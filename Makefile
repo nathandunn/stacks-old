@@ -9,9 +9,9 @@ CXX = g++
 CC  = gcc
 CXXFLAGS += -g -Wall ${OMP}
 LDFLAGS += 
-TARGET = pstacks cstacks exstacks
+TARGET = ustacks pstacks cstacks exstacks
 
-all: cstacks pstacks exstacks
+all: ustacks cstacks pstacks exstacks
 
 exstacks: exstacks.o input.o stacks.o
 	${CXX} -fopenmp -o exstacks exstacks.o input.o stacks.o
@@ -31,8 +31,17 @@ pstacks: pstacks.o input.o models.o stacks.o
 pstacks.o:	pstacks.h pstacks.cc stacks.h constants.h Tsv.h Bowtie.h Sam.h Fasta.h Fastq.h
 	${CXX} ${CXXFLAGS} -c pstacks.cc
 
+ustacks: ustacks.o input.o models.o stacks.o cluster.o
+	${CXX} -fopenmp -o ustacks ustacks.o input.o stacks.o models.o cluster.o
+
+ustacks.o:	ustacks.h ustacks.cc stacks.h constants.h sql_utilities.h
+	${CXX} ${CXXFLAGS} -c ustacks.cc
+
 input.o:	input.h input.cc constants.h
 	${CXX} ${CXXFLAGS} -c input.cc
+
+cluster.o:	cluster.h cluster.c
+	${CC} ${CXXFLAGS} -c cluster.c
 
 stacks.o:	stacks.h stacks.cc constants.h
 	${CXX} ${CXXFLAGS} -c stacks.cc
