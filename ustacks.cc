@@ -178,7 +178,6 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Seq *> &rem) {
                     dists[hit_it->first] = d;
                 }
             }
-            //}
 
             //
             // Free the k-mers we generated for this remainder read
@@ -1285,6 +1284,8 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
 	tags << "0" << "\t" 
 	     << sql_id << "\t" 
 	     << tag_1->id << "\t" 
+             << tag_1->loc.chr << "\t"
+             << tag_1->loc.bp << "\t"
 	     << "consensus\t" << "\t\t" 
 	     << tag_1->con << "\t" 
 	     << tag_1->deleveraged << "\t" 

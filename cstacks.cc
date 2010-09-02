@@ -11,10 +11,11 @@
 
 // Global variables to hold command-line options.
 queue<pair<int, string> > samples;
-string out_path;
-int    batch_id     = 0;
-int    mult_matches = 0;
-int    num_threads  = 1;
+string  out_path;
+int     batch_id     = 0;
+int     mult_matches = 0;
+searcht search_type = sequence;
+int     num_threads  = 1;
 
 int main (int argc, char* argv[]) {
 
@@ -50,8 +51,13 @@ int main (int argc, char* argv[]) {
         }
 	//dump_loci(sample);
 
-	cerr << "Searching for matches...\n";
-	find_matches(catalog, sample);
+        if (search_type == sequence) {
+            cerr << "Searching for sequence matches...\n";
+            find_matches_by_sequence(catalog, sample);
+        } else if (search_type == genomic_loc) {
+            cerr << "Searching for matches by genomic location...\n";
+            find_matches_by_genomic_loc(catalog, sample);
+        }
 
 	cerr << "Merging matches into catalog...\n";
 	merge_matches(catalog, sample, s);
@@ -131,7 +137,7 @@ int merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<
     return 0;
 }
 
-int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, QLocus *utag) {
+int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, QLocus *qloc) {
     vector<SNP *>::iterator i;
     map<string, int>::iterator j;
 
@@ -139,13 +145,13 @@ int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, 
 
     CLocus *c = new CLocus;
     c->id = cid + 1;
-    c->add_consensus(utag->con);
-    c->sources.push_back(make_pair(sample_file.first, utag->id));
+    c->add_consensus(qloc->con);
+    c->sources.push_back(make_pair(sample_file.first, qloc->id));
     catalog[c->id] = c;
 
-    // cerr << "Adding sample: " << utag->id << " to the catalog as ID: " << c->id << "\n";
+    // cerr << "Adding sample: " << qloc->id << " to the catalog as ID: " << c->id << "\n";
 
-    for (i = utag->snps.begin(); i != utag->snps.end(); i++) {
+    for (i = qloc->snps.begin(); i != qloc->snps.end(); i++) {
 	SNP *snp    = new SNP;
 	snp->col    = (*i)->col;
 	snp->lratio = (*i)->lratio;
@@ -155,7 +161,7 @@ int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, 
 	c->snps.push_back(snp);
     }
 
-    for (j = utag->alleles.begin(); j != utag->alleles.end(); j++) {
+    for (j = qloc->alleles.begin(); j != qloc->alleles.end(); j++) {
 	c->alleles[j->first] = j->second;
     }
 
@@ -164,7 +170,7 @@ int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, 
     return 0;
 }
 
-int find_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample) {
+int find_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *> &sample) {
     //
     // Calculate the distance (number of mismatches) between each pair
     // of Radtags. We expect all radtags to be the same length;
@@ -189,7 +195,7 @@ int find_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample) {
 	    vector<pair<allele_type, string> >::iterator r, s;
 
 	    //
-	    // Iterate through the two possible SAMPLE alleles
+	    // Iterate through the possible SAMPLE alleles
 	    //
 	    for (r = i->second->strings.begin(); r != i->second->strings.end(); r++) {
 
@@ -212,6 +218,42 @@ int find_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample) {
     return 0;
 }
 
+int find_matches_by_genomic_loc(map<int, CLocus *> &catalog, map<int, QLocus *> &sample) {
+    //
+    // Calculate the distance (number of mismatches) between each pair
+    // of Radtags. We expect all radtags to be the same length;
+    //
+    map<int, QLocus *>::iterator i;
+    map<int, CLocus *>::iterator j;
+    int k;
+
+    // OpenMP can't parallelize random access iterators, so we convert
+    // our map to a vector of integer keys.
+    vector<int> keys;
+    for (i = sample.begin(); i != sample.end(); i++) 
+	keys.push_back(i->first);
+
+    #pragma omp parallel private(i, j, k)
+    {
+        #pragma omp for schedule(dynamic) 
+	for (k = 0; k < (int) keys.size(); k++) {
+
+	    i = sample.find(keys[k]);
+
+            for (j = catalog.begin(); j != catalog.end(); j++) {
+                
+                if (strcmp(i->second->loc.chr, j->second->loc.chr) == 0 && 
+                    i->second->loc.bp == j->second->loc.bp) {
+
+                    i->second->add_match(j->second->id, "");
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
 int write_catalog(map<int, CLocus *> &catalog) {
     map<int, CLocus *>::iterator i;
     CLocus  *tag;
@@ -226,11 +268,11 @@ int write_catalog(map<int, CLocus *> &catalog) {
     //
     // Output the tags
     //
-    string out_file = prefix.str() + ".catalog_tags.tsv";
+    string out_file = prefix.str() + ".catalog.tags.tsv";
     ofstream cat_file(out_file.c_str());
-    out_file = prefix.str() + ".catalog_snps.tsv";
+    out_file = prefix.str() + ".catalog.snps.tsv";
     ofstream snp_file(out_file.c_str());
-    out_file = prefix.str() + ".catalog_alleles.tsv";
+    out_file = prefix.str() + ".catalog.alleles.tsv";
     ofstream all_file(out_file.c_str());
 
     for (i = catalog.begin(); i != catalog.end(); i++) {
@@ -389,13 +431,18 @@ int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofs
     sources = sources.substr(0, sources.length() - 1);
 
     cat_file << 
-	"0"         << "\t" << 
-	batch_id    << "\t" <<
-	tag->id    << "\t" <<
-	"consensus" << "\t" <<
-	"0"         << "\t" <<
-	sources     << "\t" <<
-	tag->con    << "\n";
+	"0"          << "\t" << 
+	batch_id     << "\t" <<
+	tag->id      << "\t" <<
+        tag->loc.chr << "\t" <<
+        tag->loc.bp  << "\t" <<
+	"consensus"  << "\t" <<
+	"0"          << "\t" <<
+	sources      << "\t" <<
+	tag->con     << "\t" << 
+        0            << "\t" <<  // These flags are unused in cstacks, but important in ustacks
+        0            << "\t" <<
+        0            << "\n";
 
     //
     // Output the SNPs associated with the catalog tag
@@ -416,7 +463,9 @@ int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofs
 	all_file << "0\t" << 
 	    batch_id  << "\t" <<
 	    tag->id  << "\t" << 
-	    all_it->first << "\n";
+	    all_it->first << "\t" <<
+            0 << "\t" <<              // These two fields are used in the pstacks output, not in
+            0 << "\n";
 
     return 0;
 }
@@ -457,6 +506,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"help",         no_argument,       NULL, 'h'},
             {"version",      no_argument,       NULL, 'v'},
 	    {"mmatches",     no_argument,       NULL, 'm'},
+	    {"genomic_loc",  no_argument,       NULL, 'g'},
 	    {"batch_id",     required_argument, NULL, 'b'},
 	    {"sample",       required_argument, NULL, 's'},
 	    {"sample_id",    required_argument, NULL, 'S'},
@@ -468,7 +518,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvmo:s:S:b:p:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgvmo:s:S:b:p:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -483,6 +533,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'm':
 	    mult_matches++;
+	    break;
+	case 'g':
+	    search_type = genomic_loc;
 	    break;
 	case 's':
 	    sstr = optarg;
@@ -538,13 +591,14 @@ void version() {
 
 void help() {
     std::cerr << "cstacks " << VERSION << "\n"
-              << "cstacks -b batch_id -s sample_file -S id [-s sample_file_2 -S id_2 ...] [-o path] [-p num_threads] [-h]" << "\n"
+              << "cstacks -b batch_id -s sample_file -S id [-s sample_file_2 -S id_2 ...] [-o path] [-p num_threads] [-g] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  b: MySQL ID of this batch." << "\n"
 	      << "  s: TSV file from which to load radtags." << "\n"
 	      << "  S: MySQL ID of the sample." << "\n"
 	      << "  o: output path to write results." << "\n"
 	      << "  m: include tags in the catalog that match to more than one entry." << "\n"
+              << "  g: base catalog matching on genomic location, not sequence identity." << "\n"
 	      << "  h: display this help messsage." << "\n\n";
 
     exit(0);

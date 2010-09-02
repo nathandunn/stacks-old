@@ -43,6 +43,8 @@ using std::queue;
 #include "stacks.h"
 #include "sql_utilities.h"
 
+enum searcht {sequence, genomic_loc};
+
 //
 // Query Locus Class
 //
@@ -74,7 +76,8 @@ void version( void );
 int  parse_command_line(int, char**);
 int  parse_tsv(const char *, vector<string> &);
 int  initialize_catalog(pair<int, string> &, map<int, CLocus *> &);
-int  find_matches(map<int, CLocus *> &, map<int, QLocus *> &);
+int  find_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &);
+int  find_matches_by_genomic_loc(map<int, CLocus *> &, map<int, QLocus *> &);
 int  merge_matches(map<int, CLocus *> &, map<int, QLocus *> &, pair<int, string> &);
 int  add_unique_tag(pair<int, string> &, map<int, CLocus *> &, QLocus *);
 bool compare_dist(pair<int, int>, pair<int, int>);

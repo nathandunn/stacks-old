@@ -100,6 +100,7 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
         cerr << "  Parsing " << f.c_str() << "\n";
     }
 
+    line_num = 0;
     while (fh.good()) {
 	fh.getline(line, max_len);
 
@@ -109,7 +110,7 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
 	parse_tsv(line, parts);
 
         if (parts.size() != num_snps_fields) {
-            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ".\n";
+            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
 
@@ -140,6 +141,7 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
         cerr << "  Parsing " << f.c_str() << "\n";
     }
 
+    line_num = 0;
     while (fh.good()) {
 	fh.getline(line, max_len);
 
@@ -149,7 +151,7 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
 	parse_tsv(line, parts);
 
         if (parts.size() != num_alleles_fields) {
-            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ".\n";
+            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
 

@@ -108,7 +108,7 @@ class Locus {
     map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
     vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
 
-    Locus()  { id = 0; con = NULL; }
+    Locus()  { id = 0; con = NULL; loc.bp = 0; loc.chr[0] = '\0'; }
     ~Locus() { delete [] con; }
     int add_consensus(const char *);
     int populate_alleles();
