@@ -472,7 +472,7 @@ int load_radtags(string in_file, HashMap &radtags) {
     else if (in_file_type == fastq)
         fh = new Fastq(in_file.c_str());
 
-    cerr << "Parsing " << in_file.c_str() << "\n";
+    cerr << "  Parsing " << in_file.c_str() << "\n";
 
     int i = 1;
     while ((c = fh->next_seq()) != NULL) {

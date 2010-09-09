@@ -901,115 +901,6 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
     return 0;
 }
 
-int determine_kmer_length(int read_len, int dist) {
-    int kmer_len, span, min_matches;
-    //
-    // Longer k-mer lengths will provide a smaller hash, with better key placement.
-    // Increase the kmer_len until we start to miss hits at the given distance. Then
-    // back the kmer_len off one unit to get the final value.
-    //
-    for (kmer_len = 1; kmer_len < read_len; kmer_len += 2) {
-        span = (kmer_len * (dist + 1)) - 1;
-
-        min_matches = read_len - span;
-
-        if (min_matches <= 0) break;
-    }
-    
-    if (kmer_len >= read_len) {
-        cerr << "Unable to find a suitable k-mer length for matching.\n";
-        exit(1);
-    }
-
-    kmer_len -= 2;
-
-    cerr << "  Using a k-mer length of " << kmer_len << "\n";
-
-    return kmer_len;
-}
-
-int calc_min_kmer_matches(int kmer_len, int dist, int read_len) {
-    int span, min_matches;
-
-    span = (kmer_len * (dist + 1)) - 1;
-
-    min_matches = read_len - span;
-
-    cerr << "  Miniumum number of k-mers to define a match: " << min_matches << "\n";
-
-    if (min_matches <= 0) {
-        cerr << 
-            "Combination of k-mer length (" << kmer_len << ") and edit distance (" << dist << ") allows for " <<
-            "sequences to be missed by the matching algorithm. Please choose a smaller k-mer length.\n";
-        exit(1);
-    }
-
-    return min_matches;
-}
-
-int generate_kmers(const char *seq, int kmer_len, int num_kmers, vector<char *> &kmers) {
-    char *kmer;
-    const char *k = seq;
-
-    for (int i = 0; i < num_kmers; i++) {
-        kmer = new char[kmer_len + 1];
-        strncpy(kmer, k, kmer_len);
-        kmer[kmer_len] = '\0';
-        kmers.push_back(kmer);
-        k++;
-    }
-
-    return 0;
-}
-
-int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, int kmer_len) {
-    map<int, MergedStack *>::iterator it;
-    MergedStack *tag;
-    int j;
-    //
-    // Break each stack down into k-mers and create a hash map of those k-mers
-    // recording in which sequences they occur.
-    //
-    int num_kmers = strlen(merged.begin()->second->con) - kmer_len + 1;
-
-    for (it = merged.begin(); it != merged.end(); it++) {
-        tag = it->second;
-
-        // Don't compute distances for masked tags
-        if (tag->masked) continue;
-
-        generate_kmers(tag->con, kmer_len, num_kmers, tag->kmers);
-
-        // Hash the kmers
-        for (j = 0; j < num_kmers; j++)
-            kmer_map[tag->kmers[j]].push_back(tag->id);
-    }
-
-    //dump_kmer_map(kmer_map);
-
-    return 0;
-}
-
-int dump_kmer_map(KmerHashMap &kmer_map) {
-    KmerHashMap::iterator kit;
-    vector<int>::iterator vit;
-
-    cerr << kmer_map.size() << " keys in the map.\n";
-
-    int i = 1;
-    for (kit = kmer_map.begin(); kit != kmer_map.end(); kit++) {
-        cerr << "Key #" << i << " " << kit->first << ": ";
-        for (vit = (kit->second).begin(); vit != (kit->second).end(); vit++) 
-            cerr << " " << *vit;
-        cerr << "\n";
-        i++;
-
-        if (i > 1000) break;
-    }
-
-    return 0;
-}
-
 int calc_distance(map<int, MergedStack *> &merged, int utag_dist) {
     //
     // Calculate the distance (number of mismatches) between each pair
@@ -1067,44 +958,6 @@ int calc_distance(map<int, MergedStack *> &merged, int utag_dist) {
     }
 
     return 0;
-}
-
-int dist(MergedStack *tag_1, MergedStack *tag_2) {
-    int   dist = 0;
-    char *p    = tag_1->con;
-    char *q    = tag_2->con;
-    char *end  = p + strlen(p);
-
-    // Count the number of characters that are different
-    // between the two sequences.
-    while (p < end) {
-	dist += (*p == *q) ? 0 : 1;
-	p++; 
-	q++;
-    }
-
-    return dist;
-}
-
-int dist(MergedStack *tag_1, Seq *rem) {
-    int   dist = 0;
-    char *p    = tag_1->con;
-    char *q    = rem->seq;
-    char *end  = p + strlen(p);
-
-    // Count the number of characters that are different
-    // between the two sequences.
-    while (p < end) {
-	dist += (*p == *q) ? 0 : 1;
-	p++; 
-	q++;
-    }
-
-    return dist;
-}
-
-bool compare_dist(pair<int, int> a, pair<int, int> b) {
-    return (a.second < b.second);
 }
 
 int reduce_radtags(HashMap &radtags, map<int, Stack *> &unique, map<int, Seq *> &rem) {
@@ -1299,7 +1152,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
 	    total += tag_2->count;
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << "primary\t" << id << "\t" << (*j)->id << "\t" << tag_2->seq << "\t\t\t\n";
+		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << (*j)->id << "\t" << tag_2->seq << "\t\t\t\n";
 	    }
 
 	    id++;
@@ -1311,7 +1164,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
 	total += tag_1->remtags.size();
 	for (k = tag_1->remtags.begin(); k != tag_1->remtags.end(); k++) {
 	    rem = r[*k];
-	    tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << "secondary\t\t" << rem->id << "\t" << rem->seq << "\t\t\t\n";
+	    tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "secondary\t\t" << rem->id << "\t" << rem->seq << "\t\t\t\n";
 	}
 
 	// Write out any SNPs detected in this unique tag.
@@ -1322,7 +1175,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
 	// Write the expressed alleles seen for the recorded SNPs and
 	// the percentage of tags a particular allele occupies.
 	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
-	    alle << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << (*t).first << "\t" << (((*t).second/total) * 100) << "\n";
+	    alle << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << (*t).first << "\t" << (((*t).second/total) * 100) << "\t" << (*t).second << "\n";
 	}
     }
 
@@ -1558,12 +1411,18 @@ int dump_merged_tags(map<int, MergedStack *> &m) {
 }
 
 int load_radtags(string in_file, HashMap &radtags) {
-
-    Fastq  fa(in_file.c_str());
+    Input *fh;
     Seq   *c;
 
+    if (in_file_type == fasta)
+        fh = new Fasta(in_file.c_str());
+    else if (in_file_type == fastq)
+        fh = new Fastq(in_file.c_str());
+
+    cerr << "  Parsing " << in_file.c_str() << "\n";
+
     int i = 1;
-    while ((c = fa.next_seq()) != NULL) {
+    while ((c = fh->next_seq()) != NULL) {
         if (i % 10000 == 0) cerr << "Loading RAD-Tag " << i << "       \r";
 	radtags[c->seq].add_id(c->id);
 	radtags[c->seq].count++;
@@ -1571,10 +1430,10 @@ int load_radtags(string in_file, HashMap &radtags) {
     }
     cerr << "Inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n";
 
-//     HashMap::iterator it;
-//     for (it = radtags.begin(); it != radtags.end(); it++) {
-//     	cerr << "Key: " << (*it).first << "; ID: " << (*it).second.id[0]->id << " Count: " << (*it).second.count << "\n";
-//     }
+    //
+    // Close the file and delete the Input object.
+    //
+    delete fh;
 
     return 0;
 }

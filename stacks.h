@@ -42,7 +42,7 @@ class Stack {
     vector<SeqId *> map; // List of sequence read IDs merged into this stack
     PhyLoc loc;           // Physical genome location of this stack.
 
-    Stack()  { id = 0; count = 0; seq = NULL; }
+    Stack()  { id = 0; count = 0; seq = NULL; loc.bp = 0; loc.chr[0] = '\0'; }
     ~Stack() { delete [] seq; }
     int add_id(const char *);
     int add_seq(const char *);
@@ -78,9 +78,11 @@ class MergedStack {
     bool lumberjackstack;
 
     MergedStack()  { 
-        id          = 0;
-        count       = 0;
-        con         = NULL;
+        id         = 0;
+        count      = 0;
+        con        = NULL;
+        loc.bp     = 0; 
+        loc.chr[0] = '\0';
         deleveraged     = false;
         masked          = false;
         blacklisted     = false;

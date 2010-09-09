@@ -53,6 +53,7 @@ extern "C" {
 }
 
 #include "constants.h" 
+#include "kmers.h"
 #include "stacks.h"    // Major data structures for holding stacks
 #include "models.h"    // Contains maximum likelihood statistical models.
 #include "Tsv.h"       // Reading input files in Tab-separated values format
@@ -83,14 +84,7 @@ class HVal {
     }
 };
 
-struct eqstr {
-    bool operator()(const char* s1, const char* s2) const {
-	return strcmp(s1, s2) == 0;
-    }
-};
-
 typedef hash_map<const char *, HVal, hash<const char *>, eqstr> HashMap;
-typedef hash_map<const char *, vector<int>, hash<const char *>, eqstr> KmerHashMap;
 
 void help( void );
 void version( void );
@@ -107,10 +101,6 @@ int  write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Seq 
 //
 // Match MergedStacks using a k-mer hashing algorithm
 //
-int  determine_kmer_length(int, int);
-int  calc_min_kmer_matches(int, int, int);
-int  generate_kmers(const char *, int, int, vector<char *> &);
-int  populate_kmer_hash(map<int, MergedStack *> &, KmerHashMap &, int);
 int  calc_kmer_distance(map<int, MergedStack *> &, int);
 
 //
@@ -136,18 +126,10 @@ int  check_deleveraged_dist(map<int, map<int, double> > &, set<int> &, int);
 int  dump_unique_tags(map<int, Stack *> &);
 int  dump_merged_tags(map<int, MergedStack *> &);
 int  dump_stack_graph(string, map<int, Stack *> &, map<int, MergedStack *> &, vector<int> &, map<int, map<int, double> > &, map<int, set<int> > &);
-int  dump_kmer_map(KmerHashMap &);
-
-//
-// For sorting functions.
-//
-bool compare_dist(pair<int, int>, pair<int, int>);
 
 //
 // Utilities
 //
-int dist(MergedStack *, MergedStack *);
-int dist(MergedStack *, Seq *);
 MergedStack *merge_tags(map<int, MergedStack *> &, set<int> &, int);
 long double factorial(int);
 

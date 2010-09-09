@@ -14,6 +14,7 @@ queue<pair<int, string> > samples;
 string  out_path;
 int     batch_id     = 0;
 int     mult_matches = 0;
+int     ctag_dist    = 1;
 searcht search_type = sequence;
 int     num_threads  = 1;
 
@@ -73,33 +74,33 @@ int main (int argc, char* argv[]) {
 
 int merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int, string> &sample_file) {
     map<int, QLocus *>::iterator i;
-    vector<pair<int, allele_type> >::iterator mat_it;
+    vector<Match *>::iterator mat_it;
     CLocus *ctag;
-    QLocus *utag;
+    QLocus *qtag;
 
     for (i = sample.begin(); i != sample.end(); i++) {
-	utag = i->second;
+	qtag = i->second;
 
 	//
 	// Emit a warning if the sample 1 tag matches more than one tag in sample 2.
 	//
 	set<int> local_matches;
 	set<int>::iterator j;
-	for (mat_it = utag->matches.begin(); mat_it != utag->matches.end(); mat_it++)
-	    local_matches.insert(mat_it->first);
+	for (mat_it = qtag->matches.begin(); mat_it != qtag->matches.end(); mat_it++)
+	    local_matches.insert((*mat_it)->cat_id);
 
         //
         // If this stack didn't match an existing catalog stack, add this stack to the 
         // catalog as a new stack.
         //
 	if (local_matches.size() == 0) {
-	    add_unique_tag(sample_file, catalog, utag);
+	    add_unique_tag(sample_file, catalog, qtag);
 	    continue;
 	}
 
 	if (local_matches.size() > 1) {
 	    cerr << 
-		"  Warning: sample " << sample_file.second << ", tag " << utag->id << 
+		"  Warning: sample " << sample_file.second << ", tag " << qtag->id << 
 		", matches more than one tag in the catalog: ";
 	    for (j = local_matches.begin(); j != local_matches.end(); j++)
 		cerr << *j << " ";
@@ -125,12 +126,12 @@ int merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<
 	//
 	// Merge the SNPs and alleles assigned to the two matched tags
 	//
-	if (!ctag->merge_snps(utag)) {
-	    cerr << "Error merging " << sample_file.second << ", tag " << utag->id <<
+	if (!ctag->merge_snps(qtag)) {
+	    cerr << "Error merging " << sample_file.second << ", tag " << qtag->id <<
 		" with catalog tag " << ctag->id << "\n";
 	}
 
-	ctag->sources.push_back(make_pair(sample_file.first, utag->id));
+	ctag->sources.push_back(make_pair(sample_file.first, qtag->id));
 	ctag->populate_alleles();
     }
 
@@ -170,6 +171,102 @@ int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, 
     return 0;
 }
 
+int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, int ctag_dist) {
+    //
+    // Calculate the distance (number of mismatches) between each pair
+    // of Radtags. We expect all radtags to be the same length;
+    //
+    KmerHashMap kmer_map;
+    map<int, QLocus *>::iterator it;
+    vector<char *> kmers;
+    vector<pair<allele_type, string> >::iterator allele;
+    QLocus *tag_1;
+    CLocus *tag_2;
+    int i, j;
+
+    // OpenMP can't parallelize random access iterators, so we convert
+    // our map to a vector of integer keys.
+    vector<int> keys;
+    for (it = sample.begin(); it != sample.end(); it++) 
+	keys.push_back(it->first);
+
+    //
+    // Calculate the number of k-mers we will generate. If kmer_len == 0,
+    // determine the optimal length for k-mers.
+    //
+    int con_len   = strlen(catalog[keys[0]]->con);
+    int kmer_len  = determine_kmer_length(con_len, ctag_dist);
+    int num_kmers = con_len - kmer_len + 1;
+
+    cerr << "  Number of kmers per sequence: " << num_kmers << "\n";
+
+    //
+    // Calculate the minimum number of matching k-mers required for a possible sequence match.
+    //
+    int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len);
+
+    populate_kmer_hash(catalog, kmer_map, kmer_len);
+ 
+    #pragma omp parallel private(i, j, tag_1, tag_2)
+    { 
+        #pragma omp for schedule(dynamic) 
+        for (i = 0; i < (int) keys.size(); i++) {
+            tag_1 = sample[keys[i]];
+
+            for (allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {            
+
+                generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
+
+                map<int, int> hits;
+                vector<int>::iterator map_it;
+                int d;
+                //
+                // Lookup the occurances of each k-mer in the kmer_map
+                //
+                for (j = 0; j < num_kmers; j++) {
+
+                    for (map_it  = kmer_map[kmers[j]].begin(); 
+                         map_it != kmer_map[kmers[j]].end(); 
+                         map_it++)
+                        hits[*map_it]++;
+                }
+
+                //cerr << "  Tag " << tag_1->id << " hit " << hits.size() << " kmers.\n";
+
+                //
+                // Iterate through the list of hits. For each hit that has more than min_hits
+                // check its full length to verify a match.
+                //
+                map<int, int>::iterator hit_it;
+                for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
+                    //cerr << "  Tag " << hit_it->first << " has " << hit_it->second << " hits (min hits: " << min_hits << ")\n";
+
+                    if (hit_it->second < min_hits) continue;
+
+                    //cerr << "  Match found, checking full-length match\n";
+
+                    tag_2 = catalog[hit_it->first];
+
+                    d = dist(tag_1, tag_2);
+                    //cerr << "    Distance: " << d << "\n";
+
+                    if (d <= ctag_dist)
+                        tag_1->add_match(tag_2->id, allele->first, d);
+                }
+            }
+
+            // Sort the vector of distances.
+            sort(tag_1->matches.begin(), tag_1->matches.end(), compare_matches);
+        }
+    }
+
+    return 0;
+}
+
+bool compare_matches(Match *a, Match *b) {
+    return (a->dist < b->dist);
+}
+
 int find_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *> &sample) {
     //
     // Calculate the distance (number of mismatches) between each pair
@@ -207,7 +304,7 @@ int find_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *> &sa
 			if (r->second == s->second) {
 			    //cerr << "Found a match between " << i->first << " (" << r->first << ") and " << j->first << " (" << s->first << ")\n";
 
-			    i->second->add_match(j->second->id, r->first);
+			    i->second->add_match(j->second->id, r->first, 0);
 			}
 		    }
 		}
@@ -245,7 +342,7 @@ int find_matches_by_genomic_loc(map<int, CLocus *> &catalog, map<int, QLocus *> 
                 if (strcmp(i->second->loc.chr, j->second->loc.chr) == 0 && 
                     i->second->loc.bp == j->second->loc.bp) {
 
-                    i->second->add_match(j->second->id, "");
+                    i->second->add_match(j->second->id, "", 0);
                 }
             }
         }
@@ -415,6 +512,41 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 
 bool compare_pair(pair<string, SNP *> a, pair<string, SNP *> b) {
     return (a.second->col < b.second->col);
+}
+
+int populate_kmer_hash(map<int, CLocus *> &catalog, KmerHashMap &kmer_map, int kmer_len) {
+    map<int, CLocus *>::iterator it;
+    vector<pair<allele_type, string> >::iterator allele;
+    vector<char *> kmers;
+    CLocus *tag;
+    int j;
+
+    //
+    // Break each stack down into k-mers and create a hash map of those k-mers
+    // recording in which sequences they occur.
+    //
+    int num_kmers = strlen(catalog.begin()->second->con) - kmer_len + 1;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+        tag = it->second;
+
+        //
+        // Iterate through the possible Catalog alleles
+        //
+        for (allele = tag->strings.begin(); allele != tag->strings.end(); allele++) {
+
+            generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
+
+            // Hash the kmers
+            // Huge memory LEAK. Fix this.
+            for (j = 0; j < num_kmers; j++)
+                kmer_map[kmers[j]].push_back(tag->id);
+        }
+    }
+
+    //dump_kmer_map(kmer_map);
+
+    return 0;
 }
 
 int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstream &all_file) {

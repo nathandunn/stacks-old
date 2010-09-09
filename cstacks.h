@@ -41,22 +41,45 @@ using std::queue;
 
 #include "constants.h"
 #include "stacks.h"
+#include "kmers.h"
 #include "sql_utilities.h"
 
 enum searcht {sequence, genomic_loc};
+
+typedef struct match {
+    uint        cat_id;
+    allele_type type;
+    uint        dist;
+} Match;
 
 //
 // Query Locus Class
 //
 class QLocus : public Locus {
  public:
-    vector<pair<int, allele_type> > matches;   // Matching tags found for the catalog. Stored as catalog ID/allele_type pair.
+    vector<Match *> matches;   // Matching tags found for the catalog. Stored as catalog ID/allele_type pair.
 
-    int add_match(int, allele_type);
+    QLocus(): Locus() {}
+    ~QLocus();
+
+    int add_match(int, allele_type, int);
 };
 
-int QLocus::add_match(int uid, allele_type type) {
-    this->matches.push_back(make_pair(uid, type));
+QLocus::~QLocus() {
+    vector<Match *>::iterator it;
+
+    for (it = this->matches.begin(); it != this->matches.end(); it++)
+        delete *it;
+}
+
+int QLocus::add_match(int catalog_id, allele_type type, int distance) {
+    Match *m = new Match;
+
+    m->cat_id = catalog_id;
+    m->type   = type;
+    m->dist   = distance;
+
+    this->matches.push_back(m);
 
     return 0;
 }
@@ -76,6 +99,7 @@ void version( void );
 int  parse_command_line(int, char**);
 int  parse_tsv(const char *, vector<string> &);
 int  initialize_catalog(pair<int, string> &, map<int, CLocus *> &);
+int  find_kmer_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &, int);
 int  find_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &);
 int  find_matches_by_genomic_loc(map<int, CLocus *> &, map<int, QLocus *> &);
 int  merge_matches(map<int, CLocus *> &, map<int, QLocus *> &, pair<int, string> &);
@@ -84,5 +108,8 @@ bool compare_dist(pair<int, int>, pair<int, int>);
 int  write_catalog(map<int, CLocus *> &);
 int  write_simple_output(CLocus *, ofstream &, ofstream &, ofstream &);
 bool compare_pair(pair<string, SNP *>, pair<string, SNP *>);
+bool compare_matches(Match *, Match *);
+
+int  populate_kmer_hash(map<int, CLocus *> &, KmerHashMap &, int);
 
 #endif // __CSTACKS_H__

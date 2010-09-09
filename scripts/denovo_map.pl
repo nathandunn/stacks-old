@@ -126,13 +126,13 @@ print $log_fh "$cmd\n";
 print $log_fh @results;
 
 print STDERR "Importing catalog to MySQL database\n";
-$file = "$out_path/$cat_file" . ".catalog_tags.tsv";
+$file = "$out_path/$cat_file" . ".catalog.tags.tsv";
 import_sql_file($file, "catalog_tags");
 
-$file = "$out_path/$cat_file" . ".catalog_snps.tsv";
+$file = "$out_path/$cat_file" . ".catalog.snps.tsv";
 import_sql_file($file, "catalog_snps");
 
-$file = "$out_path/$cat_file" . ".catalog_alleles.tsv";
+$file = "$out_path/$cat_file" . ".catalog.alleles.tsv";
 import_sql_file($file, "catalog_alleles");
 
 #
