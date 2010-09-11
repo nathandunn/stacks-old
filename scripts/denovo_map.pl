@@ -46,11 +46,13 @@ foreach $parent (@progeny) {
     push(@types, "progeny");
 }
 
-my (@results, $minc, $rrep, $cmd, $cscale, $threads);
+my (@results, $minc, $rrep, $cmd, $cscale, $threads, $fuzzym);
 
 $minc    = $min_cov   > 0 ? "-m $min_cov"   : "";
 $cscale  = $cov_scale > 0 ? "-S $cov_scale" : "";
 $threads = "-p 15"; 
+$fuzzym  = "-n 1";
+
 #
 # Open the log file
 #
@@ -119,7 +121,7 @@ foreach $sample (@parents) {
 }
 
 $cat_file = "batch_" . $batch_id;
-$cmd      = "$exe_path/cstacks -b $batch_id -o $out_path $parents $threads 2>&1";
+$cmd      = "$exe_path/cstacks -b $batch_id -o $out_path $parents $threads $fuzzym 2>&1";
 print STDERR  "$cmd\n";
 print $log_fh "$cmd\n";
 @results =    `$cmd`;
