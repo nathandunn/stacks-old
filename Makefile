@@ -3,8 +3,8 @@
 # Julian Catchen
 #
 
-#OMP = -fopenmp
-OMP =
+OMP = -fopenmp
+#OMP =
 CXX = g++
 CC  = gcc
 CXXFLAGS += -g -Wall ${OMP}
