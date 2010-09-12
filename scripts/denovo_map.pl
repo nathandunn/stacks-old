@@ -11,12 +11,12 @@ my $sql        = 1;
 my $exe_path   = $ENV{'HOME'} . "/research/solexa/radtags/bin";
 my $out_path   = "";
 my $white_list = "";
-my $db         = "radtags";
+my $db         = "";
 my $rep_tags   = 0;
 my $min_cov    = 0;
 my $cov_scale  = 0;
 my $batch_id   = 0;
-my $sample_id  = 0;
+my $sample_id  = 1;
 my $desc       = ""; #"Lepisosteus oculatus RAD-Tag Samples";
 my $date       = ""; #"2009-05-31";
 

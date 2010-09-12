@@ -665,10 +665,20 @@ int QLocus::merge_snp(SNP *snp) {
     sort(merged_snps.begin(), merged_snps.end(), compare_pair);
 
     //
-    // Merge the alleles accounting for any SNPs added from either of the two samples.
+    // Modify any existing alleles to account for this new SNP. If there are not any alleles, 
+    // create new ones.
     //
+    stringstream sallele;
     string allele, new_allele;
     int pos;
+
+    if (this->alleles.size() == 0) {
+        sallele << snp->rank_1;
+        merged_alleles.insert(sallele.str());
+        sallele.str("");
+        sallele << snp->rank_2;
+        merged_alleles.insert(sallele.str());
+    }
 
     for (j = this->alleles.begin(); j != this->alleles.end(); j++) {
 	allele     = j->first;

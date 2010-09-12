@@ -100,6 +100,7 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
         cerr << "  Parsing " << f.c_str() << "\n";
     }
 
+    uint id;
     line_num = 0;
     while (fh.good()) {
 	fh.getline(line, max_len);
@@ -114,7 +115,9 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
             return 0;
         }
 
-	if (blacklisted.count(atoi(parts[2].c_str())))
+        id = atoi(parts[2].c_str());
+
+	if (blacklisted.count(id))
 	    continue;
 
 	snp         = new SNP;
@@ -123,7 +126,12 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
 	snp->rank_1 = parts[5].at(0);
 	snp->rank_2 = parts[6].at(0);
 
-	loci[atoi(parts[2].c_str())]->snps.push_back(snp);
+        if (loci.count(id) > 0) {
+            loci[id]->snps.push_back(snp);
+        } else {
+            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". SNP asks for nonexistent locus with ID: " << id << "\n";
+            return 0;
+        }
     }
 
     fh.close();
@@ -155,10 +163,17 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
             return 0;
         }
 
-	if (blacklisted.count(atoi(parts[2].c_str())))
+        id = atoi(parts[2].c_str());
+
+	if (blacklisted.count(id))
 	    continue;
 
-	loci[atoi(parts[2].c_str())]->alleles[parts[3]] = atoi(parts[5].c_str());
+        if (loci.count(id) > 0) {
+            loci[id]->alleles[parts[3]] = atoi(parts[5].c_str());
+        } else {
+            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". SNP asks for nonexistent locus with ID: " << id << "\n";
+            return 0;
+        }
     }
 
     //
