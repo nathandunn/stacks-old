@@ -83,9 +83,13 @@ sub export_joinmap_bc1_map {
 
     $types{'aa/bb'} = "aaxbb";
     $types{'bb/aa'} = "bbxaa";
+    $types{'ab/cc'} = "abxcc";
+    $types{'cc/ab'} = "ccxab";
 
     $genotypes{'aaxbb'} = {'b' => 0, 'h' => 0, '-' => 0};
     $genotypes{'bbxaa'} = {'a' => 0, 'h' => 0, '-' => 0};
+    $genotypes{'abxcc'} = {'a' => 0, 'h' => 0, '-' => 0};
+    $genotypes{'ccxab'} = {'b' => 0, 'h' => 0, '-' => 0};
 
     #
     # Determine what order the parents occur in. Order is necessary to properly
@@ -758,7 +762,9 @@ sub call_bc1_genotypes {
     my (@keys, $key, $row, $allele, $m, $ptags, %parents, %progeny, %genotype_map, %rev_geno_map);
 
     my $create_genotype_map = {'aaxbb' => \&create_aaxbb_genotype_map,
-                               'bbxaa' => \&create_bbxaa_genotype_map
+                               'bbxaa' => \&create_bbxaa_genotype_map,
+                               'abxcc' => \&create_abxcc_genotype_map,
+                               'ccxab' => \&create_ccxab_genotype_map
                                };
 
     return if (!defined($create_genotype_map->{$marker}));
@@ -1019,7 +1025,42 @@ sub create_bbxaa_genotype_map {
     $map->{$parents[$key]->[0]} = "h";
 
     $key = $order->{$parents[0]} eq "second" ? $parents[0] : $parents[1];
-    $map->{$parents[$key]->[0]} = "b";
+    $map->{$parents[$key]->[0]} = "a";
+}
+
+sub create_abxcc_genotype_map {
+    my ($order, $marker, $tag_id, $parents, $map) = @_;
+
+    my (%genotypes, @parents, @types, %alleles);
+    my ($key, $allele);
+
+    @parents = keys %{$parents};
+
+    $key = $order->{$parents[0]} eq "second" ? $parents[0] : $parents[1];
+    $map->{$parents->{$key}->[0]} = "h";
+
+    $key = $order->{$parents[0]} eq "first"  ? $parents[0] : $parents[1];
+
+    foreach $allele (@{$parents->{$parents[$key]}}) {
+        $map->{$allele} = "b";
+    }
+}
+
+sub create_ccxab_genotype_map {
+    my ($order, $marker, $tag_id, $parents, $map) = @_;
+
+    my (%genotypes, @parents, @types, %alleles);
+    my ($key, $allele);
+
+    @parents = keys %{$parents};
+
+    $key = $order->{$parents[0]} eq "second" ? $parents[0] : $parents[1];
+    foreach $allele (@{$parents->{$parents[$key]}}) {
+        $map->{$allele} = "h";
+    }
+
+    $key = $order->{$parents[0]} eq "first"  ? $parents[0] : $parents[1];
+    $map->{$parents->{$key}->[0]} = "b";
 }
 
 sub create_simple_genotype_map {

@@ -12,6 +12,8 @@ my $batch_id  = 0;
 my $out_path  = "./";
 
 my %genotypes = (
+		 'ab/cc' => {'ac' => 0, 'bc' => 0},
+		 'cc/ab' => {'ac' => 0, 'bc' => 0},
 		 'aa/bb' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
 		 'ab/--' => {'aa' => 0, 'ab' => 0},
 		 '--/ab' => {'aa' => 0, 'ab' => 0},
@@ -71,6 +73,18 @@ sub find_markers {
 	    $allele_cnt_1 = scalar(@{$catalog->{$key}->{'par'}->{$parents[0]}});
 	    $allele_cnt_2 = scalar(@{$catalog->{$key}->{'par'}->{$parents[1]}});
 
+            #
+            # Determine the number of unique alleles
+            #
+            my (%unique_alleles, $num_unique_alleles, $allele);
+
+            foreach $allele (@{$catalog->{$key}->{'par'}->{$parents[0]}}, 
+                             @{$catalog->{$key}->{'par'}->{$parents[1]}}) {
+                $unique_alleles{$allele}++;
+            }
+            $num_unique_alleles = scalar(keys %unique_alleles);
+
+
 	    #
 	    # Rad-Tag is heterozygous in both parents. However, the number of alleles present distinguishes 
             # what type of marker it is. Four unique alleles requries an ab/cd marker, while four 
@@ -79,14 +93,6 @@ sub find_markers {
 	    #
 	    if ($allele_cnt_1 == 2 && $allele_cnt_2 == 2) {
                 
-                my (%unique_alleles, $num_unique_alleles, $allele);
-
-                foreach $allele (@{$catalog->{$key}->{'par'}->{$parents[0]}}, 
-                                 @{$catalog->{$key}->{'par'}->{$parents[1]}}) {
-                    $unique_alleles{$allele}++;
-                }
-                $num_unique_alleles = scalar(keys %unique_alleles);
-
                 if ($num_unique_alleles == 3) {
                     $annote = "ab/ac";
 
@@ -96,15 +102,6 @@ sub find_markers {
                 } else {
                     $annote = "ab/cd";
                 }
-
-                # #
-                # # The SNP either occurs at the same location, ab/ab, or at different locations, ab/ac.
-                # #
-                # if (compare_snp_locations($sth, $parents[0], $parents[1])) {
-                #     $annote = "ab/ab";
-                # } else {
-                #     $annote = "ab/cd";
-                # }
 
 		$ratio  = tally_progeny_alleles($catalog->{$key}->{'par'}, 
 						$catalog->{$key}->{'pro'},
@@ -119,8 +116,14 @@ sub find_markers {
 	    # Rad-Tag is homozygous in one parent and heterozygous in the other.
 	    #
 	    } elsif ($allele_cnt_1 == 2 && $allele_cnt_2 == 1) {
-		($sample_id, $tag_id) = split("_", $parents[0]);
-		$annote = $order->{$sample_id} eq 'first' ? "ab/aa" : "aa/ab";
+
+                if ($num_unique_alleles == 3) {
+                    $annote = "ab/cc";
+
+                } elsif ($num_unique_alleles == 2) {
+                    ($sample_id, $tag_id) = split("_", $parents[0]);
+                    $annote = $order->{$sample_id} eq 'first' ? "ab/aa" : "aa/ab";
+                }
 
 		$ratio = tally_progeny_alleles($catalog->{$key}->{'par'}, 
 					       $catalog->{$key}->{'pro'},
@@ -135,8 +138,14 @@ sub find_markers {
 	    # Rad-Tag is homozygous in one parent and heterozygous in the other.
 	    #
 	    } elsif ($allele_cnt_1 == 1 && $allele_cnt_2 == 2) {
-		($sample_id, $tag_id) = split("_", $parents[1]);
-		$annote = $order->{$sample_id} eq 'first' ? "ab/aa" : "aa/ab";
+
+                if ($num_unique_alleles == 3) {
+                    $annote = "cc/ab";
+
+                } elsif ($num_unique_alleles == 2) {
+                    ($sample_id, $tag_id) = split("_", $parents[0]);
+                    $annote = $order->{$sample_id} eq 'first' ? "ab/aa" : "aa/ab";
+                }
 
 		$ratio = tally_progeny_alleles($catalog->{$key}->{'par'}, 
 					       $catalog->{$key}->{'pro'},
