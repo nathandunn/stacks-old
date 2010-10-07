@@ -3,8 +3,6 @@
 #ifndef __CSTACKS_H__
 #define __CSTACKS_H__
 
-#define VERSION 0.90
-
 #include <omp.h>    // OpenMP library
 #include <getopt.h> // Process command-line options
 #include <math.h>
@@ -58,12 +56,11 @@ typedef struct match {
 //
 class QLocus : public Locus {
  public:
-    vector<Match *> matches;   // Matching tags found for the catalog. Stored as catalog ID/allele_type pair.
+    vector<Match *> matches;   // Matching tags found for the catalog.
 
     QLocus(): Locus() {}
     ~QLocus();
 
-    int merge_snp(SNP *snp);
     int add_match(int, allele_type, allele_type, int);
 };
 
@@ -100,12 +97,12 @@ class CLocus : public Locus {
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
-int  parse_tsv(const char *, vector<string> &);
 int  initialize_catalog(pair<int, string> &, map<int, CLocus *> &);
 int  find_kmer_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &, int);
 int  find_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &);
 int  find_matches_by_genomic_loc(map<int, CLocus *> &, map<int, QLocus *> &);
 int  characterize_mismatch_snps(CLocus *, QLocus *);
+int  merge_allele(Locus *locus, SNP *snp);
 int  merge_matches(map<int, CLocus *> &, map<int, QLocus *> &, pair<int, string> &, int);
 int  add_unique_tag(pair<int, string> &, map<int, CLocus *> &, QLocus *);
 bool compare_dist(pair<int, int>, pair<int, int>);

@@ -3,8 +3,6 @@
 #ifndef __PSTACKS_H__
 #define __PSTACKS_H__
 
-#define VERSION 0.90
-
 #include <omp.h>    // OpenMP library
 #include <getopt.h> // Process command-line options
 #include <iostream>

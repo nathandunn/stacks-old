@@ -9,9 +9,15 @@ using std::string;
 using std::vector;
 #include <map>
 using std::map;
+#include <set>
+using std::set;
 #include <utility>
 using std::pair;
 using std::make_pair;
+#include<iostream>
+using std::cerr;
+#include<sstream>
+using std::stringstream;
 
 #include "constants.h"
 
@@ -102,15 +108,17 @@ class MergedStack {
 
 class Locus {
  public:
-    int   id;   // Locus ID
-    char *con;  // Consensus sequence
+    int         id; // Locus ID
+    int  sample_id; // Sample ID
+    int      depth; // Stack depth
+    char      *con; // Consensus sequence
 
     PhyLoc               loc;   // Physical genome location of this Stack.
     vector<SNP *>       snps;   // Single Nucleotide Polymorphisms in this stack
     map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
     vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
 
-    Locus()  { id = 0; con = NULL; loc.bp = 0; loc.chr[0] = '\0'; }
+    Locus()  { id = 0; sample_id = 0; depth = 0; con = NULL; loc.bp = 0; loc.chr[0] = '\0'; }
     ~Locus() { delete [] con; }
     int add_consensus(const char *);
     int populate_alleles();

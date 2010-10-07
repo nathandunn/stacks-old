@@ -43,6 +43,8 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
         cerr << "  Parsing " << f.c_str() << "\n";
     }
 
+    uint id;
+
     line_num = 0;
     while (fh.good()) {
 	fh.getline(line, max_len);
@@ -57,20 +59,32 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
             return 0;
         }
 
-	if (parts[5] != "consensus")
-	    continue;
+        id = atoi(parts[2].c_str());
+
+	if (parts[5] != "consensus") {
+            if (blacklisted.count(id)) {
+                continue;
+            } else if (loci.count(id) > 0) {
+                loci[id]->depth++;
+                continue;
+            } else {
+                cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (stack " << id << " does not exist).\n";
+                return 0;
+            }
+        }
 
 	//
 	// Do not include blacklisted tags in the catalog. They are tags that are composed 
 	// of noise and/or repetitive sequence.
 	//
 	if (parts[10] == "1") {
-	    blacklisted.insert(atoi(parts[2].c_str()));
+	    blacklisted.insert(id);
 	    continue;
 	}
 
 	c = new LocusT;
-	c->id = atoi(parts[2].c_str());
+        c->sample_id = atoi(parts[1].c_str());
+	c->id        = id;
 	c->add_consensus(parts[8].c_str());
 
         //
@@ -100,7 +114,6 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
         cerr << "  Parsing " << f.c_str() << "\n";
     }
 
-    uint id;
     line_num = 0;
     while (fh.good()) {
 	fh.getline(line, max_len);

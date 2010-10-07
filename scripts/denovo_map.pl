@@ -51,7 +51,7 @@ my (@results, $minc, $rrep, $cmd, $cscale, $threads, $fuzzym);
 $minc    = $min_cov   > 0 ? "-m $min_cov"   : "";
 $cscale  = $cov_scale > 0 ? "-S $cov_scale" : "";
 $threads = "-p 15"; 
-$fuzzym  = "-n 2";
+$fuzzym  = "-n 3";
 
 #
 # Open the log file

@@ -117,9 +117,12 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
             s->rank_1 = *c;
             s->rank_2 = *q;
 
-            query_tag->merge_snp(s);
+            merge_allele(catalog_tag, s);
+            merge_allele(query_tag, s);
+
+            query_tag->snps.push_back(s);
         }
-	c++; 
+	c++;
 	q++;
     }
 
@@ -516,6 +519,92 @@ int write_catalog(map<int, CLocus *> &catalog) {
     return 0;
 }
 
+int merge_allele(Locus *locus, SNP *snp) {
+    map<int, pair<string, SNP *> > columns;
+    map<int, pair<string, SNP *> >::iterator c;
+    vector<SNP *>::iterator i;
+
+    for (i = locus->snps.begin(); i != locus->snps.end(); i++)
+	columns[(*i)->col] = make_pair("sample", *i);
+
+    //
+    // Is this column already represented from the previous sample?
+    //
+    if (columns.count(snp->col)) {
+        //
+        // Check to make sure we aren't combining inconsistent SNPS.
+        //
+        if (columns[snp->col].second->rank_1 != snp->rank_1 &&
+            columns[snp->col].second->rank_1 != snp->rank_2)
+            cerr << "  Warning: inconsistent merging of SNPs for catalog ID " << locus->id << "\n";
+        else
+            columns[snp->col] = make_pair("both", snp);
+    }
+    else
+        columns[snp->col] = make_pair("merge", snp);
+
+    vector<pair<string, SNP *> > merged_snps;
+
+    for (c = columns.begin(); c != columns.end(); c++) 
+	merged_snps.push_back((*c).second);
+
+    //
+    // Sort the SNPs by column
+    //
+    sort(merged_snps.begin(), merged_snps.end(), compare_pair);
+
+    //
+    // Modify any existing alleles to account for this new SNP. If there are not any alleles, 
+    // create new ones.
+    //
+    stringstream sallele;
+    set<string> merged_alleles;
+    string allele, new_allele;
+    int pos;
+
+    if (locus->alleles.size() == 0) {
+        sallele << locus->con[snp->col];
+        merged_alleles.insert(sallele.str());
+    }
+
+    map<string, int>::iterator j;
+    vector<pair<string, SNP *> >::iterator k;    
+
+    for (j = locus->alleles.begin(); j != locus->alleles.end(); j++) {
+	allele     = j->first;
+	new_allele = "";
+	pos        = 0;
+
+	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+	    //
+	    // If we inserted a SNP from the sample, add the proper nucleotide from the consensus
+	    // sequence to account for it in the allele string.
+	    //
+	    if ((*k).first == "merge") {
+		new_allele += locus->con[(*k).second->col];
+	    } else {
+		new_allele += allele[pos];
+		pos++;
+	    }
+	}
+
+	merged_alleles.insert(new_allele);
+    }
+
+    set<string>::iterator s;
+
+    locus->alleles.clear();
+    for (s = merged_alleles.begin(); s != merged_alleles.end(); s++) {
+	locus->alleles[*s] = 0;
+    }
+
+    return 1;
+}
+
+bool compare_pair(pair<string, SNP *> a, pair<string, SNP *> b) {
+    return (a.second->col < b.second->col);
+}
+
 int CLocus::merge_snps(QLocus *matched_tag) {
     vector<SNP *>::iterator i;
     map<string, int>::iterator j;
@@ -622,113 +711,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	this->alleles[*s] = 0;
     }
 
-
     return 1;
-}
-
-int QLocus::merge_snp(SNP *snp) {
-    vector<SNP *>::iterator i;
-    map<string, int>::iterator j;
-    vector<pair<string, SNP *> >::iterator k;
-    map<int, pair<string, SNP *> > columns;
-    map<int, pair<string, SNP *> >::iterator c;
-
-    vector<pair<string, SNP *> > merged_snps;
-    set<string> merged_alleles;
-    set<string>::iterator s;
-
-    for (i = this->snps.begin(); i != this->snps.end(); i++)
-	columns[(*i)->col] = make_pair("sample", *i);
-
-    //
-    // Is this column already represented from the previous sample?
-    //
-    if (columns.count(snp->col)) {
-        //
-        // Check to make sure we aren't combining inconsistent SNPS.
-        //
-        if (columns[snp->col].second->rank_1 != snp->rank_1 &&
-            columns[snp->col].second->rank_1 != snp->rank_2)
-            cerr << "  Warning: inconsistent merging of SNPs for catalog ID " << this->id << "\n";
-        else
-            columns[snp->col] = make_pair("both", snp);
-    }
-    else
-        columns[snp->col] = make_pair("merge", snp);
-
-    for (c = columns.begin(); c != columns.end(); c++) 
-	merged_snps.push_back((*c).second);
-
-    //
-    // Sort the SNPs by column
-    //
-    sort(merged_snps.begin(), merged_snps.end(), compare_pair);
-
-    //
-    // Modify any existing alleles to account for this new SNP. If there are not any alleles, 
-    // create new ones.
-    //
-    stringstream sallele;
-    string allele, new_allele;
-    int pos;
-
-    if (this->alleles.size() == 0) {
-        sallele << snp->rank_1;
-        merged_alleles.insert(sallele.str());
-        sallele.str("");
-        sallele << snp->rank_2;
-        merged_alleles.insert(sallele.str());
-    }
-
-    for (j = this->alleles.begin(); j != this->alleles.end(); j++) {
-	allele     = j->first;
-	new_allele = "";
-	pos        = 0;
-
-	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
-	    //
-	    // If we inserted a SNP from the sample, add the proper nucleotide from the consensus
-	    // sequence to account for it in the allele string.
-	    //
-	    if ((*k).first == "merge") {
-		new_allele += this->con[(*k).second->col];
-	    } else {
-		new_allele += allele[pos];
-		pos++;
-	    }
-	}
-
-	merged_alleles.insert(new_allele);
-    }
-
-    //
-    // Update the catalog entry's list of SNPs and alleles
-    //
-    this->snps.clear();
-
-    for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
-	SNP *newsnp = new SNP;
-	newsnp->col    = k->second->col;
-	newsnp->lratio = k->second->lratio;
-	newsnp->rank_1 = k->second->rank_1;
-	newsnp->rank_2 = k->second->rank_2;
-
-	this->snps.push_back(newsnp);
-    }
-
-    for (k = merged_snps.begin(); k != merged_snps.end(); k++)
-        delete k->second;
-    
-    this->alleles.clear();
-    for (s = merged_alleles.begin(); s != merged_alleles.end(); s++) {
-	this->alleles[*s] = 0;
-    }
-
-    return 1;
-}
-
-bool compare_pair(pair<string, SNP *> a, pair<string, SNP *> b) {
-    return (a.second->col < b.second->col);
 }
 
 int populate_kmer_hash(map<int, CLocus *> &catalog, CatKmerHashMap &kmer_map, int kmer_len) {
@@ -937,13 +920,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "cstacks " << VERSION << "\n\n";
+    std::cerr << "cstacks " << stacks_version << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "cstacks " << VERSION << "\n"
+    std::cerr << "cstacks " << stacks_version << "\n"
               << "cstacks -b batch_id -s sample_file -S id [-s sample_file_2 -S id_2 ...] [-o path] [-p num_threads] [-n num] [-g] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  b: MySQL ID of this batch." << "\n"

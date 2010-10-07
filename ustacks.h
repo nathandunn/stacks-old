@@ -3,8 +3,6 @@
 #ifndef __USTACKS_H__
 #define __USTACKS_H__
 
-#define VERSION 0.90
-
 #include <omp.h>    // OpenMP library
 #include <getopt.h> // Process command-line options
 #include <math.h>

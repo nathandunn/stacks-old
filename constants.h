@@ -4,6 +4,11 @@
 #define __CONSTANTS_H__
 
 //
+// Stacks version number
+//
+const double stacks_version = 0.90;
+
+//
 // Maximum line length for parsing input files.
 //
 const int max_len = 512;

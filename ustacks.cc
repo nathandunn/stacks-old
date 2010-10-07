@@ -1508,6 +1508,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"exp_cov",     no_argument,       NULL, 'E'},
 	    {"cov_stdev",   no_argument,       NULL, 's'},
 	    {"cov_scale",   no_argument,       NULL, 'S'},
+	    {"model_type",  required_argument, NULL, 'M'},
 	    {"bc_err_freq", required_argument, NULL, 'e'},
 	    {0, 0, 0, 0}
 	};
@@ -1515,7 +1516,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvdrgf:o:i:b:m:e:E:s:S:p:t:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvdrgf:o:i:b:m:e:E:s:S:p:t:M:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1572,6 +1573,15 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'S':
 	    cov_scale = atof(optarg);
 	    break;
+     	case 'M':
+            if (strcmp(optarg, "snp") == 0) {
+                model_type = snp;
+            } else if (strcmp(optarg, "fixed") == 0) {
+                model_type = fixed;
+            } else {
+                cerr << "Unknown model type specified '" << optarg << "'\n";
+                help();
+            }
 	case 'e':
 	    barcode_err_freq = atof(optarg);
 	    break;
@@ -1613,13 +1623,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "ustacks " << VERSION << "\n\n";
+    std::cerr << "ustacks " << stacks_version << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "ustacks " << VERSION << "\n"
+    std::cerr << "ustacks " << stacks_version << "\n"
               << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-b batch_id] [-e errfreq] [-m min_cov] [-p num_threads] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  t: input file Type. Supported types: fasta, fastq, bowtie, sam, tsv.\n"
