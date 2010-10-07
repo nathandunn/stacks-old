@@ -28,7 +28,6 @@ int main (int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
 
     map<int, CLocus *> catalog;
-    map<int, QLocus *> sample;
     map<int, CLocus *>::iterator cat_it;
 
     pair<int, string> s = samples.front();
@@ -42,6 +41,8 @@ int main (int argc, char* argv[]) {
 
     int i = 2;
     while (!samples.empty()) {
+        map<int, QLocus *> sample;
+
 	cerr << "Processing sample " << i << "\n";
 
 	s = samples.front();
@@ -119,6 +120,14 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
 
             merge_allele(catalog_tag, s);
             merge_allele(query_tag, s);
+
+            catalog_tag->snps.push_back(s);
+
+            s = new SNP;
+            s->col    =  c - beg;
+            s->lratio = 0;
+            s->rank_1 = *q;
+            s->rank_2 = *c;
 
             query_tag->snps.push_back(s);
         }
@@ -575,6 +584,8 @@ int merge_allele(Locus *locus, SNP *snp) {
 	new_allele = "";
 	pos        = 0;
 
+        //cerr << "Allele length: " << allele.size() << "\n";
+
 	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
 	    //
 	    // If we inserted a SNP from the sample, add the proper nucleotide from the consensus
@@ -582,8 +593,10 @@ int merge_allele(Locus *locus, SNP *snp) {
 	    //
 	    if ((*k).first == "merge") {
 		new_allele += locus->con[(*k).second->col];
+                //cerr << "  Adding char from consensus position " << (*k).second->col << "\n";
 	    } else {
 		new_allele += allele[pos];
+                //cerr << "  Adding char from allele position " << pos << "\n";
 		pos++;
 	    }
 	}
@@ -693,6 +706,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     // Update the catalog entry's list of SNPs and alleles
     //
     this->snps.clear();
+
     for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
 	SNP *snp    = new SNP;
 	snp->col    = (*k).second->col;

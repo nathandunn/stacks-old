@@ -6,19 +6,20 @@
 use strict;
 use Bio::SeqIO;
 
-my $debug      = 0;
-my $sql        = 1;
-my $exe_path   = $ENV{'HOME'} . "/research/solexa/radtags/bin";
-my $out_path   = "";
-my $white_list = "";
-my $db         = "";
-my $rep_tags   = 0;
-my $min_cov    = 0;
-my $cov_scale  = 0;
-my $batch_id   = 0;
-my $sample_id  = 1;
-my $desc       = ""; #"Lepisosteus oculatus RAD-Tag Samples";
-my $date       = ""; #"2009-05-31";
+my $debug       = 0;
+my $sql         = 1;
+my $exe_path    = $ENV{'HOME'} . "/research/solexa/radtags/bin";
+my $out_path    = "";
+my $white_list  = "";
+my $db          = "";
+my $rep_tags    = 0;
+my $min_cov     = 0;
+my $fuzzy_match = 0;
+my $cov_scale   = 0;
+my $batch_id    = 0;
+my $sample_id   = 1;
+my $desc        = ""; #"Lepisosteus oculatus RAD-Tag Samples";
+my $date        = ""; #"2009-05-31";
 
 my @parents;
 my @progeny;
@@ -51,7 +52,7 @@ my (@results, $minc, $rrep, $cmd, $cscale, $threads, $fuzzym);
 $minc    = $min_cov   > 0 ? "-m $min_cov"   : "";
 $cscale  = $cov_scale > 0 ? "-S $cov_scale" : "";
 $threads = "-p 15"; 
-$fuzzym  = "-n 3";
+$fuzzym  = "-n $fuzzy_match";
 
 #
 # Open the log file
@@ -193,15 +194,16 @@ sub parse_command_line {
 	if    ($_ =~ /^-p$/) { push(@parents, shift @ARGV); }
 	elsif ($_ =~ /^-r$/) { push(@progeny, shift @ARGV); }
        	elsif ($_ =~ /^-t$/) { $rep_tags++; }
-	elsif ($_ =~ /^-o$/) { $out_path  = shift @ARGV; }
-	elsif ($_ =~ /^-m$/) { $min_cov   = shift @ARGV; }
-	elsif ($_ =~ /^-c$/) { $cov_scale = shift @ARGV; }
-	elsif ($_ =~ /^-D$/) { $desc      = shift @ARGV; }
-	elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
-	elsif ($_ =~ /^-s$/) { $sample_id = shift @ARGV; }
-	elsif ($_ =~ /^-a$/) { $date      = shift @ARGV; }
-	elsif ($_ =~ /^-S$/) { $sql       = 0; }
-	elsif ($_ =~ /^-B$/) { $db        = shift @ARGV; }
+	elsif ($_ =~ /^-o$/) { $out_path    = shift @ARGV; }
+	elsif ($_ =~ /^-m$/) { $min_cov     = shift @ARGV; }
+        elsif ($_ =~ /^-n$/) { $fuzzy_match = shift @ARGV; }
+	elsif ($_ =~ /^-c$/) { $cov_scale   = shift @ARGV; }
+	elsif ($_ =~ /^-D$/) { $desc        = shift @ARGV; }
+	elsif ($_ =~ /^-b$/) { $batch_id    = shift @ARGV; }
+	elsif ($_ =~ /^-s$/) { $sample_id   = shift @ARGV; }
+	elsif ($_ =~ /^-a$/) { $date        = shift @ARGV; }
+	elsif ($_ =~ /^-S$/) { $sql         = 0; }
+	elsif ($_ =~ /^-B$/) { $db          = shift @ARGV; }
 	elsif ($_ =~ /^-d$/) { $debug++; }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
@@ -220,7 +222,7 @@ sub parse_command_line {
 
 sub usage {
     print STDERR <<EOQ; 
-pp-radtags.pl -p path -r path -o path [-t] [-m min_cov] [-c scale] [-D desc] [-b batch_id] [-s num] [-a yyyy-mm-dd] [-S] [-d] [-h]
+denovo_map.pl -p path -r path -o path [-t] [-m min_cov] [-n mismatches] [-c scale] [-D desc] [-b batch_id] [-s num] [-a yyyy-mm-dd] [-S] [-d] [-h]
     p: path to a FASTQ file containing parent sequences.
     r: path to a FASTQ file containing progeny sequences.
     o: path to output the cleaned files.
@@ -230,6 +232,7 @@ pp-radtags.pl -p path -r path -o path [-t] [-m min_cov] [-c scale] [-D desc] [-b
     D: batch description
     a: batch run date, yyyy-mm-dd
     m: specify a minimum depth of coverage to merge stacks.
+    n: specify the number of mismatches allowed between loci when building the catalog.
     c: coverage scaling factor affecting when tags are deleveraged or removed (between 0 and 1).
     t: remove, or break up, highly repetitive RAD-Tags.
     B: specify a database to load data into.

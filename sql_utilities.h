@@ -145,6 +145,8 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". SNP asks for nonexistent locus with ID: " << id << "\n";
             return 0;
         }
+
+        line_num++;
     }
 
     fh.close();
@@ -187,6 +189,8 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". SNP asks for nonexistent locus with ID: " << id << "\n";
             return 0;
         }
+
+        line_num++;
     }
 
     //
