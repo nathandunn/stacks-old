@@ -119,9 +119,13 @@ class Locus {
     vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
 
     Locus()  { id = 0; sample_id = 0; depth = 0; con = NULL; loc.bp = 0; loc.chr[0] = '\0'; }
-    ~Locus() { delete [] con; }
+    virtual ~Locus() { 
+        delete [] con; 
+        for (uint i = 0; i < snps.size(); i++)
+            delete snps[i];
+    }
     int add_consensus(const char *);
-    int populate_alleles();
+    virtual int populate_alleles();
 };
 
 #endif // __STACKS_H__

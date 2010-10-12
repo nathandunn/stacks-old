@@ -296,7 +296,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
-    int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len);
+    int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len, true);
 
     populate_kmer_hash(catalog, kmer_map, kmer_len);
 
@@ -731,8 +731,11 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 int populate_kmer_hash(map<int, CLocus *> &catalog, CatKmerHashMap &kmer_map, int kmer_len) {
     map<int, CLocus *>::iterator it;
     vector<pair<allele_type, string> >::iterator allele;
-    CLocus *tag;
-    int j;
+    vector<char *> kmers;
+    CLocus        *tag;
+    char          *hash_key;
+    bool           exists;
+    int            j;
 
     //
     // Break each stack down into k-mers and create a hash map of those k-mers
@@ -747,14 +750,28 @@ int populate_kmer_hash(map<int, CLocus *> &catalog, CatKmerHashMap &kmer_map, in
         // Iterate through the possible Catalog alleles
         //
         for (allele = tag->strings.begin(); allele != tag->strings.end(); allele++) {
-            vector<char *> kmers;
-
+            //
+            // Generate and hash the kmers for this allele string
+            //
             generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
-            // Hash the kmers
-            // Huge memory LEAK. Fix this.
+            for (j = 0; j < num_kmers; j++) {
+
+                exists = kmer_map.count(kmers[j]) == 0 ? false : true;
+
+                if (exists) {
+                    hash_key = kmers[j];
+                } else {
+                    hash_key = new char [strlen(kmers[j]) + 1];
+                    strcpy(hash_key, kmers[j]);
+                }
+
+                kmer_map[hash_key].push_back(make_pair(allele->first, tag->id));
+            }
+
             for (j = 0; j < num_kmers; j++)
-                kmer_map[kmers[j]].push_back(make_pair(allele->first, tag->id));
+                delete [] kmers[j];
+            kmers.clear();
         }
     }
 

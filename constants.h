@@ -11,7 +11,7 @@ const double stacks_version = 0.90;
 //
 // Maximum line length for parsing input files.
 //
-const int max_len = 1024;
+const int max_len = 2048;
 
 //
 // Maximum length of idetifiers, such as sequence IDs and chromosome names.

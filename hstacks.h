@@ -17,6 +17,7 @@ using std::string;
 #include <iostream>
 #include <fstream>
 #include <sstream>
+using std::ofstream;
 using std::stringstream;
 using std::cin;
 using std::cout;
@@ -42,6 +43,8 @@ using __gnu_cxx::hash;
 
 #include "constants.h"
 #include "stacks.h"
+#include "kmers.h"
+#include "models.h"
 #include "sql_utilities.h"
 
 typedef struct match {
@@ -60,6 +63,7 @@ class HLocus : public Locus {
     HLocus(): Locus() {}
     ~HLocus();
 
+    int populate_alleles();
     int add_match(int, int);
 };
 
@@ -70,66 +74,26 @@ HLocus::~HLocus() {
         delete *it;
 }
 
-int HLocus::add_match(int id, int distance) {
-    Match *m = new Match;
-
-    m->id   = id;
-    m->dist = distance;
-
-    this->matches.push_back(m);
-
-    return 0;
-}
-
-class MergedTag {
- public:
-    int   id;     // Identifier for the merged tag. 
-    char *con;    // Consensus sequence
-    int   count;  // Number of merged unique tags (UTags)
-    vector<int>      utags;       // Other UTags that have been merged into this unique tag
-    vector<pair<int, int> > dist; // Vector describing the distance between this radtag and other radtags.
-    vector<int>      remtags;     // Remainder tags that have been merged into this unique tag
-    vector<SNP *>    snps;        // Single Nucleotide Polymorphisms found in this Radtag
-    vector<string>   alleles;
-    bool             deleveraged;
-    string           sample_id;
-
-    MergedTag()  { id = 0; count = 0; con = NULL; deleveraged = false; }
-    ~MergedTag() { delete [] con; }
-    int add_consensus(const char *);
-    int add_dist(const int id, const int dist);
-};
-
-int MergedTag::add_consensus(const char *seq) {
-    if (this->con != NULL)
-	delete [] this->con;
-
-    this->con = new char[strlen(seq) + 1];
-    strcpy(this->con, seq);
-
-    return 0;
-}
-
-int MergedTag::add_dist(const int id, const int dist) {
-    //
-    // Store the ID and distance as a pair, ID in the first position,
-    // dist in the second.
-    //
-    pair<int, int> p(id, dist);
-    this->dist.push_back(p);
-
-    return 0;
-}
-
+//
+// A  map holding k-mer permutation strings. For use when generating fuzzy k-mers.
+//
+map<int, char **> pstrings;
 
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
 int  build_file_list(string, vector<string> &);
+int  calc_kmer_distance(map<int, HLocus *> &, int);
 int  calc_distance(map<int, HLocus *> &, int);
 int  dist(HLocus *, HLocus *);
-bool compare_dist(Match *, Match *);
 int  write_homologous_loci(map<int, HLocus *> &);
 int  trace_stack_graph(HLocus *, map<int, HLocus *> &, set<int> &);
+int  call_consensus(map<int, HLocus *> &, set<int> &, string &, vector<SNP *> &, vector<string> &);
+int  call_alleles(vector<char *> &, vector<SNP *> &, vector<string> &);
+
+int  populate_kmer_hash(map<int, HLocus *> &, CatKmerHashMap &, int);
+
+bool compare_mdist(Match *, Match *);
+bool compare_pair(pair<char, int>, pair<char, int>);
 
 #endif // __HSTACKS_H__

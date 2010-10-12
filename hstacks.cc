@@ -21,6 +21,7 @@ string out_path;
 int    batch_id        = 0;
 int    num_threads     = 1;
 int    stack_depth_min = 1;
+int    stack_dist      = 0;
 
 int main (int argc, char* argv[]) {
 
@@ -62,12 +63,201 @@ int main (int argc, char* argv[]) {
     //
     // Calculate distance between tags in different samples.
     //
-    calc_distance(samples, 1);
+    cerr << "Calculating distance between stacks...\n";
+
+    calc_kmer_distance(samples, stack_dist);
 
     //
     // Write out tags matched between samples.
     //
     write_homologous_loci(samples);
+
+    return 0;
+}
+
+int calc_kmer_distance(map<int, HLocus *> &loci, int stack_dist) {
+    //
+    // Calculate the distance (number of mismatches) between each pair
+    // of Radtags. We expect all radtags to be the same length;
+    //
+    CatKmerHashMap kmer_map;
+
+    map<int, HLocus *>::iterator it;
+    vector<pair<allele_type, string> >::iterator allele;
+    HLocus *tag_1, *tag_2;
+    int i, j;
+
+    //
+    // Calculate the number of k-mers we will generate. If kmer_len == 0,
+    // determine the optimal length for k-mers.
+    //
+    int con_len   = strlen(loci.begin()->second->con);
+    int kmer_len  = determine_kmer_length(con_len, stack_dist);
+    int num_kmers = con_len - kmer_len + 1;
+
+    //
+    // Calculate the minimum number of matching k-mers required for a possible sequence match.
+    //
+    int min_hits = calc_min_kmer_matches(kmer_len, stack_dist, con_len, false);
+
+    //
+    // If more mismatches are allowed than can be handled by the k-mer algorithm, revert
+    // to the simple, slow matching algorithm.
+    //
+    if (min_hits <= 0) {
+        cerr << "  Unable to use k-mer matching due to the number of allowed mismatches. Switching to slower algorithm...\n";
+        calc_distance(loci, stack_dist);
+        return 0;
+    }
+
+    cerr << "  Number of kmers per sequence: " << num_kmers << "\n";
+
+    populate_kmer_hash(loci, kmer_map, kmer_len);
+
+    cerr << "  " << loci.size() << " loci, " << kmer_map.size() << " elements in the kmer hash.\n";
+
+    //
+    // OpenMP can't parallelize random access iterators, so we convert
+    // our map to a vector of integer keys.
+    //
+    vector<int> keys;
+    for (it = loci.begin(); it != loci.end(); it++) 
+	keys.push_back(it->first);
+
+    #pragma omp parallel private(i, j, tag_1, tag_2, allele)
+    { 
+        #pragma omp for schedule(dynamic) 
+        for (i = 0; i < (int) keys.size(); i++) {
+            tag_1 = loci[keys[i]];
+
+            for (allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
+
+                vector<char *> kmers;
+                generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
+
+                map<int, vector<allele_type> > hits;
+                vector<pair<allele_type, int> >::iterator map_it;
+                int d;
+                //
+                // Lookup the occurances of each k-mer in the kmer_map
+                //
+                for (j = 0; j < num_kmers; j++) {
+
+                    if (kmer_map.count(kmers[j]) > 0)
+                        for (map_it  = kmer_map[kmers[j]].begin();
+                             map_it != kmer_map[kmers[j]].end();
+                             map_it++)
+                            hits[map_it->second].push_back(map_it->first);
+                }
+
+                //
+                // Free the allocated k-mers.
+                //
+                for (j = 0; j < num_kmers; j++)
+                    delete [] kmers[j];
+                kmers.clear();
+
+                //cerr << "  Tag " << tag_1->id << " hit " << hits.size() << " kmers.\n";
+
+                map<int, vector<allele_type> >::iterator hit_it;
+                vector<allele_type>::iterator            all_it;
+
+                //
+                // Iterate through the list of hits. For each hit, total up the hits to the various alleles.
+                // Any allele that has more than min_hits check its full length to verify a match.
+                //
+                for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
+                    //cerr << "  Tag " << hit_it->first << " has " << hit_it->second << " hits (min hits: " << min_hits << ")\n";
+
+                    map<allele_type, int>           allele_cnts;
+                    map<allele_type, int>::iterator cnt_it;
+
+                    for (all_it = hit_it->second.begin(); all_it != hit_it->second.end(); all_it++)
+                        allele_cnts[*all_it]++;
+
+                    for (cnt_it = allele_cnts.begin(); cnt_it != allele_cnts.end(); cnt_it++) {
+                        //cerr << "      allele " << cnt_it->first << " has " << cnt_it->second << " hits\n"; 
+
+                        if (cnt_it->second < min_hits) continue;
+
+                        //cerr << "  Match found, checking full-length match\n";
+
+                        tag_2 = loci[hit_it->first];
+
+                        d = dist(allele->second.c_str(), tag_2, cnt_it->first);
+
+                        if (d < 0)
+                            cerr << 
+                                "Unknown error calculating distance between " << 
+                                tag_1->id << " and " << tag_2->id << "; query allele: " << allele->first << "\n";
+
+                        //cerr << "    Distance: " << d << " CTAG_DIST: " << ctag_dist << "\n";
+
+                        //
+                        // Add a match to the query sequence: catalog ID, catalog allele, query allele, distance
+                        //
+                        if (d <= stack_dist)
+                            tag_1->add_match(tag_2->uniq_id, d);
+                    }
+                }
+            }
+
+            // Sort the vector of distances.
+            sort(tag_1->matches.begin(), tag_1->matches.end(), compare_mdist);
+        }
+    }
+
+    return 0;
+}
+
+int populate_kmer_hash(map<int, HLocus *> &loci, CatKmerHashMap &kmer_map, int kmer_len) {
+    map<int, HLocus *>::iterator it;
+    vector<pair<allele_type, string> >::iterator allele;
+    vector<char *> kmers;
+    HLocus *tag;
+    char   *hash_key;
+    bool    exists;
+    int     j;
+
+    //
+    // Break each stack down into k-mers and create a hash map of those k-mers
+    // recording in which sequences they occur.
+    //
+    int num_kmers = strlen(loci.begin()->second->con) - kmer_len + 1;
+
+    for (it = loci.begin(); it != loci.end(); it++) {
+        tag = it->second;
+
+        //
+        // Iterate through the possible Loci alleles
+        //
+        for (allele = tag->strings.begin(); allele != tag->strings.end(); allele++) {
+            //
+            // Generate and Hash the kmers for this allele string
+            //
+            generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
+
+            for (j = 0; j < num_kmers; j++) {
+
+                exists = kmer_map.count(kmers[j]) == 0 ? false : true;
+
+                if (exists) {
+                    hash_key = kmers[j];
+                } else {
+                    hash_key = new char [strlen(kmers[j]) + 1];
+                    strcpy(hash_key, kmers[j]);
+                }
+
+                kmer_map[hash_key].push_back(make_pair(allele->first, tag->uniq_id));
+            }
+
+            for (j = 0; j < num_kmers; j++)
+                delete [] kmers[j];
+            kmers.clear();
+        }
+    }
+
+    //dump_kmer_map(kmer_map);
 
     return 0;
 }
@@ -121,7 +311,7 @@ int calc_distance(map<int, HLocus *> &loci, int utag_dist) {
 	    }
 
 	    // Sort the vector of distances.
-	    sort(tag_1->matches.begin(), tag_1->matches.end(), compare_dist);
+	    sort(tag_1->matches.begin(), tag_1->matches.end(), compare_mdist);
 	}
     }
 
@@ -146,8 +336,127 @@ int dist(HLocus *tag_1, HLocus *tag_2) {
     return dist;
 }
 
-bool compare_dist(Match *a, Match *b) {
+bool compare_mdist(Match *a, Match *b) {
     return (a->dist < b->dist);
+}
+
+int call_consensus(map<int, HLocus *> &loci, set<int> &merge_list, 
+                   string &consensus, vector<SNP *> &snps, vector<string> &alleles) {
+    //
+    // Create a two-dimensional array, each row containing one read. For
+    // each unique tag that has been merged together, add the sequence for
+    // that tag into our array as many times as it originally occurred. 
+    //
+    HLocus *tag;
+    set<int>::iterator j;
+    vector<char *> reads;
+
+    for (j = merge_list.begin(); j != merge_list.end(); j++) {
+        tag = loci[*j];
+
+        reads.push_back(tag->con);
+    }
+
+    //
+    // Iterate over each column of the array and call the consensus base.
+    //
+    int row, col;
+    int length = strlen(reads[0]);
+    int height = reads.size();
+
+    char *base;
+
+    for (col = 0; col < length; col++) {
+        vector<pair<char, int> > nuc;
+        nuc.push_back(make_pair('A', 0));
+        nuc.push_back(make_pair('C', 0));
+        nuc.push_back(make_pair('G', 0));
+        nuc.push_back(make_pair('T', 0));
+
+        for (row = 0; row < height; row++) {
+            base = reads[row];
+            base = base + col;
+            //cerr << "    Row: " << row << " Col: " << col << " Base: " << *base << "\n";
+
+            switch(*base) {
+            case 'A':
+                nuc[0].second++;
+                break;
+            case 'C':
+                nuc[1].second++;
+                break;
+            case 'G':
+                nuc[2].second++;
+                break;
+            case 'T':
+                nuc[3].second++;
+                break;
+            default:
+                break;
+            }
+        }
+
+        //cerr << "A: " << nuc[0].second << " C: " << nuc[1].second << " G: " << nuc[2].second << " T: " << nuc[3].second << "\n";
+
+        //
+        // Find the base with a plurality of occurances and call it.
+        //
+        sort(nuc.begin(), nuc.end(), compare_pair);
+
+        consensus += nuc[0].second > 0 ? nuc[0].first : 'N';
+
+        //
+        // If the nucleotides are not fixed record a SNP.
+        //
+        if (nuc[0].second > 0 && nuc[1].second > 0) {
+            SNP *s = new SNP;
+            s->col    = col;
+            s->lratio = 0;
+            s->rank_1 = nuc[0].first;
+            s->rank_2 = nuc[1].first;
+
+            snps.push_back(s);
+        }
+    }
+
+    if (!call_alleles(reads, snps, alleles)) {
+        cerr << "Error calling alleles.\n";
+        exit(0);
+    }
+
+    return 0;
+}
+
+bool compare_pair(pair<char, int> a, pair<char, int> b) {
+    return (a.second > b.second);
+}
+
+int call_alleles(vector<char *> &reads, vector<SNP *> &snps, vector<string> &alleles) {
+    int     row;
+    int     height = reads.size();
+    string  allele;
+    char   *base;
+    vector<SNP *>::iterator snp;
+
+    if (snps.size() == 0)
+	return 1;
+
+    for (row = 0; row < height; row++) {
+	allele.clear();
+
+	for (snp = snps.begin(); snp != snps.end(); snp++) {
+	    base    = reads[row];
+	    base    = base + (*snp)->col;    
+            allele += *base;
+	}
+
+	if (allele.size() == snps.size())
+	    alleles.push_back(allele);
+        else
+            return 0;
+    }
+
+    return 1;
 }
 
 int write_homologous_loci(map<int, HLocus *> &samples) {
@@ -161,16 +470,23 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
     //
     // Parse the input file name to create the output files
     //
-    stringstream prefix; 
+    stringstream prefix;
+    string out_file;
     prefix << out_path << "batch_" << batch_id;
 
-    string tag_file = prefix.str() + ".homologous.tags.tsv";
-    string nuc_file = prefix.str() + ".homologous.nucs.tsv";
-
     // Open the output files for writing.
-    std::ofstream tags(tag_file.c_str());
-    std::ofstream nucs(nuc_file.c_str());
-    int id = 0;
+    out_file = prefix.str() + ".homologous.nucs.tsv";
+    ofstream nuc_file(out_file.c_str());
+    out_file = prefix.str() + ".homologous.snps.tsv";
+    ofstream snp_file(out_file.c_str());
+    out_file = prefix.str() + ".homologous.alleles.tsv";
+    ofstream all_file(out_file.c_str());
+    out_file = prefix.str() + ".homologous.matches.tsv";
+    ofstream mat_file(out_file.c_str());
+    out_file = prefix.str() + ".homologous.tags.tsv";
+    ofstream tag_file(out_file.c_str());
+
+    int id = 1;
 
     for (i = samples.begin(); i != samples.end(); i++) {
 	tag_1 = i->second;
@@ -186,6 +502,57 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
 
 	trace_stack_graph(tag_1, samples, unique_merge_list);
 
+        //
+        // Call the consensus for this locus and identify SNPs and associated alleles.
+        //
+        string       consensus;
+        vector<SNP *>     snps; 
+        vector<string> alleles;
+
+        call_consensus(samples, unique_merge_list, consensus, snps, alleles);
+
+        //
+        // Output the consensus tag for a locus in this sample.
+        //
+        tag_file <<
+            "0"              << "\t" << 
+            batch_id         << "\t" <<
+            id               << "\t" <<
+            tag_1->loc.chr   << "\t" <<
+            tag_1->loc.bp    << "\t" <<
+            "consensus"      << "\t" <<
+            0                << "\t" <<
+            ""               << "\t" <<
+            consensus        << "\t" << 
+            0                << "\t" <<  // These flags are unused in hstacks, but important in ustacks
+            0                << "\t" <<
+            0                << "\n";
+
+        //
+        // Output the SNPs and alleles
+        //
+        vector<SNP *>::iterator  s; 
+        vector<string>::iterator a;
+	for (s = snps.begin(); s != snps.end(); s++)
+            snp_file << 
+                "0"          << "\t" <<
+                batch_id     << "\t" <<
+                id           << "\t" << 
+                (*s)->col    << "\t" << 
+                (*s)->lratio << "\t" << 
+                (*s)->rank_1 << "\t" << 
+                (*s)->rank_2 << "\n";
+
+	for (a = alleles.begin(); a != alleles.end(); a++)
+            all_file << 
+                "0"        << "\t" <<
+                batch_id   << "\t" <<
+                id         << "\t" << 
+                *a         << "\t" <<
+                0          << "\t" <<
+                0          << "\n";
+
+        int sub_id = 0;
 	for (it = unique_merge_list.begin(); it != unique_merge_list.end(); it++) {
 	    tag_2 = samples[(*it)];
 
@@ -201,39 +568,58 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
                 char *p, *end;
                 end = tag_2->con + strlen(tag_2->con);
                 for (p = tag_2->con; p < end; p++)
-                    nucs 
+                    nuc_file 
                         << tag_2->sample_id << "_" << tag_2->id << "\t" 
                         << *p << "\t" 
                         << tag_2->depth << "\n";
             }
 
             //
-            // Output the consensus tag for this population.
+            // Output the consensus sequenes for all homologous loci.
             //
-	    tags 
-		<< "0" << "\t" 
-		<< batch_id << "\t" 
-		<< id << "\t" 
-		<< tag_2->uniq_id << "\t" 
-		<< tag_2->sample_id << "_" <<  tag_2->id << "\t" 
-		<< tag_2->con << "\n";
+	    tag_file <<
+                "0"              << "\t" << 
+                batch_id         << "\t" <<
+                id               << "\t" <<
+                tag_2->loc.chr   << "\t" <<
+                tag_2->loc.bp    << "\t" <<
+                "primary"        << "\t" <<
+                sub_id           << "\t" <<
+		tag_2->sample_id << "_"  <<  tag_2->id << "\t" <<
+                tag_2->con       << "\t" << 
+                ""               << "\t" <<  // These flags are unused in hstacks, but important in ustacks
+                ""               << "\t" <<
+                ""               << "\n";
+
+            mat_file <<
+		"0"              << "\t" <<
+		batch_id         << "\t" <<
+		id               << "\t" <<
+		tag_2->sample_id << "\t" <<
+		tag_2->uniq_id   << "\t" << 
+		"consensus"      << "\n";
+
+            sub_id++;
 	}
 
 	id++;
     }
 
-    tags.close();
-    nucs.close();
+    tag_file.close();
+    nuc_file.close();
+    snp_file.close();
+    all_file.close();
+    mat_file.close();
 
-    cerr << "  Wrote " << id - 1 << " tags to " << tag_file << "\n";
+    cerr << "  Wrote " << id - 1 << " tags to " << out_file << "\n";
 
     return 0;
 }
 
 int trace_stack_graph(HLocus *tag_1, map<int, HLocus *> &loci, set<int> &unique_merge_list) {
-    queue<int>                        merge_list;
-    pair<set<int>::iterator,bool>     ret;
-    vector<Match *>::iterator k;
+    queue<int>                    merge_list;
+    pair<set<int>::iterator,bool> ret;
+    vector<Match *>::iterator     k;
     HLocus *tag_2;
 
     unique_merge_list.insert(tag_1->uniq_id);
@@ -262,7 +648,6 @@ int trace_stack_graph(HLocus *tag_1, map<int, HLocus *> &loci, set<int> &unique_
 int build_file_list(string in_path, vector<string> &sql_files) {
     struct dirent *dirp;
     string d;
-    size_t found;
 
     DIR *dp = opendir(in_path.c_str());
 
@@ -273,9 +658,9 @@ int build_file_list(string in_path, vector<string> &sql_files) {
 
     while ((dirp = readdir(dp)) != NULL) {
 	d     = string(dirp->d_name);
-	found = d.find("tags.tsv");
 
-	if (found != string::npos) {
+	if (d.find("tags.tsv") != string::npos &&
+            d.find("batch") == string::npos) {
             size_t pos = d.find(".tags.tsv");            
             d = in_path + d.substr(0, pos); 
 	    sql_files.push_back(d);
@@ -289,6 +674,93 @@ int build_file_list(string in_path, vector<string> &sql_files) {
     return 0;
 }
 
+int HLocus::add_match(int id, int distance) {
+    Match *m = new Match;
+    m->id    = id;
+    m->dist  = distance;
+
+    this->matches.push_back(m);
+
+    return 0;
+}
+
+int HLocus::populate_alleles() {
+
+    this->strings.clear();
+
+    string s;
+    int    j;
+    vector<SNP *>::iterator    s_it;
+    map<string, int>::iterator a;
+
+    if (this->strings.size() == 0)
+        this->strings.push_back(make_pair("consensus", this->con));
+
+    else
+        for (a = this->alleles.begin(); a != this->alleles.end(); a++) {
+            s = this->con;
+            j = 0;
+
+            for (s_it = this->snps.begin(); s_it != this->snps.end(); s_it++) {
+                s.replace((*s_it)->col, 1, 1, a->first[j]);
+                j++;
+            }
+
+            this->strings.push_back(make_pair(a->first, s));
+        }
+
+    //
+    // Count the number of N's
+    //
+    vector<int> col;
+    char *p     = this->con;
+    int   i     = 0;
+    while (*p != '\0') {
+        if (*p == 'N') 
+            col.push_back(i);
+        i++;
+        p++;
+    }
+
+    int n_cnt = col.size();
+
+    if (n_cnt == 0) return 0;
+
+    //
+    // Generate all permutations of strings for n_cnt N's
+    //
+    if (pstrings.count(n_cnt) == 0)
+        generate_permutations(pstrings, n_cnt);
+
+    vector<pair<allele_type, string> > new_strings;
+    vector<pair<allele_type, string> >::iterator k;
+    vector<int>::iterator c;
+    char **q;
+    int    n = (int) pow(4, n_cnt);
+
+    for (k = this->strings.begin(); k != this->strings.end(); k++) {
+
+        for (i = 0; i < n; i++) {
+            q = pstrings[n_cnt] + i;
+
+            s = k->second;
+            j = 0;
+            for (c = col.begin(); c != col.end(); c++) {
+                s.replace(*c, 1, q[j]);
+                j++;
+            }
+
+            new_strings.push_back(make_pair(k->first, s));
+        }
+    }
+
+    this->strings.clear();
+    for (k = new_strings.begin(); k != new_strings.end(); k++)
+        this->strings.push_back(*k);
+
+    return 0;
+}
+
 int parse_command_line(int argc, char* argv[]) {
     int c;
      
@@ -296,6 +768,7 @@ int parse_command_line(int argc, char* argv[]) {
 	static struct option long_options[] = {
 	    {"help",        no_argument,       NULL, 'h'},
             {"version",     no_argument,       NULL, 'v'},
+	    {"stack_dist",  required_argument, NULL, 'n'},
 	    {"inpath",      required_argument, NULL, 'p'},
 	    {"outpath",     required_argument, NULL, 'o'},
 	    {"batch_id",    required_argument, NULL, 'b'},
@@ -305,7 +778,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvi:p:o:b:e:m:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvi:p:o:b:e:m:n:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -329,6 +802,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'm':
 	    stack_depth_min = atoi(optarg);
+	    break;
+	case 'n':
+	    stack_dist = atoi(optarg);
 	    break;
 	case 'p':
 	    num_threads = atoi(optarg);

@@ -129,7 +129,7 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Seq *> &rem) {
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
-    int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len);
+    int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, true);
 
     KmerHashMap kmer_map;
     populate_kmer_hash(merged, kmer_map, kmer_len);
@@ -832,7 +832,7 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
-    int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len);
+    int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len, true);
 
     populate_kmer_hash(merged, kmer_map, kmer_len);
  
