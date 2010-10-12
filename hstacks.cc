@@ -22,6 +22,7 @@ int    batch_id        = 0;
 int    num_threads     = 1;
 int    stack_depth_min = 1;
 int    stack_dist      = 0;
+int    n_limit         = 4;
 
 int main (int argc, char* argv[]) {
 
@@ -727,6 +728,15 @@ int HLocus::populate_alleles() {
     if (n_cnt == 0) return 0;
 
     //
+    // If there are too many Ns in this stack, do not include it in the 
+    // search.
+    //
+    if (n_cnt > n_limit) {
+        this->strings.clear();
+        return 0;
+    }
+
+    //
     // Generate all permutations of strings for n_cnt N's
     //
     if (pstrings.count(n_cnt) == 0)
@@ -769,8 +779,10 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"help",        no_argument,       NULL, 'h'},
             {"version",     no_argument,       NULL, 'v'},
 	    {"stack_dist",  required_argument, NULL, 'n'},
+	    {"depth_min",   required_argument, NULL, 'm'},
 	    {"inpath",      required_argument, NULL, 'p'},
 	    {"outpath",     required_argument, NULL, 'o'},
+	    {"n_limit",     required_argument, NULL, 'N'},
 	    {"batch_id",    required_argument, NULL, 'b'},
 	    {0, 0, 0, 0}
 	};
@@ -778,7 +790,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvi:p:o:b:e:m:n:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvi:p:o:b:e:m:n:N:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -799,6 +811,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'b':
 	    batch_id = atoi(optarg);
+	    break;
+	case 'N':
+	    n_limit = atoi(optarg);
 	    break;
 	case 'm':
 	    stack_depth_min = atoi(optarg);
@@ -845,11 +860,13 @@ void version() {
 
 void help() {
     std::cerr << "hstacks " << stacks_version << "\n"
-              << "hstacks -i path [-o path] [-b batch_id] [-m min] [-p min_threads] [-h]" << "\n"
+              << "hstacks -i path [-o path] [-b batch_id] [-n mismatches] [-m min] [-p min_threads] [-N limit] [-h]" << "\n"
 	      << "  i: path to the set of SQL files from which to load loci." << "\n"
 	      << "  o: output path to write results." << "\n"
 	      << "  b: SQL Batch ID to insert into the output to identify a group of samples." << "\n"
               << "  m: minimum stack depth required for a locus to be included in the search." << "\n"
+              << "  n: number of mismatches to allow between stacks." << "\n"
+              << "  N: number of 'N' characters to allow in a stack (default: 4)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  h: display this help messsage." << "\n\n";
 
