@@ -1,6 +1,11 @@
 #!/usr/bin/perl
 #
-# By Julian Catchen <catchen@cs.uoregon.edu>
+# Load a set of output files from the Stacks pipeline into a Stacks MySQL database.
+#
+# In order to differentiate parents from progeny, the script expects parents
+# to have 'male' and/or 'female' as part of the filename.
+#
+# By Julian Catchen <jcatchen@uoregon.edu>
 #
 
 use strict;
@@ -39,7 +44,6 @@ foreach $file (@files) {
     # Pull out the sample ID and insert it into the database
     #
     $type = ($file =~ /f?e?male/) ? 'parent' : 'progeny';
-    #$type = ($file =~ /sire/ || $file =~ /dam/) ? 'parent' : 'progeny';
     $sample_id = extract_sample_id($f);
 
     print STDERR "Sample: $file; Type: $type; Sample ID: $sample_id; i: $i\n";
@@ -48,16 +52,16 @@ foreach $file (@files) {
     #
     # Import the unique tag files.
     #
-    import_sql_file($f, "unique_tags.txt");
+    import_sql_file($f, "unique_tags");
 
     $f = $in_path . "/$file" . ".snps.tsv";
-    import_sql_file($f, "snps.txt");
+    import_sql_file($f, "snps");
 
     $f = $in_path . "/$file" . ".alleles.tsv";
-    import_sql_file($f, "alleles.txt");
+    import_sql_file($f, "alleles");
 
     $f = $in_path . "/$file" . ".matches.tsv";
-    import_sql_file($f, "matches.txt");
+    import_sql_file($f, "matches");
 
     $i++;
 }
@@ -68,13 +72,13 @@ foreach $file (@files) {
 if ($catalog) {
     foreach $file (@catalog) {
         $f = $in_path . "/$file" . ".catalog.tags.tsv";
-        import_sql_file($f, "catalog_tags.txt");
+        import_sql_file($f, "catalog_tags");
 
         $f = $in_path . "/$file" . ".catalog.snps.tsv";
-        import_sql_file($f, "catalog_snps.txt");
+        import_sql_file($f, "catalog_snps");
 
         $f = $in_path . "/$file" . ".catalog.alleles.tsv";
-        import_sql_file($f, "catalog_alleles.txt");
+        import_sql_file($f, "catalog_alleles");
     }
 }
 
@@ -87,21 +91,19 @@ sub extract_sample_id {
     chomp $results[0];
     @parts = split(/\t/, $results[0]);
 
+    #
+    # Sample ID is expected to be the first column in the *.tags.tsv file.
+    #
     return $parts[1];
 }
 
 sub import_sql_file {
-    my ($file, $tmp_file) = @_;
+    my ($file, $table) = @_;
 
-    my @results;
+    my (@results);
 
-    `ln -s $file $tmp_file`;
-    print STDERR "ln -s $file $tmp_file\n";
-    print STDERR "mysqlimport $db -L $tmp_file\n";
-    @results = `mysqlimport $db -L $tmp_file`;
-    print STDERR @results;
-    `rm $tmp_file`;
-    print STDERR "rm $tmp_file\n";
+    @results = `mysql $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"`;
+    print STDERR "mysql $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results, "\n";
 }
 
 sub build_file_list {

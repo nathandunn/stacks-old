@@ -4,14 +4,14 @@
 #
 
 use strict;
+use File::Temp qw/tempfile/;
 use DBI;
 
 my $debug         = 0;
-my $db            = "radtags";
-my $sql_tag_table = $ENV{'HOME'} . "/research/solexa/radtags/sql/tag_index.sql";
-my $sql_cat_table = $ENV{'HOME'} . "/research/solexa/radtags/sql/catalog_index.sql";
-my $catalog_file  = "./catalog_index.txt";
-my $tag_file      = "./tag_index.txt";
+my $db            = "";
+my $sql_path      = $ENV{'HOME'} . "/research/solexa/radtags/sql/";
+my $sql_tag_table = $sql_path . "tag_index.sql";
+my $sql_cat_table = $sql_path . "catalog_index.sql";
 my $catalog_index = 0;
 my $tag_index     = 0;
 
@@ -41,8 +41,7 @@ sub gen_cat_index {
 
     print STDERR "Generating catalog tag index\n";
 
-    open(TAG, ">$catalog_file") or 
-	die("Unable to open output file: $catalog_file; $!\n");
+    my ($fh, $catalog_file) = tempfile("catalog_index_XXXXXXXX", UNLINK => 1);
 
     my ($row, $tag, $count, $par_cnt, $pro_cnt, $allele_cnt, $marker, $valid_pro, 
         $max_pct, $ratio, $ests, $pe_radtags, $blast_hits);
@@ -139,7 +138,7 @@ sub gen_cat_index {
 	    $ratio     = "";
 	}
 
-	print TAG
+	print $fh
 	    "0\t",
 	    $row->{'batch_id'}, "\t",
 	    $row->{'id'}, "\t",
@@ -157,14 +156,12 @@ sub gen_cat_index {
             $blast_hits, "\n";
     }
 
-    close(TAG);
+    close($fh);
 
     `mysql $db -e "DROP TABLE IF EXISTS catalog_index"`;
     `mysql $db < $sql_cat_table`;
-    my @results = `mysqlimport $db -L $catalog_file`;
-    unlink($catalog_file);
 
-    print STDERR @results, "\n";
+    import_sql_file($catalog_file, 'catalog_index');
 }
 
 sub fetch_catalog_snps {
@@ -280,10 +277,9 @@ sub gen_tag_index {
 
     die ("Unable to find SQL file: '$sql_tag_table'\n") if (!-e $sql_tag_table);
 
-    print STDERR "Generating unique tag index...\n";
+    my ($fh, $tag_file) = tempfile("tag_index_XXXXXXXX", UNLINK => 1);
 
-    open(TAG, ">$tag_file") or 
-	die("Unable to open output file: $tag_file; $!\n");
+    print STDERR "Generating unique tag index...\n";
 
     my ($sample_row, $tags_row, $row, $catalog_id, $i, $num_samples);
 
@@ -308,7 +304,7 @@ sub gen_tag_index {
 
 	while ($tags_row = $sth->{'tags'}->fetchrow_hashref()) {
 
-	    print TAG
+	    print $fh
 		"0\t",
 		$sample_row->{'batch_id'}, "\t",
 		$sample_row->{'sample_id'}, "\t",
@@ -327,14 +323,12 @@ sub gen_tag_index {
 
     print STDERR "\n";
 
-    close(TAG);
+    close($fh);
 
     `mysql $db -e "DROP TABLE IF EXISTS tag_index"`;
     `mysql $db < $sql_tag_table`;
-    my @results = `mysqlimport $db -L $tag_file`;
-    unlink($tag_file);
 
-    print STDERR @results, "\n";
+    import_sql_file($tag_file, 'tag_index');
 }
 
 sub fetch_depth_counts {
@@ -383,6 +377,15 @@ sub fetch_catalog_ids {
     while ($row = $sth->{'match'}->fetchrow_hashref()) {
 	$cats->{$row->{'tag_id'}} = $row->{'catalog_id'};
     }
+}
+
+sub import_sql_file {
+    my ($file, $table) = @_;
+
+    my (@results);
+
+    @results = `mysql $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"`;
+    print STDERR "mysql $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results, "\n";
 }
 
 sub prepare_sql_handles {
@@ -470,28 +473,30 @@ sub parse_command_line {
     while (@ARGV) {
 	$_ = shift @ARGV;
 	if    ($_ =~ /^-d$/) { $debug++; }
-	elsif ($_ =~ /^-D$/) { $db = shift @ARGV; }
+	elsif ($_ =~ /^-D$/) { $db       = shift @ARGV; }
+	elsif ($_ =~ /^-s$/) { $sql_path = shift @ARGV; }
 	elsif ($_ =~ /^-c$/) { $catalog_index++; }
 	elsif ($_ =~ /^-t$/) { $tag_index++; }
-	elsif ($_ =~ /^-C$/) { $catalog_file = shift @ARGV; }
-	elsif ($_ =~ /^-T$/) { $tag_file = shift @ARGV; }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
 	    print STDERR "Unknown command line options received: $_\n";
 	    usage();
 	}
     }
+
+    if (length($db) == 0) {
+        print STDERR "You must specify a database to index.\n";
+        usage();
+    }
 }
 
 sub usage {
 	print << "EOQ";
-index-radtags.pl [-D db] [-c] [-t] [-C file] [-T file] [-d] [-h]
+index-radtags.pl -D db [-c] [-t] [-s path] [-d] [-h]
   D: radtag database to examine.
-  o: temp file to print results to (which will be loaded into the databse).
+  s: path to SQL definition files for catalog/tag index tables.
   c: generate a catalog index.
   t: generate a unique tags index.
-  C: catalog index output file.
-  T: unique tag index output file.
   h: display this help message.
   d: turn on debug output.
 

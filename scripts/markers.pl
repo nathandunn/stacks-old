@@ -522,6 +522,11 @@ sub parse_command_line {
 	print STDERR "You must specify a batch ID.\n";
 	usage();
     }
+
+    if (length($db) == 0) {
+        print STDERR "You must specify a database to access.\n";
+        usage();
+    }
 }
 
 sub usage {
