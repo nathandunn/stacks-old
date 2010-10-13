@@ -1,16 +1,21 @@
 #!/usr/bin/perl
 #
-# By Julian Catchen <catchen@cs.uoregon.edu>
+# Process the data for a genetic map: build stacks in parents and progeny, 
+# create a catalog from the parents, and match progeny against the catatlog.
+# Call genotypes, and load all data into an MySQL database along the way.
+#
+# For the database interactions to work, the 'mysql' program is expected to be
+# on the path and sufficient permissions set to access the specified database.
+#
+# By Julian Catchen <jcatchen@uoregon.edu>
 #
 
 use strict;
-use Bio::SeqIO;
 
 my $debug       = 0;
 my $sql         = 1;
-my $exe_path    = $ENV{'HOME'} . "/research/solexa/radtags/bin";
+my $exe_path    = ""; # $ENV{'HOME'} . "/research/solexa/radtags/bin/";
 my $out_path    = "";
-my $white_list  = "";
 my $db          = "";
 my $rep_tags    = 0;
 my $min_cov     = 0;
@@ -18,13 +23,22 @@ my $fuzzy_match = 0;
 my $cov_scale   = 0;
 my $batch_id    = 0;
 my $sample_id   = 1;
-my $desc        = ""; #"Lepisosteus oculatus RAD-Tag Samples";
-my $date        = ""; #"2009-05-31";
+my $desc        = ""; # Database description of this dataset
+my $date        = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 
 my @parents;
 my @progeny;
 
 parse_command_line();
+
+#
+# Check for the existence of the necessary pipeline programs
+#
+die ("Unable to find '" . $exe_path . "ustacks'.\n") if (!-e $exe_path . "ustacks" || !-x $exe_path . "ustacks");
+die ("Unable to find '" . $exe_path . "cstacks'.\n") if (!-e $exe_path . "cstacks" || !-x $exe_path . "cstacks");
+die ("Unable to find '" . $exe_path . "sstacks'.\n") if (!-e $exe_path . "sstacks" || !-x $exe_path . "sstacks");
+die ("Unable to find '" . $exe_path . "index_radtags.pl'.\n") if (!-e $exe_path . "index_radtags.pl" || !-x $exe_path . "index_radtags.pl");
+die ("Unable to find '" . $exe_path . "markers.pl'.\n")       if (!-e $exe_path . "markers.pl"       || !-x $exe_path . "markers.pl");
 
 my ($i, $log, $log_fh, $pfile, $rfile, $file, $num_files, $parent, $sample, %map);
 
@@ -90,7 +104,7 @@ foreach $sample (@parents, @progeny) {
 	$rrep = "";
     }
 
-    $cmd = "$exe_path/ustacks -t fastq -f $sample -o $out_path -b $batch_id -i $sample_id $rrep $minc $cscale $threads 2>&1";
+    $cmd = $exe_path . "ustacks -t fastq -f $sample -o $out_path -b $batch_id -i $sample_id $rrep $minc $cscale $threads 2>&1";
     print STDERR "$cmd\n";
     print $log_fh    "$cmd\n";
     @results = `$cmd`;
@@ -122,7 +136,7 @@ foreach $sample (@parents) {
 }
 
 $cat_file = "batch_" . $batch_id;
-$cmd      = "$exe_path/cstacks -b $batch_id -o $out_path $parents $threads $fuzzym 2>&1";
+$cmd      = $exe_path . "cstacks -b $batch_id -o $out_path $parents $threads $fuzzym 2>&1";
 print STDERR  "$cmd\n";
 print $log_fh "$cmd\n";
 @results =    `$cmd`;
@@ -151,7 +165,7 @@ foreach $sample (@parents, @progeny) {
 
     $rid = $map{$rfile};
 
-    $cmd = "$exe_path/sstacks -b $batch_id -c $out_path/$cat_file -s $out_path/$rfile -S $rid -o $out_path $threads 2>&1";
+    $cmd = $exe_path . "sstacks -b $batch_id -c $out_path/$cat_file -s $out_path/$rfile -S $rid -o $out_path $threads 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd`;
@@ -166,16 +180,23 @@ foreach $sample (@parents, @progeny) {
 #
 # Search for markers
 #
-print STDERR "$exe_path/markers.pl -b $batch_id -o $out_path\n";
-`$exe_path/markers.pl -D $db -b $batch_id -o $out_path`;
+$cmd = $exe_path . "markers.pl -b $batch_id -o $out_path 2>&1";
+print STDERR  "$cmd\n";
+print $log_fh "$cmd\n";
+@results =    `$cmd`;
+print $log_fh @results;
+
 $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
 import_sql_file($file, "markers");
 
 #
 # Index the radtags database
 #
-print STDERR "$exe_path/index-radtags.pl -D $db -t -c\n";
-`$exe_path/index-radtags.pl -D $db -t -c`;
+$cmd = $exe_path . "index_radtags.pl -D $db -t -c 2>&1";
+print STDERR  "$cmd\n";
+print $log_fh "$cmd\n";
+@results =    `$cmd`;
+print $log_fh @results;
 
 close($log_fh);
 
@@ -199,6 +220,7 @@ sub parse_command_line {
         elsif ($_ =~ /^-n$/) { $fuzzy_match = shift @ARGV; }
 	elsif ($_ =~ /^-c$/) { $cov_scale   = shift @ARGV; }
 	elsif ($_ =~ /^-D$/) { $desc        = shift @ARGV; }
+	elsif ($_ =~ /^-e$/) { $exe_path    = shift @ARGV; }
 	elsif ($_ =~ /^-b$/) { $batch_id    = shift @ARGV; }
 	elsif ($_ =~ /^-s$/) { $sample_id   = shift @ARGV; }
 	elsif ($_ =~ /^-a$/) { $date        = shift @ARGV; }
@@ -212,6 +234,7 @@ sub parse_command_line {
 	}
     }
 
+    $exe_path = $exe_path . "/"          if (substr($out_path, -1) ne "/");
     $out_path = substr($out_path, 0, -1) if (substr($out_path, -1) eq "/");
 
     if (scalar(@parents) == 0) {
@@ -222,20 +245,21 @@ sub parse_command_line {
 
 sub usage {
     print STDERR <<EOQ; 
-denovo_map.pl -p path -r path -o path [-t] [-m min_cov] [-n mismatches] [-c scale] [-D desc] [-b batch_id] [-s num] [-a yyyy-mm-dd] [-S] [-d] [-h]
+denovo_map.pl -p path -r path -o path [-e path] [-t] [-m min_cov] [-n mismatches] [-c scale] [-D desc] [-b batch_id] [-s num] [-a yyyy-mm-dd] [-S] [-d] [-h]
     p: path to a FASTQ file containing parent sequences.
     r: path to a FASTQ file containing progeny sequences.
-    o: path to output the cleaned files.
-    b: batch ID
-    s: starting sample_id, this is determined automatically if database interaction is enabled.
+    o: path to write pipeline output files.
+    b: batch ID representing this dataset.
+    B: specify a database to load data into.
     S: disable recording SQL data in the database.
+    s: starting sample_id, this is determined automatically if database interaction is enabled.
     D: batch description
     a: batch run date, yyyy-mm-dd
-    m: specify a minimum depth of coverage to merge stacks.
+    m: specify a minimum depth of coverage to merge stacks in the ustacks program.
     n: specify the number of mismatches allowed between loci when building the catalog.
     c: coverage scaling factor affecting when tags are deleveraged or removed (between 0 and 1).
-    t: remove, or break up, highly repetitive RAD-Tags.
-    B: specify a database to load data into.
+    t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
+    e: executable path, location of pipeline programs.
     h: display this help message.
     d: turn on debug output.
 
