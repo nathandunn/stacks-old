@@ -499,6 +499,7 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
 	    continue;
 
 	set<int> unique_merge_list;
+        set<string> unique_alleles;
 	set<int>::iterator it;
 
 	trace_stack_graph(tag_1, samples, unique_merge_list);
@@ -532,8 +533,11 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
         //
         // Output the SNPs and alleles
         //
+        string allele;
         vector<SNP *>::iterator  s; 
         vector<string>::iterator a;
+        set<string>::iterator    u;
+
 	for (s = snps.begin(); s != snps.end(); s++)
             snp_file << 
                 "0"          << "\t" <<
@@ -545,15 +549,22 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
                 (*s)->rank_2 << "\n";
 
 	for (a = alleles.begin(); a != alleles.end(); a++)
+            unique_alleles.insert(*a);
+
+        for (u = unique_alleles.begin(); u != unique_alleles.end(); u++)
             all_file << 
                 "0"        << "\t" <<
                 batch_id   << "\t" <<
                 id         << "\t" << 
-                *a         << "\t" <<
+                *u         << "\t" <<
                 0          << "\t" <<
                 0          << "\n";
 
+        unique_alleles.clear();
+
         int sub_id = 0;
+        a = alleles.begin();
+
 	for (it = unique_merge_list.begin(); it != unique_merge_list.end(); it++) {
 	    tag_2 = samples[(*it)];
 
@@ -592,15 +603,18 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
                 ""               << "\t" <<
                 ""               << "\n";
 
+            allele = (a == alleles.end()) ? "consensus" : *a;
+
             mat_file <<
 		"0"              << "\t" <<
 		batch_id         << "\t" <<
 		id               << "\t" <<
 		tag_2->sample_id << "\t" <<
 		tag_2->uniq_id   << "\t" << 
-		"consensus"      << "\n";
+		allele           << "\n";
 
             sub_id++;
+            a++;
 	}
 
 	id++;
@@ -745,18 +759,20 @@ int HLocus::populate_alleles() {
     vector<pair<allele_type, string> > new_strings;
     vector<pair<allele_type, string> >::iterator k;
     vector<int>::iterator c;
-    char **q;
+    char  *q, **r;
     int    n = (int) pow(4, n_cnt);
 
     for (k = this->strings.begin(); k != this->strings.end(); k++) {
 
         for (i = 0; i < n; i++) {
-            q = pstrings[n_cnt] + i;
+            r = pstrings[n_cnt];
+            q = r[i];
 
             s = k->second;
             j = 0;
             for (c = col.begin(); c != col.end(); c++) {
-                s.replace(*c, 1, q[j]);
+                //cerr << "Str: " << s << "; rep str: " << q << "; replacing col: " << *c << " with '" << q[j] << "'\n";
+                s.replace(*c, 1, 1, q[j]);
                 j++;
             }
 
