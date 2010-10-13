@@ -1,0 +1,502 @@
+#!/usr/bin/perl
+#
+# Written by Julian Catchen <catchen@cs.uoregon.edu>
+#
+
+use strict;
+use DBI;
+
+my $debug         = 0;
+my $db            = "radtags";
+my $sql_tag_table = $ENV{'HOME'} . "/research/solexa/radtags/sql/tag_index.sql";
+my $sql_cat_table = $ENV{'HOME'} . "/research/solexa/radtags/sql/catalog_index.sql";
+my $catalog_file  = "./catalog_index.txt";
+my $tag_file      = "./tag_index.txt";
+my $catalog_index = 0;
+my $tag_index     = 0;
+
+parse_command_line();
+
+#
+# Connect to the database and prepare our queries.
+#
+my (%sth);
+
+prepare_sql_handles(\%sth);
+
+if ($catalog_index) {
+    gen_cat_index(\%sth);
+}
+
+if ($tag_index) {
+    gen_tag_index(\%sth);
+}
+
+close_sql_handles(\%sth);
+
+sub gen_cat_index {
+    my ($sth) = @_;
+
+    die ("Unable to find SQL file: '$sql_cat_table'\n") if (!-e $sql_tag_table);
+
+    print STDERR "Generating catalog tag index\n";
+
+    open(TAG, ">$catalog_file") or 
+	die("Unable to open output file: $catalog_file; $!\n");
+
+    my ($row, $tag, $count, $par_cnt, $pro_cnt, $allele_cnt, $marker, $valid_pro, 
+        $max_pct, $ratio, $ests, $pe_radtags, $blast_hits);
+
+    my (%snps, %markers, %seqs, %hits, %parents, %progeny, %alleles);
+
+    print STDERR "  Fetching catalog SNPs...\n";
+    fetch_catalog_snps(\%sth, \%snps);
+
+    print STDERR "  Fetching markers...\n";
+    fetch_markers(\%sth, \%markers);
+
+    print STDERR "  Fetching associated sequences...\n";
+    sequence_matches(\%sth, \%seqs, \%hits);
+
+    print STDERR "  Fetching catalog matches...\n";
+    catalog_matches(\%sth, \%parents, \%progeny, \%alleles);
+
+    print STDERR "  Assembling catalog tags at the database...\n";
+    $sth->{'cat_tags'}->execute()
+	or die("Unable to select results from $db.\n");
+
+    #my $num_rows = $sth->{'cat_tags'}->rows();
+    #my $i = 1;
+
+    print STDERR "  Processing catalog tags\n";
+
+    while ($row = $sth->{'cat_tags'}->fetchrow_hashref()) {
+	#
+	# Determine the number of SNPs contained within this RAD-Tag
+	#
+	if (defined($snps{$row->{'batch_id'}}->{$row->{'tag_id'}})) {
+	    $count = $snps{$row->{'batch_id'}}->{$row->{'tag_id'}};
+	} else {
+	    $count = 0;
+	}
+
+	#
+	# Determine the number of parental samples that match this catalog RAD-Tag
+	#
+	if (defined($parents{$row->{'batch_id'}}->{$row->{'tag_id'}})) {
+	    $par_cnt = scalar(keys %{$parents{$row->{'batch_id'}}->{$row->{'tag_id'}}});
+	} else {
+	    $par_cnt = 0;
+	}
+
+	#
+	# Determine the number of progeny samples that match this catalog RAD-Tag
+	#
+	if (defined($progeny{$row->{'batch_id'}}->{$row->{'tag_id'}})) {
+	    $pro_cnt = scalar(keys %{$progeny{$row->{'batch_id'}}->{$row->{'tag_id'}}});
+	} else {
+	    $pro_cnt = 0;
+	}
+
+	#
+	# Determine the number of alleles for this catalog RAD-Tag
+	#
+	if (defined($alleles{$row->{'batch_id'}}->{$row->{'tag_id'}})) {
+	    $allele_cnt = scalar(keys %{$alleles{$row->{'batch_id'}}->{$row->{'tag_id'}}});
+	} else {
+	    $allele_cnt = 0;
+	}
+
+        #
+        # Determine if there are any sequences associated with this marker
+        #
+        $ests       = 0;
+        $pe_radtags = 0;
+        $blast_hits = 0;
+        if (defined($seqs{$row->{'batch_id'}}->{$row->{'tag_id'}}->{'est'})) {
+            $ests = $seqs{$row->{'batch_id'}}->{$row->{'tag_id'}}->{'est'};
+        }
+        if (defined($seqs{$row->{'batch_id'}}->{$row->{'tag_id'}}->{'pe_radtag'})) {
+            $pe_radtags = $seqs{$row->{'batch_id'}}->{$row->{'tag_id'}}->{'pe_radtag'};
+        }
+        if (defined($hits{$row->{'batch_id'}}->{$row->{'tag_id'}})) {
+            $blast_hits = $hits{$row->{'batch_id'}}->{$row->{'tag_id'}};
+        }
+
+	#
+	# Does this RAD-Tag have a mappable marker?
+	#
+	if (defined($markers{$row->{'batch_id'}}->{$row->{'tag_id'}})) {
+	    $tag       = $markers{$row->{'batch_id'}}->{$row->{'tag_id'}};
+	    $marker    = $tag->{'marker'};
+	    $max_pct   = $tag->{'max_pct'};
+	    $valid_pro = $tag->{'valid_pro'};
+	    $ratio     = $tag->{'ratio'};
+	} else {
+	    $marker    = "";
+	    $valid_pro = 0;
+	    $max_pct   = 0;
+	    $ratio     = "";
+	}
+
+	print TAG
+	    "0\t",
+	    $row->{'batch_id'}, "\t",
+	    $row->{'id'}, "\t",
+	    $row->{'tag_id'}, "\t",
+	    $count, "\t",
+	    $par_cnt, "\t",
+	    $pro_cnt, "\t",
+	    $allele_cnt, "\t",
+	    $marker, "\t",
+	    $valid_pro, "\t",
+	    $max_pct, "\t",
+	    $ratio, "\t",
+            $ests, "\t",
+            $pe_radtags, "\t",
+            $blast_hits, "\n";
+    }
+
+    close(TAG);
+
+    `mysql $db -e "DROP TABLE IF EXISTS catalog_index"`;
+    `mysql $db < $sql_cat_table`;
+    my @results = `mysqlimport $db -L $catalog_file`;
+    unlink($catalog_file);
+
+    print STDERR @results, "\n";
+}
+
+sub fetch_catalog_snps {
+    my ($sth, $snps) = @_;
+
+    my ($row);
+
+    $sth->{'cat_snps'}->execute()
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'cat_snps'}->fetchrow_hashref()) {
+	if (!defined($snps->{$row->{'batch_id'}})) {
+	    $snps->{$row->{'batch_id'}} = {};
+	}
+
+	$snps->{$row->{'batch_id'}}->{$row->{'tag_id'}}++;
+    }
+}
+
+sub fetch_markers {
+    my ($sth, $markers) = @_;
+
+    my ($row, $tag);
+
+    $sth->{'marker'}->execute()
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'marker'}->fetchrow_hashref()) {
+	$tag = {};
+	$tag->{'marker'}    = $row->{'type'};
+	$tag->{'max_pct'}   = $row->{'max_pct'};
+	$tag->{'valid_pro'} = $row->{'progeny'};
+	$tag->{'ratio'}     = $row->{'ratio'};
+
+	if (!defined($markers->{$row->{'batch_id'}})) {
+	    $markers->{$row->{'batch_id'}} = {};
+	}
+	$markers->{$row->{'batch_id'}}->{$row->{'catalog_id'}} = $tag;
+    }
+}
+
+sub catalog_matches {
+    my ($sth, $parents, $progeny, $alleles) = @_;
+
+    my ($row);
+
+    $sth->{'cat_matches'}->execute()
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'cat_matches'}->fetchrow_hashref()) {
+
+	if ($row->{'type'} eq "parent") {
+	    if (!defined($parents->{$row->{'batch_id'}})) {
+		$parents->{$row->{'batch_id'}} = {};
+	    }
+	    if (!defined($parents->{$row->{'batch_id'}}->{$row->{'catalog_id'}})) {
+		$parents->{$row->{'batch_id'}}->{$row->{'catalog_id'}} = {};
+	    }
+	    $parents->{$row->{'batch_id'}}->{$row->{'catalog_id'}}->{$row->{'tag_id'}}++;
+
+	} elsif ($row->{'type'} eq "progeny") {
+	    if (!defined($progeny->{$row->{'batch_id'}})) {
+		$progeny->{$row->{'batch_id'}} = {};
+	    }
+	    if (!defined($progeny->{$row->{'batch_id'}}->{$row->{'catalog_id'}})) {
+		$progeny->{$row->{'batch_id'}}->{$row->{'catalog_id'}} = {};
+	    }
+	    $progeny->{$row->{'batch_id'}}->{$row->{'catalog_id'}}->{$row->{'tag_id'}}++;
+	}
+
+	if (!defined($alleles->{$row->{'batch_id'}})) {
+	    $alleles->{$row->{'batch_id'}} = {};
+	}
+	if (!defined($alleles->{$row->{'batch_id'}}->{$row->{'catalog_id'}})) {
+	    $alleles->{$row->{'batch_id'}}->{$row->{'catalog_id'}} = {};
+	}
+	$alleles->{$row->{'batch_id'}}->{$row->{'catalog_id'}}->{$row->{'allele'}}++;
+    }
+}
+
+sub sequence_matches {
+    my ($sth, $seqs, $hits) = @_;
+
+    my ($row);
+
+    $sth->{'cat_seqs'}->execute()
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'cat_seqs'}->fetchrow_hashref()) {
+	if (!defined($seqs->{$row->{'batch_id'}})) {
+	    $seqs->{$row->{'batch_id'}} = {};
+	}
+        if (!defined($seqs->{$row->{'batch_id'}}->{$row->{'catalog_id'}})) {
+            $seqs->{$row->{'batch_id'}}->{$row->{'catalog_id'}} = {};
+        }
+
+        $seqs->{$row->{'batch_id'}}->{$row->{'catalog_id'}}->{$row->{'type'}}++;
+    }
+
+    $sth->{'cat_hits'}->execute()
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'cat_hits'}->fetchrow_hashref()) {
+	if (!defined($hits->{$row->{'batch_id'}})) {
+	    $hits->{$row->{'batch_id'}} = {};
+	}
+        $hits->{$row->{'batch_id'}}->{$row->{'catalog_id'}}++;
+    }
+}
+
+sub gen_tag_index {
+    my ($sth) = @_;
+
+    die ("Unable to find SQL file: '$sql_tag_table'\n") if (!-e $sql_tag_table);
+
+    print STDERR "Generating unique tag index...\n";
+
+    open(TAG, ">$tag_file") or 
+	die("Unable to open output file: $tag_file; $!\n");
+
+    my ($sample_row, $tags_row, $row, $catalog_id, $i, $num_samples);
+
+    $sth->{'sample'}->execute()
+	or die("Unable to select results from $db.\n");
+    
+    $num_samples = $sth->{'sample'}->rows();
+    $i           = 1;
+
+    while ($sample_row = $sth->{'sample'}->fetchrow_hashref()) {
+
+	print STDERR "Processing sample $i of $num_samples       \r";
+
+	my (%depth, %snps, %cats);
+
+	$sth->{'tags'}->execute($sample_row->{'batch_id'}, $sample_row->{'sample_id'})
+	    or die("Unable to select results from $db.\n");
+
+	fetch_depth_counts($sth, \%depth, $sample_row->{'sample_id'});
+	fetch_snp_counts($sth, \%snps, $sample_row->{'sample_id'});
+	fetch_catalog_ids($sth, \%cats, $sample_row->{'batch_id'}, $sample_row->{'sample_id'});
+
+	while ($tags_row = $sth->{'tags'}->fetchrow_hashref()) {
+
+	    print TAG
+		"0\t",
+		$sample_row->{'batch_id'}, "\t",
+		$sample_row->{'sample_id'}, "\t",
+		$tags_row->{'tag_id'}, "\t",
+		$tags_row->{'id'}, "\t",
+		$depth{$tags_row->{'tag_id'}}, "\t",
+		defined($snps{$tags_row->{'tag_id'}}) ? $snps{$tags_row->{'tag_id'}} : 0, "\t",
+		$cats{$tags_row->{'tag_id'}}, "\t",
+		$tags_row->{'deleveraged'}, "\t",
+		$tags_row->{'blacklisted'}, "\t",
+		$tags_row->{'removed'}, "\n";
+	}
+
+	$i++;
+    }
+
+    print STDERR "\n";
+
+    close(TAG);
+
+    `mysql $db -e "DROP TABLE IF EXISTS tag_index"`;
+    `mysql $db < $sql_tag_table`;
+    my @results = `mysqlimport $db -L $tag_file`;
+    unlink($tag_file);
+
+    print STDERR @results, "\n";
+}
+
+sub fetch_depth_counts {
+    my ($sth, $depths, $sample_id) = @_;
+
+    my ($row);
+
+    #
+    # Determine the depth of coverage for the RAD-Tags in this sample
+    #
+    $sth->{'depth'}->execute($sample_id)
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'depth'}->fetchrow_hashref()) {
+	$depths->{$row->{'tag_id'}}++;
+    }
+}
+
+sub fetch_snp_counts {
+    my ($sth, $snps, $sample_id) = @_;
+
+    my ($row);
+
+    #
+    # Determine the number of SNPs contained within each RAD-Tag in this sample.
+    #
+    $sth->{'snps'}->execute($sample_id)
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'snps'}->fetchrow_hashref()) {
+	$snps->{$row->{'tag_id'}}++;
+    }
+}
+
+sub fetch_catalog_ids {
+    my ($sth, $cats, $batch_id, $sample_id) = @_;
+
+    my ($row);
+
+    #
+    # Determine the catalog ID that corresponds to the RAD-Tags in this sample
+    #
+    $sth->{'match'}->execute($batch_id, $sample_id)
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'match'}->fetchrow_hashref()) {
+	$cats->{$row->{'tag_id'}} = $row->{'catalog_id'};
+    }
+}
+
+sub prepare_sql_handles {
+    my ($sth, $outg) = @_;
+
+    # Connect to the database, assumes user has a MySQL ~/.my.cnf file to 
+    # specify the host, username and password
+    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=" . $ENV{"HOME"} . "/.my.cnf")
+	or die("Unable to connect to the $db MySQL Database!\n" . $DBI::errstr);
+
+    my $query;
+
+    $query = 
+	"SELECT batch_id, id as sample_id, type FROM samples";
+    $sth->{'sample'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+	"SELECT unique_tags.id as id, tag_id, seq, deleveraged, blacklisted, removed FROM unique_tags " . 
+	"JOIN samples ON (unique_tags.sample_id=samples.id) " . 
+	"WHERE relationship='consensus' AND samples.batch_id=? AND unique_tags.sample_id=?";
+    $sth->{'tags'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+	"SELECT tag_id FROM unique_tags " . 
+	"WHERE relationship!='consensus' AND unique_tags.sample_id=?";
+    $sth->{'depth'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+	"SELECT tag_id FROM snps " . 
+	"JOIN samples ON (snps.sample_id=samples.id) " . 
+	"WHERE samples.id=?";
+    $sth->{'snps'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+	"SELECT tag_id, catalog_id FROM matches " . 
+	"WHERE batch_id=? AND sample_id=?";
+    $sth->{'match'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+	"SELECT catalog_tags.id as id, tag_id, batch_id, seq FROM catalog_tags " . 
+	"JOIN batches ON (catalog_tags.batch_id=batches.id) WHERE relationship='consensus'";
+    $sth->{'cat_tags'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+	"SELECT batch_id, tag_id FROM catalog_snps";
+    $sth->{'cat_snps'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+	"SELECT batch_id, catalog_id, type, progeny, max_pct, ratio FROM markers";
+    $sth->{'marker'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+	"SELECT samples.batch_id, catalog_id, tag_id, allele, type FROM matches " . 
+	"JOIN samples ON (samples.id=matches.sample_id)";
+    $sth->{'cat_matches'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+	"SELECT batch_id, catalog_id, type FROM sequence";
+    $sth->{'cat_seqs'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+	"SELECT batch_id, catalog_id FROM sequence_blast";
+    $sth->{'cat_hits'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+}
+
+sub close_sql_handles {
+    my ($sth) = @_;
+
+    my $key;
+
+    foreach $key (keys %{$sth}) {
+	next if ($key =~ /dbh/);
+
+	$sth->{$key}->finish();
+    }
+
+    foreach $key (keys %{$sth}) {
+	next if ($key !~ /dbh/);
+
+	$sth->{$key}->disconnect();
+    }
+}
+
+sub parse_command_line {
+    while (@ARGV) {
+	$_ = shift @ARGV;
+	if    ($_ =~ /^-d$/) { $debug++; }
+	elsif ($_ =~ /^-D$/) { $db = shift @ARGV; }
+	elsif ($_ =~ /^-c$/) { $catalog_index++; }
+	elsif ($_ =~ /^-t$/) { $tag_index++; }
+	elsif ($_ =~ /^-C$/) { $catalog_file = shift @ARGV; }
+	elsif ($_ =~ /^-T$/) { $tag_file = shift @ARGV; }
+	elsif ($_ =~ /^-h$/) { usage(); }
+	else {
+	    print STDERR "Unknown command line options received: $_\n";
+	    usage();
+	}
+    }
+}
+
+sub usage {
+	print << "EOQ";
+index-radtags.pl [-D db] [-c] [-t] [-C file] [-T file] [-d] [-h]
+  D: radtag database to examine.
+  o: temp file to print results to (which will be loaded into the databse).
+  c: generate a catalog index.
+  t: generate a unique tags index.
+  C: catalog index output file.
+  T: unique tag index output file.
+  h: display this help message.
+  d: turn on debug output.
+
+
+EOQ
+
+    exit(0);
+}

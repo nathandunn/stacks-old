@@ -535,7 +535,6 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
         //
         string allele;
         vector<SNP *>::iterator  s; 
-        vector<string>::iterator a;
         set<string>::iterator    u;
 
 	for (s = snps.begin(); s != snps.end(); s++)
@@ -548,8 +547,8 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
                 (*s)->rank_1 << "\t" << 
                 (*s)->rank_2 << "\n";
 
-	for (a = alleles.begin(); a != alleles.end(); a++)
-            unique_alleles.insert(*a);
+	for (uint a = 0; a < alleles.size(); a++)
+            unique_alleles.insert(alleles[a]);
 
         for (u = unique_alleles.begin(); u != unique_alleles.end(); u++)
             all_file << 
@@ -563,7 +562,7 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
         unique_alleles.clear();
 
         int sub_id = 0;
-        a = alleles.begin();
+        int a      = 0;
 
 	for (it = unique_merge_list.begin(); it != unique_merge_list.end(); it++) {
 	    tag_2 = samples[(*it)];
@@ -603,7 +602,7 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
                 ""               << "\t" <<
                 ""               << "\n";
 
-            allele = (a == alleles.end()) ? "consensus" : *a;
+            allele = (alleles.size() == 0) ? "consensus" : alleles[a];
 
             mat_file <<
 		"0"              << "\t" <<
