@@ -1,0 +1,143 @@
+td.seq { 
+    text-align: center;
+    font-family: monospace;
+}
+
+table.radtag { 
+    margin-left: auto;
+    margin-right: auto;
+    border-collapse: collapse;
+}
+
+table.radtag th { 
+    border-bottom: thin solid black;
+    background-color: #cccccc;
+}
+
+table.radtag td {
+    padding: 0;
+    margin: 0;
+}
+
+table.radtag td.num { 
+    text-align: center;
+    font-size: smaller;
+}
+
+table.radtag td.con { 
+    padding-left: 3em;
+    font-size: smaller;
+}
+
+table.radtag td.primary { 
+    padding-left: 3em;
+    font-size: smaller;
+    color: #32773f;
+}
+
+table.radtag td.secondary {
+    padding-left: 3em;
+    font-size: smaller; 
+    color: #870214;
+}
+
+table.radtag td.tertiary { 
+    padding-left: 3em;
+    font-size: smaller;
+    color: #3d5aff;
+}
+
+table.radtag td.id { 
+    font-family: monospace;
+    text-align: right;
+    padding-right: 4px;
+}
+
+table.radtag td.tag { 
+    font-family: monospace;
+    text-align: left;
+    border-left: thin solid black;
+    padding-left: 4px;
+}
+
+table.catalog {
+    width: 100%; 
+    text-align: center;
+}
+
+table.catalog th {
+    background-color: #eeeeee;
+}
+
+table.catalog td {
+    vertical-align: top;
+}
+
+span.rank_1 {
+    background-color: #ccddd4;
+    color: #a93535;
+    font-weight: bold;
+}
+
+span.rank_2 {
+    background-color: #ccddd4;
+    color: #29356c; 
+    font-weight: bold;
+}
+
+span.err {
+    background-color: #fcdba7;
+    color: #29356c; 
+}
+
+div.footer {
+    clear: both;
+}
+
+td.catlink {
+    font-size: small;
+}
+
+td.catlink,div.catlink a:hover {
+    cursor: pointer;
+}
+
+span.light_scale {
+    color: #888888;
+    background-color: #e29c71;
+}
+
+span.dark_scale {
+    color: #888888;
+    background-color: #bbd5ff;
+}
+
+table.genotypes {
+    margin-left: auto;
+    margin-right: auto;
+    border-collapse: collapse;
+}
+
+table.genotypes td {
+    padding: 3px;
+    border: thin solid #aaaaaa;
+    text-align: center;
+}
+
+table.genotypes td a:hover {
+    cursor: pointer;
+}
+
+table.genotypes span.title {
+    font-size: smaller;
+    color: #aaaaaa;
+}
+
+span.corrected {
+    font-weight: bold;
+    color: #870214;
+}
+
+a.annotation {
+    font-size: small;
+}
