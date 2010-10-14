@@ -3,7 +3,7 @@ require_once("header.php");
 require_once("radtag_functions.php");
 
 $batch_id  = isset($_GET['id']) ? $_GET['id'] : 0;
-$database  = isset($_GET['db']) ? $_GET['db'] : "radtags";
+$database  = isset($_GET['db']) ? $_GET['db'] : "";
 $page      = isset($_GET['p'])  ? $_GET['p']  : 1;
 $per_page  = isset($_GET['pp']) ? $_GET['pp'] : 10;
 
@@ -78,7 +78,7 @@ EOQ;
 write_filter();
 
 // Generate Excel export URL
-$excel_export = generate_url("export.php");
+$excel_export = generate_url("export_batch.php", false);
 
 echo <<< EOQ
 <h4 class="info_head" style="margin-left: 1em;">
@@ -91,9 +91,34 @@ echo <<< EOQ
 <a name="results_top"></a>
 <table class="db" style="width: 100%; border: none;">
 <tr>
-  <td colspan="8" style="border: none; padding-bottom: 0px;">
-    <a $excel_export>
-    <img style="float: right;" src="$root_path/images/excel_icon.png" title="Export data to Microsoft Excel format"/></a>
+  <td colspan="8" style="border: none; padding-bottom: 0px;" class="export_icon">
+
+<div id="export_popup" style="display: none;">
+<h3>Export</h3>
+<div id="export_popup_txt">
+<p>This will take some time. Enter your email and you will be notified
+when the results are ready.
+</p>
+<p>
+  <form id="export_popup_frm">
+  <input type="hidden" name="url" value="$excel_export" />
+  <strong>E-mail:</strong> <input type="input" size=25 name="email" value="" />
+</p>
+<p>
+  <strong>Output type:</strong>
+    <input type="radio" name="type" value="tsv" /><acronym title="Tab-separated Values Format">TSV</acronym>
+    <input type="radio" name="type" value="xls" /><acronym title="Microsoft Excel Format">XLS</acronym><br />
+</p>
+<p>
+  <a onclick="export_data('export_popup')">submit</a> | <a onclick="close_export_popup('export_popup')">cancel</a>
+</p>
+  </form>
+</div>
+</div>
+
+    <a onclick="toggle_export_popup('export_popup')">
+    <img style="float: right;" src="$root_path/images/excel_icon.png" 
+         title="Export data to Microsoft Excel format"/></a>
   </td>
 </tr>
 <tr>
@@ -227,7 +252,7 @@ EOQ;
     echo <<< EOQ
   <td class="seq">$s</td>
   <td>$row[parents]</td>
-  <td><span title="Matching Progeny">$row[progeny]</span> <strong>/</strong> <span title="Mappable Progeny">$row[valid_progeny]</span></td>
+  <td><acronym title="Matching Progeny">$row[progeny]</acronym> <strong>/</strong> <acronym title="Mappable Progeny">$row[valid_progeny]</acronym></td>
   <td>$row[marker]</td>
   <td style="text-align: left; font-size: smaller;">
     $ratio_parsed
@@ -325,10 +350,13 @@ function generate_per_page_select($name, $per_page) {
     return $ctl;
 }
 
-function generate_url($destination) {
+function generate_url($destination, $prefix) {
     global $root_path, $display;
 
-    $url = "href=\"" . $root_path . "/" . $destination . "?";
+    if ($prefix) 
+        $url = "href=\"" . $root_path . "/" . $destination . "?";
+    else 
+        $url = $root_path . "/" . $destination . "?";
 
     foreach ($display as $key => $d) {
 	if (is_array($d)) {
@@ -342,7 +370,8 @@ function generate_url($destination) {
     // Remove the hanging '&'
     $url = substr($url, 0, -1);
 
-    $url .= "\"";
+    if ($prefix)
+        $url .= "\"";
 
     return $url;
 }
@@ -355,7 +384,7 @@ function generate_page_list($page, $num_pages, $destination) {
     if ($page <= 4) {
 	for ($i = 1; $i < $page; $i++) {
 	    $display['p'] = $i;
-	    $p            = generate_url($destination);
+	    $p            = generate_url($destination, true);
 	    $page_list   .= "<a $p>$i</a>\n"; 
 	} 
     } else {
@@ -365,7 +394,7 @@ function generate_page_list($page, $num_pages, $destination) {
 
 	foreach (array($page - 3, $page - 2, $page - 1) as $i) {
 	    $display['p'] = $i;
-	    $p            = generate_url($destination);
+	    $p            = generate_url($destination, true);
 	    $page_list   .= "<a $p>$i</a>\n"; 
 	} 
     }
@@ -375,18 +404,18 @@ function generate_page_list($page, $num_pages, $destination) {
     if ($page <= $num_pages - 4) {
 	for ($i = $page + 1; $i <= $page + 3; $i++) {
 	    $display['p'] = $i;
-	    $p            = generate_url($destination);
+	    $p            = generate_url($destination, true);
 	    $page_list   .= "<a $p>$i</a>\n"; 
 	} 
 
 	$display['p'] = $num_pages;
-	$p            = generate_url($destination);
+	$p            = generate_url($destination, true);
 	$page_list   .= "... <a $p>$num_pages</a>\n"; 
 
     } else {
 	for ($i = $page + 1; $i <= $num_pages; $i++) {
 	    $display['p'] = $i;
-	    $p            = generate_url($destination);
+	    $p            = generate_url($destination, true);
 	    $page_list   .= "<a $p>$i</a>\n"; 
 	} 
     }
@@ -432,9 +461,9 @@ function write_pagination($num_tags, &$start_gene, &$end_gene, $destination) {
 
     // Generate the URLs for our links
     $display['p'] -= 1;
-    $prev_page     = generate_url($destination);
+    $prev_page     = generate_url($destination, true);
     $display['p'] += 2;
-    $next_page     = generate_url($destination);
+    $next_page     = generate_url($destination, true);
     $display['p']  = $cur_page;
 
     print 

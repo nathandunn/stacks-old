@@ -17,6 +17,7 @@ function write_header($page_title) {
   <script type="text/javascript" src="$js_path"></script>
   <script type="text/javascript" src="$root_path/radtag.js"></script>
   <script type="text/javascript" src="$root_path/annotate.js"></script>
+  <script type="text/javascript" src="$root_path/export.js"></script>
 </head>
 
 <body>

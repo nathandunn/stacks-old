@@ -141,3 +141,35 @@ span.corrected {
 a.annotation {
     font-size: small;
 }
+
+td.export_icon a:hover {
+    cursor: pointer;
+}
+
+div#export_popup {
+    position: absolute;
+    right: 7%;
+    bottom: 2%;
+    border: 2px solid black;
+    background-color: #6f9b6d;
+    width: 350px;
+    height: 175px;
+    font-size: smaller;
+    text-align: center;
+    padding: 1em;
+    -moz-box-shadow: 4px 4px 7px #888;
+    -webkit-box-shadow: 4px 4px 7px #888;
+    box-shadow: 4px 4px 7px #888;
+}
+
+div#export_popup h3 {
+    color: #ffc600;
+    text-decoration: underline;
+    margin-top: 0px;
+    padding-top: 0px;
+}
+
+.r {
+    font-weight: bold;
+    color: #a93535;
+}
