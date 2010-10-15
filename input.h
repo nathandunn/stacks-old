@@ -36,6 +36,8 @@ using std::endl;
 
 #include "constants.h"
 
+typedef unsigned int uint;
+
 class Seq {
  public:
     char *id;

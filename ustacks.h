@@ -79,6 +79,8 @@ extern "C" {
 #include "Fasta.h"     // Reading input files in FASTA format
 #include "Fastq.h"     // Reading input files in FASTQ format
 
+typedef unsigned int uint;
+
 const int   max_utag_dist   = 2;
 const int   max_rem_dist    = 3;
 const int   max_delv_stacks = 3;

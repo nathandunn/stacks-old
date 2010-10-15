@@ -40,6 +40,7 @@ using std::stringstream;
 
 #include "constants.h"
 
+typedef unsigned int uint;
 typedef string allele_type;
 
 typedef struct seqid {
