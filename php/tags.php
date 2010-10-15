@@ -1,8 +1,7 @@
 <?php
 require_once("header.php");
-require_once("radtag_functions.php");
 
-$database  = isset($_GET['db'])        ? $_GET['db']        : "radtags";
+$database  = isset($_GET['db'])        ? $_GET['db']        : "";
 $batch_id  = isset($_GET['batch_id'])  ? $_GET['batch_id']  : 0;
 $sample_id = isset($_GET['sample_id']) ? $_GET['sample_id'] : 0;
 $page      = isset($_GET['p'])         ? $_GET['p']         : 1;

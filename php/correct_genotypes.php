@@ -1,8 +1,7 @@
 <?php
 require_once("header.php");
-require_once("radtag_functions.php");
 
-$database  = isset($_POST['db'])       ? $_POST['db']       : "radtags";
+$database  = isset($_POST['db'])       ? $_POST['db']       : "";
 $tag_id    = isset($_POST['tag_id'])   ? $_POST['tag_id']   : 0;
 $batch_id  = isset($_POST['batch_id']) ? $_POST['batch_id'] : 0;
 $op        = isset($_POST['op'])       ? $_POST['op']       : "display";

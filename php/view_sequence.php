@@ -1,8 +1,7 @@
 <?php
 require_once("header.php");
-require_once("radtag_functions.php");
 
-$database = isset($_GET['db']) ? $_GET['db'] : "radtags";
+$database = isset($_GET['db']) ? $_GET['db'] : "";
 $seq_id   = isset($_GET['id']) ? $_GET['id'] : 0;
 
 // Connect to the database

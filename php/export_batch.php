@@ -1,7 +1,6 @@
 <?php
 require_once("header.php");
 require_once("CatalogClass.php");
-require_once("radtag_functions.php");
 
 $database  = isset($_GET['db'])     ? $_GET['db']     : "";
 $tag_id    = isset($_GET['tag_id']) ? $_GET['tag_id'] : 0;

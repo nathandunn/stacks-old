@@ -1,13 +1,13 @@
 <?php
 
 function db_connect($database) {
-    global $db_user, $db_pass;
+    global $db_user, $db_pass, $db_host;
 
     $dsn = array(
                  'phptype'  => 'mysql',
                  'username' => $db_user,
                  'password' => $db_pass,
-                 'hostspec' => 'localhost',
+                 'hostspec' => $db_host,
                  );
     if (strlen($database) > 0)
         $dsn['database'] = $database;

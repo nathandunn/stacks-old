@@ -1,6 +1,5 @@
 <?php
 require_once("header.php");
-require_once("radtag_functions.php");
 
 $batch_id  = isset($_GET['id']) ? $_GET['id'] : 0;
 $database  = isset($_GET['db']) ? $_GET['db'] : "";

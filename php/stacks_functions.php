@@ -2,7 +2,7 @@
 
 function write_header($page_title) {
     global $host, $site_title; 
-    global $root_path, $css_path, $img_path, $js_path;
+    global $root_path, $img_path;
 
     echo <<< EOQ
 <?xml version="1.0" encoding="iso-8859-1"?>
@@ -12,10 +12,8 @@ function write_header($page_title) {
 
 <head>
   <title>$site_title: $page_title</title>
-  <link rel="stylesheet" type="text/css" href="$css_path" />
-  <link rel="stylesheet" type="text/css" href="$root_path/radtag.css" />
-  <script type="text/javascript" src="$js_path"></script>
-  <script type="text/javascript" src="$root_path/radtag.js"></script>
+  <link rel="stylesheet" type="text/css" href="$root_path/stacks.css" />
+  <script type="text/javascript" src="$root_path/stacks.js"></script>
   <script type="text/javascript" src="$root_path/annotate.js"></script>
   <script type="text/javascript" src="$root_path/export.js"></script>
 </head>

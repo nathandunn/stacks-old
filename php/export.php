@@ -10,7 +10,7 @@ require_once("CatalogClass.php");
 // $_GET['pp']="all";
 
 $batch_id  = isset($_GET['id']) ? $_GET['id'] : 0;
-$database  = isset($_GET['db']) ? $_GET['db'] : "radtags";
+$database  = isset($_GET['db']) ? $_GET['db'] : "";
 $page      = isset($_GET['p'])  ? $_GET['p']  : 1;
 $per_page  = isset($_GET['pp']) ? $_GET['pp'] : 10;
 

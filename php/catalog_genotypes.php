@@ -1,6 +1,5 @@
 <?php
 require_once("header.php");
-require_once("radtag_functions.php");
 
 if (isset($_GET['db']))
     $database  = $_GET['db'];
