@@ -11,6 +11,7 @@ use DBI;
 #use Excel::Writer::XLSX;
 use Spreadsheet::WriteExcel;
 
+my $mysql_config = "/research/acos/synteny_db/.my.cnf";
 my $out_file = "";
 my $type     = "tsv";
 my $batch_id = 0;
@@ -21,14 +22,13 @@ parse_command_line();
 
 my (%sth, %loci, %samples, %filters);
 
-#apply_query_filters(\%filters);
-
 prepare_sql_handles(\%sth, \%filters);
 
 populate(\%sth, \%loci, \%samples, \%filters);
 
 write_results(\%loci, \%samples);
 
+print "Success\n";
 
 sub populate {
     my ($sth, $loci, $samples, $filters) = @_;
@@ -300,7 +300,7 @@ sub prepare_sql_handles {
 
     # Connect to the database, assumes user has a MySQL ~/.my.cnf file to
     # specify the host, username and password
-    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=" . $ENV{"HOME"} . "/.my.cnf")
+    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=$mysql_config")
 	or die("Unable to connect to the $db MySQL Database!\n" . $DBI::errstr);
 
     my $query;
