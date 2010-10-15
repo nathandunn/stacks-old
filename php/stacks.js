@@ -1,3 +1,40 @@
+function toggle_div(id, root_path, page_state_form) {
+    var tr_obj = document.getElementById(id); 
+    var caret  = document.getElementById(id + "_img");
+
+    if (tr_obj.style.display == "none") {
+	tr_obj.style.display = "";
+	caret.src            = root_path + "/caret-d.png"; 
+
+	update_page_state(page_state_form, id, 1);
+    }
+    else {
+	tr_obj.style.display = "none";
+	caret.src            = root_path + "/caret-u.png";
+
+	update_page_state(page_state_form, id, 0);
+    }
+}
+
+function toggle_aln_tr(id, root_path, url) {
+    var tr_obj = document.getElementById(id); 
+    var caret  = document.getElementById(id + "_img");
+
+    if (tr_obj.style.display == "none") {
+	tr_obj.style.display = "";
+	caret.src            = root_path + "/caret-d.png"; 
+
+	// Check if the alignment has been loaded, if not, load
+        // it in the iframe.
+        var iframe_obj = document.getElementById(id + '_iframe');
+	iframe_obj.src = url;
+    }
+    else {
+	tr_obj.style.display = "none";
+	caret.src            = root_path + "/caret-u.png"; 
+    }
+}
+
 function toggle_sel(id) {
     var div_obj = document.getElementById(id); 
 

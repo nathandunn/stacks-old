@@ -611,8 +611,8 @@ function write_filter($cols) {
 
     echo <<< EOQ
 <h4 class="info_head">
-  <img id="filter_img" src="$img_path/caret-d.png" />
-  <a onclick="toggle_div('filter', '$img_path', 'page_state');">Filter Results By</a>
+  <img id="stacks_filter_img" src="$img_path/caret-d.png" />
+  <a onclick="toggle_div('stacks_filter', '$img_path', 'page_state');">Filter Results By</a>
 </h4>
 <div id="stacks_filter" $filter_vis>
 <form id="filter_results" name="filter_results" method="get" action="$root_path/catalog.php">

@@ -1,3 +1,170 @@
+body {
+  font-family: bitstream vera sans, arial, sans;
+}
+
+a:link { 
+  color: #29356c; 
+}
+
+a:visited { 
+  color: #29356c; 
+}
+
+a:hover { 
+  color: #a93535; 
+}
+
+img { 
+  border: 0;
+}
+
+strong { 
+  color: #333333;
+}
+
+acronym {
+    border-bottom: 1px dotted;
+    cursor: help;
+}
+
+iframe { 
+    width: 100%;
+    height: 500px;
+}
+
+.s {
+    font-size: small;
+}
+
+div.main { 
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#header {
+  background-color: #455372;
+  background-image: url(./images/stacks_bg.png);
+  background-repeat: repeat-x;
+  min-height: 75px;
+  height: 75px;
+
+  -moz-border-radius: 10px;
+  -webkit-border-radius: 10px;
+  border-radius: 10px;
+}
+	
+#header h1 {
+  position: relative;
+  top: 0px;
+  left: 0.75em;
+  font-size: 16pt; 
+}
+
+#header h1 a,
+#header p  a {
+  text-decoration: none;
+  color: #ffffff;
+}
+
+#header p a:hover {
+    color: #a93535; 
+}
+
+#header p {
+    float: right;
+    position: relative;
+    top: -6em;
+    padding-right: 0.75em;
+    font-size: 10pt;
+}
+
+div.footer { 
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: small; 
+  clear: both;
+  padding-top: 20px;
+}
+
+h3.info_head,
+h4.info_head,
+h5.info_head {
+    margin-left: auto;
+    margin-right: auto;
+    width: 80%;
+    padding-bottom: 0px;
+    margin-bottom: 5px;
+}
+
+h3.info_head a:hover,
+h4.info_head a:hover {
+    cursor: pointer;
+}
+
+table.filter {
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+    border: thin solid black;
+    background-color: #eeeeee;
+}
+
+table.filter td {
+    border: 0px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+table.filter tr.active_filter {
+    border: 1px dashed #a93535;
+    background-color: #dadbe1;
+}
+
+table.filter td.active_filter :hover {
+    color: #ffffff;
+}
+
+table.db { 
+  margin-left: auto; 
+  margin-right: auto;
+  border: 1px solid black; 
+  line-height: 1.25;
+  width: 90%;
+  text-align: center; 
+  border-spacing: 0px 1px; 
+  border-collapse: collapse;
+}
+
+table.db th { 
+  border: 1px solid black;
+  line-height: 1;
+  padding: 7px;
+  background-color: #dddddd;
+}
+
+table.db td { 
+  border: 1px solid black; 
+  padding: 5px;
+}
+
+/* Internal table, should be invisible in terms of borders and the like */
+table.int {
+    border: none;
+    border-collapse: collapse;
+    width: 100%;
+    margin-left: auto; 
+    margin-right: auto;
+    text-align: center;
+    padding: 0px;
+    margin: 0px;
+}
+
+table.int td {
+    border: none; 
+}
+
 td.seq { 
     text-align: center;
     font-family: monospace;

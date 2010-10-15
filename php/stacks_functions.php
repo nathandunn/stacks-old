@@ -1,7 +1,7 @@
 <?php
 
 function write_header($page_title) {
-    global $host, $site_title; 
+    global $version, $site_title; 
     global $root_path, $img_path;
 
     echo <<< EOQ
@@ -21,9 +21,15 @@ function write_header($page_title) {
 <body>
 <div class="main" style="width: 95%;">
 <div id="header">
-<h1><a href="$root_path/">RAD-Tag Analysis Pipeline</a></h1>
+<h1><a href="$root_path/"><img src="$img_path/stacks_logo_small.png" /></a></h1>
 <p>
-  <a href="http://teleost.cs.uoregon.edu/acos/">Synomix Tools</a>
+  <a href="http://creskolab.uoregon.edu/stacks/">version 
+
+EOQ;
+
+    include("version.php");
+    echo <<< EOQ
+  </a>
 </p>
 </div>
 
@@ -41,10 +47,8 @@ function write_compact_header($page_title) {
 
 <head>
   <title>$site_title: $page_title</title>
-  <link rel="stylesheet" type="text/css" href="$css_path" />
-  <link rel="stylesheet" type="text/css" href="$root_path/radtag.css" />
-  <script type="text/javascript" src="$js_path"></script>
-  <script type="text/javascript" src="$root_path/radtag.js"></script>
+  <link rel="stylesheet" type="text/css" href="$root_path/stacks.css" />
+  <script type="text/javascript" src="$root_path/stacks.js"></script>
 </head>
 
 <body>
@@ -57,7 +61,7 @@ function write_footer() {
     echo <<< EOQ
 <div class="footer">
   <div style="float: left;">
-    maintained by: <a href="mailto:catchen@cs.uoregon.edu">catchen</a><br />
+    maintained by: <a href="mailto:jcatchen@uoregon.edu">catchen</a><br />
     last updated: 
 EOQ;
 
