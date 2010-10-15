@@ -42,7 +42,7 @@ int main (int argc, char* argv[]) {
     //
     // Set the number of OpenMP parallel threads to execute.
     //
-    omp_set_num_threads(num_threads);
+    //omp_set_num_threads(num_threads);
 
     map<int, Locus *> sample;
 

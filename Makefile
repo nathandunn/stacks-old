@@ -14,37 +14,37 @@ TARGET = ustacks pstacks cstacks sstacks hstacks exstacks
 all: ustacks cstacks pstacks sstacks hstacks exstacks
 
 exstacks: exstacks.o input.o stacks.o
-	${CXX} -fopenmp -o exstacks exstacks.o input.o stacks.o
+	${CXX} ${OMP} -o exstacks exstacks.o input.o stacks.o
 
 exstacks.o:	exstacks.h exstacks.cc stacks.h constants.h sql_utilities.h
 	${CXX} ${CXXFLAGS} -c exstacks.cc
 
 hstacks: hstacks.o input.o stacks.o kmers.o
-	${CXX} -fopenmp -o hstacks hstacks.o input.o stacks.o kmers.o
+	${CXX} ${OMP} -o hstacks hstacks.o input.o stacks.o kmers.o
 
 hstacks.o:	hstacks.h hstacks.cc stacks.h kmers.h constants.h sql_utilities.h
 	${CXX} ${CXXFLAGS} -c hstacks.cc
 
 cstacks: cstacks.o input.o stacks.o kmers.o
-	${CXX} -fopenmp -o cstacks cstacks.o input.o stacks.o kmers.o
+	${CXX} ${OMP} -o cstacks cstacks.o input.o stacks.o kmers.o
 
 cstacks.o:	cstacks.h cstacks.cc stacks.h kmers.h constants.h sql_utilities.h
 	${CXX} ${CXXFLAGS} -c cstacks.cc
 
 sstacks: sstacks.o input.o stacks.o
-	${CXX} -fopenmp -o sstacks sstacks.o input.o stacks.o
+	${CXX} ${OMP} -o sstacks sstacks.o input.o stacks.o
 
 sstacks.o:	sstacks.h sstacks.cc stacks.h constants.h sql_utilities.h
 	${CXX} ${CXXFLAGS} -c sstacks.cc
 
 pstacks: pstacks.o input.o models.o stacks.o
-	${CXX} -fopenmp -o pstacks pstacks.o input.o stacks.o models.o
+	${CXX} ${OMP} -o pstacks pstacks.o input.o stacks.o models.o
 
 pstacks.o:	pstacks.h pstacks.cc stacks.h constants.h Tsv.h Bowtie.h Sam.h Fasta.h Fastq.h
 	${CXX} ${CXXFLAGS} -c pstacks.cc
 
 ustacks: ustacks.o input.o models.o stacks.o kmers.o cluster.o
-	${CXX} -fopenmp -o ustacks ustacks.o input.o stacks.o models.o kmers.o cluster.o
+	${CXX} ${OMP} -o ustacks ustacks.o input.o stacks.o models.o kmers.o cluster.o
 
 ustacks.o:	ustacks.h ustacks.cc stacks.h constants.h sql_utilities.h
 	${CXX} ${CXXFLAGS} -c ustacks.cc
