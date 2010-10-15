@@ -11,7 +11,7 @@ use DBI;
 #use Excel::Writer::XLSX;
 use Spreadsheet::WriteExcel;
 
-my $mysql_config = "/research/acos/synteny_db/.my.cnf";
+my $mysql_config = "/research/acos/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
 my $out_file = "";
 my $type     = "tsv";
 my $batch_id = 0;
@@ -242,28 +242,25 @@ sub write_results {
             $locus->{'num_alleles'} . "\t" .
             $locus->{'alleles'} . "\t";
 
-        $type eq "xls" ? write_excel($worksheet, $i, $str) : print $out_fh $str;
-
-        $gtypes = "";
         foreach $id (keys %{$samples}) {
             $types = $locus->{'gtypes'}->{$id};
 
             if (!defined($types)) {
-                $gtypes .= "\t";
+                $str .= "\t";
                 next;
             }
 
             foreach $type (@{$types}) {
-                $gtypes .= $type->{'allele'} . "/";
+                $str .= $type->{'allele'} . "/";
             }
 
-            $gtypes = substr($gtypes, 0, -1);
-            $gtypes .= "\t";
+            $str  = substr($str, 0, -1);
+            $str .= "\t";
         }
-        $gtypes = substr($gtypes, 0, -1);
-        $gtypes .= "\n";
+        $str  = substr($str, 0, -1);
+        $str .= "\n";
 
-        $type eq "xls" ? write_excel($worksheet, $i, $gtypes) : print $out_fh $gtypes;
+        $type eq "xls" ? write_excel($worksheet, $i, $str) : print $out_fh $str;
 
         $i++;
     }
