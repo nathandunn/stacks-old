@@ -98,7 +98,7 @@ function process_export() {
             obj       = xml_doc.getElementsByTagName("msg");
             var msg   = obj[0].childNodes[0].nodeValue;
 
-            alert(msg);
+            //alert(msg);
 
             gen_export_result(loci, email);
 
