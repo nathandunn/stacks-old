@@ -54,6 +54,25 @@ $query =
 $db['snp_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['snp_sth'], __FILE__, __LINE__);
 
+$query =
+    "SELECT max(ests) as ests, max(pe_radtags) as pe_radtags, max(blast_hits) as blast_hits " . 
+    "FROM catalog_index WHERE batch_id=?";
+$db['seq_sth'] = $db['dbh']->prepare($query);
+check_db_error($db['seq_sth'], __FILE__, __LINE__);
+
+$result = $db['seq_sth']->execute($batch_id);
+check_db_error($result, __FILE__, __LINE__);
+$row = $result->fetchRow();
+
+$cols = array();
+
+if ($row['ests'] == 0 && 
+    $row['pe_radtags'] == 0 && 
+    $row['blast_hits'] == 0)
+    $cols['seq'] = false;
+else
+    $cols['seq'] = true;
+
 //
 // Pull information about this batch
 //
@@ -69,29 +88,34 @@ $page_title = "RAD-Tag Catalog Viewer";
 write_header($page_title, $batch);
 
 echo <<< EOQ
-<form id="page_state" name="page_state"></form>
-<h3 style="margin-left: 1em;">
-Catalog RAD-Tags</h3>
+<h3 class="info_head" style="margin-left: 1em;">
+  <a href="$root_path/index.php?db=$database">
+  Batch #$batch[id] <span class="s">[$batch[date]; $batch[desc]]</span></a>
+</h3>
 
 EOQ;
 
-write_filter();
+write_filter($cols);
 
+//
+// How many columns will we print
+//
+$num_cols = 8;
+foreach ($cols as $col)
+    if ($col == false)
+        $num_cols--;
+
+//
 // Generate Excel export URL
+//
 $excel_export = generate_url("export_batch.php", false);
 
 echo <<< EOQ
-<h4 class="info_head" style="margin-left: 1em;">
-  <img id="sources_img" src="/acos/images/caret-d.png" />
-  <a href="$root_path/index.php?db=$database">
-  Batch #$batch[id] <span class="s">[$batch[date]; $batch[desc]]</span></a></h3>
-</h4>
-
 <div id="sources" style="width: 100%;">
 <a name="results_top"></a>
 <table class="db" style="width: 100%; border: none;">
 <tr>
-  <td colspan="8" style="border: none; padding-bottom: 0px;" class="export_icon">
+  <td colspan="$num_cols" style="border: none; padding-bottom: 0px;" class="export_icon">
 
 <div id="export_popup" style="display: none;">
 <h3>Export</h3>
@@ -122,7 +146,7 @@ when the results are ready.
   </td>
 </tr>
 <tr>
-  <td colspan="8" style="border: none; padding-bottom: 0px;">
+  <td colspan="$num_cols" style="border: none; padding-bottom: 0px;">
 
 EOQ;
 
@@ -150,10 +174,13 @@ echo <<< EOQ
   <th style="width: 5%;">Progeny</th>
   <th style="width: 5%;">Marker</th>
   <th style="width: 10%;">Ratio</th>
-  <th style="width: 10%">Sequence</th>
-</tr>
 
 EOQ;
+
+if ($cols['seq'] == true)
+    print
+        "  <th style=\"width: 10%\">Sequence</th>\n";
+print  "</tr>\n";
 
 $db['dbh']->setLimit($display['pp'], $start_group - 1);
 check_db_error($db['dbh'], __FILE__, __LINE__);
@@ -257,6 +284,11 @@ EOQ;
   <td style="text-align: left; font-size: smaller;">
     $ratio_parsed
   </td>
+
+EOQ;
+
+    if ($cols['seq'] == true)
+        echo <<< EOQ
   <td>
     <table class="int" style="font-size: smaller;">
     <tr><td>ests: $row[ests]</td><td>pe: $row[pe_radtags]</td></tr>
@@ -266,9 +298,13 @@ EOQ;
       </td></tr>
     </table>
   </td>
+
+EOQ;
+
+echo <<< EOQ
 </tr>
 <tr id="{$row[tag_id]}" style="display: none">
-  <td colspan="8">
+  <td colspan="$num_cols">
     <iframe id="{$row[tag_id]}_iframe" 
             frameborder="0" 
             scrolling="no" 
@@ -277,7 +313,7 @@ EOQ;
   </td>
 </tr>
 <tr id="{$row[tag_id]}_gtypes" style="display: none">
-  <td colspan="8">
+  <td colspan="$num_cols">
     <iframe id="{$row[tag_id]}_gtypes_iframe" 
             frameborder="0" 
             scrolling="no" 
@@ -286,7 +322,7 @@ EOQ;
   </td>
 </tr>
 <tr id="{$row[tag_id]}_blast" style="display: none">
-  <td colspan="8">
+  <td colspan="$num_cols">
     <iframe id="{$row[tag_id]}_blast_iframe" 
             frameborder="0" 
             scrolling="no" 
@@ -299,7 +335,7 @@ EOQ;
 
 print 
 "<tr>\n" .
-"  <td colspan=\"8\" style=\"border: none; padding-top: 0px;\">\n";
+"  <td colspan=\"$num_cols\" style=\"border: none; padding-top: 0px;\">\n";
 
 write_pagination($pagination_count, $start_group, $end_group, "catalog.php");
 
@@ -534,7 +570,7 @@ $per_page_ctl
 EOQ;
 }
 
-function write_filter() {
+function write_filter($cols) {
     global $img_path, $root_path, $display;
 
     $hidden_vars  = generate_hidden_form_vars("filter");
@@ -577,78 +613,123 @@ function write_filter() {
     echo <<< EOQ
 <h4 class="info_head">
   <img id="filter_img" src="$img_path/caret-d.png" />
-  <a onclick="toggle_div('filter', '$img_path', 'page_state');">Filter Results</a>
+  <a onclick="toggle_div('filter', '$img_path', 'page_state');">Filter Results By</a>
 </h4>
-<div id="filter" $filter_vis>
+<div id="stacks_filter" $filter_vis>
 <form id="filter_results" name="filter_results" method="get" action="$root_path/catalog.php">
 $hidden_vars
 <table class="filter">
-<tr {$filters['cata']['tr']}>
-  <td><input type="checkbox" name="filter_type[]" value="cata" onchange="rebuild_display_select()" {$filters['cata']['sel']} /> 
-      <a onclick="toggle_cb('filter_results', 'cata')">Filter by catalog ID:</a></td>
-  <td>
-    <input name="filter_cata" value="$display[filter_cata]" size="15" />
+<tr>
+  <td {$filters['cata']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="cata" onchange="rebuild_display_select()" {$filters['cata']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'cata')">
+      <acronym title="Show a locus with a particular ID.">Catalog ID</acronym>:</a>
+      <input name="filter_cata" value="$display[filter_cata]" size="15" />
   </td>
-</tr>
-<tr {$filters['alle']['tr']}>
-  <td><input type="checkbox" name="filter_type[]" value="alle" onchange="rebuild_display_select()" {$filters['alle']['sel']} /> 
-      <a onclick="toggle_cb('filter_results', 'alle')">Filter by number of alleles:</a></td>
-  <td>
-$alle_ctl
+  <td colspan="2" style="text-align: right; padding-right: 10px;">
+      <input type="submit" value="filter" onclick="update_page_state_form(this.form.id, 'page_state')" />
   </td>
-</tr>
-<tr {$filters['snps']['tr']}>
-  <td><input type="checkbox" name="filter_type[]" value="snps" onchange="rebuild_display_select()" {$filters['snps']['sel']} /> 
-      <a onclick="toggle_cb('filter_results', 'snps')">Filter by presence of SNPs:</a></td>
-  <td>
-$snps_ctl
-  </td>
-</tr>
-<tr {$filters['pare']['tr']}>
-  <td><input type="checkbox" name="filter_type[]" value="pare" onchange="rebuild_display_select()" {$filters['pare']['sel']} /> 
-      <a onclick="toggle_cb('filter_results', 'pare')">Filter by the number of parental matches:</a></td>
-  <td>
-$pare_ctl
-  </td>
-</tr>
-<tr {$filters['prog']['tr']}>
-  <td><input type="checkbox" name="filter_type[]" value="prog" onchange="rebuild_display_select()" {$filters['prog']['sel']} /> 
-      <a onclick="toggle_cb('filter_results', 'prog')">Filter by the number of progeny matches:</a></td>
-  <td>
-$prog_ctl
-  </td>
-</tr>
-<tr {$filters['vprog']['tr']}>
-  <td><input type="checkbox" name="filter_type[]" value="vprog" onchange="rebuild_display_select()" {$filters['vprog']['sel']} /> 
-      <a onclick="toggle_cb('filter_results', 'vprog')">Filter by the number of mappable progeny:</a></td>
-  <td>
-$vprog_ctl
-  </td>
-</tr>
-<tr {$filters['mark']['tr']}>
-  <td><input type="checkbox" name="filter_type[]" value="mark" onchange="rebuild_display_select()" {$filters['mark']['sel']} /> 
-      <a onclick="toggle_cb('filter_results', 'mark')">Filter by mapable markers:</a></td>
-  <td>
-$mark_ctl
-  </td>
-</tr>
-<tr {$filters['est']['tr']}>
-  <td colspan="2"><input type="checkbox" name="filter_type[]" value="est" onchange="rebuild_display_select()" {$filters['est']['sel']} /> 
-      <a onclick="toggle_cb('filter_results', 'est')">Contains ESTs</a></td>
-</tr>
-<tr {$filters['pe']['tr']}>
-  <td colspan="2"><input type="checkbox" name="filter_type[]" value="pe" onchange="rebuild_display_select()" {$filters['pe']['sel']} /> 
-      <a onclick="toggle_cb('filter_results', 'pe')">Contains Paired-end RAD-Tags</a></td>
-</tr>
-<tr {$filters['blast']['tr']}>
-  <td colspan="2"><input type="checkbox" name="filter_type[]" value="blast" onchange="rebuild_display_select()" {$filters['blast']['sel']} /> 
-      <a onclick="toggle_cb('filter_results', 'blast')">Contains BLAST Hits</a></td>
 </tr>
 <tr>
-  <td colspan="2" style="text-align: right; padding-right: 10px;">
-    <input type="submit" value="filter" onclick="update_page_state_form(this.form.id, 'page_state')" />
+  <td style="width: 33%; text-align: left;">
+  <table style="text-align: left;">
+  <tr>
+  <td {$filters['alle']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="alle" onchange="rebuild_display_select()" {$filters['alle']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'alle')">
+      <acronym title="Filter the catalog according to the number of alleles identified for a locus.">Alleles</acronym>:</a>
+  </td>
+  <td {$filters['alle']['tr']}>
+$alle_ctl
+  </td>
+  </tr>
+  <tr>
+  <td {$filters['snps']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="snps" onchange="rebuild_display_select()" {$filters['snps']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'snps')">
+      <acronym title="Filter the catalog according to the number of SNPs found at a locus.">SNPs</acronym>:</a>
+  </td>
+  <td {$filters['snps']['tr']}>
+$snps_ctl
+  </td>
+  </tr>
+  </table>
+  </td>
+
+  <td style="width: 33%; text-align: center;">
+  <table style="text-align: left;">
+  <tr>
+  <td {$filters['pare']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="pare" onchange="rebuild_display_select()" {$filters['pare']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'pare')">
+      <acronym title="Filter the catalog according to the number of parental samples that are matched to a locus.">Parental matches</acronym>:</a>
+  </td>
+  <td {$filters['pare']['tr']}>
+$pare_ctl
+  </td>
+  </tr>
+  <tr>
+  <td {$filters['prog']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="prog" onchange="rebuild_display_select()" {$filters['prog']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'prog')">
+      <acronym title="Filter the catalog according to the number of progeny samples that are matched to a locus.">Progeny matches</acronym>:</a>
+  </td>
+  <td {$filters['prog']['tr']}>
+$prog_ctl
+  </td>
+  </tr>
+  </table>
+  </td>
+
+  <td style="width: 33%; text-align: right;">
+  <table style="text-align: left;">
+  <tr>
+  <td {$filters['vprog']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="vprog" onchange="rebuild_display_select()" {$filters['vprog']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'vprog')">
+      <acronym title="Filter the catalog according to the number of progeny for which a genotype could be inferred.">Mappable progeny</acronym>:</a></td>
+  <td {$filters['vprog']['tr']}>
+$vprog_ctl
+  </td>
+  </tr>
+  <tr>
+  <td {$filters['mark']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="mark" onchange="rebuild_display_select()" {$filters['mark']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'mark')">
+      <acronym title="Filter the catalog to display loci for which a mappable marker type could be inferred.">Mappable markers</acronym>:</a>
+  </td>
+  <td {$filters['mark']['tr']}>
+$mark_ctl
+  </td>
+  </tr>
+  </table>
   </td>
 </tr>
+
+EOQ;
+
+    if ($cols['seq'] == true)
+        echo <<< EOQ
+<tr>
+  <td {$filters['est']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="est" onchange="rebuild_display_select()" {$filters['est']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'est')">
+      <acronym title="Filter the catalog to show loci for which ESTs have been associated.">Contains ESTs</acronym></a>
+  </td>
+  <td {$filters['pe']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="pe" onchange="rebuild_display_select()" {$filters['pe']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'pe')">
+      <acronym title="Filter the catalog to show loci for which paired-end RAD-Tags have been associated.">Contains Paired-end RAD-Tags</acronym></a>
+  </td>
+  <td {$filters['blast']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="blast" onchange="rebuild_display_select()" {$filters['blast']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'blast')">
+      <acronym title="Filter the catalog to show loci for which BLAST hits  have been associated.">Contains BLAST Hits</acronym></a>
+  </td>
+</tr>
+
+EOQ;
+    echo <<< EOQ
 </table>
 </form>
 </div>

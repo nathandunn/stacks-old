@@ -173,3 +173,15 @@ div#export_popup h3 {
     font-weight: bold;
     color: #a93535;
 }
+
+#stacks_filter  {
+    margin-left: auto;
+    margin-right: auto;
+    width: 90%;
+    padding-bottom: 20px;
+}
+
+td.active_filter {
+    border: 1px dashed #a93535;
+    background-color: #a93535;
+}

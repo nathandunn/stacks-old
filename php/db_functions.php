@@ -1,13 +1,18 @@
 <?php
 
 function db_connect($database) {
+    global $db_user, $db_pass;
+
     $dsn = array(
-		 'phptype'  => 'mysql',
-		 'username' => 'acos_user',
-		 'password' => 'orthologs',
-		 'hostspec' => 'localhost',
-		 'database' => $database,
-		 );
+                 'phptype'  => 'mysql',
+                 'username' => $db_user,
+                 'password' => $db_pass,
+                 'hostspec' => 'localhost',
+                 );
+    if (strlen($database) > 0)
+        $dsn['database'] = $database;
+    else
+        $dsn['database'] = false;
 
     $dbh =& MDB2::connect($dsn, $options);
 

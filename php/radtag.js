@@ -22,3 +22,13 @@ function set_operation(id, operation) {
     form_obj.submit();
 }
 
+function toggle_cb(form_id, value) {
+    var form_obj = document.getElementById(form_id); 
+
+    for(i = 0; i < form_obj.elements.length; i++)
+        if (form_obj.elements[i].value == value) 
+            if (form_obj.elements[i].checked == true)
+                form_obj.elements[i].checked = false;
+            else
+                form_obj.elements[i].checked = true;
+}
