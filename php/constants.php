@@ -6,6 +6,8 @@ $js_path     = "/acos/acos.js";
 $css_path    = "/acos/rbh/subf.css";
 $system_path = "/Library/WebServer/Documents/teleost/radtags";
 
+$export_cmd  = "/opt/local/bin/perl /research/acos/stacks_export_notify.pl";
+
 // Colors for printing alleles below
 $colors = array("#008000",
 		"#c00000",

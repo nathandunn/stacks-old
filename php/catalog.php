@@ -106,8 +106,8 @@ when the results are ready.
 </p>
 <p>
   <strong>Output type:</strong>
-    <input type="radio" name="type" value="tsv" /><acronym title="Tab-separated Values Format">TSV</acronym>
-    <input type="radio" name="type" value="xls" /><acronym title="Microsoft Excel Format">XLS</acronym><br />
+    <input type="radio" name="otype" value="tsv" /><acronym title="Tab-separated Values Format">TSV</acronym>
+    <input type="radio" name="otype" value="xls" /><acronym title="Microsoft Excel Format">XLS</acronym><br />
 </p>
 <p>
   <a onclick="export_data('export_popup')">submit</a> | <a onclick="close_export_popup('export_popup')">cancel</a>

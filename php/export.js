@@ -22,10 +22,16 @@ function export_data(id) {
     // Fetch the marker annotation
     //
     var form_obj = document.getElementById(id + "_frm"); 
+    var otype;
+
+    for (i = 0; i < form_obj.otype.length; i++)
+        if (form_obj.otype[i].checked)
+            otype = form_obj.otype[i].value;
+
     var url = 
         form_obj.url.value + "&" + 
-        "email=" + form_obj.email.value + "&"
-        "type=" + form_obj.type.value;
+        "email=" + form_obj.email.value + "&" +
+        "otype=" + otype;
 
     // 
     // Prepare and send XMLHttpRequest Object.
@@ -88,6 +94,11 @@ function process_export() {
 
             obj       = xml_doc.getElementsByTagName("email");
             var email = obj[0].childNodes[0].nodeValue;
+
+            obj       = xml_doc.getElementsByTagName("msg");
+            var msg   = obj[0].childNodes[0].nodeValue;
+
+            alert(msg);
 
             gen_export_result(loci, email);
 
