@@ -1,3 +1,22 @@
+//
+// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+//
+// This file is part of Stacks.
+//
+// Stacks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Stacks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
 // exstacks -- an Example Stacks program. Read in a set of reference-aligned stacks
@@ -181,13 +200,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "exstacks " << VERSION << "\n\n";
+    std::cerr << "exstacks " << stacks_version << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "exstacks " << VERSION << "\n"
+    std::cerr << "exstacks " << stacks_version << "\n"
               << "exstacks -s sample_file [-o path] [-p num_threads] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  s: TSV file from which to load radtags." << "\n"
