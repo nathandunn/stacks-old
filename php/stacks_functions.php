@@ -39,7 +39,7 @@ function write_header($page_title) {
 <body>
 <div class="main" style="width: 95%;">
 <div id="header">
-<h1><a href="$root_path/"><img src="$img_path/stacks_logo_small.png" /></a></h1>
+<h1><a href="$root_path/"><img src="$img_path/stacks_logo_rev_small.png" /></a></h1>
 <p>
   <a href="http://creskolab.uoregon.edu/stacks/">version 
 
