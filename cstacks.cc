@@ -1,3 +1,4 @@
+// -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
 // Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
 //
@@ -16,7 +17,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
-// -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 
 //
 // cstacks -- Create a catalog of Stacks.

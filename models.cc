@@ -1,3 +1,4 @@
+// -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
 // Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
 //
@@ -17,7 +18,6 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-// -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
 // models.cc -- routines to detect polymorphism (snp) and detect a lack of polymorphism (fixed).
 //
