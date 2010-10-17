@@ -25,6 +25,8 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
+// $Id$
+//
 #include "kmers.h"
 
 int determine_kmer_length(int read_len, int dist) {

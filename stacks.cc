@@ -25,6 +25,8 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
+// $Id$
+//
 #include "stacks.h"
 
 int Stack::add_id(const char *id) {

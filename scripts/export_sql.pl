@@ -196,7 +196,7 @@ sub apply_query_filters {
     if (scalar(keys %{$filters}) > 0) {
 
         foreach $filter (keys %{$filters}) {
-            $query = " AND ";
+            $query .= " AND ";
             $query .= $sql_filters{$filter};
         }
     }

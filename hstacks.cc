@@ -31,6 +31,8 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
+// $Id$
+//
 
 #include "hstacks.h"
 

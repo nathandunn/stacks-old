@@ -39,8 +39,8 @@ use NET::SMTP;
 #  from:        email address to use in the 'From' field of the message
 #
 my $exe_path      = "/opt/local/bin/perl /research/acos/export_sql.pl";
-my $output_path   = "/Library/WebServer/Documents/teleost/radtags/export/"; 
-my $url           = "http://teleost.cs.uoregon.edu/radtags/export/";
+my $output_path   = "/Library/WebServer/Documents/teleost/stacks/export/"; 
+my $url           = "http://teleost.cs.uoregon.edu/stacks/export/";
 my $local_host    = "teleost.cs.uoregon.edu";
 my $smtp_host     = "teleost.cs.uoregon.edu";
 my $from          = "jcatchen\@uoregon.edu";

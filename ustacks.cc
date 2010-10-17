@@ -25,7 +25,8 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-
+// $Id$
+//
 #include "ustacks.h"
 
 //

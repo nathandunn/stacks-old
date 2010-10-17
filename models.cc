@@ -25,6 +25,8 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
+// $Id$
+//
 #include "models.h"
 
 int call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
