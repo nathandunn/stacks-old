@@ -64,6 +64,9 @@ kmers.o:	kmers.h kmers.cc stacks.h constants.h
 models.o:	models.h models.cc
 	${CXX} ${CXXFLAGS} -c models.cc
 
+cmb.o:	cmb.h cmb.cc
+	${CXX} ${CXXFLAGS} -c cmb.cc
+
 .PHONY:	clean
 
 clean:
