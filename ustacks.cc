@@ -476,18 +476,9 @@ int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, se
 	// If the depth of coverage of the merged tag is greater than the deleverage trigger
 	// then execute the deleveraging algorithm.
 	//
-	if (deleverage_stacks && 
-	    (tag_1->count > deleverage_trigger ||
-	     (int) unique_merge_list.size() > max_delv_stacks)) {
+	if (deleverage_stacks) {
 	    vector<MergedStack *> tags;
-	    int num_clusters = determine_single_linkage_clusters(merged, unique_merge_list, tag_1->count);
-
-	    //set<int>::iterator uit;
-	    //cerr << "Unique merge list: ";
-	    //for (uit = unique_merge_list.begin(); uit != unique_merge_list.end(); uit++) {
-	    //cerr << "  " << *uit << "\n";
-	    //}
-
+            int num_clusters = 1;
 	    deleverage(unique, merged, unique_merge_list, num_clusters, round, tags);
 
 	    for (uint t = 0; t < tags.size(); t++) {
@@ -685,120 +676,140 @@ int deleverage(map<int, Stack *> &unique,
 	       vector<MergedStack *> &deleveraged_tags) {
     set<int>::iterator i;
     vector<pair<int, int> >::iterator j;
-    MergedStack *tag, *tag_1, *tag_2;
-    vector<int> keys;
+    MergedStack *tag_1, *tag_2;
 
     //
-    // Create a two-dimensional map to hold distances between nodes.
+    // Two-dimensional map to hold distances between nodes.
     //
-    map<int, map<int, double> > dist_map, scaled_dist_map;
+    map<int, map<int, double> > dist_map;
 
-    for (i = merge_list.begin(); i != merge_list.end(); i++)
+    //
+    // Create a minimum spanning tree in order to determine the minimum distance
+    // between each node in the list.
+    //
+    MinSpanTree *mst = new MinSpanTree;
+    vector<int>  keys;
+
+    for (i = merge_list.begin(); i != merge_list.end(); i++) {
 	keys.push_back(*i);
-
-    //cerr << "    Deleveraging: " << merged[keys[0]]->con << "\n";
-
-    //
-    // There must be at least two tags before we can cluster the data.
-    //
-    if (keys.size() <= 2) {
-	set<int> e;
-	for (uint k = 0; k < keys.size(); k++)
-	    e.insert(keys[k]);
-
-	tag = merge_tags(merged, e, 0);
-	tag->deleveraged = true;
-	deleveraged_tags.push_back(tag);
-
-	return 0;
+        mst->add_node(*i);
     }
 
     //
-    // We want to measure the distance between all nodes in the merge_list.
+    // Measure the distance between each pair of nodes and add edges to our
+    // minimum spanning tree.
     //
+    Node *n_1, *n_2;
     for (uint k = 0; k < keys.size(); k++) {
-	for (uint l = 0; l < keys.size(); l++) {
-	    tag_1 = merged[keys[k]];
+        tag_1 = merged[keys[k]];
+        n_1   = mst->node(keys[k]);
+
+	for (uint l = k+1; l < keys.size(); l++) {
 	    tag_2 = merged[keys[l]];
+            n_2   = mst->node(keys[l]);
 
 	    int d = dist(tag_1, tag_2);
 	    dist_map[keys[k]][keys[l]] = d;
-	    dist_map[keys[l]][keys[k]] = d;
+
+            n_1->add_edge(mst->node(keys[l]), d);
+            n_2->add_edge(mst->node(keys[k]), d);
 	}
     }
-    
+
+    mst->build_tree();
+
+    //
+    // Visualize the MST
+    //
+    stringstream gout_file;
+    gout_file << out_path.c_str() << "ustacks_" << keys[0] << ".dot";
+    string vis = mst->vis(true);
+    ofstream gvis(gout_file.str().c_str());
+    gvis << vis;
+    gvis.close();
+
+    //
+    // Generate all possible combinations of the nodes in the mimimum spanning tree.
+    //
+    map<int, CombSet *> combinations;
+    CombSet *comb;
+    Cmb    **cmb;
+    int num_subsets = 3;
+
+    if (combinations.count(keys.size()) == 0)
+        comb = new CombSet(keys.size(), num_subsets);
+    else
+        comb = combinations[keys.size()];
+
+    map<int, vector<int> > comb_map;
+
+    int index = 0;
+    while ((cmb = comb->next()) != NULL) {
+        cerr << "Index: " << index << "\n";
+
+        int i = 0;
+        while (cmb[i] != NULL) { 
+
+            if (mst->connected(cmb[i]->elem, cmb[i]->size)) {
+                cerr << "  Combination #" << i << ": ";
+                write_cmb(cmb[i]->elem, cmb[i]->size);
+            }
+
+            i++;
+        }
+        index++;
+    }
+
     keys.clear();
 
-    uint s, t, depth_1, depth_2, id;
-    map<int, map<int, double> >::iterator q;
-    map<int, double>::iterator r;
-    double scale, d;
+//     uint s, t, depth_1, depth_2, id;
+//     map<int, map<int, double> >::iterator q;
+//     map<int, double>::iterator r;
+//     double scale, d;
 
-    // 
-    // Record the IDs for the stacks in the distance map
-    //
-    q = dist_map.begin();
-    for (r = (*q).second.begin(); r != (*q).second.end(); r++) {
-	//cerr << "  Key: " << (*r).first << "; Number: " << (*q).second.count((*r).first) << "\n";
-	keys.push_back((*r).first);
-    }
+//     // 
+//     // Record the IDs for the stacks in the distance map
+//     //
+//     q = dist_map.begin();
+//     for (r = (*q).second.begin(); r != (*q).second.end(); r++) {
+// 	//cerr << "  Key: " << (*r).first << "; Number: " << (*q).second.count((*r).first) << "\n";
+// 	keys.push_back((*r).first);
+//     }
 
-    //
-    // Scale the distances between nodes
-    //
-    for (s = 0; s < keys.size(); s++) {
-	for (t = 0; t < keys.size(); t++) {
-	    if (s == t) continue;
+//     map<int, set<int> > cluster_map;
+//     map<int, set<int> >::iterator c;
+//     set<int>::iterator it;
 
-	    depth_1 = merged[keys[s]]->count;
-	    depth_2 = merged[keys[t]]->count;
-	    d       = abs(depth_2 - depth_1);
+//     hclust(keys, scaled_dist_map, num_clusters, cluster_map);
 
-	    scale = d == 0 ? 1 : log(d);
-	    //cerr << 
-	    //"Distance between " << keys[s] << " (" << depth_1 << ") and " << keys[t] << " (" << depth_2 << "): " << 
-	    //d << " (" << dist_map[keys[s]][keys[t]] << 
-	    //"; scale: " << scale << 
-	    //"; total: " << dist_map[keys[s]][keys[t]] * scale << ")\n";
-	    scaled_dist_map[keys[s]][keys[t]] = dist_map[keys[s]][keys[t]] * scale;
-	}
-    }
+//     if (dump_graph) {
+//      gout_file  << out_path.c_str() << "ustacks_" << keys[0] << ".dot";
+//      dump_stack_graph(gout_file.str(), unique, merged, keys, scaled_dist_map, cluster_map);
+// 	gout_file.str("");
+// 	gout_file  << out_path.c_str() << "ustacks_unscaled_" << keys[0] << ".dot";
+// 	cerr << gout_file.str() << "\n";
+// 	dump_stack_graph(gout_file.str(), unique, merged, keys, dist_map, cluster_map);
+//     }
 
-    map<int, set<int> > cluster_map;
-    map<int, set<int> >::iterator c;
-    set<int>::iterator it;
-    stringstream gout_file;
+//     //
+//     // Merge the clustered tags together
+//     //
+//     id = 0;
+//     for (c = cluster_map.begin(); c != cluster_map.end(); c++) {
 
-    hclust(keys, scaled_dist_map, num_clusters, cluster_map);
+// 	tag = merge_tags(merged, c->second, id);
+// 	tag->deleveraged = true;
+// 	tag->masked      = true;
+// 	//
+// 	// Check to make sure the resulting tags aren't too far apart to merge. If so,
+// 	// mask this tag off, so it is not considered in later merging steps.
+// 	//
+// 	if (!check_deleveraged_dist(dist_map, c->second, round))
+// 	    tag->blacklisted = true;
 
-    if (dump_graph) {
-	gout_file  << out_path.c_str() << "pptagu_" << keys[0] << ".dot";
-	dump_stack_graph(gout_file.str(), unique, merged, keys, scaled_dist_map, cluster_map);
-	gout_file.str("");
-	gout_file  << out_path.c_str() << "pptagu_unscaled_" << keys[0] << ".dot";
-	cerr << gout_file.str() << "\n";
-	dump_stack_graph(gout_file.str(), unique, merged, keys, dist_map, cluster_map);
-    }
-
-    //
-    // Merge the clustered tags together
-    //
-    id = 0;
-    for (c = cluster_map.begin(); c != cluster_map.end(); c++) {
-
-	tag = merge_tags(merged, c->second, id);
-	tag->deleveraged = true;
-	tag->masked      = true;
-	//
-	// Check to make sure the resulting tags aren't too far apart to merge. If so,
-	// mask this tag off, so it is not considered in later merging steps.
-	//
-	if (!check_deleveraged_dist(dist_map, c->second, round))
-	    tag->blacklisted = true;
-
-	deleveraged_tags.push_back(tag);
-	id++;
-    }
+// 	deleveraged_tags.push_back(tag);
+// 	id++;
+//     }
 
     return 0;
 }
@@ -1144,9 +1155,9 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
     string all_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".alleles.tsv";
 
     // Open the output files for writing.
-    std::ofstream tags(tag_file.c_str());
-    std::ofstream snps(snp_file.c_str());
-    std::ofstream alle(all_file.c_str());
+    ofstream tags(tag_file.c_str());
+    ofstream snps(snp_file.c_str());
+    ofstream alle(all_file.c_str());
     int id;
 
     for (i = m.begin(); i != m.end(); i++) {
@@ -1207,7 +1218,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
 }
 
 int hclust(vector<int> &keys, map<int, map<int, double> > &dist_map, int num_clusters, map<int, set<int> > &cluster_map) {
-    uint s, t;
+    //    uint s, t;
 
     //for (s = 0; s < keys.size(); s++) {
     //cerr << "Key: " << keys[s] << "\n";
@@ -1227,51 +1238,51 @@ int hclust(vector<int> &keys, map<int, map<int, double> > &dist_map, int num_clu
     //  computational convenience, as including an empty row requires
     //  minimal storage.
     //
-    map<int, int> key_map;
-    double **datamatrix = new double*[keys.size()];
-    for (s = 1; s < keys.size(); s++)
-	datamatrix[s] = new double[s];
+//     map<int, int> key_map;
+//     double **datamatrix = new double*[keys.size()];
+//     for (s = 1; s < keys.size(); s++)
+// 	datamatrix[s] = new double[s];
 
-    for (s = 0; s < keys.size(); s++) {
-	key_map[s] = keys[s];
+//     for (s = 0; s < keys.size(); s++) {
+// 	key_map[s] = keys[s];
 
-	for (t = 0; t < s; t++) {
-	    datamatrix[s][t] = dist_map[keys[s]][keys[t]];
-	    //cerr << datamatrix[s][t] << "\t";
-	}
-	//cerr << "\n";
-    }
+// 	for (t = 0; t < s; t++) {
+// 	    datamatrix[s][t] = dist_map[keys[s]][keys[t]];
+// 	    //cerr << datamatrix[s][t] << "\t";
+// 	}
+// 	//cerr << "\n";
+//     }
 
-    //
-    // Hierarchically cluster the data points, using single-linkage clustering.
-    //
-    Node *tree = treecluster(keys.size(), keys.size(), NULL, NULL, NULL, 0, 0, 's', datamatrix);
+//     //
+//     // Hierarchically cluster the data points, using single-linkage clustering.
+//     //
+//     Node *tree = treecluster(keys.size(), keys.size(), NULL, NULL, NULL, 0, 0, 's', datamatrix);
 
-    // Free the data matrix as it has been modified by the clustering function.
-    for (s = 1; s < keys.size(); s++) 
-	delete datamatrix[s];
-    delete datamatrix;
+//     // Free the data matrix as it has been modified by the clustering function.
+//     for (s = 1; s < keys.size(); s++) 
+// 	delete datamatrix[s];
+//     delete datamatrix;
 
-    // Indication that the treecluster routine failed
-    if (tree == NULL) {
-	cerr << "Tree clustering algorithm failed.\n";
-	return 0;
-    }
+//     // Indication that the treecluster routine failed
+//     if (tree == NULL) {
+// 	cerr << "Tree clustering algorithm failed.\n";
+// 	return 0;
+//     }
 
-    int *clusterid = new int[keys.size()];
+//     int *clusterid = new int[keys.size()];
 
-    cuttree(keys.size(), tree, num_clusters, clusterid);
+//     cuttree(keys.size(), tree, num_clusters, clusterid);
 
-    //
-    // Record the stack clusters
-    //
-    for (s = 0; s < keys.size(); s++) {
-	cluster_map[clusterid[s]].insert(key_map[s]);
-	//cerr << "Stack " << s << " [uid: " << key_map[s] << "] is in cluster: " << clusterid[s] << "\n";
-    }
+//     //
+//     // Record the stack clusters
+//     //
+//     for (s = 0; s < keys.size(); s++) {
+// 	cluster_map[clusterid[s]].insert(key_map[s]);
+// 	//cerr << "Stack " << s << " [uid: " << key_map[s] << "] is in cluster: " << clusterid[s] << "\n";
+//     }
 
-    delete tree;
-    delete clusterid;
+//     delete tree;
+//     delete clusterid;
 
     return 0;
 }
@@ -1495,18 +1506,18 @@ int calc_triggers(double cov_mean, double cov_stdev, int &deleverage_trigger, in
 //     return k - 1;
 }
 
-long double factorial(int i) {
-    long double f = 1;
+// long double factorial(int i) {
+//     long double f = 1;
 
-    if (i == 0) return 1;
+//     if (i == 0) return 1;
 
-    do {
-	f = f * i;
-	i--;
-    } while (i > 0);
+//     do {
+// 	f = f * i;
+// 	i--;
+//     } while (i > 0);
 
-    return f;
-}
+//     return f;
+// }
 
 int parse_command_line(int argc, char* argv[]) {
     int c;

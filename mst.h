@@ -23,6 +23,8 @@
 
 #include <vector>
 using std::vector;
+#include <sstream>
+using std::stringstream;
 #include<iostream>
 using std::cerr;
 
@@ -63,36 +65,59 @@ public:
         for (uint i = 0; i < edges.size(); i++)
             delete this->edges[i];
     }
+
+    Edge *add_edge(Node *, int);
 };
+
+Edge *Node::add_edge(Node *n, int dist) {
+    Edge *e = new Edge;
+    e->child = n;
+    e->dist  = dist;
+    this->edges.push_back(e);
+
+    return e;
+}
 
 bool min_span_tree_cmp(const Node *lhs, const Node *rhs) {
     return (lhs->min_dist > rhs->min_dist);
 }
 
 class MinSpanTree {
-    vector<Node *> nodes;
-    Node *head;
+    map<int, Node *> nodes;
 
  public:
-    MinSpanTree()  { head = NULL; }
+    MinSpanTree()  { }
     ~MinSpanTree() {
         for (uint i = 0; i < this->nodes.size(); i++)
             delete this->nodes[i];
     }
 
-    int   add_node(Node *);
-    int   build_tree();
-    Node *head_node();
+    Node  *add_node(int id);
+    int    build_tree();
+    Node  *node(int id);
+    Node  *head();
+    bool   connected(int *, int);
+    string vis(bool);
 };
 
-int MinSpanTree::add_node(Node *n) {
-    this->nodes.push_back(n);
+Node *MinSpanTree::add_node(int id) {
+    Node *n = new Node(id);
 
-    return 0;
+    this->nodes[id] = n;
+
+    return n;
 }
 
-Node *MinSpanTree::head_node() {
-    return this->head;
+Node *MinSpanTree::node(int id) {
+    return this->nodes[id];
+}
+
+Node *MinSpanTree::head() {
+    return this->nodes.begin()->second;
+}
+
+bool MinSpanTree::connected(int *ids, int size) {
+    return true;
 }
 
 //
@@ -108,16 +133,15 @@ int MinSpanTree::build_tree() {
     //
     // Select an initial node to process and initialize its minimum distance.
     //
-    Node *n = this->nodes.front();
+    Node *n = this->nodes.begin()->second;
     n->min_dist = 0;
-
-    this->head = n;
 
     //
     // Add all of the nodes to the binary heap; process them in order of min_dist
     //
-    for (uint i = 0; i < this->nodes.size(); i++)
-        q.push_back(this->nodes[i]);
+    map<int, Node *>::iterator it;
+    for (it = this->nodes.begin(); it != this->nodes.end(); it++)
+        q.push_back((*it).second);
     make_heap(q.begin(), q.end(), min_span_tree_cmp);
 
     while (q.size() > 0) {
@@ -159,6 +183,81 @@ int MinSpanTree::build_tree() {
     }
 
     return 0;
+}
+
+string MinSpanTree::vis(bool overlay) {
+    uint   j;
+    double d, scale, scaled_d;
+    char   label[32];
+    int    scale_factor = 20;
+
+    //
+    // Output a specification to visualize the minimum spanning tree using graphviz:
+    //   http://www.graphviz.org/
+    //
+    stringstream data;
+    data << "graph stacks_" << this->nodes.size() << " {\n"
+         << "rankdir=LR\n"
+         << "size=\"" << scale_factor << "!\"\n"
+         << "overlap=false\n"
+         << "node [shape=circle style=filled fillcolor=\"#3875d7\" fontname=\"Arial\"];\n"
+         << "edge [fontsize=8.0 fontname=\"Arial\" color=\"#aaaaaa\"];\n";
+
+    map<int, Node *>::iterator i;
+    queue<Node *> q;
+
+    //
+    // If overlay==true, write the minimum spanning tree on top of the full tree as a subgraph.
+    //
+    data << "subgraph mst {\n"
+         << "    edge [penwidth=5 fontsize=12.0 fontcolor=\"black\" color=\"black\"]\n"
+         << "    node [fillcolor=\"red\" fontcolor=\"white\"]\n";
+
+    Node *n = this->head();
+    q.push(n);
+
+    while (!q.empty()) {
+        n = q.front();
+        q.pop();
+
+        for (uint i = 0; i < n->min_adj_list.size(); i++) {
+            data << "  " << n->id << "--" << n->min_adj_list[i]->id << "\n";
+
+            q.push(n->min_adj_list[i]);
+        }
+    }
+
+    data << "}\n";
+
+    //
+    // Scale the graph to display on a scale_factor inch canvas. Find the largest edge weight
+    // and scale the edge lengths to fit the canvas.
+    //
+    for (i = this->nodes.begin(); i != this->nodes.end(); i++) {
+        n = i->second;
+        for (j = 0; j < n->edges.size(); j++)
+	    scale = n->edges[j]->dist > scale ? n->edges[j]->dist : scale;
+    }
+    scale = scale / scale_factor;
+
+    //
+    // Write out edges.
+    //
+    for (i = this->nodes.begin(); i != this->nodes.end(); i++) {
+        n = i->second;
+        for (j = 0; j < n->edges.size(); j++) {
+            d        = n->edges[j]->dist;
+            scaled_d = d / scale;
+	    scaled_d = scaled_d < 0.75 ? 0.75 : scaled_d;
+	    sprintf(label, "%.1f", d);
+
+	    data << n->id << " -- " << n->edges[j]->child->id << " [len=" << scaled_d << ", label=" << label << "];\n";
+	}
+    }
+
+    data << "}\n";
+
+    return data.str();
 }
 
 #endif // __MST_H__

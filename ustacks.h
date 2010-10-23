@@ -28,28 +28,23 @@
 #include <utility>
 using std::pair;
 using std::make_pair;
-
 #include <string>
 using std::string;
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
+using std::ofstream;
 using std::stringstream;
 using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
-
 #include <vector>
 using std::vector;
-
 #include <map>
 using std::map;
-
 #include <queue>
 using std::queue;
-
 #include <set>
 using std::set;
 
@@ -62,13 +57,15 @@ using __gnu_cxx::hash;
 #include <hash_map>
 #endif
 
-// Include the clustering routines as provided by
-// Hoon, Imoto, and Miyano; mdehoon@gsc.riken.jp
-extern "C" {
-#include "cluster.h"
-}
+// // Include the clustering routines as provided by
+// // Hoon, Imoto, and Miyano; mdehoon@gsc.riken.jp
+// extern "C" {
+// #include "cluster.h"
+// }
 
 #include "constants.h" 
+#include "mst.h"       // Minimum spanning tree implementation
+#include "cmb.h"       // Generates combinations
 #include "kmers.h"
 #include "stacks.h"    // Major data structures for holding stacks
 #include "models.h"    // Contains maximum likelihood statistical models.
@@ -149,7 +146,7 @@ int  dump_stack_graph(string, map<int, Stack *> &, map<int, MergedStack *> &, ve
 // Utilities
 //
 MergedStack *merge_tags(map<int, MergedStack *> &, set<int> &, int);
-long double factorial(int);
+//long double factorial(int);
 
 //
 // Deprecated
