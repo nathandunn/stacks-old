@@ -677,6 +677,7 @@ int deleverage(map<int, Stack *> &unique,
     set<int>::iterator i;
     vector<pair<int, int> >::iterator j;
     MergedStack *tag_1, *tag_2;
+    uint k, l;
 
     //
     // Two-dimensional map to hold distances between nodes.
@@ -700,11 +701,11 @@ int deleverage(map<int, Stack *> &unique,
     // minimum spanning tree.
     //
     Node *n_1, *n_2;
-    for (uint k = 0; k < keys.size(); k++) {
+    for (k = 0; k < keys.size(); k++) {
         tag_1 = merged[keys[k]];
         n_1   = mst->node(keys[k]);
 
-	for (uint l = k+1; l < keys.size(); l++) {
+	for (l = k+1; l < keys.size(); l++) {
 	    tag_2 = merged[keys[l]];
             n_2   = mst->node(keys[l]);
 
@@ -716,6 +717,7 @@ int deleverage(map<int, Stack *> &unique,
 	}
     }
 
+    //
     mst->build_tree();
 
     //
@@ -734,33 +736,56 @@ int deleverage(map<int, Stack *> &unique,
     map<int, CombSet *> combinations;
     CombSet *comb;
     Cmb    **cmb;
-    int num_subsets = 3;
+    int      num_subsets = 6;
 
     if (combinations.count(keys.size()) == 0)
         comb = new CombSet(keys.size(), num_subsets);
     else
         comb = combinations[keys.size()];
 
-    map<int, vector<int> > comb_map;
+    //
+    // Provide a list of IDs to CombSet to map array indices to MergedStack IDs.
+    //
+    int *ids = new int[keys.size()];
+    for (k = 0; k < keys.size(); k++)
+        ids[k] = keys[k];
 
-    int index = 0;
-    while ((cmb = comb->next()) != NULL) {
-        cerr << "Index: " << index << "\n";
+    vector<Cmb **> valid_comb;
+    bool valid;
+    int  index = 0;
 
-        int i = 0;
-        while (cmb[i] != NULL) { 
+    while ((cmb = comb->next(ids)) != NULL) {
+        valid = true;
 
-            if (mst->connected(cmb[i]->elem, cmb[i]->size)) {
-                cerr << "  Combination #" << i << ": ";
-                write_cmb(cmb[i]->elem, cmb[i]->size);
+        for (k = 0; cmb[k] != NULL; k++) { 
+            //
+            // Is this subset connected within the minimum spanning tree?
+            //
+            if ((valid = mst->connected(cmb[k]->elem, cmb[k]->size)) == false)
+                break;
+        }
+
+        //
+        // If this combination is valid, store it in order to calculate its likelihood value
+        //
+        if (valid) {
+            cerr << "Index: " << index << "\n";
+
+            for (k = 0; cmb[k] != NULL; k++) { 
+                cerr << "  Combination #" << k << ": ";
+                write_cmb(cmb[k]->elem, cmb[k]->size);
             }
 
-            i++;
+            valid_comb.push_back(cmb);
         }
+
         index++;
     }
 
+    delete [] ids;
     keys.clear();
+    for (k = 0; k < valid_comb.size(); k++)
+        comb->destroy(valid_comb[k]);
 
 //     uint s, t, depth_1, depth_2, id;
 //     map<int, map<int, double> >::iterator q;

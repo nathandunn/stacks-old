@@ -70,18 +70,20 @@ class CombSet {
     vector<pair<int, int> > compound_set;
     vector<Cmb *>           compound_comb;
 
-    int    remove_duplicates(int **&, int &, int);
+    int    count_valid_comb(int, int, int);
+    bool   valid(int *, int);
     int    make_compound_set();
-    int  **generate_combinations(int, int, int);
-    int    next_combination(int *, int *, int, int);
+    int  **generate_combinations(int, int, int &, bool);
+    int    next_combination(int *, int, int);
     double num_combinations(int, int);
 
  public:
     CombSet(int, int);
     ~CombSet();
 
-    Cmb **next();
+    Cmb **next(int map[] = NULL);
     void  reset();
+    void  destroy(Cmb **);
 };
 
 #endif // __CMB_H__

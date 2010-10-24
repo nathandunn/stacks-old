@@ -23,6 +23,10 @@
 
 #include <vector>
 using std::vector;
+#include <set>
+using std::set;
+#include <queue>
+using std::queue;
 #include <sstream>
 using std::stringstream;
 #include<iostream>
@@ -117,7 +121,42 @@ Node *MinSpanTree::head() {
 }
 
 bool MinSpanTree::connected(int *ids, int size) {
-    return true;
+    set<int>      valid, visited;
+    queue<Node *> q;
+
+    if (size == 1)
+        return true;
+
+    for (int i = 0; i < size; i++)
+        valid.insert(ids[i]);
+
+    //
+    // Take the first ID and begin traversing the tree. If we hit
+    // a node not in the ids set, stop traversing this branch. Check that
+    // all nodes are directly connected.
+    //
+    int   valid_cnt = 0;
+    Node *n         = this->node(ids[0]);
+    q.push(n);
+
+    while (!q.empty() && valid_cnt < size) {
+        n = q.front();
+        q.pop();
+        visited.insert(n->id);
+
+        if (valid.count(n->id)) {
+            valid_cnt++;
+
+            for (uint i = 0; i < n->min_adj_list.size(); i++)
+                if (visited.count(n->min_adj_list[i]->id) == false)
+                    q.push(n->min_adj_list[i]);
+        }
+    }
+
+    if (valid_cnt == size)
+        return true;
+    else
+        return false;
 }
 
 //
@@ -157,7 +196,7 @@ int MinSpanTree::build_tree() {
         //
         if (n->parent != NULL) {
             n->parent->min_adj_list.push_back(n);
-            //n->min_adj_list.push_back(n->parent);
+            n->min_adj_list.push_back(n->parent);
         }
 
         //
@@ -204,6 +243,7 @@ string MinSpanTree::vis(bool overlay) {
          << "edge [fontsize=8.0 fontname=\"Arial\" color=\"#aaaaaa\"];\n";
 
     map<int, Node *>::iterator i;
+    set<int>      visited;
     queue<Node *> q;
 
     //
@@ -219,11 +259,12 @@ string MinSpanTree::vis(bool overlay) {
     while (!q.empty()) {
         n = q.front();
         q.pop();
+        visited.insert(n->id);
 
         for (uint i = 0; i < n->min_adj_list.size(); i++) {
             data << "  " << n->id << "--" << n->min_adj_list[i]->id << "\n";
-
-            q.push(n->min_adj_list[i]);
+            if (visited.count(n->min_adj_list[i]->id) == 0)
+                q.push(n->min_adj_list[i]);
         }
     }
 

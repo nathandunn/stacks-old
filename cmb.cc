@@ -66,8 +66,7 @@ CombSet::CombSet(int n, int k) {
         //
         // Generate all combinations, N choose K; N=num_elements, K=set_size
         //
-        cerr << "Num elements: " << this->num_elements << "; subsets of size K: " << set_size << "\n";
-        comb = this->generate_combinations(this->num_elements, set_size, size);
+        comb = this->generate_combinations(this->num_elements, set_size, size, false);
 
         this->lens.push_back(size);
         this->size.push_back(set_size);
@@ -88,13 +87,14 @@ CombSet::CombSet(int n, int k) {
 
         size = (int) num_combinations(this->compound_set.size(), set_size);
 
-        cerr << "Num elements: " << this->compound_set.size() << "; subsets of size K: " << set_size << "; total: " << size << "\n";
-        comb = this->generate_combinations(this->compound_set.size(), set_size, size);
+        cerr << "Num elements: " << this->compound_set.size() << "; subsets of size K: " << set_size << "; total: " << size;
+        comb = this->generate_combinations(this->compound_set.size(), set_size, size, true);
+        cerr << "; Valid sets: " << size << "\n";
 
         //
         // Remove combinations that repeat elements
         //
-        this->remove_duplicates(comb, size, set_size);
+        //this->remove_duplicates(comb, size, set_size);
 
         for (i = 0; i < size; i++) {
             new_comb = new Cmb;
@@ -136,108 +136,59 @@ int CombSet::make_compound_set() {
     return 0;
 }
 
-int CombSet::remove_duplicates(int **&comb, int &size, int comb_size) {
-    int **clean      = NULL;
-    int   clean_size = 0;
-
-    pair<set<int>::iterator,bool> ret;
-    set<int> s;
+bool CombSet::valid(int *comb, int comb_size) {
     int count;
     int index;
-    int k, n, i, j, r;
+    int k, n, i, j;
+
+    count = 0;
+
+    for (i = 0; i < comb_size; i++) {
+        index = comb[i];
+
+        // sets vector index number
+        k = this->compound_set[index].first;
+
+        count += this->size[k];
+    }
 
     //
-    // Initialize key to keep track of which permutations we keep/discard
+    // Combination not valid
     //
-    int  *key = new int[size];
-    for (i = 0; i < size; i++)
-        key[i] = 1;
+    if (count != this->num_elements)
+        return false;
 
-    for (i = 0; i < size; i++) {
-        count = 0;
+    //
+    // Check that each of the original elements exists only once in all subsets.
+    //
+    pair<set<int>::iterator,bool> ret;
+    set<int> s;
 
-        //cerr << "Looking at combination " << i << "\n";
+    for (i = 0; i < comb_size; i++) {
+        index = comb[i];
 
-        for (j = 0; j < comb_size; j++) {
-            index = comb[i][j];
+        // sets vector index number
+        k = this->compound_set[index].first;
+        // combination number 
+        n = this->compound_set[index].second;
 
-            // sets vector index number
-            k = this->compound_set[index].first;
-            // combination number 
-            n = this->compound_set[index].second;
-
-            count += this->size[k];
-        }
-
-        if (count != this->num_elements) {
-            key[i] = 0; // Discard this combination
-            continue;
-        }
-
-        //
-        // Check that each of the original elements exists only once in all subsets.
-        //
-        for (j = 0; j < comb_size; j++) {
-            index = comb[i][j];
-
-            // sets vector index number
-            k = this->compound_set[index].first;
-            // combination number 
-            n = this->compound_set[index].second;
-
-            //cerr << "    Set Num: " << k << "; Offset: " << n << "; Size: " << this->size[k] << "\n";
+        //cerr << "    Set Num: " << k << "; Offset: " << n << "; Size: " << this->size[k] << "\n";
 
             //
             // Items must be present only once in the final combination.
             //
-            r = 0;
-            while (key[i] == 1 && r < this->size[k]) {
-                ret = s.insert(this->sets[k][n][r]);
-                if (ret.second == false) {
-                    key[i] = 0; // Discard this combination
-                }
-                r++;
+            for (j = 0; j < this->size[k]; j++) {
+                ret = s.insert(this->sets[k][n][j]);
+                if (ret.second == false)
+                    return false;
             }
-
         }
 
-        s.clear();
-
-        if (key[i] == 1) { 
-            clean_size++;
-        }
-    }
-
-    if (clean_size > 0)
-        clean = new int * [clean_size];
-
-    j = 0;
-    for (i = 0; i < size; i++) {
-        if (key[i] == 1) {
-            clean[j] = comb[i];
-            j++;
-        }
-        else 
-            delete [] comb[i];
-    }
-     
-    delete [] comb;
-    delete [] key;
-
-    comb = clean;
-    size = clean_size;
-
-    return 0;
+    return true;
 }
 
-int **CombSet::generate_combinations(int n, int k, int total) {
-    int **comb;
-
-    cerr << "Number of combinations given a set of size " << n << " choosing subsets of " << k << ": " << total << "\n";
-
-    comb = new int * [total];
-    for (int i = 0; i < total; i++)
-        comb[i] = new int[k];
+int CombSet::count_valid_comb(int total, int n, int k) {
+    int *curr = new int[k];
 
     //
     // Setup the initial combination
@@ -245,35 +196,81 @@ int **CombSet::generate_combinations(int n, int k, int total) {
     int comb_num = 0;
 
     for (int i = 0; i < k; i++)
-        comb[comb_num][i] = i;
-    comb_num++;
+        curr[i] = i;
+
+    if (this->valid(curr, k))
+        comb_num++;
 
     //
-    // Generate and print all the other combinations
+    // Generate each successive combination
     //
-    while (comb_num < total) {
-        next_combination(comb[comb_num - 1], comb[comb_num], n, k);
+    int j = 1;
+    while (j < total) {
+        next_combination(curr, n, k);
+        if (this->valid(curr, k))
+            comb_num++;
+        j++;
+    }
+    delete [] curr;
+
+    return comb_num;
+}
+
+int **CombSet::generate_combinations(int n, int k, int &total, bool validate) {
+    int **comb;
+    int  *curr;
+
+    //cerr << "Number of combinations given a set of size " << n << " choosing subsets of " << k << ": " << total << "\n";
+
+    if (validate)
+        total = this->count_valid_comb(total, n, k);
+
+    comb = new int * [total];
+    for (int i = 0; i < total; i++)
+        comb[i] = new int[k];
+    curr = new int[k];
+
+    //
+    // Setup the initial combination
+    //
+    int comb_num = 0;
+
+    for (int i = 0; i < k; i++)
+        curr[i] = i;
+
+    if (validate == false || this->valid(curr, k)) {
+        for (int i = 0; i < k; i++)
+            comb[comb_num][i] = curr[i];
         comb_num++;
     }
+
+    //
+    // Generate each successive combination
+    //
+    while (comb_num < total) {
+        next_combination(curr, n, k);
+
+        if (validate == false || this->valid(curr, k)) {
+            for (int i = 0; i < k; i++)
+                comb[comb_num][i] = curr[i];
+            comb_num++;
+        }
+    }
+
+    delete [] curr;
 
     return comb;
 }
 
-int CombSet::next_combination(int *prev_comb, int *comb, int n, int k) {
+int CombSet::next_combination(int *comb, int n, int k) {
     int i;
 
     // 
     // The zero'th position has been incremented to its maximal value,
     // it's not possible to further increment values in the set.
     //
-    if (prev_comb[0] > n - k)
+    if (comb[0] > n - k)
         return 0;
-
-    //
-    // Copy the previous combination before incrementing it to the next combination
-    //
-    for (i = 0; i < k; i++)
-        comb[i] = prev_comb[i];
 
     //
     // Increment the last position in the set.
@@ -296,6 +293,8 @@ int CombSet::next_combination(int *prev_comb, int *comb, int n, int k) {
     for (i = i + 1; i < k; i++)
         comb[i] = comb[i - 1] + 1;
 
+    //cerr << "   Comb: " << comb[0] << "\n";
+
     return 1;
 }
 
@@ -314,12 +313,12 @@ double CombSet::num_combinations(int n, int k) {
 //
 // Return a variable length array of Cmb objects, terminated by a NULL pointer.
 //
-Cmb **CombSet::next() {
+Cmb **CombSet::next(int map[]) {
 
     if (this->index >= (int) this->compound_comb.size())
         return NULL;
 
-    int  index, i, k, n;
+    int  index, i, j, k, n;
     int  size = this->compound_comb[this->index]->size;
     int *e    = this->compound_comb[this->index]->elem;
 
@@ -334,7 +333,12 @@ Cmb **CombSet::next() {
 
         c[i] = new Cmb;
         c[i]->size = this->size[k];
-        c[i]->elem = this->sets[k][n];
+        c[i]->elem = new int[this->size[k]];
+
+        for (j = 0; j < this->size[k]; j++)
+            c[i]->elem[j] = (map == NULL) ? 
+                this->sets[k][n][j] : 
+                map[this->sets[k][n][j]];
     }
 
     c[size] = NULL;
@@ -346,6 +350,15 @@ Cmb **CombSet::next() {
 
 void CombSet::reset() {
     this->index = 0;
+}
+
+void CombSet::destroy(Cmb **cmb) {
+
+    for (uint j = 0; cmb[j] != NULL; j++) {
+        delete [] cmb[j]->elem;
+        delete cmb[j];
+    }
+    delete [] cmb;
 }
 
 void write_cmb(int *comb, int size) {
