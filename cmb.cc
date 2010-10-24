@@ -91,11 +91,6 @@ CombSet::CombSet(int n, int k) {
         comb = this->generate_combinations(this->compound_set.size(), set_size, size, true);
         cerr << "; Valid sets: " << size << "\n";
 
-        //
-        // Remove combinations that repeat elements
-        //
-        //this->remove_duplicates(comb, size, set_size);
-
         for (i = 0; i < size; i++) {
             new_comb = new Cmb;
             new_comb->size = set_size;
@@ -172,17 +167,15 @@ bool CombSet::valid(int *comb, int comb_size) {
         // combination number 
         n = this->compound_set[index].second;
 
-        //cerr << "    Set Num: " << k << "; Offset: " << n << "; Size: " << this->size[k] << "\n";
-
-            //
-            // Items must be present only once in the final combination.
-            //
-            for (j = 0; j < this->size[k]; j++) {
-                ret = s.insert(this->sets[k][n][j]);
-                if (ret.second == false)
-                    return false;
-            }
+        //
+        // Items must be present only once in the final combination.
+        //
+        for (j = 0; j < this->size[k]; j++) {
+            ret = s.insert(this->sets[k][n][j]);
+            if (ret.second == false)
+                return false;
         }
+    }
 
     return true;
 }
@@ -219,8 +212,6 @@ int CombSet::count_valid_comb(int total, int n, int k) {
 int **CombSet::generate_combinations(int n, int k, int &total, bool validate) {
     int **comb;
     int  *curr;
-
-    //cerr << "Number of combinations given a set of size " << n << " choosing subsets of " << k << ": " << total << "\n";
 
     if (validate)
         total = this->count_valid_comb(total, n, k);
@@ -292,8 +283,6 @@ int CombSet::next_combination(int *comb, int n, int k) {
     //
     for (i = i + 1; i < k; i++)
         comb[i] = comb[i - 1] + 1;
-
-    //cerr << "   Comb: " << comb[0] << "\n";
 
     return 1;
 }
