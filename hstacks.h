@@ -60,6 +60,7 @@ using __gnu_cxx::hash;
 #endif
 
 #include "constants.h"
+#include "utils.h"
 #include "stacks.h"
 #include "kmers.h"
 #include "models.h"
@@ -112,6 +113,5 @@ int  call_alleles(vector<char *> &, vector<SNP *> &, vector<string> &);
 int  populate_kmer_hash(map<int, HLocus *> &, CatKmerHashMap &, int);
 
 bool compare_mdist(Match *, Match *);
-bool compare_pair(pair<char, int>, pair<char, int>);
 
 #endif // __HSTACKS_H__

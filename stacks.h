@@ -38,6 +38,7 @@ using std::cerr;
 using std::stringstream;
 
 #include "constants.h"
+#include "input.h"
 
 typedef unsigned int uint;
 typedef string allele_type;
@@ -81,9 +82,13 @@ class MergedStack {
     // Stack component parts
     //
     int                     count;   // Number of merged stacks
-    vector<int>             utags;   // Other stacks that have been merged into this MergedStack
+    vector<int>             utags;   // Other Stack IDs that have been merged into this MergedStack
     vector<pair<int, int> > dist;    // Vector describing the distance between this stack and other stacks.
-    vector<int>             remtags; // Remainder tags that have been merged into this Stack
+    vector<int>             remtags; // Remainder tag IDs that have been merged into this Stack
+    char                  **matrix;  // Two-dimensional array for iterating over the combined stack (stacks and remainders).
+
+    float likelihood;
+
     //
     // Mapping components
     //
@@ -106,6 +111,8 @@ class MergedStack {
         id         = 0;
         count      = 0;
         con        = NULL;
+        matrix     = NULL;
+        likelihood = 0.0;
         loc.bp     = 0; 
         loc.chr[0] = '\0';
         deleveraged     = false;
@@ -120,9 +127,13 @@ class MergedStack {
             delete [] kmers[i];
         for (uint i = 0; i < snps.size(); i++)
             delete snps[i];
+
+        delete [] matrix;
     }
-    int add_consensus(const char *);
-    int add_dist(const int id, const int dist);
+    int    add_consensus(const char *);
+    int    add_dist(const int id, const int dist);
+    char **gen_matrix(map<int, Stack *> &, map<int, Seq *> &);
+    int    calc_likelihood();
 };
 
 class Locus {

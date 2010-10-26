@@ -99,7 +99,7 @@ int main (int argc, char* argv[]) {
 	calc_kmer_distance(merged, i);
 
 	cerr << "  Merging radtags, round " << i << "\n";
-	merge_radtags(unique, merged, merge_map, i);
+	merge_radtags(unique, remainders, merged, merge_map, i);
 
 	call_consensus(merged, unique, remainders, false);
 
@@ -401,7 +401,7 @@ int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &mer
     return 0;
 }
 
-int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, set<int> &merge_map, int round) {
+int merge_radtags(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, MergedStack *> &merged, set<int> &merge_map, int round) {
     map<int, MergedStack *> new_merged;
     map<int, MergedStack *>::iterator i;
     MergedStack *tag_1, *tag_2;
@@ -479,7 +479,7 @@ int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, se
 	if (deleverage_stacks) {
 	    vector<MergedStack *> tags;
             int num_clusters = 1;
-	    deleverage(unique, merged, unique_merge_list, num_clusters, round, tags);
+	    deleverage(unique, rem, merged, unique_merge_list, num_clusters, round, tags);
 
 	    for (uint t = 0; t < tags.size(); t++) {
 		tags[t]->id = id;
@@ -510,6 +510,31 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, set<int> &merge_list, i
 
     for (i = merge_list.begin(); i != merge_list.end(); i++) {
 	tag_2 = merged[(*i)];
+
+	tag_1->deleveraged     = tag_2->deleveraged     ? true : tag_1->deleveraged;
+	tag_1->masked          = tag_2->masked          ? true : tag_1->masked;
+	tag_1->blacklisted     = tag_2->blacklisted     ? true : tag_1->blacklisted;
+	tag_1->lumberjackstack = tag_2->lumberjackstack ? true : tag_1->lumberjackstack;
+
+	for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++) {
+	    tag_1->utags.push_back(*j);
+	    tag_1->count += tag_2->count;
+	}
+    }
+
+    return tag_1;
+}
+
+MergedStack *merge_tags(map<int, MergedStack *> &merged, int *merge_list, int merge_list_size, int id) {
+    int                   i;
+    vector<int>::iterator j;
+    MergedStack *tag_1, *tag_2;
+
+    tag_1     = new MergedStack;
+    tag_1->id = id;
+
+    for (i = 0; i < merge_list_size; i++) {
+	tag_2 = merged[merge_list[i]];
 
 	tag_1->deleveraged     = tag_2->deleveraged     ? true : tag_1->deleveraged;
 	tag_1->masked          = tag_2->masked          ? true : tag_1->masked;
@@ -670,6 +695,7 @@ int determine_single_linkage_clusters(map<int, MergedStack *> &merged, set<int> 
 
 int deleverage(map<int, Stack *> &unique, 
 	       map<int, MergedStack *> &merged, 
+               map<int, Seq *> &rem,
 	       set<int> &merge_list, 
 	       int num_clusters, 
 	       int round, 
@@ -757,7 +783,7 @@ int deleverage(map<int, Stack *> &unique,
     while ((cmb = comb->next(ids)) != NULL) {
         valid = true;
 
-        for (k = 0; cmb[k] != NULL; k++) { 
+        for (k = 0; cmb[k] != NULL; k++) {
             //
             // Is this subset connected within the minimum spanning tree?
             //
@@ -766,7 +792,7 @@ int deleverage(map<int, Stack *> &unique,
         }
 
         //
-        // If this combination is valid, store it in order to calculate its likelihood value
+        // Record each valid combination.
         //
         if (valid) {
             cerr << "Index: " << index << "\n";
@@ -784,8 +810,41 @@ int deleverage(map<int, Stack *> &unique,
 
     delete [] ids;
     keys.clear();
+
+    map<int, vector<MergedStack *> > comb_map;
+    map<int, vector<MergedStack *> >::iterator it;
+    vector<float> likelihoods;
+
+    for (k = 0; k < valid_comb.size(); k++) {
+        //
+        // Create a set of MergedStacks to represent each element of this combination
+        //
+        for (l = 0; cmb[l] != NULL; l++) {
+            tag_1 = merge_tags(merged, cmb[l]->elem, cmb[l]->size, l);
+            comb_map[k].second.push_back(tag_1);
+        }
+    }
+
     for (k = 0; k < valid_comb.size(); k++)
         comb->destroy(valid_comb[k]);
+
+    //
+    // Calculate the likelihood value of each combination
+    //
+    for (it = comb_map.begin(); it != comb_map.end() it++) {
+        float comb_likelihood = 1;
+
+        for (k = 0; k < it->second.size(); k++) {
+            tag_1 = it->second[k];
+
+            tag_1->gen_matrix(unique, rem);
+            tag_1->calc_likelihood();
+
+            comb_likelihood *= tag_1->likelihood;
+        }
+
+        likelihoods.push_back(comb_likelihood);
+    }
 
 //     uint s, t, depth_1, depth_2, id;
 //     map<int, map<int, double> >::iterator q;
@@ -1530,19 +1589,6 @@ int calc_triggers(double cov_mean, double cov_stdev, int &deleverage_trigger, in
 
 //     return k - 1;
 }
-
-// long double factorial(int i) {
-//     long double f = 1;
-
-//     if (i == 0) return 1;
-
-//     do {
-// 	f = f * i;
-// 	i--;
-//     } while (i > 0);
-
-//     return f;
-// }
 
 int parse_command_line(int argc, char* argv[]) {
     int c;

@@ -449,10 +449,6 @@ int call_consensus(map<int, HLocus *> &loci, set<int> &merge_list,
     return 0;
 }
 
-bool compare_pair(pair<char, int> a, pair<char, int> b) {
-    return (a.second > b.second);
-}
-
 int call_alleles(vector<char *> &reads, vector<SNP *> &snps, vector<string> &alleles) {
     int     row;
     int     height = reads.size();

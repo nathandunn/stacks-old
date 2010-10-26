@@ -29,7 +29,72 @@
 //
 #include "models.h"
 
-int call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
+//
+// ln L(1/2) = ln(n! / n_1!n_2!n_3!n_4!) + 
+//               (n_1 + n_2) * ln(n_1 + n_2 / 2n) + 
+//               (n_3 + n_4) * ln(n_3 + n_4 / 2n)
+//
+float heterozygous_likelihood(MergedStack *tag, int col, map<char, int> &nuc) {
+    vector<pair<char, int> > cnts;
+    map<char, int>::iterator i;
+
+    int n = 0;
+    for (i = nuc.begin(); i != nuc.end(); i++) {
+	n += i->second;
+	cnts.push_back(make_pair(i->first, i->second));
+    }
+
+    sort(cnts.begin(), cnts.end(), compare_pair);
+
+    float n_1 = cnts[0].second;
+    float n_2 = cnts[1].second;
+    float n_3 = cnts[2].second;
+    float n_4 = cnts[3].second;
+
+    float term_1 = 
+        factorial(n) / 
+        (factorial(n_1) * factorial(n_2) * factorial(n_3) * factorial(n_4));
+
+    float lnl = 
+        term_1 + 
+        ((n_1 + n_2) * log((n_1 + n_2) / (2 * n))) + 
+        ((n_3 + n_4) * log((n_3 + n_4) / (2 * n)));
+
+    return lnl;
+}
+
+//
+// ln L(1/1) = ln(n! / n_1!n_2!n_3!n_4!) + 
+//               n_1 * ln(n_1 / n) + 
+//               (n - n_1) * ln(n - n_1 / 3n)
+//
+float homozygous_likelihood(MergedStack *tag, int col, map<char, int> &nuc) {
+    vector<pair<char, int> > cnts;
+    map<char, int>::iterator i;
+
+    int n = 0;
+    for (i = nuc.begin(); i != nuc.end(); i++) {
+	n += i->second;
+	cnts.push_back(make_pair(i->first, i->second));
+    }
+
+    sort(cnts.begin(), cnts.end(), compare_pair);
+
+    float nuc_1 = cnts[0].second;
+    float nuc_2 = cnts[1].second;
+    float nuc_3 = cnts[2].second;
+    float nuc_4 = cnts[3].second;
+
+    float term_1 = 
+        factorial(n) / 
+        (factorial(n_1) * factorial(n_2) * factorial(n_3) * factorial(n_4));
+
+    float lnl = term_1 + (n_1 * log(n_1 / n)) + ((n - n_1) * log(((n - n_1) / (3 * n))));
+
+    return lnl;
+}
+
+allelet call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
     const float heterozygote_limit = -3.84;
     const float homozygote_limit   =  3.84;
 
@@ -88,15 +153,15 @@ int call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
 
 	tag->snps.push_back(snp);
 
+        return het;
+
     } else if (l_ratio >= homozygote_limit) {
         // This locus is a homozygote.
-
-    } else {
-        // Unknown whether this is a heterozygote or homozygote.
-
+        return hom;
     }
 
-    return 0;
+    // Unknown whether this is a heterozygote or homozygote.
+    return unknown;
 }
 
 int call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n) {
@@ -160,8 +225,4 @@ int call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n) {
     }
 
     return 0;
-}
-
-bool compare_pair(pair<char, int> a, pair<char, int> b) {
-    return (a.second > b.second);
 }

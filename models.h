@@ -39,11 +39,17 @@ using std::cerr;
 using std::endl;
 
 #include "stacks.h"
+#include "utils.h"
 
 //
 // Possible models for calling nucleotide positions as fixed or variable
 //
 enum modelt {fixed, snp};
+
+//
+// The SNP model will return one of these values.
+//
+typedef enum {hom, het, unknown} allelet;
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -54,8 +60,9 @@ extern modelt model_type;
 extern double p_freq;
 extern double barcode_err_freq;
 
-int  call_multinomial_snp(MergedStack *, int, map<char, int> &);
-int  call_multinomial_fixed(MergedStack *, int, map<char, int> &);
-bool compare_pair(pair<char, int>, pair<char, int>);
+float   heterozygous_likelihood(MergedStack *, int, map<char, int> &);
+float   homozygous_likelihood(MergedStack *, int, map<char, int> &);
+allelet call_multinomial_snp(MergedStack *, int, map<char, int> &);
+int     call_multinomial_fixed(MergedStack *, int, map<char, int> &);
 
 #endif // __MODELS_H__

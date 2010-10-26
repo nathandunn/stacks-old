@@ -39,10 +39,10 @@ using std::pair;
 using std::make_pair;
 
 #include "constants.h"
+#include "utils.h"
 
 typedef unsigned int uint;
 
-double factorial(int);
 void   write_cmb(int *, int);
 
 typedef struct cmb {

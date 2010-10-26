@@ -93,8 +93,6 @@ int  parse_command_line(int, char**);
 int  populate_hash(map<int, Locus *> &, HashMap &);
 int  find_matches(map<int, Locus *> &, map<int, QLocus *> &);
 int  verify_match(Locus *, QLocus *, uint);
-bool compare_dist(pair<int, int>, pair<int, int>);
 int  write_matches(map<int, QLocus *> &);
-bool compare_pair(pair<string, SNP *>, pair<string, SNP *>);
 
 #endif // __SSTACKS_H__

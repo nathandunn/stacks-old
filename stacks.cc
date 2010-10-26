@@ -73,6 +73,90 @@ int MergedStack::add_dist(const int id, const int dist) {
     return 0;
 }
 
+char **MergedStack::gen_matrix(map<int, Stack *> &unique, map<int, Seq *> &rem) {
+    Stack *tag;
+
+    //
+    // Create a two-dimensional array, each row containing one read. For
+    // each unique tag that has been merged together, add the sequence for
+    // that tag into our array as many times as it originally occurred. 
+    //
+    // We do not allocate memory for the second dimension of the array, we simply
+    // reuse the existing char arrays in the unique and rem maps
+    //
+    uint cnt = tag->utags.size() + tag->remtags.size();
+    if (this->matrix != NULL)
+        delete [] this->matrix;
+    this->matrix = int * [cnt];
+
+    vector<int>::iterator j;
+    int i = 0;
+    for (j = tag->utags.begin(); j != tag->utags.end(); j++) {
+        tag = unique[*j];
+
+        for (uint k = 0; k < tag->count; k++) {
+            this->matrix[i] = utag->seq;
+        }
+
+        i++;
+    }
+
+    // For each remainder tag that has been merged into this Stack, add the sequence. 
+    for (j = mtag->remtags.begin(); j != mtag->remtags.end(); j++) {
+        this->matrix[i] = rem[*j]->seq;
+        i++;
+    }
+
+    return this->matrix;
+}
+
+int MergedStack::calc_likelihood() {
+
+    if (this->matrix == NULL)
+        return 0;
+
+    //
+    // Iterate over each column of the array and call the consensus base.
+    //
+    int row, col;
+    int length = strlen(this->matrix[0]);
+    int height = this->utags.size() + this->remtags.size();
+    string con;
+    map<char, int> nuc;
+    map<char, int>::iterator max, n;
+    char *base;
+
+    for (col = 0; col < length; col++) {
+        nuc['A'] = 0; 
+        nuc['C'] = 0;
+        nuc['G'] = 0;
+        nuc['T'] = 0;
+
+        for (row = 0; row < height; row++) {
+            base = this->matrix[row][col];
+            //cerr << "    Row: " << row << " Col: " << col << " Base: " << *base << "\n";
+            nuc[*base]++;
+        }
+
+        //
+        // Find the base with a plurality of occurances and call it.
+        //
+        max = nuc.end();
+
+        for (n = nuc.begin(); n != nuc.end(); n++) {
+
+            if (max == nuc.end() || n->second > max->second)
+                max = n;
+        }
+        con += max->first;
+
+        // Search this column for the presence of a SNP
+        call_multinomial_snp(this, col, nuc);
+    }
+
+    return 0;
+}
+
 int Locus::add_consensus(const char *seq) {
     if (this->con != NULL)
 	delete [] this->con;

@@ -64,6 +64,7 @@ using __gnu_cxx::hash;
 // }
 
 #include "constants.h" 
+#include "input.h"
 #include "mst.h"       // Minimum spanning tree implementation
 #include "cmb.h"       // Generates combinations
 #include "kmers.h"
@@ -107,7 +108,7 @@ int  parse_command_line(int, char**);
 int  load_radtags(string, HashMap &);
 int  reduce_radtags(HashMap &, map<int, Stack *> &, map<int, Seq *> &);
 int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
-int  merge_radtags(map<int, Stack *> &, map<int, MergedStack *> &, set<int> &, int);
+int  merge_radtags(map<int, Stack *> &, map<int, Seq *> &, map<int, MergedStack *> &, set<int> &, int);
 int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Seq *> &, bool);
 int  call_alleles(MergedStack *, vector<char *> &);
 int  merge_remainders(map<int, MergedStack *> &, map<int, Seq *> &);
@@ -130,7 +131,7 @@ int    count_raw_reads(map<int, Stack *> &, map<int, MergedStack *> &);
 //
 int  calc_triggers(double, double, int &, int &);
 int  remove_repetitive_stacks(map<int, MergedStack *> &);
-int  deleverage(map<int, Stack *> &, map<int, MergedStack *> &, set<int> &, int, int, vector<MergedStack *> &);
+int  deleverage(map<int, Stack *> &, map<int, Seq *> &, map<int, MergedStack *> &, set<int> &, int, int, vector<MergedStack *> &);
 int  determine_single_linkage_clusters(map<int, MergedStack *> &, set<int> &, int);
 int  hclust(vector<int> &, map<int, map<int, double> > &, int, map<int, set<int> > &);
 int  check_deleveraged_dist(map<int, map<int, double> > &, set<int> &, int);
@@ -146,7 +147,7 @@ int  dump_stack_graph(string, map<int, Stack *> &, map<int, MergedStack *> &, ve
 // Utilities
 //
 MergedStack *merge_tags(map<int, MergedStack *> &, set<int> &, int);
-//long double factorial(int);
+MergedStack *merge_tags(map<int, MergedStack *> &, int *, int, int);
 
 //
 // Deprecated
