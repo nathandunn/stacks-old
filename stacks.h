@@ -63,77 +63,15 @@ class SNP {
 class Stack {
  public:
     uint   id;
-    uint   count;         // Number of identical reads forming this stack
-    char  *seq;           // Sequence read
+    uint   count;        // Number of identical reads forming this stack
+    char  *seq;          // Sequence read
     vector<SeqId *> map; // List of sequence read IDs merged into this stack
-    PhyLoc loc;           // Physical genome location of this stack.
+    PhyLoc loc;          // Physical genome location of this stack.
 
     Stack()  { id = 0; count = 0; seq = NULL; loc.bp = 0; loc.chr[0] = '\0'; }
     ~Stack() { delete [] seq; }
     int add_id(const char *);
     int add_seq(const char *);
-};
-
-class MergedStack {
- public:
-    int   id;     // Identifier for the merged stack.
-    char *con;    // Consensus sequence
-    //
-    // Stack component parts
-    //
-    int                     count;   // Number of merged stacks
-    vector<int>             utags;   // Other Stack IDs that have been merged into this MergedStack
-    vector<pair<int, int> > dist;    // Vector describing the distance between this stack and other stacks.
-    vector<int>             remtags; // Remainder tag IDs that have been merged into this Stack
-    char                  **matrix;  // Two-dimensional array for iterating over the combined stack (stacks and remainders).
-
-    float likelihood;
-
-    //
-    // Mapping components
-    //
-    PhyLoc           loc;     // Physical genome location of this Stack.
-    vector<SNP *>    snps;    // Single Nucleotide Polymorphisms found in this Stack
-    map<string, int> alleles; // Set of alleles defined by the SNPs found in this Stack
-    //
-    // K-mers generated from the consensus sequence
-    //
-    vector<char *> kmers;
-    //
-    // Flags
-    //
-    bool deleveraged;
-    bool masked;
-    bool blacklisted;
-    bool lumberjackstack;
-
-    MergedStack()  { 
-        id         = 0;
-        count      = 0;
-        con        = NULL;
-        matrix     = NULL;
-        likelihood = 0.0;
-        loc.bp     = 0; 
-        loc.chr[0] = '\0';
-        deleveraged     = false;
-        masked          = false;
-        blacklisted     = false;
-        lumberjackstack = false;
-    }
-    ~MergedStack() { 
-        delete [] con;
-
-        for (uint i = 0; i < kmers.size(); i++)
-            delete [] kmers[i];
-        for (uint i = 0; i < snps.size(); i++)
-            delete snps[i];
-
-        delete [] matrix;
-    }
-    int    add_consensus(const char *);
-    int    add_dist(const int id, const int dist);
-    char **gen_matrix(map<int, Stack *> &, map<int, Seq *> &);
-    int    calc_likelihood();
 };
 
 class Locus {

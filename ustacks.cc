@@ -694,8 +694,8 @@ int determine_single_linkage_clusters(map<int, MergedStack *> &merged, set<int> 
 }
 
 int deleverage(map<int, Stack *> &unique, 
-	       map<int, MergedStack *> &merged, 
                map<int, Seq *> &rem,
+	       map<int, MergedStack *> &merged, 
 	       set<int> &merge_list, 
 	       int num_clusters, 
 	       int round, 
@@ -794,16 +794,8 @@ int deleverage(map<int, Stack *> &unique,
         //
         // Record each valid combination.
         //
-        if (valid) {
-            cerr << "Index: " << index << "\n";
-
-            for (k = 0; cmb[k] != NULL; k++) { 
-                cerr << "  Combination #" << k << ": ";
-                write_cmb(cmb[k]->elem, cmb[k]->size);
-            }
-
+        if (valid)
             valid_comb.push_back(cmb);
-        }
 
         index++;
     }
@@ -813,87 +805,69 @@ int deleverage(map<int, Stack *> &unique,
 
     map<int, vector<MergedStack *> > comb_map;
     map<int, vector<MergedStack *> >::iterator it;
-    vector<float> likelihoods;
+    vector<double> likelihoods;
 
     for (k = 0; k < valid_comb.size(); k++) {
         //
         // Create a set of MergedStacks to represent each element of this combination
         //
+        cmb = valid_comb[k];
         for (l = 0; cmb[l] != NULL; l++) {
             tag_1 = merge_tags(merged, cmb[l]->elem, cmb[l]->size, l);
-            comb_map[k].second.push_back(tag_1);
+
+            //
+            // Set this tag to no longer be considered for further merging
+            //
+            tag_1->masked = true;
+
+            comb_map[k].push_back(tag_1);
         }
+    }
+
+    //
+    // Calculate the likelihood value of each combination
+    //
+    l = 0;
+    for (it = comb_map.begin(); it != comb_map.end(); it++) {
+        double comb_likelihood = 0;
+
+        cerr << "Potential Combination: " << l << "\n";
+        cmb = valid_comb[l];
+        for (k = 0; cmb[k] != NULL; k++) { 
+            cerr << "  Locus #" << k << ": ";
+            write_cmb(cmb[k]->elem, cmb[k]->size);
+        }
+
+        for (k = 0; k < it->second.size(); k++) {
+            tag_1 = it->second[k];
+
+            tag_1->gen_matrix(unique, rem);
+
+            comb_likelihood += tag_1->calc_likelihood();
+
+            cerr << "    MergedStack #" << k << ": lnl: " << tag_1->likelihood << "\n";
+        }
+        l++;
+        likelihoods.push_back(comb_likelihood);
+        cerr << "  Total lnl: " << comb_likelihood << "\n";
     }
 
     for (k = 0; k < valid_comb.size(); k++)
         comb->destroy(valid_comb[k]);
 
     //
-    // Calculate the likelihood value of each combination
+    // Choose the optimal log likelihood score
     //
-    for (it = comb_map.begin(); it != comb_map.end() it++) {
-        float comb_likelihood = 1;
+    int optimal_combination = 0;
 
-        for (k = 0; k < it->second.size(); k++) {
-            tag_1 = it->second[k];
-
-            tag_1->gen_matrix(unique, rem);
-            tag_1->calc_likelihood();
-
-            comb_likelihood *= tag_1->likelihood;
+    for (it = comb_map.begin(); it != comb_map.end(); it++) {
+        if (it->first == optimal_combination) {
+            deleveraged_tags = it->second;
+        } else {
+            for (k = 0; k < it->second.size(); k++)
+                delete it->second[k];
         }
-
-        likelihoods.push_back(comb_likelihood);
     }
-
-//     uint s, t, depth_1, depth_2, id;
-//     map<int, map<int, double> >::iterator q;
-//     map<int, double>::iterator r;
-//     double scale, d;
-
-//     // 
-//     // Record the IDs for the stacks in the distance map
-//     //
-//     q = dist_map.begin();
-//     for (r = (*q).second.begin(); r != (*q).second.end(); r++) {
-// 	//cerr << "  Key: " << (*r).first << "; Number: " << (*q).second.count((*r).first) << "\n";
-// 	keys.push_back((*r).first);
-//     }
-
-//     map<int, set<int> > cluster_map;
-//     map<int, set<int> >::iterator c;
-//     set<int>::iterator it;
-
-//     hclust(keys, scaled_dist_map, num_clusters, cluster_map);
-
-//     if (dump_graph) {
-//      gout_file  << out_path.c_str() << "ustacks_" << keys[0] << ".dot";
-//      dump_stack_graph(gout_file.str(), unique, merged, keys, scaled_dist_map, cluster_map);
-// 	gout_file.str("");
-// 	gout_file  << out_path.c_str() << "ustacks_unscaled_" << keys[0] << ".dot";
-// 	cerr << gout_file.str() << "\n";
-// 	dump_stack_graph(gout_file.str(), unique, merged, keys, dist_map, cluster_map);
-//     }
-
-//     //
-//     // Merge the clustered tags together
-//     //
-//     id = 0;
-//     for (c = cluster_map.begin(); c != cluster_map.end(); c++) {
-
-// 	tag = merge_tags(merged, c->second, id);
-// 	tag->deleveraged = true;
-// 	tag->masked      = true;
-// 	//
-// 	// Check to make sure the resulting tags aren't too far apart to merge. If so,
-// 	// mask this tag off, so it is not considered in later merging steps.
-// 	//
-// 	if (!check_deleveraged_dist(dist_map, c->second, round))
-// 	    tag->blacklisted = true;
-
-// 	deleveraged_tags.push_back(tag);
-// 	id++;
-//     }
 
     return 0;
 }

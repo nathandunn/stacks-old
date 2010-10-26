@@ -34,11 +34,11 @@
 //               (n_1 + n_2) * ln(n_1 + n_2 / 2n) + 
 //               (n_3 + n_4) * ln(n_3 + n_4 / 2n)
 //
-float heterozygous_likelihood(MergedStack *tag, int col, map<char, int> &nuc) {
+double heterozygous_likelihood(int col, map<char, int> &nuc) {
     vector<pair<char, int> > cnts;
     map<char, int>::iterator i;
 
-    int n = 0;
+    double n = 0;
     for (i = nuc.begin(); i != nuc.end(); i++) {
 	n += i->second;
 	cnts.push_back(make_pair(i->first, i->second));
@@ -46,19 +46,21 @@ float heterozygous_likelihood(MergedStack *tag, int col, map<char, int> &nuc) {
 
     sort(cnts.begin(), cnts.end(), compare_pair);
 
-    float n_1 = cnts[0].second;
-    float n_2 = cnts[1].second;
-    float n_3 = cnts[2].second;
-    float n_4 = cnts[3].second;
+    double n_1 = cnts[0].second;
+    double n_2 = cnts[1].second;
+    double n_3 = cnts[2].second;
+    double n_4 = cnts[3].second;
 
-    float term_1 = 
-        factorial(n) / 
-        (factorial(n_1) * factorial(n_2) * factorial(n_3) * factorial(n_4));
+    double term_1 = 
+        reduced_factorial(n, n_1) / 
+        (factorial(n_2) * factorial(n_3) * factorial(n_4));
 
-    float lnl = 
-        term_1 + 
+    double term_3 = (n_3 + n_4 > 0) ? log((n_3 + n_4) / (2 * n)) : 0;
+
+    double lnl = 
+        log(term_1) + 
         ((n_1 + n_2) * log((n_1 + n_2) / (2 * n))) + 
-        ((n_3 + n_4) * log((n_3 + n_4) / (2 * n)));
+        ((n_3 + n_4) * term_3);
 
     return lnl;
 }
@@ -68,11 +70,11 @@ float heterozygous_likelihood(MergedStack *tag, int col, map<char, int> &nuc) {
 //               n_1 * ln(n_1 / n) + 
 //               (n - n_1) * ln(n - n_1 / 3n)
 //
-float homozygous_likelihood(MergedStack *tag, int col, map<char, int> &nuc) {
+double homozygous_likelihood(int col, map<char, int> &nuc) {
     vector<pair<char, int> > cnts;
     map<char, int>::iterator i;
 
-    int n = 0;
+    double n = 0;
     for (i = nuc.begin(); i != nuc.end(); i++) {
 	n += i->second;
 	cnts.push_back(make_pair(i->first, i->second));
@@ -80,16 +82,21 @@ float homozygous_likelihood(MergedStack *tag, int col, map<char, int> &nuc) {
 
     sort(cnts.begin(), cnts.end(), compare_pair);
 
-    float nuc_1 = cnts[0].second;
-    float nuc_2 = cnts[1].second;
-    float nuc_3 = cnts[2].second;
-    float nuc_4 = cnts[3].second;
+    double n_1 = cnts[0].second;
+    double n_2 = cnts[1].second;
+    double n_3 = cnts[2].second;
+    double n_4 = cnts[3].second;
 
-    float term_1 = 
-        factorial(n) / 
-        (factorial(n_1) * factorial(n_2) * factorial(n_3) * factorial(n_4));
+    double term_1 = 
+        reduced_factorial(n, n_1) / 
+        (factorial(n_2) * factorial(n_3) * factorial(n_4));
 
-    float lnl = term_1 + (n_1 * log(n_1 / n)) + ((n - n_1) * log(((n - n_1) / (3 * n))));
+    double term_3 = n - n_1 > 0 ? log((n - n_1) / (3 * n)) : 0;
+
+    double lnl = 
+        log(term_1) + 
+        (n_1 * log(n_1 / n)) + 
+        ((n - n_1) * term_3);
 
     return lnl;
 }
@@ -108,7 +115,7 @@ allelet call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
     }
 
     if (total < snp_min)
-	return 0;
+	return undef;
 
     sort(nuc.begin(), nuc.end(), compare_pair);
 
@@ -121,11 +128,11 @@ allelet call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
     // sampling distribution, which gives the probability of observing
     // a set of read counts (n1,n2,n3,n4) given a particular genotype.
     //
-    float nuc_1   = nuc[0].second;
-    float nuc_2   = nuc[1].second;
-    float nuc_3   = nuc[2].second;
-    float nuc_4   = nuc[3].second;
-    float l_ratio = 0;
+    double nuc_1   = nuc[0].second;
+    double nuc_2   = nuc[1].second;
+    double nuc_3   = nuc[2].second;
+    double nuc_4   = nuc[3].second;
+    double l_ratio = 0;
 
     l_ratio = (nuc_1 * log(nuc_1 / total));
 
@@ -161,7 +168,7 @@ allelet call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
     }
 
     // Unknown whether this is a heterozygote or homozygote.
-    return unknown;
+    return undef;
 }
 
 int call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n) {

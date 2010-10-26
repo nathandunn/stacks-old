@@ -51,6 +51,7 @@ using std::set;
 using std::pair;
 
 #include "constants.h" 
+#include "mstack.h"
 #include "stacks.h"    // Major data structures for holding stacks
 #include "models.h"    // Contains maximum likelihood statistical models.
 #include "Tsv.h"       // Reading input files in Tab-separated values format

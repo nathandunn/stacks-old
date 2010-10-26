@@ -20,12 +20,12 @@ exstacks.o:	exstacks.h exstacks.cc stacks.h constants.h sql_utilities.h
 	${CXX} ${CXXFLAGS} -c exstacks.cc
 
 hstacks: hstacks.o input.o stacks.o kmers.o utils.o
-	${CXX} ${OMP} -o hstacks hstacks.o input.o stacks.o kmers.o
+	${CXX} ${OMP} -o hstacks hstacks.o input.o stacks.o kmers.o utils.o
 
 hstacks.o:	hstacks.h hstacks.cc stacks.h kmers.h constants.h sql_utilities.h
 	${CXX} ${CXXFLAGS} -c hstacks.cc
 
-cstacks: cstacks.o input.o stacks.o kmers.o
+cstacks: cstacks.o input.o stacks.o kmers.o 
 	${CXX} ${OMP} -o cstacks cstacks.o input.o stacks.o kmers.o
 
 cstacks.o:	cstacks.h cstacks.cc stacks.h kmers.h constants.h sql_utilities.h
@@ -37,16 +37,16 @@ sstacks: sstacks.o input.o stacks.o
 sstacks.o:	sstacks.h sstacks.cc stacks.h constants.h sql_utilities.h
 	${CXX} ${CXXFLAGS} -c sstacks.cc
 
-pstacks: pstacks.o input.o models.o stacks.o
-	${CXX} ${OMP} -o pstacks pstacks.o input.o stacks.o models.o
+pstacks: pstacks.o input.o models.o stacks.o mstack.o utils.o
+	${CXX} ${OMP} -o pstacks pstacks.o input.o stacks.o mstack.o models.o utils.o
 
 pstacks.o:	pstacks.h pstacks.cc stacks.h constants.h Tsv.h Bowtie.h Sam.h Fasta.h Fastq.h
 	${CXX} ${CXXFLAGS} -c pstacks.cc
 
-ustacks: ustacks.o input.o models.o stacks.o kmers.o cmb.o utils.o
-	${CXX} ${OMP} -o ustacks ustacks.o input.o stacks.o models.o kmers.o cmb.o
+ustacks: ustacks.o input.o models.o stacks.o mstack.o kmers.o cmb.o utils.o
+	${CXX} ${OMP} -o ustacks ustacks.o input.o stacks.o mstack.o models.o kmers.o cmb.o utils.o
 
-ustacks.o:	ustacks.h ustacks.cc stacks.h constants.h sql_utilities.h mst.h
+ustacks.o:	ustacks.h ustacks.cc stacks.h mstack.h constants.h sql_utilities.h mst.h
 	${CXX} ${CXXFLAGS} -c ustacks.cc
 
 input.o:	input.h input.cc constants.h
@@ -67,7 +67,10 @@ models.o:	models.h models.cc
 cmb.o:	cmb.h cmb.cc utils.h
 	${CXX} ${CXXFLAGS} -c cmb.cc
 
-utils.o:	utils.h
+mstack.o:	mstack.h mstack.cc
+	${CXX} ${CXXFLAGS} -c mstack.cc
+
+utils.o:	utils.h utils.cc
 	${CXX} ${CXXFLAGS} -c utils.cc
 
 .PHONY:	clean

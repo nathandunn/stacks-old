@@ -18,32 +18,24 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __CONSTANTS_H__
-#define __CONSTANTS_H__
+#ifndef __UTILS_H__
+#define __UTILS_H__
+
+#include <math.h>
+#include <iostream>
+using std::cerr;
+using std::endl;
+#include <utility>
+using std::pair;
+using std::make_pair;
+
+double factorial(double);
+double reduced_factorial(double, double);
 
 //
-// Stacks version number
+// Comparison functions for the STL sort routine
 //
-const double stacks_version = 0.91;
+bool compare_pair(pair<char, int>, pair<char, int>);
 
-//
-// Maximum line length for parsing input files.
-//
-const int max_len = 2048;
 
-//
-// Maximum length of idetifiers, such as sequence IDs and chromosome names.
-//
-const int id_len = 64;
-
-//
-// Supported file types
-//
-enum file_type {unknown, sql, fasta, fastq, bowtie, sam, tsv};
-
-//
-// The multinomial SNP model will return one of these values.
-//
-typedef enum {hom, het, undef} allelet;
-
-#endif
+#endif // __UTILS_H__

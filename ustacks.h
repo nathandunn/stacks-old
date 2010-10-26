@@ -68,6 +68,7 @@ using __gnu_cxx::hash;
 #include "mst.h"       // Minimum spanning tree implementation
 #include "cmb.h"       // Generates combinations
 #include "kmers.h"
+#include "mstack.h"
 #include "stacks.h"    // Major data structures for holding stacks
 #include "models.h"    // Contains maximum likelihood statistical models.
 #include "Tsv.h"       // Reading input files in Tab-separated values format

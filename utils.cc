@@ -18,32 +18,47 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __CONSTANTS_H__
-#define __CONSTANTS_H__
+//
+// utils.cc -- common routines needed in multiple object files.
+//
+// Julian Catchen
+// jcatchen@uoregon.edu
+// University of Oregon
+//
+// $Id$
+//
+#include "utils.h"
 
-//
-// Stacks version number
-//
-const double stacks_version = 0.91;
+double factorial(double n) {
+    double fact = 1;
 
-//
-// Maximum line length for parsing input files.
-//
-const int max_len = 2048;
+    for (double i = n; i > 1; i--)
+        fact *= i;
 
-//
-// Maximum length of idetifiers, such as sequence IDs and chromosome names.
-//
-const int id_len = 64;
+    return fact;
+}
 
-//
-// Supported file types
-//
-enum file_type {unknown, sql, fasta, fastq, bowtie, sam, tsv};
+double reduced_factorial(double n, double d) {
+    double f = n - d;
 
-//
-// The multinomial SNP model will return one of these values.
-//
-typedef enum {hom, het, undef} allelet;
+    if (f < 0) 
+        return 0;
+    else if (f == 0) 
+        return 1;
+    else if (f == 1)
+        return n;
 
-#endif
+    f = n;
+    n--;
+    while (n > d) {
+        f *= n;
+        n--;
+    }
+
+    return f;
+}
+
+bool compare_pair(pair<char, int> a, pair<char, int> b) {
+    return (a.second > b.second);
+}
+

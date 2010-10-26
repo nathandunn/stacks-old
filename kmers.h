@@ -48,6 +48,7 @@ using __gnu_cxx::hash;
 #endif
 
 #include "stacks.h"
+#include "mstack.h"
 #include "input.h"
 
 struct eqstr {
