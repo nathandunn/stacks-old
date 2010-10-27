@@ -805,7 +805,7 @@ int deleverage(map<int, Stack *> &unique,
 
     map<int, vector<MergedStack *> > comb_map;
     map<int, vector<MergedStack *> >::iterator it;
-    vector<double> likelihoods;
+    vector<double> lnls; // Log Likelihoods
 
     for (k = 0; k < valid_comb.size(); k++) {
         //
@@ -825,14 +825,17 @@ int deleverage(map<int, Stack *> &unique,
     }
 
     //
-    // Calculate the likelihood value of each combination
+    // Calculate the likelihood value of each combination and choose the optimal
+    // set of loci.
     //
-    l = 0;
+    int    optimal_comb = comb_map.begin()->first;
+    double optimal_aic  = 0;
+
     for (it = comb_map.begin(); it != comb_map.end(); it++) {
         double comb_likelihood = 0;
 
-        cerr << "Potential Combination: " << l << "\n";
-        cmb = valid_comb[l];
+        cerr << "Potential Combination: " << it->first << "\n";
+        cmb = valid_comb[it->first];
         for (k = 0; cmb[k] != NULL; k++) { 
             cerr << "  Locus #" << k << ": ";
             write_cmb(cmb[k]->elem, cmb[k]->size);
@@ -847,21 +850,23 @@ int deleverage(map<int, Stack *> &unique,
 
             cerr << "    MergedStack #" << k << ": lnl: " << tag_1->likelihood << "\n";
         }
-        l++;
-        likelihoods.push_back(comb_likelihood);
-        cerr << "  Total lnl: " << comb_likelihood << "\n";
+
+        lnls.push_back(comb_likelihood);
+
+        double aic = (2 * it->second.size()) - (2 * comb_likelihood);
+        cerr << "  Total lnl: " << comb_likelihood << "; AIC: " << aic << "\n";
+
+        optimal_comb = aic > optimal_aic ? it->first : optimal_comb;
     }
 
+    //
+    // Free memory and set the optimal 
+    //
     for (k = 0; k < valid_comb.size(); k++)
         comb->destroy(valid_comb[k]);
 
-    //
-    // Choose the optimal log likelihood score
-    //
-    int optimal_combination = 0;
-
     for (it = comb_map.begin(); it != comb_map.end(); it++) {
-        if (it->first == optimal_combination) {
+        if (it->first == optimal_comb) {
             deleveraged_tags = it->second;
         } else {
             for (k = 0; k < it->second.size(); k++)
