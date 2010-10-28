@@ -41,6 +41,7 @@ int       batch_id          = 0;
 bool      set_kmer_len      = true;
 int       kmer_len          = 0;
 int       min_merge_cov     = 2;
+int       max_subsets       = 3;
 int       dump_graph        = 0;
 int       deleverage_stacks = 0;
 int       remove_rep_stacks = 0;
@@ -55,6 +56,11 @@ int       removal_trigger;
 modelt model_type        = snp;
 double p_freq            = 0.5;
 double barcode_err_freq  = 0.0;
+//
+// A cache for storing graph combinations
+//
+//map<int, CombSet *> combinations;
+
 
 int main (int argc, char* argv[]) {
 
@@ -94,7 +100,7 @@ int main (int argc, char* argv[]) {
 	remove_repetitive_stacks(merged);
     }
 
-    for (int i = 1; i <= max_utag_dist; i++) {
+    for (int i = 2; i <= max_utag_dist; i++) {
 	cerr << "Calculating distance, round " << i << "\n";
 	calc_kmer_distance(merged, i);
 
@@ -152,7 +158,7 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Seq *> &rem) {
     int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, true);
 
     KmerHashMap kmer_map;
-    populate_kmer_hash(merged, kmer_map, kmer_len);
+    populate_kmer_hash(merged, kmer_map, kmer_len, false);
 
     #pragma omp parallel private(it, k)
     { 
@@ -459,11 +465,6 @@ int merge_radtags(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, Merg
 	}
 
 	//
-	// Merge these tags together into a new MergedStack object.
-	//
-	tag_1 = merge_tags(merged, unique_merge_list, id);
-
-	//
 	// Record the nodes that have been merged in this round.
 	//
 	set<int>::iterator j;
@@ -486,10 +487,14 @@ int merge_radtags(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, Merg
 		new_merged.insert(pair<int, MergedStack *>(id, tags[t]));
 		id++;
 	    }
-	    delete tag_1;
 
 	    //exit(0);
 	} else {
+            //
+            // If not deleveraging, merge these tags together into a new MergedStack object.
+            //
+            tag_1 = merge_tags(merged, unique_merge_list, id);
+
 	    new_merged.insert(pair<int, MergedStack *>(id, tag_1));
 	    id++;
 	}
@@ -516,10 +521,10 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, set<int> &merge_list, i
 	tag_1->blacklisted     = tag_2->blacklisted     ? true : tag_1->blacklisted;
 	tag_1->lumberjackstack = tag_2->lumberjackstack ? true : tag_1->lumberjackstack;
 
-	for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++) {
+	for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++)
 	    tag_1->utags.push_back(*j);
-	    tag_1->count += tag_2->count;
-	}
+
+        tag_1->count += tag_2->count;
     }
 
     return tag_1;
@@ -541,10 +546,10 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, int *merge_list, int me
 	tag_1->blacklisted     = tag_2->blacklisted     ? true : tag_1->blacklisted;
 	tag_1->lumberjackstack = tag_2->lumberjackstack ? true : tag_1->lumberjackstack;
 
-	for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++) {
+	for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++)
 	    tag_1->utags.push_back(*j);
-	    tag_1->count += tag_2->count;
-	}
+
+        tag_1->count += tag_2->count;
     }
 
     return tag_1;
@@ -749,20 +754,21 @@ int deleverage(map<int, Stack *> &unique,
     //
     // Visualize the MST
     //
-    stringstream gout_file;
-    gout_file << out_path.c_str() << "ustacks_" << keys[0] << ".dot";
-    string vis = mst->vis(true);
-    ofstream gvis(gout_file.str().c_str());
-    gvis << vis;
-    gvis.close();
+    if (dump_graph) {
+        stringstream gout_file;
+        gout_file << out_path.c_str() << "ustacks_" << keys[0] << ".dot";
+        string vis = mst->vis(true);
+        ofstream gvis(gout_file.str().c_str());
+        gvis << vis;
+        gvis.close();
+    }
 
     //
     // Generate all possible combinations of the nodes in the mimimum spanning tree.
     //
-    map<int, CombSet *> combinations;
     CombSet *comb;
     Cmb    **cmb;
-    int      num_subsets = 6;
+    int      num_subsets = (max_subsets > 0) ? max_subsets : keys.size();
 
     if (combinations.count(keys.size()) == 0)
         comb = new CombSet(keys.size(), num_subsets);
@@ -816,9 +822,11 @@ int deleverage(map<int, Stack *> &unique,
             tag_1 = merge_tags(merged, cmb[l]->elem, cmb[l]->size, l);
 
             //
-            // Set this tag to no longer be considered for further merging
+            // Set this tag to no longer be considered for further merging if the MergedStack
+            // contains more than one locus.
             //
-            tag_1->masked = true;
+            //if (cmb[l]->size > 1)
+                //tag_1->masked = true;
 
             comb_map[k].push_back(tag_1);
         }
@@ -856,11 +864,16 @@ int deleverage(map<int, Stack *> &unique,
         double aic = (2 * it->second.size()) - (2 * comb_likelihood);
         cerr << "  Total lnl: " << comb_likelihood << "; AIC: " << aic << "\n";
 
-        optimal_comb = aic > optimal_aic ? it->first : optimal_comb;
+        if (aic > optimal_aic) {
+            optimal_comb = it->first;
+            optimal_aic  = aic;
+        }
     }
 
+    cerr << "    Choosing combination " << optimal_comb << "\n";
+
     //
-    // Free memory and set the optimal 
+    // Free memory and set the optimal combination to retrun to the calling function.
     //
     for (k = 0; k < valid_comb.size(); k++)
         comb->destroy(valid_comb[k]);
@@ -928,7 +941,7 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
     //
     int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len, true);
 
-    populate_kmer_hash(merged, kmer_map, kmer_len);
+    populate_kmer_hash(merged, kmer_map, kmer_len, true);
  
     #pragma omp parallel private(i, j, tag_1, tag_2)
     { 
@@ -984,7 +997,7 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
                 // sequences to be merged in the following step of the
                 // algorithm.)
                 //
-                if (d == utag_dist)
+                if (d <= utag_dist)
                     tag_1->add_dist(tag_2->id, d);
             }
             // Sort the vector of distances.

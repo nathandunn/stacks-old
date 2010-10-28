@@ -29,6 +29,12 @@
 //
 #include "cmb.h"
 
+//
+// A cache to store combinations generated as (N choose k) 
+// for all set sizes encountered
+//
+map<int, int **> _cmbs;
+
 CombSet::~CombSet() {
     int num_sets = this->sets.size();
     int set, i;
@@ -51,17 +57,19 @@ CombSet::CombSet(int n, int k) {
     this->num_elements = n;
     this->index        = 0;
 
-    int   i;
-    int   set_size = this->max_set_size;
-    int   size;
-    int **comb;
-    Cmb  *new_comb;
+    int        i;
+    int  set_size = this->max_set_size;
+    long int size;
+    int    **comb;
+    Cmb *new_comb;
+
+    cerr << "  Generating combinations for a set of " << n << " elements, with a maximum subset size of " << k << "\n";
 
     while (set_size > 0) {
         //
         // How many combinations will we make?
         //
-        size = (int) num_combinations(this->num_elements, set_size);
+        size = num_combinations(this->num_elements, set_size);
 
         //
         // Generate all combinations, N choose K; N=num_elements, K=set_size
@@ -87,7 +95,7 @@ CombSet::CombSet(int n, int k) {
 
         size = (int) num_combinations(this->compound_set.size(), set_size);
 
-        cerr << "Num elements: " << this->compound_set.size() << "; subsets of size K: " << set_size << "; total: " << size;
+        cerr << "    Subsets: " << this->compound_set.size() << "; compound combinations of size " << set_size << "; total: " << size;
         comb = this->generate_combinations(this->compound_set.size(), set_size, size, true);
         cerr << "; Valid sets: " << size << "\n";
 
@@ -117,7 +125,7 @@ CombSet::CombSet(int n, int k) {
 
     this->compound_comb.push_back(new_comb);
 
-    cerr << "Total compound combinations: " << this->compound_comb.size() << "\n";
+    cerr << "  Total compound combinations for sets of size " << n << ": " << this->compound_comb.size() << "\n";
 }
 
 int CombSet::make_compound_set() {
@@ -180,7 +188,7 @@ bool CombSet::valid(int *comb, int comb_size) {
     return true;
 }
 
-int CombSet::count_valid_comb(int total, int n, int k) {
+int CombSet::count_valid_comb(long total, int n, int k) {
     int *curr = new int[k];
 
     //
@@ -209,7 +217,7 @@ int CombSet::count_valid_comb(int total, int n, int k) {
     return comb_num;
 }
 
-int **CombSet::generate_combinations(int n, int k, int &total, bool validate) {
+int **CombSet::generate_combinations(int n, int k, long &total, bool validate) {
     int **comb;
     int  *curr;
 
@@ -287,16 +295,16 @@ int CombSet::next_combination(int *comb, int n, int k) {
     return 1;
 }
 
-double CombSet::num_combinations(int n, int k) {
-    double r = 1;
+long int CombSet::num_combinations(int n, int k) {
+    long int r = 1;
 
-    for (int i = n; i >= (n - k + 1); i--)
+    for (long int i = n; i >= (n - k + 1); i--)
         r *= i;
-    double s = factorial(k);
+    long int s = (long int) factorial(k);
 
-    float num_comb = r / s;
+    long int num_comb = r / s;
 
-    return lroundf(num_comb);
+    return lround(num_comb);
 }
 
 //

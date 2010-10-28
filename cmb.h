@@ -70,12 +70,12 @@ class CombSet {
     vector<pair<int, int> > compound_set;
     vector<Cmb *>           compound_comb;
 
-    int    count_valid_comb(int, int, int);
-    bool   valid(int *, int);
-    int    make_compound_set();
-    int  **generate_combinations(int, int, int &, bool);
-    int    next_combination(int *, int, int);
-    double num_combinations(int, int);
+    int      count_valid_comb(long, int, int);
+    bool     valid(int *, int);
+    int      make_compound_set();
+    int    **generate_combinations(int, int, long &, bool);
+    int      next_combination(int *, int, int);
+    long int num_combinations(int, int);
 
  public:
     CombSet(int, int);

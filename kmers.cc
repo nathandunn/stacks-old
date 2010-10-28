@@ -157,7 +157,7 @@ int generate_permutations(map<int, char **> &pstrings, int width) {
     return 0;
 }
 
-int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, int kmer_len) {
+int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, int kmer_len, bool exclude_masked_tags) {
     map<int, MergedStack *>::iterator it;
     MergedStack *tag;
     int j;
@@ -171,7 +171,7 @@ int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, i
         tag = it->second;
 
         // Don't compute distances for masked tags
-        if (tag->masked) continue;
+        if (exclude_masked_tags && tag->masked) continue;
 
         generate_kmers(tag->con, kmer_len, num_kmers, tag->kmers);
 
