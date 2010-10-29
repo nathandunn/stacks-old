@@ -28,6 +28,8 @@ using std::stringstream;
 using std::cin;
 using std::cout;
 using std::cerr;
+#include <list>
+using std::list;
 #include <vector>
 using std::vector;
 #include <string>
@@ -39,14 +41,15 @@ using std::pair;
 using std::make_pair;
 
 #include "constants.h"
+#include "mst.h"
 #include "utils.h"
 
 typedef unsigned int uint;
 
-void   write_cmb(int *, int);
+void write_cmb(int *, int);
 
 typedef struct cmb {
-    int  size;
+    uint size;
     int *elem;
 } Cmb;
 
@@ -57,33 +60,36 @@ class CombSet {
     // and continue to generate sets.
     //
     // Once we have generated all the combinations of a particular size, K, we 
-    // will generate all combinations between the different sized sets, creating
-    // compound sets.
+    // will partition the minimum spanning tree by dropping combinations of edges
+    // from the graph. The selection of edges to drop is provided by the combinations
+    // generated first. Finally, each set of disconnected subgraphs makes for one
+    // possible combination.
     //
     int num_elements;  // N elements from which we wish to produce combinations
     int max_set_size;  // maximum set size, K, the largest subset we wish to select.
 
-    int            index;
-    vector<int>    size;
-    vector<int>    lens;
-    vector<int **> sets;
-    vector<pair<int, int> > compound_set;
-    vector<Cmb *>           compound_comb;
+    map<int, int>           node_map;  // Convert non-contiguous IDs from the MST into array indexes for this->edges
+    list<Node *>            node_list;
+    vector<pair<int, int> > edge_list;
+    int                   **edges;
 
-    int      count_valid_comb(long, int, int);
-    bool     valid(int *, int);
-    int      make_compound_set();
-    int    **generate_combinations(int, int, long &, bool);
+    int            index;
+    vector<Cmb **> compound_comb;
+    MinSpanTree   *mst;
+
+    int      catalog_tree();
+    int      partition_tree(uint);
+    int    **generate_combinations(int, int, int);
     int      next_combination(int *, int, int);
     long int num_combinations(int, int);
+    void     destroy(Cmb **);
 
  public:
-    CombSet(int, int);
+    CombSet(int, int, MinSpanTree *);
     ~CombSet();
 
     Cmb **next(int map[] = NULL);
     void  reset();
-    void  destroy(Cmb **);
 };
 
 #endif // __CMB_H__

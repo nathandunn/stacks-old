@@ -173,10 +173,15 @@ double MergedStack::calc_likelihood() {
             //
             allelet res = call_multinomial_snp(this, col, nuc);
 
-            if (res == het)
+            if (res == het) 
                 this->likelihood += heterozygous_likelihood(col, nuc);
-            else
+            else if (res == hom)
                 this->likelihood += homozygous_likelihood(col, nuc);
+            else {
+                double homlln = homozygous_likelihood(col, nuc);
+                double hetlln = heterozygous_likelihood(col, nuc);
+                this->likelihood += hetlln > homlln ? hetlln : homlln;
+            }
         }
     }
 

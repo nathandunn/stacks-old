@@ -41,7 +41,7 @@ int       batch_id          = 0;
 bool      set_kmer_len      = true;
 int       kmer_len          = 0;
 int       min_merge_cov     = 2;
-int       max_subsets       = 3;
+int       max_subsets       = 0;
 int       dump_graph        = 0;
 int       deleverage_stacks = 0;
 int       remove_rep_stacks = 0;
@@ -100,7 +100,8 @@ int main (int argc, char* argv[]) {
 	remove_repetitive_stacks(merged);
     }
 
-    for (int i = 2; i <= max_utag_dist; i++) {
+    //for (int i = 2; i <= max_utag_dist; i++) {
+    int i = 3;
 	cerr << "Calculating distance, round " << i << "\n";
 	calc_kmer_distance(merged, i);
 
@@ -110,7 +111,7 @@ int main (int argc, char* argv[]) {
 	call_consensus(merged, unique, remainders, false);
 
 	merge_map.clear();
-    }
+        //}
 
     calc_merged_coverage_distribution(unique, merged);
 
@@ -770,23 +771,20 @@ int deleverage(map<int, Stack *> &unique,
     Cmb    **cmb;
     int      num_subsets = (max_subsets > 0) ? max_subsets : keys.size();
 
-    if (combinations.count(keys.size()) == 0)
-        comb = new CombSet(keys.size(), num_subsets);
-    else
-        comb = combinations[keys.size()];
+    comb = new CombSet(keys.size(), num_subsets, mst);
 
-    //
-    // Provide a list of IDs to CombSet to map array indices to MergedStack IDs.
-    //
-    int *ids = new int[keys.size()];
-    for (k = 0; k < keys.size(); k++)
-        ids[k] = keys[k];
+//     //
+//     // Provide a list of IDs to CombSet to map array indices to MergedStack IDs.
+//     //
+//     int *ids = new int[keys.size()];
+//     for (k = 0; k < keys.size(); k++)
+//         ids[k] = keys[k];
 
     vector<Cmb **> valid_comb;
     bool valid;
     int  index = 0;
 
-    while ((cmb = comb->next(ids)) != NULL) {
+    while ((cmb = comb->next()) != NULL) {
         valid = true;
 
         for (k = 0; cmb[k] != NULL; k++) {
@@ -806,8 +804,7 @@ int deleverage(map<int, Stack *> &unique,
         index++;
     }
 
-    delete [] ids;
-    keys.clear();
+//     delete [] ids;
 
     map<int, vector<MergedStack *> > comb_map;
     map<int, vector<MergedStack *> >::iterator it;
@@ -842,11 +839,11 @@ int deleverage(map<int, Stack *> &unique,
     for (it = comb_map.begin(); it != comb_map.end(); it++) {
         double comb_likelihood = 0;
 
-        cerr << "Potential Combination: " << it->first << "\n";
+        //cerr << "Potential Combination: " << it->first << "\n";
         cmb = valid_comb[it->first];
         for (k = 0; cmb[k] != NULL; k++) { 
-            cerr << "  Locus #" << k << ": ";
-            write_cmb(cmb[k]->elem, cmb[k]->size);
+            //cerr << "  Locus #" << k << ": ";
+            //write_cmb(cmb[k]->elem, cmb[k]->size);
         }
 
         for (k = 0; k < it->second.size(); k++) {
@@ -856,36 +853,43 @@ int deleverage(map<int, Stack *> &unique,
 
             comb_likelihood += tag_1->calc_likelihood();
 
-            cerr << "    MergedStack #" << k << ": lnl: " << tag_1->likelihood << "\n";
+            //cerr << "    MergedStack #" << k << ": lnl: " << tag_1->likelihood << "\n";
         }
 
         lnls.push_back(comb_likelihood);
 
         double aic = (2 * it->second.size()) - (2 * comb_likelihood);
-        cerr << "  Total lnl: " << comb_likelihood << "; AIC: " << aic << "\n";
+        //cerr << "  Total lnl: " << comb_likelihood << "; AIC: " << aic << "\n";
 
-        if (aic > optimal_aic) {
+        if (aic < optimal_aic) {
             optimal_comb = it->first;
             optimal_aic  = aic;
         }
     }
 
-    cerr << "    Choosing combination " << optimal_comb << "\n";
+    cerr << "    Choosing combination " << optimal_comb << " with AIC " << optimal_aic << "\n";
 
     //
     // Free memory and set the optimal combination to retrun to the calling function.
     //
-    for (k = 0; k < valid_comb.size(); k++)
-        comb->destroy(valid_comb[k]);
-
     for (it = comb_map.begin(); it != comb_map.end(); it++) {
         if (it->first == optimal_comb) {
             deleveraged_tags = it->second;
+            for (uint l = 0; l < deleveraged_tags.size(); l++) {
+                MergedStack *s = deleveraged_tags[l];
+                cerr << "Stack " << l << ":\n    ";
+                for (uint m = 0; m < s->utags.size(); m++)
+                    cerr << " " << s->utags[m] << "(" << s->count << ") ";
+                cerr << "\n";
+            }
         } else {
             for (k = 0; k < it->second.size(); k++)
                 delete it->second[k];
         }
     }
+
+    delete comb;
+    delete mst;
 
     return 0;
 }

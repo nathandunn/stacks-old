@@ -36,198 +36,254 @@
 map<int, int **> _cmbs;
 
 CombSet::~CombSet() {
-    int num_sets = this->sets.size();
-    int set, i;
-
-    for (set = 0; set < num_sets; set++) {
-        for (i = 0; i < this->lens[set]; i++)
-            delete [] sets[set][i];
-        delete [] sets[set];
-    }
+    int   num_sets, set, i;
+    Cmb **c;
 
     num_sets = this->compound_comb.size();
 
-    for (set = 0; set < num_sets; set++)
-        delete [] this->compound_comb[set]->elem;
-    delete this->compound_comb[set];
+    for (set = 0; set < num_sets; set++) {
+        c = this->compound_comb[set];
+        this->destroy(c);
+    }
+
+    //
+    // Delete edge map
+    //
+    for (i = 0; i < (int) this->node_list.size(); i++)
+        delete [] this->edges[i];
+    delete [] this->edges;
 }
 
-CombSet::CombSet(int n, int k) {
+CombSet::CombSet(int n, int k, MinSpanTree *tree) {
     this->max_set_size = n >= k ? k : n;
-    this->num_elements = n;
+    this->num_elements = n - 1;
     this->index        = 0;
+    this->mst          = tree;
 
-    int        i;
-    int  set_size = this->max_set_size;
-    long int size;
+    int  set_size = this->max_set_size - 1;
+    int      size;
     int    **comb;
-    Cmb *new_comb;
 
     cerr << "  Generating combinations for a set of " << n << " elements, with a maximum subset size of " << k << "\n";
 
+    //
+    // Add the initial combination: the empty set
+    //
+    if (_cmbs.count(0) == 0) {
+        comb       = new int * [2];
+        comb[0]    = new int[1];
+        comb[0][0] = -1;
+        comb[1]    = NULL;
+        _cmbs[0]   = comb;
+    }
+
     while (set_size > 0) {
+        //
+        // Check if this set of combinations is already cached.
+        //
+        if (_cmbs.count(set_size) > 0)
+            continue;
         //
         // How many combinations will we make?
         //
-        size = num_combinations(this->num_elements, set_size);
+        size = (int) this->num_combinations(this->num_elements, set_size);
 
         //
         // Generate all combinations, N choose K; N=num_elements, K=set_size
         //
-        comb = this->generate_combinations(this->num_elements, set_size, size, false);
+        comb = this->generate_combinations(this->num_elements, set_size, size);
 
-        this->lens.push_back(size);
-        this->size.push_back(set_size);
-        this->sets.push_back(comb);
+        //
+        // Cache this set of combinations
+        //
+        _cmbs[set_size] = comb;
 
         set_size--;
     }
 
-    //
-    // Create a single list of all the combinations generated above.
-    //
-    this->make_compound_set();
+    this->catalog_tree();
 
     //
-    // Finally, generate all combinations of the compound set.
+    // Finally, generate all combinations of nodes in the tree.
     //
-    for (set_size = 1; set_size < this->num_elements; set_size++) {
-
-        size = (int) num_combinations(this->compound_set.size(), set_size);
-
-        cerr << "    Subsets: " << this->compound_set.size() << "; compound combinations of size " << set_size << "; total: " << size;
-        comb = this->generate_combinations(this->compound_set.size(), set_size, size, true);
-        cerr << "; Valid sets: " << size << "\n";
-
-        for (i = 0; i < size; i++) {
-            new_comb = new Cmb;
-            new_comb->size = set_size;
-            new_comb->elem = comb[i];
-
-            this->compound_comb.push_back(new_comb);
-        }
-
-        delete [] comb;
-    }
-
-    //
-    // We can add the final combination by hand, when set_size == this->num_elements, since it generates
-    // the most combinations and always results in all but 1 combination being removed.
-    //
-    new_comb = new Cmb;
-    new_comb->size = this->num_elements;
-    new_comb->elem = new int[this->num_elements];
-    int offset = 0;
-    for (i = 0; i < this->max_set_size - 1; i++)
-        offset += this->lens[i];
-    for (i = 0; i < this->num_elements; i++)
-        new_comb->elem[i] = offset + i;
-
-    this->compound_comb.push_back(new_comb);
+    for (set_size = 0; set_size <= this->num_elements; set_size++)
+        this->partition_tree(set_size);
 
     cerr << "  Total compound combinations for sets of size " << n << ": " << this->compound_comb.size() << "\n";
 }
 
-int CombSet::make_compound_set() {
+int CombSet::catalog_tree() {
+    set<int>      visited;
+    queue<Node *> q;
+    uint          i, n_1, n_2;
 
-    int num_sets = this->lens.size();
+    //
+    // Create a two-dimensional array to represent edges between nodes in the tree
+    //
+    uint cnt   = this->mst->node_count();
+    cerr << "Creating a two-dimensional array of size: " << cnt << "\n";
+    this->edges = new int * [cnt];
+    for (i = 0; i < cnt; i++)
+        this->edges[i] = new int[cnt];
 
-    for (int i = 0; i < num_sets; i++)
-        for (int j = 0; j < this->lens[i]; j++)
-            this->compound_set.push_back(make_pair(i, j));
+    Node *n = this->mst->head();
+    q.push(n);
+    cnt = 0;
+
+    while (!q.empty()) {
+        n = q.front();
+        q.pop();
+        visited.insert(n->id);
+
+        this->node_list.push_back(n);
+        this->node_map[n->id] = cnt;
+        cnt++;
+
+        for (i = 0; i < n->min_adj_list.size(); i++)
+            if (visited.count(n->min_adj_list[i]->id) == false)
+                q.push(n->min_adj_list[i]);
+    }
+
+    n = this->mst->head();
+    q.push(n);
+    visited.clear();
+
+    while (!q.empty()) {
+        n = q.front();
+        q.pop();
+        visited.insert(n->id);
+
+        for (i = 0; i < n->min_adj_list.size(); i++) {
+
+            if (visited.count(n->min_adj_list[i]->id) == false) {
+                n_1 = this->node_map[n->id];
+                n_2 = this->node_map[n->min_adj_list[i]->id];
+
+                // Create a list of min spanning edges
+                this->edge_list.push_back(make_pair(n->id, n->min_adj_list[i]->id));
+                // Mark the nodes as connected in our edge array
+                this->edges[n_1][n_2] = 1;
+                this->edges[n_2][n_1] = 1;
+                // Queue this node to be visited next
+                q.push(n->min_adj_list[i]);
+            }
+        }
+    }
 
     return 0;
 }
 
-bool CombSet::valid(int *comb, int comb_size) {
-    int count;
-    int index;
-    int k, n, i, j;
+int CombSet::partition_tree(uint set_size) {
+    uint          i, j;
+    set<int>      visited;
+    queue<Node *> q;
+    Node         *n;
+    int           n_1, n_2, node_cnt, cmb_cnt;
+    Cmb         **new_comb, *cmb;
+    list<Node *>  nlist_work;
 
-    count = 0;
-
-    for (i = 0; i < comb_size; i++) {
-        index = comb[i];
-
-        // sets vector index number
-        k = this->compound_set[index].first;
-
-        count += this->size[k];
-    }
+    int **comb     = _cmbs[set_size];
+    int  *subgraph = new int[this->node_list.size()];
 
     //
-    // Combination not valid
+    // We want to methodically remove every set of branches of set_size size. The
+    // subgraphs represent the combinations we want to generate.
     //
-    if (count != this->num_elements)
-        return false;
-
-    //
-    // Check that each of the original elements exists only once in all subsets.
-    //
-    pair<set<int>::iterator,bool> ret;
-    set<int> s;
-
-    for (i = 0; i < comb_size; i++) {
-        index = comb[i];
-
-        // sets vector index number
-        k = this->compound_set[index].first;
-        // combination number 
-        n = this->compound_set[index].second;
+    for (i = 0; comb[i] != NULL; ++i) {
+        //
+        // This compound combination will consist of set_size+1 subgraphs
+        //
+        new_comb = new Cmb * [set_size + 2];
+        new_comb[set_size + 1] = NULL;
 
         //
-        // Items must be present only once in the final combination.
+        // Initialize working node list.
         //
-        for (j = 0; j < this->size[k]; j++) {
-            ret = s.insert(this->sets[k][n][j]);
-            if (ret.second == false)
-                return false;
+        nlist_work = this->node_list;
+
+        //
+        // Remove edges
+        //
+        for (j = 0; j < set_size; j++) {
+            n_1 = this->edge_list[comb[i][j]].first;
+            n_2 = this->edge_list[comb[i][j]].second;
+            this->edges[this->node_map[n_1]][this->node_map[n_2]] = 0;
+            this->edges[this->node_map[n_2]][this->node_map[n_1]] = 0;
+        }
+
+        //
+        // Traverse the subgraphs of the tree and record combinations.
+        //
+        visited.clear();
+        cmb_cnt = 0;
+        while (nlist_work.size() > 0) {
+            node_cnt = 0;
+            n = nlist_work.front();
+            q.push(n);
+            nlist_work.pop_front();
+            //subgraph[node_cnt] = n->id;
+
+            while (!q.empty()) {
+                n = q.front();
+                q.pop();
+                visited.insert(n->id);
+
+                subgraph[node_cnt] = n->id;
+                node_cnt++;
+                nlist_work.remove(n);
+
+                for (j = 0; j < n->min_adj_list.size(); j++) {
+                    n_1 = this->node_map[n->id];
+                    n_2 = this->node_map[n->min_adj_list[j]->id];
+
+                    if (visited.count(n->min_adj_list[j]->id) == false &&
+                        edges[n_1][n_2] == 1) {
+                        q.push(n->min_adj_list[j]);
+                    }
+                }
+            }
+
+            //
+            // Package up this combination.
+            //
+            cmb = new Cmb;
+            cmb->size = node_cnt;
+            cmb->elem = new int[cmb->size];
+            for (j = 0; j < cmb->size; j++)
+                cmb->elem[j] = subgraph[j];
+            new_comb[cmb_cnt] = cmb;
+            cmb_cnt++;
+        }
+
+        this->compound_comb.push_back(new_comb);
+
+        //
+        // Reset the edges.
+        //
+        for (j = 0; j < set_size; j++) {
+            n_1 = this->edge_list[comb[i][j]].first;
+            n_2 = this->edge_list[comb[i][j]].second;
+            this->edges[this->node_map[n_1]][this->node_map[n_2]] = 1;
+            this->edges[this->node_map[n_2]][this->node_map[n_1]] = 1;
         }
     }
 
-    return true;
+    delete [] subgraph;
+
+    return 0;
 }
 
-int CombSet::count_valid_comb(long total, int n, int k) {
-    int *curr = new int[k];
-
-    //
-    // Setup the initial combination
-    //
-    int comb_num = 0;
-
-    for (int i = 0; i < k; i++)
-        curr[i] = i;
-
-    if (this->valid(curr, k))
-        comb_num++;
-
-    //
-    // Generate each successive combination
-    //
-    int j = 1;
-    while (j < total) {
-        next_combination(curr, n, k);
-        if (this->valid(curr, k))
-            comb_num++;
-        j++;
-    }
-    delete [] curr;
-
-    return comb_num;
-}
-
-int **CombSet::generate_combinations(int n, int k, long &total, bool validate) {
+int **CombSet::generate_combinations(int n, int k, int total) {
     int **comb;
-    int  *curr;
 
-    if (validate)
-        total = this->count_valid_comb(total, n, k);
-
-    comb = new int * [total];
+    //
+    // Generate an int pointer for each combination, terminate the list with
+    // a NULL pointer.
+    //
+    comb = new int * [total + 1];
     for (int i = 0; i < total; i++)
         comb[i] = new int[k];
-    curr = new int[k];
+    comb[total] = NULL;
 
     //
     // Setup the initial combination
@@ -235,28 +291,18 @@ int **CombSet::generate_combinations(int n, int k, long &total, bool validate) {
     int comb_num = 0;
 
     for (int i = 0; i < k; i++)
-        curr[i] = i;
-
-    if (validate == false || this->valid(curr, k)) {
-        for (int i = 0; i < k; i++)
-            comb[comb_num][i] = curr[i];
-        comb_num++;
-    }
-
+        comb[comb_num][i] = i;
+    comb_num++;
+    
     //
     // Generate each successive combination
     //
     while (comb_num < total) {
-        next_combination(curr, n, k);
-
-        if (validate == false || this->valid(curr, k)) {
-            for (int i = 0; i < k; i++)
-                comb[comb_num][i] = curr[i];
-            comb_num++;
-        }
+        for (int i = 0; i < k; i++)
+            comb[comb_num][i] = comb[comb_num - 1][i];
+        this->next_combination(comb[comb_num], n, k);
+        comb_num++;
     }
-
-    delete [] curr;
 
     return comb;
 }
@@ -315,30 +361,32 @@ Cmb **CombSet::next(int map[]) {
     if (this->index >= (int) this->compound_comb.size())
         return NULL;
 
-    int  index, i, j, k, n;
-    int  size = this->compound_comb[this->index]->size;
-    int *e    = this->compound_comb[this->index]->elem;
+//     int  index, i, j, k, n;
+//     int  size = this->compound_comb[this->index]->size;
+//     int *e    = this->compound_comb[this->index]->elem;
 
-    Cmb **c = new Cmb * [size + 1];
+//     Cmb **c = new Cmb * [size + 1];
 
-    for (i = 0; i < size; i++) {
-        index = e[i];
-        // sets vector index number
-        k = this->compound_set[index].first;
-        // combination number 
-        n = this->compound_set[index].second;
+//     for (i = 0; i < size; i++) {
+//         index = e[i];
+//         // sets vector index number
+//         k = this->compound_set[index].first;
+//         // combination number 
+//         n = this->compound_set[index].second;
 
-        c[i] = new Cmb;
-        c[i]->size = this->size[k];
-        c[i]->elem = new int[this->size[k]];
+//         c[i] = new Cmb;
+//         c[i]->size = this->size[k];
+//         c[i]->elem = new int[this->size[k]];
 
-        for (j = 0; j < this->size[k]; j++)
-            c[i]->elem[j] = (map == NULL) ? 
-                this->sets[k][n][j] : 
-                map[this->sets[k][n][j]];
-    }
+//         for (j = 0; j < this->size[k]; j++)
+//             c[i]->elem[j] = (map == NULL) ? 
+//                 this->sets[k][n][j] : 
+//                 map[this->sets[k][n][j]];
+//     }
 
-    c[size] = NULL;
+//     c[size] = NULL;
+
+    Cmb **c = this->compound_comb[this->index];
 
     this->index++;
 
