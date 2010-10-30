@@ -188,3 +188,18 @@ double MergedStack::calc_likelihood() {
     return this->likelihood;
 }
 
+string MergedStack::write_cmb() {
+
+    stringstream s;
+    uint size = this->utags.size();
+
+    s << "{";
+    for (uint i = 0; i < size; i++) {
+        s << this->utags[i];
+        if (i < size - 1)
+            s << ", ";
+    }
+    s << "}";
+
+    return s.str();
+}

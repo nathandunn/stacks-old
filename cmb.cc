@@ -81,8 +81,11 @@ CombSet::CombSet(int n, int k, MinSpanTree *tree) {
         //
         // Check if this set of combinations is already cached.
         //
-        if (_cmbs.count(set_size) > 0)
+        if (_cmbs.count(set_size) > 0) {
+            set_size--;
             continue;
+        }
+
         //
         // How many combinations will we make?
         //

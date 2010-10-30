@@ -71,9 +71,9 @@ int main (int argc, char* argv[]) {
     //
     omp_set_num_threads(num_threads);
 
-    HashMap          radtags;
-    map<int, Seq *>  remainders;
-    set<int>         merge_map;
+    HashMap           radtags;
+    map<int, Seq *>   remainders;
+    set<int>          merge_map;
     map<int, Stack *> unique;
 
     load_radtags(in_file, radtags);
@@ -93,6 +93,9 @@ int main (int argc, char* argv[]) {
 
     populate_merged_tags(unique, merged);
 
+    cerr << "Merging remainder radtags\n";
+    //merge_remainders(merged, remainders);
+
     if (remove_rep_stacks) {
 	cerr << "Calculating distance for removing repetitive stacks.\n";
 	calc_kmer_distance(merged, 1);
@@ -100,8 +103,8 @@ int main (int argc, char* argv[]) {
 	remove_repetitive_stacks(merged);
     }
 
-    //for (int i = 2; i <= max_utag_dist; i++) {
-    int i = 3;
+    for (int i = 2; i <= max_utag_dist; i++) {
+    //int i = 2;
 	cerr << "Calculating distance, round " << i << "\n";
 	calc_kmer_distance(merged, i);
 
@@ -111,14 +114,14 @@ int main (int argc, char* argv[]) {
 	call_consensus(merged, unique, remainders, false);
 
 	merge_map.clear();
-        //}
+    }
 
     calc_merged_coverage_distribution(unique, merged);
 
     //dump_merged_tags(merged);
 
-    cerr << "Merging remainder radtags\n";
-    merge_remainders(merged, remainders);
+//     cerr << "Merging remainder radtags\n";
+//     merge_remainders(merged, remainders);
 
     // Call the consensus sequence again, now that remainder tags have been merged.
     call_consensus(merged, unique, remainders, true);
@@ -385,7 +388,6 @@ int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &mer
     map<int, MergedStack *>::iterator it_new, it_old;
     Stack      *utag;
     MergedStack *mtag;
-    int        k = 0;
 
     it_old = merged.begin();
 
@@ -393,16 +395,15 @@ int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &mer
 	utag = (*i).second;
 	mtag = new MergedStack;
 
-	mtag->id    = k;
+	mtag->id    = utag->id;
 	mtag->count = utag->count;
 	mtag->utags.push_back(utag->id);
 	mtag->add_consensus(utag->seq);
 
 	// Insert the new MergedStack giving a hint as to which position
 	// to insert it at.
-	it_new = merged.insert(it_old, pair<int, MergedStack *>(k, mtag));
+	it_new = merged.insert(it_old, pair<int, MergedStack *>(mtag->id, mtag));
 	it_old = it_new;
-	k++;
     }
 
     return 0;
@@ -469,10 +470,8 @@ int merge_radtags(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, Merg
 	// Record the nodes that have been merged in this round.
 	//
 	set<int>::iterator j;
-	for (j = unique_merge_list.begin(); j != unique_merge_list.end(); j++) {
-	    //cerr << "Merging: " << *j << "\n";
+	for (j = unique_merge_list.begin(); j != unique_merge_list.end(); j++)
 	    merge_map.insert(*j);
-	}
 
 	//
 	// If the depth of coverage of the merged tag is greater than the deleverage trigger
@@ -480,8 +479,8 @@ int merge_radtags(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, Merg
 	//
 	if (deleverage_stacks) {
 	    vector<MergedStack *> tags;
-            int num_clusters = 1;
-	    deleverage(unique, rem, merged, unique_merge_list, num_clusters, round, tags);
+
+	    deleverage(unique, rem, merged, unique_merge_list, round, tags);
 
 	    for (uint t = 0; t < tags.size(); t++) {
 		tags[t]->id = id;
@@ -525,6 +524,9 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, set<int> &merge_list, i
 	for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++)
 	    tag_1->utags.push_back(*j);
 
+	for (j = tag_2->remtags.begin(); j != tag_2->remtags.end(); j++)
+	    tag_1->remtags.push_back(*j);
+
         tag_1->count += tag_2->count;
     }
 
@@ -549,6 +551,9 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, int *merge_list, int me
 
 	for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++)
 	    tag_1->utags.push_back(*j);
+
+	for (j = tag_2->remtags.begin(); j != tag_2->remtags.end(); j++)
+	    tag_1->remtags.push_back(*j);
 
         tag_1->count += tag_2->count;
     }
@@ -703,18 +708,12 @@ int deleverage(map<int, Stack *> &unique,
                map<int, Seq *> &rem,
 	       map<int, MergedStack *> &merged, 
 	       set<int> &merge_list, 
-	       int num_clusters, 
-	       int round, 
+	       int cohort_id, 
 	       vector<MergedStack *> &deleveraged_tags) {
     set<int>::iterator i;
     vector<pair<int, int> >::iterator j;
     MergedStack *tag_1, *tag_2;
     uint k, l;
-
-    //
-    // Two-dimensional map to hold distances between nodes.
-    //
-    map<int, map<int, double> > dist_map;
 
     //
     // Create a minimum spanning tree in order to determine the minimum distance
@@ -742,13 +741,14 @@ int deleverage(map<int, Stack *> &unique,
             n_2   = mst->node(keys[l]);
 
 	    int d = dist(tag_1, tag_2);
-	    dist_map[keys[k]][keys[l]] = d;
 
             n_1->add_edge(mst->node(keys[l]), d);
             n_2->add_edge(mst->node(keys[k]), d);
 	}
     }
 
+    //
+    // Build the minimum spanning tree.
     //
     mst->build_tree();
 
@@ -757,64 +757,32 @@ int deleverage(map<int, Stack *> &unique,
     //
     if (dump_graph) {
         stringstream gout_file;
-        gout_file << out_path.c_str() << "ustacks_" << keys[0] << ".dot";
+        size_t pos_1 = in_file.find_last_of("/");
+        size_t pos_2 = in_file.find_last_of(".");
+        gout_file << out_path << in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) << "_" << keys[0] << ".dot";
         string vis = mst->vis(true);
         ofstream gvis(gout_file.str().c_str());
         gvis << vis;
         gvis.close();
     }
 
-    //
-    // Generate all possible combinations of the nodes in the mimimum spanning tree.
-    //
     CombSet *comb;
     Cmb    **cmb;
     int      num_subsets = (max_subsets > 0) ? max_subsets : keys.size();
 
+    //
+    // Generate all possible combinations of the nodes in the mimimum spanning tree.
+    //
     comb = new CombSet(keys.size(), num_subsets, mst);
-
-//     //
-//     // Provide a list of IDs to CombSet to map array indices to MergedStack IDs.
-//     //
-//     int *ids = new int[keys.size()];
-//     for (k = 0; k < keys.size(); k++)
-//         ids[k] = keys[k];
-
-    vector<Cmb **> valid_comb;
-    bool valid;
-    int  index = 0;
-
-    while ((cmb = comb->next()) != NULL) {
-        valid = true;
-
-        for (k = 0; cmb[k] != NULL; k++) {
-            //
-            // Is this subset connected within the minimum spanning tree?
-            //
-            if ((valid = mst->connected(cmb[k]->elem, cmb[k]->size)) == false)
-                break;
-        }
-
-        //
-        // Record each valid combination.
-        //
-        if (valid)
-            valid_comb.push_back(cmb);
-
-        index++;
-    }
-
-//     delete [] ids;
 
     map<int, vector<MergedStack *> > comb_map;
     map<int, vector<MergedStack *> >::iterator it;
     vector<double> lnls; // Log Likelihoods
 
-    for (k = 0; k < valid_comb.size(); k++) {
+    for (k = 0; (cmb = comb->next()) != NULL; k++) {
         //
         // Create a set of MergedStacks to represent each element of this combination
         //
-        cmb = valid_comb[k];
         for (l = 0; cmb[l] != NULL; l++) {
             tag_1 = merge_tags(merged, cmb[l]->elem, cmb[l]->size, l);
 
@@ -834,32 +802,29 @@ int deleverage(map<int, Stack *> &unique,
     // set of loci.
     //
     int    optimal_comb = comb_map.begin()->first;
-    double optimal_aic  = 0;
+    double optimal_aic  = 1000000;
 
     for (it = comb_map.begin(); it != comb_map.end(); it++) {
         double comb_likelihood = 0;
-
-        //cerr << "Potential Combination: " << it->first << "\n";
-        cmb = valid_comb[it->first];
-        for (k = 0; cmb[k] != NULL; k++) { 
-            //cerr << "  Locus #" << k << ": ";
-            //write_cmb(cmb[k]->elem, cmb[k]->size);
-        }
+        int snp_cnt = 0;
+        cerr << "Potential Combination: " << it->first << "\n";
 
         for (k = 0; k < it->second.size(); k++) {
             tag_1 = it->second[k];
 
             tag_1->gen_matrix(unique, rem);
-
+            snp_cnt += tag_1->snps.size();
             comb_likelihood += tag_1->calc_likelihood();
 
-            //cerr << "    MergedStack #" << k << ": lnl: " << tag_1->likelihood << "\n";
+            cerr << "  Locus #" << k << ": " << tag_1->write_cmb() << "; lnl: " << tag_1->likelihood << "\n";
         }
 
         lnls.push_back(comb_likelihood);
 
-        double aic = (2 * it->second.size()) - (2 * comb_likelihood);
-        //cerr << "  Total lnl: " << comb_likelihood << "; AIC: " << aic << "\n";
+        //snp_cnt = snp_cnt == 0 ? 1 : snp_cnt;
+        double aic = (2 * pow(2, it->second.size())) - (2 * comb_likelihood);
+        //double aic = (2 * it->second.size()) - (2 * comb_likelihood);
+        cerr << "  Total lnl: " << comb_likelihood << "; AIC: " << aic << "\n";
 
         if (aic < optimal_aic) {
             optimal_comb = it->first;
@@ -875,13 +840,6 @@ int deleverage(map<int, Stack *> &unique,
     for (it = comb_map.begin(); it != comb_map.end(); it++) {
         if (it->first == optimal_comb) {
             deleveraged_tags = it->second;
-            for (uint l = 0; l < deleveraged_tags.size(); l++) {
-                MergedStack *s = deleveraged_tags[l];
-                cerr << "Stack " << l << ":\n    ";
-                for (uint m = 0; m < s->utags.size(); m++)
-                    cerr << " " << s->utags[m] << "(" << s->count << ") ";
-                cerr << "\n";
-            }
         } else {
             for (k = 0; k < it->second.size(); k++)
                 delete it->second[k];

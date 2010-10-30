@@ -74,6 +74,7 @@ class MergedStack {
     int    add_dist(const int id, const int dist);
     char **gen_matrix(map<int, Stack *> &, map<int, Seq *> &);
     double calc_likelihood();
+    string write_cmb();
 };
 
 #endif // __MSTACK_H__
