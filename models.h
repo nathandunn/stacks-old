@@ -58,7 +58,7 @@ extern double barcode_err_freq;
 
 double  heterozygous_likelihood(int, map<char, int> &);
 double  homozygous_likelihood(int, map<char, int> &);
-allelet call_multinomial_snp(MergedStack *, int, map<char, int> &);
+allelet call_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
 int     call_multinomial_fixed(MergedStack *, int, map<char, int> &);
 
 #endif // __MODELS_H__

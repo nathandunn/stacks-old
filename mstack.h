@@ -48,13 +48,14 @@ class MergedStack {
     vector<int>          remtags; // Remainder tag IDs that have been merged into this Stack
     char                **matrix; // Two-dimensional array for iterating over the combined stack (stacks and remainders).
 
-    double likelihood;
+    int cohort_id; // Group ID of all stacks that were originally part of the same subgraph
+    double    lnl; // Log likelihood of this stack
 
     //
     // Mapping components
     //
-    PhyLoc           loc;     // Physical genome location of this Stack.
-    vector<SNP *>    snps;    // Single Nucleotide Polymorphisms found in this Stack
+    PhyLoc               loc; // Physical genome location of this Stack.
+    vector<SNP *>       snps; // Single Nucleotide Polymorphisms found in this Stack
     map<string, int> alleles; // Set of alleles defined by the SNPs found in this Stack
     //
     // K-mers generated from the consensus sequence

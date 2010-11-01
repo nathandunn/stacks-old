@@ -65,6 +65,7 @@ using __gnu_cxx::hash;
 
 #include "constants.h" 
 #include "input.h"
+#include "utils.h"
 #include "mst.h"       // Minimum spanning tree implementation
 #include "cmb.h"       // Generates combinations
 #include "kmers.h"
@@ -136,6 +137,7 @@ int  deleverage(map<int, Stack *> &, map<int, Seq *> &, map<int, MergedStack *> 
 int  determine_single_linkage_clusters(map<int, MergedStack *> &, set<int> &, int);
 int  hclust(vector<int> &, map<int, map<int, double> > &, int, map<int, set<int> > &);
 int  check_deleveraged_dist(map<int, map<int, double> > &, set<int> &, int);
+int  choose_optimal_lnl(vector<pair<int, double> > &);
 
 //
 // Debugging

@@ -53,13 +53,9 @@ int       removal_trigger;
 //
 // For use with the multinomial model to call fixed nucleotides.
 //
-modelt model_type        = snp;
-double p_freq            = 0.5;
-double barcode_err_freq  = 0.0;
-//
-// A cache for storing graph combinations
-//
-//map<int, CombSet *> combinations;
+modelt model_type       = snp;
+double p_freq           = 0.5;
+double barcode_err_freq = 0.0;
 
 
 int main (int argc, char* argv[]) {
@@ -71,10 +67,15 @@ int main (int argc, char* argv[]) {
     //
     omp_set_num_threads(num_threads);
 
-    HashMap           radtags;
-    map<int, Seq *>   remainders;
-    set<int>          merge_map;
-    map<int, Stack *> unique;
+    //
+    // Seed the random number generator
+    //
+    srandom(time(NULL));
+
+    HashMap            radtags;
+    map<int, Seq *> remainders;
+    set<int>         merge_map;
+    map<int, Stack *>   unique;
 
     load_radtags(in_file, radtags);
 
@@ -93,8 +94,8 @@ int main (int argc, char* argv[]) {
 
     populate_merged_tags(unique, merged);
 
-    cerr << "Merging remainder radtags\n";
-    //merge_remainders(merged, remainders);
+    cerr << "Merging remainder reads\n";
+    merge_remainders(merged, remainders);
 
     if (remove_rep_stacks) {
 	cerr << "Calculating distance for removing repetitive stacks.\n";
@@ -103,25 +104,15 @@ int main (int argc, char* argv[]) {
 	remove_repetitive_stacks(merged);
     }
 
-    for (int i = 2; i <= max_utag_dist; i++) {
-    //int i = 2;
-	cerr << "Calculating distance, round " << i << "\n";
-	calc_kmer_distance(merged, i);
+    cerr << "Calculating distance between stacks...\n";
+    calc_kmer_distance(merged, max_utag_dist);
 
-	cerr << "  Merging radtags, round " << i << "\n";
-	merge_radtags(unique, remainders, merged, merge_map, i);
-
-	call_consensus(merged, unique, remainders, false);
-
-	merge_map.clear();
-    }
+    cerr << "  Merging stacks, maximum allowed distance: " << max_utag_dist << " nucleotide(s)\n";
+    merge_radtags(unique, remainders, merged, merge_map, max_utag_dist);
 
     calc_merged_coverage_distribution(unique, merged);
 
     //dump_merged_tags(merged);
-
-//     cerr << "Merging remainder radtags\n";
-//     merge_remainders(merged, remainders);
 
     // Call the consensus sequence again, now that remainder tags have been merged.
     call_consensus(merged, unique, remainders, true);
@@ -358,7 +349,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
 		// Search this column for the presence of a SNP
 		if (invoke_model) 
 		    model_type == snp ? 
-                        call_multinomial_snp(mtag, col, nuc) :
+                        call_multinomial_snp(mtag, col, nuc, true) :
                         call_multinomial_fixed(mtag, col, nuc);
 	    }
 
@@ -415,7 +406,8 @@ int merge_radtags(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, Merg
     MergedStack *tag_1, *tag_2;
 
     //cerr << "Tags to merge: " << merged.size() << "\n";
-    int id = 0;
+    int cohort_id = 0;
+    int id        = 0;
 
     for (i = merged.begin(); i != merged.end(); i++) {
 	tag_1 = i->second;
@@ -480,15 +472,15 @@ int merge_radtags(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, Merg
 	if (deleverage_stacks) {
 	    vector<MergedStack *> tags;
 
-	    deleverage(unique, rem, merged, unique_merge_list, round, tags);
+	    deleverage(unique, rem, merged, unique_merge_list, cohort_id, tags);
 
 	    for (uint t = 0; t < tags.size(); t++) {
 		tags[t]->id = id;
 		new_merged.insert(pair<int, MergedStack *>(id, tags[t]));
 		id++;
 	    }
+            cohort_id++;
 
-	    //exit(0);
 	} else {
             //
             // If not deleveraging, merge these tags together into a new MergedStack object.
@@ -586,15 +578,13 @@ int remove_repetitive_stacks(map<int, MergedStack *> &merged) {
 	//
 	// Don't process a tag that has already been removed.
 	//
-	if (stack_list.find(tag_1->id) != stack_list.end())
+	if (stack_list.count(tag_1->id) > 0)
 	    continue;
 
 	set<int> unique_merge_list;
 	unique_merge_list.insert(tag_1->id);
 
 	if (tag_1->count > removal_trigger) {
-	    //cerr << "  Removing tag " << tag_1->id << "; depth of coverage: " << tag_1->count
-	    //<< "; removing " << tag_1->dist.size() << " tags a distance of 1 from " << tag_1->id << "\n";
 	    stack_list.insert(tag_1->id);
 
 	    for (k = tag_1->dist.begin(); k != tag_1->dist.end(); k++) {
@@ -616,38 +606,11 @@ int remove_repetitive_stacks(map<int, MergedStack *> &merged) {
 	id++;
     }
 
-    cerr << "  Removed " << stack_list.size() << " RAD-Tags.\n";
-
-//     //
-//     // Keep everything not in the recorded stack list.
-//     //
-//     map<int, MergedStack *>::iterator it_new, it_old;
-
-
-//     it_old = new_merged.begin();
-
-//     for (i = merged.begin(); i != merged.end(); i++) {
-// 	tag_1 = i->second;
-
-// 	if (stack_list.find(tag_1->id) == stack_list.end()) {
-// 	    tag_2     = new MergedStack;
-// 	    tag_2->id = id;
-
-// 	    for (j = tag_1->utags.begin(); j != tag_1->utags.end(); j++) {
-// 		tag_2->utags.push_back(*j);
-// 		tag_2->count += tag_1->count;
-// 	    }
-// 	    tag_2->add_consensus(tag_1->con);
-
-	    
-// 	    it_old = it_new;
-// 	    id++;
-// 	}
-//     }
+    cerr << "  Removed " << stack_list.size() << " stacks.\n";
 
     merged = new_merged;
 
-    cerr << "  " << merged.size() << " RAD-Tags remain for merging.\n";
+    cerr << "  " << merged.size() << " stacks remain for merging.\n";
 
     return 0;
 }
@@ -777,7 +740,7 @@ int deleverage(map<int, Stack *> &unique,
 
     map<int, vector<MergedStack *> > comb_map;
     map<int, vector<MergedStack *> >::iterator it;
-    vector<double> lnls; // Log Likelihoods
+    vector<pair<int, double> > lnls; // ID / Log Likelihood pairs
 
     for (k = 0; (cmb = comb->next()) != NULL; k++) {
         //
@@ -785,6 +748,12 @@ int deleverage(map<int, Stack *> &unique,
         //
         for (l = 0; cmb[l] != NULL; l++) {
             tag_1 = merge_tags(merged, cmb[l]->elem, cmb[l]->size, l);
+
+            //
+            // Set the cohort ID for all merged stacks we generate. This allows us to track
+            // how tags were partitioned after the program executes.
+            //
+            tag_1->cohort_id = cohort_id;
 
             //
             // Set this tag to no longer be considered for further merging if the MergedStack
@@ -801,38 +770,29 @@ int deleverage(map<int, Stack *> &unique,
     // Calculate the likelihood value of each combination and choose the optimal
     // set of loci.
     //
-    int    optimal_comb = comb_map.begin()->first;
-    double optimal_aic  = 1000000;
-
     for (it = comb_map.begin(); it != comb_map.end(); it++) {
-        double comb_likelihood = 0;
-        int snp_cnt = 0;
+        double comb_lnl = 0;
         cerr << "Potential Combination: " << it->first << "\n";
 
         for (k = 0; k < it->second.size(); k++) {
             tag_1 = it->second[k];
 
             tag_1->gen_matrix(unique, rem);
-            snp_cnt += tag_1->snps.size();
-            comb_likelihood += tag_1->calc_likelihood();
+            comb_lnl += tag_1->calc_likelihood();
 
-            cerr << "  Locus #" << k << ": " << tag_1->write_cmb() << "; lnl: " << tag_1->likelihood << "\n";
+            cerr << "  Locus #" << k << ": " << tag_1->write_cmb() << "; lnl: " << tag_1->lnl << "\n";
         }
 
-        lnls.push_back(comb_likelihood);
+        double weighted_lnl = (2 * (pow(2, it->second.size()) + pow(2, it->second.size()))) - (2 * comb_lnl);
+        //double weighted_lnl = (2 * it->second.size()) - (2 * comb_lnl);
+        cerr << "  Total LnL: " << comb_lnl << "; weighted LnL: " << weighted_lnl << "\n";
 
-        //snp_cnt = snp_cnt == 0 ? 1 : snp_cnt;
-        double aic = (2 * pow(2, it->second.size())) - (2 * comb_likelihood);
-        //double aic = (2 * it->second.size()) - (2 * comb_likelihood);
-        cerr << "  Total lnl: " << comb_likelihood << "; AIC: " << aic << "\n";
-
-        if (aic < optimal_aic) {
-            optimal_comb = it->first;
-            optimal_aic  = aic;
-        }
+        lnls.push_back(make_pair(it->first, weighted_lnl));
     }
 
-    cerr << "    Choosing combination " << optimal_comb << " with AIC " << optimal_aic << "\n";
+    int optimal_comb = choose_optimal_lnl(lnls);
+
+    cerr << "Choosing combination " << optimal_comb << "\n";
 
     //
     // Free memory and set the optimal combination to retrun to the calling function.
@@ -850,6 +810,26 @@ int deleverage(map<int, Stack *> &unique,
     delete mst;
 
     return 0;
+}
+
+int choose_optimal_lnl(vector<pair<int, double> > &lnls) {
+    //
+    // Return the ID of the stack set with the optimal log likelihood score: 
+    // the one with the lowest value. If more than one score has the same value, 
+    // randombly select one of them.
+    //
+    sort(lnls.begin(), lnls.end(), compare_pair_intdouble);
+
+    if (lnls[0].second < lnls[1].second)
+        return lnls[0].first;
+
+    int    cnt = 0;
+    double opt = lnls[0].second;
+    while (lnls[cnt].second == opt) cnt++;
+
+    int index = (int) (cnt * (random() / (RAND_MAX + 1.0)));
+
+    return lnls[index].first;
 }
 
 int check_deleveraged_dist(map<int, map<int, double> > &dist_map, set<int> &merge_list, int max_dist) {
@@ -1175,13 +1155,13 @@ int count_raw_reads(map<int, Stack *> &unique, map<int, MergedStack *> &merged) 
 
 int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq *> &r) {
     map<int, MergedStack *>::iterator i;
-    vector<SeqId *>::iterator     j;
-    vector<int>::iterator           k;
-    vector<SNP *>::iterator         s;
-    map<string, int>::iterator      t;
+    vector<SeqId *>::iterator  j;
+    vector<int>::iterator      k;
+    vector<SNP *>::iterator    s;
+    map<string, int>::iterator t;
     MergedStack *tag_1;
-    Stack *tag_2;
-    Seq  *rem;
+    Stack       *tag_2;
+    Seq         *rem;
 
     //
     // Parse the input file name to create the output files
@@ -1212,7 +1192,9 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
 	     << tag_1->con << "\t" 
 	     << tag_1->deleveraged << "\t" 
 	     << tag_1->blacklisted << "\t"
-	     << tag_1->lumberjackstack << "\n";
+	     << tag_1->lumberjackstack << "\t"
+             << tag_1->cohort_id << "\t" 
+             << tag_1->lnl << "\n";
 
 	// Now write out the components of each unique tag merged into this one.
 	id = 0;

@@ -36,6 +36,6 @@ double reduced_factorial(double, double);
 // Comparison functions for the STL sort routine
 //
 bool compare_pair(pair<char, int>, pair<char, int>);
-
+bool compare_pair_intdouble(pair<int, double>, pair<int, double>);
 
 #endif // __UTILS_H__

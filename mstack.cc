@@ -32,28 +32,29 @@
 #include "models.h"
 
 MergedStack::MergedStack()  { 
-    id         = 0;
-    count      = 0;
-    con        = NULL;
-    matrix     = NULL;
-    likelihood = 0.0;
-    loc.bp     = 0; 
-    loc.chr[0] = '\0';
-    deleveraged     = false;
-    masked          = false;
-    blacklisted     = false;
-    lumberjackstack = false;
+    this->id         = 0;
+    this->count      = 0;
+    this->con        = NULL;
+    this->matrix     = NULL;
+    this->lnl        = 0.0;
+    this->cohort_id  = -1;
+    this->loc.bp     = 0; 
+    this->loc.chr[0] = '\0';
+    this->deleveraged     = false;
+    this->masked          = false;
+    this->blacklisted     = false;
+    this->lumberjackstack = false;
 }
 
 MergedStack::~MergedStack() { 
-    delete [] con;
+    delete [] this->con;
 
     for (uint i = 0; i < kmers.size(); i++)
-        delete [] kmers[i];
+        delete [] this->kmers[i];
     for (uint i = 0; i < snps.size(); i++)
-        delete snps[i];
+        delete this->snps[i];
 
-    delete [] matrix;
+    delete [] this->matrix;
 }
 
 int MergedStack::add_consensus(const char *seq) {
@@ -130,7 +131,7 @@ double MergedStack::calc_likelihood() {
     map<char, int> nuc;
     map<char, int>::iterator max, n;
 
-    this->likelihood = 0;
+    this->lnl = 0;
 
     for (col = 0; col < length; col++) {
         nuc['A'] = 0; 
@@ -162,7 +163,7 @@ double MergedStack::calc_likelihood() {
             // this permutation, or alleles are identical at the nucleotide position), the lnL for 
             // an individual is just the output of homozygous_likelihood()
             //
-            this->likelihood += homozygous_likelihood(col, nuc);
+            this->lnl += homozygous_likelihood(col, nuc);
 
         } else {
             //
@@ -171,21 +172,21 @@ double MergedStack::calc_likelihood() {
             // If it returns 'het' calculate the heterozygous_likelihood(), otherwise calculate homozygous
             // likelihood.
             //
-            allelet res = call_multinomial_snp(this, col, nuc);
+            allelet res = call_multinomial_snp(this, col, nuc, false);
 
             if (res == het) 
-                this->likelihood += heterozygous_likelihood(col, nuc);
+                this->lnl += heterozygous_likelihood(col, nuc);
             else if (res == hom)
-                this->likelihood += homozygous_likelihood(col, nuc);
+                this->lnl += homozygous_likelihood(col, nuc);
             else {
-                double homlln = homozygous_likelihood(col, nuc);
-                double hetlln = heterozygous_likelihood(col, nuc);
-                this->likelihood += hetlln > homlln ? hetlln : homlln;
+                double homlnl = homozygous_likelihood(col, nuc);
+                double hetlnl = heterozygous_likelihood(col, nuc);
+                this->lnl += hetlnl > homlnl ? hetlnl : homlnl;
             }
         }
     }
 
-    return this->likelihood;
+    return this->lnl;
 }
 
 string MergedStack::write_cmb() {

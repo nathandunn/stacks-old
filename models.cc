@@ -101,7 +101,7 @@ double homozygous_likelihood(int col, map<char, int> &nuc) {
     return lnl;
 }
 
-allelet call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
+allelet call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n, bool record_snps) {
     const float heterozygote_limit = -3.84;
     const float homozygote_limit   =  3.84;
 
@@ -151,15 +151,16 @@ allelet call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
 
     if (l_ratio <= heterozygote_limit) {
         // This locus is a heterozygote.
-	// Record this SNP
-	SNP *snp = new SNP;
-	snp->col    = col;
-	snp->lratio = l_ratio;
-	snp->rank_1 = nuc[0].first;
-	snp->rank_2 = nuc[1].first;
+        if (record_snps) {
+            // Record this SNP
+            SNP *snp = new SNP;
+            snp->col    = col;
+            snp->lratio = l_ratio;
+            snp->rank_1 = nuc[0].first;
+            snp->rank_2 = nuc[1].first;
 
-	tag->snps.push_back(snp);
-
+            tag->snps.push_back(snp);
+        }
         return het;
 
     } else if (l_ratio >= homozygote_limit) {

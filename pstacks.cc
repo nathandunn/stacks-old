@@ -200,7 +200,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
 		// Search this column for the presence of a SNP
 		if (invoke_model) 
 		    model_type == snp ? 
-                        call_multinomial_snp(mtag, col, nuc) :
+                        call_multinomial_snp(mtag, col, nuc, true) :
                         call_multinomial_fixed(mtag, col, nuc);
 	    }
 
