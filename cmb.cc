@@ -91,6 +91,8 @@ CombSet::CombSet(int n, int k, MinSpanTree *tree) {
         //
         size = (int) this->num_combinations(this->num_elements, set_size);
 
+        cerr << "    N: " << this->num_elements << "; K: " << set_size << "; Total elements: " << size << "\n";
+
         //
         // Generate all combinations, N choose K; N=num_elements, K=set_size
         //
@@ -345,15 +347,18 @@ int CombSet::next_combination(int *comb, int n, int k) {
 }
 
 long int CombSet::num_combinations(int n, int k) {
+    //
+    // Compute the binomial coefficient using the method of:
+    // Y. Manolopoulos, "Binomial coefficient computation: recursion or iteration?", 
+    // ACM SIGCSE Bulletin, 34(4):65-67, 2002.
+    //
     long int r = 1;
+    long int s = (k < n - k) ? n - k + 1 : k + 1;
 
-    for (long int i = n; i >= (n - k + 1); i--)
-        r *= i;
-    long int s = (long int) factorial(k);
+    for (long int i = n; i >= s; i--)
+        r = r * i / (n - i + 1);
 
-    long int num_comb = r / s;
-
-    return lround(num_comb);
+    return r;
 }
 
 //

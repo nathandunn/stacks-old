@@ -94,20 +94,20 @@ int main (int argc, char* argv[]) {
 
     populate_merged_tags(unique, merged);
 
-    cerr << "Merging remainder reads\n";
-    merge_remainders(merged, remainders);
+    //cerr << "Merging remainder reads\n";
+    //merge_remainders(merged, remainders);
 
-    if (remove_rep_stacks) {
-	cerr << "Calculating distance for removing repetitive stacks.\n";
-	calc_kmer_distance(merged, 1);
-	cerr << "Removing repetitive stacks.\n";
-	remove_repetitive_stacks(merged);
-    }
+//     if (remove_rep_stacks) {
+// 	cerr << "Calculating distance for removing repetitive stacks.\n";
+// 	calc_kmer_distance(merged, 1);
+// 	cerr << "Removing repetitive stacks.\n";
+// 	remove_repetitive_stacks(merged);
+//     }
 
     cerr << "Calculating distance between stacks...\n";
     calc_kmer_distance(merged, max_utag_dist);
 
-    cerr << "  Merging stacks, maximum allowed distance: " << max_utag_dist << " nucleotide(s)\n";
+    cerr << "Merging stacks, maximum allowed distance: " << max_utag_dist << " nucleotide(s)\n";
     merge_radtags(unique, remainders, merged, merge_map, max_utag_dist);
 
     calc_merged_coverage_distribution(unique, merged);
