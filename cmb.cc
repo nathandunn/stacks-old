@@ -64,14 +64,14 @@ CombSet::CombSet(int n, int k, MinSpanTree *tree) {
     int      size;
     int    **comb;
 
-    cerr << "  Generating combinations for a set of " << n << " elements, with a maximum subset size of " << k << "\n";
+    //cerr << "  Generating combinations for a set of " << n << " elements, with a maximum subset size of " << k << "\n";
 
     //
     // Add the initial combination: the empty set
     //
     if (_cmbs.count(this->num_elements) == 0 && 
         _cmbs[this->num_elements].count(0) == 0) {
-        cerr << "    N: " << this->num_elements << "; K: 0; Total elements: 0\n";
+        //cerr << "    N: " << this->num_elements << "; K: 0; Total elements: 0\n";
         comb       = new int * [2];
         comb[0]    = new int[1];
         comb[0][0] = -1;
@@ -94,7 +94,7 @@ CombSet::CombSet(int n, int k, MinSpanTree *tree) {
         //
         size = (int) this->num_combinations(this->num_elements, set_size);
 
-        cerr << "    N: " << this->num_elements << "; K: " << set_size << "; Total elements: " << size << "\n";
+        //cerr << "    N: " << this->num_elements << "; K: " << set_size << "; Total elements: " << size << "\n";
 
         //
         // Generate all combinations, N choose K; N=num_elements, K=set_size
@@ -117,7 +117,7 @@ CombSet::CombSet(int n, int k, MinSpanTree *tree) {
     for (set_size = 0; set_size <= this->num_elements; set_size++)
         this->partition_tree(set_size);
 
-    cerr << "  Total compound combinations for sets of size " << n << ": " << this->compound_comb.size() << "\n";
+    //cerr << "  Total compound combinations for sets of size " << n << ": " << this->compound_comb.size() << "\n";
 }
 
 int CombSet::catalog_tree() {

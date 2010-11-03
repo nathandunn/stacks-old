@@ -95,15 +95,15 @@ int main (int argc, char* argv[]) {
 
     populate_merged_tags(unique, merged);
 
-    //cerr << "Merging remainder reads\n";
-    //merge_remainders(merged, remainders);
+    cerr << "Merging remainder reads\n";
+    merge_remainders(merged, remainders);
 
-//     if (remove_rep_stacks) {
-// 	cerr << "Calculating distance for removing repetitive stacks.\n";
-// 	calc_kmer_distance(merged, 1);
-// 	cerr << "Removing repetitive stacks.\n";
-// 	remove_repetitive_stacks(merged);
-//     }
+    if (remove_rep_stacks) {
+	cerr << "Calculating distance for removing repetitive stacks.\n";
+	calc_kmer_distance(merged, 1);
+	cerr << "Removing repetitive stacks.\n";
+	remove_repetitive_stacks(merged);
+    }
 
     cerr << "Calculating distance between stacks...\n";
     calc_kmer_distance(merged, max_utag_dist);
@@ -706,8 +706,6 @@ int deleverage(map<int, Stack *> &unique,
 	keys.push_back(*i);
         mst->add_node(*i);
         tag_1 = merged[*i];
-        cerr << tag_1->con << "\n";
-
     }
 
     //
@@ -792,7 +790,7 @@ int deleverage(map<int, Stack *> &unique,
     //
     for (it = comb_map.begin(); it != comb_map.end(); it++) {
         double comb_lnl = 0;
-        cerr << "Potential Combination: " << it->first << "\n";
+        //cerr << "Potential Combination: " << it->first << "\n";
 
         for (k = 0; k < it->second.size(); k++) {
             tag_1 = it->second[k];
@@ -800,19 +798,20 @@ int deleverage(map<int, Stack *> &unique,
             tag_1->gen_matrix(unique, rem);
             comb_lnl += tag_1->calc_likelihood();
 
-            cerr << "  Locus #" << k << ": " << tag_1->write_cmb() << "; lnl: " << tag_1->lnl << "\n";
+            //cerr << "  Locus #" << k << ": " << tag_1->write_cmb() << "; lnl: " << tag_1->lnl << "\n";
         }
 
+        //double weighted_lnl = ((2 * it->second.size()) * (n / (n - it->second.size() - 1))) - (2 * comb_lnl);
         double weighted_lnl = (2 * (pow(2, it->second.size()) + pow(2, it->second.size()))) - (2 * comb_lnl);
         //double weighted_lnl = (2 * it->second.size()) - (2 * comb_lnl);
-        cerr << "  Total LnL: " << comb_lnl << "; weighted LnL: " << weighted_lnl << "\n";
+        //cerr << "  Total LnL: " << comb_lnl << "; weighted LnL: " << weighted_lnl << "\n";
 
         lnls.push_back(make_pair(it->first, weighted_lnl));
     }
 
     int optimal_comb = choose_optimal_lnl(lnls);
 
-    cerr << "Choosing combination " << optimal_comb << "\n";
+    //cerr << "Choosing combination " << optimal_comb << "\n";
 
     //
     // Free memory and set the optimal combination to retrun to the calling function.
