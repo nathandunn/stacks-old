@@ -32,6 +32,8 @@ using std::make_pair;
 double factorial(double);
 double reduced_factorial(double, double);
 
+double log_factorial(double);
+double reduced_log_factorial(double, double);
 //
 // Comparison functions for the STL sort routine
 //

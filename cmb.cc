@@ -33,7 +33,7 @@
 // A cache to store combinations generated as (N choose k) 
 // for all set sizes encountered
 //
-map<int, int **> _cmbs;
+map<int, map<int, int **> > _cmbs;
 
 CombSet::~CombSet() {
     int   num_sets, set, i;
@@ -69,19 +69,22 @@ CombSet::CombSet(int n, int k, MinSpanTree *tree) {
     //
     // Add the initial combination: the empty set
     //
-    if (_cmbs.count(0) == 0) {
+    if (_cmbs.count(this->num_elements) == 0 && 
+        _cmbs[this->num_elements].count(0) == 0) {
+        cerr << "    N: " << this->num_elements << "; K: 0; Total elements: 0\n";
         comb       = new int * [2];
         comb[0]    = new int[1];
         comb[0][0] = -1;
         comb[1]    = NULL;
-        _cmbs[0]   = comb;
+        _cmbs[this->num_elements][0] = comb;
     }
 
     while (set_size > 0) {
         //
         // Check if this set of combinations is already cached.
         //
-        if (_cmbs.count(set_size) > 0) {
+        if (_cmbs.count(this->num_elements) > 0 && 
+            _cmbs[this->num_elements].count(set_size) > 0) {
             set_size--;
             continue;
         }
@@ -101,7 +104,7 @@ CombSet::CombSet(int n, int k, MinSpanTree *tree) {
         //
         // Cache this set of combinations
         //
-        _cmbs[set_size] = comb;
+        _cmbs[this->num_elements][set_size] = comb;
 
         set_size--;
     }
@@ -126,7 +129,7 @@ int CombSet::catalog_tree() {
     // Create a two-dimensional array to represent edges between nodes in the tree
     //
     uint cnt   = this->mst->node_count();
-    cerr << "Creating a two-dimensional array of size: " << cnt << "\n";
+    //cerr << "Creating a two-dimensional array of size: " << cnt << " x " << cnt << "\n";
     this->edges = new int * [cnt];
     for (i = 0; i < cnt; i++)
         this->edges[i] = new int[cnt];
@@ -187,7 +190,7 @@ int CombSet::partition_tree(uint set_size) {
     Cmb         **new_comb, *cmb;
     list<Node *>  nlist_work;
 
-    int **comb     = _cmbs[set_size];
+    int **comb     = _cmbs[this->num_elements][set_size];
     int  *subgraph = new int[this->node_list.size()];
 
     //

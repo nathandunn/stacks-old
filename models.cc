@@ -52,13 +52,13 @@ double heterozygous_likelihood(int col, map<char, int> &nuc) {
     double n_4 = cnts[3].second;
 
     double term_1 = 
-        reduced_factorial(n, n_1) / 
-        (factorial(n_2) * factorial(n_3) * factorial(n_4));
+        reduced_log_factorial(n, n_1) - 
+        (log_factorial(n_2) + log_factorial(n_3) + log_factorial(n_4));
 
     double term_3 = (n_3 + n_4 > 0) ? log((n_3 + n_4) / (2 * n)) : 0;
 
     double lnl = 
-        log(term_1) + 
+        term_1 + 
         ((n_1 + n_2) * log((n_1 + n_2) / (2 * n))) + 
         ((n_3 + n_4) * term_3);
 
@@ -88,13 +88,13 @@ double homozygous_likelihood(int col, map<char, int> &nuc) {
     double n_4 = cnts[3].second;
 
     double term_1 = 
-        reduced_factorial(n, n_1) / 
-        (factorial(n_2) * factorial(n_3) * factorial(n_4));
+        reduced_log_factorial(n, n_1) -
+        (log_factorial(n_2) + log_factorial(n_3) + log_factorial(n_4));
 
     double term_3 = n - n_1 > 0 ? log((n - n_1) / (3 * n)) : 0;
 
     double lnl = 
-        log(term_1) + 
+        term_1 + 
         (n_1 * log(n_1 / n)) + 
         ((n - n_1) * term_3);
 

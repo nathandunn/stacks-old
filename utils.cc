@@ -58,6 +58,35 @@ double reduced_factorial(double n, double d) {
     return f;
 }
 
+double log_factorial(double n) {
+    double fact = 0;
+
+    for (double i = n; i > 1; i--)
+        fact += log(i);
+
+    return fact;
+}
+
+double reduced_log_factorial(double n, double d) {
+    double f = n - d;
+
+    if (f < 0) 
+        return 0;
+    else if (f == 0) 
+        return 0;
+    else if (f == 1)
+        return log(n);
+
+    f = log(n);
+    n--;
+    while (n > d) {
+        f += log(n);
+        n--;
+    }
+
+    return f;
+}
+
 bool compare_pair(pair<char, int> a, pair<char, int> b) {
     return (a.second > b.second);
 }

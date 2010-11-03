@@ -110,7 +110,7 @@ int  parse_command_line(int, char**);
 int  load_radtags(string, HashMap &);
 int  reduce_radtags(HashMap &, map<int, Stack *> &, map<int, Seq *> &);
 int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
-int  merge_radtags(map<int, Stack *> &, map<int, Seq *> &, map<int, MergedStack *> &, set<int> &, int);
+int  merge_stacks(map<int, Stack *> &, map<int, Seq *> &, map<int, MergedStack *> &, set<int> &, int);
 int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Seq *> &, bool);
 int  call_alleles(MergedStack *, vector<char *> &);
 int  merge_remainders(map<int, MergedStack *> &, map<int, Seq *> &);

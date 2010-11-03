@@ -42,6 +42,7 @@ bool      set_kmer_len      = true;
 int       kmer_len          = 0;
 int       min_merge_cov     = 2;
 int       max_subsets       = 0;
+int       max_subgraph      = 12;
 int       dump_graph        = 0;
 int       deleverage_stacks = 0;
 int       remove_rep_stacks = 0;
@@ -108,7 +109,7 @@ int main (int argc, char* argv[]) {
     calc_kmer_distance(merged, max_utag_dist);
 
     cerr << "Merging stacks, maximum allowed distance: " << max_utag_dist << " nucleotide(s)\n";
-    merge_radtags(unique, remainders, merged, merge_map, max_utag_dist);
+    merge_stacks(unique, remainders, merged, merge_map, max_utag_dist);
 
     calc_merged_coverage_distribution(unique, merged);
 
@@ -400,7 +401,7 @@ int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &mer
     return 0;
 }
 
-int merge_radtags(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, MergedStack *> &merged, set<int> &merge_map, int round) {
+int merge_stacks(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, MergedStack *> &merged, set<int> &merge_map, int round) {
     map<int, MergedStack *> new_merged;
     map<int, MergedStack *>::iterator i;
     MergedStack *tag_1, *tag_2;
@@ -429,6 +430,7 @@ int merge_radtags(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, Merg
 	if (tag_1->masked) {
 	    unique_merge_list.insert(tag_1->id);
 	    tag_2 = merge_tags(merged, unique_merge_list, id);
+            tag_2->cohort_id = tag_1->cohort_id;
 	    new_merged.insert(pair<int, MergedStack *>(id, tag_2));
 	    id++;
 	    continue;
@@ -465,9 +467,23 @@ int merge_radtags(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, Merg
 	for (j = unique_merge_list.begin(); j != unique_merge_list.end(); j++)
 	    merge_map.insert(*j);
 
+        //
+        // If a set of stacks is too large (or, represented as a subgraph, contains 
+        // too many nodes) mark it as a lumberjack stack, do not try to compute all combinations
+        //
+        if ((int) unique_merge_list.size() > max_subgraph) {
+	    tag_2 = merge_tags(merged, unique_merge_list, id);
+            tag_2->cohort_id = cohort_id;
+            tag_2->lumberjackstack = true;
+	    new_merged.insert(pair<int, MergedStack *>(id, tag_2));
+	    id++;
+            cohort_id++;
+	    continue;
+        }
+
 	//
-	// If the depth of coverage of the merged tag is greater than the deleverage trigger
-	// then execute the deleveraging algorithm.
+	// Determine the optimal set of loci for these stacks by calculating the likelihood of
+        // each possible combiantion of loci.
 	//
 	if (deleverage_stacks) {
 	    vector<MergedStack *> tags;
@@ -486,8 +502,9 @@ int merge_radtags(map<int, Stack *> &unique, map<int, Seq *> &rem, map<int, Merg
             // If not deleveraging, merge these tags together into a new MergedStack object.
             //
             tag_1 = merge_tags(merged, unique_merge_list, id);
-
+            tag_1->cohort_id = cohort_id;
 	    new_merged.insert(pair<int, MergedStack *>(id, tag_1));
+            cohort_id++;
 	    id++;
 	}
     }
@@ -688,6 +705,9 @@ int deleverage(map<int, Stack *> &unique,
     for (i = merge_list.begin(); i != merge_list.end(); i++) {
 	keys.push_back(*i);
         mst->add_node(*i);
+        tag_1 = merged[*i];
+        cerr << tag_1->con << "\n";
+
     }
 
     //
