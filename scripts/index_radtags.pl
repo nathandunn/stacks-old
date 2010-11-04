@@ -519,7 +519,6 @@ index-radtags.pl -D db [-c] [-t] [-s path] [-d] [-h]
   h: display this help message.
   d: turn on debug output.
 
-
 EOQ
 
     exit(0);

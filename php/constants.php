@@ -19,17 +19,6 @@
 //
 
 //
-// Name to print in page header
-//
-$site_title  = "Stacks Analysis Pipeline";
-
-//
-// URL path to root of PHP/HTML files
-//
-$root_path   = "/stacks";
-$img_path    = "/stacks/images";
-
-//
 // File system location of PHP/HTML files
 //
 $system_path = "/Library/WebServer/Documents/teleost/stacks";
@@ -45,6 +34,17 @@ $db_host     = "localhost";
 // Location of perl script to run the exporting jobs.
 //
 $export_cmd  = "/opt/local/bin/perl /research/acos/stacks_export_notify.pl";
+
+//
+// Name to print in page header
+//
+$site_title  = "Stacks Analysis Pipeline";
+
+//
+// URL path to root of PHP/HTML files
+//
+$root_path   = "/stacks";
+$img_path    = "/stacks/images";
 
 //
 // Colors for printing alleles/haplotypes
