@@ -525,10 +525,10 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, set<int> &merge_list, i
 	tag_1->blacklisted     = tag_2->blacklisted     ? true : tag_1->blacklisted;
 	tag_1->lumberjackstack = tag_2->lumberjackstack ? true : tag_1->lumberjackstack;
 
-	for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++) {
+	for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++)
 	    tag_1->utags.push_back(*j);
-	    tag_1->count += tag_2->count;
-	}
+
+        tag_1->count += tag_2->count;
     }
 
     return tag_1;
@@ -707,7 +707,6 @@ int deleverage(map<int, Stack *> &unique,
 	    e.insert(keys[k]);
 
 	tag = merge_tags(merged, e, 0);
-	tag->deleveraged = true;
 	deleveraged_tags.push_back(tag);
 
 	return 0;
