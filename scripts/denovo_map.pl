@@ -94,13 +94,30 @@ $log = "$out_path/denovo_map.log";
 open($log_fh, ">$log") or die("Unable to open log file '$log'; $!\n");
 
 foreach $sample (@parents, @progeny) {
+    my ($ftype, $pfile) = "";
 
-    ($pfile) = ($sample =~ /^.*\/(.+)\.fastq_1$/);
+    my ($prefix, $suffix) = ($sample =~ /^(.+)\.(.+)$/);
+
+    if ($prefix =~ /^.*\/.+$/) {
+        ($pfile) = ($prefix =~ /^.*\/(.+)$/);
+    } else {
+        $pfile = $prefix;
+    }
+
+    print STDERR "SUFFIX: $suffix\n";
+
+    if ($suffix =~ /^fa_?\d?$/ || $suffix =~ /^fasta_?\d?$/) {
+        $ftype = "fasta";
+    } elsif ($suffix =~ /^fq$/ || $suffix =~ /^fastq_?\d?$/) {
+        $ftype = "fastq";
+    } else {
+        die("Unknown input file type.\n");
+    }
 
     $type = shift @types;
 
-    printf("Identifying unique radtags; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
-    printf($log_fh "Identifying unique radtags; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
+    printf("Identifying unique stacks; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
+    printf($log_fh "Identifying unique stacks; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
 
     if ($sql) {
 	`mysql $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile'"`;
@@ -123,12 +140,12 @@ foreach $sample (@parents, @progeny) {
 	$rrep = "";
     }
 
-    $cmd = $exe_path . "ustacks -t fastq -f $sample -o $out_path -b $batch_id -i $sample_id $rrep $minc $cscale $threads 2>&1";
+    $cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -b $batch_id -i $sample_id $rrep $minc $cscale $threads 2>&1";
     print STDERR "$cmd\n";
     print $log_fh    "$cmd\n";
-    @results = `$cmd`;
+    #@results = `$cmd`;
     print $log_fh @results;
-
+    exit();
     $file = "$out_path/$pfile" . ".tags.tsv";
     import_sql_file($file, "unique_tags");
 
@@ -265,8 +282,8 @@ sub parse_command_line {
 sub usage {
     print STDERR <<EOQ; 
 denovo_map.pl -p path -r path -o path [-e path] [-t] [-m min_cov] [-n mismatches] [-c scale] [-D desc] [-b batch_id] [-s num] [-a yyyy-mm-dd] [-S] [-d] [-h]
-    p: path to a FASTQ file containing parent sequences.
-    r: path to a FASTQ file containing progeny sequences.
+    p: path to a FASTQ/FASTA file containing parent sequences.
+    r: path to a FASTQ/FASTA file containing progeny sequences.
     o: path to write pipeline output files.
     b: batch ID representing this dataset.
     B: specify a database to load data into.
