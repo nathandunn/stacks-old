@@ -29,7 +29,7 @@ use DBI;
 my $mysql_config  = "/usr/local/share/stacks/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
 my $debug         = 0;
 my $db            = "";
-my $sql_path      = $ENV{'HOME'} . "/stacks/sql/";
+my $sql_path      = "/usr/local/share/stacks/sql/";
 my $sql_tag_table = "";
 my $sql_cat_table = "";
 my $catalog_index = 0;
