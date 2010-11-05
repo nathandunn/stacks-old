@@ -670,13 +670,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "pstacks " << stacks_version << "\n\n";
+    std::cerr << "pstacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "pstacks " << stacks_version << "\n"
+    std::cerr << "pstacks " << VERSION << "\n"
               << "pstacks -t file_type -f file_path [-o path] [-i id] [-b batch_id] [-e errfreq] [-p num_threads] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  t: input file Type. Supported types: fasta, fastq, bowtie, sam, tsv.\n"

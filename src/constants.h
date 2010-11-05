@@ -22,9 +22,11 @@
 #define __CONSTANTS_H__
 
 //
-// Stacks version number
+// Pull in the configuration variables from the configure script
 //
-const double stacks_version = 0.90;
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 //
 // Maximum line length for parsing input files.

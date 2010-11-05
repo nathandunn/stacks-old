@@ -330,13 +330,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "sstacks " << stacks_version << "\n\n";
+    std::cerr << "sstacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "sstacks " << stacks_version << "\n"
+    std::cerr << "sstacks " << VERSION << "\n"
               << "sstacks -b batch_id -c catalog_file -s sample_file [-S id] [-r sample_file] [-o path] [-p num_threads] [-v] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  b: MySQL ID of this batch." << "\n"
