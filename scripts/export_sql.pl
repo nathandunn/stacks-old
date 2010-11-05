@@ -30,7 +30,7 @@ use DBI;
 #use Excel::Writer::XLSX;
 use Spreadsheet::WriteExcel;
 
-my $mysql_config = "/research/acos/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
+my $mysql_config = "/usr/local/share/stacks/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
 my $out_file = "";
 my $type     = "tsv";
 my $batch_id = 0;

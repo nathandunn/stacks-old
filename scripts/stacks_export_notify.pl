@@ -38,12 +38,12 @@ use NET::SMTP;
 #  smtp_host:   Name of SMTP server through which to send mail
 #  from:        email address to use in the 'From' field of the message
 #
-my $exe_path      = "/opt/local/bin/perl /research/acos/export_sql.pl";
-my $output_path   = "/Library/WebServer/Documents/teleost/stacks/export/"; 
-my $url           = "http://teleost.cs.uoregon.edu/stacks/export/";
-my $local_host    = "teleost.cs.uoregon.edu";
-my $smtp_host     = "teleost.cs.uoregon.edu";
-my $from          = "jcatchen\@uoregon.edu";
+my $exe_path      = "/usr/local/bin/export_sql.pl";
+my $output_path   = "/var/www/stacks/export/"; 
+my $url           = "http://stackshost.edu/stacks/export/";
+my $local_host    = "stackshost.edu";
+my $smtp_host     = "stackshost.edu";
+my $from          = "stacks\@stackshost.edu";
 
 
 my $debug         = 0;

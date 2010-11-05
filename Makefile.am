@@ -38,4 +38,4 @@ dist_noinst_SCRIPTS = autogen.sh scripts/stacks_export_notify.pl php/CatalogClas
 
 EXTRA_DIST = php/images/caret-d.png php/images/caret-u.png php/images/excel_icon.png php/images/l-arrow-disabled.png \
 	php/images/l-arrow.png php/images/r-arrow-disabled.png php/images/r-arrow.png php/images/stacks_bg.png \
-	php/images/stacks_logo_rev_small.png
+	php/images/stacks_logo_rev_small.png sql/catalog_index.sql sql/radtags.sql sql/tag_index.sql

@@ -21,19 +21,19 @@
 //
 // File system location of PHP/HTML files
 //
-$system_path = "/Library/WebServer/Documents/teleost/stacks";
+$system_path = "/var/www/stacks";
 
 //
 // Credentials to access Stacks MySQL databases
 //
-$db_user     = "acos_user";
-$db_pass     = "orthologs";
+$db_user     = "dbuser";
+$db_pass     = "dbpass";
 $db_host     = "localhost";
 
 //
 // Location of perl script to run the exporting jobs.
 //
-$export_cmd  = "/opt/local/bin/perl /research/acos/stacks_export_notify.pl";
+$export_cmd  = "/usr/local/bin/stacks_export_notify.pl";
 
 //
 // Name to print in page header

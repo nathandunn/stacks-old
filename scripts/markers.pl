@@ -25,10 +25,11 @@
 use strict;
 use DBI;
 
-my $debug     = 0;
-my $db        = "";
-my $batch_id  = 0;
-my $out_path  = "./";
+my $mysql_config = "/usr/local/share/stacks/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
+my $debug        = 0;
+my $db           = "";
+my $batch_id     = 0;
+my $out_path     = "./";
 
 my %genotypes = (
 		 'ab/cc' => {'ac' => 0, 'bc' => 0},
@@ -484,7 +485,7 @@ sub prepare_sql_handles {
 
     # Connect to the database, assumes user has a MySQL ~/.my.cnf file to
     # specify the host, username and password
-    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=" . $ENV{"HOME"} . "/.my.cnf")
+    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=$mysql_config")
 	or die("Unable to connect to the $db MySQL Database!\n" . $DBI::errstr);
 
     my $query;

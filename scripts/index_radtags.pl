@@ -26,15 +26,29 @@ use strict;
 use File::Temp qw/tempfile/;
 use DBI;
 
+my $mysql_config  = "/usr/local/share/stacks/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
 my $debug         = 0;
 my $db            = "";
-my $sql_path      = $ENV{'HOME'} . "/research/solexa/radtags/sql/";
-my $sql_tag_table = $sql_path . "tag_index.sql";
-my $sql_cat_table = $sql_path . "catalog_index.sql";
+my $sql_path      = $ENV{'HOME'} . "/stacks/sql/";
+my $sql_tag_table = "";
+my $sql_cat_table = "";
 my $catalog_index = 0;
 my $tag_index     = 0;
 
 parse_command_line();
+
+#
+# Make sure the SQL definition files are available
+#
+if ($catalog_index && !-e $sql_cat_table) {
+    print STDERR "Unable to locate catalog SQL definition.\n";
+    usage();
+}
+
+if ($tag_index && !-e $sql_tag_table) {
+    print STDERR "Unable to locate tag_index SQL definition.\n";
+    usage();
+}
 
 #
 # Connect to the database and prepare our queries.
@@ -412,7 +426,7 @@ sub prepare_sql_handles {
 
     # Connect to the database, assumes user has a MySQL ~/.my.cnf file to 
     # specify the host, username and password
-    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=" . $ENV{"HOME"} . "/.my.cnf")
+    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=$mysql_config")
 	or die("Unable to connect to the $db MySQL Database!\n" . $DBI::errstr);
 
     my $query;
@@ -507,6 +521,10 @@ sub parse_command_line {
         print STDERR "You must specify a database to index.\n";
         usage();
     }
+
+    $sql_path .= "/" if (substr($sql_path, -1, 1) ne "/");
+    $sql_tag_table = $sql_path . "tag_index.sql";
+    $sql_cat_table = $sql_path . "catalog_index.sql";
 }
 
 sub usage {

@@ -33,6 +33,7 @@ use constant min_hom_seqs => 5;
 use constant min_het_seqs => 0.05;
 use constant max_het_seqs => 0.1;
 
+my $mysql_config  = "/usr/local/share/stacks/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
 my $debug         = 0;
 my $db            = "";
 my $map_type      = "";
@@ -1422,7 +1423,7 @@ sub prepare_sql_handles {
 
     # Connect to the database, assumes user has a MySQL ~/.my.cnf file to 
     # specify the host, username and password
-    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=" . $ENV{"HOME"} . "/.my.cnf")
+    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=$mysql_config")
 	or die("Unable to connect to the $db MySQL Database!\n" . $DBI::errstr);
 
     my $query;
