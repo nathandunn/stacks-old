@@ -35,3 +35,6 @@ hstacks_LDFLAGS = -fopenmp
 
 sstacks_CPPFLAGS = -fopenmp
 sstacks_LDFLAGS = -fopenmp
+
+dist_noinst_SCRIPTS = autogen.sh
+
