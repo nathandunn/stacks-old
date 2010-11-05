@@ -3,12 +3,12 @@ bin_PROGRAMS = ustacks pstacks cstacks sstacks hstacks
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/models.h src/models.cc \
 	src/kmers.h src/kmers.cc \
-	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h \
+	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h \
 	src/cluster.c src/cluster.h
 
 pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/models.h src/models.cc \
-	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h
+	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h 
 
 cstacks_SOURCES = src/cstacks.h src/cstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/kmers.h src/kmers.cc \
