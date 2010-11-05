@@ -27,11 +27,11 @@ use File::Temp qw/tempfile/;
 use DBI;
 
 my $mysql_config  = "/usr/local/share/stacks/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
-my $debug         = 0;
-my $db            = "";
 my $sql_path      = "/usr/local/share/stacks/sql/";
 my $sql_tag_table = "";
 my $sql_cat_table = "";
+my $db            = "";
+my $debug         = 0;
 my $catalog_index = 0;
 my $tag_index     = 0;
 
