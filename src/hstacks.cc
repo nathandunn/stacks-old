@@ -52,7 +52,9 @@ int main (int argc, char* argv[]) {
     //
     // Set the number of OpenMP parallel threads to execute.
     //
+    #ifdef _OPENMP
     omp_set_num_threads(num_threads);
+    #endif
 
     vector<string>           input_files;
     vector<string>::iterator in_file;

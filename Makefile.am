@@ -21,20 +21,21 @@ hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/stacks.h src/stacks.cc src/co
 sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/input.h src/input.cc src/sql_utilities.h
 
-ustacks_CPPFLAGS = -fopenmp
-ustacks_LDFLAGS = -fopenmp
+ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
+pstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+cstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+hstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+sstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 
-pstacks_CPPFLAGS = -fopenmp
-pstacks_LDFLAGS = -fopenmp
+dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/export_sql.pl scripts/genotypes.pl \
+	scripts/index_radtags.pl scripts/load_radtags.pl scripts/markers.pl 
 
-cstacks_CPPFLAGS = -fopenmp
-cstacks_LDFLAGS = -fopenmp
+dist_noinst_SCRIPTS = autogen.sh scripts/stacks_export_notify.pl php/CatalogClass.php php/annotate_marker.php php/constants.php \
+	php/export.php php/index.php php/stacks.css php/tags.php php/Locus.php php/catalog.php php/correct_genotypes.php \
+	php/export_batch.php php/last_modified.php php/stacks.js php/version.php php/ajax.js php/catalog_genotypes.php \
+	php/db_functions.php php/header.php php/samples.php php/stacks_functions.php php/view_sequence.php \
+	php/annotate.js php/catalog_tag.php php/export.js php/sequence_blast.php php/tag.php
 
-hstacks_CPPFLAGS = -fopenmp
-hstacks_LDFLAGS = -fopenmp
-
-sstacks_CPPFLAGS = -fopenmp
-sstacks_LDFLAGS = -fopenmp
-
-dist_noinst_SCRIPTS = autogen.sh
-
+EXTRA_DIST = php/images/caret-d.png php/images/caret-u.png php/images/excel_icon.png php/images/l-arrow-disabled.png \
+	php/images/l-arrow.png php/images/r-arrow-disabled.png php/images/r-arrow.png php/images/stacks_bg.png \
+	php/images/stacks_logo_rev_small.png

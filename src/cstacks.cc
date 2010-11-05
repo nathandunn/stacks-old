@@ -46,7 +46,9 @@ int main (int argc, char* argv[]) {
     //
     // Set the number of OpenMP parallel threads to execute.
     //
+    #ifdef _OPENMP
     omp_set_num_threads(num_threads);
+    #endif
 
     map<int, CLocus *> catalog;
     map<int, CLocus *>::iterator cat_it;

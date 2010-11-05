@@ -43,6 +43,13 @@ int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
+    //
+    // Set the number of OpenMP parallel threads to execute.
+    //
+    #ifdef _OPENMP
+    omp_set_num_threads(num_threads);
+    #endif
+
     map<int, Locus *>  sample_1;
     map<int, QLocus *> sample_2;
     int res;
