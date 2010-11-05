@@ -104,8 +104,6 @@ foreach $sample (@parents, @progeny) {
         $pfile = $prefix;
     }
 
-    print STDERR "SUFFIX: $suffix\n";
-
     if ($suffix =~ /^fa_?\d?$/ || $suffix =~ /^fasta_?\d?$/) {
         $ftype = "fasta";
     } elsif ($suffix =~ /^fq$/ || $suffix =~ /^fastq_?\d?$/) {
@@ -143,9 +141,9 @@ foreach $sample (@parents, @progeny) {
     $cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -b $batch_id -i $sample_id $rrep $minc $cscale $threads 2>&1";
     print STDERR "$cmd\n";
     print $log_fh    "$cmd\n";
-    #@results = `$cmd`;
+    @results = `$cmd`;
     print $log_fh @results;
-    exit();
+
     $file = "$out_path/$pfile" . ".tags.tsv";
     import_sql_file($file, "unique_tags");
 
