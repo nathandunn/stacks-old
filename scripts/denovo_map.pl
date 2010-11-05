@@ -214,7 +214,7 @@ foreach $sample (@parents, @progeny) {
 #
 # Search for markers
 #
-$cmd = $exe_path . "markers.pl -b $batch_id -o $out_path 2>&1";
+$cmd = $exe_path . "markers.pl -D $db -b $batch_id -o $out_path 2>&1";
 print STDERR  "$cmd\n";
 print $log_fh "$cmd\n";
 @results =    `$cmd`;
