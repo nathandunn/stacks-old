@@ -30,7 +30,7 @@ use DBI;
 #use Excel::Writer::XLSX;
 use Spreadsheet::WriteExcel;
 
-my $mysql_config = "/usr/local/share/stacks/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
+my $mysql_config = $ENV{'HOME'}. "/.my.cnf"; #"/usr/local/share/stacks/.my.cnf";
 my $out_file = "";
 my $type     = "tsv";
 my $batch_id = 0;
@@ -52,9 +52,18 @@ print "Success\n";
 sub populate {
     my ($sth, $loci, $samples, $filters) = @_;
 
-    my ($row, $snp_row, $all_row, $gen_row);
+    my (%delev, $row, $snp_row, $all_row, $gen_row);
 
     my @params;
+
+    #
+    # Cache all the stacks that were deleveraged.
+    #
+    $sth->{'delev'}->execute($batch_id);
+
+    while ($row = $sth->{'delev'}->fetchrow_hashref()) {
+        $delev{$row->{'sample_id'} . "_" . $row->{'tag_id'}}++;
+    }
 
     #
     # Pull list of samples for this batch
@@ -78,6 +87,7 @@ sub populate {
         $locus->{'annotation'} = defined($row->{'external_id'}) ? $row->{'external_id'} : "";
         $locus->{'chr'}        = $row->{'chr'};
         $locus->{'bp'}         = $row->{'bp'};
+        $locus->{'delev'}      = 0;
         $locus->{'marker'}     = $row->{'marker'};
         $locus->{'seq'}        = $row->{'seq'};
         $locus->{'alleles'}    = "";
@@ -123,7 +133,15 @@ sub populate {
             push(@{$locus->{'gtypes'}->{$gen_row->{'file'}}}, 
                  {'file'   => $gen_row->{'file'},
                   'allele' => $gen_row->{'allele'},
-                  'tag_id' => $gen_row->{'id'}});
+                  'tag_id' => $gen_row->{'tag_id'}});
+
+            #
+            # Check if this particular sample was deleveraged
+            #
+            if (defined($delev{$gen_row->{'id'} . "_" . $gen_row->{'tag_id'}}) &&
+                $delev{$gen_row->{'id'} . "_" . $gen_row->{'tag_id'}} >= 1) {
+                $locus->{'delev'}++;
+            }
         }
 
         $loci->{$row->{'tag_id'}} = $locus;
@@ -234,7 +252,8 @@ sub write_results {
         "Num SNPs\t" .
         "SNPs\t" .
         "Num Alleles\t" .
-        "Alleles\t";
+        "Alleles\t" .
+        "Deleveraged\t";
 
     foreach $id (keys %{$samples}) {
         $str .= $id . "\t";
@@ -259,7 +278,8 @@ sub write_results {
             $locus->{'num_snps'} . "\t" .
             $locus->{'snps'} . "\t" . 
             $locus->{'num_alleles'} . "\t" .
-            $locus->{'alleles'} . "\t";
+            $locus->{'alleles'} . "\t" .
+            $locus->{'delev'} . "\t";
 
         foreach $id (keys %{$samples}) {
             $types = $locus->{'gtypes'}->{$id};
@@ -322,6 +342,11 @@ sub prepare_sql_handles {
     my $query;
 
     $query = 
+        "SELECT sample_id, tag_id FROM tag_index " . 
+        "WHERE batch_id=? AND deleveraged=true";
+    $sth->{'delev'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
         "SELECT id, file FROM samples " . 
         "WHERE batch_id=? ORDER BY id";
     $sth->{'samp'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
@@ -337,7 +362,7 @@ sub prepare_sql_handles {
     $sth->{'snp'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-        "SELECT samples.id, samples.sample_id, samples.type, file, tag_id, allele " . 
+        "SELECT samples.id as id, samples.sample_id, samples.type, file, tag_id, allele " . 
         "FROM matches " . 
         "JOIN samples ON (matches.sample_id=samples.id) " . 
         "WHERE matches.batch_id=? AND catalog_id=? ORDER BY samples.id";
