@@ -30,7 +30,7 @@ use DBI;
 #use Excel::Writer::XLSX;
 use Spreadsheet::WriteExcel;
 
-my $mysql_config = $ENV{'HOME'}. "/.my.cnf"; #"/usr/local/share/stacks/.my.cnf";
+my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
 my $out_file = "";
 my $type     = "tsv";
 my $batch_id = 0;

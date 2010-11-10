@@ -33,7 +33,7 @@ use strict;
 
 my $debug       = 0;
 my $sql         = 1;
-my $exe_path    = ""; # "/usr/local/bin/";
+my $exe_path    = "_BINDIR_";
 my $out_path    = "";
 my $db          = "";
 my $rep_tags    = 0;

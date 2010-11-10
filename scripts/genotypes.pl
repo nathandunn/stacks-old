@@ -33,12 +33,12 @@ use constant min_hom_seqs => 5;
 use constant min_het_seqs => 0.05;
 use constant max_het_seqs => 0.1;
 
-my $mysql_config  = "/usr/local/share/stacks/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
+my $mysql_config  = "_PKGDATADIR_" . "sql/mysql.cnf";
 my $debug         = 0;
 my $db            = "";
 my $map_type      = "";
-my $cache_path    = "./caches";
-my $uni_path      = $ENV{'HOME'} . "/research/solexa/gar/map/unique";
+my $cache_path    = "_LOCALSTATEDIR_" . "caches";
+my $uni_path      = "";
 my $progeny_limit = 4;
 my $batch_id      = 0;
 my $category      = 0;
@@ -1499,6 +1499,7 @@ sub parse_command_line {
 	$_ = shift @ARGV;
 	if    ($_ =~ /^-d$/) { $debug++; }
 	elsif ($_ =~ /^-D$/) { $db            = shift @ARGV; }
+	elsif ($_ =~ /^-P$/) { $uni_path      = shift @ARGV; }
 	elsif ($_ =~ /^-b$/) { $batch_id      = shift @ARGV; }
 	elsif ($_ =~ /^-t$/) { $map_type      = shift @ARGV; }
 	elsif ($_ =~ /^-c$/) { $category++; }
@@ -1527,6 +1528,11 @@ sub parse_command_line {
 	usage();
     }
 
+    if (length($uni_path) == 0) {
+	print STDERR "You must specify a path to the directory containing Stacks output files.\n";
+	usage();
+    }
+
     if (length($out_file) == 0) {
 	$out_file = "./batch_" . $batch_id . "_catalog.loc";
     }
@@ -1544,14 +1550,15 @@ sub parse_command_line {
 
 sub usage {
     print << "EOQ";
-genotypes.pl -t map_type -D db [-b id] [-p min] [-c] [-o path] [-s] [-C] [-B] [-E] [-d] [-h]
+genotypes.pl -t map_type -D db -P path [-b id] [-p min] [-c] [-o path] [-s] [-C] [-B] [-E] [-d] [-h]
   t: map type to write. 'CP' and 'BC1' are the currently supported map types.
+  P: path to the Stacks output files.
   D: radtag database to examine.
   b: Batch ID to examine when exporting from the catalog.
   o: output file.
   c: output by marker category.
   p: minimum number of progeny required to print a marker.
-  s: output a file to import results into a SQL database.
+  s: output a file to import results into an SQL database.
   C: apply manual corrections to the data.
   E: exclude genotypes related to a marker with a BLAST hit.
   B: only export genotypes related to a marker with BLAST hits.

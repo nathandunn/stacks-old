@@ -25,7 +25,7 @@
 use strict;
 use DBI;
 
-my $mysql_config = "/usr/local/share/stacks/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
+my $mysql_config = "_PKGDATADIR_" . "/sql/mysql.cnf";
 my $debug        = 0;
 my $db           = "";
 my $batch_id     = 0;

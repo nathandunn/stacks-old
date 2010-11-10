@@ -26,8 +26,8 @@ use strict;
 use File::Temp qw/tempfile/;
 use DBI;
 
-my $mysql_config  = "/usr/local/share/stacks/.my.cnf"; # $ENV{'HOME'}. "/.my.cnf";
-my $sql_path      = "/usr/local/share/stacks/sql/";
+my $mysql_config  = "_PKGDATADIR_" . "sql/mysql.cnf";
+my $sql_path      = "_PKGDATADIR_" . "sql/";
 my $sql_tag_table = "";
 my $sql_cat_table = "";
 my $db            = "";
