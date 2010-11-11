@@ -32,7 +32,7 @@ dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/export_sql.pl scripts/genotypes
 
 dist_noinst_SCRIPTS = autogen.sh scripts/stacks_export_notify.pl 
 
-nobase_pkgdata_DATA = sql/mysql.cnf sql/catalog_index.sql sql/radtags.sql sql/tag_index.sql \
+nobase_pkgdata_DATA = sql/mysql.cnf sql/catalog_index.sql sql/stacks.sql sql/tag_index.sql \
 	php/CatalogClass.php php/annotate_marker.php php/constants.php php/export.php php/index.php php/tags.php \
 	php/Locus.php php/catalog.php php/correct_genotypes.php php/export_batch.php php/last_modified.php  \
 	php/version.php php/catalog_genotypes.php php/db_functions.php php/header.php php/samples.php \
@@ -41,6 +41,8 @@ nobase_pkgdata_DATA = sql/mysql.cnf sql/catalog_index.sql sql/radtags.sql sql/ta
 	php/images/caret-d.png php/images/caret-u.png php/images/excel_icon.png php/images/l-arrow-disabled.png \
 	php/images/l-arrow.png php/images/r-arrow-disabled.png php/images/r-arrow.png php/images/stacks_bg.png \
 	php/images/stacks_logo_rev_small.png 
+
+EXTRA_DIST = $(nobase_pkgdata_DATA)
 
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 
