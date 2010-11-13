@@ -450,10 +450,8 @@ int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, se
 	    merge_list.pop();
 
 	    for (k = tag_2->dist.begin(); k != tag_2->dist.end(); k++) {
-                if (merge_map.count(k->first) == 0)
-                    ret = unique_merge_list.insert(k->first);
-                else
-                    ret.second = false;
+                ret = unique_merge_list.insert(k->first);
+
 		//
 		// If this Tag has not already been added to the merge list (i.e. we were able
 		// to insert it in to our unique_merge_list, which is a set), add it for consideration
@@ -1109,30 +1107,35 @@ double calc_merged_coverage_distribution(map<int, Stack *> &unique, map<int, Mer
 
 int count_raw_reads(map<int, Stack *> &unique, map<int, MergedStack *> &merged) {
     map<int, MergedStack *>::iterator it;
+    map<int, Stack *>::iterator sit;
     vector<int>::iterator k;
     Stack *tag;
     long int m = 0;
 
-    //map<int, int> uniq_ids;
-    //map<int, int>::iterator uit;
+    map<int, int> uniq_ids;
+    map<int, int>::iterator uit;
 
     for (it = merged.begin(); it != merged.end(); it++) {
 	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
 	    tag  = unique[*k];
 	    m   += tag->count;
 
-            //if (uniq_ids.count(*k) == 0)
-            //    uniq_ids[*k] = 0;
-            //uniq_ids[*k]++;
+            if (uniq_ids.count(*k) == 0)
+               uniq_ids[*k] = 0;
+            uniq_ids[*k]++;
 	}
         m += it->second->remtags.size();
     }
 
-    //for (uit = uniq_ids.begin(); uit != uniq_ids.end(); uit++)
-    //    if (uit->second > 1)
-    //        cerr << "  Unique stack #" << uit->first << " appears in " << uit->second << " merged stacks.\n";
+    for (uit = uniq_ids.begin(); uit != uniq_ids.end(); uit++)
+       if (uit->second > 1)
+           cerr << "  Unique stack #" << uit->first << " appears in " << uit->second << " merged stacks.\n";
 
     cerr << "Number of utilized reads: " << m << "\n";
+
+    //for (sit = unique.begin(); sit != unique.end(); sit++)
+    //   if (uniq_ids.count(sit->first) == 0)
+    //       cerr << "  Stack " << sit->first << ": '" << sit->second->seq << "' unused.\n";
 
     return 0;
 }
@@ -1454,7 +1457,7 @@ int load_radtags(string in_file, HashMap &radtags) {
 
     cerr << "  Parsing " << in_file.c_str() << "\n";
 
-    int i = 1;
+    int i = 0;
     while ((c = fh->next_seq()) != NULL) {
         if (i % 10000 == 0) cerr << "Loading RAD-Tag " << i << "       \r";
 	radtags[c->seq].add_id(c->id);
@@ -1462,6 +1465,15 @@ int load_radtags(string in_file, HashMap &radtags) {
         i++;
     }
     cerr << "Loaded " << i << " RAD-Tags; inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n";
+
+    //
+    // Check to make sure all the reads are of the same length.
+    //
+    HashMap::iterator it;
+    int len = strlen(radtags.begin()->first);
+    for (it = radtags.begin(); it != radtags.end(); it++)
+        if (strlen((*it).first) != len)
+            cerr << "  Warning: '" << (*it).second.id[0]->id << "' has a different length.\n";
 
     //
     // Close the file and delete the Input object.

@@ -42,10 +42,10 @@ int Stack::add_seq(const char *seq) {
     if (this->seq != NULL)
 	delete [] this->seq;
 
-    size_t len = strlen(seq);
-    this->seq = new char[len + 1];
-    strncpy(this->seq, seq, len);
-    this->seq[len] = '\0';
+    this->len = strlen(seq);
+    this->seq = new char[this->len + 1];
+    strncpy(this->seq, seq, this->len);
+    this->seq[this->len] = '\0';
 
     return 0;
 }
@@ -54,10 +54,10 @@ int MergedStack::add_consensus(const char *seq) {
     if (this->con != NULL)
 	delete [] this->con;
 
-    size_t len = strlen(seq);
-    this->con = new char[len + 1];
-    strncpy(this->con, seq, len);
-    this->con[len] = '\0';
+    this->len = strlen(seq);
+    this->con = new char[this->len + 1];
+    strncpy(this->con, seq, this->len);
+    this->con[this->len] = '\0';
 
     return 0;
 }
@@ -77,7 +77,8 @@ int Locus::add_consensus(const char *seq) {
     if (this->con != NULL)
 	delete [] this->con;
 
-    this->con = new char[strlen(seq) + 1];
+    this->len = strlen(seq);
+    this->con = new char[this->len + 1];
     strcpy(this->con, seq);
 
     return 0;

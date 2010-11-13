@@ -64,10 +64,11 @@ class Stack {
     uint   id;
     uint   count;         // Number of identical reads forming this stack
     char  *seq;           // Sequence read
-    vector<SeqId *> map; // List of sequence read IDs merged into this stack
+    uint   len;           // Read length
+    vector<SeqId *> map;  // List of sequence read IDs merged into this stack
     PhyLoc loc;           // Physical genome location of this stack.
 
-    Stack()  { id = 0; count = 0; seq = NULL; loc.bp = 0; loc.chr[0] = '\0'; }
+    Stack()  { id = 0; count = 0; seq = NULL; len = 0; loc.bp = 0; loc.chr[0] = '\0'; }
     ~Stack() { delete [] seq; }
     int add_id(const char *);
     int add_seq(const char *);
@@ -77,6 +78,7 @@ class MergedStack {
  public:
     int   id;     // Identifier for the merged stack.
     char *con;    // Consensus sequence
+    uint  len;    // Sequence length
     //
     // Stack component parts
     //
@@ -106,6 +108,7 @@ class MergedStack {
         id         = 0;
         count      = 0;
         con        = NULL;
+        len        = 0;
         loc.bp     = 0; 
         loc.chr[0] = '\0';
         deleveraged     = false;
@@ -131,13 +134,14 @@ class Locus {
     int  sample_id; // Sample ID
     int      depth; // Stack depth
     char      *con; // Consensus sequence
+    uint       len; // Sequence length
 
     PhyLoc               loc;   // Physical genome location of this Stack.
     vector<SNP *>       snps;   // Single Nucleotide Polymorphisms in this stack
     map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
     vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
 
-    Locus()  { id = 0; sample_id = 0; depth = 0; con = NULL; loc.bp = 0; loc.chr[0] = '\0'; }
+    Locus()  { id = 0; sample_id = 0; depth = 0; con = NULL; len = 0; loc.bp = 0; loc.chr[0] = '\0'; }
     virtual ~Locus() { 
         delete [] con; 
         for (uint i = 0; i < snps.size(); i++)

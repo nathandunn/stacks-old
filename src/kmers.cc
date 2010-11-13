@@ -265,16 +265,24 @@ int dist(const char *tag_1, Locus *tag_2, allele_type allele) {
 }
 
 int dist(Locus *tag_1, Locus *tag_2) {
-    int   dist = 0;
-    char *p    = tag_1->con;
-    char *q    = tag_2->con;
-    char *end  = p + strlen(p);
+    int   dist  = 0;
+    char *p     = tag_1->con;
+    char *q     = tag_2->con;
+    char *p_end = p + tag_1->len;
+    char *q_end = q + tag_2->len;
 
+    if (tag_1->len != tag_2->len)
+        if (tag_1->len < tag_2->len)
+            dist += tag_2->len - tag_1->len;
+        else if (tag_1->len > tag_2->len)
+            dist += tag_1->len - tag_2->len;
+    //
     // Count the number of characters that are different
     // between the two sequences.
-    while (p < end) {
+    //
+    while (p < p_end && q < q_end) {
 	dist += (*p == *q) ? 0 : 1;
-	p++; 
+	p++;
 	q++;
     }
 
@@ -282,14 +290,26 @@ int dist(Locus *tag_1, Locus *tag_2) {
 }
 
 int dist(MergedStack *tag_1, MergedStack *tag_2) {
-    int   dist = 0;
-    char *p    = tag_1->con;
-    char *q    = tag_2->con;
-    char *end  = p + strlen(p);
+    int   dist  = 0;
+    char *p     = tag_1->con;
+    char *q     = tag_2->con;
+    char *p_end = p + tag_1->len;
+    char *q_end = q + tag_2->len;
 
+    //
+    // If the sequences are of different lengths, count the missing
+    // nucleotides as mismatches.
+    //
+    if (tag_1->len != tag_2->len)
+        if (tag_1->len < tag_2->len)
+            dist += tag_2->len - tag_1->len;
+        else if (tag_1->len > tag_2->len)
+            dist += tag_1->len - tag_2->len;
+    //
     // Count the number of characters that are different
     // between the two sequences.
-    while (p < end) {
+    //
+    while (p < p_end && q < q_end) {
 	dist += (*p == *q) ? 0 : 1;
 	p++; 
 	q++;
@@ -299,14 +319,27 @@ int dist(MergedStack *tag_1, MergedStack *tag_2) {
 }
 
 int dist(MergedStack *tag_1, Seq *rem) {
-    int   dist = 0;
-    char *p    = tag_1->con;
-    char *q    = rem->seq;
-    char *end  = p + strlen(p);
+    int   dist  = 0;
+    char *p     = tag_1->con;
+    char *q     = rem->seq;
+    int   q_len = strlen(q);
+    char *p_end = p + tag_1->len;
+    char *q_end = q + q_len;
 
+    //
+    // If the sequences are of different lengths, count the missing
+    // nucleotides as mismatches.
+    //
+    if (tag_1->len != q_len)
+        if (tag_1->len < q_len)
+            dist += q_len - tag_1->len;
+        else if (tag_1->len > q_len)
+            dist += tag_1->len - q_len;
+    //
     // Count the number of characters that are different
     // between the two sequences.
-    while (p < end) {
+    //
+    while (p < p_end && q < q_end) {
 	dist += (*p == *q) ? 0 : 1;
 	p++; 
 	q++;
