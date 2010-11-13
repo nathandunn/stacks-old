@@ -44,6 +44,8 @@ int       min_merge_cov     = 2;
 int       dump_graph        = 0;
 int       deleverage_stacks = 0;
 int       remove_rep_stacks = 0;
+int       max_utag_dist     = 2;
+int       max_rem_dist      = 3;
 double    cov_mean          = 0.0;
 double    cov_stdev         = 0.0;
 double    cov_scale         = 1;
@@ -417,7 +419,7 @@ int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, se
 	//
 	// This tag may already have been merged by an earlier operation.
 	//
-	if (merge_map.find(tag_1->id) != merge_map.end())
+	if (merge_map.count(tag_1->id) > 0)
 	    continue;
 
 	set<int>                          unique_merge_list;
@@ -448,8 +450,10 @@ int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, se
 	    merge_list.pop();
 
 	    for (k = tag_2->dist.begin(); k != tag_2->dist.end(); k++) {
-		ret = unique_merge_list.insert((*k).first);
-
+                if (merge_map.count(k->first) == 0)
+                    ret = unique_merge_list.insert(k->first);
+                else
+                    ret.second = false;
 		//
 		// If this Tag has not already been added to the merge list (i.e. we were able
 		// to insert it in to our unique_merge_list, which is a set), add it for consideration
@@ -469,10 +473,8 @@ int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, se
 	// Record the nodes that have been merged in this round.
 	//
 	set<int>::iterator j;
-	for (j = unique_merge_list.begin(); j != unique_merge_list.end(); j++) {
-	    //cerr << "Merging: " << *j << "\n";
+	for (j = unique_merge_list.begin(); j != unique_merge_list.end(); j++)
 	    merge_map.insert(*j);
-	}
 
 	//
 	// If the depth of coverage of the merged tag is greater than the deleverage trigger
@@ -499,7 +501,6 @@ int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, se
 	    }
 	    delete tag_1;
 
-	    //exit(0);
 	} else {
 	    new_merged.insert(pair<int, MergedStack *>(id, tag_1));
 	    id++;
@@ -1112,15 +1113,26 @@ int count_raw_reads(map<int, Stack *> &unique, map<int, MergedStack *> &merged) 
     Stack *tag;
     long int m = 0;
 
+    //map<int, int> uniq_ids;
+    //map<int, int>::iterator uit;
+
     for (it = merged.begin(); it != merged.end(); it++) {
 	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
 	    tag  = unique[*k];
 	    m   += tag->count;
+
+            //if (uniq_ids.count(*k) == 0)
+            //    uniq_ids[*k] = 0;
+            //uniq_ids[*k]++;
 	}
         m += it->second->remtags.size();
     }
 
-    cerr << "  Number of utilized reads " << m << "\n";
+    //for (uit = uniq_ids.begin(); uit != uniq_ids.end(); uit++)
+    //    if (uit->second > 1)
+    //        cerr << "  Unique stack #" << uit->first << " appears in " << uit->second << " merged stacks.\n";
+
+    cerr << "Number of utilized reads: " << m << "\n";
 
     return 0;
 }
@@ -1449,7 +1461,7 @@ int load_radtags(string in_file, HashMap &radtags) {
 	radtags[c->seq].count++;
         i++;
     }
-    cerr << "Inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n";
+    cerr << "Loaded " << i << " RAD-Tags; inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n";
 
     //
     // Close the file and delete the Input object.
@@ -1522,6 +1534,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"id",          required_argument, NULL, 'i'},
 	    {"batch_id",    required_argument, NULL, 'b'},
 	    {"min_cov",     required_argument, NULL, 'm'},
+	    {"max_dist",    required_argument, NULL, 'M'},
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"deleverage",  no_argument,       NULL, 'd'},
 	    {"remove_rep",  no_argument,       NULL, 'r'},
@@ -1529,7 +1542,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"exp_cov",     no_argument,       NULL, 'E'},
 	    {"cov_stdev",   no_argument,       NULL, 's'},
 	    {"cov_scale",   no_argument,       NULL, 'S'},
-	    {"model_type",  required_argument, NULL, 'M'},
+	    {"model_type",  required_argument, NULL, 'T'},
 	    {"bc_err_freq", required_argument, NULL, 'e'},
 	    {0, 0, 0, 0}
 	};
@@ -1537,7 +1550,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvdrgf:o:i:b:m:e:E:s:S:p:t:M:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvdrgf:o:i:b:m:e:E:s:S:p:t:M:T:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1576,6 +1589,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'm':
 	    min_merge_cov = atoi(optarg);
 	    break;
+	case 'M':
+	    max_utag_dist = atoi(optarg);
+	    break;
 	case 'd':
 	    deleverage_stacks++;
 	    break;
@@ -1594,7 +1610,7 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'S':
 	    cov_scale = atof(optarg);
 	    break;
-     	case 'M':
+     	case 'T':
             if (strcmp(optarg, "snp") == 0) {
                 model_type = snp;
             } else if (strcmp(optarg, "fixed") == 0) {
@@ -1651,16 +1667,17 @@ void version() {
 
 void help() {
     std::cerr << "ustacks " << VERSION << "\n"
-              << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-b batch_id] [-e errfreq] [-m min_cov] [-p num_threads] [-h]" << "\n"
+              << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-b batch_id] [-e errfreq] [-m min_cov] [-M max_dist] [-p num_threads] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  t: input file Type. Supported types: fasta, fastq, bowtie, sam, tsv.\n"
               << "  f: input file path.\n"
 	      << "  o: output path to write results." << "\n"
 	      << "  i: SQL ID to insert into the output to identify this sample." << "\n"
 	      << "  b: SQL Batch ID to insert into the output to identify a group of samples." << "\n"
-	      << "  m: Minimum depth of coverage required to merge RAD-Tags." << "\n"
+	      << "  m: Minimum depth of coverage required to create a stack." << "\n"
+	      << "  M: Maximum distance (in nucleotides) allowed between stacks." << "\n"
 	      << "  d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
-	      << "  r: enable the Removal algorithm, to drop highly-repetitive RAD-Tags (and nearby errors) from the algorithm." << "\n"
+	      << "  r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm." << "\n"
 	      << "  e: specify the barcode error frequency (0 < e < 1) if using the 'fixed' model.\n"
 	      << "  h: display this help messsage." << "\n\n";
 

@@ -80,8 +80,6 @@ extern "C" {
 
 typedef unsigned int uint;
 
-const int   max_utag_dist   = 2;
-const int   max_rem_dist    = 3;
 const int   max_delv_stacks = 3;
 const int   barcode_size    = 5;
 const int   snp_min         = 8;
