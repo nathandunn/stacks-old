@@ -424,9 +424,12 @@ sub import_sql_file {
 sub prepare_sql_handles {
     my ($sth, $outg) = @_;
 
-    # Connect to the database, assumes user has a MySQL ~/.my.cnf file to 
-    # specify the host, username and password
-    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=$mysql_config")
+    #
+    # Connect to the database, check for the existence of a MySQL config file in the home
+    # directory first, otherwise use the stacks-distributed one.
+    #
+    my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_config;
+    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=$cnf")
 	or die("Unable to connect to the $db MySQL Database!\n" . $DBI::errstr);
 
     my $query;

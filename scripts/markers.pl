@@ -137,11 +137,12 @@ sub find_markers {
 	    #
 	    } elsif ($allele_cnt_1 == 2 && $allele_cnt_2 == 1) {
 
+                ($sample_id, $tag_id) = split("_", $parents[0]);
+
                 if ($num_unique_alleles == 3) {
-                    $annote = "ab/cc";
+                    $annote = $order->{$sample_id} eq 'first' ? "ab/cc" : "cc/ab";
 
                 } elsif ($num_unique_alleles == 2) {
-                    ($sample_id, $tag_id) = split("_", $parents[0]);
                     $annote = $order->{$sample_id} eq 'first' ? "ab/aa" : "aa/ab";
                 }
 
@@ -159,12 +160,13 @@ sub find_markers {
 	    #
 	    } elsif ($allele_cnt_1 == 1 && $allele_cnt_2 == 2) {
 
+                ($sample_id, $tag_id) = split("_", $parents[0]);
+
                 if ($num_unique_alleles == 3) {
-                    $annote = "cc/ab";
+                    $annote = $order->{$sample_id} eq 'first' ? "cc/ab" : "ab/cc";
 
                 } elsif ($num_unique_alleles == 2) {
-                    ($sample_id, $tag_id) = split("_", $parents[0]);
-                    $annote = $order->{$sample_id} eq 'first' ? "ab/aa" : "aa/ab";
+                    $annote = $order->{$sample_id} eq 'first' ? "aa/ab" : "ab/aa";
                 }
 
 		$ratio = tally_progeny_alleles($catalog->{$key}->{'par'}, 
@@ -483,9 +485,12 @@ sub dump_tags {
 sub prepare_sql_handles {
     my ($sth, $outg) = @_;
 
-    # Connect to the database, assumes user has a MySQL ~/.my.cnf file to
-    # specify the host, username and password
-    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=$mysql_config")
+    #
+    # Connect to the database, check for the existence of a MySQL config file in the home
+    # directory first, otherwise use the stacks-distributed one.
+    #
+    my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_config;
+    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=$cnf")
 	or die("Unable to connect to the $db MySQL Database!\n" . $DBI::errstr);
 
     my $query;

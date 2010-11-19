@@ -7,22 +7,37 @@
 (become root)
 # make install
 
-You can change the root of the install location (/usr/local/ on most operating systems) by specifying the --prefix command line option to the configure script.
+You can change the root of the install location (/usr/local/ on most
+operating systems) by specifying the --prefix command line option to
+the configure script.
 
 % ./configure --prefix=/home/smith/local
 
 A default install will install files in the following way:
 
 /usr/local/bin - stacks executables and perl scripts
-/usr/local/share/stacks - PHP files for the web interface and SQL files for creating the MySQL database
-/var/stacks/cache - a directory for caching database results when exporting genotypes.
 
-2. Edit the MySQL configuration file, installed in /usr/local/share/stacks/sql/mysql.cnf.dist, to enable access to the database from the Stacks scripts.
+/usr/local/share/stacks - PHP files for the web interface 
+                          and SQL files for creating the 
+                          MySQL database
+
+/var/stacks/cache - a directory for caching database 
+                    results when exporting genotypes.
+
+2. Edit the MySQL configuration file, installed in
+/usr/local/share/stacks/sql/mysql.cnf.dist, to enable access to the
+database from the Stacks scripts.
 
 % cd /usr/local/share/stacks/
 % cp mysql.cnf.dist mysql.cnf
 
-Edit the file to reflect the proper username, password, and host to use to access MySQL.
+Edit the file to reflect the proper username, password, and host to use to access MySQL. 
+
+The various scripts that access the database will search for a MySQL
+configuration file in your home directory before using the
+Stacks-distributed copy. If you already have a personal account set up
+and configured (in ~/.my.cnf) you can continue to use these
+credentials instead of setting up new, common ones.
 
 3. Enable the Stacks web interface in the Apache webserver.
 
