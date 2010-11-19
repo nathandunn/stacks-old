@@ -28,9 +28,9 @@ hstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 sstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/export_sql.pl scripts/genotypes.pl \
-	scripts/index_radtags.pl scripts/load_radtags.pl scripts/markers.pl 
+	scripts/index_radtags.pl scripts/load_radtags.pl scripts/markers.pl scripts/stacks_export_notify.pl 
 
-dist_noinst_SCRIPTS = autogen.sh scripts/stacks_export_notify.pl 
+dist_noinst_SCRIPTS = autogen.sh
 
 nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sql/tag_index.sql \
 	php/CatalogClass.php php/annotate_marker.php php/constants.php php/export.php php/index.php php/tags.php \
@@ -40,7 +40,7 @@ nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sq
 	php/ajax.js php/annotate.js php/stacks.js php/export.js php/stacks.css \
 	php/images/caret-d.png php/images/caret-u.png php/images/excel_icon.png php/images/l-arrow-disabled.png \
 	php/images/l-arrow.png php/images/r-arrow-disabled.png php/images/r-arrow.png php/images/stacks_bg.png \
-	php/images/stacks_logo_rev_small.png 
+	php/images/stacks_logo_rev_small.png
 
 EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL
 
@@ -63,8 +63,16 @@ install-data-hook:
 		$(DESTDIR)$(bindir)/genotypes.pl > $(DESTDIR)$(bindir)/genotypes.pl.subst
 	mv $(DESTDIR)$(bindir)/genotypes.pl.subst $(DESTDIR)$(bindir)/genotypes.pl
 	chmod +x $(DESTDIR)$(bindir)/genotypes.pl
+	sed -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_BINDIR_,$(bindir)/,g' \
+		$(DESTDIR)$(bindir)/stacks_export_notify.pl > $(DESTDIR)$(bindir)/stacks_export_notify.pl.subst
+	mv $(DESTDIR)$(bindir)/stacks_export_notify.pl.subst $(DESTDIR)$(bindir)/stacks_export_notify.pl
+	chmod +x $(DESTDIR)$(bindir)/stacks_export_notify.pl
+	sed -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_BINDIR_,$(bindir)/,g' \
+		$(DESTDIR)$(pkgdatadir)/php/constants.php > $(DESTDIR)$(pkgdatadir)/php/constants.php.subst
+	mv $(DESTDIR)$(pkgdatadir)/php/constants.php.subst $(DESTDIR)$(pkgdatadir)/php/constants.php
 	echo $(VERSION) > $(DESTDIR)$(pkgdatadir)/php/version.php
 	$(install_sh) -d -m 755 $(DESTDIR)$(pkglocalstatedir)/caches
+	$(install_sh) -d -m 755 $(DESTDIR)$(pkgdatadir)/php/export
 
 uninstall-hook:
 	rm -rf $(DESTDIR)$(pkglocalstatedir)

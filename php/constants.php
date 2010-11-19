@@ -19,11 +19,6 @@
 //
 
 //
-// File system location of PHP/HTML files
-//
-$system_path = "/var/www/stacks";
-
-//
 // Credentials to access Stacks MySQL databases
 //
 $db_user     = "dbuser";
@@ -31,9 +26,14 @@ $db_pass     = "dbpass";
 $db_host     = "localhost";
 
 //
+// File system location of PHP/HTML files
+//
+$system_path = "_PKGDATADIR_" . "php/";
+
+//
 // Location of perl script to run the exporting jobs.
 //
-$export_cmd  = "/usr/local/bin/stacks_export_notify.pl";
+$export_cmd  = "_BINDIR_" . "stacks_export_notify.pl";
 
 //
 // Name to print in page header

@@ -38,8 +38,8 @@ use NET::SMTP;
 #  smtp_host:   Name of SMTP server through which to send mail
 #  from:        email address to use in the 'From' field of the message
 #
-my $exe_path      = "/usr/local/bin/export_sql.pl";
-my $output_path   = "/var/www/stacks/export/"; 
+my $exe_path      = "_BINDIR_" . "export_sql.pl";
+my $output_path   = "_PKGDATADIR_" . "php/export/"; 
 my $url           = "http://stackshost.edu/stacks/export/";
 my $local_host    = "stackshost.edu";
 my $smtp_host     = "stackshost.edu";
