@@ -79,7 +79,6 @@ function write_footer() {
     echo <<< EOQ
 <div class="footer">
   <div style="float: left;">
-    maintained by: <a href="mailto:jcatchen@uoregon.edu">catchen</a><br />
     last updated: 
 EOQ;
 
