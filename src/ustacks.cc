@@ -69,9 +69,9 @@ int main (int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
     #endif
 
-    HashMap          radtags;
-    map<int, Seq *>  remainders;
-    set<int>         merge_map;
+    HashMap           radtags;
+    map<int, Seq *>   remainders;
+    set<int>          merge_map;
     map<int, Stack *> unique;
 
     load_radtags(in_file, radtags);
@@ -95,7 +95,7 @@ int main (int argc, char* argv[]) {
 	cerr << "Calculating distance for removing repetitive stacks.\n";
 	calc_kmer_distance(merged, 1);
 	cerr << "Removing repetitive stacks.\n";
-	remove_repetitive_stacks(merged);
+	remove_repetitive_stacks(unique, merged);
     }
 
     for (int i = 1; i <= max_utag_dist; i++) {
@@ -157,6 +157,7 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Seq *> &rem) {
 
     KmerHashMap kmer_map;
     populate_kmer_hash(merged, kmer_map, kmer_len);
+    int utilized = 0;
 
     #pragma omp parallel private(it, k)
     { 
@@ -231,9 +232,12 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Seq *> &rem) {
 	    if (min_id >= 0 && count == 1) {
 		#pragma omp critical
 		merged[min_id]->remtags.push_back(it->first);
+                utilized++;
 	    }
 	}
     }
+
+    cerr << "  Matched " << utilized << " remainder reads; unable to match " << keys.size() - utilized << " remainder reads.\n";
 
     return 0;
 }
@@ -535,7 +539,7 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, set<int> &merge_list, i
     return tag_1;
 }
 
-int remove_repetitive_stacks(map<int, MergedStack *> &merged) {
+int remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &merged) {
     //
     // If enabled, check the depth of coverage of each unique tag, and remove 
     // from consideration any tags with depths greater than removal_trigger. These tags
@@ -544,84 +548,85 @@ int remove_repetitive_stacks(map<int, MergedStack *> &merged) {
     // sequencing error reads, remove all seqeunces that are a distance of one from
     // the RAD-Tag with high depth of coverage.
     //
-    map<int, MergedStack *>::iterator   i;
+    map<int, MergedStack *>::iterator i;
     vector<pair<int, int> >::iterator k;
-    MergedStack *tag_1, *tag_2;
-
     map<int, MergedStack *> new_merged;
-    set<int> stack_list;
-    int id = 0;
+    MergedStack *tag_1, *tag_2;
+    set<int> already_merged;
+
     //
-    // Record all the tags that are over the removal trigger (as well as their nearest neighbors).
+    // First, iterate through the stacks and populate a list of tags that will be removed
+    // (those above the removal_trigger and those 1 nucleotide away). If we don't construct
+    // this list first, we will inadvertantly merge short stacks that end up being a
+    // single nucleotide away from one of the lumberjack stacks found later in the process.
+    //
+
+    int id = 0;
+
+    //
+    // Merge all stacks that are over the removal trigger with their nearest neighbors and
+    // mask them so they are not further processed by the program.
     //
     for (i = merged.begin(); i != merged.end(); i++) {
 	tag_1 = i->second;
 
 	//
-	// Don't process a tag that has already been removed.
+	// Don't process a tag that has already been merged.
 	//
-	if (stack_list.find(tag_1->id) != stack_list.end())
+        if (already_merged.count(tag_1->id) > 0)
+	    continue;
+
+
+	if (tag_1->count > removal_trigger) {
+            set<int> unique_merge_list;
+            unique_merge_list.insert(tag_1->id);
+	    already_merged.insert(tag_1->id);
+
+	    for (k = tag_1->dist.begin(); k != tag_1->dist.end(); k++) {
+                if (already_merged.count(k->first) == 0) {
+                    already_merged.insert(k->first);
+                    unique_merge_list.insert(k->first);
+                }
+	    }
+
+	    tag_1->lumberjackstack = true;
+	    tag_1->masked  = true;
+
+            //
+            // Merge these tags together into a new MergedStack object.
+            //
+            tag_2 = merge_tags(merged, unique_merge_list, id);
+            tag_2->add_consensus(tag_1->con);
+
+            new_merged.insert(make_pair(id, tag_2));
+            id++;
+	}
+    }
+
+    //
+    // Move the non-lumberjack stacks, unmodified, into the new merged map.
+    //
+    for (i = merged.begin(); i != merged.end(); i++) {
+	tag_1 = i->second;
+
+	if (already_merged.count(tag_1->id) > 0)
 	    continue;
 
 	set<int> unique_merge_list;
 	unique_merge_list.insert(tag_1->id);
 
-	if (tag_1->count > removal_trigger) {
-	    //cerr << "  Removing tag " << tag_1->id << "; depth of coverage: " << tag_1->count
-	    //<< "; removing " << tag_1->dist.size() << " tags a distance of 1 from " << tag_1->id << "\n";
-	    stack_list.insert(tag_1->id);
-
-	    for (k = tag_1->dist.begin(); k != tag_1->dist.end(); k++) {
-		stack_list.insert((*k).first);
-		unique_merge_list.insert((*k).first);
-	    }
-
-	    tag_1->lumberjackstack = true;
-	    tag_1->masked  = true;
-	}
-
-	//
-	// Merge these tags together into a new MergedStack object.
-	//
 	tag_2 = merge_tags(merged, unique_merge_list, id);
 	tag_2->add_consensus(tag_1->con);
-	
+
 	new_merged.insert(make_pair(id, tag_2));
 	id++;
     }
 
-    cerr << "  Removed " << stack_list.size() << " RAD-Tags.\n";
-
-//     //
-//     // Keep everything not in the recorded stack list.
-//     //
-//     map<int, MergedStack *>::iterator it_new, it_old;
-
-
-//     it_old = new_merged.begin();
-
-//     for (i = merged.begin(); i != merged.end(); i++) {
-// 	tag_1 = i->second;
-
-// 	if (stack_list.find(tag_1->id) == stack_list.end()) {
-// 	    tag_2     = new MergedStack;
-// 	    tag_2->id = id;
-
-// 	    for (j = tag_1->utags.begin(); j != tag_1->utags.end(); j++) {
-// 		tag_2->utags.push_back(*j);
-// 		tag_2->count += tag_1->count;
-// 	    }
-// 	    tag_2->add_consensus(tag_1->con);
-
-	    
-// 	    it_old = it_new;
-// 	    id++;
-// 	}
-//     }
+    cerr << "  Removed " << already_merged.size() << " stacks.\n";
 
     merged = new_merged;
 
-    cerr << "  " << merged.size() << " RAD-Tags remain for merging.\n";
+    cerr << "  " << merged.size() << " stacks remain for merging.\n";
 
     return 0;
 }

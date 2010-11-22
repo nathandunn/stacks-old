@@ -130,7 +130,7 @@ int    count_raw_reads(map<int, Stack *> &, map<int, MergedStack *> &);
 // Dealing with lumberjack (huge) stacks
 //
 int  calc_triggers(double, double, int &, int &);
-int  remove_repetitive_stacks(map<int, MergedStack *> &);
+int  remove_repetitive_stacks(map<int, Stack *> &, map<int, MergedStack *> &);
 int  deleverage(map<int, Stack *> &, map<int, MergedStack *> &, set<int> &, int, int, vector<MergedStack *> &);
 int  determine_single_linkage_clusters(map<int, MergedStack *> &, set<int> &, int);
 int  hclust(vector<int> &, map<int, map<int, double> > &, int, map<int, set<int> > &);

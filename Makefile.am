@@ -22,10 +22,15 @@ sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/co
 	src/input.h src/input.cc src/sql_utilities.h
 
 ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
+ustacks_LDFLAGS  = $(OPENMP_CFLAGS)
 pstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+pstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 cstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+cstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 hstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+hstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 sstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/export_sql.pl scripts/genotypes.pl \
 	scripts/index_radtags.pl scripts/load_radtags.pl scripts/markers.pl scripts/stacks_export_notify.pl 
