@@ -1,0 +1,63 @@
+1. Build the software. Stacks uses the standard autotools install:
+
+% tar xfvz stacks_x.xx.tar.gz
+% cd stacks_x.xx
+% ./configure
+% make
+(become root)
+# make install
+
+You can change the root of the install location (/usr/local/ on most
+operating systems) by specifying the --prefix command line option to
+the configure script.
+
+% ./configure --prefix=/home/smith/local
+
+A default install will install files in the following way:
+
+/usr/local/bin - stacks executables and perl scripts
+
+/usr/local/share/stacks - PHP files for the web interface 
+                          and SQL files for creating the 
+                          MySQL database
+
+/var/stacks/cache - a directory for caching database 
+                    results when exporting genotypes.
+
+2. Edit the MySQL configuration file, installed in
+/usr/local/share/stacks/sql/mysql.cnf.dist, to enable access to the
+database from the Stacks scripts.
+
+% cd /usr/local/share/stacks/
+% cp mysql.cnf.dist mysql.cnf
+
+Edit the file to reflect the proper username, password, and host to
+use to access MySQL.
+
+The various scripts that access the database will search for a MySQL
+configuration file in your home directory before using the
+Stacks-distributed copy. If you already have a personal account set up
+and configured (in ~/.my.cnf) you can continue to use these
+credentials instead of setting up new, common ones.
+
+3. Enable the Stacks web interface in the Apache webserver.
+
+Add a line to your apache configuration similar to: 
+
+Alias /stacks "/usr/local/share/stacks/php"
+
+Edit the PHP configuration file to allow it access to the MySQL
+database. Change the constants.php file to include the proper database
+username ($db_user), password ($db_pass), and hostname ($db_host).
+
+You may find it advantageous to create a MySQL user with very limited
+permissions - SELECT, UPDATE, and DELETE to allow users to interact
+with the database through the web interface.
+
+4. Enable web-based exporting from the MySQL database.
+
+Edit the stacks_export_notify.pl script to specify the email and SMTP
+server to use in notification messages.
+
+Ensure that the permissions of the php/export directory allow the
+webserver to write to it.

@@ -47,7 +47,7 @@ nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sq
 	php/images/l-arrow.png php/images/r-arrow-disabled.png php/images/r-arrow.png php/images/stacks_bg.png \
 	php/images/stacks_logo_rev_small.png
 
-EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL
+EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README
 
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 
