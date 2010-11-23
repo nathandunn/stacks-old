@@ -38,6 +38,7 @@ my $out_path    = "";
 my $db          = "";
 my $rep_tags    = 0;
 my $min_cov     = 0;
+my $min_dist    = 0;
 my $fuzzy_match = 0;
 my $cov_scale   = 0;
 my $batch_id    = 0;
@@ -80,9 +81,10 @@ foreach $parent (@progeny) {
     push(@types, "progeny");
 }
 
-my (@results, $minc, $rrep, $cmd, $cscale, $threads, $fuzzym);
+my (@results, $minc, $mind, $rrep, $cmd, $cscale, $threads, $fuzzym);
 
 $minc    = $min_cov   > 0 ? "-m $min_cov"   : "";
+$mind    = $min_dist  > 0 ? "-m $min_dist"  : "";
 $cscale  = $cov_scale > 0 ? "-S $cov_scale" : "";
 $threads = "-p 15"; 
 $fuzzym  = "-n $fuzzy_match";
@@ -138,7 +140,7 @@ foreach $sample (@parents, @progeny) {
 	$rrep = "";
     }
 
-    $cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -b $batch_id -i $sample_id $rrep $minc $cscale $threads 2>&1";
+    $cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -b $batch_id -i $sample_id $rrep $minc $mind $cscale $threads 2>&1";
     print STDERR "$cmd\n";
     print $log_fh    "$cmd\n";
     @results = `$cmd`;
@@ -251,6 +253,7 @@ sub parse_command_line {
        	elsif ($_ =~ /^-t$/) { $rep_tags++; }
 	elsif ($_ =~ /^-o$/) { $out_path    = shift @ARGV; }
 	elsif ($_ =~ /^-m$/) { $min_cov     = shift @ARGV; }
+	elsif ($_ =~ /^-M$/) { $min_dist    = shift @ARGV; }
         elsif ($_ =~ /^-n$/) { $fuzzy_match = shift @ARGV; }
 	elsif ($_ =~ /^-c$/) { $cov_scale   = shift @ARGV; }
 	elsif ($_ =~ /^-D$/) { $desc        = shift @ARGV; }
@@ -279,7 +282,7 @@ sub parse_command_line {
 
 sub usage {
     print STDERR <<EOQ; 
-denovo_map.pl -p path -r path -o path [-e path] [-t] [-m min_cov] [-n mismatches] [-c scale] [-D desc] [-b batch_id] [-s num] [-a yyyy-mm-dd] [-S] [-d] [-h]
+denovo_map.pl -p path -r path -o path [-e path] [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-c scale] [-D desc] [-b batch_id] [-s num] [-a yyyy-mm-dd] [-S] [-d] [-h]
     p: path to a FASTQ/FASTA file containing parent sequences.
     r: path to a FASTQ/FASTA file containing progeny sequences.
     o: path to write pipeline output files.
@@ -290,7 +293,8 @@ denovo_map.pl -p path -r path -o path [-e path] [-t] [-m min_cov] [-n mismatches
     D: batch description
     a: batch run date, yyyy-mm-dd
     m: specify a minimum depth of coverage to merge stacks in the ustacks program.
-    n: specify the number of mismatches allowed between loci when building the catalog.
+    M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
+    n: specify the number of mismatches allowed between loci when building the catalog (default 0).
     c: coverage scaling factor affecting when tags are deleveraged or removed (between 0 and 1).
     t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
     e: executable path, location of pipeline programs.
