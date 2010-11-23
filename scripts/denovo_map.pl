@@ -84,7 +84,7 @@ foreach $parent (@progeny) {
 my (@results, $minc, $mind, $rrep, $cmd, $cscale, $threads, $fuzzym);
 
 $minc    = $min_cov   > 0 ? "-m $min_cov"   : "";
-$mind    = $min_dist  > 0 ? "-m $min_dist"  : "";
+$mind    = $min_dist  > 0 ? "-M $min_dist"  : "";
 $cscale  = $cov_scale > 0 ? "-S $cov_scale" : "";
 $threads = "-p 15"; 
 $fuzzym  = "-n $fuzzy_match";
