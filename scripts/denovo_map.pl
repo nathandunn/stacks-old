@@ -292,7 +292,7 @@ denovo_map.pl -p path -r path -o path [-e path] [-t] [-m min_cov] [-M mismatches
     s: starting sample_id, this is determined automatically if database interaction is enabled.
     D: batch description
     a: batch run date, yyyy-mm-dd
-    m: specify a minimum depth of coverage to merge stacks in the ustacks program.
+    m: specify a minimum number of identical, raw reads required to create a stack.
     M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
     c: coverage scaling factor affecting when tags are deleveraged or removed (between 0 and 1).
