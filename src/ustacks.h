@@ -21,7 +21,10 @@
 #ifndef __USTACKS_H__
 #define __USTACKS_H__
 
+#ifdef _OPENMP
 #include <omp.h>    // OpenMP library
+#endif
+
 #include <getopt.h> // Process command-line options
 #include <math.h>
 #include <stdlib.h>

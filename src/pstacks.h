@@ -21,7 +21,9 @@
 #ifndef __PSTACKS_H__
 #define __PSTACKS_H__
 
+#ifdef _OPENMP
 #include <omp.h>    // OpenMP library
+#endif
 #include <getopt.h> // Process command-line options
 #include <iostream>
 #include <fstream>
