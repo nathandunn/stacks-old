@@ -74,7 +74,7 @@ sub gen_cat_index {
 
     print STDERR "Generating catalog tag index\n";
 
-    my ($fh, $catalog_file) = tempfile("catalog_index_XXXXXXXX", UNLINK => 1);
+    my ($fh, $catalog_file) = tempfile("catalog_index_XXXXXXXX", UNLINK => 1, TMPDIR => 1);
 
     my ($row, $tag, $count, $par_cnt, $pro_cnt, $allele_cnt, $marker, $valid_pro, 
         $max_pct, $ratio, $ests, $pe_radtags, $blast_hits);
@@ -310,7 +310,7 @@ sub gen_tag_index {
 
     die ("Unable to find SQL file: '$sql_tag_table'\n") if (!-e $sql_tag_table);
 
-    my ($fh, $tag_file) = tempfile("tag_index_XXXXXXXX", UNLINK => 1);
+    my ($fh, $tag_file) = tempfile("tag_index_XXXXXXXX", UNLINK => 1, TMPDIR => 1);
 
     print STDERR "Generating unique tag index...\n";
 

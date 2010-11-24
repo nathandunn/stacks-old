@@ -44,15 +44,17 @@ Seq *Sam::next_seq() {
     vector<string> parts;
 
     //
-    // Read a record from the file and place it in a Seq object
+    // Read a record from the file and place it in a Seq object, skipping header definitions.
     //
-    this->fh.getline(this->line, max_len);
+    do {
+        this->fh.getline(this->line, max_len);
 
-    if (!this->fh.good()) {
-	return NULL;
-    }
+        if (!this->fh.good())
+            return NULL;
 
-    parse_tsv(this->line, parts);
+        parse_tsv(this->line, parts);
+
+    } while (parts[0][0] == '@');
 
     Seq *s = new Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(), parts[2].c_str(), atoi(parts[3].c_str()));
 

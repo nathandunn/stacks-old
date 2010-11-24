@@ -311,9 +311,9 @@ sub tally_progeny_alleles {
 	    push(@alleles, $alleles[0]);
 
 	#
-	# We are mapping ab/ab tags.
+	# We are mapping ab/ab tags or aa/bb tags.
 	#
-	} elsif (scalar(@alleles) == 1 && $marker eq "ab/ab" && $alleles[0] eq 'b') {
+	} elsif (scalar(@alleles) == 1 && ($marker eq "ab/ab" || $marker eq "aa/bb") && $alleles[0] eq 'b') {
 	    push(@alleles, $alleles[0]);
 
 	#
@@ -328,10 +328,10 @@ sub tally_progeny_alleles {
 	$m = join("", @alleles);
 
 	if (!defined($genotypes{$marker}->{$m})) {
-	    print STDERR "  Warning: illegal genotype encountered in tag $tag_id, progeny $key\n" if ($debug);
+	    print STDERR "  Warning: illegal genotype encountered ('$m') in tag $tag_id, progeny $key\n" if ($debug);
 	} else  {
 	    $markers{$m}++;
-	    print STDERR "  $key allele: $markers{$key}\n" if ($debug);
+	    print STDERR "  $m allele: $markers{$m}\n" if ($debug);
 	}
     }
 
