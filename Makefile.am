@@ -33,7 +33,8 @@ sstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/export_sql.pl scripts/genotypes.pl \
-	scripts/index_radtags.pl scripts/load_radtags.pl scripts/markers.pl scripts/stacks_export_notify.pl 
+	scripts/index_radtags.pl scripts/load_radtags.pl scripts/markers.pl scripts/stacks_export_notify.pl \
+	scripts/process_radtags.pl
 
 dist_noinst_SCRIPTS = autogen.sh
 
