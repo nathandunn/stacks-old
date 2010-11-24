@@ -284,6 +284,7 @@ sub parse_fastq_record {
     return undef if (!defined($line));
 
     chomp $line;
+    $line  = substr($line, 1);
     @parts = split(/:/, $line);
 
     #print STDERR "ID: $line\n";
