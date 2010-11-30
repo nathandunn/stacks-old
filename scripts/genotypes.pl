@@ -52,6 +52,14 @@ my $sql           = 0;
 
 parse_command_line();
 
+#
+# Make sure the SQL definition files are available
+#
+if (!-e $cache_path) {
+    print STDERR "Unable to locate the path to store cache files '$cache_path'.\n";
+    usage();
+}
+
 $cache_path .= "/" . $db . "_batch_" . $batch_id;
 
 #
@@ -84,7 +92,7 @@ sub export_joinmap_bc1_map {
     #   a first generation backcross population: the result of crossing the F1 of a cross between 
     #   two fully homozygous diploid parents to one of the parents.
     #
-    # Segregation type codes for population type CP, from Joinmap manual:
+    # Segregation type codes for population type BC1, from Joinmap manual:
     #
     # Code      Description
     # -------   -----------
@@ -475,7 +483,7 @@ sub write_loci_sql {
 	    if (defined($locus->{'progeny'}->{$sample})) {
 		print $out_fh $locus->{'progeny'}->{$sample}, "\n";
 	    } else {
-		print $out_fh "--", "\n";
+		$map_type eq "CP" ? print $out_fh "--", "\n" : print $out_fh "-", "\n";
 	    }
 	}
     }
@@ -1503,6 +1511,7 @@ sub parse_command_line {
 	if    ($_ =~ /^-d$/) { $debug++; }
 	elsif ($_ =~ /^-D$/) { $db            = shift @ARGV; }
 	elsif ($_ =~ /^-P$/) { $uni_path      = shift @ARGV; }
+        elsif ($_ =~ /^-C$/) { $cache_path    = shift @ARGV; }
 	elsif ($_ =~ /^-b$/) { $batch_id      = shift @ARGV; }
 	elsif ($_ =~ /^-t$/) { $map_type      = shift @ARGV; }
 	elsif ($_ =~ /^-c$/) { $category++; }
@@ -1553,7 +1562,7 @@ sub parse_command_line {
 
 sub usage {
     print << "EOQ";
-genotypes.pl -t map_type -D db -P path [-b id] [-p min] [-c] [-o path] [-s] [-C] [-B] [-E] [-d] [-h]
+genotypes.pl -t map_type -D db -P path [-b id] [-p min] [-c] [-o path] [-s] [-C] [-B] [-E] [-C path] [-d] [-h]
   t: map type to write. 'CP' and 'BC1' are the currently supported map types.
   P: path to the Stacks output files.
   D: radtag database to examine.
@@ -1565,6 +1574,7 @@ genotypes.pl -t map_type -D db -P path [-b id] [-p min] [-c] [-o path] [-s] [-C]
   C: apply manual corrections to the data.
   E: exclude genotypes related to a marker with a BLAST hit.
   B: only export genotypes related to a marker with BLAST hits.
+  C: specify a path to the data cache.
   h: display this help message.
   d: turn on debug output.
 

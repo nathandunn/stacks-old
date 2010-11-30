@@ -167,7 +167,14 @@ my ($rid, $pfile, $parents, $cat_file);
 #
 print STDERR "Generating RAD-Tag catalog...\n";
 foreach $sample (@parents) {
-    ($pfile)  = ($sample =~ /^.*\/(.+)\.fastq_1$/);
+    my ($prefix, $suffix) = ($sample =~ /^(.+)\.(.+)$/);
+
+    if ($prefix =~ /^.*\/.+$/) {
+        ($pfile) = ($prefix =~ /^.*\/(.+)$/);
+    } else {
+        $pfile = $prefix;
+    }
+
     $parents .= "-s $out_path/$pfile -S " . $map{$pfile} . " ";
 }
 
