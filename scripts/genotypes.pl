@@ -37,7 +37,8 @@ my $mysql_config  = "_PKGDATADIR_" . "sql/mysql.cnf";
 my $debug         = 0;
 my $db            = "";
 my $map_type      = "";
-my $cache_path    = "_LOCALSTATEDIR_" . "caches";
+#my $cache_path    = "_LOCALSTATEDIR_" . "caches";
+my $cache_path    = "/usr/local/var/stacks/" . "caches";
 my $uni_path      = "";
 my $progeny_limit = 4;
 my $batch_id      = 0;
@@ -45,6 +46,7 @@ my $category      = 0;
 my $corrections   = 0;
 my $blast_only    = 0;
 my $exclude_blast = 0;
+my $expand_id     = 0;
 my $out_file      = "";
 my $bl_file       = "";
 my $wl_file       = "";
@@ -116,8 +118,8 @@ sub export_joinmap_bc1_map {
 
     $genotypes{'aaxbb'} = {'b' => 0, 'h' => 0, '-' => 0};
     $genotypes{'bbxaa'} = {'a' => 0, 'h' => 0, '-' => 0};
-    $genotypes{'abxcc'} = {'a' => 0, 'h' => 0, '-' => 0};
-    $genotypes{'ccxab'} = {'b' => 0, 'h' => 0, '-' => 0};
+    $genotypes{'abxcc'} = {'b' => 0, 'h' => 0, '-' => 0};
+    $genotypes{'ccxab'} = {'a' => 0, 'h' => 0, '-' => 0};
 
     #
     # Determine what order the parents occur in. Order is necessary to properly
@@ -559,6 +561,16 @@ sub write_bc1_loci {
 	print $out_fh 
 	    $id, "\t";
 
+        if ($expand_id) {
+            $id = length($locus->{'ext_id'}) > 0 ? 
+                $locus->{'id'} . "\t" . $locus->{'ext_id'} :
+                $locus->{'id'} . "\t";
+
+            print $out_fh $id, "\t";
+        }
+
+        print $out_fh "<", $types->{$locus->{'marker'}}, ">";
+
 	foreach $sample (@{$samples}) {
 	    print $out_fh "\t";
 
@@ -648,6 +660,14 @@ sub write_cp_loci {
 
 	print $out_fh 
 	    $id, "\t";
+
+        if ($expand_id) {
+            $id = length($locus->{'ext_id'}) > 0 ? 
+                $locus->{'id'} . "\t" . $locus->{'ext_id'} :
+                $locus->{'id'} . "\t";
+
+            print $out_fh $id, "\t";
+        }
 
 	if ($types->{$locus->{'marker'}} eq "lmx--") {
 	    print $out_fh "<lmxll>";
@@ -1518,6 +1538,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-C$/) { $corrections++; }
 	elsif ($_ =~ /^-B$/) { $blast_only++; }
         elsif ($_ =~ /^-E$/) { $exclude_blast++; }
+        elsif ($_ =~ /^-i$/) { $expand_id++; }
 	elsif ($_ =~ /^-s$/) { $sql++; }
 	elsif ($_ =~ /^-l$/) { $bl_file       = shift @ARGV; }
 	elsif ($_ =~ /^-w$/) { $wl_file       = shift @ARGV; }
