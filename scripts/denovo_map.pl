@@ -40,6 +40,7 @@ my $rep_tags    = 0;
 my $min_cov     = 0;
 my $min_dist    = 0;
 my $fuzzy_match = 0;
+my $num_threads = 0;
 my $cov_scale   = 0;
 my $batch_id    = 0;
 my $sample_id   = 1;
@@ -60,7 +61,7 @@ die ("Unable to find '" . $exe_path . "sstacks'.\n") if (!-e $exe_path . "sstack
 die ("Unable to find '" . $exe_path . "index_radtags.pl'.\n") if (!-e $exe_path . "index_radtags.pl" || !-x $exe_path . "index_radtags.pl");
 die ("Unable to find '" . $exe_path . "markers.pl'.\n")       if (!-e $exe_path . "markers.pl"       || !-x $exe_path . "markers.pl");
 
-my ($i, $log, $log_fh, $pfile, $rfile, $file, $num_files, $parent, $sample, %map);
+my ($i, $log, $log_fh, $pfile, $file, $num_files, $parent, $sample, %map);
 
 $i         = 1;
 $num_files = scalar(@parents) + scalar(@progeny);
@@ -83,10 +84,10 @@ foreach $parent (@progeny) {
 
 my (@results, $minc, $mind, $rrep, $cmd, $cscale, $threads, $fuzzym);
 
-$minc    = $min_cov   > 0 ? "-m $min_cov"   : "";
-$mind    = $min_dist  > 0 ? "-M $min_dist"  : "";
-$cscale  = $cov_scale > 0 ? "-S $cov_scale" : "";
-$threads = "-p 15"; 
+$minc    = $min_cov     > 0 ? "-m $min_cov"     : "";
+$mind    = $min_dist    > 0 ? "-M $min_dist"    : "";
+$cscale  = $cov_scale   > 0 ? "-S $cov_scale"   : "";
+$threads = $num_threads > 0 ? "-p $num_threads" : ""; 
 $fuzzym  = "-n $fuzzy_match";
 
 #
@@ -203,18 +204,25 @@ $num_files = scalar(@parents) + scalar(@progeny);
 
 foreach $sample (@parents, @progeny) {
 
-    ($rfile) = ($sample =~ /^.*\/(.+)\.fastq_1$/);
-    printf(STDERR "Matching RAD-Tags to catalog; file % 3s of % 3s [%s]\n", $i, $num_files, $rfile);
+    my ($prefix, $suffix) = ($sample =~ /^(.+)\.(.+)$/);
 
-    $rid = $map{$rfile};
+    if ($prefix =~ /^.*\/.+$/) {
+        ($pfile) = ($prefix =~ /^.*\/(.+)$/);
+    } else {
+        $pfile = $prefix;
+    }
 
-    $cmd = $exe_path . "sstacks -b $batch_id -c $out_path/$cat_file -s $out_path/$rfile -S $rid -o $out_path $threads 2>&1";
+    printf(STDERR "Matching RAD-Tags to catalog; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
+
+    $rid = $map{$pfile};
+
+    $cmd = $exe_path . "sstacks -b $batch_id -c $out_path/$cat_file -s $out_path/$pfile -S $rid -o $out_path $threads 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd`;
     print $log_fh @results;
 
-    $file = "$out_path/" . $rfile . ".matches.tsv";
+    $file = "$out_path/" . $pfile . ".matches.tsv";
     import_sql_file($file, "matches");
 
     $i++;
@@ -262,6 +270,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-m$/) { $min_cov     = shift @ARGV; }
 	elsif ($_ =~ /^-M$/) { $min_dist    = shift @ARGV; }
         elsif ($_ =~ /^-n$/) { $fuzzy_match = shift @ARGV; }
+        elsif ($_ =~ /^-T$/) { $num_threads = shift @ARGV; }
 	elsif ($_ =~ /^-c$/) { $cov_scale   = shift @ARGV; }
 	elsif ($_ =~ /^-D$/) { $desc        = shift @ARGV; }
 	elsif ($_ =~ /^-e$/) { $exe_path    = shift @ARGV; }
@@ -289,7 +298,7 @@ sub parse_command_line {
 
 sub usage {
     print STDERR <<EOQ; 
-denovo_map.pl -p path -r path -o path [-e path] [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-c scale] [-D desc] [-b batch_id] [-s num] [-a yyyy-mm-dd] [-S] [-d] [-h]
+denovo_map.pl -p path -r path -o path [-e path] [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-T num_threads] [-D desc] [-b batch_id] [-s num] [-a yyyy-mm-dd] [-S] [-d] [-h]
     p: path to a FASTQ/FASTA file containing parent sequences.
     r: path to a FASTQ/FASTA file containing progeny sequences.
     o: path to write pipeline output files.
@@ -302,8 +311,8 @@ denovo_map.pl -p path -r path -o path [-e path] [-t] [-m min_cov] [-M mismatches
     m: specify a minimum number of identical, raw reads required to create a stack.
     M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
-    c: coverage scaling factor affecting when tags are deleveraged or removed (between 0 and 1).
     t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
+    T: specify the number of threads to execute.
     e: executable path, location of pipeline programs.
     h: display this help message.
     d: turn on debug output.
