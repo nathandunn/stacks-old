@@ -29,6 +29,8 @@ use strict;
 use File::Temp qw/tempfile/;
 use NET::SMTP;
 
+use constant stacks_version => "_VERSION_";
+
 #
 # Configuration:
 #  exe_path:    Path to the export executable.
@@ -141,6 +143,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-e$/) { $email      = shift @ARGV; }
 	elsif ($_ =~ /^-t$/) { $out_type   = shift @ARGV; }
 	elsif ($_ =~ /^-F$/) { $filter_str = shift @ARGV; }
+	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
 	    print STDERR "Unknown command line options received: $_\n";
@@ -167,11 +170,16 @@ sub parse_command_line {
         print STDERR "Batch ID must be a numeric value.\n";
         usage();
     }
+}
 
+sub version {
+    print STDERR "stacks_export_notify.pl ", stacks_version, "\n";
 }
 
 sub usage {
-	print << "EOQ";
+    version();
+
+    print << "EOQ";
 stacks_export_notify.pl -e email -D db -b batch_id [-t type] [-F filters] [-d] [-h]
   e: email to use for notification.
   D: radtag database to examine.
@@ -180,7 +188,6 @@ stacks_export_notify.pl -e email -D db -b batch_id [-t type] [-F filters] [-d] [
   F: comma separated list of filters to apply to the data.
   h: display this help message.
   d: turn on debug output.
-
 
 EOQ
 

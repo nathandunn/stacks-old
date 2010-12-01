@@ -56,7 +56,10 @@ $marker_types = array('lmxll' => array('ll', 'lm', '--'),
                       'nnxnp' => array('nn', 'np', '--'),
                       'hkxhk' => array('hh', 'hk', 'kk', '--'),
                       'efxeg' => array('ee', 'ef', 'eg', 'fg', '--'),
-                      'abxcd' => array('ac', 'ad', 'bc', 'bd', '--'));
+                      'abxcd' => array('ac', 'ad', 'bc', 'bd', '--'),
+                      'aaxbb' => array('a', 'b', 'h', '-'),
+                      'abxcc' => array('b', 'h', '-'),
+                      'ccxab' => array('a', 'h', '-'));
 $elements     = array('ll' => $marker_types['lmxll'],
                       'lm' => $marker_types['lmxll'],
                       'nn' => $marker_types['nnxnp'],
@@ -72,6 +75,10 @@ $elements     = array('ll' => $marker_types['lmxll'],
                       'ad' => $marker_types['abxcd'],
                       'bc' => $marker_types['abxcd'],
                       'bd' => $marker_types['abxcd'],
+                      'a'  => $marker_types['aaxbb'],
+                      'b'  => $marker_types['aaxbb'],
+                      'h'  => $marker_types['aaxbb'],
+                      '-'  => array('-', 'a', 'b', 'h'),
                       '--' => array('--', 'll', 'lm', 'nn', 'np', 'hh', 'hk', 'kk', 'ee', 'ef', 'eg', 'fg', 'ab', 'ad', 'bc', 'bd'));
 
 //

@@ -30,6 +30,7 @@
 #
 
 use strict;
+use constant stacks_version => "_VERSION_";
 
 my $debug       = 0;
 my $sql         = 1;
@@ -280,6 +281,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-S$/) { $sql         = 0; }
 	elsif ($_ =~ /^-B$/) { $db          = shift @ARGV; }
 	elsif ($_ =~ /^-d$/) { $debug++; }
+	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
 	    print STDERR "Unknown command line option: '$_'\n";
@@ -296,7 +298,13 @@ sub parse_command_line {
     }
 }
 
+sub version {
+    print STDERR "denovo_map.pl ", stacks_version, "\n";
+}
+
 sub usage {
+    version();
+
     print STDERR <<EOQ; 
 denovo_map.pl -p path -r path -o path [-e path] [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-T num_threads] [-D desc] [-b batch_id] [-s num] [-a yyyy-mm-dd] [-S] [-d] [-h]
     p: path to a FASTQ/FASTA file containing parent sequences.

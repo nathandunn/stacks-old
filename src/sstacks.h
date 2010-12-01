@@ -27,6 +27,7 @@
 #include <getopt.h> // Process command-line options
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include <utility>
 using std::pair;
 using std::make_pair;
@@ -54,7 +55,6 @@ using std::set;
 
 #ifdef __GNUC__
 #include <ext/hash_map>
-#include <ext/hash_fun.h>
 using __gnu_cxx::hash_map;
 using __gnu_cxx::hash;
 #else

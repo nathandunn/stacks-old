@@ -29,6 +29,8 @@
 
 use strict;
 
+use constant stacks_version => "_VERSION_";
+
 my $debug      = 0;
 my $db         = "";
 my $in_path    = ".";
@@ -209,6 +211,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-a$/) { $date       = shift @ARGV; }
         elsif ($_ =~ /^-W$/) { $white_list = shift @ARGV; }
 	elsif ($_ =~ /^-d$/) { $debug++; }
+	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
 	    print STDERR "Unknown command line option: '$_'\n";
@@ -224,7 +227,13 @@ sub parse_command_line {
     }
 }
 
+sub version {
+    print STDERR "load_radtags.pl ", stacks_version, "\n";
+}
+
 sub usage {
+    version();
+
     print STDERR <<EOQ; 
 load_radtags.pl -D db -p path -b batch_id [-B -a date -e desc] [-c] [-W path] [-d] [-h]
     D: Database to load data into.

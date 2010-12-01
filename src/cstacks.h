@@ -25,6 +25,7 @@
 #include <omp.h>    // OpenMP library
 #endif
 #include <getopt.h> // Process command-line options
+#include <string.h>
 #include <math.h>
 #include <stdlib.h>
 #include <utility>
@@ -44,18 +45,15 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
-
 #include <vector>
 using std::vector;
-
 #include <map>
 using std::map;
-
 #include <set>
 using std::set;
-
 #include <queue>
 using std::queue;
+#include <algorithm>
 
 #include "constants.h"
 #include "stacks.h"

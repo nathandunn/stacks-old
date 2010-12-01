@@ -25,6 +25,7 @@
 #include <omp.h>    // OpenMP library
 #endif
 #include <getopt.h> // Process command-line options
+#include <string.h>
 #include <math.h>
 #include <stdlib.h>
 #include <dirent.h>
@@ -51,10 +52,10 @@ using std::map;
 using std::queue;
 #include <set>
 using std::set;
+#include <algorithm>
 
 #ifdef __GNUC__
 #include <ext/hash_map>
-#include <ext/hash_fun.h>
 using __gnu_cxx::hash_map;
 using __gnu_cxx::hash;
 #else

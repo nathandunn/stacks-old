@@ -25,6 +25,7 @@
 #include <omp.h>    // OpenMP library
 #endif
 #include <getopt.h> // Process command-line options
+#include <string.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -36,7 +37,6 @@ using std::endl;
 
 #ifdef __GNUC__
 #include <ext/hash_map>
-#include <ext/hash_fun.h>
 using __gnu_cxx::hash_map;
 using __gnu_cxx::hash;
 #else

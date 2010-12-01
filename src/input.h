@@ -21,6 +21,7 @@
 #ifndef __INPUT_H__
 #define __INPUT_H__
 
+#include <string.h>
 #include <string>
 #include <vector>
 #include <iostream>

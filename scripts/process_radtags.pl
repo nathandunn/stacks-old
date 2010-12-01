@@ -29,6 +29,8 @@ use constant false       => 1;
 use constant score_limit => 10; # Quality Score >= 90%
 use constant len_limit   => 31;
 
+use constant stacks_version => "_VERSION_";
+
 my $debug        = 0;
 my $quality      = 0;
 my $input_type   = "raw";
@@ -740,6 +742,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-q$/) { $quality++; }
 	elsif ($_ =~ /^-P$/) { $paired++; }
 	elsif ($_ =~ /^-d$/) { $debug++; }
+	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
 	    usage();
@@ -760,15 +763,21 @@ sub parse_command_line {
     }
 }
 
+sub version {
+    print STDERR "process_radtags.pl ", stacks_version, "\n";
+}
+
 sub usage {
+    version();
+
     print STDERR <<EOQ; 
-process-radtags.pl -p path -o path -b file [-s size] [-P] [-I input_type] [-e enzyme] [-c] [-q] [-r] [-t len] [-F|-R] [-d] [-h]
+process_radtags.pl -p path -o path -b file [-s size] [-P] [-I input_type] [-e enzyme] [-c] [-q] [-r] [-t len] [-F|-R] [-d] [-h]
   p: path to the Solexa BUSTARD output files, or GERALD files (if -I is specified as 'fastq').
   o: path to output the processed files.
   s: barcode size (default 5).
   P: input data contains paired-end reads.
   b: a list of barcodes for this run.
-  I: input file type, either 'raw' for the raw BUSTARD output files, or 'fastq' for GERALD files.
+  I: input file type, either 'raw' for the raw BUSTARD output files, or 'fastq' for GERALD files (default 'raw').
   c: clean data, remove any read with an uncalled base.
   q: discard reads with low quality scores.
   r: rescue barcodes and RAD-Tags.

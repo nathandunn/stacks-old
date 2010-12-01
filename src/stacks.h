@@ -21,6 +21,7 @@
 #ifndef __STACKS_H__
 #define __STACKS_H__
 
+#include <string.h>
 #include <string>
 using std::string;
 #include <vector>

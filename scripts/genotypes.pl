@@ -33,23 +33,26 @@ use constant min_hom_seqs => 5;
 use constant min_het_seqs => 0.05;
 use constant max_het_seqs => 0.1;
 
-my $mysql_config  = "_PKGDATADIR_" . "sql/mysql.cnf";
-my $debug         = 0;
-my $db            = "";
-my $map_type      = "";
-my $cache_path    = "_LOCALSTATEDIR_" . "caches";
-my $uni_path      = "";
-my $progeny_limit = 4;
-my $batch_id      = 0;
-my $category      = 0;
-my $corrections   = 0;
-my $blast_only    = 0;
-my $exclude_blast = 0;
-my $expand_id     = 0;
-my $out_file      = "";
-my $bl_file       = "";
-my $wl_file       = "";
-my $sql           = 0;
+use constant stacks_version => "_VERSION_";
+
+my $mysql_config    = "_PKGDATADIR_" . "sql/mysql.cnf";
+my $debug           = 0;
+my $db              = "";
+my $map_type        = "";
+my $cache_path      = "_LOCALSTATEDIR_" . "caches";
+my $uni_path        = "";
+my $progeny_limit   = 4;
+my $batch_id        = 0;
+my $category        = 0;
+my $man_corrections = 0;
+my $corrections     = 0;
+my $blast_only      = 0;
+my $exclude_blast   = 0;
+my $expand_id       = 0;
+my $out_file        = "";
+my $bl_file         = "";
+my $wl_file         = "";
+my $sql             = 0;
 
 parse_command_line();
 
@@ -161,7 +164,7 @@ sub export_joinmap_bc1_map {
     }
     print STDERR "\n";
 
-    apply_corrected_genotypes($sth, \@loci) if ($corrections);
+    apply_corrected_genotypes($sth, \@loci) if ($man_corrections);
 
     if ($category) {
 	foreach $key (keys %types) {
@@ -1543,6 +1546,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-w$/) { $wl_file       = shift @ARGV; }
 	elsif ($_ =~ /^-o$/) { $out_file      = shift @ARGV; }
 	elsif ($_ =~ /^-p$/) { $progeny_limit = shift @ARGV; }
+	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
 	    print STDERR "Unknown command line options received: $_\n";
@@ -1580,7 +1584,14 @@ sub parse_command_line {
     }
 }
 
+sub version {
+    print STDERR "genotypes.pl ", stacks_version, "\n";
+
+}
+
 sub usage {
+    version();
+
     print << "EOQ";
 genotypes.pl -t map_type -D db -P path [-b id] [-p min] [-c] [-o path] [-s] [-C] [-B] [-E] [-C path] [-d] [-h]
   t: map type to write. 'CP' and 'BC1' are the currently supported map types.
@@ -1588,7 +1599,7 @@ genotypes.pl -t map_type -D db -P path [-b id] [-p min] [-c] [-o path] [-s] [-C]
   D: radtag database to examine.
   b: Batch ID to examine when exporting from the catalog.
   o: output file.
-  c: output by marker category.
+  c: make automated corrections to the data.
   p: minimum number of progeny required to print a marker.
   s: output a file to import results into an SQL database.
   C: apply manual corrections to the data.

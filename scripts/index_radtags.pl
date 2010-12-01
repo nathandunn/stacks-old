@@ -26,6 +26,8 @@ use strict;
 use File::Temp qw/tempfile/;
 use DBI;
 
+use constant stacks_version => "_VERSION_";
+
 my $mysql_config  = "_PKGDATADIR_" . "sql/mysql.cnf";
 my $sql_path      = "_PKGDATADIR_" . "sql/";
 my $sql_tag_table = "";
@@ -513,6 +515,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-s$/) { $sql_path = shift @ARGV; }
 	elsif ($_ =~ /^-c$/) { $catalog_index++; }
 	elsif ($_ =~ /^-t$/) { $tag_index++; }
+	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
 	    print STDERR "Unknown command line options received: $_\n";
@@ -530,9 +533,15 @@ sub parse_command_line {
     $sql_cat_table = $sql_path . "catalog_index.sql";
 }
 
+sub version {
+    print STDERR "index_radtags.pl ", stacks_version, "\n";
+}
+
 sub usage {
-	print << "EOQ";
-index-radtags.pl -D db [-c] [-t] [-s path] [-d] [-h]
+    version();
+
+    print << "EOQ";
+index_radtags.pl -D db [-c] [-t] [-s path] [-d] [-h]
   D: radtag database to examine.
   s: path to SQL definition files for catalog/tag index tables.
   c: generate a catalog index.

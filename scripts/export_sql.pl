@@ -30,6 +30,8 @@ use DBI;
 #use Excel::Writer::XLSX;
 use Spreadsheet::WriteExcel;
 
+use constant stacks_version => "_VERSION_";
+
 my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
 my $out_file = "";
 my $type     = "tsv";
@@ -417,6 +419,7 @@ sub parse_command_line {
         elsif ($_ =~ /^-b$/) { $batch_id = shift @ARGV; }
         elsif ($_ =~ /^-D$/) { $db       = shift @ARGV; }
         elsif ($_ =~ /^-d$/) { $debug++; }
+	elsif ($_ =~ /^-v$/) { version(); exit(); }
         elsif ($_ =~ /^-h$/) { usage(); }
         elsif ($_ =~ /^-F$/) {
             $filter = shift @ARGV;
@@ -445,15 +448,21 @@ sub parse_command_line {
     }
 }
 
+sub version {
+    print STDERR "export_sql.pl ", stacks_version, "\n";
+}
+
 sub usage {
-  print STDERR 
-      "export_sql.pl -D db -b batch_id -f file [-F filter=value ...] [-d] [-h]\n", 
-      "    D: database to export from.\n",
-      "    b: batch ID of the dataset to export.\n",
-      "    f: file to output data.\n",
-      "    o: type of data to export: 'tsv' or 'xls'.\n",
-      "    F: one or more filters in the format name=value.\n",
-      "    h: display this help message.\n",
-      "    d: turn on debug output.\n\n";
-  exit(0);
+    version();
+
+    print STDERR 
+        "export_sql.pl -D db -b batch_id -f file -o tsv|xls [-F filter=value ...] [-d] [-h]\n", 
+        "    D: database to export from.\n",
+        "    b: batch ID of the dataset to export.\n",
+        "    f: file to output data.\n",
+        "    o: type of data to export: 'tsv' or 'xls'.\n",
+        "    F: one or more filters in the format name=value.\n",
+        "    h: display this help message.\n",
+        "    d: turn on debug output.\n\n";
+    exit(0);
 }

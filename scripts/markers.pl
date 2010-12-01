@@ -25,6 +25,8 @@
 use strict;
 use DBI;
 
+use constant stacks_version => "_VERSION_";
+
 my $mysql_config = "_PKGDATADIR_" . "/sql/mysql.cnf";
 my $debug        = 0;
 my $db           = "";
@@ -536,6 +538,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-D$/) { $db       = shift @ARGV; }
 	elsif ($_ =~ /^-b$/) { $batch_id = shift @ARGV; }
 	elsif ($_ =~ /^-o$/) { $out_path = shift @ARGV; }
+	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
 	    print STDERR "Unknown command line options received: $_\n";
@@ -554,8 +557,14 @@ sub parse_command_line {
     }
 }
 
+sub version {
+    print STDERR "markers.pl ", stacks_version, "\n";
+}
+
 sub usage {
-	print << "EOQ";
+    version();
+
+    print << "EOQ";
 markers.pl -b id [-D db] [-o path] [-d] [-h]
   D: radtag database to examine.
   b: Batch ID to examine.

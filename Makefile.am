@@ -53,23 +53,29 @@ EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 
 install-data-hook:
-	sed -e 's,_BINDIR_,$(bindir)/,g' $(DESTDIR)$(bindir)/denovo_map.pl > $(DESTDIR)$(bindir)/denovo_map.pl.subst
+	sed -e 's,_VERSION_,$(VERSION),' -e 's,_BINDIR_,$(bindir)/,g' $(DESTDIR)$(bindir)/denovo_map.pl > $(DESTDIR)$(bindir)/denovo_map.pl.subst
 	mv $(DESTDIR)$(bindir)/denovo_map.pl.subst $(DESTDIR)$(bindir)/denovo_map.pl
 	chmod +x $(DESTDIR)$(bindir)/denovo_map.pl
-	sed -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/export_sql.pl > $(DESTDIR)$(bindir)/export_sql.pl.subst
+	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/export_sql.pl > $(DESTDIR)$(bindir)/export_sql.pl.subst
 	mv $(DESTDIR)$(bindir)/export_sql.pl.subst $(DESTDIR)$(bindir)/export_sql.pl
 	chmod +x $(DESTDIR)$(bindir)/export_sql.pl
-	sed -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/index_radtags.pl > $(DESTDIR)$(bindir)/index_radtags.pl.subst
+	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/index_radtags.pl > $(DESTDIR)$(bindir)/index_radtags.pl.subst
 	mv $(DESTDIR)$(bindir)/index_radtags.pl.subst $(DESTDIR)$(bindir)/index_radtags.pl
 	chmod +x $(DESTDIR)$(bindir)/index_radtags.pl
-	sed -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/markers.pl > $(DESTDIR)$(bindir)/markers.pl.subst
+	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/markers.pl > $(DESTDIR)$(bindir)/markers.pl.subst
 	mv $(DESTDIR)$(bindir)/markers.pl.subst $(DESTDIR)$(bindir)/markers.pl
 	chmod +x $(DESTDIR)$(bindir)/markers.pl
-	sed -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_LOCALSTATEDIR_,$(pkglocalstatedir)/,g' \
+	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_LOCALSTATEDIR_,$(pkglocalstatedir)/,g' \
 		$(DESTDIR)$(bindir)/genotypes.pl > $(DESTDIR)$(bindir)/genotypes.pl.subst
 	mv $(DESTDIR)$(bindir)/genotypes.pl.subst $(DESTDIR)$(bindir)/genotypes.pl
 	chmod +x $(DESTDIR)$(bindir)/genotypes.pl
-	sed -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_BINDIR_,$(bindir)/,g' \
+	sed -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/load_radtags.pl > $(DESTDIR)$(bindir)/load_radtags.pl.subst
+	mv $(DESTDIR)$(bindir)/load_radtags.pl.subst $(DESTDIR)$(bindir)/load_radtags.pl
+	chmod +x $(DESTDIR)$(bindir)/load_radtags.pl
+	sed -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/process_radtags.pl > $(DESTDIR)$(bindir)/process_radtags.pl.subst
+	mv $(DESTDIR)$(bindir)/process_radtags.pl.subst $(DESTDIR)$(bindir)/process_radtags.pl
+	chmod +x $(DESTDIR)$(bindir)/process_radtags.pl
+	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_BINDIR_,$(bindir)/,g' \
 		$(DESTDIR)$(bindir)/stacks_export_notify.pl > $(DESTDIR)$(bindir)/stacks_export_notify.pl.subst
 	mv $(DESTDIR)$(bindir)/stacks_export_notify.pl.subst $(DESTDIR)$(bindir)/stacks_export_notify.pl
 	chmod +x $(DESTDIR)$(bindir)/stacks_export_notify.pl

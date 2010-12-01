@@ -21,6 +21,7 @@
 #ifndef __MODELS_H__
 #define __MODELS_H__
 
+#include <string.h>
 #include <math.h>
 #include <string>
 using std::string;
@@ -31,6 +32,7 @@ using std::map;
 #include <utility>
 using std::pair;
 using std::make_pair;
+#include <algorithm>
 #include <iostream>
 using std::ifstream;
 using std::cin;

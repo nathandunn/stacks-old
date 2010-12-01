@@ -22,6 +22,7 @@
 #define __KMERS_H__
 
 #include <math.h>
+#include <string.h>
 #include <string>
 using std::string;
 #include <vector>
@@ -40,7 +41,6 @@ using std::endl;
 
 #ifdef __GNUC__
 #include <ext/hash_map>
-#include <ext/hash_fun.h>
 using __gnu_cxx::hash_map;
 using __gnu_cxx::hash;
 #else
