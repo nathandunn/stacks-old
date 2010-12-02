@@ -59,7 +59,7 @@ parse_command_line();
 #
 # Make sure the SQL definition files are available
 #
-if (!-e $cache_path) {
+if ($corrections && !-e $cache_path) {
     print STDERR "Unable to locate the path to store cache files '$cache_path'.\n";
     usage();
 }
@@ -144,8 +144,12 @@ sub export_joinmap_bc1_map {
     #
     # Cache the sequencing reads for markers in the parents/progeny.
     #
-    #print STDERR "Caching marker sequences...\n";
-    my $cache;# = cache_progeny_seqs(\%sth, $cache_path, \@loci, \%marker_list, \%sample_ids);
+    my $cache;
+
+    if ($corrections) {
+        print STDERR "Caching marker sequences...\n";
+        $cache = cache_progeny_seqs(\%sth, $cache_path, \@loci, \%marker_list, \%sample_ids);
+    }
 
     #
     # Fetch the parents/progeny for each locus
@@ -262,8 +266,12 @@ sub export_joinmap_cp_map {
     #
     # Cache the sequencing reads for markers in the parents/progeny.
     #
-    print STDERR "Caching marker sequences...\n";
-    my $cache = cache_progeny_seqs(\%sth, $cache_path, \@loci, \%marker_list, \%sample_ids);
+    my $cache;
+
+    if ($corrections) {
+        print STDERR "Caching marker sequences...\n";
+        $cache = cache_progeny_seqs(\%sth, $cache_path, \@loci, \%marker_list, \%sample_ids);
+    }
 
     #
     # Fetch the parents/progeny for each locus
@@ -282,7 +290,7 @@ sub export_joinmap_cp_map {
     }
     print STDERR "\n";
 
-    apply_corrected_genotypes($sth, \@loci) if ($corrections);
+    apply_corrected_genotypes($sth, \@loci) if ($man_corrections);
 
     if ($category) {
 	foreach $key (keys %types) {
@@ -427,13 +435,15 @@ sub parse_record {
     $href->{'id'}        = $parts[0];
     $href->{'sample_id'} = $parts[1];
     $href->{'tag_id'}    = $parts[2];
-    $href->{'rel'}       = $parts[3];
-    $href->{'subseq_id'} = $parts[4];
-    $href->{'read_id'}   = $parts[5];
-    $href->{'seq'}       = $parts[6];
-    $href->{'delev'}     = $parts[7];
-    $href->{'black'}     = $parts[8];
-    $href->{'removed'}   = $parts[9];
+    $href->{'chr'}       = $parts[3];
+    $href->{'bp'}        = $parts[4];
+    $href->{'rel'}       = $parts[5];
+    $href->{'subseq_id'} = $parts[6];
+    $href->{'read_id'}   = $parts[7];
+    $href->{'seq'}       = $parts[8];
+    $href->{'delev'}     = $parts[9];
+    $href->{'black'}     = $parts[10];
+    $href->{'removed'}   = $parts[11];
 
     return $href;
 }
@@ -811,6 +821,12 @@ sub call_bc1_genotypes {
 
     my (@keys, $key, $row, $allele, $m, $ptags, %parents, %progeny, %genotype_map, %rev_geno_map);
 
+    my $check_genotypes = {'aaxbb' => \&check_aaxbb_genotype,
+                           'bbxaa' => \&check_aaxbb_genotype,
+			   'abxcc' => \&check_abxcc_genotype,
+                           'ccxab' => \&check_ccxab_genotype
+			   };
+
     my $create_genotype_map = {'aaxbb' => \&create_aaxbb_genotype_map,
                                'bbxaa' => \&create_bbxaa_genotype_map,
                                'abxcc' => \&create_abxcc_genotype_map,
@@ -872,6 +888,13 @@ sub call_bc1_genotypes {
             $m = $alleles[0];
         }
         $m = "-" if (grep(/^\-$/, @alleles));
+
+	#
+	# Check the genotype, correct any errors.
+	#
+        if ($corrections) {
+            $m = $check_genotypes->{$marker}->($sth, $cache, $tag_id, $sample_ids->{$key}, $keys[0], \%genotype_map, \%rev_geno_map, $m);
+        }
 
 	if (!defined($genotypes->{$marker}->{lc($m)})) {
 	    print STDERR "Warning: illegal genotype encountered in tag $tag_id, progeny $key, '$m'\n" if ($debug);
@@ -986,7 +1009,9 @@ sub call_cp_genotypes {
 	#
 	# Check the genotype, correct any errors.
 	#
-	$m = $check_genotypes->{$marker}->($sth, $cache, $tag_id, $sample_ids->{$key}, $keys[0], \%genotype_map, \%rev_geno_map, $m);
+        if ($corrections) {
+            $m = $check_genotypes->{$marker}->($sth, $cache, $tag_id, $sample_ids->{$key}, $keys[0], \%genotype_map, \%rev_geno_map, $m);
+        }
 
 	if (!defined($genotypes->{$marker}->{lc($m)})) {
 	    print STDERR "Warning: illegal genotype encountered in tag $tag_id, progeny $key, '$m'\n" if ($debug);
@@ -1311,10 +1336,12 @@ sub check_efxeg_genotype {
 
     print STDERR "Sample: $sample_id; Tag: $tag_id: Genotype; $gtype\n" if ($debug);
 
-    my ($reads, $row, @snps, @alleles, @nucs, $nuc, $allele, $rev_gtype, $key, $homozygous, $a);
+    my ($reads, $row, @snps, @alleles, @nucs, $nuc, $allele, $rev_gtype, $key, $homozygous, $a, $orig_gtype);
 
-    $key   = $sample_id . "_" . $tag_id;
-    $reads = $cache->get($key);
+    $orig_gtype = $gtype;
+    $key        = $sample_id . "_" . $tag_id;
+    $reads      = $cache->get($key);
+
     if (!defined($reads)) {
 	print STDERR "Unable to locate cached object with key $key\n"; 
 	return;
@@ -1351,11 +1378,6 @@ sub check_efxeg_genotype {
             $homozygous = check_homozygosity($reads, $row->{'col'}, $row->{'rank_1'}, $row->{'rank_2'});
             $nuc        = shift @nucs;
 
-            #if ($homozygous == false) {
-            #    $allele .= $nuc eq $row->{'rank_1'} ? $row->{'rank_2'} : $row->{'rank_1'};
-            #} elsif ($homozygous == true) {
-            #    $allele .= $nuc;
-            #} els
             if ($homozygous == unknown) {
                 $allele .= "N";
             } else {
@@ -1372,10 +1394,82 @@ sub check_efxeg_genotype {
 	"  Allele: $allele; Gtype: $gtype\n",
 	"  Ending Genotype: $gtype\n" if ($debug);
 
-    return $gtype;
+    if ($gtype eq $orig_gtype) {
+        return $gtype;
+    } else {
+        return uc($gtype);
+    }
 }
 
 sub check_abxcd_genotype {
+    my ($sth, $cache, $catalog_id, $sample_id, $tag_id, $map, $rev_map, $gtype) = @_;
+
+    return $gtype;
+}
+
+sub check_aaxbb_genotype {
+    my ($sth, $cache, $catalog_id, $sample_id, $tag_id, $map, $rev_map, $gtype) = @_;
+
+    return $gtype if ($gtype eq "h");
+
+    print STDERR "Sample: $sample_id; Tag: $tag_id: Genotype; $gtype\n" if ($debug);
+
+    my ($reads, $row, $key, $homozygous, $rev_gtype, @snps, @nucs, $nuc, $allele, $orig_gtype);
+
+    $orig_gtype = $gtype;
+    $key        = $sample_id . "_" . $tag_id;
+    $reads      = $cache->get($key);
+
+    if (!defined($reads)) {
+	print STDERR "Unable to locate cached object with key $key\n"; 
+	return;
+    }
+
+    $sth->{'snp'}->execute($batch_id, $catalog_id)
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'snp'}->fetchrow_hashref()) {
+        push(@snps, $row);
+    }
+
+    $rev_gtype = $rev_map->{$gtype};
+    print STDERR "  Allele: ", $gtype, "; reverse genotype: ", $rev_gtype, "\n" if ($debug);
+
+    @nucs   = split(//, $rev_gtype);
+    $allele = "";
+
+    foreach $row (@snps) {
+        $homozygous = check_homozygosity($reads, $row->{'col'}, $row->{'rank_1'}, $row->{'rank_2'});
+        $nuc        = shift @nucs;
+
+        if ($homozygous == true) {
+            $allele .= $nuc;
+        } elsif ($homozygous == false) {
+            $allele .= ($nuc eq $row->{'rank_1'}) ? $row->{'rank_2'} : $row->{'rank_1'};
+        } else {
+            $allele .= "N";
+        }
+    }
+
+    print STDERR "    Adding allele '$allele', which maps to '", $map->{$allele}, "' to the genotype\n" if ($debug);
+    $gtype = defined($map->{$allele}) ? $map->{$allele} : $gtype;
+
+    print STDERR "  Ending Genotype: $gtype\n" if ($debug);
+
+    if ($gtype eq $orig_gtype) {
+        return $gtype;
+    } else {
+        return uc($gtype);
+    }
+}
+
+sub check_abxcc_genotype {
+    my ($sth, $cache, $catalog_id, $sample_id, $tag_id, $map, $rev_map, $gtype) = @_;
+
+    return $gtype;
+}
+
+sub check_ccxab_genotype {
     my ($sth, $cache, $catalog_id, $sample_id, $tag_id, $map, $rev_map, $gtype) = @_;
 
     return $gtype;
@@ -1404,6 +1498,8 @@ sub check_homozygosity {
     my ($reads, $col, $rank_1, $rank_2) = @_;
 
     my (@res, $height, $nuc, $homozygous, $row);
+
+    print STDERR "  Examining col $col, rank 1: $rank_1; rank 2: $rank_2\n" if ($debug);
 
     $height     = scalar(@{$reads});
     $homozygous = true;
@@ -1437,7 +1533,7 @@ sub check_homozygosity {
     # report this tag as a heterozygote.
     #
     my $frac = $nuc->{$res[1]} / $height;
-    #print STDERR "    Frac: $frac; $nuc->{$res[1]} $height\n";
+    print STDERR "    Frac: $frac; Second-most Prominent Nuc count: $nuc->{$res[1]}; Depth: $height\n" if ($debug);
 
     if ($homozygous == false && $frac < min_het_seqs) {
 	$homozygous = true;
@@ -1533,11 +1629,11 @@ sub parse_command_line {
 	if    ($_ =~ /^-d$/) { $debug++; }
 	elsif ($_ =~ /^-D$/) { $db            = shift @ARGV; }
 	elsif ($_ =~ /^-P$/) { $uni_path      = shift @ARGV; }
-        elsif ($_ =~ /^-C$/) { $cache_path    = shift @ARGV; }
+        elsif ($_ =~ /^-A$/) { $cache_path    = shift @ARGV; }
 	elsif ($_ =~ /^-b$/) { $batch_id      = shift @ARGV; }
 	elsif ($_ =~ /^-t$/) { $map_type      = shift @ARGV; }
-	elsif ($_ =~ /^-c$/) { $category++; }
-	elsif ($_ =~ /^-C$/) { $corrections++; }
+	elsif ($_ =~ /^-c$/) { $corrections++; }
+	elsif ($_ =~ /^-C$/) { $man_corrections++; }
 	elsif ($_ =~ /^-B$/) { $blast_only++; }
         elsif ($_ =~ /^-E$/) { $exclude_blast++; }
         elsif ($_ =~ /^-i$/) { $expand_id++; }
@@ -1593,16 +1689,16 @@ sub usage {
     version();
 
     print << "EOQ";
-genotypes.pl -t map_type -D db -P path [-b id] [-p min] [-c] [-o path] [-s] [-C] [-B] [-E] [-C path] [-d] [-h]
+genotypes.pl -t map_type -D db -P path [-b id] [-p min] [-c] [-o path] [-s] [-C] [-B] [-E] [-A path] [-d] [-h]
   t: map type to write. 'CP' and 'BC1' are the currently supported map types.
   P: path to the Stacks output files.
   D: radtag database to examine.
   b: Batch ID to examine when exporting from the catalog.
   o: output file.
   c: make automated corrections to the data.
+  C: apply manual corrections (that were made via the web interface) to the data.
   p: minimum number of progeny required to print a marker.
   s: output a file to import results into an SQL database.
-  C: apply manual corrections to the data.
   E: exclude genotypes related to a marker with a BLAST hit.
   B: only export genotypes related to a marker with BLAST hits.
   C: specify a path to the data cache.
