@@ -1,3 +1,32 @@
+0. Prerequisites
+
+Stacks should build on any standard UNIX-like environment (Apple OS X, Linux, 
+etc.) To make full use of the system, however, Stacks utilizes the MySQL database
+server to provide various functions to store, sort, and export the data. 
+
+Several Perl scripts are distributed with Stacks to provide the MySQL interaction. For
+these to work, you must have the Perl DBI module installed with the MySQL driver.
+
+Likewise, to view the data, Stacks uses a web-based interface (written in PHP) that 
+interacts with the database. For this to work, you must have a PHP-enabled web server 
+installed as well as the MDB2 Pear module to provide MySQL interaction.
+
+If you want to export data in Microsoft Excel Spreadsheets, you will need the 
+Spreadsheet::WriteExcel Perl module.
+
+Most server installations will provide Apache, MySQL, Perl, and PHP by default. While 
+installing these components is beyond these instructions, here are some links that might
+be useful:
+
+  1. MySQL Database: http://www.mysql.com/downloads/mysql/
+  2. Perl interface to MySQL: http://search.cpan.org/dist/DBD-mysql/
+  3. Spreadsheet Perl Module: http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel-2.37/
+  4. MDB2 Pear Module: http://pear.php.net/package/MDB2/
+
+(Perl modules are easily installed with the cpan tool, and similarly, PHP modules are
+ easily installed with the pear tool. Many operating systems already have these tools
+ installed - such as OS X and some Linux distributions.)
+
 1. Build the software. Stacks uses the standard autotools install:
 
 % tar xfvz stacks_x.xx.tar.gz
@@ -42,15 +71,25 @@ credentials instead of setting up new, common ones.
 
 3. Enable the Stacks web interface in the Apache webserver.
 
-Add a line to your apache configuration similar to: 
+Add the following lines to your apache configuration to make the Stacks PHP
+files visible to the web server and to provide a easily readable URL to access
+them: 
+
+<Directory "/Library/WebServer/Documents/teleost/calendar">
+        Order deny,allow
+        Deny from all
+        Allow from all
+</Directory>
 
 Alias /stacks "/usr/local/share/stacks/php"
 
-Edit the PHP configuration file to allow it access to the MySQL
-database. Change the constants.php file to include the proper database
+Edit the PHP configuration file (constants.php) to allow it access to the 
+MySQL database. Change the file to include the proper database
 username ($db_user), password ($db_pass), and hostname ($db_host).
 
-You may find it advantageous to create a MySQL user with very limited
+% vi /usr/local/share/stacks/php/constants.php
+
+You may find it advantageous to create a specific MySQL user with limited
 permissions - SELECT, UPDATE, and DELETE to allow users to interact
 with the database through the web interface.
 
@@ -60,7 +99,9 @@ Edit the stacks_export_notify.pl script to specify the email and SMTP
 server to use in notification messages.
 
 Ensure that the permissions of the php/export directory allow the
-webserver to write to it.
+webserver to write to it. Assuming your web server user is 'www':
+
+% chown www /usr/local/share/stacks/php/export
 
 5. Change the permissions on the cache directory (default /usr/local/var/stacks/cache)
 so that the user executing the Stacks pipeline will have permissions to write

@@ -1701,7 +1701,7 @@ genotypes.pl -t map_type -D db -P path [-b id] [-p min] [-c] [-o path] [-s] [-C]
   s: output a file to import results into an SQL database.
   E: exclude genotypes related to a marker with a BLAST hit.
   B: only export genotypes related to a marker with BLAST hits.
-  C: specify a path to the data cache.
+  A: specify a path to the data cache.
   h: display this help message.
   d: turn on debug output.
 
