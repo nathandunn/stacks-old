@@ -239,6 +239,11 @@ sub write_results {
     }
 
     #
+    # Order the samples by sample ID
+    #
+    my @ordered_sam = sort {$samples->{$a} <=> $samples->{$b}} keys %{$samples};
+
+    #
     # Print the heading out for the spreadsheet
     #
     my $i = 0;
@@ -257,7 +262,7 @@ sub write_results {
         "Alleles\t" .
         "Deleveraged\t";
 
-    foreach $id (keys %{$samples}) {
+    foreach $id (@ordered_sam) {
         $str .= $id . "\t";
     }
     $str  = substr($str, 0, -1);
@@ -283,7 +288,7 @@ sub write_results {
             $locus->{'alleles'} . "\t" .
             $locus->{'delev'} . "\t";
 
-        foreach $id (keys %{$samples}) {
+        foreach $id (@ordered_sam) {
             $types = $locus->{'gtypes'}->{$id};
 
             if (!defined($types)) {
@@ -310,7 +315,7 @@ sub write_results {
     $type eq "xls" ? write_excel($worksheet, $i, $str) : print $out_fh $str;
     $i++;
 
-    foreach $id (keys %{$samples}) {
+    foreach $id (@ordered_sam) {
         $str = $samples->{$id} . "\t" . $id . "\n";
         $type eq "xls" ? write_excel($worksheet, $i, $str) : print $out_fh $str;
         $i++;
