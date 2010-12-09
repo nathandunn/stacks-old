@@ -322,7 +322,7 @@ int dist(MergedStack *tag_1, Seq *rem) {
     int   dist  = 0;
     char *p     = tag_1->con;
     char *q     = rem->seq;
-    int   q_len = strlen(q);
+    uint  q_len = strlen(q);
     char *p_end = p + tag_1->len;
     char *q_end = q + q_len;
 

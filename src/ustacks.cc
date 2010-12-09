@@ -1026,6 +1026,11 @@ int reduce_radtags(HashMap &radtags, map<int, Stack *> &unique, map<int, Seq *> 
 	}
     }
 
+    if (unique.size() == 0) {
+        cerr << "Error: Unable to form any stacks, data appear to be unique.\n";
+        exit(1);
+    }
+
     return 0;
 }
 
@@ -1471,11 +1476,16 @@ int load_radtags(string in_file, HashMap &radtags) {
     }
     cerr << "Loaded " << i << " RAD-Tags; inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n";
 
+    if (i == 0) {
+        cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
+        exit(1);
+    }
+
     //
     // Check to make sure all the reads are of the same length.
     //
     HashMap::iterator it;
-    int len = strlen(radtags.begin()->first);
+    uint len = strlen(radtags.begin()->first);
     for (it = radtags.begin(); it != radtags.end(); it++)
         if (strlen((*it).first) != len)
             cerr << "  Warning: '" << (*it).second.id[0]->id << "' has a different length.\n";
