@@ -94,6 +94,8 @@ create table unique_tags (
        deleveraged  bool default false,
        blacklisted  bool default false,
        removed      bool default false,
+       cohort_id    int unsigned not null,
+       lnl          float,
        INDEX        tag_id_index (tag_id),
        INDEX        sample_id_index (sample_id),
        INDEX        rel_index (relationship)

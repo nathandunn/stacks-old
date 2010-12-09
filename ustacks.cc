@@ -801,9 +801,14 @@ int deleverage(map<int, Stack *> &unique,
             //cerr << "  Locus #" << k << ": " << tag_1->write_cmb() << "; lnl: " << tag_1->lnl << "\n";
         }
 
-        //double weighted_lnl = ((2 * it->second.size()) * (n / (n - it->second.size() - 1))) - (2 * comb_lnl);
-        double weighted_lnl = (2 * (pow(2, it->second.size()) + pow(2, it->second.size()))) - (2 * comb_lnl);
-        //double weighted_lnl = (2 * it->second.size()) - (2 * comb_lnl);
+        //
+        // Parabola, origin centered on 2 loci: (x-1.5)**2 + x + 1
+        //
+        double x = it->second.size() - 1.5 > 0 ? it->second.size() : 1;
+        double weighted_lnl = ((1 * pow(x, 2)) + it->second.size() + 1) - (1 * comb_lnl);
+        //double weighted_lnl = ((2 * it->second.size()) * (n / (n - it->second.size() - 1))) - (2 * comb_lnl); // aicc
+        //double weighted_lnl = (2 * (pow(2, it->second.size()) + pow(2, it->second.size()))) - (2 * comb_lnl); 
+        //double weighted_lnl = (2 * it->second.size()) - (2 * comb_lnl); // aic
         //cerr << "  Total LnL: " << comb_lnl << "; weighted LnL: " << weighted_lnl << "\n";
 
         lnls.push_back(make_pair(it->first, weighted_lnl));
