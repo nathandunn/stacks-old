@@ -484,16 +484,10 @@ int load_radtags(string in_file, HashMap &radtags) {
     Input *fh;
     Seq *c;
 
-    if (in_file_type == tsv)
-        fh = new Tsv(in_file.c_str());
-    else if (in_file_type == bowtie)
+    if (in_file_type == bowtie)
         fh = new Bowtie(in_file.c_str());
     else if (in_file_type == sam)
         fh = new Sam(in_file.c_str());
-    else if (in_file_type == fasta)
-        fh = new Fasta(in_file.c_str());
-    else if (in_file_type == fastq)
-        fh = new Fastq(in_file.c_str());
 
     cerr << "  Parsing " << in_file.c_str() << "\n";
 
@@ -503,6 +497,11 @@ int load_radtags(string in_file, HashMap &radtags) {
 
 	radtags[c->seq].push_back(c);
         i++;
+    }
+
+    if (i == 0) {
+        cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
+        exit(1);
     }
 
     cerr << "  " <<
@@ -600,16 +599,10 @@ int parse_command_line(int argc, char* argv[]) {
 	    help();
 	    break;
      	case 't':
-            if (strcmp(optarg, "tsv") == 0)
-                in_file_type = tsv;
-            else if (strcmp(optarg, "bowtie") == 0)
+            if (strcmp(optarg, "bowtie") == 0)
                 in_file_type = bowtie;
             else if (strcmp(optarg, "sam") == 0)
                 in_file_type = sam;
-            else if (strcmp(optarg, "fasta") == 0)
-                in_file_type = fasta;
-            else if (strcmp(optarg, "fastq") == 0)
-                in_file_type = fastq;
             else
                 in_file_type = unknown;
 	    break;
@@ -681,9 +674,9 @@ void help() {
     std::cerr << "pstacks " << VERSION << "\n"
               << "pstacks -t file_type -f file_path [-o path] [-i id] [-b batch_id] [-e errfreq] [-p num_threads] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-	      << "  t: input file Type. Supported types: fasta, fastq, bowtie, sam, tsv.\n"
+	      << "  t: input file Type. Supported types: bowtie, sam.\n"
               << "  f: input file path.\n"
-	      << "  y: output file type.\n"
+        //<< "  y: output file type.\n"
 	      << "  o: output path to write results.\n"
 	      << "  i: SQL ID to insert into the output to identify this sample.\n"
 	      << "  b: SQL Batch ID to insert into the output to identify a group of samples.\n"

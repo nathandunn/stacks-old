@@ -56,7 +56,7 @@ parse_command_line();
 #
 # Check for the existence of the necessary pipeline programs
 #
-die ("Unable to find '" . $exe_path . "ustacks'.\n") if (!-e $exe_path . "ustacks" || !-x $exe_path . "ustacks");
+die ("Unable to find '" . $exe_path . "pstacks'.\n") if (!-e $exe_path . "pstacks" || !-x $exe_path . "pstacks");
 die ("Unable to find '" . $exe_path . "cstacks'.\n") if (!-e $exe_path . "cstacks" || !-x $exe_path . "cstacks");
 die ("Unable to find '" . $exe_path . "sstacks'.\n") if (!-e $exe_path . "sstacks" || !-x $exe_path . "sstacks");
 die ("Unable to find '" . $exe_path . "index_radtags.pl'.\n") if (!-e $exe_path . "index_radtags.pl" || !-x $exe_path . "index_radtags.pl");
@@ -83,18 +83,15 @@ foreach $parent (@progeny) {
     push(@types, "progeny");
 }
 
-my (@results, $minc, $mind, $rrep, $cmd, $cscale, $threads, $fuzzym);
+my (@results, $rrep, $cmd, $threads, $fuzzym);
 
-$minc    = $min_cov     > 0 ? "-m $min_cov"     : "";
-$mind    = $min_dist    > 0 ? "-M $min_dist"    : "";
-$cscale  = $cov_scale   > 0 ? "-S $cov_scale"   : "";
 $threads = $num_threads > 0 ? "-p $num_threads" : ""; 
 $fuzzym  = "-n $fuzzy_match";
 
 #
 # Open the log file
 #
-$log = "$out_path/denovo_map.log";
+$log = "$out_path/ref_map.log";
 open($log_fh, ">$log") or die("Unable to open log file '$log'; $!\n");
 
 foreach $sample (@parents, @progeny) {
@@ -108,10 +105,10 @@ foreach $sample (@parents, @progeny) {
         $pfile = $prefix;
     }
 
-    if ($suffix =~ /^fa_?\d?$/ || $suffix =~ /^fasta_?\d?$/) {
-        $ftype = "fasta";
-    } elsif ($suffix =~ /^fq$/ || $suffix =~ /^fastq_?\d?$/) {
-        $ftype = "fastq";
+    if ($suffix =~ /^bowtie$/ || $suffix =~ /^map$/) {
+        $ftype = "bowtie";
+    } elsif ($suffix =~ /^sam$/) {
+        $ftype = "sam";
     } else {
         die("Unknown input file type.\n");
     }
@@ -142,7 +139,7 @@ foreach $sample (@parents, @progeny) {
 	$rrep = "";
     }
 
-    $cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -b $batch_id -i $sample_id $rrep $minc $mind $cscale $threads 2>&1";
+    $cmd = $exe_path . "pstacks -t $ftype -f $sample -o $out_path -b $batch_id -i $sample_id $threads 2>&1";
     print STDERR "$cmd\n";
     print $log_fh    "$cmd\n";
     @results = `$cmd`;
@@ -299,24 +296,21 @@ sub parse_command_line {
 }
 
 sub version {
-    print STDERR "denovo_map.pl ", stacks_version, "\n";
+    print STDERR "ref_map.pl ", stacks_version, "\n";
 }
 
 sub usage {
     version();
 
     print STDERR <<EOQ; 
-denovo_map.pl -p path -r path -o path [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-T num_threads] [-b batch_id -D desc -a yyyy-mm-dd] [-S -s num] [-e path] [-d] [-h]
-    p: path to a FASTQ/FASTA file containing parent sequences.
-    r: path to a FASTQ/FASTA file containing progeny sequences.
+ref_map.pl -p path -r path -o path [-n mismatches] [-T num_threads] [-B db -b batch_id -D "desc" -a yyyy-mm-dd] [-S -s id] [-e path] [-d] [-h]
+    p: path to a Bowtie/SAM file containing parent sequences.
+    r: path to a Bowtie/SAM file containing progeny sequences.
     o: path to write pipeline output files.
-    m: specify a minimum number of identical, raw reads required to create a stack.
-    M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
-    t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
     T: specify the number of threads to execute.
     B: specify a database to load data into.
-    b: batch ID representing this dataset.
+    b: batch ID representing this dataset in the database.
     D: batch description
     a: batch run date, yyyy-mm-dd
     S: disable recording SQL data in the database.
