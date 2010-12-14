@@ -57,9 +57,9 @@ my $sql             = 0;
 parse_command_line();
 
 #
-# Make sure the SQL definition files are available
+# Make sure the cache location exists
 #
-if ($corrections && !-e $cache_path) {
+if ($corrections > 0 && !-e $cache_path) {
     print STDERR "Unable to locate the path to store cache files '$cache_path'.\n";
     usage();
 }
@@ -139,14 +139,14 @@ sub export_joinmap_bc1_map {
     # Fetch a list of all the loci we will examine
     #
     print STDERR "Fetching loci...\n";
-    fetch_loci($sth, \@loci);
+    fetch_loci($sth, \@loci, \%types);
 
     #
     # Cache the sequencing reads for markers in the parents/progeny.
     #
     my $cache;
 
-    if ($corrections) {
+    if ($corrections > 0) {
         print STDERR "Caching marker sequences...\n";
         $cache = cache_progeny_seqs(\%sth, $cache_path, \@loci, \%marker_list, \%sample_ids);
     }
@@ -261,14 +261,14 @@ sub export_joinmap_cp_map {
     # Fetch a list of all the loci we will examine
     #
     print STDERR "Fetching loci...\n";
-    fetch_loci($sth, \@loci);
+    fetch_loci($sth, \@loci, \%types);
 
     #
     # Cache the sequencing reads for markers in the parents/progeny.
     #
     my $cache;
 
-    if ($corrections) {
+    if ($corrections > 0) {
         print STDERR "Caching marker sequences...\n";
         $cache = cache_progeny_seqs(\%sth, $cache_path, \@loci, \%marker_list, \%sample_ids);
     }
@@ -712,7 +712,7 @@ sub write_cp_loci {
 }
 
 sub fetch_loci {
-    my ($sth, $loci) = @_;
+    my ($sth, $loci, $genotypes) = @_;
 
     my ($row, $href, $wl_keys, $wl_fh);
     my %whitelist;
@@ -747,6 +747,7 @@ sub fetch_loci {
 	$href->{'marker'} = $row->{'marker'};
 	$href->{'ext_id'} = $row->{'external_id'};
 
+        next if (!defined($genotypes->{$href->{'marker'}}));
 	next if ($wl_keys && !defined($whitelist{$href->{'id'}}));
 
 	push(@{$loci}, $href);
@@ -892,7 +893,7 @@ sub call_bc1_genotypes {
 	#
 	# Check the genotype, correct any errors.
 	#
-        if ($corrections) {
+        if ($corrections > 0) {
             $m = $check_genotypes->{$marker}->($sth, $cache, $tag_id, $sample_ids->{$key}, $keys[0], \%genotype_map, \%rev_geno_map, $m);
         }
 
@@ -933,6 +934,7 @@ sub call_cp_genotypes {
     #
     # Create a map between alleles and genotype symbols
     #
+
     $create_genotype_map->{$marker}->($order, $marker, $tag_id, \%parents, \%genotype_map);
 
     #
@@ -1009,7 +1011,7 @@ sub call_cp_genotypes {
 	#
 	# Check the genotype, correct any errors.
 	#
-        if ($corrections) {
+        if ($corrections > 0) {
             $m = $check_genotypes->{$marker}->($sth, $cache, $tag_id, $sample_ids->{$key}, $keys[0], \%genotype_map, \%rev_geno_map, $m);
         }
 
