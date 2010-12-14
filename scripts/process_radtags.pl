@@ -47,9 +47,10 @@ my $barcode_size = 5;
 
 my %encoded;
 my $tag  = 'sbfI';
-my %tags = ('sbfI'  => 'TGCAGG',
-	    'pstI'  => 'TGCAG',
-	    'ecoRI' => 'AATTC');
+my %tags = ('sbfI'  => ['TGCAGG'],  # CCTGCA/GG, SbfI
+	    'pstI'  => ['TGCAG'],   # CTGCA/G, PstI
+	    'ecoRI' => ['AATTC'],   # G/AATTC, EcoRI
+	    'sgrAI' => ['CCGGCG', 'CCGGTG']); # CR/CCGGYG, SgrAI; R=A or G; Y=C or T
 
 my $input_types  = {'fastq' => \&parse_fastq_record,
                     'raw'   => \&parse_raw_record
@@ -189,6 +190,8 @@ sub process_paired_reads {
 sub process_singlet {
     my ($href, $barcode_log, $counter, $paired_end) = @_;
 
+    my ($rad_cor, $t);
+
     #
     # If requested, truncate this read to $truncate nucleotides
     #
@@ -236,7 +239,11 @@ sub process_singlet {
 	#
 	# Is the RADTAG intact?
 	#
-	if (substr($href->{'seq'}, 0, length($tags{$tag})) ne $tags{$tag}) {
+        $rad_cor = 0;
+        foreach $t (@{$tags{$tag}}) {
+            $rad_cor++ if (substr($href->{'seq'}, 0, length($tags{$tag})) ne $tags{$tag});
+        }
+        if ($rad_cor == 0) {
 	    #
 	    # Try to correct the RAD-Tag.
 	    #
@@ -388,19 +395,24 @@ sub correct_radtag {
 
     return 0 if (!$recover);
 
+    my ($t, $dist);
+
     #
     # If the RAD-Tag sequence is off by no more than a single nucleotide, correct it.
     #
-    my $dist = dist($tags{$tag}, substr($href->{'seq'}, 0, length($tags{$tag})));
+    foreach $t (@{$tags{$tag}}) {
 
-    if ($dist <= 1) {
-	#
-	# Correct the read.
-	#
-	$href->{'seq'} = $tags{$tag} . substr($href->{'seq'}, length($tags{$tag}));
-	$counter->{'recovered'}++;
+        $dist = dist($t, substr($href->{'seq'}, 0, length($t)));
 
-	return 1;
+        if ($dist <= 1) {
+            #
+            # Correct the read.
+            #
+            $href->{'seq'} = $t . substr($href->{'seq'}, length($t));
+            $counter->{'recovered'}++;
+
+            return 1;
+        }
     }
 
     return 0;
@@ -781,7 +793,7 @@ process_radtags.pl -p path -o path -b file [-s size] [-P] [-I input_type] [-e en
   c: clean data, remove any read with an uncalled base.
   q: discard reads with low quality scores.
   r: rescue barcodes and RAD-Tags.
-  e: specify the restriction enzyme to look for (either 'sbfI', 'pstI', or 'ecoRI').
+  e: specify the restriction enzyme to look for (either 'sbfI', 'pstI', 'ecoRI', or 'sgrAI').
   t: truncate final read length to this value.
   F: output a FASTQ file instead of a FASTA file.
   R: output data in the Raw BUSTARD format.
