@@ -220,8 +220,13 @@ int calc_kmer_distance(map<int, HLocus *> &loci, int stack_dist) {
                         //
                         // Add a match to the query sequence: catalog ID, catalog allele, query allele, distance
                         //
-                        if (d <= stack_dist)
+                        if (d <= stack_dist) {
+                            if (tag_1->depth < stack_depth_min ||
+                                tag_2->depth < stack_depth_min)
+                                continue;
+
                             tag_1->add_match(tag_2->uniq_id, d);
+                        }
                     }
                 }
             }

@@ -1,0 +1,4 @@
+Stacks 0.96 - Jan 7, 2011
+-------------------------
+	*Fixed typo in README giving the wrong file path for the Apache configuration file.
+	*Fixed several hard-coded paths in PHP files that referred to our local system.
