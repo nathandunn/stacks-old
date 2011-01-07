@@ -71,17 +71,20 @@ credentials instead of setting up new, common ones.
 
 3. Enable the Stacks web interface in the Apache webserver.
 
-Add the following lines to your apache configuration to make the Stacks PHP
+Add the following lines to your Apache configuration to make the Stacks PHP
 files visible to the web server and to provide a easily readable URL to access
 them: 
 
-<Directory "/Library/WebServer/Documents/teleost/calendar">
+<Directory "/usr/local/share/stacks/php">
         Order deny,allow
         Deny from all
         Allow from all
 </Directory>
 
 Alias /stacks "/usr/local/share/stacks/php"
+
+(See the Apache configuration for more information on what these do:
+http://httpd.apache.org/docs/2.0/mod/core.html#directory)
 
 Edit the PHP configuration file (constants.php) to allow it access to the 
 MySQL database. Change the file to include the proper database
