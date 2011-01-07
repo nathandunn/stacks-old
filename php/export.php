@@ -85,7 +85,7 @@ $tmp_file = $database . "_export_" . $date . ".xls";
 $tmp_path = $system_path . "/export/" . $tmp_file;
 
 // Prepare the command line to execute
-$excel = "/opt/local/bin/perl /research/acos/export_excel.pl -f $tmp_path";
+$excel = "/usr/local/bin/export_excel.pl -f $tmp_path";
 
 // Execute the perl program that will produce our excel file. The perl script
 // will read in tab-seperated records from STDIN and print them to an excel
@@ -94,7 +94,7 @@ $excel = "/opt/local/bin/perl /research/acos/export_excel.pl -f $tmp_path";
 $excel_handle = fopen($tmp_path, "w");
 
 //
-// Populate our ParaGroups object, giving the object a hint
+// Populate our Catalog object, giving the object a hint
 // as to which genes it needs to load.
 //
 $result = $catalog->populate($start_group - 1, $end_group - $start_group + 1);

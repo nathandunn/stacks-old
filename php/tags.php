@@ -103,8 +103,8 @@ write_filter();
 
 echo <<< EOQ
 <h4 class="info_head" style="margin-left: 1em;">
-  <img id="sources_img" src="/acos/images/caret-d.png" />
-  <a onclick="toggle_div('sources', '/acos/images', 'page_state');">
+  <img id="sources_img" src="$img_path/caret-d.png" />
+  <a onclick="toggle_div('sources', '$img_path', 'page_state');">
   RAD-Tag Sample #$batch[sample_id] [<span class="s">$batch[file]</span>]</a>
 </h4>
 

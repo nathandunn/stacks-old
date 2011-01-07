@@ -27,7 +27,7 @@ else
     write_database($database);
 
 function write_database_list($database) {
-    global $db_user, $db_pass, $root_path;
+    global $db_user, $db_pass, $root_path, $img_path;
 
     $databases = array();
     
@@ -38,8 +38,8 @@ function write_database_list($database) {
 
     echo <<< EOQ
 <h4 class="info_head">
-  <img id="sources_img" src="/acos/images/caret-d.png" />
-  <a onclick="toggle_div('sources', '/acos/images', 'page_state');">RAD-Tag Databases</a>
+  <img id="sources_img" src="$img_path/caret-d.png" />
+  <a onclick="toggle_div('sources', '$img_path', 'page_state');">RAD-Tag Databases</a>
 </h4>
 
 <a name="results_top"></a>
@@ -86,8 +86,8 @@ function write_database($database) {
 
     echo <<< EOQ
 <h4 class="info_head">
-  <img id="sources_img" src="/acos/images/caret-d.png" />
-  <a onclick="toggle_div('sources', '/acos/images', 'page_state');">RAD-Tag Samples</a>
+  <img id="sources_img" src="$img_path/caret-d.png" />
+  <a onclick="toggle_div('sources', '$img_path', 'page_state');">RAD-Tag Samples</a>
 </h4>
 
 <a name="results_top"></a>

@@ -69,7 +69,7 @@ echo <<< EOQ
 <form id="page_state" name="page_state"></form>
 
 <h4 class="info_head" style="margin-left: 1em;">
-  <img id="sources_img" src="/acos/images/caret-d.png" />
+  <img id="sources_img" src="$img_path/caret-d.png" />
   <a href="$root_path/index.php?db=$database">
   RAD-Tag Samples for batch #$batch[id] <span class="s">[$batch[date]; $batch[desc]]</span></a>
 </h4>

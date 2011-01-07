@@ -115,8 +115,8 @@ Batch #$batch[id] <span class="s">[$batch[date]; $batch[desc]]</span></a></h3>
 </h4>
 
 <h4 class="info_head" style="margin-left: 1em;">
-  <img id="sources_img" src="/acos/images/caret-d.png" />
-  <a onclick="toggle_div('sources', '/acos/images', 'page_state');">
+  <img id="sources_img" src="$img_path/caret-d.png" />
+  <a onclick="toggle_div('sources', '$img_path', 'page_state');">
   Sequence #$display[tag_id]</a>
 </h4>
 
