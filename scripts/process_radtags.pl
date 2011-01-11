@@ -607,11 +607,16 @@ sub print_results {
 	"Retained\n";
 
     foreach $barcode (@{$barcodes}) {
-        print LOG 
-            $barcode, "\t",
-            $barcode_log->{$barcode}->{'total'}, "\t",
-            $barcode_log->{$barcode}->{'noradtag'}, "\t",
-            $barcode_log->{$barcode}->{'retained'}, "\n";
+        if (!defined($barcode_log->{$barcode})) {
+            print LOG
+                $barcode, "\t", "0\t", "0\t", "0\n";
+        } else {
+            print LOG 
+                $barcode, "\t",
+                $barcode_log->{$barcode}->{'total'}, "\t",
+                $barcode_log->{$barcode}->{'noradtag'}, "\t",
+                $barcode_log->{$barcode}->{'retained'}, "\n";
+        }
     }
 
     print LOG 
@@ -682,7 +687,7 @@ sub load_barcode_list {
     open(BC, "<" . $barcode_list) 
 	or die("Unable to open barcode file '$barcode_list': $!\n");
 
-    my ($line, $bc);
+    my ($line, $bc, $blen, $prev);
 
     while ($line = <BC>) {
 	chomp $line;
@@ -700,6 +705,21 @@ sub load_barcode_list {
 	print STDERR "Unable to load any barcodes from '$barcode_list'\n";
 	usage();
     }
+
+    #
+    # Determine the barcode length
+    #
+    $prev = length($bl->[0]);
+    foreach $bc (@{$bl}) {
+        $blen = length($bc);
+
+        if ($prev != $blen) {
+            print STDERR "Barcodes must all be the same length. Place different barcode lengths in separate runs.\n";
+            usage();
+        }
+    }
+
+    $barcode_size = $blen;
 }
 
 sub build_file_list {
@@ -742,7 +762,6 @@ sub parse_command_line {
 	$_ = shift @ARGV;
 	if    ($_ =~ /^-p$/) { $in_path  = shift @ARGV; }
 	elsif ($_ =~ /^-o$/) { $out_path = shift @ARGV; }
-	elsif ($_ =~ /^-s$/) { $barcode_size = shift @ARGV; }
 	elsif ($_ =~ /^-b$/) { $barcode_list = shift @ARGV; }
 	elsif ($_ =~ /^-e$/) { $tag = shift @ARGV; }
 	elsif ($_ =~ /^-t$/) { $truncate = shift @ARGV; }
@@ -783,10 +802,9 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-process_radtags.pl -p path -o path -b file [-s size] [-P] [-I input_type] [-e enzyme] [-c] [-q] [-r] [-t len] [-F|-R] [-d] [-h]
+process_radtags.pl -p path -o path -b file [-P] [-I input_type] [-e enzyme] [-c] [-q] [-r] [-t len] [-F|-R] [-d] [-h]
   p: path to the Solexa BUSTARD output files, or GERALD files (if -I is specified as 'fastq').
   o: path to output the processed files.
-  s: barcode size (default 5).
   P: input data contains paired-end reads.
   b: a list of barcodes for this run.
   I: input file type, either 'raw' for the raw BUSTARD output files, or 'fastq' for GERALD files (default 'raw').
