@@ -488,6 +488,8 @@ int load_radtags(string in_file, HashMap &radtags) {
         fh = new Bowtie(in_file.c_str());
     else if (in_file_type == sam)
         fh = new Sam(in_file.c_str());
+    else if (in_file_type == tsv)
+        fh = new Tsv(in_file.c_str());
 
     cerr << "  Parsing " << in_file.c_str() << "\n";
 
@@ -603,6 +605,8 @@ int parse_command_line(int argc, char* argv[]) {
                 in_file_type = bowtie;
             else if (strcmp(optarg, "sam") == 0)
                 in_file_type = sam;
+            else if (strcmp(optarg, "tsv") == 0)
+                in_file_type = tsv;
             else
                 in_file_type = unknown;
 	    break;

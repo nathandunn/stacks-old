@@ -747,6 +747,8 @@ sub build_file_list {
 
 	push(@{$files}, $prefix);
     }
+
+    print STDERR "Found ", scalar(@{$files}), " input file(s).\n";
 }
 
 sub close_file_handles {

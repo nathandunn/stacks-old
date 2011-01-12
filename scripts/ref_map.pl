@@ -105,10 +105,12 @@ foreach $sample (@parents, @progeny) {
         $pfile = $prefix;
     }
 
-    if ($suffix =~ /^bowtie$/ || $suffix =~ /^map$/) {
+    if ($suffix =~ /^bowtie$/) {
         $ftype = "bowtie";
     } elsif ($suffix =~ /^sam$/) {
         $ftype = "sam";
+    } elsif ($suffix =~ /^map$/) {
+        $ftype = "tsv";
     } else {
         die("Unknown input file type.\n");
     }
@@ -178,7 +180,7 @@ foreach $sample (@parents) {
 }
 
 $cat_file = "batch_" . $batch_id;
-$cmd      = $exe_path . "cstacks -b $batch_id -o $out_path $parents $threads $fuzzym 2>&1";
+$cmd      = $exe_path . "cstacks -g -b $batch_id -o $out_path $parents $threads $fuzzym 2>&1";
 print STDERR  "$cmd\n";
 print $log_fh "$cmd\n";
 @results =    `$cmd`;

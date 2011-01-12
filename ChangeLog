@@ -1,3 +1,7 @@
+Stacks 0.97
+-------------------------
+	*process_radtags.pl now detects barcode length automatically. Removed spurious error messages when no data is processed.
+
 Stacks 0.96 - Jan 7, 2011
 -------------------------
 	*Fixed typo in README giving the wrong file path for the Apache configuration file.
