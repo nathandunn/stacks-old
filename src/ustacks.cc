@@ -1075,8 +1075,8 @@ int calc_coverage_distribution(map<int, Stack *> &unique, double &mean, double &
     //
     // Output the distribution of stack depths
     //
-    for (j = depth_dist.begin(); j != depth_dist.end(); j++)
-        cerr << j->first << "\t" << j->second << "\n";
+    //for (j = depth_dist.begin(); j != depth_dist.end(); j++)
+    //    cerr << j->first << "\t" << j->second << "\n";
 
     return 0;
 }
