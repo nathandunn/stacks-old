@@ -1035,20 +1035,24 @@ int reduce_radtags(HashMap &radtags, map<int, Stack *> &unique, map<int, Seq *> 
 }
 
 int calc_coverage_distribution(map<int, Stack *> &unique, double &mean, double &stdev) {
-    map<int, Stack *>::iterator it;
+    map<int, Stack *>::iterator i;
     double m     = 0.0;
     double s     = 0.0;
     double sum   = 0.0;
     uint   max   = 0;
     double total = 0.0;
 
-    for (it = unique.begin(); it != unique.end(); it++) {
-	//if ((*it).second->count <= 3) continue;
-	m += (*it).second->count;
+    map<int, int> depth_dist;
+    map<int, int>::iterator j;
+
+    for (i = unique.begin(); i != unique.end(); i++) {
+	m += i->second->count;
 	total++;
 
-	if ((*it).second->count > max)
-	    max = (*it).second->count;
+        depth_dist[i->second->count]++;
+
+	if (i->second->count > max)
+	    max = i->second->count;
     }
 
     mean = round(m / total);
@@ -1058,16 +1062,21 @@ int calc_coverage_distribution(map<int, Stack *> &unique, double &mean, double &
     //
     total = 0.0;
 
-    for (it = unique.begin(); it != unique.end(); it++) {
-	//if ((*it).second->count <= 3) continue;
+    for (i = unique.begin(); i != unique.end(); i++) {
 	total++;
-	s = (*it).second->count;
+	s = i->second->count;
 	sum += pow((s - mean), 2);
     }
 
     stdev = sqrt(sum / (total - 1));
 
     cerr << "  Mean coverage depth is " << mean << "; Std Dev: " << stdev << " Max: " << max << "\n";
+
+    //
+    // Output the distribution of stack depths
+    //
+    for (j = depth_dist.begin(); j != depth_dist.end(); j++)
+        cerr << j->first << "\t" << j->second << "\n";
 
     return 0;
 }

@@ -36,7 +36,7 @@ const int max_len = 2048;
 //
 // Maximum length of idetifiers, such as sequence IDs and chromosome names.
 //
-const int id_len = 64;
+const int id_len = 128;
 
 //
 // Supported file types
