@@ -1490,6 +1490,8 @@ int load_radtags(string in_file, HashMap &radtags) {
         exit(1);
     }
 
+    cerr << fh->corrected << " reads contained uncalled nucleotides that were modified.\n";
+
     //
     // Check to make sure all the reads are of the same length.
     //
