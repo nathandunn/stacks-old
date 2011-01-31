@@ -1,5 +1,12 @@
+Stacks 0.971
+-------------------------
+	*Illumina software version 1.3 produces Phred scores that can begin with a '@' character, throwing off the
+	 FASTQ parser. Added code to clear the read buffer in between records to solve the problem. Thanks to 
+	 Aarti <aartiv@uchicago.edu> for finding the bug.
+
 Stacks 0.97
 -------------------------
+	*ustacks now detects when there are uncalled nucleotides in FASTA or FASTQ input files, replaces those bases with 'A'.
 	*process_radtags.pl now detects barcode length automatically. Removed spurious error messages when no data is processed.
 
 Stacks 0.96 - Jan 7, 2011

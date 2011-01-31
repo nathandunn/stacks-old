@@ -109,6 +109,13 @@ Seq *Fastq::next_seq() {
     s->qual = new char[strlen(this->line) + 1];
     strcpy(s->qual, this->line);
 
+    //
+    // Clear the line buffer so it is set up for the next record. If a '@'
+    // appears in the quality scores read, it will break parsing next time 
+    // it is called.
+    //
+    this->line[0] = '\0';
+
     return s;
 }
 
