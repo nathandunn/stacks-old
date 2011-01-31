@@ -38,7 +38,7 @@ Seq *Fasta::next_seq() {
     // the buffer will either contain whitespace or the header of the next FAST
     // record.
     //
-    while (line[0] != '>' && this->fh.good() ) {
+    while (this->line[0] != '>' && this->fh.good() ) {
 	this->fh.getline(this->line, max_len);
     }
 
@@ -95,6 +95,8 @@ Seq *Fasta::next_seq() {
         }
     if (uncalled == true) 
         this->corrected++;
+
+    this->line[0] = '\0';
 
     return s;
 }

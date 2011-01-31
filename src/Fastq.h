@@ -37,7 +37,7 @@ Seq *Fastq::next_seq() {
     // the buffer will either contain whitespace or the header of the next FASTQ
     // record.
     //
-    while (line[0] != '@' && this->fh.good() ) {
+    while (this->line[0] != '@' && this->fh.good() ) {
 	this->fh.getline(this->line, max_len);
     }
 
