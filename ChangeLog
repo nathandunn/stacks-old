@@ -1,4 +1,6 @@
-Stacks 0.971
+	*Added double haploid JoinMap export type (DH) to the genotypes.pl script.
+
+Stacks 0.971 - Jan 30, 2011
 -------------------------
 	*Illumina software version 1.3 produces Phred scores that can begin with a '@' character, throwing off the
 	 FASTQ parser. Added code to clear the read buffer in between records to solve the problem. Thanks to 
