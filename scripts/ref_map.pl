@@ -37,7 +37,6 @@ my $sql         = 1;
 my $exe_path    = "_BINDIR_";
 my $out_path    = "";
 my $db          = "";
-my $rep_tags    = 0;
 my $min_cov     = 0;
 my $min_dist    = 0;
 my $fuzzy_match = 0;
@@ -83,7 +82,7 @@ foreach $parent (@progeny) {
     push(@types, "progeny");
 }
 
-my (@results, $rrep, $cmd, $threads, $fuzzym);
+my (@results, $cmd, $threads, $fuzzym);
 
 $threads = $num_threads > 0 ? "-p $num_threads" : ""; 
 $fuzzym  = "-n $fuzzy_match";
@@ -130,16 +129,6 @@ foreach $sample (@parents, @progeny) {
     }
 
     $map{$pfile} = $sample_id;
-
-    #
-    # Calculate the expected coverage by dividing the number of reads for this sample
-    # by the number of RAD sites in the genome.
-    #
-    if ($rep_tags) {
-	$rrep = "-d -r";
-    } else {
-	$rrep = "";
-    }
 
     $cmd = $exe_path . "pstacks -t $ftype -f $sample -o $out_path -b $batch_id -i $sample_id $threads 2>&1";
     print STDERR "$cmd\n";
@@ -265,7 +254,6 @@ sub parse_command_line {
 	$_ = shift @ARGV;
 	if    ($_ =~ /^-p$/) { push(@parents, shift @ARGV); }
 	elsif ($_ =~ /^-r$/) { push(@progeny, shift @ARGV); }
-       	elsif ($_ =~ /^-t$/) { $rep_tags++; }
 	elsif ($_ =~ /^-o$/) { $out_path    = shift @ARGV; }
 	elsif ($_ =~ /^-m$/) { $min_cov     = shift @ARGV; }
 	elsif ($_ =~ /^-M$/) { $min_dist    = shift @ARGV; }
