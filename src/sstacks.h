@@ -65,6 +65,8 @@ using __gnu_cxx::hash;
 #include "stacks.h"
 #include "sql_utilities.h"
 
+enum searcht {sequence, genomic_loc};
+
 //
 // Query Locus Class
 //
@@ -93,7 +95,8 @@ void help( void );
 void version( void );
 int  parse_command_line(int, char**);
 int  populate_hash(map<int, Locus *> &, HashMap &);
-int  find_matches(map<int, Locus *> &, map<int, QLocus *> &);
+int  find_matches_by_sequence(map<int, Locus *> &, map<int, QLocus *> &);
+int  find_matches_by_genomic_loc(map<int, Locus *> &, map<int, QLocus *> &);
 int  verify_match(Locus *, QLocus *, uint);
 bool compare_dist(pair<int, int>, pair<int, int>);
 int  write_matches(map<int, QLocus *> &);

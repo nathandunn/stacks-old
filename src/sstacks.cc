@@ -31,13 +31,14 @@
 #include "sstacks.h"
 
 // Global variables to hold command-line options.
-string sample_1_file;
-string sample_2_file;
-string out_path;
-int    num_threads = 1;
-int    batch_id    = 0;
-int    samp_id     = 0; 
-int    catalog     = 0;
+string  sample_1_file;
+string  sample_2_file;
+string  out_path;
+int     num_threads = 1;
+int     batch_id    = 0;
+int     samp_id     = 0; 
+int     catalog     = 0;
+searcht search_type = sequence;
 
 int main (int argc, char* argv[]) {
 
@@ -76,14 +77,57 @@ int main (int argc, char* argv[]) {
     //dump_loci(sample_1);
     //dump_loci(sample_2);
 
-    find_matches(sample_1, sample_2);
+    if (search_type == sequence) {
+	cerr << "Searching for sequence matches...\n";
+	find_matches_by_sequence(sample_1, sample_2);
+
+    } else if (search_type == genomic_loc) {
+	cerr << "Searching for matches by genomic location...\n";
+	find_matches_by_genomic_loc(sample_1, sample_2);
+    }
 
     write_matches(sample_2);
 
     return 0;
 }
 
-int find_matches(map<int, Locus *> &sample_1, map<int, QLocus *> &sample_2) {
+int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sample_2) {
+    //
+    // Calculate the distance (number of mismatches) between each pair
+    // of Radtags. We expect all radtags to be the same length;
+    //
+    map<int, QLocus *>::iterator i;
+    map<int, Locus *>::iterator j;
+    int k;
+
+    // OpenMP can't parallelize random access iterators, so we convert
+    // our map to a vector of integer keys.
+    vector<int> keys;
+    for (i = sample_2.begin(); i != sample_2.end(); i++) 
+	keys.push_back(i->first);
+
+    #pragma omp parallel private(i, j, k)
+    {
+        #pragma omp for schedule(dynamic) 
+	for (k = 0; k < (int) keys.size(); k++) {
+
+	    i = sample_2.find(keys[k]);
+
+            for (j = sample_1.begin(); j != sample_1.end(); j++) {
+
+                if (strcmp(i->second->loc.chr, j->second->loc.chr) == 0 && 
+                    i->second->loc.bp == j->second->loc.bp) {
+
+                    i->second->add_match(j->second->id, "");
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+int find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample_2) {
     map<int, QLocus *>::iterator i;
     int k, min_tag_len;
     QLocus *tag;
@@ -264,6 +308,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"sample_1_id", required_argument, NULL, 'R'},
 	    {"sample_2",    required_argument, NULL, 's'},
 	    {"sample_2_id", required_argument, NULL, 'S'},
+	    {"genomic_loc", no_argument,       NULL, 'g'},
 	    {"outpath",     required_argument, NULL, 'o'},
 	    {0, 0, 0, 0}
 	};
@@ -271,7 +316,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvr:s:c:o:R:S:b:p:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgvr:s:c:o:R:S:b:p:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -296,6 +341,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'S':
 	    samp_id = atoi(optarg);
+	    break;
+	case 'g':
+	    search_type = genomic_loc;
 	    break;
      	case 'o':
 	    out_path = optarg;
@@ -344,7 +392,7 @@ void version() {
 
 void help() {
     std::cerr << "sstacks " << VERSION << "\n"
-              << "sstacks -b batch_id -c catalog_file -s sample_file [-S id] [-r sample_file] [-o path] [-p num_threads] [-v] [-h]" << "\n"
+              << "sstacks -b batch_id -c catalog_file -s sample_file [-S id] [-r sample_file] [-o path] [-p num_threads] [-g] [-v] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  b: MySQL ID of this batch." << "\n"
 	      << "  c: TSV file from which to load the catalog RAD-Tags." << "\n"
@@ -352,6 +400,7 @@ void help() {
 	      << "  s: TSV file from which to load sample RAD-Tags." << "\n"
 	      << "  S: MySQL ID of the specified sample." << "\n"
 	      << "  o: output path to write results." << "\n"
+              << "  g: base matching on genomic location, not sequence identity." << "\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n";
 
