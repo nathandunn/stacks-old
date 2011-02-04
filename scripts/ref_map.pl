@@ -205,7 +205,7 @@ foreach $sample (@parents, @progeny) {
 
     $rid = $map{$pfile};
 
-    $cmd = $exe_path . "sstacks -b $batch_id -c $out_path/$cat_file -s $out_path/$pfile -S $rid -o $out_path $threads 2>&1";
+    $cmd = $exe_path . "sstacks -g -b $batch_id -c $out_path/$cat_file -s $out_path/$pfile -S $rid -o $out_path $threads 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd`;
