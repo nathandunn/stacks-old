@@ -1,3 +1,6 @@
+	*Bugfix: when constructing the catalog, some tags being added to the
+	 did not have their genomic location transferred over to a new catalog 
+	 tag.
 	*Modified sstacks to include an option to match stacks against the
 	 catalog based on the genomic location (assuming individuals were
 	 processed with pstacks).
