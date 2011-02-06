@@ -98,7 +98,26 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
     //
     map<int, QLocus *>::iterator i;
     map<int, Locus *>::iterator j;
-    int k;
+    int k, min_tag_len;
+    char id[id_len];
+
+    min_tag_len = strlen(sample_1.begin()->second->con); 
+
+    //
+    // Build a hash map out of the first sample (usually the catalog)
+    //
+    //
+    // Create a map of the genomic locations of stacks in sample_1
+    //
+    cerr << "  Creating map of genomic locations...";
+
+    map<string, set<int> > locations;
+    for (j = sample_1.begin(); j != sample_1.end(); j++) {
+        snprintf(id, id_len - 1, "%s_%d", j->second->loc.chr, j->second->loc.bp);
+        locations[id].insert(j->second->id);
+    }
+
+    cerr << "done.\n";
 
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -106,23 +125,93 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
     for (i = sample_2.begin(); i != sample_2.end(); i++) 
 	keys.push_back(i->first);
 
-    #pragma omp parallel private(i, j, k)
+    #pragma omp parallel private(i, j, k, id)
     {
         #pragma omp for schedule(dynamic) 
 	for (k = 0; k < (int) keys.size(); k++) {
 
 	    i = sample_2.find(keys[k]);
+	    snprintf(id, id_len - 1, "%s_%d", i->second->loc.chr, i->second->loc.bp);
 
-            for (j = sample_1.begin(); j != sample_1.end(); j++) {
+	    //cerr << "ID: " << id << "\n";
 
-                if (strcmp(i->second->loc.chr, j->second->loc.chr) == 0 && 
-                    i->second->loc.bp == j->second->loc.bp) {
+	    if (locations[id].size() > 0) {
+		Locus *tag;
+	        set<int>::iterator loc_it;
+		vector<pair<allele_type, string> >::iterator q;
 
-                    i->second->add_match(j->second->id, "");
-                }
-            }
-        }
+		for (loc_it = locations[id].begin(); loc_it != locations[id].end(); loc_it++) {
+		    tag = sample_1[*loc_it];
+
+		    //cerr << "Found matching genomic location, tag " << tag->id << "\n";
+		    for (q = tag->strings.begin(); q != tag->strings.end(); q++)
+			if (verify_genomic_loc_match(tag, i->second, q->first))
+			    i->second->add_match(tag->id, q->first);
+		}
+	    }
+	}
     }
+
+    return 0;
+}
+
+int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, string allele) {
+    vector<SNP *>::iterator i, j;
+    //
+    // We have found a match between the genomic location of s1 and s2. We now want
+    // to verify that the alleles are consistent between the tags, i.e. they 
+    // have the same number and types of SNPs.
+    //
+    // 1. Make sure s2_tag has the same number of SNPs as s1_tag (s1_tag 
+    //    is generally the catalog, so s1_tag may have more SNPs than
+    //    s2_tag, but not less).
+    //
+    if (s2_tag->snps.size() > s1_tag->snps.size()) {
+	//cerr << "Match not verified, too many SNPs for " << s2_tag->id << "\n";
+	return 0;
+    }
+
+    uint snp_count = 0;
+    uint len = allele.length();
+    bool found;
+    char c;
+    //
+    // 2. For each SNP in s1_tag (the catalog), make sure that s2_tag has the same
+    //    SNP, or that the corresponding consensus base matches one of s1_tag's SNPs.
+    //
+    int k = 0;
+    for (j = s1_tag->snps.begin(); j != s1_tag->snps.end(); j++) {
+	found = false;
+
+	for (i = s2_tag->snps.begin(); i != s2_tag->snps.end(); i++) {
+	    //
+	    // SNP occurs in the same column and has the same nucleotide.
+	    //
+	    if ((*i)->col == (*j)->col) {
+		found = true;
+
+		if (allele[k] == (*i)->rank_1 ||
+		    allele[k] == (*i)->rank_2)
+		    snp_count++;
+	    }
+	}
+	
+	// No SNP present, check the consensus sequence.
+	if (found == false) {
+	    c =  s2_tag->con[(*j)->col];
+
+	    if (c == allele[k])
+		snp_count++;
+	}
+
+	k++;
+    }
+
+    // We matched each SNP in s2_tag against one in s1_tag
+    if (snp_count == s1_tag->snps.size())
+	return 1;
+
+    //cerr << "Match not verified, SNPs in S2 do not match catalog: " << snp_count << " vs " << s1_tag->snps.size() << "\n";
 
     return 0;
 }
@@ -176,7 +265,7 @@ int find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sa
                     // Found one or more matches between a set of alleles. Verify it is legitamate before recording it.
                     //
                     for (c = hit->second.begin(); c != hit->second.end(); c++)
-                        if (verify_match(sample_1[c->first], tag, min_tag_len)) {
+                        if (verify_sequence_match(sample_1[c->first], tag, min_tag_len)) {
                             tag->add_match(c->first, c->second);
                         }
                 }
@@ -187,11 +276,11 @@ int find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sa
     return 0;
 }
 
-int verify_match(Locus *s1_tag, QLocus *s2_tag, uint min_tag_len) {
+int verify_sequence_match(Locus *s1_tag, QLocus *s2_tag, uint min_tag_len) {
     vector<SNP *>::iterator i, j;
     //
     // We have found a match between two alleles of s1 and s2. We now want
-    // to verify that the allels are consistent between the tags, i.e. they 
+    // to verify that the alleles are consistent between the tags, i.e. they 
     // have the same number and types of SNPs.
     //
     // 1. Make sure s2_tag has the same number of SNPs as s1_tag (s1_tag 
