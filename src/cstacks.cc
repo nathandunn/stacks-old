@@ -267,6 +267,13 @@ int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, 
     c->sources.push_back(make_pair(sample_file.first, qloc->id));
     catalog[c->id] = c;
 
+    //
+    // Add the physical genome location of this locus.
+    //
+    strncpy(c->loc.chr, qloc->loc.chr, id_len);
+    c->loc.chr[id_len - 1] = '\0';
+    c->loc.bp = qloc->loc.bp;
+
     // cerr << "Adding sample: " << qloc->id << " to the catalog as ID: " << c->id << "\n";
 
     for (i = qloc->snps.begin(); i != qloc->snps.end(); i++) {
