@@ -241,7 +241,7 @@ sub process_singlet {
 	#
         $rad_cor = 0;
         foreach $t (@{$tags{$tag}}) {
-            $rad_cor++ if (substr($href->{'seq'}, 0, length($tags{$tag})) ne $tags{$tag});
+	    $rad_cor++ if (substr($href->{'seq'}, 0, length($t)) eq $t);
         }
         if ($rad_cor == 0) {
 	    #
