@@ -73,22 +73,129 @@ my (%sth);
 
 prepare_sql_handles(\%sth);
 
-if ($map_type eq "CP") {
-    export_joinmap_cp_map(\%sth, $cache_path);
+my $map_types = {'DH'  => \&export_dh_map,
+		 'CP'  => \&export_cp_map,
+		 'BC1' => \&export_bc1_map,
+		 'F2'  => \&export_f2_map};
 
-} elsif ($map_type eq "BC1") {
-    export_joinmap_bc1_map(\%sth, $cache_path);
-
-} elsif ($map_type eq "DH") {
-    export_joinmap_dh_map(\%sth, $cache_path);
-
-} else {
+if (!defined($map_types->{$map_type})) {
     print STDERR "Unknown map type.\n";
+} else {
+    $map_types->{$map_type}->(\%sth, $cache_path);
 }
 
 close_sql_handles(\%sth);
 
-sub export_joinmap_dh_map {
+sub export_f2_map {
+    my ($sth, $cache_path) = @_;
+
+    #
+    # We wish to export, according to the JoinMap manual, a locus genotype file (loc-file), 
+    # which contains the information of all the loci for a single segregating population.
+    # 
+    # We are exporting an F2 population type:
+    # The result of selfing the F1 of a cross between two fully homozygous diploid parents.
+    #
+    # Genotype codes for an F2 population, depending on the locus segregation type.
+    #
+    # Seg. type   Possible genotypes
+    # ---------   ------------------
+    # <aaxbb>     a, b, h, –
+    # <abxcd>     a, b, h, –
+    # <abxaa>     a, –
+    # <aaxab>     b, –
+    # <abxcc>     a, b, – 
+    # <ccxab>     b, –
+
+    my (%types, %genotypes, %order, @samples, %sample_ids, %marker_list, @loci, $locus, $mtype, $key, $file);
+
+    $types{'aa/bb'} = "aaxbb";
+    $types{'ab/cd'} = "abxcd";
+    $types{'ab/aa'} = "abxaa";
+    $types{'aa/ab'} = "aaxab";
+    $types{'ab/cc'} = "abxcc";
+    $types{'cc/ab'} = "ccxab";
+
+    $genotypes{'aaxbb'} = {'a' => 0, 'b' => 0, 'h' => 0, '-' => 0};
+    $genotypes{'abxcd'} = {'a' => 0, 'b' => 0, 'h' => 0, '-' => 0};
+    $genotypes{'abxaa'} = {'a' => 0, '-' => 0};
+    $genotypes{'aaxab'} = {'b' => 0, '-' => 0};
+    $genotypes{'abxcc'} = {'a' => 0, 'b' => 0, '-' => 0};
+    $genotypes{'ccxab'} = {'b' => 0, '-' => 0};
+
+    #
+    # Determine what order the parents occur in. Order is necessary to properly
+    # assign genotypes to alleles in the progeny (JoinMap expects order to 
+    # be preserved in markers where a SNP is sex specific, e.g. efxeg).
+    #
+    determine_parent_order($sth, \%order);
+
+    #
+    # Fetch a list of the samples we will output.
+    #
+    print STDERR "Fetching samples...\n";
+    fetch_samples($sth, \@samples, \%sample_ids);
+
+    #
+    # Fetch a list of all the loci we will examine
+    #
+    print STDERR "Fetching loci...\n";
+    fetch_loci($sth, \@loci, \%types);
+
+    #
+    # Cache the sequencing reads for markers in the parents/progeny.
+    #
+    my $cache;
+
+    if ($corrections > 0) {
+        print STDERR "Caching marker sequences...\n";
+        $cache = cache_progeny_seqs(\%sth, $cache_path, \@loci, \%marker_list, \%sample_ids);
+    }
+
+    #
+    # Fetch the parents/progeny for each locus
+    #
+    my $i = 1;
+    my $num_loci = scalar(@loci);
+    foreach $locus (@loci) {
+	#print STDERR "Processing locus $i of $num_loci          \r";
+
+	$locus->{'progeny'} = {};
+
+	call_f2_genotypes($sth, $cache, \%sample_ids, \%genotypes, \%order, 
+                          $locus->{'id'}, $types{$locus->{'marker'}}, $locus->{'progeny'});
+
+	$i++;
+    }
+    print STDERR "\n";
+
+    apply_corrected_genotypes($sth, \@loci) if ($man_corrections);
+
+    if ($category) {
+	foreach $key (keys %types) {
+	    $mtype = $types{$key};
+
+	    # Alter the filename to reflect the markers it contains
+	    $file = $out_file;
+	    $file =~ s/\.loc$//;
+	    $file .= "." . $mtype;
+	    $file .= ".loc";
+	    print STDERR "Filename: $file\n";
+
+	    # Escape characters that have special meaning in the regex.
+	    $key =~ s/\-/\\\-/g;
+
+	    write_loci($file, \%types, \@samples, \@loci, $key);
+	}
+
+    } else {
+	write_loci($out_file, \%types, \@samples, \@loci, ".*");
+    }
+
+    write_loci_sql($out_file, \%types, \@samples, \%sample_ids, \@loci) if ($sql);
+}
+
+sub export_dh_map {
     my ($sth, $cache_path) = @_;
 
     #
@@ -192,7 +299,7 @@ sub export_joinmap_dh_map {
     write_loci_sql($out_file, \%types, \@samples, \%sample_ids, \@loci) if ($sql);
 }
 
-sub export_joinmap_bc1_map {
+sub export_bc1_map {
     my ($sth, $cache_path) = @_;
 
     #
@@ -301,7 +408,7 @@ sub export_joinmap_bc1_map {
     write_loci_sql($out_file, \%types, \@samples, \%sample_ids, \@loci) if ($sql);
 }
 
-sub export_joinmap_cp_map {
+sub export_cp_map {
     my ($sth, $cache_path) = @_;
 
     #
@@ -585,7 +692,7 @@ sub apply_corrected_genotypes {
 sub write_loci_sql {
     my ($file, $types, $samples, $sample_ids, $loci) = @_;
 
-    my ($row, $out_fh, $locus, $num_loci, $sample);
+    my ($out_fh, $locus, $num_loci, $sample);
 
     $file =~ s/\.loc$/\.txt/;
 
@@ -615,7 +722,7 @@ sub write_loci_sql {
 sub write_loci {
     my ($file, $types, $samples, $loci, $marker_regex) = @_;
 
-    my ($row, $out_fh, $bl_fh, $locus, $num_loci, $sample, $key, $progeny_cnt, $id);
+    my ($out_fh, $bl_fh, $locus, $num_loci, $sample, $key, $progeny_cnt, $id);
 
     my %blacklist;
     #
@@ -747,7 +854,7 @@ sub fetch_loci {
 	or die("Unable to select results from $db.\n");
 
     while ($row = $sth->{'loci'}->fetchrow_hashref()) {
-        #next if ($row->{'tag_id'} != 4);
+        #next if ($row->{'tag_id'} != 191);
 
 	$href = {};
 	$href->{'id'}     = $row->{'tag_id'};
@@ -824,10 +931,123 @@ sub fetch_progeny {
     }
 }
 
+sub call_f2_genotypes {
+    my ($sth, $cache, $sample_ids, $genotypes, $order, $tag_id, $marker, $markers) = @_;
+
+    my (@keys, $key, $allele, $m, $gtype, %parents, %progeny, %genotype_map, %rev_geno_map);
+
+    my $check_genotypes = {};
+
+    my $create_genotype_map = {'aaxbb' => \&create_fx_genotype_map,
+                               'abxcd' => \&create_fx_genotype_map,
+                               'abxaa' => \&create_simple_genotype_map,
+                               'aaxab' => \&create_simple_genotype_map,
+                               'abxcc' => \&create_fx_genotype_map,
+                               'ccxab' => \&create_fx_genotype_map,
+                               };
+
+    my $dictionary = {'aaxbb' => {'aa' => 'A',
+				  'ab' => 'H',
+				  'bb' => 'B'},
+		      'abxcd' => {'aa' => 'A',
+				  'ab' => 'A',
+				  'bb' => 'A',
+				  'cc' => 'B',
+				  'cd' => 'B',
+				  'dd' => 'B',
+				  'ac' => 'H',
+				  'ad' => 'H',
+				  'bc' => 'H',
+				  'bd' => 'H'},
+		      'abxaa' => {'aa' => '-',
+				  'ab' => '-',
+				  'bb' => 'A'},
+		      'aaxab' => {'aa' => '-',
+				  'ab' => '-',
+				  'bb' => 'B'},
+		      'abxcc' => {'aa' => 'A',
+				  'ab' => 'A',
+				  'bb' => 'A',
+				  'cc' => 'B',
+				  'ac' => '-',
+				  'bc' => '-'},
+		      'ccxab' => {'aa' => 'B',
+				  'ab' => 'B',
+				  'bb' => 'B',
+				  'cc' => 'A',
+				  'ac' => '-',
+				  'bc' => '-'},
+                               };
+
+    fetch_progeny($sth, $order, $tag_id, \%parents, \%progeny);
+
+    #
+    # Create a map between alleles and genotype symbols
+    #
+    $create_genotype_map->{$marker}->($order, $marker, $tag_id, \%parents, \%genotype_map);
+
+    #
+    # Create a reverse map
+    #
+    foreach $key (keys %genotype_map) {
+	print STDERR "Reverse map Key: $key, Map: $genotype_map{$key}\n" if ($debug);
+	$rev_geno_map{$genotype_map{$key}} = $key;
+    }
+
+    foreach $key (keys %progeny) {
+	my @alleles;
+
+	print STDERR "Examining progeny $key; marker: $marker\n" if ($debug);
+
+	#
+	# If there is more than a single tag from a particular progeny, matching this tag in the 
+	# catalog, then discard this progeny, since we don't know which tag is correct and the
+	# catalog tag is probably overmerged.
+	#
+	@keys = keys %{$progeny{$key}};
+	if (scalar(@keys) > 1) {
+	    print STDERR 
+		"Discarding progeny $key from catalog tag $tag_id with multiple tag matches: ", 
+		join(" ", @keys), "\n" if ($debug);
+	    next;
+	}
+
+	foreach $allele (@{$progeny{$key}->{$keys[0]}}) {
+	    #
+	    # Impossible allele encountered.
+	    #
+	    if (!defined($genotype_map{$allele})) {
+		@alleles = ();
+		push(@alleles, "-");
+		last;
+	    }
+
+	    push(@alleles, $genotype_map{$allele});
+	}
+	@alleles = sort @alleles;
+	$gtype   = join("", @alleles);
+	$m       = $dictionary->{$marker}->{$gtype};
+
+	#
+	# Check the genotype, correct any errors.
+	#
+        if ($corrections > 0) {
+            $m = $check_genotypes->{$marker}->($sth, $cache, $tag_id, $sample_ids->{$key}, $keys[0], \%genotype_map, \%rev_geno_map, $m);
+        }
+
+	if (!defined($genotypes->{$marker}->{lc($m)})) {
+	    print STDERR "Warning: illegal genotype encountered in tag $tag_id, progeny $key, '$m'\n" if ($debug);
+	} else  {
+	    $markers->{$key} = $m;
+	    print STDERR "  $key allele: $markers->{$key}\n" if ($debug);
+	}
+    }
+}
+
 sub call_dh_genotypes {
     my ($sth, $cache, $sample_ids, $genotypes, $order, $tag_id, $marker, $markers) = @_;
 
-    my (@keys, $key, $row, $allele, $m, $ptags, %parents, %progeny, %genotype_map, %rev_geno_map);
+    my (@keys, $key, $allele, $m, %parents, %progeny, %genotype_map, %rev_geno_map);
 
     my $check_genotypes = {'abx--' => \&check_lmx___genotype,
                            '--xab' => \&check___xnp_genotype
@@ -908,7 +1128,7 @@ sub call_dh_genotypes {
 sub call_bc1_genotypes {
     my ($sth, $cache, $sample_ids, $genotypes, $order, $tag_id, $marker, $markers) = @_;
 
-    my (@keys, $key, $row, $allele, $m, $ptags, %parents, %progeny, %genotype_map, %rev_geno_map);
+    my (@keys, $key, $allele, $m, %parents, %progeny, %genotype_map, %rev_geno_map);
 
     my $check_genotypes = {'aaxbb' => \&check_aaxbb_genotype,
                            'bbxaa' => \&check_aaxbb_genotype,
@@ -997,7 +1217,7 @@ sub call_bc1_genotypes {
 sub call_cp_genotypes {
     my ($sth, $cache, $sample_ids, $genotypes, $order, $tag_id, $marker, $markers) = @_;
 
-    my (@keys, $key, $row, $allele, $m, $ptags, %parents, %progeny, %genotype_map, %rev_geno_map);
+    my (@keys, $key, $allele, $m, %parents, %progeny, %genotype_map, %rev_geno_map);
 
     my $check_genotypes = {'lmx--' => \&check_lmx___genotype,
 			   '--xnp' => \&check___xnp_genotype,
@@ -1228,6 +1448,59 @@ sub create_ccxab_genotype_map {
     $map->{$parents->{$key}->[0]} = "b";
 }
 
+
+sub create_fx_genotype_map {
+    my ($order, $marker, $tag_id, $parents, $map) = @_;
+
+    my (%genotypes, %legal_genotypes, @parents, @types, %alleles);
+    my ($type, $m, $key, $allele, $i, $j, $size);
+    #
+    # Create a genotype map. For any set of alleles, this routine will
+    # assign each allele to one of the constituent genotypes, e.g. given the 
+    # marker type 'abxaa' and the alleles 'A' and 'G' from the male, and 'G'
+    # from the female, will assign 'G' == 'a' and 'A'== 'b'. It assumes that 
+    # recombination may have occurred as in with an F2, F3 or later cross.
+    #
+    @parents = keys %{$parents};
+
+    #
+    # Choose the first parent
+    #
+    $key = $order->{$parents[0]} eq "first"  ? $parents[0] : $parents[1];
+    $m   = substr($marker, 0, 2);
+
+    foreach $type (split(//, $m)) {
+	next if ($type eq "-");
+	print STDERR "Adding $type to genotypes\n" if ($debug);
+        $legal_genotypes{$type}++;
+    }
+    @types = sort keys %legal_genotypes;
+
+    foreach $allele (@{$parents->{$key}}) {
+	$map->{$allele} = shift @types;
+	print STDERR "Assinging '$allele' to genotype '", $map->{$allele}, "'\n" if ($debug);
+    }
+
+    #
+    # Now repeat in the second parent
+    #
+    %legal_genotypes = ();
+    $key = $order->{$parents[0]} eq "second"  ? $parents[0] : $parents[1];
+    $m   = substr($marker, 3, 2);
+
+    foreach $type (split(//, $m)) {
+	next if ($type eq "-");
+	print STDERR "Adding $type to genotypes\n" if ($debug);
+        $legal_genotypes{$type}++;
+    }
+    @types = sort keys %legal_genotypes;
+
+    foreach $allele (@{$parents->{$key}}) {
+	$map->{$allele} = shift @types;
+	print STDERR "Assinging '$allele' to genotype '", $map->{$allele}, "'\n" if ($debug);
+    }
+}
+
 sub create_simple_genotype_map {
     my ($order, $marker, $tag_id, $parents, $map) = @_;
 
@@ -1243,6 +1516,7 @@ sub create_simple_genotype_map {
 
     foreach $type (split(//, $m)) {
 	next if ($type eq "-");
+	print STDERR "Adding $type to genotypes\n" if ($debug);
 	$genotypes{$type}++;
     }
 
@@ -1253,6 +1527,7 @@ sub create_simple_genotype_map {
 
     @parents = keys %{$parents};
     foreach $allele (@{$parents->{$parents[0]}}, @{$parents->{$parents[1]}}) {
+	print STDERR "Counting allele $allele\n" if ($debug);
 	$alleles{$allele}++;
     }
 
@@ -1764,8 +2039,8 @@ sub parse_command_line {
         usage();
     }
 
-    if (length($map_type) == 0 || ($map_type ne "CP" && $map_type ne "BC1" && $map_type ne "DH")) {
-        print STDERR "You must specify a map type. 'CP', 'DH' and 'BC1' are the currently supported map types.\n";
+    if (length($map_type) == 0 || ($map_type ne "CP" && $map_type ne "BC1" && $map_type ne "DH" && $map_type ne "F2")) {
+        print STDERR "You must specify a map type. 'CP', 'DH', 'F2' and 'BC1' are the currently supported map types.\n";
         usage();
     }
 }
@@ -1780,7 +2055,7 @@ sub usage {
 
     print << "EOQ";
 genotypes.pl -t map_type -D db -P path [-b id] [-p min] [-c] [-o path] [-s] [-C] [-B] [-E] [-A path] [-d] [-h]
-  t: map type to write. 'CP', 'DH' and 'BC1' are the currently supported map types.
+  t: map type to write. 'CP', 'DH', 'F2' and 'BC1' are the currently supported map types.
   P: path to the Stacks output files.
   D: radtag database to examine.
   b: Batch ID to examine when exporting from the catalog.

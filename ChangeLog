@@ -1,3 +1,6 @@
+	*Bugfix: process_radtags.pl was not properly checking the integrity of 
+	 the RAD site after adding restriction enzymes with alternate
+	 nucleotides.
 	*Bugfix: when constructing the catalog, some tags being added to the
 	 did not have their genomic location transferred over to a new catalog 
 	 tag.
