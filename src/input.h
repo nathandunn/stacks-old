@@ -43,6 +43,7 @@ class Seq {
     char *id;
     char *seq;
     char *qual;
+    bool  utilized;
 
     // Location information for a mapped sequence
     char *loc_str;

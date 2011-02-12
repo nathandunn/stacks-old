@@ -42,10 +42,11 @@ bool      set_kmer_len      = true;
 int       kmer_len          = 0;
 int       min_merge_cov     = 2;
 int       dump_graph        = 0;
+int       retain_rem_reads  = false;
 int       deleverage_stacks = 0;
 int       remove_rep_stacks = 0;
 int       max_utag_dist     = 2;
-int       max_rem_dist      = 3;
+int       max_rem_dist      = 4;
 double    cov_mean          = 0.0;
 double    cov_stdev         = 0.0;
 double    cov_scale         = 1;
@@ -61,6 +62,11 @@ double barcode_err_freq  = 0.0;
 int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
+
+    //
+    // Set the max remainder distance to be greater than the max_utag_dist.
+    //
+    max_rem_dist = max_utag_dist + 2;
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -230,9 +236,12 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Seq *> &rem) {
 
 	    // Found a merge partner.
 	    if (min_id >= 0 && count == 1) {
-		#pragma omp critical
-		merged[min_id]->remtags.push_back(it->first);
-                utilized++;
+		r->utilized = true;
+                #pragma omp critical
+		{
+		    merged[min_id]->remtags.push_back(it->first);
+		    utilized++;
+		}
 	    }
 	}
     }
@@ -1161,10 +1170,10 @@ int count_raw_reads(map<int, Stack *> &unique, map<int, MergedStack *> &merged) 
 
 int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq *> &r) {
     map<int, MergedStack *>::iterator i;
-    vector<SeqId *>::iterator     j;
-    vector<int>::iterator           k;
-    vector<SNP *>::iterator         s;
-    map<string, int>::iterator      t;
+    vector<SeqId *>::iterator  j;
+    vector<int>::iterator      k;
+    vector<SNP *>::iterator    s;
+    map<string, int>::iterator t;
     MergedStack *tag_1;
     Stack *tag_2;
     Seq  *rem;
@@ -1237,6 +1246,22 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
     tags.close();
     snps.close();
     alle.close();
+
+    //
+    // If specified, output reads not utilized in any stacks.
+    //
+    if (retain_rem_reads) {
+	string unused_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".unused.fa";
+
+	std::ofstream unused(unused_file.c_str());
+
+	map<int, Seq *>::iterator r_it;
+	for (r_it = r.begin(); r_it != r.end(); r_it++)
+	    if (r_it->second->utilized == false)
+		unused << ">" << r_it->second->id << "\n" << r_it->second->seq << "\n";
+
+	unused.close();
+    }
 
     return 0;
 }
@@ -1576,6 +1601,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"deleverage",  no_argument,       NULL, 'd'},
 	    {"remove_rep",  no_argument,       NULL, 'r'},
+	    {"retain_rem",  no_argument,       NULL, 'R'},
 	    {"graph",       no_argument,       NULL, 'g'},
 	    {"exp_cov",     no_argument,       NULL, 'E'},
 	    {"cov_stdev",   no_argument,       NULL, 's'},
@@ -1588,7 +1614,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvdrgf:o:i:b:m:e:E:s:S:p:t:M:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hRvdrgf:o:i:b:m:e:E:s:S:p:t:M:T:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1635,6 +1661,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'r':
 	    remove_rep_stacks++;
+	    break;
+	case 'R':
+	    retain_rem_reads = true;
 	    break;
 	case 'g':
 	    dump_graph++;
@@ -1705,7 +1734,7 @@ void version() {
 
 void help() {
     std::cerr << "ustacks " << VERSION << "\n"
-              << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-b batch_id] [-e errfreq] [-m min_cov] [-M max_dist] [-p num_threads] [-h]" << "\n"
+              << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-b batch_id] [-e errfreq] [-m min_cov] [-M max_dist] [-p num_threads] [-R] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  t: input file Type. Supported types: fasta, fastq, bowtie, sam, tsv.\n"
               << "  f: input file path.\n"
@@ -1717,6 +1746,7 @@ void help() {
 	      << "  d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
 	      << "  r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm." << "\n"
 	      << "  e: specify the barcode error frequency (0 < e < 1) if using the 'fixed' model.\n"
+	      << "  R: retain unused reads.\n"
 	      << "  h: display this help messsage." << "\n\n";
 
     exit(0);

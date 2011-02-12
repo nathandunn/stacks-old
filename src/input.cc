@@ -31,33 +31,36 @@
 #include "input.h"
 
 Seq::Seq() { 
-    this->id      = NULL;
-    this->seq     = NULL;
-    this->qual    = NULL;
-    this->loc_str = NULL;
-    this->chr     = NULL;
-    this->bp      = 0;
+    this->id       = NULL;
+    this->seq      = NULL;
+    this->qual     = NULL;
+    this->utilized = false;
+    this->loc_str  = NULL;
+    this->chr      = NULL;
+    this->bp       = 0;
 }
 
 Seq::Seq(const char *id, const char *seq) { 
-    this->id      = new char[strlen(id)   + 1];
-    this->seq     = new char[strlen(seq)  + 1];
-    this->qual    = NULL; 
-    this->loc_str = NULL;
-    this->chr     = NULL;
-    this->bp      = 0;
+    this->id       = new char[strlen(id)   + 1];
+    this->seq      = new char[strlen(seq)  + 1];
+    this->qual     = NULL;
+    this->utilized = false;
+    this->loc_str  = NULL;
+    this->chr      = NULL;
+    this->bp       = 0;
 
     strcpy(this->id,   id); 
     strcpy(this->seq,  seq);
 }
 
 Seq::Seq(const char *id, const char *seq, const char *qual)  { 
-    this->id      = new char[strlen(id)   + 1];
-    this->seq     = new char[strlen(seq)  + 1];
-    this->qual    = new char[strlen(qual) + 1];
-    this->loc_str = NULL;
-    this->chr     = NULL;
-    this->bp      = 0;
+    this->id       = new char[strlen(id)   + 1];
+    this->seq      = new char[strlen(seq)  + 1];
+    this->qual     = new char[strlen(qual) + 1];
+    this->utilized = false;
+    this->loc_str  = NULL;
+    this->chr      = NULL;
+    this->bp       = 0;
 
     strcpy(this->id,   id); 
     strcpy(this->seq,  seq); 
@@ -77,6 +80,8 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
     strcpy(this->qual, qual);
     strcpy(this->chr,  chr);
     sprintf(this->loc_str, "%s_%d", this->chr, this->bp);
+
+    this->utilized = false;
 }
 
 Input::Input(const char *path) {
