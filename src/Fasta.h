@@ -96,8 +96,6 @@ Seq *Fasta::next_seq() {
     if (uncalled == true) 
         this->corrected++;
 
-    this->line[0] = '\0';
-
     return s;
 }
 

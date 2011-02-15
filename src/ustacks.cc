@@ -1501,7 +1501,7 @@ int load_radtags(string in_file, HashMap &radtags) {
 
     cerr << "  Parsing " << in_file.c_str() << "\n";
 
-    int i = 0;
+    long int i = 0;
     while ((c = fh->next_seq()) != NULL) {
         if (i % 10000 == 0) cerr << "Loading RAD-Tag " << i << "       \r";
 	radtags[c->seq].add_id(c->id);

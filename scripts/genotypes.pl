@@ -854,7 +854,7 @@ sub fetch_loci {
 	or die("Unable to select results from $db.\n");
 
     while ($row = $sth->{'loci'}->fetchrow_hashref()) {
-        #next if ($row->{'tag_id'} != 191);
+        #next if ($row->{'tag_id'} != 105);
 
 	$href = {};
 	$href->{'id'}     = $row->{'tag_id'};
