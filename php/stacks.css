@@ -136,12 +136,11 @@ table.filter td {
     padding-bottom: 6px;
 }
 
-table.filter tr.active_filter {
-    border: 1px dashed #a93535;
-    background-color: #dadbe1;
+table.filter td.active_filter {
+    background-color: #a93535;
 }
 
-table.filter td.active_filter :hover {
+table.filter td.active_filter a:hover {
     color: #ffffff;
 }
 
@@ -365,9 +364,4 @@ div#export_popup h3 {
     margin-right: auto;
     width: 90%;
     padding-bottom: 20px;
-}
-
-td.active_filter {
-    border: 1px dashed #a93535;
-    background-color: #a93535;
 }

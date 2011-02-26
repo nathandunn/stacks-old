@@ -142,7 +142,7 @@ create table markers (
        type       enum('aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'),
        progeny    int unsigned not null default 0,
        max_pct    float,
-       ratio      varchar(64)
+       ratio      varchar(128)
 );
 
 create table sequence (

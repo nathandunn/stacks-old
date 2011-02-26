@@ -590,7 +590,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvnf:o:i:b:e:p:s:f:t:y:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvf:o:i:b:e:p:s:f:t:y:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -685,7 +685,6 @@ void help() {
 	      << "  i: SQL ID to insert into the output to identify this sample.\n"
 	      << "  b: SQL Batch ID to insert into the output to identify a group of samples.\n"
 	      << "  e: specify the barcode error frequency (0 < e < 1) if using the 'fixed' model.\n"
-              << "  n: reads are NOT uniquely mapped.\n" 
 	      << "  h: display this help messsage." << "\n\n";
 
     exit(0);

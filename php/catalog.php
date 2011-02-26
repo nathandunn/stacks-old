@@ -81,6 +81,7 @@ $result = $db['seq_sth']->execute($batch_id);
 check_db_error($result, __FILE__, __LINE__);
 $row = $result->fetchRow();
 
+
 $cols = array();
 
 if ($row['ests'] == 0 && 
@@ -89,6 +90,20 @@ if ($row['ests'] == 0 &&
     $cols['seq'] = false;
 else
     $cols['seq'] = true;
+
+$query =
+    "SELECT count(id) as cnt FROM catalog_genotypes WHERE batch_id=?";
+$db['gcnt_sth'] = $db['dbh']->prepare($query);
+check_db_error($db['gcnt_sth'], __FILE__, __LINE__);
+
+$result = $db['gcnt_sth']->execute($batch_id);
+check_db_error($result, __FILE__, __LINE__);
+$row = $result->fetchRow();
+
+if ($row['cnt'] > 0)
+  $cols['gcnt'] = true;
+else
+  $cols['gcnt'] = false;
 
 //
 // Pull information about this batch
@@ -117,7 +132,7 @@ write_filter($cols);
 //
 // How many columns will we print
 //
-$num_cols = 8;
+$num_cols = 9;
 foreach ($cols as $col)
     if ($col == false)
         $num_cols--;
@@ -186,13 +201,17 @@ echo <<< EOQ
 <tr>
   <th style="width: 10%;">Id</th>
   <th style="width: 5%;">SNP</th>
-  <th style="width: 50%;">Consensus</th>
+  <th style="width: 45%;">Consensus</th>
   <th style="width: 5%;">Matching Parents</th>
   <th style="width: 5%;">Progeny</th>
   <th style="width: 5%;">Marker</th>
   <th style="width: 10%;">Ratio</th>
 
 EOQ;
+
+if ($cols['gcnt'] == true)
+    print
+        "  <th style=\"width: 5%\">Genotypes</th>\n";
 
 if ($cols['seq'] == true)
     print
@@ -204,7 +223,7 @@ check_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT catalog_index.tag_id as tag_id, alleles, parents, progeny, valid_progeny, " . 
-    "seq, marker, max_pct, ratio, ests, pe_radtags, blast_hits, external_id " .
+    "seq, marker, max_pct, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt " .
     "FROM catalog_index " .
     "JOIN catalog_tags ON (catalog_index.cat_id=catalog_tags.id) " . 
     "LEFT JOIN catalog_annotations ON (catalog_index.batch_id=catalog_annotations.batch_id AND catalog_index.tag_id=catalog_annotations.catalog_id) " .
@@ -301,6 +320,12 @@ EOQ;
   <td style="text-align: left; font-size: smaller;">
     $ratio_parsed
   </td>
+
+EOQ;
+
+    if ($cols['gcnt'] == true)
+        echo <<< EOQ
+  <td>$row[geno_cnt]</td>
 
 EOQ;
 
@@ -599,15 +624,17 @@ function write_filter($cols) {
 		     "prog"  => array(),
 		     "vprog" => array(),
 		     "mark"  => array(),
+		     "gcnt"  => array(),
                      "est"   => array(),
                      "pe"    => array(),
                      "blast" => array());
 
-    $alle_ctl  = generate_element_select("filter_alle", array(1, 2, 3, 4), $display['filter_alle'], "");
-    $snps_ctl  = generate_element_select("filter_snps", array(1, 2, 3, 4, 8), $display['filter_snps'], "");
-    $pare_ctl  = generate_element_select("filter_pare", array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18), $display['filter_pare'], "");
-    $prog_ctl  = generate_element_select("filter_prog", array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90), $display['filter_prog'], "");
+    $alle_ctl  = generate_element_select("filter_alle",  array(1, 2, 3, 4), $display['filter_alle'], "");
+    $snps_ctl  = generate_element_select("filter_snps",  array(1, 2, 3, 4, 8), $display['filter_snps'], "");
+    $pare_ctl  = generate_element_select("filter_pare",  array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18), $display['filter_pare'], "");
+    $prog_ctl  = generate_element_select("filter_prog",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90), $display['filter_prog'], "");
     $vprog_ctl = generate_element_select("filter_vprog", array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90), $display['filter_vprog'], "");
+    $gcnt_ctl  = generate_element_select("filter_gcnt",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90), $display['filter_gcnt'], "");
     $mark_ctl  = generate_element_select("filter_mark", 
                                          array('Any', 'aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'), 
                                          $display['filter_mark'], "");
@@ -670,6 +697,10 @@ $alle_ctl
 $snps_ctl
   </td>
   </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
   </table>
   </td>
 
@@ -695,6 +726,10 @@ $pare_ctl
 $prog_ctl
   </td>
   </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
   </table>
   </td>
 
@@ -719,14 +754,42 @@ $vprog_ctl
 $mark_ctl
   </td>
   </tr>
+
+EOQ;
+
+if ($cols['gcnt'] == true) {
+  echo <<< EOQ
+  <tr>
+  <td {$filters['gcnt']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="gcnt" onchange="rebuild_display_select()" {$filters['gcnt']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'gcnt')">
+      <acronym title="Filter the catalog to show loci for which genotypes have been called.">Genotypes</acronym>:</a></td>
+  <td {$filters['gcnt']['tr']}>
+$gcnt_ctl
+  </td>
+  </tr>
+
+EOQ;
+
+} else {
+  echo <<< EOQ
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+
+EOQ;
+}
+
+echo <<< EOQ
   </table>
   </td>
 </tr>
 
 EOQ;
 
-    if ($cols['seq'] == true)
-        echo <<< EOQ
+  if ($cols['seq'] == true)
+    echo <<< EOQ
 <tr>
   <td {$filters['est']['tr']}>
       <input type="checkbox" name="filter_type[]" value="est" onchange="rebuild_display_select()" {$filters['est']['sel']} /> 
@@ -784,6 +847,9 @@ function process_filter(&$display_params) {
 	} else if ($filter == "mark") {
 	    $display_params['filter_mark'] = $_GET['filter_mark'];
 
+	} else if ($filter == "gcnt") {
+	    $display_params['filter_gcnt'] = $_GET['filter_gcnt'];
+
 	}
     }
 }
@@ -823,6 +889,9 @@ function prepare_filter_parameters($display_params, &$param) {
 	} else if ($filter == "blast") {
 	    array_push($param, 0);
 	
+	} else if ($filter == "gcnt") {
+	    array_push($param, $display_params['filter_gcnt']);
+	
 	} else if ($filter == "mark") {
 	  if ($display_params['filter_mark'] == "Any") 
 	    array_push($param, "%/%");
@@ -844,7 +913,8 @@ function apply_query_filters($display_params) {
 	      "mark"  => "(marker LIKE ?)", 
               "est"   => "(ests > ?)",
               "pe"    => "(pe_radtags > ?)",
-              "blast" => "(blast_hits > ?)");
+              "blast" => "(blast_hits > ?)",
+	      "gcnt"  => "(geno_cnt >= ?)");
 
     $filters = $display_params['filter_type'];
 

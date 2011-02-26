@@ -14,6 +14,9 @@ create table catalog_index (
        ests       int unsigned not null,
        pe_radtags int unsigned not null,
        blast_hits int unsigned not null,
+       geno_cnt   int unsigned not null,
+       chr        varchar(32),
+       bp         int unsigned default 0,
        INDEX batch_index (batch_id),
        INDEX tag_index (tag_id),
        INDEX snps_index (snps),
@@ -25,5 +28,8 @@ create table catalog_index (
        INDEX max_pct_index (max_pct),
        INDEX ests_index (ests),
        INDEX pe_rad_index (pe_radtags),
-       INDEX hits_index (blast_hits)
+       INDEX hits_index (blast_hits),
+       INDEX geno_index (geno_cnt),
+       INDEX chr_index (chr),
+       INDEX bp_index (bp)
 );

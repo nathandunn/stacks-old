@@ -1,5 +1,9 @@
+	*Added option to output R/QTL output in genotypes.pl
+	*Added feature to filter by number of available genotypes in progeny
 	*Added command line option to ustacks to capture and output unused
 	 reads.
+	*Bugfix: FASTA parser was missing records due to a bug introduced from
+	 a FASTQ parser fix.
 	*Bugfix: process_radtags.pl was not properly checking the integrity of 
 	 the RAD site after adding restriction enzymes with alternate
 	 nucleotides.
