@@ -37,9 +37,9 @@ file_type in_file_type;
 string    in_file;
 file_type out_file_type;
 string    out_path;
-int       sql_id      = 0;
-int       batch_id    = 0;
-int       num_threads = 1;
+int       sql_id        = 0;
+int       min_stack_cov = 1;
+int       num_threads   = 1;
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -271,8 +271,13 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
     int id;
 
     for (i = m.begin(); i != m.end(); i++) {
-	float total = 0;
 	tag_1 = i->second;
+
+	float total = 0;
+	for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++)
+ 	    total += u[*k]->count;
+
+	if (total < min_stack_cov) continue;
 
 	// First write the consensus sequence
 	tags << "0" << "\t" 
@@ -290,12 +295,10 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 	id = 0;
 	for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++) {
 	    tag_2  = u[*k];
-	    total += tag_2->count;
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
 		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << (*j)->id << "\t" << tag_2->seq << "\t\t\t\n";
 	    }
-
 	    id++;
 	}
 
@@ -581,7 +584,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"file",         required_argument, NULL, 'f'},
 	    {"outpath",      required_argument, NULL, 'o'},
 	    {"id",           required_argument, NULL, 'i'},
-	    {"batch_id",     required_argument, NULL, 'b'},
+	    {"min_cov",      required_argument, NULL, 'm'},
 	    {"num_threads",  required_argument, NULL, 'p'},
 	    {"bc_err_freq",  required_argument, NULL, 'e'},
 	    {0, 0, 0, 0}
@@ -590,7 +593,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvf:o:i:b:e:p:s:f:t:y:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvf:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -625,8 +628,8 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'i':
 	    sql_id = atoi(optarg);
 	    break;
-	case 'b':
-	    batch_id = atoi(optarg);
+	case 'm':
+	    min_stack_cov = atoi(optarg);
 	    break;
 	case 'e':
 	    barcode_err_freq = atof(optarg);
@@ -676,14 +679,14 @@ void version() {
 
 void help() {
     std::cerr << "pstacks " << VERSION << "\n"
-              << "pstacks -t file_type -f file_path [-o path] [-i id] [-b batch_id] [-e errfreq] [-p num_threads] [-h]" << "\n"
+              << "pstacks -t file_type -f file_path [-o path] [-i id] [-m min_cov] [-e errfreq] [-p num_threads] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  t: input file Type. Supported types: bowtie, sam.\n"
               << "  f: input file path.\n"
         //<< "  y: output file type.\n"
 	      << "  o: output path to write results.\n"
 	      << "  i: SQL ID to insert into the output to identify this sample.\n"
-	      << "  b: SQL Batch ID to insert into the output to identify a group of samples.\n"
+	      << "  m: minimum depth of coverage to report a stack (default 1).\n"
 	      << "  e: specify the barcode error frequency (0 < e < 1) if using the 'fixed' model.\n"
 	      << "  h: display this help messsage." << "\n\n";
 

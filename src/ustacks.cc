@@ -37,7 +37,6 @@ string    in_file;
 string    out_path;
 int       num_threads       = 1;
 int       sql_id            = 0;
-int       batch_id          = 0;
 bool      set_kmer_len      = true;
 int       kmer_len          = 0;
 int       min_merge_cov     = 2;
@@ -1595,7 +1594,6 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"file",        required_argument, NULL, 'f'},
 	    {"outpath",     required_argument, NULL, 'o'},
 	    {"id",          required_argument, NULL, 'i'},
-	    {"batch_id",    required_argument, NULL, 'b'},
 	    {"min_cov",     required_argument, NULL, 'm'},
 	    {"max_dist",    required_argument, NULL, 'M'},
 	    {"num_threads", required_argument, NULL, 'p'},
@@ -1614,7 +1612,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hRvdrgf:o:i:b:m:e:E:s:S:p:t:M:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hRvdrgf:o:i:m:e:E:s:S:p:t:M:T:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1646,9 +1644,6 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'i':
 	    sql_id = atoi(optarg);
-	    break;
-	case 'b':
-	    batch_id = atoi(optarg);
 	    break;
 	case 'm':
 	    min_merge_cov = atoi(optarg);
@@ -1734,13 +1729,12 @@ void version() {
 
 void help() {
     std::cerr << "ustacks " << VERSION << "\n"
-              << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-b batch_id] [-e errfreq] [-m min_cov] [-M max_dist] [-p num_threads] [-R] [-h]" << "\n"
+              << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-e errfreq] [-m min_cov] [-M max_dist] [-p num_threads] [-R] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  t: input file Type. Supported types: fasta, fastq, bowtie, sam, tsv.\n"
               << "  f: input file path.\n"
 	      << "  o: output path to write results." << "\n"
 	      << "  i: SQL ID to insert into the output to identify this sample." << "\n"
-	      << "  b: SQL Batch ID to insert into the output to identify a group of samples." << "\n"
 	      << "  m: Minimum depth of coverage required to create a stack." << "\n"
 	      << "  M: Maximum distance (in nucleotides) allowed between stacks." << "\n"
 	      << "  d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
