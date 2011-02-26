@@ -104,6 +104,7 @@ sub populate {
         $locus->{'num_ests'}      = $row->{'ests'};
         $locus->{'num_pe_tags'}   = $row->{'pe_radtags'};
         $locus->{'num_blast'}     = $row->{'blast_hits'};
+	$locus->{'gcnt'}          = $row->{'geno_cnt'};
 
         #
         # Fetch SNPs and Alleles
@@ -177,6 +178,9 @@ sub prepare_filter_parameters {
         } elsif ($filter eq "cata") {
             push(@{$params}, $filters->{'cata'});
 
+        } elsif ($filter eq "gcnt") {
+            push(@{$params}, $filters->{'gcnt'});
+
         } elsif ($filter eq "est") {
             push(@{$params}, 0);
 
@@ -211,7 +215,8 @@ sub apply_query_filters {
          "mark"  => "(marker LIKE ?)", 
          "est"   => "(ests > ?)",
          "pe"    => "(pe_radtags > ?)",
-         "blast" => "(blast_hits > ?)");
+         "blast" => "(blast_hits > ?)",
+	 "gcnt"  => "(geno_cnt >= ?)");
     
     if (scalar(keys %{$filters}) > 0) {
 
@@ -380,7 +385,7 @@ sub prepare_sql_handles {
 
     $query = 
         "SELECT catalog_index.tag_id as tag_id, chr, bp, snps, alleles, parents, progeny, valid_progeny, " . 
-        "seq, marker, max_pct, ratio, ests, pe_radtags, blast_hits, external_id " .
+        "seq, marker, max_pct, ratio, ests, pe_radtags, blast_hits, geno_cnt, external_id " .
         "FROM catalog_index " .
         "JOIN catalog_tags ON (catalog_index.cat_id=catalog_tags.id) " . 
         "LEFT JOIN catalog_annotations ON " . 

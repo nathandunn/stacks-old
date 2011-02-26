@@ -229,26 +229,28 @@ foreach $sample (@parents, @progeny) {
     $i++;
 }
 
-#
-# Search for markers
-#
-$cmd = $exe_path . "markers.pl -D $db -b $batch_id -o $out_path 2>&1";
-print STDERR  "$cmd\n";
-print $log_fh "$cmd\n";
-@results =    `$cmd`;
-print $log_fh @results;
+if ($sql) {
+    #
+    # Search for markers
+    #
+    $cmd = $exe_path . "markers.pl -D $db -b $batch_id -o $out_path 2>&1";
+    print STDERR  "$cmd\n";
+    print $log_fh "$cmd\n";
+    @results =    `$cmd`;
+    print $log_fh @results;
 
-$file = "$out_path/batch_" . $batch_id . ".markers.tsv";
-import_sql_file($file, "markers");
+    $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
+    import_sql_file($file, "markers");
 
-#
-# Index the radtags database
-#
-$cmd = $exe_path . "index_radtags.pl -D $db -t -c 2>&1";
-print STDERR  "$cmd\n";
-print $log_fh "$cmd\n";
-@results =    `$cmd`;
-print $log_fh @results;
+    #
+    # Index the radtags database
+    #
+    $cmd = $exe_path . "index_radtags.pl -D $db -t -c 2>&1";
+    print STDERR  "$cmd\n";
+    print $log_fh "$cmd\n";
+    @results =    `$cmd`;
+    print $log_fh @results;
+}
 
 close($log_fh);
 

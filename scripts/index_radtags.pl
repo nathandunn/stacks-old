@@ -79,15 +79,18 @@ sub gen_cat_index {
     my ($fh, $catalog_file) = tempfile("catalog_index_XXXXXXXX", UNLINK => 1, TMPDIR => 1);
 
     my ($row, $tag, $count, $par_cnt, $pro_cnt, $allele_cnt, $marker, $valid_pro, 
-        $max_pct, $ratio, $ests, $pe_radtags, $blast_hits);
+        $max_pct, $ratio, $ests, $pe_radtags, $blast_hits, $geno_cnt);
 
-    my (%snps, %markers, %seqs, %hits, %parents, %progeny, %alleles);
+    my (%snps, %markers, %genotypes, %seqs, %hits, %parents, %progeny, %alleles);
 
     print STDERR "  Fetching catalog SNPs...\n";
     fetch_catalog_snps(\%sth, \%snps);
 
     print STDERR "  Fetching markers...\n";
     fetch_markers(\%sth, \%markers);
+
+    print STDERR "  Fetching genotypes...\n";
+    fetch_genotypes(\%sth, \%genotypes);
 
     print STDERR "  Fetching associated sequences...\n";
     sequence_matches(\%sth, \%seqs, \%hits);
@@ -130,6 +133,15 @@ sub gen_cat_index {
 	    $pro_cnt = scalar(keys %{$progeny{$row->{'batch_id'}}->{$row->{'tag_id'}}});
 	} else {
 	    $pro_cnt = 0;
+	}
+
+	#
+	# Determine the number of genotypes associated with this RAD-Tag
+	#
+	if (defined($genotypes{$row->{'batch_id'}}->{$row->{'tag_id'}})) {
+	    $geno_cnt = $genotypes{$row->{'batch_id'}}->{$row->{'tag_id'}};
+	} else {
+	    $geno_cnt = 0;
 	}
 
 	#
@@ -188,7 +200,10 @@ sub gen_cat_index {
 	    $ratio, "\t",
             $ests, "\t",
             $pe_radtags, "\t",
-            $blast_hits, "\n";
+            $blast_hits, "\t",
+	    $geno_cnt, "\t",
+	    $row->{'chr'}, "\t",
+	    $row->{'bp'}, "\n";
     }
 
     close($fh);
@@ -213,6 +228,25 @@ sub fetch_catalog_snps {
 	}
 
 	$snps->{$row->{'batch_id'}}->{$row->{'tag_id'}}++;
+    }
+}
+
+sub fetch_genotypes {
+    my ($sth, $genotypes) = @_;
+
+    my ($row);
+
+    $sth->{'cat_geno'}->execute()
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'cat_geno'}->fetchrow_hashref()) {
+	if (!defined($genotypes->{$row->{'batch_id'}})) {
+	    $genotypes->{$row->{'batch_id'}} = {};
+	}
+
+	if ($row->{'genotype'} ne "-" && $row->{'genotype'} ne "--") {
+	    $genotypes->{$row->{'batch_id'}}->{$row->{'tag_id'}}++;
+	}
     }
 }
 
@@ -463,13 +497,17 @@ sub prepare_sql_handles {
     $sth->{'match'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-	"SELECT catalog_tags.id as id, tag_id, batch_id, seq FROM catalog_tags " . 
+	"SELECT catalog_tags.id as id, tag_id, batch_id, chr, bp, seq FROM catalog_tags " . 
 	"JOIN batches ON (catalog_tags.batch_id=batches.id) WHERE relationship='consensus'";
     $sth->{'cat_tags'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
 	"SELECT batch_id, tag_id FROM catalog_snps";
     $sth->{'cat_snps'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+	"SELECT batch_id, catalog_id as tag_id, sample_id, genotype FROM catalog_genotypes";
+    $sth->{'cat_geno'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
 	"SELECT batch_id, catalog_id, type, progeny, max_pct, ratio FROM markers";

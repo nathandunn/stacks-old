@@ -37,13 +37,14 @@ my %genotypes = (
 		 'ab/cc' => {'ac' => 0, 'bc' => 0},
 		 'cc/ab' => {'ac' => 0, 'bc' => 0},
 		 'aa/bb' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
-		 'ab/--' => {'aa' => 0, 'ab' => 0},
-		 '--/ab' => {'aa' => 0, 'ab' => 0},
-		 'ab/aa' => {'aa' => 0, 'ab' => 0},
-		 'aa/ab' => {'aa' => 0, 'ab' => 0},
+		 'ab/--' => {'aa' => 0, 'bb' => 0, 'ab'},
+		 '--/ab' => {'aa' => 0, 'bb' => 0, 'ab'},
+		 'ab/aa' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
+		 'aa/ab' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
 		 'ab/ab' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
-		 'ab/ac' => {'aa' => 0, 'ab' => 0, 'ac' => 0, 'bc' => 0},
-		 'ab/cd' => {'ac' => 0, 'ad' => 0, 'bc' => 0, 'bd' => 0}
+		 'ab/ac' => {'aa' => 0, 'ab' => 0, 'ac' => 0, 'bb' => 0, 'bc' => 0, },
+		 'ab/cd' => {'aa' => 0, 'ab' => 0, 'ac' => 0, 'ad' => 0, 
+			     'bb' => 0, 'bc' => 0, 'bd' => 0, 'cc' => 0, 'cd' => 0, 'dd' => 0}
 		 );
 
 parse_command_line();
@@ -70,7 +71,7 @@ sub find_markers {
 	die("Unable to open output file: $out_path/batch_" . $batch_id . ".markers.tsv; $!\n");
 
     foreach $key (keys %{$catalog}) {
-	dump_tags($catalog->{$key}) if ($debug);
+	#dump_tags($catalog->{$key}) if ($debug);
 
 	my (%samples);
 	#
@@ -106,7 +107,6 @@ sub find_markers {
             }
             $num_unique_alleles = scalar(keys %unique_alleles);
 
-
 	    #
 	    # Rad-Tag is heterozygous in both parents. However, the number of alleles present distinguishes 
             # what type of marker it is. Four unique alleles requries an ab/cd marker, while four 
@@ -125,7 +125,8 @@ sub find_markers {
                     $annote = "ab/cd";
                 }
 
-		$ratio  = tally_progeny_alleles($catalog->{$key}->{'par'}, 
+		$ratio  = tally_progeny_alleles($order,
+						$catalog->{$key}->{'par'}, 
 						$catalog->{$key}->{'pro'},
 						$key, $annote);
 		print OUT
@@ -148,7 +149,8 @@ sub find_markers {
                     $annote = $order->{$sample_id} eq 'first' ? "ab/aa" : "aa/ab";
                 }
 
-		$ratio = tally_progeny_alleles($catalog->{$key}->{'par'}, 
+		$ratio = tally_progeny_alleles($order,
+					       $catalog->{$key}->{'par'}, 
 					       $catalog->{$key}->{'pro'},
 					       $key, $annote);
 		print OUT
@@ -171,7 +173,8 @@ sub find_markers {
                     $annote = $order->{$sample_id} eq 'first' ? "aa/ab" : "ab/aa";
                 }
 
-		$ratio = tally_progeny_alleles($catalog->{$key}->{'par'}, 
+		$ratio = tally_progeny_alleles($order,
+					       $catalog->{$key}->{'par'}, 
 					       $catalog->{$key}->{'pro'},
 					       $key, $annote);
 		print OUT
@@ -188,7 +191,8 @@ sub find_markers {
                 if ($catalog->{$key}->{'par'}->{$parents[0]}->[0] ne "consensus" &&
                     $catalog->{$key}->{'par'}->{$parents[1]}->[0] ne "consensus") {
                     $annote = "aa/bb";
-                    $ratio  = tally_progeny_alleles($catalog->{$key}->{'par'}, 
+                    $ratio  = tally_progeny_alleles($order,
+						    $catalog->{$key}->{'par'}, 
                                                     $catalog->{$key}->{'pro'},
                                                     $key, $annote);
                     print OUT
@@ -209,7 +213,8 @@ sub find_markers {
 		($sample_id, $tag_id) = split("_", $parents[0]);
 		$annote = $order->{$sample_id} eq 'first' ? "ab/--" : "--/ab";
 
-		$ratio = tally_progeny_alleles($catalog->{$key}->{'par'}, 
+		$ratio = tally_progeny_alleles($order,
+					       $catalog->{$key}->{'par'}, 
 					       $catalog->{$key}->{'pro'},
 					       $key, $annote);
 
@@ -253,7 +258,7 @@ sub compare_snp_locations {
 }
 
 sub tally_progeny_alleles {
-    my ($parents, $progeny, $tag_id, $marker) = @_;
+    my ($order, $parents, $progeny, $tag_id, $marker) = @_;
 
     my (@keys, %markers, %genotype_map);
     my ($key, $allele, $m, $pct);
@@ -261,7 +266,43 @@ sub tally_progeny_alleles {
     #
     # Create a map between alleles and genotype symbols
     #
-    create_marker_map($marker, $tag_id, $parents, \%genotype_map);
+    create_genotype_map($marker, $tag_id, $order, $parents, \%genotype_map);
+
+    my $dictionary = {'ab/--' => {'a'  => 'aa',
+				  'b'  => 'bb'},
+		      '--/ab' => {'a'  => 'aa',
+				  'b'  => 'bb'},
+		      'aa/bb' => {'a'  => 'aa',
+				  'ab' => 'ab',
+				  'b'  => 'bb'},
+		      'ab/cd' => {'a'  => 'aa',
+				  'ab' => 'ab',
+				  'b'  => 'bb',
+				  'c'  => 'cc',
+				  'cd' => 'cd',
+				  'd'  => 'dd',
+				  'ac' => 'ac',
+				  'ad' => 'ad',
+				  'bc' => 'bc',
+				  'bd' => 'bd'},
+		      'ab/aa' => {'a'  => 'aa',
+				  'ab' => 'ab',
+				  'b'  => 'bb'},
+		      'aa/ab' => {'a'  => 'aa',
+				  'ab' => 'ab',
+				  'b'  => 'bb'},
+		      'ab/cc' => {'a'  => 'aa',
+				  'ab' => 'ab',
+				  'bb' => 'bb',
+				  'c'  => 'cc',
+				  'ac' => 'ac',
+				  'bc' => 'bc'},
+		      'cc/ab' => {'aa' => 'aa',
+				  'ab' => 'ab',
+				  'bb' => 'bb',
+				  'c'  => 'cc',
+				  'ac' => 'ac',
+				  'bc' => 'bc'}};
 
     foreach $key (keys %{$progeny}) {
 	my @alleles;
@@ -293,41 +334,11 @@ sub tally_progeny_alleles {
 
 	    push(@alleles, $genotype_map{$allele});
 	}
-	@alleles = sort @alleles;
+	$m = join("", sort @alleles);
+	print STDERR "Converting from '$m' to ", $dictionary->{$marker}->{$m}, "\n" if ($debug);
 
-	#
-	# If the tag was male or female-only in the parents, than we can no have more 
-	# than a single allele in any individual progeny.
-	# 
-	if (scalar(@alleles) == 2 &&
-	    ($marker eq "ab/--" || $marker eq "--/ab")) {
-	    # Illegal genotype
-	    splice(@alleles, 0);
+	$m = defined($dictionary->{$marker}->{$m}) ? $dictionary->{$marker}->{$m} : "-";
 
-	#
-	# In the cases where we have a common genotype between the parents, such as 'aa'
-	# the pipeline will only report a single 'a', since all the RAD-Tags for the two
-	# were merged into a single allele by the pipeline.
-	#
-	} elsif (scalar(@alleles) == 1 && $alleles[0] eq 'a') {
-	    push(@alleles, $alleles[0]);
-
-	#
-	# We are mapping ab/ab tags or aa/bb tags.
-	#
-	} elsif (scalar(@alleles) == 1 && ($marker eq "ab/ab" || $marker eq "aa/bb") && $alleles[0] eq 'b') {
-	    push(@alleles, $alleles[0]);
-
-	#
-	# We are mapping ab/-- and --/ab tags as lmxll and nnxnp, respectively, since 
-	# Joinmap does not have a specification for heterozygous, single parent tags.
-	#
-	} elsif (scalar(@alleles) == 1 && 
-		 ($marker eq "ab/--" || $marker eq "--/ab")) {
-	    unshift(@alleles, 'a') if ($alleles[0] eq 'b');
-	}
-
-	$m = join("", @alleles);
 
 	if (!defined($genotypes{$marker}->{$m})) {
 	    print STDERR "  Warning: illegal genotype encountered ('$m') in tag $tag_id, progeny $key\n" if ($debug);
@@ -346,53 +357,112 @@ sub tally_progeny_alleles {
     }
     foreach $m (sort keys %{$genotypes{$marker}}) {
 	$pct = $valid_progeny > 0 ? sprintf("%.1f", $markers{$m} / $valid_progeny * 100) : "0.0";
-	$ratio .= defined($markers{$m}) ? "$m:$markers{$m}($pct%);" : "$m:0(0%);";
+	if ($markers{$m} > 0) {
+	    $ratio .= defined($markers{$m}) ? "$m:$markers{$m}($pct%);" : "$m:0(0%);";
+	}
 	$max_pct = $pct > $max_pct ? $pct : $max_pct;
     }
 
     return $valid_progeny . "\t" . $max_pct . "\t" . $ratio;
 }
 
-sub create_marker_map {
-    my ($marker, $tag_id, $parents, $map) = @_;
+sub create_genotype_map {
+    my ($marker, $tag_id, $order, $parents, $map) = @_;
 
-    my (%genotypes, @nucs, %alleles);
-    my ($nuc, $m, $key, $allele);
-
+    my (%genotypes, %legal_genotypes, @parents, @types, @keys, %alleles, %par_specific, %com_types);
+    my ($type, $m, $key, $allele, $sample_id, $tag_id);
     #
     # Create a genotype map. For any set of alleles, this routine will
-    # assign each allele to one of the constituent markers, e.g. given the 
-    # marker type 'abxaa' and the alleles 'A' and 'G' from the male, and 'G'
-    # from the female, will assign 'G' == 'a' and 'A' = 'b'.
+    # assign each allele to one of the constituent genotypes, e.g. given the 
+    # marker type 'aaxbb' and the alleles 'A' from the male, and 'G'
+    # from the female, will assign 'G' == 'bb' and 'A'== 'aa'. It assumes that 
+    # recombination may have occurred as with an F2, F3 or later cross.
     #
-    $m = substr($marker, 0, 2) . substr($marker, 3, 2);
+    @parents = keys %{$parents};
 
-    foreach $nuc (split(//, $m)) {
-	next if ($nuc eq "-");
-	$genotypes{$nuc}++;
+    #
+    # First, identify any alleles that are common between the two parents.
+    #
+    # Record genotypes from first parent
+    foreach $type (split(//, substr($marker, 0, 2))) {
+	next if ($type eq "-");
+        $par_specific{$type}++;
+    }
+    foreach $type (keys %par_specific) {
+	$legal_genotypes{$type}++;
+    }
+    # Record genotypes from second parent
+    foreach $type (split(//, substr($marker, 3, 2))) {
+	next if ($type eq "-");
+        $par_specific{$type}++;
+    }
+    foreach $type (keys %par_specific) {
+	$legal_genotypes{$type}++;
+    }
+    # Find the common genotypes
+    foreach $type (keys %legal_genotypes) {
+	push(@types, $type) if ($legal_genotypes{$type} > 1);
+    }
+    @types = sort @types;
+
+    foreach $allele (@{$parents->{$parents[0]}}, @{$parents->{$parents[1]}}) {
+	$alleles{$allele}++;
+    }
+    @keys = sort {$alleles{$b} <=> $alleles{$a}} keys %alleles;
+
+    foreach $allele (@keys) {
+	if ($alleles{$allele} > 1) {
+	    $map->{$allele} = shift @types;
+	    $com_types{$map->{$allele}}++;
+	    print STDERR "  Assinging common allele '$allele' to genotype '", $map->{$allele}, "'\n" if ($debug);
+	}
     }
 
-    @nucs = sort keys %genotypes;
+    #
+    # Now, examine the remaining first parent alleles.
+    #
+    %legal_genotypes = ();
+    ($sample_id, $tag_id) = split("_", $parents[0]);
+    $key = $order->{$sample_id} eq "first" ? $parents[0] : $parents[1];
+    $m   = substr($marker, 0, 2);
 
-    foreach $key (keys %{$parents}) {
+    foreach $type (split(//, $m)) {
+	next if ($type eq "-" || defined($com_types{$type}));
+	print STDERR "  Adding $type to genotypes\n" if ($debug);
+        $legal_genotypes{$type}++;
+    }
+    @types = sort keys %legal_genotypes;
+
+    if (scalar(@types) > 0) {
 	foreach $allele (@{$parents->{$key}}) {
-	    $alleles{$allele}++;
+	    next if (defined($map->{$allele}));
+	    $map->{$allele} = shift @types;
+	    print STDERR "  Assinging '$allele' to genotype '", $map->{$allele}, "'\n" if ($debug);
 	}
     }
 
-    foreach $allele (sort {$alleles{$b} <=> $alleles{$a}} keys %alleles) {
+    #
+    # Finally, repeat in the second parent.
+    #
+    %legal_genotypes = ();
+    $key = $order->{$sample_id} eq "second"  ? $parents[0] : $parents[1];
+    $m   = substr($marker, 3, 2);
 
-	if (!defined($map->{$allele})) {
-	    $key = shift @nucs;
+    foreach $type (split(//, $m)) {
+	next if ($type eq "-" || defined($com_types{$type}));
+	print STDERR "  Adding $type to genotypes\n" if ($debug);
+        $legal_genotypes{$type}++;
+    }
+    @types = sort keys %legal_genotypes;
 
-	    #die("Impossible allele combination!\n") if (!defined($key));
-	    if (!defined($key)) {
-		print STDERR "Warning: impossible allele combination in parental genotypes, tag $tag_id\n";
-		next;
-	    }   
-	    $map->{$allele} = $key;
+    if (scalar(@types) > 0) {
+	foreach $allele (@{$parents->{$key}}) {
+	    next if (defined($map->{$allele}));
+	    $map->{$allele} = shift @types;
+	    print STDERR "  Assinging '$allele' to genotype '", $map->{$allele}, "'\n" if ($debug);
 	}
     }
+
 }
 
 sub populate {
