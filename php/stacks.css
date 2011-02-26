@@ -365,3 +365,12 @@ div#export_popup h3 {
     width: 90%;
     padding-bottom: 20px;
 }
+
+div.gloc {
+    margin-top: 0.5em;
+    margin-left: 0.5em;
+    float: left;
+    font-size: smaller;
+    font-family: bitstream vera sans, arial, sans;
+    clear: both;
+}

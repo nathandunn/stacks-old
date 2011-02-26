@@ -223,7 +223,8 @@ check_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT catalog_index.tag_id as tag_id, alleles, parents, progeny, valid_progeny, " . 
-    "seq, marker, max_pct, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt " .
+    "seq, marker, max_pct, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt, " .
+    "catalog_index.chr, catalog_index.bp " .
     "FROM catalog_index " .
     "JOIN catalog_tags ON (catalog_index.cat_id=catalog_tags.id) " . 
     "LEFT JOIN catalog_annotations ON (catalog_index.batch_id=catalog_annotations.batch_id AND catalog_index.tag_id=catalog_annotations.catalog_id) " .
@@ -312,8 +313,17 @@ EOQ;
         $blast_hits_str = "blast hits: $row[blast_hits]";
     }
 
+    if (strlen($row['chr']) > 0) {
+      print 
+	"<td class=\"seq\">\n" .
+	"$s\n" .
+	"<div class=\"gloc\">Chr: $row[chr], " . print_bp($row['bp']) . "</div>\n" .
+	"</td>\n";
+    } else {
+      print "<td class=\"seq\">$s</td>\n";
+    }
+
     echo <<< EOQ
-  <td class="seq">$s</td>
   <td>$row[parents]</td>
   <td><acronym title="Matching Progeny">$row[progeny]</acronym> <strong>/</strong> <acronym title="Mappable Progeny">$row[valid_progeny]</acronym></td>
   <td>$row[marker]</td>

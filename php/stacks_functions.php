@@ -223,4 +223,12 @@ function generate_element_select($name, $elements, $selected_ele, $javascript) {
     return $ctl;
 }
 
+function print_bp($bp) {
+
+  // Convert the location to be in megabases
+  $bp = sprintf("%.02fMb", $bp / 1000000);
+
+  return $bp;
+}
+
 ?>
