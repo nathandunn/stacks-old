@@ -27,19 +27,19 @@ else
     write_database($database);
 
 function write_database_list($database) {
-    global $db_user, $db_pass, $root_path, $img_path;
+    global $db_user, $db_pass, $root_path, $img_path, $mysql_bin;
 
     $databases = array();
-    
-    exec("mysql --user=$db_user --password=$db_pass -N -B -e \"SHOW DATABASES LIKE '%_radtags'\"", $databases);
 
-    $page_title = "RAD-Tag Databases";
+    exec("$mysql_bin --user=$db_user --password=$db_pass -N -B -e \"SHOW DATABASES LIKE '%_radtags'\"", $databases);
+
+    $page_title = "Stacks Databases";
     write_header($page_title);
 
     echo <<< EOQ
 <h4 class="info_head">
   <img id="sources_img" src="$img_path/caret-d.png" />
-  <a onclick="toggle_div('sources', '$img_path', 'page_state');">RAD-Tag Databases</a>
+  <a onclick="toggle_div('sources', '$img_path', 'page_state');">Stacks Databases</a>
 </h4>
 
 <a name="results_top"></a>
@@ -66,7 +66,7 @@ EOQ;
 }
 
 function write_database($database) {
-    global $root_path;
+    global $root_path, $img_path;
 
     //
     // Connect to the database

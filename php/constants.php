@@ -26,6 +26,11 @@ $db_pass     = "dbpass";
 $db_host     = "localhost";
 
 //
+// Path to the MySQL client program
+//
+$mysql_bin = "/usr/bin/mysql";
+
+//
 // File system location of PHP/HTML files
 //
 $system_path = "_PKGDATADIR_" . "php/";
