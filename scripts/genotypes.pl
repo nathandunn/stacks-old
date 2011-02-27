@@ -1861,7 +1861,7 @@ sub usage {
 genotypes.pl -t map_type -D db -b id [-p min] [-c -P path -A path] [-o type] [-s] [-C] [-B blacklist] [-W whitelist] [-d] [-h]
   t: map type to write. 'CP', 'DH', 'F2' and 'BC1' are the currently supported map types.
   o: output file type to write, 'joinmap' and 'rqtl' are currently supported.
-  D: radtag database to examine.
+  D: Stacks database to examine.
   b: Batch ID to examine when exporting from the catalog.
   p: minimum number of progeny required to print a marker.
   c: make automated corrections to the data.
