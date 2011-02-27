@@ -384,7 +384,8 @@ sub prepare_sql_handles {
     $sth->{'mat'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-        "SELECT catalog_index.tag_id as tag_id, chr, bp, snps, alleles, parents, progeny, valid_progeny, " . 
+        "SELECT catalog_index.tag_id as tag_id, catalog_index.chr, catalog_index.bp, " .
+	"snps, alleles, parents, progeny, valid_progeny, " . 
         "seq, marker, max_pct, ratio, ests, pe_radtags, blast_hits, geno_cnt, external_id " .
         "FROM catalog_index " .
         "JOIN catalog_tags ON (catalog_index.cat_id=catalog_tags.id) " . 

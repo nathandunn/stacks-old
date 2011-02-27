@@ -43,7 +43,7 @@ my $min_dist    = 0;
 my $fuzzy_match = 0;
 my $num_threads = 0;
 my $cov_scale   = 0;
-my $batch_id    = 0;
+my $batch_id    = -1;
 my $sample_id   = 1;
 my $desc        = ""; # Database description of this dataset
 my $date        = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
@@ -142,7 +142,7 @@ foreach $sample (@parents, @progeny) {
 	$rrep = "";
     }
 
-    $cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -b $batch_id -i $sample_id $rrep $minc $mind $cscale $threads 2>&1";
+    $cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $rrep $minc $mind $cscale $threads 2>&1";
     print STDERR "$cmd\n";
     print $log_fh    "$cmd\n";
     @results = `$cmd`;
@@ -293,6 +293,11 @@ sub parse_command_line {
 
     $exe_path = $exe_path . "/"          if (substr($out_path, -1) ne "/");
     $out_path = substr($out_path, 0, -1) if (substr($out_path, -1) eq "/");
+
+    if ($batch_id < 0) {
+	print STDERR "You must specify a batch ID.\n";
+	usage();
+    }
 
     if (scalar(@parents) == 0) {
 	print STDERR "You must specify at least one parent file.\n";

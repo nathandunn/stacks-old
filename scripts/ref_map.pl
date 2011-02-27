@@ -41,8 +41,7 @@ my $min_cov     = 0;
 my $min_dist    = 0;
 my $fuzzy_match = 0;
 my $num_threads = 0;
-my $cov_scale   = 0;
-my $batch_id    = 0;
+my $batch_id    = -1;
 my $sample_id   = 1;
 my $desc        = ""; # Database description of this dataset
 my $date        = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
@@ -82,8 +81,9 @@ foreach $parent (@progeny) {
     push(@types, "progeny");
 }
 
-my (@results, $cmd, $threads, $fuzzym);
+my (@results, $cmd, $threads, $fuzzym, $minc);
 
+$minc    = $min_cov     > 0 ? "-m $min_cov"     : "";
 $threads = $num_threads > 0 ? "-p $num_threads" : ""; 
 $fuzzym  = "-n $fuzzy_match";
 
@@ -130,7 +130,7 @@ foreach $sample (@parents, @progeny) {
 
     $map{$pfile} = $sample_id;
 
-    $cmd = $exe_path . "pstacks -t $ftype -f $sample -o $out_path -b $batch_id -i $sample_id $threads 2>&1";
+    $cmd = $exe_path . "pstacks -t $ftype -f $sample -o $out_path -i $sample_id $minc $threads 2>&1";
     print STDERR "$cmd\n";
     print $log_fh    "$cmd\n";
     @results = `$cmd`;
@@ -258,10 +258,8 @@ sub parse_command_line {
 	elsif ($_ =~ /^-r$/) { push(@progeny, shift @ARGV); }
 	elsif ($_ =~ /^-o$/) { $out_path    = shift @ARGV; }
 	elsif ($_ =~ /^-m$/) { $min_cov     = shift @ARGV; }
-	elsif ($_ =~ /^-M$/) { $min_dist    = shift @ARGV; }
         elsif ($_ =~ /^-n$/) { $fuzzy_match = shift @ARGV; }
         elsif ($_ =~ /^-T$/) { $num_threads = shift @ARGV; }
-	elsif ($_ =~ /^-c$/) { $cov_scale   = shift @ARGV; }
 	elsif ($_ =~ /^-D$/) { $desc        = shift @ARGV; }
 	elsif ($_ =~ /^-e$/) { $exe_path    = shift @ARGV; }
 	elsif ($_ =~ /^-b$/) { $batch_id    = shift @ARGV; }
@@ -281,6 +279,11 @@ sub parse_command_line {
     $exe_path = $exe_path . "/"          if (substr($out_path, -1) ne "/");
     $out_path = substr($out_path, 0, -1) if (substr($out_path, -1) eq "/");
 
+    if ($sql && $batch_id < 0) {
+	print STDERR "You must specify a batch ID.\n";
+	usage();
+    }
+
     if (scalar(@parents) == 0) {
 	print STDERR "You must specify at least one parent file.\n";
 	usage();
@@ -295,12 +298,13 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-ref_map.pl -p path -r path -o path [-n mismatches] [-T num_threads] [-B db -b batch_id -D "desc" -a yyyy-mm-dd] [-S -s id] [-e path] [-d] [-h]
+ref_map.pl -p path -r path -o path [-n mismatches] [-m min_cov] [-T num_threads] [-B db -b batch_id -D "desc" -a yyyy-mm-dd] [-S -s id] [-e path] [-d] [-h]
     p: path to a Bowtie/SAM file containing parent sequences.
     r: path to a Bowtie/SAM file containing progeny sequences.
     o: path to write pipeline output files.
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
     T: specify the number of threads to execute.
+    m: specify the minimum depth of coverage to report a stack in pstacks (default 1).
     B: specify a database to load data into.
     b: batch ID representing this dataset in the database.
     D: batch description
