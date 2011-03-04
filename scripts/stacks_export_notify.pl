@@ -27,7 +27,7 @@
 
 use strict;
 use File::Temp qw/tempfile/;
-use NET::SMTP;
+use Net::SMTP;
 
 use constant stacks_version => "_VERSION_";
 
