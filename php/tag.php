@@ -263,7 +263,7 @@ print
     "  <td class=\"tag\">" . $s . "</td>\n" .
     "</tr>\n";
 
-$s = print_snps($seqs['consensus'][0]['s'], $seqs['consensus'][0]['s'], $snps);
+$s = print_snps($seqs['consensus'][0]['s'], $seqs['consensus'][0]['s'], $snps, false);
 print
     "<tr>\n" .
     "  <td class=\"num\">&nbsp;</td>\n" .

@@ -66,4 +66,9 @@ $colors = array("#008000",
 		"#4cb8ff");
 $color_size = count($colors);
 
+//
+// Length to wrap sequences at.
+// 
+$display_len = 80;
+
 ?>

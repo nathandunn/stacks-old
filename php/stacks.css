@@ -183,8 +183,15 @@ table.int td {
     border: none; 
 }
 
-td.seq { 
+td.seq {
     text-align: center;
+}
+
+td.seq div.seq {
+    margin-left: auto;
+    margin-right: auto;
+    width: 95%;
+    text-align: left;
     font-family: monospace;
 }
 

@@ -273,7 +273,7 @@ EOQ;
     else
 	print "  <td>Yes <span class=\"s\">[" . count($snps) . "nuc]</span></td>\n";
 
-    $s = print_snps($row['seq'], $row['seq'], $snps);
+    $s = print_snps($row['seq'], $row['seq'], $snps, true);
 
     $ratio = explode(";", $row['ratio']);
     $ratio_parsed = "";
@@ -316,11 +316,11 @@ EOQ;
     if (strlen($row['chr']) > 0) {
       print 
 	"<td class=\"seq\">\n" .
-	"$s\n" .
+	"<div class=\"seq\">$s</div>\n" .
 	"<div class=\"gloc\">Chr: $row[chr], " . print_bp($row['bp']) . "</div>\n" .
 	"</td>\n";
     } else {
-      print "<td class=\"seq\">$s</td>\n";
+      print "<td class=\"seq\"><div class=\"seq\">$s</div></td>\n";
     }
 
     echo <<< EOQ

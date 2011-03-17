@@ -124,9 +124,8 @@ function print_scale($max_len) {
     return $str;
 }
 
-function print_snps($consensus, $seq, $snps) {
-    if (count($snps) == 0) 
-	return $seq;
+function print_snps($consensus, $seq, $snps, $wrap) {
+    global $display_len;
 
     $str   = "";
     $start = 0;
@@ -148,10 +147,39 @@ function print_snps($consensus, $seq, $snps) {
 	$start = $end + 1;
     }
 
-    $s    = substr($seq, $start);
-    $str .= $s;
+    if (count($snps) > 0) {
+      $s    = substr($seq, $start);
+      $str .= $s;
+    } else {
+      $str  = $consensus;
+    }
 
-    return $str;
+    if ($wrap == false) 
+      return $str;
+
+    //
+    // Add line breaks to the sequence
+    //
+    $s   = "";
+    $nuc = 0;
+    $pos = 0;
+    $len = strlen($str);
+    while ($len > $display_len) {
+      for ($pos = 0, $nuc = 0; $pos < $display_len && $nuc < $len; $nuc++, $pos++) {
+	if ($str[$nuc] == '<') {
+	  do { $nuc++; } while ($str[$nuc] != '>');
+	  $nuc++;
+	}
+      }	
+      $s  .= substr($str, 0, $nuc) . "<br />\n";
+      $str = substr($str, $nuc);
+      $pos = 0;
+      $nuc = 0;
+      $len = strlen($str);
+    }
+    $s .= $str;
+
+    return $s;
 }
 
 function print_snps_errs($consensus, $sequence, $snps) {
