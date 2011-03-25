@@ -275,12 +275,13 @@ sub fetch_markers {
 sub catalog_matches {
     my ($sth, $parents, $progeny, $alleles) = @_;
 
-    my ($row);
+    my ($row, $key);
 
     $sth->{'cat_matches'}->execute()
 	or die("Unable to select results from $db.\n");
 
     while ($row = $sth->{'cat_matches'}->fetchrow_hashref()) {
+	$key = $row->{'sample_id'} . "_" . $row->{'tag_id'};
 
 	if ($row->{'type'} eq "parent") {
 	    if (!defined($parents->{$row->{'batch_id'}})) {
@@ -289,7 +290,7 @@ sub catalog_matches {
 	    if (!defined($parents->{$row->{'batch_id'}}->{$row->{'catalog_id'}})) {
 		$parents->{$row->{'batch_id'}}->{$row->{'catalog_id'}} = {};
 	    }
-	    $parents->{$row->{'batch_id'}}->{$row->{'catalog_id'}}->{$row->{'tag_id'}}++;
+	    $parents->{$row->{'batch_id'}}->{$row->{'catalog_id'}}->{$key}++;
 
 	} elsif ($row->{'type'} eq "progeny") {
 	    if (!defined($progeny->{$row->{'batch_id'}})) {
@@ -298,7 +299,7 @@ sub catalog_matches {
 	    if (!defined($progeny->{$row->{'batch_id'}}->{$row->{'catalog_id'}})) {
 		$progeny->{$row->{'batch_id'}}->{$row->{'catalog_id'}} = {};
 	    }
-	    $progeny->{$row->{'batch_id'}}->{$row->{'catalog_id'}}->{$row->{'tag_id'}}++;
+	    $progeny->{$row->{'batch_id'}}->{$row->{'catalog_id'}}->{$key}++;
 	}
 
 	if (!defined($alleles->{$row->{'batch_id'}})) {
@@ -514,7 +515,7 @@ sub prepare_sql_handles {
     $sth->{'marker'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-	"SELECT samples.batch_id, catalog_id, tag_id, allele, type FROM matches " . 
+	"SELECT samples.batch_id, catalog_id, tag_id, matches.sample_id, allele, type FROM matches " . 
 	"JOIN samples ON (samples.id=matches.sample_id)";
     $sth->{'cat_matches'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
