@@ -350,7 +350,7 @@ sub prepare_sql_handles {
     # Connect to the database, check for the existence of a MySQL config file in the home
     # directory first, otherwise use the stacks-distributed one.
     #
-    my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_config;
+    my $cnf = (defined($ENV{"HOME"}) && -e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_config;
     $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=$cnf")
 	or die("Unable to connect to the $db MySQL Database!\n" . $DBI::errstr);
 

@@ -642,7 +642,7 @@ sub open_files {
 
     my ($barcode, $suffix_1, $suffix_2);
 
-    if ($interleaved) {
+    if ($interleaved == true) {
         if ($output_type eq "fastq") {
             $suffix_1 = ".fq";
         } elsif ($output_type eq "raw") {
@@ -727,9 +727,15 @@ sub build_file_list {
 
     my (@ls, $line, $prefix);
 
-    @ls = $input_type eq "raw" ? 
-        `ls -1 $in_path/s_*_1_*_qseq.txt 2> /dev/null` :
-        `ls -1 $in_path/s_*_sequence.txt 2> /dev/null`;
+    if ($paired) {
+	@ls = $input_type eq "raw" ? 
+	    `ls -1 $in_path/s_*_1_*_qseq.txt 2> /dev/null` :
+	    `ls -1 $in_path/s_*_1_sequence.txt 2> /dev/null`;
+    } else {
+	@ls = $input_type eq "raw" ? 
+	    `ls -1 $in_path/s_*_1_*_qseq.txt 2> /dev/null` :
+	    `ls -1 $in_path/s_*_sequence.txt 2> /dev/null`;
+    }
 
     if (scalar(@ls) == 0) {
 	print STDERR "Unable to locate any input files to process within '$in_path'\n";
