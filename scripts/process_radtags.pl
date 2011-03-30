@@ -49,6 +49,7 @@ my %encoded;
 my $tag  = 'sbfI';
 my %tags = ('sbfI'  => ['TGCAGG'],  # CCTGCA/GG, SbfI
 	    'pstI'  => ['TGCAG'],   # CTGCA/G, PstI
+	    'notI'  => ['GGCCGC'],  # GC/GGCCGC, NotI
 	    'ecoRI' => ['AATTC'],   # G/AATTC, EcoRI
 	    'sgrAI' => ['CCGGCG', 'CCGGTG']); # CR/CCGGYG, SgrAI; R=A or G; Y=C or T
 
