@@ -190,7 +190,7 @@ td.seq {
 td.seq div.seq {
     margin-left: auto;
     margin-right: auto;
-    width: 95%;
+    width: 100%;
     text-align: left;
     font-family: monospace;
 }

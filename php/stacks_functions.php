@@ -127,8 +127,9 @@ function print_scale($max_len) {
 function print_snps($consensus, $seq, $snps, $wrap) {
     global $display_len;
 
-    $str   = "";
-    $start = 0;
+    $str     = "";
+    $start   = 0;
+    $snp_cnt = count($snps);
 
     while (count($snps)) {
 	$snp = array_shift($snps);
@@ -147,7 +148,7 @@ function print_snps($consensus, $seq, $snps, $wrap) {
 	$start = $end + 1;
     }
 
-    if (count($snps) > 0) {
+    if ($snp_cnt > 0) {
       $s    = substr($seq, $start);
       $str .= $s;
     } else {
