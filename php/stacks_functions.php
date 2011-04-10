@@ -155,7 +155,7 @@ function print_snps($consensus, $seq, $snps, $wrap) {
       $str  = $consensus;
     }
 
-    if ($wrap == false) 
+    if ($wrap == false || strlen($consensus) <= $display_len) 
       return $str;
 
     //
@@ -169,7 +169,7 @@ function print_snps($consensus, $seq, $snps, $wrap) {
       for ($pos = 0, $nuc = 0; $pos < $display_len && $nuc < $len; $nuc++, $pos++) {
 	if ($str[$nuc] == '<') {
 	  do { $nuc++; } while ($str[$nuc] != '>');
-	  $nuc++;
+	  $pos--;
 	}
       }	
       $s  .= substr($str, 0, $nuc) . "<br />\n";
