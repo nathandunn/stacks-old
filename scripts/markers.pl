@@ -26,23 +26,26 @@ use strict;
 use DBI;
 
 use constant stacks_version => "_VERSION_";
+use constant true  => 1;
+use constant false => 0;
 
-my $mysql_config = "_PKGDATADIR_" . "/sql/mysql.cnf";
-my $debug        = 0;
-my $db           = "";
-my $batch_id     = 0;
-my $out_path     = "./";
+my $mysql_config   = "_PKGDATADIR_" . "/sql/mysql.cnf";
+my $debug          = 0;
+my $db             = "";
+my $batch_id       = 0;
+my $impute_markers = false;
+my $out_path       = "./";
 
 my %genotypes = (
 		 'ab/cc' => {'ac' => 0, 'bc' => 0},
 		 'cc/ab' => {'ac' => 0, 'bc' => 0},
 		 'aa/bb' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
-		 'ab/--' => {'aa' => 0, 'bb' => 0, 'ab'},
-		 '--/ab' => {'aa' => 0, 'bb' => 0, 'ab'},
+		 'ab/--' => {'aa' => 0, 'bb' => 0, 'ab' => 0},
+		 '--/ab' => {'aa' => 0, 'bb' => 0, 'ab' => 0},
 		 'ab/aa' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
 		 'aa/ab' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
 		 'ab/ab' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
-		 'ab/ac' => {'aa' => 0, 'ab' => 0, 'ac' => 0, 'bb' => 0, 'bc' => 0, },
+		 'ab/ac' => {'aa' => 0, 'ab' => 0, 'ac' => 0, 'bb' => 0, 'bc' => 0},
 		 'ab/cd' => {'aa' => 0, 'ab' => 0, 'ac' => 0, 'ad' => 0, 
 			     'bb' => 0, 'bc' => 0, 'bd' => 0, 'cc' => 0, 'cd' => 0, 'dd' => 0}
 		 );
@@ -61,6 +64,177 @@ populate(\%sth, \%catalog, \%order);
 find_markers(\%sth, \%catalog, \%order);
 
 close_sql_handles(\%sth);
+
+sub impute_marker {
+    my ($parent, $progeny) = @_;
+
+    my ($key, @keys, $cnt, $type, $err);
+
+    my %mtypes = (
+	'het' => {
+	    'ab/cc' => {'ac' => 0, 'bc' => 0}, # 2 hets
+	    'ab/--' => {'aa' => 0, 'bb' => 0}, # 2 hom
+	    'ab/aa' => {'aa' => 0, 'ab' => 0}, # 1 hom, 1 het
+	    'ab/ab' => {'aa' => 0, 'ab' => 0, 'bb' => 0}, # 2 hom, 1 het
+	    'ab/ac' => {'aa' => 0, 'ac' => 0, 'bc' => 0, }, # 1 hom, 2 het
+	    'ab/cd' => {'ac' => 0, 'ad' => 0, 'bc' => 0, 'bd' => 0} # 4 het
+	},
+	'hom' => {
+	    'cc/ab' => {'ac' => 0, 'bc' => 0}, # 2 hets
+	    'aa/bb' => {'ab' => 0}, # 1 het
+	    'aa/ab' => {'aa' => 0, 'ab' => 0, 'bb' => 0} # 2 hom, 1 het
+	});
+
+    my %gtypes;
+    my $het_cnt = 0; 
+    my $hom_cnt = 0;
+    my $par_cnt = 0;
+    my $marker  = "unknown";
+
+    foreach $key (keys %{$progeny}) {
+	my $alleles;
+
+	print STDERR "Examining progeny $key\n" if ($debug);
+	#
+	# Discard progeny with more than one locus matched to this catalog tag.
+	#
+	@keys = keys %{$progeny->{$key}};
+	next if (scalar(@keys) > 1);
+
+	$cnt     = scalar(@{$progeny->{$key}->{$keys[0]}});
+	$alleles = join("|", sort @{$progeny->{$key}->{$keys[0]}});
+	if (!defined($gtypes{$alleles})) {
+	    if ($cnt == 1) {
+		$hom_cnt++;
+	    } elsif ($cnt == 2) {
+		$het_cnt++;
+	    }
+	}    
+	$gtypes{$alleles}++;
+    }
+
+    # print STDERR "Num Hom Gtypes: $hom_cnt; Num Het GTypes: $het_cnt\n";
+
+    #
+    # Is the parent heterozygous or homozygous
+    #
+    $par_cnt = scalar(@{$parent});
+
+    if ($par_cnt == 1) {
+
+	if ($hom_cnt == 0 && $het_cnt == 2) {
+	    $marker = "cc/ab";
+	} elsif ($hom_cnt == 0 && $het_cnt == 1) {
+	    $marker = "aa/bb";
+	} elsif ($hom_cnt == 2 && $het_cnt == 1) {
+	    $marker = "aa/ab";
+	}
+
+    } elsif ($par_cnt == 2) {
+
+	if ($hom_cnt == 0 && $het_cnt == 2) {
+	    $marker = "ab/cc";
+	} elsif ($hom_cnt == 2 && $het_cnt == 0) {
+	    $marker = "ab/--";
+	} elsif ($hom_cnt == 1 && $het_cnt == 1) {
+	    $marker = "ab/aa";
+	} elsif ($hom_cnt == 2 && $het_cnt == 1) {
+	    $marker = "ab/ab";
+	} elsif ($hom_cnt == 1 && $het_cnt == 2) {
+	    $marker = "ab/ac";
+	} elsif ($hom_cnt == 0 && $het_cnt == 4) {
+	    $marker = "ab/cd";
+	}
+    }
+
+    #
+    # Check to make sure error alleles aren't interfering with the marker imputation
+    #
+    if ($marker eq "ab/ab") {
+	my %types = ("ab/ab" => [.25, .25, .50], 
+		     "ab/aa" => [.50, .50]);
+	my $min_err  = 1000;
+	my $min_type = "";
+
+	foreach $type (keys %types) {
+	    $err = cmp_hardy_weinberg($type, $types{$type}, \%gtypes);
+	    # print STDERR "Type: $type, Fit: $err\n";
+	    if ($err < $min_err) {
+		$min_err = $err;
+		$min_type = $type;
+	    }
+	}
+
+	return $min_type;
+    }
+
+    return $marker;
+}
+
+sub cmp_hardy_weinberg {
+    my ($type, $pcts, $gtypes) = @_;
+
+    my ($gtype, $pct, $tot, $i, $j, $cnt, $obs_cnt, $diff, $key);
+    my (@hw, @keys);
+
+    $tot = 0;
+    foreach $gtype (keys %{$gtypes}) {
+	$tot += $gtypes->{$gtype};
+    }
+
+    #
+    # Create a two-dimensional matrix comparing the expected Hardy-Weinberg frequencies
+    # to the observed frequencies.
+    #
+    $cnt = scalar(@{$pcts}) - 1;
+    foreach $i (0..$cnt) {
+	$hw[$i] = [];
+
+	foreach $gtype (keys %{$gtypes}) {
+	    push(@{$hw[$i]}, abs($pcts->[$i] - $gtypes->{$gtype}/$tot));
+
+	    # print STDERR 
+	    # 	"Gtype: $gtype; ",
+	    # 	"Cnt: ", $gtypes->{$gtype}/$tot, "; ",
+	    # 	"Diff: ", abs($pcts->[$i] - $gtypes->{$gtype}/$tot), "\n";
+	}
+	# print STDERR "\n";
+    }
+
+    my (%hw_map, %hw_diff, %used);
+    #
+    # Select the best fit betwee each observed genotyped and hardy-weinberg frequency
+    #
+    @keys    = keys %{$gtypes};
+    $obs_cnt = scalar(@keys) - 1;
+    foreach $i (0..$cnt) {
+	#print STDERR "Looking at HW Pct: $pcts->[$i]\n";
+
+	foreach $j (0..$obs_cnt) {
+	    $diff  = $hw[$i][$j];
+	    $gtype = $keys[$j];
+
+	    #print STDERR "  Diff for genotype $gtype: $diff\n";
+
+	    if (!defined($used{$gtype}) &&
+		(!defined($hw_diff{$i}) || $diff < $hw_diff{$i})) {
+		#print STDERR "    Found a better fit\n";
+		$hw_diff{$i} = $diff;
+		$hw_map{$i}  = $gtype;
+	    }
+	}
+	$used{$hw_map{$i}}++;
+    }
+
+    my $tot_err = 0;
+
+    foreach $key (keys %hw_map) {
+	#print STDERR "Mapped $key ($pcts->[$key]) to $hw_map{$key}\n";
+	$tot_err += $hw_diff{$key};
+    }
+
+    return $tot_err;
+}
 
 sub find_markers {
     my ($sth, $catalog, $order) = @_;
@@ -89,8 +263,26 @@ sub find_markers {
 	$parent_count = scalar(keys %samples);
 	$tag_count    = scalar(@parents);
 
+	if ($parent_count == 1 && $impute_markers == true) {
+	    $annote = impute_marker($catalog->{$key}->{'par'}->{$parents[0]}, $catalog->{$key}->{'pro'});
+
+	    if ($annote ne "unknown") {
+		$ratio  = tally_progeny_alleles($order,
+						$catalog->{$key}->{'par'}, 
+						$catalog->{$key}->{'pro'},
+						$key, $annote);
+		print OUT
+		    "0\t",
+		    $batch_id, "\t",
+		    $key, "\t",
+		    $annote, "\t",
+		    $ratio, "\n";
+	    }
+	    next;
+	}
+
 	#
-	# RAD-Tag is present in both parents.
+	# Locus is present in both parents.
 	#
 	if ($parent_count == 2 && $tag_count == 2) {
 	    $allele_cnt_1 = scalar(@{$catalog->{$key}->{'par'}->{$parents[0]}});
@@ -108,7 +300,7 @@ sub find_markers {
             $num_unique_alleles = scalar(keys %unique_alleles);
 
 	    #
-	    # Rad-Tag is heterozygous in both parents. However, the number of alleles present distinguishes 
+	    # Locus is heterozygous in both parents. However, the number of alleles present distinguishes 
             # what type of marker it is. Four unique alleles requries an ab/cd marker, while four 
             # alleles that are the same in both parents requires an ab/ab marker. Finally, three unique 
             # alleles requires either an ab/ac marker.
@@ -302,7 +494,10 @@ sub tally_progeny_alleles {
 				  'bb' => 'bb',
 				  'c'  => 'cc',
 				  'ac' => 'ac',
-				  'bc' => 'bc'}};
+				  'bc' => 'bc'},
+		      'ab/ab' => {'a'  => 'aa',
+				  'b'  => 'bb',
+				  'ab' => 'ab'}};
 
     foreach $key (keys %{$progeny}) {
 	my @alleles;
@@ -608,6 +803,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-D$/) { $db       = shift @ARGV; }
 	elsif ($_ =~ /^-b$/) { $batch_id = shift @ARGV; }
 	elsif ($_ =~ /^-o$/) { $out_path = shift @ARGV; }
+	elsif ($_ =~ /^-i$/) { $impute_markers = true; }
 	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
