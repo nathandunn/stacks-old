@@ -193,11 +193,10 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
 		max = nuc.end();
 
 		for (n = nuc.begin(); n != nuc.end(); n++) {
-
 		    if (max == nuc.end() || n->second > max->second)
 			max = n;
 		}
-		con += max->first;
+		con += max->second == 0 ? 'N' : max->first;
 
 		// Search this column for the presence of a SNP
 		if (invoke_model) 
@@ -494,7 +493,7 @@ int load_radtags(string in_file, HashMap &radtags) {
     else if (in_file_type == tsv)
         fh = new Tsv(in_file.c_str());
 
-    cerr << "  Parsing " << in_file.c_str() << "\n";
+    cerr << "Parsing " << in_file.c_str() << "\n";
 
     int i = 1;
     while ((c = fh->next_seq()) != NULL) {
@@ -510,7 +509,7 @@ int load_radtags(string in_file, HashMap &radtags) {
     }
 
     cerr << "  " <<
-        "Analyzed " << i - 1 << " sequences reads; " <<
+        "Analyzed " << i - 1 << " sequence reads; " <<
         "Identified " << radtags.size() << " unique Stacks from those reads.\n";
 
     //

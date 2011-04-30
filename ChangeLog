@@ -1,7 +1,33 @@
-	*Added option to output R/QTL output in genotypes.pl
+	*Feature: added code to impute the genotype of a missing, second
+	parent for some map types. This code adds up all the observed
+	haplotypes in the progeny and then compares their frequencies against
+	those that would be expected for the marker under Hardy-Weinberg
+	equilibrium, choosing the marker type that best fits the
+	Hardy-Weinberg expectation.
+
+Stacks 0.982 - Mar 29, 2011
+---------------------------
+	*Bugfix: process_radtags.pl was not properly parsing FASTQ formated,
+	 paired-end file names.
+	*Bugfix: counts of matching parents/progeny were sometimes incorrect
+	 due to a slightly promiscuous SQL query in index_radtags.pl.
+
+Stacks 0.98 - Feb 25, 2011
+---------------------------
+        Note: if you have pre-existing databases, you must rebuild the catalog
+	index (index_radtags.pl -D db -c) so that they are compatible with 
+	the new elements of the web interface.
+
+	*Added option to pstacks to require a minimum depth of coverage for 
+	 a stack aligned to the refernce genome before reporting it.
+	*Added double haploid (DH) and F2 export types to the genotypes.pl
+	 script.
+	*Added option to output any map in R/QTL output in genotypes.pl
 	*Added feature to filter by number of available genotypes in progeny
 	*Added command line option to ustacks to capture and output unused
-	 reads.
+         reads.
+	*Added display of chromosome/base pair to web interface for stacks 
+	 aligned to a reference genome.
 	*Bugfix: FASTA parser was missing records due to a bug introduced from
 	 a FASTQ parser fix.
 	*Bugfix: process_radtags.pl was not properly checking the integrity of 
@@ -13,25 +39,25 @@
 	*Modified sstacks to include an option to match stacks against the
 	 catalog based on the genomic location (assuming individuals were
 	 processed with pstacks).
-	*Added double haploid JoinMap export type (DH) to the genotypes.pl
-	 script.
+        *Bugfix: Lots of clean-ups and command line option fixes, thanks 
+	 to <yannick -dot- wurm -at- unil -dot- ch>.
 
 Stacks 0.971 - Jan 30, 2011
--------------------------
+---------------------------
 	*Illumina software version 1.3 produces Phred scores that can begin 
 	 with a '@' character, throwing off the FASTQ parser. Added code to 
 	 clear the read buffer in between records to solve the problem. Thanks 
 	 to Aarti <aartiv -at- uchicago -dot- edu> for finding the bug.
 
 Stacks 0.97
--------------------------
+---------------------------
 	*ustacks now detects when there are uncalled nucleotides in FASTA or 
 	 FASTQ input files, replaces those bases with 'A'.
 	*process_radtags.pl now detects barcode length automatically. Removed 
 	 spurious error messages when no data is processed.
 
 Stacks 0.96 - Jan 7, 2011
--------------------------
+---------------------------
 	*Fixed typo in README giving the wrong file path for the Apache 
 	 configuration file.
 	*Fixed several hard-coded paths in PHP files that referred to our local 

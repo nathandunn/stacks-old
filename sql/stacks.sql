@@ -9,7 +9,7 @@ create table samples (
        batch_id	 int unsigned not null,
        sample_id int unsigned not null,
        type      enum('parent', 'progeny', 'sample'),
-       file      varchar(32)
+       file      varchar(128)
 );
 
 create table catalog_tags (
@@ -21,7 +21,7 @@ create table catalog_tags (
        relationship enum('consensus', 'primary', 'secondary', 'tertiary'),
        sub_id	    int unsigned not null,
        merge_type   tinytext,
-       seq 	    varchar(76),
+       seq 	    tinytext,
        INDEX        batch_id_index (batch_id),
        INDEX        tag_id_index (tag_id)
 );
@@ -90,7 +90,7 @@ create table unique_tags (
        relationship enum('consensus', 'primary', 'secondary', 'tertiary'),
        sub_id	    int unsigned not null,
        seq_id	    varchar(32),
-       seq 	    varchar(76),
+       seq 	    tinytext,
        deleveraged  bool default false,
        blacklisted  bool default false,
        removed      bool default false,

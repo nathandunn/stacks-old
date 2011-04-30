@@ -135,7 +135,8 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
 
 	    //cerr << "ID: " << id << "\n";
 
-	    if (locations[id].size() > 0) {
+	    //if (locations[id].size() > 0) {
+	    if (locations.count(id) > 0) {
 		Locus *tag;
 	        set<int>::iterator loc_it;
 		vector<pair<allele_type, string> >::iterator q;
@@ -143,9 +144,10 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
 		for (loc_it = locations[id].begin(); loc_it != locations[id].end(); loc_it++) {
 		    tag = sample_1[*loc_it];
 
-		    //cerr << "Found matching genomic location, tag " << tag->id << "\n";
+		    //cerr << "Found matching genomic location [" << *loc_it << "], tag " << tag->id << "\n";
 		    for (q = tag->strings.begin(); q != tag->strings.end(); q++)
 			if (verify_genomic_loc_match(tag, i->second, q->first))
+			    //cerr << "  Adding match between " << tag->id << " and " << q->first << "\n";
 			    i->second->add_match(tag->id, q->first);
 		}
 	    }
