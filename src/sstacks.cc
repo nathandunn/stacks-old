@@ -133,9 +133,6 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
 	    i = sample_2.find(keys[k]);
 	    snprintf(id, id_len - 1, "%s_%d", i->second->loc.chr, i->second->loc.bp);
 
-	    //cerr << "ID: " << id << "\n";
-
-	    //if (locations[id].size() > 0) {
 	    if (locations.count(id) > 0) {
 		Locus *tag;
 	        set<int>::iterator loc_it;

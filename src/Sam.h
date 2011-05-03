@@ -38,6 +38,7 @@ class Sam: public Input {
     Sam(const char *path) : Input(path) {};
     ~Sam() {};
     Seq *next_seq();
+    Seq *next_seq(Seq *) {};
 };
 
 Seq *Sam::next_seq() {

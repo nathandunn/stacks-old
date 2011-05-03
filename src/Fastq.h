@@ -29,6 +29,7 @@ public:
     Fastq(const char *path) : Input(path) { };
     ~Fastq() {};
     Seq *next_seq();
+    Seq *next_seq(Seq *s);
 };
 
 Seq *Fastq::next_seq() {
@@ -107,6 +108,64 @@ Seq *Fastq::next_seq() {
     }
 
     s->qual = new char[strlen(this->line) + 1];
+    strcpy(s->qual, this->line);
+
+    //
+    // Clear the line buffer so it is set up for the next record. If a '@'
+    // appears in the quality scores read, it will break parsing next time 
+    // it is called.
+    //
+    this->line[0] = '\0';
+
+    return s;
+}
+
+Seq *Fastq::next_seq(Seq *s) {
+    //
+    // Check the contents of the line buffer. When we finish reading a FASTQ record
+    // the buffer will either contain whitespace or the header of the next FASTQ
+    // record.
+    //
+    while (this->line[0] != '@' && this->fh.good() ) {
+	this->fh.getline(this->line, max_len);
+    }
+
+    if (!this->fh.good()) {
+	return NULL;
+    }
+
+    //
+    // Store the FASTQ ID
+    //
+    strcpy(s->id, this->line + 1);
+
+    //
+    // Read the sequence from the file
+    //
+    this->fh.getline(this->line, max_len);
+
+    if (!this->fh.good()) {
+	return NULL;
+    }
+    strcpy(s->seq, this->line);
+
+    //
+    // Read the repeat of the ID
+    //
+    this->fh.getline(this->line, max_len);
+
+    if (this->line[0] != '+' || !this->fh.good()) {
+	return NULL;
+    }
+
+    //
+    // Read the quality score from the file
+    //
+    this->fh.getline(this->line, max_len);
+
+    if (!this->fh.good() && !this->fh.eof()) {
+	return NULL;
+    }
     strcpy(s->qual, this->line);
 
     //

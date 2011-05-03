@@ -38,6 +38,7 @@ class Bowtie: public Input {
     Bowtie(const char *path) : Input(path) {};
     ~Bowtie() {};
     Seq *next_seq();
+    Seq *next_seq(Seq *) {};
 };
 
 Seq *Bowtie::next_seq() {

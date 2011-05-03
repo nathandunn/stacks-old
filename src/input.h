@@ -69,11 +69,9 @@ class Input {
     Input(const char *path);
     virtual ~Input();
     virtual Seq *next_seq() = 0;
+    virtual Seq *next_seq(Seq *) = 0;
 };
 
-
 int parse_tsv(const char *, vector<string> &);
-
-
 
 #endif // __INPUT_H__

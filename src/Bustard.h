@@ -19,28 +19,27 @@
 //
 
 //
-// Code to parse the internal (and tempoary) data format. This format is created for
-// reads that have been aligned to a reference genome. It takes the tab-separated form:
+// Code to parse Illumina's Bustard file format. It takes the tab-separated form:
 //
-// <chromosome> <base pair> <sequence> <phred quality score>
+//  <machine> <run> <lane> <tile> <x> <y> <index> <read> <seq> <phred> <filter>
 //
 // One record per line.
 //
-#ifndef __TSV_H__
-#define __TSV_H__
+#ifndef __BUSTARD_H__
+#define __BUSTARD_H__
 
 #include "input.h"
 
-class Tsv: public Input {
+class Bustard: public Input {
 
  public:
-    Tsv(const char *path) : Input(path) {};
-    ~Tsv() {};
+    Bustard(const char *path) : Input(path) {};
+    ~Bustard() {};
     Seq *next_seq();
     Seq *next_seq(Seq *);
 };
 
-Seq *Tsv::next_seq() {
+Seq *Bustard::next_seq() {
     vector<string> parts;
 
     //
@@ -54,14 +53,25 @@ Seq *Tsv::next_seq() {
 
     parse_tsv(this->line, parts);
 
-    string id = parts[0] + "_" + parts[1];
+    Seq *s = new Seq;
+    s->seq = new char[parts[7].length() + 1];
+    strcpy(s->seq,  parts[7].c_str());
+    s->qual = new char[parts[8].length() + 1];
+    strcpy(s->qual, parts[8].c_str());
 
-    Seq *s = new Seq(id.c_str(), parts[2].c_str(), parts[3].c_str(), parts[0].c_str(), atoi(parts[1].c_str()));
+    sprintf(s->id, "@%s:%s:%s:%s:%s#%s/%s",
+	    parts[0].c_str(),
+	    parts[1].c_str(),
+	    parts[2].c_str(),
+	    parts[3].c_str(),
+	    parts[4].c_str(),
+	    parts[5].c_str(),
+	    parts[6].c_str());
 
     return s;
 }
 
-Seq *Tsv::next_seq(Seq *s) {
+Seq *Bustard::next_seq(Seq *s) {
     vector<string> parts;
 
     //
@@ -75,16 +85,19 @@ Seq *Tsv::next_seq(Seq *s) {
 
     parse_tsv(this->line, parts);
 
-    string id = parts[0] + "_" + parts[1];
+    strcpy(s->seq,  parts[2].c_str());
+    strcpy(s->qual, parts[3].c_str());
 
-    strcpy(s->id,      id.c_str());
-    strcpy(s->seq,     parts[2].c_str());
-    strcpy(s->qual,    parts[3].c_str());
-    strcpy(s->chr,     parts[0].c_str());
-    strcpy(s->loc_str, id.c_str());
-    s->bp = atoi(parts[1].c_str());
+    sprintf(s->id, "@%s:%s:%s:%s:%s#%s/%s",
+	    parts[0].c_str(),
+	    parts[1].c_str(),
+	    parts[2].c_str(),
+	    parts[3].c_str(),
+	    parts[4].c_str(),
+	    parts[5].c_str(),
+	    parts[6].c_str());
 
     return s;
 }
 
-#endif // __TSV_H__
+#endif // __BUSTARD_H__
