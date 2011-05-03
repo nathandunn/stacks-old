@@ -215,15 +215,15 @@ int process_paired_reads(string prefix_1,
 
 	if (r_1->retain && r_2->retain) {
 	    out_file_type == fastq ? 
-		write_fastq(pair_1_fhs, r_1) : write_fasta(pair_1_fhs, r_1);
+		write_fastq(pair_1_fhs, r_1, false) : write_fasta(pair_1_fhs, r_1, false);
             out_file_type == fasta ?
-                write_fasta(pair_1_fhs, r_2) :
-                write_fastq(pair_2_fhs, r_2);
+                write_fasta(pair_1_fhs, r_2, true) :
+                write_fastq(pair_2_fhs, r_2, true);
 
 	} else if (r_1->retain && !r_2->retain) {
 	    // write to a remainder file.
 	    out_file_type == fastq ? 
-		write_fastq(pair_1_fhs, r_1) : write_fasta(pair_1_fhs, r_2);
+		write_fastq(pair_1_fhs, r_1, false) : write_fasta(pair_1_fhs, r_2, false);
 	}
 
 	i++;
@@ -285,7 +285,7 @@ int process_reads(string prefix,
 
 	if (r->retain)
 	    out_file_type == fastq ? 
-		write_fastq(pair_1_fhs, r) : write_fasta(pair_1_fhs, r);
+		write_fastq(pair_1_fhs, r, false) : write_fasta(pair_1_fhs, r, false);
 
 	i++;
     } while ((s = fh->next_seq(s)) != NULL);
@@ -577,9 +577,11 @@ int parse_input_record(Seq *s, Read *r) {
     return 0;
 }
 
-int write_fasta(map<string, ofstream *> &fhs, Read *href) {
+int write_fasta(map<string, ofstream *> &fhs, Read *href, bool paired_end) {
     char tile[id_len];
     sprintf(tile, "%04d", href->tile);
+
+    int offset = paired_end ? 0 : barcode_size;
 
     *(fhs[href->barcode]) <<
 	">" << href->barcode <<
@@ -588,17 +590,19 @@ int write_fasta(map<string, ofstream *> &fhs, Read *href) {
 	"_" << href->x <<
 	"_" << href->y <<
 	"_" << href->read << "\n" <<
-	href->seq + barcode_size << "\n";
+	href->seq + offset << "\n";
 
     return 0;
 }
 
-int write_fastq(map<string, ofstream *> &fhs, Read *href) {
+int write_fastq(map<string, ofstream *> &fhs, Read *href, bool paired_end) {
     //
     // Write the sequence and quality scores in FASTQ format. 
     //
     char tile[id_len];
     sprintf(tile, "%04d", href->tile);
+
+    int offset = paired_end ? 0 : barcode_size;
 
     *(fhs[href->barcode]) <<
 	"@" << href->barcode <<
@@ -607,9 +611,9 @@ int write_fastq(map<string, ofstream *> &fhs, Read *href) {
 	"_" << href->x << 
 	"_" << href->y << 
 	"_" << href->read << "\n" <<
-	href->seq + barcode_size << "\n" <<
+	href->seq + offset << "\n" <<
 	"+\n" <<
-	href->phred + barcode_size << "\n";
+	href->phred + offset << "\n";
 
     return 0;
 }

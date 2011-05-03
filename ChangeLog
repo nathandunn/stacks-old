@@ -1,3 +1,9 @@
+Stacks 0.983 - Apr 30, 2011
+---------------------------
+	*Bugfix: sstacks segfault when running parallelized. Improper
+	insertion into map object when it should have only been checking for
+	element presence/absence. Thanks to <yannick -dot- wurm -at- unil -dot- ch>
+	for first reporting it.
 	*Feature: added code to impute the genotype of a missing, second
 	parent for some map types. This code adds up all the observed
 	haplotypes in the progeny and then compares their frequencies against

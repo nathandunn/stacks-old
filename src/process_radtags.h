@@ -109,8 +109,8 @@ int  correct_barcode(map<string, ofstream *> &, Read *, map<string, long> &, map
 int  correct_radtag(Read *, map<string, long> &);
 int  check_quality_scores(Read *);
 int  dist(const char *, char *);
-int  write_fastq(map<string, ofstream *> &, Read *);
-int  write_fasta(map<string, ofstream *> &, Read *);
+int  write_fastq(map<string, ofstream *> &, Read *, bool);
+int  write_fasta(map<string, ofstream *> &, Read *, bool);
 int  print_results(vector<string> &, map<string, map<string, long> > &, map<string, map<string, long> > &);
 
 #endif // __PROCESS_RADTAGS_H__

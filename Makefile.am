@@ -1,4 +1,4 @@
-bin_PROGRAMS = ustacks pstacks cstacks sstacks hstacks
+bin_PROGRAMS = ustacks pstacks cstacks sstacks hstacks process_radtags
 
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/models.h src/models.cc \
@@ -21,6 +21,9 @@ hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/stacks.h src/stacks.cc src/co
 sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/input.h src/input.cc src/sql_utilities.h
 
+process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc ssrc/constants.h \
+	src/input.h src/input.cc src/Bustard.h src/Fastq.h
+
 ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
 ustacks_LDFLAGS  = $(OPENMP_CFLAGS)
 pstacks_CXXFLAGS = $(OPENMP_CFLAGS)
@@ -31,12 +34,13 @@ hstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 hstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 sstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+process_radtags_CXXFLAGS = $(OPENMP_CFLAGS)
+process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl scripts/genotypes.pl \
-	scripts/index_radtags.pl scripts/load_radtags.pl scripts/markers.pl scripts/stacks_export_notify.pl \
-	scripts/process_radtags.pl
+	scripts/index_radtags.pl scripts/load_radtags.pl scripts/markers.pl scripts/stacks_export_notify.pl
 
-dist_noinst_SCRIPTS = autogen.sh
+dist_noinst_SCRIPTS = autogen.sh scripts/process_radtags.pl
 
 nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sql/tag_index.sql \
 	php/CatalogClass.php php/annotate_marker.php php/constants.php php/index.php php/tags.php \

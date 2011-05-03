@@ -421,7 +421,7 @@ sub correct_radtag {
 
 sub dist {
     #
-    # Calculate the number of mismatches between two strinsg. This is done by 
+    # Calculate the number of mismatches between two strings. This is done by 
     # XORing the strings togeher, which will give a string of 1s and 0s corresponding
     # to the match or mismatch of the charaters. The tr operator then counts the 
     # number of 0s in the string (matches) and we subtract that from the length to
