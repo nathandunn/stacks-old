@@ -25,6 +25,7 @@
 #include <omp.h>    // OpenMP library
 #endif
 #include <getopt.h> // Process command-line options
+#include <dirent.h> // Open/Read contents of a directory
 #include <string.h>
 #include <math.h>
 #include <iostream>

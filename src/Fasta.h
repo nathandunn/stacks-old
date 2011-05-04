@@ -30,7 +30,7 @@ class Fasta: public Input {
     Fasta(const char *path) : Input(path) { };
     ~Fasta() {};
     Seq *next_seq();
-    Seq *next_seq(Seq *) {};
+    int  next_seq(Seq *) { return 0; };
 };
 
 Seq *Fasta::next_seq() {

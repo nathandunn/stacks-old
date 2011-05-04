@@ -35,7 +35,7 @@
 //
 // Global variables to hold command-line options.
 //
-file_type in_file_type  = fastq;
+file_type in_file_type  = unknown;
 file_type out_file_type = fastq;
 string in_file;
 string in_file_p1;
@@ -113,8 +113,8 @@ int main (int argc, char* argv[]) {
 				 counters[files[i].first], barcode_log);
 	else
 	    process_reads(files[i].first, 
-			  pair_1_fhs, 
-			  counters[files[i].first], barcode_log);
+	    		  pair_1_fhs, 
+	    		  counters[files[i].first], barcode_log);
 
 	cerr <<	"  " 
 	     << counters[files[i].first]["total"] << " total reads; "
@@ -125,8 +125,8 @@ int main (int argc, char* argv[]) {
 	     << "-" << counters[files[i].first]["orphaned"]    << " orphaned paired-end reads; "
 	     << counters[files[i].first]["retained"] << " retained reads.\n";
     }
-    cerr << "\n";
 
+    cerr << "Closing files, flushing buffers...\n";
     close_file_handles(pair_1_fhs);
     if (paired)
 	close_file_handles(pair_2_fhs);
@@ -226,9 +226,12 @@ int process_paired_reads(string prefix_1,
 		write_fastq(pair_1_fhs, r_1, false) : write_fasta(pair_1_fhs, r_2, false);
 	}
 
+	delete s_1;
+	delete s_2;
+
 	i++;
-    } while ((s_1 = fh_1->next_seq(s_1)) != NULL && 
-	     (s_2 = fh_2->next_seq(s_2)) != NULL);
+    } while ((s_1 = fh_1->next_seq()) != NULL && 
+	     (s_2 = fh_2->next_seq()) != NULL);
 
     return 0;
 }
@@ -258,11 +261,11 @@ int process_reads(string prefix,
     }
 
     r = new Read;
-    r->barcode    = new char[id_len + 1];
-    r->machine    = new char[id_len + 1];
-    r->seq        = new char[strlen(s->seq) + 1];
-    r->phred      = new char[strlen(s->seq) + 1];
-    r->int_scores = new  int[strlen(s->seq)];
+    r->barcode    = new char [id_len + 1];
+    r->machine    = new char [id_len + 1];
+    r->seq        = new char [strlen(s->seq) + 1];
+    r->phred      = new char [strlen(s->seq) + 1];
+    r->int_scores = new  int [strlen(s->seq)];
     //
     // Set the parameters for checking read quality later in processing.
     // Window length is 15% (rounded) of the sequence length.
@@ -273,22 +276,22 @@ int process_reads(string prefix,
     r->stop_pos = r->len - r->win_len;
 
     long i = 1;
-
     do {
-        if (i % 10000 == 0) cerr << "  Processing RAD-Tag " << i << "       \r";
-
+	if (i % 10000 == 0) cerr << "  Processing RAD-Tag " << i << "       \r";
 	counter["total"]++;
 
 	parse_input_record(s, r);
 
 	process_singlet(pair_1_fhs, r, barcode_log, counter, false);
 
-	if (r->retain)
-	    out_file_type == fastq ? 
-		write_fastq(pair_1_fhs, r, false) : write_fasta(pair_1_fhs, r, false);
+	 if (r->retain)
+	     out_file_type == fastq ? 
+	 	write_fastq(pair_1_fhs, r, false) : write_fasta(pair_1_fhs, r, false);
+
+	 delete s;
 
 	i++;
-    } while ((s = fh->next_seq(s)) != NULL);
+    } while ((s = fh->next_seq()) != NULL);
 
     //
     // Close the file and delete the Input object.
@@ -541,31 +544,33 @@ int parse_input_record(Seq *s, Read *r) {
     // Parse FASTQ header that looks like this:
     //  @HWI-ST0747_0141:4:1101:1240:2199#0/1
     //
-    for (p = s->id, q = p; *q != ':' && *q != '\0'; q++);
+    char *stop = s->id + strlen(s->seq);
+
+    for (p = s->id, q = p; *q != ':' && q < stop; q++);
     *q = '\0';
     strcpy(r->machine, p);
 
-    for (p = q+1, q = p; *q != ':' && *q != '\0'; q++);
+    for (p = q+1, q = p; *q != ':' && q < stop; q++);
     *q = '\0';
     r->lane = atoi(p);
 
-    for (p = q+1, q = p; *q != ':' && *q != '\0'; q++);
+    for (p = q+1, q = p; *q != ':' && q < stop; q++);
     *q = '\0';
     r->tile = atoi(p);
 
-    for (p = q+1, q = p; *q != ':' && *q != '\0'; q++);
+    for (p = q+1, q = p; *q != ':' && q < stop; q++);
     *q = '\0';
     r->x = atoi(p);
 
-    for (p = q+1, q = p; *q != '#' && *q != '\0'; q++);
+    for (p = q+1, q = p; *q != '#' && q < stop; q++);
     *q = '\0';
     r->y = atoi(p);
 
-    for (p = q+1, q = p; *q != '/' && *q != '\0'; q++);
+    for (p = q+1, q = p; *q != '/' && q < stop; q++);
     *q = '\0';
     r->index = atoi(p);
 
-    for (p = q+1, q = p; *q != '\0'; q++);
+    for (p = q+1, q = p; *q != '\0' && q < stop; q++);
     r->read = atoi(p);
 
     strcpy(r->seq, s->seq);
@@ -603,6 +608,9 @@ int write_fastq(map<string, ofstream *> &fhs, Read *href, bool paired_end) {
     sprintf(tile, "%04d", href->tile);
 
     int offset = paired_end ? 0 : barcode_size;
+
+    if (fhs.count(href->barcode) == 0)
+	cerr << "Writing to unknown barcode: '" << href->barcode << "'\n";
 
     *(fhs[href->barcode]) <<
 	"@" << href->barcode <<
@@ -745,7 +753,7 @@ int open_files(vector<string> &barcodes,
 	ofstream *fh;
 
         if (interleave == true) {
-	    path = out_path + "/sample_" + barcodes[i] + suffix_1;
+	    path = out_path + "sample_" + barcodes[i] + suffix_1;
 	    fh = new ofstream(path.c_str());
             pair_1_fhs[barcodes[i]] = fh;
  
@@ -832,7 +840,7 @@ int load_barcodes(vector<string> &barcodes) {
 		exit(1);
 	    }
 
-	barcodes.push_back(line);
+	barcodes.push_back(string(line));
     }
 
     fh.close();
@@ -856,7 +864,7 @@ int load_barcodes(vector<string> &barcodes) {
         }
     }
 
-    cerr << "Loaded " << barcodes.size() << " " << blen << "bp barcodes.\n";
+    cerr << "Loaded " << barcodes.size() << ", " << blen << "bp barcodes.\n";
 
     return blen;
 }
@@ -864,32 +872,33 @@ int load_barcodes(vector<string> &barcodes) {
 int build_file_list(vector<pair<string, string> > &files) {
 
     if (in_path_1.length() > 0) {
-	// if (paired) {
-	//     @ls = $input_type eq "raw" ? 
-	// 	`ls -1 $in_path/s_*_1_*_qseq.txt 2> /dev/null` :
-	// 	`ls -1 $in_path/s_*_1_sequence.txt 2> /dev/null`;
-	// } else {
-	//     @ls = $input_type eq "raw" ? 
-	// 	`ls -1 $in_path/s_*_1_*_qseq.txt 2> /dev/null` :
-	// 	`ls -1 $in_path/s_*_sequence.txt 2> /dev/null`;
-	// }
+	int    pos;
+	string file;
+	struct dirent *direntry;
 
-	// if (scalar(@ls) == 0) {
-	//     print STDERR "Unable to locate any input files to process within '$in_path'\n";
-	//     usage();
-	// }
+	DIR *dir = opendir(in_path_1.c_str());
 
-	// foreach $line (@ls) {
-	//     chomp $line;
+	if (dir == NULL) {
+	    cerr << "Unable to open directory '" << in_path_1 << "' for reading.\n";
+	    exit(1);
+	}
 
-	//     if ($input_type eq "raw") {
-	// 	($prefix) = ($line =~ /$in_path\/(s_\d_\d_\d{4})_qseq\.txt/);
-	//     } else {
-	// 	($prefix) = ($line =~ /$in_path\/(s_\d_?1?)_sequence\.txt/);
-	//     }
+	while ((direntry = readdir(dir)) != NULL) {
+	    file = direntry->d_name;
 
-	//     files.push_back(prefix);
-	// }
+	    if (file == "." || file == "..")
+		continue;
+
+	    pos  = file.find_last_of("/");
+	    
+	    // Do we want to check the filename to make sure it is legal?
+
+	    files.push_back(make_pair(file.substr(pos+1), ""));
+	}
+
+	if (files.size() == 0) {
+	    cerr << "Unable to locate any input files to process within '" << in_path_1 << "'\n";
+	}
     } else {
 	//
 	// Break off file path and store path and file name.
@@ -913,6 +922,7 @@ int build_file_list(vector<pair<string, string> > &files) {
 }
 
 int parse_command_line(int argc, char* argv[]) {
+    file_type ftype;
     int c;
      
     while (1) {
@@ -927,19 +937,20 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"file",         required_argument, NULL, 'f'},
 	    {"file_p1",      required_argument, NULL, '1'},
 	    {"file_p2",      required_argument, NULL, '2'},
-	    {"path",         required_argument, NULL, 'P'},
+	    {"path",         required_argument, NULL, 'p'},
 	    {"outpath",      required_argument, NULL, 'o'},
 	    {"truncate",     required_argument, NULL, 't'},
 	    {"enzyme",       required_argument, NULL, 'e'},
 	    {"barcodes",     required_argument, NULL, 'b'},
-	    {"num_threads",  required_argument, NULL, 'p'},
+	    {"window_size",  required_argument, NULL, 'w'},
+	    {"score_limit",  required_argument, NULL, 's'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqri:y:f:o:t:e:b:1:2:p:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcqri:y:f:o:t:e:b:1:2:p:s:w:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -963,16 +974,21 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 'f':
 	    in_file = optarg;
+	    ftype   = fastq;
 	    break;
-	case 'P':
+	case 'p':
 	    in_path_1 = optarg;
+	    ftype     = bustard;
+	    break;
 	case '1':
-	    paired = true;
+	    paired     = true;
 	    in_file_p1 = optarg;
+	    ftype      = fastq;
 	    break;
 	case '2':
-	    paired = true;
+	    paired     = true;
 	    in_file_p2 = optarg;
+	    ftype      = fastq;
 	    break;
 	case 'o':
 	    out_path = optarg;
@@ -995,8 +1011,11 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'b':
 	    barcode_file = optarg;
 	    break;
- 	case 'p':
-	    num_threads = atoi(optarg);
+ 	case 'w':
+	    win_size = atof(optarg);
+	    break;
+	case 's':
+	    score_limit = atoi(optarg);
 	    break;
         case 'v':
             version();
@@ -1047,8 +1066,21 @@ int parse_command_line(int argc, char* argv[]) {
 	help();
     }
 
+    if (in_file_type == unknown)
+	in_file_type = ftype;
+
     if (enz.length() == 0) {
 	cerr << "You must specify the restriction enzyme used.\n";
+	help();
+    }
+
+    if (score_limit < 0 || score_limit > 40) {
+	cerr << "Score limit must be between 0 and 40.\n";
+	help();
+    }
+
+    if (win_size < 0 || win_size >= 1) {
+	cerr << "Window size is a fraction between 0 and 1.\n";
 	help();
     }
 
@@ -1063,10 +1095,10 @@ void version() {
 
 void help() {
     std::cerr << "process_radtags " << VERSION << "\n"
-              << "process_radtags [-f in_file | -P in_dir | -1 pair_1 -2 pair_2] -i type -b barcode_file -o out_dir -e enz [-y type] [-c] [-q] [-r] [-P] [-h]" << "\n"
+              << "process_radtags [-f in_file | -P in_dir | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-i type] [-y type] [-c] [-q] [-r] [-P] [-h]\n"
 	      << "  f: path to the input file if processing single-end seqeunces.\n"
 	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, or 'fastq' for GERALD files (default 'fastq').\n"
-	      << "  P: path to a directory of single-end Bustard files.\n"
+	      << "  p: path to a directory of single-end Bustard files.\n"
 	      << "  1: first input file in a set of paired-end sequences.\n"
 	      << "  2: second input file in a set of paired-end sequences.\n"
 	      << "  o: path to output the processed files.\n"
@@ -1077,6 +1109,8 @@ void help() {
 	      << "  q: discard reads with low quality scores.\n"
 	      << "  r: rescue barcodes and RAD-Tags.\n"
 	      << "  t: truncate final read length to this value.\n"
+	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
+	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
 	      << "  h: display this help messsage." << "\n\n";
 
     exit(0);

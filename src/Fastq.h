@@ -29,7 +29,7 @@ public:
     Fastq(const char *path) : Input(path) { };
     ~Fastq() {};
     Seq *next_seq();
-    Seq *next_seq(Seq *s);
+    int  next_seq(Seq *s);
 };
 
 Seq *Fastq::next_seq() {
@@ -120,7 +120,7 @@ Seq *Fastq::next_seq() {
     return s;
 }
 
-Seq *Fastq::next_seq(Seq *s) {
+int Fastq::next_seq(Seq *s) {
     //
     // Check the contents of the line buffer. When we finish reading a FASTQ record
     // the buffer will either contain whitespace or the header of the next FASTQ
@@ -131,7 +131,7 @@ Seq *Fastq::next_seq(Seq *s) {
     }
 
     if (!this->fh.good()) {
-	return NULL;
+	return 0;
     }
 
     //
@@ -145,7 +145,7 @@ Seq *Fastq::next_seq(Seq *s) {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good()) {
-	return NULL;
+	return 0;
     }
     strcpy(s->seq, this->line);
 
@@ -155,7 +155,7 @@ Seq *Fastq::next_seq(Seq *s) {
     this->fh.getline(this->line, max_len);
 
     if (this->line[0] != '+' || !this->fh.good()) {
-	return NULL;
+	return 0;
     }
 
     //
@@ -164,7 +164,7 @@ Seq *Fastq::next_seq(Seq *s) {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good() && !this->fh.eof()) {
-	return NULL;
+	return 0;
     }
     strcpy(s->qual, this->line);
 
@@ -175,7 +175,7 @@ Seq *Fastq::next_seq(Seq *s) {
     //
     this->line[0] = '\0';
 
-    return s;
+    return 1;
 }
 
 #endif // __FASTQ_H__

@@ -37,7 +37,7 @@ class Tsv: public Input {
     Tsv(const char *path) : Input(path) {};
     ~Tsv() {};
     Seq *next_seq();
-    Seq *next_seq(Seq *);
+    int  next_seq(Seq *) { return 0; }
 };
 
 Seq *Tsv::next_seq() {
@@ -57,32 +57,6 @@ Seq *Tsv::next_seq() {
     string id = parts[0] + "_" + parts[1];
 
     Seq *s = new Seq(id.c_str(), parts[2].c_str(), parts[3].c_str(), parts[0].c_str(), atoi(parts[1].c_str()));
-
-    return s;
-}
-
-Seq *Tsv::next_seq(Seq *s) {
-    vector<string> parts;
-
-    //
-    // Read a record from the file and place it in a Seq object
-    //
-    this->fh.getline(this->line, max_len);
-
-    if (!this->fh.good()) {
-	return NULL;
-    }
-
-    parse_tsv(this->line, parts);
-
-    string id = parts[0] + "_" + parts[1];
-
-    strcpy(s->id,      id.c_str());
-    strcpy(s->seq,     parts[2].c_str());
-    strcpy(s->qual,    parts[3].c_str());
-    strcpy(s->chr,     parts[0].c_str());
-    strcpy(s->loc_str, id.c_str());
-    s->bp = atoi(parts[1].c_str());
 
     return s;
 }

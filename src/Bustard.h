@@ -36,7 +36,7 @@ class Bustard: public Input {
     Bustard(const char *path) : Input(path) {};
     ~Bustard() {};
     Seq *next_seq();
-    Seq *next_seq(Seq *);
+    int  next_seq(Seq *);
 };
 
 Seq *Bustard::next_seq() {
@@ -54,24 +54,25 @@ Seq *Bustard::next_seq() {
     parse_tsv(this->line, parts);
 
     Seq *s = new Seq;
-    s->seq = new char[parts[7].length() + 1];
-    strcpy(s->seq,  parts[7].c_str());
-    s->qual = new char[parts[8].length() + 1];
-    strcpy(s->qual, parts[8].c_str());
+    s->seq = new char[parts[8].length() + 1];
+    strcpy(s->seq,  parts[8].c_str());
+    s->qual = new char[parts[9].length() + 1];
+    strcpy(s->qual, parts[9].c_str());
 
+    s->id = new char[id_len];
     sprintf(s->id, "@%s:%s:%s:%s:%s#%s/%s",
 	    parts[0].c_str(),
-	    parts[1].c_str(),
 	    parts[2].c_str(),
 	    parts[3].c_str(),
 	    parts[4].c_str(),
 	    parts[5].c_str(),
-	    parts[6].c_str());
+	    parts[6].c_str(),
+	    parts[7].c_str());
 
     return s;
 }
 
-Seq *Bustard::next_seq(Seq *s) {
+int Bustard::next_seq(Seq *s) {
     vector<string> parts;
 
     //
@@ -80,7 +81,7 @@ Seq *Bustard::next_seq(Seq *s) {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good()) {
-	return NULL;
+	return 0;
     }
 
     parse_tsv(this->line, parts);
@@ -97,7 +98,7 @@ Seq *Bustard::next_seq(Seq *s) {
 	    parts[5].c_str(),
 	    parts[6].c_str());
 
-    return s;
+    return 1;
 }
 
 #endif // __BUSTARD_H__

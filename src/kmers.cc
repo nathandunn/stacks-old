@@ -271,11 +271,13 @@ int dist(Locus *tag_1, Locus *tag_2) {
     char *p_end = p + tag_1->len;
     char *q_end = q + tag_2->len;
 
-    if (tag_1->len != tag_2->len)
+    if (tag_1->len != tag_2->len) {
         if (tag_1->len < tag_2->len)
             dist += tag_2->len - tag_1->len;
         else if (tag_1->len > tag_2->len)
             dist += tag_1->len - tag_2->len;
+    }
+
     //
     // Count the number of characters that are different
     // between the two sequences.
@@ -300,11 +302,13 @@ int dist(MergedStack *tag_1, MergedStack *tag_2) {
     // If the sequences are of different lengths, count the missing
     // nucleotides as mismatches.
     //
-    if (tag_1->len != tag_2->len)
+    if (tag_1->len != tag_2->len) {
         if (tag_1->len < tag_2->len)
             dist += tag_2->len - tag_1->len;
         else if (tag_1->len > tag_2->len)
             dist += tag_1->len - tag_2->len;
+    }
+
     //
     // Count the number of characters that are different
     // between the two sequences.
@@ -330,11 +334,13 @@ int dist(MergedStack *tag_1, Seq *rem) {
     // If the sequences are of different lengths, count the missing
     // nucleotides as mismatches.
     //
-    if (tag_1->len != q_len)
+    if (tag_1->len != q_len) {
         if (tag_1->len < q_len)
             dist += q_len - tag_1->len;
         else if (tag_1->len > q_len)
             dist += tag_1->len - q_len;
+    }
+
     //
     // Count the number of characters that are different
     // between the two sequences.
