@@ -1494,7 +1494,7 @@ sub create_genotype_map {
 	print STDERR "  Adding $type to genotypes\n" if ($debug);
         $legal_genotypes{$type}++;
     }
-    @types = reverse sort keys %legal_genotypes;
+    @types = sort keys %legal_genotypes;
 
     if (scalar(@types) > 0) {
 	foreach $allele (@{$parents->{$key}}) {

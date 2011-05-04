@@ -43,7 +43,7 @@ dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.p
 dist_noinst_SCRIPTS = autogen.sh scripts/process_radtags.pl
 
 nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sql/tag_index.sql \
-	php/CatalogClass.php php/annotate_marker.php php/constants.php php/index.php php/tags.php \
+	php/CatalogClass.php php/annotate_marker.php php/constants.php.dist php/index.php php/tags.php \
 	php/Locus.php php/catalog.php php/correct_genotypes.php php/export_batch.php php/last_modified.php  \
 	php/version.php php/catalog_genotypes.php php/db_functions.php php/header.php php/samples.php \
 	php/stacks_functions.php php/view_sequence.php php/catalog_tag.php php/sequence_blast.php php/tag.php \
@@ -90,8 +90,8 @@ install-data-hook:
 	mv $(DESTDIR)$(bindir)/stacks_export_notify.pl.subst $(DESTDIR)$(bindir)/stacks_export_notify.pl
 	chmod +x $(DESTDIR)$(bindir)/stacks_export_notify.pl
 	sed -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_BINDIR_,$(bindir)/,g' \
-		$(DESTDIR)$(pkgdatadir)/php/constants.php > $(DESTDIR)$(pkgdatadir)/php/constants.php.subst
-	mv $(DESTDIR)$(pkgdatadir)/php/constants.php.subst $(DESTDIR)$(pkgdatadir)/php/constants.php
+		$(DESTDIR)$(pkgdatadir)/php/constants.php.dist > $(DESTDIR)$(pkgdatadir)/php/constants.php.dist.subst
+	mv $(DESTDIR)$(pkgdatadir)/php/constants.php.dist.subst $(DESTDIR)$(pkgdatadir)/php/constants.php.dist
 	echo $(VERSION) > $(DESTDIR)$(pkgdatadir)/php/version.php
 	$(install_sh) -d -m 755 $(DESTDIR)$(pkglocalstatedir)/caches
 	$(install_sh) -d -m 755 $(DESTDIR)$(pkgdatadir)/php/export

@@ -86,11 +86,13 @@ Alias /stacks "/usr/local/share/stacks/php"
 (See the Apache configuration for more information on what these do:
 http://httpd.apache.org/docs/2.0/mod/core.html#directory)
 
-Edit the PHP configuration file (constants.php) to allow it access to the 
+Edit the PHP configuration file (constants.php.dist) to allow it access to the 
 MySQL database. Change the file to include the proper database
-username ($db_user), password ($db_pass), and hostname ($db_host).
+username ($db_user), password ($db_pass), and hostname ($db_host). Rename the 
+distribution file so it is active.
 
 % vi /usr/local/share/stacks/php/constants.php
+% cp /usr/local/share/stacks/php/constants.php.dist /usr/local/share/stacks/php/constants.php
 
 You may find it advantageous to create a specific MySQL user with limited
 permissions - SELECT, UPDATE, and DELETE to allow users to interact

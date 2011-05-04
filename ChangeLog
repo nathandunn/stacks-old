@@ -1,3 +1,5 @@
+	*Bugfix: renamed constants.php to constants.php.dist to avoid
+	overwriting an existing file on reinstallation.
 	*Feature: process_radtags has been converted to a C++ program
 	increasing its speed by approximately 30x. The parameters were
 	modified to be a little more intuitive and parameters were added to
