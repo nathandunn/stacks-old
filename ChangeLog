@@ -1,3 +1,10 @@
+	*Feature: process_radtags has been converted to a C++ program
+	increasing its speed by approximately 30x. The parameters were
+	modified to be a little more intuitive and parameters were added to
+	control the size and score limit of the sliding window. The program
+	can process a GAII lane in about 5 minutes, a HiSeq lane in about 12
+	minutes, depending on the hardware used.
+
 Stacks 0.983 - Apr 30, 2011
 ---------------------------
 	*Bugfix: sstacks segfault when running parallelized. Improper
