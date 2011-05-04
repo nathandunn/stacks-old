@@ -206,6 +206,7 @@ sub gen_cat_index {
 	    $row->{'bp'}, "\n";
     }
 
+
     close($fh);
 
     `mysql $db -e "DROP TABLE IF EXISTS catalog_index"`;

@@ -49,6 +49,7 @@ my $corrections     = 0;
 my $blast_only      = 0;
 my $exclude_blast   = 0;
 my $expand_id       = 0;
+my $impute          = 0;
 my $out_file        = "";
 my $bl_file         = "";
 my $wl_file         = "";
@@ -1080,7 +1081,7 @@ sub call_f2_genotypes {
     #
     # Create a map between alleles and genotype symbols
     #
-    $create_genotype_map->{$marker}->($order, $marker, $tag_id, \%parents, \%genotype_map);
+    $create_genotype_map->{$marker}->($order, $marker, $tag_id, \%parents, \%progeny, \%genotype_map);
 
     foreach $key (keys %progeny) {
 	my @alleles;
@@ -1165,7 +1166,7 @@ sub call_dh_genotypes {
     #
     # Create a map between alleles and genotype symbols
     #
-    $create_genotype_map->{$marker}->($order, $marker, $tag_id, \%parents, \%genotype_map);
+    $create_genotype_map->{$marker}->($order, $marker, $tag_id, \%parents, \%progeny, \%genotype_map);
 
     foreach $key (keys %progeny) {
 	my @alleles;
@@ -1262,7 +1263,7 @@ sub call_bc1_genotypes {
     #
     # Create a map between alleles and genotype symbols
     #
-    $create_genotype_map->{$marker}->($order, $marker, $tag_id, \%parents, \%genotype_map);
+    $create_genotype_map->{$marker}->($order, $marker, $tag_id, \%parents, \%progeny, \%genotype_map);
 
     foreach $key (keys %progeny) {
 	my @alleles;
@@ -1340,6 +1341,9 @@ sub call_cp_genotypes {
                                'efxeg' => \&create_genotype_map,
                                'abxcd' => \&create_genotype_map
                                };
+    if ($impute) {
+	$create_genotype_map->{'lmxll'} = \&create_imputed_genotype_map;
+    }
 
     my $dictionary = {'lmx--' => {'l'  => 'll',
 				  'm'  => 'lm'},
@@ -1366,7 +1370,7 @@ sub call_cp_genotypes {
     #
     # Create a map between alleles and genotype symbols
     #
-    $create_genotype_map->{$marker}->($order, $marker, $tag_id, \%parents, \%genotype_map);
+    $create_genotype_map->{$marker}->($order, $marker, $tag_id, \%parents, \%progeny, \%genotype_map);
 
     foreach $key (keys %progeny) {
 	my @alleles;
@@ -1424,7 +1428,7 @@ sub call_cp_genotypes {
 }
 
 sub create_genotype_map {
-    my ($order, $marker, $tag_id, $parents, $map) = @_;
+    my ($order, $marker, $tag_id, $parents, $progeny, $map) = @_;
 
     my (%genotypes, %legal_genotypes, %par_specific, @parents, @types, @keys, %alleles, %com_types);
     my ($type, $m, $key, $allele);
@@ -1490,13 +1494,13 @@ sub create_genotype_map {
 	print STDERR "  Adding $type to genotypes\n" if ($debug);
         $legal_genotypes{$type}++;
     }
-    @types = sort keys %legal_genotypes;
+    @types = reverse sort keys %legal_genotypes;
 
     if (scalar(@types) > 0) {
 	foreach $allele (@{$parents->{$key}}) {
 	    next if (defined($map->{$allele}));
 	    $map->{$allele} = shift @types;
-	    print STDERR "  Assinging '$allele' to genotype '", $map->{$allele}, "'\n" if ($debug);
+	    print STDERR "  Assinging '$allele' to first parent genotype '", $map->{$allele}, "'\n" if ($debug);
 	}
     }
 
@@ -1518,9 +1522,83 @@ sub create_genotype_map {
 	foreach $allele (@{$parents->{$key}}) {
 	    next if (defined($map->{$allele}));
 	    $map->{$allele} = shift @types;
-	    print STDERR "  Assinging '$allele' to genotype '", $map->{$allele}, "'\n" if ($debug);
+	    print STDERR "  Assinging '$allele' to second parent genotype '", $map->{$allele}, "'\n" if ($debug);
 	}
     }
+}
+
+sub create_imputed_genotype_map {
+    my ($order, $marker, $tag_id, $parents, $progeny, $map) = @_;
+
+    my (@keys, $key, $m, $type, $allele, $uall);
+
+    my (%gtypes, %allcnt, %uniqall);
+
+    #
+    # Count up the number of each type of observed allele in the progeny,
+    # record whether those genotypes are heterozygous or homozygous.
+    #
+    foreach $key (keys %{$progeny}) {
+	my $alleles;
+
+	print STDERR "Examining progeny $key\n" if ($debug);
+	#
+	# Discard progeny with more than one locus matched to this catalog tag.
+	#
+	@keys = keys %{$progeny->{$key}};
+	next if (scalar(@keys) > 1);
+
+	$alleles = join("|", sort @{$progeny->{$key}->{$keys[0]}});
+
+	if (!defined($allcnt{$alleles})) {
+	    $allcnt{$alleles} = scalar(@{$progeny->{$key}->{$keys[0]}});
+	}
+	#print STDERR "Adding genotype $alleles\n";
+
+	$gtypes{$alleles}++;
+
+	foreach $allele (@{$progeny->{$key}->{$keys[0]}}) {
+	    $uniqall{$allele}++;
+	}
+    }
+ 
+    #
+    # Examine the first parent alleles (the only alleles we have, since 
+    # we are imputing the second parent.
+    #
+    my @parents = keys %{$parents};
+    my %legal_genotypes = ();
+    $key = $order->{$parents[0]} eq "first"  ? $parents[0] : $parents[1];
+    $m   = substr($marker, 0, 2);
+
+    foreach $type (split(//, $m)) {
+	#print STDERR "  Adding $type to genotypes\n" if ($debug);
+        $legal_genotypes{$type}++;
+    }
+    my @types = sort keys %legal_genotypes;
+
+    if ($marker eq "lmxll") {
+	@keys = sort {$gtypes{$b} <=> $gtypes{$a}} keys %gtypes;
+	#
+	# Discard heterozygous alleles and find the highest frequency homozygote, 
+	# this is the "l" in the "lmxll" marker.
+	#
+	while ($allcnt{$keys[0]} == 2) {
+	    shift @keys;
+	}
+	$map->{$keys[0]} = shift @types;
+	print STDERR "  Assinging '$keys[0]' to first parent genotype '", $map->{$keys[0]}, "'\n" if ($debug);
+
+	foreach $uall (sort {$uniqall{$b} <=> $uniqall{$a}} keys %uniqall) {
+	    if ($uall ne $keys[0]) {
+		$allele = $uall;
+		last;
+	    }
+	}
+	$map->{$allele} = shift @types;
+	print STDERR "  Assinging '$allele' to first parent genotype '", $map->{$allele}, "'\n" if ($debug);
+    }
+
 }
 
 sub check_uncalled_snps {
@@ -1795,6 +1873,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-L$/) { $blast_only++; }
         elsif ($_ =~ /^-E$/) { $exclude_blast++; }
         elsif ($_ =~ /^-i$/) { $expand_id++; }
+        elsif ($_ =~ /^-I$/) { $impute++; }
 	elsif ($_ =~ /^-s$/) { $sql++; }
 	elsif ($_ =~ /^-B$/) { $bl_file       = shift @ARGV; }
 	elsif ($_ =~ /^-W$/) { $wl_file       = shift @ARGV; }
