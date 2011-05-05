@@ -21,7 +21,7 @@ hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/stacks.h src/stacks.cc src/co
 sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/input.h src/input.cc src/sql_utilities.h
 
-process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc ssrc/constants.h \
+process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h
 
 ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
@@ -82,9 +82,6 @@ install-data-hook:
 	sed -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/load_radtags.pl > $(DESTDIR)$(bindir)/load_radtags.pl.subst
 	mv $(DESTDIR)$(bindir)/load_radtags.pl.subst $(DESTDIR)$(bindir)/load_radtags.pl
 	chmod +x $(DESTDIR)$(bindir)/load_radtags.pl
-	sed -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/process_radtags.pl > $(DESTDIR)$(bindir)/process_radtags.pl.subst
-	mv $(DESTDIR)$(bindir)/process_radtags.pl.subst $(DESTDIR)$(bindir)/process_radtags.pl
-	chmod +x $(DESTDIR)$(bindir)/process_radtags.pl
 	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_BINDIR_,$(bindir)/,g' \
 		$(DESTDIR)$(bindir)/stacks_export_notify.pl > $(DESTDIR)$(bindir)/stacks_export_notify.pl.subst
 	mv $(DESTDIR)$(bindir)/stacks_export_notify.pl.subst $(DESTDIR)$(bindir)/stacks_export_notify.pl

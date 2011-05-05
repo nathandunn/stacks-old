@@ -1099,9 +1099,9 @@ void version() {
 
 void help() {
     std::cerr << "process_radtags " << VERSION << "\n"
-              << "process_radtags [-f in_file | -P in_dir | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-i type] [-y type] [-c] [-q] [-r] [-P] [-h]\n"
+              << "process_radtags [-f in_file | -p in_dir | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-i type] [-y type] [-c] [-q] [-r] [-w] [-s] [-h]\n"
 	      << "  f: path to the input file if processing single-end seqeunces.\n"
-	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, or 'fastq' for GERALD files (default 'fastq').\n"
+	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, or 'fastq' (default 'fastq').\n"
 	      << "  p: path to a directory of single-end Bustard files.\n"
 	      << "  1: first input file in a set of paired-end sequences.\n"
 	      << "  2: second input file in a set of paired-end sequences.\n"
