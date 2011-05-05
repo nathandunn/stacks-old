@@ -453,7 +453,7 @@ sub check_quality_scores {
     #
     $len      = length($href->{'seq'});
     $win_len  = int($len * .15 + 0.5);
-    $stop_pos = $len - $win_len - 1;
+    $stop_pos = $len - $win_len;
     $trim     = 0;
     @scores   = split(//, $href->{'phred'});
 
@@ -466,7 +466,7 @@ sub check_quality_scores {
 
     #print STDERR 
     #   "PHRED: $href->{'phred'}\n",
-    #	"  Len: $len; Window len: $win_len; Stop pos; $stop_pos\n";
+    # 	"  Len: $len; Window len: $win_len; Stop pos; $stop_pos\n";
 
     foreach $j (0 .. $stop_pos) {
 	#print STDERR "  J: $j\n";
@@ -482,15 +482,9 @@ sub check_quality_scores {
 	#print STDERR "Index $j; mean: $mean\n";
 
 	if ($mean < score_limit) {
-	    $trim = $j;
+	    $href->{'retain'} = 0;
+	    return 0;
 	}
-
-	last if ($trim);
-    }
-
-    if ($trim) {
-	$href->{'retain'} = 0;
-	return 0;
     }
 
     return 1;

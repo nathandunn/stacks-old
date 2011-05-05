@@ -623,7 +623,7 @@ sub create_genotype_map {
 
     foreach $type (split(//, $m)) {
 	next if ($type eq "-" || defined($com_types{$type}));
-	print STDERR "  Adding $type to genotypes\n" if ($debug);
+	print STDERR "  Adding $type to first parent genotypes\n" if ($debug);
         $legal_genotypes{$type}++;
     }
     @types = sort keys %legal_genotypes;
@@ -632,7 +632,7 @@ sub create_genotype_map {
 	foreach $allele (@{$parents->{$key}}) {
 	    next if (defined($map->{$allele}));
 	    $map->{$allele} = shift @types;
-	    print STDERR "  Assinging '$allele' to genotype '", $map->{$allele}, "'\n" if ($debug);
+	    print STDERR "    Assinging '$allele' to genotype '", $map->{$allele}, "'\n" if ($debug);
 	}
     }
 
@@ -645,7 +645,7 @@ sub create_genotype_map {
 
     foreach $type (split(//, $m)) {
 	next if ($type eq "-" || defined($com_types{$type}));
-	print STDERR "  Adding $type to genotypes\n" if ($debug);
+	print STDERR "  Adding $type to second parent genotypes\n" if ($debug);
         $legal_genotypes{$type}++;
     }
     @types = sort keys %legal_genotypes;
@@ -654,7 +654,7 @@ sub create_genotype_map {
 	foreach $allele (@{$parents->{$key}}) {
 	    next if (defined($map->{$allele}));
 	    $map->{$allele} = shift @types;
-	    print STDERR "  Assinging '$allele' to genotype '", $map->{$allele}, "'\n" if ($debug);
+	    print STDERR "    Assinging '$allele' to genotype '", $map->{$allele}, "'\n" if ($debug);
 	}
     }
 
