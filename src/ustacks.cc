@@ -1499,7 +1499,7 @@ int load_radtags(string in_file, HashMap &radtags) {
         fh = new Fastq(in_file.c_str());
 
     cerr << "  Parsing " << in_file.c_str() << "\n";
-
+    long int corrected = 0;
     long int i = 0;
     while ((c = fh->next_seq()) != NULL) {
         if (i % 10000 == 0) cerr << "Loading RAD-Tag " << i << "       \r";
@@ -1510,6 +1510,7 @@ int load_radtags(string in_file, HashMap &radtags) {
 	    case 'n':
 	    case '.':
 		*p = 'A';
+		corrected++;
 	    }
 
 	radtags[c->seq].add_id(c->id);
@@ -1523,7 +1524,7 @@ int load_radtags(string in_file, HashMap &radtags) {
         exit(1);
     }
 
-    cerr << fh->corrected << " reads contained uncalled nucleotides that were modified.\n";
+    cerr << corrected << " reads contained uncalled nucleotides that were modified.\n";
 
     //
     // Check to make sure all the reads are of the same length.

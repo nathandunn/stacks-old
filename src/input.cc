@@ -85,8 +85,6 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
 }
 
 Input::Input(const char *path) {
-    this->corrected = 0;
-
     // Open the file for reading
     this->fh.open(path, ifstream::in);
 

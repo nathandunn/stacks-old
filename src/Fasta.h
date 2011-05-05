@@ -81,22 +81,6 @@ Seq *Fasta::next_seq() {
     strcpy(s->seq, this->buf.c_str());
     this->buf.clear();
 
-    //
-    // Check if this sequence has any uncalled nucleotides
-    //
-    bool uncalled = false;
-
-    for (char *p = s->seq; *p != '\0'; p++)
-        switch (*p) {
-        case 'N':
-        case 'n':
-        case '.':
-            uncalled = true;
-            *p = 'A';
-        }
-    if (uncalled == true) 
-        this->corrected++;
-
     return s;
 }
 

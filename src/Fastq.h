@@ -74,22 +74,6 @@ Seq *Fastq::next_seq() {
     strcpy(s->seq, this->line);
 
     //
-    // Check if this sequence has any uncalled nucleotides
-    //
-    bool uncalled = false;
-
-    // for (char *p = s->seq; *p != '\0'; p++)
-    //     switch (*p) {
-    //     case 'N':
-    //     case 'n':
-    //     case '.':
-    //         uncalled = true;
-    //         *p = 'A';
-    //     }
-    // if (uncalled == true) 
-    //     this->corrected++;
-        
-    //
     // Read the repeat of the ID
     //
     this->fh.getline(this->line, max_len);

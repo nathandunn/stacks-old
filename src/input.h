@@ -64,7 +64,6 @@ class Input {
  public:
     ifstream fh;
     char     line[max_len];
-    uint     corrected;
 
     Input(const char *path);
     virtual ~Input();
