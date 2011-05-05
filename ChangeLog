@@ -1,7 +1,9 @@
+Stacks 0.984 - May 04, 2011
+---------------------------
 	*Bugfix: renamed constants.php to constants.php.dist to avoid
 	overwriting an existing file on reinstallation.
 	*Feature: process_radtags has been converted to a C++ program
-	increasing its speed by approximately 30x. The parameters were
+	increasing its speed by approximately 25x. The parameters were
 	modified to be a little more intuitive and parameters were added to
 	control the size and score limit of the sliding window. The program
 	can process a GAII lane in about 5 minutes, a HiSeq lane in about 12
