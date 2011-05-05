@@ -37,7 +37,7 @@ class Tsv: public Input {
     Tsv(const char *path) : Input(path) {};
     ~Tsv() {};
     Seq *next_seq();
-    int  next_seq(Seq *) { return 0; }
+    int  next_seq(Seq &) { return 0; }
 };
 
 Seq *Tsv::next_seq() {

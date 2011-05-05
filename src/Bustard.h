@@ -36,7 +36,7 @@ class Bustard: public Input {
     Bustard(const char *path) : Input(path) {};
     ~Bustard() {};
     Seq *next_seq();
-    int  next_seq(Seq *);
+    int  next_seq(Seq &);
 };
 
 Seq *Bustard::next_seq() {
@@ -72,7 +72,7 @@ Seq *Bustard::next_seq() {
     return s;
 }
 
-int Bustard::next_seq(Seq *s) {
+int Bustard::next_seq(Seq &s) {
     vector<string> parts;
 
     //
@@ -86,10 +86,10 @@ int Bustard::next_seq(Seq *s) {
 
     parse_tsv(this->line, parts);
 
-    strcpy(s->seq,  parts[2].c_str());
-    strcpy(s->qual, parts[3].c_str());
+    strcpy(s.seq,  parts[2].c_str());
+    strcpy(s.qual, parts[3].c_str());
 
-    sprintf(s->id, "@%s:%s:%s:%s:%s#%s/%s",
+    sprintf(s.id, "@%s:%s:%s:%s:%s#%s/%s",
 	    parts[0].c_str(),
 	    parts[1].c_str(),
 	    parts[2].c_str(),

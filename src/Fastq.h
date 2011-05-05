@@ -29,7 +29,7 @@ public:
     Fastq(const char *path) : Input(path) { };
     ~Fastq() {};
     Seq *next_seq();
-    int  next_seq(Seq *s);
+    int  next_seq(Seq &s);
 };
 
 Seq *Fastq::next_seq() {
@@ -78,16 +78,16 @@ Seq *Fastq::next_seq() {
     //
     bool uncalled = false;
 
-    for (char *p = s->seq; *p != '\0'; p++)
-        switch (*p) {
-        case 'N':
-        case 'n':
-        case '.':
-            uncalled = true;
-            *p = 'A';
-        }
-    if (uncalled == true) 
-        this->corrected++;
+    // for (char *p = s->seq; *p != '\0'; p++)
+    //     switch (*p) {
+    //     case 'N':
+    //     case 'n':
+    //     case '.':
+    //         uncalled = true;
+    //         *p = 'A';
+    //     }
+    // if (uncalled == true) 
+    //     this->corrected++;
         
     //
     // Read the repeat of the ID
@@ -120,7 +120,7 @@ Seq *Fastq::next_seq() {
     return s;
 }
 
-int Fastq::next_seq(Seq *s) {
+int Fastq::next_seq(Seq &s) {
     //
     // Check the contents of the line buffer. When we finish reading a FASTQ record
     // the buffer will either contain whitespace or the header of the next FASTQ
@@ -137,7 +137,7 @@ int Fastq::next_seq(Seq *s) {
     //
     // Store the FASTQ ID
     //
-    strcpy(s->id, this->line + 1);
+    strcpy(s.id, this->line + 1);
 
     //
     // Read the sequence from the file
@@ -147,7 +147,7 @@ int Fastq::next_seq(Seq *s) {
     if (!this->fh.good()) {
 	return 0;
     }
-    strcpy(s->seq, this->line);
+    strcpy(s.seq, this->line);
 
     //
     // Read the repeat of the ID
@@ -166,7 +166,7 @@ int Fastq::next_seq(Seq *s) {
     if (!this->fh.good() && !this->fh.eof()) {
 	return 0;
     }
-    strcpy(s->qual, this->line);
+    strcpy(s.qual, this->line);
 
     //
     // Clear the line buffer so it is set up for the next record. If a '@'

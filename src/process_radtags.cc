@@ -256,8 +256,8 @@ int process_reads(string prefix,
     //
     Seq *s = fh->next_seq();
     if (s == NULL) {
-	cerr << "Unable to allocate Seq object.\n";
-	exit(1);
+    	cerr << "Unable to allocate Seq object.\n";
+    	exit(1);
     }
 
     r = new Read;
@@ -370,7 +370,7 @@ int process_singlet(map<string, ofstream *> &fhs, Read *href, map<string, map<st
     }
 
     // Drop this sequence if it has low quality scores
-    if(quality && !check_quality_scores(href)) {
+    if(quality && !check_quality_scores(href, paired_end)) {
     	counter["low_quality"]++;
     	href->retain = 0;
     	return 0;
@@ -410,7 +410,10 @@ int correct_barcode(map<string, ofstream *> &fhs, Read *href, map<string, long> 
 	// Correct the barcode.
 	//
 	old_barcode = string(href->barcode);
-	strcpy(href->barcode, b.c_str()) ;
+	strcpy(href->barcode, b.c_str());
+	for (int i = 0; i < barcode_size; i++)
+	    href->seq[i] = href->barcode[i];
+
 	counter["recovered"]++;
 	barcode_log[old_barcode]["total"]--;
 
@@ -463,7 +466,7 @@ int dist(const char *res_enz, char *seq) {
     return dist;
 }
 
-int check_quality_scores(Read *href) {
+int check_quality_scores(Read *href, bool paired_end) {
     //
     // Phred quality scores are discussed here:
     //  http://en.wikipedia.org/wiki/FASTQ_format
@@ -500,21 +503,22 @@ int check_quality_scores(Read *href) {
     // 	}
     // }
 
+    int    offset      = paired_end ? 0 : barcode_size - 1;
     double mean        = 0.0;
     double working_sum = 0.0;
     int *p, *q, j;
     //
     // Populate the sliding window.
     //
-    for (j = barcode_size - 1; j < href->win_len + barcode_size - 1; j++)
+    for (j = offset; j < href->win_len + offset; j++)
     	working_sum += href->int_scores[j];
 
     //
     // Set pointers to one position before the first element in the window, and to the last element in the window.
     //
-    p = href->int_scores + barcode_size - 1;
+    p = href->int_scores + offset;
     q = p + (int) href->win_len;
-    j = barcode_size;
+    j = offset + 1;
     do {
     	//
     	// Add the score from the front edge of the window, subtract the score

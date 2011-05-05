@@ -108,7 +108,7 @@ int  process_singlet(map<string, ofstream *> &, Read *, map<string, map<string, 
 int  parse_input_record(Seq *, Read *);
 int  correct_barcode(map<string, ofstream *> &, Read *, map<string, long> &, map<string, map<string, long> > &);
 int  correct_radtag(Read *, map<string, long> &);
-int  check_quality_scores(Read *);
+int  check_quality_scores(Read *, bool);
 int  dist(const char *, char *);
 int  write_fastq(map<string, ofstream *> &, Read *, bool);
 int  write_fasta(map<string, ofstream *> &, Read *, bool);
