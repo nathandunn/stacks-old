@@ -45,7 +45,7 @@ my %genotypes = (
 		 'ab/aa' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
 		 'aa/ab' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
 		 'ab/ab' => {'aa' => 0, 'ab' => 0, 'bb' => 0},
-		 'ab/ac' => {'aa' => 0, 'ab' => 0, 'ac' => 0, 'bb' => 0, 'bc' => 0},
+		 'ab/ac' => {'aa' => 0, 'ab' => 0, 'ac' => 0, 'bb' => 0, 'bc' => 0, 'cc' => 0},
 		 'ab/cd' => {'aa' => 0, 'ab' => 0, 'ac' => 0, 'ad' => 0, 
 			     'bb' => 0, 'bc' => 0, 'bd' => 0, 'cc' => 0, 'cd' => 0, 'dd' => 0}
 		 );
@@ -467,6 +467,12 @@ sub tally_progeny_alleles {
 		      'aa/bb' => {'a'  => 'aa',
 				  'ab' => 'ab',
 				  'b'  => 'bb'},
+		      'ab/ac' => {'a'  => 'aa',
+				  'ab' => 'ab',
+				  'b'  => 'bb',
+				  'ab' => 'ab',
+				  'c'  => 'cc',
+				  'ac' => 'ac'},
 		      'ab/cd' => {'a'  => 'aa',
 				  'ab' => 'ab',
 				  'b'  => 'bb',
