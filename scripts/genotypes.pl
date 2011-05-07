@@ -749,9 +749,13 @@ sub write_joinmap {
 	    $id, "\t";
 
         if ($expand_id) {
-            $id = length($locus->{'ext_id'}) > 0 ? 
-                $locus->{'id'} . "\t" . $locus->{'ext_id'} :
-                $locus->{'id'} . "\t";
+            if (length($locus->{'ext_id'}) > 0) {
+                $id = $locus->{'id'} . "\t" . $locus->{'ext_id'};
+	    } elsif (length($locus->{'chr'}) > 0) {
+		$id = $locus->{'id'} . "\t" . $locus->{'chr'} . "_" . $locus->{'bp'};
+	    } else {
+                $id = $locus->{'id'} . "\t";
+	    }
 
             print $out_fh $id, "\t";
         }
@@ -954,6 +958,8 @@ sub fetch_loci {
 	$href->{'id'}     = $row->{'tag_id'};
 	$href->{'marker'} = $row->{'marker'};
 	$href->{'ext_id'} = $row->{'external_id'};
+	$href->{'chr'}    = $row->{'chr'};
+	$href->{'bp'}     = $row->{'bp'};
 
         next if (!defined($genotypes->{$href->{'marker'}}));
 	next if ($wl_keys && !defined($whitelist{$href->{'id'}}));
