@@ -80,13 +80,6 @@ int main (int argc, char* argv[]) {
     renz_len["ecoRI"] = 5;
     renz_len["sgrAI"] = 6;
 
-    //
-    // Set the number of OpenMP parallel threads to execute.
-    //
-    #ifdef _OPENMP
-    omp_set_num_threads(num_threads);
-    #endif
-
     vector<pair<string, string> > files;
     vector<string> barcodes;
     map<string, ofstream *> pair_1_fhs, pair_2_fhs;

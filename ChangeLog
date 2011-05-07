@@ -1,3 +1,6 @@
+	*Bugfix: made process_radtags Bustard file parser check number of fields to prevent
+	attempting to parse FASTQ (and segfaulting). Thanks to
+	Maureen.Liu -at- nottingham.ac.uk for reporting it.
 	*Bugfix: in sstacks, when matching to the catalog using reads aligned
 	to a reference genome (-g), sstacks did not verify that haplotypes
 	matched exactly, causing some spurious matching, which later

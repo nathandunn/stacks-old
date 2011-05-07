@@ -21,9 +21,7 @@
 #ifndef __PROCESS_RADTAGS_H__
 #define __PROCESS_RADTAGS_H__
 
-#ifdef _OPENMP
-#include <omp.h>    // OpenMP library
-#endif
+#include <stdlib.h>
 #include <getopt.h> // Process command-line options
 #include <dirent.h> // Open/Read contents of a directory
 #include <string.h>
@@ -38,14 +36,6 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
-
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
-#endif
 
 #include <vector>
 using std::vector;
