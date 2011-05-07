@@ -30,6 +30,8 @@
 
 #include "input.h"
 
+const uint num_bustd_fields = 11;
+
 class Bustard: public Input {
 
  public:
@@ -52,6 +54,12 @@ Seq *Bustard::next_seq() {
     }
 
     parse_tsv(this->line, parts);
+
+    if (parts.size() != num_bustd_fields) {
+	cerr << "Error parsing '" << this->path.c_str() << "' found " << parts.size() << " fields, but expecting " << num_bustd_fields << "). "
+	     << "Perhaps you should specify the input file type (-i)?\n";
+	return NULL;
+    }
 
     Seq *s = new Seq;
     s->seq = new char[parts[8].length() + 1];

@@ -1,3 +1,10 @@
+	*Bugfix: in sstacks, when matching to the catalog using reads aligned
+	to a reference genome (-g), sstacks did not verify that haplotypes
+	matched exactly, causing some spurious matching, which later
+	translated into dropped genotypes. 
+	*Bugfix: in markers.pl, the ratio observed alleles in the progeny was
+	not being tallied correctly for ab/ac markers.
+
 Stacks 0.984 - May 04, 2011
 ---------------------------
 	*Bugfix: renamed constants.php to constants.php.dist to avoid

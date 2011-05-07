@@ -62,6 +62,7 @@ class Seq {
 //
 class Input {
  public:
+    string   path;
     ifstream fh;
     char     line[max_len];
 
