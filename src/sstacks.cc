@@ -158,59 +158,88 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, string allele) {
     vector<SNP *>::iterator i, j;
     //
     // We have found a match between the genomic location of s1 and s2. We now want
-    // to verify that the alleles are consistent between the tags, i.e. they 
+    // to verify that the haplotypes are consistent between the tags, i.e. they 
     // have the same number and types of SNPs.
     //
-    // 1. Make sure s2_tag has the same number of SNPs as s1_tag (s1_tag 
-    //    is generally the catalog, so s1_tag may have more SNPs than
-    //    s2_tag, but not less).
+    // 1. First we will check that the query locus (s2_tag) does not have any SNPs 
+    //    lacking in the catalog tag (s1_tag).
     //
-    if (s2_tag->snps.size() > s1_tag->snps.size()) {
-	//cerr << "Match not verified, too many SNPs for " << s2_tag->id << "\n";
-	return 0;
-    }
-
     uint snp_count = 0;
-    uint len = allele.length();
     bool found;
-    char c;
-    //
-    // 2. For each SNP in s1_tag (the catalog), make sure that s2_tag has the same
-    //    SNP, or that the corresponding consensus base matches one of s1_tag's SNPs.
-    //
-    int k = 0;
-    for (j = s1_tag->snps.begin(); j != s1_tag->snps.end(); j++) {
+    for (j = s2_tag->snps.begin(); j != s2_tag->snps.end(); j++) {
 	found = false;
 
-	for (i = s2_tag->snps.begin(); i != s2_tag->snps.end(); i++) {
-	    //
-	    // SNP occurs in the same column and has the same nucleotide.
-	    //
-	    if ((*i)->col == (*j)->col) {
+	for (i = s1_tag->snps.begin(); i != s1_tag->snps.end(); i++) {
+	    if ((*i)->col == (*j)->col)
 		found = true;
-
-		if (allele[k] == (*i)->rank_1 ||
-		    allele[k] == (*i)->rank_2)
-		    snp_count++;
-	    }
 	}
-	
-	// No SNP present, check the consensus sequence.
-	if (found == false) {
-	    c =  s2_tag->con[(*j)->col];
-
-	    if (c == allele[k])
-		snp_count++;
-	}
-
-	k++;
+	//
+	// Query locus posses a SNP not present in the catalog.
+	//
+	if (found == false)
+	    return 0;
     }
 
-    // We matched each SNP in s2_tag against one in s1_tag
-    if (snp_count == s1_tag->snps.size())
-	return 1;
+    //
+    // 2. Construct a set of haplotypes from the query locus (s2_tag) and compare
+    //    then against the matching catalog haplotype.
+    //
+    vector<pair<string, SNP *> >   merged_snps;
+    set<string>                    merged_alleles;
+    map<int, pair<string, SNP *> > columns;
+    map<int, pair<string, SNP *> >::iterator c;
+    vector<pair<string, SNP *> >::iterator   k;
 
-    //cerr << "Match not verified, SNPs in S2 do not match catalog: " << snp_count << " vs " << s1_tag->snps.size() << "\n";
+    for (i = s1_tag->snps.begin(); i != s1_tag->snps.end(); i++)
+	columns[(*i)->col] = make_pair("catalog", *i);
+
+    for (i = s2_tag->snps.begin(); i != s2_tag->snps.end(); i++) {
+	//
+	// Is this column already represented in the catalog?
+	//
+	if (columns.count((*i)->col))
+	    columns[(*i)->col] = make_pair("both", *i);
+	else
+	    columns[(*i)->col] = make_pair("query", *i);
+    }
+
+    for (c = columns.begin(); c != columns.end(); c++) 
+	merged_snps.push_back((*c).second);
+
+    //
+    // Sort the SNPs by column
+    //
+    sort(merged_snps.begin(), merged_snps.end(), compare_pair);
+
+    map<string, int>::iterator b;
+    string old_allele, new_allele;
+    int    pos;
+
+    for (b = s2_tag->alleles.begin(); b != s2_tag->alleles.end(); b++) {
+	old_allele = b->first;
+	new_allele = "";
+	pos        = 0;
+
+	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+	    if ((*k).first == "catalog") {
+		new_allele += s2_tag->con[(*k).second->col];
+	    } else {
+		new_allele += old_allele[pos];
+		pos++;
+	    }
+	}
+	merged_alleles.insert(new_allele);
+    }
+
+    //
+    // Finally, check that one of the constructed alleles matches the allele
+    // passed in on the stack.
+    //
+    set<string>::iterator a;
+
+    for (a = merged_alleles.begin(); a != merged_alleles.end(); a++)
+	if (*a == allele)
+	    return 1;
 
     return 0;
 }
@@ -381,6 +410,10 @@ int write_matches(map<int, QLocus *> &sample) {
     matches.close();
 
     return 0;
+}
+
+bool compare_pair(pair<string, SNP *> a, pair<string, SNP *> b) {
+    return (a.second->col < b.second->col);
 }
 
 int parse_command_line(int argc, char* argv[]) {
