@@ -26,6 +26,7 @@
 #include <dirent.h> // Open/Read contents of a directory
 #include <string.h>
 #include <math.h>
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -103,5 +104,7 @@ int  dist(const char *, char *);
 int  write_fastq(map<string, ofstream *> &, Read *, bool);
 int  write_fasta(map<string, ofstream *> &, Read *, bool);
 int  print_results(vector<string> &, map<string, map<string, long> > &, map<string, map<string, long> > &);
+
+int  compare_barcodes(pair<string, int>, pair<string, int>);
 
 #endif // __PROCESS_RADTAGS_H__

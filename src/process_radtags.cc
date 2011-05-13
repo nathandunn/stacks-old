@@ -697,7 +697,11 @@ int print_results(vector<string> &barcodes, map<string, map<string, long> > &cou
 	<< "No RadTag\t"
 	<< "Retained\n";
 
+    set<string> barcode_list;
+
     for (uint i = 0; i < barcodes.size(); i++) {
+	barcode_list.insert(barcodes[i]);
+
         if (barcode_log.count(barcodes[i]) == 0)
             log << barcodes[i] << "\t" << "0\t" << "0\t" << "0\n";
         else
@@ -713,14 +717,19 @@ int print_results(vector<string> &barcodes, map<string, map<string, long> > &cou
 	<< "Total\n";
 
     //
-    // We need to sort by barcode hits.
+    // Sort unused barcodes by number of occurances.
     //
-    for (it = barcode_log.begin(); it != barcode_log.end(); it++) {
-	if (counters.count(it->first)) continue;
-	if (barcode_log[it->first]["total"] == 0) continue;
+    vector<pair<string, int> > bcs;
+    for (it = barcode_log.begin(); it != barcode_log.end(); it++)
+	bcs.push_back(make_pair(it->first, it->second["total"]));
+    sort(bcs.begin(), bcs.end(), compare_barcodes);
 
-	log << it->first << "\t"
-	    << it->second["total"] << "\n";
+    for (uint i = 0; i < bcs.size(); i++) {
+	if (barcode_list.count(bcs[i].first)) continue;
+	if (bcs[i].second == 0) continue;
+
+	log << bcs[i].first << "\t"
+	    << bcs[i].second << "\n";
     }
 
     log.close();
@@ -918,6 +927,10 @@ int build_file_list(vector<pair<string, string> > &files) {
     return 0;
 }
 
+int  compare_barcodes(pair<string, int> a, pair<string, int> b) {
+    return a.second > b.second;
+}
+
 int parse_command_line(int argc, char* argv[]) {
     file_type ftype;
     int c;
@@ -958,13 +971,13 @@ int parse_command_line(int argc, char* argv[]) {
 	    help();
 	    break;
      	case 'i':
-            if (strcmp(optarg, "bustard") == 0)
+            if (strcasecmp(optarg, "bustard") == 0)
                 in_file_type = bustard;
             else
                 in_file_type = fastq;
 	    break;
      	case 'y':
-            if (strcmp(optarg, "fasta") == 0)
+            if (strcasecmp(optarg, "fasta") == 0)
                 out_file_type = fasta;
 	    else 
 		out_file_type = fastq;
