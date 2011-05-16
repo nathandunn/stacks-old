@@ -1816,7 +1816,7 @@ sub prepare_sql_handles {
     $query = 
 	"SELECT tag_id, marker, external_id, chr, bp FROM catalog_index " . 
         "LEFT JOIN catalog_annotations as ca ON (ca.batch_id=catalog_index.batch_id AND ca.catalog_id=catalog_index.tag_id) ".
-	"WHERE marker!='' AND progeny>? AND catalog_index.batch_id=?";
+	"WHERE marker!='' AND progeny>=? AND catalog_index.batch_id=?";
     if ($blast_only) {
         $query .= " AND blast_hits>0";
     } elsif ($exclude_blast) {
