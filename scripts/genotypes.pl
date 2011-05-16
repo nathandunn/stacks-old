@@ -721,7 +721,8 @@ sub write_joinmap {
         #
         $locus->{'progeny_cnt'} = 0;
 	foreach $key (keys %{$locus->{'progeny'}}) {
-            $locus->{'progeny_cnt'}++ if ($key ne "--" && $key ne "-");
+            $locus->{'progeny_cnt'}++ if ($locus->{'progeny'}->{$key} ne "--" && 
+					  $locus->{'progeny'}->{$key} ne "-");
         }
 	next if ($locus->{'progeny_cnt'} < $progeny_limit);
 
@@ -821,7 +822,8 @@ sub write_rqtl {
         #
         $locus->{'progeny_cnt'} = 0;
 	foreach $key (keys %{$locus->{'progeny'}}) {
-            $locus->{'progeny_cnt'}++ if ($key ne "--" && $key ne "-");
+            $locus->{'progeny_cnt'}++ if ($locus->{'progeny'}->{$key} ne "--" && 
+					  $locus->{'progeny'}->{$key} ne "-");
         }
 	next if ($locus->{'progeny_cnt'} < $progeny_limit);
 
