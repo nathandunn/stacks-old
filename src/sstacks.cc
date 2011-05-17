@@ -413,7 +413,8 @@ int write_matches(map<int, QLocus *> &sample) {
 		(*s).first  << "\t" <<
 		samp_id     << "\t" <<
 		(*i).second->id << "\t" << 
-		(*s).second << "\n";
+		(*s).second << "\t" <<
+		(*i).second->depth << "\n";
 	}
     }
 

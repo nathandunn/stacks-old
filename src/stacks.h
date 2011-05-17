@@ -30,6 +30,7 @@ using std::vector;
 using std::map;
 #include <set>
 using std::set;
+#include <algorithm>
 #include <utility>
 using std::pair;
 using std::make_pair;
@@ -52,12 +53,15 @@ typedef struct locus {
     uint bp;
 } PhyLoc;
 
+enum snp_type {het, hom};
+
 class SNP {
  public:
-    uint  col;
-    float lratio;
-    char  rank_1;
-    char  rank_2;
+    snp_type type;   // Heterozygous or homozygous
+    uint     col;
+    float    lratio;
+    char     rank_1;
+    char     rank_2;
 };
 
 class Stack {
@@ -137,8 +141,10 @@ class Locus {
     char      *con; // Consensus sequence
     uint       len; // Sequence length
 
-    PhyLoc               loc;   // Physical genome location of this Stack.
-    vector<SNP *>       snps;   // Single Nucleotide Polymorphisms in this stack
+    vector<char *>      comp;   // Raw components in this stack.
+    vector<char *>     reads;   // Sequence reads contributing to this stack.
+    PhyLoc               loc;   // Physical genome location of this stack.
+    vector<SNP *>       snps;   // Single Nucleotide Polymorphisms in this stack.
     map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
     vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
 
@@ -147,9 +153,28 @@ class Locus {
         delete [] con; 
         for (uint i = 0; i < snps.size(); i++)
             delete snps[i];
+        for (uint i = 0; i < comp.size(); i++)
+            delete [] comp[i];
+        for (uint i = 0; i < reads.size(); i++)
+            delete [] reads[i];
     }
     int add_consensus(const char *);
     virtual int populate_alleles();
 };
+
+class CatMatch {
+public:
+    int   batch_id;
+    int   cat_id;
+    int   sample_id;
+    int   tag_id;
+    int   depth;
+    char *haplotype;
+
+    CatMatch() { batch_id = 0; cat_id = 0; sample_id = 0; tag_id = 0; depth = 0; haplotype = NULL; }
+    ~CatMatch() { delete [] haplotype; }
+};
+
+bool bp_compare(Locus *, Locus *);
 
 #endif // __STACKS_H__

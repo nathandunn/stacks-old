@@ -56,7 +56,7 @@ extern modelt model_type;
 extern double p_freq;
 extern double barcode_err_freq;
 
-int  call_multinomial_snp(MergedStack *, int, map<char, int> &);
+int  call_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
 int  call_multinomial_fixed(MergedStack *, int, map<char, int> &);
 bool compare_pair(pair<char, int>, pair<char, int>);
 

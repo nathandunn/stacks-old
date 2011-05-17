@@ -29,7 +29,7 @@
 //
 #include "models.h"
 
-int call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
+int call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n, bool record_hom) {
     const float heterozygote_limit = -3.84;
     const float homozygote_limit   =  3.84;
 
@@ -78,9 +78,11 @@ int call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
     //cerr << "Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Nuc_3: " << nuc_3 << " Nuc_4: " << nuc_4 << " Likelihood ratio: " << l_ratio << "\n";
 
     if (l_ratio <= heterozygote_limit) {
+	//
         // This locus is a heterozygote.
-	// Record this SNP
+	//
 	SNP *snp = new SNP;
+	snp->type   = het;
 	snp->col    = col;
 	snp->lratio = l_ratio;
 	snp->rank_1 = nuc[0].first;
@@ -88,8 +90,18 @@ int call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n) {
 
 	tag->snps.push_back(snp);
 
-    } else if (l_ratio >= homozygote_limit) {
+    } else if (record_hom && l_ratio >= homozygote_limit) {
+	//
         // This locus is a homozygote.
+	//
+	SNP *snp = new SNP;
+	snp->type   = hom;
+	snp->col    = col;
+	snp->lratio = l_ratio;
+	snp->rank_1 = nuc[0].first;
+	snp->rank_2 = '-';
+
+	tag->snps.push_back(snp);
 
     } else {
         // Unknown whether this is a heterozygote or homozygote.

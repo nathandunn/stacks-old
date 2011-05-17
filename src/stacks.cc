@@ -111,3 +111,7 @@ int Locus::populate_alleles() {
 
     return 0;
 }
+
+bool bp_compare(Locus *a, Locus *b) {
+    return (a->loc.bp < b->loc.bp);
+}

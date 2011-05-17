@@ -36,13 +36,16 @@
 const uint num_tags_fields    = 12;
 const uint num_snps_fields    =  7;
 const uint num_alleles_fields =  6;
+const uint num_matches_fields =  6;
 
 template <class LocusT>
-int load_loci(string &sample,  map<int, LocusT *> &loci) {
+int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
     LocusT        *c;
     SNP           *snp;
     string         f;
-    char           line[max_len];
+    char           line[max_len], *cmp;
+    const char    *p, *q;
+    int            len;
     vector<string> parts;
     set<int>       blacklisted;
     long int       line_num;
@@ -85,6 +88,12 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
                 continue;
             } else if (loci.count(id) > 0) {
                 loci[id]->depth++;
+
+		if (store_reads) {
+		    char *read = new char[parts[8].length() + 1];
+		    strcpy(read, parts[8].c_str());
+		    loci[id]->reads.push_back(read);
+		}
                 continue;
             } else {
                 cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (stack " << id << " does not exist).\n";
@@ -112,6 +121,20 @@ int load_loci(string &sample,  map<int, LocusT *> &loci) {
         strncpy(c->loc.chr, parts[3].c_str(), id_len);
         c->loc.chr[id_len - 1] = '\0';
         c->loc.bp = atoi(parts[4].c_str());
+
+	//
+	// Parse the components of this stack (either the Illumina ID, or the catalog constituents)
+	//
+	q = parts[7].c_str();
+	while (*q != '\0') {
+	    for (p = q; *q != ',' && *q != '\0'; q++);
+	    len = q - p;
+	    cmp = new char[len + 1];
+	    strncpy(cmp, p, len);
+	    cmp[len] = '\0';
+	    c->comp.push_back(cmp);
+	    if (*q != '\0') q++;
+	}
 
 	loci[c->id] = c;
 
@@ -242,6 +265,56 @@ int dump_loci(map<int, LocusT *> &u) {
 
 	cerr << "\n";
     }
+
+    return 0;
+}
+
+int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
+    CatMatch      *m;
+    string         f;
+    char           line[max_len];
+    vector<string> parts;
+    long int       line_num;
+    ifstream       fh;
+
+    f = sample + ".matches.tsv";
+    fh.open(f.c_str(), ifstream::in);
+
+    if (fh.fail()) {
+        cerr << " Unable to open " << f.c_str() << "\n";
+        return 0;
+    } else {
+        cerr << "  Parsing " << f.c_str() << "\n";
+    }
+
+    line_num = 0;
+    while (fh.good()) {
+	fh.getline(line, max_len);
+
+	if (!fh.good() && strlen(line) == 0)
+	    continue;
+
+	parse_tsv(line, parts);
+
+        if (parts.size() != num_matches_fields) {
+            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+            return 0;
+        }
+
+	m = new CatMatch;
+	m->batch_id  = atoi(parts[1].c_str());
+	m->cat_id    = atoi(parts[2].c_str());
+        m->sample_id = atoi(parts[3].c_str());
+	m->tag_id    = atoi(parts[4].c_str());
+	m->haplotype = new char[parts[5].length() + 1];
+	strcpy(m->haplotype, parts[5].c_str());
+
+	matches.push_back(m);
+
+        line_num++;
+    }
+
+    fh.close();
 
     return 0;
 }

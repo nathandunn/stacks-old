@@ -71,7 +71,7 @@ int main (int argc, char* argv[]) {
 	s = samples.front();
 	samples.pop();
 
-	if (!load_loci(s.second, sample)) {
+	if (!load_loci(s.second, sample, false)) {
             cerr << "Failed to load sample " << i << "\n";
             continue;
         }
@@ -869,7 +869,7 @@ int initialize_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog) {
     //
     // Parse the input files.
     //
-    if (!load_loci(sample.second, tmp_catalog))
+    if (!load_loci(sample.second, tmp_catalog, false))
         return 0;
 
     //
