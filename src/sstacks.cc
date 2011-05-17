@@ -38,6 +38,7 @@ int     num_threads = 1;
 int     batch_id    = 0;
 int     samp_id     = 0; 
 int     catalog     = 0;
+bool    verify_haplotype = true;
 searcht search_type = sequence;
 
 int main (int argc, char* argv[]) {
@@ -57,9 +58,9 @@ int main (int argc, char* argv[]) {
 
     if (catalog) {
         sample_1_file += ".catalog";
-	res = load_loci(sample_1_file, sample_1);
+	res = load_loci(sample_1_file, sample_1, false);
     } else {
-	res = load_loci(sample_1_file, sample_1);
+	res = load_loci(sample_1_file, sample_1, false);
     }
 
     if (res == 0) {
@@ -67,7 +68,7 @@ int main (int argc, char* argv[]) {
 	return 0;
     }
 
-    res = load_loci(sample_2_file, sample_2);
+    res = load_loci(sample_2_file, sample_2, false);
 
     if (res == 0) {
 	cerr << "Unable to parse '" << sample_2_file << "'\n";
@@ -143,9 +144,12 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
 
 		    //cerr << "Found matching genomic location [" << *loc_it << "], tag " << tag->id << "\n";
 		    for (q = tag->strings.begin(); q != tag->strings.end(); q++)
-			if (verify_genomic_loc_match(tag, i->second, q->first))
+			if (verify_haplotype && verify_genomic_loc_match(tag, i->second, q->first)) {
 			    //cerr << "  Adding match between " << tag->id << " and " << q->first << "\n";
 			    i->second->add_match(tag->id, q->first);
+			} else if (verify_haplotype == false) {
+			    i->second->add_match(tag->id, q->first);
+			}
 		}
 	    }
 	}
@@ -164,7 +168,6 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, string allele) {
     // 1. First we will check that the query locus (s2_tag) does not have any SNPs 
     //    lacking in the catalog tag (s1_tag).
     //
-    uint snp_count = 0;
     bool found;
     for (j = s2_tag->snps.begin(); j != s2_tag->snps.end(); j++) {
 	found = false;
@@ -228,6 +231,13 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, string allele) {
 		pos++;
 	    }
 	}
+	merged_alleles.insert(new_allele);
+    }
+
+    if (s2_tag->alleles.size() == 0) {
+	new_allele = "";
+	for (k = merged_snps.begin(); k != merged_snps.end(); k++)
+	    new_allele += s2_tag->con[(*k).second->col];
 	merged_alleles.insert(new_allele);
     }
 
@@ -430,6 +440,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"sample_2",    required_argument, NULL, 's'},
 	    {"sample_2_id", required_argument, NULL, 'S'},
 	    {"genomic_loc", no_argument,       NULL, 'g'},
+	    {"verify_hap",  no_argument,       NULL, 'x'},
 	    {"outpath",     required_argument, NULL, 'o'},
 	    {0, 0, 0, 0}
 	};
@@ -437,7 +448,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgvr:s:c:o:R:S:b:p:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgxvr:s:c:o:R:S:b:p:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -472,6 +483,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'c': 
 	    sample_1_file = optarg;
 	    catalog++;
+	    break;
+	case 'x': 
+	    verify_haplotype = false;
 	    break;
         case 'v':
             version();
@@ -513,7 +527,7 @@ void version() {
 
 void help() {
     std::cerr << "sstacks " << VERSION << "\n"
-              << "sstacks -b batch_id -c catalog_file -s sample_file [-S id] [-r sample_file] [-o path] [-p num_threads] [-g] [-v] [-h]" << "\n"
+              << "sstacks -b batch_id -c catalog_file -s sample_file [-S id] [-r sample_file] [-o path] [-p num_threads] [-g] [-x] [-v] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  b: MySQL ID of this batch." << "\n"
 	      << "  c: TSV file from which to load the catalog RAD-Tags." << "\n"
@@ -522,6 +536,7 @@ void help() {
 	      << "  S: MySQL ID of the specified sample." << "\n"
 	      << "  o: output path to write results." << "\n"
               << "  g: base matching on genomic location, not sequence identity." << "\n"
+	      << "  x: don't verify haplotype of matching locus." << "\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n";
 
