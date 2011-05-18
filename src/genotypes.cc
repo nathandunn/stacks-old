@@ -41,7 +41,6 @@ string    out_file;
 string    bl_file;
 string    wl_file;
 int       progeny_limit   = 1;
-bool      man_corrections = false;
 bool      corrections     = false;
 bool      expand_id       = false;
 bool      sql_out         = false;
@@ -169,6 +168,9 @@ int main (int argc, char* argv[]) {
     case gen:
 	export_gen_map(catalog, pmap, parent_ids, samples);
 	break;
+    case none:
+    case unk:
+	break;
     }
 
     //
@@ -241,7 +243,7 @@ int find_markers(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &pa
 	    p = parent_ids.begin();
 	    pid_1 = *p;
 	    pid_2 = -1;
-	    d_1   = pmap->datum(loc->id, pid_1);
+	    d_1   = pmap->blacklisted(loc->id, pid_1) ? NULL : pmap->datum(loc->id, pid_1);
 	    d_2   = NULL;
 	} else {
 	    p = parent_ids.begin();
@@ -249,8 +251,14 @@ int find_markers(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &pa
 
 	    pid_1 = *p < *q ? *p : *q;
 	    pid_2 = *p < *q ? *q : *p;
-	    d_1   = pmap->datum(loc->id, pid_1);
-	    d_2   = pmap->datum(loc->id, pid_2);
+	    if (pmap->blacklisted(loc->id, pid_1) ||
+		pmap->blacklisted(loc->id, pid_2)) {
+		d_1 = NULL;
+		d_2 = NULL;
+	    } else {
+		d_1   = pmap->datum(loc->id, pid_1);
+		d_2   = pmap->datum(loc->id, pid_2);
+	    }
 	}
 
 	parent_count = 0;
@@ -686,6 +694,7 @@ int check_uncalled_snps(CLocus *clocus, Locus *stack, Datum *d) {
      }
 
     if (status == "true") {
+	d->corrected = true;
 	delete [] d->gtype;
 	d->gtype = new char[2];
 	strcpy(d->gtype, "-");
@@ -779,6 +788,11 @@ int check_homozygosity(vector<char *> &reads, int col, char rank_1, char rank_2,
     map<char, int> nuc;
     vector<pair<char, int> > sorted_nuc;
 
+    nuc['A'] = 0;
+    nuc['C'] = 0;
+    nuc['G'] = 0;
+    nuc['T'] = 0;
+
     for (int j = 0; j < height; j++)
 	nuc[reads[j][col]]++;
 
@@ -822,8 +836,6 @@ int export_gen_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
     // We wish to export, a set of generic genotypes, not specific to any mapping type.
     // 
 
-    //apply_corrected_genotypes($sth, \@loci) if ($man_corrections);
-
     //
     // Output the results
     //
@@ -862,30 +874,6 @@ int export_f2_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     types["ab/cc"] = "abxcc";
     types["cc/ab"] = "ccxab";
 
-    // map<string, set<string> > genotypes;
-    // genotypes["aaxbb"].insert("a");
-    // genotypes["aaxbb"].insert("b");
-    // genotypes["aaxbb"].insert("h");
-    // genotypes["aaxbb"].insert("-");
-
-    // genotypes["abxcd"].insert("a");
-    // genotypes["abxcd"].insert("b");
-    // genotypes["abxcd"].insert("h");
-    // genotypes["abxcd"].insert("-");
-
-    // genotypes["abxaa"].insert("a");
-    // genotypes["abxaa"].insert("-");
-
-    // genotypes["aaxab"].insert("b");
-    // genotypes["aaxab"].insert("-");
-
-    // genotypes["abxcc"].insert("a");
-    // genotypes["abxcc"].insert("b");
-    // genotypes["abxcc"].insert("-");
-
-    // genotypes["ccxab"].insert("b");
-    // genotypes["ccxab"].insert("-");
-
     map<string, map<string, string> > dictionary;
     dictionary["aaxbb"]["aa"] = "a";
     dictionary["aaxbb"]["ab"] = "h";
@@ -917,7 +905,7 @@ int export_f2_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     dictionary["abxcc"]["a"]  = "a";
     dictionary["abxcc"]["ab"] = "a";
     dictionary["abxcc"]["bb"] = "a";
-    dictionary["abxcc"]["cc"] =  "b";
+    dictionary["abxcc"]["cc"] = "b";
     dictionary["abxcc"]["ac"] = "-";
     dictionary["abxcc"]["bc"] = "-";
     dictionary["abxcc"]["-"]  = "-";
@@ -933,9 +921,7 @@ int export_f2_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     //
     // Translate the genotypes for this particular map type.
     //
-    translate_genotypes(types, dictionary, catalog, pmap, samples);
-
-    // apply_corrected_genotypes($sth, \@loci) if ($man_corrections);
+    translate_genotypes(types, dictionary, catalog, pmap, samples, parent_ids);
 
     //
     // Output the results
@@ -981,15 +967,6 @@ int export_dh_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     types["ab/--"] = "abx--";
     types["--/ab"] = "--xab";
 
-    // map<string, set<string> > genotypes;
-    // genotypes["abx--"].insert("a");
-    // genotypes["abx--"].insert("b");
-    // genotypes["abx--"].insert("-");
-
-    // genotypes["--xab"].insert("a");
-    // genotypes["--xab"].insert("b");
-    // genotypes["--xab"].insert("-");
-
     map<string, map<string, string> > dictionary;
     dictionary["abx--"]["aa"] = "a";
     dictionary["abx--"]["bb"] = "b";
@@ -1002,9 +979,7 @@ int export_dh_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     //
     // Translate the genotypes for this particular map type.
     //
-    translate_genotypes(types, dictionary, catalog, pmap, samples);
-
-    // apply_corrected_genotypes($sth, \@loci) if ($man_corrections);
+    translate_genotypes(types, dictionary, catalog, pmap, samples, parent_ids);
 
     //
     // Output the results
@@ -1053,23 +1028,6 @@ int export_bc1_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
     types["ab/cc"] = "abxcc";
     types["cc/ab"] = "ccxab";
 
-    // map<string, set<string> > genotypes;
-    // genotypes["aaxbb"].insert("b"); 
-    // genotypes["aaxbb"].insert("h"); 
-    // genotypes["aaxbb"].insert("-");
-
-    // genotypes["bbxaa"].insert("a"); 
-    // genotypes["bbxaa"].insert("h"); 
-    // genotypes["bbxaa"].insert("-");
-
-    // genotypes["abxcc"].insert("b"); 
-    // genotypes["abxcc"].insert("h"); 
-    // genotypes["abxcc"].insert("-");
-
-    // genotypes["ccxab"].insert("a"); 
-    // genotypes["ccxab"].insert("h"); 
-    // genotypes["ccxab"].insert("-");
-
     map<string, map<string, string> > dictionary;
     dictionary["aaxbb"]["-"]  = "-";
     dictionary["aaxbb"]["aa"] = "b";
@@ -1098,9 +1056,7 @@ int export_bc1_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
     //
     // Translate the genotypes for this particular map type.
     //
-    translate_genotypes(types, dictionary, catalog, pmap, samples);
-
-    //apply_corrected_genotypes($sth, \@loci) if ($man_corrections);
+    translate_genotypes(types, dictionary, catalog, pmap, samples, parent_ids);
 
     //
     // Output the results
@@ -1151,71 +1107,43 @@ int export_cp_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     // <nnxnp>     nn, np, ––
     //
     map<string, string> types;
-    types["ab/--"] = "lmxll";
-    types["--/ab"] = "nnxnp";
+    types["ab/--"] = "lmx--";
+    types["--/ab"] = "--xnp";
     types["ab/aa"] = "lmxll";
     types["aa/ab"] = "nnxnp";
     types["ab/ab"] = "hkxhk";
     types["ab/ac"] = "efxeg";
     types["ab/cd"] = "abxcd";
 
-    // map<string, set<string> > genotypes;
-    // genotypes["lmx--"].insert("ll");
-    // genotypes["lmx--"].insert("lm");
-    // genotypes["lmx--"].insert("--");
-
-    // genotypes["--xnp"].insert("nn");
-    // genotypes["--xnp"].insert("np");
-    // genotypes["--xnp"].insert("--");
-
-    // genotypes["lmxll"].insert("ll");
-    // genotypes["lmxll"].insert("lm");
-    // genotypes["lmxll"].insert("--");
-
-    // genotypes["nnxnp"].insert("nn");
-    // genotypes["nnxnp"].insert("np");
-    // genotypes["nnxnp"].insert("--");
-
-    // genotypes["hkxhk"].insert("hh");
-    // genotypes["hkxhk"].insert("hk");
-    // genotypes["hkxhk"].insert("kk");
-    // genotypes["hkxhk"].insert("--");
-
-    // genotypes["efxeg"].insert("ee");
-    // genotypes["efxeg"].insert("ef");
-    // genotypes["efxeg"].insert("eg");
-    // genotypes["efxeg"].insert("fg");
-    // genotypes["efxeg"].insert("--");
-
-    // genotypes["abxcd"].insert("ac");
-    // genotypes["abxcd"].insert("ad");
-    // genotypes["abxcd"].insert("bc");
-    // genotypes["abxcd"].insert("bd");
-    // genotypes["abxcd"].insert("--");
-
     map<string, map<string, string> > dictionary;
-    dictionary["abx--"]["-"]  = "--";
-    dictionary["abx--"]["a"]  = "ll";
-    dictionary["abx--"]["b"]  = "lm";
+    dictionary["lmx--"]["-"]  = "--";
+    dictionary["lmx--"]["aa"] = "ll";
+    dictionary["lmx--"]["bb"] = "lm";
 
-    dictionary["--xab"]["a"]  = "nn";
-    dictionary["--xab"]["b"]  = "np";
+    dictionary["--xnp"]["-"]  = "--";
+    dictionary["--xnp"]["aa"] = "nn";
+    dictionary["--xnp"]["bb"] = "np";
 
-    dictionary["abxaa"]["aa"] = "ll";
-    dictionary["abxaa"]["ab"] = "lm";
+    dictionary["lmxll"]["-"]  = "--";
+    dictionary["lmxll"]["aa"] = "ll";
+    dictionary["lmxll"]["ab"] = "lm";
 
-    dictionary["aaxab"]["aa"] = "nn";
-    dictionary["aaxab"]["ab"] = "np";
+    dictionary["nnxnp"]["-"]  = "--";
+    dictionary["nnxnp"]["aa"] = "nn";
+    dictionary["nnxnp"]["ab"] = "np";
 
-    dictionary["abxab"]["ab"] = "hk";
-    dictionary["abxab"]["a"]  = "hh";
-    dictionary["abxab"]["b"]  = "kk";
+    dictionary["hkxhk"]["-"]  = "--";
+    dictionary["hkxhk"]["ab"] = "hk";
+    dictionary["hkxhk"]["aa"] = "hh";
+    dictionary["hkxhk"]["bb"] = "kk";
 
-    dictionary["abxac"]["ab"] = "ef";
-    dictionary["abxac"]["ac"] = "eg";
-    dictionary["abxac"]["bc"] = "fg";
-    dictionary["abxac"]["aa"] = "aa";
+    dictionary["efxeg"]["-"]  = "--";
+    dictionary["efxeg"]["ab"] = "ef";
+    dictionary["efxeg"]["ac"] = "eg";
+    dictionary["efxeg"]["bc"] = "fg";
+    dictionary["efxeg"]["aa"] = "ee";
 
+    dictionary["abxcd"]["-"]  = "--";
     dictionary["abxcd"]["ac"] = "ac";
     dictionary["abxcd"]["ad"] = "ad";
     dictionary["abxcd"]["bc"] = "bc";
@@ -1224,9 +1152,7 @@ int export_cp_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     //
     // Translate the genotypes for this particular map type.
     //
-    translate_genotypes(types, dictionary, catalog, pmap, samples);
-
-    // apply_corrected_genotypes($sth, \@loci) if ($man_corrections);
+    translate_genotypes(types, dictionary, catalog, pmap, samples, parent_ids);
 
     //
     // Output the results
@@ -1247,7 +1173,8 @@ int export_cp_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
 }
 
 int translate_genotypes(map<string, string> &types, map<string, map<string, string> > &dictionary, 
-			map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, string> &samples) {
+			map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, string> &samples,
+			set<int> &parent_ids) {
     map<int, CLocus *>::iterator it;
     CLocus *loc;
 
@@ -1260,16 +1187,18 @@ int translate_genotypes(map<string, string> &types, map<string, map<string, stri
 	for (int i = 0; i < pmap->sample_cnt(); i++) {
 	    if (d[i] == NULL) continue;
 
-	    cerr << "Examining progeny " << samples[pmap->rev_sample_index(i)] << "; marker: " << loc->marker << "\n";
+	    if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+
+	    //cerr << "Examining progeny " << samples[pmap->rev_sample_index(i)] << "; marker: " << loc->marker << "\n";
 
 	    string m;
 
 	    if (marker.length() == 0) {
-		m = "-";
+		m = dictionary[marker]["-"];
 	    } else {
 		m = dictionary[marker].count(d[i]->gtype) ? 
 		    dictionary[marker][d[i]->gtype] : 
-		    "-";
+		    dictionary[marker]["-"];
 	    }
 	    d[i]->trans_gtype = new char[m.length() + 1];
 
@@ -1283,9 +1212,9 @@ int translate_genotypes(map<string, string> &types, map<string, map<string, stri
 	    } else {
 		strcpy(d[i]->trans_gtype, m.c_str());
 	    }
-	    if (m != "-") loc->trans_gcnt++;
-
-	    cerr << "  allele: " << d[i]->trans_gtype << "\n";
+	    if (m != dictionary[marker]["-"])
+		loc->trans_gcnt++;
+	    //cerr << "  allele: " << d[i]->trans_gtype << "; trans_gcnt: " << loc->trans_gcnt << "\n";
 	}
     }
 
@@ -1364,6 +1293,9 @@ int tally_progeny_haplotypes(CLocus *locus, PopMap<CLocus> *pmap, set<int> &pare
 
 int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &parent_ids) {
 
+    if (map_type == none)
+	return 0;
+
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".markers.tsv";
     string file = in_path + pop_name.str();
@@ -1422,7 +1354,10 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 
-	if (loc->trans_gcnt < progeny_limit) continue;
+	if (map_type == gen && loc->gcnt < progeny_limit) 
+	    continue;
+	else if (map_type != gen && loc->trans_gcnt < progeny_limit) 
+	    continue;
 
 	Datum **d = pmap->locus(loc->id);
 
@@ -1436,7 +1371,7 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
 
 	    if (d[i] == NULL) 
 		map_type == cp ? fh << "--\n" : fh << "-\n";
-	    else if (d[i]->trans_gtype == NULL)
+	    else if (d[i]->trans_gtype != NULL)
 		fh << d[i]->trans_gtype << "\n";
 	    else
 		fh << d[i]->gtype << "\n";
@@ -1620,6 +1555,8 @@ int write_joinmap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string,
 	fh << id.str() << "\t";
 
         if (expand_id) {
+	    id.str("");
+
             if (loc->annotation.length() > 0)
                 id << loc->id << "\t" << loc->annotation;
 	    else if (strlen(loc->loc.chr) > 0)
@@ -1630,7 +1567,12 @@ int write_joinmap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string,
             fh << id.str() << "\t";
         }
 
-	fh << "<" << types[loc->marker] << ">";
+	if (types[loc->marker] == "lmx--")
+	    fh << "<lmxll>";
+	else if (types[loc->marker] == "--xnp")
+	    fh << "<nnxnp>";
+	else
+	    fh << "<" << types[loc->marker] << ">";
 
 	Datum **d = pmap->locus(loc->id);
 
@@ -1932,7 +1874,6 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"help",        no_argument,       NULL, 'h'},
             {"version",     no_argument,       NULL, 'v'},
             {"corr",        no_argument,       NULL, 'c'},
-            {"man_corr",    no_argument,       NULL, 'C'},
             {"sql",         no_argument,       NULL, 's'},
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"batch_id",    required_argument, NULL, 'b'},
@@ -1949,7 +1890,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvcCsib:p:t:o:r:P:m:W:B:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:W:B:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1976,6 +1917,8 @@ int parse_command_line(int argc, char* argv[]) {
 		map_type = dh;
 	    else if (strcasecmp(optarg, "gen") == 0)
 		map_type = gen;
+	    else
+		map_type = unk;
 	    break;
 	case 'o':
 	    if (strcasecmp(optarg, "joinmap") == 0)
@@ -1988,9 +1931,6 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'c':
 	    corrections = true;
-	    break;
-	case 'C':
-	    man_corrections = true;
 	    break;
 	case 'i':
 	    expand_id = true;

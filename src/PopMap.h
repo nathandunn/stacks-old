@@ -54,6 +54,7 @@ public:
 
 template<class LocusT=Locus>
 class PopMap {
+    set<pair<int, int> > blacklist;
     int      num_loci;
     int      num_samples;
     Datum ***data;
@@ -79,6 +80,7 @@ public:
 
     Datum **locus(int);
     Datum  *datum(int, int);
+    bool    blacklisted(int, int);
 };
 
 template<class LocusT>
@@ -146,7 +148,6 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
     //
     Datum *d;
     int    locus, sample;
-    set<pair<int, int> > blacklist;
 
     for (i = 0; i < matches.size(); i++) {
 	for (uint j = 0; j < matches[i].size(); j++) {
@@ -165,8 +166,8 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 
 	    if (this->data[locus][sample] == NULL) {
 
-		if (blacklist.count(make_pair(matches[i][j]->sample_id, matches[i][j]->cat_id)) == 0) {
-		    //cerr << "Creating new datum for tag ID: " << matches[i][j]->tag_id << "\n";
+		if (this->blacklist.count(make_pair(matches[i][j]->sample_id, matches[i][j]->cat_id)) == 0) {
+		    // cerr << "Creating new datum for tag ID: " << matches[i][j]->tag_id << "\n";
 		    d = new Datum;
 		    d->id = matches[i][j]->tag_id;
 		    char *h = new char[strlen(matches[i][j]->haplotype) + 1];
@@ -177,7 +178,7 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 		    catalog[matches[i][j]->cat_id]->hcnt++;
 		}
 	    } else {
-		// cerr << "  Adding haplotype to existing datum: " << matches[i][j]->tag_id << "\n";
+		// cerr << "  Adding haplotype to existing datum: sample: " << matches[i][j]->sample_id << ". tag: " << matches[i][j]->tag_id << "\n";
 		//
 		// Check that the IDs of the two matches are the same. If not, then two tags 
 		// match this locus and the locus is invalid, set back to NULL.
@@ -187,9 +188,10 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 		    strcpy(h, matches[i][j]->haplotype);
 		    this->data[locus][sample]->obshap.push_back(h);
 		} else {
+		    //cerr << "    Deleting sample, multiple tag matches\n";
 		    delete this->data[locus][sample];
 		    this->data[locus][sample] = NULL;
-		    blacklist.insert(make_pair(matches[i][j]->sample_id, matches[i][j]->cat_id));
+		    this->blacklist.insert(make_pair(matches[i][j]->sample_id, matches[i][j]->cat_id));
 		    catalog[matches[i][j]->cat_id]->hcnt--;
 		}
 	    }
@@ -207,6 +209,14 @@ Datum **PopMap<LocusT>::locus(int locus) {
 template<class LocusT>
 Datum  *PopMap<LocusT>::datum(int locus, int sample) {
     return this->data[this->locus_order[locus]][this->sample_order[sample]];
+}
+
+template<class LocusT>
+bool PopMap<LocusT>::blacklisted(int locus, int sample) {
+    if (this->blacklist.count(make_pair(sample, locus)) > 0)
+	return true;
+    else
+	return false;
 }
 
 #endif // __POPMAP_H__

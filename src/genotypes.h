@@ -57,7 +57,7 @@ using std::set;
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"
 
-enum map_types {none, gen, dh, cp, bc1, f2};
+enum map_types {unk, none, gen, dh, cp, bc1, f2};
 enum out_types {rqtl, joinmap};
 
 //
@@ -88,7 +88,7 @@ int  calculate_f(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &);
 int  create_genotype_map(CLocus *, PopMap<CLocus> *, set<int> &);
 int  call_population_genotypes(CLocus *, PopMap<CLocus> *, map<string, map<string, string> > &);
 int  tally_progeny_haplotypes(CLocus *, PopMap<CLocus> *, set<int> &, int &, double &, string &);
-int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &);
+int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &);
 
 int  automated_corrections(map<int, string> &, set<int> &, map<int, CLocus *> &, vector<vector<CatMatch *> > &, PopMap<CLocus> *);
 int  check_uncalled_snps(CLocus *, Locus *, Datum *);

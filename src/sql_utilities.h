@@ -36,6 +36,7 @@
 const uint num_tags_fields    = 12;
 const uint num_snps_fields    =  7;
 const uint num_alleles_fields =  6;
+//const uint num_matches_fields =  7;
 const uint num_matches_fields =  6;
 
 template <class LocusT>
@@ -308,6 +309,7 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
 	m->tag_id    = atoi(parts[4].c_str());
 	m->haplotype = new char[parts[5].length() + 1];
 	strcpy(m->haplotype, parts[5].c_str());
+	//m->depth     = atoi(parts[6].c_str());
 
 	matches.push_back(m);
 

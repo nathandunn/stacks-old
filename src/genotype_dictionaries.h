@@ -35,9 +35,9 @@ void initialize_dictionaries(map<string, map<string, string> > &global_dictionar
     global_dictionary["ab/ac"]["a"]  = "aa";
     global_dictionary["ab/ac"]["ab"] = "ab";
     global_dictionary["ab/ac"]["b"]  = "bb";
-    global_dictionary["ab/ac"]["ab"] = "ab";
-    global_dictionary["ab/ac"]["c"]  = "cc";
     global_dictionary["ab/ac"]["ac"] = "ac";
+    global_dictionary["ab/ac"]["c"]  = "cc";
+    global_dictionary["ab/ac"]["bc"] = "bc";
 
     global_dictionary["ab/cd"]["a"]  = "aa";
     global_dictionary["ab/cd"]["ab"] = "ab";
@@ -59,11 +59,11 @@ void initialize_dictionaries(map<string, map<string, string> > &global_dictionar
     global_dictionary["aa/ab"]["b"]  = "bb";
 
     global_dictionary["ab/cc"]["a"]  = "aa";
-    global_dictionary["aa/ab"]["ab"] = "ab";
-    global_dictionary["aa/ab"]["bb"] = "bb";
-    global_dictionary["aa/ab"]["c"]  = "cc";
-    global_dictionary["aa/ab"]["ac"] = "ac";
-    global_dictionary["aa/ab"]["bc"] = "bc";
+    global_dictionary["ab/cc"]["ab"] = "ab";
+    global_dictionary["ab/cc"]["bb"] = "bb";
+    global_dictionary["ab/cc"]["c"]  = "cc";
+    global_dictionary["ab/cc"]["ac"] = "ac";
+    global_dictionary["ab/cc"]["bc"] = "bc";
 
     global_dictionary["cc/ab"]["aa"] = "aa";
     global_dictionary["cc/ab"]["ab"] = "ab";
