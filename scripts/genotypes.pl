@@ -979,7 +979,7 @@ sub fetch_samples {
 	or die("Unable to select results from $db.\n");
 
     while ($row = $sth->{'samp'}->fetchrow_hashref()) {
-	if ($row->{'file'} !~ /f?e?male/) {
+	if ($row->{'type'} ne "parent") {
 	    push(@{$samples}, $row->{'file'});
 	}
 	$sample_ids->{$row->{'file'}} = $row->{'id'};
@@ -1480,7 +1480,7 @@ sub create_genotype_map {
     foreach $allele (@{$parents->{$parents[0]}}, @{$parents->{$parents[1]}}) {
 	$alleles{$allele}++;
     }
-    @keys = sort {$alleles{$b} <=> $alleles{$a}} keys %alleles;
+    @keys = sort keys %alleles;
 
     foreach $allele (@keys) {
 	if ($alleles{$allele} > 1) {
@@ -1825,7 +1825,7 @@ sub prepare_sql_handles {
     $sth->{'loci'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query =
-	"SELECT id, file FROM samples WHERE batch_id=? ORDER BY id";
+	"SELECT id, type, file FROM samples WHERE batch_id=? ORDER BY id";
     $sth->{'samp'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query =

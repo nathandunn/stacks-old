@@ -33,11 +33,20 @@ use Spreadsheet::WriteExcel;
 use constant stacks_version => "_VERSION_";
 
 my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
-my $out_file = "";
-my $type     = "tsv";
-my $batch_id = 0;
-my $db       = "";
-my $debug    = 0;
+my $out_file  = "";
+my $type      = "tsv";
+my $batch_id  = 0;
+my $data_type = "haplo";
+my $map_type  = "gen";
+my $depth_lim = 1;
+my $man_cor   = 0;
+my $db        = "";
+my $debug     = 0;
+
+my $translate_genotypes = {'dh'  => \&trans_dh_map,
+			   'cp'  => \&trans_cp_map,
+			   'bc1' => \&trans_bc1_map,
+			   'f2'  => \&trans_f2_map};
 
 parse_command_line();
 
@@ -47,7 +56,15 @@ prepare_sql_handles(\%sth, \%filters);
 
 populate(\%sth, \%loci, \%samples, \%filters);
 
-write_results(\%loci, \%samples);
+apply_corrected_genotypes(\%sth, \%loci) if ($man_cor > 0);
+
+if ($data_type eq "haplo") {
+    write_observed_haplotypes(\%loci, \%samples);
+
+} elsif ($data_type eq "gen") {
+    write_genotypes(\%loci, \%samples);
+}
+
 
 print "Success\n";
 
@@ -123,31 +140,82 @@ sub populate {
         }
         $locus->{'alleles'} = substr($locus->{'alleles'}, 0, -1) if (length($locus->{'alleles'}) > 0);
 
-        #
-        # Add genotypes
-        #
-        $sth->{'mat'}->execute($batch_id, $locus->{'id'});
+	if ($data_type eq "haplo") {
+	    #
+	    # Add observed haplotypes
+	    #
+	    $sth->{'mat'}->execute($batch_id, $locus->{'id'}, $depth_lim);
 
-        while ($gen_row = $sth->{'mat'}->fetchrow_hashref()) {
-            if (!defined($locus->{'gtypes'}->{$gen_row->{'file'}})) {
-                $locus->{'gtypes'}->{$gen_row->{'file'}} = [];
-            }
+	    while ($gen_row = $sth->{'mat'}->fetchrow_hashref()) {
+		if (!defined($locus->{'gtypes'}->{$gen_row->{'file'}})) {
+		    $locus->{'gtypes'}->{$gen_row->{'file'}} = [];
+		}
 
-            push(@{$locus->{'gtypes'}->{$gen_row->{'file'}}}, 
-                 {'file'   => $gen_row->{'file'},
-                  'allele' => $gen_row->{'allele'},
-                  'tag_id' => $gen_row->{'tag_id'}});
+		push(@{$locus->{'gtypes'}->{$gen_row->{'file'}}}, 
+		     {'file'   => $gen_row->{'file'},
+		      'allele' => $gen_row->{'allele'},
+		      'tag_id' => $gen_row->{'tag_id'}});
 
-            #
-            # Check if this particular sample was deleveraged
-            #
-            if (defined($delev{$gen_row->{'id'} . "_" . $gen_row->{'tag_id'}}) &&
-                $delev{$gen_row->{'id'} . "_" . $gen_row->{'tag_id'}} >= 1) {
-                $locus->{'delev'}++;
-            }
-        }
+		#
+		# Check if this particular sample was deleveraged
+		#
+		if (defined($delev{$gen_row->{'id'} . "_" . $gen_row->{'tag_id'}}) &&
+		    $delev{$gen_row->{'id'} . "_" . $gen_row->{'tag_id'}} >= 1) {
+		    $locus->{'delev'}++;
+		}
+	    }
+	} elsif ($data_type eq "gen") {
+	    #
+	    # Add genotypes
+	    #
+	    $sth->{'gtypes'}->execute($batch_id, $locus->{'id'});
+
+	    while ($gen_row = $sth->{'gtypes'}->fetchrow_hashref()) {
+		if (!defined($locus->{'gtypes'}->{$gen_row->{'file'}})) {
+		    $locus->{'gtypes'}->{$gen_row->{'file'}} = [];
+		}
+
+		push(@{$locus->{'gtypes'}->{$gen_row->{'file'}}}, 
+		     {'file'   => $gen_row->{'file'},
+		      'gtype'  => $gen_row->{'genotype'}});
+	    }
+	}
 
         $loci->{$row->{'tag_id'}} = $locus;
+    }
+}
+
+sub apply_corrected_genotypes {
+    my ($sth, $loci) = @_;
+
+    my (%corrections, $locus, $key, $row, $sample);
+
+    #print STDERR "Applying manually corrected genotypes to export data...\n";
+
+    #
+    # Fetch the manual corrections from the database.
+    #
+    $sth->{'corr'}->execute($batch_id)
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'corr'}->fetchrow_hashref()) {
+        if (!defined($corrections{$row->{'catalog_id'}})) {
+            $corrections{$row->{'catalog_id'}} = {};
+        }
+        $corrections{$row->{'catalog_id'}}->{$row->{'file'}} = $row->{'genotype'};
+    }
+
+    foreach $key (keys %{$loci}) {
+	$locus = $loci->{$key};
+
+        next if (!defined($corrections{$locus->{'id'}}));
+
+        foreach $sample (keys %{$corrections{$locus->{'id'}}}) {
+	    @{$locus->{'gtypes'}->{$sample}} = ();
+	    push(@{$locus->{'gtypes'}->{$sample}}, 
+		     {'file'   => $sample,
+		      'gtype'  => $corrections{$locus->{'id'}}->{$sample}});
+        }
     }
 }
 
@@ -229,7 +297,7 @@ sub apply_query_filters {
     return $query;
 }
 
-sub write_results {
+sub write_observed_haplotypes {
     my ($loci, $samples) = @_;
 
     my ($workbook, $worksheet);
@@ -276,7 +344,7 @@ sub write_results {
     $type eq "xls" ? write_excel($worksheet, $i, $str) : print $out_fh $str;
     $i++;
 
-    foreach $cat_id (keys %{$loci}) {
+    foreach $cat_id (sort {$a <=> $b} keys %{$loci}) {
         $locus = $loci->{$cat_id};
 
         $str =
@@ -329,6 +397,92 @@ sub write_results {
     $type eq "xls" ? $workbook->close() : close($out_fh);
 }
 
+sub write_genotypes {
+    my ($loci, $samples) = @_;
+
+    my ($workbook, $worksheet);
+
+    my ($out_fh, $str, $cat_id, $id, $locus, $gtypes, $types);
+
+    if ($type eq "xls") {
+        $workbook  = Spreadsheet::WriteExcel->new($out_file) or die("Unable to initiate excel spreadsheet.\n");
+        $worksheet = $workbook->add_worksheet() or die("Unable to add a worksheet to our excel spreadsheet.\n");
+    } else {
+        open($out_fh, ">$out_file") or die("Unable to open output file '$out_file'\n");
+    }
+
+    #
+    # Order the samples by sample ID
+    #
+    my @ordered_sam = sort {$samples->{$a} <=> $samples->{$b}} keys %{$samples};
+
+    #
+    # Print the heading out for the spreadsheet
+    #
+    my $i = 0;
+
+    $str = 
+        "Catalog ID\t" . 
+        "Annotation\t" . 
+        "Chr\t" .
+        "BP\t" .
+	"Marker\t";
+
+    foreach $id (@ordered_sam) {
+        $str .= $id . "\t";
+    }
+    $str  = substr($str, 0, -1);
+    $str .= "\n";
+
+    $type eq "xls" ? write_excel($worksheet, $i, $str) : print $out_fh $str;
+    $i++;
+
+    my ($trans_marker);
+
+    foreach $cat_id (sort {$a <=> $b} keys %{$loci}) {
+        $locus = $loci->{$cat_id};
+
+	$trans_marker = translate_marker($map_type, $locus->{'marker'});
+
+        $str =
+            $cat_id . "\t" .
+            $locus->{'annotation'} . "\t" .
+            $locus->{'chr'} . "\t" .
+            $locus->{'bp'} . "\t" .
+	    $trans_marker . "\t";
+
+        foreach $id (@ordered_sam) {
+            $types = $locus->{'gtypes'}->{$id};
+
+            if (!defined($types)) {
+                $str .= "\t";
+                next;
+            }
+
+	    my $trans_gtype = $translate_genotypes->{$map_type}->($trans_marker, $types->[0]->{'gtype'});
+            $str .=  $trans_gtype . "\t";
+        }
+        $str  = substr($str, 0, -1);
+        $str .= "\n";
+
+        $type eq "xls" ? write_excel($worksheet, $i, $str) : print $out_fh $str;
+
+        $i++;
+    }
+
+    $str = "\n";
+    $type eq "xls" ? write_excel($worksheet, $i, $str) : print $out_fh $str;
+    $i++;
+
+    foreach $id (@ordered_sam) {
+        $str = $samples->{$id} . "\t" . $id . "\n";
+        $type eq "xls" ? write_excel($worksheet, $i, $str) : print $out_fh $str;
+        $i++;
+    }
+
+    $type eq "xls" ? $workbook->close() : close($out_fh);
+}
+
 sub write_excel {
     my ($worksheet, $i, $str) = @_;
 
@@ -340,6 +494,243 @@ sub write_excel {
     foreach my $r (@row) {
         $worksheet->write($i, $j, $r);
         $j++;
+    }
+}
+
+sub translate_marker {
+    my ($map_type, $in_marker) = @_;
+
+    my %dictionary;
+
+    return $in_marker if ($map_type eq "gen");
+
+    $dictionary{"dh"}  = {};
+    $dictionary{"cp"}  = {};
+    $dictionary{"f2"}  = {};
+    $dictionary{"bc1"} = {};
+
+    $dictionary{"dh"}->{"ab/--"}  = "abx--";
+    $dictionary{"dh"}->{"--/ab"}  = "--xab";
+
+    $dictionary{"cp"}->{"ab/--"}  = "lmx--";
+    $dictionary{"cp"}->{"--/ab"}  = "--xnp";
+    $dictionary{"cp"}->{"ab/aa"}  = "lmxll";
+    $dictionary{"cp"}->{"aa/ab"}  = "nnxnp";
+    $dictionary{"cp"}->{"ab/ab"}  = "hkxhk";
+    $dictionary{"cp"}->{"ab/ac"}  = "efxeg";
+    $dictionary{"cp"}->{"ab/cd"}  = "abxcd";
+
+    $dictionary{"f2"}->{"aa/bb"}  = "aaxbb";
+    $dictionary{"f2"}->{"ab/cd"}  = "abxcd";
+    $dictionary{"f2"}->{"ab/aa"}  = "abxaa";
+    $dictionary{"f2"}->{"aa/ab"}  = "aaxab";
+    $dictionary{"f2"}->{"ab/cc"}  = "abxcc";
+    $dictionary{"f2"}->{"cc/ab"}  = "ccxab";
+
+    $dictionary{"bc1"}->{"aa/bb"} = "aaxbb";
+    $dictionary{"bc1"}->{"bb/aa"} = "bbxaa";
+    $dictionary{"bc1"}->{"ab/cc"} = "abxcc";
+    $dictionary{"bc1"}->{"cc/ab"} = "ccxab";
+
+    return $dictionary{$map_type}->{$in_marker};
+}
+
+sub trans_bc1_map {
+    my ($marker, $in_gtype) = @_;
+
+    my (%types, %dictionary);
+
+    $dictionary{"aaxbb"} = {};
+    $dictionary{"bbxaa"} = {};
+    $dictionary{"abxcc"} = {};
+    $dictionary{"ccxab"} = {};
+
+    $dictionary{"aaxbb"}->{"-"}  = "-";
+    $dictionary{"aaxbb"}->{"aa"} = "b";
+    $dictionary{"aaxbb"}->{"ab"} = "h";
+    $dictionary{"aaxbb"}->{"bb"} = "h";
+
+    $dictionary{"bbxaa"}->{"-"}  = "-";
+    $dictionary{"bbxaa"}->{"aa"} = "h";
+    $dictionary{"bbxaa"}->{"ab"} = "h";
+    $dictionary{"bbxaa"}->{"bb"} = "a";
+
+    $dictionary{"abxcc"}->{"-"}  = "-";
+    $dictionary{"abxcc"}->{"ac"} = "h";
+    $dictionary{"abxcc"}->{"bc"} = "h";
+    $dictionary{"abxcc"}->{"ab"} = "b";
+    $dictionary{"abxcc"}->{"aa"} = "b";
+    $dictionary{"abxcc"}->{"bb"} = "b";
+
+    $dictionary{"ccxab"}->{"-"}  = "-";
+    $dictionary{"ccxab"}->{"ac"} = "h";
+    $dictionary{"ccxab"}->{"bc"} = "h";
+    $dictionary{"ccxab"}->{"ab"} = "a";
+    $dictionary{"ccxab"}->{"aa"} = "a";
+    $dictionary{"ccxab"}->{"bb"} = "a";
+
+    my $out_gtype = 
+	defined($dictionary{$marker}->{lc($in_gtype)}) ? 
+	$dictionary{$marker}->{lc($in_gtype)} : 
+	"-";
+
+    if (lc($in_gtype) ne $in_gtype) {
+	return uc($out_gtype);
+    } else {
+	return $out_gtype;
+    }
+}
+
+sub trans_dh_map {
+    my ($marker, $in_gtype) = @_;
+
+    my (%types, %dictionary);
+
+    $dictionary{"abx--"} = {};
+    $dictionary{"--xab"} = {};
+
+    $dictionary{"abx--"}->{"aa"} = "a";
+    $dictionary{"abx--"}->{"bb"} = "b";
+    $dictionary{"abx--"}->{"-"}  = "-";
+
+    $dictionary{"--xab"}->{"aa"} = "a";
+    $dictionary{"--xab"}->{"bb"} = "b";
+    $dictionary{"--xab"}->{"-"}  = "-";
+
+    my $out_gtype = 
+	defined($dictionary{$marker}->{lc($in_gtype)}) ? 
+	$dictionary{$marker}->{lc($in_gtype)} : 
+	"-";
+
+    if (lc($in_gtype) ne $in_gtype) {
+	return uc($out_gtype);
+    } else {
+	return $out_gtype;
+    }
+}
+
+sub trans_f2_map {
+    my ($marker, $in_gtype) = @_;
+
+    my (%types, %dictionary);
+
+    $dictionary{"aaxbb"} = {};
+    $dictionary{"abxcd"} = {};
+    $dictionary{"abxaa"} = {};
+    $dictionary{"aaxab"} = {};
+    $dictionary{"abxcc"} = {};
+    $dictionary{"ccxab"} = {};
+
+    $dictionary{"aaxbb"}->{"aa"} = "a";
+    $dictionary{"aaxbb"}->{"ab"} = "h";
+    $dictionary{"aaxbb"}->{"bb"} = "b";
+    $dictionary{"aaxbb"}->{"-"}  = "-";
+
+    $dictionary{"abxcd"}->{"aa"} = "a";
+    $dictionary{"abxcd"}->{"ab"} = "a";
+    $dictionary{"abxcd"}->{"bb"} = "a";
+    $dictionary{"abxcd"}->{"cc"} = "b";
+    $dictionary{"abxcd"}->{"cd"} = "b";
+    $dictionary{"abxcd"}->{"dd"} = "b";
+    $dictionary{"abxcd"}->{"ac"} = "h";
+    $dictionary{"abxcd"}->{"ad"} = "h";
+    $dictionary{"abxcd"}->{"bc"} = "h";
+    $dictionary{"abxcd"}->{"bd"} = "h";
+    $dictionary{"abxcd"}->{"-"}  = "-";
+
+    $dictionary{"abxaa"}->{"aa"} = "-";
+    $dictionary{"abxaa"}->{"ab"} = "-";
+    $dictionary{"abxaa"}->{"bb"} = "a";
+    $dictionary{"abxaa"}->{"-"}  = "-";
+
+    $dictionary{"aaxab"}->{"aa"} = "-";
+    $dictionary{"aaxab"}->{"ab"} = "-";
+    $dictionary{"aaxab"}->{"bb"} = "b";
+    $dictionary{"aaxab"}->{"-"}  = "-";
+
+    $dictionary{"abxcc"}->{"a"}  = "a";
+    $dictionary{"abxcc"}->{"ab"} = "a";
+    $dictionary{"abxcc"}->{"bb"} = "a";
+    $dictionary{"abxcc"}->{"cc"} = "b";
+    $dictionary{"abxcc"}->{"ac"} = "-";
+    $dictionary{"abxcc"}->{"bc"} = "-";
+    $dictionary{"abxcc"}->{"-"}  = "-";
+
+    $dictionary{"ccxab"}->{"aa"} = "b";
+    $dictionary{"ccxab"}->{"ab"} = "b";
+    $dictionary{"ccxab"}->{"bb"} = "b";
+    $dictionary{"ccxab"}->{"cc"} = "a";
+    $dictionary{"ccxab"}->{"ac"} = "-";
+    $dictionary{"ccxab"}->{"bc"} = "-";
+    $dictionary{"ccxab"}->{"-"}  = "-";
+
+    my $out_gtype = 
+	defined($dictionary{$marker}->{lc($in_gtype)}) ? 
+	$dictionary{$marker}->{lc($in_gtype)} : 
+	"-";
+
+    if (lc($in_gtype) ne $in_gtype) {
+	return uc($out_gtype);
+    } else {
+	return $out_gtype;
+    }
+}
+
+sub trans_cp_map {
+    my ($marker, $in_gtype) = @_;
+
+    my (%types, %dictionary);
+
+    $dictionary{"lmx--"} = {};
+    $dictionary{"--xnp"} = {};
+    $dictionary{"lmxll"} = {};
+    $dictionary{"nnxnp"} = {};
+    $dictionary{"hkxhk"} = {};
+    $dictionary{"efxeg"} = {};
+    $dictionary{"abxcd"} = {};
+
+    $dictionary{"lmx--"}->{"-"}  = "--";
+    $dictionary{"lmx--"}->{"aa"} = "ll";
+    $dictionary{"lmx--"}->{"bb"} = "lm";
+
+    $dictionary{"--xnp"}->{"-"}  = "--";
+    $dictionary{"--xnp"}->{"aa"} = "nn";
+    $dictionary{"--xnp"}->{"bb"} = "np";
+
+    $dictionary{"lmxll"}->{"-"}  = "--";
+    $dictionary{"lmxll"}->{"aa"} = "ll";
+    $dictionary{"lmxll"}->{"ab"} = "lm";
+
+    $dictionary{"nnxnp"}->{"-"}  = "--";
+    $dictionary{"nnxnp"}->{"aa"} = "nn";
+    $dictionary{"nnxnp"}->{"ab"} = "np";
+
+    $dictionary{"hkxhk"}->{"-"}  = "--";
+    $dictionary{"hkxhk"}->{"ab"} = "hk";
+    $dictionary{"hkxhk"}->{"aa"} = "hh";
+    $dictionary{"hkxhk"}->{"bb"} = "kk";
+
+    $dictionary{"efxeg"}->{"-"}  = "--";
+    $dictionary{"efxeg"}->{"ab"} = "ef";
+    $dictionary{"efxeg"}->{"ac"} = "eg";
+    $dictionary{"efxeg"}->{"bc"} = "fg";
+    $dictionary{"efxeg"}->{"aa"} = "ee";
+
+    $dictionary{"abxcd"}->{"-"}  = "--";
+    $dictionary{"abxcd"}->{"ac"} = "ac";
+    $dictionary{"abxcd"}->{"ad"} = "ad";
+    $dictionary{"abxcd"}->{"bc"} = "bc";
+    $dictionary{"abxcd"}->{"bd"} = "bd";
+
+    my $out_gtype = 
+	defined($dictionary{$marker}->{lc($in_gtype)}) ? 
+	$dictionary{$marker}->{lc($in_gtype)} : 
+	"-";
+
+    if (lc($in_gtype) ne $in_gtype) {
+	return uc($out_gtype);
+    } else {
+	return $out_gtype;
     }
 }
 
@@ -380,8 +771,22 @@ sub prepare_sql_handles {
         "SELECT samples.id as id, samples.sample_id, samples.type, file, tag_id, allele " . 
         "FROM matches " . 
         "JOIN samples ON (matches.sample_id=samples.id) " . 
-        "WHERE matches.batch_id=? AND catalog_id=? ORDER BY samples.id";
+        "WHERE matches.batch_id=? AND catalog_id=? AND matches.depth>? ORDER BY samples.id";
     $sth->{'mat'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
+        "SELECT samples.id as id, samples.sample_id, samples.type, file, genotype " . 
+        "FROM catalog_genotypes " . 
+        "JOIN samples ON (catalog_genotypes.sample_id=samples.id) " . 
+        "WHERE catalog_genotypes.batch_id=? AND catalog_id=? ORDER BY samples.id";
+    $sth->{'gtypes'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query =
+	"SELECT gc.catalog_id, gc.sample_id, gc.genotype, file " . 
+        "FROM genotype_corrections as gc " . 
+        "JOIN samples ON (gc.sample_id=samples.id) " .
+        "WHERE gc.batch_id=?";
+    $sth->{'corr'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
         "SELECT catalog_index.tag_id as tag_id, catalog_index.chr, catalog_index.bp, " .
@@ -425,11 +830,15 @@ sub parse_command_line {
 
     while (@ARGV) {
         $_ = shift @ARGV;
-        if    ($_ =~ /^-f$/) { $out_file = shift @ARGV; }
-        elsif ($_ =~ /^-o$/) { $type     = shift @ARGV; }
-        elsif ($_ =~ /^-b$/) { $batch_id = shift @ARGV; }
-        elsif ($_ =~ /^-D$/) { $db       = shift @ARGV; }
+        if    ($_ =~ /^-f$/) { $out_file  = shift @ARGV; }
+        elsif ($_ =~ /^-o$/) { $type      = shift @ARGV; }
+        elsif ($_ =~ /^-a$/) { $data_type = lc(shift @ARGV); }
+        elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
+        elsif ($_ =~ /^-D$/) { $db        = shift @ARGV; }
+        elsif ($_ =~ /^-m$/) { $map_type  = lc(shift @ARGV); }
+        elsif ($_ =~ /^-L$/) { $depth_lim = shift @ARGV; }
         elsif ($_ =~ /^-d$/) { $debug++; }
+        elsif ($_ =~ /^-c$/) { $man_cor++; }
 	elsif ($_ =~ /^-v$/) { version(); exit(); }
         elsif ($_ =~ /^-h$/) { usage(); }
         elsif ($_ =~ /^-F$/) {
@@ -457,6 +866,26 @@ sub parse_command_line {
         print STDERR "Unknown output file type specified '$type'.\n";
         usage();
     }
+
+    if ($data_type ne "haplo" && $data_type ne "gen") {
+	print STDERR "Unknown data type specified, 'haplo' and 'gen' are currently accepted.\n";
+	usage();
+    }
+
+    if ($data_type eq "gen" &&
+	$map_type  ne "bc1" && 
+	$map_type  ne "dh" && 
+	$map_type  ne "f2" && 
+	$map_type  ne "cp" && 
+	$map_type  ne "gen") {
+	print STDERR "Unknown data type specified, 'haplo' and 'gen' are currently accepted.\n";
+	usage();
+    }
+
+    if ($data_type ne "gen" && $man_cor > 0) {
+	print STDERR "You can only specify manual corrections when exporting genotypes.\n";
+	usage();
+    }
 }
 
 sub version {
@@ -467,12 +896,16 @@ sub usage {
     version();
 
     print STDERR 
-        "export_sql.pl -D db -b batch_id -f file -o tsv|xls [-F filter=value ...] [-d] [-h]\n", 
+        "export_sql.pl -D db -b batch_id -a type -f file -o tsv|xls [-m type -c] [-F filter=value ...] [-L lim] [-d] [-h]\n", 
         "    D: database to export from.\n",
         "    b: batch ID of the dataset to export.\n",
+	"    a: type of data to export, either 'gen' or 'haplo', for genotypes or observed haplotypes.\n",
         "    f: file to output data.\n",
         "    o: type of data to export: 'tsv' or 'xls'.\n",
         "    F: one or more filters in the format name=value.\n",
+	"    L: if exporting observed haplotypes, specify a stack depth limit.\n",
+	"    m: map type. If genotypes are to be exported, specify the map type.\n",
+	"    c: include manual corrections if exporting genotypes.\n",
         "    h: display this help message.\n",
         "    d: turn on debug output.\n\n";
     exit(0);

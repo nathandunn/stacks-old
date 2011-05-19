@@ -59,8 +59,8 @@ parse_command_line();
 die ("Unable to find '" . $exe_path . "ustacks'.\n") if (!-e $exe_path . "ustacks" || !-x $exe_path . "ustacks");
 die ("Unable to find '" . $exe_path . "cstacks'.\n") if (!-e $exe_path . "cstacks" || !-x $exe_path . "cstacks");
 die ("Unable to find '" . $exe_path . "sstacks'.\n") if (!-e $exe_path . "sstacks" || !-x $exe_path . "sstacks");
+die ("Unable to find '" . $exe_path . "genotypes'.\n") if (!-e $exe_path . "genotypes" || !-x $exe_path . "genotypes");
 die ("Unable to find '" . $exe_path . "index_radtags.pl'.\n") if (!-e $exe_path . "index_radtags.pl" || !-x $exe_path . "index_radtags.pl");
-die ("Unable to find '" . $exe_path . "markers.pl'.\n")       if (!-e $exe_path . "markers.pl"       || !-x $exe_path . "markers.pl");
 
 my ($i, $log, $log_fh, $pfile, $file, $num_files, $parent, $sample, %map);
 
@@ -229,23 +229,26 @@ foreach $sample (@parents, @progeny) {
     $i++;
 }
 
+#
+# Generate a set of observed haplotypes and a set of markers and generic genotypes
+#
+$cmd = $exe_path . "genotypes -b $batch_id -P $out_path -t gen -r 1 -c -s  2>&1";
+print STDERR  "$cmd\n";
+print $log_fh "$cmd\n";
+@results =    `$cmd`;
+print $log_fh @results;
+
+$file = "$out_path/batch_" . $batch_id . ".markers.tsv";
+import_sql_file($file, "markers");
+
+$file = "$out_path/batch_" . $batch_id . ".genotypes_1.txt";
+import_sql_file($file, "catalog_genotypes");
+
 if ($sql) {
-    #
-    # Search for markers
-    #
-    $cmd = $exe_path . "markers.pl -D $db -b $batch_id -o $out_path 2>&1";
-    print STDERR  "$cmd\n";
-    print $log_fh "$cmd\n";
-    @results =    `$cmd`;
-    print $log_fh @results;
-
-    $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($file, "markers");
-
     #
     # Index the radtags database
     #
-    $cmd = $exe_path . "index_radtags.pl -D $db -t -c 2>&1";
+    $cmd = $exe_path . "index_radtags.pl -D $db -t -c -s /usr/local/share/stacks/sql 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd`;
