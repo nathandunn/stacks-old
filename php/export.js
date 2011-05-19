@@ -36,20 +36,27 @@ function close_export_popup(id) {
 }
 
 function export_data(id) {
-    //
-    // Fetch the marker annotation
-    //
     var form_obj = document.getElementById(id + "_frm"); 
-    var otype;
+    var otype, dtype;
 
     for (i = 0; i < form_obj.otype.length; i++)
         if (form_obj.otype[i].checked)
             otype = form_obj.otype[i].value;
 
+    for (i = 0; i < form_obj.dtype.length; i++)
+        if (form_obj.dtype[i].checked)
+            dtype = form_obj.dtype[i].value;
+
     var url = 
         form_obj.url.value + "&" + 
         "email=" + form_obj.email.value + "&" +
+        "dtype=" + dtype + "&" +
+        "dlim="  + form_obj.dlim.value + "&" +
+        "mtype=" + form_obj.mtype.value + "&" +
+        "mcor="  + form_obj.mcor.value + "&" +
         "otype=" + otype;
+
+    alert(url);
 
     // 
     // Prepare and send XMLHttpRequest Object.
@@ -124,4 +131,22 @@ function process_export() {
             alert("There was a problem retrieving the XML data:\n" + http_req.statusText);
         }
     }
+}
+
+function toggle_vis(form_id, name) {
+    var form_obj = document.getElementById(form_id); 
+    var g_obj    = document.getElementById('gopts'); 
+    var h_obj    = document.getElementById('hopts'); 
+
+    for(i = 0; i < form_obj.elements.length; i++)
+        if (form_obj.elements[i].name  == name &&
+	    form_obj.elements[i].value == "geno") 
+
+            if (form_obj.elements[i].checked == true) {
+		g_obj.style.display = "";
+		h_obj.style.display = "none";
+	    } else {
+                g_obj.style.display = "none";
+		h_obj.style.display = "";
+	    }
 }

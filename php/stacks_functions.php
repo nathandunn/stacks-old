@@ -142,6 +142,8 @@ function print_snps($consensus, $seq, $snps, $wrap) {
 
 	if ($con == $s)
 	    $str .= "<span class=\"rank_1\">$s</span>";
+	else if ($s == "N")
+	    $str .= "$s";
 	else
 	    $str .= "<span class=\"rank_2\">$s</span>";
 
@@ -193,12 +195,14 @@ function print_snps_errs($consensus, $sequence, $snps) {
 	if (isset($snps[$i])) {
 	    if ($con[$i] == $seq[$i])
 		$str .= "<span class=\"rank_1\">$seq[$i]</span>";
+	    else if ($seq[$i] == "N")
+  	        $str .= "$seq[$i]";
 	    else
 		$str .= "<span class=\"rank_2\">$seq[$i]</span>";
 
 	} else {
 	    // Does this nucleotide equal the consensus nucleotide at position $i?
-	    if ($con[$i] == $seq[$i])
+	    if ($con[$i] == $seq[$i] || $seq[$i] == "N")
 		$str .= $seq[$i];
 	    else
 		$str .= "<span class=\"err\">$seq[$i]</span>";
@@ -255,7 +259,12 @@ function generate_element_select($name, $elements, $selected_ele, $javascript) {
 function print_bp($bp) {
 
   // Convert the location to be in megabases
-  $bp = sprintf("%.02fMb", $bp / 1000000);
+  if ($bp > 1000000)
+      $bp = sprintf("%.03fMb", $bp / 1000000);
+  else if ($bp > 1000)
+    $bp = sprintf("%.03fKb", $bp / 1000);
+  else 
+    $bp = sprintf("%dbp", $bp);
 
   return $bp;
 }

@@ -24,6 +24,10 @@ $database  = isset($_GET['db'])     ? $_GET['db']     : "";
 $tag_id    = isset($_GET['tag_id']) ? $_GET['tag_id'] : 0;
 $batch_id  = isset($_GET['id'])     ? $_GET['id']     : 0;
 $email     = isset($_GET['email'])  ? $_GET['email']  : "";
+$data_type = isset($_GET['dtype'])  ? $_GET['dtype']  : "haplo";
+$map_type  = isset($_GET['mtype'])  ? $_GET['mtype']  : "gen";
+$depth_lim = isset($_GET['dlim'])   ? $_GET['dlim']   : "1";
+$man_cor   = isset($_GET['mcor'])   ? $_GET['mcor']   : "0";
 $ex_type   = isset($_GET['otype'])  ? $_GET['otype']  : "";
 
 // Connect to the database
@@ -49,7 +53,16 @@ $catalog = new Catalog($db, $batch_id, $display);
 $catalog->determine_count();
 $loci_cnt = $catalog->num_loci();
 
-$cmd = $export_cmd . " -D $database -b $batch_id -e $email -t $ex_type -F " . implode(",", $filters);
+$mc = ($man_cor > 0) ? "-c" : "";
+
+if ($data_type == "haplo") {
+  $dt = "-a haplo";
+} else if ($data_type == "gen") {
+  $dt = "-a gen -m $map_type $mc";
+}
+$dl = "-L $depth_lim";
+
+$cmd = $export_cmd . " -D $database -b $batch_id $dt $dl -e $email -t $ex_type -F " . implode(",", $filters);
 
 header("Content-type: text/xml");
 $xml_output = 

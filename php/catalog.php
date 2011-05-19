@@ -161,6 +161,34 @@ when the results are ready.
   <strong>E-mail:</strong> <input type="input" size=25 name="email" value="" />
 </p>
 <p>
+  <strong>Data:</strong>
+    <input type="radio" name="dtype" value="haplo" checked="checked" onchange="toggle_vis('export_popup_frm', 'dtype')" />Observed Haplotypes
+    <input type="radio" name="dtype" value="geno" onchange="toggle_vis('export_popup_frm', 'dtype')" />Genotypes<br />
+</p>
+<p id="hopts" style="display: none;">
+<strong>Min Stack Depth:</strong>
+<select name="dlim">
+  <option checked="checked">1</option>
+  <option>3</option>
+  <option>5</option>
+  <option>10</option>
+  <option>15</option>
+</select>
+</p>
+<p id="gopts" style="display: none;">
+  <strong><acronym title="Gen: Generic, F2: F2 cross, CP: F1 cross, BC1: Back cross, DH: Double Haploid cross">Map Type</acronym>:</strong>
+<select name="mtype">
+  <option value="gen">Gen</option>
+  <option value="f2">F2</option>
+  <option value="cp">CP</option>
+  <option value="bc1">BC1</option>
+  <option value="dh">DH</option>
+</select>
+<input type="checkbox" name="mcor" value="mcor" />
+<strong><a onclick="toggle_cb('export_popup_frm', 'mcor')">Include manual corrections</a></strong>
+</p>
+
+<p>
   <strong>Output type:</strong>
     <input type="radio" name="otype" value="tsv" /><acronym title="Tab-separated Values Format">TSV</acronym>
     <input type="radio" name="otype" value="xls" /><acronym title="Microsoft Excel Format">XLS</acronym><br />
@@ -172,7 +200,7 @@ when the results are ready.
 </div>
 </div>
 
-    <a onclick="toggle_export_popup('export_popup')">
+    <a onclick="toggle_export_popup('export_popup'); toggle_vis('export_popup_frm', 'dtype')">
     <img style="float: right;" src="$root_path/images/excel_icon.png" 
          title="Export data to Microsoft Excel format"/></a>
   </td>

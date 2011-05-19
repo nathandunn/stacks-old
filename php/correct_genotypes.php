@@ -125,9 +125,12 @@ function correct_marker($display) {
         // ID should look like: 'gtype_batchid_catalogid_sampleid'
         $parts = explode("_", $key);
         $form_gtypes[$parts[3]] = strtolower($value);
+	//print "Assigning $value to $parts[3]<br />\n";
     }
 
     foreach ($form_gtypes as $sample_id => $sample) {
+      //print "LOOKING at sample ID: $sample_id: $sample, original value: " .  $gtypes[$sample_id]['genotype'] . "<br />\n";
+
         //
         // Is this genotype being reset to the original value? If so, delete the corrected record.
         //

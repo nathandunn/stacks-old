@@ -23,8 +23,6 @@ if (isset($_GET['db']))
     $database  = $_GET['db'];
 else if (isset($_POST['db']))
     $database = $_POST['db'];
-else 
-    $database = "radtags";
 
 if (isset($_GET['tag_id']))
     $tag_id  = $_GET['tag_id'];
@@ -52,35 +50,16 @@ $display['batch_id'] = $batch_id;
 //
 // Prepare the possible select lists we will want to construct
 //
-$marker_types = array('lmxll' => array('ll', 'lm', '--'),
-                      'nnxnp' => array('nn', 'np', '--'),
-                      'hkxhk' => array('hh', 'hk', 'kk', '--'),
-                      'efxeg' => array('ee', 'ef', 'eg', 'fg', '--'),
-                      'abxcd' => array('ac', 'ad', 'bc', 'bd', '--'),
-                      'aaxbb' => array('a', 'b', 'h', '-'),
-                      'abxcc' => array('b', 'h', '-'),
-                      'ccxab' => array('a', 'h', '-'));
-$elements     = array('ll' => $marker_types['lmxll'],
-                      'lm' => $marker_types['lmxll'],
-                      'nn' => $marker_types['nnxnp'],
-                      'np' => $marker_types['nnxnp'],
-                      'hh' => $marker_types['hkxhk'],
-                      'hk' => $marker_types['hkxhk'],
-                      'kk' => $marker_types['hkxhk'],
-                      'ee' => $marker_types['efxeg'],
-                      'ef' => $marker_types['efxeg'],
-                      'eg' => $marker_types['efxeg'],
-                      'fg' => $marker_types['efxeg'],
-                      'ac' => $marker_types['abxcd'],
-                      'ad' => $marker_types['abxcd'],
-                      'bc' => $marker_types['abxcd'],
-                      'bd' => $marker_types['abxcd'],
-                      'a'  => $marker_types['aaxbb'],
-                      'b'  => $marker_types['aaxbb'],
-                      'h'  => $marker_types['aaxbb'],
-                      '-'  => array('-', 'a', 'b', 'h'),
-                      '--' => array('--', 'll', 'lm', 'nn', 'np', 'hh', 'hk', 'kk', 'ee', 'ef', 'eg', 'fg', 'ab', 'ad', 'bc', 'bd'));
-
+$marker_types = array('ab/--' => array('aa', 'bb', '-'),
+		      '--/ab' => array('aa', 'bb', '-'),
+		      'ab/aa' => array('aa', 'ab', '-'),
+                      'aa/ab' => array('aa', 'ab', '-'),
+                      'ab/ab' => array('aa', 'ab', 'bb', '-'),
+                      'ab/ac' => array('aa', 'ab', 'ac', 'bc', '-'),
+                      'ab/cd' => array('aa', 'bb', 'cc', 'dd', 'ac', 'ad', 'bc', 'bd', '-'),
+                      'aa/bb' => array('aa', 'bb', 'ab', '-'),
+                      'ab/cc' => array('aa', 'bb', 'ab', 'ac', 'bc', 'cc', '-'),
+                      'cc/ab' => array('aa', 'bb', 'ab', 'ac', 'bc', 'cc', '-'));
 //
 // Prepare some SQL queries
 //
@@ -90,7 +69,7 @@ $db['samp_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['samp_sth'], __FILE__, __LINE__);
 
 $query = 
-    "SELECT catalog_genotypes.sample_id, file, " . 
+    "SELECT marker, catalog_genotypes.sample_id, file, " . 
     "catalog_genotypes.genotype, genotype_corrections.genotype as corrected " . 
     "FROM catalog_genotypes " . 
     "LEFT JOIN genotype_corrections ON " . 
@@ -98,6 +77,7 @@ $query =
     "genotype_corrections.sample_id=catalog_genotypes.sample_id AND " .
     "genotype_corrections.batch_id=catalog_genotypes.batch_id) " .
     "JOIN samples ON (catalog_genotypes.sample_id=samples.id) " . 
+    "JOIN catalog_index ON (catalog_genotypes.catalog_id=catalog_index.cat_id) " .
     "WHERE catalog_genotypes.batch_id=? and catalog_genotypes.catalog_id=? " . 
     "ORDER BY catalog_genotypes.sample_id";
 $db['geno_sth'] = $db['dbh']->prepare($query);
@@ -132,7 +112,8 @@ if ($result->numRows() == 0) {
 while ($row = $result->fetchRow()) {
     $gtypes[$row['sample_id']] = array('file'      => $row['file'], 
                                        'genotype'  => $row['genotype'], 
-                                       'corrected' => $row['corrected']);
+                                       'corrected' => $row['corrected'],
+				       'marker'    => $row['marker']);
 }
 
 print 
@@ -150,14 +131,11 @@ foreach ($gtypes as $sample_id => $sample) {
     $id  = "gtype_" . $batch_id . "_" . $tag_id . "_" . $sample_id;
 
     if (strlen($sample['corrected']) > 0) {
-        $a = isset($elements[strtolower($sample['corrected'])]) ? 
-            $elements[strtolower($sample['corrected'])] : $elements["--"];
-        $sel = generate_element_select($id, $a, strtolower($sample['corrected']), "");
+        $sel = generate_element_select($id, $marker_types[$sample['marker']], strtolower($sample['corrected']), "");
         $genotype = "<span class=\"corrected\">$sample[corrected]</span>";
+
     } else {
-        $a = isset($elements[strtolower($sample['genotype'])]) ? 
-            $elements[strtolower($sample['genotype'])] : $elements["--"];
-        $sel = generate_element_select($id, $elements[strtolower($sample['genotype'])], strtolower($sample['genotype']), "");
+        $sel = generate_element_select($id, $marker_types[$sample['marker']], strtolower($sample['genotype']), "");
         $genotype = $sample['genotype'];
     }
 
