@@ -1980,7 +1980,7 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
-    if (map_type == none && min_stack_depth > 0)
+    if (map_type != none && min_stack_depth > 0)
 	cerr << "Warning: using a minimum stack depth when building genetic markers is not recommended.\n";
 
     return 0;
@@ -2001,6 +2001,7 @@ void help() {
 	      << "  P: path to the Stacks output files.\n"
 	      << "  t: map type to write. 'CP', 'DH', 'F2' and 'BC1' are the currently supported map types.\n"
 	      << "  o: output file type to write, 'joinmap' and 'rqtl' are currently supported.\n"
+	      << "  m: specify a minimum stack depth required before exporting a locus in a particular individual.\n"
 	      << "  s: output a file to import results into an SQL database.\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
 	      << "  W: specify a file containign Whitelisted markers to include in the export.\n"
