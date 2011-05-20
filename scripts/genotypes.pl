@@ -1760,8 +1760,11 @@ sub check_homozygosity {
     #
     # Check if more than a single nucleotide occurs in this column. Only 
     # count nucleotides that are part of the called SNP, do not count 
-    # error-generated nucleotides.
+    # error-generated nucleotides. We must also make sure there isn't a tie for 
+    # the second and third most prominent nucleotides.
     #
+    return unknown if ($nuc->{$res[2]} > 0 && $nuc->{$res[1]} <= $nuc->{$res[2]});
+
     if (($nuc->{$res[0]} > 0) && 
 	($res[0] eq $rank_1 || $res[0] eq $rank_2) &&
 	$nuc->{$res[1]} > 0 && 

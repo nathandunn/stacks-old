@@ -1,4 +1,4 @@
-bin_PROGRAMS = ustacks pstacks cstacks sstacks hstacks process_radtags
+bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks hstacks process_radtags genotypes
 
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/models.h src/models.cc \
@@ -9,6 +9,10 @@ ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/co
 pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/models.h src/models.cc \
 	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h 
+
+estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/constants.h \
+        src/models.h src/models.cc \
+        src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h
 
 cstacks_SOURCES = src/cstacks.h src/cstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/kmers.h src/kmers.cc \
@@ -24,10 +28,16 @@ sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/co
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h
 
+genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
+	src/stacks.h src/stacks.cc src/PopMap.h src/genotype_dictionaries.h \
+	src/input.h src/input.cc src/sql_utilities.h
+
 ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
 ustacks_LDFLAGS  = $(OPENMP_CFLAGS)
 pstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 pstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+estacks_CXXFLAGS = $(OPENMP_CFLAGS)
+estacks_LDFLAGS  = $(OPENMP_CFLAGS)
 cstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 cstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 hstacks_CXXFLAGS = $(OPENMP_CFLAGS)
@@ -36,11 +46,13 @@ sstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 process_radtags_CXXFLAGS = $(OPENMP_CFLAGS)
 process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
+genotypes_CXXFLAGS       = $(OPENMP_CFLAGS)
+genotypes_LDFLAGS        = $(OPENMP_CFLAGS)
 
-dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl scripts/genotypes.pl \
-	scripts/index_radtags.pl scripts/load_radtags.pl scripts/markers.pl scripts/stacks_export_notify.pl
+dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl \
+	scripts/index_radtags.pl scripts/load_radtags.pl scripts/stacks_export_notify.pl
 
-dist_noinst_SCRIPTS = autogen.sh scripts/process_radtags.pl
+dist_noinst_SCRIPTS = autogen.sh scripts/process_radtags.pl scripts/markers.pl scripts/genotypes.pl
 
 nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sql/tag_index.sql \
 	php/CatalogClass.php php/annotate_marker.php php/constants.php.dist php/index.php php/tags.php \
@@ -72,13 +84,6 @@ install-data-hook:
 	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/index_radtags.pl > $(DESTDIR)$(bindir)/index_radtags.pl.subst
 	mv $(DESTDIR)$(bindir)/index_radtags.pl.subst $(DESTDIR)$(bindir)/index_radtags.pl
 	chmod +x $(DESTDIR)$(bindir)/index_radtags.pl
-	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/markers.pl > $(DESTDIR)$(bindir)/markers.pl.subst
-	mv $(DESTDIR)$(bindir)/markers.pl.subst $(DESTDIR)$(bindir)/markers.pl
-	chmod +x $(DESTDIR)$(bindir)/markers.pl
-	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_LOCALSTATEDIR_,$(pkglocalstatedir)/,g' \
-		$(DESTDIR)$(bindir)/genotypes.pl > $(DESTDIR)$(bindir)/genotypes.pl.subst
-	mv $(DESTDIR)$(bindir)/genotypes.pl.subst $(DESTDIR)$(bindir)/genotypes.pl
-	chmod +x $(DESTDIR)$(bindir)/genotypes.pl
 	sed -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/load_radtags.pl > $(DESTDIR)$(bindir)/load_radtags.pl.subst
 	mv $(DESTDIR)$(bindir)/load_radtags.pl.subst $(DESTDIR)$(bindir)/load_radtags.pl
 	chmod +x $(DESTDIR)$(bindir)/load_radtags.pl
@@ -90,7 +95,6 @@ install-data-hook:
 		$(DESTDIR)$(pkgdatadir)/php/constants.php.dist > $(DESTDIR)$(pkgdatadir)/php/constants.php.dist.subst
 	mv $(DESTDIR)$(pkgdatadir)/php/constants.php.dist.subst $(DESTDIR)$(pkgdatadir)/php/constants.php.dist
 	echo $(VERSION) > $(DESTDIR)$(pkgdatadir)/php/version.php
-	$(install_sh) -d -m 755 $(DESTDIR)$(pkglocalstatedir)/caches
 	$(install_sh) -d -m 755 $(DESTDIR)$(pkgdatadir)/php/export
 
 uninstall-hook:

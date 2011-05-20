@@ -530,6 +530,8 @@ int call_population_genotypes(CLocus *locus,
 	vector<string> gtypes;
 	string gtype;
 
+	//cerr << "Sample Id: " << pmap->rev_sample_index(i) << "\n";
+
 	for (uint j = 0; j < d[i]->obshap.size(); j++) {
 	    //
 	    // Impossible allele encountered.
@@ -541,7 +543,7 @@ int call_population_genotypes(CLocus *locus,
 	    }
 
 	    gtypes.push_back(locus->gmap[d[i]->obshap[j]]);
-	    //cerr << "Genotype: " << locus->gmap[d[i]->obshap[j]] << "\n";
+	    //cerr << "  Observed Haplotype: " << d[i]->obshap[j] << ", Genotype: " << locus->gmap[d[i]->obshap[j]] << "\n";
 	}
 
     impossible:
@@ -580,6 +582,7 @@ int automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<i
 	sample_id = matches[i][0]->sample_id;
 	file      = samples[sample_id];
 
+	//if (sample_id != 29) continue;
 	if (parent_ids.count(sample_id)) continue;
 
 	map<int, Locus *> stacks;
@@ -605,6 +608,8 @@ int automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<i
 	     if (processed.count(make_pair(catalog_id, tag_id)) == 0 &&
 		 catalog[catalog_id]->marker.length() > 0) {
 		 d = pmap->datum(catalog_id, sample_id);
+
+		 //cerr << "Accessing catalog ID " << catalog_id << "; sample: " << sample_id << "; marker: " << catalog[catalog_id]->marker << ": d: " << d << "; gtype: " << d->gtype << "\n";
 
 		 if (d != NULL && strcmp(d->gtype, "-") != 0) {
 		     s = stacks[tag_id];
@@ -715,6 +720,7 @@ int check_uncalled_snps(CLocus *clocus, Locus *stack, Datum *d) {
 	    //cerr << "    Adding haplotype '" << haplotypes[i] << "', which maps to '" << clocus->gmap[haplotypes[i]] << "' to the genotype\n";
 	    types.push_back(clocus->gmap[haplotypes[i]]);
 	} else {
+	    //cerr << "    Adding haplotype '-' for " << haplotypes[i] << "\n";
 	    types.push_back("-");
 	}
     }
@@ -725,12 +731,16 @@ int check_uncalled_snps(CLocus *clocus, Locus *stack, Datum *d) {
     for (uint i = 0; i < types.size(); i++)
 	genotype += types[i];
 
+    //cerr << "Final genotype: " << genotype << "\n";
+
     genotype = 
 	global_dictionary[clocus->marker].count(genotype) ? 
 	global_dictionary[clocus->marker][genotype] : 
 	"-";
 
-    if (genotype != "-" && strcmp(genotype.c_str(), d->gtype) != 0) {
+    //cerr << "Final translated genotype: " << genotype << "\n";
+
+    if (strcmp(genotype.c_str(), d->gtype) != 0) {
 	d->corrected = true;
 	delete [] d->gtype;
 	d->gtype = new char[genotype.length() + 1];
@@ -767,8 +777,10 @@ int call_alleles(vector<SNP *> &snps, vector<char *> &reads, vector<string> &hap
     }
 
     map<string, int>::iterator it;
-    for (it = a.begin(); it != a.end(); it++)
+    for (it = a.begin(); it != a.end(); it++) {
+	//cerr << "    Calling haplotype: " << it->first << "\n";
 	haplotypes.push_back(it->first);
+    }
 
     return 0;
 }
@@ -801,12 +813,22 @@ int check_homozygosity(vector<char *> &reads, int col, char rank_1, char rank_2,
 	sorted_nuc.push_back(make_pair(i->first, i->second));
 
     sort(sorted_nuc.begin(), sorted_nuc.end(), compare_pair);
-    
+
     //
     // Check if more than a single nucleotide occurs in this column. Only 
     // count nucleotides that are part of the called SNP, do not count 
-    // error-generated nucleotides.
+    // error-generated nucleotides. Also, check that the sorting was successful
+    // by ensuring that sorted_nuc[0] > sorted_nuc[1] > sorted_nuc[2].
     //
+    if (sorted_nuc[2].second > 0 && sorted_nuc[1].second <= sorted_nuc[2].second) {
+	homozygous = "unknown";
+    	return 0;
+    }
+
+    // cerr << "Sorted_nuc[0], '" << sorted_nuc[0].first << "', count: " << sorted_nuc[0].second 
+    // 	 << "; Sorted_nuc[1], '" << sorted_nuc[1].first << "', count: " << sorted_nuc[1].second
+    // 	 << "; Sorted_nuc[2], '" << sorted_nuc[2].first << "', count: " << sorted_nuc[2].second << "\n";
+
     if ((sorted_nuc[0].second > 0) && 
 	(sorted_nuc[0].first == rank_1 || sorted_nuc[0].first == rank_2) &&
 	(sorted_nuc[1].second > 0) && 
@@ -827,6 +849,8 @@ int check_homozygosity(vector<char *> &reads, int col, char rank_1, char rank_2,
 	homozygous = "true";
     else if (homozygous == "false" && frac < max_het_seqs)
 	homozygous = "unknown";
+
+    //cerr << "      Homozygous: " << homozygous << "\n";
 
     return 0;
 }
@@ -1220,35 +1244,6 @@ int translate_genotypes(map<string, string> &types, map<string, map<string, stri
 
     return 0;
 }
-
-// sub apply_corrected_genotypes {
-//     my ($sth, $loci) = @_;
-
-//     my (%corrections, $locus, $row, $sample);
-
-//     print STDERR "Applying manually corrected genotypes to export data...\n";
-
-//     //
-//     // Fetch the manual corrections from the database.
-//     //
-//     $sth->{'corr'}->execute($batch_id)
-// 	or die("Unable to select results from $db.\n");
-
-//     while ($row = $sth->{'corr'}->fetchrow_hashref()) {
-//         if (!defined($corrections{$row->{'catalog_id'}})) {
-//             $corrections{$row->{'catalog_id'}} = {};
-//         }
-//         $corrections{$row->{'catalog_id'}}->{$row->{'file'}} = $row->{'genotype'};
-//     }
-
-//     foreach $locus (@{$loci}) {
-//         next if (!defined($corrections{$locus->{'id'}}));
-
-//         foreach $sample (keys %{$corrections{$locus->{'id'}}}) {
-//             $locus->{'progeny'}->{$sample} = $corrections{$locus->{'id'}}->{$sample};
-//         }
-//     }
-// }
 
 int tally_progeny_haplotypes(CLocus *locus, PopMap<CLocus> *pmap, set<int> &parent_ids, 
 			     int &total, double &max, string &freq_str) {
@@ -1848,6 +1843,8 @@ int build_file_list(vector<string> &files) {
 	if (file.substr(pos+1) == "tags.tsv")
 	    files.push_back(file.substr(0, pos));
     }
+
+    sort(files.begin(), files.end());
 
     if (files.size() == 0) {
 	cerr << "Unable to locate any input files to process within '" << in_path << "'\n";

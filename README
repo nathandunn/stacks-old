@@ -50,9 +50,6 @@ A default install will install files in the following way:
                           and SQL files for creating the 
                           MySQL database
 
-/usr/local/var/stacks/cache - a directory for caching database 
-                              results when exporting genotypes.
-
 2. Edit the MySQL configuration file, installed in
 /usr/local/share/stacks/sql/mysql.cnf.dist, to enable access to the
 database from the Stacks scripts.
@@ -107,7 +104,3 @@ Ensure that the permissions of the php/export directory allow the
 webserver to write to it. Assuming your web server user is 'www':
 
 % chown www /usr/local/share/stacks/php/export
-
-5. Change the permissions on the cache directory (default /usr/local/var/stacks/cache)
-so that the user executing the Stacks pipeline will have permissions to write
-to the directory.

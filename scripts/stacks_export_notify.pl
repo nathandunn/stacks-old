@@ -51,10 +51,14 @@ my $from          = "stacks\@stackshost.edu";
 my $debug         = 0;
 my $db            = "";
 my $batch_id      = 0;
-my $out_file      = "";     # Generated file name for output data
-my $out_type      = "tsv";  # Output format
-my $email         = "";     # Email address to send message to
-my $filter_str    = "";     # Comma separated list of filters
+my $out_file      = "";      # Generated file name for output data
+my $out_type      = "tsv";   # Output format
+my $email         = "";      # Email address to send message to
+my $data_type     = "haplo"; # Type of export: observed haplotypes or a genetic map.
+my $map_type      = "geno";  # If exporting a genetic map, specify map type.
+my $depth_lim     = 1;       # Minimum stack depth limit
+my $man_cor       = 0;       # Include manual corrections in the export
+my $filter_str    = "";      # Comma separated list of filters
 
 parse_command_line();
 
@@ -70,7 +74,19 @@ my (undef, $out_file) = tempfile($template, OPEN => 0, DIR => $output_path, SUFF
 #
 # Prepare the command line parameters
 #
-push(@cmd_opts, "-D $db", "-b $batch_id", "-f $out_file", "-o $out_type");
+push(@cmd_opts, "-D $db", "-b $batch_id", "-f $out_file", "-o $out_type", "-a $data_type");
+
+if ($data_type eq "geno") {
+    push(@cmd_opts, "-m $map_type");
+}
+
+if ($data_type eq "gen" && $man_cor > 0) {
+    push(@cmd_opts, "-c");
+}
+
+if ($data_type eq "haplo" && $depth_lim > 1) {
+    push(@cmd_opts, "-L $depth_lim");
+}
 
 if (length($filter_str) > 0) {
     @filters = split(/,/, $filter_str);
@@ -141,6 +157,10 @@ sub parse_command_line {
 	elsif ($_ =~ /^-D$/) { $db         = shift @ARGV; }
 	elsif ($_ =~ /^-b$/) { $batch_id   = shift @ARGV; }
 	elsif ($_ =~ /^-e$/) { $email      = shift @ARGV; }
+        elsif ($_ =~ /^-a$/) { $data_type  = lc(shift @ARGV); }
+        elsif ($_ =~ /^-m$/) { $map_type   = lc(shift @ARGV); }
+        elsif ($_ =~ /^-L$/) { $depth_lim  = shift @ARGV; }
+        elsif ($_ =~ /^-c$/) { $man_cor++; }
 	elsif ($_ =~ /^-t$/) { $out_type   = shift @ARGV; }
 	elsif ($_ =~ /^-F$/) { $filter_str = shift @ARGV; }
 	elsif ($_ =~ /^-v$/) { version(); exit(); }
@@ -184,8 +204,12 @@ stacks_export_notify.pl -e email -D db -b batch_id [-t type] [-F filters] [-d] [
   e: email to use for notification.
   D: radtag database to examine.
   b: batch_id of data set to export.
+  a: type of data to export, either 'gen' or 'haplo', for genotypes or observed haplotypes.
   t: output type, either 'tsv' or 'xls'.
   F: comma separated list of filters to apply to the data.
+  L: if exporting observed haplotypes, specify a stack depth limit.
+  m: map type. If genotypes are to be exported, specify the map type.
+  c: include manual corrections if exporting genotypes.
   h: display this help message.
   d: turn on debug output.
 

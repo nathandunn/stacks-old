@@ -46,7 +46,8 @@ my $debug     = 0;
 my $translate_genotypes = {'dh'  => \&trans_dh_map,
 			   'cp'  => \&trans_cp_map,
 			   'bc1' => \&trans_bc1_map,
-			   'f2'  => \&trans_f2_map};
+			   'f2'  => \&trans_f2_map,
+			   'gen' => \&trans_gen_map};
 
 parse_command_line();
 
@@ -61,7 +62,7 @@ apply_corrected_genotypes(\%sth, \%loci) if ($man_cor > 0);
 if ($data_type eq "haplo") {
     write_observed_haplotypes(\%loci, \%samples);
 
-} elsif ($data_type eq "gen") {
+} elsif ($data_type eq "geno") {
     write_genotypes(\%loci, \%samples);
 }
 
@@ -164,7 +165,7 @@ sub populate {
 		    $locus->{'delev'}++;
 		}
 	    }
-	} elsif ($data_type eq "gen") {
+	} elsif ($data_type eq "geno") {
 	    #
 	    # Add genotypes
 	    #
@@ -734,6 +735,12 @@ sub trans_cp_map {
     }
 }
 
+sub trans_gen_map {
+    my ($marker, $in_gtype) = @_;
+
+    return $in_gtype;
+}
+
 sub prepare_sql_handles {
     my ($sth, $filters) = @_;
 
@@ -867,12 +874,12 @@ sub parse_command_line {
         usage();
     }
 
-    if ($data_type ne "haplo" && $data_type ne "gen") {
-	print STDERR "Unknown data type specified, 'haplo' and 'gen' are currently accepted.\n";
+    if ($data_type ne "haplo" && $data_type ne "geno") {
+	print STDERR "Unknown data type specified, 'haplo' and 'geno' are currently accepted.\n";
 	usage();
     }
 
-    if ($data_type eq "gen" &&
+    if ($data_type eq "geno" &&
 	$map_type  ne "bc1" && 
 	$map_type  ne "dh" && 
 	$map_type  ne "f2" && 
@@ -882,7 +889,7 @@ sub parse_command_line {
 	usage();
     }
 
-    if ($data_type ne "gen" && $man_cor > 0) {
+    if ($data_type ne "geno" && $man_cor > 0) {
 	print STDERR "You can only specify manual corrections when exporting genotypes.\n";
 	usage();
     }
@@ -899,7 +906,7 @@ sub usage {
         "export_sql.pl -D db -b batch_id -a type -f file -o tsv|xls [-m type -c] [-F filter=value ...] [-L lim] [-d] [-h]\n", 
         "    D: database to export from.\n",
         "    b: batch ID of the dataset to export.\n",
-	"    a: type of data to export, either 'gen' or 'haplo', for genotypes or observed haplotypes.\n",
+	"    a: type of data to export, either 'geno' or 'haplo', for genotypes or observed haplotypes.\n",
         "    f: file to output data.\n",
         "    o: type of data to export: 'tsv' or 'xls'.\n",
         "    F: one or more filters in the format name=value.\n",

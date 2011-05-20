@@ -55,8 +55,7 @@ function export_data(id) {
         "mtype=" + form_obj.mtype.value + "&" +
         "mcor="  + form_obj.mcor.value + "&" +
         "otype=" + otype;
-
-    alert(url);
+    //alert(url);
 
     // 
     // Prepare and send XMLHttpRequest Object.

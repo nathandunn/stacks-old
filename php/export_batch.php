@@ -28,7 +28,7 @@ $data_type = isset($_GET['dtype'])  ? $_GET['dtype']  : "haplo";
 $map_type  = isset($_GET['mtype'])  ? $_GET['mtype']  : "gen";
 $depth_lim = isset($_GET['dlim'])   ? $_GET['dlim']   : "1";
 $man_cor   = isset($_GET['mcor'])   ? $_GET['mcor']   : "0";
-$ex_type   = isset($_GET['otype'])  ? $_GET['otype']  : "";
+$ex_type   = isset($_GET['otype'])  ? $_GET['otype']  : "tsv";
 
 // Connect to the database
 $db = db_connect($database);
@@ -57,10 +57,11 @@ $mc = ($man_cor > 0) ? "-c" : "";
 
 if ($data_type == "haplo") {
   $dt = "-a haplo";
-} else if ($data_type == "gen") {
-  $dt = "-a gen -m $map_type $mc";
+  $dl = "-L $depth_lim";
+} else if ($data_type == "geno") {
+  $dt = "-a geno -m $map_type $mc";
+  $dl = "";
 }
-$dl = "-L $depth_lim";
 
 $cmd = $export_cmd . " -D $database -b $batch_id $dt $dl -e $email -t $ex_type -F " . implode(",", $filters);
 

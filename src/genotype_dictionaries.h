@@ -60,14 +60,14 @@ void initialize_dictionaries(map<string, map<string, string> > &global_dictionar
 
     global_dictionary["ab/cc"]["a"]  = "aa";
     global_dictionary["ab/cc"]["ab"] = "ab";
-    global_dictionary["ab/cc"]["bb"] = "bb";
+    global_dictionary["ab/cc"]["b"]  = "bb";
     global_dictionary["ab/cc"]["c"]  = "cc";
     global_dictionary["ab/cc"]["ac"] = "ac";
     global_dictionary["ab/cc"]["bc"] = "bc";
 
-    global_dictionary["cc/ab"]["aa"] = "aa";
+    global_dictionary["cc/ab"]["a"]  = "aa";
     global_dictionary["cc/ab"]["ab"] = "ab";
-    global_dictionary["cc/ab"]["bb"] = "bb";
+    global_dictionary["cc/ab"]["b"]  = "bb";
     global_dictionary["cc/ab"]["c"]  = "cc";
     global_dictionary["cc/ab"]["ac"] = "ac";
     global_dictionary["cc/ab"]["bc"] = "bc";

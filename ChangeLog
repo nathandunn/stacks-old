@@ -1,10 +1,35 @@
+Stacks 0.99 - May 20, 2011
+--------------------------
+	*A new C++ genotypes program has been added. This program works independently from the 
+	database allowing the pipeline to fully function without installing the database. The
+	new program performs the tasks once completed by markers.pl and genotypes.pl.
+	    - The pipeline has been modified to now automatically execute the genotypes program
+	      as the last stage in an analysis. It will generate a file containing the observed
+	      haplotypes and an additional file containing a map-agnostic set of genotype calls.
+	    - If SQL interaction is enabled, the genotypes will be imported to the database and 
+	      serve as a base to export genotypes directly from the web interface for a particular
+	      map and using the set of filters available online.
+	    - If a population is being examinined, the observed haplotypes file can be imported into
+	      Microsoft Excel or another tab-separated file viewer to immediately see the results.
+	    - By replacing the Perl version of genotypes.pl we also no longer need to install or 
+	      worry about the caching mechanism for auto-correcting stacks, the C++ version can do
+	      this by directly reading the Stacks output files.
+	*markers.pl and genotypes.pl are now deprecated and will no longer be supported.
+	*Feature: When exporting observed haplotypes, you can now specify a
+	minimum stack depth to include a particular individual at a locus.
+	*Feature: map-specific genotypes can now be exported directly from the
+	database/web server.
+	*Bugfix: genotypes.pl: make script ignore parental genotypes based on
+	the sample type from the MySQL table, not based on the file name.
+	*Bugfix: genotypes.pl: some loci were sneaking in despite being under
+	the progeny limit.
 	*Bugfix: made process_radtags Bustard file parser check number of fields to prevent
 	attempting to parse FASTQ (and segfaulting). Thanks to
 	Maureen.Liu -at- nottingham.ac.uk for reporting it.
 	*Bugfix: in sstacks, when matching to the catalog using reads aligned
 	to a reference genome (-g), sstacks did not verify that haplotypes
 	matched exactly, causing some spurious matching, which later
-	translated into dropped genotypes. 
+	translated into dropped genotypes.
 	*Bugfix: in markers.pl, the ratio observed alleles in the progeny was
 	not being tallied correctly for ab/ac markers.
 

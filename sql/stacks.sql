@@ -81,6 +81,21 @@ create table catalog_annotations (
        INDEX       external_index (external_id)
 );
 
+create table pileup (
+       id    	    int unsigned not null primary key auto_increment,
+       sample_id    int unsigned not null,
+       tag_id	    int unsigned not null,
+       chr          varchar(32),
+       bp           int unsigned default 0,
+       relationship enum('consensus', 'primary', 'secondary', 'tertiary'),
+       sub_id	    int unsigned not null,
+       seq_id	    varchar(32),
+       seq 	    text,
+       INDEX        tag_id_index (tag_id),
+       INDEX        sample_id_index (sample_id),
+       INDEX        rel_index (relationship)
+);
+
 create table unique_tags (
        id    	    int unsigned not null primary key auto_increment,
        sample_id    int unsigned not null,
@@ -129,6 +144,7 @@ create table matches (
        sample_id   int unsigned not null,
        tag_id      int unsigned not null,
        allele	   varchar(32),
+       depth       int unsigned not null,
        INDEX	   batch_id_index (batch_id),
        INDEX	   catalog_id_index (catalog_id),
        INDEX	   sample_id_index (sample_id),
@@ -142,7 +158,8 @@ create table markers (
        type       enum('aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'),
        progeny    int unsigned not null default 0,
        max_pct    float,
-       ratio      varchar(128)
+       ratio      varchar(128),
+       f          float
 );
 
 create table sequence (
