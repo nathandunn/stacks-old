@@ -1994,14 +1994,13 @@ void version() {
 
 void help() {
     std::cerr << "genotypes " << VERSION << "\n"
-              << "genotypes -b batch_id -P path [-r min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-C] [-s] [-v] [-h]" << "\n"
+              << "genotypes -b batch_id -P path [-r min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-v] [-h]" << "\n"
 	      << "  b: Batch ID to examine when exporting from the catalog.\n"
 	      << "  r: minimum number of progeny required to print a marker.\n"
 	      << "  c: make automated corrections to the data.\n"
 	      << "  P: path to the Stacks output files.\n"
 	      << "  t: map type to write. 'CP', 'DH', 'F2' and 'BC1' are the currently supported map types.\n"
 	      << "  o: output file type to write, 'joinmap' and 'rqtl' are currently supported.\n"
-	      << "  C: apply manual corrections (that were made via the web interface) to the data.\n"
 	      << "  s: output a file to import results into an SQL database.\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
 	      << "  W: specify a file containign Whitelisted markers to include in the export.\n"
