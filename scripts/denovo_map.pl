@@ -40,6 +40,7 @@ my $db          = "";
 my $rep_tags    = 0;
 my $min_cov     = 0;
 my $min_dist    = 0;
+my $min_rdist   = 0;
 my $fuzzy_match = 0;
 my $num_threads = 0;
 my $cov_scale   = 0;
@@ -83,10 +84,11 @@ foreach $parent (@progeny) {
     push(@types, "progeny");
 }
 
-my (@results, $minc, $mind, $rrep, $cmd, $cscale, $threads, $fuzzym);
+my (@results, $minc, $mind, $rrep, $cmd, $cscale, $threads, $fuzzym, $minrd);
 
 $minc    = $min_cov     > 0 ? "-m $min_cov"     : "";
 $mind    = $min_dist    > 0 ? "-M $min_dist"    : "";
+$minrd   = $min_rdist   > 0 ? "-M $min_rdist"   : $mind;
 $cscale  = $cov_scale   > 0 ? "-S $cov_scale"   : "";
 $threads = $num_threads > 0 ? "-p $num_threads" : ""; 
 $fuzzym  = "-n $fuzzy_match";
@@ -142,7 +144,11 @@ foreach $sample (@parents, @progeny) {
 	$rrep = "";
     }
 
-    $cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $rrep $minc $mind $cscale $threads 2>&1";
+    if ($type eq "parent") {
+	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $rrep $minc $mind $cscale $threads 2>&1";
+    } elsif ($type eq "progeny") {
+	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $rrep $minc $minrd $cscale $threads 2>&1";
+    }
     print STDERR "$cmd\n";
     print $log_fh    "$cmd\n";
     @results = `$cmd`;
@@ -248,7 +254,7 @@ if ($sql) {
     #
     # Index the radtags database
     #
-    $cmd = $exe_path . "index_radtags.pl -D $db -t -c -s /usr/local/share/stacks/sql 2>&1";
+    $cmd = $exe_path . "index_radtags.pl -D $db -t -c 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd`;
@@ -275,6 +281,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-o$/) { $out_path    = shift @ARGV; }
 	elsif ($_ =~ /^-m$/) { $min_cov     = shift @ARGV; }
 	elsif ($_ =~ /^-M$/) { $min_dist    = shift @ARGV; }
+	elsif ($_ =~ /^-N$/) { $min_rdist   = shift @ARGV; }
         elsif ($_ =~ /^-n$/) { $fuzzy_match = shift @ARGV; }
         elsif ($_ =~ /^-T$/) { $num_threads = shift @ARGV; }
 	elsif ($_ =~ /^-c$/) { $cov_scale   = shift @ARGV; }
@@ -322,6 +329,7 @@ denovo_map.pl -p path -r path -o path [-t] [-m min_cov] [-M mismatches] [-n mism
     o: path to write pipeline output files.
     m: specify a minimum number of identical, raw reads required to create a stack.
     M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
+    N: specify the number of mismatches allowed between loci when processing a single individual marked as 'progeny' (default 2).
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
     t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
     T: specify the number of threads to execute.

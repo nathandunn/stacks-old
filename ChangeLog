@@ -1,3 +1,10 @@
+Stacks 0.991 - June 06, 2011
+----------------------------
+	Bugfix: genotypes was failing to parse Stacks output files with
+	unanticipated names.
+	Bugfix: when using ref_map.pl, tags without SNPs were failing to match
+	against the catalog.
+
 Stacks 0.99 - May 20, 2011
 --------------------------
 	*A new C++ genotypes program has been added. This program works independently from the 

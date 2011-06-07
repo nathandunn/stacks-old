@@ -110,8 +110,14 @@ int main (int argc, char* argv[]) {
     for (uint i = 0; i < files.size(); i++) {
 	vector<CatMatch *> m;
 	load_catalog_matches(in_path + files[i], m);
+
+	if (m.size() == 0) {
+	    cerr << "Warning: unable to find any matches in file '" << files[i] << "', excluding this sample from genotypes analysis.\n";
+	    continue;
+	}
+
 	catalog_matches.push_back(m);
-	samples[m[0]->sample_id] = files[i];
+ 	samples[m[0]->sample_id] = files[i];
 	sample_ids.push_back(m[0]->sample_id);
     }
 
@@ -1819,7 +1825,7 @@ int load_marker_list(string path, set<int> &list) {
 }
 
 int build_file_list(vector<string> &files) {
-    int    pos;
+    uint   pos;
     string file;
     struct dirent *direntry;
 
@@ -1839,8 +1845,8 @@ int build_file_list(vector<string> &files) {
 	if (file.substr(0, 6) == "batch_")
 	    continue;
 
-	pos = file.find_first_of(".");
-	if (file.substr(pos+1) == "tags.tsv")
+	pos = file.rfind(".tags.tsv");
+	if (pos < file.length())
 	    files.push_back(file.substr(0, pos));
     }
 
@@ -1994,7 +2000,7 @@ void version() {
 
 void help() {
     std::cerr << "genotypes " << VERSION << "\n"
-              << "genotypes -b batch_id -P path [-r min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-v] [-h]" << "\n"
+              << "genotypes -b batch_id -P path [-r min] [-m min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-v] [-h]" << "\n"
 	      << "  b: Batch ID to examine when exporting from the catalog.\n"
 	      << "  r: minimum number of progeny required to print a marker.\n"
 	      << "  c: make automated corrections to the data.\n"

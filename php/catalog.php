@@ -670,9 +670,9 @@ function write_filter($cols) {
     $alle_ctl  = generate_element_select("filter_alle",  array(1, 2, 3, 4), $display['filter_alle'], "");
     $snps_ctl  = generate_element_select("filter_snps",  array(1, 2, 3, 4, 8), $display['filter_snps'], "");
     $pare_ctl  = generate_element_select("filter_pare",  array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18), $display['filter_pare'], "");
-    $prog_ctl  = generate_element_select("filter_prog",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90), $display['filter_prog'], "");
-    $vprog_ctl = generate_element_select("filter_vprog", array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90), $display['filter_vprog'], "");
-    $gcnt_ctl  = generate_element_select("filter_gcnt",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90), $display['filter_gcnt'], "");
+    $prog_ctl  = generate_element_select("filter_prog",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $display['filter_prog'], "");
+    $vprog_ctl = generate_element_select("filter_vprog", array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $display['filter_vprog'], "");
+    $gcnt_ctl  = generate_element_select("filter_gcnt",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $display['filter_gcnt'], "");
     $mark_ctl  = generate_element_select("filter_mark", 
                                          array('Any', 'aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'), 
                                          $display['filter_mark'], "");

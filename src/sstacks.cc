@@ -165,7 +165,18 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, string allele) {
     // to verify that the haplotypes are consistent between the tags, i.e. they 
     // have the same number and types of SNPs.
     //
-    // 1. First we will check that the query locus (s2_tag) does not have any SNPs 
+
+    //
+    // 1. First, if there are no SNPs present in either the query or catalog, just
+    //    check that the strings match.
+    //
+    if (s1_tag->snps.size() == 0 && 
+	s2_tag->snps.size() == 0 && 
+	strcmp(s1_tag->con, s2_tag->con) == 0)
+	return 1;
+
+    //
+    // 2. Second, we will check that the query locus (s2_tag) does not have any SNPs 
     //    lacking in the catalog tag (s1_tag).
     //
     bool found;
@@ -184,7 +195,7 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, string allele) {
     }
 
     //
-    // 2. Construct a set of haplotypes from the query locus (s2_tag) and compare
+    // 3. Construct a set of haplotypes from the query locus (s2_tag) and compare
     //    then against the matching catalog haplotype.
     //
     vector<pair<string, SNP *> >   merged_snps;
