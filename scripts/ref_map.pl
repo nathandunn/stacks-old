@@ -85,7 +85,7 @@ my (@results, $cmd, $threads, $fuzzym, $minc);
 
 $minc    = $min_cov     > 0 ? "-m $min_cov"     : "";
 $threads = $num_threads > 0 ? "-p $num_threads" : ""; 
-$fuzzym  = "-n $fuzzy_match";
+$fuzzym  = $fuzzy_match > 0 ? "-n $fuzzy_match" : "";
 
 #
 # Open the log file

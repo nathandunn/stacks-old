@@ -87,11 +87,11 @@ foreach $parent (@progeny) {
 my (@results, $minc, $minrc, $mind, $rrep, $cmd, $cscale, $threads, $fuzzym);
 
 $minc    = $min_cov     > 0 ? "-m $min_cov"     : "";
-$minrc   = $min_rcov    > 0 ? "-M $min_rcov"    : $minc;
+$minrc   = $min_rcov    > 0 ? "-m $min_rcov"    : $minc;
 $mind    = $min_dist    > 0 ? "-M $min_dist"    : "";
 $cscale  = $cov_scale   > 0 ? "-S $cov_scale"   : "";
-$threads = $num_threads > 0 ? "-p $num_threads" : ""; 
-$fuzzym  = "-n $fuzzy_match";
+$threads = $num_threads > 0 ? "-p $num_threads" : "";
+$fuzzym  = $fuzzy_match > 0 ? "-n $fuzzy_match" : "";
 
 #
 # Open the log file
