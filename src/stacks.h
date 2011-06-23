@@ -53,7 +53,8 @@ typedef struct locus {
     uint bp;
 } PhyLoc;
 
-enum snp_type {het, hom};
+enum snp_type  {het, hom};
+enum read_type {primary, secondary};
 
 class SNP {
  public:
