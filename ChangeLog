@@ -1,3 +1,6 @@
+	Bugfix: Changed the sql input parser to handle variable length input
+	lines.
+
 Stacks 0.991 - June 06, 2011
 ----------------------------
 	Bugfix: genotypes was failing to parse Stacks output files with
