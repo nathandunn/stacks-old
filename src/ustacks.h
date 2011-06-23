@@ -114,7 +114,7 @@ int  reduce_radtags(HashMap &, map<int, Stack *> &, map<int, Seq *> &);
 int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
 int  merge_radtags(map<int, Stack *> &, map<int, MergedStack *> &, set<int> &, int);
 int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Seq *> &, bool);
-int  call_alleles(MergedStack *, vector<char *> &);
+int  call_alleles(MergedStack *, vector<char *> &, vector<read_type> &);
 int  merge_remainders(map<int, MergedStack *> &, map<int, Seq *> &);
 int  write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Seq *> &);
 

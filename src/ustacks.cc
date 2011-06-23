@@ -250,7 +250,7 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Seq *> &rem) {
     return 0;
 }
 
-int call_alleles(MergedStack *mtag, vector<char *> &reads) {
+int call_alleles(MergedStack *mtag, vector<char *> &reads, vector<read_type> &read_types) {
     int     row;
     int     height = reads.size();
     string  allele;
@@ -263,9 +263,14 @@ int call_alleles(MergedStack *mtag, vector<char *> &reads) {
     for (row = 0; row < height; row++) {
 	allele.clear();
 
+	//
+	// Only call a haplotype from primary reads.
+	//
+	if (read_types[row] == secondary) continue;
+
 	for (snp = mtag->snps.begin(); snp != mtag->snps.end(); snp++) {
 	    base = reads[row];
-	    base = base + (*snp)->col;	    
+	    base = base + (*snp)->col;
 
 	    //
 	    // Check to make sure the nucleotide at the location of this SNP is
@@ -311,18 +316,21 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
 	    //
 	    vector<int>::iterator j;
 	    vector<char *> reads;
+	    vector<read_type> read_types;
 
 	    for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
 		utag = unique[*j];
 
 		for (uint k = 0; k < utag->count; k++) {
 		    reads.push_back(utag->seq);
+		    read_types.push_back(primary);
 		}
 	    }
 
 	    // For each remainder tag that has been merged into this Stack, add the sequence. 
 	    for (j = mtag->remtags.begin(); j != mtag->remtags.end(); j++) {
 		reads.push_back(rem[*j]->seq);
+		read_types.push_back(secondary);
 	    }
 
 	    //
@@ -369,7 +377,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
 	    }
 
 	    if (invoke_model) {
-		call_alleles(mtag, reads);
+		call_alleles(mtag, reads, read_types);
 
                 if (model_type == fixed) {
                     //
