@@ -31,7 +31,7 @@
 //
 // Maximum line length for parsing input files.
 //
-const int max_len = 2048;
+const int max_len = 1024;
 
 //
 // Maximum length of idetifiers, such as sequence IDs and chromosome names.

@@ -124,3 +124,32 @@ int parse_tsv(const char *line, vector<string> &parts) {
 
     return 0;
 }
+
+int read_line(ifstream &fh, char **line, int *size) {
+    char  buf[max_len];
+    int   blen, llen;
+
+    memset(*line, 0, *size);
+    llen = 0;
+
+    //
+    // Make sure we read the entire line.
+    //
+    do {
+	fh.clear();
+	fh.getline(buf, max_len);
+
+        blen = strlen(buf);
+        if (blen + llen <= (*size) - 1) {
+            strcat(*line, buf);
+            llen += blen;
+        } else {
+            *size *= 2;
+            llen  += blen;
+            *line  = (char *) realloc(*line, *size);
+            strcat(*line, buf);
+        }
+    } while (fh.fail() && !fh.bad() && !fh.eof());
+
+    return 0;
+}

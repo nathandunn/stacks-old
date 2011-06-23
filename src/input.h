@@ -21,6 +21,7 @@
 #ifndef __INPUT_H__
 #define __INPUT_H__
 
+#include <stdlib.h>
 #include <string.h>
 #include <string>
 #include <vector>
@@ -73,5 +74,6 @@ class Input {
 };
 
 int parse_tsv(const char *, vector<string> &);
+int read_line(ifstream &, char **, int *);
 
 #endif // __INPUT_H__

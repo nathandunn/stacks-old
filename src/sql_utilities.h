@@ -43,13 +43,16 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
     LocusT        *c;
     SNP           *snp;
     string         f;
-    char           line[max_len], *cmp;
+    char          *line, *cmp;
     const char    *p, *q;
-    int            len;
+    int            len, size;
     vector<string> parts;
     set<int>       blacklisted;
     long int       line_num;
     ifstream       fh;
+
+    line = (char *) malloc(sizeof(char) * max_len);
+    size = max_len;
 
     // 
     // First, parse the tag file and pull in the consensus sequence
@@ -69,7 +72,7 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 
     line_num = 0;
     while (fh.good()) {
-	fh.getline(line, max_len);
+        read_line(fh, &line, &size);
 
 	if (!fh.good() && strlen(line) == 0)
 	    continue;
@@ -158,7 +161,7 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 
     line_num = 0;
     while (fh.good()) {
-	fh.getline(line, max_len);
+        read_line(fh, &line, &size);
 
 	if (!fh.good() && strlen(line) == 0)
 	    continue;
@@ -208,7 +211,7 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 
     line_num = 0;
     while (fh.good()) {
-	fh.getline(line, max_len);
+        read_line(fh, &line, &size);
 
 	if (!fh.good() && strlen(line) == 0)
 	    continue;
