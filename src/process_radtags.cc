@@ -56,6 +56,13 @@ double win_size     = 0.15;
 int    score_limit  = 10;
 int    num_threads  = 1;
 
+//
+// How to shift FASTQ-encoded quality scores from ASCII down to raw scores
+//     score = encoded letter - 64; Illumina version 1.3 - 1.5
+//     score = encoded letter - 33; Sanger / Illumina version 1.6+
+int qual_offset  = 64;     
+
+
 map<string, const char **> renz;
 map<string, int>           renz_cnt;
 map<string, int>           renz_len;
@@ -479,7 +486,7 @@ int check_quality_scores(Read *href, bool paired_end) {
     // Convert the encoded quality scores to their integer values
     //
     for (int j = 0; j < href->len; j++)
-        href->int_scores[j] = href->phred[j] - 64;
+        href->int_scores[j] = href->phred[j] - qual_offset;
 
     // for (int j = barcode_size; j <= href->stop_pos; j++) {
     // 	double mean = 0;
@@ -954,6 +961,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"barcodes",     required_argument, NULL, 'b'},
 	    {"window_size",  required_argument, NULL, 'w'},
 	    {"score_limit",  required_argument, NULL, 's'},
+	    {"encoding",     required_argument, NULL, 'E'},
 	    {0, 0, 0, 0}
 	};
 	
@@ -981,6 +989,12 @@ int parse_command_line(int argc, char* argv[]) {
                 out_file_type = fasta;
 	    else 
 		out_file_type = fastq;
+	    break;
+     	case 'E':
+            if (strcasecmp(optarg, "phred64") == 0)
+                qual_offset = 64;
+	    else if (strcasecmp(optarg, "phred33") == 0)
+		qual_offset = 33;
 	    break;
      	case 'f':
 	    in_file = optarg;
@@ -1105,7 +1119,7 @@ void version() {
 
 void help() {
     std::cerr << "process_radtags " << VERSION << "\n"
-              << "process_radtags [-f in_file | -p in_dir | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-i type] [-y type] [-c] [-q] [-r] [-w] [-s] [-h]\n"
+              << "process_radtags [-f in_file | -p in_dir | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-i type] [-y type] [-c] [-q] [-r] [-E encoding] [-t len] [-w size] [-s lim] [-h]\n"
 	      << "  f: path to the input file if processing single-end seqeunces.\n"
 	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, or 'fastq' (default 'fastq').\n"
 	      << "  p: path to a directory of single-end Bustard files.\n"
@@ -1119,6 +1133,7 @@ void help() {
 	      << "  q: discard reads with low quality scores.\n"
 	      << "  r: rescue barcodes and RAD-Tags.\n"
 	      << "  t: truncate final read length to this value.\n"
+	      << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.6+, Sanger) or 'phred64' (Illumina 1.3 - 1.5, default).\n"
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
 	      << "  h: display this help messsage." << "\n\n";

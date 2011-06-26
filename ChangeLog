@@ -1,3 +1,5 @@
+	Feature: process_radtags can now handle Phred+33 or Phred+64 encodings, Phred+33 is
+	the new default in Illumina software starting with version 1.6.
 	Bugfix: Changed the sql input parser to handle variable length input
 	lines.
 
