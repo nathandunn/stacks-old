@@ -71,6 +71,8 @@ int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
+    cerr << "Using Phred+" << qual_offset << " encoding for quality scores.\n";
+
     renz["sbfI"]  = sbfI;  // CCTGCA/GG, SbfI
     renz["pstI"]  = pstI;  // CTGCA/G, PstI
     renz["notI"]  = notI;  // GC/GGCCGC, NotI
@@ -545,37 +547,84 @@ int check_quality_scores(Read *href, bool paired_end) {
 int parse_input_record(Seq *s, Read *r) {
     char *p, *q;
     //
-    // Parse FASTQ header that looks like this:
+    // Count the number of colons and parse a FASTQ header like this:
+    //  @HWI-ST0747:155:C01WHABXX:8:1101:6455:26332 1:N:0:
+    //
+    //
+    // Or, parse FASTQ header that looks like this:
     //  @HWI-ST0747_0141:4:1101:1240:2199#0/1
     //
     char *stop = s->id + strlen(s->seq);
+    int   cnt  = 0;
 
-    for (p = s->id, q = p; *q != ':' && q < stop; q++);
-    *q = '\0';
-    strcpy(r->machine, p);
+    for (p = s->id, q = p; q < stop; q++)
+	cnt += *q == ':'? 1 : 0;
 
-    for (p = q+1, q = p; *q != ':' && q < stop; q++);
-    *q = '\0';
-    r->lane = atoi(p);
+    if (cnt > 4) {
+	//
+	// According to Illumina manual, "CASAVA v1.8 User Guide" page 41:
+	// @<instrument>:<run number>:<flowcell ID>:<lane>:<tile>:<x- pos>:<y-pos> <read>:<is filtered>:<control number>:<index sequence>
+	//
+	for (p = s->id, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	strcpy(r->machine, p);
 
-    for (p = q+1, q = p; *q != ':' && q < stop; q++);
-    *q = '\0';
-    r->tile = atoi(p);
+	// Run number.
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
 
-    for (p = q+1, q = p; *q != ':' && q < stop; q++);
-    *q = '\0';
-    r->x = atoi(p);
+	// Flowcell ID.
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
 
-    for (p = q+1, q = p; *q != '#' && q < stop; q++);
-    *q = '\0';
-    r->y = atoi(p);
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->lane = atoi(p);
 
-    for (p = q+1, q = p; *q != '/' && q < stop; q++);
-    *q = '\0';
-    r->index = atoi(p);
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->tile = atoi(p);
 
-    for (p = q+1, q = p; *q != '\0' && q < stop; q++);
-    r->read = atoi(p);
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->x = atoi(p);
+
+	for (p = q+1, q = p; *q != ' ' && q < stop; q++);
+	*q = '\0';
+	r->y = atoi(p);
+
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->read = atoi(p);
+
+    } else {
+	for (p = s->id, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	strcpy(r->machine, p);
+
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->lane = atoi(p);
+
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->tile = atoi(p);
+
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->x = atoi(p);
+
+	for (p = q+1, q = p; *q != '#' && q < stop; q++);
+	*q = '\0';
+	r->y = atoi(p);
+
+	for (p = q+1, q = p; *q != '/' && q < stop; q++);
+	*q = '\0';
+	r->index = atoi(p);
+
+	for (p = q+1, q = p; *q != '\0' && q < stop; q++);
+	r->read = atoi(p);
+    }
 
     strcpy(r->seq, s->seq);
     strcpy(r->phred, s->qual);
@@ -968,8 +1017,8 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqri:y:f:o:t:e:b:1:2:p:s:w:", long_options, &option_index);
-     
+	c = getopt_long(argc, argv, "hvcqri:y:f:o:t:e:b:1:2:p:s:w:E:", long_options, &option_index);
+
 	// Detect the end of the options.
 	if (c == -1)
 	    break;
