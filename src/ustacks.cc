@@ -37,6 +37,7 @@ string    in_file;
 string    out_path;
 int       num_threads       = 1;
 int       sql_id            = 0;
+bool      call_sec_hapl     = true;
 bool      set_kmer_len      = true;
 int       kmer_len          = 0;
 int       min_merge_cov     = 2;
@@ -45,7 +46,7 @@ int       retain_rem_reads  = false;
 int       deleverage_stacks = 0;
 int       remove_rep_stacks = 0;
 int       max_utag_dist     = 2;
-int       max_rem_dist      = 4;
+int       max_rem_dist      = 0;
 double    cov_mean          = 0.0;
 double    cov_stdev         = 0.0;
 double    cov_scale         = 1;
@@ -63,9 +64,10 @@ int main (int argc, char* argv[]) {
     parse_command_line(argc, argv);
 
     //
-    // Set the max remainder distance to be greater than the max_utag_dist.
+    // Set the max remainder distance to be greater than the max_utag_dist, if it is not
+    // specified on the command line.
     //
-    max_rem_dist = max_utag_dist + 2;
+    if (max_rem_dist == 0) max_rem_dist = max_utag_dist + 2;
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -266,7 +268,7 @@ int call_alleles(MergedStack *mtag, vector<char *> &reads, vector<read_type> &re
 	//
 	// Only call a haplotype from primary reads.
 	//
-	if (read_types[row] == secondary) continue;
+	if (!call_sec_hapl && read_types[row] == secondary) continue;
 
 	for (snp = mtag->snps.begin(); snp != mtag->snps.end(); snp++) {
 	    base = reads[row];
@@ -1606,31 +1608,33 @@ int parse_command_line(int argc, char* argv[]) {
      
     while (1) {
 	static struct option long_options[] = {
-	    {"help",        no_argument,       NULL, 'h'},
-            {"version",     no_argument,       NULL, 'v'},
-	    {"infile_type", required_argument, NULL, 't'},
-	    {"file",        required_argument, NULL, 'f'},
-	    {"outpath",     required_argument, NULL, 'o'},
-	    {"id",          required_argument, NULL, 'i'},
-	    {"min_cov",     required_argument, NULL, 'm'},
-	    {"max_dist",    required_argument, NULL, 'M'},
-	    {"num_threads", required_argument, NULL, 'p'},
-	    {"deleverage",  no_argument,       NULL, 'd'},
-	    {"remove_rep",  no_argument,       NULL, 'r'},
-	    {"retain_rem",  no_argument,       NULL, 'R'},
-	    {"graph",       no_argument,       NULL, 'g'},
-	    {"exp_cov",     no_argument,       NULL, 'E'},
-	    {"cov_stdev",   no_argument,       NULL, 's'},
-	    {"cov_scale",   no_argument,       NULL, 'S'},
-	    {"model_type",  required_argument, NULL, 'T'},
-	    {"bc_err_freq", required_argument, NULL, 'e'},
+	    {"help",         no_argument,       NULL, 'h'},
+            {"version",      no_argument,       NULL, 'v'},
+	    {"infile_type",  required_argument, NULL, 't'},
+	    {"file",         required_argument, NULL, 'f'},
+	    {"outpath",      required_argument, NULL, 'o'},
+	    {"id",           required_argument, NULL, 'i'},
+	    {"min_cov",      required_argument, NULL, 'm'},
+	    {"max_dist",     required_argument, NULL, 'M'},
+	    {"max_sec_dist", required_argument, NULL, 'N'},
+	    {"num_threads",  required_argument, NULL, 'p'},
+	    {"deleverage",   no_argument,       NULL, 'd'},
+	    {"remove_rep",   no_argument,       NULL, 'r'},
+	    {"retain_rem",   no_argument,       NULL, 'R'},
+	    {"graph",        no_argument,       NULL, 'g'},
+	    {"exp_cov",      no_argument,       NULL, 'E'},
+	    {"cov_stdev",    no_argument,       NULL, 's'},
+	    {"cov_scale",    no_argument,       NULL, 'S'},
+	    {"sec_hapl",     no_argument,       NULL, 'H'},
+	    {"model_type",   required_argument, NULL, 'T'},
+	    {"bc_err_freq",  required_argument, NULL, 'e'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hRvdrgf:o:i:m:e:E:s:S:p:t:M:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hHRvdrgf:o:i:m:e:E:s:S:p:t:M:N:T:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1669,6 +1673,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'M':
 	    max_utag_dist = atoi(optarg);
 	    break;
+	case 'N':
+	    max_rem_dist = atoi(optarg);
+	    break;
 	case 'd':
 	    deleverage_stacks++;
 	    break;
@@ -1701,6 +1708,9 @@ int parse_command_line(int argc, char* argv[]) {
             }
 	case 'e':
 	    barcode_err_freq = atof(optarg);
+	    break;
+	case 'H':
+	    call_sec_hapl = false;
 	    break;
 	case 'p':
 	    num_threads = atoi(optarg);
@@ -1747,7 +1757,7 @@ void version() {
 
 void help() {
     std::cerr << "ustacks " << VERSION << "\n"
-              << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-e errfreq] [-m min_cov] [-M max_dist] [-p num_threads] [-R] [-h]" << "\n"
+              << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-e errfreq] [-m min_cov] [-M max_dist] [-p num_threads] [-R] [-H] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  t: input file Type. Supported types: fasta, fastq, bowtie, sam, tsv.\n"
               << "  f: input file path.\n"
@@ -1755,10 +1765,12 @@ void help() {
 	      << "  i: SQL ID to insert into the output to identify this sample." << "\n"
 	      << "  m: Minimum depth of coverage required to create a stack." << "\n"
 	      << "  M: Maximum distance (in nucleotides) allowed between stacks." << "\n"
+	      << "  N: Maximum distance allowed to align secondary reads to primary stacks (default: M + 2).\n"
 	      << "  d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
 	      << "  r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm." << "\n"
 	      << "  e: specify the barcode error frequency (0 < e < 1) if using the 'fixed' model.\n"
 	      << "  R: retain unused reads.\n"
+	      << "  H: disable calling haplotypes from secondary reads.\n"
 	      << "  h: display this help messsage." << "\n\n";
 
     exit(0);
