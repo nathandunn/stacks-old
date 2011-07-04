@@ -1,7 +1,11 @@
+Stacks 0.992 - July 04, 2011
+----------------------------
 	Feature: process_radtags can now handle Phred+33 or Phred+64 encodings, Phred+33 is
-	the new default in Illumina software starting with version 1.6.
+	the new default encoding in Illumina's CASAVA software (v1.8).
 	Bugfix: Changed the sql input parser to handle variable length input
-	lines.
+	lines. Necessary if loading tens of individuals into a catalog.
+	Bugfix: Added command line options to ustacks to better control the use of secondary reads 
+	in the stack-building procedure.
 
 Stacks 0.991 - June 06, 2011
 ----------------------------

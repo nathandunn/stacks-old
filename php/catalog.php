@@ -945,7 +945,7 @@ function apply_query_filters($display_params) {
 	array("cata"  => "(catalog_index.tag_id = ?)", 
 	      "alle"  => "(alleles >= ?)", 
 	      "snps"  => "(snps >= ?)",
-	      "pare"  => "(parents = ?)",
+	      "pare"  => "(parents >= ?)",
 	      "prog"  => "(progeny >= ?)",
 	      "vprog" => "(valid_progeny >= ?)",
 	      "mark"  => "(marker LIKE ?)", 

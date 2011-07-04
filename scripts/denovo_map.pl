@@ -41,6 +41,8 @@ my $rep_tags    = 0;
 my $min_cov     = 0;
 my $min_rcov    = 0;
 my $min_dist    = 0;
+my $min_sdist   = 0;
+my $dis_shapl   = 0;
 my $fuzzy_match = 0;
 my $num_threads = 0;
 my $cov_scale   = 0;
@@ -57,9 +59,9 @@ parse_command_line();
 #
 # Check for the existence of the necessary pipeline programs
 #
-die ("Unable to find '" . $exe_path . "ustacks'.\n") if (!-e $exe_path . "ustacks" || !-x $exe_path . "ustacks");
-die ("Unable to find '" . $exe_path . "cstacks'.\n") if (!-e $exe_path . "cstacks" || !-x $exe_path . "cstacks");
-die ("Unable to find '" . $exe_path . "sstacks'.\n") if (!-e $exe_path . "sstacks" || !-x $exe_path . "sstacks");
+die ("Unable to find '" . $exe_path . "ustacks'.\n")   if (!-e $exe_path . "ustacks"   || !-x $exe_path . "ustacks");
+die ("Unable to find '" . $exe_path . "cstacks'.\n")   if (!-e $exe_path . "cstacks"   || !-x $exe_path . "cstacks");
+die ("Unable to find '" . $exe_path . "sstacks'.\n")   if (!-e $exe_path . "sstacks"   || !-x $exe_path . "sstacks");
 die ("Unable to find '" . $exe_path . "genotypes'.\n") if (!-e $exe_path . "genotypes" || !-x $exe_path . "genotypes");
 die ("Unable to find '" . $exe_path . "index_radtags.pl'.\n") if (!-e $exe_path . "index_radtags.pl" || !-x $exe_path . "index_radtags.pl");
 
@@ -84,11 +86,13 @@ foreach $parent (@progeny) {
     push(@types, "progeny");
 }
 
-my (@results, $minc, $minrc, $mind, $rrep, $cmd, $cscale, $threads, $fuzzym);
+my (@results, $minc, $minrc, $mind, $minsd, $rrep, $cmd, $cscale, $threads, $fuzzym, $dshapl);
 
 $minc    = $min_cov     > 0 ? "-m $min_cov"     : "";
 $minrc   = $min_rcov    > 0 ? "-m $min_rcov"    : $minc;
 $mind    = $min_dist    > 0 ? "-M $min_dist"    : "";
+$minsd   = $min_sdist   > 0 ? "-N $min_sdist"   : "";
+$dshapl  = $dis_shapl   > 0 ? "-H"              : "";
 $cscale  = $cov_scale   > 0 ? "-S $cov_scale"   : "";
 $threads = $num_threads > 0 ? "-p $num_threads" : "";
 $fuzzym  = $fuzzy_match > 0 ? "-n $fuzzy_match" : "";
@@ -145,9 +149,9 @@ foreach $sample (@parents, @progeny) {
     }
 
     if ($type eq "parent") {
-	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $rrep $minc $mind $cscale $threads 2>&1";
+	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $rrep $minc $mind $minsd $dshapl $cscale $threads 2>&1";
     } elsif ($type eq "progeny") {
-	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $rrep $minrc $mind $cscale $threads 2>&1";
+	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $rrep $minrc $mind $minsd $dshapl $cscale $threads 2>&1";
     }
     print STDERR "$cmd\n";
     print $log_fh    "$cmd\n";
@@ -280,8 +284,9 @@ sub parse_command_line {
        	elsif ($_ =~ /^-t$/) { $rep_tags++; }
 	elsif ($_ =~ /^-o$/) { $out_path    = shift @ARGV; }
 	elsif ($_ =~ /^-m$/) { $min_cov     = shift @ARGV; }
-	elsif ($_ =~ /^-N$/) { $min_rcov    = shift @ARGV; }
+	elsif ($_ =~ /^-P$/) { $min_rcov    = shift @ARGV; }
 	elsif ($_ =~ /^-M$/) { $min_dist    = shift @ARGV; }
+	elsif ($_ =~ /^-N$/) { $min_sdist   = shift @ARGV; }
         elsif ($_ =~ /^-n$/) { $fuzzy_match = shift @ARGV; }
         elsif ($_ =~ /^-T$/) { $num_threads = shift @ARGV; }
 	elsif ($_ =~ /^-c$/) { $cov_scale   = shift @ARGV; }
@@ -292,6 +297,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-a$/) { $date        = shift @ARGV; }
 	elsif ($_ =~ /^-S$/) { $sql         = 0; }
 	elsif ($_ =~ /^-B$/) { $db          = shift @ARGV; }
+       	elsif ($_ =~ /^-H$/) { $dis_shapl++; }
 	elsif ($_ =~ /^-d$/) { $debug++; }
 	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
@@ -328,10 +334,12 @@ denovo_map.pl -p path -r path -o path [-t] [-m min_cov] [-M mismatches] [-n mism
     r: path to a FASTQ/FASTA file containing progeny sequences.
     o: path to write pipeline output files.
     m: specify a minimum number of identical, raw reads required to create a stack.
-    N: specify a minimum number of identical, raw reads required to create a stack in 'progeny' individuals.
+    P: specify a minimum number of identical, raw reads required to create a stack in 'progeny' individuals.
     M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
+    N: specify the number of mismatches allowed when aligning secondary reads to primary stacks (default M+2).
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
     t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
+    H: disable calling haplotypes from secondary reads.
     T: specify the number of threads to execute.
     B: specify a database to load data into.
     b: batch ID representing this dataset.
