@@ -40,6 +40,7 @@ using std::cerr;
 using std::stringstream;
 
 #include "constants.h"
+#include "DNASeq.h"
 
 typedef unsigned int uint;
 typedef string allele_type;
@@ -67,15 +68,31 @@ class SNP {
 
 class Stack {
  public:
-    uint   id;
-    uint   count;         // Number of identical reads forming this stack
-    char  *seq;           // Sequence read
-    uint   len;           // Read length
+    uint    id;
+    uint    count;        // Number of identical reads forming this stack
+    DNASeq *seq;          // Sequence read
+    uint    len;          // Read length
     vector<SeqId *> map;  // List of sequence read IDs merged into this stack
-    PhyLoc loc;           // Physical genome location of this stack.
+    PhyLoc  loc;          // Physical genome location of this stack.
 
     Stack()  { id = 0; count = 0; seq = NULL; len = 0; loc.bp = 0; loc.chr[0] = '\0'; }
     ~Stack() { delete [] seq; }
+    int add_id(const char *);
+    int add_seq(const char *);
+    int add_seq(const DNASeq *);
+};
+
+class Rem {
+ public:
+    uint    id;
+    char   *seq_id;
+    DNASeq *seq;     // Sequence read
+    PhyLoc  loc;     // Physical genome location of this stack.
+    bool    utilized;
+
+    Rem();
+    Rem(int, char *, DNASeq *);
+    ~Rem() { delete [] seq_id; delete seq; }
     int add_id(const char *);
     int add_seq(const char *);
 };
