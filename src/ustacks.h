@@ -123,7 +123,7 @@ int  reduce_radtags(DNASeqHashMap &, map<int, Stack *> &, map<int, Rem *> &);
 int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
 int  merge_radtags(map<int, Stack *> &, map<int, MergedStack *> &, set<int> &, int);
 int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &, bool);
-int  call_alleles(MergedStack *, vector<char *> &, vector<read_type> &);
+int  call_alleles(MergedStack *, vector<DNASeq *> &, vector<read_type> &);
 int  merge_remainders(map<int, MergedStack *> &, map<int, Rem *> &);
 int  write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &);
 

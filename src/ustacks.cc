@@ -85,178 +85,189 @@ int main (int argc, char* argv[]) {
 
     reduce_radtags(radtags, unique, remainders);
 
-    // if (cov_mean == 0 || cov_stdev == 0)
-    // 	calc_coverage_distribution(unique, cov_mean, cov_stdev);
+    if (cov_mean == 0 || cov_stdev == 0)
+    	calc_coverage_distribution(unique, cov_mean, cov_stdev);
 
-    // cerr << "Coverage mean: " << cov_mean << "; stdev: " << cov_stdev << "\n";
+    cerr << "Coverage mean: " << cov_mean << "; stdev: " << cov_stdev << "\n";
 
-    // calc_triggers(cov_mean, cov_stdev, deleverage_trigger, removal_trigger);
+    calc_triggers(cov_mean, cov_stdev, deleverage_trigger, removal_trigger);
 
-    // cerr << "Deleveraging trigger: " << deleverage_trigger << "; Removal trigger: " << removal_trigger << "\n";
+    cerr << "Deleveraging trigger: " << deleverage_trigger << "; Removal trigger: " << removal_trigger << "\n";
 
-    // map<int, MergedStack *> merged;
+    map<int, MergedStack *> merged;
 
-    // populate_merged_tags(unique, merged);
+    populate_merged_tags(unique, merged);
 
-    // if (remove_rep_stacks) {
-    // 	cerr << "Calculating distance for removing repetitive stacks.\n";
-    // 	calc_kmer_distance(merged, 1);
-    // 	cerr << "Removing repetitive stacks.\n";
-    // 	remove_repetitive_stacks(unique, merged);
-    // }
+    if (remove_rep_stacks) {
+    	cerr << "Calculating distance for removing repetitive stacks.\n";
+    	calc_kmer_distance(merged, 1);
+    	cerr << "Removing repetitive stacks.\n";
+    	remove_repetitive_stacks(unique, merged);
+    }
 
-    // for (int i = 1; i <= max_utag_dist; i++) {
-    // 	cerr << "Calculating distance, round " << i << "\n";
-    // 	calc_kmer_distance(merged, i);
+    for (int i = 1; i <= max_utag_dist; i++) {
+    	cerr << "Calculating distance, round " << i << "\n";
+    	calc_kmer_distance(merged, i);
 
-    // 	cerr << "  Merging radtags, round " << i << "\n";
-    // 	merge_radtags(unique, merged, merge_map, i);
+    	cerr << "  Merging radtags, round " << i << "\n";
+    	merge_radtags(unique, merged, merge_map, i);
 
-    // 	call_consensus(merged, unique, remainders, false);
+        call_consensus(merged, unique, remainders, false);
 
-    // 	merge_map.clear();
-    // }
+    	merge_map.clear();
+    }
 
-    // calc_merged_coverage_distribution(unique, merged);
+    calc_merged_coverage_distribution(unique, merged);
 
-    // //dump_merged_tags(merged);
+    //dump_merged_tags(merged);
 
-    // cerr << "Merging remainder radtags\n";
-    // merge_remainders(merged, remainders);
+    cerr << "Merging remainder radtags\n";
+    merge_remainders(merged, remainders);
 
-    // // Call the consensus sequence again, now that remainder tags have been merged.
-    // call_consensus(merged, unique, remainders, true);
+    // Call the consensus sequence again, now that remainder tags have been merged.
+    call_consensus(merged, unique, remainders, true);
 
-    // count_raw_reads(unique, merged);
+    count_raw_reads(unique, merged);
 
-    // cerr << "Writing results\n";
-    // write_results(merged, unique, remainders);
+    cerr << "Writing results\n";
+    write_results(merged, unique, remainders);
 
     return 0;
 }
 
 int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
     map<int, Rem *>::iterator it;
-    //int j, k;
+    int j, k;
 
-    // // OpenMP can't parallelize random access iterators, so we convert
-    // // our map to a vector of integer keys.
-    // vector<int> keys;
-    // for (it = rem.begin(); it != rem.end(); it++) 
-    // 	keys.push_back(it->first);
+    // OpenMP can't parallelize random access iterators, so we convert
+    // our map to a vector of integer keys.
+    vector<int> keys;
+    for (it = rem.begin(); it != rem.end(); it++) 
+    	keys.push_back(it->first);
 
-    // cerr << "  " << keys.size() << " remainder sequences left to merge.\n";
+    cerr << "  " << keys.size() << " remainder sequences left to merge.\n";
 
-    // //
-    // // Calculate the number of k-mers we will generate. If kmer_len == 0,
-    // // determine the optimal length for k-mers.
-    // //
-    // int con_len   = strlen(merged.begin()->second->con);
-    // if (set_kmer_len) kmer_len = determine_kmer_length(con_len, max_rem_dist);
-    // int num_kmers = con_len - kmer_len + 1;
+    //
+    // Calculate the number of k-mers we will generate. If kmer_len == 0,
+    // determine the optimal length for k-mers.
+    //
+    int con_len   = strlen(merged.begin()->second->con);
+    if (set_kmer_len) kmer_len = determine_kmer_length(con_len, max_rem_dist);
+    int num_kmers = con_len - kmer_len + 1;
 
-    // cerr << "  Number of kmers per sequence: " << num_kmers << "\n";
+    cerr << "  Number of kmers per sequence: " << num_kmers << "\n";
 
-    // //
-    // // Calculate the minimum number of matching k-mers required for a possible sequence match.
-    // //
-    // int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, true);
+    //
+    // Calculate the minimum number of matching k-mers required for a possible sequence match.
+    //
+    int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, true);
 
-    // KmerHashMap kmer_map;
-    // populate_kmer_hash(merged, kmer_map, kmer_len);
-    // int utilized = 0;
+    KmerHashMap kmer_map;
+    populate_kmer_hash(merged, kmer_map, kmer_len);
+    int utilized = 0;
 
-    // #pragma omp parallel private(it, k)
-    // { 
-    //     #pragma omp for schedule(dynamic) 
-    // 	for (j = 0; j < (int) keys.size(); j++) {
-    // 	    it = rem.find(keys[j]);
-    // 	    Rem *r = it->second;
+    //
+    // Create a character buffer to hold the Rem sequence, this is faster
+    // than repeatedly decoding the DNASeq buffers.
+    // 
+    it = rem.find(keys[0]);
+    char *buf = new char[it->second->seq->size + 1];
 
-    //         //
-    //         // Generate the k-mers for this remainder sequence
-    //         //
-    //         vector<char *> rem_kmers;
-    //         generate_kmers(r->seq, kmer_len, num_kmers, rem_kmers);
+    #pragma omp parallel private(it, k, buf)
+    { 
+        #pragma omp for schedule(dynamic) 
+    	for (j = 0; j < (int) keys.size(); j++) {
+    	    it = rem.find(keys[j]);
+    	    Rem *r = it->second;
 
-    //         map<int, int> hits;
-    //         vector<int>::iterator map_it;
-    //         //
-    //         // Lookup the occurances of each remainder k-mer in the MergedStack k-mer map
-    //         //
-    //         for (k = 0; k < num_kmers; k++) {
-    //             if (kmer_map.find(rem_kmers[k]) != kmer_map.end())
-    //                 for (map_it  = kmer_map[rem_kmers[k]].begin();
-    //                      map_it != kmer_map[rem_kmers[k]].end();
-    //                      map_it++)
-    //                     hits[*map_it]++;
-    //         }
+            //
+            // Generate the k-mers for this remainder sequence
+            //
+            vector<char *> rem_kmers;
+            buf = r->seq->seq(buf);
+            generate_kmers(buf, kmer_len, num_kmers, rem_kmers);
 
-    //         //
-    //         // Iterate through the list of hits. For each hit that has more than min_hits
-    //         // check its full length to verify a match.
-    //         //
-    // 	    map<int, int> dists;
-    //         map<int, int>::iterator hit_it;
-    //         for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
-    //             if (hit_it->second < min_hits) continue;
+            map<int, int> hits;
+            vector<int>::iterator map_it;
+            //
+            // Lookup the occurances of each remainder k-mer in the MergedStack k-mer map
+            //
+            for (k = 0; k < num_kmers; k++) {
+                if (kmer_map.find(rem_kmers[k]) != kmer_map.end())
+                    for (map_it  = kmer_map[rem_kmers[k]].begin();
+                         map_it != kmer_map[rem_kmers[k]].end();
+                         map_it++)
+                        hits[*map_it]++;
+            }
 
-    //             int d = dist(merged[hit_it->first], r);
-    //             //
-    //             // Store the distance between these two sequences if it is
-    //             // below the maximum distance
-    //             //
-    //             if (d <= max_rem_dist) {
-    //                 dists[hit_it->first] = d;
-    //             }
-    //         }
+            //
+            // Iterate through the list of hits. For each hit that has more than min_hits
+            // check its full length to verify a match.
+            //
+    	    map<int, int> dists;
+            map<int, int>::iterator hit_it;
+            for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
+                if (hit_it->second < min_hits) continue;
 
-    //         //
-    //         // Free the k-mers we generated for this remainder read
-    //         //
-    //         for (k = 0; k < num_kmers; k++)
-    //             delete rem_kmers[k];
+                int d = dist(merged[hit_it->first], buf);
+                //
+                // Store the distance between these two sequences if it is
+                // below the maximum distance
+                //
+                if (d <= max_rem_dist) {
+                    dists[hit_it->first] = d;
+                }
+            }
 
-    // 	    // Check to see if there is a uniquely low distance, if so,
-    // 	    // merge this remainder tag. If not, discard it, since we
-    // 	    // can't locate a single best-fitting Stack to merge it into.
-    // 	    map<int, int>::iterator s;
-    // 	    int min_id = -1;
-    // 	    int count  =  0;
-    // 	    int dist   =  max_rem_dist + 1;
+            //
+            // Free the k-mers we generated for this remainder read
+            //
+            for (k = 0; k < num_kmers; k++)
+                delete rem_kmers[k];
 
-    // 	    for (s = dists.begin(); s != dists.end(); s++) {
-    // 		if ((*s).second < dist) {
-    // 		    min_id = (*s).first;
-    // 		    count  = 1;
-    // 		    dist   = (*s).second;
-    // 		} else if ((*s).second == dist) {
-    // 		    count++;
-    // 		}
-    // 	    }
+    	    // Check to see if there is a uniquely low distance, if so,
+    	    // merge this remainder tag. If not, discard it, since we
+    	    // can't locate a single best-fitting Stack to merge it into.
+    	    map<int, int>::iterator s;
+    	    int min_id = -1;
+    	    int count  =  0;
+    	    int dist   =  max_rem_dist + 1;
 
-    // 	    // Found a merge partner.
-    // 	    if (min_id >= 0 && count == 1) {
-    // 		r->utilized = true;
-    //             #pragma omp critical
-    // 		{
-    // 		    merged[min_id]->remtags.push_back(it->first);
-    // 		    utilized++;
-    // 		}
-    // 	    }
-    // 	}
-    // }
+    	    for (s = dists.begin(); s != dists.end(); s++) {
+    		if ((*s).second < dist) {
+    		    min_id = (*s).first;
+    		    count  = 1;
+    		    dist   = (*s).second;
+    		} else if ((*s).second == dist) {
+    		    count++;
+    		}
+    	    }
 
-    // cerr << "  Matched " << utilized << " remainder reads; unable to match " << keys.size() - utilized << " remainder reads.\n";
+    	    // Found a merge partner.
+    	    if (min_id >= 0 && count == 1) {
+    		r->utilized = true;
+                #pragma omp critical
+    		{
+    		    merged[min_id]->remtags.push_back(it->first);
+    		    utilized++;
+    		}
+    	    }
+    	}
+    }
+
+    delete [] buf;
+
+    cerr << "  Matched " << utilized << " remainder reads; unable to match " << keys.size() - utilized << " remainder reads.\n";
 
     return 0;
 }
 
-int call_alleles(MergedStack *mtag, vector<char *> &reads, vector<read_type> &read_types) {
+int call_alleles(MergedStack *mtag, vector<DNASeq *> &reads, vector<read_type> &read_types) {
     int     row;
     int     height = reads.size();
     string  allele;
-    char   *base;
+    DNASeq *d;
+    char    base;
     vector<SNP *>::iterator snp;
 
     if (mtag->snps.size() == 0)
@@ -271,15 +282,15 @@ int call_alleles(MergedStack *mtag, vector<char *> &reads, vector<read_type> &re
 	if (!call_sec_hapl && read_types[row] == secondary) continue;
 
 	for (snp = mtag->snps.begin(); snp != mtag->snps.end(); snp++) {
-	    base = reads[row];
-	    base = base + (*snp)->col;
+            d    = reads[row];
+	    base = (*d)[(*snp)->col];
 
 	    //
 	    // Check to make sure the nucleotide at the location of this SNP is
 	    // of one of the two possible states the multinomial model called.
 	    //
-	    if (*base == (*snp)->rank_1 || *base == (*snp)->rank_2) 
-		allele += *base;
+	    if (base == (*snp)->rank_1 || base == (*snp)->rank_2) 
+		allele += base;
 	    else
 		break;
 	}
@@ -296,105 +307,105 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
     //
-    // map<int, MergedStack *>::iterator it;
-    // vector<int> keys;
-    // for (it = merged.begin(); it != merged.end(); it++) 
-    // 	keys.push_back(it->first);
+    map<int, MergedStack *>::iterator it;
+    vector<int> keys;
+    for (it = merged.begin(); it != merged.end(); it++) 
+    	keys.push_back(it->first);
 
-    // int i;
-    // #pragma omp parallel private(i)
-    // { 
-    //     #pragma omp for schedule(dynamic) 
-    // 	for (i = 0; i < (int) keys.size(); i++) {
-    // 	    MergedStack *mtag;
-    // 	    Stack *utag;
+    int i;
+    #pragma omp parallel private(i)
+    { 
+        #pragma omp for schedule(dynamic) 
+    	for (i = 0; i < (int) keys.size(); i++) {
+    	    MergedStack *mtag;
+    	    Stack       *utag;
 
-    // 	    mtag = merged[keys[i]];
+    	    mtag = merged[keys[i]];
 
-    // 	    //
-    // 	    // Create a two-dimensional array, each row containing one read. For
-    // 	    // each unique tag that has been merged together, add the sequence for
-    // 	    // that tag into our array as many times as it originally occurred. 
-    // 	    //
-    // 	    vector<int>::iterator j;
-    // 	    vector<char *> reads;
-    // 	    vector<read_type> read_types;
+    	    //
+    	    // Create a two-dimensional array, each row containing one read. For
+    	    // each unique tag that has been merged together, add the sequence for
+    	    // that tag into our array as many times as it originally occurred. 
+    	    //
+    	    vector<int>::iterator j;
+    	    vector<DNASeq *>  reads;
+    	    vector<read_type> read_types;
 
-    // 	    for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
-    // 		utag = unique[*j];
+    	    for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
+    		utag = unique[*j];
 
-    // 		for (uint k = 0; k < utag->count; k++) {
-    // 		    reads.push_back(utag->seq);
-    // 		    read_types.push_back(primary);
-    // 		}
-    // 	    }
+    		for (uint k = 0; k < utag->count; k++) {
+    		    reads.push_back(utag->seq);
+    		    read_types.push_back(primary);
+    		}
+    	    }
 
-    // 	    // For each remainder tag that has been merged into this Stack, add the sequence. 
-    // 	    for (j = mtag->remtags.begin(); j != mtag->remtags.end(); j++) {
-    // 		reads.push_back(rem[*j]->seq);
-    // 		read_types.push_back(secondary);
-    // 	    }
+    	    // For each remainder tag that has been merged into this Stack, add the sequence. 
+    	    for (j = mtag->remtags.begin(); j != mtag->remtags.end(); j++) {
+    		reads.push_back(rem[*j]->seq);
+    		read_types.push_back(secondary);
+    	    }
 
-    // 	    //
-    // 	    // Iterate over each column of the array and call the consensus base.
-    // 	    //
-    // 	    int row, col;
-    // 	    int length = strlen(reads[0]);
-    // 	    int height = reads.size();
-    // 	    string con;
-    // 	    map<char, int> nuc;
-    // 	    map<char, int>::iterator max, n;
-    // 	    char *base;
+    	    //
+    	    // Iterate over each column of the array and call the consensus base.
+    	    //
+    	    int row, col;
+    	    int length = reads[0]->size;
+    	    int height = reads.size();
+    	    string con;
+    	    map<char, int> nuc;
+    	    map<char, int>::iterator max, n;
+            DNASeq *d;
 
-    // 	    for (col = 0; col < length; col++) {
-    // 		nuc['A'] = 0; 
-    // 		nuc['C'] = 0;
-    // 		nuc['G'] = 0;
-    // 		nuc['T'] = 0;
+    	    for (col = 0; col < length; col++) {
+    		nuc['A'] = 0; 
+    		nuc['C'] = 0;
+    		nuc['G'] = 0;
+    		nuc['T'] = 0;
 
-    // 		for (row = 0; row < height; row++) {
-    // 		    base = reads[row];
-    // 		    base = base + col;
-    // 		    //cerr << "    Row: " << row << " Col: " << col << " Base: " << *base << "\n";
-    // 		    nuc[*base]++;
-    // 		}
+    		for (row = 0; row < height; row++) {
+    		    d = reads[row];
+    		    //base = base + col;
+    		    //cerr << "    Row: " << row << " Col: " << col << " Base: " << *base << "\n";
+    		    nuc[(*d)[col]]++;
+    		}
 
-    // 		//
-    // 		// Find the base with a plurality of occurances and call it.
-    // 		//
-    // 		max = nuc.end();
+    		//
+    		// Find the base with a plurality of occurances and call it.
+    		//
+    		max = nuc.end();
 
-    // 		for (n = nuc.begin(); n != nuc.end(); n++) {
+    		for (n = nuc.begin(); n != nuc.end(); n++) {
 
-    // 		    if (max == nuc.end() || n->second > max->second)
-    // 			max = n;
-    // 		}
-    // 		con += max->first;
+    		    if (max == nuc.end() || n->second > max->second)
+    			max = n;
+    		}
+    		con += max->first;
 
-    // 		// Search this column for the presence of a SNP
-    // 		if (invoke_model) 
-    // 		    model_type == snp ? 
-    //                     call_multinomial_snp(mtag, col, nuc, false) :
-    //                     call_multinomial_fixed(mtag, col, nuc);
-    // 	    }
+    		// Search this column for the presence of a SNP
+    		if (invoke_model) 
+    		    model_type == snp ? 
+                        call_multinomial_snp(mtag, col, nuc, false) :
+                        call_multinomial_fixed(mtag, col, nuc);
+    	    }
 
-    // 	    if (invoke_model) {
-    // 		call_alleles(mtag, reads, read_types);
+    	    if (invoke_model) {
+    		call_alleles(mtag, reads, read_types);
 
-    //             if (model_type == fixed) {
-    //                 //
-    //                 // Mask nucleotides that are not fixed.
-    //                 //
-    //                 vector<SNP *>::iterator s;
-    //                 for (s = mtag->snps.begin(); s != mtag->snps.end(); s++) {
-    //                     con.replace((*s)->col, 1, "N");
-    //                 }
-    //             }
-    //         }
+                if (model_type == fixed) {
+                    //
+                    // Mask nucleotides that are not fixed.
+                    //
+                    vector<SNP *>::iterator s;
+                    for (s = mtag->snps.begin(); s != mtag->snps.end(); s++) {
+                        con.replace((*s)->col, 1, "N");
+                    }
+                }
+            }
 
-    // 	    mtag->add_consensus(con.c_str());
-    // 	}
-    // }
+    	    mtag->add_consensus(con.c_str());
+    	}
+    }
 
     return 0;
 }
@@ -402,9 +413,9 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
 int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &merged) {
     map<int, Stack *>::iterator i;
     map<int, MergedStack *>::iterator it_new, it_old;
-    Stack      *utag;
+    Stack       *utag;
     MergedStack *mtag;
-    int        k = 0;
+    int          k = 0;
 
     it_old = merged.begin();
 
@@ -415,7 +426,7 @@ int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &mer
 	mtag->id    = k;
 	mtag->count = utag->count;
 	mtag->utags.push_back(utag->id);
-	mtag->add_consensus(utag->seq->seq());
+	mtag->add_consensus(utag->seq);
 
 	// Insert the new MergedStack giving a hint as to which position
 	// to insert it at.
@@ -1007,7 +1018,7 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     DNASeqHashMap::iterator it;
     vector<SeqId *>::iterator fit;
 
-    Rem  *r;
+    Rem   *r;
     Stack *u;
     int   global_id = 1;
 
@@ -1043,10 +1054,12 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     	    global_id++;
     	}
 
-	cerr << "Clearing one element\n";
-	radtags.erase(*it);
+        // 
+        // We no longer need to keep this Hash entry around.
+        //
+	radtags.erase(it);
     }
-    cerr << "Clearing...\n";
+
     radtags.clear();
 
     if (unique.size() == 0) {
@@ -1207,6 +1220,8 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
     std::ofstream alle(all_file.c_str());
     int id;
 
+    char *buf = new char[m.begin()->second->len + 1];
+
     for (i = m.begin(); i != m.end(); i++) {
 	float total = 0;
 	tag_1 = i->second;
@@ -1230,7 +1245,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	    total += tag_2->count;
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << (*j)->id << "\t" << tag_2->seq << "\t\t\t\n";
+		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << (*j)->id << "\t" << tag_2->seq->seq(buf) << "\t\t\t\n";
 	    }
 
 	    id++;
@@ -1242,7 +1257,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	total += tag_1->remtags.size();
 	for (k = tag_1->remtags.begin(); k != tag_1->remtags.end(); k++) {
 	    rem = r[*k];
-	    tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "secondary\t\t" << rem->id << "\t" << rem->seq << "\t\t\t\n";
+	    tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "secondary\t\t" << rem->seq_id << "\t" << rem->seq->seq(buf) << "\t\t\t\n";
 	}
 
 	// Write out any SNPs detected in this unique tag.
@@ -1272,10 +1287,12 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
  	map<int, Rem *>::iterator r_it;
 	for (r_it = r.begin(); r_it != r.end(); r_it++)
 	    if (r_it->second->utilized == false)
-		unused << ">" << r_it->second->id << "\n" << r_it->second->seq << "\n";
+		unused << ">" << r_it->second->id << "\n" << r_it->second->seq->seq(buf) << "\n";
 
 	unused.close();
     }
+
+    delete [] buf;
 
     return 0;
 }

@@ -112,6 +112,17 @@ int MergedStack::add_consensus(const char *seq) {
     return 0;
 }
 
+int MergedStack::add_consensus(DNASeq *seq) {
+    if (this->con != NULL)
+	delete [] this->con;
+
+    this->len = seq->size;
+    this->con = new char[this->len + 1];
+    this->con = seq->seq(this->con);
+
+    return 0;
+}
+
 int MergedStack::add_dist(const int id, const int dist) {
     //
     // Store the ID and distance as a pair, ID in the first position,

@@ -148,6 +148,7 @@ class MergedStack {
             delete snps[i];
     }
     int add_consensus(const char *);
+    int add_consensus(DNASeq *);
     int add_dist(const int id, const int dist);
 };
 
