@@ -1,6 +1,7 @@
 bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks hstacks process_radtags genotypes
 
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h \
+	src/DNASeq.h src/DNASeq.cc \
 	src/models.h src/models.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h \
