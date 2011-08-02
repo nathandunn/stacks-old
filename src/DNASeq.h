@@ -23,6 +23,7 @@
 
 #include <string.h>
 #include <limits.h>
+
 #ifdef __GNUC__
 #include <ext/hash_map>
 using __gnu_cxx::hash_map;

@@ -43,7 +43,7 @@ DNASeq::DNASeq(int size) {
 }
 
 DNASeq::DNASeq(int size, unsigned char *seq) {
-    uint bytes;
+    unsigned int bytes;
 
     this->size = size;
 
@@ -51,7 +51,7 @@ DNASeq::DNASeq(int size, unsigned char *seq) {
     bytes += size % bases_per_byte > 0 ? 1 : 0;
 
     this->s = new unsigned char[bytes];
-    for (uint i = 0; i < bytes; i++)
+    for (unsigned int i = 0; i < bytes; i++)
 	this->s[i] = seq[i];
 }
 
