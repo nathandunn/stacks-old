@@ -65,7 +65,7 @@ int Rem::add_id(const char *id) {
 
 int Rem::add_seq(const char *seq) {
     if (this->seq != NULL)
-	delete [] this->seq;
+	delete this->seq;
 
     this->seq = new DNASeq(strlen(seq), seq);
 
@@ -83,7 +83,7 @@ int Stack::add_id(const char *id) {
 
 int Stack::add_seq(const char *seq) {
     if (this->seq != NULL)
-	delete [] this->seq;
+	delete this->seq;
 
     this->len = strlen(seq);
     this->seq = new DNASeq(this->len, seq);
@@ -93,7 +93,7 @@ int Stack::add_seq(const char *seq) {
 
 int Stack::add_seq(const DNASeq *seq) {
     if (this->seq != NULL)
-	delete [] this->seq;
+	delete this->seq;
 
     this->seq = new DNASeq(seq->size, seq->s);
 
