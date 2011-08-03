@@ -1031,6 +1031,7 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     	    //
     	    for (fit = it->second.id.begin(); fit != it->second.id.end(); fit++) {
     		r = new Rem(global_id, (*fit)->id, it->first);
+		//cerr << "Global ID: " << global_id << "; Cnt: " << it->second.count << "; Size: " << it->first->size << "\n";
     		rem[global_id] = r;
     		global_id++;
     	    }
@@ -1042,6 +1043,7 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     	    //
     	    u         = new Stack;
     	    u->id     = global_id;
+	    //cerr << "Global ID: " << global_id << "; Cnt: " << it->second.count << "; Size: " << it->first->size << "\n";
     	    u->count  = it->second.count;
     	    u->add_seq(it->first);
 
@@ -1056,12 +1058,12 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
         // 
         // We no longer need to keep this Hash entry around.
         //
-	//for (fit = it->second.id.begin(); fit != it->second.id.end(); fit++)
-	//delete (*fit)->id;
-	radtags.erase(it);
+	for (fit = it->second.id.begin(); fit != it->second.id.end(); fit++)
+	    delete *fit;
+	//radtags.erase(it);
     }
 
-    radtags.clear();
+    //radtags.clear();
 
     if (unique.size() == 0) {
         cerr << "Error: Unable to form any stacks, data appear to be unique.\n";
