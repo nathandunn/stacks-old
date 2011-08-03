@@ -1046,9 +1046,8 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     	    u->add_seq(it->first);
 
     	    // Copy the original Fastq IDs from which this unique radtag was built.
-    	    for (fit = (*it).second.id.begin(); fit != (*it).second.id.end(); fit++) {
+    	    for (fit = it->second.id.begin(); fit != it->second.id.end(); fit++)
     		u->add_id((*fit)->id);
-    	    }
 
     	    unique[u->id] = u;
     	    global_id++;
@@ -1057,6 +1056,8 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
         // 
         // We no longer need to keep this Hash entry around.
         //
+	//for (fit = it->second.id.begin(); fit != it->second.id.end(); fit++)
+	//delete (*fit)->id;
 	radtags.erase(it);
     }
 

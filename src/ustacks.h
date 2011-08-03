@@ -100,7 +100,7 @@ class HVal {
     HVal() { this->count = 0; }
     ~HVal() { 
 	for (uint i = 0; i < this->id.size(); i++) 
-	    delete [] this->id[i]; 
+	    delete this->id[i];
 	this->id.clear(); 
     }
 
