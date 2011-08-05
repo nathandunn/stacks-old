@@ -53,7 +53,7 @@ $query =
 $db['blast_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['blast_sth'], __FILE__, __LINE__);
 
-$page_title = "Catalog RAD-Tag Sequence BLAST Viewer";
+$page_title = "Catalog RAD-Tag Sequence/BLAST Hits Viewer";
 write_compact_header($page_title, $batch);
 
 $result = $db['seq_sth']->execute(array($batch_id, $tag_id));
@@ -100,7 +100,6 @@ while ($row = $result->fetchRow()) {
     array_push($hits[$row['query_id']], $a);
 }
 
-
 foreach ($seqs as $seq) {
     if (strlen($seq['seq_id']) > 0)
         $query_id = $seq['catalog_id'] . "|" . $seq['seq_id'];
@@ -109,11 +108,24 @@ foreach ($seqs as $seq) {
     $hsps = $hits[$query_id];
     $i    = 0;
 
-    echo <<< EOQ
+    if ($seq['type'] == "se_radtag" && !isset($hsps))
+      continue;
+    else if ($seq['type'] == "se_radtag")
+      print "<h4><img src=\"$img_path/caret-u.png\" />$seq[seq_id] [$seq[type]]</h4>\n";
+    else
+      echo <<< EOQ
 <h4><img src="$img_path/caret-u.png" />
-    <a target="_blank" href="$root_path/view_sequence.php?db=$database&id=$seq[id]">Query: $seq[seq_id] [$seq[type]]</a>
+    <a target="_blank" href="$root_path/view_sequence.php?db=$database&id=$seq[id]">$seq[seq_id] [$seq[type]]</a>
 </h4>
 
+EOQ;
+
+    if (!isset($hsps)) {
+        print "</table>\n";
+	continue;
+    }
+
+    echo <<< EOQ
 <table class="catalog">
 <tr>
   <th>&nbsp;</th>
@@ -128,11 +140,6 @@ foreach ($seqs as $seq) {
 </tr>
 
 EOQ;
-
-    if (!isset($hsps)) {
-        print "</table>\n";
-        continue;
-    }
 
     foreach ($hsps as $hsp) {
         $i++;
