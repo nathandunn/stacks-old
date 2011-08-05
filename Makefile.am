@@ -9,27 +9,33 @@ ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/co
 
 pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/models.h src/models.cc \
+	src/DNASeq.h src/DNASeq.cc \
 	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h 
 
 estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/constants.h \
         src/models.h src/models.cc \
+	src/DNASeq.h src/DNASeq.cc \
         src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h
 
 cstacks_SOURCES = src/cstacks.h src/cstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/kmers.h src/kmers.cc \
+	src/DNASeq.h src/DNASeq.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
 hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/kmers.h src/kmers.cc \
+	src/DNASeq.h src/DNASeq.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
 sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/constants.h \
+	src/DNASeq.h src/DNASeq.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h
 
 genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
+	src/DNASeq.h src/DNASeq.cc \
 	src/stacks.h src/stacks.cc src/PopMap.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h
 
@@ -51,6 +57,7 @@ genotypes_CXXFLAGS       = $(OPENMP_CFLAGS)
 genotypes_LDFLAGS        = $(OPENMP_CFLAGS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl \
+	scripts/sort_read_pairs.pl scripts/exec-velvet.pl \
 	scripts/index_radtags.pl scripts/load_radtags.pl scripts/stacks_export_notify.pl
 
 dist_noinst_SCRIPTS = autogen.sh scripts/process_radtags.pl scripts/markers.pl scripts/genotypes.pl
@@ -88,6 +95,12 @@ install-data-hook:
 	sed -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/load_radtags.pl > $(DESTDIR)$(bindir)/load_radtags.pl.subst
 	mv $(DESTDIR)$(bindir)/load_radtags.pl.subst $(DESTDIR)$(bindir)/load_radtags.pl
 	chmod +x $(DESTDIR)$(bindir)/load_radtags.pl
+	sed -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/sort_read_pairs.pl > $(DESTDIR)$(bindir)/sort_read_pairs.pl.subst
+	mv $(DESTDIR)$(bindir)/sort_read_pairs.pl.subst $(DESTDIR)$(bindir)/sort_read_pairs.pl
+	chmod +x $(DESTDIR)$(bindir)/sort_read_pairs.pl
+	sed -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/exec-velvet.pl > $(DESTDIR)$(bindir)/exec-velvet.pl.subst
+	mv $(DESTDIR)$(bindir)/exec-velvet.pl.subst $(DESTDIR)$(bindir)/exec-velvet.pl
+	chmod +x $(DESTDIR)$(bindir)/exec-velvet.pl
 	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_BINDIR_,$(bindir)/,g' \
 		$(DESTDIR)$(bindir)/stacks_export_notify.pl > $(DESTDIR)$(bindir)/stacks_export_notify.pl.subst
 	mv $(DESTDIR)$(bindir)/stacks_export_notify.pl.subst $(DESTDIR)$(bindir)/stacks_export_notify.pl

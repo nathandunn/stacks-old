@@ -69,10 +69,6 @@ map<string, int>           renz_len;
 
 int main (int argc, char* argv[]) {
 
-    parse_command_line(argc, argv);
-
-    cerr << "Using Phred+" << qual_offset << " encoding for quality scores.\n";
-
     renz["sbfI"]  = sbfI;  // CCTGCA/GG, SbfI
     renz["pstI"]  = pstI;  // CTGCA/G, PstI
     renz["notI"]  = notI;  // GC/GGCCGC, NotI
@@ -88,6 +84,10 @@ int main (int argc, char* argv[]) {
     renz_len["notI"]  = 6;
     renz_len["ecoRI"] = 5;
     renz_len["sgrAI"] = 6;
+
+    parse_command_line(argc, argv);
+
+    cerr << "Using Phred+" << qual_offset << " encoding for quality scores.\n";
 
     vector<pair<string, string> > files;
     vector<string> barcodes;
@@ -897,8 +897,12 @@ int load_barcodes(vector<string> &barcodes) {
 	    case 't':
 		*p = 'T';
 		break;
+	    case '\r':
+	    case '\t':
+		*p = '\0';
+		break;
 	    default:
-		cerr << "Invalid barcode: " << line << "\n";
+		cerr << "Invalid barcode: '" << line << "'\n";
 		exit(1);
 	    }
 
@@ -1147,6 +1151,11 @@ int parse_command_line(int argc, char* argv[]) {
 	help();
     }
 
+    if (renz.count(enz) == 0) {
+	cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
+	help();
+    }
+
     if (score_limit < 0 || score_limit > 40) {
 	cerr << "Score limit must be between 0 and 40.\n";
 	help();
@@ -1182,7 +1191,7 @@ void help() {
 	      << "  q: discard reads with low quality scores.\n"
 	      << "  r: rescue barcodes and RAD-Tags.\n"
 	      << "  t: truncate final read length to this value.\n"
-	      << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.6+, Sanger) or 'phred64' (Illumina 1.3 - 1.5, default).\n"
+	      << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.8+, Sanger) or 'phred64' (Illumina 1.3 - 1.5, default).\n"
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
 	      << "  h: display this help messsage." << "\n\n";

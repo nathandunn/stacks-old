@@ -89,12 +89,13 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int call_alleles(MergedStack *mtag, vector<char *> &reads) {
+int call_alleles(MergedStack *mtag, vector<DNASeq *> &reads) {
     int     row;
     int     height = reads.size();
     string  allele;
-    char   *base;
+    char    base;
     vector<SNP *>::iterator snp;
+    DNASeq *d;
 
     if (mtag->snps.size() == 0)
 	return 0;
@@ -103,15 +104,15 @@ int call_alleles(MergedStack *mtag, vector<char *> &reads) {
 	allele.clear();
 
 	for (snp = mtag->snps.begin(); snp != mtag->snps.end(); snp++) {
-	    base = reads[row];
-	    base = base + (*snp)->col;	    
+            d    = reads[row];
+	    base = (*d)[(*snp)->col];
 
 	    //
 	    // Check to make sure the nucleotide at the location of this SNP is
 	    // of one of the two possible states the multinomial model called.
 	    //
-	    if (*base == (*snp)->rank_1 || *base == (*snp)->rank_2) 
-		allele += *base;
+	    if (base == (*snp)->rank_1 || base == (*snp)->rank_2) 
+		allele += base;
 	    else
 		break;
 	}
@@ -149,7 +150,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
 	    // that tag into our array as many times as it originally occurred. 
 	    //
 	    vector<int>::iterator j;
-	    vector<char *> reads;
+	    vector<DNASeq *> reads;
 
 	    for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
 		utag = unique[*j];
@@ -163,12 +164,12 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
 	    // Iterate over each column of the array and call the consensus base.
 	    //
 	    int row, col;
-	    int length = strlen(reads[0]);
+	    int length = reads[0]->size;
 	    int height = reads.size();
 	    string con;
 	    map<char, int> nuc;
 	    map<char, int>::iterator max, n;
-	    char *base, c;
+	    DNASeq *d;
 
 	    for (col = 0; col < length; col++) {
 		nuc['A'] = 0;
@@ -177,14 +178,8 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
 		nuc['T'] = 0;
 
 		for (row = 0; row < height; row++) {
-		    base = reads[row];
-		    c    = toupper(*(base + col));
-		    //cerr << "    Row: " << row << " Col: " << col << " Base: " << c << "\n";
-
-                    if (c != 'A' && c != 'C' && c != 'G' && c != 'T')
-                        continue;
-
-		    nuc[c]++;
+    		    d = reads[row];
+		    nuc[(*d)[col]]++;
 		}
 
 		//
@@ -247,12 +242,12 @@ int count_raw_reads(map<int, Stack *> &unique, map<int, MergedStack *> &merged) 
 
 int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
     map<int, MergedStack *>::iterator i;
-    vector<SeqId *>::iterator     j;
-    vector<int>::iterator           k;
-    vector<SNP *>::iterator         s;
-    map<string, int>::iterator      t;
+    vector<char *>::iterator   j;
+    vector<int>::iterator      k;
+    vector<SNP *>::iterator    s;
+    map<string, int>::iterator t;
     MergedStack *tag_1;
-    Stack *tag_2;
+    Stack       *tag_2;
 
     //
     // Parse the input file name to create the output files
@@ -296,7 +291,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 	    tag_2  = u[*k];
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << (*j)->id << "\t" << tag_2->seq << "\t\t\t\n";
+		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << tag_2->seq << "\t\t\t\n";
 	    }
 	    id++;
 	}
@@ -324,10 +319,10 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 
 int write_sam(map<int, MergedStack *> &m, map<int, Stack *> &u) {
     map<int, MergedStack *>::iterator i;
-    vector<SeqId *>::iterator     j;
-    vector<int>::iterator           k;
-    vector<SNP *>::iterator         s;
-    map<string, int>::iterator      t;
+    vector<char *>::iterator   j;
+    vector<int>::iterator      k;
+    vector<SNP *>::iterator    s;
+    map<string, int>::iterator t;
     MergedStack *tag_1;
 
     //
@@ -374,7 +369,6 @@ int write_sam(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &merged) {
     map<int, Stack *>::iterator i;
     map<int, MergedStack *>::iterator it_new, it_old;
-    vector<SeqId *>::iterator j;
     map<string, set<int> > locations;
     map<string, set<int> >::iterator k;
     set<int>::iterator s;
@@ -522,7 +516,7 @@ int load_radtags(string in_file, HashMap &radtags) {
 
 int dump_stacks(map<int, Stack *> &u) {
     map<int, Stack *>::iterator it;
-    vector<SeqId *>::iterator fit;
+    vector<char *>::iterator fit;
     vector<pair<int, int> >::iterator pit;
     vector<int>::iterator mit;
 
@@ -533,7 +527,7 @@ int dump_stacks(map<int, Stack *> &u) {
 	     << "  IDs:    "; 
 
 	for (fit = (*it).second->map.begin(); fit != (*it).second->map.end(); fit++)
-	    cerr << (*fit)->id << " ";
+	    cerr << *fit << " ";
 
 	cerr << "\n\n";
     }

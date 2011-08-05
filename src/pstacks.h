@@ -60,6 +60,7 @@ using std::pair;
 #include "Sam.h"       // Reading input files in SAM format
 #include "Fasta.h"     // Reading input files in FASTA format
 #include "Fastq.h"     // Reading input files in FASTQ format
+#include "DNASeq.h"
 
 const int barcode_size = 5;
 const int snp_min      = 1;//8;
@@ -79,7 +80,7 @@ int  load_radtags(string, HashMap &);
 int  reduce_radtags(HashMap &, map<int, Stack *> &);
 int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
 int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, bool);
-int  call_alleles(MergedStack *, vector<char *> &);
+int  call_alleles(MergedStack *, vector<DNASeq *> &);
 int  count_raw_reads(map<int, Stack *> &, map<int, MergedStack *> &);
 int  write_sql(map<int, MergedStack *> &, map<int, Stack *> &);
 int  write_sam(map<int, MergedStack *> &, map<int, Stack *> &);

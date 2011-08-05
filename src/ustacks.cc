@@ -170,15 +170,16 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
     // Create a character buffer to hold the Rem sequence, this is faster
     // than repeatedly decoding the DNASeq buffers.
     // 
-    it = rem.find(keys[0]);
-    char *buf = new char[it->second->seq->size + 1];
+    //it = rem.find(keys[0]);
+    //char *buf = new char[it->second->seq->size + 1];
 
-    #pragma omp parallel private(it, k, buf)
+    #pragma omp parallel private(it, k)
     { 
         #pragma omp for schedule(dynamic) 
     	for (j = 0; j < (int) keys.size(); j++) {
     	    it = rem.find(keys[j]);
-    	    Rem *r = it->second;
+    	    Rem  *r   = it->second;
+	    char *buf = new char[r->seq->size + 1];
 
             //
             // Generate the k-mers for this remainder sequence
@@ -243,6 +244,8 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
     		}
     	    }
 
+	    delete [] buf;
+
     	    // Found a merge partner.
     	    if (min_id >= 0 && count == 1) {
     		r->utilized = true;
@@ -255,7 +258,7 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
     	}
     }
 
-    delete [] buf;
+    //delete [] buf;
 
     cerr << "  Matched " << utilized << " remainder reads; unable to match " << keys.size() - utilized << " remainder reads.\n";
 
@@ -1016,7 +1019,7 @@ int calc_distance(map<int, MergedStack *> &merged, int utag_dist) {
 
 int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, Rem *> &rem) {
     DNASeqHashMap::iterator it;
-    vector<SeqId *>::iterator fit;
+    vector<char *>::iterator fit;
 
     Rem   *r;
     Stack *u;
@@ -1029,9 +1032,8 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     	    // the specified cutoff. However, add the reads to the remainder
     	    // vector for later processing.
     	    //
-    	    for (fit = it->second.id.begin(); fit != it->second.id.end(); fit++) {
-    		r = new Rem(global_id, (*fit)->id, it->first);
-		//cerr << "Global ID: " << global_id << "; Cnt: " << it->second.count << "; Size: " << it->first->size << "\n";
+    	    for (fit = it->second.ids.begin(); fit != it->second.ids.end(); fit++) {
+    		r = new Rem(global_id, *fit, it->first);
     		rem[global_id] = r;
     		global_id++;
     	    }
@@ -1043,27 +1045,22 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     	    //
     	    u         = new Stack;
     	    u->id     = global_id;
-	    //cerr << "Global ID: " << global_id << "; Cnt: " << it->second.count << "; Size: " << it->first->size << "\n";
     	    u->count  = it->second.count;
     	    u->add_seq(it->first);
 
     	    // Copy the original Fastq IDs from which this unique radtag was built.
-    	    for (fit = it->second.id.begin(); fit != it->second.id.end(); fit++)
-    		u->add_id((*fit)->id);
+    	    for (fit = it->second.ids.begin(); fit != it->second.ids.end(); fit++)
+    		u->add_id(*fit);
 
     	    unique[u->id] = u;
     	    global_id++;
     	}
-
-        // 
-        // We no longer need to keep this Hash entry around.
-        //
-	for (fit = it->second.id.begin(); fit != it->second.id.end(); fit++)
-	    delete *fit;
-	//radtags.erase(it);
     }
 
-    //radtags.clear();
+    // 
+    // We no longer need to keep this Hash around.
+    //
+    radtags.clear();
 
     if (unique.size() == 0) {
         cerr << "Error: Unable to form any stacks, data appear to be unique.\n";
@@ -1200,7 +1197,7 @@ int count_raw_reads(map<int, Stack *> &unique, map<int, MergedStack *> &merged) 
 
 int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> &r) {
     map<int, MergedStack *>::iterator i;
-    vector<SeqId *>::iterator  j;
+    vector<char *>::iterator   j;
     vector<int>::iterator      k;
     vector<SNP *>::iterator    s;
     map<string, int>::iterator t;
@@ -1248,7 +1245,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	    total += tag_2->count;
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << (*j)->id << "\t" << tag_2->seq->seq(buf) << "\t\t\t\n";
+		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << tag_2->seq->seq(buf) << "\t\t\t\n";
 	    }
 
 	    id++;
@@ -1258,6 +1255,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	// Write out the remainder tags merged into this unique tag.
 	//
 	total += tag_1->remtags.size();
+
 	for (k = tag_1->remtags.begin(); k != tag_1->remtags.end(); k++) {
 	    rem = r[*k];
 	    tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "secondary\t\t" << rem->seq_id << "\t" << rem->seq->seq(buf) << "\t\t\t\n";
@@ -1295,7 +1293,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	unused.close();
     }
 
-    delete [] buf;
+    //delete [] buf;
 
     return 0;
 }
@@ -1390,7 +1388,7 @@ int dump_stack_graph(string data_file,
     // Output a list of IDs so we can locate these stacks in the final results.
     //
     for (s = 0; s < keys.size(); s++)
-	data << "/* " << keys[s] << ": " << unique[merged[keys[s]]->utags[0]]->map[0]->id << "; depth: " << merged[keys[s]]->count << " */\n";
+	data << "/* " << keys[s] << ": " << unique[merged[keys[s]]->utags[0]]->map[0] << "; depth: " << merged[keys[s]]->count << " */\n";
 
     //
     // Output a specification to visualize the stack graph using graphviz:
@@ -1475,7 +1473,7 @@ int dump_stack_graph(string data_file,
 
 int dump_unique_tags(map<int, Stack *> &u) {
     map<int, Stack *>::iterator it;
-    vector<SeqId *>::iterator fit;
+    vector<char *>::iterator fit;
     vector<pair<int, int> >::iterator pit;
     vector<int>::iterator mit;
 
@@ -1486,7 +1484,7 @@ int dump_unique_tags(map<int, Stack *> &u) {
 	     << "  IDs:       "; 
 
 	for (fit = (*it).second->map.begin(); fit != (*it).second->map.end(); fit++)
-	    cerr << (*fit)->id << " ";
+	    cerr << *fit << " ";
 
 	cerr << "\n\n";
     }

@@ -73,9 +73,8 @@ int Rem::add_seq(const char *seq) {
 }
 
 int Stack::add_id(const char *id) {
-    SeqId *f = new SeqId;
-    strncpy(f->id, id, id_len - 1);
-    f->id[id_len - 1] = '\0';
+    char *f = new char[strlen(id) + 1];
+    strcpy(f, id);
     this->map.push_back(f);
 
     return 0;

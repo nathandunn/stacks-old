@@ -95,19 +95,19 @@ const float snp_maj         = 0.35;
 
 class HVal {
  public:
-    vector<SeqId *> id;
+    vector<char *> ids;
     int  count;
     HVal() { this->count = 0; }
     ~HVal() { 
-	for (uint i = 0; i < this->id.size(); i++) 
-	    delete this->id[i];
-	this->id.clear(); 
+	for (uint i = 0; i < this->ids.size(); i++) 
+	    delete this->ids[i];
+	this->ids.clear(); 
     }
 
     int add_id(const char *id) {
-	SeqId *f = new SeqId;
-    	strcpy(f->id, id);
-    	this->id.push_back(f);
+	char *f = new char[strlen(id) + 1];
+    	strcpy(f, id);
+    	this->ids.push_back(f);
 	return 0;
     }
 };
