@@ -116,7 +116,7 @@ foreach $sample (@parents, @progeny) {
 
     if ($suffix =~ /^fa_?\d?$/ || $suffix =~ /^fasta_?\d?$/) {
         $ftype = "fasta";
-    } elsif ($suffix =~ /^fq$/ || $suffix =~ /^fastq_?\d?$/) {
+    } elsif ($suffix =~ /^fq_?\d?$/ || $suffix =~ /^fastq_?\d?$/) {
         $ftype = "fastq";
     } else {
         die("Unknown input file type.\n");

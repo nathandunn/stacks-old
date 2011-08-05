@@ -1,3 +1,17 @@
+	Individual sequence reads are now stored internally using a 2-bit encoding of DNA 
+	nucleotides. Some simple benchmarking of ustacks:
+
+	 Sample size         Elapsed Time       Used Memory
+	-------------     -----------------    -------------
+	 3.78m reads         3:16 /    3:23     4.64G /  1.86G
+	17.62m reads      1:31:21 / 1:43:54    55.55G / 45.42G
+
+	Bugfix: made process_radtags emit an error when an unrecognized
+	restriction enzyme is specified.
+	Bugfix: made process_radtags accept barcodes with trailing whitespace,
+	such as would be seen in a DOS text file or if errant tabs are
+	specified.
+
 Stacks 0.992 - July 04, 2011
 ----------------------------
 	Feature: process_radtags can now handle Phred+33 or Phred+64 encodings, Phred+33 is

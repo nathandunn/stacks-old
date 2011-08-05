@@ -45,10 +45,6 @@ using std::stringstream;
 typedef unsigned int uint;
 typedef string allele_type;
 
-typedef struct seqid {
-    char id[id_len];
-} SeqId;
-
 typedef struct locus {
     char chr[id_len];
     uint bp;
@@ -69,14 +65,14 @@ class SNP {
 class Stack {
  public:
     uint    id;
-    uint    count;        // Number of identical reads forming this stack
-    DNASeq *seq;          // Sequence read
-    uint    len;          // Read length
-    vector<SeqId *> map;  // List of sequence read IDs merged into this stack
-    PhyLoc  loc;          // Physical genome location of this stack.
+    uint    count;       // Number of identical reads forming this stack
+    DNASeq *seq;         // Sequence read
+    uint    len;         // Read length
+    vector<char *> map;  // List of sequence read IDs merged into this stack
+    PhyLoc  loc;         // Physical genome location of this stack.
 
     Stack()  { id = 0; count = 0; seq = NULL; len = 0; loc.bp = 0; loc.chr[0] = '\0'; }
-    ~Stack() { delete [] seq; }
+    ~Stack() { delete [] seq; for (unsigned int i = 0; i < this->map.size(); i++) delete [] map[i]; }
     int add_id(const char *);
     int add_seq(const char *);
     int add_seq(const DNASeq *);
