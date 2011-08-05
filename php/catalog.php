@@ -332,7 +332,7 @@ EOQ;
     }
 
     $url = "$root_path/sequence_blast.php?db=$database&batch_id=$batch_id&tag_id=$row[tag_id]";
-    if ($row[blast_hits] > 0) {
+    if ($row['blast_hits'] > 0 || $row['pe_radtags'] > 0 || $row['ests'] > 0) {
         $blast_hits_str =
             "<div class=\"catlink\"><img id=\"{$row[tag_id]}_blast_img\" src=\"$img_path/caret-u.png\" />" .
             "<a onclick=\"toggle_aln_tr('{$row[tag_id]}_blast', '$img_path', '$url');\">" .
