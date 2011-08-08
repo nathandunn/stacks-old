@@ -184,6 +184,9 @@ int main (int argc, char* argv[]) {
     //
     write_generic(catalog, pmap, samples, parent_ids, false);
 
+    if (out_type == genomic)
+	write_genomic(catalog, pmap);
+
     return 0;
 }
 
@@ -1384,6 +1387,88 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
     return 0;
 }
 
+int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".genomic_" << progeny_limit << ".tsv";
+
+    string file = in_path + pop_name.str();
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening genomic output file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Count the number of markers that have enough samples to output.
+    //
+    map<int, CLocus *>::iterator it;
+    CLocus *loc;
+    int num_loci = 0;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+	if (loc->hcnt < progeny_limit) continue;
+
+	num_loci += loc->snps.size() == 0 ? 1 : loc->snps.size();
+    }
+    cerr << "Writing " << num_loci << " loci to genomic file, '" << file << "'\n";
+
+    //
+    // Write the header
+    //
+    fh << num_loci << "\t" << pmap->sample_cnt() << "\n";
+
+    //
+    // Output each locus.
+    //
+    int  a, b;
+    SNP *s;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+
+	if (loc->hcnt < progeny_limit) continue;
+
+	Datum **d = pmap->locus(loc->id);
+	string  obshap;
+
+	for (uint i = 0; i < loc->snps.size(); i++) {
+	    s = loc->snps[i];
+
+	    fh << loc->loc.chr << "\t" << loc->loc.bp + s->col;
+
+	    for (int j = 0; j < pmap->sample_cnt(); j++) {
+		fh << "\t";
+
+		if (d[j] == NULL)
+		    fh << "0";
+		else 
+		    switch (d[j]->obshap.size()) {
+		    case 1:
+			a = encode_gtype(d[j]->obshap[i][0]);
+			fh << encoded_gtypes[a][a];
+			break;
+		    case 2:
+			a = encode_gtype(d[j]->obshap[i][0]);
+			b = encode_gtype(d[j]->obshap[i][1]);
+			fh << encoded_gtypes[a][b];
+			break;
+		    default:
+			fh << "0";
+			break;
+		    }
+	    }
+	}
+	fh << "\n";
+    }
+
+    fh.close();
+
+    return 0;
+}
+
 int write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, string> &samples, set<int> &parent_ids, bool write_gtypes) {
 
     stringstream pop_name;
@@ -1928,6 +2013,8 @@ int parse_command_line(int argc, char* argv[]) {
                 out_type = joinmap;
 	    else if (strcasecmp(optarg, "rqtl") == 0)
 		out_type = rqtl;
+	    else if (strcasecmp(optarg, "genomic") == 0)
+		out_type = genomic;
 	    break;
 	case 'r':
 	    progeny_limit = atoi(optarg);
@@ -2006,7 +2093,7 @@ void help() {
 	      << "  c: make automated corrections to the data.\n"
 	      << "  P: path to the Stacks output files.\n"
 	      << "  t: map type to write. 'CP', 'DH', 'F2' and 'BC1' are the currently supported map types.\n"
-	      << "  o: output file type to write, 'joinmap' and 'rqtl' are currently supported.\n"
+	      << "  o: output file type to write, 'joinmap', 'rqtl', and 'genomic' are currently supported.\n"
 	      << "  m: specify a minimum stack depth required before exporting a locus in a particular individual.\n"
 	      << "  s: output a file to import results into an SQL database.\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
