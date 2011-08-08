@@ -71,7 +71,7 @@ typedef struct read {
     int    *int_scores;
     int     filter;
     int     retain;
-    double  len;
+    unsigned int len;
     double  win_len;
     double  stop_pos;
 } Read;
