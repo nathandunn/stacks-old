@@ -1,11 +1,17 @@
-	Individual sequence reads are now stored internally using a 2-bit encoding of DNA 
-	nucleotides. Some simple benchmarking of ustacks:
+Stacks 0.993 - August 05, 2011
+------------------------------
+	Memory usage optimization: Individual sequence reads are now stored internally 
+	using a 2-bit encoding of DNA nucleotides. Some simple benchmarking of 
+	ustacks (previous version / new version):
 
 	 Sample size         Elapsed Time       Used Memory
 	-------------     -----------------    -------------
 	 3.78m reads         3:16 /    3:23     4.64G /  1.86G
 	17.62m reads      1:31:21 / 1:43:54    55.55G / 45.42G
 
+	Feature: Added the programs sort_read_pairs.pl, exec_velvet.pl, load_sequences.pl
+	to facilitate the assembly of paired-end RAD-Tags into mini-contigs and allow them
+	to be uploaded into and viewed from the web interface.
 	Bugfix: made process_radtags emit an error when an unrecognized
 	restriction enzyme is specified.
 	Bugfix: made process_radtags accept barcodes with trailing whitespace,
