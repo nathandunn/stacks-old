@@ -62,6 +62,15 @@ int main (int argc, char* argv[]) {
         return 1;
     }
 
+    //
+    // Build an index of the catalog
+    //
+    map<string, map<int, int> > cat_index;
+    if (search_type == genomic_loc) {
+	cerr << "Building an index of the catalog.\n";
+	update_catalog_index(catalog, cat_index);
+    }
+
     int i = 2;
     while (!samples.empty()) {
         map<int, QLocus *> sample;
@@ -82,23 +91,42 @@ int main (int argc, char* argv[]) {
             find_kmer_matches_by_sequence(catalog, sample, ctag_dist);
         } else if (search_type == genomic_loc) {
             cerr << "Searching for matches by genomic location...\n";
-            find_matches_by_genomic_loc(catalog, sample);
+            find_matches_by_genomic_loc(cat_index, sample);
         }
 
 	cerr << "Merging matches into catalog...\n";
 	merge_matches(catalog, sample, s, ctag_dist);
-
         //
         // Regenerate the alleles for the catalog tags after merging the new sample into the catalog.
 	//
         for (cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++)
             cat_it->second->populate_alleles();
 
+	if (search_type == genomic_loc) {
+	    cerr << "  Updating catalog index...\n";
+	    update_catalog_index(catalog, cat_index);
+	}
 	i++;
     }
 
     cerr << "Writing catalog...\n";
     write_catalog(catalog);
+
+    return 0;
+}
+
+int update_catalog_index(map<int, CLocus *> &catalog, map<string, map<int, int> > &cat_index) {
+
+    map<int, CLocus *>::iterator j;
+
+    for (j = catalog.begin(); j != catalog.end(); j++) {
+	if (cat_index[j->second->loc.chr].count(j->second->loc.bp) == 0) {
+	    cat_index[j->second->loc.chr][j->second->loc.bp] = j->first;
+	} else {
+	    if (cat_index[j->second->loc.chr][j->second->loc.bp] != j->first)
+		cerr << "Error: Catalog index mismatch.\n";
+	}
+    }
 
     return 0;
 }
@@ -470,7 +498,7 @@ int find_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *> &sa
     return 0;
 }
 
-int find_matches_by_genomic_loc(map<int, CLocus *> &catalog, map<int, QLocus *> &sample) {
+int find_matches_by_genomic_loc(map<string, map<int, int> > &cat_index, map<int, QLocus *> &sample) {
     //
     // Calculate the distance (number of mismatches) between each pair
     // of Radtags. We expect all radtags to be the same length;
@@ -492,14 +520,9 @@ int find_matches_by_genomic_loc(map<int, CLocus *> &catalog, map<int, QLocus *> 
 
 	    i = sample.find(keys[k]);
 
-            for (j = catalog.begin(); j != catalog.end(); j++) {
-                
-                if (strcmp(i->second->loc.chr, j->second->loc.chr) == 0 && 
-                    i->second->loc.bp == j->second->loc.bp) {
-
-                    i->second->add_match(j->second->id, "", "", 0);
-                }
-            }
+	    if (cat_index.count(i->second->loc.chr) > 0 &&
+		cat_index[i->second->loc.chr].count(i->second->loc.bp) > 0)
+		i->second->add_match(cat_index[i->second->loc.chr][i->second->loc.bp], "", "", 0);
         }
     }
 

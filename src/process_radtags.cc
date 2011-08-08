@@ -171,27 +171,30 @@ int process_paired_reads(string prefix_1,
 	exit(1);
     }
 
+    int buf_len = truncate_seq > 0 ? barcode_size + truncate_seq : strlen(s_1->seq);
+
     r_1 = new Read;
-    r_1->barcode    = new char[id_len + 1];
-    r_1->machine    = new char[id_len + 1];
-    r_1->seq        = new char[strlen(s_1->seq) + 1];
-    r_1->phred      = new char[strlen(s_1->seq) + 1];
-    r_1->int_scores = new  int[strlen(s_1->seq)];
+    r_1->barcode    = new char[id_len  + 1];
+    r_1->machine    = new char[id_len  + 1];
+    r_1->seq        = new char[buf_len + 1];
+    r_1->phred      = new char[buf_len + 1];
+    r_1->int_scores = new  int[buf_len];
+
     //
     // Set the parameters for checking read quality later in processing.
     // Window length is 15% (rounded) of the sequence length.
     //
-    r_1->len      = strlen(s_1->seq) - barcode_size;
+    r_1->len      = buf_len - barcode_size;
     r_1->win_len  = round(r_1->len * win_size);
     r_1->len     += barcode_size;
     r_1->stop_pos = r_1->len - r_1->win_len;
 
     r_2 = new Read;
-    r_2->barcode    = new char[id_len + 1];
-    r_2->machine    = new char[id_len + 1];
-    r_2->seq        = new char[strlen(s_2->seq) + 1];
-    r_2->phred      = new char[strlen(s_2->seq) + 1];
-    r_2->int_scores = new  int[strlen(s_2->seq)];
+    r_2->barcode    = new char[id_len  + 1];
+    r_2->machine    = new char[id_len  + 1];
+    r_2->seq        = new char[buf_len + 1];
+    r_2->phred      = new char[buf_len + 1];
+    r_2->int_scores = new  int[buf_len];
     r_2->len        = r_1->len;
     r_2->win_len    = r_1->win_len;
     r_2->stop_pos   = r_1->stop_pos;
@@ -262,20 +265,25 @@ int process_reads(string prefix,
     	exit(1);
     }
 
+    int buf_len = truncate_seq > 0 ? barcode_size + truncate_seq : strlen(s->seq);
+
     r = new Read;
-    r->barcode    = new char [id_len + 1];
-    r->machine    = new char [id_len + 1];
-    r->seq        = new char [strlen(s->seq) + 1];
-    r->phred      = new char [strlen(s->seq) + 1];
-    r->int_scores = new  int [strlen(s->seq)];
+    r->barcode    = new char [id_len  + 1];
+    r->machine    = new char [id_len  + 1];
+    r->seq        = new char [buf_len + 1];
+    r->phred      = new char [buf_len + 1];
+    r->int_scores = new  int [buf_len];
+
     //
     // Set the parameters for checking read quality later in processing.
     // Window length is 15% (rounded) of the sequence length.
     //
-    r->len      = strlen(s->seq) - barcode_size;
+    r->len      = buf_len - barcode_size;
     r->win_len  = round(r->len * win_size);
     r->len     += barcode_size;
     r->stop_pos = r->len - r->win_len;
+
+    //cerr << "Length: " << r->len << "; Window length: " << r->win_len << "; Stop position: " << r->stop_pos << "\n";
 
     long i = 1;
     do {
@@ -305,13 +313,6 @@ int process_reads(string prefix,
 
 int process_singlet(map<string, ofstream *> &fhs, Read *href, map<string, map<string, long> > &barcode_log, map<string, long> &counter, bool paired_end) {
     char *p;
-    //
-    // If requested, truncate this read to $truncate nucleotides
-    //
-    if (truncate_seq > 0) {
-    	href->seq[barcode_size + truncate_seq]   = '\0';
-    	href->phred[barcode_size + truncate_seq] = '\0';
-    }
 
     if (paired_end == false) {
     	//
@@ -626,9 +627,11 @@ int parse_input_record(Seq *s, Read *r) {
 	r->read = atoi(p);
     }
 
-    strcpy(r->seq, s->seq);
-    strcpy(r->phred, s->qual);
-    strncpy(r->barcode, r->seq, barcode_size);
+    strncpy(r->seq,     s->seq,  r->len); 
+    r->seq[r->len]   = '\0';
+    strncpy(r->phred,   s->qual, r->len);
+    r->phred[r->len] = '\0';
+    strncpy(r->barcode, r->seq,  barcode_size);
     r->retain = 1;
     r->filter = 0;
 
