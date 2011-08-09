@@ -1,3 +1,13 @@
+Stacks 0.994 - August 08, 2011
+------------------------------
+	Feature: added catalog index structure to cstacks to speed construction of catalog
+	when using reference-aligned sequences.
+	Feature: added a new output type, 'genomic' to genotypes. Outputs SNPs individually,
+	encoded as a set of integers, for reference-aligned reads.
+	Bugfix: pstacks was not writing individual stack sequences properly.
+	Bugfix: process_radtags was still checking the quality of sequence that was 
+	destined to be truncated off the read.
+
 Stacks 0.993 - August 05, 2011
 ------------------------------
 	Memory usage optimization: Individual sequence reads are now stored internally 

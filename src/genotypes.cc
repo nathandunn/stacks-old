@@ -1442,33 +1442,45 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
 	    if (loc->hcnt < progeny_limit) continue;
 
 	    Datum **d = pmap->locus(loc->id);
-	    string  obshap;
+	    set<int> snp_locs;
+	    string   obshap;
 
-	    for (uint i = 0; i < loc->snps.size(); i++) {
-		s = loc->snps[i];
+	    for (uint i = 0; i < loc->snps.size(); i++)
+		snp_locs.insert(loc->snps[i]->col);
 
-		fh << loc->loc.chr << "\t" << loc->loc.bp + s->col;
+	    uint k = 0;
+	    for (uint i = 0; i < loc->len; i++) {
 
-		for (int j = 0; j < pmap->sample_cnt(); j++) {
-		    fh << "\t";
+		fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->loc.bp + i;
 
-		    if (d[j] == NULL)
-			fh << "0";
-		    else 
-			switch (d[j]->obshap.size()) {
-			case 1:
-			    a = encode_gtype(d[j]->obshap[0][i]);
-			    fh << encoded_gtypes[a][a];
-			    break;
-			case 2:
-			    a = encode_gtype(d[j]->obshap[0][i]);
-			    b = encode_gtype(d[j]->obshap[1][i]);
-			    fh << encoded_gtypes[a][b];
-			    break;
-			default:
+ 		if (snp_locs.count(i) == 0) {
+		    for (int j = 0; j < pmap->sample_cnt(); j++) {
+			a = encode_gtype(loc->con[i]);
+			fh << "\t" << encoded_gtypes[a][a];
+		    }
+		} else {
+		    for (int j = 0; j < pmap->sample_cnt(); j++) {
+			fh << "\t";
+
+			if (d[j] == NULL)
 			    fh << "0";
-			    break;
-			}
+			else 
+			    switch (d[j]->obshap.size()) {
+			    case 1:
+				a = encode_gtype(d[j]->obshap[0][k]);
+				fh << encoded_gtypes[a][a];
+				break;
+			    case 2:
+				a = encode_gtype(d[j]->obshap[0][k]);
+				b = encode_gtype(d[j]->obshap[1][k]);
+				fh << encoded_gtypes[a][b];
+				break;
+			    default:
+				fh << "0";
+				break;
+			    }
+		    }
+		    k++;
 		}
 		fh << "\n";
 	    }
