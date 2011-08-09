@@ -94,7 +94,7 @@ int encode_gtype(char a) {
 }
 
 int encoded_gtypes[4][4] = {
-    // A  C  G  T
+  // A  C  G   T
     {1, 2, 3,  4}, // A
     {2, 5, 6,  7}, // C
     {3, 6, 8,  9}, // G
