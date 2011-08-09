@@ -89,6 +89,8 @@ int encode_gtype(char a) {
     case 'T':
 	return 3;
     }
+
+    return -1;
 }
 
 int encoded_gtypes[4][4] = {

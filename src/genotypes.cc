@@ -966,6 +966,8 @@ int export_f2_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     case rqtl:
 	write_rqtl(catalog, pmap, types, samples, parent_ids);
 	break;
+    default:
+	break;
     }
 
     if (sql_out)
@@ -1023,6 +1025,8 @@ int export_dh_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
 	break;
     case rqtl:
 	write_rqtl(catalog, pmap, types, samples, parent_ids);
+	break;
+    default:
 	break;
     }
 
@@ -1100,6 +1104,8 @@ int export_bc1_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
 	break;
     case rqtl:
 	write_rqtl(catalog, pmap, types, samples, parent_ids);
+	break;
+    default:
 	break;
     }
 
@@ -1196,6 +1202,8 @@ int export_cp_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
 	break;
     case rqtl:
 	write_rqtl(catalog, pmap, types, samples, parent_ids);
+	break;
+    default:
 	break;
     }
 
@@ -1403,12 +1411,12 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     //
     // Count the number of markers that have enough samples to output.
     //
-    map<int, CLocus *>::iterator it;
+    map<int, CLocus *>::iterator cit;
     CLocus *loc;
     int num_loci = 0;
 
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
+    for (cit = catalog.begin(); cit != catalog.end(); cit++) {
+	loc = cit->second;
 	if (loc->hcnt < progeny_limit) continue;
 
 	num_loci += loc->snps.size() == 0 ? 1 : loc->snps.size();
@@ -1423,45 +1431,48 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     //
     // Output each locus.
     //
+    map<string, vector<CLocus *> >::iterator it;
     int  a, b;
     SNP *s;
 
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint i = 0; i < it->second.size(); i++) {
+	    loc = it->second[i];
 
-	if (loc->hcnt < progeny_limit) continue;
+	    if (loc->hcnt < progeny_limit) continue;
 
-	Datum **d = pmap->locus(loc->id);
-	string  obshap;
+	    Datum **d = pmap->locus(loc->id);
+	    string  obshap;
 
-	for (uint i = 0; i < loc->snps.size(); i++) {
-	    s = loc->snps[i];
+	    for (uint i = 0; i < loc->snps.size(); i++) {
+		s = loc->snps[i];
 
-	    fh << loc->loc.chr << "\t" << loc->loc.bp + s->col;
+		fh << loc->loc.chr << "\t" << loc->loc.bp + s->col;
 
-	    for (int j = 0; j < pmap->sample_cnt(); j++) {
-		fh << "\t";
+		for (int j = 0; j < pmap->sample_cnt(); j++) {
+		    fh << "\t";
 
-		if (d[j] == NULL)
-		    fh << "0";
-		else 
-		    switch (d[j]->obshap.size()) {
-		    case 1:
-			a = encode_gtype(d[j]->obshap[i][0]);
-			fh << encoded_gtypes[a][a];
-			break;
-		    case 2:
-			a = encode_gtype(d[j]->obshap[i][0]);
-			b = encode_gtype(d[j]->obshap[i][1]);
-			fh << encoded_gtypes[a][b];
-			break;
-		    default:
+		    if (d[j] == NULL)
 			fh << "0";
-			break;
-		    }
+		    else 
+			switch (d[j]->obshap.size()) {
+			case 1:
+			    a = encode_gtype(d[j]->obshap[0][i]);
+			    fh << encoded_gtypes[a][a];
+			    break;
+			case 2:
+			    a = encode_gtype(d[j]->obshap[0][i]);
+			    b = encode_gtype(d[j]->obshap[1][i]);
+			    fh << encoded_gtypes[a][b];
+			    break;
+			default:
+			    fh << "0";
+			    break;
+			}
+		}
+		fh << "\n";
 	    }
 	}
-	fh << "\n";
     }
 
     fh.close();
