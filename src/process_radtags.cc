@@ -474,7 +474,7 @@ int check_quality_scores(Read *href, bool paired_end) {
     //
     // Convert the encoded quality scores to their integer values
     //
-    for (int j = 0; j < href->len; j++)
+    for (uint j = 0; j < href->len; j++)
         href->int_scores[j] = href->phred[j] - qual_offset;
 
     // for (int j = barcode_size; j <= href->stop_pos; j++) {
@@ -540,8 +540,9 @@ int parse_input_record(Seq *s, Read *r) {
     //
     // Or, parse FASTQ header that looks like this:
     //  @HWI-ST0747_0141:4:1101:1240:2199#0/1
+    //  @HWI-ST0747_0143:2:2208:21290:200914#0/1
     //
-    char *stop = s->id + strlen(s->seq);
+    char *stop = s->id + strlen(s->id);
     int   cnt  = 0;
 
     for (p = s->id, q = p; q < stop; q++)
@@ -550,7 +551,7 @@ int parse_input_record(Seq *s, Read *r) {
     if (cnt > 4) {
 	//
 	// According to Illumina manual, "CASAVA v1.8 User Guide" page 41:
-	// @<instrument>:<run number>:<flowcell ID>:<lane>:<tile>:<x- pos>:<y-pos> <read>:<is filtered>:<control number>:<index sequence>
+	// @<instrument>:<run number>:<flowcell ID>:<lane>:<tile>:<x-pos>:<y-pos> <read>:<is filtered>:<control number>:<index sequence>
 	//
 	for (p = s->id, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
@@ -618,6 +619,7 @@ int parse_input_record(Seq *s, Read *r) {
     strncpy(r->phred,   s->qual, r->len);
     r->phred[r->len] = '\0';
     strncpy(r->barcode, r->seq,  barcode_size);
+    r->barcode[barcode_size] = '\0';
     r->retain = 1;
     r->filter = 0;
 
