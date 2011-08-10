@@ -32,12 +32,12 @@ sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/co
 	src/input.h src/input.cc src/sql_utilities.h
 
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
-	src/input.h src/input.cc src/Bustard.h src/Fastq.h
+	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/renz.h
 
 genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 	src/DNASeq.h src/DNASeq.cc \
 	src/stacks.h src/stacks.cc src/PopMap.h src/genotype_dictionaries.h \
-	src/input.h src/input.cc src/sql_utilities.h
+	src/input.h src/input.cc src/sql_utilities.h src/renz.h
 
 ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
 ustacks_LDFLAGS  = $(OPENMP_CFLAGS)

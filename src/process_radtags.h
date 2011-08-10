@@ -48,6 +48,7 @@ using std::set;
 using std::pair;
 
 #include "constants.h" 
+#include "renz.h"
 #include "Bustard.h"   // Reading input files in Tab-separated Bustard format
 #include "Fastq.h"     // Reading input files in FASTQ format
 
@@ -75,16 +76,6 @@ typedef struct read {
     double  win_len;
     double  stop_pos;
 } Read;
-
-const char *sbfI[]   = {"TGCAGG"};           // CCTGCA/GG, SbfI
-const char *pstI[]   = {"TGCAG"};            // CTGCA/G, PstI
-const char *ecoRI[]  = {"AATTC"};            // G/AATTC, EcoRI
-const char *sgrAI[]  = {"CCGGCG", "CCGGTG"}; // CR/CCGGYG, SgrAI; R=A or G; Y=C or T
-const char *notI[]   = {"GGCCGC"};           // GC/GGCCGC, NotI
-const char *haeIII[] = {"GGCC"};
-const char *aluI[]   = {"AGCT"};
-const char *apeKI[]  = {"GCAGC", "GCTGC"};
-const char *mseI[]   = {"TTAA"};
 
 void help( void );
 void version( void );

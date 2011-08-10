@@ -21,7 +21,7 @@
 //
 // process_radtags -- clean raw reads using a sliding window approach;
 //   split reads by barcode, check RAD cutsite is intact, correct barcodes/cutsites 
-///  within one basepair, truncate reads on request.
+//   within one basepair, truncate reads on request.
 //
 // Julian Catchen
 // jcatchen@uoregon.edu
@@ -69,21 +69,7 @@ map<string, int>           renz_len;
 
 int main (int argc, char* argv[]) {
 
-    renz["sbfI"]  = sbfI;  // CCTGCA/GG, SbfI
-    renz["pstI"]  = pstI;  // CTGCA/G, PstI
-    renz["notI"]  = notI;  // GC/GGCCGC, NotI
-    renz["ecoRI"] = ecoRI; // G/AATTC, EcoRI
-    renz["sgrAI"] = sgrAI; // CR/CCGGYG, SgrAI; R=A or G; Y=C or T
-    renz_cnt["sbfI"]  = 1;
-    renz_cnt["pstI"]  = 1;
-    renz_cnt["notI"]  = 1;
-    renz_cnt["ecoRI"] = 1;
-    renz_cnt["sgrAI"] = 2;
-    renz_len["sbfI"]  = 6;
-    renz_len["pstI"]  = 5;
-    renz_len["notI"]  = 6;
-    renz_len["ecoRI"] = 5;
-    renz_len["sgrAI"] = 6;
+    initialize_renz(renz, renz_cnt, renz_len);
 
     parse_command_line(argc, argv);
 
