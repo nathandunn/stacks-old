@@ -40,6 +40,7 @@ string    out_path;
 string    out_file;
 string    bl_file;
 string    wl_file;
+string    enz;
 int       progeny_limit   = 1;
 bool      corrections     = false;
 bool      expand_id       = false;
@@ -52,11 +53,20 @@ double    max_het_seqs    = 0.1;
 set<int> whitelist, blacklist;
 
 //
+// Hold information about restriction enzymes
+//
+map<string, const char **> renz;
+map<string, int>           renz_cnt;
+map<string, int>           renz_len;
+
+//
 // Dictionaries to hold legal genotypes for different map types.
 //
 map<string, map<string, string> > global_dictionary;
 
 int main (int argc, char* argv[]) {
+
+    initialize_renz(renz, renz_cnt, renz_len);
 
     parse_command_line(argc, argv);
 
@@ -1419,9 +1429,9 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
 	loc = cit->second;
 	if (loc->hcnt < progeny_limit) continue;
 
-	num_loci += loc->snps.size() == 0 ? 1 : loc->snps.size();
+	num_loci += loc->len - renz_len[enz];
     }
-    cerr << "Writing " << num_loci << " loci to genomic file, '" << file << "'\n";
+    cerr << "Writing " << num_loci << " nucleotide positions to genomic file, '" << file << "'\n";
 
     //
     // Write the header
@@ -1433,7 +1443,10 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     //
     map<string, vector<CLocus *> >::iterator it;
     int  a, b;
-    SNP *s;
+
+    uint  rcnt = renz_cnt[enz];
+    uint  rlen = renz_len[enz];
+    char *p;
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	for (uint i = 0; i < it->second.size(); i++) {
@@ -1448,14 +1461,29 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
 	    for (uint i = 0; i < loc->snps.size(); i++)
 		snp_locs.insert(loc->snps[i]->col);
 
+	    uint start = 0;
+	    uint end   = loc->len;
+	    //
+	    // Check for the existence of the restriction enzyme cut site, mask off 
+	    // its output.
+	    //
+	    for (uint n = 0; n < rcnt; n++)
+	    	if (strncmp(loc->con, renz[enz][n], rlen) == 0)
+	    	    start += renz_len[enz];
+	    if (start == 0) {
+	    	p = loc->con + (loc->len - rlen);
+	    	for (uint n = rcnt; n < rcnt + rcnt; n++)
+	    	    if (strncmp(p, renz[enz][n], rlen) == 0)
+	    		end -= renz_len[enz];
+	    }
+
 	    uint k = 0;
-	    for (uint i = 0; i < loc->len; i++) {
+	    for (uint n = start; n < end; n++) {
+		fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->loc.bp + n;
 
-		fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->loc.bp + i;
-
- 		if (snp_locs.count(i) == 0) {
+ 		if (snp_locs.count(n) == 0) {
 		    for (int j = 0; j < pmap->sample_cnt(); j++) {
-			a = encode_gtype(loc->con[i]);
+			a = encode_gtype(loc->con[n]);
 			fh << "\t" << encoded_gtypes[a][a];
 		    }
 		} else {
@@ -1993,6 +2021,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"out_type",    required_argument, NULL, 'o'},
 	    {"progeny",     required_argument, NULL, 'r'},
 	    {"min_depth",   required_argument, NULL, 'm'},
+	    {"renz",        required_argument, NULL, 'e'},
 	    {"whitelist",   required_argument, NULL, 'W'},
 	    {"blacklist",   required_argument, NULL, 'B'},
 	    {0, 0, 0, 0}
@@ -2001,7 +2030,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:W:B:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:e:W:B:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -2060,6 +2089,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'm':
 	    min_stack_depth = atoi(optarg);
 	    break;
+	case 'e':
+	    enz = optarg;
+	    break;
         case 'v':
             version();
             break;
@@ -2099,6 +2131,16 @@ int parse_command_line(int argc, char* argv[]) {
     if (map_type != none && min_stack_depth > 0)
 	cerr << "Warning: using a minimum stack depth when building genetic markers is not recommended.\n";
 
+    if (out_type == genomic && enz.length() == 0) {
+	cerr << "You must specify the restriction enzyme used with 'genomic' output.\n";
+	help();
+    }
+
+    if (out_type == genomic && renz.count(enz) == 0) {
+	cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
+	help();
+    }
+
     return 0;
 }
 
@@ -2110,7 +2152,7 @@ void version() {
 
 void help() {
     std::cerr << "genotypes " << VERSION << "\n"
-              << "genotypes -b batch_id -P path [-r min] [-m min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-v] [-h]" << "\n"
+              << "genotypes -b batch_id -P path [-r min] [-m min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-e renz] [-v] [-h]" << "\n"
 	      << "  b: Batch ID to examine when exporting from the catalog.\n"
 	      << "  r: minimum number of progeny required to print a marker.\n"
 	      << "  c: make automated corrections to the data.\n"
@@ -2121,6 +2163,7 @@ void help() {
 	      << "  s: output a file to import results into an SQL database.\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
 	      << "  W: specify a file containign Whitelisted markers to include in the export.\n"
+	      << "  e: restriction enzyme, required if generating 'genomic' output.\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n";
 

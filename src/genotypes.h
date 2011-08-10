@@ -53,6 +53,7 @@ using std::set;
 
 #include "constants.h"
 #include "stacks.h"
+#include "renz.h"
 #include "PopMap.h"
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"
