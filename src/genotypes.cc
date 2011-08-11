@@ -1061,7 +1061,7 @@ int export_bc1_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
     // -------   -----------
     // <aaxbb>   locus homozygous in both parents, heterozygous between the parents
     //
-    // Genotype codes for a CP population, depending on the locus segregation type.
+    // Genotype codes for a BC1 population, depending on the locus segregation type.
     //
     // Seg. type   Possible genotypes
     // ---------   ------------------
@@ -1744,8 +1744,6 @@ int write_rqtl(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, st
     pop_name << "batch_" << batch_id << ".genotypes_" << progeny_limit;
     string file = in_path + pop_name.str() + ".loc";
 
-    cerr << "Writing R/QTL output file to '" << file << "'\n";
-
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
@@ -1766,7 +1764,7 @@ int write_rqtl(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, st
 
 	num_loci++;
     }
-    cerr<< "found " << num_loci << " loci\n";
+    cerr << "Writing " << num_loci << " loci to R/QTL file, '" << file << "'\n";
 
     map<int, string> map_types;
     map_types[cp]  = "CP";
@@ -1831,13 +1829,14 @@ int write_rqtl(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, st
     Datum *d;
     for (int i = 0; i < pmap->sample_cnt(); i++) {
 	if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+
 	fh << samples[pmap->rev_sample_index(i)];
 
 	for (it = catalog.begin(); it != catalog.end(); it++) {
 	    loc = it->second;
-	    if (loc->gcnt < progeny_limit) continue;
+	    //if (loc->gcnt < progeny_limit) continue;
 
-	    d = pmap->datum(loc->id, i);
+	    d = pmap->datum(loc->id, pmap->rev_sample_index(i));
 	    fh << ",";
 
 	    if (d == NULL) 
