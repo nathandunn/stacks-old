@@ -1540,6 +1540,7 @@ int load_radtags(string in_file, DNASeqHashMap &radtags) {
 
     Seq c;
     c.id   = new char[id_len];
+    c.chr  = new char[max_len];
     c.seq  = new char[max_len];
     c.qual = new char[max_len];
 

@@ -7,6 +7,8 @@ Stacks 0.994 - August 08, 2011
 	Bugfix: pstacks was not writing individual stack sequences properly.
 	Bugfix: process_radtags was still checking the quality of sequence that was 
 	destined to be truncated off the read.
+	Bugfix: process_radtags segfault fixed, parsing stop position
+	mis-specified in parse_input_record().
 
 Stacks 0.993 - August 05, 2011
 ------------------------------
