@@ -54,7 +54,7 @@ $db['blast_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['blast_sth'], __FILE__, __LINE__);
 
 $page_title = "Catalog RAD-Tag Sequence/BLAST Hits Viewer";
-write_compact_header($page_title, $batch);
+write_compact_header($page_title);
 
 $result = $db['seq_sth']->execute(array($batch_id, $tag_id));
 check_db_error($result, __FILE__, __LINE__);
