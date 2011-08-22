@@ -281,12 +281,12 @@ while ($row = $result->fetchRow()) {
     echo <<< EOQ
 <tr>
   <td class="catlink">
-<img id="{$row[tag_id]}_img" src="$img_path/caret-u.png" />
+<img id="{$row['tag_id']}_img" src="$img_path/caret-u.png" />
 <a onclick="toggle_aln_tr('$row[tag_id]', '$img_path', '$url');">$row[tag_id]</a><br />
 
-<a class="annotation" id="{$row[tag_id]}_ann" onclick="toggle_annotation($row[tag_id])">$annotation</a>
-<div id="{$row[tag_id]}_div" style="display: none; font-size: small;">
-<form id="{$row[tag_id]}_frm">
+<a class="annotation" id="{$row['tag_id']}_ann" onclick="toggle_annotation($row[tag_id])">$annotation</a>
+<div id="{$row['tag_id']}_div" style="display: none; font-size: small;">
+<form id="{$row['tag_id']}_frm">
 <input type="hidden" name="url" value="$root_path/annotate_marker.php?db=$database&batch_id=$batch_id&tag_id=$row[tag_id]" />
 <input type="input" size=15 name="ext_id" value="" />
 <a onclick="annotate_marker('$row[tag_id]')">save</a>|<a onclick="toggle_annotation('$row[tag_id]')">cancel</a>
@@ -326,16 +326,16 @@ EOQ;
         $url = "$root_path/catalog_genotypes.php?db=$database&batch_id=$batch_id&tag_id=$row[tag_id]";
         $ratio_parsed =
             $ratio_parsed .
-            "<div class=\"catlink\"><img id=\"{$row[tag_id]}_gtypes_img\" src=\"$img_path/caret-u.png\" />" .
-            "<a onclick=\"toggle_aln_tr('{$row[tag_id]}_gtypes', '$img_path', '$url');\">" .
+            "<div class=\"catlink\"><img id=\"{$row['tag_id']}_gtypes_img\" src=\"$img_path/caret-u.png\" />" .
+            "<a onclick=\"toggle_aln_tr('{$row['tag_id']}_gtypes', '$img_path', '$url');\">" .
             "view genotypes</a></div>";
     }
 
     $url = "$root_path/sequence_blast.php?db=$database&batch_id=$batch_id&tag_id=$row[tag_id]";
     if ($row['blast_hits'] > 0 || $row['pe_radtags'] > 0 || $row['ests'] > 0) {
         $blast_hits_str =
-            "<div class=\"catlink\"><img id=\"{$row[tag_id]}_blast_img\" src=\"$img_path/caret-u.png\" />" .
-            "<a onclick=\"toggle_aln_tr('{$row[tag_id]}_blast', '$img_path', '$url');\">" .
+            "<div class=\"catlink\"><img id=\"{$row['tag_id']}_blast_img\" src=\"$img_path/caret-u.png\" />" .
+            "<a onclick=\"toggle_aln_tr('{$row['tag_id']}_blast', '$img_path', '$url');\">" .
             "blast hits: $row[blast_hits]</a>";
     } else {
         $blast_hits_str = "blast hits: $row[blast_hits]";
@@ -383,27 +383,27 @@ EOQ;
 
 echo <<< EOQ
 </tr>
-<tr id="{$row[tag_id]}" style="display: none">
+<tr id="{$row['tag_id']}" style="display: none">
   <td colspan="$num_cols">
-    <iframe id="{$row[tag_id]}_iframe" 
+    <iframe id="{$row['tag_id']}_iframe" 
             frameborder="0" 
             scrolling="no" 
             onload="this.style.height = this.contentDocument.height + 'px';" 
             src=""></iframe>
   </td>
 </tr>
-<tr id="{$row[tag_id]}_gtypes" style="display: none">
+<tr id="{$row['tag_id']}_gtypes" style="display: none">
   <td colspan="$num_cols">
-    <iframe id="{$row[tag_id]}_gtypes_iframe" 
+    <iframe id="{$row['tag_id']}_gtypes_iframe" 
             frameborder="0" 
             scrolling="no" 
             onload="this.style.height = (this.contentDocument.height+25) + 'px';" 
             src=""></iframe>
   </td>
 </tr>
-<tr id="{$row[tag_id]}_blast" style="display: none">
+<tr id="{$row['tag_id']}_blast" style="display: none">
   <td colspan="$num_cols">
-    <iframe id="{$row[tag_id]}_blast_iframe" 
+    <iframe id="{$row['tag_id']}_blast_iframe" 
             frameborder="0" 
             scrolling="no" 
             onload="this.style.height = (this.contentDocument.height+25) + 'px';" 
@@ -431,6 +431,8 @@ write_footer();
 
 function generate_hidden_form_vars($var) {
     global $root_path, $display;
+
+    $vars = "";
 
     foreach ($display as $key => $d) {
 	if (strstr($key, $var))
@@ -628,6 +630,8 @@ EOQ;
 	" <span class=\"s\">($num_tags tags)</span>\n" .
 	"</td>\n";
 
+    $page_list = "";
+
     if ($num_pages > 1) 
 	$page_list = generate_page_list($page, $num_pages, $destination);
 
@@ -667,15 +671,23 @@ function write_filter($cols) {
                      "pe"    => array(),
                      "blast" => array());
 
-    $alle_ctl  = generate_element_select("filter_alle",  array(1, 2, 3, 4), $display['filter_alle'], "");
-    $snps_ctl  = generate_element_select("filter_snps",  array(1, 2, 3, 4, 8), $display['filter_snps'], "");
-    $pare_ctl  = generate_element_select("filter_pare",  array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18), $display['filter_pare'], "");
-    $prog_ctl  = generate_element_select("filter_prog",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $display['filter_prog'], "");
-    $vprog_ctl = generate_element_select("filter_vprog", array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $display['filter_vprog'], "");
-    $gcnt_ctl  = generate_element_select("filter_gcnt",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $display['filter_gcnt'], "");
+    $fal = isset($display['filter_alle'])  ? $display['filter_alle'] : "";
+    $fsn = isset($display['filter_snps'])  ? $display['filter_snps'] : "";
+    $fpa = isset($display['filter_pare'])  ? $display['filter_pare'] : "";
+    $fpr = isset($display['filter_prog'])  ? $display['filter_prog'] : "";
+    $fvp = isset($display['filter_vprog']) ? $display['filter_vprog'] : "";
+    $fgc = isset($display['filter_gcnt'])  ? $display['filter_gcnt'] : "";
+    $fma = isset($display['filter_mark'])  ? $display['filter_mark'] : "";
+
+    $alle_ctl  = generate_element_select("filter_alle",  array(1, 2, 3, 4), $fal, "");
+    $snps_ctl  = generate_element_select("filter_snps",  array(1, 2, 3, 4, 8), $fsn, "");
+    $pare_ctl  = generate_element_select("filter_pare",  array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18), $fpa, "");
+    $prog_ctl  = generate_element_select("filter_prog",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fpr, "");
+    $vprog_ctl = generate_element_select("filter_vprog", array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fvp, "");
+    $gcnt_ctl  = generate_element_select("filter_gcnt",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fgc, "");
     $mark_ctl  = generate_element_select("filter_mark", 
                                          array('Any', 'aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'), 
-                                         $display['filter_mark'], "");
+                                         $fma, "");
 
     if (isset($display['filter_type'])) {
 
@@ -697,7 +709,7 @@ function write_filter($cols) {
   <img id="stacks_filter_img" src="$img_path/caret-d.png" />
   <a onclick="toggle_div('stacks_filter', '$img_path', 'page_state');">Filter Results By</a>
 </h4>
-<div id="stacks_filter" $filter_vis>
+<div id="stacks_filter">
 <form id="filter_results" name="filter_results" method="get" action="$root_path/catalog.php">
 $hidden_vars
 <table class="filter">

@@ -60,7 +60,7 @@ $db['all_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['all_sth'], __FILE__, __LINE__);
 
 $page_title = "Catalog RAD-Tag Viewer";
-write_compact_header($page_title, $batch);
+write_compact_header($page_title);
 
 echo <<< EOQ
 <table class="catalog">

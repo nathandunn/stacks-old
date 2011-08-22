@@ -77,14 +77,15 @@ $query =
     "genotype_corrections.sample_id=catalog_genotypes.sample_id AND " .
     "genotype_corrections.batch_id=catalog_genotypes.batch_id) " .
     "JOIN samples ON (catalog_genotypes.sample_id=samples.id) " . 
-    "JOIN catalog_index ON (catalog_genotypes.catalog_id=catalog_index.cat_id) " .
+    "JOIN catalog_index ON (catalog_genotypes.catalog_id=catalog_index.tag_id AND " . 
+    "catalog_genotypes.batch_id=catalog_index.batch_id) " .
     "WHERE catalog_genotypes.batch_id=? and catalog_genotypes.catalog_id=? " . 
     "ORDER BY catalog_genotypes.sample_id";
 $db['geno_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['geno_sth'], __FILE__, __LINE__);
 
 $page_title = "Catalog Genotype Viewer";
-write_compact_header($page_title, $batch);
+write_compact_header($page_title);
 
 // 
 // Get number of samples so we can determine how many rows to display 

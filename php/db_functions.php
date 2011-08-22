@@ -27,6 +27,8 @@ function db_connect($database) {
                  'password' => $db_pass,
                  'hostspec' => $db_host,
                  );
+    $options = array();
+
     if (strlen($database) > 0)
         $dsn['database'] = $database;
     else
