@@ -1,3 +1,5 @@
+	Feature: process_radtags can now capture discarded reads to a file.
+
 Stacks 0.994 - August 08, 2011
 ------------------------------
 	Feature: added catalog index structure to cstacks to speed construction of catalog

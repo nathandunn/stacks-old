@@ -50,6 +50,7 @@ bool   clean        = false;
 bool   quality      = false;
 bool   recover      = false;
 bool   interleave   = false;
+bool   discards     = false;
 int    truncate_seq = 0;
 int    barcode_size = 0;
 double win_size     = 0.15;
@@ -132,11 +133,12 @@ int process_paired_reads(string prefix_1,
 			 map<string, map<string, long> > &barcode_log) {
     Input *fh_1, *fh_2;
     Read  *r_1, *r_2;
+    ofstream *discard_fh_1, *discard_fh_2;
 
-    string path_1 = in_path_1 + "/" + prefix_1;
-    string path_2 = in_path_2 + "/" + prefix_2;
+    string path_1 = in_path_1 + prefix_1;
+    string path_2 = in_path_2 + prefix_2;
 
-    cerr << "Reading data from " << path_1 << " and " << path_2 << "\n";
+    cerr << "  Reading data from " << path_1 << " and " << path_2 << "\n";
 
     if (in_file_type == fastq) {
         fh_1 = new Fastq(path_1.c_str());
@@ -144,6 +146,27 @@ int process_paired_reads(string prefix_1,
     } else if (in_file_type == bustard) {
         fh_1 = new Bustard(path_1.c_str());
         fh_2 = new Bustard(path_2.c_str());
+    }
+
+    //
+    // Open a file for recording discarded reads
+    //
+    if (discards) {
+	path_1 = path_1 + ".discards";
+	discard_fh_1 = new ofstream(path_1.c_str(), ifstream::out);
+
+	if (discard_fh_1->fail()) {
+	    cerr << "Error opening discard output file '" << path_1 << "'\n";
+	    exit(1);
+	}
+
+	path_2 = path_2 + ".discards";
+	discard_fh_2 = new ofstream(path_2.c_str(), ifstream::out);
+
+	if (discard_fh_1->fail()) {
+	    cerr << "Error opening discard output file '" << path_2 << "'\n";
+	    exit(1);
+	}
     }
 
     //
@@ -220,12 +243,27 @@ int process_paired_reads(string prefix_1,
 		write_fastq(pair_1_fhs, r_1, false) : write_fasta(pair_1_fhs, r_2, false);
 	}
 
+	if (discards && !r_1->retain)
+	    out_file_type == fastq ? 
+		write_fastq(discard_fh_1, s_1) : write_fasta(discard_fh_1, s_1);
+	if (discards && !r_2->retain)
+	    out_file_type == fastq ? 
+		write_fastq(discard_fh_2, s_2) : write_fasta(discard_fh_2, s_2);
+
 	delete s_1;
 	delete s_2;
 
 	i++;
     } while ((s_1 = fh_1->next_seq()) != NULL && 
 	     (s_2 = fh_2->next_seq()) != NULL);
+
+    if (discards) {
+	delete discard_fh_1;
+	delete discard_fh_2;
+    }
+
+    delete fh_1;
+    delete fh_2;
 
     return 0;
 }
@@ -236,13 +274,27 @@ int process_reads(string prefix,
 		  map<string, map<string, long> > &barcode_log) {
     Input *fh;
     Read  *r;
+    ofstream *discard_fh;
 
-    string path = in_path_1 + "/" + prefix;
+    string path = in_path_1 + prefix;
 
     if (in_file_type == fastq)
         fh = new Fastq(path.c_str());
     else if (in_file_type == bustard)
         fh = new Bustard(path.c_str());
+
+    //
+    // Open a file for recording discarded reads
+    //
+    if (discards) {
+	path = path + ".discards";
+	discard_fh = new ofstream(path.c_str(), ifstream::out);
+
+	if (discard_fh->fail()) {
+	    cerr << "Error opening discard output file '" << path << "'\n";
+	    exit(1);
+	}
+    }
 
     //
     // Read in the first record, initializing the Seq object s. Then 
@@ -290,10 +342,16 @@ int process_reads(string prefix,
 	     out_file_type == fastq ? 
 	 	write_fastq(pair_1_fhs, r, false) : write_fasta(pair_1_fhs, r, false);
 
+	 if (discards && !r->retain)
+	     out_file_type == fastq ? 
+		 write_fastq(discard_fh, s) : write_fasta(discard_fh, s);
+
 	 delete s;
 
 	i++;
     } while ((s = fh->next_seq()) != NULL);
+
+    if (discards) delete discard_fh;
 
     //
     // Close the file and delete the Input object.
@@ -632,50 +690,6 @@ int parse_input_record(Seq *s, Read *r) {
     return 0;
 }
 
-int write_fasta(map<string, ofstream *> &fhs, Read *href, bool paired_end) {
-    char tile[id_len];
-    sprintf(tile, "%04d", href->tile);
-
-    int offset = paired_end ? 0 : barcode_size;
-
-    *(fhs[href->barcode]) <<
-	">" << href->barcode <<
-	"_" << href->lane <<
-	"_" << tile << 
-	"_" << href->x <<
-	"_" << href->y <<
-	"_" << href->read << "\n" <<
-	href->seq + offset << "\n";
-
-    return 0;
-}
-
-int write_fastq(map<string, ofstream *> &fhs, Read *href, bool paired_end) {
-    //
-    // Write the sequence and quality scores in FASTQ format. 
-    //
-    char tile[id_len];
-    sprintf(tile, "%04d", href->tile);
-
-    int offset = paired_end ? 0 : barcode_size;
-
-    if (fhs.count(href->barcode) == 0)
-	cerr << "Writing to unknown barcode: '" << href->barcode << "'\n";
-
-    *(fhs[href->barcode]) <<
-	"@" << href->barcode <<
-	"_" << href->lane << 
-	"_" << tile << 
-	"_" << href->x << 
-	"_" << href->y << 
-	"_" << href->read << "\n" <<
-	href->seq + offset << "\n" <<
-	"+\n" <<
-	href->phred + offset << "\n";
-
-    return 0;
-}
-
 int print_results(vector<string> &barcodes, map<string, map<string, long> > &counters, map<string, map<string, long> > &barcode_log) {
     map<string, map<string, long> >::iterator it;
 
@@ -934,9 +948,12 @@ int load_barcodes(vector<string> &barcodes) {
 
 int build_file_list(vector<pair<string, string> > &files) {
 
+    //
+    // Scan a directory for a list of files.
+    //
     if (in_path_1.length() > 0) {
 	int    pos;
-	string file;
+	string file, paired_file;
 	struct dirent *direntry;
 
 	DIR *dir = opendir(in_path_1.c_str());
@@ -951,12 +968,21 @@ int build_file_list(vector<pair<string, string> > &files) {
 
 	    if (file == "." || file == "..")
 		continue;
+	    // 
+	    // If paired-end specified, parse file names to sort out which is which.
+	    //
+	    if (paired) {
+		int res;
 
-	    pos  = file.find_last_of("/");
-	    
-	    // Do we want to check the filename to make sure it is legal?
-
-	    files.push_back(make_pair(file.substr(pos+1), ""));
+		if ((res = parse_illumina_v1(file.c_str())) > 0 ||
+		    (res = parse_illumina_v2(file.c_str())) > 0) {
+		    paired_file = file;
+		    paired_file.replace(res, 1, "2");
+		    files.push_back(make_pair(file, paired_file));
+		}
+	    } else {
+		files.push_back(make_pair(file, ""));
+	    }
 	}
 
 	if (files.size() == 0) {
@@ -964,7 +990,8 @@ int build_file_list(vector<pair<string, string> > &files) {
 	}
     } else {
 	//
-	// Break off file path and store path and file name.
+	// Files specified directly:
+	//   Break off file path and store path and file name.
 	//
 	if (paired) {
 	    int pos_1   = in_file_p1.find_last_of("/");
@@ -999,6 +1026,8 @@ int parse_command_line(int argc, char* argv[]) {
             {"quality",      no_argument,       NULL, 'q'},
             {"clean",        no_argument,       NULL, 'c'},
             {"recover",      no_argument,       NULL, 'r'},
+	    {"discards",     no_argument,       NULL, 'D'},
+	    {"paired",       no_argument,       NULL, 'P'},
 	    {"infile_type",  required_argument, NULL, 'i'},
 	    {"outfile_type", required_argument, NULL, 'y'},
 	    {"file",         required_argument, NULL, 'f'},
@@ -1018,7 +1047,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqri:y:f:o:t:e:b:1:2:p:s:w:E:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcqrDPi:y:f:o:t:e:b:1:2:p:s:w:E:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -1052,6 +1081,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'p':
 	    in_path_1 = optarg;
+	    in_path_2 = in_path_1;
 	    ftype     = bustard;
 	    break;
 	case '1':
@@ -1063,6 +1093,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    paired     = true;
 	    in_file_p2 = optarg;
 	    ftype      = fastq;
+	    break;
+	case 'P':
+	    paired = true;
 	    break;
 	case 'o':
 	    out_path = optarg;
@@ -1084,6 +1117,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'b':
 	    barcode_file = optarg;
+	    break;
+	case 'D':
+	    discards = true;
 	    break;
  	case 'w':
 	    win_size = atof(optarg);
@@ -1112,7 +1148,7 @@ int parse_command_line(int argc, char* argv[]) {
     }
 
     if (in_file.length() > 0 && in_path_1.length() > 0) {
-	cerr << "You must specify either a single input file (-f) or a directory path (-P), not both.\n";
+	cerr << "You must specify either a single input file (-f) or a directory path (-p), not both.\n";
 	help();
     }
 
@@ -1122,7 +1158,7 @@ int parse_command_line(int argc, char* argv[]) {
     }
 
     if (in_path_1.length() > 0 && (in_file_p1.length() > 0 || in_file_p2.length() > 0)) {
-	cerr << "You must specify either a file path (-P) or a set of paired files (-1, -2), not both.\n";
+	cerr << "You must specify either a file path (-p) or a set of paired files (-1, -2), not both.\n";
 	help();
     }
 
@@ -1174,7 +1210,7 @@ void version() {
 
 void help() {
     std::cerr << "process_radtags " << VERSION << "\n"
-              << "process_radtags [-f in_file | -p in_dir | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-i type] [-y type] [-c] [-q] [-r] [-E encoding] [-t len] [-w size] [-s lim] [-h]\n"
+              << "process_radtags [-f in_file | -p in_dir | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-i type] [-y type] [-c] [-q] [-r] [-E encoding] [-t len] [-D] [-w size] [-s lim] [-h]\n"
 	      << "  f: path to the input file if processing single-end seqeunces.\n"
 	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, or 'fastq' (default 'fastq').\n"
 	      << "  p: path to a directory of single-end Bustard files.\n"
@@ -1189,6 +1225,7 @@ void help() {
 	      << "  r: rescue barcodes and RAD-Tags.\n"
 	      << "  t: truncate final read length to this value.\n"
 	      << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.8+, Sanger) or 'phred64' (Illumina 1.3 - 1.5, default).\n"
+	      << "  D: capture discarded reads to a file.\n"
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
 	      << "  h: display this help messsage." << "\n\n";

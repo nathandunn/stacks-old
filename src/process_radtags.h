@@ -49,6 +49,7 @@ using std::pair;
 
 #include "constants.h" 
 #include "renz.h"
+#include "clean.h"
 #include "Bustard.h"   // Reading input files in Tab-separated Bustard format
 #include "Fastq.h"     // Reading input files in FASTQ format
 
@@ -57,25 +58,6 @@ struct eqstr {
 	return strcmp(s1, s2) == 0;
     }
 };
-
-typedef struct read {
-    char   *barcode;
-    char   *machine;
-    int     lane;
-    int     tile;
-    int     x;
-    int     y;
-    int     index;
-    int     read;
-    char   *seq;
-    char   *phred;
-    int    *int_scores;
-    int     filter;
-    int     retain;
-    unsigned int len;
-    double  win_len;
-    double  stop_pos;
-} Read;
 
 void help( void );
 void version( void );
@@ -92,8 +74,6 @@ int  correct_barcode(map<string, ofstream *> &, Read *, map<string, long> &, map
 int  correct_radtag(Read *, map<string, long> &);
 int  check_quality_scores(Read *, bool);
 int  dist(const char *, char *);
-int  write_fastq(map<string, ofstream *> &, Read *, bool);
-int  write_fasta(map<string, ofstream *> &, Read *, bool);
 int  print_results(vector<string> &, map<string, map<string, long> > &, map<string, map<string, long> > &);
 
 int  compare_barcodes(pair<string, int>, pair<string, int>);
