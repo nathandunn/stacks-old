@@ -1,4 +1,4 @@
-bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks hstacks process_radtags genotypes
+bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks hstacks process_radtags process_shortreads genotypes
 
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/DNASeq.h src/DNASeq.cc \
@@ -34,6 +34,9 @@ sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/co
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/renz.h
 
+process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h \
+	src/input.h src/input.cc src/Bustard.h src/Fastq.h
+
 genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 	src/DNASeq.h src/DNASeq.cc \
 	src/stacks.h src/stacks.cc src/PopMap.h src/genotype_dictionaries.h \
@@ -53,6 +56,8 @@ sstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 process_radtags_CXXFLAGS = $(OPENMP_CFLAGS)
 process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
+process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS)
+process_shortreads_LDFLAGS  = $(OPENMP_CFLAGS)
 genotypes_CXXFLAGS       = $(OPENMP_CFLAGS)
 genotypes_LDFLAGS        = $(OPENMP_CFLAGS)
 
