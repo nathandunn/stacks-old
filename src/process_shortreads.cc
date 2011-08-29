@@ -993,13 +993,13 @@ int build_file_list(vector<pair<string, string> > &files) {
 	//
 	if (paired) {
 	    int pos_1   = in_file_p1.find_last_of("/");
-	    in_path_1 = in_file_p1.substr(0, pos_1);
+	    in_path_1 = in_file_p1.substr(0, pos_1 + 1);
 	    int pos_2   = in_file_p2.find_last_of("/");
-	    in_path_2 = in_file_p2.substr(0, pos_2);
+	    in_path_2 = in_file_p2.substr(0, pos_2 + 1);
 	    files.push_back(make_pair(in_file_p1.substr(pos_1+1), in_file_p2.substr(pos_2+1)));
 	} else {
 	    int pos   = in_file.find_last_of("/");
-	    in_path_1 = in_file.substr(0, pos);
+	    in_path_1 = in_file.substr(0, pos + 1);
 	    files.push_back(make_pair(in_file.substr(pos+1), ""));
 	}
     }
