@@ -1165,6 +1165,9 @@ int parse_command_line(int argc, char* argv[]) {
     if (in_path_1.length() > 0 && in_path_1.at(in_path_1.length() - 1) != '/') 
 	in_path_1 += "/";
 
+    if (in_path_2.length() > 0 && in_path_2.at(in_path_2.length() - 1) != '/') 
+	in_path_2 += "/";
+
     if (out_path.length() == 0) 
 	out_path = ".";
 

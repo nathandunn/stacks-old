@@ -47,33 +47,53 @@ using std::set;
 #include <utility>
 using std::pair;
 
+#ifdef __GNUC__
+#include <ext/hash_map>
+using __gnu_cxx::hash_map;
+using __gnu_cxx::hash;
+#else
+#include <hash_map>
+#endif
+
 #include "constants.h" 
 #include "clean.h"
+#include "kmers.h"
 #include "Bustard.h"   // Reading input files in Tab-separated Bustard format
 #include "Fastq.h"     // Reading input files in FASTQ format
 
-struct eqstr {
-    bool operator()(const char* s1, const char* s2) const {
-	return strcmp(s1, s2) == 0;
-    }
-};
+typedef hash_map<char *, long, hash<const char *>, eqstr> SeqKmerHash;
 
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
 int  build_file_list(vector<pair<string, string> > &);
 int  load_barcodes(vector<string> &);
-int  open_files(vector<string> &, map<string, ofstream *> &, map<string, ofstream *> &, map<string, ofstream *> &, map<string, map<string, long> > &);
+int  open_files(vector<string> &, 
+		map<string, ofstream *> &, map<string, ofstream *> &, map<string, ofstream *> &, 
+		map<string, map<string, long> > &);
 int  close_file_handles(map<string, ofstream *> &);
-int  process_reads(string, map<string, ofstream *> &, map<string, long> &, map<string, map<string, long> > &);
-int  process_paired_reads(string, string, map<string, ofstream *> &, map<string, ofstream *> &, map<string, ofstream *> &, map<string, long> &, map<string, map<string, long> > &);
-int  process_singlet(map<string, ofstream *> &, Read *, map<string, map<string, long> > &, map<string, long> &, bool);
+int  process_reads(string, map<string, ofstream *> &, 
+		   SeqKmerHash &, 
+		   map<string, long> &, map<string, map<string, long> > &);
+int  process_paired_reads(string, string, 
+			  map<string, ofstream *> &, map<string, ofstream *> &, map<string, ofstream *> &, 
+			  SeqKmerHash &, 
+			  map<string, long> &, map<string, map<string, long> > &);
+int  process_singlet(map<string, ofstream *> &, Read *, SeqKmerHash &, map<string, map<string, long> > &, map<string, long> &, bool);
 int  parse_input_record(Seq *, Read *);
 int  correct_barcode(map<string, ofstream *> &, Read *, map<string, long> &, map<string, map<string, long> > &);
 int  check_quality_scores(Read *, bool);
 int  dist(const char *, char *);
 int  print_results(vector<string> &, map<string, map<string, long> > &, map<string, map<string, long> > &);
 
+//
+// Functions for finding and removing reads with rare kmers
+//
+int  populate_kmers(vector<pair<string, string> > &, SeqKmerHash &);
+int  process_file_kmers(string, SeqKmerHash &);
+int  generate_kmer_dist(SeqKmerHash &);
+int  kmer_map_cmp(pair<char *, long>, pair<char *, long>);
+int  kmer_lookup(SeqKmerHash &, char *, char *, int, int *, int *);
 int  compare_barcodes(pair<string, int>, pair<string, int>);
 
 #endif // __PROCESS_SHORTREADS_H__
