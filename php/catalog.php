@@ -184,7 +184,7 @@ when the results are ready.
   <option value="bc1">BC1</option>
   <option value="dh">DH</option>
 </select>
-<input type="checkbox" name="mcor" value="mcor" />
+<input type="checkbox" name="mcor" value="1" />
 <strong><a onclick="toggle_cb('export_popup_frm', 'mcor')">Include manual corrections</a></strong>
 </p>
 
