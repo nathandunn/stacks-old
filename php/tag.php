@@ -83,7 +83,7 @@ $query =
     "WHERE batch_id=? AND sample_id=? AND tag_id=? " .
     "GROUP BY catalog_id";
 $db['cat_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['par_sth'], __FILE__, __LINE__);
+check_db_error($db['cat_sth'], __FILE__, __LINE__);
 
 //
 // Pull information about this batch

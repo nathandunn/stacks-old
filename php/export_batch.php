@@ -21,7 +21,6 @@ require_once("header.php");
 require_once("CatalogClass.php");
 
 $database  = isset($_GET['db'])     ? $_GET['db']     : "";
-$tag_id    = isset($_GET['tag_id']) ? $_GET['tag_id'] : 0;
 $batch_id  = isset($_GET['id'])     ? $_GET['id']     : 0;
 $email     = isset($_GET['email'])  ? $_GET['email']  : "";
 $data_type = isset($_GET['dtype'])  ? $_GET['dtype']  : "haplo";
@@ -37,8 +36,6 @@ $db = db_connect($database);
 $display = array();
 $display['id']          = $batch_id;
 $display['db']          = $database;
-$display['p']           = $page;
-$display['pp']          = $per_page;
 $display['filter_type'] = array();
 
 $filters = array();
@@ -119,6 +116,10 @@ function process_filter(&$display_params, &$filters) {
 	} else if ($filter == "mark") {
 	    $display_params['filter_mark'] = $_GET['filter_mark'];
             array_push($filters, "mark=" . $_GET['filter_mark']);
+
+	} else if ($filter == "gcnt") {
+	    $display_params['filter_gcnt'] = $_GET['filter_gcnt'];
+	    array_push($filters, "gcnt=" . $_GET['filter_gcnt']);
 	}
     }
 }
