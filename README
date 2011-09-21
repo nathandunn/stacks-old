@@ -54,7 +54,7 @@ A default install will install files in the following way:
 /usr/local/share/stacks/sql/mysql.cnf.dist, to enable access to the
 database from the Stacks scripts.
 
-% cd /usr/local/share/stacks/
+% cd /usr/local/share/stacks/sql/
 % cp mysql.cnf.dist mysql.cnf
 
 Edit the file to reflect the proper username, password, and host to
