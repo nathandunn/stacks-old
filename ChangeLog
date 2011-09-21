@@ -1,3 +1,5 @@
+	Bugfix: Exporting results from the web interface was not including
+	manual genotype corrections when requested.
 	Feature: process_radtags can now capture discarded reads to a file.
 
 Stacks 0.994 - August 08, 2011

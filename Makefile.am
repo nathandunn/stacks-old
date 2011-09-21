@@ -37,6 +37,7 @@ process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/const
 
 process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h \
 	src/clean.h src/clean.cc \
+	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h
 
 genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
