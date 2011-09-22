@@ -235,19 +235,21 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
     for (a = query_haplotypes.begin(); a != query_haplotypes.end(); a++) {
 
 	if (impute_haplotypes) {
-
 	    if (impute_haplotype(*a, s1_tag->strings, cat_haplotype)) {
-		if (s2_tag->alleles.count((*a).c_str()))
-		    s2_tag->alleles[cat_haplotype] = s2_tag->alleles[(*a).c_str()];
-		else
-		    s2_tag->alleles[cat_haplotype] = s2_tag->depth;
+		//
+		// If the matching haplotype was imputed, record the depths of the query alleles
+		// under the new, imputed alleles.
+		//
+		if (s2_tag->alleles.count(cat_haplotype) == 0)
+		    s2_tag->alleles[cat_haplotype] = 
+			s2_tag->alleles.count((*a).c_str()) > 0 ? 
+			s2_tag->alleles[(*a).c_str()] : s2_tag->depth;
 
 		//cerr << s2_tag->id << "; Adding cat haplotype: " << cat_haplotype << " based on depth of " << *a << ", " << s2_tag->alleles[cat_haplotype] << "\n";
 		s2_tag->add_match(s1_tag->id, cat_haplotype);
 		matches++;
 	    }
 	} else {
-
 	    for (c = s1_tag->strings.begin(); c != s1_tag->strings.end(); c++)
 		if (*a == c->first) {
 		    //cerr << "  Adding match between " << s1_tag->id << " and " << c->first << "\n";
@@ -354,8 +356,13 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
 	pos        = 0;
 
 	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
-	    if ((*k).first == "catalog") {
-		new_allele += s2_tag->con[(*k).second->col];
+	    //
+	    // We can't add SNPs from the catalog haplotype if the SNP is beyond the length of the query.
+	    //
+	    if (k->second->col > s2_tag->len - 1) continue;
+
+	    if (k->first == "catalog") {
+		new_allele += s2_tag->con[k->second->col];
 	    } else {
 		new_allele += old_allele[pos];
 		pos++;
@@ -367,10 +374,12 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
 
     if (s2_tag->alleles.size() == 0) {
 	new_allele = "";
-	for (k = merged_snps.begin(); k != merged_snps.end(); k++)
-	    new_allele += s2_tag->con[(*k).second->col];
+	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+	    if (k->second->col > s2_tag->len - 1) continue;
+	    new_allele += s2_tag->con[k->second->col];
+	}
 	query_haplotypes.insert(new_allele);
-	//cerr << "Adding haplotype: " << new_allele << "\n";
+	//cerr << "Adding haplotype 2: " << new_allele << "\n";
     }
 
     return 0;
@@ -378,22 +387,21 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
 
 int find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample_2) {
     map<int, QLocus *>::iterator i;
-    int k, min_tag_len;
-    QLocus *tag;
+    uint min_tag_len;
 
     //
-    // We don't assume all radtags will be the same length, we allow the sample_2 tags
-    // to be shorter than the sample_1 tags (generally the catalog).
+    // We don't assume all radtags will be the same length.
     //
-    min_tag_len = strlen(sample_1.begin()->second->con); 
-    //strlen(i->second->con) > strlen(j->second->con) ?
-    //  strlen(j->second->con) : strlen(i->second->con); 
+    min_tag_len = 
+	sample_1.begin()->second->len > sample_2.begin()->second->len ?
+	sample_2.begin()->second->len : sample_1.begin()->second->len; 
 
     //
-    // Build a hash map out of the first sample (usually the catalog)
+    // Build a hash map out of the first sample (usually the catalog),
+    // using only the minimum length substring of the longest reads;
     //
     HashMap sample_1_map;
-    populate_hash(sample_1, sample_1_map);
+    populate_hash(sample_1, sample_1_map, min_tag_len);
 
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -401,108 +409,174 @@ int find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sa
     for (i = sample_2.begin(); i != sample_2.end(); i++) 
 	keys.push_back(i->first);
 
-    #pragma omp parallel private(tag, k)
+    //
+    // Initialize some counters
+    //
+    unsigned long matches = 0;
+    unsigned long mmatch  = 0;
+    unsigned long nosnps  = 0;
+    unsigned long nomatch = 0;
+    unsigned long tot_hap = 0;
+    unsigned long ver_hap = 0;
+
+    #pragma omp parallel
     {
-        #pragma omp for schedule(dynamic) 
-	for (k = 0; k < (int) keys.size(); k++) {
-            tag = sample_2[keys[k]];	    
+        #pragma omp for reduction(+:matches) reduction(+:tot_hap) reduction(+:ver_hap) reduction(+:nomatch) reduction(+:mmatch)
+	for (uint k = 0; k < keys.size(); k++) {
+	    QLocus *query = sample_2[keys[k]];	    
 
             //
-            // Iterate through the possible alleles for this tag in sample_2
+            // Iterate through the haplotypes for this tag in sample_2
             //
             HashMap::iterator hit;
             vector<pair<allele_type, string> >::iterator q;  // Query records allele_type/search string pairs
             vector<pair<int, allele_type> >::iterator c;     // Hash map records id/allele_type pairs
+	    map<string, vector<string> > haplo_hits;
+	    set<int> loci_hit;
 
-            for (q = tag->strings.begin(); q != tag->strings.end(); q++) {
-                //cerr << "Looking for sequence " << s->second << "\n";
-                hit = sample_1_map.find(q->second.c_str());
+            for (q = query->strings.begin(); q != query->strings.end(); q++) {
+                //cerr << "  Looking for haplotype: " << q->first << " with sequence " << q->second.substr(0, min_tag_len) << "\n";
+
+                hit = sample_1_map.find(q->second.substr(0, min_tag_len).c_str());
 
                 if (hit != sample_1_map.end()) {
-                    //cerr << "  Found a match for " << hit->first << "\n";
+		    tot_hap++;
+                    //cerr << "    Found a match for " << hit->first << "\n";
 
-                    //
-                    // Found one or more matches between a set of alleles. Verify it is legitamate before recording it.
-                    //
-                    for (c = hit->second.begin(); c != hit->second.end(); c++)
-                        if (verify_sequence_match(sample_1[c->first], tag, min_tag_len)) {
-                            tag->add_match(c->first, c->second);
-                        }
+                    for (c = hit->second.begin(); c != hit->second.end(); c++) {
+			//
+			// Record the catalog loci hit by the haplotypes of this query locus.
+			//
+			loci_hit.insert(c->first);
+
+			//
+			// Record the haplotypes hit between the query and catalog loci.
+			//
+			haplo_hits[q->first].push_back(c->second);
+
+			if (verify_haplotypes == false)
+			    query->add_match(c->first, c->second);
+		    }
                 }
             }
+
+	    if (loci_hit.size() > 0) matches++;
+
+	    if (verify_haplotypes && loci_hit.size() > 0) {
+		uint verified = verify_sequence_match(sample_1, query, loci_hit, haplo_hits, 
+						      min_tag_len, mmatch, nosnps);
+		ver_hap += verified;
+		if (verified == 0) nomatch++;
+	    }
         }
     }
+
+    cerr << keys.size() << " stacks matched against the catalog containing " << sample_1.size() << " loci.\n" 
+	 << "  " << matches << " matching loci, " << nomatch << " contained no verified haplotypes.\n"
+	 << "  " << mmatch  << " loci matched more than one catalog locus and were excluded.\n"
+	 << "  " << nosnps  << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
+	 << "  " << tot_hap << " total haplotypes examined from matching loci, " << ver_hap << " verified.\n";
 
     return 0;
 }
 
-int verify_sequence_match(Locus *s1_tag, QLocus *s2_tag, uint min_tag_len) {
+int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query, 
+			  set<int> &loci_hit, map<string, vector<string> > &haplo_hits, 
+			  uint min_tag_len, unsigned long &mmatch, unsigned long &nosnps) {
+    //
+    // 1. Check that this query locus matches just a single catalog locus.
+    //
+    if (loci_hit.size() > 1) {
+        mmatch++;
+        return 0;
+    }
+
+    Locus *cat = sample_1[*(loci_hit.begin())];
+
+    //
+    // 2. Make sure the query has no SNPs unaccounted for in the catalog.
+    //
     vector<SNP *>::iterator i, j;
-    //
-    // We have found a match between two alleles of s1 and s2. We now want
-    // to verify that the alleles are consistent between the tags, i.e. they 
-    // have the same number and types of SNPs.
-    //
-    // 1. Make sure s2_tag has the same number of SNPs as s1_tag (s1_tag 
-    //    is generally the catalog, so s1_tag may have more SNPs than
-    //    s2_tag, but not less).
-    //
-    if (s2_tag->snps.size() > s1_tag->snps.size()) {
-	//cerr << "Match not verified, too many SNPs for " << s2_tag->id << "\n";
+    uint snp_count = 0;
+
+    for (i = query->snps.begin(); i != query->snps.end(); i++) {
+	//
+	// SNP occurs in a column that is beyond the length of the query
+	//
+	if ((*i)->col > min_tag_len - 1) {
+	    snp_count++;
+	    continue;
+	}
+	for (j = cat->snps.begin(); j != cat->snps.end(); j++) {
+	    //
+	    // SNP occurs in the same column.
+	    //
+	    if ((*i)->col == (*j)->col)
+		    snp_count++;
+	}
+    }
+
+    // We matched each SNP in query against one in the catalog
+    if (snp_count != query->snps.size()) {
+	cerr << "NOSNPS: " << query->id << "\n";
+	nosnps++;
 	return 0;
     }
 
     //
-    // 2. Okay, s2_tag has the same or less number of SNPs as s1_tag. Now make
-    //    sure they occur at the same columns and have the same alternate 
-    //    nucleotides.
+    // 3. We want a one-to-one correspondance between a query haplotype and a 
+    //    catalog haplotype. This relationship fails when the catalog and query seqeunces
+    //    are different lengths and the full length haplotype can not be determined.
     //
-    uint snp_count = 0;
-
-    for (i = s2_tag->snps.begin(); i != s2_tag->snps.end(); i++) {
-	for (j = s1_tag->snps.begin(); j != s1_tag->snps.end(); j++) {
-            //
-            // SNP occurs in a column that is beyond the length of the s2_tag
-            //
-            if ((*i)->col > min_tag_len - 1) {
-                snp_count++;
-                continue;
-            }
-	    //
-	    // SNP occurs in the same column and has the same alternate nucleotides.
-	    //
-	    if ((*i)->col == (*j)->col) {
-		if (((*i)->rank_1 == (*j)->rank_1 &&
-		     (*i)->rank_2 == (*j)->rank_2) ||
-		    ((*i)->rank_2 == (*j)->rank_1 &&
-		     (*i)->rank_1 == (*j)->rank_2))
-		    snp_count++;
-	    }
-	}
+    map<string, vector<string> >::iterator it;
+    map<string, int> cat_hap, query_hap;
+    
+    for (it = haplo_hits.begin(); it != haplo_hits.end(); it++) {
+	query_hap[it->first] = it->second.size();
+	for (uint j = 0; j < it->second.size(); j++)
+	    cat_hap[it->second[j]]++;
     }
 
-    // We matched each SNP in s2_tag against one in s1_tag
-    if (snp_count == s2_tag->snps.size())
-	return 1;
+    uint verified = 0;
+    for (it = haplo_hits.begin(); it != haplo_hits.end(); it++)
+	for (uint j = 0; j < it->second.size(); j++) {
+	    if (cat_hap[it->second[j]] == 1 &&
+		query_hap[it->first] == 1) {
+		verified++;
+		query->add_match(cat->id, it->second[j]);
+		//
+		// If the matching haplotype was imputed, record the depths of the query alleles
+		// under the new, imputed alleles.
+		//
+		if (query->alleles.count(it->second[j]) == 0)
+		    query->alleles[it->second[j]] = 
+			query->alleles.count(it->first) > 0 ? 
+			query->alleles[it->first] : query->depth;
+	    }
+	}
 
-    //cerr << "Match not verified, SNPs in S2 do not match catalog: " << snp_count << " vs " << s2_tag->snps.size() << "\n";
-
-    return 0;
+    return verified;
 }
 
-int populate_hash(map<int, Locus *> &sample, HashMap &hash_map) {
+int populate_hash(map<int, Locus *> &sample, HashMap &hash_map, int min_tag_len) {
     map<int, Locus *>::iterator it;
     vector<pair<allele_type, string> >::iterator all_it;
     Locus *tag;
+    char  *key;
 
     //
-    // Create a hash map out of the set of alleles for each Unique Tag.
+    // Create a hash map out of the set of alleles for each Locus.
     //
     for (it = sample.begin(); it != sample.end(); it++) {
         tag = it->second;
 
-        for (all_it = tag->strings.begin(); all_it != tag->strings.end(); all_it++)
-            hash_map[all_it->second.c_str()].push_back(make_pair(tag->id, all_it->first));
+        for (all_it = tag->strings.begin(); all_it != tag->strings.end(); all_it++) {
+	    key = new char[min_tag_len + 1];
+	    strncpy(key, all_it->second.c_str(), min_tag_len);
+	    key[min_tag_len] = '\0';
+
+	    hash_map[key].push_back(make_pair(tag->id, all_it->first));
+	}
     }
 
     //dump_kmer_map(kmer_map);
