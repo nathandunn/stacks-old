@@ -518,7 +518,6 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
 
     // We matched each SNP in query against one in the catalog
     if (snp_count != query->snps.size()) {
-	cerr << "NOSNPS: " << query->id << "\n";
 	nosnps++;
 	return 0;
     }
