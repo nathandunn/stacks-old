@@ -98,7 +98,7 @@ int  populate_hash(map<int, Locus *> &, HashMap &, int);
 int  find_matches_by_sequence(map<int, Locus *> &, map<int, QLocus *> &);
 int  find_matches_by_genomic_loc(map<int, Locus *> &, map<int, QLocus *> &);
 int  verify_sequence_match(map<int, Locus *> &, QLocus *, set<int> &, map<string, vector<string> > &, uint, unsigned long &, unsigned long &);
-int  verify_genomic_loc_match(Locus *, QLocus *, set<string> &);
+int  verify_genomic_loc_match(Locus *, QLocus *, set<string> &, unsigned long &);
 int  generate_query_haplotypes(Locus *, QLocus *, set<string> &);
 int  impute_haplotype(string, vector<pair<allele_type, string> > &, string &);
 bool compare_dist(pair<int, int>, pair<int, int>);
