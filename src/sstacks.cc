@@ -80,7 +80,7 @@ int main (int argc, char* argv[]) {
     //dump_loci(sample_2);
 
     if (search_type == sequence) {
-	cerr << "Searching for sequence matches...\n";
+ 	cerr << "Searching for sequence matches...\n";
 	find_matches_by_sequence(sample_1, sample_2);
 
     } else if (search_type == genomic_loc) {
@@ -132,13 +132,14 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
     //
     unsigned long matches = 0;
     unsigned long nomatch = 0;
+    unsigned long nosnps  = 0;
     unsigned long tot_hap = 0;
     unsigned long ver_hap = 0;
 
     #pragma omp parallel private(i, j, k, id)
     {
 	unsigned long verified;
-        #pragma omp for reduction(+:matches) reduction(+:tot_hap) reduction(+:ver_hap) reduction(+:nomatch)
+        #pragma omp for reduction(+:matches) reduction(+:tot_hap) reduction(+:ver_hap) reduction(+:nomatch) reduction(+:nosnps)
 	for (k = 0; k < (int) keys.size(); k++) {
 
 	    i = sample_2.find(keys[k]);
@@ -162,14 +163,11 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
 		    tot_hap += query_haplotypes.size() > 0 ? query_haplotypes.size() : 1;
 
 		    if (verify_haplotypes) {
-			verified = verify_genomic_loc_match(tag, i->second, query_haplotypes);
+			verified = verify_genomic_loc_match(tag, i->second, query_haplotypes, nosnps);
 			ver_hap += verified;
 			if (verified == 0) nomatch++;
 		    } else {
-			for (q = tag->strings.begin(); q != tag->strings.end(); q++) {
-			    i->second->add_match(tag->id, q->first);
-			    ver_hap++;
-			}
+			i->second->add_match(tag->id, tag->strings.begin()->first);
 		    }
 		}
 	    }
@@ -178,12 +176,13 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
 
     cerr << keys.size() << " stacks matched against the catalog containing " << sample_1.size() << " loci.\n" 
 	 << "  " << matches << " matching loci, " << nomatch << " contained no verified haplotypes.\n"
+	 << "  " << nosnps  << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
 	 << "  " << tot_hap << " total haplotypes examined from matching loci, " << ver_hap << " verified.\n";
 
     return 0;
 }
 
-int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_haplotypes) {
+int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_haplotypes, unsigned long &nosnps) {
     vector<SNP *>::iterator i, j;
     //
     // We have found a match between the genomic location of s1 and s2. We now want
@@ -211,6 +210,11 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
     bool found;
     for (j = s2_tag->snps.begin(); j != s2_tag->snps.end(); j++) {
 	found = false;
+	//
+	// SNP occurs in a column that is beyond the length of the catalog
+	//
+	if ((*j)->col > min_len - 1)
+	    continue;
 
 	for (i = s1_tag->snps.begin(); i != s1_tag->snps.end(); i++) {
 	    if ((*i)->col == (*j)->col)
@@ -219,8 +223,10 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
 	//
 	// Query locus posses a SNP not present in the catalog.
 	//
-	if (found == false)
+	if (found == false) {
+	    nosnps++;
 	    return 0;
+	}
     }
 
     //
@@ -240,11 +246,12 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
 		// If the matching haplotype was imputed, record the depths of the query alleles
 		// under the new, imputed alleles.
 		//
-		if (s2_tag->alleles.count(cat_haplotype) == 0)
-		    s2_tag->alleles[cat_haplotype] = 
-			s2_tag->alleles.count((*a).c_str()) > 0 ? 
-			s2_tag->alleles[(*a).c_str()] : s2_tag->depth;
-
+		if (s2_tag->alleles.count(cat_haplotype) == 0) {
+		    if (s2_tag->alleles.count(*a) > 0)
+			s2_tag->alleles[cat_haplotype] = s2_tag->alleles[*a];
+		    else
+			s2_tag->alleles[cat_haplotype] = s2_tag->depth;
+		}
 		//cerr << s2_tag->id << "; Adding cat haplotype: " << cat_haplotype << " based on depth of " << *a << ", " << s2_tag->alleles[cat_haplotype] << "\n";
 		s2_tag->add_match(s1_tag->id, cat_haplotype);
 		matches++;
@@ -294,6 +301,7 @@ int impute_haplotype(string query_haplotype,
 	    }
 	}
 	cur = next;
+	next.clear();
 	j++;
     }
 
@@ -497,29 +505,27 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
     // 2. Make sure the query has no SNPs unaccounted for in the catalog.
     //
     vector<SNP *>::iterator i, j;
-    uint snp_count = 0;
+    bool found;
 
     for (i = query->snps.begin(); i != query->snps.end(); i++) {
+	found = false;
 	//
-	// SNP occurs in a column that is beyond the length of the query
+	// SNP occurs in a column that is beyond the length of the catalog
 	//
-	if ((*i)->col > min_tag_len - 1) {
-	    snp_count++;
+	if ((*i)->col > min_tag_len - 1)
 	    continue;
-	}
-	for (j = cat->snps.begin(); j != cat->snps.end(); j++) {
-	    //
-	    // SNP occurs in the same column.
-	    //
-	    if ((*i)->col == (*j)->col)
-		    snp_count++;
-	}
-    }
 
-    // We matched each SNP in query against one in the catalog
-    if (snp_count != query->snps.size()) {
-	nosnps++;
-	return 0;
+	for (j = cat->snps.begin(); j != cat->snps.end(); j++) {
+	    if ((*i)->col == (*j)->col)
+		found = true;
+	}
+	//
+	// Query locus posses a SNP not present in the catalog.
+	//
+	if (found == false) {
+	    nosnps++;
+	    return 0;
+	}
     }
 
     //
@@ -547,10 +553,12 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
 		// If the matching haplotype was imputed, record the depths of the query alleles
 		// under the new, imputed alleles.
 		//
-		if (query->alleles.count(it->second[j]) == 0)
-		    query->alleles[it->second[j]] = 
-			query->alleles.count(it->first) > 0 ? 
-			query->alleles[it->first] : query->depth;
+		if (query->alleles.count(it->second[j]) == 0) {
+		    if (query->alleles.count(it->first) > 0)
+			query->alleles[it->second[j]] = query->alleles[it->first];
+		    else
+			query->alleles[it->second[j]] = query->depth;
+		}
 	    }
 	}
 
@@ -602,9 +610,13 @@ int write_matches(map<int, QLocus *> &sample) {
     for (i = sample.begin(); i != sample.end(); i++) {
 
 	for (s = (*i).second->matches.begin(); s != (*i).second->matches.end(); s++) {
-	    match_depth = 
-		i->second->alleles.count(s->second) > 0 ? 
-		i->second->alleles[s->second] : i->second->depth;
+	    if (verify_haplotypes == false && search_type == genomic_loc)
+		match_depth = i->second->depth;
+	    else
+		match_depth = 
+		    i->second->alleles.count(s->second) > 0 ? 
+		    i->second->alleles[s->second] : i->second->depth;
+
 	    matches << 
 		"0"           << "\t" <<
 		batch_id      << "\t" <<
