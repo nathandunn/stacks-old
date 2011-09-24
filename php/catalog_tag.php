@@ -48,7 +48,7 @@ $db['mat_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['mat_sth'], __FILE__, __LINE__);
 
 $query = 
-    "SELECT col, rank_1, rank_2 FROM catalog_snps " . 
+    "SELECT col, rank_1, rank_2, rank_3, rank_4 FROM catalog_snps " . 
     "WHERE batch_id=? AND tag_id=? ORDER BY col";
 $db['snp_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['snp_sth'], __FILE__, __LINE__);
@@ -78,7 +78,11 @@ check_db_error($result, __FILE__, __LINE__);
 
 print "  <td>\n";
 while ($row = $result->fetchRow()) {
-    print "    Column: $row[col]; $row[rank_1]/$row[rank_2]<br />\n";
+    $snp = "$row[rank_1]/$row[rank_2]";
+    if (strlen($row['rank_3']) > 0) $snp .= "/$row[rank_3]";
+    if (strlen($row['rank_4']) > 0) $snp .= "/$row[rank_4]";
+
+    print "    Column: $row[col]; $snp<br />\n";
 }
 print "  </td>\n";
 
