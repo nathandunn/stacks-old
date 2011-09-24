@@ -1,6 +1,16 @@
-	Bugfix: Exporting results from the web interface was not including
-	manual genotype corrections when requested.
+Stacks 0.995 - September 23, 2011
+---------------------------------
+	Feature: sstacks can now handle samples and catalogs that have different length reads. 
+	Each individual sample must be constructed from the same length reads (by ustacks and cstacks),
+	but between samples there can be different lengths, e.g. a catalog of length 50bp and samples 
+	of length 100bp, or vice versa.
+	Feature: Added the ApeKI restriction enzyme to process_radtags
 	Feature: process_radtags can now capture discarded reads to a file.
+	Bugfix: a coding limitation was removed that required polymorphic sites in the catalog to 
+	contain only two alleles. Now, all four alleles can be recorded at a single site in a locus in
+	the catalog.
+	Bugfix: Exporting results from the web interface was not including manual genotype corrections 
+	when requested.
 
 Stacks 0.994 - August 08, 2011
 ------------------------------

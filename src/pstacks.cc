@@ -300,7 +300,9 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 
 	// Write out any SNPs detected in this unique tag.
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-	    snps << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << (*s)->col << "\t" << (*s)->lratio << "\t" << (*s)->rank_1 << "\t" << (*s)->rank_2 << "\n";
+	    snps << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" 
+		 << (*s)->col << "\t" << (*s)->lratio << "\t" 
+		 << (*s)->rank_1 << "\t" << (*s)->rank_2 << "\t\t\n";
 	}
 
 	// Write the expressed alleles seen for the recorded SNPs and

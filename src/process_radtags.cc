@@ -1222,7 +1222,7 @@ void help() {
 	      << "  o: path to output the processed files.\n"
 	      << "  y: output type, either 'fastq' or 'fasta' (default fastq).\n"
 	      << "  b: a list of barcodes for this run.\n"
-	      << "  e: specify the restriction enzyme to look for (either 'sbfI', 'pstI', 'ecoRI', or 'sgrAI').\n"
+	      << "  e: specify the restriction enzyme to look for (either 'sbfI', 'pstI', 'ecoRI', 'apeKI', or 'sgrAI').\n"
 	      << "  c: clean data, remove any read with an uncalled base.\n"
 	      << "  q: discard reads with low quality scores.\n"
 	      << "  r: rescue barcodes and RAD-Tags.\n"

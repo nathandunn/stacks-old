@@ -60,6 +60,17 @@ class SNP {
     float    lratio;
     char     rank_1;
     char     rank_2;
+    char     rank_3;
+    char     rank_4;
+
+    SNP() {
+	col    = 0;
+	lratio = 0.0;
+	rank_1 = 0;
+	rank_2 = 0;
+	rank_3 = 0;
+	rank_4 = 0;
+    }
 };
 
 class Stack {

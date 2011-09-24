@@ -362,7 +362,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
  
     #pragma omp parallel private(i, j, tag_1, tag_2, allele)
     { 
-        #pragma omp for schedule(dynamic) 
+        #pragma omp for
         for (i = 0; i < (int) keys.size(); i++) {
             tag_1 = sample[keys[i]];
 
@@ -515,7 +515,7 @@ int find_matches_by_genomic_loc(map<string, map<int, int> > &cat_index, map<int,
 
     #pragma omp parallel private(i, j, k)
     {
-        #pragma omp for schedule(dynamic) 
+        #pragma omp for
 	for (k = 0; k < (int) keys.size(); k++) {
 
 	    i = sample.find(keys[k]);
@@ -585,25 +585,50 @@ int merge_allele(Locus *locus, SNP *snp) {
     map<int, pair<string, SNP *> > columns;
     map<int, pair<string, SNP *> >::iterator c;
     vector<SNP *>::iterator i;
+    SNP *lsnp;
 
     for (i = locus->snps.begin(); i != locus->snps.end(); i++)
 	columns[(*i)->col] = make_pair("sample", *i);
 
-    //
-    // Is this column already represented from the previous sample?
-    //
     if (columns.count(snp->col)) {
-        //
-        // Check to make sure we aren't combining inconsistent SNPS.
-        //
-        if (columns[snp->col].second->rank_1 != snp->rank_1 &&
-            columns[snp->col].second->rank_1 != snp->rank_2)
-            cerr << "  Warning: inconsistent merging of SNPs for catalog ID " << locus->id << "\n";
-        else
-            columns[snp->col] = make_pair("both", snp);
+	lsnp = columns[snp->col].second;
+
+	//
+	// If this is a new allele for this nucleotide, add it to the catalog SNP.
+	//
+	bool rank_1_exists = false;
+	bool rank_2_exists = false;
+
+	if (snp->rank_1 == lsnp->rank_1 ||
+	    snp->rank_1 == lsnp->rank_2 ||
+	    snp->rank_1 == lsnp->rank_3 ||
+	    snp->rank_1 == lsnp->rank_4) {
+	    rank_1_exists = true;
+	}
+	if (snp->rank_2 == lsnp->rank_1 ||
+	    snp->rank_2 == lsnp->rank_2 ||
+	    snp->rank_2 == lsnp->rank_3 ||
+	    snp->rank_2 == lsnp->rank_4) {
+	    rank_2_exists = true;
+	}
+
+	if (rank_1_exists == false) {
+	    if (lsnp->rank_3 == 0)
+		lsnp->rank_3 = snp->rank_1;
+	    else 
+		lsnp->rank_4 = snp->rank_1;
+	}
+	if (rank_2_exists == false) {
+	    if (lsnp->rank_3 == 0)
+		lsnp->rank_3 = snp->rank_2;
+	    else 
+		lsnp->rank_4 = snp->rank_2;
+	}
+
+	columns[snp->col] = make_pair("both", lsnp);
+    } else {
+	columns[snp->col] = make_pair("merge", snp);
     }
-    else
-        columns[snp->col] = make_pair("merge", snp);
 
     vector<pair<string, SNP *> > merged_snps;
 
@@ -681,6 +706,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     vector<pair<string, SNP *> > merged_snps;
     set<string> merged_alleles;
     set<string>::iterator s;
+    SNP *csnp;
 
     for (i = this->snps.begin(); i != this->snps.end(); i++)
 	columns[(*i)->col] = make_pair("catalog", *i);
@@ -690,17 +716,44 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	// Is this column already represented from the previous sample?
 	//
 	if (columns.count((*i)->col)) {
+	    csnp = columns[(*i)->col].second;
+
 	    //
-	    // Check to make sure we aren't combining inconsistent SNPS.
+	    // If this is a new allele for this nucleotide, add it to the catalog SNP.
 	    //
-	    if (columns[(*i)->col].second->rank_1 != (*i)->rank_1 &&
-		columns[(*i)->col].second->rank_1 != (*i)->rank_2)
-		cerr << "  Warning: inconsistent merging of SNPs for catalog ID " << this->id << "\n";
-	    else
-		columns[(*i)->col] = make_pair("both", *i);
-	}
-	else
+	    bool rank_1_exists = false;
+	    bool rank_2_exists = false;
+
+	    if ((*i)->rank_1 == csnp->rank_1 ||
+		(*i)->rank_1 == csnp->rank_2 ||
+		(*i)->rank_1 == csnp->rank_3 ||
+		(*i)->rank_1 == csnp->rank_4) {
+		rank_1_exists = true;
+	    }
+	    if ((*i)->rank_2 == csnp->rank_1 ||
+		(*i)->rank_2 == csnp->rank_2 ||
+		(*i)->rank_2 == csnp->rank_3 ||
+		(*i)->rank_2 == csnp->rank_4) {
+		rank_2_exists = true;
+	    }
+
+	    if (rank_1_exists == false) {
+		if (csnp->rank_3 == 0)
+		    csnp->rank_3 = (*i)->rank_1;
+		else 
+		    csnp->rank_4 = (*i)->rank_1;
+	    }
+	    if (rank_2_exists == false) {
+		if (csnp->rank_3 == 0)
+		    csnp->rank_3 = (*i)->rank_2;
+		else 
+		    csnp->rank_4 = (*i)->rank_2;
+	    }
+
+	    columns[(*i)->col] = make_pair("both", csnp);
+	} else {
 	    columns[(*i)->col] = make_pair("sample", *i);
+	}
     }
 
     for (c = columns.begin(); c != columns.end(); c++) 
@@ -763,9 +816,11 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
 	SNP *snp    = new SNP;
 	snp->col    = (*k).second->col;
-	snp->lratio = (*k).second->lratio;
+	snp->lratio = 0.0;
 	snp->rank_1 = (*k).second->rank_1;
 	snp->rank_2 = (*k).second->rank_2;
+	snp->rank_3 = (*k).second->rank_3;
+	snp->rank_4 = (*k).second->rank_4;
 
 	this->snps.push_back(snp);
     }
@@ -863,14 +918,24 @@ int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofs
     //
     // Output the SNPs associated with the catalog tag
     //
-    for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++)
+    char rank_3[2], rank_4[2];
+    rank_3[1] = '\0';
+    rank_4[1] = '\0';
+
+    for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
+	rank_3[0] = (*snp_it)->rank_3 == 0 ? '\0' : (*snp_it)->rank_3;
+	rank_4[0] = (*snp_it)->rank_4 == 0 ? '\0' : (*snp_it)->rank_4;
+
 	snp_file << "0\t" << 
 	    batch_id          << "\t" <<
 	    tag->id          << "\t" << 
 	    (*snp_it)->col    << "\t" << 
 	    (*snp_it)->lratio << "\t" << 
 	    (*snp_it)->rank_1 << "\t" << 
-	    (*snp_it)->rank_2 << "\n";
+	    (*snp_it)->rank_2 << "\t" << 
+	    rank_3            << "\t" << 
+	    rank_4            << "\n";
+    }
 
     //
     // Output the alleles associated with the two matched tags
