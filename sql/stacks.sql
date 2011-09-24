@@ -34,6 +34,8 @@ create table catalog_snps (
        lratio      float,
        rank_1	   char(1),
        rank_2	   char(1),
+       rank_3	   char(1),
+       rank_4	   char(1),
        INDEX       batch_index (batch_id),
        INDEX       tag_index (tag_id)
 );
@@ -122,6 +124,8 @@ create table snps (
        lratio      float,
        rank_1	   char(1),
        rank_2	   char(1),
+       rank_3	   char(1),
+       rank_4	   char(1),
        INDEX       samp_index (sample_id),
        INDEX       tag_index (tag_id)
 );
