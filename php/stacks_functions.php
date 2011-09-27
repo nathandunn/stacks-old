@@ -185,7 +185,7 @@ function print_snps($consensus, $seq, $snps, $wrap) {
     return $s;
 }
 
-function print_snps_errs($consensus, $sequence, $snps) {
+function print_snps_errs($consensus, $sequence, $snps, $cat_snps) {
     $str = "";
     $con = str_split($consensus);
     $seq = str_split($sequence);
@@ -200,6 +200,8 @@ function print_snps_errs($consensus, $sequence, $snps) {
 	    else
 		$str .= "<span class=\"rank_2\">$seq[$i]</span>";
 
+	} else if (isset($cat_snps[$i])) {
+		$str .= "<span class=\"cat_snp\">$seq[$i]</span>";
 	} else {
 	    // Does this nucleotide equal the consensus nucleotide at position $i?
 	    if ($con[$i] == $seq[$i] || $seq[$i] == "N")
