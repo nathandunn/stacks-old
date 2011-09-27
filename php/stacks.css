@@ -122,12 +122,26 @@ h4.info_head a:hover {
     cursor: pointer;
 }
 
-table.filter {
-    width: 80%;
+table.loc_filter {
+    width: 100%;
+    vertical-align: top;
     margin-left: auto;
     margin-right: auto;
     border: thin solid black;
     background-color: #eeeeee;
+    padding-right: 10px;
+    height: 160px;
+}
+
+table.filter {
+    width: 100%;
+    vertical-align: top;
+    margin-left: auto;
+    margin-right: auto;
+    border: thin solid black;
+    background-color: #eeeeee;
+    padding-left: 10px;
+    height: 160px;
 }
 
 table.filter td {
@@ -136,11 +150,13 @@ table.filter td {
     padding-bottom: 6px;
 }
 
-table.filter td.active_filter {
+table.filter td.active_filter,
+table.loc_filter td.active_filter {
     background-color: #a93535;
 }
 
-table.filter td.active_filter a:hover {
+table.filter td.active_filter a:hover,
+table.loc_filter td.active_filter a:hover {
     color: #ffffff;
 }
 
@@ -196,8 +212,7 @@ td.seq div.seq {
 }
 
 table.radtag { 
-    margin-left: auto;
-    margin-right: auto;
+    width: 100%;
     border-collapse: collapse;
 }
 
@@ -214,6 +229,7 @@ table.radtag td {
 table.radtag td.num { 
     text-align: center;
     font-size: smaller;
+    width: 5%;
 }
 
 table.radtag td.con { 
@@ -225,24 +241,28 @@ table.radtag td.primary {
     padding-left: 3em;
     font-size: smaller;
     color: #32773f;
+    width: 15%;
 }
 
 table.radtag td.secondary {
     padding-left: 3em;
     font-size: smaller; 
     color: #870214;
+    width: 15%;
 }
 
 table.radtag td.tertiary { 
     padding-left: 3em;
     font-size: smaller;
     color: #3d5aff;
+    width: 15%;
 }
 
 table.radtag td.id { 
     font-family: monospace;
     text-align: right;
     padding-right: 4px;
+    width: 20%;
 }
 
 table.radtag td.tag { 
@@ -250,6 +270,22 @@ table.radtag td.tag {
     text-align: left;
     border-left: thin solid black;
     padding-left: 4px;
+    width: 60%;
+}
+
+div.seq_frame_head {
+    margin-left: auto;
+    margin-right: auto;
+    width: 95%;
+    overflow-y: scroll;
+}
+
+div.seq_frame {
+    margin-left: auto;
+    margin-right: auto;
+    width: 95%;
+    overflow-y: scroll;
+    height: 35em;
 }
 
 table.catalog {
@@ -279,6 +315,11 @@ span.rank_2 {
 
 span.err {
     background-color: #fcdba7;
+    color: #29356c; 
+}
+
+span.cat_snp {
+    background-color: #d8f3ff;
     color: #29356c; 
 }
 
@@ -369,7 +410,7 @@ div#export_popup h3 {
 #stacks_filter  {
     margin-left: auto;
     margin-right: auto;
-    width: 90%;
+    width: 80%;
     padding-bottom: 20px;
 }
 

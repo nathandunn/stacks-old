@@ -71,6 +71,12 @@ $query =
 $db['snp_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['snp_sth'], __FILE__, __LINE__);
 
+$query = 
+  "SELECT chr, max_len FROM chr_index " . 
+  "WHERE batch_id=?";
+$db['chrs_sth'] = $db['dbh']->prepare($query);
+check_db_error($db['chrs_sth'], __FILE__, __LINE__);
+
 $query =
     "SELECT max(ests) as ests, max(pe_radtags) as pe_radtags, max(blast_hits) as blast_hits " . 
     "FROM catalog_index WHERE batch_id=?";
@@ -345,7 +351,7 @@ EOQ;
       print 
 	"<td class=\"seq\">\n" .
 	"<div class=\"seq\">$s</div>\n" .
-	"<div class=\"gloc\">Chr: $row[chr], " . print_bp($row['bp']) . "</div>\n" .
+	"<div class=\"gloc\">Chr: $row[chr], <acronym title=\"" . number_format($row['bp']) . "bp\">" . print_bp($row['bp']) . "</acronym></div>\n" .
 	"</td>\n";
     } else {
       print "<td class=\"seq\"><div class=\"seq\">$s</div></td>\n";
@@ -388,7 +394,7 @@ echo <<< EOQ
     <iframe id="{$row['tag_id']}_iframe" 
             frameborder="0" 
             scrolling="no" 
-            onload="this.style.height = this.contentDocument.height + 'px';" 
+            onload="this.style.height = this.contentWindow.document.body.offsetHeight + 'px';"
             src=""></iframe>
   </td>
 </tr>
@@ -397,7 +403,7 @@ echo <<< EOQ
     <iframe id="{$row['tag_id']}_gtypes_iframe" 
             frameborder="0" 
             scrolling="no" 
-            onload="this.style.height = (this.contentDocument.height+25) + 'px';" 
+            onload="this.style.height = (this.contentWindow.document.body.offsetHeight+25) + 'px';" 
             src=""></iframe>
   </td>
 </tr>
@@ -406,7 +412,7 @@ echo <<< EOQ
     <iframe id="{$row['tag_id']}_blast_iframe" 
             frameborder="0" 
             scrolling="no" 
-            onload="this.style.height = (this.contentDocument.height+25) + 'px';" 
+            onload="this.style.height = (this.contentWindow.document.body.offsetHeight+25) + 'px';" 
             src=""></iframe>
   </td>
 </tr>
@@ -657,7 +663,9 @@ EOQ;
 function write_filter($cols) {
     global $img_path, $root_path, $display;
 
-    $hidden_vars  = generate_hidden_form_vars("filter");
+    $max_chr_len = 0;
+    $hidden_vars = generate_hidden_form_vars("filter");
+    $chrs        = fetch_chrs($max_chr_len);
 
     $filters = array("cata"  => array(),
 		     "alle"  => array(),
@@ -667,6 +675,7 @@ function write_filter($cols) {
 		     "vprog" => array(),
 		     "mark"  => array(),
 		     "gcnt"  => array(),
+		     "loc"   => array(),
                      "est"   => array(),
                      "pe"    => array(),
                      "blast" => array());
@@ -678,13 +687,19 @@ function write_filter($cols) {
     $fvp = isset($display['filter_vprog']) ? $display['filter_vprog'] : "";
     $fgc = isset($display['filter_gcnt'])  ? $display['filter_gcnt'] : "";
     $fma = isset($display['filter_mark'])  ? $display['filter_mark'] : "";
+    $fch = isset($display['filter_chr'])   ? $display['filter_chr']  : "";
+    $fsb = isset($display['filter_sbp'])   ? $display['filter_sbp']  : 0;
+    $feb = isset($display['filter_ebp'])   ? $display['filter_ebp']  : $max_chr_len;
 
-    $alle_ctl  = generate_element_select("filter_alle",  array(1, 2, 3, 4), $fal, "");
-    $snps_ctl  = generate_element_select("filter_snps",  array(1, 2, 3, 4, 8), $fsn, "");
-    $pare_ctl  = generate_element_select("filter_pare",  array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18), $fpa, "");
+    $alle_ctl  = generate_element_select("filter_alle",  range(1, 8),   $fal, "");
+    $snps_ctl  = generate_element_select("filter_snps",  range(1, 8),   $fsn, "");
+    $pare_ctl  = generate_element_select("filter_pare",  range(1, 100), $fpa, "");
     $prog_ctl  = generate_element_select("filter_prog",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fpr, "");
     $vprog_ctl = generate_element_select("filter_vprog", array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fvp, "");
     $gcnt_ctl  = generate_element_select("filter_gcnt",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fgc, "");
+    $chr_ctl   = generate_element_select("filter_chr", $chrs, $fch, "");
+    $sbp_ctl   = generate_element_select("filter_sbp", range(0, $max_chr_len), $fsb, "");
+    $ebp_ctl   = generate_element_select("filter_ebp", range(0, $max_chr_len), $feb, "");
     $mark_ctl  = generate_element_select("filter_mark", 
                                          array('Any', 'aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'), 
                                          $fma, "");
@@ -712,6 +727,47 @@ function write_filter($cols) {
 <div id="stacks_filter">
 <form id="filter_results" name="filter_results" method="get" action="$root_path/catalog.php">
 $hidden_vars
+
+<table style="width: 100%; vertical-align: top;">
+<tr>
+EOQ;
+
+    if (count($chrs) > 0) {
+      echo <<< EOQ
+<td style="width: 25%;">
+<table class="loc_filter">
+<tr>
+  <td {$filters['loc']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="loc" onchange="rebuild_display_select()" {$filters['loc']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'loc')">
+      <acronym title="Filter by genomic location">Location</acronym>:</a></td>
+  <td {$filters['loc']['tr']}>
+      $chr_ctl
+  </td>
+</tr>
+<tr>
+  <td {$filters['loc']['tr']}><span style="padding-left: 1.5em;">Start:</span></td>
+  <td {$filters['loc']['tr']}>
+      $sbp_ctl Mb
+  </td>
+</tr>
+<tr>
+  <td {$filters['loc']['tr']}><span style="padding-left: 1.5em;">End:</span></td>
+  <td {$filters['loc']['tr']}>
+      $ebp_ctl Mb
+  </td>
+</tr>
+<tr>
+    <td>&nbsp;</td>
+</tr>
+</table>
+</td>
+
+EOQ;
+    }
+
+    echo <<< EOQ
+<td>
 <table class="filter">
 <tr>
   <td {$filters['cata']['tr']}>
@@ -861,6 +917,9 @@ EOQ;
 EOQ;
     echo <<< EOQ
 </table>
+</td>
+</tr>
+</table>
 </form>
 </div>
 
@@ -900,6 +959,10 @@ function process_filter(&$display_params) {
 	} else if ($filter == "gcnt") {
 	    $display_params['filter_gcnt'] = $_GET['filter_gcnt'];
 
+	} else if ($filter == "loc") {
+	    $display_params['filter_chr'] = $_GET['filter_chr'];
+	    $display_params['filter_sbp'] = $_GET['filter_sbp'];
+	    $display_params['filter_ebp'] = $_GET['filter_ebp'];
 	}
     }
 }
@@ -942,6 +1005,11 @@ function prepare_filter_parameters($display_params, &$param) {
 	} else if ($filter == "gcnt") {
 	    array_push($param, $display_params['filter_gcnt']);
 	
+	} else if ($filter == "loc") {
+	    array_push($param, $display_params['filter_chr']);
+	    array_push($param, $display_params['filter_sbp'] * 1000000);
+	    array_push($param, $display_params['filter_ebp'] * 1000000);
+	
 	} else if ($filter == "mark") {
 	  if ($display_params['filter_mark'] == "Any") 
 	    array_push($param, "%/%");
@@ -964,7 +1032,8 @@ function apply_query_filters($display_params) {
               "est"   => "(ests > ?)",
               "pe"    => "(pe_radtags > ?)",
               "blast" => "(blast_hits > ?)",
-	      "gcnt"  => "(geno_cnt >= ?)");
+	      "gcnt"  => "(geno_cnt >= ?)",
+	      "loc"   => "(catalog_index.chr = ? && catalog_index.bp >= ? && catalog_index.bp <= ?)");
 
     $filters = $display_params['filter_type'];
 
@@ -979,6 +1048,25 @@ function apply_query_filters($display_params) {
     }
 
     return $query;
+}
+
+function fetch_chrs(&$max_len) {
+    global $db, $batch_id;
+
+    $max_len = 0;
+
+    $chrs = array();
+    $res = $db['chrs_sth']->execute($batch_id);
+    check_db_error($res, __FILE__, __LINE__);
+
+    while ($row = $res->fetchRow()) {
+      if ($row['max_len'] > $max_len) 
+	$max_len = $row['max_len'];
+
+      array_push($chrs, $row['chr']);
+    }
+
+    return $chrs;
 }
 
 ?>
