@@ -163,7 +163,8 @@ create table markers (
        progeny    int unsigned not null default 0,
        max_pct    float,
        ratio      varchar(128),
-       f          float
+       f          float,
+       geno_map   varchar(128)
 );
 
 create table sequence (
