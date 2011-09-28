@@ -345,7 +345,18 @@ span.dark_scale {
     background-color: #bbd5ff;
 }
 
+table.genotypes td.gtype_toggle {
+    font-size: smaller;
+    text-align: right;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+}
+
 table.genotypes {
+    padding: 1em; 
+    margin-top: 0.5em;
+    margin-bottom: 1em;
     margin-left: auto;
     margin-right: auto;
     border-collapse: collapse;
