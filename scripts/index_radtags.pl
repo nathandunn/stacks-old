@@ -189,7 +189,11 @@ sub gen_cat_index {
 	#
 	# Record the chromosomes present in this dataset (if any).
 	#
-	$chrs{$row->{'batch_id'}}->{$row->{'chr'}}++ if (length($row->{'chr'}) > 0);
+	if (length($row->{'chr'}) > 0) {
+	    $chrs{$row->{'batch_id'}}->{$row->{'chr'}} = 
+		$row->{'bp'} > $chrs{$row->{'batch_id'}}->{$row->{'chr'}} ?
+		$row->{'bp'} : $chrs{$row->{'batch_id'}}->{$row->{'chr'}};
+	}
 
 	print $fh
 	    "0\t",
@@ -220,15 +224,22 @@ sub gen_cat_index {
     import_sql_file($catalog_file, 'catalog_index');
 
     if (scalar(keys %chrs) > 0) {
-	my ($batch_id, $chr);
+	my ($batch_id, $chr, $max);
 	my ($fh, $chr_file) = tempfile("chr_index_XXXXXXXX", UNLINK => 1, TMPDIR => 1);
 
 	foreach $batch_id (sort keys %chrs) {
 	    foreach $chr (sort keys %{$chrs{$batch_id}}) {
+		#
+		# Round up the maximum chromosome length to the nearest megabase.
+		#
+		$max  = int($chrs{$batch_id}->{$chr} / 1000000);
+		$max += $chrs{$batch_id}->{$chr} % 1000000 > 0 ? 1 : 0;
+
 		print $fh 
 		    "0\t",
 		    $batch_id, "\t",
-		    $chr, "\n";
+		    $chr, "\t",
+		    $max, "\n";
 	    }
 	}
 
