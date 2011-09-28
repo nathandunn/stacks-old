@@ -190,7 +190,7 @@ int main (int argc, char* argv[]) {
     }
 
     //
-    // Output the observe haplotypes.
+    // Output the observed haplotypes.
     //
     write_generic(catalog, pmap, samples, parent_ids, false);
 
@@ -1334,6 +1334,7 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
     map<int, CLocus *>::iterator it;
     CLocus *loc;
     char    f[id_len], g[id_len];
+    stringstream gtype_map;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
@@ -1348,6 +1349,14 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
 	sprintf(f, "%0.1f", max);
 	sprintf(g, "%0.2f", loc->f);
 
+	//
+	// Record the haplotype to genotype map.
+	//
+	map<string, string>::iterator j;
+	gtype_map.str("");
+	for (j = loc->gmap.begin(); j != loc->gmap.end(); j++)
+	    gtype_map << j->first << ":" << j->second << ";";
+
 	fh << 0 << "\t" 
 	   << batch_id << "\t" 
 	   << loc->id << "\t" 
@@ -1355,7 +1364,8 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
 	   << total << "\t"
 	   << f << "\t"
 	   << freq << "\t"
-	   << g << "\n";
+	   << g << "\t"
+           << gtype_map.str() <<"\n";
     }
 
     fh.close();
