@@ -76,7 +76,9 @@ int main (int argc, char* argv[]) {
     //dump_merged_stacks(merged);
 
     // Call the consensus sequence again, now that remainder tags have been merged.
+    cerr << "Identifying polymorphic sites and calling consensus sequences...";
     call_consensus(merged, unique, true);
+    cerr << "done.\n";
 
     count_raw_reads(unique, merged);
 
@@ -264,7 +266,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
     std::ofstream alle(all_file.c_str());
     int id;
 
-    char *buf = new char[m.begin()->second->len + 1];
+    char *buf; // = new char[m.begin()->second->len + 1];
 
     for (i = m.begin(); i != m.end(); i++) {
 	tag_1 = i->second;
@@ -291,11 +293,13 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 	id = 0;
 	for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++) {
 	    tag_2  = u[*k];
+	    buf = tag_2->seq->seq();
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << tag_2->seq->seq(buf) << "\t\t\t\n";
+		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\n";
 	    }
 	    id++;
+	    delete [] buf;
 	}
 
 	// Write out any SNPs detected in this unique tag.
@@ -313,8 +317,6 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 	    alle << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << t->first << "\t" << pct << "\t" << t->second << "\n";
 	}
     }
-
-    delete [] buf;
 
     tags.close();
     snps.close();
