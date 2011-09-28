@@ -1,3 +1,13 @@
+	Web interface updates: 
+	  * If the RAD tags are aligned to a reference genome, a filter is now available to view markers
+	    from a particular genomic region.
+	  * The individual RAD tag viewer now scrolls while keeping the scale view and consensus sequence
+	    always visible. 
+	  * The RAD tag viewer now highlights columns for which the catalog locus shows a SNP, but the
+	    RAD tag does not.
+	  * In the genotype viewer, the map between the haplotype and genotype is now available.
+	  * The depth of each RAD tag is now visible in the genotype viewer.
+
 Stacks 0.995 - September 23, 2011
 ---------------------------------
 	Feature: sstacks can now handle samples and catalogs that have different length reads. 

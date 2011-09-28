@@ -59,6 +59,12 @@ $query =
 $db['all_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['all_sth'], __FILE__, __LINE__);
 
+$query = 
+    "SELECT geno_map FROM markers " . 
+    "WHERE batch_id=? AND catalog_id=? ";
+$db['map_sth'] = $db['dbh']->prepare($query);
+check_db_error($db['map_sth'], __FILE__, __LINE__);
+
 $page_title = "Catalog RAD-Tag Viewer";
 write_compact_header($page_title);
 
@@ -84,22 +90,54 @@ while ($row = $result->fetchRow()) {
 
     print "    Column: $row[col]; $snp<br />\n";
 }
-print "  </td>\n";
-
-$result = $db['all_sth']->execute(array($batch_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+print "  </td>\n" .
+      "  <td>\n";
 
 $alleles = array();
 $i       = 0;
 
-print "  <td>\n";
-while ($row = $result->fetchRow()) {
-    $alleles[$row['allele']] = $colors[$i % $color_size];
+$result = $db['map_sth']->execute(array($batch_id, $tag_id));
+check_db_error($result, __FILE__, __LINE__);
 
-    print "  <span style=\"color: " . $alleles[$row['allele']] . ";\">$row[allele]</span><br />\n";
-
-    $i++;
+if ($result->numRows() > 0) {
+  $row = $result->fetchRow();
+} else {
+  $row = array();
 }
+
+if (isset($row['geno_map'])) {
+  $map = array();
+
+
+  $genos = explode(";", $row['geno_map']);
+  foreach ($genos as $g) {
+      if (strlen($g) == 0) continue;
+      $m = explode(":", $g);
+      $map[$m[0]] = $m[1];
+      $alleles[$m[0]] = $colors[$i % $color_size];
+      $i++;
+  }
+  asort($map);
+  foreach ($map as $hapl => $geno) {
+      print 
+	"  <span style=\"color: " . $alleles[$hapl] . ";\">" . 
+	"<acronym title=\"Genotype\">$geno</acronym> : " . 
+	"<acronym title=\"Observed Haplotype\">$hapl</acronym></span><br />\n";
+  }
+
+} else {
+    $result = $db['all_sth']->execute(array($batch_id, $tag_id));
+    check_db_error($result, __FILE__, __LINE__);
+
+    while ($row = $result->fetchRow()) {
+        $alleles[$row['allele']] = $colors[$i % $color_size];
+
+	print "  <span style=\"color: " . $alleles[$row['allele']] . ";\">$row[allele]</span><br />\n";
+
+	$i++;
+    }
+}
+
 print "  </td>\n";
 
 $result = $db['mat_sth']->execute(array($batch_id, $tag_id));
