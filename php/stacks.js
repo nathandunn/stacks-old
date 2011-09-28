@@ -88,3 +88,18 @@ function toggle_cb(form_id, value) {
             else
                 form_obj.elements[i].checked = true;
 }
+
+function toggle_genotypes(table_id, type) {
+    var table_obj = document.getElementById(table_id); 
+
+    divs = table_obj.getElementsByTagName("div");
+
+    for(i = 0; i < divs.length; i++) {
+        if (divs[i].id.substr(0, 3) == type) { 
+            if (divs[i].style.display == "none")
+                divs[i].style.display = "";
+            else
+                divs[i].style.display = "none";
+	}
+    }
+}

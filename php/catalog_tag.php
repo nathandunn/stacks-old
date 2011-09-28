@@ -40,7 +40,7 @@ $display['pp']       = $per_page;
 // Prepare some SQL queries
 //
 $query = 
-    "SELECT samples.id, samples.sample_id, samples.type, file, tag_id, allele " . 
+    "SELECT samples.id, samples.sample_id, samples.type, file, tag_id, allele, depth " . 
     "FROM matches " . 
     "JOIN samples ON (matches.sample_id=samples.id) " . 
     "WHERE matches.batch_id=? AND catalog_id=? ORDER BY samples.id";
@@ -109,17 +109,27 @@ while ($row = $result->fetchRow()) {
     $a = array('id'     => $row['id'],
                'file'   => $row['file'], 
                'allele' => $row['allele'], 
-               'tag_id' => $row['tag_id']);
+               'tag_id' => $row['tag_id'],
+	       'depth'  => $row['depth']);
     if (!isset($gtypes[$row['file']]))
         $gtypes[$row['file']] = array();
 
     array_push($gtypes[$row['file']], $a);
 }
 
-print 
-    "<td style=\"text-align: right;\">\n" .
-    "<table class=\"genotypes\" style=\"padding: 1em; margin-top: 1em; margin-bottom: 1em;\">\n" .
-    "<tr>\n";
+echo <<< EOQ
+<td style="text-align: right;">
+
+<table id="locus_gtypes" class="genotypes">
+<tr>
+  <td colspan="10" class="gtype_toggle">
+    <strong>View:</strong><input type="checkbox" checked="checked" onclick="toggle_genotypes('locus_gtypes', 'hap')" />Haplotypes
+    <input type="checkbox" onclick="toggle_genotypes('locus_gtypes', 'dep')" /> Allele Depths
+  </td>
+</tr>
+<tr>
+
+EOQ;
 
 $i        = 0;
 $num_cols = count($gtypes) < 10 ? count($gtypes) : 10;
@@ -131,18 +141,24 @@ foreach ($gtypes as $sample => $match) {
         "  <td>" .
         "<span class=\"title\">" . ucfirst(str_replace("_", " ", $match[0]['file'])) . "</span><br />\n";
 
-    $strs = array();
+    $hap_strs = array();
+    $dep_strs = array();
 
     foreach ($match as $m) {
         $a = 
             "<a target=\"blank\" href=\"$root_path/tag.php?db=$database&batch_id=$batch_id&sample_id=$m[id]&tag_id=$m[tag_id]\" " . 
             "title=\"#$m[tag_id]\" style=\"color: " . $alleles[$m['allele']] . ";\">$m[allele]</a>";
-        array_push($strs, $a);
+        array_push($hap_strs, $a);
+        $a = 
+            "<a target=\"blank\" href=\"$root_path/tag.php?db=$database&batch_id=$batch_id&sample_id=$m[id]&tag_id=$m[tag_id]\" " . 
+            "title=\"#$m[tag_id]\" style=\"color: " . $alleles[$m['allele']] . ";\">$m[depth]</a>";
+        array_push($dep_strs, $a);
     }
 
-    $str = implode(" / ", $strs);
+    $hap_str = implode(" / ", $hap_strs);
+    $dep_str = implode(" / ", $dep_strs);
     print
-        $str .
+        "<div id=\"hap_{$i}\">$hap_str</div><div id=\"dep_{$i}\" style=\"display: none;\">$dep_str</div>" .
         "</td>\n";
 
     if ($i % $num_cols == 0)
