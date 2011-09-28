@@ -394,7 +394,7 @@ echo <<< EOQ
     <iframe id="{$row['tag_id']}_iframe" 
             frameborder="0" 
             scrolling="no" 
-            onload="this.style.height = this.contentWindow.document.body.offsetHeight + 'px';"
+            onload="this.style.height = (this.contentWindow.document.body.offsetHeight+25) + 'px';"
             src=""></iframe>
   </td>
 </tr>
