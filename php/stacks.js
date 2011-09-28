@@ -89,7 +89,7 @@ function toggle_cb(form_id, value) {
                 form_obj.elements[i].checked = true;
 }
 
-function toggle_genotypes(table_id, type) {
+function toggle_genotypes(catalog_id, table_id, type) {
     var table_obj = document.getElementById(table_id); 
 
     divs = table_obj.getElementsByTagName("div");
@@ -102,4 +102,11 @@ function toggle_genotypes(table_id, type) {
                 divs[i].style.display = "none";
 	}
     }
+
+    //
+    // Adjust the height of the parent iframe to possibly accomodate more data
+    //
+    var iframe_obj = parent.document.getElementById(catalog_id + "_iframe");
+    if (iframe_obj)
+	iframe_obj.style.height = (this.document.body.offsetHeight+25) + 'px';
 }

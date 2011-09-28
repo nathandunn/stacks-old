@@ -161,8 +161,8 @@ echo <<< EOQ
 <table id="locus_gtypes" class="genotypes">
 <tr>
   <td colspan="10" class="gtype_toggle">
-    <strong>View:</strong><input type="checkbox" checked="checked" onclick="toggle_genotypes('locus_gtypes', 'hap')" />Haplotypes
-    <input type="checkbox" onclick="toggle_genotypes('locus_gtypes', 'dep')" /> Allele Depths
+    <strong>View:</strong><input type="checkbox" checked="checked" onclick="toggle_genotypes($tag_id, 'locus_gtypes', 'hap')" />Haplotypes
+    <input type="checkbox" onclick="toggle_genotypes($tag_id, 'locus_gtypes', 'dep')" /> Allele Depths
   </td>
 </tr>
 <tr>
