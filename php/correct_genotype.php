@@ -77,10 +77,16 @@ if ($row = $result->fetchRow()) {
 
 $corrected = "false";
 
+if ($gtype == "clr") {
+    $result = $db['del_sth']->execute($sample['corrected_id']);
+    check_db_error($result, __FILE__, __LINE__);
+
+    $corrected = "false";
+    $gtype = $sample['genotype'];
 //
 // Is this genotype being reset to the original value? If so, delete the corrected record.
 //
-if ($gtype == $sample['genotype'] && 
+} else if ($gtype == $sample['genotype'] && 
     strlen($sample['corrected_id']) > 0) {
     $result = $db['del_sth']->execute($sample['corrected_id']);
     check_db_error($result, __FILE__, __LINE__);
