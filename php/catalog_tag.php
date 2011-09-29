@@ -41,7 +41,7 @@ $display['pp']       = $per_page;
 //
 $marker_types = array('ab/--' => array('aa', 'bb', '-'),
 		      '--/ab' => array('aa', 'bb', '-'),
-		      'ab/aa' => array('aa', 'ab', '-'),
+		      'ab/aa' => array('aa', 'ab', '-', 'clr'),
                       'aa/ab' => array('aa', 'ab', '-'),
                       'ab/ab' => array('aa', 'ab', 'bb', '-'),
                       'ab/ac' => array('aa', 'ab', 'ac', 'bc', '-'),
