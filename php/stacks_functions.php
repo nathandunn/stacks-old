@@ -67,6 +67,7 @@ function write_compact_header($page_title) {
   <title>$site_title: $page_title</title>
   <link rel="stylesheet" type="text/css" href="$root_path/stacks.css" />
   <script type="text/javascript" src="$root_path/stacks.js"></script>
+  <script type="text/javascript" src="$root_path/annotate.js"></script>
 </head>
 
 <body>

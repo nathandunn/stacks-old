@@ -101,3 +101,81 @@ function process_annotation() {
         }
     }
 }
+
+function toggle_correction(id) {
+    var div_obj = document.getElementById(id + "_div");
+    var sel_obj = document.getElementById(id + "_sel");
+
+    if (div_obj.style.display == "none") {
+        div_obj.style.display = "";
+	sel_obj.style.display = "none";
+    }
+    else {
+        div_obj.style.display = "none";
+	sel_obj.style.display = "";
+    }
+}
+
+function correct_genotype(id, url) {
+    //
+    // Fetch the marker annotation
+    //
+    var sel_obj = document.getElementById(id); 
+    url = url + "&" + "gtype=" + sel_obj.options[sel_obj.selectedIndex].text;
+
+    // 
+    // Prepare and send XMLHttpRequest Object.
+    //
+    http_req = false;
+
+    try {
+	http_req = new XMLHttpRequest();
+    } catch(e) {
+	http_req = false;
+    }
+
+    if (http_req) {
+	http_req.onreadystatechange = process_correction;
+	http_req.open("GET", url, true);
+	http_req.send("");
+    }
+
+    toggle_correction(id);
+}
+
+function process_correction() {
+    //
+    // Possible readyState values:
+    // 0 = uninitialized
+    // 1 = loading
+    // 2 = loaded
+    // 3 = interactive
+    // 4 = complete
+    //
+    if (http_req.readyState == 4) {
+
+        // Check that the status is "OK"
+        if (http_req.status == 200) {
+
+            var xml_doc = http_req.responseXML;
+            var tag_obj = xml_doc.getElementsByTagName("div_id");
+            var div_id  = tag_obj[0].childNodes[0].nodeValue;
+            var cor_obj = xml_doc.getElementsByTagName("corrected");
+            var cor     = cor_obj[0].childNodes[0].nodeValue;
+            var txt_obj = xml_doc.getElementsByTagName("gtype");
+            var gtype   = txt_obj[0].childNodes[0].nodeValue;
+
+            var div_obj = document.getElementById(div_id + "_div");
+	    var txt;
+	    if (cor == "true")
+		txt = "<span class=\"corrected\">" + gtype + "</span>";
+	    else
+		txt = gtype;
+
+            div_obj.innerHTML = "<a onclick=\"toggle_correction('" + div_id + "')\">" + txt + "</a>";
+
+        } else {
+            alert("There was a problem retrieving the XML data:\n" + http_req.statusText);
+        }
+    }
+}

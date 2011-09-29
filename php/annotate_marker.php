@@ -76,7 +76,7 @@ if ($row = $result->fetchRow()) {
 
 if ($external_id != $ext_id) {
     //
-    // Is this genotype being reset to the original value? If so, delete the corrected record.
+    // Is this annotation being reset to the original value? If so, delete the corrected record.
     //
     if (strlen($external_id) > 0 && strlen($ext_id) == 0) {
         $result = $db['del_sth']->execute($sql_id);
