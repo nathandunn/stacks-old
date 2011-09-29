@@ -10,6 +10,7 @@
 	  * The genotype viewer has now been integrated with the observed haplotype viewer. You can 
 	    make changes/corrections to genotypes directly now, no need to submit a form and wait for 
 	    the page to reload.
+	Bugfix: process_radtags wasn't properly parsing the names of v1 Illumnina BUSTARD files.
 
 Stacks 0.995 - September 23, 2011
 ---------------------------------

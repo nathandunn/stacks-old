@@ -306,14 +306,19 @@ int impute_haplotype(string query_haplotype,
     }
 
     //
-    // If, after examining all the available SNPs in the query haplotype, there is
-    // still more than a single possible catalog haplotype, then we can't impute it.
+    // If there is only one left, make sure what we have of the haplotype does match
+    // and its not simply an erroneously called haplotype.
     //
-    if (cur.size() == 1) {
+    if (cur.size() == 1 && 
+	strncmp(cur[0].c_str(), query_haplotype.c_str(), max_len) == 0) {
 	match = cur[0];
 	return 1;
     }
 
+    //
+    // If, after examining all the available SNPs in the query haplotype, there is
+    // still more than a single possible catalog haplotype, then we can't impute it.
+    //
     return 0;
 }
 
