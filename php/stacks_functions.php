@@ -237,11 +237,15 @@ function generate_key_element_select($name, $elements, $selected_key, $javascrip
     return $ctl;
 }
 
-function generate_element_select($name, $elements, $selected_ele, $javascript) {
+function generate_element_select($name, $elements, $selected_ele, $change_js, $blur_js = "") {
     $script_code = "";
 
-    if (strlen($javascript) > 0) {
-        $script_code = " onchange=\"$javascript\"";
+    if (strlen($change_js) > 0 && strlen($blur_js) > 0) {
+        $script_code = " onchange=\"$change_js\" onblur=\"$blur_js\"";
+    } else if (strlen($change_js) > 0) {
+        $script_code = " onchange=\"$change_js\"";
+    } else if (strlen($blur_js) > 0) {
+        $script_code = " onblur=\"$blur_js\"";
     }
 
     $ctl = "  <select id=\"$name\" name=\"$name\"" . $script_code . ">\n";

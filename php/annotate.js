@@ -105,6 +105,7 @@ function process_annotation() {
 function toggle_correction(id) {
     var div_obj = document.getElementById(id + "_div");
     var sel_obj = document.getElementById(id + "_sel");
+    var s_obj   = document.getElementById(id);
 
     if (div_obj.style.display == "none") {
         div_obj.style.display = "";
@@ -113,7 +114,16 @@ function toggle_correction(id) {
     else {
         div_obj.style.display = "none";
 	sel_obj.style.display = "";
+	s_obj.focus();
     }
+}
+
+function cancel_correction(id) {
+    var div_obj = document.getElementById(id + "_div");
+    var sel_obj = document.getElementById(id + "_sel");
+
+    div_obj.style.display = "";
+    sel_obj.style.display = "none";
 }
 
 function correct_genotype(id, url) {

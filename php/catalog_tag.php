@@ -255,12 +255,13 @@ foreach ($htypes as $sample => $match) {
         $id      = "gtype_" . $batch_id . "_" . $tag_id . "_" . $gtypes[$sample]['id'];
 	$url     = "$root_path/correct_genotype.php?db=$database&batch_id=$batch_id&tag_id=$tag_id&sample_id=" . $gtypes[$sample]['id'];
 	$jscript = "correct_genotype('$id', '$url')";
+	$blur_js = "cancel_correction('$id')";
 
 	if (strlen($gtypes[$sample]['corrected']) > 0) {
-	    $sel = generate_element_select($id, $marker_types[$gtypes[$sample]['marker']], strtolower($gtypes[$sample]['corrected']), $jscript);
+  	    $sel = generate_element_select($id, $marker_types[$gtypes[$sample]['marker']], strtolower($gtypes[$sample]['corrected']), $jscript, $blur_js);
 	    $genotype = "<span class=\"corrected\">" . $gtypes[$sample]['corrected'] . "</span>";
 	} else {
-	    $sel = generate_element_select($id, $marker_types[$gtypes[$sample]['marker']], strtolower($gtypes[$sample]['genotype']), $jscript);
+	    $sel = generate_element_select($id, $marker_types[$gtypes[$sample]['marker']], strtolower($gtypes[$sample]['genotype']), $jscript, $blur_js);
 	    $genotype = $gtypes[$sample]['genotype'];
 	}
 
