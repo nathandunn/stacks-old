@@ -766,6 +766,8 @@ EOQ;
 EOQ;
     }
 
+    $cat_id_filter = isset($display['filter_cata']) ? $display['filter_cata'] : "";
+
     echo <<< EOQ
 <td>
 <table class="filter">
@@ -774,10 +776,10 @@ EOQ;
       <input type="checkbox" name="filter_type[]" value="cata" onchange="rebuild_display_select()" {$filters['cata']['sel']} /> 
       <a onclick="toggle_cb('filter_results', 'cata')">
       <acronym title="Show a locus with a particular ID.">Catalog ID</acronym>:</a>
-      <input name="filter_cata" value="$display[filter_cata]" size="15" />
+      <input name="filter_cata" value="$cat_id_filter" size="15" />
   </td>
   <td colspan="2" style="text-align: right; padding-right: 10px;">
-      <input type="submit" value="filter" onclick="update_page_state_form(this.form.id, 'page_state')" />
+      <input type="submit" value="filter" />
   </td>
 </tr>
 <tr>
@@ -1021,6 +1023,7 @@ function prepare_filter_parameters($display_params, &$param) {
 }
 
 function apply_query_filters($display_params) {
+    $query = "";
     $sql_filters =
 	array("cata"  => "(catalog_index.tag_id = ?)", 
 	      "alle"  => "(alleles >= ?)", 

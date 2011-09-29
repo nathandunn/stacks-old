@@ -7,6 +7,9 @@
 	    RAD tag does not.
 	  * In the genotype viewer, the map between the haplotype and genotype is now available.
 	  * The depth of each RAD tag is now visible in the genotype viewer.
+	  * The genotype viewer has now been integrated with the observed haplotype viewer. You can 
+	    make changes/corrections to genotypes directly now, no need to submit a form and wait for 
+	    the page to reload.
 
 Stacks 0.995 - September 23, 2011
 ---------------------------------

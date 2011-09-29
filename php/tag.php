@@ -203,7 +203,9 @@ if ($catalog_id >= 0) {
   check_db_error($result, __FILE__, __LINE__);
 
   while ($row = $result->fetchRow()) {
-    $cat_snps[$row['col']]++;
+      if (!isset($cat_snps[$row['col']]))
+  	  $cat_snps[$row['col']] = 0;
+      $cat_snps[$row['col']]++;
   }
 }
 
