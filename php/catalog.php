@@ -328,15 +328,6 @@ EOQ;
       $i++;
     }
 
-    if (strlen($ratio_parsed) > 0) {
-        $url = "$root_path/catalog_genotypes.php?db=$database&batch_id=$batch_id&tag_id=$row[tag_id]";
-        $ratio_parsed =
-            $ratio_parsed .
-            "<div class=\"catlink\"><img id=\"{$row['tag_id']}_gtypes_img\" src=\"$img_path/caret-u.png\" />" .
-            "<a onclick=\"toggle_aln_tr('{$row['tag_id']}_gtypes', '$img_path', '$url');\">" .
-            "view genotypes</a></div>";
-    }
-
     $url = "$root_path/sequence_blast.php?db=$database&batch_id=$batch_id&tag_id=$row[tag_id]";
     if ($row['blast_hits'] > 0 || $row['pe_radtags'] > 0 || $row['ests'] > 0) {
         $blast_hits_str =
@@ -395,15 +386,6 @@ echo <<< EOQ
             frameborder="0" 
             scrolling="no" 
             onload="this.style.height = (this.contentWindow.document.body.offsetHeight+25) + 'px';"
-            src=""></iframe>
-  </td>
-</tr>
-<tr id="{$row['tag_id']}_gtypes" style="display: none">
-  <td colspan="$num_cols">
-    <iframe id="{$row['tag_id']}_gtypes_iframe" 
-            frameborder="0" 
-            scrolling="no" 
-            onload="this.style.height = (this.contentWindow.document.body.offsetHeight+25) + 'px';" 
             src=""></iframe>
   </td>
 </tr>
