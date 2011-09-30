@@ -410,6 +410,8 @@ int process_singlet(map<string, ofstream *> &fhs, Read *href, map<string, map<st
     		return 0;
     	    }
     	}
+    } else {
+	barcode_log[href->barcode]["total"]++;
     }
 
     // Drop this sequence if it has any uncalled nucleotides
