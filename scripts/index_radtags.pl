@@ -37,6 +37,7 @@ my $db            = "";
 my $debug         = 0;
 my $catalog_index = 0;
 my $tag_index     = 0;
+my $radome_index  = 0;
 
 parse_command_line();
 
@@ -80,28 +81,42 @@ sub gen_cat_index {
     my ($fh, $catalog_file) = tempfile("catalog_index_XXXXXXXX", UNLINK => 1, TMPDIR => 1);
 
     my ($row, $tag, $count, $par_cnt, $pro_cnt, $allele_cnt, $marker, $valid_pro, 
-        $max_pct, $ratio, $ests, $pe_radtags, $blast_hits, $geno_cnt);
+        $max_pct, $ratio, $ests, $pe_radtags, $blast_hits, $geno_cnt, $ref_type, $ref_id, $bp);
 
-    my (%snps, %markers, %genotypes, %seqs, %hits, %parents, %progeny, %alleles, %chrs);
+    my (%snps, %markers, %genotypes, %seqs, %hits, %parents, %progeny, %alleles, %chrs, %radome);
 
-    print STDERR "  Fetching catalog SNPs...\n";
+    print STDERR "  Fetching catalog SNPs...";
     fetch_catalog_snps(\%sth, \%snps);
+    print STDERR "done.\n";
 
-    print STDERR "  Fetching markers...\n";
+    print STDERR "  Fetching markers...";
     fetch_markers(\%sth, \%markers);
+    print STDERR "done.\n";
 
-    print STDERR "  Fetching genotypes...\n";
+    print STDERR "  Fetching genotypes...";
     fetch_genotypes(\%sth, \%genotypes);
+    print STDERR "done.\n";
 
-    print STDERR "  Fetching associated sequences...\n";
+    print STDERR "  Fetching associated sequences...";
     sequence_matches(\%sth, \%seqs, \%hits);
+    print STDERR "done.\n";
 
-    print STDERR "  Fetching catalog matches...\n";
+    print STDERR "  Fetching catalog matches...";
     catalog_matches(\%sth, \%parents, \%progeny, \%alleles);
+    print STDERR "done.\n";
 
-    print STDERR "  Assembling catalog tags at the database...\n";
+    $ref_type = "";
+    $ref_id   = 0;
+    if ($radome_index) {
+	print STDERR "  Fetching reference RAD data...";
+	radome_ref(\%sth, \%radome);
+	print STDERR "done.\n";
+    }
+
+    print STDERR "  Assembling catalog tags at the database...";
     $sth->{'cat_tags'}->execute()
 	or die("Unable to select results from $db.\n");
+    print STDERR "done.\n";
 
     #my $num_rows = $sth->{'cat_tags'}->rows();
     #my $i = 1;
@@ -152,6 +167,28 @@ sub gen_cat_index {
 	    $allele_cnt = scalar(keys %{$alleles{$row->{'batch_id'}}->{$row->{'tag_id'}}});
 	} else {
 	    $allele_cnt = 0;
+	}
+
+	#
+	# Annotate the RAD site
+	#
+	if ($radome_index) {
+	    if (defined($radome{$row->{'chr'}}->{$row->{'bp'}})) {
+		$ref_type = $radome{$row->{'chr'}}->{$row->{'bp'}}->{'type'};
+		$ref_id   = $radome{$row->{'chr'}}->{$row->{'bp'}}->{'id'};
+	    } else {
+		#
+		# Check for a read aligned on the other strand.
+		#
+		$bp = length($row->{'seq'}) + $row->{'bp'} - 1;
+		if (defined($radome{$row->{'chr'}}->{$bp})) {
+		    $ref_type = $radome{$row->{'chr'}}->{$bp}->{'type'};
+		    $ref_id   = $radome{$row->{'chr'}}->{$bp}->{'id'}
+		} else {
+		    $ref_type = "genomic";
+		    $ref_id   = 0;
+		}
+	    }
 	}
 
         #
@@ -213,7 +250,9 @@ sub gen_cat_index {
             $blast_hits, "\t",
 	    $geno_cnt, "\t",
 	    $row->{'chr'}, "\t",
-	    $row->{'bp'}, "\n";
+	    $row->{'bp'}, "\t",
+	    $ref_type, "\t",
+	    $ref_id, "\n";
     }
 
     close($fh);
@@ -306,6 +345,27 @@ sub fetch_markers {
 	    $markers->{$row->{'batch_id'}} = {};
 	}
 	$markers->{$row->{'batch_id'}}->{$row->{'catalog_id'}} = $tag;
+    }
+}
+
+sub radome_ref {
+    my ($sth, $radome) = @_;
+
+    my ($row);
+
+    $sth->{'radome'}->execute()
+	or die("Unable to select results from $db.\n");
+
+    while ($row = $sth->{'radome'}->fetchrow_hashref()) {
+	if (!defined($radome->{$row->{'chr'}})) {
+	    $radome->{$row->{'chr'}} = {};
+	}
+
+	if (!defined($radome->{$row->{'chr'}}->{$row->{'bp'}}) || 
+	    $row->{'type'} eq "exon") {
+	    $radome->{$row->{'chr'}}->{$row->{'bp'}} = {'type' => $row->{'type'},
+							'id'   => $row->{'id'}};
+	}
     }
 }
 
@@ -563,6 +623,10 @@ sub prepare_sql_handles {
     $query = 
 	"SELECT batch_id, catalog_id FROM sequence_blast";
     $sth->{'cat_hits'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+   $query = 
+	"SELECT id, chr, bp, type FROM ref_radome";
+    $sth->{'radome'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 }
 
 sub close_sql_handles {
@@ -591,6 +655,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-s$/) { $sql_path = shift @ARGV; }
 	elsif ($_ =~ /^-c$/) { $catalog_index++; }
 	elsif ($_ =~ /^-t$/) { $tag_index++; }
+	elsif ($_ =~ /^-r$/) { $radome_index++; }
 	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {

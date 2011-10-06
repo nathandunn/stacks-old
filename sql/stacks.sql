@@ -207,3 +207,21 @@ create table chr_index (
        chr      varchar(32),
        max_len  int unsigned not null
 );
+
+create table ref_radome (
+       id       int unsigned not null primary key,
+       chr	varchar(32),
+       bp	int unsigned not null,
+       strand	enum('1', '-1'),
+       type	enum('genomic', 'exon', 'intron'),
+       gene	varchar(32),
+       ext_id	varchar(32),
+       exon	varchar(32),
+       ex_start	int unsigned not null,
+       ex_end	int unsigned not null,
+       ex_index	int unsigned not null,
+       tran_cnt int unsigned not null,
+       dist	int unsigned not null,
+       uniq	bool default false,
+       tran	varchar(32)
+);
