@@ -258,10 +258,11 @@ check_db_error($db['dbh'], __FILE__, __LINE__);
 $query = 
     "SELECT catalog_index.tag_id as tag_id, alleles, parents, progeny, valid_progeny, " . 
     "seq, marker, max_pct, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt, " .
-    "catalog_index.chr, catalog_index.bp " .
+    "catalog_index.chr, catalog_index.bp, catalog_index.type, gene, ext_id, ex_start, ex_end, ex_index " .
     "FROM catalog_index " .
     "JOIN catalog_tags ON (catalog_index.cat_id=catalog_tags.id) " . 
     "LEFT JOIN catalog_annotations ON (catalog_index.batch_id=catalog_annotations.batch_id AND catalog_index.tag_id=catalog_annotations.catalog_id) " .
+    "LEFT JOIN ref_radome ON (catalog_index.ref_id=ref_radome.id) " .
     "WHERE catalog_index.batch_id=?";
 $query .= apply_query_filters($display);
 
@@ -342,8 +343,19 @@ EOQ;
       print 
 	"<td class=\"seq\">\n" .
 	"<div class=\"seq\">$s</div>\n" .
-	"<div class=\"gloc\">Chr: $row[chr], <acronym title=\"" . number_format($row['bp']) . "bp\">" . print_bp($row['bp']) . "</acronym></div>\n" .
-	"</td>\n";
+	"<div class=\"gloc\">Chr: $row[chr], <acronym title=\"" . number_format($row['bp']) . "bp\">" . print_bp($row['bp']) . "</acronym>\n";
+
+      if ($row['type'] == "exon") {
+  	  if (strlen($row['ext_id']) == 0)
+	    $gene = $row['gene'];
+	  else
+	    $gene = $row['ext_id'];
+	  print 
+	    ", Gene: <acronym title=\"Exon $row[ex_index]: " . number_format($row['ex_start']) . "-" . number_format($row['ex_end']) . "bp\">" . $gene . "</acronym>\n";
+      }
+      print
+	"</div></td>\n";
+
     } else {
       print "<td class=\"seq\"><div class=\"seq\">$s</div></td>\n";
     }
@@ -658,6 +670,7 @@ function write_filter($cols) {
 		     "mark"  => array(),
 		     "gcnt"  => array(),
 		     "loc"   => array(),
+		     "ref"   => array(),
                      "est"   => array(),
                      "pe"    => array(),
                      "blast" => array());
@@ -669,6 +682,7 @@ function write_filter($cols) {
     $fvp = isset($display['filter_vprog']) ? $display['filter_vprog'] : "";
     $fgc = isset($display['filter_gcnt'])  ? $display['filter_gcnt'] : "";
     $fma = isset($display['filter_mark'])  ? $display['filter_mark'] : "";
+    $ref = isset($display['filter_ref'])   ? $display['filter_ref']  : "";
     $fch = isset($display['filter_chr'])   ? $display['filter_chr']  : "";
     $fsb = isset($display['filter_sbp'])   ? $display['filter_sbp']  : 0;
     $feb = isset($display['filter_ebp'])   ? $display['filter_ebp']  : $max_chr_len;
@@ -679,9 +693,10 @@ function write_filter($cols) {
     $prog_ctl  = generate_element_select("filter_prog",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fpr, "");
     $vprog_ctl = generate_element_select("filter_vprog", array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fvp, "");
     $gcnt_ctl  = generate_element_select("filter_gcnt",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fgc, "");
-    $chr_ctl   = generate_element_select("filter_chr", $chrs, $fch, "");
-    $sbp_ctl   = generate_element_select("filter_sbp", range(0, $max_chr_len), $fsb, "");
-    $ebp_ctl   = generate_element_select("filter_ebp", range(0, $max_chr_len), $feb, "");
+    $chr_ctl   = generate_element_select("filter_chr",   $chrs, $fch, "");
+    $sbp_ctl   = generate_element_select("filter_sbp",   range(0, $max_chr_len), $fsb, "");
+    $ebp_ctl   = generate_element_select("filter_ebp",   range(0, $max_chr_len), $feb, "");
+    $ref_ctl   = generate_element_select("filter_ref",  array("exon", "intron", "genomic"), $ref, "");
     $mark_ctl  = generate_element_select("filter_mark", 
                                          array('Any', 'aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'), 
                                          $fma, "");
@@ -740,7 +755,13 @@ EOQ;
   </td>
 </tr>
 <tr>
-    <td>&nbsp;</td>
+  <td {$filters['ref']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="ref" onchange="rebuild_display_select()" {$filters['ref']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'ref')">
+      <acronym title="Filter by type of RAD locus">Type</acronym>:</a></td>
+  <td {$filters['ref']['tr']}>
+      $ref_ctl
+  </td>
 </tr>
 </table>
 </td>
@@ -943,6 +964,9 @@ function process_filter(&$display_params) {
 	} else if ($filter == "gcnt") {
 	    $display_params['filter_gcnt'] = $_GET['filter_gcnt'];
 
+	} else if ($filter == "ref") {
+	    $display_params['filter_ref'] = $_GET['filter_ref'];
+
 	} else if ($filter == "loc") {
 	    $display_params['filter_chr'] = $_GET['filter_chr'];
 	    $display_params['filter_sbp'] = $_GET['filter_sbp'];
@@ -989,6 +1013,9 @@ function prepare_filter_parameters($display_params, &$param) {
 	} else if ($filter == "gcnt") {
 	    array_push($param, $display_params['filter_gcnt']);
 	
+	} else if ($filter == "ref") {
+	    array_push($param, $display_params['filter_ref']);
+	
 	} else if ($filter == "loc") {
 	    array_push($param, $display_params['filter_chr']);
 	    array_push($param, $display_params['filter_sbp'] * 1000000);
@@ -1005,6 +1032,7 @@ function prepare_filter_parameters($display_params, &$param) {
 }
 
 function apply_query_filters($display_params) {
+    $order = 0;
     $query = "";
     $sql_filters =
 	array("cata"  => "(catalog_index.tag_id = ?)", 
@@ -1018,6 +1046,7 @@ function apply_query_filters($display_params) {
               "pe"    => "(pe_radtags > ?)",
               "blast" => "(blast_hits > ?)",
 	      "gcnt"  => "(geno_cnt >= ?)",
+	      "ref"   => "(catalog_index.type = ?)",
 	      "loc"   => "(catalog_index.chr = ? && catalog_index.bp >= ? && catalog_index.bp <= ?)");
 
     $filters = $display_params['filter_type'];
@@ -1029,7 +1058,12 @@ function apply_query_filters($display_params) {
 	    $filter = array_shift($filters);
 	    $query .= $sql_filters[$filter];
 	    $query .= count($filters) > 0 ? " AND " : "";
+
+	    if ($filter == "loc") $order++;
 	}
+
+	if ($order)
+	  $query .= " ORDER BY chr, bp";
     }
 
     return $query;
