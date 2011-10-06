@@ -1,3 +1,5 @@
+Stacks 0.996 - October 5, 2011
+---------------------------------
 	Web interface updates: 
 	  * If the RAD tags are aligned to a reference genome, a filter is now available to view markers
 	    from a particular genomic region.
@@ -13,6 +15,8 @@
 	Bugfix: process_radtags wasn't properly parsing the names of v1 Illumnina BUSTARD files.
 	Bugfix: process_radtags wasn't counting the total number of barceded paired-end reads correctly.
 	Bugfix: sstacks' impute_haplotype() was causing spurious matching in some, error-based cases.
+	Bugfix: build system was not properly replacing the _PKGDATADIR_ variable in denovo/ref_map.pl 
+	programs.
 
 Stacks 0.995 - September 23, 2011
 ---------------------------------
