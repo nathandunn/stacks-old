@@ -34,6 +34,8 @@ create table catalog_snps (
        lratio      float,
        rank_1	   char(1),
        rank_2	   char(1),
+       rank_3	   char(1),
+       rank_4	   char(1),
        INDEX       batch_index (batch_id),
        INDEX       tag_index (tag_id)
 );
@@ -122,6 +124,8 @@ create table snps (
        lratio      float,
        rank_1	   char(1),
        rank_2	   char(1),
+       rank_3	   char(1),
+       rank_4	   char(1),
        INDEX       samp_index (sample_id),
        INDEX       tag_index (tag_id)
 );
@@ -159,7 +163,8 @@ create table markers (
        progeny    int unsigned not null default 0,
        max_pct    float,
        ratio      varchar(128),
-       f          float
+       f          float,
+       geno_map   varchar(128)
 );
 
 create table sequence (
@@ -194,4 +199,11 @@ create table sequence_blast (
        hit_aln          text,
        hit_aln_start    int unsigned not null default 0,
        hit_aln_end      int unsigned not null default 0
+);
+
+create table chr_index (
+       id    	int unsigned not null primary key auto_increment,
+       batch_id	int unsigned not null,
+       chr      varchar(32),
+       max_len  int unsigned not null
 );

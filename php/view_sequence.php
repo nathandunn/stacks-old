@@ -41,7 +41,7 @@ check_db_error($db['seq_sth'], __FILE__, __LINE__);
 
 
 $page_title = "Catalog RAD-Tag Sequence Viewer";
-write_compact_header($page_title, $batch);
+write_compact_header($page_title);
 
 $result = $db['seq_sth']->execute($seq_id);
 check_db_error($result, __FILE__, __LINE__);

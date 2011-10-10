@@ -80,7 +80,7 @@ if ($data_type eq "geno") {
     push(@cmd_opts, "-m $map_type");
 }
 
-if ($data_type eq "gen" && $man_cor > 0) {
+if ($data_type eq "geno" && $man_cor > 0) {
     push(@cmd_opts, "-c");
 }
 

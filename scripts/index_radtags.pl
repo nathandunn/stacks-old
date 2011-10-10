@@ -32,6 +32,7 @@ my $mysql_config  = "_PKGDATADIR_" . "sql/mysql.cnf";
 my $sql_path      = "_PKGDATADIR_" . "sql/";
 my $sql_tag_table = "";
 my $sql_cat_table = "";
+my $sql_chr_table = "";
 my $db            = "";
 my $debug         = 0;
 my $catalog_index = 0;
@@ -81,7 +82,7 @@ sub gen_cat_index {
     my ($row, $tag, $count, $par_cnt, $pro_cnt, $allele_cnt, $marker, $valid_pro, 
         $max_pct, $ratio, $ests, $pe_radtags, $blast_hits, $geno_cnt);
 
-    my (%snps, %markers, %genotypes, %seqs, %hits, %parents, %progeny, %alleles);
+    my (%snps, %markers, %genotypes, %seqs, %hits, %parents, %progeny, %alleles, %chrs);
 
     print STDERR "  Fetching catalog SNPs...\n";
     fetch_catalog_snps(\%sth, \%snps);
@@ -185,6 +186,15 @@ sub gen_cat_index {
 	    $ratio     = "";
 	}
 
+	#
+	# Record the chromosomes present in this dataset (if any).
+	#
+	if (length($row->{'chr'}) > 0) {
+	    $chrs{$row->{'batch_id'}}->{$row->{'chr'}} = 
+		$row->{'bp'} > $chrs{$row->{'batch_id'}}->{$row->{'chr'}} ?
+		$row->{'bp'} : $chrs{$row->{'batch_id'}}->{$row->{'chr'}};
+	}
+
 	print $fh
 	    "0\t",
 	    $row->{'batch_id'}, "\t",
@@ -206,13 +216,39 @@ sub gen_cat_index {
 	    $row->{'bp'}, "\n";
     }
 
-
     close($fh);
 
     `mysql $db -e "DROP TABLE IF EXISTS catalog_index"`;
     `mysql $db < $sql_cat_table`;
 
     import_sql_file($catalog_file, 'catalog_index');
+
+    if (scalar(keys %chrs) > 0) {
+	my ($batch_id, $chr, $max);
+	my ($fh, $chr_file) = tempfile("chr_index_XXXXXXXX", UNLINK => 1, TMPDIR => 1);
+
+	foreach $batch_id (sort keys %chrs) {
+	    foreach $chr (sort keys %{$chrs{$batch_id}}) {
+		#
+		# Round up the maximum chromosome length to the nearest megabase.
+		#
+		$max  = int($chrs{$batch_id}->{$chr} / 1000000);
+		$max += $chrs{$batch_id}->{$chr} % 1000000 > 0 ? 1 : 0;
+
+		print $fh 
+		    "0\t",
+		    $batch_id, "\t",
+		    $chr, "\t",
+		    $max, "\n";
+	    }
+	}
+
+	`mysql $db -e "DROP TABLE IF EXISTS chr_index"`;
+	`mysql $db < $sql_chr_table`;
+
+	import_sql_file($chr_file, 'chr_index');
+	close($fh);
+    }
 }
 
 sub fetch_catalog_snps {
@@ -571,6 +607,7 @@ sub parse_command_line {
     $sql_path .= "/" if (substr($sql_path, -1, 1) ne "/");
     $sql_tag_table = $sql_path . "tag_index.sql";
     $sql_cat_table = $sql_path . "catalog_index.sql";
+    $sql_chr_table = $sql_path . "chr_index.sql";
 }
 
 sub version {

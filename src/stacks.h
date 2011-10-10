@@ -40,13 +40,10 @@ using std::cerr;
 using std::stringstream;
 
 #include "constants.h"
+#include "DNASeq.h"
 
 typedef unsigned int uint;
 typedef string allele_type;
-
-typedef struct seqid {
-    char id[id_len];
-} SeqId;
 
 typedef struct locus {
     char chr[id_len];
@@ -63,19 +60,46 @@ class SNP {
     float    lratio;
     char     rank_1;
     char     rank_2;
+    char     rank_3;
+    char     rank_4;
+
+    SNP() {
+	col    = 0;
+	lratio = 0.0;
+	rank_1 = 0;
+	rank_2 = 0;
+	rank_3 = 0;
+	rank_4 = 0;
+    }
 };
 
 class Stack {
  public:
-    uint   id;
-    uint   count;         // Number of identical reads forming this stack
-    char  *seq;           // Sequence read
-    uint   len;           // Read length
-    vector<SeqId *> map;  // List of sequence read IDs merged into this stack
-    PhyLoc loc;           // Physical genome location of this stack.
+    uint    id;
+    uint    count;       // Number of identical reads forming this stack
+    DNASeq *seq;         // Sequence read
+    uint    len;         // Read length
+    vector<char *> map;  // List of sequence read IDs merged into this stack
+    PhyLoc  loc;         // Physical genome location of this stack.
 
     Stack()  { id = 0; count = 0; seq = NULL; len = 0; loc.bp = 0; loc.chr[0] = '\0'; }
-    ~Stack() { delete [] seq; }
+    ~Stack() { delete [] seq; for (unsigned int i = 0; i < this->map.size(); i++) delete [] map[i]; }
+    int add_id(const char *);
+    int add_seq(const char *);
+    int add_seq(const DNASeq *);
+};
+
+class Rem {
+ public:
+    uint    id;
+    char   *seq_id;
+    DNASeq *seq;     // Sequence read
+    PhyLoc  loc;     // Physical genome location of this stack.
+    bool    utilized;
+
+    Rem();
+    Rem(int, char *, DNASeq *);
+    ~Rem() { delete [] seq_id; delete seq; }
     int add_id(const char *);
     int add_seq(const char *);
 };
@@ -131,6 +155,7 @@ class MergedStack {
             delete snps[i];
     }
     int add_consensus(const char *);
+    int add_consensus(DNASeq *);
     int add_dist(const int id, const int dist);
 };
 

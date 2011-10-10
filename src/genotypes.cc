@@ -40,6 +40,7 @@ string    out_path;
 string    out_file;
 string    bl_file;
 string    wl_file;
+string    enz;
 int       progeny_limit   = 1;
 bool      corrections     = false;
 bool      expand_id       = false;
@@ -52,11 +53,20 @@ double    max_het_seqs    = 0.1;
 set<int> whitelist, blacklist;
 
 //
+// Hold information about restriction enzymes
+//
+map<string, const char **> renz;
+map<string, int>           renz_cnt;
+map<string, int>           renz_len;
+
+//
 // Dictionaries to hold legal genotypes for different map types.
 //
 map<string, map<string, string> > global_dictionary;
 
 int main (int argc, char* argv[]) {
+
+    initialize_renz(renz, renz_cnt, renz_len);
 
     parse_command_line(argc, argv);
 
@@ -180,9 +190,12 @@ int main (int argc, char* argv[]) {
     }
 
     //
-    // Output the observe haplotypes.
+    // Output the observed haplotypes.
     //
     write_generic(catalog, pmap, samples, parent_ids, false);
+
+    if (out_type == genomic)
+	write_genomic(catalog, pmap);
 
     return 0;
 }
@@ -963,6 +976,8 @@ int export_f2_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     case rqtl:
 	write_rqtl(catalog, pmap, types, samples, parent_ids);
 	break;
+    default:
+	break;
     }
 
     if (sql_out)
@@ -1021,6 +1036,8 @@ int export_dh_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     case rqtl:
 	write_rqtl(catalog, pmap, types, samples, parent_ids);
 	break;
+    default:
+	break;
     }
 
     if (sql_out)
@@ -1044,7 +1061,7 @@ int export_bc1_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
     // -------   -----------
     // <aaxbb>   locus homozygous in both parents, heterozygous between the parents
     //
-    // Genotype codes for a CP population, depending on the locus segregation type.
+    // Genotype codes for a BC1 population, depending on the locus segregation type.
     //
     // Seg. type   Possible genotypes
     // ---------   ------------------
@@ -1097,6 +1114,8 @@ int export_bc1_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
 	break;
     case rqtl:
 	write_rqtl(catalog, pmap, types, samples, parent_ids);
+	break;
+    default:
 	break;
     }
 
@@ -1193,6 +1212,8 @@ int export_cp_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
 	break;
     case rqtl:
 	write_rqtl(catalog, pmap, types, samples, parent_ids);
+	break;
+    default:
 	break;
     }
 
@@ -1313,6 +1334,7 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
     map<int, CLocus *>::iterator it;
     CLocus *loc;
     char    f[id_len], g[id_len];
+    stringstream gtype_map;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
@@ -1327,6 +1349,14 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
 	sprintf(f, "%0.1f", max);
 	sprintf(g, "%0.2f", loc->f);
 
+	//
+	// Record the haplotype to genotype map.
+	//
+	map<string, string>::iterator j;
+	gtype_map.str("");
+	for (j = loc->gmap.begin(); j != loc->gmap.end(); j++)
+	    gtype_map << j->first << ":" << j->second << ";";
+
 	fh << 0 << "\t" 
 	   << batch_id << "\t" 
 	   << loc->id << "\t" 
@@ -1334,7 +1364,8 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
 	   << total << "\t"
 	   << f << "\t"
 	   << freq << "\t"
-	   << g << "\n";
+	   << g << "\t"
+           << gtype_map.str() <<"\n";
     }
 
     fh.close();
@@ -1376,6 +1407,121 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
 		fh << d[i]->trans_gtype << "\n";
 	    else
 		fh << d[i]->gtype << "\n";
+	}
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".genomic_" << progeny_limit << ".tsv";
+
+    string file = in_path + pop_name.str();
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening genomic output file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Count the number of markers that have enough samples to output.
+    //
+    map<int, CLocus *>::iterator cit;
+    CLocus *loc;
+    int num_loci = 0;
+
+    for (cit = catalog.begin(); cit != catalog.end(); cit++) {
+	loc = cit->second;
+	if (loc->hcnt < progeny_limit) continue;
+
+	num_loci += loc->len - renz_len[enz];
+    }
+    cerr << "Writing " << num_loci << " nucleotide positions to genomic file, '" << file << "'\n";
+
+    //
+    // Write the header
+    //
+    fh << num_loci << "\t" << pmap->sample_cnt() << "\n";
+
+    //
+    // Output each locus.
+    //
+    map<string, vector<CLocus *> >::iterator it;
+    int  a, b;
+
+    uint  rcnt = renz_cnt[enz];
+    uint  rlen = renz_len[enz];
+    char *p;
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint i = 0; i < it->second.size(); i++) {
+	    loc = it->second[i];
+
+	    if (loc->hcnt < progeny_limit) continue;
+
+	    Datum **d = pmap->locus(loc->id);
+	    set<int> snp_locs;
+	    string   obshap;
+
+	    for (uint i = 0; i < loc->snps.size(); i++)
+		snp_locs.insert(loc->snps[i]->col);
+
+	    uint start = 0;
+	    uint end   = loc->len;
+	    //
+	    // Check for the existence of the restriction enzyme cut site, mask off 
+	    // its output.
+	    //
+	    for (uint n = 0; n < rcnt; n++)
+	    	if (strncmp(loc->con, renz[enz][n], rlen) == 0)
+	    	    start += renz_len[enz];
+	    if (start == 0) {
+	    	p = loc->con + (loc->len - rlen);
+	    	for (uint n = rcnt; n < rcnt + rcnt; n++)
+	    	    if (strncmp(p, renz[enz][n], rlen) == 0)
+	    		end -= renz_len[enz];
+	    }
+
+	    uint k = 0;
+	    for (uint n = start; n < end; n++) {
+		fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->loc.bp + n;
+
+ 		if (snp_locs.count(n) == 0) {
+		    for (int j = 0; j < pmap->sample_cnt(); j++) {
+			a = encode_gtype(loc->con[n]);
+			fh << "\t" << encoded_gtypes[a][a];
+		    }
+		} else {
+		    for (int j = 0; j < pmap->sample_cnt(); j++) {
+			fh << "\t";
+
+			if (d[j] == NULL)
+			    fh << "0";
+			else 
+			    switch (d[j]->obshap.size()) {
+			    case 1:
+				a = encode_gtype(d[j]->obshap[0][k]);
+				fh << encoded_gtypes[a][a];
+				break;
+			    case 2:
+				a = encode_gtype(d[j]->obshap[0][k]);
+				b = encode_gtype(d[j]->obshap[1][k]);
+				fh << encoded_gtypes[a][b];
+				break;
+			    default:
+				fh << "0";
+				break;
+			    }
+		    }
+		    k++;
+		}
+		fh << "\n";
+	    }
 	}
     }
 
@@ -1608,8 +1754,6 @@ int write_rqtl(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, st
     pop_name << "batch_" << batch_id << ".genotypes_" << progeny_limit;
     string file = in_path + pop_name.str() + ".loc";
 
-    cerr << "Writing R/QTL output file to '" << file << "'\n";
-
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
@@ -1630,7 +1774,7 @@ int write_rqtl(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, st
 
 	num_loci++;
     }
-    cerr<< "found " << num_loci << " loci\n";
+    cerr << "Writing " << num_loci << " loci to R/QTL file, '" << file << "'\n";
 
     map<int, string> map_types;
     map_types[cp]  = "CP";
@@ -1695,13 +1839,14 @@ int write_rqtl(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, st
     Datum *d;
     for (int i = 0; i < pmap->sample_cnt(); i++) {
 	if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+
 	fh << samples[pmap->rev_sample_index(i)];
 
 	for (it = catalog.begin(); it != catalog.end(); it++) {
 	    loc = it->second;
-	    if (loc->gcnt < progeny_limit) continue;
+	    //if (loc->gcnt < progeny_limit) continue;
 
-	    d = pmap->datum(loc->id, i);
+	    d = pmap->datum(loc->id, pmap->rev_sample_index(i));
 	    fh << ",";
 
 	    if (d == NULL) 
@@ -1885,6 +2030,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"out_type",    required_argument, NULL, 'o'},
 	    {"progeny",     required_argument, NULL, 'r'},
 	    {"min_depth",   required_argument, NULL, 'm'},
+	    {"renz",        required_argument, NULL, 'e'},
 	    {"whitelist",   required_argument, NULL, 'W'},
 	    {"blacklist",   required_argument, NULL, 'B'},
 	    {0, 0, 0, 0}
@@ -1893,7 +2039,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:W:B:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:e:W:B:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1928,6 +2074,8 @@ int parse_command_line(int argc, char* argv[]) {
                 out_type = joinmap;
 	    else if (strcasecmp(optarg, "rqtl") == 0)
 		out_type = rqtl;
+	    else if (strcasecmp(optarg, "genomic") == 0)
+		out_type = genomic;
 	    break;
 	case 'r':
 	    progeny_limit = atoi(optarg);
@@ -1949,6 +2097,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'm':
 	    min_stack_depth = atoi(optarg);
+	    break;
+	case 'e':
+	    enz = optarg;
 	    break;
         case 'v':
             version();
@@ -1989,6 +2140,16 @@ int parse_command_line(int argc, char* argv[]) {
     if (map_type != none && min_stack_depth > 0)
 	cerr << "Warning: using a minimum stack depth when building genetic markers is not recommended.\n";
 
+    if (out_type == genomic && enz.length() == 0) {
+	cerr << "You must specify the restriction enzyme used with 'genomic' output.\n";
+	help();
+    }
+
+    if (out_type == genomic && renz.count(enz) == 0) {
+	cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
+	help();
+    }
+
     return 0;
 }
 
@@ -2000,17 +2161,18 @@ void version() {
 
 void help() {
     std::cerr << "genotypes " << VERSION << "\n"
-              << "genotypes -b batch_id -P path [-r min] [-m min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-v] [-h]" << "\n"
+              << "genotypes -b batch_id -P path [-r min] [-m min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-e renz] [-v] [-h]" << "\n"
 	      << "  b: Batch ID to examine when exporting from the catalog.\n"
 	      << "  r: minimum number of progeny required to print a marker.\n"
 	      << "  c: make automated corrections to the data.\n"
 	      << "  P: path to the Stacks output files.\n"
 	      << "  t: map type to write. 'CP', 'DH', 'F2' and 'BC1' are the currently supported map types.\n"
-	      << "  o: output file type to write, 'joinmap' and 'rqtl' are currently supported.\n"
+	      << "  o: output file type to write, 'joinmap', 'rqtl', and 'genomic' are currently supported.\n"
 	      << "  m: specify a minimum stack depth required before exporting a locus in a particular individual.\n"
 	      << "  s: output a file to import results into an SQL database.\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
 	      << "  W: specify a file containign Whitelisted markers to include in the export.\n"
+	      << "  e: restriction enzyme, required if generating 'genomic' output.\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n";
 

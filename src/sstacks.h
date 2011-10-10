@@ -94,11 +94,13 @@ typedef hash_map<const char *, vector<pair<int, allele_type> >, hash<const char 
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
-int  populate_hash(map<int, Locus *> &, HashMap &);
+int  populate_hash(map<int, Locus *> &, HashMap &, int);
 int  find_matches_by_sequence(map<int, Locus *> &, map<int, QLocus *> &);
 int  find_matches_by_genomic_loc(map<int, Locus *> &, map<int, QLocus *> &);
-int  verify_sequence_match(Locus *, QLocus *, uint);
-int  verify_genomic_loc_match(Locus *, QLocus *, string);
+int  verify_sequence_match(map<int, Locus *> &, QLocus *, set<int> &, map<string, vector<string> > &, uint, unsigned long &, unsigned long &);
+int  verify_genomic_loc_match(Locus *, QLocus *, set<string> &, unsigned long &);
+int  generate_query_haplotypes(Locus *, QLocus *, set<string> &);
+int  impute_haplotype(string, vector<pair<allele_type, string> > &, string &);
 bool compare_dist(pair<int, int>, pair<int, int>);
 int  write_matches(map<int, QLocus *> &);
 bool compare_pair(pair<string, SNP *>, pair<string, SNP *>);

@@ -111,7 +111,10 @@ class Catalog {
             } else if ($filter == "cata") {
                 array_push($this->params, $this->display['filter_cata']);
 
-            } else if ($filter == "est") {
+            } else if ($filter == "gcnt") {
+	        array_push($this->params, $this->display['filter_gcnt']);
+	
+	    } else if ($filter == "est") {
                 array_push($this->params, 0);
 
             } else if ($filter == "pe") {
@@ -140,7 +143,8 @@ class Catalog {
                   "mark"  => "(marker LIKE ?)", 
                   "est"   => "(ests > ?)",
                   "pe"    => "(pe_radtags > ?)",
-                  "blast" => "(blast_hits > ?)");
+                  "blast" => "(blast_hits > ?)",
+		  "gcnt"  => "(geno_cnt >= ?)");
 
         $filters = $this->display['filter_type'];
 

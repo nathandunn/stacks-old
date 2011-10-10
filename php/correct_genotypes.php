@@ -39,7 +39,7 @@ $diplsay['op']       = $op;
 //
 $query = 
     "SELECT catalog_genotypes.id as id, catalog_genotypes.sample_id, catalog_genotypes.genotype, " . 
-    "genotype_corrections.genotype as correction, genotype_corrections.id as cid " . 
+    "genotype_corrections.genotype as correction, genotype_corrections.id as cid, file " . 
     "FROM catalog_genotypes " . 
     "LEFT JOIN genotype_corrections ON " . 
     "(genotype_corrections.catalog_id=catalog_genotypes.catalog_id AND " .

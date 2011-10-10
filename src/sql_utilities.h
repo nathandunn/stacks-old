@@ -34,7 +34,7 @@
 // The expected number of tab-separated fields in our SQL input files.
 //
 const uint num_tags_fields    = 12;
-const uint num_snps_fields    =  7;
+const uint num_snps_fields    =  9;
 const uint num_alleles_fields =  6;
 const uint num_matches_fields =  7;
 
@@ -168,7 +168,7 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 
 	parse_tsv(line, parts);
 
-        if (parts.size() != num_snps_fields) {
+        if (parts.size() != num_snps_fields && parts.size() != num_snps_fields - 2) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
@@ -183,6 +183,11 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 	snp->lratio = atof(parts[4].c_str());
 	snp->rank_1 = parts[5].at(0);
 	snp->rank_2 = parts[6].at(0);
+
+	if (parts.size() == 9) {
+	    snp->rank_3 = parts[7].length() == 0 ? 0 : parts[7].at(0);
+	    snp->rank_4 = parts[8].length() == 0 ? 0 : parts[8].at(0);
+	}
 
         if (loci.count(id) > 0) {
             loci[id]->snps.push_back(snp);

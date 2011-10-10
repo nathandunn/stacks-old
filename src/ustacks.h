@@ -66,6 +66,8 @@ using __gnu_cxx::hash;
 #include <hash_map>
 #endif
 
+#include <unistd.h>
+
 // Include the clustering routines as provided by
 // Hoon, Imoto, and Miyano; mdehoon@gsc.riken.jp
 extern "C" {
@@ -74,6 +76,7 @@ extern "C" {
 
 #include "constants.h" 
 #include "kmers.h"
+#include "DNASeq.h"    // Class for storing two-bit compressed DNA sequences
 #include "stacks.h"    // Major data structures for holding stacks
 #include "models.h"    // Contains maximum likelihood statistical models.
 #include "Tsv.h"       // Reading input files in Tab-separated values format
@@ -92,31 +95,37 @@ const float snp_maj         = 0.35;
 
 class HVal {
  public:
-    vector<SeqId *> id;
+    vector<char *> ids;
     int  count;
-    HVal() { count = 0; }
+    HVal() { this->count = 0; }
+    ~HVal() { 
+	for (uint i = 0; i < this->ids.size(); i++) 
+	    delete this->ids[i];
+	this->ids.clear(); 
+    }
 
     int add_id(const char *id) {
-	SeqId *f = new SeqId;
-    	strcpy(f->id, id);
-    	this->id.push_back(f);
+	char *f = new char[strlen(id) + 1];
+    	strcpy(f, id);
+    	this->ids.push_back(f);
 	return 0;
     }
 };
 
+typedef hash_map<DNASeq *, HVal, hash<DNASeq *>, dnaseq_eqstr> DNASeqHashMap;
 typedef hash_map<const char *, HVal, hash<const char *>, eqstr> HashMap;
 
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
-int  load_radtags(string, HashMap &);
-int  reduce_radtags(HashMap &, map<int, Stack *> &, map<int, Seq *> &);
+int  load_radtags(string, DNASeqHashMap &);
+int  reduce_radtags(DNASeqHashMap &, map<int, Stack *> &, map<int, Rem *> &);
 int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
 int  merge_radtags(map<int, Stack *> &, map<int, MergedStack *> &, set<int> &, int);
-int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Seq *> &, bool);
-int  call_alleles(MergedStack *, vector<char *> &, vector<read_type> &);
-int  merge_remainders(map<int, MergedStack *> &, map<int, Seq *> &);
-int  write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Seq *> &);
+int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &, bool);
+int  call_alleles(MergedStack *, vector<DNASeq *> &, vector<read_type> &);
+int  merge_remainders(map<int, MergedStack *> &, map<int, Rem *> &);
+int  write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &);
 
 //
 // Match MergedStacks using a k-mer hashing algorithm

@@ -32,24 +32,27 @@
 use strict;
 use constant stacks_version => "_VERSION_";
 
-my $debug       = 0;
-my $sql         = 1;
-my $exe_path    = "_BINDIR_";
-my $out_path    = "";
-my $db          = "";
-my $min_cov     = 0;
-my $min_dist    = 0;
-my $fuzzy_match = 0;
-my $num_threads = 0;
-my $batch_id    = -1;
-my $sample_id   = 1;
-my $desc        = ""; # Database description of this dataset
-my $date        = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
+my $debug        = 0;
+my $sql          = 1;
+my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
+my $exe_path     = "_BINDIR_";
+my $out_path     = "";
+my $db           = "";
+my $min_cov      = 0;
+my $min_dist     = 0;
+my $fuzzy_match  = 0;
+my $num_threads  = 0;
+my $batch_id     = -1;
+my $sample_id    = 1;
+my $desc         = ""; # Database description of this dataset
+my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
 
 my @parents;
 my @progeny;
 
 parse_command_line();
+
+my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_config;
 
 #
 # Check for the existence of the necessary pipeline programs
@@ -70,7 +73,7 @@ if ($sql) {
     # SQL Batch ID for this set of Radtags, along with description and date of 
     # sequencing. Insert this batch data into the database.
     # 
-    `mysql $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date'"`;
+    `mysql --defaults-file=$cnf $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date'"`;
 }
 
 my (@types, $type);
@@ -120,12 +123,12 @@ foreach $sample (@parents, @progeny) {
     printf($log_fh "Identifying unique stacks; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
 
     if ($sql) {
-	`mysql $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile'"`;
-	@results = `mysql $db -N -B -e "SELECT id FROM samples WHERE sample_id=$i AND batch_id=$batch_id AND type='$type' AND file='$pfile'"`;
+	`mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile'"`;
+	@results = `mysql --defaults-file=$cnf $db -N -B -e "SELECT id FROM samples WHERE sample_id=$i AND batch_id=$batch_id AND type='$type' AND file='$pfile'"`;
 	chomp $results[0];
 	$sample_id = $results[0];
     } else {
-	print STDERR "mysql $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile'\"\n";
+	print STDERR "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile'\"\n";
     }
 
     $map{$pfile} = $sample_id;
@@ -250,8 +253,8 @@ sub import_sql_file {
 
     my (@results);
 
-    @results = `mysql $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"` if ($sql);
-    print STDERR "mysql $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results, "\n";
+    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"` if ($sql);
+    print STDERR "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results, "\n";
 }
 
 sub parse_command_line {
