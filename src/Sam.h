@@ -57,7 +57,11 @@ Seq *Sam::next_seq() {
 
     } while (parts[0][0] == '@');
 
-    Seq *s = new Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(), parts[2].c_str(), atoi(parts[3].c_str()));
+    //
+    // Sam format has a 1-based offset for chrmosome/basepair positions, adjust it to match
+    // the Stacks, 0-based offset.
+    //
+    Seq *s = new Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(), parts[2].c_str(), atoi(parts[3].c_str()) - 1);
 
     return s;
 }
