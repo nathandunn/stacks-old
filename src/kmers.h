@@ -73,7 +73,7 @@ int  generate_permutations(map<int, char **> &, int);
 int dist(const char *, Locus *, allele_type);
 int dist(Locus *, Locus *);
 int dist(MergedStack *, MergedStack *);
-int dist(MergedStack *, Seq *);
+int dist(MergedStack *, char *);
 
 //
 // For sorting functions.

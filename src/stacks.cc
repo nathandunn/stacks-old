@@ -29,10 +29,52 @@
 //
 #include "stacks.h"
 
+Rem::Rem() { 
+    this->id         = 0;
+    this->seq_id     = NULL; 
+    this->seq        = NULL; 
+    this->utilized   = false;
+    this->loc.bp     = 0; 
+    this->loc.chr[0] = '\0'; 
+}
+
+Rem::Rem(int id, char *seq_id, DNASeq *seq) { 
+    this->id = id;
+
+    uint len = strlen(seq_id);
+    this->seq_id = new char[len + 1];
+    strcpy(this->seq_id, seq_id);
+
+    this->seq = new DNASeq(seq->size, seq->s);
+
+    this->utilized   = false;
+    this->loc.bp     = 0; 
+    this->loc.chr[0] = '\0'; 
+}
+
+int Rem::add_id(const char *id) {
+    if (this->seq_id != NULL)
+	delete [] this->seq_id;
+
+    uint len = strlen(id);
+    this->seq_id = new char[len + 1];
+    strcpy(this->seq_id, id);
+
+    return 0;
+}
+
+int Rem::add_seq(const char *seq) {
+    if (this->seq != NULL)
+	delete this->seq;
+
+    this->seq = new DNASeq(strlen(seq), seq);
+
+    return 0;
+}
+
 int Stack::add_id(const char *id) {
-    SeqId *f = new SeqId;
-    strncpy(f->id, id, id_len - 1);
-    f->id[id_len - 1] = '\0';
+    char *f = new char[strlen(id) + 1];
+    strcpy(f, id);
     this->map.push_back(f);
 
     return 0;
@@ -40,12 +82,19 @@ int Stack::add_id(const char *id) {
 
 int Stack::add_seq(const char *seq) {
     if (this->seq != NULL)
-	delete [] this->seq;
+	delete this->seq;
 
     this->len = strlen(seq);
-    this->seq = new char[this->len + 1];
-    strncpy(this->seq, seq, this->len);
-    this->seq[this->len] = '\0';
+    this->seq = new DNASeq(this->len, seq);
+
+    return 0;
+}
+
+int Stack::add_seq(const DNASeq *seq) {
+    if (this->seq != NULL)
+	delete this->seq;
+
+    this->seq = new DNASeq(seq->size, seq->s);
 
     return 0;
 }
@@ -58,6 +107,17 @@ int MergedStack::add_consensus(const char *seq) {
     this->con = new char[this->len + 1];
     strncpy(this->con, seq, this->len);
     this->con[this->len] = '\0';
+
+    return 0;
+}
+
+int MergedStack::add_consensus(DNASeq *seq) {
+    if (this->con != NULL)
+	delete [] this->con;
+
+    this->len = seq->size;
+    this->con = new char[this->len + 1];
+    this->con = seq->seq(this->con);
 
     return 0;
 }

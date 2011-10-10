@@ -77,4 +77,28 @@ void initialize_dictionaries(map<string, map<string, string> > &global_dictionar
     global_dictionary["ab/ab"]["ab"] = "ab";
 }
 
+inline
+int encode_gtype(char a) { 
+    switch (a) {
+    case 'A':
+	return 0;
+    case 'C':
+	return 1;
+    case 'G':
+	return 2;
+    case 'T':
+	return 3;
+    }
+
+    return -1;
+}
+
+int encoded_gtypes[4][4] = {
+  // A  C  G   T
+    {1, 2, 3,  4}, // A
+    {2, 5, 6,  7}, // C
+    {3, 6, 8,  9}, // G
+    {4, 7, 9, 10}  // T
+};
+
 #endif // __GENOTYPE_DICTIONARIES_H__

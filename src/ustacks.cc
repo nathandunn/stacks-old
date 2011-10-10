@@ -76,8 +76,8 @@ int main (int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
     #endif
 
-    HashMap           radtags;
-    map<int, Seq *>   remainders;
+    DNASeqHashMap     radtags;
+    map<int, Rem *>   remainders;
     set<int>          merge_map;
     map<int, Stack *> unique;
 
@@ -86,7 +86,7 @@ int main (int argc, char* argv[]) {
     reduce_radtags(radtags, unique, remainders);
 
     if (cov_mean == 0 || cov_stdev == 0)
-	calc_coverage_distribution(unique, cov_mean, cov_stdev);
+    	calc_coverage_distribution(unique, cov_mean, cov_stdev);
 
     cerr << "Coverage mean: " << cov_mean << "; stdev: " << cov_stdev << "\n";
 
@@ -99,22 +99,22 @@ int main (int argc, char* argv[]) {
     populate_merged_tags(unique, merged);
 
     if (remove_rep_stacks) {
-	cerr << "Calculating distance for removing repetitive stacks.\n";
-	calc_kmer_distance(merged, 1);
-	cerr << "Removing repetitive stacks.\n";
-	remove_repetitive_stacks(unique, merged);
+    	cerr << "Calculating distance for removing repetitive stacks.\n";
+    	calc_kmer_distance(merged, 1);
+    	cerr << "Removing repetitive stacks.\n";
+    	remove_repetitive_stacks(unique, merged);
     }
 
     for (int i = 1; i <= max_utag_dist; i++) {
-	cerr << "Calculating distance, round " << i << "\n";
-	calc_kmer_distance(merged, i);
+    	cerr << "Calculating distance, round " << i << "\n";
+    	calc_kmer_distance(merged, i);
 
-	cerr << "  Merging radtags, round " << i << "\n";
-	merge_radtags(unique, merged, merge_map, i);
+    	cerr << "  Merging radtags, round " << i << "\n";
+    	merge_radtags(unique, merged, merge_map, i);
 
-	call_consensus(merged, unique, remainders, false);
+        call_consensus(merged, unique, remainders, false);
 
-	merge_map.clear();
+    	merge_map.clear();
     }
 
     calc_merged_coverage_distribution(unique, merged);
@@ -135,15 +135,15 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int merge_remainders(map<int, MergedStack *> &merged, map<int, Seq *> &rem) {
-    map<int, Seq *>::iterator it;
+int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
+    map<int, Rem *>::iterator it;
     int j, k;
 
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
     vector<int> keys;
     for (it = rem.begin(); it != rem.end(); it++) 
-	keys.push_back(it->first);
+    	keys.push_back(it->first);
 
     cerr << "  " << keys.size() << " remainder sequences left to merge.\n";
 
@@ -166,18 +166,27 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Seq *> &rem) {
     populate_kmer_hash(merged, kmer_map, kmer_len);
     int utilized = 0;
 
+    //
+    // Create a character buffer to hold the Rem sequence, this is faster
+    // than repeatedly decoding the DNASeq buffers.
+    // 
+    //it = rem.find(keys[0]);
+    //char *buf = new char[it->second->seq->size + 1];
+
     #pragma omp parallel private(it, k)
     { 
         #pragma omp for schedule(dynamic) 
-	for (j = 0; j < (int) keys.size(); j++) {
-	    it = rem.find(keys[j]);
-	    Seq *r = it->second;
+    	for (j = 0; j < (int) keys.size(); j++) {
+    	    it = rem.find(keys[j]);
+    	    Rem  *r   = it->second;
+	    char *buf = new char[r->seq->size + 1];
 
             //
             // Generate the k-mers for this remainder sequence
             //
             vector<char *> rem_kmers;
-            generate_kmers(r->seq, kmer_len, num_kmers, rem_kmers);
+            buf = r->seq->seq(buf);
+            generate_kmers(buf, kmer_len, num_kmers, rem_kmers);
 
             map<int, int> hits;
             vector<int>::iterator map_it;
@@ -196,12 +205,12 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Seq *> &rem) {
             // Iterate through the list of hits. For each hit that has more than min_hits
             // check its full length to verify a match.
             //
-	    map<int, int> dists;
+    	    map<int, int> dists;
             map<int, int>::iterator hit_it;
             for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
                 if (hit_it->second < min_hits) continue;
 
-                int d = dist(merged[hit_it->first], r);
+                int d = dist(merged[hit_it->first], buf);
                 //
                 // Store the distance between these two sequences if it is
                 // below the maximum distance
@@ -217,46 +226,51 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Seq *> &rem) {
             for (k = 0; k < num_kmers; k++)
                 delete rem_kmers[k];
 
-	    // Check to see if there is a uniquely low distance, if so,
-	    // merge this remainder tag. If not, discard it, since we
-	    // can't locate a single best-fitting Stack to merge it into.
-	    map<int, int>::iterator s;
-	    int min_id = -1;
-	    int count  =  0;
-	    int dist   =  max_rem_dist + 1;
+    	    // Check to see if there is a uniquely low distance, if so,
+    	    // merge this remainder tag. If not, discard it, since we
+    	    // can't locate a single best-fitting Stack to merge it into.
+    	    map<int, int>::iterator s;
+    	    int min_id = -1;
+    	    int count  =  0;
+    	    int dist   =  max_rem_dist + 1;
 
-	    for (s = dists.begin(); s != dists.end(); s++) {
-		if ((*s).second < dist) {
-		    min_id = (*s).first;
-		    count  = 1;
-		    dist   = (*s).second;
-		} else if ((*s).second == dist) {
-		    count++;
-		}
-	    }
+    	    for (s = dists.begin(); s != dists.end(); s++) {
+    		if ((*s).second < dist) {
+    		    min_id = (*s).first;
+    		    count  = 1;
+    		    dist   = (*s).second;
+    		} else if ((*s).second == dist) {
+    		    count++;
+    		}
+    	    }
 
-	    // Found a merge partner.
-	    if (min_id >= 0 && count == 1) {
-		r->utilized = true;
+	    delete [] buf;
+
+    	    // Found a merge partner.
+    	    if (min_id >= 0 && count == 1) {
+    		r->utilized = true;
                 #pragma omp critical
-		{
-		    merged[min_id]->remtags.push_back(it->first);
-		    utilized++;
-		}
-	    }
-	}
+    		{
+    		    merged[min_id]->remtags.push_back(it->first);
+    		    utilized++;
+    		}
+    	    }
+    	}
     }
+
+    //delete [] buf;
 
     cerr << "  Matched " << utilized << " remainder reads; unable to match " << keys.size() - utilized << " remainder reads.\n";
 
     return 0;
 }
 
-int call_alleles(MergedStack *mtag, vector<char *> &reads, vector<read_type> &read_types) {
+int call_alleles(MergedStack *mtag, vector<DNASeq *> &reads, vector<read_type> &read_types) {
     int     row;
     int     height = reads.size();
     string  allele;
-    char   *base;
+    DNASeq *d;
+    char    base;
     vector<SNP *>::iterator snp;
 
     if (mtag->snps.size() == 0)
@@ -271,15 +285,15 @@ int call_alleles(MergedStack *mtag, vector<char *> &reads, vector<read_type> &re
 	if (!call_sec_hapl && read_types[row] == secondary) continue;
 
 	for (snp = mtag->snps.begin(); snp != mtag->snps.end(); snp++) {
-	    base = reads[row];
-	    base = base + (*snp)->col;
+            d    = reads[row];
+	    base = (*d)[(*snp)->col];
 
 	    //
 	    // Check to make sure the nucleotide at the location of this SNP is
 	    // of one of the two possible states the multinomial model called.
 	    //
-	    if (*base == (*snp)->rank_1 || *base == (*snp)->rank_2) 
-		allele += *base;
+	    if (base == (*snp)->rank_1 || base == (*snp)->rank_2) 
+		allele += base;
 	    else
 		break;
 	}
@@ -291,7 +305,7 @@ int call_alleles(MergedStack *mtag, vector<char *> &reads, vector<read_type> &re
     return 0;
 }
 
-int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<int, Seq *> &rem, bool invoke_model) {
+int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<int, Rem *> &rem, bool invoke_model) {
     //
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -299,87 +313,87 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
     map<int, MergedStack *>::iterator it;
     vector<int> keys;
     for (it = merged.begin(); it != merged.end(); it++) 
-	keys.push_back(it->first);
+    	keys.push_back(it->first);
 
     int i;
     #pragma omp parallel private(i)
     { 
         #pragma omp for schedule(dynamic) 
-	for (i = 0; i < (int) keys.size(); i++) {
-	    MergedStack *mtag;
-	    Stack *utag;
+    	for (i = 0; i < (int) keys.size(); i++) {
+    	    MergedStack *mtag;
+    	    Stack       *utag;
 
-	    mtag = merged[keys[i]];
+    	    mtag = merged[keys[i]];
 
-	    //
-	    // Create a two-dimensional array, each row containing one read. For
-	    // each unique tag that has been merged together, add the sequence for
-	    // that tag into our array as many times as it originally occurred. 
-	    //
-	    vector<int>::iterator j;
-	    vector<char *> reads;
-	    vector<read_type> read_types;
+    	    //
+    	    // Create a two-dimensional array, each row containing one read. For
+    	    // each unique tag that has been merged together, add the sequence for
+    	    // that tag into our array as many times as it originally occurred. 
+    	    //
+    	    vector<int>::iterator j;
+    	    vector<DNASeq *>  reads;
+    	    vector<read_type> read_types;
 
-	    for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
-		utag = unique[*j];
+    	    for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
+    		utag = unique[*j];
 
-		for (uint k = 0; k < utag->count; k++) {
-		    reads.push_back(utag->seq);
-		    read_types.push_back(primary);
-		}
-	    }
+    		for (uint k = 0; k < utag->count; k++) {
+    		    reads.push_back(utag->seq);
+    		    read_types.push_back(primary);
+    		}
+    	    }
 
-	    // For each remainder tag that has been merged into this Stack, add the sequence. 
-	    for (j = mtag->remtags.begin(); j != mtag->remtags.end(); j++) {
-		reads.push_back(rem[*j]->seq);
-		read_types.push_back(secondary);
-	    }
+    	    // For each remainder tag that has been merged into this Stack, add the sequence. 
+    	    for (j = mtag->remtags.begin(); j != mtag->remtags.end(); j++) {
+    		reads.push_back(rem[*j]->seq);
+    		read_types.push_back(secondary);
+    	    }
 
-	    //
-	    // Iterate over each column of the array and call the consensus base.
-	    //
-	    int row, col;
-	    int length = strlen(reads[0]);
-	    int height = reads.size();
-	    string con;
-	    map<char, int> nuc;
-	    map<char, int>::iterator max, n;
-	    char *base;
+    	    //
+    	    // Iterate over each column of the array and call the consensus base.
+    	    //
+    	    int row, col;
+    	    int length = reads[0]->size;
+    	    int height = reads.size();
+    	    string con;
+    	    map<char, int> nuc;
+    	    map<char, int>::iterator max, n;
+            DNASeq *d;
 
-	    for (col = 0; col < length; col++) {
-		nuc['A'] = 0; 
-		nuc['C'] = 0;
-		nuc['G'] = 0;
-		nuc['T'] = 0;
+    	    for (col = 0; col < length; col++) {
+    		nuc['A'] = 0; 
+    		nuc['C'] = 0;
+    		nuc['G'] = 0;
+    		nuc['T'] = 0;
 
-		for (row = 0; row < height; row++) {
-		    base = reads[row];
-		    base = base + col;
-		    //cerr << "    Row: " << row << " Col: " << col << " Base: " << *base << "\n";
-		    nuc[*base]++;
-		}
+    		for (row = 0; row < height; row++) {
+    		    d = reads[row];
+    		    //base = base + col;
+    		    //cerr << "    Row: " << row << " Col: " << col << " Base: " << *base << "\n";
+    		    nuc[(*d)[col]]++;
+    		}
 
-		//
-		// Find the base with a plurality of occurances and call it.
-		//
-		max = nuc.end();
+    		//
+    		// Find the base with a plurality of occurances and call it.
+    		//
+    		max = nuc.end();
 
-		for (n = nuc.begin(); n != nuc.end(); n++) {
+    		for (n = nuc.begin(); n != nuc.end(); n++) {
 
-		    if (max == nuc.end() || n->second > max->second)
-			max = n;
-		}
-		con += max->first;
+    		    if (max == nuc.end() || n->second > max->second)
+    			max = n;
+    		}
+    		con += max->first;
 
-		// Search this column for the presence of a SNP
-		if (invoke_model) 
-		    model_type == snp ? 
+    		// Search this column for the presence of a SNP
+    		if (invoke_model) 
+    		    model_type == snp ? 
                         call_multinomial_snp(mtag, col, nuc, false) :
                         call_multinomial_fixed(mtag, col, nuc);
-	    }
+    	    }
 
-	    if (invoke_model) {
-		call_alleles(mtag, reads, read_types);
+    	    if (invoke_model) {
+    		call_alleles(mtag, reads, read_types);
 
                 if (model_type == fixed) {
                     //
@@ -392,8 +406,8 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
                 }
             }
 
-	    mtag->add_consensus(con.c_str());
-	}
+    	    mtag->add_consensus(con.c_str());
+    	}
     }
 
     return 0;
@@ -402,9 +416,9 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
 int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &merged) {
     map<int, Stack *>::iterator i;
     map<int, MergedStack *>::iterator it_new, it_old;
-    Stack      *utag;
+    Stack       *utag;
     MergedStack *mtag;
-    int        k = 0;
+    int          k = 0;
 
     it_old = merged.begin();
 
@@ -1003,46 +1017,50 @@ int calc_distance(map<int, MergedStack *> &merged, int utag_dist) {
     return 0;
 }
 
-int reduce_radtags(HashMap &radtags, map<int, Stack *> &unique, map<int, Seq *> &rem) {
-    HashMap::iterator it;
-    vector<SeqId *>::iterator fit;
+int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, Rem *> &rem) {
+    DNASeqHashMap::iterator it;
+    vector<char *>::iterator fit;
 
-    Seq  *s;
+    Rem   *r;
     Stack *u;
     int   global_id = 1;
 
     for (it = radtags.begin(); it != radtags.end(); it++) {
-	if (it->second.count < min_merge_cov) {
-	    //
-	    // Don't record this unique RAD-Tag if its coverage is below
-	    // the specified cutoff. However, add the reads to the remainder
-	    // vector for later processing.
-	    //
-	    for (fit = (*it).second.id.begin(); fit != (*it).second.id.end(); fit++) {
-		s = new Seq((*fit)->id, (*it).first);
-		rem[global_id] = s;
-		global_id++;
-	    }
-	} else if (it->second.count > 1) {
-	    //
-	    // Populate a Stack object for this unique radtag. Create a
-	    // map of the IDs for the sequences that have been
-	    // collapsed into this radtag.
-	    //
-	    u         = new Stack;
-	    u->id    = global_id;
-	    u->count  = (*it).second.count;
-	    u->add_seq((*it).first);
+    	if (it->second.count < min_merge_cov) {
+    	    //
+    	    // Don't record this unique RAD-Tag if its coverage is below
+    	    // the specified cutoff. However, add the reads to the remainder
+    	    // vector for later processing.
+    	    //
+    	    for (fit = it->second.ids.begin(); fit != it->second.ids.end(); fit++) {
+    		r = new Rem(global_id, *fit, it->first);
+    		rem[global_id] = r;
+    		global_id++;
+    	    }
+    	} else if (it->second.count > 1) {
+    	    //
+    	    // Populate a Stack object for this unique radtag. Create a
+    	    // map of the IDs for the sequences that have been
+    	    // collapsed into this radtag.
+    	    //
+    	    u         = new Stack;
+    	    u->id     = global_id;
+    	    u->count  = it->second.count;
+    	    u->add_seq(it->first);
 
-	    // Copy the original Fastq IDs from which this unique radtag was built.
-	    for (fit = (*it).second.id.begin(); fit != (*it).second.id.end(); fit++) {
-		u->add_id((*fit)->id);
-	    }
+    	    // Copy the original Fastq IDs from which this unique radtag was built.
+    	    for (fit = it->second.ids.begin(); fit != it->second.ids.end(); fit++)
+    		u->add_id(*fit);
 
-	    unique[u->id] = u;
-	    global_id++;
-	}
+    	    unique[u->id] = u;
+    	    global_id++;
+    	}
     }
+
+    // 
+    // We no longer need to keep this Hash around.
+    //
+    radtags.clear();
 
     if (unique.size() == 0) {
         cerr << "Error: Unable to form any stacks, data appear to be unique.\n";
@@ -1177,15 +1195,15 @@ int count_raw_reads(map<int, Stack *> &unique, map<int, MergedStack *> &merged) 
     return 0;
 }
 
-int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq *> &r) {
+int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> &r) {
     map<int, MergedStack *>::iterator i;
-    vector<SeqId *>::iterator  j;
+    vector<char *>::iterator   j;
     vector<int>::iterator      k;
     vector<SNP *>::iterator    s;
     map<string, int>::iterator t;
     MergedStack *tag_1;
     Stack *tag_2;
-    Seq  *rem;
+    Rem   *rem;
 
     //
     // Parse the input file name to create the output files
@@ -1201,6 +1219,8 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
     std::ofstream snps(snp_file.c_str());
     std::ofstream alle(all_file.c_str());
     int id;
+
+    char *buf = new char[m.begin()->second->len + 1];
 
     for (i = m.begin(); i != m.end(); i++) {
 	float total = 0;
@@ -1225,7 +1245,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
 	    total += tag_2->count;
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << (*j)->id << "\t" << tag_2->seq << "\t\t\t\n";
+		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << tag_2->seq->seq(buf) << "\t\t\t\n";
 	    }
 
 	    id++;
@@ -1235,14 +1255,17 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
 	// Write out the remainder tags merged into this unique tag.
 	//
 	total += tag_1->remtags.size();
+
 	for (k = tag_1->remtags.begin(); k != tag_1->remtags.end(); k++) {
 	    rem = r[*k];
-	    tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "secondary\t\t" << rem->id << "\t" << rem->seq << "\t\t\t\n";
+	    tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "secondary\t\t" << rem->seq_id << "\t" << rem->seq->seq(buf) << "\t\t\t\n";
 	}
 
 	// Write out any SNPs detected in this unique tag.
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-	    snps << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << (*s)->col << "\t" << (*s)->lratio << "\t" << (*s)->rank_1 << "\t" << (*s)->rank_2 << "\n";
+	    snps << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" 
+		 << (*s)->col << "\t" << (*s)->lratio << "\t" 
+		 << (*s)->rank_1 << "\t" << (*s)->rank_2 << "\t\t\n";
 	}
 
 	// Write the expressed alleles seen for the recorded SNPs and
@@ -1264,13 +1287,15 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Seq
 
 	std::ofstream unused(unused_file.c_str());
 
-	map<int, Seq *>::iterator r_it;
+ 	map<int, Rem *>::iterator r_it;
 	for (r_it = r.begin(); r_it != r.end(); r_it++)
 	    if (r_it->second->utilized == false)
-		unused << ">" << r_it->second->id << "\n" << r_it->second->seq << "\n";
+		unused << ">" << r_it->second->id << "\n" << r_it->second->seq->seq(buf) << "\n";
 
 	unused.close();
     }
+
+    //delete [] buf;
 
     return 0;
 }
@@ -1365,7 +1390,7 @@ int dump_stack_graph(string data_file,
     // Output a list of IDs so we can locate these stacks in the final results.
     //
     for (s = 0; s < keys.size(); s++)
-	data << "/* " << keys[s] << ": " << unique[merged[keys[s]]->utags[0]]->map[0]->id << "; depth: " << merged[keys[s]]->count << " */\n";
+	data << "/* " << keys[s] << ": " << unique[merged[keys[s]]->utags[0]]->map[0] << "; depth: " << merged[keys[s]]->count << " */\n";
 
     //
     // Output a specification to visualize the stack graph using graphviz:
@@ -1450,7 +1475,7 @@ int dump_stack_graph(string data_file,
 
 int dump_unique_tags(map<int, Stack *> &u) {
     map<int, Stack *>::iterator it;
-    vector<SeqId *>::iterator fit;
+    vector<char *>::iterator fit;
     vector<pair<int, int> >::iterator pit;
     vector<int>::iterator mit;
 
@@ -1461,7 +1486,7 @@ int dump_unique_tags(map<int, Stack *> &u) {
 	     << "  IDs:       "; 
 
 	for (fit = (*it).second->map.begin(); fit != (*it).second->map.end(); fit++)
-	    cerr << (*fit)->id << " ";
+	    cerr << *fit << " ";
 
 	cerr << "\n\n";
     }
@@ -1499,22 +1524,35 @@ int dump_merged_tags(map<int, MergedStack *> &m) {
     return 0;
 }
 
-int load_radtags(string in_file, HashMap &radtags) {
+int load_radtags(string in_file, DNASeqHashMap &radtags) {
     Input *fh;
-    Seq   *c;
+    DNASeq *d;
 
     if (in_file_type == fasta)
         fh = new Fasta(in_file.c_str());
     else if (in_file_type == fastq)
         fh = new Fastq(in_file.c_str());
 
-    cerr << "  Parsing " << in_file.c_str() << "\n";
-    long int corrected = 0;
-    long int i = 0;
-    while ((c = fh->next_seq()) != NULL) {
-        if (i % 10000 == 0) cerr << "Loading RAD-Tag " << i << "       \r";
+    cerr << "Parsing " << in_file.c_str() << "\n";
+    long  int corrected = 0;
+    long  int i         = 0;
+    short int seql      = 0;
+    short int prev_seql = 0;
+    bool  len_mismatch  = false;
 
-	for (char *p = c->seq; *p != '\0'; p++)
+    Seq c;
+    c.id   = new char[id_len];
+    c.chr  = new char[max_len];
+    c.seq  = new char[max_len];
+    c.qual = new char[max_len];
+
+    while ((fh->next_seq(c)) != 0) {
+        if (i % 10000 == 0) cerr << "  Loading RAD-Tag " << i << "       \r";
+
+	prev_seql = seql;
+	seql      = 0;
+
+	for (char *p = c.seq; *p != '\0'; p++, seql++)
 	    switch (*p) {
 	    case 'N':
 	    case 'n':
@@ -1523,8 +1561,11 @@ int load_radtags(string in_file, HashMap &radtags) {
 		corrected++;
 	    }
 
-	radtags[c->seq].add_id(c->id);
-	radtags[c->seq].count++;
+	if (seql != prev_seql && prev_seql > 0) len_mismatch = true;
+
+	d = new DNASeq(seql, c.seq);
+	radtags[d].add_id(c.id);
+	radtags[d].count++;
         i++;
     }
     cerr << "Loaded " << i << " RAD-Tags; inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n";
@@ -1534,16 +1575,10 @@ int load_radtags(string in_file, HashMap &radtags) {
         exit(1);
     }
 
-    cerr << corrected << " reads contained uncalled nucleotides that were modified.\n";
+    cerr << "  " << corrected << " reads contained uncalled nucleotides that were modified.\n";
 
-    //
-    // Check to make sure all the reads are of the same length.
-    //
-    HashMap::iterator it;
-    uint len = strlen(radtags.begin()->first);
-    for (it = radtags.begin(); it != radtags.end(); it++)
-        if (strlen((*it).first) != len)
-            cerr << "  Warning: '" << (*it).second.id[0]->id << "' has a different length.\n";
+    if (len_mismatch)
+	cerr << "  Warning: different sequence lengths detected, this will interfere with Stacks algorithms.\n";
 
     //
     // Close the file and delete the Input object.

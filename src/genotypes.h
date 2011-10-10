@@ -53,12 +53,13 @@ using std::set;
 
 #include "constants.h"
 #include "stacks.h"
+#include "renz.h"
 #include "PopMap.h"
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"
 
 enum map_types {unk, none, gen, dh, cp, bc1, f2};
-enum out_types {rqtl, joinmap};
+enum out_types {rqtl, joinmap, genomic};
 
 //
 // Catalog Locus Class
@@ -102,9 +103,10 @@ int  export_dh_map(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &, map<int, 
 int  export_f2_map(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &, map<int, string> &);
 
 int  write_generic(map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &, bool);
-int  write_sql(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &);
+int  write_sql(map<int, CLocus *> &,     PopMap<CLocus> *, set<int> &);
 int  write_joinmap(map<int, CLocus *> &, PopMap<CLocus> *, map<string, string> &, map<int, string> &, set<int> &);
-int  write_rqtl(map<int, CLocus *> &, PopMap<CLocus> *, map<string, string> &, map<int, string> &, set<int> &);
+int  write_rqtl(map<int, CLocus *> &,    PopMap<CLocus> *, map<string, string> &, map<int, string> &, set<int> &);
+int  write_genomic(map<int, CLocus *> &, PopMap<CLocus> *);
 
 bool hap_compare(pair<string, int>, pair<string, int>);
 bool compare_pair(pair<char, int>, pair<char, int>);

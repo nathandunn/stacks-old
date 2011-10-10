@@ -88,3 +88,25 @@ function toggle_cb(form_id, value) {
             else
                 form_obj.elements[i].checked = true;
 }
+
+function toggle_genotypes(catalog_id, table_id, type) {
+    var table_obj = document.getElementById(table_id); 
+
+    divs = table_obj.getElementsByTagName("div");
+
+    for(i = 0; i < divs.length; i++) {
+        if (divs[i].id.substr(0, 3) == type) { 
+            if (divs[i].style.display == "none")
+                divs[i].style.display = "";
+            else
+                divs[i].style.display = "none";
+	}
+    }
+
+    //
+    // Adjust the height of the parent iframe to possibly accomodate more data
+    //
+    var iframe_obj = parent.document.getElementById(catalog_id + "_iframe");
+    if (iframe_obj)
+	iframe_obj.style.height = (this.document.body.offsetHeight+25) + 'px';
+}

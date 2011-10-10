@@ -83,7 +83,13 @@ $query =
     "WHERE batch_id=? AND sample_id=? AND tag_id=? " .
     "GROUP BY catalog_id";
 $db['cat_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['par_sth'], __FILE__, __LINE__);
+check_db_error($db['cat_sth'], __FILE__, __LINE__);
+
+$query = 
+    "SELECT col FROM catalog_snps " . 
+    "WHERE batch_id=? AND tag_id=?";
+$db['cat_snp_sth'] = $db['dbh']->prepare($query);
+check_db_error($db['cat_snp_sth'], __FILE__, __LINE__);
 
 //
 // Pull information about this batch
@@ -162,13 +168,15 @@ while ($row = $result->fetchRow()) {
 $result = $db['cat_sth']->execute(array($batch_id, $sample_id, $tag_id));
 check_db_error($result, __FILE__, __LINE__);
 $row = $result->fetchRow();
+if (isset($row['catalog_id'])) 
+  $catalog_id = $row['catalog_id'];
+else
+  $catalog_id = -1;
 
-echo <<< EOQ
-<td style="text-align: center; vertical-align: top;">
-  <a href="$root_path/catalog.php?db=$database&id=$batch_id&filter_type[]=cata&filter_cata=$row[catalog_id]">#$row[catalog_id]</a>
-</td>
-
-EOQ;
+print "<td style=\"text-align: center; vertical-align: top;\">\n";
+if ($catalog_id >= 0)
+  print "  <a href=\"$root_path/catalog.php?db=$database&id=$batch_id&filter_type[]=cata&filter_cata=$catalog_id\">#$catalog_id</a>\n";
+print "</td>\n";
 
 $result = $db['depth_sth']->execute(array($sample_id, $tag_id));
 check_db_error($result, __FILE__, __LINE__);
@@ -187,6 +195,18 @@ check_db_error($result, __FILE__, __LINE__);
 
 while ($row = $result->fetchRow()) {
   $snps[$row['col']] = array('col' => $row['col'], 'rank_1' => $row['rank_1'], 'rank_2' => $row['rank_2']);
+}
+
+$cat_snps = array();
+if ($catalog_id >= 0) {
+  $result   = $db['cat_snp_sth']->execute(array($batch_id, $catalog_id));
+  check_db_error($result, __FILE__, __LINE__);
+
+  while ($row = $result->fetchRow()) {
+      if (!isset($cat_snps[$row['col']]))
+  	  $cat_snps[$row['col']] = 0;
+      $cat_snps[$row['col']]++;
+  }
 }
 
 print 
@@ -244,7 +264,8 @@ echo <<< EOQ
 </table>
 
 <a name="results_top"></a>
-<table class="radtag" style="width: 95%;">
+<div class="seq_frame_head">
+<table class="radtag">
 <tr>
   <th style="width: 5%;">&nbsp;</th>
   <th style="width: 15%;">Relationship</th>
@@ -272,10 +293,18 @@ print
     "  <td class=\"tag\">" . $s . "</td>\n" .
     "</tr>\n";
 
+echo <<< EOQ
+</table>
+</div>
+<div class="seq_frame">
+<table class="radtag">
+
+EOQ;
+
 $i = 1;
-foreach (array('primary', 'secondary', 'tertiary') as $key) {
+foreach (array('primary', 'secondary') as $key) {
     foreach ($seqs[$key] as $seq) {
-	$s = print_snps_errs($seqs['consensus'][0]['s'], $seq['s'], $snps);
+        $s = print_snps_errs($seqs['consensus'][0]['s'], $seq['s'], $snps, $cat_snps);
 
 	if ($key == "primary" && $seq['sub_id'] % 2 == 1) 
 	    $bg = "style=\"background-color: #dddddd;\"";
@@ -295,6 +324,7 @@ foreach (array('primary', 'secondary', 'tertiary') as $key) {
 
 echo <<< EOQ
 </table>
+</div>
 </div>
 
 EOQ;

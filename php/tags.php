@@ -464,7 +464,7 @@ function write_filter() {
   <img id="filter_img" src="$img_path/caret-d.png" />
   <a onclick="toggle_div('filter', '$img_path', 'page_state');">Filter Results</a>
 </h4>
-<div id="filter" $filter_vis>
+<div id="filter">
 <form id="filter_results" name="filter_results" method="get" action="$root_path/tags.php">
 $hidden_vars
 <table class="filter">

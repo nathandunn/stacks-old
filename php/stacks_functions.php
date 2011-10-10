@@ -67,6 +67,7 @@ function write_compact_header($page_title) {
   <title>$site_title: $page_title</title>
   <link rel="stylesheet" type="text/css" href="$root_path/stacks.css" />
   <script type="text/javascript" src="$root_path/stacks.js"></script>
+  <script type="text/javascript" src="$root_path/annotate.js"></script>
 </head>
 
 <body>
@@ -185,7 +186,7 @@ function print_snps($consensus, $seq, $snps, $wrap) {
     return $s;
 }
 
-function print_snps_errs($consensus, $sequence, $snps) {
+function print_snps_errs($consensus, $sequence, $snps, $cat_snps) {
     $str = "";
     $con = str_split($consensus);
     $seq = str_split($sequence);
@@ -200,6 +201,8 @@ function print_snps_errs($consensus, $sequence, $snps) {
 	    else
 		$str .= "<span class=\"rank_2\">$seq[$i]</span>";
 
+	} else if (isset($cat_snps[$i])) {
+		$str .= "<span class=\"cat_snp\">$seq[$i]</span>";
 	} else {
 	    // Does this nucleotide equal the consensus nucleotide at position $i?
 	    if ($con[$i] == $seq[$i] || $seq[$i] == "N")
@@ -234,11 +237,15 @@ function generate_key_element_select($name, $elements, $selected_key, $javascrip
     return $ctl;
 }
 
-function generate_element_select($name, $elements, $selected_ele, $javascript) {
+function generate_element_select($name, $elements, $selected_ele, $change_js, $blur_js = "") {
     $script_code = "";
 
-    if (strlen($javascript) > 0) {
-        $script_code = " onchange=\"$javascript\"";
+    if (strlen($change_js) > 0 && strlen($blur_js) > 0) {
+        $script_code = " onchange=\"$change_js\" onblur=\"$blur_js\"";
+    } else if (strlen($change_js) > 0) {
+        $script_code = " onchange=\"$change_js\"";
+    } else if (strlen($blur_js) > 0) {
+        $script_code = " onblur=\"$blur_js\"";
     }
 
     $ctl = "  <select id=\"$name\" name=\"$name\"" . $script_code . ">\n";
