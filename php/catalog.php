@@ -507,7 +507,7 @@ function generate_page_list($page, $num_pages, $destination) {
 	} 
     } else {
 	$display['p'] = 1;
-	$p            = generate_url($destination);
+	$p            = generate_url($destination, true);
 	$page_list   .= "<a $p>1</a> ...\n"; 
 
 	foreach (array($page - 3, $page - 2, $page - 1) as $i) {
