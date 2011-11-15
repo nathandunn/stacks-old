@@ -302,7 +302,8 @@ int process_reads(string prefix,
     //
     Seq *s = fh->next_seq();
     if (s == NULL) {
-    	cerr << "Unable to allocate Seq object.\n";
+    	cerr << "Attempting to read first input record, unable to allocate " 
+	     << "Seq object (Was the correct input type specified?).\n";
     	exit(1);
     }
 
