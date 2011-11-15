@@ -54,14 +54,6 @@ Seq *Fastq::next_seq() {
     strcpy(s->id, this->line + 1);
 
     //
-    // We will also load the FASTQ ID into the Seq object as a fake genomic location
-    // so that the stacks are built correctly in the pstacks program.
-    //
-    s->chr = new char[strlen(this->line) + 1];
-    strcpy(s->chr, this->line + 1);
-    s->bp = 0;
-
-    //
     // Read the sequence from the file
     //
     this->fh.getline(this->line, max_len);

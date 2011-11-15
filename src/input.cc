@@ -35,8 +35,6 @@ Seq::Seq() {
     this->seq      = NULL;
     this->qual     = NULL;
     this->loc_str  = NULL;
-    this->chr      = NULL;
-    this->bp       = 0;
 }
 
 Seq::Seq(const char *id, const char *seq) { 
@@ -44,8 +42,6 @@ Seq::Seq(const char *id, const char *seq) {
     this->seq      = new char[strlen(seq)  + 1];
     this->qual     = NULL;
     this->loc_str  = NULL;
-    this->chr      = NULL;
-    this->bp       = 0;
 
     strcpy(this->id,   id); 
     strcpy(this->seq,  seq);
@@ -56,27 +52,32 @@ Seq::Seq(const char *id, const char *seq, const char *qual)  {
     this->seq      = new char[strlen(seq)  + 1];
     this->qual     = new char[strlen(qual) + 1];
     this->loc_str  = NULL;
-    this->chr      = NULL;
-    this->bp       = 0;
 
     strcpy(this->id,   id); 
     strcpy(this->seq,  seq); 
     strcpy(this->qual, qual); 
 }
 
-Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp)  { 
+Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand)  { 
     this->id      = new char[strlen(id)   + 1];
-    this->seq     = new char[strlen(seq)  + 1];
     this->qual    = new char[strlen(qual) + 1];
-    this->chr     = new char[strlen(chr)  + 1];
-    this->loc_str = new char[strlen(chr)  + 11];
-    this->bp      = bp;
+    this->loc_str = new char[strlen(chr)  + 15];
 
     strcpy(this->id,   id);
-    strcpy(this->seq,  seq);
     strcpy(this->qual, qual);
-    strcpy(this->chr,  chr);
-    sprintf(this->loc_str, "%s_%d", this->chr, this->bp);
+    this->loc.set(chr, bp, strand);
+
+    sprintf(this->loc_str, "%s|%d|%c", chr, bp, strand == plus ? '+' : '-');
+
+    //
+    // Reverse complement sequences from the negative strand 
+    //
+    if (strand == plus) {
+	this->seq = new char[strlen(seq)  + 1];
+	strcpy(this->seq, seq);
+    } else {
+	this->seq = rev_comp(seq);
+    }
 }
 
 Input::Input(const char *path) {
@@ -93,6 +94,38 @@ Input::Input(const char *path) {
 Input::~Input() {
     // Close the file
     this->fh.close();
+}
+
+char *rev_comp(const char *seq) {
+    int len   = strlen(seq);
+    int j     = 0;
+    char *com = new char[len + 1]; 
+    const char *p;
+   
+    for (p = seq + len - 1; p >= seq; p--) {
+        switch (*p) {
+        case 'A':
+        case 'a':
+            com[j] = 'T';
+            break;
+        case 'C':
+        case 'c':
+            com[j] = 'G';
+            break;
+        case 'G':
+        case 'g':
+            com[j] = 'C';
+            break;
+        case 'T':
+        case 't':
+            com[j] = 'A';
+            break;
+        }
+        j++;
+    }
+    com[len] = '\0';
+
+    return com;
 }
 
 int parse_tsv(const char *line, vector<string> &parts) {

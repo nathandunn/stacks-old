@@ -65,7 +65,7 @@ int main (int argc, char* argv[]) {
     //
     // Build an index of the catalog
     //
-    map<string, map<int, int> > cat_index;
+    map<string, int> cat_index;
     if (search_type == genomic_loc) {
 	cerr << "Building an index of the catalog.\n";
 	update_catalog_index(catalog, cat_index);
@@ -115,16 +115,21 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int update_catalog_index(map<int, CLocus *> &catalog, map<string, map<int, int> > &cat_index) {
-
+int update_catalog_index(map<int, CLocus *> &catalog, map<string, int> &cat_index) {
     map<int, CLocus *>::iterator j;
+    char id[id_len];
 
     for (j = catalog.begin(); j != catalog.end(); j++) {
-	if (cat_index[j->second->loc.chr].count(j->second->loc.bp) == 0) {
-	    cat_index[j->second->loc.chr][j->second->loc.bp] = j->first;
+	snprintf(id, id_len - 1, "%s|%d|%c", 
+		 j->second->loc.chr, 
+		 j->second->loc.bp, 
+		 j->second->loc.strand == plus ? '+' : '-');
+
+	if (cat_index.count(id) == 0) {
+	    cat_index[id] = j->first;
 	} else {
-	    if (cat_index[j->second->loc.chr][j->second->loc.bp] != j->first)
-		cerr << "Error: Catalog index mismatch.\n";
+	    if (cat_index[id] != j->first)
+		cerr << "Error: Catalog index mismatch, key: '" << id << "'.\n";
 	}
     }
 
@@ -158,13 +163,13 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
     //
     // For each mismatch found, create a SNP object
     //
-    const char *beg = c;
-    const char *end = c + strlen(c);
+    const char *beg    = c;
+    const char *end    = c + strlen(c);
 
     while (c < end) {
 	if (*c != *q) {
             SNP *s = new SNP;
-            s->col    =  c - beg;
+            s->col    = c - beg;
             s->lratio = 0;
             s->rank_1 = *c;
             s->rank_2 = *q;
@@ -175,7 +180,7 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
             catalog_tag->snps.push_back(s);
 
             s = new SNP;
-            s->col    =  c - beg;
+            s->col    = c - beg;
             s->lratio = 0;
             s->rank_1 = *q;
             s->rank_2 = *c;
@@ -292,15 +297,16 @@ int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, 
     CLocus *c = new CLocus;
     c->id = cid + 1;
     c->add_consensus(qloc->con);
+    //
+    // Record the source of this catalog tag.
+    //
     c->sources.push_back(make_pair(sample_file.first, qloc->id));
-    catalog[c->id] = c;
-
     //
     // Add the physical genome location of this locus.
     //
-    strncpy(c->loc.chr, qloc->loc.chr, id_len);
-    c->loc.chr[id_len - 1] = '\0';
-    c->loc.bp = qloc->loc.bp;
+    c->loc.set(qloc->loc.chr, qloc->loc.bp, qloc->loc.strand);
+
+    catalog[c->id] = c;
 
     // cerr << "Adding sample: " << qloc->id << " to the catalog as ID: " << c->id << "\n";
 
@@ -498,14 +504,15 @@ int find_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *> &sa
     return 0;
 }
 
-int find_matches_by_genomic_loc(map<string, map<int, int> > &cat_index, map<int, QLocus *> &sample) {
+int find_matches_by_genomic_loc(map<string, int> &cat_index, map<int, QLocus *> &sample) {
     //
     // Calculate the distance (number of mismatches) between each pair
     // of Radtags. We expect all radtags to be the same length;
     //
     map<int, QLocus *>::iterator i;
     map<int, CLocus *>::iterator j;
-    int k;
+    char id[id_len];
+    int  k;
 
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -520,9 +527,13 @@ int find_matches_by_genomic_loc(map<string, map<int, int> > &cat_index, map<int,
 
 	    i = sample.find(keys[k]);
 
-	    if (cat_index.count(i->second->loc.chr) > 0 &&
-		cat_index[i->second->loc.chr].count(i->second->loc.bp) > 0)
-		i->second->add_match(cat_index[i->second->loc.chr][i->second->loc.bp], "", "", 0);
+	    snprintf(id, id_len - 1, "%s|%d|%c", 
+		     i->second->loc.chr, 
+		     i->second->loc.bp, 
+		     i->second->loc.strand == plus ? '+' : '-');
+
+	    if (cat_index.count(id) > 0)
+		i->second->add_match(cat_index[id], "", "", 0);
         }
     }
 
@@ -907,6 +918,7 @@ int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofs
 	tag->id      << "\t" <<
         tag->loc.chr << "\t" <<
         tag->loc.bp  << "\t" <<
+        (tag->loc.strand == plus ? "+" : "-") << "\t" <<
 	"consensus"  << "\t" <<
 	"0"          << "\t" <<
 	sources      << "\t" <<

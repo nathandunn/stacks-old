@@ -83,10 +83,7 @@ int main (int argc, char* argv[]) {
     count_raw_reads(unique, merged);
 
     cerr << "Writing results\n";
-    if (out_file_type == sam)
-        write_sam(merged, unique);
-    else
-        write_sql(merged, unique);
+    write_sql(merged, unique);
 
     return 0;
 }
@@ -195,7 +192,9 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
 		}
 		con += max->second == 0 ? 'N' : max->first;
 
+		//
 		// Search this column for the presence of a SNP
+		//
 		if (invoke_model) 
 		    model_type == snp ? 
                         call_multinomial_snp(mtag, col, nuc, false) :
@@ -211,7 +210,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
                     //
                     vector<SNP *>::iterator s;
                     for (s = mtag->snps.begin(); s != mtag->snps.end(); s++) {
-                        con.replace((*s)->col, 1, "N");
+			con.replace((*s)->col, 1, "N");
                     }
                 }
             }
@@ -283,6 +282,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 	     << tag_1->id << "\t" 
              << tag_1->loc.chr << "\t"
              << tag_1->loc.bp << "\t"
+             << (tag_1->loc.strand == plus ? "+" : "-") << "\t"
 	     << "consensus\t" << "\t\t" 
 	     << tag_1->con << "\t" 
 	     << tag_1->deleveraged << "\t" 
@@ -296,7 +296,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 	    buf = tag_2->seq->seq();
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\n";
+		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\n";
 	    }
 	    id++;
 	    delete [] buf;
@@ -326,51 +326,6 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 }
 
 int write_sam(map<int, MergedStack *> &m, map<int, Stack *> &u) {
-    map<int, MergedStack *>::iterator i;
-    vector<char *>::iterator   j;
-    vector<int>::iterator      k;
-    vector<SNP *>::iterator    s;
-    map<string, int>::iterator t;
-    MergedStack *tag_1;
-
-    //
-    // Parse the input file name to create the output files
-    //
-    size_t pos_1 = in_file.find_last_of("/");
-    size_t pos_2 = in_file.find_last_of(".");
-    string sam_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".pstacks.sam";
-
-    // Open the output files for writing.
-    std::ofstream sam(sam_file.c_str());
-
-    for (i = m.begin(); i != m.end(); i++) {
-	tag_1 = i->second;
-
-	// First write the consensus sequence
-	sam << tag_1->id << "\t"
-            << "\t"  // direction
-            << tag_1->loc.chr << "\t"
-            << tag_1->loc.bp<< "\t"
-            << "\t"  // 
-            << "\t"  // 
-            << "\t"  // 
-            << "\t"  // 
-            << "\t"  // 
-            << tag_1->con << "\t"
-            << "\t"  // quality
-            << "\t";  // 
-        //
-        // Write out any SNPs detected in this unique tag.
-        //
-        stringstream snps;
-	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++)
-	    snps << (*s)->col << ":" << (*s)->rank_1 << ">" << (*s)->rank_2 << ",";
-
-        sam << snps.str().substr(0, snps.str().length() - 1) << "\n"; //             
-    }
-
-    sam.close();
-
     return 0;
 }
 
@@ -389,7 +344,10 @@ int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &mer
     // Create a map of each unique Stack that has been aligned to the same genomic location.
     //
     for (i = unique.begin(); i != unique.end(); i++) {
-        snprintf(id, id_len - 1, "%s_%d", i->second->loc.chr, i->second->loc.bp);
+        snprintf(id, id_len - 1, "%s|%d|%s", 
+		 i->second->loc.chr, 
+		 i->second->loc.bp, 
+		 i->second->loc.strand == plus ? "+" : "-");
         locations[id].insert(i->second->id);
     }
 
@@ -404,9 +362,7 @@ int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &mer
         //
         s = k->second.begin();
 	m->add_consensus(unique[*s]->seq);
-        strncpy(m->loc.chr, unique[*s]->loc.chr, id_len - 1);
-        m->loc.chr[id_len] = '\0';
-        m->loc.bp = unique[*s]->loc.bp;
+        m->loc.set(unique[*s]->loc.chr, unique[*s]->loc.bp, unique[*s]->loc.strand);
 
         //
         // Record the individual stacks that were aligned together.
@@ -466,9 +422,7 @@ int reduce_radtags(HashMap &radtags, map<int, Stack *> &unique) {
             for (sit = (*it).second.begin(); sit != (*it).second.end(); sit++) {
                 if (strcmp((*sit)->loc_str, lit->first.c_str()) == 0) {
                     u->add_id((*sit)->id);
-                    strncpy(u->loc.chr, (*sit)->chr, id_len - 1);
-                    u->loc.chr[id_len] = '\0';
-                    u->loc.bp = (*sit)->bp;
+                    u->loc.set((*sit)->loc.chr, (*sit)->loc.bp, (*sit)->loc.strand);
                 }
             }
 
@@ -512,7 +466,7 @@ int load_radtags(string in_file, HashMap &radtags) {
 
     cerr << "  " <<
         "Analyzed " << i - 1 << " sequence reads; " <<
-        "Identified " << radtags.size() << " unique Stacks from those reads.\n";
+        "Identified " << radtags.size() << " unique stacks from those reads.\n";
 
     //
     // Close the file and delete the Input object.

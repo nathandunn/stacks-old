@@ -56,7 +56,7 @@ Seq *Tsv::next_seq() {
 
     string id = parts[0] + "_" + parts[1];
 
-    Seq *s = new Seq(id.c_str(), parts[2].c_str(), parts[3].c_str(), parts[0].c_str(), atoi(parts[1].c_str()));
+    Seq *s = new Seq(id.c_str(), parts[2].c_str(), parts[3].c_str(), parts[0].c_str(), atoi(parts[1].c_str()), plus);
 
     return s;
 }

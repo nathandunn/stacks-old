@@ -115,7 +115,10 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
 
     map<string, set<int> > locations;
     for (j = sample_1.begin(); j != sample_1.end(); j++) {
-        snprintf(id, id_len - 1, "%s_%d", j->second->loc.chr, j->second->loc.bp);
+        snprintf(id, id_len - 1, "%s|%d|%c", 
+		 j->second->loc.chr, 
+		 j->second->loc.bp, 
+		 j->second->loc.strand == plus ? '+' : '-');
         locations[id].insert(j->second->id);
     }
 
@@ -143,7 +146,10 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
 	for (k = 0; k < (int) keys.size(); k++) {
 
 	    i = sample_2.find(keys[k]);
-	    snprintf(id, id_len - 1, "%s_%d", i->second->loc.chr, i->second->loc.bp);
+	    snprintf(id, id_len - 1, "%s|%d|%c", 
+		     i->second->loc.chr, 
+		     i->second->loc.bp, 
+		     i->second->loc.strand == plus ? '+' : '-');
 
 	    if (locations.count(id) > 0) {
 		Locus *tag;
