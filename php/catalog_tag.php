@@ -203,7 +203,9 @@ while ($row = $result->fetchRow()) {
 }
 
 if (count($gtypes) > 0)
-  $gtype_str = "<input type=\"checkbox\" onclick=\"toggle_genotypes($tag_id, 'locus_gtypes', 'gen')\" /> Genotypes";
+  $gtype_str = 
+    "<input id=\"gen_cb\" type=\"checkbox\" onclick=\"toggle_genotypes($tag_id, 'locus_gtypes', 'gen')\" /> " .
+    "<a onclick=\"document.getElementById('gen_cb').click()\">Genotypes</a>";
 else
   $gtype_str = "";
 
@@ -214,8 +216,10 @@ echo <<< EOQ
 <tr>
   <td colspan="10" class="gtype_toggle">
     <strong>View:</strong>
-    <input type="checkbox" checked="checked" onclick="toggle_genotypes($tag_id, 'locus_gtypes', 'hap')" />Haplotypes
-    <input type="checkbox" onclick="toggle_genotypes($tag_id, 'locus_gtypes', 'dep')" /> Allele Depths
+    <input type="checkbox" id="hap_cb" checked="checked" onclick="toggle_genotypes($tag_id, 'locus_gtypes', 'hap')" />
+    <a onclick="document.getElementById('hap_cb').click()">Haplotypes</a>
+    <input type="checkbox" id="dep_cb" onclick="toggle_genotypes($tag_id, 'locus_gtypes', 'dep')" /> 
+    <a onclick="document.getElementById('dep_cb').click()">Allele Depths</a>
     $gtype_str
   </td>
 </tr>

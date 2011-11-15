@@ -267,9 +267,9 @@ function print_bp($bp) {
 
   // Convert the location to be in megabases
   if ($bp > 1000000)
-      $bp = sprintf("%.03fMb", $bp / 1000000);
+      $bp = sprintf("%.02fMb", $bp / 1000000);
   else if ($bp > 1000)
-    $bp = sprintf("%.03fKb", $bp / 1000);
+    $bp = sprintf("%.1fKb", $bp / 1000);
   else 
     $bp = sprintf("%dbp", $bp);
 

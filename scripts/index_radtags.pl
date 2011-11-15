@@ -173,17 +173,21 @@ sub gen_cat_index {
 	# Annotate the RAD site
 	#
 	if ($radome_index) {
-	    if (defined($radome{$row->{'chr'}}->{$row->{'bp'}})) {
-		$ref_type = $radome{$row->{'chr'}}->{$row->{'bp'}}->{'type'};
-		$ref_id   = $radome{$row->{'chr'}}->{$row->{'bp'}}->{'id'};
+	    my $key = $row->{'chr'} . "|" . $row->{'bp'} . "|" . $row->{'strand'};
+	    
+	    if (defined($radome{$key})) {
+		$ref_type = $radome{$key}->{'type'};
+		$ref_id   = $radome{$key}->{'id'};
 	    } else {
 		#
 		# Check for a read aligned on the other strand.
 		#
-		$bp = length($row->{'seq'}) + $row->{'bp'} - 1;
-		if (defined($radome{$row->{'chr'}}->{$bp})) {
-		    $ref_type = $radome{$row->{'chr'}}->{$bp}->{'type'};
-		    $ref_id   = $radome{$row->{'chr'}}->{$bp}->{'id'}
+		$bp  = $row->{'bp'} - 4;
+		$key = $row->{'chr'} . "|" . $bp . "|" . $row->{'strand'};
+
+		if (defined($radome{$key})) {
+		    $ref_type = $radome{$key}->{'type'};
+		    $ref_id   = $radome{$key}->{'id'}
 		} else {
 		    $ref_type = "genomic";
 		    $ref_id   = 0;
@@ -351,20 +355,19 @@ sub fetch_markers {
 sub radome_ref {
     my ($sth, $radome) = @_;
 
-    my ($row);
+    my ($row, $key, $strand);
 
     $sth->{'radome'}->execute()
 	or die("Unable to select results from $db.\n");
 
     while ($row = $sth->{'radome'}->fetchrow_hashref()) {
-	if (!defined($radome->{$row->{'chr'}})) {
-	    $radome->{$row->{'chr'}} = {};
-	}
+	$strand = $row->{'strand'} == 1 ? "+" : "-";
+	$key    = $row->{'chr'} . "|" . $row->{'bp'} . "|" . $strand;
 
-	if (!defined($radome->{$row->{'chr'}}->{$row->{'bp'}}) || 
+	if (!defined($radome->{$key}) || 
 	    $row->{'type'} eq "exon") {
-	    $radome->{$row->{'chr'}}->{$row->{'bp'}} = {'type' => $row->{'type'},
-							'id'   => $row->{'id'}};
+	    $radome->{$key} = {'type' => $row->{'type'},
+			       'id'   => $row->{'id'}};
 	}
     }
 }
@@ -595,7 +598,7 @@ sub prepare_sql_handles {
     $sth->{'match'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-	"SELECT catalog_tags.id as id, tag_id, batch_id, chr, bp, seq FROM catalog_tags " . 
+	"SELECT catalog_tags.id as id, tag_id, batch_id, chr, bp, strand, seq FROM catalog_tags " . 
 	"JOIN batches ON (catalog_tags.batch_id=batches.id) WHERE relationship='consensus'";
     $sth->{'cat_tags'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
@@ -625,7 +628,7 @@ sub prepare_sql_handles {
     $sth->{'cat_hits'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
    $query = 
-	"SELECT id, chr, bp, type FROM ref_radome";
+	"SELECT id, chr, bp, strand, type FROM ref_radome";
     $sth->{'radome'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 }
 

@@ -81,6 +81,8 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
 }
 
 Input::Input(const char *path) {
+    memset(this->line, '\0', max_len);    
+
     this->path = string(path);
     //
     // Open the file for reading
