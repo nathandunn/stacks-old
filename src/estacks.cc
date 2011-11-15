@@ -470,9 +470,7 @@ int reduce_radtags(HashMap &radtags, map<int, Stack *> &unique) {
             for (sit = (*it).second.begin(); sit != (*it).second.end(); sit++) {
                 if (strcmp((*sit)->loc_str, lit->first.c_str()) == 0) {
                     u->add_id((*sit)->id);
-                    strncpy(u->loc.chr, (*sit)->chr, id_len - 1);
-                    u->loc.chr[id_len] = '\0';
-                    u->loc.bp = (*sit)->bp;
+                    u->loc.set((*sit)->loc.chr, (*sit)->loc.bp, (*sit)->loc.strand);
                 }
             }
 

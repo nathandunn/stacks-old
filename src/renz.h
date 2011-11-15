@@ -26,48 +26,53 @@ using std::map;
 #include <string>
 using std::string;
 
-const char *sbfI[]   = {"TGCAGG",            // CCTGCA/GG, SbfI
-			"CCTGCA"};
-const char *pstI[]   = {"TGCAG",             // CTGCA/G, PstI
-			"CTGCA"};
-const char *ecoRI[]  = {"AATTC",             // G/AATTC, EcoRI
-			"GAATT"};
-const char *sgrAI[]  = {"CCGGCG", "CCGGTG",  // CR/CCGGYG, SgrAI; R=A or G; Y=C or T
-			"CGCCGG", "CACCGG"};
-const char *notI[]   = {"GGCCGC",            // GC/GGCCGC, NotI
-			"GCGGCC"};
-const char *haeIII[] = {"GGCC",
-			"GGCC"};
-const char *aluI[]   = {"AGCT",
-			"AGCT"};
-const char *apeKI[]  = {"GCAGC", "GCTGC",    // G/CWGC, ApeKI; W=A or T
-			"CGTCG", "CGACG"};
-const char *mseI[]   = {"TTAA",
-			"TTAA"};
+const char *sbfI[]    = {"TGCAGG",            // CCTGCA/GG, SbfI
+			 "CCTGCA"};
+const char *pstI[]    = {"TGCAG",             // CTGCA/G, PstI
+			 "CTGCA"};
+const char *ecoRI[]   = {"AATTC",             // G/AATTC, EcoRI
+			 "GAATT"};
+const char *sgrAI[]   = {"CCGGCG", "CCGGTG",  // CR/CCGGYG, SgrAI; R=A or G; Y=C or T
+			 "CGCCGG", "CACCGG"};
+const char *notI[]    = {"GGCCGC",            // GC/GGCCGC, NotI
+			 "GCGGCC"};
+const char *haeIII[]  = {"GGCC",
+			 "GGCC"};
+const char *aluI[]    = {"AGCT",
+			 "AGCT"};
+const char *apeKI[]   = {"GCAGC", "GCTGC",    // G/CWGC, ApeKI; W=A or T
+			 "CGTCG", "CGACG"};
+const char *mseI[]    = {"TTAA",
+			 "TTAA"};
+const char *hindIII[] = {"AAGCT",
+			 "TTCGA"};
 
 void 
 initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, map<string, int> &renz_len) {
 
-    renz["sbfI"]  = sbfI;  // CCTGCA/GG, SbfI
-    renz["pstI"]  = pstI;  // CTGCA/G, PstI
-    renz["notI"]  = notI;  // GC/GGCCGC, NotI
-    renz["ecoRI"] = ecoRI; // G/AATTC, EcoRI
-    renz["sgrAI"] = sgrAI; // CR/CCGGYG, SgrAI; R=A or G; Y=C or T
-    renz["apeKI"] = apeKI; // G/CWGC, ApeKI; W=A or T
+    renz["sbfI"]    = sbfI;    // CCTGCA/GG, SbfI
+    renz["pstI"]    = pstI;    // CTGCA/G, PstI
+    renz["notI"]    = notI;    // GC/GGCCGC, NotI
+    renz["ecoRI"]   = ecoRI;   // G/AATTC, EcoRI
+    renz["sgrAI"]   = sgrAI;   // CR/CCGGYG, SgrAI; R=A or G; Y=C or T
+    renz["apeKI"]   = apeKI;   // G/CWGC, ApeKI; W=A or T
+    renz["hindIII"] = hindIII; // A/AGCTT, HindIII
 
-    renz_cnt["sbfI"]  = 1;
-    renz_cnt["pstI"]  = 1;
-    renz_cnt["notI"]  = 1;
-    renz_cnt["ecoRI"] = 1;
-    renz_cnt["sgrAI"] = 2;
-    renz_cnt["apeKI"] = 2;
+    renz_cnt["sbfI"]    = 1;
+    renz_cnt["pstI"]    = 1;
+    renz_cnt["notI"]    = 1;
+    renz_cnt["ecoRI"]   = 1;
+    renz_cnt["sgrAI"]   = 2;
+    renz_cnt["apeKI"]   = 2;
+    renz_cnt["hindIII"] = 1;
 
-    renz_len["sbfI"]  = 6;
-    renz_len["pstI"]  = 5;
-    renz_len["notI"]  = 6;
-    renz_len["ecoRI"] = 5;
-    renz_len["sgrAI"] = 6;
-    renz_len["apeKI"] = 5;
+    renz_len["sbfI"]    = 6;
+    renz_len["pstI"]    = 5;
+    renz_len["notI"]    = 6;
+    renz_len["ecoRI"]   = 5;
+    renz_len["sgrAI"]   = 6;
+    renz_len["apeKI"]   = 5;
+    renz_len["hindIII"] = 5;
 }
 
 #endif // __RENZ_H__

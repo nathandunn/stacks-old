@@ -33,7 +33,7 @@
 //
 // The expected number of tab-separated fields in our SQL input files.
 //
-const uint num_tags_fields    = 12;
+const uint num_tags_fields    = 13;
 const uint num_snps_fields    =  9;
 const uint num_alleles_fields =  6;
 const uint num_matches_fields =  7;
@@ -86,15 +86,15 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 
         id = atoi(parts[2].c_str());
 
-	if (parts[5] != "consensus") {
+	if (parts[6] != "consensus") {
             if (blacklisted.count(id)) {
                 continue;
             } else if (loci.count(id) > 0) {
                 loci[id]->depth++;
 
 		if (store_reads) {
-		    char *read = new char[parts[8].length() + 1];
-		    strcpy(read, parts[8].c_str());
+		    char *read = new char[parts[9].length() + 1];
+		    strcpy(read, parts[9].c_str());
 		    loci[id]->reads.push_back(read);
 		}
                 continue;
@@ -108,7 +108,7 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 	// Do not include blacklisted tags in the catalog. They are tags that are composed 
 	// of noise and/or repetitive sequence.
 	//
-	if (parts[10] == "1") {
+	if (parts[11] == "1") {
 	    blacklisted.insert(id);
 	    continue;
 	}
@@ -116,19 +116,17 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 	c = new LocusT;
         c->sample_id = atoi(parts[1].c_str());
 	c->id        = id;
-	c->add_consensus(parts[8].c_str());
+	c->add_consensus(parts[9].c_str());
 
         //
         // Parse the physical genome location of this locus.
         //
-        strncpy(c->loc.chr, parts[3].c_str(), id_len);
-        c->loc.chr[id_len - 1] = '\0';
-        c->loc.bp = atoi(parts[4].c_str());
+	c->loc.set(parts[3].c_str(), atoi(parts[4].c_str()), (parts[5] == "+" ? plus : minus));
 
 	//
 	// Parse the components of this stack (either the Illumina ID, or the catalog constituents)
 	//
-	q = parts[7].c_str();
+	q = parts[8].c_str();
 	while (*q != '\0') {
 	    for (p = q; *q != ',' && *q != '\0'; q++);
 	    len = q - p;

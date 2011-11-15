@@ -1232,6 +1232,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	     << tag_1->id << "\t" 
              << tag_1->loc.chr << "\t"
              << tag_1->loc.bp << "\t"
+             << (tag_1->loc.strand == plus ? "+" : "-") << "\t"
 	     << "consensus\t" << "\t\t" 
 	     << tag_1->con << "\t" 
 	     << tag_1->deleveraged << "\t" 
@@ -1245,7 +1246,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	    total += tag_2->count;
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << tag_2->seq->seq(buf) << "\t\t\t\n";
+		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << tag_2->seq->seq(buf) << "\t\t\t\n";
 	    }
 
 	    id++;
@@ -1542,7 +1543,6 @@ int load_radtags(string in_file, DNASeqHashMap &radtags) {
 
     Seq c;
     c.id   = new char[id_len];
-    c.chr  = new char[max_len];
     c.seq  = new char[max_len];
     c.qual = new char[max_len];
 

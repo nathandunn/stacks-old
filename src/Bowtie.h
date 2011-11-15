@@ -55,7 +55,17 @@ Seq *Bowtie::next_seq() {
 
     parse_tsv(this->line, parts);
 
-    Seq *s = new Seq(parts[0].c_str(), parts[4].c_str(), parts[5].c_str(), parts[2].c_str(), atoi(parts[3].c_str()));
+    strand_type strand = parts[1] == "+" ? plus : minus;
+
+    //
+    // If the read was aligned on the reverse strand (and is therefore reverse complemented)
+    // alter the start point of the alignment to reflect the right-side of the read, at the
+    // end of the RAD cut site.
+    //
+    int bp = strand == plus ? atoi(parts[3].c_str()) : atoi(parts[3].c_str()) + parts[4].length();
+
+    Seq *s = new Seq(parts[0].c_str(), parts[4].c_str(), parts[5].c_str(), 
+		     parts[2].c_str(), bp, strand);
 
     return s;
 }

@@ -36,6 +36,7 @@ using std::cerr;
 using std::endl;
 
 #include "constants.h"
+#include "stacks.h"
 
 typedef unsigned int uint;
 
@@ -46,15 +47,19 @@ class Seq {
     char *qual;
 
     // Location information for a mapped sequence
-    char *loc_str;
-    char *chr;
-    uint  bp;
+    char  *loc_str;
+    PhyLoc loc;
 
     Seq( void );
     Seq(const char *, const char *);
     Seq(const char *, const char *, const char *);
-    Seq(const char *, const char *, const char *, const char *, uint);
-    ~Seq( void ) { delete[] id; delete[] seq; delete[] qual; delete[] chr; delete[] loc_str; }
+    Seq(const char *, const char *, const char *, const char *, uint, strand_type);
+    ~Seq( void ) { 
+	delete[] id; 
+	delete[] seq; 
+	delete[] qual; 
+	delete[] loc_str; 
+    }
 };
 
 //
@@ -72,7 +77,8 @@ class Input {
     virtual int  next_seq(Seq &) = 0;
 };
 
-int parse_tsv(const char *, vector<string> &);
-int read_line(ifstream &, char **, int *);
+char *rev_comp(const char *);
+int   parse_tsv(const char *, vector<string> &);
+int   read_line(ifstream &, char **, int *);
 
 #endif // __INPUT_H__

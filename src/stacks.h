@@ -45,13 +45,43 @@ using std::stringstream;
 typedef unsigned int uint;
 typedef string allele_type;
 
-typedef struct locus {
-    char chr[id_len];
-    uint bp;
-} PhyLoc;
+enum snp_type    {het, hom};
+enum read_type   {primary, secondary};
+enum strand_type {plus, minus};
 
-enum snp_type  {het, hom};
-enum read_type {primary, secondary};
+class PhyLoc {
+public:
+    char       *chr;
+    uint        bp;
+    strand_type strand;
+
+    void set(const char *chr, uint bp, strand_type strand) {
+	this->chr    = new char[strlen(chr)  + 1];
+	this->bp     = bp;
+	this->strand = strand;
+	strcpy(this->chr,  chr);
+    }
+    PhyLoc() {
+	chr    = NULL;
+	bp     = 0;
+	strand = plus;
+    }
+    PhyLoc(const char *chr, uint bp) {
+	this->chr    = new char[strlen(chr)  + 1];
+	this->bp     = bp;
+	this->strand = plus;
+	strcpy(this->chr,  chr);
+    }
+    PhyLoc(const char *chr, uint bp, strand_type strnd) {
+	this->chr    = new char[strlen(chr)  + 1];
+	this->bp     = bp;
+	this->strand = strnd;
+	strcpy(this->chr,  chr);
+    }
+    ~PhyLoc() {
+	delete [] chr;
+    }
+};
 
 class SNP {
  public:
@@ -82,8 +112,17 @@ class Stack {
     vector<char *> map;  // List of sequence read IDs merged into this stack
     PhyLoc  loc;         // Physical genome location of this stack.
 
-    Stack()  { id = 0; count = 0; seq = NULL; len = 0; loc.bp = 0; loc.chr[0] = '\0'; }
-    ~Stack() { delete [] seq; for (unsigned int i = 0; i < this->map.size(); i++) delete [] map[i]; }
+    Stack()  { 
+	id     = 0; 
+	count  = 0; 
+	seq    = NULL; 
+	len    = 0; 
+    }
+    ~Stack() { 
+	delete [] seq; 
+	for (unsigned int i = 0; i < this->map.size(); i++) 
+	    delete [] map[i]; 
+    }
     int add_id(const char *);
     int add_seq(const char *);
     int add_seq(const DNASeq *);
@@ -135,12 +174,11 @@ class MergedStack {
     bool lumberjackstack;
 
     MergedStack()  { 
-        id         = 0;
-        count      = 0;
-        con        = NULL;
-        len        = 0;
-        loc.bp     = 0; 
-        loc.chr[0] = '\0';
+        id    = 0;
+        count = 0;
+        con   = NULL;
+        len   = 0;
+
         deleveraged     = false;
         masked          = false;
         blacklisted     = false;
@@ -174,7 +212,13 @@ class Locus {
     map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
     vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
 
-    Locus()  { id = 0; sample_id = 0; depth = 0; con = NULL; len = 0; loc.bp = 0; loc.chr[0] = '\0'; }
+    Locus()  { 
+	id        = 0; 
+	sample_id = 0; 
+	depth     = 0; 
+	con       = NULL; 
+	len       = 0;
+    }
     virtual ~Locus() { 
         delete [] con; 
         for (uint i = 0; i < snps.size(); i++)
@@ -197,8 +241,17 @@ public:
     int   depth;
     char *haplotype;
 
-    CatMatch() { batch_id = 0; cat_id = 0; sample_id = 0; tag_id = 0; depth = 0; haplotype = NULL; }
-    ~CatMatch() { delete [] haplotype; }
+    CatMatch() { 
+	batch_id  = 0; 
+	cat_id    = 0; 
+	sample_id = 0; 
+	tag_id    = 0; 
+	depth     = 0; 
+	haplotype = NULL; 
+    }
+    ~CatMatch() { 
+	delete [] haplotype; 
+    }
 };
 
 bool bp_compare(Locus *, Locus *);
