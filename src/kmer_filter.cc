@@ -256,7 +256,6 @@ int write_rare_abundant_kmers(SeqKmerHash &kmer_map) {
     cerr << "done.\n";
 
     return 0;
-
 }
 
 int process_file_kmers(string path, SeqKmerHash &kmer_map) {
@@ -326,6 +325,8 @@ int generate_kmer_dist(SeqKmerHash &kmer_map) {
     SeqKmerHash::iterator i;
     map<uint, uint> bins;
 
+    cerr << "Generating kmer distribution...";
+
     for (i = kmer_map.begin(); i != kmer_map.end(); i++)
 	bins[i->second]++;
 
@@ -339,6 +340,8 @@ int generate_kmer_dist(SeqKmerHash &kmer_map) {
 
     for (unsigned long k = 0; k < sorted_kmers.size(); k++)
 	cout << sorted_kmers[k].first << "\t" << sorted_kmers[k].second << "\n";
+
+    cerr << "done.\n";
 
     return 0;
 }
