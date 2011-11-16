@@ -176,3 +176,22 @@ int write_fastq(ofstream *fh, Seq *href) {
 
     return 0;
 }
+
+int write_fastq(ofstream *fh, Seq *href, string msg) {
+    *fh <<
+	"@" << href->id << "|" << msg << "\n" <<
+	href->seq << "\n" <<
+	"+\n" <<
+	href->qual << "\n";
+
+    return 0;
+}
+
+int write_fasta(ofstream *fh, Seq *href, string msg) {
+    *fh <<
+	">" << 
+	href->id  << "|" << msg << "\n" <<
+	href->seq << "\n";
+
+    return 0;
+}

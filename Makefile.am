@@ -1,4 +1,4 @@
-bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks hstacks process_radtags process_shortreads genotypes
+bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks hstacks process_radtags process_shortreads kmer_filter genotypes
 
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/DNASeq.h src/DNASeq.cc \
@@ -40,6 +40,11 @@ process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc 
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h
 
+kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h \
+	src/clean.h src/clean.cc \
+	src/kmers.h src/kmers.cc \
+	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h
+
 genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 	src/DNASeq.h src/DNASeq.cc \
 	src/stacks.h src/stacks.cc src/PopMap.h src/genotype_dictionaries.h \
@@ -61,8 +66,10 @@ process_radtags_CXXFLAGS = $(OPENMP_CFLAGS)
 process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
 process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS)
 process_shortreads_LDFLAGS  = $(OPENMP_CFLAGS)
-genotypes_CXXFLAGS       = $(OPENMP_CFLAGS)
-genotypes_LDFLAGS        = $(OPENMP_CFLAGS)
+kmer_filter_CXXFLAGS = $(OPENMP_CFLAGS)
+kmer_filter_LDFLAGS  = $(OPENMP_CFLAGS)
+genotypes_CXXFLAGS   = $(OPENMP_CFLAGS)
+genotypes_LDFLAGS    = $(OPENMP_CFLAGS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl \
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
