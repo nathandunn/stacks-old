@@ -955,7 +955,6 @@ int build_file_list(vector<pair<string, string> > &files) {
     // Scan a directory for a list of files.
     //
     if (in_path_1.length() > 0) {
-	int    pos;
 	string file, paired_file;
 	struct dirent *direntry;
 

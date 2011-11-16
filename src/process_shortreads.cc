@@ -272,9 +272,9 @@ int kmer_lookup(SeqKmerHash &kmer_map,
     *rare_k        = 0;
     *abundant_k    = 0;
     kmer[kmer_len] = '\0';
-    uint cnt = 0;
+    int cnt = 0;
 
-    for (uint j = 0; j < num_kmers; j++) {
+    for (int j = 0; j < num_kmers; j++) {
 	strncpy(kmer, read + j, kmer_len);
 
 	cnt = kmer_map[kmer];
@@ -1430,7 +1430,7 @@ void help() {
 	      << "  D: capture discarded reads to a file.\n"
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
-	      << "  h: display tehis help messsage.\n\n"
+	      << "  h: display this help messsage.\n\n"
 	      << " K-mer Options\n"
 	      << "  k: enable k-mer hashing.\n"
 	      << "  --k_dist: print k-mer frequency distribution and exit.\n"

@@ -884,7 +884,7 @@ int export_gen_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
     //
     map<int, CLocus *>::iterator it;
     CLocus *loc;
-    int     len;
+    uint    len;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
