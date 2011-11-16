@@ -40,8 +40,8 @@ const char *haeIII[]  = {"GGCC",
 			 "GGCC"};
 const char *aluI[]    = {"AGCT",
 			 "AGCT"};
-const char *apeKI[]   = {"GCAGC", "GCTGC",    // G/CWGC, ApeKI; W=A or T
-			 "CGTCG", "CGACG"};
+const char *apeKI[]   = {"CAGC", "CTGC",    // G/CWGC, ApeKI; W=A or T
+ 			 "GTCG", "GACG"};
 const char *mseI[]    = {"TTAA",
 			 "TTAA"};
 const char *hindIII[] = {"AAGCT",
@@ -71,7 +71,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["notI"]    = 6;
     renz_len["ecoRI"]   = 5;
     renz_len["sgrAI"]   = 6;
-    renz_len["apeKI"]   = 5;
+    renz_len["apeKI"]   = 4;
     renz_len["hindIII"] = 5;
 }
 
