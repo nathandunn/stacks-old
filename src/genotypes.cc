@@ -880,6 +880,31 @@ int export_gen_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
     // 
 
     //
+    // Mark those genotypes that have been corrected in uppercase letters.
+    //
+    map<int, CLocus *>::iterator it;
+    CLocus *loc;
+    int     len;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+
+	Datum **d = pmap->locus(loc->id);
+
+	for (int i = 0; i < pmap->sample_cnt(); i++) {
+	    if (d[i] == NULL) continue;
+
+	    if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+
+	    if (d[i]->corrected) {
+		len = strlen(d[i]->gtype);
+		for (uint k = 0; k < len; k++)
+		    d[i]->gtype[k] = toupper(d[i]->gtype[k]);
+	    }
+	}
+    }
+
+    //
     // Output the results
     //
     write_generic(catalog, pmap, samples, parent_ids, true);

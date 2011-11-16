@@ -1,3 +1,10 @@
+	Bugfix: genotypes was not capitalizing auto-corrected genotypes in the
+	generic format (it was in joinmap/rqtl specific formats).
+	Bugfix: corrected cut site sequence for ApeKI in process_radtags.
+	Bugfix: process_radtags inadvertantly used newly initialized memory
+	that had not been cleared, causing rare parsing errors when uncleared
+	memory resembled portions of a FASTQ record.
+
 Stacks 0.996 - October 5, 2011
 ---------------------------------
 	Web interface updates: 
