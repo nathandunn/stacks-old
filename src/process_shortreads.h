@@ -80,7 +80,6 @@ int  process_paired_reads(string, string,
 			  SeqKmerHash &, 
 			  map<string, long> &, map<string, map<string, long> > &);
 int  process_singlet(map<string, ofstream *> &, Read *, SeqKmerHash &, map<string, map<string, long> > &, map<string, long> &, bool);
-int  parse_input_record(Seq *, Read *);
 int  correct_barcode(map<string, ofstream *> &, Read *, map<string, long> &, map<string, map<string, long> > &);
 int  check_quality_scores(Read *, bool);
 int  dist(const char *, char *);

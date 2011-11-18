@@ -64,12 +64,21 @@ void version( void );
 int  parse_command_line(int, char**);
 int  build_file_list(vector<pair<string, string> > &);
 int  load_barcodes(vector<string> &);
-int  open_files(vector<string> &, map<string, ofstream *> &, map<string, ofstream *> &, map<string, map<string, long> > &);
+int  open_files(vector<string> &, 
+		map<string, ofstream *> &, 
+		map<string, ofstream *> &, 
+		map<string, ofstream *> &,
+		map<string, map<string, long> > &);
 int  close_file_handles(map<string, ofstream *> &);
-int  process_reads(string, map<string, ofstream *> &, map<string, long> &, map<string, map<string, long> > &);
-int  process_paired_reads(string, string, map<string, ofstream *> &, map<string, ofstream *> &, map<string, long> &, map<string, map<string, long> > &);
+int  process_reads(string, 
+		   map<string, ofstream *> &, 
+		   map<string, long> &, map<string, map<string, long> > &);
+int  process_paired_reads(string, string, 
+			  map<string, ofstream *> &, 
+			  map<string, ofstream *> &, 
+			  map<string, ofstream *> &,
+			  map<string, long> &, map<string, map<string, long> > &);
 int  process_singlet(map<string, ofstream *> &, Read *, map<string, map<string, long> > &, map<string, long> &, bool);
-int  parse_input_record(Seq *, Read *);
 int  correct_barcode(map<string, ofstream *> &, Read *, map<string, long> &, map<string, map<string, long> > &);
 int  correct_radtag(Read *, map<string, long> &);
 int  check_quality_scores(Read *, bool);
