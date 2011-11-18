@@ -58,10 +58,6 @@ int    barcode_size = 0;
 double win_size     = 0.15;
 int    score_limit  = 10;
 int    len_limit    = 31;
-int    kmer_len     = 19;
-int    min_k_freq   = 0;
-int    max_k_freq   = 0;
-int    k_freq_lim   = 0;
 int    num_threads  = 1;
 
 //
@@ -81,12 +77,9 @@ int main (int argc, char* argv[]) {
     vector<string> barcodes;
     map<string, ofstream *> pair_1_fhs, pair_2_fhs, rem_fhs;
     map<string, map<string, long> > counters, barcode_log;
-    SeqKmerHash kmers;
 
     build_file_list(files);
     barcode_size = load_barcodes(barcodes);
-
-    if (rare_kmers) populate_kmers(files, kmers);
 
     open_files(barcodes, pair_1_fhs, pair_2_fhs, rem_fhs, counters);
 
@@ -100,18 +93,14 @@ int main (int argc, char* argv[]) {
 	counters[files[i].first]["retained"]    = 0;
 	counters[files[i].first]["orphaned"]    = 0;
 	counters[files[i].first]["recovered"]   = 0;
-	counters[files[i].first]["rare_k"]      = 0;
-	counters[files[i].first]["abundant_k"]  = 0;
 
 	if (paired)
 	    process_paired_reads(files[i].first, files[i].second, 
 				 pair_1_fhs, pair_2_fhs, rem_fhs,
-				 kmers,
 				 counters[files[i].first], barcode_log);
 	else
 	    process_reads(files[i].first, 
 	    		  pair_1_fhs,
-			  kmers,
 	    		  counters[files[i].first], barcode_log);
 
 	cerr <<	"  " 
@@ -119,12 +108,7 @@ int main (int argc, char* argv[]) {
 	     << "-" << counters[files[i].first]["ambiguous"]   << " ambiguous barcodes; "
 	     << "+" << counters[files[i].first]["recovered"]   << " recovered; "
 	     << "+" << counters[files[i].first]["trimmed"]     << " trimmed reads; "
-	     << "-" << counters[files[i].first]["low_quality"] << " low quality reads; ";
-	if (rare_kmers)
-	    cerr 
-		<< "-" << counters[files[i].first]["rare_k"] << " rare k-mer reads; "
-		<< "-" << counters[files[i].first]["abundant_k"] << " abundant k-mer reads; ";
-	cerr
+	     << "-" << counters[files[i].first]["low_quality"] << " low quality reads; "
 	     << counters[files[i].first]["orphaned"]    << " orphaned paired-ends; "
 	     << counters[files[i].first]["retained"] << " retained reads.\n";
     }
@@ -141,157 +125,11 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int populate_kmers(vector<pair<string, string> > &files, 
-		   SeqKmerHash &kmers) {
-    //
-    // Break each read down into k-mers and create a hash map of those k-mers
-    // recording in which sequences they occur.
-    //
-    cerr << "K-mer len: " << kmer_len << "\n";
-
-    int nfiles = paired ? files.size() * 2 : files.size();
-    int j = 1;
-    for (uint i = 0; i < files.size(); i++) {
-	cerr << "Generating kmers from " << j << " of " << nfiles << " [" << files[i].first.c_str() << "]\n";
-	process_file_kmers(files[i].first, kmers);
-	j++;
-
-	if (paired) {
-	    cerr << "Generating kmers from " << j << " of " << nfiles << " [" << files[i].second.c_str() << "]\n";
-	    process_file_kmers(files[i].second, kmers);
-	    j++;
-	}
-    }
-
-    cerr << kmers.size() << " unique k-mers recorded.\n";
-
-    if (kmer_distr) {
-	generate_kmer_dist(kmers);
-	exit(0);
-    }
-
-    return 0;
-}
-
-int process_file_kmers(string file, SeqKmerHash &kmer_map) {
-    vector<char *> kmers;
-    char          *hash_key;
-    bool           exists;
-    int            j;
-    Input         *fh;
-
-    string path = in_path_1 + file;
-
-    if (in_file_type == fastq)
-        fh = new Fastq(path.c_str());
-    else if (in_file_type == bustard)
-        fh = new Bustard(path.c_str());
-
-    //
-    // Read in the first record, initializing the Seq object s.
-    //
-    Seq *s = fh->next_seq();
-    if (s == NULL) {
-    	cerr << "Unable to allocate Seq object.\n";
-    	exit(1);
-    }
-
-    int   num_kmers = strlen(s->seq) - kmer_len + 1;
-    char *kmer      = new char [kmer_len + 1];
-
-    long i = 1;
-    do {
-	if (i % 10000 == 0) cerr << "  Processing short read " << i << "       \r";
-
-	//
-	// Generate and hash the kmers for this raw read
-	//
-	kmer[kmer_len] = '\0';
-
-	for (j = 0; j < num_kmers; j++) {
-	    strncpy(kmer, s->seq + j, kmer_len);
-
-	    exists = kmer_map.count(kmer) == 0 ? false : true;
-
-	    if (exists) {
-	    	hash_key = kmer;
-	    } else {
-	    	hash_key = new char [kmer_len + 1];
-	    	strcpy(hash_key, kmer);
-	    }
-
-	    kmer_map[hash_key]++;
-	}
-
-	delete s;
-
-	i++;
-    } while ((s = fh->next_seq()) != NULL);
-
-    //
-    // Close the file and delete the Input object.
-    //
-    delete fh;
-
-    return 0;
-}
-
-int generate_kmer_dist(SeqKmerHash &kmer_map) {
-    SeqKmerHash::iterator i;
-    map<uint, uint> bins;
-
-    for (i = kmer_map.begin(); i != kmer_map.end(); i++)
-	bins[i->second]++;
-
-    map<uint, uint>::iterator j;
-    vector<pair<uint, uint> > sorted_kmers;
-
-    for (j = bins.begin(); j != bins.end(); j++)
-	sorted_kmers.push_back(make_pair(j->first, j->second));
-
-    cout << "Kmer Frequency\tCount\n";
-
-    for (unsigned long k = 0; k < sorted_kmers.size(); k++)
-	cout << sorted_kmers[k].first << "\t" << sorted_kmers[k].second << "\n";
-
-    return 0;
-}
-
-int kmer_map_cmp(pair<char *, long> a, pair<char *, long> b) {
-    return (a.second < b.second);
-}
-
-inline
-int kmer_lookup(SeqKmerHash &kmer_map, 
-		char *read, char *kmer, 
-		int num_kmers, 
-		int *rare_k, int *abundant_k) {
-    //
-    // Generate and hash the kmers for this raw read
-    //
-    *rare_k        = 0;
-    *abundant_k    = 0;
-    kmer[kmer_len] = '\0';
-    int cnt = 0;
-
-    for (int j = 0; j < num_kmers; j++) {
-	strncpy(kmer, read + j, kmer_len);
-
-	cnt = kmer_map[kmer];
-
-	if (cnt <= min_k_freq) (*rare_k)++;
-	if (cnt >= max_k_freq) (*abundant_k)++;
-    }
-
-    return 0;
-}
-
 int process_paired_reads(string prefix_1,
 			 string prefix_2,
 			 map<string, ofstream *> &pair_1_fhs,
 			 map<string, ofstream *> &pair_2_fhs,
 			 map<string, ofstream *> &rem_fhs,
-			 SeqKmerHash &kmers,
 			 map<string, long> &counter,
 			 map<string, map<string, long> > &barcode_log) {
     Input *fh_1, *fh_2;
@@ -301,7 +139,7 @@ int process_paired_reads(string prefix_1,
     string path_1 = in_path_1 + prefix_1;
     string path_2 = in_path_2 + prefix_2;
 
-    cerr << "  Reading data from " << path_1 << " and " << path_2 << "\n";
+    cerr << "  Reading data from\n    " << path_1 << " and\n    " << path_2 << "\n";
 
     if (in_file_type == fastq) {
         fh_1 = new Fastq(path_1.c_str());
@@ -315,7 +153,7 @@ int process_paired_reads(string prefix_1,
     // Open a file for recording discarded reads
     //
     if (discards) {
-	path_1 = path_1 + ".discards";
+	path_1 = out_path + prefix_1 + ".discards";
 	discard_fh_1 = new ofstream(path_1.c_str(), ifstream::out);
 
 	if (discard_fh_1->fail()) {
@@ -323,7 +161,7 @@ int process_paired_reads(string prefix_1,
 	    exit(1);
 	}
 
-	path_2 = path_2 + ".discards";
+	path_2 = out_path + prefix_2 + ".discards";
 	discard_fh_2 = new ofstream(path_2.c_str(), ifstream::out);
 
 	if (discard_fh_1->fail()) {
@@ -388,40 +226,51 @@ int process_paired_reads(string prefix_1,
 	parse_input_record(s_2, r_2);
 	counter["total"] += 2;
 
-	process_singlet(pair_1_fhs, r_1, kmers, barcode_log, counter, false);
+	process_singlet(pair_1_fhs, r_1, barcode_log, counter, false);
+	process_singlet(pair_2_fhs, r_2, barcode_log, counter, true);
 
-	if (!r_1->retain) {
-	    r_2->retain = 0;
-	    counter["orphaned"]++;
-	} else {
-	    strcpy(r_2->barcode, r_1->barcode);
-	    process_singlet(pair_2_fhs, r_2, kmers, barcode_log, counter, true);
-	}
-
-	if (r_1->retain && r_2->retain) {
-	    out_file_type == fastq ? 
-		write_fastq(pair_1_fhs, r_1, false) : write_fasta(pair_1_fhs, r_1, false);
-            out_file_type == fasta ?
-                write_fasta(pair_1_fhs, r_2, true) :
-                write_fastq(pair_2_fhs, r_2, true);
+ 	if (r_1->retain && r_2->retain) {
+	    //
+	    // Check to make sure the barcodes from the pair match. If not,
+	    // we assume the wrong molecules have been matched up on the flow cell.
+	    //
+	    if (barcode_size > 0 && strcmp(r_1->barcode, r_2->barcode) != 0) {
+		out_file_type == fastq ? 
+		    write_fastq(rem_fhs, r_1, true, overhang) : 
+		    write_fasta(rem_fhs, r_1, true, overhang);
+		out_file_type == fastq ? 
+		    write_fastq(rem_fhs, r_2, true, overhang) : 
+		    write_fasta(rem_fhs, r_2, true, overhang);
+	    } else {
+		out_file_type == fastq ? 
+		    write_fastq(pair_1_fhs, r_1, true, overhang) : 
+		    write_fasta(pair_1_fhs, r_1, true, overhang);
+		out_file_type == fastq ?
+		    write_fastq(pair_2_fhs, r_2, true, overhang) :
+		    write_fasta(pair_2_fhs, r_2, true, overhang);
+	    }
 
 	} else if (r_1->retain && !r_2->retain) {
 	    // Write to a remainder file.
 	    out_file_type == fastq ? 
-		write_fastq(rem_fhs, r_1, false) : write_fasta(rem_fhs, r_1, false);
+		write_fastq(rem_fhs, r_1, true, overhang) : 
+		write_fasta(rem_fhs, r_1, true, overhang);
 
 	} else if (!r_1->retain && r_2->retain) {
 	    // Write to a remainder file.
 	    out_file_type == fastq ? 
-		write_fastq(rem_fhs, r_2, false) : write_fasta(rem_fhs, r_2, false);
+		write_fastq(rem_fhs, r_2, true, overhang) : 
+		write_fasta(rem_fhs, r_2, true, overhang);
 	}
 
 	if (discards && !r_1->retain)
 	    out_file_type == fastq ? 
-		write_fastq(discard_fh_1, s_1) : write_fasta(discard_fh_1, s_1);
+		write_fastq(discard_fh_1, s_1) : 
+		write_fasta(discard_fh_1, s_1);
 	if (discards && !r_2->retain)
 	    out_file_type == fastq ? 
-		write_fastq(discard_fh_2, s_2) : write_fasta(discard_fh_2, s_2);
+		write_fastq(discard_fh_2, s_2) : 
+		write_fasta(discard_fh_2, s_2);
 
 	delete s_1;
 	delete s_2;
@@ -444,7 +293,6 @@ int process_paired_reads(string prefix_1,
 
 int process_reads(string prefix, 
 		  map<string, ofstream *> &pair_1_fhs, 
-		  SeqKmerHash &kmers,
 		  map<string, long> &counter, 
 		  map<string, map<string, long> > &barcode_log) {
     Input *fh;
@@ -514,15 +362,17 @@ int process_reads(string prefix,
 
 	parse_input_record(s, r);
 
-	process_singlet(pair_1_fhs, r, kmers, barcode_log, counter, false);
+	process_singlet(pair_1_fhs, r, barcode_log, counter, false);
 
 	 if (r->retain)
 	     out_file_type == fastq ? 
-	 	write_fastq(pair_1_fhs, r, false) : write_fasta(pair_1_fhs, r, false);
+		 write_fastq(pair_1_fhs, r, true, overhang) : 
+		 write_fasta(pair_1_fhs, r, true, overhang);
 
 	 if (discards && !r->retain)
 	     out_file_type == fastq ? 
-		 write_fastq(discard_fh, s) : write_fasta(discard_fh, s);
+		 write_fastq(discard_fh, s) : 
+		 write_fasta(discard_fh, s);
 
 	 delete s;
 
@@ -540,11 +390,11 @@ int process_reads(string prefix,
 }
 
 inline
-int process_singlet(map<string, ofstream *> &fhs, Read *href, SeqKmerHash &kmers, 
+int process_singlet(map<string, ofstream *> &fhs, Read *href, 
 		    map<string, map<string, long> > &barcode_log, map<string, long> &counter, 
 		    bool paired_end) {
 
-    if (barcode_size > 0 && paired_end == false) {
+    if (barcode_size > 0) {
     	//
     	// Log the barcodes we receive.
     	//
@@ -589,31 +439,6 @@ int process_singlet(map<string, ofstream *> &fhs, Read *href, SeqKmerHash &kmers
 
 	} else if (res < 0) {
 	    counter["trimmed"]++;
-	}
-    }
-
-    //
-    // Drop this sequence if it has too many rare or abundant kmers.
-    //
-    if (rare_kmers) {
-	int rare_k, abundant_k, num_kmers, offset;
-	char *kmer     = new char[kmer_len + 1];
-	kmer[kmer_len] = '\0';
-	offset         = barcode_size > 0 ? barcode_size - 1 : 0;
-	offset         = paired_end ? 0 : offset;
-	num_kmers      = strlen(href->seq + offset) - kmer_len + 1;
-	kmer_lookup(kmers, href->seq + offset, kmer, num_kmers, &rare_k, &abundant_k);
-
-	if (min_k_freq > 0 && k_freq_lim && rare_k > k_freq_lim) {
-	    counter["rare_k"]++;
-	    href->retain = 0;
-	    return 0;
-	}
-
-	if (max_k_freq > 0 && k_freq_lim && abundant_k > k_freq_lim) {
-	    counter["abundant_k"]++;
-	    href->retain = 0;
-	    return 0;
 	}
     }
 
@@ -719,7 +544,6 @@ int check_quality_scores(Read *href, bool paired_end) {
 
     int offset;
     offset = barcode_size > 0 ? barcode_size - 1 : 0;
-    offset = paired_end ? 0 : offset;
 
     double mean        = 0.0;
     double working_sum = 0.0;
@@ -814,8 +638,6 @@ int print_results(vector<string> &barcodes, map<string, map<string, long> > &cou
 	c["trimmed"]     += it->second["trimmed"];
 	c["orphaned"]    += it->second["orphaned"];
 	c["retained"]    += it->second["retained"];
- 	c["rare_k"]      += it->second["rare_k"];
- 	c["abundant_k"]  += it->second["abundant_k"];
     }
 
     cerr << 
@@ -824,8 +646,6 @@ int print_results(vector<string> &barcodes, map<string, map<string, long> > &cou
 	 << "  " << c["low_quality"] << " low quality read drops;\n"
 	 << "  " << c["trimmed"]     << " trimmed reads;\n"
 	 << "  " << c["orphaned"]    << " orphaned paired-end reads;\n"
-	 << "  " << c["rare_k"]      << " rare k-mer reads;\n"
-	 << "  " << c["abundant_k"]  << " abundant k-mer reads;\n"
 	 << c["retained"] << " retained reads.\n";
 
     log	<< "Total Sequences\t"      << c["total"]       << "\n"
@@ -1134,19 +954,13 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"window_size",  required_argument, NULL, 'w'},
 	    {"score_limit",  required_argument, NULL, 's'},
 	    {"encoding",     required_argument, NULL, 'E'},
-	    {"kmers",        no_argument,       NULL, 'k'},
-	    {"k_dist",       no_argument,       NULL, 'I'},
-	    {"k_len",        required_argument, NULL, 'K'},
-	    {"min_k_freq",   required_argument, NULL, 'm'},
-	    {"max_k_freq",   required_argument, NULL, 'M'},
-	    {"k_freq_lim",   required_argument, NULL, 'F'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqrPDkI::K:F:M:m:n:i:y:f:o:t:b:1:2:p:s:w:E:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcqrPDI:i:y:f:o:t:b:1:2:p:s:w:E:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -1222,24 +1036,6 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 's':
 	    score_limit = atoi(optarg);
-	    break;
-	case 'k':
-	    rare_kmers = true;
-	    break;
-	case 'I':
-	    kmer_distr = true;
-	    break;
-	case 'K':
-	    kmer_len = atoi(optarg);
-	    break;
-	case 'm':
-	    min_k_freq = atoi(optarg);
-	    break;
-	case 'M':
-	    max_k_freq = atoi(optarg);
-	    break;
-	case 'F':
-	    k_freq_lim = atoi(optarg);
 	    break;
         case 'v':
             version();
@@ -1330,15 +1126,7 @@ void help() {
 	      << "  D: capture discarded reads to a file.\n"
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
-	      << "  h: display this help messsage.\n\n"
-	      << " K-mer Options\n"
-	      << "  k: enable k-mer hashing.\n"
-	      << "  --k_dist: print k-mer frequency distribution and exit.\n"
-	      << "  --k_len: specify k-mer size (default 19).\n"
-	      << "  --min_k_freq: specify minimum limit for a kmer to be considered rare.\n"
-	      << "  --max_k_freq: specify maximum limit for a kmer to be considered abundant.\n"
-	      << "  --k_freq_lim: specify number of rare/abundant kmers required to discard a read.\n"
-	      << "\n";
+	      << "  h: display this help messsage.\n";
 
     exit(0);
 }
