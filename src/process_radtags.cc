@@ -51,6 +51,7 @@ bool   quality      = false;
 bool   recover      = false;
 bool   interleave   = false;
 bool   discards     = false;
+bool   overhang     = false;
 int    truncate_seq = 0;
 int    barcode_size = 0;
 double win_size     = 0.15;
@@ -233,27 +234,29 @@ int process_paired_reads(string prefix_1,
 
 	if (r_1->retain && r_2->retain) {
 	    out_file_type == fastq ? 
-		write_fastq(pair_1_fhs, r_1, false) : 
-		write_fasta(pair_1_fhs, r_1, false);
+		write_fastq(pair_1_fhs, r_1, true, overhang) : 
+		write_fasta(pair_1_fhs, r_1, true, overhang);
             out_file_type == fastq ?
-                write_fastq(pair_2_fhs, r_2, true) :
-                write_fasta(pair_2_fhs, r_2, true);
+                write_fastq(pair_2_fhs, r_2, false, overhang) :
+                write_fasta(pair_2_fhs, r_2, false, overhang);
 
 	} else if (r_1->retain && !r_2->retain) {
 	    //
 	    // Write to the remainder file.
 	    //
 	    out_file_type == fastq ? 
-		write_fastq(rem_fhs, r_1, false) : 
-		write_fasta(rem_fhs, r_1, false);
+		write_fastq(rem_fhs, r_1, true, overhang) : 
+		write_fasta(rem_fhs, r_1, true, overhang);
 	}
 
 	if (discards && !r_1->retain)
 	    out_file_type == fastq ? 
-		write_fastq(discard_fh_1, s_1) : write_fasta(discard_fh_1, s_1);
+		write_fastq(discard_fh_1, s_1) : 
+		write_fasta(discard_fh_1, s_1);
 	if (discards && !r_2->retain)
 	    out_file_type == fastq ? 
-		write_fastq(discard_fh_2, s_2) : write_fasta(discard_fh_2, s_2);
+		write_fastq(discard_fh_2, s_2) : 
+		write_fasta(discard_fh_2, s_2);
 
 	delete s_1;
 	delete s_2;
@@ -346,11 +349,13 @@ int process_reads(string prefix,
 
 	 if (r->retain)
 	     out_file_type == fastq ? 
-	 	write_fastq(pair_1_fhs, r, false) : write_fasta(pair_1_fhs, r, false);
+		 write_fastq(pair_1_fhs, r, true, overhang) : 
+		 write_fasta(pair_1_fhs, r, true, overhang);
 
 	 if (discards && !r->retain)
 	     out_file_type == fastq ? 
-		 write_fastq(discard_fh, s) : write_fasta(discard_fh, s);
+		 write_fastq(discard_fh, s) : 
+		 write_fasta(discard_fh, s);
 
 	 delete s;
 

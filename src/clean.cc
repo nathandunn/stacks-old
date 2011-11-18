@@ -140,59 +140,71 @@ int parse_input_record(Seq *s, Read *r) {
 	for (p = s->id, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
 	strcpy(r->machine, p);
+	*q = ':';
 
 	// Run number.
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
+	//*q = '\0';
 
 	// Flowcell ID.
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
+	//*q = '\0';
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
 	r->lane = atoi(p);
+	*q = ':';
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
 	r->tile = atoi(p);
+	*q = ':';
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
 	r->x = atoi(p);
+	*q = ':';
 
 	for (p = q+1, q = p; *q != ' ' && q < stop; q++);
 	*q = '\0';
 	r->y = atoi(p);
+	*q = ' ';
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
 	r->read = atoi(p);
+	*q = ':';
 
     } else {
 	for (p = s->id, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
 	strcpy(r->machine, p);
+	*q = ':';
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
 	r->lane = atoi(p);
+	*q = ':';
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
 	r->tile = atoi(p);
+	*q = ':';
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
 	r->x = atoi(p);
+	*q = ':';
 
 	for (p = q+1, q = p; *q != '#' && q < stop; q++);
 	*q = '\0';
 	r->y = atoi(p);
+	*q = '#';
 
 	for (p = q+1, q = p; *q != '/' && q < stop; q++);
 	*q = '\0';
 	r->index = atoi(p);
+	*q = '/';
 
 	for (p = q+1, q = p; *q != '\0' && q < stop; q++);
 	r->read = atoi(p);
@@ -214,11 +226,13 @@ int parse_input_record(Seq *s, Read *r) {
     return 0;
 }
 
-int write_fasta(map<string, ofstream *> &fhs, Read *href, bool paired_end) {
+int write_fasta(map<string, ofstream *> &fhs, Read *href, bool barcode, bool overhang) {
     char tile[id_len];
     sprintf(tile, "%04d", href->tile);
 
-    int offset = paired_end ? 0 : barcode_size;
+    int offset;
+    offset  = barcode  ? barcode_size : 0;
+    offset += overhang ? 1 : 0;
 
     *(fhs[href->barcode]) <<
 	">" << href->barcode <<
@@ -241,14 +255,16 @@ int write_fasta(ofstream *fh, Seq *href) {
     return 0;
 }
 
-int write_fastq(map<string, ofstream *> &fhs, Read *href, bool paired_end) {
+int write_fastq(map<string, ofstream *> &fhs, Read *href, bool barcode, bool overhang) {
     //
     // Write the sequence and quality scores in FASTQ format. 
     //
     char tile[id_len];
     sprintf(tile, "%04d", href->tile);
 
-    int offset = paired_end ? 0 : barcode_size;
+    int offset;
+    offset  = barcode  ? barcode_size : 0;
+    offset += overhang ? 1 : 0;
 
     if (fhs.count(href->barcode) == 0)
 	cerr << "Writing to unknown barcode: '" << href->barcode << "'\n";

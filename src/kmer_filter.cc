@@ -488,12 +488,14 @@ int process_file_kmers(string path, SeqKmerHash &kmer_map) {
     	exit(1);
     }
 
-    int   num_kmers = strlen(s->seq) - kmer_len + 1;
-    char *kmer      = new char [kmer_len + 1];
+    int   num_kmers;
+    char *kmer = new char [kmer_len + 1];
 
     long i = 1;
     do {
 	if (i % 10000 == 0) cerr << "  Processing short read " << i << "       \r";
+
+	num_kmers = strlen(s->seq) - kmer_len + 1;
 
 	//
 	// Generate and hash the kmers for this raw read

@@ -59,10 +59,10 @@ extern int barcode_size;
 int  parse_illumina_v1(const char *);
 int  parse_illumina_v2(const char *);
 int  parse_input_record(Seq *, Read *);
-int  write_fastq(map<string, ofstream *> &, Read *, bool);
+int  write_fastq(map<string, ofstream *> &, Read *, bool, bool);
 int  write_fastq(ofstream *, Seq *);
 int  write_fastq(ofstream *, Seq *, string);
-int  write_fasta(map<string, ofstream *> &, Read *, bool);
+int  write_fasta(map<string, ofstream *> &, Read *, bool, bool);
 int  write_fasta(ofstream *, Seq *);
 int  write_fasta(ofstream *, Seq *, string);
 
