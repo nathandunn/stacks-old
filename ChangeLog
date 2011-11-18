@@ -1,3 +1,5 @@
+	Feature: altered process_radtags to store orphaned, paired-end reads in a remainder file,
+	keeping paired-reads in frame.
 	Bugfix: genotypes was not capitalizing auto-corrected genotypes in the
 	generic format (it was in joinmap/rqtl specific formats).
 	Bugfix: corrected cut site sequence for ApeKI in process_radtags.

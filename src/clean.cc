@@ -114,6 +114,106 @@ int parse_illumina_v2(const char *file) {
     return (p + 2 - file); 
 }
 
+int parse_input_record(Seq *s, Read *r) {
+    char *p, *q;
+    //
+    // Count the number of colons to differentiate Illumina version.
+    // CASAVA 1.8+ has a FASTQ header like this:
+    //  @HWI-ST0747:155:C01WHABXX:8:1101:6455:26332 1:N:0:
+    //
+    //
+    // Or, parse FASTQ header from previous versions that looks like this:
+    //  @HWI-ST0747_0141:4:1101:1240:2199#0/1
+    //  @HWI-ST0747_0143:2:2208:21290:200914#0/1
+    //
+    char *stop = s->id + strlen(s->id);
+    int   cnt  = 0;
+
+    for (p = s->id, q = p; q < stop; q++)
+	cnt += *q == ':'? 1 : 0;
+
+    if (cnt > 4) {
+	//
+	// According to Illumina manual, "CASAVA v1.8 User Guide" page 41:
+	// @<instrument>:<run number>:<flowcell ID>:<lane>:<tile>:<x-pos>:<y-pos> <read>:<is filtered>:<control number>:<index sequence>
+	//
+	for (p = s->id, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	strcpy(r->machine, p);
+
+	// Run number.
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+
+	// Flowcell ID.
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->lane = atoi(p);
+
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->tile = atoi(p);
+
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->x = atoi(p);
+
+	for (p = q+1, q = p; *q != ' ' && q < stop; q++);
+	*q = '\0';
+	r->y = atoi(p);
+
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->read = atoi(p);
+
+    } else {
+	for (p = s->id, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	strcpy(r->machine, p);
+
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->lane = atoi(p);
+
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->tile = atoi(p);
+
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->x = atoi(p);
+
+	for (p = q+1, q = p; *q != '#' && q < stop; q++);
+	*q = '\0';
+	r->y = atoi(p);
+
+	for (p = q+1, q = p; *q != '/' && q < stop; q++);
+	*q = '\0';
+	r->index = atoi(p);
+
+	for (p = q+1, q = p; *q != '\0' && q < stop; q++);
+	r->read = atoi(p);
+    }
+
+    strncpy(r->seq,     s->seq,  r->len); 
+    r->seq[r->len]   = '\0';
+    strncpy(r->phred,   s->qual, r->len);
+    r->phred[r->len] = '\0';
+
+    if (barcode_size > 0) {
+	strncpy(r->barcode, r->seq,  barcode_size);
+	r->barcode[barcode_size] = '\0';
+    }
+
+    r->retain = 1;
+    r->filter = 0;
+
+    return 0;
+}
+
 int write_fasta(map<string, ofstream *> &fhs, Read *href, bool paired_end) {
     char tile[id_len];
     sprintf(tile, "%04d", href->tile);

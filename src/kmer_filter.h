@@ -67,16 +67,15 @@ typedef hash_map<char *, long, hash<const char *>, eqstr> SeqKmerHash;
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
-int  build_file_list(vector<pair<string, string> > &);
-int  open_files(vector<pair<string, string> > &, map<string, ofstream *> &, map<string, map<string, long> > &);
-int  close_file_handles(map<string, ofstream *> &);
-int  process_reads(string, string, ofstream *, SeqKmerHash &, map<string, long> &);
+int  build_file_list(vector<string> &, vector<pair<string, string> > &);
+int  process_reads(string, string, SeqKmerHash &, map<string, long> &);
+int  process_paired_reads(string, string, string, string, SeqKmerHash &, map<string, long> &);
 int  print_results(map<string, map<string, long> > &);
 
 //
 // Functions for finding and removing reads with rare kmers
 //
-int  populate_kmers(vector<pair<string, string> > &, SeqKmerHash &);
+int  populate_kmers(vector<pair<string, string> > &, vector<pair<string, string> > &, SeqKmerHash &);
 int  write_rare_abundant_kmers(SeqKmerHash &);
 int  process_file_kmers(string, SeqKmerHash &);
 int  generate_kmer_dist(SeqKmerHash &);

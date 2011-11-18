@@ -78,12 +78,12 @@ int main (int argc, char* argv[]) {
 
     vector<pair<string, string> > files;
     vector<string> barcodes;
-    map<string, ofstream *> pair_1_fhs, pair_2_fhs;
+    map<string, ofstream *> pair_1_fhs, pair_2_fhs, rem_fhs;
     map<string, map<string, long> > counters, barcode_log;
 
     build_file_list(files);
     barcode_size = load_barcodes(barcodes);
-    open_files(barcodes, pair_1_fhs, pair_2_fhs, counters);
+    open_files(barcodes, pair_1_fhs, pair_2_fhs, rem_fhs, counters);
 
     for (uint i = 0; i < files.size(); i++) {
 	cerr << "Processing file " << i+1 << " of " << files.size() << " [" << files[i].first.c_str() << "]\n";
@@ -98,7 +98,7 @@ int main (int argc, char* argv[]) {
 
 	if (paired)
 	    process_paired_reads(files[i].first, files[i].second, 
-				 pair_1_fhs, pair_2_fhs, 
+				 pair_1_fhs, pair_2_fhs, rem_fhs,
 				 counters[files[i].first], barcode_log);
 	else
 	    process_reads(files[i].first, 
@@ -129,6 +129,7 @@ int process_paired_reads(string prefix_1,
 			 string prefix_2,
 			 map<string, ofstream *> &pair_1_fhs, 
 			 map<string, ofstream *> &pair_2_fhs, 
+			 map<string, ofstream *> &rem_fhs,
 			 map<string, long> &counter, 
 			 map<string, map<string, long> > &barcode_log) {
     Input *fh_1, *fh_2;
@@ -138,7 +139,7 @@ int process_paired_reads(string prefix_1,
     string path_1 = in_path_1 + prefix_1;
     string path_2 = in_path_2 + prefix_2;
 
-    cerr << "  Reading data from " << path_1 << " and " << path_2 << "\n";
+    cerr << "  Reading data from:\n  " << path_1 << " and\n  " << path_2 << "\n";
 
     if (in_file_type == fastq) {
         fh_1 = new Fastq(path_1.c_str());
@@ -232,15 +233,19 @@ int process_paired_reads(string prefix_1,
 
 	if (r_1->retain && r_2->retain) {
 	    out_file_type == fastq ? 
-		write_fastq(pair_1_fhs, r_1, false) : write_fasta(pair_1_fhs, r_1, false);
-            out_file_type == fasta ?
-                write_fasta(pair_1_fhs, r_2, true) :
-                write_fastq(pair_2_fhs, r_2, true);
+		write_fastq(pair_1_fhs, r_1, false) : 
+		write_fasta(pair_1_fhs, r_1, false);
+            out_file_type == fastq ?
+                write_fastq(pair_2_fhs, r_2, true) :
+                write_fasta(pair_2_fhs, r_2, true);
 
 	} else if (r_1->retain && !r_2->retain) {
-	    // write to a remainder file.
+	    //
+	    // Write to the remainder file.
+	    //
 	    out_file_type == fastq ? 
-		write_fastq(pair_1_fhs, r_1, false) : write_fasta(pair_1_fhs, r_2, false);
+		write_fastq(rem_fhs, r_1, false) : 
+		write_fasta(rem_fhs, r_1, false);
 	}
 
 	if (discards && !r_1->retain)
@@ -598,101 +603,6 @@ int check_quality_scores(Read *href, bool paired_end) {
     return 1;
 }
 
-int parse_input_record(Seq *s, Read *r) {
-    char *p, *q;
-    //
-    // Count the number of colons and parse a FASTQ header like this:
-    //  @HWI-ST0747:155:C01WHABXX:8:1101:6455:26332 1:N:0:
-    //
-    //
-    // Or, parse FASTQ header that looks like this:
-    //  @HWI-ST0747_0141:4:1101:1240:2199#0/1
-    //  @HWI-ST0747_0143:2:2208:21290:200914#0/1
-    //
-    char *stop = s->id + strlen(s->id);
-    int   cnt  = 0;
-
-    for (p = s->id, q = p; q < stop; q++)
-	cnt += *q == ':'? 1 : 0;
-
-    if (cnt > 4) {
-	//
-	// According to Illumina manual, "CASAVA v1.8 User Guide" page 41:
-	// @<instrument>:<run number>:<flowcell ID>:<lane>:<tile>:<x-pos>:<y-pos> <read>:<is filtered>:<control number>:<index sequence>
-	//
-	for (p = s->id, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	strcpy(r->machine, p);
-
-	// Run number.
-	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-
-	// Flowcell ID.
-	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-
-	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->lane = atoi(p);
-
-	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->tile = atoi(p);
-
-	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->x = atoi(p);
-
-	for (p = q+1, q = p; *q != ' ' && q < stop; q++);
-	*q = '\0';
-	r->y = atoi(p);
-
-	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->read = atoi(p);
-
-    } else {
-	for (p = s->id, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	strcpy(r->machine, p);
-
-	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->lane = atoi(p);
-
-	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->tile = atoi(p);
-
-	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->x = atoi(p);
-
-	for (p = q+1, q = p; *q != '#' && q < stop; q++);
-	*q = '\0';
-	r->y = atoi(p);
-
-	for (p = q+1, q = p; *q != '/' && q < stop; q++);
-	*q = '\0';
-	r->index = atoi(p);
-
-	for (p = q+1, q = p; *q != '\0' && q < stop; q++);
-	r->read = atoi(p);
-    }
-
-    strncpy(r->seq,     s->seq,  r->len); 
-    r->seq[r->len]   = '\0';
-    strncpy(r->phred,   s->qual, r->len);
-    r->phred[r->len] = '\0';
-    strncpy(r->barcode, r->seq,  barcode_size);
-    r->barcode[barcode_size] = '\0';
-    r->retain = 1;
-    r->filter = 0;
-
-    return 0;
-}
-
 int print_results(vector<string> &barcodes, map<string, map<string, long> > &counters, map<string, map<string, long> > &barcode_log) {
     map<string, map<string, long> >::iterator it;
 
@@ -810,6 +720,7 @@ int print_results(vector<string> &barcodes, map<string, map<string, long> > &cou
 int open_files(vector<string> &barcodes, 
 	       map<string, ofstream *> &pair_1_fhs, 
 	       map<string, ofstream *> &pair_2_fhs, 
+	       map<string, ofstream *> &rem_fhs, 
 	       map<string, map<string, long> > &counters) {
     string path, suffix_1, suffix_2;
 
@@ -855,6 +766,15 @@ int open_files(vector<string> &barcodes,
 
 		if (pair_2_fhs[barcodes[i]]->fail()) {
 		    cerr << "Error opening output file '" << path << "'\n";
+		    exit(1);
+		}
+
+		path = out_path + "sample_" + barcodes[i] + ".rem" + suffix_2.substr(0,3);
+		fh = new ofstream(path.c_str(), ifstream::out);
+                rem_fhs[barcodes[i]] = fh;
+
+		if (rem_fhs[barcodes[i]]->fail()) {
+		    cerr << "Error opening remainder output file '" << path << "'\n";
 		    exit(1);
 		}
             }
@@ -1218,7 +1138,8 @@ void help() {
               << "process_radtags [-f in_file | -p in_dir | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-i type] [-y type] [-c] [-q] [-r] [-E encoding] [-t len] [-D] [-w size] [-s lim] [-h]\n"
 	      << "  f: path to the input file if processing single-end seqeunces.\n"
 	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, or 'fastq' (default 'fastq').\n"
-	      << "  p: path to a directory of single-end Bustard files.\n"
+	      << "  p: path to a directory of files.\n"
+	      << "  P: files contained within directory specified by '-p' are paired.\n"
 	      << "  1: first input file in a set of paired-end sequences.\n"
 	      << "  2: second input file in a set of paired-end sequences.\n"
 	      << "  o: path to output the processed files.\n"

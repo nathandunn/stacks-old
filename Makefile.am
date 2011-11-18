@@ -1,4 +1,4 @@
-bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks hstacks process_radtags process_shortreads kmer_filter genotypes
+bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks hstacks process_radtags process_shortreads kmer_filter clone_filter genotypes
 
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/DNASeq.h src/DNASeq.cc \
@@ -41,6 +41,11 @@ process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc 
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h
 
 kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h \
+	src/clean.h src/clean.cc \
+	src/kmers.h src/kmers.cc \
+	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h
+
+clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h \
 	src/clean.h src/clean.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h
