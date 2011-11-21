@@ -38,10 +38,10 @@ my $type      = "tsv";
 my $batch_id  = 0;
 my $data_type = "haplo";
 my $map_type  = "gen";
+my $all_depth = 0;
 my $depth_lim = 1;
 my $man_cor   = 0;
 my $db        = "";
-my $debug     = 0;
 
 my $translate_genotypes = {'dh'  => \&trans_dh_map,
 			   'cp'  => \&trans_cp_map,
@@ -155,7 +155,8 @@ sub populate {
 		push(@{$locus->{'gtypes'}->{$gen_row->{'file'}}}, 
 		     {'file'   => $gen_row->{'file'},
 		      'allele' => $gen_row->{'allele'},
-		      'tag_id' => $gen_row->{'tag_id'}});
+		      'tag_id' => $gen_row->{'tag_id'},
+		      'depth'  => $gen_row->{'depth'}});
 
 		#
 		# Check if this particular sample was deleveraged
@@ -371,7 +372,8 @@ sub write_observed_haplotypes {
             }
 
             foreach $type (@{$types}) {
-                $str .= $type->{'allele'} . "/";
+                $str .= $all_depth ? $type->{'depth'} : $type->{'allele'};
+		$str .= "/";
             }
 
             $str  = substr($str, 0, -1);
@@ -775,7 +777,7 @@ sub prepare_sql_handles {
     $sth->{'snp'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-        "SELECT samples.id as id, samples.sample_id, samples.type, file, tag_id, allele " . 
+        "SELECT samples.id as id, samples.sample_id, samples.type, file, tag_id, allele, depth " . 
         "FROM matches " . 
         "JOIN samples ON (matches.sample_id=samples.id) " . 
         "WHERE matches.batch_id=? AND catalog_id=? AND matches.depth>? ORDER BY samples.id";
@@ -844,7 +846,7 @@ sub parse_command_line {
         elsif ($_ =~ /^-D$/) { $db        = shift @ARGV; }
         elsif ($_ =~ /^-m$/) { $map_type  = lc(shift @ARGV); }
         elsif ($_ =~ /^-L$/) { $depth_lim = shift @ARGV; }
-        elsif ($_ =~ /^-d$/) { $debug++; }
+        elsif ($_ =~ /^-d$/) { $all_depth++; }
         elsif ($_ =~ /^-c$/) { $man_cor++; }
 	elsif ($_ =~ /^-v$/) { version(); exit(); }
         elsif ($_ =~ /^-h$/) { usage(); }
@@ -893,6 +895,11 @@ sub parse_command_line {
 	print STDERR "You can only specify manual corrections when exporting genotypes.\n";
 	usage();
     }
+
+    if ($data_type ne "haplo" && $all_depth > 0) {
+	print STDERR "You must use a data type of 'haplo' to export allele depths.\n";
+	usage();
+    }
 }
 
 sub version {
@@ -909,11 +916,11 @@ sub usage {
 	"    a: type of data to export, either 'geno' or 'haplo', for genotypes or observed haplotypes.\n",
         "    f: file to output data.\n",
         "    o: type of data to export: 'tsv' or 'xls'.\n",
+	"    d: output depths of alleles instead of the allele values (must use 'haplo' data type).\n",
         "    F: one or more filters in the format name=value.\n",
 	"    L: if exporting observed haplotypes, specify a stack depth limit.\n",
 	"    m: map type. If genotypes are to be exported, specify the map type.\n",
 	"    c: include manual corrections if exporting genotypes.\n",
-        "    h: display this help message.\n",
-        "    d: turn on debug output.\n\n";
+        "    h: display this help message.\n\n";
     exit(0);
 }

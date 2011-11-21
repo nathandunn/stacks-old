@@ -31,28 +31,38 @@ use strict;
 
 use constant stacks_version => "_VERSION_";
 
-my $debug      = 0;
-my $db         = "";
-my $in_path    = ".";
-my $sample_id  = 0;
-my $desc       = ""; #"Lepisosteus oculatus RAD-Tag Samples";
-my $date       = ""; #"2009-05-31";
-my $batch_id   = 0;
-my $batch      = 0;
-my $catalog    = 0;
-my $white_list = "";
+my $mysql_config  = "_PKGDATADIR_" . "sql/mysql.cnf";
+my $dry_run       = 0;
+my $db            = "";
+my $in_path       = ".";
+my $sample_id     = 0;
+my $desc          = ""; #"Lepisosteus oculatus RAD-Tag Samples";
+my $date          = ""; #"2009-05-31";
+my $batch_id      = 0;
+my $batch         = 0;
+my $catalog       = 0;
+my $white_list    = "";
 
 parse_command_line();
 
-my (@files, @catalog);
+my (@results, @files, @catalog, @parent_ids);
 
 build_file_list(\@files, \@catalog);
+extract_parental_ids(\@catalog, \@parent_ids);
 
-print STDERR scalar(@files), " files to process: ", join(", ", @files), "\n";
-print STDERR "Catalog files to process: ", join(", ", @catalog), "\n";
+print STDERR 
+    scalar(@files), " files to process: ", join(", ", @files), "\n",
+    "Catalog files to process: ", join(", ", @catalog), "\n",
+    "Parent IDs identified: ", join(", ", @parent_ids), "\n";
 
 if ($batch) {
-    `mysql $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date'"`;
+    if (!$dry_run) {
+	@results = `mysql --defaults-file=$mysql_config $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date'"`;
+    }
+    print STDERR
+	"mysql --defaults-file=$mysql_config $db ",
+	"-e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date'\"\n",
+	@results, "\n";
 }
 
 my ($file, $f, $i, $type);
@@ -64,11 +74,16 @@ foreach $file (@files) {
     #
     # Pull out the sample ID and insert it into the database
     #
-    $type = ($file =~ /f?e?male/) ? 'parent' : 'progeny';
     $sample_id = extract_sample_id($f);
+    $type = (grep(/^$sample_id$/, @parent_ids) > 0) ? 'parent' : 'progeny';
 
-    print STDERR "Sample: $file; Type: $type; Sample ID: $sample_id; i: $i\n";
-    `mysql $db -e "INSERT INTO samples SET id=$sample_id, sample_id=$i, batch_id=$batch_id, type='$type', file='$file'"`;
+    if (!$dry_run) {
+	@results = `mysql --defaults-file=$mysql_config $db -e "INSERT INTO samples SET id=$sample_id, sample_id=$i, batch_id=$batch_id, type='$type', file='$file'"`;
+    }
+    print STDERR 
+	"mysql --defaults-file=$mysql_config $db ",
+	"-e \"INSERT INTO samples SET id=$sample_id, sample_id=$i, batch_id=$batch_id, type='$type', file='$file'\"\n", 
+	@results, "\n";
 
     #
     # Import the unique tag files.
@@ -103,6 +118,34 @@ if ($catalog) {
     }
 }
 
+sub extract_parental_ids {
+    my ($catalog, $parental_ids) = @_;
+
+    my ($fh, $prefix, $path, $line, @parts, $tag_id, @tag_ids, $id, $tag, %ids);
+
+    foreach $prefix (@catalog) {
+        $path = $in_path . "/" . $prefix . ".catalog.tags.tsv";
+
+	open($fh, "<$path") or die("Unable to open catalog file: '$path', $!\n");
+
+	while ($line = <$fh>) {
+	    chomp $line;
+	    @parts = split(/\t/, $line);
+
+	    @tag_ids = split(/,/, $parts[8]);
+
+	    foreach $tag_id (@tag_ids) {
+		($id, $tag) = split(/_/, $tag_id);
+		$ids{$id}++;
+	    }
+	}
+
+	close($fh);
+    }
+
+    @{$parental_ids} = keys %ids;
+}
+
 sub extract_sample_id {
     my ($file) = @_;
 
@@ -123,8 +166,13 @@ sub import_sql_file {
 
     my (@results);
 
-    @results = `mysql $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"`;
-    print STDERR "mysql $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results, "\n";
+    if (!$dry_run) {
+	@results = `mysql --defaults-file=$mysql_config $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"`;
+    }
+    print STDERR 
+	"mysql --defaults-file=$mysql_config $db ",
+	"-e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", 
+	@results, "\n";
 }
 
 sub build_file_list {
@@ -210,7 +258,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-e$/) { $desc       = shift @ARGV; }
 	elsif ($_ =~ /^-a$/) { $date       = shift @ARGV; }
         elsif ($_ =~ /^-W$/) { $white_list = shift @ARGV; }
-	elsif ($_ =~ /^-d$/) { $debug++; }
+	elsif ($_ =~ /^-d$/) { $dry_run++; }
 	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
@@ -235,7 +283,7 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-load_radtags.pl -D db -p path -b batch_id [-B -a date -e desc] [-c] [-W path] [-d] [-h]
+load_radtags.pl -D db -p path -b batch_id [-B -a date -e desc] [-c] [-d] [-W path] [-d] [-h]
     D: Database to load data into.
     p: Path to input files.
     b: Batch ID.
@@ -243,9 +291,9 @@ load_radtags.pl -D db -p path -b batch_id [-B -a date -e desc] [-c] [-W path] [-
     B: Load information into batch table.
     e: batch dEscription.
     a: batch run dAte, yyyy-mm-dd.
-    W: white list of files to load.
+    d: perform a dry run. Do not actually load any data, just print what would be executed.
+    W: only load file found on this white list.
     h: display this help message.
-    d: turn on debug output.
 
 EOQ
 

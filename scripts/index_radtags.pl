@@ -261,8 +261,8 @@ sub gen_cat_index {
 
     close($fh);
 
-    `mysql $db -e "DROP TABLE IF EXISTS catalog_index"`;
-    `mysql $db < $sql_cat_table`;
+    `mysql --defaults-file=$mysql_config $db -e "DROP TABLE IF EXISTS catalog_index"`;
+    `mysql --defaults-file=$mysql_config $db < $sql_cat_table`;
 
     import_sql_file($catalog_file, 'catalog_index');
 
@@ -286,8 +286,8 @@ sub gen_cat_index {
 	    }
 	}
 
-	`mysql $db -e "DROP TABLE IF EXISTS chr_index"`;
-	`mysql $db < $sql_chr_table`;
+	`mysql --defaults-file=$mysql_config $db -e "DROP TABLE IF EXISTS chr_index"`;
+	`mysql --defaults-file=$mysql_config $db < $sql_chr_table`;
 
 	import_sql_file($chr_file, 'chr_index');
 	close($fh);
@@ -495,8 +495,8 @@ sub gen_tag_index {
 
     close($fh);
 
-    `mysql $db -e "DROP TABLE IF EXISTS tag_index"`;
-    `mysql $db < $sql_tag_table`;
+    `mysql --defaults-file=$mysql_config $db -e "DROP TABLE IF EXISTS tag_index"`;
+    `mysql --defaults-file=$mysql_config $db < $sql_tag_table`;
 
     import_sql_file($tag_file, 'tag_index');
 }
@@ -554,8 +554,8 @@ sub import_sql_file {
 
     my (@results);
 
-    @results = `mysql $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"`;
-    print STDERR "mysql $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results, "\n";
+    @results = `mysql --defaults-file=$mysql_config $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"`;
+    print STDERR "mysql --defaults-file=$mysql_config $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results, "\n";
 }
 
 sub prepare_sql_handles {

@@ -1,3 +1,6 @@
+	Feature: added the '-d' flag to export_sql.pl to export allele depths from the database.
+	Bugfix: fixed the handling of the paired-end barcode in process_shortreads, 
+	added a check to make sure the barcodes from both pairs of a read match.
 	Feature: altered process_radtags to store orphaned, paired-end reads in a remainder file,
 	keeping paired-reads in frame.
 	Bugfix: genotypes was not capitalizing auto-corrected genotypes in the
@@ -6,6 +9,11 @@
 	Bugfix: process_radtags inadvertantly used newly initialized memory
 	that had not been cleared, causing rare parsing errors when uncleared
 	memory resembled portions of a FASTQ record.
+	Bugfix: the default MySQL permissions were not being properly passed to index_radatags.pl.
+	Bugfix: changed load_radtags.pl to extract parental IDs from directly catalog files, instead of
+	relying on file names. 
+	Feature: added a 'dry run' option to load_radtags.pl so it will print what it intends to do
+	without actually doing it.
 
 Stacks 0.996 - October 5, 2011
 ---------------------------------
