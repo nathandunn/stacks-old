@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
 #
 # This file is part of Stacks.
 #
