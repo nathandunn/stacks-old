@@ -43,6 +43,9 @@ int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
+    cerr << "Number of mismatches allowed between stacks: " << ctag_dist << "\n"
+	 << "Loci matched based on " << (search_type == sequence ? "sequence identity" : "genomic location") << "\n";
+
     //
     // Set the number of OpenMP parallel threads to execute.
     //

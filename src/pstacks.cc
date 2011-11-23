@@ -52,6 +52,8 @@ int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
+    cerr << "Min depth of coverage to report a stack: " << min_stack_cov << "\n";
+
     //
     // Set the number of OpenMP parallel threads to execute.
     //
@@ -638,7 +640,6 @@ void help() {
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  t: input file Type. Supported types: bowtie, sam.\n"
               << "  f: input file path.\n"
-        //<< "  y: output file type.\n"
 	      << "  o: output path to write results.\n"
 	      << "  i: SQL ID to insert into the output to identify this sample.\n"
 	      << "  m: minimum depth of coverage to report a stack (default 1).\n"

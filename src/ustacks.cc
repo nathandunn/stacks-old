@@ -69,6 +69,12 @@ int main (int argc, char* argv[]) {
     //
     if (max_rem_dist == 0) max_rem_dist = max_utag_dist + 2;
 
+    cerr << "Min depth of coverage to create a stack: " << min_merge_cov << "\n"
+	 << "Max distance allowed between stacks: " << max_utag_dist << "\n"
+	 << "Max distance allowed to align secondary reads: " << max_rem_dist << "\n"
+	 << "Deleveraging algorithm: " << (deleverage_stacks ? "enabled" : "disabled") << "\n"
+	 << "Removal algorithm: " << (remove_rep_stacks ? "enabled" : "disabled") << "\n";
+
     //
     // Set the number of OpenMP parallel threads to execute.
     //
@@ -1227,12 +1233,12 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	tag_1 = i->second;
 
 	// First write the consensus sequence
-	tags << "0" << "\t" 
-	     << sql_id << "\t" 
-	     << tag_1->id << "\t" 
-             << tag_1->loc.chr << "\t"
-             << tag_1->loc.bp << "\t"
-             << (tag_1->loc.strand == plus ? "+" : "-") << "\t"
+	tags << "0"           << "\t" 
+	     << sql_id        << "\t" 
+	     << tag_1->id     << "\t" 
+             << ""            << "\t" // chr
+             << 0             << "\t" // bp
+             << "+"           << "\t" // strand
 	     << "consensus\t" << "\t\t" 
 	     << tag_1->con << "\t" 
 	     << tag_1->deleveraged << "\t" 
@@ -1259,7 +1265,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 
 	for (k = tag_1->remtags.begin(); k != tag_1->remtags.end(); k++) {
 	    rem = r[*k];
-	    tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t" << "secondary\t\t" << rem->seq_id << "\t" << rem->seq->seq(buf) << "\t\t\t\n";
+	    tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "secondary\t\t" << rem->seq_id << "\t" << rem->seq->seq(buf) << "\t\t\t\n";
 	}
 
 	// Write out any SNPs detected in this unique tag.
@@ -1798,8 +1804,8 @@ void help() {
               << "  f: input file path.\n"
 	      << "  o: output path to write results." << "\n"
 	      << "  i: SQL ID to insert into the output to identify this sample." << "\n"
-	      << "  m: Minimum depth of coverage required to create a stack." << "\n"
-	      << "  M: Maximum distance (in nucleotides) allowed between stacks." << "\n"
+	      << "  m: Minimum depth of coverage required to create a stack (default 2)." << "\n"
+	      << "  M: Maximum distance (in nucleotides) allowed between stacks (default 2)." << "\n"
 	      << "  N: Maximum distance allowed to align secondary reads to primary stacks (default: M + 2).\n"
 	      << "  d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
 	      << "  r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm." << "\n"
