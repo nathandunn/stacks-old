@@ -34,8 +34,6 @@ Rem::Rem() {
     this->seq_id     = NULL; 
     this->seq        = NULL; 
     this->utilized   = false;
-    this->loc.bp     = 0; 
-    this->loc.chr[0] = '\0'; 
 }
 
 Rem::Rem(int id, char *seq_id, DNASeq *seq) { 
@@ -48,8 +46,6 @@ Rem::Rem(int id, char *seq_id, DNASeq *seq) {
     this->seq = new DNASeq(seq->size, seq->s);
 
     this->utilized   = false;
-    this->loc.bp     = 0; 
-    this->loc.chr[0] = '\0'; 
 }
 
 int Rem::add_id(const char *id) {
