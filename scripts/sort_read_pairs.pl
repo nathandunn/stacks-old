@@ -130,12 +130,12 @@ sub load_stacks {
         chomp $line;
         @parts = split(/\t/, $line);
 
-        next if ($parts[5] eq "consensus");
+        next if ($parts[6] eq "consensus");
 
         #
         # Index by sequence ID -> stack ID
         #
-        $stacks->{substr($parts[7], 0, -2)} = $parts[2];
+        $stacks->{substr($parts[8], 0, -2)} = $parts[2];
     }
 
     close($in_fh);
@@ -164,6 +164,7 @@ sub process_read_pairs {
 	<$in_fh>;
 
         $key = $stacks->{$in_file}->{$read_id};
+
         next if (!defined($key));
 
         if (!defined($reads->{$key})) {
@@ -186,7 +187,7 @@ sub print_results {
         #
         # Check that this catalog ID only has a single match from each sample.
         #
-        next if (check_mult_catalog_matches($matches->{$cat_id}) == true);
+        #next if (check_mult_catalog_matches($matches->{$cat_id}) == true);
 
         #
         # Check that we have reads for this catalog ID to avoid opening mostly empty files.
@@ -242,7 +243,10 @@ sub count_reads {
 
     foreach $key (keys %{$catalog}) {
         ($sample, $stack_id) = split(/\|/, $key);
-        $count += scalar(@{$reads->{$sample}->{$stack_id}}) if (defined($reads->{$sample}->{$stack_id}));
+
+	if (defined($reads->{$sample}->{$stack_id})) {
+	    $count += scalar(@{$reads->{$sample}->{$stack_id}});
+	}
     }
 
     return $count;
