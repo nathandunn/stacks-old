@@ -53,6 +53,7 @@ bool   kmer_distr   = false;
 bool   interleave   = false;
 bool   discards     = false;
 bool   overhang     = true;
+bool   matepair     = false;
 int    truncate_seq = 0;
 int    barcode_size = 0;
 double win_size     = 0.15;
@@ -229,7 +230,9 @@ int process_paired_reads(string prefix_1,
 	process_singlet(pair_1_fhs, r_1, barcode_log, counter, false);
 	process_singlet(pair_2_fhs, r_2, barcode_log, counter, true);
 
- 	if (r_1->retain && r_2->retain) {
+ 	if (matepair) rev_complement(r_1->seq, true, overhang);
+
+  	if (r_1->retain && r_2->retain) {
 	    //
 	    // Check to make sure the barcodes from the pair match. If not,
 	    // we assume the wrong molecules have been matched up on the flow cell.
@@ -942,6 +945,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"recover",      no_argument,       NULL, 'r'},
 	    {"discards",     no_argument,       NULL, 'D'},
 	    {"paired",       no_argument,       NULL, 'P'},
+	    {"mate-pair",    no_argument,       NULL, 'M'},
 	    {"infile_type",  required_argument, NULL, 'i'},
 	    {"outfile_type", required_argument, NULL, 'y'},
 	    {"file",         required_argument, NULL, 'f'},
@@ -1012,6 +1016,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'o':
 	    out_path = optarg;
+	    break;
+	case 'M':
+	    matepair = true;
 	    break;
 	case 'D':
 	    discards = true;
@@ -1126,7 +1133,8 @@ void help() {
 	      << "  D: capture discarded reads to a file.\n"
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
-	      << "  h: display this help messsage.\n";
+	      << "  h: display this help messsage.\n\n"
+	      << "  --mate-pair: raw reads are circularized mate-pair data, first read will be reverse complemented.\n";
 
     exit(0);
 }

@@ -1,17 +1,37 @@
+Stacks 0.997 - November 22, 2011
+--------------------------------
+	Feature: new program, called clone_filter, that will take a set of paired-end reads and
+	reduce them according to PCR clones (a PCR clone is a pair of reads that match exactly,
+	while paried-end reads from two different DNA molecules will nearly always be slightly
+	different lengths).
+	Feature: new program, called kmer_filter, that allows paired or single-end reads to be
+	filtered according to the number or rare or abundant kmers they contain. Useful for both
+	RAD datasets as well as randomly sheared genomic or transcriptomic data.
+	Feature: new program, called process_shortreads, performs the same task as process_radtags
+	for fast cleaning of randomly sheared genomic or transcriptomic data (a 'beta' version of
+	this program has actually been distributed in the last few Stacks releases).
+
+	Feature: the Stacks tags.tsv file format has a new column to record the DNA strand that a
+	particular read is aligned to, currently only used in datasets aligned to a reference genome.
+	Feature: pstacks now reverse complements all stacks aligned to the negative strand and
+	stores them in this orientation in the output files and database. (All aligners always present
+	these reads in the positive orientation.) This change allows one to align reads to a reference
+	genome using a gapped aligner, such as Tophat or GSNAP and have the RAD site still align with
+	genomic data. (One can then compare genomic RAD tags along with cDNA RAD tags.)
+
 	Feature: added the '-d' flag to export_sql.pl to export allele depths from the database.
-	Bugfix: fixed the handling of the paired-end barcode in process_shortreads, 
-	added a check to make sure the barcodes from both pairs of a read match.
 	Feature: altered process_radtags to store orphaned, paired-end reads in a remainder file,
 	keeping paired-reads in frame.
-	Bugfix: genotypes was not capitalizing auto-corrected genotypes in the
-	generic format (it was in joinmap/rqtl specific formats).
+	Bugfix: fixed the handling of the paired-end barcode in process_shortreads, added a check
+	to make sure the barcodes from both pairs of a read match.
+	Bugfix: genotypes was not capitalizing auto-corrected genotypes in the generic format (it
+	was in joinmap/rqtl specific formats).
 	Bugfix: corrected cut site sequence for ApeKI in process_radtags.
-	Bugfix: process_radtags inadvertantly used newly initialized memory
-	that had not been cleared, causing rare parsing errors when uncleared
-	memory resembled portions of a FASTQ record.
+	Bugfix: process_radtags inadvertantly used newly initialized memory that had not been
+	cleared, causing rare parsing errors when uncleared memory resembled portions of a FASTQ record.
 	Bugfix: the default MySQL permissions were not being properly passed to index_radatags.pl.
 	Bugfix: changed load_radtags.pl to extract parental IDs from directly catalog files, instead of
-	relying on file names. 
+	relying on file names.
 	Feature: added a 'dry run' option to load_radtags.pl so it will print what it intends to do
 	without actually doing it.
 
