@@ -311,3 +311,43 @@ int write_fasta(ofstream *fh, Seq *href, string msg) {
 
     return 0;
 }
+
+int rev_complement(char *seq, bool barcode, bool overhang) {
+    char *p, *q;
+    int offset;
+    offset  = barcode  ? barcode_size : 0;
+    offset += overhang ? 1 : 0;
+    q       = seq + offset;
+
+    int len   = strlen(q);
+    int j     = 0;
+    char *com = new char[len + 1]; 
+   
+    for (p = q + len - 1; p >= q; p--) {
+        switch (*p) {
+        case 'A':
+        case 'a':
+            com[j] = 'T';
+            break;
+        case 'C':
+        case 'c':
+            com[j] = 'G';
+            break;
+        case 'G':
+        case 'g':
+            com[j] = 'C';
+            break;
+        case 'T':
+        case 't':
+            com[j] = 'A';
+            break;
+        }
+        j++;
+    }
+    com[len] = '\0';
+
+    for (j = 0; j < len; j++)
+	q[j] = com[j];
+
+    return 0;
+}
