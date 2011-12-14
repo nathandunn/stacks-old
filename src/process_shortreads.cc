@@ -230,7 +230,10 @@ int process_paired_reads(string prefix_1,
 	process_singlet(pair_1_fhs, r_1, barcode_log, counter, false);
 	process_singlet(pair_2_fhs, r_2, barcode_log, counter, true);
 
- 	if (matepair) rev_complement(r_1->seq, true, overhang);
+ 	if (matepair) {
+	    rev_complement(r_1->seq, true, overhang);
+	    reverse_qual(r_1->phred, true, overhang);
+	}
 
   	if (r_1->retain && r_2->retain) {
 	    //

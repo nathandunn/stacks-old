@@ -66,5 +66,6 @@ int  write_fasta(map<string, ofstream *> &, Read *, bool, bool);
 int  write_fasta(ofstream *, Seq *);
 int  write_fasta(ofstream *, Seq *, string);
 int  rev_complement(char *, bool, bool);
+int  reverse_qual(char *, bool, bool);
 
 #endif // __CLEAN_H__
