@@ -351,3 +351,26 @@ int rev_complement(char *seq, bool barcode, bool overhang) {
 
     return 0;
 }
+
+int reverse_qual(char *qual, bool barcode, bool overhang) {
+    char *p, *q;
+    int offset;
+    offset  = barcode  ? barcode_size : 0;
+    offset += overhang ? 1 : 0;
+    q       = qual + offset;
+
+    int len   = strlen(q);
+    int j     = 0;
+    char *com = new char[len + 1]; 
+   
+    for (p = q + len - 1; p >= q; p--) {
+	com[j] = *p;
+        j++;
+    }
+    com[len] = '\0';
+
+    for (j = 0; j < len; j++)
+	q[j] = com[j];
+
+    return 0;
+}
