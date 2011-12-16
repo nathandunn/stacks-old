@@ -93,7 +93,7 @@ sub load_matches {
 
     my ($file, $in_fh, $line, @parts, $key);
 
-    $file = $in_path . $in_file . ".matches.tsv";
+    $file = $in_path . "/" . $in_file . ".matches.tsv";
     open($in_fh, "<$file") or die("Unable to open '$file', $!\n");
 
     while ($line = <$in_fh>) {
@@ -123,7 +123,7 @@ sub load_stacks {
 
     my ($file, $in_fh, $line, @parts);
 
-    $file = $in_path . $in_file . ".tags.tsv";
+    $file = $in_path . "/" . $in_file . ".tags.tsv";
     open($in_fh, "<$file") or die("Unable to open '$file', $!\n");
 
     while ($line = <$in_fh>) {
@@ -146,7 +146,7 @@ sub process_read_pairs {
 
     my ($file, $in_fh, $line, $seq, $key, $read_id);
 
-    $file = $in_path . $in_file . ".fq_2";
+    $file = $in_path . "/" . $in_file . ".fq_2";
     open($in_fh, "<$file") or die("Unable to open paired-end input file '$file'\n");
 
     while ($line = <$in_fh>) {
@@ -270,7 +270,7 @@ sub build_file_list {
 	chomp $line;
 
 	next if (length($line) == 0);	
-	next if ($line =~ /batch_/);
+	next if ($line =~ /batch_\d+\.catalog/);
 
 	($file) = ($line =~ /$in_path\/(.+)\.tags\.tsv$/); 
 
@@ -319,9 +319,9 @@ sub parse_command_line {
 	}
     }
 
-    $in_path   = $in_path   . "/" if (substr($in_path, -1)   ne "/");
-    $out_path  = $out_path  . "/" if (substr($out_path, -1)  ne "/");
-    $samp_path = $samp_path . "/" if (substr($samp_path, -1) ne "/");
+    $in_path   = substr($in_path, 0, -1)   if (substr($in_path, -1)   eq "/");
+    $out_path  = substr($out_path, 0, -1)  if (substr($out_path, -1)  eq "/");
+    $samp_path = substr($samp_path, 0, -1) if (substr($samp_path, -1) eq "/");
 }
 
 sub version {
