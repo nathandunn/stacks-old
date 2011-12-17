@@ -187,14 +187,14 @@ sub print_results {
         #
         # Check that this catalog ID only has a single match from each sample.
         #
-        #next if (check_mult_catalog_matches($matches->{$cat_id}) == true);
+        next if (check_mult_catalog_matches($matches->{$cat_id}) == true);
 
         #
         # Check that we have reads for this catalog ID to avoid opening mostly empty files.
         #
         next if (count_reads($matches->{$cat_id}, $reads) < $read_lim);
 
-        $path = $out_path . $cat_id . ".fa";
+        $path = $out_path . "/" . $cat_id . ".fa";
         open($out_fh, ">$path") or die("Unable to open $path; '$!'\n");
 
         foreach $key (keys %{$matches->{$cat_id}}) {
