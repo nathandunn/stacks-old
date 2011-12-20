@@ -98,13 +98,16 @@ int call_alleles(MergedStack *mtag, vector<DNASeq *> &reads) {
     vector<SNP *>::iterator snp;
     DNASeq *d;
 
-    if (mtag->snps.size() == 0)
-	return 0;
-
     for (row = 0; row < height; row++) {
 	allele.clear();
 
+	int snp_cnt = 0;
+
 	for (snp = mtag->snps.begin(); snp != mtag->snps.end(); snp++) {
+	    if ((*snp)->type != snp_type_het) continue;
+
+	    snp_cnt++;
+
             d    = reads[row];
 	    base = (*d)[(*snp)->col];
 
@@ -118,7 +121,7 @@ int call_alleles(MergedStack *mtag, vector<DNASeq *> &reads) {
 		break;
 	}
 
-	if (allele.size() == mtag->snps.size())
+	if (snp_cnt > 0 && allele.length() == snp_cnt)
 	    mtag->alleles[allele]++;
     }
 
@@ -199,7 +202,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
 		//
 		if (invoke_model) 
 		    model_type == snp ? 
-                        call_multinomial_snp(mtag, col, nuc, false) :
+                        call_multinomial_snp(mtag, col, nuc, true) :
                         call_multinomial_fixed(mtag, col, nuc);
 	    }
 
@@ -212,7 +215,8 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
                     //
                     vector<SNP *>::iterator s;
                     for (s = mtag->snps.begin(); s != mtag->snps.end(); s++) {
-			con.replace((*s)->col, 1, "N");
+			if ((*s)->type != snp_type_hom)
+			    con.replace((*s)->col, 1, "N");
                     }
                 }
             }
@@ -291,6 +295,30 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 	     << tag_1->blacklisted << "\t"
 	     << tag_1->lumberjackstack << "\n";
 
+	//
+	// Write a sequence recording the output of the SNP model for each nucleotide.
+	//
+	tags << "0" << "\t" 
+	     << sql_id << "\t" 
+	     << tag_1->id << "\t" 
+             << "\t"
+             << "\t"
+             << "\t"
+	     << "model\t" << "\t"
+	     << "\t";
+	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
+	    if ((*s)->type == snp_type_het)
+		tags << "P";
+	    else if ((*s)->type == snp_type_hom)
+		tags << "H";
+	    else
+		tags << "U";
+	}
+	tags << "\t"
+	     << "\t"
+	     << "\t"
+	     << "\n";
+
 	// Now write out the components of each unique tag merged into this one.
 	id = 0;
 	for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++) {
@@ -304,11 +332,14 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 	    delete [] buf;
 	}
 
+	//
 	// Write out any SNPs detected in this unique tag.
+	//
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-	    snps << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" 
-		 << (*s)->col << "\t" << (*s)->lratio << "\t" 
-		 << (*s)->rank_1 << "\t" << (*s)->rank_2 << "\t\t\n";
+	    if ((*s)->type == snp_type_het)
+		snps << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" 
+		     << (*s)->col << "\t" << (*s)->lratio << "\t" 
+		     << (*s)->rank_1 << "\t" << (*s)->rank_2 << "\t\t\n";
 	}
 
 	// Write the expressed alleles seen for the recorded SNPs and
@@ -531,7 +562,7 @@ int dump_merged_stacks(map<int, MergedStack *> &m) {
 
 int parse_command_line(int argc, char* argv[]) {
     int c;
-     
+
     while (1) {
 	static struct option long_options[] = {
 	    {"help",         no_argument,       NULL, 'h'},
@@ -546,16 +577,16 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"bc_err_freq",  required_argument, NULL, 'e'},
 	    {0, 0, 0, 0}
 	};
-	
+
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvf:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
-     
+	c = getopt_long(argc, argv, "hvOf:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
+
 	// Detect the end of the options.
 	if (c == -1)
 	    break;
-     
+
 	switch (c) {
 	case 'h':
 	    help();

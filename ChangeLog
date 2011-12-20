@@ -1,3 +1,8 @@
+	Feature: Added new 'model' line to *.tags.tsv files. This line records the output of the SNP
+	model at every position in the read as either Homozygous (H), Polymorphic (P), or unkown (U). 
+	Previously only polymorphic loci were recorded in the SNPs file (and this remains unchanged).
+	Bugfix: fixed crasher bug in cstacks when parallel processing was enabled for genomic-aligned data.
+
 Stacks 0.997 - November 22, 2011
 --------------------------------
 	Feature: new program, called clone_filter, that will take a set of paired-end reads and

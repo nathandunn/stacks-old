@@ -45,7 +45,7 @@ using std::stringstream;
 typedef unsigned int uint;
 typedef string allele_type;
 
-enum snp_type    {het, hom};
+enum snp_type    {snp_type_het, snp_type_hom, snp_type_unk};
 enum read_type   {primary, secondary};
 enum strand_type {plus, minus};
 
@@ -203,6 +203,7 @@ class Locus {
     int  sample_id; // Sample ID
     int      depth; // Stack depth
     char      *con; // Consensus sequence
+    char    *model; // Model calls for each nucleotide
     uint       len; // Sequence length
 
     vector<char *>      comp;   // Raw components in this stack.
@@ -216,6 +217,7 @@ class Locus {
 	id        = 0; 
 	sample_id = 0; 
 	depth     = 0; 
+	model     = NULL;
 	con       = NULL; 
 	len       = 0;
     }

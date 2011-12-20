@@ -514,8 +514,6 @@ int find_matches_by_genomic_loc(map<string, int> &cat_index, map<int, QLocus *> 
     //
     map<int, QLocus *>::iterator i;
     map<int, CLocus *>::iterator j;
-    char id[id_len];
-    int  k;
 
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -523,10 +521,12 @@ int find_matches_by_genomic_loc(map<string, int> &cat_index, map<int, QLocus *> 
     for (i = sample.begin(); i != sample.end(); i++) 
 	keys.push_back(i->first);
 
-    #pragma omp parallel private(i, j, k)
+    #pragma omp parallel private(i, j)
     {
+	char id[id_len];
+
         #pragma omp for
-	for (k = 0; k < (int) keys.size(); k++) {
+	for (int k = 0; k < (int) keys.size(); k++) {
 
 	    i = sample.find(keys[k]);
 

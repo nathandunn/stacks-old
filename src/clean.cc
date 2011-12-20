@@ -349,6 +349,8 @@ int rev_complement(char *seq, bool barcode, bool overhang) {
     for (j = 0; j < len; j++)
 	q[j] = com[j];
 
+    delete [] com;
+
     return 0;
 }
 
@@ -371,6 +373,8 @@ int reverse_qual(char *qual, bool barcode, bool overhang) {
 
     for (j = 0; j < len; j++)
 	q[j] = com[j];
+
+    delete [] com;
 
     return 0;
 }
