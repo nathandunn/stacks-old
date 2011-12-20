@@ -87,17 +87,35 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
         id = atoi(parts[2].c_str());
 
 	if (parts[6] != "consensus") {
-            if (blacklisted.count(id)) {
-                continue;
-            } else if (loci.count(id) > 0) {
-                loci[id]->depth++;
+            if (blacklisted.count(id)) continue;
 
-		if (store_reads) {
-		    char *read = new char[parts[9].length() + 1];
-		    strcpy(read, parts[9].c_str());
-		    loci[id]->reads.push_back(read);
+	    //
+	    // Make sure this locus has already been defined (consensus sequence SHOULD always 
+	    // be specified first in the file for a particular locus).
+	    //
+	    if (loci.count(id) > 0) {
+		//
+		// Read the model sequence, a series of letters specifying if the model called a
+		// homozygous base (H), a polymorphic base (P), or if the base type was unknown (U).
+		//
+		if (parts[6] == "model") {
+		    loci[id]->model = new char[parts[9].length() + 1];
+		    strcpy(loci[id]->model, parts[9].c_str());
+
+		} else {
+		    //
+		    // Otherwise, we expect a primary or secondary read, record these if specified.
+		    //
+		    loci[id]->depth++;
+
+		    if (store_reads) {
+			char *read = new char[parts[9].length() + 1];
+			strcpy(read, parts[9].c_str());
+			loci[id]->reads.push_back(read);
+		    }
 		}
-                continue;
+
+		continue;
             } else {
                 cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (stack " << id << " does not exist).\n";
                 return 0;

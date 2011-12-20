@@ -582,7 +582,7 @@ int parse_command_line(int argc, char* argv[]) {
 	static struct option long_options[] = {
 	    {"help",         no_argument,       NULL, 'h'},
             {"version",      no_argument,       NULL, 'v'},
-	    {"rec_hom",      no_argument,       NULL, 'r'},
+	    {"rec_hom",      no_argument,       NULL, 'O'},
 	    {"infile_type",  required_argument, NULL, 't'},
 	    {"outfile_type", required_argument, NULL, 'y'},
 	    {"file",         required_argument, NULL, 'f'},
@@ -597,7 +597,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvrf:o:i:e:p:m:s:f:t:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvOf:o:i:e:p:m:s:f:t:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -635,7 +635,7 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'p':
 	    num_threads = atoi(optarg);
 	    break;
-        case 'r':
+        case 'O':
 	    record_hom = true;
             break;
         case 'v':
@@ -686,7 +686,7 @@ void help() {
               << "  f: input file path.\n"
 	      << "  o: output path to write results.\n"
 	      << "  i: SQL ID to insert into the output to identify this sample.\n"
-	      << "  r: record homozygotes along with heterozygote SNPs.\n"
+	      << "  O: record homozygotes along with heterozygote SNPs.\n"
 	      << "  m: minimum depth of coverage to report a stack (default 1).\n"
 	      << "  e: specify the barcode error frequency (0 < e < 1) if using the 'fixed' model.\n"
 	      << "  h: display this help messsage." << "\n\n";
