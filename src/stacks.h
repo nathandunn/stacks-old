@@ -256,6 +256,23 @@ public:
     }
 };
 
+class ModRes {
+public:
+    int   sample_id;
+    int   tag_id;
+    char *model;
+
+    ModRes(int samp_id, int tag_id, const char *model) { 
+	this->sample_id = samp_id; 
+	this->tag_id    = tag_id;
+	this->model     = new char[strlen(model) + 1];
+	strcpy(this->model, model);
+    }
+    ~ModRes() { 
+	delete [] this->model; 
+    }
+};
+
 bool bp_compare(Locus *, Locus *);
 
 #endif // __STACKS_H__

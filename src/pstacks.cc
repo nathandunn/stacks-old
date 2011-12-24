@@ -308,9 +308,9 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 	     << "\t";
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
 	    if ((*s)->type == snp_type_het)
-		tags << "P";
+		tags << "E";
 	    else if ((*s)->type == snp_type_hom)
-		tags << "H";
+		tags << "O";
 	    else
 		tags << "U";
 	}
