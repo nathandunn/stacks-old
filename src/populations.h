@@ -55,6 +55,7 @@ using std::set;
 #include "stacks.h"
 #include "renz.h"
 #include "PopMap.h"
+#include "PopSum.h"
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"
 
@@ -80,7 +81,7 @@ public:
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
-int  build_file_list(vector<string> &);
+int  build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &);
 int  load_marker_list(string, set<int> &);
 int  identify_parental_ids(map<int, CLocus *> &, set<int> &);
 int  reduce_catalog(map<int, CLocus *> &, set<int> &, set<int> &);
@@ -91,9 +92,11 @@ int  call_population_genotypes(CLocus *, PopMap<CLocus> *, map<string, map<strin
 int  tally_progeny_haplotypes(CLocus *, PopMap<CLocus> *, set<int> &, int &, double &, string &);
 int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &);
 
+int  write_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CLocus *> &, PopSum<CLocus> *);
 int  write_generic(map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &, bool);
 int  write_genomic(map<int, CLocus *> &, PopMap<CLocus> *);
 
+bool compare_pop_map(pair<int, string>, pair<int, string>);
 bool hap_compare(pair<string, int>, pair<string, int>);
 bool compare_pair(pair<char, int>, pair<char, int>);
 

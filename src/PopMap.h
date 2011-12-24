@@ -40,15 +40,17 @@ public:
     int            id;           // Stack ID
     int            depth;        // Stack Depth
     bool           corrected;    // Has this genotype call been corrected
+    char          *model;        // String representing SNP model output for each nucleotide at this locus.
     char          *gtype;        // Genotype
     char          *trans_gtype;  // Translated Genotype
     vector<char *> obshap;       // Observed Haplotypes
-    Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; }
+    Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; }
     ~Datum() {
     	for (uint i = 0; i < this->obshap.size(); i++)
     	    delete [] this->obshap[i];
     	delete [] this->gtype;
 	delete [] this->trans_gtype;
+	delete [] this->model;
     }
 };
 

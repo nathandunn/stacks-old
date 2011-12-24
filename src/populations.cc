@@ -34,10 +34,10 @@
 // Global variables to hold command-line options.
 int       num_threads = 1;
 int       batch_id    = 0;
-out_types out_type    = joinmap;
 string    in_path;
 string    out_path;
 string    out_file;
+string    pmap_path;
 string    bl_file;
 string    wl_file;
 string    enz;
@@ -46,10 +46,8 @@ bool      corrections     = false;
 bool      expand_id       = false;
 bool      sql_out         = false;
 int       min_stack_depth = 0;
-int       min_hom_seqs    = 5;
-double    min_het_seqs    = 0.05;
-double    max_het_seqs    = 0.1;
 
+map<int, pair<int, int> > pop_indexes;
 set<int> whitelist, blacklist;
 
 //
@@ -58,11 +56,6 @@ set<int> whitelist, blacklist;
 map<string, const char **> renz;
 map<string, int>           renz_cnt;
 map<string, int>           renz_len;
-
-//
-// Dictionaries to hold legal genotypes for different map types.
-//
-map<string, map<string, string> > global_dictionary;
 
 int main (int argc, char* argv[]) {
 
@@ -77,10 +70,8 @@ int main (int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
     #endif
 
-    initialize_dictionaries(global_dictionary);
-
-    vector<string> files;
-    build_file_list(files);
+    vector<pair<int, string> > files;
+    build_file_list(files, pop_indexes);
 
     if (wl_file.length() > 0) {
 	load_marker_list(wl_file, whitelist);
@@ -119,15 +110,15 @@ int main (int argc, char* argv[]) {
     vector<int>                 sample_ids;
     for (uint i = 0; i < files.size(); i++) {
 	vector<CatMatch *> m;
-	load_catalog_matches(in_path + files[i], m);
+	load_catalog_matches(in_path + files[i].second, m);
 
 	if (m.size() == 0) {
-	    cerr << "Warning: unable to find any matches in file '" << files[i] << "', excluding this sample from genotypes analysis.\n";
+	    cerr << "Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from genotypes analysis.\n";
 	    continue;
 	}
 
 	catalog_matches.push_back(m);
- 	samples[m[0]->sample_id] = files[i];
+ 	samples[m[0]->sample_id] = files[i].second;
 	sample_ids.push_back(m[0]->sample_id);
     }
 
@@ -138,13 +129,69 @@ int main (int argc, char* argv[]) {
     PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches, min_stack_depth);
 
+    cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
+    map<int, CLocus *>::iterator it;
+    map<int, ModRes *>::iterator mit;
+    Datum  *d;
+    CLocus *loc;
+    //
+    // Load the output from the SNP calling model for each individual at each locus. This
+    // model output string looks like this:
+    //   OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOEOOOOOOEOOOOOOOOOOOOOOOOOOOOOOOOOOOOOUOOOOUOOOOOO
+    // and records model calls for each nucleotide: O (hOmozygous), E (hEterozygous), U (Unknown)
+    //
+    for (uint i = 0; i < files.size(); i++) {
+	map<int, ModRes *> modres;
+	load_model_results(in_path + files[i].second, modres);
+
+	if (modres.size() == 0) {
+	    cerr << "Warning: unable to find any model results in file '" << files[i].second << "', excluding this sample from population analysis.\n";
+	    continue;
+	}
+
+	for (it = catalog.begin(); it != catalog.end(); it++) {
+	    loc = it->second;
+	    d = pmap->datum(loc->id, sample_ids[i]);
+
+	    if (d != NULL) {
+		d->model = new char[strlen(modres[d->id]->model) + 1];
+		strcpy(d->model, modres[d->id]->model);
+	    }
+	}
+
+	for (mit = modres.begin(); mit != modres.end(); mit++)
+	    delete mit->second;
+	modres.clear();
+    }
+
+    uint pop_id, start_index, end_index;
+    map<int, pair<int, int> >::iterator pit;
+
+    PopSum<CLocus> *psum = new PopSum<CLocus>(pmap->loci_cnt(), pop_indexes.size());
+    psum->initialize(pmap);
+
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	start_index = pit->second.first;
+	end_index   = pit->second.second;
+	pop_id      = pit->first;
+	cerr << "Generating nucleotide-level summary statistics for population " << pop_id << "\n";
+	psum->add_population(catalog, pmap, pop_id, start_index, end_index);
+    }
+
+    //
+    // Output the locus-level summary statistics.
+    //
+    write_summary_stats(files, pop_indexes, catalog, psum);
+
     //
     // Output the observed haplotypes.
     //
     write_generic(catalog, pmap, samples, parent_ids, false);
 
-    if (out_type == genomic)
-	write_genomic(catalog, pmap);
+    //
+    // Output nucleotide-level genotype calls for each individual.
+    //
+    write_genomic(catalog, pmap);
 
     return 0;
 }
@@ -693,8 +740,90 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     return 0;
 }
 
-int write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, string> &samples, set<int> &parent_ids, bool write_gtypes) {
+int 
+write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
+		    map<int, CLocus *> &catalog, PopSum<CLocus> *psum) 
+{
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".sumstats_" << progeny_limit << ".tsv";
 
+    string file = in_path + pop_name.str();
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening generic output file '" << file << "'\n";
+	exit(1);
+    }
+
+    int start, end;
+    //
+    // Write the population members.
+    //
+    map<int, pair<int, int> >::iterator pit;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	start = pit->second.first;
+	end   = pit->second.second;
+	fh << pit->first << "\t";
+	for (int i = start; i <= end; i++) {
+	    fh << files[i].second;
+	    if (i < end) fh << ",";
+	}
+	fh << "\n";
+    }
+
+    cerr << "Writing " << catalog.size() << " loci to summary statistics file, '" << file << "'\n";
+
+    map<int, CLocus *>::iterator it;
+    CLocus  *loc;
+    LocSum **s;
+    int      len;
+    int      pop_cnt = psum->pop_cnt();
+
+    fh << "Locus ID" << "\t"
+       << "Chr" << "\t"
+       << "BP" << "\t"
+       << "Pop ID" << "\t"
+       << "N" << "\t"
+       << "P" << "\t"
+       << "Obs Het" << "\t"
+       << "Obs Hom" << "\t"
+       << "Exp Het" << "\t"
+       << "Exp Hom" << "\n";
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+
+	s = psum->locus(loc->id);
+	len = strlen(loc->con);
+
+	for (int i = 0; i < len; i++) {
+
+	    for (int j = 0; j < pop_cnt; j++) {
+
+		if (s[j]->nucs[i].num_indv < progeny_limit) continue;
+
+		fh << loc->id << "\t"
+		   << loc->loc.chr << "\t"
+		   << loc->loc.bp + i << "\t"
+		   << psum->rev_pop_index(j) << "\t"
+		   << s[j]->nucs[i].num_indv << "\t"
+		   << s[j]->nucs[i].p << "\t"
+		   << s[j]->nucs[i].obs_het << "\t"
+		   << s[j]->nucs[i].obs_hom << "\t"
+		   << s[j]->nucs[i].exp_het << "\t"
+		   << s[j]->nucs[i].exp_hom << "\n";
+	    }
+	}
+    }
+
+    return 0;
+}
+
+int
+write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, 
+	      map<int, string> &samples, set<int> &parent_ids, bool write_gtypes)
+{
     stringstream pop_name;
     pop_name << "batch_" << batch_id;
     if (write_gtypes)
@@ -841,33 +970,37 @@ int load_marker_list(string path, set<int> &list) {
     return 0;
 }
 
-int build_file_list(vector<string> &files) {
-    uint   pos;
-    string file;
-    struct dirent *direntry;
+int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes) {
+    char   line[max_len];
+    vector<string> parts;
 
-    DIR *dir = opendir(in_path.c_str());
+    ifstream fh(pmap_path.c_str(), ifstream::in);
 
-    if (dir == NULL) {
-	cerr << "Unable to open directory '" << in_path << "' for reading.\n";
+    if (fh.fail()) {
+        cerr << "Error opening population map '" << pmap_path << "'\n";
 	exit(1);
     }
 
-    while ((direntry = readdir(dir)) != NULL) {
-	file = direntry->d_name;
+    while (fh.good()) {
+	fh.getline(line, max_len);
 
-	if (file == "." || file == "..")
-	    continue;
+	if (strlen(line) == 0) continue;
 
-	if (file.substr(0, 6) == "batch_")
-	    continue;
+	//
+	// Parse the population map, we expect:
+	// <file name> <tab> <population ID>
+	//
+	parse_tsv(line, parts);
 
-	pos = file.rfind(".tags.tsv");
-	if (pos < file.length())
-	    files.push_back(file.substr(0, pos));
+	files.push_back(make_pair(atoi(parts[1].c_str()), parts[0]));
     }
 
-    sort(files.begin(), files.end());
+    fh.close();
+
+    //
+    // Sort the files according to population ID.
+    //
+    sort(files.begin(), files.end(), compare_pop_map);
 
     if (files.size() == 0) {
 	cerr << "Unable to locate any input files to process within '" << in_path << "'\n";
@@ -875,7 +1008,41 @@ int build_file_list(vector<string> &files) {
 
     cerr << "Found " << files.size() << " input file(s).\n";
 
+    //
+    // Determine the start/end index for each population in the files array.
+    //
+    int start  = 0;
+    int end    = 0;
+    int pop_id = files[0].first;
+
+    do {
+	end++;
+	if (pop_id != files[end].first) {
+	    pop_indexes[pop_id] = make_pair(start, end - 1);
+	    start  = end;
+	    pop_id = files[end].first;
+	}
+    } while (end < (int) files.size());
+
+    cerr << "  " << pop_indexes.size() << " populations found\n";
+
+    map<int, pair<int, int> >::iterator it;
+    for (it = pop_indexes.begin(); it != pop_indexes.end(); it++) {
+	start = it->second.first;
+	end   = it->second.second;
+	cerr << "    " << it->first << ": ";
+	for (int i = start; i <= end; i++) {
+	    cerr << files[i].second;
+	    if (i < end) cerr << ", ";
+	}
+	cerr << "\n";
+    }
+
     return 0;
+}
+
+bool compare_pop_map(pair<int, string> a, pair<int, string> b) {
+    return (a.first < b.first);
 }
 
 bool hap_compare(pair<string, int> a, pair<string, int> b) {
@@ -898,10 +1065,10 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"batch_id",    required_argument, NULL, 'b'},
 	    {"in_path",     required_argument, NULL, 'P'},
-	    {"out_type",    required_argument, NULL, 'o'},
 	    {"progeny",     required_argument, NULL, 'r'},
 	    {"min_depth",   required_argument, NULL, 'm'},
 	    {"renz",        required_argument, NULL, 'e'},
+	    {"pop_map",     required_argument, NULL, 'M'},
 	    {"whitelist",   required_argument, NULL, 'W'},
 	    {"blacklist",   required_argument, NULL, 'B'},
 	    {0, 0, 0, 0}
@@ -910,7 +1077,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:e:W:B:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:M:P:m:e:W:B:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -923,12 +1090,11 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'P':
 	    in_path = optarg;
 	    break;
+	case 'M':
+	    pmap_path = optarg;
+	    break;
 	case 'b':
 	    batch_id = atoi(optarg);
-	    break;
-	case 'o':
-	    if (strcasecmp(optarg, "genomic") == 0)
-		out_type = genomic;
 	    break;
 	case 'r':
 	    progeny_limit = atoi(optarg);
@@ -975,17 +1141,22 @@ int parse_command_line(int argc, char* argv[]) {
     if (in_path.at(in_path.length() - 1) != '/') 
 	in_path += "/";
 
+    if (pmap_path.length() == 0) {
+	cerr << "You must specify a path to the population map.\n";
+	help();
+    }
+
     if (batch_id == 0) {
 	cerr << "You must specify a batch ID.\n";
 	help();
     }
 
-    if (out_type == genomic && enz.length() == 0) {
+    if (enz.length() == 0) {
 	cerr << "You must specify the restriction enzyme used with 'genomic' output.\n";
 	help();
     }
 
-    if (out_type == genomic && renz.count(enz) == 0) {
+    if (renz.count(enz) == 0) {
 	cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
 	help();
     }
@@ -1001,13 +1172,11 @@ void version() {
 
 void help() {
     std::cerr << "populations " << VERSION << "\n"
-              << "populations -b batch_id -P path [-r min] [-m min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-e renz] [-v] [-h]" << "\n"
+              << "populations -b batch_id -P path -M path [-r min] [-m min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-e renz] [-v] [-h]" << "\n"
 	      << "  b: Batch ID to examine when exporting from the catalog.\n"
-	      << "  r: minimum number of progeny required to print a marker.\n"
-	      << "  c: make automated corrections to the data.\n"
 	      << "  P: path to the Stacks output files.\n"
-	      << "  t: map type to write. 'CP', 'DH', 'F2' and 'BC1' are the currently supported map types.\n"
-	      << "  o: output file type to write, 'joinmap', 'rqtl', and 'genomic' are currently supported.\n"
+	      << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
+	      << "  r: minimum number of individuals required to process a locus.\n"
 	      << "  m: specify a minimum stack depth required before exporting a locus in a particular individual.\n"
 	      << "  s: output a file to import results into an SQL database.\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"

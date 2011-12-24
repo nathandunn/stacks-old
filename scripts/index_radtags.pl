@@ -41,6 +41,8 @@ my $radome_index  = 0;
 
 parse_command_line();
 
+my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_config;
+
 #
 # Make sure the SQL definition files are available
 #
@@ -261,8 +263,8 @@ sub gen_cat_index {
 
     close($fh);
 
-    `mysql --defaults-file=$mysql_config $db -e "DROP TABLE IF EXISTS catalog_index"`;
-    `mysql --defaults-file=$mysql_config $db < $sql_cat_table`;
+    `mysql --defaults-file=$cnf $db -e "DROP TABLE IF EXISTS catalog_index"`;
+    `mysql --defaults-file=$cnf $db < $sql_cat_table`;
 
     import_sql_file($catalog_file, 'catalog_index');
 
@@ -286,8 +288,8 @@ sub gen_cat_index {
 	    }
 	}
 
-	`mysql --defaults-file=$mysql_config $db -e "DROP TABLE IF EXISTS chr_index"`;
-	`mysql --defaults-file=$mysql_config $db < $sql_chr_table`;
+	`mysql --defaults-file=$cnf $db -e "DROP TABLE IF EXISTS chr_index"`;
+	`mysql --defaults-file=$cnf $db < $sql_chr_table`;
 
 	import_sql_file($chr_file, 'chr_index');
 	close($fh);
@@ -495,8 +497,8 @@ sub gen_tag_index {
 
     close($fh);
 
-    `mysql --defaults-file=$mysql_config $db -e "DROP TABLE IF EXISTS tag_index"`;
-    `mysql --defaults-file=$mysql_config $db < $sql_tag_table`;
+    `mysql --defaults-file=$cnf $db -e "DROP TABLE IF EXISTS tag_index"`;
+    `mysql --defaults-file=$cnf $db < $sql_tag_table`;
 
     import_sql_file($tag_file, 'tag_index');
 }
@@ -554,8 +556,8 @@ sub import_sql_file {
 
     my (@results);
 
-    @results = `mysql --defaults-file=$mysql_config $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"`;
-    print STDERR "mysql --defaults-file=$mysql_config $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results, "\n";
+    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"`;
+    print STDERR "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results, "\n";
 }
 
 sub prepare_sql_handles {
@@ -565,7 +567,6 @@ sub prepare_sql_handles {
     # Connect to the database, check for the existence of a MySQL config file in the home
     # directory first, otherwise use the stacks-distributed one.
     #
-    my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_config;
     $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=$cnf")
 	or die("Unable to connect to the $db MySQL Database!\n" . $DBI::errstr);
 

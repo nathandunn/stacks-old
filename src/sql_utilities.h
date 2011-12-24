@@ -96,7 +96,7 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 	    if (loci.count(id) > 0) {
 		//
 		// Read the model sequence, a series of letters specifying if the model called a
-		// homozygous base (H), a polymorphic base (P), or if the base type was unknown (U).
+		// homozygous base (O), a heterozygous base (E), or if the base type was unknown (U).
 		//
 		if (parts[6] == "model") {
 		    loci[id]->model = new char[parts[9].length() + 1];
@@ -269,6 +269,8 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 
     fh.close();
 
+    delete [] line;
+
     return 1;
 }
 
@@ -314,6 +316,7 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
     line_num = 0;
     while (fh.good()) {
 	fh.getline(line, max_len);
+        line_num++;
 
 	if (!fh.good() && strlen(line) == 0)
 	    continue;
@@ -335,13 +338,74 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
 	m->depth     = atoi(parts[6].c_str());
 
 	matches.push_back(m);
-
-        line_num++;
     }
 
     fh.close();
 
     return 0;
+}
+
+int load_model_results(string sample,  map<int, ModRes *> &modres) {
+    string         f;
+    char          *line;
+    int            size;
+    vector<string> parts;
+    long int       line_num;
+    ifstream       fh;
+
+    line = (char *) malloc(sizeof(char) * max_len);
+    size = max_len;
+
+    // 
+    // First, parse the tag file and pull in the consensus sequence
+    // for each Radtag.
+    //
+    f = sample + ".tags.tsv";
+    fh.open(f.c_str(), ifstream::in);
+
+    if (fh.fail()) {
+        cerr << " Unable to open " << f.c_str() << "\n";
+        return 0;
+    } else {
+        cerr << "  Parsing " << f.c_str() << "\n";
+    }
+
+    ModRes *mod;
+    uint    tag_id, samp_id;
+
+    line_num = 0;
+    while (fh.good()) {
+        read_line(fh, &line, &size);
+        line_num++;
+
+	if (!fh.good() && strlen(line) == 0)
+	    continue;
+
+	parse_tsv(line, parts);
+
+        if (parts.size() != num_tags_fields) {
+            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+            return 0;
+        }
+
+	//
+	// Read the model sequence, a series of letters specifying if the model called a
+	// homozygous base (H), a polymorphic base (P), or if the base type was unknown (U).
+	//
+	if (parts[6] != "model") continue;
+
+	samp_id = atoi(parts[1].c_str()); 
+	tag_id  = atoi(parts[2].c_str());
+	mod     = new ModRes(samp_id, tag_id, parts[9].c_str());
+
+	modres[tag_id] = mod;
+    }
+
+    fh.close();
+
+    delete [] line;
+
+    return 1;
 }
 
 #endif // __SQL_UTILITIES_H__
