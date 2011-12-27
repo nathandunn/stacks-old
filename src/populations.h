@@ -83,17 +83,17 @@ void version( void );
 int  parse_command_line(int, char**);
 int  build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &);
 int  load_marker_list(string, set<int> &);
-int  identify_parental_ids(map<int, CLocus *> &, set<int> &);
 int  reduce_catalog(map<int, CLocus *> &, set<int> &, set<int> &);
-int  find_markers(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &);
-int  calculate_f(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &);
-int  create_genotype_map(CLocus *, PopMap<CLocus> *, set<int> &);
-int  call_population_genotypes(CLocus *, PopMap<CLocus> *, map<string, map<string, string> > &);
-int  tally_progeny_haplotypes(CLocus *, PopMap<CLocus> *, set<int> &, int &, double &, string &);
+int  tabulate_haplotypes(map<int, CLocus *> &, PopMap<CLocus> *);
+int  calculate_f(map<int, CLocus *> &, PopMap<CLocus> *);
+int  create_genotype_map(CLocus *, PopMap<CLocus> *);
+int  call_population_genotypes(CLocus *, PopMap<CLocus> *);
+int  tally_haplotype_freq(CLocus *, PopMap<CLocus> *, int &, double &, string &);
 int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &);
 
+int  write_sql(map<int, CLocus *> &, PopMap<CLocus> *);
 int  write_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CLocus *> &, PopSum<CLocus> *);
-int  write_generic(map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &, bool);
+int  write_generic(map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, bool);
 int  write_genomic(map<int, CLocus *> &, PopMap<CLocus> *);
 
 bool compare_pop_map(pair<int, string>, pair<int, string>);

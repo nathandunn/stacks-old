@@ -94,9 +94,6 @@ int main (int argc, char* argv[]) {
      	return 0;
     }
 
-    set<int> parent_ids;
-    identify_parental_ids(catalog, parent_ids);
-
     //
     // Implement the black/white list
     //
@@ -129,64 +126,75 @@ int main (int argc, char* argv[]) {
     PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches, min_stack_depth);
 
-    cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
-    map<int, CLocus *>::iterator it;
-    map<int, ModRes *>::iterator mit;
-    Datum  *d;
-    CLocus *loc;
+    // cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
+    // map<int, CLocus *>::iterator it;
+    // map<int, ModRes *>::iterator mit;
+    // Datum  *d;
+    // CLocus *loc;
+    // //
+    // // Load the output from the SNP calling model for each individual at each locus. This
+    // // model output string looks like this:
+    // //   OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOEOOOOOOEOOOOOOOOOOOOOOOOOOOOOOOOOOOOOUOOOOUOOOOOO
+    // // and records model calls for each nucleotide: O (hOmozygous), E (hEterozygous), U (Unknown)
+    // //
+    // for (uint i = 0; i < files.size(); i++) {
+    // 	map<int, ModRes *> modres;
+    // 	load_model_results(in_path + files[i].second, modres);
+
+    // 	if (modres.size() == 0) {
+    // 	    cerr << "Warning: unable to find any model results in file '" << files[i].second << "', excluding this sample from population analysis.\n";
+    // 	    continue;
+    // 	}
+
+    // 	for (it = catalog.begin(); it != catalog.end(); it++) {
+    // 	    loc = it->second;
+    // 	    d = pmap->datum(loc->id, sample_ids[i]);
+
+    // 	    if (d != NULL) {
+    // 		d->model = new char[strlen(modres[d->id]->model) + 1];
+    // 		strcpy(d->model, modres[d->id]->model);
+    // 	    }
+    // 	}
+
+    // 	for (mit = modres.begin(); mit != modres.end(); mit++)
+    // 	    delete mit->second;
+    // 	modres.clear();
+    // }
+
+    // uint pop_id, start_index, end_index;
+    // map<int, pair<int, int> >::iterator pit;
+
+    // PopSum<CLocus> *psum = new PopSum<CLocus>(pmap->loci_cnt(), pop_indexes.size());
+    // psum->initialize(pmap);
+
+    // for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+    // 	start_index = pit->second.first;
+    // 	end_index   = pit->second.second;
+    // 	pop_id      = pit->first;
+    // 	cerr << "Generating nucleotide-level summary statistics for population " << pop_id << "\n";
+    // 	psum->add_population(catalog, pmap, pop_id, start_index, end_index);
+    // }
+
     //
-    // Load the output from the SNP calling model for each individual at each locus. This
-    // model output string looks like this:
-    //   OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOEOOOOOOEOOOOOOOOOOOOOOOOOOOOOOOOOOOOOUOOOOUOOOOOO
-    // and records model calls for each nucleotide: O (hOmozygous), E (hEterozygous), U (Unknown)
+    // Idenitfy polymorphic loci, tabulate haplotypes present.
     //
-    for (uint i = 0; i < files.size(); i++) {
-	map<int, ModRes *> modres;
-	load_model_results(in_path + files[i].second, modres);
+    tabulate_haplotypes(catalog, pmap);
 
-	if (modres.size() == 0) {
-	    cerr << "Warning: unable to find any model results in file '" << files[i].second << "', excluding this sample from population analysis.\n";
-	    continue;
-	}
-
-	for (it = catalog.begin(); it != catalog.end(); it++) {
-	    loc = it->second;
-	    d = pmap->datum(loc->id, sample_ids[i]);
-
-	    if (d != NULL) {
-		d->model = new char[strlen(modres[d->id]->model) + 1];
-		strcpy(d->model, modres[d->id]->model);
-	    }
-	}
-
-	for (mit = modres.begin(); mit != modres.end(); mit++)
-	    delete mit->second;
-	modres.clear();
-    }
-
-    uint pop_id, start_index, end_index;
-    map<int, pair<int, int> >::iterator pit;
-
-    PopSum<CLocus> *psum = new PopSum<CLocus>(pmap->loci_cnt(), pop_indexes.size());
-    psum->initialize(pmap);
-
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-	start_index = pit->second.first;
-	end_index   = pit->second.second;
-	pop_id      = pit->first;
-	cerr << "Generating nucleotide-level summary statistics for population " << pop_id << "\n";
-	psum->add_population(catalog, pmap, pop_id, start_index, end_index);
-    }
+    //
+    // Output a list of heterozygous loci and the associate haplotype frequencies.
+    //
+    if (sql_out)
+	write_sql(catalog, pmap);
 
     //
     // Output the locus-level summary statistics.
     //
-    write_summary_stats(files, pop_indexes, catalog, psum);
+    //write_summary_stats(files, pop_indexes, catalog, psum);
 
     //
     // Output the observed haplotypes.
     //
-    write_generic(catalog, pmap, samples, parent_ids, false);
+    write_generic(catalog, pmap, samples, false);
 
     //
     // Output nucleotide-level genotype calls for each individual.
@@ -217,142 +225,34 @@ int reduce_catalog(map<int, CLocus *> &catalog, set<int> &whitelist, set<int> &b
     return 0;
 }
 
-int identify_parental_ids(map<int, CLocus *> &catalog, set<int> &parents) {
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
-    int     sample_id;
-
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
-	for (uint i = 0; i < loc->comp.size(); i++) {
-	    sample_id = (int) strtol(loc->comp[i], NULL, 10);
-	}
-	parents.insert(sample_id);
-    }
-
-    set<int>::iterator sit;
-    cerr << "Identified parent IDs: ";
-    for (sit = parents.begin(); sit != parents.end(); sit++)
-	cerr << *sit << " ";
-    cerr << "\n";
-
-    return 0;
-}
-
-int find_markers(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &parent_ids) {
+int tabulate_haplotypes(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     map<int, CLocus *>::iterator it;
     vector<char *>::iterator hit;
-    set<int>::iterator p, q;
-    int pid_1, pid_2, parent_count, allele_cnt_1, allele_cnt_2;
-    Datum  *d_1, *d_2;
-    CLocus *loc;
+    Datum  **d;
+    CLocus  *loc;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
-	//
-	// Count the number of parental tags matching this catalog tag. A proper marker should
-	// contain a single representative from each parent; multiple alleles must be called from 
-	// a single tag from a single parent.
-	//
-	if (parent_ids.size() == 1) {
-	    p = parent_ids.begin();
-	    pid_1 = *p;
-	    pid_2 = -1;
-	    d_1   = pmap->blacklisted(loc->id, pid_1) ? NULL : pmap->datum(loc->id, pid_1);
-	    d_2   = NULL;
-	} else {
-	    p = parent_ids.begin();
-	    q = p++;
+	d   = pmap->locus(loc->id);
 
-	    pid_1 = *p < *q ? *p : *q;
-	    pid_2 = *p < *q ? *q : *p;
-	    if (pmap->blacklisted(loc->id, pid_1) ||
-		pmap->blacklisted(loc->id, pid_2)) {
-		d_1 = NULL;
-		d_2 = NULL;
-	    } else {
-		d_1   = pmap->datum(loc->id, pid_1);
-		d_2   = pmap->datum(loc->id, pid_2);
-	    }
+	for (int i = 0; i < pmap->sample_cnt(); i++) {
+	    if (d[i] == NULL) 
+		continue;
+
+	    if (d[i]->obshap.size() > 1)
+		loc->marker = "heterozygous";
 	}
 
-	parent_count = 0;
-	if (d_1 != NULL) parent_count++;
-	if (d_2 != NULL) parent_count++;
-
-	//
-	// Locus is present in both parents.
-	//
-	if (parent_count == 2) {
-	    allele_cnt_1 = d_1->obshap.size();
-	    allele_cnt_2 = d_2->obshap.size();
-
-            //
-            // Determine the number of unique alleles
-            //
-	    set<string> unique_alleles;
-
-	    for (hit = d_1->obshap.begin(); hit != d_1->obshap.end(); hit++)
-                unique_alleles.insert(*hit);
-	    for (hit = d_2->obshap.begin(); hit != d_2->obshap.end(); hit++)
-                unique_alleles.insert(*hit);
-            int num_unique_alleles = unique_alleles.size();
-
-	    //
-	    // Locus is heterozygous in both parents. However, the number of alleles present distinguishes 
-            // what type of marker it is. Four unique alleles requries an ab/cd marker, while four 
-            // alleles that are the same in both parents requires an ab/ab marker. Finally, three unique 
-            // alleles requires either an ab/ac marker.
-	    //
-	    if (allele_cnt_1 == 2 && allele_cnt_2 == 2) {
-                if (num_unique_alleles == 3)
-                    loc->marker = "ab/ac";
-		else if (num_unique_alleles == 2)
-                    loc->marker = "ab/ab";
-		else
-                    loc->marker = "ab/cd";
-	    //
-	    // Locus is homozygous in one parent and heterozygous in the other.
-	    //
-	    } else if (allele_cnt_1 == 2 && allele_cnt_2 == 1) {
-
-                if (num_unique_alleles == 3)
-                    loc->marker = "ab/cc";
-                else if (num_unique_alleles == 2)
-                    loc->marker = "ab/aa";
-	    //
-	    // Locus is homozygous in one parent and heterozygous in the other.
-	    //
-	    } else if (allele_cnt_1 == 1 && allele_cnt_2 == 2) {
-
-                if (num_unique_alleles == 3)
-                    loc->marker = "cc/ab";
-                else if (num_unique_alleles == 2)
-                    loc->marker = "aa/ab";
-            //
-            // Locus is homozygous in both parents, but heterozygous between parents.
-            //
-	    } else if (allele_cnt_1 == 1 && allele_cnt_2 == 1) {
-
-		if (strcmp(d_1->obshap[0], "consensus") != 0 &&
-		    strcmp(d_2->obshap[0], "consensus") != 0)
-                    loc->marker = "aa/bb";
-	    }
-        //
-        // Locus only exists in one parent.
-	//
-	} else if (parent_count == 1) {
-	    if (d_1 != NULL && d_1->obshap.size() == 2)
-		loc->marker = "ab/--";
-	    else if (d_2 != NULL && d_2->obshap.size() == 2)
-		loc->marker = "--/ab";
+	if (loc->marker.length() > 0) {
+     	    create_genotype_map(loc, pmap);
+	    call_population_genotypes(loc, pmap);
 	}
     }
 
     return 0;
 }
 
-int calculate_f(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &parent_ids) {
+int calculate_f(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     map<int, CLocus *>::iterator it;
     map<char, int>::iterator j;
     Datum **d;
@@ -371,8 +271,6 @@ int calculate_f(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &par
 
 	for (int i = 0; i < pmap->sample_cnt(); i++) {
 	    if (d[i] == NULL) 
-		continue;
-	    if (parent_ids.count(pmap->rev_sample_index(i))) 
 		continue;
 
 	    tot++;
@@ -404,63 +302,38 @@ int calculate_f(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &par
     return 0;
 }
 
-int create_genotype_map(CLocus *locus, PopMap<CLocus> *pmap, set<int> &parent_ids) {
+int create_genotype_map(CLocus *locus, PopMap<CLocus> *pmap) {
     //
-    // Create a genotype map. For any set of alleles, this routine will
-    // assign each allele to one of the constituent genotypes, e.g. given the 
-    // marker type 'aaxbb' and the alleles 'A' from the male, and 'G'
-    // from the female, will assign 'G' == 'bb' and 'A'== 'aa'. It assumes that 
-    // recombination may have occurred as with an F2, F3 or later cross.
+    // Create a genotype map. For any set of haplotypes, this routine will
+    // assign each haplotype to a genotype, e.g. given the haplotypes 
+    // 'AC' and 'GT' in the population, this routine will assign 'AC' == 'a' 
+    // and 'GT' == 'b'. If an individual is homozygous for 'AC', they will be 
+    // assigned an 'aa' genotype.
     //
     //cerr << "Creating genotype map for catalog ID " << locus->id  << ", marker: " << locus->marker << ".\n";
 
-    //
-    // Get the parent IDs ordered
-    //
-    set<int>::iterator p = parent_ids.begin();
-    set<int>::iterator q = p++;
-    int pid_1 = *p < *q ? *p : *q;
-    int pid_2 = *p < *q ? *q : *p;
+    char gtypes[26] ={'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+		      'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+		      'u', 'v', 'w', 'x', 'y', 'z'};
 
-    set<char> p1_gtypes, p2_gtypes;
-    set<char>::iterator i;
-    map<char, int> legal_gtypes, com_gtypes;
-    //
-    // First, identify any alleles that are common between the two parents.
-    //
-    p1_gtypes.insert(locus->marker[0]);
-    p1_gtypes.insert(locus->marker[1]);
-    p2_gtypes.insert(locus->marker[3]);
-    p2_gtypes.insert(locus->marker[4]);
-    for (i = p1_gtypes.begin(); i != p1_gtypes.end(); i++)
-	if (*i != '-') legal_gtypes[*i]++;
-    for (i = p2_gtypes.begin(); i != p2_gtypes.end(); i++)
-	if (*i != '-') legal_gtypes[*i]++;
-    //
-    // Find the common genotypes
-    //
-    vector<char> types;
-    map<char, int>::iterator j;
-
-    for (j = legal_gtypes.begin(); j != legal_gtypes.end(); j++)
-	if (j->second > 1) types.push_back(j->first);
-    sort(types.begin(), types.end());
-
-    Datum *d_1, *d_2;
+    Datum **d;
     map<string, int> haplotypes;
     map<string, int>::iterator k;
     vector<pair<string, int> > sorted_haplotypes;
-    d_1 = pmap->datum(locus->id, pid_1);
-    d_2 = pmap->datum(locus->id, pid_2);
 
-    if (d_1 != NULL) {
-	for (uint n = 0; n < d_1->obshap.size(); n++)
-	    haplotypes[d_1->obshap[n]]++;
+    d = pmap->locus(locus->id);
+
+    for (int i = 0; i < pmap->sample_cnt(); i++) {
+
+	if (d[i] != NULL)
+	    for (uint n = 0; n < d[i]->obshap.size(); n++)
+		haplotypes[d[i]->obshap[n]]++;
     }
-    if (d_2 != NULL) {
-	for (uint n = 0; n < d_2->obshap.size(); n++)
-	    haplotypes[d_2->obshap[n]]++;
-    }
+
+    //
+    // Check that there are not more haplotypes than we have encodings.
+    //
+    if (haplotypes.size() > 26) return 0;
 
     // 
     // Sort the haplotypes map by value
@@ -469,70 +342,16 @@ int create_genotype_map(CLocus *locus, PopMap<CLocus> *pmap, set<int> &parent_id
 	sorted_haplotypes.push_back(*k);
     sort(sorted_haplotypes.begin(), sorted_haplotypes.end(), hap_compare);
 
-    for (uint n = 0, index = 0; n < sorted_haplotypes.size() && index < types.size(); n++, index++) {
-	if (sorted_haplotypes[n].second > 1) {
-	    locus->gmap[sorted_haplotypes[n].first] = types[index];
-	    com_gtypes[types[index]]++;
-	    //cerr << "  Assinging common allele " << sorted_haplotypes[n].first << " to genotype '" << locus->gmap[sorted_haplotypes[n].first] << "'\n";
-	}
-    }
-
-    //
-    // Now, examine the remaining first parent alleles.
-    //
-    if (d_1 != NULL) {
-	legal_gtypes.clear();
-	for (i = p1_gtypes.begin(); i != p1_gtypes.end(); i++)
-	    if (*i != '-' && com_gtypes.count(*i) == 0) {
-		//cerr << "  Adding " << *i << " to first parent genotypes\n";
-		legal_gtypes[*i]++;
-	    }
-	types.clear();
-	for (j = legal_gtypes.begin(); j != legal_gtypes.end(); j++)
-	    types.push_back(j->first);
-	sort(types.begin(), types.end());
-
-	for (uint n = 0, index = 0; n < d_1->obshap.size() && index < types.size(); n++, index++) {
-	    if (locus->gmap.count(d_1->obshap[n])) {
-		index--;
-		continue;
-	    }
-	    locus->gmap[d_1->obshap[n]] = types[index];
-	    //cerr << "  Assinging '" << d_1->obshap[n] << "' to first parent genotype '" << locus->gmap[d_1->obshap[n]] << "'\n";
-	}
-    }
-
-    //
-    // Finally, repeat in the second parent.
-    //
-    if (d_2 != NULL) {
-	legal_gtypes.clear();
-	for (i = p2_gtypes.begin(); i != p2_gtypes.end(); i++)
-	    if (*i != '-' && com_gtypes.count(*i) == 0) {
-		//cerr << "  Adding " << *i << " to second genotypes\n";
-		legal_gtypes[*i]++;
-	    }
-	types.clear();
-	for (j = legal_gtypes.begin(); j != legal_gtypes.end(); j++)
-	    types.push_back(j->first);
-	sort(types.begin(), types.end());
-
-	for (uint n = 0, index = 0; n < d_2->obshap.size() && index < types.size(); n++, index++) {
-	    if (locus->gmap.count(d_2->obshap[n])) {
-		index--;
-		continue;
-	    }
-	    locus->gmap[d_2->obshap[n]] = types[index];
-	    //cerr << "  Assinging '" << d_2->obshap[n] << "' to second parent genotype '" << locus->gmap[d_2->obshap[n]] << "'\n";
-	}
+    for (uint n = 0, index = 0; n < sorted_haplotypes.size() && index <= 26; n++, index++) {
+	locus->gmap[sorted_haplotypes[n].first] = gtypes[index];
+	//cerr << "GMAP: " << sorted_haplotypes[n].first << " == " << gtypes[index] << "\n";
     }
 
     return 0;
 }
 
 int call_population_genotypes(CLocus *locus, 
-			      PopMap<CLocus> *pmap, 
-			      map<string, map<string, string> > &dictionary) {
+			      PopMap<CLocus> *pmap) {
     //
     // Fetch the array of observed haplotypes from the population
     //
@@ -568,9 +387,8 @@ int call_population_genotypes(CLocus *locus,
 	    //cerr << "  Adding genotype to string: " << gtypes[j] << "; " << gtype << "\n";
 	}
 
- 	string m = dictionary[locus->marker].count(gtype) ? 
-	    dictionary[locus->marker][gtype] : 
-	    "-";
+ 	string m = gtype.length() == 1 ? 
+	    gtype + gtype : gtype;
 
 	d[i]->gtype = new char[m.length() + 1];
 	strcpy(d[i]->gtype, m.c_str());
@@ -584,8 +402,8 @@ int call_population_genotypes(CLocus *locus,
     return 0;
 }
 
-int tally_progeny_haplotypes(CLocus *locus, PopMap<CLocus> *pmap, set<int> &parent_ids, 
-			     int &total, double &max, string &freq_str) {
+int tally_haplotype_freq(CLocus *locus, PopMap<CLocus> *pmap,
+			 int &total, double &max, string &freq_str) {
 
     map<string, double> freq;
     Datum **d = pmap->locus(locus->id);
@@ -596,7 +414,6 @@ int tally_progeny_haplotypes(CLocus *locus, PopMap<CLocus> *pmap, set<int> &pare
     //cerr << "Examining marker: " << locus->id << "\n";
 
     for (int i = 0; i < pmap->sample_cnt(); i++) {
-	if (parent_ids.count(pmap->rev_sample_index(i))) continue;
 	if (d[i] == NULL) continue;
 
 	//cerr << "  Sample: " << i << "; Haplotype: " << d[i]->obshap[0] << "; Genotype: " << d[i]->gtype << "\n";
@@ -664,8 +481,8 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     map<string, vector<CLocus *> >::iterator it;
     int  a, b;
 
-    uint  rcnt = renz_cnt[enz];
-    uint  rlen = renz_len[enz];
+    uint  rcnt = enz.length() ? renz_cnt[enz] : 0;
+    uint  rlen = enz.length() ? renz_len[enz] : 0;
     char *p;
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
@@ -822,7 +639,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
 int
 write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, 
-	      map<int, string> &samples, set<int> &parent_ids, bool write_gtypes)
+	      map<int, string> &samples, bool write_gtypes)
 {
     stringstream pop_name;
     pop_name << "batch_" << batch_id;
@@ -869,8 +686,6 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
 
     map<int, string>::iterator s;
     for (int i = 0; i < pmap->sample_cnt(); i++) {
-	if (write_gtypes && parent_ids.count(pmap->rev_sample_index(i))) 
-	    continue;
 	fh << samples[pmap->rev_sample_index(i)];
 	if (i < pmap->sample_cnt() - 1) 
 	    fh << "\t";
@@ -911,8 +726,6 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
 	string  obshap;
 
 	for (int i = 0; i < pmap->sample_cnt(); i++) {
-	    if (write_gtypes && parent_ids.count(pmap->rev_sample_index(i))) 
-		continue;
 	    fh << "\t";
 
 	    if (d[i] == NULL)
@@ -930,6 +743,63 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
 	}
 
 	fh << "\n";
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
+
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".markers.tsv";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing SQL markers file to '" << file << "'\n";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening markers SQL file '" << file << "'\n";
+	exit(1);
+    }
+
+    map<int, CLocus *>::iterator it;
+    CLocus *loc;
+    char    f[id_len], g[id_len];
+    stringstream gtype_map;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+
+	if (loc->marker.length() == 0) continue;
+
+	string freq  = "";
+	double max   = 0.0;
+	int    total = 0;
+	tally_haplotype_freq(loc, pmap, total, max, freq);
+
+	sprintf(f, "%0.1f", max);
+	sprintf(g, "%0.2f", loc->f);
+
+	//
+	// Record the haplotype to genotype map.
+	//
+	map<string, string>::iterator j;
+	gtype_map.str("");
+	for (j = loc->gmap.begin(); j != loc->gmap.end(); j++)
+	    gtype_map << j->first << ":" << j->second << ";";
+
+	fh << 0 << "\t" 
+	   << batch_id << "\t" 
+	   << loc->id << "\t" 
+	   << "\t"              // Marker
+	   << total << "\t"
+	   << f << "\t"
+	   << freq << "\t"
+	   << g << "\t"
+           << gtype_map.str() <<"\n";
     }
 
     fh.close();
@@ -1151,12 +1021,7 @@ int parse_command_line(int argc, char* argv[]) {
 	help();
     }
 
-    if (enz.length() == 0) {
-	cerr << "You must specify the restriction enzyme used with 'genomic' output.\n";
-	help();
-    }
-
-    if (renz.count(enz) == 0) {
+    if (enz.length() > 0 && renz.count(enz) == 0) {
 	cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
 	help();
     }
