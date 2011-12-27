@@ -46,7 +46,7 @@ prepare_filter_parameters($display, $param);
 // Prepare some SQL queries
 //
 $query = 
-    "SELECT batches.id as id, date, description FROM batches " . 
+    "SELECT batches.id as id, date, description, type FROM batches " . 
     "WHERE batches.id=?";
 $db['batch_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['batch_sth'], __FILE__, __LINE__);
@@ -121,6 +121,7 @@ $batch  = array();
 $batch['id']   = $row['id'];
 $batch['desc'] = $row['description'];
 $batch['date'] = $row['date'];
+$batch['type'] = $row['type'];
 
 $page_title = "RAD-Tag Catalog Viewer";
 write_header($page_title, $batch);
@@ -229,7 +230,8 @@ $end_group   = 0;
 
 write_pagination($pagination_count, $start_group, $end_group, "catalog.php");
 
-echo <<< EOQ
+if ($batch['type'] == "map") {
+  echo <<< EOQ
   </td>
 </tr>
 <tr>
@@ -242,14 +244,25 @@ echo <<< EOQ
   <th style="width: 10%;">Ratio</th>
 
 EOQ;
+} else {
+  echo <<< EOQ
+  </td>
+</tr>
+<tr>
+  <th style="width: 10%;">Id</th>
+  <th style="width: 5%;">SNP</th>
+  <th style="width: 50%;">Consensus</th>
+  <th style="width: 5%;">Matching Samples</th>
+  <th style="width: 15%;">Ratio</th>
+
+EOQ;
+}
 
 if ($cols['gcnt'] == true)
-    print
-        "  <th style=\"width: 5%\">Genotypes</th>\n";
+  print "  <th style=\"width: 5%\">Genotypes</th>\n";
 
 if ($cols['seq'] == true)
-    print
-        "  <th style=\"width: 10%\">Sequence</th>\n";
+  print "  <th style=\"width: 10%\">Sequence</th>\n";
 print  "</tr>\n";
 
 $db['dbh']->setLimit($display['pp'], $start_group - 1);
@@ -316,7 +329,7 @@ EOQ;
     foreach ($ratio as $r) {
       if (strlen($r) == 0) continue;
 
-      preg_match("/([abcd]{1,2}):(\d+)\((\d+\.?\d*%)\)/", $r, $matches);
+      preg_match("/([a-z]+):(\d+)\((\d+\.?\d*%)\)/", $r, $matches);
 
       $color = $colors[$i % $color_size];
 
@@ -360,10 +373,15 @@ EOQ;
       print "<td class=\"seq\"><div class=\"seq\">$s</div></td>\n";
     }
 
+
+    print "<td>$row[parents]</td>\n";
+
+    if ($batch['type'] == "map")
+      print 
+	"  <td><acronym title=\"Matching Progeny\">$row[progeny]</acronym> <strong>/</strong> <acronym title=\"Mappable Progeny\">$row[valid_progeny]</acronym></td>\n" .
+	"  <td>$row[marker]</td>\n";
+
     echo <<< EOQ
-  <td>$row[parents]</td>
-  <td><acronym title="Matching Progeny">$row[progeny]</acronym> <strong>/</strong> <acronym title="Mappable Progeny">$row[valid_progeny]</acronym></td>
-  <td>$row[marker]</td>
   <td style="text-align: left; font-size: smaller;">
     $ratio_parsed
   </td>

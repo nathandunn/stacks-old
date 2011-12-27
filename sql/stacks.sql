@@ -1,7 +1,8 @@
 create table batches (
        id           int unsigned not null primary key auto_increment,
        date         DATE not null,
-       description  tinytext
+       description  tinytext,
+       type	    enum('map', 'population')
 );
 
 create table samples (
@@ -164,9 +165,9 @@ create table markers (
        type       enum('aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'),
        progeny    int unsigned not null default 0,
        max_pct    float,
-       ratio      varchar(128),
+       ratio      varchar(256),
        f          float,
-       geno_map   varchar(128)
+       geno_map   varchar(256)
 );
 
 create table sequence (
