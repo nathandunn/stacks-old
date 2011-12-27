@@ -251,6 +251,8 @@ int find_markers(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &pa
     Datum  *d_1, *d_2;
     CLocus *loc;
 
+    if (parent_ids.size() > 2) return 0;
+
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 	//

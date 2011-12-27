@@ -10,7 +10,7 @@ create table catalog_index (
        marker   enum('aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab', ''),
        valid_progeny int unsigned not null default 0,
        max_pct    float not null default 0,
-       ratio      varchar(64),
+       ratio      varchar(256),
        ests       int unsigned not null,
        pe_radtags int unsigned not null,
        blast_hits int unsigned not null,
