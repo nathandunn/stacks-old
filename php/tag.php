@@ -42,7 +42,7 @@ $display['pp']        = $per_page;
 // Prepare some SQL queries
 //
 $query = 
-    "SELECT batches.id as id, date, description, samples.id as sample_id, samples.sample_id as samp_id, type, file " . 
+    "SELECT batches.id as id, date, description, samples.id as sample_id, samples.sample_id as samp_id, samples.type, file " . 
     "FROM batches " . 
     "JOIN samples ON (batch_id=batches.id) " . 
     "WHERE batches.id=? AND samples.id=?";
