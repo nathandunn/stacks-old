@@ -126,54 +126,54 @@ int main (int argc, char* argv[]) {
     PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches, min_stack_depth);
 
-    // cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
-    // map<int, CLocus *>::iterator it;
-    // map<int, ModRes *>::iterator mit;
-    // Datum  *d;
-    // CLocus *loc;
-    // //
-    // // Load the output from the SNP calling model for each individual at each locus. This
-    // // model output string looks like this:
-    // //   OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOEOOOOOOEOOOOOOOOOOOOOOOOOOOOOOOOOOOOOUOOOOUOOOOOO
-    // // and records model calls for each nucleotide: O (hOmozygous), E (hEterozygous), U (Unknown)
-    // //
-    // for (uint i = 0; i < files.size(); i++) {
-    // 	map<int, ModRes *> modres;
-    // 	load_model_results(in_path + files[i].second, modres);
+    cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
+    map<int, CLocus *>::iterator it;
+    map<int, ModRes *>::iterator mit;
+    Datum  *d;
+    CLocus *loc;
+    //
+    // Load the output from the SNP calling model for each individual at each locus. This
+    // model output string looks like this:
+    //   OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOEOOOOOOEOOOOOOOOOOOOOOOOOOOOOOOOOOOOOUOOOOUOOOOOO
+    // and records model calls for each nucleotide: O (hOmozygous), E (hEterozygous), U (Unknown)
+    //
+    for (uint i = 0; i < files.size(); i++) {
+    	map<int, ModRes *> modres;
+    	load_model_results(in_path + files[i].second, modres);
 
-    // 	if (modres.size() == 0) {
-    // 	    cerr << "Warning: unable to find any model results in file '" << files[i].second << "', excluding this sample from population analysis.\n";
-    // 	    continue;
-    // 	}
+    	if (modres.size() == 0) {
+    	    cerr << "Warning: unable to find any model results in file '" << files[i].second << "', excluding this sample from population analysis.\n";
+    	    continue;
+    	}
 
-    // 	for (it = catalog.begin(); it != catalog.end(); it++) {
-    // 	    loc = it->second;
-    // 	    d = pmap->datum(loc->id, sample_ids[i]);
+    	for (it = catalog.begin(); it != catalog.end(); it++) {
+    	    loc = it->second;
+    	    d = pmap->datum(loc->id, sample_ids[i]);
 
-    // 	    if (d != NULL) {
-    // 		d->model = new char[strlen(modres[d->id]->model) + 1];
-    // 		strcpy(d->model, modres[d->id]->model);
-    // 	    }
-    // 	}
+    	    if (d != NULL) {
+    		d->model = new char[strlen(modres[d->id]->model) + 1];
+    		strcpy(d->model, modres[d->id]->model);
+    	    }
+    	}
 
-    // 	for (mit = modres.begin(); mit != modres.end(); mit++)
-    // 	    delete mit->second;
-    // 	modres.clear();
-    // }
+    	for (mit = modres.begin(); mit != modres.end(); mit++)
+    	    delete mit->second;
+    	modres.clear();
+    }
 
-    // uint pop_id, start_index, end_index;
-    // map<int, pair<int, int> >::iterator pit;
+    uint pop_id, start_index, end_index;
+    map<int, pair<int, int> >::iterator pit;
 
-    // PopSum<CLocus> *psum = new PopSum<CLocus>(pmap->loci_cnt(), pop_indexes.size());
-    // psum->initialize(pmap);
+    PopSum<CLocus> *psum = new PopSum<CLocus>(pmap->loci_cnt(), pop_indexes.size());
+    psum->initialize(pmap);
 
-    // for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-    // 	start_index = pit->second.first;
-    // 	end_index   = pit->second.second;
-    // 	pop_id      = pit->first;
-    // 	cerr << "Generating nucleotide-level summary statistics for population " << pop_id << "\n";
-    // 	psum->add_population(catalog, pmap, pop_id, start_index, end_index);
-    // }
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+    	start_index = pit->second.first;
+    	end_index   = pit->second.second;
+    	pop_id      = pit->first;
+    	cerr << "Generating nucleotide-level summary statistics for population " << pop_id << "\n";
+    	psum->add_population(catalog, pmap, pop_id, start_index, end_index);
+    }
 
     //
     // Idenitfy polymorphic loci, tabulate haplotypes present.
@@ -189,7 +189,7 @@ int main (int argc, char* argv[]) {
     //
     // Output the locus-level summary statistics.
     //
-    //write_summary_stats(files, pop_indexes, catalog, psum);
+    write_summary_stats(files, pop_indexes, catalog, psum);
 
     //
     // Output the observed haplotypes.
@@ -844,37 +844,70 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
     char   line[max_len];
     vector<string> parts;
 
-    ifstream fh(pmap_path.c_str(), ifstream::in);
+    if (pmap_path.length() > 0) {
+	ifstream fh(pmap_path.c_str(), ifstream::in);
 
-    if (fh.fail()) {
-        cerr << "Error opening population map '" << pmap_path << "'\n";
-	exit(1);
+	if (fh.fail()) {
+	    cerr << "Error opening population map '" << pmap_path << "'\n";
+	    exit(1);
+	}
+
+	while (fh.good()) {
+	    fh.getline(line, max_len);
+
+	    if (strlen(line) == 0) continue;
+	    if (line[0] == '#') continue;
+
+	    //
+	    // Parse the population map, we expect:
+	    // <file name> <tab> <population ID>
+	    //
+	    parse_tsv(line, parts);
+
+	    files.push_back(make_pair(atoi(parts[1].c_str()), parts[0]));
+	}
+
+	fh.close();
+    } else {
+	//
+	// If no population map is specified, read all the files from the Stacks directory.
+	//
+	uint   pos;
+	string file;
+	struct dirent *direntry;
+
+	DIR *dir = opendir(in_path.c_str());
+
+	if (dir == NULL) {
+	    cerr << "Unable to open directory '" << in_path << "' for reading.\n";
+	    exit(1);
+	}
+
+	while ((direntry = readdir(dir)) != NULL) {
+	    file = direntry->d_name;
+
+	    if (file == "." || file == "..")
+		continue;
+
+	    if (file.substr(0, 6) == "batch_")
+		continue;
+
+	    pos = file.rfind(".tags.tsv");
+	    if (pos < file.length())
+		files.push_back(make_pair(1, file.substr(0, pos)));
+	}
+
+	closedir(dir);
     }
 
-    while (fh.good()) {
-	fh.getline(line, max_len);
-
-	if (strlen(line) == 0) continue;
-
-	//
-	// Parse the population map, we expect:
-	// <file name> <tab> <population ID>
-	//
-	parse_tsv(line, parts);
-
-	files.push_back(make_pair(atoi(parts[1].c_str()), parts[0]));
+    if (files.size() == 0) {
+	cerr << "Unable to locate any input files to process within '" << in_path << "'\n";
     }
-
-    fh.close();
 
     //
     // Sort the files according to population ID.
     //
     sort(files.begin(), files.end(), compare_pop_map);
-
-    if (files.size() == 0) {
-	cerr << "Unable to locate any input files to process within '" << in_path << "'\n";
-    }
 
     cerr << "Found " << files.size() << " input file(s).\n";
 
@@ -912,6 +945,8 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
 }
 
 bool compare_pop_map(pair<int, string> a, pair<int, string> b) {
+    if (a.first == b.first)
+	return (a.second < b.second);
     return (a.first < b.first);
 }
 
@@ -1012,8 +1047,7 @@ int parse_command_line(int argc, char* argv[]) {
 	in_path += "/";
 
     if (pmap_path.length() == 0) {
-	cerr << "You must specify a path to the population map.\n";
-	help();
+	cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
     }
 
     if (batch_id == 0) {
