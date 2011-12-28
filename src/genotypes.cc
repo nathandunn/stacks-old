@@ -2022,6 +2022,8 @@ int build_file_list(vector<string> &files) {
 	    files.push_back(file.substr(0, pos));
     }
 
+    closedir(dir);
+
     sort(files.begin(), files.end());
 
     if (files.size() == 0) {
