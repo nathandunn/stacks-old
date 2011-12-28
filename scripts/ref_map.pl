@@ -317,6 +317,12 @@ sub parse_command_line {
 	print STDERR "You must specify at least one parent or sample file.\n";
 	usage();
     }
+
+    if (scalar(@samples) > 0) {
+	$data_type = "population";
+    } else {
+	$data_type = "map";
+    }
 }
 
 sub version {
