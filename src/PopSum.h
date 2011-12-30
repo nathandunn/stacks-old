@@ -47,6 +47,9 @@ public:
     double obs_hom;
     double exp_het;
     double exp_hom;
+    double H;
+    double pi;
+    double Fis;
 
     SumStat() { 
 	num_indv = 0.0;
@@ -55,6 +58,8 @@ public:
 	obs_hom  = 0.0;
 	exp_het  = 0.0;
 	exp_hom  = 0.0;
+	pi       = 0.0;
+	Fis      = 0.0;
     }
 };
 
@@ -108,10 +113,12 @@ public:
 
     LocSum **locus(int);
     LocSum  *pop(int, int);
+    double   Fst(int, int, int, int);
 
 private:
-    int tally_heterozygous_pos(LocusT *, Datum **, LocSum *, int, int, uint, uint);
-    int tally_fixed_pos(LocusT *, Datum **, LocSum *, int, uint, uint);
+    int    tally_heterozygous_pos(LocusT *, Datum **, LocSum *, int, int, uint, uint);
+    int    tally_fixed_pos(LocusT *, Datum **, LocSum *, int, uint, uint);
+    double binomial_coeff(double, double);
 };
 
 template<class LocusT>
@@ -207,6 +214,46 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 }
 
 template<class LocusT>
+double PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) {
+    LocSum *s_1 = this->pop(locus, pop_1);
+    LocSum *s_2 = this->pop(locus, pop_2);
+
+    //
+    // If this locus only appears on one population, do not calculate Fst.
+    //
+    if (s_1->nucs[pos].num_indv == 0 || s_2->nucs[pos].num_indv == 0) return -2;
+
+    //
+    // Calculate Fst at a locus, sub-population relative to that found in the entire population
+    //   Fst = 1 - (Sum_j( (n_j choose 2) * pi_j)) / (pi_all * Sum_j( (n_j choose 2) ))
+    //
+    double n_1, n_2, pi_1, pi_2;
+
+    n_1  = s_1->nucs[pos].num_indv;
+    n_2  = s_2->nucs[pos].num_indv;
+    pi_1 = s_1->nucs[pos].pi;
+    pi_2 = s_2->nucs[pos].pi;
+
+    if (pi_1 == 0 && pi_2 == 0) return 0;
+
+    double pi_all   = (pi_1 + pi_2) / 2;
+    double bcoeff_1 = this->binomial_coeff(n_1, 2);
+    double bcoeff_2 = this->binomial_coeff(n_2, 2);
+
+    double num = (bcoeff_1 * pi_1) + (bcoeff_2 * pi_2);
+    double den = pi_all * (bcoeff_1 + bcoeff_2);
+
+    double Fst = 1 - (num / den);
+
+    // cerr << "Pi1: " << pi_1 << "; Pi2: " << pi_2 << "; PiAll: " << pi_all << "\n"
+    // 	 << "N1: " << n_1 << "; N1 choose 2: " << bcoeff_1 << "\n"
+    // 	 << "N2: " << n_2 << "; N2 choose 2: " << bcoeff_2 << "\n"
+    // 	 << "Fst: " << Fst << "\n";
+
+    return Fst;
+}
+
+template<class LocusT>
 int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos, uint start, uint end) {
     double num_indv = 0.0;
 
@@ -228,6 +275,7 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
     s->nucs[pos].obs_het  = 0.0;
     s->nucs[pos].exp_hom  = 1.0;
     s->nucs[pos].exp_het  = 0.0;
+    s->nucs[pos].pi       = 0.0;
 
     return 0;
 }
@@ -330,7 +378,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
 	}
 	i++;
     }
-    cerr << "  P Allele: " << p_allele << "; Q Allele: " << q_allele << "\n";
+    //cerr << "  P Allele: " << p_allele << "; Q Allele: " << q_allele << "\n";
 
     //
     // Calculate obaserved genotype frequencies.
@@ -359,7 +407,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
 	else if (d[i]->obshap[0][snp_index] == q_allele)
 	    obs_q++;
     }
-    cerr << "  Num Individuals: " << num_indv << "; Obs Hets: " << obs_het << "; Obs P: " << obs_p << "; Obs Q: " << obs_q << "\n";
+    //cerr << "  Num Individuals: " << num_indv << "; Obs Hets: " << obs_het << "; Obs P: " << obs_p << "; Obs Q: " << obs_q << "\n";
 
     if (num_indv == 0 || num_indv < progeny_limit) return 0;
 
@@ -369,7 +417,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     double allele_p = ((0.5 * obs_het) + obs_p) / num_indv;
     double allele_q = ((0.5 * obs_het) + obs_q) / num_indv;
 
-    cerr << "  P allele frequency: " << allele_p << "; Q allele frequency: " << allele_q << "\n";
+    //cerr << "  P allele frequency: " << allele_p << "; Q allele frequency: " << allele_q << "\n";
 
     //
     // Calculate expected genotype frequencies.
@@ -378,13 +426,13 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     double exp_p   = allele_p * allele_p;     // p^2
     double exp_q   = allele_q * allele_q;     // q^2; 
 
-    cerr << "  Expected Het: " << exp_het << "; Expected P: " << exp_p << "; Expected Q: " << exp_q << "\n";
+    //cerr << "  Expected Het: " << exp_het << "; Expected P: " << exp_p << "; Expected Q: " << exp_q << "\n";
 
     obs_het = obs_het / num_indv;
     obs_p   = obs_p   / num_indv;
     obs_q   = obs_q   / num_indv;
 
-    cerr << "  Obs Hets Freq: " << obs_het << "; Obs P Freq: " << obs_p << "; Obs Q Freq: " << obs_q << "\n";
+    //cerr << "  Obs Hets Freq: " << obs_het << "; Obs P Freq: " << obs_p << "; Obs Q Freq: " << obs_q << "\n";
 
     //
     // Record the results in the PopSum object.
@@ -396,7 +444,44 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     s->nucs[pos].exp_hom  = obs_p    > obs_q    ? exp_p    : exp_q;
     s->nucs[pos].exp_het  = exp_het;
 
+    //
+    // Calculate Pi, equivalent to expected heterozygosity (obs_het):
+    //  pi = 1 - Sum_i( (n_i choose 2) ) / (n choose 2)
+    //
+    allele_p = s->nucs[pos].p;
+    double tot_alleles = num_indv * 2;
+    double pi = 
+	this->binomial_coeff(allele_p * tot_alleles, 2) + 
+	this->binomial_coeff(((1 - allele_p) * tot_alleles), 2);
+    pi = pi / binomial_coeff(tot_alleles, 2);
+    pi = 1 - pi;
+    s->nucs[pos].pi = pi;
+
+    //
+    // Calculate F_is, the inbreeding coefficient of an individual (I) relative to the subpopulation:
+    //   Fis = (exp_het - obs_het) / exp_het
+    //
+    s->nucs[pos].Fis = pi == 0 ? 0 : (pi - obs_het) / pi;
+
     return 0;
+}
+
+template<class LocusT>
+double PopSum<LocusT>::binomial_coeff(double n, double k)
+{
+    if (n < k) return 0.0;
+    //
+    // Compute the binomial coefficient using the method of:
+    // Y. Manolopoulos, "Binomial coefficient computation: recursion or iteration?", 
+    // ACM SIGCSE Bulletin, 34(4):65-67, 2002.
+    //
+    double r = 1.0;
+    double s = (k < n - k) ? n - k + 1 : k + 1;
+
+    for (double i = n; i >= s; i--)
+        r = r * i / (n - i + 1);
+
+    return r;
 }
 
 template<class LocusT>

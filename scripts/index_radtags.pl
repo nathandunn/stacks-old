@@ -385,7 +385,7 @@ sub catalog_matches {
     while ($row = $sth->{'cat_matches'}->fetchrow_hashref()) {
 	$key = $row->{'sample_id'} . "_" . $row->{'tag_id'};
 
-	if ($row->{'type'} eq "parent") {
+	if ($row->{'type'} eq "parent" || $row->{'type'} eq "sample") {
 	    if (!defined($parents->{$row->{'batch_id'}})) {
 		$parents->{$row->{'batch_id'}} = {};
 	    }

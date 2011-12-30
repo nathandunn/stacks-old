@@ -157,7 +157,7 @@ foreach $sample (@parents, @progeny, @samples) {
 	$rrep = "";
     }
 
-    if ($type eq "parent") {
+    if ($type eq "parent" || $type eq "sample") {
 	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $rrep $minc $mind $minsd $dshapl $cscale $threads 2>&1";
     } elsif ($type eq "progeny") {
 	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $rrep $minrc $mind $minsd $dshapl $cscale $threads 2>&1";
