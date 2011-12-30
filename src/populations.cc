@@ -131,18 +131,19 @@ int main (int argc, char* argv[]) {
     map<int, ModRes *>::iterator mit;
     Datum  *d;
     CLocus *loc;
+
     //
     // Load the output from the SNP calling model for each individual at each locus. This
     // model output string looks like this:
     //   OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOEOOOOOOEOOOOOOOOOOOOOOOOOOOOOOOOOOOOOUOOOOUOOOOOO
     // and records model calls for each nucleotide: O (hOmozygous), E (hEterozygous), U (Unknown)
     //
-    for (uint i = 0; i < files.size(); i++) {
+    for (uint i = 0; i < sample_ids.size(); i++) {
     	map<int, ModRes *> modres;
-    	load_model_results(in_path + files[i].second, modres);
+    	load_model_results(in_path + samples[sample_ids[i]], modres);
 
     	if (modres.size() == 0) {
-    	    cerr << "Warning: unable to find any model results in file '" << files[i].second << "', excluding this sample from population analysis.\n";
+    	    cerr << "Warning: unable to find any model results in file '" << samples[sample_ids[i]] << "', excluding this sample from population analysis.\n";
     	    continue;
     	}
 
@@ -189,7 +190,12 @@ int main (int argc, char* argv[]) {
     //
     // Output the locus-level summary statistics.
     //
-    write_summary_stats(files, pop_indexes, catalog, psum);
+    write_summary_stats(files, pop_indexes, catalog, pmap, psum);
+
+    //
+    // Calculate and write Fst.
+    //
+    write_fst_stats(files, pop_indexes, catalog, pmap, psum);
 
     //
     // Output the observed haplotypes.
@@ -559,7 +565,7 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
 
 int 
 write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
-		    map<int, CLocus *> &catalog, PopSum<CLocus> *psum) 
+		    map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum) 
 {
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".sumstats_" << progeny_limit << ".tsv";
@@ -591,46 +597,124 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
     cerr << "Writing " << catalog.size() << " loci to summary statistics file, '" << file << "'\n";
 
-    map<int, CLocus *>::iterator it;
+    map<string, vector<CLocus *> >::iterator it;
     CLocus  *loc;
     LocSum **s;
     int      len;
     int      pop_cnt = psum->pop_cnt();
 
     fh << "Locus ID" << "\t"
-       << "Chr" << "\t"
-       << "BP" << "\t"
-       << "Pop ID" << "\t"
-       << "N" << "\t"
-       << "P" << "\t"
-       << "Obs Het" << "\t"
-       << "Obs Hom" << "\t"
-       << "Exp Het" << "\t"
-       << "Exp Hom" << "\n";
+       << "Chr"      << "\t"
+       << "BP"       << "\t"
+       << "Pop ID"   << "\t"
+       << "N"        << "\t"
+       << "P"        << "\t"
+       << "Obs Het"  << "\t"
+       << "Obs Hom"  << "\t"
+       << "Exp Het"  << "\t"
+       << "Exp Hom"  << "\t"
+       << "Pi"       << "\t"
+       << "Fis"      << "\n";
 
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint pos = 0; pos < it->second.size(); pos++) {
+	    loc = it->second[pos];
 
-	s = psum->locus(loc->id);
-	len = strlen(loc->con);
+	    s = psum->locus(loc->id);
+	    len = strlen(loc->con);
 
-	for (int i = 0; i < len; i++) {
+	    for (int i = 0; i < len; i++) {
 
-	    for (int j = 0; j < pop_cnt; j++) {
+		for (int j = 0; j < pop_cnt; j++) {
 
-		if (s[j]->nucs[i].num_indv < progeny_limit) continue;
+		    if (s[j]->nucs[i].num_indv < progeny_limit) continue;
 
-		fh << loc->id << "\t"
-		   << loc->loc.chr << "\t"
-		   << loc->loc.bp + i << "\t"
-		   << psum->rev_pop_index(j) << "\t"
-		   << s[j]->nucs[i].num_indv << "\t"
-		   << s[j]->nucs[i].p << "\t"
-		   << s[j]->nucs[i].obs_het << "\t"
-		   << s[j]->nucs[i].obs_hom << "\t"
-		   << s[j]->nucs[i].exp_het << "\t"
-		   << s[j]->nucs[i].exp_hom << "\n";
+		    fh << loc->id << "\t"
+		       << loc->loc.chr << "\t"
+		       << loc->loc.bp + i << "\t"
+		       << psum->rev_pop_index(j) << "\t"
+		       << s[j]->nucs[i].num_indv << "\t"
+		       << s[j]->nucs[i].p << "\t"
+		       << s[j]->nucs[i].obs_het << "\t"
+		       << s[j]->nucs[i].obs_hom << "\t"
+		       << s[j]->nucs[i].exp_het << "\t"
+		       << s[j]->nucs[i].exp_hom << "\t"
+		       << s[j]->nucs[i].pi      << "\t"
+		       << s[j]->nucs[i].Fis     << "\n";
+		}
 	    }
+	}
+    }
+
+    return 0;
+}
+
+int 
+write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
+		map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum) 
+{
+    //
+    // We want to iterate over each pair of populations and calculate Fst at each 
+    // nucleotide of each locus.
+    //
+    vector<int> pops;
+    map<int, pair<int, int> >::iterator pit;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
+	pops.push_back(pit->first);
+
+    if (pops.size() == 1) return 0;
+
+    for (uint i = 0; i < pops.size(); i++) {
+	for (uint j = i + 1; j < pops.size(); j++) {
+	    int pop_1 = pops[i];
+	    int pop_2 = pops[j];
+
+	    stringstream pop_name;
+	    pop_name << "batch_" << batch_id << ".fst_" << pop_1 << "-" << pop_2 << ".tsv";
+
+	    string file = in_path + pop_name.str();
+	    ofstream fh(file.c_str(), ofstream::out);
+
+	    if (fh.fail()) {
+		cerr << "Error opening generic output file '" << file << "'\n";
+		exit(1);
+	    }
+
+	    cerr << "Calculating Fst for populations " << pop_1 << " and " << pop_2 << " and writing it to file, '" << file << "'\n";
+
+	    map<string, vector<CLocus *> >::iterator it;
+	    CLocus  *loc;
+	    LocSum **s;
+	    int      len;
+	    char     fst_str[32];
+
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		for (uint pos = 0; pos < it->second.size(); pos++) {
+		    loc = it->second[pos];
+
+		    s = psum->locus(loc->id);
+		    len = strlen(loc->con);
+
+		    for (int k = 0; k < len; k++) {
+
+			double fst = psum->Fst(loc->id, pop_1, pop_2, k);
+
+			//
+			// Locus does not exist in both populations.
+			//
+			if (fst < -1) continue;
+
+			sprintf(fst_str, "%0.10f", fst);
+
+			fh << loc->id << "\t"
+			   << loc->loc.chr << "\t"
+			   << loc->loc.bp + k << "\t"
+			   << fst_str << "\n";
+		    }
+		}
+	    }
+
+	    fh.close();
 	}
     }
 

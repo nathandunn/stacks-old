@@ -390,7 +390,7 @@ int load_model_results(string sample,  map<int, ModRes *> &modres) {
 
 	//
 	// Read the model sequence, a series of letters specifying if the model called a
-	// homozygous base (H), a polymorphic base (P), or if the base type was unknown (U).
+	// homozygous base (O), a heterozygous base (E), or if the base type was unknown (U).
 	//
 	if (parts[6] != "model") continue;
 

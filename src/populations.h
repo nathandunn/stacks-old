@@ -92,7 +92,8 @@ int  tally_haplotype_freq(CLocus *, PopMap<CLocus> *, int &, double &, string &)
 int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &);
 
 int  write_sql(map<int, CLocus *> &, PopMap<CLocus> *);
-int  write_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CLocus *> &, PopSum<CLocus> *);
+int  write_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *);
+int  write_fst_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *);
 int  write_generic(map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, bool);
 int  write_genomic(map<int, CLocus *> &, PopMap<CLocus> *);
 
