@@ -90,6 +90,7 @@ int  create_genotype_map(CLocus *, PopMap<CLocus> *);
 int  call_population_genotypes(CLocus *, PopMap<CLocus> *);
 int  tally_haplotype_freq(CLocus *, PopMap<CLocus> *, int &, double &, string &);
 int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &);
+int  kernel_smoothed_fst(vector<PopPair *> &);
 
 int  write_sql(map<int, CLocus *> &, PopMap<CLocus> *);
 int  write_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *);

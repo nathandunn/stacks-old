@@ -39,6 +39,21 @@ using std::make_pair;
 
 extern int progeny_limit;
 
+class PopPair {
+public:
+    int    bp;
+    double pi;
+    double fst;
+    double wfst; // Weigted Fst (kernel-smoothed)
+
+    PopPair() { 
+	bp   = 0;
+	pi   = 0.0;
+	fst  = 0.0;
+	wfst = 0.0;
+    }
+};
+
 class SumStat {
 public:
     double num_indv;
@@ -117,7 +132,7 @@ public:
 
     LocSum **locus(int);
     LocSum  *pop(int, int);
-    double   Fst(int, int, int, int);
+    PopPair *Fst(int, int, int, int);
 
 private:
     int    tally_heterozygous_pos(LocusT *, Datum **, LocSum *, int, int, uint, uint);
@@ -218,7 +233,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 }
 
 template<class LocusT>
-double PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) 
+PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) 
 {
     LocSum *s_1 = this->pop(locus, pop_1);
     LocSum *s_2 = this->pop(locus, pop_2);
@@ -226,7 +241,7 @@ double PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
     //
     // If this locus only appears on one population, do not calculate Fst.
     //
-    if (s_1->nucs[pos].num_indv == 0 || s_2->nucs[pos].num_indv == 0) return -2;
+    if (s_1->nucs[pos].num_indv == 0 || s_2->nucs[pos].num_indv == 0) return NULL;
 
     //
     // Calculate Fst at a locus, sub-population relative to that found in the entire population
@@ -240,7 +255,7 @@ double PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
     pi_2 = s_2->nucs[pos].pi;
 
     if (pi_1 == 0 && pi_2 == 0 && s_1->nucs[pos].p_nuc == s_2->nucs[pos].p_nuc)
-	return 0;
+	return NULL;
 
     //
     // Calculate Pi over the entire pooled population.
@@ -278,7 +293,7 @@ double PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
     if (allele_cnt > 2) {
 	cerr << "Incompatible site for Fst calculation at locus " << locus << " between population " 
 	     << pop_1 << " and population " << pop_2 << " position " << pos << "\n";
-	return -2;
+	return NULL;
     }
 
     double tot_alleles = n_1 + n_2;
@@ -300,15 +315,22 @@ double PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
 
     double Fst = 1 - (num / den);
 
+    PopPair *pair = new PopPair();
+    pair->fst = Fst;
+    pair->pi  = pi_all;
+
     // cerr << "Locus: " << locus << ", pos: " << pos << "\n"
-    // 	 << "    Total alleles: " << tot_alleles << "; " << " s_1.p: " << s_1->nucs[pos].p << "; s_1.p: " << s_2->nucs[pos].p << "\n"
+    // 	 << "    p_1.nuc: " << s_1->nucs[pos].p_nuc << "; q_1.nuc: " << s_1->nucs[pos].q_nuc 
+    // 	 << "; p_2.nuc: " << s_2->nucs[pos].p_nuc << "; q_2.nuc: " << s_2->nucs[pos].q_nuc << "\n"
+    // 	 << "    Total alleles: " << tot_alleles << "; " << " s_1.p: " << s_1->nucs[pos].p 
+    // 	 << "; s_2.p: " << s_2->nucs[pos].p << "\n"
     // 	 << "    p_1: " << p_1 << "; q_1: " << q_1 << " p_2: " << p_2 << "; q_2: " << q_2 << "\n"
     // 	 << "    Pi1: " << pi_1 << "; Pi2: " << pi_2 << "; PiAll: " << pi_all << "\n"
     // 	 << "    N1: " << n_1 << "; N1 choose 2: " << bcoeff_1 << "\n"
     // 	 << "    N2: " << n_2 << "; N2 choose 2: " << bcoeff_2 << "\n"
     // 	 << "  Fst: " << Fst << "\n";
 
-    return Fst;
+    return pair;
 }
 
 template<class LocusT>

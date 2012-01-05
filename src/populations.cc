@@ -41,6 +41,7 @@ string    pmap_path;
 string    bl_file;
 string    wl_file;
 string    enz;
+double    sigma           = 150000;
 int       progeny_limit   = 1;
 bool      corrections     = false;
 bool      expand_id       = false;
@@ -602,6 +603,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     LocSum **s;
     int      len;
     int      pop_cnt = psum->pop_cnt();
+    char     fisstr[32];
 
     fh << "Locus ID" << "\t"
        << "Chr"      << "\t"
@@ -629,6 +631,8 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
 		    if (s[j]->nucs[i].num_indv < progeny_limit) continue;
 
+		    sprintf(fisstr, "%0.10f", s[j]->nucs[i].Fis);
+
 		    fh << loc->id << "\t"
 		       << loc->loc.chr << "\t"
 		       << loc->loc.bp + i << "\t"
@@ -640,7 +644,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 		       << s[j]->nucs[i].exp_het << "\t"
 		       << s[j]->nucs[i].exp_hom << "\t"
 		       << s[j]->nucs[i].pi      << "\t"
-		       << s[j]->nucs[i].Fis     << "\n";
+		       << fisstr << "\n";
 		}
 	    }
 	}
@@ -684,38 +688,133 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
 	    map<string, vector<CLocus *> >::iterator it;
 	    CLocus  *loc;
-	    LocSum **s;
+	    PopPair *pair;
 	    int      len;
-	    char     fst_str[32];
+	    char     fst_str[32], wfst_str[32];
 
 	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+
+		vector<PopPair *> pairs;
+
 		for (uint pos = 0; pos < it->second.size(); pos++) {
 		    loc = it->second[pos];
-
-		    s = psum->locus(loc->id);
 		    len = strlen(loc->con);
 
 		    for (int k = 0; k < len; k++) {
 
-			double fst = psum->Fst(loc->id, pop_1, pop_2, k);
+			pair = psum->Fst(loc->id, pop_1, pop_2, k);
 
 			//
 			// Locus does not exist in both populations.
 			//
-			if (fst < -1) continue;
+			if (pair == NULL) {
+			    pairs.push_back(NULL);
+			    continue;
+			}
 
-			sprintf(fst_str, "%0.10f", fst);
+			//
+			// Locus is fixed in both populations.
+			//
+			if (pair->pi == 0) {
+			    delete pair;
+			    pairs.push_back(NULL);
+			    continue;
+			}
+
+			pair->bp = loc->loc.bp + k;
+			pairs.push_back(pair);
+		    }
+		}
+
+		//
+		// Calculate kernel-smoothed Fst values.
+		//
+		cerr << "  Generating kernel-smoothed Fst for " << it->first << ".\n";
+		kernel_smoothed_fst(pairs);
+
+		uint i = 0;
+		for (uint pos = 0; pos < it->second.size(); pos++) {
+		    loc = it->second[pos];
+		    len = strlen(loc->con);
+
+		    for (int k = 0; k < len; k++) {
+
+			if (pairs[i] == NULL) {
+			    i++;
+			    continue;
+			}
+
+			sprintf(fst_str,  "%0.10f", pairs[i]->fst);
+			sprintf(wfst_str, "%0.10f", pairs[i]->wfst);
 
 			fh << loc->id << "\t"
 			   << loc->loc.chr << "\t"
 			   << loc->loc.bp + k << "\t"
-			   << fst_str << "\n";
+			   << pairs[i]->pi << "\t"
+			   << fst_str << "\t"
+			   << wfst_str << "\n";
+
+			delete pairs[i];
+			i++;
 		    }
 		}
 	    }
 
 	    fh.close();
 	}
+    }
+
+    return 0;
+}
+
+int
+kernel_smoothed_fst(vector<PopPair *> &pairs) {
+    //
+    // To generate smooth genome-wide distributions of Fst, we calculate a kernel-smoothing 
+    // moving average of Fst values along each ordered chromosome.
+    //
+    // For each genomic region centered on a nucleotide position c, the contribution of the population 
+    // genetic statistic at position p to the region average was weighted by the Gaussian function:
+    //   exp( (-1 * (p - c)^2) / (2 * sigma^2))
+    // 
+    // By default, sigma = 150Kb, for computational efficiency, only calculate average out to 3sigma.
+    //
+    int      limit = 3 * sigma;
+    int      dist;
+    double   weighted_fst, sum;
+    PopPair *c, *p;
+
+    //
+    // Precalculate weights.
+    //
+    double *weights = new double[limit + 1];
+    for (int i = 0; i <= limit; i++)
+	weights[i] = exp((-1 * pow(i, 2)) / (2 * pow(sigma, 2)));
+
+    for (uint pos_c = 0; pos_c < pairs.size(); pos_c++) {
+	c = pairs[pos_c];
+
+	if (c == NULL)
+	    continue;
+
+	weighted_fst = 0.0;
+	sum          = 0.0;
+
+	for (uint pos_p = 0; pos_p < pairs.size(); pos_p++) {
+	    p = pairs[pos_p];
+
+	    if (p == NULL)
+		continue;
+
+	    dist = p->bp > c->bp ? p->bp - c->bp : c->bp - p->bp;
+	    if (dist > limit)
+		continue;
+
+	    weighted_fst += p->fst * weights[dist];
+	    sum          += weights[dist];
+	}
+
+	c->wfst = weighted_fst / sum;
     }
 
     return 0;
@@ -1051,6 +1150,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"version",     no_argument,       NULL, 'v'},
             {"corr",        no_argument,       NULL, 'c'},
             {"sql",         no_argument,       NULL, 's'},
+	    {"window_size", required_argument, NULL, 'w'},
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"batch_id",    required_argument, NULL, 'b'},
 	    {"in_path",     required_argument, NULL, 'P'},
@@ -1066,7 +1166,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:M:P:m:e:W:B:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:M:P:m:e:W:B:w:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1108,6 +1208,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'e':
 	    enz = optarg;
+	    break;
+	case 'w':
+	    sigma = atof(optarg);
 	    break;
         case 'v':
             version();
