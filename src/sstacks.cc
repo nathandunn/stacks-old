@@ -388,6 +388,8 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
 	    }
 	}
 	query_haplotypes.insert(new_allele);
+	s2_tag->alleles[new_allele] = b->second;
+
 	//cerr << "Adding haplotype: " << new_allele << "\n";
     }
 

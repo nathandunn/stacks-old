@@ -584,7 +584,7 @@ sub prepare_sql_handles {
 
     $query = 
 	"SELECT tag_id FROM unique_tags " . 
-	"WHERE relationship!='consensus' AND unique_tags.sample_id=?";
+	"WHERE relationship!='consensus' AND relationship != 'model' AND unique_tags.sample_id=?";
     $sth->{'depth'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
