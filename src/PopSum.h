@@ -123,7 +123,7 @@ public:
     ~PopSum();
 
     int initialize(PopMap<LocusT> *);
-    int add_population(map<int, LocusT *> &, PopMap<LocusT> *, uint, uint, uint);
+    int add_population(map<int, LocusT *> &, PopMap<LocusT> *, uint, uint, uint, ofstream &);
 
     int loci_cnt() { return this->num_loci; }
     int rev_locus_index(int index) { return this->rev_locus_order[index]; }
@@ -183,13 +183,15 @@ template<class LocusT>
 int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 				   PopMap<LocusT> *pmap, 
 				   uint population_id,
-				   uint start_index, uint end_index) {
+				   uint start_index, uint end_index, ofstream &log_fh) {
     LocusT  *loc;
     Datum  **d;
     LocSum **s;
     uint locus_id, len;
+    int res;
     set<int> snp_cols;
 
+    int incompatible_loci = 0;
     //
     // Determine the index for this population
     //
@@ -213,8 +215,20 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	// calculate observed genotype frequencies, allele frequencies, and expected genotype frequencies.
 	//
 	for (uint k = 0; k < loc->snps.size(); k++) {
-	    this->tally_heterozygous_pos(loc, d, s[pop_index], 
-					 loc->snps[k]->col, k, start_index, end_index);
+	    res = this->tally_heterozygous_pos(loc, d, s[pop_index], 
+					       loc->snps[k]->col, k, start_index, end_index);
+	    //
+	    // Site is incompatible, log it.
+	    //
+	    if (res < 0) {
+		incompatible_loci++;
+		log_fh << loc->id << "\t"
+		       << loc->loc.chr << "\t"
+		       << loc->loc.bp + k << "\t"
+		       << k << "\t" 
+		       << population_id << "\n";
+	    }
+
 	    snp_cols.insert(loc->snps[k]->col);
 	}
 	//
@@ -229,19 +243,23 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	snp_cols.clear();
     }
 
+    cerr << "Population " << population_id << " contained " << incompatible_loci << " incompatible loci.\n";
+
     return 0;
 }
 
 template<class LocusT>
 PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) 
 {
-    LocSum *s_1 = this->pop(locus, pop_1);
-    LocSum *s_2 = this->pop(locus, pop_2);
+    LocSum  *s_1  = this->pop(locus, pop_1);
+    LocSum  *s_2  = this->pop(locus, pop_2);
+    PopPair *pair = new PopPair();
 
     //
     // If this locus only appears on one population, do not calculate Fst.
     //
-    if (s_1->nucs[pos].num_indv == 0 || s_2->nucs[pos].num_indv == 0) return NULL;
+    if (s_1->nucs[pos].num_indv == 0 || s_2->nucs[pos].num_indv == 0) 
+	return pair;
 
     //
     // Calculate Fst at a locus, sub-population relative to that found in the entire population
@@ -255,7 +273,7 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
     pi_2 = s_2->nucs[pos].pi;
 
     if (pi_1 == 0 && pi_2 == 0 && s_1->nucs[pos].p_nuc == s_2->nucs[pos].p_nuc)
-	return NULL;
+	return pair;
 
     //
     // Calculate Pi over the entire pooled population.
@@ -290,11 +308,8 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
     for (int i = 0; i < 4; i++)
 	if (ncnt[i] > 0) allele_cnt++;
 
-    if (allele_cnt > 2) {
-	cerr << "Incompatible site for Fst calculation at locus " << locus << " between population " 
-	     << pop_1 << " and population " << pop_2 << " position " << pos << "\n";
+    if (allele_cnt > 2)
 	return NULL;
-    }
 
     double tot_alleles = n_1 + n_2;
     double p_1 = n_1 * s_1->nucs[pos].p;
@@ -315,7 +330,6 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
 
     double Fst = 1 - (num / den);
 
-    PopPair *pair = new PopPair();
     pair->fst = Fst;
     pair->pi  = pi_all;
 
@@ -423,10 +437,8 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     for (i = 0; i < 4; i++)
 	if (nucs[i] > 0) allele_cnt++;
 
-    if (allele_cnt > 2) {
-	cerr << "Locus " << locus->id << ", bp: " << pos << "; more than two alleles present.\n";
-	return 0;
-    }
+    if (allele_cnt > 2)
+	return -1;
 
     //
     // Record which nucleotide is the P allele and which is the Q allele.

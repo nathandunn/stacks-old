@@ -84,8 +84,8 @@ int  parse_command_line(int, char**);
 int  build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &);
 int  load_marker_list(string, set<int> &);
 int  reduce_catalog(map<int, CLocus *> &, set<int> &, set<int> &);
+int  order_unordered_loci(map<int, CLocus *> &);
 int  tabulate_haplotypes(map<int, CLocus *> &, PopMap<CLocus> *);
-int  calculate_f(map<int, CLocus *> &, PopMap<CLocus> *);
 int  create_genotype_map(CLocus *, PopMap<CLocus> *);
 int  call_population_genotypes(CLocus *, PopMap<CLocus> *);
 int  tally_haplotype_freq(CLocus *, PopMap<CLocus> *, int &, double &, string &);
@@ -94,7 +94,7 @@ int  kernel_smoothed_fst(vector<PopPair *> &);
 
 int  write_sql(map<int, CLocus *> &, PopMap<CLocus> *);
 int  write_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *);
-int  write_fst_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *);
+int  write_fst_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *, ofstream &);
 int  write_generic(map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, bool);
 int  write_genomic(map<int, CLocus *> &, PopMap<CLocus> *);
 

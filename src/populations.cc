@@ -46,6 +46,8 @@ int       progeny_limit   = 1;
 bool      corrections     = false;
 bool      expand_id       = false;
 bool      sql_out         = false;
+bool      genomic_out     = false;
+bool      kernel_fst      = false;
 int       min_stack_depth = 0;
 
 map<int, pair<int, int> > pop_indexes;
@@ -84,6 +86,20 @@ int main (int argc, char* argv[]) {
     }
 
     //
+    // Open the log file.
+    //
+    stringstream log;
+    log << "batch_" << batch_id << ".populations.log";
+    string log_path = in_path + log.str();
+    ofstream log_fh(log_path.c_str(), ofstream::out);
+
+    if (log_fh.fail()) {
+        cerr << "Error opening log file '" << log_path << "'\n";
+	exit(1);
+    }
+
+
+    //
     // Load the catalog
     //
     stringstream catalog_file;
@@ -99,6 +115,11 @@ int main (int argc, char* argv[]) {
     // Implement the black/white list
     //
     reduce_catalog(catalog, whitelist, blacklist);
+
+    //
+    // If the catalog is not reference aligned, assign an arbitrary ordering to catalog loci.
+    //
+    order_unordered_loci(catalog);
 
     //
     // Load matches to the catalog
@@ -174,7 +195,7 @@ int main (int argc, char* argv[]) {
     	end_index   = pit->second.second;
     	pop_id      = pit->first;
     	cerr << "Generating nucleotide-level summary statistics for population " << pop_id << "\n";
-    	psum->add_population(catalog, pmap, pop_id, start_index, end_index);
+    	psum->add_population(catalog, pmap, pop_id, start_index, end_index, log_fh);
     }
 
     //
@@ -189,6 +210,11 @@ int main (int argc, char* argv[]) {
 	write_sql(catalog, pmap);
 
     //
+    // Output the observed haplotypes.
+    //
+    write_generic(catalog, pmap, samples, false);
+
+    //
     // Output the locus-level summary statistics.
     //
     write_summary_stats(files, pop_indexes, catalog, pmap, psum);
@@ -196,17 +222,15 @@ int main (int argc, char* argv[]) {
     //
     // Calculate and write Fst.
     //
-    write_fst_stats(files, pop_indexes, catalog, pmap, psum);
-
-    //
-    // Output the observed haplotypes.
-    //
-    write_generic(catalog, pmap, samples, false);
+    write_fst_stats(files, pop_indexes, catalog, pmap, psum, log_fh);
 
     //
     // Output nucleotide-level genotype calls for each individual.
     //
-    write_genomic(catalog, pmap);
+    if (genomic_out)
+	write_genomic(catalog, pmap);
+
+    log_fh.close();
 
     return 0;
 }
@@ -228,6 +252,39 @@ int reduce_catalog(map<int, CLocus *> &catalog, set<int> &whitelist, set<int> &b
     }
 
     catalog = list;
+
+    return 0;
+}
+
+int order_unordered_loci(map<int, CLocus *> &catalog) {
+    map<int, CLocus *>::iterator it;
+    CLocus *loc;
+    set<string> chrs;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+	if (strlen(loc->loc.chr) > 0) 
+	    chrs.insert(loc->loc.chr);
+    }
+
+    //
+    // This data is already reference aligned.
+    //
+    if (chrs.size() > 0)
+	return 0;
+
+    cerr << "Catalog is not reference aligned, arbitrarily ordering catalog loci.\n";
+
+    uint bp = 1;
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+	loc->loc.chr = new char[3];
+	strcpy(loc->loc.chr, "un");
+	loc->loc.bp  = bp;
+
+	bp += strlen(loc->con);
+    }
+    
 
     return 0;
 }
@@ -254,56 +311,6 @@ int tabulate_haplotypes(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
      	    create_genotype_map(loc, pmap);
 	    call_population_genotypes(loc, pmap);
 	}
-    }
-
-    return 0;
-}
-
-int calculate_f(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
-    map<int, CLocus *>::iterator it;
-    map<char, int>::iterator j;
-    Datum **d;
-    CLocus *loc;
-
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
-	d   = pmap->locus(loc->id);
-
-	if (loc->snps.size() == 0) continue;
-
-	double tot  = 0.0;
-	double hets = 0;
-	double p, q, h, h0;
-	map<char, int> alle;
-
-	for (int i = 0; i < pmap->sample_cnt(); i++) {
-	    if (d[i] == NULL) 
-		continue;
-
-	    tot++;
-
-	    if (d[i]->obshap.size() > 1) hets++;
-
-	    //
-	    // We are measuring the first SNP in the haplotype
-	    //
-	    for (uint j = 0; j < d[i]->obshap.size(); j++)
-		alle[d[i]->obshap[j][0]]++;
-	}
-
-	if (alle.size() > 2 || tot == 0)
-	    continue;
-
-	j  = alle.begin();
-	p  = j->second;
-	j++;
-	q  = j->second;
-	h  = hets / tot;            // Observed frequency of heterozygotes in the population
-	h0 = 2 * (p/tot) * (q/tot); // 2PQ, expected frequency of hets under Hardy-Weinberg 
-	if (h0 > 0)
-	    loc->f = (h0 - h) / h0;
-
-	//cerr << "P: " << p << "; Q: " << q << "; Hets: " << hets << "; total: " << tot << "; f: " << loc->f << "\n";
     }
 
     return 0;
@@ -630,6 +637,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 		for (int j = 0; j < pop_cnt; j++) {
 
 		    if (s[j]->nucs[i].num_indv < progeny_limit) continue;
+		    if (s[j]->nucs[i].pi == 0) continue;
 
 		    sprintf(fisstr, "%0.10f", s[j]->nucs[i].Fis);
 
@@ -655,7 +663,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
 int 
 write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
-		map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum) 
+		map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum, ofstream &log_fh) 
 {
     //
     // We want to iterate over each pair of populations and calculate Fst at each 
@@ -672,6 +680,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	for (uint j = i + 1; j < pops.size(); j++) {
 	    int pop_1 = pops[i];
 	    int pop_2 = pops[j];
+
+	    int incompatible_loci = 0;
 
 	    stringstream pop_name;
 	    pop_name << "batch_" << batch_id << ".fst_" << pop_1 << "-" << pop_2 << ".tsv";
@@ -705,15 +715,22 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			pair = psum->Fst(loc->id, pop_1, pop_2, k);
 
 			//
-			// Locus does not exist in both populations.
+			// Locus is incompatible, log this position.
 			//
 			if (pair == NULL) {
 			    pairs.push_back(NULL);
+			    incompatible_loci++;
+			    log_fh << loc->id << "\t"
+				   << loc->loc.chr << "\t"
+				   << loc->loc.bp + k << "\t"
+				   << k << "\t" 
+				   << pop_1 << "\t" 
+				   << pop_2 << "\n";
 			    continue;
 			}
 
 			//
-			// Locus is fixed in both populations.
+			// Locus is fixed in both populations, or was only found in one population.
 			//
 			if (pair->pi == 0) {
 			    delete pair;
@@ -729,8 +746,10 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		//
 		// Calculate kernel-smoothed Fst values.
 		//
-		cerr << "  Generating kernel-smoothed Fst for " << it->first << ".\n";
-		kernel_smoothed_fst(pairs);
+		if (kernel_fst) {
+		    cerr << "  Generating kernel-smoothed Fst for " << it->first << ".\n";
+		    kernel_smoothed_fst(pairs);
+		}
 
 		uint i = 0;
 		for (uint pos = 0; pos < it->second.size(); pos++) {
@@ -759,7 +778,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    }
 		}
 	    }
-
+	    cerr << "Pooled populations " << pop_1 << " and " << pop_2 << " contained " << incompatible_loci << " incompatible loci.\n";
 	    fh.close();
 	}
     }
@@ -1150,6 +1169,8 @@ int parse_command_line(int argc, char* argv[]) {
             {"version",     no_argument,       NULL, 'v'},
             {"corr",        no_argument,       NULL, 'c'},
             {"sql",         no_argument,       NULL, 's'},
+            {"genomic",     no_argument,       NULL, 'g'},
+            {"kernel_fst",  no_argument,       NULL, 'k'},
 	    {"window_size", required_argument, NULL, 'w'},
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"batch_id",    required_argument, NULL, 'b'},
@@ -1166,7 +1187,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:M:P:m:e:W:B:w:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hkgvcsib:p:t:o:r:M:P:m:e:W:B:w:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1188,6 +1209,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'r':
 	    progeny_limit = atoi(optarg);
 	    break;
+	case 'k':
+	    kernel_fst = true;
+	    break;
 	case 'c':
 	    corrections = true;
 	    break;
@@ -1196,6 +1220,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 's':
 	    sql_out = true;
+	    break;
+	case 'g':
+	    genomic_out = true;
 	    break;
 	case 'W':
 	    wl_file = optarg;
@@ -1265,11 +1292,15 @@ void help() {
 	      << "  r: minimum number of individuals required to process a locus.\n"
 	      << "  m: specify a minimum stack depth required before exporting a locus in a particular individual.\n"
 	      << "  s: output a file to import results into an SQL database.\n"
+	      << "  g: output each nucleotide position in all population members to a file.\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
 	      << "  W: specify a file containign Whitelisted markers to include in the export.\n"
 	      << "  e: restriction enzyme, required if generating 'genomic' output.\n"
 	      << "  v: print program version." << "\n"
-	      << "  h: display this help messsage." << "\n\n";
+	      << "  h: display this help messsage." << "\n\n"
+	      << "  Kernel-smoothing algorithm:\n" 
+	      << "   k: enable kernel-smoothed Fst calculation.\n"
+	      << "   --window_size: distance over which to average values (sigma, default 150Kb)\n";
 
     exit(0);
 }

@@ -949,6 +949,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"discards",     no_argument,       NULL, 'D'},
 	    {"paired",       no_argument,       NULL, 'P'},
 	    {"mate-pair",    no_argument,       NULL, 'M'},
+	    {"no_overhang",  no_argument,       NULL, 'O'},
 	    {"infile_type",  required_argument, NULL, 'i'},
 	    {"outfile_type", required_argument, NULL, 'y'},
 	    {"file",         required_argument, NULL, 'f'},
@@ -967,7 +968,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqrPDI:i:y:f:o:t:b:1:2:p:s:w:E:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcqrOPDI:i:y:f:o:t:b:1:2:p:s:w:E:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -1034,6 +1035,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'r':
 	    recover = true;
+	    break;
+	case 'O':
+	    overhang = false;
 	    break;
 	case 't':
 	    truncate_seq = atoi(optarg);
@@ -1137,7 +1141,8 @@ void help() {
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
 	      << "  h: display this help messsage.\n\n"
-	      << "  --mate-pair: raw reads are circularized mate-pair data, first read will be reverse complemented.\n";
+	      << "  --mate-pair: raw reads are circularized mate-pair data, first read will be reverse complemented.\n"
+	      << "  --no_overhang: data does not contain an overhang nucleotide between barcode and seqeunce.\n";
 
     exit(0);
 }

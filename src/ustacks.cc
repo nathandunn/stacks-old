@@ -1242,7 +1242,8 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
              << ""            << "\t" // chr
              << 0             << "\t" // bp
              << "+"           << "\t" // strand
-	     << "consensus\t" << "\t\t" 
+	     << "consensus\t" << "\t" 
+	     << "\t" 
 	     << tag_1->con << "\t" 
 	     << tag_1->deleveraged << "\t" 
 	     << tag_1->blacklisted << "\t"
@@ -1268,6 +1269,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 		tags << "U";
 	}
 	tags << "\t" 
+	     << "\t"
 	     << "\t"
 	     << "\n";
 
