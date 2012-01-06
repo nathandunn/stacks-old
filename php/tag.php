@@ -51,7 +51,7 @@ check_db_error($db['batch_sth'], __FILE__, __LINE__);
 
 $query = 
     "SELECT count(id) as depth FROM unique_tags " . 
-    "WHERE relationship!='consensus' AND sample_id=? AND tag_id=?";
+    "WHERE relationship!='consensus' AND relationship!='model' AND sample_id=? AND tag_id=?";
 $db['depth_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['depth_sth'], __FILE__, __LINE__);
 
@@ -150,7 +150,7 @@ $blacklisted     = 0;
 $seqs = array('consensus' => array(),
 	      'primary'   => array(),
 	      'secondary' => array(),
-	      'tertiary'  => array());
+	      'model'     => array());
 
 $result = $db['seq_sth']->execute(array($batch_id, $sample_id, $tag_id));
 check_db_error($result, __FILE__, __LINE__);
@@ -293,11 +293,18 @@ print
     "  <td class=\"tag\">" . $s . "</td>\n" .
     "</tr>\n";
 
+$s = $seqs['model'][0]['s'];
 echo <<< EOQ
 </table>
 </div>
 <div class="seq_frame">
 <table class="radtag">
+<tr>
+  <td class="num">&nbsp;</td>
+  <td class="con">model</td>
+  <td class="id"></td>
+  <td class="tag">$s</td>
+</tr>
 
 EOQ;
 

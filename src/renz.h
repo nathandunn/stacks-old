@@ -46,6 +46,8 @@ const char *mseI[]    = {"TTAA",
 			 "TTAA"};
 const char *hindIII[] = {"AAGCT",
 			 "TTCGA"};
+const char *dpnII[]   = {"GATC",
+			 "GATC"};
 
 void 
 initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, map<string, int> &renz_len) {
@@ -57,6 +59,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz["sgrAI"]   = sgrAI;   // CR/CCGGYG, SgrAI; R=A or G; Y=C or T
     renz["apeKI"]   = apeKI;   // G/CWGC, ApeKI; W=A or T
     renz["hindIII"] = hindIII; // A/AGCTT, HindIII
+    renz["dpnII"]   = dpnII;   // GATC, DpnII
 
     renz_cnt["sbfI"]    = 1;
     renz_cnt["pstI"]    = 1;
@@ -65,6 +68,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["sgrAI"]   = 2;
     renz_cnt["apeKI"]   = 2;
     renz_cnt["hindIII"] = 1;
+    renz_cnt["dpnII"]   = 1;
 
     renz_len["sbfI"]    = 6;
     renz_len["pstI"]    = 5;
@@ -73,6 +77,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["sgrAI"]   = 6;
     renz_len["apeKI"]   = 4;
     renz_len["hindIII"] = 5;
+    renz_len["dpnII"]   = 4;
 }
 
 #endif // __RENZ_H__
