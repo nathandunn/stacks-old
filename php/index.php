@@ -77,7 +77,7 @@ function write_database($database) {
     // Prepare some SQL queries
     //
     $query = 
-        "SELECT id, date, description FROM batches";
+        "SELECT id, date, description, type FROM batches";
     $db['batch_sth'] = $db['dbh']->prepare($query);
     check_db_error($db['batch_sth'], __FILE__, __LINE__);
 
@@ -96,7 +96,8 @@ function write_database($database) {
   <th style="width: 10%;">&nbsp;</th>
   <th style="width: 10%;">&nbsp;</th>
   <th style="width: 10%;">Batch ID</th>
-  <th style="width: 20%;">Date</th>
+  <th style="width: 10%;">Date</th>
+  <th style="width: 10%;">Type</th> 
   <th style="width: 50%;">Description</th>
 </tr>
 
@@ -112,6 +113,7 @@ EOQ;
             "  <td class=\"s\"><a href=\"$root_path/samples.php?db=$database&id=$row[id]\">Samples</a></td>\n" .
             "  <td>" . $row['id'] . "</td>\n" .
             "  <td>" . $row['date'] . "</td>\n" .
+            "  <td>" . $row['type'] . "</td>\n" .
             "  <td>" . $row['description'] . "</td>\n" .
             "</tr>\n";
     }

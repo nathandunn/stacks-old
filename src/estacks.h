@@ -63,7 +63,6 @@ using std::pair;
 #include "DNASeq.h"
 
 const int barcode_size = 5;
-const int snp_min      = 1;//8;
 
 struct eqstr {
     bool operator()(const char* s1, const char* s2) const {
