@@ -51,7 +51,6 @@ enum modelt {fixed, snp};
 // For use with the multinomial model to call fixed nucleotides.
 //
 extern const int barcode_size;
-extern const int snp_min;
 extern modelt model_type;
 extern double p_freq;
 extern double barcode_err_freq;

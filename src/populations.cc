@@ -769,6 +769,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			fh << loc->id << "\t"
 			   << loc->loc.chr << "\t"
 			   << loc->loc.bp + k << "\t"
+			   << k << "\t"
 			   << pairs[i]->pi << "\t"
 			   << fst_str << "\t"
 			   << wfst_str << "\n";
@@ -796,11 +797,14 @@ kernel_smoothed_fst(vector<PopPair *> &pairs) {
     // genetic statistic at position p to the region average was weighted by the Gaussian function:
     //   exp( (-1 * (p - c)^2) / (2 * sigma^2))
     // 
+    // In addition, we weight each position according to (n_k - 1), where n_k is the number of alleles
+    // sampled at that location.
+    //
     // By default, sigma = 150Kb, for computational efficiency, only calculate average out to 3sigma.
     //
     int      limit = 3 * sigma;
     int      dist;
-    double   weighted_fst, sum;
+    double   weighted_fst, sum, final_weight;
     PopPair *c, *p;
 
     //
@@ -829,8 +833,9 @@ kernel_smoothed_fst(vector<PopPair *> &pairs) {
 	    if (dist > limit)
 		continue;
 
-	    weighted_fst += p->fst * weights[dist];
-	    sum          += weights[dist];
+	    final_weight  = (p->alleles - 1) * weights[dist];
+	    weighted_fst += p->fst * final_weight;
+	    sum          += final_weight;
 	}
 
 	c->wfst = weighted_fst / sum;
@@ -883,8 +888,7 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
 	fh << "\t";
     if (write_gtypes)
 	fh << "Marker\t";
-    fh << "Cnt\t"
-       << "F\t";
+    fh << "Cnt\t";
 
     map<int, string>::iterator s;
     for (int i = 0; i < pmap->sample_cnt(); i++) {
@@ -922,7 +926,6 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
 	    fh << "\t" << loc->marker;
 
 	write_gtypes ? fh << "\t" << loc->gcnt : fh << "\t" << loc->hcnt;
-	fh << "\t" << loc->f;
 
 	Datum **d = pmap->locus(loc->id);
 	string  obshap;

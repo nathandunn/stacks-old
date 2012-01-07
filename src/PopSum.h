@@ -42,15 +42,17 @@ extern int progeny_limit;
 class PopPair {
 public:
     int    bp;
+    double alleles; // Number of alleles sampled at this location.
     double pi;
     double fst;
-    double wfst; // Weigted Fst (kernel-smoothed)
+    double wfst;    // Weigted Fst (kernel-smoothed)
 
     PopPair() { 
-	bp   = 0;
-	pi   = 0.0;
-	fst  = 0.0;
-	wfst = 0.0;
+	bp      = 0;
+	alleles = 0.0;
+	pi      = 0.0;
+	fst     = 0.0;
+	wfst    = 0.0;
     }
 };
 
@@ -330,8 +332,9 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
 
     double Fst = 1 - (num / den);
 
-    pair->fst = Fst;
-    pair->pi  = pi_all;
+    pair->alleles = tot_alleles;
+    pair->fst     = Fst;
+    pair->pi      = pi_all;
 
     // cerr << "Locus: " << locus << ", pos: " << pos << "\n"
     // 	 << "    p_1.nuc: " << s_1->nucs[pos].p_nuc << "; q_1.nuc: " << s_1->nucs[pos].q_nuc 

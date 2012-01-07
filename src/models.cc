@@ -42,9 +42,6 @@ int call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n, bool rec
 	nuc.push_back(make_pair(i->first, i->second));
     }
 
-    if (total < snp_min)
-	return 0;
-
     sort(nuc.begin(), nuc.end(), compare_pair);
 
     //
@@ -131,9 +128,6 @@ int call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n) {
 	total += i->second;
 	nuc.push_back(make_pair(i->first, i->second));
     }
-
-    if (total < snp_min)
-	return 0;
 
     sort(nuc.begin(), nuc.end(), compare_pair);
 

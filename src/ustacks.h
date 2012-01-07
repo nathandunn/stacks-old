@@ -87,11 +87,8 @@ extern "C" {
 
 typedef unsigned int uint;
 
-const int   max_delv_stacks = 3;
-const int   barcode_size    = 5;
-const int   snp_min         = 6;
-const float snp_max         = 0.95;
-const float snp_maj         = 0.35;
+const int max_delv_stacks = 3;
+const int barcode_size    = 5;
 
 class HVal {
  public:

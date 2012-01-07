@@ -134,7 +134,10 @@ echo <<< EOQ
 
 EOQ;
 
-write_filter($cols);
+if ($batch['type'] == "population")
+  write_pop_filter($cols);
+else
+  write_map_filter($cols);
 
 //
 // How many columns will we print
@@ -672,7 +675,7 @@ $per_page_ctl
 EOQ;
 }
 
-function write_filter($cols) {
+function write_map_filter($cols) {
     global $img_path, $root_path, $display;
 
     $max_chr_len = 0;
@@ -693,29 +696,35 @@ function write_filter($cols) {
                      "pe"    => array(),
                      "blast" => array());
 
-    $fal = isset($display['filter_alle'])  ? $display['filter_alle'] : "";
-    $fsn = isset($display['filter_snps'])  ? $display['filter_snps'] : "";
-    $fpa = isset($display['filter_pare'])  ? $display['filter_pare'] : "";
-    $fpr = isset($display['filter_prog'])  ? $display['filter_prog'] : "";
-    $fvp = isset($display['filter_vprog']) ? $display['filter_vprog'] : "";
-    $fgc = isset($display['filter_gcnt'])  ? $display['filter_gcnt'] : "";
-    $fma = isset($display['filter_mark'])  ? $display['filter_mark'] : "";
-    $ref = isset($display['filter_ref'])   ? $display['filter_ref']  : "";
-    $fch = isset($display['filter_chr'])   ? $display['filter_chr']  : "";
-    $fsb = isset($display['filter_sbp'])   ? $display['filter_sbp']  : 0;
-    $feb = isset($display['filter_ebp'])   ? $display['filter_ebp']  : $max_chr_len;
+    $fall = isset($display['filter_alle_l'])  ? $display['filter_alle_l'] : "";
+    $falu = isset($display['filter_alle_u'])  ? $display['filter_alle_u'] : "";
+    $fsnl = isset($display['filter_snps_l'])  ? $display['filter_snps_l'] : "";
+    $fsnu = isset($display['filter_snps_u'])  ? $display['filter_snps_u'] : "";
+    $fpal = isset($display['filter_pare_l'])  ? $display['filter_pare_l'] : "";
+    $fpau = isset($display['filter_pare_u'])  ? $display['filter_pare_u'] : "";
+    $fpr  = isset($display['filter_prog'])    ? $display['filter_prog']   : "";
+    $fvp  = isset($display['filter_vprog'])   ? $display['filter_vprog']  : "";
+    $fgc  = isset($display['filter_gcnt'])    ? $display['filter_gcnt']   : "";
+    $fma  = isset($display['filter_mark'])    ? $display['filter_mark']   : "";
+    $ref  = isset($display['filter_ref'])     ? $display['filter_ref']    : "";
+    $fch  = isset($display['filter_chr'])     ? $display['filter_chr']    : "";
+    $fsb  = isset($display['filter_sbp'])     ? $display['filter_sbp']    : 0;
+    $feb  = isset($display['filter_ebp'])     ? $display['filter_ebp']    : $max_chr_len;
 
-    $alle_ctl  = generate_element_select("filter_alle",  range(1, 8),   $fal, "");
-    $snps_ctl  = generate_element_select("filter_snps",  range(1, 8),   $fsn, "");
-    $pare_ctl  = generate_element_select("filter_pare",  range(1, 100), $fpa, "");
-    $prog_ctl  = generate_element_select("filter_prog",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fpr, "");
-    $vprog_ctl = generate_element_select("filter_vprog", array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fvp, "");
-    $gcnt_ctl  = generate_element_select("filter_gcnt",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fgc, "");
-    $chr_ctl   = generate_element_select("filter_chr",   $chrs, $fch, "");
-    $sbp_ctl   = generate_element_select("filter_sbp",   range(0, $max_chr_len), $fsb, "");
-    $ebp_ctl   = generate_element_select("filter_ebp",   range(0, $max_chr_len), $feb, "");
-    $ref_ctl   = generate_element_select("filter_ref",  array("exon", "intron", "genomic"), $ref, "");
-    $mark_ctl  = generate_element_select("filter_mark", 
+    $alle_l_ctl  = generate_element_select("filter_alle_l",  range(1, 8),   $fall, "");
+    $alle_u_ctl  = generate_element_select("filter_alle_u",  range(1, 8),   $falu, "");
+    $snps_l_ctl  = generate_element_select("filter_snps_l",  range(1, 8),   $fsnl, "");
+    $snps_u_ctl  = generate_element_select("filter_snps_u",  range(1, 8),   $fsnu, "");
+    $pare_l_ctl  = generate_element_select("filter_pare_l",  range(1, 100), $fpal, "");
+    $pare_u_ctl  = generate_element_select("filter_pare_u",  range(1, 100), $fpau, "");
+    $prog_ctl    = generate_element_select("filter_prog",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fpr, "");
+    $vprog_ctl   = generate_element_select("filter_vprog", array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fvp, "");
+    $gcnt_ctl    = generate_element_select("filter_gcnt",  array(1, 2, 4, 8, 16, 32, 64, 70, 85, 90, 100, 150, 200), $fgc, "");
+    $chr_ctl     = generate_element_select("filter_chr",   $chrs, $fch, "");
+    $sbp_ctl     = generate_element_select("filter_sbp",   range(0, $max_chr_len), $fsb, "");
+    $ebp_ctl     = generate_element_select("filter_ebp",   range(0, $max_chr_len), $feb, "");
+    $ref_ctl     = generate_element_select("filter_ref",  array("exon", "intron", "genomic"), $ref, "");
+    $mark_ctl    = generate_element_select("filter_mark", 
                                          array('Any', 'aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'), 
                                          $fma, "");
 
@@ -749,7 +758,7 @@ EOQ;
 
     if (count($chrs) > 0) {
       echo <<< EOQ
-<td style="width: 25%;">
+<td style="width: 25%; vertical-align: top;">
 <table class="loc_filter">
 <tr>
   <td {$filters['loc']['tr']}>
@@ -785,6 +794,7 @@ EOQ;
 </td>
 
 EOQ;
+
     }
 
     $cat_id_filter = isset($display['filter_cata']) ? $display['filter_cata'] : "";
@@ -793,18 +803,18 @@ EOQ;
 <td>
 <table class="filter">
 <tr>
-  <td {$filters['cata']['tr']}>
+  <td colspan="2" {$filters['cata']['tr']}>
       <input type="checkbox" name="filter_type[]" value="cata" onchange="rebuild_display_select()" {$filters['cata']['sel']} /> 
       <a onclick="toggle_cb('filter_results', 'cata')">
       <acronym title="Show a locus with a particular ID.">Catalog ID</acronym>:</a>
       <input name="filter_cata" value="$cat_id_filter" size="15" />
   </td>
-  <td colspan="2" style="text-align: right; padding-right: 10px;">
+  <td style="text-align: right; padding-right: 10px;">
       <input type="submit" value="filter" />
   </td>
 </tr>
 <tr>
-  <td style="width: 33%; text-align: left;">
+  <td style="width: 27%; text-align: left;">
   <table style="text-align: left;">
   <tr>
   <td {$filters['alle']['tr']}>
@@ -813,7 +823,7 @@ EOQ;
       <acronym title="Filter the catalog according to the number of alleles identified for a locus.">Alleles</acronym>:</a>
   </td>
   <td {$filters['alle']['tr']}>
-$alle_ctl
+$alle_l_ctl $alle_u_ctl
   </td>
   </tr>
   <tr>
@@ -823,7 +833,7 @@ $alle_ctl
       <acronym title="Filter the catalog according to the number of SNPs found at a locus.">SNPs</acronym>:</a>
   </td>
   <td {$filters['snps']['tr']}>
-$snps_ctl
+$snps_l_ctl $snps_u_ctl
   </td>
   </tr>
   <tr>
@@ -833,7 +843,7 @@ $snps_ctl
   </table>
   </td>
 
-  <td style="width: 33%; text-align: center;">
+  <td style="width: 39%; text-align: center;">
   <table style="text-align: left;">
   <tr>
   <td {$filters['pare']['tr']}>
@@ -842,7 +852,7 @@ $snps_ctl
       <acronym title="Filter the catalog according to the number of parental samples that are matched to a locus.">Parental matches</acronym>:</a>
   </td>
   <td {$filters['pare']['tr']}>
-$pare_ctl
+$pare_l_ctl $pare_u_ctl
   </td>
   </tr>
   <tr>
@@ -950,6 +960,262 @@ EOQ;
 
 }
 
+function write_pop_filter($cols) {
+    global $img_path, $root_path, $display;
+
+    $max_chr_len = 0;
+    $hidden_vars = generate_hidden_form_vars("filter");
+    $chrs        = fetch_chrs($max_chr_len);
+
+    $filters = array("cata"  => array(),
+		     "alle"  => array(),
+		     "snps"  => array(),
+		     "pare"  => array(),
+		     "gcnt"  => array(),
+		     "loc"   => array(),
+		     "ref"   => array(),
+                     "est"   => array(),
+                     "pe"    => array(),
+                     "blast" => array());
+
+    $fall = isset($display['filter_alle_l'])  ? $display['filter_alle_l'] : "";
+    $falu = isset($display['filter_alle_u'])  ? $display['filter_alle_u'] : "";
+    $fsnl = isset($display['filter_snps_l'])  ? $display['filter_snps_l'] : "";
+    $fsnu = isset($display['filter_snps_u'])  ? $display['filter_snps_u'] : "";
+    $fpal = isset($display['filter_pare_l'])  ? $display['filter_pare_l'] : "";
+    $fpau = isset($display['filter_pare_u'])  ? $display['filter_pare_u'] : "";
+    $ref  = isset($display['filter_ref'])     ? $display['filter_ref']    : "";
+    $fch  = isset($display['filter_chr'])     ? $display['filter_chr']    : "";
+    $fsb  = isset($display['filter_sbp'])     ? $display['filter_sbp']    : 0;
+    $feb  = isset($display['filter_ebp'])     ? $display['filter_ebp']    : $max_chr_len;
+
+    $alle_l_ctl  = generate_element_select("filter_alle_l",  range(1, 8),   $fall, "");
+    $alle_u_ctl  = generate_element_select("filter_alle_u",  range(1, 8),   $falu, "");
+    $snps_l_ctl  = generate_element_select("filter_snps_l",  range(1, 8),   $fsnl, "");
+    $snps_u_ctl  = generate_element_select("filter_snps_u",  range(1, 8),   $fsnu, "");
+    $pare_l_ctl  = generate_element_select("filter_pare_l",  range(1, 100), $fpal, "");
+    $pare_u_ctl  = generate_element_select("filter_pare_u",  range(1, 100), $fpau, "");
+    $chr_ctl   = generate_element_select("filter_chr",   $chrs, $fch, "");
+    $sbp_ctl   = generate_element_select("filter_sbp",   range(0, $max_chr_len), $fsb, "");
+    $ebp_ctl   = generate_element_select("filter_ebp",   range(0, $max_chr_len), $feb, "");
+    $ref_ctl   = generate_element_select("filter_ref",   array("exon", "intron", "genomic"), $ref, "");
+
+    if (isset($display['filter_type'])) {
+
+	foreach ($filters as $key => $f)
+	    if (in_array($key, $display['filter_type'])) {
+		$filters[$key]['sel'] = "checked=\"checked\"";
+		$filters[$key]['tr']  = "class=\"active_filter\"";
+	    } else {
+		$filters[$key]['sel'] = "";
+		$filters[$key]['tr']  = "";
+	    }
+
+    } else {
+	$filters['none']['sel'] = "checked=\"checked\"";
+    }
+
+    echo <<< EOQ
+<h4 class="info_head">
+  <img id="stacks_filter_img" src="$img_path/caret-d.png" />
+  <a onclick="toggle_div('stacks_filter', '$img_path', 'page_state');">Filter Results By</a>
+</h4>
+<div id="stacks_filter">
+<form id="filter_results" name="filter_results" method="get" action="$root_path/catalog.php">
+$hidden_vars
+
+<table style="width: 100%; vertical-align: top;">
+<tr>
+EOQ;
+
+    if (count($chrs) > 0) {
+      echo <<< EOQ
+<td style="width: 25%;">
+<table class="loc_filter">
+<tr>
+  <td {$filters['loc']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="loc" onchange="rebuild_display_select()" {$filters['loc']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'loc')">
+      <acronym title="Filter by genomic location">Location</acronym>:</a></td>
+  <td {$filters['loc']['tr']}>
+      $chr_ctl
+  </td>
+</tr>
+<tr>
+  <td {$filters['loc']['tr']}><span style="padding-left: 1.5em;">Start:</span></td>
+  <td {$filters['loc']['tr']}>
+      $sbp_ctl Mb
+  </td>
+</tr>
+<tr>
+  <td {$filters['loc']['tr']}><span style="padding-left: 1.5em;">End:</span></td>
+  <td {$filters['loc']['tr']}>
+      $ebp_ctl Mb
+  </td>
+</tr>
+<tr>
+  <td {$filters['ref']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="ref" onchange="rebuild_display_select()" {$filters['ref']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'ref')">
+      <acronym title="Filter by type of RAD locus">Type</acronym>:</a></td>
+  <td {$filters['ref']['tr']}>
+      $ref_ctl
+  </td>
+</tr>
+</table>
+</td>
+
+EOQ;
+    }
+
+    $cat_id_filter = isset($display['filter_cata']) ? $display['filter_cata'] : "";
+
+    echo <<< EOQ
+<td>
+<table class="filter">
+<tr>
+  <td colspan="2" {$filters['cata']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="cata" onchange="rebuild_display_select()" {$filters['cata']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'cata')">
+      <acronym title="Show a locus with a particular ID.">Catalog ID</acronym>:</a>
+      <input name="filter_cata" value="$cat_id_filter" size="15" />
+  </td>
+  <td style="text-align: right; padding-right: 10px;">
+      <input type="submit" value="filter" />
+  </td>
+</tr>
+<tr>
+  <td style="width: 27%; text-align: left;">
+  <table style="text-align: left;">
+  <tr>
+  <td {$filters['alle']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="alle" onchange="rebuild_display_select()" {$filters['alle']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'alle')">
+      <acronym title="Filter the catalog according to the number of alleles identified for a locus.">Alleles</acronym>:</a>
+  </td>
+  <td {$filters['alle']['tr']}>
+$alle_l_ctl $alle_u_ctl
+  </td>
+  </tr>
+  <tr>
+  <td {$filters['snps']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="snps" onchange="rebuild_display_select()" {$filters['snps']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'snps')">
+      <acronym title="Filter the catalog according to the number of SNPs found at a locus.">SNPs</acronym>:</a>
+  </td>
+  <td {$filters['snps']['tr']}>
+$snps_l_ctl $snps_u_ctl
+  </td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  </table>
+  </td>
+
+  <td style="width: 39%; text-align: center;">
+  <table style="text-align: left;">
+  <tr>
+  <td {$filters['pare']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="pare" onchange="rebuild_display_select()" {$filters['pare']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'pare')">
+      <acronym title="Filter the catalog according to the number of population samples that are matched to a locus.">Matching samples</acronym>:</a>
+  </td>
+  <td {$filters['pare']['tr']}>
+$pare_l_ctl $pare_u_ctl
+  </td>
+  </tr>
+  <tr>
+  <td {$filters['prog']['tr']}>
+  </td>
+  <td {$filters['prog']['tr']}>
+  </td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  </table>
+  </td>
+
+  <td style="width: 33%; text-align: right;">
+  <table style="text-align: left;">
+  <tr>
+  <td {$filters['vprog']['tr']}>
+  <td {$filters['vprog']['tr']}>
+  </td>
+  </tr>
+  <tr>
+  <td {$filters['mark']['tr']}>
+  </td>
+  <td {$filters['mark']['tr']}>
+  </td>
+  </tr>
+
+EOQ;
+
+if ($cols['gcnt'] == true) {
+  echo <<< EOQ
+  <tr>
+  <td {$filters['gcnt']['tr']}>
+  <td {$filters['gcnt']['tr']}>
+$gcnt_ctl
+  </td>
+  </tr>
+
+EOQ;
+
+} else {
+  echo <<< EOQ
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+
+EOQ;
+}
+
+echo <<< EOQ
+  </table>
+  </td>
+</tr>
+
+EOQ;
+
+  if ($cols['seq'] == true)
+    echo <<< EOQ
+<tr>
+  <td {$filters['est']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="est" onchange="rebuild_display_select()" {$filters['est']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'est')">
+      <acronym title="Filter the catalog to show loci for which ESTs have been associated.">Contains ESTs</acronym></a>
+  </td>
+  <td {$filters['pe']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="pe" onchange="rebuild_display_select()" {$filters['pe']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'pe')">
+      <acronym title="Filter the catalog to show loci for which paired-end RAD-Tags have been associated.">Contains Paired-end RAD-Tags</acronym></a>
+  </td>
+  <td {$filters['blast']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="blast" onchange="rebuild_display_select()" {$filters['blast']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'blast')">
+      <acronym title="Filter the catalog to show loci for which BLAST hits  have been associated.">Contains BLAST Hits</acronym></a>
+  </td>
+</tr>
+
+EOQ;
+    echo <<< EOQ
+</table>
+</td>
+</tr>
+</table>
+</form>
+</div>
+
+EOQ;
+
+}
+
 function process_filter(&$display_params) {
 
     if (!isset($_GET['filter_type'])) 
@@ -959,13 +1225,16 @@ function process_filter(&$display_params) {
 	array_push($display_params['filter_type'], $filter);
 
 	if ($filter == "alle") {
-	    $display_params['filter_alle'] = $_GET['filter_alle'];
+	    $display_params['filter_alle_l'] = $_GET['filter_alle_l'];
+	    $display_params['filter_alle_u'] = $_GET['filter_alle_u'];
 
 	} else if ($filter == "snps") {
-	    $display_params['filter_snps'] = $_GET['filter_snps'];
+	    $display_params['filter_snps_l'] = $_GET['filter_snps_l'];
+	    $display_params['filter_snps_u'] = $_GET['filter_snps_u'];
 
 	} else if ($filter == "pare") {
-	    $display_params['filter_pare'] = $_GET['filter_pare'];
+	    $display_params['filter_pare_l'] = $_GET['filter_pare_l'];
+	    $display_params['filter_pare_u'] = $_GET['filter_pare_u'];
 
 	} else if ($filter == "prog") {
 	    $display_params['filter_prog'] = $_GET['filter_prog'];
@@ -1002,14 +1271,17 @@ function prepare_filter_parameters($display_params, &$param) {
     foreach ($filters as $filter) {
 
 	if ($filter == "snps") {
-	    array_push($param, $display_params['filter_snps']);
+	    array_push($param, $display_params['filter_snps_l']);
+	    array_push($param, $display_params['filter_snps_u']);
 
 	} else if ($filter == "alle") {
-	    array_push($param, $display_params['filter_alle']);
-	
+	    array_push($param, $display_params['filter_alle_l']);
+	    array_push($param, $display_params['filter_alle_u']);
+
 	} else if ($filter == "pare") {
-	    array_push($param, $display_params['filter_pare']);
-	
+	    array_push($param, $display_params['filter_pare_l']);
+	    array_push($param, $display_params['filter_pare_u']);
+
 	} else if ($filter == "prog") {
 	    array_push($param, $display_params['filter_prog']);
 	
@@ -1054,9 +1326,9 @@ function apply_query_filters($display_params) {
     $query = "";
     $sql_filters =
 	array("cata"  => "(catalog_index.tag_id = ?)", 
-	      "alle"  => "(alleles >= ?)", 
-	      "snps"  => "(snps >= ?)",
-	      "pare"  => "(parents >= ?)",
+	      "alle"  => "(alleles >= ? AND alleles <= ?)", 
+	      "snps"  => "(snps >= ? AND snps <= ?)",
+	      "pare"  => "(parents >= ? AND parents <= ?)",
 	      "prog"  => "(progeny >= ?)",
 	      "vprog" => "(valid_progeny >= ?)",
 	      "mark"  => "(marker LIKE ?)", 
