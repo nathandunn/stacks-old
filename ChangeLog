@@ -1,7 +1,33 @@
+Stacks 0.998 - January 06, 2012
+--------------------------------
+	Feature: Pipeline is now aware if samples are submitted as a 'population' or a 'mapping cross'.
+	A new command line option, -s, has been added to denovo_map.pl and ref_map.pl that will label
+	the dataset as a population. The -p/-r flags continue to keep the samples as a mapping cross.
+	Feature: The web interface has been updated to display more information specific to populations.
+	The filtering code has been changed to include lower and upper limits for filter fields such
+	as SNPs, alleles, and number of parents/samples.
+
+	Feature: A new program, populations, has been written to be executed in place of the exisiting
+	genotypes program when a population is being processed through the pipeline. A map specifiying
+	which individuals belong to which population is submitted to the program and the program will then
+	calculate population genetics statistics, expected/observed heterzygosity, Pi, and Fis at each
+	nucleotide position.
+	Feature: the populations program will compare all populations pairwise to compute Fst. If a set
+	of data is reference aligned, then a kernel-smoothed Fst will also be calculated.
+	     These statistics were originally designed by Paul Hohenlohe and Bill Cresko, and are
+	     described in the paper: Population Genomics of Parallel Adaptation in Threespine Stickleback
+	     using Sequenced RAD Tags,
+	     http://www.plosgenetics.org/article/info%3Adoi%2F10.1371%2Fjournal.pgen.1000862
+	     They have been implemented independently in Stacks.
+
+	Feature: added the DpnII enzyme to the process_radtags program.
 	Feature: Added new 'model' line to *.tags.tsv files. This line records the output of the SNP
-	model at every position in the read as either Homozygous (H), Polymorphic (P), or unkown (U). 
-	Previously only polymorphic loci were recorded in the SNPs file (and this remains unchanged).
+	model at every position in the read as either Homozygous (O), Heterozygous (E), or unkown (U).
+	Previously only polymorphic loci were recorded in the SNPs file (and this remains unchanged). The
+	model output line is now also available in the web interface.
+
 	Bugfix: fixed crasher bug in cstacks when parallel processing was enabled for genomic-aligned data.
+	Bugfix: allele depths are now properly reported in reference-aligned data.
 
 Stacks 0.997 - November 22, 2011
 --------------------------------

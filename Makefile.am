@@ -57,7 +57,7 @@ genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 
 populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/DNASeq.h src/DNASeq.cc \
-	src/stacks.h src/stacks.cc src/PopMap.h src/genotype_dictionaries.h \
+	src/stacks.h src/stacks.cc src/PopMap.h src/PopSum.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h
 
 ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
