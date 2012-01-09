@@ -1301,7 +1301,7 @@ int translate_genotypes(map<string, string> &types, map<string, map<string, stri
 
 int tally_progeny_haplotypes(CLocus *locus, PopMap<CLocus> *pmap, set<int> &parent_ids, 
 			     int &total, double &max, string &freq_str) {
-
+    char gtype[id_len];
     map<string, double> freq;
     Datum **d = pmap->locus(locus->id);
 
@@ -1316,7 +1316,17 @@ int tally_progeny_haplotypes(CLocus *locus, PopMap<CLocus> *pmap, set<int> &pare
 
 	//cerr << "  Sample: " << i << "; Haplotype: " << d[i]->obshap[0] << "; Genotype: " << d[i]->gtype << "\n";
 	if (d[i]->gtype[0] != '-') {
-	    freq[d[i]->gtype]++;
+	    //
+	    // Automated corrections will uppercase genotypes, convert them back to lowercase 
+	    // in order to tally them properly.
+	    //
+	    int j = 0;
+	    while (d[i]->gtype[j] != '\0') {
+	    	gtype[j] = tolower(d[i]->gtype[j]);
+	    	j++;
+	    }
+	    gtype[j] = '\0';
+	    freq[gtype]++;
 	    total++;
 	}
     }

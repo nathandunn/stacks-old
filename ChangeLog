@@ -22,7 +22,7 @@ Stacks 0.998 - January 06, 2012
 
 	Feature: added the DpnII enzyme to the process_radtags program.
 	Feature: Added new 'model' line to *.tags.tsv files. This line records the output of the SNP
-	model at every position in the read as either Homozygous (O), Heterozygous (E), or unkown (U).
+	model at every position in the read as either Homozygous (O), Heterozygous (E), or unknown (U).
 	Previously only polymorphic loci were recorded in the SNPs file (and this remains unchanged). The
 	model output line is now also available in the web interface.
 
