@@ -43,8 +43,8 @@ use constant stacks_version => "_VERSION_";
 my $exe_path      = "_BINDIR_" . "export_sql.pl";
 my $output_path   = "_PKGDATADIR_" . "php/export/"; 
 my $url           = "http://stackshost.edu/stacks/export/";
-my $local_host    = "stackshost.edu";
-my $smtp_host     = "stackshost.edu";
+my $local_host    = "localhost";
+my $smtp_host     = "localhost";
 my $from          = "stacks\@stackshost.edu";
 
 
