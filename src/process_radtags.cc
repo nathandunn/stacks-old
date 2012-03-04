@@ -794,7 +794,7 @@ int close_file_handles(map<string, ofstream *> &fhs) {
 
     for (i = fhs.begin(); i != fhs.end(); i++) {
 	i->second->close();
-	delete i->second;
+ 	delete i->second;
     }
 
     return 0;

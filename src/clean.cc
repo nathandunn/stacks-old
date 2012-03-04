@@ -132,7 +132,7 @@ int parse_input_record(Seq *s, Read *r) {
     for (p = s->id, q = p; q < stop; q++)
 	cnt += *q == ':'? 1 : 0;
 
-    if (cnt > 4) {
+    if (cnt == 9) {
 	//
 	// According to Illumina manual, "CASAVA v1.8 User Guide" page 41:
 	// @<instrument>:<run number>:<flowcell ID>:<lane>:<tile>:<x-pos>:<y-pos> <read>:<is filtered>:<control number>:<index sequence>
