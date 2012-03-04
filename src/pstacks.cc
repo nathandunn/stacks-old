@@ -272,7 +272,8 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
     int id;
 
     char *buf; // = new char[m.begin()->second->len + 1];
-
+    int   wrote    = 0;
+    int   excluded = 0;
     for (i = m.begin(); i != m.end(); i++) {
 	tag_1 = i->second;
 
@@ -280,7 +281,12 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
 	for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++)
  	    total += u[*k]->count;
 
-	if (total < min_stack_cov) continue;
+	if (total < min_stack_cov) {
+	    excluded++;
+	    continue;
+	}
+
+	wrote++;
 
 	// First write the consensus sequence
 	tags << "0" << "\t" 
@@ -354,6 +360,8 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
     tags.close();
     snps.close();
     alle.close();
+
+    cerr << "  Wrote " << wrote << " loci, excluded " << excluded << " loci due to insuffient depth of coverage.\n";
 
     return 0;
 }
