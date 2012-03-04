@@ -33,6 +33,7 @@
 #include "input.h"
 
 class Sam: public Input {
+    int parse_cigar(int, const char *);
 
  public:
     Sam(const char *path) : Input(path) {};
@@ -41,7 +42,9 @@ class Sam: public Input {
     int  next_seq(Seq &) { return 0; };
 };
 
-Seq *Sam::next_seq() {
+Seq *
+Sam::next_seq() 
+{
     vector<string> parts;
     int flag;
 
@@ -80,7 +83,9 @@ Seq *Sam::next_seq() {
     // alter the start point of the alignment to reflect the right-side of the read, at the
     // end of the RAD cut site.
     //
-    int bp = flag ? atoi(parts[3].c_str()) + parts[9].length() : atoi(parts[3].c_str());
+    // To accomplish this, we must parse the alignment CIGAR string
+    //
+    int bp = flag ? this->parse_cigar(atoi(parts[3].c_str()), parts[5].c_str()) : atoi(parts[3].c_str());
 
     //
     // Sam format has a 1-based offset for chrmosome/basepair positions, adjust it to match
@@ -92,6 +97,43 @@ Seq *Sam::next_seq() {
 		     parts[2].c_str(), bp, flag ? minus : plus);            // Chr, BasePair, Strand
 
     return s;
+}
+
+int 
+Sam::parse_cigar(int aln_bp, const char *cigar)
+{
+    char buf[id_len];
+    int  dist;
+    const char *p, *q;
+
+    p = cigar;
+
+    //cerr << "Starting bp: " << aln_bp << "\n";
+
+    while (*p != '\0') {
+	q = p + 1;
+
+	while (*q != '\0' && isdigit(*q))
+	    q++;
+	strncpy(buf, p, q - p);
+	buf[q-p+1] = '\0';
+	dist = atoi(buf);
+
+	switch(*q) {
+	case 'S':
+	case 'D':
+	    break;
+	case 'M':
+	case 'I':
+	    aln_bp += dist;
+	    break;
+	}
+	p = q + 1;
+
+	//cerr << "  CIGAR: " << cigar << "; Dist: " << dist << "; Type: " << *q << "; aln_bp: " << aln_bp << " [" << *p << "]\n";
+    }
+
+    return aln_bp;
 }
 
 #endif // __SAM_H__

@@ -1288,7 +1288,7 @@ void version() {
 
 void help() {
     std::cerr << "populations " << VERSION << "\n"
-              << "populations -b batch_id -P path -M path [-r min] [-m min] [-t map_type -o type] [-B blacklist] [-W whitelist] [-c] [-s] [-e renz] [-v] [-h]" << "\n"
+              << "populations -b batch_id -P path -M path [-r min] [-m min] [-g] [-B blacklist] [-W whitelist] [-s] [-e renz] [-v] [-h]" << "\n"
 	      << "  b: Batch ID to examine when exporting from the catalog.\n"
 	      << "  P: path to the Stacks output files.\n"
 	      << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
