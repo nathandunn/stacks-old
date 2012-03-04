@@ -274,7 +274,7 @@ check_db_error($db['dbh'], __FILE__, __LINE__);
 $query = 
     "SELECT catalog_index.tag_id as tag_id, alleles, parents, progeny, valid_progeny, " . 
     "seq, marker, max_pct, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt, " .
-    "catalog_index.chr, catalog_index.bp, catalog_index.type, gene, ext_id, ex_start, ex_end, ex_index " .
+    "catalog_index.chr, catalog_index.bp, catalog_tags.strand, catalog_index.type, gene, ext_id, ex_start, ex_end, ex_index " .
     "FROM catalog_index " .
     "JOIN catalog_tags ON (catalog_index.cat_id=catalog_tags.id) " . 
     "LEFT JOIN catalog_annotations ON (catalog_index.batch_id=catalog_annotations.batch_id AND catalog_index.tag_id=catalog_annotations.catalog_id) " .
@@ -359,7 +359,7 @@ EOQ;
       print 
 	"<td class=\"seq\">\n" .
 	"<div class=\"seq\">$s</div>\n" .
-	"<div class=\"gloc\">Chr: $row[chr], <acronym title=\"" . number_format($row['bp']) . "bp\">" . print_bp($row['bp']) . "</acronym>\n";
+	"<div class=\"gloc\">Chr: $row[chr], <acronym title=\"" . number_format($row['bp']) . "bp\">" . print_bp($row['bp']) . "</acronym>, $row[strand]\n";
 
       if ($row['type'] == "exon") {
   	  if (strlen($row['ext_id']) == 0)
