@@ -134,7 +134,7 @@ public:
 
     LocSum **locus(int);
     LocSum  *pop(int, int);
-    PopPair *Fst(int, int, int, int);
+    PopPair *Fst(int, int, int, int, int);
 
 private:
     int    tally_heterozygous_pos(LocusT *, Datum **, LocSum *, int, int, uint, uint);
@@ -251,16 +251,17 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 }
 
 template<class LocusT>
-PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) 
+PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos, int sample_lim) 
 {
     LocSum  *s_1  = this->pop(locus, pop_1);
     LocSum  *s_2  = this->pop(locus, pop_2);
     PopPair *pair = new PopPair();
 
     //
-    // If this locus only appears on one population, do not calculate Fst.
+    // If this locus only appears in one population, or it does not have sufficient 
+    // samples in the population, do not calculate Fst.
     //
-    if (s_1->nucs[pos].num_indv == 0 || s_2->nucs[pos].num_indv == 0) 
+    if (s_1->nucs[pos].num_indv < sample_lim || s_2->nucs[pos].num_indv < sample_lim) 
 	return pair;
 
     //
