@@ -595,7 +595,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
 	start = pit->second.first;
 	end   = pit->second.second;
-	fh << pit->first << "\t";
+	fh << "# " << pit->first << "\t";
 	for (int i = start; i <= end; i++) {
 	    fh << files[i].second;
 	    if (i < end) fh << ",";
@@ -611,8 +611,9 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     int      len;
     int      pop_cnt = psum->pop_cnt();
     char     fisstr[32];
+    bool     fixed, plimit;
 
-    fh << "Locus ID" << "\t"
+    fh << "# Locus ID" << "\t"
        << "Chr"      << "\t"
        << "BP"       << "\t"
        << "Pop ID"   << "\t"
@@ -634,25 +635,36 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
 	    for (int i = 0; i < len; i++) {
 
+		// 
+		// If this site is fixed in all populations, don't output it.
+		//
+		fixed  = true;
+		plimit = true;
 		for (int j = 0; j < pop_cnt; j++) {
+		    if (s[j]->nucs[i].num_indv < progeny_limit) 
+			plimit = false;
+		    if (s[j]->nucs[i].pi != 0) 
+			fixed = false;
+		}
 
-		    if (s[j]->nucs[i].num_indv < progeny_limit) continue;
-		    if (s[j]->nucs[i].pi == 0) continue;
+		if (!fixed && plimit) {
+		    for (int j = 0; j < pop_cnt; j++) {
 
-		    sprintf(fisstr, "%0.10f", s[j]->nucs[i].Fis);
+			sprintf(fisstr, "%0.10f", s[j]->nucs[i].Fis);
 
-		    fh << loc->id << "\t"
-		       << loc->loc.chr << "\t"
-		       << loc->loc.bp + i << "\t"
-		       << psum->rev_pop_index(j) << "\t"
-		       << s[j]->nucs[i].num_indv << "\t"
-		       << s[j]->nucs[i].p << "\t"
-		       << s[j]->nucs[i].obs_het << "\t"
-		       << s[j]->nucs[i].obs_hom << "\t"
-		       << s[j]->nucs[i].exp_het << "\t"
-		       << s[j]->nucs[i].exp_hom << "\t"
-		       << s[j]->nucs[i].pi      << "\t"
-		       << fisstr << "\n";
+			fh << loc->id << "\t"
+			   << loc->loc.chr << "\t"
+			   << loc->loc.bp + i << "\t"
+			   << psum->rev_pop_index(j) << "\t"
+			   << s[j]->nucs[i].num_indv << "\t"
+			   << s[j]->nucs[i].p << "\t"
+			   << s[j]->nucs[i].obs_het << "\t"
+			   << s[j]->nucs[i].obs_hom << "\t"
+			   << s[j]->nucs[i].exp_het << "\t"
+			   << s[j]->nucs[i].exp_hom << "\t"
+			   << s[j]->nucs[i].pi      << "\t"
+			   << fisstr << "\n";
+		    }
 		}
 	    }
 	}
@@ -696,6 +708,14 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
 	    cerr << "Calculating Fst for populations " << pop_1 << " and " << pop_2 << " and writing it to file, '" << file << "'\n";
 
+	    fh << "# Locus ID"   << "\t"
+	       << "Chr"          << "\t"
+	       << "BP"           << "\t"
+	       << "Column"       << "\t"
+	       << "Overall Pi"   << "\t"
+	       << "Fst"          << "\t"
+	       << "Smoothed Fst" << "\n";
+
 	    map<string, vector<CLocus *> >::iterator it;
 	    CLocus  *loc;
 	    PopPair *pair;
@@ -712,7 +732,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
 		    for (int k = 0; k < len; k++) {
 
-			pair = psum->Fst(loc->id, pop_1, pop_2, k);
+			pair = psum->Fst(loc->id, pop_1, pop_2, k, progeny_limit);
 
 			//
 			// Locus is incompatible, log this position.
