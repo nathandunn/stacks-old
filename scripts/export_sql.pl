@@ -231,13 +231,16 @@ sub prepare_filter_parameters {
     foreach $filter (keys %{$filters}) {
 
         if ($filter eq "snps") {
-            push(@{$params}, $filters->{'snps'});
+            push(@{$params}, $filters->{'snps_l'});
+            push(@{$params}, $filters->{'snps_u'});
 
         } elsif ($filter eq "alle") {
-            push(@{$params}, $filters->{'alle'});
+            push(@{$params}, $filters->{'alle_l'});
+            push(@{$params}, $filters->{'alle_u'});
 
         } elsif ($filter eq "pare") {
-            push(@{$params}, $filters->{'pare'});
+            push(@{$params}, $filters->{'pare_l'});
+            push(@{$params}, $filters->{'pare_u'});
 	
         } elsif ($filter eq "prog") {
             push(@{$params}, $filters->{'prog'});
@@ -260,7 +263,15 @@ sub prepare_filter_parameters {
         } elsif ($filter eq "blast") {
             push(@{$params}, 0);
 
-        } elsif ($filter eq "mark") {
+        } elsif ($filter eq "ref") {
+            push(@{$params}, $filters->{'ref'});
+
+        } elsif ($filter eq "loc") {
+	    push(@{$params}, $filters->{'chr'});
+	    push(@{$params}, $filters->{'sbp'} * 1000000);
+	    push(@{$params}, $filters->{'ebp'} * 1000000);
+	
+	} elsif ($filter eq "mark") {
             if ($filters->{'mark'} eq "Any") {
                 push(@{$params}, "%/%");
             } else {
@@ -277,20 +288,24 @@ sub apply_query_filters {
 
     my %sql_filters = 
         ("cata"  => "(catalog_index.tag_id = ?)", 
-         "alle"  => "(alleles >= ?)", 
-         "snps"  => "(snps >= ?)",
-         "pare"  => "(parents = ?)",
+	 "alle"  => "(alleles >= ? AND alleles <= ?)", 
+	 "snps"  => "(snps >= ? AND snps <= ?)",
+	 "pare"  => "(parents >= ? AND parents <= ?)",
          "prog"  => "(progeny >= ?)",
          "vprog" => "(valid_progeny >= ?)",
          "mark"  => "(marker LIKE ?)", 
          "est"   => "(ests > ?)",
          "pe"    => "(pe_radtags > ?)",
          "blast" => "(blast_hits > ?)",
-	 "gcnt"  => "(geno_cnt >= ?)");
+	 "gcnt"  => "(geno_cnt >= ?)",
+	 "ref"   => "(catalog_index.type = ?)",
+	 "loc"   => "(catalog_index.chr = ? && catalog_index.bp >= ? && catalog_index.bp <= ?)");
     
     if (scalar(keys %{$filters}) > 0) {
 
         foreach $filter (keys %{$filters}) {
+	    next if (!defined($sql_filters{$filter}));
+
             $query .= " AND ";
             $query .= $sql_filters{$filter};
         }
@@ -300,7 +315,7 @@ sub apply_query_filters {
 }
 
 sub write_observed_haplotypes {
-    my ($loci, $samples) = @_;
+    my ($loci, $samples, $filters) = @_;
 
     my ($workbook, $worksheet);
 
@@ -346,7 +361,7 @@ sub write_observed_haplotypes {
     $type eq "xls" ? write_excel($worksheet, $i, $str) : print $out_fh $str;
     $i++;
 
-    foreach $cat_id (sort {$a <=> $b} keys %{$loci}) {
+    foreach $cat_id (keys %{$loci}) {
         $locus = $loci->{$cat_id};
 
         $str =
@@ -442,7 +457,7 @@ sub write_genotypes {
 
     my ($trans_marker);
 
-    foreach $cat_id (sort {$a <=> $b} keys %{$loci}) {
+    foreach $cat_id (keys %{$loci}) {
         $locus = $loci->{$cat_id};
 
 	$trans_marker = translate_marker($map_type, $locus->{'marker'});
@@ -864,6 +879,12 @@ sub parse_command_line {
             print STDERR "Unknown command line option: '$_'\n";
             usage();
         }
+    }
+
+    if (defined($filters{'chr'})) {
+	$filters{'loc'} = 1;
+	$filters{'sbp'} = 0 if (!defined($filters{'sbp'}));
+	$filters{'ebp'} = 500000000 if (!defined($filters{'ebp'}));
     }
 
     if ($out_file eq "") {
