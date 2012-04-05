@@ -94,13 +94,16 @@ class Catalog {
 	foreach ($filters as $filter) {
 
             if ($filter == "snps") {
-                array_push($this->params, $this->display['filter_snps']);
+                array_push($this->params, $this->display['filter_snps_l']);
+                array_push($this->params, $this->display['filter_snps_u']);
 
             } else if ($filter == "alle") {
-                array_push($this->params, $this->display['filter_alle']);
+                array_push($this->params, $this->display['filter_alle_l']);
+                array_push($this->params, $this->display['filter_alle_u']);
 
             } else if ($filter == "pare") {
-                array_push($this->params, $this->display['filter_pare']);
+                array_push($this->params, $this->display['filter_pare_l']);
+                array_push($this->params, $this->display['filter_pare_u']);
 	
             } else if ($filter == "prog") {
                 array_push($this->params, $this->display['filter_prog']);
@@ -123,9 +126,17 @@ class Catalog {
             } else if ($filter == "blast") {
                 array_push($this->params, 0);
 
-            } else if ($filter == "mark") {
-                if ($this->display['filter_mark'] == "Any") 
-                    array_push($this->params, "%/%");
+            } else if ($filter == "ref") {
+	      array_push($this->params, $this->display['filter_ref']);
+	
+	    } else if ($filter == "loc") {
+	      array_push($this->params, $this->display['filter_chr']);
+	      array_push($this->params, $this->display['filter_sbp'] * 1000000);
+	      array_push($this->params, $this->display['filter_ebp'] * 1000000);
+	
+	    } else if ($filter == "mark") {
+	        if ($this->display['filter_mark'] == "Any") 
+		    array_push($this->params, "%/%");
                 else 
                     array_push($this->params, $this->display['filter_mark']);
             }
@@ -135,16 +146,18 @@ class Catalog {
     function apply_query_filters() {
         $sql_filters =
             array("cata"  => "(catalog_index.tag_id = ?)", 
-                  "alle"  => "(alleles >= ?)", 
-                  "snps"  => "(snps >= ?)",
-                  "pare"  => "(parents = ?)",
+		  "alle"  => "(alleles >= ? AND alleles <= ?)", 
+		  "snps"  => "(snps >= ? AND snps <= ?)",
+		  "pare"  => "(parents >= ? AND parents <= ?)",
                   "prog"  => "(progeny >= ?)",
                   "vprog" => "(valid_progeny >= ?)",
                   "mark"  => "(marker LIKE ?)", 
                   "est"   => "(ests > ?)",
                   "pe"    => "(pe_radtags > ?)",
                   "blast" => "(blast_hits > ?)",
-		  "gcnt"  => "(geno_cnt >= ?)");
+		  "gcnt"  => "(geno_cnt >= ?)",
+		  "ref"   => "(catalog_index.type = ?)",
+		  "loc"   => "(catalog_index.chr = ? && catalog_index.bp >= ? && catalog_index.bp <= ?)");
 
         $filters = $this->display['filter_type'];
 

@@ -90,22 +90,22 @@ function process_filter(&$display_params, &$filters) {
 	array_push($display_params['filter_type'], $filter);
 
 	if ($filter == "alle") {
-	    $display_params['filter_alle'] = $_GET['filter_alle_l'];
-            array_push($filters, "alle=" . $_GET['filter_alle_l']);
-	    $display_params['filter_alle'] = $_GET['filter_alle_u'];
-            array_push($filters, "alle=" . $_GET['filter_alle_u']);
+	    $display_params['filter_alle_l'] = $_GET['filter_alle_l'];
+            array_push($filters, "alle_l=" . $_GET['filter_alle_l']);
+	    $display_params['filter_alle_u'] = $_GET['filter_alle_u'];
+            array_push($filters, "alle_u=" . $_GET['filter_alle_u']);
 
 	} else if ($filter == "snps") {
-	    $display_params['filter_snps'] = $_GET['filter_snps_l'];
-            array_push($filters, "snps=" . $_GET['filter_snps_l']);
-	    $display_params['filter_snps'] = $_GET['filter_snps_u'];
-            array_push($filters, "snps=" . $_GET['filter_snps_u']);
+	    $display_params['filter_snps_l'] = $_GET['filter_snps_l'];
+            array_push($filters, "snps_l=" . $_GET['filter_snps_l']);
+	    $display_params['filter_snps_u'] = $_GET['filter_snps_u'];
+            array_push($filters, "snps_u=" . $_GET['filter_snps_u']);
 
 	} else if ($filter == "pare") {
-	    $display_params['filter_pare'] = $_GET['filter_pare_l'];
-            array_push($filters, "pare=" . $_GET['filter_pare_l']);
-	    $display_params['filter_pare'] = $_GET['filter_pare_u'];
-            array_push($filters, "pare=" . $_GET['filter_pare_u']);
+	    $display_params['filter_pare_l'] = $_GET['filter_pare_l'];
+            array_push($filters, "pare_l=" . $_GET['filter_pare_l']);
+	    $display_params['filter_pare_u'] = $_GET['filter_pare_u'];
+            array_push($filters, "pare_u=" . $_GET['filter_pare_u']);
 
 	} else if ($filter == "prog") {
 	    $display_params['filter_prog'] = $_GET['filter_prog'];
