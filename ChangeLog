@@ -1,3 +1,7 @@
+	Bugfix: updated the PHP code as well as export_sql.pl to properly use
+	the new filters for chromosome, basepair, as well as lower and upper
+	ranges to various filters.
+
 Stacks 0.998 - January 06, 2012
 --------------------------------
 	Feature: Pipeline is now aware if samples are submitted as a 'population' or a 'mapping cross'.
