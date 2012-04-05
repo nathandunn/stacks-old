@@ -90,16 +90,22 @@ function process_filter(&$display_params, &$filters) {
 	array_push($display_params['filter_type'], $filter);
 
 	if ($filter == "alle") {
-	    $display_params['filter_alle'] = $_GET['filter_alle'];
-            array_push($filters, "alle=" . $_GET['filter_alle']);
+	    $display_params['filter_alle'] = $_GET['filter_alle_l'];
+            array_push($filters, "alle=" . $_GET['filter_alle_l']);
+	    $display_params['filter_alle'] = $_GET['filter_alle_u'];
+            array_push($filters, "alle=" . $_GET['filter_alle_u']);
 
 	} else if ($filter == "snps") {
-	    $display_params['filter_snps'] = $_GET['filter_snps'];
-            array_push($filters, "snps=" . $_GET['filter_snps']);
+	    $display_params['filter_snps'] = $_GET['filter_snps_l'];
+            array_push($filters, "snps=" . $_GET['filter_snps_l']);
+	    $display_params['filter_snps'] = $_GET['filter_snps_u'];
+            array_push($filters, "snps=" . $_GET['filter_snps_u']);
 
 	} else if ($filter == "pare") {
-	    $display_params['filter_pare'] = $_GET['filter_pare'];
-            array_push($filters, "pare=" . $_GET['filter_pare']);
+	    $display_params['filter_pare'] = $_GET['filter_pare_l'];
+            array_push($filters, "pare=" . $_GET['filter_pare_l']);
+	    $display_params['filter_pare'] = $_GET['filter_pare_u'];
+            array_push($filters, "pare=" . $_GET['filter_pare_u']);
 
 	} else if ($filter == "prog") {
 	    $display_params['filter_prog'] = $_GET['filter_prog'];
@@ -120,6 +126,18 @@ function process_filter(&$display_params, &$filters) {
 	} else if ($filter == "gcnt") {
 	    $display_params['filter_gcnt'] = $_GET['filter_gcnt'];
 	    array_push($filters, "gcnt=" . $_GET['filter_gcnt']);
+
+	} else if ($filter == "ref") {
+	    $display_params['filter_ref'] = $_GET['filter_ref'];
+	    array_push($filters, "ref=" . $_GET['filter_ref']);
+
+	} else if ($filter == "loc") {
+	    $display_params['filter_chr'] = $_GET['filter_chr'];
+	    array_push($filters, "chr=" . $_GET['filter_chr']);
+	    $display_params['filter_sbp'] = $_GET['filter_sbp'];
+	    array_push($filters, "sbp=" . $_GET['filter_sbp']);
+	    $display_params['filter_ebp'] = $_GET['filter_ebp'];
+	    array_push($filters, "ebp=" . $_GET['filter_ebp']);
 	}
     }
 }
