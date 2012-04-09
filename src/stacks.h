@@ -41,6 +41,7 @@ using std::stringstream;
 
 #include "constants.h"
 #include "DNASeq.h"
+#include "DNANSeq.h"
 
 typedef unsigned int uint;
 typedef string allele_type;
@@ -119,13 +120,38 @@ class Stack {
 	len    = 0; 
     }
     ~Stack() { 
-	delete [] seq; 
+	delete this->seq; 
 	for (unsigned int i = 0; i < this->map.size(); i++) 
-	    delete [] map[i]; 
+	    delete [] this->map[i]; 
     }
     int add_id(const char *);
     int add_seq(const char *);
     int add_seq(const DNASeq *);
+};
+
+class PStack {
+ public:
+    uint     id;
+    uint     count;       // Number of identical reads forming this stack
+    DNANSeq *seq;         // Sequence read
+    uint     len;         // Read length
+    vector<char *> map;  // List of sequence read IDs merged into this stack
+    PhyLoc   loc;         // Physical genome location of this stack.
+
+    PStack()  { 
+	id     = 0; 
+	count  = 0; 
+	seq    = NULL; 
+	len    = 0; 
+    }
+    ~PStack() { 
+	delete this->seq; 
+	for (unsigned int i = 0; i < this->map.size(); i++) 
+	    delete [] this->map[i]; 
+    }
+    int add_id(const char *);
+    int add_seq(const char *);
+    int add_seq(DNANSeq *);
 };
 
 class Rem {
@@ -194,6 +220,7 @@ class MergedStack {
     }
     int add_consensus(const char *);
     int add_consensus(DNASeq *);
+    int add_consensus(DNANSeq *);
     int add_dist(const int id, const int dist);
 };
 

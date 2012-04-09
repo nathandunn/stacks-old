@@ -68,6 +68,33 @@ int Rem::add_seq(const char *seq) {
     return 0;
 }
 
+int PStack::add_id(const char *id) {
+    char *f = new char[strlen(id) + 1];
+    strcpy(f, id);
+    this->map.push_back(f);
+
+    return 0;
+}
+
+int PStack::add_seq(const char *seq) {
+    if (this->seq != NULL)
+	delete this->seq;
+
+    this->len = strlen(seq);
+    this->seq = new DNANSeq(this->len, seq);
+
+    return 0;
+}
+
+int PStack::add_seq(DNANSeq *seq) {
+    if (this->seq != NULL)
+	delete this->seq;
+
+    this->seq = new DNANSeq(seq->size(), seq->s);
+
+    return 0;
+}
+
 int Stack::add_id(const char *id) {
     char *f = new char[strlen(id) + 1];
     strcpy(f, id);
@@ -112,6 +139,17 @@ int MergedStack::add_consensus(DNASeq *seq) {
 	delete [] this->con;
 
     this->len = seq->size;
+    this->con = new char[this->len + 1];
+    this->con = seq->seq(this->con);
+
+    return 0;
+}
+
+int MergedStack::add_consensus(DNANSeq *seq) {
+    if (this->con != NULL)
+	delete [] this->con;
+
+    this->len = seq->size();
     this->con = new char[this->len + 1];
     this->con = seq->seq(this->con);
 
