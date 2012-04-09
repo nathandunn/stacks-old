@@ -122,6 +122,11 @@ char *rev_comp(const char *seq) {
         case 't':
             com[j] = 'A';
             break;
+	case 'N':
+	case 'n':
+	case '.':
+	    com[j] = 'N';
+	    break;
         }
         j++;
     }

@@ -1,34 +1,34 @@
 bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks hstacks process_radtags process_shortreads kmer_filter clone_filter genotypes populations
 
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h \
-	src/DNASeq.h src/DNASeq.cc \
+	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/models.h src/models.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h \
 	src/cluster.c src/cluster.h
 
 pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/constants.h \
+	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
 	src/models.h src/models.cc \
-	src/DNASeq.h src/DNASeq.cc \
 	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h 
 
 estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/constants.h \
         src/models.h src/models.cc \
-	src/DNASeq.h src/DNASeq.cc \
+	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
         src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h
 
 cstacks_SOURCES = src/cstacks.h src/cstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/kmers.h src/kmers.cc \
-	src/DNASeq.h src/DNASeq.cc \
+	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
 hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/kmers.h src/kmers.cc \
-	src/DNASeq.h src/DNASeq.cc \
+	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
 sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/constants.h \
-	src/DNASeq.h src/DNASeq.cc \
+	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
@@ -51,12 +51,12 @@ clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h
 
 genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
-	src/DNASeq.h src/DNASeq.cc \
+	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/stacks.h src/stacks.cc src/PopMap.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h
 
 populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
-	src/DNASeq.h src/DNASeq.cc \
+	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/stacks.h src/stacks.cc src/PopMap.h src/PopSum.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h
 
@@ -87,7 +87,7 @@ dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.p
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
 	scripts/index_radtags.pl scripts/load_radtags.pl scripts/stacks_export_notify.pl
 
-dist_noinst_SCRIPTS = autogen.sh scripts/process_radtags.pl scripts/markers.pl scripts/genotypes.pl
+dist_noinst_SCRIPTS = autogen.sh
 
 nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sql/tag_index.sql sql/chr_index.sql \
 	php/CatalogClass.php php/annotate_marker.php php/constants.php.dist php/index.php php/tags.php \

@@ -61,9 +61,9 @@ int main (int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
     #endif
 
-    HashMap           radtags;
-    set<int>          merge_map;
-    map<int, Stack *> unique;
+    HashMap            radtags;
+    set<int>           merge_map;
+    map<int, PStack *> unique;
 
     load_radtags(in_file, radtags);
 
@@ -90,18 +90,18 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int call_alleles(MergedStack *mtag, vector<DNASeq *> &reads) {
-    int     row;
-    int     height = reads.size();
-    string  allele;
-    char    base;
+int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {
+    int      row;
+    int      height = reads.size();
+    string   allele;
+    char     base;
     vector<SNP *>::iterator snp;
-    DNASeq *d;
+    DNANSeq *d;
 
     for (row = 0; row < height; row++) {
 	allele.clear();
 
-	int snp_cnt = 0;
+	uint snp_cnt = 0;
 
 	for (snp = mtag->snps.begin(); snp != mtag->snps.end(); snp++) {
 	    if ((*snp)->type != snp_type_het) continue;
@@ -128,7 +128,7 @@ int call_alleles(MergedStack *mtag, vector<DNASeq *> &reads) {
     return 0;
 }
 
-int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, bool invoke_model) {
+int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, bool invoke_model) {
     //
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -144,7 +144,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
         #pragma omp for schedule(dynamic) 
 	for (i = 0; i < (int) keys.size(); i++) {
 	    MergedStack *mtag;
-	    Stack *utag;
+	    PStack *utag;
 
 	    mtag = merged[keys[i]];
 
@@ -154,7 +154,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
 	    // that tag into our array as many times as it originally occurred. 
 	    //
 	    vector<int>::iterator j;
-	    vector<DNASeq *> reads;
+	    vector<DNANSeq *> reads;
 
 	    for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
 		utag = unique[*j];
@@ -168,12 +168,12 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
 	    // Iterate over each column of the array and call the consensus base.
 	    //
 	    int row, col;
-	    int length = reads[0]->size;
+	    int length = reads[0]->size();
 	    int height = reads.size();
 	    string con;
 	    map<char, int> nuc;
 	    map<char, int>::iterator max, n;
-	    DNASeq *d;
+	    DNANSeq *d;
 
 	    for (col = 0; col < length; col++) {
 		nuc['A'] = 0;
@@ -183,7 +183,8 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
 
 		for (row = 0; row < height; row++) {
     		    d = reads[row];
-		    nuc[(*d)[col]]++;
+		    if (nuc.count((*d)[col]))
+			nuc[(*d)[col]]++;
 		}
 
 		//
@@ -228,10 +229,10 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, b
     return 0;
 }
 
-int count_raw_reads(map<int, Stack *> &unique, map<int, MergedStack *> &merged) {
+int count_raw_reads(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
     map<int, MergedStack *>::iterator it;
     vector<int>::iterator k;
-    Stack *tag;
+    PStack *tag;
     long int m = 0;
 
     for (it = merged.begin(); it != merged.end(); it++) {
@@ -247,14 +248,14 @@ int count_raw_reads(map<int, Stack *> &unique, map<int, MergedStack *> &merged) 
     return 0;
 }
 
-int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
+int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     map<int, MergedStack *>::iterator i;
     vector<char *>::iterator   j;
     vector<int>::iterator      k;
     vector<SNP *>::iterator    s;
     map<string, int>::iterator t;
     MergedStack *tag_1;
-    Stack       *tag_2;
+    PStack      *tag_2;
 
     //
     // Parse the input file name to create the output files
@@ -366,18 +367,18 @@ int write_sql(map<int, MergedStack *> &m, map<int, Stack *> &u) {
     return 0;
 }
 
-int write_sam(map<int, MergedStack *> &m, map<int, Stack *> &u) {
+int write_sam(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     return 0;
 }
 
-int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &merged) {
-    map<int, Stack *>::iterator i;
+int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
+    map<int, PStack *>::iterator i;
     map<int, MergedStack *>::iterator it_new, it_old;
     map<string, set<int> > locations;
     map<string, set<int> >::iterator k;
     set<int>::iterator s;
     char         id[id_len];
-    Stack       *u;
+    PStack      *u;
     MergedStack *m;
     int global_id = 0;
 
@@ -431,11 +432,11 @@ int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &mer
 // places in the genome. In this case, reads are broken down by read ID
 // and split into different Stack objects.
 //
-int reduce_radtags(HashMap &radtags, map<int, Stack *> &unique) {
+int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
     HashMap::iterator it;
     vector<Seq *>::iterator sit;
     
-    Stack *u;
+    PStack *u;
     int    global_id = 1;
 
     for (it = radtags.begin(); it != radtags.end(); it++) {
@@ -452,7 +453,7 @@ int reduce_radtags(HashMap &radtags, map<int, Stack *> &unique) {
             //
             // Populate a Stack object for this unique radtag.
             //
-            u        = new Stack;
+            u        = new PStack;
             u->id    = global_id;
             u->count = lit->second;
             u->add_seq(it->first);
@@ -517,8 +518,8 @@ int load_radtags(string in_file, HashMap &radtags) {
     return 0;
 }
 
-int dump_stacks(map<int, Stack *> &u) {
-    map<int, Stack *>::iterator it;
+int dump_stacks(map<int, PStack *> &u) {
+    map<int, PStack *>::iterator it;
     vector<char *>::iterator fit;
     vector<pair<int, int> >::iterator pit;
     vector<int>::iterator mit;
@@ -526,7 +527,7 @@ int dump_stacks(map<int, Stack *> &u) {
     for (it = u.begin(); it != u.end(); it++) {
 
 	cerr << "Stack ID: " << (*it).second->id << "\n"
-	     << "  Seq:    " << (*it).second->seq << "\n"
+	     << "  Seq:    " << (*it).second->seq->seq() << "\n"
 	     << "  IDs:    "; 
 
 	for (fit = (*it).second->map.begin(); fit != (*it).second->map.end(); fit++)

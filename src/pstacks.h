@@ -60,7 +60,7 @@ using std::pair;
 #include "Sam.h"       // Reading input files in SAM format
 #include "Fasta.h"     // Reading input files in FASTA format
 #include "Fastq.h"     // Reading input files in FASTQ format
-#include "DNASeq.h"
+#include "DNANSeq.h"
 
 const int barcode_size = 5;
 
@@ -76,18 +76,18 @@ void help( void );
 void version( void );
 int  parse_command_line(int, char**);
 int  load_radtags(string, HashMap &);
-int  reduce_radtags(HashMap &, map<int, Stack *> &);
-int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
-int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, bool);
-int  call_alleles(MergedStack *, vector<DNASeq *> &);
-int  count_raw_reads(map<int, Stack *> &, map<int, MergedStack *> &);
-int  write_sql(map<int, MergedStack *> &, map<int, Stack *> &);
-int  write_sam(map<int, MergedStack *> &, map<int, Stack *> &);
+int  reduce_radtags(HashMap &, map<int, PStack *> &);
+int  populate_merged_tags(map<int, PStack *> &, map<int, MergedStack *> &);
+int  call_consensus(map<int, MergedStack *> &, map<int, PStack *> &, bool);
+int  call_alleles(MergedStack *, vector<DNANSeq *> &);
+int  count_raw_reads(map<int, PStack *> &, map<int, MergedStack *> &);
+int  write_sql(map<int, MergedStack *> &, map<int, PStack *> &);
+int  write_sam(map<int, MergedStack *> &, map<int, PStack *> &);
 
 //
 // Debugging
 //
-int  dump_stacks(map<int, Stack *> &);
+int  dump_stacks(map<int, PStack *> &);
 int  dump_merged_stacks(map<int, MergedStack *> &);
 
 
