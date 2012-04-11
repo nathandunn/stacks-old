@@ -1,6 +1,19 @@
-	Bugfix: updated the PHP code as well as export_sql.pl to properly use
-	the new filters for chromosome, basepair, as well as lower and upper
-	ranges to various filters.
+Stacks 0.999 - April 11, 2012
+--------------------------------
+	Feature: Added support for the 1000 Genomes Project, Variant Call Format (VCF) in the populations
+	program. (http://www.1000genomes.org/node/101). This file output includes the genotype call for 
+	every individual for each locus, allele depth, and likelihood values for heterozygous SNP calls.
+
+	Feature: implemented a three-bit compression scheme so that uncalled bases ('N's) can be stored 
+	in compress format in pstacks. Other stacks programs currently use two-bit compression which is 
+	more compact, but can only store plain nucleotides ('A', 'C', 'G', 'T').
+
+	Bugfix: added lots of error checkign code to populations so it properly handles 
+	poorly formatted population maps, missing files, and similar errors.
+	Bugfix: added uncalled bases ('n', 'N', and '.') to the reverse complement function (reads 
+	aligned on the negative strand and processed by pstacks will be stored reverse complement.
+	Bugfix: updated the PHP code as well as export_sql.pl to properly use the new filters for 
+	chromosome, basepair, as well as lower and upper ranges to various filters.
 
 Stacks 0.998 - January 06, 2012
 --------------------------------

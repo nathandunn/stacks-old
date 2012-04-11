@@ -282,7 +282,7 @@ int call_alleles(MergedStack *mtag, vector<DNASeq *> &reads, vector<read_type> &
     for (row = 0; row < height; row++) {
 	allele.clear();
 
-	int snp_cnt = 0;
+	uint snp_cnt = 0;
 
 	//
 	// Only call a haplotype from primary reads.

@@ -38,16 +38,20 @@ using std::make_pair;
 class Datum {
 public:
     int            id;           // Stack ID
-    int            depth;        // Stack Depth
+    int            tot_depth;    // Stack depth
+    vector<int>    depth;        // Stack depth of each matching allele
     bool           corrected;    // Has this genotype call been corrected
     char          *model;        // String representing SNP model output for each nucleotide at this locus.
     char          *gtype;        // Genotype
     char          *trans_gtype;  // Translated Genotype
     vector<char *> obshap;       // Observed Haplotypes
-    Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; }
+    vector<SNP *>  snps;
+    Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; }
     ~Datum() {
     	for (uint i = 0; i < this->obshap.size(); i++)
     	    delete [] this->obshap[i];
+    	for (uint i = 0; i < this->snps.size(); i++)
+	    delete this->snps[i];
     	delete [] this->gtype;
 	delete [] this->trans_gtype;
 	delete [] this->model;
@@ -175,6 +179,8 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 		    char *h = new char[strlen(matches[i][j]->haplotype) + 1];
 		    strcpy(h, matches[i][j]->haplotype);
 		    d->obshap.push_back(h);
+		    d->depth.push_back(matches[i][j]->depth);
+		    d->tot_depth += matches[i][j]->depth;
 		    this->data[locus][sample] = d;
 
 		    catalog[matches[i][j]->cat_id]->hcnt++;
@@ -189,6 +195,8 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 		    char *h = new char[strlen(matches[i][j]->haplotype) + 1];
 		    strcpy(h, matches[i][j]->haplotype);
 		    this->data[locus][sample]->obshap.push_back(h);
+		    this->data[locus][sample]->depth.push_back(matches[i][j]->depth);
+		    this->data[locus][sample]->tot_depth += matches[i][j]->depth;
 		} else {
 		    //cerr << "    Deleting sample, multiple tag matches\n";
 		    delete this->data[locus][sample];
