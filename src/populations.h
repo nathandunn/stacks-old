@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2012, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -18,8 +18,8 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __GENOTYPES_H__
-#define __GENOTYPES_H__
+#ifndef __POPULATIONS_H__
+#define __POPULATIONS_H__
 
 #ifdef _OPENMP
 #include <omp.h>    // OpenMP library
@@ -29,6 +29,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <utility>
 using std::pair;
 using std::make_pair;
@@ -97,9 +98,13 @@ int  write_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> >
 int  write_fst_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *, ofstream &);
 int  write_generic(map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, bool);
 int  write_genomic(map<int, CLocus *> &, PopMap<CLocus> *);
+int  write_vcf(map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *, map<int, string> &, vector<int> &);
+int  tally_observed_haplotypes(vector<char *> &, int, char &, char &);
+int  tally_ref_alleles(LocSum **, int, int, char &, char &);
+int  load_snp_calls(string,  PopMap<CLocus> *);
 
 bool compare_pop_map(pair<int, string>, pair<int, string>);
 bool hap_compare(pair<string, int>, pair<string, int>);
 bool compare_pair(pair<char, int>, pair<char, int>);
 
-#endif // __GENOTYPES_H__
+#endif // __POPULATIONS_H__

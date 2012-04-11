@@ -408,4 +408,73 @@ int load_model_results(string sample,  map<int, ModRes *> &modres) {
     return 1;
 }
 
+int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
+    string         f;
+    char          *line;
+    int            size, id, samp_id;
+    vector<string> parts;
+    long int       line_num;
+    SNP           *snp;
+    SNPRes        *snpr;
+    ifstream       fh;
+
+    line = (char *) malloc(sizeof(char) * max_len);
+    size = max_len;
+
+    // 
+    // Parse the SNP file
+    //
+    f = sample + ".snps.tsv";
+    fh.open(f.c_str(), ifstream::in);
+
+    if (fh.fail()) {
+        cerr << " Unable to open " << f.c_str() << "\n";
+        return 0;
+    } else {
+        cerr << "  Parsing " << f.c_str() << "\n";
+    }
+
+    line_num = 0;
+    while (fh.good()) {
+        read_line(fh, &line, &size);
+
+	if (!fh.good() && strlen(line) == 0)
+	    continue;
+
+	parse_tsv(line, parts);
+
+        if (parts.size() != num_snps_fields && parts.size() != num_snps_fields - 2) {
+            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+            return 0;
+        }
+
+	samp_id = atoi(parts[1].c_str()); 
+        id      = atoi(parts[2].c_str());
+
+	snp         = new SNP;
+	snp->col    = atoi(parts[3].c_str());
+	snp->lratio = atof(parts[4].c_str());
+	snp->rank_1 = parts[5].at(0);
+	snp->rank_2 = parts[6].at(0);
+
+	if (parts.size() == 9) {
+	    snp->rank_3 = parts[7].length() == 0 ? 0 : parts[7].at(0);
+	    snp->rank_4 = parts[8].length() == 0 ? 0 : parts[8].at(0);
+	}
+
+        if (snpres.count(id) == 0) {
+	    snpr = new SNPRes(samp_id, id);
+	    snpres[id] = snpr;
+        }
+	snpres[id]->snps.push_back(snp);
+
+        line_num++;
+    }
+
+    fh.close();
+    delete [] line;
+
+    return 1;
+}
+
 #endif // __SQL_UTILITIES_H__

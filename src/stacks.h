@@ -300,6 +300,22 @@ public:
     }
 };
 
+class SNPRes {
+public:
+    int   sample_id;
+    int   tag_id;
+    vector<SNP *> snps;
+
+    SNPRes(int samp_id, int tag_id) { 
+	this->sample_id = samp_id; 
+	this->tag_id    = tag_id;
+    }
+    ~SNPRes() { 
+	for (uint i = 0; i < this->snps.size(); i++)
+	    delete this->snps[i];
+    }
+};
+
 bool bp_compare(Locus *, Locus *);
 
 #endif // __STACKS_H__

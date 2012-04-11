@@ -489,7 +489,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     //cerr << "  P Allele: " << p_allele << "; Q Allele: " << q_allele << "\n";
 
     //
-    // Calculate obaserved genotype frequencies.
+    // Calculate observed genotype frequencies.
     //
     double num_indv = 0.0;
     double obs_het  = 0.0;

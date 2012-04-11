@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2012, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -46,6 +46,7 @@ int       progeny_limit   = 1;
 bool      corrections     = false;
 bool      expand_id       = false;
 bool      sql_out         = false;
+bool      vcf_out         = false;
 bool      genomic_out     = false;
 bool      kernel_fst      = false;
 int       min_stack_depth = 0;
@@ -74,7 +75,8 @@ int main (int argc, char* argv[]) {
     #endif
 
     vector<pair<int, string> > files;
-    build_file_list(files, pop_indexes);
+    if (!build_file_list(files, pop_indexes))
+	exit(1);
 
     if (wl_file.length() > 0) {
 	load_marker_list(wl_file, whitelist);
@@ -208,6 +210,12 @@ int main (int argc, char* argv[]) {
     //
     if (sql_out)
 	write_sql(catalog, pmap);
+
+    //
+    // Output data in Variant Call Format (VCF)
+    //
+    if (vcf_out)
+	write_vcf(catalog, pmap, psum, samples, sample_ids);
 
     //
     // Output the observed haplotypes.
@@ -910,7 +918,6 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
 	fh << "Marker\t";
     fh << "Cnt\t";
 
-    map<int, string>::iterator s;
     for (int i = 0; i < pmap->sample_cnt(); i++) {
 	fh << samples[pmap->rev_sample_index(i)];
 	if (i < pmap->sample_cnt() - 1) 
@@ -975,8 +982,9 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
     return 0;
 }
 
-int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
-
+int 
+write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) 
+{
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".markers.tsv";
     string file = in_path + pop_name.str();
@@ -1032,6 +1040,402 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     return 0;
 }
 
+int 
+write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum, map<int, string> &samples, vector<int> &sample_ids) 
+{
+    //
+    // Write a VCF file as defined here: http://www.1000genomes.org/node/101
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".vcf";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing population data to VCF file '" << file << "'\n";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening VCF file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Load SNP data so that model likelihoods can be output to VCF file.
+    //
+    cerr << "Loading SNP data for " << samples.size() << " samples.\n";
+    map<int, CLocus *>::iterator cit;
+    map<int, SNPRes *>::iterator sit;
+    CLocus *loc;
+    Datum  *datum;
+
+    for (uint i = 0; i < sample_ids.size(); i++) {
+	map<int, SNPRes *> snpres;
+	load_snp_calls(in_path + samples[sample_ids[i]], snpres);
+
+    	for (cit = catalog.begin(); cit != catalog.end(); cit++) {
+    	    loc = cit->second;
+    	    datum = pmap->datum(loc->id, sample_ids[i]);
+
+    	    if (datum != NULL && snpres.count(datum->id)) {
+		for (uint j = 0; j < snpres[datum->id]->snps.size(); j++)
+		    datum->snps.push_back(snpres[datum->id]->snps[j]);
+		snpres[datum->id]->snps.clear();
+    	    }
+    	}
+
+	for (sit = snpres.begin(); sit != snpres.end(); sit++)
+	    delete sit->second;
+    }
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%Y%m%d", timeinfo);
+
+    //
+    // Output the header.
+    //
+    fh << "##fileformat=VCFv4.0\n"
+       << "##fileDate=" << date << "\n"
+       << "##source=\"Stacks v" << VERSION << "\"\n"
+       << "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n"
+       << "##INFO=<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">\n"
+       << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
+       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
+       << "##FORMAT=<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">\n"
+       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
+       << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
+
+    for (int i = 0; i < pmap->sample_cnt(); i++)
+	fh << "\t" << samples[pmap->rev_sample_index(i)];
+    fh << "\n";    
+
+    map<string, vector<CLocus *> >::iterator it;
+    Datum  **d;
+    LocSum **s;
+    int      len, bp, gt_1, gt_2, num_indv;
+    double   p;
+    int      pop_cnt = psum->pop_cnt();
+    bool     fixed, plimit;
+    char     ref, alt, p_allele, q_allele, p_str[32], q_str[32];
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint pos = 0; pos < it->second.size(); pos++) {
+	    loc = it->second[pos];
+
+	    s = psum->locus(loc->id);
+	    len = strlen(loc->con);
+
+	    for (uint i = 0; i < loc->snps.size(); i++) {
+		uint col = loc->snps[i]->col;
+
+		if (!tally_ref_alleles(s, pop_cnt, col, ref, alt))
+		    continue;
+
+		fixed    = true;
+		plimit   = true;
+		num_indv = 0;
+		p        = 0.0;
+		for (int j = 0; j < pop_cnt; j++) {
+		    //
+		    // Sum the number of individuals examined at this locus across populations.
+		    //
+		    num_indv += s[j]->nucs[col].num_indv;
+		}
+
+		for (int j = 0; j < pop_cnt; j++) {
+		    //
+		    // Sum the most frequent allele across populations.
+		    //
+		    if (s[j]->nucs[col].p_nuc == ref)
+			p += s[j]->nucs[col].p * (s[j]->nucs[col].num_indv / num_indv);
+		    else 
+			p += (1 - s[j]->nucs[col].p) * (s[j]->nucs[col].num_indv / num_indv);
+
+		    if (s[j]->nucs[col].num_indv < progeny_limit) 
+			plimit = false;
+		    if (s[j]->nucs[col].pi != 0) 
+			fixed = false;
+		}
+
+		// 
+		// If this site is fixed in all populations, or below the minimum 
+		// sample limit in any population, don't output it.
+		//
+		if (fixed || !plimit) 
+		    continue;
+
+		sprintf(p_str, "%0.3f", p);
+		sprintf(q_str, "%0.3f", 1 - p);
+
+		bp = loc->loc.strand == plus ? loc->loc.bp + col : loc->loc.bp - (len - col);
+
+		fh << loc->loc.chr << "\t" << bp << "\t" << loc->id << "\t"
+		   << ref        << "\t"                       // REFerence allele
+		   << alt        << "\t"                       // ALTernate allele
+		   << "."        << "\t"                       // QUAL
+		   << "PASS"     << "\t"                       // FILTER
+		   << "NS="      << num_indv << ";"            // INFO
+		   << "AF="      << p_str << ":" << q_str << ";" << "\t" // INFO
+		   << "GT:DP:GL" << "\t";                     // FORMAT
+
+		d = pmap->locus(loc->id);
+
+		for (int j = 0; j < pmap->sample_cnt(); j++) {
+		    fh << "\t";
+
+		    if (d[j] == NULL) {
+			//
+			// Data does not exist.
+			//
+			fh << ".:0:.,.,.";
+		    } else if (d[j]->model[col] == 'U') {
+			//
+			// Data exists, but the model call was uncertain.
+			//
+			fh << ".:" << d[j]->tot_depth << ":.,.,.";
+		    } else {
+			//
+			// Tally up the nucleotide calls.
+			//
+			tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
+
+			if (p_allele == 0 && q_allele == 0) {
+			    // More than two potential alleles.
+			    fh << ".:" << d[j]->tot_depth << ":.,.,.";
+			} else if (p_allele == 0) {
+			    gt_1 = q_allele == ref ? 0 : 1;
+			    fh << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
+			} else if (q_allele == 0) {
+			    gt_1 = p_allele == ref ? 0 : 1;
+			    fh << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
+			} else {
+			    gt_1 = p_allele == ref ? 0 : 1;
+			    gt_2 = q_allele == ref ? 0 : 1;
+			    fh << gt_1 << "|" << gt_2 << ":" << d[j]->tot_depth;
+			    //
+			    // Find the heterozygous SNP call for this column and output it.
+			    //
+			    int  snp_index = -1;
+			    uint k;
+			    for (k = 0; k < d[j]->snps.size(); k++)
+				if (d[j]->snps[k]->col == col) {
+				    snp_index = k;
+				    break;
+				}
+			    if (snp_index >= 0) {
+				fh << ":.," << d[j]->snps[k]->lratio << ",.";
+			    } else {
+				cerr << "Warning, unable to locate SNP call for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
+				fh << ":.,.,.";
+			    }
+			}
+		    }
+		}
+		fh << "\n";
+	    }
+	}
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int 
+tally_ref_alleles(LocSum **s, int pop_cnt, int snp_index, char &p_allele, char &q_allele) 
+{
+    int  nucs[4] = {0};
+    char nuc[2];
+
+    for (int j = 0; j < pop_cnt; j++) {
+	nuc[0] = 0;
+	nuc[1] = 0;
+        nuc[0] = s[j]->nucs[snp_index].p_nuc;
+        nuc[1] = s[j]->nucs[snp_index].q_nuc;
+
+	for (uint k = 0; k < 2; k++) 
+	    switch(nuc[k]) {
+	    case 'A':
+	    case 'a':
+		nucs[0]++;
+		break;
+	    case 'C':
+	    case 'c':
+		nucs[1]++;
+		break;
+	    case 'G':
+	    case 'g':
+		nucs[2]++;
+		break;
+	    case 'T':
+	    case 't':
+		nucs[3]++;
+		break;
+	    }
+    }
+
+    //
+    // Determine how many alleles are present at this position in this population.
+    // We cannot deal with more than two alternative alleles, if there are more than two
+    // in a single population, print a warning and exclude this nucleotide position.
+    //
+    int i;
+    int allele_cnt = 0;
+    for (i = 0; i < 4; i++)
+	if (nucs[i] > 0) allele_cnt++;
+
+    if (allele_cnt > 2) {
+	p_allele = 0;
+	q_allele = 0;
+	return 0;
+    }
+
+    //
+    // Record which nucleotide is the P allele and which is the Q allele.
+    //
+    p_allele = 0;
+    q_allele = 0;
+
+    i = 0;
+    while (p_allele == 0 && i < 4) {
+	if (nucs[i] > 0) {
+	    switch(i) {
+	    case 0:
+		p_allele = 'A';
+		break;
+	    case 1:
+		p_allele = 'C';
+		break;
+	    case 2:
+		p_allele = 'G';
+		break;
+	    case 3:
+		p_allele = 'T';
+		break;
+	    }
+	}
+	i++;
+    }
+    while (q_allele == 0 && i < 4) {
+	if (nucs[i] > 0) {
+	    switch(i) {
+	    case 1:
+		q_allele = 'C';
+		break;
+	    case 2:
+		q_allele = 'G';
+		break;
+	    case 3:
+		q_allele = 'T';
+		break;
+	    }
+	}
+	i++;
+    }
+
+    return 1;
+}
+
+int 
+tally_observed_haplotypes(vector<char *> &obshap, int snp_index, char &p_allele, char &q_allele) 
+{
+    int  nucs[4] = {0};
+    char nuc;
+
+    //
+    // Pull each allele for this SNP from the observed haplotype.
+    //
+    for (uint j = 0; j < obshap.size(); j++) {
+        nuc = obshap[j][snp_index];
+
+	switch(nuc) {
+	case 'A':
+	case 'a':
+	    nucs[0]++;
+	    break;
+	case 'C':
+	case 'c':
+	    nucs[1]++;
+	    break;
+	case 'G':
+	case 'g':
+	    nucs[2]++;
+	    break;
+	case 'T':
+	case 't':
+	    nucs[3]++;
+	    break;
+	}
+    }
+
+    //
+    // Determine how many alleles are present at this position in this population.
+    // We cannot deal with more than two alternative alleles, if there are more than two
+    // in a single population, print a warning and exclude this nucleotide position.
+    //
+    int i;
+    int allele_cnt = 0;
+    for (i = 0; i < 4; i++)
+	if (nucs[i] > 0) allele_cnt++;
+
+    if (allele_cnt > 2) {
+	p_allele = 0;
+	q_allele = 0;
+	return -1;
+    }
+
+    //
+    // Record which nucleotide is the P allele and which is the Q allele.
+    //
+    p_allele = 0;
+    q_allele = 0;
+
+    i = 0;
+    while (p_allele == 0 && i < 4) {
+	if (nucs[i] > 0) {
+	    switch(i) {
+	    case 0:
+		p_allele = 'A';
+		break;
+	    case 1:
+		p_allele = 'C';
+		break;
+	    case 2:
+		p_allele = 'G';
+		break;
+	    case 3:
+		p_allele = 'T';
+		break;
+	    }
+	}
+	i++;
+    }
+    while (q_allele == 0 && i < 4) {
+	if (nucs[i] > 0) {
+	    switch(i) {
+	    case 1:
+		q_allele = 'C';
+		break;
+	    case 2:
+		q_allele = 'G';
+		break;
+	    case 3:
+		q_allele = 'T';
+		break;
+	    }
+	}
+	i++;
+    }
+
+    return 0;
+}
+
 int load_marker_list(string path, set<int> &list) {
     char     line[id_len];
     ifstream fh(path.c_str(), ifstream::in);
@@ -1067,14 +1471,18 @@ int load_marker_list(string path, set<int> &list) {
 
 int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes) {
     char   line[max_len];
+    char   pop_id_str[id_len];
     vector<string> parts;
+    string f;
 
     if (pmap_path.length() > 0) {
+	cerr << "Parsing population map.\n";
+
 	ifstream fh(pmap_path.c_str(), ifstream::in);
 
 	if (fh.fail()) {
 	    cerr << "Error opening population map '" << pmap_path << "'\n";
-	    exit(1);
+	    return 0;
 	}
 
 	while (fh.good()) {
@@ -1089,11 +1497,36 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
 	    //
 	    parse_tsv(line, parts);
 
-	    files.push_back(make_pair(atoi(parts[1].c_str()), parts[0]));
+	    if (parts.size() != 2) {
+		cerr << "Population map is not formated correctly: expecting two, tab separated columns, found " << parts.size() << ".\n";
+		return 0;
+	    }
+
+	    strncpy(pop_id_str, parts[1].c_str(), id_len);
+	    for (int i = 0; i < id_len && pop_id_str[i] != '\0'; i++)
+		if (!isdigit(pop_id_str[i])) {
+		    cerr << "Population map is not formated correctly: expecting numerical ID in second column, found '" << parts[1] << "'.\n";
+		    return 0;
+		}
+
+	    //
+	    // Test that file exists before adding to list.
+	    //
+	    f = in_path.c_str() + parts[0] + ".matches.tsv";
+	    ifstream test_fh(f.c_str(), ifstream::in);
+
+	    if (test_fh.fail()) {
+		cerr << " Unable to open " << f.c_str() << ", excluding it from the analysis.\n";
+	    } else {
+		test_fh.close();
+		files.push_back(make_pair(atoi(parts[1].c_str()), parts[0]));
+	    }
 	}
 
 	fh.close();
     } else {
+	cerr << "No population map specified, building file list.\n";
+
 	//
 	// If no population map is specified, read all the files from the Stacks directory.
 	//
@@ -1127,6 +1560,7 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
     if (files.size() == 0) {
 	cerr << "Unable to locate any input files to process within '" << in_path << "'\n";
+	return 0;
     }
 
     //
@@ -1166,7 +1600,7 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
 	cerr << "\n";
     }
 
-    return 0;
+    return 1;
 }
 
 bool compare_pop_map(pair<int, string> a, pair<int, string> b) {
@@ -1192,6 +1626,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"version",     no_argument,       NULL, 'v'},
             {"corr",        no_argument,       NULL, 'c'},
             {"sql",         no_argument,       NULL, 's'},
+            {"vcf",         no_argument,       NULL, 'V'},
             {"genomic",     no_argument,       NULL, 'g'},
             {"kernel_fst",  no_argument,       NULL, 'k'},
 	    {"window_size", required_argument, NULL, 'w'},
@@ -1210,7 +1645,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hkgvcsib:p:t:o:r:M:P:m:e:W:B:w:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hkVgvcsib:p:t:o:r:M:P:m:e:W:B:w:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1243,6 +1678,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 's':
 	    sql_out = true;
+	    break;
+	case 'V':
+	    vcf_out = true;
 	    break;
 	case 'g':
 	    genomic_out = true;
@@ -1308,7 +1746,7 @@ void version() {
 
 void help() {
     std::cerr << "populations " << VERSION << "\n"
-              << "populations -b batch_id -P path -M path [-r min] [-m min] [-g] [-B blacklist] [-W whitelist] [-s] [-e renz] [-v] [-h]" << "\n"
+              << "populations -b batch_id -P path -M path [-r min] [-m min] [-g] [-V] [-B blacklist] [-W whitelist] [-s] [-e renz] [-v] [-h]" << "\n"
 	      << "  b: Batch ID to examine when exporting from the catalog.\n"
 	      << "  P: path to the Stacks output files.\n"
 	      << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
@@ -1316,6 +1754,7 @@ void help() {
 	      << "  m: specify a minimum stack depth required before exporting a locus in a particular individual.\n"
 	      << "  s: output a file to import results into an SQL database.\n"
 	      << "  g: output each nucleotide position in all population members to a file.\n"
+	      << "  V: output results in Variant Call Format (VCF).\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
 	      << "  W: specify a file containign Whitelisted markers to include in the export.\n"
 	      << "  e: restriction enzyme, required if generating 'genomic' output.\n"
