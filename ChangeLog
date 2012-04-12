@@ -1,19 +1,25 @@
 Stacks 0.999 - April 11, 2012
 --------------------------------
 	Feature: Added support for the 1000 Genomes Project, Variant Call Format (VCF) in the populations
-	program. (http://www.1000genomes.org/node/101). This file output includes the genotype call for 
+	program. (http://www.1000genomes.org/node/101). This file output includes the genotype calls for 
 	every individual for each locus, allele depth, and likelihood values for heterozygous SNP calls.
 
 	Feature: implemented a three-bit compression scheme so that uncalled bases ('N's) can be stored 
-	in compress format in pstacks. Other stacks programs currently use two-bit compression which is 
-	more compact, but can only store plain nucleotides ('A', 'C', 'G', 'T').
+	in compressed format in pstacks. Other stacks programs currently use two-bit compression which is 
+	more compact, but can only store plain nucleotides ('A', 'C', 'G', 'T'). This restores earlier behavior
+	that allowed Ns in pstacks prior to the implementation of the two-bit compression scheme.
 
-	Bugfix: added lots of error checkign code to populations so it properly handles 
+	Bugfix: the populations program was only outputing sites to the summary statistics file (*.sumstats.tsv) 
+	if they were heterozygous in a population. This could give the impression that the same site may be
+	absent in other populations when in reality it was simply fixed in the other populations. Now, if a 
+	site is heterozygous in any of the populations, it will be output for all populations.
+	Bugfix: added lots of error checking code to populations so it properly handles 
 	poorly formatted population maps, missing files, and similar errors.
 	Bugfix: added uncalled bases ('n', 'N', and '.') to the reverse complement function (reads 
 	aligned on the negative strand and processed by pstacks will be stored reverse complement.
 	Bugfix: updated the PHP code as well as export_sql.pl to properly use the new filters for 
 	chromosome, basepair, as well as lower and upper ranges to various filters.
+	Other: Removed the deprecated markers.pl, genotypes.pl, and process_radtags.pl programs from the distribution.
 
 Stacks 0.998 - January 06, 2012
 --------------------------------
