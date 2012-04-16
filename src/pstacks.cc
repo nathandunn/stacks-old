@@ -52,7 +52,8 @@ int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
-    cerr << "Min depth of coverage to report a stack: " << min_stack_cov << "\n";
+    cerr << "Min depth of coverage to report a stack: " << min_stack_cov << "\n"
+	 << "Model type: " << (model_type == snp ? "SNP" : "Fixed") << "\n";
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -216,7 +217,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
                     //
                     vector<SNP *>::iterator s;
                     for (s = mtag->snps.begin(); s != mtag->snps.end(); s++) {
-			if ((*s)->type != snp_type_hom)
+			if ((*s)->type == snp_type_unk)
 			    con.replace((*s)->col, 1, "N");
                     }
                 }
