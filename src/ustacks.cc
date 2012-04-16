@@ -73,7 +73,8 @@ int main (int argc, char* argv[]) {
 	 << "Max distance allowed between stacks: " << max_utag_dist << "\n"
 	 << "Max distance allowed to align secondary reads: " << max_rem_dist << "\n"
 	 << "Deleveraging algorithm: " << (deleverage_stacks ? "enabled" : "disabled") << "\n"
-	 << "Removal algorithm: " << (remove_rep_stacks ? "enabled" : "disabled") << "\n";
+	 << "Removal algorithm: " << (remove_rep_stacks ? "enabled" : "disabled") << "\n"
+	 << "Model type: " << (model_type == snp ? "SNP" : "Fixed") << "\n";
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -410,7 +411,8 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
                     //
                     vector<SNP *>::iterator s;
                     for (s = mtag->snps.begin(); s != mtag->snps.end(); s++) {
-                        con.replace((*s)->col, 1, "N");
+			if ((*s)->type == snp_type_unk)
+			    con.replace((*s)->col, 1, "N");
                     }
                 }
             }
