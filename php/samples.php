@@ -20,7 +20,7 @@
 require_once("header.php");
 
 $batch_id = isset($_GET['id']) ? $_GET['id'] : 0;
-$database = isset($_GET['db']) ? $_GET['db'] : "radtags";
+$database = isset($_GET['db']) ? $_GET['db'] : "";
 
 // Connect to the database
 $db = db_connect($database);
@@ -46,7 +46,7 @@ $db['count_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['count_sth'], __FILE__, __LINE__);
 
 $query = 
-    "SELECT COUNT(snps) AS count FROM tag_index " .
+    "SELECT snps FROM tag_index " .
     "WHERE batch_id=? AND sample_id=? AND snps>0";
 $db['snp_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['snp_sth'], __FILE__, __LINE__);
@@ -80,8 +80,9 @@ echo <<< EOQ
 <tr>
   <th style="width: 10%;">Id</th>
   <th style="width: 20%;">Type</th>
-  <th style="width: 20%;">Unique Stacks</th>
-  <th style="width: 20%;">SNPs Found</th>
+  <th style="width: 16%;">Unique Stacks</th>
+  <th style="width: 12%;">Polymorphic Loci</th>
+  <th style="width: 12%;">SNPs Found</th>
   <th style="width: 30%;">Source</th>
 </tr>
 
@@ -91,6 +92,8 @@ $result = $db['samp_sth']->execute($batch_id);
 check_db_error($result, __FILE__, __LINE__);
 
 while ($row = $result->fetchRow()) {
+    $snps = 0;
+    $poly = 0;
 
     // Query the database to determine how many tags belong to this sample.
     $count_res = $db['count_sth']->execute(array($batch_id, $row['id']));
@@ -101,14 +104,18 @@ while ($row = $result->fetchRow()) {
     // Query the database to find how many SNPs were found in this sample.
     $count_res = $db['snp_sth']->execute(array($batch_id, $row['id']));
     check_db_error($count_res, __FILE__, __LINE__);
-    $count_row = $count_res->fetchRow();
-    $snps = $count_row['count'];
+
+    while ($count_row = $count_res->fetchRow()) {
+      $snps += $count_row['snps'];
+      $poly += $count_row['snps'] > 0 ? 1 : 0;
+    }
 
     print
 	"<tr>\n" .
 	"  <td><a href=\"$root_path/tags.php?db=$database&batch_id=$batch[id]&sample_id=$row[id]\">$row[id]</a></td>\n" .
 	"  <td>" . ucfirst($row['type']) . "</td>\n" .
 	"  <td>" . $count . "</td>\n" .
+	"  <td>" . $poly . "</td>\n" .
 	"  <td>" . $snps . "</td>\n" .
 	"  <td>" . $row['file'] . "</td>\n" .
 	"</tr>\n";
