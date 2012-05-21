@@ -52,8 +52,10 @@ bool   recover      = false;
 bool   interleave   = false;
 bool   discards     = false;
 bool   overhang     = false;
+bool   check_radtag = true;
 int    truncate_seq = 0;
 int    barcode_size = 0;
+int    barcode_dist = 2;
 double win_size     = 0.15;
 int    score_limit  = 10;
 int    num_threads  = 1;
@@ -403,24 +405,26 @@ int process_singlet(map<string, ofstream *> &fhs, Read *href, map<string, map<st
     	//
     	// Is the RADTAG intact?
     	//
-	bool rad_cor = false;
-        for (int i = 0; i < renz_cnt[enz]; i++) {
-	    p = href->seq + barcode_size;
+	if (check_radtag) {
+	    bool rad_cor = false;
+	    for (int i = 0; i < renz_cnt[enz]; i++) {
+		p = href->seq + barcode_size;
 
-    	    if (strncmp(p, renz[enz][i], renz_len[enz]) == 0)
-    		rad_cor = true;
-        }
-        if (rad_cor == false) {
-    	    //
-    	    // Try to correct the RAD-Tag.
-    	    //
-    	    if (!correct_radtag(href, counter)) {
-    		barcode_log[href->barcode]["noradtag"]++;
-    		counter["noradtag"]++;
-    		href->retain = 0;
-    		return 0;
-    	    }
-    	}
+		if (strncmp(p, renz[enz][i], renz_len[enz]) == 0)
+		    rad_cor = true;
+	    }
+	    if (rad_cor == false) {
+		//
+		// Try to correct the RAD-Tag.
+		//
+		if (!correct_radtag(href, counter)) {
+		    barcode_log[href->barcode]["noradtag"]++;
+		    counter["noradtag"]++;
+		    href->retain = 0;
+		    return 0;
+		}
+	    }
+	}
     } else {
 	barcode_log[href->barcode]["total"]++;
     }
@@ -453,18 +457,23 @@ int correct_barcode(map<string, ofstream *> &fhs, Read *href, map<string, long> 
 	return 0;
 
     //
-    // If the barcode sequence is off by no more than a single nucleotide, correct it.
+    // The barcode_dist variable specifies how far apart in sequence space barcodes are. If barcodes
+    // are off by two nucleotides in sequence space, than we can correct barcodes that have a single
+    // sequencing error. 
+    // 
+    // If the barcode sequence is off by no more than barcodes_dist-1 nucleotides, correct it.
     //
     int d, close;
     string barcode, b, old_barcode;
     map<string, ofstream *>::iterator it;
 
+    int num_errs = barcode_dist - 1;
     close = 0;
 
     for (it = fhs.begin(); it != fhs.end(); it++) {
 	d = dist(it->first.c_str(), href->barcode); 
 
-	if (d <= 1) {
+	if (d <= num_errs) {
 	    close++;
 	    b = it->first;
 	    break;
@@ -955,6 +964,8 @@ int parse_command_line(int argc, char* argv[]) {
             {"recover",      no_argument,       NULL, 'r'},
 	    {"discards",     no_argument,       NULL, 'D'},
 	    {"paired",       no_argument,       NULL, 'P'},
+	    {"disable_rad_check", no_argument,  NULL, 'R'},
+	    {"barcode_dist", required_argument, NULL, 'B'},
 	    {"infile_type",  required_argument, NULL, 'i'},
 	    {"outfile_type", required_argument, NULL, 'y'},
 	    {"file",         required_argument, NULL, 'f'},
@@ -974,7 +985,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqrDPi:y:f:o:t:e:b:1:2:p:s:w:E:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvRcqrDPB:i:y:f:o:t:e:b:1:2:p:s:w:E:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -1024,6 +1035,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'P':
 	    paired = true;
 	    break;
+	case 'B':
+	    barcode_dist = atoi(optarg);
+	    break;
 	case 'o':
 	    out_path = optarg;
 	    break;
@@ -1047,6 +1061,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'D':
 	    discards = true;
+	    break;
+	case 'R':
+	    check_radtag = false;
 	    break;
  	case 'w':
 	    win_size = atof(optarg);
@@ -1140,7 +1157,7 @@ void version() {
 
 void help() {
     std::cerr << "process_radtags " << VERSION << "\n"
-              << "process_radtags [-f in_file | -p in_dir | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-i type] [-y type] [-c] [-q] [-r] [-E encoding] [-t len] [-D] [-w size] [-s lim] [-h]\n"
+              << "process_radtags [-f in_file | -p in_dir [-P] | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-i type] [-y type] [-c] [-q] [-r] [-E encoding] [-t len] [-D] [-w size] [-s lim] [-h]\n"
 	      << "  f: path to the input file if processing single-end seqeunces.\n"
 	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, or 'fastq' (default 'fastq').\n"
 	      << "  p: path to a directory of files.\n"
@@ -1159,7 +1176,9 @@ void help() {
 	      << "  D: capture discarded reads to a file.\n"
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
-	      << "  h: display this help messsage." << "\n\n";
+	      << "  h: display this help messsage." << "\n\n"
+	      << "  --disable_rad_check: disable checking if the RAD site is intact.\n"
+	      << "  --barcode_dist: provide the distace between barcodes to allow for barcode rescue (default 2)\n";
 
     exit(0);
 }

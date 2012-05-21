@@ -42,7 +42,7 @@ string    bl_file;
 string    wl_file;
 string    enz;
 double    sigma           = 150000;
-int       progeny_limit   = 1;
+int       progeny_limit   = 0;
 bool      corrections     = false;
 bool      expand_id       = false;
 bool      sql_out         = false;
@@ -584,7 +584,10 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 		    map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum) 
 {
     stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".sumstats_" << progeny_limit << ".tsv";
+    pop_name << "batch_" << batch_id << ".sumstats";
+    if (progeny_limit > 0)
+	pop_name << "_" << progeny_limit;
+    pop_name << ".tsv";
 
     string file = in_path + pop_name.str();
 
@@ -657,6 +660,8 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
 		if (!fixed && plimit) {
 		    for (int j = 0; j < pop_cnt; j++) {
+
+			if (s[j]->nucs[i].num_indv == 0) continue;
 
 			sprintf(fisstr, "%0.10f", s[j]->nucs[i].Fis);
 
@@ -1182,7 +1187,7 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
 		   << "PASS"     << "\t"                       // FILTER
 		   << "NS="      << num_indv << ";"            // INFO
 		   << "AF="      << p_str << ":" << q_str << ";" << "\t" // INFO
-		   << "GT:DP:GL" << "\t";                     // FORMAT
+		   << "GT:DP:GL";                              // FORMAT
 
 		d = pmap->locus(loc->id);
 
@@ -1210,14 +1215,14 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
 			    fh << ".:" << d[j]->tot_depth << ":.,.,.";
 			} else if (p_allele == 0) {
 			    gt_1 = q_allele == ref ? 0 : 1;
-			    fh << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
+			    fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
 			} else if (q_allele == 0) {
 			    gt_1 = p_allele == ref ? 0 : 1;
-			    fh << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
+			    fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
 			} else {
 			    gt_1 = p_allele == ref ? 0 : 1;
 			    gt_2 = q_allele == ref ? 0 : 1;
-			    fh << gt_1 << "|" << gt_2 << ":" << d[j]->tot_depth;
+			    fh << gt_1 << "/" << gt_2 << ":" << d[j]->tot_depth;
 			    //
 			    // Find the heterozygous SNP call for this column and output it.
 			    //
