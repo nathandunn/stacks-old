@@ -366,6 +366,8 @@ table.genotypes td {
     padding: 3px;
     border: thin solid #aaaaaa;
     text-align: center;
+    width: 10%;
+    word-wrap: break-word;
 }
 
 table.genotypes td a:hover {
@@ -432,4 +434,9 @@ div.gloc {
     font-size: smaller;
     font-family: bitstream vera sans, arial, sans;
     clear: both;
+}
+
+div.haplotype {
+    max-width: 80px;
+    word-wrap: break-word;
 }

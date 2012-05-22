@@ -149,9 +149,9 @@ if (isset($row['geno_map'])) {
   asort($map);
   foreach ($map as $hapl => $geno) {
       print 
-	"  <span style=\"color: " . $alleles[$hapl] . ";\">" . 
+	"  <div class=\"haplotype\" style=\"color: " . $alleles[$hapl] . ";\">" . 
 	"<acronym title=\"Genotype\">$geno</acronym> : " . 
-	"<acronym title=\"Observed Haplotype\">$hapl</acronym></span><br />\n";
+	"<acronym title=\"Observed Haplotype\">$hapl</acronym></div>\n";
   }
 } else {
     $result = $db['all_sth']->execute(array($batch_id, $tag_id));
@@ -280,7 +280,7 @@ foreach ($htypes as $sample => $match) {
     }
 
     print
-        "<div id=\"hap_{$i}\">$hap_str</div><div id=\"dep_{$i}\" style=\"display: none;\">$dep_str</div>$gen_str" .
+        "<div class=\"haplotype\" id=\"hap_{$i}\">$hap_str</div><div id=\"dep_{$i}\" style=\"display: none;\">$dep_str</div>$gen_str" .
         "</td>\n";
 
     if ($i % $num_cols == 0)
