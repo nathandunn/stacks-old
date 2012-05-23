@@ -887,6 +887,24 @@ sub parse_command_line {
 	$filters{'ebp'} = 500000000 if (!defined($filters{'ebp'}));
     }
 
+    if (defined($filters{'snps_l'}) || defined($filters{'snps_u'})) {
+	$filters{'snps'} = 1;
+	$filters{'snps_l'} = 1 if (!defined($filters{'snps_l'}));
+	$filters{'snps_u'} = 100 if (!defined($filters{'snps_u'}));
+    }
+
+    if (defined($filters{'alle_l'}) || defined($filters{'alle_u'})) {
+	$filters{'alle'} = 1;
+	$filters{'alle_l'} = 1 if (!defined($filters{'alle_l'}));
+	$filters{'alle_u'} = 100 if (!defined($filters{'alle_u'}));
+    }
+
+    if (defined($filters{'pare_l'}) || defined($filters{'pare_u'})) {
+	$filters{'pare'} = 1;
+	$filters{'pare_l'} = 1 if (!defined($filters{'pare_l'}));
+	$filters{'pare_u'} = 1000 if (!defined($filters{'pare_u'}));
+    }
+
     if ($out_file eq "") {
 	print STDERR "You must specify the file to write data to!\n";
 	usage();

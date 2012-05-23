@@ -10,7 +10,8 @@ create table samples (
        batch_id	 int unsigned not null,
        sample_id int unsigned not null,
        type      enum('parent', 'progeny', 'sample'),
-       file      varchar(128)
+       file      varchar(128),
+       pop_id	 int unsigned not null
 );
 
 create table catalog_tags (
@@ -150,7 +151,7 @@ create table matches (
        catalog_id  int unsigned not null,
        sample_id   int unsigned not null,
        tag_id      int unsigned not null,
-       allele	   varchar(32),
+       allele	   varchar(256),
        depth       int unsigned not null,
        INDEX	   batch_id_index (batch_id),
        INDEX	   catalog_id_index (catalog_id),
@@ -165,9 +166,9 @@ create table markers (
        type       enum('aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'),
        progeny    int unsigned not null default 0,
        max_pct    float,
-       ratio      varchar(256),
+       ratio      varchar(512),
        f          float,
-       geno_map   varchar(256)
+       geno_map   text
 );
 
 create table sequence (

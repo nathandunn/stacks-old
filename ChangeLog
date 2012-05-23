@@ -1,3 +1,25 @@
+Stacks 0.9992 - May 22, 2012
+--------------------------------
+	Bugfix: if using a population map to calculate Fst in the populations program, some individuals could
+	be inadvertently attributed to the wrong populations, due to a mismatch between the indices of the 
+	population map (PopMap.h) and the indexes recorded for making the population summary (PopSum.h).
+	Bugfix: export_sql.pl wasn't properly using the new filters that use a lower and upper bound (snps, alle, 
+	pare).
+	Feature: improved how values are generated for web-based filters, allowing for larger populations/maps.
+	Improved HTML rendering for extremely long haplotype strings.
+	Bugfix: corrected alleles to be output as "unphased" in VCF file; corrected homozygotes to be printed as 
+	diploid values, e.g. '0/0' or '1/1' instead of just '0'.
+	Bugfix: changed reporting of SNPs on samples.php page to specify total number of SNPs and the number
+	of polymorphic loci (containing one or more SNPs).
+	Bugfix: an extra tab was being placed in the VCF output file.
+	Feature: added flag to process_radtags to disable checking the integrity of the RAD site in each raw 
+	read. Added a flag to allow more nucleotide mismatches in the barcode when rescuing barcodes.
+
+Stacks 0.9991 - April 17, 2012
+--------------------------------
+	Bugfix: replaced bit-rotted code causing all nucleotides to be masked as 'N' when fixed model engaged 
+	on ustacks.
+
 Stacks 0.999 - April 11, 2012
 --------------------------------
 	Feature: Added support for the 1000 Genomes Project, Variant Call Format (VCF) in the populations

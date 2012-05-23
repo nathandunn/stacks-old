@@ -131,6 +131,8 @@ int main (int argc, char* argv[]) {
 	sample_ids.push_back(m[0]->sample_id);
     }
 
+    sort(sample_ids.begin(), sample_ids.end());
+
     //
     // Create the population map
     //

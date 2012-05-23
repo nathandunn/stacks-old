@@ -120,9 +120,8 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 			     vector<vector<CatMatch *> > &matches,
 			     int min_stack_depth=0) {
     //
-    // Sort the samples by ID, create a mapping to what index they will be stored in the array
+    // Record the array position of each sample that we will load.
     //
-    sort(sample_ids.begin(), sample_ids.end());
     for (uint i = 0; i < sample_ids.size(); i++) {
 	this->sample_order[sample_ids[i]] = i;
 	this->rev_sample_order[i]         = sample_ids[i];
