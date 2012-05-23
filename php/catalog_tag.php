@@ -149,7 +149,7 @@ if (isset($row['geno_map'])) {
   asort($map);
   foreach ($map as $hapl => $geno) {
       print 
-	"  <div class=\"haplotype\" style=\"color: " . $alleles[$hapl] . ";\">" . 
+	"  <div class=\"haplotype_def\" style=\"color: " . $alleles[$hapl] . ";\">" . 
 	"<acronym title=\"Genotype\">$geno</acronym> : " . 
 	"<acronym title=\"Observed Haplotype\">$hapl</acronym></div>\n";
   }
