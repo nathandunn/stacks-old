@@ -759,6 +759,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 				   << k << "\t" 
 				   << pop_1 << "\t" 
 				   << pop_2 << "\n";
+			    delete pair;
 			    continue;
 			}
 
@@ -873,6 +874,8 @@ kernel_smoothed_fst(vector<PopPair *> &pairs) {
 
 	c->wfst = weighted_fst / sum;
     }
+
+    delete [] weights;
 
     return 0;
 }

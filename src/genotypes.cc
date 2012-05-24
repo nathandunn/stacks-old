@@ -2207,7 +2207,7 @@ void help() {
 	      << "  r: minimum number of progeny required to print a marker.\n"
 	      << "  c: make automated corrections to the data.\n"
 	      << "  P: path to the Stacks output files.\n"
-	      << "  t: map type to write. 'CP', 'DH', 'F2' and 'BC1' are the currently supported map types.\n"
+	      << "  t: map type to write. 'CP', 'DH', 'F2', 'BC1' and 'GEN' are the currently supported map types.\n"
 	      << "  o: output file type to write, 'joinmap', 'rqtl', and 'genomic' are currently supported.\n"
 	      << "  m: specify a minimum stack depth required before exporting a locus in a particular individual.\n"
 	      << "  s: output a file to import results into an SQL database.\n"
