@@ -1,5 +1,6 @@
 Stacks 0.9992 - May 22, 2012
 --------------------------------
+	Bugfix: fixed massive memory leak in Fst calcuations in populations program.
 	Bugfix: if using a population map to calculate Fst in the populations program, some individuals could
 	be inadvertently attributed to the wrong populations, due to a mismatch between the indices of the 
 	population map (PopMap.h) and the indexes recorded for making the population summary (PopSum.h).
