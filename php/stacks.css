@@ -380,6 +380,14 @@ table.genotypes span.title {
     color: #aaaaaa;
 }
 
+table.genotypes td.pop_id {
+    height: 1.5em;
+    text-align: left;
+    font-size: 12pt;
+    padding-left: 10px;
+    background-color: #eeeeee;
+}
+
 span.corrected {
     font-weight: bold;
     color: #870214;
