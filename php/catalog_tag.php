@@ -54,7 +54,7 @@ $marker_types = array('ab/--' => array('aa', 'bb', '-'),
 // Prepare some SQL queries
 //
 $query = 
-    "SELECT samples.id, samples.sample_id, samples.type, file, tag_id, allele, depth " . 
+    "SELECT samples.id, samples.sample_id, samples.type, file, tag_id, allele, depth, pop_id " . 
     "FROM matches " . 
     "JOIN samples ON (matches.sample_id=samples.id) " . 
     "WHERE matches.batch_id=? AND catalog_id=? ORDER BY samples.id";
@@ -181,11 +181,15 @@ while ($row = $result->fetchRow()) {
                'file'   => $row['file'], 
                'allele' => $row['allele'], 
                'tag_id' => $row['tag_id'],
-	       'depth'  => $row['depth']);
-    if (!isset($htypes[$row['file']]))
-        $htypes[$row['file']] = array();
+	       'depth'  => $row['depth'],
+	       'pop_id' => $row['pop_id']);
+    if (!isset($htypes[$row['pop_id']]))
+        $htypes[$row['pop_id']] = array();
 
-    array_push($htypes[$row['file']], $a);
+    if (!isset($htypes[$row['pop_id']][$row['file']]))
+        $htypes[$row['pop_id']][$row['file']] = array();
+
+    array_push($htypes[$row['pop_id']][$row['file']], $a);
 }
 
 //
@@ -223,79 +227,95 @@ echo <<< EOQ
     $gtype_str
   </td>
 </tr>
-<tr>
 
 EOQ;
 
 $i        = 0;
-$num_cols = count($htypes) < 10 ? count($htypes) : 10;
+$num_pops = count($htypes);
+$num_cols = 0;
 
-foreach ($htypes as $sample => $match) {
-    $i++;
+foreach ($htypes as $pop_id => $population)
+  $num_cols = count($population) > $num_cols ? count($population) : $num_cols;
+$num_cols = $num_cols < 10 ? $num_cols : 10;
 
-    print 
-        "  <td>" .
-        "<span class=\"title\">" . ucfirst(str_replace("_", " ", $match[0]['file'])) . "</span><br />\n";
+ksort($htypes);
 
-    $hap_strs = array();
-    $dep_strs = array();
-
-    foreach ($match as $m) {
-        $a = 
-            "<a target=\"blank\" href=\"$root_path/tag.php?db=$database&batch_id=$batch_id&sample_id=$m[id]&tag_id=$m[tag_id]\" " . 
-            "title=\"#$m[tag_id]\" style=\"color: " . $alleles[$m['allele']] . ";\">$m[allele]</a>";
-        array_push($hap_strs, $a);
-        $a = 
-            "<a target=\"blank\" href=\"$root_path/tag.php?db=$database&batch_id=$batch_id&sample_id=$m[id]&tag_id=$m[tag_id]\" " . 
-            "title=\"#$m[tag_id]\" style=\"color: " . $alleles[$m['allele']] . ";\">$m[depth]</a>";
-        array_push($dep_strs, $a);
+foreach ($htypes as $pop_id => $population) {
+    print "<tr>\n";
+    if ($num_pops > 1) {
+      print 
+	"  <td class=\"pop_id\" colspan=\"$num_cols\">Population $pop_id</td>\n" .
+	"</tr>\n";
     }
 
-    $hap_str = implode(" / ", $hap_strs);
-    $dep_str = implode(" / ", $dep_strs);
+    foreach ($population as $sample => $match) {
+        $i++;
 
-    if (count($gtypes) > 0 && isset($gtypes[$sample])) {
+	print 
+	  "  <td>" .
+	  "<span class=\"title\">" . ucfirst(str_replace("_", " ", $match[0]['file'])) . "</span><br />\n";
 
-        $id      = "gtype_" . $batch_id . "_" . $tag_id . "_" . $gtypes[$sample]['id'];
-	$url     = "$root_path/correct_genotype.php?db=$database&batch_id=$batch_id&tag_id=$tag_id&sample_id=" . $gtypes[$sample]['id'];
-	$jscript = "correct_genotype('$id', '$url')";
-	$blur_js = "cancel_correction('$id')";
+	$hap_strs = array();
+	$dep_strs = array();
 
-	if (strlen($gtypes[$sample]['corrected']) > 0) {
-  	    $sel = generate_element_select($id, $marker_types[$gtypes[$sample]['marker']], strtolower($gtypes[$sample]['corrected']), $jscript, $blur_js);
-	    $genotype = "<span class=\"corrected\">" . $gtypes[$sample]['corrected'] . "</span>";
-	} else {
-	    $sel = generate_element_select($id, $marker_types[$gtypes[$sample]['marker']], strtolower($gtypes[$sample]['genotype']), $jscript, $blur_js);
-	    $genotype = $gtypes[$sample]['genotype'];
+	foreach ($match as $m) {
+	    $a = 
+	      "<a target=\"blank\" href=\"$root_path/tag.php?db=$database&batch_id=$batch_id&sample_id=$m[id]&tag_id=$m[tag_id]\" " . 
+	      "title=\"#$m[tag_id]\" style=\"color: " . $alleles[$m['allele']] . ";\">$m[allele]</a>";
+	    array_push($hap_strs, $a);
+	    $a = 
+	      "<a target=\"blank\" href=\"$root_path/tag.php?db=$database&batch_id=$batch_id&sample_id=$m[id]&tag_id=$m[tag_id]\" " . 
+	      "title=\"#$m[tag_id]\" style=\"color: " . $alleles[$m['allele']] . ";\">$m[depth]</a>";
+	    array_push($dep_strs, $a);
 	}
 
-      $gen_str = 
-	"<div id=\"gen_{$i}\" style=\"display: none;\">" .
-        "<div id=\"{$id}_div\"><a onclick=\"toggle_correction('$id')\">" . $genotype . "</a></div>\n" . 
-        "  <div id=\"{$id}_sel\" style=\"display: none;\">\n" . 
-        $sel . 
-        "  </div>";
-    } else {
-      $gen_str = "";
-    }
+	$hap_str = implode(" / ", $hap_strs);
+	$dep_str = implode(" / ", $dep_strs);
 
-    print
-        "<div class=\"haplotype\" id=\"hap_{$i}\">$hap_str</div><div id=\"dep_{$i}\" style=\"display: none;\">$dep_str</div>$gen_str" .
-        "</td>\n";
+	if (count($gtypes) > 0 && isset($gtypes[$sample])) {
 
-    if ($i % $num_cols == 0)
-        print 
+	  $id      = "gtype_" . $batch_id . "_" . $tag_id . "_" . $gtypes[$sample]['id'];
+	  $url     = "$root_path/correct_genotype.php?db=$database&batch_id=$batch_id&tag_id=$tag_id&sample_id=" . $gtypes[$sample]['id'];
+	  $jscript = "correct_genotype('$id', '$url')";
+	  $blur_js = "cancel_correction('$id')";
+
+	  if (strlen($gtypes[$sample]['corrected']) > 0) {
+  	      $sel = generate_element_select($id, $marker_types[$gtypes[$sample]['marker']], strtolower($gtypes[$sample]['corrected']), $jscript, $blur_js);
+	      $genotype = "<span class=\"corrected\">" . $gtypes[$sample]['corrected'] . "</span>";
+	  } else {
+	      $sel = generate_element_select($id, $marker_types[$gtypes[$sample]['marker']], strtolower($gtypes[$sample]['genotype']), $jscript, $blur_js);
+	      $genotype = $gtypes[$sample]['genotype'];
+	  }
+
+	  $gen_str = 
+	    "<div id=\"gen_{$i}\" style=\"display: none;\">" .
+	    "<div id=\"{$id}_div\"><a onclick=\"toggle_correction('$id')\">" . $genotype . "</a></div>\n" . 
+	    "  <div id=\"{$id}_sel\" style=\"display: none;\">\n" . 
+	    $sel . 
+	    "  </div>";
+	} else {
+	  $gen_str = "";
+	}
+
+	print
+	  "<div class=\"haplotype\" id=\"hap_{$i}\">$hap_str</div><div id=\"dep_{$i}\" style=\"display: none;\">$dep_str</div>$gen_str" .
+	  "</td>\n";
+
+	if ($i % $num_cols == 0)
+	  print 
             "</tr>\n" .
             "<tr>\n";
-}
+    }
 
-while ($i % $num_cols != 0) {
-    print "  <td></td>\n";
-    $i++;
+    while ($i % $num_cols != 0) {
+      print "  <td></td>\n";
+      $i++;
+    }
+
+    print "</tr>\n";
 }
 
 echo <<< EOQ
-</tr>
 </table>
 </td>
 </tr>
