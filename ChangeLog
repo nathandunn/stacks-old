@@ -5,7 +5,7 @@ Stacks 0.9992 - May 22, 2012
 	be inadvertently attributed to the wrong populations, due to a mismatch between the indices of the 
 	population map (PopMap.h) and the indexes recorded for making the population summary (PopSum.h).
 	Feature: population map can now be specified to denovo_map.pl and ref_map.pl. This data is 
-	populated into the database and samples are display according to population in the web interface.
+	populated into the database and samples are displayed according to their population in the web interface.
 	Feature: improved denovo_map.pl and ref_map.pl to check for existence of input files.
 	Bugfix: export_sql.pl wasn't properly using the new filters that use a lower and upper bound (snps, alle, 
 	pare).
