@@ -53,6 +53,8 @@ my @parents;
 my @progeny;
 my @samples;
 
+my $cmd_str = $0 . " " . join(" ", @ARGV);
+
 parse_command_line();
 
 check_input_files(\@parents, \@progeny, \@samples);
@@ -111,7 +113,9 @@ $ppath   = length($popmap_path) > 0 ? "-M $popmap_path" : "";
 $log = "$out_path/ref_map.log";
 open($log_fh, ">$log") or die("Unable to open log file '$log'; $!\n");
 
-print $log_fh "ref_map.pl started at ", strftime("%Y-%m-%d %H:%M:%S",(localtime(time))), "\n";
+print $log_fh 
+    "ref_map.pl started at ", strftime("%Y-%m-%d %H:%M:%S",(localtime(time))), "\n",
+    $cmd_str, "\n";
 
 foreach $sample (@parents, @progeny, @samples) {
     my ($ftype, $pfile) = "";
@@ -300,7 +304,6 @@ sub parse_population_map {
 	}
 
 	$ids{$parts[0]} = $parts[1];
-	$pops{$parts[1]}++;
     }
 
     foreach $path (@{$samples}) {
@@ -317,6 +320,7 @@ sub parse_population_map {
 	}
 
 	push(@{$pop_ids}, $ids{$file});
+	$pops{$ids{$file}}++;
     }
 
     print STDERR "Parsed population map: ", scalar(@{$samples}), " files in ", scalar(keys %pops), " populations.\n";
