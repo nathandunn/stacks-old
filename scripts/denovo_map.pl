@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
 #
 # This file is part of Stacks.
 #
@@ -30,13 +30,14 @@
 #
 
 use strict;
+use POSIX;
 use constant stacks_version => "_VERSION_";
 
-my $debug        = 0;
 my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
 my $sql          = 1;
 my $exe_path     = "_BINDIR_";
 my $out_path     = "";
+my $popmap_path  = "";
 my $db           = "";
 my $data_type    = "map";
 my $rep_tags     = 0;
@@ -58,6 +59,8 @@ my @progeny;
 my @samples;
 
 parse_command_line();
+
+check_input_files(\@parents, \@progeny, \@samples);
 
 my $cnf = (-e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_config;
 
@@ -84,18 +87,23 @@ if ($sql) {
     `mysql --defaults-file=$cnf $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'"`;
 }
 
-my (@types, $type);
+my (@types, $type, @pop_ids, $pop);
+
+parse_population_map(\@samples, \@pop_ids) if ($data_type eq "population");
+
 foreach $parent (@parents) {
     push(@types, "parent");
+    push(@pop_ids, 1);
 }
 foreach $parent (@progeny) {
     push(@types, "progeny");
+    push(@pop_ids, 1);
 }
 foreach $parent (@samples) {
     push(@types, "sample");
 }
 
-my (@results, $minc, $minrc, $mind, $minsd, $rrep, $cmd, $cscale, $threads, $fuzzym, $dshapl);
+my (@results, $minc, $minrc, $mind, $minsd, $rrep, $cmd, $cscale, $threads, $fuzzym, $dshapl, $ppath);
 
 $minc    = $min_cov     > 0 ? "-m $min_cov"     : "";
 $minrc   = $min_rcov    > 0 ? "-m $min_rcov"    : $minc;
@@ -105,12 +113,15 @@ $dshapl  = $dis_shapl   > 0 ? "-H"              : "";
 $cscale  = $cov_scale   > 0 ? "-S $cov_scale"   : "";
 $threads = $num_threads > 0 ? "-p $num_threads" : "";
 $fuzzym  = $fuzzy_match > 0 ? "-n $fuzzy_match" : "";
+$ppath   = length($popmap_path) > 0 ? "-M $popmap_path" : "";
 
 #
 # Open the log file
 #
 $log = "$out_path/denovo_map.log";
 open($log_fh, ">$log") or die("Unable to open log file '$log'; $!\n");
+
+print $log_fh "denovo_map.pl started at ", strftime("%Y-%m-%d %H:%M:%S",(localtime(time))), "\n";
 
 foreach $sample (@parents, @progeny, @samples) {
     my ($ftype, $pfile) = "";
@@ -132,17 +143,19 @@ foreach $sample (@parents, @progeny, @samples) {
     }
 
     $type = shift @types;
+    $pop  = shift @pop_ids;
 
     printf("Identifying unique stacks; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
     printf($log_fh "Identifying unique stacks; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
 
     if ($sql) {
-	`mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile'"`;
+	`mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop"`;
 	@results = `mysql --defaults-file=$cnf $db -N -B -e "SELECT id FROM samples WHERE sample_id=$i AND batch_id=$batch_id AND type='$type' AND file='$pfile'"`;
 	chomp $results[0];
 	$sample_id = $results[0];
     } else {
-	print STDERR "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile'\"\n";
+	print STDERR "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop\"\n";
+	print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop\"\n";
     }
 
     $map{$pfile} = $sample_id;
@@ -168,13 +181,13 @@ foreach $sample (@parents, @progeny, @samples) {
     print $log_fh @results;
 
     $file = "$out_path/$pfile" . ".tags.tsv";
-    import_sql_file($file, "unique_tags");
+    import_sql_file($log_fh, $file, "unique_tags");
 
     $file = "$out_path/$pfile" . ".snps.tsv";
-    import_sql_file($file, "snps");
+    import_sql_file($log_fh, $file, "snps");
 
     $file = "$out_path/$pfile" . ".alleles.tsv";
-    import_sql_file($file, "alleles");
+    import_sql_file($log_fh, $file, "alleles");
 
     $i++;
 
@@ -208,13 +221,13 @@ print $log_fh @results;
 
 print STDERR "Importing catalog to MySQL database\n";
 $file = "$out_path/$cat_file" . ".catalog.tags.tsv";
-import_sql_file($file, "catalog_tags");
+import_sql_file($log_fh, $file, "catalog_tags");
 
 $file = "$out_path/$cat_file" . ".catalog.snps.tsv";
-import_sql_file($file, "catalog_snps");
+import_sql_file($log_fh, $file, "catalog_snps");
 
 $file = "$out_path/$cat_file" . ".catalog.alleles.tsv";
-import_sql_file($file, "catalog_alleles");
+import_sql_file($log_fh, $file, "catalog_alleles");
 
 #
 # Match parents and progeny to the catalog
@@ -243,7 +256,7 @@ foreach $sample (@parents, @progeny, @samples) {
     print $log_fh @results;
 
     $file = "$out_path/" . $pfile . ".matches.tsv";
-    import_sql_file($file, "matches");
+    import_sql_file($log_fh, $file, "matches");
 
     $i++;
 }
@@ -259,26 +272,26 @@ if ($data_type eq "map") {
     print $log_fh @results;
 
     $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($file, "markers");
+    import_sql_file($log_fh, $file, "markers");
 
     $file = "$out_path/batch_" . $batch_id . ".genotypes_1.txt";
-    import_sql_file($file, "catalog_genotypes");
+    import_sql_file($log_fh, $file, "catalog_genotypes");
 } else {
-    $cmd = $exe_path . "populations -b $batch_id -P $out_path -r 1 -s  2>&1";
+    $cmd = $exe_path . "populations -b $batch_id -P $out_path -r 1 -s $ppath 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd`;
     print $log_fh @results;
 
     $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($file, "markers");
+    import_sql_file($log_fh, $file, "markers");
 }
-
 
 if ($sql) {
     #
     # Index the radtags database
     #
+    print STDERR "Indexing the database...\n";
     $cmd = $exe_path . "index_radtags.pl -D $db -t -c 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
@@ -286,15 +299,107 @@ if ($sql) {
     print $log_fh @results;
 }
 
+print $log_fh "denovo_map.pl completed at ", strftime("%Y-%m-%d %H:%M:%S",(localtime(time))), "\n";
+
 close($log_fh);
 
+sub parse_population_map {
+    my ($samples, $pop_ids) = @_;
+
+    my ($fh, @parts, $line, %ids, %pops, $file, $path);
+
+    open($fh, "<$popmap_path") or die("Unable to open population map, '$popmap_path', $!\n");
+
+    while ($line = <$fh>) {
+	chomp $line;
+	@parts = split(/\t/, $line);
+
+	if (scalar(@parts) > 2) {
+	    die("Unable to parse population map, '$popmap_path' (map should contain no more than two columns).\n");
+	}
+
+	if ($parts[1] !~ /\d+/) {
+	    die("Unable to parse population map, '$popmap_path' (population ID in second column should be an integer).\n");
+	}
+
+	$ids{$parts[0]} = $parts[1];
+	$pops{$parts[1]}++;
+    }
+
+    foreach $path (@{$samples}) {
+	my ($prefix, $suffix) = ($path =~ /^(.+)\.(.+)$/);
+
+	if ($prefix =~ /^.*\/.+$/) {
+	    ($file) = ($prefix =~ /^.*\/(.+)$/);
+	} else {
+	    $file = $prefix;
+	}
+
+	if (!defined($ids{$file})) {
+	    die("Unable to find '$file' in the population map, '$popmap_path'.\n");
+	}
+
+	push(@{$pop_ids}, $ids{$file});
+    }
+
+    print STDERR "Parsed population map: ", scalar(@{$samples}), " files in ", scalar(keys %pops), " populations.\n";
+
+    close($fh);
+}
+
+sub check_input_files {
+    my ($parents, $progeny, $samples) = @_;
+
+    #
+    # Check that no duplicate files were specified.
+    #
+    my (%files, $file);
+    foreach $file (@{$parents}, @{$progeny}, @{$samples}) {
+	$files{$file}++;
+    }
+    foreach $file (keys %files) {
+	if ($files{$file} > 1) {
+	    print STDERR "A duplicate file was specified which may create undefined results, '$file'\n";
+	    usage();
+	}
+    }
+
+    #
+    # Check that all the files exist and are accessible.
+    #
+    foreach $file (@{$parents}) {
+	if (!-e $file) {
+	    print STDERR "Unable to locate parental file '$file'\n";
+	    usage();
+	}
+    }
+    print STDERR "Found ", scalar(@{$parents}), " parental file(s).\n" if (scalar(@{$parents}) > 0);
+
+    foreach $file (@{$progeny}) {
+	if (!-e $file) {
+	    print STDERR "Unable to locate progeny file '$file'\n";
+	    usage();
+	}
+    }
+    print STDERR "Found ", scalar(@{$progeny}), " progeny file(s).\n" if (scalar(@{$progeny}) > 0);
+
+    foreach $file (@{$samples}) {
+	if (!-e $file) {
+	    print STDERR "Unable to locate sample file '$file'\n";
+	    usage();
+	}
+    }
+    print STDERR "Found ", scalar(@{$samples}), " sample file(s).\n" if (scalar(@{$samples}) > 0);
+}
+
 sub import_sql_file {
-    my ($file, $table) = @_;
+    my ($log_fh, $file, $table) = @_;
 
     my (@results);
 
     @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"` if ($sql);
-    print STDERR "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results, "\n";
+    print STDERR  "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results;
+    print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results;
 }
 
 sub parse_command_line {
@@ -319,8 +424,8 @@ sub parse_command_line {
 	elsif ($_ =~ /^-a$/) { $date        = shift @ARGV; }
 	elsif ($_ =~ /^-S$/) { $sql         = 0; }
 	elsif ($_ =~ /^-B$/) { $db          = shift @ARGV; }
+	elsif ($_ =~ /^-O$/) { $popmap_path = shift @ARGV; }
        	elsif ($_ =~ /^-H$/) { $dis_shapl++; }
-	elsif ($_ =~ /^-d$/) { $debug++; }
 	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
@@ -332,7 +437,7 @@ sub parse_command_line {
     $exe_path = $exe_path . "/"          if (substr($out_path, -1) ne "/");
     $out_path = substr($out_path, 0, -1) if (substr($out_path, -1) eq "/");
 
-    if ($sql && $batch_id < 0) {
+    if ($batch_id < 0) {
 	print STDERR "You must specify a batch ID.\n";
 	usage();
     }
@@ -362,7 +467,7 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-T num_threads] [-b batch_id -D desc -a yyyy-mm-dd] [-S -i num] [-e path] [-d] [-h]
+denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-T num_threads] [-O popmap] [-B db -b batch_id -D desc -a yyyy-mm-dd] [-S -i num] [-e path] [-h]
     p: path to a FASTQ/FASTA file containing parent sequences from a mapping cross.
     r: path to a FASTQ/FASTA file containing progeny sequences from a mapping cross.
     s: path to a Bowtie/SAM file contiaining an individual sample from a population.
@@ -375,6 +480,7 @@ denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches
     t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
     H: disable calling haplotypes from secondary reads.
     T: specify the number of threads to execute.
+    O: if analyzing one or more populations, specify a pOpulation map
     B: specify a database to load data into.
     b: batch ID representing this dataset.
     D: batch description
@@ -383,7 +489,6 @@ denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches
     i: starting sample_id, this is determined automatically if database interaction is enabled.
     e: executable path, location of pipeline programs.
     h: display this help message.
-    d: turn on debug output.
 
 EOQ
 
