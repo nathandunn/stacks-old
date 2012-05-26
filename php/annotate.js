@@ -189,3 +189,83 @@ function process_correction() {
         }
     }
 }
+
+function toggle_population(id) {
+    var div_obj = document.getElementById(id + "_div"); 
+    var a_obj   = document.getElementById(id + "_pop"); 
+    var frm_obj = document.getElementById(id + "_frm"); 
+
+    // Turn ON the anchor, turn OFF the form
+    if (a_obj.style.display == "none") {
+        a_obj.style.display = "";
+        div_obj.style.display = "none";
+    }
+    // Turn OFF the anchor, turn ON the form
+    else {
+        a_obj.style.display   = "none";
+        div_obj.style.display = "";
+        frm_obj.pop_name.value  = a_obj.innerHTML;
+    }
+}
+
+function annotate_population(id) {
+    //
+    // Fetch the marker annotation
+    //
+    var form_obj = document.getElementById(id + "_frm"); 
+    var url = 
+        form_obj.url.value + "&" + 
+        "pop_name=" + escape(form_obj.pop_name.value);
+
+    // 
+    // Prepare and send XMLHttpRequest Object.
+    //
+    http_req = false;
+
+    try {
+	http_req = new XMLHttpRequest();
+    } catch(e) {
+	http_req = false;
+    }
+
+    if (http_req) {
+	http_req.onreadystatechange = process_pop_annotation;
+	http_req.open("GET", url, true);
+	http_req.send("");
+    }
+
+    toggle_population(id);
+}
+
+function process_pop_annotation() {
+    //
+    // Possible readyState values:
+    // 0 = uninitialized
+    // 1 = loading
+    // 2 = loaded
+    // 3 = interactive
+    // 4 = complete
+    //
+    if (http_req.readyState == 4) {
+
+        // Check that the status is "OK"
+        if (http_req.status == 200) {
+
+            var xml_doc = http_req.responseXML;
+            var id_obj   = xml_doc.getElementsByTagName("pop_id");
+            var name_obj = xml_doc.getElementsByTagName("text");
+            var pop_id   = id_obj[0].childNodes[0].nodeValue;
+            var txt;
+            if (name_obj[0].childNodes.length > 0)
+                txt = name_obj[0].childNodes[0].nodeValue;
+            else
+                txt = "Population " + pop_id;
+
+            var a_obj = document.getElementById(pop_id + "_pop");
+            a_obj.innerHTML = txt;
+
+        } else {
+            alert("There was a problem retrieving the XML data:\n" + http_req.statusText);
+        }
+    }
+}

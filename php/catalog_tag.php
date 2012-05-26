@@ -19,11 +19,12 @@
 //
 require_once("header.php");
 
-$database  = isset($_GET['db'])       ? $_GET['db']       : "";
-$tag_id    = isset($_GET['tag_id'])   ? $_GET['tag_id']   : 0;
-$batch_id  = isset($_GET['batch_id']) ? $_GET['batch_id'] : 0;
-$page      = isset($_GET['p'])        ? $_GET['p']        : 1;
-$per_page  = isset($_GET['pp'])       ? $_GET['pp']       : 10;
+$database   = isset($_GET['db'])       ? $_GET['db']       : "";
+$tag_id     = isset($_GET['tag_id'])   ? $_GET['tag_id']   : 0;
+$batch_id   = isset($_GET['batch_id']) ? $_GET['batch_id'] : 0;
+$batch_type = isset($_GET['type'])     ? $_GET['type']     : "map";
+$page       = isset($_GET['p'])        ? $_GET['p']        : 1;
+$per_page   = isset($_GET['pp'])       ? $_GET['pp']       : 10; 
 
 // Connect to the database
 $db = db_connect($database);
@@ -80,6 +81,12 @@ $db['map_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['map_sth'], __FILE__, __LINE__);
 
 $query = 
+    "SELECT pop_id, pop_name FROM populations " . 
+    "WHERE batch_id=?";
+$db['pop_sth'] = $db['dbh']->prepare($query);
+check_db_error($db['pop_sth'], __FILE__, __LINE__);
+
+$query = 
     "SELECT marker, catalog_genotypes.sample_id, file, " . 
     "catalog_genotypes.genotype, genotype_corrections.genotype as corrected " . 
     "FROM catalog_genotypes " . 
@@ -97,6 +104,18 @@ check_db_error($db['geno_sth'], __FILE__, __LINE__);
 
 $page_title = "Catalog RAD-Tag Viewer";
 write_compact_header($page_title);
+
+//
+// Fetch population names if available.
+//
+$pop_names = array();
+if ($batch_type == "population") {
+    $result = $db['pop_sth']->execute($batch_id);
+    check_db_error($result, __FILE__, __LINE__);
+
+    while ($row = $result->fetchRow())
+        $pop_names[$row['pop_id']] = $row['pop_name'];
+}
 
 echo <<< EOQ
 <table class="catalog">
@@ -244,7 +263,9 @@ foreach ($htypes as $pop_id => $population) {
     print "<tr>\n";
     if ($num_pops > 1) {
       print 
-	"  <td class=\"pop_id\" colspan=\"$num_cols\">Population $pop_id</td>\n" .
+	"  <td class=\"pop_id\" colspan=\"$num_cols\">";
+      print_population_name($database, $batch_id, $pop_id, $pop_names);
+      print "</td>\n" .
 	"</tr>\n";
     }
 
@@ -324,5 +345,23 @@ echo <<< EOQ
 EOQ;
 
 write_compact_footer();
+
+function print_population_name($db, $batch_id, $pop_id, $pop_names) {
+    global $root_path;
+
+    $pop_str = isset($pop_names[$pop_id]) ? $pop_names[$pop_id] : "Population $pop_id";
+
+    echo <<< EOQ
+<div class="pop_annotation" id="{$pop_id}_pop" onclick="toggle_population($pop_id)">$pop_str</div>
+<div id="{$pop_id}_div" style="display: none; font-size: small;">
+  <form id="{$pop_id}_frm">
+    <input type="hidden" name="url" value="$root_path/annotate_population.php?db=$db&batch_id=$batch_id&pop_id=$pop_id" />
+    <input type="input" size=15 name="pop_name" value="" />
+    <a onclick="annotate_population('$pop_id')">save</a>|<a onclick="toggle_population('$pop_id')">cancel</a>
+  </form>
+</div>
+
+EOQ;
+}
 
 ?>
