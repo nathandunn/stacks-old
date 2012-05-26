@@ -298,7 +298,7 @@ while ($row = $result->fetchRow()) {
 	array_push($snps, array('col' => $snp_row['col'], 'rank' => $snp_row['rank_2']));
     }
 
-    $url = "$root_path/catalog_tag.php?db=$database&batch_id=$batch_id&tag_id=$row[tag_id]";
+    $url = "$root_path/catalog_tag.php?db=$database&batch_id=$batch_id&type=$batch[type]&tag_id=$row[tag_id]";
     $annotation = strlen($row['external_id']) > 0 ? $row['external_id'] : "annotate";
 
     echo <<< EOQ

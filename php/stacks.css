@@ -388,6 +388,14 @@ table.genotypes td.pop_id {
     background-color: #eeeeee;
 }
 
+div.pop_annotation {
+    display: inline;
+}
+
+div.pop_annotation:hover {
+    cursor: pointer;
+}
+
 span.corrected {
     font-weight: bold;
     color: #870214;
@@ -457,3 +465,4 @@ div.haplotype {
     max-width: 85px;
     word-wrap: break-word;
 }
+
