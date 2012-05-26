@@ -14,6 +14,13 @@ create table samples (
        pop_id	 int unsigned not null
 );
 
+create table populations (
+       id        int unsigned not null primary key auto_increment,
+       batch_id	 int unsigned not null,
+       pop_id    int unsigned not null,
+       pop_name  varchar(128)
+);
+
 create table catalog_tags (
        id    	    int unsigned not null primary key auto_increment,
        batch_id     int unsigned not null,
