@@ -21,6 +21,40 @@ create table populations (
        pop_name  varchar(128)
 );
 
+create table sumstats (
+       batch_id	 int unsigned not null,
+       tag_id	 int unsigned not null,
+       chr	 varchar(32),
+       bp	 int unsigned default 0,
+       col	 int unsigned default 0,
+       pop_id	 int unsigned default 0,
+       n	 int unsigned default 0,
+       p	 double,
+       obs_het	 double,
+       obs_hom	 double,
+       exp_het	 double,
+       exp_hom	 double,
+       pi	 double,
+       fis	 double,
+       INDEX     batch_id_index (batch_id),
+       INDEX     tag_id_index (tag_id)
+);
+
+create table fst (
+       batch_id	 int unsigned not null,
+       tag_id	 int unsigned not null,
+       pop_id_1	 int unsigned default 0,
+       pop_id_2	 int unsigned default 0,
+       chr	 varchar(32),
+       bp	 int unsigned default 0,
+       col	 int unsigned default 0,
+       pi_o	 double,
+       fst	 double,
+       fst_s	 double,
+       INDEX     batch_id_index (batch_id),
+       INDEX     tag_id_index (tag_id)
+);
+
 create table catalog_tags (
        id    	    int unsigned not null primary key auto_increment,
        batch_id     int unsigned not null,

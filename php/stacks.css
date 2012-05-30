@@ -466,3 +466,97 @@ div.haplotype {
     word-wrap: break-word;
 }
 
+div.snps {
+    text-align: left;
+    width: 49.5%;
+    float: left;
+}
+
+div.snps span.snp, 
+div.snps span.snp_sel {
+    margin-left: 10%;
+}
+
+div.alleles {
+    width: 49.5%;
+    float: right;
+}
+
+div.alleles h3, div.snps h3 {
+    background-color: #eeeeee;
+    font-size: 12pt;
+    padding: 3px;
+    text-align: center;
+}
+
+div.sumstats {
+    clear: both;
+    padding-top: 2em;
+}
+
+table.sumstats, table.fst {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+    margin-bottom: 2em;
+}
+
+table.sumstats td, table.fst td {
+    height: 2em;
+    border: thin solid #aaa;
+    vertical-align: middle;
+}
+
+table.sumstats td.pop_id, 
+table.fst td.pop_id {
+    width: 5%;
+    background-color: #eeeeee;
+    border-left: 0px;
+}
+
+table.sumstats td.key, 
+table.fst td.key {
+    border-top: 0px;
+    background-color: #eeeeee;
+    padding: 2px;
+}
+
+table.fst td.diagonal {
+    background-color: #888;
+}
+
+table.fst td.fst, 
+table.fst_key td.fst {
+    background-color: #aee2f3;
+}
+
+table.fst td.pi, 
+table.fst_key td.pi {
+    background-color: #fdc4b8;
+}
+
+table.fst_key {
+    font-size: 10pt;
+    width: 100%;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+table.fst_key td {
+    font-weight: bold;
+    width: 45%;
+}
+
+span.snp {
+    font-weight: normal;
+}
+
+span.snp:hover {
+    color: #a93535; 
+    cursor: pointer;
+}
+
+span.snp_sel {
+    font-weight: bold;
+    text-decoration: underline;
+}

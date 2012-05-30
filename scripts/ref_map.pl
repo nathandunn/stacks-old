@@ -84,9 +84,9 @@ if ($sql) {
     `mysql --defaults-file=$cnf $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'"`;
 }
 
-my (@types, $type, @pop_ids, $pop);
+my (@types, $type, @pop_ids, $pop, %pops);
 
-parse_population_map(\@samples, \@pop_ids) if ($data_type eq "population");
+parse_population_map(\@samples, \@pop_ids, \%pops) if ($data_type eq "population");
 
 foreach $parent (@parents) {
     push(@types, "parent");
@@ -100,8 +100,9 @@ foreach $parent (@samples) {
     push(@types, "sample");
 }
 
-my (@results, $cmd, $threads, $fuzzym, $minc, $ppath);
+my (@results, $cmd, $threads, $fuzzym, $minc, $ppath, $pop_cnt);
 
+$pop_cnt = scalar(keys %pops);
 $minc    = $min_cov     > 0 ? "-m $min_cov"     : "";
 $threads = $num_threads > 0 ? "-p $num_threads" : "";
 $fuzzym  = $fuzzy_match > 0 ? "-n $fuzzy_match" : "";
@@ -162,13 +163,13 @@ foreach $sample (@parents, @progeny, @samples) {
     print $log_fh @results;
 
     $file = "$out_path/$pfile" . ".tags.tsv";
-    import_sql_file($log_fh, $file, "unique_tags");
+    import_sql_file($log_fh, $file, "unique_tags", 0);
 
     $file = "$out_path/$pfile" . ".snps.tsv";
-    import_sql_file($log_fh, $file, "snps");
+    import_sql_file($log_fh, $file, "snps", 0);
 
     $file = "$out_path/$pfile" . ".alleles.tsv";
-    import_sql_file($log_fh, $file, "alleles");
+    import_sql_file($log_fh, $file, "alleles", 0);
 
     $i++;
 
@@ -202,13 +203,13 @@ print $log_fh @results;
 
 print STDERR "Importing catalog to MySQL database\n";
 $file = "$out_path/$cat_file" . ".catalog.tags.tsv";
-import_sql_file($log_fh, $file, "catalog_tags");
+import_sql_file($log_fh, $file, "catalog_tags", 0);
 
 $file = "$out_path/$cat_file" . ".catalog.snps.tsv";
-import_sql_file($log_fh, $file, "catalog_snps");
+import_sql_file($log_fh, $file, "catalog_snps", 0);
 
 $file = "$out_path/$cat_file" . ".catalog.alleles.tsv";
-import_sql_file($log_fh, $file, "catalog_alleles");
+import_sql_file($log_fh, $file, "catalog_alleles", 0);
 
 #
 # Match parents and progeny to the catalog
@@ -237,7 +238,7 @@ foreach $sample (@parents, @progeny, @samples) {
     print $log_fh @results;
 
     $file = "$out_path/" . $pfile . ".matches.tsv";
-    import_sql_file($log_fh, $file, "matches");
+    import_sql_file($log_fh, $file, "matches", 0);
 
     $i++;
 }
@@ -253,10 +254,10 @@ if ($data_type eq "map") {
     print $log_fh @results;
 
     $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($log_fh, $file, "markers");
+    import_sql_file($log_fh, $file, "markers", 0);
 
     $file = "$out_path/batch_" . $batch_id . ".genotypes_1.txt";
-    import_sql_file($log_fh, $file, "catalog_genotypes");
+    import_sql_file($log_fh, $file, "catalog_genotypes", 0);
 } else {
     $cmd = $exe_path . "populations -b $batch_id -P $out_path -r 1 -s $ppath 2>&1";
     print STDERR  "$cmd\n";
@@ -265,7 +266,21 @@ if ($data_type eq "map") {
     print $log_fh @results;
 
     $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($log_fh, $file, "markers");
+    import_sql_file($log_fh, $file, "markers", 0);
+
+    $file = "$out_path/batch_" . $batch_id . ".sumstats.tsv";
+    import_sql_file($log_fh, $file, "sumstats", $pop_cnt+1);
+
+    #
+    # Import the Fst files.
+    #
+    my ($m, $n);
+    foreach $m (sort keys %pops) {
+	foreach $n (sort keys %pops) {
+	    $file = "$out_path/batch_" . $batch_id . ".fst_" . $m . "-" . $n . ".tsv";
+	    import_sql_file($log_fh, $file, "fst", 1);
+	}
+    }
 }
 
 if ($sql) {
@@ -285,9 +300,9 @@ print $log_fh "refmap_map.pl completed at ", strftime("%Y-%m-%d %H:%M:%S",(local
 close($log_fh);
 
 sub parse_population_map {
-    my ($samples, $pop_ids) = @_;
+    my ($samples, $pop_ids, $pops) = @_;
 
-    my ($fh, @parts, $line, %ids, %pops, $file, $path);
+    my ($fh, @parts, $line, %ids, $file, $path);
 
     open($fh, "<$popmap_path") or die("Unable to open population map, '$popmap_path', $!\n");
 
@@ -320,10 +335,10 @@ sub parse_population_map {
 	}
 
 	push(@{$pop_ids}, $ids{$file});
-	$pops{$ids{$file}}++;
+	$pops->{$ids{$file}}++;
     }
 
-    print STDERR "Parsed population map: ", scalar(@{$samples}), " files in ", scalar(keys %pops), " populations.\n";
+    print STDERR "Parsed population map: ", scalar(@{$samples}), " files in ", scalar(keys %{$pops}), " populations.\n";
 
     close($fh);
 }
@@ -374,13 +389,15 @@ sub check_input_files {
 }
 
 sub import_sql_file {
-    my ($log_fh, $file, $table) = @_;
+    my ($log_fh, $file, $table, $skip_lines) = @_;
 
-    my (@results);
+    my (@results, $ignore);
 
-    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"` if ($sql);
-    print STDERR  "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results;
-    print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results;
+    $ignore = "IGNORE $skip_lines LINES" if ($skip_lines > 0);
+
+    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore"` if ($sql);
+    print STDERR  "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
+    print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
 }
 
 sub parse_command_line {
@@ -415,6 +432,10 @@ sub parse_command_line {
     if ($batch_id < 0) {
 	print STDERR "You must specify a batch ID.\n";
 	usage();
+    }
+
+    if ($sql > 0 && length($date) == 0) {
+	$date = strftime("%Y-%m-%d", (localtime(time)));
     }
 
     if (scalar(@parents) > 0 && scalar(@samples) > 0) {
