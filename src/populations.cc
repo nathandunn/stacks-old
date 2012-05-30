@@ -624,9 +624,11 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     char     fisstr[32];
     bool     fixed, plimit;
 
-    fh << "# Locus ID" << "\t"
+    fh << "# Batch ID " << "\t"
+       << "Locus ID" << "\t"
        << "Chr"      << "\t"
        << "BP"       << "\t"
+       << "Col"      << "\t"
        << "Pop ID"   << "\t"
        << "N"        << "\t"
        << "P"        << "\t"
@@ -665,9 +667,11 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
 			sprintf(fisstr, "%0.10f", s[j]->nucs[i].Fis);
 
-			fh << loc->id << "\t"
+			fh << batch_id << "\t"
+			   << loc->id << "\t"
 			   << loc->loc.chr << "\t"
 			   << loc->loc.bp + i << "\t"
+			   << i << "\t"
 			   << psum->rev_pop_index(j) << "\t"
 			   << s[j]->nucs[i].num_indv << "\t"
 			   << s[j]->nucs[i].p << "\t"
@@ -721,7 +725,10 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
 	    cerr << "Calculating Fst for populations " << pop_1 << " and " << pop_2 << " and writing it to file, '" << file << "'\n";
 
-	    fh << "# Locus ID"   << "\t"
+	    fh << "# Batch ID"   << "\t"
+	       << "Locus ID"     << "\t"
+	       << "Pop 1 ID"     << "\t"
+	       << "Pop 2 ID"     << "\t"
 	       << "Chr"          << "\t"
 	       << "BP"           << "\t"
 	       << "Column"       << "\t"
@@ -753,7 +760,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			if (pair == NULL) {
 			    pairs.push_back(NULL);
 			    incompatible_loci++;
-			    log_fh << loc->id << "\t"
+			    log_fh << batch_id << "\t"
+				   << loc->id << "\t"
 				   << loc->loc.chr << "\t"
 				   << loc->loc.bp + k << "\t"
 				   << k << "\t" 
@@ -800,7 +808,10 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			sprintf(fst_str,  "%0.10f", pairs[i]->fst);
 			sprintf(wfst_str, "%0.10f", pairs[i]->wfst);
 
-			fh << loc->id << "\t"
+			fh << batch_id << "\t" 
+			   << loc->id << "\t"
+			   << pop_1 << "\t"
+			   << pop_2 << "\t"
 			   << loc->loc.chr << "\t"
 			   << loc->loc.bp + k << "\t"
 			   << k << "\t"

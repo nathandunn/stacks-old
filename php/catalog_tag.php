@@ -87,6 +87,18 @@ $db['pop_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['pop_sth'], __FILE__, __LINE__);
 
 $query = 
+    "SELECT col, pop_id, n, p, obs_het, obs_hom, exp_het, exp_hom, pi, fis FROM sumstats " . 
+    "WHERE batch_id=? AND tag_id=?";
+$db['stats_sth'] = $db['dbh']->prepare($query);
+check_db_error($db['stats_sth'], __FILE__, __LINE__);
+
+$query = 
+    "SELECT col, pop_id_1, pop_id_2, pi_o, fst, fst_s FROM fst " . 
+    "WHERE batch_id=? AND tag_id=?";
+$db['fst_sth'] = $db['dbh']->prepare($query);
+check_db_error($db['stats_sth'], __FILE__, __LINE__);
+
+$query = 
     "SELECT marker, catalog_genotypes.sample_id, file, " . 
     "catalog_genotypes.genotype, genotype_corrections.genotype as corrected " . 
     "FROM catalog_genotypes " . 
@@ -120,27 +132,39 @@ if ($batch_type == "population") {
 echo <<< EOQ
 <table class="catalog">
 <tr>
-  <th style="width: 15%;">SNPs</th>
-  <th style="width: 15%;">Alleles</th>
-  <th style="width: 70%;">Matching Samples</th>
-</tr>
-<tr>
 
 EOQ;
 
 $result = $db['snp_sth']->execute(array($batch_id, $tag_id));
 check_db_error($result, __FILE__, __LINE__);
 
-print "  <td>\n";
+echo <<< EOQ
+  <td style="width: 30%;">
+  <div id="snps" class="snps">
+  <h3>SNPs</h3>
+
+EOQ;
+
+$i = 0;
 while ($row = $result->fetchRow()) {
     $snp = "$row[rank_1]/$row[rank_2]";
     if (strlen($row['rank_3']) > 0) $snp .= "/$row[rank_3]";
     if (strlen($row['rank_4']) > 0) $snp .= "/$row[rank_4]";
 
-    print "    Column: $row[col]; $snp<br />\n";
+    if ($i == 0) {
+      print "    <input type=\"hidden\" id=\"snp_index\" value=\"$row[col]\" />\n";
+    }
+    $class = $i == 0 ? "class=\"snp_sel\"" : "class=\"snp\"";
+    print "    <span $class id=\"{$row[col]}_snp\" onclick=\"toggle_sumstats(this, $row[col])\">Column: $row[col]; $snp</span><br />\n";
+    $i++;
 }
-print "  </td>\n" .
-      "  <td>\n";
+
+echo <<< EOQ
+  </div>
+  <div class="alleles">
+  <h3>Alleles</h3>
+
+EOQ;
 
 $alleles = array();
 $i       = 0;
@@ -185,7 +209,22 @@ if (isset($row['geno_map'])) {
     }
 }
 
-print "  </td>\n";
+echo <<< EOQ
+  </div>
+  <div class="sumstats">
+
+EOQ;
+
+if ($batch_type == "population") {
+    print_sumstats($db, $pop_names);
+    print_fst($db, $pop_names);
+}
+
+echo <<< EOQ
+  </div>
+</td>
+
+EOQ;
 
 $htypes = array();
 $gtypes = array();
@@ -219,8 +258,8 @@ check_db_error($result, __FILE__, __LINE__);
 
 while ($row = $result->fetchRow()) {
     $gtypes[$row['file']] = array('id'        => $row['sample_id'],
-				  'file'      => $row['file'], 
-				  'genotype'  => $row['genotype'], 
+				  'file'      => $row['file'],
+				  'genotype'  => $row['genotype'],
 				  'corrected' => $row['corrected'],
 				  'marker'    => $row['marker']);
 }
@@ -233,7 +272,7 @@ else
   $gtype_str = "";
 
 echo <<< EOQ
-<td style="text-align: right;">
+<td class="matches" style="text-align: right;">
 
 <table id="locus_gtypes" class="genotypes">
 <tr>
@@ -265,7 +304,8 @@ foreach ($htypes as $pop_id => $population) {
       print 
 	"  <td class=\"pop_id\" colspan=\"$num_cols\">";
       print_population_name($database, $batch_id, $pop_id, $pop_names);
-      print "</td>\n" .
+      print 
+	"</td>\n" .
 	"</tr>\n";
     }
 
@@ -345,6 +385,174 @@ echo <<< EOQ
 EOQ;
 
 write_compact_footer();
+
+function print_sumstats($db, $pop_names) {
+    global $batch_id, $tag_id;
+
+    $result = $db['stats_sth']->execute(array($batch_id, $tag_id));
+    check_db_error($result, __FILE__, __LINE__);
+
+    $stats = array();
+    $pops  = array();
+
+    while ($row = $result->fetchRow()) {
+        $a = array('col'     => $row['col'],
+		   'n'       => $row['n'],
+		   'p'       => $row['p'],
+		   'obs_het' => $row['obs_het'],
+		   'obs_hom' => $row['obs_hom'],
+		   'exp_het' => $row['exp_het'],
+		   'exp_hom' => $row['exp_hom'],
+		   'pi'      => $row['pi'],
+		   'fis'     => $row['fis'],
+		   'pop_id'  => $row['pop_id']);
+
+	if (!isset($stats[$row['col']]))
+  	    $stats[$row['col']] = array();
+
+	$stats[$row['col']][$row['pop_id']] = $a;
+
+	$pops[$row['pop_id']] = $row['pop_id'];
+    }
+
+    ksort($stats);
+    ksort($pops);
+
+    $index = count($pop_names) == 0 ? $pops : $pop_names;
+
+    $n = 0;
+    foreach ($stats as $col => $stat) {    
+      $style = $n == 0 ? "" : "style=\"display: none;\"";
+
+      print
+	"    <table id=\"{$col}_sumstats\" class=\"sumstats\" $style>\n" .
+	  "    <tr>\n" .
+	  "      <td class=\"key\" style=\"background-color: #fff; border-left: 0px;\">&nbsp;</td>\n" .
+	  "      <td class=\"key\">P</td>\n" .
+	  "      <td class=\"key\">N</td>\n" .
+	  "      <td class=\"key\">Obs Het</td>\n" .
+	  "      <td class=\"key\">Obs Hom</td>\n" .
+	  "      <td class=\"key\">Exp Het</td>\n" .
+	  "      <td class=\"key\">Exp Hom</td>\n" .
+	  "      <td class=\"key\">&pi;</td>\n" .
+	  "      <td class=\"key\">F<sub>is</sub></td>\n" .
+	  "    </tr>\n";
+
+      foreach ($index as $pop_id => $pop_name) {
+	  $s    = $stat[$pop_id];
+	  $p    = $s['p']       < 1 ? sprintf("%.3f", $s['p']) : $s['p'];
+	  $ohet = $s['obs_het'] > 0 ? sprintf("%.3f", $s['obs_het']) : $s['obs_het'];
+	  $ohom = $s['obs_hom'] < 1 ? sprintf("%.3f", $s['obs_hom']) : $s['obs_hom'];
+	  $ehet = $s['exp_het'] > 0 ? sprintf("%.3f", $s['exp_het']) : $s['exp_het'];
+	  $ehom = $s['exp_hom'] < 1 ? sprintf("%.3f", $s['exp_hom']) : $s['exp_hom'];
+	  $pi   = $s['pi']      > 0 ? sprintf("%.3f", $s['pi']) : $s['pi'];
+	  $fis  = $s['fis']    != 0 ? sprintf("%.3f", $s['fis']) : "0";
+	  print
+	    "    <tr>\n" .
+	    "      <td class=\"pop_id\">$pop_name</td>\n" .
+	    "      <td>$p</td>\n" .
+	    "      <td>" . $s['n'] . "</td>\n" .
+	    "      <td>$ohet</td>\n" .
+	    "      <td>$ohom</td>\n" .
+	    "      <td>$ehet</td>\n" .
+	    "      <td>$ehom</td>\n" .
+	    "      <td>$pi</td>\n" .
+	    "      <td>$fis</td>\n" .
+	    "    </tr>\n";
+      }
+      print
+	"    </table>\n";
+      $n++;
+    }
+}
+
+function print_fst($db, $pop_names) {
+    global $batch_id, $tag_id;
+
+    $result = $db['fst_sth']->execute(array($batch_id, $tag_id));
+    check_db_error($result, __FILE__, __LINE__);
+
+    $stats = array();
+    $pops  = array();
+
+    while ($row = $result->fetchRow()) {
+        $a = array('col'   => $row['col'],
+		   'pid_1' => $row['pop_id_1'],
+		   'pid_2' => $row['pop_id_2'],
+		   'pi_o'  => $row['pi_o'],
+		   'fst'   => $row['fst']);
+
+	if (!isset($stats[$row['col']]))
+  	    $stats[$row['col']] = array();
+
+	array_push($stats[$row['col']], $a);
+
+	$pops[$row['pop_id_1']] = $row['pop_id_1'];
+	$pops[$row['pop_id_2']] = $row['pop_id_2'];
+    }
+
+    ksort($stats);
+    ksort($pops);
+
+    print
+	"    <table class=\"fst_key\">\n" .
+	"    <tr>\n" .
+	"      <td class=\"fst\">F<sub>st</sub></td>\n" .
+	"      <td class=\"pi\">&pi;<sub>overall</sub></td>\n" .
+	"    </tr>\n" .
+	"    </table>\n";
+
+    $index = count($pop_names) == 0 ? $pops : $pop_names;
+
+    $n = 0;
+    foreach ($stats as $col => $stat) {
+      $style = $n == 0 ? "" : "style=\"display: none;\"";
+
+      $matrix = array();
+      foreach ($index as $pop_id => $pop_name)
+	$matrix[$pop_id] = array();
+
+      foreach ($stat as $s) {
+	  $matrix[$s['pid_1']][$s['pid_2']] = $s['pi_o'];
+	  $matrix[$s['pid_2']][$s['pid_1']] = $s['fst'];
+      }
+
+      $keys    = array_keys($pops);
+      $pop_cnt = count($pops);
+
+      print
+	"    <table id=\"{$col}_fst\" class=\"fst\" $style>\n" .
+	"    <tr>\n" .
+	"      <td class=\"key\" style=\"background-color: #fff; border-left: 0px; border-right: 0px;\">&nbsp;</td>\n";
+
+      for ($i = 0; $i < $pop_cnt; $i++)
+	print "      <td class=\"key\">" . $index[$keys[$i]] . "</td>\n";
+
+      print "    </tr>\n";
+
+      for ($i = 0; $i < $pop_cnt; $i++) {
+	print 
+	  "    <tr>\n" .
+	  "      <td class=\"pop_id\">" . $index[$keys[$i]] . "</td>\n";
+
+	for ($j = 0; $j < $pop_cnt; $j++) {
+	  $class = ($i < $j) ? "class=\"pi\"" : "class=\"fst\"";
+	  
+	  if ($i == $j)
+	    print "      <td class=\"diagonal\">&nbsp;</td>\n";
+	  else if (!isset($matrix[$keys[$i]][$keys[$j]]))
+	    print "      <td $class>&nbsp;</td>\n";
+	  else
+	    print "      <td $class>" . sprintf("%0.3f", $matrix[$keys[$i]][$keys[$j]]) . "</td>\n";
+	}
+
+	print "    </tr>\n";
+      }
+
+      print "    </table>\n";
+      $n++;
+    }
+}
 
 function print_population_name($db, $batch_id, $pop_id, $pop_names) {
     global $root_path;

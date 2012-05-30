@@ -110,3 +110,37 @@ function toggle_genotypes(catalog_id, table_id, type) {
     if (iframe_obj)
 	iframe_obj.style.height = (this.document.body.offsetHeight+25) + 'px';
 }
+
+function toggle_sumstats(span_obj, col) {
+    var snp_index = document.getElementById("snp_index");
+
+    var old_snp = snp_index.value;
+    var old_snp_id = old_snp + "_snp";
+    var old_span_obj = document.getElementById(old_snp_id); 
+
+    snp_index.value = col;
+
+    if (col == old_snp) return;
+
+    span_obj.className = "snp_sel";
+    old_span_obj.className = "snp";
+
+    var div;
+    var div_id;
+
+    div_id = old_snp + "_sumstats";
+    div    = document.getElementById(div_id); 
+    div.style.display = "none";
+
+    div_id = old_snp + "_fst";
+    div    = document.getElementById(div_id); 
+    div.style.display = "none";
+
+    div_id = col + "_sumstats";
+    div    = document.getElementById(div_id); 
+    div.style.display = "";
+
+    div_id = col + "_fst";
+    div    = document.getElementById(div_id); 
+    div.style.display = "";
+}
