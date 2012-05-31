@@ -1,3 +1,8 @@
+	Feature: denovo_map.pl and ref_map.pl now import population statistics
+	files into the database (fst and sumstats files).
+	Feature: Web interface now displays summary statistics and Fst values
+	for every locus.
+
 Stacks 0.9992 - May 22, 2012
 --------------------------------
 	Bugfix: fixed massive memory leak in Fst calcuations in populations program.
