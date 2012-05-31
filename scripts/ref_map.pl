@@ -274,10 +274,11 @@ if ($data_type eq "map") {
     #
     # Import the Fst files.
     #
-    my ($m, $n);
-    foreach $m (sort keys %pops) {
-	foreach $n (sort keys %pops) {
-	    $file = "$out_path/batch_" . $batch_id . ".fst_" . $m . "-" . $n . ".tsv";
+    my (@keys, $m, $n);
+    @keys = sort keys %pops;
+    for ($m = 0; $m < scalar(@keys); $m++) {
+	for ($n = $m+1; $n < scalar(@keys); $n++) {
+	    $file = "$out_path/batch_" . $batch_id . ".fst_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
 	    import_sql_file($log_fh, $file, "fst", 1);
 	}
     }
@@ -303,6 +304,14 @@ sub parse_population_map {
     my ($samples, $pop_ids, $pops) = @_;
 
     my ($fh, @parts, $line, %ids, $file, $path);
+
+    if (length($popmap_path) == 0) {
+	foreach $path (@{$samples}) {
+	    push(@{$pop_ids}, 1);
+	    $pops->{1}++;
+	}
+	return;
+    }
 
     open($fh, "<$popmap_path") or die("Unable to open population map, '$popmap_path', $!\n");
 

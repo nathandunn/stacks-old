@@ -440,7 +440,7 @@ function print_sumstats($db, $pop_names) {
 
       foreach ($index as $pop_id => $pop_name) {
 	  $s    = $stat[$pop_id];
-	  $p    = $s['p']       < 1 ? sprintf("%.3f", $s['p']) : $s['p'];
+	  $p    = $s['p']       < 1 ? sprintf("%.5f", $s['p']) : $s['p'];
 	  $ohet = $s['obs_het'] > 0 ? sprintf("%.3f", $s['obs_het']) : $s['obs_het'];
 	  $ohom = $s['obs_hom'] < 1 ? sprintf("%.3f", $s['obs_hom']) : $s['obs_hom'];
 	  $ehet = $s['exp_het'] > 0 ? sprintf("%.3f", $s['exp_het']) : $s['exp_het'];
@@ -543,7 +543,10 @@ function print_fst($db, $pop_names) {
 	  else if (!isset($matrix[$keys[$i]][$keys[$j]]))
 	    print "      <td $class>&nbsp;</td>\n";
 	  else
-	    print "      <td $class>" . sprintf("%0.3f", $matrix[$keys[$i]][$keys[$j]]) . "</td>\n";
+	    print 
+	      "      <td id=\"{$col}_{$i}_{$j}\" $class onmouseover=\"highlight_cells($col, $i, $j)\" onmouseout=\"unhighlight_cells($col, $i, $j)\">" . 
+	      sprintf("%0.5f", $matrix[$keys[$i]][$keys[$j]]) . 
+	      "</td>\n";
 	}
 
 	print "    </tr>\n";

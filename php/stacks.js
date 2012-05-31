@@ -144,3 +144,37 @@ function toggle_sumstats(span_obj, col) {
     div    = document.getElementById(div_id); 
     div.style.display = "";
 }
+
+function highlight_cells(snp, row, col) {
+    var cell_1 = document.getElementById(snp + "_" + row + "_" + col);
+    var cell_2 = document.getElementById(snp + "_" + col + "_" + row);
+
+    if (row < col) {
+	cell_1.style.backgroundColor = "#f1592a";
+	cell_1.style.color = "#ffffff";
+	cell_2.style.backgroundColor = "#24aae2";
+	cell_2.style.color = "#ffffff";
+    } else {
+	cell_1.style.backgroundColor = "#24aae2";
+	cell_1.style.color = "#ffffff";
+	cell_2.style.backgroundColor = "#f1592a";
+	cell_2.style.color = "#ffffff";
+    }
+}
+
+function unhighlight_cells(snp, row, col) {
+    var cell_1 = document.getElementById(snp + "_" + row + "_" + col);
+    var cell_2 = document.getElementById(snp + "_" + col + "_" + row);
+
+    if (row < col) {
+	cell_1.style.backgroundColor = "#fdc4b8";
+	cell_1.style.color = "#000000";
+	cell_2.style.backgroundColor = "#aee2f3";
+	cell_2.style.color = "#000000";
+    } else {
+	cell_1.style.backgroundColor = "#aee2f3";
+	cell_1.style.color = "#000000";
+	cell_2.style.backgroundColor = "#fdc4b8";
+	cell_2.style.color = "#000000";
+    }
+}
