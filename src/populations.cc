@@ -734,6 +734,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	       << "Column"       << "\t"
 	       << "Overall Pi"   << "\t"
 	       << "Fst"          << "\t"
+	       << "Fisher's P"   << "\t"
 	       << "Smoothed Fst" << "\n";
 
 	    map<string, vector<CLocus *> >::iterator it;
@@ -817,6 +818,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			   << k << "\t"
 			   << pairs[i]->pi << "\t"
 			   << fst_str << "\t"
+			   << pairs[i]->fet_p << "\t"
 			   << wfst_str << "\n";
 
 			delete pairs[i];
@@ -1535,7 +1537,7 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
 	    ifstream test_fh(f.c_str(), ifstream::in);
 
 	    if (test_fh.fail()) {
-		cerr << " Unable to open " << f.c_str() << ", excluding it from the analysis.\n";
+		cerr << " Unable to find " << f.c_str() << ", excluding it from the analysis.\n";
 	    } else {
 		test_fh.close();
 		files.push_back(make_pair(atoi(parts[1].c_str()), parts[0]));

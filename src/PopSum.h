@@ -45,6 +45,11 @@ public:
     double alleles; // Number of alleles sampled at this location.
     double pi;
     double fst;
+    double fet_p;   // Fisher's Exact Test p-value.
+    double fet_or;  // Fisher's exact test odds ratio.
+    double or_se;   // Fisher's exact test odds ratio standard error.
+    double ci_low;  // Fisher's exact test lower confidence interval.
+    double ci_high; // Fisher's exact test higher confidence interval.
     double wfst;    // Weigted Fst (kernel-smoothed)
 
     PopPair() { 
@@ -135,6 +140,7 @@ public:
     LocSum **locus(int);
     LocSum  *pop(int, int);
     PopPair *Fst(int, int, int, int, int);
+    int      fishers_exact_test(PopPair *, double, double, double, double);
 
 private:
     int    tally_heterozygous_pos(LocusT *, Datum **, LocSum *, int, int, uint, uint);
@@ -336,6 +342,8 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos, int sampl
     pair->alleles = tot_alleles;
     pair->fst     = Fst;
     pair->pi      = pi_all;
+
+    this->fishers_exact_test(pair, p_1, q_1, p_2, q_2);
 
     // cerr << "Locus: " << locus << ", pos: " << pos << "\n"
     // 	 << "    p_1.nuc: " << s_1->nucs[pos].p_nuc << "; q_1.nuc: " << s_1->nucs[pos].q_nuc 
@@ -573,6 +581,37 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     s->nucs[pos].Fis = s->nucs[pos].pi == 0 ? 0 : (s->nucs[pos].pi - obs_het) / s->nucs[pos].pi;
 
     return 0;
+}
+
+template<class LocusT>
+int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, double p_2, double q_2)
+{
+    //                            | Allele1 | Allele2 | 
+    // Fisher's Exact Test:  -----+---------+---------+
+    //                       Pop1 |   p_1   |   q_1   |
+    //                       Pop2 |   p_2   |   q_2   |
+    // Probability p:
+    // p = ((p_1 + q_1)!(p_2 + q_2)!(p_1 + p_2)!(q_1 + q_2)!) / (n! p_1! q_1! p_2! q_2!)
+    //
+    // According to:
+    //   Jerrold H. Zar, "A fast and efficient algorithm for the Fisher exact test."
+    //   Behavior Research Methods, Instruments, & Computers 1987, 19(4): 43-44
+    // probability p can be calculated as three binomial coefficients:
+    //   Let p_1 + q_1 = r_1; p_2 + q_2 = r_2; p_1 + p_2 = c_1; q_1 + q_2 = c_2
+    //
+    //   p = (r_1 choose p_1)(r_2 choose p_2) / (n choose c_1)
+    //
+    double r_1  = p_1 + q_1;     
+    double r_2  = p_2 + q_2;
+    double c_1  = p_1 + p_2;
+    double c_2  = q_1 + q_2;
+    double n    = r_1 + r_2;
+
+    pair->fet_p = 
+	(this->binomial_coeff(r_1, p_1) * 
+	 this->binomial_coeff(r_2, p_2)) /
+	this->binomial_coeff(n, c_1);
+
 }
 
 template<class LocusT>
