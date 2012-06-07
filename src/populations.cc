@@ -1785,7 +1785,7 @@ void help() {
 	      << "  g: output each nucleotide position in all population members to a file.\n"
 	      << "  V: output results in Variant Call Format (VCF).\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
-	      << "  W: specify a file containign Whitelisted markers to include in the export.\n"
+	      << "  W: specify a file containing Whitelisted markers to include in the export.\n"
 	      << "  e: restriction enzyme, required if generating 'genomic' output.\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n"
