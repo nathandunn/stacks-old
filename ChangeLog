@@ -1,7 +1,11 @@
+Stacks 0.9993 - June 07, 2012
+--------------------------------
+	Feature: Added Fisher's Exact Test statistics to Fst estimates. This provides a p-value, an odds ratio
+	along with a 95% confidence interval and a Log of Odds (LOD) score for each Fst estimate. These statistics
+	allow one to decide if a particular Fst measurement is significant. 
 	Feature: denovo_map.pl and ref_map.pl now import population statistics
 	files into the database (fst and sumstats files).
-	Feature: Web interface now displays summary statistics and Fst values
-	for every locus.
+	Feature: Web interface now displays summary statistics and Fst values for every locus.
 
 Stacks 0.9992 - May 22, 2012
 --------------------------------
