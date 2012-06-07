@@ -41,18 +41,23 @@ create table sumstats (
 );
 
 create table fst (
-       batch_id	 int unsigned not null,
-       tag_id	 int unsigned not null,
-       pop_id_1	 int unsigned default 0,
-       pop_id_2	 int unsigned default 0,
-       chr	 varchar(32),
-       bp	 int unsigned default 0,
-       col	 int unsigned default 0,
-       pi_o	 double,
-       fst	 double,
-       fst_s	 double,
-       INDEX     batch_id_index (batch_id),
-       INDEX     tag_id_index (tag_id)
+       batch_id	  int unsigned not null,
+       tag_id	  int unsigned not null,
+       pop_id_1	  int unsigned default 0,
+       pop_id_2	  int unsigned default 0,
+       chr	  varchar(32),
+       bp	  int unsigned default 0,
+       col	  int unsigned default 0,
+       pi_o	  double,
+       fst	  double,
+       fishers_p  double,
+       odds_ratio double,
+       ci_low	  double,
+       ci_high	  double,
+       lod	  double,
+       fst_s	  double,
+       INDEX      batch_id_index (batch_id),
+       INDEX      tag_id_index (tag_id)
 );
 
 create table catalog_tags (

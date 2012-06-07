@@ -48,6 +48,7 @@ public:
     double fet_p;   // Fisher's Exact Test p-value.
     double fet_or;  // Fisher's exact test odds ratio.
     double or_se;   // Fisher's exact test odds ratio standard error.
+    double lod;     // base 10 logarithm of odds score.
     double ci_low;  // Fisher's exact test lower confidence interval.
     double ci_high; // Fisher's exact test higher confidence interval.
     double wfst;    // Weigted Fst (kernel-smoothed)
@@ -58,6 +59,11 @@ public:
 	pi      = 0.0;
 	fst     = 0.0;
 	wfst    = 0.0;
+	fet_p   = 0.0;
+	fet_or  = 0.0;
+	lod     = 0.0;
+	ci_low  = 0.0;
+	ci_high = 0.0;
     }
 };
 
@@ -596,22 +602,185 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
     // According to:
     //   Jerrold H. Zar, "A fast and efficient algorithm for the Fisher exact test."
     //   Behavior Research Methods, Instruments, & Computers 1987, 19(4): 43-44
-    // probability p can be calculated as three binomial coefficients:
+    //
+    // Probability p can be calculated as three binomial coefficients:
     //   Let p_1 + q_1 = r_1; p_2 + q_2 = r_2; p_1 + p_2 = c_1; q_1 + q_2 = c_2
     //
     //   p = (r_1 choose p_1)(r_2 choose p_2) / (n choose c_1)
     //
-    double r_1  = p_1 + q_1;     
+    // Fisher's Exact test algorithm implemented according to Sokal and Rohlf, _Biometry_, section 17.4.
+    //
+    
+    double r_1  = p_1 + q_1;
     double r_2  = p_2 + q_2;
     double c_1  = p_1 + p_2;
-    double c_2  = q_1 + q_2;
+    double d_1  = p_1 * q_2;
+    double d_2  = p_2 * q_1;
     double n    = r_1 + r_2;
+    double p    = 0.0;
 
-    pair->fet_p = 
-	(this->binomial_coeff(r_1, p_1) * 
-	 this->binomial_coeff(r_2, p_2)) /
-	this->binomial_coeff(n, c_1);
+    // char p1_str[32], p2_str[32], q1_str[32], q2_str[32];
+    // sprintf(p1_str, "% 3.0f", p_1);
+    // sprintf(q1_str, "% 3.0f", q_1);
+    // sprintf(p2_str, "% 3.0f", p_2);
+    // sprintf(q2_str, "% 3.0f", q_2);
+    //
+    // cerr 
+    // 	<< "     | Allele1 | Allele2 | " << "\n"
+    // 	<< "-----+---------+---------+" << "\n"
+    // 	<< "Pop1 |   " << p1_str << "   |   " << q1_str << "   |" << "\n"
+    // 	<< "Pop2 |   " << p2_str << "   |   " << q2_str << "   |" << "\n\n";
 
+    //
+    // Compute the first tail.
+    //
+    double p1     = p_1;
+    double q1     = q_1;
+    double p2     = p_2;
+    double q2     = q_2;
+    double tail_1 = 0.0;
+    double den    = binomial_coeff(n, c_1);
+
+    //
+    // If (p_1*q_2 - p_2*q_1) < 0 decrease cells p_1 and q_2 by one and add one to p_2 and q_1. 
+    // Compute p and repeat until one or more cells equal 0.
+    //
+    if (d_1 - d_2 < 0) {
+	do {
+	    p = (this->binomial_coeff(r_1, p1) * this->binomial_coeff(r_2, p2)) / den;
+
+	    tail_1 += p;
+	    p1--;
+	    q2--;
+	    p2++;
+	    q1++;
+	} while (p1 >= 0 && q2 >= 0);
+
+    } else {
+	//
+	// Else, if (p_1*q_2 - p_2*q_1) > 0 decrease cells p_2 and q_1 by one and add one to p_1 and q_2. 
+	// Compute p and repeat until one or more cells equal 0.
+	//
+	do {
+	    p = (this->binomial_coeff(r_1, p1) * this->binomial_coeff(r_2, p2)) / den;
+
+	    tail_1 += p;
+
+	    p2--;
+	    q1--;
+	    p1++;
+	    q2++;
+	} while (p2 >= 0 && q1 >= 0);
+    }
+
+    //
+    // Compute the second tail.
+    //
+    double tail_2 = 0.0;
+    p = 0;
+
+    //
+    // If (p_1*q_2 - p_2*q_1) < 0, set to zero the smaller of the two frequencies, adjusting the other values 
+    // to keep the marginals the same.
+    //
+    if (d_1 - d_2 < 0) {
+	if (p2 < q1) {
+	    q2 += p2;
+	    p1 += p2;
+	    q1 -= p2;
+	    p2  = 0;
+	} else {
+	    p1 += q1;
+	    q2 += q1;
+	    p2 -= q1;
+	    q1  = 0;
+	}
+    } else {
+	if (p1 < q2) {
+	    q1 += p1;
+	    p2 += p1;
+	    q2 -= p1;
+	    p1  = 0;
+	} else {
+	    p2 += q2;
+	    q1 += q2;
+	    p1 -= q2;
+	    q2  = 0;
+	}
+    }
+
+    //
+    // If (p_1*q_2 - p_2*q_1) < 0 decrease cells p_1 and q_2 by one and add one to p_2 and q_1. 
+    // Compute p and repeat until tail_2 > tail_1.
+    //
+    if (d_1 - d_2 < 0) {
+	do {
+	    p = (this->binomial_coeff(r_1, p1) * this->binomial_coeff(r_2, p2)) / den;
+
+	    tail_2 += p;
+
+	    p1--;
+	    q2--;
+	    p2++;
+	    q1++;
+	} while (tail_2 < tail_1);
+
+	tail_2 -= p;
+
+    } else {
+	//
+	// Else, if (p_1*q_2 - p_2*q_1) > 0 decrease cells p_2 and q_1 by one and add one to p_1 and q_2. 
+	// Compute p and repeat until one or more cells equal 0.
+	//
+	do {
+	    p = (this->binomial_coeff(r_1, p1) * this->binomial_coeff(r_2, p2)) / den;
+
+	    tail_2 += p;
+
+	    p2--;
+	    q1--;
+	    p1++;
+	    q2++;
+	} while (tail_2 < tail_1);
+
+	tail_2 -= p;
+    }
+
+    pair->fet_p = tail_1 + tail_2;
+
+    //
+    // Calculate the odds ratio. To account for possible cases were one allele frequency is
+    // zero, we will increment all allele frequencies by one.
+    //
+    if (p_1 == 0 || q_1 == 0 || p_2 == 0 || q_2 == 0) {
+	p_1++;
+	q_1++;
+	p_2++;
+	q_2++;
+    }
+    pair->fet_or = (p_1 * q_2) / (q_1 * p_2);
+
+    double ln_fet_or = pair->fet_or > 0 ? log(pair->fet_or) : 0.0;
+
+    //
+    // Calculate the standard error of the natural log of the odds ratio
+    //
+    double se = pair->fet_or > 0 ? sqrt((1 / p_1) + (1 / q_1) + (1 / p_2) + (1 / q_2)) : 0.0;
+
+    //
+    // Calculate the confidence intervals of the natural log of the odds ratio.
+    //
+    double ln_ci_low  = pair->fet_or > 0 ? ln_fet_or - (1.96 * se) : 0;
+    double ln_ci_high = pair->fet_or > 0 ? ln_fet_or + (1.96 * se) : 0;
+
+    //
+    // Convert the confidence intervals out of natural log space
+    //
+    pair->ci_low  = pair->fet_or > 0 ? exp(ln_ci_low)  : 0;
+    pair->ci_high = pair->fet_or > 0 ? exp(ln_ci_high) : 0;
+    pair->lod     = fabs(log10(pair->fet_or));
+
+    return 0;
 }
 
 template<class LocusT>
