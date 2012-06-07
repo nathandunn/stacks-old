@@ -270,7 +270,7 @@ if ($data_type eq "map") {
     #
     # Generate a set of observed haplotypes and a set of markers and generic genotypes
     #
-    $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -t gen -r 1 -c -s  2>&1";
+    $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -t gen -r 1 -c -s 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd`;
@@ -282,7 +282,7 @@ if ($data_type eq "map") {
     $file = "$out_path/batch_" . $batch_id . ".genotypes_1.txt";
     import_sql_file($log_fh, $file, "catalog_genotypes", 0);
 } else {
-    $cmd = $exe_path . "populations -b $batch_id -P $out_path -r 1 -s $ppath 2>&1";
+    $cmd = $exe_path . "populations -b $batch_id -P $out_path -s $ppath 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd`;

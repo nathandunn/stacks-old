@@ -735,6 +735,10 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	       << "Overall Pi"   << "\t"
 	       << "Fst"          << "\t"
 	       << "Fisher's P"   << "\t"
+	       << "Odds Ratio"   << "\t"
+	       << "CI Low"       << "\t"
+	       << "CI High"      << "\t"
+	       << "LOD"          << "\t"
 	       << "Smoothed Fst" << "\n";
 
 	    map<string, vector<CLocus *> >::iterator it;
@@ -809,16 +813,20 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			sprintf(fst_str,  "%0.10f", pairs[i]->fst);
 			sprintf(wfst_str, "%0.10f", pairs[i]->wfst);
 
-			fh << batch_id << "\t" 
-			   << loc->id << "\t"
-			   << pop_1 << "\t"
-			   << pop_2 << "\t"
-			   << loc->loc.chr << "\t"
+			fh << batch_id        << "\t" 
+			   << loc->id         << "\t"
+			   << pop_1           << "\t"
+			   << pop_2           << "\t"
+			   << loc->loc.chr    << "\t"
 			   << loc->loc.bp + k << "\t"
-			   << k << "\t"
-			   << pairs[i]->pi << "\t"
-			   << fst_str << "\t"
-			   << pairs[i]->fet_p << "\t"
+			   << k               << "\t"
+			   << pairs[i]->pi    << "\t"
+			   << fst_str         << "\t"
+			   << pairs[i]->fet_p   << "\t"
+			   << pairs[i]->fet_or  << "\t"
+			   << pairs[i]->ci_low  << "\t"
+			   << pairs[i]->ci_high << "\t"
+			   << pairs[i]->lod     << "\t"
 			   << wfst_str << "\n";
 
 			delete pairs[i];

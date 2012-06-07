@@ -259,7 +259,7 @@ if ($data_type eq "map") {
     $file = "$out_path/batch_" . $batch_id . ".genotypes_1.txt";
     import_sql_file($log_fh, $file, "catalog_genotypes", 0);
 } else {
-    $cmd = $exe_path . "populations -b $batch_id -P $out_path -r 1 -s $ppath 2>&1";
+    $cmd = $exe_path . "populations -b $batch_id -P $out_path -s $ppath 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd`;
@@ -480,6 +480,7 @@ ref_map.pl -p path -r path [-s path] -o path [-n mismatches] [-m min_cov] [-T nu
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
     T: specify the number of threads to execute.
     m: specify the minimum depth of coverage to report a stack in pstacks (default 1).
+    O: if analyzing one or more populations, specify a pOpulation map
     B: specify a database to load data into.
     b: batch ID representing this dataset in the database.
     D: batch description
