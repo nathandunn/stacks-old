@@ -93,7 +93,7 @@ $db['stats_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['stats_sth'], __FILE__, __LINE__);
 
 $query = 
-    "SELECT col, pop_id_1, pop_id_2, pi_o, fst, fst_s FROM fst " . 
+    "SELECT col, pop_id_1, pop_id_2, pi_o, fst, fishers_p, odds_ratio, ci_low, ci_high, lod, fst_s FROM fst " . 
     "WHERE batch_id=? AND tag_id=?";
 $db['fst_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['stats_sth'], __FILE__, __LINE__);
@@ -472,6 +472,9 @@ function print_fst($db, $pop_names) {
     $result = $db['fst_sth']->execute(array($batch_id, $tag_id));
     check_db_error($result, __FILE__, __LINE__);
 
+    if ($result->numRows() == 0)
+      return;
+
     $stats = array();
     $pops  = array();
 
@@ -480,6 +483,8 @@ function print_fst($db, $pop_names) {
 		   'pid_1' => $row['pop_id_1'],
 		   'pid_2' => $row['pop_id_2'],
 		   'pi_o'  => $row['pi_o'],
+		   'p'     => $row['fishers_p'],
+		   'lod'   => $row['lod'],
 		   'fst'   => $row['fst']);
 
 	if (!isset($stats[$row['col']]))
@@ -513,8 +518,8 @@ function print_fst($db, $pop_names) {
 	$matrix[$pop_id] = array();
 
       foreach ($stat as $s) {
-	  $matrix[$s['pid_1']][$s['pid_2']] = $s['pi_o'];
-	  $matrix[$s['pid_2']][$s['pid_1']] = $s['fst'];
+	  $matrix[$s['pid_1']][$s['pid_2']] = $s;
+	  $matrix[$s['pid_2']][$s['pid_1']] = $s;
       }
 
       $keys    = array_keys($pops);
@@ -536,8 +541,17 @@ function print_fst($db, $pop_names) {
 	  "      <td class=\"pop_id\">" . $index[$keys[$i]] . "</td>\n";
 
 	for ($j = 0; $j < $pop_cnt; $j++) {
-	  $class = ($i < $j) ? "class=\"pi\"" : "class=\"fst\"";
-	  
+	  if ($i < $j) {
+	    $class = "class=\"pi\"";
+	    $str   = sprintf("%0.5f", $matrix[$keys[$i]][$keys[$j]]['pi_o']);
+	  } else {
+	    $class = "class=\"fst\"";
+	    $str   = 
+	      "<span title=\"" . 
+	      "Fisher's P value: " . $matrix[$keys[$i]][$keys[$j]]['p'] . "; LOD: " . $matrix[$keys[$i]][$keys[$j]]['lod'] . "\">" .
+	      sprintf("%0.5f", $matrix[$keys[$i]][$keys[$j]]['fst']) . "</span>";
+	  }
+
 	  if ($i == $j)
 	    print "      <td class=\"diagonal\">&nbsp;</td>\n";
 	  else if (!isset($matrix[$keys[$i]][$keys[$j]]))
@@ -545,7 +559,7 @@ function print_fst($db, $pop_names) {
 	  else
 	    print 
 	      "      <td id=\"{$col}_{$i}_{$j}\" $class onmouseover=\"highlight_cells($col, $i, $j)\" onmouseout=\"unhighlight_cells($col, $i, $j)\">" . 
-	      sprintf("%0.5f", $matrix[$keys[$i]][$keys[$j]]) . 
+	      $str . 
 	      "</td>\n";
 	}
 
