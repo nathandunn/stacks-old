@@ -33,7 +33,9 @@
 #include "input.h"
 
 class Sam: public Input {
-    int parse_cigar(int, const char *);
+    int parse_cigar(const char *, vector<pair<char, uint> > &, bool);
+    int find_start_bp(int, vector<pair<char, uint> > &);
+    int edit_gaps(vector<pair<char, uint> > &, char *);
 
  public:
     Sam(const char *path) : Input(path) {};
@@ -85,7 +87,10 @@ Sam::next_seq()
     //
     // To accomplish this, we must parse the alignment CIGAR string
     //
-    int bp = flag ? this->parse_cigar(atoi(parts[3].c_str()), parts[5].c_str()) : atoi(parts[3].c_str());
+    vector<pair<char, uint> > cigar;
+    this->parse_cigar(parts[5].c_str(), cigar, flag);
+
+    int bp = flag ? this->find_start_bp(atoi(parts[3].c_str()), cigar) : atoi(parts[3].c_str());
 
     //
     // Sam format has a 1-based offset for chrmosome/basepair positions, adjust it to match
@@ -96,19 +101,22 @@ Sam::next_seq()
     Seq *s = new Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(), // Read ID, Sequence, Quality
 		     parts[2].c_str(), bp, flag ? minus : plus);            // Chr, BasePair, Strand
 
+    if (cigar.size() > 0)
+	this->edit_gaps(cigar, s->seq);
+
     return s;
 }
 
 int 
-Sam::parse_cigar(int aln_bp, const char *cigar)
+Sam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool orientation)
 {
     char buf[id_len];
     int  dist;
     const char *p, *q;
 
-    p = cigar;
+    p = cigar_str;
 
-    //cerr << "Starting bp: " << aln_bp << "\n";
+    if (*p == '*') return 0;
 
     while (*p != '\0') {
 	q = p + 1;
@@ -116,10 +124,36 @@ Sam::parse_cigar(int aln_bp, const char *cigar)
 	while (*q != '\0' && isdigit(*q))
 	    q++;
 	strncpy(buf, p, q - p);
-	buf[q-p+1] = '\0';
+	buf[q-p] = '\0';
 	dist = atoi(buf);
 
-	switch(*q) {
+	//
+	// If aligned to the negative strand, sequence has been reverse complemented and 
+	// CIGAR string should be interpreted in reverse.
+	//
+	if (orientation == plus)
+	    cigar.push_back(make_pair(*q, dist));
+	else
+	    cigar.insert(cigar.begin(), make_pair(*q, dist));
+
+	p = q + 1;
+    }
+
+    return 0;
+}
+
+int 
+Sam::find_start_bp(int aln_bp, vector<pair<char, uint> > &cigar)
+{
+    uint size = cigar.size();
+    char op;
+    uint dist;
+
+    for (uint i = 0; i < size; i++)  {
+	op   = cigar[i].first;
+	dist = cigar[i].second;
+
+	switch(op) {
 	case 'S':
 	case 'D':
 	    break;
@@ -128,12 +162,92 @@ Sam::parse_cigar(int aln_bp, const char *cigar)
 	    aln_bp += dist;
 	    break;
 	}
-	p = q + 1;
-
-	//cerr << "  CIGAR: " << cigar << "; Dist: " << dist << "; Type: " << *q << "; aln_bp: " << aln_bp << " [" << *p << "]\n";
     }
 
     return aln_bp;
+}
+
+int 
+Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
+{
+    char buf[id_len];
+    uint size = cigar.size();
+    char op;
+    uint dist, bp, len, buf_len, j, k, stop;
+
+    len = strlen(seq);
+    bp  = 0;
+
+    for (uint i = 0; i < size; i++)  {
+	op   = cigar[i].first;
+	dist = cigar[i].second;
+
+	switch(op) {
+	case 'S':
+	    stop = bp + dist;
+	    stop = stop > len ? len : stop;
+	    while (bp < stop) {
+		seq[bp] = 'N';
+		bp++;
+	    }
+	    break;
+	case 'D':
+	    //
+	    // A deletion has occured in the read relative to the reference genome.
+	    // Pad the read with sufficent Ns to match the deletion, shifting the existing
+	    // sequence down. Trim the final length to keep the read length consistent.
+	    //
+	    strncpy(buf, seq + bp, id_len - 1);
+	    buf[id_len] = '\0';
+	    buf_len     = strlen(buf);
+
+	    stop = bp + dist;
+	    stop = stop > len ? len : stop;
+	    while (bp < stop) {
+		seq[bp] = 'N';
+		bp++;
+	    }
+
+	    j = bp;
+	    k = 0;
+	    while (j < len && k < buf_len) {
+		seq[j] = buf[k];
+		k++;
+		j++;
+	    }
+	    break;
+	case 'I':
+	    //
+	    // An insertion has occurred in the read relative to the reference genome. Delete the
+	    // inserted bases and padd the end of the read with Ns.
+	    //
+	    k = bp + dist;
+	    strncpy(buf, seq + k, id_len - 1);
+	    buf[id_len] = '\0';
+	    buf_len     = strlen(buf);
+
+	    j = bp;
+	    k = 0;
+	    while (j < len && k < buf_len) {
+		seq[j] = buf[k];
+		k++;
+		j++;
+	    }
+
+	    stop = j + dist;
+	    stop = stop > len ? len : stop;
+	    while (j < stop) {
+		seq[j] = 'N';
+		j++;
+	    }
+	    break;
+	case 'M':
+	    bp += dist;
+	    break;
+	}
+    }
+
+    return 0;
 }
 
 #endif // __SAM_H__

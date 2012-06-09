@@ -416,8 +416,10 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
             m->utags.push_back(u->id);
         }
 
+	//
 	// Insert the new MergedStack giving a hint as to which position
 	// to insert it at.
+	//
 	it_new = merged.insert(it_old, pair<int, MergedStack *>(global_id, m));
 	it_old = it_new;
 	global_id++;
