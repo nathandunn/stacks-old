@@ -170,7 +170,7 @@ char *DNANSeq::seq(char *seq) {
     int i;
     int end = this->bits / bits_per_nuc;
 
-    for (i = 0; i <= end; i++)
+    for (i = 0; i < end; i++)
 	seq[i] = this->operator[](i);
 
     seq[i] = '\0';

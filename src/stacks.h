@@ -57,6 +57,8 @@ public:
     strand_type strand;
 
     void set(const char *chr, uint bp, strand_type strand) {
+	if (this->chr != NULL) 
+	    delete [] this->chr;
 	this->chr    = new char[strlen(chr)  + 1];
 	this->bp     = bp;
 	this->strand = strand;
