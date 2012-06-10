@@ -1,6 +1,8 @@
 	Feature: pstacks can now handle gapped alignments properly. It parses the CIGAR string in the SAM file 
 	and inserts/removes Ns to accomodate indels and soft-masked alignment fragments. This prevents the SNP
 	model from mistakenly calling polymorphisms due to indel frameshifts.
+	Bugfix: Updated load_radtags.pl to support population types and to import sumstats, fst, and genotypes 
+	files.
 	Bugfix: fixed a small memory leak in DNANSeq.
 
 Stacks 0.9993 - June 07, 2012
