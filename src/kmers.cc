@@ -239,10 +239,9 @@ int populate_kmer_hash(map<int, Locus *> &catalog, CatKmerHashMap &kmer_map, int
 
 int dist(const char *tag_1, Locus *tag_2, allele_type allele) {
     int   dist = 0;
-    const char *p    = tag_1;
-    const char *q    = NULL;
-    const char *end  = p + strlen(p);
-
+    const char *p     = tag_1;
+    const char *p_end = p + strlen(p);
+    const char *q     = NULL;
     //
     // Identify which matching string has the proper allele
     //
@@ -253,9 +252,11 @@ int dist(const char *tag_1, Locus *tag_2, allele_type allele) {
             q = it->second.c_str();
     if (q == NULL) return -1;
 
+    const char *q_end = q + strlen(q);
+
     // Count the number of characters that are different
     // between the two sequences.
-    while (p < end) {
+    while (p < p_end && q < q_end) {
 	dist += (*p == *q) ? 0 : 1;
 	p++; 
 	q++;

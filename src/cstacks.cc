@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -36,15 +36,17 @@ string  out_path;
 int     batch_id     = 0;
 int     mult_matches = 0;
 int     ctag_dist    = 0;
-searcht search_type = sequence;
+searcht search_type  = sequence;
 int     num_threads  = 1;
+bool    require_uniq_haplotypes = false;
 
 int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
     cerr << "Number of mismatches allowed between stacks: " << ctag_dist << "\n"
-	 << "Loci matched based on " << (search_type == sequence ? "sequence identity" : "genomic location") << "\n";
+	 << "Loci matched based on " << (search_type == sequence ? "sequence identity" : "genomic location") << ".\n"
+	 << "Constructing catalog from " << samples.size() << " samples.\n";
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -140,39 +142,30 @@ int update_catalog_index(map<int, CLocus *> &catalog, map<string, int> &cat_inde
 }
 
 int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
-    vector<Match *>::iterator mat_it;
-    vector<pair<allele_type, string> >::iterator all_it;
-    
-    mat_it = query_tag->matches.begin();
-
-    const char *c = NULL;
-    //
-    // Fetch the proper catalog allele
-    //
-    for (all_it = catalog_tag->strings.begin(); all_it != catalog_tag->strings.end(); all_it++)
-        if (all_it->first == (*mat_it)->cat_type) 
-            c = all_it->second.c_str();
-    if (c == NULL) return 0;
-
-    const char *q = NULL;
-    //
-    // Fetch the proper query allele
-    //
-    for (all_it = query_tag->strings.begin(); all_it != query_tag->strings.end(); all_it++)
-        if (all_it->first == (*mat_it)->query_type) 
-            q = all_it->second.c_str();
-    if (q == NULL) return 0;
+    set<int> snp_cols;
+    uint i;
+    for (i = 0; i < catalog_tag->snps.size(); i++)
+	snp_cols.insert(catalog_tag->snps[i]->col);
+    for (i = 0; i < query_tag->snps.size(); i++)
+	snp_cols.insert(query_tag->snps[i]->col);
 
     //
     // For each mismatch found, create a SNP object
     //
-    const char *beg    = c;
-    const char *end    = c + strlen(c);
+    const char *c        = catalog_tag->con;
+    const char *c_beg    = c;
+    const char *c_end    = c + strlen(c);
+    const char *q        = query_tag->con;
+    const char *q_beg    = q;
+    const char *q_end    = q + strlen(q);
 
-    while (c < end) {
-	if (*c != *q) {
+    i = 0;
+    while (c < c_end && q < q_end) {
+	if (snp_cols.count(i) == 0 && 
+	    (*c != *q) && (*c != 'N' && *q != 'N')) {
+
             SNP *s = new SNP;
-            s->col    = c - beg;
+            s->col    = c - c_beg;
             s->lratio = 0;
             s->rank_1 = *c;
             s->rank_2 = *q;
@@ -183,7 +176,7 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
             catalog_tag->snps.push_back(s);
 
             s = new SNP;
-            s->col    = c - beg;
+            s->col    = q - q_beg;
             s->lratio = 0;
             s->rank_1 = *q;
             s->rank_2 = *c;
@@ -192,6 +185,7 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
         }
 	c++;
 	q++;
+	i++;
     }
 
     return 1;
@@ -283,6 +277,13 @@ int merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<
 	if (!ctag->merge_snps(qtag)) {
 	    cerr << "Error merging " << sample_file.second << ", tag " << qtag->id <<
 		" with catalog tag " << ctag->id << "\n";
+	}
+
+	//
+	// If the catalog consensus tag is shorter than the query tag, replace it.
+	//
+	if (strlen(ctag->con) < strlen(qtag->con)) {
+	    ctag->add_consensus(qtag->con);
 	}
 
 	ctag->sources.push_back(make_pair(sample_file.first, qtag->id));
@@ -508,15 +509,13 @@ int find_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *> &sa
 }
 
 int find_matches_by_genomic_loc(map<string, int> &cat_index, map<int, QLocus *> &sample) {
-    //
-    // Calculate the distance (number of mismatches) between each pair
-    // of Radtags. We expect all radtags to be the same length;
-    //
     map<int, QLocus *>::iterator i;
     map<int, CLocus *>::iterator j;
 
+    //
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
+    //
     vector<int> keys;
     for (i = sample.begin(); i != sample.end(); i++) 
 	keys.push_back(i->first);
@@ -794,8 +793,8 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	    // If we inserted a SNP from the sample, add the proper nucleotide from the consensus
 	    // sequence to account for it in the allele string.
 	    //
-	    if ((*k).first == "sample") {
-		new_allele += this->con[(*k).second->col];
+	    if (k->first == "sample") {
+		new_allele += k->second->col > this->len - 1 ? 'N' : this->con[k->second->col];
 	    } else {
 		new_allele += allele[pos];
 		pos++;
@@ -811,8 +810,8 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	pos        = 0;
 
 	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
-	    if ((*k).first == "catalog") {
-		new_allele += matched_tag->con[(*k).second->col];
+	    if (k->first == "catalog") {
+		new_allele += k->second->col > matched_tag->len - 1 ? 'N' : matched_tag->con[k->second->col];
 	    } else {
 		new_allele += allele[pos];
 		pos++;
@@ -821,6 +820,21 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 
 	merged_alleles.insert(new_allele);
     }
+
+    if (matched_tag->alleles.size() == 0) {
+	new_allele = "";
+	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+	    new_allele += (k->second->col > matched_tag->len - 1) ? 'N' : matched_tag->con[k->second->col];
+	}
+	merged_alleles.insert(new_allele);
+    }
+
+    //
+    // If the newly merged alleles contain Ns due to different sequence lengths,
+    // check if we can reduce the alleles as one of the longer allele haplotypes
+    // may fully encompass a shorter allele haplotype that has been padded with Ns.
+    //
+    if (require_uniq_haplotypes) this->reduce_alleles(merged_alleles);
 
     //
     // Update the catalog entry's list of SNPs and alleles
@@ -848,6 +862,91 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     }
 
     return 1;
+}
+
+int 
+CLocus::reduce_alleles(set<string> &alleles) 
+{
+    set<string>::iterator it;
+    uint len, max_len, match, ncnt;
+    vector<string> haplotypes, cur, next;
+
+    max_len = 0;
+    for (it = alleles.begin(); it != alleles.end(); it++) {
+	max_len = it->length() > max_len ? it->length() : max_len;
+	haplotypes.push_back(*it);
+    }
+
+    len = alleles.size();
+    alleles.clear();
+
+    for (uint i = 0; i < len; i++) {
+	//cerr << "Looking at haplotype[" << i << "]: " << haplotypes[i] << "\n";
+	//
+	// We will only look at strings that contain Ns.
+	//
+	if (haplotypes[i].find('N') == string::npos) {
+	    alleles.insert(haplotypes[i]);
+	    //cerr << "  No Ns, skipping...\n";
+	    continue;
+	}
+
+	uint k = 0;
+	uint j = i + 1;
+	while (k < len - 1) {
+	    cur.push_back(haplotypes[j % len]);
+	    k++;
+	    j++;
+	}
+
+	//
+	// Examine the haplotype alleles one SNP at a time. If we are able to uniquely 
+	// determine a second haplotype that encompasses the first 
+	// to, return it.
+	//
+	j = 0;
+	while (cur.size() > 1 && j < max_len) {
+
+	    for (k = 0; k < cur.size(); k++) {
+		cerr << "Comparing haplotypes[" << i << "]: '" << haplotypes[i] << "' to '" << cur[k] << " at position " << j << "'\n"; 
+		if (haplotypes[i][j] == cur[k][j] || haplotypes[i][j] == 'N') {
+		    cerr << "  Keeping this haplotype.\n";
+		    next.push_back(cur[k]);
+		} else {
+		    cerr << "  Discarding this haplotype.\n";
+		}
+	    }
+	    cur = next;
+	    next.clear();
+	    j++;
+	}
+
+	//
+	// If there is only one left, make sure what we have of the haplotype does match
+	// and its not simply an erroneously called haplotype. If so, then this haplotype
+	// is encompassed by another, longer haplotype and we do not need to keep it.
+	//
+	ncnt  = 0;
+	match = 0;
+	if (cur.size() > 1) {
+	    cerr << "Discarding " << haplotypes[i] << "\n";
+	    continue;
+	} else if (cur.size() == 1) {
+	    for (k = 0; k < max_len; k++)
+		if (haplotypes[i][k] != 'N') ncnt++;
+	    for (k = 0; k < max_len; k++)
+		if (cur[0][k] == haplotypes[i][k]) match++;
+	    if (match == ncnt) {
+		cerr << "Discarding " << haplotypes[i] << "\n";
+		continue;
+	    }
+	}
+
+	cerr << "Keeping " << haplotypes[i] << "\n";
+	alleles.insert(haplotypes[i]);
+    }
+
+    return 0;
 }
 
 int populate_kmer_hash(map<int, CLocus *> &catalog, CatKmerHashMap &kmer_map, int kmer_len) {
@@ -999,10 +1098,11 @@ int parse_command_line(int argc, char* argv[]) {
 
     while (1) {
 	static struct option long_options[] = {
-	    {"help",         no_argument,       NULL, 'h'},
-            {"version",      no_argument,       NULL, 'v'},
-	    {"mmatches",     no_argument,       NULL, 'm'},
-	    {"genomic_loc",  no_argument,       NULL, 'g'},
+	    {"help",               no_argument, NULL, 'h'},
+            {"version",            no_argument, NULL, 'v'},
+	    {"mmatches",           no_argument, NULL, 'm'},
+	    {"genomic_loc",        no_argument, NULL, 'g'},
+	    {"uniq_haplotypes",    no_argument, NULL, 'u'},
 	    {"batch_id",     required_argument, NULL, 'b'},
 	    {"ctag_dist",    required_argument, NULL, 'n'},
 	    {"sample",       required_argument, NULL, 's'},
@@ -1015,7 +1115,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgvmo:s:S:b:p:n:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgvumo:s:S:b:p:n:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1052,6 +1152,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 'o':
 	    out_path = optarg;
+	    break;
+	case 'u':
+	    require_uniq_haplotypes = true;
 	    break;
         case 'v':
             version();

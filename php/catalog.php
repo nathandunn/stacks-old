@@ -713,12 +713,14 @@ function write_map_filter($cols) {
 
     $r = range(1, 9);
     $r = array_merge($r, range(10, 100, 5));
+    array_push($r, 1000);
     $alle_l_ctl  = generate_element_select("filter_alle_l",  $r,   $fall, "");
     $alle_u_ctl  = generate_element_select("filter_alle_u",  $r,   $falu, "");
     $snps_l_ctl  = generate_element_select("filter_snps_l",  $r,   $fsnl, "");
     $snps_u_ctl  = generate_element_select("filter_snps_u",  $r,   $fsnu, "");
     $r = range(1, 9);
     $r = array_merge($r, range(10, 500, 10));
+    array_push($r, 1000);
     $pare_l_ctl  = generate_element_select("filter_pare_l",  $r, $fpal, "");
     $pare_u_ctl  = generate_element_select("filter_pare_u",  $r, $fpau, "");
     $prog_ctl    = generate_element_select("filter_prog",  $r, $fpr, "");
@@ -995,12 +997,14 @@ function write_pop_filter($cols) {
 
     $r = range(1, 9);
     $r = array_merge($r, range(10, 100, 5));
+    array_push($r, 1000);
     $alle_l_ctl  = generate_element_select("filter_alle_l",  $r,  $fall, "");
     $alle_u_ctl  = generate_element_select("filter_alle_u",  $r,  $falu, "");
     $snps_l_ctl  = generate_element_select("filter_snps_l",  $r,  $fsnl, "");
     $snps_u_ctl  = generate_element_select("filter_snps_u",  $r,  $fsnu, "");
     $r = range(1, 9);
     $r = array_merge($r, range(10, 500, 10));
+    array_push($r, 1000);
     $pare_l_ctl  = generate_element_select("filter_pare_l",  $r, $fpal, "");
     $pare_u_ctl  = generate_element_select("filter_pare_u",  $r, $fpau, "");
     $chr_ctl   = generate_element_select("filter_chr",   $chrs, $fch, "");
@@ -1135,10 +1139,8 @@ $pare_l_ctl $pare_u_ctl
   </td>
   </tr>
   <tr>
-  <td {$filters['prog']['tr']}>
-  </td>
-  <td {$filters['prog']['tr']}>
-  </td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
   </tr>
   <tr>
     <td>&nbsp;</td>
@@ -1150,15 +1152,12 @@ $pare_l_ctl $pare_u_ctl
   <td style="width: 33%; text-align: right;">
   <table style="text-align: left;">
   <tr>
-  <td {$filters['vprog']['tr']}>
-  <td {$filters['vprog']['tr']}>
-  </td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
   </tr>
   <tr>
-  <td {$filters['mark']['tr']}>
-  </td>
-  <td {$filters['mark']['tr']}>
-  </td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
   </tr>
 
 EOQ;

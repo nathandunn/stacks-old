@@ -110,6 +110,7 @@ class CLocus : public Locus {
     vector<pair<int, int> > sources;   // Sample/ID pairs for the sources contributing to this catalog entry
 
     int merge_snps(QLocus *);
+    int reduce_alleles(set<string> &);
 };
 
 void help( void );

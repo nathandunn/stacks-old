@@ -96,7 +96,7 @@ $query =
     "SELECT col, pop_id_1, pop_id_2, pi_o, fst, fishers_p, odds_ratio, ci_low, ci_high, lod, fst_s FROM fst " . 
     "WHERE batch_id=? AND tag_id=?";
 $db['fst_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['stats_sth'], __FILE__, __LINE__);
+check_db_error($db['fst_sth'], __FILE__, __LINE__);
 
 $query = 
     "SELECT marker, catalog_genotypes.sample_id, file, " . 
@@ -155,7 +155,7 @@ while ($row = $result->fetchRow()) {
       print "    <input type=\"hidden\" id=\"snp_index\" value=\"$row[col]\" />\n";
     }
     $class = $i == 0 ? "class=\"snp_sel\"" : "class=\"snp\"";
-    print "    <span $class id=\"{$row[col]}_snp\" onclick=\"toggle_sumstats(this, $row[col])\">Column: $row[col]; $snp</span><br />\n";
+    print "    <span $class id=\"{$row['col']}_snp\" onclick=\"toggle_sumstats(this, $row[col])\">Column: $row[col]; $snp</span><br />\n";
     $i++;
 }
 
@@ -540,16 +540,19 @@ function print_fst($db, $pop_names) {
 	  "    <tr>\n" .
 	  "      <td class=\"pop_id\">" . $index[$keys[$i]] . "</td>\n";
 
+	$str = "";
 	for ($j = 0; $j < $pop_cnt; $j++) {
 	  if ($i < $j) {
 	    $class = "class=\"pi\"";
-	    $str   = sprintf("%0.5f", $matrix[$keys[$i]][$keys[$j]]['pi_o']);
+	    if (isset($matrix[$keys[$i]][$keys[$j]]))
+	      $str = sprintf("%0.5f", $matrix[$keys[$i]][$keys[$j]]['pi_o']);
 	  } else {
 	    $class = "class=\"fst\"";
-	    $str   = 
-	      "<span title=\"" . 
-	      "Fisher's P value: " . $matrix[$keys[$i]][$keys[$j]]['p'] . "; LOD: " . $matrix[$keys[$i]][$keys[$j]]['lod'] . "\">" .
-	      sprintf("%0.5f", $matrix[$keys[$i]][$keys[$j]]['fst']) . "</span>";
+	    if (isset($matrix[$keys[$i]][$keys[$j]]))
+	      $str   = 
+		"<span title=\"" . 
+		"Fisher's P value: " . $matrix[$keys[$i]][$keys[$j]]['p'] . "; LOD: " . $matrix[$keys[$i]][$keys[$j]]['lod'] . "\">" .
+		sprintf("%0.5f", $matrix[$keys[$i]][$keys[$j]]['fst']) . "</span>";
 	  }
 
 	  if ($i == $j)

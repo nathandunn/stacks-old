@@ -196,7 +196,8 @@ int Locus::populate_alleles() {
 	k = 0;
 
 	for (i = this->snps.begin(); i != this->snps.end(); i++) {
-	    s.replace((*i)->col, 1, 1, j->first[k]);
+	    if ((*i)->col < this->len - 1)
+		s.replace((*i)->col, 1, 1, j->first[k]);
 	    k++;
 	}
 

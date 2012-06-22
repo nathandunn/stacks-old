@@ -557,7 +557,7 @@ sub import_sql_file {
     my (@results);
 
     @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table"`;
-    print STDERR "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results, "\n";
+    print STDERR "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table\"\n", @results;
 }
 
 sub prepare_sql_handles {
@@ -619,6 +619,7 @@ sub prepare_sql_handles {
 	"SELECT samples.batch_id, catalog_id, tag_id, matches.sample_id, allele, type FROM matches " . 
 	"JOIN samples ON (samples.id=matches.sample_id)";
     $sth->{'cat_matches'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+#	"JOIN samples ON (samples.sample_id=matches.sample_id AND samples.batch_id=matches.batch_id)";
 
     $query = 
 	"SELECT batch_id, catalog_id, type FROM sequence";

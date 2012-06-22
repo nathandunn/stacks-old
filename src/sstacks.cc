@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -40,6 +40,7 @@ int     samp_id     = 0;
 int     catalog     = 0;
 bool    verify_haplotypes = true;
 bool    impute_haplotypes = true;
+bool    require_uniq_haplotypes = false;
 searcht search_type = sequence;
 
 int main (int argc, char* argv[]) {
@@ -261,7 +262,9 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
 		//cerr << s2_tag->id << "; Adding cat haplotype: " << cat_haplotype << " based on depth of " << *a << ", " << s2_tag->alleles[cat_haplotype] << "\n";
 		s2_tag->add_match(s1_tag->id, cat_haplotype);
 		matches++;
-	    }
+	    } //else {
+	    //cerr << "Unable to verify haplotype for query ID " << s2_tag->id << " catalog ID " << s1_tag->id << "\n";
+	    //}
 	} else {
 	    for (c = s1_tag->strings.begin(); c != s1_tag->strings.end(); c++)
 		if (*a == c->first) {
@@ -275,10 +278,64 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
     return matches;
 }
 
+// int impute_haplotype(string query_haplotype, 
+// 		     vector<pair<allele_type, string> > &cat_haplotypes, 
+// 		     string &match) {
+
+//     uint max_len = query_haplotype.length() > cat_haplotypes[0].first.length() ?
+// 	query_haplotype.length() : 
+// 	cat_haplotypes[0].first.length();
+
+//     //cerr << "Query len: " << query_haplotype.length() << "; Max length: " << max_len << "\n";
+
+//     vector<string> cur, next;
+
+//     for (uint i = 0; i < cat_haplotypes.size(); i++)
+// 	cur.push_back(cat_haplotypes[i].first);
+//     match = "";
+
+//     //
+//     // Examine the haplotypes one SNP at a time. If we are able to uniquely 
+//     // determine the catalog haplotype that the query haplotype corresponds 
+//     // to, return it.
+//     //
+//     uint j = 0;
+//     while (cur.size() > 1 && j < max_len) {
+
+// 	for (uint i = 0; i < cur.size(); i++) {
+// 	    //cerr << "Comparing query[" << j << "]: '" << query_haplotype[j] << "' to catalog '" << cur[i][j] << "'\n"; 
+// 	    if (query_haplotype[j] == cur[i][j]) {
+// 		//cerr << "  Keeping this haplotype.\n";
+// 		next.push_back(cur[i]);
+// 	    }
+// 	}
+// 	cur = next;
+// 	next.clear();
+// 	j++;
+//     }
+
+//     //
+//     // If there is only one left, make sure what we have of the haplotype does match
+//     // and its not simply an erroneously called haplotype.
+//     //
+//     if (cur.size() == 1 && 
+// 	strncmp(cur[0].c_str(), query_haplotype.c_str(), max_len) == 0) {
+// 	match = cur[0];
+// 	return 1;
+//     }
+
+//     //
+//     // If, after examining all the available SNPs in the query haplotype, there is
+//     // still more than a single possible catalog haplotype, then we can't impute it.
+//     //
+//     return 0;
+// }
+
 int impute_haplotype(string query_haplotype, 
 		     vector<pair<allele_type, string> > &cat_haplotypes, 
 		     string &match) {
 
+    //cerr << "Examining " << query_haplotype << "\n";
     uint max_len = query_haplotype.length() > cat_haplotypes[0].first.length() ?
 	query_haplotype.length() : 
 	cat_haplotypes[0].first.length();
@@ -286,6 +343,7 @@ int impute_haplotype(string query_haplotype,
     //cerr << "Query len: " << query_haplotype.length() << "; Max length: " << max_len << "\n";
 
     vector<string> cur, next;
+    uint match_cnt, no_n_cnt;
 
     for (uint i = 0; i < cat_haplotypes.size(); i++)
 	cur.push_back(cat_haplotypes[i].first);
@@ -300,11 +358,16 @@ int impute_haplotype(string query_haplotype,
     while (cur.size() > 1 && j < max_len) {
 
 	for (uint i = 0; i < cur.size(); i++) {
-	    //cerr << "Comparing query[" << j << "]: '" << query_haplotype[j] << "' to catalog '" << cur[i][j] << "'\n"; 
-	    if (query_haplotype[j] == cur[i][j]) {
+	    //cerr << "Comparing query[" << j << "]: '" << query_haplotype << "' to catalog '" << cur[i] << "'\n"; 
+	    if (require_uniq_haplotypes && (query_haplotype[j] == cur[i][j] || query_haplotype[j] == 'N')) {
 		//cerr << "  Keeping this haplotype.\n";
 		next.push_back(cur[i]);
-	    }
+	    } else if (query_haplotype[j] == cur[i][j]) {
+		//cerr << "  Keeping this haplotype.\n";
+		next.push_back(cur[i]);
+	    } //else {
+		//cerr << "  Discarding this haplotype.\n";
+	    //}
 	}
 	cur = next;
 	next.clear();
@@ -315,10 +378,26 @@ int impute_haplotype(string query_haplotype,
     // If there is only one left, make sure what we have of the haplotype does match
     // and its not simply an erroneously called haplotype.
     //
-    if (cur.size() == 1 && 
-	strncmp(cur[0].c_str(), query_haplotype.c_str(), max_len) == 0) {
-	match = cur[0];
-	return 1;
+    no_n_cnt  = 0;
+    match_cnt = 0;
+    if (cur.size() == 1) {
+	if (require_uniq_haplotypes) {
+	    for (uint k = 0; k < max_len; k++)
+		if (query_haplotype[k] != 'N') no_n_cnt++;
+	    for (uint k = 0; k < max_len; k++)
+		if (cur[0][k] == query_haplotype[k]) match_cnt++;
+
+	    if (match_cnt == no_n_cnt) {
+		//cerr << "Keeping " << query_haplotype << "\n";
+		match = cur[0];
+		return 1;
+	    }
+	} else {
+	    if (strncmp(cur[0].c_str(), query_haplotype.c_str(), max_len) == 0) {
+		match = cur[0];
+		return 1;
+	    }
+	}
     }
 
     //
@@ -376,12 +455,10 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
 
 	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
 	    //
-	    // We can't add SNPs from the catalog haplotype if the SNP is beyond the length of the query.
+	    // If the SNPs from the catalog haplotype beyond the length of the query, add Ns
 	    //
-	    if (k->second->col > s2_tag->len - 1) continue;
-
 	    if (k->first == "catalog") {
-		new_allele += s2_tag->con[k->second->col];
+		new_allele += (k->second->col > s2_tag->len - 1) ? 'N' : s2_tag->con[k->second->col];
 	    } else {
 		new_allele += old_allele[pos];
 		pos++;
@@ -390,17 +467,16 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
 	query_haplotypes.insert(new_allele);
 	s2_tag->alleles[new_allele] = b->second;
 
-	//cerr << "Adding haplotype: " << new_allele << "\n";
+	// cerr << "Adding haplotype: " << new_allele << " [" << b->first << "]\n";
     }
 
     if (s2_tag->alleles.size() == 0) {
 	new_allele = "";
 	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
-	    if (k->second->col > s2_tag->len - 1) continue;
-	    new_allele += s2_tag->con[k->second->col];
+	    new_allele += (k->second->col > s2_tag->len - 1) ? 'N' : s2_tag->con[k->second->col];
 	}
 	query_haplotypes.insert(new_allele);
-	//cerr << "Adding haplotype 2: " << new_allele << "\n";
+	// cerr << "Adding haplotype 2: " << new_allele << "\n";
     }
 
     return 0;
@@ -655,16 +731,17 @@ int parse_command_line(int argc, char* argv[]) {
      
     while (1) {
 	static struct option long_options[] = {
-	    {"help",        no_argument,       NULL, 'h'},
-            {"version",     no_argument,       NULL, 'v'},
+	    {"help",              no_argument, NULL, 'h'},
+            {"version",           no_argument, NULL, 'v'},
+	    {"genomic_loc",       no_argument, NULL, 'g'},
+	    {"verify_hap",        no_argument, NULL, 'x'},
+	    {"uniq_haplotypes",   no_argument, NULL, 'u'},
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"batch_id",    required_argument, NULL, 'b'},
 	    {"sample_1",    required_argument, NULL, 'r'},
 	    {"sample_1_id", required_argument, NULL, 'R'},
 	    {"sample_2",    required_argument, NULL, 's'},
 	    {"sample_2_id", required_argument, NULL, 'S'},
-	    {"genomic_loc", no_argument,       NULL, 'g'},
-	    {"verify_hap",  no_argument,       NULL, 'x'},
 	    {"outpath",     required_argument, NULL, 'o'},
 	    {0, 0, 0, 0}
 	};
@@ -672,7 +749,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgxvr:s:c:o:R:S:b:p:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgxuvr:s:c:o:R:S:b:p:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -710,6 +787,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'x': 
 	    verify_haplotypes = false;
+	    break;
+	case 'u':
+	    require_uniq_haplotypes = true;
 	    break;
         case 'v':
             version();

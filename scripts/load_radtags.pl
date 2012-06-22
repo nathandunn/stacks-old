@@ -106,11 +106,11 @@ foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
     $pop_id = shift(@pop_ids);
 
     if (!$dry_run) {
-	@results = `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id"`;
+	@results = `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id"`;
     }
     print STDERR 
 	"mysql --defaults-file=$cnf $db ",
-	"-e \"INSERT INTO samples SET sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id\"\n", 
+	"-e \"INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id\"\n", 
 	@results;
 
     #
@@ -224,6 +224,8 @@ sub extract_parental_ids {
 
     my ($fh, $prefix, $path, $line, @parts, $tag_id, @tag_ids, $id, $tag, %ids);
 
+    print STDERR "Scanning catalog for sample IDs...";
+
     foreach $prefix (@catalog) {
         $path = $in_path . "/" . $prefix . ".catalog.tags.tsv";
 
@@ -254,12 +256,16 @@ sub extract_parental_ids {
     if (length($stacks_type) == 0) {
 	$stacks_type = (scalar(@{$parental_ids}) == $sample_cnt) ? "population" : "map";
     }
+
+    print STDERR "done.\n";
 }
 
 sub extract_sample_ids {
     my ($files, $sample_ids) = @_;
 
     my ($file, $f, $line, @results, @parts);
+
+    print STDERR "Collecting sample IDs from Stacks output files...";
 
     foreach $file (@files) {
 	$f = $in_path . "/$file" . ".tags.tsv";
@@ -273,6 +279,8 @@ sub extract_sample_ids {
 	#
 	$sample_ids->{$file} = $parts[1];
     }
+
+    print STDERR "done.\n";
 }
 
 sub import_sql_file {
