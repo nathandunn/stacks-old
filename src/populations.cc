@@ -41,15 +41,21 @@ string    pmap_path;
 string    bl_file;
 string    wl_file;
 string    enz;
-double    sigma           = 150000;
-int       progeny_limit   = 0;
-bool      corrections     = false;
-bool      expand_id       = false;
-bool      sql_out         = false;
-bool      vcf_out         = false;
-bool      genomic_out     = false;
-bool      kernel_fst      = false;
-int       min_stack_depth = 0;
+double    sigma             = 150000;
+double    sample_limit      = 0;
+int       progeny_limit     = 0;
+int       population_limit  = 0;
+bool      corrections       = false;
+bool      expand_id         = false;
+bool      sql_out           = false;
+bool      vcf_out           = false;
+bool      genepop_out       = false;
+bool      genomic_out       = false;
+bool      kernel_fst        = false;
+int       min_stack_depth   = 0;
+double    minor_allele_freq = 0;
+double    p_value_cutoff    = 0.05;
+corr_type fst_correction    = no_correction;
 
 map<int, pair<int, int> > pop_indexes;
 set<int> whitelist, blacklist;
@@ -66,6 +72,28 @@ int main (int argc, char* argv[]) {
     initialize_renz(renz, renz_cnt, renz_len);
 
     parse_command_line(argc, argv);
+
+    cerr
+	<< "Fst kernel smoothing: " << (kernel_fst == true ? "on" : "off") << "\n"
+	<< "Percent samples limit per population: " << sample_limit << "\n"
+	<< "Locus Population limit: " << population_limit << "\n"
+	<< "Minimum stack depth: " << min_stack_depth << "\n"
+	<< "Minor allele frequency cutoff: " << minor_allele_freq << "\n"
+	<< "Applying Fst correction: ";
+    switch(fst_correction) {
+    case p_value:
+	cerr << "P-value correction.\n";
+	break;
+    case bonferroni_win:
+	cerr << "Bonferroni correction within sliding window.\n";
+	break;
+    case bonferroni_gen:
+	cerr << "Bonferroni correction across genome wide sites.\n";
+	break;
+    case no_correction:
+	cerr << "none.\n";
+	break;
+    }
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -150,6 +178,8 @@ int main (int argc, char* argv[]) {
     PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches, min_stack_depth);
 
+    apply_locus_constraints(catalog, pmap, pop_indexes);
+
     cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
     map<int, CLocus *>::iterator it;
     map<int, ModRes *>::iterator mit;
@@ -176,7 +206,8 @@ int main (int argc, char* argv[]) {
     	    d = pmap->datum(loc->id, sample_ids[i]);
 
     	    if (d != NULL) {
-    		d->model = new char[strlen(modres[d->id]->model) + 1];
+		d->len   = strlen(modres[d->id]->model);
+    		d->model = new char[d->len + 1];
     		strcpy(d->model, modres[d->id]->model);
     	    }
     	}
@@ -217,6 +248,9 @@ int main (int argc, char* argv[]) {
     if (vcf_out)
 	write_vcf(catalog, pmap, psum, samples, sample_ids);
 
+    if (genepop_out)
+	write_genepop(catalog, pmap, pop_indexes, samples, sample_ids);
+
     //
     // Output the observed haplotypes.
     //
@@ -243,7 +277,129 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int reduce_catalog(map<int, CLocus *> &catalog, set<int> &whitelist, set<int> &blacklist) {
+int
+apply_locus_constraints(map<int, CLocus *> &catalog, 
+			PopMap<CLocus> *pmap, 
+			map<int, pair<int, int> > &pop_indexes)
+{
+    uint pop_id, start_index, end_index;
+    CLocus *loc;
+    Datum **d;
+
+    if (sample_limit == 0 && population_limit == 0) return 0;
+
+    map<int, CLocus *>::iterator it;
+    map<int, pair<int, int> >::iterator pit;
+
+    uint pop_cnt   = pop_indexes.size();
+    int *pop_order = new int [pop_cnt];
+
+    // Which population each sample belongs to.
+    int *samples   = new int [pmap->sample_cnt()];
+
+    // For the current locus, how many samples in each population.
+    int *pop_cnts  = new int [pop_cnt];
+
+    // The total number of samples in each population.
+    int *pop_tot   = new int [pop_cnt];
+
+    pop_id = 0;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	start_index = pit->second.first;
+	end_index   = pit->second.second;
+	pop_tot[pop_id]  = 0;
+
+	for (uint i = start_index; i <= end_index; i++) {
+	    samples[i] = pop_id;
+	    pop_tot[pop_id]++;
+	}
+	pop_order[pop_id] = pit->first;
+	pop_id++;
+    }
+
+    for (uint i = 0; i < pop_cnt; i++)
+	pop_cnts[i] = 0;
+
+    double pct       = 0.0;
+    bool   pro_limit = false;
+    bool   pop_limit = false;
+    int    pops      = 0;
+    set<int> blacklist;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+	d   = pmap->locus(loc->id);
+
+	//
+	// Tally up the count of samples in this population.
+	//
+	for (int i = 0; i < pmap->sample_cnt(); i++) {
+	    if (d[i] != NULL)
+		pop_cnts[samples[i]]++;
+	}
+
+	//
+	// Check that the counts for each population are over progeny_limit. If not, zero out 
+	// the members of that population.
+	//
+	for (uint i = 0; i < pop_cnt; i++) {
+	    pct = (double) pop_cnts[i] / (double) pop_tot[i];
+
+	    if (pop_cnts[i] > 0 && pct < sample_limit) {
+		//cerr << "Removing population " << pop_order[i] << " at locus: " << loc->id << "; below sample limit: " << pct << "\n";
+		start_index = pop_indexes[pop_order[i]].first;
+		end_index   = pop_indexes[pop_order[i]].second;
+
+		for (uint j  = start_index; j <= end_index; j++) {
+		    if (d[j] != NULL) {
+			delete d[j];
+			d[j] = NULL;
+		    }
+		}
+		pop_cnts[i] = 0;
+	    }
+	}
+
+	//
+	// Check that this locus is present in enough populations.
+	//
+	for (uint i = 0; i < pop_cnt; i++)
+	    if (pop_cnts[i] > 0) pops++;
+	if (pops < population_limit) {
+	    //cerr << "Removing locus: " << loc->id << "; below population limit: " << pops << "\n";
+	    pop_limit = true;
+	}
+
+	if (pop_limit)
+	    blacklist.insert(loc->id);
+
+	for (uint i = 0; i < pop_cnt; i++)
+	    pop_cnts[i] = 0;
+	pro_limit = false;
+	pop_limit = false;
+	pops      = 0;
+    }
+
+    //
+    // Remove loci
+    //
+    cerr << "Removing " << blacklist.size() << " loci that did not pass sample/population constraints...";
+    set<int> whitelist;
+    reduce_catalog(catalog, whitelist, blacklist);
+    int retained = pmap->prune(blacklist);
+    cerr << " retained " << retained << " loci.\n";
+
+    delete [] pop_cnts;
+    delete [] pop_tot;
+    delete [] pop_order;
+    delete [] samples;
+
+    return 0;
+}
+
+int 
+reduce_catalog(map<int, CLocus *> &catalog, set<int> &whitelist, set<int> &blacklist) 
+{
     map<int, CLocus *> list;
     map<int, CLocus *>::iterator it;
     CLocus *loc;
@@ -251,20 +407,25 @@ int reduce_catalog(map<int, CLocus *> &catalog, set<int> &whitelist, set<int> &b
     if (whitelist.size() == 0 && blacklist.size() == 0) 
 	return 0;
  
+    int i = 0;
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 
 	if (whitelist.size() > 0 && whitelist.count(loc->id) == 0) continue;
 	if (blacklist.count(loc->id)) continue;
+
 	list[it->first] = it->second;
+	i++;
     }
 
     catalog = list;
 
-    return 0;
+    return i;
 }
 
-int order_unordered_loci(map<int, CLocus *> &catalog) {
+int 
+order_unordered_loci(map<int, CLocus *> &catalog) 
+{
     map<int, CLocus *>::iterator it;
     CLocus *loc;
     set<string> chrs;
@@ -466,7 +627,7 @@ int tally_haplotype_freq(CLocus *locus, PopMap<CLocus> *pmap,
 
 int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".genomic_" << progeny_limit << ".tsv";
+    pop_name << "batch_" << batch_id << ".genomic.tsv";
 
     string file = in_path + pop_name.str();
 
@@ -486,7 +647,6 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
 
     for (cit = catalog.begin(); cit != catalog.end(); cit++) {
 	loc = cit->second;
-	if (loc->hcnt < progeny_limit) continue;
 
 	num_loci += loc->len - renz_len[enz];
     }
@@ -510,8 +670,6 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	for (uint i = 0; i < it->second.size(); i++) {
 	    loc = it->second[i];
-
-	    if (loc->hcnt < progeny_limit) continue;
 
 	    Datum **d = pmap->locus(loc->id);
 	    set<int> snp_locs;
@@ -584,10 +742,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 		    map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum) 
 {
     stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".sumstats";
-    if (progeny_limit > 0)
-	pop_name << "_" << progeny_limit;
-    pop_name << ".tsv";
+    pop_name << "batch_" << batch_id << ".sumstats" << ".tsv";
 
     string file = in_path + pop_name.str();
 
@@ -622,7 +777,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     int      len;
     int      pop_cnt = psum->pop_cnt();
     char     fisstr[32];
-    bool     fixed, plimit;
+    bool     fixed;
 
     fh << "# Batch ID " << "\t"
        << "Locus ID" << "\t"
@@ -652,15 +807,12 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 		// If this site is fixed in all populations, don't output it.
 		//
 		fixed  = true;
-		plimit = true;
 		for (int j = 0; j < pop_cnt; j++) {
-		    if (s[j]->nucs[i].num_indv < progeny_limit) 
-			plimit = false;
 		    if (s[j]->nucs[i].pi != 0) 
 			fixed = false;
 		}
 
-		if (!fixed && plimit) {
+		if (!fixed) {
 		    for (int j = 0; j < pop_cnt; j++) {
 
 			if (s[j]->nucs[i].num_indv == 0) continue;
@@ -698,7 +850,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     // We want to iterate over each pair of populations and calculate Fst at each 
     // nucleotide of each locus.
     //
-    vector<int> pops;
+    vector<double> means;
+    vector<int>    pops;
     map<int, pair<int, int> >::iterator pit;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
 	pops.push_back(pit->first);
@@ -706,6 +859,9 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     if (pops.size() == 1) return 0;
 
     for (uint i = 0; i < pops.size(); i++) {
+	double sum = 0.0;
+	double cnt = 0.0;
+
 	for (uint j = i + 1; j < pops.size(); j++) {
 	    int pop_1 = pops[i];
 	    int pop_2 = pops[j];
@@ -725,27 +881,28 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
 	    cerr << "Calculating Fst for populations " << pop_1 << " and " << pop_2 << " and writing it to file, '" << file << "'\n";
 
-	    fh << "# Batch ID"   << "\t"
-	       << "Locus ID"     << "\t"
-	       << "Pop 1 ID"     << "\t"
-	       << "Pop 2 ID"     << "\t"
-	       << "Chr"          << "\t"
-	       << "BP"           << "\t"
-	       << "Column"       << "\t"
-	       << "Overall Pi"   << "\t"
-	       << "Fst"          << "\t"
-	       << "Fisher's P"   << "\t"
-	       << "Odds Ratio"   << "\t"
-	       << "CI Low"       << "\t"
-	       << "CI High"      << "\t"
-	       << "LOD"          << "\t"
-	       << "Smoothed Fst" << "\n";
+	    fh << "# Batch ID" << "\t"
+	       << "Locus ID"   << "\t"
+	       << "Pop 1 ID"   << "\t"
+	       << "Pop 2 ID"   << "\t"
+	       << "Chr"        << "\t"
+	       << "BP"         << "\t"
+	       << "Column"     << "\t"
+	       << "Overall Pi" << "\t"
+	       << "Fst"        << "\t"
+	       << "Fisher's P" << "\t"
+	       << "Odds Ratio" << "\t"
+	       << "CI Low"     << "\t"
+	       << "CI High"    << "\t"
+	       << "LOD"        << "\t"
+	       << "Corrected Fst" << "\t"
+	       << "Smoothed Fst"  << "\n";
 
 	    map<string, vector<CLocus *> >::iterator it;
 	    CLocus  *loc;
 	    PopPair *pair;
 	    int      len;
-	    char     fst_str[32], wfst_str[32];
+	    char     fst_str[32], wfst_str[32], cfst_str[32];
 
 	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 
@@ -757,7 +914,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
 		    for (int k = 0; k < len; k++) {
 
-			pair = psum->Fst(loc->id, pop_1, pop_2, k, progeny_limit);
+			pair = psum->Fst(loc->id, pop_1, pop_2, k);
 
 			//
 			// Locus is incompatible, log this position.
@@ -791,6 +948,36 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		}
 
 		//
+		// Apply user-selected correction to the Fst values.
+		//
+		double correction;
+		switch(fst_correction) {
+		case p_value:
+		    for (uint i = 0; i < pairs.size(); i++) {
+			if (pairs[i] != NULL)
+			    pairs[i]->cfst = pairs[i]->fet_p < p_value_cutoff ? pairs[i]->fst : 0;
+		    }
+		    break;
+		case bonferroni_win:
+		    correct_fst_bonferroni_win(pairs);
+		    break;
+		case bonferroni_gen:
+		    correction = p_value_cutoff / catalog.size();
+		    for (uint i = 0; i < pairs.size(); i++) {
+			if (pairs[i] != NULL)
+			    pairs[i]->cfst = pairs[i]->fet_p < correction ? pairs[i]->fst : 0;
+		    }
+		    break;
+		case no_correction:
+		    for (uint i = 0; i < pairs.size(); i++) {
+			if (pairs[i] != NULL) {
+			    pairs[i]->cfst = pairs[i]->fst;
+			}
+		    }
+		    break;
+		}
+
+		//
 		// Calculate kernel-smoothed Fst values.
 		//
 		if (kernel_fst) {
@@ -810,40 +997,136 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			    continue;
 			}
 
+			cnt++;
+			sum += pairs[i]->cfst;
+
 			sprintf(fst_str,  "%0.10f", pairs[i]->fst);
+			sprintf(cfst_str, "%0.10f", pairs[i]->cfst);
 			sprintf(wfst_str, "%0.10f", pairs[i]->wfst);
 
-			fh << batch_id        << "\t" 
+			fh << batch_id        << "\t"
 			   << loc->id         << "\t"
 			   << pop_1           << "\t"
 			   << pop_2           << "\t"
 			   << loc->loc.chr    << "\t"
 			   << loc->loc.bp + k << "\t"
 			   << k               << "\t"
-			   << pairs[i]->pi    << "\t"
-			   << fst_str         << "\t"
+			   << pairs[i]->pi      << "\t"
+			   << fst_str           << "\t"
 			   << pairs[i]->fet_p   << "\t"
 			   << pairs[i]->fet_or  << "\t"
 			   << pairs[i]->ci_low  << "\t"
 			   << pairs[i]->ci_high << "\t"
 			   << pairs[i]->lod     << "\t"
-			   << wfst_str << "\n";
+			   << cfst_str          << "\t"
+			   << wfst_str          << "\n";
 
 			delete pairs[i];
 			i++;
 		    }
 		}
 	    }
+	    means.push_back(sum / cnt);
+
 	    cerr << "Pooled populations " << pop_1 << " and " << pop_2 << " contained " << incompatible_loci << " incompatible loci.\n";
 	    fh.close();
 	}
+    }
+
+    //
+    // Write out the mean Fst measure of each pair of populations.
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".fst_summary.tsv";
+
+    string file = in_path + pop_name.str();
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+	cerr << "Error opening generic output file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Write out X-axis header.
+    //
+    for (uint i = 0; i < pops.size(); i++)
+	fh << "\t" << pops[i];
+    fh << "\n";
+
+    uint n = 0;
+    for (uint i = 0; i < pops.size() - 1; i++) {
+	fh << pops[i];
+
+	for (uint k = 0; k <= i; k++)
+	    fh << "\t";
+
+	for (uint j = i + 1; j < pops.size(); j++) {
+	    fh << "\t" << means[n];
+	    n++;
+	}
+	fh << "\n";
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int
+correct_fst_bonferroni_win(vector<PopPair *> &pairs)
+{
+    int      limit = 3 * sigma;
+    int      limit_l, limit_u;
+    double   correction;
+    uint     cnt, pos_l, pos_u;
+
+    pos_l = 0;
+    pos_u = 0;
+
+    for (uint pos_c = 0; pos_c < pairs.size(); pos_c++) {
+	if (pairs[pos_c] == NULL) continue;
+
+	limit_l = pairs[pos_c]->bp - limit > 0 ? pairs[pos_c]->bp - limit : 0;
+	limit_u = pairs[pos_c]->bp + limit;
+
+	while (pos_l <  pairs.size()) {
+	    if (pairs[pos_l] == NULL) {
+		pos_l++;
+	    } else {
+		if (pairs[pos_l]->bp < limit_l) 
+		    pos_l++;
+		else
+		    break;
+	    }
+	}    
+	while (pos_u < pairs.size()) {
+	    if (pairs[pos_u] == NULL) {
+		pos_u++;
+	    } else {
+		if (pairs[pos_u]->bp < limit_u)
+		    pos_u++;
+		else
+		    break;
+	    }
+	}
+
+	cnt = 0;
+	for (uint i = pos_l; i < pos_u; i++) {
+	    if (pairs[i] == NULL) continue;
+	    cnt++;
+	}
+
+	correction = p_value_cutoff / cnt;
+	pairs[pos_c]->cfst = pairs[pos_c]->fet_p < correction ? pairs[pos_c]->fst : 0;
     }
 
     return 0;
 }
 
 int
-kernel_smoothed_fst(vector<PopPair *> &pairs) {
+kernel_smoothed_fst(vector<PopPair *> &pairs) 
+{
     //
     // To generate smooth genome-wide distributions of Fst, we calculate a kernel-smoothing 
     // moving average of Fst values along each ordered chromosome.
@@ -858,7 +1141,8 @@ kernel_smoothed_fst(vector<PopPair *> &pairs) {
     // By default, sigma = 150Kb, for computational efficiency, only calculate average out to 3sigma.
     //
     int      limit = 3 * sigma;
-    int      dist;
+    int      dist, limit_l, limit_u;
+    uint     pos_l, pos_u;
     double   weighted_fst, sum, final_weight;
     PopPair *c, *p;
 
@@ -869,6 +1153,9 @@ kernel_smoothed_fst(vector<PopPair *> &pairs) {
     for (int i = 0; i <= limit; i++)
 	weights[i] = exp((-1 * pow(i, 2)) / (2 * pow(sigma, 2)));
 
+    pos_l = 0;
+    pos_u = 0;
+
     for (uint pos_c = 0; pos_c < pairs.size(); pos_c++) {
 	c = pairs[pos_c];
 
@@ -878,18 +1165,44 @@ kernel_smoothed_fst(vector<PopPair *> &pairs) {
 	weighted_fst = 0.0;
 	sum          = 0.0;
 
-	for (uint pos_p = 0; pos_p < pairs.size(); pos_p++) {
+	limit_l = pairs[pos_c]->bp - limit > 0 ? pairs[pos_c]->bp - limit : 0;
+	limit_u = pairs[pos_c]->bp + limit;
+
+	while (pos_l <  pairs.size()) {
+	    if (pairs[pos_l] == NULL) {
+		pos_l++;
+	    } else {
+		if (pairs[pos_l]->bp < limit_l) 
+		    pos_l++;
+		else
+		    break;
+	    }
+	}    
+	while (pos_u < pairs.size()) {
+	    if (pairs[pos_u] == NULL) {
+		pos_u++;
+	    } else {
+		if (pairs[pos_u]->bp < limit_u)
+		    pos_u++;
+		else
+		    break;
+	    }
+	}
+
+	// cerr << "Calculating sliding window; start position: " << pos_l << ", " << pairs[pos_l]->bp << "bp; end position: " 
+	//      << pos_u << ", " << pairs[pos_u]->bp << "bp; center: " 
+	//      << pos_c << ", " << pairs[pos_c]->bp << "bp\n";
+
+	for (uint pos_p = pos_l; pos_p < pos_u; pos_p++) {
 	    p = pairs[pos_p];
 
 	    if (p == NULL)
 		continue;
 
 	    dist = p->bp > c->bp ? p->bp - c->bp : c->bp - p->bp;
-	    if (dist > limit)
-		continue;
 
 	    final_weight  = (p->alleles - 1) * weights[dist];
-	    weighted_fst += p->fst * final_weight;
+	    weighted_fst += p->cfst * final_weight;
 	    sum          += final_weight;
 	}
 
@@ -908,9 +1221,9 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
     stringstream pop_name;
     pop_name << "batch_" << batch_id;
     if (write_gtypes)
-	pop_name << ".genotypes_" << progeny_limit << ".tsv";
+	pop_name << ".genotypes.tsv";
     else 
-	pop_name << ".haplotypes_" << progeny_limit << ".tsv";
+	pop_name << ".haplotypes.tsv";
 
     string file = in_path + pop_name.str();
 
@@ -926,15 +1239,8 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
     //
     map<int, CLocus *>::iterator it;
     CLocus *loc;
-    int num_loci = 0;
+    int num_loci = catalog.size();
 
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
-	if (write_gtypes == false && loc->hcnt < progeny_limit) continue;
-	if (write_gtypes == true  && loc->gcnt < progeny_limit) continue;
-
-	num_loci++;
-    }
     cerr << "Writing " << num_loci << " loci to " << (write_gtypes ? "genotype" : "observed haplotype") << " file, '" << file << "'\n";
 
     //
@@ -959,9 +1265,6 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
     //
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
-
-	if (write_gtypes == false && loc->hcnt < progeny_limit) continue;
-	if (write_gtypes == true  && loc->gcnt < progeny_limit) continue;
 
 	stringstream id;
         loc->annotation.length() > 0 ? 
@@ -1150,7 +1453,7 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
     int      len, bp, gt_1, gt_2, num_indv;
     double   p;
     int      pop_cnt = psum->pop_cnt();
-    bool     fixed, plimit;
+    bool     fixed;
     char     ref, alt, p_allele, q_allele, p_str[32], q_str[32];
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
@@ -1167,7 +1470,6 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
 		    continue;
 
 		fixed    = true;
-		plimit   = true;
 		num_indv = 0;
 		p        = 0.0;
 		for (int j = 0; j < pop_cnt; j++) {
@@ -1186,8 +1488,6 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
 		    else 
 			p += (1 - s[j]->nucs[col].p) * (s[j]->nucs[col].num_indv / num_indv);
 
-		    if (s[j]->nucs[col].num_indv < progeny_limit) 
-			plimit = false;
 		    if (s[j]->nucs[col].pi != 0) 
 			fixed = false;
 		}
@@ -1196,7 +1496,7 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
 		// If this site is fixed in all populations, or below the minimum 
 		// sample limit in any population, don't output it.
 		//
-		if (fixed || !plimit) 
+		if (fixed) 
 		    continue;
 
 		sprintf(p_str, "%0.3f", p);
@@ -1268,6 +1568,130 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
 		}
 		fh << "\n";
 	    }
+	}
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int 
+write_genepop(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, pair<int, int> > &pop_indexes, map<int, string> &samples, vector<int> &sample_ids) 
+{
+    //
+    // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".genepop";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing population data to GenePop file '" << file << "'\n";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening GenePop file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    //
+    // Output the header line.
+    //
+    fh << "Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
+
+    map<int, pair<int, int> >::iterator pit;
+    map<int, CLocus *>::iterator it;
+    CLocus  *loc;
+    Datum  **d;
+    int      len, start_index, end_index;
+    char     p_allele, q_allele;
+
+    //
+    // Output all the loci on the second line, comma-separated.
+    //
+    uint i   = 0;
+    uint cnt = catalog.size();
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+	for (uint j = 0; j < loc->snps.size(); j++) {
+	    fh << loc->id << "_" << loc->snps[j]->col;
+	    if (i <  cnt - 1) fh << ",";
+	    if (i == cnt - 1 && j < loc->snps.size() - 1) fh << ",";
+	}
+	i++;
+    }
+    fh << "\n";
+
+    map<char, string> nuc_map;
+    nuc_map['A'] = "01";
+    nuc_map['C'] = "02";
+    nuc_map['G'] = "03";
+    nuc_map['T'] = "04";
+
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	start_index = pit->second.first;
+	end_index   = pit->second.second;
+
+	fh << "pop\n";
+
+	for (int j = start_index; j <= end_index; j++) {
+
+	    fh << samples[pmap->rev_sample_index(j)] << ",\t";
+
+	    for (it = catalog.begin(); it != catalog.end(); it++) {
+		loc = it->second;
+
+		len = strlen(loc->con);
+		d   = pmap->locus(loc->id);
+
+		for (i = 0; i < loc->snps.size(); i++) {
+		    uint col = loc->snps[i]->col;
+
+		    if (d[j] == NULL) {
+			//
+			// Data does not exist.
+			//
+			fh << "0000";
+		    } else if (d[j]->model[col] == 'U') {
+			//
+			// Data exists, but the model call was uncertain.
+			//
+			fh << "0000";
+		    } else {
+			//
+			// Tally up the nucleotide calls.
+			//
+			tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
+
+			if (p_allele == 0 && q_allele == 0) {
+			    // More than two potential alleles.
+			    fh << "0000";
+			} else if (p_allele == 0) {
+			    fh << nuc_map[q_allele] << nuc_map[q_allele];
+
+			} else if (q_allele == 0) {
+			    fh << nuc_map[p_allele] << nuc_map[p_allele];
+
+			} else {
+			    fh << nuc_map[p_allele] << nuc_map[q_allele];
+			}
+		    }
+		    if (j <= end_index) 
+			fh << "\t";
+		}
+	    }
+	    fh << "\n";
 	}
     }
 
@@ -1657,6 +2081,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"sql",         no_argument,       NULL, 's'},
             {"vcf",         no_argument,       NULL, 'V'},
             {"genomic",     no_argument,       NULL, 'g'},
+	    {"genepop",     no_argument,       NULL, 'G'},
             {"kernel_fst",  no_argument,       NULL, 'k'},
 	    {"window_size", required_argument, NULL, 'w'},
 	    {"num_threads", required_argument, NULL, 'p'},
@@ -1668,13 +2093,17 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"pop_map",     required_argument, NULL, 'M'},
 	    {"whitelist",   required_argument, NULL, 'W'},
 	    {"blacklist",   required_argument, NULL, 'B'},
+	    {"min_populations",   required_argument, NULL, 'p'},
+	    {"minor_allele_freq", required_argument, NULL, 'a'},
+	    {"fst_correction",    required_argument, NULL, 'f'},
+	    {"p_value_cutoff",    required_argument, NULL, 'u'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hkVgvcsib:p:t:o:r:M:P:m:e:W:B:w:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hkVGgvcsib:p:t:o:r:M:P:m:e:W:B:w:a:f:p:u:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1694,7 +2123,10 @@ int parse_command_line(int argc, char* argv[]) {
 	    batch_id = atoi(optarg);
 	    break;
 	case 'r':
-	    progeny_limit = atoi(optarg);
+	    sample_limit = atof(optarg);
+	    break;
+	case 'p':
+	    population_limit = atoi(optarg);
 	    break;
 	case 'k':
 	    kernel_fst = true;
@@ -1711,6 +2143,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'V':
 	    vcf_out = true;
 	    break;
+	case 'G':
+	    genepop_out = true;
+	    break;
 	case 'g':
 	    genomic_out = true;
 	    break;
@@ -1722,6 +2157,24 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'm':
 	    min_stack_depth = atoi(optarg);
+	    break;
+	case 'a':
+	    minor_allele_freq = atof(optarg);
+	    break;
+	case 'f':
+	    if (strcmp(optarg, "p_value") == 0)
+		fst_correction = p_value;
+	    else if (strcmp(optarg, "bonferroni_win") == 0)
+		fst_correction = bonferroni_win;
+	    else if (strcmp(optarg, "bonferroni_gen") == 0)
+		fst_correction = bonferroni_gen;
+	    else {
+		cerr << "Unknown Fst correction specified '" << optarg << "'\n";
+		help();
+	    }
+	    break;
+	case 'u':
+	    p_value_cutoff = atof(optarg);
 	    break;
 	case 'e':
 	    enz = optarg;
@@ -1764,6 +2217,26 @@ int parse_command_line(int argc, char* argv[]) {
 	help();
     }
 
+    if (minor_allele_freq > 0) {
+	if (minor_allele_freq > 1)
+	    minor_allele_freq = minor_allele_freq / 100;
+
+	if (minor_allele_freq > 0.5) {
+	    cerr << "Unable to parse the minor allele frequency\n";
+	    help();
+	}
+    }
+
+    if (progeny_limit > 0) {
+	if (progeny_limit > 1)
+	    progeny_limit = progeny_limit / 100;
+
+	if (progeny_limit > 1.0) {
+	    cerr << "Unable to parse the progeny limit frequency\n";
+	    help();
+	}
+    }
+
     return 0;
 }
 
@@ -1779,19 +2252,25 @@ void help() {
 	      << "  b: Batch ID to examine when exporting from the catalog.\n"
 	      << "  P: path to the Stacks output files.\n"
 	      << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
-	      << "  r: minimum number of individuals required to process a locus.\n"
-	      << "  m: specify a minimum stack depth required before exporting a locus in a particular individual.\n"
 	      << "  s: output a file to import results into an SQL database.\n"
 	      << "  g: output each nucleotide position in all population members to a file.\n"
 	      << "  V: output results in Variant Call Format (VCF).\n"
+	      << "  G: output results in GenePop format.\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
 	      << "  W: specify a file containing Whitelisted markers to include in the export.\n"
 	      << "  e: restriction enzyme, required if generating 'genomic' output.\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n"
+	      << "  Data Filtering:\n"
+	      << "    r: minimum percentage of individuals in a population required to process a locus for that population.\n"
+	      << "    p: minimum number of populations a locus must be present in to process a locus.\n"
+	      << "    m: specify a minimum stack depth required for individuals at a locus.\n"
+	      << "    a: specify a minimum minor allele frequency required before calculating Fst at a locus (0 < a < 0.5).\n"
+	      << "    f: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'.\n"
+	      << "    --p_value_cutoff: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n"
 	      << "  Kernel-smoothing algorithm:\n" 
-	      << "   k: enable kernel-smoothed Fst calculation.\n"
-	      << "   --window_size: distance over which to average values (sigma, default 150Kb)\n";
+	      << "    k: enable kernel-smoothed Fst calculation.\n"
+	      << "    --window_size: distance over which to average values (sigma, default 150Kb)\n";
 
     exit(0);
 }

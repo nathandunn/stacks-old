@@ -38,6 +38,7 @@ using std::make_pair;
 #include "stacks.h"
 
 extern int progeny_limit;
+extern double minor_allele_freq;
 
 class PopPair {
 public:
@@ -51,6 +52,7 @@ public:
     double lod;     // base 10 logarithm of odds score.
     double ci_low;  // Fisher's exact test lower confidence interval.
     double ci_high; // Fisher's exact test higher confidence interval.
+    double cfst;    // Corrected Fst (by p-value or Bonferroni p-value).
     double wfst;    // Weigted Fst (kernel-smoothed)
 
     PopPair() { 
@@ -58,6 +60,7 @@ public:
 	alleles = 0.0;
 	pi      = 0.0;
 	fst     = 0.0;
+	cfst    = 0.0;
 	wfst    = 0.0;
 	fet_p   = 0.0;
 	fet_or  = 0.0;
@@ -145,7 +148,7 @@ public:
 
     LocSum **locus(int);
     LocSum  *pop(int, int);
-    PopPair *Fst(int, int, int, int, int);
+    PopPair *Fst(int, int, int, int);
     int      fishers_exact_test(PopPair *, double, double, double, double);
 
 private:
@@ -225,7 +228,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	s[pop_index] = new LocSum(len);
 
 	//
-	// The catalog records which nucleotides are heterzygous. For these nucleotides we much
+	// The catalog records which nucleotides are heterozygous. For these nucleotides we will
 	// calculate observed genotype frequencies, allele frequencies, and expected genotype frequencies.
 	//
 	for (uint k = 0; k < loc->snps.size(); k++) {
@@ -263,7 +266,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 }
 
 template<class LocusT>
-PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos, int sample_lim) 
+PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) 
 {
     LocSum  *s_1  = this->pop(locus, pop_1);
     LocSum  *s_2  = this->pop(locus, pop_2);
@@ -273,7 +276,7 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos, int sampl
     // If this locus only appears in one population, or it does not have sufficient 
     // samples in the population, do not calculate Fst.
     //
-    if (s_1->nucs[pos].num_indv < sample_lim || s_2->nucs[pos].num_indv < sample_lim) 
+    if (s_1->nucs[pos].num_indv == 0 || s_2->nucs[pos].num_indv == 0) 
 	return pair;
 
     //
@@ -372,7 +375,7 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
     char   p_nuc;
 
     for (uint i = start; i <= end; i++) {
-	if (d[i] == NULL) continue;
+	if (d[i] == NULL || pos >= d[i]->len) continue;
 	//
 	// Before counting this individual, make sure the model definitively called this 
 	// position as hEterozygous or hOmozygous.
@@ -417,7 +420,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     // Iterate over each individual in this sub-population.
     //
     for (i = start; i <= end; i++) {
-	if (d[i] == NULL) continue;
+	if (d[i] == NULL || pos >= d[i]->len) continue;
 
 	//
 	// Pull each allele for this SNP from the observed haplotype.
@@ -511,7 +514,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     double obs_q    = 0.0;
 
     for (i = start; i <= end; i++) {
-	if (d[i] == NULL) continue;
+	if (d[i] == NULL || pos >= d[i]->len) continue;
 	//
 	// Before counting this individual, make sure the model definitively called this 
 	// position as hEterozygous or hOmozygous.
@@ -552,6 +555,25 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     allele_q = allele_q / tot_alleles;
 
     //cerr << "  P allele frequency: " << allele_p << "; Q allele frequency: " << allele_q << "\n";
+
+    //
+    // If the minor allele frequency is below the cutoff, set it to zero.
+    //
+    if (minor_allele_freq > 0) {
+	if (allele_p < allele_q) {
+	    if (allele_p < minor_allele_freq) {
+		allele_q += allele_p;
+		allele_p  = 0;
+		s->nucs[pos].pi = 0;
+	    }
+	} else {
+	    if (allele_q < minor_allele_freq) {
+		allele_p += allele_q;
+		allele_q  = 0;
+		s->nucs[pos].pi = 0;
+	    }
+	}
+    }
 
     //
     // Calculate expected genotype frequencies.

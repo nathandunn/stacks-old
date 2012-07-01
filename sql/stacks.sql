@@ -55,6 +55,7 @@ create table fst (
        ci_low	  double,
        ci_high	  double,
        lod	  double,
+       fst_c	  double,
        fst_s	  double,
        INDEX      batch_id_index (batch_id),
        INDEX      tag_id_index (tag_id)
