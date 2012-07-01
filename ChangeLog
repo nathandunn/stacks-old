@@ -1,6 +1,31 @@
+Stacks 0.9994 - July 01, 2012
+-----------------------------
+	Feature: the populations program can now write a file in the GenePop format. GenePop files can be read
+	by the GenePop program and converted for other population genetics programs such as Arlequin. Caution: you
+	may not be able to include all loci from a Stacks run in the output as these programs aren't necessarily 
+	capable of handling such a volume of data. However, you can use populations' whitelist feature to only
+	include certain loci in the output.
+	Feature: the populations program now writes an Fst summary file providing a matrix of mean Fst measures
+	for each pair of populations in the analysis.
+	Feature: added two filters to populations to require a locus to be present in a certain percentage of 
+	individuals in a population, and requiring a locus to be present in a certain number of populations. If
+	the former criteria is not reached, the locus is zeroed out only in the specific population, if the latter
+	criteria is not met, the locus is discarded from the analysis.
+	Feature: three Fst corrections are now provided by the populations program: requiring a locus to have a significant
+	p-value (smaller than 0.05, although its configurable), applying a Bonferroni correction according to the number 
+	of data points in the sliding window, and applying a Bonferroni correction according to the number of data points 
+	in the genome. Loci that fail to reach statitical significance in each case are considered not different from zero
+	and are set to zero.
+	Feature: a filter can be specified to the populations program requiring a minimum allele frequency (MAF) at
+	a locus to consider the locus variable. If an allele at a locus is below the MAF, the locus is considered fixed.
+	Feature: when using a reference genome, Stacks can now work with samples of different sequence lengths.
+	This means one can combine samples generated from different Illumina runs of different length. Each
+	individual sample must be of the same length internally, however.
 	Feature: pstacks can now handle gapped alignments properly. It parses the CIGAR string in the SAM file 
 	and inserts/removes Ns to accomodate indels and soft-masked alignment fragments. This prevents the SNP
 	model from mistakenly calling polymorphisms due to indel frameshifts.
+	Bugfix: Removed O(n^2) algorithm from Sliding window Fst calculation in populations program, significant 
+	speedup acheived. 
 	Bugfix: Updated load_radtags.pl to support population types and to import sumstats, fst, and genotypes 
 	files.
 	Bugfix: fixed a small memory leak in DNANSeq.

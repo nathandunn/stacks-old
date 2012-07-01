@@ -62,6 +62,7 @@ using std::set;
 
 enum map_types {unk, none, gen, dh, cp, bc1, f2};
 enum out_types {rqtl, joinmap, genomic};
+enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 
 //
 // Catalog Locus Class
@@ -85,12 +86,14 @@ int  parse_command_line(int, char**);
 int  build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &);
 int  load_marker_list(string, set<int> &);
 int  reduce_catalog(map<int, CLocus *> &, set<int> &, set<int> &);
+int  apply_locus_constraints(map<int, CLocus *> &, PopMap<CLocus> *, map<int, pair<int, int> > &);
 int  order_unordered_loci(map<int, CLocus *> &);
 int  tabulate_haplotypes(map<int, CLocus *> &, PopMap<CLocus> *);
 int  create_genotype_map(CLocus *, PopMap<CLocus> *);
 int  call_population_genotypes(CLocus *, PopMap<CLocus> *);
 int  tally_haplotype_freq(CLocus *, PopMap<CLocus> *, int &, double &, string &);
 int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &);
+int  correct_fst_bonferroni_win(vector<PopPair *> &);
 int  kernel_smoothed_fst(vector<PopPair *> &);
 
 int  write_sql(map<int, CLocus *> &, PopMap<CLocus> *);
@@ -99,6 +102,7 @@ int  write_fst_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, 
 int  write_generic(map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, bool);
 int  write_genomic(map<int, CLocus *> &, PopMap<CLocus> *);
 int  write_vcf(map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *, map<int, string> &, vector<int> &);
+int  write_genepop(map<int, CLocus *> &, PopMap<CLocus> *, map<int, pair<int, int> > &, map<int, string> &, vector<int> &);
 int  tally_observed_haplotypes(vector<char *> &, int, char &, char &);
 int  tally_ref_alleles(LocSum **, int, int, char &, char &);
 int  load_snp_calls(string,  PopMap<CLocus> *);

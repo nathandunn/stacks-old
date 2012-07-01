@@ -38,6 +38,7 @@ using std::make_pair;
 class Datum {
 public:
     int            id;           // Stack ID
+    int            len;          // Length of locus
     int            tot_depth;    // Stack depth
     vector<int>    depth;        // Stack depth of each matching allele
     bool           corrected;    // Has this genotype call been corrected
@@ -46,7 +47,7 @@ public:
     char          *trans_gtype;  // Translated Genotype
     vector<char *> obshap;       // Observed Haplotypes
     vector<SNP *>  snps;
-    Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; }
+    Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; len = 0; }
     ~Datum() {
     	for (uint i = 0; i < this->obshap.size(); i++)
     	    delete [] this->obshap[i];
@@ -78,6 +79,7 @@ public:
     ~PopMap();
 
     int populate(vector<int> &, map<int, LocusT*> &, vector<vector<CatMatch *> > &, int);
+    int prune(set<int> &);
 
     int loci_cnt() { return this->num_loci; }
     int rev_locus_index(int index) { return this->rev_locus_order[index]; }
@@ -208,6 +210,70 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
     }
 
     return 0;
+}
+
+template<class LocusT>
+int PopMap<LocusT>::prune(set<int> &remove_ids) {
+    uint new_size = this->num_loci - remove_ids.size();
+    uint loc_id;
+    map<int, int> new_loc_order, new_rev_loc_order;
+
+    Datum ***d = new Datum **[new_size];
+
+    int j = 0;
+    for (int i = 0; i < this->num_loci; i++) {
+
+	loc_id = this->rev_locus_order[i];
+
+	//
+	// Keep this locus.
+	//
+	if (remove_ids.count(loc_id) == 0) {
+	    d[j] = this->data[i];
+	    new_loc_order[loc_id] = j;
+	    new_rev_loc_order[j] = loc_id;
+	    j++;
+
+	} else {
+	    //
+	    // Remove this locus.
+	    //
+	    for (int k = 0; k < this->num_samples; k++)
+		delete this->data[i][k];
+	    delete [] this->data[i];
+	}
+    }
+
+    delete [] this->data;
+
+    this->data = d;
+    this->locus_order.clear();
+    this->locus_order = new_loc_order;
+    this->rev_locus_order.clear();
+    this->rev_locus_order = new_rev_loc_order;
+    this->num_loci = new_size;
+
+    //
+    // Re-sort the catalog loci on each chromosome according to base pair.
+    //
+    map<string, vector<LocusT *> > new_ordered_loci;
+    typename map<string, vector<LocusT*> >::iterator cit;
+
+    for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++) {
+	for (uint k = 0; k < cit->second.size(); k++) {
+	    if (remove_ids.count(cit->second[k]->id) == 0)
+		new_ordered_loci[cit->first].push_back(cit->second[k]);
+	}
+    }
+
+    this->ordered_loci.clear();
+    this->ordered_loci = new_ordered_loci;
+
+    for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++)
+	sort(cit->second.begin(), cit->second.end(), bp_compare);
+
+
+    return new_size;
 }
 
 template<class LocusT>
