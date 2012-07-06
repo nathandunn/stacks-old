@@ -859,12 +859,13 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     if (pops.size() == 1) return 0;
 
     for (uint i = 0; i < pops.size(); i++) {
-	double sum = 0.0;
-	double cnt = 0.0;
 
 	for (uint j = i + 1; j < pops.size(); j++) {
 	    int pop_1 = pops[i];
 	    int pop_2 = pops[j];
+
+	    double sum = 0.0;
+	    double cnt = 0.0;
 
 	    int incompatible_loci = 0;
 
@@ -1026,6 +1027,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    }
 		}
 	    }
+	    
+	    cerr << "Pop 1: " << pop_1 << "; Pop 2: " << pop_2 << "; mean Fst: " << (sum / cnt) << "\n";
 	    means.push_back(sum / cnt);
 
 	    cerr << "Pooled populations " << pop_1 << " and " << pop_2 << " contained " << incompatible_loci << " incompatible loci.\n";
