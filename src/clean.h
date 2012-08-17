@@ -47,7 +47,7 @@ typedef struct read {
     char   *seq;
     char   *phred;
     int    *int_scores;
-    int     filter;
+    bool    filter;
     int     retain;
     unsigned int len;
     double  win_len;

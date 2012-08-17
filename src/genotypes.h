@@ -87,6 +87,7 @@ int  reduce_catalog(map<int, CLocus *> &, set<int> &, set<int> &);
 int  find_markers(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &);
 int  calculate_f(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &);
 int  create_genotype_map(CLocus *, PopMap<CLocus> *, set<int> &);
+int  apply_locus_constraints(map<int, CLocus *> &, PopMap<CLocus> *);
 int  call_population_genotypes(CLocus *, PopMap<CLocus> *, map<string, map<string, string> > &);
 int  tally_progeny_haplotypes(CLocus *, PopMap<CLocus> *, set<int> &, int &, double &, string &);
 int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &);

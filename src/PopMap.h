@@ -78,7 +78,7 @@ public:
     PopMap(int, int);
     ~PopMap();
 
-    int populate(vector<int> &, map<int, LocusT*> &, vector<vector<CatMatch *> > &, int);
+    int populate(vector<int> &, map<int, LocusT*> &, vector<vector<CatMatch *> > &);
     int prune(set<int> &);
 
     int loci_cnt() { return this->num_loci; }
@@ -119,8 +119,7 @@ PopMap<LocusT>::~PopMap() {
 template<class LocusT>
 int PopMap<LocusT>::populate(vector<int> &sample_ids,
 			     map<int, LocusT*> &catalog,
-			     vector<vector<CatMatch *> > &matches,
-			     int min_stack_depth=0) {
+			     vector<vector<CatMatch *> > &matches) {
     //
     // Record the array position of each sample that we will load.
     //
@@ -164,9 +163,6 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 		continue;
 
 	    locus  = this->locus_order[matches[i][j]->cat_id];
-
-	    if (matches[i][j]->depth < min_stack_depth)
-		continue;
 
 	    // cerr << "Translating sample id: " << matches[i][j]->sample_id << " to index " << sample << "\n";
 	    // cerr << "Translating locus id: " << matches[i][j]->cat_id << " to index " << locus << "\n";

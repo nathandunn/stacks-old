@@ -61,7 +61,7 @@ struct eqstr {
 
 void help( void );
 void version( void );
-int  parse_command_line(int, char**);
+int  parse_command_line(int, char **);
 int  build_file_list(vector<pair<string, string> > &);
 int  load_barcodes(vector<string> &);
 int  open_files(vector<string> &, 
@@ -83,7 +83,7 @@ int  correct_barcode(map<string, ofstream *> &, Read *, map<string, long> &, map
 int  correct_radtag(Read *, map<string, long> &);
 int  check_quality_scores(Read *, bool);
 int  dist(const char *, char *);
-int  print_results(vector<string> &, map<string, map<string, long> > &, map<string, map<string, long> > &);
+int  print_results(int, char **, vector<string> &, map<string, map<string, long> > &, map<string, map<string, long> > &);
 
 int  compare_barcodes(pair<string, int>, pair<string, int>);
 

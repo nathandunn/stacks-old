@@ -48,7 +48,8 @@ Seq *
 Sam::next_seq() 
 {
     vector<string> parts;
-    int flag;
+    int  flag;
+    uint len;
 
     //
     // Read a record from the file and place it in a Seq object, skipping header 
@@ -59,6 +60,9 @@ Sam::next_seq()
 
         if (!this->fh.good())
             return NULL;
+
+	len = strlen(this->line);
+	if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
 
         parse_tsv(this->line, parts);
 

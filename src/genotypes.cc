@@ -138,7 +138,9 @@ int main (int argc, char* argv[]) {
     //
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
     PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
-    pmap->populate(sample_ids, catalog, catalog_matches, min_stack_depth);
+    pmap->populate(sample_ids, catalog, catalog_matches);
+
+    apply_locus_constraints(catalog, pmap);
 
     //
     // Identify mappable markers in the parents
@@ -198,6 +200,39 @@ int main (int argc, char* argv[]) {
 
     if (out_type == genomic)
 	write_genomic(catalog, pmap);
+
+    return 0;
+}
+
+int
+apply_locus_constraints(map<int, CLocus *> &catalog, 
+			PopMap<CLocus> *pmap)
+{
+    CLocus *loc;
+    Datum **d;
+    int below_stack_dep = 0;
+
+    if (min_stack_depth == 0) return 0;
+
+    map<int, CLocus *>::iterator it;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+	d   = pmap->locus(loc->id);
+
+	//
+	// Check that each sample is over the minimum stack depth for this locus.
+	//
+	for (int i = 0; i < pmap->sample_cnt(); i++) {
+	    if (d[i] != NULL && d[i]->tot_depth < min_stack_depth) {
+		below_stack_dep++;
+		delete d[i];
+		d[i] = NULL;
+	    }
+	}
+    }
+
+    cerr << "Removed " << below_stack_dep << " samples from loci that are below the minimum stack depth of " << min_stack_depth << "x\n";
 
     return 0;
 }

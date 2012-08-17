@@ -48,10 +48,16 @@ Seq *Fasta::next_seq() {
     }
 
     //
+    // Check if there is a carraige return in the buffer
+    //
+    uint len = strlen(this->line);
+    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
+    //
     // Initialize the Seq structure and store the FASTA ID
     //
     Seq *s = new Seq;
-    s->id = new char[strlen(this->line) + 1];
+    s->id = new char[len + 1];
     strcpy(s->id, this->line + 1);
 
     //
@@ -61,11 +67,17 @@ Seq *Fasta::next_seq() {
     this->fh.getline(this->line, max_len);
 
     while (this->line[0] != '>' && this->fh.good()) {
+	len = strlen(this->line);
+	if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
 	this->buf += this->line;
 	this->fh.getline(this->line, max_len);
     }
 
     if (this->fh.eof()) {
+	len = strlen(this->line);
+	if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
 	this->buf += this->line;
     }
 
@@ -91,6 +103,12 @@ int Fasta::next_seq(Seq &s) {
     }
 
     //
+    // Check if there is a carraige return in the buffer
+    //
+    uint len = strlen(this->line);
+    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
+    //
     // Store the FASTA ID
     //
     strcpy(s.id, this->line + 1);
@@ -102,11 +120,17 @@ int Fasta::next_seq(Seq &s) {
     this->fh.getline(this->line, max_len);
 
     while (this->line[0] != '>' && this->fh.good()) {
+	len = strlen(this->line);
+	if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
 	this->buf += this->line;
 	this->fh.getline(this->line, max_len);
     }
 
     if (this->fh.eof()) {
+	len = strlen(this->line);
+	if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
 	this->buf += this->line;
     }
 
