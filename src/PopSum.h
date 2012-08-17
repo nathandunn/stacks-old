@@ -580,7 +580,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     //
     double exp_het = 2 * allele_p * allele_q; // 2pq
     double exp_p   = allele_p * allele_p;     // p^2
-    double exp_q   = allele_q * allele_q;     // q^2; 
+    double exp_q   = allele_q * allele_q;     // q^2
 
     //cerr << "  Expected Het: " << exp_het << "; Expected P: " << exp_p << "; Expected Q: " << exp_q << "\n";
 
@@ -597,9 +597,9 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     s->nucs[pos].p        = allele_p > allele_q ? allele_p : allele_q;
     s->nucs[pos].p_nuc    = allele_p > allele_q ? p_allele : q_allele;
     s->nucs[pos].q_nuc    = allele_p > allele_q ? q_allele : p_allele;
-    s->nucs[pos].obs_hom  = obs_p    > obs_q    ? obs_p    : obs_q;
+    s->nucs[pos].obs_hom  = 1 - obs_het;
     s->nucs[pos].obs_het  = obs_het;
-    s->nucs[pos].exp_hom  = obs_p    > obs_q    ? exp_p    : exp_q;
+    s->nucs[pos].exp_hom  = 1 - s->nucs[pos].pi;
     s->nucs[pos].exp_het  = exp_het;
 
     //

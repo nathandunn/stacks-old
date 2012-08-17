@@ -47,6 +47,12 @@ Seq *Fastq::next_seq() {
     }
 
     //
+    // Check if there is a carraige return in the buffer
+    //
+    uint len = strlen(this->line);
+    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
+    //
     // Initialize the Seq structure and store the FASTQ ID
     //
     Seq *s = new Seq;
@@ -62,7 +68,10 @@ Seq *Fastq::next_seq() {
 	return NULL;
     }
 
-    s->seq = new char[strlen(this->line) + 1];
+    len = strlen(this->line);
+    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
+    s->seq = new char[len + 1];
     strcpy(s->seq, this->line);
 
     //
@@ -83,7 +92,10 @@ Seq *Fastq::next_seq() {
 	return NULL;
     }
 
-    s->qual = new char[strlen(this->line) + 1];
+    len = strlen(this->line);
+    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
+    s->qual = new char[len + 1];
     strcpy(s->qual, this->line);
 
     //
@@ -111,6 +123,12 @@ int Fastq::next_seq(Seq &s) {
     }
 
     //
+    // Check if there is a carraige return in the buffer
+    //
+    uint len = strlen(this->line);
+    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
+    //
     // Store the FASTQ ID
     //
     strcpy(s.id, this->line + 1);
@@ -123,6 +141,10 @@ int Fastq::next_seq(Seq &s) {
     if (!this->fh.good()) {
 	return 0;
     }
+
+    len = strlen(this->line);
+    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
     strcpy(s.seq, this->line);
 
     //
@@ -142,6 +164,10 @@ int Fastq::next_seq(Seq &s) {
     if (!this->fh.good() && !this->fh.eof()) {
 	return 0;
     }
+
+    len = strlen(this->line);
+    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+
     strcpy(s.qual, this->line);
 
     //

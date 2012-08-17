@@ -175,6 +175,11 @@ int parse_input_record(Seq *s, Read *r) {
 	r->read = atoi(p);
 	*q = ':';
 
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	*q = '\0';
+	r->filter = *p == 'Y' ? true : false;
+	*q = ':';
+
     } else {
 	for (p = s->id, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
@@ -221,7 +226,6 @@ int parse_input_record(Seq *s, Read *r) {
     }
 
     r->retain = 1;
-    r->filter = 0;
 
     return 0;
 }

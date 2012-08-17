@@ -176,7 +176,7 @@ int main (int argc, char* argv[]) {
     //
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
     PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
-    pmap->populate(sample_ids, catalog, catalog_matches, min_stack_depth);
+    pmap->populate(sample_ids, catalog, catalog_matches);
 
     apply_locus_constraints(catalog, pmap, pop_indexes);
 
@@ -249,7 +249,7 @@ int main (int argc, char* argv[]) {
 	write_vcf(catalog, pmap, psum, samples, sample_ids);
 
     if (genepop_out)
-	write_genepop(catalog, pmap, pop_indexes, samples, sample_ids);
+	write_genepop(catalog, pmap, psum, pop_indexes, samples, sample_ids);
 
     //
     // Output the observed haplotypes.
@@ -286,7 +286,7 @@ apply_locus_constraints(map<int, CLocus *> &catalog,
     CLocus *loc;
     Datum **d;
 
-    if (sample_limit == 0 && population_limit == 0) return 0;
+    if (sample_limit == 0 && population_limit == 0 && min_stack_depth == 0) return 0;
 
     map<int, CLocus *>::iterator it;
     map<int, pair<int, int> >::iterator pit;
@@ -324,11 +324,24 @@ apply_locus_constraints(map<int, CLocus *> &catalog,
     bool   pro_limit = false;
     bool   pop_limit = false;
     int    pops      = 0;
+    int    below_stack_dep = 0;
     set<int> blacklist;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 	d   = pmap->locus(loc->id);
+
+	//
+	// Check that each sample is over the minimum stack depth for this locus.
+	//
+	if (min_stack_depth > 0) 
+	    for (int i = 0; i < pmap->sample_cnt(); i++) {
+		if (d[i] != NULL && d[i]->tot_depth < min_stack_depth) {
+		    below_stack_dep++;
+		    delete d[i];
+		    d[i] = NULL;
+		}
+	    }
 
 	//
 	// Tally up the count of samples in this population.
@@ -383,6 +396,8 @@ apply_locus_constraints(map<int, CLocus *> &catalog,
     //
     // Remove loci
     //
+    if (min_stack_depth > 0) 
+	cerr << "Removed " << below_stack_dep << " samples from loci that are below the minimum stack depth of " << min_stack_depth << "x\n";
     cerr << "Removing " << blacklist.size() << " loci that did not pass sample/population constraints...";
     set<int> whitelist;
     reduce_catalog(catalog, whitelist, blacklist);
@@ -1496,8 +1511,7 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
 		}
 
 		// 
-		// If this site is fixed in all populations, or below the minimum 
-		// sample limit in any population, don't output it.
+		// If this site is fixed in all populations don't output it.
 		//
 		if (fixed) 
 		    continue;
@@ -1580,7 +1594,11 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
 }
 
 int 
-write_genepop(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, pair<int, int> > &pop_indexes, map<int, string> &samples, vector<int> &sample_ids) 
+write_genepop(map<int, CLocus *> &catalog, 
+	      PopMap<CLocus> *pmap, 
+	      PopSum<CLocus> *psum, 
+	      map<int, pair<int, int> > &pop_indexes, 
+	      map<int, string> &samples, vector<int> &sample_ids) 
 {
     //
     // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
@@ -1617,18 +1635,40 @@ write_genepop(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, pair<i
     map<int, CLocus *>::iterator it;
     CLocus  *loc;
     Datum  **d;
-    int      len, start_index, end_index;
+    LocSum **s;
+    int      len, start_index, end_index, col;
+    bool     fixed;
     char     p_allele, q_allele;
+    int      pop_cnt = psum->pop_cnt();
+    set<uint> fixed_loci;
 
     //
     // Output all the loci on the second line, comma-separated.
     //
     uint i   = 0;
     uint cnt = catalog.size();
+    uint locus_index = 0;
+
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 	for (uint j = 0; j < loc->snps.size(); j++) {
-	    fh << loc->id << "_" << loc->snps[j]->col;
+	    col = loc->snps[j]->col;
+	    s   = psum->locus(loc->id);
+
+	    fixed = true;
+	    for (int k = 0; k < pop_cnt; k++) {
+		if (s[k]->nucs[col].pi != 0) 
+		    fixed = false;
+	    }
+	    locus_index++;
+	    // 
+	    // If this site is fixed in all populations don't output it.
+	    //
+	    if (fixed) {
+		fixed_loci.insert(locus_index);
+		continue;
+	    }
+	    fh << loc->id << "_" << col;
 	    if (i <  cnt - 1) fh << ",";
 	    if (i == cnt - 1 && j < loc->snps.size() - 1) fh << ",";
 	}
@@ -1652,6 +1692,7 @@ write_genepop(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, pair<i
 
 	    fh << samples[pmap->rev_sample_index(j)] << ",\t";
 
+	    locus_index = 0;
 	    for (it = catalog.begin(); it != catalog.end(); it++) {
 		loc = it->second;
 
@@ -1660,6 +1701,11 @@ write_genepop(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, pair<i
 
 		for (i = 0; i < loc->snps.size(); i++) {
 		    uint col = loc->snps[i]->col;
+
+		    if (fixed_loci.count(locus_index)) {
+			locus_index++;
+			continue;
+		    }
 
 		    if (d[j] == NULL) {
 			//
@@ -1692,6 +1738,7 @@ write_genepop(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, pair<i
 		    }
 		    if (j <= end_index) 
 			fh << "\t";
+		    locus_index++;
 		}
 	    }
 	    fh << "\n";
@@ -1930,6 +1977,7 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
     char   pop_id_str[id_len];
     vector<string> parts;
     string f;
+    uint   len;
 
     if (pmap_path.length() > 0) {
 	cerr << "Parsing population map.\n";
@@ -1944,7 +1992,17 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
 	while (fh.good()) {
 	    fh.getline(line, max_len);
 
-	    if (strlen(line) == 0) continue;
+	    len = strlen(line);
+	    if (len == 0) continue;
+
+	    //
+	    // Check that there is no carraige return in the buffer.
+	    //
+	    if (line[len - 1] == '\r') line[len - 1] = '\0';
+
+	    //
+	    // Ignore comments
+	    //
 	    if (line[0] == '#') continue;
 
 	    //

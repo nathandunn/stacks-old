@@ -1,3 +1,20 @@
+Stacks 0.9996 - August 17, 2012
+-----------------------------
+	Bugfix: Corrected the behavior of the '-m' parameter to populations and genotypes. It is meant to apply
+	to the total depth of a stack at a locus, but was instead being applied to the depth of each allele at 
+	each locus.
+	Feature: process_radtags and process_shortreads can now automatically discard reads marked as
+	'failed' by Illumina's chastity/purity filter.
+	Feature: added mluCI, nlaIII, and sphI restriction enzymes to process_radtags
+	Bugfix: modified Stacks programs to handle Windows-style line endings ('\r\n') from FASTQ, FASTA, and 
+	SAM files as well as population maps.
+	Bugfix: changed populations' genepop output to only include loci that are variable in the populations 
+	specified. Previously, in some cases, additional fixed loci were included, which are not included in the 
+	VCF output, causing the two files to have different loci present.
+	Bugfix: expected homozygosity and observed homozygosity were not being reported correctly in the sumstats 
+	files. The other population statistics were not affected by the bug.
+	Feature: process_radtags and process_shortreads now print command and time executed to log file.
+
 Stacks 0.9995 - July 05, 2012
 -----------------------------
 	Bugfix: Fst summary matrix was being incorrectly written.

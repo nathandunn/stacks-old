@@ -44,16 +44,15 @@ string in_path_1;
 string in_path_2;
 string out_path;
 string barcode_file;
-bool   paired       = false;
-bool   clean        = false;
-bool   quality      = false;
-bool   recover      = false;
-bool   rare_kmers   = false;
-bool   kmer_distr   = false;
-bool   interleave   = false;
-bool   discards     = false;
-bool   overhang     = true;
-bool   matepair     = false;
+bool   paired          = false;
+bool   clean           = false;
+bool   quality         = false;
+bool   recover         = false;
+bool   interleave      = false;
+bool   discards        = false;
+bool   overhang        = true;
+bool   matepair        = false;
+bool   filter_illumina = false;
 int    truncate_seq = 0;
 int    barcode_size = 0;
 double win_size     = 0.15;
@@ -73,6 +72,8 @@ int main (int argc, char* argv[]) {
     parse_command_line(argc, argv);
 
     cerr << "Using Phred+" << qual_offset << " encoding for quality scores.\n";
+    if (filter_illumina)
+	cerr << "Discarding reads marked as 'failed' by Illumina's chastity/purity filters.\n";
 
     vector<pair<string, string> > files;
     vector<string> barcodes;
@@ -87,13 +88,14 @@ int main (int argc, char* argv[]) {
     for (uint i = 0; i < files.size(); i++) {
 	cerr << "Processing file " << i+1 << " of " << files.size() << " [" << files[i].first.c_str() << "]\n";
 
-	counters[files[i].first]["total"]       = 0;
-	counters[files[i].first]["low_quality"] = 0;
-	counters[files[i].first]["trimmed"]     = 0;
-	counters[files[i].first]["ambiguous"]   = 0;
-	counters[files[i].first]["retained"]    = 0;
-	counters[files[i].first]["orphaned"]    = 0;
-	counters[files[i].first]["recovered"]   = 0;
+	counters[files[i].first]["total"]        = 0;
+	counters[files[i].first]["ill_filtered"] = 0;
+	counters[files[i].first]["low_quality"]  = 0;
+	counters[files[i].first]["trimmed"]      = 0;
+	counters[files[i].first]["ambiguous"]    = 0;
+	counters[files[i].first]["retained"]     = 0;
+	counters[files[i].first]["orphaned"]     = 0;
+	counters[files[i].first]["recovered"]    = 0;
 
 	if (paired)
 	    process_paired_reads(files[i].first, files[i].second, 
@@ -105,7 +107,10 @@ int main (int argc, char* argv[]) {
 	    		  counters[files[i].first], barcode_log);
 
 	cerr <<	"  " 
-	     << counters[files[i].first]["total"] << " total reads; "
+	     << counters[files[i].first]["total"] << " total reads; ";
+	if (filter_illumina)
+	    cerr << "-" << counters[files[i].first]["ill_filtered"] << " failed Illumina reads; ";
+	cerr 
 	     << "-" << counters[files[i].first]["ambiguous"]   << " ambiguous barcodes; "
 	     << "+" << counters[files[i].first]["recovered"]   << " recovered; "
 	     << "+" << counters[files[i].first]["trimmed"]     << " trimmed reads; "
@@ -121,7 +126,7 @@ int main (int argc, char* argv[]) {
 	close_file_handles(rem_fhs);
     }
 
-    print_results(barcodes, counters, barcode_log);
+    print_results(argc, argv, barcodes, counters, barcode_log);
 
     return 0;
 }
@@ -400,6 +405,12 @@ int process_singlet(map<string, ofstream *> &fhs, Read *href,
 		    map<string, map<string, long> > &barcode_log, map<string, long> &counter, 
 		    bool paired_end) {
 
+    if (filter_illumina && href->filter) {
+	counter["ill_filtered"]++;
+	href->retain = 0;
+	return 0;
+    }
+
     if (barcode_size > 0) {
     	//
     	// Log the barcodes we receive.
@@ -596,7 +607,7 @@ int check_quality_scores(Read *href, bool paired_end) {
     return 1;
 }
 
-int print_results(vector<string> &barcodes, map<string, map<string, long> > &counters, map<string, map<string, long> > &barcode_log) {
+int print_results(int argc, char **argv, vector<string> &barcodes, map<string, map<string, long> > &counters, map<string, map<string, long> > &barcode_log) {
     map<string, map<string, long> >::iterator it;
 
     string log_path = out_path + "process_shortreads.log";
@@ -609,9 +620,27 @@ int print_results(vector<string> &barcodes, map<string, map<string, long> > &cou
 
     cerr << "Outputing details to log: '" << log_path << "'\n\n";
 
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
+
+    for (int i = 0; i < argc; i++) {
+	log << argv[i]; 
+	if (i < argc - 1) log << " ";
+    }
+    log << "\n" << "process_shortreads executed " << date << "\n\n";
+
     log << "File\t"
-	<< "Retained Reads\t"
-	<< "Low Quality\t"
+	<< "Retained Reads\t";
+    if (filter_illumina)
+	log << "Illumina Filtered\t";
+    log << "Low Quality\t"
 	<< "Ambiguous Barcodes\t"
 	<< "Trimmed Reads\t"
 	<< "Orphaned paired-end reads\t"
@@ -619,8 +648,10 @@ int print_results(vector<string> &barcodes, map<string, map<string, long> > &cou
 
     for (it = counters.begin(); it != counters.end(); it++) {
 	log << it->first                 << "\t"
-	    << it->second["retained"]    << "\t"
-	    << it->second["low_quality"] << "\t"
+	    << it->second["retained"]    << "\t";
+	if (filter_illumina)
+	    log << it->second["ill_filtered"] << "\t";
+	log << it->second["low_quality"] << "\t"
 	    << it->second["ambiguous"]   << "\t"
 	    << it->second["trimmed"]    << "\t"
 	    << it->second["orphaned"]    << "\t"
@@ -630,6 +661,7 @@ int print_results(vector<string> &barcodes, map<string, map<string, long> > &cou
     map<string, long> c;
     c["total"]       = 0;
     c["low_quality"] = 0;
+    c["ill_filtered"] = 0;
     c["ambiguous"]   = 0;
     c["trimmed"]     = 0;
     c["orphaned"]    = 0;
@@ -639,6 +671,7 @@ int print_results(vector<string> &barcodes, map<string, map<string, long> > &cou
     //
     for (it = counters.begin(); it != counters.end(); it++) {
 	c["total"]       += it->second["total"];
+	c["ill_filtered"] += it->second["ill_filtered"];
 	c["low_quality"] += it->second["low_quality"];
 	c["ambiguous"]   += it->second["ambiguous"];
 	c["trimmed"]     += it->second["trimmed"];
@@ -646,15 +679,20 @@ int print_results(vector<string> &barcodes, map<string, map<string, long> > &cou
 	c["retained"]    += it->second["retained"];
     }
 
-    cerr << 
-	c["total"] << " total sequences;\n"
-	 << "  " << c["ambiguous"]   << " ambiguous barcode drops;\n"
+    cerr << c["total"] << " total sequences;\n";
+    if (filter_illumina)
+	cerr << "  " << c["ill_filtered"] << " failed Illumina filtered reads;\n";
+    cerr << "  " << c["ambiguous"]   << " ambiguous barcode drops;\n"
 	 << "  " << c["low_quality"] << " low quality read drops;\n"
 	 << "  " << c["trimmed"]     << " trimmed reads;\n"
 	 << "  " << c["orphaned"]    << " orphaned paired-end reads;\n"
 	 << c["retained"] << " retained reads.\n";
 
-    log	<< "Total Sequences\t"      << c["total"]       << "\n"
+    log	<< "\n" 
+	<< "Total Sequences\t"      << c["total"]       << "\n";
+    if (filter_illumina)
+	log << "Failed Illumina filtered reads\t" << c["ill_filtered"] << "\n";
+    log 
 	<< "Ambiguous Barcodes\t"   << c["ambiguous"]   << "\n"
 	<< "Low Quality\t"          << c["low_quality"] << "\n"
 	<< "Trimmed Reads\t"        << c["trimmed"]     << "\n"
@@ -941,15 +979,16 @@ int parse_command_line(int argc, char* argv[]) {
      
     while (1) {
 	static struct option long_options[] = {
-	    {"help",         no_argument,       NULL, 'h'},
-            {"version",      no_argument,       NULL, 'v'},
-            {"quality",      no_argument,       NULL, 'q'},
-            {"clean",        no_argument,       NULL, 'c'},
-            {"recover",      no_argument,       NULL, 'r'},
-	    {"discards",     no_argument,       NULL, 'D'},
-	    {"paired",       no_argument,       NULL, 'P'},
-	    {"mate-pair",    no_argument,       NULL, 'M'},
-	    {"no_overhang",  no_argument,       NULL, 'O'},
+	    {"help",            no_argument,    NULL, 'h'},
+            {"version",         no_argument,    NULL, 'v'},
+            {"quality",         no_argument,    NULL, 'q'},
+            {"clean",           no_argument,    NULL, 'c'},
+            {"recover",         no_argument,    NULL, 'r'},
+	    {"discards",        no_argument,    NULL, 'D'},
+	    {"paired",          no_argument,    NULL, 'P'},
+	    {"mate-pair",       no_argument,    NULL, 'M'},
+	    {"no_overhang",     no_argument,    NULL, 'O'},
+	    {"filter_illumina", no_argument,    NULL, 'F'},
 	    {"infile_type",  required_argument, NULL, 'i'},
 	    {"outfile_type", required_argument, NULL, 'y'},
 	    {"file",         required_argument, NULL, 'f'},
@@ -968,7 +1007,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqrOPDI:i:y:f:o:t:b:1:2:p:s:w:E:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcqrFOPDI:i:y:f:o:t:b:1:2:p:s:w:E:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -1038,6 +1077,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'O':
 	    overhang = false;
+	    break;
+	case 'F':
+	    filter_illumina = true;
 	    break;
 	case 't':
 	    truncate_seq = atoi(optarg);
@@ -1141,6 +1183,7 @@ void help() {
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
 	      << "  h: display this help messsage.\n\n"
+	      << "  --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
 	      << "  --mate-pair: raw reads are circularized mate-pair data, first read will be reverse complemented.\n"
 	      << "  --no_overhang: data does not contain an overhang nucleotide between barcode and seqeunce.\n";
 
