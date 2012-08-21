@@ -39,7 +39,7 @@ string in_path_1;
 string in_path_2;
 string out_path;
 int    barcode_size = 0;
-
+bool   ill_barcode  = false;
 
 int main (int argc, char* argv[]) {
 

@@ -32,11 +32,11 @@ sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/co
 	src/input.h src/input.cc src/sql_utilities.h
 
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
-	src/clean.h src/clean.cc \
+	src/clean.h src/clean.cc src/file_io.h src/file_io.cc \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/renz.h
 
 process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h \
-	src/clean.h src/clean.cc \
+	src/clean.h src/clean.cc src/file_io.h src/file_io.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h
 

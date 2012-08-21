@@ -51,7 +51,7 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
     long int       line_num;
     ifstream       fh;
 
-    line = (char *) malloc(sizeof(char) * max_len);
+    line = new char[max_len];
     size = max_len;
 
     // 

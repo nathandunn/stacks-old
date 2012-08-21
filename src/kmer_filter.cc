@@ -42,6 +42,7 @@ string out_path;
 bool   discards     = false;
 bool   record_kmers = false;
 bool   kmer_distr   = false;
+bool   ill_barcode  = false;
 int    kmer_len     = 19;
 int    min_k_freq   = 0;
 int    max_k_freq   = 0;

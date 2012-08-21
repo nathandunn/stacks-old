@@ -53,6 +53,7 @@ bool   discards        = false;
 bool   overhang        = true;
 bool   matepair        = false;
 bool   filter_illumina = false;
+bool   ill_barcode     = false;
 int    truncate_seq = 0;
 int    barcode_size = 0;
 double win_size     = 0.15;
@@ -81,9 +82,9 @@ int main (int argc, char* argv[]) {
     map<string, map<string, long> > counters, barcode_log;
 
     build_file_list(files);
-    barcode_size = load_barcodes(barcodes);
+    barcode_size = load_barcodes(barcode_file, barcodes);
 
-    open_files(barcodes, pair_1_fhs, pair_2_fhs, rem_fhs, counters);
+    open_files(files, barcodes, pair_1_fhs, pair_2_fhs, rem_fhs, counters);
 
     for (uint i = 0; i < files.size(); i++) {
 	cerr << "Processing file " << i+1 << " of " << files.size() << " [" << files[i].first.c_str() << "]\n";
@@ -195,6 +196,14 @@ int process_paired_reads(string prefix_1,
     r_1->seq        = new char[buf_len + 1];
     r_1->phred      = new char[buf_len + 1];
     r_1->int_scores = new  int[buf_len];
+    r_1->read       = 1;
+
+    //
+    // If no barcodes were specified, set r->barcode to be the input file name so
+    // that reads are written to an output file of the same name as the input file.
+    //
+    if (barcode_size == 0)
+	strncpy(r_1->barcode, prefix_1.c_str(), id_len);
 
     //
     // Set the parameters for checking read quality later in processing.
@@ -214,14 +223,13 @@ int process_paired_reads(string prefix_1,
     r_2->seq        = new char[buf_len + 1];
     r_2->phred      = new char[buf_len + 1];
     r_2->int_scores = new  int[buf_len];
+    r_2->read       = 2;
     r_2->len        = r_1->len;
     r_2->win_len    = r_1->win_len;
     r_2->stop_pos   = r_1->stop_pos;
 
-    if (barcode_size == 0) {
-	strcpy(r_1->barcode, "unbarcoded");
-	strcpy(r_2->barcode, "unbarcoded");
-    }
+    if (barcode_size == 0)
+	strncpy(r_2->barcode, prefix_2.c_str(), id_len);
 
     long i = 1;
 
@@ -348,6 +356,7 @@ int process_reads(string prefix,
     r->seq        = new char [buf_len + 1];
     r->phred      = new char [buf_len + 1];
     r->int_scores = new  int [buf_len];
+    r->read       = 1;
 
     //
     // Set the parameters for checking read quality later in processing.
@@ -361,8 +370,12 @@ int process_reads(string prefix,
     r->len     += barcode_size;
     r->stop_pos = r->len - r->win_len;
 
+    //
+    // If no barcodes were specified, set r->barcode to be the input file name so
+    // that reads are written to an output file of the same name as the input file.
+    //
     if (barcode_size == 0)
-	strcpy(r->barcode, "unbarcoded");
+	strncpy(r->barcode, prefix.c_str(), id_len);
 
     //cerr << "Length: " << r->len << "; Window length: " << r->win_len << "; Stop position: " << r->stop_pos << "\n";
 
@@ -459,7 +472,7 @@ int process_singlet(map<string, ofstream *> &fhs, Read *href,
 	}
     }
 
-    barcode_log[href->barcode]["retained"]++;
+    if (barcode_size > 0) barcode_log[href->barcode]["retained"]++;
     counter["retained"]++;
 
     return 0;
@@ -748,227 +761,6 @@ int print_results(int argc, char **argv, vector<string> &barcodes, map<string, m
     return 0;
 }
 
-int open_files(vector<string> &barcodes, 
-	       map<string, ofstream *> &pair_1_fhs, 
-	       map<string, ofstream *> &pair_2_fhs, 
-	       map<string, ofstream *> &rem_fhs, 
-	       map<string, map<string, long> > &counters) {
-    string path, suffix_1, suffix_2;
-
-    if (out_file_type == fastq) {
-	suffix_1 = ".fq";
-	suffix_2 = ".fq";
-    } else {
-	suffix_1 = ".fa";
-	suffix_2 = ".fa";
-    }
-    if (paired && interleave == false) {
-	suffix_1 += "_1";
-	suffix_2 += "_2";
-    }
-
-    for (uint i = 0; i < barcodes.size(); i++) {
-	ofstream *fh;
-
-        if (interleave == true) {
-	    path = out_path + "sample_" + barcodes[i] + suffix_1;
-	    fh = new ofstream(path.c_str());
-            pair_1_fhs[barcodes[i]] = fh;
- 
-	    if (pair_1_fhs[barcodes[i]]->fail()) {
-		cerr << "Error opening output file '" << path << "'\n";
-		exit(1);
-	    }
-
-        } else {
-	    path = out_path + "sample_" + barcodes[i] + suffix_1;
-	    fh = new ofstream(path.c_str(), ifstream::out);
-            pair_1_fhs[barcodes[i]] = fh;
-
-	    if (pair_1_fhs[barcodes[i]]->fail()) {
-		cerr << "Error opening output file '" << path << "'\n";
-		exit(1);
-	    }
-
-            if (paired) {
-		path = out_path + "sample_" + barcodes[i] + suffix_2;
-		fh = new ofstream(path.c_str(), ifstream::out);
-                pair_2_fhs[barcodes[i]] = fh;
-
-		if (pair_2_fhs[barcodes[i]]->fail()) {
-		    cerr << "Error opening output file '" << path << "'\n";
-		    exit(1);
-		}
-
-		path = out_path + "sample_" + barcodes[i] + ".rem" + suffix_2.substr(0,3);
-		fh = new ofstream(path.c_str(), ifstream::out);
-                rem_fhs[barcodes[i]] = fh;
-
-		if (rem_fhs[barcodes[i]]->fail()) {
-		    cerr << "Error opening remainder output file '" << path << "'\n";
-		    exit(1);
-		}
-            }
-        }
-    }
-
-    return 0;
-}
-
-int close_file_handles(map<string, ofstream *> &fhs) {
-    map<string, ofstream*>::iterator i;
-
-    for (i = fhs.begin(); i != fhs.end(); i++) {
-	i->second->close();
-	delete i->second;
-    }
-
-    return 0;
-}
-
-int load_barcodes(vector<string> &barcodes) {
-    if (barcode_file.length() == 0) {
-	barcodes.push_back("unbarcoded");
-	return 0;
-    }
-
-    char     line[id_len];
-    ifstream fh(barcode_file.c_str(), ifstream::in);
-
-    if (fh.fail()) {
-        cerr << "Error opening barcode file '" << barcode_file << "'\n";
-	exit(1);
-    }
-
-    while (fh.good()) {
-	fh.getline(line, id_len);
-
-	if (strlen(line) == 0) continue;
-
-	//
-	// Check that barcode is legitimate
-	//
-	for (char *p = line; *p != '\0'; p++)
-	    switch (*p) {
-	    case 'A':
-	    case 'C':
-	    case 'G':
-	    case 'T':
-		break;
-	    case 'a':
-		*p = 'A';
-		break;
-	    case 'c':
-		*p = 'C';
-		break;
-	    case 'g':
-		*p = 'G';
-		break;
-	    case 't':
-		*p = 'T';
-		break;
-	    case '\r':
-	    case '\t':
-		*p = '\0';
-		break;
-	    default:
-		cerr << "Invalid barcode: '" << line << "'\n";
-		exit(1);
-	    }
-
-	barcodes.push_back(string(line));
-    }
-
-    fh.close();
-
-    if (barcodes.size() == 0) {
-	cerr << "Unable to load any barcodes from '" << barcode_file << "'\n";
-	help();
-    }
-
-    //
-    // Determine the barcode length
-    //
-    int prev, blen;
-    prev = barcodes[0].length();
-    for (uint i = 0; i < barcodes.size(); i++) {
-        blen = barcodes[i].length();
-
-        if (prev != blen) {
-            cerr << "Barcodes must all be the same length. Place different barcode lengths in separate runs.\n";
-            help();
-        }
-    }
-
-    cerr << "Loaded " << barcodes.size() << ", " << blen << "bp barcodes.\n";
-
-    return blen;
-}
-
-int build_file_list(vector<pair<string, string> > &files) {
-    //
-    // Scan a directory for a list of files.
-    //
-    if (in_path_1.length() > 0) {
-	string file, paired_file;
-	struct dirent *direntry;
-
-	DIR *dir = opendir(in_path_1.c_str());
-
-	if (dir == NULL) {
-	    cerr << "Unable to open directory '" << in_path_1 << "' for reading.\n";
-	    exit(1);
-	}
-
-	while ((direntry = readdir(dir)) != NULL) {
-	    file = direntry->d_name;
-
-	    if (file == "." || file == "..")
-		continue;
-
-	    // 
-	    // If paired-end specified, parse file names to sort out which is which.
-	    //
-	    if (paired) {
-		int res;
-
-		if ((res = parse_illumina_v1(file.c_str())) > 0 ||
-		    (res = parse_illumina_v2(file.c_str())) > 0) {
-		    paired_file = file;
-		    paired_file.replace(res, 1, "2");
-		    files.push_back(make_pair(file, paired_file));
-		}
-	    } else {
-		files.push_back(make_pair(file, ""));
-	    }
-	}
-
-	if (files.size() == 0) {
-	    cerr << "Unable to locate any input files to process within '" << in_path_1 << "'\n";
-	}
-    } else {
-	//
-	// Files specified directly:
-	//    Break off file path and store path and file name.
-	//
-	if (paired) {
-	    int pos_1   = in_file_p1.find_last_of("/");
-	    in_path_1 = in_file_p1.substr(0, pos_1 + 1);
-	    int pos_2   = in_file_p2.find_last_of("/");
-	    in_path_2 = in_file_p2.substr(0, pos_2 + 1);
-	    files.push_back(make_pair(in_file_p1.substr(pos_1+1), in_file_p2.substr(pos_2+1)));
-	} else {
-	    int pos   = in_file.find_last_of("/");
-	    in_path_1 = in_file.substr(0, pos + 1);
-	    files.push_back(make_pair(in_file.substr(pos+1), ""));
-	}
-    }
-
-    cerr << "Found " << files.size() << " input file(s).\n";
-
-    return 0;
-}
-
 int  compare_barcodes(pair<string, int> a, pair<string, int> b) {
     return a.second > b.second;
 }
@@ -979,16 +771,17 @@ int parse_command_line(int argc, char* argv[]) {
      
     while (1) {
 	static struct option long_options[] = {
-	    {"help",            no_argument,    NULL, 'h'},
-            {"version",         no_argument,    NULL, 'v'},
-            {"quality",         no_argument,    NULL, 'q'},
-            {"clean",           no_argument,    NULL, 'c'},
-            {"recover",         no_argument,    NULL, 'r'},
-	    {"discards",        no_argument,    NULL, 'D'},
-	    {"paired",          no_argument,    NULL, 'P'},
-	    {"mate-pair",       no_argument,    NULL, 'M'},
-	    {"no_overhang",     no_argument,    NULL, 'O'},
-	    {"filter_illumina", no_argument,    NULL, 'F'},
+	    {"help",               no_argument, NULL, 'h'},
+            {"version",            no_argument, NULL, 'v'},
+            {"quality",            no_argument, NULL, 'q'},
+            {"clean",              no_argument, NULL, 'c'},
+            {"recover",            no_argument, NULL, 'r'},
+	    {"discards",           no_argument, NULL, 'D'},
+	    {"paired",             no_argument, NULL, 'P'},
+	    {"mate-pair",          no_argument, NULL, 'M'},
+	    {"no_overhang",        no_argument, NULL, 'O'},
+	    {"filter_illumina",    no_argument, NULL, 'F'},
+	    {"illumina_barcodes",  no_argument, NULL, 'I'},
 	    {"infile_type",  required_argument, NULL, 'i'},
 	    {"outfile_type", required_argument, NULL, 'y'},
 	    {"file",         required_argument, NULL, 'f'},
@@ -1007,7 +800,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqrFOPDI:i:y:f:o:t:b:1:2:p:s:w:E:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcqrFIOPDi:y:f:o:t:b:1:2:p:s:w:E:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -1081,6 +874,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'F':
 	    filter_illumina = true;
 	    break;
+	case 'I':
+	    ill_barcode = true;
+	    break;
 	case 't':
 	    truncate_seq = atoi(optarg);
 	    break;
@@ -1140,6 +936,9 @@ int parse_command_line(int argc, char* argv[]) {
     if (out_path.at(out_path.length() - 1) != '/') 
 	out_path += "/";
 
+    if (barcode_file.length() == 0)
+	cerr << "No barcodes specified, files will not be demultiplexed.\n";
+
     if (in_file_type == unknown)
 	in_file_type = ftype;
 
@@ -1184,6 +983,7 @@ void help() {
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
 	      << "  h: display this help messsage.\n\n"
 	      << "  --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
+	      << "  --illumina_barcodes: barcodes are not inline, but instead are part of Illumina's FASTQ header.\n"
 	      << "  --mate-pair: raw reads are circularized mate-pair data, first read will be reverse complemented.\n"
 	      << "  --no_overhang: data does not contain an overhang nucleotide between barcode and seqeunce.\n";
 

@@ -35,7 +35,10 @@ using std::endl;
 
 #include "input.h"
 
+enum fastqt {generic_fastq, illv1_fastq, illv2_fastq};
+
 typedef struct read {
+    fastqt  fastq_type;
     char   *barcode;
     char   *machine;
     int     lane;
@@ -54,7 +57,8 @@ typedef struct read {
     double  stop_pos;
 } Read;
 
-extern int barcode_size;
+extern int  barcode_size;
+extern bool ill_barcode;
 
 int  parse_illumina_v1(const char *);
 int  parse_illumina_v2(const char *);

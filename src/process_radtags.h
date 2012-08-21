@@ -50,6 +50,7 @@ using std::pair;
 #include "constants.h" 
 #include "renz.h"
 #include "clean.h"
+#include "file_io.h"
 #include "Bustard.h"   // Reading input files in Tab-separated Bustard format
 #include "Fastq.h"     // Reading input files in FASTQ format
 
@@ -62,14 +63,6 @@ struct eqstr {
 void help( void );
 void version( void );
 int  parse_command_line(int, char **);
-int  build_file_list(vector<pair<string, string> > &);
-int  load_barcodes(vector<string> &);
-int  open_files(vector<string> &, 
-		map<string, ofstream *> &, 
-		map<string, ofstream *> &, 
-		map<string, ofstream *> &,
-		map<string, map<string, long> > &);
-int  close_file_handles(map<string, ofstream *> &);
 int  process_reads(string, 
 		   map<string, ofstream *> &, 
 		   map<string, long> &, map<string, map<string, long> > &);

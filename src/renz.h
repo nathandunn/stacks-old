@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2012, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -36,17 +36,17 @@ const char *sgrAI[]   = {"CCGGCG", "CCGGTG",  // CR/CCGGYG, SgrAI; R=A or G; Y=C
 			 "CGCCGG", "CACCGG"};
 const char *notI[]    = {"GGCCGC",            // GC/GGCCGC, NotI
 			 "GCGGCC"};
-const char *haeIII[]  = {"GGCC",
-			 "GGCC"};
-const char *aluI[]    = {"AGCT",
-			 "AGCT"};
+// const char *haeIII[]  = {"GGCC",
+// 			 "GGCC"};
+// const char *aluI[]    = {"AGCT",
+// 			 "AGCT"};
+// const char *mseI[]    = {"TTAA",
+// 			 "TTAA"};
 const char *apeKI[]   = {"CAGC", "CTGC",      // G/CWGC, ApeKI; W=A or T
  			 "GTCG", "GACG"};
-const char *mseI[]    = {"TTAA",
-			 "TTAA"};
-const char *hindIII[] = {"AAGCT",
+const char *hindIII[] = {"AAGCT",             // A/AGCTT, HindIII
 			 "TTCGA"};
-const char *dpnII[]   = {"GATC",
+const char *dpnII[]   = {"GATC",              // GATC, DpnII
 			 "GATC"};
 const char *sphI[]    = {"GCATG",             // GCATG/C, SphI
 			 "CATGC"};
@@ -54,6 +54,8 @@ const char *nlaIII[]  = {"CATG",              // CATG, NlaIII
 			 "CATG"};
 const char *mluCI[]   = {"AATT",              // AATT, MluCI
 			 "AATT"};
+const char *ecoT22I[] = {"TGCAT",             // A/TGCAT, EcoT22I
+			 "ATGCA"};
 
 void 
 initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, map<string, int> &renz_len) {
@@ -66,9 +68,10 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz["apeKI"]   = apeKI;   // G/CWGC, ApeKI; W=A or T
     renz["hindIII"] = hindIII; // A/AGCTT, HindIII
     renz["dpnII"]   = dpnII;   // GATC, DpnII
-    renz["sphI"]    = sphI;
-    renz["nlaIII"]  = nlaIII;
-    renz["mluCI"]   = mluCI;
+    renz["sphI"]    = sphI;    // GCATG/C, SphI
+    renz["nlaIII"]  = nlaIII;  // CATG, NlaIII
+    renz["mluCI"]   = mluCI;   // AATT, MluCI
+    renz["ecoT22I"] = ecoT22I; // A/TGCAT, EcoT22I
 
     renz_cnt["sbfI"]    = 1;
     renz_cnt["pstI"]    = 1;
@@ -81,6 +84,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["sphI"]    = 1;
     renz_cnt["nlaIII"]  = 1;
     renz_cnt["mluCI"]   = 1;
+    renz_cnt["ecoT22I"] = 1;
 
     renz_len["sbfI"]    = 6;
     renz_len["pstI"]    = 5;
@@ -93,6 +97,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["sphI"]    = 5;
     renz_len["nlaIII"]  = 4;
     renz_len["mluCI"]   = 4;
+    renz_len["ecoT22I"] = 5;
 }
 
 #endif // __RENZ_H__
