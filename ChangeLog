@@ -1,11 +1,15 @@
 Stacks 0.9996 - August 17, 2012
 -----------------------------
+	Feature: process_radtags and process_shortreads can handle non-Illumina FASTQ headers (any generic FASTQ type).
+	Feature: process_radtags can process data without barcodes.
+	Feature: process_radtags and process_shortreads can handle Illumina barcodes, when the barcode is not
+	inline but is instead provided in the FASTQ header.
 	Bugfix: Corrected the behavior of the '-m' parameter to populations and genotypes. It is meant to apply
 	to the total depth of a stack at a locus, but was instead being applied to the depth of each allele at 
 	each locus.
 	Feature: process_radtags and process_shortreads can now automatically discard reads marked as
 	'failed' by Illumina's chastity/purity filter.
-	Feature: added mluCI, nlaIII, and sphI restriction enzymes to process_radtags
+	Feature: added ecoT22I, mluCI, nlaIII, and sphI restriction enzymes to process_radtags
 	Bugfix: modified Stacks programs to handle Windows-style line endings ('\r\n') from FASTQ, FASTA, and 
 	SAM files as well as population maps.
 	Bugfix: changed populations' genepop output to only include loci that are variable in the populations 

@@ -120,6 +120,8 @@ int parse_input_record(Seq *s, Read *r) {
     // Count the number of colons to differentiate Illumina version.
     // CASAVA 1.8+ has a FASTQ header like this:
     //  @HWI-ST0747:155:C01WHABXX:8:1101:6455:26332 1:N:0:
+    // Or, with the embedded barcode:
+    //  @HWI-ST1233:67:D12GNACXX:7:2307:14604:78978 1:N:0:ATCACG
     //
     //
     // Or, parse FASTQ header from previous versions that looks like this:
@@ -127,12 +129,16 @@ int parse_input_record(Seq *s, Read *r) {
     //  @HWI-ST0747_0143:2:2208:21290:200914#0/1
     //
     char *stop = s->id + strlen(s->id);
-    int   cnt  = 0;
+    int   colon_cnt = 0;
+    int   hash_cnt  = 0;
 
-    for (p = s->id, q = p; q < stop; q++)
-	cnt += *q == ':'? 1 : 0;
+    for (p = s->id, q = p; q < stop; q++) {
+	colon_cnt += *q == ':' ? 1 : 0;
+	hash_cnt  += *q == '#' ? 1 : 0;
+    }
 
-    if (cnt == 9) {
+    if (colon_cnt == 9 && hash_cnt == 0) {
+	r->fastq_type = illv2_fastq;
 	//
 	// According to Illumina manual, "CASAVA v1.8 User Guide" page 41:
 	// @<instrument>:<run number>:<flowcell ID>:<lane>:<tile>:<x-pos>:<y-pos> <read>:<is filtered>:<control number>:<index sequence>
@@ -180,7 +186,20 @@ int parse_input_record(Seq *s, Read *r) {
 	r->filter = *p == 'Y' ? true : false;
 	*q = ':';
 
-    } else {
+	// Control Number.
+	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	//*q = '\0';
+
+	// Index (barcode)
+	for (p = q+1, q = p; q < stop; q++);
+	if (barcode_size > 0 && ill_barcode == true) {
+	    strncpy(r->barcode, p,  barcode_size);
+	    r->barcode[barcode_size] = '\0';
+	}
+
+    } else if (colon_cnt == 4 && hash_cnt == 1) {
+	r->fastq_type = illv1_fastq;
+
 	for (p = s->id, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
 	strcpy(r->machine, p);
@@ -213,6 +232,12 @@ int parse_input_record(Seq *s, Read *r) {
 
 	for (p = q+1, q = p; *q != '\0' && q < stop; q++);
 	r->read = atoi(p);
+
+    } else {
+	r->fastq_type = generic_fastq;
+
+	strncpy(r->machine, s->id, id_len);
+	r->machine[id_len] = '\0';
     }
 
     strncpy(r->seq,     s->seq,  r->len); 
@@ -220,7 +245,7 @@ int parse_input_record(Seq *s, Read *r) {
     strncpy(r->phred,   s->qual, r->len);
     r->phred[r->len] = '\0';
 
-    if (barcode_size > 0) {
+    if (barcode_size > 0 && ill_barcode == false) {
 	strncpy(r->barcode, r->seq,  barcode_size);
 	r->barcode[barcode_size] = '\0';
     }
@@ -235,17 +260,30 @@ int write_fasta(map<string, ofstream *> &fhs, Read *href, bool barcode, bool ove
     sprintf(tile, "%04d", href->tile);
 
     int offset;
-    offset  = barcode  ? barcode_size : 0;
-    offset += overhang ? 1 : 0;
+    offset  = barcode     ? barcode_size : 0;
+    offset  = ill_barcode ? 0 : offset;
+    offset += overhang    ? 1 : 0;
 
-    *(fhs[href->barcode]) <<
-	">" << href->barcode <<
-	"_" << href->lane <<
-	"_" << tile << 
-	"_" << href->x <<
-	"_" << href->y <<
-	"_" << href->read << "\n" <<
-	href->seq + offset << "\n";
+    if (fhs.count(href->barcode) == 0) {
+	cerr << "Unable to write to unknown barcode: '" << href->barcode << "'\n";
+	return -1;
+    }
+
+    if (href->fastq_type != generic_fastq)
+	*(fhs[href->barcode]) <<
+	    ">" << href->barcode <<
+	    "_" << href->lane <<
+	    "_" << tile << 
+	    "_" << href->x <<
+	    "_" << href->y <<
+	    "_" << href->read << "\n" <<
+	    href->seq + offset << "\n";
+    else 
+	*(fhs[href->barcode]) <<
+	    ">" << href->barcode <<
+	    "_" << href->machine <<
+	    "_" << href->read << "\n" <<
+	    href->seq + offset << "\n";
 
     return 0;
 }
@@ -267,22 +305,34 @@ int write_fastq(map<string, ofstream *> &fhs, Read *href, bool barcode, bool ove
     sprintf(tile, "%04d", href->tile);
 
     int offset;
-    offset  = barcode  ? barcode_size : 0;
-    offset += overhang ? 1 : 0;
+    offset  = barcode     ? barcode_size : 0;
+    offset  = ill_barcode ? 0 : offset;
+    offset += overhang    ? 1 : 0;
 
-    if (fhs.count(href->barcode) == 0)
-	cerr << "Writing to unknown barcode: '" << href->barcode << "'\n";
+    if (fhs.count(href->barcode) == 0) {
+	cerr << "Unable to write to unknown barcode: '" << href->barcode << "'\n";
+	return -1;
+    }
 
-    *(fhs[href->barcode]) <<
-	"@" << href->barcode <<
-	"_" << href->lane << 
-	"_" << tile << 
-	"_" << href->x << 
-	"_" << href->y << 
-	"_" << href->read << "\n" <<
-	href->seq + offset << "\n" <<
-	"+\n" <<
-	href->phred + offset << "\n";
+    if (href->fastq_type != generic_fastq)
+	*(fhs[href->barcode]) <<
+	    "@" << href->barcode <<
+	    "_" << href->lane << 
+	    "_" << tile << 
+	    "_" << href->x << 
+	    "_" << href->y << 
+	    "_" << href->read << "\n" <<
+	    href->seq + offset << "\n" <<
+	    "+\n" <<
+	    href->phred + offset << "\n";
+    else
+	*(fhs[href->barcode]) <<
+	    "@" << href->barcode <<
+	    "_" << href->machine << 
+	    "_" << href->read << "\n" <<
+	    href->seq + offset << "\n" <<
+	    "+\n" <<
+	    href->phred + offset << "\n";
 
     return 0;
 }
