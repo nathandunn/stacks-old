@@ -184,6 +184,13 @@ int Locus::populate_alleles() {
     string s;
     int    k;
 
+    //
+    // Is this effective?
+    //
+    for (uint n = 0; n < this->strings.size(); n++) {
+	this->strings[n].first.clear();
+	this->strings[n].second.clear();
+    }
     this->strings.clear();
 
     if (this->snps.size() == 0) {

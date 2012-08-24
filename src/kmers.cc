@@ -157,10 +157,12 @@ int generate_permutations(map<int, char **> &pstrings, int width) {
     return 0;
 }
 
-int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, int kmer_len) {
+int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, vector<char *> &kmer_map_keys, int kmer_len) {
     map<int, MergedStack *>::iterator it;
-    MergedStack *tag;
-    int j;
+    MergedStack    *tag;
+    vector<char *>  kmers;
+    bool            exists;
+
     //
     // Break each stack down into k-mers and create a hash map of those k-mers
     // recording in which sequences they occur.
@@ -173,11 +175,20 @@ int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, i
         // Don't compute distances for masked tags
         if (tag->masked) continue;
 
-        generate_kmers(tag->con, kmer_len, num_kmers, tag->kmers);
+        generate_kmers(tag->con, kmer_len, num_kmers, kmers);
 
         // Hash the kmers
-        for (j = 0; j < num_kmers; j++)
-            kmer_map[tag->kmers[j]].push_back(tag->id);
+        for (uint j = 0; j < num_kmers; j++) {
+	    exists = kmer_map.count(kmers[j]) == 0 ? false : true;
+
+            kmer_map[kmers[j]].push_back(tag->id);
+
+	    if (exists)
+		delete [] kmers[j];
+	    else
+		kmer_map_keys.push_back(kmers[j]);
+	}
+	kmers.clear();
     }
 
     //dump_kmer_map(kmer_map);
@@ -185,14 +196,13 @@ int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, i
     return 0;
 }
 
-int populate_kmer_hash(map<int, Locus *> &catalog, CatKmerHashMap &kmer_map, int kmer_len) {
+int populate_kmer_hash(map<int, Locus *> &catalog, CatKmerHashMap &kmer_map, vector<char *> &kmer_map_keys, int kmer_len) {
     map<int, Locus *>::iterator it;
     vector<pair<allele_type, string> >::iterator allele;
     vector<char *> kmers;
     Locus         *tag;
     char          *hash_key;
     bool           exists;
-    int            j;
 
     //
     // Break each stack down into k-mers and create a hash map of those k-mers
@@ -212,27 +222,54 @@ int populate_kmer_hash(map<int, Locus *> &catalog, CatKmerHashMap &kmer_map, int
             //
             generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
-            for (j = 0; j < num_kmers; j++) {
-
-                exists = kmer_map.count(kmers[j]) == 0 ? false : true;
-
-                if (exists) {
-                    hash_key = kmers[j];
-                } else {
-                    hash_key = new char [strlen(kmers[j]) + 1];
-                    strcpy(hash_key, kmers[j]);
-                }
+            for (uint j = 0; j < num_kmers; j++) {
+		hash_key = kmers[j];
+                exists   = kmer_map.count(hash_key) == 0 ? false : true;
 
                 kmer_map[hash_key].push_back(make_pair(allele->first, tag->id));
-            }
 
-            for (j = 0; j < num_kmers; j++)
-                delete [] kmers[j];
+                if (exists)
+		    delete [] kmers[j];
+                else
+		    kmer_map_keys.push_back(hash_key);
+            }
             kmers.clear();
         }
     }
 
     //dump_kmer_map(kmer_map);
+
+    return 0;
+}
+
+int 
+free_kmer_hash(CatKmerHashMap &kmer_map, vector<char *> &kmer_map_keys) 
+{
+    for (uint i = 0; i < kmer_map_keys.size(); i++) {
+        kmer_map[kmer_map_keys[i]].clear();
+    }
+    kmer_map.clear();
+
+    for (uint i = 0; i < kmer_map_keys.size(); i++) {
+	delete [] kmer_map_keys[i];
+    }
+    kmer_map_keys.clear();
+
+    return 0;
+}
+
+int 
+free_kmer_hash(KmerHashMap &kmer_map, vector<char *> &kmer_map_keys) 
+{
+    for (uint i = 0; i < kmer_map_keys.size(); i++) {
+        kmer_map[kmer_map_keys[i]].clear();
+    }
+    kmer_map.clear();
+
+    for (uint i = 0; i < kmer_map_keys.size(); i++) {
+	delete [] kmer_map_keys[i];
+    }
+    kmer_map_keys.clear();
 
     return 0;
 }

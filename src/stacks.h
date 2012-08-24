@@ -192,7 +192,8 @@ class MergedStack {
     //
     // K-mers generated from the consensus sequence
     //
-    vector<char *> kmers;
+    //    vector<char *> kmers;
+
     //
     // Flags
     //
@@ -215,8 +216,8 @@ class MergedStack {
     ~MergedStack() { 
         delete [] con;
 
-        for (uint i = 0; i < kmers.size(); i++)
-            delete [] kmers[i];
+        // for (uint i = 0; i < kmers.size(); i++)
+        //     delete [] kmers[i];
         for (uint i = 0; i < snps.size(); i++)
             delete snps[i];
     }

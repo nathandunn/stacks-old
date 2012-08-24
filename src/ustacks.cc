@@ -169,8 +169,9 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
     //
     int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, true);
 
-    KmerHashMap kmer_map;
-    populate_kmer_hash(merged, kmer_map, kmer_len);
+    KmerHashMap    kmer_map;
+    vector<char *> kmer_map_keys;
+    populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
     int utilized = 0;
 
     //
@@ -231,7 +232,7 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
             // Free the k-mers we generated for this remainder read
             //
             for (k = 0; k < num_kmers; k++)
-                delete rem_kmers[k];
+                delete [] rem_kmers[k];
 
     	    // Check to see if there is a uniquely low distance, if so,
     	    // merge this remainder tag. If not, discard it, since we
@@ -265,6 +266,7 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
     	}
     }
 
+    free_kmer_hash(kmer_map, kmer_map_keys);
     //delete [] buf;
 
     cerr << "  Matched " << utilized << " remainder reads; unable to match " << keys.size() - utilized << " remainder reads.\n";
@@ -875,10 +877,10 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
     // Calculate the distance (number of mismatches) between each pair
     // of Radtags. We expect all radtags to be the same length;
     //
-    KmerHashMap kmer_map;
+    KmerHashMap    kmer_map;
+    vector<char *> kmer_map_keys;
+    MergedStack   *tag_1, *tag_2;
     map<int, MergedStack *>::iterator it;
-    MergedStack *tag_1, *tag_2;
-    int i, j;
 
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -902,30 +904,36 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
     //
     int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len, true);
 
-    populate_kmer_hash(merged, kmer_map, kmer_len);
+    populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
  
-    #pragma omp parallel private(i, j, tag_1, tag_2)
+    #pragma omp parallel private(tag_1, tag_2)
     { 
         #pragma omp for schedule(dynamic) 
-        for (i = 0; i < (int) keys.size(); i++) {
+        for (uint i = 0; i < keys.size(); i++) {
             tag_1 = merged[keys[i]];
 
             // Don't compute distances for masked tags
             if (tag_1->masked) continue;
 
+            vector<char *> query_kmers;
+            generate_kmers(tag_1->con, kmer_len, num_kmers, query_kmers);
+
             map<int, int> hits;
-            vector<int>::iterator map_it;
             int d;
             //
             // Lookup the occurances of each k-mer in the kmer_map
             //
-            for (j = 0; j < num_kmers; j++) {
+            for (uint j = 0; j < num_kmers; j++) {
 
-                for (map_it  = kmer_map[tag_1->kmers[j]].begin(); 
-                     map_it != kmer_map[tag_1->kmers[j]].end(); 
-                     map_it++)
-                    hits[*map_it]++;
+                for (uint k = 0; k < kmer_map[query_kmers[j]].size(); k++)
+                    hits[kmer_map[query_kmers[j]][k]]++;
             }
+
+            //
+            // Free the k-mers we generated for this query
+            //
+            for (uint j = 0; j < num_kmers; j++)
+                delete [] query_kmers[j];
 
             //cerr << "  Tag " << tag_1->id << " hit " << hits.size() << " kmers.\n";
 
@@ -965,6 +973,8 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
             sort(tag_1->dist.begin(), tag_1->dist.end(), compare_dist);
         }
     }
+
+    free_kmer_hash(kmer_map, kmer_map_keys);
 
     return 0;
 }
