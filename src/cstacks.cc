@@ -339,6 +339,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     // of Radtags. We expect all radtags to be the same length;
     //
     CatKmerHashMap kmer_map;
+    vector<char *> kmer_map_keys;
     map<int, QLocus *>::iterator it;
     vector<pair<allele_type, string> >::iterator allele;
     QLocus *tag_1;
@@ -366,7 +367,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     //
     int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len, true);
 
-    populate_kmer_hash(catalog, kmer_map, kmer_len);
+    populate_kmer_hash(catalog, kmer_map, kmer_map_keys, kmer_len);
 
     cerr << "  " << catalog.size() << " items in the catalog, " << kmer_map.size() << " elements in the catalog hash.\n";
  
@@ -452,6 +453,8 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
             sort(tag_1->matches.begin(), tag_1->matches.end(), compare_matches);
         }
     }
+
+    free_kmer_hash(kmer_map, kmer_map_keys);
 
     return 0;
 }
@@ -949,7 +952,9 @@ CLocus::reduce_alleles(set<string> &alleles)
     return 0;
 }
 
-int populate_kmer_hash(map<int, CLocus *> &catalog, CatKmerHashMap &kmer_map, int kmer_len) {
+int 
+populate_kmer_hash(map<int, CLocus *> &catalog, CatKmerHashMap &kmer_map, vector<char *> &kmer_map_keys, int kmer_len)
+{
     map<int, CLocus *>::iterator it;
     vector<pair<allele_type, string> >::iterator allele;
     vector<char *> kmers;
@@ -977,21 +982,17 @@ int populate_kmer_hash(map<int, CLocus *> &catalog, CatKmerHashMap &kmer_map, in
             generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
             for (j = 0; j < num_kmers; j++) {
-
-                exists = kmer_map.count(kmers[j]) == 0 ? false : true;
-
-                if (exists) {
-                    hash_key = kmers[j];
-                } else {
-                    hash_key = new char [strlen(kmers[j]) + 1];
-                    strcpy(hash_key, kmers[j]);
-                }
+		hash_key = kmers[j];
+                exists   = kmer_map.count(hash_key) == 0 ? false : true;
 
                 kmer_map[hash_key].push_back(make_pair(allele->first, tag->id));
+
+                if (exists)
+		    delete [] kmers[j];
+                else
+		    kmer_map_keys.push_back(hash_key);
             }
 
-            for (j = 0; j < num_kmers; j++)
-                delete [] kmers[j];
             kmers.clear();
         }
     }

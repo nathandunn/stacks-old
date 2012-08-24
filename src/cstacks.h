@@ -131,6 +131,6 @@ int  write_simple_output(CLocus *, ofstream &, ofstream &, ofstream &);
 bool compare_pair(pair<string, SNP *>, pair<string, SNP *>);
 bool compare_matches(Match *, Match *);
 
-int  populate_kmer_hash(map<int, CLocus *> &, CatKmerHashMap &, int);
+int  populate_kmer_hash(map<int, CLocus *> &, CatKmerHashMap &, vector<char *> &, int);
 
 #endif // __CSTACKS_H__

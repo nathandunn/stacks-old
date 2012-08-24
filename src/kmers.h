@@ -62,8 +62,10 @@ typedef hash_map<const char *, vector<pair<string, int> >, hash<const char *>, e
 int  determine_kmer_length(int, int);
 int  calc_min_kmer_matches(int, int, int, bool);
 int  generate_kmers(const char *, int, int, vector<char *> &);
-int  populate_kmer_hash(map<int, MergedStack *> &, KmerHashMap &, int);
-int  populate_kmer_hash(map<int, Locus *> &, CatKmerHashMap &, int);
+int  populate_kmer_hash(map<int, MergedStack *> &, KmerHashMap &, vector<char *> &, int);
+int  populate_kmer_hash(map<int, Locus *> &, CatKmerHashMap &, vector<char *> &, int);
+int  free_kmer_hash(KmerHashMap &, vector<char *> &);
+int  free_kmer_hash(CatKmerHashMap &, vector<char *> &);
 
 int  generate_permutations(map<int, char **> &, int);
 
