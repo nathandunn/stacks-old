@@ -102,7 +102,9 @@ int  write_fst_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, 
 int  write_generic(map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, bool);
 int  write_genomic(map<int, CLocus *> &, PopMap<CLocus> *);
 int  write_vcf(map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *, map<int, string> &, vector<int> &);
-int  write_genepop(map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *, map<int, pair<int, int> > &, map<int, string> &, vector<int> &);
+int  write_genepop(map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *, map<int, pair<int, int> > &, map<int, string> &);
+int  write_structure(map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *, map<int, pair<int, int> > &, map<int, string> &);
+int  write_phylip(map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  tally_observed_haplotypes(vector<char *> &, int, char &, char &);
 int  tally_ref_alleles(LocSum **, int, int, char &, char &);
 int  load_snp_calls(string,  PopMap<CLocus> *);

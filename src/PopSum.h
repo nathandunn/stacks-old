@@ -111,22 +111,65 @@ public:
     }
 };
 
+class NucTally {
+public:
+    uint   num_indv;
+    unsigned short int pop_cnt;
+    unsigned short int allele_cnt;
+    char   p_allele;
+    char   q_allele;
+    bool   fixed;
+
+    NucTally() { 
+	num_indv   = 0;
+	pop_cnt    = 0;
+	allele_cnt = 0;
+	p_allele   = 0;
+	q_allele   = 0;
+	fixed      = true;
+    }
+};
+
+class LocTally {
+public:
+    NucTally *nucs;
+
+    LocTally(int len)  { 
+	this->nucs = new NucTally[len]; 
+    }
+    ~LocTally() {
+	delete [] this->nucs;
+    }
+};
+
 //
 // Population Summary class contains a two dimensional array storing the 
 // summary statistics for each locus in each of a set of populations:
 //
-//          Pop1    Pop2    Pop3  
-// Locus1  SumStat SumStat SumStat
-// Locus2  SumStat SumStat SumStat
-// Locus3  SumStat SumStat SumStat
-// Locus4  SumStat SumStat SumStat
-// ...
+//           Pop1        Pop2        Pop3
+// Locus1  +-LocSum----+-LocSum----+-LocSum
+//         |  |           |           |
+//         |  +-SumStat   +-SumStat   +-SumStat (Nuc0)
+//         |  +-SumStat   +-SumStat   +-SumStat (Nuc1)
+//         |  ...
+// Locus2  +-LocSum----+-LocSum----+-LocSum
+//         |  |           |           |
+//         |  +-SumStat   +-SumStat   +-SumStat (Nuc0)
+//         |  +-SumStat   +-SumStat   +-SumStat (Nuc1)
+//         |  ...
+// Locus3  +-LocSum----+-LocSum----+-LocSum
+//         |  |           |           |
+//         |  +-SumStat   +-SumStat   +-SumStat (Nuc0)
+//         |  +-SumStat   +-SumStat   +-SumStat (Nuc1)
+//         |  ...
+//         ...
 //
 template<class LocusT=Locus>
 class PopSum {
-    int       num_loci;
-    int       num_pops;
-    LocSum ***data;
+    int           num_loci;
+    int           num_pops;
+    LocSum     ***data;
+    LocTally    **loc_tally;
     map<int, int> locus_order;  // LocusID => ArrayIndex; map catalog IDs to their first dimension 
                                 // position in the LocSum array.
     map<int, int> rev_locus_order;
@@ -140,27 +183,31 @@ public:
 
     int initialize(PopMap<LocusT> *);
     int add_population(map<int, LocusT *> &, PopMap<LocusT> *, uint, uint, uint, ofstream &);
+    int tally(map<int, LocusT *> &);
 
     int loci_cnt() { return this->num_loci; }
     int rev_locus_index(int index) { return this->rev_locus_order[index]; }
     int pop_cnt()  { return this->num_pops; }
     int rev_pop_index(int index) { return this->rev_pop_order[index]; }
 
-    LocSum **locus(int);
-    LocSum  *pop(int, int);
-    PopPair *Fst(int, int, int, int);
-    int      fishers_exact_test(PopPair *, double, double, double, double);
+    LocSum  **locus(int);
+    LocSum   *pop(int, int);
+    LocTally *locus_tally(int);
+    PopPair  *Fst(int, int, int, int);
+    int       fishers_exact_test(PopPair *, double, double, double, double);
 
 private:
     int    tally_heterozygous_pos(LocusT *, Datum **, LocSum *, int, int, uint, uint);
     int    tally_fixed_pos(LocusT *, Datum **, LocSum *, int, uint, uint);
+    int    tally_ref_alleles(LocSum **, int, short unsigned int &, char &, char &); 
     double pi(double, double, double);
     double binomial_coeff(double, double);
 };
 
 template<class LocusT>
 PopSum<LocusT>::PopSum(int num_loci, int num_populations) {
-    this->data = new LocSum **[num_loci];
+    this->loc_tally = new LocTally *[num_loci];
+    this->data      = new LocSum  **[num_loci];
 
     for (int i = 0; i < num_loci; i++) {
 	this->data[i] = new LocSum *[num_populations];
@@ -179,8 +226,10 @@ PopSum<LocusT>::~PopSum() {
 	for (int j = 0; j < this->num_pops; j++)
 	    delete this->data[i][j];
 	delete [] this->data[i];
+	delete this->loc_tally[i];
     }
     delete [] this->data;
+    delete [] this->loc_tally;
 }
 
 template<class LocusT>
@@ -263,6 +312,142 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
     cerr << "Population " << population_id << " contained " << incompatible_loci << " incompatible loci.\n";
 
     return 0;
+}
+
+template<class LocusT>
+int PopSum<LocusT>::tally(map<int, LocusT *> &catalog) 
+{
+    LocusT   *loc;
+    LocSum  **s;
+    LocTally *ltally;
+    int       locus_id, len;
+
+    for (int n = 0; n < this->num_loci; n++) {
+	locus_id = this->rev_locus_index(n);
+	loc      = catalog[locus_id];
+	s        = this->locus(locus_id);
+	len      = strlen(loc->con);
+
+	ltally = new LocTally(len);
+	this->loc_tally[n] = ltally;
+
+	for (uint i = 0; i < loc->snps.size(); i++) {
+	    uint col = loc->snps[i]->col;
+
+	    for (int j = 0; j < this->num_pops; j++) {
+		//
+		// Sum the number of individuals examined at this locus across populations.
+		//
+		ltally->nucs[col].num_indv += s[j]->nucs[col].num_indv;
+		ltally->nucs[col].pop_cnt  += s[j]->nucs[col].num_indv > 0 ? 1 : 0;
+
+		if (s[j]->nucs[col].pi != 0) 
+		    ltally->nucs[col].fixed = false;
+	    }
+
+	    this->tally_ref_alleles(s, col, 
+				    ltally->nucs[col].allele_cnt, 
+				    ltally->nucs[col].p_allele, 
+				    ltally->nucs[col].q_allele);
+	}
+    }
+
+    return 0;
+}
+
+template<class LocusT>
+int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index, short unsigned int &allele_cnt, char &p_allele, char &q_allele) 
+{
+    int  nucs[4] = {0};
+    char nuc[2];
+
+    p_allele   = 0;
+    q_allele   = 0;
+    allele_cnt = 0;
+
+    for (int j = 0; j < this->num_pops; j++) {
+	nuc[0] = 0;
+	nuc[1] = 0;
+        nuc[0] = s[j]->nucs[snp_index].p_nuc;
+        nuc[1] = s[j]->nucs[snp_index].q_nuc;
+
+	for (uint k = 0; k < 2; k++) 
+	    switch(nuc[k]) {
+	    case 'A':
+	    case 'a':
+		nucs[0]++;
+		break;
+	    case 'C':
+	    case 'c':
+		nucs[1]++;
+		break;
+	    case 'G':
+	    case 'g':
+		nucs[2]++;
+		break;
+	    case 'T':
+	    case 't':
+		nucs[3]++;
+		break;
+	    }
+    }
+
+    //
+    // Determine how many alleles are present at this position in this population.
+    // We cannot deal with more than two alternative alleles, if there are more than two
+    // in a single population, print a warning and exclude this nucleotide position.
+    //
+    int i;
+    for (i = 0; i < 4; i++)
+	if (nucs[i] > 0) allele_cnt++;
+
+    if (allele_cnt > 2) {
+	p_allele = 0;
+	q_allele = 0;
+	return 0;
+    }
+
+    //
+    // Record which nucleotide is the P allele and which is the Q allele.
+    //
+    i = 0;
+    while (p_allele == 0 && i < 4) {
+	if (nucs[i] > 0) {
+	    switch(i) {
+	    case 0:
+		p_allele = 'A';
+		break;
+	    case 1:
+		p_allele = 'C';
+		break;
+	    case 2:
+		p_allele = 'G';
+		break;
+	    case 3:
+		p_allele = 'T';
+		break;
+	    }
+	}
+	i++;
+    }
+    while (q_allele == 0 && i < 4) {
+	if (nucs[i] > 0) {
+	    switch(i) {
+	    case 1:
+		q_allele = 'C';
+		break;
+	    case 2:
+		q_allele = 'G';
+		break;
+	    case 3:
+		q_allele = 'T';
+		break;
+	    }
+	}
+	i++;
+    }
+
+    return 1;
 }
 
 template<class LocusT>
@@ -849,6 +1034,12 @@ template<class LocusT>
 LocSum  *PopSum<LocusT>::pop(int locus, int pop_id) 
 {
     return this->data[this->locus_order[locus]][this->pop_order[pop_id]];
+}
+
+template<class LocusT>
+LocTally *PopSum<LocusT>::locus_tally(int locus) 
+{
+    return this->loc_tally[this->locus_order[locus]];
 }
 
 #endif // __POPSUM_H__

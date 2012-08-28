@@ -835,7 +835,7 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'p':
 	    in_path_1 = optarg;
 	    in_path_2 = in_path_1;
-	    ftype     = bustard;
+	    ftype     = fastq;
 	    break;
 	case '1':
 	    paired     = true;
