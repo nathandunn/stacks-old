@@ -1,5 +1,8 @@
-Stacks 0.9996 - August 17, 2012
+Stacks 0.9996 - August 24, 2012
 -----------------------------
+	Bugfix: fixed significant memory leak in Kmer hashing for both ustacks and cstacks. Results in an
+	approximately 3.4x reduction in memory use for cstacks, and an approximately 1.6x reduction in
+	ustacks.
 	Feature: process_radtags and process_shortreads can handle non-Illumina FASTQ headers (any generic FASTQ type).
 	Feature: process_radtags can process data without barcodes.
 	Feature: process_radtags and process_shortreads can handle Illumina barcodes, when the barcode is not

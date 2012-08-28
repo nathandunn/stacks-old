@@ -721,7 +721,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvPRDkI::K:F:G:M:m:i:y:f:o:t:p:1:2:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvRDkI::K:F:G:M:m:i:y:f:o:t:p:1:2:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -837,7 +837,6 @@ void help() {
     std::cerr << "kmer_filter " << VERSION << "\n"
               << "kmer_filter [-f in_file_1 [-f in_file_2...] | -p in_dir] [-1 pair_1 -2 pair_2 [-1 pair_1...]] -o out_dir [-i type] [-y type] [-D] [-h]\n"
 	      << "  f: path to the input file if processing single-end seqeunces.\n"
-	      << "  P: specify that input is paired (reads will be processed in pairs as input).\n"
 	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, 'fasta', or 'fastq' (default 'fastq').\n"
 	      << "  p: path to a directory of files (for single-end files only).\n"
 	      << "  1: specify the first in a pair of files to be processed together.\n"

@@ -51,6 +51,8 @@ bool      sql_out           = false;
 bool      vcf_out           = false;
 bool      genepop_out       = false;
 bool      genomic_out       = false;
+bool      structure_out     = false;
+bool      phylip_out        = false;
 bool      kernel_fst        = false;
 int       min_stack_depth   = 0;
 double    minor_allele_freq = 0;
@@ -231,6 +233,8 @@ int main (int argc, char* argv[]) {
     	psum->add_population(catalog, pmap, pop_id, start_index, end_index, log_fh);
     }
 
+    psum->tally(catalog);
+
     //
     // Idenitfy polymorphic loci, tabulate haplotypes present.
     //
@@ -243,13 +247,19 @@ int main (int argc, char* argv[]) {
 	write_sql(catalog, pmap);
 
     //
-    // Output data in Variant Call Format (VCF)
+    // Output data in requested formats
     //
     if (vcf_out)
 	write_vcf(catalog, pmap, psum, samples, sample_ids);
 
     if (genepop_out)
-	write_genepop(catalog, pmap, psum, pop_indexes, samples, sample_ids);
+	write_genepop(catalog, pmap, psum, pop_indexes, samples);
+
+    if (structure_out)
+	write_structure(catalog, pmap, psum, pop_indexes, samples);
+
+    if (phylip_out)
+	write_phylip(catalog, pmap, psum, pop_indexes, samples);
 
     //
     // Output the observed haplotypes.
@@ -1598,7 +1608,7 @@ write_genepop(map<int, CLocus *> &catalog,
 	      PopMap<CLocus> *pmap, 
 	      PopSum<CLocus> *psum, 
 	      map<int, pair<int, int> > &pop_indexes, 
-	      map<int, string> &samples, vector<int> &sample_ids) 
+	      map<int, string> &samples) 
 {
     //
     // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
@@ -1636,11 +1646,9 @@ write_genepop(map<int, CLocus *> &catalog,
     CLocus  *loc;
     Datum  **d;
     LocSum **s;
+    LocTally *t;
     int      len, start_index, end_index, col;
-    bool     fixed;
     char     p_allele, q_allele;
-    int      pop_cnt = psum->pop_cnt();
-    set<uint> fixed_loci;
 
     //
     // Output all the loci on the second line, comma-separated.
@@ -1654,20 +1662,14 @@ write_genepop(map<int, CLocus *> &catalog,
 	for (uint j = 0; j < loc->snps.size(); j++) {
 	    col = loc->snps[j]->col;
 	    s   = psum->locus(loc->id);
+	    t   = psum->locus_tally(loc->id);
 
-	    fixed = true;
-	    for (int k = 0; k < pop_cnt; k++) {
-		if (s[k]->nucs[col].pi != 0) 
-		    fixed = false;
-	    }
-	    locus_index++;
 	    // 
-	    // If this site is fixed in all populations don't output it.
+	    // If this site is fixed in all populations or has too many alleles don't output it.
 	    //
-	    if (fixed) {
-		fixed_loci.insert(locus_index);
+	    if (t->nucs[col].fixed || t->nucs[col].allele_cnt > 2) 
 		continue;
-	    }
+
 	    fh << loc->id << "_" << col;
 	    if (i <  cnt - 1) fh << ",";
 	    if (i == cnt - 1 && j < loc->snps.size() - 1) fh << ",";
@@ -1698,14 +1700,13 @@ write_genepop(map<int, CLocus *> &catalog,
 
 		len = strlen(loc->con);
 		d   = pmap->locus(loc->id);
+		t   = psum->locus_tally(loc->id);
 
 		for (i = 0; i < loc->snps.size(); i++) {
 		    uint col = loc->snps[i]->col;
 
-		    if (fixed_loci.count(locus_index)) {
-			locus_index++;
+		    if (t->nucs[col].fixed || t->nucs[col].allele_cnt > 2) 
 			continue;
-		    }
 
 		    if (d[j] == NULL) {
 			//
@@ -1738,7 +1739,6 @@ write_genepop(map<int, CLocus *> &catalog,
 		    }
 		    if (j <= end_index) 
 			fh << "\t";
-		    locus_index++;
 		}
 	    }
 	    fh << "\n";
@@ -1746,6 +1746,307 @@ write_genepop(map<int, CLocus *> &catalog,
     }
 
     fh.close();
+
+    return 0;
+}
+
+int 
+write_structure(map<int, CLocus *> &catalog, 
+		PopMap<CLocus> *pmap, 
+		PopSum<CLocus> *psum, 
+		map<int, pair<int, int> > &pop_indexes, 
+		map<int, string> &samples) 
+{
+    //
+    // Write a Structure file as defined here: http://pritch.bsd.uchicago.edu/structure.html
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".structure.tsv";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing population data to Structure file '" << file << "'...";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening Structure file '" << file << "'\n";
+    	exit(1);
+    }
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    //
+    // Output the header.
+    //
+    fh << "# Stacks v" << VERSION << "; " << " Structure v2.3; " << date << "\n"
+       << "\t";
+
+    map<string, vector<CLocus *> >::iterator it;
+    CLocus   *loc;
+    Datum   **d;
+    LocSum  **s;
+    LocTally *t;
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    	for (uint pos = 0; pos < it->second.size(); pos++) {
+    	    loc = it->second[pos];
+    	    s   = psum->locus(loc->id);
+	    t   = psum->locus_tally(loc->id);
+
+    	    for (uint i = 0; i < loc->snps.size(); i++) {
+    		uint col = loc->snps[i]->col;
+		if (t->nucs[col].fixed == false && t->nucs[col].allele_cnt <= 2) 
+		    fh << "\t" << loc->id << "_" << col;
+	    }
+	}
+    }
+    fh << "\n";
+
+    map<char, string> nuc_map;
+    nuc_map['A'] = "1";
+    nuc_map['C'] = "2";
+    nuc_map['G'] = "3";
+    nuc_map['T'] = "4";
+
+    map<int, pair<int, int> >::iterator pit;
+    int       start_index, end_index, pop_id;
+    char      p_allele, q_allele;
+
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	pop_id      = pit->first;
+	start_index = pit->second.first;
+	end_index   = pit->second.second;
+
+	for (int j = start_index; j <= end_index; j++) {
+	    //
+	    // Output all the loci for this sample, printing only the p allele
+	    //
+	    fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
+
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		for (uint pos = 0; pos < it->second.size(); pos++) {
+		    loc = it->second[pos];
+
+		    s = psum->locus(loc->id);
+		    d = pmap->locus(loc->id);
+		    t = psum->locus_tally(loc->id);
+
+		    for (uint i = 0; i < loc->snps.size(); i++) {
+			uint col = loc->snps[i]->col;
+
+			// 
+			// If this site is fixed in all populations or has too many alleles don't output it.
+			//
+			if (t->nucs[col].fixed || t->nucs[col].allele_cnt > 2) 
+			    continue;
+
+			if (d[j] == NULL) {
+			    //
+			    // Data does not exist.
+			    //
+			    fh << "\t" << "0";
+			} else if (d[j]->model[col] == 'U') {
+			    //
+			    // Data exists, but the model call was uncertain.
+			    //
+			    fh << "\t" << "0";
+			} else {
+			    //
+			    // Tally up the nucleotide calls.
+			    //
+			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
+
+			    if (p_allele == 0)
+				fh << "\t" << nuc_map[q_allele];
+			    else
+				fh << "\t" << nuc_map[p_allele];
+			}
+		    }
+		}
+    	    }
+	    fh << "\n";
+
+	    //
+	    // Output all the loci for this sample again, now for the q allele
+	    //
+	    fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
+
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		for (uint pos = 0; pos < it->second.size(); pos++) {
+		    loc = it->second[pos];
+
+		    s = psum->locus(loc->id);
+		    d = pmap->locus(loc->id);
+		    t = psum->locus_tally(loc->id);
+
+		    for (uint i = 0; i < loc->snps.size(); i++) {
+			uint col = loc->snps[i]->col;
+
+			if (t->nucs[col].fixed || t->nucs[col].allele_cnt > 2) 
+			    continue;
+
+			if (d[j] == NULL) {
+			    fh << "\t" << "0";
+			} else if (d[j]->model[col] == 'U') {
+			    fh << "\t" << "0";
+			} else {
+			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
+
+			    if (q_allele == 0)
+				fh << "\t" << nuc_map[p_allele];
+			    else
+				fh << "\t" << nuc_map[q_allele];
+			}
+		    }
+		}
+    	    }
+	    fh << "\n";
+    	}
+    }
+
+    fh.close();
+
+    cerr << "done.\n";
+
+    return 0;
+}
+
+int 
+write_phylip(map<int, CLocus *> &catalog, 
+	     PopMap<CLocus> *pmap, 
+	     PopSum<CLocus> *psum, 
+	     map<int, pair<int, int> > &pop_indexes, 
+	     map<int, string> &samples) 
+{
+    //
+    // We want to find loci where each locus is fixed within a population but variable between populations.
+    //
+    // We will write those loci to a Phylip file as defined here: 
+    //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".phylip";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing population data to Phylip file '" << file << "'; ";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening Phylip file '" << file << "'\n";
+    	exit(1);
+    }
+
+    pop_name << ".log";
+    file = in_path + pop_name.str();
+
+    cerr << "logging nucleotide positions to '" << file << "'...";
+
+    ofstream log_fh(file.c_str(), ofstream::out);
+
+    if (log_fh.fail()) {
+        cerr << "Error opening Phylip Log file '" << file << "'\n";
+    	exit(1);
+    }
+
+    log_fh << "# Seq Pos\tLocus ID\tColumn\tPopulation\n";
+
+    map<string, vector<CLocus *> >::iterator it;
+    CLocus   *loc;
+    Datum   **d;
+    LocSum  **s;
+    LocTally *t;
+
+    map<int, pair<int, int> >::iterator pit;
+    int pop_cnt = psum->pop_cnt();
+    int pop_id;
+
+    //
+    // A map storing, for each population, the concatenated list of interspecific nucleotides.
+    //
+    map<int, string> interspecific_nucs;
+
+    int index = 0;
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint pos = 0; pos < it->second.size(); pos++) {
+	    loc = it->second[pos];
+
+	    s = psum->locus(loc->id);
+	    d = pmap->locus(loc->id);
+	    t = psum->locus_tally(loc->id);
+
+	    for (uint i = 0; i < loc->snps.size(); i++) {
+		uint col = loc->snps[i]->col;
+
+		//
+		// We are looking for loci that are fixed within each population, but are 
+		// variable between one or more populations.
+		//
+		if (t->nucs[col].fixed == false || t->nucs[col].allele_cnt == 1 || t->nucs[col].pop_cnt < 2)
+		    continue;
+
+		log_fh << index << "\t" << loc->id << "\t" << col << "\t";
+
+		for (int j = 0; j < pop_cnt; j++) {
+		    pop_id = psum->rev_pop_index(j);
+
+		    if (s[j]->nucs[col].num_indv > 0) {
+			interspecific_nucs[pop_id] += s[j]->nucs[col].p_nuc;
+			log_fh << pop_id << ":" << s[j]->nucs[col].p_nuc << ",";
+		    } else {
+			interspecific_nucs[pop_id] += 'N';
+			log_fh << pop_id << ":N" << ",";
+		    }
+		}
+		log_fh << "\n";
+		index++;
+	    }
+	}
+    }
+
+    char id_str[id_len];
+    uint len;
+
+    fh << pop_indexes.size() << "    " << interspecific_nucs.begin()->second.length() << "\n";
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	pop_id = pit->first;
+
+	sprintf(id_str, "%d", pop_id);
+	len = strlen(id_str);
+	for (uint j = len; j < 10; j++)
+	    id_str[j] = ' ';
+	id_str[9] = '\0'; 
+
+	fh << id_str << " " << interspecific_nucs[pop_id] << "\n";
+    }
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    //
+    // Output the header.
+    //
+    fh << "# Stacks v" << VERSION << "; " << " Phylip sequential; " << date << "\n";
+
+    fh.close();
+    log_fh.close();
+
+    cerr << "done.\n";
 
     return 0;
 }
@@ -2141,8 +2442,10 @@ int parse_command_line(int argc, char* argv[]) {
             {"corr",        no_argument,       NULL, 'c'},
             {"sql",         no_argument,       NULL, 's'},
             {"vcf",         no_argument,       NULL, 'V'},
+            {"structure",   no_argument,       NULL, 'S'},
             {"genomic",     no_argument,       NULL, 'g'},
 	    {"genepop",     no_argument,       NULL, 'G'},
+	    {"phylip",      no_argument,       NULL, 'Y'},
             {"kernel_fst",  no_argument,       NULL, 'k'},
 	    {"window_size", required_argument, NULL, 'w'},
 	    {"num_threads", required_argument, NULL, 'p'},
@@ -2164,7 +2467,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hkVGgvcsib:p:t:o:r:M:P:m:e:W:B:w:a:f:p:u:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hkSYVGgvcsib:p:t:o:r:M:P:m:e:W:B:w:a:f:p:u:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -2206,6 +2509,12 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'G':
 	    genepop_out = true;
+	    break;
+	case 'S':
+	    structure_out = true;
+	    break;
+	case 'Y':
+	    phylip_out = true;
 	    break;
 	case 'g':
 	    genomic_out = true;
@@ -2314,9 +2623,6 @@ void help() {
 	      << "  P: path to the Stacks output files.\n"
 	      << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
 	      << "  s: output a file to import results into an SQL database.\n"
-	      << "  g: output each nucleotide position in all population members to a file.\n"
-	      << "  V: output results in Variant Call Format (VCF).\n"
-	      << "  G: output results in GenePop format.\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
 	      << "  W: specify a file containing Whitelisted markers to include in the export.\n"
 	      << "  e: restriction enzyme, required if generating 'genomic' output.\n"
@@ -2328,10 +2634,16 @@ void help() {
 	      << "    m: specify a minimum stack depth required for individuals at a locus.\n"
 	      << "    a: specify a minimum minor allele frequency required before calculating Fst at a locus (0 < a < 0.5).\n"
 	      << "    f: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'.\n"
-	      << "    --p_value_cutoff: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n"
+	      << "    --p_value_cutoff: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n\n"
 	      << "  Kernel-smoothing algorithm:\n" 
 	      << "    k: enable kernel-smoothed Fst calculation.\n"
-	      << "    --window_size: distance over which to average values (sigma, default 150Kb)\n";
+	      << "    --window_size: distance over which to average values (sigma, default 150Kb)\n\n"
+	      << "  File ouput options:\n"
+	      << "    --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file.\n"
+	      << "    --vcf: output results in Variant Call Format (VCF).\n"
+	      << "    --genepop: output results in GenePop format.\n"
+	      << "    --structure: output results in Structure format.\n"
+	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n";
 
     exit(0);
 }
