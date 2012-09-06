@@ -93,6 +93,7 @@ public:
 	obs_hom  = 0.0;
 	exp_het  = 0.0;
 	exp_hom  = 0.0;
+	H        = 0.0;
 	pi       = 0.0;
 	Fis      = 0.0;
     }
@@ -119,14 +120,16 @@ public:
     char   p_allele;
     char   q_allele;
     bool   fixed;
+    int    priv_allele;
 
     NucTally() { 
-	num_indv   = 0;
-	pop_cnt    = 0;
-	allele_cnt = 0;
-	p_allele   = 0;
-	q_allele   = 0;
-	fixed      = true;
+	num_indv    = 0;
+	pop_cnt     = 0;
+	allele_cnt  = 0;
+	p_allele    = 0;
+	q_allele    = 0;
+	priv_allele = -1;
+	fixed       = true;
     }
 };
 
@@ -199,7 +202,8 @@ public:
 private:
     int    tally_heterozygous_pos(LocusT *, Datum **, LocSum *, int, int, uint, uint);
     int    tally_fixed_pos(LocusT *, Datum **, LocSum *, int, uint, uint);
-    int    tally_ref_alleles(LocSum **, int, short unsigned int &, char &, char &); 
+    int    tally_ref_alleles(LocSum **, int, short unsigned int &, char &, char &, short unsigned int &, short unsigned int &); 
+    int    tally_observed_haplotypes(vector<char *> &, int);
     double pi(double, double, double);
     double binomial_coeff(double, double);
 };
@@ -320,7 +324,8 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
     LocusT   *loc;
     LocSum  **s;
     LocTally *ltally;
-    int       locus_id, len;
+    int       locus_id, len, variable_pop;
+    unsigned short int p_cnt, q_cnt;
 
     for (int n = 0; n < this->num_loci; n++) {
 	locus_id = this->rev_locus_index(n);
@@ -341,14 +346,34 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 		ltally->nucs[col].num_indv += s[j]->nucs[col].num_indv;
 		ltally->nucs[col].pop_cnt  += s[j]->nucs[col].num_indv > 0 ? 1 : 0;
 
-		if (s[j]->nucs[col].pi != 0) 
+		if (s[j]->nucs[col].pi != 0)
 		    ltally->nucs[col].fixed = false;
 	    }
 
 	    this->tally_ref_alleles(s, col, 
 				    ltally->nucs[col].allele_cnt, 
 				    ltally->nucs[col].p_allele, 
-				    ltally->nucs[col].q_allele);
+				    ltally->nucs[col].q_allele,
+				    p_cnt, q_cnt);
+	    //
+	    // Check if this is a private allele. Either the site is variable and
+	    // the allele exists in one population, or the site is fixed and one
+	    // population is homozygous for the private allele.
+	    //
+	    variable_pop = -1;
+
+	    if (p_cnt == 1 && q_cnt > 1) {
+	    	for (int j = 0; j < this->num_pops; j++)
+	    	    if (s[j]->nucs[col].p_nuc == ltally->nucs[col].p_allele ||
+			s[j]->nucs[col].q_nuc == ltally->nucs[col].p_allele)
+			variable_pop = j;
+	    } else if (p_cnt > 1 && q_cnt == 1) {
+	    	for (int j = 0; j < this->num_pops; j++)
+	    	    if (s[j]->nucs[col].p_nuc == ltally->nucs[col].q_allele ||
+			s[j]->nucs[col].q_nuc == ltally->nucs[col].q_allele)
+			variable_pop = j;
+	    }
+	    ltally->nucs[col].priv_allele = variable_pop;
 	}
     }
 
@@ -356,7 +381,10 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 }
 
 template<class LocusT>
-int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index, short unsigned int &allele_cnt, char &p_allele, char &q_allele) 
+int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index, 
+				      short unsigned int &allele_cnt, 
+				      char &p_allele, char &q_allele, 
+				      short unsigned int &p_cnt, short unsigned int &q_cnt) 
 {
     int  nucs[4] = {0};
     char nuc[2];
@@ -445,6 +473,25 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index, short unsigned 
 	    }
 	}
 	i++;
+    }
+
+    //
+    // Tabulate the number of populations the p_allele and the q_allele occur in.
+    // 
+    p_cnt = 0;
+    q_cnt = 0;
+
+    for (int j = 0; j < this->num_pops; j++) {
+	nuc[0] = 0;
+	nuc[1] = 0;
+        nuc[0] = s[j]->nucs[snp_index].p_nuc;
+        nuc[1] = s[j]->nucs[snp_index].q_nuc;
+
+	for (uint k = 0; k < 2; k++) 
+	    if (nuc[k] != 0 && nuc[k] == p_allele)
+		p_cnt++;
+	    else if (nuc[k] != 0 && nuc[k] == q_allele)
+		q_cnt++;
     }
 
     return 1;
@@ -605,7 +652,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     // Iterate over each individual in this sub-population.
     //
     for (i = start; i <= end; i++) {
-	if (d[i] == NULL || pos >= d[i]->len) continue;
+	if (d[i] == NULL || pos >= d[i]->len || d[i]->model[pos] == 'U') continue;
 
 	//
 	// Pull each allele for this SNP from the observed haplotype.
@@ -710,8 +757,8 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
 	    continue;
 
 	if (d[i]->obshap.size() > 1 &&
-	    d[i]->obshap[0][snp_index] != d[i]->obshap[1][snp_index])
-	    obs_het++;
+	    this->tally_observed_haplotypes(d[i]->obshap, snp_index) == 2)
+		obs_het++;
 	else if (d[i]->obshap[0][snp_index] == p_allele)
 	    obs_p++;
 	else if (d[i]->obshap[0][snp_index] == q_allele)
@@ -794,6 +841,45 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     s->nucs[pos].Fis = s->nucs[pos].pi == 0 ? 0 : (s->nucs[pos].pi - obs_het) / s->nucs[pos].pi;
 
     return 0;
+}
+
+template<class LocusT>
+int PopSum<LocusT>::tally_observed_haplotypes(vector<char *> &obshap, int snp_index) 
+{
+    int  nucs[4] = {0};
+    char nuc;
+
+    //
+    // Pull each allele for this SNP from the observed haplotype.
+    //
+    for (uint j = 0; j < obshap.size(); j++) {
+        nuc = obshap[j][snp_index];
+
+	switch(nuc) {
+	case 'A':
+	case 'a':
+	    nucs[0]++;
+	    break;
+	case 'C':
+	case 'c':
+	    nucs[1]++;
+	    break;
+	case 'G':
+	case 'g':
+	    nucs[2]++;
+	    break;
+	case 'T':
+	case 't':
+	    nucs[3]++;
+	    break;
+	}
+    }
+
+    int allele_cnt = 0;
+    for (int i = 0; i < 4; i++)
+	if (nucs[i] > 0) allele_cnt++;
+
+    return allele_cnt;
 }
 
 template<class LocusT>
