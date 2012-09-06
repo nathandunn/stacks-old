@@ -233,7 +233,9 @@ int main (int argc, char* argv[]) {
     	psum->add_population(catalog, pmap, pop_id, start_index, end_index, log_fh);
     }
 
+    cerr << "Tallying loci across populations...";
     psum->tally(catalog);
+    cerr << "done.\n";
 
     //
     // Idenitfy polymorphic loci, tabulate haplotypes present.
@@ -766,6 +768,108 @@ int
 write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
 		    map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum) 
 {
+    map<string, vector<CLocus *> >::iterator it;
+    CLocus   *loc;
+    LocSum  **s;
+    LocTally *t;
+    int       len;
+    int       pop_cnt = psum->pop_cnt();
+    char      fisstr[32];
+
+    //
+    // Calculate the means for each summary statistic.
+    //
+    int    *private_cnt;
+    double *num_indv_mean, *p_mean, *obs_het_mean, *obs_hom_mean, *exp_het_mean, *exp_hom_mean, *pi_mean, *fis_mean;
+    double *num_indv_var,  *p_var,  *obs_het_var,  *obs_hom_var,  *exp_het_var,  *exp_hom_var,  *pi_var,  *fis_var;
+    double *n;
+    private_cnt   = new int[pop_cnt];
+    n             = new double[pop_cnt];
+    num_indv_mean = new double[pop_cnt];
+    num_indv_var  = new double[pop_cnt];
+    p_mean        = new double[pop_cnt];
+    p_var         = new double[pop_cnt];
+    obs_het_mean  = new double[pop_cnt];
+    obs_het_var   = new double[pop_cnt];
+    obs_hom_mean  = new double[pop_cnt];
+    obs_hom_var   = new double[pop_cnt];
+    exp_het_mean  = new double[pop_cnt];
+    exp_het_var   = new double[pop_cnt];
+    exp_hom_mean  = new double[pop_cnt];
+    exp_hom_var   = new double[pop_cnt];
+    pi_mean       = new double[pop_cnt];
+    pi_var        = new double[pop_cnt];
+    fis_mean      = new double[pop_cnt];
+    fis_var       = new double[pop_cnt];
+
+    for (int j = 0; j < pop_cnt; j++) {
+	private_cnt[j]   = 0;
+	n[j]             = 0.0;
+	num_indv_mean[j] = 0.0;
+	num_indv_var[j]  = 0.0;
+	p_mean[j]        = 0.0;
+	p_var[j]         = 0.0;
+	obs_het_mean[j]  = 0.0;
+	obs_het_var[j]   = 0.0;
+	obs_hom_mean[j]  = 0.0;
+	obs_hom_var[j]   = 0.0;
+	exp_het_mean[j]  = 0.0;
+	exp_het_var[j]   = 0.0;
+	exp_hom_mean[j]  = 0.0;
+	exp_hom_var[j]   = 0.0;
+	pi_mean[j]       = 0.0;
+	pi_var[j]        = 0.0;
+	fis_mean[j]      = 0.0;
+	fis_var[j]       = 0.0;
+    }
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint pos = 0; pos < it->second.size(); pos++) {
+	    loc = it->second[pos];
+
+	    s = psum->locus(loc->id);
+	    t = psum->locus_tally(loc->id);
+	    len = strlen(loc->con);
+
+	    for (int i = 0; i < len; i++) {
+		//
+		// Compile private alleles
+		//
+		if (t->nucs[i].priv_allele >= 0)
+		    private_cnt[t->nucs[i].priv_allele]++;
+
+		if (t->nucs[i].allele_cnt == 2) {
+
+		    for (int j = 0; j < pop_cnt; j++) {
+
+			if (s[j]->nucs[i].num_indv == 0) continue;
+
+			n[j]++;
+			num_indv_mean[j] += s[j]->nucs[i].num_indv;
+			p_mean[j]        += s[j]->nucs[i].p;
+			obs_het_mean[j]  += s[j]->nucs[i].obs_het;
+			obs_hom_mean[j]  += s[j]->nucs[i].obs_hom;
+			exp_het_mean[j]  += s[j]->nucs[i].exp_het;
+			exp_hom_mean[j]  += s[j]->nucs[i].exp_hom;
+			pi_mean[j]       += s[j]->nucs[i].pi;
+			fis_mean[j]      += s[j]->nucs[i].Fis;
+		    }
+		}
+	    }
+	}
+    }
+
+    for (int j = 0; j < pop_cnt; j++) {
+	num_indv_mean[j] = num_indv_mean[j] / n[j];
+	p_mean[j]        = p_mean[j]        / n[j];
+	obs_het_mean[j]  = obs_het_mean[j]  / n[j];
+	obs_hom_mean[j]  = obs_hom_mean[j]  / n[j];
+	exp_het_mean[j]  = exp_het_mean[j]  / n[j];
+	exp_hom_mean[j]  = exp_hom_mean[j]  / n[j];
+	pi_mean[j]       = pi_mean[j]       / n[j];
+	fis_mean[j]      = fis_mean[j]      / n[j];
+    }
+
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".sumstats" << ".tsv";
 
@@ -774,7 +878,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
-        cerr << "Error opening generic output file '" << file << "'\n";
+        cerr << "Error opening sumstats file '" << file << "'\n";
 	exit(1);
     }
 
@@ -796,20 +900,14 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
     cerr << "Writing " << catalog.size() << " loci to summary statistics file, '" << file << "'\n";
 
-    map<string, vector<CLocus *> >::iterator it;
-    CLocus  *loc;
-    LocSum **s;
-    int      len;
-    int      pop_cnt = psum->pop_cnt();
-    char     fisstr[32];
-    bool     fixed;
-
     fh << "# Batch ID " << "\t"
        << "Locus ID" << "\t"
        << "Chr"      << "\t"
        << "BP"       << "\t"
        << "Col"      << "\t"
        << "Pop ID"   << "\t"
+       << "P Nuc"    << "\t"
+       << "Q Nuc"    << "\t"
        << "N"        << "\t"
        << "P"        << "\t"
        << "Obs Het"  << "\t"
@@ -817,27 +915,25 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
        << "Exp Het"  << "\t"
        << "Exp Hom"  << "\t"
        << "Pi"       << "\t"
-       << "Fis"      << "\n";
+       << "Fis"      << "\t"
+       << "Private"  << "\n";
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	for (uint pos = 0; pos < it->second.size(); pos++) {
 	    loc = it->second[pos];
 
 	    s = psum->locus(loc->id);
+	    t = psum->locus_tally(loc->id);
 	    len = strlen(loc->con);
 
 	    for (int i = 0; i < len; i++) {
 
 		// 
-		// If this site is fixed in all populations, don't output it.
+		// If this site is fixed in all populations, DON'T output it. If it is variable
+		// or fixed within populations but variable among, DO output it.
 		//
-		fixed  = true;
-		for (int j = 0; j < pop_cnt; j++) {
-		    if (s[j]->nucs[i].pi != 0) 
-			fixed = false;
-		}
+		if (t->nucs[i].allele_cnt == 2) {
 
-		if (!fixed) {
 		    for (int j = 0; j < pop_cnt; j++) {
 
 			if (s[j]->nucs[i].num_indv == 0) continue;
@@ -850,19 +946,150 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			   << loc->loc.bp + i << "\t"
 			   << i << "\t"
 			   << psum->rev_pop_index(j) << "\t"
-			   << s[j]->nucs[i].num_indv << "\t"
+			   << s[j]->nucs[i].p_nuc << "\t";
+
+			if (s[j]->nucs[i].q_nuc != 0) 
+			    fh << s[j]->nucs[i].q_nuc;
+
+			fh << "\t" << s[j]->nucs[i].num_indv << "\t"
 			   << s[j]->nucs[i].p << "\t"
 			   << s[j]->nucs[i].obs_het << "\t"
 			   << s[j]->nucs[i].obs_hom << "\t"
 			   << s[j]->nucs[i].exp_het << "\t"
 			   << s[j]->nucs[i].exp_hom << "\t"
 			   << s[j]->nucs[i].pi      << "\t"
-			   << fisstr << "\n";
+			   << fisstr                << "\t";
+			(t->nucs[i].priv_allele == j) ? fh << "1\n" : fh << "0\n";
+
+			//
+			// Tabulate the residuals to calculate the variance.
+			//
+			num_indv_var[j] += pow((s[j]->nucs[i].num_indv - num_indv_mean[j]), 2);
+			p_var[j]        += pow((s[j]->nucs[i].p        - p_mean[j]),        2);
+			obs_het_var[j]  += pow((s[j]->nucs[i].obs_het  - obs_het_mean[j]),  2);
+			obs_hom_var[j]  += pow((s[j]->nucs[i].obs_hom  - obs_hom_mean[j]),  2);
+			exp_het_var[j]  += pow((s[j]->nucs[i].exp_het  - exp_het_mean[j]),  2);
+			exp_hom_var[j]  += pow((s[j]->nucs[i].exp_hom  - exp_hom_mean[j]),  2);
+			pi_var[j]       += pow((s[j]->nucs[i].pi       - pi_mean[j]),       2);
+			fis_var[j]      += pow((s[j]->nucs[i].Fis      - fis_mean[j]),      2);
 		    }
 		}
 	    }
 	}
     }
+
+    //
+    // Calculate the variance.
+    //
+    for (int j = 0; j < pop_cnt; j++) {
+	num_indv_var[j] = num_indv_var[j] / (n[j] - 1);
+	p_var[j]        = p_var[j] / (n[j] - 1);
+	obs_het_var[j]  = obs_het_var[j] / (n[j] - 1);
+	obs_hom_var[j]  = obs_hom_var[j] / (n[j] - 1);
+	exp_het_var[j]  = exp_het_var[j] / (n[j] - 1);
+	exp_hom_var[j]  = exp_hom_var[j] / (n[j] - 1);
+	pi_var[j]       = pi_var[j] / (n[j] - 1);
+	fis_var[j]      = fis_var[j] / (n[j] - 1);
+    }
+
+    fh.close();
+
+    pop_name.str("");
+    pop_name << "batch_" << batch_id << ".sumstats_summary" << ".tsv";
+
+    file = in_path + pop_name.str();
+
+    fh.open(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening sumstats summary file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Write out summary statistics of the summary statistics.
+    //
+    fh << "# Pop ID\t"
+       << "Private\t"
+       << "Num Indv\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "P\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Obs Het\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Obs Hom\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Exp Het\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Exp Hom\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Pi\t"
+       << "Var\t"
+       << "StdErr\t"
+       << "Fis\t"
+       << "Var\t"
+       << "StdErr\n";
+
+    double *sq_n = new double[pop_cnt];
+
+    for (int j = 0; j < pop_cnt; j++)
+	sq_n[j] = sqrt(n[j]);
+
+    for (int j = 0; j < pop_cnt; j++)
+	fh << psum->rev_pop_index(j) << "\t" 
+	   << private_cnt[j]         << "\t"
+	   << num_indv_mean[j]       << "\t"
+	   << num_indv_var[j]        << "\t"
+	   << sqrt(num_indv_var[j]) / sq_n[j] << "\t"
+	   << p_mean[j]              << "\t"
+	   << p_var[j]               << "\t"
+	   << sqrt(p_var[j]) / sq_n[j] << "\t"
+	   << obs_het_mean[j]        << "\t"
+	   << obs_het_var[j]         << "\t"
+	   << sqrt(obs_het_var[j]) / sq_n[j] << "\t"
+	   << obs_hom_mean[j]        << "\t"
+	   << obs_hom_var[j]         << "\t"
+	   << sqrt(obs_hom_var[j]) / sq_n[j] << "\t"
+	   << exp_het_mean[j]        << "\t"
+	   << exp_het_var[j]         << "\t"
+	   << sqrt(exp_het_var[j]) / sq_n[j] << "\t"
+	   << exp_hom_mean[j]        << "\t"
+	   << exp_hom_var[j]         << "\t"
+	   << sqrt(exp_hom_var[j]) / sq_n[j] << "\t"
+	   << pi_mean[j]             << "\t"
+	   << pi_var[j]              << "\t"
+	   << sqrt(pi_var[j]) / sq_n[j] << "\t"
+	   << fis_mean[j]            << "\t"
+	   << fis_var[j]             << "\t"
+	   << sqrt(num_indv_var[j]) / sq_n[j] << "\n";
+
+    delete [] private_cnt;
+    delete [] n;
+    delete [] sq_n;
+    delete [] num_indv_mean;
+    delete [] num_indv_var;
+    delete [] p_mean;
+    delete [] p_var;
+    delete [] obs_het_mean;
+    delete [] obs_het_var;
+    delete [] obs_hom_mean;
+    delete [] obs_hom_var;
+    delete [] exp_het_mean;
+    delete [] exp_het_var;
+    delete [] exp_hom_mean;
+    delete [] exp_hom_var;
+    delete [] pi_mean;
+    delete [] pi_var;
+    delete [] fis_mean;
+    delete [] fis_var;
+
+    fh.close();
 
     return 0;
 }
@@ -1667,7 +1894,7 @@ write_genepop(map<int, CLocus *> &catalog,
 	    // 
 	    // If this site is fixed in all populations or has too many alleles don't output it.
 	    //
-	    if (t->nucs[col].fixed || t->nucs[col].allele_cnt > 2) 
+	    if (t->nucs[col].allele_cnt != 2) 
 		continue;
 
 	    fh << loc->id << "_" << col;
@@ -1705,7 +1932,7 @@ write_genepop(map<int, CLocus *> &catalog,
 		for (i = 0; i < loc->snps.size(); i++) {
 		    uint col = loc->snps[i]->col;
 
-		    if (t->nucs[col].fixed || t->nucs[col].allele_cnt > 2) 
+		    if (t->nucs[col].allele_cnt != 2) 
 			continue;
 
 		    if (d[j] == NULL) {
@@ -1803,7 +2030,7 @@ write_structure(map<int, CLocus *> &catalog,
 
     	    for (uint i = 0; i < loc->snps.size(); i++) {
     		uint col = loc->snps[i]->col;
-		if (t->nucs[col].fixed == false && t->nucs[col].allele_cnt <= 2) 
+		if (t->nucs[col].allele_cnt == 2) 
 		    fh << "\t" << loc->id << "_" << col;
 	    }
 	}
@@ -1845,7 +2072,7 @@ write_structure(map<int, CLocus *> &catalog,
 			// 
 			// If this site is fixed in all populations or has too many alleles don't output it.
 			//
-			if (t->nucs[col].fixed || t->nucs[col].allele_cnt > 2) 
+			if (t->nucs[col].allele_cnt != 2) 
 			    continue;
 
 			if (d[j] == NULL) {
@@ -1890,7 +2117,7 @@ write_structure(map<int, CLocus *> &catalog,
 		    for (uint i = 0; i < loc->snps.size(); i++) {
 			uint col = loc->snps[i]->col;
 
-			if (t->nucs[col].fixed || t->nucs[col].allele_cnt > 2) 
+			if (t->nucs[col].allele_cnt != 2) 
 			    continue;
 
 			if (d[j] == NULL) {
