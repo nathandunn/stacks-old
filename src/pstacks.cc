@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -44,16 +44,51 @@ int       num_threads   = 1;
 //
 // For use with the multinomial model to call fixed nucleotides.
 //
-modelt model_type        = snp;
-double p_freq            = 0.5;
-double barcode_err_freq  = 0.0;
+modelt model_type         = snp;
+double alpha              = 0.05;
+double bound_low          = 0.0;
+double bound_high         = 1.0;
+double p_freq             = 0.5;
+double barcode_err_freq   = 0.0;
+double heterozygote_limit = -3.84;
+double homozygote_limit   =  3.84;
 
 int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
     cerr << "Min depth of coverage to report a stack: " << min_stack_cov << "\n"
-	 << "Model type: " << (model_type == snp ? "SNP" : "Fixed") << "\n";
+	 << "Model type: ";
+    switch (model_type) {
+    case snp:
+	cerr << "SNP\n";
+	break;
+    case fixed: 
+	cerr << "Fixed\n";
+	break;
+    case bounded:
+	cerr << "Bounded; lower epsilon bound: " << bound_low << "; upper bound: " << bound_high << "\n";
+	break;
+    }
+
+    //
+    // Set limits to call het or homozygote according to chi-square distribution with one 
+    // degree of freedom:
+    //   http://en.wikipedia.org/wiki/Chi-squared_distribution#Table_of_.CF.872_value_vs_p-value
+    //
+    if (alpha == 0.1) {
+	heterozygote_limit = -2.71;
+	homozygote_limit   =  2.71;
+    } else if (alpha == 0.05) {
+	heterozygote_limit = -3.84;
+	homozygote_limit   =  3.84;
+    } else if (alpha == 0.01) {
+	heterozygote_limit = -6.64;
+	homozygote_limit   =  6.64;
+    } else if (alpha == 0.001) {
+	heterozygote_limit = -10.83;
+	homozygote_limit   =  10.83;
+    }
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -202,10 +237,18 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
 		//
 		// Search this column for the presence of a SNP
 		//
-		if (invoke_model) 
-		    model_type == snp ? 
-                        call_multinomial_snp(mtag, col, nuc, true) :
+		if (invoke_model)
+		    switch(model_type) {
+		    case snp:
+                        call_multinomial_snp(mtag, col, nuc, true);
+			break;
+		    case bounded:
+			call_bounded_multinomial_snp(mtag, col, nuc, true);
+			break;
+		    case fixed:
                         call_multinomial_fixed(mtag, col, nuc);
+			break;
+		    }
 	    }
 
 	    if (invoke_model) {
@@ -587,13 +630,16 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"min_cov",      required_argument, NULL, 'm'},
 	    {"num_threads",  required_argument, NULL, 'p'},
 	    {"bc_err_freq",  required_argument, NULL, 'e'},
+	    {"bound_low",    required_argument, NULL, 'L'},
+	    {"bound_high",   required_argument, NULL, 'U'},
+	    {"alpha",        required_argument, NULL, 'A'},
 	    {0, 0, 0, 0}
 	};
 
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvOf:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvOL:U:f:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -634,6 +680,15 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'e':
 	    barcode_err_freq = atof(optarg);
 	    break;
+	case 'L':
+	    bound_low  = atof(optarg);
+	    break;
+	case 'U':
+	    bound_high = atof(optarg);
+	    break;
+	case 'A':
+	    alpha = atof(optarg);
+	    break;
 	case 'p':
 	    num_threads = atoi(optarg);
 	    break;
@@ -650,6 +705,25 @@ int parse_command_line(int argc, char* argv[]) {
 	    help();
 	    abort();
 	}
+    }
+
+    if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
+	cerr << "SNP model alpha significance level must be either 0.1, 0.05, 0.01, or 0.001.\n";
+	help();
+    }
+
+    if (bound_low != 0 && (bound_low < 0 || bound_low >= 1.0)) {
+	cerr << "SNP model lower bound must be between 0.0 and 1.0.\n";
+	help();
+    }
+
+    if (bound_high != 1 && (bound_high <= 0 || bound_high > 1.0)) {
+	cerr << "SNP model upper bound must be between 0.0 and 1.0.\n";
+	help();
+    }
+
+    if (bound_low > 0 || bound_high < 1.0) {
+	model_type = bounded;
     }
 
     if (in_file.length() == 0 || in_file_type == unknown) {
@@ -679,15 +753,23 @@ void version() {
 
 void help() {
     std::cerr << "pstacks " << VERSION << "\n"
-              << "pstacks -t file_type -f file_path [-o path] [-i id] [-m min_cov] [-e errfreq] [-p num_threads] [-h]" << "\n"
-              << "  p: enable parallel execution with num_threads threads.\n"
+              << "pstacks -t file_type -f file_path [-o path] [-i id] [-m min_cov] [-p num_threads] [-h]" << "\n"
 	      << "  t: input file Type. Supported types: bowtie, sam.\n"
               << "  f: input file path.\n"
 	      << "  o: output path to write results.\n"
 	      << "  i: SQL ID to insert into the output to identify this sample.\n"
 	      << "  m: minimum depth of coverage to report a stack (default 1).\n"
-	      << "  e: specify the barcode error frequency (0 < e < 1) if using the 'fixed' model.\n"
-	      << "  h: display this help messsage." << "\n\n";
+              << "  p: enable parallel execution with num_threads threads.\n"
+	      << "  h: display this help messsage.\n"
+	      << "  Model options:\n" 
+	      << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
+	      << "    For the SNP or Bounded SNP model:\n"
+	      << "      --alpha: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
+	      << "    For the Bounded SNP model:\n"
+	      << "      --bound_low: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
+	      << "      --bound_high: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
+	      << "    For the Fixed model:\n"
+	      << "      --bc_err_freq: specify the barcode error frequency, between 0 and 1.0.\n";
 
     exit(0);
 }

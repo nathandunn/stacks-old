@@ -53,6 +53,7 @@ bool      genepop_out       = false;
 bool      genomic_out       = false;
 bool      structure_out     = false;
 bool      phylip_out        = false;
+bool      phylip_var        = false;
 bool      kernel_fst        = false;
 int       min_stack_depth   = 0;
 double    minor_allele_freq = 0;
@@ -2193,8 +2194,9 @@ write_phylip(map<int, CLocus *> &catalog,
     LocTally *t;
 
     map<int, pair<int, int> >::iterator pit;
-    int pop_cnt = psum->pop_cnt();
-    int pop_id;
+    int  pop_cnt = psum->pop_cnt();
+    int  pop_id;
+    char nuc;
 
     //
     // A map storing, for each population, the concatenated list of interspecific nucleotides.
@@ -2213,28 +2215,112 @@ write_phylip(map<int, CLocus *> &catalog,
 	    for (uint i = 0; i < loc->snps.size(); i++) {
 		uint col = loc->snps[i]->col;
 
-		//
-		// We are looking for loci that are fixed within each population, but are 
-		// variable between one or more populations.
-		//
-		if (t->nucs[col].fixed == false || t->nucs[col].allele_cnt == 1 || t->nucs[col].pop_cnt < 2)
-		    continue;
+		if (phylip_var == false) {
+		    //
+		    // We are looking for loci that are fixed within each population, but are 
+		    // variable between one or more populations.
+		    //
+		    if (t->nucs[col].fixed == false || t->nucs[col].allele_cnt == 1 || t->nucs[col].pop_cnt < 2)
+			continue;
 
-		log_fh << index << "\t" << loc->id << "\t" << col << "\t";
+		    log_fh << index << "\t" << loc->id << "\t" << col << "\t";
 
-		for (int j = 0; j < pop_cnt; j++) {
-		    pop_id = psum->rev_pop_index(j);
+		    for (int j = 0; j < pop_cnt; j++) {
+			pop_id = psum->rev_pop_index(j);
 
-		    if (s[j]->nucs[col].num_indv > 0) {
-			interspecific_nucs[pop_id] += s[j]->nucs[col].p_nuc;
-			log_fh << pop_id << ":" << s[j]->nucs[col].p_nuc << ",";
-		    } else {
-			interspecific_nucs[pop_id] += 'N';
-			log_fh << pop_id << ":N" << ",";
+			if (s[j]->nucs[col].num_indv > 0) {
+			    interspecific_nucs[pop_id] += s[j]->nucs[col].p_nuc;
+			    log_fh << pop_id << ":" << s[j]->nucs[col].p_nuc << ",";
+			} else {
+			    interspecific_nucs[pop_id] += 'N';
+			    log_fh << pop_id << ":N" << ",";
+			}
 		    }
+		    log_fh << "\n";
+		    index++;
+
+		} else {
+		    log_fh << index << "\t" << loc->id << "\t" << col << "\t";
+
+		    for (int j = 0; j < pop_cnt; j++) {
+			pop_id = psum->rev_pop_index(j);
+
+			switch(s[j]->nucs[col].p_nuc) {
+			case 0:
+			    nuc = 'N';
+			    break;
+			case 'A':
+			    switch(s[j]->nucs[col].q_nuc) {
+			    case 'C':
+				nuc = 'M';
+				break;
+			    case 'G':
+				nuc = 'R';
+				break;
+			    case 'T':
+				nuc = 'W';
+				break;
+			    case 0:
+				nuc = 'A';
+				break;
+			    }
+			    break;
+			case 'C':
+			    switch(s[j]->nucs[col].q_nuc) {
+			    case 'A':
+				nuc = 'M';
+				break;
+			    case 'G':
+				nuc = 'S';
+				break;
+			    case 'T':
+				nuc = 'Y';
+				break;
+			    case 0:
+				nuc = 'C';
+				break;
+			    }
+			    break;
+			case 'G':
+			    switch(s[j]->nucs[col].q_nuc) {
+			    case 'A':
+				nuc = 'R';
+				break;
+			    case 'C':
+				nuc = 'S';
+				break;
+			    case 'T':
+				nuc = 'K';
+				break;
+			    case 0:
+				nuc = 'G';
+				break;
+			    }
+			    break;
+			case 'T':
+			    switch(s[j]->nucs[col].q_nuc) {
+			    case 'A':
+				nuc = 'W';
+				break;
+			    case 'C':
+				nuc = 'Y';
+				break;
+			    case 'G':
+				nuc = 'K';
+				break;
+			    case 0:
+				nuc = 'T';
+				break;
+			    }
+			    break;
+			}
+			interspecific_nucs[pop_id] += nuc;
+			log_fh << pop_id << ":" << nuc << ",";
+
+		    }
+		    log_fh << "\n";
+		    index++;
 		}
-		log_fh << "\n";
-		index++;
 	    }
 	}
     }
@@ -2673,6 +2759,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"genomic",     no_argument,       NULL, 'g'},
 	    {"genepop",     no_argument,       NULL, 'G'},
 	    {"phylip",      no_argument,       NULL, 'Y'},
+	    {"phylip_var",  no_argument,       NULL, 'L'},
             {"kernel_fst",  no_argument,       NULL, 'k'},
 	    {"window_size", required_argument, NULL, 'w'},
 	    {"num_threads", required_argument, NULL, 'p'},
@@ -2694,7 +2781,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hkSYVGgvcsib:p:t:o:r:M:P:m:e:W:B:w:a:f:p:u:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hkSLYVGgvcsib:p:t:o:r:M:P:m:e:W:B:w:a:f:p:u:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -2742,6 +2829,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'Y':
 	    phylip_out = true;
+	    break;
+	case 'L':
+	    phylip_var = true;
 	    break;
 	case 'g':
 	    genomic_out = true;
@@ -2870,7 +2960,8 @@ void help() {
 	      << "    --vcf: output results in Variant Call Format (VCF).\n"
 	      << "    --genepop: output results in GenePop format.\n"
 	      << "    --structure: output results in Structure format.\n"
-	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n";
+	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
+	      << "      --phylip_var: include variable sites in the phylip output.\n";
 
     exit(0);
 }
