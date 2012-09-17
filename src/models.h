@@ -45,7 +45,7 @@ using std::endl;
 //
 // Possible models for calling nucleotide positions as fixed or variable
 //
-enum modelt {fixed, snp};
+enum modelt {fixed, snp, bounded};
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -54,7 +54,12 @@ extern const int barcode_size;
 extern modelt model_type;
 extern double p_freq;
 extern double barcode_err_freq;
+extern double bound_low;
+extern double bound_high;
+extern double heterozygote_limit;
+extern double homozygote_limit;
 
+int  call_bounded_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
 int  call_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
 int  call_multinomial_fixed(MergedStack *, int, map<char, int> &);
 bool compare_pair(pair<char, int>, pair<char, int>);

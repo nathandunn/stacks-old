@@ -267,7 +267,7 @@ sub extract_sample_ids {
 
     print STDERR "Collecting sample IDs from Stacks output files...";
 
-    foreach $file (@files) {
+    foreach $file (@{$files}) {
 	$f = $in_path . "/$file" . ".tags.tsv";
 
 	@results = `head -n 1 $f`;
