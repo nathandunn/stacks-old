@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #
-# Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
 #
 # This file is part of Stacks.
 #
@@ -39,7 +39,8 @@ my $batch_id  = 0;
 my $data_type = "haplo";
 my $map_type  = "gen";
 my $all_depth = 0;
-my $depth_lim = 1;
+my $allele_depth_lim = 1;
+my $locus_depth_lim  = 0;
 my $man_cor   = 0;
 my $db        = "";
 
@@ -51,11 +52,11 @@ my $translate_genotypes = {'dh'  => \&trans_dh_map,
 
 parse_command_line();
 
-my (%sth, %loci, %samples, %filters);
+my (%sth, %loci, %samples, %depths, %filters);
 
 prepare_sql_handles(\%sth, \%filters);
 
-populate(\%sth, \%loci, \%samples, \%filters);
+populate(\%sth, \%loci, \%samples, \%depths, \%filters);
 
 apply_corrected_genotypes(\%sth, \%loci) if ($man_cor > 0);
 
@@ -63,17 +64,16 @@ if ($data_type eq "haplo") {
     write_observed_haplotypes(\%loci, \%samples);
 
 } elsif ($data_type eq "geno") {
-    write_genotypes(\%loci, \%samples);
+    write_genotypes(\%loci, \%samples, \%depths);
 }
-
 
 print "Success\n";
 
 sub populate {
-    my ($sth, $loci, $samples, $filters) = @_;
+    my ($sth, $loci, $samples, $depths, $filters) = @_;
 
-    my (%delev, $row, $snp_row, $all_row, $gen_row);
-
+    my (%delev);
+    my ($row, $snp_row, $all_row, $gen_row);
     my @params;
 
     #
@@ -145,7 +145,7 @@ sub populate {
 	    #
 	    # Add observed haplotypes
 	    #
-	    $sth->{'mat'}->execute($batch_id, $locus->{'id'}, $depth_lim);
+	    $sth->{'mat'}->execute($batch_id, $locus->{'id'}, $allele_depth_lim);
 
 	    while ($gen_row = $sth->{'mat'}->fetchrow_hashref()) {
 		if (!defined($locus->{'gtypes'}->{$gen_row->{'file'}})) {
@@ -184,6 +184,23 @@ sub populate {
 	}
 
         $loci->{$row->{'tag_id'}} = $locus;
+    }
+
+    #
+    # If exporting genotypes and a locus depth limit was specified, fetch locus depths.
+    #
+    if ($data_type eq "geno" && $locus_depth_lim > 0) {
+
+	$sth->{'depths'}->execute($batch_id);
+
+	while ($row = $sth->{'depths'}->fetchrow_hashref()) {
+	    next if (!defined($loci->{$row->{'catalog_id'}}));
+
+	    if (!defined($depths->{$row->{'catalog_id'}})) {
+		$depths->{$row->{'catalog_id'}} = {};
+	    }
+	    $depths->{$row->{'catalog_id'}}->{$row->{'file'}} += $row->{'depth'};
+	}
     }
 }
 
@@ -241,7 +258,7 @@ sub prepare_filter_parameters {
         } elsif ($filter eq "pare") {
             push(@{$params}, $filters->{'pare_l'});
             push(@{$params}, $filters->{'pare_u'});
-	
+
         } elsif ($filter eq "prog") {
             push(@{$params}, $filters->{'prog'});
 
@@ -270,7 +287,7 @@ sub prepare_filter_parameters {
 	    push(@{$params}, $filters->{'chr'});
 	    push(@{$params}, $filters->{'sbp'} * 1000000);
 	    push(@{$params}, $filters->{'ebp'} * 1000000);
-	
+
 	} elsif ($filter eq "mark") {
             if ($filters->{'mark'} eq "Any") {
                 push(@{$params}, "%/%");
@@ -319,7 +336,7 @@ sub write_observed_haplotypes {
 
     my ($workbook, $worksheet);
 
-    my ($out_fh, $str, $cat_id, $id, $locus, $gtypes, $types);
+    my ($out_fh, $str, $cat_id, $id, $locus, $gtypes, $types, $tot_depth);
 
     if ($type eq "xls") {
         $workbook  = Spreadsheet::WriteExcel->new($out_file) or die("Unable to initiate excel spreadsheet.\n");
@@ -386,6 +403,18 @@ sub write_observed_haplotypes {
                 next;
             }
 
+	    #
+	    # Check total locus depth.
+	    #
+	    $tot_depth = 0;
+            foreach $type (@{$types}) {
+		$tot_depth += $type->{'depth'};
+            }
+	    if ($tot_depth < $locus_depth_lim) {
+                $str .= "\t";
+                next;
+	    }
+
             foreach $type (@{$types}) {
                 $str .= $all_depth ? $type->{'depth'} : $type->{'allele'};
 		$str .= "/";
@@ -416,7 +445,7 @@ sub write_observed_haplotypes {
 }
 
 sub write_genotypes {
-    my ($loci, $samples) = @_;
+    my ($loci, $samples, $depths) = @_;
 
     my ($workbook, $worksheet);
 
@@ -472,10 +501,23 @@ sub write_genotypes {
         foreach $id (@ordered_sam) {
             $types = $locus->{'gtypes'}->{$id};
 
+	    #
+	    # Check that there is a genotype for this sample.
+	    #
             if (!defined($types)) {
                 $str .= "\t";
                 next;
             }
+
+	    #
+	    # Check the depth of coverage for this locus, if requested.
+	    #
+	    if ($locus_depth_lim > 0) {
+		if (!defined($depths->{$cat_id}->{$id}) || $depths->{$cat_id}->{$id} < $locus_depth_lim) {
+		    $str .= "\t";
+		    next;
+		}
+	    }
 
 	    my $trans_gtype = $translate_genotypes->{$map_type}->($trans_marker, $types->[0]->{'gtype'});
             $str .=  $trans_gtype . "\t";
@@ -799,6 +841,13 @@ sub prepare_sql_handles {
     $sth->{'mat'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
+        "SELECT catalog_id, file, depth " . 
+        "FROM matches " . 
+        "JOIN samples ON (matches.sample_id=samples.id) " . 
+        "WHERE matches.batch_id=?";
+    $sth->{'depths'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
+
+    $query = 
         "SELECT samples.id as id, samples.sample_id, samples.type, file, genotype " . 
         "FROM catalog_genotypes " . 
         "JOIN samples ON (catalog_genotypes.sample_id=samples.id) " . 
@@ -860,7 +909,8 @@ sub parse_command_line {
         elsif ($_ =~ /^-b$/) { $batch_id  = shift @ARGV; }
         elsif ($_ =~ /^-D$/) { $db        = shift @ARGV; }
         elsif ($_ =~ /^-m$/) { $map_type  = lc(shift @ARGV); }
-        elsif ($_ =~ /^-L$/) { $depth_lim = shift @ARGV; }
+        elsif ($_ =~ /^-A$/) { $allele_depth_lim = shift @ARGV; }
+        elsif ($_ =~ /^-L$/) { $locus_depth_lim  = shift @ARGV; }
         elsif ($_ =~ /^-d$/) { $all_depth++; }
         elsif ($_ =~ /^-c$/) { $man_cor++; }
 	elsif ($_ =~ /^-v$/) { version(); exit(); }
@@ -957,7 +1007,8 @@ sub usage {
         "    o: type of data to export: 'tsv' or 'xls'.\n",
 	"    d: output depths of alleles instead of the allele values (must use 'haplo' data type).\n",
         "    F: one or more filters in the format name=value.\n",
-	"    L: if exporting observed haplotypes, specify a stack depth limit.\n",
+	"    A: if exporting observed haplotypes, specify an allele depth limit.\n",
+	"    L: if exporting observed haplotypes, specify a locus depth limit.\n",
 	"    m: map type. If genotypes are to be exported, specify the map type.\n",
 	"    c: include manual corrections if exporting genotypes.\n",
         "    h: display this help message.\n\n";
