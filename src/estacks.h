@@ -54,6 +54,8 @@ using std::pair;
 
 #include "constants.h" 
 #include "stacks.h"    // Major data structures for holding stacks
+#include "mstack.h"
+#include "utils.h"
 #include "models.h"    // Contains maximum likelihood statistical models.
 #include "Tsv.h"       // Reading input files in Tab-separated values format
 #include "Bowtie.h"    // Reading input files in Bowtie format

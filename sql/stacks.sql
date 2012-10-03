@@ -22,22 +22,29 @@ create table populations (
 );
 
 create table sumstats (
-       batch_id	 int unsigned not null,
-       tag_id	 int unsigned not null,
-       chr	 varchar(32),
-       bp	 int unsigned default 0,
-       col	 int unsigned default 0,
-       pop_id	 int unsigned default 0,
-       n	 int unsigned default 0,
-       p	 double,
-       obs_het	 double,
-       obs_hom	 double,
-       exp_het	 double,
-       exp_hom	 double,
-       pi	 double,
-       fis	 double,
-       INDEX     batch_id_index (batch_id),
-       INDEX     tag_id_index (tag_id)
+       batch_id	  int unsigned not null,
+       tag_id	  int unsigned not null,
+       chr	  varchar(32),
+       bp	  int unsigned default 0,
+       col	  int unsigned default 0,
+       pop_id	  int unsigned default 0,
+       p_nuc      char,
+       q_nuc      char,
+       n	  int unsigned default 0,
+       p	  double,
+       obs_het	  double,
+       obs_hom	  double,
+       exp_het	  double,
+       exp_hom	  double,
+       pi	  double,
+       pi_s       double,
+       pi_s_pval  double,
+       fis	  double,
+       fis_s      double,
+       fis_s_pval double,
+       private    int unsigned default 0,
+       INDEX      batch_id_index (batch_id),
+       INDEX      tag_id_index (tag_id)
 );
 
 create table fst (
@@ -57,6 +64,7 @@ create table fst (
        lod	  double,
        fst_c	  double,
        fst_s	  double,
+       fis_s_pval double,
        INDEX      batch_id_index (batch_id),
        INDEX      tag_id_index (tag_id)
 );

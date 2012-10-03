@@ -73,7 +73,7 @@ sub populate {
     my ($sth, $loci, $samples, $depths, $filters) = @_;
 
     my (%delev);
-    my ($row, $snp_row, $all_row, $gen_row);
+    my ($row, $snp_row, $all_row, $gen_row, $locus);
     my @params;
 
     #
@@ -102,7 +102,7 @@ sub populate {
     $sth->{'tag'}->execute(@params);
 
     while ($row = $sth->{'tag'}->fetchrow_hashref()) {
-        my $locus = {};
+        $locus = {};
         $locus->{'id'}         = $row->{'tag_id'};
         $locus->{'annotation'} = defined($row->{'external_id'}) ? $row->{'external_id'} : "";
         $locus->{'chr'}        = $row->{'chr'};
@@ -124,66 +124,75 @@ sub populate {
         $locus->{'num_blast'}     = $row->{'blast_hits'};
 	$locus->{'gcnt'}          = $row->{'geno_cnt'};
 
-        #
-        # Fetch SNPs and Alleles
-        #
-        $sth->{'snp'}->execute($batch_id, $locus->{'id'});
+        $loci->{$row->{'tag_id'}} = $locus;
+    }
 
-        while ($snp_row = $sth->{'snp'}->fetchrow_hashref()) {
-            $locus->{'snps'} .= $snp_row->{'col'} . "," . $snp_row->{'rank_1'} . ">" . $snp_row->{'rank_2'} . ";";
-        }
-        $locus->{'snps'} = substr($locus->{'snps'}, 0, -1) if (length($locus->{'snps'}) > 0);
 
-        $sth->{'allele'}->execute($batch_id, $locus->{'id'});
+    if ($data_type eq "haplo") {
+	#
+	# Add observed haplotypes
+	#
+	$sth->{'mat'}->execute($batch_id, $allele_depth_lim);
 
-        while ($all_row = $sth->{'allele'}->fetchrow_hashref()) {
-            $locus->{'alleles'} .= $all_row->{'allele'} . ";";
-        }
-        $locus->{'alleles'} = substr($locus->{'alleles'}, 0, -1) if (length($locus->{'alleles'}) > 0);
+	while ($gen_row = $sth->{'mat'}->fetchrow_hashref()) {
+	    next if (!defined($loci->{$gen_row->{'catalog_id'}}));
+	    $locus = $loci->{$gen_row->{'catalog_id'}};
 
-	if ($data_type eq "haplo") {
-	    #
-	    # Add observed haplotypes
-	    #
-	    $sth->{'mat'}->execute($batch_id, $locus->{'id'}, $allele_depth_lim);
-
-	    while ($gen_row = $sth->{'mat'}->fetchrow_hashref()) {
-		if (!defined($locus->{'gtypes'}->{$gen_row->{'file'}})) {
-		    $locus->{'gtypes'}->{$gen_row->{'file'}} = [];
-		}
-
-		push(@{$locus->{'gtypes'}->{$gen_row->{'file'}}}, 
-		     {'file'   => $gen_row->{'file'},
-		      'allele' => $gen_row->{'allele'},
-		      'tag_id' => $gen_row->{'tag_id'},
-		      'depth'  => $gen_row->{'depth'}});
-
-		#
-		# Check if this particular sample was deleveraged
-		#
-		if (defined($delev{$gen_row->{'id'} . "_" . $gen_row->{'tag_id'}}) &&
-		    $delev{$gen_row->{'id'} . "_" . $gen_row->{'tag_id'}} >= 1) {
-		    $locus->{'delev'}++;
-		}
+	    if (!defined($locus->{'gtypes'}->{$gen_row->{'file'}})) {
+		$locus->{'gtypes'}->{$gen_row->{'file'}} = [];
 	    }
-	} elsif ($data_type eq "geno") {
-	    #
-	    # Add genotypes
-	    #
-	    $sth->{'gtypes'}->execute($batch_id, $locus->{'id'});
 
-	    while ($gen_row = $sth->{'gtypes'}->fetchrow_hashref()) {
-		if (!defined($locus->{'gtypes'}->{$gen_row->{'file'}})) {
-		    $locus->{'gtypes'}->{$gen_row->{'file'}} = [];
-		}
+	    push(@{$locus->{'gtypes'}->{$gen_row->{'file'}}}, 
+		 {'file'   => $gen_row->{'file'},
+		  'allele' => $gen_row->{'allele'},
+		  'tag_id' => $gen_row->{'tag_id'},
+		  'depth'  => $gen_row->{'depth'}});
 
-		push(@{$locus->{'gtypes'}->{$gen_row->{'file'}}}, 
-		     {'file'   => $gen_row->{'file'},
-		      'gtype'  => $gen_row->{'genotype'}});
+	    #
+	    # Check if this particular sample was deleveraged
+	    #
+	    if (defined($delev{$gen_row->{'id'} . "_" . $gen_row->{'tag_id'}}) &&
+		$delev{$gen_row->{'id'} . "_" . $gen_row->{'tag_id'}} >= 1) {
+		$locus->{'delev'}++;
 	    }
 	}
+    } elsif ($data_type eq "geno") {
+	#
+	# Add genotypes
+	#
+	$sth->{'gtypes'}->execute($batch_id);
 
-        $loci->{$row->{'tag_id'}} = $locus;
+	while ($gen_row = $sth->{'gtypes'}->fetchrow_hashref()) {
+	    next if (!defined($loci->{$gen_row->{'catalog_id'}}));
+	    $locus = $loci->{$gen_row->{'catalog_id'}};
+
+	    if (!defined($locus->{'gtypes'}->{$gen_row->{'file'}})) {
+		$locus->{'gtypes'}->{$gen_row->{'file'}} = [];
+	    }
+
+	    push(@{$locus->{'gtypes'}->{$gen_row->{'file'}}}, 
+		 {'file'   => $gen_row->{'file'},
+		  'gtype'  => $gen_row->{'genotype'}});
+	}
+    }
+
+    #
+    # Fetch SNPs and Alleles
+    #
+    $sth->{'snp'}->execute($batch_id);
+
+    while ($snp_row = $sth->{'snp'}->fetchrow_hashref()) {
+	next if (!defined($loci->{$snp_row->{'tag_id'}}));
+
+	$loci->{$snp_row->{'tag_id'}}->{'snps'} .= $snp_row->{'col'} . "," . $snp_row->{'rank_1'} . ">" . $snp_row->{'rank_2'} . ";";
+    }
+
+    $sth->{'allele'}->execute($batch_id);
+
+    while ($all_row = $sth->{'allele'}->fetchrow_hashref()) {
+	next if (!defined($loci->{$all_row->{'tag_id'}}));
+
+	$loci->{$all_row->{'tag_id'}}->{'alleles'} .= $all_row->{'allele'} . ";";
     }
 
     #
@@ -380,6 +389,9 @@ sub write_observed_haplotypes {
 
     foreach $cat_id (keys %{$loci}) {
         $locus = $loci->{$cat_id};
+
+	$locus->{'snps'}    = substr($locus->{'snps'}, 0, -1) if (length($locus->{'snps'}) > 0);
+	$locus->{'alleles'} = substr($locus->{'alleles'}, 0, -1) if (length($locus->{'alleles'}) > 0);
 
         $str =
             $cat_id . "\t" .
@@ -824,20 +836,20 @@ sub prepare_sql_handles {
     $sth->{'samp'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-        "SELECT allele FROM catalog_alleles " . 
-        "WHERE batch_id=? AND tag_id=?";
+        "SELECT tag_id, allele FROM catalog_alleles " . 
+        "WHERE batch_id=?";
     $sth->{'allele'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-        "SELECT col, rank_1, rank_2 FROM catalog_snps " . 
-        "WHERE batch_id=? AND tag_id=? ORDER BY col";
+        "SELECT tag_id, col, rank_1, rank_2 FROM catalog_snps " . 
+        "WHERE batch_id=?";
     $sth->{'snp'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-        "SELECT samples.id as id, samples.sample_id, samples.type, file, tag_id, allele, depth " . 
+        "SELECT catalog_id, samples.id as id, samples.sample_id, samples.type, file, tag_id, allele, depth " . 
         "FROM matches " . 
         "JOIN samples ON (matches.sample_id=samples.id) " . 
-        "WHERE matches.batch_id=? AND catalog_id=? AND matches.depth>? ORDER BY samples.id";
+        "WHERE matches.batch_id=? AND matches.depth>?";
     $sth->{'mat'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
@@ -848,10 +860,10 @@ sub prepare_sql_handles {
     $sth->{'depths'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-        "SELECT samples.id as id, samples.sample_id, samples.type, file, genotype " . 
+        "SELECT catalog_id, samples.id as id, samples.sample_id, samples.type, file, genotype " . 
         "FROM catalog_genotypes " . 
         "JOIN samples ON (catalog_genotypes.sample_id=samples.id) " . 
-        "WHERE catalog_genotypes.batch_id=? AND catalog_id=? ORDER BY samples.id";
+        "WHERE catalog_genotypes.batch_id=?";
     $sth->{'gtypes'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query =

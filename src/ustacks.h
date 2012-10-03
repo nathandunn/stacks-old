@@ -40,6 +40,7 @@ using std::string;
 #include <iostream>
 #include <fstream>
 #include <sstream>
+using std::ofstream;
 using std::stringstream;
 using std::cin;
 using std::cout;
@@ -68,16 +69,14 @@ using __gnu_cxx::hash;
 
 #include <unistd.h>
 
-// Include the clustering routines as provided by
-// Hoon, Imoto, and Miyano; mdehoon@gsc.riken.jp
-extern "C" {
-#include "cluster.h"
-}
 
 #include "constants.h" 
 #include "kmers.h"
+#include "utils.h"
 #include "DNASeq.h"    // Class for storing two-bit compressed DNA sequences
 #include "stacks.h"    // Major data structures for holding stacks
+#include "mstack.h"
+#include "mst.h"       // Minimum spanning tree implementation
 #include "models.h"    // Contains maximum likelihood statistical models.
 #include "Tsv.h"       // Reading input files in Tab-separated values format
 #include "Bowtie.h"    // Reading input files in Bowtie format
@@ -87,8 +86,7 @@ extern "C" {
 
 typedef unsigned int uint;
 
-const int max_delv_stacks = 3;
-const int barcode_size    = 5;
+const int barcode_size = 5;
 
 class HVal {
  public:
@@ -97,7 +95,7 @@ class HVal {
     HVal() { this->count = 0; }
     ~HVal() { 
 	for (uint i = 0; i < this->ids.size(); i++) 
-	    delete this->ids[i];
+	    delete [] this->ids[i];
 	this->ids.clear(); 
     }
 
@@ -115,10 +113,11 @@ typedef hash_map<const char *, HVal, hash<const char *>, eqstr> HashMap;
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
-int  load_radtags(string, DNASeqHashMap &);
+int  load_radtags(string, DNASeqHashMap &, vector<DNASeq *> &);
 int  reduce_radtags(DNASeqHashMap &, map<int, Stack *> &, map<int, Rem *> &);
+int  free_radtags_hash(DNASeqHashMap &, vector<DNASeq *> &);
 int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
-int  merge_radtags(map<int, Stack *> &, map<int, MergedStack *> &, set<int> &, int);
+int  merge_stacks(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, set<int> &, int);
 int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &, bool);
 int  call_alleles(MergedStack *, vector<DNASeq *> &, vector<read_type> &);
 int  merge_remainders(map<int, MergedStack *> &, map<int, Rem *> &);
@@ -141,10 +140,7 @@ int    count_raw_reads(map<int, Stack *> &, map<int, MergedStack *> &);
 //
 int  calc_triggers(double, double, int &, int &);
 int  remove_repetitive_stacks(map<int, Stack *> &, map<int, MergedStack *> &);
-int  deleverage(map<int, Stack *> &, map<int, MergedStack *> &, set<int> &, int, int, vector<MergedStack *> &);
-int  determine_single_linkage_clusters(map<int, MergedStack *> &, set<int> &, int);
-int  hclust(vector<int> &, map<int, map<int, double> > &, int, map<int, set<int> > &);
-int  check_deleveraged_dist(map<int, map<int, double> > &, set<int> &, int);
+int  deleverage(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, set<int> &, int, vector<MergedStack *> &);
 
 //
 // Debugging
@@ -157,6 +153,7 @@ int  dump_stack_graph(string, map<int, Stack *> &, map<int, MergedStack *> &, ve
 // Utilities
 //
 MergedStack *merge_tags(map<int, MergedStack *> &, set<int> &, int);
+MergedStack *merge_tags(map<int, MergedStack *> &, int *, int, int);
 long double factorial(int);
 
 //

@@ -122,51 +122,6 @@ int Stack::add_seq(const DNASeq *seq) {
     return 0;
 }
 
-int MergedStack::add_consensus(const char *seq) {
-    if (this->con != NULL)
-	delete [] this->con;
-
-    this->len = strlen(seq);
-    this->con = new char[this->len + 1];
-    strncpy(this->con, seq, this->len);
-    this->con[this->len] = '\0';
-
-    return 0;
-}
-
-int MergedStack::add_consensus(DNASeq *seq) {
-    if (this->con != NULL)
-	delete [] this->con;
-
-    this->len = seq->size;
-    this->con = new char[this->len + 1];
-    this->con = seq->seq(this->con);
-
-    return 0;
-}
-
-int MergedStack::add_consensus(DNANSeq *seq) {
-    if (this->con != NULL)
-	delete [] this->con;
-
-    this->len = seq->size();
-    this->con = new char[this->len + 1];
-    this->con = seq->seq(this->con);
-
-    return 0;
-}
-
-int MergedStack::add_dist(const int id, const int dist) {
-    //
-    // Store the ID and distance as a pair, ID in the first position,
-    // dist in the second.
-    //
-    pair<int, int> p(id, dist);
-    this->dist.push_back(p);
-
-    return 0;
-}
-
 int Locus::add_consensus(const char *seq) {
     if (this->con != NULL)
 	delete [] this->con;

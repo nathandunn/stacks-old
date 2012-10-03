@@ -41,6 +41,7 @@ bool      call_sec_hapl     = true;
 bool      set_kmer_len      = true;
 int       kmer_len          = 0;
 int       min_merge_cov     = 2;
+uint      max_subgraph      = 3;
 int       dump_graph        = 0;
 int       retain_rem_reads  = false;
 int       deleverage_stacks = 0;
@@ -77,6 +78,7 @@ int main (int argc, char* argv[]) {
     cerr << "Min depth of coverage to create a stack: " << min_merge_cov << "\n"
 	 << "Max distance allowed between stacks: " << max_utag_dist << "\n"
 	 << "Max distance allowed to align secondary reads: " << max_rem_dist << "\n"
+	 << "Max number of stacks allowed per de novo locus: " << max_subgraph << "\n"
 	 << "Deleveraging algorithm: " << (deleverage_stacks ? "enabled" : "disabled") << "\n"
 	 << "Removal algorithm: " << (remove_rep_stacks ? "enabled" : "disabled") << "\n"
 	 << "Model type: "; 
@@ -119,13 +121,18 @@ int main (int argc, char* argv[]) {
     #endif
 
     DNASeqHashMap     radtags;
+    vector<DNASeq *>  radtags_keys;
     map<int, Rem *>   remainders;
     set<int>          merge_map;
     map<int, Stack *> unique;
 
-    load_radtags(in_file, radtags);
+    load_radtags(in_file, radtags, radtags_keys);
 
     reduce_radtags(radtags, unique, remainders);
+
+    free_radtags_hash(radtags, radtags_keys);
+
+    // dump_unique_tags(unique);
 
     if (cov_mean == 0 || cov_stdev == 0)
     	calc_coverage_distribution(unique, cov_mean, cov_stdev);
@@ -147,17 +154,13 @@ int main (int argc, char* argv[]) {
     	remove_repetitive_stacks(unique, merged);
     }
 
-    for (int i = 1; i <= max_utag_dist; i++) {
-    	cerr << "Calculating distance, round " << i << "\n";
-    	calc_kmer_distance(merged, i);
+    cerr << "Calculating distance between stacks...\n";
+    calc_kmer_distance(merged, max_utag_dist);
 
-    	cerr << "  Merging radtags, round " << i << "\n";
-    	merge_radtags(unique, merged, merge_map, i);
+    cerr << "Merging stacks, maximum allowed distance: " << max_utag_dist << " nucleotide(s)\n";
+    merge_stacks(unique, remainders, merged, merge_map, max_utag_dist);
 
-        call_consensus(merged, unique, remainders, false);
-
-    	merge_map.clear();
-    }
+    call_consensus(merged, unique, remainders, false);
 
     calc_merged_coverage_distribution(unique, merged);
 
@@ -500,16 +503,20 @@ int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &mer
     return 0;
 }
 
-int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, set<int> &merge_map, int round) {
+int merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged, set<int> &merge_map, int round) {
     map<int, MergedStack *> new_merged;
-    map<int, MergedStack *>::iterator i;
+    map<int, MergedStack *>::iterator it, it_old, it_new;
     MergedStack *tag_1, *tag_2;
+    vector<set<int> > merge_lists;
 
-    //cerr << "Tags to merge: " << merged.size() << "\n";
-    int id = 0;
+    uint index     = 0;
+    int  cohort_id  = 0;
+    int  id         = 1;
+    uint delev_cnt = 0;
+    uint blist_cnt = 0;
 
-    for (i = merged.begin(); i != merged.end(); i++) {
-	tag_1 = i->second;
+    for (it = merged.begin(); it != merged.end(); it++) {
+	tag_1 = it->second;
 
 	//
 	// This tag may already have been merged by an earlier operation.
@@ -517,19 +524,15 @@ int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, se
 	if (merge_map.count(tag_1->id) > 0)
 	    continue;
 
-	set<int>                          unique_merge_list;
 	queue<int>                        merge_list;
 	pair<set<int>::iterator,bool>     ret;
 	vector<pair<int, int> >::iterator k;
 
-	//
-	// If this tag is masked, do not try to merge it.
-	//
+	merge_lists.push_back(set<int>());
+
 	if (tag_1->masked) {
-	    unique_merge_list.insert(tag_1->id);
-	    tag_2 = merge_tags(merged, unique_merge_list, id);
-	    new_merged.insert(pair<int, MergedStack *>(id, tag_2));
-	    id++;
+	    merge_lists[index].insert(tag_1->id);
+	    index++;
 	    continue;
 	}
 
@@ -537,7 +540,7 @@ int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, se
 	// Construct a list of MergedStacks that are within a particular distance
 	// of this tag.
 	//
-	unique_merge_list.insert(tag_1->id);
+	merge_lists[index].insert(tag_1->id);
 	merge_list.push(tag_1->id);
 
 	while (!merge_list.empty()) {
@@ -545,7 +548,7 @@ int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, se
 	    merge_list.pop();
 
 	    for (k = tag_2->dist.begin(); k != tag_2->dist.end(); k++) {
-                ret = unique_merge_list.insert(k->first);
+		ret = merge_lists[index].insert(k->first);
 
 		//
 		// If this Tag has not already been added to the merge list (i.e. we were able
@@ -558,49 +561,128 @@ int merge_radtags(map<int, Stack *> &unique, map<int, MergedStack *> &merged, se
 	}
 
 	//
-	// Merge these tags together into a new MergedStack object.
-	//
-	tag_1 = merge_tags(merged, unique_merge_list, id);
-
-	//
 	// Record the nodes that have been merged in this round.
 	//
 	set<int>::iterator j;
-	for (j = unique_merge_list.begin(); j != unique_merge_list.end(); j++)
+	for (j = merge_lists[index].begin(); j != merge_lists[index].end(); j++)
 	    merge_map.insert(*j);
 
+	index++;
+    }
+
+    #pragma omp parallel private(tag_1, tag_2)
+    {
+	vector<MergedStack *> merged_tags;
+
+        #pragma omp for reduction(+:delev_cnt) reduction(+:blist_cnt)
+	for (uint index = 0; index < merge_lists.size(); index++) {
+	    //
+	    // Deal with the simple case of a single locus that does not need to be merged.
+	    //
+	    if (merge_lists[index].size() == 1) {
+		tag_1 = merged[*(merge_lists[index].begin())];
+		tag_2 = merge_tags(merged, merge_lists[index], 0);
+
+		//
+		// If this tag is masked, keep the old cohort_id.
+		//
+		if (tag_1->masked) {
+		    tag_2->cohort_id = tag_1->cohort_id;
+		} else {
+		    tag_2->cohort_id = cohort_id;
+		    #pragma omp atomic
+		    cohort_id++;
+		}
+		merged_tags.push_back(tag_2);
+		continue;
+	    }
+
+	    //
+	    // Break large loci down by constructing a minimum
+	    // spanning tree and severing long distance edges.
+	    //
+	    if (deleverage_stacks) {
+		vector<MergedStack *> tags;
+		bool delev;
+
+		deleverage(unique, rem, merged, merge_lists[index], cohort_id, tags);
+
+		if (tags.size() == 1) {
+		    delev = false;
+		} else {
+		    delev_cnt++;
+		    delev = true;
+		}
+
+		for (uint t = 0; t < tags.size(); t++) {
+		    //tags[t]->id = id;
+		    tags[t]->deleveraged = delev;
+
+		    if (tags[t]->utags.size() > max_subgraph) {
+			tags[t]->masked      = true;
+			tags[t]->blacklisted = true;
+			blist_cnt++;
+		    }
+
+		    //new_merged.insert(pair<int, MergedStack *>(id, tags[t]));
+		    merged_tags.push_back(tags[t]);
+		    //id++;
+		}
+
+		#pragma omp atomic
+		cohort_id++;
+
+	    } else {
+		//
+		// If not deleveraging, merge these tags together into a new MergedStack object.
+		//
+		tag_2 = merge_tags(merged, merge_lists[index], 0);
+		tag_2->cohort_id = cohort_id;
+
+		if (tag_2->utags.size() > max_subgraph) {
+		    tag_2->masked      = true;
+		    tag_2->blacklisted = true;
+		    blist_cnt++;
+		}
+
+		//new_merged.insert(pair<int, MergedStack *>(id, tag_2));
+		merged_tags.push_back(tag_2);
+
+                #pragma omp atomic
+		cohort_id++;
+		//id++;
+	    }
+	}
+
 	//
-	// If the depth of coverage of the merged tag is greater than the deleverage trigger
-	// then execute the deleveraging algorithm.
+	// Merge the accumulated tags into the new_merged map.
 	//
-	if (deleverage_stacks && 
-	    (tag_1->count > deleverage_trigger ||
-	     (int) unique_merge_list.size() > max_delv_stacks)) {
-	    vector<MergedStack *> tags;
-	    int num_clusters = determine_single_linkage_clusters(merged, unique_merge_list, tag_1->count);
-
-	    //set<int>::iterator uit;
-	    //cerr << "Unique merge list: ";
-	    //for (uit = unique_merge_list.begin(); uit != unique_merge_list.end(); uit++) {
-	    //cerr << "  " << *uit << "\n";
-	    //}
-
-	    deleverage(unique, merged, unique_merge_list, num_clusters, round, tags);
-
-	    for (uint t = 0; t < tags.size(); t++) {
-		tags[t]->id = id;
-		new_merged.insert(pair<int, MergedStack *>(id, tags[t]));
+        #pragma omp critical
+	{
+	    it_old = merged.begin();
+	    for (uint j = 0; j < merged_tags.size(); j++) {
+		merged_tags[j]->id = id;
+		it_new = new_merged.insert(it_old, pair<int, MergedStack *>(id, merged_tags[j]));
+		it_old = it_new;
 		id++;
 	    }
-	    delete tag_1;
-
-	} else {
-	    new_merged.insert(pair<int, MergedStack *>(id, tag_1));
-	    id++;
 	}
     }
 
+    uint new_cnt = new_merged.size();
+    uint old_cnt = merged.size();
+
+    //
+    // Free the memory from the old map of merged tags.
+    //
+    for (it = merged.begin(); it != merged.end(); it++)
+	delete it->second;
+
     merged = new_merged;
+
+    cerr << "  " << old_cnt << " stacks merged into " << new_cnt 
+	 << " stacks; deleveraged " << delev_cnt 
+	 << " stacks; removed " << blist_cnt << " stacks.\n";
 
     return 0;
 }
@@ -623,6 +705,37 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, set<int> &merge_list, i
 
 	for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++)
 	    tag_1->utags.push_back(*j);
+
+	for (j = tag_2->remtags.begin(); j != tag_2->remtags.end(); j++)
+	    tag_1->remtags.push_back(*j);
+
+        tag_1->count += tag_2->count;
+    }
+
+    return tag_1;
+}
+
+MergedStack *merge_tags(map<int, MergedStack *> &merged, int *merge_list, int merge_list_size, int id) {
+    int                   i;
+    vector<int>::iterator j;
+    MergedStack *tag_1, *tag_2;
+
+    tag_1     = new MergedStack;
+    tag_1->id = id;
+
+    for (i = 0; i < merge_list_size; i++) {
+	tag_2 = merged[merge_list[i]];
+
+	tag_1->deleveraged     = tag_2->deleveraged     ? true : tag_1->deleveraged;
+	tag_1->masked          = tag_2->masked          ? true : tag_1->masked;
+	tag_1->blacklisted     = tag_2->blacklisted     ? true : tag_1->blacklisted;
+	tag_1->lumberjackstack = tag_2->lumberjackstack ? true : tag_1->lumberjackstack;
+
+	for (j = tag_2->utags.begin(); j != tag_2->utags.end(); j++)
+	    tag_1->utags.push_back(*j);
+
+	for (j = tag_2->remtags.begin(); j != tag_2->remtags.end(); j++)
+	    tag_1->remtags.push_back(*j);
 
         tag_1->count += tag_2->count;
     }
@@ -667,7 +780,6 @@ int remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> 
         if (already_merged.count(tag_1->id) > 0)
 	    continue;
 
-
 	if (tag_1->count > removal_trigger) {
             set<int> unique_merge_list;
             unique_merge_list.insert(tag_1->id);
@@ -681,7 +793,8 @@ int remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> 
 	    }
 
 	    tag_1->lumberjackstack = true;
-	    tag_1->masked  = true;
+	    tag_1->masked          = true;
+	    tag_1->blacklisted     = true;
 
             //
             // Merge these tags together into a new MergedStack object.
@@ -715,6 +828,13 @@ int remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> 
 
     cerr << "  Removed " << already_merged.size() << " stacks.\n";
 
+    //
+    // Free the memory from the old map of merged tags.
+    //
+    map<int, MergedStack *>::iterator it;
+    for (it = merged.begin(); it != merged.end(); it++)
+	delete it->second;
+
     merged = new_merged;
 
     cerr << "  " << merged.size() << " stacks remain for merging.\n";
@@ -722,200 +842,170 @@ int remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> 
     return 0;
 }
 
-int determine_single_linkage_clusters(map<int, MergedStack *> &merged, set<int> &merge_list, int tag_depth) {
-    set<int>::iterator i;
-    MergedStack *tag;
-
-    return 2;
-
-    // 
-    // We want to determine how many clusters to break this lumberjack stack into. We start
-    // by dividing the total depth of the tag by the expected coverage. This assumes that every
-    // tag has the same depth. However, it is quite common for one or two clusters within the
-    // stack to have very large depths, so we want to adjust the total number of clusters we
-    // expect there to be by accounting for very large clusters within the lumberjackstack.
-    //
-    //  Lumberjack stack:
-    //  |--------------------------------------------------------------------------------|
-    //  Expected stacks as determined by cov_mean parameter:
-    //  |--------|--------|--------|--------|--------|--------|--------|--------|--------|
-    //  Actual components of stack:
-    //  |---------------------------------------|----------------|----|---|--|--|--|--|--|
-    //
-    double num_clusters = round(tag_depth / cov_mean);
-    double cluster_cov;
-    int    cluster_count = 0;
-
-    if (num_clusters <= 1) return 2;
-
-    for (i = merge_list.begin(); i != merge_list.end(); i++) {
-	tag           = merged[*i];
-	cluster_cov   = floor(tag->count / cov_mean); 
-
-	//cerr << "Cluster coverage: " << cluster_cov << "; Tag depth: " << tag->count << "; Expected cov: " << cov_mean << "\n";
-
-	if (cluster_cov > 1) {
-	    num_clusters -= cluster_cov;
-	    cluster_count++;
-	}
-    }
-    num_clusters = cluster_count + num_clusters;
-
-    //
-    // Make sure there aren't more clusters than individual stacks
-    //
-    num_clusters = num_clusters > merge_list.size() ? merge_list.size() : num_clusters;
-
-    //cerr << "Number of clusters: " << num_clusters 
-    //     << "; unique_merge_list size: " << merge_list.size() 
-    //     << "; expected coverage: " << cov_mean
-    //     << "; Lumberjackstack depth: " << tag_depth << "\n";
-    
-    return (int) num_clusters;
-}
-
 int deleverage(map<int, Stack *> &unique, 
+               map<int, Rem *> &rem,
 	       map<int, MergedStack *> &merged, 
 	       set<int> &merge_list, 
-	       int num_clusters, 
-	       int round, 
+	       int cohort_id, 
 	       vector<MergedStack *> &deleveraged_tags) {
-    set<int>::iterator i;
+    set<int>::iterator it;
     vector<pair<int, int> >::iterator j;
-    MergedStack *tag, *tag_1, *tag_2;
-    vector<int> keys;
+    MergedStack *tag_1, *tag_2;
+    uint k, l;
 
     //
-    // Create a two-dimensional map to hold distances between nodes.
+    // Create a minimum spanning tree in order to determine the minimum distance
+    // between each node in the list.
     //
-    map<int, map<int, double> > dist_map, scaled_dist_map;
+    MinSpanTree *mst = new MinSpanTree;
+    vector<int>  keys;
 
-    for (i = merge_list.begin(); i != merge_list.end(); i++)
-	keys.push_back(*i);
+    for (it = merge_list.begin(); it != merge_list.end(); it++) {
+	keys.push_back(*it);
+        mst->add_node(*it);
+        tag_1 = merged[*it];
 
-    //cerr << "    Deleveraging: " << merged[keys[0]]->con << "\n";
+	// cerr << "  " << *it << " -> " << tag_1->utags[0] << "\n";
+    }
 
     //
-    // There must be at least two tags before we can cluster the data.
+    // Measure the distance between each pair of nodes and add edges to our
+    // minimum spanning tree.
     //
-    if (keys.size() <= 2) {
-	set<int> e;
-	for (uint k = 0; k < keys.size(); k++)
-	    e.insert(keys[k]);
+    Node *n_1, *n_2;
+    for (k = 0; k < keys.size(); k++) {
+        tag_1 = merged[keys[k]];
+        n_1   = mst->node(keys[k]);
 
-	tag = merge_tags(merged, e, 0);
-	deleveraged_tags.push_back(tag);
+	for (l = k+1; l < keys.size(); l++) {
+	    tag_2 = merged[keys[l]];
+            n_2   = mst->node(keys[l]);
 
+	    int d = dist(tag_1, tag_2);
+
+            n_1->add_edge(mst->node(keys[l]), d);
+            n_2->add_edge(mst->node(keys[k]), d);
+	}
+    }
+
+    //
+    // Build the minimum spanning tree.
+    //
+    mst->build_tree();
+
+    //
+    // Visualize the MST
+    //
+    if (dump_graph) {
+        stringstream gout_file;
+        size_t pos_1 = in_file.find_last_of("/");
+        size_t pos_2 = in_file.find_last_of(".");
+        gout_file << out_path << in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) << "_" << keys[0] << ".dot";
+        string vis = mst->vis(true);
+        ofstream gvis(gout_file.str().c_str());
+        gvis << vis;
+        gvis.close();
+    }
+
+    set<int> visited;
+    set<int, int_increasing> dists;
+    queue<Node *> q;
+
+    Node *n = mst->head();
+    q.push(n);
+
+    while (!q.empty()) {
+        n = q.front();
+        q.pop();
+        visited.insert(n->id);
+
+        for (uint i = 0; i < n->min_adj_list.size(); i++) {
+            if (visited.count(n->min_adj_list[i]->id) == 0) {
+                q.push(n->min_adj_list[i]);
+		// cerr << n->id << " -> " << n->min_adj_list[i]->id << ": ";
+
+		//
+		// Find the edge distance.
+		//
+		for (uint j = 0; j < n->edges.size(); j++)
+		    if (n->edges[j]->child == n->min_adj_list[i]) {
+			// cerr << n->edges[j]->dist << "\n";
+			dists.insert(n->edges[j]->dist);
+		    }
+	    }
+        }
+    }
+
+    //
+    // This set is sorted by definition. Check if there is more than a single 
+    // distance separating stacks.
+    //
+    if (dists.size() == 1) {
+	tag_1 = merge_tags(merged, merge_list, 0);
+	deleveraged_tags.push_back(tag_1);
+	delete mst;
 	return 0;
     }
 
-    //
-    // We want to measure the distance between all nodes in the merge_list.
-    //
-    for (uint k = 0; k < keys.size(); k++) {
-	for (uint l = 0; l < keys.size(); l++) {
-	    tag_1 = merged[keys[k]];
-	    tag_2 = merged[keys[l]];
-
-	    int d = dist(tag_1, tag_2);
-	    dist_map[keys[k]][keys[l]] = d;
-	    dist_map[keys[l]][keys[k]] = d;
-	}
-    }
-    
-    keys.clear();
-
-    uint s, t, depth_1, depth_2, id;
-    map<int, map<int, double> >::iterator q;
-    map<int, double>::iterator r;
-    double scale, d;
-
-    // 
-    // Record the IDs for the stacks in the distance map
-    //
-    q = dist_map.begin();
-    for (r = (*q).second.begin(); r != (*q).second.end(); r++) {
-	//cerr << "  Key: " << (*r).first << "; Number: " << (*q).second.count((*r).first) << "\n";
-	keys.push_back((*r).first);
-    }
+    uint min_dist = *(dists.begin());
 
     //
-    // Scale the distances between nodes
+    // If there is more than a single distance, split the minimum spanning tree
+    // into separate loci, by cutting the tree at the larger distances.
     //
-    for (s = 0; s < keys.size(); s++) {
-	for (t = 0; t < keys.size(); t++) {
-	    if (s == t) continue;
+    set<int> uniq_merge_list;
+    visited.clear();
+    n = mst->head();
+    q.push(n);
+    int id = 0;
 
-	    depth_1 = merged[keys[s]]->count;
-	    depth_2 = merged[keys[t]]->count;
-	    d       = abs(depth_2 - depth_1);
+    uniq_merge_list.insert(n->id);
+    while (!q.empty()) {
+        n = q.front();
+        q.pop();
+        visited.insert(n->id);
 
-	    scale = d == 0 ? 1 : log(d);
-	    //cerr << 
-	    //"Distance between " << keys[s] << " (" << depth_1 << ") and " << keys[t] << " (" << depth_2 << "): " << 
-	    //d << " (" << dist_map[keys[s]][keys[t]] << 
-	    //"; scale: " << scale << 
-	    //"; total: " << dist_map[keys[s]][keys[t]] * scale << ")\n";
-	    scaled_dist_map[keys[s]][keys[t]] = dist_map[keys[s]][keys[t]] * scale;
-	}
+        for (uint i = 0; i < n->min_adj_list.size(); i++) {
+            if (visited.count(n->min_adj_list[i]->id) == 0) {
+                q.push(n->min_adj_list[i]);
+
+		for (uint j = 0; j < n->edges.size(); j++) {
+		    if (n->edges[j]->child == n->min_adj_list[i])
+			if (n->edges[j]->dist > min_dist) {
+
+			    // cerr << "Merging the following stacks into a locus:\n";
+			    for (it = uniq_merge_list.begin(); it != uniq_merge_list.end(); it++) {
+				tag_1 = merged[*it];
+				// cerr << "  " << *it << " -> " << tag_1->utags[0] << "\n";
+			    }
+
+			    tag_1 = merge_tags(merged, uniq_merge_list, id);
+			    tag_1->cohort_id = cohort_id;
+			    deleveraged_tags.push_back(tag_1);
+			    uniq_merge_list.clear();
+			    id++;
+			}
+		}
+
+		uniq_merge_list.insert(n->min_adj_list[i]->id);
+	    }
+        }
     }
 
-    map<int, set<int> > cluster_map;
-    map<int, set<int> >::iterator c;
-    set<int>::iterator it;
-    stringstream gout_file;
-
-    hclust(keys, scaled_dist_map, num_clusters, cluster_map);
-
-    if (dump_graph) {
-	gout_file  << out_path.c_str() << "pptagu_" << keys[0] << ".dot";
-	dump_stack_graph(gout_file.str(), unique, merged, keys, scaled_dist_map, cluster_map);
-	gout_file.str("");
-	gout_file  << out_path.c_str() << "pptagu_unscaled_" << keys[0] << ".dot";
-	cerr << gout_file.str() << "\n";
-	dump_stack_graph(gout_file.str(), unique, merged, keys, dist_map, cluster_map);
+    // cerr << "Merging the following stacks into a locus:\n";
+    for (it = uniq_merge_list.begin(); it != uniq_merge_list.end(); it++) {
+	tag_1 = merged[*it];
+	// cerr << "  " << *it << " -> " << tag_1->utags[0] << "\n";
     }
 
-    //
-    // Merge the clustered tags together
-    //
-    id = 0;
-    for (c = cluster_map.begin(); c != cluster_map.end(); c++) {
+    tag_1 = merge_tags(merged, uniq_merge_list, id);
+    tag_1->cohort_id = cohort_id;
+    deleveraged_tags.push_back(tag_1);
+    uniq_merge_list.clear();
 
-	tag = merge_tags(merged, c->second, id);
-	tag->deleveraged = true;
-	tag->masked      = true;
-	//
-	// Check to make sure the resulting tags aren't too far apart to merge. If so,
-	// mask this tag off, so it is not considered in later merging steps.
-	//
-	if (!check_deleveraged_dist(dist_map, c->second, round))
-	    tag->blacklisted = true;
-
-	deleveraged_tags.push_back(tag);
-	id++;
-    }
+    delete mst;
 
     return 0;
-}
-
-int check_deleveraged_dist(map<int, map<int, double> > &dist_map, set<int> &merge_list, int max_dist) {
-    set<int>::iterator i, j;
-    double dist = 0;
-
-    if (merge_list.size() == 1)
-	return 1;
-
-    for (i = merge_list.begin(); i != merge_list.end(); i++) {
-	for (j = i, j++; j != merge_list.end(); j++) {
-	    dist = dist_map[*i][*j];
-	    //cerr << "Distance is: " << dist << " (between " << *i << " and " << *j << ")\n";
-	    if (dist > max_dist)
-		return 0;
-	}
-    }
-
-    return 1;
 }
 
 int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
@@ -980,7 +1070,7 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
             for (int j = 0; j < num_kmers; j++)
                 delete [] query_kmers[j];
 
-            //cerr << "  Tag " << tag_1->id << " hit " << hits.size() << " kmers.\n";
+            // cerr << "  Tag " << tag_1->id << " hit " << hits.size() << " kmers.\n";
 
             //
             // Iterate through the list of hits. For each hit that has more than min_hits
@@ -988,11 +1078,11 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
             //
             map<int, int>::iterator hit_it;
             for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
-                //cerr << "  Tag " << hit_it->first << " has " << hit_it->second << " hits (min hits: " << min_hits << ")\n";
+                // cerr << "  Tag " << hit_it->first << " has " << hit_it->second << " hits (min hits: " << min_hits << ")\n";
 
                 if (hit_it->second < min_hits) continue;
 
-                //cerr << "  Match found, checking full-length match\n";
+                // cerr << "  Match found, checking full-length match\n";
 
                 tag_2 = merged[hit_it->first];
 
@@ -1003,7 +1093,7 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
                 if (tag_1 == tag_2) continue;
 
                 d = dist(tag_1, tag_2);
-                //cerr << "    Distance: " << d << "\n";
+                // cerr << "    Distance: " << d << "\n";
 
                 //
                 // Store the distance between these two sequences if it is
@@ -1011,7 +1101,7 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
                 // sequences to be merged in the following step of the
                 // algorithm.)
                 //
-                if (d == utag_dist)
+                if (d <= utag_dist)
                     tag_1->add_dist(tag_2->id, d);
             }
             // Sort the vector of distances.
@@ -1123,15 +1213,21 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     	}
     }
 
-    // 
-    // We no longer need to keep this Hash around.
-    //
-    radtags.clear();
-
     if (unique.size() == 0) {
         cerr << "Error: Unable to form any stacks, data appear to be unique.\n";
         exit(1);
     }
+
+    return 0;
+}
+
+int
+free_radtags_hash(DNASeqHashMap &radtags, vector<DNASeq *> &radtags_keys)
+{
+    for (uint i = 0; i < radtags_keys.size(); i++)
+	delete radtags_keys[i];
+
+    radtags.clear();
 
     return 0;
 }
@@ -1293,15 +1389,16 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	tag_1 = i->second;
 
 	// First write the consensus sequence
-	tags << "0"           << "\t" 
-	     << sql_id        << "\t" 
-	     << tag_1->id     << "\t" 
-             << ""            << "\t" // chr
-             << 0             << "\t" // bp
-             << "+"           << "\t" // strand
-	     << "consensus\t" << "\t" 
+	tags << "0"              << "\t" 
+	     << sql_id           << "\t" 
+	     << tag_1->id        << "\t"
+	    //<< tag_1->cohort_id << "\t"
+             << ""               << "\t" // chr
+             << 0                << "\t" // bp
+             << "+"              << "\t" // strand
+	     << "consensus\t"    << "\t" 
 	     << "\t" 
-	     << tag_1->con << "\t" 
+	     << tag_1->con         << "\t" 
 	     << tag_1->deleveraged << "\t" 
 	     << tag_1->blacklisted << "\t"
 	     << tag_1->lumberjackstack << "\n";
@@ -1312,9 +1409,10 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	tags << "0" << "\t" 
 	     << sql_id << "\t" 
 	     << tag_1->id << "\t" 
-             << "\t"
-             << "\t"
-             << "\t"
+	    //<< "\t" // cohort_id
+             << "\t"  // chr
+             << "\t"  // bp
+             << "\t"  // strand
 	     << "model\t" << "\t"
 	     << "\t";
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
@@ -1337,7 +1435,18 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	    total += tag_2->count;
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << tag_2->seq->seq(buf) << "\t\t\t\n";
+		tags << "0"       << "\t" 
+		     << sql_id    << "\t" 
+		     << tag_1->id << "\t"
+		    //<< "\t" // cohort_id
+		     << "\t" // chr
+		     << "\t" // bp
+		     << "\t" // strand
+		     << "primary\t" 
+		     << id << "\t" 
+		     << *j << "\t" 
+		     << tag_2->seq->seq(buf) 
+		     << "\t\t\t\n";
 	    }
 
 	    id++;
@@ -1350,7 +1459,18 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 
 	for (k = tag_1->remtags.begin(); k != tag_1->remtags.end(); k++) {
 	    rem = r[*k];
-	    tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "secondary\t\t" << rem->seq_id << "\t" << rem->seq->seq(buf) << "\t\t\t\n";
+	    tags << "0"       << "\t" 
+		 << sql_id    << "\t" 
+		 << tag_1->id << "\t"
+		//<< "\t" // cohort_id
+		 << "\t" // chr
+		 << "\t" // bp
+		 << "\t" // strand
+		 << "secondary\t"
+		 << "\t" 
+		 << rem->seq_id << "\t" 
+		 << rem->seq->seq(buf) 
+		 << "\t\t\t\n";
 	}
 
 	// Write out any SNPs detected in this unique tag.
@@ -1388,77 +1508,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	unused.close();
     }
 
-    //delete [] buf;
-
-    return 0;
-}
-
-int hclust(vector<int> &keys, map<int, map<int, double> > &dist_map, int num_clusters, map<int, set<int> > &cluster_map) {
-    uint s, t;
-
-    //for (s = 0; s < keys.size(); s++) {
-    //cerr << "Key: " << keys[s] << "\n";
-    //}
-
-    //
-    // Generate a two-dimensional, ragged array containing the distances
-    // between stacks.
-    // From the cluster.h software manual:
-    //  This matrix contains all the distances between the items that
-    //  are being clustered.  The distance matrix can therefore be
-    //  stored as a ragged array, with the number of columns in each
-    //  row equal to the (zero-offset) row number. The distance
-    //  between items i and j is stored in location [i][j] if j < i,
-    //  in [j][i] if j > i, while it is zero if j=i. Note that the
-    //  first row of the distance matrix is empty. It is included for
-    //  computational convenience, as including an empty row requires
-    //  minimal storage.
-    //
-    map<int, int> key_map;
-    double **datamatrix = new double*[keys.size()];
-    for (s = 1; s < keys.size(); s++)
-	datamatrix[s] = new double[s];
-
-    for (s = 0; s < keys.size(); s++) {
-	key_map[s] = keys[s];
-
-	for (t = 0; t < s; t++) {
-	    datamatrix[s][t] = dist_map[keys[s]][keys[t]];
-	    //cerr << datamatrix[s][t] << "\t";
-	}
-	//cerr << "\n";
-    }
-
-    //
-    // Hierarchically cluster the data points, using single-linkage clustering.
-    //
-    Node *tree = treecluster(keys.size(), keys.size(), NULL, NULL, NULL, 0, 0, 's', datamatrix);
-
-    // Free the data matrix as it has been modified by the clustering function.
-    for (s = 1; s < keys.size(); s++) 
-	delete datamatrix[s];
-    delete datamatrix;
-
-    // Indication that the treecluster routine failed
-    if (tree == NULL) {
-	cerr << "Tree clustering algorithm failed.\n";
-	return 0;
-    }
-
-    int *clusterid = new int[keys.size()];
-
-    cuttree(keys.size(), tree, num_clusters, clusterid);
-
-    //
-    // Record the stack clusters
-    //
-    for (s = 0; s < keys.size(); s++) {
-	cluster_map[clusterid[s]].insert(key_map[s]);
-	//cerr << "Stack " << s << " [uid: " << key_map[s] << "] is in cluster: " << clusterid[s] << "\n";
-    }
-
-    delete tree;
-    delete clusterid;
+    //////??delete [] buf;
 
     return 0;
 }
@@ -1571,17 +1621,21 @@ int dump_unique_tags(map<int, Stack *> &u) {
     vector<char *>::iterator fit;
     vector<pair<int, int> >::iterator pit;
     vector<int>::iterator mit;
+    char *c;
 
     for (it = u.begin(); it != u.end(); it++) {
+	c = (*it).second->seq->seq();
 
 	cerr << "UniqueTag UID: " << (*it).second->id << "\n"
-	     << "  Seq:       "   << (*it).second->seq << "\n"
+	     << "  Seq:       "   << c << "\n"
 	     << "  IDs:       "; 
 
 	for (fit = (*it).second->map.begin(); fit != (*it).second->map.end(); fit++)
 	    cerr << *fit << " ";
 
 	cerr << "\n\n";
+
+	delete [] c;
     }
 
     return 0;
@@ -1617,7 +1671,7 @@ int dump_merged_tags(map<int, MergedStack *> &m) {
     return 0;
 }
 
-int load_radtags(string in_file, DNASeqHashMap &radtags) {
+int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radtags_keys) {
     Input *fh;
     DNASeq *d;
 
@@ -1658,6 +1712,7 @@ int load_radtags(string in_file, DNASeqHashMap &radtags) {
 	d = new DNASeq(seql, c.seq);
 	radtags[d].add_id(c.id);
 	radtags[d].count++;
+	radtags_keys.push_back(d);
         i++;
     }
     cerr << "Loaded " << i << " RAD-Tags; inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n";
@@ -1744,6 +1799,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"min_cov",      required_argument, NULL, 'm'},
 	    {"max_dist",     required_argument, NULL, 'M'},
 	    {"max_sec_dist", required_argument, NULL, 'N'},
+	    {"max_locus_stacks", required_argument, NULL, 'K'},
 	    {"num_threads",  required_argument, NULL, 'p'},
 	    {"deleverage",   no_argument,       NULL, 'd'},
 	    {"remove_rep",   no_argument,       NULL, 'r'},
@@ -1764,7 +1820,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hHvdrgL:U:f:o:i:m:e:E:s:S:p:t:M:N:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hHvdrgL:U:f:o:i:m:e:E:s:S:p:t:M:N:K:T:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1811,6 +1867,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'r':
 	    remove_rep_stacks++;
+	    break;
+	case 'K':
+	    max_subgraph = atoi(optarg);
 	    break;
 	case 'R':
 	    retain_rem_reads = true;
@@ -1925,12 +1984,14 @@ void help() {
 	      << "  m: Minimum depth of coverage required to create a stack (default 2)." << "\n"
 	      << "  M: Maximum distance (in nucleotides) allowed between stacks (default 2)." << "\n"
 	      << "  N: Maximum distance allowed to align secondary reads to primary stacks (default: M + 2).\n"
-	      << "  d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
-	      << "  r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm." << "\n"
 	      << "  R: retain unused reads.\n"
 	      << "  H: disable calling haplotypes from secondary reads.\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-	      << "  h: display this help messsage.\n"
+	      << "  h: display this help messsage.\n\n"
+	      << "  Stack assembly options:\n"
+	      << "    r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm." << "\n"
+	      << "    d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
+	      << "    --max_locus_stacks: maximum number of stacks at a single de novo locus (default 3).\n"
 	      << "  Model options:\n" 
 	      << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
 	      << "    For the SNP or Bounded SNP model:\n"

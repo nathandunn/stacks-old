@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2012, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -37,7 +37,7 @@ using std::make_pair;
 
 #include "stacks.h"
 
-extern int progeny_limit;
+extern int    progeny_limit;
 extern double minor_allele_freq;
 
 class PopPair {
@@ -46,32 +46,37 @@ public:
     double alleles; // Number of alleles sampled at this location.
     double pi;
     double fst;
-    double fet_p;   // Fisher's Exact Test p-value.
-    double fet_or;  // Fisher's exact test odds ratio.
-    double or_se;   // Fisher's exact test odds ratio standard error.
-    double lod;     // base 10 logarithm of odds score.
-    double ci_low;  // Fisher's exact test lower confidence interval.
-    double ci_high; // Fisher's exact test higher confidence interval.
-    double cfst;    // Corrected Fst (by p-value or Bonferroni p-value).
-    double wfst;    // Weigted Fst (kernel-smoothed)
+    double fet_p;     // Fisher's Exact Test p-value.
+    double fet_or;    // Fisher's exact test odds ratio.
+    double or_se;     // Fisher's exact test odds ratio standard error.
+    double lod;       // base 10 logarithm of odds score.
+    double ci_low;    // Fisher's exact test lower confidence interval.
+    double ci_high;   // Fisher's exact test higher confidence interval.
+    double cfst;      // Corrected Fst (by p-value or Bonferroni p-value).
+    double wfst;      // Weigted Fst (kernel-smoothed)
+    double wfst_pval; // p-value of weighted Fst from bootstrapping.
+    int    snp_cnt;   // Number of SNPs in kernel-smoothed window centered on this SNP.
 
     PopPair() { 
-	bp      = 0;
-	alleles = 0.0;
-	pi      = 0.0;
-	fst     = 0.0;
-	cfst    = 0.0;
-	wfst    = 0.0;
-	fet_p   = 0.0;
-	fet_or  = 0.0;
-	lod     = 0.0;
-	ci_low  = 0.0;
-	ci_high = 0.0;
+	bp        = 0;
+	alleles   = 0.0;
+	pi        = 0.0;
+	fst       = 0.0;
+	cfst      = 0.0;
+	wfst      = 0.0;
+	fet_p     = 0.0;
+	fet_or    = 0.0;
+	lod       = 0.0;
+	ci_low    = 0.0;
+	ci_high   = 0.0;
+	wfst_pval = 0.0;
+	snp_cnt   = 0;
     }
 };
 
 class SumStat {
 public:
+    int    bp;
     double num_indv;
     char   p_nuc;
     char   q_nuc;
@@ -82,20 +87,31 @@ public:
     double exp_hom;
     double H;
     double pi;
+    double wPi;
+    double wPi_pval;
     double Fis;
+    double wFis;
+    double wFis_pval;
+    int    snp_cnt;   // Number of SNPs in kernel-smoothed window centered on this SNP.
 
-    SumStat() { 
-	num_indv = 0.0;
-	p        = 0.0;
-	p_nuc    = 0;
-	q_nuc    = 0;
-	obs_het  = 0.0;
-	obs_hom  = 0.0;
-	exp_het  = 0.0;
-	exp_hom  = 0.0;
-	H        = 0.0;
-	pi       = 0.0;
-	Fis      = 0.0;
+    SumStat() {
+	bp        = 0;
+	num_indv  = 0.0;
+	p         = 0.0;
+	p_nuc     = 0;
+	q_nuc     = 0;
+	obs_het   = 0.0;
+	obs_hom   = 0.0;
+	exp_het   = 0.0;
+	exp_hom   = 0.0;
+	H         = 0.0;
+	pi        = 0.0;
+	wPi       = 0.0;
+	wPi_pval  = 0.0;
+	Fis       = 0.0;
+	wFis      = 0.0;
+	wFis_pval = 0.0;
+	snp_cnt   = 0;
     }
 };
 
@@ -604,7 +620,7 @@ template<class LocusT>
 int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos, uint start, uint end) 
 {
     double num_indv = 0.0;
-    char   p_nuc;
+    char   p_nuc = 0;
 
     for (uint i = start; i <= end; i++) {
 	if (d[i] == NULL || pos >= d[i]->len) continue;
@@ -623,14 +639,18 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
     //
     // Record the results in the PopSum object.
     //
+    s->nucs[pos].bp       = locus->loc.bp + pos;
     s->nucs[pos].num_indv = num_indv;
-    s->nucs[pos].p        = 1.0;
-    s->nucs[pos].p_nuc    = p_nuc;
-    s->nucs[pos].obs_hom  = 1.0;
-    s->nucs[pos].obs_het  = 0.0;
-    s->nucs[pos].exp_hom  = 1.0;
-    s->nucs[pos].exp_het  = 0.0;
-    s->nucs[pos].pi       = 0.0;
+
+    if (num_indv > 0) {
+	s->nucs[pos].p        = 1.0;
+	s->nucs[pos].p_nuc    = p_nuc;
+	s->nucs[pos].obs_hom  = 1.0;
+	s->nucs[pos].obs_het  = 0.0;
+	s->nucs[pos].exp_hom  = 1.0;
+	s->nucs[pos].exp_het  = 0.0;
+	s->nucs[pos].pi       = 0.0;
+    }
 
     return 0;
 }
@@ -811,8 +831,8 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     // Calculate expected genotype frequencies.
     //
     double exp_het = 2 * allele_p * allele_q; // 2pq
-    double exp_p   = allele_p * allele_p;     // p^2
-    double exp_q   = allele_q * allele_q;     // q^2
+    // double exp_p   = allele_p * allele_p;     // p^2
+    // double exp_q   = allele_q * allele_q;     // q^2
 
     //cerr << "  Expected Het: " << exp_het << "; Expected P: " << exp_p << "; Expected Q: " << exp_q << "\n";
 
@@ -825,6 +845,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     //
     // Record the results in the PopSum object.
     //
+    s->nucs[pos].bp       = locus->loc.bp + pos;
     s->nucs[pos].num_indv = num_indv;
     s->nucs[pos].p        = allele_p > allele_q ? allele_p : allele_q;
     s->nucs[pos].p_nuc    = allele_p > allele_q ? p_allele : q_allele;
@@ -835,7 +856,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     s->nucs[pos].exp_het  = exp_het;
 
     //
-    // Calculate F_is, the inbreeding coefficient of an individual (I) relative to the subpopulation:
+    // Calculate F_is, the inbreeding coefficient of an individual (I) relative to the subpopulation (S):
     //   Fis = (exp_het - obs_het) / exp_het
     //
     s->nucs[pos].Fis = s->nucs[pos].pi == 0 ? 0 : (s->nucs[pos].pi - obs_het) / s->nucs[pos].pi;
