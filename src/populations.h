@@ -57,12 +57,16 @@ using std::set;
 #include "renz.h"
 #include "PopMap.h"
 #include "PopSum.h"
+#include "utils.h"
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"
 
 enum map_types {unk, none, gen, dh, cp, bc1, f2};
 enum out_types {rqtl, joinmap, genomic};
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
+enum bs_type   {bs_exact, bs_approx, bs_none};
+
+const int max_snp_dist = 500;
 
 //
 // Catalog Locus Class
@@ -80,21 +84,46 @@ public:
                               // genotype, translated for a particular map type.
 };
 
-void help( void );
-void version( void );
-int  parse_command_line(int, char**);
-int  build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &);
-int  load_marker_list(string, set<int> &);
-int  reduce_catalog(map<int, CLocus *> &, set<int> &, set<int> &);
-int  apply_locus_constraints(map<int, CLocus *> &, PopMap<CLocus> *, map<int, pair<int, int> > &);
-int  order_unordered_loci(map<int, CLocus *> &);
-int  tabulate_haplotypes(map<int, CLocus *> &, PopMap<CLocus> *);
-int  create_genotype_map(CLocus *, PopMap<CLocus> *);
-int  call_population_genotypes(CLocus *, PopMap<CLocus> *);
-int  tally_haplotype_freq(CLocus *, PopMap<CLocus> *, int &, double &, string &);
-int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &);
-int  correct_fst_bonferroni_win(vector<PopPair *> &);
-int  kernel_smoothed_fst(vector<PopPair *> &);
+//
+// Bootstrap resamplign structure.
+//
+class BSample {
+public:
+    int    bp;
+    int    alleles;
+    double f;
+    double pi;
+
+    BSample() {
+	this->bp      = 0;
+	this->alleles = 0;
+	this->f       = 0.0;
+	this->pi      = -1.0;
+    }
+};
+
+void    help( void );
+void    version( void );
+int     parse_command_line(int, char**);
+int     build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &);
+int     load_marker_list(string, set<int> &);
+int     reduce_catalog(map<int, CLocus *> &, set<int> &, set<int> &);
+int     apply_locus_constraints(map<int, CLocus *> &, PopMap<CLocus> *, map<int, pair<int, int> > &);
+bool    order_unordered_loci(map<int, CLocus *> &);
+int     tabulate_haplotypes(map<int, CLocus *> &, PopMap<CLocus> *);
+int     create_genotype_map(CLocus *, PopMap<CLocus> *);
+int     call_population_genotypes(CLocus *, PopMap<CLocus> *);
+int     tally_haplotype_freq(CLocus *, PopMap<CLocus> *, int &, double &, string &);
+int     translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &);
+int     correct_fst_bonferroni_win(vector<PopPair *> &);
+int     kernel_smoothed_fst(vector<PopPair *> &, double *, int *);
+int     bootstrap_fst(vector<double> &, vector<PopPair *> &, double *);
+int     bootstrap_fst_approximate_dist(vector<double> &, vector<int>  &, double *, int *, map<int, vector<double> > &);
+int     kernel_smoothed_popstats(map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *, int);
+int     bootstrap_popstats(vector<double> &, vector<double> &, vector<SumStat *> &, int, int, double *, SumStat *); 
+int     bootstrap_popstats_approximate_dist(vector<double> &, vector<double> &, vector<int>  &, double *, int *, int, map<int, vector<double> > &, map<int, vector<double> > &);
+double  bootstrap_approximate_pval(int, double, map<int, vector<double> > &);
+double *calculate_weights(void);
 
 int  write_sql(map<int, CLocus *> &, PopMap<CLocus> *);
 int  write_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *);
@@ -111,6 +140,5 @@ int  load_snp_calls(string,  PopMap<CLocus> *);
 
 bool compare_pop_map(pair<int, string>, pair<int, string>);
 bool hap_compare(pair<string, int>, pair<string, int>);
-bool compare_pair(pair<char, int>, pair<char, int>);
 
 #endif // __POPULATIONS_H__

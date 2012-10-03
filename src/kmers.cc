@@ -178,7 +178,7 @@ int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, v
         generate_kmers(tag->con, kmer_len, num_kmers, kmers);
 
         // Hash the kmers
-        for (uint j = 0; j < num_kmers; j++) {
+        for (int j = 0; j < num_kmers; j++) {
 	    exists = kmer_map.count(kmers[j]) == 0 ? false : true;
 
             kmer_map[kmers[j]].push_back(tag->id);
@@ -222,7 +222,7 @@ int populate_kmer_hash(map<int, Locus *> &catalog, CatKmerHashMap &kmer_map, vec
             //
             generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
-            for (uint j = 0; j < num_kmers; j++) {
+            for (int j = 0; j < num_kmers; j++) {
 		hash_key = kmers[j];
                 exists   = kmer_map.count(hash_key) == 0 ? false : true;
 

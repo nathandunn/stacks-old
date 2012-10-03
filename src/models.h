@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -40,7 +40,9 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-#include "stacks.h"
+#include "constants.h"
+#include "utils.h"
+#include "mstack.h"
 
 //
 // Possible models for calling nucleotide positions as fixed or variable
@@ -59,9 +61,10 @@ extern double bound_high;
 extern double heterozygote_limit;
 extern double homozygote_limit;
 
-int  call_bounded_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
-int  call_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
-int  call_multinomial_fixed(MergedStack *, int, map<char, int> &);
-bool compare_pair(pair<char, int>, pair<char, int>);
+snp_type call_bounded_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
+snp_type call_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
+int      call_multinomial_fixed(MergedStack *, int, map<char, int> &);
+double   heterozygous_likelihood(int, map<char, int> &);
+double   homozygous_likelihood(int, map<char, int> &);
 
 #endif // __MODELS_H__

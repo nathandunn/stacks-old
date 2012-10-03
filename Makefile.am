@@ -1,19 +1,21 @@
 bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks hstacks process_radtags process_shortreads kmer_filter clone_filter genotypes populations
 
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h \
+	src/mstack.h src/mstack.cc src/mst.h src/mst.cc src/cmb.h src/cmb.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
-	src/models.h src/models.cc \
+	src/models.h src/models.cc src/utils.h src/utils.cc \
 	src/kmers.h src/kmers.cc \
-	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h \
-	src/cluster.c src/cluster.h
+	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h 
 
 pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/constants.h \
+	src/mstack.h src/mstack.cc \
 	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
-	src/models.h src/models.cc \
+	src/models.h src/models.cc src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h 
 
 estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/constants.h \
-        src/models.h src/models.cc \
+	src/mstack.h src/mstack.cc \
+        src/models.h src/models.cc src/utils.h src/utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
         src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h
 
@@ -56,6 +58,7 @@ genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h
 
 populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
+	src/utils.h src/utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/stacks.h src/stacks.cc src/PopMap.h src/PopSum.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h

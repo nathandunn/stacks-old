@@ -50,7 +50,7 @@ Seq *Fastq::next_seq() {
     // Check if there is a carraige return in the buffer
     //
     uint len = strlen(this->line);
-    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
 
     //
     // Initialize the Seq structure and store the FASTQ ID
@@ -69,7 +69,7 @@ Seq *Fastq::next_seq() {
     }
 
     len = strlen(this->line);
-    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
 
     s->seq = new char[len + 1];
     strcpy(s->seq, this->line);
@@ -93,7 +93,7 @@ Seq *Fastq::next_seq() {
     }
 
     len = strlen(this->line);
-    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
 
     s->qual = new char[len + 1];
     strcpy(s->qual, this->line);

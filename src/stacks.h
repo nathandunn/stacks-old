@@ -171,62 +171,6 @@ class Rem {
     int add_seq(const char *);
 };
 
-class MergedStack {
- public:
-    int   id;     // Identifier for the merged stack.
-    char *con;    // Consensus sequence
-    uint  len;    // Sequence length
-    //
-    // Stack component parts
-    //
-    int                     count;   // Number of merged stacks
-    vector<int>             utags;   // Other stacks that have been merged into this MergedStack
-    vector<pair<int, int> > dist;    // Vector describing the distance between this stack and other stacks.
-    vector<int>             remtags; // Remainder tags that have been merged into this Stack
-    //
-    // Mapping components
-    //
-    PhyLoc           loc;     // Physical genome location of this Stack.
-    vector<SNP *>    snps;    // Single Nucleotide Polymorphisms found in this Stack
-    map<string, int> alleles; // Set of alleles defined by the SNPs found in this Stack
-    //
-    // K-mers generated from the consensus sequence
-    //
-    //    vector<char *> kmers;
-
-    //
-    // Flags
-    //
-    bool deleveraged;
-    bool masked;
-    bool blacklisted;
-    bool lumberjackstack;
-
-    MergedStack()  { 
-        id    = 0;
-        count = 0;
-        con   = NULL;
-        len   = 0;
-
-        deleveraged     = false;
-        masked          = false;
-        blacklisted     = false;
-        lumberjackstack = false;
-    }
-    ~MergedStack() { 
-        delete [] con;
-
-        // for (uint i = 0; i < kmers.size(); i++)
-        //     delete [] kmers[i];
-        for (uint i = 0; i < snps.size(); i++)
-            delete snps[i];
-    }
-    int add_consensus(const char *);
-    int add_consensus(DNASeq *);
-    int add_consensus(DNANSeq *);
-    int add_dist(const int id, const int dist);
-};
-
 class Locus {
  public:
     int         id; // Locus ID
