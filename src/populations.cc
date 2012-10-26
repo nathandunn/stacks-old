@@ -1091,7 +1091,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			pi_var_all[j]       += pow((s[j]->nucs[i].pi       - pi_mean_all[j]),       2);
 			fis_var_all[j]      += pow((s[j]->nucs[i].Fis      - fis_mean_all[j]),      2);
 		    }
-		} else if (t->nucs[i].allele_cnt == 2) {
+		} else if (t->nucs[i].allele_cnt == 1) {
 		    for (int j = 0; j < pop_cnt; j++) {
 			if (s[j]->nucs[i].num_indv == 0) continue;
 

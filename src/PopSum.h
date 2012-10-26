@@ -924,7 +924,7 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
     //
     // Fisher's Exact test algorithm implemented according to Sokal and Rohlf, _Biometry_, section 17.4.
     //
-    
+
     double r_1  = p_1 + q_1;
     double r_2  = p_2 + q_2;
     double c_1  = p_1 + p_2;

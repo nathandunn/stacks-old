@@ -191,6 +191,7 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
 
 int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_haplotypes, unsigned long &nosnps) {
     vector<SNP *>::iterator i, j;
+
     //
     // We have found a match between the genomic location of s1 and s2. We now want
     // to verify that the haplotypes are consistent between the tags, i.e. they 
@@ -248,7 +249,9 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
     for (a = query_haplotypes.begin(); a != query_haplotypes.end(); a++) {
 
 	if (impute_haplotypes) {
-	    if (impute_haplotype(*a, s1_tag->strings, cat_haplotype)) {
+	    int res = impute_haplotype(*a, s1_tag->strings, cat_haplotype);
+
+	    if (res > 0) {
 		//
 		// If the matching haplotype was imputed, record the depths of the query alleles
 		// under the new, imputed alleles.
@@ -262,9 +265,9 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
 		//cerr << s2_tag->id << "; Adding cat haplotype: " << cat_haplotype << " based on depth of " << *a << ", " << s2_tag->alleles[cat_haplotype] << "\n";
 		s2_tag->add_match(s1_tag->id, cat_haplotype);
 		matches++;
-	    } //else {
-	    //cerr << "Unable to verify haplotype for query ID " << s2_tag->id << " catalog ID " << s1_tag->id << "\n";
-	    //}
+	    } else if (res < 0) {
+		cerr << "  Failure imputing haplotype for catalog locus: " << s1_tag->id << " and query tag: " << s2_tag->id << "\n";
+	    }
 	} else {
 	    for (c = s1_tag->strings.begin(); c != s1_tag->strings.end(); c++)
 		if (*a == c->first) {
@@ -334,6 +337,11 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
 int impute_haplotype(string query_haplotype, 
 		     vector<pair<allele_type, string> > &cat_haplotypes, 
 		     string &match) {
+
+    if (cat_haplotypes.size() == 0) {
+	cerr << "Warning: malformed catalog tag: missing haplotype information.\n";
+	return -1;
+    }
 
     //cerr << "Examining " << query_haplotype << "\n";
     uint max_len = query_haplotype.length() > cat_haplotypes[0].first.length() ?

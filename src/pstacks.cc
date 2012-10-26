@@ -216,6 +216,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
 		nuc['C'] = 0;
 		nuc['G'] = 0;
 		nuc['T'] = 0;
+		nuc['N'] = 0;
 
 		for (row = 0; row < height; row++) {
     		    d = reads[row];
@@ -267,6 +268,15 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
             }
 
 	    mtag->add_consensus(con.c_str());
+
+	    //
+	    // If SNPs were called at this locus but no alleles could be determined,
+	    // blacklist this tag. This can occur if there are two many uncalled bases
+	    // in the locus (Ns), such that haplotypes can't be consistently read
+	    // due to the presence of the Ns in the reads.
+	    //
+	    if (mtag->snps.size() > 0 && mtag->alleles.empty())
+		mtag->blacklisted = 1;
 	}
     }
 
@@ -317,8 +327,10 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     int id;
 
     char *buf; // = new char[m.begin()->second->len + 1];
-    int   wrote    = 0;
-    int   excluded = 0;
+    int   wrote       = 0;
+    int   excluded    = 0;
+    int   blacklisted = 0;
+
     for (i = m.begin(); i != m.end(); i++) {
 	tag_1 = i->second;
 
@@ -332,6 +344,8 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	}
 
 	wrote++;
+
+	if (tag_1->blacklisted) blacklisted++;
 
 	// First write the consensus sequence
 	tags << "0" << "\t" 
@@ -406,7 +420,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     snps.close();
     alle.close();
 
-    cerr << "  Wrote " << wrote << " loci, excluded " << excluded << " loci due to insuffient depth of coverage.\n";
+    cerr << "  Wrote " << wrote << " loci, excluded " << excluded << " loci due to insuffient depth of coverage; blacklisted " << blacklisted << " loci.\n";
 
     return 0;
 }
