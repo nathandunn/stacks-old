@@ -2086,10 +2086,6 @@ bool hap_compare(pair<string, int> a, pair<string, int> b) {
     return (a.second > b.second);
 }
 
-bool compare_pair(pair<char, int> a, pair<char, int> b) {
-    return (a.second > b.second);
-}
-
 int parse_command_line(int argc, char* argv[]) {
     int c;
      
@@ -2129,7 +2125,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    in_path = optarg;
 	    break;
 	case 'b':
-	    batch_id = atoi(optarg);
+	    batch_id = is_integer(optarg);
+	    if (batch_id < 0) {
+		cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
+		help();
+	    }
 	    break;
 	case 't':
 	    if (strcasecmp(optarg, "cp") == 0)

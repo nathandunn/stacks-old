@@ -59,6 +59,7 @@ using std::queue;
 #include "stacks.h"
 #include "kmers.h"
 #include "sql_utilities.h"
+#include "utils.h"
 
 enum searcht {sequence, genomic_loc};
 
@@ -128,7 +129,6 @@ int  add_unique_tag(pair<int, string> &, map<int, CLocus *> &, QLocus *);
 bool compare_dist(pair<int, int>, pair<int, int>);
 int  write_catalog(map<int, CLocus *> &);
 int  write_simple_output(CLocus *, ofstream &, ofstream &, ofstream &);
-bool compare_pair(pair<string, SNP *>, pair<string, SNP *>);
 bool compare_matches(Match *, Match *);
 
 int  populate_kmer_hash(map<int, CLocus *> &, CatKmerHashMap &, vector<char *> &, int);

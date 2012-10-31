@@ -56,6 +56,7 @@ using std::set;
 #include "renz.h"
 #include "PopMap.h"
 #include "sql_utilities.h"
+#include "utils.h"
 #include "genotype_dictionaries.h"
 
 enum map_types {unk, none, gen, dh, cp, bc1, f2};
@@ -110,6 +111,5 @@ int  write_rqtl(map<int, CLocus *> &,    PopMap<CLocus> *, map<string, string> &
 int  write_genomic(map<int, CLocus *> &, PopMap<CLocus> *);
 
 bool hap_compare(pair<string, int>, pair<string, int>);
-bool compare_pair(pair<char, int>, pair<char, int>);
 
 #endif // __GENOTYPES_H__

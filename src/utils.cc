@@ -29,6 +29,30 @@
 //
 #include "utils.h"
 
+int is_integer(char *str) {
+    //
+    // Adapted from the strtol manpage.
+    //
+    char *endptr;
+
+    // To distinguish success/failure after call
+    errno = 0;
+    long val = strtol(str, &endptr, 10);
+
+    //
+    // Check for various possible errors
+    //
+    if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
+	|| (errno != 0 && val == 0)) {
+	return -1;
+    }
+
+    if (endptr == str || *endptr != '\0')
+	return -1;
+
+    return (int) val;
+}
+
 double factorial(double n) {
     double fact = 1;
 
@@ -97,4 +121,8 @@ bool compare_pair_intdouble(pair<int, double> a, pair<int, double> b) {
 
 bool compare_ints(int a, int b) {
     return (a > b);
+}
+
+bool compare_pair_snp(pair<string, SNP *> a, pair<string, SNP *> b) {
+    return (a.second->col < b.second->col);
 }

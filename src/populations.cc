@@ -801,7 +801,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     LocTally *t;
     int       len;
     int       pop_cnt = psum->pop_cnt();
-    char      fisstr[32], wfisstr[32], wpistr[32];
+    char      fisstr[32], wfisstr[32], wpistr[32], sitesstr[32];
 
     //
     // Calculate the means for each summary statistic.
@@ -1244,10 +1244,12 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
        << "Var\t"
        << "StdErr\n";
 
-    for (int j = 0; j < pop_cnt; j++)
+    for (int j = 0; j < pop_cnt; j++) {
+	sprintf(sitesstr, "%.0f", n_all[j]);
+
 	fh << psum->rev_pop_index(j)     << "\t" 
 	   << private_cnt[j]             << "\t"
-	   << n_all[j]                   << "\t"
+	   << sitesstr                   << "\t"
 	   << n[j]                       << "\t"
 	   << n[j] / n_all[j]            << "\t"
 	   << num_indv_mean_all[j]       << "\t"
@@ -1274,6 +1276,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 	   << fis_mean_all[j]            << "\t"
 	   << fis_var_all[j]             << "\t"
 	   << sqrt(num_indv_var_all[j]) / sq_n_all[j] << "\n";
+    }
 
     delete [] private_cnt;
     delete [] n;
@@ -1783,16 +1786,18 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
 		    if (p == NULL)
 			continue;
 
-		    if (p->pi > 0)
-			snp_cnt++;
 		    sites_cnt++;
 
 		    alleles = p->num_indv * 2;
 		    dist    = p->bp > c->bp ? p->bp - c->bp : c->bp - p->bp;
 
-		    final_weight_fis = (alleles - 1) * weights[dist];
-		    weighted_fis    += p->Fis * final_weight_fis;
-		    sum_fis         += final_weight_fis;
+		    if (p->pi > 0) {
+			snp_cnt++;
+
+			final_weight_fis = (alleles - 1) * weights[dist];
+			weighted_fis    += p->Fis * final_weight_fis;
+			sum_fis         += final_weight_fis;
+		    }
 
 		    final_weight_pi = (alleles - 1) * weights[dist];
 		    weighted_pi    += p->pi * final_weight_pi;
@@ -3356,6 +3361,11 @@ write_phylip(map<int, CLocus *> &catalog,
 	}
     }
 
+    if (interspecific_nucs.size() == 0) {
+	cerr << "  No data is available to write to the Phylip file.\n";
+	return 0;
+    }
+
     char id_str[id_len];
     uint len;
 
@@ -3830,7 +3840,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    pmap_path = optarg;
 	    break;
 	case 'b':
-	    batch_id = atoi(optarg);
+	    batch_id = is_integer(optarg);
+	    if (batch_id < 0) {
+		cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
+		help();
+	    }
 	    break;
 	case 'r':
 	    sample_limit = atof(optarg);
