@@ -483,8 +483,8 @@ sub parse_command_line {
     $exe_path = $exe_path . "/"          if (substr($out_path, -1) ne "/");
     $out_path = substr($out_path, 0, -1) if (substr($out_path, -1) eq "/");
 
-    if ($batch_id < 0) {
-	print STDERR "You must specify a batch ID.\n";
+    if ($batch_id !~ /^\d+$/ || $batch_id < 0) {
+	print STDERR "You must specify a batch ID and it must be an integer (e.g. 1, 2, 3).\n";
 	usage();
     }
 

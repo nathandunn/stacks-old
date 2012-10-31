@@ -450,7 +450,7 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
     //
     // Sort the SNPs by column
     //
-    sort(merged_snps.begin(), merged_snps.end(), compare_pair);
+    sort(merged_snps.begin(), merged_snps.end(), compare_pair_snp);
 
     map<string, int>::iterator b;
     string old_allele, new_allele;
@@ -730,10 +730,6 @@ int write_matches(map<int, QLocus *> &sample) {
     return 0;
 }
 
-bool compare_pair(pair<string, SNP *> a, pair<string, SNP *> b) {
-    return (a.second->col < b.second->col);
-}
-
 int parse_command_line(int argc, char* argv[]) {
     int c;
      
@@ -771,7 +767,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    num_threads = atoi(optarg);
 	    break;
 	case 'b':
-	    batch_id = atoi(optarg);
+	    batch_id = is_integer(optarg);
+	    if (batch_id < 0) {
+		cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
+		help();
+	    }
 	    break;
 	case 'r':
 	    sample_1_file = optarg;
@@ -781,7 +781,12 @@ int parse_command_line(int argc, char* argv[]) {
 	    sample_2_file = optarg;
 	    break;
 	case 'S':
-	    samp_id = atoi(optarg);
+	    samp_id = is_integer(optarg);
+	    if (samp_id < 0) {
+		cerr << "Sample ID (-S) must be an integer, e.g. 1, 2, 3\n";
+		help();
+	    }
+
 	    break;
 	case 'g':
 	    search_type = genomic_loc;

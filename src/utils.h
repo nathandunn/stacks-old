@@ -21,6 +21,9 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
+#include <stdlib.h>
+#include <errno.h>
+#include <limits.h>
 #include <math.h>
 #include <iostream>
 using std::cerr;
@@ -28,6 +31,10 @@ using std::endl;
 #include <utility>
 using std::pair;
 using std::make_pair;
+
+#include "stacks.h"
+
+int is_integer(char *);
 
 double factorial(double);
 double reduced_factorial(double, double);
@@ -40,6 +47,8 @@ double reduced_log_factorial(double, double);
 bool compare_ints(int, int);
 bool compare_pair(pair<char, int>, pair<char, int>);
 bool compare_pair_intdouble(pair<int, double>, pair<int, double>);
+bool compare_pair_snp(pair<string, SNP *>, pair<string, SNP *>);
+
 
 //
 // Comparison classes for STL sets

@@ -1851,7 +1851,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    out_path = optarg;
 	    break;
 	case 'i':
-	    sql_id = atoi(optarg);
+	    sql_id = is_integer(optarg);
+	    if (sql_id < 0) {
+		cerr << "SQL ID (-i) must be an integer, e.g. 1, 2, 3\n";
+		help();
+	    }
 	    break;
 	case 'm':
 	    min_merge_cov = atoi(optarg);

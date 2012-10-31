@@ -1,27 +1,36 @@
+Stacks 1.0 
+----------
+	Bugfix: Added code to ensure command line IDs are in fact integers.
+	Bugfix: fixed nucleotide positions were not being tallied across populations properly resulting in an
+	incorrect value for number of sites and percent polymorphic sites in the sumstats_summary file.
+	Bugfix: pstacks could identify a locus that despite having SNPs would have no haplotypes generated.
+	This would late cause sstacks to segfault. Added code in pstacks to blacklist these loci and code
+	in sstacks to catch this case and not segfault, now will print a warning.
+
 Stacks 0.9999 - October 03, 2012
 --------------------------------
-	Feature: two bootstrapping proceedures have been introduced into the populations program to
-	determine the statistical significance of kernel smoothed windows. These algorthims are controlled
+	Feature: two bootstrapping procedures have been introduced into the populations program to
+	determine the statistical significance of kernel smoothed windows. These algorithms are controlled
 	by the --bootstrap and --bootstrap_reps command line options.
 	Feature: summary summary statistics are now written for all populations, giving the mean, variance,
 	and standard error for each of the population-specific summary stats. In addition, private alleles
-	are identified and marked in the sumstats file, and summarized accross populations. Number and
+	are identified and marked in the sumstats file, and summarized across populations. Number and
 	percent of polymorphic loci are also reported. The actual variable nucleotides at each site are now
 	reported in the sumstats file.
 	Feature: the populations program can now generate kernel-smoothed values for Fis and Pi, in addition
 	to the current support for Fst.
-	Feature: the populations program can now ouput SNP data for use in the program Structure.
+	Feature: the populations program can now output SNP data for use in the program Structure.
 	Feature: various sections of the populations program have been parallelized.
 	Feature: the populations program can now output SNP data in the Phylip file format. If --phylip is
 	specified, the populations program will identify SNPs that are fixed within populations, but variable
 	between populations and output these in a Phylip file. This file can then be fed into any phylogenetics
-	program, such as PhyML. This feature is equivalent to the anaylsis done in Emerson, et al., 2010. In
+	program, such as PhyML. This feature is equivalent to the analysis done in Emerson, et al., 2010. In
 	addition, if the --phylip_var flag is specified as well, variable sites within populations are encoded
 	into the Phylip file using standard alternative nucleotide encodings.
 	Feature: for ustacks/pstacks, the alpha significance level can now be specified on the command line.
 	Specifying --alpha to ustacks or pstacks will set the chi square significance level to determine
 	whether a heterozygous or homozygous model call is statistically significant. Legal values of alpha are
-	0.1, 0.05 (the previous defaul), 0.01, or 0.001.
+	0.1, 0.05 (the previous default), 0.01, or 0.001.
 	Feature: for ustacks/pstacks, a new bounded SNP calling model has been introduced, allowing limits to
 	be set on the error rate. This model allows the calling of SNPs to be affected by prior knowledge
 	as to how likely polymorphism is in the data set. This behavior is controlled by the --bound_low and

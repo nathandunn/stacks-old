@@ -352,8 +352,9 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 	ltally = new LocTally(len);
 	this->loc_tally[n] = ltally;
 
-	for (uint i = 0; i < loc->snps.size(); i++) {
-	    uint col = loc->snps[i]->col;
+	// for (uint i = 0; i < loc->snps.size(); i++) {
+	//     uint col = loc->snps[i]->col;
+	for (int col = 0; col < len; col++) {
 
 	    for (int j = 0; j < this->num_pops; j++) {
 		//

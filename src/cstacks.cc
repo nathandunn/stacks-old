@@ -654,7 +654,7 @@ int merge_allele(Locus *locus, SNP *snp) {
     //
     // Sort the SNPs by column
     //
-    sort(merged_snps.begin(), merged_snps.end(), compare_pair);
+    sort(merged_snps.begin(), merged_snps.end(), compare_pair_snp);
 
     //
     // Modify any existing alleles to account for this new SNP. If there are not any alleles, 
@@ -706,10 +706,6 @@ int merge_allele(Locus *locus, SNP *snp) {
     }
 
     return 1;
-}
-
-bool compare_pair(pair<string, SNP *> a, pair<string, SNP *> b) {
-    return (a.second->col < b.second->col);
 }
 
 int CLocus::merge_snps(QLocus *matched_tag) {
@@ -778,7 +774,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     //
     // Sort the SNPs by column
     //
-    sort(merged_snps.begin(), merged_snps.end(), compare_pair);
+    sort(merged_snps.begin(), merged_snps.end(), compare_pair_snp);
 
     //
     // Merge the alleles accounting for any SNPs added from either of the two samples.
@@ -1127,7 +1123,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    help();
 	    break;
 	case 'b':
-	    batch_id = atoi(optarg);
+	    batch_id = is_integer(optarg);
+	    if (batch_id < 0) {
+		cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
+		help();
+	    }
 	    break;
 	case 'n':
 	    ctag_dist = atoi(optarg);
@@ -1148,7 +1148,11 @@ int parse_command_line(int argc, char* argv[]) {
 		abort();
 	    }
 
-	    sid = atoi(optarg);
+	    sid = is_integer(optarg);
+	    if (sid < 0) {
+		cerr << "Sample ID (-S) must be an integer, e.g. 1, 2, 3\n";
+		help();
+	    }
 	    samples.push(make_pair(sid, sstr));
 	    break;
      	case 'o':

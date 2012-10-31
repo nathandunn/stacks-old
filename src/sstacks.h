@@ -64,6 +64,7 @@ using __gnu_cxx::hash;
 #include "constants.h"
 #include "stacks.h"
 #include "sql_utilities.h"
+#include "utils.h"
 
 enum searcht {sequence, genomic_loc};
 
@@ -103,6 +104,5 @@ int  generate_query_haplotypes(Locus *, QLocus *, set<string> &);
 int  impute_haplotype(string, vector<pair<allele_type, string> > &, string &);
 bool compare_dist(pair<int, int>, pair<int, int>);
 int  write_matches(map<int, QLocus *> &);
-bool compare_pair(pair<string, SNP *>, pair<string, SNP *>);
 
 #endif // __SSTACKS_H__

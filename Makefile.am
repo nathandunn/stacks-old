@@ -20,7 +20,7 @@ estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/co
         src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h
 
 cstacks_SOURCES = src/cstacks.h src/cstacks.cc src/stacks.h src/stacks.cc src/constants.h \
-	src/kmers.h src/kmers.cc \
+	src/kmers.h src/kmers.cc src/utils.h src/utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
@@ -30,7 +30,7 @@ hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/stacks.h src/stacks.cc src/co
 	src/input.h src/input.cc src/sql_utilities.h
 
 sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/constants.h \
-	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
+	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
@@ -53,6 +53,7 @@ clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h
 
 genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
+	src/utils.h src/utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/stacks.h src/stacks.cc src/PopMap.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h
