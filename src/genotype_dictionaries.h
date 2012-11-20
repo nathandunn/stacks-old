@@ -21,7 +21,9 @@
 #ifndef __GENOTYPE_DICTIONARIES_H__
 #define __GENOTYPE_DICTIONARIES_H__
 
-void initialize_dictionaries(map<string, map<string, string> > &global_dictionary) {
+void 
+initialize_dictionaries(map<string, map<string, string> > &global_dictionary) 
+{
     global_dictionary["ab/--"]["a"]  = "aa";
     global_dictionary["ab/--"]["b"]  = "bb";
 
@@ -77,8 +79,104 @@ void initialize_dictionaries(map<string, map<string, string> > &global_dictionar
     global_dictionary["ab/ab"]["ab"] = "ab";
 }
 
+void 
+load_joinmap_cp_dictionary(map<string, string> &types, map<string, map<string, string> > &dictionary) 
+{
+    types["ab/--"] = "lmx--";
+    types["--/ab"] = "--xnp";
+    types["ab/aa"] = "lmxll";
+    types["aa/ab"] = "nnxnp";
+    types["ab/ab"] = "hkxhk";
+    types["ab/ac"] = "efxeg";
+    types["ab/cd"] = "abxcd";
+
+    dictionary["lmx--"]["-"]  = "--";
+    dictionary["lmx--"]["aa"] = "ll";
+    dictionary["lmx--"]["bb"] = "lm";
+
+    dictionary["--xnp"]["-"]  = "--";
+    dictionary["--xnp"]["aa"] = "nn";
+    dictionary["--xnp"]["bb"] = "np";
+
+    dictionary["lmxll"]["-"]  = "--";
+    dictionary["lmxll"]["aa"] = "ll";
+    dictionary["lmxll"]["ab"] = "lm";
+
+    dictionary["nnxnp"]["-"]  = "--";
+    dictionary["nnxnp"]["aa"] = "nn";
+    dictionary["nnxnp"]["ab"] = "np";
+
+    dictionary["hkxhk"]["-"]  = "--";
+    dictionary["hkxhk"]["ab"] = "hk";
+    dictionary["hkxhk"]["aa"] = "hh";
+    dictionary["hkxhk"]["bb"] = "kk";
+
+    dictionary["efxeg"]["-"]  = "--";
+    dictionary["efxeg"]["ab"] = "ef";
+    dictionary["efxeg"]["ac"] = "eg";
+    dictionary["efxeg"]["bc"] = "fg";
+    dictionary["efxeg"]["aa"] = "ee";
+
+    dictionary["abxcd"]["-"]  = "--";
+    dictionary["abxcd"]["ac"] = "ac";
+    dictionary["abxcd"]["ad"] = "ad";
+    dictionary["abxcd"]["bc"] = "bc";
+    dictionary["abxcd"]["bd"] = "bd";
+
+    return;
+}
+
+void 
+load_onemap_cp_dictionary(map<string, string> &types, map<string, map<string, string> > &dictionary) 
+{
+    types["ab/--"] = "abxoo";
+    types["--/ab"] = "ooxab";
+    types["ab/aa"] = "abxaa";
+    types["aa/ab"] = "aaxab";
+    types["ab/ab"] = "abxab";
+    types["ab/ac"] = "abxac";
+    types["ab/cd"] = "abxcd";
+
+    dictionary["abxoo"]["-"]  = "-";
+    dictionary["abxoo"]["aa"] = "a";
+    dictionary["abxoo"]["bb"] = "b";
+
+    dictionary["ooxab"]["-"]  = "-";
+    dictionary["ooxab"]["aa"] = "a";
+    dictionary["ooxab"]["bb"] = "b";
+
+    dictionary["abxaa"]["-"]  = "-";
+    dictionary["abxaa"]["aa"] = "aa";
+    dictionary["abxaa"]["ab"] = "ba";
+
+    dictionary["aaxab"]["-"]  = "-";
+    dictionary["aaxab"]["aa"] = "aa";
+    dictionary["aaxab"]["ab"] = "ab";
+
+    dictionary["abxab"]["-"]  = "-";
+    dictionary["abxab"]["ab"] = "ab";
+    dictionary["abxab"]["aa"] = "aa";
+    dictionary["abxab"]["bb"] = "bb";
+
+    dictionary["efxeg"]["-"]  = "-";
+    dictionary["abxac"]["ab"] = "ba";
+    dictionary["abxac"]["ac"] = "ac";
+    dictionary["abxac"]["bc"] = "bc";
+    dictionary["abxac"]["aa"] = "aa";
+
+    dictionary["abxcd"]["-"]  = "-";
+    dictionary["abxcd"]["ac"] = "ac";
+    dictionary["abxcd"]["ad"] = "ad";
+    dictionary["abxcd"]["bc"] = "bc";
+    dictionary["abxcd"]["bd"] = "bd";
+
+    return;
+}
+
 inline
-int encode_gtype(char a) { 
+int 
+encode_gtype(char a) 
+{ 
     switch (a) {
     case 'A':
 	return 0;
@@ -93,7 +191,9 @@ int encode_gtype(char a) {
     return -1;
 }
 
-int encoded_gtypes[4][4] = {
+int 
+encoded_gtypes[4][4] = 
+{
   // A  C  G   T
     {1, 2, 3,  4}, // A
     {2, 5, 6,  7}, // C

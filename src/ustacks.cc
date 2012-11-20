@@ -93,6 +93,7 @@ int main (int argc, char* argv[]) {
 	cerr << "Bounded; lower epsilon bound: " << bound_low << "; upper bound: " << bound_high << "\n";
 	break;
     }
+    cerr << "Alpha significance level for model: " << alpha << "\n";
 
     //
     // Set limits to call het or homozygote according to chi-square distribution with one 
@@ -1820,7 +1821,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hHvdrgL:U:f:o:i:m:e:E:s:S:p:t:M:N:K:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hHvdrgA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:T:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)

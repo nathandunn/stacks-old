@@ -1,5 +1,9 @@
-Stacks 1.0 
+Stacks 1.0
 ----------
+	Feature: added support for OneMap CP map export in genotypes.
+	Bugfix: Fixed some bugs in pstacks/ustacks command line processing involving --alpha and --model_type.
+	Bugfix: several bugs in the exact and approximate bootstrap algorithms were corrected. These algorithms
+	are now robust.
 	Bugfix: Added code to ensure command line IDs are in fact integers.
 	Bugfix: fixed nucleotide positions were not being tallied across populations properly resulting in an
 	incorrect value for number of sites and percent polymorphic sites in the sumstats_summary file.

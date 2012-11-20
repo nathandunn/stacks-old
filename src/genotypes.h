@@ -60,7 +60,7 @@ using std::set;
 #include "genotype_dictionaries.h"
 
 enum map_types {unk, none, gen, dh, cp, bc1, f2};
-enum out_types {rqtl, joinmap, genomic};
+enum out_types {rqtl, joinmap, onemap, genomic};
 
 //
 // Catalog Locus Class
@@ -107,6 +107,7 @@ int  export_f2_map(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &, map<int, 
 int  write_generic(map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &, bool);
 int  write_sql(map<int, CLocus *> &,     PopMap<CLocus> *, set<int> &);
 int  write_joinmap(map<int, CLocus *> &, PopMap<CLocus> *, map<string, string> &, map<int, string> &, set<int> &);
+int  write_onemap(map<int, CLocus *> &, PopMap<CLocus> *, map<string, string> &, map<int, string> &, set<int> &);
 int  write_rqtl(map<int, CLocus *> &,    PopMap<CLocus> *, map<string, string> &, map<int, string> &, set<int> &);
 int  write_genomic(map<int, CLocus *> &, PopMap<CLocus> *);
 

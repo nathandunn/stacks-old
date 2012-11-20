@@ -1516,11 +1516,16 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			    continue;
 			}
 
+			// if (pairs[i]->bp < 2110730 || pairs[i]->bp > 2110750) {
+			//     i++;
+			//     continue;
+			// }
+
 			//
 			// Calculate Fst P-value from approximate distribution.
 			//
 			if (bootstrap && bootstrap_type == bs_approx)
-			    pairs[i]->wfst_pval = bootstrap_approximate_pval(pairs[i]->snp_cnt, pairs[i]->cfst, approx_fst_dist);
+			    pairs[i]->wfst_pval = bootstrap_approximate_pval(pairs[i]->snp_cnt, pairs[i]->wfst, approx_fst_dist);
 
 			cnt++;
 			sum += pairs[i]->cfst;
@@ -1545,7 +1550,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			   << pairs[i]->lod     << "\t"
 			   << cfst_str          << "\t"
 			   << wfst_str          << "\t"
-			   << pairs[i]->wfst_pval << "\n";
+			   << pairs[i]->wfst_pval << "\t"
+			   << pairs[i]->snp_cnt   << "\n";
 
 			delete pairs[i];
 			i++;
@@ -1722,6 +1728,8 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
 		    sites.push_back(&(lsum->nucs[k]));
 	}
 
+	//if (it->first != "groupIV") continue;
+
 	cerr << "    Processing chromosome " << it->first << "\n";
 	#pragma omp parallel private(alleles)
 	{
@@ -1742,6 +1750,9 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
 
 		if (c->pi == 0)
 		    continue;
+
+		////
+		////if (c->bp != 994244) continue;
 
 		weighted_fis = 0.0;
 		sum_fis      = 0.0;
@@ -1829,31 +1840,31 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
     map<int, vector<double> > approx_fis_dist;
     map<int, vector<double> > approx_pi_dist;
     if (bootstrap && bootstrap_type == bs_approx) {
-	sites_per_snp = sites_per_snp / tot_windows;
+    	sites_per_snp = sites_per_snp / tot_windows;
 
-	// cerr << "Sites per snp: " << sites_per_snp << "\n";
+    	// cerr << "Sites per snp: " << sites_per_snp << "\n";
 
-	bootstrap_popstats_approximate_dist(fis_samples, pi_samples, allele_depth_samples, 
-					    weights, snp_dist, sites_per_snp, 
-					    approx_fis_dist, approx_pi_dist);
+    	bootstrap_popstats_approximate_dist(fis_samples, pi_samples, allele_depth_samples, 
+    					    weights, snp_dist, sites_per_snp, 
+    					    approx_fis_dist, approx_pi_dist);
 
-	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 
-	    for (uint pos = 0; pos < it->second.size(); pos++) {
-		loc  = it->second[pos];
-		len  = strlen(loc->con);
-		lsum = psum->pop(loc->id, pop_id);
+    	    for (uint pos = 0; pos < it->second.size(); pos++) {
+    		loc  = it->second[pos];
+    		len  = strlen(loc->con);
+    		lsum = psum->pop(loc->id, pop_id);
 
-		for (int k = 0; k < len; k++)
-		    if (lsum->nucs[k].num_indv > 0 && bootstrap && lsum->nucs[k].pi > 0) {
-			//
-			// Calculate Fis/Pi p-values from approximate distribution.
-			//
-			lsum->nucs[k].wFis_pval = bootstrap_approximate_pval(lsum->nucs[k].snp_cnt, lsum->nucs[k].wFis, approx_fis_dist);
-			lsum->nucs[k].wPi_pval  = bootstrap_approximate_pval(lsum->nucs[k].snp_cnt, lsum->nucs[k].wPi, approx_pi_dist);
-		    }
-	    }
-	}
+    		for (int k = 0; k < len; k++)
+    		    if (lsum->nucs[k].num_indv > 0 && bootstrap && lsum->nucs[k].pi > 0) {
+    			//
+    			// Calculate Fis/Pi p-values from approximate distribution.
+    			//
+    			lsum->nucs[k].wFis_pval = bootstrap_approximate_pval(lsum->nucs[k].snp_cnt, lsum->nucs[k].wFis, approx_fis_dist);
+    			lsum->nucs[k].wPi_pval  = bootstrap_approximate_pval(lsum->nucs[k].snp_cnt, lsum->nucs[k].wPi, approx_pi_dist);
+    		    }
+    	    }
+    	}
     }
 
     delete [] weights;
@@ -2055,11 +2066,16 @@ bootstrap_popstats(vector<double> &fis_samples, vector<double> &pi_samples,
     fiss.reserve(bootstrap_reps);
     pis.reserve(bootstrap_reps);
 
-    // cerr << "Window starts at " << bs[0].bp << "\n";
+    // cerr << "Window starts at " << bs[0].bp << "; Window center is " << c->bp << "\n";
 
     //
     // Precompute the fraction of the window that will not change during resampling.
     //
+    partial_weighted_fis = 0.0;
+    partial_sum_fis      = 0.0;
+    partial_weighted_pi  = 0.0;
+    partial_sum_pi       = 0.0;
+
     for (j = 0; j < size; j++) {
 	if (bs[j].pi > 0) continue;
 
@@ -2093,7 +2109,7 @@ bootstrap_popstats(vector<double> &fis_samples, vector<double> &pi_samples,
 		continue;
 
 	    index = (int) (fis_samples.size() * (random() / (RAND_MAX + 1.0)));
-	    // cerr << "      Randomly selecting " << index_1 << " out of " << fis_samples.size() << " possible values giving Fis value: " << bs[j].f << "\n";
+	    // cerr << "      WinPos: " << j << "; Randomly selecting " << index << " out of " << pi_samples.size() << " possible values giving Pi value: " << pi_samples[index] << "\n";
 
 	    //
 	    // Calculate weighted Fis/Pi at this position.
@@ -2109,7 +2125,7 @@ bootstrap_popstats(vector<double> &fis_samples, vector<double> &pi_samples,
 	    sum_pi         += final_weight_pi;
 	}
 
-	// cerr << "    New weighted Fis value: " << weighted_fis / sum_fis << "\n";
+	// cerr << "    New weighted Pi value: " << weighted_pi / sum_pi << "\n";
 	fiss.push_back(weighted_fis / sum_fis);
 	pis.push_back(weighted_pi / sum_pi);
     }
@@ -2119,14 +2135,11 @@ bootstrap_popstats(vector<double> &fis_samples, vector<double> &pi_samples,
     //
     // Cacluate the p-value for this window based on the empirical Fst distribution.
     //
-    vector<double>::iterator up;
     sort(fiss.begin(), fiss.end());
-    up = upper_bound(fiss.begin(), fiss.end(), c->wFis);
-    c->wFis_pval = 1.0 - (((up - fiss.begin()) - 1.0) / (double) fiss.size());
+    c->wFis_pval = bootstrap_pval(c->wFis, fiss);
 
     sort(pis.begin(), pis.end());
-    up = upper_bound(pis.begin(), pis.end(), c->wPi);
-    c->wPi_pval = 1.0 - (((up - pis.begin()) - 1.0) / (double) pis.size());
+    c->wPi_pval = bootstrap_pval(c->wPi, pis);
 
     return 0;
 }
@@ -2213,6 +2226,8 @@ kernel_smoothed_fst(vector<PopPair *> &pairs, double *weights, int *snp_dist)
 		sum          += final_weight;
 	    }
 
+	    // cerr << "Fst measure at " << c->bp << "bp has " << snp_cnt << " snps.\n";
+
 	    if (snp_cnt < max_snp_dist) {
 		#pragma omp atomic
 		snp_dist[snp_cnt]++;
@@ -2276,7 +2291,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 	    //
             #pragma omp for schedule(dynamic, 1)
 	    for (int j = 0; j < bootstrap_reps; j++) {
-		// cerr << "  Bootsrap rep " << j << "\n";
+		// cerr << "Bootsrap rep " << j << "\n";
 
 		//
 		// First SNP is always placed at the center of the window.
@@ -2296,7 +2311,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 		    index_2 = (int) (allele_samples.size() * (random() / (RAND_MAX + 1.0)));
 		    bs[pos].f       = fst_samples[index_1];
 		    bs[pos].alleles = allele_samples[index_2];
-		    //cerr << "  Placing SNP at position: " << pos << " with data from index " << index << "\n";
+		    // cerr << "  " << j << ": Placing SNP at position: " << pos << " with data from index " << index_1 << "\n";
 
 		    poss.push_back(pos);
 		}
@@ -2344,16 +2359,59 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 double
 bootstrap_approximate_pval(int snp_cnt, double stat, map<int, vector<double> > &approx_dist)
 {
+    if (approx_dist.count(snp_cnt) == 0)
+	return 1.0;
+
     vector<double>::iterator up;
     vector<double> &dist = approx_dist[snp_cnt];
     double pos;
 
     up  = upper_bound(dist.begin(), dist.end(), stat);
-    pos = (up == dist.end()) ? dist.size() : up - dist.begin();
+
+    if (up == dist.begin())
+	pos = 1;
+    else if (up == dist.end())
+	pos = dist.size();
+    else 
+	pos = up - dist.begin() + 1;
 
     double res = 1.0 - (pos / (double) dist.size());
 
-    //cerr << "SNP Count: " << snp_cnt << "; Fst " << fst << " falls at position " << pos << " out of " << dist.size() << " positions; result: " << res << "\n";
+    // cerr << "Generated Approx Smoothed Fst Distribution:\n";
+    // for (uint n = 0; n < dist.size(); n++)
+    // 	cerr << "  n: " << n << "; Fst: " << dist[n] << "\n";
+
+    // cerr << "Comparing Fst value: " << stat 
+    // 	 << " at position " << (up - dist.begin()) << " out of " 
+    // 	 << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
+
+    return res;
+}
+
+double
+bootstrap_pval(double stat, vector<double> &dist)
+{
+    vector<double>::iterator up;
+    double pos;
+
+    up = upper_bound(dist.begin(), dist.end(), stat);
+
+    if (up == dist.begin())
+	pos = 1;
+    else if (up == dist.end())
+	pos = dist.size();
+    else 
+	pos = up - dist.begin() + 1;
+
+    double res = 1.0 - (pos / (double) dist.size());
+
+    // cerr << "Generated Smoothed Fst Distribution:\n";
+    // for (uint n = 0; n < dist.size(); n++)
+    // 	cerr << "  n: " << n << "; Fst: " << dist[n] << "\n";
+
+    // cerr << "Comparing Fst value: " << stat 
+    // 	 << " at position " << (up - dist.begin()) << " out of " 
+    // 	 << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
 
     return res;
 }
@@ -2429,7 +2487,7 @@ bootstrap_fst(vector<double> &fst_samples, vector<PopPair *> &pairs, double *wei
 	    fsts.reserve(bootstrap_reps);
 	    vector<double>::iterator up;
 
-	    // cerr << "Window starts at " << bs[0].bp << "\n";
+	    // cerr << "Window starts at " << bs[0].bp << "; centered on " << c->bp << "\n";
 
 	    //
 	    // Bootstrap this bitch.
@@ -2446,8 +2504,8 @@ bootstrap_fst(vector<double> &fst_samples, vector<PopPair *> &pairs, double *wei
 		    //
 		    index   = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
 		    bs[j].f = fst_samples[index];
-		    // cerr << "      Randomly selecting " << index << " out of " << fst_samples.size() << " possible values giving Fst value: " << bs[j].f << "\n";
-	
+		    // cerr << "      WinPos: " << j << "; Randomly selecting " << index << " out of " << fst_samples.size() << " possible values giving Fst value: " << bs[j].f << "\n";
+
 		    //
 		    // Calculate weighted Fst at this position.
 		    //
@@ -2466,8 +2524,7 @@ bootstrap_fst(vector<double> &fst_samples, vector<PopPair *> &pairs, double *wei
 	    // Cacluate the p-value for this window based on the empirical Fst distribution.
 	    //
 	    sort(fsts.begin(), fsts.end());
-	    up = upper_bound(fsts.begin(), fsts.end(), c->wfst);
-	    c->wfst_pval = 1 - (((up - fsts.begin()) - 1.0) / (double) fsts.size());
+ 	    c->wfst_pval = bootstrap_pval(c->wfst, fsts);
 
 	    delete [] bs;
 	}
