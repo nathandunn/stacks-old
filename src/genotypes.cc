@@ -1220,47 +1220,18 @@ int export_cp_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     // <nnxnp>     nn, np, ––
     //
     map<string, string> types;
-    types["ab/--"] = "lmx--";
-    types["--/ab"] = "--xnp";
-    types["ab/aa"] = "lmxll";
-    types["aa/ab"] = "nnxnp";
-    types["ab/ab"] = "hkxhk";
-    types["ab/ac"] = "efxeg";
-    types["ab/cd"] = "abxcd";
-
     map<string, map<string, string> > dictionary;
-    dictionary["lmx--"]["-"]  = "--";
-    dictionary["lmx--"]["aa"] = "ll";
-    dictionary["lmx--"]["bb"] = "lm";
 
-    dictionary["--xnp"]["-"]  = "--";
-    dictionary["--xnp"]["aa"] = "nn";
-    dictionary["--xnp"]["bb"] = "np";
-
-    dictionary["lmxll"]["-"]  = "--";
-    dictionary["lmxll"]["aa"] = "ll";
-    dictionary["lmxll"]["ab"] = "lm";
-
-    dictionary["nnxnp"]["-"]  = "--";
-    dictionary["nnxnp"]["aa"] = "nn";
-    dictionary["nnxnp"]["ab"] = "np";
-
-    dictionary["hkxhk"]["-"]  = "--";
-    dictionary["hkxhk"]["ab"] = "hk";
-    dictionary["hkxhk"]["aa"] = "hh";
-    dictionary["hkxhk"]["bb"] = "kk";
-
-    dictionary["efxeg"]["-"]  = "--";
-    dictionary["efxeg"]["ab"] = "ef";
-    dictionary["efxeg"]["ac"] = "eg";
-    dictionary["efxeg"]["bc"] = "fg";
-    dictionary["efxeg"]["aa"] = "ee";
-
-    dictionary["abxcd"]["-"]  = "--";
-    dictionary["abxcd"]["ac"] = "ac";
-    dictionary["abxcd"]["ad"] = "ad";
-    dictionary["abxcd"]["bc"] = "bc";
-    dictionary["abxcd"]["bd"] = "bd";
+    switch(out_type) {
+    case joinmap:
+	load_joinmap_cp_dictionary(types, dictionary);
+	break;
+    case onemap:
+	load_onemap_cp_dictionary(types, dictionary);
+	break;
+    default:
+	break;
+    }
 
     //
     // Translate the genotypes for this particular map type.
@@ -1274,8 +1245,8 @@ int export_cp_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     case joinmap:
 	write_joinmap(catalog, pmap, types, samples, parent_ids);
 	break;
-    case rqtl:
-	write_rqtl(catalog, pmap, types, samples, parent_ids);
+    case onemap:
+	write_onemap(catalog, pmap, types, samples, parent_ids);
 	break;
     default:
 	break;
@@ -1719,8 +1690,9 @@ int write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, st
     return 0;
 }
 
-int write_joinmap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids) {
-
+int 
+write_joinmap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids) 
+{
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".genotypes_" << progeny_limit;
     string file = in_path + pop_name.str() + ".loc";
@@ -1823,10 +1795,95 @@ int write_joinmap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string,
     return 0;
 }
 
-int write_rqtl(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids) {
+int 
+write_onemap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids)
+{
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".genotypes_" << progeny_limit;
-    string file = in_path + pop_name.str() + ".loc";
+    string file = in_path + pop_name.str() + "onemap.tsv";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening joinmap output file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Count the number of mappable progeny
+    //
+    map<int, CLocus *>::iterator it;
+    CLocus *loc;
+    int num_loci = 0;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+	if (loc->trans_gcnt < progeny_limit) continue;
+
+	num_loci++;
+    }
+    cerr << "Writing " << num_loci << " loci to OneMap file, '" << file << "'\n";
+
+    map<int, string> map_types;
+    map_types[cp]  = "CP";
+    map_types[dh]  = "DH";
+    map_types[bc1] = "BC1";
+    map_types[f2]  = "F2";
+
+    map<string, string> marker_types;
+    marker_types["abxoo"] = "D1.11";
+    marker_types["ooxab"] = "D2.16";
+    marker_types["abxaa"] = "D1.10";
+    marker_types["aaxab"] = "D2.15";
+    marker_types["abxab"] = "B3.7";
+    marker_types["abxac"] = "A.2";
+    marker_types["abxcd"] = "A.1";
+
+
+    //
+    // Output the header: number of individuals followed by number of markers.
+    //
+    fh << pmap->sample_cnt() - parent_ids.size() << "\t" << num_loci << "\n";
+       
+    //
+    // Output each locus.
+    //
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+
+	if (loc->trans_gcnt < progeny_limit) continue;
+
+	fh << "*" << loc->id << " "
+	   << marker_types[types[loc->marker]] << "\t";
+
+	Datum **d = pmap->locus(loc->id);
+
+	for (int i = 0; i < pmap->sample_cnt(); i++) {
+	    if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+
+	    if (d[i] == NULL) 
+		fh << "-";
+	    else
+		fh << d[i]->trans_gtype;
+
+	    if (i < pmap->sample_cnt() - 1)
+		fh << ",";
+	}
+
+	fh << "\n";
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int 
+write_rqtl(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids) 
+{
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".genotypes_" << progeny_limit;
+    string file = in_path + pop_name.str() + ".rqtl.tsv";
 
     ofstream fh(file.c_str(), ofstream::out);
 
@@ -2150,6 +2207,8 @@ int parse_command_line(int argc, char* argv[]) {
                 out_type = joinmap;
 	    else if (strcasecmp(optarg, "rqtl") == 0)
 		out_type = rqtl;
+	    else if (strcasecmp(optarg, "onemap") == 0)
+		out_type = onemap;
 	    else if (strcasecmp(optarg, "genomic") == 0)
 		out_type = genomic;
 	    break;
@@ -2243,7 +2302,7 @@ void help() {
 	      << "  c: make automated corrections to the data.\n"
 	      << "  P: path to the Stacks output files.\n"
 	      << "  t: map type to write. 'CP', 'DH', 'F2', 'BC1' and 'GEN' are the currently supported map types.\n"
-	      << "  o: output file type to write, 'joinmap', 'rqtl', and 'genomic' are currently supported.\n"
+	      << "  o: output file type to write, 'joinmap', 'onemap', 'rqtl', and 'genomic' are currently supported.\n"
 	      << "  m: specify a minimum stack depth required before exporting a locus in a particular individual.\n"
 	      << "  s: output a file to import results into an SQL database.\n"
 	      << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"

@@ -122,6 +122,7 @@ int     bootstrap_fst_approximate_dist(vector<double> &, vector<int>  &, double 
 int     kernel_smoothed_popstats(map<int, CLocus *> &, PopMap<CLocus> *, PopSum<CLocus> *, int);
 int     bootstrap_popstats(vector<double> &, vector<double> &, vector<SumStat *> &, int, int, double *, SumStat *); 
 int     bootstrap_popstats_approximate_dist(vector<double> &, vector<double> &, vector<int>  &, double *, int *, int, map<int, vector<double> > &, map<int, vector<double> > &);
+double  bootstrap_pval(double, vector<double> &);
 double  bootstrap_approximate_pval(int, double, map<int, vector<double> > &);
 double *calculate_weights(void);
 

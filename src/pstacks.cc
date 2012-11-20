@@ -70,6 +70,7 @@ int main (int argc, char* argv[]) {
 	cerr << "Bounded; lower epsilon bound: " << bound_low << "; upper bound: " << bound_high << "\n";
 	break;
     }
+    cerr << "Alpha significance level for model: " << alpha << "\n";
 
     //
     // Set limits to call het or homozygote according to chi-square distribution with one 
@@ -275,8 +276,12 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
 	    // in the locus (Ns), such that haplotypes can't be consistently read
 	    // due to the presence of the Ns in the reads.
 	    //
-	    if (mtag->snps.size() > 0 && mtag->alleles.empty())
-		mtag->blacklisted = 1;
+ 	    if (mtag->alleles.empty())
+		for (uint j = 0; j < mtag->snps.size(); j++)
+		    if (mtag->snps[j]->type == snp_type_het) {
+			mtag->blacklisted = 1;
+			break;
+		    }
 	}
     }
 
@@ -644,6 +649,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"min_cov",      required_argument, NULL, 'm'},
 	    {"num_threads",  required_argument, NULL, 'p'},
 	    {"bc_err_freq",  required_argument, NULL, 'e'},
+	    {"model_type",   required_argument, NULL, 'T'},
 	    {"bound_low",    required_argument, NULL, 'L'},
 	    {"bound_high",   required_argument, NULL, 'U'},
 	    {"alpha",        required_argument, NULL, 'A'},
@@ -653,7 +659,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvOL:U:f:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvOT:A:L:U:f:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -698,6 +704,17 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'e':
 	    barcode_err_freq = atof(optarg);
 	    break;
+     	case 'T':
+            if (strcmp(optarg, "snp") == 0) {
+                model_type = snp;
+            } else if (strcmp(optarg, "fixed") == 0) {
+                model_type = fixed;
+            } else if (strcmp(optarg, "bounded") == 0) {
+                model_type = bounded;
+            } else {
+                cerr << "Unknown model type specified '" << optarg << "'\n";
+                help();
+            }
 	case 'L':
 	    bound_low  = atof(optarg);
 	    break;
