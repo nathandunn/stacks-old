@@ -114,7 +114,7 @@ int open_files(vector<pair<string, string> > &files,
                 rem_fhs[files[i].first]  = fh;
                 rem_fhs[files[i].second] = fh;
 
-		if (fh->fail()) {
+ 		if (rem_fhs[files[i].first]->fail()) {
 		    cerr << "Error opening remainder output file '" << path << "'\n";
 		    exit(1);
 		}

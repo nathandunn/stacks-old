@@ -1,5 +1,8 @@
 Stacks 1.0
 ----------
+	Bugfix: Remainder reads weren't being written properly as the file handles weren't properly closed.
+	Bugfix: Processing paired reads with process_radtags/process_shortreads was not functioning correctly,
+	barcode was not being transferred properly from P1 to P2 read. Regression introduce Aug 21, 2012.
 	Feature: added support for OneMap CP map export in genotypes.
 	Bugfix: Fixed some bugs in pstacks/ustacks command line processing involving --alpha and --model_type.
 	Bugfix: several bugs in the exact and approximate bootstrap algorithms were corrected. These algorithms

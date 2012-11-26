@@ -534,6 +534,13 @@ denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches
     r: path to a FASTQ/FASTA file containing progeny sequences from a mapping cross.
     s: path to a Bowtie/SAM file contiaining an individual sample from a population.
     o: path to write pipeline output files.
+    O: if analyzing one or more populations, specify a pOpulation map.
+    T: specify the number of threads to execute.
+    e: executable path, location of pipeline programs.
+    d: perform a dry run. Do not actually execute any programs, just print what would be executed.
+    h: display this help message.
+
+    Stack assembly options:
     m: specify a minimum number of identical, raw reads required to create a stack.
     P: specify a minimum number of identical, raw reads required to create a stack in 'progeny' individuals.
     M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
@@ -541,17 +548,14 @@ denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
     t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
     H: disable calling haplotypes from secondary reads.
-    T: specify the number of threads to execute.
-    O: if analyzing one or more populations, specify a pOpulation map
-    B: specify a database to load data into.
+
+    Database options:
     b: batch ID representing this dataset.
+    B: specify a database to load data into.
     D: batch description
     a: batch run date, yyyy-mm-dd
     S: disable recording SQL data in the database.
     i: starting sample_id, this is determined automatically if database interaction is enabled.
-    e: executable path, location of pipeline programs.
-    d: perform a dry run. Do not actually execute any programs, just print what would be executed.
-    h: display this help message.
 
     SNP Model Options (these options are passed on to ustacks):
     --bound_low: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).

@@ -4071,7 +4071,7 @@ void help() {
 	      << "    f: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'.\n"
 	      << "    --p_value_cutoff [num]: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n\n"
 	      << "  Kernel-smoothing algorithm:\n" 
-	      << "    k: enable kernel-smoothed H, Pi, and Fst calculations.\n"
+	      << "    k: enable kernel-smoothed Pi, Fis, and Fst calculations.\n"
 	      << "    --window_size [num]: distance over which to average values (sigma, default 150Kb)\n\n"
 	      << "  Bootstrap Resampling:\n" 
 	      << "    --bootstrap [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"

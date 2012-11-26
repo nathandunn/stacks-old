@@ -128,8 +128,10 @@ int main (int argc, char* argv[]) {
 
     cerr << "Closing files, flushing buffers...\n";
     close_file_handles(pair_1_fhs);
-    if (paired)
+    if (paired) {
+	close_file_handles(rem_fhs);
 	close_file_handles(pair_2_fhs);
+    }
 
     print_results(argc, argv, barcodes, counters, barcode_log);
 
@@ -234,8 +236,6 @@ int process_paired_reads(string prefix_1,
 
     if (barcode_size == 0)
 	strncpy(r_2->barcode, prefix_2.c_str(), id_len);
-    else
-	strcpy(r_2->barcode, r_1->barcode);
 
     long i = 1;
 
@@ -245,6 +245,9 @@ int process_paired_reads(string prefix_1,
 	parse_input_record(s_1, r_1);
 	parse_input_record(s_2, r_2);
 	counter["total"] += 2;
+
+	if (barcode_size > 0)
+	    strcpy(r_2->barcode, r_1->barcode);
 
 	process_singlet(pair_1_fhs, r_1, barcode_log, counter, false);
 
@@ -256,8 +259,8 @@ int process_paired_reads(string prefix_1,
 	}
 
 	if (r_1->retain && r_2->retain) {
-	    out_file_type == fastq ? 
-		write_fastq(pair_1_fhs, r_1, true, overhang) : 
+	    out_file_type == fastq ?
+		write_fastq(pair_1_fhs, r_1, true, overhang) :
 		write_fasta(pair_1_fhs, r_1, true, overhang);
             out_file_type == fastq ?
                 write_fastq(pair_2_fhs, r_2, false, overhang) :
@@ -468,7 +471,9 @@ process_singlet(map<string, ofstream *> &fhs, Read *href,
 	}
     }
 
-    // Drop this sequence if it has any uncalled nucleotides
+    //
+    // Drop this sequence if it has any uncalled nucleotides.
+    //
     if (clean) {
 	for (char *p = href->seq; *p != '\0'; p++)
 	    if (*p == '.' || *p == 'N') {
@@ -478,8 +483,10 @@ process_singlet(map<string, ofstream *> &fhs, Read *href,
 	    }
     }
 
-    // Drop this sequence if it has low quality scores
-    if(quality && !check_quality_scores(href, paired_end)) {
+    //
+    // Drop this sequence if it has low quality scores.
+    //
+    if (quality && !check_quality_scores(href, paired_end)) {
     	counter["low_quality"]++;
     	href->retain = 0;
     	return 0;

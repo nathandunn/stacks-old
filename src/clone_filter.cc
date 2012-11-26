@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2012, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -88,7 +88,8 @@ int main (int argc, char* argv[]) {
     }
     cerr << path << "\n";
 
-    CloneHash clone_map;
+    CloneHash      clone_map;
+    vector<char *> clone_map_keys;
 
     //
     // Read in the first record, initializing the Seq object s. Then 
@@ -115,15 +116,27 @@ int main (int argc, char* argv[]) {
 
 	exists = clone_map.count(s_1->seq) == 0 ? false : true;
 
+	// if (exists) {
+	//     hash_key = s_1->seq;
+	//     clone_map[hash_key].pairs[s_2->seq]++;
+	// } else {
+	//     hash_key = new char [seq_len + 1];
+	//     strcpy(hash_key, s_1->seq);
+	//     clone_map_keys.push_back(hash_key);
+
+	//     clone_map[hash_key].id = s_1->id;
+	//     clone_map[hash_key].pairs[s_2->seq] = 1;
+	// }
+
 	if (exists) {
 	    hash_key = s_1->seq;
-	    clone_map[hash_key].pairs[s_2->seq]++;
 	} else {
 	    hash_key = new char [seq_len + 1];
 	    strcpy(hash_key, s_1->seq);
-	    clone_map[hash_key].id = s_1->id;
-	    clone_map[hash_key].pairs[s_2->seq] = 1;
+	    clone_map_keys.push_back(hash_key);
 	}
+
+	clone_map[hash_key][s_2->seq].push_back(Pair(s_1->id, s_2->id, s_1->qual, s_2->qual));
 
 	delete s_1;
 	delete s_2;
@@ -138,7 +151,7 @@ int main (int argc, char* argv[]) {
     delete fh_2;
 
     CloneHash::iterator it;
-    map<string, int>::iterator j;
+    map<string, vector<Pair> >::iterator j;
     uint k;
 
     cerr << "Writing filtered data...";
@@ -146,12 +159,25 @@ int main (int argc, char* argv[]) {
     for (it = clone_map.begin(); it != clone_map.end(); it++) {
 	k = 1;
 
-	for (j = it->second.pairs.begin(); j != it->second.pairs.end(); j++) {
+	for (j = it->second.begin(); j != it->second.end(); j++) {
 
-	    *ofh_1 << ">" << it->second.id << "|1\n"
-		   << it->first << "\n";
-	    *ofh_2 << ">" << it->second.id << "|2-" << k << "|" << j->second << "\n"
-		   << j->first << "\n";
+	    if (out_file_type == fasta) {
+		*ofh_1 << ">" << j->second[0].p1_id << "\n"
+		       << it->first << "\n";
+		*ofh_2 << ">" << j->second[0].p2_id << "\n"
+		       << j->first << "\n";
+
+	    } else if (out_file_type == fastq) {
+		*ofh_1 << "@" << j->second[0].p1_id << "\n"
+		       << it->first << "\n"
+		       << "+\n"
+		       << j->second[0].p1_qual << "\n";
+		*ofh_2 << "@" << j->second[0].p2_id << "\n"
+		       << j->first << "\n"
+		       << "+\n"
+		       << j->second[0].p2_qual << "\n";
+	    }
+
 	    k++;
 	    red_reads++;
 	}
@@ -159,12 +185,32 @@ int main (int argc, char* argv[]) {
 
     cerr << "done.\n";
 
+    cerr << "Freeing hash key memory...";
+    free_clone_hash(clone_map, clone_map_keys);
+    cerr << "done.\n";
+
     delete ofh_1;
     delete ofh_2;
 
     char buf[32];
-    sprintf(buf, "%0.2f%%", ((float) (tot_reads - red_reads) / (float) tot_reads) * 100);
+    sprintf(buf, "%0.2f%%", ((double) (tot_reads - red_reads) / (double) tot_reads) * 100);
     cerr << tot_reads << " pairs of reads input. " << red_reads << " pairs of reads output, " << buf << " clone reads.\n";
+
+    return 0;
+}
+
+int 
+free_clone_hash(CloneHash &clone_map, vector<char *> &clone_map_keys) 
+{
+    // for (uint i = 0; i < clone_map_keys.size(); i++) {
+    //     clone_map[clone_map_keys[i]].clear();
+    // }
+    // clone_map.clear();
+
+    for (uint i = 0; i < clone_map_keys.size(); i++) {
+	delete [] clone_map_keys[i];
+    }
+    clone_map_keys.clear();
 
     return 0;
 }
