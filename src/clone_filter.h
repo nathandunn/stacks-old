@@ -64,13 +64,24 @@ using __gnu_cxx::hash;
 
 typedef unsigned int uint;
 
-class Clone { 
+class Pair { 
 public:
-    string           id;
-    map<string, int> pairs;
+    string p1_id;
+    string p2_id;
+    string p1_qual;
+    string p2_qual;
+
+    Pair(string p1_id, string p2_id, string p1_qual, string p2_qual) {
+	this->p1_id   = p1_id;
+	this->p2_id   = p2_id;
+	this->p1_qual = p1_qual;
+	this->p2_qual = p2_qual;
+    }
 };
 
-typedef hash_map<char *, Clone, hash<const char *>, eqstr> CloneHash;
+typedef hash_map<char *, map<string, vector<Pair> >, hash<const char *>, eqstr> CloneHash;
+
+int free_clone_hash(CloneHash &, vector<char *> &);
 
 void help( void );
 void version( void );

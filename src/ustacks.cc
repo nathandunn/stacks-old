@@ -1834,10 +1834,6 @@ int parse_command_line(int argc, char* argv[]) {
      	case 't':
             if (strcmp(optarg, "tsv") == 0)
                 in_file_type = tsv;
-            else if (strcmp(optarg, "bowtie") == 0)
-                in_file_type = bowtie;
-            else if (strcmp(optarg, "sam") == 0)
-                in_file_type = sam;
             else if (strcmp(optarg, "fasta") == 0)
                 in_file_type = fasta;
             else if (strcmp(optarg, "fastq") == 0)
@@ -1982,7 +1978,7 @@ void version() {
 void help() {
     std::cerr << "ustacks " << VERSION << "\n"
               << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-m min_cov] [-M max_dist] [-p num_threads] [-R] [-H] [-h]" << "\n"
-	      << "  t: input file Type. Supported types: fasta, fastq, bowtie, sam, tsv.\n"
+	      << "  t: input file Type. Supported types: fasta or fastq.\n"
               << "  f: input file path.\n"
 	      << "  o: output path to write results." << "\n"
 	      << "  i: SQL ID to insert into the output to identify this sample." << "\n"

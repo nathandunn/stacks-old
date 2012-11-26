@@ -240,6 +240,9 @@ int process_paired_reads(string prefix_1,
 	parse_input_record(s_2, r_2);
 	counter["total"] += 2;
 
+	if (barcode_size > 0)
+	    strcpy(r_2->barcode, r_1->barcode);
+
 	process_singlet(pair_1_fhs, r_1, barcode_log, counter, false);
 	process_singlet(pair_2_fhs, r_2, barcode_log, counter, true);
 
@@ -460,7 +463,7 @@ int process_singlet(map<string, ofstream *> &fhs, Read *href,
     }
 
     // Drop this sequence if it has low quality scores
-    if(quality) {
+    if (quality) {
 	int res = check_quality_scores(href, paired_end);
 	if (res == 0) {
 	    counter["low_quality"]++;
