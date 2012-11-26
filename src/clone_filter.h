@@ -77,6 +77,10 @@ public:
 	this->p1_qual = p1_qual;
 	this->p2_qual = p2_qual;
     }
+    Pair(string p1_id, string p2_id) {
+	this->p1_id   = p1_id;
+	this->p2_id   = p2_id;
+    }
 };
 
 typedef hash_map<char *, map<string, vector<Pair> >, hash<const char *>, eqstr> CloneHash;
