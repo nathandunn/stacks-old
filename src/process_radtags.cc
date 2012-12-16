@@ -680,6 +680,8 @@ int print_results(int argc, char **argv, vector<string> &barcodes, map<string, m
 	<< "Retained Reads\t";
     if (filter_illumina)
 	log << "Illumina Filtered\t";
+    if (filter_adapter)
+	log << "Adapter Seq" << "\t";
     log << "Low Quality\t"
 	<< "Ambiguous Barcodes\t"
 	<< "Ambiguous RAD-Tag\t"
@@ -691,6 +693,8 @@ int print_results(int argc, char **argv, vector<string> &barcodes, map<string, m
 	    << it->second["retained"]    << "\t";
 	if (filter_illumina)
 	    log << it->second["ill_filtered"] << "\t";
+	if (filter_adapter)
+	    log << it->second["adapter"] << "\t";
 	log << it->second["low_quality"] << "\t"
 	    << it->second["ambiguous"]   << "\t"
 	    << it->second["noradtag"]    << "\t"
@@ -701,6 +705,7 @@ int print_results(int argc, char **argv, vector<string> &barcodes, map<string, m
     map<string, long> c;
     c["total"]        = 0;
     c["low_quality"]  = 0;
+    c["adapter"]      = 0;
     c["ill_filtered"] = 0;
     c["ambiguous"]    = 0;
     c["noradtag"]     = 0;
@@ -713,6 +718,7 @@ int print_results(int argc, char **argv, vector<string> &barcodes, map<string, m
 	c["total"]        += it->second["total"];
 	c["ill_filtered"] += it->second["ill_filtered"];
 	c["low_quality"]  += it->second["low_quality"];
+	c["adapter"]      += it->second["adapter"];
 	c["ambiguous"]    += it->second["ambiguous"];
 	c["orphaned"]     += it->second["orphaned"];
 	c["noradtag"]     += it->second["noradtag"];
@@ -722,6 +728,8 @@ int print_results(int argc, char **argv, vector<string> &barcodes, map<string, m
     cerr << c["total"] << " total sequences;\n";
     if (filter_illumina)
 	cerr << "  " << c["ill_filtered"] << " failed Illumina filtered reads;\n";
+    if (filter_adapter)
+	cerr << "  " << c["adapter"] << " reads contained adapter sequence;\n";
     cerr << "  " << c["ambiguous"]   << " ambiguous barcode drops;\n"
 	 << "  " << c["low_quality"] << " low quality read drops;\n"
 	 << "  " << c["noradtag"]    << " ambiguous RAD-Tag drops;\n"
@@ -732,6 +740,8 @@ int print_results(int argc, char **argv, vector<string> &barcodes, map<string, m
 	 << "Total Sequences\t"      << c["total"]       << "\n";
     if (filter_illumina)
 	log << "Failed Illumina filtered reads\t" << c["ill_filtered"] << "\n";
+    if (filter_adapter)
+	log << "Reads containing adapter sequence\t" << c["adapter"] << "\n";
     log << "Ambiguous Barcodes\t"   << c["ambiguous"]   << "\n"
 	<< "Low Quality\t"          << c["low_quality"] << "\n"
 	<< "Ambiguous RAD-Tag\t"    << c["noradtag"]    << "\n"
@@ -824,13 +834,16 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"window_size",  required_argument, NULL, 'w'},
 	    {"score_limit",  required_argument, NULL, 's'},
 	    {"encoding",     required_argument, NULL, 'E'},
+	    {"adapter_1",    required_argument, NULL, 'A'},
+	    {"adapter_2",    required_argument, NULL, 'G'},
+	    {"adapter_mm",   required_argument, NULL, 'T'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvRFIcqrDPmB:i:y:f:o:t:e:b:1:2:p:s:w:E:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvRFIcqrDPmB:i:y:f:o:t:e:b:1:2:p:s:w:E:A:G:T:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -885,7 +898,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    paired = true;
 	    break;
 	case 'B':
-	    barcode_dist = atoi(optarg);
+	    barcode_dist = is_integer(optarg);
 	    break;
 	case 'o':
 	    out_path = optarg;
@@ -900,7 +913,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    recover = true;
 	    break;
 	case 't':
-	    truncate_seq = atoi(optarg);
+	    truncate_seq = is_integer(optarg);
 	    break;
 	case 'e':
 	    enz = optarg;
@@ -923,11 +936,24 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'I':
 	    ill_barcode = true;
 	    break;
+     	case 'A':
+	    adapter_1 = new char[strlen(optarg) + 1];
+	    strcpy(adapter_1, optarg);
+	    filter_adapter = true;
+	    break;
+     	case 'G':
+	    adapter_2 = new char[strlen(optarg) + 1];
+	    strcpy(adapter_2, optarg);
+	    filter_adapter = true;
+	    break;
+     	case 'T':
+	    distance = is_integer(optarg);
+	    break;
  	case 'w':
-	    win_size = atof(optarg);
+	    win_size = is_double(optarg);
 	    break;
 	case 's':
-	    score_limit = atoi(optarg);
+	    score_limit = is_integer(optarg);
 	    break;
         case 'v':
             version();
@@ -1052,6 +1078,10 @@ void help() {
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
 	      << "  h: display this help messsage." << "\n\n"
+	      << "  Adapter options:\n"
+	      << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the first read for filtering.\n"
+	      << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
+	      << "      --adapter_mm <mismatches>: number of mismatches allowed in the adapter sequence.\n\n"
 	      << "  Output options:\n"
 	      << "    --merge: if no barcodes are specified, merge all input files into a single output file.\n\n"
 	      << "  Advanced options:\n"
