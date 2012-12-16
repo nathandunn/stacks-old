@@ -57,8 +57,8 @@ using __gnu_cxx::hash;
 
 #include "constants.h" 
 #include "clean.h"
-#include "kmers.h"
 #include "file_io.h"
+#include "utils.h"
 #include "Bustard.h"   // Reading input files in Tab-separated Bustard format
 #include "Fastq.h"     // Reading input files in FASTQ format
 
@@ -72,7 +72,7 @@ int  process_paired_reads(string, string,
 			  map<string, long> &, map<string, map<string, long> > &);
 int  process_singlet(map<string, ofstream *> &, Read *, map<string, map<string, long> > &, map<string, long> &, bool);
 int  correct_barcode(map<string, ofstream *> &, Read *, map<string, long> &, map<string, map<string, long> > &);
-int  check_quality_scores(Read *, bool);
+
 int  dist(const char *, char *);
 int  print_results(int, char **, vector<string> &, map<string, map<string, long> > &, map<string, map<string, long> > &);
 int  compare_barcodes(pair<string, int>, pair<string, int>);

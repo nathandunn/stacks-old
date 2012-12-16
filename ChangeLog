@@ -1,7 +1,16 @@
 Stacks 1.0
 ----------
+	Feature: process_shortreads and process_radtags can now filter for adapter sequence in raw data, trimming 
+	(process_shortreads) or discarding (process_shortreads/process_radtags) it. Mismatches to the adapter 
+	sequence are allowed to accomodate for sequencing error.
+	Bugfix: added --merge flag to process_shortreads/process_radtags to handle regression where unbarcoded
+	data should be merged together into single output files.
+	Bugfix: code in cstacks to characterize differentially fixed SNPs was only running with -n > 0, but
+	should also run by default if -g is specified.
+	Feature: made automated correction thresholds for the genotypes program accessible from the command
+	line, including --min_hom_seqs, --min_het_seqs, and --max_het_seqs options.
 	Feature: refactored clone_filter to be more functional. Now can output sequences in FASTA or FASTQ
-	(FASTA will save memory). Keeps sequence headers intact, can capture discarded reads, and prints 
+	(FASTA will save memory). Keeps sequence headers intact, can capture discarded reads, and prints
 	a distribution of the number of cloned read pairs.
 	Bugfix: Remainder reads weren't being written properly as the file handles weren't properly closed.
 	Bugfix: Processing paired reads with process_radtags/process_shortreads was not functioning correctly,

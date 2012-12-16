@@ -53,6 +53,30 @@ int is_integer(char *str) {
     return (int) val;
 }
 
+double is_double(char *str) {
+    //
+    // Adapted from the strtol manpage.
+    //
+    char *endptr;
+
+    // To distinguish success/failure after call
+    errno = 0;
+    long val = strtod(str, &endptr);
+
+    //
+    // Check for various possible errors
+    //
+    if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
+	|| (errno != 0 && val == 0)) {
+	return -1;
+    }
+
+    if (endptr == str || *endptr != '\0')
+	return -1;
+
+    return val;
+}
+
 double factorial(double n) {
     double fact = 1;
 

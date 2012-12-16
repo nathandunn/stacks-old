@@ -532,7 +532,7 @@ sub usage {
 denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-T num_threads] [-O popmap] [-B db -b batch_id -D desc -a yyyy-mm-dd] [-S -i num] [-e path] [-d] [-h]
     p: path to a FASTQ/FASTA file containing parent sequences from a mapping cross.
     r: path to a FASTQ/FASTA file containing progeny sequences from a mapping cross.
-    s: path to a Bowtie/SAM file contiaining an individual sample from a population.
+    s: path to a FASTQ/FASTA file contiaining an individual sample from a population.
     o: path to write pipeline output files.
     O: if analyzing one or more populations, specify a pOpulation map.
     T: specify the number of threads to execute.

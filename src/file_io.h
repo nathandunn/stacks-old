@@ -55,6 +55,7 @@ extern file_type in_file_type;
 extern file_type out_file_type;
 extern bool      paired;
 extern bool      interleave;
+extern bool      merge;
 extern string    out_path;
 extern string    in_file;
 extern string    in_file_p1;

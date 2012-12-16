@@ -265,7 +265,7 @@ int merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<
         // If mismatches are allowed between query and catalog tags, identify the 
         // mismatches and convert them into SNP objects to be merged into the catalog tag.
         //
-        if (ctag_dist > 0 && !characterize_mismatch_snps(ctag, qtag))
+        if ((ctag_dist > 0 || search_type == genomic_loc) && !characterize_mismatch_snps(ctag, qtag))
             cerr 
                 << "  Error characterizing mismatch SNPs " 
                 << sample_file.second << ", tag " << qtag->id 

@@ -240,9 +240,24 @@ int parse_input_record(Seq *s, Read *r) {
 	r->machine[id_len] = '\0';
     }
 
-    strncpy(r->seq,     s->seq,  r->len); 
+    r->len = strlen(s->seq);
+
+    //
+    // Resize the sequence/phred buffers if necessary.
+    //
+    if (r->len > r->size) {
+	delete [] r->seq;
+	delete [] r->phred;
+	delete [] r->int_scores;
+	r->seq   = new char[r->len + 1];
+	r->phred = new char[r->len + 1];
+	r->int_scores = new int[r->len];
+	r->size = r->len + 1;
+    }
+
+    strncpy(r->seq,   s->seq,  r->len); 
     r->seq[r->len]   = '\0';
-    strncpy(r->phred,   s->qual, r->len);
+    strncpy(r->phred, s->qual, r->len);
     r->phred[r->len] = '\0';
 
     if (barcode_size > 0 && ill_barcode == false) {
@@ -431,4 +446,216 @@ int reverse_qual(char *qual, bool barcode, bool overhang) {
     delete [] com;
 
     return 0;
+}
+
+//
+// Functions for quality filtering based on phred scores.
+//
+int 
+check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit, bool paired_end) 
+{
+    //
+    // Phred quality scores are discussed here:
+    //  http://en.wikipedia.org/wiki/FASTQ_format
+    //
+    // Illumina 1.3+ encodes phred scores between ASCII values 64 (0 quality) and 104 (40 quality)
+    //
+    //   @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefgh
+    //   |         |         |         |         |
+    //  64        74        84        94       104
+    //   0        10(90%)   20(99%)   30(99.9%) 40(99.99%)
+    //
+    //
+    // Drop sequence if the average phred quality score drops below a threshold within a sliding window.
+    //
+
+    //
+    // Convert the encoded quality scores to their integer values
+    //
+    for (uint j = 0; j < href->len; j++)
+        href->int_scores[j] = href->phred[j] - qual_offset;
+
+    // for (int j = barcode_size; j <= href->stop_pos; j++) {
+    // 	double mean = 0;
+    // 	int    stop = j + href->win_len;
+
+    // 	for (int k = j; k < stop; k++)
+    // 	    mean += href->int_scores[k];
+
+    // 	mean = mean / href->win_len;
+
+    // 	if (mean < score_limit) {
+    // 	    href->retain = 0;
+    // 	    return 0;
+    // 	}
+    // }
+
+    int offset;
+    if (paired_end == true || barcode_size == 0)
+	offset = 0;
+    else
+	offset = barcode_size - 1;
+    double mean        = 0.0;
+    double working_sum = 0.0;
+    int *p, *q, j;
+    //
+    // Populate the sliding window.
+    //
+    for (j = offset; j < href->win_len + offset; j++)
+    	working_sum += href->int_scores[j];
+
+    //
+    // Set pointers to one position before the first element in the window, and to the last element in the window.
+    //
+    p = href->int_scores + offset;
+    q = p + (int) href->win_len;
+    j = offset + 1;
+    do {
+    	//
+    	// Add the score from the front edge of the window, subtract the score
+    	// from the back edge of the window.
+    	//
+    	working_sum -= (double) *p;
+    	working_sum += (double) *q;
+
+    	mean = working_sum / href->win_len;
+
+    	if (mean < score_limit) {
+
+	    if (j < len_limit) {
+		return 0;
+	    } else {
+		href->len      = j + 1;
+		href->seq[j]   = '\0';
+		href->phred[j] = '\0';
+		return -1;
+	    }
+    	}
+
+    	p++;
+    	q++;
+    	j++;
+    } while (j <= href->stop_pos);
+
+    return 1;
+}
+
+//
+// Functions for filtering adapter sequence
+//
+int
+init_adapter_seq(int kmer_size, char *adapter, int &adp_len, AdapterHash &kmers, vector<char *> &keys)
+{
+    char *kmer;
+    bool  exists;
+
+    adp_len = strlen(adapter);
+
+    int   num_kmers = adp_len - kmer_size + 1;
+    char *p = adapter;
+    for (int i = 0; i < num_kmers; i++) {
+	kmer = new char[kmer_size + 1];
+	kmer[kmer_size] = '\0';
+	strncpy(kmer, p, kmer_size);
+
+	exists = kmers.count(kmer) == 0 ? false : true;
+	kmers[kmer].push_back(i);
+	if (exists)
+	    delete [] kmer;
+	else
+	    keys.push_back(kmer);
+	p++;
+    }
+
+    return 0;
+}
+
+int
+free_adapter_seq(vector<char *> &keys)
+{
+    for (uint i = 0; i < keys.size(); i++)
+	delete [] keys[i];
+    keys.clear();
+
+    return 0;
+}
+
+int 
+filter_adapter_seq(Read *href, char *adapter, int adp_len, AdapterHash &adp_kmers,
+		   int kmer_size, int distance, int len_limit) 
+{
+    vector<pair<int, int> > hits;
+    int   num_kmers = strlen(href->seq) - kmer_size + 1;
+    char *p = href->seq;
+
+    char *kmer = new char[kmer_size + 1];
+    kmer[kmer_size] = '\0';
+
+    //
+    // Identify matching kmers and their locations of occurance.
+    //
+    // cerr << "Num kmers: " << num_kmers << "; P: " << p << "\n";
+    for (int i = 0; i < num_kmers; i++) {
+	strncpy(kmer, p, kmer_size);
+
+	if (adp_kmers.count(kmer) > 0) {
+	    for (uint j = 0; j < adp_kmers[kmer].size(); j++) {
+		//cerr << "Kmer hit " << kmer << " at query position " << i << " at hit position " << adp_kmers[kmer][j] << "\n";
+		hits.push_back(make_pair(i, adp_kmers[kmer][j]));
+	    }
+	}
+	p++;
+    }
+
+    delete [] kmer;
+
+    //
+    // Scan backwards and then forwards and count the number of mismatches.
+    //
+    int mismatches, i, j, start_pos;
+
+    for (uint k = 0; k < hits.size(); k++) {
+	mismatches = 0;
+	i = hits[k].first;  // Position in query sequence
+	j = hits[k].second; // Position in adapter hit
+
+	// cerr << "Starting comparison at i: "<< i << "; j: " << j << "\n";
+
+	while (i >= 0 && j >= 0) {
+	    if (href->seq[i] != adapter[j])
+		mismatches++;
+	    i--;
+	    j--;
+	}
+
+	if (mismatches > distance) continue;
+
+	start_pos = i + 1;
+	i = hits[k].first;
+	j = hits[k].second;
+
+	while (i < (int) href->len && j < adp_len && mismatches <= distance) {
+	    if (href->seq[i] != adapter[j])
+		mismatches++;
+	    i++;
+	    j++;
+	}
+
+	// cerr << "Starting position: " << start_pos << "; Query end (i): " << i << "; adapter end (j): " << j 
+	//      << "; number of mismatches: " << mismatches << "; Seq Len: " << href->len << "\n";
+
+	if (mismatches <= distance && (i == (int) href->len || j == adp_len)) {
+	    // cerr << "  Trimming or dropping.\n";
+	    if (start_pos < len_limit) {
+		return 0;
+	    } else {
+		href->len = start_pos + 1;
+		href->seq[start_pos]   = '\0';
+		href->phred[start_pos] = '\0';
+		return -1;
+	    }
+	}
+    }
+
+    return 1;
 }
