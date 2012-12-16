@@ -2148,27 +2148,30 @@ int parse_command_line(int argc, char* argv[]) {
      
     while (1) {
 	static struct option long_options[] = {
-	    {"help",        no_argument,       NULL, 'h'},
-            {"version",     no_argument,       NULL, 'v'},
-            {"corr",        no_argument,       NULL, 'c'},
-            {"sql",         no_argument,       NULL, 's'},
-	    {"num_threads", required_argument, NULL, 'p'},
-	    {"batch_id",    required_argument, NULL, 'b'},
-	    {"in_path",     required_argument, NULL, 'P'},
-	    {"map_type",    required_argument, NULL, 't'},
-	    {"out_type",    required_argument, NULL, 'o'},
-	    {"progeny",     required_argument, NULL, 'r'},
-	    {"min_depth",   required_argument, NULL, 'm'},
-	    {"renz",        required_argument, NULL, 'e'},
-	    {"whitelist",   required_argument, NULL, 'W'},
-	    {"blacklist",   required_argument, NULL, 'B'},
+	    {"help",         no_argument,       NULL, 'h'},
+            {"version",      no_argument,       NULL, 'v'},
+            {"corr",         no_argument,       NULL, 'c'},
+            {"sql",          no_argument,       NULL, 's'},
+	    {"num_threads",  required_argument, NULL, 'p'},
+	    {"batch_id",     required_argument, NULL, 'b'},
+	    {"in_path",      required_argument, NULL, 'P'},
+	    {"map_type",     required_argument, NULL, 't'},
+	    {"out_type",     required_argument, NULL, 'o'},
+	    {"progeny",      required_argument, NULL, 'r'},
+	    {"min_depth",    required_argument, NULL, 'm'},
+	    {"min_hom_seqs", required_argument, NULL, 'H'},
+	    {"min_het_seqs", required_argument, NULL, 'N'},
+	    {"max_het_seqs", required_argument, NULL, 'X'},
+	    {"renz",         required_argument, NULL, 'e'},
+	    {"whitelist",    required_argument, NULL, 'W'},
+	    {"blacklist",    required_argument, NULL, 'B'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:e:W:B:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:e:H:N:X:W:B:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -2231,7 +2234,16 @@ int parse_command_line(int argc, char* argv[]) {
 	    bl_file = optarg;
 	    break;
 	case 'm':
-	    min_stack_depth = atoi(optarg);
+	    min_stack_depth = is_integer(optarg);
+	    break;
+	case 'H':
+	    min_hom_seqs = is_integer(optarg);
+	    break;
+	case 'N':
+	    min_het_seqs = is_double(optarg);
+	    break;
+	case 'X':
+	    max_het_seqs = is_double(optarg);
 	    break;
 	case 'e':
 	    enz = optarg;
@@ -2309,7 +2321,11 @@ void help() {
 	      << "  W: specify a file containign Whitelisted markers to include in the export.\n"
 	      << "  e: restriction enzyme, required if generating 'genomic' output.\n"
 	      << "  v: print program version." << "\n"
-	      << "  h: display this help messsage." << "\n\n";
+	      << "  h: display this help messsage." << "\n\n"
+	      << "  Automated corrections options:\n"
+	      << "    --min_hom_seqs: minimum number of reads required at a stack to call a homozygous genotype (default 5).\n"
+	      << "    --min_het_seqs: below this minor allele frequency a stack is called a homozygote, above it (but below --max_het_seqs) it is called unknown (default 0.05).\n"
+	      << "    --max_het_seqs: minimum frequency of minor allele to call a heterozygote (default 0.1).\n";
 
     exit(0);
 }

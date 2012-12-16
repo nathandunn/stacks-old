@@ -34,7 +34,8 @@ using std::make_pair;
 
 #include "stacks.h"
 
-int is_integer(char *);
+int    is_integer(char *);
+double is_double(char *);
 
 double factorial(double);
 double reduced_factorial(double, double);

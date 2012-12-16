@@ -57,6 +57,7 @@ using __gnu_cxx::hash;
 
 #include "constants.h" 
 #include "clean.h"
+#include "utils.h"
 #include "kmers.h"
 #include "Bustard.h"   // Reading input files in Tab-separated Bustard format
 #include "Fasta.h"     // Reading input files in FASTA format
@@ -73,13 +74,24 @@ int  process_paired_reads(string, string, string, string, SeqKmerHash &, map<str
 int  print_results(map<string, map<string, long> > &);
 
 //
+// Functions to normalize read depth
+//
+int  normalize_reads(string, string, SeqKmerHash &, vector<char *> &, map<string, long> &);
+int  normalize_paired_reads(string, string, string, string, SeqKmerHash &, vector<char *> &, map<string, long> &);
+bool normalize_kmer_lookup(SeqKmerHash &, char *, char *, int, vector<char *> &);
+
+//
 // Functions for finding and removing reads with rare kmers
 //
-int  populate_kmers(vector<pair<string, string> > &, vector<pair<string, string> > &, SeqKmerHash &);
-int  write_rare_abundant_kmers(SeqKmerHash &);
-int  process_file_kmers(string, SeqKmerHash &);
+int  populate_kmers(vector<pair<string, string> > &, vector<pair<string, string> > &, SeqKmerHash &, vector<char *> &);
+int  process_file_kmers(string, SeqKmerHash &, vector<char *> &);
 int  generate_kmer_dist(SeqKmerHash &);
+int  calc_kmer_median(SeqKmerHash &, double &, double &);
 int  kmer_map_cmp(pair<char *, long>, pair<char *, long>);
-int  kmer_lookup(SeqKmerHash &, char *, char *, int, int *, int *);
+int  kmer_lookup(SeqKmerHash &, char *, char *, int, int &, int &);
+int  free_kmer_hash(SeqKmerHash &, vector<char *> &);
+
+int  read_kmer_freq(string, SeqKmerHash &, vector<char *> &);
+int  write_kmer_freq(string, SeqKmerHash &);
 
 #endif // __KMER_FILTER_H__

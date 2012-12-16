@@ -54,12 +54,6 @@ using std::pair;
 #include "Bustard.h"   // Reading input files in Tab-separated Bustard format
 #include "Fastq.h"     // Reading input files in FASTQ format
 
-struct eqstr {
-    bool operator()(const char* s1, const char* s2) const {
-	return strcmp(s1, s2) == 0;
-    }
-};
-
 void help( void );
 void version( void );
 int  parse_command_line(int, char **);

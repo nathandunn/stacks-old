@@ -39,10 +39,12 @@ process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/const
 
 process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h \
 	src/clean.h src/clean.cc src/file_io.h src/file_io.cc \
+	src/utils.h src/utils.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h
 
 kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h \
+	src/utils.h src/utils.cc \
 	src/clean.h src/clean.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h

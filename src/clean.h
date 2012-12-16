@@ -34,6 +34,7 @@ using std::cerr;
 using std::endl;
 
 #include "input.h"
+#include "kmers.h"
 
 enum fastqt {generic_fastq, illv1_fastq, illv2_fastq};
 
@@ -52,10 +53,13 @@ typedef struct read {
     int    *int_scores;
     bool    filter;
     int     retain;
+    unsigned int size;
     unsigned int len;
     double  win_len;
     double  stop_pos;
 } Read;
+
+typedef hash_map<const char *, vector<int>, hash<const char *>, eqstr> AdapterHash;
 
 extern int  barcode_size;
 extern bool ill_barcode;
@@ -71,5 +75,12 @@ int  write_fasta(ofstream *, Seq *);
 int  write_fasta(ofstream *, Seq *, string);
 int  rev_complement(char *, bool, bool);
 int  reverse_qual(char *, bool, bool);
+
+int  filter_adapter_seq(Read *, char *, int, AdapterHash &, int, int, int);
+int  init_adapter_seq(int, char *, int &, AdapterHash &, vector<char *> &);
+int  free_adapter_seq(vector<char *> &);
+
+int  check_quality_scores(Read *, int, int, int, bool);
+
 
 #endif // __CLEAN_H__

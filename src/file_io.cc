@@ -56,7 +56,7 @@ int open_files(vector<pair<string, string> > &files,
     // were submitted. In this case, we want to open output files
     // of the same name as input files, but in out_path.
     //
-    if (barcodes.size() == 0) {
+    if (barcodes.size() == 0 && merge == false) {
 
 	struct stat sb_1, sb_2;
 
@@ -119,6 +119,47 @@ int open_files(vector<pair<string, string> > &files,
 		    exit(1);
 		}
             }
+	}
+
+	return 0;
+
+    } else if (barcodes.size() == 0 && merge == true) {
+
+	path = out_path + "sample_unbarcoded" + suffix_1;
+	fh   = new ofstream(path.c_str(), ifstream::out);
+
+	if (fh->fail()) {
+	    cerr << "Error opening output file '" << path << "'\n";
+	    exit(1);
+	}
+
+	for (uint i = 0; i < files.size(); i++)
+            pair_1_fhs[files[i].first] = fh;
+
+	if (paired) {
+	    path = out_path + "sample_unbarcoded" + suffix_2;
+	    fh   = new ofstream(path.c_str(), ifstream::out);
+
+	    if (fh->fail()) {
+		cerr << "Error opening output file '" << path << "'\n";
+		exit(1);
+	    }
+
+	    for (uint i = 0; i < files.size(); i++)
+		pair_2_fhs[files[i].second] = fh;
+
+	    path = out_path + "sample_unbarcoded.rem" + suffix_2.substr(0,3);
+	    fh   = new ofstream(path.c_str(), ifstream::out);
+
+	    if (fh->fail()) {
+		cerr << "Error opening remainder output file '" << path << "'\n";
+		exit(1);
+	    }
+
+	    for (uint i = 0; i < files.size(); i++) {
+		rem_fhs[files[i].first]  = fh;
+		rem_fhs[files[i].second] = fh;
+	    }
 	}
 
 	return 0;

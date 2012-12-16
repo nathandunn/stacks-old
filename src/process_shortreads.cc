@@ -44,11 +44,15 @@ string in_path_1;
 string in_path_2;
 string out_path;
 string barcode_file;
+char  *adapter_1;
+char  *adapter_2;
+bool   filter_adapter  = false;
 bool   paired          = false;
 bool   clean           = false;
 bool   quality         = false;
 bool   recover         = false;
 bool   interleave      = false;
+bool   merge           = false;
 bool   discards        = false;
 bool   overhang        = true;
 bool   matepair        = false;
@@ -67,14 +71,39 @@ int    num_threads  = 1;
 //     score = encoded letter - 33; Sanger / Illumina version 1.6+
 int qual_offset  = 64;
 
+//
+// Kmer data for adapter filtering.
+//
+int kmer_size = 5;
+int distance  = 1;
+int adp_1_len = 0;
+int adp_2_len = 0;
+vector<char *> adp_1_keys, adp_2_keys;
+AdapterHash adp_1_kmers, adp_2_kmers;
 
 int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
-    cerr << "Using Phred+" << qual_offset << " encoding for quality scores.\n";
+    cerr << "Using Phred+" << qual_offset << " encoding for quality scores.\n"
+	 << "Reads trimmed shorter than " << len_limit << " nucleotides will be discarded.\n";
+    if (truncate_seq > 0)
+	cerr << "Reads will be truncated to " << truncate_seq << "bp\n";
     if (filter_illumina)
 	cerr << "Discarding reads marked as 'failed' by Illumina's chastity/purity filters.\n";
+
+    if (filter_adapter) {
+	cerr << "Filtering reads for adapter sequence:\n";
+	if (paired)
+	    cerr << "  " << adapter_1 << "\n"
+		 << "  " << adapter_2 << "\n";
+	else
+	    cerr << "  " << adapter_1 << "\n";
+	cerr << "    " << distance << " mismatches allowed to adapter sequence.\n";
+	init_adapter_seq(kmer_size, adapter_1, adp_1_len, adp_1_kmers, adp_1_keys);
+	if (paired)
+	    init_adapter_seq(kmer_size, adapter_2, adp_2_len, adp_2_kmers, adp_2_keys);
+    }
 
     vector<pair<string, string> > files;
     vector<string> barcodes;
@@ -93,6 +122,7 @@ int main (int argc, char* argv[]) {
 	counters[files[i].first]["ill_filtered"] = 0;
 	counters[files[i].first]["low_quality"]  = 0;
 	counters[files[i].first]["trimmed"]      = 0;
+	counters[files[i].first]["adapter"]      = 0;
 	counters[files[i].first]["ambiguous"]    = 0;
 	counters[files[i].first]["retained"]     = 0;
 	counters[files[i].first]["orphaned"]     = 0;
@@ -114,10 +144,13 @@ int main (int argc, char* argv[]) {
 	cerr 
 	     << "-" << counters[files[i].first]["ambiguous"]   << " ambiguous barcodes; "
 	     << "+" << counters[files[i].first]["recovered"]   << " recovered; "
-	     << "+" << counters[files[i].first]["trimmed"]     << " trimmed reads; "
 	     << "-" << counters[files[i].first]["low_quality"] << " low quality reads; "
-	     << counters[files[i].first]["orphaned"]    << " orphaned paired-ends; "
-	     << counters[files[i].first]["retained"] << " retained reads.\n";
+	     << counters[files[i].first]["retained"] << " retained reads.\n"
+	     << "  ";
+	if (filter_adapter)
+	    cerr << counters[files[i].first]["adapter"] << " reads with adapter sequence; ";
+	cerr << counters[files[i].first]["trimmed"]     << " trimmed reads; "
+	     << counters[files[i].first]["orphaned"]    << " orphaned paired-ends.\n";
     }
 
     cerr << "Closing files, flushing buffers...\n";
@@ -128,6 +161,12 @@ int main (int argc, char* argv[]) {
     }
 
     print_results(argc, argv, barcodes, counters, barcode_log);
+
+    if (filter_adapter) {
+	free_adapter_seq(adp_1_keys);
+	if (paired)
+	    free_adapter_seq(adp_2_keys);
+    }
 
     return 0;
 }
@@ -196,6 +235,7 @@ int process_paired_reads(string prefix_1,
     r_1->seq        = new char[buf_len + 1];
     r_1->phred      = new char[buf_len + 1];
     r_1->int_scores = new  int[buf_len];
+    r_1->size       = buf_len + 1;
     r_1->read       = 1;
 
     //
@@ -223,6 +263,7 @@ int process_paired_reads(string prefix_1,
     r_2->seq        = new char[buf_len + 1];
     r_2->phred      = new char[buf_len + 1];
     r_2->int_scores = new  int[buf_len];
+    r_2->size       = buf_len + 1;
     r_2->read       = 2;
     r_2->len        = r_1->len;
     r_2->win_len    = r_1->win_len;
@@ -359,6 +400,7 @@ int process_reads(string prefix,
     r->seq        = new char [buf_len + 1];
     r->phred      = new char [buf_len + 1];
     r->int_scores = new  int [buf_len];
+    r->size       = buf_len + 1;
     r->read       = 1;
 
     //
@@ -416,11 +458,11 @@ int process_reads(string prefix,
     return 0;
 }
 
-inline
-int process_singlet(map<string, ofstream *> &fhs, Read *href, 
-		    map<string, map<string, long> > &barcode_log, map<string, long> &counter, 
-		    bool paired_end) {
-
+inline int 
+process_singlet(map<string, ofstream *> &fhs, Read *href, 
+		map<string, map<string, long> > &barcode_log, map<string, long> &counter, 
+		bool paired_end)
+{
     if (filter_illumina && href->filter) {
 	counter["ill_filtered"]++;
 	href->retain = 0;
@@ -452,7 +494,9 @@ int process_singlet(map<string, ofstream *> &fhs, Read *href,
     	}
     }
 
+    //
     // Drop this sequence if it has any uncalled nucleotides
+    //
     if (clean) {
 	for (char *p = href->seq; *p != '\0'; p++)
 	    if (*p == '.' || *p == 'N') {
@@ -462,18 +506,48 @@ int process_singlet(map<string, ofstream *> &fhs, Read *href,
 	    }
     }
 
-    // Drop this sequence if it has low quality scores
+    bool adapter_trim = false;
+    bool quality_trim = false;
+
+    //
+    // Drop or trim this sequence if it has low quality scores
+    //
     if (quality) {
-	int res = check_quality_scores(href, paired_end);
+	int res = check_quality_scores(href, qual_offset, score_limit, len_limit, paired_end);
 	if (res == 0) {
 	    counter["low_quality"]++;
 	    href->retain = 0;
 	    return 0;
 
 	} else if (res < 0) {
-	    counter["trimmed"]++;
+	    quality_trim = true;
 	}
     }
+
+    //
+    // Drop or trim this sequence if it contains adapter sequence.
+    //
+    if (filter_adapter) {
+	int res;
+	if (paired_end)
+	    res = filter_adapter_seq(href, adapter_2, adp_2_len, adp_2_kmers, 
+				     kmer_size, distance, len_limit);
+	else
+	    res = filter_adapter_seq(href, adapter_1, adp_1_len, adp_1_kmers, 
+				     kmer_size, distance, len_limit);
+	if (res == 0) {
+	    counter["adapter"]++;
+	    href->retain = 0;
+	    return 0;
+
+	} else if (res < 0) {
+	    counter["adapter"]++;
+	    adapter_trim = true;
+	}
+    }
+
+    if (adapter_trim || quality_trim)
+	counter["trimmed"]++;
 
     if (barcode_size > 0) barcode_log[href->barcode]["retained"]++;
     counter["retained"]++;
@@ -538,92 +612,12 @@ int dist(const char *res_enz, char *seq) {
     return dist;
 }
 
-int check_quality_scores(Read *href, bool paired_end) {
-    //
-    // Phred quality scores are discussed here:
-    //  http://en.wikipedia.org/wiki/FASTQ_format
-    //
-    // Illumina 1.3+ encodes phred scores between ASCII values 64 (0 quality) and 104 (40 quality)
-    //
-    //   @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefgh
-    //   |         |         |         |         |
-    //  64        74        84        94       104
-    //   0        10(90%)   20(99%)   30(99.9%) 40(99.99%)
-    //
-    //
-    // Drop sequence if the average phred quality score drops below a threshold within a sliding window.
-    //
-
-    //
-    // Convert the encoded quality scores to their integer values
-    //
-    for (uint j = 0; j < href->len; j++)
-        href->int_scores[j] = href->phred[j] - qual_offset;
-
-    // for (int j = barcode_size; j <= href->stop_pos; j++) {
-    // 	double mean = 0;
-    // 	int    stop = j + href->win_len;
-
-    // 	for (int k = j; k < stop; k++)
-    // 	    mean += href->int_scores[k];
-
-    // 	mean = mean / href->win_len;
-
-    // 	if (mean < score_limit) {
-    // 	    href->retain = 0;
-    // 	    return 0;
-    // 	}
-    // }
-
-    int offset;
-    offset = barcode_size > 0 ? barcode_size - 1 : 0;
-
-    double mean        = 0.0;
-    double working_sum = 0.0;
-    int *p, *q, j;
-    //
-    // Populate the sliding window.
-    //
-    for (j = offset; j < href->win_len + offset; j++)
-    	working_sum += href->int_scores[j];
-
-    //
-    // Set pointers to one position before the first element in the window, and to the last element in the window.
-    //
-    p = href->int_scores + offset;
-    q = p + (int) href->win_len;
-    j = offset + 1;
-    do {
-    	//
-    	// Add the score from the front edge of the window, subtract the score
-    	// from the back edge of the window.
-    	//
-    	working_sum -= (double) *p;
-    	working_sum += (double) *q;
-
-    	mean = working_sum / href->win_len;
-
-    	if (mean < score_limit) {
-
-	    if (j < len_limit) {
-		href->retain = 0;
-		return 0;
-	    } else {
-		href->seq[j]   = '\0';
-		href->phred[j] = '\0';
-		return -1;
-	    }
-    	}
-
-    	p++;
-    	q++;
-    	j++;
-    } while (j <= href->stop_pos);
-
-    return 1;
-}
-
-int print_results(int argc, char **argv, vector<string> &barcodes, map<string, map<string, long> > &counters, map<string, map<string, long> > &barcode_log) {
+int 
+print_results(int argc, char **argv, 
+	      vector<string> &barcodes, 
+	      map<string, map<string, long> > &counters, 
+	      map<string, map<string, long> > &barcode_log)
+{
     map<string, map<string, long> >::iterator it;
 
     string log_path = out_path + "process_shortreads.log";
@@ -656,6 +650,8 @@ int print_results(int argc, char **argv, vector<string> &barcodes, map<string, m
 	<< "Retained Reads\t";
     if (filter_illumina)
 	log << "Illumina Filtered\t";
+    if (filter_adapter)
+	log << "Adapter Seq" << "\t";
     log << "Low Quality\t"
 	<< "Ambiguous Barcodes\t"
 	<< "Trimmed Reads\t"
@@ -667,6 +663,8 @@ int print_results(int argc, char **argv, vector<string> &barcodes, map<string, m
 	    << it->second["retained"]    << "\t";
 	if (filter_illumina)
 	    log << it->second["ill_filtered"] << "\t";
+	if (filter_adapter)
+	    log << it->second["adapter"] << "\t";
 	log << it->second["low_quality"] << "\t"
 	    << it->second["ambiguous"]   << "\t"
 	    << it->second["trimmed"]    << "\t"
@@ -675,29 +673,33 @@ int print_results(int argc, char **argv, vector<string> &barcodes, map<string, m
     }
 
     map<string, long> c;
-    c["total"]       = 0;
-    c["low_quality"] = 0;
+    c["total"]        = 0;
+    c["low_quality"]  = 0;
+    c["adapter"]      = 0;
     c["ill_filtered"] = 0;
-    c["ambiguous"]   = 0;
-    c["trimmed"]     = 0;
-    c["orphaned"]    = 0;
+    c["ambiguous"]    = 0;
+    c["trimmed"]      = 0;
+    c["orphaned"]     = 0;
 
     //
     // Total up the individual counters
     //
     for (it = counters.begin(); it != counters.end(); it++) {
-	c["total"]       += it->second["total"];
+	c["total"]        += it->second["total"];
 	c["ill_filtered"] += it->second["ill_filtered"];
-	c["low_quality"] += it->second["low_quality"];
-	c["ambiguous"]   += it->second["ambiguous"];
-	c["trimmed"]     += it->second["trimmed"];
-	c["orphaned"]    += it->second["orphaned"];
-	c["retained"]    += it->second["retained"];
+	c["adapter"]      += it->second["adapter"];
+	c["low_quality"]  += it->second["low_quality"];
+	c["ambiguous"]    += it->second["ambiguous"];
+	c["trimmed"]      += it->second["trimmed"];
+	c["orphaned"]     += it->second["orphaned"];
+	c["retained"]     += it->second["retained"];
     }
 
     cerr << c["total"] << " total sequences;\n";
     if (filter_illumina)
 	cerr << "  " << c["ill_filtered"] << " failed Illumina filtered reads;\n";
+    if (filter_adapter)
+	cerr << "  " << c["adapter"] << " reads contained adapter sequence;\n";
     cerr << "  " << c["ambiguous"]   << " ambiguous barcode drops;\n"
 	 << "  " << c["low_quality"] << " low quality read drops;\n"
 	 << "  " << c["trimmed"]     << " trimmed reads;\n"
@@ -708,6 +710,8 @@ int print_results(int argc, char **argv, vector<string> &barcodes, map<string, m
 	<< "Total Sequences\t"      << c["total"]       << "\n";
     if (filter_illumina)
 	log << "Failed Illumina filtered reads\t" << c["ill_filtered"] << "\n";
+    if (filter_adapter)
+	log << "Reads containing adapter sequence\t" << c["adapter"] << "\n";
     log 
 	<< "Ambiguous Barcodes\t"   << c["ambiguous"]   << "\n"
 	<< "Low Quality\t"          << c["low_quality"] << "\n"
@@ -781,6 +785,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"recover",            no_argument, NULL, 'r'},
 	    {"discards",           no_argument, NULL, 'D'},
 	    {"paired",             no_argument, NULL, 'P'},
+	    {"merge",              no_argument, NULL, 'm'},
 	    {"mate-pair",          no_argument, NULL, 'M'},
 	    {"no_overhang",        no_argument, NULL, 'O'},
 	    {"filter_illumina",    no_argument, NULL, 'F'},
@@ -797,13 +802,17 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"window_size",  required_argument, NULL, 'w'},
 	    {"score_limit",  required_argument, NULL, 's'},
 	    {"encoding",     required_argument, NULL, 'E'},
+	    {"len_limit",    required_argument, NULL, 'L'},
+	    {"adapter_1",    required_argument, NULL, 'A'},
+	    {"adapter_2",    required_argument, NULL, 'B'},
+	    {"adapter_mm",   required_argument, NULL, 'T'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqrFIOPDi:y:f:o:t:b:1:2:p:s:w:E:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcqrFIOPmDi:y:f:o:t:b:1:2:p:s:w:E:L:A:B:T:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -856,6 +865,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'o':
 	    out_path = optarg;
 	    break;
+	case 'm':
+	    merge = true;
+	    break;
 	case 'M':
 	    matepair = true;
 	    break;
@@ -881,16 +893,32 @@ int parse_command_line(int argc, char* argv[]) {
 	    ill_barcode = true;
 	    break;
 	case 't':
-	    truncate_seq = atoi(optarg);
+	    truncate_seq = is_integer(optarg);
 	    break;
 	case 'b':
 	    barcode_file = optarg;
 	    break;
+     	case 'A':
+	    adapter_1 = new char[strlen(optarg) + 1];
+	    strcpy(adapter_1, optarg);
+	    filter_adapter = true;
+	    break;
+     	case 'B':
+	    adapter_2 = new char[strlen(optarg) + 1];
+	    strcpy(adapter_2, optarg);
+	    filter_adapter = true;
+	    break;
+     	case 'T':
+	    distance = is_integer(optarg);
+	    break;
+ 	case 'L':
+	    len_limit = is_integer(optarg);
+	    break;
  	case 'w':
-	    win_size = atof(optarg);
+	    win_size = is_double(optarg);
 	    break;
 	case 's':
-	    score_limit = atoi(optarg);
+	    score_limit = is_integer(optarg);
 	    break;
         case 'v':
             version();
@@ -939,8 +967,15 @@ int parse_command_line(int argc, char* argv[]) {
     if (out_path.at(out_path.length() - 1) != '/') 
 	out_path += "/";
 
-    if (barcode_file.length() == 0)
+    if (barcode_file.length() == 0) {
+	overhang = false;
 	cerr << "No barcodes specified, files will not be demultiplexed.\n";
+    }
+
+    if (barcode_file.length() > 0 && merge) {
+	cerr << "You may specify a set of barcodes, or that all files should be merged, not both.\n";
+	help();
+    }
 
     if (in_file_type == unknown)
 	in_file_type = ftype;
@@ -985,10 +1020,18 @@ void help() {
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
 	      << "  h: display this help messsage.\n\n"
-	      << "  --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
-	      << "  --illumina_barcodes: barcodes are not inline, but instead are part of Illumina's FASTQ header.\n"
-	      << "  --mate-pair: raw reads are circularized mate-pair data, first read will be reverse complemented.\n"
-	      << "  --no_overhang: data does not contain an overhang nucleotide between barcode and seqeunce.\n";
+	      << "  Adapter options:\n"
+	      << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the first read for filtering.\n"
+	      << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
+	      << "      --adapter_mm <mismatches>: number of mismatches allowed in the adapter sequence.\n\n"
+	      << "  Output options:\n"
+	      << "    --merge: if no barcodes are specified, merge all input files into a single output file (or single pair of files).\n\n"
+	      << "  Advanced options:\n"
+	      << "    --len_limit <limit>: when trimming sequences, specify the minimum length a sequence must be to keep it (default 31bp).\n"
+	      << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
+	      << "    --illumina_barcodes: barcodes are not inline, but instead are part of Illumina's FASTQ header.\n"
+	      << "    --mate-pair: raw reads are circularized mate-pair data, first read will be reverse complemented.\n"
+	      << "    --no_overhang: data does not contain an overhang nucleotide between barcode and seqeunce.\n";
 
     exit(0);
 }
