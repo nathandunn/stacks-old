@@ -60,6 +60,7 @@ bool   filter_illumina = false;
 bool   ill_barcode     = false;
 int    truncate_seq = 0;
 int    barcode_size = 0;
+int    barcode_dist = 2;
 double win_size     = 0.15;
 int    score_limit  = 10;
 int    len_limit    = 31;
@@ -566,12 +567,13 @@ int correct_barcode(map<string, ofstream *> &fhs, Read *href, map<string, long> 
     string barcode, b, old_barcode;
     map<string, ofstream *>::iterator it;
 
+    int num_errs = barcode_dist - 1;
     close = 0;
 
     for (it = fhs.begin(); it != fhs.end(); it++) {
 	d = dist(it->first.c_str(), href->barcode); 
 
-	if (d <= 1) {
+	if (d <= num_errs) {
 	    close++;
 	    b = it->first;
 	    break;
@@ -804,7 +806,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"encoding",     required_argument, NULL, 'E'},
 	    {"len_limit",    required_argument, NULL, 'L'},
 	    {"adapter_1",    required_argument, NULL, 'A'},
-	    {"adapter_2",    required_argument, NULL, 'B'},
+	    {"adapter_2",    required_argument, NULL, 'G'},
 	    {"adapter_mm",   required_argument, NULL, 'T'},
 	    {0, 0, 0, 0}
 	};
@@ -812,7 +814,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqrFIOPmDi:y:f:o:t:b:1:2:p:s:w:E:L:A:B:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcqrFIOPmDi:y:f:o:t:B:b:1:2:p:s:w:E:L:A:G:T:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -862,6 +864,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'P':
 	    paired = true;
 	    break;
+	case 'B':
+	    barcode_dist = is_integer(optarg);
+	    break;
 	case 'o':
 	    out_path = optarg;
 	    break;
@@ -903,7 +908,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    strcpy(adapter_1, optarg);
 	    filter_adapter = true;
 	    break;
-     	case 'B':
+     	case 'G':
 	    adapter_2 = new char[strlen(optarg) + 1];
 	    strcpy(adapter_2, optarg);
 	    filter_adapter = true;
@@ -1030,6 +1035,7 @@ void help() {
 	      << "    --len_limit <limit>: when trimming sequences, specify the minimum length a sequence must be to keep it (default 31bp).\n"
 	      << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
 	      << "    --illumina_barcodes: barcodes are not inline, but instead are part of Illumina's FASTQ header.\n"
+	      << "    --barcode_dist: provide the distace between barcodes to allow for barcode rescue (default 2)\n"
 	      << "    --mate-pair: raw reads are circularized mate-pair data, first read will be reverse complemented.\n"
 	      << "    --no_overhang: data does not contain an overhang nucleotide between barcode and seqeunce.\n";
 
