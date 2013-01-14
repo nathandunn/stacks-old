@@ -61,7 +61,7 @@ double is_double(char *str) {
 
     // To distinguish success/failure after call
     errno = 0;
-    long val = strtod(str, &endptr);
+    double val = strtod(str, &endptr);
 
     //
     // Check for various possible errors
