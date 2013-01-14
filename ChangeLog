@@ -1,5 +1,10 @@
-Stacks 1.0
-----------
+Stacks 0.99992 - January 8, 2013
+--------------------------------
+	Bugfix: floating point command line options were not being processed correctly and may have been
+	truncated.
+
+Stacks 0.99991 - December 17, 2012
+----------------------------------
 	Feature: process_shortreads and process_radtags can now filter for adapter sequence in raw data, trimming 
 	(process_shortreads) or discarding (process_shortreads/process_radtags) it. Mismatches to the adapter 
 	sequence are allowed to accomodate for sequencing error.

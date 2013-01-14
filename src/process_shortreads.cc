@@ -147,7 +147,7 @@ int main (int argc, char* argv[]) {
 	     << "+" << counters[files[i].first]["recovered"]   << " recovered; "
 	     << "-" << counters[files[i].first]["low_quality"] << " low quality reads; "
 	     << counters[files[i].first]["retained"] << " retained reads.\n"
-	     << "  ";
+	     << "    ";
 	if (filter_adapter)
 	    cerr << counters[files[i].first]["adapter"] << " reads with adapter sequence; ";
 	cerr << counters[files[i].first]["trimmed"]     << " trimmed reads; "

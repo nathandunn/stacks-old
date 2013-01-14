@@ -179,14 +179,17 @@ int main (int argc, char* argv[]) {
 	//
 	// Add the remainder files from the previous step to the queue.
 	//
-	string file;
-	int    pos;
-	for (uint i = 0; i < pair_files.size(); i += 2) {
- 	    file = pair_files[i].second;
-	    pos  = file.find_last_of(".");
-	    file = file.substr(0, pos) + ".rem" + file.substr(pos);
-	    cerr << "Adding remainder file generate in previous step to queue, '" << file << "\n";
-	    files.push_back(make_pair(pair_files[i].first, file));
+	if (filter_rare_k || filter_abundant_k) {
+	    string file;
+	    int    pos;
+	    for (uint i = 0; i < pair_files.size(); i += 2) {
+		file  = pair_files[i].second;
+		pos   = file.find_last_of(".");
+		file  = file.substr(0, pos) + ".rem";
+		file += out_file_type == fastq ? ".fq" : ".fa";
+		cerr << "Adding remainder file generate in previous step to queue, '" << file << "\n";
+		files.push_back(make_pair(pair_files[i].first, file));
+	    }
 	}
 
 	for (uint i = 0; i < pair_files.size(); i += 2) {
@@ -1183,7 +1186,7 @@ kmer_lookup(SeqKmerHash &kmer_map,
 	(double) sorted_cnts[num_kmers / 2 - 1];
     // cout << "# median: " << median << "\n";
 
-    double bound = round(median * 0.15);
+    double bound = round(median * min_k_pct);
     // cout << "# kmer cov bound: " << bound << "\n";
 
     //
@@ -1493,6 +1496,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"max_k_freq",   required_argument, NULL, 'M'},
 	    {"min_lim",      required_argument, NULL, 'F'},
 	    {"max_lim",      required_argument, NULL, 'G'},
+	    {"min_k_pct",    required_argument, NULL, 'P'},
 	    {"read_k_freq",  required_argument, NULL, 'r'},
 	    {"write_k_freq", required_argument, NULL, 'w'},
 	    {0, 0, 0, 0}
@@ -1501,7 +1505,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvRADkN:I:w:r:K:F:G:M:m:i:y:f:o:t:p:1:2:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvRADkP:N:I:w:r:K:F:G:M:m:i:y:f:o:t:p:1:2:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -1571,6 +1575,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'G':
 	    max_lim = is_integer(optarg);
 	    break;
+	case 'P':
+	    min_k_pct = is_double(optarg);
+	    break;
 	case 'r':
 	    read_k_freq = true;
 	    k_freq_path = optarg;
@@ -1618,6 +1625,11 @@ int parse_command_line(int argc, char* argv[]) {
 
     if (read_k_freq && write_k_freq) {
 	cerr << "You may either read a set of kmer frequencies, or write kmer frequencies, not both.\n";
+	help();
+    }
+
+    if (min_k_pct < 0.0 || min_k_pct > 1.0) {
+	cerr << "Percentage to consider a kmer rare must be between 0 and 1.0.\n";
 	help();
     }
 
