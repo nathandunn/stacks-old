@@ -11,7 +11,7 @@ pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/co
 	src/mstack.h src/mstack.cc \
 	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
 	src/models.h src/models.cc src/utils.h src/utils.cc \
-	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h 
+	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h src/Bam.h
 
 estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/mstack.h src/mstack.cc \
@@ -69,8 +69,9 @@ populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 
 ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
 ustacks_LDFLAGS  = $(OPENMP_CFLAGS)
-pstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 pstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+pstacks_LDADD    = $(BAM_LIBS)
 estacks_CXXFLAGS = $(OPENMP_CFLAGS)
 estacks_LDFLAGS  = $(OPENMP_CFLAGS)
 cstacks_CXXFLAGS = $(OPENMP_CFLAGS)

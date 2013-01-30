@@ -180,18 +180,23 @@ int main (int argc, char* argv[]) {
 	load_catalog_matches(in_path + files[i].second, m);
 
 	if (m.size() == 0) {
-	    cerr << "Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from genotypes analysis.\n";
+	    cerr << "Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from population analysis.\n";
 	    continue;
 	}
 
 	catalog_matches.push_back(m);
- 	samples[m[0]->sample_id] = files[i].second;
-	sample_ids.push_back(m[0]->sample_id);
+	if (samples.count(m[0]->sample_id) == 0) {
+	    samples[m[0]->sample_id] = files[i].second;
+	    sample_ids.push_back(m[0]->sample_id);
+	} else {
+	    cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
+	    exit(0);
+	}
     }
 
     //
     // Create the population map
-    //
+    // 
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
     PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
@@ -224,6 +229,12 @@ int main (int argc, char* argv[]) {
     	    d = pmap->datum(loc->id, sample_ids[i]);
 
     	    if (d != NULL) {
+		if (modres.count(d->id) == 0) {
+		    cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id 
+			 << ", sample ID " << sample_ids[i] << ", sample locus " << d->id 
+			 << "; likely IDs were mismatched when running pipeline.\n";
+		    exit(0);
+		}
 		d->len   = strlen(modres[d->id]->model);
     		d->model = new char[d->len + 1];
     		strcpy(d->model, modres[d->id]->model);
@@ -750,7 +761,7 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
 
 	    uint k = 0;
 	    for (uint n = start; n < end; n++) {
-		fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->loc.bp + n;
+		fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->sort_bp() + n;
 
  		if (snp_locs.count(n) == 0) {
 		    for (int j = 0; j < pmap->sample_cnt(); j++) {
@@ -1048,7 +1059,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			fh << batch_id << "\t"
 			   << loc->id << "\t"
 			   << loc->loc.chr << "\t"
-			   << loc->loc.bp + i << "\t"
+			   << loc->sort_bp() + i << "\t"
 			   << i << "\t"
 			   << psum->rev_pop_index(j) << "\t"
 			   << s[j]->nucs[i].p_nuc << "\t";
@@ -1414,7 +1425,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			    log_fh << batch_id << "\t"
 				   << loc->id << "\t"
 				   << loc->loc.chr << "\t"
-				   << loc->loc.bp + k << "\t"
+				   << loc->sort_bp() + k << "\t"
 				   << k << "\t" 
 				   << pop_1 << "\t" 
 				   << pop_2 << "\n";
@@ -1431,7 +1442,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			    continue;
 			}
 
-			pair->bp = loc->loc.bp + k;
+			pair->bp = loc->sort_bp() + k;
 			pairs.push_back(pair);
 		    }
 		}
@@ -1539,7 +1550,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			   << pop_1           << "\t"
 			   << pop_2           << "\t"
 			   << loc->loc.chr    << "\t"
-			   << loc->loc.bp + k << "\t"
+			   << loc->sort_bp() + k << "\t"
 			   << k               << "\t"
 			   << pairs[i]->pi      << "\t"
 			   << fst_str           << "\t"
@@ -1718,17 +1729,21 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	vector<SumStat *> sites;
 
+	// if (it->first != "groupI") continue;
+
 	for (uint pos = 0; pos < it->second.size(); pos++) {
 	    loc  = it->second[pos];
 	    len  = strlen(loc->con);
 	    lsum = psum->pop(loc->id, pop_id);
 
-	    for (int k = 0; k < len; k++)
-		if (lsum->nucs[k].num_indv > 0)
-		    sites.push_back(&(lsum->nucs[k]));
-	}
+	    // cerr << "Catalog locus: " << loc->id << "\n";
 
-	//if (it->first != "groupIV") continue;
+	    for (int k = 0; k < len; k++)
+		if (lsum->nucs[k].num_indv > 0) {
+		    sites.push_back(&(lsum->nucs[k]));
+		    // cerr << "  BP: " << lsum->nucs[k].bp << "\n";
+		}
+	}
 
 	cerr << "    Processing chromosome " << it->first << "\n";
 	#pragma omp parallel private(alleles)
@@ -1752,7 +1767,7 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
 		    continue;
 
 		////
-		////if (c->bp != 994244) continue;
+		////if (c->bp != 1190640) continue;
 
 		weighted_fis = 0.0;
 		sum_fis      = 0.0;
@@ -1801,6 +1816,8 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
 
 		    alleles = p->num_indv * 2;
 		    dist    = p->bp > c->bp ? p->bp - c->bp : c->bp - p->bp;
+
+		    //cerr << "Window centered on: " << c->bp << "; Examining bp " << p->bp << "; distance from center: " << dist << "\n";
 
 		    if (p->pi > 0) {
 			snp_cnt++;
@@ -2788,7 +2805,7 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
     map<string, vector<CLocus *> >::iterator it;
     Datum  **d;
     LocSum **s;
-    int      len, bp, gt_1, gt_2, num_indv;
+    int      len, gt_1, gt_2, num_indv;
     double   p;
     int      pop_cnt = psum->pop_cnt();
     bool     fixed;
@@ -2839,9 +2856,7 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
 		sprintf(p_str, "%0.3f", p);
 		sprintf(q_str, "%0.3f", 1 - p);
 
-		bp = loc->loc.strand == plus ? loc->loc.bp + col : loc->loc.bp - (len - col);
-
-		fh << loc->loc.chr << "\t" << bp << "\t" << loc->id << "\t"
+		fh << loc->loc.chr << "\t" << loc->sort_bp() + col << "\t" << loc->id << "\t"
 		   << ref        << "\t"                       // REFerence allele
 		   << alt        << "\t"                       // ALTernate allele
 		   << "."        << "\t"                       // QUAL
@@ -2982,7 +2997,8 @@ write_genepop(map<int, CLocus *> &catalog,
 
 	    fh << loc->id << "_" << col;
 	    if (i <  cnt - 1) fh << ",";
-	    if (i == cnt - 1 && j < loc->snps.size() - 1) fh << ",";
+	    //if (i == cnt - 1 && j < loc->snps.size() - 1) fh << ",";
+	    break;
 	}
 	i++;
     }
@@ -3022,12 +3038,12 @@ write_genepop(map<int, CLocus *> &catalog,
 			//
 			// Data does not exist.
 			//
-			fh << "0000";
+			fh << "\t0000";
 		    } else if (d[j]->model[col] == 'U') {
 			//
 			// Data exists, but the model call was uncertain.
 			//
-			fh << "0000";
+			fh << "\t0000";
 		    } else {
 			//
 			// Tally up the nucleotide calls.
@@ -3036,19 +3052,20 @@ write_genepop(map<int, CLocus *> &catalog,
 
 			if (p_allele == 0 && q_allele == 0) {
 			    // More than two potential alleles.
-			    fh << "0000";
+			    fh << "\t0000";
 			} else if (p_allele == 0) {
-			    fh << nuc_map[q_allele] << nuc_map[q_allele];
+			    fh << "\t" << nuc_map[q_allele] << nuc_map[q_allele];
 
 			} else if (q_allele == 0) {
-			    fh << nuc_map[p_allele] << nuc_map[p_allele];
+			    fh << "\t" << nuc_map[p_allele] << nuc_map[p_allele];
 
 			} else {
-			    fh << nuc_map[p_allele] << nuc_map[q_allele];
+			    fh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
 			}
 		    }
-		    if (j <= end_index) 
-			fh << "\t";
+		    // if (j <= end_index) 
+		    // 	fh << "\t";
+		    break;
 		}
 	    }
 	    fh << "\n";

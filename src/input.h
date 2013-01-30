@@ -71,6 +71,7 @@ class Input {
     ifstream fh;
     char     line[max_len];
 
+    Input();
     Input(const char *path);
     virtual ~Input();
     virtual Seq *next_seq() = 0;

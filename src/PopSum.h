@@ -579,12 +579,12 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
 	return NULL;
 
     double tot_alleles = n_1 + n_2;
-    double p_1 = n_1 * s_1->nucs[pos].p;
+    double p_1 = round(n_1 * s_1->nucs[pos].p);
     double q_1 = n_1 - p_1;
     double p_2 = 
 	s_1->nucs[pos].p_nuc == s_2->nucs[pos].p_nuc ? 
 	s_2->nucs[pos].p : (1 - s_2->nucs[pos].p);
-    p_2 = n_2 * p_2;
+    p_2 = round(n_2 * p_2);
     double q_2 = n_2 - p_2;
 
     double pi_all = this->pi(tot_alleles, p_1 + p_2, q_1 + q_2);
@@ -640,7 +640,8 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
     //
     // Record the results in the PopSum object.
     //
-    s->nucs[pos].bp       = locus->loc.bp + pos;
+    //s->nucs[pos].bp       = locus->loc.bp + pos;
+    s->nucs[pos].bp       = locus->sort_bp() + pos;
     s->nucs[pos].num_indv = num_indv;
 
     if (num_indv > 0) {
@@ -846,7 +847,8 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     //
     // Record the results in the PopSum object.
     //
-    s->nucs[pos].bp       = locus->loc.bp + pos;
+    //s->nucs[pos].bp       = locus->loc.bp + pos;
+    s->nucs[pos].bp       = locus->sort_bp() + pos;
     s->nucs[pos].num_indv = num_indv;
     s->nucs[pos].p        = allele_p > allele_q ? allele_p : allele_q;
     s->nucs[pos].p_nuc    = allele_p > allele_q ? p_allele : q_allele;
@@ -954,7 +956,7 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
     double p2     = p_2;
     double q2     = q_2;
     double tail_1 = 0.0;
-    double den    = binomial_coeff(n, c_1);
+    double den    = this->binomial_coeff(n, c_1);
 
     //
     // If (p_1*q_2 - p_2*q_1) < 0 decrease cells p_1 and q_2 by one and add one to p_2 and q_1. 
@@ -1038,7 +1040,7 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
 	    q2--;
 	    p2++;
 	    q1++;
-	} while (tail_2 < tail_1);
+	} while (tail_2 < tail_1 && p1 >= 0 && q2 >= 0);
 
 	tail_2 -= p;
 
@@ -1056,7 +1058,7 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
 	    q1--;
 	    p1++;
 	    q2++;
-	} while (tail_2 < tail_1);
+	} while (tail_2 < tail_1 && p2 >= 0 && q1 >= 0);
 
 	tail_2 -= p;
     }

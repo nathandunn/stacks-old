@@ -122,6 +122,10 @@ int Stack::add_seq(const DNASeq *seq) {
     return 0;
 }
 
+uint Locus::sort_bp() {
+    return this->loc.strand == plus ? this->loc.bp : (this->loc.bp - this->len);
+}
+
 int Locus::add_consensus(const char *seq) {
     if (this->con != NULL)
 	delete [] this->con;
@@ -170,5 +174,5 @@ int Locus::populate_alleles() {
 }
 
 bool bp_compare(Locus *a, Locus *b) {
-    return (a->loc.bp < b->loc.bp);
+    return (a->sort_bp() < b->sort_bp());
 }

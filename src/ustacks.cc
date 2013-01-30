@@ -40,7 +40,7 @@ int       sql_id            = 0;
 bool      call_sec_hapl     = true;
 bool      set_kmer_len      = true;
 int       kmer_len          = 0;
-int       min_merge_cov     = 2;
+int       min_merge_cov     = 3;
 uint      max_subgraph      = 3;
 int       dump_graph        = 0;
 int       retain_rem_reads  = false;
@@ -419,9 +419,8 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
 
     		for (row = 0; row < height; row++) {
     		    d = reads[row];
-    		    //base = base + col;
-    		    //cerr << "    Row: " << row << " Col: " << col << " Base: " << *base << "\n";
-    		    nuc[(*d)[col]]++;
+		    if (nuc.count((*d)[col]))
+			nuc[(*d)[col]]++;
     		}
 
     		//
@@ -436,11 +435,10 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
     		}
     		con += max->first;
 
+		//
     		// Search this column for the presence of a SNP
+		//
     		if (invoke_model) 
-    		    // model_type == snp ? 
-                    //     call_multinomial_snp(mtag, col, nuc, true) :
-                    //     call_multinomial_fixed(mtag, col, nuc);
 		    switch(model_type) {
 		    case snp:
                         call_multinomial_snp(mtag, col, nuc, true);
@@ -1982,7 +1980,7 @@ void help() {
               << "  f: input file path.\n"
 	      << "  o: output path to write results." << "\n"
 	      << "  i: SQL ID to insert into the output to identify this sample." << "\n"
-	      << "  m: Minimum depth of coverage required to create a stack (default 2)." << "\n"
+	      << "  m: Minimum depth of coverage required to create a stack (default 3)." << "\n"
 	      << "  M: Maximum distance (in nucleotides) allowed between stacks (default 2)." << "\n"
 	      << "  N: Maximum distance allowed to align secondary reads to primary stacks (default: M + 2).\n"
 	      << "  R: retain unused reads.\n"

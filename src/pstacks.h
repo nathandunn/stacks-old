@@ -60,8 +60,7 @@ using std::pair;
 #include "Tsv.h"       // Reading input files in Tab-separated values format
 #include "Bowtie.h"    // Reading input files in Bowtie format
 #include "Sam.h"       // Reading input files in SAM format
-#include "Fasta.h"     // Reading input files in FASTA format
-#include "Fastq.h"     // Reading input files in FASTQ format
+#include "Bam.h"       // Reading input files in BAM format
 #include "DNANSeq.h"
 
 const int barcode_size = 5;
