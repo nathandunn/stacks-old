@@ -2,19 +2,34 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([Stacks], [0.99992])
+AC_INIT([Stacks], [0.99993])
 AC_CONFIG_AUX_DIR([config])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([src/ustacks.cc])
 AC_CONFIG_HEADERS([config.h])
 
+# Get BAM library and include locations
+AC_ARG_WITH([bam-include-path],
+  [AS_HELP_STRING([--with-bam-include-path],
+    [location of Samtools BAM headers, defaults to /usr/include/bam])],
+  [BAM_CFLAGS="-I$withval"],
+  [BAM_CFLAGS='-I/usr/include/bam'])
+AC_SUBST([BAM_CFLAGS])
+
+AC_ARG_WITH([bam-lib-path],
+  [AS_HELP_STRING([--with-bam-lib-path], [location of Samtools BAM library])],
+  [BAM_LIBS="$withval/libbam.a -lz"],
+  [BAM_LIBS='/usr/lib/libbam.a -lz'])
+AC_SUBST([BAM_LIBS])
+
 # Checks for programs.
 AC_PROG_CXX
 AM_PROG_CC_C_O
 
 # Checks for libraries.
-AC_CHECK_LIB(gomp, omp_set_num_threads,, echo "Unable to locate OpenMP library")
+AC_CHECK_LIB(gomp, omp_set_num_threads,, echo "Unable to locate OpenMP library.")
+AC_CHECK_LIB(bam, bam_header_init,, echo "Unable to locate SAMTools library for loading BAM files.")
 
 # Checks for header files.
 AC_HEADER_DIRENT

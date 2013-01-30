@@ -80,8 +80,12 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
     }
 }
 
+Input::Input() {
+    memset(this->line, '\0', max_len);
+}
+
 Input::Input(const char *path) {
-    memset(this->line, '\0', max_len);    
+    memset(this->line, '\0', max_len);
 
     this->path = string(path);
     //

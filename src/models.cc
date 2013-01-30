@@ -37,11 +37,30 @@ call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n, bool record_
 
     int total = 0;
     for (i = n.begin(); i != n.end(); i++) {
-	total += i->second;
-	nuc.push_back(make_pair(i->first, i->second));
+	if (i->first != 'N') {
+	    total += i->second;
+	    nuc.push_back(make_pair(i->first, i->second));
+	}
     }
 
     sort(nuc.begin(), nuc.end(), compare_pair);
+
+    //
+    // If this column was simply uncalled Ns, return.
+    //
+    if (nuc[0].second == 0) {
+	if (record_snps) {
+	    SNP *snp = new SNP;
+	    snp->type   = snp_type_unk;
+	    snp->col    = col;
+	    snp->lratio = 0;
+	    snp->rank_1 = 'N';
+	    snp->rank_2 = '-';
+
+	    tag->snps.push_back(snp);
+	}
+	return snp_type_unk;
+    }
 
     //
     // Method of Paul Hohenlohe <hohenlohe@uidaho.edu>, personal communication.
@@ -127,18 +146,38 @@ call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n, bool record_
 }
 
 snp_type 
-call_bounded_multinomial_snp (MergedStack *tag, int col, map<char, int> &n, bool record_snps) 
+call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_snps) 
 {
     vector<pair<char, int> > nuc;
     map<char, int>::iterator i;
 
     double total = 0.0;
     for (i = n.begin(); i != n.end(); i++) {
-	total += i->second;
-	nuc.push_back(make_pair(i->first, i->second));
+	if (i->first != 'N') {
+	    total += i->second;
+	    nuc.push_back(make_pair(i->first, i->second));
+	}
     }
 
     sort(nuc.begin(), nuc.end(), compare_pair);
+
+    //
+    // If this column was simply uncalled Ns, return.
+    //
+    if (nuc[0].second == 0) {
+	if (record_snps) {
+	    SNP *snp = new SNP;
+	    snp->type   = snp_type_unk;
+	    snp->col    = col;
+	    snp->lratio = 0;
+	    snp->rank_1 = 'N';
+	    snp->rank_2 = '-';
+
+	    tag->snps.push_back(snp);
+	}
+	return snp_type_unk;
+    }
+
     double nuc_1   = nuc[0].second;
     double nuc_2   = nuc[1].second;
     double nuc_3   = nuc[2].second;
@@ -254,11 +293,25 @@ call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n)
 
     int total = 0;
     for (i = n.begin(); i != n.end(); i++) {
-	total += i->second;
-	nuc.push_back(make_pair(i->first, i->second));
+	if (i->first != 'N') {
+	    total += i->second;
+	    nuc.push_back(make_pair(i->first, i->second));
+	}
     }
 
     sort(nuc.begin(), nuc.end(), compare_pair);
+
+    if (nuc[0].second == 0) {
+	SNP *snp = new SNP;
+	snp->type   = snp_type_unk;
+	snp->col    = col;
+	snp->lratio = 0;
+	snp->rank_1 = 'N';
+	snp->rank_2 = '-';
+
+	tag->snps.push_back(snp);
+	return snp_type_unk;
+    }
 
     //
     // Method of Paul Hohenlohe <hohenlo@uoregon.edu>, personal communication.

@@ -231,6 +231,8 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
 		max = nuc.end();
 
 		for (n = nuc.begin(); n != nuc.end(); n++) {
+		    if (n->first == 'N') 
+			continue;
 		    if (max == nuc.end() || n->second > max->second)
 			max = n;
 		}
@@ -553,6 +555,8 @@ int load_radtags(string in_file, HashMap &radtags) {
         fh = new Bowtie(in_file.c_str());
     else if (in_file_type == sam)
         fh = new Sam(in_file.c_str());
+    else if (in_file_type == bam)
+        fh = new Bam(in_file.c_str());
     else if (in_file_type == tsv)
         fh = new Tsv(in_file.c_str());
 
@@ -674,6 +678,8 @@ int parse_command_line(int argc, char* argv[]) {
                 in_file_type = bowtie;
             else if (strcmp(optarg, "sam") == 0)
                 in_file_type = sam;
+            else if (strcmp(optarg, "bam") == 0)
+                in_file_type = bam;
             else if (strcmp(optarg, "tsv") == 0)
                 in_file_type = tsv;
             else
@@ -789,7 +795,7 @@ void version() {
 void help() {
     std::cerr << "pstacks " << VERSION << "\n"
               << "pstacks -t file_type -f file_path [-o path] [-i id] [-m min_cov] [-p num_threads] [-h]" << "\n"
-	      << "  t: input file Type. Supported types: bowtie, sam.\n"
+	      << "  t: input file Type. Supported types: bowtie, sam, bam.\n"
               << "  f: input file path.\n"
 	      << "  o: output path to write results.\n"
 	      << "  i: SQL ID to insert into the output to identify this sample.\n"

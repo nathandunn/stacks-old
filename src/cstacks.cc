@@ -1206,7 +1206,7 @@ void help() {
 	      << "  S: MySQL ID of the sample." << "\n"
 	      << "  o: output path to write results." << "\n"
 	      << "  m: include tags in the catalog that match to more than one entry." << "\n"
-              << "  n: number of mismatches allowed between sample tags when generating the catalog." << "\n"
+              << "  n: number of mismatches allowed between sample tags when generating the catalog (default 0)." << "\n"
               << "  g: base catalog matching on genomic location, not sequence identity." << "\n"
 	      << "  h: display this help messsage." << "\n\n";
 
