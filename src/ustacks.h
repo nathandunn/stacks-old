@@ -78,11 +78,10 @@ using __gnu_cxx::hash;
 #include "mstack.h"
 #include "mst.h"       // Minimum spanning tree implementation
 #include "models.h"    // Contains maximum likelihood statistical models.
-#include "Tsv.h"       // Reading input files in Tab-separated values format
-#include "Bowtie.h"    // Reading input files in Bowtie format
-#include "Sam.h"       // Reading input files in SAM format
 #include "Fasta.h"     // Reading input files in FASTA format
 #include "Fastq.h"     // Reading input files in FASTQ format
+#include "gzFasta.h"   // Reading gzipped input files in FASTA format
+#include "gzFastq.h"   // Reading gzipped input files in FASTQ format
 
 typedef unsigned int uint;
 

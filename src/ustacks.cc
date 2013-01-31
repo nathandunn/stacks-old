@@ -1678,6 +1678,10 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radta
         fh = new Fasta(in_file.c_str());
     else if (in_file_type == fastq)
         fh = new Fastq(in_file.c_str());
+    else if (in_file_type == gzfasta)
+        fh = new GzFasta(in_file.c_str());
+    else if (in_file_type == gzfastq)
+        fh = new GzFastq(in_file.c_str());
 
     cerr << "Parsing " << in_file.c_str() << "\n";
     long  int corrected = 0;
