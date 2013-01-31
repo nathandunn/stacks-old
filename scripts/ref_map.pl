@@ -144,6 +144,8 @@ foreach $sample (@parents, @progeny, @samples) {
         $ftype = "bowtie";
     } elsif ($suffix =~ /^sam$/) {
         $ftype = "sam";
+    } elsif ($suffix =~ /^bam$/) {
+        $ftype = "bam";
     } elsif ($suffix =~ /^map$/) {
         $ftype = "tsv";
     } else {
@@ -500,9 +502,9 @@ sub usage {
 
     print STDERR <<EOQ; 
 ref_map.pl -p path -r path [-s path] -o path [-n mismatches] [-m min_cov] [-T num_threads] [-O popmap] [-B db -b batch_id -D "desc" -a yyyy-mm-dd] [-S -i id] [-e path] [-d] [-h]
-    p: path to a Bowtie/SAM file containing parent sequences from a mapping cross.
-    r: path to a Bowtie/SAM file containing progeny sequences from a mapping cross.
-    s: path to a Bowtie/SAM file contiaining an individual sample from a population.
+    p: path to a Bowtie/SAM/BAM file containing parent sequences from a mapping cross.
+    r: path to a Bowtie/SAM/BAM file containing progeny sequences from a mapping cross.
+    s: path to a Bowtie/SAM/BAM file contiaining an individual sample from a population.
     o: path to write pipeline output files.
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
     T: specify the number of threads to execute.
@@ -512,7 +514,7 @@ ref_map.pl -p path -r path [-s path] -o path [-n mismatches] [-m min_cov] [-T nu
     d: perform a dry run. Do not actually execute any programs, just print what would be executed.
     h: display this help message.
 
-    Database options:
+   Database options:
     B: specify a database to load data into.
     b: batch ID representing this dataset in the database.
     D: batch description
@@ -520,7 +522,7 @@ ref_map.pl -p path -r path [-s path] -o path [-n mismatches] [-m min_cov] [-T nu
     S: disable recording SQL data in the database.
     i: starting sample_id, this is determined automatically if database interaction is enabled.
 
-    SNP Model Options (these options are passed on to pstacks):
+   SNP Model Options (these options are passed on to pstacks):
     --bound_low: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).
     --bound_high: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).
     --alpha: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.

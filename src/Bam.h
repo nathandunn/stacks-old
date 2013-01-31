@@ -26,8 +26,7 @@
 // reads that have been aligned to a reference genome.
 //
 
-#include <sstream>
-using std::stringstream;
+#ifdef HAVE_BAM
 
 #include "input.h"
 #include "bam.h"
@@ -352,4 +351,18 @@ Bam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
     return 0;
 }
 
-#endif // __SAM_H__
+#else  // If HAVE_BAM is undefined and BAM library is not present.
+
+#include "input.h"
+
+class Bam: public Input {
+ public:
+    Bam(const char *path) : Input() { cerr << "BAM support was not enabled when Stacks was compiled.\n"; };
+    ~Bam() {};
+    Seq *next_seq()      { return NULL; };
+    int  next_seq(Seq &) { return 0; };
+};
+
+#endif // HAVE_BAM
+
+#endif // __BAM_H__
