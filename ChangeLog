@@ -1,14 +1,15 @@
 Stacks 0.99993 - January 30, 2013
 ---------------------------------
+	Feature: process_radtags/process_shortreads/ustacks can now read gzipped Fasta/Fastq input files.
 	Feature: ref_map.pl/pstacks now supports the use of BAM alignment files. This feature is optional and must 
 	be enabled during compilation. It requires the Samtools library to be installed.
 	Bugfix: When using referenced aligned data, soft-masked alignments (Ns) were getting imporperly injected into
 	the SNP models, which would call them as Homozygous Ns, and this data would eventually be passed to the 
 	summary statistics in populations, which would make errant Fst calculations.
 	Bugfix: In rare cases, sequences aligned to the negative strand had their base pair positions slightly off,
-	this could cause a segfault during the kernel-smoothed Fst calculations.
-	Bugfix: Fixed a rare, infinite loop condition in Fisher's exact test for Fst calculations. Could occur due to
-	a floating point rounding error when calculating allele frequencies for Fst calculation.
+	this could cause a segfault during populations' kernel-smoothed Fst calculations.
+	Bugfix: In populations, fixed a rare, infinite loop condition in Fisher's exact test for Fst calculations. 
+	Could occur due to a floating point rounding error when calculating allele frequencies for Fst calculation.
 
 Stacks 0.99992 - January 8, 2013
 --------------------------------

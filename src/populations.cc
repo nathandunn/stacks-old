@@ -3831,6 +3831,14 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
     cerr << "  " << pop_indexes.size() << " populations found\n";
 
+    if (population_limit > (int) pop_indexes.size()) {
+	cerr << "Population limit (" 
+	     << population_limit 
+	     << ") larger than number of popualtions present, adjusting parameter to " 
+	     << pop_indexes.size() << "\n";
+	population_limit = pop_indexes.size();
+    }
+
     map<int, pair<int, int> >::iterator it;
     for (it = pop_indexes.begin(); it != pop_indexes.end(); it++) {
 	start = it->second.first;

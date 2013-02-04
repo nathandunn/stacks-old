@@ -62,6 +62,8 @@ using __gnu_cxx::hash;
 #include "Bustard.h"   // Reading input files in Tab-separated Bustard format
 #include "Fasta.h"     // Reading input files in FASTA format
 #include "Fastq.h"     // Reading input files in FASTQ format
+#include "gzFasta.h"   // Reading gzipped input files in FASTA format
+#include "gzFastq.h"   // Reading gzipped input files in FASTQ format
 
 typedef hash_map<char *, long, hash<const char *>, eqstr> SeqKmerHash;
 

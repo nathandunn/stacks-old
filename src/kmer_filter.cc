@@ -254,6 +254,12 @@ int process_paired_reads(string in_path_1,
     } else if (in_file_type == fasta) {
         fh_1 = new Fasta(path_1.c_str());
         fh_2 = new Fasta(path_2.c_str());
+    } else if (in_file_type == gzfasta) {
+        fh_1 = new GzFasta(path_1.c_str());
+        fh_2 = new GzFasta(path_2.c_str());
+    } else if (in_file_type == gzfastq) {
+        fh_1 = new GzFastq(path_1.c_str());
+        fh_2 = new GzFastq(path_2.c_str());
     } else if (in_file_type == bustard) {
         fh_1 = new Bustard(path_1.c_str());
         fh_2 = new Bustard(path_2.c_str());
@@ -425,6 +431,10 @@ int process_reads(string in_path,
         fh = new Fastq(path.c_str());
     else if (in_file_type == fasta)
         fh = new Fasta(path.c_str());
+    else if (in_file_type == gzfastq)
+        fh = new GzFastq(path.c_str());
+    else if (in_file_type == gzfasta)
+        fh = new GzFasta(path.c_str());
     else if (in_file_type == bustard)
         fh = new Bustard(path.c_str());
 
@@ -1518,8 +1528,12 @@ int parse_command_line(int argc, char* argv[]) {
      	case 'i':
              if (strcasecmp(optarg, "fasta") == 0)
                 in_file_type = fasta;
-            else
-                in_file_type = fastq;
+	     else if (strcasecmp(optarg, "gzfasta") == 0)
+		 in_file_type = gzfasta;
+	     else if (strcasecmp(optarg, "gzfastq") == 0)
+		 in_file_type = gzfastq;
+	     else
+		 in_file_type = fastq;
 	    break;
      	case 'y':
             if (strcasecmp(optarg, "fasta") == 0)
@@ -1646,7 +1660,7 @@ void help() {
     std::cerr << "kmer_filter " << VERSION << "\n"
               << "kmer_filter [-f in_file_1 [-f in_file_2...] | -p in_dir] [-1 pair_1 -2 pair_2 [-1 pair_1...]] -o out_dir [-i type] [-y type] [-D] [-h]\n"
 	      << "  f: path to the input file if processing single-end seqeunces.\n"
-	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, 'fasta', or 'fastq' (default 'fastq').\n"
+	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, 'fasta', 'fastq', 'gzfasta', or 'gzfastq' (default 'fastq').\n"
 	      << "  p: path to a directory of files (for single-end files only).\n"
 	      << "  1: specify the first in a pair of files to be processed together.\n"
 	      << "  2: specify the second in a pair of files to be processed together.\n"
