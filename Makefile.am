@@ -5,13 +5,15 @@ ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/co
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/models.h src/models.cc src/utils.h src/utils.cc \
 	src/kmers.h src/kmers.cc \
-	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h 
+	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h \
+	src/gzFasta.h src/gzFastq.h
 
 pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/mstack.h src/mstack.cc \
 	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
 	src/models.h src/models.cc src/utils.h src/utils.cc \
-	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h src/Bam.h
+	src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h \
+	src/Bam.h
 
 estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/constants.h \
 	src/mstack.h src/mstack.cc \
@@ -36,24 +38,26 @@ sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/co
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
 	src/utils.h src/utils.cc \
 	src/clean.h src/clean.cc src/file_io.h src/file_io.cc \
-	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/renz.h
+	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/gzFastq.h src/renz.h
 
 process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h \
 	src/clean.h src/clean.cc src/file_io.h src/file_io.cc \
 	src/utils.h src/utils.cc \
 	src/kmers.h src/kmers.cc \
-	src/input.h src/input.cc src/Bustard.h src/Fastq.h
+	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/gzFastq.h 
 
 kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h \
 	src/utils.h src/utils.cc \
 	src/clean.h src/clean.cc \
 	src/kmers.h src/kmers.cc \
-	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h
+	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h \
+	src/gzFastq.h src/gzFastq.h
 
 clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h \
 	src/clean.h src/clean.cc \
 	src/kmers.h src/kmers.cc \
-	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h
+	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h \
+	src/gzFastq.h src/gzFastq.h
 
 genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 	src/utils.h src/utils.cc \

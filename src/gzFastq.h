@@ -23,6 +23,7 @@
 
 #ifdef HAVE_LIBZ
 
+#include <errno.h>
 #include <zlib.h>
 #include "input.h"
 
@@ -45,16 +46,19 @@ public:
 };
 
 Seq *GzFastq::next_seq() {
+    char *res = NULL;
+
     //
     // Check the contents of the line buffer. When we finish reading a FASTQ record
     // the buffer will either contain whitespace or the header of the next FASTQ
     // record.
     //
-    while (this->line[0] != '@' && !gzeof(this->gz_fh)) {
-	gzgets(this->gz_fh, this->line, max_len);
-    }
+    this->line[0] = '\0';
+    do {
+	res = gzgets(this->gz_fh, this->line, max_len);
+    } while (this->line[0] != '@' && res != NULL);
 
-    if (!gzeof(this->gz_fh)) {
+    if (res == NULL) {
 	return NULL;
     }
 
@@ -62,7 +66,8 @@ Seq *GzFastq::next_seq() {
     // Check if there is a carraige return in the buffer
     //
     uint len = strlen(this->line);
-    if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     //
     // Initialize the Seq structure and store the FASTQ ID
@@ -76,12 +81,13 @@ Seq *GzFastq::next_seq() {
     //
     gzgets(this->gz_fh, this->line, max_len);
 
-    if (!gzeof(this->gz_fh)) {
+    if (gzeof(this->gz_fh)) {
 	return NULL;
     }
 
     len = strlen(this->line);
-    if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     s->seq = new char[len + 1];
     strcpy(s->seq, this->line);
@@ -89,23 +95,26 @@ Seq *GzFastq::next_seq() {
     //
     // Read the repeat of the ID
     //
-    gzgets(this->gz_fh, this->line, max_len);
+    this->line[0] = '\0';
+    res = gzgets(this->gz_fh, this->line, max_len);
 
-    if (this->line[0] != '+' || !gzeof(this->gz_fh)) {
+    if (this->line[0] != '+' || res == NULL) {
 	return NULL;
     }
 
     //
     // Read the quality score from the file
     //
-    gzgets(this->gz_fh, this->line, max_len);
+    this->line[0] = '\0';
+    res = gzgets(this->gz_fh, this->line, max_len);
 
-    if (!gzeof(this->gz_fh)) {
+    if (res == NULL && strlen(this->line) == 0) {
 	return NULL;
     }
 
     len = strlen(this->line);
-    if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     s->qual = new char[len + 1];
     strcpy(s->qual, this->line);
@@ -121,16 +130,19 @@ Seq *GzFastq::next_seq() {
 }
 
 int GzFastq::next_seq(Seq &s) {
+    char *res = NULL;
+
     //
     // Check the contents of the line buffer. When we finish reading a FASTQ record
     // the buffer will either contain whitespace or the header of the next FASTQ
     // record.
     //
-    while (this->line[0] != '@' && !gzeof(this->gz_fh)) {
-	gzgets(this->gz_fh, this->line, max_len);
-    }
+    this->line[0] = '\0';
+    do {
+	res = gzgets(this->gz_fh, this->line, max_len);
+    } while (this->line[0] != '@' && res != NULL);
 
-    if (!gzeof(this->gz_fh)) {
+    if (res == NULL) {
 	return 0;
     }
 
@@ -138,7 +150,8 @@ int GzFastq::next_seq(Seq &s) {
     // Check if there is a carraige return in the buffer
     //
     uint len = strlen(this->line);
-    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     //
     // Store the FASTQ ID
@@ -148,37 +161,42 @@ int GzFastq::next_seq(Seq &s) {
     //
     // Read the sequence from the file
     //
-    gzgets(this->gz_fh, this->line, max_len);
+    this->line[0] = '\0';
+    res = gzgets(this->gz_fh, this->line, max_len);
 
-    if (!gzeof(this->gz_fh)) {
+    if (res == NULL) {
 	return 0;
     }
 
     len = strlen(this->line);
-    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     strcpy(s.seq, this->line);
 
     //
     // Read the repeat of the ID
     //
-    gzgets(this->gz_fh, this->line, max_len);
+    this->line[0] = '\0';
+    res = gzgets(this->gz_fh, this->line, max_len);
 
-    if (this->line[0] != '+' || !gzeof(this->gz_fh)) {
+    if (this->line[0] != '+' || res == NULL) {
 	return 0;
     }
 
     //
     // Read the quality score from the file
     //
-    gzgets(this->gz_fh, this->line, max_len);
+    this->line[0] = '\0';
+    res = gzgets(this->gz_fh, this->line, max_len);
 
-    if (!gzeof(this->gz_fh)) {
+    if (res == NULL && strlen(this->line) == 0) {
 	return 0;
     }
 
     len = strlen(this->line);
-    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     strcpy(s.qual, this->line);
 

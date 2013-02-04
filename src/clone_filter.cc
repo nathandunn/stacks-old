@@ -60,6 +60,12 @@ int main (int argc, char* argv[]) {
     } else if (in_file_type == fasta) {
         fh_1 = new Fasta(in_path_1.c_str());
         fh_2 = new Fasta(in_path_2.c_str());
+    } else if (in_file_type == gzfastq) {
+        fh_1 = new GzFastq(in_path_1.c_str());
+	fh_2 = new GzFastq(in_path_2.c_str());
+    } else if (in_file_type == gzfasta) {
+        fh_1 = new GzFasta(in_path_1.c_str());
+        fh_2 = new GzFasta(in_path_2.c_str());
     } else if (in_file_type == bustard) {
         fh_1 = new Bustard(in_path_1.c_str());
         fh_2 = new Bustard(in_path_2.c_str());
@@ -328,8 +334,12 @@ int parse_command_line(int argc, char* argv[]) {
                 in_file_type = bustard;
 	    else if (strcasecmp(optarg, "fasta") == 0)
                 in_file_type = fasta;
-            else
-                in_file_type = fastq;
+	     else if (strcasecmp(optarg, "gzfasta") == 0)
+		 in_file_type = gzfasta;
+	     else if (strcasecmp(optarg, "gzfastq") == 0)
+		 in_file_type = gzfastq;
+	     else
+		 in_file_type = fastq;
 	    break;
      	case 'y':
             if (strcasecmp(optarg, "fasta") == 0)
@@ -392,7 +402,7 @@ void help() {
               << "clone_filter -1 pair_1 -2 pair_2 -o out_dir [-i type] [-y type] [-D] [-h]\n"
 	      << "  1: first input file in a set of paired-end sequences.\n"
 	      << "  2: second input file in a set of paired-end sequences.\n"
-	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, or 'fastq' (default 'fastq').\n"
+	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, 'fastq', 'fasta', 'gzfasta', or 'gzfastq' (default 'fastq').\n"
 	      << "  o: path to output the processed files.\n"
 	      << "  y: output type, either 'fastq' or 'fasta' (default fastq).\n"
 	      << "  D: capture discarded reads to a file.\n"

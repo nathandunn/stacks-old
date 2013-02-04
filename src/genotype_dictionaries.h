@@ -137,33 +137,40 @@ load_onemap_cp_dictionary(map<string, string> &types, map<string, map<string, st
     types["ab/ac"] = "abxac";
     types["ab/cd"] = "abxcd";
 
+    // D1.11
     dictionary["abxoo"]["-"]  = "-";
     dictionary["abxoo"]["aa"] = "a";
     dictionary["abxoo"]["bb"] = "b";
 
+    // D2.16
     dictionary["ooxab"]["-"]  = "-";
     dictionary["ooxab"]["aa"] = "a";
     dictionary["ooxab"]["bb"] = "b";
 
+    // D1.10
     dictionary["abxaa"]["-"]  = "-";
-    dictionary["abxaa"]["aa"] = "aa";
-    dictionary["abxaa"]["ab"] = "ba";
+    dictionary["abxaa"]["aa"] = "a";
+    dictionary["abxaa"]["ab"] = "ab";
 
+    // D2.15
     dictionary["aaxab"]["-"]  = "-";
-    dictionary["aaxab"]["aa"] = "aa";
+    dictionary["aaxab"]["aa"] = "a";
     dictionary["aaxab"]["ab"] = "ab";
 
+    // B3.7
     dictionary["abxab"]["-"]  = "-";
-    dictionary["abxab"]["ab"] = "ab";
-    dictionary["abxab"]["aa"] = "aa";
-    dictionary["abxab"]["bb"] = "bb";
+    dictionary["abxab"]["ab"] = "2ab";
+    dictionary["abxab"]["aa"] = "a";
+    dictionary["abxab"]["bb"] = "b";
 
-    dictionary["efxeg"]["-"]  = "-";
+    // A.2
+    dictionary["abxac"]["-"]  = "-";
     dictionary["abxac"]["ab"] = "ba";
     dictionary["abxac"]["ac"] = "ac";
     dictionary["abxac"]["bc"] = "bc";
-    dictionary["abxac"]["aa"] = "aa";
+    dictionary["abxac"]["aa"] = "a";
 
+    // A.1
     dictionary["abxcd"]["-"]  = "-";
     dictionary["abxcd"]["ac"] = "ac";
     dictionary["abxcd"]["ad"] = "ad";

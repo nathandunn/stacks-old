@@ -191,6 +191,9 @@ int process_paired_reads(string prefix_1,
     if (in_file_type == fastq) {
         fh_1 = new Fastq(path_1.c_str());
 	fh_2 = new Fastq(path_2.c_str());
+    } else if (in_file_type == gzfastq) {
+        fh_1 = new GzFastq(path_1.c_str());
+	fh_2 = new GzFastq(path_2.c_str());
     } else if (in_file_type == bustard) {
         fh_1 = new Bustard(path_1.c_str());
         fh_2 = new Bustard(path_2.c_str());
@@ -367,6 +370,8 @@ int process_reads(string prefix,
 
     if (in_file_type == fastq)
         fh = new Fastq(path.c_str());
+    else if (in_file_type == gzfastq)
+        fh = new GzFastq(path.c_str());
     else if (in_file_type == bustard)
         fh = new Bustard(path.c_str());
 
@@ -827,6 +832,8 @@ int parse_command_line(int argc, char* argv[]) {
      	case 'i':
             if (strcasecmp(optarg, "bustard") == 0)
                 in_file_type = bustard;
+	    else if (strcasecmp(optarg, "gzfastq") == 0)
+                in_file_type = gzfastq;
             else
                 in_file_type = fastq;
 	    break;
@@ -1008,7 +1015,7 @@ void help() {
     std::cerr << "process_shortreads " << VERSION << "\n"
               << "process_shortreads [-f in_file | -p in_dir [-P] | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir [-i type] [-y type] [-c] [-q] [-r] [-E encoding] [-t len] [-D] [-w size] [-s lim] [-h]\n"
 	      << "  f: path to the input file if processing single-end seqeunces.\n"
-	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, or 'fastq' (default 'fastq').\n"
+	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, 'fastq', or 'gzfastq' for gzipped Fastq (default 'fastq').\n"
 	      << "  p: path to a directory of single-end Illumina files.\n"
 	      << "  1: first input file in a set of paired-end sequences.\n"
 	      << "  2: second input file in a set of paired-end sequences.\n"

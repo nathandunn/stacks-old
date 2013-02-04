@@ -142,8 +142,14 @@ if ($sql == 1 && $dry_run == 0) {
 
 foreach $sample (@parents, @progeny, @samples) {
     my ($ftype, $pfile) = "";
+    my $gzip = 0;
 
     my ($prefix, $suffix) = ($sample =~ /^(.+)\.(.+)$/);
+
+    if ($suffix eq "gz") {
+	$gzip = 1;
+	($prefix, $suffix) = ($prefix =~ /^(.+)\.(.+)$/);
+    }
 
     if ($prefix =~ /^.*\/.+$/) {
         ($pfile) = ($prefix =~ /^.*\/(.+)$/);
@@ -151,12 +157,22 @@ foreach $sample (@parents, @progeny, @samples) {
         $pfile = $prefix;
     }
 
-    if ($suffix =~ /^fa_?\d?$/ || $suffix =~ /^fasta_?\d?$/) {
-        $ftype = "fasta";
-    } elsif ($suffix =~ /^fq_?\d?$/ || $suffix =~ /^fastq_?\d?$/) {
-        $ftype = "fastq";
+    if ($gzip == 1) {
+	if ($suffix =~ /^fa_?\d?$/ || $suffix =~ /^fasta_?\d?$/) {
+	    $ftype = "gzfasta";
+	} elsif ($suffix =~ /^fq_?\d?$/ || $suffix =~ /^fastq_?\d?$/) {
+	    $ftype = "gzfastq";
+	} else {
+	    die("Unknown input file type.\n");
+	}
     } else {
-        die("Unknown input file type.\n");
+	if ($suffix =~ /^fa_?\d?$/ || $suffix =~ /^fasta_?\d?$/) {
+	    $ftype = "fasta";
+	} elsif ($suffix =~ /^fq_?\d?$/ || $suffix =~ /^fastq_?\d?$/) {
+	    $ftype = "fastq";
+	} else {
+	    die("Unknown input file type.\n");
+	}
     }
 
     $type = shift @types;
@@ -220,6 +236,10 @@ print STDERR "Generating RAD-Tag catalog...\n";
 foreach $sample (@parents, @samples) {
     my ($prefix, $suffix) = ($sample =~ /^(.+)\.(.+)$/);
 
+    if ($suffix eq "gz") {
+	($prefix, $suffix) = ($prefix =~ /^(.+)\.(.+)$/);
+    }
+
     if ($prefix =~ /^.*\/.+$/) {
         ($pfile) = ($prefix =~ /^.*\/(.+)$/);
     } else {
@@ -255,6 +275,10 @@ $num_files = scalar(@parents) + scalar(@progeny) + scalar(@samples);
 foreach $sample (@parents, @progeny, @samples) {
 
     my ($prefix, $suffix) = ($sample =~ /^(.+)\.(.+)$/);
+
+    if ($suffix eq "gz") {
+	($prefix, $suffix) = ($prefix =~ /^(.+)\.(.+)$/);
+    }
 
     if ($prefix =~ /^.*\/.+$/) {
         ($pfile) = ($prefix =~ /^.*\/(.+)$/);
@@ -540,7 +564,7 @@ denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches
     d: perform a dry run. Do not actually execute any programs, just print what would be executed.
     h: display this help message.
 
-    Stack assembly options:
+  Stack assembly options:
     m: specify a minimum number of identical, raw reads required to create a stack.
     P: specify a minimum number of identical, raw reads required to create a stack in 'progeny' individuals.
     M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
@@ -549,7 +573,7 @@ denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches
     t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
     H: disable calling haplotypes from secondary reads.
 
-    Database options:
+  Database options:
     b: batch ID representing this dataset.
     B: specify a database to load data into.
     D: batch description
@@ -557,7 +581,7 @@ denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches
     S: disable recording SQL data in the database.
     i: starting sample_id, this is determined automatically if database interaction is enabled.
 
-    SNP Model Options (these options are passed on to ustacks):
+  SNP Model Options (these options are passed on to ustacks):
     --bound_low: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).
     --bound_high: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).
     --alpha: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.

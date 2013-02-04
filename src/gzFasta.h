@@ -23,6 +23,7 @@
 
 #ifdef HAVE_LIBZ
 
+#include <errno.h>
 #include <zlib.h>
 #include "input.h"
 
@@ -63,7 +64,8 @@ Seq *GzFasta::next_seq() {
     // Check if there is a carraige return in the buffer
     //
     uint len = strlen(this->line);
-    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     //
     // Initialize the Seq structure and store the FASTA ID
@@ -80,7 +82,8 @@ Seq *GzFasta::next_seq() {
 
     while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
 	len = strlen(this->line);
-	if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+	if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
 	this->buf += this->line;
 	gzgets(this->gz_fh, this->line, max_len);
@@ -88,7 +91,8 @@ Seq *GzFasta::next_seq() {
 
     if (gzeof(this->gz_fh)) {
 	len = strlen(this->line);
-	if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+	if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
 	this->buf += this->line;
     }
@@ -110,7 +114,7 @@ int GzFasta::next_seq(Seq &s) {
 	gzgets(this->gz_fh, this->line, max_len);
     }
 
-    if (!gzeof(this->gz_fh)) {
+    if (gzeof(this->gz_fh)) {
 	return 0;
     }
 
@@ -118,7 +122,8 @@ int GzFasta::next_seq(Seq &s) {
     // Check if there is a carraige return in the buffer
     //
     uint len = strlen(this->line);
-    if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+    if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
     //
     // Store the FASTA ID
@@ -133,7 +138,8 @@ int GzFasta::next_seq(Seq &s) {
 
     while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
 	len = strlen(this->line);
-	if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+	if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
 	this->buf += this->line;
 	gzgets(this->gz_fh, this->line, max_len);
@@ -141,7 +147,8 @@ int GzFasta::next_seq(Seq &s) {
 
     if (gzeof(this->gz_fh)) {
 	len = strlen(this->line);
-	if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+	if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
 	this->buf += this->line;
     }
