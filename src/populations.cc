@@ -263,7 +263,7 @@ int main (int argc, char* argv[]) {
 	    cerr << "  Generating kernel-smoothed population statistics";
 	    if (bootstrap) cerr << " and bootstrap resampling";
 	    cerr << "...\n";
-	    kernel_smoothed_popstats(catalog, pmap, psum, pop_id);
+	    kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
 	}
     }
 
@@ -822,9 +822,10 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     double *num_indv_var,  *p_var,  *obs_het_var,  *obs_hom_var,  *exp_het_var,  *exp_hom_var,  *pi_var,  *fis_var;
     double *num_indv_mean_all, *p_mean_all, *obs_het_mean_all, *obs_hom_mean_all, *exp_het_mean_all, *exp_hom_mean_all, *pi_mean_all, *fis_mean_all;
     double *num_indv_var_all,  *p_var_all,  *obs_het_var_all,  *obs_hom_var_all,  *exp_het_var_all,  *exp_hom_var_all,  *pi_var_all,  *fis_var_all;
-    double *n, *n_all;
+    double *n, *n_all, *var_sites;
     private_cnt       = new int[pop_cnt];
     n                 = new double[pop_cnt];
+    var_sites         = new double[pop_cnt];
     num_indv_mean     = new double[pop_cnt];
     num_indv_var      = new double[pop_cnt];
     p_mean            = new double[pop_cnt];
@@ -863,6 +864,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     for (int j = 0; j < pop_cnt; j++) {
 	private_cnt[j]   = 0;
 	n[j]             = 0.0;
+	var_sites[j]     = 0.0;
 	num_indv_mean[j] = 0.0;
 	num_indv_var[j]  = 0.0;
 	p_mean[j]        = 0.0;
@@ -921,6 +923,9 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			if (s[j]->nucs[i].num_indv == 0) continue;
 
 			n[j]++;
+
+			if (s[j]->nucs[i].pi > 0) var_sites[j]++;
+
 			num_indv_mean[j] += s[j]->nucs[i].num_indv;
 			p_mean[j]        += s[j]->nucs[i].p;
 			obs_het_mean[j]  += s[j]->nucs[i].obs_het;
@@ -1228,6 +1233,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
        << "# Pop ID\t"
        << "Private\t"
        << "Sites\t"
+       << "Variant Sites\t"
        << "Polymorphic Sites\t"
        << "% Polymorphic Loci\t"
        << "Num Indv\t"
@@ -1262,7 +1268,8 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 	   << private_cnt[j]             << "\t"
 	   << sitesstr                   << "\t"
 	   << n[j]                       << "\t"
-	   << n[j] / n_all[j]            << "\t"
+	   << var_sites[j]               << "\t"
+	   << var_sites[j] / n_all[j] * 100 << "\t"
 	   << num_indv_mean_all[j]       << "\t"
 	   << num_indv_var_all[j]        << "\t"
 	   << sqrt(num_indv_var_all[j]) / sq_n_all[j] << "\t"
@@ -1291,6 +1298,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
     delete [] private_cnt;
     delete [] n;
+    delete [] var_sites;
     delete [] sq_n;
     delete [] num_indv_mean;
     delete [] num_indv_var;
@@ -1361,6 +1369,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    double cnt = 0.0;
 
 	    int incompatible_loci = 0;
+	    int multiple_loci     = 0;
 
 	    stringstream pop_name;
 	    pop_name << "batch_" << batch_id << ".fst_" << pop_1 << "-" << pop_2 << ".tsv";
@@ -1406,6 +1415,10 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
 	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 		string chr = it->first;
+		map<uint, uint> pairs_key;
+
+		init_chr_pairs(genome_pairs, chr, pairs_key, it->second);
+
 		vector<PopPair *> &pairs = genome_pairs[chr];
 
 		for (uint pos = 0; pos < it->second.size(); pos++) {
@@ -1420,9 +1433,9 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			// Locus is incompatible, log this position.
 			//
 			if (pair == NULL) {
-			    pairs.push_back(NULL);
 			    incompatible_loci++;
-			    log_fh << batch_id << "\t"
+			    log_fh << "between_population\t"
+				   << "incompatible_locus\t"
 				   << loc->id << "\t"
 				   << loc->loc.chr << "\t"
 				   << loc->sort_bp() + k << "\t"
@@ -1433,17 +1446,35 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			    continue;
 			}
 
+			pair->loc_id = loc->id;
+			pair->bp     = loc->sort_bp() + k;
+
 			//
 			// Locus is fixed in both populations, or was only found in one population.
 			//
 			if (pair->pi == 0) {
 			    delete pair;
-			    pairs.push_back(NULL);
 			    continue;
 			}
 
-			pair->bp = loc->sort_bp() + k;
-			pairs.push_back(pair);
+			//
+			// Check if this basepair position is already covered by a RAD site.
+			//
+			if (pairs[pairs_key[pair->bp]] != NULL) {
+			    multiple_loci++;
+			    log_fh << "between_population\t"
+				   << "multiple_locus\t"
+				   << loc->id << "\t"
+				   << loc->loc.chr << "\t"
+				   << pair->bp << "\t"
+				   << k << "\t" 
+				   << pop_1 << "\t" 
+				   << pop_2 << "\n";
+			    delete pair;
+			    continue;
+			}
+
+			pairs[pairs_key[pair->bp]] = pair;
 		    }
 		}
 
@@ -1515,65 +1546,55 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    bootstrap_fst(fst_samples, pairs, weights);
 		}
 
-		uint i = 0;
-		for (uint pos = 0; pos < it->second.size(); pos++) {
-		    loc = it->second[pos];
-		    len = strlen(loc->con);
+		for (uint i = 0; i < pairs.size(); i++) {
 
-		    for (int k = 0; k < len; k++) {
+		    if (pairs[i] == NULL)
+			continue;
 
-			if (pairs[i] == NULL) {
-			    i++;
-			    continue;
-			}
+		    // if (pairs[i]->bp < 2110730 || pairs[i]->bp > 2110750) {
+		    //     continue;
+		    // }
 
-			// if (pairs[i]->bp < 2110730 || pairs[i]->bp > 2110750) {
-			//     i++;
-			//     continue;
-			// }
+		    //
+		    // Calculate Fst P-value from approximate distribution.
+		    //
+		    if (bootstrap && bootstrap_type == bs_approx)
+			pairs[i]->wfst_pval = bootstrap_approximate_pval(pairs[i]->snp_cnt, pairs[i]->wfst, approx_fst_dist);
 
-			//
-			// Calculate Fst P-value from approximate distribution.
-			//
-			if (bootstrap && bootstrap_type == bs_approx)
-			    pairs[i]->wfst_pval = bootstrap_approximate_pval(pairs[i]->snp_cnt, pairs[i]->wfst, approx_fst_dist);
+		    cnt++;
+		    sum += pairs[i]->cfst;
 
-			cnt++;
-			sum += pairs[i]->cfst;
+		    sprintf(fst_str,  "%0.10f", pairs[i]->fst);
+		    sprintf(cfst_str, "%0.10f", pairs[i]->cfst);
+		    sprintf(wfst_str, "%0.10f", pairs[i]->wfst);
 
-			sprintf(fst_str,  "%0.10f", pairs[i]->fst);
-			sprintf(cfst_str, "%0.10f", pairs[i]->cfst);
-			sprintf(wfst_str, "%0.10f", pairs[i]->wfst);
+		    fh << batch_id          << "\t"
+		       << pairs[i]->loc_id  << "\t"
+		       << pop_1             << "\t"
+		       << pop_2             << "\t"
+		       << chr               << "\t"
+		       << pairs[i]->bp      << "\t"
+		       << "0"               << "\t"
+		       << pairs[i]->pi      << "\t"
+		       << fst_str           << "\t"
+		       << pairs[i]->fet_p   << "\t"
+		       << pairs[i]->fet_or  << "\t"
+		       << pairs[i]->ci_low  << "\t"
+		       << pairs[i]->ci_high << "\t"
+		       << pairs[i]->lod     << "\t"
+		       << cfst_str          << "\t"
+		       << wfst_str          << "\t"
+		       << pairs[i]->wfst_pval << "\t"
+		       << pairs[i]->snp_cnt   << "\n";
 
-			fh << batch_id        << "\t"
-			   << loc->id         << "\t"
-			   << pop_1           << "\t"
-			   << pop_2           << "\t"
-			   << loc->loc.chr    << "\t"
-			   << loc->sort_bp() + k << "\t"
-			   << k               << "\t"
-			   << pairs[i]->pi      << "\t"
-			   << fst_str           << "\t"
-			   << pairs[i]->fet_p   << "\t"
-			   << pairs[i]->fet_or  << "\t"
-			   << pairs[i]->ci_low  << "\t"
-			   << pairs[i]->ci_high << "\t"
-			   << pairs[i]->lod     << "\t"
-			   << cfst_str          << "\t"
-			   << wfst_str          << "\t"
-			   << pairs[i]->wfst_pval << "\t"
-			   << pairs[i]->snp_cnt   << "\n";
-
-			delete pairs[i];
-			i++;
-		    }
+		    delete pairs[i];
 		}
 	    }
-
 	    cerr << "Pop 1: " << pop_1 << "; Pop 2: " << pop_2 << "; mean Fst: " << (sum / cnt) << "\n";
 	    means.push_back(sum / cnt);
 
-	    cerr << "Pooled populations " << pop_1 << " and " << pop_2 << " contained " << incompatible_loci << " incompatible loci.\n";
+	    cerr << "Pooled populations " << pop_1 << " and " << pop_2 << " contained: " << incompatible_loci << " incompatible loci; " 
+		 << multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 	    fh.close();
 	}
     }
@@ -1616,6 +1637,39 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     fh.close();
 
     delete [] weights;
+
+    return 0;
+}
+
+int
+init_chr_pairs(map<string, vector<PopPair *> > &genome_chrs, string chr, map<uint, uint> &pairs_key, vector<CLocus *> &sorted_loci)
+{
+    CLocus *loc;
+    int     len, bp;
+
+    //
+    // We need to create an array to store all the pair values for computing Fst. We must
+    // account for positions in the genome that are covered by more than one RAD tag.
+    //
+    set<int> bps;
+
+    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
+	loc = sorted_loci[pos];
+	len = strlen(loc->con);
+	bp  = loc->sort_bp();
+
+	for (int k = 0; k < len; k++)
+	    bps.insert(bp + k);
+    }
+
+    genome_chrs[chr].resize(bps.size(), NULL);
+
+    set<int>::iterator it;
+    int i = 0;
+    for (it = bps.begin(); it != bps.end(); it++) {
+	pairs_key[*it] = i;
+	i++;
+    }
 
     return 0;
 }
@@ -1672,7 +1726,7 @@ correct_fst_bonferroni_win(vector<PopPair *> &pairs)
 }
 
 int 
-kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum, int pop_id) 
+kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum, int pop_id, ofstream &log_fh) 
 {
     //
     // We calculate a kernel-smoothing moving average of Pi and Fis values along each ordered chromosome.
@@ -1726,24 +1780,14 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
 	}
     }
 
+    uint multiple_loci = 0;
+
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	vector<SumStat *> sites;
 
 	// if (it->first != "groupI") continue;
 
-	for (uint pos = 0; pos < it->second.size(); pos++) {
-	    loc  = it->second[pos];
-	    len  = strlen(loc->con);
-	    lsum = psum->pop(loc->id, pop_id);
-
-	    // cerr << "Catalog locus: " << loc->id << "\n";
-
-	    for (int k = 0; k < len; k++)
-		if (lsum->nucs[k].num_indv > 0) {
-		    sites.push_back(&(lsum->nucs[k]));
-		    // cerr << "  BP: " << lsum->nucs[k].bp << "\n";
-		}
-	}
+	init_chr_sites(sites, pop_id, it->second, psum, multiple_loci, log_fh);
 
 	cerr << "    Processing chromosome " << it->first << "\n";
 	#pragma omp parallel private(alleles)
@@ -1797,7 +1841,7 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
 			    break;
 		    }
 		}
-		if (pos_u < sites.size() && sites[pos_u]->bp > limit_u) pos_u--;
+		//if (pos_u < sites.size() && sites[pos_u]->bp > limit_u) pos_u--;
 
 		// if (pos_u < sites.size())
 		// 	cerr << "Calculating sliding window; start position: " << pos_l << ", " << sites[pos_l]->bp << "bp; end position: " 
@@ -1817,6 +1861,24 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
 		    alleles = p->num_indv * 2;
 		    dist    = p->bp > c->bp ? p->bp - c->bp : c->bp - p->bp;
 
+		    if (dist > limit || dist < 0) {
+                        #pragma omp critical
+			{
+			    cerr << "ERROR: current basepair is out of the sliding window.\n"
+				 << "  Calculating sliding window; start position: " << pos_l << ", " << (sites[pos_l] == NULL ? -1 : sites[pos_l]->bp) << "bp; end position: " 
+				 << pos_u << ", " << (sites[pos_u] == NULL ? -1 : sites[pos_u]->bp) << "bp; center: " 
+				 << pos_c << ", " << sites[pos_c]->bp << "bp\n"
+				 << "  Current position: " << pos_p << ", " << sites[pos_p]->bp << "; Dist: " << dist << "\n"
+				 << "  Window positions:\n";
+
+			    for (uint j = pos_l; j < pos_u; j++) {
+				p = sites[j];
+				if (p == NULL) continue;
+				cerr << "    Position: " << j << "; " << p->bp << "bp\n";
+			    }
+			}
+			continue;
+		    }
 		    //cerr << "Window centered on: " << c->bp << "; Examining bp " << p->bp << "; distance from center: " << dist << "\n";
 
 		    if (p->pi > 0) {
@@ -1850,6 +1912,7 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
 	}
 	sites.clear();
     }
+    cerr << "Population " << pop_id << " contained " << multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 
     //
     // If bootstrap resampling method is approximate, generate our single, empirical distribution.
@@ -1885,6 +1948,81 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
     }
 
     delete [] weights;
+
+    return 0;
+}
+
+int
+init_chr_sites(vector<SumStat *> &sites, 
+	       int pop_id, vector<CLocus *> &sorted_loci, PopSum<CLocus> *psum, 
+	       uint &multiple_loci, ofstream &log_fh)
+{
+    CLocus *loc;
+    LocSum *lsum;
+    int     len;
+
+    //
+    // We need to create an array to store all the nucleotide values for computing kernel-smoothed
+    // statistics for this population. We must account for positions in the genome that are covered 
+    // by more than one RAD tag.
+    //
+    set<int> bps;
+
+    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
+	loc  = sorted_loci[pos];
+	len  = strlen(loc->con);
+	lsum = psum->pop(loc->id, pop_id);
+
+	for (int k = 0; k < len; k++) {
+	    if (lsum->nucs[k].num_indv > 0) 
+		bps.insert(lsum->nucs[k].bp);
+	}
+    }
+
+    sites.resize(bps.size(), NULL);
+
+    //
+    // Create a key describing where in the sites array to find each basepair coordinate.
+    //
+    map<uint, uint>    sites_key;
+    set<int>::iterator it;
+    int i = 0;
+    for (it = bps.begin(); it != bps.end(); it++) {
+	sites_key[*it] = i;
+	i++;
+    }
+
+    //
+    // Assign nucleotides to their proper, ordered location in the genome, 
+    // checking that a site hasn't already been covered by another RAD locus.
+    //
+    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
+	loc  = sorted_loci[pos];
+	len  = strlen(loc->con);
+	lsum = psum->pop(loc->id, pop_id);
+
+	for (int k = 0; k < len; k++) {
+	    if (lsum->nucs[k].num_indv == 0) continue;
+
+	    if (sites_key.count(lsum->nucs[k].bp) == 0) {
+		cerr << "Error: locus " << lsum->nucs[k].loc_id << " at " << lsum->nucs[k].bp << "bp is not defined in the sites map.\n";
+
+	    } else if (sites[sites_key[lsum->nucs[k].bp]] == NULL) {
+		sites[sites_key[lsum->nucs[k].bp]] = &(lsum->nucs[k]);
+
+	    } else {
+		multiple_loci++;
+		log_fh << "within_population\t"
+		       << "multiple_locus\t"
+		       << loc->id << "\t"
+		       << loc->loc.chr << "\t"
+		       << lsum->nucs[k].bp << "\t"
+		       << k << "\t" 
+		       << pop_id << "\t"
+		       << "conflicts with locus " << sites[sites_key[lsum->nucs[k].bp]]->loc_id << "\n";
+	    }
+	}
+    }
 
     return 0;
 }
@@ -2201,7 +2339,7 @@ kernel_smoothed_fst(vector<PopPair *> &pairs, double *weights, int *snp_dist)
 	    limit_l = c->bp - limit > 0 ? c->bp - limit : 0;
 	    limit_u = c->bp + limit;
 
-	    while (pos_l <  pairs.size()) {
+	    while (pos_l < pairs.size()) {
 		if (pairs[pos_l] == NULL) {
 		    pos_l++;
 		} else {
@@ -2221,7 +2359,8 @@ kernel_smoothed_fst(vector<PopPair *> &pairs, double *weights, int *snp_dist)
 			break;
 		}
 	    }
-	    if (pos_u < pairs.size() && pairs[pos_u]->bp > limit_u) pos_u--;
+	    //if (pos_u < pairs.size() && pairs[pos_u]->bp > limit_u) 
+		//do { pos_u--; } while (pairs[pos_u] == NULL);
 
 	    // cerr << "Calculating sliding window; start position: " << pos_l << ", " << pairs[pos_l]->bp << "bp; end position: " 
 	    //      << pos_u << ", " << pairs[pos_u]->bp << "bp; center: " 
@@ -2237,6 +2376,26 @@ kernel_smoothed_fst(vector<PopPair *> &pairs, double *weights, int *snp_dist)
 		snp_cnt++;
 
 		dist = p->bp > c->bp ? p->bp - c->bp : c->bp - p->bp;
+
+		if (dist > limit || dist < 0) {
+		    #pragma omp critical
+		    {
+			cerr << "ERROR: current basepair is out of the sliding window.\n"
+			     << "  Calculating sliding window; start position: " << pos_l << ", " << (pairs[pos_l] == NULL ? -1 : pairs[pos_l]->bp) << "bp; end position: " 
+			     << pos_u << ", " << (pairs[pos_u] == NULL ? -1 : pairs[pos_u]->bp) << "bp; center: " 
+			     << pos_c << ", " << pairs[pos_c]->bp << "bp\n"
+			     << "  Current position: " << pos_p << ", " << pairs[pos_p]->bp << "; Dist: " << dist << "\n"
+			     << "  Window positions:\n";
+
+			for (uint j = pos_l; j < pos_u; j++) {
+			    p = pairs[j];
+			    if (p == NULL) continue;
+			    cerr << "    Position: " << j << "; " << p->bp << "bp\n";
+			}
+			//exit(0);
+		    }
+		    continue;
+		}
 
 		final_weight  = (p->alleles - 1) * weights[dist];
 		weighted_fst += p->cfst * final_weight;

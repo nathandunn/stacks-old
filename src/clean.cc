@@ -240,15 +240,16 @@ int parse_input_record(Seq *s, Read *r) {
 	r->machine[id_len] = '\0';
     }
 
-    r->len = strlen(s->seq);
+    uint len = strlen(s->seq);
 
     //
     // Resize the sequence/phred buffers if necessary.
     //
-    if (r->len > r->size) {
+    if (truncate_seq == 0 && len > r->size - 1) {
 	delete [] r->seq;
 	delete [] r->phred;
 	delete [] r->int_scores;
+	r->len   = len;
 	r->seq   = new char[r->len + 1];
 	r->phred = new char[r->len + 1];
 	r->int_scores = new int[r->len];
@@ -286,8 +287,7 @@ int write_fasta(map<string, ofstream *> &fhs, Read *href, bool barcode, bool ove
 
     if (href->fastq_type != generic_fastq)
 	*(fhs[href->barcode]) <<
-	    ">" << href->barcode <<
-	    "_" << href->lane <<
+	    ">" << href->lane <<
 	    "_" << tile << 
 	    "_" << href->x <<
 	    "_" << href->y <<
@@ -295,8 +295,7 @@ int write_fasta(map<string, ofstream *> &fhs, Read *href, bool barcode, bool ove
 	    href->seq + offset << "\n";
     else 
 	*(fhs[href->barcode]) <<
-	    ">" << href->barcode <<
-	    "_" << href->machine <<
+	    ">" << href->machine <<
 	    "_" << href->read << "\n" <<
 	    href->seq + offset << "\n";
 
@@ -331,8 +330,7 @@ int write_fastq(map<string, ofstream *> &fhs, Read *href, bool barcode, bool ove
 
     if (href->fastq_type != generic_fastq)
 	*(fhs[href->barcode]) <<
-	    "@" << href->barcode <<
-	    "_" << href->lane << 
+	    "@" << href->lane << 
 	    "_" << tile << 
 	    "_" << href->x << 
 	    "_" << href->y << 
@@ -342,8 +340,7 @@ int write_fastq(map<string, ofstream *> &fhs, Read *href, bool barcode, bool ove
 	    href->phred + offset << "\n";
     else
 	*(fhs[href->barcode]) <<
-	    "@" << href->barcode <<
-	    "_" << href->machine << 
+	    "@" << href->machine << 
 	    "_" << href->read << "\n" <<
 	    href->seq + offset << "\n" <<
 	    "+\n" <<

@@ -42,6 +42,7 @@ extern double minor_allele_freq;
 
 class PopPair {
 public:
+    int    loc_id;
     int    bp;
     double alleles; // Number of alleles sampled at this location.
     double pi;
@@ -58,6 +59,7 @@ public:
     int    snp_cnt;   // Number of SNPs in kernel-smoothed window centered on this SNP.
 
     PopPair() { 
+	loc_id    = 0;
 	bp        = 0;
 	alleles   = 0.0;
 	pi        = 0.0;
@@ -76,6 +78,7 @@ public:
 
 class SumStat {
 public:
+    int    loc_id;
     int    bp;
     double num_indv;
     char   p_nuc;
@@ -95,6 +98,7 @@ public:
     int    snp_cnt;   // Number of SNPs in kernel-smoothed window centered on this SNP.
 
     SumStat() {
+	loc_id    = 0;
 	bp        = 0;
 	num_indv  = 0.0;
 	p         = 0.0;
@@ -308,9 +312,11 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	    //
 	    if (res < 0) {
 		incompatible_loci++;
-		log_fh << loc->id << "\t"
+		log_fh << "within_population\t"
+		       << "incompatible_locus\t"
+		       << loc->id << "\t"
 		       << loc->loc.chr << "\t"
-		       << loc->loc.bp + k << "\t"
+		       << loc->sort_bp() + k << "\t"
 		       << k << "\t" 
 		       << population_id << "\n";
 	    }
@@ -640,6 +646,7 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
     //
     // Record the results in the PopSum object.
     //
+    s->nucs[pos].loc_id   = locus->id;
     //s->nucs[pos].bp       = locus->loc.bp + pos;
     s->nucs[pos].bp       = locus->sort_bp() + pos;
     s->nucs[pos].num_indv = num_indv;
@@ -848,6 +855,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     // Record the results in the PopSum object.
     //
     //s->nucs[pos].bp       = locus->loc.bp + pos;
+    s->nucs[pos].loc_id   = locus->id;
     s->nucs[pos].bp       = locus->sort_bp() + pos;
     s->nucs[pos].num_indv = num_indv;
     s->nucs[pos].p        = allele_p > allele_q ? allele_p : allele_q;

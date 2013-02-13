@@ -58,6 +58,7 @@ bool   overhang        = true;
 bool   matepair        = false;
 bool   filter_illumina = false;
 bool   ill_barcode     = false;
+bool   trim_reads      = true;
 int    truncate_seq = 0;
 int    barcode_size = 0;
 int    barcode_dist = 2;
@@ -520,13 +521,21 @@ process_singlet(map<string, ofstream *> &fhs, Read *href,
     //
     if (quality) {
 	int res = check_quality_scores(href, qual_offset, score_limit, len_limit, paired_end);
-	if (res == 0) {
-	    counter["low_quality"]++;
-	    href->retain = 0;
-	    return 0;
 
-	} else if (res < 0) {
-	    quality_trim = true;
+	if (trim_reads) {
+	    if (res <= 0) {
+		counter["low_quality"]++;
+		href->retain = 0;
+		return 0;
+	    }
+	} else {
+	    if (res == 0) {
+		counter["low_quality"]++;
+		href->retain = 0;
+		return 0;
+	    } else if (res < 0) {
+		quality_trim = true;
+	    }
 	}
     }
 
@@ -797,6 +806,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"no_overhang",        no_argument, NULL, 'O'},
 	    {"filter_illumina",    no_argument, NULL, 'F'},
 	    {"illumina_barcodes",  no_argument, NULL, 'I'},
+	    {"no_read_trimming",   no_argument, NULL, 'N'},
 	    {"infile_type",  required_argument, NULL, 'i'},
 	    {"outfile_type", required_argument, NULL, 'y'},
 	    {"file",         required_argument, NULL, 'f'},
@@ -819,7 +829,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqrFIOPmDi:y:f:o:t:B:b:1:2:p:s:w:E:L:A:G:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcqrNFIOPmDi:y:f:o:t:B:b:1:2:p:s:w:E:L:A:G:T:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -903,6 +913,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'I':
 	    ill_barcode = true;
+	    break;
+	case 'N':
+	    trim_reads = false;
 	    break;
 	case 't':
 	    truncate_seq = is_integer(optarg);
@@ -1039,6 +1052,7 @@ void help() {
 	      << "  Output options:\n"
 	      << "    --merge: if no barcodes are specified, merge all input files into a single output file (or single pair of files).\n\n"
 	      << "  Advanced options:\n"
+	      << "    --no_read_trimming: do not trim low quality reads, just discard them.\n"
 	      << "    --len_limit <limit>: when trimming sequences, specify the minimum length a sequence must be to keep it (default 31bp).\n"
 	      << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
 	      << "    --illumina_barcodes: barcodes are not inline, but instead are part of Illumina's FASTQ header.\n"
