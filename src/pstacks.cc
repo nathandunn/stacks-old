@@ -795,7 +795,7 @@ void version() {
 void help() {
     std::cerr << "pstacks " << VERSION << "\n"
               << "pstacks -t file_type -f file_path [-o path] [-i id] [-m min_cov] [-p num_threads] [-h]" << "\n"
-	      << "  t: input file Type. Supported types: bowtie, sam, bam.\n"
+	      << "  t: input file Type. Supported types: bowtie, sam, or bam.\n"
               << "  f: input file path.\n"
 	      << "  o: output path to write results.\n"
 	      << "  i: SQL ID to insert into the output to identify this sample.\n"
@@ -803,14 +803,14 @@ void help() {
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  h: display this help messsage.\n"
 	      << "  Model options:\n" 
-	      << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
+	      << "    --model_type <type>: either 'snp' (default), 'bounded', or 'fixed'\n"
 	      << "    For the SNP or Bounded SNP model:\n"
-	      << "      --alpha: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
+	      << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
 	      << "    For the Bounded SNP model:\n"
-	      << "      --bound_low: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
-	      << "      --bound_high: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
+	      << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
+	      << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
 	      << "    For the Fixed model:\n"
-	      << "      --bc_err_freq: specify the barcode error frequency, between 0 and 1.0.\n";
+	      << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n";
 
     exit(0);
 }

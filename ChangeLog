@@ -1,3 +1,11 @@
+Stacks 0.99994 - February 12, 2013
+---------------------------------
+	Bugfix: process_radtags/process_shortreads, when adding support for reads of different length, I
+	clobbered the sequence truncation option. Fixed this regression.
+	Bugfix: the kernel smoothing algorithms for calculating Fst, Pi, and Fis could sometimes segfault
+	as some RAD sites can overlap. Added code to find and describe overlapping RAD sites and report these
+	to the user.
+
 Stacks 0.99993 - January 30, 2013
 ---------------------------------
 	Feature: process_radtags/process_shortreads/ustacks can now read gzipped Fasta/Fastq input files.

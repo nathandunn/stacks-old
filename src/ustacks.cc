@@ -1840,6 +1840,10 @@ int parse_command_line(int argc, char* argv[]) {
                 in_file_type = fasta;
             else if (strcmp(optarg, "fastq") == 0)
                 in_file_type = fastq;
+	    else if (strcasecmp(optarg, "gzfasta") == 0)
+                in_file_type = gzfasta;
+	    else if (strcasecmp(optarg, "gzfastq") == 0)
+                in_file_type = gzfastq;
             else
                 in_file_type = unknown;
 	    break;
@@ -1980,7 +1984,7 @@ void version() {
 void help() {
     std::cerr << "ustacks " << VERSION << "\n"
               << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-m min_cov] [-M max_dist] [-p num_threads] [-R] [-H] [-h]" << "\n"
-	      << "  t: input file Type. Supported types: fasta or fastq.\n"
+	      << "  t: input file Type. Supported types: fasta, fastq, gzfasta, or gzfastq.\n"
               << "  f: input file path.\n"
 	      << "  o: output path to write results." << "\n"
 	      << "  i: SQL ID to insert into the output to identify this sample." << "\n"
@@ -1994,16 +1998,16 @@ void help() {
 	      << "  Stack assembly options:\n"
 	      << "    r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm." << "\n"
 	      << "    d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
-	      << "    --max_locus_stacks: maximum number of stacks at a single de novo locus (default 3).\n"
+	      << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
 	      << "  Model options:\n" 
 	      << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
 	      << "    For the SNP or Bounded SNP model:\n"
-	      << "      --alpha: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
+	      << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
 	      << "    For the Bounded SNP model:\n"
-	      << "      --bound_low: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
-	      << "      --bound_high: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
+	      << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
+	      << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
 	      << "    For the Fixed model:\n"
-	      << "      --bc_err_freq: specify the barcode error frequency, between 0 and 1.0.\n";
+	      << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n";
 
     exit(0);
 }

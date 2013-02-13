@@ -63,6 +63,7 @@ typedef hash_map<const char *, vector<int>, hash<const char *>, eqstr> AdapterHa
 
 extern int  barcode_size;
 extern bool ill_barcode;
+extern int  truncate_seq;
 
 int  parse_illumina_v1(const char *);
 int  parse_illumina_v2(const char *);
