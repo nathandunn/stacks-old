@@ -31,30 +31,35 @@
 
 Rem::Rem() { 
     this->id         = 0;
-    this->seq_id     = NULL; 
+    // this->seq_id     = NULL; 
     this->seq        = NULL; 
     this->utilized   = false;
 }
 
 Rem::Rem(int id, char *seq_id, DNASeq *seq) { 
-    this->id = id;
+    this->id       = id;
+    this->utilized = false;
 
-    uint len = strlen(seq_id);
-    this->seq_id = new char[len + 1];
-    strcpy(this->seq_id, seq_id);
+    char *s = new char[strlen(seq_id) + 1];
+    strcpy(s, seq_id);
+    this->map.push_back(s);
 
     this->seq = new DNASeq(seq->size, seq->s);
-
-    this->utilized   = false;
 }
 
 int Rem::add_id(const char *id) {
-    if (this->seq_id != NULL)
-	delete [] this->seq_id;
+    char *f = new char[strlen(id) + 1];
+    strcpy(f, id);
+    this->map.push_back(f);
 
-    uint len = strlen(id);
-    this->seq_id = new char[len + 1];
-    strcpy(this->seq_id, id);
+    return 0;
+}
+
+int Rem::add_seq(const DNASeq *seq) {
+    if (this->seq != NULL)
+	delete this->seq;
+
+    this->seq = new DNASeq(seq->size, seq->s);
 
     return 0;
 }
@@ -107,8 +112,7 @@ int Stack::add_seq(const char *seq) {
     if (this->seq != NULL)
 	delete this->seq;
 
-    this->len = strlen(seq);
-    this->seq = new DNASeq(this->len, seq);
+    this->seq = new DNASeq(strlen(seq), seq);
 
     return 0;
 }

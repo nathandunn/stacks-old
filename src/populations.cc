@@ -3177,7 +3177,7 @@ write_genepop(map<int, CLocus *> &catalog,
 
 	for (int j = start_index; j <= end_index; j++) {
 
-	    fh << samples[pmap->rev_sample_index(j)] << ",\t";
+	    fh << samples[pmap->rev_sample_index(j)] << ",";
 
 	    locus_index = 0;
 	    for (it = catalog.begin(); it != catalog.end(); it++) {
@@ -3222,9 +3222,7 @@ write_genepop(map<int, CLocus *> &catalog,
 			    fh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
 			}
 		    }
-		    // if (j <= end_index) 
-		    // 	fh << "\t";
-		    break;
+		    //break;
 		}
 	    }
 	    fh << "\n";

@@ -46,29 +46,29 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
-
 #include <vector>
 using std::vector;
-
 #include <map>
 using std::map;
-
+#include <tr1/unordered_map>
+using std::tr1::unordered_map;
 #include <queue>
 using std::queue;
-
 #include <set>
 using std::set;
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
-#endif
+// #ifdef __GNUC__
+// #include <ext/hash_map>
+// using __gnu_cxx::hash_map;
+// using __gnu_cxx::hash;
+// #else
+// #include <hash_map>
+// #endif
 
 #include <unistd.h>
 
+#include <sparsehash/sparse_hash_map>
+using google::sparse_hash_map;
 
 #include "constants.h" 
 #include "kmers.h"
@@ -106,8 +106,10 @@ class HVal {
     }
 };
 
-typedef hash_map<DNASeq *, HVal, hash<DNASeq *>, dnaseq_eqstr> DNASeqHashMap;
-typedef hash_map<const char *, HVal, hash<const char *>, eqstr> HashMap;
+//typedef hash_map<DNASeq *, HVal, hash<DNASeq *>, dnaseq_eqstr> DNASeqHashMap;
+//typedef sparse_hash_map<DNASeq *, HVal, hash_dnaseq, dnaseq_eqstr> DNASeqHashMap;
+typedef unordered_map<DNASeq *, HVal, hash_dnaseq, dnaseq_eqstr> DNASeqHashMap;
+//typedef sparse_hash_map<const char *, HVal, hash<const char *>, eqstr> HashMap;
 
 void help( void );
 void version( void );
@@ -132,7 +134,7 @@ int  calc_kmer_distance(map<int, MergedStack *> &, int);
 //
 int    calc_coverage_distribution(map<int, Stack *> &, double &, double &);
 double calc_merged_coverage_distribution(map<int, Stack *> &, map<int, MergedStack *> &);
-int    count_raw_reads(map<int, Stack *> &, map<int, MergedStack *> &);
+int    count_raw_reads(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &);
 
 //
 // Dealing with lumberjack (huge) stacks

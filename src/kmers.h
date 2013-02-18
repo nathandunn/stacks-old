@@ -39,13 +39,18 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
-#endif
+// #ifdef __GNUC__
+// #include <ext/hash_map>
+// using __gnu_cxx::hash_map;
+// using __gnu_cxx::hash;
+// #else
+// #include <hash_map>
+// #endif
+
+#include <tr1/unordered_map>
+using std::tr1::unordered_map;
+#include <sparsehash/sparse_hash_map>
+using google::sparse_hash_map;
 
 #include "stacks.h"
 #include "mstack.h"
@@ -57,8 +62,12 @@ struct eqstr {
     }
 };
 
-typedef hash_map<const char *, vector<int>, hash<const char *>, eqstr> KmerHashMap;
-typedef hash_map<const char *, vector<pair<string, int> >, hash<const char *>, eqstr> CatKmerHashMap;
+//typedef hash_map<const char *, vector<int>, hash<const char *>, eqstr> KmerHashMap;
+typedef unordered_map<const char *, vector<int>, hash<const char *>, eqstr> KmerHashMap;
+//typedef sparse_hash_map<const char *, vector<int>, hash<const char *>, eqstr> KmerHashMap;
+
+//typedef hash_map<const char *, vector<pair<string, int> >, hash<const char *>, eqstr> CatKmerHashMap;
+typedef unordered_map<const char *, vector<pair<string, int> >, hash<const char *>, eqstr> CatKmerHashMap;
 
 int  determine_kmer_length(int, int);
 int  calc_min_kmer_matches(int, int, int, bool);

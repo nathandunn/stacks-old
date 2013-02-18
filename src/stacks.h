@@ -106,31 +106,6 @@ class SNP {
     }
 };
 
-class Stack {
- public:
-    uint    id;
-    uint    count;       // Number of identical reads forming this stack
-    DNASeq *seq;         // Sequence read
-    uint    len;         // Read length
-    vector<char *> map;  // List of sequence read IDs merged into this stack
-    PhyLoc  loc;         // Physical genome location of this stack.
-
-    Stack()  { 
-	id     = 0; 
-	count  = 0; 
-	seq    = NULL; 
-	len    = 0; 
-    }
-    ~Stack() { 
-	delete this->seq; 
-	for (unsigned int i = 0; i < this->map.size(); i++) 
-	    delete [] this->map[i]; 
-    }
-    int add_id(const char *);
-    int add_seq(const char *);
-    int add_seq(const DNASeq *);
-};
-
 class PStack {
  public:
     uint     id;
@@ -156,19 +131,45 @@ class PStack {
     int add_seq(DNANSeq *);
 };
 
+class Stack {
+ public:
+    uint            id;
+    DNASeq        *seq;  // Sequence read
+    vector<char *> map;  // List of sequence read IDs merged into this stack
+
+    Stack()  {
+	id  = 0;
+	seq = NULL;
+    }
+    ~Stack() { 
+	delete this->seq; 
+	for (unsigned int i = 0; i < this->map.size(); i++)
+	    delete [] this->map[i];
+    }
+    uint count() { return this->map.size(); }
+    int  add_id(const char *);
+    int  add_seq(const char *);
+    int  add_seq(const DNASeq *);
+};
+
 class Rem {
  public:
-    uint    id;
-    char   *seq_id;
-    DNASeq *seq;     // Sequence read
-    PhyLoc  loc;     // Physical genome location of this stack.
-    bool    utilized;
+    uint            id;
+    vector<char *> map; // List of sequence read IDs merged into this stack
+    DNASeq        *seq; // Sequence read
+    bool      utilized;
 
     Rem();
     Rem(int, char *, DNASeq *);
-    ~Rem() { delete [] seq_id; delete seq; }
-    int add_id(const char *);
-    int add_seq(const char *);
+    ~Rem() { 
+	delete this->seq;
+	for (unsigned int i = 0; i < this->map.size(); i++) 
+	    delete [] this->map[i];
+    }
+    uint count() { return this->map.size(); }
+    int  add_id(const char *);
+    int  add_seq(const char *);
+    int  add_seq(const DNASeq *);
 };
 
 class Locus {
