@@ -173,7 +173,7 @@ int main (int argc, char* argv[]) {
     // Call the consensus sequence again, now that remainder tags have been merged.
     call_consensus(merged, unique, remainders, true);
 
-    count_raw_reads(unique, merged);
+    count_raw_reads(unique, remainders, merged);
 
     cerr << "Writing results\n";
     write_results(merged, unique, remainders);
@@ -188,10 +188,13 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
     vector<int> keys;
-    for (it = rem.begin(); it != rem.end(); it++) 
+    uint tot = 0;
+    for (it = rem.begin(); it != rem.end(); it++) {
     	keys.push_back(it->first);
+	tot += it->second->count();
+    }
 
-    cerr << "  " << keys.size() << " remainder sequences left to merge.\n";
+    cerr << "  " << tot << " remainder sequences left to merge.\n";
 
     //
     // Calculate the number of k-mers we will generate. If kmer_len == 0,
@@ -299,7 +302,7 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
                 #pragma omp critical
     		{
     		    merged[min_id]->remtags.push_back(it->first);
-    		    utilized++;
+    		    utilized += it->second->count();
     		}
     	    }
     	}
@@ -308,7 +311,7 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
     free_kmer_hash(kmer_map, kmer_map_keys);
     //delete [] buf;
 
-    cerr << "  Matched " << utilized << " remainder reads; unable to match " << keys.size() - utilized << " remainder reads.\n";
+    cerr << "  Matched " << utilized << " remainder reads; unable to match " << tot - utilized << " remainder reads.\n";
 
     return 0;
 }
@@ -369,11 +372,12 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
     int i;
     #pragma omp parallel private(i)
     { 
+	MergedStack *mtag;
+	Stack       *utag;
+	Rem         *r;
+
         #pragma omp for schedule(dynamic) 
     	for (i = 0; i < (int) keys.size(); i++) {
-    	    MergedStack *mtag;
-    	    Stack       *utag;
-
     	    mtag = merged[keys[i]];
 
     	    //
@@ -388,7 +392,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
     	    for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
     		utag = unique[*j];
 
-    		for (uint k = 0; k < utag->count; k++) {
+    		for (uint k = 0; k < utag->count(); k++) {
     		    reads.push_back(utag->seq);
     		    read_types.push_back(primary);
     		}
@@ -396,8 +400,12 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
 
     	    // For each remainder tag that has been merged into this Stack, add the sequence. 
     	    for (j = mtag->remtags.begin(); j != mtag->remtags.end(); j++) {
-    		reads.push_back(rem[*j]->seq);
-    		read_types.push_back(secondary);
+		r = rem[*j];
+
+    		for (uint k = 0; k < r->count(); k++) {
+		    reads.push_back(r->seq);
+		    read_types.push_back(secondary);
+		}
     	    }
 
     	    //
@@ -488,7 +496,7 @@ int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &mer
 	mtag = new MergedStack;
 
 	mtag->id    = k;
-	mtag->count = utag->count;
+	mtag->count = utag->count();
 	mtag->utags.push_back(utag->id);
 	mtag->add_consensus(utag->seq);
 
@@ -1187,20 +1195,24 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     	    // the specified cutoff. However, add the reads to the remainder
     	    // vector for later processing.
     	    //
-    	    for (fit = it->second.ids.begin(); fit != it->second.ids.end(); fit++) {
-    		r = new Rem(global_id, *fit, it->first);
-    		rem[global_id] = r;
-    		global_id++;
-    	    }
-    	} else if (it->second.count > 1) {
+	    r     = new Rem;
+    	    r->id = global_id;
+    	    r->add_seq(it->first);
+
+    	    for (fit = it->second.ids.begin(); fit != it->second.ids.end(); fit++)
+    		r->add_id(*fit);
+
+	    rem[r->id] = r;
+	    global_id++;
+
+    	} else { // if (it->second.count > 1) {
     	    //
     	    // Populate a Stack object for this unique radtag. Create a
     	    // map of the IDs for the sequences that have been
     	    // collapsed into this radtag.
     	    //
-    	    u         = new Stack;
-    	    u->id     = global_id;
-    	    u->count  = it->second.count;
+    	    u     = new Stack;
+    	    u->id = global_id;
     	    u->add_seq(it->first);
 
     	    // Copy the original Fastq IDs from which this unique radtag was built.
@@ -1237,19 +1249,21 @@ int calc_coverage_distribution(map<int, Stack *> &unique, double &mean, double &
     double s     = 0.0;
     double sum   = 0.0;
     uint   max   = 0;
+    uint   cnt   = 0;
     double total = 0.0;
 
     map<int, int> depth_dist;
     map<int, int>::iterator j;
 
     for (i = unique.begin(); i != unique.end(); i++) {
-	m += i->second->count;
+	cnt = i->second->count();
+	m += cnt;
 	total++;
 
-        depth_dist[i->second->count]++;
+        depth_dist[cnt]++;
 
-	if (i->second->count > max)
-	    max = i->second->count;
+	if (cnt > max)
+	    max = cnt;
     }
 
     mean = round(m / total);
@@ -1261,7 +1275,7 @@ int calc_coverage_distribution(map<int, Stack *> &unique, double &mean, double &
 
     for (i = unique.begin(); i != unique.end(); i++) {
 	total++;
-	s = i->second->count;
+	s = i->second->count();
 	sum += pow((s - mean), 2);
     }
 
@@ -1293,7 +1307,7 @@ double calc_merged_coverage_distribution(map<int, Stack *> &unique, map<int, Mer
 	m = 0.0;
 	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
 	    tag  = unique[*k];
-	    m   += tag->count;
+	    m   += tag->count();
 	}
 	if (m > max) max = m;
 
@@ -1309,7 +1323,7 @@ double calc_merged_coverage_distribution(map<int, Stack *> &unique, map<int, Mer
 	s = 0.0;
 	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
 	    tag  = unique[*k];
-	    s   += tag->count;
+	    s   += tag->count();
 	}
 	sum += pow((s - mean), 2);
     }
@@ -1321,7 +1335,7 @@ double calc_merged_coverage_distribution(map<int, Stack *> &unique, map<int, Mer
     return m;
 }
 
-int count_raw_reads(map<int, Stack *> &unique, map<int, MergedStack *> &merged) {
+int count_raw_reads(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged) {
     map<int, MergedStack *>::iterator it;
     map<int, Stack *>::iterator sit;
     vector<int>::iterator k;
@@ -1334,13 +1348,15 @@ int count_raw_reads(map<int, Stack *> &unique, map<int, MergedStack *> &merged) 
     for (it = merged.begin(); it != merged.end(); it++) {
 	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
 	    tag  = unique[*k];
-	    m   += tag->count;
+	    m   += tag->count();
 
             if (uniq_ids.count(*k) == 0)
                uniq_ids[*k] = 0;
             uniq_ids[*k]++;
 	}
-        m += it->second->remtags.size();
+	for (uint j = 0; j < it->second->remtags.size(); j++)
+	    m += rem[it->second->remtags[j]]->count();
+	    //m += it->second->remtags.size();
     }
 
     for (uit = uniq_ids.begin(); uit != uniq_ids.end(); uit++)
@@ -1431,11 +1447,11 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	id = 0;
 	for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++) {
 	    tag_2  = u[*k];
-	    total += tag_2->count;
+	    total += tag_2->count();
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0"       << "\t" 
-		     << sql_id    << "\t" 
+		tags << "0"       << "\t"
+		     << sql_id    << "\t"
 		     << tag_1->id << "\t"
 		    //<< "\t" // cohort_id
 		     << "\t" // chr
@@ -1458,18 +1474,19 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 
 	for (k = tag_1->remtags.begin(); k != tag_1->remtags.end(); k++) {
 	    rem = r[*k];
-	    tags << "0"       << "\t" 
-		 << sql_id    << "\t" 
-		 << tag_1->id << "\t"
-		//<< "\t" // cohort_id
-		 << "\t" // chr
-		 << "\t" // bp
-		 << "\t" // strand
-		 << "secondary\t"
-		 << "\t" 
-		 << rem->seq_id << "\t" 
-		 << rem->seq->seq(buf) 
-		 << "\t\t\t\n";
+	    for (uint j = 0; j < rem->map.size(); j++)
+		tags << "0"       << "\t" 
+		     << sql_id    << "\t" 
+		     << tag_1->id << "\t"
+		    //<< "\t" // cohort_id
+		     << "\t" // chr
+		     << "\t" // bp
+		     << "\t" // strand
+		     << "secondary\t"
+		     << "\t" 
+		     << rem->map[j] << "\t" 
+		     << rem->seq->seq(buf) 
+		     << "\t\t\t\n";
 	}
 
 	// Write out any SNPs detected in this unique tag.
@@ -1713,8 +1730,12 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radta
 	if (seql != prev_seql && prev_seql > 0) len_mismatch = true;
 
 	d = new DNASeq(seql, c.seq);
-	radtags[d].add_id(c.id);
-	radtags[d].count++;
+
+	pair<DNASeqHashMap::iterator, bool> r;
+
+	r = radtags.insert(make_pair(d, HVal()));
+	(*r.first).second.count++;
+	(*r.first).second.add_id(c.id);
 	radtags_keys.push_back(d);
         i++;
     }

@@ -24,13 +24,13 @@
 #include <string.h>
 #include <limits.h>
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
-#endif
+// #ifdef __GNUC__
+// #include <ext/hash_map>
+// using __gnu_cxx::hash_map;
+// using __gnu_cxx::hash;
+// #else
+// #include <hash_map>
+// #endif
 
 //
 // We expect (and C++ defines) an unsigned char as 8 bits, so we 
@@ -48,7 +48,7 @@ const unsigned short int bases_per_byte = CHAR_BIT / 2;
 //    T == 11
 //
 class DNASeq {
- public:
+public:
     //
     // The number of DNA bases we are storing
     //
@@ -63,6 +63,7 @@ class DNASeq {
     DNASeq(int, unsigned char *);
     ~DNASeq();
 
+    char  len() { return this->size; }
     char  operator[](int);
     char *seq(char *);
     char *seq();
@@ -77,20 +78,34 @@ using std::cin;
 using std::cout;
 using std::cerr;
 
-namespace __gnu_cxx {
-    template<>
-    struct hash<DNASeq *>
+// namespace __gnu_cxx {
+//     template<>
+//     struct hash<DNASeq *>
+//     {
+// 	size_t
+// 	operator()(DNASeq *__s) const {
+// 	    unsigned long   __h = 0;
+// 	    unsigned int  bytes = (__s->size / bases_per_byte) + (__s->size % bases_per_byte > 0 ? 1 : 0);
+// 	    for (unsigned int i = 0; i < bytes; i++)
+// 		__h = 5 * __h + __s->s[i];
+// 	    return size_t(__h);
+// 	}
+//     };
+// }
+
+struct hash_dnaseq {
+    size_t operator()(DNASeq *__s) const
     {
-	size_t
-	operator()(DNASeq *__s) const {
-	    unsigned long   __h = 0;
-	    unsigned int  bytes = (__s->size / bases_per_byte) + (__s->size % bases_per_byte > 0 ? 1 : 0);
-	    for (unsigned int i = 0; i < bytes; i++)
-		__h = 5 * __h + __s->s[i];
-	    return size_t(__h);
+	size_t __result = static_cast<size_t>(14695981039346656037ULL);
+	unsigned short int   __bytes  = (__s->size / bases_per_byte) + (__s->size % bases_per_byte > 0 ? 1 : 0);
+	for (unsigned short int i = 0; i < __bytes; i++) {
+	    __result ^= static_cast<size_t>(__s->s[i]);
+	    __result *= static_cast<size_t>(1099511628211ULL);
 	}
-    };
-}
+
+	return __result;
+    }
+};
 
 struct dnaseq_eqstr {
     bool operator()(DNASeq *s1, DNASeq *s2) const {

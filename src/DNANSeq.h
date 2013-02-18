@@ -56,13 +56,13 @@ const unsigned short int byte_size    = 8;
 //    N == 100
 //
 class DNANSeq {
- public:
+public:
     //
     // The number of bits required to store string of DNA string
     //
     unsigned short int bits;
     //
-    // Array of bytes to store DNA sequence, one character per two bits, four per byte.
+    // Array of bytes to store DNA sequence.
     //
     unsigned char *s;
 
