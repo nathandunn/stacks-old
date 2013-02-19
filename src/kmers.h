@@ -21,6 +21,8 @@
 #ifndef __KMERS_H__
 #define __KMERS_H__
 
+#include "constants.h"
+
 #include <math.h>
 #include <string.h>
 #include <string>
@@ -38,36 +40,44 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
-
-// #ifdef __GNUC__
-// #include <ext/hash_map>
-// using __gnu_cxx::hash_map;
-// using __gnu_cxx::hash;
-// #else
-// #include <hash_map>
-// #endif
-
 #include <tr1/unordered_map>
 using std::tr1::unordered_map;
+
+#ifdef HAVE_SPARSEHASH
 #include <sparsehash/sparse_hash_map>
 using google::sparse_hash_map;
+#endif
 
 #include "stacks.h"
 #include "mstack.h"
 #include "input.h"
 
+struct hash_charptr {
+    size_t operator()(const char *__s) const
+    {
+	size_t __result = static_cast<size_t>(14695981039346656037ULL);
+	unsigned int __len = strlen(__s);
+	for (unsigned int i = 0; i < __len; i++) {
+	    __result ^= static_cast<size_t>(__s[i]);
+	    __result *= static_cast<size_t>(1099511628211ULL);
+	}
+
+	return __result;
+    }
+};
 struct eqstr {
     bool operator()(const char* s1, const char* s2) const {
 	return strcmp(s1, s2) == 0;
     }
 };
 
-//typedef hash_map<const char *, vector<int>, hash<const char *>, eqstr> KmerHashMap;
-typedef unordered_map<const char *, vector<int>, hash<const char *>, eqstr> KmerHashMap;
-//typedef sparse_hash_map<const char *, vector<int>, hash<const char *>, eqstr> KmerHashMap;
-
-//typedef hash_map<const char *, vector<pair<string, int> >, hash<const char *>, eqstr> CatKmerHashMap;
-typedef unordered_map<const char *, vector<pair<string, int> >, hash<const char *>, eqstr> CatKmerHashMap;
+#ifdef HAVE_SPARSEHASH
+typedef sparse_hash_map<const char *, vector<int>, hash_charptr, eqstr> KmerHashMap;
+typedef sparse_hash_map<const char *, vector<pair<string, int> >, hash_charptr, eqstr> CatKmerHashMap;
+#else
+typedef unordered_map<const char *, vector<int>, hash_charptr, eqstr> KmerHashMap;
+typedef unordered_map<const char *, vector<pair<string, int> >, hash_charptr, eqstr> CatKmerHashMap;
+#endif
 
 int  determine_kmer_length(int, int);
 int  calc_min_kmer_matches(int, int, int, bool);

@@ -1,4 +1,4 @@
-#                                               -*- Autoconf -*-
+# -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
@@ -27,6 +27,21 @@ AC_ARG_WITH([bam-lib-path],
   [BAM_LIBS="$withval/libbam.a"],
   [BAM_LIBS='/usr/lib/libbam.a'])
 AC_SUBST([BAM_LIBS])
+
+])
+
+# Enable use of Google Sparsehash and get include location if requested.
+AC_ARG_ENABLE([sparsehash],
+    AS_HELP_STRING([--enable-sparsehash], [Enable the use of Google Sparsehash (must be installed).]))
+
+AS_IF([test "x$enable_sparsehash" = "xyes"], [
+AC_DEFINE([HAVE_SPARSEHASH], [1], [Enable compilation with Google Sparsehash])
+AC_ARG_WITH([sparsehash-include-path],
+  [AS_HELP_STRING([--with-sparsehash-include-path],
+    [location of Google Sparsehash headers])],
+  [SPARSEHASH_CFLAGS="-I$withval"],
+  [SPARSEHASH_CFLAGS=""])
+AC_SUBST([SPARSEHASH_CFLAGS])
 
 ])
 

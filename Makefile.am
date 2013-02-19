@@ -71,14 +71,14 @@ populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/stacks.h src/stacks.cc src/PopMap.h src/PopSum.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h
 
-ustacks_CXXFLAGS = $(OPENMP_CFLAGS)
+ustacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 ustacks_LDFLAGS  = $(OPENMP_CFLAGS)
 pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
 pstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 pstacks_LDADD    = $(BAM_LIBS)
 estacks_CXXFLAGS = $(OPENMP_CFLAGS)
 estacks_LDFLAGS  = $(OPENMP_CFLAGS)
-cstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+cstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 cstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 hstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 hstacks_LDFLAGS  = $(OPENMP_CFLAGS)

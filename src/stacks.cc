@@ -31,26 +31,21 @@
 
 Rem::Rem() { 
     this->id         = 0;
-    // this->seq_id     = NULL; 
     this->seq        = NULL; 
     this->utilized   = false;
 }
 
-Rem::Rem(int id, char *seq_id, DNASeq *seq) { 
+Rem::Rem(int id, uint seq_id, DNASeq *seq) { 
     this->id       = id;
     this->utilized = false;
 
-    char *s = new char[strlen(seq_id) + 1];
-    strcpy(s, seq_id);
-    this->map.push_back(s);
+    this->map.push_back(seq_id);
 
     this->seq = new DNASeq(seq->size, seq->s);
 }
 
-int Rem::add_id(const char *id) {
-    char *f = new char[strlen(id) + 1];
-    strcpy(f, id);
-    this->map.push_back(f);
+int Rem::add_id(uint id) {
+    this->map.push_back(id);
 
     return 0;
 }
@@ -100,10 +95,8 @@ int PStack::add_seq(DNANSeq *seq) {
     return 0;
 }
 
-int Stack::add_id(const char *id) {
-    char *f = new char[strlen(id) + 1];
-    strcpy(f, id);
-    this->map.push_back(f);
+int Stack::add_id(uint id) {
+    this->map.push_back(id);
 
     return 0;
 }

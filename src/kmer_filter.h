@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -20,6 +20,8 @@
 
 #ifndef __KMER_FILTER_H__
 #define __KMER_FILTER_H__
+
+#include "constants.h" 
 
 #include <stdlib.h>
 #include <getopt.h> // Process command-line options
@@ -46,16 +48,14 @@ using std::map;
 using std::set;
 #include <utility>
 using std::pair;
+#include <tr1/unordered_map>
+using std::tr1::unordered_map;
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
+#ifdef HAVE_SPARSEHASH
+#include <sparsehash/sparse_hash_map>
+using google::sparse_hash_map;
 #endif
 
-#include "constants.h" 
 #include "clean.h"
 #include "utils.h"
 #include "kmers.h"
@@ -65,7 +65,11 @@ using __gnu_cxx::hash;
 #include "gzFasta.h"   // Reading gzipped input files in FASTA format
 #include "gzFastq.h"   // Reading gzipped input files in FASTQ format
 
-typedef hash_map<char *, long, hash<const char *>, eqstr> SeqKmerHash;
+#ifdef HAVE_SPARSEHASH
+typedef sparse_hash_map<char *, long, hash_charptr, eqstr> SeqKmerHash;
+#else
+typedef unordered_map<char *, long, hash_charptr, eqstr> SeqKmerHash;
+#endif
 
 void help( void );
 void version( void );

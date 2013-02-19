@@ -21,6 +21,8 @@
 #ifndef __USTACKS_H__
 #define __USTACKS_H__
 
+#include "constants.h" 
+
 #ifdef _OPENMP
 #include <omp.h>    // OpenMP library
 #endif
@@ -56,21 +58,13 @@ using std::tr1::unordered_map;
 using std::queue;
 #include <set>
 using std::set;
-
-// #ifdef __GNUC__
-// #include <ext/hash_map>
-// using __gnu_cxx::hash_map;
-// using __gnu_cxx::hash;
-// #else
-// #include <hash_map>
-// #endif
-
 #include <unistd.h>
 
+#ifdef HAVE_SPARSEHASH
 #include <sparsehash/sparse_hash_map>
 using google::sparse_hash_map;
+#endif
 
-#include "constants.h" 
 #include "kmers.h"
 #include "utils.h"
 #include "DNASeq.h"    // Class for storing two-bit compressed DNA sequences
@@ -89,27 +83,22 @@ const int barcode_size = 5;
 
 class HVal {
  public:
-    vector<char *> ids;
-    int  count;
-    HVal() { this->count = 0; }
-    ~HVal() { 
-	for (uint i = 0; i < this->ids.size(); i++) 
-	    delete [] this->ids[i];
-	this->ids.clear(); 
-    }
+    vector<int> ids;
 
-    int add_id(const char *id) {
-	char *f = new char[strlen(id) + 1];
-    	strcpy(f, id);
-    	this->ids.push_back(f);
+    int count() {
+	return this->ids.size();
+    }
+    int add_id(int id) {
+    	this->ids.push_back(id);
 	return 0;
     }
 };
 
-//typedef hash_map<DNASeq *, HVal, hash<DNASeq *>, dnaseq_eqstr> DNASeqHashMap;
-//typedef sparse_hash_map<DNASeq *, HVal, hash_dnaseq, dnaseq_eqstr> DNASeqHashMap;
+#ifdef HAVE_SPARSEHASH
+typedef sparse_hash_map<DNASeq *, HVal, hash_dnaseq, dnaseq_eqstr> DNASeqHashMap;
+#else
 typedef unordered_map<DNASeq *, HVal, hash_dnaseq, dnaseq_eqstr> DNASeqHashMap;
-//typedef sparse_hash_map<const char *, HVal, hash<const char *>, eqstr> HashMap;
+#endif
 
 void help( void );
 void version( void );
