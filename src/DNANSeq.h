@@ -24,14 +24,6 @@
 #include <string.h>
 #include <limits.h>
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
-#endif
-
 #define BITMASK(b)     (1 << ((b) % CHAR_BIT))
 #define BITSLOT(b)     ((b) / CHAR_BIT)
 #define BITSET(a, b)   ((a)[BITSLOT(b)] |= BITMASK(b))
@@ -86,20 +78,34 @@ using std::cin;
 using std::cout;
 using std::cerr;
 
-namespace __gnu_cxx {
-    template<>
-    struct hash<DNANSeq *>
+// namespace __gnu_cxx {
+//     template<>
+//     struct hash<DNANSeq *>
+//     {
+// 	size_t
+// 	operator()(DNANSeq *__s) const {
+// 	    unsigned long   __h = 0;
+// 	    unsigned int  bytes = BITNSLOTS(__s->bits);
+// 	    for (unsigned int i = 0; i < bytes; i++)
+// 		__h = 5 * __h + __s->s[i];
+// 	    return size_t(__h);
+// 	}
+//     };
+// }
+
+struct hash_dnanseq {
+    size_t operator()(DNANSeq *__s) const
     {
-	size_t
-	operator()(DNANSeq *__s) const {
-	    unsigned long   __h = 0;
-	    unsigned int  bytes = BITNSLOTS(__s->bits);
-	    for (unsigned int i = 0; i < bytes; i++)
-		__h = 5 * __h + __s->s[i];
-	    return size_t(__h);
+	size_t __result = static_cast<size_t>(14695981039346656037ULL);
+	unsigned short int __bytes  = BITNSLOTS(__s->bits);
+	for (unsigned short int i = 0; i < __bytes; i++) {
+	    __result ^= static_cast<size_t>(__s->s[i]);
+	    __result *= static_cast<size_t>(1099511628211ULL);
 	}
-    };
-}
+
+	return __result;
+    }
+};
 
 struct dnanseq_eqstr {
     bool operator()(DNANSeq *s1, DNANSeq *s2) const {

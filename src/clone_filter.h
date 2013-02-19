@@ -21,6 +21,8 @@
 #ifndef __CLONE_FILTER_H__
 #define __CLONE_FILTER_H__
 
+#include "constants.h" 
+
 #include <stdlib.h>
 #include <getopt.h> // Process command-line options
 #include <dirent.h> // Open/Read contents of a directory
@@ -46,16 +48,14 @@ using std::map;
 using std::set;
 #include <utility>
 using std::pair;
+#include <tr1/unordered_map>
+using std::tr1::unordered_map;
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
+#ifdef HAVE_SPARSEHASH
+#include <sparsehash/sparse_hash_map>
+using google::sparse_hash_map;
 #endif
 
-#include "constants.h" 
 #include "clean.h"
 #include "kmers.h"
 #include "Bustard.h"   // Reading input files in Tab-separated Bustard format
@@ -85,7 +85,12 @@ public:
     }
 };
 
-typedef hash_map<char *, map<string, vector<Pair> >, hash<const char *>, eqstr> CloneHash;
+#ifdef HAVE_SPARSEHASH
+typedef sparse_hash_map<char *, map<string, vector<Pair> >, hash_charptr, eqstr> CloneHash;
+#else
+typedef unordered_map<char *, map<string, vector<Pair> >, hash_charptr, eqstr> CloneHash;
+
+#endif
 
 int free_clone_hash(CloneHash &, vector<char *> &);
 

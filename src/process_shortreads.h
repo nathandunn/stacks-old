@@ -47,14 +47,6 @@ using std::set;
 #include <utility>
 using std::pair;
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
-#endif
-
 #include "constants.h" 
 #include "clean.h"
 #include "file_io.h"

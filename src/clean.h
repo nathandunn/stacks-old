@@ -32,6 +32,8 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
+#include <tr1/unordered_map>
+using std::tr1::unordered_map;
 
 #include "input.h"
 #include "kmers.h"
@@ -59,7 +61,7 @@ typedef struct read {
     double  stop_pos;
 } Read;
 
-typedef hash_map<const char *, vector<int>, hash<const char *>, eqstr> AdapterHash;
+typedef unordered_map<const char *, vector<int>, std::tr1::hash<const char *>, eqstr> AdapterHash;
 
 extern int  barcode_size;
 extern bool ill_barcode;

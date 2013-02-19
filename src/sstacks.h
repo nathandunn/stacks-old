@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -20,6 +20,8 @@
 
 #ifndef __SSTACKS_H__
 #define __SSTACKS_H__
+
+#include "constants.h"
 
 #ifdef _OPENMP
 #include <omp.h>    // OpenMP library
@@ -46,22 +48,20 @@ using std::endl;
 
 #include <vector>
 using std::vector;
-
 #include <map>
 using std::map;
-
 #include <set>
 using std::set;
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
+#include <tr1/unordered_map>
+using std::tr1::unordered_map;
+
+#ifdef HAVE_SPARSEHASH
+#include <sparsehash/sparse_hash_map>
+using google::sparse_hash_map;
 #endif
 
-#include "constants.h"
+#include "kmers.h"
 #include "stacks.h"
 #include "sql_utilities.h"
 #include "utils.h"
@@ -84,13 +84,11 @@ int QLocus::add_match(int id, allele_type type) {
     return 0;
 }
 
-struct eqstr {
-    bool operator()(const char* s1, const char* s2) const {
-	return strcmp(s1, s2) == 0;
-    }
-};
-
-typedef hash_map<const char *, vector<pair<int, allele_type> >, hash<const char *>, eqstr> HashMap;
+#ifdef HAVE_SPARSEHASH
+typedef sparse_hash_map<const char *, vector<pair<int, allele_type> >, hash_charptr, eqstr> HashMap;
+#else
+typedef unordered_map<const char *, vector<pair<int, allele_type> >, hash_charptr, eqstr> HashMap;
+#endif
 
 void help( void );
 void version( void );

@@ -54,14 +54,6 @@ using std::queue;
 using std::set;
 #include <algorithm>
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
-#endif
-
 #include "constants.h"
 #include "stacks.h"
 #include "kmers.h"

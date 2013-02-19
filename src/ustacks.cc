@@ -40,6 +40,7 @@ int       sql_id            = 0;
 bool      call_sec_hapl     = true;
 bool      set_kmer_len      = true;
 int       kmer_len          = 0;
+int       max_kmer_len      = 19;
 int       min_merge_cov     = 3;
 uint      max_subgraph      = 3;
 int       dump_graph        = 0;
@@ -1182,14 +1183,13 @@ int calc_distance(map<int, MergedStack *> &merged, int utag_dist) {
 
 int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, Rem *> &rem) {
     DNASeqHashMap::iterator it;
-    vector<char *>::iterator fit;
 
     Rem   *r;
     Stack *u;
     int   global_id = 1;
 
     for (it = radtags.begin(); it != radtags.end(); it++) {
-    	if (it->second.count < min_merge_cov) {
+    	if (it->second.count() < min_merge_cov) {
     	    //
     	    // Don't record this unique RAD-Tag if its coverage is below
     	    // the specified cutoff. However, add the reads to the remainder
@@ -1199,13 +1199,13 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     	    r->id = global_id;
     	    r->add_seq(it->first);
 
-    	    for (fit = it->second.ids.begin(); fit != it->second.ids.end(); fit++)
-    		r->add_id(*fit);
+    	    for (uint i = 0; i < it->second.ids.size(); i++)
+    		r->add_id(it->second.ids[i]);
 
 	    rem[r->id] = r;
 	    global_id++;
 
-    	} else { // if (it->second.count > 1) {
+    	} else {
     	    //
     	    // Populate a Stack object for this unique radtag. Create a
     	    // map of the IDs for the sequences that have been
@@ -1216,8 +1216,8 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     	    u->add_seq(it->first);
 
     	    // Copy the original Fastq IDs from which this unique radtag was built.
-    	    for (fit = it->second.ids.begin(); fit != it->second.ids.end(); fit++)
-    		u->add_id(*fit);
+    	    for (uint i = 0; i < it->second.ids.size(); i++)
+    		u->add_id(it->second.ids[i]);
 
     	    unique[u->id] = u;
     	    global_id++;
@@ -1374,7 +1374,6 @@ int count_raw_reads(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Me
 
 int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> &r) {
     map<int, MergedStack *>::iterator i;
-    vector<char *>::iterator   j;
     vector<int>::iterator      k;
     vector<SNP *>::iterator    s;
     map<string, int>::iterator t;
@@ -1449,7 +1448,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	    tag_2  = u[*k];
 	    total += tag_2->count();
 
-	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
+	    for (uint j = 0; j < tag_2->map.size(); j++) {
 		tags << "0"       << "\t"
 		     << sql_id    << "\t"
 		     << tag_1->id << "\t"
@@ -1459,7 +1458,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 		     << "\t" // strand
 		     << "primary\t" 
 		     << id << "\t" 
-		     << *j << "\t" 
+		     << tag_2->map[j] << "\t" 
 		     << tag_2->seq->seq(buf) 
 		     << "\t\t\t\n";
 	    }
@@ -1634,7 +1633,6 @@ int dump_stack_graph(string data_file,
 
 int dump_unique_tags(map<int, Stack *> &u) {
     map<int, Stack *>::iterator it;
-    vector<char *>::iterator fit;
     vector<pair<int, int> >::iterator pit;
     vector<int>::iterator mit;
     char *c;
@@ -1646,8 +1644,8 @@ int dump_unique_tags(map<int, Stack *> &u) {
 	     << "  Seq:       "   << c << "\n"
 	     << "  IDs:       "; 
 
-	for (fit = (*it).second->map.begin(); fit != (*it).second->map.end(); fit++)
-	    cerr << *fit << " ";
+	for (uint j = 0; j < it->second->map.size(); j++)
+	    cerr << it->second->map[j] << " ";
 
 	cerr << "\n\n";
 
@@ -1734,8 +1732,7 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radta
 	pair<DNASeqHashMap::iterator, bool> r;
 
 	r = radtags.insert(make_pair(d, HVal()));
-	(*r.first).second.count++;
-	(*r.first).second.add_id(c.id);
+	(*r.first).second.add_id(i);
 	radtags_keys.push_back(d);
         i++;
     }
