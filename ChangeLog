@@ -1,5 +1,26 @@
+Stacks 0.99995 - February 19, 2013
+----------------------------------
+	Feature: added support for using Google's Sparsehash Object: http://code.google.com/p/sparsehash/
+	If enabled at compile time, this object will replace all the hash maps with Google's sparsehash
+	saving significant memory.
+	Feature: removed the -S command line option from cstacks and sstacks. These programs now read this ID
+	directly from the Stacks input files.
+	Feature: altered ustacks to no longer store FASTQ/FASTA IDs from input files in memory to lower
+	memory usage. Instead, an integer representing the read is stored and the IDs are read back in from
+	disk just before results are written.
+	Feature: added the '--write_single_snp' option to populations. When writing Genepop or Structure files
+	this option will cause populations to write just the first SNP per locus to the file, avoiding potential
+	problems with linked SNPs originating from the same locus.
+	Feature: compressed the Hval/Stack/Rem objects to remove convenience integer variables to save memory.
+	Feature: updated Stacks programs to use the newer TR1 unordered_map hash object instead of the
+	deprecated SGI hash_map object.
+	Bugfix: fixed a memory leak in cstacks in which not all of the Locus Class elements was being properly
+	freed (only the SNP objects were being freed).
+	Bugfix: Added code to denovo_map.pl/ref_map.pl to remove from the logfile the 'counter' lines that
+	printed when initially loading radtags data.
+
 Stacks 0.99994 - February 12, 2013
----------------------------------
+----------------------------------
 	Bugfix: process_radtags/process_shortreads, when adding support for reads of different length, I
 	clobbered the sequence truncation option. Fixed this regression.
 	Bugfix: the kernel smoothing algorithms for calculating Fst, Pi, and Fis could sometimes segfault

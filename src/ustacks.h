@@ -104,6 +104,7 @@ void help( void );
 void version( void );
 int  parse_command_line(int, char**);
 int  load_radtags(string, DNASeqHashMap &, vector<DNASeq *> &);
+int  load_seq_ids(vector<char *> &);
 int  reduce_radtags(DNASeqHashMap &, map<int, Stack *> &, map<int, Rem *> &);
 int  free_radtags_hash(DNASeqHashMap &, vector<DNASeq *> &);
 int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);

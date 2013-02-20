@@ -76,6 +76,10 @@ int main (int argc, char* argv[]) {
 	cerr << "Unable to parse '" << sample_2_file << "'\n";
 	return 0;
     }
+    //
+    // Assign the ID for this sample data.
+    //
+    samp_id = sample_2.begin()->second->sample_id;
 
     //dump_loci(sample_1);
     //dump_loci(sample_2);
@@ -698,8 +702,16 @@ int write_matches(map<int, QLocus *> &sample) {
     size_t pos_1    = sample_2_file.find_last_of("/");
     string out_file = out_path + sample_2_file.substr(pos_1 + 1)  + ".matches.tsv";
 
+    //
     // Open the output files for writing.
-    std::ofstream matches(out_file.c_str());
+    //
+    std::ofstream matches;
+    matches.open(out_file.c_str());
+    if (matches.fail()) {
+	cerr << "Error: Unable to open matches file for writing.\n";
+	exit(1);
+    }
+
     string type;
     uint   match_depth;
     cerr << "Outputing to file " << out_file.c_str() << "\n";
@@ -743,9 +755,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"batch_id",    required_argument, NULL, 'b'},
 	    {"sample_1",    required_argument, NULL, 'r'},
-	    {"sample_1_id", required_argument, NULL, 'R'},
 	    {"sample_2",    required_argument, NULL, 's'},
-	    {"sample_2_id", required_argument, NULL, 'S'},
 	    {"outpath",     required_argument, NULL, 'o'},
 	    {0, 0, 0, 0}
 	};
@@ -753,7 +763,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgxuvr:s:c:o:R:S:b:p:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgxuvr:s:c:o:b:p:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -779,14 +789,6 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 's':
 	    sample_2_file = optarg;
-	    break;
-	case 'S':
-	    samp_id = is_integer(optarg);
-	    if (samp_id < 0) {
-		cerr << "Sample ID (-S) must be an integer, e.g. 1, 2, 3\n";
-		help();
-	    }
-
 	    break;
 	case 'g':
 	    search_type = genomic_loc;
@@ -844,13 +846,12 @@ void version() {
 
 void help() {
     std::cerr << "sstacks " << VERSION << "\n"
-              << "sstacks -b batch_id -c catalog_file -s sample_file [-S id] [-r sample_file] [-o path] [-p num_threads] [-g] [-x] [-v] [-h]" << "\n"
+              << "sstacks -b batch_id -c catalog_file -s sample_file [-r sample_file] [-o path] [-p num_threads] [-g] [-x] [-v] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  b: MySQL ID of this batch." << "\n"
-	      << "  c: TSV file from which to load the catalog RAD-Tags." << "\n"
+	      << "  c: TSV file from which to load the catalog loci." << "\n"
 	      << "  r: Load the TSV file of a single sample instead of a catalog." << "\n"
-	      << "  s: TSV file from which to load sample RAD-Tags." << "\n"
-	      << "  S: MySQL ID of the specified sample." << "\n"
+	      << "  s: filename prefix from which to load sample loci." << "\n"
 	      << "  o: output path to write results." << "\n"
               << "  g: base matching on genomic location, not sequence identity." << "\n"
 	      << "  x: don't verify haplotype of matching locus." << "\n"

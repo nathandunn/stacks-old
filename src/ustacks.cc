@@ -1382,6 +1382,12 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
     Rem   *rem;
 
     //
+    // Read in the set of sequencing IDs so they can be included in the output.
+    //
+    vector<char *> seq_ids;
+    load_seq_ids(seq_ids);
+
+    //
     // Parse the input file name to create the output files
     //
     size_t pos_1 = in_file.find_last_of("/");
@@ -1390,10 +1396,25 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
     string snp_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".snps.tsv";
     string all_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".alleles.tsv";
 
+    //
     // Open the output files for writing.
-    std::ofstream tags(tag_file.c_str());
-    std::ofstream snps(snp_file.c_str());
-    std::ofstream alle(all_file.c_str());
+    //
+    std::ofstream tags, snps, alle;
+    tags.open(tag_file.c_str());
+    if (tags.fail()) {
+	cerr << "Error: Unable to open tag file for writing.\n";
+	exit(1);
+    }
+    snps.open(snp_file.c_str());
+    if (snps.fail()) {
+	cerr << "Error: Unable to open SNPs file for writing.\n";
+	exit(1);
+    }
+    alle.open(all_file.c_str());
+    if (alle.fail()) {
+	cerr << "Error: Unable to open allele file for writing.\n";
+	exit(1);
+    }
     int id;
 
     char *buf = new char[m.begin()->second->len + 1];
@@ -1458,7 +1479,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 		     << "\t" // strand
 		     << "primary\t" 
 		     << id << "\t" 
-		     << tag_2->map[j] << "\t" 
+		     << seq_ids[tag_2->map[j]] << "\t" 
 		     << tag_2->seq->seq(buf) 
 		     << "\t\t\t\n";
 	    }
@@ -1483,7 +1504,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 		     << "\t" // strand
 		     << "secondary\t"
 		     << "\t" 
-		     << rem->map[j] << "\t" 
+		     << seq_ids[rem->map[j]] << "\t" 
 		     << rem->seq->seq(buf) 
 		     << "\t\t\t\n";
 	}
@@ -1508,12 +1529,23 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
     alle.close();
 
     //
+    // Free sequence IDs.
+    //
+    for (uint i = 0; i < seq_ids.size(); i++)
+	delete [] seq_ids[i];
+
+    //
     // If specified, output reads not utilized in any stacks.
     //
     if (retain_rem_reads) {
 	string unused_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".unused.fa";
 
-	std::ofstream unused(unused_file.c_str());
+	std::ofstream unused;
+	unused.open(unused_file.c_str());
+	if (unused.fail()) {
+	    cerr << "Error: Unable to open discard file for writing.\n";
+	    exit(1);
+	}
 
  	map<int, Rem *>::iterator r_it;
 	for (r_it = r.begin(); r_it != r.end(); r_it++)
@@ -1523,7 +1555,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	unused.close();
     }
 
-    //////??delete [] buf;
+    delete [] buf;
 
     return 0;
 }
@@ -1751,6 +1783,40 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radta
     //
     // Close the file and delete the Input object.
     //
+    delete fh;
+
+    return 0;
+}
+
+int
+load_seq_ids(vector<char *> &seq_ids)
+{
+    Input *fh;
+
+    if (in_file_type == fasta)
+        fh = new Fasta(in_file.c_str());
+    else if (in_file_type == fastq)
+        fh = new Fastq(in_file.c_str());
+    else if (in_file_type == gzfasta)
+        fh = new GzFasta(in_file.c_str());
+    else if (in_file_type == gzfastq)
+        fh = new GzFastq(in_file.c_str());
+
+    cerr << "  Refetching sequencing IDs from " << in_file.c_str() << "... ";    
+
+    char *id;
+    Seq c;
+    c.id   = new char[id_len];
+    c.seq  = new char[max_len];
+    c.qual = new char[max_len];
+
+    while ((fh->next_seq(c)) != 0) {
+	id = new char[strlen(c.id) + 1];
+	strcpy(id, c.id);
+	seq_ids.push_back(id);
+    }
+    cerr << "read " << seq_ids.size() << " sequence IDs.\n";
+
     delete fh;
 
     return 0;

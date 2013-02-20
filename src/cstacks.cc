@@ -33,11 +33,12 @@
 // Global variables to hold command-line options.
 queue<pair<int, string> > samples;
 string  out_path;
-int     batch_id     = 0;
-int     mult_matches = 0;
-int     ctag_dist    = 0;
-searcht search_type  = sequence;
-int     num_threads  = 1;
+int     batch_id        = 0;
+int     ctag_dist       = 0;
+searcht search_type     = sequence;
+int     num_threads     = 1;
+bool    mult_matches    = false;
+bool    report_mmatches = false;
 bool    require_uniq_haplotypes = false;
 
 int main (int argc, char* argv[]) {
@@ -57,6 +58,7 @@ int main (int argc, char* argv[]) {
 
     map<int, CLocus *> catalog;
     map<int, CLocus *>::iterator cat_it;
+    map<int, QLocus *>::iterator query_it;
 
     pair<int, string> s = samples.front();
     samples.pop();
@@ -89,6 +91,11 @@ int main (int argc, char* argv[]) {
             cerr << "Failed to load sample " << i << "\n";
             continue;
         }
+	//
+	// Assign the ID for this sample data.
+	//
+	s.first = sample.begin()->second->sample_id;
+
 	//dump_loci(sample);
 
         if (search_type == sequence) {
@@ -100,7 +107,10 @@ int main (int argc, char* argv[]) {
         }
 
 	cerr << "Merging matches into catalog...\n";
-	merge_matches(catalog, sample, s, ctag_dist);
+	uint mmatches = 0;
+	merge_matches(catalog, sample, s, ctag_dist, mmatches);
+	cerr << "  " << mmatches << " loci matched more than one catalog locus and were excluded.\n";
+
         //
         // Regenerate the alleles for the catalog tags after merging the new sample into the catalog.
 	//
@@ -112,6 +122,10 @@ int main (int argc, char* argv[]) {
 	    update_catalog_index(catalog, cat_index);
 	}
 	i++;
+
+	for (query_it = sample.begin(); query_it != sample.end(); query_it++)
+	    delete (*query_it).second;
+	sample.clear();
     }
 
     cerr << "Writing catalog...\n";
@@ -191,7 +205,9 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
     return 1;
 }
 
-int merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int, string> &sample_file, int ctag_dist) {
+int 
+merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int, string> &sample_file, int ctag_dist, uint &mmatches) 
+{
     map<int, QLocus *>::iterator i;
     vector<Match *>::iterator mat_it;
     CLocus *ctag;
@@ -242,13 +258,15 @@ int merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<
 	// Emit a warning if the query tag matches more than one tag in the catalog.
 	//
 	if (num_matches > 1) {
-	    cerr << 
-		"  Warning: sample " << sample_file.second << ", tag " << qtag->id << 
-		", matches more than one tag in the catalog: ";
-	    for (j = local_matches.begin(); j != local_matches.end(); j++)
-		cerr << j->first << " ";
-	    cerr << "\n";
-
+	    mmatches++;
+	    if (report_mmatches) {
+		cerr << 
+		    "  Warning: sample " << sample_file.second << ", tag " << qtag->id << 
+		    ", matches more than one tag in the catalog and was excluded: ";
+		for (j = local_matches.begin(); j != local_matches.end(); j++)
+		    cerr << j->first << " ";
+		cerr << "\n";
+	    }
 	    //
 	    // Don't record matches to multiple catalog entries unless instructed
 	    // to do so by the command line option.
@@ -369,7 +387,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
 
     populate_kmer_hash(catalog, kmer_map, kmer_map_keys, kmer_len);
 
-    cerr << "  " << catalog.size() << " items in the catalog, " << kmer_map.size() << " elements in the catalog hash.\n";
+    cerr << "  " << catalog.size() << " loci in the catalog, " << kmer_map.size() << " kmers in the catalog hash.\n";
  
     #pragma omp parallel private(i, j, tag_1, tag_2, allele)
     { 
@@ -559,12 +577,28 @@ int write_catalog(map<int, CLocus *> &catalog) {
     //
     // Output the tags
     //
+    ofstream cat_file, snp_file, all_file;
+
     string out_file = prefix.str() + ".catalog.tags.tsv";
-    ofstream cat_file(out_file.c_str());
+    cat_file.open(out_file.c_str());
+    if (cat_file.fail()) {
+	cerr << "Error: Unable to open catalog tag file for writing.\n";
+	exit(1);
+    }
+
     out_file = prefix.str() + ".catalog.snps.tsv";
-    ofstream snp_file(out_file.c_str());
+    snp_file.open(out_file.c_str());
+    if (snp_file.fail()) {
+	cerr << "Error: Unable to open catalog SNP file for writing.\n";
+	exit(1);
+    }
+
     out_file = prefix.str() + ".catalog.alleles.tsv";
-    ofstream all_file(out_file.c_str());
+    all_file.open(out_file.c_str());
+    if (all_file.fail()) {
+	cerr << "Error: Unable to open catalog allele file for writing.\n";
+	exit(1);
+    }
 
     for (i = catalog.begin(); i != catalog.end(); i++) {
 	tag = i->second;
@@ -852,9 +886,6 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	this->snps.push_back(snp);
     }
 
-    for (k = merged_snps.begin(); k != merged_snps.end(); k++)
-        delete k->second;
-
     this->alleles.clear();
     for (s = merged_alleles.begin(); s != merged_alleles.end(); s++) {
 	this->alleles[*s] = 0;
@@ -1071,6 +1102,8 @@ int initialize_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog) {
     if (!load_loci(sample.second, tmp_catalog, false))
         return 0;
 
+    sample.first = tmp_catalog.begin()->second->sample_id;
+
     //
     // Iterate over the catalog entires and renumber them after recording the source of
     // locus.
@@ -1100,6 +1133,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"mmatches",           no_argument, NULL, 'm'},
 	    {"genomic_loc",        no_argument, NULL, 'g'},
 	    {"uniq_haplotypes",    no_argument, NULL, 'u'},
+	    {"report_mmatches",    no_argument, NULL, 'R'},
 	    {"batch_id",     required_argument, NULL, 'b'},
 	    {"ctag_dist",    required_argument, NULL, 'n'},
 	    {"sample",       required_argument, NULL, 's'},
@@ -1112,7 +1146,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgvumo:s:S:b:p:n:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgvuRmo:s:S:b:p:n:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1133,27 +1167,17 @@ int parse_command_line(int argc, char* argv[]) {
 	    ctag_dist = atoi(optarg);
 	    break;
 	case 'm':
-	    mult_matches++;
+	    mult_matches = true;
+	    break;
+	case 'R':
+	    report_mmatches = true;
 	    break;
 	case 'g':
 	    search_type = genomic_loc;
 	    break;
 	case 's':
 	    sstr = optarg;
-
-	    c = getopt_long(argc, argv, "ho:s:S:b:", long_options, &option_index);
-	    if (c != 'S') {
-		cerr << "You must specify a sample ID after each sample file.\n";
-		help();
-		abort();
-	    }
-
-	    sid = is_integer(optarg);
-	    if (sid < 0) {
-		cerr << "Sample ID (-S) must be an integer, e.g. 1, 2, 3\n";
-		help();
-	    }
-	    samples.push(make_pair(sid, sstr));
+	    samples.push(make_pair(0, sstr));
 	    break;
      	case 'o':
 	    out_path = optarg;
@@ -1199,16 +1223,17 @@ void version() {
 
 void help() {
     std::cerr << "cstacks " << VERSION << "\n"
-              << "cstacks -b batch_id -s sample_file -S id [-s sample_file_2 -S id_2 ...] [-o path] [-p num_threads] [-n num] [-g] [-h]" << "\n"
-              << "  p: enable parallel execution with num_threads threads.\n"
+              << "cstacks -b batch_id -s sample_file [-s sample_file_2 ...] [-o path] [-g] [-n num] [-p num_threads] [-h]" << "\n"
 	      << "  b: MySQL ID of this batch." << "\n"
-	      << "  s: TSV file from which to load radtags." << "\n"
-	      << "  S: MySQL ID of the sample." << "\n"
+	      << "  s: filename prefix from which to load loci into the catalog." << "\n"
 	      << "  o: output path to write results." << "\n"
-	      << "  m: include tags in the catalog that match to more than one entry." << "\n"
-              << "  n: number of mismatches allowed between sample tags when generating the catalog (default 0)." << "\n"
               << "  g: base catalog matching on genomic location, not sequence identity." << "\n"
-	      << "  h: display this help messsage." << "\n\n";
+	      << "  m: include tags in the catalog that match to more than one entry (default false)." << "\n"
+              << "  n: number of mismatches allowed between sample tags when generating the catalog (default 0)." << "\n"
+              << "  p: enable parallel execution with num_threads threads.\n"
+	      << "  h: display this help messsage." << "\n"
+	      << "  Advanced options:\n" 
+	      << "    --report_mmatches: report query loci that match more than one catalog locus.\n";
 
     exit(0);
 }
