@@ -49,6 +49,7 @@ bool      bootstrap         = false;
 bs_type   bootstrap_type    = bs_none;
 int       bootstrap_reps    = 100;
 bool      corrections       = false;
+bool      write_single_snp  = false;
 bool      expand_id         = false;
 bool      sql_out           = false;
 bool      vcf_out           = false;
@@ -3157,7 +3158,7 @@ write_genepop(map<int, CLocus *> &catalog,
 	    fh << loc->id << "_" << col;
 	    if (i <  cnt - 1) fh << ",";
 	    //if (i == cnt - 1 && j < loc->snps.size() - 1) fh << ",";
-	    break;
+	    if (write_single_snp) break;
 	}
 	i++;
     }
@@ -3222,7 +3223,7 @@ write_genepop(map<int, CLocus *> &catalog,
 			    fh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
 			}
 		    }
-		    //break;
+		    if (write_single_snp) break;
 		}
 	    }
 	    fh << "\n";
@@ -3292,7 +3293,7 @@ write_structure(map<int, CLocus *> &catalog,
     		uint col = loc->snps[i]->col;
 		if (t->nucs[col].allele_cnt == 2) {
 		    fh << "\t" << loc->id;
-		    break;
+		    if (write_single_snp) break;
 		}
 	    }
 	}
@@ -3360,7 +3361,7 @@ write_structure(map<int, CLocus *> &catalog,
 			    else
 				fh << "\t" << nuc_map[p_allele];
 			}
-			break;
+			if (write_single_snp) break;
 		    }
 		}
     	    }
@@ -3399,7 +3400,7 @@ write_structure(map<int, CLocus *> &catalog,
 			    else
 				fh << "\t" << nuc_map[q_allele];
 			}
-			break;
+			if (write_single_snp) break;
 		    }
 		}
     	    }
@@ -4046,6 +4047,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"pop_map",     required_argument, NULL, 'M'},
 	    {"whitelist",   required_argument, NULL, 'W'},
 	    {"blacklist",   required_argument, NULL, 'B'},
+	    {"write_single_snp",  no_argument,       NULL, 'I'},
             {"kernel_smoothed",   no_argument,       NULL, 'k'},
             {"bootstrap",         required_argument, NULL, 'O'},
 	    {"bootstrap_reps",    required_argument, NULL, 'R'},
@@ -4059,7 +4061,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hkSLYVGgvcsib:p:t:o:r:M:P:m:e:W:B:w:a:f:p:u:R:O:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hkSLYVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -4113,6 +4115,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'i':
 	    expand_id = true;
+	    break;
+	case 'I':
+	    write_single_snp = true;
 	    break;
 	case 's':
 	    sql_out = true;
@@ -4264,7 +4269,8 @@ void help() {
 	      << "    --genepop: output results in GenePop format.\n"
 	      << "    --structure: output results in Structure format.\n"
 	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
-	      << "      --phylip_var: include variable sites in the phylip output.\n";
+	      << "      --phylip_var: include variable sites in the phylip output.\n"
+	      << "    --write_single_snp: write only the first SNP per locus in Genepop and Structure outputs.\n";
 
     exit(0);
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
 #
 # This file is part of Stacks.
 #
@@ -173,7 +173,7 @@ foreach $sample (@parents, @progeny, @samples) {
     print STDERR "$cmd\n";
     print $log_fh    "$cmd\n";
     @results = `$cmd` if ($dry_run == 0);
-    print $log_fh @results;
+    write_results(\@results, $log_fh);
 
     $file = "$out_path/$pfile" . ".tags.tsv";
     import_sql_file($log_fh, $file, "unique_tags", 0);
@@ -204,7 +204,7 @@ foreach $sample (@parents, @samples) {
         $pfile = $prefix;
     }
 
-    $parents .= "-s $out_path/$pfile -S " . $map{$pfile} . " ";
+    $parents .= "-s $out_path/$pfile ";
 }
 
 $cat_file = "batch_" . $batch_id;
@@ -244,7 +244,7 @@ foreach $sample (@parents, @progeny, @samples) {
 
     $rid = $map{$pfile};
 
-    $cmd = $exe_path . "sstacks -g -b $batch_id -c $out_path/$cat_file -s $out_path/$pfile -S $rid -o $out_path $threads 2>&1";
+    $cmd = $exe_path . "sstacks -g -b $batch_id -c $out_path/$cat_file -s $out_path/$pfile -o $out_path $threads 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd` if ($dry_run == 0);
@@ -408,6 +408,19 @@ sub check_input_files {
 	}
     }
     print STDERR "Found ", scalar(@{$samples}), " sample file(s).\n" if (scalar(@{$samples}) > 0);
+}
+
+sub write_results {
+    my ($results, $log_fh) = @_;
+
+    my $line;
+
+    foreach $line (@{$results}) {
+	if ($line =~ /\r/) { 
+	    $line =~ s/^.+\r(.*\n)$/\1/; 
+	}
+	print $log_fh $line;
+    }
 }
 
 sub import_sql_file {

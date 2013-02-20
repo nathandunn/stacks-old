@@ -78,21 +78,6 @@ using std::cin;
 using std::cout;
 using std::cerr;
 
-// namespace __gnu_cxx {
-//     template<>
-//     struct hash<DNASeq *>
-//     {
-// 	size_t
-// 	operator()(DNASeq *__s) const {
-// 	    unsigned long   __h = 0;
-// 	    unsigned int  bytes = (__s->size / bases_per_byte) + (__s->size % bases_per_byte > 0 ? 1 : 0);
-// 	    for (unsigned int i = 0; i < bytes; i++)
-// 		__h = 5 * __h + __s->s[i];
-// 	    return size_t(__h);
-// 	}
-//     };
-// }
-
 struct hash_dnaseq {
     size_t operator()(DNASeq *__s) const
     {
