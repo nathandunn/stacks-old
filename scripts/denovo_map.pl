@@ -126,7 +126,7 @@ $log = "$out_path/denovo_map.log";
 open($log_fh, ">$log") or die("Unable to open log file '$log'; $!\n");
 
 print $log_fh 
-    "ref_map.pl started at ", strftime("%Y-%m-%d %H:%M:%S",(localtime(time))), "\n",
+    "denovo_map.pl started at ", strftime("%Y-%m-%d %H:%M:%S",(localtime(time))), "\n",
     $cmd_str, "\n";
 
 if ($sql == 1 && $dry_run == 0) {
