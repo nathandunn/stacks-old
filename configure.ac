@@ -59,7 +59,7 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([float.h limits.h stdlib.h string.h])
 
 # Check for OpenMP parallel execution support
-AC_OPENMP
+#AC_OPENMP
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL

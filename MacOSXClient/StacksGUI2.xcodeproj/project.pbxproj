@@ -1,0 +1,608 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		14B4DD4116C97A7500317EB3 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD4016C97A7500317EB3 /* Cocoa.framework */; };
+		14B4DD4B16C97A7500317EB3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD4916C97A7500317EB3 /* InfoPlist.strings */; };
+		14B4DD4D16C97A7500317EB3 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD4C16C97A7500317EB3 /* main.m */; };
+		14B4DD5116C97A7500317EB3 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD4F16C97A7500317EB3 /* Credits.rtf */; };
+		14B4DD5416C97A7500317EB3 /* stacksAppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD5316C97A7500317EB3 /* stacksAppDelegate.mm */; };
+		14B4DD5716C97A7600317EB3 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD5516C97A7600317EB3 /* MainMenu.xib */; };
+		14B4DD5F16C97A7600317EB3 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD5E16C97A7600317EB3 /* SenTestingKit.framework */; };
+		14B4DD6016C97A7600317EB3 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD4016C97A7500317EB3 /* Cocoa.framework */; };
+		14B4DD6816C97A7600317EB3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD6616C97A7600317EB3 /* InfoPlist.strings */; };
+		14B4DD6B16C97A7600317EB3 /* StacksGUI2Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD6A16C97A7600317EB3 /* StacksGUI2Tests.m */; };
+		14B4DD9E16C97ACE00317EB3 /* cmb.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD7C16C97ACD00317EB3 /* cmb.cc */; };
+		14B4DD9F16C97ACE00317EB3 /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD8016C97ACE00317EB3 /* DNANSeq.cc */; };
+		14B4DDA016C97ACE00317EB3 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD8216C97ACE00317EB3 /* DNASeq.cc */; };
+		14B4DDA216C97ACE00317EB3 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD8B16C97ACE00317EB3 /* input.cc */; };
+		14B4DDA316C97ACE00317EB3 /* kmers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD8D16C97ACE00317EB3 /* kmers.cc */; };
+		14B4DDA416C97ACE00317EB3 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD8F16C97ACE00317EB3 /* libz.1.2.7.dylib */; };
+		14B4DDA516C97ACE00317EB3 /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD9516C97ACE00317EB3 /* stacks.cc */; };
+		14B4DDA716C97ACE00317EB3 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD9A16C97ACE00317EB3 /* utils.cc */; };
+		14B4DDAD16C97B9200317EB3 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDAB16C97B9200317EB3 /* mst.cc */; };
+		14B4DDB116C97C0400317EB3 /* MasterViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */; };
+		14B4DDB216C97C0400317EB3 /* MasterViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DDB016C97C0400317EB3 /* MasterViewController.xib */; };
+		14B4DDB716C97D8C00317EB3 /* GenomeData.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB616C97D8C00317EB3 /* GenomeData.m */; };
+		14B4DDBA16C97DA100317EB3 /* StacksDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB916C97DA100317EB3 /* StacksDocument.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		14B4DD6116C97A7600317EB3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 14B4DD3516C97A7500317EB3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 14B4DD3C16C97A7500317EB3;
+			remoteInfo = StacksGUI2;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		14B4DD3D16C97A7500317EB3 /* StacksGUI2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StacksGUI2.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		14B4DD4016C97A7500317EB3 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		14B4DD4316C97A7500317EB3 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		14B4DD4416C97A7500317EB3 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		14B4DD4516C97A7500317EB3 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		14B4DD4816C97A7500317EB3 /* StacksGUI2-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "StacksGUI2-Info.plist"; sourceTree = "<group>"; };
+		14B4DD4A16C97A7500317EB3 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		14B4DD4C16C97A7500317EB3 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		14B4DD4E16C97A7500317EB3 /* StacksGUI2-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "StacksGUI2-Prefix.pch"; sourceTree = "<group>"; };
+		14B4DD5016C97A7500317EB3 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
+		14B4DD5216C97A7500317EB3 /* stacksAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stacksAppDelegate.h; sourceTree = "<group>"; };
+		14B4DD5316C97A7500317EB3 /* stacksAppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = stacksAppDelegate.mm; sourceTree = "<group>"; };
+		14B4DD5616C97A7600317EB3 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		14B4DD5D16C97A7600317EB3 /* StacksGUI2Tests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StacksGUI2Tests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
+		14B4DD5E16C97A7600317EB3 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
+		14B4DD6516C97A7600317EB3 /* StacksGUI2Tests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "StacksGUI2Tests-Info.plist"; sourceTree = "<group>"; };
+		14B4DD6716C97A7600317EB3 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		14B4DD6916C97A7600317EB3 /* StacksGUI2Tests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StacksGUI2Tests.h; sourceTree = "<group>"; };
+		14B4DD6A16C97A7600317EB3 /* StacksGUI2Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StacksGUI2Tests.m; sourceTree = "<group>"; };
+		14B4DD7516C97ACD00317EB3 /* Bam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Bam.h; sourceTree = "<group>"; };
+		14B4DD7616C97ACD00317EB3 /* Bowtie.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Bowtie.h; sourceTree = "<group>"; };
+		14B4DD7716C97ACD00317EB3 /* Bustard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Bustard.h; sourceTree = "<group>"; };
+		14B4DD7C16C97ACD00317EB3 /* cmb.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = cmb.cc; sourceTree = "<group>"; };
+		14B4DD7D16C97ACD00317EB3 /* cmb.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cmb.h; sourceTree = "<group>"; };
+		14B4DD7E16C97ACE00317EB3 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		14B4DD7F16C97ACE00317EB3 /* constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = constants.h; sourceTree = "<group>"; };
+		14B4DD8016C97ACE00317EB3 /* DNANSeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DNANSeq.cc; sourceTree = "<group>"; };
+		14B4DD8116C97ACE00317EB3 /* DNANSeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNANSeq.h; sourceTree = "<group>"; };
+		14B4DD8216C97ACE00317EB3 /* DNASeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DNASeq.cc; sourceTree = "<group>"; };
+		14B4DD8316C97ACE00317EB3 /* DNASeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNASeq.h; sourceTree = "<group>"; };
+		14B4DD8416C97ACE00317EB3 /* Fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Fasta.h; sourceTree = "<group>"; };
+		14B4DD8516C97ACE00317EB3 /* Fastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Fastq.h; sourceTree = "<group>"; };
+		14B4DD8816C97ACE00317EB3 /* genotype_dictionaries.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genotype_dictionaries.h; sourceTree = "<group>"; };
+		14B4DD8916C97ACE00317EB3 /* gzFasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = gzFasta.h; sourceTree = "<group>"; };
+		14B4DD8A16C97ACE00317EB3 /* gzFastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = gzFastq.h; sourceTree = "<group>"; };
+		14B4DD8B16C97ACE00317EB3 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = input.cc; sourceTree = "<group>"; };
+		14B4DD8C16C97ACE00317EB3 /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = input.h; sourceTree = "<group>"; };
+		14B4DD8D16C97ACE00317EB3 /* kmers.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = kmers.cc; sourceTree = "<group>"; };
+		14B4DD8E16C97ACE00317EB3 /* kmers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kmers.h; sourceTree = "<group>"; };
+		14B4DD8F16C97ACE00317EB3 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libz.1.2.7.dylib; sourceTree = "<group>"; };
+		14B4DD9016C97ACE00317EB3 /* PopMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopMap.h; sourceTree = "<group>"; };
+		14B4DD9116C97ACE00317EB3 /* PopSum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopSum.h; sourceTree = "<group>"; };
+		14B4DD9216C97ACE00317EB3 /* renz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = renz.h; sourceTree = "<group>"; };
+		14B4DD9316C97ACE00317EB3 /* Sam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Sam.h; sourceTree = "<group>"; };
+		14B4DD9416C97ACE00317EB3 /* sql_utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sql_utilities.h; sourceTree = "<group>"; };
+		14B4DD9516C97ACE00317EB3 /* stacks.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = stacks.cc; sourceTree = "<group>"; };
+		14B4DD9616C97ACE00317EB3 /* stacks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stacks.h; sourceTree = "<group>"; };
+		14B4DD9716C97ACE00317EB3 /* Tsv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Tsv.h; sourceTree = "<group>"; };
+		14B4DD9A16C97ACE00317EB3 /* utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = utils.cc; sourceTree = "<group>"; };
+		14B4DD9B16C97ACE00317EB3 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
+		14B4DDAB16C97B9200317EB3 /* mst.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mst.cc; sourceTree = "<group>"; };
+		14B4DDAC16C97B9200317EB3 /* mst.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mst.h; sourceTree = "<group>"; };
+		14B4DDAE16C97C0400317EB3 /* MasterViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MasterViewController.h; sourceTree = "<group>"; };
+		14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MasterViewController.mm; sourceTree = "<group>"; };
+		14B4DDB016C97C0400317EB3 /* MasterViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = MasterViewController.xib; sourceTree = "<group>"; };
+		14B4DDB516C97D8C00317EB3 /* GenomeData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenomeData.h; sourceTree = "<group>"; };
+		14B4DDB616C97D8C00317EB3 /* GenomeData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenomeData.m; sourceTree = "<group>"; };
+		14B4DDB816C97DA100317EB3 /* StacksDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksDocument.h; sourceTree = "<group>"; };
+		14B4DDB916C97DA100317EB3 /* StacksDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksDocument.m; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		14B4DD3A16C97A7500317EB3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14B4DD4116C97A7500317EB3 /* Cocoa.framework in Frameworks */,
+				14B4DDA416C97ACE00317EB3 /* libz.1.2.7.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		14B4DD5916C97A7600317EB3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14B4DD5F16C97A7600317EB3 /* SenTestingKit.framework in Frameworks */,
+				14B4DD6016C97A7600317EB3 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		14B4DD3416C97A7500317EB3 = {
+			isa = PBXGroup;
+			children = (
+				14B4DD4616C97A7500317EB3 /* StacksGUI2 */,
+				14B4DD6316C97A7600317EB3 /* StacksGUI2Tests */,
+				14B4DD3F16C97A7500317EB3 /* Frameworks */,
+				14B4DD3E16C97A7500317EB3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		14B4DD3E16C97A7500317EB3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				14B4DD3D16C97A7500317EB3 /* StacksGUI2.app */,
+				14B4DD5D16C97A7600317EB3 /* StacksGUI2Tests.octest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		14B4DD3F16C97A7500317EB3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				14B4DD4016C97A7500317EB3 /* Cocoa.framework */,
+				14B4DD5E16C97A7600317EB3 /* SenTestingKit.framework */,
+				14B4DD4216C97A7500317EB3 /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		14B4DD4216C97A7500317EB3 /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				14B4DD4316C97A7500317EB3 /* AppKit.framework */,
+				14B4DD4416C97A7500317EB3 /* CoreData.framework */,
+				14B4DD4516C97A7500317EB3 /* Foundation.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		14B4DD4616C97A7500317EB3 /* StacksGUI2 */ = {
+			isa = PBXGroup;
+			children = (
+				14B4DDB416C97D6100317EB3 /* Model */,
+				14B4DDB316C97D4800317EB3 /* GUI */,
+				14B4DD7416C97A9500317EB3 /* core */,
+				14B4DD4716C97A7500317EB3 /* Supporting Files */,
+			);
+			path = StacksGUI2;
+			sourceTree = "<group>";
+		};
+		14B4DD4716C97A7500317EB3 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				14B4DD4816C97A7500317EB3 /* StacksGUI2-Info.plist */,
+				14B4DD4916C97A7500317EB3 /* InfoPlist.strings */,
+				14B4DD4C16C97A7500317EB3 /* main.m */,
+				14B4DD4E16C97A7500317EB3 /* StacksGUI2-Prefix.pch */,
+				14B4DD4F16C97A7500317EB3 /* Credits.rtf */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		14B4DD6316C97A7600317EB3 /* StacksGUI2Tests */ = {
+			isa = PBXGroup;
+			children = (
+				14B4DD6916C97A7600317EB3 /* StacksGUI2Tests.h */,
+				14B4DD6A16C97A7600317EB3 /* StacksGUI2Tests.m */,
+				14B4DD6416C97A7600317EB3 /* Supporting Files */,
+			);
+			path = StacksGUI2Tests;
+			sourceTree = "<group>";
+		};
+		14B4DD6416C97A7600317EB3 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				14B4DD6516C97A7600317EB3 /* StacksGUI2Tests-Info.plist */,
+				14B4DD6616C97A7600317EB3 /* InfoPlist.strings */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		14B4DD7416C97A9500317EB3 /* core */ = {
+			isa = PBXGroup;
+			children = (
+				14B4DDAB16C97B9200317EB3 /* mst.cc */,
+				14B4DDAC16C97B9200317EB3 /* mst.h */,
+				14B4DD7516C97ACD00317EB3 /* Bam.h */,
+				14B4DD7616C97ACD00317EB3 /* Bowtie.h */,
+				14B4DD7716C97ACD00317EB3 /* Bustard.h */,
+				14B4DD7C16C97ACD00317EB3 /* cmb.cc */,
+				14B4DD7D16C97ACD00317EB3 /* cmb.h */,
+				14B4DD7E16C97ACE00317EB3 /* config.h */,
+				14B4DD7F16C97ACE00317EB3 /* constants.h */,
+				14B4DD8016C97ACE00317EB3 /* DNANSeq.cc */,
+				14B4DD8116C97ACE00317EB3 /* DNANSeq.h */,
+				14B4DD8216C97ACE00317EB3 /* DNASeq.cc */,
+				14B4DD8316C97ACE00317EB3 /* DNASeq.h */,
+				14B4DD8416C97ACE00317EB3 /* Fasta.h */,
+				14B4DD8516C97ACE00317EB3 /* Fastq.h */,
+				14B4DD8816C97ACE00317EB3 /* genotype_dictionaries.h */,
+				14B4DD8916C97ACE00317EB3 /* gzFasta.h */,
+				14B4DD8A16C97ACE00317EB3 /* gzFastq.h */,
+				14B4DD8B16C97ACE00317EB3 /* input.cc */,
+				14B4DD8C16C97ACE00317EB3 /* input.h */,
+				14B4DD8D16C97ACE00317EB3 /* kmers.cc */,
+				14B4DD8E16C97ACE00317EB3 /* kmers.h */,
+				14B4DD8F16C97ACE00317EB3 /* libz.1.2.7.dylib */,
+				14B4DD9016C97ACE00317EB3 /* PopMap.h */,
+				14B4DD9116C97ACE00317EB3 /* PopSum.h */,
+				14B4DD9216C97ACE00317EB3 /* renz.h */,
+				14B4DD9316C97ACE00317EB3 /* Sam.h */,
+				14B4DD9416C97ACE00317EB3 /* sql_utilities.h */,
+				14B4DD9516C97ACE00317EB3 /* stacks.cc */,
+				14B4DD9616C97ACE00317EB3 /* stacks.h */,
+				14B4DD9716C97ACE00317EB3 /* Tsv.h */,
+				14B4DD9A16C97ACE00317EB3 /* utils.cc */,
+				14B4DD9B16C97ACE00317EB3 /* utils.h */,
+			);
+			name = core;
+			sourceTree = "<group>";
+		};
+		14B4DDB316C97D4800317EB3 /* GUI */ = {
+			isa = PBXGroup;
+			children = (
+				14B4DD5216C97A7500317EB3 /* stacksAppDelegate.h */,
+				14B4DD5316C97A7500317EB3 /* stacksAppDelegate.mm */,
+				14B4DD5516C97A7600317EB3 /* MainMenu.xib */,
+				14B4DDAE16C97C0400317EB3 /* MasterViewController.h */,
+				14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */,
+				14B4DDB016C97C0400317EB3 /* MasterViewController.xib */,
+			);
+			name = GUI;
+			sourceTree = "<group>";
+		};
+		14B4DDB416C97D6100317EB3 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				14B4DDB816C97DA100317EB3 /* StacksDocument.h */,
+				14B4DDB916C97DA100317EB3 /* StacksDocument.m */,
+				14B4DDB516C97D8C00317EB3 /* GenomeData.h */,
+				14B4DDB616C97D8C00317EB3 /* GenomeData.m */,
+			);
+			name = Model;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		14B4DD3C16C97A7500317EB3 /* StacksGUI2 */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 14B4DD6E16C97A7600317EB3 /* Build configuration list for PBXNativeTarget "StacksGUI2" */;
+			buildPhases = (
+				14B4DD3916C97A7500317EB3 /* Sources */,
+				14B4DD3A16C97A7500317EB3 /* Frameworks */,
+				14B4DD3B16C97A7500317EB3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = StacksGUI2;
+			productName = StacksGUI2;
+			productReference = 14B4DD3D16C97A7500317EB3 /* StacksGUI2.app */;
+			productType = "com.apple.product-type.application";
+		};
+		14B4DD5C16C97A7600317EB3 /* StacksGUI2Tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 14B4DD7116C97A7600317EB3 /* Build configuration list for PBXNativeTarget "StacksGUI2Tests" */;
+			buildPhases = (
+				14B4DD5816C97A7600317EB3 /* Sources */,
+				14B4DD5916C97A7600317EB3 /* Frameworks */,
+				14B4DD5A16C97A7600317EB3 /* Resources */,
+				14B4DD5B16C97A7600317EB3 /* ShellScript */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				14B4DD6216C97A7600317EB3 /* PBXTargetDependency */,
+			);
+			name = StacksGUI2Tests;
+			productName = StacksGUI2Tests;
+			productReference = 14B4DD5D16C97A7600317EB3 /* StacksGUI2Tests.octest */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		14B4DD3516C97A7500317EB3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				CLASSPREFIX = stacks;
+				LastUpgradeCheck = 0460;
+				ORGANIZATIONNAME = "Nathan Dunn";
+			};
+			buildConfigurationList = 14B4DD3816C97A7500317EB3 /* Build configuration list for PBXProject "StacksGUI2" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 14B4DD3416C97A7500317EB3;
+			productRefGroup = 14B4DD3E16C97A7500317EB3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				14B4DD3C16C97A7500317EB3 /* StacksGUI2 */,
+				14B4DD5C16C97A7600317EB3 /* StacksGUI2Tests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		14B4DD3B16C97A7500317EB3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14B4DD4B16C97A7500317EB3 /* InfoPlist.strings in Resources */,
+				14B4DD5116C97A7500317EB3 /* Credits.rtf in Resources */,
+				14B4DD5716C97A7600317EB3 /* MainMenu.xib in Resources */,
+				14B4DDB216C97C0400317EB3 /* MasterViewController.xib in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		14B4DD5A16C97A7600317EB3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14B4DD6816C97A7600317EB3 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		14B4DD5B16C97A7600317EB3 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Run the unit tests in this test bundle.\n\"${SYSTEM_DEVELOPER_DIR}/Tools/RunUnitTests\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		14B4DD3916C97A7500317EB3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14B4DD4D16C97A7500317EB3 /* main.m in Sources */,
+				14B4DD5416C97A7500317EB3 /* stacksAppDelegate.mm in Sources */,
+				14B4DD9E16C97ACE00317EB3 /* cmb.cc in Sources */,
+				14B4DD9F16C97ACE00317EB3 /* DNANSeq.cc in Sources */,
+				14B4DDA016C97ACE00317EB3 /* DNASeq.cc in Sources */,
+				14B4DDA216C97ACE00317EB3 /* input.cc in Sources */,
+				14B4DDA316C97ACE00317EB3 /* kmers.cc in Sources */,
+				14B4DDA516C97ACE00317EB3 /* stacks.cc in Sources */,
+				14B4DDA716C97ACE00317EB3 /* utils.cc in Sources */,
+				14B4DDAD16C97B9200317EB3 /* mst.cc in Sources */,
+				14B4DDB116C97C0400317EB3 /* MasterViewController.mm in Sources */,
+				14B4DDB716C97D8C00317EB3 /* GenomeData.m in Sources */,
+				14B4DDBA16C97DA100317EB3 /* StacksDocument.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		14B4DD5816C97A7600317EB3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14B4DD6B16C97A7600317EB3 /* StacksGUI2Tests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		14B4DD6216C97A7600317EB3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 14B4DD3C16C97A7500317EB3 /* StacksGUI2 */;
+			targetProxy = 14B4DD6116C97A7600317EB3 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		14B4DD4916C97A7500317EB3 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				14B4DD4A16C97A7500317EB3 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		14B4DD4F16C97A7500317EB3 /* Credits.rtf */ = {
+			isa = PBXVariantGroup;
+			children = (
+				14B4DD5016C97A7500317EB3 /* en */,
+			);
+			name = Credits.rtf;
+			sourceTree = "<group>";
+		};
+		14B4DD5516C97A7600317EB3 /* MainMenu.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				14B4DD5616C97A7600317EB3 /* en */,
+			);
+			name = MainMenu.xib;
+			sourceTree = "<group>";
+		};
+		14B4DD6616C97A7600317EB3 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				14B4DD6716C97A7600317EB3 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		14B4DD6C16C97A7600317EB3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		14B4DD6D16C97A7600317EB3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		14B4DD6F16C97A7600317EB3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "StacksGUI2/StacksGUI2-Prefix.pch";
+				INFOPLIST_FILE = "StacksGUI2/StacksGUI2-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/StacksGUI2\"",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Debug;
+		};
+		14B4DD7016C97A7600317EB3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "StacksGUI2/StacksGUI2-Prefix.pch";
+				INFOPLIST_FILE = "StacksGUI2/StacksGUI2-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/StacksGUI2\"",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Release;
+		};
+		14B4DD7216C97A7600317EB3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/StacksGUI2.app/Contents/MacOS/StacksGUI2";
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "StacksGUI2/StacksGUI2-Prefix.pch";
+				INFOPLIST_FILE = "StacksGUI2Tests/StacksGUI2Tests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Debug;
+		};
+		14B4DD7316C97A7600317EB3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/StacksGUI2.app/Contents/MacOS/StacksGUI2";
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "StacksGUI2/StacksGUI2-Prefix.pch";
+				INFOPLIST_FILE = "StacksGUI2Tests/StacksGUI2Tests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		14B4DD3816C97A7500317EB3 /* Build configuration list for PBXProject "StacksGUI2" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14B4DD6C16C97A7600317EB3 /* Debug */,
+				14B4DD6D16C97A7600317EB3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		14B4DD6E16C97A7600317EB3 /* Build configuration list for PBXNativeTarget "StacksGUI2" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14B4DD6F16C97A7600317EB3 /* Debug */,
+				14B4DD7016C97A7600317EB3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		14B4DD7116C97A7600317EB3 /* Build configuration list for PBXNativeTarget "StacksGUI2Tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14B4DD7216C97A7600317EB3 /* Debug */,
+				14B4DD7316C97A7600317EB3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 14B4DD3516C97A7500317EB3 /* Project object */;
+}
