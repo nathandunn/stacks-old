@@ -23,11 +23,11 @@
 		14B4DDB716C97D8C00317EB3 /* GenomeData.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB616C97D8C00317EB3 /* GenomeData.m */; };
 		14B4DDBA16C97DA100317EB3 /* StacksDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB916C97DA100317EB3 /* StacksDocument.m */; };
 		63D531E8CE86AE86FEB3F2F0 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D5308F61F143EAAF0C767C /* mst.cc */; };
+		63D533B671A0155542E81C55 /* kmers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D537B99C9554B9A7E79315 /* kmers.cc */; };
 		63D536FB26B8E69C1C3DC0AC /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53D4267AA85297E12A72C /* stacks.cc */; };
 		63D537A0B0415DFBDF34FA15 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53AE1D0F2E9B01FF76A92 /* DNASeq.cc */; };
 		63D53BAE4399201879BC1A25 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53B6C04011DF2C3822EA9 /* utils.cc */; };
 		63D53CFE966113781FC441AB /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D539CD1E1FCCB7E006CD52 /* DNANSeq.cc */; };
-		63D53E9DAF21A317A691A57E /* kmers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53E989264D277D7713934 /* kmers.cc */; };
 		63D53F54162E9B13476B4708 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53EF1168D7ADB8E210F17 /* input.cc */; };
 /* End PBXBuildFile section */
 
@@ -78,13 +78,14 @@
 		63D53268A3B8886FB788CD26 /* Bustard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bustard.h; path = ../../src/Bustard.h; sourceTree = "<group>"; };
 		63D532A9CF0591C964C37DA7 /* Fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Fasta.h; path = ../../src/Fasta.h; sourceTree = "<group>"; };
 		63D532C71B8BB9E796A5B83D /* DNANSeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DNANSeq.h; path = ../../src/DNANSeq.h; sourceTree = "<group>"; };
-		63D533650299FF874B65A23C /* kmers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kmers.h; sourceTree = "<group>"; };
 		63D5349331EA2A9590315B56 /* genotype_dictionaries.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = genotype_dictionaries.h; path = ../../src/genotype_dictionaries.h; sourceTree = "<group>"; };
 		63D53602B1B1AE8200EBDCA9 /* sql_utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sql_utilities.h; path = ../../src/sql_utilities.h; sourceTree = "<group>"; };
 		63D536626A1A4C2FC014378F /* renz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = renz.h; path = ../../src/renz.h; sourceTree = "<group>"; };
+		63D537B99C9554B9A7E79315 /* kmers.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = kmers.cc; sourceTree = "<group>"; };
 		63D538AC7F916F4D82F4F43B /* Bam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bam.h; path = ../../src/Bam.h; sourceTree = "<group>"; };
 		63D53922D8DEF06945551E06 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = utils.h; path = ../../src/utils.h; sourceTree = "<group>"; };
 		63D539491A6750D4C379832F /* DNASeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DNASeq.h; path = ../../src/DNASeq.h; sourceTree = "<group>"; };
+		63D5399ADD271A3D0E8F4ABA /* kmers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kmers.h; sourceTree = "<group>"; };
 		63D539B3C0765D7CF0E3D905 /* constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = constants.h; path = ../../src/constants.h; sourceTree = "<group>"; };
 		63D539CD1E1FCCB7E006CD52 /* DNANSeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DNANSeq.cc; path = ../../src/DNANSeq.cc; sourceTree = "<group>"; };
 		63D53A351DA41069B043CC6E /* PopSum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopSum.h; path = ../../src/PopSum.h; sourceTree = "<group>"; };
@@ -95,7 +96,6 @@
 		63D53DB1736827DEE2A2C7FF /* Bowtie.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bowtie.h; path = ../../src/Bowtie.h; sourceTree = "<group>"; };
 		63D53E06DD38D5E5874594E4 /* gzFastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzFastq.h; path = ../../src/gzFastq.h; sourceTree = "<group>"; };
 		63D53E5C7C20D8D9F9D0E564 /* PopMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopMap.h; path = ../../src/PopMap.h; sourceTree = "<group>"; };
-		63D53E989264D277D7713934 /* kmers.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = kmers.cc; sourceTree = "<group>"; };
 		63D53EF1168D7ADB8E210F17 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = input.cc; path = ../../src/input.cc; sourceTree = "<group>"; };
 		63D53F1876901A28E2BA178E /* gzFasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzFasta.h; path = ../../src/gzFasta.h; sourceTree = "<group>"; };
 		63D53F86FC72703151919FB1 /* Fastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Fastq.h; path = ../../src/Fastq.h; sourceTree = "<group>"; };
@@ -224,8 +224,6 @@
 				63D53E06DD38D5E5874594E4 /* gzFastq.h */,
 				63D53EF1168D7ADB8E210F17 /* input.cc */,
 				63D531FEAC6100A03A4949FF /* input.h */,
-				63D53E989264D277D7713934 /* kmers.cc */,
-				63D533650299FF874B65A23C /* kmers.h */,
 				63D5308F61F143EAAF0C767C /* mst.cc */,
 				63D530C0AA8A40DE6021B47C /* mst.h */,
 				63D53E5C7C20D8D9F9D0E564 /* PopMap.h */,
@@ -238,6 +236,8 @@
 				63D532620E0F9480C87EE9EE /* Tsv.h */,
 				63D53B6C04011DF2C3822EA9 /* utils.cc */,
 				63D53922D8DEF06945551E06 /* utils.h */,
+				63D537B99C9554B9A7E79315 /* kmers.cc */,
+				63D5399ADD271A3D0E8F4ABA /* kmers.h */,
 			);
 			name = core;
 			sourceTree = "<group>";
@@ -384,10 +384,10 @@
 				63D53CFE966113781FC441AB /* DNANSeq.cc in Sources */,
 				63D537A0B0415DFBDF34FA15 /* DNASeq.cc in Sources */,
 				63D53F54162E9B13476B4708 /* input.cc in Sources */,
-				63D53E9DAF21A317A691A57E /* kmers.cc in Sources */,
 				63D531E8CE86AE86FEB3F2F0 /* mst.cc in Sources */,
 				63D536FB26B8E69C1C3DC0AC /* stacks.cc in Sources */,
 				63D53BAE4399201879BC1A25 /* utils.cc in Sources */,
+				63D533B671A0155542E81C55 /* kmers.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -475,6 +475,9 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = (
+					"/usr/local/Cellar/boost/1.52.0/include/boost//**",
+				);
 			};
 			name = Debug;
 		};
@@ -501,6 +504,9 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = (
+					"/usr/local/Cellar/boost/1.52.0/include/boost//**",
+				);
 			};
 			name = Release;
 		};
