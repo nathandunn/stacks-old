@@ -17,19 +17,18 @@
 		14B4DD6016C97A7600317EB3 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD4016C97A7500317EB3 /* Cocoa.framework */; };
 		14B4DD6816C97A7600317EB3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD6616C97A7600317EB3 /* InfoPlist.strings */; };
 		14B4DD6B16C97A7600317EB3 /* StacksGUI2Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD6A16C97A7600317EB3 /* StacksGUI2Tests.m */; };
-		14B4DD9E16C97ACE00317EB3 /* cmb.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD7C16C97ACD00317EB3 /* cmb.cc */; };
-		14B4DD9F16C97ACE00317EB3 /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD8016C97ACE00317EB3 /* DNANSeq.cc */; };
-		14B4DDA016C97ACE00317EB3 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD8216C97ACE00317EB3 /* DNASeq.cc */; };
-		14B4DDA216C97ACE00317EB3 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD8B16C97ACE00317EB3 /* input.cc */; };
-		14B4DDA316C97ACE00317EB3 /* kmers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD8D16C97ACE00317EB3 /* kmers.cc */; };
 		14B4DDA416C97ACE00317EB3 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD8F16C97ACE00317EB3 /* libz.1.2.7.dylib */; };
-		14B4DDA516C97ACE00317EB3 /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD9516C97ACE00317EB3 /* stacks.cc */; };
-		14B4DDA716C97ACE00317EB3 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD9A16C97ACE00317EB3 /* utils.cc */; };
-		14B4DDAD16C97B9200317EB3 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDAB16C97B9200317EB3 /* mst.cc */; };
 		14B4DDB116C97C0400317EB3 /* MasterViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */; };
 		14B4DDB216C97C0400317EB3 /* MasterViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DDB016C97C0400317EB3 /* MasterViewController.xib */; };
 		14B4DDB716C97D8C00317EB3 /* GenomeData.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB616C97D8C00317EB3 /* GenomeData.m */; };
 		14B4DDBA16C97DA100317EB3 /* StacksDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB916C97DA100317EB3 /* StacksDocument.m */; };
+		63D531E8CE86AE86FEB3F2F0 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D5308F61F143EAAF0C767C /* mst.cc */; };
+		63D536FB26B8E69C1C3DC0AC /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53D4267AA85297E12A72C /* stacks.cc */; };
+		63D537A0B0415DFBDF34FA15 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53AE1D0F2E9B01FF76A92 /* DNASeq.cc */; };
+		63D53BAE4399201879BC1A25 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53B6C04011DF2C3822EA9 /* utils.cc */; };
+		63D53CFE966113781FC441AB /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D539CD1E1FCCB7E006CD52 /* DNANSeq.cc */; };
+		63D53E9DAF21A317A691A57E /* kmers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53E989264D277D7713934 /* kmers.cc */; };
+		63D53F54162E9B13476B4708 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53EF1168D7ADB8E210F17 /* input.cc */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,39 +61,7 @@
 		14B4DD6716C97A7600317EB3 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		14B4DD6916C97A7600317EB3 /* StacksGUI2Tests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StacksGUI2Tests.h; sourceTree = "<group>"; };
 		14B4DD6A16C97A7600317EB3 /* StacksGUI2Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StacksGUI2Tests.m; sourceTree = "<group>"; };
-		14B4DD7516C97ACD00317EB3 /* Bam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Bam.h; sourceTree = "<group>"; };
-		14B4DD7616C97ACD00317EB3 /* Bowtie.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Bowtie.h; sourceTree = "<group>"; };
-		14B4DD7716C97ACD00317EB3 /* Bustard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Bustard.h; sourceTree = "<group>"; };
-		14B4DD7C16C97ACD00317EB3 /* cmb.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = cmb.cc; sourceTree = "<group>"; };
-		14B4DD7D16C97ACD00317EB3 /* cmb.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cmb.h; sourceTree = "<group>"; };
-		14B4DD7E16C97ACE00317EB3 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
-		14B4DD7F16C97ACE00317EB3 /* constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = constants.h; sourceTree = "<group>"; };
-		14B4DD8016C97ACE00317EB3 /* DNANSeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DNANSeq.cc; sourceTree = "<group>"; };
-		14B4DD8116C97ACE00317EB3 /* DNANSeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNANSeq.h; sourceTree = "<group>"; };
-		14B4DD8216C97ACE00317EB3 /* DNASeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DNASeq.cc; sourceTree = "<group>"; };
-		14B4DD8316C97ACE00317EB3 /* DNASeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNASeq.h; sourceTree = "<group>"; };
-		14B4DD8416C97ACE00317EB3 /* Fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Fasta.h; sourceTree = "<group>"; };
-		14B4DD8516C97ACE00317EB3 /* Fastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Fastq.h; sourceTree = "<group>"; };
-		14B4DD8816C97ACE00317EB3 /* genotype_dictionaries.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genotype_dictionaries.h; sourceTree = "<group>"; };
-		14B4DD8916C97ACE00317EB3 /* gzFasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = gzFasta.h; sourceTree = "<group>"; };
-		14B4DD8A16C97ACE00317EB3 /* gzFastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = gzFastq.h; sourceTree = "<group>"; };
-		14B4DD8B16C97ACE00317EB3 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = input.cc; sourceTree = "<group>"; };
-		14B4DD8C16C97ACE00317EB3 /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = input.h; sourceTree = "<group>"; };
-		14B4DD8D16C97ACE00317EB3 /* kmers.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = kmers.cc; sourceTree = "<group>"; };
-		14B4DD8E16C97ACE00317EB3 /* kmers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kmers.h; sourceTree = "<group>"; };
 		14B4DD8F16C97ACE00317EB3 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libz.1.2.7.dylib; sourceTree = "<group>"; };
-		14B4DD9016C97ACE00317EB3 /* PopMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopMap.h; sourceTree = "<group>"; };
-		14B4DD9116C97ACE00317EB3 /* PopSum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopSum.h; sourceTree = "<group>"; };
-		14B4DD9216C97ACE00317EB3 /* renz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = renz.h; sourceTree = "<group>"; };
-		14B4DD9316C97ACE00317EB3 /* Sam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Sam.h; sourceTree = "<group>"; };
-		14B4DD9416C97ACE00317EB3 /* sql_utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sql_utilities.h; sourceTree = "<group>"; };
-		14B4DD9516C97ACE00317EB3 /* stacks.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = stacks.cc; sourceTree = "<group>"; };
-		14B4DD9616C97ACE00317EB3 /* stacks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stacks.h; sourceTree = "<group>"; };
-		14B4DD9716C97ACE00317EB3 /* Tsv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Tsv.h; sourceTree = "<group>"; };
-		14B4DD9A16C97ACE00317EB3 /* utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = utils.cc; sourceTree = "<group>"; };
-		14B4DD9B16C97ACE00317EB3 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
-		14B4DDAB16C97B9200317EB3 /* mst.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mst.cc; sourceTree = "<group>"; };
-		14B4DDAC16C97B9200317EB3 /* mst.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mst.h; sourceTree = "<group>"; };
 		14B4DDAE16C97C0400317EB3 /* MasterViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MasterViewController.h; sourceTree = "<group>"; };
 		14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MasterViewController.mm; sourceTree = "<group>"; };
 		14B4DDB016C97C0400317EB3 /* MasterViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = MasterViewController.xib; sourceTree = "<group>"; };
@@ -102,6 +69,36 @@
 		14B4DDB616C97D8C00317EB3 /* GenomeData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenomeData.m; sourceTree = "<group>"; };
 		14B4DDB816C97DA100317EB3 /* StacksDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksDocument.h; sourceTree = "<group>"; };
 		14B4DDB916C97DA100317EB3 /* StacksDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksDocument.m; sourceTree = "<group>"; };
+		63D53087A6787051E6F55B9B /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../../config.h; sourceTree = "<group>"; };
+		63D5308F61F143EAAF0C767C /* mst.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mst.cc; path = ../../src/mst.cc; sourceTree = "<group>"; };
+		63D530C0AA8A40DE6021B47C /* mst.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mst.h; path = ../../src/mst.h; sourceTree = "<group>"; };
+		63D530FA501490B30332BA38 /* Sam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Sam.h; path = ../../src/Sam.h; sourceTree = "<group>"; };
+		63D531FEAC6100A03A4949FF /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../../src/input.h; sourceTree = "<group>"; };
+		63D532620E0F9480C87EE9EE /* Tsv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tsv.h; path = ../../src/Tsv.h; sourceTree = "<group>"; };
+		63D53268A3B8886FB788CD26 /* Bustard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bustard.h; path = ../../src/Bustard.h; sourceTree = "<group>"; };
+		63D532A9CF0591C964C37DA7 /* Fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Fasta.h; path = ../../src/Fasta.h; sourceTree = "<group>"; };
+		63D532C71B8BB9E796A5B83D /* DNANSeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DNANSeq.h; path = ../../src/DNANSeq.h; sourceTree = "<group>"; };
+		63D533650299FF874B65A23C /* kmers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kmers.h; sourceTree = "<group>"; };
+		63D5349331EA2A9590315B56 /* genotype_dictionaries.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = genotype_dictionaries.h; path = ../../src/genotype_dictionaries.h; sourceTree = "<group>"; };
+		63D53602B1B1AE8200EBDCA9 /* sql_utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sql_utilities.h; path = ../../src/sql_utilities.h; sourceTree = "<group>"; };
+		63D536626A1A4C2FC014378F /* renz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = renz.h; path = ../../src/renz.h; sourceTree = "<group>"; };
+		63D538AC7F916F4D82F4F43B /* Bam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bam.h; path = ../../src/Bam.h; sourceTree = "<group>"; };
+		63D53922D8DEF06945551E06 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = utils.h; path = ../../src/utils.h; sourceTree = "<group>"; };
+		63D539491A6750D4C379832F /* DNASeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DNASeq.h; path = ../../src/DNASeq.h; sourceTree = "<group>"; };
+		63D539B3C0765D7CF0E3D905 /* constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = constants.h; path = ../../src/constants.h; sourceTree = "<group>"; };
+		63D539CD1E1FCCB7E006CD52 /* DNANSeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DNANSeq.cc; path = ../../src/DNANSeq.cc; sourceTree = "<group>"; };
+		63D53A351DA41069B043CC6E /* PopSum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopSum.h; path = ../../src/PopSum.h; sourceTree = "<group>"; };
+		63D53AE1D0F2E9B01FF76A92 /* DNASeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DNASeq.cc; path = ../../src/DNASeq.cc; sourceTree = "<group>"; };
+		63D53B6C04011DF2C3822EA9 /* utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = utils.cc; path = ../../src/utils.cc; sourceTree = "<group>"; };
+		63D53CC8901DDFA9C507E879 /* stacks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stacks.h; path = ../../src/stacks.h; sourceTree = "<group>"; };
+		63D53D4267AA85297E12A72C /* stacks.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = stacks.cc; path = ../../src/stacks.cc; sourceTree = "<group>"; };
+		63D53DB1736827DEE2A2C7FF /* Bowtie.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bowtie.h; path = ../../src/Bowtie.h; sourceTree = "<group>"; };
+		63D53E06DD38D5E5874594E4 /* gzFastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzFastq.h; path = ../../src/gzFastq.h; sourceTree = "<group>"; };
+		63D53E5C7C20D8D9F9D0E564 /* PopMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopMap.h; path = ../../src/PopMap.h; sourceTree = "<group>"; };
+		63D53E989264D277D7713934 /* kmers.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = kmers.cc; sourceTree = "<group>"; };
+		63D53EF1168D7ADB8E210F17 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = input.cc; path = ../../src/input.cc; sourceTree = "<group>"; };
+		63D53F1876901A28E2BA178E /* gzFasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzFasta.h; path = ../../src/gzFasta.h; sourceTree = "<group>"; };
+		63D53F86FC72703151919FB1 /* Fastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Fastq.h; path = ../../src/Fastq.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -210,39 +207,37 @@
 		14B4DD7416C97A9500317EB3 /* core */ = {
 			isa = PBXGroup;
 			children = (
-				14B4DDAB16C97B9200317EB3 /* mst.cc */,
-				14B4DDAC16C97B9200317EB3 /* mst.h */,
-				14B4DD7516C97ACD00317EB3 /* Bam.h */,
-				14B4DD7616C97ACD00317EB3 /* Bowtie.h */,
-				14B4DD7716C97ACD00317EB3 /* Bustard.h */,
-				14B4DD7C16C97ACD00317EB3 /* cmb.cc */,
-				14B4DD7D16C97ACD00317EB3 /* cmb.h */,
-				14B4DD7E16C97ACE00317EB3 /* config.h */,
-				14B4DD7F16C97ACE00317EB3 /* constants.h */,
-				14B4DD8016C97ACE00317EB3 /* DNANSeq.cc */,
-				14B4DD8116C97ACE00317EB3 /* DNANSeq.h */,
-				14B4DD8216C97ACE00317EB3 /* DNASeq.cc */,
-				14B4DD8316C97ACE00317EB3 /* DNASeq.h */,
-				14B4DD8416C97ACE00317EB3 /* Fasta.h */,
-				14B4DD8516C97ACE00317EB3 /* Fastq.h */,
-				14B4DD8816C97ACE00317EB3 /* genotype_dictionaries.h */,
-				14B4DD8916C97ACE00317EB3 /* gzFasta.h */,
-				14B4DD8A16C97ACE00317EB3 /* gzFastq.h */,
-				14B4DD8B16C97ACE00317EB3 /* input.cc */,
-				14B4DD8C16C97ACE00317EB3 /* input.h */,
-				14B4DD8D16C97ACE00317EB3 /* kmers.cc */,
-				14B4DD8E16C97ACE00317EB3 /* kmers.h */,
 				14B4DD8F16C97ACE00317EB3 /* libz.1.2.7.dylib */,
-				14B4DD9016C97ACE00317EB3 /* PopMap.h */,
-				14B4DD9116C97ACE00317EB3 /* PopSum.h */,
-				14B4DD9216C97ACE00317EB3 /* renz.h */,
-				14B4DD9316C97ACE00317EB3 /* Sam.h */,
-				14B4DD9416C97ACE00317EB3 /* sql_utilities.h */,
-				14B4DD9516C97ACE00317EB3 /* stacks.cc */,
-				14B4DD9616C97ACE00317EB3 /* stacks.h */,
-				14B4DD9716C97ACE00317EB3 /* Tsv.h */,
-				14B4DD9A16C97ACE00317EB3 /* utils.cc */,
-				14B4DD9B16C97ACE00317EB3 /* utils.h */,
+				63D538AC7F916F4D82F4F43B /* Bam.h */,
+				63D53DB1736827DEE2A2C7FF /* Bowtie.h */,
+				63D53268A3B8886FB788CD26 /* Bustard.h */,
+				63D53087A6787051E6F55B9B /* config.h */,
+				63D539B3C0765D7CF0E3D905 /* constants.h */,
+				63D539CD1E1FCCB7E006CD52 /* DNANSeq.cc */,
+				63D532C71B8BB9E796A5B83D /* DNANSeq.h */,
+				63D53AE1D0F2E9B01FF76A92 /* DNASeq.cc */,
+				63D539491A6750D4C379832F /* DNASeq.h */,
+				63D532A9CF0591C964C37DA7 /* Fasta.h */,
+				63D53F86FC72703151919FB1 /* Fastq.h */,
+				63D5349331EA2A9590315B56 /* genotype_dictionaries.h */,
+				63D53F1876901A28E2BA178E /* gzFasta.h */,
+				63D53E06DD38D5E5874594E4 /* gzFastq.h */,
+				63D53EF1168D7ADB8E210F17 /* input.cc */,
+				63D531FEAC6100A03A4949FF /* input.h */,
+				63D53E989264D277D7713934 /* kmers.cc */,
+				63D533650299FF874B65A23C /* kmers.h */,
+				63D5308F61F143EAAF0C767C /* mst.cc */,
+				63D530C0AA8A40DE6021B47C /* mst.h */,
+				63D53E5C7C20D8D9F9D0E564 /* PopMap.h */,
+				63D53A351DA41069B043CC6E /* PopSum.h */,
+				63D536626A1A4C2FC014378F /* renz.h */,
+				63D530FA501490B30332BA38 /* Sam.h */,
+				63D53602B1B1AE8200EBDCA9 /* sql_utilities.h */,
+				63D53D4267AA85297E12A72C /* stacks.cc */,
+				63D53CC8901DDFA9C507E879 /* stacks.h */,
+				63D532620E0F9480C87EE9EE /* Tsv.h */,
+				63D53B6C04011DF2C3822EA9 /* utils.cc */,
+				63D53922D8DEF06945551E06 /* utils.h */,
 			);
 			name = core;
 			sourceTree = "<group>";
@@ -383,17 +378,16 @@
 			files = (
 				14B4DD4D16C97A7500317EB3 /* main.m in Sources */,
 				14B4DD5416C97A7500317EB3 /* stacksAppDelegate.mm in Sources */,
-				14B4DD9E16C97ACE00317EB3 /* cmb.cc in Sources */,
-				14B4DD9F16C97ACE00317EB3 /* DNANSeq.cc in Sources */,
-				14B4DDA016C97ACE00317EB3 /* DNASeq.cc in Sources */,
-				14B4DDA216C97ACE00317EB3 /* input.cc in Sources */,
-				14B4DDA316C97ACE00317EB3 /* kmers.cc in Sources */,
-				14B4DDA516C97ACE00317EB3 /* stacks.cc in Sources */,
-				14B4DDA716C97ACE00317EB3 /* utils.cc in Sources */,
-				14B4DDAD16C97B9200317EB3 /* mst.cc in Sources */,
 				14B4DDB116C97C0400317EB3 /* MasterViewController.mm in Sources */,
 				14B4DDB716C97D8C00317EB3 /* GenomeData.m in Sources */,
 				14B4DDBA16C97DA100317EB3 /* StacksDocument.m in Sources */,
+				63D53CFE966113781FC441AB /* DNANSeq.cc in Sources */,
+				63D537A0B0415DFBDF34FA15 /* DNASeq.cc in Sources */,
+				63D53F54162E9B13476B4708 /* input.cc in Sources */,
+				63D53E9DAF21A317A691A57E /* kmers.cc in Sources */,
+				63D531E8CE86AE86FEB3F2F0 /* mst.cc in Sources */,
+				63D536FB26B8E69C1C3DC0AC /* stacks.cc in Sources */,
+				63D53BAE4399201879BC1A25 /* utils.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
