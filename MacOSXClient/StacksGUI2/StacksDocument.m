@@ -11,9 +11,10 @@
 
 @implementation StacksDocument
 
-- (id)initWithGene:(NSString*)gene letters:(NSString*)letters {
+
+- (id)initWithMarker:(NSString*)marker consensusSequence:(NSString*)conensusSequence {
     if ((self = [super init])) {
-        self.data = [[GenomeData alloc] initWithGene:gene letters:letters];
+        self.data = [[GenomeData alloc] initWithMarker: marker consensusSequence:conensusSequence];
     }
     return self ; 
 }

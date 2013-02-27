@@ -12,9 +12,10 @@
 
 @interface MasterViewController ()
 @property (weak) IBOutlet NSTableView *filesTableView;
-@property (weak) IBOutlet NSTextField *testField;
+//@property (weak) IBOutlet NSTextField *testField;
 @property (weak) IBOutlet NSTextField *headerField;
 @property (weak) IBOutlet NSTextField *fastaField;
+//@property (weak) IBOutlet NSTextField *markerField;
 
 
 //@property (weak) IBOutlet NSTextField *testField ;
@@ -47,7 +48,7 @@
     {
         StacksDocument *bugDoc = [self.data objectAtIndex:row];
 //        cellView.imageView.image = bugDoc.thumbImage;
-        cellView.textField.stringValue = bugDoc.data.gene;
+        cellView.textField.stringValue = bugDoc.data.marker;
         return cellView;
     }
     return cellView;
@@ -74,12 +75,12 @@
     NSString *test =@"";
     
     if(doc!=nil){
-        name = doc.data.gene;
-        data = doc.data.letters;
+        name = doc.data.marker;
+        data = doc.data.consensusSequence;
         test = @"testis working I think";
     }
     
-    [self.testField setStringValue:test];
+//    [self.testField setStringValue:test];
     [self.headerField setStringValue:name];
     [self.fastaField setStringValue:data];
 }

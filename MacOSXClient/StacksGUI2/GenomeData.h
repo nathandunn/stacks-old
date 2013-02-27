@@ -10,10 +10,10 @@
 
 @interface GenomeData : NSObject
 
-@property (strong) NSString *gene;
+@property (strong) NSString *marker;
 //@property (assign) NSString *letters;
-@property (strong) NSString *letters;
+@property (strong) NSString *consensusSequence;
 
-- (id)initWithGene:(NSString*)gene letters:(NSString*)letters;
+- (id)initWithMarker:(NSString*)marker consensusSequence:(NSString*)consensusSequence;
 
 @end
