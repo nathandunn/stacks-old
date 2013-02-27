@@ -8,6 +8,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([src/ustacks.cc])
 AC_CONFIG_HEADERS([config.h])
+m4_pattern_allow([AC_OPENMP])
 
 # Get BAM library and include locations if requested
 AC_ARG_ENABLE([bam],
@@ -59,7 +60,7 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([float.h limits.h stdlib.h string.h])
 
 # Check for OpenMP parallel execution support
-#AC_OPENMP
+AC_OPENMP
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
