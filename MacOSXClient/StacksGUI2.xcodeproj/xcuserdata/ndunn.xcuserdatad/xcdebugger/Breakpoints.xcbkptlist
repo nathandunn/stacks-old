@@ -86,11 +86,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "StacksGUI2/MasterViewController.mm"
-         timestampString = "382618017.73347"
+         timestampString = "383696885.050891"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "76"
-         endingLineNumber = "76"
+         startingLineNumber = "79"
+         endingLineNumber = "79"
          landmarkName = "-setDetailInfo:"
          landmarkType = "5">
       </FileBreakpoint>

@@ -31,8 +31,8 @@
     NSMutableArray *geneDocs;
     if(!existsAtPath){
         NSLog(@"files do not exist %@",examplePath);
-       StacksDocument *doc1 = [[StacksDocument alloc] initWithGene:@"sox9" letters:@"ATATAGATA"];
-        StacksDocument *doc2 = [[StacksDocument alloc] initWithGene:@"sox12" letters:@"ATATAGAGG"];
+       StacksDocument *doc1 = [[StacksDocument alloc] initWithMarker:@"sox9" consensusSequence:@"ATATAGATA"];
+       StacksDocument *doc2 = [[StacksDocument alloc] initWithMarker:@"sox12" consensusSequence:@"ATATAGAGG"];
         geneDocs = [NSMutableArray arrayWithObjects:doc1,doc2,nil];
     }
     else{
@@ -58,7 +58,7 @@
 //            [NSString initWithUTF8String:read];
 
 //            NSString* letters = [NSString stringWithUTF8String:read];
-            const char *test = "teststring" ;
+//            const char *test = "teststring" ;
             NSString* letters = [[NSString alloc] initWithCString:read encoding: NSUTF8StringEncoding];
             //            NSString* letters = [NSString stringWithFormat:@"%@",lettersString];
 //            NSString* letters = [NSString stringWithCharacters:read length: sizeof(read)];
@@ -69,7 +69,7 @@
             NSLog(@"added read %@",letters);
             int intValue = (*iter).first;
             NSString *geneValue = [NSString stringWithFormat:@"%d",intValue];
-            StacksDocument *doc = [[StacksDocument alloc] initWithGene:geneValue letters:letters];
+            StacksDocument *doc = [[StacksDocument alloc] initWithMarker:geneValue consensusSequence:letters];
             [geneDocs addObject:doc];
             
             ++iter;

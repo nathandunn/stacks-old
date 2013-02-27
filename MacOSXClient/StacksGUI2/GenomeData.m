@@ -10,10 +10,10 @@
 
 @implementation GenomeData
 
-- (id)initWithGene:(NSString*)gene letters:(NSString*)letters{
+- (id)initWithMarker:(NSString *)marker consensusSequence:(NSString *)consensusSequence{
     if ((self = [super init])) {
-        self.gene= gene;
-        self.letters = letters;
+        self.marker= marker;
+        self.consensusSequence = consensusSequence;
     }
     return self;
 }

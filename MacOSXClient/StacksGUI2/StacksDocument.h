@@ -14,7 +14,7 @@
 
 @property (strong) GenomeData *data;
 
-- (id)initWithGene:(NSString*)gene letters:(NSString*)letters ;
+- (id)initWithMarker:(NSString*)marker consensusSequence:(NSString*)consensusSequence ;
 
 
 @end
