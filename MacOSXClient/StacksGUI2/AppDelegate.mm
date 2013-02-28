@@ -1,30 +1,25 @@
 //
-//  stacksAppDelegate.m
+//  AppDelegate.m
 //  StacksGUI2
 //
 //  Created by Nathan Dunn on 2/11/13.
 //  Copyright (c) 2013 Nathan Dunn. All rights reserved.
 //
 
-#import "stacksAppDelegate.h"
+#import "AppDelegate.h"
 #import "MasterViewController.h"
 #import "StacksDocument.h"
 #import "sql_utilities.h"
 
-@implementation stacksAppDelegate
+@implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
     // Insert code here to initialize your application
     // 1. Create the master view controller
-    self.masterViewController = [[MasterViewController alloc] initWithNibName:@"MasterViewController" bundle:nil];
+    masterViewController = [[MasterViewController alloc] initWithWindowNibName:@"MasterViewController"];
+    [masterViewController showWindow:self];
     
-
-   
-//    NSString *curDir = [[NSFileManager defaultManager] currentDirectoryPath];
-//    /Users/ndunn/Library/Developer/Xcode/DerivedData/StacksGUI2-hbdogjryyrskwkegjgawcnpajwxg/Build/Products/Debug
-//    NSLog(curDir);
-//    NSString *examplePath = @"/tmp/stacks_samples/";
     NSString *examplePath = @"/tmp/stacks_tut/";
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
@@ -52,7 +47,7 @@
         // different color of view / lgith  / grey is the 3rd column/ locus . . . have to color SNP according other
         // the actual data will need to be imported directly and stored . . . see parse_tsv . .. but will be using raw data
         
-        NSLog(@"model size %d",modelMap.size());
+        NSLog(@"model size %d",(int)modelMap.size());
         
 //        NSArray *dirFiles = [fileManager contentsOfDirectoryAtPath:examplePath error:nil];
 //        NSArray *fastaFiles= [dirFiles filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"self ENDSWITH '.fa'"]];
@@ -92,11 +87,11 @@
     
     
 
-    self.masterViewController.data = geneDocs;
+    masterViewController.data = geneDocs;
     
     // 2. Add the view controller to the Window's content view
-    [self.window.contentView addSubview:self.masterViewController.view];
-    self.masterViewController.view.frame = ((NSView*)self.window.contentView).bounds;
+//    [window.contentView addSubview:self.masterViewController.view];
+//    masterViewController.view.frame = ((NSView*)self.window.contentView).bounds;
     
     
 
