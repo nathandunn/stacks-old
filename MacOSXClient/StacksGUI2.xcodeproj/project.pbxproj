@@ -29,7 +29,7 @@
 		63D53BAE4399201879BC1A25 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53B6C04011DF2C3822EA9 /* utils.cc */; };
 		63D53CFE966113781FC441AB /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D539CD1E1FCCB7E006CD52 /* DNANSeq.cc */; };
 		63D53F54162E9B13476B4708 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53EF1168D7ADB8E210F17 /* input.cc */; };
-		63D53FE52E358257C3582A3D /* StacksView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5320C33B677602C381333 /* StacksView.m */; };
+		63D53FE52E358257C3582A3D /* SnpsView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5320C33B677602C381333 /* SnpsView.m */; };
 		6B4D21EC16DAA75A008D971F /* kmers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4D21EA16DAA75A008D971F /* kmers.cc */; };
 /* End PBXBuildFile section */
 
@@ -76,7 +76,7 @@
 		63D530C0AA8A40DE6021B47C /* mst.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mst.h; path = ../../src/mst.h; sourceTree = "<group>"; };
 		63D530FA501490B30332BA38 /* Sam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Sam.h; path = ../../src/Sam.h; sourceTree = "<group>"; };
 		63D531FEAC6100A03A4949FF /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../../src/input.h; sourceTree = "<group>"; };
-		63D5320C33B677602C381333 /* StacksView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksView.m; sourceTree = "<group>"; };
+		63D5320C33B677602C381333 /* SnpsView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpsView.m; sourceTree = "<group>"; };
 		63D532620E0F9480C87EE9EE /* Tsv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tsv.h; path = ../../src/Tsv.h; sourceTree = "<group>"; };
 		63D53268A3B8886FB788CD26 /* Bustard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bustard.h; path = ../../src/Bustard.h; sourceTree = "<group>"; };
 		63D532A9CF0591C964C37DA7 /* Fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Fasta.h; path = ../../src/Fasta.h; sourceTree = "<group>"; };
@@ -99,7 +99,7 @@
 		63D53DB1736827DEE2A2C7FF /* Bowtie.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bowtie.h; path = ../../src/Bowtie.h; sourceTree = "<group>"; };
 		63D53E06DD38D5E5874594E4 /* gzFastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzFastq.h; path = ../../src/gzFastq.h; sourceTree = "<group>"; };
 		63D53E5C7C20D8D9F9D0E564 /* PopMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopMap.h; path = ../../src/PopMap.h; sourceTree = "<group>"; };
-		63D53E91154AE4EC76FCA139 /* StacksView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksView.h; sourceTree = "<group>"; };
+		63D53E91154AE4EC76FCA139 /* SnpsView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpsView.h; sourceTree = "<group>"; };
 		63D53EF1168D7ADB8E210F17 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = input.cc; path = ../../src/input.cc; sourceTree = "<group>"; };
 		63D53F1876901A28E2BA178E /* gzFasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzFasta.h; path = ../../src/gzFasta.h; sourceTree = "<group>"; };
 		63D53F86FC72703151919FB1 /* Fastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Fastq.h; path = ../../src/Fastq.h; sourceTree = "<group>"; };
@@ -270,8 +270,8 @@
 				14B4DDB616C97D8C00317EB3 /* LocusView.m */,
 				63D53933849F418F0D3EFBB7 /* GenotypeView.m */,
 				63D535DBF5CC086466FBD43E /* GenotypeView.h */,
-				63D5320C33B677602C381333 /* StacksView.m */,
-				63D53E91154AE4EC76FCA139 /* StacksView.h */,
+				63D5320C33B677602C381333 /* SnpsView.m */,
+				63D53E91154AE4EC76FCA139 /* SnpsView.h */,
 			);
 			name = Model;
 			sourceTree = "<group>";
@@ -399,7 +399,7 @@
 				63D53BAE4399201879BC1A25 /* utils.cc in Sources */,
 				6B4D21EC16DAA75A008D971F /* kmers.cc in Sources */,
 				63D53AF955360D80C3B5C435 /* GenotypeView.m in Sources */,
-				63D53FE52E358257C3582A3D /* StacksView.m in Sources */,
+				63D53FE52E358257C3582A3D /* SnpsView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

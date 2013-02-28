@@ -5,8 +5,11 @@
 //
 
 
-#import <Foundation/Foundation.h>
+#import "SnpsView.h"
 
 
-@interface StacksView : NSObject
+@implementation SnpsView {
+
+}
+
 @end

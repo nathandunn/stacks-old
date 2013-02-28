@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 
 @class GenotypeView;
-@class StacksView;
+@class SnpsView;
 
 @interface LocusView : NSObject
 
@@ -24,7 +24,7 @@
 @property (strong) NSString *genotypes ;
 
 @property (strong) GenotypeView *genotypeView;
-@property (strong) StacksView *stacksView;
+@property (strong) NSMutableArray *snpsViews;
 
 - (id)initWithId:(NSString *)locusId consensus:(NSString*)consensus;
 

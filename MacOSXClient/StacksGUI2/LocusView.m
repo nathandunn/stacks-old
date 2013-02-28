@@ -8,7 +8,7 @@
 
 #import "LocusView.h"
 #import "GenotypeView.h"
-#import "StacksView.h"
+#import "SnpsView.h"
 
 @implementation LocusView
 
