@@ -9,8 +9,12 @@
 #import <Foundation/Foundation.h>
 
 @class GenotypeView;
-@class SnpsView;
+@class StacksView;
 
+/**
+* This is the table view:
+* http://genome.uoregon.edu/stacks/catalog.php?db=tut_radtags&id=1
+*/
 @interface LocusView : NSObject
 
 @property (strong) NSString *locusId;

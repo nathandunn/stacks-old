@@ -7,6 +7,9 @@
 
 #import <Foundation/Foundation.h>
 
-
+/**
+* This is the popup view from each catalog:
+* http://genome.uoregon.edu/stacks/catalog.php?db=tut_radtags&id=1
+*/
 @interface GenotypeView : NSObject
 @end
