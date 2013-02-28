@@ -20,14 +20,16 @@
 		14B4DDA416C97ACE00317EB3 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD8F16C97ACE00317EB3 /* libz.1.2.7.dylib */; };
 		14B4DDB116C97C0400317EB3 /* MasterViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */; };
 		14B4DDB216C97C0400317EB3 /* MasterViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DDB016C97C0400317EB3 /* MasterViewController.xib */; };
-		14B4DDB716C97D8C00317EB3 /* GenomeData.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB616C97D8C00317EB3 /* GenomeData.m */; };
+		14B4DDB716C97D8C00317EB3 /* LocusView.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB616C97D8C00317EB3 /* LocusView.m */; };
 		14B4DDBA16C97DA100317EB3 /* StacksDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB916C97DA100317EB3 /* StacksDocument.m */; };
 		63D531E8CE86AE86FEB3F2F0 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D5308F61F143EAAF0C767C /* mst.cc */; };
 		63D536FB26B8E69C1C3DC0AC /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53D4267AA85297E12A72C /* stacks.cc */; };
 		63D537A0B0415DFBDF34FA15 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53AE1D0F2E9B01FF76A92 /* DNASeq.cc */; };
+		63D53AF955360D80C3B5C435 /* GenotypeView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53933849F418F0D3EFBB7 /* GenotypeView.m */; };
 		63D53BAE4399201879BC1A25 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53B6C04011DF2C3822EA9 /* utils.cc */; };
 		63D53CFE966113781FC441AB /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D539CD1E1FCCB7E006CD52 /* DNANSeq.cc */; };
 		63D53F54162E9B13476B4708 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53EF1168D7ADB8E210F17 /* input.cc */; };
+		63D53FE52E358257C3582A3D /* StacksView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5320C33B677602C381333 /* StacksView.m */; };
 		6B4D21EC16DAA75A008D971F /* kmers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4D21EA16DAA75A008D971F /* kmers.cc */; };
 /* End PBXBuildFile section */
 
@@ -54,7 +56,7 @@
 		14B4DD5016C97A7500317EB3 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
 		14B4DD5216C97A7500317EB3 /* stacksAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stacksAppDelegate.h; sourceTree = "<group>"; };
 		14B4DD5316C97A7500317EB3 /* stacksAppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = stacksAppDelegate.mm; sourceTree = "<group>"; };
-		14B4DD5616C97A7600317EB3 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		14B4DD5616C97A7600317EB3 /* MainMenu.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = MainMenu.xib; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		14B4DD5D16C97A7600317EB3 /* StacksGUI2Tests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StacksGUI2Tests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
 		14B4DD5E16C97A7600317EB3 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
 		14B4DD6516C97A7600317EB3 /* StacksGUI2Tests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "StacksGUI2Tests-Info.plist"; sourceTree = "<group>"; };
@@ -65,8 +67,8 @@
 		14B4DDAE16C97C0400317EB3 /* MasterViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MasterViewController.h; sourceTree = "<group>"; };
 		14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MasterViewController.mm; sourceTree = "<group>"; };
 		14B4DDB016C97C0400317EB3 /* MasterViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = MasterViewController.xib; sourceTree = "<group>"; };
-		14B4DDB516C97D8C00317EB3 /* GenomeData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenomeData.h; sourceTree = "<group>"; };
-		14B4DDB616C97D8C00317EB3 /* GenomeData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenomeData.m; sourceTree = "<group>"; };
+		14B4DDB516C97D8C00317EB3 /* LocusView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusView.h; sourceTree = "<group>"; };
+		14B4DDB616C97D8C00317EB3 /* LocusView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusView.m; sourceTree = "<group>"; };
 		14B4DDB816C97DA100317EB3 /* StacksDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksDocument.h; sourceTree = "<group>"; };
 		14B4DDB916C97DA100317EB3 /* StacksDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksDocument.m; sourceTree = "<group>"; };
 		63D53087A6787051E6F55B9B /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../../config.h; sourceTree = "<group>"; };
@@ -74,15 +76,18 @@
 		63D530C0AA8A40DE6021B47C /* mst.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mst.h; path = ../../src/mst.h; sourceTree = "<group>"; };
 		63D530FA501490B30332BA38 /* Sam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Sam.h; path = ../../src/Sam.h; sourceTree = "<group>"; };
 		63D531FEAC6100A03A4949FF /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../../src/input.h; sourceTree = "<group>"; };
+		63D5320C33B677602C381333 /* StacksView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksView.m; sourceTree = "<group>"; };
 		63D532620E0F9480C87EE9EE /* Tsv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tsv.h; path = ../../src/Tsv.h; sourceTree = "<group>"; };
 		63D53268A3B8886FB788CD26 /* Bustard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bustard.h; path = ../../src/Bustard.h; sourceTree = "<group>"; };
 		63D532A9CF0591C964C37DA7 /* Fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Fasta.h; path = ../../src/Fasta.h; sourceTree = "<group>"; };
 		63D532C71B8BB9E796A5B83D /* DNANSeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DNANSeq.h; path = ../../src/DNANSeq.h; sourceTree = "<group>"; };
 		63D5349331EA2A9590315B56 /* genotype_dictionaries.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = genotype_dictionaries.h; path = ../../src/genotype_dictionaries.h; sourceTree = "<group>"; };
+		63D535DBF5CC086466FBD43E /* GenotypeView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeView.h; sourceTree = "<group>"; };
 		63D53602B1B1AE8200EBDCA9 /* sql_utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sql_utilities.h; path = ../../src/sql_utilities.h; sourceTree = "<group>"; };
 		63D536626A1A4C2FC014378F /* renz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = renz.h; path = ../../src/renz.h; sourceTree = "<group>"; };
 		63D538AC7F916F4D82F4F43B /* Bam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bam.h; path = ../../src/Bam.h; sourceTree = "<group>"; };
 		63D53922D8DEF06945551E06 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = utils.h; path = ../../src/utils.h; sourceTree = "<group>"; };
+		63D53933849F418F0D3EFBB7 /* GenotypeView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenotypeView.m; sourceTree = "<group>"; };
 		63D539491A6750D4C379832F /* DNASeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DNASeq.h; path = ../../src/DNASeq.h; sourceTree = "<group>"; };
 		63D539B3C0765D7CF0E3D905 /* constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = constants.h; path = ../../src/constants.h; sourceTree = "<group>"; };
 		63D539CD1E1FCCB7E006CD52 /* DNANSeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DNANSeq.cc; path = ../../src/DNANSeq.cc; sourceTree = "<group>"; };
@@ -94,6 +99,7 @@
 		63D53DB1736827DEE2A2C7FF /* Bowtie.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bowtie.h; path = ../../src/Bowtie.h; sourceTree = "<group>"; };
 		63D53E06DD38D5E5874594E4 /* gzFastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzFastq.h; path = ../../src/gzFastq.h; sourceTree = "<group>"; };
 		63D53E5C7C20D8D9F9D0E564 /* PopMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopMap.h; path = ../../src/PopMap.h; sourceTree = "<group>"; };
+		63D53E91154AE4EC76FCA139 /* StacksView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksView.h; sourceTree = "<group>"; };
 		63D53EF1168D7ADB8E210F17 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = input.cc; path = ../../src/input.cc; sourceTree = "<group>"; };
 		63D53F1876901A28E2BA178E /* gzFasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzFasta.h; path = ../../src/gzFasta.h; sourceTree = "<group>"; };
 		63D53F86FC72703151919FB1 /* Fastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Fastq.h; path = ../../src/Fastq.h; sourceTree = "<group>"; };
@@ -238,6 +244,7 @@
 				63D532620E0F9480C87EE9EE /* Tsv.h */,
 				63D53B6C04011DF2C3822EA9 /* utils.cc */,
 				63D53922D8DEF06945551E06 /* utils.h */,
+				14B4DD5516C97A7600317EB3 /* MainMenu.xib */,
 			);
 			name = core;
 			sourceTree = "<group>";
@@ -247,7 +254,6 @@
 			children = (
 				14B4DD5216C97A7500317EB3 /* stacksAppDelegate.h */,
 				14B4DD5316C97A7500317EB3 /* stacksAppDelegate.mm */,
-				14B4DD5516C97A7600317EB3 /* MainMenu.xib */,
 				14B4DDAE16C97C0400317EB3 /* MasterViewController.h */,
 				14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */,
 				14B4DDB016C97C0400317EB3 /* MasterViewController.xib */,
@@ -260,8 +266,12 @@
 			children = (
 				14B4DDB816C97DA100317EB3 /* StacksDocument.h */,
 				14B4DDB916C97DA100317EB3 /* StacksDocument.m */,
-				14B4DDB516C97D8C00317EB3 /* GenomeData.h */,
-				14B4DDB616C97D8C00317EB3 /* GenomeData.m */,
+				14B4DDB516C97D8C00317EB3 /* LocusView.h */,
+				14B4DDB616C97D8C00317EB3 /* LocusView.m */,
+				63D53933849F418F0D3EFBB7 /* GenotypeView.m */,
+				63D535DBF5CC086466FBD43E /* GenotypeView.h */,
+				63D5320C33B677602C381333 /* StacksView.m */,
+				63D53E91154AE4EC76FCA139 /* StacksView.h */,
 			);
 			name = Model;
 			sourceTree = "<group>";
@@ -379,7 +389,7 @@
 				14B4DD4D16C97A7500317EB3 /* main.m in Sources */,
 				14B4DD5416C97A7500317EB3 /* stacksAppDelegate.mm in Sources */,
 				14B4DDB116C97C0400317EB3 /* MasterViewController.mm in Sources */,
-				14B4DDB716C97D8C00317EB3 /* GenomeData.m in Sources */,
+				14B4DDB716C97D8C00317EB3 /* LocusView.m in Sources */,
 				14B4DDBA16C97DA100317EB3 /* StacksDocument.m in Sources */,
 				63D53CFE966113781FC441AB /* DNANSeq.cc in Sources */,
 				63D537A0B0415DFBDF34FA15 /* DNASeq.cc in Sources */,
@@ -388,6 +398,8 @@
 				63D536FB26B8E69C1C3DC0AC /* stacks.cc in Sources */,
 				63D53BAE4399201879BC1A25 /* utils.cc in Sources */,
 				6B4D21EC16DAA75A008D971F /* kmers.cc in Sources */,
+				63D53AF955360D80C3B5C435 /* GenotypeView.m in Sources */,
+				63D53FE52E358257C3582A3D /* StacksView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -429,7 +441,7 @@
 		14B4DD5516C97A7600317EB3 /* MainMenu.xib */ = {
 			isa = PBXVariantGroup;
 			children = (
-				14B4DD5616C97A7600317EB3 /* en */,
+				14B4DD5616C97A7600317EB3 /* MainMenu.xib */,
 			);
 			name = MainMenu.xib;
 			sourceTree = "<group>";

@@ -7,14 +7,21 @@
 //
 
 #import "StacksDocument.h"
-#import "GenomeData.h"
+#import "LocusView.h"
 
 @implementation StacksDocument
+
+- (id)initWithLocusData:(LocusView *)locusData {
+    if ((self = [super init])) {
+        self.locusData = locusData;
+    }
+    return self ;
+}
 
 
 - (id)initWithMarker:(NSString*)marker consensusSequence:(NSString*)conensusSequence {
     if ((self = [super init])) {
-        self.data = [[GenomeData alloc] initWithMarker: marker consensusSequence:conensusSequence];
+        self.locusData = [[LocusView alloc] initWithId:marker consensus:conensusSequence];
     }
     return self ; 
 }
