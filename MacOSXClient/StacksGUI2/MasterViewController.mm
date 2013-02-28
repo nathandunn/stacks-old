@@ -8,7 +8,7 @@
 
 #import "MasterViewController.h"
 #import "StacksDocument.h"
-#import "GenomeData.h"
+#import "LocusView.h"
 
 @interface MasterViewController ()
 @property (weak) IBOutlet NSTableView *filesTableView;
@@ -48,7 +48,7 @@
     {
         StacksDocument *bugDoc = [self.data objectAtIndex:row];
 //        cellView.imageView.image = bugDoc.thumbImage;
-        cellView.textField.stringValue = bugDoc.data.marker;
+        cellView.textField.stringValue = bugDoc.locusData.locusId;
         return cellView;
     }
     return cellView;
@@ -75,8 +75,8 @@
     NSString *test =@"";
     
     if(doc!=nil){
-        name = doc.data.marker;
-        data = doc.data.consensusSequence;
+        name = doc.locusData.locusId;
+        data = doc.locusData.consensus;
         test = @"testis working I think";
     }
     
