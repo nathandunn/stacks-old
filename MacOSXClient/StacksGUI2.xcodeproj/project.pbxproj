@@ -11,7 +11,7 @@
 		14B4DD4B16C97A7500317EB3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD4916C97A7500317EB3 /* InfoPlist.strings */; };
 		14B4DD4D16C97A7500317EB3 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD4C16C97A7500317EB3 /* main.m */; };
 		14B4DD5116C97A7500317EB3 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD4F16C97A7500317EB3 /* Credits.rtf */; };
-		14B4DD5416C97A7500317EB3 /* stacksAppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD5316C97A7500317EB3 /* stacksAppDelegate.mm */; };
+		14B4DD5416C97A7500317EB3 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD5316C97A7500317EB3 /* AppDelegate.mm */; };
 		14B4DD5716C97A7600317EB3 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD5516C97A7600317EB3 /* MainMenu.xib */; };
 		14B4DD5F16C97A7600317EB3 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD5E16C97A7600317EB3 /* SenTestingKit.framework */; };
 		14B4DD6016C97A7600317EB3 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD4016C97A7500317EB3 /* Cocoa.framework */; };
@@ -54,8 +54,8 @@
 		14B4DD4C16C97A7500317EB3 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		14B4DD4E16C97A7500317EB3 /* StacksGUI2-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "StacksGUI2-Prefix.pch"; sourceTree = "<group>"; };
 		14B4DD5016C97A7500317EB3 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
-		14B4DD5216C97A7500317EB3 /* stacksAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stacksAppDelegate.h; sourceTree = "<group>"; };
-		14B4DD5316C97A7500317EB3 /* stacksAppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = stacksAppDelegate.mm; sourceTree = "<group>"; };
+		14B4DD5216C97A7500317EB3 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		14B4DD5316C97A7500317EB3 /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
 		14B4DD5616C97A7600317EB3 /* MainMenu.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = MainMenu.xib; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		14B4DD5E16C97A7600317EB3 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
 		14B4DD6516C97A7600317EB3 /* StacksGUI2Tests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "StacksGUI2Tests-Info.plist"; sourceTree = "<group>"; };
@@ -242,7 +242,6 @@
 				63D532620E0F9480C87EE9EE /* Tsv.h */,
 				63D53B6C04011DF2C3822EA9 /* utils.cc */,
 				63D53922D8DEF06945551E06 /* utils.h */,
-				14B4DD5516C97A7600317EB3 /* MainMenu.xib */,
 			);
 			name = core;
 			sourceTree = "<group>";
@@ -250,8 +249,9 @@
 		14B4DDB316C97D4800317EB3 /* GUI */ = {
 			isa = PBXGroup;
 			children = (
-				14B4DD5216C97A7500317EB3 /* stacksAppDelegate.h */,
-				14B4DD5316C97A7500317EB3 /* stacksAppDelegate.mm */,
+				14B4DD5516C97A7600317EB3 /* MainMenu.xib */,
+				14B4DD5216C97A7500317EB3 /* AppDelegate.h */,
+				14B4DD5316C97A7500317EB3 /* AppDelegate.mm */,
 				14B4DDAE16C97C0400317EB3 /* MasterViewController.h */,
 				14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */,
 				14B4DDB016C97C0400317EB3 /* MasterViewController.xib */,
@@ -384,7 +384,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				14B4DD4D16C97A7500317EB3 /* main.m in Sources */,
-				14B4DD5416C97A7500317EB3 /* stacksAppDelegate.mm in Sources */,
+				14B4DD5416C97A7500317EB3 /* AppDelegate.mm in Sources */,
 				14B4DDB116C97C0400317EB3 /* MasterViewController.mm in Sources */,
 				14B4DDB716C97D8C00317EB3 /* LocusView.m in Sources */,
 				14B4DDBA16C97DA100317EB3 /* StacksDocument.m in Sources */,
