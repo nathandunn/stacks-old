@@ -42,6 +42,15 @@
         
 //        load_model_results([exampleFile UTF8String], modelMap);
         load_loci([exampleFile UTF8String], modelMap,false);
+
+        // TODO: Get the genotype view
+        // from populations.cc 150-205 . . . load the catalog matches and then the
+        // I will use the locus ID to look over the PopMap<CLocus> and the catalog map map<int,CLocus *> . . .
+        // the table that iterates (e.g., is the tabulate_haplotypes object)
+
+        // TODO: get the Stack View
+        // different color of view / lgith  / grey is the 3rd column/ locus . . . have to color SNP according other
+        // the actual data will need to be imported directly and stored . . . see parse_tsv . .. but will be using raw data
         
         NSLog(@"model size %d",modelMap.size());
         
