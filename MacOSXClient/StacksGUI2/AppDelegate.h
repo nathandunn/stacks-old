@@ -10,13 +10,15 @@
 //#import "MasterViewController.h"
 
 @class MasterViewController ;
+@class StacksLoader;
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>{
 
-    MasterViewController *masterViewController ; 
+//    MasterViewController *masterViewController ;
 }
 
 //@property (assign) IBOutlet NSWindow *window;
-//@property (nonatomic,strong) IBOutlet MasterViewController *masterViewController;
+@property (nonatomic,strong) IBOutlet MasterViewController *masterViewController;
+@property (nonatomic,strong) IBOutlet StacksLoader *loader;
 
 @end

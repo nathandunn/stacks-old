@@ -42,7 +42,7 @@
 			<object class="NSCustomObject" id="1004">
 				<string key="NSClassName">NSApplication</string>
 			</object>
-			<object class="NSWindowTemplate" id="1001304146">
+			<object class="NSWindowTemplate" id="109564015">
 				<int key="NSWindowStyleMask">15</int>
 				<int key="NSWindowBacking">2</int>
 				<string key="NSWindowRect">{{283, 305}, {967, 545}}</string>
@@ -51,12 +51,12 @@
 				<string key="NSWindowClass">NSWindow</string>
 				<nil key="NSViewClass"/>
 				<nil key="NSUserInterfaceItemIdentifier"/>
-				<object class="NSView" key="NSWindowView" id="465672967">
+				<object class="NSView" key="NSWindowView" id="849161457">
 					<reference key="NSNextResponder"/>
 					<int key="NSvFlags">256</int>
 					<array class="NSMutableArray" key="NSSubviews">
 						<object class="NSSplitView" id="645924114">
-							<reference key="NSNextResponder" ref="465672967"/>
+							<reference key="NSNextResponder" ref="849161457"/>
 							<int key="NSvFlags">274</int>
 							<array class="NSMutableArray" key="NSSubviews">
 								<object class="NSCustomView" id="788725117">
@@ -900,7 +900,6 @@
 																	<string key="NSFrame">{{1, 173}, {468, 15}}</string>
 																	<reference key="NSSuperview" ref="263850351"/>
 																	<reference key="NSWindow"/>
-																	<reference key="NSNextKeyView"/>
 																	<string key="NSReuseIdentifierKey">_NS:60</string>
 																	<int key="NSsFlags">1</int>
 																	<reference key="NSTarget" ref="263850351"/>
@@ -963,7 +962,7 @@
 								</object>
 							</array>
 							<string key="NSFrame">{{-89, 0}, {1056, 588}}</string>
-							<reference key="NSSuperview" ref="465672967"/>
+							<reference key="NSSuperview" ref="849161457"/>
 							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="788725117"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
@@ -988,7 +987,7 @@
 					<object class="IBOutletConnection" key="connection">
 						<string key="label">window</string>
 						<reference key="source" ref="1001"/>
-						<reference key="destination" ref="1001304146"/>
+						<reference key="destination" ref="109564015"/>
 					</object>
 					<int key="connectionID">487</int>
 				</object>
@@ -1002,19 +1001,19 @@
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBOutletConnection" key="connection">
-						<string key="label">delegate</string>
-						<reference key="source" ref="583026923"/>
-						<reference key="destination" ref="1001"/>
-					</object>
-					<int key="connectionID">479</int>
-				</object>
-				<object class="IBConnectionRecord">
-					<object class="IBOutletConnection" key="connection">
 						<string key="label">dataSource</string>
 						<reference key="source" ref="583026923"/>
 						<reference key="destination" ref="1001"/>
 					</object>
-					<int key="connectionID">480</int>
+					<int key="connectionID">489</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBOutletConnection" key="connection">
+						<string key="label">delegate</string>
+						<reference key="source" ref="583026923"/>
+						<reference key="destination" ref="1001"/>
+					</object>
+					<int key="connectionID">490</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBOutletConnection" key="connection">
@@ -1215,19 +1214,19 @@
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">481</int>
-						<reference key="object" ref="1001304146"/>
+						<reference key="object" ref="109564015"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="465672967"/>
+							<reference ref="849161457"/>
 						</array>
 						<reference key="parent" ref="0"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">484</int>
-						<reference key="object" ref="465672967"/>
+						<reference key="object" ref="849161457"/>
 						<array class="NSMutableArray" key="children">
 							<reference ref="645924114"/>
 						</array>
-						<reference key="parent" ref="1001304146"/>
+						<reference key="parent" ref="109564015"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">327</int>
@@ -1236,7 +1235,7 @@
 							<reference ref="955813267"/>
 							<reference ref="788725117"/>
 						</array>
-						<reference key="parent" ref="465672967"/>
+						<reference key="parent" ref="849161457"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">329</int>
@@ -1850,7 +1849,7 @@
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">488</int>
+			<int key="maxID">490</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">
