@@ -9,6 +9,7 @@
 #import "stacks.h"
 #import "sql_utilities.h"
 #import "StacksLoader.h"
+#import "LocusView.h"
 
 
 @implementation StacksLoader {
@@ -52,23 +53,17 @@
         map<int,Locus*>::iterator iter = modelMap.begin();
 
         while(iter!=modelMap.end()){
+            NSString *sampleId = [NSString stringWithFormat:@"%d",(*iter).first];
+            LocusView *locusView = [[LocusView alloc] initWithId:sampleId ];
+
             const char *read = (*iter).second->con;
-//            NSString* letters = [NSString stringWithCString:read encoding: NSUTF8StringEncoding];
-//            [NSString initWithUTF8String:read];
-
-//            NSString* letters = [NSString stringWithUTF8String:read];
-//            const char *test = "teststring" ;
             NSString* letters = [[NSString alloc] initWithCString:read encoding: NSUTF8StringEncoding];
-            //            NSString* letters = [NSString stringWithFormat:@"%@",lettersString];
-//            NSString* letters = [NSString stringWithCharacters:read length: sizeof(read)];
-//            NSString* letters = [NSString stringWithCharacters:read length: sizeof(read)];
-
-//            NSString* letters = @"";
-//            letters = @"ABCDEFG";
             NSLog(@"added read %@",letters);
-            int intValue = (*iter).first;
-            NSString *geneValue = [NSString stringWithFormat:@"%d",intValue];
-            StacksDocument *doc = [[StacksDocument alloc] initWithMarker:geneValue consensusSequence:letters];
+            locusView.consensus = letters;
+
+
+
+            StacksDocument *doc = [[StacksDocument alloc] initWithLocusData:locusView];
             [geneDocs addObject:doc];
 
             ++iter;
