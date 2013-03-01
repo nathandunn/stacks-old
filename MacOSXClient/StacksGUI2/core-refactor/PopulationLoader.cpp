@@ -37,45 +37,45 @@ int PopulationLoader::reduce_catalog(map<int, CLocus *> catalog,set<int> whiteli
     return i;
 }
 
-int PopulationLoader::reduce_catalog(map<int, CLocus *> catalog){
-
-    set<int> whitelist, blacklist;
-    return reduce_catalog(catalog,whitelist,blacklist);
-
-}
-
-bool PopulationLoader::order_unordered_loci(map<int, CLocus *> catalog) {
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
-    set<string> chrs;
-
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-        if (strlen(loc->loc.chr) > 0)
-            chrs.insert(loc->loc.chr);
-    }
-
-    //
-    // This data is already reference aligned.
-    //
-    if (chrs.size() > 0)
-        return true;
-
-    cerr << "Catalog is not reference aligned, arbitrarily ordering catalog loci.\n";
-
-    uint bp = 1;
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-        loc->loc.chr = new char[3];
-        strcpy(loc->loc.chr, "un");
-        loc->loc.bp  = bp;
-
-        bp += strlen(loc->con);
-    }
-
-    return false;
-
-}
+//int PopulationLoader::reduce_catalog(map<int, CLocus *> catalog){
+//
+//    set<int> whitelist, blacklist;
+//    return reduce_catalog(catalog,whitelist,blacklist);
+//
+//}
+//
+//bool PopulationLoader::order_unordered_loci(map<int, CLocus *> catalog) {
+//    map<int, CLocus *>::iterator it;
+//    CLocus *loc;
+//    set<string> chrs;
+//
+//    for (it = catalog.begin(); it != catalog.end(); it++) {
+//        loc = it->second;
+//        if (strlen(loc->loc.chr) > 0)
+//            chrs.insert(loc->loc.chr);
+//    }
+//
+//    //
+//    // This data is already reference aligned.
+//    //
+//    if (chrs.size() > 0)
+//        return true;
+//
+//    cerr << "Catalog is not reference aligned, arbitrarily ordering catalog loci.\n";
+//
+//    uint bp = 1;
+//    for (it = catalog.begin(); it != catalog.end(); it++) {
+//        loc = it->second;
+//        loc->loc.chr = new char[3];
+//        strcpy(loc->loc.chr, "un");
+//        loc->loc.bp  = bp;
+//
+//        bp += strlen(loc->con);
+//    }
+//
+//    return false;
+//
+//}
 
 int PopulationLoader::build_file_list(string pmap_path, vector<int, string> files , map<int, pair<int,int>> &pop_indexes) {
     char   line[max_len];
@@ -241,146 +241,146 @@ bool PopulationLoader::compare_pop_map(pair<int, string> a, pair<int, string> b)
 }
 
 
-int PopulationLoader::apply_locus_constraints(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, pair<int, int> > &pop_indexes){
-    uint pop_id, start_index, end_index;
-    CLocus *loc;
-    Datum **d;
-
-    double    sample_limit      = 0;
-    int       progeny_limit     = 0;
-    int       population_limit  = 1;
-    int       min_stack_depth   = 0;
-
-
-    if (sample_limit == 0 && population_limit == 0 && min_stack_depth == 0) return 0;
-
-    map<int, CLocus *>::iterator it;
-    map<int, pair<int, int> >::iterator pit;
-
-    uint pop_cnt   = pop_indexes.size();
-    int *pop_order = new int [pop_cnt];
-
-    // Which population each sample belongs to.
-    int *samples   = new int [pmap->sample_cnt()];
-
-    // For the current locus, how many samples in each population.
-    int *pop_cnts  = new int [pop_cnt];
-
-    // The total number of samples in each population.
-    int *pop_tot   = new int [pop_cnt];
-
-    pop_id = 0;
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        start_index = pit->second.first;
-        end_index   = pit->second.second;
-        pop_tot[pop_id]  = 0;
-
-        for (uint i = start_index; i <= end_index; i++) {
-            samples[i] = pop_id;
-            pop_tot[pop_id]++;
-        }
-        pop_order[pop_id] = pit->first;
-        pop_id++;
-    }
-
-    for (uint i = 0; i < pop_cnt; i++)
-        pop_cnts[i] = 0;
-
-    double pct       = 0.0;
-    bool   pro_limit = false;
-    bool   pop_limit = false;
-    int    pops      = 0;
-    int    below_stack_dep = 0;
-    set<int> blacklist;
-
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-        d   = pmap->locus(loc->id);
-
-        //
-        // Check that each sample is over the minimum stack depth for this locus.
-        //
-        if (min_stack_depth > 0)
-            for (int i = 0; i < pmap->sample_cnt(); i++) {
-                if (d[i] != NULL && d[i]->tot_depth < min_stack_depth) {
-                    below_stack_dep++;
-                    delete d[i];
-                    d[i] = NULL;
-                    loc->hcnt--;
-                }
-            }
-
-        //
-        // Tally up the count of samples in this population.
-        //
-        for (int i = 0; i < pmap->sample_cnt(); i++) {
-            if (d[i] != NULL)
-                pop_cnts[samples[i]]++;
-        }
-
-        //
-        // Check that the counts for each population are over progeny_limit. If not, zero out
-        // the members of that population.
-        //
-        for (uint i = 0; i < pop_cnt; i++) {
-            pct = (double) pop_cnts[i] / (double) pop_tot[i];
-
-            if (pop_cnts[i] > 0 && pct < sample_limit) {
-                //cerr << "Removing population " << pop_order[i] << " at locus: " << loc->id << "; below sample limit: " << pct << "\n";
-                start_index = pop_indexes[pop_order[i]].first;
-                end_index   = pop_indexes[pop_order[i]].second;
-
-                for (uint j  = start_index; j <= end_index; j++) {
-                    if (d[j] != NULL) {
-                        delete d[j];
-                        d[j] = NULL;
-                        loc->hcnt--;
-                    }
-                }
-                pop_cnts[i] = 0;
-            }
-        }
-
-        //
-        // Check that this locus is present in enough populations.
-        //
-        for (uint i = 0; i < pop_cnt; i++)
-            if (pop_cnts[i] > 0) pops++;
-        if (pops < population_limit) {
-            //cerr << "Removing locus: " << loc->id << "; below population limit: " << pops << "\n";
-            pop_limit = true;
-        }
-
-        if (pop_limit)
-            blacklist.insert(loc->id);
-
-        for (uint i = 0; i < pop_cnt; i++)
-            pop_cnts[i] = 0;
-        pro_limit = false;
-        pop_limit = false;
-        pops      = 0;
-    }
-
-    //
-    // Remove loci
-    //
-    if (min_stack_depth > 0)
-        cerr << "Removed " << below_stack_dep << " samples from loci that are below the minimum stack depth of " << min_stack_depth << "x\n";
-    cerr << "Removing " << blacklist.size() << " loci that did not pass sample/population constraints...";
-    set<int> whitelist;
-    reduce_catalog(catalog, whitelist, blacklist);
-    int retained = pmap->prune(blacklist);
-    cerr << " retained " << retained << " loci.\n";
-
-    delete [] pop_cnts;
-    delete [] pop_tot;
-    delete [] pop_order;
-    delete [] samples;
-
-    if (retained == 0)
-        exit(0);
-
-    return 0;
-
-}
+//int PopulationLoader::apply_locus_constraints(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, pair<int, int> > &pop_indexes){
+//    uint pop_id, start_index, end_index;
+//    CLocus *loc;
+//    Datum **d;
+//
+//    double    sample_limit      = 0;
+//    int       progeny_limit     = 0;
+//    int       population_limit  = 1;
+//    int       min_stack_depth   = 0;
+//
+//
+//    if (sample_limit == 0 && population_limit == 0 && min_stack_depth == 0) return 0;
+//
+//    map<int, CLocus *>::iterator it;
+//    map<int, pair<int, int> >::iterator pit;
+//
+//    uint pop_cnt   = pop_indexes.size();
+//    int *pop_order = new int [pop_cnt];
+//
+//    // Which population each sample belongs to.
+//    int *samples   = new int [pmap->sample_cnt()];
+//
+//    // For the current locus, how many samples in each population.
+//    int *pop_cnts  = new int [pop_cnt];
+//
+//    // The total number of samples in each population.
+//    int *pop_tot   = new int [pop_cnt];
+//
+//    pop_id = 0;
+//    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+//        start_index = pit->second.first;
+//        end_index   = pit->second.second;
+//        pop_tot[pop_id]  = 0;
+//
+//        for (uint i = start_index; i <= end_index; i++) {
+//            samples[i] = pop_id;
+//            pop_tot[pop_id]++;
+//        }
+//        pop_order[pop_id] = pit->first;
+//        pop_id++;
+//    }
+//
+//    for (uint i = 0; i < pop_cnt; i++)
+//        pop_cnts[i] = 0;
+//
+//    double pct       = 0.0;
+//    bool   pro_limit = false;
+//    bool   pop_limit = false;
+//    int    pops      = 0;
+//    int    below_stack_dep = 0;
+//    set<int> blacklist;
+//
+//    for (it = catalog.begin(); it != catalog.end(); it++) {
+//        loc = it->second;
+//        d   = pmap->locus(loc->id);
+//
+//        //
+//        // Check that each sample is over the minimum stack depth for this locus.
+//        //
+//        if (min_stack_depth > 0)
+//            for (int i = 0; i < pmap->sample_cnt(); i++) {
+//                if (d[i] != NULL && d[i]->tot_depth < min_stack_depth) {
+//                    below_stack_dep++;
+//                    delete d[i];
+//                    d[i] = NULL;
+//                    loc->hcnt--;
+//                }
+//            }
+//
+//        //
+//        // Tally up the count of samples in this population.
+//        //
+//        for (int i = 0; i < pmap->sample_cnt(); i++) {
+//            if (d[i] != NULL)
+//                pop_cnts[samples[i]]++;
+//        }
+//
+//        //
+//        // Check that the counts for each population are over progeny_limit. If not, zero out
+//        // the members of that population.
+//        //
+//        for (uint i = 0; i < pop_cnt; i++) {
+//            pct = (double) pop_cnts[i] / (double) pop_tot[i];
+//
+//            if (pop_cnts[i] > 0 && pct < sample_limit) {
+//                //cerr << "Removing population " << pop_order[i] << " at locus: " << loc->id << "; below sample limit: " << pct << "\n";
+//                start_index = pop_indexes[pop_order[i]].first;
+//                end_index   = pop_indexes[pop_order[i]].second;
+//
+//                for (uint j  = start_index; j <= end_index; j++) {
+//                    if (d[j] != NULL) {
+//                        delete d[j];
+//                        d[j] = NULL;
+//                        loc->hcnt--;
+//                    }
+//                }
+//                pop_cnts[i] = 0;
+//            }
+//        }
+//
+//        //
+//        // Check that this locus is present in enough populations.
+//        //
+//        for (uint i = 0; i < pop_cnt; i++)
+//            if (pop_cnts[i] > 0) pops++;
+//        if (pops < population_limit) {
+//            //cerr << "Removing locus: " << loc->id << "; below population limit: " << pops << "\n";
+//            pop_limit = true;
+//        }
+//
+//        if (pop_limit)
+//            blacklist.insert(loc->id);
+//
+//        for (uint i = 0; i < pop_cnt; i++)
+//            pop_cnts[i] = 0;
+//        pro_limit = false;
+//        pop_limit = false;
+//        pops      = 0;
+//    }
+//
+//    //
+//    // Remove loci
+//    //
+//    if (min_stack_depth > 0)
+//        cerr << "Removed " << below_stack_dep << " samples from loci that are below the minimum stack depth of " << min_stack_depth << "x\n";
+//    cerr << "Removing " << blacklist.size() << " loci that did not pass sample/population constraints...";
+//    set<int> whitelist;
+//    reduce_catalog(catalog, whitelist, blacklist);
+//    int retained = pmap->prune(blacklist);
+//    cerr << " retained " << retained << " loci.\n";
+//
+//    delete [] pop_cnts;
+//    delete [] pop_tot;
+//    delete [] pop_order;
+//    delete [] samples;
+//
+//    if (retained == 0)
+//        exit(0);
+//
+//    return 0;
+//
+//}
 
