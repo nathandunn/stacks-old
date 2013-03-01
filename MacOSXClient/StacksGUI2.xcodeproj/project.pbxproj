@@ -28,7 +28,9 @@
 		63D53AF955360D80C3B5C435 /* GenotypeView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53933849F418F0D3EFBB7 /* GenotypeView.m */; };
 		63D53BAE4399201879BC1A25 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53B6C04011DF2C3822EA9 /* utils.cc */; };
 		63D53CFE966113781FC441AB /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D539CD1E1FCCB7E006CD52 /* DNANSeq.cc */; };
+		63D53DA2BFB70418ED3332D2 /* StackEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D535B7EBC93C50F022EC09 /* StackEntry.m */; };
 		63D53F54162E9B13476B4708 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53EF1168D7ADB8E210F17 /* input.cc */; };
+		63D53F976A8F672611CEDD89 /* GenotypeEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5385E36771B7AA5B8DFBD /* GenotypeEntry.m */; };
 		63D53FE52E358257C3582A3D /* StacksView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5320C33B677602C381333 /* StacksView.m */; };
 		6B4D21EC16DAA75A008D971F /* kmers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4D21EA16DAA75A008D971F /* kmers.cc */; };
 /* End PBXBuildFile section */
@@ -80,10 +82,14 @@
 		63D53268A3B8886FB788CD26 /* Bustard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bustard.h; path = ../../src/Bustard.h; sourceTree = "<group>"; };
 		63D532A9CF0591C964C37DA7 /* Fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Fasta.h; path = ../../src/Fasta.h; sourceTree = "<group>"; };
 		63D532C71B8BB9E796A5B83D /* DNANSeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DNANSeq.h; path = ../../src/DNANSeq.h; sourceTree = "<group>"; };
+		63D5335CF973AC8844F64B50 /* GenotypeEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeEntry.h; sourceTree = "<group>"; };
 		63D5349331EA2A9590315B56 /* genotype_dictionaries.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = genotype_dictionaries.h; path = ../../src/genotype_dictionaries.h; sourceTree = "<group>"; };
+		63D535B7EBC93C50F022EC09 /* StackEntry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntry.m; sourceTree = "<group>"; };
 		63D535DBF5CC086466FBD43E /* GenotypeView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeView.h; sourceTree = "<group>"; };
 		63D53602B1B1AE8200EBDCA9 /* sql_utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sql_utilities.h; path = ../../src/sql_utilities.h; sourceTree = "<group>"; };
 		63D536626A1A4C2FC014378F /* renz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = renz.h; path = ../../src/renz.h; sourceTree = "<group>"; };
+		63D5371A4F5797CDFF21B223 /* StackEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackEntry.h; sourceTree = "<group>"; };
+		63D5385E36771B7AA5B8DFBD /* GenotypeEntry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenotypeEntry.m; sourceTree = "<group>"; };
 		63D538AC7F916F4D82F4F43B /* Bam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bam.h; path = ../../src/Bam.h; sourceTree = "<group>"; };
 		63D53922D8DEF06945551E06 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = utils.h; path = ../../src/utils.h; sourceTree = "<group>"; };
 		63D53933849F418F0D3EFBB7 /* GenotypeView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenotypeView.m; sourceTree = "<group>"; };
@@ -270,6 +276,10 @@
 				63D535DBF5CC086466FBD43E /* GenotypeView.h */,
 				63D5320C33B677602C381333 /* StacksView.m */,
 				63D53E91154AE4EC76FCA139 /* StacksView.h */,
+				63D5385E36771B7AA5B8DFBD /* GenotypeEntry.m */,
+				63D5335CF973AC8844F64B50 /* GenotypeEntry.h */,
+				63D535B7EBC93C50F022EC09 /* StackEntry.m */,
+				63D5371A4F5797CDFF21B223 /* StackEntry.h */,
 			);
 			name = Model;
 			sourceTree = "<group>";
@@ -397,6 +407,8 @@
 				6B4D21EC16DAA75A008D971F /* kmers.cc in Sources */,
 				63D53AF955360D80C3B5C435 /* GenotypeView.m in Sources */,
 				63D53FE52E358257C3582A3D /* StacksView.m in Sources */,
+				63D53F976A8F672611CEDD89 /* GenotypeEntry.m in Sources */,
+				63D53DA2BFB70418ED3332D2 /* StackEntry.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
