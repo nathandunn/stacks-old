@@ -36,11 +36,11 @@ class PopulationLoader {
 
 public:
 
-    int apply_locus_constraints(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, pair<int, int> > &pop_indexes);
-    int reduce_catalog(map<int, CLocus *> catalog);
+//    int apply_locus_constraints(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, pair<int, int> > &pop_indexes);
+//    int reduce_catalog(map<int, CLocus *> catalog);
     int reduce_catalog(map<int, CLocus *> catalog,set<int> whitelist,set<int> blacklist);
 
-    bool order_unordered_loci(map<int, CLocus *> catalog);
+//    bool order_unordered_loci(map<int, CLocus *> catalog);
 
     int build_file_list(string pmap_path, vector<int, string> files , map<int, pair<int,int>> &pop_indexes) ;
 
