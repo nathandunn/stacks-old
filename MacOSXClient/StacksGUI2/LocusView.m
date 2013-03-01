@@ -12,6 +12,13 @@
 
 @implementation LocusView
 
+- (id)initWithId:(NSString *)locusId {
+    if ((self = [super init])) {
+        self.locusId = locusId;
+    }
+    return self;
+}
+
 - (id)initWithId:(NSString *)locusId consensus:(NSString *)consensus {
     if ((self = [super init])) {
         self.locusId = locusId;

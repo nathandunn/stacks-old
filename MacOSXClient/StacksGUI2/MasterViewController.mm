@@ -113,12 +113,10 @@
 -(void) setDetailInfo:(StacksDocument*) doc{
     NSString *name =@"";
     NSString *data =@"";
-    NSString *test =@"";
 
     if(doc!=nil){
         name = doc.locusData.locusId;
         data = doc.locusData.consensus;
-        test = @"testis working I think";
     }
 
 //    [self.testField setStringValue:test];

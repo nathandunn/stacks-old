@@ -33,6 +33,7 @@
 // TODO: look in populations.cc
 // use PopMap to get the GenotypesView
 
+- (id)initWithId:(NSString *)locusId ;
 - (id)initWithId:(NSString *)locusId consensus:(NSString*)consensus;
 
 @end

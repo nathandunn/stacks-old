@@ -16,9 +16,7 @@
 @implementation AppDelegate
 
 
-
-- (void)applicationDidFinishLaunching:(NSNotification *)aNotification
-{
+- (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     // Insert code here to initialize your application
     // 1. Create the master view controller
     self.masterViewController = [[MasterViewController alloc] initWithWindowNibName:@"MasterViewController"];
@@ -36,7 +34,7 @@
     // 2. Add the view controller to the Window's content view
 //    [self.contentView addSubview:self.masterViewController.view];
 //    masterViewController.view.frame = ((NSView*)self.window.contentView).bounds;
-    
+
 }
 
 

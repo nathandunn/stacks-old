@@ -23,7 +23,7 @@
     if ((self = [super init])) {
         self.locusData = [[LocusView alloc] initWithId:marker consensus:conensusSequence];
     }
-    return self ; 
+    return self ;
 }
 
 @end
