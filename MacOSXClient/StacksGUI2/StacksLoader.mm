@@ -10,9 +10,13 @@
 #import "sql_utilities.h"
 #import "StacksLoader.h"
 #import "LocusView.h"
+#import "PopMap.h"
+#import "CLocus.hpp"
+#import "PopulationLoader.hpp"
 
 
 @implementation StacksLoader {
+    
 
 }
 
@@ -60,6 +64,9 @@
             NSString* letters = [[NSString alloc] initWithCString:read encoding: NSUTF8StringEncoding];
             NSLog(@"added read %@",letters);
             locusView.consensus = letters;
+            
+            // rest of data comes from gentypes . . .  crapola
+            
 
 
 
@@ -76,6 +83,83 @@
     }
     
     return geneDocs;
+
+}
+
+
+- (NSMutableArray *)loadGenotypes:(NSString *)path {
+
+    int batch_id = 1 ;
+    //
+    // Load the catalog
+    //
+    stringstream catalog_file;
+    map<int, CLocus *> catalog;
+    int res;
+    catalog_file << path << "batch_" << batch_id << ".catalog";
+    if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
+        cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
+        return 0;
+    }
+
+    PopulationLoader* populationLoader = new PopulationLoader();
+
+    // Implement the black/white list
+    populationLoader->reduce_catalog(catalog);
+
+    //
+    // If the catalog is not reference aligned, assign an arbitrary ordering to catalog loci.
+    //
+//    loci_ordered = order_unordered_loci(catalog);
+    bool loci_ordered = false ;
+    loci_ordered = populationLoader->order_unordered_loci(catalog);
+//    loci_ordered = order_unordered_loci(catalog);
+
+    //
+    // Load matches to the catalog
+    //
+    vector<vector<CatMatch *> > catalog_matches;
+    map<int, string>            samples;
+    vector<int>                 sample_ids;
+
+    srandom(time(NULL));
+
+    vector<pair<int, string> > files;
+    map<int, pair<int, int> > pop_indexes;
+    string in_path ;
+
+    if (!populationLoader->build_file_list([path UTF8String] ,files, pop_indexes)){
+        exit(1);
+    }
+
+
+    for (uint i = 0; i < files.size(); i++) {
+        vector<CatMatch *> m;
+        load_catalog_matches(in_path + files[i].second, m);
+
+        if (m.size() == 0) {
+            cerr << "Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from population analysis.\n";
+            continue;
+        }
+
+        catalog_matches.push_back(m);
+        if (samples.count(m[0]->sample_id) == 0) {
+            samples[m[0]->sample_id] = files[i].second;
+            sample_ids.push_back(m[0]->sample_id);
+        } else {
+            cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
+            exit(0);
+        }
+    }
+
+    //
+    // Create the population map
+    //
+    cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
+    PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
+    pmap->populate(sample_ids, catalog, catalog_matches);
+
+    populationLoader->apply_locus_constraints(catalog, pmap, pop_indexes);
 
 }
 
