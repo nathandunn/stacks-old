@@ -11,4 +11,6 @@
 @interface StacksLoader : NSObject
 
 -(NSMutableArray *) loadLoci:(NSString *) path;
+-(NSMutableArray *) loadGenotypes:(NSString *) path;
+
 @end
