@@ -104,18 +104,6 @@
 
     PopulationLoader* populationLoader = new PopulationLoader();
 
-    // Implement the black/white list
-//    populationLoader->reduce_catalog(catalog);
-
-    //
-    // If the catalog is not reference aligned, assign an arbitrary ordering to catalog loci.
-    //
-//    loci_ordered = order_unordered_loci(catalog);
-//    bool loci_ordered = false ;
-//    loci_ordered = populationLoader->order_unordered_loci(catalog);
-//    loci_ordered = order_unordered_loci(catalog);
-
-    //
     // Load matches to the catalog
     //
     vector<vector<CatMatch *> > catalog_matches;
@@ -128,10 +116,10 @@
     map<int, pair<int, int> > pop_indexes;
     string in_path ;
 
-    // TODO: redo and create index
-    if (!populationLoader->build_file_list([path UTF8String] ,files, pop_indexes)){
-        exit(1);
-    }
+//    // TODO: redo and create index
+//    if (!populationLoader->build_file_list([path UTF8String] ,files, pop_indexes)){
+//        exit(1);
+//    }
 
 
     for (uint i = 0; i < files.size(); i++) {
@@ -159,8 +147,6 @@
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
     PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
-
-//    populationLoader->apply_locus_constraints(catalog, pmap, pop_indexes);
 
 }
 

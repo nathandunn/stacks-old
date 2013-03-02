@@ -6,36 +6,36 @@
 
 
 #include "PopulationLoader.hpp"
-#include "CLocus.hpp"
-#include "input.h"
-#include "dirent.h"
-#include "PopMap.h"
+//#include "CLocus.hpp"
+//#include "input.h"
+//#include "dirent.h"
+//#include "PopMap.h"
 
-using std::pair ;
+//using std::pair ;
 
-int PopulationLoader::reduce_catalog(map<int, CLocus *> catalog,set<int> whitelist,set<int> blacklist){
-    map<int, CLocus *> list;
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
-
-    if (whitelist.size() == 0 && blacklist.size() == 0)
-        return 0;
-
-    int i = 0;
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-
-        if (whitelist.size() > 0 && whitelist.count(loc->id) == 0) continue;
-        if (blacklist.count(loc->id)) continue;
-
-        list[it->first] = it->second;
-        i++;
-    }
-
-    catalog = list;
-
-    return i;
-}
+//int PopulationLoader::reduce_catalog(map<int, CLocus *> catalog,set<int> whitelist,set<int> blacklist){
+//    map<int, CLocus *> list;
+//    map<int, CLocus *>::iterator it;
+//    CLocus *loc;
+//
+//    if (whitelist.size() == 0 && blacklist.size() == 0)
+//        return 0;
+//
+//    int i = 0;
+//    for (it = catalog.begin(); it != catalog.end(); it++) {
+//        loc = it->second;
+//
+//        if (whitelist.size() > 0 && whitelist.count(loc->id) == 0) continue;
+//        if (blacklist.count(loc->id)) continue;
+//
+//        list[it->first] = it->second;
+//        i++;
+//    }
+//
+//    catalog = list;
+//
+//    return i;
+//}
 
 //int PopulationLoader::reduce_catalog(map<int, CLocus *> catalog){
 //
@@ -77,168 +77,168 @@ int PopulationLoader::reduce_catalog(map<int, CLocus *> catalog,set<int> whiteli
 //
 //}
 
-int PopulationLoader::build_file_list(string pmap_path, vector<int, string> files , map<int, pair<int,int>> &pop_indexes) {
-    char   line[max_len];
-    char   pop_id_str[id_len];
-    vector<string> parts;
-    string f;
-    uint   len;
-    string in_path ;
-    int population_limit = 1;
-
-
-    if (pmap_path.length() > 0) {
-        cerr << "Parsing population map.\n";
-
-        ifstream fh(pmap_path.c_str(), ifstream::in);
-
-        if (fh.fail()) {
-            cerr << "Error opening population map '" << pmap_path << "'\n";
-            return 0;
-        }
-
-        while (fh.good()) {
-            fh.getline(line, max_len);
-
-            len = strlen(line);
-            if (len == 0) continue;
-
-            //
-            // Check that there is no carraige return in the buffer.
-            //
-            if (line[len - 1] == '\r') line[len - 1] = '\0';
-
-            //
-            // Ignore comments
-            //
-            if (line[0] == '#') continue;
-
-            //
-            // Parse the population map, we expect:
-            // <file name> <tab> <population ID>
-            //
-            parse_tsv(line, parts);
-
-            if (parts.size() != 2) {
-                cerr << "Population map is not formated correctly: expecting two, tab separated columns, found " << parts.size() << ".\n";
-                return 0;
-            }
-
-            strncpy(pop_id_str, parts[1].c_str(), id_len);
-            for (int i = 0; i < id_len && pop_id_str[i] != '\0'; i++)
-                if (!isdigit(pop_id_str[i])) {
-                    cerr << "Population map is not formated correctly: expecting numerical ID in second column, found '" << parts[1] << "'.\n";
-                    return 0;
-                }
-
-            //
-            // Test that file exists before adding to list.
-            //
-            f = in_path.c_str() + parts[0] + ".matches.tsv";
-            ifstream test_fh(f.c_str(), ifstream::in);
-
-            if (test_fh.fail()) {
-                cerr << " Unable to find " << f.c_str() << ", excluding it from the analysis.\n";
-            } else {
-                test_fh.close();
-                files.push_back(make_pair(atoi(parts[1].c_str()), parts[0]));
-            }
-        }
-
-        fh.close();
-    } else {
-        cerr << "No population map specified, building file list.\n";
-
-        //
-        // If no population map is specified, read all the files from the Stacks directory.
-        //
-        uint   pos;
-        string file;
-        struct dirent *direntry;
-
-        DIR *dir = opendir(in_path.c_str());
-
-        if (dir == NULL) {
-            cerr << "Unable to open directory '" << in_path << "' for reading.\n";
-            exit(1);
-        }
-
-        while ((direntry = readdir(dir)) != NULL) {
-            file = direntry->d_name;
-
-            if (file == "." || file == "..")
-                continue;
-
-            if (file.substr(0, 6) == "batch_")
-                continue;
-
-            pos = file.rfind(".tags.tsv");
-            if (pos < file.length())
-                files.push_back(make_pair(1, file.substr(0, pos)));
-        }
-
-        closedir(dir);
-    }
-
-    if (files.size() == 0) {
-        cerr << "Unable to locate any input files to process within '" << in_path << "'\n";
-        return 0;
-    }
-
-    //
-    // Sort the files according to population ID.
-    //
-    sort(files.begin(), files.end(), compare_pop_map);
-
-    cerr << "Found " << files.size() << " input file(s).\n";
-
-    //
-    // Determine the start/end index for each population in the files array.
-    //
-    int start  = 0;
-    int end    = 0;
-    int pop_id = files[0].first;
-
-    do {
-        end++;
-        if (pop_id != files[end].first) {
-            pop_indexes[pop_id] = make_pair(start, end - 1);
-            start  = end;
-            pop_id = files[end].first;
-        }
-    } while (end < (int) files.size());
-
-    cerr << "  " << pop_indexes.size() << " populations found\n";
-
-    if (population_limit > (int) pop_indexes.size()) {
-        cerr << "Population limit ("
-                << population_limit
-                << ") larger than number of popualtions present, adjusting parameter to "
-                << pop_indexes.size() << "\n";
-        population_limit = pop_indexes.size();
-    }
-
-    map<int, pair<int, int> >::iterator it;
-    for (it = pop_indexes.begin(); it != pop_indexes.end(); it++) {
-        start = it->second.first;
-        end   = it->second.second;
-        cerr << "    " << it->first << ": ";
-        for (int i = start; i <= end; i++) {
-            cerr << files[i].second;
-            if (i < end) cerr << ", ";
-        }
-        cerr << "\n";
-    }
-
-    return 1;
-}
-
-
-bool PopulationLoader::compare_pop_map(pair<int, string> a, pair<int, string> b) {
-    if (a.first == b.first)
-        return (a.second < b.second);
-    return (a.first < b.first);
-}
+//int PopulationLoader::build_file_list(string pmap_path, vector<int, string> files , map<int, pair<int,int>> &pop_indexes) {
+//    char   line[max_len];
+//    char   pop_id_str[id_len];
+//    vector<string> parts;
+//    string f;
+//    uint   len;
+//    string in_path ;
+//    int population_limit = 1;
+//
+//
+//    if (pmap_path.length() > 0) {
+//        cerr << "Parsing population map.\n";
+//
+//        ifstream fh(pmap_path.c_str(), ifstream::in);
+//
+//        if (fh.fail()) {
+//            cerr << "Error opening population map '" << pmap_path << "'\n";
+//            return 0;
+//        }
+//
+//        while (fh.good()) {
+//            fh.getline(line, max_len);
+//
+//            len = strlen(line);
+//            if (len == 0) continue;
+//
+//            //
+//            // Check that there is no carraige return in the buffer.
+//            //
+//            if (line[len - 1] == '\r') line[len - 1] = '\0';
+//
+//            //
+//            // Ignore comments
+//            //
+//            if (line[0] == '#') continue;
+//
+//            //
+//            // Parse the population map, we expect:
+//            // <file name> <tab> <population ID>
+//            //
+//            parse_tsv(line, parts);
+//
+//            if (parts.size() != 2) {
+//                cerr << "Population map is not formated correctly: expecting two, tab separated columns, found " << parts.size() << ".\n";
+//                return 0;
+//            }
+//
+//            strncpy(pop_id_str, parts[1].c_str(), id_len);
+//            for (int i = 0; i < id_len && pop_id_str[i] != '\0'; i++)
+//                if (!isdigit(pop_id_str[i])) {
+//                    cerr << "Population map is not formated correctly: expecting numerical ID in second column, found '" << parts[1] << "'.\n";
+//                    return 0;
+//                }
+//
+//            //
+//            // Test that file exists before adding to list.
+//            //
+//            f = in_path.c_str() + parts[0] + ".matches.tsv";
+//            ifstream test_fh(f.c_str(), ifstream::in);
+//
+//            if (test_fh.fail()) {
+//                cerr << " Unable to find " << f.c_str() << ", excluding it from the analysis.\n";
+//            } else {
+//                test_fh.close();
+//                files.push_back(make_pair(atoi(parts[1].c_str()), parts[0]));
+//            }
+//        }
+//
+//        fh.close();
+//    } else {
+//        cerr << "No population map specified, building file list.\n";
+//
+//        //
+//        // If no population map is specified, read all the files from the Stacks directory.
+//        //
+//        uint   pos;
+//        string file;
+//        struct dirent *direntry;
+//
+//        DIR *dir = opendir(in_path.c_str());
+//
+//        if (dir == NULL) {
+//            cerr << "Unable to open directory '" << in_path << "' for reading.\n";
+//            exit(1);
+//        }
+//
+//        while ((direntry = readdir(dir)) != NULL) {
+//            file = direntry->d_name;
+//
+//            if (file == "." || file == "..")
+//                continue;
+//
+//            if (file.substr(0, 6) == "batch_")
+//                continue;
+//
+//            pos = file.rfind(".tags.tsv");
+//            if (pos < file.length())
+//                files.push_back(make_pair(1, file.substr(0, pos)));
+//        }
+//
+//        closedir(dir);
+//    }
+//
+//    if (files.size() == 0) {
+//        cerr << "Unable to locate any input files to process within '" << in_path << "'\n";
+//        return 0;
+//    }
+//
+//    //
+//    // Sort the files according to population ID.
+//    //
+//    sort(files.begin(), files.end(), compare_pop_map);
+//
+//    cerr << "Found " << files.size() << " input file(s).\n";
+//
+//    //
+//    // Determine the start/end index for each population in the files array.
+//    //
+//    int start  = 0;
+//    int end    = 0;
+//    int pop_id = files[0].first;
+//
+//    do {
+//        end++;
+//        if (pop_id != files[end].first) {
+//            pop_indexes[pop_id] = make_pair(start, end - 1);
+//            start  = end;
+//            pop_id = files[end].first;
+//        }
+//    } while (end < (int) files.size());
+//
+//    cerr << "  " << pop_indexes.size() << " populations found\n";
+//
+//    if (population_limit > (int) pop_indexes.size()) {
+//        cerr << "Population limit ("
+//                << population_limit
+//                << ") larger than number of popualtions present, adjusting parameter to "
+//                << pop_indexes.size() << "\n";
+//        population_limit = pop_indexes.size();
+//    }
+//
+//    map<int, pair<int, int> >::iterator it;
+//    for (it = pop_indexes.begin(); it != pop_indexes.end(); it++) {
+//        start = it->second.first;
+//        end   = it->second.second;
+//        cerr << "    " << it->first << ": ";
+//        for (int i = start; i <= end; i++) {
+//            cerr << files[i].second;
+//            if (i < end) cerr << ", ";
+//        }
+//        cerr << "\n";
+//    }
+//
+//    return 1;
+//}
+//
+//
+//bool PopulationLoader::compare_pop_map(pair<int, string> a, pair<int, string> b) {
+//    if (a.first == b.first)
+//        return (a.second < b.second);
+//    return (a.first < b.first);
+//}
 
 
 //int PopulationLoader::apply_locus_constraints(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, pair<int, int> > &pop_indexes){
