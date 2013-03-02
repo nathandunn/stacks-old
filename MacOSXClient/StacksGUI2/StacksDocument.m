@@ -26,4 +26,7 @@
     return self ;
 }
 
+@synthesize genotypes;
+
 @end
+

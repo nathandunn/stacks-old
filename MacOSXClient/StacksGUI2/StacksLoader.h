@@ -14,3 +14,4 @@
 -(NSMutableArray *) loadGenotypes:(NSString *) path;
 
 @end
+

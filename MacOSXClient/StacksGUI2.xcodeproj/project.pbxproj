@@ -265,8 +265,6 @@
 				14B4DDAE16C97C0400317EB3 /* MasterViewController.h */,
 				14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */,
 				14B4DDB016C97C0400317EB3 /* MasterViewController.xib */,
-				D793C114FCF6912D8351BD0A /* StacksLoader.mm */,
-				D793C629FFC307E2C8B3A9BD /* StacksLoader.h */,
 			);
 			name = GUI;
 			sourceTree = "<group>";
@@ -274,6 +272,8 @@
 		14B4DDB416C97D6100317EB3 /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				D793C114FCF6912D8351BD0A /* StacksLoader.mm */,
+				D793C629FFC307E2C8B3A9BD /* StacksLoader.h */,
 				14B4DDB816C97DA100317EB3 /* StacksDocument.h */,
 				14B4DDB916C97DA100317EB3 /* StacksDocument.m */,
 				14B4DDB516C97D8C00317EB3 /* LocusView.h */,
