@@ -32,7 +32,6 @@
 		63D53F54162E9B13476B4708 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53EF1168D7ADB8E210F17 /* input.cc */; };
 		63D53FE52E358257C3582A3D /* StacksView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5320C33B677602C381333 /* StacksView.m */; };
 		6B4D21EC16DAA75A008D971F /* kmers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4D21EA16DAA75A008D971F /* kmers.cc */; };
-		6B57701316E12E6300A7333B /* CLocus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6B57701216E12E6300A7333B /* CLocus.cpp */; };
 		D793CCC30AA9AF345061AC72 /* StacksLoader.mm in Sources */ = {isa = PBXBuildFile; fileRef = D793C114FCF6912D8351BD0A /* StacksLoader.mm */; };
 /* End PBXBuildFile section */
 
@@ -110,7 +109,6 @@
 		6B4D21EA16DAA75A008D971F /* kmers.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = kmers.cc; path = ../../src/kmers.cc; sourceTree = "<group>"; };
 		6B4D21EB16DAA75A008D971F /* kmers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kmers.h; path = ../../src/kmers.h; sourceTree = "<group>"; };
 		6B57701116E12E1900A7333B /* CLocus.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = CLocus.hpp; sourceTree = "<group>"; };
-		6B57701216E12E6300A7333B /* CLocus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CLocus.cpp; sourceTree = "<group>"; };
 		D793C114FCF6912D8351BD0A /* StacksLoader.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = StacksLoader.mm; sourceTree = "<group>"; };
 		D793C629FFC307E2C8B3A9BD /* StacksLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksLoader.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -290,7 +288,6 @@
 			isa = PBXGroup;
 			children = (
 				6B57701116E12E1900A7333B /* CLocus.hpp */,
-				6B57701216E12E6300A7333B /* CLocus.cpp */,
 				63D53067EBF89971A24A452A /* PopulationLoader.cpp */,
 				63D538A720E5C59BCEFECC23 /* PopulationLoader.hpp */,
 			);
@@ -421,7 +418,6 @@
 				63D53AF955360D80C3B5C435 /* GenotypeView.m in Sources */,
 				63D53FE52E358257C3582A3D /* StacksView.m in Sources */,
 				D793CCC30AA9AF345061AC72 /* StacksLoader.mm in Sources */,
-				6B57701316E12E6300A7333B /* CLocus.cpp in Sources */,
 				63D53D45A005FCFA90B5317A /* PopulationLoader.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

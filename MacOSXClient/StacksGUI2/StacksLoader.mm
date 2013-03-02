@@ -101,7 +101,7 @@
     map<int, CLocus *> catalog;
     int res;
     // TODO: fix error
-    catalog_file << path << "batch_" << batch_id << ".catalog";
+    catalog_file << [path UTF8String] << "batch_" << batch_id << ".catalog";
     if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
         cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
         return 0;
