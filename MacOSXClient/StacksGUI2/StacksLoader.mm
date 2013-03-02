@@ -62,7 +62,7 @@
 
             const char *read = (*iter).second->con;
             NSString* letters = [[NSString alloc] initWithCString:read encoding: NSUTF8StringEncoding];
-            NSLog(@"added read %@",letters);
+//            NSLog(@"added read %@",letters);
             locusView.consensus = letters;
             
             // rest of data comes from gentypes . . .  crapola
@@ -75,6 +75,9 @@
 
             ++iter;
         }
+        
+
+        
 
 //        while (object = [e nextObject]) {
 //    //        NSLog(object);
@@ -87,6 +90,7 @@
 }
 
 
+//- (NSMutableArray *)loadLoci:(NSString *)examplePath{
 - (NSMutableArray *)loadGenotypes:(NSString *)path {
 
     int batch_id = 1 ;
@@ -96,6 +100,7 @@
     stringstream catalog_file;
     map<int, CLocus *> catalog;
     int res;
+    // TODO: fix error
     catalog_file << path << "batch_" << batch_id << ".catalog";
     if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
         cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
