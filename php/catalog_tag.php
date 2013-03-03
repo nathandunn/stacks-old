@@ -418,6 +418,10 @@ function print_sumstats($db, $pop_names) {
     ksort($stats);
     ksort($pops);
 
+    foreach ($pops as $pop_id)
+        if (!isset($pop_names[$pop_id])) 
+	    $pop_names[$pop_id] = $pop_id;
+
     $index = count($pop_names) == 0 ? $pops : $pop_names;
 
     $n = 0;
@@ -439,6 +443,9 @@ function print_sumstats($db, $pop_names) {
 	  "    </tr>\n";
 
       foreach ($index as $pop_id => $pop_name) {
+	  if (!isset($stat[$pop_id])) 
+  	      continue;
+
 	  $s    = $stat[$pop_id];
 	  $p    = $s['p']       < 1 ? sprintf("%.5f", $s['p']) : $s['p'];
 	  $ohet = $s['obs_het'] > 0 ? sprintf("%.3f", $s['obs_het']) : $s['obs_het'];
@@ -506,6 +513,10 @@ function print_fst($db, $pop_names) {
 	"      <td class=\"pi\">&pi;<sub>overall</sub></td>\n" .
 	"    </tr>\n" .
 	"    </table>\n";
+
+    foreach ($pops as $pop_id)
+        if (!isset($pop_names[$pop_id])) 
+	    $pop_names[$pop_id] = $pop_id;
 
     $index = count($pop_names) == 0 ? $pops : $pop_names;
 
