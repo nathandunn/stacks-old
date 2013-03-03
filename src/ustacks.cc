@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -25,7 +25,6 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-// $Id$
 //
 #include "ustacks.h"
 
@@ -48,7 +47,7 @@ int       retain_rem_reads  = false;
 int       deleverage_stacks = 0;
 int       remove_rep_stacks = 0;
 int       max_utag_dist     = 2;
-int       max_rem_dist      = 0;
+int       max_rem_dist      = -1;
 double    cov_mean          = 0.0;
 double    cov_stdev         = 0.0;
 double    cov_scale         = 1;
@@ -74,7 +73,7 @@ int main (int argc, char* argv[]) {
     // Set the max remainder distance to be greater than the max_utag_dist, if it is not
     // specified on the command line.
     //
-    if (max_rem_dist == 0) max_rem_dist = max_utag_dist + 2;
+    if (max_rem_dist == -1) max_rem_dist = max_utag_dist + 2;
 
     cerr << "Min depth of coverage to create a stack: " << min_merge_cov << "\n"
 	 << "Max distance allowed between stacks: " << max_utag_dist << "\n"
@@ -196,6 +195,11 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
     }
 
     cerr << "  " << tot << " remainder sequences left to merge.\n";
+
+    if (max_rem_dist <= 0) {
+	cerr << "  Matched 0 remainder reads; unable to match " << tot << " remainder reads.\n";
+	return 0;
+    }
 
     //
     // Calculate the number of k-mers we will generate. If kmer_len == 0,

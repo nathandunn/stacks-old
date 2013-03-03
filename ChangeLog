@@ -1,3 +1,8 @@
+	Bugfix: setting secondary read distance to 0 in ustacks (-N) was ineffective.
+	Bugfix: changed the PHP code to remove 'Strict Standards' warnings and
+	a few other warnings. Thanks to Yue Yu for tracking down the proper
+	changes to avoid the warnings.
+
 Stacks 0.99995 - February 19, 2013
 ----------------------------------
 	Feature: added support for using Google's Sparsehash Object: http://code.google.com/p/sparsehash/
