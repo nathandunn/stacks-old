@@ -34,9 +34,9 @@ function db_connect($database) {
     else
         $dsn['database'] = false;
 
-    $dbh =& MDB2::connect($dsn, $options);
+    $dbh = MDB2::connect($dsn, $options);
 
-    if (PEAR::isError($dbh)) {
+    if (MDB2::isError($dbh)) {
 	die("File: " . __FILE__ . " (line " . __LINE__ . ") " . $dbh->getMessage());
     }
 
@@ -55,7 +55,7 @@ function db_connect($database) {
 
 function check_db_error($sth, $file, $line) {
 
-    if (PEAR::isError($sth)) {
+    if (MDB2::isError($sth)) {
 
 	$error_str = 
 	    "File: $file (line $line)<br />\n " .
