@@ -56,14 +56,15 @@ using std::set;
 
 #include "constants.h"
 #include "stacks.h"
+#include "locus.h"
 #include "kmers.h"
 #include "models.h"
 #include "sql_utilities.h"
 
-typedef struct match {
-    uint id;
-    uint dist;
-} Match;
+//
+// A  map holding k-mer permutation strings. For use when generating fuzzy k-mers.
+//
+map<int, char **> pstrings;
 
 //
 // Homologous Locus Class
@@ -79,18 +80,6 @@ class HLocus : public Locus {
     int populate_alleles();
     int add_match(int, int);
 };
-
-HLocus::~HLocus() {
-    vector<Match *>::iterator it;
-
-    for (it = this->matches.begin(); it != this->matches.end(); it++)
-        delete *it;
-}
-
-//
-// A  map holding k-mer permutation strings. For use when generating fuzzy k-mers.
-//
-map<int, char **> pstrings;
 
 void help( void );
 void version( void );

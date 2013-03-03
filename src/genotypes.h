@@ -53,6 +53,7 @@ using std::set;
 
 #include "constants.h"
 #include "stacks.h"
+#include "locus.h"
 #include "renz.h"
 #include "PopMap.h"
 #include "sql_utilities.h"
@@ -62,54 +63,38 @@ using std::set;
 enum map_types {unk, none, gen, dh, cp, bc1, f2};
 enum out_types {rqtl, joinmap, onemap, genomic};
 
-//
-// Catalog Locus Class
-//
-class CLocus : public Locus {
-public:
-    CLocus() : Locus() { this->f = 0.0; this->hcnt = 0; this->gcnt = 0; this->trans_gcnt = 0; };
-    string annotation;
-    string marker;
-    double f;                 // Inbreeder's coefficient
-    map<string, string> gmap; // Observed haplotype to genotype map for this locus.
-    int hcnt;                 // Number of progeny containing a haplotype for this locus.
-    int gcnt;                 // Number of progeny containing a valid genotype.
-    int trans_gcnt;           // Number of progeny containing a valid 
-                              // genotype, translated for a particular map type.
-};
-
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
 int  build_file_list(vector<string> &);
 int  load_marker_list(string, set<int> &);
-int  identify_parental_ids(map<int, CLocus *> &, set<int> &);
-int  reduce_catalog(map<int, CLocus *> &, set<int> &, set<int> &);
-int  find_markers(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &);
-int  calculate_f(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &);
-int  create_genotype_map(CLocus *, PopMap<CLocus> *, set<int> &);
-int  apply_locus_constraints(map<int, CLocus *> &, PopMap<CLocus> *);
-int  call_population_genotypes(CLocus *, PopMap<CLocus> *, map<string, map<string, string> > &);
-int  tally_progeny_haplotypes(CLocus *, PopMap<CLocus> *, set<int> &, int &, double &, string &);
-int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &);
+int  identify_parental_ids(map<int, CSLocus *> &, set<int> &);
+int  reduce_catalog(map<int, CSLocus *> &, set<int> &, set<int> &);
+int  find_markers(map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &);
+int  calculate_f(map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &);
+int  create_genotype_map(CSLocus *, PopMap<CSLocus> *, set<int> &);
+int  apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *);
+int  call_population_genotypes(CSLocus *, PopMap<CSLocus> *, map<string, map<string, string> > &);
+int  tally_progeny_haplotypes(CSLocus *, PopMap<CSLocus> *, set<int> &, int &, double &, string &);
+int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &);
 
-int  automated_corrections(map<int, string> &, set<int> &, map<int, CLocus *> &, vector<vector<CatMatch *> > &, PopMap<CLocus> *);
-int  check_uncalled_snps(CLocus *, Locus *, Datum *);
+int  automated_corrections(map<int, string> &, set<int> &, map<int, CSLocus *> &, vector<vector<CatMatch *> > &, PopMap<CSLocus> *);
+int  check_uncalled_snps(CSLocus *, Locus *, Datum *);
 int  call_alleles(vector<SNP *> &, vector<char *> &, vector<string> &);
 int  check_homozygosity(vector<char *> &, int, char, char, string &);
 
-int  export_gen_map(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &, map<int, string> &);
-int  export_cp_map(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &, map<int, string> &);
-int  export_bc1_map(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &, map<int, string> &);
-int  export_dh_map(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &, map<int, string> &);
-int  export_f2_map(map<int, CLocus *> &, PopMap<CLocus> *, set<int> &, map<int, string> &);
+int  export_gen_map(map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &, map<int, string> &);
+int  export_cp_map(map<int, CSLocus *> &,  PopMap<CSLocus> *, set<int> &, map<int, string> &);
+int  export_bc1_map(map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &, map<int, string> &);
+int  export_dh_map(map<int, CSLocus *> &,  PopMap<CSLocus> *, set<int> &, map<int, string> &);
+int  export_f2_map(map<int, CSLocus *> &,  PopMap<CSLocus> *, set<int> &, map<int, string> &);
 
-int  write_generic(map<int, CLocus *> &, PopMap<CLocus> *, map<int, string> &, set<int> &, bool);
-int  write_sql(map<int, CLocus *> &,     PopMap<CLocus> *, set<int> &);
-int  write_joinmap(map<int, CLocus *> &, PopMap<CLocus> *, map<string, string> &, map<int, string> &, set<int> &);
-int  write_onemap(map<int, CLocus *> &, PopMap<CLocus> *, map<string, string> &, map<int, string> &, set<int> &);
-int  write_rqtl(map<int, CLocus *> &,    PopMap<CLocus> *, map<string, string> &, map<int, string> &, set<int> &);
-int  write_genomic(map<int, CLocus *> &, PopMap<CLocus> *);
+int  write_generic(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &, bool);
+int  write_sql(map<int, CSLocus *> &,     PopMap<CSLocus> *, set<int> &);
+int  write_joinmap(map<int, CSLocus *> &, PopMap<CSLocus> *, map<string, string> &, map<int, string> &, set<int> &);
+int  write_onemap(map<int, CSLocus *> &,  PopMap<CSLocus> *, map<string, string> &, map<int, string> &, set<int> &);
+int  write_rqtl(map<int, CSLocus *> &,    PopMap<CSLocus> *, map<string, string> &, map<int, string> &, set<int> &);
+int  write_genomic(map<int, CSLocus *> &, PopMap<CSLocus> *);
 
 bool hap_compare(pair<string, int>, pair<string, int>);
 

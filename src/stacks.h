@@ -49,6 +49,7 @@ typedef string allele_type;
 enum snp_type    {snp_type_het, snp_type_hom, snp_type_unk};
 enum read_type   {primary, secondary};
 enum strand_type {plus, minus};
+enum searcht     {sequence, genomic_loc};
 
 class PhyLoc {
 public:
@@ -168,44 +169,6 @@ class Rem {
     int  add_seq(const DNASeq *);
 };
 
-class Locus {
- public:
-    int         id; // Locus ID
-    int  sample_id; // Sample ID
-    int      depth; // Stack depth
-    char      *con; // Consensus sequence
-    char    *model; // Model calls for each nucleotide
-    uint       len; // Sequence length
-
-    vector<char *>      comp;   // Raw components in this stack.
-    vector<char *>     reads;   // Sequence reads contributing to this stack.
-    PhyLoc               loc;   // Physical genome location of this stack.
-    vector<SNP *>       snps;   // Single Nucleotide Polymorphisms in this stack.
-    map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
-    vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
-
-    Locus()  { 
-	id        = 0; 
-	sample_id = 0; 
-	depth     = 0; 
-	model     = NULL;
-	con       = NULL; 
-	len       = 0;
-    }
-    virtual ~Locus() { 
-        delete [] con; 
-        for (uint i = 0; i < snps.size(); i++)
-            delete snps[i];
-        for (uint i = 0; i < comp.size(); i++)
-            delete [] comp[i];
-        for (uint i = 0; i < reads.size(); i++)
-            delete [] reads[i];
-    }
-    uint sort_bp();
-    int add_consensus(const char *);
-    virtual int populate_alleles();
-};
-
 class CatMatch {
 public:
     int   batch_id;
@@ -260,7 +223,5 @@ public:
 	    delete this->snps[i];
     }
 };
-
-bool bp_compare(Locus *, Locus *);
 
 #endif // __STACKS_H__

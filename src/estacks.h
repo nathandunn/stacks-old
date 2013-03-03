@@ -35,14 +35,6 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
-#endif
-
 #include <vector>
 using std::vector;
 #include <map>
@@ -52,8 +44,17 @@ using std::set;
 #include <utility>
 using std::pair;
 
+#include <tr1/unordered_map>
+using std::tr1::unordered_map;
+
+#ifdef HAVE_SPARSEHASH
+#include <sparsehash/sparse_hash_map>
+using google::sparse_hash_map;
+#endif
+
 #include "constants.h" 
 #include "stacks.h"    // Major data structures for holding stacks
+#include "kmers.h"
 #include "mstack.h"
 #include "utils.h"
 #include "models.h"    // Contains maximum likelihood statistical models.
@@ -66,13 +67,11 @@ using std::pair;
 
 const int barcode_size = 5;
 
-struct eqstr {
-    bool operator()(const char* s1, const char* s2) const {
-	return strcmp(s1, s2) == 0;
-    }
-};
-
-typedef hash_map<const char *, vector<Seq *>, hash<const char *>, eqstr> HashMap;
+#ifdef HAVE_SPARSEHASH
+typedef sparse_hash_map<const char *, vector<Seq *>, hash_charptr, eqstr> HashMap;
+#else
+typedef unordered_map<const char *, vector<Seq *>, hash_charptr, eqstr> HashMap;
+#endif
 
 void help( void );
 void version( void );
@@ -93,4 +92,4 @@ int  dump_stacks(map<int, PStack *> &);
 int  dump_merged_stacks(map<int, MergedStack *> &);
 
 
-#endif // __PSTACKS_H__
+#endif // __ESTACKS_H__
