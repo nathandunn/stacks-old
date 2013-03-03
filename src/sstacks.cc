@@ -694,7 +694,6 @@ int populate_hash(map<int, Locus *> &sample, HashMap &hash_map, int min_tag_len)
 
 int write_matches(map<int, QLocus *> &sample) {
     map<int, QLocus *>::iterator i;
-    vector<pair<int, allele_type> >::iterator s;
 
     //
     // Parse the input file names to create the output file
@@ -718,21 +717,21 @@ int write_matches(map<int, QLocus *> &sample) {
 
     for (i = sample.begin(); i != sample.end(); i++) {
 
-	for (s = (*i).second->matches.begin(); s != (*i).second->matches.end(); s++) {
+	for (uint j = 0; j < i->second->matches.size(); j++) {
 	    if (verify_haplotypes == false && search_type == genomic_loc)
 		match_depth = i->second->depth;
 	    else
 		match_depth = 
-		    i->second->alleles.count(s->second) > 0 ? 
-		    i->second->alleles[s->second] : i->second->depth;
+		    i->second->alleles.count(i->second->matches[j]->cat_type) > 0 ? 
+		    i->second->alleles[i->second->matches[j]->cat_type] : i->second->depth;
 
 	    matches << 
 		"0"           << "\t" <<
 		batch_id      << "\t" <<
-		s->first      << "\t" <<
+		i->second->matches[j]->cat_id   << "\t" <<
 		samp_id       << "\t" <<
 		i->second->id << "\t" << 
-		s->second     << "\t" <<
+		i->second->matches[j]->cat_type << "\t" <<
 		match_depth   << "\n";
 	}
     }

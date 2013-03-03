@@ -95,7 +95,7 @@ int main (int argc, char* argv[]) {
     // Load the catalog
     //
     stringstream catalog_file;
-    map<int, CLocus *> catalog;
+    map<int, CSLocus *> catalog;
     int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
     if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
@@ -137,7 +137,7 @@ int main (int argc, char* argv[]) {
     // Create the population map
     //
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
 
     apply_locus_constraints(catalog, pmap);
@@ -155,7 +155,7 @@ int main (int argc, char* argv[]) {
     //
     // Create genotypes maps
     //
-    map<int, CLocus *>::iterator it;
+    map<int, CSLocus *>::iterator it;
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	if (it->second->marker.length() > 0) {
 	    create_genotype_map(it->second, pmap, parent_ids);
@@ -205,16 +205,16 @@ int main (int argc, char* argv[]) {
 }
 
 int
-apply_locus_constraints(map<int, CLocus *> &catalog, 
-			PopMap<CLocus> *pmap)
+apply_locus_constraints(map<int, CSLocus *> &catalog, 
+			PopMap<CSLocus> *pmap)
 {
-    CLocus *loc;
-    Datum **d;
+    CSLocus *loc;
+    Datum  **d;
     int below_stack_dep = 0;
 
     if (min_stack_depth == 0) return 0;
 
-    map<int, CLocus *>::iterator it;
+    map<int, CSLocus *>::iterator it;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
@@ -237,10 +237,10 @@ apply_locus_constraints(map<int, CLocus *> &catalog,
     return 0;
 }
 
-int reduce_catalog(map<int, CLocus *> &catalog, set<int> &whitelist, set<int> &blacklist) {
-    map<int, CLocus *> list;
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
+int reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blacklist) {
+    map<int, CSLocus *> list;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
 
     if (whitelist.size() == 0 && blacklist.size() == 0) 
 	return 0;
@@ -258,10 +258,10 @@ int reduce_catalog(map<int, CLocus *> &catalog, set<int> &whitelist, set<int> &b
     return 0;
 }
 
-int identify_parental_ids(map<int, CLocus *> &catalog, set<int> &parents) {
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
-    int     sample_id;
+int identify_parental_ids(map<int, CSLocus *> &catalog, set<int> &parents) {
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
+    int      sample_id;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
@@ -280,13 +280,13 @@ int identify_parental_ids(map<int, CLocus *> &catalog, set<int> &parents) {
     return 0;
 }
 
-int find_markers(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &parent_ids) {
-    map<int, CLocus *>::iterator it;
+int find_markers(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &parent_ids) {
+    map<int, CSLocus *>::iterator it;
     vector<char *>::iterator hit;
     set<int>::iterator p, q;
     int pid_1, pid_2, parent_count, allele_cnt_1, allele_cnt_2;
-    Datum  *d_1, *d_2;
-    CLocus *loc;
+    Datum   *d_1, *d_2;
+    CSLocus *loc;
 
     if (parent_ids.size() > 2) return 0;
 
@@ -395,11 +395,11 @@ int find_markers(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &pa
     return 0;
 }
 
-int calculate_f(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &parent_ids) {
-    map<int, CLocus *>::iterator it;
+int calculate_f(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &parent_ids) {
+    map<int, CSLocus *>::iterator it;
     map<char, int>::iterator j;
-    Datum **d;
-    CLocus *loc;
+    Datum  **d;
+    CSLocus *loc;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
@@ -447,7 +447,7 @@ int calculate_f(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &par
     return 0;
 }
 
-int create_genotype_map(CLocus *locus, PopMap<CLocus> *pmap, set<int> &parent_ids) {
+int create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap, set<int> &parent_ids) {
     //
     // Create a genotype map. For any set of alleles, this routine will
     // assign each allele to one of the constituent genotypes, e.g. given the 
@@ -573,8 +573,8 @@ int create_genotype_map(CLocus *locus, PopMap<CLocus> *pmap, set<int> &parent_id
     return 0;
 }
 
-int call_population_genotypes(CLocus *locus, 
-			      PopMap<CLocus> *pmap, 
+int call_population_genotypes(CSLocus *locus, 
+			      PopMap<CSLocus> *pmap, 
 			      map<string, map<string, string> > &dictionary) {
     //
     // Fetch the array of observed haplotypes from the population
@@ -627,8 +627,8 @@ int call_population_genotypes(CLocus *locus,
     return 0;
 }
 
-int automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<int, CLocus *> &catalog,
-			  vector<vector<CatMatch *> > &matches, PopMap<CLocus> *pmap) {
+int automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<int, CSLocus *> &catalog,
+			  vector<vector<CatMatch *> > &matches, PopMap<CSLocus> *pmap) {
     int sample_id, catalog_id, tag_id;
     Datum *d;
     Locus *s;
@@ -695,7 +695,7 @@ int automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<i
     long het_cor = 0;
     long rem_cor = 0;
     int  markers = 0;
-    map<int, CLocus *>::iterator it;
+    map<int, CSLocus *>::iterator it;
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	if (it->second->marker.length() == 0) continue;
 	markers++;
@@ -731,7 +731,7 @@ int automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<i
     return 0;
 }
 
-int check_uncalled_snps(CLocus *clocus, Locus *stack, Datum *d) {
+int check_uncalled_snps(CSLocus *clocus, Locus *stack, Datum *d) {
     //
     // If this locus is already known to be multi-allele, return, we only want 
     // to verify uncalled SNPs.
@@ -913,7 +913,7 @@ int check_homozygosity(vector<char *> &reads, int col, char rank_1, char rank_2,
     return 0;
 }
 
-int export_gen_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &parent_ids, map<int, string> &samples) {
+int export_gen_map(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &parent_ids, map<int, string> &samples) {
     //
     // We wish to export, a set of generic genotypes, not specific to any mapping type.
     // 
@@ -921,9 +921,9 @@ int export_gen_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
     //
     // Mark those genotypes that have been corrected in uppercase letters.
     //
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
-    uint    len;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
+    uint     len;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
@@ -954,7 +954,7 @@ int export_gen_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
     return 0;
 }
 
-int export_f2_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &parent_ids, map<int, string> &samples) {
+int export_f2_map(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &parent_ids, map<int, string> &samples) {
     //
     // We wish to export, according to the JoinMap manual, a locus genotype file (loc-file), 
     // which contains the information of all the loci for a single segregating population.
@@ -1050,7 +1050,7 @@ int export_f2_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     return 0;
 }
 
-int export_dh_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &parent_ids, map<int, string> &samples) {
+int export_dh_map(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &parent_ids, map<int, string> &samples) {
     //
     // We wish to export, according to the JoinMap manual, a locus genotype file (loc-file), 
     // which contains the information of all the loci for a single segregating population.
@@ -1110,7 +1110,7 @@ int export_dh_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
     return 0;
 }
 
-int export_bc1_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &parent_ids, map<int, string> &samples) {
+int export_bc1_map(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &parent_ids, map<int, string> &samples) {
     //
     // We wish to export, according to the JoinMap manual, a locus genotype file (loc-file), 
     // which contains the information of all the loci for a single segregating population.
@@ -1189,7 +1189,7 @@ int export_bc1_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &
     return 0;
 }
 
-int export_cp_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &parent_ids, map<int, string> &samples) {
+int export_cp_map(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &parent_ids, map<int, string> &samples) {
     //
     // We wish to export, according to the JoinMap manual, a locus genotype file (loc-file), 
     // which contains the information of all the loci for a single segregating population.
@@ -1259,10 +1259,10 @@ int export_cp_map(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &p
 }
 
 int translate_genotypes(map<string, string> &types, map<string, map<string, string> > &dictionary, 
-			map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, string> &samples,
+			map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string> &samples,
 			set<int> &parent_ids) {
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
@@ -1307,7 +1307,7 @@ int translate_genotypes(map<string, string> &types, map<string, map<string, stri
     return 0;
 }
 
-int tally_progeny_haplotypes(CLocus *locus, PopMap<CLocus> *pmap, set<int> &parent_ids, 
+int tally_progeny_haplotypes(CSLocus *locus, PopMap<CSLocus> *pmap, set<int> &parent_ids, 
 			     int &total, double &max, string &freq_str) {
     char gtype[id_len];
     map<string, double> freq;
@@ -1358,7 +1358,7 @@ int tally_progeny_haplotypes(CLocus *locus, PopMap<CLocus> *pmap, set<int> &pare
     return 0;
 }
 
-int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &parent_ids) {
+int write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &parent_ids) {
 
     if (map_type == none)
 	return 0;
@@ -1376,8 +1376,8 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
 	exit(1);
     }
 
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
     char    f[id_len], g[id_len];
     stringstream gtype_map;
 
@@ -1460,7 +1460,7 @@ int write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, set<int> &paren
     return 0;
 }
 
-int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
+int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".genomic_" << progeny_limit << ".tsv";
 
@@ -1476,8 +1476,8 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     //
     // Count the number of markers that have enough samples to output.
     //
-    map<int, CLocus *>::iterator cit;
-    CLocus *loc;
+    map<int, CSLocus *>::iterator cit;
+    CSLocus *loc;
     int num_loci = 0;
 
     for (cit = catalog.begin(); cit != catalog.end(); cit++) {
@@ -1496,7 +1496,7 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     //
     // Output each locus.
     //
-    map<string, vector<CLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::iterator it;
     int  a, b;
 
     uint  rcnt = renz_cnt[enz];
@@ -1575,7 +1575,7 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     return 0;
 }
 
-int write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, string> &samples, set<int> &parent_ids, bool write_gtypes) {
+int write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string> &samples, set<int> &parent_ids, bool write_gtypes) {
 
     stringstream pop_name;
     pop_name << "batch_" << batch_id;
@@ -1596,8 +1596,8 @@ int write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, st
     //
     // Count the number of markers that have enough samples to output.
     //
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
     int num_loci = 0;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
@@ -1691,7 +1691,7 @@ int write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<int, st
 }
 
 int 
-write_joinmap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids) 
+write_joinmap(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids) 
 {
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".genotypes_" << progeny_limit;
@@ -1707,8 +1707,8 @@ write_joinmap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, str
     //
     // Count the number of mappable progeny
     //
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
     int num_loci = 0;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
@@ -1796,7 +1796,7 @@ write_joinmap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, str
 }
 
 int 
-write_onemap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids)
+write_onemap(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids)
 {
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".genotypes_" << progeny_limit;
@@ -1812,8 +1812,8 @@ write_onemap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, stri
     //
     // Count the number of mappable progeny
     //
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
     int num_loci = 0;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
@@ -1879,7 +1879,7 @@ write_onemap(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, stri
 }
 
 int 
-write_rqtl(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids) 
+write_rqtl(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids) 
 {
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".genotypes_" << progeny_limit;
@@ -1895,8 +1895,8 @@ write_rqtl(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, map<string, string
     //
     // Count the number of mappable progeny
     //
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
     int num_loci = 0;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
