@@ -92,6 +92,8 @@
 
 //- (NSMutableArray *)loadLoci:(NSString *)examplePath{
 - (NSMutableArray *)loadGenotypes:(NSString *)path {
+    
+    NSMutableArray *returnArray = [[NSMutableArray alloc] init];
 
     int batch_id = 1 ;
     //
@@ -153,6 +155,7 @@
     PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
 
+    return returnArray;
 }
 
 
