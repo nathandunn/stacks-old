@@ -12,7 +12,8 @@
 #import "LocusView.h"
 #import "PopMap.h"
 #import "CLocus.hpp"
-#import "PopulationLoader.hpp"
+//#import "PopulationLoader.hpp"
+#import "GenotypeView.h"
 
 
 @implementation StacksLoader {
@@ -60,13 +61,14 @@
             NSString *sampleId = [NSString stringWithFormat:@"%d",(*iter).first];
             LocusView *locusView = [[LocusView alloc] initWithId:sampleId ];
 
+            // TODO: add locus to dictionary / hashmap instead using sampleID as index
+
             const char *read = (*iter).second->con;
             NSString* letters = [[NSString alloc] initWithCString:read encoding: NSUTF8StringEncoding];
 //            NSLog(@"added read %@",letters);
             locusView.consensus = letters;
             
             // rest of data comes from gentypes . . .  crapola
-            
 
 
 
@@ -75,14 +77,6 @@
 
             ++iter;
         }
-        
-
-        
-
-//        while (object = [e nextObject]) {
-//    //        NSLog(object);
-//            // do something with object
-//        }
     }
     
     return geneDocs;
@@ -91,7 +85,7 @@
 
 
 //- (NSMutableArray *)loadLoci:(NSString *)examplePath{
-- (NSMutableArray *)loadGenotypes:(NSString *)path {
+- (NSMutableArray *)loadGenotypes:(NSString *)path withLoci:(NSMutableArray *) loci{
     
     NSMutableArray *returnArray = [[NSMutableArray alloc] init];
 
@@ -109,7 +103,10 @@
         return 0;
     }
 
-    PopulationLoader* populationLoader = new PopulationLoader();
+    NSLog(@"catalog size %d",(int) catalog.size());
+
+
+//    PopulationLoader* populationLoader = new PopulationLoader();
 
     // Load matches to the catalog
     //
@@ -120,7 +117,7 @@
     srandom(time(NULL));
 
     vector<pair<int, string> > files;
-    map<int, pair<int, int> > pop_indexes;
+//    map<int, pair<int, int> > pop_indexes;
     string in_path ;
 
 //    // TODO: redo and create index
@@ -154,6 +151,21 @@
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
     PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
+
+    map<int,CLocus*>::iterator iterator= catalog.begin();
+
+    while(iterator!=catalog.end()){
+        CLocus* locus = (*iterator).second;
+        GenotypeView * genotypeView = [[GenotypeView alloc] init];
+        // TODO: set Locus in NSDictionary dictionary / hashmap instead using sampleID as index
+
+//        locus->
+
+        [returnArray addObject:genotypeView];
+//        locus->marker;
+        iterator++;
+    }
+
 
     return returnArray;
 }

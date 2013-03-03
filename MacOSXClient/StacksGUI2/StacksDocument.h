@@ -13,7 +13,7 @@
 @interface StacksDocument : NSObject
 
 @property (strong) LocusView *locusData;
-@property (strong) NSMutableArray *genotypes;
+//@property (strong) NSMutableArray *genotypes;
 
 // rename to init with locaus data
 - (id)initWithLocusData:(LocusView *)locusData;
