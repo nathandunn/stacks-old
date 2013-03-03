@@ -21,17 +21,20 @@ estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/co
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
         src/input.h src/input.cc src/Tsv.h src/Bowtie.h src/Fasta.h src/Fastq.h src/Sam.h
 
-cstacks_SOURCES = src/cstacks.h src/cstacks.cc src/stacks.h src/stacks.cc src/constants.h \
+cstacks_SOURCES = src/cstacks.h src/cstacks.cc src/constants.h \
+	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/kmers.h src/kmers.cc src/utils.h src/utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
-hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/stacks.h src/stacks.cc src/constants.h \
+hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/constants.h \
+	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/kmers.h src/kmers.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
-sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/stacks.h src/stacks.cc src/constants.h \
+sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/constants.h \
+	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
@@ -61,14 +64,16 @@ clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h \
 
 genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 	src/utils.h src/utils.cc \
+	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
-	src/stacks.h src/stacks.cc src/PopMap.h src/genotype_dictionaries.h \
+	src/PopMap.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h
 
 populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/utils.h src/utils.cc \
+	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
-	src/stacks.h src/stacks.cc src/PopMap.h src/PopSum.h src/genotype_dictionaries.h \
+	src/PopMap.h src/PopSum.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h
 
 ustacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)

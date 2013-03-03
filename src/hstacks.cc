@@ -672,7 +672,7 @@ int trace_stack_graph(HLocus *tag_1, map<int, HLocus *> &loci, set<int> &unique_
 	merge_list.pop();
 
 	for (k = tag_2->matches.begin(); k != tag_2->matches.end(); k++) {
-	    ret = unique_merge_list.insert((*k)->id);
+	    ret = unique_merge_list.insert((*k)->cat_id);
 
 	    //
 	    // If this Tag has not already been added to the merge list (i.e. we were able
@@ -680,7 +680,7 @@ int trace_stack_graph(HLocus *tag_1, map<int, HLocus *> &loci, set<int> &unique_
 	    // later in the loop.
 	    //
 	    if (ret.second == true)
-		merge_list.push((*k)->id);
+		merge_list.push((*k)->cat_id);
 	}
     }
 
@@ -716,18 +716,29 @@ int build_file_list(string in_path, vector<string> &sql_files) {
     return 0;
 }
 
-int HLocus::add_match(int id, int distance) {
+HLocus::~HLocus() 
+{
+    vector<Match *>::iterator it;
+
+    for (it = this->matches.begin(); it != this->matches.end(); it++)
+        delete *it;
+}
+
+int 
+HLocus::add_match(int id, int distance) 
+{
     Match *m = new Match;
-    m->id    = id;
-    m->dist  = distance;
+    m->cat_id = id;
+    m->dist   = distance;
 
     this->matches.push_back(m);
 
     return 0;
 }
 
-int HLocus::populate_alleles() {
-
+int 
+HLocus::populate_alleles() 
+{
     this->strings.clear();
 
     string s;

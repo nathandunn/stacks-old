@@ -58,61 +58,9 @@ using std::queue;
 #include "constants.h"
 #include "stacks.h"
 #include "kmers.h"
+#include "locus.h"
 #include "sql_utilities.h"
 #include "utils.h"
-
-enum searcht {sequence, genomic_loc};
-
-typedef struct match {
-    uint        cat_id;
-    allele_type cat_type;
-    allele_type query_type;
-    uint        dist;
-} Match;
-
-//
-// Query Locus Class
-//
-class QLocus : public Locus {
- public:
-    vector<Match *> matches;   // Matching tags found for the catalog.
-
-    QLocus(): Locus() {}
-    ~QLocus();
-
-    int add_match(int, allele_type, allele_type, int);
-};
-
-QLocus::~QLocus() {
-    vector<Match *>::iterator it;
-
-    for (it = this->matches.begin(); it != this->matches.end(); it++)
-        delete *it;
-}
-
-int QLocus::add_match(int catalog_id, allele_type cat_type, allele_type query_type, int distance) {
-    Match *m = new Match;
-
-    m->cat_id     = catalog_id;
-    m->cat_type   = cat_type;
-    m->query_type = query_type;
-    m->dist       = distance;
-
-    this->matches.push_back(m);
-
-    return 0;
-}
-
-//
-// Catalog Locus Class
-//
-class CLocus : public Locus {
- public:
-    vector<pair<int, int> > sources;   // Sample/ID pairs for the sources contributing to this catalog entry
-
-    int merge_snps(QLocus *);
-    int reduce_alleles(set<string> &);
-};
 
 void help( void );
 void version( void );
