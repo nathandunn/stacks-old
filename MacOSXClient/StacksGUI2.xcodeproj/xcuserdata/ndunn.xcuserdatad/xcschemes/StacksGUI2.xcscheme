@@ -33,7 +33,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "14B4DD5C16C97A7600317EB3"
-               BuildableName = "StacksGUI2Tests.octest"
+               BuildableName = "StacksGUI2Tests"
                BlueprintName = "StacksGUI2Tests"
                ReferencedContainer = "container:StacksGUI2.xcodeproj">
             </BuildableReference>
