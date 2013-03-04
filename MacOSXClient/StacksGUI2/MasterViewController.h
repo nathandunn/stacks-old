@@ -14,7 +14,7 @@
     IBOutlet NSView *dividerHandleView;
 }
 
-@property (strong) NSMutableArray *data;
+@property (strong) NSMutableDictionary *data;
 
 
 @end

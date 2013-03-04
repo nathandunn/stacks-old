@@ -12,12 +12,12 @@
 
 @interface StacksDocument : NSObject
 
-@property (strong) LocusView *locusData;
-//@property (strong) NSMutableArray *genotypes;
 
-// rename to init with locaus data
-- (id)initWithLocusData:(LocusView *)locusData;
-- (id)initWithMarker:(NSString*)marker consensusSequence:(NSString*)consensusSequence ;
+// this is a wrapper
+@property (strong) NSString *locusId ;
+@property (strong) LocusView *locusData;
+
+- (id)initWithLocusView:(LocusView *)locusData;
 
 
 @end
