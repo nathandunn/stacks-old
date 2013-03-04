@@ -235,16 +235,16 @@ using std::ofstream;
         modres.clear();
     }
 
-    map<int, pair<int, int> > pop_indexes;
+//    map<int, pair<int, int> > pop_indexes;
 
 //    bool      kernel_smoothed   = false;
-    uint pop_id, start_index, end_index;
-    map<int, pair<int, int> >::iterator pit;
-    stringstream log;
-    log << "batch_" << batch_id << ".populations.log";
-    string log_path = in_path + log.str();
+//    uint pop_id, start_index, end_index;
+//    map<int, pair<int, int> >::iterator pit;
+//    stringstream log;
+//    log << "batch_" << batch_id << ".populations.log";
+//    string log_path = in_path + log.str();
 
-    ofstream log_fh(log_path.c_str(), ofstream::out);
+//    ofstream log_fh(log_path.c_str(), ofstream::out);
 
 //    PopSum<CSLocus> *psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
 //    psum->initialize(pmap);
@@ -300,6 +300,11 @@ using std::ofstream;
 
 //    exit(0);
 
+    NSLog(@"loci size %d",[loci count]);
+    for (id key in [loci allKeys]){
+        NSLog(@"%@ - %@",key,[loci objectForKey:key]);
+
+    }
 
     map<int, CSLocus *>::iterator iterator = catalog.begin();
     while (iterator != catalog.end()) {
@@ -311,34 +316,43 @@ using std::ofstream;
 
 //        [returnArray addObject:genotypeView];
         NSString *key = [NSString stringWithFormat:@"%d", iterator->first];
+        NSLog(@"key %@",key);
 
-        LocusView *locusView = [loci valueForKey:key];
+        StacksDocument *stacksDocument= [loci objectForKey:key];
+        LocusView *locusView = stacksDocument.locusData;
         NSString *markerString = [NSString stringWithUTF8String:locus->marker.c_str()];
-        cout << "locus model: "<< locus->model << endl ;
+//        cout << "locus model: "<< locus->model << endl ;
         cout << "locus values marker[" << locus->marker << "] ann[" << locus->annotation << "] con[" << locus->con << "] " << endl ;
         cout << "f ["<< locus->f << "] sample[" << locus->sample_id << "]" << endl ;
         NSLog(@"markerString [%@]", markerString);
         if (markerString!= Nil && markerString.length > 0) {
 
             NSLog(@"marker [%@]", [NSString stringWithUTF8String:locus->marker.c_str()]);
-            locusView.marker = [NSString stringWithUTF8String:locus->marker.c_str()];
+            NSString *newMarker = [NSString stringWithUTF8String:locus->marker.c_str()];
+            NSLog(@"marker2 [%@]", newMarker);
+            locusView.marker = newMarker;
             NSLog(@"annotation %@", [NSString stringWithUTF8String:locus->annotation.c_str()]);
             NSLog(@"con %@", [NSString stringWithUTF8String:locus->con]);
             NSLog(@"f %f", locus->f);
             NSLog(@"depth %d", locus->depth);
-            NSLog(@"model %@", [NSString stringWithUTF8String:locus->model]);
             NSLog(@"sample_id %d", locus->sample_id);
             NSLog(@"trans_gcnt %d", locus->trans_gcnt);
-            PhyLoc phyLoc = locus->loc;
-            NSLog(@"phyLoc %d", phyLoc.bp);
-            NSLog(@"phyLoc %@", [NSString stringWithUTF8String:phyLoc.chr]);
-            NSLog(@"phyLoc %@", phyLoc.strand);
+//            PhyLoc phyLoc = locus->loc;
+//            NSLog(@"phyLoc %d", phyLoc.bp);
+//            NSLog(@"phyLoc %@", [NSString stringWithUTF8String:phyLoc.chr]);
+//            NSLog(@"phyLoc %@", phyLoc.strand);
+
+
+            // TODO: get the model to work
+//            NSLog(@"model %@", [NSString stringWithUTF8String:locus->model]);
         }
 //        locusView.= [NSString stringWithUTF8String:locus->marker.c_str()];
 //        [returnArray addObject:genotypeView];
 //        locus->marker;
         iterator++;
     }
+
+    exit(0);
 
 
     return loci;
