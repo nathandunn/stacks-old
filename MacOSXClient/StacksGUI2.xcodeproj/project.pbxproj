@@ -22,6 +22,7 @@
 		14B4DDB216C97C0400317EB3 /* MasterViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DDB016C97C0400317EB3 /* MasterViewController.xib */; };
 		14B4DDB716C97D8C00317EB3 /* LocusView.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB616C97D8C00317EB3 /* LocusView.m */; };
 		14B4DDBA16C97DA100317EB3 /* StacksDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB916C97DA100317EB3 /* StacksDocument.m */; };
+		63D53037916A7D22630386CC /* LociLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63D5304246F71EE19F4488C7 /* LociLoader.cpp */; };
 		63D531E8CE86AE86FEB3F2F0 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D5308F61F143EAAF0C767C /* mst.cc */; };
 		63D536FB26B8E69C1C3DC0AC /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53D4267AA85297E12A72C /* stacks.cc */; };
 		63D537A0B0415DFBDF34FA15 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53AE1D0F2E9B01FF76A92 /* DNASeq.cc */; };
@@ -72,6 +73,7 @@
 		14B4DDB616C97D8C00317EB3 /* LocusView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusView.m; sourceTree = "<group>"; };
 		14B4DDB816C97DA100317EB3 /* StacksDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksDocument.h; sourceTree = "<group>"; };
 		14B4DDB916C97DA100317EB3 /* StacksDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksDocument.m; sourceTree = "<group>"; };
+		63D5304246F71EE19F4488C7 /* LociLoader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LociLoader.cpp; sourceTree = "<group>"; };
 		63D53087A6787051E6F55B9B /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../../config.h; sourceTree = "<group>"; };
 		63D5308F61F143EAAF0C767C /* mst.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mst.cc; path = ../../src/mst.cc; sourceTree = "<group>"; };
 		63D530C0AA8A40DE6021B47C /* mst.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mst.h; path = ../../src/mst.h; sourceTree = "<group>"; };
@@ -82,6 +84,7 @@
 		63D53268A3B8886FB788CD26 /* Bustard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bustard.h; path = ../../src/Bustard.h; sourceTree = "<group>"; };
 		63D532A9CF0591C964C37DA7 /* Fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Fasta.h; path = ../../src/Fasta.h; sourceTree = "<group>"; };
 		63D532C71B8BB9E796A5B83D /* DNANSeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DNANSeq.h; path = ../../src/DNANSeq.h; sourceTree = "<group>"; };
+		63D5338F31E04FD17263890C /* LociLoader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LociLoader.hpp; sourceTree = "<group>"; };
 		63D5349331EA2A9590315B56 /* genotype_dictionaries.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = genotype_dictionaries.h; path = ../../src/genotype_dictionaries.h; sourceTree = "<group>"; };
 		63D535DBF5CC086466FBD43E /* GenotypeView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeView.h; sourceTree = "<group>"; };
 		63D53602B1B1AE8200EBDCA9 /* sql_utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sql_utilities.h; path = ../../src/sql_utilities.h; sourceTree = "<group>"; };
@@ -179,6 +182,7 @@
 				14B4DDB316C97D4800317EB3 /* GUI */,
 				14B4DD7416C97A9500317EB3 /* core */,
 				14B4DD4716C97A7500317EB3 /* Supporting Files */,
+				63D53F285736E5307BB4F7DA /* core-refactor */,
 			);
 			path = StacksGUI2;
 			sourceTree = "<group>";
@@ -282,6 +286,15 @@
 				63D53E91154AE4EC76FCA139 /* StacksView.h */,
 			);
 			name = Model;
+			sourceTree = "<group>";
+		};
+		63D53F285736E5307BB4F7DA /* core-refactor */ = {
+			isa = PBXGroup;
+			children = (
+				63D5304246F71EE19F4488C7 /* LociLoader.cpp */,
+				63D5338F31E04FD17263890C /* LociLoader.hpp */,
+			);
+			path = "core-refactor";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -409,6 +422,7 @@
 				63D53FE52E358257C3582A3D /* StacksView.m in Sources */,
 				D793CCC30AA9AF345061AC72 /* StacksLoader.mm in Sources */,
 				6B4E1C2A16E306DC0058A86E /* locus.cc in Sources */,
+				63D53037916A7D22630386CC /* LociLoader.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -10,8 +10,8 @@
 
 @interface StacksLoader : NSObject
 
--(NSMutableArray *) loadLoci:(NSString *) path;
-- (NSMutableArray *)loadGenotypes:(NSString *)path withLoci:(NSMutableArray *) loci;
+-(NSMutableDictionary *) loadLoci:(NSString *) path;
+- (NSMutableDictionary *)loadGenotypes:(NSString *)path withLoci:(NSMutableDictionary *) loci;
 //-(NSMutableArray *) loadGenotypes:(NSString *) path;
 
 @end

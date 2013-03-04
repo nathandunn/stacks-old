@@ -24,8 +24,8 @@
 
 
     NSString *examplePath = @"/tmp/stacks_tut/";
-    NSMutableArray *geneDocs = [self.loader loadLoci:examplePath];
-    NSMutableArray *genotypes = [self.loader loadGenotypes:examplePath withLoci:geneDocs];
+    NSMutableDictionary *geneDocs = [self.loader loadLoci:examplePath];
+    NSMutableDictionary *genotypes = [self.loader loadGenotypes:examplePath withLoci:geneDocs];
 
     // on each call of the genotypes . . . the similarly linked genotype will also be linked
     NSLog(@"number of genotypes %d",[genotypes count]);

@@ -16,33 +16,41 @@
 //#import "PopulationLoader.hpp"
 #import "GenotypeView.h"
 
+#include <fstream>
+using std::ifstream;
+using std::ofstream;
+
+
+#import "PopSum.h"
+#import "LociLoader.hpp"
+
+
+#import <dirent.h>
 
 
 
 @implementation StacksLoader {
-    
+
 
 }
 
-- (NSMutableArray *)loadLoci:(NSString *)examplePath{
+- (NSMutableDictionary *)loadLoci:(NSString *)examplePath {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
 
     // TODO: should be NSMutableDictionary
-    NSMutableArray *geneDocs = [[NSMutableArray alloc] init];
-    if(!existsAtPath){
-        NSLog(@"files do not exist %@",examplePath);
-        StacksDocument *doc1 = [[StacksDocument alloc] initWithMarker:@"sox9" consensusSequence:@"ATATAGATA"];
-        StacksDocument *doc2 = [[StacksDocument alloc] initWithMarker:@"sox12" consensusSequence:@"ATATAGAGG"];
-        geneDocs = [NSMutableArray arrayWithObjects:doc1,doc2,nil];
+    NSMutableDictionary *stackDocuments = [[NSMutableDictionary alloc] init];
+    if (!existsAtPath) {
+        NSLog(@"files do not exist %@", examplePath);
+        exit(0);
     }
-    else{
+    else {
 //        map<int,ModRes*> modelMap ;
-        map<int,Locus*> modelMap ;
-        NSString *exampleFile = [examplePath  stringByAppendingString:@"batch_1.catalog"] ;
+        map<int, Locus *> modelMap;
+        NSString *exampleFile = [examplePath stringByAppendingString:@"batch_1.catalog"];
 
 //        load_model_results([exampleFile UTF8String], modelMap);
-        load_loci([exampleFile UTF8String], modelMap,false);
+        load_loci([exampleFile UTF8String], modelMap, false);
 
         // TODO: Get the genotype view
         // from populations.cc 150-205 . . . load the catalog matches and then the
@@ -53,48 +61,45 @@
         // different color of view / lgith  / grey is the 3rd column/ locus . . . have to color SNP according other
         // the actual data will need to be imported directly and stored . . . see parse_tsv . .. but will be using raw data
 
-        NSLog(@"model size %d",(int)modelMap.size());
+        NSLog(@"model size %d", (int) modelMap.size());
 
-//        NSArray *dirFiles = [fileManager contentsOfDirectoryAtPath:examplePath error:nil];
-//        NSArray *fastaFiles= [dirFiles filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"self ENDSWITH '.fa'"]];
-//        NSEnumerator *e = [fastaFiles objectEnumerator];
-//        id object;
-        geneDocs = [NSMutableArray arrayWithCapacity:modelMap.size()];
-        map<int,Locus*>::iterator iter = modelMap.begin();
+        stackDocuments = [[NSMutableDictionary alloc] initWithCapacity:modelMap.size()];
 
-        while(iter!=modelMap.end()){
-            NSString *sampleId = [NSString stringWithFormat:@"%d",(*iter).first];
-            LocusView *locusView = [[LocusView alloc] initWithId:sampleId ];
+        map<int, Locus *>::iterator iter = modelMap.begin();
+
+        while (iter != modelMap.end()) {
+            NSString *sampleId = [NSString stringWithFormat:@"%d", (*iter).first];
+
+            LocusView *locusView = [[LocusView alloc] initWithId:sampleId];
 
             // TODO: add locus to dictionary / hashmap instead using sampleID as index
 
             const char *read = (*iter).second->con;
-            NSString* letters = [[NSString alloc] initWithCString:read encoding: NSUTF8StringEncoding];
+            NSString *letters = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
 //            NSLog(@"added read %@",letters);
             locusView.consensus = letters;
-            
+
             // rest of data comes from gentypes . . .  crapola
 
 
 
-            StacksDocument *doc = [[StacksDocument alloc] initWithLocusData:locusView];
-            [geneDocs addObject:doc];
+            StacksDocument *doc = [[StacksDocument alloc] initWithLocusView:locusView];
+//            [stackDocuments insertValue:doc atIndex:doc inPropertyWithKey:<#(NSString *)key#>]
+//            [stackDocuments insertValue:doc inPropertyWithKey:doc.locusId];
+            [stackDocuments setObject:doc forKey:doc.locusId];
 
             ++iter;
         }
     }
-    
-    return geneDocs;
+
+    return stackDocuments;
 
 }
 
 
-//- (NSMutableArray *)loadLoci:(NSString *)examplePath{
-- (NSMutableArray *)loadGenotypes:(NSString *)path withLoci:(NSMutableArray *) loci{
-    
-    NSMutableArray *returnArray = [[NSMutableArray alloc] init];
+- (NSMutableDictionary *)loadGenotypes:(NSString *)path withLoci:(NSMutableDictionary *)loci {
 
-    int batch_id = 1 ;
+    int batch_id = 1;
     //
     // Load the catalog
     //
@@ -107,7 +112,7 @@
         return 0;
     }
 
-    NSLog(@"catalog size %d",(int) catalog.size());
+    NSLog(@"catalog size %d", (int) catalog.size());
 
 
 //    PopulationLoader* populationLoader = new PopulationLoader();
@@ -115,18 +120,48 @@
     // Load matches to the catalog
     //
     vector<vector<CatMatch *> > catalog_matches;
-    map<int, string>            samples;
-    vector<int>                 sample_ids;
+    map<int, string> samples;
+    vector<int> sample_ids;
 
     srandom(time(NULL));
 
     vector<pair<int, string> > files;
 //    map<int, pair<int, int> > pop_indexes;
-    string in_path ;
+    string in_path = [path UTF8String ];
 
 //    if (!populationLoader->build_file_list([path UTF8String] ,files, pop_indexes)){
 //        exit(1);
 //    }
+    uint   pos;
+    string file;
+    struct dirent *direntry;
+
+    DIR *dir = opendir(in_path.c_str());
+
+    if (dir == NULL) {
+        cerr << "Unable to open directory '" << in_path << "' for reading.\n";
+        exit(1);
+    }
+
+
+    while ((direntry = readdir(dir)) != NULL) {
+        cout << "reading directory!!!" << endl ;
+        file = direntry->d_name;
+
+        if (file == "." || file == "..")
+            continue;
+
+        if (file.substr(0, 6) == "batch_")
+            continue;
+
+        pos = file.rfind(".tags.tsv");
+        if (pos < file.length())
+            files.push_back(make_pair(1, file.substr(0, pos)));
+    }
+
+
+    cout << "done reading directory!!" << endl ;
+    cout << "files.size() " << file.size()<< endl ;
 
 
     for (uint i = 0; i < files.size(); i++) {
@@ -156,22 +191,162 @@
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
 
-    map<int,CSLocus*>::iterator iterator= catalog.begin();
 
-    while(iterator!=catalog.end()){
-        CSLocus* locus = (*iterator).second;
-        GenotypeView * genotypeView = [[GenotypeView alloc] init];
+    map<int, CSLocus *>::iterator it;
+    map<int, ModRes *>::iterator mit;
+    Datum   *d;
+    CSLocus *loc;
+
+    // need to load the genotypes in order to get the markers . . .
+    //
+    // Load the output from the SNP calling model for each individual at each locus. This
+    // model output string looks like this:
+    //   OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOEOOOOOOEOOOOOOOOOOOOOOOOOOOOOOOOOOOOOUOOOOUOOOOOO
+    // and records model calls for each nucleotide: O (hOmozygous), E (hEterozygous), U (Unknown)
+    //
+    for (uint i = 0; i < sample_ids.size(); i++) {
+        map<int, ModRes *> modres;
+        load_model_results(in_path + samples[sample_ids[i]], modres);
+
+        if (modres.size() == 0) {
+            cerr << "Warning: unable to find any model results in file '" << samples[sample_ids[i]] << "', excluding this sample from population analysis.\n";
+            continue;
+        }
+
+        for (it = catalog.begin(); it != catalog.end(); it++) {
+            loc = it->second;
+            d = pmap->datum(loc->id, sample_ids[i]);
+
+            if (d != NULL) {
+                if (modres.count(d->id) == 0) {
+                    cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id
+                            << ", sample ID " << sample_ids[i] << ", sample locus " << d->id
+                            << "; likely IDs were mismatched when running pipeline.\n";
+                    exit(0);
+                }
+                d->len   = strlen(modres[d->id]->model);
+                d->model = new char[d->len + 1];
+                strcpy(d->model, modres[d->id]->model);
+            }
+        }
+
+        for (mit = modres.begin(); mit != modres.end(); mit++)
+            delete mit->second;
+        modres.clear();
+    }
+
+    map<int, pair<int, int> > pop_indexes;
+
+//    bool      kernel_smoothed   = false;
+    uint pop_id, start_index, end_index;
+    map<int, pair<int, int> >::iterator pit;
+    stringstream log;
+    log << "batch_" << batch_id << ".populations.log";
+    string log_path = in_path + log.str();
+
+    ofstream log_fh(log_path.c_str(), ofstream::out);
+
+
+    PopSum<CSLocus> *psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
+    psum->initialize(pmap);
+
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+        start_index = pit->second.first;
+        end_index   = pit->second.second;
+        pop_id      = pit->first;
+        cerr << "Generating nucleotide-level summary statistics for population " << pop_id << "\n";
+        psum->add_population(catalog, pmap, pop_id, start_index, end_index, log_fh);
+
+//        if (kernel_smoothed && loci_ordered) {
+//            cerr << "  Generating kernel-smoothed population statistics";
+//            if (bootstrap) cerr << " and bootstrap resampling";
+//            cerr << "...\n";
+//            kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
+//        }
+    }
+
+    cerr << "Tallying loci across populations...";
+    psum->tally(catalog);
+    cerr << "done.\n";
+
+    //
+    // Idenitfy polymorphic loci, tabulate haplotypes present.
+    //
+    LociLoader* lociLoader = new LociLoader();
+    lociLoader->tabulate_haplotypes(catalog, pmap);
+
+
+
+
+
+
+//    vector<vector<CatMatch*>>::iterator catalog_match_iterator = catalog_matches.begin();
+//    while(catalog_match_iterator!=catalog_matches.end()){
+//        vector<CatMatch*> innerVector= (*catalog_match_iterator);
+//        vector<CatMatch*>::iterator innerVector_iterator= innerVector.begin();
+//        while(innerVector_iterator!=innerVector.end()){
+//            CatMatch* match = (*innerVector_iterator);
+//            cout << "match: " << match->sample_id;
+////            match->
+//        }
+//
+//        cout << "size " << innerVector.size() << endl;
+//        catalog_match_iterator++ ;
+//    }
+
+//    cout << "sampeid: " << sample_ids.size();
+//    map<string, vector<CSLocus*>> *orderedLoci = &(pmap->ordered_loci);
+//    cout << "# of ordered loci: " << orderedLoci->size();
+//    map<string, vector<CSLocus*>>::iterator iter2 = orderedLoci->begin();
+//    while (iter2 != orderedLoci->end()){
+//        cout << "key " << iter2->first << endl ;
+//        iter2++;
+//    }
+
+//    exit(0);
+
+
+    map<int, CSLocus *>::iterator iterator = catalog.begin();
+    while (iterator != catalog.end()) {
+        CSLocus *locus = (*iterator).second;
+        GenotypeView *genotypeView = [[GenotypeView alloc] init];
         // TODO: set Locus in NSDictionary dictionary / hashmap instead using sampleID as index
 
 //        locus->
 
-        [returnArray addObject:genotypeView];
+//        [returnArray addObject:genotypeView];
+        NSString *key = [NSString stringWithFormat:@"%d", iterator->first];
+
+        LocusView *locusView = [loci valueForKey:key];
+        NSString *markerString = [NSString stringWithUTF8String:locus->marker.c_str()];
+        cout << "locus model: "<< locus->model << endl ;
+        cout << "locus values marker[" << locus->marker << "] ann[" << locus->annotation << "] con[" << locus->con << "] " << endl ;
+        cout << "f ["<< locus->f << "] sample[" << locus->sample_id << "]" << endl ;
+        NSLog(@"markerString [%@]", markerString);
+        if (markerString!= Nil && markerString.length > 0) {
+
+            NSLog(@"marker [%@]", [NSString stringWithUTF8String:locus->marker.c_str()]);
+            locusView.marker = [NSString stringWithUTF8String:locus->marker.c_str()];
+            NSLog(@"annotation %@", [NSString stringWithUTF8String:locus->annotation.c_str()]);
+            NSLog(@"con %@", [NSString stringWithUTF8String:locus->con]);
+            NSLog(@"f %f", locus->f);
+            NSLog(@"depth %d", locus->depth);
+            NSLog(@"model %@", [NSString stringWithUTF8String:locus->model]);
+            NSLog(@"sample_id %d", locus->sample_id);
+            NSLog(@"trans_gcnt %d", locus->trans_gcnt);
+            PhyLoc phyLoc = locus->loc;
+            NSLog(@"phyLoc %d", phyLoc.bp);
+            NSLog(@"phyLoc %@", [NSString stringWithUTF8String:phyLoc.chr]);
+            NSLog(@"phyLoc %@", phyLoc.strand);
+        }
+//        locusView.= [NSString stringWithUTF8String:locus->marker.c_str()];
+//        [returnArray addObject:genotypeView];
 //        locus->marker;
         iterator++;
     }
 
 
-    return returnArray;
+    return loci;
 }
 
 

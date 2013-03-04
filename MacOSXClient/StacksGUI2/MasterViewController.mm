@@ -93,7 +93,10 @@
     // But it's a good practice to do it in order by remember it when a table is multicolumn.
     if( [tableColumn.identifier isEqualToString:@"GeneColumn"] )
     {
-        StacksDocument *bugDoc = [self.data objectAtIndex:row];
+//        StacksDocument *bugDoc = [self.data objectAtIndex:row];
+//        [self.data valueForKey:[row.]];
+        NSString *key = [NSString stringWithFormat:@"%d",row];
+        StacksDocument *bugDoc = [self.data objectForKey:key];
 //        cellView.imageView.image = bugDoc.thumbImage;
         cellView.textField.stringValue = bugDoc.locusData.locusId;
         return cellView;
@@ -104,7 +107,10 @@
 -(StacksDocument*) selectedDoc{
     NSInteger selectedRow = [self.filesTableView selectedRow];
     if(selectedRow >= 0 && self.data.count > selectedRow){
-        StacksDocument *stacksDocument = [self.data objectAtIndex:selectedRow];
+        NSString *key = [NSString stringWithFormat:@"%d",selectedRow];
+//        StacksDocument *stacksDocument = [self.data objectAtIndex:key];
+        StacksDocument *stacksDocument = [self.data objectForKey:key];
+//        StacksDocument *stacksDocument = [self.data objectAtIndex:selectedRow];
         return stacksDocument;
     }
     return nil ;
