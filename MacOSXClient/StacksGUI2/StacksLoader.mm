@@ -5,29 +5,29 @@
 //
 
 
-#import "StacksDocument.h"
-#import "locus.h"
-#import "stacks.h"
-#import "sql_utilities.h"
-#import "StacksLoader.h"
-#import "LocusView.h"
-#import "PopMap.h"
-//#import "CLocus.hpp"
-//#import "PopulationLoader.hpp"
-#import "GenotypeView.h"
+
+#include "locus.h"
+//#include "stacks.h"
+#include "sql_utilities.h"
+#include "PopMap.h"
+
 
 #include <fstream>
 using std::ifstream;
 using std::ofstream;
+#include "PopSum.h"
+
+#include <dirent.h>
 
 
-#import "PopSum.h"
-#import "LociLoader.hpp"
+
+#import "GenotypeView.h"
+#import "LocusView.h"
+#import "StacksDocument.h"
+#import "StacksLoader.h"
 
 
-#import <dirent.h>
-
-
+#include "LociLoader.hpp"
 
 @implementation StacksLoader {
 
@@ -246,38 +246,33 @@ using std::ofstream;
 
     ofstream log_fh(log_path.c_str(), ofstream::out);
 
+//    PopSum<CSLocus> *psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
+//    psum->initialize(pmap);
+//
+//    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+//        start_index = pit->second.first;
+//        end_index   = pit->second.second;
+//        pop_id      = pit->first;
+//        cerr << "Generating nucleotide-level summary statistics for population " << pop_id << "\n";
+//        psum->add_population(catalog, pmap, pop_id, start_index, end_index, log_fh);
+//
+////        if (kernel_smoothed && loci_ordered) {
+////            cerr << "  Generating kernel-smoothed population statistics";
+////            if (bootstrap) cerr << " and bootstrap resampling";
+////            cerr << "...\n";
+////            kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
+////        }
+//    }
 
-    PopSum<CSLocus> *psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
-    psum->initialize(pmap);
-
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        start_index = pit->second.first;
-        end_index   = pit->second.second;
-        pop_id      = pit->first;
-        cerr << "Generating nucleotide-level summary statistics for population " << pop_id << "\n";
-        psum->add_population(catalog, pmap, pop_id, start_index, end_index, log_fh);
-
-//        if (kernel_smoothed && loci_ordered) {
-//            cerr << "  Generating kernel-smoothed population statistics";
-//            if (bootstrap) cerr << " and bootstrap resampling";
-//            cerr << "...\n";
-//            kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
-//        }
-    }
-
-    cerr << "Tallying loci across populations...";
-    psum->tally(catalog);
-    cerr << "done.\n";
+//    cerr << "Tallying loci across populations...";
+//    psum->tally(catalog);
+//    cerr << "done.\n";
 
     //
     // Idenitfy polymorphic loci, tabulate haplotypes present.
     //
     LociLoader* lociLoader = new LociLoader();
     lociLoader->tabulate_haplotypes(catalog, pmap);
-
-
-
-
 
 
 //    vector<vector<CatMatch*>>::iterator catalog_match_iterator = catalog_matches.begin();

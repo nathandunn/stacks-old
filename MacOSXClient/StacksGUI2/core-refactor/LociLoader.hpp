@@ -9,7 +9,10 @@
 #ifndef __LociLoader_H_
 #define __LociLoader_H_
 
-#include <iostream>
+//double minor_allele_freq = 0;
+//int progeny_limit = 0;
+
+//#include <iostream>
 #include "locus.h"
 #include "PopMap.h"
 
@@ -19,10 +22,14 @@
 */
 class LociLoader {
 
+public:
     int tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap);
+
     int create_genotype_map(CSLocus *pLocus, PopMap<CSLocus> *pMap);
+
     int call_population_genotypes(CSLocus *pLocus, PopMap<CSLocus> *pMap);
-    bool hap_compare(pair<string, int> a, pair<string, int> b);
+
+
 
 };
 
