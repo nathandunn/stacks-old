@@ -580,7 +580,7 @@ int find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sa
         }
     }
 
-    cerr << keys.size() << " stacks matched against the catalog containing " << sample_1.size() << " loci.\n" 
+    cerr << keys.size() << " stacks compared against the catalog containing " << sample_1.size() << " loci.\n" 
 	 << "  " << matches << " matching loci, " << nomatch << " contained no verified haplotypes.\n"
 	 << "  " << mmatch  << " loci matched more than one catalog locus and were excluded.\n"
 	 << "  " << nosnps  << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
