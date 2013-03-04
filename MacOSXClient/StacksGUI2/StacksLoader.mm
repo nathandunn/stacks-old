@@ -27,6 +27,8 @@
 - (NSMutableArray *)loadLoci:(NSString *)examplePath{
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
+
+    // TODO: should be NSMutableDictionary
     NSMutableArray *geneDocs = [[NSMutableArray alloc] init];
     if(!existsAtPath){
         NSLog(@"files do not exist %@",examplePath);
@@ -99,7 +101,6 @@
     stringstream catalog_file;
     map<int, CSLocus *> catalog;
     int res;
-    // TODO: fix error
     catalog_file << [path UTF8String] << "batch_" << batch_id << ".catalog";
     if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
         cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
@@ -123,7 +124,6 @@
 //    map<int, pair<int, int> > pop_indexes;
     string in_path ;
 
-//    // TODO: redo and create index
 //    if (!populationLoader->build_file_list([path UTF8String] ,files, pop_indexes)){
 //        exit(1);
 //    }
