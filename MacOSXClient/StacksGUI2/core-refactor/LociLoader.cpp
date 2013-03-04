@@ -1,13 +1,12 @@
 //
 // Created by ndunn on 3/4/13.
 //
-// To change the template use AppCode | Preferences | File Templates.
 //
 
 
 #include "LociLoader.hpp"
 
-bool LociLoader::hap_compare(pair<string, int> a, pair<string, int> b) {
+bool hap_compare(pair<string, int> a, pair<string, int> b) {
     return (a.second > b.second);
 }
 
@@ -74,8 +73,9 @@ int LociLoader::create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap) {
     //
     // Sort the haplotypes map by value
     //
-    for (k = haplotypes.begin(); k != haplotypes.end(); k++)
+    for (k = haplotypes.begin(); k != haplotypes.end(); k++){
         sorted_haplotypes.push_back(*k);
+    }
     sort(sorted_haplotypes.begin(), sorted_haplotypes.end(), hap_compare);
 
     for (uint n = 0, index = 0; n < sorted_haplotypes.size() && index <= 26; n++, index++) {
