@@ -14,7 +14,7 @@
     IBOutlet NSView *dividerHandleView;
 }
 
-@property (strong) NSMutableDictionary *data;
+@property (strong) NSMutableDictionary *stacksDocuments;
 
 
 @end

@@ -80,7 +80,7 @@
 }
 
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
-    return [self.data count];
+    return [self.stacksDocuments count];
 }
 
 - (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
@@ -95,9 +95,23 @@
     {
 //        StacksDocument *bugDoc = [self.data objectAtIndex:row];
 //        [self.data valueForKey:[row.]];
-        NSString *key = [NSString stringWithFormat:@"%d",row];
-        StacksDocument *bugDoc = [self.data objectForKey:key];
-//        cellView.imageView.image = bugDoc.thumbImage;
+        
+        // we want data for the row . . . .
+//        NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingSelector: @selector(compare:)];
+        NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator)^(id obj1,id obj2){
+            return [obj1 integerValue] - [obj2 integerValue];
+        }];
+        
+//        NSArray *sortedKeys = [self.stacksDocuments keysSortedByValueUsingComparator:^(id obj1, id obj2) {
+//            return [(NSString*)obj2 compare:(NSString*)obj1];
+//        }];
+        NSString *key = [sortedKeys objectAtIndexedSubscript:row];
+//        NSString *key = [NSString stringWithFormat:@"%d",row+1];
+//        StacksDocument *bugDoc = [self.data objectForKey:key];
+        StacksDocument *bugDoc = [self.stacksDocuments objectForKey:key];
+//        NSLog(@"locusId: %d",bugDoc.locusId);
+//        NSLog(@"locusId: %@",bugDoc.locusData.locusId);
+        //        cellView.imageView.image = bugDoc.thumbImage;
         cellView.textField.stringValue = bugDoc.locusData.locusId;
         return cellView;
     }
@@ -106,10 +120,10 @@
 
 -(StacksDocument*) selectedDoc{
     NSInteger selectedRow = [self.filesTableView selectedRow];
-    if(selectedRow >= 0 && self.data.count > selectedRow){
+    if(selectedRow >= 0 && self.stacksDocuments.count > selectedRow){
         NSString *key = [NSString stringWithFormat:@"%d",selectedRow];
 //        StacksDocument *stacksDocument = [self.data objectAtIndex:key];
-        StacksDocument *stacksDocument = [self.data objectForKey:key];
+        StacksDocument *stacksDocument = [self.stacksDocuments objectForKey:key];
 //        StacksDocument *stacksDocument = [self.data objectAtIndex:selectedRow];
         return stacksDocument;
     }

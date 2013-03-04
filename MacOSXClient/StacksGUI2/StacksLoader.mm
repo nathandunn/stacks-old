@@ -59,7 +59,7 @@ using std::ofstream;
 
         // TODO: get the Stack View
         // different color of view / lgith  / grey is the 3rd column/ locus . . . have to color SNP according other
-        // the actual data will need to be imported directly and stored . . . see parse_tsv . .. but will be using raw data
+        // the actual stacksDocuments will need to be imported directly and stored . . . see parse_tsv . .. but will be using raw stacksDocuments
 
         NSLog(@"model size %d", (int) modelMap.size());
 
@@ -79,7 +79,7 @@ using std::ofstream;
 //            NSLog(@"added read %@",letters);
             locusView.consensus = letters;
 
-            // rest of data comes from gentypes . . .  crapola
+            // rest of stacksDocuments comes from gentypes . . .  crapola
 
 
 
@@ -178,7 +178,7 @@ using std::ofstream;
             samples[m[0]->sample_id] = files[i].second;
             sample_ids.push_back(m[0]->sample_id);
         } else {
-            cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
+            cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this stacksDocuments set, likely the pipeline was run incorrectly.\n";
             exit(0);
         }
     }
@@ -219,7 +219,7 @@ using std::ofstream;
 
             if (d != NULL) {
                 if (modres.count(d->id) == 0) {
-                    cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id
+                    cerr << "Fatal error: Unable to find model stacksDocuments for catalog locus " << loc->id
                             << ", sample ID " << sample_ids[i] << ", sample locus " << d->id
                             << "; likely IDs were mismatched when running pipeline.\n";
                     exit(0);
@@ -270,7 +270,6 @@ using std::ofstream;
 
     //
     // Idenitfy polymorphic loci, tabulate haplotypes present.
-    //
     LociLoader* lociLoader = new LociLoader();
     lociLoader->tabulate_haplotypes(catalog, pmap);
 
@@ -352,7 +351,7 @@ using std::ofstream;
         iterator++;
     }
 
-    exit(0);
+//    exit(0);
 
 
     return loci;
