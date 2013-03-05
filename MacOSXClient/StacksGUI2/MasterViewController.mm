@@ -9,6 +9,7 @@
 #import "MasterViewController.h"
 #import "StacksDocument.h"
 #import "LocusView.h"
+//#import "stacks.h"
 
 
 @interface MasterViewController ()
@@ -179,8 +180,12 @@
     if(doc!=nil){
         LocusView* locus = doc.locusData;
         NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locus.consensus];
-        
+
+        // TODOL need to store snps correctly . . . as SnpsView or as vector<SNP>:: in LocusView
 //        NSMutableArray* snps = locus.snps;
+//        for(int i =0 ; i < [snps count]; i++){
+//           SNP *snp = [[snps objectAtIndex:i] pointerValue];
+//        }
         
         NSRange selectedRange = NSMakeRange(12,1) ;
         
