@@ -13,5 +13,9 @@ cobertura.ser
 target/
 .deps/*
 out/
+.idea/*
+*.o
+*.orig
+*.swp
 web-app/plugins
 web-app/WEB-INF/classes

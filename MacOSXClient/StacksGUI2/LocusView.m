@@ -45,4 +45,9 @@
     }
     return count;
 }
+
+- (NSInteger)genotypes {
+    return [_progeny count];
+}
+
 @end

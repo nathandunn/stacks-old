@@ -73,7 +73,7 @@ using std::ofstream;
         DataStubber *dataStubber = [[DataStubber alloc] init];
 
         int randomness = arc4random_uniform(20);
-        int totalGenotypes = 80+randomness ;
+        NSInteger totalGenotypes = 80 + randomness;
 
 
         while (iter != modelMap.end()) {
@@ -94,15 +94,8 @@ using std::ofstream;
             locusView.snps = [dataStubber generateSnps];
             locusView.male = [dataStubber generateGenotype];
             locusView.female = [dataStubber generateGenotype];
-
-            NSMutableArray *progeny = [[NSMutableArray alloc] init];
-            for (int i = 0 ; i < totalGenotypes ; i++){
-                GenotypeEntry *genotypeEntry = [dataStubber generateGenotype];
-                if(genotypeEntry){
-                [progeny addObject:genotypeEntry];
-                }
-            }
-
+            locusView.progeny = [dataStubber generateProgeny:(NSInteger) totalGenotypes];
+            locusView.marker = [dataStubber generateMarker];
 
 
             StacksDocument *doc = [[StacksDocument alloc] initWithLocusView:locusView];
