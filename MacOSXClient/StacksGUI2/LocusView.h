@@ -25,7 +25,6 @@
 //@property (strong) NSString *progeny;
 @property (strong) NSString *marker ;
 @property (strong) NSString *ratio ;
-@property (strong) NSString *genotypes ;
 
 
 @property (strong) NSMutableArray *progeny;
@@ -42,4 +41,5 @@
 - (id)initWithId:(NSString *)locusId consensus:(NSString*)consensus;
 
 - (NSInteger) matchingParents;
+- (NSInteger) genotypes ;
 @end

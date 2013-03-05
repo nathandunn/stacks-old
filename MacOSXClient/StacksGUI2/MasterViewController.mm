@@ -123,33 +123,35 @@
     else
     if( [tableColumn.identifier isEqualToString:@"ParentsColumn"] )
     {
-        cellView.textField.stringValue = [NSString stringWithFormat:@"%d",[stacksDoc.locusData matchingParents]];
+//        cellView.textField.stringValue = [NSString stringWithFormat:@"%d",[stacksDoc.locusData matchingParents]];
+        cellView.textField.integerValue = [stacksDoc.locusData matchingParents];
 //        NSLog(@"in the PARENTS column! value set: %@",stacksDoc.locusData.locusId);
         return cellView;
     }
     else
     if( [tableColumn.identifier isEqualToString:@"ProgenyColumn"] )
     {
-        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+        NSUInteger count = [[stacksDoc.locusData progeny] count];
+        cellView.textField.stringValue = [NSString stringWithFormat:@"%d / %d",count,count];
         return cellView;
     }
     else
     if( [tableColumn.identifier isEqualToString:@"MarkerColumn"] )
     {
-        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+        cellView.textField.stringValue = stacksDoc.locusData.marker;
 //        NSLog(@"MARKER column! value set: %@",stacksDoc.locusData.locusId);
         return cellView;
     }
     else
     if( [tableColumn.identifier isEqualToString:@"RatioColumn"] )
     {
-        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+        cellView.textField.stringValue = @"aa: 45 (51.7%) bb:42 (48.3%)";
         return cellView;
     }
     else
     if( [tableColumn.identifier isEqualToString:@"GenotypesColumn"] )
     {
-        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+        cellView.textField.integerValue = [stacksDoc.locusData genotypes] ;
         return cellView;
     }
 
