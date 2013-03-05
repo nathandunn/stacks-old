@@ -15,12 +15,9 @@
 @interface MasterViewController ()
 
 @property (weak) IBOutlet NSTableView *filesTableView;
-//@property (weak) IBOutlet NSTextField *headerField;
-//@property (weak) IBOutlet NSTextField *fastaField;
+@property (weak) IBOutlet NSTableView* genotypeTableView;
 @property (weak) IBOutlet NSTextField *locusDetail;
 @property (weak) IBOutlet NSTextField *consensusDetail;
-
-//@property (weak) IBOutlet NSTextField *fastaField;
 
 @end
 
@@ -86,93 +83,119 @@
 }
 
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
-    return [self.stacksDocuments count];
+    if([[tableView identifier] isEqualToString:@"GenotypeTableView"]){
+        if(self.selectedStacksDocument!=nil ){
+            LocusView* locusView = self.selectedStacksDocument.locusData;
+            NSInteger count = [locusView genotypes];
+            NSInteger rows = count / 10 ;
+            if(count%10>0){
+                rows++ ;
+            }
+            return rows ;
+            
+        }
+        return 0  ;
+    }
+    else{
+        return [self.stacksDocuments count];
+    }
 }
 
 - (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
+    
 
     // Get a new ViewCell
     NSTableCellView *cellView = [tableView makeViewWithIdentifier:tableColumn.identifier owner:self];
-
-    // we want data for the row . . . .
-    NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator)^(id obj1,id obj2){
-        return [obj1 integerValue] - [obj2 integerValue];
-    }];
-    NSString *key = [sortedKeys objectAtIndexedSubscript:row];
-    StacksDocument *stacksDoc = [self.stacksDocuments objectForKey:key];
-
-    // Since this is a single-column table view, this would not be necessary.
-    // But it's a good practice to do it in order by remember it when a table is multicolumn.
-    if( [tableColumn.identifier isEqualToString:@"IdColumn"] )
-    {
-        cellView.textField.stringValue = stacksDoc.locusData.locusId;
-        return cellView;
+    
+    if([[tableView identifier] isEqualToString:@"GenotypeTableView"]){
+//        NSLog(@"is a genotype table with column identifier %@",[tableColumn identifier]);
+        return [self handleGenotypesTable:(NSString*) tableColumn.identifier row:(NSInteger) row cell:(NSTableCellView*) cellView];
     }
-    else
-    if( [tableColumn.identifier isEqualToString:@"SnpColumn"] )
-    {
-        NSMutableArray *snps = stacksDoc.locusData.snps;
-        if([snps count]>0){
-            cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%dnuc]",[snps count]];
+    else{
+        // we want data for the row . . . .
+        NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator)^(id obj1,id obj2){
+            return [obj1 integerValue] - [obj2 integerValue];
+        }];
+        NSString *key = [sortedKeys objectAtIndexedSubscript:row];
+        StacksDocument *stacksDoc = [self.stacksDocuments objectForKey:key];
+
+        // Since this is a single-column table view, this would not be necessary.
+        // But it's a good practice to do it in order by remember it when a table is multicolumn.
+        if( [tableColumn.identifier isEqualToString:@"IdColumn"] )
+        {
+            cellView.textField.stringValue = stacksDoc.locusData.locusId;
         }
-        else{
-            cellView.textField.stringValue = @"None";
+        else
+        if( [tableColumn.identifier isEqualToString:@"SnpColumn"] )
+        {
+            NSMutableArray *snps = stacksDoc.locusData.snps;
+            if([snps count]>0){
+                cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%dnuc]",[snps count]];
+            }
+            else{
+                cellView.textField.stringValue = @"None";
+            }
         }
-        return cellView;
-    }
-//    else
-//    if( [tableColumn.identifier isEqualToString:@"ConsensusColumn"] )
-//    {
-//        cellView.textField.stringValue = stacksDoc.locusData.locusId;
-//        return cellView;
-//    }
-    else
-    if( [tableColumn.identifier isEqualToString:@"ParentsColumn"] )
-    {
-//        cellView.textField.stringValue = [NSString stringWithFormat:@"%d",[stacksDoc.locusData matchingParents]];
-        cellView.textField.integerValue = [stacksDoc.locusData matchingParents];
-//        NSLog(@"in the PARENTS column! value set: %@",stacksDoc.locusData.locusId);
-        return cellView;
-    }
-    else
-    if( [tableColumn.identifier isEqualToString:@"ProgenyColumn"] )
-    {
-        NSUInteger count = [[stacksDoc.locusData progeny] count];
-        cellView.textField.stringValue = [NSString stringWithFormat:@"%d / %d",count,count];
-        return cellView;
-    }
-    else
-    if( [tableColumn.identifier isEqualToString:@"MarkerColumn"] )
-    {
-        cellView.textField.stringValue = stacksDoc.locusData.marker;
-//        NSLog(@"MARKER column! value set: %@",stacksDoc.locusData.locusId);
-        return cellView;
-    }
-    else
-    if( [tableColumn.identifier isEqualToString:@"RatioColumn"] )
-    {
-        cellView.textField.stringValue = @"aa: 45 (51.7%) bb:42 (48.3%)";
-        return cellView;
-    }
-    else
-    if( [tableColumn.identifier isEqualToString:@"GenotypesColumn"] )
-    {
-        cellView.textField.integerValue = [stacksDoc.locusData genotypes] ;
+        else
+        if( [tableColumn.identifier isEqualToString:@"ParentsColumn"] )
+        {
+            cellView.textField.integerValue = [stacksDoc.locusData matchingParents];
+        }
+        else
+        if( [tableColumn.identifier isEqualToString:@"ProgenyColumn"] )
+        {
+            NSUInteger count = [[stacksDoc.locusData progeny] count];
+            cellView.textField.stringValue = [NSString stringWithFormat:@"%d / %d",count,count];
+        }
+        else
+        if( [tableColumn.identifier isEqualToString:@"MarkerColumn"] )
+        {
+            cellView.textField.stringValue = stacksDoc.locusData.marker;
+        }
+        else
+        if( [tableColumn.identifier isEqualToString:@"RatioColumn"] )
+        {
+            cellView.textField.stringValue = @"aa: 45 (51.7%) bb:42 (48.3%)";
+        }
+        else
+        if( [tableColumn.identifier isEqualToString:@"GenotypesColumn"] )
+        {
+            cellView.textField.integerValue = [stacksDoc.locusData genotypes] ;
+        }
+
         return cellView;
     }
 
 
-    return cellView;
+}
+
+- (NSTableCellView*) handleGenotypesTable:(NSString *)column row:(NSInteger)row cell:(NSTableCellView *)cellView {
+//    NSLog(@"handling the genotypes table %@",column);
+    if( [column isEqualToString:@"Genotypes1"] )
+    {
+        cellView.textField.stringValue = @"asdfasdf";
+    }
+    else
+    if( [column isEqualToString:@"Genotypes2"] )
+    {
+        cellView.textField.stringValue = @"gggg";
+    }
+    else{
+        cellView.textField.stringValue = @"dog!";
+    }
+
+    return cellView ;
 }
 
 -(StacksDocument*) selectedDoc{
+    
     NSInteger selectedRow = [self.filesTableView selectedRow];
-    if(selectedRow >= 0 && self.stacksDocuments.count > selectedRow){
-        NSString *key = [NSString stringWithFormat:@"%d",selectedRow];
-        StacksDocument *stacksDocument = [self.stacksDocuments objectForKey:key];
-        return stacksDocument;
-    }
-    return nil ;
+    NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator)^(id obj1,id obj2){
+        return [obj1 integerValue] - [obj2 integerValue];
+    }];
+    NSString *key = [sortedKeys objectAtIndexedSubscript:selectedRow];
+    StacksDocument *stacksDocument = [self.stacksDocuments objectForKey:key];
+    return stacksDocument;
 }
 
 -(void) setDetailInfo:(StacksDocument*) doc{
@@ -203,21 +226,34 @@
         [string endEditing];
         [self.locusDetail setStringValue:locus.locusId];
         [self.consensusDetail setAttributedStringValue:string];
+        
+        [self.genotypeTableView reloadData];
+
     }
     else{
+        self.selectedStacksDocument = nil  ;
             [self.locusDetail setStringValue:@"Error"];
     }
-    
-    
+
+
+    // update the genotypes table
+    [self.genotypeTableView reloadData];
+
 
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification
 {
-    StacksDocument *selectedDoc = [self selectedDoc];
-
-    // Update info
-    [self setDetailInfo:selectedDoc];
+    NSString *tableName = [[aNotification object] identifier] ;
+    if([tableName isEqualToString:@"LocusTable"]){
+        self.selectedStacksDocument = [self selectedDoc];
+        // Update info
+        [self setDetailInfo:self.selectedStacksDocument];
+    }
+    else{
+        NSLog(@"need to handle the other case ") ;
+    }
+    
 }
 
 
