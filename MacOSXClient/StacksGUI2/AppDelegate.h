@@ -10,6 +10,7 @@
 //#import "MasterViewController.h"
 
 @class MasterViewController ;
+@class GenotypesViewController ;
 @class StacksLoader;
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>{
@@ -19,6 +20,7 @@
 
 //@property (assign) IBOutlet NSWindow *window;
 @property (nonatomic,strong) IBOutlet MasterViewController *masterViewController;
+@property (nonatomic,strong) IBOutlet GenotypesViewController *genotypesViewController;
 @property (nonatomic,strong) StacksLoader *loader;
 
 @end

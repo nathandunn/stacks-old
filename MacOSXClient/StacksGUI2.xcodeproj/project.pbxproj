@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		149F0A2A16E6A03B0013C557 /* GenotypesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 149F0A2816E6A03B0013C557 /* GenotypesViewController.m */; };
+		149F0A2B16E6A03B0013C557 /* GenotypesViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 149F0A2916E6A03B0013C557 /* GenotypesViewController.xib */; };
 		14B4DD4116C97A7500317EB3 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD4016C97A7500317EB3 /* Cocoa.framework */; };
 		14B4DD4B16C97A7500317EB3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD4916C97A7500317EB3 /* InfoPlist.strings */; };
 		14B4DD4D16C97A7500317EB3 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD4C16C97A7500317EB3 /* main.m */; };
@@ -49,6 +51,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		149F0A2716E6A03B0013C557 /* GenotypesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypesViewController.h; sourceTree = "<group>"; };
+		149F0A2816E6A03B0013C557 /* GenotypesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenotypesViewController.m; sourceTree = "<group>"; };
+		149F0A2916E6A03B0013C557 /* GenotypesViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = GenotypesViewController.xib; sourceTree = "<group>"; };
 		14B4DD3D16C97A7500317EB3 /* StacksGUI2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StacksGUI2.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14B4DD4016C97A7500317EB3 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		14B4DD4316C97A7500317EB3 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -273,6 +278,9 @@
 				14B4DDAE16C97C0400317EB3 /* MasterViewController.h */,
 				14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */,
 				14B4DDB016C97C0400317EB3 /* MasterViewController.xib */,
+				149F0A2716E6A03B0013C557 /* GenotypesViewController.h */,
+				149F0A2816E6A03B0013C557 /* GenotypesViewController.m */,
+				149F0A2916E6A03B0013C557 /* GenotypesViewController.xib */,
 			);
 			name = GUI;
 			sourceTree = "<group>";
@@ -382,6 +390,7 @@
 				14B4DD5116C97A7500317EB3 /* Credits.rtf in Resources */,
 				14B4DD5716C97A7600317EB3 /* MainMenu.xib in Resources */,
 				14B4DDB216C97C0400317EB3 /* MasterViewController.xib in Resources */,
+				149F0A2B16E6A03B0013C557 /* GenotypesViewController.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -435,6 +444,7 @@
 				63D53037916A7D22630386CC /* LociLoader.cpp in Sources */,
 				D793C6B078CD3756AADE640E /* DataStubber.mm in Sources */,
 				D793CC59D715A7C58E1706B1 /* GenotypeEntry.m in Sources */,
+				149F0A2A16E6A03B0013C557 /* GenotypesViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
