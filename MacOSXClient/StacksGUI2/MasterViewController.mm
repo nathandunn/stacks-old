@@ -88,33 +88,66 @@
     // Get a new ViewCell
     NSTableCellView *cellView = [tableView makeViewWithIdentifier:tableColumn.identifier owner:self];
 
+    // we want data for the row . . . .
+    NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator)^(id obj1,id obj2){
+        return [obj1 integerValue] - [obj2 integerValue];
+    }];
+    NSString *key = [sortedKeys objectAtIndexedSubscript:row];
+    StacksDocument *stacksDoc = [self.stacksDocuments objectForKey:key];
 
     // Since this is a single-column table view, this would not be necessary.
     // But it's a good practice to do it in order by remember it when a table is multicolumn.
-    if( [tableColumn.identifier isEqualToString:@"GeneColumn"] )
+    if( [tableColumn.identifier isEqualToString:@"IdColumn"] )
     {
-//        StacksDocument *bugDoc = [self.data objectAtIndex:row];
-//        [self.data valueForKey:[row.]];
-        
-        // we want data for the row . . . .
-//        NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingSelector: @selector(compare:)];
-        NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator)^(id obj1,id obj2){
-            return [obj1 integerValue] - [obj2 integerValue];
-        }];
-        
-//        NSArray *sortedKeys = [self.stacksDocuments keysSortedByValueUsingComparator:^(id obj1, id obj2) {
-//            return [(NSString*)obj2 compare:(NSString*)obj1];
-//        }];
-        NSString *key = [sortedKeys objectAtIndexedSubscript:row];
-//        NSString *key = [NSString stringWithFormat:@"%d",row+1];
-//        StacksDocument *bugDoc = [self.data objectForKey:key];
-        StacksDocument *bugDoc = [self.stacksDocuments objectForKey:key];
-//        NSLog(@"locusId: %d",bugDoc.locusId);
-//        NSLog(@"locusId: %@",bugDoc.locusData.locusId);
-        //        cellView.imageView.image = bugDoc.thumbImage;
-        cellView.textField.stringValue = bugDoc.locusData.locusId;
+        cellView.textField.stringValue = stacksDoc.locusData.locusId;
         return cellView;
     }
+    else
+    if( [tableColumn.identifier isEqualToString:@"SnpColumn"] )
+    {
+        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+        return cellView;
+    }
+    else
+    if( [tableColumn.identifier isEqualToString:@"ConsensusColumn"] )
+    {
+        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+        return cellView;
+    }
+    else
+    if( [tableColumn.identifier isEqualToString:@"ParentsColumn"] )
+    {
+        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+//        NSLog(@"in the PARENTS column! value set: %@",stacksDoc.locusData.locusId);
+        return cellView;
+    }
+    else
+    if( [tableColumn.identifier isEqualToString:@"ProgenyColumn"] )
+    {
+        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+        return cellView;
+    }
+    else
+    if( [tableColumn.identifier isEqualToString:@"MarkerColumn"] )
+    {
+        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+//        NSLog(@"MARKER column! value set: %@",stacksDoc.locusData.locusId);
+        return cellView;
+    }
+    else
+    if( [tableColumn.identifier isEqualToString:@"RatioColumn"] )
+    {
+        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+        return cellView;
+    }
+    else
+    if( [tableColumn.identifier isEqualToString:@"GenotypesColumn"] )
+    {
+        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+        return cellView;
+    }
+
+
     return cellView;
 }
 
@@ -122,9 +155,7 @@
     NSInteger selectedRow = [self.filesTableView selectedRow];
     if(selectedRow >= 0 && self.stacksDocuments.count > selectedRow){
         NSString *key = [NSString stringWithFormat:@"%d",selectedRow];
-//        StacksDocument *stacksDocument = [self.data objectAtIndex:key];
         StacksDocument *stacksDocument = [self.stacksDocuments objectForKey:key];
-//        StacksDocument *stacksDocument = [self.data objectAtIndex:selectedRow];
         return stacksDocument;
     }
     return nil ;
