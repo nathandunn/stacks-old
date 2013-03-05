@@ -25,21 +25,9 @@
 
     NSString *examplePath = @"/tmp/stacks_tut/";
     NSMutableDictionary *geneDocs = [self.loader loadLoci:examplePath];
-//    NSMutableDictionary *genotypes = [self.loader loadGenotypes:examplePath withLoci:geneDocs];
-
-    // on each call of the genotypes . . . the similarly linked genotype will also be linked
-//    NSLog(@"number of genotypes %d",[genotypes count]);
-
-//        load
-//    NSMutableArray *geneDocs;
-
 
     self.masterViewController.stacksDocuments = geneDocs;
     [self.masterViewController showWindow:self];
-
-    // 2. Add the view controller to the Window's content view
-//    [self.contentView addSubview:self.masterViewController.view];
-//    masterViewController.view.frame = ((NSView*)self.window.contentView).bounds;
 
 }
 

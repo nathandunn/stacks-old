@@ -8,6 +8,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+@class StacksDocument;
+
 @interface MasterViewController : NSWindowController <NSSplitViewDelegate>{
     IBOutlet NSSplitView *verticalSplitView ;
     IBOutlet NSSplitView *horizontalSplitView ;
@@ -15,6 +17,7 @@
 }
 
 @property (strong) NSMutableDictionary *stacksDocuments;
+@property (weak) StacksDocument* selectedStacksDocument;
 
 
 @end
