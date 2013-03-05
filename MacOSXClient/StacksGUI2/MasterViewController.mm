@@ -17,9 +17,9 @@
 //@property (weak) IBOutlet NSTextField *headerField;
 //@property (weak) IBOutlet NSTextField *fastaField;
 @property (weak) IBOutlet NSTextField *locusDetail;
+@property (weak) IBOutlet NSTextField *consensusDetail;
 
-
-@property (weak) IBOutlet NSTextField *fastaField;
+//@property (weak) IBOutlet NSTextField *fastaField;
 
 @end
 
@@ -177,12 +177,12 @@
 -(void) setDetailInfo:(StacksDocument*) doc{
 
     if(doc!=nil){
-        NSString *name =@"";
-        NSString *data =@"";
-        name = doc.locusData.locusId;
-        data = doc.locusData.consensus;
-        NSString* detail = [NSString stringWithFormat:@" Locus %@ \n Consensus %@",name,data];
-        [self.locusDetail setStringValue:detail];
+        LocusView* locus = doc.locusData;
+//        NSString* detail = [NSString stringWithFormat:@" Locus %@ \n Consensus %@",locus.locusId,locus.consensus];
+        NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locus.consensus];
+//        [self.locusDetail setStringValue:detail];
+        [self.locusDetail setStringValue:locus.locusId];
+        [self.consensusDetail setAttributedStringValue:string];
     }
     else{
             [self.locusDetail setStringValue:@"Error"];
@@ -205,42 +205,3 @@
 @end
 
 
-
-//- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
-//{
-//    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
-//    if (self) {
-//        // Initialization code here.
-//    }
-//
-//    return self;
-//}
-//
-//- (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
-//
-//    // Get a new ViewCell
-//    NSTableCellView *cellView = [tableView makeViewWithIdentifier:tableColumn.identifier owner:self];
-//
-//
-//    // Since this is a single-column table view, this would not be necessary.
-//    // But it's a good practice to do it in order by remember it when a table is multicolumn.
-//    if( [tableColumn.identifier isEqualToString:@"GeneColumn"] )
-//    {
-//        StacksDocument *bugDoc = [self.data objectAtIndex:row];
-////        cellView.imageView.image = bugDoc.thumbImage;
-//        cellView.textField.stringValue = bugDoc.locusData.locusId;
-//        return cellView;
-//    }
-//    return cellView;
-//}
-//
-//-(void) loadView{
-//    [super loadView];
-//    // customzie below this line
-//}
-//
-//
-//
-//
-//
-//@end
