@@ -31,6 +31,7 @@ using std::ofstream;
 
 
 #include "LociLoader.hpp"
+#import "GenotypeEntry.h"
 
 @implementation StacksLoader {
 
@@ -71,6 +72,9 @@ using std::ofstream;
         map<int, Locus *>::iterator iter = modelMap.begin();
         DataStubber *dataStubber = [[DataStubber alloc] init];
 
+        int randomness = arc4random_uniform(20);
+        int totalGenotypes = 80+randomness ;
+
 
         while (iter != modelMap.end()) {
             NSString *sampleId = [NSString stringWithFormat:@"%d", (*iter).first];
@@ -88,6 +92,17 @@ using std::ofstream;
 
 //            NSMutableArray *generated = [dataStubber generateSnps];
             locusView.snps = [dataStubber generateSnps];
+            locusView.male = [dataStubber generateGenotype];
+            locusView.female = [dataStubber generateGenotype];
+
+            NSMutableArray *progeny = [[NSMutableArray alloc] init];
+            for (int i = 0 ; i < totalGenotypes ; i++){
+                GenotypeEntry *genotypeEntry = [dataStubber generateGenotype];
+                if(genotypeEntry){
+                [progeny addObject:genotypeEntry];
+                }
+            }
+
 
 
             StacksDocument *doc = [[StacksDocument alloc] initWithLocusView:locusView];

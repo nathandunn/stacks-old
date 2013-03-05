@@ -27,13 +27,22 @@
     return self;
 }
 
-@synthesize locusId;
-@synthesize consensus;
-@synthesize marker;
-@synthesize genotypes;
-@synthesize matchingParents;
-@synthesize progeny;
-@synthesize ratio;
-@synthesize snps;
+//@synthesize locusId;
+//@synthesize consensus;
+//@synthesize marker;
+//@synthesize genotypes;
+//@synthesize progeny;
+//@synthesize ratio;
+//@synthesize snps;
 
+- (NSInteger)matchingParents {
+    NSInteger count = 0;
+    if (_male) {
+        ++count;
+    }
+    if (_female) {
+        ++count;
+    }
+    return count;
+}
 @end
