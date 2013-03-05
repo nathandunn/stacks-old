@@ -19,6 +19,6 @@
 
 //@property (assign) IBOutlet NSWindow *window;
 @property (nonatomic,strong) IBOutlet MasterViewController *masterViewController;
-@property (nonatomic,strong) IBOutlet StacksLoader *loader;
+@property (nonatomic,strong) StacksLoader *loader;
 
 @end

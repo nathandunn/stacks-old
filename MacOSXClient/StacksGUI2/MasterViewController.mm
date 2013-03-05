@@ -9,11 +9,16 @@
 #import "MasterViewController.h"
 #import "StacksDocument.h"
 #import "LocusView.h"
+#import "AppDelegate.h"
 
 @interface MasterViewController ()
 
 @property (weak) IBOutlet NSTableView *filesTableView;
-@property (weak) IBOutlet NSTextField *headerField;
+//@property (weak) IBOutlet NSTextField *headerField;
+//@property (weak) IBOutlet NSTextField *fastaField;
+@property (weak) IBOutlet NSTextField *locusDetail;
+
+
 @property (weak) IBOutlet NSTextField *fastaField;
 
 @end
@@ -170,17 +175,21 @@
 }
 
 -(void) setDetailInfo:(StacksDocument*) doc{
-    NSString *name =@"";
-    NSString *data =@"";
 
     if(doc!=nil){
+        NSString *name =@"";
+        NSString *data =@"";
         name = doc.locusData.locusId;
         data = doc.locusData.consensus;
+        NSString* detail = [NSString stringWithFormat:@" Locus %@ \n Consensus %@",name,data];
+        [self.locusDetail setStringValue:detail];
     }
+    else{
+            [self.locusDetail setStringValue:@"Error"];
+    }
+    
+    
 
-//    [self.testField setStringValue:test];
-    [self.headerField setStringValue:name];
-    [self.fastaField setStringValue:data];
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification
