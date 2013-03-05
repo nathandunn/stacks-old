@@ -34,6 +34,6 @@
 @synthesize matchingParents;
 @synthesize progeny;
 @synthesize ratio;
-@synthesize snp;
+@synthesize snps;
 
 @end

@@ -33,6 +33,7 @@
 		63D53FE52E358257C3582A3D /* StacksView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5320C33B677602C381333 /* StacksView.m */; };
 		6B4D21EC16DAA75A008D971F /* kmers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4D21EA16DAA75A008D971F /* kmers.cc */; };
 		6B4E1C2A16E306DC0058A86E /* locus.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4E1C2916E306DC0058A86E /* locus.cc */; };
+		D793C6B078CD3756AADE640E /* DataStubber.mm in Sources */ = {isa = PBXBuildFile; fileRef = D793C265DCCA050C662CEE0D /* DataStubber.mm */; };
 		D793CCC30AA9AF345061AC72 /* StacksLoader.mm in Sources */ = {isa = PBXBuildFile; fileRef = D793C114FCF6912D8351BD0A /* StacksLoader.mm */; };
 /* End PBXBuildFile section */
 
@@ -112,7 +113,9 @@
 		6B4E1C2816E303220058A86E /* locus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = locus.h; path = ../../src/locus.h; sourceTree = "<group>"; };
 		6B4E1C2916E306DC0058A86E /* locus.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = locus.cc; path = ../../src/locus.cc; sourceTree = "<group>"; };
 		D793C114FCF6912D8351BD0A /* StacksLoader.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = StacksLoader.mm; sourceTree = "<group>"; };
+		D793C265DCCA050C662CEE0D /* DataStubber.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DataStubber.mm; sourceTree = "<group>"; };
 		D793C629FFC307E2C8B3A9BD /* StacksLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksLoader.h; sourceTree = "<group>"; };
+		D793CD806CC4024FF02F6545 /* DataStubber.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DataStubber.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -267,6 +270,8 @@
 				14B4DDAE16C97C0400317EB3 /* MasterViewController.h */,
 				14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */,
 				14B4DDB016C97C0400317EB3 /* MasterViewController.xib */,
+				D793C265DCCA050C662CEE0D /* DataStubber.mm */,
+				D793CD806CC4024FF02F6545 /* DataStubber.h */,
 			);
 			name = GUI;
 			sourceTree = "<group>";
@@ -423,6 +428,7 @@
 				D793CCC30AA9AF345061AC72 /* StacksLoader.mm in Sources */,
 				6B4E1C2A16E306DC0058A86E /* locus.cc in Sources */,
 				63D53037916A7D22630386CC /* LociLoader.cpp in Sources */,
+				D793C6B078CD3756AADE640E /* DataStubber.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
