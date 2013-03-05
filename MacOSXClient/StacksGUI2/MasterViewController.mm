@@ -9,7 +9,7 @@
 #import "MasterViewController.h"
 #import "StacksDocument.h"
 #import "LocusView.h"
-#import "AppDelegate.h"
+
 
 @interface MasterViewController ()
 
@@ -178,9 +178,24 @@
 
     if(doc!=nil){
         LocusView* locus = doc.locusData;
-//        NSString* detail = [NSString stringWithFormat:@" Locus %@ \n Consensus %@",locus.locusId,locus.consensus];
         NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locus.consensus];
-//        [self.locusDetail setStringValue:detail];
+        
+//        NSMutableArray* snps = locus.snps;
+        
+        NSRange selectedRange = NSMakeRange(12,1) ;
+        
+        [string beginEditing];
+
+        [NSFont boldSystemFontOfSize:10.0];
+
+        NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                    [NSColor blueColor], NSForegroundColorAttributeName,
+                                    [NSColor grayColor], NSBackgroundColorAttributeName,
+                                    [NSFont boldSystemFontOfSize:14.0], NSFontAttributeName,
+                                    nil];
+        [string setAttributes:attributes range:selectedRange];
+        
+        [string endEditing];
         [self.locusDetail setStringValue:locus.locusId];
         [self.consensusDetail setAttributedStringValue:string];
     }
