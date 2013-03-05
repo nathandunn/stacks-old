@@ -105,7 +105,13 @@
     else
     if( [tableColumn.identifier isEqualToString:@"SnpColumn"] )
     {
-        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+        NSMutableArray *snps = stacksDoc.locusData.snps;
+        if([snps count]>0){
+            cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%dnuc]",[snps count]];
+        }
+        else{
+            cellView.textField.stringValue = @"None";
+        }
         return cellView;
     }
     else

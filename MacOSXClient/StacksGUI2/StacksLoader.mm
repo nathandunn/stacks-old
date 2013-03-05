@@ -13,18 +13,21 @@
 
 
 #include <fstream>
+
 using std::ifstream;
 using std::ofstream;
+
 #include "PopSum.h"
 
 #include <dirent.h>
-
+#include <stdlib.h>
 
 
 #import "GenotypeView.h"
 #import "LocusView.h"
 #import "StacksDocument.h"
 #import "StacksLoader.h"
+#import "DataStubber.h"
 
 
 #include "LociLoader.hpp"
@@ -66,6 +69,8 @@ using std::ofstream;
         stackDocuments = [[NSMutableDictionary alloc] initWithCapacity:modelMap.size()];
 
         map<int, Locus *>::iterator iter = modelMap.begin();
+        DataStubber *dataStubber = [[DataStubber alloc] init];
+
 
         while (iter != modelMap.end()) {
             NSString *sampleId = [NSString stringWithFormat:@"%d", (*iter).first];
@@ -81,6 +86,8 @@ using std::ofstream;
 
             // rest of stacksDocuments comes from gentypes . . .  crapola
 
+//            NSMutableArray *generated = [dataStubber generateSnps];
+            locusView.snps = [dataStubber generateSnps];
 
 
             StacksDocument *doc = [[StacksDocument alloc] initWithLocusView:locusView];
@@ -127,12 +134,12 @@ using std::ofstream;
 
     vector<pair<int, string> > files;
 //    map<int, pair<int, int> > pop_indexes;
-    string in_path = [path UTF8String ];
+    string in_path = [path UTF8String];
 
 //    if (!populationLoader->build_file_list([path UTF8String] ,files, pop_indexes)){
 //        exit(1);
 //    }
-    uint   pos;
+    uint pos;
     string file;
     struct dirent *direntry;
 
@@ -145,7 +152,7 @@ using std::ofstream;
 
 
     while ((direntry = readdir(dir)) != NULL) {
-        cout << "reading directory!!!" << endl ;
+        cout << "reading directory!!!" << endl;
         file = direntry->d_name;
 
         if (file == "." || file == "..")
@@ -160,8 +167,8 @@ using std::ofstream;
     }
 
 
-    cout << "done reading directory!!" << endl ;
-    cout << "files.size() " << file.size()<< endl ;
+    cout << "done reading directory!!" << endl;
+    cout << "files.size() " << file.size() << endl;
 
 
     for (uint i = 0; i < files.size(); i++) {
@@ -194,7 +201,7 @@ using std::ofstream;
 
     map<int, CSLocus *>::iterator it;
     map<int, ModRes *>::iterator mit;
-    Datum   *d;
+    Datum *d;
     CSLocus *loc;
 
     // need to load the genotypes in order to get the markers . . .
@@ -224,8 +231,8 @@ using std::ofstream;
                             << "; likely IDs were mismatched when running pipeline.\n";
                     exit(0);
                 }
-                d->len   = strlen(modres[d->id]->model);
-                d->model = new char[d->len + 1];
+                d->len = strlen(modres[d->id]->model);
+                d->model = new char [d->len + 1];
                 strcpy(d->model, modres[d->id]->model);
             }
         }
@@ -270,7 +277,7 @@ using std::ofstream;
 
     //
     // Idenitfy polymorphic loci, tabulate haplotypes present.
-    LociLoader* lociLoader = new LociLoader();
+    LociLoader *lociLoader = new LociLoader();
     lociLoader->tabulate_haplotypes(catalog, pmap);
 
 
@@ -299,9 +306,9 @@ using std::ofstream;
 
 //    exit(0);
 
-    NSLog(@"loci size %d",[loci count]);
-    for (id key in [loci allKeys]){
-        NSLog(@"%@ - %@",key,[loci objectForKey:key]);
+    NSLog(@"loci size %d", [loci count]);
+    for (id key in [loci allKeys]) {
+        NSLog(@"%@ - %@", key, [loci objectForKey:key]);
 
     }
 
@@ -315,16 +322,16 @@ using std::ofstream;
 
 //        [returnArray addObject:genotypeView];
         NSString *key = [NSString stringWithFormat:@"%d", iterator->first];
-        NSLog(@"key %@",key);
+        NSLog(@"key %@", key);
 
-        StacksDocument *stacksDocument= [loci objectForKey:key];
+        StacksDocument *stacksDocument = [loci objectForKey:key];
         LocusView *locusView = stacksDocument.locusData;
         NSString *markerString = [NSString stringWithUTF8String:locus->marker.c_str()];
 //        cout << "locus model: "<< locus->model << endl ;
-        cout << "locus values marker[" << locus->marker << "] ann[" << locus->annotation << "] con[" << locus->con << "] " << endl ;
-        cout << "f ["<< locus->f << "] sample[" << locus->sample_id << "]" << endl ;
+        cout << "locus values marker[" << locus->marker << "] ann[" << locus->annotation << "] con[" << locus->con << "] " << endl;
+        cout << "f [" << locus->f << "] sample[" << locus->sample_id << "]" << endl;
         NSLog(@"markerString [%@]", markerString);
-        if (markerString!= Nil && markerString.length > 0) {
+        if (markerString != Nil && markerString.length > 0) {
 
             NSLog(@"marker [%@]", [NSString stringWithUTF8String:locus->marker.c_str()]);
             NSString *newMarker = [NSString stringWithUTF8String:locus->marker.c_str()];
