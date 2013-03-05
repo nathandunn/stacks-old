@@ -8,6 +8,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+@class GenotypesViewController;
+
 @interface MasterViewController : NSWindowController <NSSplitViewDelegate>{
     IBOutlet NSSplitView *verticalSplitView ;
     IBOutlet NSSplitView *horizontalSplitView ;
@@ -15,6 +17,8 @@
 }
 
 @property (strong) NSMutableDictionary *stacksDocuments;
+@property (weak) IBOutlet NSView *genotypesView;
+@property (weak) IBOutlet GenotypesViewController *genotypesViewController;
 
 
 @end

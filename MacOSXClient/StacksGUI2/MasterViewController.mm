@@ -220,8 +220,9 @@
     [self setDetailInfo:selectedDoc];
 }
 
-
+@synthesize genotypesView;
 
 @end
+
 
 
