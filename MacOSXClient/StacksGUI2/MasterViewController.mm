@@ -114,16 +114,16 @@
         }
         return cellView;
     }
-    else
-    if( [tableColumn.identifier isEqualToString:@"ConsensusColumn"] )
-    {
-        cellView.textField.stringValue = stacksDoc.locusData.locusId;
-        return cellView;
-    }
+//    else
+//    if( [tableColumn.identifier isEqualToString:@"ConsensusColumn"] )
+//    {
+//        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+//        return cellView;
+//    }
     else
     if( [tableColumn.identifier isEqualToString:@"ParentsColumn"] )
     {
-        cellView.textField.stringValue = stacksDoc.locusData.locusId;
+        cellView.textField.stringValue = [NSString stringWithFormat:@"%d",[stacksDoc.locusData matchingParents]];
 //        NSLog(@"in the PARENTS column! value set: %@",stacksDoc.locusData.locusId);
         return cellView;
     }
