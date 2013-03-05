@@ -447,7 +447,7 @@
 																		<object class="NSTableView" id="505885802">
 																			<reference key="NSNextResponder" ref="251132264"/>
 																			<int key="NSvFlags">256</int>
-																			<string key="NSFrameSize">{898, 282}</string>
+																			<string key="NSFrameSize">{898, 228}</string>
 																			<reference key="NSSuperview" ref="251132264"/>
 																			<reference key="NSWindow"/>
 																			<reference key="NSNextKeyView" ref="437181450"/>
@@ -740,7 +740,7 @@
 																			<int key="NSTableViewGroupRowStyle">1</int>
 																		</object>
 																	</array>
-																	<string key="NSFrame">{{1, 1}, {863, 282}}</string>
+																	<string key="NSFrame">{{1, 1}, {863, 228}}</string>
 																	<reference key="NSSuperview" ref="777565625"/>
 																	<reference key="NSWindow"/>
 																	<reference key="NSNextKeyView" ref="505885802"/>
@@ -776,7 +776,7 @@
 																	<double key="NSPercent">0.46325167037861914</double>
 																</object>
 															</array>
-															<string key="NSFrame">{{1, -5}, {865, 284}}</string>
+															<string key="NSFrame">{{1, 0}, {865, 230}}</string>
 															<reference key="NSSuperview" ref="1054248441"/>
 															<reference key="NSWindow"/>
 															<reference key="NSNextKeyView" ref="841100113"/>
@@ -787,11 +787,37 @@
 															<reference key="NSContentView" ref="251132264"/>
 															<bytes key="NSScrollAmts">QSAAAEEgAABBmAAAQZgAAA</bytes>
 														</object>
+														<object class="NSTextField" id="882708716">
+															<reference key="NSNextResponder" ref="1054248441"/>
+															<int key="NSvFlags">266</int>
+															<string key="NSFrame">{{-3, 228}, {872, 48}}</string>
+															<reference key="NSSuperview" ref="1054248441"/>
+															<reference key="NSWindow"/>
+															<reference key="NSNextKeyView" ref="777565625"/>
+															<string key="NSReuseIdentifierKey">_NS:9</string>
+															<string key="NSAntiCompressionPriority">{250, 750}</string>
+															<bool key="NSEnabled">YES</bool>
+															<object class="NSTextFieldCell" key="NSCell" id="677400744">
+																<int key="NSCellFlags">69206017</int>
+																<int key="NSCellFlags2">1074073600</int>
+																<string key="NSContents"/>
+																<object class="NSFont" key="NSSupport">
+																	<string key="NSName">LucidaGrande</string>
+																	<double key="NSSize">13</double>
+																	<int key="NSfFlags">16</int>
+																</object>
+																<string key="NSCellIdentifier">_NS:9</string>
+																<reference key="NSControlView" ref="882708716"/>
+																<bool key="NSDrawsBackground">YES</bool>
+																<reference key="NSBackgroundColor" ref="442015106"/>
+																<reference key="NSTextColor" ref="932315312"/>
+															</object>
+														</object>
 													</array>
 													<string key="NSFrameSize">{866, 319}</string>
 													<reference key="NSSuperview" ref="1033176852"/>
 													<reference key="NSWindow"/>
-													<reference key="NSNextKeyView" ref="777565625"/>
+													<reference key="NSNextKeyView" ref="882708716"/>
 													<string key="NSReuseIdentifierKey">_NS:11</string>
 													<string key="NSClassName">NSView</string>
 												</object>
@@ -987,7 +1013,6 @@
 																	<string key="NSFrame">{{1, 173}, {468, 15}}</string>
 																	<reference key="NSSuperview" ref="263850351"/>
 																	<reference key="NSWindow"/>
-																	<reference key="NSNextKeyView"/>
 																	<string key="NSReuseIdentifierKey">_NS:60</string>
 																	<int key="NSsFlags">1</int>
 																	<reference key="NSTarget" ref="263850351"/>
@@ -1086,6 +1111,22 @@
 						<reference key="destination" ref="645924114"/>
 					</object>
 					<int key="connectionID">488</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBOutletConnection" key="connection">
+						<string key="label">locusDetail</string>
+						<reference key="source" ref="1001"/>
+						<reference key="destination" ref="882708716"/>
+					</object>
+					<int key="connectionID">508</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBOutletConnection" key="connection">
+						<string key="label">filesTableView</string>
+						<reference key="source" ref="1001"/>
+						<reference key="destination" ref="583026923"/>
+					</object>
+					<int key="connectionID">509</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBOutletConnection" key="connection">
@@ -1631,6 +1672,7 @@
 						<reference key="object" ref="1054248441"/>
 						<array class="NSMutableArray" key="children">
 							<reference ref="777565625"/>
+							<reference ref="882708716"/>
 						</array>
 						<reference key="parent" ref="1033176852"/>
 					</object>
@@ -1973,6 +2015,19 @@
 						<reference key="object" ref="525045957"/>
 						<reference key="parent" ref="741660665"/>
 					</object>
+					<object class="IBObjectRecord">
+						<int key="objectID">504</int>
+						<reference key="object" ref="882708716"/>
+						<array class="NSMutableArray" key="children">
+							<reference ref="677400744"/>
+						</array>
+						<reference key="parent" ref="1054248441"/>
+					</object>
+					<object class="IBObjectRecord">
+						<int key="objectID">505</int>
+						<reference key="object" ref="677400744"/>
+						<reference key="parent" ref="882708716"/>
+					</object>
 				</array>
 			</object>
 			<dictionary class="NSMutableDictionary" key="flattenedProperties">
@@ -2096,12 +2151,15 @@
 				<string key="500.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="501.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="503.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
+				<string key="504.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
+				<string key="504.userInterfaceItemIdentifier">SequenceDetails</string>
+				<string key="505.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 			</dictionary>
 			<dictionary class="NSMutableDictionary" key="unlocalizedProperties"/>
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">503</int>
+			<int key="maxID">509</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">
@@ -2110,7 +2168,9 @@
 					<string key="superclassName">NSWindowController</string>
 					<dictionary class="NSMutableDictionary" key="outlets">
 						<string key="dividerHandleView">NSView</string>
+						<string key="filesTableView">NSTableView</string>
 						<string key="horizontalSplitView">NSSplitView</string>
+						<string key="locusDetail">NSTextField</string>
 						<string key="verticalSplitView">NSSplitView</string>
 					</dictionary>
 					<dictionary class="NSMutableDictionary" key="toOneOutletInfosByName">
@@ -2118,9 +2178,17 @@
 							<string key="name">dividerHandleView</string>
 							<string key="candidateClassName">NSView</string>
 						</object>
+						<object class="IBToOneOutletInfo" key="filesTableView">
+							<string key="name">filesTableView</string>
+							<string key="candidateClassName">NSTableView</string>
+						</object>
 						<object class="IBToOneOutletInfo" key="horizontalSplitView">
 							<string key="name">horizontalSplitView</string>
 							<string key="candidateClassName">NSSplitView</string>
+						</object>
+						<object class="IBToOneOutletInfo" key="locusDetail">
+							<string key="name">locusDetail</string>
+							<string key="candidateClassName">NSTextField</string>
 						</object>
 						<object class="IBToOneOutletInfo" key="verticalSplitView">
 							<string key="name">verticalSplitView</string>
