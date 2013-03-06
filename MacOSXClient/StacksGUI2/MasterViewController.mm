@@ -9,15 +9,16 @@
 #import "MasterViewController.h"
 #import "StacksDocument.h"
 #import "LocusView.h"
+#import "GenotypeEntry.h"
 //#import "stacks.h"
 
 
 @interface MasterViewController ()
 
-@property (weak) IBOutlet NSTableView *filesTableView;
-@property (weak) IBOutlet NSTableView* genotypeTableView;
-@property (weak) IBOutlet NSTextField *locusDetail;
-@property (weak) IBOutlet NSTextField *consensusDetail;
+@property(weak) IBOutlet NSTableView *filesTableView;
+@property(weak) IBOutlet NSTableView *genotypeTableView;
+@property(weak) IBOutlet NSTextField *locusDetail;
+@property(weak) IBOutlet NSTextField *consensusDetail;
 
 @end
 
@@ -27,20 +28,17 @@
 // -------------------------------------------------------------------------------
 //	awakeFromNib:
 // -------------------------------------------------------------------------------
-- (void)awakeFromNib
-{
-    [verticalSplitView setDelegate:self];	// we want a chance to affect the vertical split view coverage
+- (void)awakeFromNib {
+    [verticalSplitView setDelegate:self];    // we want a chance to affect the vertical split view coverage
 }
 
 // -------------------------------------------------------------------------------
 //	splitView:effectiveRect:effectiveRect:forDrawnRect:ofDividerAtIndex
 // -------------------------------------------------------------------------------
-- (NSRect)splitView:(NSSplitView *)splitView effectiveRect:(NSRect)proposedEffectiveRect forDrawnRect:(NSRect)drawnRect ofDividerAtIndex:(NSInteger)dividerIndex
-{
+- (NSRect)splitView:(NSSplitView *)splitView effectiveRect:(NSRect)proposedEffectiveRect forDrawnRect:(NSRect)drawnRect ofDividerAtIndex:(NSInteger)dividerIndex {
     NSRect effectiveRect = drawnRect;
 
-    if (splitView == verticalSplitView)
-    {
+    if (splitView == verticalSplitView) {
         // don't steal as much from the scroll bar as NSSplitView normally would
         effectiveRect.origin.x -= 2.0;
         effectiveRect.size.width += 6.0;
@@ -53,8 +51,7 @@
 // -------------------------------------------------------------------------------
 //	splitView:additionalEffectiveRectOfDividerAtIndex:dividerIndex:
 // -------------------------------------------------------------------------------
-- (NSRect)splitView:(NSSplitView *)splitView additionalEffectiveRectOfDividerAtIndex:(NSInteger)dividerIndex
-{
+- (NSRect)splitView:(NSSplitView *)splitView additionalEffectiveRectOfDividerAtIndex:(NSInteger)dividerIndex {
     // we have a divider handle next to one of the split views in the window
     if (splitView == verticalSplitView)
         return [dividerHandleView convertRect:[dividerHandleView bounds] toView:splitView];
@@ -65,16 +62,13 @@
 // -------------------------------------------------------------------------------
 //	constrainMinCoordinate:proposedCoordinate:index
 // -------------------------------------------------------------------------------
-- (CGFloat)splitView:(NSSplitView *)splitView constrainMinCoordinate:(CGFloat)proposedCoordinate ofSubviewAt:(NSInteger)index
-{
+- (CGFloat)splitView:(NSSplitView *)splitView constrainMinCoordinate:(CGFloat)proposedCoordinate ofSubviewAt:(NSInteger)index {
     CGFloat constrainedCoordinate = proposedCoordinate;
-    if (splitView == verticalSplitView)
-    {
+    if (splitView == verticalSplitView) {
         // the primary vertical split view is asking for a constrained size
         constrainedCoordinate = proposedCoordinate + 120.0;
     }
-    else if (splitView == horizontalSplitView)
-    {
+    else if (splitView == horizontalSplitView) {
         // the horizontal split view between mailboxes and activity view
         constrainedCoordinate = proposedCoordinate + 200.0;
     }
@@ -83,37 +77,37 @@
 }
 
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
-    if([[tableView identifier] isEqualToString:@"GenotypeTableView"]){
-        if(self.selectedStacksDocument!=nil ){
-            LocusView* locusView = self.selectedStacksDocument.locusData;
+    if ([[tableView identifier] isEqualToString:@"GenotypeTableView"]) {
+        if (self.selectedStacksDocument != nil) {
+            LocusView *locusView = self.selectedStacksDocument.locusData;
             NSInteger count = [locusView genotypes];
-            NSInteger rows = count / 10 ;
-            if(count%10>0){
-                rows++ ;
+            NSInteger rows = count / 10;
+            if (count % 10 > 0) {
+                rows++;
             }
-            return rows ;
-            
+            return rows;
+
         }
-        return 0  ;
+        return 0;
     }
-    else{
+    else {
         return [self.stacksDocuments count];
     }
 }
 
 - (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
-    
+
 
     // Get a new ViewCell
     NSTableCellView *cellView = [tableView makeViewWithIdentifier:tableColumn.identifier owner:self];
-    
-    if([[tableView identifier] isEqualToString:@"GenotypeTableView"]){
+
+    if ([[tableView identifier] isEqualToString:@"GenotypeTableView"]) {
 //        NSLog(@"is a genotype table with column identifier %@",[tableColumn identifier]);
-        return [self handleGenotypesTable:(NSString*) tableColumn.identifier row:(NSInteger) row cell:(NSTableCellView*) cellView];
+        return [self handleGenotypesTable:(NSString *) tableColumn.identifier row:(NSInteger) row cell:(NSTableCellView *) cellView];
     }
-    else{
+    else {
         // we want data for the row . . . .
-        NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator)^(id obj1,id obj2){
+        NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
             return [obj1 integerValue] - [obj2 integerValue];
         }];
         NSString *key = [sortedKeys objectAtIndexedSubscript:row];
@@ -121,46 +115,33 @@
 
         // Since this is a single-column table view, this would not be necessary.
         // But it's a good practice to do it in order by remember it when a table is multicolumn.
-        if( [tableColumn.identifier isEqualToString:@"IdColumn"] )
-        {
+        if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
             cellView.textField.stringValue = stacksDoc.locusData.locusId;
         }
-        else
-        if( [tableColumn.identifier isEqualToString:@"SnpColumn"] )
-        {
+        else if ([tableColumn.identifier isEqualToString:@"SnpColumn"]) {
             NSMutableArray *snps = stacksDoc.locusData.snps;
-            if([snps count]>0){
-                cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%dnuc]",[snps count]];
+            if ([snps count] > 0) {
+                cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%dnuc]", [snps count]];
             }
-            else{
+            else {
                 cellView.textField.stringValue = @"None";
             }
         }
-        else
-        if( [tableColumn.identifier isEqualToString:@"ParentsColumn"] )
-        {
+        else if ([tableColumn.identifier isEqualToString:@"ParentsColumn"]) {
             cellView.textField.integerValue = [stacksDoc.locusData matchingParents];
         }
-        else
-        if( [tableColumn.identifier isEqualToString:@"ProgenyColumn"] )
-        {
+        else if ([tableColumn.identifier isEqualToString:@"ProgenyColumn"]) {
             NSUInteger count = [[stacksDoc.locusData progeny] count];
-            cellView.textField.stringValue = [NSString stringWithFormat:@"%d / %d",count,count];
+            cellView.textField.stringValue = [NSString stringWithFormat:@"%d / %d", count, count];
         }
-        else
-        if( [tableColumn.identifier isEqualToString:@"MarkerColumn"] )
-        {
+        else if ([tableColumn.identifier isEqualToString:@"MarkerColumn"]) {
             cellView.textField.stringValue = stacksDoc.locusData.marker;
         }
-        else
-        if( [tableColumn.identifier isEqualToString:@"RatioColumn"] )
-        {
+        else if ([tableColumn.identifier isEqualToString:@"RatioColumn"]) {
             cellView.textField.stringValue = @"aa: 45 (51.7%) bb:42 (48.3%)";
         }
-        else
-        if( [tableColumn.identifier isEqualToString:@"GenotypesColumn"] )
-        {
-            cellView.textField.integerValue = [stacksDoc.locusData genotypes] ;
+        else if ([tableColumn.identifier isEqualToString:@"GenotypesColumn"]) {
+            cellView.textField.integerValue = [stacksDoc.locusData genotypes];
         }
 
         return cellView;
@@ -169,28 +150,97 @@
 
 }
 
-- (NSTableCellView*) handleGenotypesTable:(NSString *)column row:(NSInteger)row cell:(NSTableCellView *)cellView {
+- (NSTableCellView *)handleGenotypesTable:(NSString *)column row:(NSInteger)row cell:(NSTableCellView *)cellView {
 //    NSLog(@"handling the genotypes table %@",column);
-    if( [column isEqualToString:@"Genotypes1"] )
-    {
-        cellView.textField.stringValue = @"asdfasdf";
+    if (self.selectedStacksDocument != nil) {
+
+        LocusView *locusView = self.selectedStacksDocument.locusData;
+        NSInteger parentCount = locusView.matchingParents;
+        NSInteger progenyCount = locusView.genotypes;
+        NSInteger totalCount = parentCount + progenyCount;
+        NSInteger totalColumnCount = 10;
+        NSInteger totalRowCount = totalCount / totalColumnCount;
+        NSInteger remainderColumns = totalCount % totalColumnCount;
+        if (remainderColumns > 0) {
+            ++totalRowCount;
+        }
+
+
+        // turn the row / column into an index
+        NSInteger columnIndex = [[column substringFromIndex:9] integerValue];
+        NSInteger progenyIndex = row * totalColumnCount + columnIndex - parentCount ;
+
+        // if a male
+        if (row == 0 && [column isEqualToString:@"Genotypes1"] && locusView.male != nil) {
+            GenotypeEntry *male = locusView.male;
+            NSString *maleString = [male render];
+            if ([maleString length] > 0) {
+                cellView.textField.stringValue = [NSString stringWithFormat:@"male - %@", [male render]];
+            }
+            else {
+                cellView.textField.stringValue = @"";
+            }
+        }
+        else if (row == 0 && [column isEqualToString:@"Genotypes1"] && locusView.male == nil && locusView.female != nil) {
+            GenotypeEntry *female = locusView.female;
+            NSString *femaleString = [female render];
+            if ([femaleString length] > 0) {
+                cellView.textField.stringValue = [NSString stringWithFormat:@"female - %@", [female render]];
+            }
+            else {
+                cellView.textField.stringValue = @"";
+            }
+        }
+        else if (row == 0 && [column isEqualToString:@"Genotypes2"] && locusView.male != nil && locusView.female != nil) {
+            GenotypeEntry *female = locusView.female;
+            NSString *femaleString = [female render];
+            if ([femaleString length] > 0) {
+                cellView.textField.stringValue = [NSString stringWithFormat:@"female - %@", [female render]];
+            }
+            else {
+                cellView.textField.stringValue = @"";
+            }
+        }
+        else
+        if (progenyCount>progenyIndex) {
+            GenotypeEntry *genotypeEntry = [locusView.progeny objectAtIndex:progenyIndex];
+//            cellView.textField.stringValue = [NSString stringWithFormat:@"Progeny %d %@", progenyIndex,[genotypeEntry render]];
+            cellView.textField.stringValue = [NSString stringWithFormat:@"%d %@", progenyIndex,[genotypeEntry render]];
+        }
+        else {
+            cellView.textField.stringValue = @"";
+        }
+//        GenotypeEntry* male = self.selectedStacksDocument.locusData.male;
+//        GenotypeEntry* female = self.selectedStacksDocument.locusData.female ;
+//        NSMutableArray* progeny = self.selectedStacksDocument.locusData.progeny;
+//        
+//        if( [column isEqualToString:@"Genotypes1"] )
+//        {
+//            cellView.textField.stringValue = @"asdfasdf";
+//        }
+//        else
+//        if( [column isEqualToString:@"Genotypes2"] )
+//        {
+//            cellView.textField.stringValue = @"gggg";
+//        }
+//        else{
+//            cellView.textField.stringValue = @"dog!";
+//        }
+//        
+
+
     }
-    else
-    if( [column isEqualToString:@"Genotypes2"] )
-    {
-        cellView.textField.stringValue = @"gggg";
-    }
-    else{
-        cellView.textField.stringValue = @"dog!";
+    else {
+        cellView.textField.stringValue = @"";
     }
 
-    return cellView ;
+    return cellView;
 }
 
--(StacksDocument*) selectedDoc{
-    
+- (StacksDocument *)selectedDoc {
+
     NSInteger selectedRow = [self.filesTableView selectedRow];
-    NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator)^(id obj1,id obj2){
+    NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
         return [obj1 integerValue] - [obj2 integerValue];
     }];
     NSString *key = [sortedKeys objectAtIndexedSubscript:selectedRow];
@@ -198,10 +248,10 @@
     return stacksDocument;
 }
 
--(void) setDetailInfo:(StacksDocument*) doc{
+- (void)setDetailInfo:(StacksDocument *)doc {
 
-    if(doc!=nil){
-        LocusView* locus = doc.locusData;
+    if (doc != nil) {
+        LocusView *locus = doc.locusData;
         NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locus.consensus];
 
         // TODOL need to store snps correctly . . . as SnpsView or as vector<SNP>:: in LocusView
@@ -209,30 +259,30 @@
 //        for(int i =0 ; i < [snps count]; i++){
 //           SNP *snp = [[snps objectAtIndex:i] pointerValue];
 //        }
-        
-        NSRange selectedRange = NSMakeRange(12,1) ;
-        
+
+        NSRange selectedRange = NSMakeRange(12, 1);
+
         [string beginEditing];
 
         [NSFont boldSystemFontOfSize:10.0];
 
         NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                                    [NSColor blueColor], NSForegroundColorAttributeName,
-                                    [NSColor grayColor], NSBackgroundColorAttributeName,
-                                    [NSFont boldSystemFontOfSize:14.0], NSFontAttributeName,
-                                    nil];
+                [NSColor blueColor], NSForegroundColorAttributeName,
+                [NSColor grayColor], NSBackgroundColorAttributeName,
+                [NSFont boldSystemFontOfSize:14.0], NSFontAttributeName,
+                nil];
         [string setAttributes:attributes range:selectedRange];
-        
+
         [string endEditing];
         [self.locusDetail setStringValue:locus.locusId];
         [self.consensusDetail setAttributedStringValue:string];
-        
+
         [self.genotypeTableView reloadData];
 
     }
-    else{
-        self.selectedStacksDocument = nil  ;
-            [self.locusDetail setStringValue:@"Error"];
+    else {
+        self.selectedStacksDocument = nil ;
+        [self.locusDetail setStringValue:@"Error"];
     }
 
 
@@ -242,20 +292,18 @@
 
 }
 
-- (void)tableViewSelectionDidChange:(NSNotification *)aNotification
-{
-    NSString *tableName = [[aNotification object] identifier] ;
-    if([tableName isEqualToString:@"LocusTable"]){
+- (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
+    NSString *tableName = [[aNotification object] identifier];
+    if ([tableName isEqualToString:@"LocusTable"]) {
         self.selectedStacksDocument = [self selectedDoc];
         // Update info
         [self setDetailInfo:self.selectedStacksDocument];
     }
-    else{
-        NSLog(@"need to handle the other case ") ;
+    else {
+        NSLog(@"need to handle the other case ");
     }
-    
-}
 
+}
 
 
 @end

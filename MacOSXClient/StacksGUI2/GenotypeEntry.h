@@ -19,4 +19,5 @@
 @property NSInteger  *sampleId;
 @property NSInteger  *tagId;
 
+- (NSString *)render;
 @end
