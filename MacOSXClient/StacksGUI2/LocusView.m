@@ -9,6 +9,7 @@
 #import "LocusView.h"
 #import "GenotypeView.h"
 #import "StacksView.h"
+#import "GenotypeEntry.h"
 
 @implementation LocusView
 
@@ -48,6 +49,20 @@
 
 - (NSInteger)genotypes {
     return [_progeny count];
+}
+
+- (BOOL)hasMale {
+    if (_male !=nil ){
+        return (_male.superScript!= nil || _male.subScript !=nil);
+    }
+    return FALSE;
+}
+
+- (BOOL)hasFemale {
+    if (_female !=nil ){
+        return (_female.superScript!= nil || _female.subScript !=nil);
+    }
+    return FALSE;
 }
 
 @end

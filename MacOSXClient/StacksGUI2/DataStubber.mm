@@ -38,6 +38,11 @@
         GenotypeEntry *genotypeEntry = [[GenotypeEntry alloc] init];
         genotypeEntry.superScript = [self generateLetter];
         genotypeEntry.subScript = [self generateLetter];
+        // one has to be valid .  ..
+        if(genotypeEntry.subScript==nil && genotypeEntry.superScript==nil){
+            genotypeEntry.subScript=@"T";
+        }
+
 //        genotypeEntry.sampleId=
 //        genotypeEntry.sampleId= 12;
         return genotypeEntry;
@@ -49,7 +54,7 @@
 * 50% change of creating a letter
 */
 - (NSString *)generateLetter {
-    int number = arc4random_uniform(10);
+    int number = arc4random_uniform(6);
     switch (number) {
         case 0:
             return @"T";
@@ -69,6 +74,7 @@
     for (int i = 0; i < totalGenotypes; i++) {
         GenotypeEntry *genotypeEntry = [self generateGenotype];
         if (genotypeEntry != nil) {
+            genotypeEntry.entryId=i;
             [progeny addObject:genotypeEntry];
         }
     }

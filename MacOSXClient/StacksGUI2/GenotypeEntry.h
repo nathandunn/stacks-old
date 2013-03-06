@@ -10,7 +10,7 @@
 
 @interface GenotypeEntry : NSObject
 
-@property NSInteger  *entryId ;
+@property NSInteger entryId ;
 @property NSString *type;
 @property NSString *superScript;
 @property NSString *subScript;

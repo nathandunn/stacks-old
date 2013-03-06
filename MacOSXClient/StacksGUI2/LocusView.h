@@ -42,4 +42,7 @@
 
 - (NSInteger) matchingParents;
 - (NSInteger) genotypes ;
+
+- (BOOL)hasMale;
+- (BOOL)hasFemale;
 @end

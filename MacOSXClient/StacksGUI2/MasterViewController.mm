@@ -168,65 +168,31 @@
 
         // turn the row / column into an index
         NSInteger columnIndex = [[column substringFromIndex:9] integerValue];
-        NSInteger progenyIndex = row * totalColumnCount + columnIndex - parentCount ;
+        NSInteger progenyIndex = row * totalColumnCount + columnIndex - parentCount;
 
         // if a male
-        if (row == 0 && [column isEqualToString:@"Genotypes1"] && locusView.male != nil) {
+        if (row == 0 && [column isEqualToString:@"Genotypes1"] && [locusView hasMale]) {
             GenotypeEntry *male = locusView.male;
             NSString *maleString = [male render];
-            if ([maleString length] > 0) {
-                cellView.textField.stringValue = [NSString stringWithFormat:@"male - %@", [male render]];
-            }
-            else {
-                cellView.textField.stringValue = @"";
-            }
+            cellView.textField.stringValue = [NSString stringWithFormat:@"male - %@", [male render]];
         }
-        else if (row == 0 && [column isEqualToString:@"Genotypes1"] && locusView.male == nil && locusView.female != nil) {
+        else if (row == 0 && [column isEqualToString:@"Genotypes1"] && [locusView hasFemale] && ![locusView hasMale]) {
             GenotypeEntry *female = locusView.female;
             NSString *femaleString = [female render];
-            if ([femaleString length] > 0) {
-                cellView.textField.stringValue = [NSString stringWithFormat:@"female - %@", [female render]];
-            }
-            else {
-                cellView.textField.stringValue = @"";
-            }
+            cellView.textField.stringValue = [NSString stringWithFormat:@"female - %@", [female render]];
         }
-        else if (row == 0 && [column isEqualToString:@"Genotypes2"] && locusView.male != nil && locusView.female != nil) {
+        else if (row == 0 && [column isEqualToString:@"Genotypes2"] && [locusView hasMale] && [locusView hasFemale]) {
             GenotypeEntry *female = locusView.female;
             NSString *femaleString = [female render];
-            if ([femaleString length] > 0) {
-                cellView.textField.stringValue = [NSString stringWithFormat:@"female - %@", [female render]];
-            }
-            else {
-                cellView.textField.stringValue = @"";
-            }
+            cellView.textField.stringValue = [NSString stringWithFormat:@"female - %@", [female render]];
         }
-        else
-        if (progenyCount>progenyIndex) {
+        else if (progenyCount > progenyIndex) {
             GenotypeEntry *genotypeEntry = [locusView.progeny objectAtIndex:progenyIndex];
-//            cellView.textField.stringValue = [NSString stringWithFormat:@"Progeny %d %@", progenyIndex,[genotypeEntry render]];
-            cellView.textField.stringValue = [NSString stringWithFormat:@"%d %@", progenyIndex,[genotypeEntry render]];
+            cellView.textField.stringValue = [NSString stringWithFormat:@"%d %@", genotypeEntry.entryId, [genotypeEntry render]];
         }
         else {
             cellView.textField.stringValue = @"";
         }
-//        GenotypeEntry* male = self.selectedStacksDocument.locusData.male;
-//        GenotypeEntry* female = self.selectedStacksDocument.locusData.female ;
-//        NSMutableArray* progeny = self.selectedStacksDocument.locusData.progeny;
-//        
-//        if( [column isEqualToString:@"Genotypes1"] )
-//        {
-//            cellView.textField.stringValue = @"asdfasdf";
-//        }
-//        else
-//        if( [column isEqualToString:@"Genotypes2"] )
-//        {
-//            cellView.textField.stringValue = @"gggg";
-//        }
-//        else{
-//            cellView.textField.stringValue = @"dog!";
-//        }
-//        
 
 
     }
