@@ -10,9 +10,10 @@
 
 @interface StackEntry : NSObject
 
-@property NSUInteger *entryId ;
+@property NSUInteger entryId ;
 @property NSString *relationship ;
 @property NSString *sequenceId ;
 @property NSString *sequence;
+@property NSString *block ;
 
 @end
