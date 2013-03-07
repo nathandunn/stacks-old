@@ -12,6 +12,7 @@
 #import "GenotypeEntry.h"
 #import "StacksView.h"
 #import "StacksLoader.h"
+#import "StackEntry.h"
 //#import "stacks.h"
 
 
@@ -169,10 +170,16 @@
     }
     else
     if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
-        if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
-            cellView.textField.integerValue =  3;
-
-//            cellView.textField.integerValue = [stacksDoc.locusData genotypes];
+        if(self.selectedStacks!=nil){
+            StacksView *stacksView = self.selectedStacks;
+            if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
+                if(row>2){
+                    cellView.textField.integerValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row-3] entryId];
+                }
+                else{
+                    cellView.textField.stringValue =@"";
+                }
+            }
         }
         return cellView;
     }

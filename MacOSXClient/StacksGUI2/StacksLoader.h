@@ -8,6 +8,7 @@
 #import <Foundation/Foundation.h>
 
 @class StacksView;
+//@class StackEntry;
 
 
 @interface StacksLoader : NSObject

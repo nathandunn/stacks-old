@@ -17,12 +17,13 @@
 using std::ifstream;
 using std::ofstream;
 
-#include "PopSum.h"
+//#include "PopSum.h"
 
 #include <dirent.h>
-#include <stdlib.h>
+//#include <stdlib.h>
 
 
+#import "StackEntry.h"
 #import "GenotypeView.h"
 #import "LocusView.h"
 #import "StacksDocument.h"
@@ -32,8 +33,6 @@ using std::ofstream;
 
 
 #include "LociLoader.hpp"
-#import "GenotypeEntry.h"
-#import "StacksView.h"
 
 @implementation StacksLoader {
 
@@ -397,6 +396,58 @@ using std::ofstream;
         return nil ;
     }
     StacksView *stacksView = [[StacksView alloc] init] ;
+
+    NSError *error = nil ;
+    NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error] componentsSeparatedByString:@"\n"];
+
+    if(error){
+        NSLog(@"error loading file [%@]: %@",absoluteFileName,error);
+    }
+
+    NSLog(@"START splitting");
+
+    NSMutableArray *stackEntries = [[NSMutableArray alloc] init];
+
+    NSString *line;
+    NSUInteger row =1 ;
+    for (line in fileData) {
+        NSArray *columns = [line componentsSeparatedByString:@"\t"];
+
+        if([[columns objectAtIndex:0] isEqualToString:@"0"]){
+            StackEntry *stackEntry = [[StackEntry alloc] init];
+            stackEntry.entryId = row ;
+            stackEntry.relationship = [columns objectAtIndex:6];
+            stackEntry.block = [columns objectAtIndex:7];
+            stackEntry.sequenceId = [columns objectAtIndex:8];
+            stackEntry.sequence = [columns objectAtIndex:9];
+
+            if([stackEntry.relationship isEqualToString:@"consensus"]){
+                stacksView.consensus = stackEntry;
+            }
+            else
+            if([stackEntry.relationship isEqualToString:@"model"]){
+                stacksView.model = stackEntry;
+            }
+            else{
+                ++row ;
+                [stackEntries addObject:stackEntry];
+            }
+
+//        for(column in columns){
+////            NSLog(@"entry %@",column);
+//        }
+        }
+
+
+    }
+
+    stacksView.stackEntries = stackEntries;
+    StackEntry *referenceStack = [[StackEntry alloc] init];
+    referenceStack.sequence = @"1203130120321302103210321203";
+    referenceStack.entryId = 0;
+    stacksView.reference = referenceStack;
+
+    NSLog(@"done splitting");
 
 
     return stacksView;
