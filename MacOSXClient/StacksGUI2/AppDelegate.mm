@@ -24,16 +24,10 @@
 
 
     NSString *examplePath = @"/tmp/stacks_tut/";
-    NSMutableArray *geneDocs = [self.loader loadLoci:examplePath];
-//    NSMutableArray *geneDocs;
+    NSMutableDictionary *geneDocs = [self.loader loadLoci:examplePath];
 
-
-    self.masterViewController.data = geneDocs;
+    self.masterViewController.stacksDocuments = geneDocs;
     [self.masterViewController showWindow:self];
-
-    // 2. Add the view controller to the Window's content view
-//    [self.contentView addSubview:self.masterViewController.view];
-//    masterViewController.view.frame = ((NSView*)self.window.contentView).bounds;
 
 }
 

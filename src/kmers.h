@@ -49,6 +49,7 @@ using google::sparse_hash_map;
 #endif
 
 #include "stacks.h"
+#include "locus.h"
 #include "mstack.h"
 #include "input.h"
 

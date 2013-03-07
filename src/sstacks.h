@@ -63,26 +63,9 @@ using google::sparse_hash_map;
 
 #include "kmers.h"
 #include "stacks.h"
+#include "locus.h"
 #include "sql_utilities.h"
 #include "utils.h"
-
-enum searcht {sequence, genomic_loc};
-
-//
-// Query Locus Class
-//
-class QLocus : public Locus {
- public:
-    vector<pair<int, allele_type> > matches;   // Matching tags found for the catalog. Stored as catalog ID/allele_type pair.
-
-    int add_match(int, allele_type);
-};
-
-int QLocus::add_match(int id, allele_type type) {
-    this->matches.push_back(make_pair(id, type));
-
-    return 0;
-}
 
 #ifdef HAVE_SPARSEHASH
 typedef sparse_hash_map<const char *, vector<pair<int, allele_type> >, hash_charptr, eqstr> HashMap;

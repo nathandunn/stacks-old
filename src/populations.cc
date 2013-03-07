@@ -152,7 +152,7 @@ int main (int argc, char* argv[]) {
     // Load the catalog
     //
     stringstream catalog_file;
-    map<int, CLocus *> catalog;
+    map<int, CSLocus *> catalog;
     int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
     if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
@@ -199,16 +199,16 @@ int main (int argc, char* argv[]) {
     // Create the population map
     // 
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
 
     apply_locus_constraints(catalog, pmap, pop_indexes);
 
     cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
-    map<int, CLocus *>::iterator it;
+    map<int, CSLocus *>::iterator it;
     map<int, ModRes *>::iterator mit;
-    Datum  *d;
-    CLocus *loc;
+    Datum   *d;
+    CSLocus *loc;
 
     //
     // Load the output from the SNP calling model for each individual at each locus. This
@@ -250,7 +250,7 @@ int main (int argc, char* argv[]) {
     uint pop_id, start_index, end_index;
     map<int, pair<int, int> >::iterator pit;
 
-    PopSum<CLocus> *psum = new PopSum<CLocus>(pmap->loci_cnt(), pop_indexes.size());
+    PopSum<CSLocus> *psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
     psum->initialize(pmap);
 
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
@@ -325,17 +325,17 @@ int main (int argc, char* argv[]) {
 }
 
 int
-apply_locus_constraints(map<int, CLocus *> &catalog, 
-			PopMap<CLocus> *pmap, 
+apply_locus_constraints(map<int, CSLocus *> &catalog, 
+			PopMap<CSLocus> *pmap, 
 			map<int, pair<int, int> > &pop_indexes)
 {
     uint pop_id, start_index, end_index;
-    CLocus *loc;
-    Datum **d;
+    CSLocus *loc;
+    Datum  **d;
 
     if (sample_limit == 0 && population_limit == 0 && min_stack_depth == 0) return 0;
 
-    map<int, CLocus *>::iterator it;
+    map<int, CSLocus *>::iterator it;
     map<int, pair<int, int> >::iterator pit;
 
     uint pop_cnt   = pop_indexes.size();
@@ -465,11 +465,11 @@ apply_locus_constraints(map<int, CLocus *> &catalog,
 }
 
 int 
-reduce_catalog(map<int, CLocus *> &catalog, set<int> &whitelist, set<int> &blacklist) 
+reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blacklist) 
 {
-    map<int, CLocus *> list;
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
+    map<int, CSLocus *> list;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
 
     if (whitelist.size() == 0 && blacklist.size() == 0) 
 	return 0;
@@ -491,10 +491,10 @@ reduce_catalog(map<int, CLocus *> &catalog, set<int> &whitelist, set<int> &black
 }
 
 bool 
-order_unordered_loci(map<int, CLocus *> &catalog) 
+order_unordered_loci(map<int, CSLocus *> &catalog) 
 {
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
     set<string> chrs;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
@@ -524,11 +524,11 @@ order_unordered_loci(map<int, CLocus *> &catalog)
     return false;
 }
 
-int tabulate_haplotypes(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
-    map<int, CLocus *>::iterator it;
+int tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
+    map<int, CSLocus *>::iterator it;
     vector<char *>::iterator hit;
     Datum  **d;
-    CLocus  *loc;
+    CSLocus *loc;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
@@ -551,7 +551,7 @@ int tabulate_haplotypes(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     return 0;
 }
 
-int create_genotype_map(CLocus *locus, PopMap<CLocus> *pmap) {
+int create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap) {
     //
     // Create a genotype map. For any set of haplotypes, this routine will
     // assign each haplotype to a genotype, e.g. given the haplotypes 
@@ -599,8 +599,8 @@ int create_genotype_map(CLocus *locus, PopMap<CLocus> *pmap) {
     return 0;
 }
 
-int call_population_genotypes(CLocus *locus, 
-			      PopMap<CLocus> *pmap) {
+int call_population_genotypes(CSLocus *locus, 
+			      PopMap<CSLocus> *pmap) {
     //
     // Fetch the array of observed haplotypes from the population
     //
@@ -651,7 +651,7 @@ int call_population_genotypes(CLocus *locus,
     return 0;
 }
 
-int tally_haplotype_freq(CLocus *locus, PopMap<CLocus> *pmap,
+int tally_haplotype_freq(CSLocus *locus, PopMap<CSLocus> *pmap,
 			 int &total, double &max, string &freq_str) {
 
     map<string, double> freq;
@@ -691,7 +691,7 @@ int tally_haplotype_freq(CLocus *locus, PopMap<CLocus> *pmap,
     return 0;
 }
 
-int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
+int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".genomic.tsv";
 
@@ -707,8 +707,8 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     //
     // Count the number of markers that have enough samples to output.
     //
-    map<int, CLocus *>::iterator cit;
-    CLocus *loc;
+    map<int, CSLocus *>::iterator cit;
+    CSLocus *loc;
     int num_loci = 0;
 
     for (cit = catalog.begin(); cit != catalog.end(); cit++) {
@@ -726,7 +726,7 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
     //
     // Output each locus.
     //
-    map<string, vector<CLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::iterator it;
     int  a, b;
 
     uint  rcnt = enz.length() ? renz_cnt[enz] : 0;
@@ -805,10 +805,10 @@ int write_genomic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) {
 
 int 
 write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
-		    map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum) 
+		    map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
-    map<string, vector<CLocus *> >::iterator it;
-    CLocus   *loc;
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
     LocSum  **s;
     LocTally *t;
     int       len;
@@ -1344,7 +1344,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
 int 
 write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
-		map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum, ofstream &log_fh) 
+		map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, ofstream &log_fh) 
 {
     //
     // We want to iterate over each pair of populations and calculate Fst at each 
@@ -1403,8 +1403,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	       << "Smoothed Fst"  << "\t"
 	       << "Smoothed Fst P-value" << "\n";
 
-	    map<string, vector<CLocus *> >::iterator it;
-	    CLocus  *loc;
+	    map<string, vector<CSLocus *> >::iterator it;
+	    CSLocus *loc;
 	    PopPair *pair;
 	    int      len;
 	    char     fst_str[32], wfst_str[32], cfst_str[32];
@@ -1643,10 +1643,10 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 }
 
 int
-init_chr_pairs(map<string, vector<PopPair *> > &genome_chrs, string chr, map<uint, uint> &pairs_key, vector<CLocus *> &sorted_loci)
+init_chr_pairs(map<string, vector<PopPair *> > &genome_chrs, string chr, map<uint, uint> &pairs_key, vector<CSLocus *> &sorted_loci)
 {
-    CLocus *loc;
-    int     len, bp;
+    CSLocus *loc;
+    int      len, bp;
 
     //
     // We need to create an array to store all the pair values for computing Fst. We must
@@ -1727,7 +1727,7 @@ correct_fst_bonferroni_win(vector<PopPair *> &pairs)
 }
 
 int 
-kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum, int pop_id, ofstream &log_fh) 
+kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, int pop_id, ofstream &log_fh) 
 {
     //
     // We calculate a kernel-smoothing moving average of Pi and Fis values along each ordered chromosome.
@@ -1753,8 +1753,8 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
     // Create a list of all nucleotide positions in this population to make it easy to iterate over
     // with the sliding window.
     //
-    map<string, vector<CLocus *> >::iterator it;
-    CLocus  *loc;
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus *loc;
     LocSum  *lsum;
     int      len;
 
@@ -1955,12 +1955,12 @@ kernel_smoothed_popstats(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopS
 
 int
 init_chr_sites(vector<SumStat *> &sites, 
-	       int pop_id, vector<CLocus *> &sorted_loci, PopSum<CLocus> *psum, 
+	       int pop_id, vector<CSLocus *> &sorted_loci, PopSum<CSLocus> *psum, 
 	       uint &multiple_loci, ofstream &log_fh)
 {
-    CLocus *loc;
-    LocSum *lsum;
-    int     len;
+    CSLocus *loc;
+    LocSum  *lsum;
+    int      len;
 
     //
     // We need to create an array to store all the nucleotide values for computing kernel-smoothed
@@ -2730,7 +2730,7 @@ calculate_weights()
 }
 
 int
-write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, 
+write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, 
 	      map<int, string> &samples, bool write_gtypes)
 {
     stringstream pop_name;
@@ -2752,8 +2752,8 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
     //
     // Count the number of markers that have enough samples to output.
     //
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
     int num_loci = catalog.size();
 
     cerr << "Writing " << num_loci << " loci to " << (write_gtypes ? "genotype" : "observed haplotype") << " file, '" << file << "'\n";
@@ -2830,7 +2830,7 @@ write_generic(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap,
 }
 
 int 
-write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap) 
+write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) 
 {
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".markers.tsv";
@@ -2845,8 +2845,8 @@ write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap)
 	exit(1);
     }
 
-    map<int, CLocus *>::iterator it;
-    CLocus *loc;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
     char    f[id_len], g[id_len];
     stringstream gtype_map;
 
@@ -2888,7 +2888,7 @@ write_sql(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap)
 }
 
 int 
-write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psum, map<int, string> &samples, vector<int> &sample_ids) 
+write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, map<int, string> &samples, vector<int> &sample_ids) 
 {
     //
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
@@ -2910,10 +2910,10 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
     // Load SNP data so that model likelihoods can be output to VCF file.
     //
     cerr << "Loading SNP data for " << samples.size() << " samples.\n";
-    map<int, CLocus *>::iterator cit;
+    map<int, CSLocus *>::iterator cit;
     map<int, SNPRes *>::iterator sit;
-    CLocus *loc;
-    Datum  *datum;
+    CSLocus *loc;
+    Datum   *datum;
 
     for (uint i = 0; i < sample_ids.size(); i++) {
 	map<int, SNPRes *> snpres;
@@ -2962,7 +2962,7 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
 	fh << "\t" << samples[pmap->rev_sample_index(i)];
     fh << "\n";    
 
-    map<string, vector<CLocus *> >::iterator it;
+    map<string, vector<CSLocus *> >::iterator it;
     Datum  **d;
     LocSum **s;
     int      len, gt_1, gt_2, num_indv;
@@ -3089,9 +3089,9 @@ write_vcf(map<int, CLocus *> &catalog, PopMap<CLocus> *pmap, PopSum<CLocus> *psu
 }
 
 int 
-write_genepop(map<int, CLocus *> &catalog, 
-	      PopMap<CLocus> *pmap, 
-	      PopSum<CLocus> *psum, 
+write_genepop(map<int, CSLocus *> &catalog, 
+	      PopMap<CSLocus> *pmap, 
+	      PopSum<CSLocus> *psum, 
 	      map<int, pair<int, int> > &pop_indexes, 
 	      map<int, string> &samples) 
 {
@@ -3127,10 +3127,10 @@ write_genepop(map<int, CLocus *> &catalog,
     fh << "Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
 
     map<int, pair<int, int> >::iterator pit;
-    map<int, CLocus *>::iterator it;
-    CLocus  *loc;
-    Datum  **d;
-    LocSum **s;
+    map<int, CSLocus *>::iterator it;
+    CSLocus  *loc;
+    Datum   **d;
+    LocSum  **s;
     LocTally *t;
     int      len, start_index, end_index, col;
     char     p_allele, q_allele;
@@ -3236,9 +3236,9 @@ write_genepop(map<int, CLocus *> &catalog,
 }
 
 int 
-write_structure(map<int, CLocus *> &catalog, 
-		PopMap<CLocus> *pmap, 
-		PopSum<CLocus> *psum, 
+write_structure(map<int, CSLocus *> &catalog, 
+		PopMap<CSLocus> *pmap, 
+		PopSum<CSLocus> *psum, 
 		map<int, pair<int, int> > &pop_indexes, 
 		map<int, string> &samples) 
 {
@@ -3277,8 +3277,8 @@ write_structure(map<int, CLocus *> &catalog,
     fh << "# Stacks v" << VERSION << "; " << " Structure v2.3; " << date << "\n"
        << "\t";
 
-    map<string, vector<CLocus *> >::iterator it;
-    CLocus   *loc;
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
     Datum   **d;
     LocSum  **s;
     LocTally *t;
@@ -3416,9 +3416,9 @@ write_structure(map<int, CLocus *> &catalog,
 }
 
 int 
-write_phylip(map<int, CLocus *> &catalog, 
-	     PopMap<CLocus> *pmap, 
-	     PopSum<CLocus> *psum, 
+write_phylip(map<int, CSLocus *> &catalog, 
+	     PopMap<CSLocus> *pmap, 
+	     PopSum<CSLocus> *psum, 
 	     map<int, pair<int, int> > &pop_indexes, 
 	     map<int, string> &samples) 
 {
@@ -3455,8 +3455,8 @@ write_phylip(map<int, CLocus *> &catalog,
 
     log_fh << "# Seq Pos\tLocus ID\tColumn\tPopulation\n";
 
-    map<string, vector<CLocus *> >::iterator it;
-    CLocus   *loc;
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
     Datum   **d;
     LocSum  **s;
     LocTally *t;

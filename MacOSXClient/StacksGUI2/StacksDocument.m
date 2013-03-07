@@ -11,19 +11,14 @@
 
 @implementation StacksDocument
 
-- (id)initWithLocusData:(LocusView *)locusData {
+- (id)initWithLocusView:(LocusView *)locusData {
     if ((self = [super init])) {
         self.locusData = locusData;
+        self.locusId = locusData.locusId;
     }
     return self ;
 }
 
-
-- (id)initWithMarker:(NSString*)marker consensusSequence:(NSString*)conensusSequence {
-    if ((self = [super init])) {
-        self.locusData = [[LocusView alloc] initWithId:marker consensus:conensusSequence];
-    }
-    return self ;
-}
 
 @end
+
