@@ -27,11 +27,13 @@ using std::ofstream;
 #import "LocusView.h"
 #import "StacksDocument.h"
 #import "StacksLoader.h"
+#import "StacksView.h"
 #import "DataStubber.h"
 
 
 #include "LociLoader.hpp"
 #import "GenotypeEntry.h"
+#import "StacksView.h"
 
 @implementation StacksLoader {
 
@@ -372,5 +374,11 @@ using std::ofstream;
     return loci;
 }
 
+- (StacksView *)loadStacksView:(NSString *)string atPath: path {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    // TODO: if male . . .male.tags.tsv / female.tags.tsv
+    // TODO: or progeny_N.tags.tsv
+    BOOL existsAtPath = [fileManager fileExistsAtPath:path];
 
+}
 @end
