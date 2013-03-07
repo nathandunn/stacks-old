@@ -447,6 +447,13 @@ using std::ofstream;
     referenceStack.entryId = 0;
     stacksView.reference = referenceStack;
 
+    // random snps
+    NSMutableArray *snps = [[NSMutableArray alloc] init];
+    [snps addObject:[NSNumber numberWithInt:17]];
+    [snps addObject:[NSNumber numberWithInt:35]];
+    stacksView.snps = snps ;
+
+
     NSLog(@"done splitting");
 
 

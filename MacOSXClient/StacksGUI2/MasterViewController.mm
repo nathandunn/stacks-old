@@ -172,6 +172,8 @@
     if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
         if(self.selectedStacks!=nil){
             StacksView *stacksView = self.selectedStacks;
+
+
             if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
                 if(row>2){
                     cellView.textField.integerValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row-3] entryId];
@@ -222,7 +224,26 @@
                         cellView.textField.stringValue =stacksView.model.sequence;
                         break ;
                     default:
-                        cellView.textField.stringValue =[(StackEntry *) [stacksView.stackEntries objectAtIndex:row-3] sequence];
+                        NSString *sequenceString = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row-3] sequence];
+//                        NSMutableAttributedString *string = [self decorateSnps:sequenceString snps:stacksView.snps];
+                        NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:sequenceString];
+
+                        [string beginEditing];
+                        NSNumber *snpIndex ;
+                        NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSColor blueColor], NSForegroundColorAttributeName,
+                                [NSColor grayColor], NSBackgroundColorAttributeName,
+                                [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
+                                nil];
+                        for(snpIndex in stacksView.snps){
+                            NSRange selectedRange = NSMakeRange([snpIndex intValue], 1);
+                            [string setAttributes:attributes range:selectedRange];
+                        }
+                        [string endEditing];
+
+
+                        cellView.textField.attributedStringValue = string;
+                        cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
                 }
             }
             else{
@@ -381,6 +402,10 @@
 //    StacksView *stacksView = [[StacksView alloc] init];
     // parse the tags file based on the index
     return stacksView;
+}
+
+-(NSMutableAttributedString *)decorateSnps:(NSString *)sequenceString snps:(NSMutableArray *) snps{
+
 }
 
 
