@@ -21,8 +21,6 @@
 @property(weak) IBOutlet NSTextField *locusDetail;
 @property(weak) IBOutlet NSTextField *consensusDetail;
 
-- (IBAction)selectGenotype:(NSTextFieldCell *)sender;
-
 @end
 
 @implementation MasterViewController
@@ -36,7 +34,8 @@
     [verticalSplitView setDelegate:self];    // we want a chance to affect the vertical split view coverage
     [_genotypeTableView setTarget:self];
     [_genotypeTableView setAllowsColumnSelection:TRUE];
-    [_genotypeTableView setDoubleAction:@selector(doubleClick:)];
+    [_genotypeTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
+    [_genotypeTableView setAction:@selector(genotypeSelected:)];
 }
 
 
@@ -289,18 +288,9 @@
 - (void)showTagsTable:(StacksView *)view {
 
 }
-// TODO: somehow get the selected path
-- (void)tableView: (NSTableView *)tableView didSelectRowAtIndexPath: (NSIndexPath *)indexPath {
-    NSLog(@"getting the path . . . %@",indexPath);
-//    [tableView cel]
-//    NSTableCellView *cell = [tableView cellForRowAtIndexPath:indexPath];
-//    NSTableCellView *cell = [tableView ];
 
-//    NSString *newText = [array objectAtIndex:row];
-//    textbox.text = newtext;
-}
-
-- (StacksView *)loadStacksForProgeny:(NSUInteger)i {
+- (StacksView *)loadStacksForProgeny:(NSString*)stackKey {
+    NSLog(@"loading stacks for %@", stackKey);
     StacksView *stacksView = [[StacksView alloc] init];
     // parse the tags file based on the index
     return stacksView;
@@ -308,17 +298,35 @@
 
 
 // TODO: handle genotype selection
-- (void)doubleClick:(id)doubleClick {
-    NSInteger rowNumber = [_genotypeTableView clickedRow];
-    NSInteger columnNumber = [_genotypeTableView clickedColumn];
+- (void)genotypeSelected:(id)tableView {
+    NSLog(@"passed value %@", tableView);
+//    NSTableCellView *tableCellView = [tableView selectedCell];
+    NSUInteger rowNumber = [_genotypeTableView clickedRow];
+    NSUInteger columnNumber = [_genotypeTableView clickedColumn];
     NSLog(@"clicked row %ld, column %ld", rowNumber, columnNumber);
-    NSTableCellView *tableCellView = [_genotypeTableView selectedCell];
-//    NSCell *tableCellView = [_genotypeTableView preparedCellAtColumn:columnNumber row:rowNumber];
-    NSLog(@"value of cell %@", [[tableCellView textField] stringValue]);
+    // get the array number
 
+    LocusView *locusView = self.selectedStacksDocument.locusData;
+    if(rowNumber==0 && columnNumber==0 && locusView.hasMale){
+        self.selectedGenotype = [self loadStacksForProgeny:@"male"];
+    }
+    else
+    if((rowNumber==0 && columnNumber==0 && !locusView.hasMale && locusView.hasFemale)
+            ||
+       (rowNumber==0 && columnNumber==1 && locusView.hasMale && locusView.hasFemale)
+            ){
+        self.selectedGenotype = [self loadStacksForProgeny:@"female"];
+    }
+    else{
+        NSUInteger totalColumnCount = 10;
+        NSInteger parentCount = locusView.matchingParents;
 
-    NSUInteger progenyIndex = 3 ;
-    self.selectedGenotype = [self loadStacksForProgeny:progenyIndex];
+        NSUInteger index = rowNumber*totalColumnCount + columnNumber - parentCount;
+        GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index+1] ;
+        NSLog(@"entry %@",[entry render]);
+
+        self.selectedGenotype = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld",[entry entryId]]];
+    }
     [self showTagsTable:self.selectedGenotype];
 }
 
