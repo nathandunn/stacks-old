@@ -20,6 +20,7 @@
 @property(weak) IBOutlet NSTableView *genotypeTableView;
 @property(weak) IBOutlet NSTextField *locusDetail;
 @property(weak) IBOutlet NSTextField *consensusDetail;
+
 - (IBAction)selectGenotype:(NSTextFieldCell *)sender;
 
 @end
@@ -33,7 +34,11 @@
 // -------------------------------------------------------------------------------
 - (void)awakeFromNib {
     [verticalSplitView setDelegate:self];    // we want a chance to affect the vertical split view coverage
+    [_genotypeTableView setTarget:self];
+    [_genotypeTableView setAllowsColumnSelection:TRUE];
+    [_genotypeTableView setDoubleAction:@selector(doubleClick:)];
 }
+
 
 // -------------------------------------------------------------------------------
 //	splitView:effectiveRect:effectiveRect:forDrawnRect:ofDividerAtIndex
@@ -188,7 +193,7 @@
         }
         else if (progenyCount > progenyIndex) {
             GenotypeEntry *genotypeEntry = [locusView.progeny objectAtIndex:progenyIndex];
-            cellView.textField.stringValue = [NSString stringWithFormat:@"%ld %@", (long)genotypeEntry.entryId, [genotypeEntry render]];
+            cellView.textField.stringValue = [NSString stringWithFormat:@"%ld %@", (long) genotypeEntry.entryId, [genotypeEntry render]];
         }
         else {
             cellView.textField.stringValue = @"";
@@ -265,43 +270,58 @@
         // Update info
         [self setDetailInfo:self.selectedStacksDocument];
     }
-    else
-    if ([tableName isEqualToString:@"GenotypeTableView"]) {
-        NSUInteger progenyIndex = [self getSelectedGenotype];
-        self.selectedGenotype = [self loadStacksForProgeny:progenyIndex];
-        [self showTags:self.selectedGenotype];
-        
-        NSLog(@"genotype table selected");
-    }
-    else{
-        NSLog(@"need to handle the other case ");
-    }
+//    else
+//    if ([tableName isEqualToString:@"GenotypeTableView"]) {
+//        NSUInteger progenyIndex = [self getSelectedGenotype];
+//        self.selectedGenotype = [self loadStacksForProgeny:progenyIndex];
+//        [self showTags:self.selectedGenotype];
+//        
+//        NSLog(@"genotype table selected");
+//    }
+//    else {
+//        NSLog(@"need to handle the other case ");
+//    }
 
 }
 
 // TODO: create the snps / stacks view
 // http://genome.uoregon.edu/stacks/tag.php?db=tut_radtags&batch_id=1&sample_id=28&tag_id=277
-- (void)showTags:(StacksView *)view {
+- (void)showTagsTable:(StacksView *)view {
 
+}
+// TODO: somehow get the selected path
+- (void)tableView: (NSTableView *)tableView didSelectRowAtIndexPath: (NSIndexPath *)indexPath {
+    NSLog(@"getting the path . . . %@",indexPath);
+//    [tableView cel]
+//    NSTableCellView *cell = [tableView cellForRowAtIndexPath:indexPath];
+//    NSTableCellView *cell = [tableView ];
+
+//    NSString *newText = [array objectAtIndex:row];
+//    textbox.text = newtext;
 }
 
 - (StacksView *)loadStacksForProgeny:(NSUInteger)i {
-    // parse the tags file
- return nil;
-}
-
-- (NSUInteger)getSelectedGenotype {
-    NSTableCellView* selectedCell = (NSTableCellView*) [self.genotypeTableView selectedCell];
-    NSLog(@"Seelcted text %@", [[selectedCell textField] stringValue] );
-    // look into the table to find the GenotypeEntry . .
- return 0;
+    StacksView *stacksView = [[StacksView alloc] init];
+    // parse the tags file based on the index
+    return stacksView;
 }
 
 
-- (IBAction)selectGenotype:(NSTextFieldCell *)sender {
-    NSLog(@"selected a genotype %@",[sender stringValue]);
-    
+// TODO: handle genotype selection
+- (void)doubleClick:(id)doubleClick {
+    NSInteger rowNumber = [_genotypeTableView clickedRow];
+    NSInteger columnNumber = [_genotypeTableView clickedColumn];
+    NSLog(@"clicked row %ld, column %ld", rowNumber, columnNumber);
+    NSTableCellView *tableCellView = [_genotypeTableView selectedCell];
+//    NSCell *tableCellView = [_genotypeTableView preparedCellAtColumn:columnNumber row:rowNumber];
+    NSLog(@"value of cell %@", [[tableCellView textField] stringValue]);
+
+
+    NSUInteger progenyIndex = 3 ;
+    self.selectedGenotype = [self loadStacksForProgeny:progenyIndex];
+    [self showTagsTable:self.selectedGenotype];
 }
+
 @end
 
 
