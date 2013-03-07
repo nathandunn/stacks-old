@@ -20,6 +20,6 @@
 
 @property (strong) NSMutableDictionary *stacksDocuments;
 @property (weak) StacksDocument* selectedStacksDocument;
-@property(nonatomic, strong) StacksView *selectedGenotype;
+@property(nonatomic, strong) StacksView *selectedStacks;
 
 @end

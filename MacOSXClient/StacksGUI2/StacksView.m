@@ -14,4 +14,8 @@
 
 }
 
+- (NSInteger)rowsNeeded {
+    NSLog(@"rows needed calc") ;
+ return 3+ [_stackEntries count];
+}
 @end

@@ -65,4 +65,7 @@
     return FALSE;
 }
 
+- (NSInteger)count {
+ return self.matchingParents + self.genotypes;
+}
 @end
