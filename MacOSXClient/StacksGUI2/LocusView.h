@@ -9,7 +9,8 @@
 #import <Foundation/Foundation.h>
 
 @class GenotypeView;
-@class StacksView;
+//@class StacksView;
+@class GenotypeEntry;
 
 /**
 * This is the table view:
@@ -19,16 +20,19 @@
 
 @property (strong) NSString *locusId;
 //@property (assign) NSString *letters;
-@property (strong) NSString *snp;
+@property (strong) NSMutableArray *snps;
 @property (strong) NSString *consensus;
-@property (strong) NSString *matchingParents;
-@property (strong) NSString *progeny;
+//@property (strong) NSString *progeny;
 @property (strong) NSString *marker ;
 @property (strong) NSString *ratio ;
-@property (strong) NSString *genotypes ;
+
+
+@property (strong) NSMutableArray *progeny;
+@property (strong) GenotypeEntry *male;
+@property (strong) GenotypeEntry *female;
 
 //@property (strong) GenotypeView *genotypeView;
-@property (strong) NSMutableArray *snpsViews; // SNP in the consensus
+//@property (strong) NSMutableArray *snpsViews; // SNP in the consensus
 
 // TODO: look in populations.cc
 // use PopMap to get the GenotypesView
@@ -36,4 +40,11 @@
 - (id)initWithId:(NSString *)locusId ;
 - (id)initWithId:(NSString *)locusId consensus:(NSString*)consensus;
 
+- (NSInteger) matchingParents;
+- (NSInteger) genotypes ;
+
+- (BOOL)hasMale;
+- (BOOL)hasFemale;
+
+- (NSInteger)count;
 @end

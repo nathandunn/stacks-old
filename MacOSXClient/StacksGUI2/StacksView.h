@@ -19,10 +19,11 @@
 @property (strong) NSMutableArray *stackEntries;
 @property (strong) StackEntry *consensus;
 @property (strong) StackEntry *model;
+@property (strong) StackEntry *reference;
 
 // index of snps in the consensus
 @property (strong) NSMutableArray *snps;
 
 
-
+- (NSInteger)rowsNeeded;
 @end

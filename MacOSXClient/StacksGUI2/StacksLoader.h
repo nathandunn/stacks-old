@@ -7,8 +7,16 @@
 
 #import <Foundation/Foundation.h>
 
+@class StacksView;
+//@class StackEntry;
+
 
 @interface StacksLoader : NSObject
 
--(NSMutableArray *) loadLoci:(NSString *) path;
+-(NSMutableDictionary *) loadLoci:(NSString *) path;
+- (NSMutableDictionary *)loadGenotypes:(NSString *)path withLoci:(NSMutableDictionary *) loci;
+//-(NSMutableArray *) loadGenotypes:(NSString *) path;
+
+- (StacksView *)loadStacksView:(NSString *)stackKey atPath:(NSString *) path;
 @end
+

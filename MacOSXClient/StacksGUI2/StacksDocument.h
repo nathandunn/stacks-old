@@ -12,11 +12,12 @@
 
 @interface StacksDocument : NSObject
 
+
+// this is a wrapper
+@property (strong) NSString *locusId ;
 @property (strong) LocusView *locusData;
 
-// rename to init with locaus data
-- (id)initWithLocusData:(LocusView *)locusData;
-- (id)initWithMarker:(NSString*)marker consensusSequence:(NSString*)consensusSequence ;
+- (id)initWithLocusView:(LocusView *)locusData;
 
 
 @end
