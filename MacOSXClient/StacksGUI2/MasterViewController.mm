@@ -18,6 +18,7 @@
 
 @property(weak) IBOutlet NSTableView *filesTableView;
 @property(weak) IBOutlet NSTableView *genotypeTableView;
+@property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSTextField *locusDetail;
 @property(weak) IBOutlet NSTextField *consensusDetail;
 
@@ -93,13 +94,18 @@
                 rows++;
             }
             return rows;
-
         }
         return 0;
     }
-    else {
+    else
+    if ([[tableView identifier] isEqualToString:@"LocusTable"]) {
         return [self.stacksDocuments count];
     }
+    else
+    if ([[tableView identifier] isEqualToString:@"StacksTable"]) {
+        return 3 ;
+    }
+
 }
 
 - (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
@@ -112,7 +118,8 @@
 //        NSLog(@"is a genotype table with column identifier %@",[tableColumn identifier]);
         return [self handleGenotypesTable:(NSString *) tableColumn.identifier row:(NSInteger) row cell:(NSTableCellView *) cellView];
     }
-    else {
+    else
+    if ([[tableView identifier] isEqualToString:@"LocusTable"]) {
         // we want data for the row . . . .
         NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
             return [obj1 integerValue] - [obj2 integerValue];
@@ -151,6 +158,19 @@
             cellView.textField.integerValue = [stacksDoc.locusData genotypes];
         }
 
+        return cellView;
+    }
+    else
+    if ([[tableView identifier] isEqualToString:@"StacksTable"]) {
+        if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
+            cellView.textField.integerValue =  3;
+
+//            cellView.textField.integerValue = [stacksDoc.locusData genotypes];
+        }
+        return cellView;
+    }
+    else{
+        NSLog(@"could not find table %@",[tableView identifier]);
         return cellView;
     }
 
@@ -287,6 +307,7 @@
 // http://genome.uoregon.edu/stacks/tag.php?db=tut_radtags&batch_id=1&sample_id=28&tag_id=277
 - (void)showTagsTable:(StacksView *)view {
 
+    [self.stacksTableView reloadData];
 }
 
 - (StacksView *)loadStacksForProgeny:(NSString*)stackKey {
