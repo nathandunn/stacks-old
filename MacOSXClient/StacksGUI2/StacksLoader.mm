@@ -341,8 +341,8 @@ using std::ofstream;
         NSLog(@"markerString [%@]", markerString);
         if (markerString != Nil && markerString.length > 0) {
 
-            NSLog(@"marker [%@]", [NSString stringWithUTF8String:locus->marker.c_str()]);
             NSString *newMarker = [NSString stringWithUTF8String:locus->marker.c_str()];
+            NSLog(@"marker [%@]", newMarker);
             NSLog(@"marker2 [%@]", newMarker);
             locusView.marker = newMarker;
             NSLog(@"annotation %@", [NSString stringWithUTF8String:locus->annotation.c_str()]);
