@@ -180,6 +180,55 @@
                     cellView.textField.stringValue =@"";
                 }
             }
+            else
+            if ([tableColumn.identifier isEqualToString:@"RelationshipColumn"]) {
+                switch (row){
+                    case 0:
+                        cellView.textField.stringValue =@"";
+                        break ;
+                    case 1:
+                        cellView.textField.stringValue =@"consensus";
+                        break ;
+                    case 2:
+                        cellView.textField.stringValue =@"model";
+                        break ;
+                    default:
+                        cellView.textField.stringValue =[(StackEntry *) [stacksView.stackEntries objectAtIndex:row-3] relationship];
+                }
+            }
+            else
+            if ([tableColumn.identifier isEqualToString:@"SequenceIdColumn"]) {
+                switch (row){
+                    case 0:
+                    case 1:
+                    case 2:
+                        cellView.textField.stringValue =@"";
+                        break ;
+                    default:
+                        cellView.textField.stringValue =[(StackEntry *) [stacksView.stackEntries objectAtIndex:row-3] sequenceId];
+                        cellView.textField.alignment = NSRightTextAlignment;
+                }
+            }
+            else
+            if ([tableColumn.identifier isEqualToString:@"SequenceColumn"]) {
+                switch (row){
+                    case 0:
+                        cellView.textField.stringValue =stacksView.reference.sequence;
+                        break ;
+                    case 1:
+                        cellView.textField.stringValue =stacksView.consensus.sequence;
+                        break ;
+                    case 2:
+                        cellView.textField.stringValue =stacksView.model.sequence;
+                        break ;
+                    default:
+                        cellView.textField.stringValue =[(StackEntry *) [stacksView.stackEntries objectAtIndex:row-3] sequence];
+                }
+            }
+            else{
+                NSLog(@"not sure what that column is %@",tableColumn.identifier);
+                cellView.textField.stringValue = @"";
+            }
         }
         return cellView;
     }
