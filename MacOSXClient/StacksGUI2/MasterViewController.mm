@@ -11,6 +11,7 @@
 #import "LocusView.h"
 #import "GenotypeEntry.h"
 #import "StacksView.h"
+#import "StacksLoader.h"
 //#import "stacks.h"
 
 
@@ -312,7 +313,11 @@
 
 - (StacksView *)loadStacksForProgeny:(NSString*)stackKey {
     NSLog(@"loading stacks for %@", stackKey);
-    StacksView *stacksView = [[StacksView alloc] init];
+
+    StacksLoader *loader = [[StacksLoader alloc] init];
+    StacksView *stacksView = [loader loadStacksView:stackKey atPath:@"/tmp/stacks_tut"];
+
+//    StacksView *stacksView = [[StacksView alloc] init];
     // parse the tags file based on the index
     return stacksView;
 }
