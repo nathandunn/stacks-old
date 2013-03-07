@@ -25,5 +25,5 @@
 @property (strong) NSMutableArray *snps;
 
 
-
+- (NSInteger)rowsNeeded;
 @end

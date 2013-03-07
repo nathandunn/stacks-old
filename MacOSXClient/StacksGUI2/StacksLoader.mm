@@ -374,12 +374,31 @@ using std::ofstream;
     return loci;
 }
 
-- (StacksView *)loadStacksView:(NSString *)string atPath: path {
+- (StacksView *)loadStacksView:(NSString *)stackKey atPath:(NSString *) path {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
     // TODO: or progeny_N.tags.tsv
-    BOOL existsAtPath = [fileManager fileExistsAtPath:path];
-    return nil ; 
+    NSString *fileName = [[NSString alloc] init];
+    if([stackKey isEqualToString:@"male"]){
+        fileName = @"/male.tags.tsv";
+    }
+    else
+    if([stackKey isEqualToString:@"female"]){
+        fileName = @"/female.tags.tsv";
+    }
+    else{
+        fileName = [NSString stringWithFormat:@"/progeny_%@.tags.tsv",stackKey];
+    }
+    NSString *absoluteFileName = [path stringByAppendingString:fileName];
 
+    BOOL existsAtPath = [fileManager fileExistsAtPath:absoluteFileName];
+    NSLog(@"absolute file name %@ exists %d",absoluteFileName,existsAtPath);
+    if(!existsAtPath){
+        return nil ;
+    }
+    StacksView *stacksView = [[StacksView alloc] init] ;
+
+
+    return stacksView;
 }
 @end

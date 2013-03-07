@@ -16,6 +16,6 @@
 - (NSMutableDictionary *)loadGenotypes:(NSString *)path withLoci:(NSMutableDictionary *) loci;
 //-(NSMutableArray *) loadGenotypes:(NSString *) path;
 
-- (StacksView *)loadStacksView:(NSString *)string atPath:() path;
+- (StacksView *)loadStacksView:(NSString *)stackKey atPath:(NSString *) path;
 @end
 

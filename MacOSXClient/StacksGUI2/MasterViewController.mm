@@ -26,7 +26,7 @@
 @end
 
 @implementation MasterViewController
-@synthesize selectedGenotype = _selectedGenotype;
+@synthesize selectedStacks = _selectedStacks;
 
 
 // -------------------------------------------------------------------------------
@@ -104,7 +104,13 @@
     }
     else
     if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
-        return 3 ;
+        NSLog(@"reloading stackstableview %@",self.selectedStacks);
+        if(self.selectedStacks==nil){
+            return 0 ;
+        }
+        else{
+            return [self.selectedStacks rowsNeeded];
+        }
     }
 
 }
@@ -218,8 +224,6 @@
         else {
             cellView.textField.stringValue = @"";
         }
-
-
     }
     else {
         cellView.textField.stringValue = @"";
@@ -228,7 +232,7 @@
     return cellView;
 }
 
-- (StacksDocument *)selectedDoc {
+- (StacksDocument *)findSelectedStacksDocument {
 
     NSInteger selectedRow = [self.filesTableView selectedRow];
     NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
@@ -239,7 +243,7 @@
     return stacksDocument;
 }
 
-- (void)setDetailInfo:(StacksDocument *)doc {
+- (void)handleSelectedLocus:(StacksDocument *)doc {
 
     if (doc != nil) {
         LocusView *locus = doc.locusData;
@@ -286,15 +290,15 @@
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
     NSString *tableName = [[aNotification object] identifier];
     if ([tableName isEqualToString:@"LocusTable"]) {
-        self.selectedStacksDocument = [self selectedDoc];
+        self.selectedStacksDocument = [self findSelectedStacksDocument];
         // Update info
-        [self setDetailInfo:self.selectedStacksDocument];
+        [self handleSelectedLocus:self.selectedStacksDocument];
     }
 //    else
 //    if ([tableName isEqualToString:@"GenotypeTableView"]) {
 //        NSUInteger progenyIndex = [self getSelectedGenotype];
-//        self.selectedGenotype = [self loadStacksForProgeny:progenyIndex];
-//        [self showTags:self.selectedGenotype];
+//        self.selectedStacks = [self loadStacksForProgeny:progenyIndex];
+//        [self showTags:self.selectedStacks];
 //        
 //        NSLog(@"genotype table selected");
 //    }
@@ -307,6 +311,7 @@
 // TODO: create the snps / stacks view
 // http://genome.uoregon.edu/stacks/tag.php?db=tut_radtags&batch_id=1&sample_id=28&tag_id=277
 - (void)showTagsTable:(StacksView *)view {
+    NSLog(@"reloading for view") ;
 
     [self.stacksTableView reloadData];
 }
@@ -327,33 +332,46 @@
 - (void)genotypeSelected:(id)tableView {
     NSLog(@"passed value %@", tableView);
 //    NSTableCellView *tableCellView = [tableView selectedCell];
-    NSUInteger rowNumber = [_genotypeTableView clickedRow];
-    NSUInteger columnNumber = [_genotypeTableView clickedColumn];
+    NSInteger rowNumber = [_genotypeTableView clickedRow];
+    NSInteger columnNumber = [_genotypeTableView clickedColumn];
     NSLog(@"clicked row %ld, column %ld", rowNumber, columnNumber);
+    if(rowNumber<0 || columnNumber<0){
+        NSLog(@"invalid selection") ;
+        self.selectedStacks = nil  ;
+        return ;
+    }
     // get the array number
 
     LocusView *locusView = self.selectedStacksDocument.locusData;
     if(rowNumber==0 && columnNumber==0 && locusView.hasMale){
-        self.selectedGenotype = [self loadStacksForProgeny:@"male"];
+        self.selectedStacks = [self loadStacksForProgeny:@"male"];
     }
     else
     if((rowNumber==0 && columnNumber==0 && !locusView.hasMale && locusView.hasFemale)
             ||
        (rowNumber==0 && columnNumber==1 && locusView.hasMale && locusView.hasFemale)
             ){
-        self.selectedGenotype = [self loadStacksForProgeny:@"female"];
+        self.selectedStacks = [self loadStacksForProgeny:@"female"];
     }
     else{
         NSUInteger totalColumnCount = 10;
         NSInteger parentCount = locusView.matchingParents;
 
-        NSUInteger index = rowNumber*totalColumnCount + columnNumber - parentCount;
-        GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index+1] ;
-        NSLog(@"entry %@",[entry render]);
+        NSInteger index = rowNumber*totalColumnCount + columnNumber - parentCount;
+        NSLog(@"index %d < %d",index,[locusView genotypes]);
+        if(index+1 < [locusView genotypes]){
+            GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index+1] ;
+            NSLog(@"entry %@",[entry render]);
 
-        self.selectedGenotype = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld",[entry entryId]]];
+            self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld",[entry entryId]]];
+        }
+        else{
+            NSLog(@"invalid selection") ;
+            self.selectedStacks = nil ;
+        }
     }
-    [self showTagsTable:self.selectedGenotype];
+    NSLog(@"set selected tags %@",self.selectedStacks);
+    [self showTagsTable:self.selectedStacks];
 }
 
 @end

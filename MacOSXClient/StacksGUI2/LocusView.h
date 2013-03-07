@@ -45,4 +45,6 @@
 
 - (BOOL)hasMale;
 - (BOOL)hasFemale;
+
+- (NSInteger)count;
 @end
