@@ -10,6 +10,7 @@
 #import "StacksDocument.h"
 #import "LocusView.h"
 #import "GenotypeEntry.h"
+#import "StacksView.h"
 //#import "stacks.h"
 
 
@@ -19,10 +20,12 @@
 @property(weak) IBOutlet NSTableView *genotypeTableView;
 @property(weak) IBOutlet NSTextField *locusDetail;
 @property(weak) IBOutlet NSTextField *consensusDetail;
+- (IBAction)selectGenotype:(NSTextFieldCell *)sender;
 
 @end
 
 @implementation MasterViewController
+@synthesize selectedGenotype = _selectedGenotype;
 
 
 // -------------------------------------------------------------------------------
@@ -121,7 +124,7 @@
         else if ([tableColumn.identifier isEqualToString:@"SnpColumn"]) {
             NSMutableArray *snps = stacksDoc.locusData.snps;
             if ([snps count] > 0) {
-                cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%dnuc]", [snps count]];
+                cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%ldnuc]", [snps count]];
             }
             else {
                 cellView.textField.stringValue = @"None";
@@ -132,7 +135,7 @@
         }
         else if ([tableColumn.identifier isEqualToString:@"ProgenyColumn"]) {
             NSUInteger count = [[stacksDoc.locusData progeny] count];
-            cellView.textField.stringValue = [NSString stringWithFormat:@"%d / %d", count, count];
+            cellView.textField.stringValue = [NSString stringWithFormat:@"%ld / %ld", count, count];
         }
         else if ([tableColumn.identifier isEqualToString:@"MarkerColumn"]) {
             cellView.textField.stringValue = stacksDoc.locusData.marker;
@@ -173,22 +176,19 @@
         // if a male
         if (row == 0 && [column isEqualToString:@"Genotypes1"] && [locusView hasMale]) {
             GenotypeEntry *male = locusView.male;
-            NSString *maleString = [male render];
             cellView.textField.stringValue = [NSString stringWithFormat:@"male - %@", [male render]];
         }
         else if (row == 0 && [column isEqualToString:@"Genotypes1"] && [locusView hasFemale] && ![locusView hasMale]) {
             GenotypeEntry *female = locusView.female;
-            NSString *femaleString = [female render];
             cellView.textField.stringValue = [NSString stringWithFormat:@"female - %@", [female render]];
         }
         else if (row == 0 && [column isEqualToString:@"Genotypes2"] && [locusView hasMale] && [locusView hasFemale]) {
             GenotypeEntry *female = locusView.female;
-            NSString *femaleString = [female render];
             cellView.textField.stringValue = [NSString stringWithFormat:@"female - %@", [female render]];
         }
         else if (progenyCount > progenyIndex) {
             GenotypeEntry *genotypeEntry = [locusView.progeny objectAtIndex:progenyIndex];
-            cellView.textField.stringValue = [NSString stringWithFormat:@"%d %@", genotypeEntry.entryId, [genotypeEntry render]];
+            cellView.textField.stringValue = [NSString stringWithFormat:@"%ld %@", (long)genotypeEntry.entryId, [genotypeEntry render]];
         }
         else {
             cellView.textField.stringValue = @"";
@@ -265,13 +265,43 @@
         // Update info
         [self setDetailInfo:self.selectedStacksDocument];
     }
-    else {
+    else
+    if ([tableName isEqualToString:@"GenotypeTableView"]) {
+        NSUInteger progenyIndex = [self getSelectedGenotype];
+        self.selectedGenotype = [self loadStacksForProgeny:progenyIndex];
+        [self showTags:self.selectedGenotype];
+        
+        NSLog(@"genotype table selected");
+    }
+    else{
         NSLog(@"need to handle the other case ");
     }
 
 }
 
+// TODO: create the snps / stacks view
+// http://genome.uoregon.edu/stacks/tag.php?db=tut_radtags&batch_id=1&sample_id=28&tag_id=277
+- (void)showTags:(StacksView *)view {
 
+}
+
+- (StacksView *)loadStacksForProgeny:(NSUInteger)i {
+    // parse the tags file
+ return nil;
+}
+
+- (NSUInteger)getSelectedGenotype {
+    NSTableCellView* selectedCell = (NSTableCellView*) [self.genotypeTableView selectedCell];
+    NSLog(@"Seelcted text %@", [[selectedCell textField] stringValue] );
+    // look into the table to find the GenotypeEntry . .
+ return 0;
+}
+
+
+- (IBAction)selectGenotype:(NSTextFieldCell *)sender {
+    NSLog(@"selected a genotype %@",[sender stringValue]);
+    
+}
 @end
 
 
