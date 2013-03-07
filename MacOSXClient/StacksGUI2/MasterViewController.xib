@@ -496,7 +496,7 @@
 																			<string key="NSFrameSize">{890, 228}</string>
 																			<reference key="NSSuperview" ref="251132264"/>
 																			<reference key="NSWindow"/>
-																			<reference key="NSNextKeyView" ref="437181450"/>
+																			<reference key="NSNextKeyView" ref="112627233"/>
 																			<string key="NSReuseIdentifierKey">_NS:13</string>
 																			<bool key="NSEnabled">YES</bool>
 																			<object class="_NSCornerView" key="NSCornerView">
@@ -1507,6 +1507,7 @@
 									<int key="NSvFlags">266</int>
 									<string key="NSFrameSize">{86, 17}</string>
 									<reference key="NSSuperview" ref="112627233"/>
+									<reference key="NSNextKeyView" ref="415101558"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
 									<bool key="NSEnabled">YES</bool>
 									<object class="NSTextFieldCell" key="NSCell" id="502391736">
@@ -1521,6 +1522,7 @@
 								</object>
 							</array>
 							<string key="NSFrame">{{1, 1}, {86, 17}}</string>
+							<reference key="NSNextKeyView" ref="231985708"/>
 						</object>
 						<reference key="destination" ref="231985708"/>
 					</object>
@@ -1538,6 +1540,7 @@
 									<int key="NSvFlags">266</int>
 									<string key="NSFrameSize">{86, 17}</string>
 									<reference key="NSSuperview" ref="415101558"/>
+									<reference key="NSNextKeyView" ref="46688872"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
 									<bool key="NSEnabled">YES</bool>
 									<object class="NSTextFieldCell" key="NSCell" id="263490182">
@@ -1552,6 +1555,7 @@
 								</object>
 							</array>
 							<string key="NSFrame">{{90, 1}, {86, 17}}</string>
+							<reference key="NSNextKeyView" ref="550906346"/>
 						</object>
 						<reference key="destination" ref="550906346"/>
 					</object>
@@ -1569,6 +1573,7 @@
 									<int key="NSvFlags">266</int>
 									<string key="NSFrameSize">{86, 17}</string>
 									<reference key="NSSuperview" ref="46688872"/>
+									<reference key="NSNextKeyView" ref="346970870"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
 									<bool key="NSEnabled">YES</bool>
 									<object class="NSTextFieldCell" key="NSCell" id="519405931">
@@ -1583,6 +1588,7 @@
 								</object>
 							</array>
 							<string key="NSFrame">{{179, 1}, {86, 17}}</string>
+							<reference key="NSNextKeyView" ref="794780469"/>
 						</object>
 						<reference key="destination" ref="794780469"/>
 					</object>
@@ -1600,6 +1606,7 @@
 									<int key="NSvFlags">266</int>
 									<string key="NSFrameSize">{86, 17}</string>
 									<reference key="NSSuperview" ref="346970870"/>
+									<reference key="NSNextKeyView" ref="647853715"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
 									<bool key="NSEnabled">YES</bool>
 									<object class="NSTextFieldCell" key="NSCell" id="578442055">
@@ -1614,6 +1621,7 @@
 								</object>
 							</array>
 							<string key="NSFrame">{{268, 1}, {86, 17}}</string>
+							<reference key="NSNextKeyView" ref="102784201"/>
 						</object>
 						<reference key="destination" ref="102784201"/>
 					</object>
@@ -1631,6 +1639,7 @@
 									<int key="NSvFlags">266</int>
 									<string key="NSFrameSize">{86, 17}</string>
 									<reference key="NSSuperview" ref="647853715"/>
+									<reference key="NSNextKeyView" ref="543263272"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
 									<bool key="NSEnabled">YES</bool>
 									<object class="NSTextFieldCell" key="NSCell" id="510448514">
@@ -1645,6 +1654,7 @@
 								</object>
 							</array>
 							<string key="NSFrame">{{357, 1}, {86, 17}}</string>
+							<reference key="NSNextKeyView" ref="871556234"/>
 						</object>
 						<reference key="destination" ref="871556234"/>
 					</object>
@@ -1662,6 +1672,7 @@
 									<int key="NSvFlags">266</int>
 									<string key="NSFrameSize">{86, 17}</string>
 									<reference key="NSSuperview" ref="543263272"/>
+									<reference key="NSNextKeyView" ref="200036810"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
 									<bool key="NSEnabled">YES</bool>
 									<object class="NSTextFieldCell" key="NSCell" id="78781577">
@@ -1676,6 +1687,7 @@
 								</object>
 							</array>
 							<string key="NSFrame">{{446, 1}, {86, 17}}</string>
+							<reference key="NSNextKeyView" ref="44873377"/>
 						</object>
 						<reference key="destination" ref="44873377"/>
 					</object>
@@ -1693,6 +1705,7 @@
 									<int key="NSvFlags">266</int>
 									<string key="NSFrameSize">{86, 17}</string>
 									<reference key="NSSuperview" ref="200036810"/>
+									<reference key="NSNextKeyView" ref="706050499"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
 									<bool key="NSEnabled">YES</bool>
 									<object class="NSTextFieldCell" key="NSCell" id="818038861">
@@ -1707,6 +1720,7 @@
 								</object>
 							</array>
 							<string key="NSFrame">{{535, 1}, {86, 17}}</string>
+							<reference key="NSNextKeyView" ref="1027754401"/>
 						</object>
 						<reference key="destination" ref="1027754401"/>
 					</object>
@@ -1724,6 +1738,7 @@
 									<int key="NSvFlags">266</int>
 									<string key="NSFrameSize">{86, 17}</string>
 									<reference key="NSSuperview" ref="706050499"/>
+									<reference key="NSNextKeyView" ref="643515493"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
 									<bool key="NSEnabled">YES</bool>
 									<object class="NSTextFieldCell" key="NSCell" id="777833418">
@@ -1738,6 +1753,7 @@
 								</object>
 							</array>
 							<string key="NSFrame">{{624, 1}, {86, 17}}</string>
+							<reference key="NSNextKeyView" ref="857249215"/>
 						</object>
 						<reference key="destination" ref="857249215"/>
 					</object>
@@ -1755,6 +1771,7 @@
 									<int key="NSvFlags">266</int>
 									<string key="NSFrameSize">{86, 17}</string>
 									<reference key="NSSuperview" ref="643515493"/>
+									<reference key="NSNextKeyView" ref="32041363"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
 									<bool key="NSEnabled">YES</bool>
 									<object class="NSTextFieldCell" key="NSCell" id="822830501">
@@ -1769,6 +1786,7 @@
 								</object>
 							</array>
 							<string key="NSFrame">{{713, 1}, {86, 17}}</string>
+							<reference key="NSNextKeyView" ref="345343864"/>
 						</object>
 						<reference key="destination" ref="345343864"/>
 					</object>
@@ -1786,6 +1804,7 @@
 									<int key="NSvFlags">266</int>
 									<string key="NSFrameSize">{86, 17}</string>
 									<reference key="NSSuperview" ref="32041363"/>
+									<reference key="NSNextKeyView" ref="437181450"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
 									<bool key="NSEnabled">YES</bool>
 									<object class="NSTextFieldCell" key="NSCell" id="787124005">
@@ -1800,6 +1819,7 @@
 								</object>
 							</array>
 							<string key="NSFrame">{{802, 1}, {86, 17}}</string>
+							<reference key="NSNextKeyView" ref="411207146"/>
 						</object>
 						<reference key="destination" ref="411207146"/>
 					</object>
@@ -2925,26 +2945,57 @@
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">568</int>
+			<int key="maxID">569</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">
 				<object class="IBPartialClassDescription">
 					<string key="className">MasterViewController</string>
 					<string key="superclassName">NSWindowController</string>
+					<object class="NSMutableDictionary" key="actions">
+						<string key="NS.key.0">selectGenotype:</string>
+						<string key="NS.object.0">NSTextFieldCell</string>
+					</object>
+					<object class="NSMutableDictionary" key="actionInfosByName">
+						<string key="NS.key.0">selectGenotype:</string>
+						<object class="IBActionInfo" key="NS.object.0">
+							<string key="name">selectGenotype:</string>
+							<string key="candidateClassName">NSTextFieldCell</string>
+						</object>
+					</object>
 					<dictionary class="NSMutableDictionary" key="outlets">
+						<string key="consensusDetail">NSTextField</string>
 						<string key="dividerHandleView">NSView</string>
+						<string key="filesTableView">NSTableView</string>
+						<string key="genotypeTableView">NSTableView</string>
 						<string key="horizontalSplitView">NSSplitView</string>
+						<string key="locusDetail">NSTextField</string>
 						<string key="verticalSplitView">NSSplitView</string>
 					</dictionary>
 					<dictionary class="NSMutableDictionary" key="toOneOutletInfosByName">
+						<object class="IBToOneOutletInfo" key="consensusDetail">
+							<string key="name">consensusDetail</string>
+							<string key="candidateClassName">NSTextField</string>
+						</object>
 						<object class="IBToOneOutletInfo" key="dividerHandleView">
 							<string key="name">dividerHandleView</string>
 							<string key="candidateClassName">NSView</string>
 						</object>
+						<object class="IBToOneOutletInfo" key="filesTableView">
+							<string key="name">filesTableView</string>
+							<string key="candidateClassName">NSTableView</string>
+						</object>
+						<object class="IBToOneOutletInfo" key="genotypeTableView">
+							<string key="name">genotypeTableView</string>
+							<string key="candidateClassName">NSTableView</string>
+						</object>
 						<object class="IBToOneOutletInfo" key="horizontalSplitView">
 							<string key="name">horizontalSplitView</string>
 							<string key="candidateClassName">NSSplitView</string>
+						</object>
+						<object class="IBToOneOutletInfo" key="locusDetail">
+							<string key="name">locusDetail</string>
+							<string key="candidateClassName">NSTextField</string>
 						</object>
 						<object class="IBToOneOutletInfo" key="verticalSplitView">
 							<string key="name">verticalSplitView</string>
