@@ -103,7 +103,7 @@
         return [self.stacksDocuments count];
     }
     else
-    if ([[tableView identifier] isEqualToString:@"StacksTable"]) {
+    if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
         return 3 ;
     }
 
@@ -162,7 +162,7 @@
         return cellView;
     }
     else
-    if ([[tableView identifier] isEqualToString:@"StacksTable"]) {
+    if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
         if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
             cellView.textField.integerValue =  3;
 
