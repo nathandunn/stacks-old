@@ -51,11 +51,11 @@ using std::ofstream;
     }
     else {
 //        map<int,ModRes*> modelMap ;
-        map<int, Locus *> modelMap;
+        map<int, Locus *> catalog ;
         NSString *exampleFile = [examplePath stringByAppendingString:@"batch_1.catalog"];
 
 //        load_model_results([exampleFile UTF8String], modelMap);
-        load_loci([exampleFile UTF8String], modelMap, false);
+        load_loci([exampleFile UTF8String], catalog, false);
 
         // TODO: Get the genotype view
         // from populations.cc 150-205 . . . load the catalog matches and then the
@@ -66,18 +66,18 @@ using std::ofstream;
         // different color of view / lgith  / grey is the 3rd column/ locus . . . have to color SNP according other
         // the actual stacksDocuments will need to be imported directly and stored . . . see parse_tsv . .. but will be using raw stacksDocuments
 
-        NSLog(@"model size %d", (int) modelMap.size());
+        NSLog(@"model size %d", (int) catalog.size());
 
-        stackDocuments = [[NSMutableDictionary alloc] initWithCapacity:modelMap.size()];
+        stackDocuments = [[NSMutableDictionary alloc] initWithCapacity:catalog.size()];
 
-        map<int, Locus *>::iterator iter = modelMap.begin();
+        map<int, Locus *>::iterator iter = catalog.begin();
         DataStubber *dataStubber = [[DataStubber alloc] init];
 
         int randomness = arc4random_uniform(20);
         NSInteger totalGenotypes = 80 + randomness;
 
 
-        while (iter != modelMap.end()) {
+        while (iter != catalog.end()) {
             NSString *sampleId = [NSString stringWithFormat:@"%d", (*iter).first];
 
             LocusView *locusView = [[LocusView alloc] initWithId:sampleId];
@@ -96,6 +96,8 @@ using std::ofstream;
             locusView.male = [dataStubber generateGenotype];
             locusView.female = [dataStubber generateGenotype];
             locusView.progeny = [dataStubber generateProgeny:(NSInteger) totalGenotypes];
+
+            // TODO should be loaded from batch_x.markers.tsv
             locusView.marker = [dataStubber generateMarker];
 
 
@@ -119,16 +121,15 @@ using std::ofstream;
     //
     // Load the catalog
     //
-    stringstream catalog_file;
-    map<int, CSLocus *> catalog;
-    int res;
-    catalog_file << [path UTF8String] << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
-        cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
-        return 0;
-    }
-
-    NSLog(@"catalog size %d", (int) catalog.size());
+//    stringstream catalog_file;
+//    int res;
+//    catalog_file << [path UTF8String] << "batch_" << batch_id << ".catalog";
+//    if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
+//        cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
+//        return 0;
+//    }
+//
+//    NSLog(@"catalog size %d", (int) catalog.size());
 
 
 //    PopulationLoader* populationLoader = new PopulationLoader();
@@ -139,7 +140,7 @@ using std::ofstream;
     map<int, string> samples;
     vector<int> sample_ids;
 
-    srandom(time(NULL));
+//    srandom(time(NULL));
 
     vector<pair<int, string> > files;
 //    map<int, pair<int, int> > pop_indexes;
@@ -199,6 +200,7 @@ using std::ofstream;
         }
     }
 
+    map<int, CSLocus *> catalog;
     //
     // Create the population map
     //
@@ -208,10 +210,10 @@ using std::ofstream;
     pmap->populate(sample_ids, catalog, catalog_matches);
 
 
-    map<int, CSLocus *>::iterator it;
-    map<int, ModRes *>::iterator mit;
-    Datum *d;
-    CSLocus *loc;
+//    map<int, CSLocus *>::iterator it;
+//    map<int, ModRes *>::iterator mit;
+//    Datum *d;
+//    CSLocus *loc;
 
     // need to load the genotypes in order to get the markers . . .
     //
@@ -220,36 +222,36 @@ using std::ofstream;
     //   OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOEOOOOOOEOOOOOOOOOOOOOOOOOOOOOOOOOOOOOUOOOOUOOOOOO
     // and records model calls for each nucleotide: O (hOmozygous), E (hEterozygous), U (Unknown)
     //
-    for (uint i = 0; i < sample_ids.size(); i++) {
-        map<int, ModRes *> modres;
-        load_model_results(in_path + samples[sample_ids[i]], modres);
-
-        if (modres.size() == 0) {
-            cerr << "Warning: unable to find any model results in file '" << samples[sample_ids[i]] << "', excluding this sample from population analysis.\n";
-            continue;
-        }
-
-        for (it = catalog.begin(); it != catalog.end(); it++) {
-            loc = it->second;
-            d = pmap->datum(loc->id, sample_ids[i]);
-
-            if (d != NULL) {
-                if (modres.count(d->id) == 0) {
-                    cerr << "Fatal error: Unable to find model stacksDocuments for catalog locus " << loc->id
-                            << ", sample ID " << sample_ids[i] << ", sample locus " << d->id
-                            << "; likely IDs were mismatched when running pipeline.\n";
-                    exit(0);
-                }
-                d->len = strlen(modres[d->id]->model);
-                d->model = new char [d->len + 1];
-                strcpy(d->model, modres[d->id]->model);
-            }
-        }
-
-        for (mit = modres.begin(); mit != modres.end(); mit++)
-            delete mit->second;
-        modres.clear();
-    }
+//    for (uint i = 0; i < sample_ids.size(); i++) {
+//        map<int, ModRes *> modres;
+//        load_model_results(in_path + samples[sample_ids[i]], modres);
+//
+//        if (modres.size() == 0) {
+//            cerr << "Warning: unable to find any model results in file '" << samples[sample_ids[i]] << "', excluding this sample from population analysis.\n";
+//            continue;
+//        }
+//
+//        for (it = catalog.begin(); it != catalog.end(); it++) {
+//            loc = it->second;
+//            d = pmap->datum(loc->id, sample_ids[i]);
+//
+//            if (d != NULL) {
+//                if (modres.count(d->id) == 0) {
+//                    cerr << "Fatal error: Unable to find model stacksDocuments for catalog locus " << loc->id
+//                            << ", sample ID " << sample_ids[i] << ", sample locus " << d->id
+//                            << "; likely IDs were mismatched when running pipeline.\n";
+//                    exit(0);
+//                }
+//                d->len = strlen(modres[d->id]->model);
+//                d->model = new char [d->len + 1];
+//                strcpy(d->model, modres[d->id]->model);
+//            }
+//        }
+//
+//        for (mit = modres.begin(); mit != modres.end(); mit++)
+//            delete mit->second;
+//        modres.clear();
+//    }
 
 //    map<int, pair<int, int> > pop_indexes;
 
@@ -286,9 +288,8 @@ using std::ofstream;
 
     //
     // Idenitfy polymorphic loci, tabulate haplotypes present.
-    LociLoader *lociLoader = new LociLoader();
-    lociLoader->tabulate_haplotypes(catalog, pmap);
-
+//    LociLoader *lociLoader = new LociLoader();
+//    lociLoader->tabulate_haplotypes(catalog, pmap);
 
 //    vector<vector<CatMatch*>>::iterator catalog_match_iterator = catalog_matches.begin();
 //    while(catalog_match_iterator!=catalog_matches.end()){
@@ -315,60 +316,64 @@ using std::ofstream;
 
 //    exit(0);
 
-    NSLog(@"loci size %d", [loci count]);
-    for (id key in [loci allKeys]) {
-        NSLog(@"%@ - %@", key, [loci objectForKey:key]);
+//    NSLog(@"loci size %d", [loci count]);
+//    for (id key in [loci allKeys]) {
+//        NSLog(@"%@ - %@", key, [loci objectForKey:key]);
+//
+//    }
 
-    }
-
-    map<int, CSLocus *>::iterator iterator = catalog.begin();
-    while (iterator != catalog.end()) {
-        CSLocus *locus = (*iterator).second;
-        GenotypeView *genotypeView = [[GenotypeView alloc] init];
-        // TODO: set Locus in NSDictionary dictionary / hashmap instead using sampleID as index
-
-//        locus->
-
-//        [returnArray addObject:genotypeView];
-        NSString *key = [NSString stringWithFormat:@"%d", iterator->first];
-        NSLog(@"key %@", key);
-
-        StacksDocument *stacksDocument = [loci objectForKey:key];
-        LocusView *locusView = stacksDocument.locusData;
-        NSString *markerString = [NSString stringWithUTF8String:locus->marker.c_str()];
-//        cout << "locus model: "<< locus->model << endl ;
-        cout << "locus values marker[" << locus->marker << "] ann[" << locus->annotation << "] con[" << locus->con << "] " << endl;
-        cout << "f [" << locus->f << "] sample[" << locus->sample_id << "]" << endl;
-        NSLog(@"markerString [%@]", markerString);
-        if (markerString != Nil && markerString.length > 0) {
-
-            NSString *newMarker = [NSString stringWithUTF8String:locus->marker.c_str()];
-            NSLog(@"marker [%@]", newMarker);
-            NSLog(@"marker2 [%@]", newMarker);
-            locusView.marker = newMarker;
-            NSLog(@"annotation %@", [NSString stringWithUTF8String:locus->annotation.c_str()]);
-            NSLog(@"con %@", [NSString stringWithUTF8String:locus->con]);
-            NSLog(@"f %f", locus->f);
-            NSLog(@"depth %d", locus->depth);
-            NSLog(@"sample_id %d", locus->sample_id);
-            NSLog(@"trans_gcnt %d", locus->trans_gcnt);
-//            PhyLoc phyLoc = locus->loc;
-//            NSLog(@"phyLoc %d", phyLoc.bp);
-//            NSLog(@"phyLoc %@", [NSString stringWithUTF8String:phyLoc.chr]);
-//            NSLog(@"phyLoc %@", phyLoc.strand);
-
-
-            // TODO: get the model to work
-//            NSLog(@"model %@", [NSString stringWithUTF8String:locus->model]);
-        }
-//        locusView.= [NSString stringWithUTF8String:locus->marker.c_str()];
-//        [returnArray addObject:genotypeView];
-//        locus->marker;
-        iterator++;
-    }
+//    map<int, CSLocus *>::iterator iterator = catalog.begin();
+//    while (iterator != catalog.end()) {
+//        CSLocus *locus = (*iterator).second;
+//        GenotypeView *genotypeView = [[GenotypeView alloc] init];
+//        // TODO: set Locus in NSDictionary dictionary / hashmap instead using sampleID as index
+//
+////        locus->
+//
+////        [returnArray addObject:genotypeView];
+//        NSString *key = [NSString stringWithFormat:@"%d", iterator->first];
+//        NSLog(@"key %@", key);
+//
+//        StacksDocument *stacksDocument = [loci objectForKey:key];
+//        LocusView *locusView = stacksDocument.locusData;
+//        NSString *markerString = [NSString stringWithUTF8String:locus->marker.c_str()];
+////        cout << "locus model: "<< locus->model << endl ;
+//        cout << "locus values marker[" << locus->marker << "] ann[" << locus->annotation << "] con[" << locus->con << "] " << endl;
+//        cout << "f [" << locus->f << "] sample[" << locus->sample_id << "]" << endl;
+//        NSLog(@"markerString [%@]", markerString);
+//        if (markerString != Nil && markerString.length > 0) {
+//
+//            NSString *newMarker = [NSString stringWithUTF8String:locus->marker.c_str()];
+//            NSLog(@"marker [%@]", newMarker);
+//            NSLog(@"marker2 [%@]", newMarker);
+//            locusView.marker = newMarker;
+//            NSLog(@"annotation %@", [NSString stringWithUTF8String:locus->annotation.c_str()]);
+//            NSLog(@"con %@", [NSString stringWithUTF8String:locus->con]);
+//            NSLog(@"f %f", locus->f);
+//            NSLog(@"depth %d", locus->depth);
+//            NSLog(@"sample_id %d", locus->sample_id);
+//            NSLog(@"trans_gcnt %d", locus->trans_gcnt);
+////            PhyLoc phyLoc = locus->loc;
+////            NSLog(@"phyLoc %d", phyLoc.bp);
+////            NSLog(@"phyLoc %@", [NSString stringWithUTF8String:phyLoc.chr]);
+////            NSLog(@"phyLoc %@", phyLoc.strand);
+//
+//
+//            // TODO: get the model to work
+////            NSLog(@"model %@", [NSString stringWithUTF8String:locus->model]);
+//        }
+////        locusView.= [NSString stringWithUTF8String:locus->marker.c_str()];
+////        [returnArray addObject:genotypeView];
+////        locus->marker;
+//        iterator++;
+//    }
 
 //    exit(0);
 
+    // TODO: iterate over the catalog . . . -> OR . . . like write_genomic . . . : 736
+    // as pmap->ordered_loci.begin() . . . etc.
+    // Datum in pmap->locus(id) contains genotypes table
+    // genotype is in datum->obshap . . . (size of 1, 2, typically or more)
 
     return loci;
 }
@@ -376,7 +381,7 @@ using std::ofstream;
 - (StacksView *)loadStacksView:(NSString *)stackKey atPath:(NSString *) path {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
-    // TODO: or progeny_N.tags.tsv
+    // TODO: or *|!male|!female_N.tags.tsv
     NSString *fileName = [[NSString alloc] init];
     if([stackKey isEqualToString:@"male"]){
         fileName = @"/male.tags.tsv";
