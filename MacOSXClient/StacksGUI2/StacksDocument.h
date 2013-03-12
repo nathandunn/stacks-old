@@ -13,6 +13,7 @@
 @interface StacksDocument : NSObject
 
 
+// TODO: should be an array of locusviews
 // this is a wrapper
 @property (strong) NSString *locusId ;
 @property (strong) LocusView *locusData;

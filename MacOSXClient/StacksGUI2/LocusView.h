@@ -27,6 +27,7 @@
 @property (strong) NSString *ratio ;
 
 
+// TODO:
 @property (strong) NSMutableArray *progeny;
 @property (strong) GenotypeEntry *male;
 @property (strong) GenotypeEntry *female;
