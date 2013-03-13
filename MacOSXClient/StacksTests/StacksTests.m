@@ -7,6 +7,8 @@
 //
 
 #import "StacksTests.h"
+#import "StacksLoader.h"
+#import "StacksDocument.h"
 
 @implementation StacksTests
 
@@ -24,10 +26,17 @@
     [super tearDown];
 }
 
-- (void)testBob
+- (void)testLoadLoci
 {
 //    STFail(@"Unit tests are not implemented yet in StacksTests");
     STAssertNil(nil,@"should obviously be nil");
+
+    StacksLoader *stacksLoader = [[StacksLoader alloc] init];
+    NSString *examplePath = @"/tmp/stacks_tut/";
+    StacksDocument* stacksDocument = [stacksLoader loadLoci:examplePath];
+    NSUInteger lociCount = stacksDocument.locusViews.count;
+    NSLog(@"lociCount %ld",lociCount);
+    STAssertTrue(462==lociCount,@"locusviews should not be empty");
 }
 
 @end
