@@ -8,9 +8,20 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface MasterViewController : NSViewController
+@class StacksDocument;
+@class StacksView;
+@class LocusView;
 
-@property (strong) NSMutableArray *data;
+@interface MasterViewController : NSWindowController <NSSplitViewDelegate>{
+    IBOutlet NSSplitView *verticalSplitView ;
+    IBOutlet NSSplitView *horizontalSplitView ;
+    IBOutlet NSView *dividerHandleView;
 
+}
+
+//@property (strong) NSMutableDictionary *stacksDocuments;
+@property (atomic,strong) StacksDocument* stacksDocument;
+@property (atomic,strong) LocusView* selectedLocusView;
+@property(atomic, strong) StacksView *selectedStacks;
 
 @end
