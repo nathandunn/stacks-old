@@ -10,6 +10,7 @@
 
 @class StacksDocument;
 @class StacksView;
+@class LocusView;
 
 @interface MasterViewController : NSWindowController <NSSplitViewDelegate>{
     IBOutlet NSSplitView *verticalSplitView ;
@@ -18,8 +19,9 @@
 
 }
 
-@property (strong) NSMutableDictionary *stacksDocuments;
-@property (weak) StacksDocument* selectedStacksDocument;
-@property(nonatomic, strong) StacksView *selectedStacks;
+//@property (strong) NSMutableDictionary *stacksDocuments;
+@property (atomic,strong) StacksDocument* stacksDocument;
+@property (atomic,strong) LocusView* selectedLocusView;
+@property(atomic, strong) StacksView *selectedStacks;
 
 @end

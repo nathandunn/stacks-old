@@ -13,12 +13,9 @@
 @interface StacksDocument : NSObject
 
 
-// TODO: should be an array of locusviews
-// this is a wrapper
-@property (strong) NSString *locusId ;
-@property (strong) LocusView *locusData;
+@property (strong) NSMutableDictionary *locusViews;
 
-- (id)initWithLocusView:(LocusView *)locusData;
+- (id)initWithLocusView:(NSMutableDictionary*)locusViews;
 
 
 @end
