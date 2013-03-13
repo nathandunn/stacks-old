@@ -10,6 +10,7 @@
 //#include "stacks.h"
 #include "sql_utilities.h"
 #include "PopMap.h"
+#import "StacksDocument.h"
 
 
 #include <fstream>
@@ -39,12 +40,12 @@ using std::ofstream;
 
 }
 
-- (NSMutableDictionary *)loadLoci:(NSString *)examplePath {
+- (StacksDocument*)loadLoci:(NSString *)examplePath {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
 
     // TODO: should be NSMutableDictionary
-    NSMutableDictionary *stackDocuments = [[NSMutableDictionary alloc] init];
+    NSMutableDictionary *locusViews = [[NSMutableDictionary alloc] init];
     if (!existsAtPath) {
         NSLog(@"files do not exist %@", examplePath);
         exit(0);
@@ -68,7 +69,7 @@ using std::ofstream;
 
         NSLog(@"model size %d", (int) modelMap.size());
 
-        stackDocuments = [[NSMutableDictionary alloc] initWithCapacity:modelMap.size()];
+//        stackDocument = [[NSMutableDictionary alloc] initWithCapacity:modelMap.size()];
 
         map<int, Locus *>::iterator iter = modelMap.begin();
         DataStubber *dataStubber = [[DataStubber alloc] init];
@@ -98,17 +99,21 @@ using std::ofstream;
             locusView.progeny = [dataStubber generateProgeny:(NSInteger) totalGenotypes];
             locusView.marker = [dataStubber generateMarker];
 
-
-            StacksDocument *doc = [[StacksDocument alloc] initWithLocusView:locusView];
+            
+            [locusViews setObject:locusView forKey:locusView.locusId] ;
+            
+//            StacksDocument *doc = [[StacksDocument alloc] initWithLocusView:locusView];
 //            [stackDocuments insertValue:doc atIndex:doc inPropertyWithKey:<#(NSString *)key#>]
 //            [stackDocuments insertValue:doc inPropertyWithKey:doc.locusId];
-            [stackDocuments setObject:doc forKey:doc.locusId];
+//            [stackDocument setObject:doc forKey:doc.locusId];
 
             ++iter;
         }
     }
 
-    return stackDocuments;
+    StacksDocument *stackDocument = [[StacksDocument  alloc] initWithLocusView:locusViews];
+
+    return stackDocument;
 
 }
 
@@ -315,7 +320,7 @@ using std::ofstream;
 
 //    exit(0);
 
-    NSLog(@"loci size %d", [loci count]);
+    NSLog(@"loci size %ld", [loci count]);
     for (id key in [loci allKeys]) {
         NSLog(@"%@ - %@", key, [loci objectForKey:key]);
 
@@ -333,8 +338,7 @@ using std::ofstream;
         NSString *key = [NSString stringWithFormat:@"%d", iterator->first];
         NSLog(@"key %@", key);
 
-        StacksDocument *stacksDocument = [loci objectForKey:key];
-        LocusView *locusView = stacksDocument.locusData;
+        LocusView *locusView = [loci objectForKey:key];
         NSString *markerString = [NSString stringWithUTF8String:locus->marker.c_str()];
 //        cout << "locus model: "<< locus->model << endl ;
         cout << "locus values marker[" << locus->marker << "] ann[" << locus->annotation << "] con[" << locus->con << "] " << endl;

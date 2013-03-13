@@ -34,11 +34,9 @@
 //@property (strong) GenotypeView *genotypeView;
 //@property (strong) NSMutableArray *snpsViews; // SNP in the consensus
 
-// TODO: look in populations.cc
 // use PopMap to get the GenotypesView
 
 - (id)initWithId:(NSString *)locusId ;
-- (id)initWithId:(NSString *)locusId consensus:(NSString*)consensus;
 
 - (NSInteger) matchingParents;
 - (NSInteger) genotypes ;

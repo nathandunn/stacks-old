@@ -27,8 +27,8 @@
 @end
 
 @implementation MasterViewController
-@synthesize selectedStacks = _selectedStacks;
 
+@synthesize stacksDocument;
 
 // -------------------------------------------------------------------------------
 //	awakeFromNib:
@@ -88,8 +88,8 @@
 
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
     if ([[tableView identifier] isEqualToString:@"GenotypeTableView"]) {
-        if (self.selectedStacksDocument != nil) {
-            LocusView *locusView = self.selectedStacksDocument.locusData;
+        if (self.selectedLocusView != nil) {
+            LocusView *locusView = self.selectedLocusView;
             NSInteger count = [locusView genotypes];
             NSInteger rows = count / 10;
             if (count % 10 > 0) {
@@ -101,7 +101,7 @@
     }
     else
     if ([[tableView identifier] isEqualToString:@"LocusTable"]) {
-        return [self.stacksDocuments count];
+        return [self.stacksDocument.locusViews count];
     }
     else
     if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
@@ -129,19 +129,19 @@
     else
     if ([[tableView identifier] isEqualToString:@"LocusTable"]) {
         // we want data for the row . . . .
-        NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
+        NSArray *sortedKeys = [[self.stacksDocument.locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
             return [obj1 integerValue] - [obj2 integerValue];
         }];
         NSString *key = [sortedKeys objectAtIndexedSubscript:row];
-        StacksDocument *stacksDoc = [self.stacksDocuments objectForKey:key];
+        LocusView *locusView = [self.stacksDocument.locusViews objectForKey:key];
 
         // Since this is a single-column table view, this would not be necessary.
         // But it's a good practice to do it in order by remember it when a table is multicolumn.
         if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
-            cellView.textField.stringValue = stacksDoc.locusData.locusId;
+            cellView.textField.stringValue = locusView.locusId;
         }
         else if ([tableColumn.identifier isEqualToString:@"SnpColumn"]) {
-            NSMutableArray *snps = stacksDoc.locusData.snps;
+            NSMutableArray *snps = locusView.snps;
             if ([snps count] > 0) {
                 cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%ldnuc]", [snps count]];
             }
@@ -150,20 +150,20 @@
             }
         }
         else if ([tableColumn.identifier isEqualToString:@"ParentsColumn"]) {
-            cellView.textField.integerValue = [stacksDoc.locusData matchingParents];
+            cellView.textField.integerValue = [locusView matchingParents];
         }
         else if ([tableColumn.identifier isEqualToString:@"ProgenyColumn"]) {
-            NSUInteger count = [[stacksDoc.locusData progeny] count];
+            NSUInteger count = [[locusView progeny] count];
             cellView.textField.stringValue = [NSString stringWithFormat:@"%ld / %ld", count, count];
         }
         else if ([tableColumn.identifier isEqualToString:@"MarkerColumn"]) {
-            cellView.textField.stringValue = stacksDoc.locusData.marker;
+            cellView.textField.stringValue = locusView.marker;
         }
         else if ([tableColumn.identifier isEqualToString:@"RatioColumn"]) {
             cellView.textField.stringValue = @"aa: 45 (51.7%) bb:42 (48.3%)";
         }
         else if ([tableColumn.identifier isEqualToString:@"GenotypesColumn"]) {
-            cellView.textField.integerValue = [stacksDoc.locusData genotypes];
+            cellView.textField.integerValue = [locusView genotypes];
         }
 
         return cellView;
@@ -263,9 +263,9 @@
 
 - (NSTableCellView *)handleGenotypesTable:(NSString *)column row:(NSInteger)row cell:(NSTableCellView *)cellView {
 //    NSLog(@"handling the genotypes table %@",column);
-    if (self.selectedStacksDocument != nil) {
+    if (self.stacksDocument != nil) {
 
-        LocusView *locusView = self.selectedStacksDocument.locusData;
+        LocusView *locusView = self.selectedLocusView;
         NSInteger parentCount = locusView.matchingParents;
         NSInteger progenyCount = locusView.genotypes;
         NSInteger totalCount = parentCount + progenyCount;
@@ -309,21 +309,24 @@
     return cellView;
 }
 
-- (StacksDocument *)findSelectedStacksDocument {
-
+- (LocusView *)findSelectedLocus {
+    NSLog(@"A - # of locusViews %ld",[self.stacksDocument.locusViews count]);
     NSInteger selectedRow = [self.filesTableView selectedRow];
-    NSArray *sortedKeys = [[self.stacksDocuments allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
+    NSArray *sortedKeys = [[self.stacksDocument.locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
         return [obj1 integerValue] - [obj2 integerValue];
     }];
     NSString *key = [sortedKeys objectAtIndexedSubscript:selectedRow];
-    StacksDocument *stacksDocument = [self.stacksDocuments objectForKey:key];
-    return stacksDocument;
+    NSLog(@"# of locusViews %ld",[self.stacksDocument.locusViews count]);
+    NSLog(@"input keys %ld",[[self.stacksDocument.locusViews allKeys]count]);
+    NSLog(@"retrieved key %@",key);
+    NSLog(@"sorted keys size: %ld",[sortedKeys count]);
+    LocusView *locusView= [self.stacksDocument.locusViews objectForKey:key];
+    return locusView;
 }
 
-- (void)handleSelectedLocus:(StacksDocument *)doc {
+- (void)handleSelectedLocus:(LocusView*) locus{
 
-    if (doc != nil) {
-        LocusView *locus = doc.locusData;
+    if (locus != nil) {
         NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locus.consensus];
 
         // TODOL need to store snps correctly . . . as SnpsView or as vector<SNP>:: in LocusView
@@ -353,7 +356,7 @@
 
     }
     else {
-        self.selectedStacksDocument = nil ;
+        self.stacksDocument = nil ;
         [self.locusDetail setStringValue:@"Error"];
     }
 
@@ -367,9 +370,9 @@
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
     NSString *tableName = [[aNotification object] identifier];
     if ([tableName isEqualToString:@"LocusTable"]) {
-        self.selectedStacksDocument = [self findSelectedStacksDocument];
+        self.selectedLocusView = [self findSelectedLocus];
         // Update info
-        [self handleSelectedLocus:self.selectedStacksDocument];
+        [self handleSelectedLocus:self.selectedLocusView];
     }
 //    else
 //    if ([tableName isEqualToString:@"GenotypeTableView"]) {
@@ -423,7 +426,7 @@
     }
     // get the array number
 
-    LocusView *locusView = self.selectedStacksDocument.locusData;
+    LocusView *locusView = self.selectedLocusView;
     if(rowNumber==0 && columnNumber==0 && locusView.hasMale){
         self.selectedStacks = [self loadStacksForProgeny:@"male"];
     }
@@ -438,8 +441,8 @@
         NSUInteger totalColumnCount = 10;
         NSInteger parentCount = locusView.matchingParents;
 
-        NSInteger index = rowNumber*totalColumnCount + columnNumber - parentCount;
-        NSLog(@"index %d < %d",index,[locusView genotypes]);
+        int index = rowNumber*totalColumnCount + columnNumber - parentCount;
+        NSLog(@"index %d < %ld",index,[locusView genotypes]);
         if(index+1 < [locusView genotypes]){
             GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index+1] ;
             NSLog(@"entry %@",[entry render]);
