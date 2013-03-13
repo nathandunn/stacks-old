@@ -22,6 +22,6 @@
 //@property (strong) NSMutableDictionary *stacksDocuments;
 @property (atomic,strong) StacksDocument* stacksDocument;
 @property (atomic,strong) LocusView* selectedLocusView;
-@property(nonatomic, strong) StacksView *selectedStacks;
+@property(atomic, strong) StacksView *selectedStacks;
 
 @end

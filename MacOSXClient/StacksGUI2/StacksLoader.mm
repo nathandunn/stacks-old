@@ -408,8 +408,6 @@ using std::ofstream;
         NSLog(@"error loading file [%@]: %@",absoluteFileName,error);
     }
 
-    NSLog(@"START splitting");
-
     NSMutableArray *stackEntries = [[NSMutableArray alloc] init];
 
     NSString *line;
@@ -456,9 +454,6 @@ using std::ofstream;
     [snps addObject:[NSNumber numberWithInt:17]];
     [snps addObject:[NSNumber numberWithInt:35]];
     stacksView.snps = snps ;
-
-
-    NSLog(@"done splitting");
 
 
     return stacksView;
