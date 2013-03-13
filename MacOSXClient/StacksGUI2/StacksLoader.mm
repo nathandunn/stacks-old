@@ -44,7 +44,6 @@ using std::ofstream;
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
 
-    // TODO: should be NSMutableDictionary
     NSMutableDictionary *locusViews = [[NSMutableDictionary alloc] init];
     if (!existsAtPath) {
         NSLog(@"files do not exist %@", examplePath);
@@ -362,7 +361,6 @@ using std::ofstream;
 //            NSLog(@"phyLoc %@", phyLoc.strand);
 
 
-            // TODO: get the model to work
 //            NSLog(@"model %@", [NSString stringWithUTF8String:locus->model]);
         }
 //        locusView.= [NSString stringWithUTF8String:locus->marker.c_str()];
