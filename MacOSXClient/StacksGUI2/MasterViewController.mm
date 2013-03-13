@@ -105,7 +105,6 @@
     }
     else
     if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
-        NSLog(@"reloading stackstableview %@",self.selectedStacks);
         if(self.selectedStacks==nil){
             return 0 ;
         }
@@ -310,16 +309,11 @@
 }
 
 - (LocusView *)findSelectedLocus {
-    NSLog(@"A - # of locusViews %ld",[self.stacksDocument.locusViews count]);
     NSInteger selectedRow = [self.filesTableView selectedRow];
     NSArray *sortedKeys = [[self.stacksDocument.locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
         return [obj1 integerValue] - [obj2 integerValue];
     }];
     NSString *key = [sortedKeys objectAtIndexedSubscript:selectedRow];
-    NSLog(@"# of locusViews %ld",[self.stacksDocument.locusViews count]);
-    NSLog(@"input keys %ld",[[self.stacksDocument.locusViews allKeys]count]);
-    NSLog(@"retrieved key %@",key);
-    NSLog(@"sorted keys size: %ld",[sortedKeys count]);
     LocusView *locusView= [self.stacksDocument.locusViews objectForKey:key];
     return locusView;
 }
@@ -391,14 +385,10 @@
 // TODO: create the snps / stacks view
 // http://genome.uoregon.edu/stacks/tag.php?db=tut_radtags&batch_id=1&sample_id=28&tag_id=277
 - (void)showTagsTable:(StacksView *)view {
-    NSLog(@"reloading for view") ;
-
     [self.stacksTableView reloadData];
 }
 
 - (StacksView *)loadStacksForProgeny:(NSString*)stackKey {
-    NSLog(@"loading stacks for %@", stackKey);
-
     StacksLoader *loader = [[StacksLoader alloc] init];
     StacksView *stacksView = [loader loadStacksView:stackKey atPath:@"/tmp/stacks_tut"];
 
@@ -414,11 +404,9 @@
 
 // TODO: handle genotype selection
 - (void)genotypeSelected:(id)tableView {
-    NSLog(@"passed value %@", tableView);
 //    NSTableCellView *tableCellView = [tableView selectedCell];
     NSInteger rowNumber = [_genotypeTableView clickedRow];
     NSInteger columnNumber = [_genotypeTableView clickedColumn];
-    NSLog(@"clicked row %ld, column %ld", rowNumber, columnNumber);
     if(rowNumber<0 || columnNumber<0){
         NSLog(@"invalid selection") ;
         self.selectedStacks = nil  ;
@@ -442,11 +430,8 @@
         NSInteger parentCount = locusView.matchingParents;
 
         int index = rowNumber*totalColumnCount + columnNumber - parentCount;
-        NSLog(@"index %d < %ld",index,[locusView genotypes]);
         if(index+1 < [locusView genotypes]){
             GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index+1] ;
-            NSLog(@"entry %@",[entry render]);
-
             self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld",[entry entryId]]];
         }
         else{
@@ -454,7 +439,6 @@
             self.selectedStacks = nil ;
         }
     }
-    NSLog(@"set selected tags %@",self.selectedStacks);
     [self showTagsTable:self.selectedStacks];
 }
 
