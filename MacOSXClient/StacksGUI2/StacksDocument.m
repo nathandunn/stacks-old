@@ -11,14 +11,14 @@
 
 @implementation StacksDocument
 
-- (id)initWithLocusView:(LocusView *)locusData {
+- (id)initWithLocusView:(NSMutableDictionary*)locusViews {
     if ((self = [super init])) {
-        self.locusData = locusData;
-        self.locusId = locusData.locusId;
+        self.locusViews = locusViews;
     }
     return self ;
 }
 
+@synthesize locusViews;
 
 @end
 
