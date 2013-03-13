@@ -13,8 +13,6 @@
 		14B4DD5116C97A7500317EB3 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD4F16C97A7500317EB3 /* Credits.rtf */; };
 		14B4DD5416C97A7500317EB3 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD5316C97A7500317EB3 /* AppDelegate.mm */; };
 		14B4DD5716C97A7600317EB3 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD5516C97A7600317EB3 /* MainMenu.xib */; };
-		14B4DD5F16C97A7600317EB3 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD5E16C97A7600317EB3 /* SenTestingKit.framework */; };
-		14B4DD6016C97A7600317EB3 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD4016C97A7500317EB3 /* Cocoa.framework */; };
 		14B4DDA416C97ACE00317EB3 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD8F16C97ACE00317EB3 /* libz.1.2.7.dylib */; };
 		14B4DDB116C97C0400317EB3 /* MasterViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */; };
 		14B4DDB216C97C0400317EB3 /* MasterViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DDB016C97C0400317EB3 /* MasterViewController.xib */; };
@@ -42,13 +40,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		14B4DD6116C97A7600317EB3 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 14B4DD3516C97A7500317EB3 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 14B4DD3C16C97A7500317EB3;
-			remoteInfo = StacksGUI2;
-		};
 		6BEFE6CD16F1253500F932B0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 14B4DD3516C97A7500317EB3 /* Project object */;
@@ -142,15 +133,6 @@
 			files = (
 				14B4DD4116C97A7500317EB3 /* Cocoa.framework in Frameworks */,
 				14B4DDA416C97ACE00317EB3 /* libz.1.2.7.dylib in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		14B4DD5916C97A7600317EB3 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				14B4DD5F16C97A7600317EB3 /* SenTestingKit.framework in Frameworks */,
-				14B4DD6016C97A7600317EB3 /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -354,24 +336,6 @@
 			productReference = 14B4DD3D16C97A7500317EB3 /* StacksGUI2.app */;
 			productType = "com.apple.product-type.application";
 		};
-		14B4DD5C16C97A7600317EB3 /* StacksGUI2Tests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 14B4DD7116C97A7600317EB3 /* Build configuration list for PBXNativeTarget "StacksGUI2Tests" */;
-			buildPhases = (
-				14B4DD5816C97A7600317EB3 /* Sources */,
-				14B4DD5916C97A7600317EB3 /* Frameworks */,
-				14B4DD5A16C97A7600317EB3 /* Resources */,
-				14B4DD5B16C97A7600317EB3 /* ShellScript */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				14B4DD6216C97A7600317EB3 /* PBXTargetDependency */,
-			);
-			name = StacksGUI2Tests;
-			productName = StacksGUI2Tests;
-			productType = "com.apple.product-type.bundle";
-		};
 		6BEFE6BC16F121DE00F932B0 /* StacksTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6BEFE6CC16F121DE00F932B0 /* Build configuration list for PBXNativeTarget "StacksTests" */;
@@ -414,7 +378,6 @@
 			projectRoot = "";
 			targets = (
 				14B4DD3C16C97A7500317EB3 /* StacksGUI2 */,
-				14B4DD5C16C97A7600317EB3 /* StacksGUI2Tests */,
 				6BEFE6BC16F121DE00F932B0 /* StacksTests */,
 			);
 		};
@@ -432,13 +395,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		14B4DD5A16C97A7600317EB3 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6BEFE6BA16F121DE00F932B0 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -450,19 +406,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		14B4DD5B16C97A7600317EB3 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Run the unit tests in this test bundle.\n\"${SYSTEM_DEVELOPER_DIR}/Tools/RunUnitTests\"\n";
-		};
 		6BEFE6BB16F121DE00F932B0 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -506,13 +449,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		14B4DD5816C97A7600317EB3 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6BEFE6B816F121DE00F932B0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -524,11 +460,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		14B4DD6216C97A7600317EB3 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 14B4DD3C16C97A7500317EB3 /* StacksGUI2 */;
-			targetProxy = 14B4DD6116C97A7600317EB3 /* PBXContainerItemProxy */;
-		};
 		6BEFE6CE16F1253500F932B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 14B4DD3C16C97A7500317EB3 /* StacksGUI2 */;
@@ -577,6 +508,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/StacksGui2.app/Contents/MacOS/StacksGui2";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libstdc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -595,6 +527,7 @@
 					"$(inherited)",
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
@@ -602,6 +535,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				TEST_HOST = "$(BUNDLE_LOADER)";
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
@@ -611,6 +545,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/StacksGui2.app/Contents/MacOS/StacksGui2";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libstdc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -623,12 +558,14 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				SDKROOT = macosx;
+				TEST_HOST = "$(BUNDLE_LOADER)";
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Release;
@@ -636,6 +573,7 @@
 		14B4DD6F16C97A7600317EB3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "StacksGUI2/StacksGUI2-Prefix.pch";
@@ -652,6 +590,7 @@
 		14B4DD7016C97A7600317EB3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "StacksGUI2/StacksGUI2-Prefix.pch";
@@ -665,39 +604,10 @@
 			};
 			name = Release;
 		};
-		14B4DD7216C97A7600317EB3 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/StacksGUI2.app/Contents/MacOS/StacksGUI2";
-				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "StacksGUI2/StacksGUI2-Prefix.pch";
-				INFOPLIST_FILE = "StacksGUI2Tests/StacksGUI2Tests-Info.plist";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUNDLE_LOADER)";
-				WRAPPER_EXTENSION = octest;
-			};
-			name = Debug;
-		};
-		14B4DD7316C97A7600317EB3 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/StacksGUI2.app/Contents/MacOS/StacksGUI2";
-				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "StacksGUI2/StacksGUI2-Prefix.pch";
-				INFOPLIST_FILE = "StacksGUI2Tests/StacksGUI2Tests-Info.plist";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUNDLE_LOADER)";
-				WRAPPER_EXTENSION = octest;
-			};
-			name = Release;
-		};
 		6BEFE6CA16F121DE00F932B0 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/StacksGUI2.app/Contents/MacOS/StacksGUI2";
 				CLANG_CXX_LIBRARY = "libc++";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
@@ -712,6 +622,7 @@
 		6BEFE6CB16F121DE00F932B0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/StacksGUI2.app/Contents/MacOS/StacksGUI2";
 				CLANG_CXX_LIBRARY = "libc++";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
@@ -744,15 +655,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		14B4DD7116C97A7600317EB3 /* Build configuration list for PBXNativeTarget "StacksGUI2Tests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				14B4DD7216C97A7600317EB3 /* Debug */,
-				14B4DD7316C97A7600317EB3 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		6BEFE6CC16F121DE00F932B0 /* Build configuration list for PBXNativeTarget "StacksTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -760,6 +662,7 @@
 				6BEFE6CB16F121DE00F932B0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
