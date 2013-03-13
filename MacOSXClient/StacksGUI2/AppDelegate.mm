@@ -9,6 +9,7 @@
 #import "AppDelegate.h"
 #import "MasterViewController.h"
 #import "StacksLoader.h"
+#import "StacksDocument.h"
 //#import "StacksDocument.h"
 //#import "sql_utilities.h"
 
@@ -24,9 +25,10 @@
 
 
     NSString *examplePath = @"/tmp/stacks_tut/";
-    NSMutableDictionary *geneDocs = [self.loader loadLoci:examplePath];
+    StacksDocument *stacksDocument = [self.loader loadLoci:examplePath];
 
-    self.masterViewController.stacksDocuments = geneDocs;
+    self.masterViewController.stacksDocument = stacksDocument;
+
     [self.masterViewController showWindow:self];
 
 }

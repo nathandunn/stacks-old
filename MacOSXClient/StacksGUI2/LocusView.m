@@ -20,14 +20,6 @@
     return self;
 }
 
-- (id)initWithId:(NSString *)locusId consensus:(NSString *)consensus {
-    if ((self = [super init])) {
-        self.locusId = locusId;
-        self.consensus = consensus;
-    }
-    return self;
-}
-
 //@synthesize locusId;
 //@synthesize consensus;
 //@synthesize marker;
