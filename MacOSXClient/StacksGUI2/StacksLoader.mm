@@ -35,12 +35,14 @@ using std::ofstream;
 
 #include "LociLoader.hpp"
 
+BOOL build_file_list(char const *string1, id param);
+
 @implementation StacksLoader {
 
 
 }
 
-- (StacksDocument*)loadLoci:(NSString *)examplePath {
+- (StacksDocument *)loadLoci:(NSString *)examplePath {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
 
@@ -54,7 +56,6 @@ using std::ofstream;
         map<int, Locus *> modelMap;
         NSString *exampleFile = [examplePath stringByAppendingString:@"batch_1.catalog"];
 
-//        load_model_results([exampleFile UTF8String], modelMap);
         load_loci([exampleFile UTF8String], modelMap, false);
 
         // TODO: Get the genotype view
@@ -75,7 +76,6 @@ using std::ofstream;
 
         int randomness = arc4random_uniform(20);
         NSInteger totalGenotypes = 80 + randomness;
-
 
         while (iter != modelMap.end()) {
             NSString *sampleId = [NSString stringWithFormat:@"%d", (*iter).first];
@@ -98,9 +98,9 @@ using std::ofstream;
             locusView.progeny = [dataStubber generateProgeny:(NSInteger) totalGenotypes];
             locusView.marker = [dataStubber generateMarker];
 
-            
-            [locusViews setObject:locusView forKey:locusView.locusId] ;
-            
+
+            [locusViews setObject:locusView forKey:locusView.locusId];
+
 //            StacksDocument *doc = [[StacksDocument alloc] initWithLocusView:locusView];
 //            [stackDocuments insertValue:doc atIndex:doc inPropertyWithKey:<#(NSString *)key#>]
 //            [stackDocuments insertValue:doc inPropertyWithKey:doc.locusId];
@@ -110,7 +110,7 @@ using std::ofstream;
         }
     }
 
-    StacksDocument *stackDocument = [[StacksDocument  alloc] initWithLocusView:locusViews];
+    StacksDocument *stackDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
 
     return stackDocument;
 
@@ -381,61 +381,59 @@ using std::ofstream;
     return loci;
 }
 
-- (StacksView *)loadStacksView:(NSString *)stackKey atPath:(NSString *) path {
+- (StacksView *)loadStacksView:(NSString *)stackKey atPath:(NSString *)path {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
     // TODO: or *|!male|!female_N.tags.tsv
     NSString *fileName = [[NSString alloc] init];
-    if([stackKey isEqualToString:@"male"]){
+    if ([stackKey isEqualToString:@"male"]) {
         fileName = @"/male.tags.tsv";
     }
-    else
-    if([stackKey isEqualToString:@"female"]){
+    else if ([stackKey isEqualToString:@"female"]) {
         fileName = @"/female.tags.tsv";
     }
-    else{
-        fileName = [NSString stringWithFormat:@"/progeny_%@.tags.tsv",stackKey];
+    else {
+        fileName = [NSString stringWithFormat:@"/progeny_%@.tags.tsv", stackKey];
     }
     NSString *absoluteFileName = [path stringByAppendingString:fileName];
 
     BOOL existsAtPath = [fileManager fileExistsAtPath:absoluteFileName];
-    NSLog(@"absolute file name %@ exists %d",absoluteFileName,existsAtPath);
-    if(!existsAtPath){
-        return nil ;
+    NSLog(@"absolute file name %@ exists %d", absoluteFileName, existsAtPath);
+    if (!existsAtPath) {
+        return nil;
     }
-    StacksView *stacksView = [[StacksView alloc] init] ;
+    StacksView *stacksView = [[StacksView alloc] init];
 
     NSError *error = nil ;
     NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error] componentsSeparatedByString:@"\n"];
 
-    if(error){
-        NSLog(@"error loading file [%@]: %@",absoluteFileName,error);
+    if (error) {
+        NSLog(@"error loading file [%@]: %@", absoluteFileName, error);
     }
 
     NSMutableArray *stackEntries = [[NSMutableArray alloc] init];
 
     NSString *line;
-    NSUInteger row =1 ;
+    NSUInteger row = 1;
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
-        if([[columns objectAtIndex:0] isEqualToString:@"0"]){
+        if ([[columns objectAtIndex:0] isEqualToString:@"0"]) {
             StackEntry *stackEntry = [[StackEntry alloc] init];
-            stackEntry.entryId = row ;
+            stackEntry.entryId = row;
             stackEntry.relationship = [columns objectAtIndex:6];
             stackEntry.block = [columns objectAtIndex:7];
             stackEntry.sequenceId = [columns objectAtIndex:8];
             stackEntry.sequence = [columns objectAtIndex:9];
 
-            if([stackEntry.relationship isEqualToString:@"consensus"]){
+            if ([stackEntry.relationship isEqualToString:@"consensus"]) {
                 stacksView.consensus = stackEntry;
             }
-            else
-            if([stackEntry.relationship isEqualToString:@"model"]){
+            else if ([stackEntry.relationship isEqualToString:@"model"]) {
                 stacksView.model = stackEntry;
             }
-            else{
-                ++row ;
+            else {
+                ++row;
                 [stackEntries addObject:stackEntry];
             }
 
@@ -457,9 +455,184 @@ using std::ofstream;
     NSMutableArray *snps = [[NSMutableArray alloc] init];
     [snps addObject:[NSNumber numberWithInt:17]];
     [snps addObject:[NSNumber numberWithInt:35]];
-    stacksView.snps = snps ;
+    stacksView.snps = snps;
 
 
     return stacksView;
 }
+
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path {
+    [self checkFile:path];
+//    map<int, Locus *> modelMap;
+    map<int, CSLocus *> catalog;
+    NSString *exampleFile = [path stringByAppendingString:@"batch_1.catalog"];
+
+//        load_model_results([exampleFile UTF8String], modelMap);
+    load_loci([exampleFile UTF8String], catalog, false);
+
+    /**
+    * START: loading genotypes + extra info
+*/
+
+    vector<vector<CatMatch *> > catalog_matches;
+    map<int, string> samples;
+    vector<int> sample_ids;
+
+    vector<pair<int, string>> files = [self buildFileList:path];
+//    vector<pair<int, string>>::iterator fileNameIterator = files.begin();
+//    while (fileNameIterator != files.end()) {
+//        string fileName = (*fileNameIterator).second;
+//        NSLog(@"filestring %@", [NSString stringWithUTF8String:fileName.c_str()]);
+////        NSLog(@"filestring %@", fileName);
+//        ++fileNameIterator;
+//    }
+    NSLog(@"number of files %d",files.size());
+
+
+    // loci loaded . . . now loading genotype
+
+    // TODO: Get the genotype view
+    // from populations.cc 150-205 . . . load the catalog matches and then the
+    // I will use the locus ID to look over the PopMap<CLocus> and the catalog map map<int,CLocus *> . . .
+    // the table that iterates (e.g., is the tabulate_haplotypes object)
+
+    // TODO: get the Stack View
+    // different color of view / lgith  / grey is the 3rd column/ locus . . . have to color SNP according other
+    // the actual stacksDocuments will need to be imported directly and stored . . . see parse_tsv . .. but will be using raw stacksDocuments
+
+    NSLog(@"model size %d", (int) catalog.size());
+
+
+    for (uint i = 0; i < files.size(); i++) {
+        vector<CatMatch *> m;
+        load_catalog_matches([[path stringByAppendingString:@"/"]UTF8String] + files[i].second, m);
+
+        if (m.size() == 0) {
+            cerr << "Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from population analysis.\n";
+//            exit(1);
+            continue;
+        }
+
+        catalog_matches.push_back(m);
+        if (samples.count(m[0]->sample_id) == 0) {
+            samples[m[0]->sample_id] = files[i].second;
+            sample_ids.push_back(m[0]->sample_id);
+        } else {
+            cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this stacksDocuments set, likely the pipeline was run incorrectly.\n";
+            exit(1);
+        }
+    }
+
+    cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
+//    PopMap<CLocus> *pmap = new PopMap<CLocus>(sample_ids.size(), catalog.size());
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
+    pmap->populate(sample_ids, catalog, catalog_matches);
+
+
+    NSMutableDictionary *locusViews = [[NSMutableDictionary alloc] init];
+
+    map<int, CSLocus *>::iterator catalogIterator = catalog.begin();
+    while (catalogIterator != catalog.end()) {
+        NSString *sampleId = [NSString stringWithFormat:@"%d", (*catalogIterator).first];
+
+        LocusView *locusView = [[LocusView alloc] initWithId:sampleId];
+        const char *read = (*catalogIterator).second->con;
+        NSString *letters = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
+//            NSLog(@"added read %@",letters);
+        locusView.consensus = letters;
+
+//        locusView.snps = [dataStubber generateSnps];
+//        locusView.male = [dataStubber generateGenotype];
+//        locusView.female = [dataStubber generateGenotype];
+//        locusView.progeny = [dataStubber generateProgeny:(NSInteger) totalGenotypes];
+//        locusView.marker = [dataStubber generateMarker];
+
+        [locusViews setObject:locusView forKey:locusView.locusId];
+    }
+
+
+// TODO: iterate over the catalog . . . -> OR . . . like write_genomic . . . : 736
+// as pmap->ordered_loci.begin() . . . etc.
+// Datum in pmap->locus(id) contains genotypes table
+// genotype is in datum->obshap . . . (size of 1, 2, typically or more)
+
+
+
+
+
+    StacksDocument *stackDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
+
+    return stackDocument;
+}
+
+/**
+* returns all of the files that end with .tags.tsv in the directory
+*/
+- (vector<pair<int, string> >)buildFileList:(NSString *)path {
+    vector<pair<int, string> > files;
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+
+    NSDirectoryEnumerator *dirEnum = [fileManager enumeratorAtPath:path];
+    NSString *file;
+    while (file = [dirEnum nextObject]) {
+
+        if ([file hasSuffix:@".tags.tsv"]) {
+//            NSLog(@"HAS SUFFIX name %@", file);
+            NSUInteger length = [file length] - 9;
+            NSString *fileName = [file substringToIndex:length];
+            files.push_back(make_pair(1, [fileName UTF8String]));
+        }
+    }
+
+    return files;
+}
+
+/**
+* Exist on error.
+*/
+- (void)checkFile:(NSString *)examplePath {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
+
+    if (!existsAtPath) {
+        NSLog(@"files do not exist %@", examplePath);
+        exit(1);
+    }
+}
+
 @end
+
+//int build_file_list(string in_path, vector<pair<int, string> > &files) {
+//    uint pos;
+//    string file;
+//    struct dirent *direntry;
+//
+//    DIR *dir = opendir(in_path.c_str());
+//
+//    if (dir == NULL) {
+//        cerr << "Unable to open directory '" << in_path << "' for reading.\n";
+//        exit(1);
+//    }
+//
+//
+//    while ((direntry = readdir(dir)) != NULL) {
+//        cout << "reading directory!!!" << endl;
+//        file = direntry->d_name;
+//
+//        if (file == "." || file == "..")
+//            continue;
+//
+//        if (file.substr(0, 6) == "batch_")
+//            continue;
+//
+//        pos = file.rfind(".tags.tsv");
+//        if (pos < file.length())
+//            files.push_back(make_pair(1, file.substr(0, pos)));
+//    }
+//
+//
+//    cout << "done reading directory!!" << endl;
+//    cout << "files.size() " << file.size() << endl;
+//    return files.size();
+//}
