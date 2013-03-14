@@ -548,6 +548,7 @@ BOOL build_file_list(char const *string1, id param);
 //        locusView.marker = [dataStubber generateMarker];
 
         [locusViews setObject:locusView forKey:locusView.locusId];
+        ++catalogIterator;
     }
 
 
