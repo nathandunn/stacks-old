@@ -318,23 +318,12 @@ BOOL build_file_list(char const *string1, id param);
             LocusView *locusView = [locusViews objectForKey:[NSString stringWithFormat:@"%d",it->first]];
             if(d!=NULL && locusView!=nil){
                 vector<char*> obshape = d->obshap;
-                if(obshape.size()>1){
-                    loc->marker = "heterozygous";
-                }
+
                 locusView.depth = loc->depth;
                 GenotypeEntry *genotypeEntry = [[GenotypeEntry alloc] init];
 
                 NSLog(@"locus: %d sample %d",it->first,sample_ids[i]) ;
                 NSLog(@"id: %d",d->id);
-                if(d->model!=NULL){
-                    NSLog(@"model: %@", [NSString stringWithUTF8String:d->model]);
-                }
-                if(d->gtype!=NULL){
-                    NSLog(@"gtype: %@", [NSString stringWithUTF8String:d->gtype]);
-                }
-                if(d->trans_gtype!=NULL){
-                    NSLog(@"trans_gtype: %@", [NSString stringWithUTF8String:d->trans_gtype]);
-                }
                 NSLog(@"length: %d",d->len);
                 NSLog(@"tot_depth: %d",d->tot_depth);
 
