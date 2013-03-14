@@ -26,9 +26,12 @@
 @property (strong) NSString *marker ;
 @property (strong) NSString *ratio ;
 
+@property NSUInteger genotypeCount;
 
-// TODO:
-@property (strong) NSMutableArray *progeny;
+@property (strong) NSMutableDictionary *genotypes;
+
+//@property (strong) NSMutableArray *progeny;
+// TODO: remove these
 @property (strong) GenotypeEntry *male;
 @property (strong) GenotypeEntry *female;
 
@@ -37,10 +40,11 @@
 
 // use PopMap to get the GenotypesView
 
+@property(nonatomic) int depth;
+
 - (id)initWithId:(NSString *)locusId ;
 
 - (NSInteger) matchingParents;
-- (NSInteger) genotypes ;
 
 - (BOOL)hasMale;
 - (BOOL)hasFemale;

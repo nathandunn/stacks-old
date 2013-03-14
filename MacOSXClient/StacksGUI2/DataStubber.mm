@@ -81,6 +81,18 @@
     return progeny;
 }
 
+- (NSMutableDictionary *)generateGenotypes:(NSInteger)totalGenotypes {
+    NSMutableDictionary *progeny = [[NSMutableDictionary alloc] initWithCapacity:totalGenotypes];
+    for (int i = 0; i < totalGenotypes; i++) {
+        GenotypeEntry *genotypeEntry = [self generateGenotype];
+        if (genotypeEntry != nil) {
+            genotypeEntry.entryId=i;
+            [progeny setObject:genotypeEntry forKey:[NSString stringWithFormat:@"%d",genotypeEntry.entryId] ];
+        }
+    }
+    return progeny;
+}
+
 - (NSString *)generateMarker {
     int number = arc4random_uniform(10);
     switch (number) {
