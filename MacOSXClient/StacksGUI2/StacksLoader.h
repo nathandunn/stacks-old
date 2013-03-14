@@ -18,5 +18,8 @@
 
 - (StacksView *)loadStacksView:(NSString *)stackKey atPath:(NSString *) path;
 
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path;
 @end
+
+//int build_file_list(string in_path, vector<pair<int, string> > &files) ;
 

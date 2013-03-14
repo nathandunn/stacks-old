@@ -39,4 +39,17 @@
     STAssertTrue(462==lociCount,@"locusviews should not be empty");
 }
 
+- (void)testLoadLociAndGenotypes
+{
+//    STFail(@"Unit tests are not implemented yet in StacksTests");
+    STAssertNil(nil,@"should obviously be nil");
+
+    StacksLoader *stacksLoader = [[StacksLoader alloc] init];
+    NSString *examplePath = @"/tmp/stacks_tut/";
+    StacksDocument* stacksDocument = [stacksLoader loadLociAndGenotypes:examplePath];
+    NSUInteger lociCount = stacksDocument.locusViews.count;
+    NSLog(@"lociCount %ld",lociCount);
+    STAssertTrue(462==lociCount,@"locusviews should not be empty");
+}
+
 @end
