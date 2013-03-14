@@ -27,8 +27,6 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-// $Id: process_radtags.cc 2099 2011-04-30 22:04:37Z catchen $
-//
 
 #include "process_radtags.h"
 
@@ -265,6 +263,11 @@ int process_paired_reads(string prefix_1,
     r_1->len     += barcode_size;
     r_1->stop_pos = r_1->len - r_1->win_len;
 
+    //
+    // Compute the parameters for the second read, assuming no barcode is present in this sequence.
+    //
+    buf_len = truncate_seq > 0 ? truncate_seq : strlen(s_2->seq);
+
     r_2 = new Read;
     r_2->barcode    = new char[id_len  + 1];
     r_2->machine    = new char[id_len  + 1];
@@ -273,9 +276,12 @@ int process_paired_reads(string prefix_1,
     r_2->int_scores = new  int[buf_len];
     r_2->size       = buf_len + 1;
     r_2->read       = 2;
-    r_2->len        = r_1->len;
-    r_2->win_len    = r_1->win_len;
-    r_2->stop_pos   = r_1->stop_pos;
+    r_2->len        = buf_len;
+    r_2->win_len    = round(r_2->len * win_size);
+
+    if (r_2->win_len < 1) r_2->win_len = 1;
+
+    r_2->stop_pos = r_2->len - r_2->win_len;
 
     if (barcode_size == 0)
 	strncpy(r_2->barcode, prefix_2.c_str(), id_len);
