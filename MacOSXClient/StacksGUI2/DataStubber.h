@@ -15,6 +15,7 @@
 - (GenotypeEntry *)generateGenotype;
 
 - (NSMutableArray *)generateProgeny:(NSInteger) totalGenotypes;
+- (NSMutableDictionary *)generateGenotypes:(NSInteger) totalGenotypes;
 
 - (NSString *)generateMarker;
 @end

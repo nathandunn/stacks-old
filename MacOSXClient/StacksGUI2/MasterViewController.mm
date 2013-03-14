@@ -90,7 +90,8 @@
     if ([[tableView identifier] isEqualToString:@"GenotypeTableView"]) {
         if (self.selectedLocusView != nil) {
             LocusView *locusView = self.selectedLocusView;
-            NSInteger count = [locusView genotypes];
+//            NSInteger count = [locusView genotypes];
+            NSInteger count = [locusView genotypeCount];
             NSInteger rows = count / 10;
             if (count % 10 > 0) {
                 rows++;
@@ -99,16 +100,14 @@
         }
         return 0;
     }
-    else
-    if ([[tableView identifier] isEqualToString:@"LocusTable"]) {
+    else if ([[tableView identifier] isEqualToString:@"LocusTable"]) {
         return [self.stacksDocument.locusViews count];
     }
-    else
-    if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
-        if(self.selectedStacks==nil){
-            return 0 ;
+    else if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
+        if (self.selectedStacks == nil) {
+            return 0;
         }
-        else{
+        else {
             return [self.selectedStacks rowsNeeded];
         }
     }
@@ -125,8 +124,7 @@
 //        NSLog(@"is a genotype table with column identifier %@",[tableColumn identifier]);
         return [self handleGenotypesTable:(NSString *) tableColumn.identifier row:(NSInteger) row cell:(NSTableCellView *) cellView];
     }
-    else
-    if ([[tableView identifier] isEqualToString:@"LocusTable"]) {
+    else if ([[tableView identifier] isEqualToString:@"LocusTable"]) {
         // we want data for the row . . . .
         NSArray *sortedKeys = [[self.stacksDocument.locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
             return [obj1 integerValue] - [obj2 integerValue];
@@ -152,7 +150,8 @@
             cellView.textField.integerValue = [locusView matchingParents];
         }
         else if ([tableColumn.identifier isEqualToString:@"ProgenyColumn"]) {
-            NSUInteger count = [[locusView progeny] count];
+//            NSUInteger count = [[locusView progeny] count];
+            NSUInteger count = [locusView genotypeCount] ;
             cellView.textField.stringValue = [NSString stringWithFormat:@"%ld / %ld", count, count];
         }
         else if ([tableColumn.identifier isEqualToString:@"MarkerColumn"]) {
@@ -162,79 +161,76 @@
             cellView.textField.stringValue = @"aa: 45 (51.7%) bb:42 (48.3%)";
         }
         else if ([tableColumn.identifier isEqualToString:@"GenotypesColumn"]) {
-            cellView.textField.integerValue = [locusView genotypes];
+//            cellView.textField.integerValue = [locusView genotypes];
+            cellView.textField.integerValue = [locusView genotypeCount];
         }
 
         return cellView;
     }
-    else
-    if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
-        if(self.selectedStacks!=nil){
+    else if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
+        if (self.selectedStacks != nil) {
             StacksView *stacksView = self.selectedStacks;
 
 
             if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
-                if(row>2){
-                    cellView.textField.integerValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row-3] entryId];
+                if (row > 2) {
+                    cellView.textField.integerValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row - 3] entryId];
                 }
-                else{
-                    cellView.textField.stringValue =@"";
+                else {
+                    cellView.textField.stringValue = @"";
                 }
             }
-            else
-            if ([tableColumn.identifier isEqualToString:@"RelationshipColumn"]) {
-                switch (row){
+            else if ([tableColumn.identifier isEqualToString:@"RelationshipColumn"]) {
+                switch (row) {
                     case 0:
-                        cellView.textField.stringValue =@"";
-                        break ;
+                        cellView.textField.stringValue = @"";
+                        break;
                     case 1:
-                        cellView.textField.stringValue =@"consensus";
-                        break ;
+                        cellView.textField.stringValue = @"consensus";
+                        break;
                     case 2:
-                        cellView.textField.stringValue =@"model";
-                        break ;
+                        cellView.textField.stringValue = @"model";
+                        break;
                     default:
-                        cellView.textField.stringValue =[(StackEntry *) [stacksView.stackEntries objectAtIndex:row-3] relationship];
+                        cellView.textField.stringValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row - 3] relationship];
                 }
             }
-            else
-            if ([tableColumn.identifier isEqualToString:@"SequenceIdColumn"]) {
-                switch (row){
+            else if ([tableColumn.identifier isEqualToString:@"SequenceIdColumn"]) {
+                switch (row) {
                     case 0:
                     case 1:
                     case 2:
-                        cellView.textField.stringValue =@"";
-                        break ;
+                        cellView.textField.stringValue = @"";
+                        break;
                     default:
-                        cellView.textField.stringValue =[(StackEntry *) [stacksView.stackEntries objectAtIndex:row-3] sequenceId];
+                        cellView.textField.stringValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row - 3] sequenceId];
                         cellView.textField.alignment = NSRightTextAlignment;
                 }
             }
-            else
-            if ([tableColumn.identifier isEqualToString:@"SequenceColumn"]) {
-                switch (row){
+            else if ([tableColumn.identifier isEqualToString:@"SequenceColumn"]) {
+                switch (row) {
                     case 0:
-                        cellView.textField.stringValue =stacksView.reference.sequence;
-                        break ;
+                        cellView.textField.stringValue = stacksView.reference.sequence;
+                        break;
                     case 1:
-                        cellView.textField.stringValue =stacksView.consensus.sequence;
-                        break ;
+                        cellView.textField.stringValue = stacksView.consensus.sequence;
+                        break;
                     case 2:
-                        cellView.textField.stringValue =stacksView.model.sequence;
-                        break ;
+                        cellView.textField.stringValue = stacksView.model.sequence;
+                        break;
                     default:
-                        NSString *sequenceString = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row-3] sequence];
+                        NSString *sequenceString = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row - 3] sequence];
 //                        NSMutableAttributedString *string = [self decorateSnps:sequenceString snps:stacksView.snps];
                         NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:sequenceString];
 
                         [string beginEditing];
-                        NSNumber *snpIndex ;
+                        NSNumber *snpIndex;
                         NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                                 [NSColor blueColor], NSForegroundColorAttributeName,
                                 [NSColor grayColor], NSBackgroundColorAttributeName,
                                 [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
                                 nil];
-                        for(snpIndex in stacksView.snps){
+                        for (snpIndex in stacksView.snps) {
                             NSRange selectedRange = NSMakeRange([snpIndex intValue], 1);
                             [string setAttributes:attributes range:selectedRange];
                         }
@@ -245,15 +241,15 @@
                         cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
                 }
             }
-            else{
-                NSLog(@"not sure what that column is %@",tableColumn.identifier);
+            else {
+                NSLog(@"not sure what that column is %@", tableColumn.identifier);
                 cellView.textField.stringValue = @"";
             }
         }
         return cellView;
     }
-    else{
-        NSLog(@"could not find table %@",[tableView identifier]);
+    else {
+        NSLog(@"could not find table %@", [tableView identifier]);
         return cellView;
     }
 
@@ -265,9 +261,13 @@
     if (self.stacksDocument != nil) {
 
         LocusView *locusView = self.selectedLocusView;
-        NSInteger parentCount = locusView.matchingParents;
-        NSInteger progenyCount = locusView.genotypes;
-        NSInteger totalCount = parentCount + progenyCount;
+//        NSInteger parentCount = locusView.matchingParents;
+        NSInteger progenyCount = locusView.genotypeCount;
+//        NSInteger totalCount = parentCount + progenyCount;
+
+        // TODO: this should come from the file system, nowhere else
+        NSUInteger parentCount = 2;
+        NSInteger totalCount = locusView.genotypeCount;
         NSInteger totalColumnCount = 10;
         NSInteger totalRowCount = totalCount / totalColumnCount;
         NSInteger remainderColumns = totalCount % totalColumnCount;
@@ -294,7 +294,8 @@
             cellView.textField.stringValue = [NSString stringWithFormat:@"female - %@", [female render]];
         }
         else if (progenyCount > progenyIndex) {
-            GenotypeEntry *genotypeEntry = [locusView.progeny objectAtIndex:progenyIndex];
+//            GenotypeEntry *genotypeEntry = [locusView.progeny objectAtIndex:progenyIndex];
+            GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%ld",progenyIndex]];
             cellView.textField.stringValue = [NSString stringWithFormat:@"%ld %@", (long) genotypeEntry.entryId, [genotypeEntry render]];
         }
         else {
@@ -314,11 +315,11 @@
         return [obj1 integerValue] - [obj2 integerValue];
     }];
     NSString *key = [sortedKeys objectAtIndexedSubscript:selectedRow];
-    LocusView *locusView= [self.stacksDocument.locusViews objectForKey:key];
+    LocusView *locusView = [self.stacksDocument.locusViews objectForKey:key];
     return locusView;
 }
 
-- (void)handleSelectedLocus:(LocusView*) locus{
+- (void)handleSelectedLocus:(LocusView *)locus {
 
     if (locus != nil) {
         NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locus.consensus];
@@ -388,7 +389,7 @@
     [self.stacksTableView reloadData];
 }
 
-- (StacksView *)loadStacksForProgeny:(NSString*)stackKey {
+- (StacksView *)loadStacksForProgeny:(NSString *)stackKey {
     StacksLoader *loader = [[StacksLoader alloc] init];
     StacksView *stacksView = [loader loadStacksView:stackKey atPath:@"/tmp/stacks_tut"];
 
@@ -397,7 +398,7 @@
     return stacksView;
 }
 
--(NSMutableAttributedString *)decorateSnps:(NSString *)sequenceString snps:(NSMutableArray *) snps{
+- (NSMutableAttributedString *)decorateSnps:(NSString *)sequenceString snps:(NSMutableArray *)snps {
 
 }
 
@@ -407,35 +408,36 @@
 //    NSTableCellView *tableCellView = [tableView selectedCell];
     NSInteger rowNumber = [_genotypeTableView clickedRow];
     NSInteger columnNumber = [_genotypeTableView clickedColumn];
-    if(rowNumber<0 || columnNumber<0){
-        NSLog(@"invalid selection") ;
-        self.selectedStacks = nil  ;
-        return ;
+    if (rowNumber < 0 || columnNumber < 0) {
+        NSLog(@"invalid selection");
+        self.selectedStacks = nil ;
+        return;
     }
     // get the array number
 
     LocusView *locusView = self.selectedLocusView;
-    if(rowNumber==0 && columnNumber==0 && locusView.hasMale){
+    if (rowNumber == 0 && columnNumber == 0 && locusView.hasMale) {
         self.selectedStacks = [self loadStacksForProgeny:@"male"];
     }
-    else
-    if((rowNumber==0 && columnNumber==0 && !locusView.hasMale && locusView.hasFemale)
+    else if ((rowNumber == 0 && columnNumber == 0 && !locusView.hasMale && locusView.hasFemale)
             ||
-       (rowNumber==0 && columnNumber==1 && locusView.hasMale && locusView.hasFemale)
-            ){
+            (rowNumber == 0 && columnNumber == 1 && locusView.hasMale && locusView.hasFemale)
+            ) {
         self.selectedStacks = [self loadStacksForProgeny:@"female"];
     }
-    else{
+    else {
         NSUInteger totalColumnCount = 10;
         NSInteger parentCount = locusView.matchingParents;
 
-        int index = rowNumber*totalColumnCount + columnNumber - parentCount;
-        if(index+1 < [locusView genotypes]){
-            GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index+1] ;
-            self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld",[entry entryId]]];
+        int index = rowNumber * totalColumnCount + columnNumber - parentCount;
+//        if(index+1 < [locusView genotypes]){
+        if (index + 1 < [locusView genotypeCount]) {
+//            GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index + 1];
+            GenotypeEntry *entry = (GenotypeEntry *) [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%d",index + 1]];
+            self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [entry entryId]]];
         }
-        else{
-            NSLog(@"invalid selection") ;
+        else {
+            NSLog(@"invalid selection");
             self.selectedStacks = nil ;
         }
     }
