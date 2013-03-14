@@ -74,44 +74,36 @@ int parse_illumina_v2(const char *file) {
     // Parse a file name that looks like: lane6_NoIndex_L006_R1_003.fastq
     // but exclude the paired-end files:  lane6_NoIndex_L006_R2_003.fastq
     //
-    if (strncmp(file, "lane", 4) != 0) 
-	return 0;
+    // Another example could be:          GfddRAD1_001_ATCACG_L008_R1_001.fastq.gz
+    // and excluding the paired-end file: GfddRAD1_001_ATCACG_L008_R2_001.fastq.gz
 
     //
-    // Make sure it ends in "fastq"
+    // Make sure it ends in "fastq" or "fastq.gz"
     //
     for (q = file; *q != '\0'; q++);
     for (p = q; *p != '.' && p > file; p--);
+    if (strncmp(p, ".gz", 3) == 0)
+	for (p--; *p != '.' && p > file; p--);
     if (strncmp(p, ".fastq", 6) != 0)
 	return 0;
 
-    int underscore_cnt = 0;
-    for (p = file; *p != '\0'; p++) {
-	if (*p == '_') underscore_cnt++;
-	q = p;
+    //
+    // Find the part of the name marking the pair, "_R1_", make sure it is not the paired-end file.
+    //
+    p = file;
+    while (p != '\0') {
+	for (; *p != '_' && *p != '\0'; p++);
+	if (*p == '\0') return 0;
+	if (strncmp(p, "_R1_", 4) == 0) {
+	    //
+	    // Return the position of the paired-end number, so the other file name can be generated.
+	    //
+	    return (p + 2 - file); 
+	}
+	p++;
     }
 
-    if (underscore_cnt != 4)
-	return 0;
-
-    // Check the lane exists
-    for (p = file; *p != '_' && *p != '\0'; p++);
-    p++;
-    for (; *p != '_' && *p != '\0'; p++);
-    p++;
-
-    if (*p != 'L')
-	return 0;
-
-    // Make sure it is not the paired-end file
-    for (; *p != '_' && *p != '\0'; p++);
-    if (strncmp(p, "_R1_", 4) != 0)
-	return 0;
-
-    //
-    // Return the position of the paired-end number, so the other file name can be generated.
-    //
-    return (p + 2 - file); 
+    return 0;
 }
 
 int parse_input_record(Seq *s, Read *r) {
