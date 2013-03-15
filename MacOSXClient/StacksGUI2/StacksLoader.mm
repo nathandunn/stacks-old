@@ -43,6 +43,9 @@ BOOL build_file_list(char const *string1, id param);
 
 }
 
+/**
+* TODO: remove once other is implmemented
+*/
 - (StacksDocument *)loadLoci:(NSString *)examplePath {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
@@ -59,15 +62,6 @@ BOOL build_file_list(char const *string1, id param);
 
         load_loci([exampleFile UTF8String], modelMap, false);
 
-        // TODO: Get the genotype view
-        // from populations.cc 150-205 . . . load the catalog matches and then the
-        // I will use the locus ID to look over the PopMap<CLocus> and the catalog map map<int,CLocus *> . . .
-        // the table that iterates (e.g., is the tabulate_haplotypes object)
-
-        // TODO: get the Stack View
-        // different color of view / lgith  / grey is the 3rd column/ locus . . . have to color SNP according other
-        // the actual stacksDocuments will need to be imported directly and stored . . . see parse_tsv . .. but will be using raw stacksDocuments
-
         NSLog(@"model size %d", (int) modelMap.size());
 
 //        stackDocument = [[NSMutableDictionary alloc] initWithCapacity:modelMap.size()];
@@ -83,20 +77,12 @@ BOOL build_file_list(char const *string1, id param);
 
             LocusView *locusView = [[LocusView alloc] initWithId:sampleId];
 
-            // TODO: add locus to dictionary / hashmap instead using sampleID as index
-
             const char *read = (*iter).second->con;
             NSString *letters = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
-//            NSLog(@"added read %@",letters);
             locusView.consensus = letters;
 
             // rest of stacksDocuments comes from gentypes . . .  crapola
-
-//            NSMutableArray *generated = [dataStubber generateSnps];
             locusView.snps = [dataStubber generateSnps];
-            locusView.male = [dataStubber generateGenotype];
-            locusView.female = [dataStubber generateGenotype];
-//            locusView.progeny = [dataStubber generateProgeny:(NSInteger) totalGenotypes];
             locusView.genotypes = [dataStubber generateGenotypes:(NSInteger) totalGenotypes];
             locusView.marker = [dataStubber generateMarker];
 
@@ -229,14 +215,6 @@ BOOL build_file_list(char const *string1, id param);
 
     // loci loaded . . . now loading genotype
 
-    // TODO: Get the genotype view
-    // from populations.cc 150-205 . . . load the catalog matches and then the
-    // I will use the locus ID to look over the PopMap<CLocus> and the catalog map map<int,CLocus *> . . .
-    // the table that iterates (e.g., is the tabulate_haplotypes object)
-
-    // TODO: get the Stack View
-    // different color of view / lgith  / grey is the 3rd column/ locus . . . have to color SNP according other
-    // the actual stacksDocuments will need to be imported directly and stored . . . see parse_tsv . .. but will be using raw stacksDocuments
 
     NSLog(@"model size %d", (int) catalog.size());
 

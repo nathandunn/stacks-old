@@ -31,9 +31,8 @@
 @property (strong) NSMutableDictionary *genotypes;
 
 //@property (strong) NSMutableArray *progeny;
-// TODO: remove these
-@property (strong) GenotypeEntry *male;
-@property (strong) GenotypeEntry *female;
+//@property (strong) GenotypeEntry *male;
+//@property (strong) GenotypeEntry *female;
 
 //@property (strong) GenotypeView *genotypeView;
 //@property (strong) NSMutableArray *snpsViews; // SNP in the consensus
