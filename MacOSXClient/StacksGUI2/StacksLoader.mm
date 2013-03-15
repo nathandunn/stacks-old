@@ -304,12 +304,12 @@ BOOL build_file_list(char const *string1, id param);
 
                 locusView.depth = loc->depth;
 
-                NSLog(@"locus: %d sample %d",it->first,sample_ids[i]) ;
-                NSLog(@"id: %d",d->id);
-                NSLog(@"length: %d",d->len);
-                NSLog(@"tot_depth: %d",d->tot_depth);
+//                NSLog(@"locus: %d sample %d",it->first,sample_ids[i]) ;
+//                NSLog(@"id: %d",d->id);
+//                NSLog(@"length: %d",d->len);
+//                NSLog(@"tot_depth: %d",d->tot_depth);
 
-                NSLog(@"objshape size: %d",obshape.size());
+//                NSLog(@"objshape size: %d",obshape.size());
                 for(vector<char*>::iterator obshapeIter = obshape.begin() ; obshapeIter !=obshape.end() ; ++obshapeIter){
                     NSLog(@"ojb: %@", [NSString stringWithUTF8String:(*obshapeIter)]);
                 }
@@ -324,6 +324,7 @@ BOOL build_file_list(char const *string1, id param);
 //                    NSLog(@"snp : %d",(*testIter));
 //                }
 
+                [locusView.genotypes setObject:genotypeEntry forKey:key];
 
             }
         }
