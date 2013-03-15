@@ -195,8 +195,6 @@
 				14B4DD7416C97A9500317EB3 /* core */,
 				14B4DD4716C97A7500317EB3 /* Supporting Files */,
 				63D53F285736E5307BB4F7DA /* core-refactor */,
-				D793C4B6BE94FC937EC7DE1C /* StackEntry.m */,
-				D793C5F1F981DA716A03D5F6 /* StackEntry.h */,
 			);
 			path = StacksGUI2;
 			sourceTree = "<group>";
@@ -283,6 +281,8 @@
 				63D53E91154AE4EC76FCA139 /* StacksView.h */,
 				D793CE4ACEF1D46868E63075 /* GenotypeEntry.h */,
 				D793C92D0B7B008BE6F0B53A /* GenotypeEntry.m */,
+				D793C4B6BE94FC937EC7DE1C /* StackEntry.m */,
+				D793C5F1F981DA716A03D5F6 /* StackEntry.h */,
 			);
 			name = Model;
 			sourceTree = "<group>";
