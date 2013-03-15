@@ -295,8 +295,8 @@ BOOL build_file_list(char const *string1, id param);
 
             LocusView *locusView = [locusViews objectForKey:[NSString stringWithFormat:@"%d",it->first]];
             if(d!=NULL && locusView!=nil){
-//                [NSString stringWithUTF8String:@"%d",sample_ids[i]];
-                GenotypeEntry *genotypeEntry = [locusView.genotypes objectForKey:]];
+                NSString *key = [NSString stringWithFormat:@"%d",sample_ids[i]];
+                GenotypeEntry *genotypeEntry = [locusView.genotypes objectForKey:key];
                 if(genotypeEntry==nil){
                     genotypeEntry = [[GenotypeEntry alloc] init];
                 }
