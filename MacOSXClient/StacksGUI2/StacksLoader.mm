@@ -20,7 +20,7 @@ using std::ofstream;
 
 //#include "PopSum.h"
 
-#include <dirent.h>
+//#include <dirent.h>
 //#include <stdlib.h>
 
 
@@ -295,10 +295,14 @@ BOOL build_file_list(char const *string1, id param);
 
             LocusView *locusView = [locusViews objectForKey:[NSString stringWithFormat:@"%d",it->first]];
             if(d!=NULL && locusView!=nil){
+//                [NSString stringWithUTF8String:@"%d",sample_ids[i]];
+                GenotypeEntry *genotypeEntry = [locusView.genotypes objectForKey:]];
+                if(genotypeEntry==nil){
+                    genotypeEntry = [[GenotypeEntry alloc] init];
+                }
                 vector<char*> obshape = d->obshap;
 
                 locusView.depth = loc->depth;
-                GenotypeEntry *genotypeEntry = [[GenotypeEntry alloc] init];
 
                 NSLog(@"locus: %d sample %d",it->first,sample_ids[i]) ;
                 NSLog(@"id: %d",d->id);
@@ -319,6 +323,7 @@ BOOL build_file_list(char const *string1, id param);
 //                for(vector<SNP *>::iterator testIter = d->snps.begin() ; testIter !=d->snps.end() ; ++testIter){
 //                    NSLog(@"snp : %d",(*testIter));
 //                }
+
 
             }
         }
