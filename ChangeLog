@@ -1,7 +1,12 @@
+Stacks 0.99996 - March 4, 2013
+------------------------------
+	Bugfix: changed the parsing code to accept a wider range of Illumina named, paired-end
+	files in process_radtags/shortreads.
+	Bugfix: gzipped files were not read properly in process_radtags/shortreads when a directory
+	was specified with -P.
 	Bugfix: setting secondary read distance to 0 in ustacks (-N) was ineffective.
-	Bugfix: changed the PHP code to remove 'Strict Standards' warnings and
-	a few other warnings. Thanks to Yue Yu for tracking down the proper
-	changes to avoid the warnings.
+	Bugfix: changed the PHP code to remove 'Strict Standards' warnings and a few other warnings.
+	Thanks to Yue Yu for tracking down the proper changes to avoid the warnings.
 
 Stacks 0.99995 - February 19, 2013
 ----------------------------------
