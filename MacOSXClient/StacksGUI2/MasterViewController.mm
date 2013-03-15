@@ -151,7 +151,7 @@
         }
         else if ([tableColumn.identifier isEqualToString:@"ProgenyColumn"]) {
 //            NSUInteger count = [[locusView progeny] count];
-            NSUInteger count = [locusView genotypeCount] ;
+            NSUInteger count = [locusView genotypeCount];
             cellView.textField.stringValue = [NSString stringWithFormat:@"%ld / %ld", count, count];
         }
         else if ([tableColumn.identifier isEqualToString:@"MarkerColumn"]) {
@@ -266,7 +266,7 @@
 //        NSInteger totalCount = parentCount + progenyCount;
 
         // TODO: this should come from the file system, nowhere else
-        NSUInteger parentCount = 2;
+// to identify the # of parents: look at "identify_parents" in genotypes.cc .
         NSInteger totalCount = locusView.genotypeCount;
         NSInteger totalColumnCount = 10;
         NSInteger totalRowCount = totalCount / totalColumnCount;
@@ -278,24 +278,11 @@
 
         // turn the row / column into an index
         NSInteger columnIndex = [[column substringFromIndex:9] integerValue];
-        NSInteger progenyIndex = row * totalColumnCount + columnIndex - parentCount;
+        NSInteger progenyIndex = row * totalColumnCount + columnIndex;
 
-        // if a male
-        if (row == 0 && [column isEqualToString:@"Genotypes1"] && [locusView hasMale]) {
-            GenotypeEntry *male = locusView.male;
-            cellView.textField.stringValue = [NSString stringWithFormat:@"male - %@", [male render]];
-        }
-        else if (row == 0 && [column isEqualToString:@"Genotypes1"] && [locusView hasFemale] && ![locusView hasMale]) {
-            GenotypeEntry *female = locusView.female;
-            cellView.textField.stringValue = [NSString stringWithFormat:@"female - %@", [female render]];
-        }
-        else if (row == 0 && [column isEqualToString:@"Genotypes2"] && [locusView hasMale] && [locusView hasFemale]) {
-            GenotypeEntry *female = locusView.female;
-            cellView.textField.stringValue = [NSString stringWithFormat:@"female - %@", [female render]];
-        }
-        else if (progenyCount > progenyIndex) {
+        if (progenyCount > progenyIndex) {
 //            GenotypeEntry *genotypeEntry = [locusView.progeny objectAtIndex:progenyIndex];
-            GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%ld",progenyIndex]];
+            GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%ld", progenyIndex]];
             cellView.textField.stringValue = [NSString stringWithFormat:@"%ld %@", (long) genotypeEntry.entryId, [genotypeEntry render]];
         }
         else {
@@ -416,30 +403,18 @@
     // get the array number
 
     LocusView *locusView = self.selectedLocusView;
-    if (rowNumber == 0 && columnNumber == 0 && locusView.hasMale) {
-        self.selectedStacks = [self loadStacksForProgeny:@"male"];
-    }
-    else if ((rowNumber == 0 && columnNumber == 0 && !locusView.hasMale && locusView.hasFemale)
-            ||
-            (rowNumber == 0 && columnNumber == 1 && locusView.hasMale && locusView.hasFemale)
-            ) {
-        self.selectedStacks = [self loadStacksForProgeny:@"female"];
+    NSUInteger totalColumnCount = 10;
+
+    int index = rowNumber * totalColumnCount + columnNumber;
+//        if(index+1 < [locusView genotypes]){
+    if (index + 1 < [locusView genotypeCount]) {
+//            GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index + 1];
+        GenotypeEntry *entry = (GenotypeEntry *) [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%d", index + 1]];
+        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [entry entryId]]];
     }
     else {
-        NSUInteger totalColumnCount = 10;
-        NSInteger parentCount = locusView.matchingParents;
-
-        int index = rowNumber * totalColumnCount + columnNumber - parentCount;
-//        if(index+1 < [locusView genotypes]){
-        if (index + 1 < [locusView genotypeCount]) {
-//            GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index + 1];
-            GenotypeEntry *entry = (GenotypeEntry *) [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%d",index + 1]];
-            self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [entry entryId]]];
-        }
-        else {
-            NSLog(@"invalid selection");
-            self.selectedStacks = nil ;
-        }
+        NSLog(@"invalid selection");
+        self.selectedStacks = nil ;
     }
     [self showTagsTable:self.selectedStacks];
 }
