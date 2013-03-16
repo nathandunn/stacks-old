@@ -10,6 +10,7 @@
 #import "MasterViewController.h"
 #import "StacksLoader.h"
 #import "StacksDocument.h"
+#import "LocusView.h"
 //#import "StacksDocument.h"
 //#import "sql_utilities.h"
 
