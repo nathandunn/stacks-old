@@ -10,10 +10,18 @@
 
 @interface GenotypeEntry : NSObject
 
+@property NSString *name ;
 @property NSInteger entryId ;
-@property NSString *type;
+//@property NSString *type;
+
+// TODO: remove
 @property NSString *superScript;
 @property NSString *subScript;
+
+// replaced with this:
+@property (strong) NSMutableArray *haplotypes;
+@property (strong) NSMutableArray *depths;
+
 
 // link info
 @property NSInteger  *sampleId;

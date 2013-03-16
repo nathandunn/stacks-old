@@ -9,6 +9,7 @@
 #import "StacksTests.h"
 #import "StacksLoader.h"
 #import "StacksDocument.h"
+#import "LocusView.h"
 
 @implementation StacksTests
 
@@ -50,6 +51,26 @@
     NSUInteger lociCount = stacksDocument.locusViews.count;
     NSLog(@"lociCount %ld",lociCount);
     STAssertTrue(462==lociCount,@"locusviews should not be empty");
+//    for( NSString *aKey in [stacksDocument.locusViews allKeys] ){
+////        NSLog(@"key %@",aKey);
+//        NSLog(@"key %@",aKey);
+//    }
+
+    for( LocusView *locus in [stacksDocument.locusViews allValues] ){
+//        NSLog(@"key %@",aKey);
+        NSLog(@"genotpye count %ld",locus.genotypes.count);
+    }
+
+    LocusView *locusView = [stacksDocument.locusViews objectForKey:[NSString stringWithFormat:@"%d",1]];
+    STAssertNotNil(locusView, @"should not be nil");
+
+    NSMutableDictionary *genotypes = locusView.genotypes;
+    NSLog(@"number of genotypes: %d",genotypes.count);
+//    for( NSString *aKey in [genotypes allKeys] ){
+//        NSLog(@"key %@",aKey);
+//    }
+
+    
 }
 
 @end
