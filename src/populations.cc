@@ -3495,6 +3495,9 @@ write_phylip(map<int, CSLocus *> &catalog,
 		    index++;
 
 		} else {
+		    if (t->nucs[col].allele_cnt != 2)
+			continue;
+
 		    log_fh << index << "\t" << loc->id << "\t" << col << "\t";
 
 		    for (int j = 0; j < pop_cnt; j++) {
