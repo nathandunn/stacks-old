@@ -12,7 +12,8 @@
 #import "GenotypeEntry.h"
 
 @implementation LocusView
-@synthesize depth = _depth;
+@synthesize depth ;
+@synthesize genotypes;
 
 
 - (id)initWithId:(NSString *)locusId {

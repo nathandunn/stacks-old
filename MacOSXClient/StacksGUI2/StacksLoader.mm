@@ -210,7 +210,7 @@ BOOL build_file_list(char const *string1, id param);
 ////        NSLog(@"filestring %@", fileName);
 //        ++fileNameIterator;
 //    }
-    NSLog(@"number of files %d",files.size());
+    NSLog(@"number of files %d", files.size());
 
 
     // loci loaded . . . now loading genotype
@@ -221,7 +221,7 @@ BOOL build_file_list(char const *string1, id param);
 
     for (uint i = 0; i < files.size(); i++) {
         vector<CatMatch *> m;
-        load_catalog_matches([[path stringByAppendingString:@"/"]UTF8String] + files[i].second, m);
+        load_catalog_matches([[path stringByAppendingString:@"/"] UTF8String] + files[i].second, m);
 
         if (m.size() == 0) {
             cerr << "Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from population analysis.\n";
@@ -261,7 +261,7 @@ BOOL build_file_list(char const *string1, id param);
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
         NSMutableArray *snpsArray = [[NSMutableArray alloc] initWithCapacity:snps.size()];
-        for( ; snpsIterator!=snps.end() ; ++snpsIterator){
+        for (; snpsIterator != snps.end(); ++snpsIterator) {
             [snpsArray addObject:[NSValue valueWithPointer:(*snpsIterator)]];
         }
 
@@ -280,7 +280,7 @@ BOOL build_file_list(char const *string1, id param);
 // genotype is in datum->obshap . . . (size of 1, 2, typically or more)
 
     map<int, CSLocus *>::iterator it;
-    Datum   *d;
+    Datum *d;
     CSLocus *loc;
 
     // for each sample process the catalog
@@ -288,19 +288,24 @@ BOOL build_file_list(char const *string1, id param);
     for (uint i = 0; i < sample_ids.size(); i++) {
         int sampleId = sample_ids[i];
         string sampleString = samples[sampleId];
-        NSLog(@"evaluating sample %@", [NSString stringWithUTF8String:sampleString.c_str()]);
+//        NSLog(@"evaluating sample %@", [NSString stringWithUTF8String:sampleString.c_str()]);
         for (it = catalog.begin(); it != catalog.end(); it++) {
             loc = it->second;
             d = pmap->datum(loc->id, sample_ids[i]);
 
-            LocusView *locusView = [locusViews objectForKey:[NSString stringWithFormat:@"%d",it->first]];
-            if(d!=NULL && locusView!=nil){
-                NSString *key = [NSString stringWithFormat:@"%d",sample_ids[i]];
-                GenotypeEntry *genotypeEntry = [locusView.genotypes objectForKey:key];
-                if(genotypeEntry==nil){
+            LocusView *locusView = [locusViews objectForKey:[NSString stringWithFormat:@"%d", it->first]];
+            if (d != NULL && locusView != nil) {
+//                NSString *key = [NSString stringWithFormat:@"%d",sample_ids[i]];
+                NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
+                NSMutableDictionary *genotypes = locusView.genotypes;
+                if(genotypes==nil){
+                    genotypes=[[NSMutableDictionary alloc] init];
+                }
+                GenotypeEntry *genotypeEntry = [genotypes objectForKey:key];
+                if (genotypeEntry == nil) {
                     genotypeEntry = [[GenotypeEntry alloc] init];
                 }
-                vector<char*> obshape = d->obshap;
+                genotypeEntry.name = key;
 
                 locusView.depth = loc->depth;
 
@@ -310,26 +315,27 @@ BOOL build_file_list(char const *string1, id param);
 //                NSLog(@"tot_depth: %d",d->tot_depth);
 
 //                NSLog(@"objshape size: %d",obshape.size());
-                for(vector<char*>::iterator obshapeIter = obshape.begin() ; obshapeIter !=obshape.end() ; ++obshapeIter){
-                    NSLog(@"ojb: %@", [NSString stringWithUTF8String:(*obshapeIter)]);
+                vector<char *> obshape = d->obshap;
+                vector<int> depths = d->depth;
+                int numLetters = obshape.size();
+                if (depths.size() == numLetters) {
+                    genotypeEntry.haplotypes = [[NSMutableArray alloc] initWithCapacity:numLetters];
+                    for (int j = 0; j < numLetters; j++) {
+                        [genotypeEntry.haplotypes addObject:[NSString stringWithUTF8String:obshape[j]]];
+                        [genotypeEntry.depths addObject:[NSNumber numberWithInt:depths[j]]];
+                    }
+                    [genotypes setObject:genotypeEntry forKey:key];
+                    locusView.genotypes = genotypes;
+                }
+                else {
+                    NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
+//                    sampleString);
                 }
 
-                NSLog(@"depth size: %d",d->depth.size());
-                for(vector<int>::iterator testIter = d->depth.begin() ; testIter !=d->depth.end() ; ++testIter){
-                    NSLog(@"depth: %d",(*testIter));
-                }
-
-                NSLog(@"snp size: %d",d->snps.size());
-//                for(vector<SNP *>::iterator testIter = d->snps.begin() ; testIter !=d->snps.end() ; ++testIter){
-//                    NSLog(@"snp : %d",(*testIter));
-//                }
-
-                [locusView.genotypes setObject:genotypeEntry forKey:key];
 
             }
         }
     }
-
 
 
     StacksDocument *stackDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
