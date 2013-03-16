@@ -18,18 +18,16 @@
 
 
 - (NSString *)render {
-    if(_superScript!=nil && _subScript!=nil){
-        return [NSString stringWithFormat:@"%@ / %@",_superScript,_subScript];
+    NSString *renderString = @"";
+    for(int i = 0 ; i < _haplotypes.count ; i++){
+        renderString = [renderString stringByAppendingString:[_haplotypes objectAtIndex:i]];
     }
-    else
-    if(_superScript!=nil){
-        return [NSString stringWithFormat:@"%@",_superScript];
+    for(int i = 0 ; i < _depths.count ; i++){
+        renderString = [renderString stringByAppendingString:[_depths objectAtIndex:i]];
     }
-    else
-    if(_subScript!=nil){
-        return [NSString stringWithFormat:@"%@",_subScript];
-    }
+    NSLog(@"rendering string %@",renderString);
 
-    return @"";
+
+    return renderString;
 }
 @end
