@@ -1,5 +1,6 @@
-Stacks 0.99996 - March 4, 2013
-------------------------------
+Stacks 0.99996 - March 14, 2013
+-------------------------------
+	Bugfix: VCF output did not include sites fixed within and variable among populations.
 	Bugfix: changed the parsing code to accept a wider range of Illumina named, paired-end
 	files in process_radtags/shortreads.
 	Bugfix: gzipped files were not read properly in process_radtags/shortreads when a directory
