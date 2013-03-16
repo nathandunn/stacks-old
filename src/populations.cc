@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2012-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -2963,62 +2963,49 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
     fh << "\n";    
 
     map<string, vector<CSLocus *> >::iterator it;
-    Datum  **d;
-    LocSum **s;
-    int      len, gt_1, gt_2, num_indv;
-    double   p;
-    int      pop_cnt = psum->pop_cnt();
-    bool     fixed;
-    char     ref, alt, p_allele, q_allele, p_str[32], q_str[32];
+    Datum   **d;
+    LocSum  **s;
+    LocTally *t;
+    int       len, gt_1, gt_2;
+    double    p_freq, num_indv;
+    int       pop_cnt = psum->pop_cnt();
+    char      p_allele, q_allele, p_str[32], q_str[32];
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	for (uint pos = 0; pos < it->second.size(); pos++) {
 	    loc = it->second[pos];
 
-	    s = psum->locus(loc->id);
+	    s   = psum->locus(loc->id);
+	    t   = psum->locus_tally(loc->id);
 	    len = strlen(loc->con);
 
 	    for (uint i = 0; i < loc->snps.size(); i++) {
 		uint col = loc->snps[i]->col;
 
-		if (!tally_ref_alleles(s, pop_cnt, col, ref, alt))
-		    continue;
-
-		fixed    = true;
-		num_indv = 0;
-		p        = 0.0;
-		for (int j = 0; j < pop_cnt; j++) {
-		    //
-		    // Sum the number of individuals examined at this locus across populations.
-		    //
-		    num_indv += s[j]->nucs[col].num_indv;
-		}
-
+		num_indv = (double) t->nucs[col].num_indv;
+		p_freq   = 0.0;
 		for (int j = 0; j < pop_cnt; j++) {
 		    //
 		    // Sum the most frequent allele across populations.
 		    //
-		    if (s[j]->nucs[col].p_nuc == ref)
-			p += s[j]->nucs[col].p * (s[j]->nucs[col].num_indv / num_indv);
+		    if (s[j]->nucs[col].p_nuc == t->nucs[col].p_allele)
+			p_freq += s[j]->nucs[col].p * (s[j]->nucs[col].num_indv / num_indv);
 		    else 
-			p += (1 - s[j]->nucs[col].p) * (s[j]->nucs[col].num_indv / num_indv);
-
-		    if (s[j]->nucs[col].pi != 0) 
-			fixed = false;
+			p_freq += (1 - s[j]->nucs[col].p) * (s[j]->nucs[col].num_indv / num_indv);
 		}
 
 		// 
-		// If this site is fixed in all populations don't output it.
+		// If this site is fixed in all populations or has too many alleles don't output it.
 		//
-		if (fixed) 
+		if (t->nucs[col].allele_cnt != 2) 
 		    continue;
 
-		sprintf(p_str, "%0.3f", p);
-		sprintf(q_str, "%0.3f", 1 - p);
+		sprintf(p_str, "%0.3f", p_freq);
+		sprintf(q_str, "%0.3f", 1 - p_freq);
 
 		fh << loc->loc.chr << "\t" << loc->sort_bp() + col << "\t" << loc->id << "\t"
-		   << ref        << "\t"                       // REFerence allele
-		   << alt        << "\t"                       // ALTernate allele
+		   << t->nucs[col].p_allele << "\t"            // REFerence allele
+		   << t->nucs[col].q_allele << "\t"            // ALTernate allele
 		   << "."        << "\t"                       // QUAL
 		   << "PASS"     << "\t"                       // FILTER
 		   << "NS="      << num_indv << ";"            // INFO
@@ -3050,14 +3037,14 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 			    // More than two potential alleles.
 			    fh << ".:" << d[j]->tot_depth << ":.,.,.";
 			} else if (p_allele == 0) {
-			    gt_1 = q_allele == ref ? 0 : 1;
+			    gt_1 = q_allele == t->nucs[col].p_allele ? 0 : 1;
 			    fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
 			} else if (q_allele == 0) {
-			    gt_1 = p_allele == ref ? 0 : 1;
+			    gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
 			    fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
 			} else {
-			    gt_1 = p_allele == ref ? 0 : 1;
-			    gt_2 = q_allele == ref ? 0 : 1;
+			    gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
+			    gt_2 = q_allele == t->nucs[col].p_allele ? 0 : 1;
 			    fh << gt_1 << "/" << gt_2 << ":" << d[j]->tot_depth;
 			    //
 			    // Find the heterozygous SNP call for this column and output it.
