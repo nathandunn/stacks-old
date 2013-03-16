@@ -306,6 +306,7 @@ BOOL build_file_list(char const *string1, id param);
                     genotypeEntry = [[GenotypeEntry alloc] init];
                 }
                 genotypeEntry.name = key;
+                genotypeEntry.sampleId = [[NSNumber numberWithInt:sample_ids[i]] unsignedIntegerValue];
 
                 locusView.depth = loc->depth;
 

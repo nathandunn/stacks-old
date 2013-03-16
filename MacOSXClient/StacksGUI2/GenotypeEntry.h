@@ -24,8 +24,10 @@
 
 
 // link info
-@property NSInteger  *sampleId;
-@property NSInteger  *tagId;
+@property NSUInteger  sampleId;
+
+// will use the selected locus
+//@property NSUInteger  *tagId;
 
 - (NSString *)render;
 @end
