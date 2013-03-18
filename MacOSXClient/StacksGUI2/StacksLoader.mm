@@ -213,7 +213,7 @@ BOOL build_file_list(char const *string1, id param);
 
 
     // map of sample_ids and then catalog_ids
-    map<int, map<int, CatMatch *>> catMatchLookup;
+//    map<int, map<int, CatMatch *>> catMatchLookup;
 //    map<int,CatMatch*> tagfiles(catalog.size()) ;
 
 
@@ -227,18 +227,18 @@ BOOL build_file_list(char const *string1, id param);
             continue;
         }
 
-//            NSLog(@"m size: %d", m.size());
-        map<int, CatMatch *> catMatches;
-        for (int j = 0; j < m.size(); j++) {
-            CatMatch *match = m[j];
-//                NSLog(@"match %d",match);
-//                NSLog(@"match tag->id %d",match->tag_id);
-            catMatches[match->cat_id] = match;
-        }
-//            NSLog(@"sample id %d", m[0]->sample_id);
-
-
-        catMatchLookup[m[0]->sample_id] = catMatches;
+////            NSLog(@"m size: %d", m.size());
+//        map<int, CatMatch *> catMatches;
+//        for (int j = 0; j < m.size(); j++) {
+//            CatMatch *match = m[j];
+////                NSLog(@"match %d",match);
+////                NSLog(@"match tag->id %d",match->tag_id);
+//            catMatches[match->cat_id] = match;
+//        }
+////            NSLog(@"sample id %d", m[0]->sample_id);
+//
+//
+//        catMatchLookup[m[0]->sample_id] = catMatches;
 
         catalog_matches.push_back(m);
         if (samples.count(m[0]->sample_id) == 0) {
@@ -332,13 +332,14 @@ BOOL build_file_list(char const *string1, id param);
                 genotypeEntry.sampleId = [[NSNumber numberWithInt:sample_ids[i]] unsignedIntegerValue];
 
                 // get catalogs for matches
-                map<int, CatMatch *> catalogMap = catMatchLookup[genotypeEntry.sampleId];
+//                map<int, CatMatch *> catalogMap = catMatchLookup[genotypeEntry.sampleId];
 //                NSLog(@"catalog map %d for sampleId %ld",catalogMap.size(),genotypeEntry.sampleId);
-                CatMatch *catMatch = catalogMap[[locusView.locusId intValue]];
-
-                if(catMatch!=NULL){
-                    genotypeEntry.tagId = catMatch->tag_id;
-                }
+//                CatMatch *catMatch = catalogMap[[locusView.locusId intValue]];
+                genotypeEntry.tagId =d->id;
+                
+//                if(catMatch!=NULL){
+//                    genotypeEntry.tagId = catMatch->tag_id;
+//                }
 //                else{
 //                    NSLog(@"catMatch %d NOT found for locus %d",catMatch,locusView.locusId.intValue);
 //                }

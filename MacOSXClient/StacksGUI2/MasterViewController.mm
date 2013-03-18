@@ -159,7 +159,7 @@
 //            SNP* snp = [(NSValue) [snpsArray objectAtIndex:i] value: withObjCType:<#(char const *)type#>]
 //            SNP* snp = [NSValue value:[snpsArray objectAtIndex:i] withObjCType:(SNP *)];
             SnpView *snpView = [snpsArray objectAtIndex:i];
-            NSLog(@"snp thing %d",snpView.column);
+//            NSLog(@"snp thing %d",snpView.column);
         }
         for (SnpView* snpView in locusView.snps) {
 //            NSLog(@"snp index %d",snpView);
