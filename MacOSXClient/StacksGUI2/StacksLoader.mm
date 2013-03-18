@@ -373,15 +373,19 @@ BOOL build_file_list(char const *string1, id param);
 
     NSDirectoryEnumerator *dirEnum = [fileManager enumeratorAtPath:path];
     NSString *file;
+    int i = 0 ;
     while (file = [dirEnum nextObject]) {
 
         if ([file hasSuffix:@".tags.tsv"]) {
 //            NSLog(@"HAS SUFFIX name %@", file);
             NSUInteger length = [file length] - 9;
             NSString *fileName = [file substringToIndex:length];
-            files.push_back(make_pair(1, [fileName UTF8String]));
+            files.push_back(make_pair(i, [fileName UTF8String]));
+            ++i ;
         }
     }
+
+    sort(files.begin(),files.end());
 
     return files;
 }
