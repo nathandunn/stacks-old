@@ -12,7 +12,7 @@
 
 }
 
-//@synthesize type;
+@synthesize tagId;
 //@synthesize superScript;
 //@synthesize subScript;
 
@@ -31,3 +31,4 @@
     return renderString;
 }
 @end
+

@@ -11,6 +11,7 @@
 @class StacksDocument;
 @class StacksView;
 @class LocusView;
+@class StacksLoader;
 
 @interface MasterViewController : NSWindowController <NSSplitViewDelegate>{
     IBOutlet NSSplitView *verticalSplitView ;
@@ -23,5 +24,6 @@
 @property (atomic,strong) StacksDocument* stacksDocument;
 @property (atomic,strong) LocusView* selectedLocusView;
 @property(atomic, strong) StacksView *selectedStacks;
+@property(atomic, strong) StacksLoader *stacksLoader;
 
 @end

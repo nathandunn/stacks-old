@@ -39,6 +39,8 @@
     [_genotypeTableView setAllowsColumnSelection:TRUE];
     [_genotypeTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
     [_genotypeTableView setAction:@selector(genotypeSelected:)];
+
+    _stacksLoader = [[StacksLoader alloc] init];
 }
 
 
@@ -379,14 +381,6 @@
     [self.stacksTableView reloadData];
 }
 
-- (StacksView *)loadStacksForProgeny:(NSString *)stackKey andLocus:(NSString *)locus {
-    StacksLoader *loader = [[StacksLoader alloc] init];
-    StacksView *stacksView = [loader loadStacksView:stackKey atPath:@"/tmp/stacks_tut" forLocus:locus];
-
-//    StacksView *stacksView = [[StacksView alloc] init];
-    // parse the tags file based on the index
-    return stacksView;
-}
 
 - (NSMutableAttributedString *)decorateSnps:(NSString *)sequenceString snps:(NSMutableArray *)snps {
 
@@ -410,13 +404,25 @@
 
     int index = rowNumber * totalColumnCount + columnNumber;
 //        if(index+1 < [locusView genotypes]){
+    NSLog(@"loading genotypes %d",locusView.genotypes.count);
+
+    for(NSString* key in locusView.genotypes.allKeys){
+        GenotypeEntry *genotypeEntry = [locusView.genotypes objectForKey:key];
+        NSLog(@"entry %@ - %d",genotypeEntry.name,genotypeEntry.tagId);
+    }
+
     if (index + 1 < locusView.genotypes.count) {
 //            GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index + 1];
         NSString *key = [[locusView.genotypes allKeys] objectAtIndex:index+1];
         GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
 //        GenotypeEntry *entry = (GenotypeEntry *) [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%d", index + 1]];
         NSLog(@"entry ID: %d",genotypeEntry.sampleId);
-        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [genotypeEntry sampleId]] andLocus:locusView.locusId];
+//        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [genotypeEntry sampleId]] andLocus:locusView.locusId];
+
+        NSLog(@"loading %@ tag - %d",genotypeEntry.name, genotypeEntry.tagId);
+        StacksView *stacksView = [_stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId];
+//        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [genotypeEntry sampleId]] andTag:genotypeEntry.tagId];
+        self.selectedStacks = stacksView;
     }
     else {
         NSLog(@"invalid selection");

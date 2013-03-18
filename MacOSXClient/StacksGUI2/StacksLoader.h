@@ -16,7 +16,7 @@
 -(StacksDocument*) loadLoci:(NSString *) path;
 - (NSMutableDictionary *)loadGenotypes:(NSString *)path withLoci:(NSMutableDictionary *) loci;
 
-- (StacksView *)loadStacksView:(NSString *)stackKey atPath:(NSString *)path forLocus:(NSString *)locus;
+- (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag;
 
 - (StacksDocument *)loadLociAndGenotypes:(NSString *)path;
 @end

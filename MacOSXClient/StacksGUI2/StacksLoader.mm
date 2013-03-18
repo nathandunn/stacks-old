@@ -105,21 +105,12 @@ BOOL build_file_list(char const *string1, id param);
 }
 
 
-- (StacksView *)loadStacksView:(NSString *)stackKey atPath:(NSString *)path forLocus:(NSString *)locus {
+- (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
     // TODO: or *|!male|!female_N.tags.tsv
-    NSString *fileName = [[NSString alloc] init];
-    if ([stackKey isEqualToString:@"male"]) {
-        fileName = @"/male.tags.tsv";
-    }
-    else if ([stackKey isEqualToString:@"female"]) {
-        fileName = @"/female.tags.tsv";
-    }
-    else {
-        fileName = [NSString stringWithFormat:@"/progeny_%@.tags.tsv", stackKey];
-    }
-    NSString *absoluteFileName = [path stringByAppendingString:fileName];
+
+    NSString *absoluteFileName = [NSString stringWithFormat:@"%@/%@.tags.tsv", path,filename];
 
     BOOL existsAtPath = [fileManager fileExistsAtPath:absoluteFileName];
     NSLog(@"absolute file name %@ exists %d", absoluteFileName, existsAtPath);
@@ -128,7 +119,7 @@ BOOL build_file_list(char const *string1, id param);
     }
     StacksView *stacksView = [[StacksView alloc] init];
 
-    NSError *error = nil ;
+    NSError *error = nil;
     NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error] componentsSeparatedByString:@"\n"];
 
     if (error) {
@@ -143,7 +134,7 @@ BOOL build_file_list(char const *string1, id param);
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
 //        NSLog(@"columns at index %@",[columns objectAtIndex:2]);
-        if (columns.count >8 && [[columns objectAtIndex:2] isEqualToString:locus] ) {
+        if (columns.count > 8 && [[columns objectAtIndex:2] integerValue] == tag) {
             StackEntry *stackEntry = [[StackEntry alloc] init];
             stackEntry.entryId = row;
             stackEntry.relationship = [columns objectAtIndex:6];
@@ -220,6 +211,11 @@ BOOL build_file_list(char const *string1, id param);
     NSLog(@"model size %d", (int) catalog.size());
 
 
+    // map of sample_ids and then catalog_ids
+    map<int, map<int, CatMatch *>> catMatchLookup;
+//    map<int,CatMatch*> tagfiles(catalog.size()) ;
+
+
     for (uint i = 0; i < files.size(); i++) {
         vector<CatMatch *> m;
         load_catalog_matches([[path stringByAppendingString:@"/"] UTF8String] + files[i].second, m);
@@ -230,6 +226,19 @@ BOOL build_file_list(char const *string1, id param);
             continue;
         }
 
+//            NSLog(@"m size: %d", m.size());
+        map<int, CatMatch *> catMatches;
+        for (int j = 0; j < m.size(); j++) {
+            CatMatch *match = m[j];
+//                NSLog(@"match %d",match);
+//                NSLog(@"match tag->id %d",match->tag_id);
+            catMatches[match->cat_id] = match;
+        }
+//            NSLog(@"sample id %d", m[0]->sample_id);
+
+
+        catMatchLookup[m[0]->sample_id] = catMatches;
+
         catalog_matches.push_back(m);
         if (samples.count(m[0]->sample_id) == 0) {
             samples[m[0]->sample_id] = files[i].second;
@@ -239,6 +248,7 @@ BOOL build_file_list(char const *string1, id param);
             exit(1);
         }
     }
+
 
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
@@ -289,6 +299,7 @@ BOOL build_file_list(char const *string1, id param);
     for (uint i = 0; i < sample_ids.size(); i++) {
         int sampleId = sample_ids[i];
         string sampleString = samples[sampleId];
+
 //        NSLog(@"evaluating sample %@", [NSString stringWithUTF8String:sampleString.c_str()]);
         for (it = catalog.begin(); it != catalog.end(); it++) {
             loc = it->second;
@@ -299,8 +310,8 @@ BOOL build_file_list(char const *string1, id param);
 //                NSString *key = [NSString stringWithFormat:@"%d",sample_ids[i]];
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
                 NSMutableDictionary *genotypes = locusView.genotypes;
-                if(genotypes==nil){
-                    genotypes=[[NSMutableDictionary alloc] init];
+                if (genotypes == nil) {
+                    genotypes = [[NSMutableDictionary alloc] init];
                 }
                 GenotypeEntry *genotypeEntry = [genotypes objectForKey:key];
                 if (genotypeEntry == nil) {
@@ -309,14 +320,21 @@ BOOL build_file_list(char const *string1, id param);
                 genotypeEntry.name = key;
                 genotypeEntry.sampleId = [[NSNumber numberWithInt:sample_ids[i]] unsignedIntegerValue];
 
+                // get catalogs for matches
+                map<int, CatMatch *> catalogMap = catMatchLookup[genotypeEntry.sampleId];
+//                NSLog(@"catalog map %d for sampleId %ld",catalogMap.size(),genotypeEntry.sampleId);
+                CatMatch *catMatch = catalogMap[[locusView.locusId intValue]];
+
+                if(catMatch!=NULL){
+                    genotypeEntry.tagId = catMatch->tag_id;
+                }
+//                else{
+//                    NSLog(@"catMatch %d NOT found for locus %d",catMatch,locusView.locusId.intValue);
+//                }
+
+
                 locusView.depth = loc->depth;
 
-//                NSLog(@"locus: %d sample %d",it->first,sample_ids[i]) ;
-//                NSLog(@"id: %d",d->id);
-//                NSLog(@"length: %d",d->len);
-//                NSLog(@"tot_depth: %d",d->tot_depth);
-
-//                NSLog(@"objshape size: %d",obshape.size());
                 vector<char *> obshape = d->obshap;
                 vector<int> depths = d->depth;
                 int numLetters = obshape.size();
