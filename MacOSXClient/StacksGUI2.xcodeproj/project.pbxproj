@@ -23,6 +23,7 @@
 		63D536FB26B8E69C1C3DC0AC /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53D4267AA85297E12A72C /* stacks.cc */; };
 		63D537A0B0415DFBDF34FA15 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53AE1D0F2E9B01FF76A92 /* DNASeq.cc */; };
 		63D53AF955360D80C3B5C435 /* GenotypeView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53933849F418F0D3EFBB7 /* GenotypeView.m */; };
+		63D53B07416CCB32D80053FD /* LocusCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D531E195380867D4081F2F /* LocusCell.m */; };
 		63D53BAE4399201879BC1A25 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53B6C04011DF2C3822EA9 /* utils.cc */; };
 		63D53CFE966113781FC441AB /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D539CD1E1FCCB7E006CD52 /* DNANSeq.cc */; };
 		63D53F54162E9B13476B4708 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53EF1168D7ADB8E210F17 /* input.cc */; };
@@ -77,6 +78,8 @@
 		63D5308F61F143EAAF0C767C /* mst.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mst.cc; path = ../../src/mst.cc; sourceTree = "<group>"; };
 		63D530C0AA8A40DE6021B47C /* mst.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mst.h; path = ../../src/mst.h; sourceTree = "<group>"; };
 		63D530FA501490B30332BA38 /* Sam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Sam.h; path = ../../src/Sam.h; sourceTree = "<group>"; };
+		63D53190F54C154F624260B9 /* LocusCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusCell.h; sourceTree = "<group>"; };
+		63D531E195380867D4081F2F /* LocusCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusCell.m; sourceTree = "<group>"; };
 		63D531FEAC6100A03A4949FF /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../../src/input.h; sourceTree = "<group>"; };
 		63D5320C33B677602C381333 /* StacksView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksView.m; sourceTree = "<group>"; };
 		63D532620E0F9480C87EE9EE /* Tsv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tsv.h; path = ../../src/Tsv.h; sourceTree = "<group>"; };
@@ -260,6 +263,8 @@
 				14B4DDAE16C97C0400317EB3 /* MasterViewController.h */,
 				14B4DDAF16C97C0400317EB3 /* MasterViewController.mm */,
 				14B4DDB016C97C0400317EB3 /* MasterViewController.xib */,
+				63D531E195380867D4081F2F /* LocusCell.m */,
+				63D53190F54C154F624260B9 /* LocusCell.h */,
 			);
 			name = GUI;
 			sourceTree = "<group>";
@@ -446,6 +451,7 @@
 				D793C6B078CD3756AADE640E /* DataStubber.mm in Sources */,
 				D793CC59D715A7C58E1706B1 /* GenotypeEntry.m in Sources */,
 				D793C729B49D4B6893BECCEC /* StackEntry.m in Sources */,
+				63D53B07416CCB32D80053FD /* LocusCell.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

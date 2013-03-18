@@ -94,5 +94,16 @@
          landmarkName = "-splitView:constrainMinCoordinate:ofSubviewAt:"
          landmarkType = "5">
       </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "StacksGUI2/LocusCell.m"
+         timestampString = "385337771.825001"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "13"
+         endingLineNumber = "13">
+      </FileBreakpoint>
    </FileBreakpoints>
 </Bucket>
