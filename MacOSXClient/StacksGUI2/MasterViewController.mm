@@ -13,6 +13,7 @@
 #import "StacksView.h"
 #import "StacksLoader.h"
 #import "StackEntry.h"
+#import "LocusCell.h"
 //#import "stacks.h"
 
 
@@ -134,38 +135,51 @@
         NSString *key = [sortedKeys objectAtIndexedSubscript:row];
         LocusView *locusView = [self.stacksDocument.locusViews objectForKey:key];
 
+        LocusCell* locusCell = (LocusCell *) cellView;
+        locusCell.locusId.stringValue = locusView.locusId;
+        locusCell.propertyField.stringValue = [NSString stringWithFormat:@"Parents %d Progeny %d \nSNPS %d"
+                ,0,locusView.genotypes.count,locusView.snps.count];
+        locusCell.consensusField.stringValue = locusView.consensus;
+
+
+
+
+
+
+//        cellView.
+
         // Since this is a single-column table view, this would not be necessary.
         // But it's a good practice to do it in order by remember it when a table is multicolumn.
-        if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
-            cellView.textField.stringValue = locusView.locusId;
-        }
-        else if ([tableColumn.identifier isEqualToString:@"SnpColumn"]) {
-            NSMutableArray *snps = locusView.snps;
-            if ([snps count] > 0) {
-                cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%ldnuc]", [snps count]];
-            }
-            else {
-                cellView.textField.stringValue = @"None";
-            }
-        }
-        else if ([tableColumn.identifier isEqualToString:@"ParentsColumn"]) {
-            cellView.textField.integerValue = [locusView matchingParents];
-        }
-        else if ([tableColumn.identifier isEqualToString:@"ProgenyColumn"]) {
-//            NSUInteger count = [[locusView progeny] count];
-            NSUInteger count = [locusView genotypeCount];
-            cellView.textField.stringValue = [NSString stringWithFormat:@"%ld / %ld", count, count];
-        }
-        else if ([tableColumn.identifier isEqualToString:@"MarkerColumn"]) {
-            cellView.textField.stringValue = locusView.marker;
-        }
-        else if ([tableColumn.identifier isEqualToString:@"RatioColumn"]) {
-            cellView.textField.stringValue = @"aa: 45 (51.7%) bb:42 (48.3%)";
-        }
-        else if ([tableColumn.identifier isEqualToString:@"GenotypesColumn"]) {
-//            cellView.textField.integerValue = [locusView genotypes];
-            cellView.textField.integerValue = [locusView genotypeCount];
-        }
+//        if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
+//            cellView.textField.stringValue = locusView.locusId;
+//        }
+//        else if ([tableColumn.identifier isEqualToString:@"SnpColumn"]) {
+//            NSMutableArray *snps = locusView.snps;
+//            if ([snps count] > 0) {
+//                cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%ldnuc]", [snps count]];
+//            }
+//            else {
+//                cellView.textField.stringValue = @"None";
+//            }
+//        }
+//        else if ([tableColumn.identifier isEqualToString:@"ParentsColumn"]) {
+//            cellView.textField.integerValue = [locusView matchingParents];
+//        }
+//        else if ([tableColumn.identifier isEqualToString:@"ProgenyColumn"]) {
+////            NSUInteger count = [[locusView progeny] count];
+//            NSUInteger count = [locusView genotypeCount];
+//            cellView.textField.stringValue = [NSString stringWithFormat:@"%ld / %ld", count, count];
+//        }
+//        else if ([tableColumn.identifier isEqualToString:@"MarkerColumn"]) {
+//            cellView.textField.stringValue = locusView.marker;
+//        }
+//        else if ([tableColumn.identifier isEqualToString:@"RatioColumn"]) {
+//            cellView.textField.stringValue = @"aa: 45 (51.7%) bb:42 (48.3%)";
+//        }
+//        else if ([tableColumn.identifier isEqualToString:@"GenotypesColumn"]) {
+////            cellView.textField.integerValue = [locusView genotypes];
+//            cellView.textField.integerValue = [locusView genotypeCount];
+//        }
 
         return cellView;
     }
@@ -401,10 +415,10 @@
 //        if(index+1 < [locusView genotypes]){
     NSLog(@"loading genotypes %d",locusView.genotypes.count);
 
-    for(NSString* key in locusView.genotypes.allKeys){
-        GenotypeEntry *genotypeEntry = [locusView.genotypes objectForKey:key];
-        NSLog(@"entry %@ - %d",genotypeEntry.name,genotypeEntry.tagId);
-    }
+//    for(NSString* key in locusView.genotypes.allKeys){
+//        GenotypeEntry *genotypeEntry = [locusView.genotypes objectForKey:key];
+//        NSLog(@"entry %@ - %d",genotypeEntry.name,genotypeEntry.tagId);
+//    }
 
     if (index + 1 < locusView.genotypes.count) {
 //            GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index + 1];
