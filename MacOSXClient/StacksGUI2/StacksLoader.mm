@@ -35,6 +35,7 @@ using std::ofstream;
 
 #include "LociLoader.hpp"
 #import "GenotypeEntry.h"
+#import "SnpView.h"
 
 BOOL build_file_list(char const *string1, id param);
 
@@ -272,8 +273,20 @@ BOOL build_file_list(char const *string1, id param);
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
         NSMutableArray *snpsArray = [[NSMutableArray alloc] initWithCapacity:snps.size()];
+//        for (; snpsIterator != snps.end(); ++snpsIterator) {
+//            [snpsArray addObject:[NSValue valueWithPointer:(*snpsIterator)]];
+//        }
         for (; snpsIterator != snps.end(); ++snpsIterator) {
-            [snpsArray addObject:[NSValue valueWithPointer:(*snpsIterator)]];
+            SnpView *snpView = [[SnpView alloc] init];
+            SNP* snp = (*snpsIterator);
+            snpView.column = snp->col;
+            snpView.lratio = snp->lratio;
+            snpView.rank1 = snp->rank_1;
+            snpView.rank2 = snp->rank_2;
+            snpView.rank2 = snp->rank_2;
+            snpView.rank4 = snp->rank_4;
+//            [snpsArray addObject:[NSValue valueWithPointer:(*snpsIterator)]];
+            [snpsArray addObject:snpView];
         }
 
         locusView.snps = snpsArray ;

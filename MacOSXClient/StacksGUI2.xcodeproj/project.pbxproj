@@ -20,6 +20,7 @@
 		14B4DDBA16C97DA100317EB3 /* StacksDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB916C97DA100317EB3 /* StacksDocument.m */; };
 		63D53037916A7D22630386CC /* LociLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63D5304246F71EE19F4488C7 /* LociLoader.cpp */; };
 		63D531E8CE86AE86FEB3F2F0 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D5308F61F143EAAF0C767C /* mst.cc */; };
+		63D532AEA7F7111C269694E1 /* SnpView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53B1CDC233D9C03CA9540 /* SnpView.m */; };
 		63D536FB26B8E69C1C3DC0AC /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53D4267AA85297E12A72C /* stacks.cc */; };
 		63D537A0B0415DFBDF34FA15 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D53AE1D0F2E9B01FF76A92 /* DNASeq.cc */; };
 		63D53AF955360D80C3B5C435 /* GenotypeView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53933849F418F0D3EFBB7 /* GenotypeView.m */; };
@@ -88,6 +89,7 @@
 		63D532C71B8BB9E796A5B83D /* DNANSeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DNANSeq.h; path = ../../src/DNANSeq.h; sourceTree = "<group>"; };
 		63D5338F31E04FD17263890C /* LociLoader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LociLoader.hpp; sourceTree = "<group>"; };
 		63D5349331EA2A9590315B56 /* genotype_dictionaries.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = genotype_dictionaries.h; path = ../../src/genotype_dictionaries.h; sourceTree = "<group>"; };
+		63D5353725D241F8024DACEB /* SnpView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpView.h; sourceTree = "<group>"; };
 		63D535DBF5CC086466FBD43E /* GenotypeView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeView.h; sourceTree = "<group>"; };
 		63D53602B1B1AE8200EBDCA9 /* sql_utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sql_utilities.h; path = ../../src/sql_utilities.h; sourceTree = "<group>"; };
 		63D536626A1A4C2FC014378F /* renz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = renz.h; path = ../../src/renz.h; sourceTree = "<group>"; };
@@ -99,6 +101,7 @@
 		63D539CD1E1FCCB7E006CD52 /* DNANSeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DNANSeq.cc; path = ../../src/DNANSeq.cc; sourceTree = "<group>"; };
 		63D53A351DA41069B043CC6E /* PopSum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopSum.h; path = ../../src/PopSum.h; sourceTree = "<group>"; };
 		63D53AE1D0F2E9B01FF76A92 /* DNASeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DNASeq.cc; path = ../../src/DNASeq.cc; sourceTree = "<group>"; };
+		63D53B1CDC233D9C03CA9540 /* SnpView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpView.m; sourceTree = "<group>"; };
 		63D53B6C04011DF2C3822EA9 /* utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = utils.cc; path = ../../src/utils.cc; sourceTree = "<group>"; };
 		63D53CC8901DDFA9C507E879 /* stacks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stacks.h; path = ../../src/stacks.h; sourceTree = "<group>"; };
 		63D53D4267AA85297E12A72C /* stacks.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = stacks.cc; path = ../../src/stacks.cc; sourceTree = "<group>"; };
@@ -288,6 +291,8 @@
 				D793C92D0B7B008BE6F0B53A /* GenotypeEntry.m */,
 				D793C4B6BE94FC937EC7DE1C /* StackEntry.m */,
 				D793C5F1F981DA716A03D5F6 /* StackEntry.h */,
+				63D53B1CDC233D9C03CA9540 /* SnpView.m */,
+				63D5353725D241F8024DACEB /* SnpView.h */,
 			);
 			name = Model;
 			sourceTree = "<group>";
@@ -452,6 +457,7 @@
 				D793CC59D715A7C58E1706B1 /* GenotypeEntry.m in Sources */,
 				D793C729B49D4B6893BECCEC /* StackEntry.m in Sources */,
 				63D53B07416CCB32D80053FD /* LocusCell.m in Sources */,
+				63D532AEA7F7111C269694E1 /* SnpView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
