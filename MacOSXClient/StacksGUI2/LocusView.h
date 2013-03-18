@@ -28,6 +28,7 @@
 
 @property NSUInteger genotypeCount;
 
+@property (strong) NSMutableArray *genotypesOrder;
 @property (strong) NSMutableDictionary *genotypes;
 
 //@property (strong) NSMutableArray *progeny;

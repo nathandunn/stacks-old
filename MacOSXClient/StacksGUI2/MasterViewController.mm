@@ -263,20 +263,12 @@
     if (self.stacksDocument != nil) {
 
         LocusView *locusView = self.selectedLocusView;
-//        NSInteger parentCount = locusView.matchingParents;
-//        NSInteger progenyCount = locusView.genotypeCount;
         NSInteger progenyCount = locusView.genotypes.count;
-//        NSInteger totalCount = parentCount + progenyCount;
 
         // TODO: this should come from the file system, nowhere else
 // to identify the # of parents: look at "identify_parents" in genotypes.cc .
-        NSInteger totalCount = locusView.genotypeCount;
         NSInteger totalColumnCount = 10;
-//        NSInteger totalRowCount = totalCount / totalColumnCount;
-        NSInteger remainderColumns = totalCount % totalColumnCount;
-//        if (remainderColumns > 0) {
-//            ++totalRowCount;
-//        }
+//        NSInteger remainderColumns = totalCount % totalColumnCount;
 
 
         // turn the row / column into an index
@@ -286,7 +278,10 @@
         if (progenyCount > progenyIndex) {
 //            GenotypeEntry *genotypeEntry = [locusView.progeny objectAtIndex:progenyIndex];
 //            GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%ld", progenyIndex]];
-            NSString *key = [[locusView.genotypes allKeys] objectAtIndex:progenyIndex];
+            NSArray *sortedKeys = [[locusView.genotypes allKeys] sortedArrayUsingComparator:^(NSString * obj1,NSString * obj2){
+                return [obj1 compare:obj2];
+            }];
+            NSString *key = [sortedKeys objectAtIndex:progenyIndex-1];
             GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
             cellView.textField.stringValue = [NSString stringWithFormat:@"%@  %@", genotypeEntry.name, [genotypeEntry render]];
         }
