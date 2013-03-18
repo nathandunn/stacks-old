@@ -16,6 +16,7 @@ out/
 .idea/*
 *.o
 *.orig
+**/*.orig
 *.swp
 web-app/plugins
 web-app/WEB-INF/classes

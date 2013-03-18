@@ -14,6 +14,8 @@
 #import "StacksLoader.h"
 #import "StackEntry.h"
 #import "LocusCell.h"
+#import "stacks.h"
+#import "SnpView.h"
 //#import "stacks.h"
 
 
@@ -139,9 +141,38 @@
         locusCell.locusId.stringValue = locusView.locusId;
         locusCell.propertyField.stringValue = [NSString stringWithFormat:@"Parents %d Progeny %d \nSNPS %d"
                 ,0,locusView.genotypes.count,locusView.snps.count];
-        locusCell.consensusField.stringValue = locusView.consensus;
+//        locusCell.consensusField.stringValue = locusView.consensus;
 
 
+        // START FANCY
+        NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locusView.consensus];
+
+        [string beginEditing];
+        NSNumber *snpIndex;
+        NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                [NSColor blueColor], NSForegroundColorAttributeName,
+                [NSColor grayColor], NSBackgroundColorAttributeName,
+                [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
+                nil];
+        NSMutableArray *snpsArray = locusView.snps ;
+        for(int i = 0 ; i < snpsArray.count ; i++){
+//            SNP* snp = [(NSValue) [snpsArray objectAtIndex:i] value: withObjCType:<#(char const *)type#>]
+//            SNP* snp = [NSValue value:[snpsArray objectAtIndex:i] withObjCType:(SNP *)];
+            SnpView *snpView = [snpsArray objectAtIndex:i];
+            NSLog(@"snp thing %d",snpView.column);
+        }
+        for (SnpView* snpView in locusView.snps) {
+//            NSLog(@"snp index %d",snpView);
+            NSRange selectedRange = NSMakeRange(snpView.column, 1);
+            [string setAttributes:attributes range:selectedRange];
+        }
+        [string endEditing];
+
+
+        locusCell.consensusField.attributedStringValue = string;
+        locusCell.consensusField.font = [NSFont fontWithName:@"Courier" size:14];
+
+        // START FANCY
 
 
 
