@@ -105,7 +105,7 @@ BOOL build_file_list(char const *string1, id param);
 }
 
 
-- (StacksView *)loadStacksView:(NSString *)stackKey atPath:(NSString *)path {
+- (StacksView *)loadStacksView:(NSString *)stackKey atPath:(NSString *)path forLocus:(NSString *)locus {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
     // TODO: or *|!male|!female_N.tags.tsv
@@ -142,7 +142,8 @@ BOOL build_file_list(char const *string1, id param);
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
-        if ([[columns objectAtIndex:0] isEqualToString:@"0"]) {
+//        NSLog(@"columns at index %@",[columns objectAtIndex:2]);
+        if (columns.count >8 && [[columns objectAtIndex:2] isEqualToString:locus] ) {
             StackEntry *stackEntry = [[StackEntry alloc] init];
             stackEntry.entryId = row;
             stackEntry.relationship = [columns objectAtIndex:6];
