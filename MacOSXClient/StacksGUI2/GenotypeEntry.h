@@ -11,7 +11,7 @@
 @interface GenotypeEntry : NSObject
 
 @property NSString *name ;
-@property NSInteger entryId ;
+@property NSInteger sampleId;
 //@property NSString *type;
 
 // TODO: remove
@@ -24,7 +24,7 @@
 
 
 // link info
-@property NSUInteger  sampleId;
+//@property NSUInteger  sampleId;
 
 // will use the selected locus
 //@property NSUInteger  *tagId;
