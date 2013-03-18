@@ -379,9 +379,9 @@
     [self.stacksTableView reloadData];
 }
 
-- (StacksView *)loadStacksForProgeny:(NSString *)stackKey {
+- (StacksView *)loadStacksForProgeny:(NSString *)stackKey andLocus:(NSString *)locus {
     StacksLoader *loader = [[StacksLoader alloc] init];
-    StacksView *stacksView = [loader loadStacksView:stackKey atPath:@"/tmp/stacks_tut"];
+    StacksView *stacksView = [loader loadStacksView:stackKey atPath:@"/tmp/stacks_tut" forLocus:locus];
 
 //    StacksView *stacksView = [[StacksView alloc] init];
     // parse the tags file based on the index
@@ -416,7 +416,7 @@
         GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
 //        GenotypeEntry *entry = (GenotypeEntry *) [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%d", index + 1]];
         NSLog(@"entry ID: %d",genotypeEntry.sampleId);
-        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [genotypeEntry sampleId]]];
+        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [genotypeEntry sampleId]] andLocus:locusView.locusId];
     }
     else {
         NSLog(@"invalid selection");
