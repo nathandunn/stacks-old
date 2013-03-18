@@ -410,10 +410,13 @@
 
     int index = rowNumber * totalColumnCount + columnNumber;
 //        if(index+1 < [locusView genotypes]){
-    if (index + 1 < [locusView genotypeCount]) {
+    if (index + 1 < locusView.genotypes.count) {
 //            GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index + 1];
-        GenotypeEntry *entry = (GenotypeEntry *) [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%d", index + 1]];
-        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [entry entryId]]];
+        NSString *key = [[locusView.genotypes allKeys] objectAtIndex:index+1];
+        GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
+//        GenotypeEntry *entry = (GenotypeEntry *) [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%d", index + 1]];
+        NSLog(@"entry ID: %d",genotypeEntry.sampleId);
+        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [genotypeEntry sampleId]]];
     }
     else {
         NSLog(@"invalid selection");

@@ -74,7 +74,7 @@
     for (int i = 0; i < totalGenotypes; i++) {
         GenotypeEntry *genotypeEntry = [self generateGenotype];
         if (genotypeEntry != nil) {
-            genotypeEntry.entryId=i;
+            genotypeEntry.sampleId =i;
             [progeny addObject:genotypeEntry];
         }
     }
@@ -86,8 +86,8 @@
     for (int i = 0; i < totalGenotypes; i++) {
         GenotypeEntry *genotypeEntry = [self generateGenotype];
         if (genotypeEntry != nil) {
-            genotypeEntry.entryId=i;
-            [progeny setObject:genotypeEntry forKey:[NSString stringWithFormat:@"%d",genotypeEntry.entryId] ];
+            genotypeEntry.sampleId =i;
+            [progeny setObject:genotypeEntry forKey:[NSString stringWithFormat:@"%d", genotypeEntry.sampleId] ];
         }
     }
     return progeny;

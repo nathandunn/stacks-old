@@ -25,7 +25,7 @@
     for(int i = 0 ; i < _depths.count ; i++){
         renderString = [renderString stringByAppendingString:[_depths objectAtIndex:i]];
     }
-    NSLog(@"rendering string %@",renderString);
+//    NSLog(@"rendering string %@",renderString);
 
 
     return renderString;
