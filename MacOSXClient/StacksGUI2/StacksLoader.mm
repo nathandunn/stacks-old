@@ -276,9 +276,7 @@ BOOL build_file_list(char const *string1, id param);
             [snpsArray addObject:[NSValue valueWithPointer:(*snpsIterator)]];
         }
 
-//        locusView.male = [dataStubber generateGenotype];
-//        locusView.female = [dataStubber generateGenotype];
-//        locusView.progeny = [dataStubber generateProgeny:(NSInteger) totalGenotypes];
+        locusView.snps = snpsArray ;
 
         [locusViews setObject:locusView forKey:locusView.locusId];
         ++catalogIterator;
