@@ -27,7 +27,7 @@
 //@property NSUInteger  sampleId;
 
 // will use the selected locus
-//@property NSUInteger  *tagId;
+@property NSInteger  tagId;
 
 - (NSString *)render;
 @end
