@@ -47,54 +47,11 @@
 }
 
 
-// -------------------------------------------------------------------------------
-//	splitView:effectiveRect:effectiveRect:forDrawnRect:ofDividerAtIndex
-// -------------------------------------------------------------------------------
-- (NSRect)splitView:(NSSplitView *)splitView effectiveRect:(NSRect)proposedEffectiveRect forDrawnRect:(NSRect)drawnRect ofDividerAtIndex:(NSInteger)dividerIndex {
-//    NSRect effectiveRect = drawnRect;
-//
-//    if (splitView == verticalSplitView) {
-//        // don't steal as much from the scroll bar as NSSplitView normally would
-//        effectiveRect.origin.x -= 2.0;
-//        effectiveRect.size.width += 6.0;
-//
-//    }
-//
-//    return effectiveRect;
-    return NSZeroRect;
-}
-
-// -------------------------------------------------------------------------------
-//	splitView:additionalEffectiveRectOfDividerAtIndex:dividerIndex:
-// -------------------------------------------------------------------------------
-- (NSRect)splitView:(NSSplitView *)splitView additionalEffectiveRectOfDividerAtIndex:(NSInteger)dividerIndex {
-    // we have a divider handle next to one of the split views in the window
-    if (splitView == verticalSplitView)
-        return [dividerHandleView convertRect:[dividerHandleView bounds] toView:splitView];
-    else
-        return NSZeroRect;
-}
-
-
-// -------------------------------------------------------------------------------
-//	constrainMinCoordinate:proposedCoordinate:index
-// -------------------------------------------------------------------------------
-- (CGFloat)splitView:(NSSplitView *)splitView constrainMinCoordinate:(CGFloat)proposedCoordinate ofSubviewAt:(NSInteger)index {
-    CGFloat constrainedCoordinate = proposedCoordinate;
-    if (splitView == verticalSplitView) {
-        // the primary vertical split view is asking for a constrained size
-        constrainedCoordinate = proposedCoordinate + 120.0;
-    }
-    else if (splitView == horizontalSplitView) {
-        // the horizontal split view between mailboxes and activity view
-        constrainedCoordinate = proposedCoordinate + 200.0;
-    }
-
-    return constrainedCoordinate;
-}
-
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
-    if ([[tableView identifier] isEqualToString:@"GenotypeTableView"]) {
+    if ([[tableView identifier] isEqualToString:@"GenotypeTableView"]
+            ||
+            [[tableView identifier] isEqualToString:@"ProgenyLightTable"]
+            ) {
         if (self.selectedLocusView != nil) {
             LocusView *locusView = self.selectedLocusView;
 //            NSInteger count = [locusView genotypes];
@@ -118,6 +75,13 @@
             return [self.selectedStacks rowsNeeded];
         }
     }
+    else if ([[tableView identifier] isEqualToString:@"PopulationTable"]) {
+        NSLog(@"setting num rows for pop table");
+        return 1;
+    }
+    else{
+        NSLog(@"table not found %@",tableView.identifier);
+    }
 
 }
 
@@ -130,6 +94,12 @@
     if ([[tableView identifier] isEqualToString:@"GenotypeTableView"]) {
 //        NSLog(@"is a genotype table with column identifier %@",[tableColumn identifier]);
         return [self handleGenotypesTable:(NSString *) tableColumn.identifier row:(NSInteger) row cell:(NSTableCellView *) cellView];
+    }
+    if ([[tableView identifier] isEqualToString:@"PopulationTable"]) {
+        NSLog(@"populating the population table  %@",tableColumn.identifier);
+        cellView.textField.stringValue = @"Rabbit Slough";
+        return cellView;
+//        return [self handleGenotypesTable:(NSString *) tableColumn.identifier row:(NSInteger) row cell:(NSTableCellView *) cellView];
     }
     else if ([[tableView identifier] isEqualToString:@"LocusTable"]) {
         // we want data for the row . . . .
@@ -156,13 +126,10 @@
                 [NSColor grayColor], NSBackgroundColorAttributeName,
                 [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
                 nil];
-        NSMutableArray *snpsArray = locusView.snps ;
-        for(int i = 0 ; i < snpsArray.count ; i++){
-//            SNP* snp = [(NSValue) [snpsArray objectAtIndex:i] value: withObjCType:<#(char const *)type#>]
-//            SNP* snp = [NSValue value:[snpsArray objectAtIndex:i] withObjCType:(SNP *)];
-            SnpView *snpView = [snpsArray objectAtIndex:i];
-//            NSLog(@"snp thing %d",snpView.column);
-        }
+//        NSMutableArray *snpsArray = locusView.snps ;
+//        for(int i = 0 ; i < snpsArray.count ; i++){
+//            SnpView *snpView = [snpsArray objectAtIndex:i];
+//        }
         for (SnpView* snpView in locusView.snps) {
 //            NSLog(@"snp index %d",snpView);
             NSRange selectedRange = NSMakeRange(snpView.column, 1);
@@ -172,49 +139,8 @@
 
 
         locusCell.consensusField.attributedStringValue = string;
-//        locusCell.consensusField.font = [NSFont fontWithName:@"Courier" size:14];
 
-        // START FANCY
-
-
-
-
-//        cellView.
-
-        // Since this is a single-column table view, this would not be necessary.
-        // But it's a good practice to do it in order by remember it when a table is multicolumn.
-//        if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
-//            cellView.textField.stringValue = locusView.locusId;
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"SnpColumn"]) {
-//            NSMutableArray *snps = locusView.snps;
-//            if ([snps count] > 0) {
-//                cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%ldnuc]", [snps count]];
-//            }
-//            else {
-//                cellView.textField.stringValue = @"None";
-//            }
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"ParentsColumn"]) {
-//            cellView.textField.integerValue = [locusView matchingParents];
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"ProgenyColumn"]) {
-////            NSUInteger count = [[locusView progeny] count];
-//            NSUInteger count = [locusView genotypeCount];
-//            cellView.textField.stringValue = [NSString stringWithFormat:@"%ld / %ld", count, count];
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"MarkerColumn"]) {
-//            cellView.textField.stringValue = locusView.marker;
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"RatioColumn"]) {
-//            cellView.textField.stringValue = @"aa: 45 (51.7%) bb:42 (48.3%)";
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"GenotypesColumn"]) {
-////            cellView.textField.integerValue = [locusView genotypes];
-//            cellView.textField.integerValue = [locusView genotypeCount];
-//        }
-
-        return cellView;
+        return locusCell;
     }
     else if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
         if (self.selectedStacks != nil) {
@@ -445,21 +371,15 @@
     NSUInteger totalColumnCount = 10;
 
     int index = rowNumber * totalColumnCount + columnNumber;
-//        if(index+1 < [locusView genotypes]){
     NSLog(@"loading genotypes %d",locusView.genotypes.count);
-
-//    for(NSString* key in locusView.genotypes.allKeys){
-//        GenotypeEntry *genotypeEntry = [locusView.genotypes objectForKey:key];
-//        NSLog(@"entry %@ - %d",genotypeEntry.name,genotypeEntry.tagId);
-//    }
 
     if (index + 1 < locusView.genotypes.count) {
 //            GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index + 1];
         NSString *key = [[locusView.genotypes allKeys] objectAtIndex:index+1];
         GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
-//        GenotypeEntry *entry = (GenotypeEntry *) [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%d", index + 1]];
+        self.selectedGenotype = genotypeEntry ;
+
         NSLog(@"entry ID: %d",genotypeEntry.sampleId);
-//        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [genotypeEntry sampleId]] andLocus:locusView.locusId];
 
         NSLog(@"loading %@ tag - %d",genotypeEntry.name, genotypeEntry.tagId);
         StacksView *stacksView = [_stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId];

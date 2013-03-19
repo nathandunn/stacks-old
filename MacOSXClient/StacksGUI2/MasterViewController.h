@@ -12,6 +12,7 @@
 @class StacksView;
 @class LocusView;
 @class StacksLoader;
+@class GenotypeEntry;
 
 @interface MasterViewController : NSWindowController <NSSplitViewDelegate>{
     IBOutlet NSSplitView *verticalSplitView ;
@@ -23,6 +24,7 @@
 //@property (strong) NSMutableDictionary *stacksDocuments;
 @property (atomic,strong) StacksDocument* stacksDocument;
 @property (atomic,strong) LocusView* selectedLocusView;
+@property (atomic,strong) GenotypeEntry* selectedGenotype;
 @property(atomic, strong) StacksView *selectedStacks;
 @property(atomic, strong) StacksLoader *stacksLoader;
 
