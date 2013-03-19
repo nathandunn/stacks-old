@@ -60,19 +60,20 @@ void help( void );
 void version( void );
 int  parse_command_line(int, char **);
 int  process_reads(string, 
-		   map<string, ofstream *> &, 
-		   map<string, long> &, map<string, map<string, long> > &);
+		   map<BarcodePair, ofstream *> &, 
+		   map<string, long> &, map<BarcodePair, map<string, long> > &);
 int  process_paired_reads(string, string, 
-			  map<string, ofstream *> &, 
-			  map<string, ofstream *> &, 
-			  map<string, ofstream *> &,
-			  map<string, long> &, map<string, map<string, long> > &);
-int  process_singlet(map<string, ofstream *> &, Read *, map<string, map<string, long> > &, map<string, long> &, bool);
-int  correct_barcode(map<string, ofstream *> &, Read *, map<string, long> &, map<string, map<string, long> > &);
+			  map<BarcodePair, ofstream *> &, 
+			  map<BarcodePair, ofstream *> &, 
+			  map<BarcodePair, ofstream *> &,
+			  map<string, long> &, map<BarcodePair, map<string, long> > &);
+int  process_barcode(Read *, Read *, map<string, ofstream *> &, map<BarcodePair, map<string, long> > &, map<string, long> &); 
+int  process_singlet(map<BarcodePair, ofstream *> &, Read *, map<string, long> &, bool);
+bool correct_barcode(map<BarcodePair, ofstream *> &, Read *);
 int  correct_radtag(Read *, map<string, long> &);
 int  check_quality_scores(Read *, bool);
 int  dist(const char *, char *);
-int  print_results(int, char **, vector<string> &, map<string, map<string, long> > &, map<string, map<string, long> > &);
+int  print_results(int, char **, vector<BarcodePair> &, map<string, map<string, long> > &, map<BarcodePair, map<string, long> > &);
 
 int  compare_barcodes(pair<string, int>, pair<string, int>);
 

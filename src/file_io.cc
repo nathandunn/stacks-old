@@ -31,10 +31,10 @@
 #include "file_io.h"
 
 int open_files(vector<pair<string, string> > &files,
-	       vector<string> &barcodes, 
-	       map<string, ofstream *> &pair_1_fhs, 
-	       map<string, ofstream *> &pair_2_fhs, 
-	       map<string, ofstream *> &rem_fhs, 
+	       vector<BarcodePair> &barcodes, 
+	       map<BarcodePair, ofstream *> &pair_1_fhs, 
+	       map<BarcodePair, ofstream *> &pair_2_fhs, 
+	       map<BarcodePair, ofstream *> &rem_fhs, 
 	       map<string, map<string, long> > &counters) {
     string path, suffix_1, suffix_2;
 
@@ -50,7 +50,8 @@ int open_files(vector<pair<string, string> > &files,
 	suffix_2 += "_2";
     }
 
-    ofstream *fh;
+    ofstream   *fh;
+    BarcodePair bc;
     //
     // If the size of the barcodes vector is 0, then no barcodes
     // were submitted. In this case, we want to open output files
@@ -61,6 +62,10 @@ int open_files(vector<pair<string, string> > &files,
 	struct stat sb_1, sb_2;
 
 	for (uint i = 0; i < files.size(); i++) {
+
+	    bc.se = files[i].first;
+	    if (paired)
+		bc.pe = files[i].second;
 
 	    path = out_path + files[i].first;
 
@@ -77,9 +82,9 @@ int open_files(vector<pair<string, string> > &files,
 	    }
 
 	    fh = new ofstream(path.c_str(), ifstream::out);
-            pair_1_fhs[files[i].first] = fh;
+            pair_1_fhs[bc] = fh;
 
-	    if (pair_1_fhs[files[i].first]->fail()) {
+	    if (pair_1_fhs[bc]->fail()) {
 		cerr << "Error opening output file '" << path << "'\n";
 		exit(1);
 	    }
@@ -100,9 +105,9 @@ int open_files(vector<pair<string, string> > &files,
 		}
 
 		fh = new ofstream(path.c_str(), ifstream::out);
-                pair_2_fhs[files[i].second] = fh;
+                pair_2_fhs[bc] = fh;
 
-		if (pair_2_fhs[files[i].second]->fail()) {
+		if (pair_2_fhs[bc]->fail()) {
 		    cerr << "Error opening output file '" << path << "'\n";
 		    exit(1);
 		}
@@ -111,10 +116,9 @@ int open_files(vector<pair<string, string> > &files,
 		path = out_path + files[i].first.substr(0, pos) + ".rem" + files[i].first.substr(pos);
 
 		fh = new ofstream(path.c_str(), ifstream::out);
-                rem_fhs[files[i].first]  = fh;
-                rem_fhs[files[i].second] = fh;
+                rem_fhs[bc] = fh;
 
- 		if (rem_fhs[files[i].first]->fail()) {
+ 		if (rem_fhs[bc]->fail()) {
 		    cerr << "Error opening remainder output file '" << path << "'\n";
 		    exit(1);
 		}
@@ -133,8 +137,13 @@ int open_files(vector<pair<string, string> > &files,
 	    exit(1);
 	}
 
-	for (uint i = 0; i < files.size(); i++)
-            pair_1_fhs[files[i].first] = fh;
+	for (uint i = 0; i < files.size(); i++) {
+	    bc.se = files[i].first;
+	    if (paired)
+		bc.pe = files[i].second;
+
+            pair_1_fhs[bc] = fh;
+	}
 
 	if (paired) {
 	    path = out_path + "sample_unbarcoded" + suffix_2;
@@ -145,9 +154,12 @@ int open_files(vector<pair<string, string> > &files,
 		exit(1);
 	    }
 
-	    for (uint i = 0; i < files.size(); i++)
-		pair_2_fhs[files[i].second] = fh;
+	    for (uint i = 0; i < files.size(); i++) {
+		bc.se = files[i].first;
+		if (paired) bc.pe = files[i].second;
 
+		pair_2_fhs[bc] = fh;
+	    }
 	    path = out_path + "sample_unbarcoded.rem" + suffix_2.substr(0,3);
 	    fh   = new ofstream(path.c_str(), ifstream::out);
 
@@ -157,8 +169,7 @@ int open_files(vector<pair<string, string> > &files,
 	    }
 
 	    for (uint i = 0; i < files.size(); i++) {
-		rem_fhs[files[i].first]  = fh;
-		rem_fhs[files[i].second] = fh;
+		rem_fhs[bc] = fh;
 	    }
 	}
 
@@ -168,7 +179,7 @@ int open_files(vector<pair<string, string> > &files,
     for (uint i = 0; i < barcodes.size(); i++) {
 
         if (interleave == true) {
-	    path = out_path + "sample_" + barcodes[i] + suffix_1;
+	    path = out_path + "sample_" + barcodes[i].str() + suffix_1;
 	    fh = new ofstream(path.c_str());
             pair_1_fhs[barcodes[i]] = fh;
  
@@ -178,7 +189,7 @@ int open_files(vector<pair<string, string> > &files,
 	    }
 
         } else {
-	    path = out_path + "sample_" + barcodes[i] + suffix_1;
+	    path = out_path + "sample_" + barcodes[i].str() + suffix_1;
 	    fh = new ofstream(path.c_str(), ifstream::out);
             pair_1_fhs[barcodes[i]] = fh;
 
@@ -188,7 +199,7 @@ int open_files(vector<pair<string, string> > &files,
 	    }
 
             if (paired) {
-		path = out_path + "sample_" + barcodes[i] + suffix_2;
+		path = out_path + "sample_" + barcodes[i].str() + suffix_2;
 		fh = new ofstream(path.c_str(), ifstream::out);
                 pair_2_fhs[barcodes[i]] = fh;
 
@@ -197,7 +208,7 @@ int open_files(vector<pair<string, string> > &files,
 		    exit(1);
 		}
 
-		path = out_path + "sample_" + barcodes[i] + ".rem" + suffix_2.substr(0,3);
+		path = out_path + "sample_" + barcodes[i].str() + ".rem" + suffix_2.substr(0,3);
 		fh = new ofstream(path.c_str(), ifstream::out);
                 rem_fhs[barcodes[i]] = fh;
 
@@ -213,9 +224,9 @@ int open_files(vector<pair<string, string> > &files,
 }
 
 int 
-close_file_handles(map<string, ofstream *> &fhs) 
+close_file_handles(map<BarcodePair, ofstream *> &fhs) 
 {
-    map<string, ofstream*>::iterator i;
+    map<BarcodePair, ofstream*>::iterator i;
     set<ofstream*> ptrs;
     set<ofstream*>::iterator j;
 
@@ -232,7 +243,7 @@ close_file_handles(map<string, ofstream *> &fhs)
 }
 
 int 
-load_barcodes(string barcode_file, vector<string> &barcodes) 
+load_barcodes(string barcode_file, vector<BarcodePair> &barcodes, int &se_len, int &pe_len) 
 {
     if (barcode_file.length() == 0)
 	return 0;
@@ -245,43 +256,86 @@ load_barcodes(string barcode_file, vector<string> &barcodes)
 	exit(1);
     }
 
+    char *p, *q, *r;
+
     while (fh.good()) {
+	memset(line, 0, id_len);
 	fh.getline(line, id_len);
 
 	if (strlen(line) == 0) continue;
 
 	//
-	// Check that barcode is legitimate
+	// Identify the first barcode and check that it's legitimate.
 	//
-	for (char *p = line; *p != '\0'; p++)
-	    switch (*p) {
+	p = line;
+	q = p;
+	while (*q != '\0') {
+	    switch (*q) {
 	    case 'A':
 	    case 'C':
 	    case 'G':
 	    case 'T':
 		break;
 	    case 'a':
-		*p = 'A';
+		*q = 'A';
 		break;
 	    case 'c':
-		*p = 'C';
+		*q = 'C';
 		break;
 	    case 'g':
-		*p = 'G';
+		*q = 'G';
 		break;
 	    case 't':
-		*p = 'T';
+		*q = 'T';
 		break;
 	    case '\r':
 	    case '\t':
-		*p = '\0';
+		*q = '\0';
 		break;
 	    default:
 		cerr << "Invalid barcode: '" << line << "'\n";
 		exit(1);
 	    }
+	    if (*q != '\0') q++;
+	}
 
-	barcodes.push_back(string(line));
+	//
+	// Identify the second barcode and check that it's legitimate.
+	//
+	if (q - p < id_len)
+	    q++;
+	r = q;
+	while (*q != '\0') {
+	    switch (*q) {
+	    case 'A':
+	    case 'C':
+	    case 'G':
+	    case 'T':
+		break;
+	    case 'a':
+		*q = 'A';
+		break;
+	    case 'c':
+		*q = 'C';
+		break;
+	    case 'g':
+		*q = 'G';
+		break;
+	    case 't':
+		*q = 'T';
+		break;
+	    case '\r':
+	    case '\t':
+		*q = '\0';
+		break;
+	    default:
+		cerr << "Invalid barcode: '" << line << "'\n";
+		exit(1);
+	    }
+	    if (*q != '\0') q++;
+	}
+
+	barcodes.push_back(BarcodePair(p, r));
     }
 
     fh.close();
@@ -292,25 +346,60 @@ load_barcodes(string barcode_file, vector<string> &barcodes)
     }
 
     //
-    // Determine the barcode length
+    // Make sure barcodes are properly paired up.
     //
-    int prev, blen;
-    prev = barcodes[0].length();
+    int pe_cnt = 0;
+    int se_cnt = 0;
     for (uint i = 0; i < barcodes.size(); i++) {
-        blen = barcodes[i].length();
+	se_cnt += (barcodes[i].se.length() > 0) ? 1 : 0;
+	pe_cnt += (barcodes[i].pe.length() > 0) ? 1 : 0;
+    }
 
-        if (prev != blen) {
-            cerr << "Barcodes must all be the same length. Place different barcode lengths in separate runs.\n";
+    if (pe_cnt > 0 && se_cnt != pe_cnt) {
+	cerr << "Single and paired-end barcodes must be properly paired.\n";
+	help();
+    }
+
+    //
+    // Determine the barcode length for the single-end barcodes
+    //
+    int prev;
+    prev = barcodes[0].se.length();
+    for (uint i = 0; i < barcodes.size(); i++) {
+        se_len = barcodes[i].se.length();
+
+        if (prev != se_len) {
+            cerr << "Single-end barcodes must all be the same length. Place different barcode lengths in separate runs.\n";
             help();
         }
     }
 
-    cerr << "Loaded " << barcodes.size() << ", " << blen << "bp barcodes.\n";
+    //
+    // Determine the barcode length for the paired-end barcodes
+    //
+    prev = barcodes[0].pe.length();
+    for (uint i = 0; i < barcodes.size(); i++) {
+        pe_len = barcodes[i].pe.length();
 
-    return blen;
+        if (prev != pe_len) {
+            cerr << "Paired-end barcodes must all be the same length. Place different barcode lengths in separate runs.\n";
+            help();
+        }
+    }
+
+    cerr << "Loaded " << barcodes.size() << " barcodes ";
+
+    if (pe_cnt > 0) 
+	cerr << "(" << se_len << "bp / " << pe_len << "bp).\n";
+    else
+	cerr << "(" << se_len << "bp).\n";
+
+    return 0;
 }
 
-int build_file_list(vector<pair<string, string> > &files) {
+int 
+build_file_list(vector<pair<string, string> > &files) 
+{
 
     //
     // Scan a directory for a list of files.
