@@ -74,7 +74,7 @@
 														<object class="NSTableView" id="583026923">
 															<reference key="NSNextResponder" ref="537753620"/>
 															<int key="NSvFlags">256</int>
-															<string key="NSFrameSize">{281, 660}</string>
+															<string key="NSFrameSize">{283, 660}</string>
 															<reference key="NSSuperview" ref="537753620"/>
 															<reference key="NSWindow"/>
 															<reference key="NSNextKeyView" ref="790200215"/>
@@ -89,7 +89,7 @@
 															<array class="NSMutableArray" key="NSTableColumns">
 																<object class="NSTableColumn" id="763445558">
 																	<string key="NSIdentifier">IdColumn</string>
-																	<double key="NSWidth">278</double>
+																	<double key="NSWidth">280</double>
 																	<double key="NSMinWidth">40</double>
 																	<double key="NSMaxWidth">1000</double>
 																	<object class="NSTableHeaderCell" key="NSHeaderCell">
@@ -173,7 +173,7 @@
 															<int key="NSTableViewGroupRowStyle">1</int>
 														</object>
 													</array>
-													<string key="NSFrame">{{1, 1}, {281, 660}}</string>
+													<string key="NSFrame">{{1, 1}, {283, 660}}</string>
 													<reference key="NSSuperview" ref="741660665"/>
 													<reference key="NSWindow"/>
 													<reference key="NSNextKeyView" ref="583026923"/>
@@ -208,7 +208,7 @@
 													<double key="NSPercent">0.99777777777777776</double>
 												</object>
 											</array>
-											<string key="NSFrame">{{82, 0}, {283, 662}}</string>
+											<string key="NSFrame">{{82, 0}, {285, 662}}</string>
 											<reference key="NSSuperview" ref="788725117"/>
 											<reference key="NSWindow"/>
 											<reference key="NSNextKeyView" ref="537753620"/>
@@ -220,7 +220,7 @@
 											<bytes key="NSScrollAmts">QSAAAEEgAABCtgAAQrYAAA</bytes>
 										</object>
 									</array>
-									<string key="NSFrameSize">{365, 682}</string>
+									<string key="NSFrameSize">{367, 682}</string>
 									<reference key="NSSuperview" ref="645924114"/>
 									<reference key="NSWindow"/>
 									<reference key="NSNextKeyView" ref="741660665"/>
@@ -250,10 +250,10 @@
 																		<object class="NSTableView" id="505885802">
 																			<reference key="NSNextResponder" ref="251132264"/>
 																			<int key="NSvFlags">256</int>
-																			<string key="NSFrameSize">{1172, 295}</string>
+																			<string key="NSFrameSize">{1179, 295}</string>
 																			<reference key="NSSuperview" ref="251132264"/>
 																			<reference key="NSWindow"/>
-																			<reference key="NSNextKeyView" ref="112627233"/>
+																			<reference key="NSNextKeyView" ref="841100113"/>
 																			<string key="NSReuseIdentifierKey">_NS:13</string>
 																			<bool key="NSEnabled">YES</bool>
 																			<object class="_NSCornerView" key="NSCornerView">
@@ -515,7 +515,7 @@
 																				</object>
 																				<object class="NSTableColumn" id="708257721">
 																					<string key="NSIdentifier">Genotypes10</string>
-																					<double key="NSWidth">242</double>
+																					<double key="NSWidth">249</double>
 																					<double key="NSMinWidth">50</double>
 																					<double key="NSMaxWidth">1000</double>
 																					<object class="NSTableHeaderCell" key="NSHeaderCell">
@@ -557,7 +557,7 @@
 																			<int key="NSTableViewGroupRowStyle">1</int>
 																		</object>
 																	</array>
-																	<string key="NSFrame">{{1, 1}, {1172, 295}}</string>
+																	<string key="NSFrame">{{1, 1}, {1179, 295}}</string>
 																	<reference key="NSSuperview" ref="777565625"/>
 																	<reference key="NSWindow"/>
 																	<reference key="NSNextKeyView" ref="505885802"/>
@@ -592,10 +592,10 @@
 																	<double key="NSPercent">0.46325167037861914</double>
 																</object>
 															</array>
-															<string key="NSFrame">{{1, 0}, {1174, 297}}</string>
+															<string key="NSFrame">{{1, 0}, {1181, 297}}</string>
 															<reference key="NSSuperview" ref="1054248441"/>
 															<reference key="NSWindow"/>
-															<reference key="NSNextKeyView" ref="841100113"/>
+															<reference key="NSNextKeyView" ref="251132264"/>
 															<string key="NSReuseIdentifierKey">_NS:9</string>
 															<int key="NSsFlags">133650</int>
 															<reference key="NSVScroller" ref="437181450"/>
@@ -604,7 +604,7 @@
 															<bytes key="NSScrollAmts">QSAAAEEgAABBmAAAQZgAAA</bytes>
 														</object>
 													</array>
-													<string key="NSFrameSize">{1175, 319}</string>
+													<string key="NSFrameSize">{1182, 319}</string>
 													<reference key="NSSuperview" ref="1033176852"/>
 													<reference key="NSWindow"/>
 													<reference key="NSNextKeyView" ref="777565625"/>
@@ -626,16 +626,16 @@
 																		<object class="NSTableView" id="225475346">
 																			<reference key="NSNextResponder" ref="1070293944"/>
 																			<int key="NSvFlags">256</int>
-																			<string key="NSFrameSize">{1173, 340}</string>
+																			<string key="NSFrameSize">{1180, 340}</string>
 																			<reference key="NSSuperview" ref="1070293944"/>
 																			<reference key="NSWindow"/>
-																			<reference key="NSNextKeyView" ref="440580289"/>
+																			<reference key="NSNextKeyView" ref="44806687"/>
 																			<string key="NSReuseIdentifierKey">_NS:13</string>
 																			<bool key="NSEnabled">YES</bool>
 																			<object class="NSTableHeaderView" key="NSHeaderView" id="272610400">
 																				<reference key="NSNextResponder" ref="44806687"/>
 																				<int key="NSvFlags">256</int>
-																				<string key="NSFrameSize">{1173, 17}</string>
+																				<string key="NSFrameSize">{1180, 17}</string>
 																				<reference key="NSSuperview" ref="44806687"/>
 																				<reference key="NSWindow"/>
 																				<reference key="NSNextKeyView" ref="250910160"/>
@@ -734,7 +734,7 @@
 																				</object>
 																				<object class="NSTableColumn" id="649726951">
 																					<string key="NSIdentifier">SequenceColumn</string>
-																					<double key="NSWidth">731</double>
+																					<double key="NSWidth">738</double>
 																					<double key="NSMinWidth">100</double>
 																					<double key="NSMaxWidth">2000</double>
 																					<object class="NSTableHeaderCell" key="NSHeaderCell">
@@ -775,7 +775,7 @@
 																			<int key="NSTableViewGroupRowStyle">1</int>
 																		</object>
 																	</array>
-																	<string key="NSFrame">{{1, 17}, {1173, 340}}</string>
+																	<string key="NSFrame">{{1, 17}, {1180, 340}}</string>
 																	<reference key="NSSuperview" ref="263850351"/>
 																	<reference key="NSWindow"/>
 																	<reference key="NSNextKeyView" ref="225475346"/>
@@ -802,7 +802,6 @@
 																	<string key="NSFrame">{{1, 173}, {468, 15}}</string>
 																	<reference key="NSSuperview" ref="263850351"/>
 																	<reference key="NSWindow"/>
-																	<reference key="NSNextKeyView"/>
 																	<string key="NSReuseIdentifierKey">_NS:60</string>
 																	<int key="NSsFlags">1</int>
 																	<reference key="NSTarget" ref="263850351"/>
@@ -815,7 +814,7 @@
 																	<array class="NSMutableArray" key="NSSubviews">
 																		<reference ref="272610400"/>
 																	</array>
-																	<string key="NSFrame">{{1, 0}, {1173, 17}}</string>
+																	<string key="NSFrame">{{1, 0}, {1180, 17}}</string>
 																	<reference key="NSSuperview" ref="263850351"/>
 																	<reference key="NSWindow"/>
 																	<reference key="NSNextKeyView" ref="272610400"/>
@@ -825,10 +824,10 @@
 																</object>
 																<reference ref="250910160"/>
 															</array>
-															<string key="NSFrame">{{0, -4}, {1175, 358}}</string>
+															<string key="NSFrame">{{0, -4}, {1182, 358}}</string>
 															<reference key="NSSuperview" ref="281571825"/>
 															<reference key="NSWindow"/>
-															<reference key="NSNextKeyView" ref="44806687"/>
+															<reference key="NSNextKeyView" ref="1070293944"/>
 															<string key="NSReuseIdentifierKey">_NS:9</string>
 															<int key="NSsFlags">133682</int>
 															<reference key="NSVScroller" ref="509018953"/>
@@ -839,7 +838,7 @@
 															<bytes key="NSScrollAmts">QSAAAEEgAABBiAAAQYgAAA</bytes>
 														</object>
 													</array>
-													<string key="NSFrame">{{0, 329}, {1175, 352}}</string>
+													<string key="NSFrame">{{0, 329}, {1182, 352}}</string>
 													<reference key="NSSuperview" ref="1033176852"/>
 													<reference key="NSWindow"/>
 													<reference key="NSNextKeyView" ref="263850351"/>
@@ -847,7 +846,7 @@
 													<string key="NSClassName">NSView</string>
 												</object>
 											</array>
-											<string key="NSFrameSize">{1175, 681}</string>
+											<string key="NSFrameSize">{1182, 681}</string>
 											<reference key="NSSuperview" ref="955813267"/>
 											<reference key="NSWindow"/>
 											<reference key="NSNextKeyView" ref="1054248441"/>
@@ -855,7 +854,7 @@
 											<int key="NSDividerStyle">3</int>
 										</object>
 									</array>
-									<string key="NSFrame">{{375, 0}, {1175, 682}}</string>
+									<string key="NSFrame">{{368, 0}, {1182, 682}}</string>
 									<reference key="NSSuperview" ref="645924114"/>
 									<reference key="NSWindow"/>
 									<reference key="NSNextKeyView" ref="1033176852"/>
@@ -869,7 +868,7 @@
 							<reference key="NSNextKeyView" ref="788725117"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<bool key="NSIsVertical">YES</bool>
-							<int key="NSDividerStyle">3</int>
+							<int key="NSDividerStyle">2</int>
 						</object>
 					</array>
 					<string key="NSFrameSize">{1461, 659}</string>
@@ -1053,7 +1052,7 @@
 									</object>
 								</object>
 							</array>
-							<string key="NSFrame">{{1, 1}, {278, 89}}</string>
+							<string key="NSFrame">{{1, 1}, {280, 89}}</string>
 							<reference key="NSNextKeyView" ref="841870977"/>
 						</object>
 						<reference key="destination" ref="841870977"/>
@@ -1391,7 +1390,7 @@
 								<object class="NSTextField" id="411207146">
 									<reference key="NSNextResponder" ref="32041363"/>
 									<int key="NSvFlags">266</int>
-									<string key="NSFrameSize">{242, 17}</string>
+									<string key="NSFrameSize">{249, 17}</string>
 									<reference key="NSSuperview" ref="32041363"/>
 									<reference key="NSNextKeyView" ref="437181450"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
@@ -1407,7 +1406,7 @@
 									</object>
 								</object>
 							</array>
-							<string key="NSFrame">{{928, 1}, {242, 17}}</string>
+							<string key="NSFrame">{{928, 1}, {249, 17}}</string>
 							<reference key="NSNextKeyView" ref="411207146"/>
 						</object>
 						<reference key="destination" ref="411207146"/>
@@ -1523,7 +1522,7 @@
 								<object class="NSTextField" id="391583045">
 									<reference key="NSNextResponder" ref="931486229"/>
 									<int key="NSvFlags">266</int>
-									<string key="NSFrameSize">{731, 17}</string>
+									<string key="NSFrameSize">{738, 17}</string>
 									<reference key="NSSuperview" ref="931486229"/>
 									<reference key="NSNextKeyView" ref="509018953"/>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
@@ -1539,7 +1538,7 @@
 									</object>
 								</object>
 							</array>
-							<string key="NSFrame">{{440, 0}, {731, 17}}</string>
+							<string key="NSFrame">{{440, 0}, {738, 17}}</string>
 							<reference key="NSNextKeyView" ref="391583045"/>
 						</object>
 						<reference key="destination" ref="391583045"/>
@@ -2519,18 +2518,43 @@
 					<string key="className">MasterViewController</string>
 					<string key="superclassName">NSWindowController</string>
 					<dictionary class="NSMutableDictionary" key="outlets">
+						<string key="consensusDetail">NSTextField</string>
 						<string key="dividerHandleView">NSView</string>
+						<string key="filesTableView">NSTableView</string>
+						<string key="genotypeTableView">NSTableView</string>
 						<string key="horizontalSplitView">NSSplitView</string>
+						<string key="locusDetail">NSTextField</string>
+						<string key="stacksTableView">NSTableView</string>
 						<string key="verticalSplitView">NSSplitView</string>
 					</dictionary>
 					<dictionary class="NSMutableDictionary" key="toOneOutletInfosByName">
+						<object class="IBToOneOutletInfo" key="consensusDetail">
+							<string key="name">consensusDetail</string>
+							<string key="candidateClassName">NSTextField</string>
+						</object>
 						<object class="IBToOneOutletInfo" key="dividerHandleView">
 							<string key="name">dividerHandleView</string>
 							<string key="candidateClassName">NSView</string>
 						</object>
+						<object class="IBToOneOutletInfo" key="filesTableView">
+							<string key="name">filesTableView</string>
+							<string key="candidateClassName">NSTableView</string>
+						</object>
+						<object class="IBToOneOutletInfo" key="genotypeTableView">
+							<string key="name">genotypeTableView</string>
+							<string key="candidateClassName">NSTableView</string>
+						</object>
 						<object class="IBToOneOutletInfo" key="horizontalSplitView">
 							<string key="name">horizontalSplitView</string>
 							<string key="candidateClassName">NSSplitView</string>
+						</object>
+						<object class="IBToOneOutletInfo" key="locusDetail">
+							<string key="name">locusDetail</string>
+							<string key="candidateClassName">NSTextField</string>
+						</object>
+						<object class="IBToOneOutletInfo" key="stacksTableView">
+							<string key="name">stacksTableView</string>
+							<string key="candidateClassName">NSTableView</string>
 						</object>
 						<object class="IBToOneOutletInfo" key="verticalSplitView">
 							<string key="name">verticalSplitView</string>

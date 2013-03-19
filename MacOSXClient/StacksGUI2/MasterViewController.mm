@@ -51,16 +51,17 @@
 //	splitView:effectiveRect:effectiveRect:forDrawnRect:ofDividerAtIndex
 // -------------------------------------------------------------------------------
 - (NSRect)splitView:(NSSplitView *)splitView effectiveRect:(NSRect)proposedEffectiveRect forDrawnRect:(NSRect)drawnRect ofDividerAtIndex:(NSInteger)dividerIndex {
-    NSRect effectiveRect = drawnRect;
-
-    if (splitView == verticalSplitView) {
-        // don't steal as much from the scroll bar as NSSplitView normally would
-        effectiveRect.origin.x -= 2.0;
-        effectiveRect.size.width += 6.0;
-
-    }
-
-    return effectiveRect;
+//    NSRect effectiveRect = drawnRect;
+//
+//    if (splitView == verticalSplitView) {
+//        // don't steal as much from the scroll bar as NSSplitView normally would
+//        effectiveRect.origin.x -= 2.0;
+//        effectiveRect.size.width += 6.0;
+//
+//    }
+//
+//    return effectiveRect;
+    return NSZeroRect;
 }
 
 // -------------------------------------------------------------------------------
@@ -73,6 +74,7 @@
     else
         return NSZeroRect;
 }
+
 
 // -------------------------------------------------------------------------------
 //	constrainMinCoordinate:proposedCoordinate:index
