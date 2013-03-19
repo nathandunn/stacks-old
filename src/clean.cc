@@ -182,12 +182,24 @@ int parse_input_record(Seq *s, Read *r) {
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
 	//*q = '\0';
 
-	// Index (barcode)
+	//
+	// Index barcode
+	//
 	for (p = q+1, q = p; q < stop; q++);
-	if (barcode_size > 0 && ill_barcode == true) {
-	    strncpy(r->barcode, p,  barcode_size);
-	    r->barcode[barcode_size] = '\0';
+
+	if (r->read == 1 && 
+	    (barcode_type == index_null ||
+	     barcode_type == index_index || 
+	     barcode_type == index_inline)) {
+	    strncpy(r->barcode, p,  bc_size_1);
+	    r->barcode[bc_size_1] = '\0';
+	} else if (r->read == 2 &&
+		   (barcode_type == index_index || 
+		    barcode_type == inline_index)) {
+	    strncpy(r->barcode, p,  bc_size_2);
+	    r->barcode[bc_size_2] = '\0';
 	}
+		   
 
     } else if (colon_cnt == 4 && hash_cnt == 1) {
 	r->fastq_type = illv1_fastq;
@@ -253,9 +265,17 @@ int parse_input_record(Seq *s, Read *r) {
     strncpy(r->phred, s->qual, r->len);
     r->phred[r->len] = '\0';
 
-    if (barcode_size > 0 && ill_barcode == false) {
-	strncpy(r->barcode, r->seq,  barcode_size);
-	r->barcode[barcode_size] = '\0';
+    if (r->read == 1 && 
+	(barcode_type == inline_null ||
+	 barcode_type == inline_inline || 
+	 barcode_type == inline_index)) {
+	strncpy(r->barcode, r->seq,  bc_size_1);
+	r->barcode[bc_size_1] = '\0';
+    } else if (r->read == 2 &&
+	       (barcode_type == inline_inline ||
+		barcode_type == index_inline)) {
+	strncpy(r->barcode, r->seq,  bc_size_2);
+	r->barcode[bc_size_2] = '\0';
     }
 
     r->retain = 1;
@@ -263,33 +283,36 @@ int parse_input_record(Seq *s, Read *r) {
     return 0;
 }
 
-int write_fasta(map<string, ofstream *> &fhs, Read *href, bool barcode, bool overhang) {
+int 
+write_fasta(ofstream *fh, Read *href, bool overhang) {
     char tile[id_len];
     sprintf(tile, "%04d", href->tile);
 
-    int offset;
-    offset  = barcode     ? barcode_size : 0;
-    offset  = ill_barcode ? 0 : offset;
-    offset += overhang    ? 1 : 0;
-
-    if (fhs.count(href->barcode) == 0) {
-	cerr << "Unable to write to unknown barcode: '" << href->barcode << "'\n";
-	return -1;
-    }
+    int offset = 0;
+    if (href->read == 1 && 
+	(barcode_type == inline_null ||
+	 barcode_type == inline_inline ||
+	 barcode_type == inline_index))
+	offset = bc_size_1;
+    else if (href->read == 2 && 
+	(barcode_type == index_inline ||
+	 barcode_type == inline_inline))
+	offset = bc_size_2;
+    offset += overhang ? 1 : 0;
 
     if (href->fastq_type != generic_fastq)
-	*(fhs[href->barcode]) <<
-	    ">" << href->lane <<
-	    "_" << tile << 
-	    "_" << href->x <<
-	    "_" << href->y <<
-	    "_" << href->read << "\n" <<
-	    href->seq + offset << "\n";
+    	*fh <<
+    	    ">" << href->lane <<
+    	    "_" << tile << 
+    	    "_" << href->x <<
+    	    "_" << href->y <<
+    	    "_" << href->read << "\n" <<
+    	    href->seq + offset << "\n";
     else 
-	*(fhs[href->barcode]) <<
-	    ">" << href->machine <<
-	    "_" << href->read << "\n" <<
-	    href->seq + offset << "\n";
+    	*fh <<
+    	    ">" << href->machine <<
+    	    "_" << href->read << "\n" <<
+    	    href->seq + offset << "\n";
 
     return 0;
 }
@@ -303,40 +326,42 @@ int write_fasta(ofstream *fh, Seq *href) {
     return 0;
 }
 
-int write_fastq(map<string, ofstream *> &fhs, Read *href, bool barcode, bool overhang) {
+int write_fastq(ofstream *fh, Read *href, bool overhang) {
     //
     // Write the sequence and quality scores in FASTQ format. 
     //
     char tile[id_len];
     sprintf(tile, "%04d", href->tile);
 
-    int offset;
-    offset  = barcode     ? barcode_size : 0;
-    offset  = ill_barcode ? 0 : offset;
-    offset += overhang    ? 1 : 0;
-
-    if (fhs.count(href->barcode) == 0) {
-	cerr << "Unable to write to unknown barcode: '" << href->barcode << "'\n";
-	return -1;
-    }
+    int offset = 0;
+    if (href->read == 1 && 
+	(barcode_type == inline_null ||
+	 barcode_type == inline_inline ||
+	 barcode_type == inline_index))
+	offset = bc_size_1;
+    else if (href->read == 2 && 
+	(barcode_type == index_inline ||
+	 barcode_type == inline_inline))
+	offset = bc_size_2;
+    offset += overhang ? 1 : 0;
 
     if (href->fastq_type != generic_fastq)
-	*(fhs[href->barcode]) <<
-	    "@" << href->lane << 
-	    "_" << tile << 
-	    "_" << href->x << 
-	    "_" << href->y << 
-	    "_" << href->read << "\n" <<
-	    href->seq + offset << "\n" <<
-	    "+\n" <<
-	    href->phred + offset << "\n";
+    	*fh <<
+    	    "@" << href->lane << 
+    	    "_" << tile << 
+    	    "_" << href->x << 
+    	    "_" << href->y << 
+    	    "_" << href->read << "\n" <<
+    	    href->seq + offset << "\n" <<
+    	    "+\n" <<
+    	    href->phred + offset << "\n";
     else
-	*(fhs[href->barcode]) <<
-	    "@" << href->machine << 
-	    "_" << href->read << "\n" <<
-	    href->seq + offset << "\n" <<
-	    "+\n" <<
-	    href->phred + offset << "\n";
+    	*fh <<
+    	    "@" << href->machine << 
+    	    "_" << href->read << "\n" <<
+    	    href->seq + offset << "\n" <<
+    	    "+\n" <<
+    	    href->phred + offset << "\n";
 
     return 0;
 }
@@ -373,7 +398,7 @@ int write_fasta(ofstream *fh, Seq *href, string msg) {
 int rev_complement(char *seq, bool barcode, bool overhang) {
     char *p, *q;
     int offset;
-    offset  = barcode  ? barcode_size : 0;
+    offset  = barcode  ? bc_size_1 : 0;
     offset += overhang ? 1 : 0;
     q       = seq + offset;
 
@@ -415,7 +440,7 @@ int rev_complement(char *seq, bool barcode, bool overhang) {
 int reverse_qual(char *qual, bool barcode, bool overhang) {
     char *p, *q;
     int offset;
-    offset  = barcode  ? barcode_size : 0;
+    offset  = barcode  ? bc_size_1 : 0;
     offset += overhang ? 1 : 0;
     q       = qual + offset;
 
@@ -480,10 +505,10 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
     // }
 
     int offset;
-    if (paired_end == true || barcode_size == 0)
+    if (paired_end == true || bc_size_1 == 0)
 	offset = 0;
     else
-	offset = barcode_size - 1;
+	offset = bc_size_1 - 1;
     double mean        = 0.0;
     double working_sum = 0.0;
     int *p, *q, j;

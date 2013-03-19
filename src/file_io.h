@@ -47,6 +47,7 @@ using std::endl;
 
 #include "constants.h"
 #include "clean.h"
+#include "input.h"
 
 //
 // Command line options defined in process_radtags and process_shortreads.
@@ -69,13 +70,13 @@ extern string    in_path_2;
 void help( void );
 
 int  build_file_list(vector<pair<string, string> > &);
-int  load_barcodes(string, vector<string> &);
+int  load_barcodes(string, vector<BarcodePair> &, int &, int &);
 int  open_files(vector<pair<string, string> > &,
-		vector<string> &, 
-		map<string, ofstream *> &, 
-		map<string, ofstream *> &, 
-		map<string, ofstream *> &,
+		vector<BarcodePair> &, 
+		map<BarcodePair, ofstream *> &, 
+		map<BarcodePair, ofstream *> &, 
+		map<BarcodePair, ofstream *> &,
 		map<string, map<string, long> > &);
-int  close_file_handles(map<string, ofstream *> &);
+int  close_file_handles(map<BarcodePair, ofstream *> &);
 
 #endif // __FILE_IO_H__

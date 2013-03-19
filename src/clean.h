@@ -38,9 +38,70 @@ using std::tr1::unordered_map;
 #include "input.h"
 #include "kmers.h"
 
-enum fastqt {generic_fastq, illv1_fastq, illv2_fastq};
+enum fastqt   {generic_fastq, illv1_fastq, illv2_fastq};
 
-typedef struct read {
+enum barcodet {null_null,
+	       inline_null,   index_null, 
+	       inline_inline, index_index, 
+	       inline_index,  index_inline};
+
+class BarcodePair {
+public:
+    string se;    // Single-end barcode
+    string pe;    // Paired-end barcode
+
+    BarcodePair()
+    {
+	this->se = "";
+	this->pe = "";
+    }
+    BarcodePair(char *p, char *q)
+    {
+	this->se = string(p);
+	this->pe = string(q);
+    }
+    BarcodePair(string se, string pe)
+    {
+	this->se = se;
+	this->pe = pe;
+    }
+    void set(char *p, char *q)
+    {
+	this->se = string(p);
+	this->pe = string(q);
+    }
+    string str() 
+    {
+	if (this->pe.length() > 0)
+	    return string(this->se + "-" + this->pe);
+	else
+	    return this->se;
+    }
+    friend bool operator<(const BarcodePair &lhs, const BarcodePair &rhs)
+    {
+	if (lhs.se < rhs.se)
+	    return true;
+	else if (lhs.se == rhs.se && lhs.pe < rhs.pe)
+	    return true;
+	else
+	    return false;
+    }
+    friend bool operator==(const BarcodePair &lhs, const BarcodePair &rhs)
+    {
+	return (lhs.se == rhs.se && lhs.pe == rhs.pe);
+    }
+    friend ofstream& operator<<(ofstream &out, const BarcodePair &bp)
+    {
+	if (bp.pe.length() > 0)
+	    out << bp.se << "-" << bp.pe;
+	else
+	    out << bp.se;
+	return out;
+    }
+};
+
+class Read {
+public:
     fastqt  fastq_type;
     char   *barcode;
     char   *machine;
@@ -59,21 +120,52 @@ typedef struct read {
     unsigned int len;
     double  win_len;
     double  stop_pos;
-} Read;
+
+    Read(uint buf_len, int read, int barcode_size, int win_size) {
+	this->barcode    = new char[id_len  + 1];
+	this->machine    = new char[id_len  + 1];
+	this->seq        = new char[buf_len + 1];
+	this->phred      = new char[buf_len + 1];
+	this->int_scores = new  int[buf_len];
+	this->size       = buf_len + 1;
+	this->len        = buf_len;
+	this->read       = read;
+
+	//
+	// Set the parameters for checking read quality later in processing.
+	// Window length is 15% (rounded) of the sequence length.
+	//
+	this->len      = buf_len - barcode_size;
+	this->win_len  = round(this->len * win_size);
+
+	if (this->win_len < 1) 
+	    this->win_len = 1;
+
+	this->len     += barcode_size;
+	this->stop_pos = this->len - this->win_len;
+    }
+    ~Read() {
+	delete [] this->barcode;
+	delete [] this->machine;
+	delete [] this->seq;
+	delete [] this->phred;
+	delete [] this->int_scores;
+    }
+};
 
 typedef unordered_map<const char *, vector<int>, std::tr1::hash<const char *>, eqstr> AdapterHash;
 
-extern int  barcode_size;
-extern bool ill_barcode;
-extern int  truncate_seq;
+extern int      bc_size_1, bc_size_2;
+extern barcodet barcode_type;
+extern int      truncate_seq;
 
 int  parse_illumina_v1(const char *);
 int  parse_illumina_v2(const char *);
 int  parse_input_record(Seq *, Read *);
-int  write_fastq(map<string, ofstream *> &, Read *, bool, bool);
+int  write_fastq(ofstream *, Read *, bool);
 int  write_fastq(ofstream *, Seq *);
 int  write_fastq(ofstream *, Seq *, string);
-int  write_fasta(map<string, ofstream *> &, Read *, bool, bool);
+int  write_fasta(ofstream *, Read *, bool);
 int  write_fasta(ofstream *, Seq *);
 int  write_fasta(ofstream *, Seq *, string);
 int  rev_complement(char *, bool, bool);
