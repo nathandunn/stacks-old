@@ -170,7 +170,7 @@
 
 
         locusCell.consensusField.attributedStringValue = string;
-        locusCell.consensusField.font = [NSFont fontWithName:@"Courier" size:14];
+//        locusCell.consensusField.font = [NSFont fontWithName:@"Courier" size:14];
 
         // START FANCY
 
