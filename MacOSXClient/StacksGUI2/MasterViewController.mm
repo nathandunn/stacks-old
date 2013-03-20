@@ -143,7 +143,6 @@
         locusCell.locusId.stringValue = locusView.locusId;
         locusCell.propertyField.stringValue = [NSString stringWithFormat:@"Parents %d Progeny %d \nSNPS %d"
                 ,0,locusView.genotypes.count,locusView.snps.count];
-//        locusCell.consensusField.stringValue = locusView.consensus;
 
 
         // START FANCY
@@ -156,13 +155,6 @@
                 [NSColor grayColor], NSBackgroundColorAttributeName,
                 [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
                 nil];
-        NSMutableArray *snpsArray = locusView.snps ;
-        for(int i = 0 ; i < snpsArray.count ; i++){
-//            SNP* snp = [(NSValue) [snpsArray objectAtIndex:i] value: withObjCType:<#(char const *)type#>]
-//            SNP* snp = [NSValue value:[snpsArray objectAtIndex:i] withObjCType:(SNP *)];
-            SnpView *snpView = [snpsArray objectAtIndex:i];
-//            NSLog(@"snp thing %d",snpView.column);
-        }
         for (SnpView* snpView in locusView.snps) {
 //            NSLog(@"snp index %d",snpView);
             NSRange selectedRange = NSMakeRange(snpView.column, 1);
@@ -172,47 +164,6 @@
 
 
         locusCell.consensusField.attributedStringValue = string;
-//        locusCell.consensusField.font = [NSFont fontWithName:@"Courier" size:14];
-
-        // START FANCY
-
-
-
-
-//        cellView.
-
-        // Since this is a single-column table view, this would not be necessary.
-        // But it's a good practice to do it in order by remember it when a table is multicolumn.
-//        if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
-//            cellView.textField.stringValue = locusView.locusId;
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"SnpColumn"]) {
-//            NSMutableArray *snps = locusView.snps;
-//            if ([snps count] > 0) {
-//                cellView.textField.stringValue = [NSString stringWithFormat:@"Yes [%ldnuc]", [snps count]];
-//            }
-//            else {
-//                cellView.textField.stringValue = @"None";
-//            }
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"ParentsColumn"]) {
-//            cellView.textField.integerValue = [locusView matchingParents];
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"ProgenyColumn"]) {
-////            NSUInteger count = [[locusView progeny] count];
-//            NSUInteger count = [locusView genotypeCount];
-//            cellView.textField.stringValue = [NSString stringWithFormat:@"%ld / %ld", count, count];
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"MarkerColumn"]) {
-//            cellView.textField.stringValue = locusView.marker;
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"RatioColumn"]) {
-//            cellView.textField.stringValue = @"aa: 45 (51.7%) bb:42 (48.3%)";
-//        }
-//        else if ([tableColumn.identifier isEqualToString:@"GenotypesColumn"]) {
-////            cellView.textField.integerValue = [locusView genotypes];
-//            cellView.textField.integerValue = [locusView genotypeCount];
-//        }
 
         return cellView;
     }
@@ -323,8 +274,6 @@
         NSInteger progenyIndex = row * totalColumnCount + columnIndex;
 
         if (progenyCount > progenyIndex) {
-//            GenotypeEntry *genotypeEntry = [locusView.progeny objectAtIndex:progenyIndex];
-//            GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%ld", progenyIndex]];
             NSArray *sortedKeys = [[locusView.genotypes allKeys] sortedArrayUsingComparator:^(NSString * obj1,NSString * obj2){
                 return [obj1 compare:obj2];
             }];
@@ -358,11 +307,6 @@
     if (locus != nil) {
         NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locus.consensus];
 
-        // TODOL need to store snps correctly . . . as SnpsView or as vector<SNP>:: in LocusView
-//        NSMutableArray* snps = locus.snps;
-//        for(int i =0 ; i < [snps count]; i++){
-//           SNP *snp = [[snps objectAtIndex:i] pointerValue];
-//        }
 
         NSRange selectedRange = NSMakeRange(12, 1);
 
@@ -403,17 +347,6 @@
         // Update info
         [self handleSelectedLocus:self.selectedLocusView];
     }
-//    else
-//    if ([tableName isEqualToString:@"GenotypeTableView"]) {
-//        NSUInteger progenyIndex = [self getSelectedGenotype];
-//        self.selectedStacks = [self loadStacksForProgeny:progenyIndex];
-//        [self showTags:self.selectedStacks];
-//        
-//        NSLog(@"genotype table selected");
-//    }
-//    else {
-//        NSLog(@"need to handle the other case ");
-//    }
 
 }
 
@@ -424,14 +357,9 @@
 }
 
 
-- (NSMutableAttributedString *)decorateSnps:(NSString *)sequenceString snps:(NSMutableArray *)snps {
-
-}
-
 
 // TODO: handle genotype selection
 - (void)genotypeSelected:(id)tableView {
-//    NSTableCellView *tableCellView = [tableView selectedCell];
     NSInteger rowNumber = [_genotypeTableView clickedRow];
     NSInteger columnNumber = [_genotypeTableView clickedColumn];
     if (rowNumber < 0 || columnNumber < 0) {
@@ -445,25 +373,15 @@
     NSUInteger totalColumnCount = 10;
 
     int index = rowNumber * totalColumnCount + columnNumber;
-//        if(index+1 < [locusView genotypes]){
     NSLog(@"loading genotypes %d",locusView.genotypes.count);
 
-//    for(NSString* key in locusView.genotypes.allKeys){
-//        GenotypeEntry *genotypeEntry = [locusView.genotypes objectForKey:key];
-//        NSLog(@"entry %@ - %d",genotypeEntry.name,genotypeEntry.tagId);
-//    }
-
     if (index + 1 < locusView.genotypes.count) {
-//            GenotypeEntry *entry = (GenotypeEntry *) [locusView.progeny objectAtIndex:index + 1];
         NSString *key = [[locusView.genotypes allKeys] objectAtIndex:index+1];
         GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
-//        GenotypeEntry *entry = (GenotypeEntry *) [locusView.genotypes valueForKey:[NSString stringWithFormat:@"%d", index + 1]];
         NSLog(@"entry ID: %d",genotypeEntry.sampleId);
-//        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [genotypeEntry sampleId]] andLocus:locusView.locusId];
 
         NSLog(@"loading %@ tag - %d",genotypeEntry.name, genotypeEntry.tagId);
         StacksView *stacksView = [_stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId];
-//        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [genotypeEntry sampleId]] andTag:genotypeEntry.tagId];
         self.selectedStacks = stacksView;
     }
     else {
