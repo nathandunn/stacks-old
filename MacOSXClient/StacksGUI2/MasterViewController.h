@@ -15,10 +15,6 @@
 @class GenotypeEntry;
 
 @interface MasterViewController : NSWindowController <NSSplitViewDelegate>{
-    IBOutlet NSSplitView *verticalSplitView ;
-    IBOutlet NSSplitView *horizontalSplitView ;
-    IBOutlet NSView *dividerHandleView;
-
 }
 
 //@property (strong) NSMutableDictionary *stacksDocuments;

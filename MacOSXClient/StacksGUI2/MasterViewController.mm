@@ -27,6 +27,9 @@
 @property(weak) IBOutlet NSTextField *locusDetail;
 @property(weak) IBOutlet NSTextField *consensusDetail;
 
+@property(weak) IBOutlet NSScrollView *snpsScrollView ;
+@property(weak) IBOutlet NSScrollView *genotypesScrollView ;
+
 @end
 
 @implementation MasterViewController
@@ -37,11 +40,11 @@
 //	awakeFromNib:
 // -------------------------------------------------------------------------------
 - (void)awakeFromNib {
-    [verticalSplitView setDelegate:self];    // we want a chance to affect the vertical split view coverage
-    [_genotypeTableView setTarget:self];
-    [_genotypeTableView setAllowsColumnSelection:TRUE];
-    [_genotypeTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
-    [_genotypeTableView setAction:@selector(genotypeSelected:)];
+//    [self.snpsScrollView setHidden:TRUE];
+    [self.genotypeTableView setTarget:self];
+    [self.genotypeTableView setAllowsColumnSelection:TRUE];
+    [self.genotypeTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
+    [self.genotypeTableView setAction:@selector(genotypeSelected:)];
 
     _stacksLoader = [[StacksLoader alloc] init];
 }
@@ -120,18 +123,12 @@
         NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locusView.consensus];
 
         [string beginEditing];
-        NSNumber *snpIndex;
         NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blueColor], NSForegroundColorAttributeName,
                 [NSColor grayColor], NSBackgroundColorAttributeName,
                 [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
                 nil];
-//        NSMutableArray *snpsArray = locusView.snps ;
-//        for(int i = 0 ; i < snpsArray.count ; i++){
-//            SnpView *snpView = [snpsArray objectAtIndex:i];
-//        }
         for (SnpView* snpView in locusView.snps) {
-//            NSLog(@"snp index %d",snpView);
             NSRange selectedRange = NSMakeRange(snpView.column, 1);
             [string setAttributes:attributes range:selectedRange];
         }
@@ -350,12 +347,7 @@
 }
 
 
-- (NSMutableAttributedString *)decorateSnps:(NSString *)sequenceString snps:(NSMutableArray *)snps {
 
-}
-
-
-// TODO: handle genotype selection
 - (void)genotypeSelected:(id)tableView {
 //    NSTableCellView *tableCellView = [tableView selectedCell];
     NSInteger rowNumber = [_genotypeTableView clickedRow];
@@ -382,9 +374,18 @@
         NSLog(@"entry ID: %d",genotypeEntry.sampleId);
 
         NSLog(@"loading %@ tag - %d",genotypeEntry.name, genotypeEntry.tagId);
-        StacksView *stacksView = [_stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId];
-//        self.selectedStacks = [self loadStacksForProgeny:[NSString stringWithFormat:@"%ld", [genotypeEntry sampleId]] andTag:genotypeEntry.tagId];
+        StacksView *stacksView = [self.stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId];
         self.selectedStacks = stacksView;
+
+
+//        [self.genotypesScrollView setHidden:TRUE];
+//        [self.snpsScrollView setHidden:FALSE];
+//        [self.stacksTableView setHidden:FALSE];
+//        [self.stacksTableView reloadData];
+
+
+
+
     }
     else {
         NSLog(@"invalid selection");
