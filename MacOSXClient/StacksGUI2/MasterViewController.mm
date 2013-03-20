@@ -24,8 +24,9 @@
 @property(weak) IBOutlet NSTableView *filesTableView;
 @property(weak) IBOutlet NSTableView *genotypeTableView;
 @property(weak) IBOutlet NSTableView *stacksTableView;
-@property(weak) IBOutlet NSTextField *locusDetail;
-@property(weak) IBOutlet NSTextField *consensusDetail;
+//@property(weak) IBOutlet NSTextField *locusDetail;
+//@property(weak) IBOutlet NSTextField *consensusDetail;
+@property (strong) IBOutlet NSWindow *mainWindow;
 
 @end
 
@@ -38,12 +39,14 @@
 // -------------------------------------------------------------------------------
 - (void)awakeFromNib {
     [verticalSplitView setDelegate:self];    // we want a chance to affect the vertical split view coverage
-    [_genotypeTableView setTarget:self];
-    [_genotypeTableView setAllowsColumnSelection:TRUE];
-    [_genotypeTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
-    [_genotypeTableView setAction:@selector(genotypeSelected:)];
+    [self.genotypeTableView setTarget:self];
+    [self.genotypeTableView setAllowsColumnSelection:TRUE];
+    [self.genotypeTableView setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleNone];
+    [self.genotypeTableView setAction:@selector(genotypeSelected:)];
+    self.mainWindow.backgroundColor = [NSColor whiteColor];
 
-    _stacksLoader = [[StacksLoader alloc] init];
+    self.stacksLoader = [[StacksLoader alloc] init];
+    
 }
 
 
@@ -322,15 +325,15 @@
         [string setAttributes:attributes range:selectedRange];
 
         [string endEditing];
-        [self.locusDetail setStringValue:locus.locusId];
-        [self.consensusDetail setAttributedStringValue:string];
+//        [self.locusDetail setStringValue:locus.locusId];
+//        [self.consensusDetail setAttributedStringValue:string];
 
         [self.genotypeTableView reloadData];
 
     }
     else {
         self.stacksDocument = nil ;
-        [self.locusDetail setStringValue:@"Error"];
+//        [self.locusDetail setStringValue:@"Error"];
     }
 
 
