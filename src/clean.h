@@ -70,6 +70,11 @@ public:
 	this->se = string(p);
 	this->pe = string(q);
     }
+    void set(char *p)
+    {
+	this->se = string(p);
+	this->pe = "";
+    }
     string str() 
     {
 	if (this->pe.length() > 0)

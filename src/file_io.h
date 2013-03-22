@@ -70,7 +70,9 @@ extern string    in_path_2;
 void help( void );
 
 int  build_file_list(vector<pair<string, string> > &);
-int  load_barcodes(string, vector<BarcodePair> &, int &, int &);
+int  load_barcodes(string, vector<BarcodePair> &, 
+		   set<string> &, set<string> &, 
+		   int &, int &);
 int  open_files(vector<pair<string, string> > &,
 		vector<BarcodePair> &, 
 		map<BarcodePair, ofstream *> &, 
