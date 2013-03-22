@@ -243,7 +243,9 @@ close_file_handles(map<BarcodePair, ofstream *> &fhs)
 }
 
 int 
-load_barcodes(string barcode_file, vector<BarcodePair> &barcodes, int &se_len, int &pe_len) 
+load_barcodes(string barcode_file, vector<BarcodePair> &barcodes, 
+	      set<string> &se_bc, set<string> &pe_bc,
+	      int &se_len, int &pe_len) 
 {
     if (barcode_file.length() == 0)
 	return 0;
@@ -336,6 +338,8 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes, int &se_len, i
 	}
 
 	barcodes.push_back(BarcodePair(p, r));
+	if (strlen(p) > 0) se_bc.insert(string(p));
+	if (strlen(r) > 0) pe_bc.insert(string(r));
     }
 
     fh.close();
@@ -387,9 +391,29 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes, int &se_len, i
         }
     }
 
+    //
+    // If paired barcodes were supplied chech that a paired barcode type was 
+    // specified and vice versa.
+    //
+    if (se_bc.size() > 0 && pe_bc.size() > 0) {
+	if (barcode_type != inline_inline &&
+	    barcode_type != index_index &&
+	    barcode_type != inline_index &&
+	    barcode_type != index_inline) {
+	    cerr << "You provided paried barcodes but did not specify a paired barcode type.\n";
+	    help();
+	}
+    } else {
+	if (barcode_type != inline_null &&
+	    barcode_type != index_null) {
+	    cerr << "You provided single-end barcodes but did not specify a single-end barcode type.\n";
+	    help();
+	}
+    }
+	    
     cerr << "Loaded " << barcodes.size() << " barcodes ";
 
-    if (pe_cnt > 0) 
+    if (pe_bc.size() > 0) 
 	cerr << "(" << se_len << "bp / " << pe_len << "bp).\n";
     else
 	cerr << "(" << se_len << "bp).\n";

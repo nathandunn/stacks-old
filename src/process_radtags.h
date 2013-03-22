@@ -60,16 +60,23 @@ void help( void );
 void version( void );
 int  parse_command_line(int, char **);
 int  process_reads(string, 
+		   set<string> &, set<string> &,
 		   map<BarcodePair, ofstream *> &, 
 		   map<string, long> &, map<BarcodePair, map<string, long> > &);
 int  process_paired_reads(string, string, 
+			  set<string> &, set<string> &,
 			  map<BarcodePair, ofstream *> &, 
 			  map<BarcodePair, ofstream *> &, 
 			  map<BarcodePair, ofstream *> &,
 			  map<string, long> &, map<BarcodePair, map<string, long> > &);
-int  process_barcode(Read *, Read *, map<string, ofstream *> &, map<BarcodePair, map<string, long> > &, map<string, long> &); 
-int  process_singlet(map<BarcodePair, ofstream *> &, Read *, map<string, long> &, bool);
-bool correct_barcode(map<BarcodePair, ofstream *> &, Read *);
+int  process_barcode(Read *, Read *, BarcodePair &, 
+		     map<BarcodePair, ofstream *> &,
+		     set<string> &, set<string> &, 
+		     map<BarcodePair, map<string, long> > &, map<string, long> &); 
+int  process_singlet(Read *, 
+		     string, int, bool,
+		     map<string, long> &, map<string, long> &);
+bool correct_barcode(set<string> &, Read *);
 int  correct_radtag(Read *, map<string, long> &);
 int  check_quality_scores(Read *, bool);
 int  dist(const char *, char *);
