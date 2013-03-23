@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -238,7 +238,8 @@ int process_paired_reads(string prefix_1,
     Seq *s_1 = fh_1->next_seq();
     Seq *s_2 = fh_2->next_seq();
     if (s_1 == NULL || s_2 == NULL) {
-	cerr << "Unable to allocate Seq object.\n";
+    	cerr << "Attempting to read first pair of input records, unable to allocate " 
+	     << "Seq object (Was the correct input type specified?).\n";
 	exit(1);
     }
 
@@ -253,7 +254,7 @@ int process_paired_reads(string prefix_1,
 	strncpy(r_1->barcode, prefix_1.c_str(), id_len);
 
     //
-    // Compute the parameters for the second read, assuming no barcode is present in this sequence.
+    // Compute the parameters for the second read.
     //
     buf_len = truncate_seq > 0 ? truncate_seq : strlen(s_2->seq);
     r_2     = new Read(buf_len, 2, bc_size_2, win_size);
@@ -441,83 +442,6 @@ int process_reads(string prefix,
 
 inline
 int 
-process_barcode(Read *href_1, Read *href_2, BarcodePair &bc, 
-		map<BarcodePair, ofstream *> &fhs,
-		set<string> &se_bc, set<string> &pe_bc, 
-		map<BarcodePair, map<string, long> > &barcode_log, map<string, long> &counter) 
-{
-    if (barcode_type == null_null)
-	return 0;
-
-    //
-    // Log the barcodes we receive.
-    //
-    if (barcode_log.count(bc) == 0) {
-	barcode_log[bc]["noradtag"] = 0;
-	barcode_log[bc]["total"]    = 0;
-	barcode_log[bc]["retained"] = 0;
-    }
-    barcode_log[bc]["total"]++;
-
-    bool se_correct, pe_correct;
-
-    //
-    // Is this a legitimate barcode?
-    //
-    if (fhs.count(bc) == 0) {
-	BarcodePair old_barcode = bc;
-
-    	//
-    	// Try to correct the barcode.
-    	//
-	if (paired) {
-	    if (se_bc.count(bc.se) == 0)
-		se_correct = correct_barcode(se_bc, href_1);
-	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
-		pe_correct = correct_barcode(pe_bc, href_2);
-
-	    if (se_correct)
-		bc.se = string(href_1->barcode);
-	    if (pe_bc.size() > 0 && pe_correct)
-		bc.pe = string(href_2->barcode);
-	    //
-	    // After correcting the individual barcodes, check if the combination is valid.
-	    //
-	    if (fhs.count(bc) == 0) {
-		counter["ambiguous"]++;
-		href_1->retain = 0;
-		href_2->retain = 0;
-	    }
-
-	} else {
-	    if (se_bc.count(bc.se) == 0)
-		se_correct = correct_barcode(se_bc, href_1);
-
-	    if (se_correct) {
-		bc.se = string(href_1->barcode);
-	    } else {
-		counter["ambiguous"]++;
-		href_1->retain = 0;
-	    }
-	}
-
-	if (href_1->retain) {
-	    counter["recovered"]++;
-	    barcode_log[old_barcode]["total"]--;
-	    if (barcode_log.count(bc) == 0) {
-		barcode_log[bc]["total"]    = 0;
-		barcode_log[bc]["retained"] = 0;
-		barcode_log[bc]["noradtag"] = 0;
-	    }
-	    barcode_log[bc]["total"]++;
-	}
-    }
-
-    return 0;
-}
-
-inline
-int 
 process_singlet(Read *href, 
 		string res_enz, int offset, bool paired_end,
 		map<string, long> &bc_log, map<string, long> &counter) 
@@ -600,49 +524,6 @@ process_singlet(Read *href,
     counter["retained"]++;
 
     return 0;
-}
-
-bool 
-correct_barcode(set<string> &bcs, Read *href) 
-{
-    if (recover == false)
-	return 0;
-
-    //
-    // The barcode_dist variable specifies how far apart in sequence space barcodes are. If barcodes
-    // are off by two nucleotides in sequence space, than we can correct barcodes that have a single
-    // sequencing error. 
-    // 
-    // If the barcode sequence is off by no more than barcodes_dist-1 nucleotides, correct it.
-    //
-    int d, close;
-    string barcode, b, old_barcode;
-    set<string>::iterator it;
-
-    int num_errs = barcode_dist - 1;
-    close = 0;
-
-    for (it = bcs.begin(); it != bcs.end(); it++) {
-	d = dist(it->c_str(), href->barcode); 
-
-	if (d <= num_errs) {
-	    close++;
-	    b = *it;
-	    break;
-	}
-    }
-
-    if (close == 1) {
-	//
-	// Correct the barcode.
-	//
-	old_barcode = string(href->barcode);
-	strcpy(href->barcode, b.c_str());
-
-	return true;
-    }
-
-    return false;
 }
 
 int 
@@ -823,26 +704,26 @@ print_results(int argc, char **argv,
     //
     // Sort unused barcodes by number of occurances.
     //
-    // map<BarcodePair, map<string, long> >::iterator bit;
-    // vector<pair<string, int> > bcs;
-    // for (bit = barcode_log.begin(); bit != barcode_log.end(); bit++)
-    // 	bcs.push_back(make_pair(bit->first, bit->second["total"]));
-    // sort(bcs.begin(), bcs.end(), compare_barcodes);
+    map<BarcodePair, map<string, long> >::iterator bit;
+    vector<pair<BarcodePair, int> > bcs;
+    for (bit = barcode_log.begin(); bit != barcode_log.end(); bit++)
+    	bcs.push_back(make_pair(bit->first, bit->second["total"]));
+    sort(bcs.begin(), bcs.end(), compare_barcodes);
 
-    // for (uint i = 0; i < bcs.size(); i++) {
-    // 	if (barcode_list.count(bcs[i].first)) continue;
-    // 	if (bcs[i].second == 0) continue;
+    for (uint i = 0; i < bcs.size(); i++) {
+    	if (barcode_list.count(bcs[i].first)) continue;
+    	if (bcs[i].second == 0) continue;
 
-    // 	log << bcs[i].first << "\t"
-    // 	    << bcs[i].second << "\n";
-    // }
+    	log << bcs[i].first << "\t"
+    	    << bcs[i].second << "\n";
+    }
 
     log.close();
 
     return 0;
 }
 
-int  compare_barcodes(pair<string, int> a, pair<string, int> b) {
+int  compare_barcodes(pair<BarcodePair, int> a, pair<BarcodePair, int> b) {
     return a.second > b.second;
 }
 
