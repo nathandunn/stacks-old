@@ -556,6 +556,132 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
 }
 
 //
+// Funtion to process barcodes
+//
+int 
+process_barcode(Read *href_1, Read *href_2, BarcodePair &bc, 
+		map<BarcodePair, ofstream *> &fhs,
+		set<string> &se_bc, set<string> &pe_bc, 
+		map<BarcodePair, map<string, long> > &barcode_log, map<string, long> &counter) 
+{
+    if (barcode_type == null_null)
+	return 0;
+
+    //
+    // Log the barcodes we receive.
+    //
+    if (barcode_log.count(bc) == 0) {
+	barcode_log[bc]["noradtag"] = 0;
+	barcode_log[bc]["total"]    = 0;
+	barcode_log[bc]["retained"] = 0;
+    }
+    barcode_log[bc]["total"]++;
+
+    bool se_correct, pe_correct;
+
+    //
+    // Is this a legitimate barcode?
+    //
+    if (fhs.count(bc) == 0) {
+	BarcodePair old_barcode = bc;
+
+    	//
+    	// Try to correct the barcode.
+    	//
+	if (paired) {
+	    if (se_bc.count(bc.se) == 0)
+		se_correct = correct_barcode(se_bc, href_1);
+	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
+		pe_correct = correct_barcode(pe_bc, href_2);
+
+	    if (se_correct)
+		bc.se = string(href_1->barcode);
+	    if (pe_bc.size() > 0 && pe_correct)
+		bc.pe = string(href_2->barcode);
+	    //
+	    // After correcting the individual barcodes, check if the combination is valid.
+	    //
+	    if (fhs.count(bc) == 0) {
+		counter["ambiguous"]++;
+		href_1->retain = 0;
+		href_2->retain = 0;
+	    }
+
+	} else {
+	    if (se_bc.count(bc.se) == 0)
+		se_correct = correct_barcode(se_bc, href_1);
+
+	    if (se_correct) {
+		bc.se = string(href_1->barcode);
+	    } else {
+		counter["ambiguous"]++;
+		href_1->retain = 0;
+	    }
+	}
+
+	if (href_1->retain) {
+	    counter["recovered"]++;
+	    barcode_log[old_barcode]["total"]--;
+	    if (barcode_log.count(bc) == 0) {
+		barcode_log[bc]["total"]    = 0;
+		barcode_log[bc]["retained"] = 0;
+		barcode_log[bc]["noradtag"] = 0;
+	    }
+	    barcode_log[bc]["total"]++;
+	}
+    }
+
+    return 0;
+}
+
+bool 
+correct_barcode(set<string> &bcs, Read *href) 
+{
+    if (recover == false)
+	return 0;
+
+    //
+    // The barcode_dist variable specifies how far apart in sequence space barcodes are. If barcodes
+    // are off by two nucleotides in sequence space, than we can correct barcodes that have a single
+    // sequencing error. 
+    // 
+    // If the barcode sequence is off by no more than barcodes_dist-1 nucleotides, correct it.
+    //
+    const char *p; char *q;
+    int d, close;
+    string barcode, b, old_barcode;
+    set<string>::iterator it;
+
+    int num_errs = barcode_dist - 1;
+    close = 0;
+
+    for (it = bcs.begin(); it != bcs.end(); it++) {
+
+	d = 0; 
+	for (p = it->c_str(), q = href->barcode; *p != '\0'; p++, q++)
+	    if (*p != *q) d++;
+
+	if (d <= num_errs) {
+	    close++;
+	    b = *it;
+	    break;
+	}
+    }
+
+    if (close == 1) {
+	//
+	// Correct the barcode.
+	//
+	old_barcode = string(href->barcode);
+	strcpy(href->barcode, b.c_str());
+
+	return true;
+    }
+
+    return false;
+}
+
+//
 // Functions for filtering adapter sequence
 //
 int

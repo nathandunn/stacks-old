@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -27,8 +27,6 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-// $Id: process_shortreads.cc 2099 2011-04-30 22:04:37Z catchen $
-//
 
 #include "process_shortreads.h"
 
@@ -46,32 +44,34 @@ string out_path;
 string barcode_file;
 char  *adapter_1;
 char  *adapter_2;
-bool   filter_adapter  = false;
-bool   paired          = false;
-bool   clean           = false;
-bool   quality         = false;
-bool   recover         = false;
-bool   interleave      = false;
-bool   merge           = false;
-bool   discards        = false;
-bool   overhang        = true;
-bool   matepair        = false;
-bool   filter_illumina = false;
-bool   ill_barcode     = false;
-bool   trim_reads      = true;
-int    truncate_seq = 0;
-int    barcode_size = 0;
-int    barcode_dist = 2;
-double win_size     = 0.15;
-int    score_limit  = 10;
-int    len_limit    = 31;
-int    num_threads  = 1;
+barcodet barcode_type    = null_null;
+bool     filter_adapter  = false;
+bool     paired          = false;
+bool     clean           = false;
+bool     quality         = false;
+bool     recover         = false;
+bool     interleave      = false;
+bool     merge           = false;
+bool     discards        = false;
+bool     overhang        = true;
+bool     matepair        = false;
+bool     filter_illumina = false;
+bool     ill_barcode     = false;
+bool     trim_reads      = true;
+int      truncate_seq = 0;
+int      bc_size_1    = 0;
+int      bc_size_2    = 0;
+int      barcode_dist = 2;
+double   win_size     = 0.15;
+int      score_limit  = 10;
+int      len_limit    = 31;
+int      num_threads  = 1;
 
 //
 // How to shift FASTQ-encoded quality scores from ASCII down to raw scores
 //     score = encoded letter - 64; Illumina version 1.3 - 1.5
 //     score = encoded letter - 33; Sanger / Illumina version 1.6+
-int qual_offset  = 64;
+int qual_offset  = 33;
 
 //
 // Kmer data for adapter filtering.
@@ -107,15 +107,17 @@ int main (int argc, char* argv[]) {
 	    init_adapter_seq(kmer_size, adapter_2, adp_2_len, adp_2_kmers, adp_2_keys);
     }
 
-    vector<pair<string, string> > files;
-    vector<string> barcodes;
-    map<string, ofstream *> pair_1_fhs, pair_2_fhs, rem_fhs;
-    map<string, map<string, long> > counters, barcode_log;
+    vector<pair<string, string> >        files;
+    vector<BarcodePair>                  barcodes;
+    set<string>                          se_bc, pe_bc;
+    map<BarcodePair, ofstream *>         pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs;
+    map<string, map<string, long> >      counters;
+    map<BarcodePair, map<string, long> > barcode_log;
 
     build_file_list(files);
-    barcode_size = load_barcodes(barcode_file, barcodes);
+    load_barcodes(barcode_file, barcodes, se_bc, pe_bc, bc_size_1, bc_size_2);
 
-    open_files(files, barcodes, pair_1_fhs, pair_2_fhs, rem_fhs, counters);
+    open_files(files, barcodes, pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs, counters);
 
     for (uint i = 0; i < files.size(); i++) {
 	cerr << "Processing file " << i+1 << " of " << files.size() << " [" << files[i].first.c_str() << "]\n";
@@ -132,10 +134,12 @@ int main (int argc, char* argv[]) {
 
 	if (paired)
 	    process_paired_reads(files[i].first, files[i].second, 
-				 pair_1_fhs, pair_2_fhs, rem_fhs,
+				 se_bc, pe_bc,
+				 pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs,
 				 counters[files[i].first], barcode_log);
 	else
 	    process_reads(files[i].first, 
+			  se_bc, pe_bc,
 	    		  pair_1_fhs,
 	    		  counters[files[i].first], barcode_log);
 
@@ -158,8 +162,9 @@ int main (int argc, char* argv[]) {
     cerr << "Closing files, flushing buffers...\n";
     close_file_handles(pair_1_fhs);
     if (paired) {
+	close_file_handles(rem_1_fhs);
+	close_file_handles(rem_2_fhs);
 	close_file_handles(pair_2_fhs);
-	close_file_handles(rem_fhs);
     }
 
     print_results(argc, argv, barcodes, counters, barcode_log);
@@ -175,11 +180,13 @@ int main (int argc, char* argv[]) {
 
 int process_paired_reads(string prefix_1,
 			 string prefix_2,
-			 map<string, ofstream *> &pair_1_fhs,
-			 map<string, ofstream *> &pair_2_fhs,
-			 map<string, ofstream *> &rem_fhs,
-			 map<string, long> &counter,
-			 map<string, map<string, long> > &barcode_log) {
+			 set<string> &se_bc, set<string> &pe_bc,
+			 map<BarcodePair, ofstream *> &pair_1_fhs, 
+			 map<BarcodePair, ofstream *> &pair_2_fhs, 
+			 map<BarcodePair, ofstream *> &rem_1_fhs,
+			 map<BarcodePair, ofstream *> &rem_2_fhs,
+			 map<string, long> &counter, 
+			 map<BarcodePair, map<string, long> > &barcode_log) {
     Input *fh_1, *fh_2;
     Read  *r_1, *r_2;
     ofstream *discard_fh_1, *discard_fh_2;
@@ -228,63 +235,42 @@ int process_paired_reads(string prefix_1,
     Seq *s_1 = fh_1->next_seq();
     Seq *s_2 = fh_2->next_seq();
     if (s_1 == NULL || s_2 == NULL) {
-	cerr << "Unable to allocate Seq object.\n";
+    	cerr << "Attempting to read first pair of input records, unable to allocate " 
+	     << "Seq object (Was the correct input type specified?).\n";
 	exit(1);
     }
 
-    int buf_len = truncate_seq > 0 ? barcode_size + truncate_seq : strlen(s_1->seq);
-
-    r_1 = new Read;
-    r_1->barcode    = new char[id_len  + 1];
-    r_1->machine    = new char[id_len  + 1];
-    r_1->seq        = new char[buf_len + 1];
-    r_1->phred      = new char[buf_len + 1];
-    r_1->int_scores = new  int[buf_len];
-    r_1->size       = buf_len + 1;
-    r_1->read       = 1;
+    int buf_len = truncate_seq > 0 ? bc_size_1 + truncate_seq : strlen(s_1->seq);
+    r_1 = new Read(buf_len, 1, bc_size_1, win_size);
 
     //
     // If no barcodes were specified, set r->barcode to be the input file name so
     // that reads are written to an output file of the same name as the input file.
     //
-    if (barcode_size == 0)
+    if (bc_size_1 == 0)
 	strncpy(r_1->barcode, prefix_1.c_str(), id_len);
 
     //
-    // Set the parameters for checking read quality later in processing.
-    // Window length is 15% (rounded) of the sequence length.
-    //
-    r_1->len      = buf_len - barcode_size;
-    r_1->win_len  = round(r_1->len * win_size);
-
-    if (r_1->win_len < 1) r_1->win_len = 1;
-
-    r_1->len     += barcode_size;
-    r_1->stop_pos = r_1->len - r_1->win_len;
-
-    //
-    // Compute the parameters for the second read, assuming no barcode is present in this sequence.
+    // Compute the parameters for the second read.
     //
     buf_len = truncate_seq > 0 ? truncate_seq : strlen(s_2->seq);
+    r_2     = new Read(buf_len, 2, bc_size_2, win_size);
 
-    r_2 = new Read;
-    r_2->barcode    = new char[id_len  + 1];
-    r_2->machine    = new char[id_len  + 1];
-    r_2->seq        = new char[buf_len + 1];
-    r_2->phred      = new char[buf_len + 1];
-    r_2->int_scores = new  int[buf_len];
-    r_2->size       = buf_len + 1;
-    r_2->read       = 2;
-    r_2->len        = buf_len;
-    r_2->win_len    = round(r_2->len * win_size);
-
-    if (r_2->win_len < 1) r_2->win_len = 1;
-
-    r_2->stop_pos = r_2->len - r_2->win_len;
-
-    if (barcode_size == 0)
+    if (bc_size_1 == 0)
 	strncpy(r_2->barcode, prefix_2.c_str(), id_len);
 
+    int se_offset = 0;
+    int pe_offset = 0;
+
+    if (barcode_type == inline_null ||
+	barcode_type == inline_inline ||
+	barcode_type == inline_index)
+	se_offset = bc_size_1;
+    if (barcode_type == inline_inline || 
+	barcode_type == index_inline)
+	pe_offset = bc_size_2;
+	
+    BarcodePair bc;
     long i = 1;
 
     do {
@@ -294,11 +280,12 @@ int process_paired_reads(string prefix_1,
 	parse_input_record(s_2, r_2);
 	counter["total"] += 2;
 
-	if (barcode_size > 0)
-	    strcpy(r_2->barcode, r_1->barcode);
+	bc.set(r_1->barcode, r_2->barcode);
 
-	process_singlet(pair_1_fhs, r_1, barcode_log, counter, false);
-	process_singlet(pair_2_fhs, r_2, barcode_log, counter, true);
+	process_barcode(r_1, r_2, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
+
+	process_singlet(r_1, se_offset, false, barcode_log[bc], counter);
+	process_singlet(r_2, pe_offset, true,  barcode_log[bc], counter);
 
  	if (matepair) {
 	    rev_complement(r_1->seq, true, overhang);
@@ -306,37 +293,26 @@ int process_paired_reads(string prefix_1,
 	}
 
   	if (r_1->retain && r_2->retain) {
-	    //
-	    // Check to make sure the barcodes from the pair match. If not,
-	    // we assume the wrong molecules have been matched up on the flow cell.
-	    //
-	    if (barcode_size > 0 && strcmp(r_1->barcode, r_2->barcode) != 0) {
-		out_file_type == fastq ? 
-		    write_fastq(rem_fhs, r_1, true, overhang) : 
-		    write_fasta(rem_fhs, r_1, true, overhang);
-		out_file_type == fastq ? 
-		    write_fastq(rem_fhs, r_2, true, overhang) : 
-		    write_fasta(rem_fhs, r_2, true, overhang);
-	    } else {
-		out_file_type == fastq ? 
-		    write_fastq(pair_1_fhs, r_1, true, overhang) : 
-		    write_fasta(pair_1_fhs, r_1, true, overhang);
-		out_file_type == fastq ?
-		    write_fastq(pair_2_fhs, r_2, true, overhang) :
-		    write_fasta(pair_2_fhs, r_2, true, overhang);
-	    }
+	    out_file_type == fastq ? 
+		write_fastq(pair_1_fhs[bc], r_1, overhang) : 
+		write_fasta(pair_1_fhs[bc], r_1, overhang);
+	    out_file_type == fastq ?
+		write_fastq(pair_2_fhs[bc], r_2, overhang) :
+		write_fasta(pair_2_fhs[bc], r_2, overhang);
 
 	} else if (r_1->retain && !r_2->retain) {
+	    //
 	    // Write to a remainder file.
+	    //
 	    out_file_type == fastq ? 
-		write_fastq(rem_fhs, r_1, true, overhang) : 
-		write_fasta(rem_fhs, r_1, true, overhang);
+		write_fastq(rem_1_fhs[bc], r_1, overhang) : 
+		write_fasta(rem_1_fhs[bc], r_1, overhang);
 
 	} else if (!r_1->retain && r_2->retain) {
 	    // Write to a remainder file.
 	    out_file_type == fastq ? 
-		write_fastq(rem_fhs, r_2, true, overhang) : 
-		write_fasta(rem_fhs, r_2, true, overhang);
+		write_fastq(rem_2_fhs[bc], r_2, overhang) : 
+		write_fasta(rem_2_fhs[bc], r_2, overhang);
 	}
 
 	if (discards && !r_1->retain)
@@ -368,9 +344,10 @@ int process_paired_reads(string prefix_1,
 }
 
 int process_reads(string prefix, 
-		  map<string, ofstream *> &pair_1_fhs, 
+		  set<string> &se_bc, set<string> &pe_bc,
+		  map<BarcodePair, ofstream *> &pair_1_fhs, 
 		  map<string, long> &counter, 
-		  map<string, map<string, long> > &barcode_log) {
+		  map<BarcodePair, map<string, long> > &barcode_log) {
     Input *fh;
     Read  *r;
     ofstream *discard_fh;
@@ -403,42 +380,29 @@ int process_reads(string prefix,
     //
     Seq *s = fh->next_seq();
     if (s == NULL) {
-    	cerr << "Unable to allocate Seq object.\n";
+    	cerr << "Attempting to read first input record, unable to allocate " 
+	     << "Seq object (Was the correct input type specified?).\n";
     	exit(1);
     }
 
-    int buf_len = truncate_seq > 0 ? barcode_size + truncate_seq : strlen(s->seq);
+    int buf_len = truncate_seq > 0 ? bc_size_1 + truncate_seq : strlen(s->seq);
 
-    r = new Read;
-    r->barcode    = new char [id_len  + 1];
-    r->machine    = new char [id_len  + 1];
-    r->seq        = new char [buf_len + 1];
-    r->phred      = new char [buf_len + 1];
-    r->int_scores = new  int [buf_len];
-    r->size       = buf_len + 1;
-    r->read       = 1;
+    r = new Read(buf_len, 1, bc_size_1, win_size);
 
-    //
-    // Set the parameters for checking read quality later in processing.
-    // Window length is 15% (rounded) of the sequence length.
-    //
-    r->len      = buf_len - barcode_size;
-    r->win_len  = round(r->len * win_size);
+    int se_offset = 0;
 
-    if (r->win_len < 1) r->win_len = 1;
-
-    r->len     += barcode_size;
-    r->stop_pos = r->len - r->win_len;
-
+    if (barcode_type == inline_null)
+	se_offset = bc_size_1;
     //
     // If no barcodes were specified, set r->barcode to be the input file name so
     // that reads are written to an output file of the same name as the input file.
     //
-    if (barcode_size == 0)
+    if (bc_size_1 == 0)
 	strncpy(r->barcode, prefix.c_str(), id_len);
 
     //cerr << "Length: " << r->len << "; Window length: " << r->win_len << "; Stop position: " << r->stop_pos << "\n";
 
+    BarcodePair bc;
     long i = 1;
     do {
 	if (i % 10000 == 0) cerr << "  Processing short read " << i << "       \r";
@@ -446,12 +410,16 @@ int process_reads(string prefix,
 
 	parse_input_record(s, r);
 
-	process_singlet(pair_1_fhs, r, barcode_log, counter, false);
+	bc.set(r->barcode);
+
+	process_barcode(r, NULL, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
+
+	process_singlet(r, se_offset, false, barcode_log[bc], counter);
 
 	 if (r->retain)
 	     out_file_type == fastq ? 
-		 write_fastq(pair_1_fhs, r, true, overhang) : 
-		 write_fasta(pair_1_fhs, r, true, overhang);
+		 write_fastq(pair_1_fhs[bc], r, overhang) : 
+		 write_fasta(pair_1_fhs[bc], r, overhang);
 
 	 if (discards && !r->retain)
 	     out_file_type == fastq ? 
@@ -474,9 +442,9 @@ int process_reads(string prefix,
 }
 
 inline int 
-process_singlet(map<string, ofstream *> &fhs, Read *href, 
-		map<string, map<string, long> > &barcode_log, map<string, long> &counter, 
-		bool paired_end)
+process_singlet(Read *href,
+		int offset, bool paired_end,
+		map<string, long> &bc_log, map<string, long> &counter) 
 {
     if (filter_illumina && href->filter) {
 	counter["ill_filtered"]++;
@@ -484,36 +452,11 @@ process_singlet(map<string, ofstream *> &fhs, Read *href,
 	return 0;
     }
 
-    if (barcode_size > 0) {
-    	//
-    	// Log the barcodes we receive.
-    	//
-    	if (barcode_log.count(href->barcode) == 0) {
-    	    barcode_log[href->barcode]["total"]    = 0;
-	    barcode_log[href->barcode]["retained"] = 0;
-    	}
-    	barcode_log[href->barcode]["total"]++;
-    
-    	//
-    	// Is this a legitimate barcode?
-    	//
-    	if (fhs.count(href->barcode) == 0) {
-    	    //
-    	    // Try to correct the barcode.
-    	    //
-    	    if (!correct_barcode(fhs, href, counter, barcode_log)) {
-    		counter["ambiguous"]++;
-    		href->retain = 0;
-    		return 0;
-    	    }
-    	}
-    }
-
     //
     // Drop this sequence if it has any uncalled nucleotides
     //
     if (clean) {
-	for (char *p = href->seq; *p != '\0'; p++)
+	for (char *p = href->seq + offset; *p != '\0'; p++)
 	    if (*p == '.' || *p == 'N') {
 		counter["low_quality"]++;
 		href->retain = 0;
@@ -528,7 +471,7 @@ process_singlet(map<string, ofstream *> &fhs, Read *href,
     // Drop or trim this sequence if it has low quality scores
     //
     if (quality) {
-	int res = check_quality_scores(href, qual_offset, score_limit, len_limit, paired_end);
+	int res = check_quality_scores(href, qual_offset, score_limit, len_limit, offset);
 
 	if (trim_reads) {
 	    if (res <= 0) {
@@ -572,55 +515,9 @@ process_singlet(map<string, ofstream *> &fhs, Read *href,
     if (adapter_trim || quality_trim)
 	counter["trimmed"]++;
 
-    if (barcode_size > 0) barcode_log[href->barcode]["retained"]++;
+    if (barcode_type != null_null) 
+	bc_log["retained"]++;
     counter["retained"]++;
-
-    return 0;
-}
-
-int correct_barcode(map<string, ofstream *> &fhs, Read *href, map<string, long> &counter, map<string, map<string, long> > &barcode_log) {
-    if (recover == false)
-	return 0;
-
-    //
-    // If the barcode sequence is off by no more than a single nucleotide, correct it.
-    //
-    int d, close;
-    string barcode, b, old_barcode;
-    map<string, ofstream *>::iterator it;
-
-    int num_errs = barcode_dist - 1;
-    close = 0;
-
-    for (it = fhs.begin(); it != fhs.end(); it++) {
-	d = dist(it->first.c_str(), href->barcode); 
-
-	if (d <= num_errs) {
-	    close++;
-	    b = it->first;
-	    break;
-	}
-    }
-
-    if (close == 1) {
-	//
-	// Correct the barcode.
-	//
-	old_barcode = string(href->barcode);
-	strcpy(href->barcode, b.c_str());
-	for (int i = 0; i < barcode_size; i++)
-	    href->seq[i] = href->barcode[i];
-
-	counter["recovered"]++;
-	barcode_log[old_barcode]["total"]--;
-
-        if (barcode_log.count(href->barcode) == 0) {
-            barcode_log[href->barcode]["total"]    = 0;
-            barcode_log[href->barcode]["retained"] = 0;
-        }
-	barcode_log[href->barcode]["total"]++;
-	return 1;
-    }
 
     return 0;
 }
@@ -638,9 +535,9 @@ int dist(const char *res_enz, char *seq) {
 
 int 
 print_results(int argc, char **argv, 
-	      vector<string> &barcodes, 
+	      vector<BarcodePair> &barcodes, 
 	      map<string, map<string, long> > &counters, 
-	      map<string, map<string, long> > &barcode_log)
+	      map<BarcodePair, map<string, long> > &barcode_log)
 {
     map<string, map<string, long> >::iterator it;
 
@@ -743,48 +640,49 @@ print_results(int argc, char **argv,
 	<< "Orphaned Paired-ends\t" << c["orphaned"]    << "\n"
 	<< "Retained Reads\t"       << c["retained"]      << "\n";
 
-    if (barcode_size > 0) {
-	//
-	// Print out barcode information.
-	//
-	log << "\n"
-	    << "Barcode\t" 
-	    << "Total\t"
-	    << "Retained\n";
+    if (bc_size_1 == 0) return 0;
 
-	set<string> barcode_list;
+    //
+    // Print out barcode information.
+    //
+    log << "\n"
+	<< "Barcode\t" 
+	<< "Total\t"
+	<< "Retained\n";
 
-	for (uint i = 0; i < barcodes.size(); i++) {
-	    barcode_list.insert(barcodes[i]);
+    set<BarcodePair> barcode_list;
 
-	    if (barcode_log.count(barcodes[i]) == 0)
-		log << barcodes[i] << "\t" << "0\t" << "0\t" << "0\n";
-	    else
-		log << barcodes[i] << "\t"
-		    << barcode_log[barcodes[i]]["total"]    << "\t"
-		    << barcode_log[barcodes[i]]["retained"] << "\n";
-	}
+    for (uint i = 0; i < barcodes.size(); i++) {
+	barcode_list.insert(barcodes[i]);
 
-	log << "\n"
-	    << "Sequences not recorded\n"
-	    << "Barcode\t"
-	    << "Total\n";
+	if (barcode_log.count(barcodes[i]) == 0)
+	    log << barcodes[i] << "\t" << "0\t" << "0\t" << "0\n";
+	else
+	    log << barcodes[i] << "\t"
+		<< barcode_log[barcodes[i]]["total"]    << "\t"
+		<< barcode_log[barcodes[i]]["retained"] << "\n";
+    }
 
-	//
-	// Sort unused barcodes by number of occurances.
-	//
-	vector<pair<string, int> > bcs;
-	for (it = barcode_log.begin(); it != barcode_log.end(); it++)
-	    bcs.push_back(make_pair(it->first, it->second["total"]));
-	sort(bcs.begin(), bcs.end(), compare_barcodes);
+    log << "\n"
+	<< "Sequences not recorded\n"
+	<< "Barcode\t"
+	<< "Total\n";
 
-	for (uint i = 0; i < bcs.size(); i++) {
-	    if (barcode_list.count(bcs[i].first)) continue;
-	    if (bcs[i].second == 0) continue;
+    //
+    // Sort unused barcodes by number of occurances.
+    //
+    map<BarcodePair, map<string, long> >::iterator bit;
+    vector<pair<BarcodePair, int> > bcs;
+    for (bit = barcode_log.begin(); bit != barcode_log.end(); bit++)
+    	bcs.push_back(make_pair(bit->first, bit->second["total"]));
+    sort(bcs.begin(), bcs.end(), compare_barcodes);
 
-	    log << bcs[i].first << "\t"
-		<< bcs[i].second << "\n";
-	}
+    for (uint i = 0; i < bcs.size(); i++) {
+    	if (barcode_list.count(bcs[i].first)) continue;
+    	if (bcs[i].second == 0) continue;
+
+    	log << bcs[i].first << "\t"
+    	    << bcs[i].second << "\n";
     }
 
     log.close();
@@ -792,7 +690,7 @@ print_results(int argc, char **argv,
     return 0;
 }
 
-int  compare_barcodes(pair<string, int> a, pair<string, int> b) {
+int  compare_barcodes(pair<BarcodePair, int> a, pair<BarcodePair, int> b) {
     return a.second > b.second;
 }
 
@@ -813,8 +711,13 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"mate-pair",          no_argument, NULL, 'M'},
 	    {"no_overhang",        no_argument, NULL, 'O'},
 	    {"filter_illumina",    no_argument, NULL, 'F'},
-	    {"illumina_barcodes",  no_argument, NULL, 'I'},
 	    {"no_read_trimming",   no_argument, NULL, 'N'},
+	    {"index_null",         no_argument, NULL, 'u'},
+	    {"inline_null",        no_argument, NULL, 'V'},
+	    {"index_index",        no_argument, NULL, 'W'},
+	    {"inline_inline",      no_argument, NULL, 'x'},
+	    {"index_inline",       no_argument, NULL, 'Y'},
+	    {"inline_index",       no_argument, NULL, 'Z'},
 	    {"infile_type",  required_argument, NULL, 'i'},
 	    {"outfile_type", required_argument, NULL, 'y'},
 	    {"file",         required_argument, NULL, 'f'},
@@ -837,7 +740,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvcqrNFIOPmDi:y:f:o:t:B:b:1:2:p:s:w:E:L:A:G:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcqrNFuVWxYZOPmDi:y:f:o:t:B:b:1:2:p:s:w:E:L:A:G:T:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -930,6 +833,24 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'b':
 	    barcode_file = optarg;
+	    break;
+	case 'u':
+	    barcode_type = index_null;
+	    break;
+	case 'V':
+	    barcode_type = inline_null;
+	    break;
+	case 'W':
+	    barcode_type = index_index;
+	    break;
+	case 'x':
+	    barcode_type = inline_inline;
+	    break;
+	case 'Y':
+	    barcode_type = index_inline;
+	    break;
+	case 'Z':
+	    barcode_type = inline_index;
 	    break;
      	case 'A':
 	    adapter_1 = new char[strlen(optarg) + 1];
@@ -1053,6 +974,13 @@ void help() {
 	      << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
 	      << "  h: display this help messsage.\n\n"
+	      << "  Barcode options:\n"
+	      << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
+	      << "    --index_null:    barcode is provded in FASTQ header, occurs only on single-end read.\n"
+	      << "    --inline_inline: barcode is inline with sequence, occurs on single and paired-end read.\n"
+	      << "    --index_index:   barcode is provded in FASTQ header, occurs on single and paired-end read.\n"
+	      << "    --inline_index:  barcode is inline with sequence on single-end read, occurs in FASTQ header for paired-end read.\n"
+	      << "    --index_inline:  barcode occurs in FASTQ header for single-end read, is inline with sequence on paired-end read.\n\n"
 	      << "  Adapter options:\n"
 	      << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the first read for filtering.\n"
 	      << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
@@ -1063,7 +991,6 @@ void help() {
 	      << "    --no_read_trimming: do not trim low quality reads, just discard them.\n"
 	      << "    --len_limit <limit>: when trimming sequences, specify the minimum length a sequence must be to keep it (default 31bp).\n"
 	      << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
-	      << "    --illumina_barcodes: barcodes are not inline, but instead are part of Illumina's FASTQ header.\n"
 	      << "    --barcode_dist: provide the distace between barcodes to allow for barcode rescue (default 2)\n"
 	      << "    --mate-pair: raw reads are circularized mate-pair data, first read will be reverse complemented.\n"
 	      << "    --no_overhang: data does not contain an overhang nucleotide between barcode and seqeunce.\n";

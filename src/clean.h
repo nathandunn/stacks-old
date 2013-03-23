@@ -163,6 +163,9 @@ typedef unordered_map<const char *, vector<int>, std::tr1::hash<const char *>, e
 extern int      bc_size_1, bc_size_2;
 extern barcodet barcode_type;
 extern int      truncate_seq;
+extern bool     paired;
+extern bool     recover;
+extern int      barcode_dist;
 
 int  parse_illumina_v1(const char *);
 int  parse_illumina_v2(const char *);
@@ -175,6 +178,12 @@ int  write_fasta(ofstream *, Seq *);
 int  write_fasta(ofstream *, Seq *, string);
 int  rev_complement(char *, bool, bool);
 int  reverse_qual(char *, bool, bool);
+
+int  process_barcode(Read *, Read *, BarcodePair &, 
+		     map<BarcodePair, ofstream *> &,
+		     set<string> &, set<string> &, 
+		     map<BarcodePair, map<string, long> > &, map<string, long> &); 
+bool correct_barcode(set<string> &, Read *);
 
 int  filter_adapter_seq(Read *, char *, int, AdapterHash &, int, int, int);
 int  init_adapter_seq(int, char *, int &, AdapterHash &, vector<char *> &);

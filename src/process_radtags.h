@@ -70,19 +70,14 @@ int  process_paired_reads(string, string,
 			  map<BarcodePair, ofstream *> &, 
 			  map<BarcodePair, ofstream *> &,
 			  map<string, long> &, map<BarcodePair, map<string, long> > &);
-int  process_barcode(Read *, Read *, BarcodePair &, 
-		     map<BarcodePair, ofstream *> &,
-		     set<string> &, set<string> &, 
-		     map<BarcodePair, map<string, long> > &, map<string, long> &); 
 int  process_singlet(Read *, 
 		     string, int, bool,
 		     map<string, long> &, map<string, long> &);
-bool correct_barcode(set<string> &, Read *);
 int  correct_radtag(Read *, int, string, map<string, long> &);
 int  check_quality_scores(Read *, bool);
 int  dist(const char *, char *);
 int  print_results(int, char **, vector<BarcodePair> &, map<string, map<string, long> > &, map<BarcodePair, map<string, long> > &);
 
-int  compare_barcodes(pair<string, int>, pair<string, int>);
+int  compare_barcodes(pair<BarcodePair, int>, pair<BarcodePair, int>);
 
 #endif // __PROCESS_RADTAGS_H__
