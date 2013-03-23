@@ -466,7 +466,7 @@ int reverse_qual(char *qual, bool barcode, bool overhang) {
 // Functions for quality filtering based on phred scores.
 //
 int 
-check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit, bool paired_end) 
+check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit, int offset) 
 {
     //
     // Phred quality scores are discussed here:
@@ -486,53 +486,43 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
     //
     // Convert the encoded quality scores to their integer values
     //
-    for (uint j = 0; j < href->len; j++)
+    // cerr << "Integer scores: ";
+    for (uint j = 0; j < href->len; j++) {
         href->int_scores[j] = href->phred[j] - qual_offset;
+	// cerr << href->int_scores[j] << " ";
+    }
+    // cerr << "\n";
 
-    // for (int j = barcode_size; j <= href->stop_pos; j++) {
-    // 	double mean = 0;
-    // 	int    stop = j + href->win_len;
-
-    // 	for (int k = j; k < stop; k++)
-    // 	    mean += href->int_scores[k];
-
-    // 	mean = mean / href->win_len;
-
-    // 	if (mean < score_limit) {
-    // 	    href->retain = 0;
-    // 	    return 0;
-    // 	}
-    // }
-
-    int offset;
-    if (paired_end == true || bc_size_1 == 0)
-	offset = 0;
-    else
-	offset = bc_size_1 - 1;
     double mean        = 0.0;
     double working_sum = 0.0;
     int *p, *q, j;
+
+    // cerr << "Window length: " << href->win_len << "; Stop position: " << href->stop_pos << "\n";
     //
     // Populate the sliding window.
     //
     for (j = offset; j < href->win_len + offset; j++)
     	working_sum += href->int_scores[j];
 
+    // cerr << "Populating the sliding window using position " << offset << " to " << href->win_len + offset - 1 << "; initial working sum: " << working_sum << "\n";
+
     //
-    // Set pointers to one position before the first element in the window, and to the last element in the window.
+    // Set p pointer to the first element in the window, and q to one element past the last element in the window.
     //
     p = href->int_scores + offset;
     q = p + (int) href->win_len;
-    j = offset + 1;
-    do {
-    	//
-    	// Add the score from the front edge of the window, subtract the score
-    	// from the back edge of the window.
-    	//
-    	working_sum -= (double) *p;
-    	working_sum += (double) *q;
+    j = offset;
 
+    // cerr << "Setting pointers; P: " << (href->int_scores + offset) - href->int_scores << "; Q: " << p + (int) href->win_len - p << "; J: " << j << "\n";
+
+    do {
     	mean = working_sum / href->win_len;
+
+	// cerr << "J: " << j << "; Window contents: ";
+	// for (int *r = p; r < q; r++)
+	//     cerr << *r << " ";
+	// cerr << "\n";
+	// cerr << "    Mean: " << mean << "\n";
 
     	if (mean < score_limit) {
 
@@ -545,6 +535,17 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
 		return -1;
 	    }
     	}
+
+	//
+    	// Advance the window:
+    	//   Add the score from the front edge of the window, subtract the score
+    	//   from the back edge of the window.
+    	//
+    	working_sum -= (double) *p;
+    	working_sum += (double) *q;
+
+	// cerr << "  Removing value of p: " << *p << " (position: " << p - (href->int_scores) << ")\n";
+	// cerr << "  Adding value of q: " << *q << " (position: " << q - (href->int_scores) << ")\n";
 
     	p++;
     	q++;

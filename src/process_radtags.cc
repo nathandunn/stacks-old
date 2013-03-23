@@ -114,14 +114,14 @@ int main (int argc, char* argv[]) {
     vector<pair<string, string> >        files;
     vector<BarcodePair>                  barcodes;
     set<string>                          se_bc, pe_bc;
-    map<BarcodePair, ofstream *>         pair_1_fhs, pair_2_fhs, rem_fhs;
+    map<BarcodePair, ofstream *>         pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs;
     map<string, map<string, long> >      counters;
     map<BarcodePair, map<string, long> > barcode_log;
 
     build_file_list(files);
     load_barcodes(barcode_file, barcodes, se_bc, pe_bc, bc_size_1, bc_size_2);
 
-    open_files(files, barcodes, pair_1_fhs, pair_2_fhs, rem_fhs, counters);
+    open_files(files, barcodes, pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs, counters);
 
     for (uint i = 0; i < files.size(); i++) {
 	cerr << "Processing file " << i+1 << " of " << files.size() << " [" << files[i].first.c_str() << "]\n";
@@ -139,7 +139,7 @@ int main (int argc, char* argv[]) {
 	if (paired)
 	    process_paired_reads(files[i].first, files[i].second, 
 				 se_bc, pe_bc,
-				 pair_1_fhs, pair_2_fhs, rem_fhs,
+				 pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs,
 				 counters[files[i].first], barcode_log);
 	else
 	    process_reads(files[i].first, 
@@ -165,7 +165,8 @@ int main (int argc, char* argv[]) {
     cerr << "Closing files, flushing buffers...\n";
     close_file_handles(pair_1_fhs);
     if (paired) {
-	close_file_handles(rem_fhs);
+	close_file_handles(rem_1_fhs);
+	close_file_handles(rem_2_fhs);
 	close_file_handles(pair_2_fhs);
     }
 
@@ -185,7 +186,8 @@ int process_paired_reads(string prefix_1,
 			 set<string> &se_bc, set<string> &pe_bc,
 			 map<BarcodePair, ofstream *> &pair_1_fhs, 
 			 map<BarcodePair, ofstream *> &pair_2_fhs, 
-			 map<BarcodePair, ofstream *> &rem_fhs,
+			 map<BarcodePair, ofstream *> &rem_1_fhs,
+			 map<BarcodePair, ofstream *> &rem_2_fhs,
 			 map<string, long> &counter, 
 			 map<BarcodePair, map<string, long> > &barcode_log) {
     Input *fh_1, *fh_2;
@@ -203,7 +205,7 @@ int process_paired_reads(string prefix_1,
     } else if (in_file_type == gzfastq) {
         fh_1 = new GzFastq(path_1.c_str());
 	fh_2 = new GzFastq(path_2.c_str());
-    }else if (in_file_type == bustard) {
+    } else if (in_file_type == bustard) {
         fh_1 = new Bustard(path_1.c_str());
         fh_2 = new Bustard(path_2.c_str());
     }
@@ -266,7 +268,8 @@ int process_paired_reads(string prefix_1,
 	barcode_type == inline_inline ||
 	barcode_type == inline_index)
 	se_offset = bc_size_1;
-    if (barcode_type == inline_inline)
+    if (barcode_type == inline_inline || 
+	barcode_type == index_inline)
 	pe_offset = bc_size_2;
 	
     BarcodePair bc;
@@ -286,13 +289,6 @@ int process_paired_reads(string prefix_1,
 	process_singlet(r_1, renz_1, se_offset, false, barcode_log[bc], counter);
 	process_singlet(r_2, renz_2, pe_offset, true,  barcode_log[bc], counter);
 
-	// if (!r_1->retain) {
-	//     r_2->retain = 0;
-	//     counter["orphaned"]++;
-	// } else {
-	//     process_singlet(pair_2_fhs, r_2, barcode_log, counter, true);
-	// }
-
 	if (r_1->retain && r_2->retain) {
 	    out_file_type == fastq ?
 		write_fastq(pair_1_fhs[bc], r_1, overhang) :
@@ -306,8 +302,15 @@ int process_paired_reads(string prefix_1,
 	    // Write to the remainder file.
 	    //
 	    out_file_type == fastq ? 
-		write_fastq(rem_fhs[bc], r_1, overhang) : 
-		write_fasta(rem_fhs[bc], r_1, overhang);
+		write_fastq(rem_1_fhs[bc], r_1, overhang) : 
+		write_fasta(rem_1_fhs[bc], r_1, overhang);
+	} else if (!r_1->retain && r_2->retain) {
+	    //
+	    // Write to the remainder file.
+	    //
+	    out_file_type == fastq ? 
+		write_fastq(rem_2_fhs[bc], r_2, overhang) : 
+		write_fasta(rem_2_fhs[bc], r_2, overhang);
 	}
 
 	if (discards && !r_1->retain)
@@ -470,12 +473,12 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 	if (paired) {
 	    if (se_bc.count(bc.se) == 0)
 		se_correct = correct_barcode(se_bc, href_1);
-	    if (pe_bc.count(bc.pe) == 0)
+	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
 		pe_correct = correct_barcode(pe_bc, href_2);
 
 	    if (se_correct)
 		bc.se = string(href_1->barcode);
-	    if (pe_correct)
+	    if (pe_bc.size() > 0 && pe_correct)
 		bc.pe = string(href_2->barcode);
 	    //
 	    // After correcting the individual barcodes, check if the combination is valid.
@@ -530,7 +533,7 @@ process_singlet(Read *href,
     //
     // Is the RADTAG intact?
     //
-    if (check_radtag) {
+    if (check_radtag && res_enz.length() > 0) {
 	bool rad_cor = false;
 
 	for (int i = 0; i < renz_cnt[res_enz]; i++) {
@@ -543,7 +546,7 @@ process_singlet(Read *href,
 	    //
 	    // Try to correct the RAD-Tag.
 	    //
-	    if (!correct_radtag(href, counter)) {
+	    if (!correct_radtag(href, offset, res_enz, counter)) {
 	        if (barcode_type != null_null) bc_log["noradtag"]++;
 	        counter["noradtag"]++;
 	        href->retain = 0;
@@ -556,7 +559,7 @@ process_singlet(Read *href,
     // Drop this sequence if it has any uncalled nucleotides.
     //
     if (clean) {
-	for (char *p = href->seq; *p != '\0'; p++)
+	for (char *p = href->seq + offset; *p != '\0'; p++)
 	    if (*p == '.' || *p == 'N') {
 		counter["low_quality"]++;
 		href->retain = 0;
@@ -568,11 +571,11 @@ process_singlet(Read *href,
     // Drop this sequence if it has low quality scores.
     //
     if (quality && 
-	check_quality_scores(href, qual_offset, score_limit, len_limit, paired_end) <= 0) {
+	check_quality_scores(href, qual_offset, score_limit, len_limit, offset) <= 0) {
     	counter["low_quality"]++;
     	href->retain = 0;
     	return 0;
-    } 
+    }
 
     //
     // Drop this sequence if it contains adapter sequence.
@@ -635,8 +638,6 @@ correct_barcode(set<string> &bcs, Read *href)
 	//
 	old_barcode = string(href->barcode);
 	strcpy(href->barcode, b.c_str());
-	for (int i = 0; i < bc_size_1; i++)
-	    href->seq[i] = href->barcode[i];
 
 	return true;
     }
@@ -644,7 +645,9 @@ correct_barcode(set<string> &bcs, Read *href)
     return false;
 }
 
-int correct_radtag(Read *href, map<string, long> &counter) {
+int 
+correct_radtag(Read *href, int offset, string res_enz, map<string, long> &counter) 
+{
     if (recover == false)
 	return 0;
     //
@@ -652,15 +655,15 @@ int correct_radtag(Read *href, map<string, long> &counter) {
     //
     int d = 0;
 
-    for (int i = 0; i < renz_cnt[renz_1]; i++) {
+    for (int i = 0; i < renz_cnt[res_enz]; i++) {
 	
-        d = dist(renz[renz_1][i], href->seq+bc_size_1);
+        d = dist(renz[res_enz][i], href->seq + offset);
 
         if (d <= 1) {
             //
             // Correct the read.
             //
-	    strncpy(href->seq + bc_size_1, renz[renz_1][i], renz_len[renz_1]);
+	    strncpy(href->seq + offset, renz[res_enz][i], renz_len[res_enz]);
             counter["recovered"]++;
 
             return 1;

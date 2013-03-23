@@ -34,20 +34,21 @@ int open_files(vector<pair<string, string> > &files,
 	       vector<BarcodePair> &barcodes, 
 	       map<BarcodePair, ofstream *> &pair_1_fhs, 
 	       map<BarcodePair, ofstream *> &pair_2_fhs, 
-	       map<BarcodePair, ofstream *> &rem_fhs, 
+	       map<BarcodePair, ofstream *> &rem_1_fhs, 
+	       map<BarcodePair, ofstream *> &rem_2_fhs, 
 	       map<string, map<string, long> > &counters) {
     string path, suffix_1, suffix_2;
 
-    if (out_file_type == fastq) {
-	suffix_1 = ".fq";
-	suffix_2 = ".fq";
-    } else {
-	suffix_1 = ".fa";
-	suffix_2 = ".fa";
-    }
     if (paired && interleave == false) {
-	suffix_1 += "_1";
-	suffix_2 += "_2";
+	suffix_1 = ".1";
+	suffix_2 = ".2";
+    }
+    if (out_file_type == fastq) {
+	suffix_1 += ".fq";
+	suffix_2 += ".fq";
+    } else {
+	suffix_1 += ".fa";
+	suffix_2 += ".fa";
     }
 
     ofstream   *fh;
@@ -116,9 +117,20 @@ int open_files(vector<pair<string, string> > &files,
 		path = out_path + files[i].first.substr(0, pos) + ".rem" + files[i].first.substr(pos);
 
 		fh = new ofstream(path.c_str(), ifstream::out);
-                rem_fhs[bc] = fh;
+                rem_1_fhs[bc] = fh;
 
- 		if (rem_fhs[bc]->fail()) {
+ 		if (rem_1_fhs[bc]->fail()) {
+		    cerr << "Error opening remainder output file '" << path << "'\n";
+		    exit(1);
+		}
+
+		pos  = files[i].second.find_last_of(".");
+		path = out_path + files[i].second.substr(0, pos) + ".rem" + files[i].second.substr(pos);
+
+		fh = new ofstream(path.c_str(), ifstream::out);
+		rem_2_fhs[bc] = fh;
+
+		if (rem_2_fhs[bc]->fail()) {
 		    cerr << "Error opening remainder output file '" << path << "'\n";
 		    exit(1);
 		}
@@ -160,7 +172,8 @@ int open_files(vector<pair<string, string> > &files,
 
 		pair_2_fhs[bc] = fh;
 	    }
-	    path = out_path + "sample_unbarcoded.rem" + suffix_2.substr(0,3);
+
+	    path = out_path + "sample_unbarcoded.rem" + suffix_1;
 	    fh   = new ofstream(path.c_str(), ifstream::out);
 
 	    if (fh->fail()) {
@@ -169,7 +182,19 @@ int open_files(vector<pair<string, string> > &files,
 	    }
 
 	    for (uint i = 0; i < files.size(); i++) {
-		rem_fhs[bc] = fh;
+		rem_1_fhs[bc] = fh;
+	    }
+
+	    path = out_path + "sample_unbarcoded.rem" + suffix_2;
+	    fh   = new ofstream(path.c_str(), ifstream::out);
+
+	    if (fh->fail()) {
+		cerr << "Error opening remainder output file '" << path << "'\n";
+		exit(1);
+	    }
+
+	    for (uint i = 0; i < files.size(); i++) {
+		rem_2_fhs[bc] = fh;
 	    }
 	}
 
@@ -208,11 +233,20 @@ int open_files(vector<pair<string, string> > &files,
 		    exit(1);
 		}
 
-		path = out_path + "sample_" + barcodes[i].str() + ".rem" + suffix_2.substr(0,3);
+		path = out_path + "sample_" + barcodes[i].str() + ".rem" + suffix_1;
 		fh = new ofstream(path.c_str(), ifstream::out);
-                rem_fhs[barcodes[i]] = fh;
+                rem_1_fhs[barcodes[i]] = fh;
 
-		if (rem_fhs[barcodes[i]]->fail()) {
+		if (rem_1_fhs[barcodes[i]]->fail()) {
+		    cerr << "Error opening remainder output file '" << path << "'\n";
+		    exit(1);
+		}
+
+		path = out_path + "sample_" + barcodes[i].str() + ".rem" + suffix_2;
+		fh = new ofstream(path.c_str(), ifstream::out);
+                rem_2_fhs[barcodes[i]] = fh;
+
+		if (rem_2_fhs[barcodes[i]]->fail()) {
 		    cerr << "Error opening remainder output file '" << path << "'\n";
 		    exit(1);
 		}
@@ -247,6 +281,30 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
 	      set<string> &se_bc, set<string> &pe_bc,
 	      int &se_len, int &pe_len) 
 {
+    switch(barcode_type) {
+    case null_null:
+	cerr << "Barcode type unspecified, assuming unbarcoded data.\n";
+	break;
+    case index_null:
+	cerr << "Searching for single-end, indexed barcodes.\n";
+	break;
+    case inline_null:
+	cerr << "Searching for single-end, inlined barcodes.\n";
+	break;
+    case index_index:
+	cerr << "Searching for single and paired-end, indexed barcodes.\n";
+	break;
+    case inline_inline:
+	cerr << "Searching for single and paired-end, inlined barcodes.\n";
+	break;
+    case inline_index:
+	cerr << "Searching for single-end, inlined and paired-end, indexed barcodes.\n";
+	break;
+    case index_inline:
+	cerr << "Searching for single-end, indexed and paired-end, inlined barcodes.\n";
+	break;
+    }
+
     if (barcode_file.length() == 0)
 	return 0;
 
@@ -410,7 +468,7 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
 	    help();
 	}
     }
-	    
+
     cerr << "Loaded " << barcodes.size() << " barcodes ";
 
     if (pe_bc.size() > 0) 

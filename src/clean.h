@@ -126,7 +126,7 @@ public:
     double  win_len;
     double  stop_pos;
 
-    Read(uint buf_len, int read, int barcode_size, int win_size) {
+    Read(uint buf_len, int read, int barcode_size, double win_size) {
 	this->barcode    = new char[id_len  + 1];
 	this->machine    = new char[id_len  + 1];
 	this->seq        = new char[buf_len + 1];
@@ -141,7 +141,7 @@ public:
 	// Window length is 15% (rounded) of the sequence length.
 	//
 	this->len      = buf_len - barcode_size;
-	this->win_len  = round(this->len * win_size);
+	this->win_len  = round((double) this->len * win_size);
 
 	if (this->win_len < 1) 
 	    this->win_len = 1;
@@ -180,7 +180,7 @@ int  filter_adapter_seq(Read *, char *, int, AdapterHash &, int, int, int);
 int  init_adapter_seq(int, char *, int &, AdapterHash &, vector<char *> &);
 int  free_adapter_seq(vector<char *> &);
 
-int  check_quality_scores(Read *, int, int, int, bool);
+int  check_quality_scores(Read *, int, int, int, int);
 
 
 #endif // __CLEAN_H__
