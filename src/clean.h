@@ -45,6 +45,14 @@ enum barcodet {null_null,
 	       inline_inline, index_index, 
 	       inline_index,  index_inline};
 
+extern int      bc_size_1, bc_size_2;
+extern barcodet barcode_type;
+extern int      truncate_seq;
+extern double   win_size;
+extern bool     paired;
+extern bool     recover;
+extern int      barcode_dist;
+
 class BarcodePair {
 public:
     string se;    // Single-end barcode
@@ -120,6 +128,7 @@ public:
     char   *phred;
     int    *int_scores;
     bool    filter;
+    int     inline_bc_len;
     int     retain;
     unsigned int size;
     unsigned int len;
@@ -127,27 +136,16 @@ public:
     double  stop_pos;
 
     Read(uint buf_len, int read, int barcode_size, double win_size) {
-	this->barcode    = new char[id_len  + 1];
-	this->machine    = new char[id_len  + 1];
-	this->seq        = new char[buf_len + 1];
-	this->phred      = new char[buf_len + 1];
-	this->int_scores = new  int[buf_len];
-	this->size       = buf_len + 1;
-	this->len        = buf_len;
-	this->read       = read;
+	this->barcode       = new char[id_len  + 1];
+	this->machine       = new char[id_len  + 1];
+	this->seq           = new char[buf_len + 1];
+	this->phred         = new char[buf_len + 1];
+	this->int_scores    = new  int[buf_len];
+	this->size          = buf_len + 1;
+	this->inline_bc_len = barcode_size;
+	this->read          = read;
 
-	//
-	// Set the parameters for checking read quality later in processing.
-	// Window length is 15% (rounded) of the sequence length.
-	//
-	this->len      = buf_len - barcode_size;
-	this->win_len  = round((double) this->len * win_size);
-
-	if (this->win_len < 1) 
-	    this->win_len = 1;
-
-	this->len     += barcode_size;
-	this->stop_pos = this->len - this->win_len;
+	this->set_len(buf_len);
     }
     ~Read() {
 	delete [] this->barcode;
@@ -156,28 +154,47 @@ public:
 	delete [] this->phred;
 	delete [] this->int_scores;
     }
+    int resize(int size) {
+	delete [] this->seq;
+	delete [] this->phred;
+	delete [] this->int_scores;
+	this->size  = size;
+	this->seq   = new char[this->size];
+	this->phred = new char[this->size];
+	this->int_scores = new int[this->len];
+
+	this->set_len(size - 1);
+
+	return 0;
+    }
+    int set_len(uint buf_len) {
+	if (buf_len == this->len)
+	    return 0;
+
+	//
+	// Set the parameters for checking read quality later in processing.
+	// Window length is 15% (rounded) of the sequence length.
+	//
+	this->len      = buf_len - this->inline_bc_len;
+	this->win_len  = round((double) this->len * win_size);
+
+	if (this->win_len < 1) 
+	    this->win_len = 1;
+
+	this->len     += this->inline_bc_len;
+	this->stop_pos = this->len - this->win_len;
+
+	return 0;
+    }
 };
 
 typedef unordered_map<const char *, vector<int>, std::tr1::hash<const char *>, eqstr> AdapterHash;
 
-extern int      bc_size_1, bc_size_2;
-extern barcodet barcode_type;
-extern int      truncate_seq;
-extern bool     paired;
-extern bool     recover;
-extern int      barcode_dist;
-
 int  parse_illumina_v1(const char *);
 int  parse_illumina_v2(const char *);
 int  parse_input_record(Seq *, Read *);
-int  write_fastq(ofstream *, Read *, bool);
-int  write_fastq(ofstream *, Seq *);
-int  write_fastq(ofstream *, Seq *, string);
-int  write_fasta(ofstream *, Read *, bool);
-int  write_fasta(ofstream *, Seq *);
-int  write_fasta(ofstream *, Seq *, string);
-int  rev_complement(char *, bool, bool);
-int  reverse_qual(char *, bool, bool);
+int  rev_complement(char *, int, bool);
+int  reverse_qual(char *, int, bool);
 
 int  process_barcode(Read *, Read *, BarcodePair &, 
 		     map<BarcodePair, ofstream *> &,

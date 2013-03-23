@@ -59,6 +59,7 @@ using google::sparse_hash_map;
 #include "clean.h"
 #include "utils.h"
 #include "kmers.h"
+#include "write.h"
 #include "Bustard.h"   // Reading input files in Tab-separated Bustard format
 #include "Fasta.h"     // Reading input files in FASTA format
 #include "Fastq.h"     // Reading input files in FASTQ format

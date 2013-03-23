@@ -249,16 +249,10 @@ int parse_input_record(Seq *s, Read *r) {
     //
     // Resize the sequence/phred buffers if necessary.
     //
-    if (truncate_seq == 0 && len > r->size - 1) {
-	delete [] r->seq;
-	delete [] r->phred;
-	delete [] r->int_scores;
-	r->len   = len;
-	r->seq   = new char[r->len + 1];
-	r->phred = new char[r->len + 1];
-	r->int_scores = new int[r->len];
-	r->size = r->len + 1;
-    }
+    if (truncate_seq == 0 && len > r->size - 1)
+	r->resize(len + 1);
+    else if (truncate_seq == 0)
+	r->set_len(len);
 
     strncpy(r->seq,   s->seq,  r->len); 
     r->seq[r->len]   = '\0';
@@ -284,121 +278,10 @@ int parse_input_record(Seq *s, Read *r) {
 }
 
 int 
-write_fasta(ofstream *fh, Read *href, bool overhang) {
-    char tile[id_len];
-    sprintf(tile, "%04d", href->tile);
-
-    int offset = 0;
-    if (href->read == 1 && 
-	(barcode_type == inline_null ||
-	 barcode_type == inline_inline ||
-	 barcode_type == inline_index))
-	offset = bc_size_1;
-    else if (href->read == 2 && 
-	(barcode_type == index_inline ||
-	 barcode_type == inline_inline))
-	offset = bc_size_2;
-    offset += overhang ? 1 : 0;
-
-    if (href->fastq_type != generic_fastq)
-    	*fh <<
-    	    ">" << href->lane <<
-    	    "_" << tile << 
-    	    "_" << href->x <<
-    	    "_" << href->y <<
-    	    "_" << href->read << "\n" <<
-    	    href->seq + offset << "\n";
-    else 
-    	*fh <<
-    	    ">" << href->machine <<
-    	    "_" << href->read << "\n" <<
-    	    href->seq + offset << "\n";
-
-    return 0;
-}
-
-int write_fasta(ofstream *fh, Seq *href) {
-    *fh <<
-	">" << 
-	href->id  << "\n" <<
-	href->seq << "\n";
-
-    return 0;
-}
-
-int write_fastq(ofstream *fh, Read *href, bool overhang) {
-    //
-    // Write the sequence and quality scores in FASTQ format. 
-    //
-    char tile[id_len];
-    sprintf(tile, "%04d", href->tile);
-
-    int offset = 0;
-    if (href->read == 1 && 
-	(barcode_type == inline_null ||
-	 barcode_type == inline_inline ||
-	 barcode_type == inline_index))
-	offset = bc_size_1;
-    else if (href->read == 2 && 
-	(barcode_type == index_inline ||
-	 barcode_type == inline_inline))
-	offset = bc_size_2;
-    offset += overhang ? 1 : 0;
-
-    if (href->fastq_type != generic_fastq)
-    	*fh <<
-    	    "@" << href->lane << 
-    	    "_" << tile << 
-    	    "_" << href->x << 
-    	    "_" << href->y << 
-    	    "_" << href->read << "\n" <<
-    	    href->seq + offset << "\n" <<
-    	    "+\n" <<
-    	    href->phred + offset << "\n";
-    else
-    	*fh <<
-    	    "@" << href->machine << 
-    	    "_" << href->read << "\n" <<
-    	    href->seq + offset << "\n" <<
-    	    "+\n" <<
-    	    href->phred + offset << "\n";
-
-    return 0;
-}
-
-int write_fastq(ofstream *fh, Seq *href) {
-    *fh <<
-	"@" << href->id << "\n" <<
-	href->seq << "\n" <<
-	"+\n" <<
-	href->qual << "\n";
-
-    return 0;
-}
-
-int write_fastq(ofstream *fh, Seq *href, string msg) {
-    *fh <<
-	"@" << href->id << "|" << msg << "\n" <<
-	href->seq << "\n" <<
-	"+\n" <<
-	href->qual << "\n";
-
-    return 0;
-}
-
-int write_fasta(ofstream *fh, Seq *href, string msg) {
-    *fh <<
-	">" << 
-	href->id  << "|" << msg << "\n" <<
-	href->seq << "\n";
-
-    return 0;
-}
-
-int rev_complement(char *seq, bool barcode, bool overhang) {
+rev_complement(char *seq, int offset, bool overhang) 
+{
     char *p, *q;
-    int offset;
-    offset  = barcode  ? bc_size_1 : 0;
+
     offset += overhang ? 1 : 0;
     q       = seq + offset;
 
@@ -437,10 +320,11 @@ int rev_complement(char *seq, bool barcode, bool overhang) {
     return 0;
 }
 
-int reverse_qual(char *qual, bool barcode, bool overhang) {
+int 
+reverse_qual(char *qual, int offset, bool overhang) 
+{
     char *p, *q;
-    int offset;
-    offset  = barcode  ? bc_size_1 : 0;
+
     offset += overhang ? 1 : 0;
     q       = qual + offset;
 

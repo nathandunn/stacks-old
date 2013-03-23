@@ -31,16 +31,6 @@
 #include "clone_filter.h"
 
 //
-// Unused variables needed for linking clean.o
-//
-barcodet barcode_type = null_null;
-bool     paired       = false;
-int      bc_size_1    = 0;
-int      bc_size_2    = 0;
-bool     recover      = false;
-int      barcode_dist = 2;
-
-//
 // Global variables to hold command-line options.
 //
 file_type in_file_type  = unknown;

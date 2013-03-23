@@ -40,24 +40,27 @@ sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/constants.h \
 
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
 	src/utils.h src/utils.cc \
-	src/clean.h src/clean.cc src/file_io.h src/file_io.cc \
+	src/write.h src/write.cc \
+	src/clean.h src/clean.cc \
+	src/file_io.h src/file_io.cc \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/gzFastq.h src/renz.h
 
 process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h \
-	src/clean.h src/clean.cc src/file_io.h src/file_io.cc \
+	src/clean.h src/clean.cc \
+	src/file_io.h src/file_io.cc \
 	src/utils.h src/utils.cc \
+	src/write.h src/write.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/gzFastq.h 
 
 kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h \
 	src/utils.h src/utils.cc \
-	src/clean.h src/clean.cc \
+	src/write.h src/write.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h \
 	src/gzFastq.h src/gzFastq.h
 
 clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h \
-	src/clean.h src/clean.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/Bustard.h src/Fastq.h src/Fasta.h \
 	src/gzFastq.h src/gzFastq.h
