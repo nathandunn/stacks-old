@@ -78,6 +78,7 @@ int  open_files(vector<pair<string, string> > &,
 		map<BarcodePair, ofstream *> &, 
 		map<BarcodePair, ofstream *> &, 
 		map<BarcodePair, ofstream *> &,
+		map<BarcodePair, ofstream *> &,
 		map<string, map<string, long> > &);
 int  close_file_handles(map<BarcodePair, ofstream *> &);
 
