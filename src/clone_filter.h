@@ -56,7 +56,6 @@ using std::tr1::unordered_map;
 using google::sparse_hash_map;
 #endif
 
-#include "clean.h"
 #include "kmers.h"
 #include "Bustard.h"   // Reading input files in Tab-separated Bustard format
 #include "Fastq.h"     // Reading input files in FASTQ format

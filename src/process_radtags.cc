@@ -243,25 +243,10 @@ int process_paired_reads(string prefix_1,
 	exit(1);
     }
 
-    int buf_len = truncate_seq > 0 ? bc_size_1 + truncate_seq : strlen(s_1->seq);
-    r_1 = new Read(buf_len, 1, bc_size_1, win_size);
-
+    // 
+    // If there is an inline barcode on either of the reads, we will need to set an 
+    // offset to know the start of true sequence for checking quality.
     //
-    // If no barcodes were specified, set r->barcode to be the input file name so
-    // that reads are written to an output file of the same name as the input file.
-    //
-    if (bc_size_1 == 0)
-	strncpy(r_1->barcode, prefix_1.c_str(), id_len);
-
-    //
-    // Compute the parameters for the second read.
-    //
-    buf_len = truncate_seq > 0 ? truncate_seq : strlen(s_2->seq);
-    r_2     = new Read(buf_len, 2, bc_size_2, win_size);
-
-    if (bc_size_1 == 0)
-	strncpy(r_2->barcode, prefix_2.c_str(), id_len);
-
     int se_offset = 0;
     int pe_offset = 0;
 
@@ -272,6 +257,25 @@ int process_paired_reads(string prefix_1,
     if (barcode_type == inline_inline || 
 	barcode_type == index_inline)
 	pe_offset = bc_size_2;
+
+    int buf_len = truncate_seq > 0 ? se_offset + truncate_seq : strlen(s_1->seq);
+    r_1 = new Read(buf_len, 1, se_offset, win_size);
+
+    //
+    // If no barcodes were specified, set r->barcode to be the input file name so
+    // that reads are written to an output file of the same name as the input file.
+    //
+    if (bc_size_1 == 0)
+    	strncpy(r_1->barcode, prefix_1.c_str(), id_len);
+
+    //
+    // Compute the parameters for the second read.
+    //
+    buf_len = truncate_seq > 0 ? pe_offset + truncate_seq : strlen(s_2->seq);
+    r_2     = new Read(buf_len, 2, pe_offset, win_size);
+
+    if (bc_size_1 == 0)
+	strncpy(r_2->barcode, prefix_2.c_str(), id_len);
 	
     BarcodePair bc;
     long i = 1;

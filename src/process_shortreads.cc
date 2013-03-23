@@ -240,8 +240,23 @@ int process_paired_reads(string prefix_1,
 	exit(1);
     }
 
+    // 
+    // If there is an inline barcode on either of the reads, we will need to set an 
+    // offset to know the start of true sequence for checking quality.
+    //
+    int se_offset = 0;
+    int pe_offset = 0;
+
+    if (barcode_type == inline_null ||
+	barcode_type == inline_inline ||
+	barcode_type == inline_index)
+	se_offset = bc_size_1;
+    if (barcode_type == inline_inline || 
+	barcode_type == index_inline)
+	pe_offset = bc_size_2;
+
     int buf_len = truncate_seq > 0 ? bc_size_1 + truncate_seq : strlen(s_1->seq);
-    r_1 = new Read(buf_len, 1, bc_size_1, win_size);
+    r_1 = new Read(buf_len, 1, se_offset, win_size);
 
     //
     // If no barcodes were specified, set r->barcode to be the input file name so
@@ -253,23 +268,12 @@ int process_paired_reads(string prefix_1,
     //
     // Compute the parameters for the second read.
     //
-    buf_len = truncate_seq > 0 ? truncate_seq : strlen(s_2->seq);
-    r_2     = new Read(buf_len, 2, bc_size_2, win_size);
+    buf_len = truncate_seq > 0 ? pe_offset + truncate_seq : strlen(s_2->seq);
+    r_2     = new Read(buf_len, 2, pe_offset, win_size);
 
     if (bc_size_1 == 0)
 	strncpy(r_2->barcode, prefix_2.c_str(), id_len);
 
-    int se_offset = 0;
-    int pe_offset = 0;
-
-    if (barcode_type == inline_null ||
-	barcode_type == inline_inline ||
-	barcode_type == inline_index)
-	se_offset = bc_size_1;
-    if (barcode_type == inline_inline || 
-	barcode_type == index_inline)
-	pe_offset = bc_size_2;
-	
     BarcodePair bc;
     long i = 1;
 
@@ -288,8 +292,8 @@ int process_paired_reads(string prefix_1,
 	process_singlet(r_2, pe_offset, true,  barcode_log[bc], counter);
 
  	if (matepair) {
-	    rev_complement(r_1->seq, true, overhang);
-	    reverse_qual(r_1->phred, true, overhang);
+	    rev_complement(r_1->seq, se_offset, overhang);
+	    reverse_qual(r_1->phred, se_offset, overhang);
 	}
 
   	if (r_1->retain && r_2->retain) {
@@ -474,18 +478,18 @@ process_singlet(Read *href,
 	int res = check_quality_scores(href, qual_offset, score_limit, len_limit, offset);
 
 	if (trim_reads) {
-	    if (res <= 0) {
-		counter["low_quality"]++;
-		href->retain = 0;
-		return 0;
-	    }
-	} else {
 	    if (res == 0) {
 		counter["low_quality"]++;
 		href->retain = 0;
 		return 0;
 	    } else if (res < 0) {
 		quality_trim = true;
+	    }
+	} else {
+	    if (res <= 0) {
+		counter["low_quality"]++;
+		href->retain = 0;
+		return 0;
 	    }
 	}
     }
@@ -833,6 +837,8 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'b':
 	    barcode_file = optarg;
+	    if (barcode_type == null_null)
+		barcode_type = inline_null;
 	    break;
 	case 'u':
 	    barcode_type = index_null;
