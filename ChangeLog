@@ -1,5 +1,23 @@
-Stacks 0.99996 - March 14, 2013
+Stacks 0.99996 - March 24, 2013
 -------------------------------
+	Feature: major overhaul of the process_radtags / process_shortreads programs to support
+	combinatorial barcodes and double-digested data. Programs now support a mixture of
+	barcodes from single-end inline, to mixtures of inline/indexed barcodes.
+	    1) changed naming scheme for process_radtags/process_shortreads output files for
+	paired reads. Changed file suffix to properly be ".fq" or ".fa", with paired-reads named
+	sample_XXX.1.fq and sample_XXX.2.fq instead of the previous ".fq_1" and ".fq_2".
+	    2) changed Phred+33 to be the default encoding scheme (previously was the now 
+	    3) Combinatorial barcdoes are specified as --inline_index or --inline_inline among a
+	number of other supported possibilities. Barcodes are listed in the barcode file as either
+	a single column or two, tab-separated columns. 
+	    4) Two restriction enzymes can now be specified via --renz_1 and --renz_2 to have the
+	program check (and correct) the restriction enzyme cut site on the first and second read
+	respectively.
+	deprecated Phred+64)
+	Bugfix: processing paired-end data with process_radtags could incorrectly alter the first
+	few nucleotides of the paired-read when correcting barcodes.
+	Bugfix: two regressions were fixed in process_shortreads causing all reads to be
+	improperly trimmed.
 	Bugfix: VCF output did not include sites fixed within and variable among populations.
 	Bugfix: changed the parsing code to accept a wider range of Illumina named, paired-end
 	files in process_radtags/shortreads.
