@@ -133,7 +133,6 @@ int main (int argc, char* argv[]) {
 	counters[files[i].first]["noradtag"]     = 0;
 	counters[files[i].first]["ambiguous"]    = 0;
 	counters[files[i].first]["retained"]     = 0;
-	counters[files[i].first]["orphaned"]     = 0;
 	counters[files[i].first]["recovered"]    = 0;
 
 	if (paired)
@@ -158,8 +157,8 @@ int main (int argc, char* argv[]) {
 	     << counters[files[i].first]["retained"] << " retained reads.\n"
 	     << "    ";
 	if (filter_adapter)
-	    cerr << counters[files[i].first]["adapter"] << " reads with adapter sequence; ";
-	cerr << counters[files[i].first]["orphaned"]    << " orphaned paired-end reads.\n";
+	    cerr << counters[files[i].first]["adapter"] << " reads with adapter sequence";
+	cerr << "\n";
     }
 
     cerr << "Closing files, flushing buffers...\n";
@@ -291,8 +290,10 @@ int process_paired_reads(string prefix_1,
 
 	process_barcode(r_1, r_2, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
 
-	process_singlet(r_1, renz_1, se_offset, false, barcode_log[bc], counter);
-	process_singlet(r_2, renz_2, pe_offset, true,  barcode_log[bc], counter);
+	if (r_1->retain) 
+	    process_singlet(r_1, renz_1, se_offset, false, barcode_log[bc], counter);
+	if (r_2->retain) 
+	    process_singlet(r_2, renz_2, pe_offset, true,  barcode_log[bc], counter);
 
 	if (r_1->retain && r_2->retain) {
 	    out_file_type == fastq ?
@@ -417,7 +418,8 @@ int process_reads(string prefix,
 
 	process_barcode(r, NULL, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
 
-	process_singlet(r, renz_1, se_offset, false, barcode_log[bc], counter);
+	if (r->retain) 
+	    process_singlet(r, renz_1, se_offset, false, barcode_log[bc], counter);
 
 	 if (r->retain)
 	     out_file_type == fastq ? 
@@ -612,7 +614,6 @@ print_results(int argc, char **argv,
     log << "Low Quality\t"
 	<< "Ambiguous Barcodes\t"
 	<< "Ambiguous RAD-Tag\t"
-	<< "Orphaned paired-end reads\t"
 	<< "Total\n";
 
     for (it = counters.begin(); it != counters.end(); it++) {
@@ -625,7 +626,6 @@ print_results(int argc, char **argv,
 	log << it->second["low_quality"] << "\t"
 	    << it->second["ambiguous"]   << "\t"
 	    << it->second["noradtag"]    << "\t"
-	    << it->second["orphaned"]    << "\t"
 	    << it->second["total"]       << "\n";
     }
 
@@ -636,7 +636,6 @@ print_results(int argc, char **argv,
     c["ill_filtered"] = 0;
     c["ambiguous"]    = 0;
     c["noradtag"]     = 0;
-    c["orphaned"]     = 0;
 
     //
     // Total up the individual counters
@@ -647,7 +646,6 @@ print_results(int argc, char **argv,
 	c["low_quality"]  += it->second["low_quality"];
 	c["adapter"]      += it->second["adapter"];
 	c["ambiguous"]    += it->second["ambiguous"];
-	c["orphaned"]     += it->second["orphaned"];
 	c["noradtag"]     += it->second["noradtag"];
 	c["retained"]     += it->second["retained"]; 
     }
@@ -660,7 +658,6 @@ print_results(int argc, char **argv,
     cerr << "  " << c["ambiguous"]   << " ambiguous barcode drops;\n"
 	 << "  " << c["low_quality"] << " low quality read drops;\n"
 	 << "  " << c["noradtag"]    << " ambiguous RAD-Tag drops;\n"
-	 << "  " << c["orphaned"]    << " orphaned paired-end reads;\n"
 	 << c["retained"] << " retained reads.\n";
 
     log	<< "\n" 
@@ -672,7 +669,6 @@ print_results(int argc, char **argv,
     log << "Ambiguous Barcodes\t"   << c["ambiguous"]   << "\n"
 	<< "Low Quality\t"          << c["low_quality"] << "\n"
 	<< "Ambiguous RAD-Tag\t"    << c["noradtag"]    << "\n"
-	<< "Orphaned Paired-ends\t" << c["orphaned"]    << "\n"
 	<< "Retained Reads\t"       << c["retained"]    << "\n";
 
     if (bc_size_1 == 0) return 0;
