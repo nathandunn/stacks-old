@@ -288,8 +288,10 @@ int process_paired_reads(string prefix_1,
 
 	process_barcode(r_1, r_2, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
 
-	process_singlet(r_1, se_offset, false, barcode_log[bc], counter);
-	process_singlet(r_2, pe_offset, true,  barcode_log[bc], counter);
+	if (r_1->retain)
+	    process_singlet(r_1, se_offset, false, barcode_log[bc], counter);
+	if (r_2->retain)
+	    process_singlet(r_2, pe_offset, true,  barcode_log[bc], counter);
 
  	if (matepair) {
 	    rev_complement(r_1->seq, se_offset, overhang);
@@ -418,7 +420,8 @@ int process_reads(string prefix,
 
 	process_barcode(r, NULL, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
 
-	process_singlet(r, se_offset, false, barcode_log[bc], counter);
+	if (r->retain)
+	    process_singlet(r, se_offset, false, barcode_log[bc], counter);
 
 	 if (r->retain)
 	     out_file_type == fastq ? 

@@ -486,7 +486,7 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 	    // After correcting the individual barcodes, check if the combination is valid.
 	    //
 	    if (fhs.count(bc) == 0) {
-		counter["ambiguous"]++;
+		counter["ambiguous"] += 2;
 		href_1->retain = 0;
 		href_2->retain = 0;
 	    }
