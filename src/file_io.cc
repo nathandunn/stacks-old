@@ -500,8 +500,9 @@ build_file_list(vector<pair<string, string> > &files)
 	while ((direntry = readdir(dir)) != NULL) {
 	    file = direntry->d_name;
 
-	    if (file == "." || file == "..")
+	    if (file.substr(0, 1) == ".")
 		continue;
+
 	    // 
 	    // If paired-end specified, parse file names to sort out which is which.
 	    //
