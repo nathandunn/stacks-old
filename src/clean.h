@@ -145,6 +145,18 @@ public:
 	this->inline_bc_len = barcode_size;
 	this->read          = read;
 
+	this->retain        = 1;
+	this->tile          = 0;
+	this->lane          = 0;
+	this->x             = 0;
+	this->y             = 0;
+	this->index         = 0;
+
+	this->barcode[0] = '\0';
+	this->machine[0] = '\0';
+	this->seq[0]     = '\0';
+	this->phred[0]   = '\0';
+
 	this->set_len(buf_len);
     }
     ~Read() {

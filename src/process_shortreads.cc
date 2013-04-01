@@ -725,6 +725,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"inline_inline",      no_argument, NULL, 'x'},
 	    {"index_inline",       no_argument, NULL, 'Y'},
 	    {"inline_index",       no_argument, NULL, 'Z'},
+	    {"barcode_dist", required_argument, NULL, 'B'},
 	    {"infile_type",  required_argument, NULL, 'i'},
 	    {"outfile_type", required_argument, NULL, 'y'},
 	    {"file",         required_argument, NULL, 'f'},
