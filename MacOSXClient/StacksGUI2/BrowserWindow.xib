@@ -52,6 +52,7 @@
 							<string key="NSFrameSize">{1287, 712}</string>
 							<reference key="NSSuperview" ref="1006"/>
 							<reference key="NSWindow"/>
+							<reference key="NSNextKeyView"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<bool key="NSEnabled">YES</bool>
 							<object class="NSBrowserCell" key="NSCellPrototype">
@@ -66,7 +67,8 @@
 							</object>
 							<string key="NSPathSeparator">/</string>
 							<int key="NSMinColumnWidth">100</int>
-							<int key="NSNumberOfVisibleColumns">10</int>
+							<int key="NSNumberOfVisibleColumns">3</int>
+							<int key="NSMaxNumberOfVisibleColumns">3</int>
 							<int key="NSColumnResizingType">1</int>
 							<double key="NSPreferedColumnWidth">100</double>
 							<bool key="NSAllowsTypeSelect">YES</bool>

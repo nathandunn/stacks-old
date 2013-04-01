@@ -13,9 +13,11 @@
 
 @interface BrowserViewController : NSWindowController{
 
+
 }
 
 @property (weak) NSBrowser* browser;
 @property (atomic,strong) StacksDocument* stacksDocument;
+@property (atomic,strong) StacksLoader *stacksLoader ;
 
 @end
