@@ -342,6 +342,9 @@ int process_paired_reads(string prefix_1,
     delete fh_1;
     delete fh_2;
 
+    delete r_1;
+    delete r_2;
+
     return 0;
 }
 
@@ -441,6 +444,8 @@ int process_reads(string prefix,
     // Close the file and delete the Input object.
     //
     delete fh;
+
+    delete r;
 
     return 0;
 }
