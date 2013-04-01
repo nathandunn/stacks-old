@@ -18,6 +18,8 @@
 		14B4DDB216C97C0400317EB3 /* MasterViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DDB016C97C0400317EB3 /* MasterViewController.xib */; };
 		14B4DDB716C97D8C00317EB3 /* LocusView.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB616C97D8C00317EB3 /* LocusView.m */; };
 		14B4DDBA16C97DA100317EB3 /* StacksDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DDB916C97DA100317EB3 /* StacksDocument.m */; };
+		14E4A76F170A029100B7674F /* BrowserViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14E4A76E170A029100B7674F /* BrowserViewController.m */; };
+		14E4A771170A02E500B7674F /* BrowserWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14E4A770170A02E400B7674F /* BrowserWindow.xib */; };
 		63D53037916A7D22630386CC /* LociLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63D5304246F71EE19F4488C7 /* LociLoader.cpp */; };
 		63D531E8CE86AE86FEB3F2F0 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 63D5308F61F143EAAF0C767C /* mst.cc */; };
 		63D532AEA7F7111C269694E1 /* SnpView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53B1CDC233D9C03CA9540 /* SnpView.m */; };
@@ -74,6 +76,9 @@
 		14B4DDB616C97D8C00317EB3 /* LocusView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusView.m; sourceTree = "<group>"; };
 		14B4DDB816C97DA100317EB3 /* StacksDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksDocument.h; sourceTree = "<group>"; };
 		14B4DDB916C97DA100317EB3 /* StacksDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksDocument.m; sourceTree = "<group>"; };
+		14E4A76D170A029100B7674F /* BrowserViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BrowserViewController.h; sourceTree = "<group>"; };
+		14E4A76E170A029100B7674F /* BrowserViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BrowserViewController.m; sourceTree = "<group>"; };
+		14E4A770170A02E400B7674F /* BrowserWindow.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = BrowserWindow.xib; sourceTree = "<group>"; };
 		63D5304246F71EE19F4488C7 /* LociLoader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LociLoader.cpp; sourceTree = "<group>"; };
 		63D53087A6787051E6F55B9B /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../../config.h; sourceTree = "<group>"; };
 		63D5308F61F143EAAF0C767C /* mst.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mst.cc; path = ../../src/mst.cc; sourceTree = "<group>"; };
@@ -268,6 +273,9 @@
 				14B4DDB016C97C0400317EB3 /* MasterViewController.xib */,
 				63D531E195380867D4081F2F /* LocusCell.m */,
 				63D53190F54C154F624260B9 /* LocusCell.h */,
+				14E4A76D170A029100B7674F /* BrowserViewController.h */,
+				14E4A76E170A029100B7674F /* BrowserViewController.m */,
+				14E4A770170A02E400B7674F /* BrowserWindow.xib */,
 			);
 			name = GUI;
 			sourceTree = "<group>";
@@ -402,6 +410,7 @@
 				14B4DD5116C97A7500317EB3 /* Credits.rtf in Resources */,
 				14B4DD5716C97A7600317EB3 /* MainMenu.xib in Resources */,
 				14B4DDB216C97C0400317EB3 /* MasterViewController.xib in Resources */,
+				14E4A771170A02E500B7674F /* BrowserWindow.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -458,6 +467,7 @@
 				D793C729B49D4B6893BECCEC /* StackEntry.m in Sources */,
 				63D53B07416CCB32D80053FD /* LocusCell.m in Sources */,
 				63D532AEA7F7111C269694E1 /* SnpView.m in Sources */,
+				14E4A76F170A029100B7674F /* BrowserViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
