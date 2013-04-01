@@ -7,10 +7,11 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "TreeProtocol.h"
 
 @class LocusView;
 
-@interface StacksDocument : NSObject
+@interface StacksDocument : NSObject<TreeProtocol>
 
 
 @property (strong) NSMutableDictionary *locusViews;

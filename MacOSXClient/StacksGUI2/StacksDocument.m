@@ -18,6 +18,21 @@
     return self ;
 }
 
+- (NSUInteger)childCount {
+    return self.locusViews.count;
+}
+
+- (id)childAtIndex:(NSUInteger) index {
+    NSString *key = [self.locusViews.allKeys objectAtIndex:index];
+    return [self.locusViews objectForKey:key];
+//    return nil;
+}
+
+- (BOOL)isLeaf {
+    return self.childCount ==0 ;
+}
+
+
 @synthesize locusViews;
 
 @end
