@@ -8,6 +8,14 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface BrowserViewController : NSBrowser
+@class StacksDocument;
+@class StacksLoader;
+
+@interface BrowserViewController : NSWindowController{
+
+}
+
+@property (weak) NSBrowser* browser;
+@property (atomic,strong) StacksDocument* stacksDocument;
 
 @end

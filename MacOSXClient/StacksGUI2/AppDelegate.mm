@@ -23,7 +23,7 @@
     // Insert code here to initialize your application
     // 1. Create the master view controller
     self.masterViewController = [[MasterViewController alloc] initWithWindowNibName:@"MasterViewController"];
-    self.browserViewController = [[BrowserViewController alloc] init];
+    self.browserViewController = [[BrowserViewController alloc] initWithWindowNibName:@"BrowserWindow"];
     self.loader = [[StacksLoader alloc] init];
 
 
@@ -32,8 +32,10 @@
     StacksDocument *stacksDocument = [self.loader loadLociAndGenotypes:examplePath];
 
     self.masterViewController.stacksDocument = stacksDocument;
-
     [self.masterViewController showWindow:self];
+
+    self.browserViewController.stacksDocument = stacksDocument;
+    [self.browserViewController showWindow:self];
 //    [self.browserViewController ];
 
 }
