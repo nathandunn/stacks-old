@@ -30,6 +30,7 @@
     NSString *examplePath = @"/tmp/stacks_tut/";
 //    StacksDocument *stacksDocument = [self.loader loadLoci:examplePath];
     StacksDocument *stacksDocument = [self.loader loadLociAndGenotypes:examplePath];
+    stacksDocument.name = examplePath;
 
     self.masterViewController.stacksDocument = stacksDocument;
     [self.masterViewController showWindow:self];

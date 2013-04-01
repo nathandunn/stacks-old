@@ -15,6 +15,7 @@
 
 
 @property (strong) NSMutableDictionary *locusViews;
+@property (strong) NSString *name ;
 
 - (id)initWithLocusView:(NSMutableDictionary*)locusViews;
 
