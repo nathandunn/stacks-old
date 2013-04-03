@@ -16,7 +16,7 @@
 * This is the table view:
 * http://genome.uoregon.edu/stacks/catalog.php?db=tut_radtags&id=1
 */
-@interface LocusView : NSObject
+@interface LocusView : NSObject<TreeProtocol>
 
 @property (strong) NSString *locusId;
 //@property (assign) NSString *letters;

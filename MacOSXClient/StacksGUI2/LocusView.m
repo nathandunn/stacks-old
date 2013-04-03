@@ -6,6 +6,7 @@
 //  Copyright (c) 2013 University of Oregon. All rights reserved.
 //
 
+#import "TreeProtocol.h"
 #import "LocusView.h"
 #import "GenotypeView.h"
 #import "StacksView.h"
@@ -66,4 +67,38 @@
     return self.genotypeCount;
 //    return self.matchingParents + self.genotypes;
 }
+
+- (NSUInteger)childCount {
+    if(genotypes== nil){
+        return 0 ;
+    }
+    return genotypes.count;
+}
+
+- (id)childAtIndex:(NSUInteger)index1 {
+//    NSArray *sortedKeys = [self.locusViews.allKeys sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
+//        return [obj1 integerValue] - [obj2 integerValue];
+//    }];
+//    NSString *key = [sortedKeys objectAtIndexedSubscript:index];
+//    return [self.locusViews objectForKey:key];
+    NSArray *sortedKeys = [self.genotypes.allKeys sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
+//        return [obj1 integerValue] - [obj2 integerValue];
+        return [obj1 compare:obj2];
+    }];
+
+//    for(id i in genotypes.allKeys){
+//        NSLog(@"@sorted array %@%",i);
+//    }
+
+
+    NSString *key = [sortedKeys objectAtIndexedSubscript:index1];
+    GenotypeEntry *genotypeEntry = [genotypes objectForKey:key];
+    return genotypeEntry;
+}
+
+- (BOOL)isLeaf {
+    return YES ;
+}
+
+
 @end

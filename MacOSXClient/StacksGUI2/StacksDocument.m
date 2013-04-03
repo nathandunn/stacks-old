@@ -23,7 +23,10 @@
 }
 
 - (id)childAtIndex:(NSUInteger) index {
-    NSString *key = [self.locusViews.allKeys objectAtIndex:index];
+    NSArray *sortedKeys = [self.locusViews.allKeys sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
+        return [obj1 integerValue] - [obj2 integerValue];
+    }];
+    NSString *key = [sortedKeys objectAtIndexedSubscript:index];
     return [self.locusViews objectForKey:key];
 //    return nil;
 }

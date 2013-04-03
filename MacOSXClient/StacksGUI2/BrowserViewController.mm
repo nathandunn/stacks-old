@@ -37,7 +37,7 @@
 }
 
 - (NSInteger)browser:(NSBrowser *)browser numberOfChildrenOfItem:(id)item {
-    NSLog(@"number of children for class name %@", [item className]);
+//    NSLog(@"number of children for class name %@", [item className]);
     NSString *className = [item className];
     if([className isEqualToString:@"StacksDocument"]){
         return ((StacksDocument *) item).childCount;
@@ -45,23 +45,23 @@
     else
     if([className isEqualToString:@"LocusView"]){
         LocusView* locusView = (LocusView*) item;
-        NSUInteger genotypeCount = locusView.genotypes.count;
-        NSLog(@"count return %ld",genotypeCount);
+        NSUInteger genotypeCount = locusView.childCount;
+//        NSLog(@"count return %ld",genotypeCount);
         
         
         return genotypeCount;
     }
     else{
-        NSLog(@"returing 0 cause I don't know the class %@",className);
+//        NSLog(@"returing 0 cause I don't know the class %@",className);
         return 0 ;
     }
 }
 
 - (id)browser:(NSBrowser *)browser child:(NSInteger)index ofItem:(id)item {
-    NSLog(@"getting child %ld %@",index,item);
+//    NSLog(@"getting child %ld %@",index,item);
 //    FileSystemNode *node = (FileSystemNode *)item;
 //    return [node.children objectAtIndex:index];
-    NSLog(@"class name %@", [item className]);
+//    NSLog(@"class name %@", [item className]);
     NSString *className = [item className];
     if([className isEqualToString:@"StacksDocument"]){
         return [((StacksDocument *) item) childAtIndex:index];
@@ -69,11 +69,8 @@
     else
     if([className isEqualToString:@"LocusView"]){
         // get genoyptes
-        LocusView *locusView = (LocusView*) item;
+        return [((LocusView*) item) childAtIndex:index];
 
-        NSString *key = [[locusView.genotypes allKeys] objectAtIndex:index+1];
-        GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
-        return genotypeEntry;
     }
     // Not sure what would happen here
 //    else
@@ -89,7 +86,7 @@
 }
 
 - (BOOL)browser:(NSBrowser *)browser isLeafItem:(id)item {
-    NSLog(@"leaf class name %@", [item className]);
+//    NSLog(@"leaf class name %@", [item className]);
     NSString *className = [item className];
     if([className isEqualToString:@"StacksDocument"]){
 //        return [((StacksDocument *) item) isLeaf];
@@ -109,8 +106,8 @@
 }
 
 - (id)browser:(NSBrowser *)browser objectValueForItem:(id)item {
-    NSLog(@"object for value%@",item);
-    NSLog(@"objectValue for item %@", [item className]);
+//    NSLog(@"object for value%@",item);
+//    NSLog(@"objectValue for item %@", [item className]);
     NSString *className = [item className];
     if([className isEqualToString:@"StacksDocument"]){
         StacksDocument *doc = ((StacksDocument *) item);
