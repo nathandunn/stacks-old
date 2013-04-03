@@ -12,6 +12,7 @@
 #import "LocusView.h"
 #import "GenotypeView.h"
 #import "GenotypeEntry.h"
+#import "LocusBrowserCell.h"
 
 @interface BrowserViewController()
 
@@ -133,9 +134,42 @@
 //    return node.displayName;
 }
 
+- (void)browser:(NSBrowser *)browser willDisplayCell:(LocusBrowserCell *)cell atRow:(NSUInteger)row column:(NSUInteger)column {
+    // Find the item and set the image.
+//    NSLog(@"display column %ld",column);
+//    NSLog(@"disaply row %ld",row);
+
+//    NSIndexPath *indexPath = [browser indexPathForColumn:column];
+//    indexPath = [indexPath indexPathByAddingIndex:row];
+//
+//
+    NSString *className = [cell className];
+    NSLog(@"class name %@",className);
+   
+    NSLog(@"cell class %@",[[self.browser cell]className]);
+
+//    LocusBrowserCell *locusBrowserCell = cell;
+//    NSString* testString = @"diggity";
+//    NSLog(@"locusID is null %@",cell.locusId );
+
+//    locusBrowserCell.locusId.stringValue = testString;
+    
+//    locusBrowserCell.locusId.stringValue = @"locusId" ;
+//    locusBrowserCell.propertyField.stringValue= @"prop" ;
+//    locusBrowserCell.consensusField.stringValue= @"cons" ;
+
+//
+//    id node = [browser itemAtIndexPath:indexPath];
+//    NSString *idClassName = [node className];
+//    NSLog(@"id class name %@",className);
+
+}
+
 
 - (void)awakeFromNib {
+    NSLog(@"awaking from bin");
 
+    [self.browser setCellClass:[LocusBrowserCell class]];
 //    [self.browser setDelegate:self];
 }
 
