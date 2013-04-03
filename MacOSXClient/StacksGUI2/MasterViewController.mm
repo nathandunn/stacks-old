@@ -16,6 +16,7 @@
 #import "LocusCell.h"
 #import "stacks.h"
 #import "SnpView.h"
+#import "GenotypeCell.h"
 //#import "stacks.h"
 
 
@@ -259,7 +260,7 @@
 
 }
 
-- (NSTableCellView *)handleGenotypesTable:(NSString *)column row:(NSInteger)row cell:(NSTableCellView *)cellView {
+- (NSTableCellView *)handleGenotypesTable:(NSString *)column row:(NSInteger)row cell:(GenotypeCell*)cellView {
 //    NSLog(@"handling the genotypes table %@",column);
     if (self.stacksDocument != nil) {
 
@@ -282,7 +283,24 @@
             }];
             NSString *key = [sortedKeys objectAtIndex:progenyIndex-1];
             GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
-            cellView.textField.stringValue = [NSString stringWithFormat:@"%@  %@", genotypeEntry.name, [genotypeEntry render]];
+//            cellView.textField.stringValue = [NSString stringWithFormat:@"%@  %@", genotypeEntry.name, [genotypeEntry render]];
+
+            NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:genotypeEntry.name];
+
+
+            NSMutableAttributedString *haplotypes = [[NSMutableAttributedString alloc] initWithString:@""];
+
+            [haplotypes beginEditing];
+
+            for(NSString *haplotype in genotypeEntry.haplotypes){
+                NSMutableAttributedString *hapString = [[NSMutableAttributedString alloc] initWithString:haplotype];
+               [haplotypes appendAttributedString:hapString];
+            }
+
+            [haplotypes endEditing];
+
+            cellView.textField.attributedStringValue = string ;
+//            cellView.haplotypes.attributedStringValue = haplotypes;
         }
         else {
             cellView.textField.stringValue = @"";

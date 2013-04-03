@@ -37,6 +37,7 @@
 		6BEFE6C816F121DE00F932B0 /* StacksTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BEFE6C716F121DE00F932B0 /* StacksTests.m */; };
 		D793C6B078CD3756AADE640E /* DataStubber.mm in Sources */ = {isa = PBXBuildFile; fileRef = D793C265DCCA050C662CEE0D /* DataStubber.mm */; };
 		D793C729B49D4B6893BECCEC /* StackEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C4B6BE94FC937EC7DE1C /* StackEntry.m */; };
+		D793CB21D1B842FF28CED13C /* GenotypeCell.m in Sources */ = {isa = PBXBuildFile; fileRef = D793CB5759B88408491206AC /* GenotypeCell.m */; };
 		D793CC59D715A7C58E1706B1 /* GenotypeEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C92D0B7B008BE6F0B53A /* GenotypeEntry.m */; };
 		D793CCC30AA9AF345061AC72 /* StacksLoader.mm in Sources */ = {isa = PBXBuildFile; fileRef = D793C114FCF6912D8351BD0A /* StacksLoader.mm */; };
 /* End PBXBuildFile section */
@@ -127,7 +128,9 @@
 		D793C4B6BE94FC937EC7DE1C /* StackEntry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntry.m; sourceTree = "<group>"; };
 		D793C5F1F981DA716A03D5F6 /* StackEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackEntry.h; sourceTree = "<group>"; };
 		D793C629FFC307E2C8B3A9BD /* StacksLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksLoader.h; sourceTree = "<group>"; };
+		D793C83E5ACD57B082C3EAAF /* GenotypeCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeCell.h; sourceTree = "<group>"; };
 		D793C92D0B7B008BE6F0B53A /* GenotypeEntry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenotypeEntry.m; sourceTree = "<group>"; };
+		D793CB5759B88408491206AC /* GenotypeCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenotypeCell.m; sourceTree = "<group>"; };
 		D793CD806CC4024FF02F6545 /* DataStubber.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DataStubber.h; sourceTree = "<group>"; };
 		D793CE4ACEF1D46868E63075 /* GenotypeEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeEntry.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -260,6 +263,8 @@
 		14B4DDB316C97D4800317EB3 /* GUI */ = {
 			isa = PBXGroup;
 			children = (
+				D793CB5759B88408491206AC /* GenotypeCell.m */,
+				D793C83E5ACD57B082C3EAAF /* GenotypeCell.h */,
 				14B4DD5516C97A7600317EB3 /* MainMenu.xib */,
 				14B4DD5216C97A7500317EB3 /* AppDelegate.h */,
 				14B4DD5316C97A7500317EB3 /* AppDelegate.mm */,
@@ -458,6 +463,7 @@
 				D793C729B49D4B6893BECCEC /* StackEntry.m in Sources */,
 				63D53B07416CCB32D80053FD /* LocusCell.m in Sources */,
 				63D532AEA7F7111C269694E1 /* SnpView.m in Sources */,
+				D793CB21D1B842FF28CED13C /* GenotypeCell.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
