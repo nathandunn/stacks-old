@@ -7,16 +7,13 @@
       buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
-            buildForTesting = "YES"
             buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
+            buildForTesting = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "14B4DD3C16C97A7500317EB3"
-               BuildableName = "StacksGUI2.app"
-               BlueprintName = "StacksGUI2"
+               BlueprintIdentifier = "6BEFE6BC16F121DE00F932B0"
+               BuildableName = "StacksTests.octest"
+               BlueprintName = "StacksTests"
                ReferencedContainer = "container:StacksGUI2.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -32,22 +29,13 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "14B4DD5C16C97A7600317EB3"
-               BuildableName = "StacksGUI2Tests"
-               BlueprintName = "StacksGUI2Tests"
+               BlueprintIdentifier = "6BEFE6BC16F121DE00F932B0"
+               BuildableName = "StacksTests.octest"
+               BlueprintName = "StacksTests"
                ReferencedContainer = "container:StacksGUI2.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "14B4DD3C16C97A7500317EB3"
-            BuildableName = "StacksGUI2.app"
-            BlueprintName = "StacksGUI2"
-            ReferencedContainer = "container:StacksGUI2.xcodeproj">
-         </BuildableReference>
-      </MacroExpansion>
    </TestAction>
    <LaunchAction
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
@@ -58,15 +46,6 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       allowLocationSimulation = "YES">
-      <BuildableProductRunnable>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "14B4DD3C16C97A7500317EB3"
-            BuildableName = "StacksGUI2.app"
-            BlueprintName = "StacksGUI2"
-            ReferencedContainer = "container:StacksGUI2.xcodeproj">
-         </BuildableReference>
-      </BuildableProductRunnable>
       <AdditionalOptions>
       </AdditionalOptions>
    </LaunchAction>
@@ -76,15 +55,6 @@
       useCustomWorkingDirectory = "NO"
       buildConfiguration = "Release"
       debugDocumentVersioning = "YES">
-      <BuildableProductRunnable>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "14B4DD3C16C97A7500317EB3"
-            BuildableName = "StacksGUI2.app"
-            BlueprintName = "StacksGUI2"
-            ReferencedContainer = "container:StacksGUI2.xcodeproj">
-         </BuildableReference>
-      </BuildableProductRunnable>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

@@ -7,15 +7,18 @@
 //
 
 #import "StacksDocument.h"
-#import "GenomeData.h"
+#import "LocusView.h"
 
 @implementation StacksDocument
 
-- (id)initWithGene:(NSString*)gene letters:(NSString*)letters {
+- (id)initWithLocusView:(NSMutableDictionary*)locusViews {
     if ((self = [super init])) {
-        self.data = [[GenomeData alloc] initWithGene:gene letters:letters];
+        self.locusViews = locusViews;
     }
-    return self ; 
+    return self ;
 }
 
+@synthesize locusViews;
+
 @end
+
