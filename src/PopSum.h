@@ -56,6 +56,8 @@ public:
     double cfst;      // Corrected Fst (by p-value or Bonferroni p-value).
     double wfst;      // Weigted Fst (kernel-smoothed)
     double wfst_pval; // p-value of weighted Fst from bootstrapping.
+    double amova_fst; // AMOVA Fst method, from Weir, Genetic Data Analysis II .
+    double jakob_fst; // Jakobsson, Edge, Rosenberg (2013), Fst based on equation 4.
     int    snp_cnt;   // Number of SNPs in kernel-smoothed window centered on this SNP.
 
     PopPair() { 
@@ -72,6 +74,8 @@ public:
 	ci_low    = 0.0;
 	ci_high   = 0.0;
 	wfst_pval = 0.0;
+	amova_fst = 0.0;
+	jakob_fst = 0.0;
 	snp_cnt   = 0;
     }
 };
@@ -619,6 +623,33 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
     // 	 << "    N1: " << n_1 << "; N1 choose 2: " << bcoeff_1 << "\n"
     // 	 << "    N2: " << n_2 << "; N2 choose 2: " << bcoeff_2 << "\n"
     // 	 << "  Fst: " << Fst << "\n";
+
+    //
+    // Calculate Fst (corrected for different samples sizes) using an AMOVA based method. 
+    // Derived from Weir, _Genetic Data Analysis II_, chapter 5, "F Statistics."
+    //
+    double p_avg_unc = p_1 + p_2 / 2;
+    double p_avg_cor = 
+	( (s_1->nucs[pos].num_indv * p_1) + (s_2->nucs[pos].num_indv * p_2) ) / 
+	( (s_1->nucs[pos].num_indv + s_2->nucs[pos].num_indv) / 2 );
+
+    pair->amova_fst =
+	((s_1->nucs[pos].num_indv * pow((p_1 - p_avg_unc), 2) + 
+	  s_2->nucs[pos].num_indv * pow((p_2 - p_avg_unc), 2)) / 
+	 (s_1->nucs[pos].num_indv + s_2->nucs[pos].num_indv) ) 
+	/ ( (p_avg_cor * (1 - p_avg_cor)) / 2 );
+
+    //
+    // Calculate Fst using a pure parametric method (assumes allele counts are real, not 
+    // samples). Jakobsson, Edge, and Rosenberg. "The Relationship Between Fst and the 
+    // Frequency of the Most Frequent Allele." Genetics 193:515-528. Equation 4.
+    //
+    double sigma_1 = p_1 + q_1;
+    double sigma_2 = p_2 + q_2;
+    double delta_1 = abs(p_1 - p_2);
+    double delta_2 = abs(q_1 - q_2);
+
+    pair->jakob_fst = (pow(delta_1, 2) + pow(delta_2, 2)) / ( 4 - (pow(sigma_1, 2) + pow(sigma_2, 2)) );
 
     return pair;
 }

@@ -589,9 +589,9 @@ denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches
     i: starting sample_id, this is determined automatically if database interaction is enabled.
 
   SNP Model Options (these options are passed on to ustacks):
-    --bound_low: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).
-    --bound_high: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).
-    --alpha: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.
+    --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).
+    --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).
+    --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.
 
 EOQ
 

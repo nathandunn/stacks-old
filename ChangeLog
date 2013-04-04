@@ -1,3 +1,9 @@
+Stacks 0.99997 - April 01, 2013
+-------------------------------
+	Bugfix: paired barcode could become uninitialized on second pair of files in 
+	process_radtags/process_shortreads causing all barcodes to mismatch. Made Read 
+	class explicitly initialize everything.
+
 Stacks 0.99996 - March 24, 2013
 -------------------------------
 	Feature: major overhaul of the process_radtags / process_shortreads programs to support
