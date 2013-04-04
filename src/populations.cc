@@ -1401,13 +1401,16 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	       << "LOD"        << "\t"
 	       << "Corrected Fst" << "\t"
 	       << "Smoothed Fst"  << "\t"
-	       << "Smoothed Fst P-value" << "\n";
+	       << "Smoothed Fst P-value" << "\t"
+	       << "AMOVA Fst" << "\t"
+	       << "Jakob Fst" << "\t"
+	       << "Window SNP Count" << "\n";
 
 	    map<string, vector<CSLocus *> >::iterator it;
 	    CSLocus *loc;
 	    PopPair *pair;
 	    int      len;
-	    char     fst_str[32], wfst_str[32], cfst_str[32];
+	    char     fst_str[32], wfst_str[32], cfst_str[32], afst_str[32], jfst_str[32];
 
 	    map<string, vector<PopPair *> > genome_pairs;
 	    vector<double> fst_samples;
@@ -1568,6 +1571,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    sprintf(fst_str,  "%0.10f", pairs[i]->fst);
 		    sprintf(cfst_str, "%0.10f", pairs[i]->cfst);
 		    sprintf(wfst_str, "%0.10f", pairs[i]->wfst);
+		    sprintf(afst_str, "%0.10f", pairs[i]->amova_fst);
+		    sprintf(jfst_str, "%0.10f", pairs[i]->jakob_fst);
 
 		    fh << batch_id          << "\t"
 		       << pairs[i]->loc_id  << "\t"
@@ -1586,6 +1591,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		       << cfst_str          << "\t"
 		       << wfst_str          << "\t"
 		       << pairs[i]->wfst_pval << "\t"
+		       << afst_str            << "\t"
+		       << jfst_str            << "\t"
 		       << pairs[i]->snp_cnt   << "\n";
 
 		    delete pairs[i];
