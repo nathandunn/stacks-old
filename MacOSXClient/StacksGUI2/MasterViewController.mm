@@ -190,7 +190,7 @@
 
         if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
             if (row > 2) {
-                cellView.textField.integerValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row - 3] entryId];
+                cellView.textField.integerValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row] entryId];
             }
             else {
                 cellView.textField.stringValue = @"";
@@ -208,7 +208,7 @@
                     cellView.textField.stringValue = @"model";
                     break;
                 default:
-                    cellView.textField.stringValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row - 3] relationship];
+                    cellView.textField.stringValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row] relationship];
             }
         }
         else if ([tableColumn.identifier isEqualToString:@"SequenceIdColumn"]) {
@@ -219,7 +219,7 @@
                     cellView.textField.stringValue = @"";
                     break;
                 default:
-                    cellView.textField.stringValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row - 3] sequenceId];
+                    cellView.textField.stringValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row] sequenceId];
                     cellView.textField.alignment = NSRightTextAlignment;
             }
         }
@@ -244,7 +244,7 @@
                     break;
                 default: {
 
-                    NSString *sequenceString = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row - 3] sequence];
+                    NSString *sequenceString = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row] sequence];
                     cellView.textField.attributedStringValue = [self createSnpsView:sequenceString snps:stacksView.snps];
                     cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
                 }
