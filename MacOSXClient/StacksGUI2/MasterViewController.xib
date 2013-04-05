@@ -1220,32 +1220,12 @@
 							<nil key="NSNextResponder"/>
 							<int key="NSvFlags">274</int>
 							<array class="NSMutableArray" key="NSSubviews">
-								<object class="NSTextField" id="1004311084">
-									<reference key="NSNextResponder" ref="112627233"/>
-									<int key="NSvFlags">268</int>
-									<string key="NSFrame">{{31, 0}, {38, 17}}</string>
-									<reference key="NSSuperview" ref="112627233"/>
-									<reference key="NSNextKeyView" ref="415101558"/>
-									<int key="NSViewLayerContentsRedrawPolicy">2</int>
-									<string key="NSReuseIdentifierKey">_NS:1535</string>
-									<bool key="NSEnabled">YES</bool>
-									<object class="NSTextFieldCell" key="NSCell" id="614559722">
-										<int key="NSCellFlags">68157504</int>
-										<int key="NSCellFlags2">272630784</int>
-										<string key="NSContents">Hapolotypes</string>
-										<reference key="NSSupport" ref="228321220"/>
-										<string key="NSCellIdentifier">_NS:1535</string>
-										<reference key="NSControlView" ref="1004311084"/>
-										<reference key="NSBackgroundColor" ref="558577612"/>
-										<reference key="NSTextColor" ref="932315312"/>
-									</object>
-								</object>
 								<object class="NSTextField" id="231985708">
 									<reference key="NSNextResponder" ref="112627233"/>
 									<int key="NSvFlags">266</int>
 									<string key="NSFrameSize">{100, 17}</string>
 									<reference key="NSSuperview" ref="112627233"/>
-									<reference key="NSNextKeyView" ref="1004311084"/>
+									<reference key="NSNextKeyView"/>
 									<int key="NSViewLayerContentsRedrawPolicy">2</int>
 									<string key="NSAntiCompressionPriority">{250, 750}</string>
 									<bool key="NSEnabled">YES</bool>
@@ -1267,14 +1247,6 @@
 						<reference key="destination" ref="231985708"/>
 					</object>
 					<int key="connectionID">532</int>
-				</object>
-				<object class="IBConnectionRecord">
-					<object class="IBOutletConnection" key="connection">
-						<string key="label">haplotypes</string>
-						<reference key="source" ref="112627233"/>
-						<reference key="destination" ref="1004311084"/>
-					</object>
-					<int key="connectionID">619</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBOutletConnection" key="connection">
@@ -2393,7 +2365,6 @@
 						<reference key="object" ref="112627233"/>
 						<array class="NSMutableArray" key="children">
 							<reference ref="231985708"/>
-							<reference ref="1004311084"/>
 						</array>
 						<reference key="parent" ref="646277073"/>
 					</object>
@@ -2531,20 +2502,6 @@
 						<int key="objectID">334</int>
 						<reference key="object" ref="1046472681"/>
 						<reference key="parent" ref="741660665"/>
-					</object>
-					<object class="IBObjectRecord">
-						<int key="objectID">617</int>
-						<reference key="object" ref="1004311084"/>
-						<array class="NSMutableArray" key="children">
-							<reference ref="614559722"/>
-						</array>
-						<reference key="parent" ref="112627233"/>
-						<string key="objectName">Static Text - Hapolotypes</string>
-					</object>
-					<object class="IBObjectRecord">
-						<int key="objectID">618</int>
-						<reference key="object" ref="614559722"/>
-						<reference key="parent" ref="1004311084"/>
 					</object>
 				</array>
 			</object>
@@ -2752,8 +2709,6 @@
 				<string key="611.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="611.userInterfaceItemIdentifier">CloseStacksButton</string>
 				<string key="612.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
-				<string key="617.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
-				<string key="618.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 			</dictionary>
 			<dictionary class="NSMutableDictionary" key="unlocalizedProperties"/>
 			<nil key="activeLocalization"/>
