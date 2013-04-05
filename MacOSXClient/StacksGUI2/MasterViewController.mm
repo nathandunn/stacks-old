@@ -225,12 +225,12 @@
         else if ([tableColumn.identifier isEqualToString:@"SequenceColumn"]) {
             switch (row) {
                 case 0: {
-                    cellView.textField.stringValue = stacksView.reference.sequence;
-
+//                    cellView.textField.stringValue = stacksView.reference.sequence;
+                    cellView.textField.attributedStringValue = [self createReferenceView:stacksView.consensus.sequence.length];
+                    cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
                 }
                     break;
                 case 1: {
-//                    cellView.textField.stringValue = stacksView.consensus.sequence;
                     NSString *consensusString = stacksView.consensus.sequence;
                     cellView.textField.attributedStringValue = [self createSnpsView:consensusString snps:stacksView.snps];
                     cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
@@ -238,6 +238,7 @@
                     break;
                 case 2: {
                     cellView.textField.stringValue = stacksView.model.sequence;
+                    cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
                 }
                     break;
                 default: {
@@ -255,6 +256,15 @@
         }
     }
     return cellView;
+}
+
+- (NSAttributedString *)createReferenceView:(NSUInteger)sequenceSize  {
+    // create a string from 0-9 for sequenceSize
+
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@"123123123"];
+
+
+    return string ;
 }
 
 - (NSAttributedString *)createSnpsView:(NSString *)sequenceString snps:(NSMutableArray *)snps {
