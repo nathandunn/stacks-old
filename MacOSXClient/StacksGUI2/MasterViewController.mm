@@ -406,7 +406,7 @@
         NSLog(@"entry ID: %d",genotypeEntry.sampleId);
 
         NSLog(@"loading %@ tag - %d",genotypeEntry.name, genotypeEntry.tagId);
-        StacksView *stacksView = [_stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId];
+        StacksView *stacksView = [_stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId locus:locusView];
         self.selectedStacks = stacksView;
     }
     else {
