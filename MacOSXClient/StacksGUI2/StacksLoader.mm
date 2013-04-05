@@ -164,7 +164,7 @@ BOOL build_file_list(char const *string1, id param);
 
     stacksView.stackEntries = stackEntries;
     StackEntry *referenceStack = [[StackEntry alloc] init];
-    referenceStack.sequence = @"1203130120321302103210321203";
+//    referenceStack.sequence = @"1203130120321302103210321203";
     referenceStack.entryId = 0;
     stacksView.reference = referenceStack;
 
