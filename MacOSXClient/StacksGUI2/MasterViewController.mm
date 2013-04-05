@@ -27,7 +27,7 @@
 @property(weak) IBOutlet NSTableView *stacksTableView;
 //@property(weak) IBOutlet NSTextField *locusDetail;
 //@property(weak) IBOutlet NSTextField *consensusDetail;
-@property (strong) IBOutlet NSWindow *mainWindow;
+@property(strong) IBOutlet NSWindow *mainWindow;
 
 @end
 
@@ -47,7 +47,7 @@
     self.mainWindow.backgroundColor = [NSColor whiteColor];
 
     self.stacksLoader = [[StacksLoader alloc] init];
-    
+
 }
 
 
@@ -143,10 +143,10 @@
         NSString *key = [sortedKeys objectAtIndexedSubscript:row];
         LocusView *locusView = [self.stacksDocument.locusViews objectForKey:key];
 
-        LocusCell* locusCell = (LocusCell *) cellView;
+        LocusCell *locusCell = (LocusCell *) cellView;
         locusCell.locusId.stringValue = locusView.locusId;
         locusCell.propertyField.stringValue = [NSString stringWithFormat:@"Parents %d Progeny %d \nSNPS %d"
-                ,0,locusView.genotypes.count,locusView.snps.count];
+                , 0, locusView.genotypes.count, locusView.snps.count];
 
 
         // START FANCY
@@ -159,7 +159,7 @@
                 [NSColor grayColor], NSBackgroundColorAttributeName,
                 [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
                 nil];
-        for (SnpView* snpView in locusView.snps) {
+        for (SnpView *snpView in locusView.snps) {
 //            NSLog(@"snp index %d",snpView);
             NSRange selectedRange = NSMakeRange(snpView.column, 1);
             [string setAttributes:attributes range:selectedRange];
@@ -172,7 +172,7 @@
         return cellView;
     }
     else if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
-        return [self handleStacksTable:(NSTableColumn*) tableColumn row:(NSInteger) row cell:(NSTableCellView *) cellView];
+        return [self handleStacksTable:(NSTableColumn *) tableColumn row:(NSInteger) row cell:(NSTableCellView *) cellView];
     }
     else {
         NSLog(@"could not find table %@", [tableView identifier]);
@@ -182,7 +182,7 @@
 
 }
 
-- (NSView *)handleStacksTable:(NSTableColumn *) tableColumn row:(NSInteger)row cell:(NSTableCellView *)cellView {
+- (NSView *)handleStacksTable:(NSTableColumn *)tableColumn row:(NSInteger)row cell:(NSTableCellView *)cellView {
     if (self.selectedStacks != nil) {
         StacksView *stacksView = self.selectedStacks;
 
@@ -224,36 +224,29 @@
         }
         else if ([tableColumn.identifier isEqualToString:@"SequenceColumn"]) {
             switch (row) {
-                case 0:
+                case 0: {
                     cellView.textField.stringValue = stacksView.reference.sequence;
-                    break;
-                case 1:
-                    cellView.textField.stringValue = stacksView.consensus.sequence;
-                    break;
-                case 2:
-                    cellView.textField.stringValue = stacksView.model.sequence;
-                    break;
-                default:
-                    NSString *sequenceString = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row - 3] sequence];
-//                        NSMutableAttributedString *string = [self decorateSnps:sequenceString snps:stacksView.snps];
-                    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:sequenceString];
 
-                    [string beginEditing];
-                    NSNumber *snpIndex;
-                    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                            [NSColor blueColor], NSForegroundColorAttributeName,
-                            [NSColor grayColor], NSBackgroundColorAttributeName,
-                            [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
-                            nil];
-                    for (snpIndex in stacksView.snps) {
-                        NSRange selectedRange = NSMakeRange([snpIndex intValue], 1);
-                        [string setAttributes:attributes range:selectedRange];
-                    }
-                    [string endEditing];
-
-
-                    cellView.textField.attributedStringValue = string;
+                }
+                    break;
+                case 1: {
+//                    cellView.textField.stringValue = stacksView.consensus.sequence;
+                    NSString *consensusString = stacksView.consensus.sequence;
+                    cellView.textField.attributedStringValue = [self createSnpsView:consensusString snps:stacksView.snps];
                     cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
+                }
+                    break;
+                case 2: {
+                    cellView.textField.stringValue = stacksView.model.sequence;
+                }
+                    break;
+                default: {
+
+                    NSString *sequenceString = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row - 3] sequence];
+                    cellView.textField.attributedStringValue = [self createSnpsView:sequenceString snps:stacksView.snps];
+                    cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
+                }
+
             }
         }
         else {
@@ -264,7 +257,25 @@
     return cellView;
 }
 
-- (NSTableCellView *)handleGenotypesTable:(NSString *)column row:(NSInteger)row cell:(GenotypeCell*)cellView {
+- (NSAttributedString *)createSnpsView:(NSString *)sequenceString snps:(NSMutableArray *)snps {
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:sequenceString];
+
+    [string beginEditing];
+    NSNumber *snpIndex;
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+            [NSColor blueColor], NSForegroundColorAttributeName,
+            [NSColor grayColor], NSBackgroundColorAttributeName,
+            [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
+            nil];
+    for (snpIndex in snps) {
+        NSRange selectedRange = NSMakeRange([snpIndex intValue], 1);
+        [string setAttributes:attributes range:selectedRange];
+    }
+    [string endEditing];
+    return string;
+}
+
+- (NSTableCellView *)handleGenotypesTable:(NSString *)column row:(NSInteger)row cell:(GenotypeCell *)cellView {
 //    NSLog(@"handling the genotypes table %@",column);
     if (self.stacksDocument != nil) {
 
@@ -282,10 +293,10 @@
         NSInteger progenyIndex = row * totalColumnCount + columnIndex;
 
         if (progenyCount > progenyIndex) {
-            NSArray *sortedKeys = [[locusView.genotypes allKeys] sortedArrayUsingComparator:^(NSString * obj1,NSString * obj2){
+            NSArray *sortedKeys = [[locusView.genotypes allKeys] sortedArrayUsingComparator:^(NSString *obj1, NSString *obj2) {
                 return [obj1 compare:obj2];
             }];
-            NSString *key = [sortedKeys objectAtIndex:progenyIndex-1];
+            NSString *key = [sortedKeys objectAtIndex:progenyIndex - 1];
             GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
 //            cellView.textField.stringValue = [NSString stringWithFormat:@"%@  %@", genotypeEntry.name, [genotypeEntry render]];
 
@@ -296,14 +307,14 @@
 
             [haplotypes beginEditing];
 
-            for(NSString *haplotype in genotypeEntry.haplotypes){
+            for (NSString *haplotype in genotypeEntry.haplotypes) {
                 NSMutableAttributedString *hapString = [[NSMutableAttributedString alloc] initWithString:haplotype];
-               [haplotypes appendAttributedString:hapString];
+                [haplotypes appendAttributedString:hapString];
             }
 
             [haplotypes endEditing];
 
-            cellView.textField.attributedStringValue = string ;
+            cellView.textField.attributedStringValue = string;
 //            cellView.haplotypes.attributedStringValue = haplotypes;
         }
         else {
@@ -382,7 +393,6 @@
 }
 
 
-
 // TODO: handle genotype selection
 - (void)genotypeSelected:(id)tableView {
     NSInteger rowNumber = [_genotypeTableView clickedRow];
@@ -398,14 +408,14 @@
     NSUInteger totalColumnCount = 10;
 
     int index = rowNumber * totalColumnCount + columnNumber;
-    NSLog(@"loading genotypes %d",locusView.genotypes.count);
+    NSLog(@"loading genotypes %d", locusView.genotypes.count);
 
     if (index + 1 < locusView.genotypes.count) {
-        NSString *key = [[locusView.genotypes allKeys] objectAtIndex:index+1];
+        NSString *key = [[locusView.genotypes allKeys] objectAtIndex:index + 1];
         GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
-        NSLog(@"entry ID: %d",genotypeEntry.sampleId);
+        NSLog(@"entry ID: %d", genotypeEntry.sampleId);
 
-        NSLog(@"loading %@ tag - %d",genotypeEntry.name, genotypeEntry.tagId);
+        NSLog(@"loading %@ tag - %d", genotypeEntry.name, genotypeEntry.tagId);
         StacksView *stacksView = [_stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId locus:locusView];
         self.selectedStacks = stacksView;
     }
