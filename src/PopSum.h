@@ -47,36 +47,40 @@ public:
     double alleles; // Number of alleles sampled at this location.
     double pi;
     double fst;
-    double fet_p;     // Fisher's Exact Test p-value.
-    double fet_or;    // Fisher's exact test odds ratio.
-    double or_se;     // Fisher's exact test odds ratio standard error.
-    double lod;       // base 10 logarithm of odds score.
-    double ci_low;    // Fisher's exact test lower confidence interval.
-    double ci_high;   // Fisher's exact test higher confidence interval.
-    double cfst;      // Corrected Fst (by p-value or Bonferroni p-value).
-    double wfst;      // Weigted Fst (kernel-smoothed)
-    double wfst_pval; // p-value of weighted Fst from bootstrapping.
-    double amova_fst; // AMOVA Fst method, from Weir, Genetic Data Analysis II .
-    double jakob_fst; // Jakobsson, Edge, Rosenberg (2013), Fst based on equation 4.
-    int    snp_cnt;   // Number of SNPs in kernel-smoothed window centered on this SNP.
+    double fet_p;      // Fisher's Exact Test p-value.
+    double fet_or;     // Fisher's exact test odds ratio.
+    double or_se;      // Fisher's exact test odds ratio standard error.
+    double lod;        // base 10 logarithm of odds score.
+    double ci_low;     // Fisher's exact test lower confidence interval.
+    double ci_high;    // Fisher's exact test higher confidence interval.
+    double cfst;       // Corrected Fst (by p-value or Bonferroni p-value).
+    double wfst;       // Weigted Fst (kernel-smoothed)
+    double wfst_pval;  // p-value of weighted Fst from bootstrapping.
+    double amova_fst;  // AMOVA Fst method, from Weir, Genetic Data Analysis II .
+    double wamova_fst; // Kernel-smoothed amova Fst value.
+    double jakob_fst;  // Jakobsson, Edge, Rosenberg (2013), Fst based on equation 4.
+    double wjakob_fst; // Kernel-smoothed Jakobsson Fst value.
+    int    snp_cnt;    // Number of SNPs in kernel-smoothed window centered on this SNP.
 
     PopPair() { 
-	loc_id    = 0;
-	bp        = 0;
-	alleles   = 0.0;
-	pi        = 0.0;
-	fst       = 0.0;
-	cfst      = 0.0;
-	wfst      = 0.0;
-	fet_p     = 0.0;
-	fet_or    = 0.0;
-	lod       = 0.0;
-	ci_low    = 0.0;
-	ci_high   = 0.0;
-	wfst_pval = 0.0;
-	amova_fst = 0.0;
-	jakob_fst = 0.0;
-	snp_cnt   = 0;
+	loc_id     = 0;
+	bp         = 0;
+	alleles    = 0.0;
+	pi         = 0.0;
+	fst        = 0.0;
+	cfst       = 0.0;
+	wfst       = 0.0;
+	fet_p      = 0.0;
+	fet_or     = 0.0;
+	lod        = 0.0;
+	ci_low     = 0.0;
+	ci_high    = 0.0;
+	wfst_pval  = 0.0;
+	amova_fst  = 0.0;
+	wamova_fst = 0.0;
+	jakob_fst  = 0.0;
+	wjakob_fst = 0.0;
+	snp_cnt    = 0;
     }
 };
 
@@ -639,7 +643,7 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
     double p_avg_cor = 
 	( (s_1->nucs[pos].num_indv * p_1_freq) + (s_2->nucs[pos].num_indv * p_2_freq) ) / 
 	( s_1->nucs[pos].num_indv + s_2->nucs[pos].num_indv );
-    double n_avg_cor = (s_1->nucs[pos].num_indv / 2) + (s_2->nucs[pos].num_indv / 2);
+    double n_avg_cor = 2 * ((s_1->nucs[pos].num_indv / 2) + (s_2->nucs[pos].num_indv / 2));
 
     pair->amova_fst =
 	(
