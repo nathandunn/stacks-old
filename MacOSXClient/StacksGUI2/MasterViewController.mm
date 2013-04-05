@@ -157,7 +157,8 @@
         NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blueColor], NSForegroundColorAttributeName,
                 [NSColor grayColor], NSBackgroundColorAttributeName,
-                [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
+//                [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
+                [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
                 nil];
         for (SnpView *snpView in locusView.snps) {
 //            NSLog(@"snp index %d",snpView);
@@ -258,13 +259,72 @@
     return cellView;
 }
 
-- (NSAttributedString *)createReferenceView:(NSUInteger)sequenceSize  {
+- (NSAttributedString *)createReferenceView:(NSUInteger)sequenceSize {
     // create a string from 0-9 for sequenceSize
 
-    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@"123123123"];
+//    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@""];
+
+    NSString *string = [[NSString alloc] init];
+
+    for (NSUInteger i = 0; i < sequenceSize; i++) {
+        string = [string stringByAppendingFormat:@"%ld", i % 10];
+//        [string appendAttributedString:[[NSMutableAttributedString alloc] initWithString:<#(NSString *)str#>];
+//        [string appendAttributedString:[[NSMutableAttributedString alloc] initWithString:<#(NSString *)str#>];
+    }
+
+    NSLog(@"string length %ld vs %ld", string.length, sequenceSize);
+
+    NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:string];
+
+//    assert (attributedString.length == sequenceSize);
+    NSLog(@"string length %ld vs %ld", attributedString.length, sequenceSize);
+
+    NSUInteger nextCount = 10;
+    NSUInteger i = 0;
+    NSUInteger next = 10;
+    bool highlight1 = true;
 
 
-    return string ;
+    [attributedString beginEditing];
+
+    while (i < sequenceSize) {
+        next = i + nextCount;
+        if (next > sequenceSize) {
+            next = sequenceSize ;
+        }
+
+//        NSRange range =
+        NSRange selectedRange = NSMakeRange(i, next - i);
+
+        NSDictionary *attributes;
+        if (highlight1) {
+            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor blueColor], NSForegroundColorAttributeName,
+                    [NSColor grayColor], NSBackgroundColorAttributeName,
+//                    [NSFont boldSystemFontOfSize:14.0], NSFontAttributeName
+                    [NSFont fontWithName:@"Courier" size:14], NSFontAttributeName,
+                    nil];
+            highlight1 = false;
+        }
+        else {
+            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor grayColor], NSForegroundColorAttributeName,
+                    [NSColor blueColor], NSBackgroundColorAttributeName,
+//                    [NSFont boldSystemFontOfSize:14.0], NSFontAttributeName,
+                    [NSFont fontWithName:@"Courier" size:14], NSFontAttributeName,
+                    nil];
+            highlight1 = true;
+
+        }
+        NSLog(@"select range %ld-%ld", i, next);
+        [attributedString setAttributes:attributes range:selectedRange];
+        i += nextCount;
+
+    }
+    [attributedString endEditing];
+
+
+    return attributedString;
 }
 
 - (NSAttributedString *)createSnpsView:(NSString *)sequenceString snps:(NSMutableArray *)snps {
@@ -275,7 +335,8 @@
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
             [NSColor blueColor], NSForegroundColorAttributeName,
             [NSColor grayColor], NSBackgroundColorAttributeName,
-            [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
+//            [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
+            [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
             nil];
     for (snpIndex in snps) {
         NSRange selectedRange = NSMakeRange([snpIndex intValue], 1);
