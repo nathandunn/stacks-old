@@ -625,29 +625,41 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
     // 	 << "  Fst: " << Fst << "\n";
 
     //
-    // Calculate Fst (corrected for different samples sizes) using an AMOVA based method. 
-    // Derived from Weir, _Genetic Data Analysis II_, chapter 5, "F Statistics."
+    // Calculate Fst (corrected for different samples sizes) using an AMOVA method,
+    // correcting for unequal sample sizes.
+    // Derived from Weir, _Genetic Data Analysis II_, chapter 5, "F Statistics,", pp166-167.
     //
-    double p_avg_unc = p_1 + p_2 / 2;
+    double p_1_freq = s_1->nucs[pos].p;
+    double q_1_freq = 1 - p_1_freq;
+    double p_2_freq = 
+	s_1->nucs[pos].p_nuc == s_2->nucs[pos].p_nuc ? 
+	s_2->nucs[pos].p : (1 - s_2->nucs[pos].p);
+    double q_2_freq = 1 - p_2_freq;
+
     double p_avg_cor = 
-	( (s_1->nucs[pos].num_indv * p_1) + (s_2->nucs[pos].num_indv * p_2) ) / 
-	( (s_1->nucs[pos].num_indv + s_2->nucs[pos].num_indv) / 2 );
+	( (s_1->nucs[pos].num_indv * p_1_freq) + (s_2->nucs[pos].num_indv * p_2_freq) ) / 
+	( s_1->nucs[pos].num_indv + s_2->nucs[pos].num_indv );
+    double n_avg_cor = (s_1->nucs[pos].num_indv / 2) + (s_2->nucs[pos].num_indv / 2);
 
     pair->amova_fst =
-	((s_1->nucs[pos].num_indv * pow((p_1 - p_avg_unc), 2) + 
-	  s_2->nucs[pos].num_indv * pow((p_2 - p_avg_unc), 2)) / 
-	 (s_1->nucs[pos].num_indv + s_2->nucs[pos].num_indv) ) 
-	/ ( (p_avg_cor * (1 - p_avg_cor)) / 2 );
+	(
+	 (s_1->nucs[pos].num_indv * pow((p_1_freq - p_avg_cor), 2) + 
+	  s_2->nucs[pos].num_indv * pow((p_2_freq - p_avg_cor), 2))
+	 / 
+	 n_avg_cor 
+	 )
+	/ 
+	(p_avg_cor * (1 - p_avg_cor));
 
     //
     // Calculate Fst using a pure parametric method (assumes allele counts are real, not 
     // samples). Jakobsson, Edge, and Rosenberg. "The Relationship Between Fst and the 
     // Frequency of the Most Frequent Allele." Genetics 193:515-528. Equation 4.
     //
-    double sigma_1 = p_1 + q_1;
-    double sigma_2 = p_2 + q_2;
-    double delta_1 = abs(p_1 - p_2);
-    double delta_2 = abs(q_1 - q_2);
+    double sigma_1 = p_1_freq + q_1_freq;
+    double sigma_2 = p_2_freq + q_2_freq;
+    double delta_1 = fabs(p_1_freq - p_2_freq);
+    double delta_2 = fabs(q_1_freq - q_2_freq);
 
     pair->jakob_fst = (pow(delta_1, 2) + pow(delta_2, 2)) / ( 4 - (pow(sigma_1, 2) + pow(sigma_2, 2)) );
 
