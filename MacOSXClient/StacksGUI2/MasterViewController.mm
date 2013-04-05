@@ -203,12 +203,29 @@
                     break;
                 case 1:
                     cellView.textField.stringValue = @"consensus";
+                    cellView.textField.textColor = [NSColor blackColor];
                     break;
                 case 2:
                     cellView.textField.stringValue = @"model";
+                    cellView.textField.textColor = [NSColor blackColor];
                     break;
                 default:
-                    cellView.textField.stringValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row] relationship];
+                    NSString *relationship =  [(StackEntry *) [stacksView.stackEntries objectAtIndex:row] relationship];
+                    if([relationship isEqual:@"primary"]){
+                    cellView.textField.textColor = [NSColor greenColor];
+                    }
+                    else
+                    if([relationship isEqual:@"secondary"]){
+                        cellView.textField.textColor = [NSColor redColor];
+                    }
+                    else{
+                        cellView.textField.textColor = [NSColor blackColor];
+                    }
+                    cellView.textField.stringValue = relationship ;
+                    break ;
+
+//                    cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
+
             }
         }
         else if ([tableColumn.identifier isEqualToString:@"SequenceIdColumn"]) {
