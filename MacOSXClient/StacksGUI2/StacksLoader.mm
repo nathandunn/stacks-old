@@ -106,12 +106,12 @@ BOOL build_file_list(char const *string1, id param);
 }
 
 
-- (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag {
+- (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
     // TODO: or *|!male|!female_N.tags.tsv
 
-    NSString *absoluteFileName = [NSString stringWithFormat:@"%@/%@.tags.tsv", path,filename];
+    NSString *absoluteFileName = [NSString stringWithFormat:@"%@/%@.tags.tsv", path, filename];
 
     BOOL existsAtPath = [fileManager fileExistsAtPath:absoluteFileName];
     NSLog(@"absolute file name %@ exists %d", absoluteFileName, existsAtPath);
@@ -170,10 +170,12 @@ BOOL build_file_list(char const *string1, id param);
 
     // random snps
     NSMutableArray *snps = [[NSMutableArray alloc] init];
-    [snps addObject:[NSNumber numberWithInt:17]];
-    [snps addObject:[NSNumber numberWithInt:35]];
-    stacksView.snps = snps;
 
+    for (SnpView *snp in locus.snps) {
+        [snps addObject:[NSNumber numberWithInt:snp.column]];
+    }
+
+    stacksView.snps = snps;
 
     return stacksView;
 }
@@ -278,7 +280,7 @@ BOOL build_file_list(char const *string1, id param);
 //        }
         for (; snpsIterator != snps.end(); ++snpsIterator) {
             SnpView *snpView = [[SnpView alloc] init];
-            SNP* snp = (*snpsIterator);
+            SNP *snp = (*snpsIterator);
             snpView.column = snp->col;
             snpView.lratio = snp->lratio;
             snpView.rank1 = snp->rank_1;
@@ -289,7 +291,7 @@ BOOL build_file_list(char const *string1, id param);
             [snpsArray addObject:snpView];
         }
 
-        locusView.snps = snpsArray ;
+        locusView.snps = snpsArray;
 
         [locusViews setObject:locusView forKey:locusView.locusId];
         ++catalogIterator;
@@ -335,8 +337,8 @@ BOOL build_file_list(char const *string1, id param);
 //                map<int, CatMatch *> catalogMap = catMatchLookup[genotypeEntry.sampleId];
 //                NSLog(@"catalog map %d for sampleId %ld",catalogMap.size(),genotypeEntry.sampleId);
 //                CatMatch *catMatch = catalogMap[[locusView.locusId intValue]];
-                genotypeEntry.tagId =d->id;
-                
+                genotypeEntry.tagId = d->id;
+
 //                if(catMatch!=NULL){
 //                    genotypeEntry.tagId = catMatch->tag_id;
 //                }
@@ -385,7 +387,7 @@ BOOL build_file_list(char const *string1, id param);
 
     NSDirectoryEnumerator *dirEnum = [fileManager enumeratorAtPath:path];
     NSString *file;
-    int i = 0 ;
+    int i = 0;
     while (file = [dirEnum nextObject]) {
 
         if ([file hasSuffix:@".tags.tsv"]) {
@@ -393,11 +395,11 @@ BOOL build_file_list(char const *string1, id param);
             NSUInteger length = [file length] - 9;
             NSString *fileName = [file substringToIndex:length];
             files.push_back(make_pair(i, [fileName UTF8String]));
-            ++i ;
+            ++i;
         }
     }
 
-    sort(files.begin(),files.end());
+    sort(files.begin(), files.end());
 
     return files;
 }
