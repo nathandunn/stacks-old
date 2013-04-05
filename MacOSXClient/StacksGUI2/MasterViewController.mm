@@ -183,14 +183,18 @@
 
 }
 
-- (NSView *)handleStacksTable:(NSTableColumn *)tableColumn row:(NSInteger)row cell:(NSTableCellView *)cellView {
+- (NSView *)handleStacksTable:(NSTableColumn *)tableColumn row:(NSUInteger)row cell:(NSTableCellView *)cellView {
     if (self.selectedStacks != nil) {
+
+        // we are staring to populate the 3rd table row.
+        NSUInteger lookupIndex = row - 3;
+
         StacksView *stacksView = self.selectedStacks;
 
 
         if ([tableColumn.identifier isEqualToString:@"IdColumn"]) {
             if (row > 2) {
-                cellView.textField.integerValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row] entryId];
+                cellView.textField.integerValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:lookupIndex] entryId];
             }
             else {
                 cellView.textField.stringValue = @"";
@@ -210,19 +214,18 @@
                     cellView.textField.textColor = [NSColor blackColor];
                     break;
                 default:
-                    NSString *relationship =  [(StackEntry *) [stacksView.stackEntries objectAtIndex:row] relationship];
-                    if([relationship isEqual:@"primary"]){
-                    cellView.textField.textColor = [NSColor greenColor];
+                    NSString *relationship = [(StackEntry *) [stacksView.stackEntries objectAtIndex:lookupIndex] relationship];
+                    if ([relationship isEqual:@"primary"]) {
+                        cellView.textField.textColor = [NSColor greenColor];
                     }
-                    else
-                    if([relationship isEqual:@"secondary"]){
+                    else if ([relationship isEqual:@"secondary"]) {
                         cellView.textField.textColor = [NSColor redColor];
                     }
-                    else{
+                    else {
                         cellView.textField.textColor = [NSColor blackColor];
                     }
-                    cellView.textField.stringValue = relationship ;
-                    break ;
+                    cellView.textField.stringValue = relationship;
+                    break;
 
 //                    cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
 
@@ -236,7 +239,7 @@
                     cellView.textField.stringValue = @"";
                     break;
                 default:
-                    cellView.textField.stringValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row] sequenceId];
+                    cellView.textField.stringValue = [(StackEntry *) [stacksView.stackEntries objectAtIndex:lookupIndex] sequenceId];
                     cellView.textField.alignment = NSRightTextAlignment;
             }
         }
@@ -261,9 +264,21 @@
                     break;
                 default: {
 
-                    NSString *sequenceString = [(StackEntry *) [stacksView.stackEntries objectAtIndex:row] sequence];
+                    StackEntry *stackEntry = [stacksView.stackEntries objectAtIndex:lookupIndex];
+                    NSString *sequenceString = [stackEntry sequence];
                     cellView.textField.attributedStringValue = [self createSnpsView:sequenceString snps:stacksView.snps];
                     cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
+
+                    // TODO:
+                    NSLog(@"block [%@]", stackEntry.block);
+                    if (stackEntry.block != nil && [stackEntry.block isEqualToString:@"1"]) {
+                        [cellView.textField setBackgroundColor:[NSColor lightGrayColor]];
+                        [cellView.textField setDrawsBackground:TRUE];
+                    }
+                    else{
+                        [cellView.textField setDrawsBackground:FALSE];
+                    }
+
                 }
 
             }
@@ -279,22 +294,13 @@
 - (NSAttributedString *)createReferenceView:(NSUInteger)sequenceSize {
     // create a string from 0-9 for sequenceSize
 
-//    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@""];
-
     NSString *string = [[NSString alloc] init];
 
     for (NSUInteger i = 0; i < sequenceSize; i++) {
         string = [string stringByAppendingFormat:@"%ld", i % 10];
-//        [string appendAttributedString:[[NSMutableAttributedString alloc] initWithString:<#(NSString *)str#>];
-//        [string appendAttributedString:[[NSMutableAttributedString alloc] initWithString:<#(NSString *)str#>];
     }
 
-    NSLog(@"string length %ld vs %ld", string.length, sequenceSize);
-
     NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:string];
-
-//    assert (attributedString.length == sequenceSize);
-    NSLog(@"string length %ld vs %ld", attributedString.length, sequenceSize);
 
     NSUInteger nextCount = 10;
     NSUInteger i = 0;
@@ -307,7 +313,7 @@
     while (i < sequenceSize) {
         next = i + nextCount;
         if (next > sequenceSize) {
-            next = sequenceSize ;
+            next = sequenceSize;
         }
 
 //        NSRange range =
@@ -333,7 +339,6 @@
             highlight1 = true;
 
         }
-        NSLog(@"select range %ld-%ld", i, next);
         [attributedString setAttributes:attributes range:selectedRange];
         i += nextCount;
 
