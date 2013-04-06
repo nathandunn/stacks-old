@@ -20,5 +20,7 @@
 //@property (assign) IBOutlet NSWindow *window;
 @property (nonatomic,strong) IBOutlet MasterViewController *masterViewController;
 @property (nonatomic,strong) StacksLoader *loader;
+-(IBAction)openDocument:(id)sender;
 
+- (id)loadApplication;
 @end
