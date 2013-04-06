@@ -21,18 +21,40 @@
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     // Insert code here to initialize your application
     // 1. Create the master view controller
-    self.masterViewController = [[MasterViewController alloc] initWithWindowNibName:@"MasterViewController"];
+
+
     self.loader = [[StacksLoader alloc] init];
 
-
     NSString *examplePath = @"/tmp/stacks_tut/";
-//    StacksDocument *stacksDocument = [self.loader loadLoci:examplePath];
-    StacksDocument *stacksDocument = [self.loader loadLociAndGenotypes:examplePath];
+    [self loadApplication:examplePath];
 
+}
+
+- (id)loadApplication:(NSString*)path{
+    StacksDocument *stacksDocument = [self.loader loadLociAndGenotypes:path];
+    self.masterViewController = [[MasterViewController alloc] initWithWindowNibName:@"MasterViewController"];
     self.masterViewController.stacksDocument = stacksDocument;
-
     [self.masterViewController showWindow:self];
+}
 
+-(IBAction)openDocument:(id)sender{
+    NSLog(@"opening some shit");
+    int result;
+    NSOpenPanel *oPanel = [NSOpenPanel openPanel];
+//    NSArray *fileTypes = [NSArray arrayWithObject:@"td"];
+//    [oPanel setAllowedFileTypes:fileTypes];
+//    [oPanel setDirectoryURL:<#(NSURL *)url#>];
+    [oPanel setAllowsMultipleSelection:NO];
+    [oPanel setCanChooseDirectories:YES];
+    [oPanel setCanChooseFiles:NO];
+
+    result = [oPanel runModal];
+    if (result == NSOKButton) {
+        NSURL *url = [oPanel URL];
+        NSString *pathToOpen = [[url path] stringByAppendingString:@"/"];
+        NSLog(@"trying to poen file: %@",pathToOpen);
+        [self loadApplication:pathToOpen];
+    }
 }
 
 
