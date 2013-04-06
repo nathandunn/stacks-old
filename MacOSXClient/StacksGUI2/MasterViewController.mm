@@ -255,11 +255,13 @@
                     NSString *consensusString = stacksView.consensus.sequence;
                     cellView.textField.attributedStringValue = [self createSnpsView:consensusString snps:stacksView.snps];
                     cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
+                    [cellView.textField setDrawsBackground:FALSE];
                 }
                     break;
                 case 2: {
                     cellView.textField.stringValue = stacksView.model.sequence;
                     cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
+                    [cellView.textField setDrawsBackground:FALSE];
                 }
                     break;
                 default: {
