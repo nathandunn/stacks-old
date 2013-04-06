@@ -25,8 +25,16 @@
 
     self.loader = [[StacksLoader alloc] init];
 
+    NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *examplePath = @"/tmp/stacks_tut/";
-    [self loadApplication:examplePath];
+    BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
+    if(existsAtPath){
+        [self loadApplication:examplePath];
+    }
+    else{
+        NSLog(@"%@ does not exist.",examplePath);
+    }
+
 
 }
 
@@ -38,7 +46,6 @@
 }
 
 -(IBAction)openDocument:(id)sender{
-    NSLog(@"opening some shit");
     int result;
     NSOpenPanel *oPanel = [NSOpenPanel openPanel];
 //    NSArray *fileTypes = [NSArray arrayWithObject:@"td"];
