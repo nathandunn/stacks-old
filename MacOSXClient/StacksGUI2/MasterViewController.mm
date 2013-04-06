@@ -269,8 +269,6 @@
                     cellView.textField.attributedStringValue = [self createSnpsView:sequenceString snps:stacksView.snps];
                     cellView.textField.font = [NSFont fontWithName:@"Courier" size:14];
 
-                    // TODO:
-                    NSLog(@"block [%@]", stackEntry.block);
                     if (stackEntry.block != nil && [stackEntry.block isEqualToString:@"1"]) {
                         [cellView.textField setBackgroundColor:[NSColor lightGrayColor]];
                         [cellView.textField setDrawsBackground:TRUE];
