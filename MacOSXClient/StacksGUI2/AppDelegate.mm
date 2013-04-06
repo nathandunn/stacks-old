@@ -38,7 +38,7 @@
 
 }
 
-- (id)loadApplication:(NSString*)path{
+- (void)loadApplication:(NSString*)path{
     StacksDocument *stacksDocument = [self.loader loadLociAndGenotypes:path];
     self.masterViewController = [[MasterViewController alloc] initWithWindowNibName:@"MasterViewController"];
     self.masterViewController.stacksDocument = stacksDocument;
