@@ -32,4 +32,5 @@
 
 @property (strong) NSMutableArray *selectedGenotypes ;
 
+@property(nonatomic, copy) NSString *previousStacksName;
 @end
