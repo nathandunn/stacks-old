@@ -10,7 +10,7 @@
 
 @interface GenotypeEntry : NSObject
 
-@property NSString *name ;
+@property (strong) NSString *name ;
 @property NSInteger sampleId;
 //@property NSString *type;
 

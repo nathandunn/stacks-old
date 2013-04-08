@@ -32,7 +32,10 @@
 @implementation MasterViewController
 
 @synthesize stacksDocument;
-@synthesize selectedGenotypes ;
+
+
+@synthesize selectedGenotypes = _selectedGenotypes ;
+
 
 // -------------------------------------------------------------------------------
 //	awakeFromNib:
@@ -47,6 +50,11 @@
 
     self.stacksLoader = [[StacksLoader alloc] init];
     self.selectedGenotypes = [[NSMutableArray alloc] init];
+
+    NSMutableArray *test = [[NSMutableArray alloc] init];
+    GenotypeEntry *genotypeEntry = [[GenotypeEntry alloc] init];
+    [test addObject:genotypeEntry];
+//    self.selectedGenotypes = test ;
 
 }
 
@@ -373,16 +381,23 @@
 
 //        [self.genotypeTableView reloadData];
 
-        // convert dictionary to array . . . .
-        if(self.selectedGenotypes!=nil){
-            [self.selectedGenotypes removeAllObjects];
-        }
+//        // convert dictionary to array . . . .
+//        if(self.selectedGenotypes!=nil){
+//            [self.selectedGenotypes removeAllObjects];
+//        }
 
+        NSMutableArray *genotypeEntries = [[NSMutableArray alloc] init];
 
 //        self.selectedGenotypes = [locus.genotypes allValues];
         for(NSString* key in [locus.genotypes allKeys]){
-            [self.selectedGenotypes addObject:[locus.genotypes objectForKey:key]];
+            [genotypeEntries addObject:[locus.genotypes objectForKey:key]];
         }
+
+//        GenotypeEntry *genotypeEntry = [[GenotypeEntry alloc] init];
+//        [test addObject:genotypeEntry];
+//        self.selectedGenotypes = test ;
+//        [self.selectedGenotypes setValue:test];
+        self.selectedGenotypes = genotypeEntries ;
 
 //        NSLog(@"size of selected genotype %ld vs %ld",locus.genotypes.count,self.selectedGenotypes.count);
     }
