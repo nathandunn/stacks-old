@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-@class GenotypeView;
+//@class GenotypeView;
 //@class StacksView;
 @class GenotypeEntry;
 
@@ -28,7 +28,7 @@
 
 @property NSUInteger genotypeCount;
 
-@property (strong) NSMutableArray *genotypesOrder;
+//@property (strong) NSMutableArray *genotypesOrder;
 @property (strong) NSMutableDictionary *genotypes;
 
 //@property (strong) NSMutableArray *progeny;
