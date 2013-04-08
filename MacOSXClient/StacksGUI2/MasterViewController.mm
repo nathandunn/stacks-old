@@ -9,15 +9,12 @@
 #import "MasterViewController.h"
 #import "StacksDocument.h"
 #import "LocusView.h"
-#import "GenotypeEntry.h"
 #import "StacksView.h"
 #import "StacksLoader.h"
 #import "StackEntry.h"
 #import "LocusCell.h"
-#import "stacks.h"
 #import "SnpView.h"
-#import "GenotypeCell.h"
-//#import "stacks.h"
+#import "GenotypeEntry.h"
 
 
 @interface MasterViewController ()
@@ -25,6 +22,7 @@
 @property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSTableView *locusTableView;
 @property(strong) IBOutlet NSWindow *mainWindow;
+@property(strong) StacksLoader *stacksLoader;
 
 @end
 
@@ -40,20 +38,30 @@
     [verticalSplitView setDelegate:self];    // we want a chance to affect the vertical split view coverage
     self.mainWindow.backgroundColor = [NSColor whiteColor];
     self.stacksLoader = [[StacksLoader alloc] init];
+
+    [genotypesController addObserver:self forKeyPath:@"selectionIndexes" options:NSKeyValueObservingOptionNew context:nil];
 }
 
 
 // -------------------------------------------------------------------------------
 //	splitView:effectiveRect:effectiveRect:forDrawnRect:ofDividerAtIndex
 // -------------------------------------------------------------------------------
-- (NSRect)splitView:(NSSplitView *)splitView effectiveRect:(NSRect)proposedEffectiveRect forDrawnRect:(NSRect)drawnRect ofDividerAtIndex:(NSInteger)dividerIndex {
+- (NSRect)splitView:(NSSplitView *)splitView
+      effectiveRect:
+              (NSRect)proposedEffectiveRect
+       forDrawnRect:
+               (NSRect)drawnRect
+   ofDividerAtIndex:
+           (NSInteger)dividerIndex {
     return NSZeroRect;
 }
 
 // -------------------------------------------------------------------------------
 //	splitView:additionalEffectiveRectOfDividerAtIndex:dividerIndex:
 // -------------------------------------------------------------------------------
-- (NSRect)splitView:(NSSplitView *)splitView additionalEffectiveRectOfDividerAtIndex:(NSInteger)dividerIndex {
+- (NSRect)                    splitView:(NSSplitView *)splitView
+additionalEffectiveRectOfDividerAtIndex:
+        (NSInteger)dividerIndex {
     // we have a divider handle next to one of the split views in the window
     if (splitView == verticalSplitView)
         return [dividerHandleView convertRect:[dividerHandleView bounds] toView:splitView];
@@ -65,7 +73,11 @@
 // -------------------------------------------------------------------------------
 //	constrainMinCoordinate:proposedCoordinate:index
 // -------------------------------------------------------------------------------
-- (CGFloat)splitView:(NSSplitView *)splitView constrainMinCoordinate:(CGFloat)proposedCoordinate ofSubviewAt:(NSInteger)index {
+- (CGFloat)  splitView:(NSSplitView *)splitView
+constrainMinCoordinate:
+        (CGFloat)proposedCoordinate
+           ofSubviewAt:
+                   (NSInteger)index {
     CGFloat constrainedCoordinate = proposedCoordinate;
     if (splitView == verticalSplitView) {
         // the primary vertical split view is asking for a constrained size
@@ -94,7 +106,11 @@
 
 }
 
-- (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
+- (NSView *)tableView:(NSTableView *)tableView
+   viewForTableColumn:
+           (NSTableColumn *)tableColumn
+                  row:
+                          (NSInteger)row {
 
     // Get a new ViewCell
     NSTableCellView *cellView = [tableView makeViewWithIdentifier:tableColumn.identifier owner:self];
@@ -145,7 +161,11 @@
 
 }
 
-- (NSView *)handleStacksTable:(NSTableColumn *)tableColumn row:(NSInteger)row cell:(NSTableCellView *)cellView {
+- (NSView *)handleStacksTable:(NSTableColumn *)tableColumn
+                          row:
+                                  (NSInteger)row
+                         cell:
+                                 (NSTableCellView *)cellView {
     if (self.selectedStacks != nil) {
         StacksView *stacksView = self.selectedStacks;
 
@@ -227,7 +247,9 @@
     return string;
 }
 
-- (NSAttributedString *)createSnpsView:(NSString *)sequenceString snps:(NSMutableArray *)snps {
+- (NSAttributedString *)createSnpsView:(NSString *)sequenceString
+                                  snps:
+                                          (NSMutableArray *)snps {
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:sequenceString];
 
     [string beginEditing];
@@ -299,6 +321,71 @@
 // http://genome.uoregon.edu/stacks/tag.php?db=tut_radtags&batch_id=1&sample_id=28&tag_id=277
 - (void)showTagsTable:(StacksView *)view {
     [self.stacksTableView reloadData];
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath
+                      ofObject:(id)object
+                        change:(NSDictionary *)change
+                       context:(void *)context {
+    if ([keyPath isEqualTo:@"selectionIndexes"]) {
+        if ([[genotypesController selectedObjects] count] > 0) {
+            if ([[genotypesController selectedObjects] count] == 1) {
+                GenotypeEntry *genotypeEntry = (GenotypeEntry *) [[genotypesController selectedObjects] objectAtIndex:0];
+                NSLog(@"selected genotype %@ and tagID %ld", genotypeEntry.name,genotypeEntry.tagId);
+                LocusView *locusView = self.selectedLocusView;
+
+                NSLog(@"locusView: %@",locusView.locusId);
+
+                StacksView *stacksView = [self.stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId locus:locusView];
+                self.selectedStacks = stacksView;
+                NSLog(@"stacks view %@",stacksView);
+
+//                [self showTagsTable:self.selectedStacks];
+            }
+        }
+        else {
+            self.selectedStacks = nil ;
+            NSLog(@"none selected");
+        }
+        [self showTagsTable:self.selectedStacks];
+        [self.stacksTableView reloadData];
+    }
+}
+
+// TODO: handle genotype selection
+- (IBAction)genotypeSelected:(id)sender {
+
+    NSLog(@"ouch!");
+
+//    NSInteger rowNumber = [_genotypeTableView clickedRow];
+//    NSInteger columnNumber = [_genotypeTableView clickedColumn];
+//    if (rowNumber < 0 || columnNumber < 0) {
+//        NSLog(@"invalid selection");
+//        self.selectedStacks = nil ;
+//        return;
+//    }
+//    // get the array number
+//
+//    LocusView *locusView = self.selectedLocusView;
+//    NSUInteger totalColumnCount = 10;
+//
+//    int index = rowNumber * totalColumnCount + columnNumber;
+//    NSLog(@"loading genotypes %d", locusView.genotypes.count);
+//
+//    if (index + 1 < locusView.genotypes.count) {
+//        NSString *key = [[locusView.genotypes allKeys] objectAtIndex:index + 1];
+//        GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
+//        NSLog(@"entry ID: %d", genotypeEntry.sampleId);
+//
+//        NSLog(@"loading %@ tag - %d", genotypeEntry.name, genotypeEntry.tagId);
+//        StacksView *stacksView = [_stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId locus:locusView];
+//        self.selectedStacks = stacksView;
+//    }
+//    else {
+//        NSLog(@"invalid selection");
+//        self.selectedStacks = nil ;
+//    }
+//    [self showTagsTable:self.selectedStacks];
 }
 
 
