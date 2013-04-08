@@ -18,6 +18,8 @@
     IBOutlet NSSplitView *horizontalSplitView ;
     IBOutlet NSView *dividerHandleView;
 
+    IBOutlet NSArrayController *genotypesController ;
+
 }
 
 //@property (strong) NSMutableDictionary *stacksDocuments;
@@ -25,5 +27,8 @@
 @property (atomic,strong) LocusView* selectedLocusView;
 @property(atomic, strong) StacksView *selectedStacks;
 @property(atomic, strong) StacksLoader *stacksLoader;
+
+
+@property (strong) NSMutableArray *selectedGenotypes ;
 
 @end
