@@ -8,13 +8,14 @@
 
 #import <Foundation/Foundation.h>
 
-@class GenomeData;
+@class LocusView;
 
 @interface StacksDocument : NSObject
 
-@property (strong) GenomeData *data;
 
-- (id)initWithGene:(NSString*)gene letters:(NSString*)letters ;
+@property (strong) NSMutableDictionary *locusViews;
+
+- (id)initWithLocusView:(NSMutableDictionary*)locusViews;
 
 
 @end
