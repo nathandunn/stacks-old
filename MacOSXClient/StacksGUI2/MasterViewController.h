@@ -27,6 +27,8 @@
 @property (atomic,strong) LocusView* selectedLocusView;
 @property(atomic, strong) StacksView *selectedStacks;
 @property(atomic, strong) StacksLoader *stacksLoader;
+@property(weak) IBOutlet NSTableView *locusTableView;
+
 
 
 @property (strong) NSMutableArray *selectedGenotypes ;

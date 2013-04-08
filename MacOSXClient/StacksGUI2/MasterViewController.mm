@@ -22,7 +22,6 @@
 
 @interface MasterViewController ()
 
-@property(weak) IBOutlet NSTableView *locusTableView;
 @property(weak) IBOutlet NSTableView *genotypeTableView;
 @property(weak) IBOutlet NSTableView *stacksTableView;
 //@property(weak) IBOutlet NSTextField *locusDetail;
@@ -134,7 +133,6 @@
     NSTableCellView *cellView = [tableView makeViewWithIdentifier:tableColumn.identifier owner:self];
 
     if ([[tableView identifier] isEqualToString:@"GenotypeTableView"]) {
-//        NSLog(@"is a genotype table with column identifier %@",[tableColumn identifier]);
         return [self handleGenotypesTable:(NSString *) tableColumn.identifier row:(NSInteger) row cell:(NSTableCellView *) cellView];
     }
     else if ([[tableView identifier] isEqualToString:@"LocusTable"]) {
@@ -162,7 +160,6 @@
                 [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
                 nil];
         for (SnpView *snpView in locusView.snps) {
-//            NSLog(@"snp index %d",snpView);
             NSRange selectedRange = NSMakeRange(snpView.column, 1);
             [string setAttributes:attributes range:selectedRange];
         }
@@ -288,7 +285,6 @@
 }
 
 - (NSTableCellView *)handleGenotypesTable:(NSString *)column row:(NSInteger)row cell:(GenotypeCell *)cellView {
-//    NSLog(@"handling the genotypes table %@",column);
     if (self.stacksDocument != nil) {
 
         LocusView *locusView = self.selectedLocusView;
@@ -342,20 +338,15 @@
 
 - (LocusView *)findSelectedLocus {
     NSInteger selectedRow = [self.locusTableView selectedRow];
-    NSLog(@"selected row is %ld for %@",selectedRow,self.locusTableView);
     NSArray *sortedKeys = [[self.stacksDocument.locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
         return [obj1 integerValue] - [obj2 integerValue];
     }];
     NSString *key = [sortedKeys objectAtIndexedSubscript:selectedRow];
     LocusView *locusView = [self.stacksDocument.locusViews objectForKey:key];
-    NSLog(@"getting selected locus %@ for key %@ and row %ld",locusView.locusId,key,selectedRow);
     return locusView;
 }
 
 - (void)handleSelectedLocus:(LocusView *)locus {
-
-    NSLog(@"selected locus: %@",locus.locusId);
-    NSLog(@"selected locus genotypes: %ld",locus.genotypes.count);
 
     if (locus != nil) {
         NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locus.consensus];
