@@ -17,6 +17,9 @@
 //@synthesize subScript;
 
 
+@synthesize name ;
+
+
 - (NSString *)render {
     NSString *renderString = @"";
     for(int i = 0 ; i < _haplotypes.count ; i++){

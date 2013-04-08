@@ -25,8 +25,6 @@
 @property(weak) IBOutlet NSTableView *filesTableView;
 @property(weak) IBOutlet NSTableView *genotypeTableView;
 @property(weak) IBOutlet NSTableView *stacksTableView;
-//@property(weak) IBOutlet NSTextField *locusDetail;
-//@property(weak) IBOutlet NSTextField *consensusDetail;
 @property(strong) IBOutlet NSWindow *mainWindow;
 
 @end
@@ -34,6 +32,7 @@
 @implementation MasterViewController
 
 @synthesize stacksDocument;
+@synthesize selectedGenotypes ;
 
 // -------------------------------------------------------------------------------
 //	awakeFromNib:
@@ -47,6 +46,7 @@
     self.mainWindow.backgroundColor = [NSColor whiteColor];
 
     self.stacksLoader = [[StacksLoader alloc] init];
+    self.selectedGenotypes = [[NSMutableArray alloc] init];
 
 }
 
@@ -125,7 +125,7 @@
 
 }
 
-- (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
+- (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSUInteger)row {
 
 
     // Get a new ViewCell
@@ -145,7 +145,7 @@
 
         LocusCell *locusCell = (LocusCell *) cellView;
         locusCell.locusId.stringValue = locusView.locusId;
-        locusCell.propertyField.stringValue = [NSString stringWithFormat:@"Parents %d Progeny %d \nSNPS %d"
+        locusCell.propertyField.stringValue = [NSString stringWithFormat:@"Parents %d Progeny %ld \nSNPS %ld"
                 , 0, locusView.genotypes.count, locusView.snps.count];
 
 
@@ -371,17 +371,30 @@
 //        [self.locusDetail setStringValue:locus.locusId];
 //        [self.consensusDetail setAttributedStringValue:string];
 
-        [self.genotypeTableView reloadData];
+//        [self.genotypeTableView reloadData];
 
+        // convert dictionary to array . . . .
+        if(self.selectedGenotypes!=nil){
+            [self.selectedGenotypes removeAllObjects];
+        }
+
+
+//        self.selectedGenotypes = [locus.genotypes allValues];
+        for(NSString* key in [locus.genotypes allKeys]){
+            [self.selectedGenotypes addObject:[locus.genotypes objectForKey:key]];
+        }
+
+//        NSLog(@"size of selected genotype %ld vs %ld",locus.genotypes.count,self.selectedGenotypes.count);
     }
     else {
         self.stacksDocument = nil ;
+        self.selectedGenotypes = nil  ;
 //        [self.locusDetail setStringValue:@"Error"];
     }
 
 
     // update the genotypes table
-    [self.genotypeTableView reloadData];
+//    [self.genotypeTableView reloadData];
 
 
 }
