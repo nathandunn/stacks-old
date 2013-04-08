@@ -22,7 +22,7 @@
 
 @interface MasterViewController ()
 
-@property(weak) IBOutlet NSTableView *filesTableView;
+@property(weak) IBOutlet NSTableView *locusTableView;
 @property(weak) IBOutlet NSTableView *genotypeTableView;
 @property(weak) IBOutlet NSTableView *stacksTableView;
 //@property(weak) IBOutlet NSTextField *locusDetail;
@@ -341,12 +341,14 @@
 }
 
 - (LocusView *)findSelectedLocus {
-    NSInteger selectedRow = [self.filesTableView selectedRow];
+    NSInteger selectedRow = [self.locusTableView selectedRow];
+    NSLog(@"selected row is %ld for %@",selectedRow,self.locusTableView);
     NSArray *sortedKeys = [[self.stacksDocument.locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
         return [obj1 integerValue] - [obj2 integerValue];
     }];
     NSString *key = [sortedKeys objectAtIndexedSubscript:selectedRow];
     LocusView *locusView = [self.stacksDocument.locusViews objectForKey:key];
+    NSLog(@"getting selected locus %@ for key %@ and row %ld",locusView.locusId,key,selectedRow);
     return locusView;
 }
 
