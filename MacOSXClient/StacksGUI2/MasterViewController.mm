@@ -34,7 +34,7 @@
 @implementation MasterViewController
 
 @synthesize stacksDocument;
-@synthesize selectedGenotypes  ;
+@synthesize selectedGenotypes;
 
 // -------------------------------------------------------------------------------
 //	awakeFromNib:
@@ -48,7 +48,6 @@
     self.mainWindow.backgroundColor = [NSColor whiteColor];
 
     self.stacksLoader = [[StacksLoader alloc] init];
-
 
 
 }
@@ -261,13 +260,13 @@
     return cellView;
 }
 
-- (NSAttributedString *)createReferenceView:(NSUInteger)sequenceSize  {
+- (NSAttributedString *)createReferenceView:(NSUInteger)sequenceSize {
     // create a string from 0-9 for sequenceSize
 
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@"123123123"];
 
 
-    return string ;
+    return string;
 }
 
 - (NSAttributedString *)createSnpsView:(NSString *)sequenceString snps:(NSMutableArray *)snps {
@@ -353,6 +352,9 @@
 
 - (void)handleSelectedLocus:(LocusView *)locus {
 
+    NSLog(@"selected locus: %@",locus.locusId);
+    NSLog(@"selected locus genotypes: %ld",locus.genotypes.count);
+
     if (locus != nil) {
         NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locus.consensus];
 
@@ -371,19 +373,20 @@
         [string setAttributes:attributes range:selectedRange];
 
         [string endEditing];
-//        [self.locusDetail setStringValue:locus.locusId];
-//        [self.consensusDetail setAttributedStringValue:string];
 
 
-//        NSMutableArray *genotypes = [locus.genotypes allValues];
+        NSMutableArray *genotypes = [[NSMutableArray alloc] init];
+        [genotypes addObjectsFromArray:[locus.genotypes allValues]];
 
-//        GenotypeEntry *genotypeEntry = [[GenotypeEntry alloc] init];
-//        genotypeEntry.name = @"bob";
-//        [genotypes addObject:genotypeEntry];
-         self.selectedGenotypes = [locus.genotypes allValues];
+        NSLog(@"input values: %ld vs %ld", locus.genotypes.count, genotypes.count);
+
+        self.selectedGenotypes = genotypes;
+
+        NSLog(@"input values: %ld vs %ld", locus.genotypes.count, self.selectedGenotypes.count);
+
 //        [self.selectedGenotypes setValue:genotypes];
 
-        NSLog(@"should be setting genotypes %ld",self.selectedGenotypes.count);
+        NSLog(@"should be setting genotypes %ld", self.selectedGenotypes.count);
 
 //        [self.genotypeTableView reloadData];
 

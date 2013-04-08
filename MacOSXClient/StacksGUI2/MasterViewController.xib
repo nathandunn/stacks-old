@@ -663,33 +663,33 @@
 				<reference key="NSNextResponder"/>
 				<int key="NSvFlags">256</int>
 				<array class="NSMutableArray" key="NSSubviews">
-					<object class="NSTextField" id="876626107">
+					<object class="NSTextField" id="145468152">
 						<reference key="NSNextResponder" ref="42991249"/>
 						<int key="NSvFlags">268</int>
-						<string key="NSFrame">{{31, 9}, {38, 17}}</string>
+						<string key="NSFrame">{{11, 36}, {149, 17}}</string>
 						<reference key="NSSuperview" ref="42991249"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
-						<object class="NSTextFieldCell" key="NSCell" id="654142829">
-							<int key="NSCellFlags">68157504</int>
-							<int key="NSCellFlags2">272630784</int>
+						<object class="NSTextFieldCell" key="NSCell" id="699341512">
+							<int key="NSCellFlags">67108864</int>
+							<int key="NSCellFlags2">272630272</int>
 							<string key="NSContents">Label</string>
 							<reference key="NSSupport" ref="228321220"/>
 							<string key="NSCellIdentifier">_NS:1535</string>
-							<reference key="NSControlView" ref="876626107"/>
+							<reference key="NSControlView" ref="145468152"/>
 							<reference key="NSBackgroundColor" ref="558577612"/>
 							<reference key="NSTextColor" ref="932315312"/>
 						</object>
 					</object>
 				</array>
-				<string key="NSFrameSize">{100, 32}</string>
+				<string key="NSFrameSize">{163, 59}</string>
 				<reference key="NSSuperview"/>
 				<reference key="NSWindow"/>
-				<reference key="NSNextKeyView" ref="876626107"/>
+				<reference key="NSNextKeyView" ref="145468152"/>
 			</object>
-			<object class="NSArrayController" id="170714152">
+			<object class="NSArrayController" id="754298939">
 				<array class="NSMutableArray" key="NSDeclaredKeys">
 					<string>name</string>
 				</array>
@@ -702,7 +702,7 @@
 				<bool key="NSFilterRestrictsInsertion">YES</bool>
 				<bool key="NSClearsFilterPredicateOnInsertion">YES</bool>
 			</object>
-			<object class="NSUserDefaultsController" id="370137261">
+			<object class="NSUserDefaultsController" id="353585579">
 				<bool key="NSSharedInstance">YES</bool>
 			</object>
 		</array>
@@ -728,7 +728,7 @@
 					<object class="IBOutletConnection" key="connection">
 						<string key="label">genotypesController</string>
 						<reference key="source" ref="1001"/>
-						<reference key="destination" ref="170714152"/>
+						<reference key="destination" ref="754298939"/>
 					</object>
 					<int key="connectionID">727</int>
 				</object>
@@ -1026,10 +1026,10 @@
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">content: arrangedObjects</string>
 						<reference key="source" ref="704246430"/>
-						<reference key="destination" ref="170714152"/>
-						<object class="NSNibBindingConnector" key="connector" id="314950069">
+						<reference key="destination" ref="754298939"/>
+						<object class="NSNibBindingConnector" key="connector" id="285748243">
 							<reference key="NSSource" ref="704246430"/>
-							<reference key="NSDestination" ref="170714152"/>
+							<reference key="NSDestination" ref="754298939"/>
 							<string key="NSLabel">content: arrangedObjects</string>
 							<string key="NSBinding">content</string>
 							<string key="NSKeyPath">arrangedObjects</string>
@@ -1042,14 +1042,14 @@
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">selectionIndexes: selectionIndexes</string>
 						<reference key="source" ref="704246430"/>
-						<reference key="destination" ref="170714152"/>
+						<reference key="destination" ref="754298939"/>
 						<object class="NSNibBindingConnector" key="connector">
 							<reference key="NSSource" ref="704246430"/>
-							<reference key="NSDestination" ref="170714152"/>
+							<reference key="NSDestination" ref="754298939"/>
 							<string key="NSLabel">selectionIndexes: selectionIndexes</string>
 							<string key="NSBinding">selectionIndexes</string>
 							<string key="NSKeyPath">selectionIndexes</string>
-							<reference key="NSPreviousConnector" ref="314950069"/>
+							<reference key="NSPreviousConnector" ref="285748243"/>
 							<int key="NSNibBindingConnectorVersion">2</int>
 						</object>
 					</object>
@@ -1066,10 +1066,10 @@
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">contentArray: selectedGenotypes</string>
-						<reference key="source" ref="170714152"/>
+						<reference key="source" ref="754298939"/>
 						<reference key="destination" ref="1001"/>
 						<object class="NSNibBindingConnector" key="connector">
-							<reference key="NSSource" ref="170714152"/>
+							<reference key="NSSource" ref="754298939"/>
 							<reference key="NSDestination" ref="1001"/>
 							<string key="NSLabel">contentArray: selectedGenotypes</string>
 							<string key="NSBinding">contentArray</string>
@@ -1078,6 +1078,22 @@
 						</object>
 					</object>
 					<int key="connectionID">726</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBBindingConnection" key="connection">
+						<string key="label">value: representedObject.name</string>
+						<reference key="source" ref="145468152"/>
+						<reference key="destination" ref="330939775"/>
+						<object class="NSNibBindingConnector" key="connector">
+							<reference key="NSSource" ref="145468152"/>
+							<reference key="NSDestination" ref="330939775"/>
+							<string key="NSLabel">value: representedObject.name</string>
+							<string key="NSBinding">value</string>
+							<string key="NSKeyPath">representedObject.name</string>
+							<int key="NSNibBindingConnectorVersion">2</int>
+						</object>
+					</object>
+					<int key="connectionID">737</int>
 				</object>
 			</array>
 			<object class="IBMutableOrderedSet" key="objectRecords">
@@ -1510,33 +1526,33 @@
 						<int key="objectID">696</int>
 						<reference key="object" ref="42991249"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="876626107"/>
+							<reference ref="145468152"/>
 						</array>
 						<reference key="parent" ref="0"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">699</int>
-						<reference key="object" ref="170714152"/>
+						<reference key="object" ref="754298939"/>
 						<reference key="parent" ref="0"/>
 						<string key="objectName">Genotypes</string>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">701</int>
-						<reference key="object" ref="370137261"/>
+						<reference key="object" ref="353585579"/>
 						<reference key="parent" ref="0"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">710</int>
-						<reference key="object" ref="876626107"/>
+						<reference key="object" ref="145468152"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="654142829"/>
+							<reference ref="699341512"/>
 						</array>
 						<reference key="parent" ref="42991249"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">711</int>
-						<reference key="object" ref="654142829"/>
-						<reference key="parent" ref="876626107"/>
+						<reference key="object" ref="699341512"/>
+						<reference key="parent" ref="145468152"/>
 					</object>
 				</array>
 			</object>
@@ -1652,7 +1668,7 @@
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">733</int>
+			<int key="maxID">737</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">
