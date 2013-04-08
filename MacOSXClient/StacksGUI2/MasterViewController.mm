@@ -34,6 +34,7 @@
 @implementation MasterViewController
 
 @synthesize stacksDocument;
+@synthesize selectedGenotypes  ;
 
 // -------------------------------------------------------------------------------
 //	awakeFromNib:
@@ -47,6 +48,8 @@
     self.mainWindow.backgroundColor = [NSColor whiteColor];
 
     self.stacksLoader = [[StacksLoader alloc] init];
+
+
 
 }
 
@@ -371,7 +374,18 @@
 //        [self.locusDetail setStringValue:locus.locusId];
 //        [self.consensusDetail setAttributedStringValue:string];
 
-        [self.genotypeTableView reloadData];
+
+//        NSMutableArray *genotypes = [locus.genotypes allValues];
+
+//        GenotypeEntry *genotypeEntry = [[GenotypeEntry alloc] init];
+//        genotypeEntry.name = @"bob";
+//        [genotypes addObject:genotypeEntry];
+         self.selectedGenotypes = [locus.genotypes allValues];
+//        [self.selectedGenotypes setValue:genotypes];
+
+        NSLog(@"should be setting genotypes %ld",self.selectedGenotypes.count);
+
+//        [self.genotypeTableView reloadData];
 
     }
     else {
@@ -381,7 +395,7 @@
 
 
     // update the genotypes table
-    [self.genotypeTableView reloadData];
+//    [self.genotypeTableView reloadData];
 
 
 }
