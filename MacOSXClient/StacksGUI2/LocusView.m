@@ -7,9 +7,6 @@
 //
 
 #import "LocusView.h"
-#import "GenotypeView.h"
-#import "StacksView.h"
-#import "GenotypeEntry.h"
 
 @implementation LocusView
 @synthesize depth ;

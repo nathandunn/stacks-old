@@ -7,7 +7,6 @@
 
 
 #include "locus.h"
-//#include "stacks.h"
 #include "sql_utilities.h"
 #include "PopMap.h"
 #import "StacksDocument.h"
@@ -18,16 +17,9 @@
 using std::ifstream;
 using std::ofstream;
 
-//#include "PopSum.h"
-
-//#include <dirent.h>
-//#include <stdlib.h>
-
 
 #import "StackEntry.h"
-#import "GenotypeView.h"
 #import "LocusView.h"
-#import "StacksDocument.h"
 #import "StacksLoader.h"
 #import "StacksView.h"
 #import "DataStubber.h"
