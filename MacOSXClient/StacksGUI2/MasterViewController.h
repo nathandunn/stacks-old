@@ -19,7 +19,8 @@
     IBOutlet NSView *dividerHandleView;
    
     // array of genotypes for cellction view 
-    NSMutableArray *selectedGenotypes ;
+//    NSMutableArray *selectedGenotypes ;
+    IBOutlet NSArrayController *arrayController ;
 
 
 }
@@ -30,6 +31,7 @@
 @property(atomic, strong) StacksView *selectedStacks;
 @property(atomic, strong) StacksLoader *stacksLoader;
 
-@property(retain) NSMutableArray *selectedGenotypes;
+
+@property(atomic,strong) NSMutableArray *selectedGenotypes;
 
 @end
