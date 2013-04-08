@@ -17,6 +17,10 @@
     IBOutlet NSSplitView *verticalSplitView ;
     IBOutlet NSSplitView *horizontalSplitView ;
     IBOutlet NSView *dividerHandleView;
+   
+    // array of genotypes for cellction view 
+    NSMutableArray *selectedGenotypes ;
+
 
 }
 
@@ -25,5 +29,7 @@
 @property (atomic,strong) LocusView* selectedLocusView;
 @property(atomic, strong) StacksView *selectedStacks;
 @property(atomic, strong) StacksLoader *stacksLoader;
+
+@property(retain) NSMutableArray *selectedGenotypes;
 
 @end
