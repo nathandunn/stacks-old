@@ -24,6 +24,7 @@
 
 @property(weak) IBOutlet NSTableView *genotypeTableView;
 @property(weak) IBOutlet NSTableView *stacksTableView;
+@property(weak) IBOutlet NSTableView *locusTableView;
 //@property(weak) IBOutlet NSTextField *locusDetail;
 //@property(weak) IBOutlet NSTextField *consensusDetail;
 @property(strong) IBOutlet NSWindow *mainWindow;
