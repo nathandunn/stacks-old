@@ -331,14 +331,21 @@ constrainMinCoordinate:
         if ([[genotypesController selectedObjects] count] > 0) {
             if ([[genotypesController selectedObjects] count] == 1) {
                 GenotypeEntry *genotypeEntry = (GenotypeEntry *) [[genotypesController selectedObjects] objectAtIndex:0];
-                NSLog(@"selected genotype %@ and tagID %ld", genotypeEntry.name,genotypeEntry.tagId);
+                
+                if([genotypeEntry.name isEqualToString:self.previousStacksName]) {
+                    return ; 
+                }
+
+                self.previousStacksName = genotypeEntry.name ;
+                
+//                NSLog(@"selected genotype %@ and tagID %ld", genotypeEntry.name,genotypeEntry.tagId);
                 LocusView *locusView = self.selectedLocusView;
 
-                NSLog(@"locusView: %@",locusView.locusId);
-
+//                NSLog(@"locusView: %@",locusView.locusId);
+                // TODO: should use the current path of the
                 StacksView *stacksView = [self.stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId locus:locusView];
                 self.selectedStacks = stacksView;
-                NSLog(@"stacks view %@",stacksView);
+//                NSLog(@"stacks view %@",stacksView);
 
 //                [self showTagsTable:self.selectedStacks];
             }
@@ -352,41 +359,6 @@ constrainMinCoordinate:
     }
 }
 
-// TODO: handle genotype selection
-- (IBAction)genotypeSelected:(id)sender {
-
-    NSLog(@"ouch!");
-
-//    NSInteger rowNumber = [_genotypeTableView clickedRow];
-//    NSInteger columnNumber = [_genotypeTableView clickedColumn];
-//    if (rowNumber < 0 || columnNumber < 0) {
-//        NSLog(@"invalid selection");
-//        self.selectedStacks = nil ;
-//        return;
-//    }
-//    // get the array number
-//
-//    LocusView *locusView = self.selectedLocusView;
-//    NSUInteger totalColumnCount = 10;
-//
-//    int index = rowNumber * totalColumnCount + columnNumber;
-//    NSLog(@"loading genotypes %d", locusView.genotypes.count);
-//
-//    if (index + 1 < locusView.genotypes.count) {
-//        NSString *key = [[locusView.genotypes allKeys] objectAtIndex:index + 1];
-//        GenotypeEntry *genotypeEntry = [locusView.genotypes valueForKey:key];
-//        NSLog(@"entry ID: %d", genotypeEntry.sampleId);
-//
-//        NSLog(@"loading %@ tag - %d", genotypeEntry.name, genotypeEntry.tagId);
-//        StacksView *stacksView = [_stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId locus:locusView];
-//        self.selectedStacks = stacksView;
-//    }
-//    else {
-//        NSLog(@"invalid selection");
-//        self.selectedStacks = nil ;
-//    }
-//    [self showTagsTable:self.selectedStacks];
-}
 
 
 @end
