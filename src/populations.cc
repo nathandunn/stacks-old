@@ -2347,8 +2347,10 @@ kernel_smoothed_fst(vector<PopPair *> &pairs, double *weights, int *snp_dist)
 	    if (c == NULL)
 		continue;
 
-	    weighted_fst = 0.0;
-	    sum          = 0.0;
+	    weighted_fst       = 0.0;
+	    weighted_amova_fst = 0.0;
+	    weighted_jakob_fst = 0.0;
+	    sum                = 0.0;
 
 	    limit_l = c->bp - limit > 0 ? c->bp - limit : 0;
 	    limit_u = c->bp + limit;
