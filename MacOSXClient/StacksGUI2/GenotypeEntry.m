@@ -41,10 +41,64 @@
     return renderString;
 }
 
-- (NSString *)renderHaplotypes{
-    return @"happy haplotypes";
+
+- (NSAttributedString *)renderName{
+    NSString *formattedString = [_name stringByReplacingOccurrencesOfString:@"_" withString:@" "] ;
+    formattedString = [formattedString capitalizedString];
+
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:formattedString];
+
+    return string;
 }
 
+- (NSAttributedString *)renderHaplotypes{
+
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
+
+    for(NSUInteger i = 0 ; i < self.haplotypes.count ; i++){
+        NSString *haplotype = [self.haplotypes objectAtIndex:i];
+        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype];
+        NSRange selectedRange = NSMakeRange(0,haplotype.length);
+        [appendString beginEditing];
+        NSDictionary *attributes ;
+        if(i%2==0){
+            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor greenColor], NSForegroundColorAttributeName,
+                    nil];
+        }
+        else{
+            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor redColor], NSForegroundColorAttributeName,
+                    nil];
+        }
+        [appendString setAttributes:attributes range:selectedRange];
+        [appendString endEditing];
+
+        [string appendAttributedString:appendString];
+        if(i < self.haplotypes.count-1){
+            [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
+        }
+    }
+
+//    for(NSString *haplotype in self.haplotypes){
+//        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype];
+//        [string appendAttributedString:appendString];
+//    }
+
+    return string ;
+}
+
+- (NSAttributedString *)renderDepths{
+
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
+
+    for(NSNumber *depth in self.depths){
+        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@",depth]];
+        [string appendAttributedString:appendString];
+    }
+    NSLog(@"returning depths %ld",self.depths.count);
+    return string ;
+}
 
 @end
 
