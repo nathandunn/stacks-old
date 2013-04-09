@@ -40,5 +40,11 @@
 
     return renderString;
 }
+
+- (NSString *)renderHaplotypes{
+    return @"happy haplotypes";
+}
+
+
 @end
 
