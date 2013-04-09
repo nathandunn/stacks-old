@@ -12,9 +12,19 @@
 
 }
 
-@synthesize tagId;
+//@synthesize tagId;
 //@synthesize superScript;
 //@synthesize subScript;
+
+@synthesize name = _name ;
+
+- (id) init{
+    self = [super init];
+    if(self){
+        _name = @"Test";
+    }
+    return self ;
+}
 
 
 - (NSString *)render {

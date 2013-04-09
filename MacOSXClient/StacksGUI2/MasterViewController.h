@@ -18,12 +18,19 @@
     IBOutlet NSSplitView *horizontalSplitView ;
     IBOutlet NSView *dividerHandleView;
 
+    IBOutlet NSArrayController *genotypesController ;
+
 }
 
-//@property (strong) NSMutableDictionary *stacksDocuments;
+-(IBAction) genotypeSelected:(id) sender ;
+
 @property (atomic,strong) StacksDocument* stacksDocument;
 @property (atomic,strong) LocusView* selectedLocusView;
 @property(atomic, strong) StacksView *selectedStacks;
-@property(atomic, strong) StacksLoader *stacksLoader;
 
+
+
+@property (strong) NSMutableArray *selectedGenotypes ;
+
+@property(nonatomic, copy) NSString *previousStacksName;
 @end
