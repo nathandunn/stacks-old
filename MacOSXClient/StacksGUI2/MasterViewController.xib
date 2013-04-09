@@ -386,7 +386,7 @@
 														</object>
 														<object class="NSTextField" id="491687459">
 															<reference key="NSNextResponder" ref="281571825"/>
-															<int key="NSvFlags">274</int>
+															<int key="NSvFlags">266</int>
 															<string key="NSFrame">{{1, 327}, {1178, 27}}</string>
 															<reference key="NSSuperview" ref="281571825"/>
 															<reference key="NSWindow"/>
@@ -698,7 +698,7 @@
 						<string key="NSFrame">{{11, 28}, {149, 17}}</string>
 						<reference key="NSSuperview" ref="42991249"/>
 						<reference key="NSWindow"/>
-						<reference key="NSNextKeyView" ref="345780428"/>
+						<reference key="NSNextKeyView" ref="453371864"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
 						<object class="NSTextFieldCell" key="NSCell" id="699341512">
@@ -712,7 +712,7 @@
 							<reference key="NSTextColor" ref="932315312"/>
 						</object>
 					</object>
-					<object class="NSTextField" id="345780428">
+					<object class="NSTextField" id="453371864">
 						<reference key="NSNextResponder" ref="42991249"/>
 						<int key="NSvFlags">268</int>
 						<string key="NSFrame">{{11, 9}, {149, 17}}</string>
@@ -721,13 +721,13 @@
 						<reference key="NSNextKeyView"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
-						<object class="NSTextFieldCell" key="NSCell" id="809379495">
+						<object class="NSTextFieldCell" key="NSCell" id="924592452">
 							<int key="NSCellFlags">67108864</int>
 							<int key="NSCellFlags2">138412544</int>
 							<string key="NSContents">Haplotypes</string>
 							<reference key="NSSupport" ref="228321220"/>
 							<string key="NSCellIdentifier">_NS:1535</string>
-							<reference key="NSControlView" ref="345780428"/>
+							<reference key="NSControlView" ref="453371864"/>
 							<reference key="NSBackgroundColor" ref="558577612"/>
 							<reference key="NSTextColor" ref="932315312"/>
 						</object>
@@ -1163,10 +1163,10 @@
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">value: representedObject.renderHaplotypes</string>
-						<reference key="source" ref="345780428"/>
+						<reference key="source" ref="453371864"/>
 						<reference key="destination" ref="330939775"/>
 						<object class="NSNibBindingConnector" key="connector">
-							<reference key="NSSource" ref="345780428"/>
+							<reference key="NSSource" ref="453371864"/>
 							<reference key="NSDestination" ref="330939775"/>
 							<string key="NSLabel">value: representedObject.renderHaplotypes</string>
 							<string key="NSBinding">value</string>
@@ -1608,7 +1608,7 @@
 						<reference key="object" ref="42991249"/>
 						<array class="NSMutableArray" key="children">
 							<reference ref="145468152"/>
-							<reference ref="345780428"/>
+							<reference ref="453371864"/>
 						</array>
 						<reference key="parent" ref="0"/>
 					</object>
@@ -1638,16 +1638,16 @@
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">741</int>
-						<reference key="object" ref="345780428"/>
+						<reference key="object" ref="453371864"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="809379495"/>
+							<reference ref="924592452"/>
 						</array>
 						<reference key="parent" ref="42991249"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">742</int>
-						<reference key="object" ref="809379495"/>
-						<reference key="parent" ref="345780428"/>
+						<reference key="object" ref="924592452"/>
+						<reference key="parent" ref="453371864"/>
 					</object>
 				</array>
 			</object>
