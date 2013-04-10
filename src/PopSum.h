@@ -57,9 +57,8 @@ public:
     double wfst;       // Weigted Fst (kernel-smoothed)
     double wfst_pval;  // p-value of weighted Fst from bootstrapping.
     double amova_fst;  // AMOVA Fst method, from Weir, Genetic Data Analysis II .
-    double wamova_fst; // Kernel-smoothed amova Fst value.
-    double jakob_fst;  // Jakobsson, Edge, Rosenberg (2013), Fst based on equation 4.
-    double wjakob_fst; // Kernel-smoothed Jakobsson Fst value.
+    double camova_fst; // Corrected AMOVA Fst value.
+    double wamova_fst; // Kernel-smoothed AMOVA Fst value.
     int    snp_cnt;    // Number of SNPs in kernel-smoothed window centered on this SNP.
 
     PopPair() { 
@@ -77,9 +76,8 @@ public:
 	ci_high    = 0.0;
 	wfst_pval  = 0.0;
 	amova_fst  = 0.0;
+	camova_fst = 0.0;
 	wamova_fst = 0.0;
-	jakob_fst  = 0.0;
-	wjakob_fst = 0.0;
 	snp_cnt    = 0;
     }
 };
@@ -655,17 +653,17 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
 	/ 
 	(p_avg_cor * (1 - p_avg_cor));
 
-    //
-    // Calculate Fst using a pure parametric method (assumes allele counts are real, not 
-    // samples). Jakobsson, Edge, and Rosenberg. "The Relationship Between Fst and the 
-    // Frequency of the Most Frequent Allele." Genetics 193:515-528. Equation 4.
-    //
-    double sigma_1 = p_1_freq + q_1_freq;
-    double sigma_2 = p_2_freq + q_2_freq;
-    double delta_1 = fabs(p_1_freq - p_2_freq);
-    double delta_2 = fabs(q_1_freq - q_2_freq);
+    // //
+    // // Calculate Fst using a pure parametric method (assumes allele counts are real, not 
+    // // samples). Jakobsson, Edge, and Rosenberg. "The Relationship Between Fst and the 
+    // // Frequency of the Most Frequent Allele." Genetics 193:515-528. Equation 4.
+    // //
+    // double sigma_1 = p_1_freq + q_1_freq;
+    // double sigma_2 = p_2_freq + q_2_freq;
+    // double delta_1 = fabs(p_1_freq - p_2_freq);
+    // double delta_2 = fabs(q_1_freq - q_2_freq);
 
-    pair->jakob_fst = (pow(delta_1, 2) + pow(delta_2, 2)) / ( 4 - (pow(sigma_1, 2) + pow(sigma_2, 2)) );
+    // pair->jakob_fst = (pow(delta_1, 2) + pow(delta_2, 2)) / ( 4 - (pow(sigma_1, 2) + pow(sigma_2, 2)) );
 
     return pair;
 }
