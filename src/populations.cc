@@ -1403,16 +1403,15 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	       << "Smoothed Fst"  << "\t"
 	       << "Smoothed Fst P-value" << "\t"
 	       << "AMOVA Fst" << "\t"
+	       << "Corrected AMOVA Fst" << "\t"
 	       << "Smoothed AMOVA Fst" << "\t"
-	       << "Jakob Fst" << "\t"
-	       << "Smoothed Jakob Fst" << "\t"
 	       << "Window SNP Count" << "\n";
 
 	    map<string, vector<CSLocus *> >::iterator it;
 	    CSLocus *loc;
 	    PopPair *pair;
 	    int      len;
-	    char     fst_str[32], wfst_str[32], cfst_str[32], afst_str[32], jfst_str[32], wafst_str[32], wjfst_str[32];
+	    char     fst_str[32], wfst_str[32], cfst_str[32], afst_str[32], cafst_str[32], wafst_str[32];
 
 	    map<string, vector<PopPair *> > genome_pairs;
 	    vector<double> fst_samples;
@@ -1492,7 +1491,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		case p_value:
 		    for (uint i = 0; i < pairs.size(); i++) {
 			if (pairs[i] != NULL)
-			    pairs[i]->cfst = pairs[i]->fet_p < p_value_cutoff ? pairs[i]->fst : 0;
+			    pairs[i]->cfst       = pairs[i]->fet_p < p_value_cutoff ? pairs[i]->fst : 0;
+			    pairs[i]->camova_fst = pairs[i]->fet_p < p_value_cutoff ? pairs[i]->amova_fst : 0;
 		    }
 		    break;
 		case bonferroni_win:
@@ -1502,13 +1502,15 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    correction = p_value_cutoff / catalog.size();
 		    for (uint i = 0; i < pairs.size(); i++) {
 			if (pairs[i] != NULL)
-			    pairs[i]->cfst = pairs[i]->fet_p < correction ? pairs[i]->fst : 0;
+			    pairs[i]->cfst       = pairs[i]->fet_p < correction ? pairs[i]->fst : 0;
+			    pairs[i]->camova_fst = pairs[i]->fet_p < correction ? pairs[i]->amova_fst : 0;
 		    }
 		    break;
 		case no_correction:
 		    for (uint i = 0; i < pairs.size(); i++) {
 			if (pairs[i] != NULL)
 			    pairs[i]->cfst = pairs[i]->fst;
+			    pairs[i]->camova_fst = pairs[i]->amova_fst;
 		    }
 		    break;
 		}
@@ -1574,9 +1576,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    sprintf(cfst_str,  "%0.10f", pairs[i]->cfst);
 		    sprintf(wfst_str,  "%0.10f", pairs[i]->wfst);
 		    sprintf(afst_str,  "%0.10f", pairs[i]->amova_fst);
-		    sprintf(jfst_str,  "%0.10f", pairs[i]->jakob_fst);
+		    sprintf(cafst_str,  "%0.10f", pairs[i]->camova_fst);
 		    sprintf(wafst_str, "%0.10f", pairs[i]->wamova_fst);
-		    sprintf(wjfst_str, "%0.10f", pairs[i]->wjakob_fst);
 
 		    fh << batch_id          << "\t"
 		       << pairs[i]->loc_id  << "\t"
@@ -1596,9 +1597,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		       << wfst_str          << "\t"
 		       << pairs[i]->wfst_pval << "\t"
 		       << afst_str            << "\t"
+		       << cafst_str           << "\t"
 		       << wafst_str           << "\t"
-		       << jfst_str            << "\t"
-		       << wjfst_str           << "\t"
 		       << pairs[i]->snp_cnt   << "\n";
 
 		    delete pairs[i];
@@ -2334,7 +2334,7 @@ kernel_smoothed_fst(vector<PopPair *> &pairs, double *weights, int *snp_dist)
 	int      limit = 3 * sigma;
 	int      dist, limit_l, limit_u;
 	uint     pos_l, pos_u;
-	double   weighted_fst, weighted_amova_fst, weighted_jakob_fst, sum, final_weight;
+	double   weighted_fst, weighted_amova_fst, sum, final_weight;
 	PopPair *c, *p;
 
 	pos_l = 0;
@@ -2349,7 +2349,6 @@ kernel_smoothed_fst(vector<PopPair *> &pairs, double *weights, int *snp_dist)
 
 	    weighted_fst       = 0.0;
 	    weighted_amova_fst = 0.0;
-	    weighted_jakob_fst = 0.0;
 	    sum                = 0.0;
 
 	    limit_l = c->bp - limit > 0 ? c->bp - limit : 0;
@@ -2415,8 +2414,7 @@ kernel_smoothed_fst(vector<PopPair *> &pairs, double *weights, int *snp_dist)
 
 		final_weight        = (p->alleles - 1) * weights[dist];
 		weighted_fst       += p->cfst * final_weight;
-		weighted_amova_fst += p->amova_fst * final_weight;
-		weighted_jakob_fst += p->jakob_fst * final_weight;
+		weighted_amova_fst += p->camova_fst * final_weight;
 		sum                += final_weight;
 	    }
 
@@ -2430,7 +2428,6 @@ kernel_smoothed_fst(vector<PopPair *> &pairs, double *weights, int *snp_dist)
 	    c->snp_cnt    = snp_cnt;
 	    c->wfst       = weighted_fst / sum;
 	    c->wamova_fst = weighted_amova_fst / sum;
-	    c->wjakob_fst = weighted_jakob_fst / sum;
 	}
     }
 
