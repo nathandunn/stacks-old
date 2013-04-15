@@ -15,6 +15,8 @@
 
 @property (strong) NSMutableDictionary *locusViews;
 
+@property(strong) NSString *path;
+
 - (id)initWithLocusView:(NSMutableDictionary*)locusViews;
 
 
