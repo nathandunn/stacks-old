@@ -17,7 +17,10 @@
 
 @property(strong) NSString *path;
 
+@property(nonatomic, strong) NSMutableDictionary *populationLookup;
+
 - (id)initWithLocusView:(NSMutableDictionary*)locusViews;
 
 
+- (NSMutableArray *)findPopulations;
 @end
