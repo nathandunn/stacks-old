@@ -20,5 +20,19 @@
 
 @synthesize locusViews;
 
+- (NSMutableArray *)findPopulations {
+
+    NSMutableArray *populations = [[NSMutableArray alloc] init];
+
+    NSString *population ;
+    for(population in self.populationLookup.allValues){
+        if(![populations containsObject:population]){
+            [populations addObject:population];
+        }
+    }
+
+    return populations;
+}
+
 @end
 

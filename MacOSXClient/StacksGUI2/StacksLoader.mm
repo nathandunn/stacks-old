@@ -1,7 +1,6 @@
 //
 // Created by NathanDunn on 2/28/13.
 //
-// To change the template use AppCode | Preferences | File Templates.
 //
 
 
@@ -36,6 +35,7 @@ using std::ofstream;
 #include "LociLoader.hpp"
 #import "GenotypeEntry.h"
 #import "SnpView.h"
+#import "PopulationLookup.h"
 
 BOOL build_file_list(char const *string1, id param);
 
@@ -122,10 +122,9 @@ BOOL build_file_list(char const *string1, id param);
     [self checkFile:path];
 //    map<int, Locus *> modelMap;
     map<int, CSLocus *> catalog;
-    NSString *exampleFile = [path stringByAppendingString:@"batch_1.catalog"];
-
-//        load_model_results([exampleFile UTF8String], modelMap);
-    load_loci([exampleFile UTF8String], catalog, false);
+    NSString *catalogFile = [path stringByAppendingString:@"batch_1.catalog"];
+    load_loci([catalogFile UTF8String], catalog, false);
+    NSMutableDictionary *populationLookup = [self loadPopulation:path];
 
     /**
     * START: loading genotypes + extra info
@@ -310,11 +309,43 @@ BOOL build_file_list(char const *string1, id param);
     }
 
 
-    StacksDocument *stackDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
+    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
     
-    stackDocument.path = path;
+    stacksDocument.path = path;
+    stacksDocument.populationLookup = populationLookup ;
 
-    return stackDocument;
+    NSMutableArray *populations = [stacksDocument findPopulations];
+    NSLog(@"popps %ld",populations.count);
+
+    return stacksDocument;
+}
+
+- (NSMutableDictionary *)loadPopulation:(NSString *)path {
+    NSMutableDictionary *populationLookup = [[NSMutableDictionary alloc] init];
+
+    NSString *popmapFile = [path stringByAppendingString:@"popmap"];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    BOOL exists = [fileManager fileExistsAtPath:popmapFile];
+
+    if(exists){
+        NSArray *fileData = [[NSString stringWithContentsOfFile:popmapFile encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
+        NSString *line ;
+        for(line in fileData){
+            NSArray *columns = [line componentsSeparatedByString:@"\t"];
+            if(columns.count==2){
+                [populationLookup setValue:[columns objectAtIndex:1] forKey:[columns objectAtIndex:0]];
+            }
+            else{
+                NSLog(@"something wrong with the column count %@",line);
+            }
+        }
+    }
+    else{
+        NSLog(@"does not exist at %@",popmapFile);
+    }
+
+
+    return populationLookup;
 }
 
 /**
