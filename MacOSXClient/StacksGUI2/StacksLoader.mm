@@ -373,6 +373,8 @@ BOOL build_file_list(char const *string1, id param);
 
 
     StacksDocument *stackDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
+    
+    stackDocument.path = path;
 
     return stackDocument;
 }

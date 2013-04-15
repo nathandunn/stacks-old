@@ -39,6 +39,7 @@
     self.mainWindow.backgroundColor = [NSColor whiteColor];
     self.stacksLoader = [[StacksLoader alloc] init];
 
+
     [genotypesController addObserver:self forKeyPath:@"selectionIndexes" options:NSKeyValueObservingOptionNew context:nil];
 }
 
@@ -423,9 +424,11 @@ constrainMinCoordinate:
 //                NSLog(@"selected genotype %@ and tagID %ld", genotypeEntry.name,genotypeEntry.tagId);
                 LocusView *locusView = self.selectedLocusView;
 
-//                NSLog(@"locusView: %@",locusView.locusId);
-                // TODO: should use the current path of the
-                StacksView *stacksView = [self.stacksLoader loadStacksView:genotypeEntry.name atPath:@"/tmp/stacks_tut/" forTag:genotypeEntry.tagId locus:locusView];
+                StacksView *stacksView = [self.stacksLoader
+                        loadStacksView:genotypeEntry.name
+                                atPath:stacksDocument.path
+                                forTag:genotypeEntry.tagId
+                                 locus:locusView];
                 self.selectedStacks = stacksView;
 //                NSLog(@"stacks view %@",stacksView);
 
