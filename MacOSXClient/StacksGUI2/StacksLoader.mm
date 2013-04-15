@@ -44,68 +44,6 @@ BOOL build_file_list(char const *string1, id param);
 
 }
 
-/**
-* TODO: remove once other is implmemented
-*/
-- (StacksDocument *)loadLoci:(NSString *)examplePath {
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
-
-    NSMutableDictionary *locusViews = [[NSMutableDictionary alloc] init];
-    if (!existsAtPath) {
-        NSLog(@"files do not exist %@", examplePath);
-        exit(0);
-    }
-    else {
-//        map<int,ModRes*> modelMap ;
-        map<int, Locus *> modelMap;
-        NSString *exampleFile = [examplePath stringByAppendingString:@"batch_1.catalog"];
-
-        load_loci([exampleFile UTF8String], modelMap, false);
-
-        NSLog(@"model size %d", (int) modelMap.size());
-
-//        stackDocument = [[NSMutableDictionary alloc] initWithCapacity:modelMap.size()];
-
-        map<int, Locus *>::iterator iter = modelMap.begin();
-        DataStubber *dataStubber = [[DataStubber alloc] init];
-
-        int randomness = arc4random_uniform(20);
-        NSInteger totalGenotypes = 80 + randomness;
-
-        while (iter != modelMap.end()) {
-            NSString *sampleId = [NSString stringWithFormat:@"%d", (*iter).first];
-
-            LocusView *locusView = [[LocusView alloc] initWithId:sampleId];
-
-            const char *read = (*iter).second->con;
-            NSString *letters = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
-            locusView.consensus = letters;
-
-            // rest of stacksDocuments comes from gentypes . . .  crapola
-            locusView.snps = [dataStubber generateSnps];
-            locusView.genotypes = [dataStubber generateGenotypes:(NSInteger) totalGenotypes];
-            locusView.marker = [dataStubber generateMarker];
-
-
-            [locusViews setObject:locusView forKey:locusView.locusId];
-
-//            StacksDocument *doc = [[StacksDocument alloc] initWithLocusView:locusView];
-//            [stackDocuments insertValue:doc atIndex:doc inPropertyWithKey:<#(NSString *)key#>]
-//            [stackDocuments insertValue:doc inPropertyWithKey:doc.locusId];
-//            [stackDocument setObject:doc forKey:doc.locusId];
-
-            ++iter;
-        }
-    }
-
-    StacksDocument *stackDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
-
-    return stackDocument;
-
-}
-
-
 - (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
@@ -270,7 +208,7 @@ BOOL build_file_list(char const *string1, id param);
 //            NSLog(@"added read %@",letters);
         locusView.consensus = letters;
         locusView.marker = [NSString stringWithUTF8String:catalogIterator->second->marker.c_str()];;
-        locusView.genotypeCount = catalogIterator->second->gcnt;
+//        locusView.genotypeCount = catalogIterator->second->gcnt;
         vector<SNP *> snps = catalogIterator->second->snps;
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
