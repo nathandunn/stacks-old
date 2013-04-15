@@ -25,15 +25,15 @@
 
     self.loader = [[StacksLoader alloc] init];
 
-//    NSFileManager *fileManager = [NSFileManager defaultManager];
-//    NSString *examplePath = @"/tmp/stacks_tut/";
-//    BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
-//    if(existsAtPath){
-//        [self loadApplication:examplePath];
-//    }
-//    else{
-//        NSLog(@"%@ does not exist.",examplePath);
-//    }
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString *examplePath = @"/tmp/stacks_tut/";
+    BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
+    if(existsAtPath){
+        [self loadApplication:examplePath];
+    }
+    else{
+        NSLog(@"%@ does not exist.",examplePath);
+    }
 
 
 }
