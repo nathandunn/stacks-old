@@ -25,7 +25,6 @@
 @property (strong) NSString *ratio ;
 
 
-// TODO: remove after moving to PopulationView
 @property (strong) NSMutableDictionary *genotypes;
 
 // use PopMap to get the GenotypesView
