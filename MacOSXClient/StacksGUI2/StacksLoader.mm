@@ -307,6 +307,8 @@ BOOL build_file_list(char const *string1, id param);
         }
     }
 
+    delete pmap ;
+
 
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
     
