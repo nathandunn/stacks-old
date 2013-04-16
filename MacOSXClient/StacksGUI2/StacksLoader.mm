@@ -141,7 +141,7 @@ BOOL build_file_list(char const *string1, id param);
 ////        NSLog(@"filestring %@", fileName);
 //        ++fileNameIterator;
 //    }
-    NSLog(@"number of files %d", files.size());
+    NSLog(@"number of files %ld", files.size());
 
 
     // loci loaded . . . now loading genotype
