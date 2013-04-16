@@ -138,15 +138,15 @@ constrainMinCoordinate:
 
         LocusCell *locusCell = (LocusCell *) cellView;
         locusCell.locusId.stringValue = locusView.locusId;
-        locusCell.propertyField.stringValue = [NSString stringWithFormat:@"Parents %d Progeny %d \nSNPS %d"
-                , 0, locusView.genotypes.count, locusView.snps.count];
+        locusCell.propertyField.stringValue = [NSString stringWithFormat:@"Parents %ld Progeny %ld \nSNPS %ld"
+                , (NSInteger) 0, locusView.genotypes.count, locusView.snps.count];
 
 
         // START FANCY
         NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:locusView.consensus];
 
         [string beginEditing];
-        NSNumber *snpIndex;
+//        NSNumber *snpIndex;
         NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blueColor], NSForegroundColorAttributeName,
                 [NSColor grayColor], NSBackgroundColorAttributeName,
