@@ -418,12 +418,9 @@ constrainMinCoordinate:
 
             for (NSString *key in locus.genotypes.allKeys) {
                 NSString *populationValue = [populationLookup objectForKey:key];
-                NSLog(@"matching pop %@ vs %ld",populationValue,_selectedPopulation);
+//                NSLog(@"matching pop %@ vs %ld",populationValue,_selectedPopulation);
                 if (_selectedPopulation == ([populationValue integerValue])) {
                     [array addObject:[locus.genotypes objectForKey:key]];
-                }
-                else{
-                    NSLog(@"no match! %@ ",key);
                 }
             }
 
