@@ -87,7 +87,7 @@
         GenotypeEntry *genotypeEntry = [self generateGenotype];
         if (genotypeEntry != nil) {
             genotypeEntry.sampleId =i;
-            [progeny setObject:genotypeEntry forKey:[NSString stringWithFormat:@"%d", genotypeEntry.sampleId] ];
+            [progeny setObject:genotypeEntry forKey:[NSString stringWithFormat:@"%ld", genotypeEntry.sampleId] ];
         }
     }
     return progeny;
