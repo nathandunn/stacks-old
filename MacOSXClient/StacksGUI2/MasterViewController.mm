@@ -109,7 +109,7 @@ constrainMinCoordinate:
         }
     }
     else if ([[tableView identifier] isEqualToString:@"PopulationsTable"]) {
-        if (self.stacksDocument.locusViews.count == 0)  return 0 ;
+        if (self.stacksDocument.locusViews.count == 0) return 0;
 
         NSInteger count = [[self.stacksDocument findPopulations] count];
         return count == 0 ? 1 : count;
@@ -409,10 +409,35 @@ constrainMinCoordinate:
         [string endEditing];
 
 
+        if (self.stacksDocument.populationLookup.count == 0) {
+            self.selectedGenotypes = [[NSMutableArray alloc] initWithArray:locus.genotypes.allValues];
+        }
+        else {
+            NSMutableArray *array = [[NSMutableArray alloc] init];
+            NSMutableDictionary *populationLookup = self.stacksDocument.populationLookup;
+
+            for (NSString *key in locus.genotypes.allKeys) {
+                NSString *populationValue = [populationLookup objectForKey:key];
+                NSLog(@"matching pop %@ vs %ld",populationValue,_selectedPopulation);
+                if (_selectedPopulation == ([populationValue integerValue])) {
+                    [array addObject:[locus.genotypes objectForKey:key]];
+                }
+                else{
+                    NSLog(@"no match! %@ ",key);
+                }
+            }
+
 //        [self.selectedGenotypes ];
 //        [self.selectedGenotypes addObjectsFromArray:[locus.genotypes allValues]];
 
-        self.selectedGenotypes = [[NSMutableArray alloc] initWithArray:locus.genotypes.allValues];
+
+            // get all of the genotypes for the locus
+
+            // get the selected popmap (unless the size is 0 or 1)
+
+            self.selectedGenotypes = array;
+        }
+
     }
     else {
         self.stacksDocument = nil ;
@@ -427,12 +452,11 @@ constrainMinCoordinate:
         [self clearGenotypesTable];
 //        self.selectedLocusView = [self findSelectedLocus];
         self.selectedLocusView = nil ;
-        self.selectedPopulation = -1 ;
+        self.selectedPopulation = -1;
         [self.populationTableView deselectAll:self];
 //        [self handleSelectedLocus:self.selectedLocusView];
     }
-    else
-    if ([tableName isEqualToString:@"PopulationsTable"]) {
+    else if ([tableName isEqualToString:@"PopulationsTable"]) {
         self.selectedLocusView = [self findSelectedLocus];
         self.selectedPopulation = [self findSelectedPopulation];
         // Update info
@@ -447,7 +471,7 @@ constrainMinCoordinate:
 
 - (NSUInteger)findSelectedPopulation {
     NSInteger selectedRow = self.populationTableView.selectedRow;
-    return selectedRow+1;
+    return selectedRow + 1;
 }
 
 // TODO: create the snps / stacks view
