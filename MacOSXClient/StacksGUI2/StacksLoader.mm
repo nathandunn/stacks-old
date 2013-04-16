@@ -332,7 +332,7 @@ BOOL build_file_list(char const *string1, id param);
         for(line in fileData){
             NSArray *columns = [line componentsSeparatedByString:@"\t"];
             if(columns.count==2){
-                [populationLookup setValue:[columns objectAtIndex:1] forKey:[columns objectAtIndex:0]];
+                [populationLookup setObject:[columns objectAtIndex:1] forKey:[columns objectAtIndex:0]];
             }
             else{
                 NSLog(@"something wrong with the column count %@",line);
