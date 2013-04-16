@@ -204,8 +204,6 @@
 				14B4DD7416C97A9500317EB3 /* core */,
 				14B4DD4716C97A7500317EB3 /* Supporting Files */,
 				63D53F285736E5307BB4F7DA /* core-refactor */,
-				63D53F72DB1D44DC6E878E0D /* PopulationCell.m */,
-				63D538E9083AC90F03D6E1C5 /* PopulationCell.h */,
 			);
 			path = StacksGUI2;
 			sourceTree = "<group>";
@@ -265,6 +263,8 @@
 		14B4DDB316C97D4800317EB3 /* GUI */ = {
 			isa = PBXGroup;
 			children = (
+				63D53F72DB1D44DC6E878E0D /* PopulationCell.m */,
+				63D538E9083AC90F03D6E1C5 /* PopulationCell.h */,
 				14B4DD5516C97A7600317EB3 /* MainMenu.xib */,
 				14B4DD5216C97A7500317EB3 /* AppDelegate.h */,
 				14B4DD5316C97A7500317EB3 /* AppDelegate.mm */,
