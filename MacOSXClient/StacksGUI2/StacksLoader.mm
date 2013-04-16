@@ -35,7 +35,6 @@ using std::ofstream;
 #include "LociLoader.hpp"
 #import "GenotypeEntry.h"
 #import "SnpView.h"
-#import "PopulationLookup.h"
 
 BOOL build_file_list(char const *string1, id param);
 

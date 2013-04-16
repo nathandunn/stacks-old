@@ -15,6 +15,7 @@
 #import "LocusCell.h"
 #import "SnpView.h"
 #import "GenotypeEntry.h"
+#import "PopulationCell.h"
 
 
 @interface MasterViewController ()
@@ -104,6 +105,9 @@ constrainMinCoordinate:
             return [self.selectedStacks rowsNeeded];
         }
     }
+    else if ([[tableView identifier] isEqualToString:@"PopulationsTable"]) {
+        return [[self.stacksDocument findPopulations] count];
+    }
 
 }
 
@@ -154,6 +158,15 @@ constrainMinCoordinate:
     }
     else if ([[tableView identifier] isEqualToString:@"StacksTableView"]) {
         return [self handleStacksTable:(NSTableColumn *) tableColumn row:(NSInteger) row cell:(NSTableCellView *) cellView];
+    }
+    else if ([[tableView identifier] isEqualToString:@"PopulationsTable"]) {
+        PopulationCell *populationCell= (PopulationCell*) cellView;
+
+        NSString *name = [[self.stacksDocument.populationLookup allValues] objectAtIndex:row];
+        populationCell.name.stringValue = name ;
+//        return [self handleStacksTable:(NSTableColumn *) tableColumn row:(NSInteger) row cell:(NSTableCellView *) cellView];
+
+        return populationCell ;
     }
     else {
         NSLog(@"could not find table %@", [tableView identifier]);
