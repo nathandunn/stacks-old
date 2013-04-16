@@ -116,6 +116,7 @@ constrainMinCoordinate:
 
     }
 
+    return 0 ; 
 }
 
 - (NSView *)tableView:(NSTableView *)tableView
