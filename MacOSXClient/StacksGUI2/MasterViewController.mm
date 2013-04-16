@@ -106,7 +106,11 @@ constrainMinCoordinate:
         }
     }
     else if ([[tableView identifier] isEqualToString:@"PopulationsTable"]) {
-        return [[self.stacksDocument findPopulations] count];
+        if (self.stacksDocument.locusViews.count == 0)  return 0 ;
+
+        NSInteger count = [[self.stacksDocument findPopulations] count];
+        return count == 0 ? 1 : count;
+
     }
 
 }
@@ -162,26 +166,17 @@ constrainMinCoordinate:
     else if ([[tableView identifier] isEqualToString:@"PopulationsTable"]) {
         PopulationCell *populationCell = (PopulationCell *) cellView;
 
-        NSMutableOrderedSet *orderedSet = [[NSMutableOrderedSet alloc] initWithArray:[self.stacksDocument.populationLookup allValues]];
+        if (self.stacksDocument != nil) {
 
-//        NSString *name = [[self.stacksDocument.populationLookup allValues] objectAtIndex:row];
-        NSString *name = [orderedSet objectAtIndex:row];
-        populationCell.name.stringValue = [NSString stringWithFormat:@"Population %@", name];
-
-//        NSString *popName;
-//        int i = 0;
-//        for (popName in [self.stacksDocument.populationLookup allValues]) {
-//            NSLog(@"%@ at row %ld and index %d", popName, row, i);
-//            ++i;
-//        }
-//
-//        i = 0;
-//        for (popName in [self.stacksDocument.populationLookup allKeys]) {
-//            NSLog(@"%@ at row %ld and index %d", popName, row, i);
-//            ++i;
-//        }
-
-//        return [self handleStacksTable:(NSTableColumn *) tableColumn row:(NSInteger) row cell:(NSTableCellView *) cellView];
+            if (self.stacksDocument.populationLookup.count > 0) {
+                NSMutableOrderedSet *orderedSet = [[NSMutableOrderedSet alloc] initWithArray:[self.stacksDocument.populationLookup allValues]];
+                NSString *name = [orderedSet objectAtIndex:row];
+                populationCell.name.stringValue = [NSString stringWithFormat:@"Population %@", name];
+            }
+            else {
+                populationCell.name.stringValue = @"Population All";
+            }
+        }
 
         return populationCell;
     }
