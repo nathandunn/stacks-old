@@ -22,6 +22,9 @@
 
 @property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSTableView *locusTableView;
+@property(weak) IBOutlet NSTableView *populationTableView;
+@property(weak) IBOutlet NSCollectionView *genotypesCollectionView;
+
 @property(strong) IBOutlet NSWindow *mainWindow;
 @property(strong) StacksLoader *stacksLoader;
 
@@ -409,7 +412,7 @@ constrainMinCoordinate:
 //        [self.selectedGenotypes ];
 //        [self.selectedGenotypes addObjectsFromArray:[locus.genotypes allValues]];
 
-        self.selectedGenotypes = locus.genotypes.allValues;
+        self.selectedGenotypes = [[NSMutableArray alloc] initWithArray:locus.genotypes.allValues];
     }
     else {
         self.stacksDocument = nil ;
@@ -421,11 +424,30 @@ constrainMinCoordinate:
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
     NSString *tableName = [[aNotification object] identifier];
     if ([tableName isEqualToString:@"LocusTable"]) {
+        [self clearGenotypesTable];
+//        self.selectedLocusView = [self findSelectedLocus];
+        self.selectedLocusView = nil ;
+        self.selectedPopulation = -1 ;
+        [self.populationTableView deselectAll:self];
+//        [self handleSelectedLocus:self.selectedLocusView];
+    }
+    else
+    if ([tableName isEqualToString:@"PopulationsTable"]) {
         self.selectedLocusView = [self findSelectedLocus];
+        self.selectedPopulation = [self findSelectedPopulation];
         // Update info
         [self handleSelectedLocus:self.selectedLocusView];
     }
 
+}
+
+- (void)clearGenotypesTable {
+    self.selectedGenotypes = nil ;
+}
+
+- (NSUInteger)findSelectedPopulation {
+    NSInteger selectedRow = self.populationTableView.selectedRow;
+    return selectedRow+1;
 }
 
 // TODO: create the snps / stacks view
@@ -465,7 +487,7 @@ constrainMinCoordinate:
         }
         else {
             self.selectedStacks = nil ;
-            NSLog(@"none selected");
+//            NSLog(@"none selected");
         }
         [self showTagsTable:self.selectedStacks];
         [self.stacksTableView reloadData];

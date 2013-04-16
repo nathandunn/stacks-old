@@ -27,6 +27,7 @@
 @property (atomic,strong) StacksDocument* stacksDocument;
 @property (atomic,strong) LocusView* selectedLocusView;
 @property(atomic, strong) StacksView *selectedStacks;
+@property NSInteger selectedPopulation ;
 
 
 
