@@ -160,13 +160,30 @@ constrainMinCoordinate:
         return [self handleStacksTable:(NSTableColumn *) tableColumn row:(NSInteger) row cell:(NSTableCellView *) cellView];
     }
     else if ([[tableView identifier] isEqualToString:@"PopulationsTable"]) {
-        PopulationCell *populationCell= (PopulationCell*) cellView;
+        PopulationCell *populationCell = (PopulationCell *) cellView;
 
-        NSString *name = [[self.stacksDocument.populationLookup allValues] objectAtIndex:row];
-        populationCell.name.stringValue = name ;
+        NSMutableOrderedSet *orderedSet = [[NSMutableOrderedSet alloc] initWithArray:[self.stacksDocument.populationLookup allValues]];
+
+//        NSString *name = [[self.stacksDocument.populationLookup allValues] objectAtIndex:row];
+        NSString *name = [orderedSet objectAtIndex:row];
+        populationCell.name.stringValue = [NSString stringWithFormat:@"Population %@", name];
+
+//        NSString *popName;
+//        int i = 0;
+//        for (popName in [self.stacksDocument.populationLookup allValues]) {
+//            NSLog(@"%@ at row %ld and index %d", popName, row, i);
+//            ++i;
+//        }
+//
+//        i = 0;
+//        for (popName in [self.stacksDocument.populationLookup allKeys]) {
+//            NSLog(@"%@ at row %ld and index %d", popName, row, i);
+//            ++i;
+//        }
+
 //        return [self handleStacksTable:(NSTableColumn *) tableColumn row:(NSInteger) row cell:(NSTableCellView *) cellView];
 
-        return populationCell ;
+        return populationCell;
     }
     else {
         NSLog(@"could not find table %@", [tableView identifier]);
@@ -268,7 +285,7 @@ constrainMinCoordinate:
                         [cellView.textField setBackgroundColor:[NSColor lightGrayColor]];
                         [cellView.textField setDrawsBackground:TRUE];
                     }
-                    else{
+                    else {
                         [cellView.textField setDrawsBackground:FALSE];
                     }
 
@@ -394,7 +411,10 @@ constrainMinCoordinate:
         [string endEditing];
 
 
-        self.selectedGenotypes = [locus.genotypes allValues];
+//        [self.selectedGenotypes ];
+//        [self.selectedGenotypes addObjectsFromArray:[locus.genotypes allValues]];
+
+        self.selectedGenotypes = locus.genotypes.allValues;
     }
     else {
         self.stacksDocument = nil ;
@@ -427,13 +447,13 @@ constrainMinCoordinate:
         if ([[genotypesController selectedObjects] count] > 0) {
             if ([[genotypesController selectedObjects] count] == 1) {
                 GenotypeEntry *genotypeEntry = (GenotypeEntry *) [[genotypesController selectedObjects] objectAtIndex:0];
-                
-                if([genotypeEntry.name isEqualToString:self.previousStacksName]) {
-                    return ; 
+
+                if ([genotypeEntry.name isEqualToString:self.previousStacksName]) {
+                    return;
                 }
 
-                self.previousStacksName = genotypeEntry.name ;
-                
+                self.previousStacksName = genotypeEntry.name;
+
 //                NSLog(@"selected genotype %@ and tagID %ld", genotypeEntry.name,genotypeEntry.tagId);
                 LocusView *locusView = self.selectedLocusView;
 
@@ -456,8 +476,6 @@ constrainMinCoordinate:
         [self.stacksTableView reloadData];
     }
 }
-
-
 
 
 @end
