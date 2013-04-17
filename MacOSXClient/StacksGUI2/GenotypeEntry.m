@@ -27,6 +27,17 @@
 }
 
 
+- (id)initWithCapcity:(int)numHaplotypes {
+    self = [super init];
+    if (self) {
+        _name = @"Test";
+        _haplotypes = [[NSMutableArray alloc] initWithCapacity:numHaplotypes];
+        _depths = [[NSMutableArray alloc] initWithCapacity:numHaplotypes];
+    }
+    return self;
+}
+
+
 - (NSString *)render {
     NSString *renderString = @"";
     for (int i = 0; i < _haplotypes.count; i++) {
