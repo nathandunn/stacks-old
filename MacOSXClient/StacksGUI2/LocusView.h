@@ -18,31 +18,20 @@
 */
 @interface LocusView : NSObject
 
-@property (strong) NSString *locusId;
-//@property (assign) NSString *letters;
+@property NSInteger locusId;
 @property (strong) NSMutableArray *snps;
 @property (strong) NSString *consensus;
-//@property (strong) NSString *progeny;
 @property (strong) NSString *marker ;
 @property (strong) NSString *ratio ;
 
-@property NSUInteger genotypeCount;
 
-@property (strong) NSMutableArray *genotypesOrder;
 @property (strong) NSMutableDictionary *genotypes;
-
-//@property (strong) NSMutableArray *progeny;
-//@property (strong) GenotypeEntry *male;
-//@property (strong) GenotypeEntry *female;
-
-//@property (strong) GenotypeView *genotypeView;
-//@property (strong) NSMutableArray *snpsViews; // SNP in the consensus
 
 // use PopMap to get the GenotypesView
 
 @property(nonatomic) int depth;
 
-- (id)initWithId:(NSString *)locusId ;
+- (id)initWithId:(NSInteger)locusId ;
 
 - (NSInteger) matchingParents;
 

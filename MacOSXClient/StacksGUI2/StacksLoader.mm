@@ -1,7 +1,6 @@
 //
 // Created by NathanDunn on 2/28/13.
 //
-// To change the template use AppCode | Preferences | File Templates.
 //
 
 
@@ -18,11 +17,6 @@
 using std::ifstream;
 using std::ofstream;
 
-//#include "PopSum.h"
-
-//#include <dirent.h>
-//#include <stdlib.h>
-
 
 #import "StackEntry.h"
 #import "GenotypeView.h"
@@ -37,74 +31,13 @@ using std::ofstream;
 #import "GenotypeEntry.h"
 #import "SnpView.h"
 
-BOOL build_file_list(char const *string1, id param);
+
+#include <sys/time.h>
 
 @implementation StacksLoader {
 
 
 }
-
-/**
-* TODO: remove once other is implmemented
-*/
-- (StacksDocument *)loadLoci:(NSString *)examplePath {
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
-
-    NSMutableDictionary *locusViews = [[NSMutableDictionary alloc] init];
-    if (!existsAtPath) {
-        NSLog(@"files do not exist %@", examplePath);
-        exit(0);
-    }
-    else {
-//        map<int,ModRes*> modelMap ;
-        map<int, Locus *> modelMap;
-        NSString *exampleFile = [examplePath stringByAppendingString:@"batch_1.catalog"];
-
-        load_loci([exampleFile UTF8String], modelMap, false);
-
-        NSLog(@"model size %d", (int) modelMap.size());
-
-//        stackDocument = [[NSMutableDictionary alloc] initWithCapacity:modelMap.size()];
-
-        map<int, Locus *>::iterator iter = modelMap.begin();
-        DataStubber *dataStubber = [[DataStubber alloc] init];
-
-        int randomness = arc4random_uniform(20);
-        NSInteger totalGenotypes = 80 + randomness;
-
-        while (iter != modelMap.end()) {
-            NSString *sampleId = [NSString stringWithFormat:@"%d", (*iter).first];
-
-            LocusView *locusView = [[LocusView alloc] initWithId:sampleId];
-
-            const char *read = (*iter).second->con;
-            NSString *letters = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
-            locusView.consensus = letters;
-
-            // rest of stacksDocuments comes from gentypes . . .  crapola
-            locusView.snps = [dataStubber generateSnps];
-            locusView.genotypes = [dataStubber generateGenotypes:(NSInteger) totalGenotypes];
-            locusView.marker = [dataStubber generateMarker];
-
-
-            [locusViews setObject:locusView forKey:locusView.locusId];
-
-//            StacksDocument *doc = [[StacksDocument alloc] initWithLocusView:locusView];
-//            [stackDocuments insertValue:doc atIndex:doc inPropertyWithKey:<#(NSString *)key#>]
-//            [stackDocuments insertValue:doc inPropertyWithKey:doc.locusId];
-//            [stackDocument setObject:doc forKey:doc.locusId];
-
-            ++iter;
-        }
-    }
-
-    StacksDocument *stackDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
-
-    return stackDocument;
-
-}
-
 
 - (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus {
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -120,8 +53,14 @@ BOOL build_file_list(char const *string1, id param);
     }
     StacksView *stacksView = [[StacksView alloc] init];
 
+
+    struct timeval time1, time2;
+    gettimeofday(&time1, NULL);
+
     NSError *error = nil;
     NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error] componentsSeparatedByString:@"\n"];
+    gettimeofday(&time2, NULL);
+    NSLog(@"load file data and split %ld",(time2.tv_sec-time1.tv_sec));
 
     if (error) {
         NSLog(@"error loading file [%@]: %@", absoluteFileName, error);
@@ -131,10 +70,10 @@ BOOL build_file_list(char const *string1, id param);
 
     NSString *line;
     NSUInteger row = 1;
+    gettimeofday(&time1, NULL);
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
-//        NSLog(@"columns at index %@",[columns objectAtIndex:2]);
         if (columns.count > 8 && [[columns objectAtIndex:2] integerValue] == tag) {
             StackEntry *stackEntry = [[StackEntry alloc] init];
             stackEntry.entryId = row;
@@ -153,18 +92,13 @@ BOOL build_file_list(char const *string1, id param);
                 ++row;
                 [stackEntries addObject:stackEntry];
             }
-
-//        for(column in columns){
-////            NSLog(@"entry %@",column);
-//        }
         }
-
-
     }
+    gettimeofday(&time2, NULL);
+    NSLog(@"parse entries lines %ld produce %ld - %ld",fileData.count,stackEntries.count,(time2.tv_sec-time1.tv_sec));
 
     stacksView.stackEntries = stackEntries;
     StackEntry *referenceStack = [[StackEntry alloc] init];
-//    referenceStack.sequence = @"1203130120321302103210321203";
     referenceStack.entryId = 0;
     stacksView.reference = referenceStack;
 
@@ -182,43 +116,35 @@ BOOL build_file_list(char const *string1, id param);
 
 - (StacksDocument *)loadLociAndGenotypes:(NSString *)path {
     [self checkFile:path];
-//    map<int, Locus *> modelMap;
     map<int, CSLocus *> catalog;
-    NSString *exampleFile = [path stringByAppendingString:@"batch_1.catalog"];
+    NSString *catalogFile = [path stringByAppendingString:@"batch_1.catalog"];
 
-//        load_model_results([exampleFile UTF8String], modelMap);
-    load_loci([exampleFile UTF8String], catalog, false);
+    struct timeval time1, time2;
+    gettimeofday(&time1, NULL);
+
+
+    load_loci([catalogFile UTF8String], catalog, false);
+    gettimeofday(&time2, NULL);
+    NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
+
+
+    NSMutableDictionary *populationLookup = [self loadPopulation:path];
 
     /**
     * START: loading genotypes + extra info
 */
-
     vector<vector<CatMatch *> > catalog_matches;
     map<int, string> samples;
     vector<int> sample_ids;
 
     vector<pair<int, string>> files = [self buildFileList:path];
-//    vector<pair<int, string>>::iterator fileNameIterator = files.begin();
-//    while (fileNameIterator != files.end()) {
-//        string fileName = (*fileNameIterator).second;
-//        NSLog(@"filestring %@", [NSString stringWithUTF8String:fileName.c_str()]);
-////        NSLog(@"filestring %@", fileName);
-//        ++fileNameIterator;
-//    }
-    NSLog(@"number of files %d", files.size());
+    NSLog(@"number of files %ld", files.size());
 
 
     // loci loaded . . . now loading genotype
-
-
     NSLog(@"model size %d", (int) catalog.size());
 
-
-    // map of sample_ids and then catalog_ids
-//    map<int, map<int, CatMatch *>> catMatchLookup;
-//    map<int,CatMatch*> tagfiles(catalog.size()) ;
-
-
+    gettimeofday(&time1, NULL);
     for (uint i = 0; i < files.size(); i++) {
         vector<CatMatch *> m;
         load_catalog_matches([[path stringByAppendingString:@"/"] UTF8String] + files[i].second, m);
@@ -229,19 +155,6 @@ BOOL build_file_list(char const *string1, id param);
             continue;
         }
 
-////            NSLog(@"m size: %d", m.size());
-//        map<int, CatMatch *> catMatches;
-//        for (int j = 0; j < m.size(); j++) {
-//            CatMatch *match = m[j];
-////                NSLog(@"match %d",match);
-////                NSLog(@"match tag->id %d",match->tag_id);
-//            catMatches[match->cat_id] = match;
-//        }
-////            NSLog(@"sample id %d", m[0]->sample_id);
-//
-//
-//        catMatchLookup[m[0]->sample_id] = catMatches;
-
         catalog_matches.push_back(m);
         if (samples.count(m[0]->sample_id) == 0) {
             samples[m[0]->sample_id] = files[i].second;
@@ -251,33 +164,32 @@ BOOL build_file_list(char const *string1, id param);
             exit(1);
         }
     }
-
+    gettimeofday(&time2, NULL);
+    NSLog(@"catalog matches %ld", (time2.tv_sec - time1.tv_sec));
 
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
+
+    gettimeofday(&time1, NULL);
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
+    gettimeofday(&time2, NULL);
+    NSLog(@"population pmap %ld", (time2.tv_sec - time1.tv_sec));
 
 
     NSMutableDictionary *locusViews = [[NSMutableDictionary alloc] init];
 
+    gettimeofday(&time1, NULL);
     map<int, CSLocus *>::iterator catalogIterator = catalog.begin();
     while (catalogIterator != catalog.end()) {
-        NSString *sampleId = [NSString stringWithFormat:@"%d", (*catalogIterator).first];
-
-        LocusView *locusView = [[LocusView alloc] initWithId:sampleId];
+        LocusView *locusView = [[LocusView alloc] initWithId:(*catalogIterator).first];
         const char *read = (*catalogIterator).second->con;
         NSString *letters = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
-//            NSLog(@"added read %@",letters);
         locusView.consensus = letters;
         locusView.marker = [NSString stringWithUTF8String:catalogIterator->second->marker.c_str()];;
-        locusView.genotypeCount = catalogIterator->second->gcnt;
         vector<SNP *> snps = catalogIterator->second->snps;
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
         NSMutableArray *snpsArray = [[NSMutableArray alloc] initWithCapacity:snps.size()];
-//        for (; snpsIterator != snps.end(); ++snpsIterator) {
-//            [snpsArray addObject:[NSValue valueWithPointer:(*snpsIterator)]];
-//        }
         for (; snpsIterator != snps.end(); ++snpsIterator) {
             SnpView *snpView = [[SnpView alloc] init];
             SNP *snp = (*snpsIterator);
@@ -287,15 +199,16 @@ BOOL build_file_list(char const *string1, id param);
             snpView.rank2 = snp->rank_2;
             snpView.rank2 = snp->rank_2;
             snpView.rank4 = snp->rank_4;
-//            [snpsArray addObject:[NSValue valueWithPointer:(*snpsIterator)]];
             [snpsArray addObject:snpView];
         }
 
         locusView.snps = snpsArray;
 
-        [locusViews setObject:locusView forKey:locusView.locusId];
+        [locusViews setObject:locusView forKey:[NSString stringWithFormat:@"%ld", locusView.locusId]];
         ++catalogIterator;
     }
+    gettimeofday(&time2, NULL);
+    NSLog(@"populating snps %ld", (time2.tv_sec - time1.tv_sec));
 
 
 // TODO: iterate over the catalog . . . -> OR . . . like write_genomic . . . : 736
@@ -308,73 +221,116 @@ BOOL build_file_list(char const *string1, id param);
     CSLocus *loc;
 
     // for each sample process the catalog
+    NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
 
+    long totalCatalogTime = 0;
     for (uint i = 0; i < sample_ids.size(); i++) {
         int sampleId = sample_ids[i];
         string sampleString = samples[sampleId];
 
+        gettimeofday(&time1, NULL);
 //        NSLog(@"evaluating sample %@", [NSString stringWithUTF8String:sampleString.c_str()]);
         for (it = catalog.begin(); it != catalog.end(); it++) {
             loc = it->second;
             d = pmap->datum(loc->id, sample_ids[i]);
 
-            LocusView *locusView = [locusViews objectForKey:[NSString stringWithFormat:@"%d", it->first]];
+            LocusView *locusView = [locusViews objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
             if (d != NULL && locusView != nil) {
-//                NSString *key = [NSString stringWithFormat:@"%d",sample_ids[i]];
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
                 NSMutableDictionary *genotypes = locusView.genotypes;
                 if (genotypes == nil) {
                     genotypes = [[NSMutableDictionary alloc] init];
                 }
                 GenotypeEntry *genotypeEntry = [genotypes objectForKey:key];
+
+
                 if (genotypeEntry == nil) {
-                    genotypeEntry = [[GenotypeEntry alloc] init];
-                }
-                genotypeEntry.name = key;
-                genotypeEntry.sampleId = [[NSNumber numberWithInt:sample_ids[i]] unsignedIntegerValue];
+                    vector<char *> obshape = d->obshap;
+                    vector<int> depths = d->depth;
+                    int numLetters = obshape.size();
+                    genotypeEntry = [[GenotypeEntry alloc] initWithCapcity:numLetters];
+                    genotypeEntry.name = key;
+                    genotypeEntry.sampleId = [[NSNumber numberWithInt:sample_ids[i]] unsignedIntegerValue];
 
-                // get catalogs for matches
-//                map<int, CatMatch *> catalogMap = catMatchLookup[genotypeEntry.sampleId];
-//                NSLog(@"catalog map %d for sampleId %ld",catalogMap.size(),genotypeEntry.sampleId);
-//                CatMatch *catMatch = catalogMap[[locusView.locusId intValue]];
-                genotypeEntry.tagId = d->id;
+                    // get catalogs for matches
+                    genotypeEntry.tagId = d->id;
 
-//                if(catMatch!=NULL){
-//                    genotypeEntry.tagId = catMatch->tag_id;
-//                }
-//                else{
-//                    NSLog(@"catMatch %d NOT found for locus %d",catMatch,locusView.locusId.intValue);
-//                }
+                    locusView.depth = loc->depth;
 
-
-                locusView.depth = loc->depth;
-
-                vector<char *> obshape = d->obshap;
-                vector<int> depths = d->depth;
-                int numLetters = obshape.size();
-                if (depths.size() == numLetters) {
-                    genotypeEntry.haplotypes = [[NSMutableArray alloc] initWithCapacity:numLetters];
-                    for (int j = 0; j < numLetters; j++) {
-                        [genotypeEntry.haplotypes addObject:[NSString stringWithUTF8String:obshape[j]]];
-                        [genotypeEntry.depths addObject:[NSNumber numberWithInt:depths[j]]];
+                    if (depths.size() == numLetters) {
+                        for (int j = 0; j < numLetters; j++) {
+                            [genotypeEntry.haplotypes addObject:[NSString stringWithUTF8String:obshape[j]]];
+                            [genotypeEntry.depths addObject:[NSNumber numberWithInt:depths[j]]];
+                        }
+//                    for(NSNumber *depth in genotypeEntry.depths){
+//                        NSLog(@"depth %@",depth);
+//                    }
+                        [genotypes setObject:genotypeEntry forKey:key];
+                        locusView.genotypes = genotypes;
                     }
-                    [genotypes setObject:genotypeEntry forKey:key];
-                    locusView.genotypes = genotypes;
+                    else {
+                        NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
+                    }
                 }
-                else {
-                    NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
-//                    sampleString);
-                }
+            }
+        }
+        gettimeofday(&time2, NULL);
+        NSLog(@"iterating locus %d -  %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
+        totalCatalogTime += time2.tv_sec - time1.tv_sec;
+    }
+    NSLog(@"total time %ld", totalCatalogTime);
+
+    gettimeofday(&time1, NULL);
+    delete pmap;
+    gettimeofday(&time2, NULL);
+    NSLog(@"delete pmap time %ld", time2.tv_sec - time1.tv_sec);
 
 
+    gettimeofday(&time1, NULL);
+    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
+    stacksDocument.path = path;
+    stacksDocument.populationLookup = populationLookup;
+
+
+    gettimeofday(&time2, NULL);
+    NSLog(@"create stacks document time %ld", time2.tv_sec - time1.tv_sec);
+
+
+    gettimeofday(&time1, NULL);
+    NSMutableArray *populations = [stacksDocument findPopulations];
+    NSLog(@"popps %ld", populations.count);
+    gettimeofday(&time2, NULL);
+    NSLog(@"find population time %ld", time2.tv_sec - time1.tv_sec);
+
+
+    return stacksDocument;
+}
+
+- (NSMutableDictionary *)loadPopulation:(NSString *)path {
+    NSMutableDictionary *populationLookup = [[NSMutableDictionary alloc] init];
+
+    NSString *popmapFile = [path stringByAppendingString:@"popmap"];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    BOOL exists = [fileManager fileExistsAtPath:popmapFile];
+
+    if (exists) {
+        NSArray *fileData = [[NSString stringWithContentsOfFile:popmapFile encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
+        NSString *line;
+        for (line in fileData) {
+            NSArray *columns = [line componentsSeparatedByString:@"\t"];
+            if (columns.count == 2) {
+                [populationLookup setObject:[columns objectAtIndex:1] forKey:[columns objectAtIndex:0]];
+            }
+            else {
+                NSLog(@"something wrong with the column count %@", line);
             }
         }
     }
+    else {
+        NSLog(@"does not exist at %@", popmapFile);
+    }
 
-
-    StacksDocument *stackDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
-
-    return stackDocument;
+    return populationLookup;
 }
 
 /**
@@ -419,36 +375,3 @@ BOOL build_file_list(char const *string1, id param);
 
 @end
 
-//int build_file_list(string in_path, vector<pair<int, string> > &files) {
-//    uint pos;
-//    string file;
-//    struct dirent *direntry;
-//
-//    DIR *dir = opendir(in_path.c_str());
-//
-//    if (dir == NULL) {
-//        cerr << "Unable to open directory '" << in_path << "' for reading.\n";
-//        exit(1);
-//    }
-//
-//
-//    while ((direntry = readdir(dir)) != NULL) {
-//        cout << "reading directory!!!" << endl;
-//        file = direntry->d_name;
-//
-//        if (file == "." || file == "..")
-//            continue;
-//
-//        if (file.substr(0, 6) == "batch_")
-//            continue;
-//
-//        pos = file.rfind(".tags.tsv");
-//        if (pos < file.length())
-//            files.push_back(make_pair(1, file.substr(0, pos)));
-//    }
-//
-//
-//    cout << "done reading directory!!" << endl;
-//    cout << "files.size() " << file.size() << endl;
-//    return files.size();
-//}
