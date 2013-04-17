@@ -116,8 +116,6 @@ using std::ofstream;
     struct timeval time1,time2;
     gettimeofday(&time1, NULL);
 
-    long millis = (time1.tv_sec * 1000) + (time1.tv_usec / 1000);
-
 
     load_loci([catalogFile UTF8String], catalog, false);
     gettimeofday(&time2, NULL);
@@ -286,6 +284,8 @@ using std::ofstream;
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
     stacksDocument.path = path;
     stacksDocument.populationLookup = populationLookup ;
+
+
     gettimeofday(&time2, NULL);
     NSLog(@"create stacks document time %ld",time2.tv_sec-time1.tv_sec);
 
@@ -295,6 +295,9 @@ using std::ofstream;
     NSLog(@"popps %ld",populations.count);
     gettimeofday(&time2, NULL);
     NSLog(@"find population time %ld",time2.tv_sec-time1.tv_sec);
+
+
+
 
     return stacksDocument;
 }
