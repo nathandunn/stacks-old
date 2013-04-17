@@ -53,8 +53,14 @@ using std::ofstream;
     }
     StacksView *stacksView = [[StacksView alloc] init];
 
+
+    struct timeval time1, time2;
+    gettimeofday(&time1, NULL);
+
     NSError *error = nil;
     NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error] componentsSeparatedByString:@"\n"];
+    gettimeofday(&time2, NULL);
+    NSLog(@"load file data and split %ld",(time2.tv_sec-time1.tv_sec));
 
     if (error) {
         NSLog(@"error loading file [%@]: %@", absoluteFileName, error);
@@ -64,6 +70,7 @@ using std::ofstream;
 
     NSString *line;
     NSUInteger row = 1;
+    gettimeofday(&time1, NULL);
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
@@ -87,6 +94,8 @@ using std::ofstream;
             }
         }
     }
+    gettimeofday(&time2, NULL);
+    NSLog(@"parse entries lines %ld produce %ld - %ld",fileData.count,stackEntries.count,(time2.tv_sec-time1.tv_sec));
 
     stacksView.stackEntries = stackEntries;
     StackEntry *referenceStack = [[StackEntry alloc] init];
@@ -110,16 +119,13 @@ using std::ofstream;
     map<int, CSLocus *> catalog;
     NSString *catalogFile = [path stringByAppendingString:@"batch_1.catalog"];
 
-//    double time1 = CACurrentMediaTime();
-//    double time2 = CACurrentMediaTime();
-
-    struct timeval time1,time2;
+    struct timeval time1, time2;
     gettimeofday(&time1, NULL);
 
 
     load_loci([catalogFile UTF8String], catalog, false);
     gettimeofday(&time2, NULL);
-    NSLog(@"load_loci %ld",(time2.tv_sec-time1.tv_sec));
+    NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
 
 
     NSMutableDictionary *populationLookup = [self loadPopulation:path];
@@ -159,7 +165,7 @@ using std::ofstream;
         }
     }
     gettimeofday(&time2, NULL);
-    NSLog(@"catalog matches %ld",(time2.tv_sec-time1.tv_sec));
+    NSLog(@"catalog matches %ld", (time2.tv_sec - time1.tv_sec));
 
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
 
@@ -167,7 +173,7 @@ using std::ofstream;
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
     gettimeofday(&time2, NULL);
-    NSLog(@"population pmap %ld",(time2.tv_sec-time1.tv_sec));
+    NSLog(@"population pmap %ld", (time2.tv_sec - time1.tv_sec));
 
 
     NSMutableDictionary *locusViews = [[NSMutableDictionary alloc] init];
@@ -198,11 +204,11 @@ using std::ofstream;
 
         locusView.snps = snpsArray;
 
-        [locusViews setObject:locusView forKey:[NSString stringWithFormat:@"%ld",locusView.locusId] ];
+        [locusViews setObject:locusView forKey:[NSString stringWithFormat:@"%ld", locusView.locusId]];
         ++catalogIterator;
     }
     gettimeofday(&time2, NULL);
-    NSLog(@"populating snps %ld",(time2.tv_sec-time1.tv_sec));
+    NSLog(@"populating snps %ld", (time2.tv_sec - time1.tv_sec));
 
 
 // TODO: iterate over the catalog . . . -> OR . . . like write_genomic . . . : 736
@@ -215,9 +221,9 @@ using std::ofstream;
     CSLocus *loc;
 
     // for each sample process the catalog
-    NSLog(@"samples %ld X catalog %ld = %ld ",sample_ids.size(),catalog.size(),sample_ids.size()*catalog.size());
+    NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
 
-    long totalCatalogTime = 0 ;
+    long totalCatalogTime = 0;
     for (uint i = 0; i < sample_ids.size(); i++) {
         int sampleId = sample_ids[i];
         string sampleString = samples[sampleId];
@@ -239,64 +245,62 @@ using std::ofstream;
 
 
                 if (genotypeEntry == nil) {
-                vector<char *> obshape = d->obshap;
-                vector<int> depths = d->depth;
-                int numLetters = obshape.size();
+                    vector<char *> obshape = d->obshap;
+                    vector<int> depths = d->depth;
+                    int numLetters = obshape.size();
                     genotypeEntry = [[GenotypeEntry alloc] initWithCapcity:numLetters];
-                genotypeEntry.name = key;
-                genotypeEntry.sampleId = [[NSNumber numberWithInt:sample_ids[i]] unsignedIntegerValue];
+                    genotypeEntry.name = key;
+                    genotypeEntry.sampleId = [[NSNumber numberWithInt:sample_ids[i]] unsignedIntegerValue];
 
-                // get catalogs for matches
-                genotypeEntry.tagId = d->id;
+                    // get catalogs for matches
+                    genotypeEntry.tagId = d->id;
 
-                locusView.depth = loc->depth;
+                    locusView.depth = loc->depth;
 
-                if (depths.size() == numLetters) {
-                    for (int j = 0; j < numLetters; j++) {
-                        [genotypeEntry.haplotypes addObject:[NSString stringWithUTF8String:obshape[j]]];
-                        [genotypeEntry.depths addObject:[NSNumber numberWithInt:depths[j]]];
-                    }
+                    if (depths.size() == numLetters) {
+                        for (int j = 0; j < numLetters; j++) {
+                            [genotypeEntry.haplotypes addObject:[NSString stringWithUTF8String:obshape[j]]];
+                            [genotypeEntry.depths addObject:[NSNumber numberWithInt:depths[j]]];
+                        }
 //                    for(NSNumber *depth in genotypeEntry.depths){
 //                        NSLog(@"depth %@",depth);
 //                    }
-                    [genotypes setObject:genotypeEntry forKey:key];
-                    locusView.genotypes = genotypes;
-                }
-                else {
-                    NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
-                }
+                        [genotypes setObject:genotypeEntry forKey:key];
+                        locusView.genotypes = genotypes;
+                    }
+                    else {
+                        NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
+                    }
                 }
             }
         }
         gettimeofday(&time2, NULL);
-        NSLog(@"iterating locus %d -  %ld",sample_ids[i],(time2.tv_sec-time1.tv_sec));
-        totalCatalogTime += time2.tv_sec-time1.tv_sec;
+        NSLog(@"iterating locus %d -  %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
+        totalCatalogTime += time2.tv_sec - time1.tv_sec;
     }
-    NSLog(@"total time %ld",totalCatalogTime);
+    NSLog(@"total time %ld", totalCatalogTime);
 
     gettimeofday(&time1, NULL);
-    delete pmap ;
+    delete pmap;
     gettimeofday(&time2, NULL);
-    NSLog(@"delete pmap time %ld",time2.tv_sec-time1.tv_sec);
+    NSLog(@"delete pmap time %ld", time2.tv_sec - time1.tv_sec);
 
 
     gettimeofday(&time1, NULL);
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
     stacksDocument.path = path;
-    stacksDocument.populationLookup = populationLookup ;
+    stacksDocument.populationLookup = populationLookup;
 
 
     gettimeofday(&time2, NULL);
-    NSLog(@"create stacks document time %ld",time2.tv_sec-time1.tv_sec);
+    NSLog(@"create stacks document time %ld", time2.tv_sec - time1.tv_sec);
 
 
     gettimeofday(&time1, NULL);
     NSMutableArray *populations = [stacksDocument findPopulations];
-    NSLog(@"popps %ld",populations.count);
+    NSLog(@"popps %ld", populations.count);
     gettimeofday(&time2, NULL);
-    NSLog(@"find population time %ld",time2.tv_sec-time1.tv_sec);
-
-
+    NSLog(@"find population time %ld", time2.tv_sec - time1.tv_sec);
 
 
     return stacksDocument;
@@ -309,21 +313,21 @@ using std::ofstream;
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL exists = [fileManager fileExistsAtPath:popmapFile];
 
-    if(exists){
+    if (exists) {
         NSArray *fileData = [[NSString stringWithContentsOfFile:popmapFile encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
-        NSString *line ;
-        for(line in fileData){
+        NSString *line;
+        for (line in fileData) {
             NSArray *columns = [line componentsSeparatedByString:@"\t"];
-            if(columns.count==2){
+            if (columns.count == 2) {
                 [populationLookup setObject:[columns objectAtIndex:1] forKey:[columns objectAtIndex:0]];
             }
-            else{
-                NSLog(@"something wrong with the column count %@",line);
+            else {
+                NSLog(@"something wrong with the column count %@", line);
             }
         }
     }
-    else{
-        NSLog(@"does not exist at %@",popmapFile);
+    else {
+        NSLog(@"does not exist at %@", popmapFile);
     }
 
     return populationLookup;
