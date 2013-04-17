@@ -14,6 +14,10 @@
 - (id)initWithLocusView:(NSMutableDictionary*)locusViews {
     if ((self = [super init])) {
         self.locusViews = locusViews;
+        self.orderedLocus = [[locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
+            return [obj1 integerValue] - [obj2 integerValue];
+        }];
+
     }
     return self ;
 }

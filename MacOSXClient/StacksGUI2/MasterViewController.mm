@@ -17,6 +17,8 @@
 #import "GenotypeEntry.h"
 #import "PopulationCell.h"
 
+#include <sys/time.h>
+
 
 @interface MasterViewController ()
 
@@ -129,11 +131,18 @@ constrainMinCoordinate:
     NSTableCellView *cellView = [tableView makeViewWithIdentifier:tableColumn.identifier owner:self];
 
     if ([[tableView identifier] isEqualToString:@"LocusTable"]) {
+        struct timeval time1,time2;
+        gettimeofday(&time1, NULL);
+
         // we want data for the row . . . .
-        NSArray *sortedKeys = [[self.stacksDocument.locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
-            return [obj1 integerValue] - [obj2 integerValue];
-        }];
-        NSString *key = [sortedKeys objectAtIndexedSubscript:row];
+//        NSArray *sortedKeys = [[self.stacksDocument.locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
+//            return [obj1 integerValue] - [obj2 integerValue];
+//        }];
+        NSString *key = [self.stacksDocument.orderedLocus objectAtIndexedSubscript:row];
+
+        gettimeofday(&time2, NULL);
+        NSLog(@"get proper key %@ - %ld",key,(time2.tv_sec-time1.tv_sec));
+
         LocusView *locusView = [self.stacksDocument.locusViews objectForKey:key];
 
         LocusCell *locusCell = (LocusCell *) cellView;
@@ -158,6 +167,7 @@ constrainMinCoordinate:
         }
         [string endEditing];
 
+        gettimeofday(&time2, NULL);
 
         locusCell.consensusField.attributedStringValue = string;
 
