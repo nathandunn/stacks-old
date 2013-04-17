@@ -150,7 +150,6 @@ constrainMinCoordinate:
         NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blueColor], NSForegroundColorAttributeName,
                 [NSColor grayColor], NSBackgroundColorAttributeName,
-//                [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
                 [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
                 nil];
         for (SnpView *snpView in locusView.snps) {
@@ -333,7 +332,6 @@ constrainMinCoordinate:
             attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                     [NSColor blueColor], NSForegroundColorAttributeName,
                     [NSColor grayColor], NSBackgroundColorAttributeName,
-//                    [NSFont boldSystemFontOfSize:14.0], NSFontAttributeName
                     [NSFont fontWithName:@"Courier" size:14], NSFontAttributeName,
                     nil];
             highlight1 = false;
@@ -342,7 +340,6 @@ constrainMinCoordinate:
             attributes = [NSDictionary dictionaryWithObjectsAndKeys:
                     [NSColor grayColor], NSForegroundColorAttributeName,
                     [NSColor blueColor], NSBackgroundColorAttributeName,
-//                    [NSFont boldSystemFontOfSize:14.0], NSFontAttributeName,
                     [NSFont fontWithName:@"Courier" size:14], NSFontAttributeName,
                     nil];
             highlight1 = true;
