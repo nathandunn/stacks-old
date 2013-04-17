@@ -7,29 +7,18 @@
 //
 
 #import "LocusView.h"
-#import "GenotypeView.h"
-#import "StacksView.h"
-#import "GenotypeEntry.h"
 
 @implementation LocusView
-@synthesize depth ;
+@synthesize depth;
 @synthesize genotypes;
 
 
-- (id)initWithId:(NSString *)locusId {
+- (id)initWithId:(NSInteger)locusId {
     if ((self = [super init])) {
         self.locusId = locusId;
     }
     return self;
 }
-
-//@synthesize locusId;
-//@synthesize consensus;
-//@synthesize marker;
-//@synthesize genotypes;
-//@synthesize progeny;
-//@synthesize ratio;
-//@synthesize snps;
 
 // TODO: fix parental functions
 // to identify the # of parents: look at "identify_parents" in genotypes.cc .
@@ -44,26 +33,5 @@
     return count;
 }
 
-//- (NSInteger)genotypes {
-//    return [_progeny count];
-//}
 
-- (BOOL)hasMale {
-//    if (_male !=nil ){
-//        return (_male.superScript!= nil || _male.subScript !=nil);
-//    }
-    return FALSE;
-}
-
-- (BOOL)hasFemale {
-//    if (_female !=nil ){
-//        return (_female.superScript!= nil || _female.subScript !=nil);
-//    }
-    return FALSE;
-}
-
-- (NSInteger)count {
-    return self.genotypeCount;
-//    return self.matchingParents + self.genotypes;
-}
 @end

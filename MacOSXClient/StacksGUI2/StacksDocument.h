@@ -15,7 +15,14 @@
 
 @property (strong) NSMutableDictionary *locusViews;
 
+@property(strong) NSString *path;
+
+@property(atomic, strong) NSMutableDictionary *populationLookup;
+
+@property(atomic, strong) NSArray *orderedLocus;
+
 - (id)initWithLocusView:(NSMutableDictionary*)locusViews;
 
 
+- (NSMutableArray *)findPopulations;
 @end

@@ -30,4 +30,10 @@
 @property NSInteger  tagId;
 
 - (NSString *)render;
+
+- (id)initWithCapcity:(int)numHaplotypes;
+
+- (NSAttributedString *)renderName;
+- (NSAttributedString *)renderHaplotypes;
+- (NSAttributedString *)renderDepths;
 @end

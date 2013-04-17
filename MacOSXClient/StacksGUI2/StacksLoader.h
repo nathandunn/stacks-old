@@ -19,6 +19,8 @@
 - (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus;
 
 - (StacksDocument *)loadLociAndGenotypes:(NSString *)path;
+
+- (NSMutableDictionary *)loadPopulation:(NSString *)path;
 @end
 
 //int build_file_list(string in_path, vector<pair<int, string> > &files) ;
