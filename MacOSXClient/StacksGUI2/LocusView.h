@@ -18,7 +18,7 @@
 */
 @interface LocusView : NSObject
 
-@property (strong) NSString *locusId;
+@property NSInteger locusId;
 @property (strong) NSMutableArray *snps;
 @property (strong) NSString *consensus;
 @property (strong) NSString *marker ;
@@ -31,7 +31,7 @@
 
 @property(nonatomic) int depth;
 
-- (id)initWithId:(NSString *)locusId ;
+- (id)initWithId:(NSInteger)locusId ;
 
 - (NSInteger) matchingParents;
 

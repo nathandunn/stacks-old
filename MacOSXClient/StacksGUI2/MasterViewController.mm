@@ -137,7 +137,7 @@ constrainMinCoordinate:
         LocusView *locusView = [self.stacksDocument.locusViews objectForKey:key];
 
         LocusCell *locusCell = (LocusCell *) cellView;
-        locusCell.locusId.stringValue = locusView.locusId;
+        locusCell.locusId.stringValue = [NSString stringWithFormat:@"%ld",locusView.locusId];
         locusCell.propertyField.stringValue = [NSString stringWithFormat:@"Parents %ld Progeny %ld \nSNPS %ld"
                 , (NSInteger) 0, locusView.genotypes.count, locusView.snps.count];
 

@@ -13,7 +13,7 @@
 @synthesize genotypes;
 
 
-- (id)initWithId:(NSString *)locusId {
+- (id)initWithId:(NSInteger)locusId {
     if ((self = [super init])) {
         self.locusId = locusId;
     }

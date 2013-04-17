@@ -198,9 +198,9 @@ BOOL build_file_list(char const *string1, id param);
 
     map<int, CSLocus *>::iterator catalogIterator = catalog.begin();
     while (catalogIterator != catalog.end()) {
-        NSString *sampleId = [NSString stringWithFormat:@"%d", (*catalogIterator).first];
+//        NSString *sampleId = [NSString stringWithFormat:@"%d", (*catalogIterator).first];
 
-        LocusView *locusView = [[LocusView alloc] initWithId:sampleId];
+        LocusView *locusView = [[LocusView alloc] initWithId:(*catalogIterator).first];
         const char *read = (*catalogIterator).second->con;
         NSString *letters = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
 //            NSLog(@"added read %@",letters);
@@ -229,7 +229,7 @@ BOOL build_file_list(char const *string1, id param);
 
         locusView.snps = snpsArray;
 
-        [locusViews setObject:locusView forKey:locusView.locusId];
+        [locusViews setObject:locusView forKey:[NSString stringWithFormat:@"%ld",locusView.locusId] ];
         ++catalogIterator;
     }
 
@@ -254,7 +254,7 @@ BOOL build_file_list(char const *string1, id param);
             loc = it->second;
             d = pmap->datum(loc->id, sample_ids[i]);
 
-            LocusView *locusView = [locusViews objectForKey:[NSString stringWithFormat:@"%d", it->first]];
+            LocusView *locusView = [locusViews objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
             if (d != NULL && locusView != nil) {
 //                NSString *key = [NSString stringWithFormat:@"%d",sample_ids[i]];
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
