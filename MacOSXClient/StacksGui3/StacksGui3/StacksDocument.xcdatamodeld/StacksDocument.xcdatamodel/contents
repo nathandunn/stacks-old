@@ -4,6 +4,7 @@
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sampleId" optional="YES" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
         <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="genotypes" inverseEntity="Locus" syncable="YES"/>
+        <relationship name="stacks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Stack" inverseName="genotype" inverseEntity="Stack" syncable="YES"/>
     </entity>
     <entity name="Locus" syncable="YES">
         <attribute name="consensus" optional="YES" attributeType="String" syncable="YES"/>
@@ -14,17 +15,18 @@
         <attribute name="consensus" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="model" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="reference" optional="YES" attributeType="String" syncable="YES"/>
-        <relationship name="stacks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
+        <relationship name="genotype" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Genotype" inverseName="stacks" inverseEntity="Genotype" syncable="YES"/>
+        <relationship name="stackEntries" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
     </entity>
     <entity name="StackEntry" syncable="YES">
         <attribute name="entryId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
         <attribute name="relationship" optional="YES" attributeType="String" syncable="YES"/>
-        <relationship name="stack" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Stack" inverseName="stacks" inverseEntity="Stack" syncable="YES"/>
+        <relationship name="stack" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Stack" inverseName="stackEntries" inverseEntity="Stack" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Genotype" positionX="189" positionY="135" width="128" height="90"/>
-        <element name="Locus" positionX="196" positionY="-18" width="128" height="90"/>
-        <element name="Stack" positionX="376" positionY="-18" width="128" height="105"/>
-        <element name="StackEntry" positionX="385" positionY="144" width="128" height="90"/>
+        <element name="Genotype" positionX="169" positionY="-150" width="128" height="105"/>
+        <element name="Locus" positionX="171" positionY="-288" width="128" height="90"/>
+        <element name="Stack" positionX="187" positionY="27" width="128" height="120"/>
+        <element name="StackEntry" positionX="178" positionY="261" width="128" height="90"/>
     </elements>
 </model>
