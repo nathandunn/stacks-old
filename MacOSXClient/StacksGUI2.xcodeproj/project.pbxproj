@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1442E0F6171DF5DA004B6361 /* double_tap.png in Resources */ = {isa = PBXBuildFile; fileRef = 1442E0F5171DF5DA004B6361 /* double_tap.png */; };
 		14B4DD4116C97A7500317EB3 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B4DD4016C97A7500317EB3 /* Cocoa.framework */; };
 		14B4DD4B16C97A7500317EB3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 14B4DD4916C97A7500317EB3 /* InfoPlist.strings */; };
 		14B4DD4D16C97A7500317EB3 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 14B4DD4C16C97A7500317EB3 /* main.m */; };
@@ -53,6 +54,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1442E0F5171DF5DA004B6361 /* double_tap.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = double_tap.png; path = ../double_tap.png; sourceTree = "<group>"; };
 		14B4DD3D16C97A7500317EB3 /* StacksGUI2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StacksGUI2.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14B4DD4016C97A7500317EB3 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		14B4DD4316C97A7500317EB3 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -324,6 +326,7 @@
 		6BEFE6C116F121DE00F932B0 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				1442E0F5171DF5DA004B6361 /* double_tap.png */,
 				6BEFE6C216F121DE00F932B0 /* StacksTests-Info.plist */,
 				6BEFE6C316F121DE00F932B0 /* InfoPlist.strings */,
 				6BEFE6C916F121DE00F932B0 /* StacksTests-Prefix.pch */,
@@ -407,6 +410,7 @@
 				14B4DD5116C97A7500317EB3 /* Credits.rtf in Resources */,
 				14B4DD5716C97A7600317EB3 /* MainMenu.xib in Resources */,
 				14B4DDB216C97C0400317EB3 /* MasterViewController.xib in Resources */,
+				1442E0F6171DF5DA004B6361 /* double_tap.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

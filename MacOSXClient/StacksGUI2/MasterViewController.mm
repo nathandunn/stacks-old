@@ -46,7 +46,7 @@
     self.stacksLoader = [[StacksLoader alloc] init];
 
 
-    [genotypesController addObserver:self forKeyPath:@"selectionIndexes" options:NSKeyValueObservingOptionNew context:nil];
+    [genotypesController addObserver:self forKeyPath:@"selectionIndexes" options:NSKeyValueObservingOptionInitial context:nil];
 }
 
 
@@ -426,19 +426,10 @@ constrainMinCoordinate:
 
             for (NSString *key in locus.genotypes.allKeys) {
                 NSString *populationValue = [populationLookup objectForKey:key];
-//                NSLog(@"matching pop %@ vs %ld",populationValue,_selectedPopulation);
                 if (_selectedPopulation == ([populationValue integerValue])) {
                     [array addObject:[locus.genotypes objectForKey:key]];
                 }
             }
-
-//        [self.selectedGenotypes ];
-//        [self.selectedGenotypes addObjectsFromArray:[locus.genotypes allValues]];
-
-
-            // get all of the genotypes for the locus
-
-            // get the selected popmap (unless the size is 0 or 1)
 
             self.selectedGenotypes = array;
         }
@@ -498,6 +489,13 @@ constrainMinCoordinate:
                     return;
                 }
 
+                NSLog(@"object %@",object);
+                NSLog(@"object %@",object);
+                NSLog(@"selected %ld ",[genotypesController selectionIndex]);
+                for(NSString *key in change){
+                    NSLog(@"key %@ - value %@",key,[change objectForKey:key]);
+                }
+
                 self.previousStacksName = genotypeEntry.name;
 
 //                NSLog(@"selected genotype %@ and tagID %ld", genotypeEntry.name,genotypeEntry.tagId);
@@ -509,14 +507,10 @@ constrainMinCoordinate:
                                 forTag:genotypeEntry.tagId
                                  locus:locusView];
                 self.selectedStacks = stacksView;
-//                NSLog(@"stacks view %@",stacksView);
-
-//                [self showTagsTable:self.selectedStacks];
             }
         }
         else {
             self.selectedStacks = nil ;
-//            NSLog(@"none selected");
         }
         [self showTagsTable:self.selectedStacks];
         [self.stacksTableView reloadData];
