@@ -32,9 +32,9 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "14B4DD5C16C97A7600317EB3"
-               BuildableName = "StacksGUI2Tests.octest"
-               BlueprintName = "StacksGUI2Tests"
+               BlueprintIdentifier = "6BEFE6BC16F121DE00F932B0"
+               BuildableName = "StacksTests.octest"
+               BlueprintName = "StacksTests"
                ReferencedContainer = "container:StacksGUI2.xcodeproj">
             </BuildableReference>
          </TestableReference>

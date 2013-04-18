@@ -8,9 +8,28 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface MasterViewController : NSViewController
+@class StacksDocument;
+@class StacksView;
+@class LocusView;
+@class StacksLoader;
 
-@property (strong) NSMutableArray *data;
+@interface MasterViewController : NSWindowController <NSSplitViewDelegate>{
+    IBOutlet NSSplitView *verticalSplitView ;
+    IBOutlet NSSplitView *horizontalSplitView ;
+    IBOutlet NSView *dividerHandleView;
+
+    IBOutlet NSArrayController *genotypesController ;
+
+}
+
+@property (atomic,strong) StacksDocument* stacksDocument;
+@property (atomic,strong) LocusView* selectedLocusView;
+@property(atomic, strong) StacksView *selectedStacks;
+@property NSInteger selectedPopulation ;
 
 
+
+@property (strong) NSMutableArray *selectedGenotypes ;
+
+@property(nonatomic, copy) NSString *previousStacksName;
 @end
