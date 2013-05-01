@@ -1,32 +1,63 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model name="" userDefinedModelVersionIdentifier="" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="2061" systemVersion="11G63" minimumToolsVersion="Automatic" macOSVersion="Automatic" iOSVersion="Automatic">
-    <entity name="Genotype" syncable="YES">
+    <entity name="Depth" syncable="YES">
+        <attribute name="depth" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <relationship name="genotype" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Genotype" syncable="YES"/>
+    </entity>
+    <entity name="Genotype" representedClassName="Genotype" syncable="YES">
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sampleId" optional="YES" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
+        <attribute name="tagId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
+        <relationship name="depths" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Depth" inverseName="genotype" inverseEntity="Depth" syncable="YES"/>
+        <relationship name="haplotypes" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Haplotype" inverseName="genotype" inverseEntity="Haplotype" syncable="YES"/>
         <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="genotypes" inverseEntity="Locus" syncable="YES"/>
         <relationship name="stacks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Stack" inverseName="genotype" inverseEntity="Stack" syncable="YES"/>
     </entity>
-    <entity name="Locus" syncable="YES">
-        <attribute name="consensus" optional="YES" attributeType="String" syncable="YES"/>
-        <attribute name="locusId" optional="YES" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
-        <relationship name="genotypes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Genotype" inverseName="locus" inverseEntity="Genotype" syncable="YES"/>
+    <entity name="Haplotype" syncable="YES">
+        <attribute name="haplotype" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <relationship name="genotype" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Genotype" inverseName="haplotypes" inverseEntity="Genotype" syncable="YES"/>
     </entity>
-    <entity name="Stack" syncable="YES">
-        <attribute name="consensus" optional="YES" attributeType="String" syncable="YES"/>
-        <attribute name="model" optional="YES" attributeType="String" syncable="YES"/>
-        <attribute name="reference" optional="YES" attributeType="String" syncable="YES"/>
-        <relationship name="genotype" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Genotype" inverseName="stacks" inverseEntity="Genotype" syncable="YES"/>
+    <entity name="Locus" representedClassName="Locus" syncable="YES">
+        <attribute name="consensus" attributeType="String" syncable="YES"/>
+        <attribute name="length" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="locusId" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
+        <attribute name="marker" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="ratio" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="genotypes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Genotype" inverseName="locus" inverseEntity="Genotype" syncable="YES"/>
+        <relationship name="snps" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Snp" inverseName="locus" inverseEntity="Snp" syncable="YES"/>
+    </entity>
+    <entity name="Snp" representedClassName="Snp" syncable="YES">
+        <attribute name="column" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
+        <attribute name="lratio" optional="YES" attributeType="Decimal" minValueString="0" defaultValueString="0.0" syncable="YES"/>
+        <attribute name="rank1" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
+        <attribute name="rank2" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
+        <attribute name="rank3" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
+        <attribute name="rank4" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
+        <attribute name="type" optional="YES" attributeType="Integer 16" minValueString="0" syncable="YES"/>
+        <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="snps" inverseEntity="Locus" syncable="YES"/>
+    </entity>
+    <entity name="Stack" representedClassName="Stack" syncable="YES">
+        <relationship name="consensus" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
+        <relationship name="genotype" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Genotype" inverseName="stacks" inverseEntity="Genotype" syncable="YES"/>
+        <relationship name="model" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
+        <relationship name="reference" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
         <relationship name="stackEntries" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
     </entity>
     <entity name="StackEntry" syncable="YES">
+        <attribute name="block" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="entryId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
         <attribute name="relationship" optional="YES" attributeType="String" syncable="YES"/>
-        <relationship name="stack" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Stack" inverseName="stackEntries" inverseEntity="Stack" syncable="YES"/>
+        <attribute name="sequence" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sequenceId" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="stack" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Stack" inverseName="reference" inverseEntity="Stack" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Genotype" positionX="169" positionY="-150" width="128" height="105"/>
-        <element name="Locus" positionX="171" positionY="-288" width="128" height="90"/>
-        <element name="Stack" positionX="187" positionY="27" width="128" height="120"/>
-        <element name="StackEntry" positionX="178" positionY="261" width="128" height="90"/>
+        <element name="Genotype" positionX="171" positionY="-117" width="128" height="150"/>
+        <element name="Locus" positionX="171" positionY="-288" width="128" height="150"/>
+        <element name="Stack" positionX="153" positionY="63" width="128" height="120"/>
+        <element name="StackEntry" positionX="322" positionY="99" width="128" height="135"/>
+        <element name="Snp" positionX="331" positionY="-288" width="128" height="165"/>
+        <element name="Haplotype" positionX="342" positionY="-111" width="128" height="75"/>
+        <element name="Depth" positionX="340" positionY="-18" width="128" height="75"/>
     </elements>
 </model>

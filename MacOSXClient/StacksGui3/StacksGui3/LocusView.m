@@ -24,12 +24,6 @@
 // to identify the # of parents: look at "identify_parents" in genotypes.cc .
 - (NSInteger)matchingParents {
     NSInteger count = 0;
-//    if (_male) {
-//        ++count;
-//    }
-//    if (_female) {
-//        ++count;
-//    }
     return count;
 }
 

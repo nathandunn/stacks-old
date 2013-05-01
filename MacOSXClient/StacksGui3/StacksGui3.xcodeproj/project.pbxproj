@@ -35,6 +35,10 @@
 		6B4674A2173183AB00E42419 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B46749B173183AB00E42419 /* utils.cc */; };
 		6B4674A4173183C300E42419 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B4674A3173183C300E42419 /* libz.1.2.7.dylib */; };
 		6B4674AA1731872600E42419 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674A81731872600E42419 /* input.cc */; };
+		6B4674AD1731888200E42419 /* Locus.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674AC1731888200E42419 /* Locus.m */; };
+		6B4674B017318A4200E42419 /* Genotype.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674AF17318A4200E42419 /* Genotype.m */; };
+		6B4674B317318A6900E42419 /* Stack.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674B217318A6900E42419 /* Stack.m */; };
+		6B4674B81731947B00E42419 /* Snp.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674B71731947B00E42419 /* Snp.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -115,6 +119,14 @@
 		6B4674A3173183C300E42419 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libz.1.2.7.dylib; sourceTree = "<group>"; };
 		6B4674A81731872600E42419 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = input.cc; path = ../../../src/input.cc; sourceTree = "<group>"; };
 		6B4674A91731872600E42419 /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../../../src/input.h; sourceTree = "<group>"; };
+		6B4674AB1731888200E42419 /* Locus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Locus.h; sourceTree = "<group>"; };
+		6B4674AC1731888200E42419 /* Locus.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Locus.m; sourceTree = "<group>"; };
+		6B4674AE17318A4200E42419 /* Genotype.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Genotype.h; sourceTree = "<group>"; };
+		6B4674AF17318A4200E42419 /* Genotype.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Genotype.m; sourceTree = "<group>"; };
+		6B4674B117318A6900E42419 /* Stack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Stack.h; sourceTree = "<group>"; };
+		6B4674B217318A6900E42419 /* Stack.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Stack.m; sourceTree = "<group>"; };
+		6B4674B61731947A00E42419 /* Snp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Snp.h; sourceTree = "<group>"; };
+		6B4674B71731947B00E42419 /* Snp.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Snp.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -267,8 +279,6 @@
 				63D531804419CD422905AD3F /* StacksView.h */,
 				63D53E7F581563F0A435D268 /* StackEntry.m */,
 				63D53089800900FDBF405C44 /* StackEntry.h */,
-				63D5391E65841C27ACCD2BB4 /* LocusView.m */,
-				63D537BDB11ABFB191353902 /* LocusView.h */,
 				63D5300CEE50E2EFF99D9FA9 /* SnpView.m */,
 				63D53F98F88E905D5B4D6620 /* SnpView.h */,
 				63D53152900941A896B8CCE9 /* LocusCell.m */,
@@ -282,9 +292,19 @@
 		6B4674A6173183FE00E42419 /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				6B4674AC1731888200E42419 /* Locus.m */,
+				6B4674AB1731888200E42419 /* Locus.h */,
+				63D5391E65841C27ACCD2BB4 /* LocusView.m */,
+				63D537BDB11ABFB191353902 /* LocusView.h */,
 				1442E1AA17206DBB004B6361 /* StacksDocument.h */,
 				1442E1AB17206DBB004B6361 /* StacksDocument.m */,
 				1442E1B317206DBB004B6361 /* StacksDocument.xcdatamodeld */,
+				6B4674B61731947A00E42419 /* Snp.h */,
+				6B4674B71731947B00E42419 /* Snp.m */,
+				6B4674B117318A6900E42419 /* Stack.h */,
+				6B4674B217318A6900E42419 /* Stack.m */,
+				6B4674AE17318A4200E42419 /* Genotype.h */,
+				6B4674AF17318A4200E42419 /* Genotype.m */,
 				63D536B7D774709CB10C35A9 /* GenotypeEntry.h */,
 				63D534C6D7C874A78179DE78 /* GenotypeEntry.m */,
 			);
@@ -428,6 +448,10 @@
 				6B4674AA1731872600E42419 /* input.cc in Sources */,
 				63D5373EE2F31FA8CF4F5F1A /* LocusCell.m in Sources */,
 				63D53CFA3A01C35492B74405 /* PopulationCell.m in Sources */,
+				6B4674AD1731888200E42419 /* Locus.m in Sources */,
+				6B4674B017318A4200E42419 /* Genotype.m in Sources */,
+				6B4674B317318A6900E42419 /* Stack.m in Sources */,
+				6B4674B81731947B00E42419 /* Snp.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
