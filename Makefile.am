@@ -111,7 +111,7 @@ dist_noinst_SCRIPTS = autogen.sh
 
 nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sql/tag_index.sql sql/chr_index.sql \
 	php/CatalogClass.php php/annotate_marker.php php/constants.php.dist php/index.php php/tags.php \
-	php/Locus.php php/catalog.php php/correct_genotypes.php php/export_batch.php php/last_modified.php  \
+	php/Locus.php php/catalog.php php/correct_genotypes.php php/correct_genotype.php php/export_batch.php php/last_modified.php  \
 	php/version.php php/catalog_genotypes.php php/db_functions.php php/header.php php/samples.php \
 	php/stacks_functions.php php/view_sequence.php php/catalog_tag.php php/sequence_blast.php php/tag.php \
 	php/ajax.js php/annotate.js php/stacks.js php/export.js php/stacks.css \

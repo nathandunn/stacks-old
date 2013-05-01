@@ -364,7 +364,9 @@ sub write_observed_haplotypes {
     #
     my $i = 0;
 
-    $str = 
+    $str = "# " if ($type ne "xls");
+    
+    $str .= 
         "Catalog ID\t" . 
         "Annotation\t" . 
         "Chr\t" .
@@ -448,7 +450,7 @@ sub write_observed_haplotypes {
     $i++;
 
     foreach $id (@ordered_sam) {
-        $str = $samples->{$id} . "\t" . $id . "\n";
+        $str = "\t" . $samples->{$id} . "\t" . $id . "\n";
         $type eq "xls" ? write_excel($worksheet, $i, $str) : print $out_fh $str;
         $i++;
     }
@@ -604,7 +606,8 @@ sub translate_marker {
     $dictionary{"bc1"}->{"ab/cc"} = "abxcc";
     $dictionary{"bc1"}->{"cc/ab"} = "ccxab";
 
-    return $dictionary{$map_type}->{$in_marker};
+    return defined($dictionary{$map_type}->{$in_marker}) ? 
+	$dictionary{$map_type}->{$in_marker} : "";
 }
 
 sub trans_bc1_map {

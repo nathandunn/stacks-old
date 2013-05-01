@@ -1490,9 +1490,10 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		switch(fst_correction) {
 		case p_value:
 		    for (uint i = 0; i < pairs.size(); i++) {
-			if (pairs[i] != NULL)
+			if (pairs[i] != NULL) {
 			    pairs[i]->cfst       = pairs[i]->fet_p < p_value_cutoff ? pairs[i]->fst : 0;
 			    pairs[i]->camova_fst = pairs[i]->fet_p < p_value_cutoff ? pairs[i]->amova_fst : 0;
+			}
 		    }
 		    break;
 		case bonferroni_win:
@@ -1501,16 +1502,18 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		case bonferroni_gen:
 		    correction = p_value_cutoff / catalog.size();
 		    for (uint i = 0; i < pairs.size(); i++) {
-			if (pairs[i] != NULL)
+			if (pairs[i] != NULL) {
 			    pairs[i]->cfst       = pairs[i]->fet_p < correction ? pairs[i]->fst : 0;
 			    pairs[i]->camova_fst = pairs[i]->fet_p < correction ? pairs[i]->amova_fst : 0;
+			}
 		    }
 		    break;
 		case no_correction:
 		    for (uint i = 0; i < pairs.size(); i++) {
-			if (pairs[i] != NULL)
+			if (pairs[i] != NULL) {
 			    pairs[i]->cfst = pairs[i]->fst;
 			    pairs[i]->camova_fst = pairs[i]->amova_fst;
+			}
 		    }
 		    break;
 		}
@@ -1576,7 +1579,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    sprintf(cfst_str,  "%0.10f", pairs[i]->cfst);
 		    sprintf(wfst_str,  "%0.10f", pairs[i]->wfst);
 		    sprintf(afst_str,  "%0.10f", pairs[i]->amova_fst);
-		    sprintf(cafst_str,  "%0.10f", pairs[i]->camova_fst);
+		    sprintf(cafst_str, "%0.10f", pairs[i]->camova_fst);
 		    sprintf(wafst_str, "%0.10f", pairs[i]->wamova_fst);
 
 		    fh << batch_id          << "\t"

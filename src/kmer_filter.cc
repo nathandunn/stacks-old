@@ -267,13 +267,24 @@ int process_paired_reads(string in_path_1,
     //
     // Open the output files.
     //
-    int       pos_1  = in_file_1.find_last_of(".");
-    string    path   = out_path + in_file_1.substr(0, pos_1) + ".fil" + in_file_1.substr(pos_1);
-    ofstream *ofh_1  = new ofstream(path.c_str(), ifstream::out);
-    pos_1 = in_file_2.find_last_of(".");
-    path  = out_path + in_file_2.substr(0, pos_1) + ".fil" + in_file_2.substr(pos_1);
+    string    path  = in_file_1;
+    int       pos_1 = path.find_last_of(".");
+    if (path.substr(pos_1) == ".gz") {
+	path = path.substr(0, pos_1);
+	pos_1  = path.find_last_of(".");
+    }
+    path = out_path + path.substr(0, pos_1) + ".fil" + path.substr(pos_1);
+    ofstream *ofh_1 = new ofstream(path.c_str(), ifstream::out);
+
+    path  = in_file_2;
+    pos_1 = path.find_last_of(".");
+    if (path.substr(pos_1) == ".gz") {
+	path = path.substr(0, pos_1);
+	pos_1  = path.find_last_of(".");
+    }
+    path  = out_path + path.substr(0, pos_1) + ".fil" + path.substr(pos_1);
     ofstream *ofh_2  = new ofstream(path.c_str(), ifstream::out);
-    path  = out_path + in_file_2.substr(0, pos_1) + ".fil.rem";
+    path  = out_path + path.substr(0, pos_1) + ".fil.rem";
     path += out_file_type == fastq ? ".fq" : ".fa";
     ofstream *rem_fh = new ofstream(path.c_str(), ifstream::out);
 
@@ -440,8 +451,13 @@ int process_reads(string in_path,
     //
     // Open the output file.
     //
-    int pos = in_file.find_last_of(".");
-    path    = out_path + in_file.substr(0, pos) + ".fil" + in_file.substr(pos);
+    path    = in_file;
+    int pos = path.find_last_of(".");
+    if (path.substr(pos) == ".gz") {
+	path = path.substr(0, pos);
+	pos  = path.find_last_of(".");
+    }
+    path = out_path + path.substr(0, pos) + ".fil" + path.substr(pos);
     ofstream *out_fh = new ofstream(path.c_str(), ifstream::out);    
 
     //
@@ -554,9 +570,15 @@ normalize_paired_reads(string in_path_1,
     if (in_file_type == fastq) {
         fh_1 = new Fastq(path_1.c_str());
         fh_2 = new Fastq(path_2.c_str());
+    } else if (in_file_type == gzfastq) {
+        fh_1 = new GzFastq(path_1.c_str());
+        fh_2 = new GzFastq(path_1.c_str());
     } else if (in_file_type == fasta) {
         fh_1 = new Fasta(path_1.c_str());
         fh_2 = new Fasta(path_2.c_str());
+    } else if (in_file_type == gzfasta) {
+        fh_1 = new GzFasta(path_1.c_str());
+        fh_2 = new GzFasta(path_2.c_str());
     } else if (in_file_type == bustard) {
         fh_1 = new Bustard(path_1.c_str());
         fh_2 = new Bustard(path_2.c_str());
@@ -963,8 +985,12 @@ process_file_kmers(string path, SeqKmerHash &kmer_map, vector<char *> &kmer_map_
 
     if (in_file_type == fastq)
         fh = new Fastq(path.c_str());
+    else if (in_file_type == gzfastq)
+        fh = new GzFastq(path.c_str());
     else if (in_file_type == fasta)
         fh = new Fasta(path.c_str());
+    else if (in_file_type == gzfasta)
+        fh = new GzFasta(path.c_str());
     else if (in_file_type == bustard)
         fh = new Bustard(path.c_str());
 
