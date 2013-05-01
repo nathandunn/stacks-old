@@ -1,3 +1,12 @@
+Stacks 0.99998 - May 01, 2013
+-----------------------------
+	Feature: Added option to sort_read_pairs.pl to output FASTQ if desired.
+	Bugfix: make sort_read_pairs.pl understand new file naming scheme.
+	Feature: added mseI, mspI restriction enzymes to process_radtags.
+	Bugfix: corrected sphI cutsite sequence in process_radtags.
+	Bugfix: stopped "uninitialized value" errors in export_sql.pl when marker type is
+	undefined for a particular map.
+
 Stacks 0.99997 - April 01, 2013
 -------------------------------
 	Bugfix: paired barcode could become uninitialized on second pair of files in 

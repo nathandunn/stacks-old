@@ -175,6 +175,8 @@ foreach $sample (@parents, @progeny, @samples) {
     @results = `$cmd` if ($dry_run == 0);
     write_results(\@results, $log_fh);
 
+    print STDERR "  Loading ustacks output to $db..." if ($sql == 1);
+
     $file = "$out_path/$pfile" . ".tags.tsv";
     import_sql_file($log_fh, $file, "unique_tags", 0);
 
@@ -183,6 +185,8 @@ foreach $sample (@parents, @progeny, @samples) {
 
     $file = "$out_path/$pfile" . ".alleles.tsv";
     import_sql_file($log_fh, $file, "alleles", 0);
+
+    print STDERR "done.\n" if ($sql == 1);
 
     $i++;
 
@@ -214,7 +218,8 @@ print $log_fh "$cmd\n";
 @results =    `$cmd` if ($dry_run == 0);
 print $log_fh @results;
 
-print STDERR "Importing catalog to MySQL database\n";
+print STDERR "Importing catalog to MySQL database..." if ($sql == 1);
+
 $file = "$out_path/$cat_file" . ".catalog.tags.tsv";
 import_sql_file($log_fh, $file, "catalog_tags", 0);
 
@@ -223,6 +228,8 @@ import_sql_file($log_fh, $file, "catalog_snps", 0);
 
 $file = "$out_path/$cat_file" . ".catalog.alleles.tsv";
 import_sql_file($log_fh, $file, "catalog_alleles", 0);
+
+print STDERR "done.\n" if ($sql == 1);
 
 #
 # Match parents and progeny to the catalog
