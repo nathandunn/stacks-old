@@ -8,6 +8,7 @@
 
 #import "GenotypeMO.h"
 #import "DepthMO.h"
+#import "HaplotypeMO.h"
 #import "LocusMO.h"
 #import "StackMO.h"
 
@@ -17,9 +18,9 @@
 @dynamic name;
 @dynamic sampleId;
 @dynamic tagId;
+@dynamic depths;
+@dynamic haplotypes;
 @dynamic locus;
 @dynamic stacks;
-@dynamic haplotypes;
-@dynamic depths;
 
 @end

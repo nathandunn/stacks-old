@@ -9,13 +9,17 @@
 
 @class StacksView;
 @class LocusView;
-//@class StacksDocument;
+@class StacksDocument;
 
 
 @interface StacksConverter : NSObject
 
+@property(nonatomic, strong) NSManagedObjectContext *managedObjectContext;
+@property(nonatomic, strong) NSManagedObjectModel *managedObjectModel;
+
+- (id)init ;
 - (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus;
-- (NSSet *)loadLociAndGenotypes:(NSString *)path;
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path;
 - (NSMutableDictionary *)loadPopulation:(NSString *)path;
 @end
 
