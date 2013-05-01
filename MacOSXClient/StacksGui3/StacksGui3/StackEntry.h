@@ -1,19 +1,23 @@
 //
-// Created by ndunn on 2/28/13.
+//  StackEntry.h
+//  StacksGui3
 //
-// To change the template use AppCode | Preferences | File Templates.
+//  Created by Nathan Dunn on 5/1/13.
+//  Copyright (c) 2013 Nathan Dunn. All rights reserved.
 //
-
 
 #import <Foundation/Foundation.h>
+#import <CoreData/CoreData.h>
 
+@class Stack;
 
-@interface StackEntry : NSObject
+@interface StackEntry : NSManagedObject
 
-@property NSUInteger entryId ;
-@property NSString *relationship ;
-@property NSString *sequenceId ;
-@property NSString *sequence;
-@property NSString *block ;
+@property (nonatomic, retain) NSNumber * entryId;
+@property (nonatomic, retain) NSString * relationship;
+@property (nonatomic, retain) NSString * sequenceId;
+@property (nonatomic, retain) NSString * sequence;
+@property (nonatomic, retain) NSString * block;
+@property (nonatomic, retain) Stack *stack;
 
 @end
