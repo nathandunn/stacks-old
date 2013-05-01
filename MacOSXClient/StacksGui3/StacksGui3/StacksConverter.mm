@@ -22,7 +22,7 @@ using std::ofstream;
 // #import "GenotypeView.h"
 #import "LocusView.h"
 #import "StacksDocument.h"
-#import "StacksLoader.h"
+#import "StacksConverter.h"
 #import "StacksView.h"
 // #import "DataStubber.h"
 
@@ -35,7 +35,7 @@ using std::ofstream;
 
 #include <sys/time.h>
 
-@implementation StacksLoader {
+@implementation StacksConverter {
 
 
 }
@@ -116,7 +116,7 @@ using std::ofstream;
     return stacksView;
 }
 
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path {
+- (NSSet *)loadLociAndGenotypes:(NSString *)path {
     [self checkFile:path];
     map<int, CSLocus *> catalog;
     NSString *catalogFile = [path stringByAppendingString:@"batch_1.catalog"];
@@ -304,8 +304,11 @@ using std::ofstream;
     gettimeofday(&time2, NULL);
     NSLog(@"find population time %ld", time2.tv_sec - time1.tv_sec);
 
+    NSSet* returnSet = [[NSSet alloc] init];
 
-    return stacksDocument;
+    return returnSet ;
+
+//    return stacksDocument;
 }
 
 - (NSMutableDictionary *)loadPopulation:(NSString *)path {

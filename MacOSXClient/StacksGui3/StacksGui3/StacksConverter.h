@@ -8,20 +8,15 @@
 #import <Foundation/Foundation.h>
 
 @class StacksView;
-@class StacksDocument;
+@class LocusView;
+//@class StacksDocument;
 
 
-@interface StacksLoader : NSObject
-
--(StacksDocument*) loadLoci:(NSString *) path;
-- (NSMutableDictionary *)loadGenotypes:(NSString *)path withLoci:(NSMutableDictionary *) loci;
+@interface StacksConverter : NSObject
 
 - (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus;
-
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path;
-
+- (NSSet *)loadLociAndGenotypes:(NSString *)path;
 - (NSMutableDictionary *)loadPopulation:(NSString *)path;
 @end
 
-//int build_file_list(string in_path, vector<pair<int, string> > &files) ;
 
