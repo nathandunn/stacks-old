@@ -39,8 +39,9 @@
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
     if(existsAtPath){
 //        [self loadApplication:examplePath];
-        NSSet *loci = [stacksConverter loadLociAndGenotypes:examplePath];
-        STAssertEquals(74, loci.count, @"should match loci count");
+        StacksDocument *stacksDocument= [stacksConverter loadLociAndGenotypes:examplePath];
+        NSSet* loci = stacksDocument.loci;
+        STAssertEquals( (NSUInteger) 462, loci.count, @"should match loci count");
     }
     else{
         NSLog(@"%@ does not exist.",examplePath);

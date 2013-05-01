@@ -14,7 +14,7 @@
 @interface SnpMO : NSManagedObject
 
 @property (nonatomic, retain) NSNumber * column;
-@property (nonatomic, retain) NSDecimalNumber * lratio;
+@property (nonatomic, retain) NSNumber * lratio;
 @property (nonatomic, retain) NSNumber * rank1;
 @property (nonatomic, retain) NSNumber * rank2;
 @property (nonatomic, retain) NSNumber * rank3;

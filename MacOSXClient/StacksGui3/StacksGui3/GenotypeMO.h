@@ -9,20 +9,30 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class DepthMO, LocusMO, StackMO;
+@class DepthMO, HaplotypeMO, LocusMO, StackMO;
 
 @interface GenotypeMO : NSManagedObject
 
 @property (nonatomic, retain) NSString * name;
 @property (nonatomic, retain) NSNumber * sampleId;
 @property (nonatomic, retain) NSNumber * tagId;
+@property (nonatomic, retain) NSSet *depths;
+@property (nonatomic, retain) NSSet *haplotypes;
 @property (nonatomic, retain) LocusMO *locus;
 @property (nonatomic, retain) NSSet *stacks;
-@property (nonatomic, retain) NSManagedObject *haplotypes;
-@property (nonatomic, retain) DepthMO *depths;
 @end
 
 @interface GenotypeMO (CoreDataGeneratedAccessors)
+
+- (void)addDepthsObject:(DepthMO *)value;
+- (void)removeDepthsObject:(DepthMO *)value;
+- (void)addDepths:(NSSet *)values;
+- (void)removeDepths:(NSSet *)values;
+
+- (void)addHaplotypesObject:(HaplotypeMO *)value;
+- (void)removeHaplotypesObject:(HaplotypeMO *)value;
+- (void)addHaplotypes:(NSSet *)values;
+- (void)removeHaplotypes:(NSSet *)values;
 
 - (void)addStacksObject:(StackMO *)value;
 - (void)removeStacksObject:(StackMO *)value;

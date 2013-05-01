@@ -13,7 +13,7 @@
 
 @interface HaplotypeMO : NSManagedObject
 
-@property (nonatomic, retain) NSNumber * haplotype;
+@property (nonatomic, retain) NSString * haplotype;
 @property (nonatomic, retain) GenotypeMO *genotype;
 
 @end

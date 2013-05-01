@@ -36,12 +36,12 @@
 		6B4674AA1731872600E42419 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674A81731872600E42419 /* input.cc */; };
 		6B4674BB17319C8900E42419 /* DepthMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674BA17319C8800E42419 /* DepthMO.m */; };
 		6B4674BE17319D2D00E42419 /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674BD17319D2C00E42419 /* AlleleMO.m */; };
-		6B4674C117319D5B00E42419 /* GenotypeMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674C017319D5B00E42419 /* GenotypeMO.m */; };
-		6B4674C417319D6800E42419 /* HaplotypeMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674C317319D6700E42419 /* HaplotypeMO.m */; };
-		6B4674C717319DAC00E42419 /* LocusMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674C617319DAC00E42419 /* LocusMO.m */; };
 		6B4674CA17319DBF00E42419 /* SnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674C917319DBB00E42419 /* SnpMO.m */; };
 		6B4674CD17319DE400E42419 /* StackMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674CC17319DE400E42419 /* StackMO.m */; };
 		6B4674D31731A0FD00E42419 /* StackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674D21731A0FD00E42419 /* StackEntryMO.m */; };
+		6BA21EC11731C2C0005132AC /* LocusMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BA21EC01731C2C0005132AC /* LocusMO.m */; };
+		6BA21EC41731C6A4005132AC /* HaplotypeMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BA21EC31731C6A4005132AC /* HaplotypeMO.m */; };
+		6BA21EC71731C70C005132AC /* GenotypeMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BA21EC61731C70C005132AC /* GenotypeMO.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -124,18 +124,18 @@
 		6B4674BA17319C8800E42419 /* DepthMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DepthMO.m; sourceTree = "<group>"; };
 		6B4674BC17319D2C00E42419 /* AlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleMO.h; sourceTree = "<group>"; };
 		6B4674BD17319D2C00E42419 /* AlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleMO.m; sourceTree = "<group>"; };
-		6B4674BF17319D5A00E42419 /* GenotypeMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeMO.h; sourceTree = "<group>"; };
-		6B4674C017319D5B00E42419 /* GenotypeMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenotypeMO.m; sourceTree = "<group>"; };
-		6B4674C217319D6700E42419 /* HaplotypeMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HaplotypeMO.h; sourceTree = "<group>"; };
-		6B4674C317319D6700E42419 /* HaplotypeMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HaplotypeMO.m; sourceTree = "<group>"; };
-		6B4674C517319DAB00E42419 /* LocusMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusMO.h; sourceTree = "<group>"; };
-		6B4674C617319DAC00E42419 /* LocusMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusMO.m; sourceTree = "<group>"; };
 		6B4674C817319DB800E42419 /* SnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpMO.h; sourceTree = "<group>"; };
 		6B4674C917319DBB00E42419 /* SnpMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpMO.m; sourceTree = "<group>"; };
 		6B4674CB17319DE300E42419 /* StackMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackMO.h; sourceTree = "<group>"; };
 		6B4674CC17319DE400E42419 /* StackMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackMO.m; sourceTree = "<group>"; };
 		6B4674D11731A0FD00E42419 /* StackEntryMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackEntryMO.h; sourceTree = "<group>"; };
 		6B4674D21731A0FD00E42419 /* StackEntryMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntryMO.m; sourceTree = "<group>"; };
+		6BA21EBF1731C2C0005132AC /* LocusMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusMO.h; sourceTree = "<group>"; };
+		6BA21EC01731C2C0005132AC /* LocusMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusMO.m; sourceTree = "<group>"; };
+		6BA21EC21731C6A4005132AC /* HaplotypeMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HaplotypeMO.h; sourceTree = "<group>"; };
+		6BA21EC31731C6A4005132AC /* HaplotypeMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HaplotypeMO.m; sourceTree = "<group>"; };
+		6BA21EC51731C70C005132AC /* GenotypeMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeMO.h; sourceTree = "<group>"; };
+		6BA21EC61731C70C005132AC /* GenotypeMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenotypeMO.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -307,16 +307,16 @@
 				1442E1AA17206DBB004B6361 /* StacksDocument.h */,
 				1442E1AB17206DBB004B6361 /* StacksDocument.m */,
 				1442E1B317206DBB004B6361 /* StacksDocument.xcdatamodeld */,
+				6BA21EC51731C70C005132AC /* GenotypeMO.h */,
+				6BA21EC61731C70C005132AC /* GenotypeMO.m */,
+				6BA21EC21731C6A4005132AC /* HaplotypeMO.h */,
+				6BA21EC31731C6A4005132AC /* HaplotypeMO.m */,
+				6BA21EBF1731C2C0005132AC /* LocusMO.h */,
+				6BA21EC01731C2C0005132AC /* LocusMO.m */,
 				6B4674CB17319DE300E42419 /* StackMO.h */,
 				6B4674CC17319DE400E42419 /* StackMO.m */,
 				6B4674C817319DB800E42419 /* SnpMO.h */,
 				6B4674C917319DBB00E42419 /* SnpMO.m */,
-				6B4674C517319DAB00E42419 /* LocusMO.h */,
-				6B4674C617319DAC00E42419 /* LocusMO.m */,
-				6B4674C217319D6700E42419 /* HaplotypeMO.h */,
-				6B4674C317319D6700E42419 /* HaplotypeMO.m */,
-				6B4674BF17319D5A00E42419 /* GenotypeMO.h */,
-				6B4674C017319D5B00E42419 /* GenotypeMO.m */,
 				6B4674BC17319D2C00E42419 /* AlleleMO.h */,
 				6B4674BD17319D2C00E42419 /* AlleleMO.m */,
 				6B4674B917319C8800E42419 /* DepthMO.h */,
@@ -461,15 +461,15 @@
 				63D53CFA3A01C35492B74405 /* PopulationCell.m in Sources */,
 				6B4674BB17319C8900E42419 /* DepthMO.m in Sources */,
 				6B4674BE17319D2D00E42419 /* AlleleMO.m in Sources */,
-				6B4674C117319D5B00E42419 /* GenotypeMO.m in Sources */,
-				6B4674C417319D6800E42419 /* HaplotypeMO.m in Sources */,
-				6B4674C717319DAC00E42419 /* LocusMO.m in Sources */,
 				6B4674CA17319DBF00E42419 /* SnpMO.m in Sources */,
 				6B4674CD17319DE400E42419 /* StackMO.m in Sources */,
 				6B4674D31731A0FD00E42419 /* StackEntryMO.m in Sources */,
 				63D53A7B98C0266C27BCB428 /* GenotypeEntry.m in Sources */,
 				63D53BDDE2EE5FB78660C9E1 /* LocusView.m in Sources */,
 				63D53BAAED00BA9776516730 /* StacksConverter.mm in Sources */,
+				6BA21EC11731C2C0005132AC /* LocusMO.m in Sources */,
+				6BA21EC41731C6A4005132AC /* HaplotypeMO.m in Sources */,
+				6BA21EC71731C70C005132AC /* GenotypeMO.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

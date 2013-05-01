@@ -17,6 +17,7 @@
 @property(nonatomic, strong) NSSet *loci;
 
 - (id)initWithLocusView:(NSMutableDictionary*)locusViews;
+- (id)initWithLoci:(NSSet*)loci ;
 - (NSMutableArray *)findPopulations;
 
 @end

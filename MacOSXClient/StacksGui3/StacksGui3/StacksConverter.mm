@@ -30,6 +30,10 @@ using std::ofstream;
 // #include "LociLoader.hpp"
 #import "GenotypeEntry.h"
 #import "SnpView.h"
+#import "SnpMO.h"
+#import "GenotypeMO.h"
+#import "HaplotypeMO.h"
+#import "DepthMO.h"
 //#import "StackEntry.h"
 
 
@@ -38,6 +42,14 @@ using std::ofstream;
 @implementation StacksConverter {
 
 
+}
+
+- (id)init {
+    self = [super init];
+    if (self) {
+        // nothing write now
+    }
+    return self;
 }
 
 - (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus {
@@ -116,10 +128,12 @@ using std::ofstream;
     return stacksView;
 }
 
-- (NSSet *)loadLociAndGenotypes:(NSString *)path {
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path {
     [self checkFile:path];
     map<int, CSLocus *> catalog;
     NSString *catalogFile = [path stringByAppendingString:@"batch_1.catalog"];
+
+    StacksDocument *stacksDocument = [[StacksDocument alloc] init];
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
@@ -178,35 +192,46 @@ using std::ofstream;
     NSLog(@"population pmap %ld", (time2.tv_sec - time1.tv_sec));
 
 
-    NSMutableDictionary *locusViews = [[NSMutableDictionary alloc] init];
+//    NSMutableDictionary *locusViews = [[NSMutableDictionary alloc] init];
+    NSMutableSet *loci = [[NSMutableSet alloc] init];
 
     gettimeofday(&time1, NULL);
     map<int, CSLocus *>::iterator catalogIterator = catalog.begin();
     while (catalogIterator != catalog.end()) {
-        LocusView *locusView = [[LocusView alloc] initWithId:(*catalogIterator).first];
+//        LocusView *locusView = [[LocusView alloc] initWithId:(*catalogIterator).first];
+//        LocusMO *locusMO = [[LocusMO  alloc] init];
+//        NSEntityDescription *locusEntity = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:stacksDocument.managedObjectContext];
+//        LocusMO *locusMO = [[LocusMO alloc] initWithEntity:locusEntity insertIntoManagedObjectContext:stacksDocument.managedObjectContext];
+//        Expense *newExpense = [NSEntityDescription insertNewObjectForEntityForName: @"Expense" inManagedObjectContext: [self managedObjectContext]];
+        LocusMO *locusMO = [NSEntityDescription insertNewObjectForEntityForName: @"Locus" inManagedObjectContext: stacksDocument.managedObjectContext];
+
+        locusMO.locusId= [NSNumber numberWithInt:(*catalogIterator).first];
+
         const char *read = (*catalogIterator).second->con;
         NSString *letters = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
-        locusView.consensus = letters;
-        locusView.marker = [NSString stringWithUTF8String:catalogIterator->second->marker.c_str()];;
+        locusMO.consensus = letters;
+        locusMO.marker = [NSString stringWithUTF8String:catalogIterator->second->marker.c_str()];;
         vector<SNP *> snps = catalogIterator->second->snps;
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
-        NSMutableArray *snpsArray = [[NSMutableArray alloc] initWithCapacity:snps.size()];
+        NSMutableSet *snpsSet = [[NSMutableSet alloc] init];
         for (; snpsIterator != snps.end(); ++snpsIterator) {
-            SnpView *snpView = [[SnpView alloc] init];
+//            SnpMO *snpMO = [[SnpMO alloc] init];
+            SnpMO *snpMO = [NSEntityDescription insertNewObjectForEntityForName: @"Snp" inManagedObjectContext: stacksDocument.managedObjectContext];
             SNP *snp = (*snpsIterator);
-            snpView.column = snp->col;
-            snpView.lratio = snp->lratio;
-            snpView.rank1 = snp->rank_1;
-            snpView.rank2 = snp->rank_2;
-            snpView.rank2 = snp->rank_2;
-            snpView.rank4 = snp->rank_4;
-            [snpsArray addObject:snpView];
+            snpMO.column = [NSNumber numberWithInt:snp->col];
+            snpMO.lratio = [NSNumber numberWithFloat:snp->lratio];
+            snpMO.rank1 = [NSNumber numberWithChar:snp->rank_1];
+            snpMO.rank2 = [NSNumber numberWithChar:snp->rank_2];
+            snpMO.rank3 = [NSNumber numberWithChar:snp->rank_3];
+            snpMO.rank4 = [NSNumber numberWithChar:snp->rank_4];
+            [locusMO addSnpsObject:snpMO];
+//            [snpsSet addObject:snpMO];
         }
 
-        locusView.snps = snpsArray;
-
-        [locusViews setObject:locusView forKey:[NSString stringWithFormat:@"%ld", locusView.locusId]];
+        [loci addObject:locusMO];
+//        locusMO.snps = snpsSet;
+//        [loci setObject:locusMO forKey:[NSString stringWithFormat:@"%ld", locusMO.locusId]];
         ++catalogIterator;
     }
     gettimeofday(&time2, NULL);
@@ -236,39 +261,70 @@ using std::ofstream;
             loc = it->second;
             d = pmap->datum(loc->id, sample_ids[i]);
 
-            LocusView *locusView = [locusViews objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
-            if (d != NULL && locusView != nil) {
-                NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
-                NSMutableDictionary *genotypes = locusView.genotypes;
-                if (genotypes == nil) {
-                    genotypes = [[NSMutableDictionary alloc] init];
+            // TODO: find a locus using a locusID properly
+
+//            LocusMO *locusMO = [loci objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
+            LocusMO *locusMO ;
+            NSArray *locusArray = [loci allObjects];
+            for(LocusMO *aLocus in locusArray){
+                NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
+                if([lookupKey isEqualToNumber:aLocus.locusId]){
+                   locusMO = aLocus;
                 }
-                GenotypeEntry *genotypeEntry = [genotypes objectForKey:key];
+            }
+
+            if (d != NULL && locusMO != nil) {
+                NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
+//                GenotypeEntry *genotypeEntry = [genotypes objectForKey:key];
+//                GenotypeMO *genotypeMO = [genotypes objectForKey:key];
+
+//                GenotypeMO *genotypeMO = [genotypes objectForKey:key];
+                GenotypeMO *genotypeMO = nil ;
+
+                for(GenotypeMO *aGenotype in locusMO.genotypes.allObjects){
+                    if([genotypeMO.name isEqualToString:aGenotype.name]){
+                        genotypeMO = aGenotype;
+                    }
+                }
 
 
-                if (genotypeEntry == nil) {
+
+
+                if (genotypeMO == nil) {
                     vector<char *> obshape = d->obshap;
                     vector<int> depths = d->depth;
                     int numLetters = obshape.size();
-                    genotypeEntry = [[GenotypeEntry alloc] initWithCapcity:numLetters];
-                    genotypeEntry.name = key;
-                    genotypeEntry.sampleId = [[NSNumber numberWithInt:sample_ids[i]] unsignedIntegerValue];
+//                    genotypeMO = [[GenotypeMO alloc] init];
+                    genotypeMO = [NSEntityDescription insertNewObjectForEntityForName: @"Genotype" inManagedObjectContext: stacksDocument.managedObjectContext];
+                    genotypeMO.name = key;
+                    genotypeMO.sampleId = [NSNumber numberWithInt:sample_ids[i]];
 
                     // get catalogs for matches
-                    genotypeEntry.tagId = d->id;
+                    genotypeMO.tagId = [NSNumber numberWithInt:d->id];
 
-                    locusView.depth = loc->depth;
+                    locusMO.length = [NSNumber numberWithInt:loc->depth];
 
                     if (depths.size() == numLetters) {
                         for (int j = 0; j < numLetters; j++) {
-                            [genotypeEntry.haplotypes addObject:[NSString stringWithUTF8String:obshape[j]]];
-                            [genotypeEntry.depths addObject:[NSNumber numberWithInt:depths[j]]];
+//                            HaplotypeMO* haplotypeMO = [[HaplotypeMO alloc] init];
+                            HaplotypeMO *haplotypeMO= [NSEntityDescription insertNewObjectForEntityForName: @"Haplotype" inManagedObjectContext: stacksDocument.managedObjectContext];
+                            haplotypeMO.haplotype = [NSString stringWithUTF8String:obshape[j]];
+                            [genotypeMO addHaplotypesObject:haplotypeMO];
+
+//                            DepthMO *depthMO = [[DepthMO alloc] init];
+                            DepthMO *depthMO = [NSEntityDescription insertNewObjectForEntityForName: @"Depth" inManagedObjectContext: stacksDocument.managedObjectContext];
+                            depthMO.depth = [NSNumber numberWithInt:depths[j]];
+
+                            [genotypeMO addDepthsObject:depthMO];
+//                            [genotypeMO.haplotypes addObject:[NSString stringWithUTF8String:obshape[j]]];
+//                            [genotypeMO.depths addObject:[NSNumber numberWithInt:depths[j]]];
                         }
 //                    for(NSNumber *depth in genotypeEntry.depths){
 //                        NSLog(@"depth %@",depth);
 //                    }
-                        [genotypes setObject:genotypeEntry forKey:key];
-                        locusView.genotypes = genotypes;
+                        [locusMO addGenotypesObject:genotypeMO];
+//                        [genotypes setObject:genotypeMO forKey:key];
+//                        locusMO.genotypes = genotypes;
                     }
                     else {
                         NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
@@ -289,9 +345,12 @@ using std::ofstream;
 
 
     gettimeofday(&time1, NULL);
-    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
+
+//    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithLoci:loci];
+//    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
     stacksDocument.path = path;
     stacksDocument.populationLookup = populationLookup;
+    stacksDocument.loci = loci ;
 
 
     gettimeofday(&time2, NULL);
@@ -306,9 +365,9 @@ using std::ofstream;
 
     NSSet* returnSet = [[NSSet alloc] init];
 
-    return returnSet ;
+//    return returnSet ;
 
-//    return stacksDocument;
+    return stacksDocument;
 }
 
 - (NSMutableDictionary *)loadPopulation:(NSString *)path {

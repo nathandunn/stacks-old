@@ -15,12 +15,12 @@
 @implementation LocusMO
 
 @dynamic consensus;
+@dynamic length;
 @dynamic locusId;
 @dynamic marker;
-@dynamic length;
 @dynamic ratio;
+@dynamic alleles;
 @dynamic genotypes;
 @dynamic snps;
-@dynamic alleles;
 
 @end

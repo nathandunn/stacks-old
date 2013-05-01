@@ -10,6 +10,10 @@
 
 @implementation StacksDocument
 
+// TODO: remove these in favor of NSSet loci
+@synthesize locusViews;
+@synthesize loci;
+
 - (id)init
 {
     self = [super init];
@@ -47,6 +51,43 @@
 + (BOOL)autosavesInPlace
 {
     return YES;
+}
+
+- (id)initWithLocusView:(NSMutableDictionary*)locusViews {
+    if ((self = [super init])) {
+        self.locusViews = locusViews;
+        self.orderedLocus = [[locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
+            return [obj1 integerValue] - [obj2 integerValue];
+        }];
+
+    }
+    return self ;
+}
+
+- (id)initWithLoci:(NSSet*)loci {
+    if ((self = [super init])) {
+        self.loci = loci ;
+//        self.orderedLocus = [[locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
+//            return [obj1 integerValue] - [obj2 integerValue];
+//        }];
+
+    }
+    return self ;
+}
+
+
+- (NSMutableArray *)findPopulations {
+
+    NSMutableArray *populations = [[NSMutableArray alloc] init];
+
+    NSString *population ;
+    for(population in self.populationLookup.allValues){
+        if(![populations containsObject:population]){
+            [populations addObject:population];
+        }
+    }
+
+    return populations;
 }
 
 @end
