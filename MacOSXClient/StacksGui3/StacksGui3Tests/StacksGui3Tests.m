@@ -26,26 +26,27 @@
     [super tearDown];
 }
 
-- (void)testExample
-{
-    STFail(@"Unit tests are not implemented yet in StacksGui3Tests");
-}
+//- (void)testExample
+//{
+//    STFail(@"Unit tests are not implemented yet in StacksGui3Tests");
+//}
 
 - (void)testReadRawStacks
 {
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *examplePath = @"/tmp/stacks_tut/";
-//    BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
-//    if(existsAtPath){
+    BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
+    if(existsAtPath){
 //        [self loadApplication:examplePath];
-//    }
-//    else{
-//        NSLog(@"%@ does not exist.",examplePath);
-//    }
+        NSSet *loci = [stacksConverter loadLociAndGenotypes:examplePath];
+        STAssertEquals(74, loci.count, @"should match loci count");
+    }
+    else{
+        NSLog(@"%@ does not exist.",examplePath);
+        STFail(@"Does not exists at path!");
+    }
 
-    NSSet *loci = [stacksConverter loadLociAndGenotypes:examplePath];
-    STAssertEquals(74, loci.count, @"should match loci count");
 }
 
 @end

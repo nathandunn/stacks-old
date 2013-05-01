@@ -9,6 +9,7 @@
 
 @class StacksView;
 @class StacksDocument;
+@class LocusView;
 
 
 @interface StacksLoader : NSObject
