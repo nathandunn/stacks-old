@@ -22,6 +22,7 @@
 #define __POPMAP_H__
 
 #include "stacks.h"
+#include "locus.h"
 #include <string.h>
 #include <string>
 using std::string;

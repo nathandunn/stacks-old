@@ -1,5 +1,5 @@
 //
-//  Allele.h
+//  AlleleMO.h
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 5/1/13.
@@ -9,12 +9,12 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class Locus;
+@class LocusMO;
 
-@interface Allele : NSManagedObject
+@interface AlleleMO : NSManagedObject
 
 @property (nonatomic, retain) NSString * type;
 @property (nonatomic, retain) NSString * value;
-@property (nonatomic, retain) Locus *locus;
+@property (nonatomic, retain) LocusMO *locus;
 
 @end

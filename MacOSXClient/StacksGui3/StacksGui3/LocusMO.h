@@ -1,5 +1,5 @@
 //
-//  Locus.h
+//  LocusMO.h
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 5/1/13.
@@ -9,9 +9,9 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class Allele, Genotype, Snp;
+@class AlleleMO, GenotypeMO, SnpMO;
 
-@interface Locus : NSManagedObject
+@interface LocusMO : NSManagedObject
 
 @property (nonatomic, retain) NSString * consensus;
 @property (nonatomic, retain) NSNumber * locusId;
@@ -19,14 +19,14 @@
 @property (nonatomic, retain) NSNumber * length;
 @property (nonatomic, retain) NSString * ratio;
 @property (nonatomic, retain) NSSet *genotypes;
-@property (nonatomic, retain) Snp *snps;
-@property (nonatomic, retain) Allele *alleles;
+@property (nonatomic, retain) SnpMO *snps;
+@property (nonatomic, retain) AlleleMO *alleles;
 @end
 
-@interface Locus (CoreDataGeneratedAccessors)
+@interface LocusMO (CoreDataGeneratedAccessors)
 
-- (void)addGenotypesObject:(Genotype *)value;
-- (void)removeGenotypesObject:(Genotype *)value;
+- (void)addGenotypesObject:(GenotypeMO *)value;
+- (void)removeGenotypesObject:(GenotypeMO *)value;
 - (void)addGenotypes:(NSSet *)values;
 - (void)removeGenotypes:(NSSet *)values;
 
