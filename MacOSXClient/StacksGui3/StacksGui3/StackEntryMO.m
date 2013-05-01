@@ -1,16 +1,16 @@
 //
-//  StackEntry.m
+//  StackEntryMO.m
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 5/1/13.
 //  Copyright (c) 2013 Nathan Dunn. All rights reserved.
 //
 
-#import "StackEntry.h"
-#import "Stack.h"
+#import "StackEntryMO.h"
+#import "StackMO.h"
 
 
-@implementation StackEntry
+@implementation StackEntryMO
 
 @dynamic entryId;
 @dynamic relationship;

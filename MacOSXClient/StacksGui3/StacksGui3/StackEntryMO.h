@@ -1,5 +1,5 @@
 //
-//  StackEntry.h
+//  StackEntryMO.h
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 5/1/13.
@@ -9,15 +9,15 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class Stack;
+@class StackMO;
 
-@interface StackEntry : NSManagedObject
+@interface StackEntryMO : NSManagedObject
 
 @property (nonatomic, retain) NSNumber * entryId;
 @property (nonatomic, retain) NSString * relationship;
 @property (nonatomic, retain) NSString * sequenceId;
 @property (nonatomic, retain) NSString * sequence;
 @property (nonatomic, retain) NSString * block;
-@property (nonatomic, retain) Stack *stack;
+@property (nonatomic, retain) StackMO *stack;
 
 @end

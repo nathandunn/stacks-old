@@ -1,5 +1,5 @@
 //
-//  Stack.h
+//  StackMO.h
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 5/1/13.
@@ -9,18 +9,18 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class Genotype;
+@class GenotypeMO;
 
-@interface Stack : NSManagedObject
+@interface StackMO : NSManagedObject
 
-@property (nonatomic, retain) Genotype *genotype;
+@property (nonatomic, retain) GenotypeMO *genotype;
 @property (nonatomic, retain) NSSet *stackEntries;
 @property (nonatomic, retain) NSManagedObject *consensus;
 @property (nonatomic, retain) NSManagedObject *model;
 @property (nonatomic, retain) NSManagedObject *reference;
 @end
 
-@interface Stack (CoreDataGeneratedAccessors)
+@interface StackMO (CoreDataGeneratedAccessors)
 
 - (void)addStackEntriesObject:(NSManagedObject *)value;
 - (void)removeStackEntriesObject:(NSManagedObject *)value;

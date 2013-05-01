@@ -1,16 +1,16 @@
 //
-//  Haplotype.m
+//  HaplotypeMO.m
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 5/1/13.
 //  Copyright (c) 2013 Nathan Dunn. All rights reserved.
 //
 
-#import "Haplotype.h"
-#import "Genotype.h"
+#import "HaplotypeMO.h"
+#import "GenotypeMO.h"
 
 
-@implementation Haplotype
+@implementation HaplotypeMO
 
 @dynamic haplotype;
 @dynamic genotype;

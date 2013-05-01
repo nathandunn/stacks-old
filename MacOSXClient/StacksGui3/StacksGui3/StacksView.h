@@ -7,7 +7,7 @@
 
 #import <Foundation/Foundation.h>
 
-@class StackEntry;
+@class StackEntryMO;
 
 /**
 * This is just a raw read formatted:
@@ -17,9 +17,9 @@
 
 // a list of StacksEntry's
 @property (strong) NSMutableArray *stackEntries;
-@property (strong) StackEntry *consensus;
-@property (strong) StackEntry *model;
-@property (strong) StackEntry *reference;
+@property (strong) StackEntryMO *consensus;
+@property (strong) StackEntryMO *model;
+@property (strong) StackEntryMO *reference;
 
 // index of snps in the consensus
 @property (strong) NSMutableArray *snps;

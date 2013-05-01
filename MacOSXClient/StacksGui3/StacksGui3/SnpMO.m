@@ -6,11 +6,11 @@
 //  Copyright (c) 2013 Nathan Dunn. All rights reserved.
 //
 
-#import "Snp.h"
-#import "Locus.h"
+#import "SnpMO.h"
+#import "LocusMO.h"
 
 
-@implementation Snp
+@implementation SnpMO
 
 @dynamic column;
 @dynamic lratio;

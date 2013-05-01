@@ -5,7 +5,7 @@
 
 
 
-#include "locus.h"
+#include "LocusMO.h"
 //#include "stacks.h"
 #include "sql_utilities.h"
 #include "PopMap.h"
@@ -18,7 +18,7 @@ using std::ifstream;
 using std::ofstream;
 
 
-#import "StackEntry.h"
+#import "StackEntryMO.h"
 // #import "GenotypeView.h"
 #import "LocusView.h"
 #import "StacksDocument.h"
@@ -30,6 +30,7 @@ using std::ofstream;
 // #include "LociLoader.hpp"
 #import "GenotypeEntry.h"
 #import "SnpView.h"
+//#import "StackEntry.h"
 
 
 #include <sys/time.h>
@@ -75,8 +76,9 @@ using std::ofstream;
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
         if (columns.count > 8 && [[columns objectAtIndex:2] integerValue] == tag) {
-            StackEntry *stackEntry = [[StackEntry alloc] init];
-            stackEntry.entryId = row;
+            StackEntryMO *stackEntry = [[StackEntryMO alloc] init];
+//            stackEntry.entryId = row;
+            stackEntry.entryId = [NSNumber numberWithInteger:row];
             stackEntry.relationship = [columns objectAtIndex:6];
             stackEntry.block = [columns objectAtIndex:7];
             stackEntry.sequenceId = [columns objectAtIndex:8];
@@ -98,7 +100,7 @@ using std::ofstream;
     NSLog(@"parse entries lines %ld produce %ld - %ld",fileData.count,stackEntries.count,(time2.tv_sec-time1.tv_sec));
 
     stacksView.stackEntries = stackEntries;
-    StackEntry *referenceStack = [[StackEntry alloc] init];
+    StackEntryMO *referenceStack = [[StackEntryMO alloc] init];
     referenceStack.entryId = 0;
     stacksView.reference = referenceStack;
 

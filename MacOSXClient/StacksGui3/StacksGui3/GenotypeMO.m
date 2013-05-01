@@ -1,18 +1,18 @@
 //
-//  Genotype.m
+//  GenotypeMO.m
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 5/1/13.
 //  Copyright (c) 2013 Nathan Dunn. All rights reserved.
 //
 
-#import "Genotype.h"
-#import "Depth.h"
-#import "Locus.h"
-#import "Stack.h"
+#import "GenotypeMO.h"
+#import "DepthMO.h"
+#import "LocusMO.h"
+#import "StackMO.h"
 
 
-@implementation Genotype
+@implementation GenotypeMO
 
 @dynamic name;
 @dynamic sampleId;
