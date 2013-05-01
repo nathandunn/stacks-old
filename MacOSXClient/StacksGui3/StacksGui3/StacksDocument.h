@@ -10,4 +10,11 @@
 
 @interface StacksDocument : NSPersistentDocument
 
+@property (strong) NSMutableDictionary *locusViews;
+@property(strong) NSString *path;
+@property(atomic, retain) NSMutableDictionary *populationLookup;
+@property(atomic, retain) NSArray *orderedLocus;
+- (id)initWithLocusView:(NSMutableDictionary*)locusViews;
+- (NSMutableArray *)findPopulations;
+
 @end
