@@ -9,6 +9,7 @@
 #import "StacksGui3Tests.h"
 #import "StacksConverter.h"
 #import "StacksDocument.h"
+#import "LocusMO.h"
 
 @implementation StacksGui3Tests
 
@@ -42,6 +43,13 @@
         StacksDocument *stacksDocument= [stacksConverter loadLociAndGenotypes:examplePath];
         NSSet* loci = stacksDocument.loci;
         STAssertEquals( (NSUInteger) 462, loci.count, @"should match loci count");
+
+
+        LocusMO *locusMO = [loci.allObjects objectAtIndex:0];
+        NSLog(@"locus %@ has %ld genotypes",locusMO.locusId,locusMO.genotypes.count);
+//        for(LocusMO *locusMO in loci.allObjects){
+//            NSLog(@"locus %@ has %ld genotypes",locusMO.locusId,locusMO.genotypes.count);
+//        }
     }
     else{
         NSLog(@"%@ does not exist.",examplePath);

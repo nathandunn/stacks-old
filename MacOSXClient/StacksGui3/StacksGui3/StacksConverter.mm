@@ -73,7 +73,7 @@ using std::ofstream;
     NSError *error = nil;
     NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error] componentsSeparatedByString:@"\n"];
     gettimeofday(&time2, NULL);
-    NSLog(@"load file data and split %ld",(time2.tv_sec-time1.tv_sec));
+    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
 
     if (error) {
         NSLog(@"error loading file [%@]: %@", absoluteFileName, error);
@@ -109,7 +109,7 @@ using std::ofstream;
         }
     }
     gettimeofday(&time2, NULL);
-    NSLog(@"parse entries lines %ld produce %ld - %ld",fileData.count,stackEntries.count,(time2.tv_sec-time1.tv_sec));
+    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, stackEntries.count, (time2.tv_sec - time1.tv_sec));
 
     stacksView.stackEntries = stackEntries;
     StackEntryMO *referenceStack = [[StackEntryMO alloc] init];
@@ -203,9 +203,9 @@ using std::ofstream;
 //        NSEntityDescription *locusEntity = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:stacksDocument.managedObjectContext];
 //        LocusMO *locusMO = [[LocusMO alloc] initWithEntity:locusEntity insertIntoManagedObjectContext:stacksDocument.managedObjectContext];
 //        Expense *newExpense = [NSEntityDescription insertNewObjectForEntityForName: @"Expense" inManagedObjectContext: [self managedObjectContext]];
-        LocusMO *locusMO = [NSEntityDescription insertNewObjectForEntityForName: @"Locus" inManagedObjectContext: stacksDocument.managedObjectContext];
+        LocusMO *locusMO = [NSEntityDescription insertNewObjectForEntityForName:@"Locus" inManagedObjectContext:stacksDocument.managedObjectContext];
 
-        locusMO.locusId= [NSNumber numberWithInt:(*catalogIterator).first];
+        locusMO.locusId = [NSNumber numberWithInt:(*catalogIterator).first];
 
         const char *read = (*catalogIterator).second->con;
         NSString *letters = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
@@ -217,7 +217,7 @@ using std::ofstream;
         NSMutableSet *snpsSet = [[NSMutableSet alloc] init];
         for (; snpsIterator != snps.end(); ++snpsIterator) {
 //            SnpMO *snpMO = [[SnpMO alloc] init];
-            SnpMO *snpMO = [NSEntityDescription insertNewObjectForEntityForName: @"Snp" inManagedObjectContext: stacksDocument.managedObjectContext];
+            SnpMO *snpMO = [NSEntityDescription insertNewObjectForEntityForName:@"Snp" inManagedObjectContext:stacksDocument.managedObjectContext];
             SNP *snp = (*snpsIterator);
             snpMO.column = [NSNumber numberWithInt:snp->col];
             snpMO.lratio = [NSNumber numberWithFloat:snp->lratio];
@@ -264,14 +264,38 @@ using std::ofstream;
             // TODO: find a locus using a locusID properly
 
 //            LocusMO *locusMO = [loci objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
-            LocusMO *locusMO ;
-            NSArray *locusArray = [loci allObjects];
-            for(LocusMO *aLocus in locusArray){
-                NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
-                if([lookupKey isEqualToNumber:aLocus.locusId]){
-                   locusMO = aLocus;
-                }
+            LocusMO *locusMO = nil ;
+
+            NSFetchRequest *request = [[NSFetchRequest alloc] init];
+            NSEntityDescription *entity =
+                    [NSEntityDescription entityForName:@"Locus"
+                                inManagedObjectContext:stacksDocument.managedObjectContext];
+            [request setEntity:entity];
+
+            NSPredicate *predicate =
+                    [NSPredicate predicateWithFormat:@"locusId == %@", [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]]];
+            [request setPredicate:predicate];
+
+            NSError *error;
+            NSArray *array = [stacksDocument.managedObjectContext executeFetchRequest:request error:&error];
+            if (array != nil && array.count == 1) {
+//                NSUInteger count = [array count]; // May be 0 if the object has been deleted.
+                locusMO = [array objectAtIndex:0];
+//                NSLog(@"found locus %@",locusMO.locusId);
             }
+            else {
+                locusMO = nil ;
+                NSLog(@"NO Locus!!!");
+                // Deal with error.
+            }
+
+//            NSArray *locusArray = [loci allObjects];
+//            for(LocusMO *aLocus in locusArray){
+//                NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
+//                if([lookupKey isEqualToNumber:aLocus.locusId]){
+//                   locusMO = aLocus;
+//                }
+//            }
 
             if (d != NULL && locusMO != nil) {
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
@@ -281,48 +305,78 @@ using std::ofstream;
 //                GenotypeMO *genotypeMO = [genotypes objectForKey:key];
                 GenotypeMO *genotypeMO = nil ;
 
-                for(GenotypeMO *aGenotype in locusMO.genotypes.allObjects){
-                    if([genotypeMO.name isEqualToString:aGenotype.name]){
-                        genotypeMO = aGenotype;
-                    }
+                NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+                NSEntityDescription *entity1 =
+                        [NSEntityDescription entityForName:@"Genotype"
+                                    inManagedObjectContext:stacksDocument.managedObjectContext];
+                [request1 setEntity:entity1];
+
+                NSPredicate *predicate1 =
+                        [NSPredicate predicateWithFormat:@"name == %@ and locus == %@ ", key,locusMO];
+                [request1 setPredicate:predicate1];
+
+                NSError *error1;
+                NSArray *array1 = [stacksDocument.managedObjectContext executeFetchRequest:request1 error:&error1];
+                if (array1 != nil && array1.count == 1) {
+//                NSUInteger count = [array count]; // May be 0 if the object has been deleted.
+                    genotypeMO = [array1 objectAtIndex:0];
+//                    NSLog(@"genotype MO %@ tag %@ sample %@",genotypeMO.name,genotypeMO.tagId,genotypeMO.sampleId);
                 }
-
-
+                else {
+                    // Deal with error.
+                }
+//                for(GenotypeMO *aGenotype in locusMO.genotypes.allObjects){
+//                    if([genotypeMO.name isEqualToString:aGenotype.name]){
+//                        genotypeMO = aGenotype;
+//                    }
+//                }
 
 
                 if (genotypeMO == nil) {
+//                    NSLog(@"genotype NOT found for key %@ and locus %@",key,locusMO.locusId);
                     vector<char *> obshape = d->obshap;
                     vector<int> depths = d->depth;
                     int numLetters = obshape.size();
 //                    genotypeMO = [[GenotypeMO alloc] init];
-                    genotypeMO = [NSEntityDescription insertNewObjectForEntityForName: @"Genotype" inManagedObjectContext: stacksDocument.managedObjectContext];
-                    genotypeMO.name = key;
-                    genotypeMO.sampleId = [NSNumber numberWithInt:sample_ids[i]];
+                    GenotypeMO *newGenotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Genotype" inManagedObjectContext:stacksDocument.managedObjectContext];
+                    newGenotypeMO.name = key;
+                    newGenotypeMO.sampleId = [NSNumber numberWithInt:sample_ids[i]];
 
                     // get catalogs for matches
-                    genotypeMO.tagId = [NSNumber numberWithInt:d->id];
+                    newGenotypeMO.tagId = [NSNumber numberWithInt:d->id];
 
                     locusMO.length = [NSNumber numberWithInt:loc->depth];
 
                     if (depths.size() == numLetters) {
                         for (int j = 0; j < numLetters; j++) {
 //                            HaplotypeMO* haplotypeMO = [[HaplotypeMO alloc] init];
-                            HaplotypeMO *haplotypeMO= [NSEntityDescription insertNewObjectForEntityForName: @"Haplotype" inManagedObjectContext: stacksDocument.managedObjectContext];
+                            HaplotypeMO *haplotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Haplotype" inManagedObjectContext:stacksDocument.managedObjectContext];
                             haplotypeMO.haplotype = [NSString stringWithUTF8String:obshape[j]];
-                            [genotypeMO addHaplotypesObject:haplotypeMO];
+                            [newGenotypeMO addHaplotypesObject:haplotypeMO];
 
 //                            DepthMO *depthMO = [[DepthMO alloc] init];
-                            DepthMO *depthMO = [NSEntityDescription insertNewObjectForEntityForName: @"Depth" inManagedObjectContext: stacksDocument.managedObjectContext];
+                            DepthMO *depthMO = [NSEntityDescription insertNewObjectForEntityForName:@"Depth" inManagedObjectContext:stacksDocument.managedObjectContext];
                             depthMO.depth = [NSNumber numberWithInt:depths[j]];
 
-                            [genotypeMO addDepthsObject:depthMO];
+                            [newGenotypeMO addDepthsObject:depthMO];
 //                            [genotypeMO.haplotypes addObject:[NSString stringWithUTF8String:obshape[j]]];
 //                            [genotypeMO.depths addObject:[NSNumber numberWithInt:depths[j]]];
                         }
 //                    for(NSNumber *depth in genotypeEntry.depths){
 //                        NSLog(@"depth %@",depth);
 //                    }
-                        [locusMO addGenotypesObject:genotypeMO];
+//                        NSLog(@"PRE locus %@ genotypes count %ld", locusMO.locusId, locusMO.genotypes.count);
+                        [locusMO addGenotypesObject:newGenotypeMO];
+//                        NSLog(@"POST locus %@ genotypes count %ld", locusMO.locusId, locusMO.genotypes.count);
+
+//                        NSError *saveError ;
+//                        BOOL saved = [stacksDocument.managedObjectContext save:&saveError];
+//                        if(saved){
+//                            NSLog(@"saved %d",saved);
+//                        }
+//                        else{
+//                            NSLog(@"error saving %@",saveError);
+//                        }
 //                        [genotypes setObject:genotypeMO forKey:key];
 //                        locusMO.genotypes = genotypes;
                     }
@@ -330,6 +384,11 @@ using std::ofstream;
                         NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
                     }
                 }
+                else {
+                    NSLog(@"genotype %@ FOUND for key %@ and locus %@",genotypeMO.name,key,locusMO.locusId);
+                }
+
+
             }
         }
         gettimeofday(&time2, NULL);
@@ -350,7 +409,13 @@ using std::ofstream;
 //    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithLocusView:locusViews];
     stacksDocument.path = path;
     stacksDocument.populationLookup = populationLookup;
-    stacksDocument.loci = loci ;
+
+    LocusMO *bLocusMO = [loci.allObjects objectAtIndex:0];
+    NSLog(@"pre locus %@ genotypes %ld",bLocusMO.locusId,bLocusMO.genotypes.count);
+
+    stacksDocument.loci = loci;
+    LocusMO *cLocusMO = [stacksDocument.loci.allObjects objectAtIndex:0];
+    NSLog(@"post locus %@ genotypes %ld",cLocusMO.locusId,cLocusMO.genotypes.count);
 
 
     gettimeofday(&time2, NULL);
@@ -363,9 +428,6 @@ using std::ofstream;
     gettimeofday(&time2, NULL);
     NSLog(@"find population time %ld", time2.tv_sec - time1.tv_sec);
 
-    NSSet* returnSet = [[NSSet alloc] init];
-
-//    return returnSet ;
 
     return stacksDocument;
 }

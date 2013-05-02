@@ -34,7 +34,7 @@
     </entity>
     <entity name="Snp" representedClassName="SnpMO" syncable="YES">
         <attribute name="column" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
-        <attribute name="lratio" optional="YES" attributeType="Double" minValueString="0" defaultValueString="0.0" syncable="YES"/>
+        <attribute name="lratio" optional="YES" attributeType="Double" defaultValueString="0.0" syncable="YES"/>
         <attribute name="rank1" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
         <attribute name="rank2" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
         <attribute name="rank3" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
