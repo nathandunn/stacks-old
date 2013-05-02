@@ -266,36 +266,36 @@ using std::ofstream;
 //            LocusMO *locusMO = [loci objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
             LocusMO *locusMO = nil ;
 
-            NSFetchRequest *request = [[NSFetchRequest alloc] init];
-            NSEntityDescription *entity =
-                    [NSEntityDescription entityForName:@"Locus"
-                                inManagedObjectContext:stacksDocument.managedObjectContext];
-            [request setEntity:entity];
-
-            NSPredicate *predicate =
-                    [NSPredicate predicateWithFormat:@"locusId == %@", [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]]];
-            [request setPredicate:predicate];
-
-            NSError *error;
-            NSArray *array = [stacksDocument.managedObjectContext executeFetchRequest:request error:&error];
-            if (array != nil && array.count == 1) {
-//                NSUInteger count = [array count]; // May be 0 if the object has been deleted.
-                locusMO = [array objectAtIndex:0];
-//                NSLog(@"found locus %@",locusMO.locusId);
-            }
-            else {
-                locusMO = nil ;
-                NSLog(@"NO Locus!!!");
-                // Deal with error.
-            }
-
-//            NSArray *locusArray = [loci allObjects];
-//            for(LocusMO *aLocus in locusArray){
-//                NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
-//                if([lookupKey isEqualToNumber:aLocus.locusId]){
-//                   locusMO = aLocus;
-//                }
+//            NSFetchRequest *request = [[NSFetchRequest alloc] init];
+//            NSEntityDescription *entity =
+//                    [NSEntityDescription entityForName:@"Locus"
+//                                inManagedObjectContext:stacksDocument.managedObjectContext];
+//            [request setEntity:entity];
+//
+//            NSPredicate *predicate =
+//                    [NSPredicate predicateWithFormat:@"locusId == %@", [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]]];
+//            [request setPredicate:predicate];
+//
+//            NSError *error;
+//            NSArray *array = [stacksDocument.managedObjectContext executeFetchRequest:request error:&error];
+//            if (array != nil && array.count == 1) {
+////                NSUInteger count = [array count]; // May be 0 if the object has been deleted.
+//                locusMO = [array objectAtIndex:0];
+////                NSLog(@"found locus %@",locusMO.locusId);
 //            }
+//            else {
+//                locusMO = nil ;
+//                NSLog(@"NO Locus!!!");
+//                // Deal with error.
+//            }
+
+            NSArray *locusArray = [loci allObjects];
+            for(LocusMO *aLocus in locusArray){
+                NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
+                if([lookupKey isEqualToNumber:aLocus.locusId]){
+                   locusMO = aLocus;
+                }
+            }
 
             if (d != NULL && locusMO != nil) {
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
@@ -305,31 +305,31 @@ using std::ofstream;
 //                GenotypeMO *genotypeMO = [genotypes objectForKey:key];
                 GenotypeMO *genotypeMO = nil ;
 
-                NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
-                NSEntityDescription *entity1 =
-                        [NSEntityDescription entityForName:@"Genotype"
-                                    inManagedObjectContext:stacksDocument.managedObjectContext];
-                [request1 setEntity:entity1];
-
-                NSPredicate *predicate1 =
-                        [NSPredicate predicateWithFormat:@"name == %@ and locus == %@ ", key,locusMO];
-                [request1 setPredicate:predicate1];
-
-                NSError *error1;
-                NSArray *array1 = [stacksDocument.managedObjectContext executeFetchRequest:request1 error:&error1];
-                if (array1 != nil && array1.count == 1) {
-//                NSUInteger count = [array count]; // May be 0 if the object has been deleted.
-                    genotypeMO = [array1 objectAtIndex:0];
-//                    NSLog(@"genotype MO %@ tag %@ sample %@",genotypeMO.name,genotypeMO.tagId,genotypeMO.sampleId);
-                }
-                else {
-                    // Deal with error.
-                }
-//                for(GenotypeMO *aGenotype in locusMO.genotypes.allObjects){
-//                    if([genotypeMO.name isEqualToString:aGenotype.name]){
-//                        genotypeMO = aGenotype;
-//                    }
+//                NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+//                NSEntityDescription *entity1 =
+//                        [NSEntityDescription entityForName:@"Genotype"
+//                                    inManagedObjectContext:stacksDocument.managedObjectContext];
+//                [request1 setEntity:entity1];
+//
+//                NSPredicate *predicate1 =
+//                        [NSPredicate predicateWithFormat:@"name == %@ and locus == %@ ", key,locusMO];
+//                [request1 setPredicate:predicate1];
+//
+//                NSError *error1;
+//                NSArray *array1 = [stacksDocument.managedObjectContext executeFetchRequest:request1 error:&error1];
+//                if (array1 != nil && array1.count == 1) {
+////                NSUInteger count = [array count]; // May be 0 if the object has been deleted.
+//                    genotypeMO = [array1 objectAtIndex:0];
+////                    NSLog(@"genotype MO %@ tag %@ sample %@",genotypeMO.name,genotypeMO.tagId,genotypeMO.sampleId);
 //                }
+//                else {
+//                    // Deal with error.
+//                }
+                for(GenotypeMO *aGenotype in locusMO.genotypes.allObjects){
+                    if([genotypeMO.name isEqualToString:aGenotype.name]){
+                        genotypeMO = aGenotype;
+                    }
+                }
 
 
                 if (genotypeMO == nil) {
@@ -392,7 +392,7 @@ using std::ofstream;
             }
         }
         gettimeofday(&time2, NULL);
-        NSLog(@"iterating locus %d -  %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
+        NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
     }
     NSLog(@"total time %ld", totalCatalogTime);
