@@ -21,6 +21,7 @@
 #ifndef __POPMAP_H__
 #define __POPMAP_H__
 
+#include "stacks.h"
 #include <string.h>
 #include <string>
 using std::string;
