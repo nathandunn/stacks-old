@@ -133,7 +133,12 @@ using std::ofstream;
     map<int, CSLocus *> catalog;
     NSString *catalogFile = [path stringByAppendingString:@"batch_1.catalog"];
 
-    StacksDocument *stacksDocument = [[StacksDocument alloc] init];
+    NSError *stacksDocumentCreateError ;
+    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+    if(stacksDocumentCreateError){
+        NSLog(@"error creating stacks document %@",stacksDocumentCreateError);
+        return nil ;
+    }
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);

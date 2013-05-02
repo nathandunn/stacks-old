@@ -22,4 +22,6 @@
 
 
 - (NSManagedObjectContext *)getContext;
+
+- (NSManagedObjectContext *)getContextForPath:(NSString *)path;
 @end
