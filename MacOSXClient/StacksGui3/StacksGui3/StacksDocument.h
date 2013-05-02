@@ -20,4 +20,6 @@
 - (id)initWithLoci:(NSSet*)loci ;
 - (NSMutableArray *)findPopulations;
 
+
+- (NSManagedObjectContext *)getContext;
 @end

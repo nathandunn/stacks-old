@@ -115,4 +115,89 @@
 
 }
 
+- (void)testCreateRawStore {
+
+//    NSString *storePath = [[self applicationDocumentsDirectory] stringByAppendingPathComponent: @"Datafile.sqlite"];
+    NSString *storePath = @"file://localhost/tmp/stacks_tut/StacksGui3.sqlite" ;
+//    NSString *storePath = @"Store.sqlite" ;
+    
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+//    if (![fileManager fileExistsAtPath:storePath]) {
+//        NSLog(@"does not exist so createing");
+//        NSString *defaultStorePath = [[NSBundle mainBundle]  pathForResource:@"Datafile-DefaultData" ofType:@"sqlite"];
+//        if (defaultStorePath) {
+//            NSLog(@"default DOES exist") ;
+//            [fileManager copyItemAtPath:defaultStorePath toPath:storePath error:NULL];
+//        }
+//        else{
+//            NSLog(@"default DOES NOT exist") ;
+//        }
+//    }
+//    else{
+//        NSLog(@"file DOES exist") ;
+//    }
+
+    NSError *stacksDocumentCreateError ;
+    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+//    NSManagedObjectModel *mom = [stacksDocument managedObjectModel];
+    NSManagedObjectContext *moc = [stacksDocument getContext];
+    NSPersistentStoreCoordinator *psc = [moc persistentStoreCoordinator];
+    NSError *error = nil;
+    NSDictionary *options =
+            [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:1]
+                                        forKey:NSReadOnlyPersistentStoreOption];
+
+    NSError *error1 = nil;
+
+//    NSURL *storeURL = [NSURL fileURLWithPath:storePath];
+//    NSURL *storeURL =[NSURL URLWithString:storePath];
+    //    NSPersistentStore *roStore =
+//    if (![psc addPersistentStoreWithType:NSSQLiteStoreType
+//                           configuration:nil URL:storeURL
+//                                 options:options error:&error1]) {
+//        STFail(@"Failed to add persistent store to coordinator! %@",error1);
+//    }
+
+    NSError *error2;
+    if (![moc save: &error2]) {
+        NSLog(@"Error while saving %@",error2);
+        STFail(@"Failed to save %@",error2);
+
+//                ([error localizedDescription] != nil) ? [error localizedDescription] : @"Unknown Error");
+//        exit(1);
+    }
+    else{
+        NSLog(@"SUCCESS!!!") ;
+    }
+
+
+
+
+//    NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
+//    NSPersistentStoreCoordinator *psc = [moc persistentStoreCoordinator];
+//    NSError *error = nil;
+//    NSDictionary *options =
+//            [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:1]
+//                                        forKey:NSReadOnlyPersistentStoreOption];
+//
+////    NSString *examplePath = @"/Users/ndunn/Desktop/stacks_tut/stored.sqlite";
+//    NSString *examplePath = @"stored.sqlite";
+//    //    NSString *examplePath = @"~/Desktop/stacks_tut/";
+////    NSURL *storeURL = [NSURL URLWithString:[examplePath stringByAppendingFormat:@"stored.sqlite"]];
+//    NSURL *storeURL = [NSURL fileURLWithPath:examplePath];
+////    NSLog(@"store URL %@ fileUrl %@",storeURL,[NSURL fileURLWithPath:storeURL]);
+//    NSLog(@"store URL %@", storeURL);
+////    NSPersistentStore *roStore =
+//    if (![psc addPersistentStoreWithType:NSSQLiteStoreType
+//                           configuration:nil URL:storeURL
+//                                 options:options error:&error]) {
+//        STFail(@"Failed to add persistent store to coordinator! %@",error);
+//    }
+//    NSError *error2;
+//    BOOL saved = [stacksDocument.managedObjectContext save:&error2];
+//    NSLog(@"saved %d error %@", saved, error2);
+
+}
+
 @end
