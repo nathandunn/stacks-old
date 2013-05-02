@@ -47,6 +47,20 @@
 
         LocusMO *locusMO = [loci.allObjects objectAtIndex:0];
         NSLog(@"locus %@ has %ld genotypes",locusMO.locusId,locusMO.genotypes.count);
+
+//        NSURL *storeURL = <#URL for path to global store#>; // just same url
+        NSURL *storeURL = [NSURL URLWithString:[examplePath stringByAppendingFormat:@"stored.stacks"] ];
+        id globalStore = [[stacksDocument.managedObjectContext persistentStoreCoordinator]
+                persistentStoreForURL:storeURL];
+//        NSManagedObject *newEmployee = [NSEntityDescription
+//                insertNewObjectForEntityForName:@"Employee"
+//                         inManagedObjectContext:stacksDocument.managedObjectContext];
+        [stacksDocument.managedObjectContext assignObject:stacksDocument toPersistentStore:globalStore];
+
+        NSError *error ;
+        BOOL saved = [stacksDocument.managedObjectContext save:&error];
+        NSLog(@"saved %d error %@",saved,error);
+
 //        for(LocusMO *locusMO in loci.allObjects){
 //            NSLog(@"locus %@ has %ld genotypes",locusMO.locusId,locusMO.genotypes.count);
 //        }
