@@ -49,13 +49,13 @@
         NSLog(@"locus %@ has %ld genotypes",locusMO.locusId,locusMO.genotypes.count);
 
 //        NSURL *storeURL = <#URL for path to global store#>; // just same url
-        NSURL *storeURL = [NSURL URLWithString:[examplePath stringByAppendingFormat:@"stored.stacks"] ];
-        id globalStore = [[stacksDocument.managedObjectContext persistentStoreCoordinator]
-                persistentStoreForURL:storeURL];
-//        NSManagedObject *newEmployee = [NSEntityDescription
+        NSURL *storeURL = [NSURL URLWithString:[examplePath stringByAppendingFormat:@"stored.sqlite"] ];
+        id globalStore = [[stacksDocument.managedObjectContext persistentStoreCoordinator] persistentStoreForURL:storeURL];
+        //        NSManagedObject *newEmployee = [NSEntityDescription
 //                insertNewObjectForEntityForName:@"Employee"
 //                         inManagedObjectContext:stacksDocument.managedObjectContext];
-        [stacksDocument.managedObjectContext assignObject:stacksDocument toPersistentStore:globalStore];
+//        LocusMO *locusMO = [stacksDocument.loci.allObjects objectAtIndex:0]
+        [stacksDocument.managedObjectContext assignObject:locusMO toPersistentStore:globalStore];
 
         NSError *error ;
         BOOL saved = [stacksDocument.managedObjectContext save:&error];
