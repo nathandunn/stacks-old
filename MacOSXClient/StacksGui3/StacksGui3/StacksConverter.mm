@@ -135,6 +135,8 @@ using std::ofstream;
 
     NSError *stacksDocumentCreateError ;
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+    NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
+    stacksDocument.managedObjectContext = moc ;
     if(stacksDocumentCreateError){
         NSLog(@"error creating stacks document %@",stacksDocumentCreateError);
         return nil ;
@@ -433,6 +435,9 @@ using std::ofstream;
     gettimeofday(&time2, NULL);
     NSLog(@"find population time %ld", time2.tv_sec - time1.tv_sec);
 
+    NSError *error ;
+    BOOL success = [moc save:&error];
+    NSLog(@"saved %d",success);
 
     return stacksDocument;
 }
