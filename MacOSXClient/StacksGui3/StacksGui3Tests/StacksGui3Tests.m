@@ -62,7 +62,7 @@
                                             forKey:NSReadOnlyPersistentStoreOption];
 
         NSString *filePath = [NSString stringWithFormat:@"file://%@", examplePath];
-        NSURL *storeURL = [NSURL URLWithString:[filePath stringByAppendingFormat:@"storedNew.sqlite"]];
+        NSURL *storeURL = [NSURL URLWithString:[filePath stringByAppendingFormat:@"StacksDocument.sqlite"]];
 //    NSLog(@"store URL %@ fileUrl %@",storeURL,[NSURL fileURLWithPath:storeURL]);
         NSLog(@"store URL %@", storeURL);
 
@@ -87,12 +87,13 @@
 }
 
 
-- (void)testCreateStoreToPath {
+- (void)testCreatePopulatedStoreToPath {
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
     NSString *examplePath = @"/tmp/stacks_tut/";
     StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:examplePath];
     NSManagedObjectContext *moc = [stacksDocument getContextForPath:examplePath];
 
+    // NOT NECESSARY, but still here
     NSError *error2;
     if (![moc save: &error2]) {
         NSLog(@"Error while saving %@",error2);
@@ -104,28 +105,31 @@
 
 }
 
-- (void)testCreateRawStoreWithData {
-    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
-    NSString *examplePath = @"/tmp/stacks_tut/";
-    StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:examplePath];
+//- (void)testCreateRawStoreWithData {
+//    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
+//    NSString *examplePath = @"/tmp/stacks_tut/";
+//    StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:examplePath];
+//    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+//    NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
+//    NSManagedObjectContext *moc = [stacksDocument getContextForPath:basePath];
+//
+//    NSError *error2;
+//    if (![moc save: &error2]) {
+//        NSLog(@"Error while saving %@",error2);
+//        STFail(@"Failed to save %@",error2);
+//    }
+//    else{
+//        NSLog(@"SUCCESS!!!") ;
+//    }
+//}
+
+- (void)testCreateEmptyStore {
+    NSError *stacksDocumentCreateError ;
+    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+//    NSString *examplePath = @"~/Desktop/stacks_tut/";
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
     NSManagedObjectContext *moc = [stacksDocument getContextForPath:basePath];
-
-    NSError *error2;
-    if (![moc save: &error2]) {
-        NSLog(@"Error while saving %@",error2);
-        STFail(@"Failed to save %@",error2);
-    }
-    else{
-        NSLog(@"SUCCESS!!!") ;
-    }
-}
-
-- (void)testCreateRawStore {
-    NSError *stacksDocumentCreateError ;
-    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
-    NSManagedObjectContext *moc = [stacksDocument getContext];
 
     NSError *error2;
     if (![moc save: &error2]) {
