@@ -121,6 +121,10 @@
 
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path {
+    return [self getContextForPath:path andName:@"StacksDocument"];
+}
+
+- (NSManagedObjectContext *)getContextForPath:(NSString *)path andName:(NSString *)name {
     NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES],NSMigratePersistentStoresAutomaticallyOption,
                                                                        [NSNumber numberWithBool:YES],
                                                                        NSInferMappingModelAutomaticallyOption, nil];
@@ -128,7 +132,7 @@
 
 //    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
 //    NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
-    NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/StacksDocument.sqlite"]];
+    NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.sqlite",name]];
     NSLog(@"saving to %@ from %@",path,storeUrl);
     NSPersistentStoreCoordinator *persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
     NSError *error = nil;

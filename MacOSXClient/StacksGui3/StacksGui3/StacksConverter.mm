@@ -509,5 +509,215 @@ using std::ofstream;
     }
 }
 
+- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument{
+    NSString* path = stacksDocument.path ;
+    [self checkFile:path];
+    map<int, CSLocus *> catalog;
+    NSString *catalogFile = [path stringByAppendingString:@"batch_1.catalog"];
+
+    struct timeval time1, time2;
+    gettimeofday(&time1, NULL);
+
+
+    load_loci([catalogFile UTF8String], catalog, false);
+    gettimeofday(&time2, NULL);
+    NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
+
+
+    NSMutableDictionary *populationLookup = [self loadPopulation:path];
+
+    /**
+    * START: loading genotypes + extra info
+*/
+    vector<vector<CatMatch *> > catalog_matches;
+    map<int, string> samples;
+    vector<int> sample_ids;
+
+    vector<pair<int, string>> files = [self buildFileList:path];
+    NSLog(@"number of files %ld", files.size());
+
+
+    // loci loaded . . . now loading genotype
+    NSLog(@"model size %d", (int) catalog.size());
+
+    gettimeofday(&time1, NULL);
+    for (uint i = 0; i < files.size(); i++) {
+        vector<CatMatch *> m;
+        load_catalog_matches([[path stringByAppendingString:@"/"] UTF8String] + files[i].second, m);
+
+        if (m.size() == 0) {
+            cerr << "Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from population analysis.\n";
+            continue;
+        }
+
+        catalog_matches.push_back(m);
+        if (samples.count(m[0]->sample_id) == 0) {
+            samples[m[0]->sample_id] = files[i].second;
+            sample_ids.push_back(m[0]->sample_id);
+        } else {
+            cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this stacksDocuments set, likely the pipeline was run incorrectly.\n";
+            exit(1);
+        }
+    }
+    gettimeofday(&time2, NULL);
+    NSLog(@"catalog matches %ld", (time2.tv_sec - time1.tv_sec));
+
+    cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
+
+    gettimeofday(&time1, NULL);
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
+    pmap->populate(sample_ids, catalog, catalog_matches);
+    gettimeofday(&time2, NULL);
+    NSLog(@"population pmap %ld", (time2.tv_sec - time1.tv_sec));
+
+
+    NSMutableSet *loci = [[NSMutableSet alloc] init];
+
+    gettimeofday(&time1, NULL);
+    map<int, CSLocus *>::iterator catalogIterator = catalog.begin();
+    while (catalogIterator != catalog.end()) {
+        LocusMO *locusMO = [NSEntityDescription insertNewObjectForEntityForName:@"Locus" inManagedObjectContext:stacksDocument.managedObjectContext];
+        locusMO.locusId = [NSNumber numberWithInt:(*catalogIterator).first];
+        const char *read = (*catalogIterator).second->con;
+        NSString *letters = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
+        locusMO.consensus = letters;
+        locusMO.marker = [NSString stringWithUTF8String:catalogIterator->second->marker.c_str()];;
+        vector<SNP *> snps = catalogIterator->second->snps;
+        vector<SNP *>::iterator snpsIterator = snps.begin();
+
+        NSMutableSet *snpsSet = [[NSMutableSet alloc] init];
+        for (; snpsIterator != snps.end(); ++snpsIterator) {
+            SnpMO *snpMO = [NSEntityDescription insertNewObjectForEntityForName:@"Snp" inManagedObjectContext:stacksDocument.managedObjectContext];
+            SNP *snp = (*snpsIterator);
+            snpMO.column = [NSNumber numberWithInt:snp->col];
+            snpMO.lratio = [NSNumber numberWithFloat:snp->lratio];
+            snpMO.rank1 = [NSNumber numberWithChar:snp->rank_1];
+            snpMO.rank2 = [NSNumber numberWithChar:snp->rank_2];
+            snpMO.rank3 = [NSNumber numberWithChar:snp->rank_3];
+            snpMO.rank4 = [NSNumber numberWithChar:snp->rank_4];
+            [locusMO addSnpsObject:snpMO];
+        }
+
+        [loci addObject:locusMO];
+        ++catalogIterator;
+    }
+    gettimeofday(&time2, NULL);
+    NSLog(@"populating snps %ld", (time2.tv_sec - time1.tv_sec));
+
+    map<int, CSLocus *>::iterator it;
+    Datum *d;
+    CSLocus *loc;
+
+    // for each sample process the catalog
+    NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
+
+    long totalCatalogTime = 0;
+    for (uint i = 0; i < sample_ids.size(); i++) {
+        int sampleId = sample_ids[i];
+        string sampleString = samples[sampleId];
+
+        gettimeofday(&time1, NULL);
+        for (it = catalog.begin(); it != catalog.end(); it++) {
+            loc = it->second;
+            d = pmap->datum(loc->id, sample_ids[i]);
+
+            LocusMO *locusMO = nil ;
+            NSArray *locusArray = [loci allObjects];
+            for(LocusMO *aLocus in locusArray){
+                NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
+                if([lookupKey isEqualToNumber:aLocus.locusId]){
+                    locusMO = aLocus;
+                }
+            }
+
+            if (d != NULL && locusMO != nil) {
+                NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
+                GenotypeMO *genotypeMO = nil ;
+                for(GenotypeMO *aGenotype in locusMO.genotypes.allObjects){
+                    if([genotypeMO.name isEqualToString:aGenotype.name]){
+                        genotypeMO = aGenotype;
+                    }
+                }
+
+
+                if (genotypeMO == nil) {
+//                    NSLog(@"genotype NOT found for key %@ and locus %@",key,locusMO.locusId);
+                    vector<char *> obshape = d->obshap;
+                    vector<int> depths = d->depth;
+                    int numLetters = obshape.size();
+//                    genotypeMO = [[GenotypeMO alloc] init];
+                    GenotypeMO *newGenotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Genotype" inManagedObjectContext:stacksDocument.managedObjectContext];
+                    newGenotypeMO.name = key;
+                    newGenotypeMO.sampleId = [NSNumber numberWithInt:sample_ids[i]];
+
+                    // get catalogs for matches
+                    newGenotypeMO.tagId = [NSNumber numberWithInt:d->id];
+
+                    locusMO.length = [NSNumber numberWithInt:loc->depth];
+
+                    if (depths.size() == numLetters) {
+                        for (int j = 0; j < numLetters; j++) {
+                            HaplotypeMO *haplotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Haplotype" inManagedObjectContext:stacksDocument.managedObjectContext];
+                            haplotypeMO.haplotype = [NSString stringWithUTF8String:obshape[j]];
+                            [newGenotypeMO addHaplotypesObject:haplotypeMO];
+
+                            DepthMO *depthMO = [NSEntityDescription insertNewObjectForEntityForName:@"Depth" inManagedObjectContext:stacksDocument.managedObjectContext];
+                            depthMO.depth = [NSNumber numberWithInt:depths[j]];
+
+                            [newGenotypeMO addDepthsObject:depthMO];
+                        }
+                        [locusMO addGenotypesObject:newGenotypeMO];
+                    }
+                    else {
+                        NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
+                    }
+                }
+                else {
+                    NSLog(@"genotype %@ FOUND for key %@ and locus %@",genotypeMO.name,key,locusMO.locusId);
+                }
+
+
+            }
+        }
+        gettimeofday(&time2, NULL);
+        NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
+        totalCatalogTime += time2.tv_sec - time1.tv_sec;
+    }
+    NSLog(@"total time %ld", totalCatalogTime);
+
+    gettimeofday(&time1, NULL);
+    delete pmap;
+    gettimeofday(&time2, NULL);
+    NSLog(@"delete pmap time %ld", time2.tv_sec - time1.tv_sec);
+
+
+    gettimeofday(&time1, NULL);
+
+    stacksDocument.populationLookup = populationLookup;
+
+    LocusMO *bLocusMO = [loci.allObjects objectAtIndex:0];
+    NSLog(@"pre locus %@ genotypes %ld",bLocusMO.locusId,bLocusMO.genotypes.count);
+
+    stacksDocument.loci = loci;
+    LocusMO *cLocusMO = [stacksDocument.loci.allObjects objectAtIndex:0];
+    NSLog(@"post locus %@ genotypes %ld",cLocusMO.locusId,cLocusMO.genotypes.count);
+
+
+    gettimeofday(&time2, NULL);
+    NSLog(@"create stacks document time %ld", time2.tv_sec - time1.tv_sec);
+
+
+    gettimeofday(&time1, NULL);
+    NSMutableArray *populations = [stacksDocument findPopulations];
+    NSLog(@"popps %ld", populations.count);
+    gettimeofday(&time2, NULL);
+    NSLog(@"find population time %ld", time2.tv_sec - time1.tv_sec);
+
+    NSError *error ;
+    BOOL success = [stacksDocument.managedObjectContext save:&error];
+    NSLog(@"saved %d",success);
+
+    return stacksDocument;
+}
 @end
 
