@@ -89,18 +89,19 @@
 - (void)testCreatePopulatedStoreToPath {
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
     NSString *examplePath = @"/tmp/stacks_tut/";
-    StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:examplePath];
-    NSManagedObjectContext *moc = [stacksDocument getContextForPath:examplePath];
+    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
 
-    // NOT NECESSARY, but still here
-    NSError *error2;
-    if (![moc save: &error2]) {
-        NSLog(@"Error while saving %@",error2);
-        STFail(@"Failed to save %@",error2);
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSError *fileError ;
+    if([fileManager fileExistsAtPath:filePath]){
+        [fileManager removeItemAtPath:filePath error:&fileError];
     }
-    else{
-        NSLog(@"SUCCESS!!!") ;
+    if(fileError){
+        STFail(@"error deleting file %@", fileError);
     }
+    STAssertFalse([fileManager fileExistsAtPath:filePath],@"Should be false");
+
+    StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:examplePath];
 
 }
 
@@ -108,28 +109,22 @@
 - (void)testCreatePopulatedStoreToPathAndContext {
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
     NSString *examplePath = @"/tmp/stacks_tut/";
+    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
 
-
-    NSError *stacksDocumentCreateError ;
-    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
-    NSManagedObjectContext *moc = [stacksDocument getContextForPath:examplePath];
-    stacksDocument.managedObjectContext = moc ;
-    stacksDocument.path = examplePath ;
-    if(stacksDocumentCreateError){
-        NSLog(@"error creating stacks document %@",stacksDocumentCreateError);
-        STFail(@"Failed to to create a stacks document %@",stacksDocumentCreateError);
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSError *fileError ;
+    if([fileManager fileExistsAtPath:filePath]){
+        [fileManager removeItemAtPath:filePath error:&fileError];
     }
+    if(fileError){
+        STFail(@"error deleting file %@", fileError);
+    }
+    STAssertFalse([fileManager fileExistsAtPath:filePath],@"Should be false");
 
+    StacksDocument* stacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
     stacksDocument = [stacksConverter loadDocument:stacksDocument];
-
-    // NOT NECESSARY, but still here
-    NSError *error2;
-    if (![moc save: &error2]) {
-        NSLog(@"Error while saving %@",error2);
-        STFail(@"Failed to save %@",error2);
-    }
-    else{
-        NSLog(@"SUCCESS!!!") ;
+    if(stacksDocument==nil){
+        STFail(@"There was an error reading in the stacks Document ");
     }
 
 }
