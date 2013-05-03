@@ -86,12 +86,41 @@
     }
 }
 
-
 - (void)testCreatePopulatedStoreToPath {
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
     NSString *examplePath = @"/tmp/stacks_tut/";
     StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:examplePath];
     NSManagedObjectContext *moc = [stacksDocument getContextForPath:examplePath];
+
+    // NOT NECESSARY, but still here
+    NSError *error2;
+    if (![moc save: &error2]) {
+        NSLog(@"Error while saving %@",error2);
+        STFail(@"Failed to save %@",error2);
+    }
+    else{
+        NSLog(@"SUCCESS!!!") ;
+    }
+
+}
+
+
+- (void)testCreatePopulatedStoreToPathAndContext {
+    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
+    NSString *examplePath = @"/tmp/stacks_tut/";
+
+
+    NSError *stacksDocumentCreateError ;
+    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+    NSManagedObjectContext *moc = [stacksDocument getContextForPath:examplePath];
+    stacksDocument.managedObjectContext = moc ;
+    stacksDocument.path = examplePath ;
+    if(stacksDocumentCreateError){
+        NSLog(@"error creating stacks document %@",stacksDocumentCreateError);
+        STFail(@"Failed to to create a stacks document %@",stacksDocumentCreateError);
+    }
+
+    stacksDocument = [stacksConverter loadDocument:stacksDocument];
 
     // NOT NECESSARY, but still here
     NSError *error2;
@@ -129,7 +158,7 @@
 //    NSString *examplePath = @"~/Desktop/stacks_tut/";
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
-    NSManagedObjectContext *moc = [stacksDocument getContextForPath:basePath];
+    NSManagedObjectContext *moc = [stacksDocument getContextForPath:basePath andName:@"Empty"];
 
     NSError *error2;
     if (![moc save: &error2]) {

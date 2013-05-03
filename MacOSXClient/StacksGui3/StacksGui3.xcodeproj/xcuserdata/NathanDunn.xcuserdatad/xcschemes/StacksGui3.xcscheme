@@ -37,6 +37,17 @@
                BlueprintName = "StacksGui3Tests"
                ReferencedContainer = "container:StacksGui3.xcodeproj">
             </BuildableReference>
+            <SkippedTests>
+               <Test
+                  Identifier = "StacksGui3Tests/testCreateEmptyStore">
+               </Test>
+               <Test
+                  Identifier = "StacksGui3Tests/testReadRawStacks">
+               </Test>
+               <Test
+                  Identifier = "StacksGui3Tests/testCreatePopulatedStoreToPath">
+               </Test>
+            </SkippedTests>
          </TestableReference>
       </Testables>
       <MacroExpansion>
