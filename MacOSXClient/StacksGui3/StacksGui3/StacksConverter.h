@@ -23,6 +23,8 @@
 - (NSMutableDictionary *)loadPopulation:(NSString *)path;
 
 - (StacksDocument *)loadDocument:(StacksDocument *)document;
+
+- (StacksDocument *)createStacksDocumentForPath:(NSString *)path;
 @end
 
 
