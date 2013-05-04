@@ -187,6 +187,12 @@
 - (void)testReadPopulatedDataStore {
     NSString *examplePath = @"/tmp/stacks_tut/";
     NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    BOOL existsAtPath = [fileManager fileExistsAtPath:filePath];
+    if (!existsAtPath) {
+        NSLog(@"file does NOT exit! %@",filePath);
+    }
 //    StacksDocument *newStacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
 //    StacksDocument *newStacksDocument = [stacksConverter getStacksDocumentForPath:examplePath];
 
@@ -201,23 +207,22 @@
         STFail(@"failed to load . . .error %@",stacksDocumentCreateError);
     }
 
+    NSError *error ;
+    NSManagedObjectContext *moc = newStacksDocument.managedObjectContext ;
+    NSEntityDescription *entityDescription = [NSEntityDescription
+            entityForName:@"Locus" inManagedObjectContext:moc];
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    [request setEntity:entityDescription];
 
-//    NSError *error ;
-//    BOOL readOkay = [newStacksDocument readFromURL:fileUrl ofType:NSSQLiteStoreType error:&error] ;
-//    NSLog(@"read okay? %ld",readOkay);
-//    if(error){
-//        STFail(@"error  reading %@",error);
-//    }
+    NSArray *locusArray = [moc executeFetchRequest:request error:&error];
+    for(NSUInteger  i = 0 ; i < 5 ; i++){
+        LocusMO *locusMO = [locusArray objectAtIndex:i];
+        NSLog(@"index %ld locus %@",i,locusMO.locusId);
+        NSLog(@"has genotypes %ld",locusMO.genotypes.count);
+    }
+    NSLog(@"array size %ld", locusArray.count);
 
-//    NSMutableDictionary *options = [[NSMutableDictionary alloc] init];
-//    [options setObject:[NSNumber numberWithBool:YES] forKey:NSMigratePersistentStoresAutomaticallyOption];
-
-
-//    BOOL result = [newStacksDocument configurePersistentStoreCoordinatorForURL:filePath ofType:NSSQLiteStoreType modelConfiguration:configuration storeOptions:options error:error];
-
-//    BOOL configured = [newStacksDocument configurePersistentStoreCoordinatorForURL:filePath ofType:<#(NSString *)fileType#> modelConfiguration:<#(NSString *)configuration#> storeOptions:<#(NSDictionary *)storeOptions#> error:<#(NSError * *)error#>];
-
-    STAssertTrue(newStacksDocument.loci.count > 8, @"should be at least 8 loci %ld", newStacksDocument.loci.count );
+    STAssertTrue(locusArray.count ==462 , @"should be at least 8 loci %ld", locusArray.count );
 }
 
 @end
