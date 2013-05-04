@@ -8,6 +8,12 @@
 
 #import "StacksDocument.h"
 
+@interface StacksDocument()
+
+@property(weak) IBOutlet NSTableView *locusTableView;
+
+@end
+
 @implementation StacksDocument
 
 // TODO: remove these in favor of NSSet loci
@@ -139,5 +145,6 @@
 
     return returnType;
 }
+
 
 @end
