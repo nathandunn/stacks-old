@@ -10,20 +10,14 @@
 
 @interface StacksDocument : NSPersistentDocument
 
-@property (strong) NSMutableDictionary *locusViews;
+//@property (strong) NSMutableDictionary *locusViews;
 @property(strong) NSString *path;
 @property(atomic, retain) NSMutableDictionary *populationLookup;
-@property(atomic, retain) NSArray *orderedLocus;
+//@property(atomic, retain) NSArray *orderedLocus;
 @property(nonatomic, strong) NSSet *loci;
 
-- (id)initWithLocusView:(NSMutableDictionary*)locusViews;
-- (id)initWithLoci:(NSSet*)loci ;
 - (NSMutableArray *)findPopulations;
 
-
-- (NSManagedObjectContext *)getContext;
-
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path;
-
 - (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name;
 @end

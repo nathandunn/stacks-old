@@ -25,6 +25,8 @@
 - (StacksDocument *)loadDocument:(StacksDocument *)document;
 
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path;
+
+- (StacksDocument *)getStacksDocumentForPath:(NSString *)string;
 @end
 
 

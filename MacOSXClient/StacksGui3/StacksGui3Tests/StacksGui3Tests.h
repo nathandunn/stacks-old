@@ -8,6 +8,12 @@
 
 #import <SenTestingKit/SenTestingKit.h>
 
+@class StacksConverter;
+
 @interface StacksGui3Tests : SenTestCase
 
+//StacksConverter *stacksConverter :
+
 @end
+
+

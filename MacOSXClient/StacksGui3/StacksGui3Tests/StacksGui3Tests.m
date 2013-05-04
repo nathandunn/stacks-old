@@ -11,16 +11,21 @@
 #import "StacksDocument.h"
 #import "LocusMO.h"
 
-@implementation StacksGui3Tests
+@implementation StacksGui3Tests {
+//    stacksConverter;
+    StacksConverter *stacksConverter ;
+}
+
 
 - (void)setUp {
     [super setUp];
-
+    stacksConverter = [[StacksConverter alloc] init];
     // Set-up code here.
 }
 
 - (void)tearDown {
     // Tear-down code here.
+    stacksConverter = nil ;
 
     [super tearDown];
 }
@@ -31,7 +36,7 @@
 //}
 
 - (void)testReadRawStacks {
-    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
+//    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *examplePath = @"/tmp/stacks_tut/";
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
@@ -86,48 +91,61 @@
     }
 }
 
-- (void)testCreatePopulatedStoreToPath {
-    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
-    NSString *examplePath = @"/tmp/stacks_tut/";
-    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
-
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSError *fileError ;
-    if([fileManager fileExistsAtPath:filePath]){
-        [fileManager removeItemAtPath:filePath error:&fileError];
-    }
-    if(fileError){
-        STFail(@"error deleting file %@", fileError);
-    }
-    STAssertFalse([fileManager fileExistsAtPath:filePath],@"Should be false");
-
-    StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:examplePath];
-
-}
-
+//- (void)testCreatePopulatedStoreToPath {
+//    NSString *examplePath = @"/tmp/stacks_tut/";
+//    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
+//
+//    NSFileManager *fileManager = [NSFileManager defaultManager];
+//    NSError *fileError;
+//    if ([fileManager fileExistsAtPath:filePath]) {
+//        [fileManager removeItemAtPath:filePath error:&fileError];
+//    }
+//    if (fileError) {
+//        STFail(@"error deleting file %@", fileError);
+//    }
+//    STAssertFalse([fileManager fileExistsAtPath:filePath], @"Should be false");
+//
+//    StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:examplePath];
+//
+//    NSLog(@"loci count %ld",stacksDocument.loci.count);
+//
+//    STAssertTrue(stacksDocument.loci.count > 8, @"should be at least 8 loci %ld", stacksDocument.loci.count );
+//
+//}
 
 - (void)testCreatePopulatedStoreToPathAndContext {
-    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
+//    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
     NSString *examplePath = @"/tmp/stacks_tut/";
     NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSError *fileError ;
-    if([fileManager fileExistsAtPath:filePath]){
+    NSError *fileError;
+    if ([fileManager fileExistsAtPath:filePath]) {
         [fileManager removeItemAtPath:filePath error:&fileError];
     }
-    if(fileError){
+    if (fileError) {
         STFail(@"error deleting file %@", fileError);
     }
-    STAssertFalse([fileManager fileExistsAtPath:filePath],@"Should be false");
+    STAssertFalse([fileManager fileExistsAtPath:filePath], @"Should be false");
 
-    StacksDocument* stacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
+    StacksDocument *stacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
     stacksDocument = [stacksConverter loadDocument:stacksDocument];
-    if(stacksDocument==nil){
+    if (stacksDocument == nil) {
         STFail(@"There was an error reading in the stacks Document ");
+    }
+    NSLog(@"loci count %ld",stacksDocument.loci.count);
+    STAssertTrue(stacksDocument.loci.count > 8, @"should be at least 8 loci %ld", stacksDocument.loci.count );
+    NSError *error2;
+    if (![stacksDocument.managedObjectContext save: &error2]) {
+        NSLog(@"Error while saving %@",error2);
+        STFail(@"Failed to save %@",error2);
+    }
+    else{
+        NSLog(@"SUCCESS!!!") ;
     }
 
 }
+
 
 //- (void)testCreateRawStoreWithData {
 //    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
@@ -147,22 +165,54 @@
 //    }
 //}
 
-- (void)testCreateEmptyStore {
-    NSError *stacksDocumentCreateError ;
-    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
-//    NSString *examplePath = @"~/Desktop/stacks_tut/";
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
-    NSManagedObjectContext *moc = [stacksDocument getContextForPath:basePath andName:@"Empty"];
+//- (void)testCreateEmptyStore {
+//    NSError *stacksDocumentCreateError;
+//    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+////    NSString *examplePath = @"~/Desktop/stacks_tut/";
+//    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+//    NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
+//    NSManagedObjectContext *moc = [stacksDocument getContextForPath:basePath andName:@"Empty"];
+//
+//    NSError *error2;
+//    if (![moc save:&error2]) {
+//        NSLog(@"Error while saving %@", error2);
+//        STFail(@"Failed to save %@", error2);
+//    }
+//    else {
+//        NSLog(@"SUCCESS!!!");
+//    }
+//}
 
-    NSError *error2;
-    if (![moc save: &error2]) {
-        NSLog(@"Error while saving %@",error2);
-        STFail(@"Failed to save %@",error2);
+
+- (void)testReadPopulatedDataStore {
+    NSString *examplePath = @"/tmp/stacks_tut/";
+    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
+//    StacksDocument *newStacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
+//    StacksDocument *newStacksDocument = [stacksConverter getStacksDocumentForPath:examplePath];
+
+    NSError *stacksDocumentCreateError ;
+//    StacksDocument *newStacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+//    NSURL *fileUrl = [NSURL fileURLWithPath:filePath]
+    NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.sqlite"]];
+    StacksDocument *newStacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
+//    StacksDocument *newStacksDocument = [[StacksDocument alloc]
+//            initWithContentsOfURL:fileUrl ofType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+    if(stacksDocumentCreateError){
+        STFail(@"failed to load . . .error %@",stacksDocumentCreateError);
     }
-    else{
-        NSLog(@"SUCCESS!!!") ;
-    }
+
+    NSError *error ;
+    [newStacksDocument readFromURL:fileUrl ofType:NSSQLiteStoreType error:&error] ;
+
+//    NSMutableDictionary *options = [[NSMutableDictionary alloc] init];
+//    [options setObject:[NSNumber numberWithBool:YES] forKey:NSMigratePersistentStoresAutomaticallyOption];
+
+
+//    BOOL result = [newStacksDocument configurePersistentStoreCoordinatorForURL:filePath ofType:NSSQLiteStoreType modelConfiguration:configuration storeOptions:options error:error];
+
+//    BOOL configured = [newStacksDocument configurePersistentStoreCoordinatorForURL:filePath ofType:<#(NSString *)fileType#> modelConfiguration:<#(NSString *)configuration#> storeOptions:<#(NSDictionary *)storeOptions#> error:<#(NSError * *)error#>];
+
+    STAssertTrue(newStacksDocument.loci.count > 8, @"should be at least 8 loci %ld", newStacksDocument.loci.count );
 }
 
 @end
