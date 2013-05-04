@@ -14,8 +14,7 @@
 //@synthesize locusViews;
 @synthesize loci;
 
-- (id)init
-{
+- (id)init {
     self = [super init];
     if (self) {
         // Add your subclass-specific initialization here.
@@ -28,15 +27,13 @@
 //}
 
 
-- (NSString *)windowNibName
-{
+- (NSString *)windowNibName {
     // Override returning the nib file name of the document
     // If you need to use a subclass of NSWindowController or if your document supports multiple NSWindowControllers, you should remove this method and override -makeWindowControllers instead.
     return @"StacksDocument";
 }
 
-- (void)windowControllerDidLoadNib:(NSWindowController *)aController
-{
+- (void)windowControllerDidLoadNib:(NSWindowController *)aController {
 //    NSString *aControllerName = [anIdentifier stringByAppendingString: @"ViewController"];
 //    NSString *aNibName = [anIdentifier stringByAppendingString: @"View"];
 //    Class aControllerClass = NSClassFromString(aControllerName);
@@ -48,8 +45,7 @@
 
 }
 
-+ (BOOL)autosavesInPlace
-{
++ (BOOL)autosavesInPlace {
     return YES;
 }
 
@@ -58,9 +54,9 @@
 
     NSMutableArray *populations = [[NSMutableArray alloc] init];
 
-    NSString *population ;
-    for(population in self.populationLookup.allValues){
-        if(![populations containsObject:population]){
+    NSString *population;
+    for (population in self.populationLookup.allValues) {
+        if (![populations containsObject:population]) {
             [populations addObject:population];
         }
     }
@@ -103,13 +99,13 @@
 }
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path andName:(NSString *)name {
-    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES],NSMigratePersistentStoresAutomaticallyOption,
+    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption,
                                                                        [NSNumber numberWithBool:YES],
                                                                        NSInferMappingModelAutomaticallyOption, nil];
 
 
-    NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.sqlite",name]];
-    NSLog(@"saving to %@ from %@",path,storeUrl);
+    NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.sqlite", name]];
+    NSLog(@"saving to %@ from %@", path, storeUrl);
     NSPersistentStoreCoordinator *persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
     NSError *error = nil;
 
@@ -125,10 +121,23 @@
 
     NSManagedObjectContext *context = [[NSManagedObjectContext alloc] init];
     [context setPersistentStoreCoordinator:persistentStoreCoordinator];
-    self.managedObjectContext = context ;
-    self.path = path ;
+    self.managedObjectContext = context;
+    self.path = path;
 
 
     return context;
 }
+
+
+- (BOOL)readFromURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)error {
+    BOOL returnType = [super readFromURL:absoluteURL ofType:typeName error:error];
+//    NSLog(@"reading from the url %@", absoluteURL);
+//    if(error!=nil){
+//        NSLog(@"error reading %@", error);
+//    }
+//    NSLog(@"error reading success %ld",  returnType);
+
+    return returnType;
+}
+
 @end
