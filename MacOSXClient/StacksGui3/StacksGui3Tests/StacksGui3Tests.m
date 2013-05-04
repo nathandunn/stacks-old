@@ -194,15 +194,20 @@
 //    StacksDocument *newStacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
 //    NSURL *fileUrl = [NSURL fileURLWithPath:filePath]
     NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.sqlite"]];
-    StacksDocument *newStacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
-//    StacksDocument *newStacksDocument = [[StacksDocument alloc]
-//            initWithContentsOfURL:fileUrl ofType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+//    StacksDocument *newStacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
+    StacksDocument *newStacksDocument = [[StacksDocument alloc]
+            initWithContentsOfURL:fileUrl ofType:NSSQLiteStoreType error:&stacksDocumentCreateError];
     if(stacksDocumentCreateError){
         STFail(@"failed to load . . .error %@",stacksDocumentCreateError);
     }
 
-    NSError *error ;
-    [newStacksDocument readFromURL:fileUrl ofType:NSSQLiteStoreType error:&error] ;
+
+//    NSError *error ;
+//    BOOL readOkay = [newStacksDocument readFromURL:fileUrl ofType:NSSQLiteStoreType error:&error] ;
+//    NSLog(@"read okay? %ld",readOkay);
+//    if(error){
+//        STFail(@"error  reading %@",error);
+//    }
 
 //    NSMutableDictionary *options = [[NSMutableDictionary alloc] init];
 //    [options setObject:[NSNumber numberWithBool:YES] forKey:NSMigratePersistentStoresAutomaticallyOption];
