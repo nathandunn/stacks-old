@@ -11,7 +11,7 @@
 @implementation StacksDocument
 
 // TODO: remove these in favor of NSSet loci
-@synthesize locusViews;
+//@synthesize locusViews;
 @synthesize loci;
 
 - (id)init
@@ -51,28 +51,6 @@
 + (BOOL)autosavesInPlace
 {
     return YES;
-}
-
-- (id)initWithLocusView:(NSMutableDictionary*)locusViews {
-    if ((self = [super init])) {
-        self.locusViews = locusViews;
-        self.orderedLocus = [[locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
-            return [obj1 integerValue] - [obj2 integerValue];
-        }];
-
-    }
-    return self ;
-}
-
-- (id)initWithLoci:(NSSet*)loci {
-    if ((self = [super init])) {
-        self.loci = loci ;
-//        self.orderedLocus = [[locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
-//            return [obj1 integerValue] - [obj2 integerValue];
-//        }];
-
-    }
-    return self ;
 }
 
 
@@ -147,6 +125,9 @@
 
     NSManagedObjectContext *context = [[NSManagedObjectContext alloc] init];
     [context setPersistentStoreCoordinator:persistentStoreCoordinator];
+    self.managedObjectContext = context ;
+    self.path = path ;
+
 
     return context;
 }

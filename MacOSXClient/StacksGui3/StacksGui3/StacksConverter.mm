@@ -429,5 +429,18 @@ using std::ofstream;
     }
     return stacksDocument ;
 }
+
+- (StacksDocument *)getStacksDocumentForPath:(NSString *)path {
+    NSError *stacksDocumentCreateError ;
+    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+    NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
+//    stacksDocument.managedObjectContext = moc ;
+//    stacksDocument.path = path;
+    if(stacksDocumentCreateError){
+        NSLog(@"error creating stacks document %@",stacksDocumentCreateError);
+        return nil ;
+    }
+    return stacksDocument ;
+}
 @end
 
