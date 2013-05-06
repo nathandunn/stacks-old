@@ -9,7 +9,6 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class LocusMO;
 
 @interface SnpMO : NSManagedObject
 
@@ -20,6 +19,5 @@
 @property (nonatomic, retain) NSNumber * rank3;
 @property (nonatomic, retain) NSNumber * rank4;
 @property (nonatomic, retain) NSNumber * type;
-@property (nonatomic, retain) LocusMO *locus;
 
 @end

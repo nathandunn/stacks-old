@@ -7,7 +7,6 @@
 //
 
 #import "SnpMO.h"
-#import "LocusMO.h"
 
 
 @implementation SnpMO
@@ -19,6 +18,5 @@
 @dynamic rank3;
 @dynamic rank4;
 @dynamic type;
-@dynamic locus;
 
 @end

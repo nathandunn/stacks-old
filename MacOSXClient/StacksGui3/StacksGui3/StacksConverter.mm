@@ -465,7 +465,7 @@ using std::ofstream;
                         [populations addObject:newPopulationMO];
                     }
 
-                    [newPopulationMO addDatumsObject:datumMO];
+                    // [newPopulationMO addDatumsObject:datumMO];
 //                    [document.populations insertValue:<#(id)value#> inPropertyWithKey:<#(NSString *)key#>];
 
                 }
