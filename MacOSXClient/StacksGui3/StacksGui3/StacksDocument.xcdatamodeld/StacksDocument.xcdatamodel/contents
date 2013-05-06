@@ -12,8 +12,9 @@
         <relationship name="depths" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Depth" inverseName="datum" inverseEntity="Depth" syncable="YES"/>
         <relationship name="haplotypes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Haplotype" inverseName="datum" inverseEntity="Haplotype" syncable="YES"/>
         <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="datums" inverseEntity="Locus" syncable="YES"/>
+        <relationship name="sample" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Sample" inverseName="datums" inverseEntity="Sample" syncable="YES"/>
         <relationship name="snps" optional="YES" toMany="YES" deletionRule="No Action" destinationEntity="Snp" syncable="YES"/>
-        <relationship name="stacks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Stack" inverseName="datum" inverseEntity="Stack" syncable="YES"/>
+        <relationship name="stack" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Stack" inverseName="datum" inverseEntity="Stack" syncable="YES"/>
     </entity>
     <entity name="Depth" representedClassName="DepthMO" syncable="YES">
         <attribute name="depth" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
@@ -31,7 +32,6 @@
         <attribute name="ratio" optional="YES" attributeType="String" syncable="YES"/>
         <relationship name="alleles" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Allele" syncable="YES"/>
         <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="locus" inverseEntity="Datum" syncable="YES"/>
-        <relationship name="sample" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Sample" inverseName="loci" inverseEntity="Sample" syncable="YES"/>
         <relationship name="snps" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Snp" syncable="YES"/>
     </entity>
     <entity name="Population" representedClassName="PopulationMO" syncable="YES">
@@ -40,7 +40,9 @@
         <relationship name="samples" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Sample" inverseName="population" inverseEntity="Sample" syncable="YES"/>
     </entity>
     <entity name="Sample" representedClassName="SampleMO" syncable="YES">
-        <relationship name="loci" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Locus" inverseName="sample" inverseEntity="Locus" syncable="YES"/>
+        <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sampleId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
+        <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="sample" inverseEntity="Datum" syncable="YES"/>
         <relationship name="population" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Population" inverseName="samples" inverseEntity="Population" syncable="YES"/>
     </entity>
     <entity name="Snp" representedClassName="SnpMO" syncable="YES">
@@ -54,7 +56,7 @@
     </entity>
     <entity name="Stack" representedClassName="StackMO" syncable="YES">
         <relationship name="consensus" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
-        <relationship name="datum" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="stacks" inverseEntity="Datum" syncable="YES"/>
+        <relationship name="datum" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="stack" inverseEntity="Datum" syncable="YES"/>
         <relationship name="model" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
         <relationship name="reference" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
         <relationship name="stackEntries" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
@@ -68,15 +70,15 @@
         <relationship name="stack" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Stack" inverseName="reference" inverseEntity="Stack" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Allele" positionX="-11" positionY="-378" width="128" height="75"/>
-        <element name="Datum" positionX="178" positionY="-162" width="128" height="180"/>
-        <element name="Depth" positionX="423" positionY="-189" width="128" height="75"/>
-        <element name="Haplotype" positionX="378" positionY="-99" width="128" height="75"/>
-        <element name="Locus" positionX="214" positionY="-378" width="128" height="180"/>
-        <element name="Population" positionX="7" positionY="-27" width="128" height="90"/>
-        <element name="Snp" positionX="376" positionY="-369" width="128" height="150"/>
+        <element name="Allele" positionX="360" positionY="-165" width="128" height="75"/>
+        <element name="Datum" positionX="178" positionY="-162" width="128" height="195"/>
+        <element name="Depth" positionX="43" positionY="-342" width="128" height="75"/>
+        <element name="Haplotype" positionX="27" positionY="-255" width="128" height="75"/>
+        <element name="Locus" positionX="214" positionY="-378" width="128" height="165"/>
+        <element name="Population" positionX="-9" positionY="-162" width="128" height="90"/>
+        <element name="Snp" positionX="394" positionY="-396" width="128" height="150"/>
         <element name="Stack" positionX="180" positionY="69" width="128" height="120"/>
-        <element name="StackEntry" positionX="378" positionY="18" width="128" height="135"/>
-        <element name="Sample" positionX="-18" positionY="-228" width="128" height="75"/>
+        <element name="StackEntry" positionX="378" positionY="45" width="128" height="135"/>
+        <element name="Sample" positionX="-2" positionY="-18" width="128" height="105"/>
     </elements>
 </model>

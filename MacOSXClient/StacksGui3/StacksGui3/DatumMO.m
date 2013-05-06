@@ -11,6 +11,7 @@
 #import "DepthMO.h"
 #import "HaplotypeMO.h"
 #import "LocusMO.h"
+#import "SampleMO.h"
 #import "SnpMO.h"
 #import "StackMO.h"
 
@@ -23,8 +24,9 @@
 @dynamic depths;
 @dynamic haplotypes;
 @dynamic locus;
-@dynamic stacks;
+@dynamic stack;
 @dynamic alleles;
 @dynamic snps;
+@dynamic sample;
 
 @end

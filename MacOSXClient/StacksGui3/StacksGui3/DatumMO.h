@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class AlleleMO, DepthMO, HaplotypeMO, LocusMO, SnpMO, StackMO;
+@class AlleleMO, DepthMO, HaplotypeMO, LocusMO, SampleMO, SnpMO, StackMO;
 
 @interface DatumMO : NSManagedObject
 
@@ -19,9 +19,10 @@
 @property (nonatomic, retain) NSSet *depths;
 @property (nonatomic, retain) NSSet *haplotypes;
 @property (nonatomic, retain) LocusMO *locus;
-@property (nonatomic, retain) NSSet *stacks;
+@property (nonatomic, retain) StackMO *stack;
 @property (nonatomic, retain) NSSet *alleles;
 @property (nonatomic, retain) NSSet *snps;
+@property (nonatomic, retain) SampleMO *sample;
 @end
 
 @interface DatumMO (CoreDataGeneratedAccessors)
@@ -35,11 +36,6 @@
 - (void)removeHaplotypesObject:(HaplotypeMO *)value;
 - (void)addHaplotypes:(NSSet *)values;
 - (void)removeHaplotypes:(NSSet *)values;
-
-- (void)addStacksObject:(StackMO *)value;
-- (void)removeStacksObject:(StackMO *)value;
-- (void)addStacks:(NSSet *)values;
-- (void)removeStacks:(NSSet *)values;
 
 - (void)addAllelesObject:(AlleleMO *)value;
 - (void)removeAllelesObject:(AlleleMO *)value;

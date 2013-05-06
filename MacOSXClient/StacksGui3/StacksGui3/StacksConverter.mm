@@ -35,6 +35,7 @@ using std::ofstream;
 #import "HaplotypeMO.h"
 #import "DepthMO.h"
 #import "PopulationMO.h"
+#import "SampleMO.h"
 //#import "StackEntry.h"
 
 
@@ -217,8 +218,6 @@ using std::ofstream;
     gettimeofday(&time1, NULL);
 
 
-
-
     load_loci([catalogFile UTF8String], catalog, false);
     gettimeofday(&time2, NULL);
     NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
@@ -235,10 +234,6 @@ using std::ofstream;
     vector<pair<int, string>> files = [self buildFileList:path];
     NSLog(@"number of files %ld", files.size());
 
-
-    // sample . . . index / name
-    NSMutableDictionary *populationLookup = [self loadPopulation:path];
-    stacksDocument.populationLookup = populationLookup;
 
 
     // loci loaded . . . now loading datum
@@ -265,6 +260,16 @@ using std::ofstream;
     }
     gettimeofday(&time2, NULL);
     NSLog(@"catalog matches %ld", (time2.tv_sec - time1.tv_sec));
+
+
+    NSLog(@"input populations %ld",stacksDocument.populations.count);
+    [self addPopulationsToDocument:stacksDocument forPath:path];
+    NSLog(@"output populations %ld",stacksDocument.populations.count);
+    [self addSamplesToDocument:stacksDocument forSampleIds:sample_ids andSamples:samples];
+    NSLog(@"output populations after samples %ld",stacksDocument.populations.count);
+    for(PopulationMO* populationMo in stacksDocument.populations){
+        NSLog(@"samples %ld per population %@",populationMo.samples.count,populationMo.name);
+    }
 
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
 
@@ -424,9 +429,65 @@ using std::ofstream;
     return stacksDocument;
 }
 
+- (void)addSamplesToDocument:(StacksDocument *)document forSampleIds:(vector<int>)sampleIds andSamples:(map<int, string>)samples {
+
+    if (document.populationLookup == nil || document.populationLookup.count == 0) {
+        PopulationMO *populationMO = [NSEntityDescription insertNewObjectForEntityForName:@"Population" inManagedObjectContext:document.managedObjectContext];
+        populationMO.populationId = [NSNumber numberWithInt:1];
+        populationMO.name = @"All";
+        document.populations = [NSSet setWithObjects:populationMO, nil];
+
+        // set each sample to populationMO
+        for (int i = 0; i < sampleIds.size(); i++) {
+            SampleMO *sampleMO = [NSEntityDescription insertNewObjectForEntityForName:@"Sample" inManagedObjectContext:document.managedObjectContext];
+            sampleMO.sampleId = [NSNumber numberWithInt:sampleIds[i]];
+            sampleMO.name = [NSString stringWithUTF8String:samples[sampleIds[i]].c_str()];
+            [populationMO addSamplesObject:sampleMO];
+        }
+    }
+    else {
+        NSNumberFormatter *f = [[NSNumberFormatter alloc] init];
+        // else
+        for (int i = 0; i < sampleIds.size(); i++) {
+            SampleMO *sampleMO = [NSEntityDescription insertNewObjectForEntityForName:@"Sample" inManagedObjectContext:document.managedObjectContext];
+            sampleMO.sampleId = [NSNumber numberWithInt:sampleIds[i]];
+            sampleMO.name = [NSString stringWithUTF8String:samples[sampleIds[i]].c_str()];
+
+            NSString *populationId = [document.populationLookup objectForKey:sampleMO.name];
+
+            // lets get the population . . can use lookup, but this is usually pretty small
+            for (PopulationMO *populationMO in document.populations) {
+                if ([populationMO.populationId isEqualToNumber:[f numberFromString:populationId]]) {
+                    [populationMO addSamplesObject:sampleMO];
+                }
+            }
+        }
+    }
+
+}
+
+- (void)addPopulationsToDocument:(StacksDocument *)document forPath:(NSString *)path {
+    // sample . . . index / name
+    NSMutableDictionary *populationLookup = [self loadPopulation:path];
+
+    document.populationLookup = populationLookup;
+
+
+    // scan and create the populations . . .
+    NSNumberFormatter *f = [[NSNumberFormatter alloc] init];
+//    [f setNumberStyle:NSNumberFormatterDecimalStyle];
+    for (NSString *sampleName in populationLookup.allValues) {
+        NSNumber *myNumber = [f numberFromString:sampleName];
+        PopulationMO *populationMO = [NSEntityDescription insertNewObjectForEntityForName:@"Population" inManagedObjectContext:document.managedObjectContext];
+        populationMO.populationId = myNumber;
+        populationMO.name = sampleName;
+    }
+
+}
+
 - (void)readPopulations:(StacksDocument *)document {
 //    NSMutableDictionary *populationLookup = [[NSMutableDictionary alloc] init];
-    NSMutableArray *populations = [[NSMutableArray  alloc] init];
+    NSMutableArray *populations = [[NSMutableArray alloc] init];
 
     NSString *path = document.path;
     NSLog(@"reading population for file %@", path);
@@ -450,10 +511,10 @@ using std::ofstream;
                 NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name == %@", sampleName];
                 [request setPredicate:predicate];
                 [request setEntity:entityDescription];
-                NSError *error ;
+                NSError *error;
                 NSArray *datumArray = [moc executeFetchRequest:request error:&error];
 
-                if(datumArray.count==1){
+                if (datumArray.count == 1) {
                     DatumMO *datumMO = [datumArray objectAtIndex:0];
                     NSString *populationName = [columns objectAtIndex:1]; // initially an integer
                     NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Population" inManagedObjectContext:moc];
@@ -463,8 +524,8 @@ using std::ofstream;
                     [request1 setEntity:entityDescription1];
                     NSArray *populationArray = [moc executeFetchRequest:request error:&error];
 
-                    PopulationMO *newPopulationMO ;
-                    if(populationArray == nil || populationArray.count==0){
+                    PopulationMO *newPopulationMO;
+                    if (populationArray == nil || populationArray.count == 0) {
                         newPopulationMO = [NSEntityDescription insertNewObjectForEntityForName:@"Population" inManagedObjectContext:document.managedObjectContext];
                         newPopulationMO.name = populationName;
                         [populations addObject:newPopulationMO];
@@ -484,7 +545,7 @@ using std::ofstream;
         NSLog(@"does not exist at %@", popmapFile);
     }
 
-    NSLog(@"population size %ld",populations.count);
+    NSLog(@"population size %ld", populations.count);
 //    [document.populations setWithArray:populations ];
     document.populations = [[NSSet alloc] initWithArray:populations];
 //    return populationLookup;

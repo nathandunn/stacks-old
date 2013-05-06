@@ -7,13 +7,15 @@
 //
 
 #import "SampleMO.h"
-#import "LocusMO.h"
+#import "DatumMO.h"
 #import "PopulationMO.h"
 
 
 @implementation SampleMO
 
+@dynamic sampleId;
+@dynamic name;
 @dynamic population;
-@dynamic loci;
+@dynamic datums;
 
 @end
