@@ -9,12 +9,10 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class LocusMO;
 
 @interface AlleleMO : NSManagedObject
 
 @property (nonatomic, retain) NSString * type;
 @property (nonatomic, retain) NSString * value;
-@property (nonatomic, retain) LocusMO *locus;
 
 @end

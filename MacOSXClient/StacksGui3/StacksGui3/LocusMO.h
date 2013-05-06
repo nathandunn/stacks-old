@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class AlleleMO, DatumMO, SnpMO;
+@class AlleleMO, DatumMO, SampleMO, SnpMO;
 
 @interface LocusMO : NSManagedObject
 
@@ -21,6 +21,7 @@
 @property (nonatomic, retain) NSSet *alleles;
 @property (nonatomic, retain) NSSet *datums;
 @property (nonatomic, retain) NSSet *snps;
+@property (nonatomic, retain) SampleMO *sample;
 @end
 
 @interface LocusMO (CoreDataGeneratedAccessors)

@@ -239,7 +239,7 @@
     for(NSUInteger  i = 0 ; i < 5 ; i++){
         PopulationMO* populationMO = [populationArray objectAtIndex:i];
         NSLog(@"index %ld population %@",i,populationMO.name);
-        NSLog(@"has datums %ld",populationMO.datums.count);
+        NSLog(@"has datums %ld",populationMO.samples.count);
     }
     NSLog(@"array size %ld", populationArray.count);
 }

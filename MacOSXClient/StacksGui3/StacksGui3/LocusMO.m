@@ -9,6 +9,7 @@
 #import "LocusMO.h"
 #import "AlleleMO.h"
 #import "DatumMO.h"
+#import "SampleMO.h"
 #import "SnpMO.h"
 
 
@@ -22,5 +23,6 @@
 @dynamic alleles;
 @dynamic datums;
 @dynamic snps;
+@dynamic sample;
 
 @end

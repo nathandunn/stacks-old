@@ -9,19 +9,20 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class DatumMO;
+@class SampleMO;
 
 @interface PopulationMO : NSManagedObject
 
 @property (nonatomic, retain) NSString * name;
-@property (nonatomic, retain) NSSet *datums;
+@property (nonatomic, retain) NSNumber * populationId;
+@property (nonatomic, retain) NSSet *samples;
 @end
 
 @interface PopulationMO (CoreDataGeneratedAccessors)
 
-- (void)addDatumsObject:(DatumMO *)value;
-- (void)removeDatumsObject:(DatumMO *)value;
-- (void)addDatums:(NSSet *)values;
-- (void)removeDatums:(NSSet *)values;
+- (void)addSamplesObject:(SampleMO *)value;
+- (void)removeSamplesObject:(SampleMO *)value;
+- (void)addSamples:(NSSet *)values;
+- (void)removeSamples:(NSSet *)values;
 
 @end

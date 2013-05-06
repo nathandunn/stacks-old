@@ -7,13 +7,11 @@
 //
 
 #import "AlleleMO.h"
-#import "LocusMO.h"
 
 
 @implementation AlleleMO
 
 @dynamic type;
 @dynamic value;
-@dynamic locus;
 
 @end

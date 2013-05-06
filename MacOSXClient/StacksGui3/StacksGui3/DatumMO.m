@@ -7,10 +7,11 @@
 //
 
 #import "DatumMO.h"
+#import "AlleleMO.h"
 #import "DepthMO.h"
 #import "HaplotypeMO.h"
 #import "LocusMO.h"
-#import "PopulationMO.h"
+#import "SnpMO.h"
 #import "StackMO.h"
 
 
@@ -23,6 +24,7 @@
 @dynamic haplotypes;
 @dynamic locus;
 @dynamic stacks;
-@dynamic population;
+@dynamic alleles;
+@dynamic snps;
 
 @end
