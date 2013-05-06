@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class DepthMO, HaplotypeMO, LocusMO, StackMO;
+@class DepthMO, HaplotypeMO, LocusMO, PopulationMO, StackMO;
 
 @interface DatumMO : NSManagedObject
 
@@ -20,6 +20,7 @@
 @property (nonatomic, retain) NSSet *haplotypes;
 @property (nonatomic, retain) LocusMO *locus;
 @property (nonatomic, retain) NSSet *stacks;
+@property (nonatomic, retain) PopulationMO *population;
 @end
 
 @interface DatumMO (CoreDataGeneratedAccessors)

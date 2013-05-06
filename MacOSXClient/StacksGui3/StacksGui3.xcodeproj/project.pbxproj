@@ -23,9 +23,10 @@
 		14D9746C17380A060067CC1A /* StackMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14D9746B17380A060067CC1A /* StackMO.m */; };
 		14D9746F17380A060067CC1A /* DepthMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14D9746E17380A060067CC1A /* DepthMO.m */; };
 		14D9747517380A060067CC1A /* SnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14D9747417380A060067CC1A /* SnpMO.m */; };
-		14D9747817380A060067CC1A /* DatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14D9747717380A060067CC1A /* DatumMO.m */; };
 		14D9747B17380A060067CC1A /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14D9747A17380A060067CC1A /* AlleleMO.m */; };
 		14D9747E17380A640067CC1A /* LocusMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14D9747D17380A640067CC1A /* LocusMO.m */; };
+		14D9748117380F2E0067CC1A /* PopulationMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14D9748017380F2E0067CC1A /* PopulationMO.m */; };
+		14D9748417380F500067CC1A /* DatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14D9748317380F500067CC1A /* DatumMO.m */; };
 		63D5373EE2F31FA8CF4F5F1A /* LocusCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53152900941A896B8CCE9 /* LocusCell.m */; };
 		63D53A7B98C0266C27BCB428 /* GenotypeEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D534676BD27E8518BBDB92 /* GenotypeEntry.m */; };
 		63D53BAAED00BA9776516730 /* StacksConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 63D534F6AA587D896D3DC11B /* StacksConverter.mm */; };
@@ -85,12 +86,14 @@
 		14D9746E17380A060067CC1A /* DepthMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DepthMO.m; sourceTree = "<group>"; };
 		14D9747317380A060067CC1A /* SnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpMO.h; sourceTree = "<group>"; };
 		14D9747417380A060067CC1A /* SnpMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpMO.m; sourceTree = "<group>"; };
-		14D9747617380A060067CC1A /* DatumMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumMO.h; sourceTree = "<group>"; };
-		14D9747717380A060067CC1A /* DatumMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumMO.m; sourceTree = "<group>"; };
 		14D9747917380A060067CC1A /* AlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleMO.h; sourceTree = "<group>"; };
 		14D9747A17380A060067CC1A /* AlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleMO.m; sourceTree = "<group>"; };
 		14D9747C17380A640067CC1A /* LocusMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusMO.h; sourceTree = "<group>"; };
 		14D9747D17380A640067CC1A /* LocusMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusMO.m; sourceTree = "<group>"; };
+		14D9747F17380F2E0067CC1A /* PopulationMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationMO.h; sourceTree = "<group>"; };
+		14D9748017380F2E0067CC1A /* PopulationMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationMO.m; sourceTree = "<group>"; };
+		14D9748217380F500067CC1A /* DatumMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumMO.h; sourceTree = "<group>"; };
+		14D9748317380F500067CC1A /* DatumMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumMO.m; sourceTree = "<group>"; };
 		63D5300CEE50E2EFF99D9FA9 /* SnpView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpView.m; sourceTree = "<group>"; };
 		63D5311F44388AEE157BD2CD /* LocusView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusView.m; sourceTree = "<group>"; };
 		63D53152900941A896B8CCE9 /* LocusCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusCell.m; sourceTree = "<group>"; };
@@ -305,12 +308,14 @@
 				1442E1AA17206DBB004B6361 /* StacksDocument.h */,
 				1442E1AB17206DBB004B6361 /* StacksDocument.m */,
 				1442E1B317206DBB004B6361 /* StacksDocument.xcdatamodeld */,
+				14D9748217380F500067CC1A /* DatumMO.h */,
+				14D9748317380F500067CC1A /* DatumMO.m */,
+				14D9747F17380F2E0067CC1A /* PopulationMO.h */,
+				14D9748017380F2E0067CC1A /* PopulationMO.m */,
 				14D9747C17380A640067CC1A /* LocusMO.h */,
 				14D9747D17380A640067CC1A /* LocusMO.m */,
 				14D9747917380A060067CC1A /* AlleleMO.h */,
 				14D9747A17380A060067CC1A /* AlleleMO.m */,
-				14D9747617380A060067CC1A /* DatumMO.h */,
-				14D9747717380A060067CC1A /* DatumMO.m */,
 				14D9747317380A060067CC1A /* SnpMO.h */,
 				14D9747417380A060067CC1A /* SnpMO.m */,
 				14D9746D17380A060067CC1A /* DepthMO.h */,
@@ -467,9 +472,10 @@
 				14D9746C17380A060067CC1A /* StackMO.m in Sources */,
 				14D9746F17380A060067CC1A /* DepthMO.m in Sources */,
 				14D9747517380A060067CC1A /* SnpMO.m in Sources */,
-				14D9747817380A060067CC1A /* DatumMO.m in Sources */,
 				14D9747B17380A060067CC1A /* AlleleMO.m in Sources */,
 				14D9747E17380A640067CC1A /* LocusMO.m in Sources */,
+				14D9748117380F2E0067CC1A /* PopulationMO.m in Sources */,
+				14D9748417380F500067CC1A /* DatumMO.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
