@@ -1,8 +1,8 @@
 //
-//  GenotypeMO.h
+//  DatumMO.h
 //  StacksGui3
 //
-//  Created by Nathan Dunn on 5/1/13.
+//  Created by Nathan Dunn on 5/6/13.
 //  Copyright (c) 2013 Nathan Dunn. All rights reserved.
 //
 
@@ -11,7 +11,7 @@
 
 @class DepthMO, HaplotypeMO, LocusMO, StackMO;
 
-@interface GenotypeMO : NSManagedObject
+@interface DatumMO : NSManagedObject
 
 @property (nonatomic, retain) NSString * name;
 @property (nonatomic, retain) NSNumber * sampleId;
@@ -22,7 +22,7 @@
 @property (nonatomic, retain) NSSet *stacks;
 @end
 
-@interface GenotypeMO (CoreDataGeneratedAccessors)
+@interface DatumMO (CoreDataGeneratedAccessors)
 
 - (void)addDepthsObject:(DepthMO *)value;
 - (void)removeDepthsObject:(DepthMO *)value;

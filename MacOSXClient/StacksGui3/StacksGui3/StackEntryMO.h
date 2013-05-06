@@ -2,7 +2,7 @@
 //  StackEntryMO.h
 //  StacksGui3
 //
-//  Created by Nathan Dunn on 5/1/13.
+//  Created by Nathan Dunn on 5/6/13.
 //  Copyright (c) 2013 Nathan Dunn. All rights reserved.
 //
 
@@ -13,11 +13,11 @@
 
 @interface StackEntryMO : NSManagedObject
 
+@property (nonatomic, retain) NSString * block;
 @property (nonatomic, retain) NSNumber * entryId;
 @property (nonatomic, retain) NSString * relationship;
-@property (nonatomic, retain) NSString * sequenceId;
 @property (nonatomic, retain) NSString * sequence;
-@property (nonatomic, retain) NSString * block;
+@property (nonatomic, retain) NSString * sequenceId;
 @property (nonatomic, retain) StackMO *stack;
 
 @end
