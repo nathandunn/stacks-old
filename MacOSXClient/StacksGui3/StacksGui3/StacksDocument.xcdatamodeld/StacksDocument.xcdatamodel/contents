@@ -63,14 +63,14 @@
         <relationship name="stack" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Stack" inverseName="reference" inverseEntity="Stack" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Allele" positionX="-11" positionY="-351" width="128" height="90"/>
+        <element name="Allele" positionX="-27" positionY="-342" width="128" height="90"/>
         <element name="Depth" positionX="342" positionY="-63" width="128" height="75"/>
         <element name="Datum" positionX="169" positionY="-153" width="128" height="165"/>
         <element name="Haplotype" positionX="349" positionY="-171" width="128" height="75"/>
         <element name="Locus" positionX="142" positionY="-381" width="128" height="165"/>
         <element name="Snp" positionX="315" positionY="-369" width="128" height="165"/>
         <element name="Stack" positionX="187" positionY="54" width="128" height="120"/>
-        <element name="StackEntry" positionX="378" positionY="36" width="128" height="135"/>
-        <element name="Population" positionX="160" positionY="192" width="128" height="75"/>
+        <element name="StackEntry" positionX="394" positionY="36" width="128" height="135"/>
+        <element name="Population" positionX="-9" positionY="-120" width="128" height="75"/>
     </elements>
 </model>
