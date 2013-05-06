@@ -9,19 +9,21 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class LocusMO, PopulationMO;
+@class DatumMO, PopulationMO;
 
 @interface SampleMO : NSManagedObject
 
+@property (nonatomic, retain) NSNumber * sampleId;
+@property (nonatomic, retain) NSString * name;
 @property (nonatomic, retain) PopulationMO *population;
-@property (nonatomic, retain) NSSet *loci;
+@property (nonatomic, retain) NSSet *datums;
 @end
 
 @interface SampleMO (CoreDataGeneratedAccessors)
 
-- (void)addLociObject:(LocusMO *)value;
-- (void)removeLociObject:(LocusMO *)value;
-- (void)addLoci:(NSSet *)values;
-- (void)removeLoci:(NSSet *)values;
+- (void)addDatumsObject:(DatumMO *)value;
+- (void)removeDatumsObject:(DatumMO *)value;
+- (void)addDatums:(NSSet *)values;
+- (void)removeDatums:(NSSet *)values;
 
 @end
