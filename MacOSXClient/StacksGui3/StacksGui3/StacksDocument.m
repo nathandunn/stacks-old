@@ -19,6 +19,7 @@
 // TODO: remove these in favor of NSSet loci
 //@synthesize locusViews;
 @synthesize loci;
+@synthesize populations;
 
 - (id)init {
     self = [super init];
