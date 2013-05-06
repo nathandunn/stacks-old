@@ -10,6 +10,7 @@
 #import "StacksConverter.h"
 #import "StacksDocument.h"
 #import "LocusMO.h"
+#import "PopulationMO.h"
 
 @implementation StacksGui3Tests {
 //    stacksConverter;
@@ -223,6 +224,24 @@
     NSLog(@"array size %ld", locusArray.count);
 
     STAssertTrue(locusArray.count ==462 , @"should be at least 8 loci %ld", locusArray.count );
+
+
+    NSEntityDescription *entityDescription2 = [NSEntityDescription
+            entityForName:@"Population" inManagedObjectContext:moc];
+    NSFetchRequest *request2 = [[NSFetchRequest alloc] init];
+    [request2 setEntity:entityDescription2];
+
+    NSArray *populationArray = [moc executeFetchRequest:request2 error:&error];
+    NSLog(@"population Array size %ld",populationArray.count);
+
+    STAssertTrue(populationArray.count == 3 , @"should be a population of 3: %ld", populationArray.count );
+
+    for(NSUInteger  i = 0 ; i < 5 ; i++){
+        PopulationMO* populationMO = [populationArray objectAtIndex:i];
+        NSLog(@"index %ld population %@",i,populationMO.name);
+        NSLog(@"has datums %ld",populationMO.datums.count);
+    }
+    NSLog(@"array size %ld", populationArray.count);
 }
 
 @end

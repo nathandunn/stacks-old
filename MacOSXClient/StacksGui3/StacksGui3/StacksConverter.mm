@@ -34,6 +34,7 @@ using std::ofstream;
 #import "DatumMO.h"
 #import "HaplotypeMO.h"
 #import "DepthMO.h"
+#import "PopulationMO.h"
 //#import "StackEntry.h"
 
 
@@ -131,8 +132,8 @@ using std::ofstream;
 - (StacksDocument *)loadLociAndGenotypes:(NSString *)path {
 
     StacksDocument *stacksDocument = [self createStacksDocumentForPath:path];
-    if(stacksDocument == nil){
-        return nil ;
+    if (stacksDocument == nil) {
+        return nil;
     }
 
     return [self loadDocument:stacksDocument];
@@ -206,8 +207,8 @@ using std::ofstream;
     }
 }
 
-- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument{
-    NSString* path = stacksDocument.path ;
+- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument {
+    NSString *path = stacksDocument.path;
     [self checkFile:path];
     map<int, CSLocus *> catalog;
     NSString *catalogFile = [path stringByAppendingString:@"batch_1.catalog"];
@@ -221,7 +222,6 @@ using std::ofstream;
     NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
 
 
-    NSMutableDictionary *populationLookup = [self loadPopulation:path];
 
     /**
     * START: loading datums + extra info
@@ -320,9 +320,9 @@ using std::ofstream;
 
             LocusMO *locusMO = nil ;
             NSArray *locusArray = [loci allObjects];
-            for(LocusMO *aLocus in locusArray){
+            for (LocusMO *aLocus in locusArray) {
                 NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
-                if([lookupKey isEqualToNumber:aLocus.locusId]){
+                if ([lookupKey isEqualToNumber:aLocus.locusId]) {
                     locusMO = aLocus;
                 }
             }
@@ -330,8 +330,8 @@ using std::ofstream;
             if (datum != NULL && locusMO != nil) {
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
                 DatumMO *datumMO = nil ;
-                for(DatumMO *datumMO1 in locusMO.datums.allObjects){
-                    if([datumMO.name isEqualToString:datumMO1.name]){
+                for (DatumMO *datumMO1 in locusMO.datums.allObjects) {
+                    if ([datumMO.name isEqualToString:datumMO1.name]) {
                         datumMO = datumMO1;
                     }
                 }
@@ -370,7 +370,7 @@ using std::ofstream;
                     }
                 }
                 else {
-                    NSLog(@"datum %@ FOUND for key %@ and locus %@", datumMO.name,key,locusMO.locusId);
+                    NSLog(@"datum %@ FOUND for key %@ and locus %@", datumMO.name, key, locusMO.locusId);
                 }
 
 
@@ -390,14 +390,16 @@ using std::ofstream;
 
     gettimeofday(&time1, NULL);
 
+    NSMutableDictionary *populationLookup = [self loadPopulation:path];
     stacksDocument.populationLookup = populationLookup;
+    [self readPopulations:stacksDocument];
 
     LocusMO *bLocusMO = [loci.allObjects objectAtIndex:0];
-    NSLog(@"pre locus %@ datums %ld",bLocusMO.locusId,bLocusMO.datums.count);
+    NSLog(@"pre locus %@ datums %ld", bLocusMO.locusId, bLocusMO.datums.count);
 
     stacksDocument.loci = loci;
     LocusMO *cLocusMO = [stacksDocument.loci.allObjects objectAtIndex:0];
-    NSLog(@"post locus %@ datums %ld",cLocusMO.locusId,cLocusMO.datums.count);
+    NSLog(@"post locus %@ datums %ld", cLocusMO.locusId, cLocusMO.datums.count);
 
 
     gettimeofday(&time2, NULL);
@@ -410,37 +412,104 @@ using std::ofstream;
     gettimeofday(&time2, NULL);
     NSLog(@"find population time %ld", time2.tv_sec - time1.tv_sec);
 
-    NSError *error ;
+    NSError *error;
     BOOL success = [stacksDocument.managedObjectContext save:&error];
-    NSLog(@"saved %d",success);
+    NSLog(@"saved %d", success);
 
     return stacksDocument;
 }
 
+- (void)readPopulations:(StacksDocument *)document {
+//    NSMutableDictionary *populationLookup = [[NSMutableDictionary alloc] init];
+    NSMutableArray *populations = [[NSMutableArray  alloc] init];
+
+    NSString *path = document.path;
+    NSLog(@"reading population for file %@", path);
+
+    NSString *popmapFile = [path stringByAppendingString:@"popmap"];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    BOOL exists = [fileManager fileExistsAtPath:popmapFile];
+
+    if (exists) {
+        NSArray *fileData = [[NSString stringWithContentsOfFile:popmapFile encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
+        NSString *line;
+        for (line in fileData) {
+            NSArray *columns = [line componentsSeparatedByString:@"\t"];
+            if (columns.count == 2) {
+
+//                [populationLookup setObject:[columns objectAtIndex:1] forKey:[columns objectAtIndex:0]];
+                NSString *sampleName = [columns objectAtIndex:0]; // the sample name . . . male, female, progeny, etc.
+                NSManagedObjectContext *moc = document.managedObjectContext;
+                NSEntityDescription *entityDescription = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:moc];
+                NSFetchRequest *request = [[NSFetchRequest alloc] init];
+                NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name == %@", sampleName];
+                [request setPredicate:predicate];
+                [request setEntity:entityDescription];
+                NSError *error ;
+                NSArray *datumArray = [moc executeFetchRequest:request error:&error];
+
+                if(datumArray.count==1){
+                    DatumMO *datumMO = [datumArray objectAtIndex:0];
+                    NSString *populationName = [columns objectAtIndex:1]; // initially an integer
+                    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Population" inManagedObjectContext:moc];
+                    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+                    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"name == %@", populationName];
+                    [request1 setPredicate:predicate1];
+                    [request1 setEntity:entityDescription1];
+                    NSArray *populationArray = [moc executeFetchRequest:request error:&error];
+
+                    PopulationMO *newPopulationMO ;
+                    if(populationArray == nil || populationArray.count==0){
+                        newPopulationMO = [NSEntityDescription insertNewObjectForEntityForName:@"Population" inManagedObjectContext:document.managedObjectContext];
+                        newPopulationMO.name = populationName;
+                        [populations addObject:newPopulationMO];
+                    }
+
+                    [newPopulationMO addDatumsObject:datumMO];
+//                    [document.populations insertValue:<#(id)value#> inPropertyWithKey:<#(NSString *)key#>];
+
+                }
+            }
+            else {
+                NSLog(@"something wrong with the column count %@", line);
+            }
+        }
+    }
+    else {
+        NSLog(@"does not exist at %@", popmapFile);
+    }
+
+    NSLog(@"population size %ld",populations.count);
+//    [document.populations setWithArray:populations ];
+    document.populations = [[NSSet alloc] initWithArray:populations];
+//    return populationLookup;
+
+}
+
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path {
-    NSError *stacksDocumentCreateError ;
+    NSError *stacksDocumentCreateError;
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
     NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
-    stacksDocument.managedObjectContext = moc ;
+    stacksDocument.managedObjectContext = moc;
     stacksDocument.path = path;
-    if(stacksDocumentCreateError){
-        NSLog(@"error creating stacks document %@",stacksDocumentCreateError);
-        return nil ;
+    if (stacksDocumentCreateError) {
+        NSLog(@"error creating stacks document %@", stacksDocumentCreateError);
+        return nil;
     }
-    return stacksDocument ;
+    return stacksDocument;
 }
 
 - (StacksDocument *)getStacksDocumentForPath:(NSString *)path {
-    NSError *stacksDocumentCreateError ;
+    NSError *stacksDocumentCreateError;
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
     NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
 //    stacksDocument.managedObjectContext = moc ;
 //    stacksDocument.path = path;
-    if(stacksDocumentCreateError){
-        NSLog(@"error creating stacks document %@",stacksDocumentCreateError);
-        return nil ;
+    if (stacksDocumentCreateError) {
+        NSLog(@"error creating stacks document %@", stacksDocumentCreateError);
+        return nil;
     }
-    return stacksDocument ;
+    return stacksDocument;
 }
 @end
 
