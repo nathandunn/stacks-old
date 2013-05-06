@@ -69,14 +69,14 @@
     </entity>
     <elements>
         <element name="Allele" positionX="-11" positionY="-378" width="128" height="75"/>
-        <element name="Datum" positionX="153" positionY="-153" width="128" height="180"/>
-        <element name="Depth" positionX="387" positionY="-189" width="128" height="75"/>
-        <element name="Haplotype" positionX="358" positionY="-81" width="128" height="75"/>
-        <element name="Locus" positionX="142" positionY="-381" width="128" height="180"/>
-        <element name="Population" positionX="-45" positionY="18" width="128" height="90"/>
-        <element name="Snp" positionX="-56" positionY="-288" width="128" height="150"/>
-        <element name="Stack" positionX="187" positionY="36" width="128" height="120"/>
+        <element name="Datum" positionX="178" positionY="-162" width="128" height="180"/>
+        <element name="Depth" positionX="423" positionY="-189" width="128" height="75"/>
+        <element name="Haplotype" positionX="378" positionY="-99" width="128" height="75"/>
+        <element name="Locus" positionX="214" positionY="-378" width="128" height="180"/>
+        <element name="Population" positionX="7" positionY="-27" width="128" height="90"/>
+        <element name="Snp" positionX="376" positionY="-369" width="128" height="150"/>
+        <element name="Stack" positionX="180" positionY="69" width="128" height="120"/>
         <element name="StackEntry" positionX="378" positionY="18" width="128" height="135"/>
-        <element name="Sample" positionX="-56" positionY="-129" width="128" height="75"/>
+        <element name="Sample" positionX="-18" positionY="-228" width="128" height="75"/>
     </elements>
 </model>
