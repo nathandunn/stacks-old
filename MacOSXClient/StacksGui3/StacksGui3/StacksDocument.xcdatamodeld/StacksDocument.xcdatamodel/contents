@@ -12,6 +12,7 @@
         <relationship name="depths" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Depth" inverseName="datum" inverseEntity="Depth" syncable="YES"/>
         <relationship name="haplotypes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Haplotype" inverseName="datum" inverseEntity="Haplotype" syncable="YES"/>
         <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="datums" inverseEntity="Locus" syncable="YES"/>
+        <relationship name="population" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Population" inverseName="datums" inverseEntity="Population" syncable="YES"/>
         <relationship name="stacks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Stack" inverseName="datum" inverseEntity="Stack" syncable="YES"/>
     </entity>
     <entity name="Depth" representedClassName="DepthMO" syncable="YES">
@@ -31,6 +32,10 @@
         <relationship name="alleles" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Allele" inverseName="locus" inverseEntity="Allele" syncable="YES"/>
         <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="locus" inverseEntity="Datum" syncable="YES"/>
         <relationship name="snps" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Snp" inverseName="locus" inverseEntity="Snp" syncable="YES"/>
+    </entity>
+    <entity name="Population" representedClassName="PopulationMO" syncable="YES">
+        <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="population" inverseEntity="Datum" syncable="YES"/>
     </entity>
     <entity name="Snp" representedClassName="SnpMO" syncable="YES">
         <attribute name="column" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
@@ -60,11 +65,12 @@
     <elements>
         <element name="Allele" positionX="-11" positionY="-351" width="128" height="90"/>
         <element name="Depth" positionX="342" positionY="-63" width="128" height="75"/>
-        <element name="Datum" positionX="169" positionY="-153" width="128" height="150"/>
+        <element name="Datum" positionX="169" positionY="-153" width="128" height="165"/>
         <element name="Haplotype" positionX="349" positionY="-171" width="128" height="75"/>
         <element name="Locus" positionX="142" positionY="-381" width="128" height="165"/>
         <element name="Snp" positionX="315" positionY="-369" width="128" height="165"/>
         <element name="Stack" positionX="187" positionY="54" width="128" height="120"/>
         <element name="StackEntry" positionX="378" positionY="36" width="128" height="135"/>
+        <element name="Population" positionX="160" positionY="192" width="128" height="75"/>
     </elements>
 </model>
