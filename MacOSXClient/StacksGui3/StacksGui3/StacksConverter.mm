@@ -217,6 +217,8 @@ using std::ofstream;
     gettimeofday(&time1, NULL);
 
 
+
+
     load_loci([catalogFile UTF8String], catalog, false);
     gettimeofday(&time2, NULL);
     NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
@@ -232,6 +234,11 @@ using std::ofstream;
 
     vector<pair<int, string>> files = [self buildFileList:path];
     NSLog(@"number of files %ld", files.size());
+
+
+    // sample . . . index / name
+    NSMutableDictionary *populationLookup = [self loadPopulation:path];
+    stacksDocument.populationLookup = populationLookup;
 
 
     // loci loaded . . . now loading datum
@@ -390,8 +397,6 @@ using std::ofstream;
 
     gettimeofday(&time1, NULL);
 
-    NSMutableDictionary *populationLookup = [self loadPopulation:path];
-    stacksDocument.populationLookup = populationLookup;
     [self readPopulations:stacksDocument];
 
     LocusMO *bLocusMO = [loci.allObjects objectAtIndex:0];
