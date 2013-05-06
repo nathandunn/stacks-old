@@ -31,7 +31,7 @@ using std::ofstream;
 #import "GenotypeEntry.h"
 #import "SnpView.h"
 #import "SnpMO.h"
-#import "GenotypeMO.h"
+#import "DatumMO.h"
 #import "HaplotypeMO.h"
 #import "DepthMO.h"
 //#import "StackEntry.h"
@@ -224,7 +224,7 @@ using std::ofstream;
     NSMutableDictionary *populationLookup = [self loadPopulation:path];
 
     /**
-    * START: loading genotypes + extra info
+    * START: loading datums + extra info
 */
     vector<vector<CatMatch *> > catalog_matches;
     map<int, string> samples;
@@ -234,7 +234,7 @@ using std::ofstream;
     NSLog(@"number of files %ld", files.size());
 
 
-    // loci loaded . . . now loading genotype
+    // loci loaded . . . now loading datum
     NSLog(@"model size %d", (int) catalog.size());
 
     gettimeofday(&time1, NULL);
@@ -302,7 +302,7 @@ using std::ofstream;
     NSLog(@"populating snps %ld", (time2.tv_sec - time1.tv_sec));
 
     map<int, CSLocus *>::iterator it;
-    Datum *d;
+    Datum *datum;
     CSLocus *loc;
 
     // for each sample process the catalog
@@ -316,7 +316,7 @@ using std::ofstream;
         gettimeofday(&time1, NULL);
         for (it = catalog.begin(); it != catalog.end(); it++) {
             loc = it->second;
-            d = pmap->datum(loc->id, sample_ids[i]);
+            datum = pmap->datum(loc->id, sample_ids[i]);
 
             LocusMO *locusMO = nil ;
             NSArray *locusArray = [loci allObjects];
@@ -327,28 +327,28 @@ using std::ofstream;
                 }
             }
 
-            if (d != NULL && locusMO != nil) {
+            if (datum != NULL && locusMO != nil) {
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
-                GenotypeMO *genotypeMO = nil ;
-                for(GenotypeMO *aGenotype in locusMO.genotypes.allObjects){
-                    if([genotypeMO.name isEqualToString:aGenotype.name]){
-                        genotypeMO = aGenotype;
+                DatumMO *datumMO = nil ;
+                for(DatumMO *datumMO1 in locusMO.datums.allObjects){
+                    if([datumMO.name isEqualToString:datumMO1.name]){
+                        datumMO = datumMO1;
                     }
                 }
 
 
-                if (genotypeMO == nil) {
-//                    NSLog(@"genotype NOT found for key %@ and locus %@",key,locusMO.locusId);
-                    vector<char *> obshape = d->obshap;
-                    vector<int> depths = d->depth;
+                if (datumMO == nil) {
+//                    NSLog(@"datum NOT found for key %@ and locus %@",key,locusMO.locusId);
+                    vector<char *> obshape = datum->obshap;
+                    vector<int> depths = datum->depth;
                     int numLetters = obshape.size();
-//                    genotypeMO = [[GenotypeMO alloc] init];
-                    GenotypeMO *newGenotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Genotype" inManagedObjectContext:stacksDocument.managedObjectContext];
-                    newGenotypeMO.name = key;
-                    newGenotypeMO.sampleId = [NSNumber numberWithInt:sample_ids[i]];
+//                    genotypeMO = [[DatumMO alloc] init];
+                    DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:stacksDocument.managedObjectContext];
+                    newDatumMO.name = key;
+                    newDatumMO.sampleId = [NSNumber numberWithInt:sample_ids[i]];
 
                     // get catalogs for matches
-                    newGenotypeMO.tagId = [NSNumber numberWithInt:d->id];
+                    newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
 
                     locusMO.length = [NSNumber numberWithInt:loc->depth];
 
@@ -356,21 +356,21 @@ using std::ofstream;
                         for (int j = 0; j < numLetters; j++) {
                             HaplotypeMO *haplotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Haplotype" inManagedObjectContext:stacksDocument.managedObjectContext];
                             haplotypeMO.haplotype = [NSString stringWithUTF8String:obshape[j]];
-                            [newGenotypeMO addHaplotypesObject:haplotypeMO];
+                            [newDatumMO addHaplotypesObject:haplotypeMO];
 
                             DepthMO *depthMO = [NSEntityDescription insertNewObjectForEntityForName:@"Depth" inManagedObjectContext:stacksDocument.managedObjectContext];
                             depthMO.depth = [NSNumber numberWithInt:depths[j]];
 
-                            [newGenotypeMO addDepthsObject:depthMO];
+                            [newDatumMO addDepthsObject:depthMO];
                         }
-                        [locusMO addGenotypesObject:newGenotypeMO];
+                        [locusMO addDatumsObject:newDatumMO];
                     }
                     else {
                         NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
                     }
                 }
                 else {
-                    NSLog(@"genotype %@ FOUND for key %@ and locus %@",genotypeMO.name,key,locusMO.locusId);
+                    NSLog(@"datum %@ FOUND for key %@ and locus %@", datumMO.name,key,locusMO.locusId);
                 }
 
 
@@ -393,11 +393,11 @@ using std::ofstream;
     stacksDocument.populationLookup = populationLookup;
 
     LocusMO *bLocusMO = [loci.allObjects objectAtIndex:0];
-    NSLog(@"pre locus %@ genotypes %ld",bLocusMO.locusId,bLocusMO.genotypes.count);
+    NSLog(@"pre locus %@ datums %ld",bLocusMO.locusId,bLocusMO.datums.count);
 
     stacksDocument.loci = loci;
     LocusMO *cLocusMO = [stacksDocument.loci.allObjects objectAtIndex:0];
-    NSLog(@"post locus %@ genotypes %ld",cLocusMO.locusId,cLocusMO.genotypes.count);
+    NSLog(@"post locus %@ datums %ld",cLocusMO.locusId,cLocusMO.datums.count);
 
 
     gettimeofday(&time2, NULL);

@@ -48,7 +48,7 @@
 
 
         LocusMO *locusMO = [loci.allObjects objectAtIndex:0];
-        NSLog(@"locus %@ has %ld genotypes", locusMO.locusId, locusMO.genotypes.count);
+        NSLog(@"locus %@ has %ld datums", locusMO.locusId, locusMO.datums.count);
 
 //        NSURL *storeURL = <#URL for path to global store#>; // just same url
 //        NSURL *storeURL = [NSURL URLWithString:[examplePath stringByAppendingFormat:@"stored.sqlite"] ];
@@ -82,7 +82,7 @@
         NSLog(@"saved %d error %@", saved, error);
 
 //        for(LocusMO *locusMO in loci.allObjects){
-//            NSLog(@"locus %@ has %ld genotypes",locusMO.locusId,locusMO.genotypes.count);
+//            NSLog(@"locus %@ has %ld datums",locusMO.locusId,locusMO.datums.count);
 //        }
     }
     else {
@@ -218,7 +218,7 @@
     for(NSUInteger  i = 0 ; i < 5 ; i++){
         LocusMO *locusMO = [locusArray objectAtIndex:i];
         NSLog(@"index %ld locus %@",i,locusMO.locusId);
-        NSLog(@"has genotypes %ld",locusMO.genotypes.count);
+        NSLog(@"has datums %ld",locusMO.datums.count);
     }
     NSLog(@"array size %ld", locusArray.count);
 
