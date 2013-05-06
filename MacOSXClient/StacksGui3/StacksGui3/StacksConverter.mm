@@ -269,6 +269,9 @@ using std::ofstream;
     NSLog(@"output populations after samples %ld", stacksDocument.populations.count);
     for (PopulationMO *populationMo in stacksDocument.populations) {
         NSLog(@"samples %ld per population %@", populationMo.samples.count, populationMo.name);
+//        for(SampleMO* sampleMO in populationMo.samples){
+//            NSLog(@"sample %@ ",sampleMO.name);
+//        }
     }
 
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
