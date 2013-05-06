@@ -14,7 +14,7 @@
 
 @implementation StacksGui3Tests {
 //    stacksConverter;
-    StacksConverter *stacksConverter ;
+    StacksConverter *stacksConverter;
 }
 
 
@@ -134,15 +134,15 @@
     if (stacksDocument == nil) {
         STFail(@"There was an error reading in the stacks Document ");
     }
-    NSLog(@"loci count %ld",stacksDocument.loci.count);
+    NSLog(@"loci count %ld", stacksDocument.loci.count);
     STAssertTrue(stacksDocument.loci.count > 8, @"should be at least 8 loci %ld", stacksDocument.loci.count );
     NSError *error2;
-    if (![stacksDocument.managedObjectContext save: &error2]) {
-        NSLog(@"Error while saving %@",error2);
-        STFail(@"Failed to save %@",error2);
+    if (![stacksDocument.managedObjectContext save:&error2]) {
+        NSLog(@"Error while saving %@", error2);
+        STFail(@"Failed to save %@", error2);
     }
-    else{
-        NSLog(@"SUCCESS!!!") ;
+    else {
+        NSLog(@"SUCCESS!!!");
     }
 
 }
@@ -192,38 +192,38 @@
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL existsAtPath = [fileManager fileExistsAtPath:filePath];
     if (!existsAtPath) {
-        NSLog(@"file does NOT exit! %@",filePath);
+        NSLog(@"file does NOT exit! %@", filePath);
     }
 //    StacksDocument *newStacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
 //    StacksDocument *newStacksDocument = [stacksConverter getStacksDocumentForPath:examplePath];
 
-    NSError *stacksDocumentCreateError ;
+    NSError *stacksDocumentCreateError;
 //    StacksDocument *newStacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
 //    NSURL *fileUrl = [NSURL fileURLWithPath:filePath]
     NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.sqlite"]];
 //    StacksDocument *newStacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
     StacksDocument *newStacksDocument = [[StacksDocument alloc]
             initWithContentsOfURL:fileUrl ofType:NSSQLiteStoreType error:&stacksDocumentCreateError];
-    if(stacksDocumentCreateError){
-        STFail(@"failed to load . . .error %@",stacksDocumentCreateError);
+    if (stacksDocumentCreateError) {
+        STFail(@"failed to load . . .error %@", stacksDocumentCreateError);
     }
 
-    NSError *error ;
-    NSManagedObjectContext *moc = newStacksDocument.managedObjectContext ;
+    NSError *error;
+    NSManagedObjectContext *moc = newStacksDocument.managedObjectContext;
     NSEntityDescription *entityDescription = [NSEntityDescription
             entityForName:@"Locus" inManagedObjectContext:moc];
     NSFetchRequest *request = [[NSFetchRequest alloc] init];
     [request setEntity:entityDescription];
 
     NSArray *locusArray = [moc executeFetchRequest:request error:&error];
-    for(NSUInteger  i = 0 ; i < 5 ; i++){
+    for (NSUInteger i = 0; i < 5; i++) {
         LocusMO *locusMO = [locusArray objectAtIndex:i];
-        NSLog(@"index %ld locus %@",i,locusMO.locusId);
-        NSLog(@"has datums %ld",locusMO.datums.count);
+        NSLog(@"index %ld locus %@", i, locusMO.locusId);
+        NSLog(@"has datums %ld", locusMO.datums.count);
     }
     NSLog(@"array size %ld", locusArray.count);
 
-    STAssertTrue(locusArray.count ==462 , @"should be at least 8 loci %ld", locusArray.count );
+    STAssertTrue(locusArray.count == 462, @"should be at least 8 loci %ld", locusArray.count );
 
 
     NSEntityDescription *entityDescription2 = [NSEntityDescription
@@ -232,15 +232,15 @@
     [request2 setEntity:entityDescription2];
 
     NSArray *populationArray = [moc executeFetchRequest:request2 error:&error];
-    NSLog(@"population Array size %ld",populationArray.count);
+    NSLog(@"population size %ld", populationArray.count);
 
-    STAssertTrue(populationArray.count == 3 , @"should be a population of 3: %ld", populationArray.count );
+    STAssertTrue(populationArray.count == 3, @"should be a population of 3: %ld", populationArray.count );
 
-    for(NSUInteger  i = 0 ; i < 5 ; i++){
-        PopulationMO* populationMO = [populationArray objectAtIndex:i];
-        NSLog(@"index %ld population %@",i,populationMO.name);
-        NSLog(@"has datums %ld",populationMO.samples.count);
-    }
+//    for(NSUInteger  i = 0 ; i < 5 ; i++){
+    PopulationMO *populationMO = [populationArray objectAtIndex:0];
+    NSLog(@"index population %@", populationMO.name);
+    NSLog(@"has datums %ld", populationMO.samples.count);
+//    }
     NSLog(@"array size %ld", populationArray.count);
 }
 

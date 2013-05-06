@@ -262,13 +262,13 @@ using std::ofstream;
     NSLog(@"catalog matches %ld", (time2.tv_sec - time1.tv_sec));
 
 
-    NSLog(@"input populations %ld",stacksDocument.populations.count);
+    NSLog(@"input populations %ld", stacksDocument.populations.count);
     [self addPopulationsToDocument:stacksDocument forPath:path];
-    NSLog(@"output populations %ld",stacksDocument.populations.count);
+    NSLog(@"output populations %ld", stacksDocument.populations.count);
     [self addSamplesToDocument:stacksDocument forSampleIds:sample_ids andSamples:samples];
-    NSLog(@"output populations after samples %ld",stacksDocument.populations.count);
-    for(PopulationMO* populationMo in stacksDocument.populations){
-        NSLog(@"samples %ld per population %@",populationMo.samples.count,populationMo.name);
+    NSLog(@"output populations after samples %ld", stacksDocument.populations.count);
+    for (PopulationMO *populationMo in stacksDocument.populations) {
+        NSLog(@"samples %ld per population %@", populationMo.samples.count, populationMo.name);
     }
 
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
@@ -455,10 +455,16 @@ using std::ofstream;
 
             NSString *populationId = [document.populationLookup objectForKey:sampleMO.name];
 
-            // lets get the population . . can use lookup, but this is usually pretty small
-            for (PopulationMO *populationMO in document.populations) {
-                if ([populationMO.populationId isEqualToNumber:[f numberFromString:populationId]]) {
-                    [populationMO addSamplesObject:sampleMO];
+            if(populationId!=nil){
+                // lets get the population . . can use lookup, but this is usually pretty small
+                NSLog(@"tyring to populate popid %@", populationId);
+                for (PopulationMO *populationMO in document.populations) {
+                    NSNumber* endNumber = [f numberFromString:populationId];
+                    NSLog(@"comparing to %@ vs %@", populationMO.populationId,endNumber);
+                    if ([populationMO.populationId isEqualToNumber:endNumber]) {
+                        NSLog(@"FOuND population ID %@", populationMO.populationId);
+                        [populationMO addSamplesObject:sampleMO];
+                    }
                 }
             }
         }
@@ -472,16 +478,36 @@ using std::ofstream;
 
     document.populationLookup = populationLookup;
 
+    NSLog(@"population lookup %ld", document.populationLookup.count);
+
 
     // scan and create the populations . . .
     NSNumberFormatter *f = [[NSNumberFormatter alloc] init];
 //    [f setNumberStyle:NSNumberFormatterDecimalStyle];
-    for (NSString *sampleName in populationLookup.allValues) {
+
+    // creates a unique set
+    NSMutableSet* populationIdsSet = [[NSMutableSet alloc] init];
+    for(NSString *populationId in populationLookup.allValues){
+        [populationIdsSet addObject:populationId];
+    }
+
+    for (NSString *sampleName in populationIdsSet) {
+        NSLog(@"adding sample %@", sampleName);
         NSNumber *myNumber = [f numberFromString:sampleName];
         PopulationMO *populationMO = [NSEntityDescription insertNewObjectForEntityForName:@"Population" inManagedObjectContext:document.managedObjectContext];
         populationMO.populationId = myNumber;
         populationMO.name = sampleName;
     }
+
+    NSEntityDescription *entityDescription2 = [NSEntityDescription
+            entityForName:@"Population" inManagedObjectContext:document.managedObjectContext];
+    NSFetchRequest *request2 = [[NSFetchRequest alloc] init];
+    [request2 setEntity:entityDescription2];
+
+    NSError *error;
+    NSArray *populationArray = [document.managedObjectContext executeFetchRequest:request2 error:&error];
+
+    document.populations = [NSSet setWithArray:populationArray];
 
 }
 
