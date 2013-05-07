@@ -115,7 +115,7 @@ using std::ofstream;
 
     stacksView.stackEntries = stackEntries;
     StackEntryMO *referenceStack = [[StackEntryMO alloc] init];
-    referenceStack.entryId = 0;
+    referenceStack.entryId = nil ;
     stacksView.reference = referenceStack;
 
     // random snps
