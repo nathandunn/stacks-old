@@ -297,7 +297,7 @@ using std::ofstream;
         vector<SNP *> snps = catalogIterator->second->snps;
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
-        NSMutableSet *snpsSet = [[NSMutableSet alloc] init];
+//        NSMutableSet *snpsSet = [[NSMutableSet alloc] init];
         for (; snpsIterator != snps.end(); ++snpsIterator) {
             SnpMO *snpMO = [NSEntityDescription insertNewObjectForEntityForName:@"Snp" inManagedObjectContext:stacksDocument.managedObjectContext];
             SNP *snp = (*snpsIterator);
@@ -324,11 +324,14 @@ using std::ofstream;
     NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
 
     long totalCatalogTime = 0;
+    //go through all samples
     for (uint i = 0; i < sample_ids.size(); i++) {
         int sampleId = sample_ids[i];
         string sampleString = samples[sampleId];
 
+
         gettimeofday(&time1, NULL);
+        // go through all loci
         for (it = catalog.begin(); it != catalog.end(); it++) {
             loc = it->second;
             datum = pmap->datum(loc->id, sample_ids[i]);
@@ -344,6 +347,23 @@ using std::ofstream;
 
             if (datum != NULL && locusMO != nil) {
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
+
+
+                NSError *error;
+                NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
+                NSEntityDescription *entityDescription = [NSEntityDescription
+                        entityForName:@"Sample" inManagedObjectContext:moc];
+                NSFetchRequest *request = [[NSFetchRequest alloc] init];
+                [request setEntity:entityDescription];
+                NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name == %@", key];
+                [request setPredicate:predicate];
+                NSArray *sampleArray = [moc executeFetchRequest:request error:&error];
+                if (error || sampleArray == nil || sampleArray.count == 0) {
+                    NSLog(@"sampleArray %ld error %@", sampleArray.count, error);
+                }
+                SampleMO *sampleMO = [sampleArray objectAtIndex:0];
+
+
                 DatumMO *datumMO = nil ;
                 for (DatumMO *datumMO1 in locusMO.datums.allObjects) {
                     if ([datumMO.name isEqualToString:datumMO1.name]) {
@@ -387,8 +407,10 @@ using std::ofstream;
                 else {
                     NSLog(@"datum %@ FOUND for key %@ and locus %@", datumMO.name, key, locusMO.locusId);
                 }
-
-
+                datumMO.sample = sampleMO;
+//                NSp
+//                NSLog(@"sampleMO %@",sampleMO) ;
+//                [sampleMO addDatumsObject:datumMO];
             }
         }
         gettimeofday(&time2, NULL);
@@ -458,12 +480,12 @@ using std::ofstream;
 
             NSString *populationId = [document.populationLookup objectForKey:sampleMO.name];
 
-            if(populationId!=nil){
+            if (populationId != nil) {
                 // lets get the population . . can use lookup, but this is usually pretty small
                 NSLog(@"tyring to populate popid %@", populationId);
                 for (PopulationMO *populationMO in document.populations) {
-                    NSNumber* endNumber = [f numberFromString:populationId];
-                    NSLog(@"comparing to %@ vs %@", populationMO.populationId,endNumber);
+                    NSNumber *endNumber = [f numberFromString:populationId];
+                    NSLog(@"comparing to %@ vs %@", populationMO.populationId, endNumber);
                     if ([populationMO.populationId isEqualToNumber:endNumber]) {
                         NSLog(@"FOuND population ID %@", populationMO.populationId);
                         [populationMO addSamplesObject:sampleMO];
@@ -489,8 +511,8 @@ using std::ofstream;
 //    [f setNumberStyle:NSNumberFormatterDecimalStyle];
 
     // creates a unique set
-    NSMutableSet* populationIdsSet = [[NSMutableSet alloc] init];
-    for(NSString *populationId in populationLookup.allValues){
+    NSMutableSet *populationIdsSet = [[NSMutableSet alloc] init];
+    for (NSString *populationId in populationLookup.allValues) {
         [populationIdsSet addObject:populationId];
     }
 
