@@ -11,6 +11,7 @@
 #import "StacksDocument.h"
 #import "LocusMO.h"
 #import "PopulationMO.h"
+#import "DatumMO.h"
 
 @implementation StacksGui3Tests {
 //    stacksConverter;
@@ -221,7 +222,7 @@
         NSLog(@"index %ld locus %@", i, locusMO.locusId);
         NSLog(@"has datums %ld", locusMO.datums.count);
     }
-    NSLog(@"array size %ld", locusArray.count);
+    NSLog(@"number of loci %ld", locusArray.count);
 
     STAssertTrue(locusArray.count == 462, @"should be at least 8 loci %ld", locusArray.count );
 
@@ -239,9 +240,19 @@
 //    for(NSUInteger  i = 0 ; i < 5 ; i++){
     PopulationMO *populationMO = [populationArray objectAtIndex:0];
     NSLog(@"index population %@", populationMO.name);
-    NSLog(@"has datums %ld", populationMO.samples.count);
-//    }
-    NSLog(@"array size %ld", populationArray.count);
+    NSLog(@"has samples %ld", populationMO.samples.count);
+
+
+    NSEntityDescription *entityDescription3 = [NSEntityDescription
+            entityForName:@"Datum" inManagedObjectContext:moc];
+    NSFetchRequest *request3 = [[NSFetchRequest alloc] init];
+    [request3 setEntity:entityDescription3];
+    NSArray *datumArray = [moc executeFetchRequest:request3 error:&error];
+    NSLog(@"num datums: %ld",datumArray.count);
+    DatumMO* datumMO = [datumArray objectAtIndex:0];
+    STAssertNotNil(datumMO.locus, @"should have a valid locus ");
+    STAssertNotNil(datumMO.sample, @"should have a valid sample");
+    STAssertNotNil(datumMO.name, @"should have a valid name ? ");
 }
 
 @end
