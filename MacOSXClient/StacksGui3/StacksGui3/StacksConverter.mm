@@ -358,56 +358,62 @@ using std::ofstream;
                 NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name == %@", key];
                 [request setPredicate:predicate];
                 NSArray *sampleArray = [moc executeFetchRequest:request error:&error];
+                SampleMO *sampleMO = nil ;
                 if (error || sampleArray == nil || sampleArray.count == 0) {
                     NSLog(@"sampleArray %ld error %@", sampleArray.count, error);
                 }
-                SampleMO *sampleMO = [sampleArray objectAtIndex:0];
-
-
-                DatumMO *datumMO = nil ;
-                for (DatumMO *datumMO1 in locusMO.datums.allObjects) {
-                    if ([datumMO.name isEqualToString:datumMO1.name]) {
-                        datumMO = datumMO1;
-                    }
+                else {
+                    sampleMO = [sampleArray objectAtIndex:0];
+//                    NSLog(@"sample found %@",sampleMO.name);
                 }
 
 
-                if (datumMO == nil) {
+//                DatumMO *datumMO = nil ;
+//                for (DatumMO *datumMO1 in locusMO.datums.allObjects) {
+//                    if ([datumMO.name isEqualToString:datumMO1.name]) {
+//                        datumMO = datumMO1;
+//                        NSLog(@"DATUM EXISTS!") ;
+//                    }
+//                }
+
+
+//                if (datumMO == nil) {
 //                    NSLog(@"datum NOT found for key %@ and locus %@",key,locusMO.locusId);
-                    vector<char *> obshape = datum->obshap;
-                    vector<int> depths = datum->depth;
-                    int numLetters = obshape.size();
+                vector<char *> obshape = datum->obshap;
+                vector<int> depths = datum->depth;
+                int numLetters = obshape.size();
 //                    genotypeMO = [[DatumMO alloc] init];
-                    DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:stacksDocument.managedObjectContext];
-                    newDatumMO.name = key;
-                    newDatumMO.sampleId = [NSNumber numberWithInt:sample_ids[i]];
+                DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:stacksDocument.managedObjectContext];
+                newDatumMO.name = key;
+                newDatumMO.sampleId = [NSNumber numberWithInt:sample_ids[i]];
+                newDatumMO.sample = sampleMO;
 
-                    // get catalogs for matches
-                    newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
+                // get catalogs for matches
+                newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
 
-                    locusMO.length = [NSNumber numberWithInt:loc->depth];
+                locusMO.length = [NSNumber numberWithInt:loc->depth];
 
-                    if (depths.size() == numLetters) {
-                        for (int j = 0; j < numLetters; j++) {
-                            HaplotypeMO *haplotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Haplotype" inManagedObjectContext:stacksDocument.managedObjectContext];
-                            haplotypeMO.haplotype = [NSString stringWithUTF8String:obshape[j]];
-                            [newDatumMO addHaplotypesObject:haplotypeMO];
+                if (depths.size() == numLetters) {
+                    for (int j = 0; j < numLetters; j++) {
+                        HaplotypeMO *haplotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Haplotype" inManagedObjectContext:stacksDocument.managedObjectContext];
+                        haplotypeMO.haplotype = [NSString stringWithUTF8String:obshape[j]];
+                        [newDatumMO addHaplotypesObject:haplotypeMO];
 
-                            DepthMO *depthMO = [NSEntityDescription insertNewObjectForEntityForName:@"Depth" inManagedObjectContext:stacksDocument.managedObjectContext];
-                            depthMO.depth = [NSNumber numberWithInt:depths[j]];
+                        DepthMO *depthMO = [NSEntityDescription insertNewObjectForEntityForName:@"Depth" inManagedObjectContext:stacksDocument.managedObjectContext];
+                        depthMO.depth = [NSNumber numberWithInt:depths[j]];
 
-                            [newDatumMO addDepthsObject:depthMO];
-                        }
-                        [locusMO addDatumsObject:newDatumMO];
+                        [newDatumMO addDepthsObject:depthMO];
                     }
-                    else {
-                        NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
-                    }
+                    [locusMO addDatumsObject:newDatumMO];
                 }
                 else {
-                    NSLog(@"datum %@ FOUND for key %@ and locus %@", datumMO.name, key, locusMO.locusId);
+                    NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
                 }
-                datumMO.sample = sampleMO;
+//                }
+//                else {
+//                    NSLog(@"datum %@ FOUND for key %@ and locus %@", datumMO.name, key, locusMO.locusId);
+//                }
+//                datumMO.sample = sampleMO;
 //                NSp
 //                NSLog(@"sampleMO %@",sampleMO) ;
 //                [sampleMO addDatumsObject:datumMO];
