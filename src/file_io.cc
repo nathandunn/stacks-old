@@ -37,7 +37,7 @@ int open_files(vector<pair<string, string> > &files,
 	       map<BarcodePair, ofstream *> &rem_1_fhs, 
 	       map<BarcodePair, ofstream *> &rem_2_fhs, 
 	       map<string, map<string, long> > &counters) {
-    string path, suffix_1, suffix_2;
+    string path, suffix_1, suffix_2, filepath;
 
     if (paired && interleave == false) {
 	suffix_1 = ".1";
@@ -51,6 +51,7 @@ int open_files(vector<pair<string, string> > &files,
 	suffix_2 += ".fa";
     }
 
+    int         pos;
     ofstream   *fh;
     BarcodePair bc;
     //
@@ -68,7 +69,13 @@ int open_files(vector<pair<string, string> > &files,
 	    if (paired)
 		bc.pe = files[i].second;
 
-	    path = out_path + files[i].first;
+	    filepath = files[i].first;
+	    pos      = filepath.find_last_of(".");
+	    if (filepath.substr(pos) == ".gz") {
+		filepath = filepath.substr(0, pos);
+		pos      = filepath.find_last_of(".");
+	    }
+	    path = out_path + filepath;
 
 	    if (stat((in_path_1 + files[i].first).c_str(), &sb_1) == -1) {
 		cerr << "Unable to stat input file " << in_path_1 + files[i].first << "\n";
@@ -91,7 +98,13 @@ int open_files(vector<pair<string, string> > &files,
 	    }
 
             if (paired) {
-		path = out_path + files[i].second;
+		filepath = files[i].second;		
+		pos      = filepath.find_last_of(".");
+		if (filepath.substr(pos) == ".gz") {
+		    filepath = filepath.substr(0, pos);
+		    pos      = filepath.find_last_of(".");
+		}
+		path = out_path + filepath;
 
 		if (stat((in_path_2 + files[i].second).c_str(), &sb_1) == -1) {
 		    cerr << "Unable to stat input file " << in_path_2 + files[i].second << "\n";
@@ -113,8 +126,13 @@ int open_files(vector<pair<string, string> > &files,
 		    exit(1);
 		}
 
-		int pos = files[i].first.find_last_of(".");
-		path = out_path + files[i].first.substr(0, pos) + ".rem" + files[i].first.substr(pos);
+		filepath = files[i].first;
+		pos      = filepath.find_last_of(".");
+		if (filepath.substr(pos) == ".gz") {
+		    filepath = filepath.substr(0, pos);
+		    pos      = filepath.find_last_of(".");
+		}
+		path = out_path + filepath.substr(0, pos) + ".rem" + filepath.substr(pos);
 
 		fh = new ofstream(path.c_str(), ifstream::out);
                 rem_1_fhs[bc] = fh;
@@ -124,8 +142,13 @@ int open_files(vector<pair<string, string> > &files,
 		    exit(1);
 		}
 
-		pos  = files[i].second.find_last_of(".");
-		path = out_path + files[i].second.substr(0, pos) + ".rem" + files[i].second.substr(pos);
+		filepath = files[i].second;		
+		pos      = filepath.find_last_of(".");
+		if (filepath.substr(pos) == ".gz") {
+		    filepath = filepath.substr(0, pos);
+		    pos      = filepath.find_last_of(".");
+		}
+		path = out_path + filepath.substr(0, pos) + ".rem" + filepath.substr(pos);
 
 		fh = new ofstream(path.c_str(), ifstream::out);
 		rem_2_fhs[bc] = fh;
@@ -153,8 +176,7 @@ int open_files(vector<pair<string, string> > &files,
 	    bc.se = files[i].first;
 	    if (paired)
 		bc.pe = files[i].second;
-
-            pair_1_fhs[bc] = fh;
+	    pair_1_fhs[bc] = fh;
 	}
 
 	if (paired) {
@@ -168,8 +190,7 @@ int open_files(vector<pair<string, string> > &files,
 
 	    for (uint i = 0; i < files.size(); i++) {
 		bc.se = files[i].first;
-		if (paired) bc.pe = files[i].second;
-
+		bc.pe = files[i].second;
 		pair_2_fhs[bc] = fh;
 	    }
 
@@ -182,6 +203,8 @@ int open_files(vector<pair<string, string> > &files,
 	    }
 
 	    for (uint i = 0; i < files.size(); i++) {
+		bc.se = files[i].first;
+		bc.pe = files[i].second;
 		rem_1_fhs[bc] = fh;
 	    }
 
@@ -194,6 +217,8 @@ int open_files(vector<pair<string, string> > &files,
 	    }
 
 	    for (uint i = 0; i < files.size(); i++) {
+		bc.se = files[i].first;
+		bc.pe = files[i].second;
 		rem_2_fhs[bc] = fh;
 	    }
 	}

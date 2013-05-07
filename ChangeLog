@@ -1,3 +1,7 @@
+Stacks 0.99999 - May 06, 2013
+-----------------------------
+	Bugfix: process_shortreads/process_radtags not working with non-barcoded data.
+
 Stacks 0.99998 - May 01, 2013
 -----------------------------
 	Feature: Added option to sort_read_pairs.pl to output FASTQ if desired.

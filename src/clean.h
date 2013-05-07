@@ -63,6 +63,11 @@ public:
 	this->se = "";
 	this->pe = "";
     }
+    BarcodePair(char *p)
+    {
+	this->se = string(p);
+	this->pe = "";
+    }
     BarcodePair(char *p, char *q)
     {
 	this->se = string(p);
@@ -72,6 +77,11 @@ public:
     {
 	this->se = se;
 	this->pe = pe;
+    }
+    BarcodePair(string se)
+    {
+	this->se = se;
+	this->pe = "";
     }
     void set(char *p, char *q)
     {
