@@ -58,7 +58,7 @@
         <relationship name="consensus" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
         <relationship name="datum" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="stack" inverseEntity="Datum" syncable="YES"/>
         <relationship name="model" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
-        <relationship name="reference" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
+        <relationship name="reference" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="StackEntry" syncable="YES"/>
         <relationship name="stackEntries" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="StackEntry" inverseName="stack" inverseEntity="StackEntry" syncable="YES"/>
     </entity>
     <entity name="StackEntry" representedClassName="StackEntryMO" syncable="YES">
@@ -67,7 +67,7 @@
         <attribute name="relationship" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sequence" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sequenceId" optional="YES" attributeType="String" syncable="YES"/>
-        <relationship name="stack" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Stack" inverseName="reference" inverseEntity="Stack" syncable="YES"/>
+        <relationship name="stack" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Stack" syncable="YES"/>
     </entity>
     <elements>
         <element name="Allele" positionX="360" positionY="-165" width="128" height="75"/>
@@ -76,9 +76,9 @@
         <element name="Haplotype" positionX="27" positionY="-255" width="128" height="75"/>
         <element name="Locus" positionX="214" positionY="-378" width="128" height="165"/>
         <element name="Population" positionX="-9" positionY="-162" width="128" height="90"/>
+        <element name="Sample" positionX="-2" positionY="-18" width="128" height="105"/>
         <element name="Snp" positionX="394" positionY="-396" width="128" height="150"/>
         <element name="Stack" positionX="180" positionY="69" width="128" height="120"/>
         <element name="StackEntry" positionX="378" positionY="45" width="128" height="135"/>
-        <element name="Sample" positionX="-2" positionY="-18" width="128" height="105"/>
     </elements>
 </model>
