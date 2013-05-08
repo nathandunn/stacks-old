@@ -19,17 +19,18 @@ using std::ofstream;
 
 
 #import "StackEntryMO.h"
+#import "SampleRepository.h"
 // #import "GenotypeView.h"
-#import "LocusView.h"
+//#import "LocusView.h"
 #import "StacksDocument.h"
 #import "StacksConverter.h"
-#import "StacksView.h"
+//#import "StacksView.h"
 // #import "DataStubber.h"
 
 
 // #include "LociLoader.hpp"
-#import "GenotypeEntry.h"
-#import "SnpView.h"
+//#import "GenotypeEntry.h"
+//#import "SnpView.h"
 #import "SnpMO.h"
 #import "DatumMO.h"
 #import "HaplotypeMO.h"
@@ -51,85 +52,86 @@ using std::ofstream;
     self = [super init];
     if (self) {
         // nothing write now
+        _sampleRepository = [[SampleRepository alloc] init];
     }
     return self;
 }
 
-- (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus {
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    // TODO: if male . . .male.tags.tsv / female.tags.tsv
-    // TODO: or *|!male|!female_N.tags.tsv
-
-    NSString *absoluteFileName = [NSString stringWithFormat:@"%@/%@.tags.tsv", path, filename];
-
-    BOOL existsAtPath = [fileManager fileExistsAtPath:absoluteFileName];
-    NSLog(@"absolute file name %@ exists %d", absoluteFileName, existsAtPath);
-    if (!existsAtPath) {
-        return nil;
-    }
-    StacksView *stacksView = [[StacksView alloc] init];
-
-
-    struct timeval time1, time2;
-    gettimeofday(&time1, NULL);
-
-    NSError *error = nil;
-    NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error] componentsSeparatedByString:@"\n"];
-    gettimeofday(&time2, NULL);
-    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
-
-    if (error) {
-        NSLog(@"error loading file [%@]: %@", absoluteFileName, error);
-    }
-
-    NSMutableArray *stackEntries = [[NSMutableArray alloc] init];
-
-    NSString *line;
-    NSUInteger row = 1;
-    gettimeofday(&time1, NULL);
-    for (line in fileData) {
-        NSArray *columns = [line componentsSeparatedByString:@"\t"];
-
-        if (columns.count > 8 && [[columns objectAtIndex:2] integerValue] == tag) {
-            StackEntryMO *stackEntry = [[StackEntryMO alloc] init];
-//            stackEntry.entryId = row;
-            stackEntry.entryId = [NSNumber numberWithInteger:row];
-            stackEntry.relationship = [columns objectAtIndex:6];
-            stackEntry.block = [columns objectAtIndex:7];
-            stackEntry.sequenceId = [columns objectAtIndex:8];
-            stackEntry.sequence = [columns objectAtIndex:9];
-
-            if ([stackEntry.relationship isEqualToString:@"consensus"]) {
-                stacksView.consensus = stackEntry;
-            }
-            else if ([stackEntry.relationship isEqualToString:@"model"]) {
-                stacksView.model = stackEntry;
-            }
-            else {
-                ++row;
-                [stackEntries addObject:stackEntry];
-            }
-        }
-    }
-    gettimeofday(&time2, NULL);
-    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, stackEntries.count, (time2.tv_sec - time1.tv_sec));
-
-    stacksView.stackEntries = stackEntries;
-    StackEntryMO *referenceStack = [[StackEntryMO alloc] init];
-    referenceStack.entryId = nil ;
-    stacksView.reference = referenceStack;
-
-    // random snps
-    NSMutableArray *snps = [[NSMutableArray alloc] init];
-
-    for (SnpView *snp in locus.snps) {
-        [snps addObject:[NSNumber numberWithInt:snp.column]];
-    }
-
-    stacksView.snps = snps;
-
-    return stacksView;
-}
+//- (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus {
+//    NSFileManager *fileManager = [NSFileManager defaultManager];
+//    // TODO: if male . . .male.tags.tsv / female.tags.tsv
+//    // TODO: or *|!male|!female_N.tags.tsv
+//
+//    NSString *absoluteFileName = [NSString stringWithFormat:@"%@/%@.tags.tsv", path, filename];
+//
+//    BOOL existsAtPath = [fileManager fileExistsAtPath:absoluteFileName];
+//    NSLog(@"absolute file name %@ exists %d", absoluteFileName, existsAtPath);
+//    if (!existsAtPath) {
+//        return nil;
+//    }
+//    StacksView *stacksView = [[StacksView alloc] init];
+//
+//
+//    struct timeval time1, time2;
+//    gettimeofday(&time1, NULL);
+//
+//    NSError *error = nil;
+//    NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error] componentsSeparatedByString:@"\n"];
+//    gettimeofday(&time2, NULL);
+//    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
+//
+//    if (error) {
+//        NSLog(@"error loading file [%@]: %@", absoluteFileName, error);
+//    }
+//
+//    NSMutableArray *stackEntries = [[NSMutableArray alloc] init];
+//
+//    NSString *line;
+//    NSUInteger row = 1;
+//    gettimeofday(&time1, NULL);
+//    for (line in fileData) {
+//        NSArray *columns = [line componentsSeparatedByString:@"\t"];
+//
+//        if (columns.count > 8 && [[columns objectAtIndex:2] integerValue] == tag) {
+//            StackEntryMO *stackEntry = [[StackEntryMO alloc] init];
+////            stackEntry.entryId = row;
+//            stackEntry.entryId = [NSNumber numberWithInteger:row];
+//            stackEntry.relationship = [columns objectAtIndex:6];
+//            stackEntry.block = [columns objectAtIndex:7];
+//            stackEntry.sequenceId = [columns objectAtIndex:8];
+//            stackEntry.sequence = [columns objectAtIndex:9];
+//
+//            if ([stackEntry.relationship isEqualToString:@"consensus"]) {
+//                stacksView.consensus = stackEntry;
+//            }
+//            else if ([stackEntry.relationship isEqualToString:@"model"]) {
+//                stacksView.model = stackEntry;
+//            }
+//            else {
+//                ++row;
+//                [stackEntries addObject:stackEntry];
+//            }
+//        }
+//    }
+//    gettimeofday(&time2, NULL);
+//    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, stackEntries.count, (time2.tv_sec - time1.tv_sec));
+//
+//    stacksView.stackEntries = stackEntries;
+//    StackEntryMO *referenceStack = [[StackEntryMO alloc] init];
+//    referenceStack.entryId = nil ;
+//    stacksView.reference = referenceStack;
+//
+//    // random snps
+//    NSMutableArray *snps = [[NSMutableArray alloc] init];
+//
+//    for (SnpView *snp in locus.snps) {
+//        [snps addObject:[NSNumber numberWithInt:snp.column]];
+//    }
+//
+//    stacksView.snps = snps;
+//
+//    return stacksView;
+//}
 
 - (StacksDocument *)loadLociAndGenotypes:(NSString *)path {
 
@@ -410,6 +412,27 @@ using std::ofstream;
                 else {
                     NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
                 }
+
+                vector<SNP *> snps = datum->snps;
+                vector<SNP *>::iterator snpsIterator = snps.begin();
+
+                if (snps.size() > 0) {
+                    NSLog(@"has snps %ld", snps.size());
+                }
+
+//        NSMutableSet *snpsSet = [[NSMutableSet alloc] init];
+                for (; snpsIterator != snps.end(); ++snpsIterator) {
+                    SnpMO *snpMO = [NSEntityDescription insertNewObjectForEntityForName:@"Snp" inManagedObjectContext:stacksDocument.managedObjectContext];
+                    SNP *snp = (*snpsIterator);
+                    snpMO.column = [NSNumber numberWithInt:snp->col];
+                    snpMO.lratio = [NSNumber numberWithFloat:snp->lratio];
+                    snpMO.rank1 = [NSNumber numberWithChar:snp->rank_1];
+                    snpMO.rank2 = [NSNumber numberWithChar:snp->rank_2];
+                    snpMO.rank3 = [NSNumber numberWithChar:snp->rank_3];
+                    snpMO.rank4 = [NSNumber numberWithChar:snp->rank_4];
+                    [newDatumMO addSnpsObject:snpMO];
+                }
+
 //                }
 //                else {
 //                    NSLog(@"datum %@ FOUND for key %@ and locus %@", datumMO.name, key, locusMO.locusId);
@@ -454,7 +477,11 @@ using std::ofstream;
 //    gettimeofday(&time2, NULL);
 //    NSLog(@"find population time %ld", time2.tv_sec - time1.tv_sec);
 
+    NSLog(@"loading stacks");
+    gettimeofday(&time1, NULL);
     [self loadStacks:stacksDocument];
+    gettimeofday(&time2, NULL);
+    NSLog(@"finished loading stacks time %ld", time2.tv_sec - time1.tv_sec);
 
     NSError *error;
     BOOL success = [stacksDocument.managedObjectContext save:&error];
@@ -472,11 +499,15 @@ using std::ofstream;
     // 1- get all files i the directory named *.tag.tsv"
     NSError *error;
     NSArray *files = [fileManager contentsOfDirectoryAtPath:path error:&error];
+    NSLog(@"# of files for directory %ld", files.count);
 
     // 2 - for each file, read the .tags file
     for (NSString *filePath in files) {
-        if ([filePath hasSuffix:@".tags.tsv"] && [fileManager fileExistsAtPath:filePath]) {
+        if ([filePath hasSuffix:@".tags.tsv"] && ![filePath hasPrefix:@"batch"]) {
             [self loadTagFile:document fromFile:filePath];
+        }
+        else {
+            NSLog(@"not loading tag file %@", filePath);
         }
     }
 
@@ -484,12 +515,16 @@ using std::ofstream;
 }
 
 - (void)loadTagFile:(StacksDocument *)document fromFile:(NSString *)tagFileName {
+    NSLog(@"Loading tag file %@", tagFileName);
 
-    NSString *sampleName;
     NSUInteger fileNameLength = tagFileName.length;
 //    NSCharacterSet* characterSet = [[NSCharacterSet alloc] init];
 //    characterSet.st
-    NSRange range = [tagFileName rangeOfCharacterFromSet:[@"/" ch options:NSBackwardsSearch];
+//    NSRange range = [tagFileName rangeOfString:@"/" options:NSBackwardsSearch];
+//    range.length = (fileNameLength-9) - range.location ;
+//    NSString *sampleName = [tagFileName substringWithRange:range];
+    NSString *sampleName = [tagFileName substringToIndex:fileNameLength - 9];
+    NSLog(@"sampleName %@", sampleName);
     // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
     NSManagedObjectContext *moc = document.managedObjectContext;
@@ -499,20 +534,24 @@ using std::ofstream;
     [request setEntity:entityDescription];
     NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name == %@", sampleName];
     [request setPredicate:predicate];
-    NSError *error ;
+    NSError *error;
     NSArray *sampleArray = [moc executeFetchRequest:request error:&error];
-    SampleMO* sampleMO = [sampleArray objectAtIndex:0];
+    SampleMO *sampleMO = [sampleArray objectAtIndex:0];
+
+
+//    NSLog(@"found a sample: %@",sampleMO);
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
 
-    NSError *error = nil;
-    NSArray *fileData = [[NSString stringWithContentsOfFile:tagFileName encoding:NSUTF8StringEncoding error:&error] componentsSeparatedByString:@"\n"];
+    NSError *error2 = nil;
+    NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", tagFileName];
+    NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
     gettimeofday(&time2, NULL);
-    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
+//    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
 
-    if (error) {
-        NSLog(@"error loading file [%@]: %@", tagFileName, error);
+    if (error2) {
+        NSLog(@"error loading file [%@]: %@", tagFileName, error2);
     }
 
 //    NSMutableArray *stackEntries = [[NSMutableArray alloc] init];
@@ -520,8 +559,8 @@ using std::ofstream;
     NSString *line;
     NSUInteger row = 1;
     gettimeofday(&time1, NULL);
-    int locusId = -1;
-    int newLocusId;
+    NSInteger locusId = -1;
+    NSInteger newLocusId;
     StackMO *stackMO = nil ;
     DatumMO *datumMO = nil ;
     for (line in fileData) {
@@ -533,37 +572,64 @@ using std::ofstream;
 
             newLocusId = [[columns objectAtIndex:2] integerValue];
             if (locusId != newLocusId) {
+
+                // save old
+//                NSError* saveError ;
+//                BOOL success = [moc save:&saveError];
+//                NSLog(@"saved %d", success);
+//                if(saveError!=nil ){
+//                    NSLog(@"error saving %@",saveError);
+//                }
+
                 locusId = newLocusId;
-                stackMO = [NSEntityDescription insertNewObjectForEntityForName:@"Stack" inManagedObjectContext:document.managedObjectContext];
                 // search for the new locus
-                NSManagedObjectContext *moc = document.managedObjectContext;
-                NSEntityDescription *entityDescription = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:moc];
-                NSFetchRequest *request = [[NSFetchRequest alloc] init];
-                NSPredicate *predicate = [NSPredicate predicateWithFormat:@"locusId == %@", locusId];
-                [request setPredicate:predicate];
-                [request setEntity:entityDescription];
-                NSError *error;
-                NSArray *datumArray = [moc executeFetchRequest:request error:&error];
-                datumMO = [datumArray objectAtIndex:0];
+                NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:moc];
+                NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+                NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus.locusId == %ld and sample.name == %@ ", locusId, sampleMO.name];
+                [request1 setPredicate:predicate1];
+                [request1 setEntity:entityDescription1];
+                NSError *error1;
+                NSArray *datumArray = [moc executeFetchRequest:request1 error:&error1];
+                if (datumArray.count == 1) {
+                    datumMO = [datumArray objectAtIndex:0];
+                    if (datumMO.stack == nil) {
+                        stackMO = [NSEntityDescription insertNewObjectForEntityForName:@"Stack" inManagedObjectContext:moc];
+                        stackMO.datum = datumMO;
+                        datumMO.stack = stackMO;
+                    }
+                    else {
+                        stackMO = datumMO.stack;
+                    }
+                }
+                else {
+                    datumMO = nil ;
+                    stackMO = nil ;
+                }
             }
 
-            StackEntryMO *stackEntryMO = [NSEntityDescription insertNewObjectForEntityForName:@"StackEntry" inManagedObjectContext:document.managedObjectContext];
-            stackEntryMO.entryId = [NSNumber numberWithInteger:row];
-            stackEntryMO.relationship = [columns objectAtIndex:6];
-            stackEntryMO.block = [columns objectAtIndex:7];
-            stackEntryMO.sequenceId = [columns objectAtIndex:8];
-            stackEntryMO.sequence = [columns objectAtIndex:9];
+            if (datumMO != nil) {
+                StackEntryMO *stackEntryMO = [NSEntityDescription insertNewObjectForEntityForName:@"StackEntry" inManagedObjectContext:document.managedObjectContext];
+                stackEntryMO.entryId = [NSNumber numberWithInteger:row];
+                stackEntryMO.relationship = [columns objectAtIndex:6];
+                stackEntryMO.block = [columns objectAtIndex:7];
+                stackEntryMO.sequenceId = [columns objectAtIndex:8];
+                stackEntryMO.sequence = [columns objectAtIndex:9];
+                stackEntryMO.stack = stackMO;
 
-            if ([stackEntryMO.relationship isEqualToString:@"consensus"]) {
-                stackMO.consensus = stackEntryMO;
+                if ([stackEntryMO.relationship isEqualToString:@"consensus"]) {
+                    stackMO.consensus = stackEntryMO;
+                }
+                else if ([stackEntryMO.relationship isEqualToString:@"model"]) {
+                    stackMO.model = stackEntryMO;
+                }
+                else {
+//                    NSLog(@"adding stack entry to stack %ld vs %@",stackMO.datum.locus.locusId,stackMO.datum.sample.name);
+                    [stackMO addStackEntriesObject:stackEntryMO];
+                    ++row;
+                }
             }
-            else if ([stackEntryMO.relationship isEqualToString:@"model"]) {
-                stackMO.model = stackEntryMO;
-            }
-            else {
-                [stackMO addStackEntriesObject:stackEntryMO];
-                ++row;
-            }
+
+
         }
     }
     gettimeofday(&time2, NULL);
@@ -579,6 +645,26 @@ using std::ofstream;
 //    stacksView.snps = snps;
 
 //    return stacksView;
+
+
+    // save old
+    NSError *saveError;
+    BOOL success = [moc save:&saveError];
+    NSLog(@"saved %d", success);
+    if (saveError != nil ) {
+        NSLog(@"error saving %@", saveError);
+    }
+
+//    NSEntityDescription *entityDescription3 = [NSEntityDescription entityForName:@"Stack" inManagedObjectContext:moc];
+//    NSFetchRequest *request3 = [[NSFetchRequest alloc] init];
+//    [request3 setEntity:entityDescription3];
+//    NSError *error3;
+//    NSArray *stackArray = [moc executeFetchRequest:request3 error:&error3];
+//    for (StackMO *stackMO in stackArray) {
+//        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
+//    }
+
+
 }
 
 - (void)addSamplesToDocument:(StacksDocument *)document forSampleIds:(vector<int>)sampleIds andSamples:(map<int, string>)samples {

@@ -10,12 +10,15 @@
 @class StacksView;
 @class LocusView;
 @class StacksDocument;
+@class SampleRepository;
 
 
 @interface StacksConverter : NSObject
 
-@property(nonatomic, strong) NSManagedObjectContext *managedObjectContext;
-@property(nonatomic, strong) NSManagedObjectModel *managedObjectModel;
+
+@property(nonatomic, strong) SampleRepository* sampleRepository ;
+//@property(nonatomic, strong) NSManagedObjectContext *managedObjectContext;
+//@property(nonatomic, strong) NSManagedObjectModel *managedObjectModel;
 
 - (id)init ;
 - (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus;
