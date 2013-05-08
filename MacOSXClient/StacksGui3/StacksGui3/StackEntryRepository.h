@@ -8,6 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
+@class StackEntryMO;
+@class StackMO;
 
 @interface StackEntryRepository : NSObject
+- (StackEntryMO *)insertStackEntry:(NSManagedObjectContext *)context entryId:(NSNumber *)id relationship:(NSString *)relationship block:(NSString *)block sequenceId:(NSString *)sequenceId sequence:(NSString *)sequence stack:(StackMO *)stack;
 @end

@@ -40,7 +40,6 @@
 		6B2C6F00173865CE0044E9A6 /* DepthMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B2C6EFF173865CE0044E9A6 /* DepthMO.m */; };
 		6B2C6F03173865CE0044E9A6 /* PopulationMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B2C6F02173865CE0044E9A6 /* PopulationMO.m */; };
 		6B2C6F06173865CE0044E9A6 /* DatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B2C6F05173865CE0044E9A6 /* DatumMO.m */; };
-		6B2C6F09173865CF0044E9A6 /* SnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B2C6F08173865CF0044E9A6 /* SnpMO.m */; };
 		6B2C6F0C173865CF0044E9A6 /* StackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B2C6F0B173865CF0044E9A6 /* StackEntryMO.m */; };
 		6B2C6F0F173865CF0044E9A6 /* LocusMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B2C6F0E173865CF0044E9A6 /* LocusMO.m */; };
 		6B2C6F12173865F90044E9A6 /* SampleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B2C6F11173865F90044E9A6 /* SampleMO.m */; };
@@ -52,6 +51,7 @@
 		6B4674A2173183AB00E42419 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B46749B173183AB00E42419 /* utils.cc */; };
 		6B4674A4173183C300E42419 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B4674A3173183C300E42419 /* libz.1.2.7.dylib */; };
 		6B4674AA1731872600E42419 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674A81731872600E42419 /* input.cc */; };
+		6B6609CB173B03C1002C7F5A /* SnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B6609CA173B03C1002C7F5A /* SnpMO.m */; };
 		D793C0F3A4CB3044602B1F3F /* SampleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C907D04E589764C9E424 /* SampleRepository.m */; };
 /* End PBXBuildFile section */
 
@@ -129,8 +129,6 @@
 		6B2C6F02173865CE0044E9A6 /* PopulationMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationMO.m; sourceTree = "<group>"; };
 		6B2C6F04173865CE0044E9A6 /* DatumMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumMO.h; sourceTree = "<group>"; };
 		6B2C6F05173865CE0044E9A6 /* DatumMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumMO.m; sourceTree = "<group>"; };
-		6B2C6F07173865CF0044E9A6 /* SnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpMO.h; sourceTree = "<group>"; };
-		6B2C6F08173865CF0044E9A6 /* SnpMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpMO.m; sourceTree = "<group>"; };
 		6B2C6F0A173865CF0044E9A6 /* StackEntryMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackEntryMO.h; sourceTree = "<group>"; };
 		6B2C6F0B173865CF0044E9A6 /* StackEntryMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntryMO.m; sourceTree = "<group>"; };
 		6B2C6F0D173865CF0044E9A6 /* LocusMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusMO.h; sourceTree = "<group>"; };
@@ -167,6 +165,8 @@
 		6B4674A3173183C300E42419 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libz.1.2.7.dylib; sourceTree = "<group>"; };
 		6B4674A81731872600E42419 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = input.cc; path = ../../../src/input.cc; sourceTree = "<group>"; };
 		6B4674A91731872600E42419 /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../../../src/input.h; sourceTree = "<group>"; };
+		6B6609C9173B03C1002C7F5A /* SnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpMO.h; sourceTree = "<group>"; };
+		6B6609CA173B03C1002C7F5A /* SnpMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpMO.m; sourceTree = "<group>"; };
 		D793C4A57535355A029B6C52 /* SampleRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SampleRepository.h; sourceTree = "<group>"; };
 		D793C907D04E589764C9E424 /* SampleRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SampleRepository.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -338,14 +338,14 @@
 				1442E1AA17206DBB004B6361 /* StacksDocument.h */,
 				1442E1AB17206DBB004B6361 /* StacksDocument.m */,
 				1442E1B317206DBB004B6361 /* StacksDocument.xcdatamodeld */,
+				6B6609C9173B03C1002C7F5A /* SnpMO.h */,
+				6B6609CA173B03C1002C7F5A /* SnpMO.m */,
 				6B2C6F10173865F90044E9A6 /* SampleMO.h */,
 				6B2C6F11173865F90044E9A6 /* SampleMO.m */,
 				6B2C6F0D173865CF0044E9A6 /* LocusMO.h */,
 				6B2C6F0E173865CF0044E9A6 /* LocusMO.m */,
 				6B2C6F0A173865CF0044E9A6 /* StackEntryMO.h */,
 				6B2C6F0B173865CF0044E9A6 /* StackEntryMO.m */,
-				6B2C6F07173865CF0044E9A6 /* SnpMO.h */,
-				6B2C6F08173865CF0044E9A6 /* SnpMO.m */,
 				6B2C6F04173865CE0044E9A6 /* DatumMO.h */,
 				6B2C6F05173865CE0044E9A6 /* DatumMO.m */,
 				6B2C6F01173865CE0044E9A6 /* PopulationMO.h */,
@@ -523,7 +523,6 @@
 				6B2C6F00173865CE0044E9A6 /* DepthMO.m in Sources */,
 				6B2C6F03173865CE0044E9A6 /* PopulationMO.m in Sources */,
 				6B2C6F06173865CE0044E9A6 /* DatumMO.m in Sources */,
-				6B2C6F09173865CF0044E9A6 /* SnpMO.m in Sources */,
 				6B2C6F0C173865CF0044E9A6 /* StackEntryMO.m in Sources */,
 				6B2C6F0F173865CF0044E9A6 /* LocusMO.m in Sources */,
 				6B2C6F12173865F90044E9A6 /* SampleMO.m in Sources */,
@@ -536,6 +535,7 @@
 				63D5324CC3F9B03789008CE5 /* HaplotypeRepository.m in Sources */,
 				63D535D7853D908FA36A2597 /* StackRepository.m in Sources */,
 				63D53E9B9995E1FAAA1FF1ED /* StackEntryRepository.m in Sources */,
+				6B6609CB173B03C1002C7F5A /* SnpMO.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
