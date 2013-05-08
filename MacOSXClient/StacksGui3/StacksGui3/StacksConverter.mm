@@ -53,7 +53,6 @@ using std::ofstream;
 
 @implementation StacksConverter {
 
-
 }
 
 @synthesize datumRepository;
@@ -73,8 +72,8 @@ using std::ofstream;
         // nothing write now
         datumRepository = [[DatumRepository alloc] init];
         depthRepository = [[DepthRepository alloc] init];
-        haplotypeRepository = [[HaplotypeRepository alloc] init] ;
-        locusRepository = [[LocusRepository alloc] init] ;
+        haplotypeRepository = [[HaplotypeRepository alloc] init];
+        locusRepository = [[LocusRepository alloc] init];
         populationRepository = [[PopulationRepository alloc] init];
         sampleRepository = [[SampleRepository alloc] init];
         snpRepository = [[SnpRepository alloc] init];
@@ -317,26 +316,26 @@ using std::ofstream;
 
     gettimeofday(&time1, NULL);
     map<int, CSLocus *>::iterator catalogIterator = catalog.begin();
+    NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
     while (catalogIterator != catalog.end()) {
-        LocusMO *locusMO = [NSEntityDescription insertNewObjectForEntityForName:@"Locus" inManagedObjectContext:stacksDocument.managedObjectContext];
-        locusMO.locusId = [NSNumber numberWithInt:(*catalogIterator).first];
         const char *read = (*catalogIterator).second->con;
-        NSString *letters = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
-        locusMO.consensus = letters;
-        locusMO.marker = [NSString stringWithUTF8String:catalogIterator->second->marker.c_str()];;
+        LocusMO *locusMO = [locusRepository insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).first]
+                                              andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
+        ];
         vector<SNP *> snps = catalogIterator->second->snps;
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
-//        NSMutableSet *snpsSet = [[NSMutableSet alloc] init];
         for (; snpsIterator != snps.end(); ++snpsIterator) {
-            SnpMO *snpMO = [NSEntityDescription insertNewObjectForEntityForName:@"Snp" inManagedObjectContext:stacksDocument.managedObjectContext];
             SNP *snp = (*snpsIterator);
-            snpMO.column = [NSNumber numberWithInt:snp->col];
-            snpMO.lratio = [NSNumber numberWithFloat:snp->lratio];
-            snpMO.rank1 = [NSNumber numberWithChar:snp->rank_1];
-            snpMO.rank2 = [NSNumber numberWithChar:snp->rank_2];
-            snpMO.rank3 = [NSNumber numberWithChar:snp->rank_3];
-            snpMO.rank4 = [NSNumber numberWithChar:snp->rank_4];
+
+            SnpMO *snpMO = [snpRepository insertSnp:moc
+                                             column:[NSNumber numberWithInt:snp->col]
+                                             lratio:[NSNumber numberWithFloat:snp->lratio]
+                                              rank1:[NSNumber numberWithInt:snp->rank_1]
+                                              rank2:[NSNumber numberWithInt:snp->rank_2]
+                                              rank3:[NSNumber numberWithInt:snp->rank_3]
+                                              rank4:[NSNumber numberWithInt:snp->rank_4]
+            ];
             [locusMO addSnpsObject:snpMO];
         }
 
@@ -380,59 +379,23 @@ using std::ofstream;
 
 
                 NSError *error;
-                NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
                 SampleMO *sampleMO = [sampleRepository getSampleForName:key andContext:moc andError:nil];
-//                NSEntityDescription *entityDescription = [NSEntityDescription
-//                        entityForName:@"Sample" inManagedObjectContext:moc];
-//                NSFetchRequest *request = [[NSFetchRequest alloc] init];
-//                [request setEntity:entityDescription];
-//                NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name == %@", key];
-//                [request setPredicate:predicate];
-//                NSArray *sampleArray = [moc executeFetchRequest:request error:&error];
-//                SampleMO *sampleMO = nil ;
-//                if (error || sampleArray == nil || sampleArray.count == 0) {
-//                    NSLog(@"sampleArray %ld error %@", sampleArray.count, error);
-//                }
-//                else {
-//                    sampleMO = [sampleArray objectAtIndex:0];
-//                    //                    NSLog(@"sample found %@",sampleMO.name);
-//                }
 
-
-//                DatumMO *datumMO = nil ;
-//                for (DatumMO *datumMO1 in locusMO.datums.allObjects) {
-//                    if ([datumMO.name isEqualToString:datumMO1.name]) {
-//                        datumMO = datumMO1;
-//                        NSLog(@"DATUM EXISTS!") ;
-//                    }
-//                }
-
-
-//                if (datumMO == nil) {
-//                    NSLog(@"datum NOT found for key %@ and locus %@",key,locusMO.locusId);
                 vector<char *> obshape = datum->obshap;
                 vector<int> depths = datum->depth;
                 int numLetters = obshape.size();
-//                    genotypeMO = [[DatumMO alloc] init];
-                DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:stacksDocument.managedObjectContext];
-                newDatumMO.name = key;
-                newDatumMO.sampleId = [NSNumber numberWithInt:sample_ids[i]];
-                newDatumMO.sample = sampleMO;
+                DatumMO* newDatumMO = [datumRepository insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO] ;
 
                 // get catalogs for matches
                 newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
-
                 locusMO.length = [NSNumber numberWithInt:loc->depth];
 
                 if (depths.size() == numLetters) {
                     for (int j = 0; j < numLetters; j++) {
-                        HaplotypeMO *haplotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Haplotype" inManagedObjectContext:stacksDocument.managedObjectContext];
-                        haplotypeMO.haplotype = [NSString stringWithUTF8String:obshape[j]];
+                        HaplotypeMO *haplotypeMO = [haplotypeRepository insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]]] ;
                         [newDatumMO addHaplotypesObject:haplotypeMO];
 
-                        DepthMO *depthMO = [NSEntityDescription insertNewObjectForEntityForName:@"Depth" inManagedObjectContext:stacksDocument.managedObjectContext];
-                        depthMO.depth = [NSNumber numberWithInt:depths[j]];
-
+                        DepthMO *depthMO = [depthRepository insertDepth:moc depth:[NSNumber numberWithInt:depths[j]]];
                         [newDatumMO addDepthsObject:depthMO];
                     }
                     [locusMO addDatumsObject:newDatumMO];
@@ -546,28 +509,12 @@ using std::ofstream;
     NSLog(@"Loading tag file %@", tagFileName);
 
     NSUInteger fileNameLength = tagFileName.length;
-//    NSCharacterSet* characterSet = [[NSCharacterSet alloc] init];
-//    characterSet.st
-//    NSRange range = [tagFileName rangeOfString:@"/" options:NSBackwardsSearch];
-//    range.length = (fileNameLength-9) - range.location ;
-//    NSString *sampleName = [tagFileName substringWithRange:range];
     NSString *sampleName = [tagFileName substringToIndex:fileNameLength - 9];
     NSLog(@"sampleName %@", sampleName);
     // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
     NSManagedObjectContext *moc = document.managedObjectContext;
-    NSEntityDescription *entityDescription = [NSEntityDescription
-            entityForName:@"Sample" inManagedObjectContext:moc];
-    NSFetchRequest *request = [[NSFetchRequest alloc] init];
-    [request setEntity:entityDescription];
-    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name == %@", sampleName];
-    [request setPredicate:predicate];
-    NSError *error;
-    NSArray *sampleArray = [moc executeFetchRequest:request error:&error];
-    SampleMO *sampleMO = [sampleArray objectAtIndex:0];
-
-
-//    NSLog(@"found a sample: %@",sampleMO);
+    SampleMO* sampleMO = [sampleRepository getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
@@ -611,15 +558,8 @@ using std::ofstream;
 
                 locusId = newLocusId;
                 // search for the new locus
-                NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:moc];
-                NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
-                NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus.locusId == %ld and sample.name == %@ ", locusId, sampleMO.name];
-                [request1 setPredicate:predicate1];
-                [request1 setEntity:entityDescription1];
-                NSError *error1;
-                NSArray *datumArray = [moc executeFetchRequest:request1 error:&error1];
-                if (datumArray.count == 1) {
-                    datumMO = [datumArray objectAtIndex:0];
+                datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name] ;
+                if (datumMO!=nil) {
                     if (datumMO.stack == nil) {
                         stackMO = [NSEntityDescription insertNewObjectForEntityForName:@"Stack" inManagedObjectContext:moc];
                         stackMO.datum = datumMO;
@@ -636,13 +576,14 @@ using std::ofstream;
             }
 
             if (datumMO != nil) {
-                StackEntryMO *stackEntryMO = [NSEntityDescription insertNewObjectForEntityForName:@"StackEntry" inManagedObjectContext:document.managedObjectContext];
-                stackEntryMO.entryId = [NSNumber numberWithInteger:row];
-                stackEntryMO.relationship = [columns objectAtIndex:6];
-                stackEntryMO.block = [columns objectAtIndex:7];
-                stackEntryMO.sequenceId = [columns objectAtIndex:8];
-                stackEntryMO.sequence = [columns objectAtIndex:9];
-                stackEntryMO.stack = stackMO;
+                StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
+                                     entryId:[NSNumber numberWithInteger:row]
+                        relationship:[columns objectAtIndex:6]
+                        block:[columns objectAtIndex:7]
+                        sequenceId:[columns objectAtIndex:8]
+                        sequence:[columns objectAtIndex:9]
+                        stack:stackMO
+                ];
 
                 if ([stackEntryMO.relationship isEqualToString:@"consensus"]) {
                     stackMO.consensus = stackEntryMO;

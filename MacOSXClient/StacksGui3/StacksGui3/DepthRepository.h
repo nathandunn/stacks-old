@@ -8,6 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
+@class DepthMO;
+
 
 @interface DepthRepository : NSObject
+- (DepthMO *)insertDepth:(NSManagedObjectContext *)context depth:(NSNumber *)depth;
 @end

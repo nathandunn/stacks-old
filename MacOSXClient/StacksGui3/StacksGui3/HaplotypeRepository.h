@@ -8,6 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
+@class HaplotypeMO;
+
 
 @interface HaplotypeRepository : NSObject
+- (HaplotypeMO *)insertHaplotype:(NSManagedObjectContext *)context haplotype:(NSString *)haplotype;
 @end

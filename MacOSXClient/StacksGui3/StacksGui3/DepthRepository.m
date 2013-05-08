@@ -7,9 +7,15 @@
 
 
 #import "DepthRepository.h"
+#import "DepthMO.h"
 
 
 @implementation DepthRepository {
 
+}
+- (DepthMO *)insertDepth:(NSManagedObjectContext *)context depth:(NSNumber *)depth {
+    DepthMO *depthMO = [NSEntityDescription insertNewObjectForEntityForName:@"Depth" inManagedObjectContext:context];
+    depthMO.depth = depth ;
+    return depthMO ;
 }
 @end

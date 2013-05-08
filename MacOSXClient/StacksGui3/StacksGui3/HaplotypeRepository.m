@@ -7,9 +7,15 @@
 
 
 #import "HaplotypeRepository.h"
+#import "HaplotypeMO.h"
 
 
 @implementation HaplotypeRepository {
 
+}
+- (HaplotypeMO *)insertHaplotype:(NSManagedObjectContext *)context haplotype:(NSString *)haplotype {
+    HaplotypeMO *haplotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Haplotype" inManagedObjectContext:context];
+    haplotypeMO.haplotype = haplotype ;
+    return haplotypeMO ;
 }
 @end

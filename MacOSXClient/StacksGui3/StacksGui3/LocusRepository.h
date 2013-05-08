@@ -8,6 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
+@class LocusMO ;
 
 @interface LocusRepository : NSObject
+- (LocusMO *)insertNewLocus:(NSManagedObjectContext *)model withId:(NSNumber *)id andConsensus:(NSString *)consensus andMarker:(NSString *)markers;
 @end
