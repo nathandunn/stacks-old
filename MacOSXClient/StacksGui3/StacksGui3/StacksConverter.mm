@@ -24,6 +24,7 @@ using std::ofstream;
 //#import "LocusView.h"
 #import "StacksDocument.h"
 #import "StacksConverter.h"
+#import "PopulationRepository.h"
 //#import "StacksView.h"
 // #import "DataStubber.h"
 
@@ -48,11 +49,15 @@ using std::ofstream;
 
 }
 
+@synthesize sampleRepository;
+@synthesize populationRepository;
+
 - (id)init {
     self = [super init];
     if (self) {
         // nothing write now
-        _sampleRepository = [[SampleRepository alloc] init];
+        sampleRepository = [[SampleRepository alloc] init];
+        populationRepository = [[PopulationRepository alloc] init];
     }
     return self;
 }
@@ -354,21 +359,22 @@ using std::ofstream;
 
                 NSError *error;
                 NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
-                NSEntityDescription *entityDescription = [NSEntityDescription
-                        entityForName:@"Sample" inManagedObjectContext:moc];
-                NSFetchRequest *request = [[NSFetchRequest alloc] init];
-                [request setEntity:entityDescription];
-                NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name == %@", key];
-                [request setPredicate:predicate];
-                NSArray *sampleArray = [moc executeFetchRequest:request error:&error];
-                SampleMO *sampleMO = nil ;
-                if (error || sampleArray == nil || sampleArray.count == 0) {
-                    NSLog(@"sampleArray %ld error %@", sampleArray.count, error);
-                }
-                else {
-                    sampleMO = [sampleArray objectAtIndex:0];
-//                    NSLog(@"sample found %@",sampleMO.name);
-                }
+                SampleMO* sampleMO = [sampleRepository getSampleForName:key andContext:moc andError:nil];
+//                NSEntityDescription *entityDescription = [NSEntityDescription
+//                        entityForName:@"Sample" inManagedObjectContext:moc];
+//                NSFetchRequest *request = [[NSFetchRequest alloc] init];
+//                [request setEntity:entityDescription];
+//                NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name == %@", key];
+//                [request setPredicate:predicate];
+//                NSArray *sampleArray = [moc executeFetchRequest:request error:&error];
+//                SampleMO *sampleMO = nil ;
+//                if (error || sampleArray == nil || sampleArray.count == 0) {
+//                    NSLog(@"sampleArray %ld error %@", sampleArray.count, error);
+//                }
+//                else {
+//                    sampleMO = [sampleArray objectAtIndex:0];
+//                    //                    NSLog(@"sample found %@",sampleMO.name);
+//                }
 
 
 //                DatumMO *datumMO = nil ;
@@ -670,16 +676,13 @@ using std::ofstream;
 - (void)addSamplesToDocument:(StacksDocument *)document forSampleIds:(vector<int>)sampleIds andSamples:(map<int, string>)samples {
 
     if (document.populationLookup == nil || document.populationLookup.count == 0) {
-        PopulationMO *populationMO = [NSEntityDescription insertNewObjectForEntityForName:@"Population" inManagedObjectContext:document.managedObjectContext];
-        populationMO.populationId = [NSNumber numberWithInt:1];
-        populationMO.name = @"All";
+        PopulationMO *populationMO = [populationRepository insertPopulation:document.managedObjectContext withId:[NSNumber numberWithInt:1] andName:@"All"];
         document.populations = [NSSet setWithObjects:populationMO, nil];
 
         // set each sample to populationMO
         for (int i = 0; i < sampleIds.size(); i++) {
-            SampleMO *sampleMO = [NSEntityDescription insertNewObjectForEntityForName:@"Sample" inManagedObjectContext:document.managedObjectContext];
-            sampleMO.sampleId = [NSNumber numberWithInt:sampleIds[i]];
-            sampleMO.name = [NSString stringWithUTF8String:samples[sampleIds[i]].c_str()];
+            SampleMO *sampleMO = [sampleRepository insertSample:document.managedObjectContext withId:[NSNumber numberWithInt:sampleIds[i]] andName:[NSString stringWithUTF8String:samples[sampleIds[i]].c_str()]];
+
             [populationMO addSamplesObject:sampleMO];
         }
     }

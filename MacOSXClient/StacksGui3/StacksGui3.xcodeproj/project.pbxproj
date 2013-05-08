@@ -18,6 +18,7 @@
 		1442E1BE17206DBC004B6361 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1442E19817206DBB004B6361 /* Cocoa.framework */; };
 		1442E1C617206DBC004B6361 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1442E1C417206DBC004B6361 /* InfoPlist.strings */; };
 		1442E1C917206DBC004B6361 /* StacksGui3Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1442E1C817206DBC004B6361 /* StacksGui3Tests.m */; };
+		63D5347912394D8EC31E2F3E /* PopulationRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D538AE43D06E9B03B0BC59 /* PopulationRepository.m */; };
 		63D5373EE2F31FA8CF4F5F1A /* LocusCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53152900941A896B8CCE9 /* LocusCell.m */; };
 		63D53A7B98C0266C27BCB428 /* GenotypeEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D534676BD27E8518BBDB92 /* GenotypeEntry.m */; };
 		63D53BAAED00BA9776516730 /* StacksConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 63D534F6AA587D896D3DC11B /* StacksConverter.mm */; };
@@ -89,6 +90,8 @@
 		63D536AC65251712D1E68790 /* LocusView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusView.h; sourceTree = "<group>"; };
 		63D537228656D66A61C2C10E /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/StacksDocument.xib; sourceTree = "<group>"; };
 		63D5378099A61B2CFB032560 /* PopulationCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationCell.h; sourceTree = "<group>"; };
+		63D537E9B36961C20399DC49 /* PopulationRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationRepository.h; sourceTree = "<group>"; };
+		63D538AE43D06E9B03B0BC59 /* PopulationRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationRepository.m; sourceTree = "<group>"; };
 		63D53BD5D4E7AA4FBFDB755F /* PopulationCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationCell.m; sourceTree = "<group>"; };
 		63D53D8BC4B48133CB695E5C /* StacksConverter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksConverter.h; sourceTree = "<group>"; };
 		63D53EFA95D4B7DF21498B77 /* StacksView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksView.m; sourceTree = "<group>"; };
@@ -346,6 +349,8 @@
 				63D53D8BC4B48133CB695E5C /* StacksConverter.h */,
 				D793C907D04E589764C9E424 /* SampleRepository.m */,
 				D793C4A57535355A029B6C52 /* SampleRepository.h */,
+				63D538AE43D06E9B03B0BC59 /* PopulationRepository.m */,
+				63D537E9B36961C20399DC49 /* PopulationRepository.h */,
 			);
 			name = Service;
 			sourceTree = "<group>";
@@ -488,6 +493,7 @@
 				6B2C6F0F173865CF0044E9A6 /* LocusMO.m in Sources */,
 				6B2C6F12173865F90044E9A6 /* SampleMO.m in Sources */,
 				D793C0F3A4CB3044602B1F3F /* SampleRepository.m in Sources */,
+				63D5347912394D8EC31E2F3E /* PopulationRepository.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

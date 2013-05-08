@@ -301,8 +301,8 @@
     STAssertTrue(stackEntries.count<100, @"but less than 100 entries %ld",stackEntries.count);
 
     
-    STAssertTrue(datumMO.snps.count>0, @"should have at least one snp ");
-    STAssertTrue(datumMO.alleles.count>0, @"should have at least one allele");
+//    STAssertTrue(datumMO.snps.count>0, @"should have at least one snp ");
+//    STAssertTrue(datumMO.alleles.count>0, @"should have at least one allele");
     STAssertTrue(datumMO.depths.count>0, @"should have at least one depth");
 }
 
