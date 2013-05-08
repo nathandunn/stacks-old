@@ -7,9 +7,17 @@
 
 
 #import "StackRepository.h"
+#import "StackMO.h"
+#import "DatumMO.h"
 
 
 @implementation StackRepository {
 
+}
+- (StackMO *)insertStack:(NSManagedObjectContext *)context datum:(DatumMO *)datum {
+    StackMO *stackMO = [NSEntityDescription insertNewObjectForEntityForName:@"Stack" inManagedObjectContext:context];
+    stackMO.datum = datum;
+    datum.stack = stackMO;
+    return stackMO;
 }
 @end

@@ -8,6 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
+@class StackMO ;
+@class DatumMO ;
 
 @interface StackRepository : NSObject
+- (StackMO *)insertStack:(NSManagedObjectContext *)context datum:(DatumMO *)datum;
 @end
