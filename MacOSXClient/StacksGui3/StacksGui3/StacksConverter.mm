@@ -25,6 +25,10 @@ using std::ofstream;
 #import "StacksDocument.h"
 #import "StacksConverter.h"
 #import "PopulationRepository.h"
+#import "DepthRepository.h"
+#import "DatumRepository.h"
+#import "HaplotypeRepository.h"
+#import "LocusRepository.h"
 //#import "StacksView.h"
 // #import "DataStubber.h"
 
@@ -39,6 +43,9 @@ using std::ofstream;
 #import "PopulationMO.h"
 #import "SampleMO.h"
 #import "StackMO.h"
+#import "SnpRepository.h"
+#import "StackEntryRepository.h"
+#import "StackRepository.h"
 //#import "StackEntry.h"
 
 
@@ -49,15 +56,30 @@ using std::ofstream;
 
 }
 
-@synthesize sampleRepository;
+@synthesize datumRepository;
+@synthesize depthRepository;
+@synthesize haplotypeRepository;
+@synthesize locusRepository;
 @synthesize populationRepository;
+@synthesize sampleRepository;
+@synthesize snpRepository;
+@synthesize stackEntryRepository;
+@synthesize stackRepository;
+
 
 - (id)init {
     self = [super init];
     if (self) {
         // nothing write now
-        sampleRepository = [[SampleRepository alloc] init];
+        datumRepository = [[DatumRepository alloc] init];
+        depthRepository = [[DepthRepository alloc] init];
+        haplotypeRepository = [[HaplotypeRepository alloc] init] ;
+        locusRepository = [[LocusRepository alloc] init] ;
         populationRepository = [[PopulationRepository alloc] init];
+        sampleRepository = [[SampleRepository alloc] init];
+        snpRepository = [[SnpRepository alloc] init];
+        stackEntryRepository = [[StackEntryRepository alloc] init];
+        stackRepository = [[StackRepository alloc] init];
     }
     return self;
 }
@@ -359,7 +381,7 @@ using std::ofstream;
 
                 NSError *error;
                 NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
-                SampleMO* sampleMO = [sampleRepository getSampleForName:key andContext:moc andError:nil];
+                SampleMO *sampleMO = [sampleRepository getSampleForName:key andContext:moc andError:nil];
 //                NSEntityDescription *entityDescription = [NSEntityDescription
 //                        entityForName:@"Sample" inManagedObjectContext:moc];
 //                NSFetchRequest *request = [[NSFetchRequest alloc] init];

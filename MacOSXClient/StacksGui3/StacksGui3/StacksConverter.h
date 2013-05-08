@@ -12,13 +12,27 @@
 @class StacksDocument;
 @class SampleRepository;
 @class PopulationRepository;
+@class DatumRepository;
+@class DepthRepository;
+@class HaplotypeRepository;
+@class LocusRepository;
+@class SnpRepository;
+@class StackEntryRepository;
+@class StackRepository;
 
 
 @interface StacksConverter : NSObject
 
 
-@property(nonatomic, strong) SampleRepository* sampleRepository ;
+@property(nonatomic, strong) DatumRepository* datumRepository ;
+@property(nonatomic, strong) DepthRepository* depthRepository;
+@property(nonatomic, strong) HaplotypeRepository* haplotypeRepository;
+@property(nonatomic, strong) LocusRepository* locusRepository;
 @property(nonatomic, strong) PopulationRepository* populationRepository;
+@property(nonatomic, strong) SampleRepository* sampleRepository ;
+@property(nonatomic, strong) SnpRepository* snpRepository ;
+@property(nonatomic, strong) StackEntryRepository* stackEntryRepository ;
+@property(nonatomic, strong) StackRepository* stackRepository ;
 //@property(nonatomic, strong) NSManagedObjectContext *managedObjectContext;
 //@property(nonatomic, strong) NSManagedObjectModel *managedObjectModel;
 
