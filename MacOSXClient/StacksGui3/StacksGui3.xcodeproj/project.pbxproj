@@ -18,14 +18,21 @@
 		1442E1BE17206DBC004B6361 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1442E19817206DBB004B6361 /* Cocoa.framework */; };
 		1442E1C617206DBC004B6361 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1442E1C417206DBC004B6361 /* InfoPlist.strings */; };
 		1442E1C917206DBC004B6361 /* StacksGui3Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1442E1C817206DBC004B6361 /* StacksGui3Tests.m */; };
+		63D5324CC3F9B03789008CE5 /* HaplotypeRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5361AB5A4A6EAA62C5CE7 /* HaplotypeRepository.m */; };
 		63D5347912394D8EC31E2F3E /* PopulationRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D538AE43D06E9B03B0BC59 /* PopulationRepository.m */; };
+		63D535D7853D908FA36A2597 /* StackRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5309D9A2F9F447D917CA1 /* StackRepository.m */; };
 		63D5373EE2F31FA8CF4F5F1A /* LocusCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53152900941A896B8CCE9 /* LocusCell.m */; };
+		63D539193E198FC341D4D036 /* LocusRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53558BC604AF5CB21EDEE /* LocusRepository.m */; };
+		63D53922F24CBD38E628870C /* DepthRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D530556A0C5C6B869DB3BF /* DepthRepository.m */; };
 		63D53A7B98C0266C27BCB428 /* GenotypeEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D534676BD27E8518BBDB92 /* GenotypeEntry.m */; };
 		63D53BAAED00BA9776516730 /* StacksConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 63D534F6AA587D896D3DC11B /* StacksConverter.mm */; };
 		63D53BDDE2EE5FB78660C9E1 /* LocusView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5311F44388AEE157BD2CD /* LocusView.m */; };
 		63D53C66C975A160E74A5CA3 /* StacksView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53EFA95D4B7DF21498B77 /* StacksView.m */; };
 		63D53CFA3A01C35492B74405 /* PopulationCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53BD5D4E7AA4FBFDB755F /* PopulationCell.m */; };
+		63D53D3EB72A92AA5C40B665 /* SnpRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53689674344677BCBF06E /* SnpRepository.m */; };
 		63D53D7AA2ECE7DFF96DC4AC /* SnpView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5300CEE50E2EFF99D9FA9 /* SnpView.m */; };
+		63D53E8EEFB2658C1ABFB10C /* DatumRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D535F2DD9F93E6A22D2211 /* DatumRepository.m */; };
+		63D53E9B9995E1FAAA1FF1ED /* StackEntryRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53146E34901E5A22B3D33 /* StackEntryRepository.m */; };
 		63D53F09D355842335914336 /* StacksDocument.xib in Resources */ = {isa = PBXBuildFile; fileRef = 63D53D3DA1B67441F7C8386C /* StacksDocument.xib */; };
 		6B2C6EF4173865CD0044E9A6 /* StackMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B2C6EF3173865CD0044E9A6 /* StackMO.m */; };
 		6B2C6EFA173865CE0044E9A6 /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B2C6EF9173865CE0044E9A6 /* AlleleMO.m */; };
@@ -80,20 +87,34 @@
 		1442E1C717206DBC004B6361 /* StacksGui3Tests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StacksGui3Tests.h; sourceTree = "<group>"; };
 		1442E1C817206DBC004B6361 /* StacksGui3Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StacksGui3Tests.m; sourceTree = "<group>"; };
 		63D5300CEE50E2EFF99D9FA9 /* SnpView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpView.m; sourceTree = "<group>"; };
+		63D530556A0C5C6B869DB3BF /* DepthRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DepthRepository.m; sourceTree = "<group>"; };
+		63D5309D9A2F9F447D917CA1 /* StackRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackRepository.m; sourceTree = "<group>"; };
+		63D530B3764932ACC9CE8F92 /* DepthRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DepthRepository.h; sourceTree = "<group>"; };
+		63D530DF0317609848E07684 /* LocusRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusRepository.h; sourceTree = "<group>"; };
 		63D5311F44388AEE157BD2CD /* LocusView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusView.m; sourceTree = "<group>"; };
+		63D53146E34901E5A22B3D33 /* StackEntryRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntryRepository.m; sourceTree = "<group>"; };
 		63D53152900941A896B8CCE9 /* LocusCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusCell.m; sourceTree = "<group>"; };
 		63D531804419CD422905AD3F /* StacksView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksView.h; sourceTree = "<group>"; };
 		63D532EFC82E0AE433712145 /* GenotypeEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeEntry.h; sourceTree = "<group>"; };
 		63D534676BD27E8518BBDB92 /* GenotypeEntry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenotypeEntry.m; sourceTree = "<group>"; };
+		63D534CA97F7DF4D5667189A /* HaplotypeRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HaplotypeRepository.h; sourceTree = "<group>"; };
 		63D534F6AA587D896D3DC11B /* StacksConverter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = StacksConverter.mm; sourceTree = "<group>"; };
+		63D53558BC604AF5CB21EDEE /* LocusRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusRepository.m; sourceTree = "<group>"; };
+		63D535BC655183E4F0EA1AAB /* StackEntryRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackEntryRepository.h; sourceTree = "<group>"; };
+		63D535F2DD9F93E6A22D2211 /* DatumRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumRepository.m; sourceTree = "<group>"; };
+		63D5361AB5A4A6EAA62C5CE7 /* HaplotypeRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HaplotypeRepository.m; sourceTree = "<group>"; };
 		63D536784C756323263BE1CE /* LocusCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusCell.h; sourceTree = "<group>"; };
+		63D53689674344677BCBF06E /* SnpRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpRepository.m; sourceTree = "<group>"; };
 		63D536AC65251712D1E68790 /* LocusView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusView.h; sourceTree = "<group>"; };
 		63D537228656D66A61C2C10E /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/StacksDocument.xib; sourceTree = "<group>"; };
 		63D5378099A61B2CFB032560 /* PopulationCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationCell.h; sourceTree = "<group>"; };
 		63D537E9B36961C20399DC49 /* PopulationRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationRepository.h; sourceTree = "<group>"; };
 		63D538AE43D06E9B03B0BC59 /* PopulationRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationRepository.m; sourceTree = "<group>"; };
+		63D539F4D777500058FBF9BA /* SnpRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpRepository.h; sourceTree = "<group>"; };
 		63D53BD5D4E7AA4FBFDB755F /* PopulationCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationCell.m; sourceTree = "<group>"; };
 		63D53D8BC4B48133CB695E5C /* StacksConverter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksConverter.h; sourceTree = "<group>"; };
+		63D53DE28A5484384B765065 /* StackRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackRepository.h; sourceTree = "<group>"; };
+		63D53ED3BED907B741C5C706 /* DatumRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumRepository.h; sourceTree = "<group>"; };
 		63D53EFA95D4B7DF21498B77 /* StacksView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksView.m; sourceTree = "<group>"; };
 		63D53F98F88E905D5B4D6620 /* SnpView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpView.h; sourceTree = "<group>"; };
 		6B2C6EF2173865CD0044E9A6 /* StackMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackMO.h; sourceTree = "<group>"; };
@@ -351,6 +372,20 @@
 				D793C4A57535355A029B6C52 /* SampleRepository.h */,
 				63D538AE43D06E9B03B0BC59 /* PopulationRepository.m */,
 				63D537E9B36961C20399DC49 /* PopulationRepository.h */,
+				63D53689674344677BCBF06E /* SnpRepository.m */,
+				63D539F4D777500058FBF9BA /* SnpRepository.h */,
+				63D535F2DD9F93E6A22D2211 /* DatumRepository.m */,
+				63D53ED3BED907B741C5C706 /* DatumRepository.h */,
+				63D530556A0C5C6B869DB3BF /* DepthRepository.m */,
+				63D530B3764932ACC9CE8F92 /* DepthRepository.h */,
+				63D53558BC604AF5CB21EDEE /* LocusRepository.m */,
+				63D530DF0317609848E07684 /* LocusRepository.h */,
+				63D5361AB5A4A6EAA62C5CE7 /* HaplotypeRepository.m */,
+				63D534CA97F7DF4D5667189A /* HaplotypeRepository.h */,
+				63D5309D9A2F9F447D917CA1 /* StackRepository.m */,
+				63D53DE28A5484384B765065 /* StackRepository.h */,
+				63D53146E34901E5A22B3D33 /* StackEntryRepository.m */,
+				63D535BC655183E4F0EA1AAB /* StackEntryRepository.h */,
 			);
 			name = Service;
 			sourceTree = "<group>";
@@ -494,6 +529,13 @@
 				6B2C6F12173865F90044E9A6 /* SampleMO.m in Sources */,
 				D793C0F3A4CB3044602B1F3F /* SampleRepository.m in Sources */,
 				63D5347912394D8EC31E2F3E /* PopulationRepository.m in Sources */,
+				63D53D3EB72A92AA5C40B665 /* SnpRepository.m in Sources */,
+				63D53E8EEFB2658C1ABFB10C /* DatumRepository.m in Sources */,
+				63D53922F24CBD38E628870C /* DepthRepository.m in Sources */,
+				63D539193E198FC341D4D036 /* LocusRepository.m in Sources */,
+				63D5324CC3F9B03789008CE5 /* HaplotypeRepository.m in Sources */,
+				63D535D7853D908FA36A2597 /* StackRepository.m in Sources */,
+				63D53E9B9995E1FAAA1FF1ED /* StackEntryRepository.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
