@@ -253,6 +253,10 @@
     STAssertNotNil(datumMO.locus, @"should have a valid locus ");
     STAssertNotNil(datumMO.sample, @"should have a valid sample");
     STAssertNotNil(datumMO.name, @"should have a valid name ? ");
+
+    STAssertTrue(datumMO.snps.count>0, @"should have at least one snp ");
+    STAssertTrue(datumMO.alleles.count>0, @"should have at least one allele");
+    STAssertTrue(datumMO.depths.count>0, @"should have at least one depth");
 }
 
 @end
