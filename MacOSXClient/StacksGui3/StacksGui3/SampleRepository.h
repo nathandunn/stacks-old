@@ -8,6 +8,13 @@
 
 #import <Foundation/Foundation.h>
 
+@class SampleMO;
+
 
 @interface SampleRepository : NSObject
+- (SampleMO *)getSampleForName:(NSString *)string andContext:(NSManagedObjectContext *)context andError:(NSError*)error;
+
+- (SampleMO *)insertSampleWithId:(NSNumber *)number andName:(NSString *)name;
+
+- (SampleMO *)insertSample:(NSManagedObjectContext *)context withId:(NSNumber *) number andName:(NSString *)name;
 @end

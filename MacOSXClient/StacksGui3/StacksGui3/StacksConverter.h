@@ -11,12 +11,14 @@
 @class LocusView;
 @class StacksDocument;
 @class SampleRepository;
+@class PopulationRepository;
 
 
 @interface StacksConverter : NSObject
 
 
 @property(nonatomic, strong) SampleRepository* sampleRepository ;
+@property(nonatomic, strong) PopulationRepository* populationRepository;
 //@property(nonatomic, strong) NSManagedObjectContext *managedObjectContext;
 //@property(nonatomic, strong) NSManagedObjectModel *managedObjectModel;
 
