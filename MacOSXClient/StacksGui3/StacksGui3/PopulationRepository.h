@@ -12,5 +12,9 @@
 
 
 @interface PopulationRepository : NSObject
-- (PopulationMO *)insertPopulation:(NSManagedObjectContext *)context withId:(NSNumber *)id andName:(NSString *)name;
+- (PopulationMO *)insertPopulation:(NSManagedObjectContext *)context id:(NSNumber *)id name:(NSString *)name;
+
+- (NSArray *)getAllPopulations:(NSManagedObjectContext *)context;
+
+- (PopulationMO *)getPopulation:(NSManagedObjectContext *)context name:(NSString *)name;
 @end

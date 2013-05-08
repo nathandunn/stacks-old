@@ -16,5 +16,5 @@
 
 - (SampleMO *)insertSampleWithId:(NSNumber *)number andName:(NSString *)name;
 
-- (SampleMO *)insertSample:(NSManagedObjectContext *)context withId:(NSNumber *) number andName:(NSString *)name;
+- (SampleMO *)insertSample:(NSManagedObjectContext *)context id:(NSNumber *)number name:(NSString *)name;
 @end

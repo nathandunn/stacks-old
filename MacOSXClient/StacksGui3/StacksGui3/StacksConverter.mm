@@ -83,82 +83,6 @@ using std::ofstream;
     return self;
 }
 
-//- (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus {
-//    NSFileManager *fileManager = [NSFileManager defaultManager];
-//    // TODO: if male . . .male.tags.tsv / female.tags.tsv
-//    // TODO: or *|!male|!female_N.tags.tsv
-//
-//    NSString *absoluteFileName = [NSString stringWithFormat:@"%@/%@.tags.tsv", path, filename];
-//
-//    BOOL existsAtPath = [fileManager fileExistsAtPath:absoluteFileName];
-//    NSLog(@"absolute file name %@ exists %d", absoluteFileName, existsAtPath);
-//    if (!existsAtPath) {
-//        return nil;
-//    }
-//    StacksView *stacksView = [[StacksView alloc] init];
-//
-//
-//    struct timeval time1, time2;
-//    gettimeofday(&time1, NULL);
-//
-//    NSError *error = nil;
-//    NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error] componentsSeparatedByString:@"\n"];
-//    gettimeofday(&time2, NULL);
-//    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
-//
-//    if (error) {
-//        NSLog(@"error loading file [%@]: %@", absoluteFileName, error);
-//    }
-//
-//    NSMutableArray *stackEntries = [[NSMutableArray alloc] init];
-//
-//    NSString *line;
-//    NSUInteger row = 1;
-//    gettimeofday(&time1, NULL);
-//    for (line in fileData) {
-//        NSArray *columns = [line componentsSeparatedByString:@"\t"];
-//
-//        if (columns.count > 8 && [[columns objectAtIndex:2] integerValue] == tag) {
-//            StackEntryMO *stackEntry = [[StackEntryMO alloc] init];
-////            stackEntry.entryId = row;
-//            stackEntry.entryId = [NSNumber numberWithInteger:row];
-//            stackEntry.relationship = [columns objectAtIndex:6];
-//            stackEntry.block = [columns objectAtIndex:7];
-//            stackEntry.sequenceId = [columns objectAtIndex:8];
-//            stackEntry.sequence = [columns objectAtIndex:9];
-//
-//            if ([stackEntry.relationship isEqualToString:@"consensus"]) {
-//                stacksView.consensus = stackEntry;
-//            }
-//            else if ([stackEntry.relationship isEqualToString:@"model"]) {
-//                stacksView.model = stackEntry;
-//            }
-//            else {
-//                ++row;
-//                [stackEntries addObject:stackEntry];
-//            }
-//        }
-//    }
-//    gettimeofday(&time2, NULL);
-//    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, stackEntries.count, (time2.tv_sec - time1.tv_sec));
-//
-//    stacksView.stackEntries = stackEntries;
-//    StackEntryMO *referenceStack = [[StackEntryMO alloc] init];
-//    referenceStack.entryId = nil ;
-//    stacksView.reference = referenceStack;
-//
-//    // random snps
-//    NSMutableArray *snps = [[NSMutableArray alloc] init];
-//
-//    for (SnpView *snp in locus.snps) {
-//        [snps addObject:[NSNumber numberWithInt:snp.column]];
-//    }
-//
-//    stacksView.snps = snps;
-//
-//    return stacksView;
-//}
-
 - (StacksDocument *)loadLociAndGenotypes:(NSString *)path {
 
     StacksDocument *stacksDocument = [self createStacksDocumentForPath:path];
@@ -384,15 +308,17 @@ using std::ofstream;
                 vector<char *> obshape = datum->obshap;
                 vector<int> depths = datum->depth;
                 int numLetters = obshape.size();
-                DatumMO* newDatumMO = [datumRepository insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO] ;
+                // TODO: should be entering this for the locus as well?
+                DatumMO *newDatumMO = [datumRepository insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO];
 
                 // get catalogs for matches
+                // TODO: is not the locus the same thing as the id?  can I use the loc->id here?
                 newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
                 locusMO.length = [NSNumber numberWithInt:loc->depth];
 
                 if (depths.size() == numLetters) {
                     for (int j = 0; j < numLetters; j++) {
-                        HaplotypeMO *haplotypeMO = [haplotypeRepository insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]]] ;
+                        HaplotypeMO *haplotypeMO = [haplotypeRepository insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]]];
                         [newDatumMO addHaplotypesObject:haplotypeMO];
 
                         DepthMO *depthMO = [depthRepository insertDepth:moc depth:[NSNumber numberWithInt:depths[j]]];
@@ -411,27 +337,19 @@ using std::ofstream;
                     NSLog(@"has snps %ld", snps.size());
                 }
 
-//        NSMutableSet *snpsSet = [[NSMutableSet alloc] init];
                 for (; snpsIterator != snps.end(); ++snpsIterator) {
-                    SnpMO *snpMO = [NSEntityDescription insertNewObjectForEntityForName:@"Snp" inManagedObjectContext:stacksDocument.managedObjectContext];
                     SNP *snp = (*snpsIterator);
-                    snpMO.column = [NSNumber numberWithInt:snp->col];
-                    snpMO.lratio = [NSNumber numberWithFloat:snp->lratio];
-                    snpMO.rank1 = [NSNumber numberWithChar:snp->rank_1];
-                    snpMO.rank2 = [NSNumber numberWithChar:snp->rank_2];
-                    snpMO.rank3 = [NSNumber numberWithChar:snp->rank_3];
-                    snpMO.rank4 = [NSNumber numberWithChar:snp->rank_4];
+                    SnpMO *snpMO = [snpRepository insertSnp:moc
+                                                     column:[NSNumber numberWithInt:snp->col]
+                                                     lratio:[NSNumber numberWithFloat:snp->lratio]
+                                                      rank1:[NSNumber numberWithChar:snp->rank_1]
+                                                      rank2:[NSNumber numberWithChar:snp->rank_2]
+                                                      rank3:[NSNumber numberWithChar:snp->rank_3]
+                                                      rank4:[NSNumber numberWithChar:snp->rank_4]
+                    ];
+
                     [newDatumMO addSnpsObject:snpMO];
                 }
-
-//                }
-//                else {
-//                    NSLog(@"datum %@ FOUND for key %@ and locus %@", datumMO.name, key, locusMO.locusId);
-//                }
-//                datumMO.sample = sampleMO;
-//                NSp
-//                NSLog(@"sampleMO %@",sampleMO) ;
-//                [sampleMO addDatumsObject:datumMO];
             }
         }
         gettimeofday(&time2, NULL);
@@ -461,12 +379,6 @@ using std::ofstream;
     gettimeofday(&time2, NULL);
     NSLog(@"create stacks document time %ld", time2.tv_sec - time1.tv_sec);
 
-
-//    gettimeofday(&time1, NULL);
-//    NSMutableArray *populations = [stacksDocument findPopulations];
-//    NSLog(@"popps %ld", populations.count);
-//    gettimeofday(&time2, NULL);
-//    NSLog(@"find population time %ld", time2.tv_sec - time1.tv_sec);
 
     NSLog(@"loading stacks");
     gettimeofday(&time1, NULL);
@@ -514,7 +426,7 @@ using std::ofstream;
     // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
     NSManagedObjectContext *moc = document.managedObjectContext;
-    SampleMO* sampleMO = [sampleRepository getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
+    SampleMO *sampleMO = [sampleRepository getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
@@ -528,8 +440,6 @@ using std::ofstream;
     if (error2) {
         NSLog(@"error loading file [%@]: %@", tagFileName, error2);
     }
-
-//    NSMutableArray *stackEntries = [[NSMutableArray alloc] init];
 
     NSString *line;
     NSUInteger row = 1;
@@ -548,22 +458,12 @@ using std::ofstream;
             newLocusId = [[columns objectAtIndex:2] integerValue];
             if (locusId != newLocusId) {
 
-                // save old
-//                NSError* saveError ;
-//                BOOL success = [moc save:&saveError];
-//                NSLog(@"saved %d", success);
-//                if(saveError!=nil ){
-//                    NSLog(@"error saving %@",saveError);
-//                }
-
                 locusId = newLocusId;
                 // search for the new locus
-                datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name] ;
-                if (datumMO!=nil) {
+                datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name];
+                if (datumMO != nil) {
                     if (datumMO.stack == nil) {
-                        stackMO = [NSEntityDescription insertNewObjectForEntityForName:@"Stack" inManagedObjectContext:moc];
-                        stackMO.datum = datumMO;
-                        datumMO.stack = stackMO;
+                        stackMO = [stackRepository insertStack:moc datum:datumMO];
                     }
                     else {
                         stackMO = datumMO.stack;
@@ -577,12 +477,12 @@ using std::ofstream;
 
             if (datumMO != nil) {
                 StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
-                                     entryId:[NSNumber numberWithInteger:row]
-                        relationship:[columns objectAtIndex:6]
-                        block:[columns objectAtIndex:7]
-                        sequenceId:[columns objectAtIndex:8]
-                        sequence:[columns objectAtIndex:9]
-                        stack:stackMO
+                                                                            entryId:[NSNumber numberWithInteger:row]
+                                                                       relationship:[columns objectAtIndex:6]
+                                                                              block:[columns objectAtIndex:7]
+                                                                         sequenceId:[columns objectAtIndex:8]
+                                                                           sequence:[columns objectAtIndex:9]
+                                                                              stack:stackMO
                 ];
 
                 if ([stackEntryMO.relationship isEqualToString:@"consensus"]) {
@@ -604,16 +504,6 @@ using std::ofstream;
     gettimeofday(&time2, NULL);
 //    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, stackMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
 
-    // random snps
-//    NSMutableArray *snps = [[NSMutableArray alloc] init];
-//
-//    for (SnpView *snp in locus.snps) {
-//        [snps addObject:[NSNumber numberWithInt:snp.column]];
-//    }
-
-//    stacksView.snps = snps;
-
-//    return stacksView;
 
 
     // save old
@@ -623,28 +513,17 @@ using std::ofstream;
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
     }
-
-//    NSEntityDescription *entityDescription3 = [NSEntityDescription entityForName:@"Stack" inManagedObjectContext:moc];
-//    NSFetchRequest *request3 = [[NSFetchRequest alloc] init];
-//    [request3 setEntity:entityDescription3];
-//    NSError *error3;
-//    NSArray *stackArray = [moc executeFetchRequest:request3 error:&error3];
-//    for (StackMO *stackMO in stackArray) {
-//        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
-//    }
-
-
 }
 
 - (void)addSamplesToDocument:(StacksDocument *)document forSampleIds:(vector<int>)sampleIds andSamples:(map<int, string>)samples {
 
     if (document.populationLookup == nil || document.populationLookup.count == 0) {
-        PopulationMO *populationMO = [populationRepository insertPopulation:document.managedObjectContext withId:[NSNumber numberWithInt:1] andName:@"All"];
+        PopulationMO *populationMO = [populationRepository insertPopulation:document.managedObjectContext id:[NSNumber numberWithInt:1] name:@"All"];
         document.populations = [NSSet setWithObjects:populationMO, nil];
 
         // set each sample to populationMO
         for (int i = 0; i < sampleIds.size(); i++) {
-            SampleMO *sampleMO = [sampleRepository insertSample:document.managedObjectContext withId:[NSNumber numberWithInt:sampleIds[i]] andName:[NSString stringWithUTF8String:samples[sampleIds[i]].c_str()]];
+            SampleMO *sampleMO = [sampleRepository insertSample:document.managedObjectContext id:[NSNumber numberWithInt:sampleIds[i]] name:[NSString stringWithUTF8String:samples[sampleIds[i]].c_str()]];
 
             [populationMO addSamplesObject:sampleMO];
         }
@@ -653,9 +532,9 @@ using std::ofstream;
         NSNumberFormatter *f = [[NSNumberFormatter alloc] init];
         // else
         for (int i = 0; i < sampleIds.size(); i++) {
-            SampleMO *sampleMO = [NSEntityDescription insertNewObjectForEntityForName:@"Sample" inManagedObjectContext:document.managedObjectContext];
-            sampleMO.sampleId = [NSNumber numberWithInt:sampleIds[i]];
-            sampleMO.name = [NSString stringWithUTF8String:samples[sampleIds[i]].c_str()];
+            SampleMO *sampleMO = [sampleRepository insertSample:document.managedObjectContext
+                                                             id:[NSNumber numberWithInt:sampleIds[i]]
+                                                           name:[NSString stringWithUTF8String:samples[sampleIds[i]].c_str()]];
 
             NSString *populationId = [document.populationLookup objectForKey:sampleMO.name];
 
@@ -695,29 +574,21 @@ using std::ofstream;
         [populationIdsSet addObject:populationId];
     }
 
-    for (NSString *sampleName in populationIdsSet) {
-        NSLog(@"adding sample %@", sampleName);
-        NSNumber *myNumber = [f numberFromString:sampleName];
-        PopulationMO *populationMO = [NSEntityDescription insertNewObjectForEntityForName:@"Population" inManagedObjectContext:document.managedObjectContext];
-        populationMO.populationId = myNumber;
-        populationMO.name = sampleName;
+    for (NSString *popId in populationIdsSet) {
+        NSLog(@"adding population %@", popId);
+        NSNumber *myNumber = [f numberFromString:popId];
+        [populationRepository insertPopulation:document.managedObjectContext id:myNumber name:popId];
     }
 
-    NSEntityDescription *entityDescription2 = [NSEntityDescription
-            entityForName:@"Population" inManagedObjectContext:document.managedObjectContext];
-    NSFetchRequest *request2 = [[NSFetchRequest alloc] init];
-    [request2 setEntity:entityDescription2];
-
-    NSError *error;
-    NSArray *populationArray = [document.managedObjectContext executeFetchRequest:request2 error:&error];
+    NSArray *populationArray = [populationRepository getAllPopulations:document.managedObjectContext];
 
     document.populations = [NSSet setWithArray:populationArray];
 
 }
 
 - (void)readPopulations:(StacksDocument *)document {
-//    NSMutableDictionary *populationLookup = [[NSMutableDictionary alloc] init];
     NSMutableArray *populations = [[NSMutableArray alloc] init];
+    NSManagedObjectContext *moc = document.managedObjectContext;
 
     NSString *path = document.path;
     NSLog(@"reading population for file %@", path);
@@ -734,36 +605,13 @@ using std::ofstream;
             if (columns.count == 2) {
 
 //                [populationLookup setObject:[columns objectAtIndex:1] forKey:[columns objectAtIndex:0]];
-                NSString *sampleName = [columns objectAtIndex:0]; // the sample name . . . male, female, progeny, etc.
-                NSManagedObjectContext *moc = document.managedObjectContext;
-                NSEntityDescription *entityDescription = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:moc];
-                NSFetchRequest *request = [[NSFetchRequest alloc] init];
-                NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name == %@", sampleName];
-                [request setPredicate:predicate];
-                [request setEntity:entityDescription];
-                NSError *error;
-                NSArray *datumArray = [moc executeFetchRequest:request error:&error];
+//                NSString *sampleName = [columns objectAtIndex:0]; // the sample name . . . male, female, progeny, etc.
 
-                if (datumArray.count == 1) {
-//                    DatumMO *datumMO = [datumArray objectAtIndex:0];
-                    NSString *populationName = [columns objectAtIndex:1]; // initially an integer
-                    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Population" inManagedObjectContext:moc];
-                    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
-                    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"name == %@", populationName];
-                    [request1 setPredicate:predicate1];
-                    [request1 setEntity:entityDescription1];
-                    NSArray *populationArray = [moc executeFetchRequest:request error:&error];
+                NSString *populationName = [columns objectAtIndex:1]; // initially an integer
+                PopulationMO *newPopulationMO = [populationRepository getPopulation:moc name:populationName];
 
-                    PopulationMO *newPopulationMO;
-                    if (populationArray == nil || populationArray.count == 0) {
-                        newPopulationMO = [NSEntityDescription insertNewObjectForEntityForName:@"Population" inManagedObjectContext:document.managedObjectContext];
-                        newPopulationMO.name = populationName;
-                        [populations addObject:newPopulationMO];
-                    }
-
-                    // [newPopulationMO addDatumsObject:datumMO];
-//                    [document.populations insertValue:<#(id)value#> inPropertyWithKey:<#(NSString *)key#>];
-
+                if(newPopulationMO!=nil){
+                    [populations addObject:newPopulationMO];
                 }
             }
             else {
