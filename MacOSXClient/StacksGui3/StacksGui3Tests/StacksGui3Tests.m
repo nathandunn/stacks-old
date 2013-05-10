@@ -345,7 +345,7 @@
 
 - (void)testCreateLargeStore{
 //    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
-    NSString *examplePath = @"/tmp/stacks_larger/";
+    NSString *examplePath = @"/tmp/stacks_large/";
     NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -401,7 +401,7 @@
 }
 
 - (void)testReadLargeDataStore {
-    NSString *examplePath = @"/tmp/stacks_larger/";
+    NSString *examplePath = @"/tmp/stacks_large/";
     NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
