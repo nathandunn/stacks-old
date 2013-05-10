@@ -46,9 +46,7 @@
 - (NSArray *)getDatums:(NSManagedObjectContext *)context locus:(LocusMO *)locus andPopulation:(PopulationMO *)population {
     NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:context];
     NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
-//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus == %@ and sample.population == %@ ", locus, population];
-//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus.locusId == %@ ", [NSNumber numberWithInt:12]];
-    NSLog(@"locusID: %@",locus);
+//    NSLog(@"locusID: %@",locus);
     NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus == %@ ", locus];
     [request1 setPredicate:predicate1];
     [request1 setEntity:entityDescription1];

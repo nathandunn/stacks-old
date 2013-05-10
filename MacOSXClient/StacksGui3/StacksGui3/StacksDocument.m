@@ -19,6 +19,8 @@
 
 @property(weak) IBOutlet NSTableView *locusTableView;
 @property(weak) IBOutlet NSTableView *populationTableView;
+@property(weak) IBOutlet NSCollectionView *datumCollectionView;
+@property(weak) IBOutlet NSArrayController *datumController ;
 
 @end
 
@@ -76,35 +78,14 @@
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
-    NSString *tableName = [[aNotification object] identifier];
-    NSLog(@"table selected!! %@",tableName);
-//    if ([tableName isEqualToString:@"LociTable"]) {
-//        [self clearGenotypesTable];
-        //        self.selectedLocusView = [self findSelectedLocus];
-//        self.selectedLocusView = nil ;
-//        self.selectedPopulation = -1;
-//        [self.populationTableView deselectAll:self];
-        //        [self handleSelectedLocus:self.selectedLocusView];
-//    }
-//    else if ([tableName isEqualToString:@"PopulationsTable"]) {
-//        self.selectedLocusView = [self findSelectedLocus];
-//        self.selectedPopulation = [self findSelectedPopulation];
-        // Update info
-//        [self handleSelectedLocus:self.selectedLocusView];
-//    }
-    
-    
+//    NSString *tableName = [[aNotification object] identifier];
+//    NSLog(@"table selected!! %@",tableName);
+
     self.selectedLocus = [self findSelectedLocus];
     self.selectedPopulation = [self findSelectedPopulation];
-    
-//    NSLog(@"selected Locus: %@",self.selectedLocus);
-//    NSLog(@"selected Population: %@",self.selectedPopulation);
-    
+
     if(self.selectedLocus!=nil && self.selectedPopulation!=nil){
         self.selectedDatums = [self.datumRepository getDatums:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
-
-        NSLog(@"selectedDatums!! %ld",self.selectedDatums.count) ;
-//        self.selectedDatums
     }
     else{
         self.selectedDatums = nil ;
