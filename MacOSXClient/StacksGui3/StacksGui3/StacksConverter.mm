@@ -498,13 +498,10 @@ using std::ofstream;
                     ++row;
                 }
             }
-
-
         }
     }
     gettimeofday(&time2, NULL);
-//    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, stackMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
-
+    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, stackMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
 
 
     // save old
@@ -611,7 +608,7 @@ using std::ofstream;
                 NSString *populationName = [columns objectAtIndex:1]; // initially an integer
                 PopulationMO *newPopulationMO = [populationRepository getPopulation:moc name:populationName];
 
-                if(newPopulationMO!=nil){
+                if (newPopulationMO != nil) {
                     [populations addObject:newPopulationMO];
                 }
             }
