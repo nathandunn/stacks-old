@@ -7,6 +7,13 @@
 //
 
 #import "StacksDocument.h"
+#import "DatumMO.h"
+#import "StackMO.h"
+#import "LocusMO.h"
+#import "PopulationMO.h"
+#import "DatumRepository.h"
+#import "PopulationRepository.h"
+#import "LocusRepository.h"
 
 @interface StacksDocument()
 
@@ -22,10 +29,22 @@
 @synthesize loci;
 @synthesize populations;
 
+// selected stuff
+@synthesize selectedDatums;
+@synthesize selectedStack;
+
+// repository
+@synthesize datumRepository;
+@synthesize locusRepository;
+@synthesize populationRepository;
+
 - (id)init {
     self = [super init];
     if (self) {
         // Add your subclass-specific initialization here.
+        datumRepository = [[DatumRepository alloc] init];
+        locusRepository = [[LocusRepository alloc] init];
+        populationRepository = [[PopulationRepository alloc] init];
     }
     return self;
 }
@@ -54,6 +73,69 @@
 
 + (BOOL)autosavesInPlace {
     return YES;
+}
+
+- (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
+    NSString *tableName = [[aNotification object] identifier];
+    NSLog(@"table selected!! %@",tableName);
+//    if ([tableName isEqualToString:@"LociTable"]) {
+//        [self clearGenotypesTable];
+        //        self.selectedLocusView = [self findSelectedLocus];
+//        self.selectedLocusView = nil ;
+//        self.selectedPopulation = -1;
+//        [self.populationTableView deselectAll:self];
+        //        [self handleSelectedLocus:self.selectedLocusView];
+//    }
+//    else if ([tableName isEqualToString:@"PopulationsTable"]) {
+//        self.selectedLocusView = [self findSelectedLocus];
+//        self.selectedPopulation = [self findSelectedPopulation];
+        // Update info
+//        [self handleSelectedLocus:self.selectedLocusView];
+//    }
+    
+    
+    self.selectedLocus = [self findSelectedLocus];
+    self.selectedPopulation = [self findSelectedPopulation];
+    
+//    NSLog(@"selected Locus: %@",self.selectedLocus);
+//    NSLog(@"selected Population: %@",self.selectedPopulation);
+    
+    if(self.selectedLocus!=nil && self.selectedPopulation!=nil){
+        self.selectedDatums = [self.datumRepository getDatums:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
+
+        NSLog(@"selectedDatums!! %ld",self.selectedDatums.count) ;
+//        self.selectedDatums
+    }
+    else{
+        self.selectedDatums = nil ;
+        self.selectedStack = nil ;
+    }
+    
+}
+
+- (PopulationMO *)findSelectedPopulation {
+    NSInteger selectedRow = [self.populationTableView selectedRow];
+    if(selectedRow>=0){
+//        return [populationRepository getPopulation:self.managedObjectContext name:[NSString stringWithFormat:@"%ld",selectedRow]];
+        return [[populationRepository getAllPopulations:self.managedObjectContext] objectAtIndex:selectedRow];
+//        return (PopulationMO*) [[self.populations allObjects] objectAtIndex:(NSUInteger ) selectedRow];
+    }
+    return nil ;
+}
+
+- (LocusMO *)findSelectedLocus {
+    NSInteger selectedRow = [self.locusTableView selectedRow];
+    if(selectedRow>=0){
+        return [locusRepository getLocus:self.managedObjectContext forId:selectedRow];
+//        return (LocusMO*) [[self.loci allObjects] objectAtIndex: (NSUInteger) selectedRow];
+    }
+    return nil ;
+//    NSArray *sortedKeys = [[self.stacksDocument.locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
+//        return [obj1 integerValue] - [obj2 integerValue];
+//    }];
+//    NSString *key = [sortedKeys objectAtIndexedSubscript:selectedRow];
+//    LocusView *locusView = [self.stacksDocument.locusViews objectForKey:key];
+//    return locusView;
 }
 
 
