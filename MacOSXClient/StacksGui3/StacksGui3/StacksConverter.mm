@@ -291,6 +291,7 @@ using std::ofstream;
 
             LocusMO *locusMO = nil ;
             NSArray *locusArray = [loci allObjects];
+            // TODO: use a lookup here to speed up
             for (LocusMO *aLocus in locusArray) {
                 NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
                 if ([lookupKey isEqualToNumber:aLocus.locusId]) {

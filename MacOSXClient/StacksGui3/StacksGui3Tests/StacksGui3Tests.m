@@ -342,4 +342,64 @@
 //    }
 }
 
+
+- (void)testCreateLargeStore{
+//    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
+    NSString *examplePath = @"/tmp/stacks_alrger/";
+    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSError *fileError;
+    if ([fileManager fileExistsAtPath:filePath]) {
+        [fileManager removeItemAtPath:filePath error:&fileError];
+    }
+    if (fileError) {
+        STFail(@"error deleting file %@", fileError);
+    }
+    STAssertFalse([fileManager fileExistsAtPath:filePath], @"Should be false");
+
+    StacksDocument *stacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
+    NSManagedObjectContext *moc =  stacksDocument.managedObjectContext;
+    stacksDocument = [stacksConverter loadDocument:stacksDocument];
+    if (stacksDocument == nil) {
+        STFail(@"There was an error reading in the stacks Document ");
+    }
+    NSLog(@"loci count %ld", stacksDocument.loci.count);
+    STAssertTrue(stacksDocument.loci.count > 8, @"should be at least 8 loci %ld", stacksDocument.loci.count );
+    NSError *error2;
+    if (![moc save:&error2]) {
+        NSLog(@"Error while saving %@", error2);
+        STFail(@"Failed to save %@", error2);
+    }
+    else {
+        NSLog(@"SUCCESS!!!");
+    }
+
+    NSEntityDescription *stackEntityDescription = [NSEntityDescription entityForName:@"Stack" inManagedObjectContext:moc];
+    NSFetchRequest *stackRequest = [[NSFetchRequest alloc] init];
+    [stackRequest setEntity:stackEntityDescription];
+    NSError *stackFetchError;
+    NSArray *stackArray = [moc executeFetchRequest:stackRequest error:&stackFetchError];
+    NSRange nsRange ;
+    nsRange.length=10 ;
+    nsRange.location=0 ;
+    for (StackMO *stackMO in [stackArray subarrayWithRange:nsRange]) {
+//        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
+        STAssertTrue(stackMO.stackEntries.count>5, @"should have atleast 5 %ld", stackMO.stackEntries.count);
+    }
+
+
+//    NSEntityDescription *entityDescription3 = [NSEntityDescription entityForName:@"Stack" inManagedObjectContext:moc];
+//    NSFetchRequest *request3 = [[NSFetchRequest alloc] init];
+//    [request3 setEntity:entityDescription3];
+//    NSError *error3;
+//    NSArray *stackArray = [moc executeFetchRequest:request3 error:&error3];
+//    for (StackMO *stackMO in stackArray) {
+//        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
+//    }
+
+}
+
+
+
 @end
