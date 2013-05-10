@@ -345,7 +345,7 @@
 
 - (void)testCreateLargeStore{
 //    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
-    NSString *examplePath = @"/tmp/stacks_alrger/";
+    NSString *examplePath = @"/tmp/stacks_larger/";
     NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -400,6 +400,98 @@
 
 }
 
+- (void)testReadLargeDataStore {
+    NSString *examplePath = @"/tmp/stacks_larger/";
+    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    BOOL existsAtPath = [fileManager fileExistsAtPath:filePath];
+    if (!existsAtPath) {
+        NSLog(@"file does NOT exit! %@", filePath);
+    }
+//    StacksDocument *newStacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
+//    StacksDocument *newStacksDocument = [stacksConverter getStacksDocumentForPath:examplePath];
+
+    NSError *stacksDocumentCreateError;
+//    StacksDocument *newStacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+//    NSURL *fileUrl = [NSURL fileURLWithPath:filePath]
+    NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.sqlite"]];
+//    StacksDocument *newStacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
+    StacksDocument *newStacksDocument = [[StacksDocument alloc]
+            initWithContentsOfURL:fileUrl ofType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+    if (stacksDocumentCreateError) {
+        STFail(@"failed to load . . .error %@", stacksDocumentCreateError);
+    }
+
+    NSError *error;
+    NSManagedObjectContext *moc = newStacksDocument.managedObjectContext;
+    NSEntityDescription *entityDescription = [NSEntityDescription
+            entityForName:@"Locus" inManagedObjectContext:moc];
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    [request setEntity:entityDescription];
+
+    NSArray *locusArray = [moc executeFetchRequest:request error:&error];
+    for (NSUInteger i = 0; i < 5; i++) {
+        LocusMO *locusMO = [locusArray objectAtIndex:i];
+        NSLog(@"index %ld locus %@", i, locusMO.locusId);
+        NSLog(@"has datums %ld", locusMO.datums.count);
+    }
+    NSLog(@"number of loci %ld", locusArray.count);
+
+    STAssertTrue(locusArray.count == 462 || locusArray.count==11, @"should be either 11 or 462 loci %ld", locusArray.count );
+
+
+    NSEntityDescription *entityDescription2 = [NSEntityDescription
+            entityForName:@"Population" inManagedObjectContext:moc];
+    NSFetchRequest *request2 = [[NSFetchRequest alloc] init];
+    [request2 setEntity:entityDescription2];
+
+    NSArray *populationArray = [moc executeFetchRequest:request2 error:&error];
+    NSLog(@"!!!population size %ld", populationArray.count);
+
+    STAssertTrue(populationArray.count == 3, @"should be a population of 3: %ld", populationArray.count );
+
+    PopulationMO *populationMO = [populationArray objectAtIndex:0];
+    NSLog(@"index population %@", populationMO.name);
+    NSLog(@"has samples %ld", populationMO.samples.count);
+
+
+    NSEntityDescription *stackEntityDescription = [NSEntityDescription entityForName:@"Stack" inManagedObjectContext:moc];
+    NSFetchRequest *stackRequest = [[NSFetchRequest alloc] init];
+    [stackRequest setEntity:stackEntityDescription];
+    NSError *stackFetchError;
+    NSArray *stackArray = [moc executeFetchRequest:stackRequest error:&stackFetchError];
+    NSRange nsRange ;
+    nsRange.length=10 ;
+    nsRange.location=0 ;
+    for (StackMO *stackMO in [stackArray subarrayWithRange:nsRange]) {
+        STAssertTrue(stackMO.stackEntries.count>5, @"should have atleast 5 %ld", stackMO.stackEntries.count);
+    }
+
+
+    NSEntityDescription *datumEntityDescription = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:moc];
+    NSFetchRequest *datumRequest = [[NSFetchRequest alloc] init];
+    [datumRequest setEntity:datumEntityDescription];
+    NSError *datumFetchError;
+    NSArray *datumArray = [moc executeFetchRequest:datumRequest error:&datumFetchError];
+
+    NSLog(@"num datum: %ld",datumArray.count);
+    DatumMO* datumMO = [datumArray objectAtIndex:0];
+    STAssertNotNil(datumMO.locus, @"should have a valid locus ");
+    STAssertNotNil(datumMO.sample, @"should have a valid sample");
+    STAssertNotNil(datumMO.name, @"should have a valid name ? ");
+    STAssertNotNil(datumMO.stack, @"should have a valid stack ? ");
+    StackMO* stackMO = datumMO.stack ;
+    NSSet* stackEntries = stackMO.stackEntries ;
+    STAssertTrue(stackEntries.count>5, @"should have at least 5 entries %ld",stackEntries.count);
+    STAssertTrue(stackEntries.count<100, @"but less than 100 entries %ld",stackEntries.count);
+
+
+    STAssertTrue(datumMO.depths.count>0, @"should have at least one depth");
+
+
+
+}
 
 
 @end

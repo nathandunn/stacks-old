@@ -44,6 +44,15 @@
                <Test
                   Identifier = "StacksGui3Tests/testReadRawStacks">
                </Test>
+               <Test
+                  Identifier = "StacksGui3Tests/testCreatePopulatedStoreToPathAndContext">
+               </Test>
+               <Test
+                  Identifier = "StacksGui3Tests/testReadPopulatedDataStore">
+               </Test>
+               <Test
+                  Identifier = "StacksGui3Tests/testReadWithRepositoryMethods">
+               </Test>
             </SkippedTests>
          </TestableReference>
       </Testables>
