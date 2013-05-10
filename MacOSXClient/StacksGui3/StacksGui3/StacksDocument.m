@@ -24,6 +24,8 @@
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet NSArrayController *datumController ;
 
+//@property(weak) IBOutlet NSArrayController *stacksController ;
+
 @end
 
 @implementation StacksDocument
@@ -225,7 +227,6 @@
                       ofObject:(id)object
                         change:(NSDictionary *)change
                        context:(void *)context {
-    NSLog(@"observing value %@ count %ld",keyPath ,datumController.selectedObjects.count);
     if ([keyPath isEqualTo:@"selectionIndexes"]) {
         if ([[datumController selectedObjects] count] > 0) {
             if ([[datumController selectedObjects] count] == 1) {
@@ -233,13 +234,8 @@
                 if ([datumMO.name isEqualToString:self.previousStacksName]) {
                     return;
                 }
-
                 self.selectedStack = [stackRepository getStack:self.managedObjectContext forDatum:datumMO];
-                NSLog(@"selected stack: %@",self.selectedStack) ;
-//                self.selectedStack = datumMO.stack ;
-
                 self.previousStacksName = datumMO.name ;
-
             }
 
         }
