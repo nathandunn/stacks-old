@@ -14,11 +14,13 @@
 #import "DatumRepository.h"
 #import "PopulationRepository.h"
 #import "LocusRepository.h"
+#import "StackRepository.h"
 
 @interface StacksDocument()
 
 @property(weak) IBOutlet NSTableView *locusTableView;
 @property(weak) IBOutlet NSTableView *populationTableView;
+@property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet NSArrayController *datumController ;
 
@@ -39,6 +41,10 @@
 @synthesize datumRepository;
 @synthesize locusRepository;
 @synthesize populationRepository;
+@synthesize stackRepository;
+
+// array controller
+@synthesize datumController ;
 
 - (id)init {
     self = [super init];
@@ -47,6 +53,9 @@
         datumRepository = [[DatumRepository alloc] init];
         locusRepository = [[LocusRepository alloc] init];
         populationRepository = [[PopulationRepository alloc] init];
+        stackRepository = [[StackRepository alloc] init];
+        
+//        [datumController addObserver:self forKeyPath:@"selectionIndexes" options:NSKeyValueObservingOptionInitial context:nil];
     }
     return self;
 }
@@ -67,10 +76,11 @@
 //    NSString *aNibName = [anIdentifier stringByAppendingString: @"View"];
 //    Class aControllerClass = NSClassFromString(aControllerName);
 //    [self setCurrentController: [[aControllerClass alloc] initWithNibName: aNibName bundle: [NSBundle mainBundle]]];
-
+    [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionInitial) context:nil];
+    
     [super windowControllerDidLoadNib:aController];
     // Add any code here that needs to be executed once the windowController has loaded the document's window.
-
+//    [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld) context:nil];
 }
 
 + (BOOL)autosavesInPlace {
@@ -210,5 +220,63 @@
     return returnType;
 }
 
+- (void)observeValueForKeyPath:(NSString *)keyPath
+                      ofObject:(id)object
+                        change:(NSDictionary *)change
+                       context:(void *)context {
+    NSLog(@"observing value %@ count %ld",keyPath ,datumController.selectedObjects.count);
+    if ([keyPath isEqualTo:@"selectionIndexes"]) {
+        if ([[datumController selectedObjects] count] > 0) {
+            if ([[datumController selectedObjects] count] == 1) {
+                DatumMO *datumMO = (DatumMO *) [[datumController selectedObjects] objectAtIndex:0];
+                if ([datumMO.name isEqualToString:self.previousStacksName]) {
+                    return;
+                }
+
+                self.selectedStack = [stackRepository getStack:self.managedObjectContext forDatum:datumMO];
+                NSLog(@"selected stack: %@",self.selectedStack) ;
+//                self.selectedStack = datumMO.stack ;
+
+                self.previousStacksName = datumMO.name ;
+
+            }
+
+        }
+
+    }
+//        if ([[genotypesController selectedObjects] count] > 0) {
+//            if ([[genotypesController selectedObjects] count] == 1) {
+//                GenotypeEntry *genotypeEntry = (GenotypeEntry *) [[genotypesController selectedObjects] objectAtIndex:0];
+//
+//                if ([genotypeEntry.name isEqualToString:self.previousStacksName]) {
+//                    return;
+//                }
+//
+//                NSLog(@"object %@",object);
+//                NSLog(@"object %@",object);
+//                NSLog(@"selected %ld ",[genotypesController selectionIndex]);
+//                for(NSString *key in change){
+//                    NSLog(@"key %@ - value %@",key,[change objectForKey:key]);
+//                }
+//
+//                self.previousStacksName = genotypeEntry.name;
+//
+////                NSLog(@"selected genotype %@ and tagID %ld", genotypeEntry.name,genotypeEntry.tagId);
+////                LocusView *locusView = self.selectedLocusView;
+//
+////                StacksView *stacksView = [self.stacksLoader
+////                        loadStacksView:genotypeEntry.name
+////                                atPath:stacksDocument.path
+////                                forTag:genotypeEntry.tagId
+////                                 locus:locusView];
+////                self.selectedStacks = stacksView;
+//            }
+//        }
+//        else {
+//            self.selectedStacks = nil ;
+//        }
+//        [self showTagsTable:self.selectedStacks];
+//        [self.stacksTableView reloadData];
+}
 
 @end

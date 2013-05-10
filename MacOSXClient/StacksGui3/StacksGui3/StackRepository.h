@@ -13,4 +13,6 @@
 
 @interface StackRepository : NSObject
 - (StackMO *)insertStack:(NSManagedObjectContext *)context datum:(DatumMO *)datum;
+
+- (StackMO *)getStack:(NSManagedObjectContext *)context forDatum:(DatumMO *)datum;
 @end
