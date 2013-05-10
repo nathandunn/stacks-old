@@ -15,6 +15,7 @@
 @class DatumRepository;
 @class PopulationRepository;
 @class LocusRepository;
+@class StackRepository;
 
 @interface StacksDocument : NSPersistentDocument
 
@@ -35,9 +36,11 @@
 @property(nonatomic, strong) DatumRepository *datumRepository ;
 @property(nonatomic, strong) LocusRepository *locusRepository ;
 @property(nonatomic, strong) PopulationRepository *populationRepository ;
+@property(nonatomic, strong) StackRepository *stackRepository;
 
 
 
+@property(nonatomic, copy) NSString *previousStacksName;
 
 //- (NSMutableArray *)findPopulations;
 
