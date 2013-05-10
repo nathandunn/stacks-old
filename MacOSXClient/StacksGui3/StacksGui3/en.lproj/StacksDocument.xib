@@ -351,6 +351,7 @@
 											<array key="NSBackgroundColors">
 												<reference ref="190012126"/>
 											</array>
+											<bool key="NSSelectable">YES</bool>
 											<int key="NSDraggingSourceMaskForLocal">-1</int>
 											<int key="NSDraggingSourceMaskForNonLocal">0</int>
 										</object>
@@ -361,7 +362,7 @@
 									<reference key="NSNextKeyView" ref="826674678"/>
 									<string key="NSReuseIdentifierKey">_NS:78</string>
 									<reference key="NSDocView" ref="826674678"/>
-									<object class="NSColor" key="NSBGColor" id="947014046">
+									<object class="NSColor" key="NSBGColor" id="1031097403">
 										<int key="NSColorSpace">6</int>
 										<string key="NSCatalogName">System</string>
 										<string key="NSColorName">controlColor</string>
@@ -656,7 +657,7 @@
 				<reference key="NSNextResponder"/>
 				<int key="NSvFlags">256</int>
 				<array class="NSMutableArray" key="NSSubviews">
-					<object class="NSTextField" id="443682603">
+					<object class="NSTextField" id="760110724">
 						<reference key="NSNextResponder" ref="767095797"/>
 						<int key="NSvFlags">268</int>
 						<string key="NSFrame">{{4, 7}, {92, 17}}</string>
@@ -665,14 +666,14 @@
 						<reference key="NSNextKeyView"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
-						<object class="NSTextFieldCell" key="NSCell" id="264719266">
+						<object class="NSTextFieldCell" key="NSCell" id="751665373">
 							<int key="NSCellFlags">68157504</int>
 							<int key="NSCellFlags2">272630784</int>
 							<string key="NSContents">Name</string>
 							<reference key="NSSupport" ref="216874794"/>
 							<string key="NSCellIdentifier">_NS:1535</string>
-							<reference key="NSControlView" ref="443682603"/>
-							<reference key="NSBackgroundColor" ref="947014046"/>
+							<reference key="NSControlView" ref="760110724"/>
+							<reference key="NSBackgroundColor" ref="1031097403"/>
 							<reference key="NSTextColor" ref="638047246"/>
 						</object>
 					</object>
@@ -680,7 +681,7 @@
 				<string key="NSFrameSize">{100, 30}</string>
 				<reference key="NSSuperview"/>
 				<reference key="NSWindow"/>
-				<reference key="NSNextKeyView" ref="443682603"/>
+				<reference key="NSNextKeyView" ref="760110724"/>
 			</object>
 			<object class="NSArrayController" id="508374123">
 				<bool key="NSAutomaticallyPreparesContent">YES</bool>
@@ -814,11 +815,15 @@
 							<string key="NSLabel">selectionIndexes: selectionIndexes</string>
 							<string key="NSBinding">selectionIndexes</string>
 							<string key="NSKeyPath">selectionIndexes</string>
+							<object class="NSDictionary" key="NSOptions">
+								<string key="NS.key.0">NSRaisesForNotApplicableKeys</string>
+								<boolean value="NO" key="NS.object.0"/>
+							</object>
 							<reference key="NSPreviousConnector" ref="340408317"/>
 							<int key="NSNibBindingConnectorVersion">2</int>
 						</object>
 					</object>
-					<int key="connectionID">100228</int>
+					<int key="connectionID">100246</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBOutletConnection" key="connection">
@@ -943,18 +948,22 @@
 							<string key="NSLabel">contentArray: selectedDatums</string>
 							<string key="NSBinding">contentArray</string>
 							<string key="NSKeyPath">selectedDatums</string>
+							<object class="NSDictionary" key="NSOptions">
+								<string key="NS.key.0">NSConditionallySetsEditable</string>
+								<boolean value="NO" key="NS.object.0"/>
+							</object>
 							<int key="NSNibBindingConnectorVersion">2</int>
 						</object>
 					</object>
-					<int key="connectionID">100236</int>
+					<int key="connectionID">100245</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">value: representedObject.name</string>
-						<reference key="source" ref="443682603"/>
+						<reference key="source" ref="760110724"/>
 						<reference key="destination" ref="599496054"/>
 						<object class="NSNibBindingConnector" key="connector">
-							<reference key="NSSource" ref="443682603"/>
+							<reference key="NSSource" ref="760110724"/>
 							<reference key="NSDestination" ref="599496054"/>
 							<string key="NSLabel">value: representedObject.name</string>
 							<string key="NSBinding">value</string>
@@ -1000,8 +1009,8 @@
 						<array class="NSMutableArray" key="children">
 							<reference ref="300643506"/>
 							<reference ref="776896794"/>
-							<reference ref="132586649"/>
 							<reference ref="59706283"/>
+							<reference ref="132586649"/>
 						</array>
 						<reference key="parent" ref="275939982"/>
 					</object>
@@ -1132,7 +1141,7 @@
 						<int key="objectID">100140</int>
 						<reference key="object" ref="767095797"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="443682603"/>
+							<reference ref="760110724"/>
 						</array>
 						<reference key="parent" ref="0"/>
 					</object>
@@ -1245,16 +1254,16 @@
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100238</int>
-						<reference key="object" ref="443682603"/>
+						<reference key="object" ref="760110724"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="264719266"/>
+							<reference ref="751665373"/>
 						</array>
 						<reference key="parent" ref="767095797"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100239</int>
-						<reference key="object" ref="264719266"/>
-						<reference key="parent" ref="443682603"/>
+						<reference key="object" ref="751665373"/>
+						<reference key="parent" ref="760110724"/>
 					</object>
 				</array>
 			</object>
@@ -1307,7 +1316,7 @@
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">100244</int>
+			<int key="maxID">100246</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">
