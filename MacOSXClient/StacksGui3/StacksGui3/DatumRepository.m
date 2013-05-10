@@ -9,6 +9,8 @@
 #import "DatumRepository.h"
 #import "DatumMO.h"
 #import "SampleMO.h"
+#import "LocusMO.h"
+#import "PopulationMO.h"
 
 
 @implementation DatumRepository {
@@ -27,9 +29,10 @@
 - (DatumMO *)getDatum:(NSManagedObjectContext *)moc locusId:(NSInteger)locusId andSampleName:(NSString *)sampleName {
     NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:moc];
     NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+    [request1 setEntity:entityDescription1];
+
     NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus.locusId == %ld and sample.name == %@ ", locusId, sampleName];
     [request1 setPredicate:predicate1];
-    [request1 setEntity:entityDescription1];
     NSError *error1;
     NSArray *datumArray = [moc executeFetchRequest:request1 error:&error1];
     if(datumArray!=nil && datumArray.count==1){
@@ -38,5 +41,18 @@
     else{
         return nil ;
     }
+}
+
+- (NSArray *)getDatums:(NSManagedObjectContext *)context locus:(LocusMO *)locus andPopulation:(PopulationMO *)population {
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:context];
+    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus == %@ and sample.population == %@ ", locus, population];
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus.locusId == %@ ", [NSNumber numberWithInt:12]];
+    NSLog(@"locusID: %@",locus);
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus == %@ ", locus];
+    [request1 setPredicate:predicate1];
+    [request1 setEntity:entityDescription1];
+    NSError *error1;
+    return [context executeFetchRequest:request1 error:&error1];
 }
 @end

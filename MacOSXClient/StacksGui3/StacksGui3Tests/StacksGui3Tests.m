@@ -14,6 +14,9 @@
 #import "DatumMO.h"
 #import "StackMO.h"
 #import "SampleMO.h"
+#import "DatumRepository.h"
+#import "LocusRepository.h"
+#import "PopulationRepository.h"
 
 @implementation StacksGui3Tests {
 //    stacksConverter;
@@ -263,7 +266,6 @@
 
     STAssertTrue(populationArray.count == 3, @"should be a population of 3: %ld", populationArray.count );
 
-//    for(NSUInteger  i = 0 ; i < 5 ; i++){
     PopulationMO *populationMO = [populationArray objectAtIndex:0];
     NSLog(@"index population %@", populationMO.name);
     NSLog(@"has samples %ld", populationMO.samples.count);
@@ -278,7 +280,6 @@
     nsRange.length=10 ;
     nsRange.location=0 ;
     for (StackMO *stackMO in [stackArray subarrayWithRange:nsRange]) {
-//        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
         STAssertTrue(stackMO.stackEntries.count>5, @"should have atleast 5 %ld", stackMO.stackEntries.count);
     }
 
@@ -301,9 +302,44 @@
     STAssertTrue(stackEntries.count<100, @"but less than 100 entries %ld",stackEntries.count);
 
     
-//    STAssertTrue(datumMO.snps.count>0, @"should have at least one snp ");
-//    STAssertTrue(datumMO.alleles.count>0, @"should have at least one allele");
     STAssertTrue(datumMO.depths.count>0, @"should have at least one depth");
+
+
+
+}
+
+- (void)testReadWithRepositoryMethods {
+    NSString *examplePath = @"/tmp/stacks_tut/";
+    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    BOOL existsAtPath = [fileManager fileExistsAtPath:filePath];
+    if (!existsAtPath) {
+        NSLog(@"file does NOT exit! %@", filePath);
+    }
+
+    NSError *stacksDocumentCreateError;
+    NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.sqlite"]];
+    StacksDocument *newStacksDocument = [[StacksDocument alloc] initWithContentsOfURL:fileUrl ofType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+    if (stacksDocumentCreateError) {
+        STFail(@"failed to load . . .error %@", stacksDocumentCreateError);
+    }
+
+    NSManagedObjectContext *managedObjectContext = newStacksDocument.managedObjectContext ;
+
+    DatumRepository *datumRepository = [[DatumRepository alloc]init];
+    LocusRepository *locusRepository = [[LocusRepository alloc]init];
+    PopulationRepository *populationRepository = [[PopulationRepository alloc]init];
+
+    LocusMO *locusMO = [[locusRepository getAllLoci:managedObjectContext] objectAtIndex:0];
+    PopulationMO* populationMO = [[populationRepository getAllPopulations:managedObjectContext] objectAtIndex:0];
+
+    NSArray *datums = [datumRepository getDatums:managedObjectContext locus:locusMO andPopulation:populationMO];
+    NSLog(@"datums found %ld",datums.count) ;
+//    for(int i = 0 ; i < 5 ; i++){
+//        DatumMO *datumMO = [datums objectAtIndex:i] ;
+//        NSLog(@"datum: %@", datumMO.sample);
+//    }
 }
 
 @end

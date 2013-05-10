@@ -12,4 +12,8 @@
 
 @interface LocusRepository : NSObject
 - (LocusMO *)insertNewLocus:(NSManagedObjectContext *)model withId:(NSNumber *)id andConsensus:(NSString *)consensus andMarker:(NSString *)markers;
+
+- (NSArray *)getAllLoci:(NSManagedObjectContext *)context;
+
+- (LocusMO *)getLocus:(NSManagedObjectContext *)context forId:(NSInteger)id;
 @end

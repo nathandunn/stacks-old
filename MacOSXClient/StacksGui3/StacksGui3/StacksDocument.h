@@ -8,16 +8,39 @@
 
 #import <Cocoa/Cocoa.h>
 
+@class DatumMO;
+@class StackMO;
+@class LocusMO;
+@class PopulationMO;
+@class DatumRepository;
+@class PopulationRepository;
+@class LocusRepository;
+
 @interface StacksDocument : NSPersistentDocument
 
-//@property (strong) NSMutableDictionary *locusViews;
 @property(strong) NSString *path;
 @property(atomic, retain) NSMutableDictionary *populationLookup;
-//@property(atomic, retain) NSArray *orderedLocus;
+
 @property(nonatomic, strong) NSSet *loci;
 @property(nonatomic, strong) NSSet *populations;
 
-- (NSMutableArray *)findPopulations;
+
+// handle selections
+@property(nonatomic, strong) LocusMO *selectedLocus;
+@property(nonatomic, strong) PopulationMO *selectedPopulation;
+@property(nonatomic, strong) NSArray *selectedDatums;
+@property(nonatomic, strong) StackMO *selectedStack;
+
+// repositories
+@property(nonatomic, strong) DatumRepository *datumRepository ;
+@property(nonatomic, strong) LocusRepository *locusRepository ;
+@property(nonatomic, strong) PopulationRepository *populationRepository ;
+
+
+
+
+//- (NSMutableArray *)findPopulations;
+
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path;
 - (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name;

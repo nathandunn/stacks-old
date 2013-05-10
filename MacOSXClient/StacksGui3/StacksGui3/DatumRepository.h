@@ -10,9 +10,13 @@
 
 @class DatumMO;
 @class SampleMO ;
+@class LocusMO;
+@class PopulationMO;
 
 @interface DatumRepository : NSObject
 - (DatumMO *)insertDatum:(NSManagedObjectContext *)context name:(NSString *)name sampleId:(NSNumber *)id sample:(SampleMO *)sample;
 
 - (DatumMO *)getDatum:(NSManagedObjectContext *)context locusId:(NSInteger)locusId andSampleName:(NSString *)sampleName;
+
+- (NSArray *)getDatums:(NSManagedObjectContext *)context locus:(LocusMO *)locus andPopulation:(PopulationMO *)population;
 @end

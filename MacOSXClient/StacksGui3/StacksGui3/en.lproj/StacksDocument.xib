@@ -640,7 +640,7 @@
 					<reference key="NSWindow"/>
 					<reference key="NSNextKeyView" ref="776896794"/>
 				</object>
-				<string key="NSScreenRect">{{0, 0}, {1440, 878}}</string>
+				<string key="NSScreenRect">{{0, 0}, {2560, 1418}}</string>
 				<string key="NSMinSize">{94, 108}</string>
 				<string key="NSMaxSize">{10000000000000, 10000000000000}</string>
 				<bool key="NSWindowIsRestorable">YES</bool>
@@ -712,7 +712,7 @@
 						<reference key="source" ref="512844837"/>
 						<reference key="destination" ref="637643938"/>
 					</object>
-					<int key="connectionID">100183</int>
+					<int key="connectionID">100231</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBOutletConnection" key="connection">
@@ -720,7 +720,7 @@
 						<reference key="source" ref="512844837"/>
 						<reference key="destination" ref="1026559097"/>
 					</object>
-					<int key="connectionID">100218</int>
+					<int key="connectionID">100232</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBOutletConnection" key="connection">
@@ -780,6 +780,14 @@
 					<int key="connectionID">100142</int>
 				</object>
 				<object class="IBConnectionRecord">
+					<object class="IBOutletConnection" key="connection">
+						<string key="label">delegate</string>
+						<reference key="source" ref="637643938"/>
+						<reference key="destination" ref="512844837"/>
+					</object>
+					<int key="connectionID">100229</int>
+				</object>
+				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">value: arrangedObjects.locusId</string>
 						<reference key="source" ref="88205911"/>
@@ -798,6 +806,14 @@
 						</object>
 					</object>
 					<int key="connectionID">100204</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBOutletConnection" key="connection">
+						<string key="label">delegate</string>
+						<reference key="source" ref="1026559097"/>
+						<reference key="destination" ref="512844837"/>
+					</object>
+					<int key="connectionID">100230</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
@@ -1200,7 +1216,7 @@
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">100228</int>
+			<int key="maxID">100232</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">
