@@ -11,6 +11,7 @@
 @interface StacksDocument()
 
 @property(weak) IBOutlet NSTableView *locusTableView;
+@property(weak) IBOutlet NSTableView *populationTableView;
 
 @end
 
@@ -48,7 +49,6 @@
 
     [super windowControllerDidLoadNib:aController];
     // Add any code here that needs to be executed once the windowController has loaded the document's window.
-
 
 }
 

@@ -259,7 +259,7 @@
     [request2 setEntity:entityDescription2];
 
     NSArray *populationArray = [moc executeFetchRequest:request2 error:&error];
-    NSLog(@"population size %ld", populationArray.count);
+    NSLog(@"!!!population size %ld", populationArray.count);
 
     STAssertTrue(populationArray.count == 3, @"should be a population of 3: %ld", populationArray.count );
 
