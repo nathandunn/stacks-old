@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1429B9F417442D0300CAC7F2 /* ConsensusStackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1429B9F317442D0300CAC7F2 /* ConsensusStackEntryMO.m */; };
 		1431B43417440CF7006FD2BC /* LocusMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B43317440CF7006FD2BC /* LocusMO.m */; };
 		1431B43717440CF7006FD2BC /* DatumSnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B43617440CF7006FD2BC /* DatumSnpMO.m */; };
 		1431B43A17440CF7006FD2BC /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B43917440CF7006FD2BC /* AlleleMO.m */; };
@@ -16,7 +17,6 @@
 		1431B44617440CF8006FD2BC /* StackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B44517440CF8006FD2BC /* StackEntryMO.m */; };
 		1431B44917440CF8006FD2BC /* HaplotypeMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B44817440CF8006FD2BC /* HaplotypeMO.m */; };
 		1431B44C17440CF8006FD2BC /* PopulationMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B44B17440CF8006FD2BC /* PopulationMO.m */; };
-		1431B44F17440CF8006FD2BC /* ConsensusStackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B44E17440CF8006FD2BC /* ConsensusStackEntryMO.m */; };
 		1431B45217440CF8006FD2BC /* LocusAlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B45117440CF8006FD2BC /* LocusAlleleMO.m */; };
 		1431B45517440CF8006FD2BC /* SnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B45417440CF8006FD2BC /* SnpMO.m */; };
 		1431B45817440CF8006FD2BC /* DepthMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B45717440CF8006FD2BC /* DepthMO.m */; };
@@ -71,6 +71,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1429B9F217442D0300CAC7F2 /* ConsensusStackEntryMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConsensusStackEntryMO.h; sourceTree = "<group>"; };
+		1429B9F317442D0300CAC7F2 /* ConsensusStackEntryMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ConsensusStackEntryMO.m; sourceTree = "<group>"; };
 		1431B43217440CF7006FD2BC /* LocusMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusMO.h; sourceTree = "<group>"; };
 		1431B43317440CF7006FD2BC /* LocusMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusMO.m; sourceTree = "<group>"; };
 		1431B43517440CF7006FD2BC /* DatumSnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumSnpMO.h; sourceTree = "<group>"; };
@@ -89,8 +91,6 @@
 		1431B44817440CF8006FD2BC /* HaplotypeMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HaplotypeMO.m; sourceTree = "<group>"; };
 		1431B44A17440CF8006FD2BC /* PopulationMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationMO.h; sourceTree = "<group>"; };
 		1431B44B17440CF8006FD2BC /* PopulationMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationMO.m; sourceTree = "<group>"; };
-		1431B44D17440CF8006FD2BC /* ConsensusStackEntryMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConsensusStackEntryMO.h; sourceTree = "<group>"; };
-		1431B44E17440CF8006FD2BC /* ConsensusStackEntryMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ConsensusStackEntryMO.m; sourceTree = "<group>"; };
 		1431B45017440CF8006FD2BC /* LocusAlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusAlleleMO.h; sourceTree = "<group>"; };
 		1431B45117440CF8006FD2BC /* LocusAlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusAlleleMO.m; sourceTree = "<group>"; };
 		1431B45317440CF8006FD2BC /* SnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpMO.h; sourceTree = "<group>"; };
@@ -353,6 +353,8 @@
 				1442E1AA17206DBB004B6361 /* StacksDocument.h */,
 				1442E1AB17206DBB004B6361 /* StacksDocument.m */,
 				1442E1B317206DBB004B6361 /* StacksDocument.xcdatamodeld */,
+				1429B9F217442D0300CAC7F2 /* ConsensusStackEntryMO.h */,
+				1429B9F317442D0300CAC7F2 /* ConsensusStackEntryMO.m */,
 				1431B45F17440CF8006FD2BC /* DatumAlleleMO.h */,
 				1431B46017440CF8006FD2BC /* DatumAlleleMO.m */,
 				1431B45C17440CF8006FD2BC /* SampleMO.h */,
@@ -365,8 +367,6 @@
 				1431B45417440CF8006FD2BC /* SnpMO.m */,
 				1431B45017440CF8006FD2BC /* LocusAlleleMO.h */,
 				1431B45117440CF8006FD2BC /* LocusAlleleMO.m */,
-				1431B44D17440CF8006FD2BC /* ConsensusStackEntryMO.h */,
-				1431B44E17440CF8006FD2BC /* ConsensusStackEntryMO.m */,
 				1431B44A17440CF8006FD2BC /* PopulationMO.h */,
 				1431B44B17440CF8006FD2BC /* PopulationMO.m */,
 				1431B44717440CF8006FD2BC /* HaplotypeMO.h */,
@@ -559,13 +559,13 @@
 				1431B44617440CF8006FD2BC /* StackEntryMO.m in Sources */,
 				1431B44917440CF8006FD2BC /* HaplotypeMO.m in Sources */,
 				1431B44C17440CF8006FD2BC /* PopulationMO.m in Sources */,
-				1431B44F17440CF8006FD2BC /* ConsensusStackEntryMO.m in Sources */,
 				1431B45217440CF8006FD2BC /* LocusAlleleMO.m in Sources */,
 				1431B45517440CF8006FD2BC /* SnpMO.m in Sources */,
 				1431B45817440CF8006FD2BC /* DepthMO.m in Sources */,
 				1431B45B17440CF8006FD2BC /* ModelStackEntryMO.m in Sources */,
 				1431B45E17440CF8006FD2BC /* SampleMO.m in Sources */,
 				1431B46117440CF8006FD2BC /* DatumAlleleMO.m in Sources */,
+				1429B9F417442D0300CAC7F2 /* ConsensusStackEntryMO.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
