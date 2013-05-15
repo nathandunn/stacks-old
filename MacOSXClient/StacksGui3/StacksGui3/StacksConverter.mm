@@ -20,23 +20,12 @@ using std::ofstream;
 
 #import "StackEntryMO.h"
 #import "SampleRepository.h"
-// #import "GenotypeView.h"
-//#import "LocusView.h"
-#import "StacksDocument.h"
 #import "StacksConverter.h"
 #import "PopulationRepository.h"
 #import "DepthRepository.h"
 #import "DatumRepository.h"
 #import "HaplotypeRepository.h"
 #import "LocusRepository.h"
-//#import "StacksView.h"
-// #import "DataStubber.h"
-
-
-// #include "LociLoader.hpp"
-//#import "GenotypeEntry.h"
-//#import "SnpView.h"
-#import "SnpMO.h"
 #import "DatumMO.h"
 #import "HaplotypeMO.h"
 #import "DepthMO.h"
@@ -44,7 +33,6 @@ using std::ofstream;
 #import "SampleMO.h"
 #import "SnpRepository.h"
 #import "StackEntryRepository.h"
-//#import "StackEntry.h"
 
 
 #include <sys/time.h>
@@ -71,6 +59,7 @@ using std::ofstream;
 @synthesize sampleRepository;
 @synthesize snpRepository;
 @synthesize stackEntryRepository;
+@synthesize lociDictionary;
 
 
 - (id)init {
@@ -85,6 +74,9 @@ using std::ofstream;
         sampleRepository = [[SampleRepository alloc] init];
         snpRepository = [[SnpRepository alloc] init];
         stackEntryRepository = [[StackEntryRepository alloc] init];
+
+
+        lociDictionary = [[NSMutableDictionary alloc] init];
     }
     return self;
 }
@@ -259,18 +251,19 @@ using std::ofstream;
             SNP *snp = (*snpsIterator);
 
             LocusSnpMO *snpMO = [snpRepository insertLocusSnp:moc
-                                                  column:[NSNumber numberWithInt:snp->col]
-                                                  lratio:[NSNumber numberWithFloat:snp->lratio]
-                                                   rank1:[NSNumber numberWithInt:snp->rank_1]
-                                                   rank2:[NSNumber numberWithInt:snp->rank_2]
-                                                   rank3:[NSNumber numberWithInt:snp->rank_3]
-                                                   rank4:[NSNumber numberWithInt:snp->rank_4]
-                                                        locus: locusMO
+                                                       column:[NSNumber numberWithInt:snp->col]
+                                                       lratio:[NSNumber numberWithFloat:snp->lratio]
+                                                        rank1:[NSNumber numberWithInt:snp->rank_1]
+                                                        rank2:[NSNumber numberWithInt:snp->rank_2]
+                                                        rank3:[NSNumber numberWithInt:snp->rank_3]
+                                                        rank4:[NSNumber numberWithInt:snp->rank_4]
+                                                        locus:locusMO
             ];
             [locusMO addSnpsObject:snpMO];
         }
 
         [loci addObject:locusMO];
+        [lociDictionary setObject:locusMO forKey:locusMO.locusId];
         ++catalogIterator;
     }
     gettimeofday(&time2, NULL);
@@ -335,21 +328,6 @@ using std::ofstream;
                 else {
                     NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
                 }
-
-//                vector<SNP *> snps = datum->snps;
-//                vector<SNP *>::iterator snpsIterator = snps.begin();
-//
-//                if (snps.size() > 0) {
-//                    NSLog(@"has snps %ld", snps.size());
-//                }
-//
-//                // TODO: this is not handled here . . . will be using StackEntrySnp, anyway .  . . or DatumSnp . .
-//                for (; snpsIterator != snps.end(); ++snpsIterator) {
-//                    SNP *snp = (*snpsIterator);
-//                    LocusSnpMO *snpMO = [snpRepository insertLocusSnp:moc column:[NSNumber numberWithInt:snp->col] lratio:[NSNumber numberWithFloat:snp->lratio] rank1:[NSNumber numberWithChar:snp->rank_1] rank2:[NSNumber numberWithChar:snp->rank_2] rank3:[NSNumber numberWithChar:snp->rank_3] rank4:[NSNumber numberWithChar:snp->rank_4] locus:nil ];
-//
-//                    [newDatumMO addSnpsObject:snpMO];
-//                }
             }
         }
         gettimeofday(&time2, NULL);
@@ -360,11 +338,11 @@ using std::ofstream;
     }
 
     NSError *innerError = nil ;
-    stacksDocument.loci = loci ;
+    stacksDocument.loci = loci;
     [stacksDocument.managedObjectContext save:&innerError];
-    if(innerError!=nil){
-        NSLog(@"error doing inner save: ",innerError);
-        return nil ;
+    if (innerError != nil) {
+        NSLog(@"error doing inner save: ", innerError);
+        return nil;
     }
 
     NSLog(@"total time %ld", totalCatalogTime);
@@ -396,11 +374,130 @@ using std::ofstream;
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading stacks entries time %ld", time2.tv_sec - time1.tv_sec);
 
+    NSLog(@"loading snps onto datums");
+    gettimeofday(&time1, NULL);
+    [self loadSnpsOntoDatum:stacksDocument];
+    gettimeofday(&time2, NULL);
+    NSLog(@"finished loading snps onto datum time %ld", time2.tv_sec - time1.tv_sec);
+
+
     NSError *error;
     BOOL success = [stacksDocument.managedObjectContext save:&error];
     NSLog(@"saved %d", success);
 
     return stacksDocument;
+}
+
+- (void)loadSnpsOntoDatum:(StacksDocument *)document {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString *path = document.path;
+
+    // 1- get all files i the directory named *.tag.tsv"
+    NSError *error;
+    NSArray *files = [fileManager contentsOfDirectoryAtPath:path error:&error];
+    NSLog(@"# of files for directory %ld", files.count);
+
+    // 2 - for each file, read the .tags file
+    for (NSString *filePath in files) {
+        if ([filePath hasSuffix:@".snps.tsv"] && ![filePath hasPrefix:@"batch"]) {
+            [self loadSnpFileForDatum:document fromFile:filePath];
+        }
+        else {
+            NSLog(@"not loading tag file %@", filePath);
+        }
+    }
+}
+
+- (void)loadSnpFileForDatum:(StacksDocument *)document fromFile:(NSString *)snpFileName {
+    NSLog(@"Loading tag file %@", snpFileName);
+
+    NSUInteger fileNameLength = snpFileName.length;
+    NSString *sampleName = [snpFileName substringToIndex:fileNameLength - 9];
+    NSLog(@"sampleName %@", sampleName);
+    // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
+
+    NSManagedObjectContext *moc = document.managedObjectContext;
+    SampleMO *sampleMO = [sampleRepository getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
+
+    struct timeval time1, time2;
+    gettimeofday(&time1, NULL);
+
+    NSError *error2 = nil;
+    NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", snpFileName];
+    NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
+    gettimeofday(&time2, NULL);
+//    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
+
+    if (error2) {
+        NSLog(@"error loading file [%@]: %@", snpFileName, error2);
+    }
+
+    NSString *line;
+    NSUInteger row = 1;
+    gettimeofday(&time1, NULL);
+    NSInteger locusId = -1;
+    NSInteger sampleId = -1;
+    NSInteger newLocusId;
+    NSUInteger column;
+    float lratio;
+    char rank1, rank2, rank3, rank4;
+    DatumMO *datumMO = nil ;
+    LocusMO *locusMO = nil ;
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+    for (line in fileData) {
+        NSArray *columns = [line componentsSeparatedByString:@"\t"];
+
+        if (columns.count > 6) {
+
+            // if the StackMO is found
+            sampleId = [[columns objectAtIndex:1] integerValue];
+            newLocusId = [[columns objectAtIndex:2] integerValue];
+            column = [[columns objectAtIndex:3] integerValue];
+            lratio = [[columns objectAtIndex:4] floatValue];
+//            NSLog(@"columns %@",columns);
+//            rank1 = [[columns objectAtIndex:5] charValue];
+//            rank2 = [[columns objectAtIndex:6] charValue];
+//
+//            if (columns.count == 9) {
+//                rank3 = [[columns objectAtIndex:7] charValue];
+//                rank4 = [[columns objectAtIndex:8] charValue];
+//            }
+
+
+            if (locusId != newLocusId) {
+                locusId = newLocusId;
+                locusMO = [locusRepository getLocus:moc forId:locusId];
+                // search for the new locus
+                // TODO: get from in-memory lookup?
+                datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name];
+            }
+
+            if (datumMO != nil) {
+                [snpRepository insertDatumSnp:moc
+                                       column:[NSNumber numberWithInteger:column]
+                                       lratio:[NSNumber numberWithFloat:lratio]
+                                        rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
+                                        rank2:[numberFormatter numberFromString:[columns objectAtIndex:6]]
+                                        rank3:[numberFormatter numberFromString:[columns objectAtIndex:7]]
+                                        rank4:[numberFormatter numberFromString:[columns objectAtIndex:8]]
+                                        datum:datumMO
+                ];
+            }
+        }
+    }
+    gettimeofday(&time2, NULL);
+    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
+
+
+    // save old
+    NSError *saveError;
+    BOOL success = [moc save:&saveError];
+    NSLog(@"saved %d", success);
+    if (saveError != nil ) {
+        NSLog(@"error saving %@", saveError);
+    }
+
 }
 
 - (void)loadStacksEntriesFromTagFile:(StacksDocument *)document {
@@ -456,7 +553,6 @@ using std::ofstream;
     gettimeofday(&time1, NULL);
     NSInteger locusId = -1;
     NSInteger newLocusId;
-    StackMO *stackMO = nil ;
     DatumMO *datumMO = nil ;
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
@@ -464,7 +560,6 @@ using std::ofstream;
         if (columns.count > 8) {
 
             // if the StackMO is found
-
             newLocusId = [[columns objectAtIndex:2] integerValue];
             if (locusId != newLocusId) {
 
@@ -472,18 +567,6 @@ using std::ofstream;
                 // search for the new locus
                 // TODO: get from in-memory lookup?
                 datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name];
-//                if (datumMO != nil) {
-//                    if (datumMO.stack == nil) {
-////                        stackMO = [stackRepository insertStack:moc datum:datumMO];
-//                    }
-//                    else {
-////                        stackMO = datumMO.stack;
-//                    }
-//                }
-//                else {
-//                    datumMO = nil ;
-//                    stackMO = nil ;
-//                }
             }
 
             if (datumMO != nil) {
@@ -508,7 +591,6 @@ using std::ofstream;
                     ];
                 }
                 else {
-//                    NSLog(@"adding stack entry to stack %ld vs %@",stackMO.datum.locus.locusId,stackMO.datum.sample.name);
                     StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
                                                                                 entryId:[NSNumber numberWithInteger:row]
                                                                            relationship:[columns objectAtIndex:6]
@@ -664,17 +746,17 @@ using std::ofstream;
     return stacksDocument;
 }
 
-- (StacksDocument *)getStacksDocumentForPath:(NSString *)path {
-    NSError *stacksDocumentCreateError;
-    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
-    NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
-//    stacksDocument.managedObjectContext = moc ;
-//    stacksDocument.path = path;
-    if (stacksDocumentCreateError) {
-        NSLog(@"error creating stacks document %@", stacksDocumentCreateError);
-        return nil;
-    }
-    return stacksDocument;
-}
+//- (StacksDocument *)getStacksDocumentForPath:(NSString *)path {
+//    NSError *stacksDocumentCreateError;
+//    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+//    NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
+////    stacksDocument.managedObjectContext = moc ;
+////    stacksDocument.path = path;
+//    if (stacksDocumentCreateError) {
+//        NSLog(@"error creating stacks document %@", stacksDocumentCreateError);
+//        return nil;
+//    }
+//    return stacksDocument;
+//}
 @end
 

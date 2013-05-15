@@ -7,8 +7,6 @@
 
 #import <Foundation/Foundation.h>
 
-@class StacksView;
-@class LocusView;
 @class StacksDocument;
 @class SampleRepository;
 @class PopulationRepository;
@@ -31,19 +29,18 @@
 @property(nonatomic, strong) SampleRepository* sampleRepository ;
 @property(nonatomic, strong) SnpRepository* snpRepository ;
 @property(nonatomic, strong) StackEntryRepository* stackEntryRepository ;
-//@property(nonatomic, strong) NSManagedObjectContext *managedObjectContext;
-//@property(nonatomic, strong) NSManagedObjectModel *managedObjectModel;
+
+// a lookup
+@property(nonatomic, strong) NSMutableDictionary *lociDictionary ;
+
 
 - (id)init ;
-//- (StacksView *)loadStacksView:(NSString *)filename atPath:(NSString *)path forTag:(NSInteger)tag locus:(LocusView *)locus;
 - (StacksDocument *)loadLociAndGenotypes:(NSString *)path;
 - (NSMutableDictionary *)loadPopulation:(NSString *)path;
-
 - (StacksDocument *)loadDocument:(StacksDocument *)document;
-
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path;
 
-- (StacksDocument *)getStacksDocumentForPath:(NSString *)string;
+//- (StacksDocument *)getStacksDocumentForPath:(NSString *)string;
 @end
 
 
