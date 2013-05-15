@@ -154,7 +154,6 @@
         STFail(@"Failed to save %@", error2);
     }
 
-    DatumRepository *datumRepository = [[DatumRepository alloc]init];
     NSArray *datumArray = [datumRepository getAllDatum:moc];
     NSRange nsRange ;
     nsRange.length=10 ;
@@ -260,7 +259,6 @@
     NSLog(@"has samples %ld", populationMO.samples.count);
 
 
-    DatumRepository *datumRepository = [[DatumRepository alloc]init];
     NSArray *datumArray = [datumRepository getAllDatum:moc];
     NSRange nsRange ;
     nsRange.length=10 ;
@@ -276,7 +274,7 @@
     STAssertNotNil(datumMO.name, @"should have a valid name ? ");
     NSSet* stackEntries = datumMO.stackEntries ;
     STAssertTrue(stackEntries.count>5, @"should have at least 5 entries %ld",stackEntries.count);
-    STAssertTrue(stackEntries.count<100, @"but less than 100 entries %ld",stackEntries.count);
+    STAssertTrue(stackEntries.count<100, @"but less than 1000 entries %ld",stackEntries.count);
 
     
     STAssertTrue(datumMO.depths.count>0, @"should have at least one depth");
@@ -349,7 +347,6 @@
         NSLog(@"SUCCESS!!!");
     }
 
-    DatumRepository *datumRepository = [[DatumRepository alloc]init];
     NSArray *datumArray = [datumRepository getAllDatum:moc];
     NSRange nsRange ;
     nsRange.length=10 ;
