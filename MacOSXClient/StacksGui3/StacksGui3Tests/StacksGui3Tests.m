@@ -15,6 +15,8 @@
 #import "DatumRepository.h"
 #import "LocusRepository.h"
 #import "PopulationRepository.h"
+#import "SampleMO.h"
+#import "SampleRepository.h"
 
 @implementation StacksGui3Tests {
 //    stacksConverter;
@@ -22,6 +24,7 @@
     DatumRepository *datumRepository ;
     LocusRepository *locusRepository ;
     PopulationRepository *populationRepository ;
+    SampleRepository *sampleRepository;
 }
 
 
@@ -32,6 +35,7 @@
     datumRepository = [[DatumRepository alloc]init];
     locusRepository = [[LocusRepository alloc]init];
     populationRepository = [[PopulationRepository alloc]init];
+    sampleRepository = [[SampleRepository alloc]init];
 }
 
 - (void)tearDown {
@@ -155,13 +159,34 @@
     }
 
     NSArray *datumArray = [datumRepository getAllDatum:moc];
+    NSLog(@"number of datum %ld",datumArray.count) ;
     NSRange nsRange ;
     nsRange.length=10 ;
     nsRange.location=0 ;
     for (DatumMO *datumMO in [datumArray subarrayWithRange:nsRange]) {
 //        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
         STAssertTrue(datumMO.stackEntries.count>5, @"should have atleast 5 %ld", datumMO.stackEntries.count);
+//        NSLog(@"processing snps %@ ",datumMO.snps) ;
+        if(datumMO.snps != nil && datumMO.snps.count>0){
+            NSLog(@"snps count on datum %ld for sample %@ and locus %@",datumMO.snps.count,datumMO.sample.name,datumMO.locus.locusId);
+        }
+        else{
+            NSLog(@"has no snps for sample %@ and locus %@",datumMO.sample.name,datumMO.locus.locusId);
+        }
+//        STAssertTrue(datumMO.snps.count>0, @"Should have snps on Datum, %ld", datumMO.snps.count);
     }
+
+//    NSLog(@"datums found %ld",datums.count) ;
+//    for(int i = 0 ; i < 5 ; i++){
+//        DatumMO *datumMO = [datums objectAtIndex:i] ;
+//        if(datumMO.snps != nil){
+//            NSLog(@"snps count on datum %@ for sample %@ and locus %@",datumMO.snps.count,datumMO.sample.name,datumMO.locus.locusId);
+//        }
+//        else{
+//            NSLog(@"has no snps for sample %@ and locus %@",datumMO.sample.name,datumMO.locus.locusId);
+//        }
+////        STAssertTrue(datumMO.snps.count>0, @"Should have snps on Datum, %ld", datumMO.snps.count);
+//    }
 
 }
 
@@ -274,24 +299,15 @@
     STAssertNotNil(datumMO.name, @"should have a valid name ? ");
     NSSet* stackEntries = datumMO.stackEntries ;
     STAssertTrue(stackEntries.count>5, @"should have at least 5 entries %ld",stackEntries.count);
-    STAssertTrue(stackEntries.count<100, @"but less than 1000 entries %ld",stackEntries.count);
+    STAssertTrue(stackEntries.count<1000, @"but less than 1000 entries %ld",stackEntries.count);
 
     
     STAssertTrue(datumMO.depths.count>0, @"should have at least one depth");
-
-
 
 }
 
 - (void)testReadWithRepositoryMethods {
     NSString *examplePath = @"/tmp/stacks_tut/";
-    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
-
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    BOOL existsAtPath = [fileManager fileExistsAtPath:filePath];
-    if (!existsAtPath) {
-        NSLog(@"file does NOT exit! %@", filePath);
-    }
 
     NSError *stacksDocumentCreateError;
     NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.sqlite"]];
@@ -306,12 +322,21 @@
     LocusMO *locusMO = [[locusRepository getAllLoci:managedObjectContext] objectAtIndex:0];
     PopulationMO* populationMO = [[populationRepository getAllPopulations:managedObjectContext] objectAtIndex:0];
 
-    NSArray *datums = [datumRepository getDatums:managedObjectContext locus:locusMO andPopulation:populationMO];
+    NSArray *datumWithPopulation  = [datumRepository getDatums:managedObjectContext locus:locusMO andPopulation:populationMO];
+    STAssertTrue(datumWithPopulation.count>0, @"must have a population count greater than 0") ;
+    NSArray *datums = [datumRepository getAllDatum:managedObjectContext];
+    
     NSLog(@"datums found %ld",datums.count) ;
-//    for(int i = 0 ; i < 5 ; i++){
-//        DatumMO *datumMO = [datums objectAtIndex:i] ;
-//        NSLog(@"datum: %@", datumMO.sample);
-//    }
+    for(int i = 0 ; i < 5 ; i++){
+        DatumMO *datumMO = [datums objectAtIndex:i] ;
+        if(datumMO.snps != nil){
+           NSLog(@"snps count on datum %ld for sample %@ and locus %@",datumMO.snps.count,datumMO.sample.name,datumMO.locus.locusId);
+        }
+        else{
+           NSLog(@"has no snps for sample %@ and locus %@",datumMO.sample.name,datumMO.locus.locusId);
+        }
+//        STAssertTrue(datumMO.snps.count>0, @"Should have snps on Datum, %ld", datumMO.snps.count);
+    }
 }
 
 

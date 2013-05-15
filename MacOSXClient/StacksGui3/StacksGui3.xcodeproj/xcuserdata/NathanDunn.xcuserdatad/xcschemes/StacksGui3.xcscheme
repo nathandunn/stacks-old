@@ -50,12 +50,6 @@
                <Test
                   Identifier = "StacksGui3Tests/testCreateLargeStore">
                </Test>
-               <Test
-                  Identifier = "StacksGui3Tests/testReadPopulatedDataStore">
-               </Test>
-               <Test
-                  Identifier = "StacksGui3Tests/testReadWithRepositoryMethods">
-               </Test>
             </SkippedTests>
          </TestableReference>
       </Testables>
