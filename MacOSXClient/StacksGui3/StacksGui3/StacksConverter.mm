@@ -33,6 +33,7 @@ using std::ofstream;
 #import "SampleMO.h"
 #import "SnpRepository.h"
 #import "StackEntryRepository.h"
+#import "DatumSnpMO.h"
 
 
 #include <sys/time.h>
@@ -433,16 +434,16 @@ using std::ofstream;
     }
 
     NSString *line;
-    NSUInteger row = 1;
+//    NSUInteger row = 1;
     gettimeofday(&time1, NULL);
     NSInteger locusId = -1;
-    NSInteger sampleId = -1;
+//    NSInteger sampleId = -1;
     NSInteger newLocusId;
-    NSUInteger column;
+    NSInteger column;
     float lratio;
-    char rank1, rank2, rank3, rank4;
+//    char rank1, rank2, rank3, rank4;
     DatumMO *datumMO = nil ;
-    LocusMO *locusMO = nil ;
+//    LocusMO *locusMO = nil ;
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
     for (line in fileData) {
@@ -451,30 +452,22 @@ using std::ofstream;
         if (columns.count > 6) {
 
             // if the StackMO is found
-            sampleId = [[columns objectAtIndex:1] integerValue];
+//            sampleId = [[columns objectAtIndex:1] integerValue];
             newLocusId = [[columns objectAtIndex:2] integerValue];
             column = [[columns objectAtIndex:3] integerValue];
             lratio = [[columns objectAtIndex:4] floatValue];
-//            NSLog(@"columns %@",columns);
-//            rank1 = [[columns objectAtIndex:5] charValue];
-//            rank2 = [[columns objectAtIndex:6] charValue];
-//
-//            if (columns.count == 9) {
-//                rank3 = [[columns objectAtIndex:7] charValue];
-//                rank4 = [[columns objectAtIndex:8] charValue];
-//            }
 
 
             if (locusId != newLocusId) {
                 locusId = newLocusId;
-                locusMO = [locusRepository getLocus:moc forId:locusId];
+//                locusMO = [locusRepository getLocus:moc forId:locusId];
                 // search for the new locus
                 // TODO: get from in-memory lookup?
                 datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name];
             }
 
             if (datumMO != nil) {
-                [snpRepository insertDatumSnp:moc
+                DatumSnpMO* datumSnpMO = [snpRepository insertDatumSnp:moc
                                        column:[NSNumber numberWithInteger:column]
                                        lratio:[NSNumber numberWithFloat:lratio]
                                         rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
@@ -483,6 +476,8 @@ using std::ofstream;
                                         rank4:[numberFormatter numberFromString:[columns objectAtIndex:8]]
                                         datum:datumMO
                 ];
+                [datumMO addSnpsObject:datumSnpMO];
+//                NSLog(@"inserted snp at %@ for sample %@ and locus %@",datumSnpMO.column,datumMO.sample.name,datumMO.locus.locusId);
             }
         }
     }
@@ -599,7 +594,7 @@ using std::ofstream;
                                                                                sequence:[columns objectAtIndex:9]
                                                                                   datum:datumMO
                     ];
-                    [datumMO addStackEntriesObject:stackEntryMO];
+//                    [datumMO addStackEntriesObject:stackEntryMO];
                     ++row;
                 }
             }
