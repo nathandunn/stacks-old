@@ -299,15 +299,13 @@ using std::ofstream;
             if (datum != NULL && locusMO != nil) {
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
 
-
-                NSError *error;
                 SampleMO *sampleMO = [sampleRepository getSampleForName:key andContext:moc andError:nil];
 
                 vector<char *> obshape = datum->obshap;
                 vector<int> depths = datum->depth;
                 int numLetters = obshape.size();
                 // TODO: should be entering this for the locus as well?
-                DatumMO *newDatumMO = [datumRepository insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO];
+                DatumMO *newDatumMO = [datumRepository insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO locus:locusMO];
 
                 // get catalogs for matches
                 // TODO: is not the locus the same thing as the id?  can I use the loc->id here?
@@ -347,7 +345,18 @@ using std::ofstream;
         gettimeofday(&time2, NULL);
         NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
+
+
     }
+
+    NSError *innerError = nil ;
+    stacksDocument.loci = loci ;
+    [stacksDocument.managedObjectContext save:&innerError];
+    if(innerError!=nil){
+        NSLog(@"error doing inner save: ",innerError);
+        return nil ;
+    }
+
     NSLog(@"total time %ld", totalCatalogTime);
 
     gettimeofday(&time1, NULL);
@@ -358,14 +367,14 @@ using std::ofstream;
 
     gettimeofday(&time1, NULL);
     // TODO: I don't think this does anything hear
-//    [self readPopulations:stacksDocument];
+    [self readPopulations:stacksDocument];
 
-//    LocusMO *bLocusMO = [loci.allObjects objectAtIndex:0];
-//    NSLog(@"pre locus %@ datums %ld", bLocusMO.locusId, bLocusMO.datums.count);
+    LocusMO *bLocusMO = [loci.allObjects objectAtIndex:0];
+    NSLog(@"pre locus %@ datums %ld", bLocusMO.locusId, bLocusMO.datums.count);
 //
     stacksDocument.loci = loci;
-//    LocusMO *cLocusMO = [stacksDocument.loci.allObjects objectAtIndex:0];
-//    NSLog(@"post locus %@ datums %ld", cLocusMO.locusId, cLocusMO.datums.count);
+    LocusMO *cLocusMO = [stacksDocument.loci.allObjects objectAtIndex:0];
+    NSLog(@"post locus %@ datums %ld", cLocusMO.locusId, cLocusMO.datums.count);
 
     gettimeofday(&time2, NULL);
     NSLog(@"create stacks document time %ld", time2.tv_sec - time1.tv_sec);

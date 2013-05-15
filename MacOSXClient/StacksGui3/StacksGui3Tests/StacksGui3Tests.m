@@ -150,6 +150,10 @@
         NSLog(@"SUCCESS!!!");
     }
 
+    if(error2!=nil){
+        STFail(@"Failed to save %@", error2);
+    }
+
     DatumRepository *datumRepository = [[DatumRepository alloc]init];
     NSArray *datumArray = [datumRepository getAllDatum:moc];
     NSRange nsRange ;
