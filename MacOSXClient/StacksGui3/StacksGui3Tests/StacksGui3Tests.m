@@ -12,8 +12,6 @@
 #import "LocusMO.h"
 #import "PopulationMO.h"
 #import "DatumMO.h"
-#import "StackMO.h"
-#import "SampleMO.h"
 #import "DatumRepository.h"
 #import "LocusRepository.h"
 #import "PopulationRepository.h"
@@ -21,18 +19,28 @@
 @implementation StacksGui3Tests {
 //    stacksConverter;
     StacksConverter *stacksConverter;
+    DatumRepository *datumRepository ;
+    LocusRepository *locusRepository ;
+    PopulationRepository *populationRepository ;
 }
 
 
 - (void)setUp {
     [super setUp];
     stacksConverter = [[StacksConverter alloc] init];
-    // Set-up code here.
+
+    datumRepository = [[DatumRepository alloc]init];
+    locusRepository = [[LocusRepository alloc]init];
+    populationRepository = [[PopulationRepository alloc]init];
 }
 
 - (void)tearDown {
     // Tear-down code here.
     stacksConverter = nil ;
+
+    datumRepository = nil ;
+    locusRepository = nil ;
+    populationRepository = nil ;
 
     [super tearDown];
 }
@@ -57,16 +65,6 @@
         LocusMO *locusMO = [loci.allObjects objectAtIndex:0];
         NSLog(@"locus %@ has %ld datums", locusMO.locusId, locusMO.datums.count);
 
-//        NSURL *storeURL = <#URL for path to global store#>; // just same url
-//        NSURL *storeURL = [NSURL URLWithString:[examplePath stringByAppendingFormat:@"stored.sqlite"] ];
-//        id globalStore = [[stacksDocument.managedObjectContext persistentStoreCoordinator] persistentStoreForURL:storeURL];
-        //        NSManagedObject *newEmployee = [NSEntityDescription
-//                insertNewObjectForEntityForName:@"Employee"
-//                         inManagedObjectContext:stacksDocument.managedObjectContext];
-//        LocusMO *locusMO = [stacksDocument.loci.allObjects objectAtIndex:0]
-//        [stacksDocument.managedObjectContext assignObject:locusMO toPersistentStore:globalStore];
-
-//        StacksDocument *stacksDocument = [[StacksDocument alloc] init];
         NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
         NSPersistentStoreCoordinator *psc = [moc persistentStoreCoordinator];
         NSDictionary *options =
@@ -152,28 +150,15 @@
         NSLog(@"SUCCESS!!!");
     }
 
-    NSEntityDescription *stackEntityDescription = [NSEntityDescription entityForName:@"Stack" inManagedObjectContext:moc];
-    NSFetchRequest *stackRequest = [[NSFetchRequest alloc] init];
-    [stackRequest setEntity:stackEntityDescription];
-    NSError *stackFetchError;
-    NSArray *stackArray = [moc executeFetchRequest:stackRequest error:&stackFetchError];
+    DatumRepository *datumRepository = [[DatumRepository alloc]init];
+    NSArray *datumArray = [datumRepository getAllDatum:moc];
     NSRange nsRange ;
     nsRange.length=10 ;
     nsRange.location=0 ;
-    for (StackMO *stackMO in [stackArray subarrayWithRange:nsRange]) {
+    for (DatumMO *datumMO in [datumArray subarrayWithRange:nsRange]) {
 //        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
-        STAssertTrue(stackMO.stackEntries.count>5, @"should have atleast 5 %ld", stackMO.stackEntries.count);
+        STAssertTrue(datumMO.stackEntries.count>5, @"should have atleast 5 %ld", datumMO.stackEntries.count);
     }
-
-
-//    NSEntityDescription *entityDescription3 = [NSEntityDescription entityForName:@"Stack" inManagedObjectContext:moc];
-//    NSFetchRequest *request3 = [[NSFetchRequest alloc] init];
-//    [request3 setEntity:entityDescription3];
-//    NSError *error3;
-//    NSArray *stackArray = [moc executeFetchRequest:request3 error:&error3];
-//    for (StackMO *stackMO in stackArray) {
-//        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
-//    }
 
 }
 
@@ -271,33 +256,21 @@
     NSLog(@"has samples %ld", populationMO.samples.count);
 
 
-    NSEntityDescription *stackEntityDescription = [NSEntityDescription entityForName:@"Stack" inManagedObjectContext:moc];
-    NSFetchRequest *stackRequest = [[NSFetchRequest alloc] init];
-    [stackRequest setEntity:stackEntityDescription];
-    NSError *stackFetchError;
-    NSArray *stackArray = [moc executeFetchRequest:stackRequest error:&stackFetchError];
+    DatumRepository *datumRepository = [[DatumRepository alloc]init];
+    NSArray *datumArray = [datumRepository getAllDatum:moc];
     NSRange nsRange ;
     nsRange.length=10 ;
     nsRange.location=0 ;
-    for (StackMO *stackMO in [stackArray subarrayWithRange:nsRange]) {
-        STAssertTrue(stackMO.stackEntries.count>5, @"should have atleast 5 %ld", stackMO.stackEntries.count);
+    for (DatumMO *mo in [datumArray subarrayWithRange:nsRange]) {
+        STAssertTrue(mo.stackEntries.count>5, @"should have atleast 5 %ld", mo.stackEntries.count);
     }
-
-
-    NSEntityDescription *datumEntityDescription = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:moc];
-    NSFetchRequest *datumRequest = [[NSFetchRequest alloc] init];
-    [datumRequest setEntity:datumEntityDescription];
-    NSError *datumFetchError;
-    NSArray *datumArray = [moc executeFetchRequest:datumRequest error:&datumFetchError];
 
     NSLog(@"num datum: %ld",datumArray.count);
     DatumMO* datumMO = [datumArray objectAtIndex:0];
     STAssertNotNil(datumMO.locus, @"should have a valid locus ");
     STAssertNotNil(datumMO.sample, @"should have a valid sample");
     STAssertNotNil(datumMO.name, @"should have a valid name ? ");
-    STAssertNotNil(datumMO.stack, @"should have a valid stack ? ");
-    StackMO* stackMO = datumMO.stack ;
-    NSSet* stackEntries = stackMO.stackEntries ;
+    NSSet* stackEntries = datumMO.stackEntries ;
     STAssertTrue(stackEntries.count>5, @"should have at least 5 entries %ld",stackEntries.count);
     STAssertTrue(stackEntries.count<100, @"but less than 100 entries %ld",stackEntries.count);
 
@@ -327,9 +300,6 @@
 
     NSManagedObjectContext *managedObjectContext = newStacksDocument.managedObjectContext ;
 
-    DatumRepository *datumRepository = [[DatumRepository alloc]init];
-    LocusRepository *locusRepository = [[LocusRepository alloc]init];
-    PopulationRepository *populationRepository = [[PopulationRepository alloc]init];
 
     LocusMO *locusMO = [[locusRepository getAllLoci:managedObjectContext] objectAtIndex:0];
     PopulationMO* populationMO = [[populationRepository getAllPopulations:managedObjectContext] objectAtIndex:0];
@@ -375,28 +345,15 @@
         NSLog(@"SUCCESS!!!");
     }
 
-    NSEntityDescription *stackEntityDescription = [NSEntityDescription entityForName:@"Stack" inManagedObjectContext:moc];
-    NSFetchRequest *stackRequest = [[NSFetchRequest alloc] init];
-    [stackRequest setEntity:stackEntityDescription];
-    NSError *stackFetchError;
-    NSArray *stackArray = [moc executeFetchRequest:stackRequest error:&stackFetchError];
+    DatumRepository *datumRepository = [[DatumRepository alloc]init];
+    NSArray *datumArray = [datumRepository getAllDatum:moc];
     NSRange nsRange ;
     nsRange.length=10 ;
     nsRange.location=0 ;
-    for (StackMO *stackMO in [stackArray subarrayWithRange:nsRange]) {
+    for (DatumMO *datumMO in [datumArray subarrayWithRange:nsRange]) {
 //        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
-        STAssertTrue(stackMO.stackEntries.count>5, @"should have atleast 5 %ld", stackMO.stackEntries.count);
+        STAssertTrue(datumMO.stackEntries.count>5, @"should have atleast 5 %ld", datumMO.stackEntries.count);
     }
-
-
-//    NSEntityDescription *entityDescription3 = [NSEntityDescription entityForName:@"Stack" inManagedObjectContext:moc];
-//    NSFetchRequest *request3 = [[NSFetchRequest alloc] init];
-//    [request3 setEntity:entityDescription3];
-//    NSError *error3;
-//    NSArray *stackArray = [moc executeFetchRequest:request3 error:&error3];
-//    for (StackMO *stackMO in stackArray) {
-//        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
-//    }
 
 }
 
@@ -456,18 +413,6 @@
     NSLog(@"has samples %ld", populationMO.samples.count);
 
 
-    NSEntityDescription *stackEntityDescription = [NSEntityDescription entityForName:@"Stack" inManagedObjectContext:moc];
-    NSFetchRequest *stackRequest = [[NSFetchRequest alloc] init];
-    [stackRequest setEntity:stackEntityDescription];
-    NSError *stackFetchError;
-    NSArray *stackArray = [moc executeFetchRequest:stackRequest error:&stackFetchError];
-    NSRange nsRange ;
-    nsRange.length=10 ;
-    nsRange.location=0 ;
-//    for (StackMO *stackMO in [stackArray subarrayWithRange:nsRange]) {
-//        STAssertTrue(stackMO.stackEntries.count>5, @"should have atleast 5 %ld", stackMO.stackEntries.count);
-//    }
-
 
     NSEntityDescription *datumEntityDescription = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:moc];
     NSFetchRequest *datumRequest = [[NSFetchRequest alloc] init];
@@ -477,17 +422,10 @@
 
     NSLog(@"num datum: %ld",datumArray.count);
     DatumMO* datumMO = [datumArray objectAtIndex:0];
-//    STAssertNotNil(datumMO.locus, @"should have a valid locus ");
-//    STAssertNotNil(datumMO.sample, @"should have a valid sample");
-//    STAssertNotNil(datumMO.name, @"should have a valid name ? ");
-//    STAssertNotNil(datumMO.stack, @"should have a valid stack ? ");
-    StackMO* stackMO = datumMO.stack ;
-    NSSet* stackEntries = stackMO.stackEntries ;
-//    STAssertTrue(stackEntries.count>5, @"should have at least 5 entries %ld",stackEntries.count);
-//    STAssertTrue(stackEntries.count<100, @"but less than 100 entries %ld",stackEntries.count);
-//
-//
-//    STAssertTrue(datumMO.depths.count>0, @"should have at least one depth");
+    NSSet* stackEntries = datumMO.stackEntries ;
+    STAssertTrue(stackEntries.count>5, @"should have at least 5 entries %ld",stackEntries.count);
+    STAssertTrue(stackEntries.count<100, @"but less than 100 entries %ld",stackEntries.count);
+    STAssertTrue(datumMO.depths.count>0, @"should have at least one depth");
 
 
 

@@ -4,13 +4,13 @@
         <attribute name="type" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="value" optional="YES" attributeType="String" syncable="YES"/>
     </entity>
-    <entity name="ConensusStackEntry" representedClassName="ConsensusStackEntryMO" parentEntity="StackEntry" syncable="YES"/>
+    <entity name="ConsensusStackEntry" representedClassName="ConsensusStackEntryMO" parentEntity="StackEntry" syncable="YES"/>
     <entity name="Datum" representedClassName="DatumMO" syncable="YES">
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sampleId" optional="YES" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
         <attribute name="tagId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
         <relationship name="alleles" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="DatumAllele" inverseName="datum" inverseEntity="DatumAllele" syncable="YES"/>
-        <relationship name="consensus" minCount="1" maxCount="1" deletionRule="Cascade" destinationEntity="ConensusStackEntry" inverseName="datum" inverseEntity="StackEntry" syncable="YES"/>
+        <relationship name="consensus" minCount="1" maxCount="1" deletionRule="Cascade" destinationEntity="ConsensusStackEntry" inverseName="datum" inverseEntity="StackEntry" syncable="YES"/>
         <relationship name="depths" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Depth" inverseName="datum" inverseEntity="Depth" syncable="YES"/>
         <relationship name="haplotypes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Haplotype" inverseName="datum" inverseEntity="Haplotype" syncable="YES"/>
         <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="datums" inverseEntity="Locus" syncable="YES"/>
@@ -78,12 +78,14 @@
         <attribute name="relationship" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sequence" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sequenceId" optional="YES" attributeType="String" syncable="YES"/>
-        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="reference" inverseEntity="Datum" syncable="YES"/>
+        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="stackEntries" inverseEntity="Datum" syncable="YES"/>
     </entity>
     <elements>
         <element name="Allele" positionX="936" positionY="18" width="128" height="75"/>
-        <element name="ConensusStackEntry" positionX="207" positionY="-36" width="128" height="45"/>
+        <element name="ConsensusStackEntry" positionX="207" positionY="-36" width="128" height="45"/>
         <element name="Datum" positionX="216" positionY="198" width="128" height="240"/>
+        <element name="DatumAllele" positionX="522" positionY="480" width="128" height="60"/>
+        <element name="DatumSnp" positionX="709" positionY="471" width="128" height="60"/>
         <element name="Depth" positionX="981" positionY="357" width="128" height="75"/>
         <element name="Haplotype" positionX="18" positionY="333" width="128" height="75"/>
         <element name="Locus" positionX="493" positionY="-66" width="128" height="165"/>
@@ -95,7 +97,5 @@
         <element name="Sample" positionX="25" positionY="156" width="128" height="105"/>
         <element name="Snp" positionX="988" positionY="111" width="128" height="150"/>
         <element name="StackEntry" positionX="502" positionY="234" width="128" height="135"/>
-        <element name="DatumAllele" positionX="522" positionY="480" width="128" height="60"/>
-        <element name="DatumSnp" positionX="709" positionY="471" width="128" height="60"/>
     </elements>
 </model>

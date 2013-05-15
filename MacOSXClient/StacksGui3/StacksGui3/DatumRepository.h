@@ -19,4 +19,6 @@
 - (DatumMO *)getDatum:(NSManagedObjectContext *)context locusId:(NSInteger)locusId andSampleName:(NSString *)sampleName;
 
 - (NSArray *)getDatums:(NSManagedObjectContext *)context locus:(LocusMO *)locus andPopulation:(PopulationMO *)population;
+
+- (NSArray *)getAllDatum:(NSManagedObjectContext *)context;
 @end

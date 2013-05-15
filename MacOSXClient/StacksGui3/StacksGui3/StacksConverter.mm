@@ -328,14 +328,14 @@ using std::ofstream;
                     NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
                 }
 
-                vector<SNP *> snps = datum->snps;
-                vector<SNP *>::iterator snpsIterator = snps.begin();
-
-                if (snps.size() > 0) {
-                    NSLog(@"has snps %ld", snps.size());
-                }
-
-                // TODO: this is not handled here . . . will be using StackEntrySnp, anyway .  . . or DatumSnp . . 
+//                vector<SNP *> snps = datum->snps;
+//                vector<SNP *>::iterator snpsIterator = snps.begin();
+//
+//                if (snps.size() > 0) {
+//                    NSLog(@"has snps %ld", snps.size());
+//                }
+//
+//                // TODO: this is not handled here . . . will be using StackEntrySnp, anyway .  . . or DatumSnp . .
 //                for (; snpsIterator != snps.end(); ++snpsIterator) {
 //                    SNP *snp = (*snpsIterator);
 //                    LocusSnpMO *snpMO = [snpRepository insertLocusSnp:moc column:[NSNumber numberWithInt:snp->col] lratio:[NSNumber numberWithFloat:snp->lratio] rank1:[NSNumber numberWithChar:snp->rank_1] rank2:[NSNumber numberWithChar:snp->rank_2] rank3:[NSNumber numberWithChar:snp->rank_3] rank4:[NSNumber numberWithChar:snp->rank_4] locus:nil ];
@@ -357,26 +357,25 @@ using std::ofstream;
 
 
     gettimeofday(&time1, NULL);
+    // TODO: I don't think this does anything hear
+//    [self readPopulations:stacksDocument];
 
-    [self readPopulations:stacksDocument];
-
-    LocusMO *bLocusMO = [loci.allObjects objectAtIndex:0];
-    NSLog(@"pre locus %@ datums %ld", bLocusMO.locusId, bLocusMO.datums.count);
-
+//    LocusMO *bLocusMO = [loci.allObjects objectAtIndex:0];
+//    NSLog(@"pre locus %@ datums %ld", bLocusMO.locusId, bLocusMO.datums.count);
+//
     stacksDocument.loci = loci;
-    LocusMO *cLocusMO = [stacksDocument.loci.allObjects objectAtIndex:0];
-    NSLog(@"post locus %@ datums %ld", cLocusMO.locusId, cLocusMO.datums.count);
-
+//    LocusMO *cLocusMO = [stacksDocument.loci.allObjects objectAtIndex:0];
+//    NSLog(@"post locus %@ datums %ld", cLocusMO.locusId, cLocusMO.datums.count);
 
     gettimeofday(&time2, NULL);
     NSLog(@"create stacks document time %ld", time2.tv_sec - time1.tv_sec);
 
 
-    NSLog(@"loading stacks");
+    NSLog(@"loading stack entries");
     gettimeofday(&time1, NULL);
-    [self loadStacks:stacksDocument];
+    [self loadStacksEntriesFromTagFile:stacksDocument];
     gettimeofday(&time2, NULL);
-    NSLog(@"finished loading stacks time %ld", time2.tv_sec - time1.tv_sec);
+    NSLog(@"finished loading stacks entries time %ld", time2.tv_sec - time1.tv_sec);
 
     NSError *error;
     BOOL success = [stacksDocument.managedObjectContext save:&error];
@@ -385,7 +384,7 @@ using std::ofstream;
     return stacksDocument;
 }
 
-- (void)loadStacks:(StacksDocument *)document {
+- (void)loadStacksEntriesFromTagFile:(StacksDocument *)document {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *path = document.path;
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
