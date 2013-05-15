@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class AlleleMO, DepthMO, HaplotypeMO, LocusMO, SampleMO, SnpMO, StackEntryMO;
+@class ConsensusStackEntryMO, DatumAlleleMO, DatumSnpMO, DepthMO, HaplotypeMO, LocusMO, ModelStackEntryMO, ReferenceStackEntryMO, SampleMO, StackEntryMO;
 
 @interface DatumMO : NSManagedObject
 
@@ -17,21 +17,21 @@
 @property (nonatomic, retain) NSNumber * sampleId;
 @property (nonatomic, retain) NSNumber * tagId;
 @property (nonatomic, retain) NSSet *alleles;
+@property (nonatomic, retain) ConsensusStackEntryMO *consensus;
 @property (nonatomic, retain) NSSet *depths;
 @property (nonatomic, retain) NSSet *haplotypes;
 @property (nonatomic, retain) LocusMO *locus;
+@property (nonatomic, retain) ModelStackEntryMO *model;
+@property (nonatomic, retain) ReferenceStackEntryMO *reference;
 @property (nonatomic, retain) SampleMO *sample;
 @property (nonatomic, retain) NSSet *snps;
-@property (nonatomic, retain) StackEntryMO *consensus;
-@property (nonatomic, retain) StackEntryMO *model;
-@property (nonatomic, retain) StackEntryMO *reference;
 @property (nonatomic, retain) NSSet *stackEntries;
 @end
 
 @interface DatumMO (CoreDataGeneratedAccessors)
 
-- (void)addAllelesObject:(AlleleMO *)value;
-- (void)removeAllelesObject:(AlleleMO *)value;
+- (void)addAllelesObject:(DatumAlleleMO *)value;
+- (void)removeAllelesObject:(DatumAlleleMO *)value;
 - (void)addAlleles:(NSSet *)values;
 - (void)removeAlleles:(NSSet *)values;
 
@@ -45,8 +45,8 @@
 - (void)addHaplotypes:(NSSet *)values;
 - (void)removeHaplotypes:(NSSet *)values;
 
-- (void)addSnpsObject:(SnpMO *)value;
-- (void)removeSnpsObject:(SnpMO *)value;
+- (void)addSnpsObject:(DatumSnpMO *)value;
+- (void)removeSnpsObject:(DatumSnpMO *)value;
 - (void)addSnps:(NSSet *)values;
 - (void)removeSnps:(NSSet *)values;
 

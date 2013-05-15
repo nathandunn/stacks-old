@@ -248,13 +248,14 @@ using std::ofstream;
         for (; snpsIterator != snps.end(); ++snpsIterator) {
             SNP *snp = (*snpsIterator);
 
-            SnpMO *snpMO = [snpRepository insertSnp:moc
-                                             column:[NSNumber numberWithInt:snp->col]
-                                             lratio:[NSNumber numberWithFloat:snp->lratio]
-                                              rank1:[NSNumber numberWithInt:snp->rank_1]
-                                              rank2:[NSNumber numberWithInt:snp->rank_2]
-                                              rank3:[NSNumber numberWithInt:snp->rank_3]
-                                              rank4:[NSNumber numberWithInt:snp->rank_4]
+            LocusSnpMO *snpMO = [snpRepository insertLocusSnp:moc
+                                                  column:[NSNumber numberWithInt:snp->col]
+                                                  lratio:[NSNumber numberWithFloat:snp->lratio]
+                                                   rank1:[NSNumber numberWithInt:snp->rank_1]
+                                                   rank2:[NSNumber numberWithInt:snp->rank_2]
+                                                   rank3:[NSNumber numberWithInt:snp->rank_3]
+                                                   rank4:[NSNumber numberWithInt:snp->rank_4]
+                                                        locus: locusMO
             ];
             [locusMO addSnpsObject:snpMO];
         }
@@ -334,19 +335,13 @@ using std::ofstream;
                     NSLog(@"has snps %ld", snps.size());
                 }
 
-                for (; snpsIterator != snps.end(); ++snpsIterator) {
-                    SNP *snp = (*snpsIterator);
-                    SnpMO *snpMO = [snpRepository insertSnp:moc
-                                                     column:[NSNumber numberWithInt:snp->col]
-                                                     lratio:[NSNumber numberWithFloat:snp->lratio]
-                                                      rank1:[NSNumber numberWithChar:snp->rank_1]
-                                                      rank2:[NSNumber numberWithChar:snp->rank_2]
-                                                      rank3:[NSNumber numberWithChar:snp->rank_3]
-                                                      rank4:[NSNumber numberWithChar:snp->rank_4]
-                    ];
-
-                    [newDatumMO addSnpsObject:snpMO];
-                }
+                // TODO: this is not handled here . . . will be using StackEntrySnp, anyway .  . . or DatumSnp . . 
+//                for (; snpsIterator != snps.end(); ++snpsIterator) {
+//                    SNP *snp = (*snpsIterator);
+//                    LocusSnpMO *snpMO = [snpRepository insertLocusSnp:moc column:[NSNumber numberWithInt:snp->col] lratio:[NSNumber numberWithFloat:snp->lratio] rank1:[NSNumber numberWithChar:snp->rank_1] rank2:[NSNumber numberWithChar:snp->rank_2] rank3:[NSNumber numberWithChar:snp->rank_3] rank4:[NSNumber numberWithChar:snp->rank_4] locus:nil ];
+//
+//                    [newDatumMO addSnpsObject:snpMO];
+//                }
             }
         }
         gettimeofday(&time2, NULL);
@@ -474,22 +469,36 @@ using std::ofstream;
             }
 
             if (datumMO != nil) {
-                StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
-                                                                            entryId:[NSNumber numberWithInteger:row]
-                                                                       relationship:[columns objectAtIndex:6]
-                                                                              block:[columns objectAtIndex:7]
-                                                                         sequenceId:[columns objectAtIndex:8]
-                                                                           sequence:[columns objectAtIndex:9]
-                ];
+                NSString *relationship = [columns objectAtIndex:6];
 
-                if ([stackEntryMO.relationship isEqualToString:@"consensus"]) {
-                    datumMO.consensus = stackEntryMO;
+                if ([relationship isEqualToString:@"consensus"]) {
+                    datumMO.consensus = [stackEntryRepository insertConsensusStackEntry:moc
+                                                                                entryId:[NSNumber numberWithInteger:row]
+                                                                                  block:[columns objectAtIndex:7]
+                                                                             sequenceId:[columns objectAtIndex:8]
+                                                                               sequence:[columns objectAtIndex:9]
+                                                                                  datum:datumMO
+                    ];
                 }
-                else if ([stackEntryMO.relationship isEqualToString:@"model"]) {
-                    datumMO.model = stackEntryMO;
+                else if ([relationship isEqualToString:@"model"]) {
+                    datumMO.model = [stackEntryRepository insertModelStackEntry:moc
+                                                                        entryId:[NSNumber numberWithInteger:row]
+                                                                          block:[columns objectAtIndex:7]
+                                                                     sequenceId:[columns objectAtIndex:8]
+                                                                       sequence:[columns objectAtIndex:9]
+                                                                          datum:datumMO
+                    ];
                 }
                 else {
 //                    NSLog(@"adding stack entry to stack %ld vs %@",stackMO.datum.locus.locusId,stackMO.datum.sample.name);
+                    StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
+                                                                                entryId:[NSNumber numberWithInteger:row]
+                                                                           relationship:[columns objectAtIndex:6]
+                                                                                  block:[columns objectAtIndex:7]
+                                                                             sequenceId:[columns objectAtIndex:8]
+                                                                               sequence:[columns objectAtIndex:9]
+                                                                                  datum:datumMO
+                    ];
                     [datumMO addStackEntriesObject:stackEntryMO];
                     ++row;
                 }

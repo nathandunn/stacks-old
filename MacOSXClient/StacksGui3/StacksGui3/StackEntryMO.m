@@ -7,6 +7,7 @@
 //
 
 #import "StackEntryMO.h"
+#import "DatumMO.h"
 
 
 @implementation StackEntryMO
@@ -16,5 +17,6 @@
 @dynamic relationship;
 @dynamic sequence;
 @dynamic sequenceId;
+@dynamic datum;
 
 @end

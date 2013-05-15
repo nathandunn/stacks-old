@@ -7,12 +7,15 @@
 //
 
 #import "DatumMO.h"
-#import "AlleleMO.h"
+#import "ConsensusStackEntryMO.h"
+#import "DatumAlleleMO.h"
+#import "DatumSnpMO.h"
 #import "DepthMO.h"
 #import "HaplotypeMO.h"
 #import "LocusMO.h"
+#import "ModelStackEntryMO.h"
+#import "ReferenceStackEntryMO.h"
 #import "SampleMO.h"
-#import "SnpMO.h"
 #import "StackEntryMO.h"
 
 
@@ -22,14 +25,14 @@
 @dynamic sampleId;
 @dynamic tagId;
 @dynamic alleles;
+@dynamic consensus;
 @dynamic depths;
 @dynamic haplotypes;
 @dynamic locus;
-@dynamic sample;
-@dynamic snps;
-@dynamic consensus;
 @dynamic model;
 @dynamic reference;
+@dynamic sample;
+@dynamic snps;
 @dynamic stackEntries;
 
 @end
