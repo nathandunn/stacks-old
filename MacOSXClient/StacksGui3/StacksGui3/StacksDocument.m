@@ -8,13 +8,11 @@
 
 #import "StacksDocument.h"
 #import "DatumMO.h"
-#import "StackMO.h"
 #import "LocusMO.h"
 #import "PopulationMO.h"
 #import "DatumRepository.h"
 #import "PopulationRepository.h"
 #import "LocusRepository.h"
-#import "StackRepository.h"
 
 @interface StacksDocument()
 
@@ -37,13 +35,12 @@
 
 // selected stuff
 @synthesize selectedDatums;
-@synthesize selectedStack;
+@synthesize selectedDatum;
 
 // repository
 @synthesize datumRepository;
 @synthesize locusRepository;
 @synthesize populationRepository;
-@synthesize stackRepository;
 
 // array controller
 @synthesize datumController ;
@@ -55,7 +52,6 @@
         datumRepository = [[DatumRepository alloc] init];
         locusRepository = [[LocusRepository alloc] init];
         populationRepository = [[PopulationRepository alloc] init];
-        stackRepository = [[StackRepository alloc] init];
         
 //        [datumController addObserver:self forKeyPath:@"selectionIndexes" options:NSKeyValueObservingOptionInitial context:nil];
     }
@@ -102,7 +98,7 @@
     }
     else{
         self.selectedDatums = nil ;
-        self.selectedStack = nil ;
+        self.selectedDatum = nil ;
     }
     
 }
@@ -234,7 +230,7 @@
                 if ([datumMO.name isEqualToString:self.previousStacksName]) {
                     return;
                 }
-                self.selectedStack = [stackRepository getStack:self.managedObjectContext forDatum:datumMO];
+//                self.selectedStack = [stackRepository getStack:self.managedObjectContext forDatum:datumMO];
                 self.previousStacksName = datumMO.name ;
             }
 

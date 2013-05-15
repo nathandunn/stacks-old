@@ -18,7 +18,6 @@
 @class LocusRepository;
 @class SnpRepository;
 @class StackEntryRepository;
-@class StackRepository;
 
 
 @interface StacksConverter : NSObject
@@ -32,7 +31,6 @@
 @property(nonatomic, strong) SampleRepository* sampleRepository ;
 @property(nonatomic, strong) SnpRepository* snpRepository ;
 @property(nonatomic, strong) StackEntryRepository* stackEntryRepository ;
-@property(nonatomic, strong) StackRepository* stackRepository ;
 //@property(nonatomic, strong) NSManagedObjectContext *managedObjectContext;
 //@property(nonatomic, strong) NSManagedObjectModel *managedObjectModel;
 

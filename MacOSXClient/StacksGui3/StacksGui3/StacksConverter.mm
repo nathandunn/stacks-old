@@ -42,10 +42,8 @@ using std::ofstream;
 #import "DepthMO.h"
 #import "PopulationMO.h"
 #import "SampleMO.h"
-#import "StackMO.h"
 #import "SnpRepository.h"
 #import "StackEntryRepository.h"
-#import "StackRepository.h"
 //#import "StackEntry.h"
 
 
@@ -63,7 +61,6 @@ using std::ofstream;
 @synthesize sampleRepository;
 @synthesize snpRepository;
 @synthesize stackEntryRepository;
-@synthesize stackRepository;
 
 
 - (id)init {
@@ -78,7 +75,6 @@ using std::ofstream;
         sampleRepository = [[SampleRepository alloc] init];
         snpRepository = [[SnpRepository alloc] init];
         stackEntryRepository = [[StackEntryRepository alloc] init];
-        stackRepository = [[StackRepository alloc] init];
     }
     return self;
 }
@@ -461,19 +457,20 @@ using std::ofstream;
 
                 locusId = newLocusId;
                 // search for the new locus
+                // TODO: get from in-memory lookup?
                 datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name];
-                if (datumMO != nil) {
-                    if (datumMO.stack == nil) {
-                        stackMO = [stackRepository insertStack:moc datum:datumMO];
-                    }
-                    else {
-                        stackMO = datumMO.stack;
-                    }
-                }
-                else {
-                    datumMO = nil ;
-                    stackMO = nil ;
-                }
+//                if (datumMO != nil) {
+//                    if (datumMO.stack == nil) {
+////                        stackMO = [stackRepository insertStack:moc datum:datumMO];
+//                    }
+//                    else {
+////                        stackMO = datumMO.stack;
+//                    }
+//                }
+//                else {
+//                    datumMO = nil ;
+//                    stackMO = nil ;
+//                }
             }
 
             if (datumMO != nil) {
@@ -483,25 +480,24 @@ using std::ofstream;
                                                                               block:[columns objectAtIndex:7]
                                                                          sequenceId:[columns objectAtIndex:8]
                                                                            sequence:[columns objectAtIndex:9]
-                                                                              stack:stackMO
                 ];
 
                 if ([stackEntryMO.relationship isEqualToString:@"consensus"]) {
-                    stackMO.consensus = stackEntryMO;
+                    datumMO.consensus = stackEntryMO;
                 }
                 else if ([stackEntryMO.relationship isEqualToString:@"model"]) {
-                    stackMO.model = stackEntryMO;
+                    datumMO.model = stackEntryMO;
                 }
                 else {
 //                    NSLog(@"adding stack entry to stack %ld vs %@",stackMO.datum.locus.locusId,stackMO.datum.sample.name);
-                    [stackMO addStackEntriesObject:stackEntryMO];
+                    [datumMO addStackEntriesObject:stackEntryMO];
                     ++row;
                 }
             }
         }
     }
     gettimeofday(&time2, NULL);
-    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, stackMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
+    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
 
 
     // save old

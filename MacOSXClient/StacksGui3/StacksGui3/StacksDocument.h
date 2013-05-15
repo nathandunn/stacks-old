@@ -30,13 +30,12 @@
 @property(nonatomic, strong) LocusMO *selectedLocus;
 @property(nonatomic, strong) PopulationMO *selectedPopulation;
 @property(nonatomic, strong) NSArray *selectedDatums;
-@property(nonatomic, strong) StackMO *selectedStack;
+@property(nonatomic, strong) DatumMO *selectedDatum;
 
 // repositories
 @property(nonatomic, strong) DatumRepository *datumRepository ;
 @property(nonatomic, strong) LocusRepository *locusRepository ;
 @property(nonatomic, strong) PopulationRepository *populationRepository ;
-@property(nonatomic, strong) StackRepository *stackRepository;
 
 
 
