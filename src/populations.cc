@@ -26,8 +26,6 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-// $Id: populations.cc 2117 2011-05-07 00:54:22Z catchen $
-//
 
 #include "populations.h"
 
@@ -762,7 +760,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 
 	    uint k = 0;
 	    for (uint n = start; n < end; n++) {
-		fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->sort_bp() + n;
+		fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->sort_bp(n);
 
  		if (snp_locs.count(n) == 0) {
 		    for (int j = 0; j < pmap->sample_cnt(); j++) {
@@ -1065,7 +1063,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			fh << batch_id << "\t"
 			   << loc->id << "\t"
 			   << loc->loc.chr << "\t"
-			   << loc->sort_bp() + i << "\t"
+			   << loc->sort_bp(i) << "\t"
 			   << i << "\t"
 			   << psum->rev_pop_index(j) << "\t"
 			   << s[j]->nucs[i].p_nuc << "\t";
@@ -1443,7 +1441,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 				   << "incompatible_locus\t"
 				   << loc->id << "\t"
 				   << loc->loc.chr << "\t"
-				   << loc->sort_bp() + k << "\t"
+				   << loc->sort_bp(k) << "\t"
 				   << k << "\t" 
 				   << pop_1 << "\t" 
 				   << pop_2 << "\n";
@@ -1452,7 +1450,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			}
 
 			pair->loc_id = loc->id;
-			pair->bp     = loc->sort_bp() + k;
+			pair->bp     = loc->sort_bp(k);
+			pair->col    = k;
 
 			//
 			// Locus is fixed in both populations, or was only found in one population.
@@ -1573,7 +1572,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			pairs[i]->wfst_pval = bootstrap_approximate_pval(pairs[i]->snp_cnt, pairs[i]->wfst, approx_fst_dist);
 
 		    cnt++;
-		    sum += pairs[i]->cfst;
+		    sum += pairs[i]->camova_fst;
 
 		    sprintf(fst_str,   "%0.10f", pairs[i]->fst);
 		    sprintf(cfst_str,  "%0.10f", pairs[i]->cfst);
@@ -1588,7 +1587,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		       << pop_2             << "\t"
 		       << chr               << "\t"
 		       << pairs[i]->bp      << "\t"
-		       << "0"               << "\t"
+		       << pairs[i]->col     << "\t"
 		       << pairs[i]->pi      << "\t"
 		       << fst_str           << "\t"
 		       << pairs[i]->fet_p   << "\t"
@@ -1673,10 +1672,11 @@ init_chr_pairs(map<string, vector<PopPair *> > &genome_chrs, string chr, map<uin
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
 	loc = sorted_loci[pos];
 	len = strlen(loc->con);
-	bp  = loc->sort_bp();
 
-	for (int k = 0; k < len; k++)
-	    bps.insert(bp + k);
+	for (int k = 0; k < len; k++) {
+	    bp  = loc->sort_bp(k);
+	    bps.insert(bp);
+	}
     }
 
     genome_chrs[chr].resize(bps.size(), NULL);
@@ -3022,7 +3022,9 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 		sprintf(p_str, "%0.3f", p_freq);
 		sprintf(q_str, "%0.3f", 1 - p_freq);
 
-		fh << loc->loc.chr << "\t" << loc->sort_bp() + col << "\t" << loc->id << "\t"
+		fh << loc->loc.chr << "\t" 
+		   << loc->sort_bp(col) << "\t" 
+		   << loc->id << "\t"
 		   << t->nucs[col].p_allele << "\t"            // REFerence allele
 		   << t->nucs[col].q_allele << "\t"            // ALTernate allele
 		   << "."        << "\t"                       // QUAL
@@ -3299,7 +3301,10 @@ write_structure(map<int, CSLocus *> &catalog,
     		uint col = loc->snps[i]->col;
 		if (t->nucs[col].allele_cnt == 2) {
 		    fh << "\t" << loc->id;
-		    if (write_single_snp) break;
+		    if (write_single_snp) 
+			break;
+		    else 
+			fh << "_" << col;
 		}
 	    }
 	}

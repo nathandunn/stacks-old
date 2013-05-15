@@ -25,8 +25,6 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-// $Id$
-//
 
 #include "cstacks.h"
 

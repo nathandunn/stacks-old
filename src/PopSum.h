@@ -44,6 +44,7 @@ class PopPair {
 public:
     int    loc_id;
     int    bp;
+    int    col;
     double alleles; // Number of alleles sampled at this location.
     double pi;
     double fst;
@@ -64,6 +65,7 @@ public:
     PopPair() { 
 	loc_id     = 0;
 	bp         = 0;
+	col        = 0;
 	alleles    = 0.0;
 	pi         = 0.0;
 	fst        = 0.0;
@@ -322,7 +324,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 		       << "incompatible_locus\t"
 		       << loc->id << "\t"
 		       << loc->loc.chr << "\t"
-		       << loc->sort_bp() + k << "\t"
+		       << loc->sort_bp(k) << "\t"
 		       << k << "\t" 
 		       << population_id << "\n";
 	    }
@@ -692,8 +694,7 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
     // Record the results in the PopSum object.
     //
     s->nucs[pos].loc_id   = locus->id;
-    //s->nucs[pos].bp       = locus->loc.bp + pos;
-    s->nucs[pos].bp       = locus->sort_bp() + pos;
+    s->nucs[pos].bp       = locus->sort_bp(pos);
     s->nucs[pos].num_indv = num_indv;
 
     if (num_indv > 0) {
@@ -899,9 +900,8 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     //
     // Record the results in the PopSum object.
     //
-    //s->nucs[pos].bp       = locus->loc.bp + pos;
     s->nucs[pos].loc_id   = locus->id;
-    s->nucs[pos].bp       = locus->sort_bp() + pos;
+    s->nucs[pos].bp       = locus->sort_bp(pos);
     s->nucs[pos].num_indv = num_indv;
     s->nucs[pos].p        = allele_p > allele_q ? allele_p : allele_q;
     s->nucs[pos].p_nuc    = allele_p > allele_q ? p_allele : q_allele;

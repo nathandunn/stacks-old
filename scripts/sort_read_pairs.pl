@@ -211,11 +211,11 @@ sub print_results {
             foreach $read (@{$reads->{$sample}->{$stack_id}}) {
 		if ($out_type eq "fasta") {
 		    print $out_fh
-			">", $cat_id, "|", $stack_id, "|", $read->{'id'}, "\n",
+			">", $cat_id, "|", $sample, "|", $stack_id, "|", $read->{'id'}, "\n",
 			$read->{'seq'}, "\n";
 		} else {
 		    print $out_fh
-			"@", $cat_id, "|", $stack_id, "|", $read->{'id'}, "\n",
+			"@", $cat_id, "|", $sample, "|", $stack_id, "|", $read->{'id'}, "\n",
 			$read->{'seq'}, "\n",
 			"+\n",
 			$read->{'qual'}, "\n";
