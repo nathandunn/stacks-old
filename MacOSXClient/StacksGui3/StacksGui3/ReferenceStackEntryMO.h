@@ -1,5 +1,5 @@
 //
-//  AlleleMO.h
+//  ReferenceStackEntryMO.h
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 5/15/13.
@@ -8,11 +8,10 @@
 
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
+#import "StackEntryMO.h"
 
 
-@interface AlleleMO : NSManagedObject
+@interface ReferenceStackEntryMO : StackEntryMO
 
-@property (nonatomic, retain) NSString * type;
-@property (nonatomic, retain) NSString * value;
 
 @end

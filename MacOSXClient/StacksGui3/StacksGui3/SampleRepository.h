@@ -14,7 +14,7 @@
 @interface SampleRepository : NSObject
 - (SampleMO *)getSampleForName:(NSString *)string andContext:(NSManagedObjectContext *)context andError:(NSError*)error;
 
-- (SampleMO *)insertSampleWithId:(NSNumber *)number andName:(NSString *)name;
+//- (SampleMO *)insertSampleWithId:(NSNumber *)number andName:(NSString *)name;
 
 - (SampleMO *)insertSample:(NSManagedObjectContext *)context id:(NSNumber *)number name:(NSString *)name;
 @end

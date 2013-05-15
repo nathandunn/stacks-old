@@ -2,7 +2,7 @@
 //  SampleMO.h
 //  StacksGui3
 //
-//  Created by Nathan Dunn on 5/6/13.
+//  Created by Nathan Dunn on 5/15/13.
 //  Copyright (c) 2013 Nathan Dunn. All rights reserved.
 //
 
@@ -13,10 +13,10 @@
 
 @interface SampleMO : NSManagedObject
 
-@property (nonatomic, retain) NSNumber * sampleId;
 @property (nonatomic, retain) NSString * name;
-@property (nonatomic, retain) PopulationMO *population;
+@property (nonatomic, retain) NSNumber * sampleId;
 @property (nonatomic, retain) NSSet *datums;
+@property (nonatomic, retain) PopulationMO *population;
 @end
 
 @interface SampleMO (CoreDataGeneratedAccessors)

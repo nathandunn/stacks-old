@@ -1,5 +1,5 @@
 //
-//  AlleleMO.h
+//  DatumAlleleMO.h
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 5/15/13.
@@ -8,11 +8,12 @@
 
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
+#import "AlleleMO.h"
 
+@class DatumMO;
 
-@interface AlleleMO : NSManagedObject
+@interface DatumAlleleMO : AlleleMO
 
-@property (nonatomic, retain) NSString * type;
-@property (nonatomic, retain) NSString * value;
+@property (nonatomic, retain) DatumMO *datum;
 
 @end

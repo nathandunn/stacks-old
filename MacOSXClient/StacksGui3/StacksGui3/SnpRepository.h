@@ -8,8 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
-@class SnpMO ; 
+@class LocusSnpMO ;
+@class LocusMO ;
 
 @interface SnpRepository : NSObject
-- (SnpMO *)insertSnp:(NSManagedObjectContext *)context column:(NSNumber *)column lratio:(NSNumber *)lratio rank1:(NSNumber *)rank1 rank2:(NSNumber *)rank2 rank3:(NSNumber *)rank3 rank4:(NSNumber *)rank4;
+- (LocusSnpMO *)insertLocusSnp:(NSManagedObjectContext *)context column:(NSNumber *)column lratio:(NSNumber *)lratio rank1:(NSNumber *)rank1 rank2:(NSNumber *)rank2 rank3:(NSNumber *)rank3 rank4:(NSNumber *)rank4 locus:(LocusMO *)locus;
 @end

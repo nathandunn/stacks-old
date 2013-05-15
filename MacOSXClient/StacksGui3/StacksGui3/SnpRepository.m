@@ -8,13 +8,15 @@
 
 #import "SnpRepository.h"
 #import "SnpMO.h"
+#import "LocusMO.h"
+#import "LocusSnpMO.h"
 
 
 @implementation SnpRepository {
 
 }
-- (SnpMO *)insertSnp:(NSManagedObjectContext *)context column:(NSNumber *)column lratio:(NSNumber *)lratio rank1:(NSNumber *)rank1 rank2:(NSNumber *)rank2 rank3:(NSNumber *)rank3 rank4:(NSNumber *)rank4 {
-    SnpMO *snpMO = [NSEntityDescription insertNewObjectForEntityForName:@"Snp" inManagedObjectContext:context];
+- (LocusSnpMO *)insertLocusSnp:(NSManagedObjectContext *)context column:(NSNumber *)column lratio:(NSNumber *)lratio rank1:(NSNumber *)rank1 rank2:(NSNumber *)rank2 rank3:(NSNumber *)rank3 rank4:(NSNumber *)rank4 locus:(LocusMO *)locus {
+    LocusSnpMO *snpMO = [NSEntityDescription insertNewObjectForEntityForName:@"LocusSnp" inManagedObjectContext:context];
 
     snpMO.column = column ;
     snpMO.lratio = lratio ;
@@ -22,6 +24,7 @@
     snpMO.rank2 = rank2 ;
     snpMO.rank3 = rank3 ;
     snpMO.rank4 = rank4 ;
+    snpMO.locus = locus ;
 
     return snpMO;
 }
