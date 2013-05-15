@@ -53,6 +53,16 @@ using std::ofstream;
 
 }
 
+/**
+* https://casspr.fogbugz.com/default.asp?1144
+* 1 - add pops
+2 - add samples
+3 - load locis (refactor into other method)
+4 - create datum from loci and sample (do per sample, load loci into a lookupTable to use throughout)
+5 - add stackEntries onto each datum per tags file
+6 - load snps onto each datum
+7 - load alleles onto each datum
+*/
 @synthesize datumRepository;
 @synthesize depthRepository;
 @synthesize haplotypeRepository;

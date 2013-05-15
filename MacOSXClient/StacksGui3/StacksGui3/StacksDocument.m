@@ -230,7 +230,7 @@
                 if ([datumMO.name isEqualToString:self.previousStacksName]) {
                     return;
                 }
-//                self.selectedStack = [stackRepository getStack:self.managedObjectContext forDatum:datumMO];
+                self.selectedDatum = datumMO;
                 self.previousStacksName = datumMO.name ;
             }
 
