@@ -11,7 +11,8 @@
 
 @implementation AlleleMO
 
-@dynamic type;
-@dynamic value;
+@dynamic allele;
+@dynamic depth;
+@dynamic ratio;
 
 @end

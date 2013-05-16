@@ -12,6 +12,7 @@
 #import "DatumMO.h"
 #import "LocusSnpMO.h"
 #import "DatumSnpMO.h"
+#import "DatumAlleleMO.h"
 
 
 @implementation SnpRepository {
@@ -47,7 +48,6 @@
 
     return snpMO;
 }
-
 
 
 @end

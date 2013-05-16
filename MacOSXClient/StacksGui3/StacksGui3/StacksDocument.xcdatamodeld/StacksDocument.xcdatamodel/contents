@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model name="" userDefinedModelVersionIdentifier="" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="2061" systemVersion="11G63" minimumToolsVersion="Automatic" macOSVersion="Automatic" iOSVersion="Automatic">
     <entity name="Allele" representedClassName="AlleleMO" isAbstract="YES" syncable="YES">
-        <attribute name="type" optional="YES" attributeType="String" syncable="YES"/>
-        <attribute name="value" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="allele" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="depth" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="ratio" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
     </entity>
     <entity name="ConsensusStackEntry" representedClassName="ConsensusStackEntryMO" parentEntity="StackEntry" syncable="YES"/>
     <entity name="Datum" representedClassName="DatumMO" syncable="YES">
@@ -81,7 +82,7 @@
         <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="stackEntries" inverseEntity="Datum" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Allele" positionX="936" positionY="18" width="128" height="75"/>
+        <element name="Allele" positionX="936" positionY="18" width="128" height="90"/>
         <element name="ConsensusStackEntry" positionX="207" positionY="-36" width="128" height="45"/>
         <element name="Datum" positionX="214" positionY="201" width="128" height="240"/>
         <element name="DatumAllele" positionX="522" positionY="480" width="128" height="60"/>
