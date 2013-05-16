@@ -515,7 +515,6 @@ using std::ofstream;
         }
     }
     gettimeofday(&time2, NULL);
-    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
 
 
     // save old
@@ -600,7 +599,6 @@ using std::ofstream;
         }
     }
     gettimeofday(&time2, NULL);
-    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
 
 
     // save old
@@ -712,7 +710,7 @@ using std::ofstream;
                                                                                sequence:[columns objectAtIndex:9]
                                                                                   datum:datumMO
                     ];
-//                    [datumMO addStackEntriesObject:stackEntryMO];
+                    [datumMO addStackEntriesObject:stackEntryMO];
                     ++row;
                 }
             }
