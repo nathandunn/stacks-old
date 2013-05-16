@@ -259,14 +259,21 @@
     [request setEntity:entityDescription];
 
     NSArray *locusArray = [moc executeFetchRequest:request error:&error];
+    int locusSnpCount = 0 ;
+    int locusAlleleCount  = 0 ;
     for (NSUInteger i = 0; i < 5; i++) {
         LocusMO *locusMO = [locusArray objectAtIndex:i];
         NSLog(@"index %ld locus %@", i, locusMO.locusId);
         NSLog(@"has datums %ld", locusMO.datums.count);
+        locusAlleleCount += locusMO.alleles.count ;
+        locusSnpCount += locusMO.snps.count ;
     }
     NSLog(@"number of loci %ld", locusArray.count);
 
     STAssertTrue(locusArray.count == 462 || locusArray.count==11, @"should be either 11 or 462 loci %ld", locusArray.count );
+    STAssertTrue(locusSnpCount>0, @"should be atleast one snp ", locusSnpCount );
+    STAssertTrue(locusAlleleCount>0, @"should be atleast one allele ", locusAlleleCount);
+
 
 
     NSEntityDescription *entityDescription2 = [NSEntityDescription
@@ -346,9 +353,9 @@
         else{
             NSLog(@"has no alleles for sample %@ and locus %@",datumMO.sample.name,datumMO.locus.locusId);
         }
+    }
         STAssertTrue(snpsCount>0, @"Should have snps on Datum, %ld", snpsCount);
         STAssertTrue(allelesCount>0, @"Should have alleles on Datum, %ld", allelesCount);
-    }
 }
 
 
