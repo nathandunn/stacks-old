@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		1429B9F417442D0300CAC7F2 /* ConsensusStackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1429B9F317442D0300CAC7F2 /* ConsensusStackEntryMO.m */; };
 		1431B43417440CF7006FD2BC /* LocusMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B43317440CF7006FD2BC /* LocusMO.m */; };
-		1431B43A17440CF7006FD2BC /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B43917440CF7006FD2BC /* AlleleMO.m */; };
 		1431B43D17440CF7006FD2BC /* DatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B43C17440CF7006FD2BC /* DatumMO.m */; };
 		1431B44317440CF8006FD2BC /* ReferenceStackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B44217440CF8006FD2BC /* ReferenceStackEntryMO.m */; };
 		1431B44617440CF8006FD2BC /* StackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B44517440CF8006FD2BC /* StackEntryMO.m */; };
@@ -19,7 +18,6 @@
 		1431B45817440CF8006FD2BC /* DepthMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B45717440CF8006FD2BC /* DepthMO.m */; };
 		1431B45B17440CF8006FD2BC /* ModelStackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B45A17440CF8006FD2BC /* ModelStackEntryMO.m */; };
 		1431B45E17440CF8006FD2BC /* SampleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B45D17440CF8006FD2BC /* SampleMO.m */; };
-		1431B46117440CF8006FD2BC /* DatumAlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1431B46017440CF8006FD2BC /* DatumAlleleMO.m */; };
 		1442E19917206DBB004B6361 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1442E19817206DBB004B6361 /* Cocoa.framework */; };
 		1442E1A317206DBB004B6361 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1442E1A117206DBB004B6361 /* InfoPlist.strings */; };
 		1442E1A517206DBB004B6361 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 1442E1A417206DBB004B6361 /* main.m */; };
@@ -31,6 +29,8 @@
 		1442E1BE17206DBC004B6361 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1442E19817206DBB004B6361 /* Cocoa.framework */; };
 		1442E1C617206DBC004B6361 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1442E1C417206DBC004B6361 /* InfoPlist.strings */; };
 		1442E1C917206DBC004B6361 /* StacksGui3Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1442E1C817206DBC004B6361 /* StacksGui3Tests.m */; };
+		1466633A17445AEE0051E40C /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1466633917445AEE0051E40C /* AlleleMO.m */; };
+		1466633D17445AF80051E40C /* DatumAlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1466633C17445AF80051E40C /* DatumAlleleMO.m */; };
 		14A1E8E8174449D00056C06F /* DatumSnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A1E8E7174449D00056C06F /* DatumSnpMO.m */; };
 		14A1E8EB174449D80056C06F /* LocusSnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A1E8EA174449D80056C06F /* LocusSnpMO.m */; };
 		14A1E8EE17444B620056C06F /* SnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A1E8ED17444B620056C06F /* SnpMO.m */; };
@@ -58,6 +58,7 @@
 		6B4674A4173183C300E42419 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B4674A3173183C300E42419 /* libz.1.2.7.dylib */; };
 		6B4674AA1731872600E42419 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674A81731872600E42419 /* input.cc */; };
 		D793C0F3A4CB3044602B1F3F /* SampleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C907D04E589764C9E424 /* SampleRepository.m */; };
+		D793C6F5BDAD1E1FA91892F2 /* AlleleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C907C035E29655E283F1 /* AlleleRepository.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -75,8 +76,6 @@
 		1429B9F317442D0300CAC7F2 /* ConsensusStackEntryMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ConsensusStackEntryMO.m; sourceTree = "<group>"; };
 		1431B43217440CF7006FD2BC /* LocusMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusMO.h; sourceTree = "<group>"; };
 		1431B43317440CF7006FD2BC /* LocusMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusMO.m; sourceTree = "<group>"; };
-		1431B43817440CF7006FD2BC /* AlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleMO.h; sourceTree = "<group>"; };
-		1431B43917440CF7006FD2BC /* AlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleMO.m; sourceTree = "<group>"; };
 		1431B43B17440CF7006FD2BC /* DatumMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumMO.h; sourceTree = "<group>"; };
 		1431B43C17440CF7006FD2BC /* DatumMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumMO.m; sourceTree = "<group>"; };
 		1431B44117440CF8006FD2BC /* ReferenceStackEntryMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReferenceStackEntryMO.h; sourceTree = "<group>"; };
@@ -95,8 +94,6 @@
 		1431B45A17440CF8006FD2BC /* ModelStackEntryMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ModelStackEntryMO.m; sourceTree = "<group>"; };
 		1431B45C17440CF8006FD2BC /* SampleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SampleMO.h; sourceTree = "<group>"; };
 		1431B45D17440CF8006FD2BC /* SampleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SampleMO.m; sourceTree = "<group>"; };
-		1431B45F17440CF8006FD2BC /* DatumAlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumAlleleMO.h; sourceTree = "<group>"; };
-		1431B46017440CF8006FD2BC /* DatumAlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumAlleleMO.m; sourceTree = "<group>"; };
 		1442E19517206DBB004B6361 /* StacksGui3.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StacksGui3.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1442E19817206DBB004B6361 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		1442E19B17206DBB004B6361 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -117,6 +114,10 @@
 		1442E1C517206DBC004B6361 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1442E1C717206DBC004B6361 /* StacksGui3Tests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StacksGui3Tests.h; sourceTree = "<group>"; };
 		1442E1C817206DBC004B6361 /* StacksGui3Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StacksGui3Tests.m; sourceTree = "<group>"; };
+		1466633817445AEE0051E40C /* AlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleMO.h; sourceTree = "<group>"; };
+		1466633917445AEE0051E40C /* AlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleMO.m; sourceTree = "<group>"; };
+		1466633B17445AF80051E40C /* DatumAlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumAlleleMO.h; sourceTree = "<group>"; };
+		1466633C17445AF80051E40C /* DatumAlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumAlleleMO.m; sourceTree = "<group>"; };
 		14A1E8E6174449D00056C06F /* DatumSnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumSnpMO.h; sourceTree = "<group>"; };
 		14A1E8E7174449D00056C06F /* DatumSnpMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumSnpMO.m; sourceTree = "<group>"; };
 		14A1E8E9174449D80056C06F /* LocusSnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusSnpMO.h; sourceTree = "<group>"; };
@@ -183,6 +184,8 @@
 		6B4674A81731872600E42419 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = input.cc; path = ../../../src/input.cc; sourceTree = "<group>"; };
 		6B4674A91731872600E42419 /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../../../src/input.h; sourceTree = "<group>"; };
 		D793C4A57535355A029B6C52 /* SampleRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SampleRepository.h; sourceTree = "<group>"; };
+		D793C634902255B9E726C00C /* AlleleRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleRepository.h; sourceTree = "<group>"; };
+		D793C907C035E29655E283F1 /* AlleleRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleRepository.m; sourceTree = "<group>"; };
 		D793C907D04E589764C9E424 /* SampleRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SampleRepository.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -353,6 +356,10 @@
 				1442E1AA17206DBB004B6361 /* StacksDocument.h */,
 				1442E1AB17206DBB004B6361 /* StacksDocument.m */,
 				1442E1B317206DBB004B6361 /* StacksDocument.xcdatamodeld */,
+				1466633B17445AF80051E40C /* DatumAlleleMO.h */,
+				1466633C17445AF80051E40C /* DatumAlleleMO.m */,
+				1466633817445AEE0051E40C /* AlleleMO.h */,
+				1466633917445AEE0051E40C /* AlleleMO.m */,
 				14A1E8EC17444B620056C06F /* SnpMO.h */,
 				14A1E8ED17444B620056C06F /* SnpMO.m */,
 				14A1E8E9174449D80056C06F /* LocusSnpMO.h */,
@@ -361,8 +368,6 @@
 				14A1E8E7174449D00056C06F /* DatumSnpMO.m */,
 				1429B9F217442D0300CAC7F2 /* ConsensusStackEntryMO.h */,
 				1429B9F317442D0300CAC7F2 /* ConsensusStackEntryMO.m */,
-				1431B45F17440CF8006FD2BC /* DatumAlleleMO.h */,
-				1431B46017440CF8006FD2BC /* DatumAlleleMO.m */,
 				1431B45C17440CF8006FD2BC /* SampleMO.h */,
 				1431B45D17440CF8006FD2BC /* SampleMO.m */,
 				1431B45917440CF8006FD2BC /* ModelStackEntryMO.h */,
@@ -381,8 +386,6 @@
 				1431B44217440CF8006FD2BC /* ReferenceStackEntryMO.m */,
 				1431B43B17440CF7006FD2BC /* DatumMO.h */,
 				1431B43C17440CF7006FD2BC /* DatumMO.m */,
-				1431B43817440CF7006FD2BC /* AlleleMO.h */,
-				1431B43917440CF7006FD2BC /* AlleleMO.m */,
 				1431B43217440CF7006FD2BC /* LocusMO.h */,
 				1431B43317440CF7006FD2BC /* LocusMO.m */,
 				63D53D3DA1B67441F7C8386C /* StacksDocument.xib */,
@@ -411,6 +414,8 @@
 				63D534CA97F7DF4D5667189A /* HaplotypeRepository.h */,
 				63D53146E34901E5A22B3D33 /* StackEntryRepository.m */,
 				63D535BC655183E4F0EA1AAB /* StackEntryRepository.h */,
+				D793C907C035E29655E283F1 /* AlleleRepository.m */,
+				D793C634902255B9E726C00C /* AlleleRepository.h */,
 			);
 			name = Service;
 			sourceTree = "<group>";
@@ -551,7 +556,6 @@
 				63D5324CC3F9B03789008CE5 /* HaplotypeRepository.m in Sources */,
 				63D53E9B9995E1FAAA1FF1ED /* StackEntryRepository.m in Sources */,
 				1431B43417440CF7006FD2BC /* LocusMO.m in Sources */,
-				1431B43A17440CF7006FD2BC /* AlleleMO.m in Sources */,
 				1431B43D17440CF7006FD2BC /* DatumMO.m in Sources */,
 				1431B44317440CF8006FD2BC /* ReferenceStackEntryMO.m in Sources */,
 				1431B44617440CF8006FD2BC /* StackEntryMO.m in Sources */,
@@ -561,11 +565,13 @@
 				1431B45817440CF8006FD2BC /* DepthMO.m in Sources */,
 				1431B45B17440CF8006FD2BC /* ModelStackEntryMO.m in Sources */,
 				1431B45E17440CF8006FD2BC /* SampleMO.m in Sources */,
-				1431B46117440CF8006FD2BC /* DatumAlleleMO.m in Sources */,
 				1429B9F417442D0300CAC7F2 /* ConsensusStackEntryMO.m in Sources */,
 				14A1E8E8174449D00056C06F /* DatumSnpMO.m in Sources */,
 				14A1E8EB174449D80056C06F /* LocusSnpMO.m in Sources */,
 				14A1E8EE17444B620056C06F /* SnpMO.m in Sources */,
+				D793C6F5BDAD1E1FA91892F2 /* AlleleRepository.m in Sources */,
+				1466633A17445AEE0051E40C /* AlleleMO.m in Sources */,
+				1466633D17445AF80051E40C /* DatumAlleleMO.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

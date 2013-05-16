@@ -12,7 +12,8 @@
 
 @interface AlleleMO : NSManagedObject
 
-@property (nonatomic, retain) NSString * type;
-@property (nonatomic, retain) NSString * value;
+@property (nonatomic, retain) NSNumber * allele;
+@property (nonatomic, retain) NSNumber * depth;
+@property (nonatomic, retain) NSNumber * ratio;
 
 @end

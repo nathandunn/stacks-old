@@ -34,6 +34,7 @@ using std::ofstream;
 #import "SnpRepository.h"
 #import "StackEntryRepository.h"
 #import "DatumSnpMO.h"
+#import "AlleleRepository.h"
 
 
 #include <sys/time.h>
@@ -52,6 +53,8 @@ using std::ofstream;
 6 - load snps onto each datum
 7 - load alleles onto each datum
 */
+
+// repositories
 @synthesize datumRepository;
 @synthesize depthRepository;
 @synthesize haplotypeRepository;
@@ -60,6 +63,10 @@ using std::ofstream;
 @synthesize sampleRepository;
 @synthesize snpRepository;
 @synthesize stackEntryRepository;
+@synthesize alleleRepository;
+
+
+// lookups
 @synthesize lociDictionary;
 
 
@@ -75,6 +82,7 @@ using std::ofstream;
         sampleRepository = [[SampleRepository alloc] init];
         snpRepository = [[SnpRepository alloc] init];
         stackEntryRepository = [[StackEntryRepository alloc] init];
+        alleleRepository= [[AlleleRepository alloc] init];
 
 
         lociDictionary = [[NSMutableDictionary alloc] init];
@@ -381,6 +389,12 @@ using std::ofstream;
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading snps onto datum time %ld", time2.tv_sec - time1.tv_sec);
 
+    NSLog(@"loading alleles onto datums");
+    gettimeofday(&time1, NULL);
+    [self loadAllelesOntoDatum:stacksDocument];
+    gettimeofday(&time2, NULL);
+    NSLog(@"finished loading alleles onto datum time %ld", time2.tv_sec - time1.tv_sec);
+
 
     NSError *error;
     BOOL success = [stacksDocument.managedObjectContext save:&error];
@@ -409,8 +423,110 @@ using std::ofstream;
     }
 }
 
+- (void)loadAllelesOntoDatum:(StacksDocument *)document {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString *path = document.path;
+
+    // 1- get all files i the directory named *.tag.tsv"
+    NSError *error;
+    NSArray *files = [fileManager contentsOfDirectoryAtPath:path error:&error];
+    NSLog(@"# of files for directory %ld", files.count);
+
+    // 2 - for each file, read the .tags file
+    for (NSString *filePath in files) {
+        if ([filePath hasSuffix:@".alleles.tsv"] && ![filePath hasPrefix:@"batch"]) {
+            [self loadAlleleFileForDatum:document fromFile:filePath];
+        }
+        else {
+            NSLog(@"not loading alleles file %@", filePath);
+        }
+    }
+}
+
+- (void)loadAlleleFileForDatum:(StacksDocument *)document fromFile:(NSString *)alleleFileName {
+    NSLog(@"Loading snps file %@", alleleFileName);
+
+    NSUInteger fileNameLength = alleleFileName.length;
+    NSString *sampleName = [alleleFileName substringToIndex:fileNameLength - 9];
+    NSLog(@"sampleName %@", sampleName);
+    // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
+
+    NSManagedObjectContext *moc = document.managedObjectContext;
+    SampleMO *sampleMO = [sampleRepository getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
+
+    struct timeval time1, time2;
+    gettimeofday(&time1, NULL);
+
+    NSError *error2 = nil;
+    NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", alleleFileName];
+    NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
+    gettimeofday(&time2, NULL);
+//    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
+
+    if (error2) {
+        NSLog(@"error loading file [%@]: %@", alleleFileName, error2);
+    }
+
+    NSString *line;
+//    NSUInteger row = 1;
+    gettimeofday(&time1, NULL);
+    NSInteger locusId = -1;
+    NSInteger newLocusId;
+    DatumMO *datumMO = nil ;
+    char allele  ;
+    int depth ;
+    float ratio;
+//    LocusMO *locusMO = nil ;
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+    for (line in fileData) {
+        NSArray *columns = [line componentsSeparatedByString:@"\t"];
+
+        if (columns.count > 4) {
+
+            // if the StackMO is found
+//            sampleId = [[columns objectAtIndex:1] integerValue];
+            newLocusId = [[columns objectAtIndex:2] integerValue];
+            allele = [[columns objectAtIndex:3] charValue];
+            ratio = [[columns objectAtIndex:4] floatValue];
+            depth = [[columns objectAtIndex:5] intValue];
+
+
+            if (locusId != newLocusId) {
+                locusId = newLocusId;
+//                locusMO = [locusRepository getLocus:moc forId:locusId];
+                // search for the new locus
+                // TODO: get from in-memory lookup?
+                datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name];
+            }
+
+            if (datumMO != nil) {
+                DatumAlleleMO* datumAlleleMO = [alleleRepository insertDatumAllele:moc
+                                                                ratio:[NSNumber numberWithFloat:ratio]
+                                                                 depth:[NSNumber numberWithInt:depth]
+                                                                 allele:[NSNumber numberWithInt:allele]
+                                                                 datum:datumMO
+                ];
+//                [datumMO addSnpsObject:datumSnpMO];
+                NSLog(@"inserted allele at %@ for sample %@ and locus %@",datumAlleleMO.allele,datumMO.sample.name,datumMO.locus.locusId);
+            }
+        }
+    }
+    gettimeofday(&time2, NULL);
+    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
+
+
+    // save old
+    NSError *saveError;
+    BOOL success = [moc save:&saveError];
+    NSLog(@"saved %d", success);
+    if (saveError != nil ) {
+        NSLog(@"error saving %@", saveError);
+    }
+}
+
 - (void)loadSnpFileForDatum:(StacksDocument *)document fromFile:(NSString *)snpFileName {
-    NSLog(@"Loading tag file %@", snpFileName);
+    NSLog(@"Loading snps file %@", snpFileName);
 
     NSUInteger fileNameLength = snpFileName.length;
     NSString *sampleName = [snpFileName substringToIndex:fileNameLength - 9];

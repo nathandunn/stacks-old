@@ -327,15 +327,27 @@
     NSArray *datums = [datumRepository getAllDatum:managedObjectContext];
     
     NSLog(@"datums found %ld",datums.count) ;
+    int snpsCount = 0 ;
+    int allelesCount = 0 ;
     for(int i = 0 ; i < 5 ; i++){
         DatumMO *datumMO = [datums objectAtIndex:i] ;
         if(datumMO.snps != nil){
            NSLog(@"snps count on datum %ld for sample %@ and locus %@",datumMO.snps.count,datumMO.sample.name,datumMO.locus.locusId);
+            snpsCount += datumMO.snps.count ;
         }
         else{
            NSLog(@"has no snps for sample %@ and locus %@",datumMO.sample.name,datumMO.locus.locusId);
         }
-//        STAssertTrue(datumMO.snps.count>0, @"Should have snps on Datum, %ld", datumMO.snps.count);
+
+        if(datumMO.alleles != nil){
+            allelesCount += datumMO.alleles.count ;
+            NSLog(@"alleles count on datum %ld for sample %@ and locus %@",datumMO.alleles.count,datumMO.sample.name,datumMO.locus.locusId);
+        }
+        else{
+            NSLog(@"has no alleles for sample %@ and locus %@",datumMO.sample.name,datumMO.locus.locusId);
+        }
+        STAssertTrue(snpsCount>0, @"Should have snps on Datum, %ld", snpsCount);
+        STAssertTrue(allelesCount>0, @"Should have alleles on Datum, %ld", allelesCount);
     }
 }
 
