@@ -10,8 +10,12 @@
 
 @class DatumAlleleMO;
 @class DatumMO;
+@class LocusAlleleMO;
+@class LocusMO;
 
 
 @interface AlleleRepository : NSObject
 - (DatumAlleleMO *)insertDatumAllele:(NSManagedObjectContext *)context ratio:(NSNumber *)ratio depth:(NSNumber *)depth allele:(NSNumber *)allele datum:(DatumMO *)datum;
+
+- (LocusAlleleMO *)insertLocusAllele:(NSManagedObjectContext *)context depth:(NSNumber *)column allele:(NSNumber *)allele locus:(LocusMO *)locus;
 @end

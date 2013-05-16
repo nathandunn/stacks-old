@@ -9,6 +9,8 @@
 #import "AlleleRepository.h"
 #import "DatumAlleleMO.h"
 #import "DatumMO.h"
+#import "LocusAlleleMO.h"
+#import "LocusMO.h"
 
 
 @implementation AlleleRepository {
@@ -23,5 +25,15 @@
     datumAlleleMO.datum = datum ;
 
     return datumAlleleMO;
+}
+
+- (LocusAlleleMO *)insertLocusAllele:(NSManagedObjectContext *)context depth:(NSNumber *)depth allele:(NSNumber *)allele locus:(LocusMO *)locus {
+    LocusAlleleMO *locusAlleleMO = [NSEntityDescription insertNewObjectForEntityForName:@"LocusAllele" inManagedObjectContext:context];
+
+    locusAlleleMO.depth = depth ;
+    locusAlleleMO.allele = allele;
+    locusAlleleMO.locus = locus ;
+
+    return locusAlleleMO;
 }
 @end

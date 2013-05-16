@@ -36,6 +36,7 @@ using std::ofstream;
 #import "DatumSnpMO.h"
 #import "DatumAlleleMO.h"
 #import "AlleleRepository.h"
+#import "LocusAlleleMO.h"
 
 
 #include <sys/time.h>
@@ -83,7 +84,7 @@ using std::ofstream;
         sampleRepository = [[SampleRepository alloc] init];
         snpRepository = [[SnpRepository alloc] init];
         stackEntryRepository = [[StackEntryRepository alloc] init];
-        alleleRepository= [[AlleleRepository alloc] init];
+        alleleRepository = [[AlleleRepository alloc] init];
 
 
         lociDictionary = [[NSMutableDictionary alloc] init];
@@ -183,8 +184,6 @@ using std::ofstream;
     gettimeofday(&time2, NULL);
     NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
 
-
-
     /**
     * START: loading datums + extra info
 */
@@ -249,6 +248,10 @@ using std::ofstream;
     gettimeofday(&time1, NULL);
     map<int, CSLocus *>::iterator catalogIterator = catalog.begin();
     NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
+
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
         LocusMO *locusMO = [locusRepository insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).first]
@@ -271,6 +274,23 @@ using std::ofstream;
             ];
             [locusMO addSnpsObject:snpMO];
         }
+
+//        map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
+        map<string, int> alleles = catalogIterator->second->alleles;
+        map<string, int>::iterator allelesIterator = alleles.begin();
+        string allele;
+        int column;
+        for (; allelesIterator != alleles.end(); ++allelesIterator) {
+            string allele = allelesIterator->first;
+            int column = allelesIterator->second;
+
+            LocusAlleleMO *locusAlleleMO = [alleleRepository insertLocusAllele:moc
+                                                                         depth:[NSNumber numberWithInt:column]
+                                                                        allele:[numberFormatter numberFromString:[NSString stringWithUTF8String:allele.c_str()]]
+                                                                         locus:locusMO
+            ];
+        }
+
 
         [loci addObject:locusMO];
         [lociDictionary setObject:locusMO forKey:locusMO.locusId];
@@ -474,8 +494,8 @@ using std::ofstream;
     NSInteger locusId = -1;
     NSInteger newLocusId;
     DatumMO *datumMO = nil ;
-    char allele  ;
-    int depth ;
+    char allele;
+    int depth;
     float ratio;
 //    LocusMO *locusMO = nil ;
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
@@ -503,15 +523,16 @@ using std::ofstream;
             }
 
             if (datumMO != nil) {
-                DatumAlleleMO* datumAlleleMO = [alleleRepository insertDatumAllele:moc
-                                                                ratio:[NSNumber numberWithFloat:ratio]
-                                                                 depth:[NSNumber numberWithInt:depth]
+                DatumAlleleMO *datumAlleleMO = [alleleRepository insertDatumAllele:moc
+                                                                             ratio:[NSNumber numberWithFloat:ratio]
+                                                                             depth:[NSNumber numberWithInt:depth]
                                                                             allele:[numberFormatter numberFromString:[columns objectAtIndex:3]]
-                                                                 datum:datumMO
+                                                                             datum:datumMO
                 ];
 //                [datumMO addSnpsObject:datumSnpMO];
 //                [datumMO addAllelesObject:datumAlleleMO];
-                NSLog(@"inserted allele at %@ for sample %@ and locus %@",datumAlleleMO.allele,datumMO.sample.name,datumMO.locus.locusId); }
+//                NSLog(@"inserted allele at %@ for sample %@ and locus %@", datumAlleleMO.allele, datumMO.sample.name, datumMO.locus.locusId);
+            }
         }
     }
     gettimeofday(&time2, NULL);
@@ -585,14 +606,14 @@ using std::ofstream;
             }
 
             if (datumMO != nil) {
-                DatumSnpMO* datumSnpMO = [snpRepository insertDatumSnp:moc
-                                       column:[NSNumber numberWithInteger:column]
-                                       lratio:[NSNumber numberWithFloat:lratio]
-                                        rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
-                                        rank2:[numberFormatter numberFromString:[columns objectAtIndex:6]]
-                                        rank3:[numberFormatter numberFromString:[columns objectAtIndex:7]]
-                                        rank4:[numberFormatter numberFromString:[columns objectAtIndex:8]]
-                                        datum:datumMO
+                DatumSnpMO *datumSnpMO = [snpRepository insertDatumSnp:moc
+                                                                column:[NSNumber numberWithInteger:column]
+                                                                lratio:[NSNumber numberWithFloat:lratio]
+                                                                 rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
+                                                                 rank2:[numberFormatter numberFromString:[columns objectAtIndex:6]]
+                                                                 rank3:[numberFormatter numberFromString:[columns objectAtIndex:7]]
+                                                                 rank4:[numberFormatter numberFromString:[columns objectAtIndex:8]]
+                                                                 datum:datumMO
                 ];
 //                [datumMO addSnpsObject:datumSnpMO];
 //                NSLog(@"inserted snp at %@ for sample %@ and locus %@",datumSnpMO.column,datumMO.sample.name,datumMO.locus.locusId);
