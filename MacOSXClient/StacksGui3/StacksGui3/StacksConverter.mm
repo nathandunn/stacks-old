@@ -34,6 +34,7 @@ using std::ofstream;
 #import "SnpRepository.h"
 #import "StackEntryRepository.h"
 #import "DatumSnpMO.h"
+#import "DatumAlleleMO.h"
 #import "AlleleRepository.h"
 
 
@@ -444,10 +445,10 @@ using std::ofstream;
 }
 
 - (void)loadAlleleFileForDatum:(StacksDocument *)document fromFile:(NSString *)alleleFileName {
-    NSLog(@"Loading snps file %@", alleleFileName);
+    NSLog(@"Loading allele file %@", alleleFileName);
 
     NSUInteger fileNameLength = alleleFileName.length;
-    NSString *sampleName = [alleleFileName substringToIndex:fileNameLength - 9];
+    NSString *sampleName = [alleleFileName substringToIndex:fileNameLength - 12];
     NSLog(@"sampleName %@", sampleName);
     // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
@@ -508,8 +509,8 @@ using std::ofstream;
                                                                  datum:datumMO
                 ];
 //                [datumMO addSnpsObject:datumSnpMO];
-                NSLog(@"inserted allele at %@ for sample %@ and locus %@",datumAlleleMO.allele,datumMO.sample.name,datumMO.locus.locusId);
-            }
+//                [datumMO addAllelesObject:datumAlleleMO];
+                NSLog(@"inserted allele at %@ for sample %@ and locus %@",datumAlleleMO.allele,datumMO.sample.name,datumMO.locus.locusId); }
         }
     }
     gettimeofday(&time2, NULL);
@@ -592,7 +593,7 @@ using std::ofstream;
                                         rank4:[numberFormatter numberFromString:[columns objectAtIndex:8]]
                                         datum:datumMO
                 ];
-                [datumMO addSnpsObject:datumSnpMO];
+//                [datumMO addSnpsObject:datumSnpMO];
 //                NSLog(@"inserted snp at %@ for sample %@ and locus %@",datumSnpMO.column,datumMO.sample.name,datumMO.locus.locusId);
             }
         }
