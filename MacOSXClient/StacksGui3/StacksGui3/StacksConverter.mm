@@ -488,7 +488,8 @@ using std::ofstream;
             // if the StackMO is found
 //            sampleId = [[columns objectAtIndex:1] integerValue];
             newLocusId = [[columns objectAtIndex:2] integerValue];
-            allele = [[columns objectAtIndex:3] charValue];
+//            allele = [[columns objectAtIndex:3] charValue];
+//            allele = [numberFormatter numberFromString:[columns objectAtIndex:3]];
             ratio = [[columns objectAtIndex:4] floatValue];
             depth = [[columns objectAtIndex:5] intValue];
 
@@ -505,7 +506,7 @@ using std::ofstream;
                 DatumAlleleMO* datumAlleleMO = [alleleRepository insertDatumAllele:moc
                                                                 ratio:[NSNumber numberWithFloat:ratio]
                                                                  depth:[NSNumber numberWithInt:depth]
-                                                                 allele:[NSNumber numberWithInt:allele]
+                                                                            allele:[numberFormatter numberFromString:[columns objectAtIndex:3]]
                                                                  datum:datumMO
                 ];
 //                [datumMO addSnpsObject:datumSnpMO];
