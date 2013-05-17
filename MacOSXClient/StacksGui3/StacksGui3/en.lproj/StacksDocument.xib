@@ -1171,7 +1171,7 @@
 									<int key="NSvFlags">268</int>
 									<string key="NSFrame">{{47, 46}, {50, 33}}</string>
 									<reference key="NSSuperview" ref="895738995"/>
-									<reference key="NSNextKeyView" ref="363718098"/>
+									<reference key="NSNextKeyView" ref="784836729"/>
 									<int key="NSViewLayerContentsRedrawPolicy">2</int>
 									<string key="NSReuseIdentifierKey">_NS:1535</string>
 									<bool key="NSEnabled">YES</bool>
@@ -1186,7 +1186,7 @@
 										<reference key="NSTextColor" ref="638047246"/>
 									</object>
 								</object>
-								<object class="NSTextField" id="363718098">
+								<object class="NSTextField" id="784836729">
 									<reference key="NSNextResponder" ref="895738995"/>
 									<int key="NSvFlags">268</int>
 									<string key="NSFrame">{{94, 51}, {84, 28}}</string>
@@ -1195,13 +1195,13 @@
 									<int key="NSViewLayerContentsRedrawPolicy">2</int>
 									<string key="NSReuseIdentifierKey">_NS:1535</string>
 									<bool key="NSEnabled">YES</bool>
-									<object class="NSTextFieldCell" key="NSCell" id="172048819">
+									<object class="NSTextFieldCell" key="NSCell" id="1055464812">
 										<int key="NSCellFlags">68157504</int>
 										<int key="NSCellFlags2">272630784</int>
 										<string key="NSContents">Progeny</string>
 										<reference key="NSSupport" ref="216874794"/>
 										<string key="NSCellIdentifier">_NS:1535</string>
-										<reference key="NSControlView" ref="363718098"/>
+										<reference key="NSControlView" ref="784836729"/>
 										<reference key="NSBackgroundColor" ref="766441978"/>
 										<reference key="NSTextColor" ref="638047246"/>
 									</object>
@@ -1291,10 +1291,10 @@
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">displayPatternValue1: objectValue.datums.@count</string>
-						<reference key="source" ref="363718098"/>
+						<reference key="source" ref="784836729"/>
 						<reference key="destination" ref="895738995"/>
 						<object class="NSNibBindingConnector" key="connector">
-							<reference key="NSSource" ref="363718098"/>
+							<reference key="NSSource" ref="784836729"/>
 							<reference key="NSDestination" ref="895738995"/>
 							<string key="NSLabel">displayPatternValue1: objectValue.datums.@count</string>
 							<string key="NSBinding">displayPatternValue1</string>
@@ -1626,7 +1626,7 @@
 							<reference ref="837655550"/>
 							<reference ref="117096700"/>
 							<reference ref="890108701"/>
-							<reference ref="363718098"/>
+							<reference ref="784836729"/>
 						</array>
 						<reference key="parent" ref="88205911"/>
 					</object>
@@ -1671,16 +1671,16 @@
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100365</int>
-						<reference key="object" ref="363718098"/>
+						<reference key="object" ref="784836729"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="172048819"/>
+							<reference ref="1055464812"/>
 						</array>
 						<reference key="parent" ref="895738995"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100366</int>
-						<reference key="object" ref="172048819"/>
-						<reference key="parent" ref="363718098"/>
+						<reference key="object" ref="1055464812"/>
+						<reference key="parent" ref="784836729"/>
 					</object>
 				</array>
 			</object>
