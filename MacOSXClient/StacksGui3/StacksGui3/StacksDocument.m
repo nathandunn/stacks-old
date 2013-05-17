@@ -22,7 +22,7 @@
 @property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet NSArrayController *datumController ;
-@property(weak) IBOutlet PopulationArrayController *populationController ;
+//@property(weak) IBOutlet PopulationArrayController *populationController ;
 
 //@property(weak) IBOutlet NSArrayController *stacksController ;
 
@@ -46,7 +46,7 @@
 
 // array controller
 @synthesize datumController ;
-@synthesize populationController;
+//@synthesize populationController;
 
 - (id)init {
     self = [super init];
@@ -78,7 +78,7 @@
 //    Class aControllerClass = NSClassFromString(aControllerName);
 //    [self setCurrentController: [[aControllerClass alloc] initWithNibName: aNibName bundle: [NSBundle mainBundle]]];
     [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew) context:nil];
-    [populationController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew) context:nil];
+//    [populationController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew) context:nil];
 //    [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld) context:nil];
 
     [super windowControllerDidLoadNib:aController];
@@ -97,8 +97,7 @@
     self.selectedLocus = [self findSelectedLocus];
     self.selectedPopulation = [self findSelectedPopulation];
 
-    NSLog(@"selected locus: %@ and population: %@",self.selectedLocus.locusId,self.selectedPopulation.populationId);
-
+//    NSLog(@"selected locus: %@ and population: %@",self.selectedLocus.locusId,self.selectedPopulation.populationId);
     if(self.selectedLocus!=nil && self.selectedPopulation!=nil){
         self.selectedDatums = [self.datumRepository getDatums:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
     }
@@ -112,9 +111,7 @@
 - (PopulationMO *)findSelectedPopulation {
     NSInteger selectedRow = [self.populationTableView selectedRow];
     if(selectedRow>=0){
-//        return [populationRepository getPopulation:self.managedObjectContext name:[NSString stringWithFormat:@"%ld",selectedRow]];
         return [[populationRepository getAllPopulations:self.managedObjectContext] objectAtIndex:selectedRow];
-//        return (PopulationMO*) [[self.populations allObjects] objectAtIndex:(NSUInteger ) selectedRow];
     }
     return nil ;
 }
