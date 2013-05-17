@@ -33,6 +33,8 @@
 		14A1E8E8174449D00056C06F /* DatumSnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A1E8E7174449D00056C06F /* DatumSnpMO.m */; };
 		14A1E8EB174449D80056C06F /* LocusSnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A1E8EA174449D80056C06F /* LocusSnpMO.m */; };
 		14A1E8EE17444B620056C06F /* SnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A1E8ED17444B620056C06F /* SnpMO.m */; };
+		14A72B471746A1E60024B2D1 /* LocusArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A72B461746A1E60024B2D1 /* LocusArrayController.m */; };
+		14A72B4A1746A5500024B2D1 /* PopulationArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A72B491746A5500024B2D1 /* PopulationArrayController.m */; };
 		63D5324CC3F9B03789008CE5 /* HaplotypeRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5361AB5A4A6EAA62C5CE7 /* HaplotypeRepository.m */; };
 		63D5347912394D8EC31E2F3E /* PopulationRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D538AE43D06E9B03B0BC59 /* PopulationRepository.m */; };
 		63D5373EE2F31FA8CF4F5F1A /* LocusCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53152900941A896B8CCE9 /* LocusCell.m */; };
@@ -122,6 +124,10 @@
 		14A1E8EA174449D80056C06F /* LocusSnpMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusSnpMO.m; sourceTree = "<group>"; };
 		14A1E8EC17444B620056C06F /* SnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpMO.h; sourceTree = "<group>"; };
 		14A1E8ED17444B620056C06F /* SnpMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpMO.m; sourceTree = "<group>"; };
+		14A72B451746A1E60024B2D1 /* LocusArrayController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusArrayController.h; sourceTree = "<group>"; };
+		14A72B461746A1E60024B2D1 /* LocusArrayController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusArrayController.m; sourceTree = "<group>"; };
+		14A72B481746A5500024B2D1 /* PopulationArrayController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationArrayController.h; sourceTree = "<group>"; };
+		14A72B491746A5500024B2D1 /* PopulationArrayController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationArrayController.m; sourceTree = "<group>"; };
 		63D5300CEE50E2EFF99D9FA9 /* SnpView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpView.m; sourceTree = "<group>"; };
 		63D530556A0C5C6B869DB3BF /* DepthRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DepthRepository.m; sourceTree = "<group>"; };
 		63D530B3764932ACC9CE8F92 /* DepthRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DepthRepository.h; sourceTree = "<group>"; };
@@ -333,6 +339,7 @@
 		6B4674A5173183F700E42419 /* GUI */ = {
 			isa = PBXGroup;
 			children = (
+				63D53D3DA1B67441F7C8386C /* StacksDocument.xib */,
 				1442E1B017206DBB004B6361 /* MainMenu.xib */,
 				63D53EFA95D4B7DF21498B77 /* StacksView.m */,
 				63D531804419CD422905AD3F /* StacksView.h */,
@@ -346,6 +353,10 @@
 				63D534676BD27E8518BBDB92 /* GenotypeEntry.m */,
 				63D532EFC82E0AE433712145 /* GenotypeEntry.h */,
 				63D5311F44388AEE157BD2CD /* LocusView.m */,
+				14A72B451746A1E60024B2D1 /* LocusArrayController.h */,
+				14A72B461746A1E60024B2D1 /* LocusArrayController.m */,
+				14A72B481746A5500024B2D1 /* PopulationArrayController.h */,
+				14A72B491746A5500024B2D1 /* PopulationArrayController.m */,
 			);
 			name = GUI;
 			sourceTree = "<group>";
@@ -388,7 +399,6 @@
 				1431B43C17440CF7006FD2BC /* DatumMO.m */,
 				1431B43217440CF7006FD2BC /* LocusMO.h */,
 				1431B43317440CF7006FD2BC /* LocusMO.m */,
-				63D53D3DA1B67441F7C8386C /* StacksDocument.xib */,
 			);
 			name = Model;
 			sourceTree = "<group>";
@@ -572,6 +582,8 @@
 				D793C6F5BDAD1E1FA91892F2 /* AlleleRepository.m in Sources */,
 				1466633D17445AF80051E40C /* DatumAlleleMO.m in Sources */,
 				6BE2E32E17459949005E3C81 /* AlleleMO.m in Sources */,
+				14A72B471746A1E60024B2D1 /* LocusArrayController.m in Sources */,
+				14A72B4A1746A5500024B2D1 /* PopulationArrayController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
