@@ -21,6 +21,7 @@
     newDatumMO.name = name;
     newDatumMO.sampleId = id ;
     newDatumMO.sample = sample ;
+    newDatumMO.locus = locus ;
 
     return newDatumMO ;
 }
@@ -47,7 +48,7 @@
     NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:context];
     NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
 //    NSLog(@"locusID: %@",locus);
-    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus == %@ ", locus];
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus == %@ and sample.population == %@ ", locus,population];
     [request1 setPredicate:predicate1];
     [request1 setEntity:entityDescription1];
     NSError *error1;

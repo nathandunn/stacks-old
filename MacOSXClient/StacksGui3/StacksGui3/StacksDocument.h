@@ -9,13 +9,11 @@
 #import <Cocoa/Cocoa.h>
 
 @class DatumMO;
-@class StackMO;
 @class LocusMO;
 @class PopulationMO;
 @class DatumRepository;
 @class PopulationRepository;
 @class LocusRepository;
-@class StackRepository;
 
 @interface StacksDocument : NSPersistentDocument
 
