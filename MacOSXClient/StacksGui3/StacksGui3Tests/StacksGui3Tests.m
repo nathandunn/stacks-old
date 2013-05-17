@@ -21,9 +21,9 @@
 @implementation StacksGui3Tests {
 //    stacksConverter;
     StacksConverter *stacksConverter;
-    DatumRepository *datumRepository ;
-    LocusRepository *locusRepository ;
-    PopulationRepository *populationRepository ;
+    DatumRepository *datumRepository;
+    LocusRepository *locusRepository;
+    PopulationRepository *populationRepository;
     SampleRepository *sampleRepository;
 }
 
@@ -32,10 +32,10 @@
     [super setUp];
     stacksConverter = [[StacksConverter alloc] init];
 
-    datumRepository = [[DatumRepository alloc]init];
-    locusRepository = [[LocusRepository alloc]init];
-    populationRepository = [[PopulationRepository alloc]init];
-    sampleRepository = [[SampleRepository alloc]init];
+    datumRepository = [[DatumRepository alloc] init];
+    locusRepository = [[LocusRepository alloc] init];
+    populationRepository = [[PopulationRepository alloc] init];
+    sampleRepository = [[SampleRepository alloc] init];
 }
 
 - (void)tearDown {
@@ -138,7 +138,7 @@
     STAssertFalse([fileManager fileExistsAtPath:filePath], @"Should be false");
 
     StacksDocument *stacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
-    NSManagedObjectContext *moc =  stacksDocument.managedObjectContext;
+    NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
     stacksDocument = [stacksConverter loadDocument:stacksDocument];
     if (stacksDocument == nil) {
         STFail(@"There was an error reading in the stacks Document ");
@@ -154,24 +154,24 @@
         NSLog(@"SUCCESS!!!");
     }
 
-    if(error2!=nil){
+    if (error2 != nil) {
         STFail(@"Failed to save %@", error2);
     }
 
     NSArray *datumArray = [datumRepository getAllDatum:moc];
-    NSLog(@"number of datum %ld",datumArray.count) ;
-    NSRange nsRange ;
-    nsRange.length=10 ;
-    nsRange.location=0 ;
+    NSLog(@"number of datum %ld", datumArray.count);
+    NSRange nsRange;
+    nsRange.length = 10;
+    nsRange.location = 0;
     for (DatumMO *datumMO in [datumArray subarrayWithRange:nsRange]) {
 //        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
-        STAssertTrue(datumMO.stackEntries.count>5, @"should have atleast 5 %ld", datumMO.stackEntries.count);
+        STAssertTrue(datumMO.stackEntries.count > 5, @"should have atleast 5 %ld", datumMO.stackEntries.count);
 //        NSLog(@"processing snps %@ ",datumMO.snps) ;
-        if(datumMO.snps != nil && datumMO.snps.count>0){
-            NSLog(@"snps count on datum %ld for sample %@ and locus %@",datumMO.snps.count,datumMO.sample.name,datumMO.locus.locusId);
+        if (datumMO.snps != nil && datumMO.snps.count > 0) {
+            NSLog(@"snps count on datum %ld for sample %@ and locus %@", datumMO.snps.count, datumMO.sample.name, datumMO.locus.locusId);
         }
-        else{
-            NSLog(@"has no snps for sample %@ and locus %@",datumMO.sample.name,datumMO.locus.locusId);
+        else {
+            NSLog(@"has no snps for sample %@ and locus %@", datumMO.sample.name, datumMO.locus.locusId);
         }
 //        STAssertTrue(datumMO.snps.count>0, @"Should have snps on Datum, %ld", datumMO.snps.count);
     }
@@ -259,21 +259,20 @@
     [request setEntity:entityDescription];
 
     NSArray *locusArray = [moc executeFetchRequest:request error:&error];
-    int locusSnpCount = 0 ;
-    int locusAlleleCount  = 0 ;
+    int locusSnpCount = 0;
+    int locusAlleleCount = 0;
     for (NSUInteger i = 0; i < 5; i++) {
         LocusMO *locusMO = [locusArray objectAtIndex:i];
         NSLog(@"index %ld locus %@", i, locusMO.locusId);
         NSLog(@"has datums %ld", locusMO.datums.count);
-        locusAlleleCount += locusMO.alleles.count ;
-        locusSnpCount += locusMO.snps.count ;
+        locusAlleleCount += locusMO.alleles.count;
+        locusSnpCount += locusMO.snps.count;
     }
     NSLog(@"number of loci %ld", locusArray.count);
 
-    STAssertTrue(locusArray.count == 462 || locusArray.count==11, @"should be either 11 or 462 loci %ld", locusArray.count );
-    STAssertTrue(locusSnpCount>0, @"should be atleast one snp ", locusSnpCount );
-    STAssertTrue(locusAlleleCount>0, @"should be atleast one allele ", locusAlleleCount);
-
+    STAssertTrue(locusArray.count == 462 || locusArray.count == 11, @"should be either 11 or 462 loci %ld", locusArray.count );
+    STAssertTrue(locusSnpCount > 0, @"should be atleast one snp ", locusSnpCount );
+    STAssertTrue(locusAlleleCount > 0, @"should be atleast one allele ", locusAlleleCount);
 
 
     NSEntityDescription *entityDescription2 = [NSEntityDescription
@@ -292,24 +291,24 @@
 
 
     NSArray *datumArray = [datumRepository getAllDatum:moc];
-    NSRange nsRange ;
-    nsRange.length=10 ;
-    nsRange.location=0 ;
+    NSRange nsRange;
+    nsRange.length = 10;
+    nsRange.location = 0;
     for (DatumMO *mo in [datumArray subarrayWithRange:nsRange]) {
-        STAssertTrue(mo.stackEntries.count>5, @"should have atleast 5 %ld", mo.stackEntries.count);
+        STAssertTrue(mo.stackEntries.count > 5, @"should have atleast 5 %ld", mo.stackEntries.count);
     }
 
-    NSLog(@"num datum: %ld",datumArray.count);
-    DatumMO* datumMO = [datumArray objectAtIndex:0];
+    NSLog(@"num datum: %ld", datumArray.count);
+    DatumMO *datumMO = [datumArray objectAtIndex:0];
     STAssertNotNil(datumMO.locus, @"should have a valid locus ");
     STAssertNotNil(datumMO.sample, @"should have a valid sample");
     STAssertNotNil(datumMO.name, @"should have a valid name ? ");
-    NSSet* stackEntries = datumMO.stackEntries ;
-    STAssertTrue(stackEntries.count>5, @"should have at least 5 entries %ld",stackEntries.count);
-    STAssertTrue(stackEntries.count<1000, @"but less than 1000 entries %ld",stackEntries.count);
+    NSSet *stackEntries = datumMO.stackEntries;
+    STAssertTrue(stackEntries.count > 5, @"should have at least 5 entries %ld", stackEntries.count);
+    STAssertTrue(stackEntries.count < 1000, @"but less than 1000 entries %ld", stackEntries.count);
 
-    
-    STAssertTrue(datumMO.depths.count>0, @"should have at least one depth");
+
+    STAssertTrue(datumMO.depths.count > 0, @"should have at least one depth");
 
 }
 
@@ -323,43 +322,43 @@
         STFail(@"failed to load . . .error %@", stacksDocumentCreateError);
     }
 
-    NSManagedObjectContext *managedObjectContext = newStacksDocument.managedObjectContext ;
+    NSManagedObjectContext *managedObjectContext = newStacksDocument.managedObjectContext;
 
 
     LocusMO *locusMO = [[locusRepository getAllLoci:managedObjectContext] objectAtIndex:0];
-    PopulationMO* populationMO = [[populationRepository getAllPopulations:managedObjectContext] objectAtIndex:0];
+    PopulationMO *populationMO = [[populationRepository getAllPopulations:managedObjectContext] objectAtIndex:0];
 
-    NSArray *datumWithPopulation  = [datumRepository getDatums:managedObjectContext locus:locusMO andPopulation:populationMO];
-    STAssertTrue(datumWithPopulation.count>0, @"must have a population count greater than 0") ;
+    NSArray *datumWithPopulation = [datumRepository getDatums:managedObjectContext locus:locusMO andPopulation:populationMO];
+    STAssertTrue(datumWithPopulation.count > 0, @"must have a population count greater than 0") ;
     NSArray *datums = [datumRepository getAllDatum:managedObjectContext];
-    
-    NSLog(@"datums found %ld",datums.count) ;
-    int snpsCount = 0 ;
-    int allelesCount = 0 ;
-    for(int i = 0 ; i < 5 ; i++){
-        DatumMO *datumMO = [datums objectAtIndex:i] ;
-        if(datumMO.snps != nil){
-           NSLog(@"snps count on datum %ld for sample %@ and locus %@",datumMO.snps.count,datumMO.sample.name,datumMO.locus.locusId);
-            snpsCount += datumMO.snps.count ;
+
+    NSLog(@"datums found %ld", datums.count);
+    int snpsCount = 0;
+    int allelesCount = 0;
+    for (int i = 0; i < 5; i++) {
+        DatumMO *datumMO = [datums objectAtIndex:i];
+        if (datumMO.snps != nil) {
+            NSLog(@"snps count on datum %ld for sample %@ and locus %@", datumMO.snps.count, datumMO.sample.name, datumMO.locus.locusId);
+            snpsCount += datumMO.snps.count;
         }
-        else{
-           NSLog(@"has no snps for sample %@ and locus %@",datumMO.sample.name,datumMO.locus.locusId);
+        else {
+            NSLog(@"has no snps for sample %@ and locus %@", datumMO.sample.name, datumMO.locus.locusId);
         }
 
-        if(datumMO.alleles != nil){
-            allelesCount += datumMO.alleles.count ;
-            NSLog(@"alleles count on datum %ld for sample %@ and locus %@",datumMO.alleles.count,datumMO.sample.name,datumMO.locus.locusId);
+        if (datumMO.alleles != nil) {
+            allelesCount += datumMO.alleles.count;
+            NSLog(@"alleles count on datum %ld for sample %@ and locus %@", datumMO.alleles.count, datumMO.sample.name, datumMO.locus.locusId);
         }
-        else{
-            NSLog(@"has no alleles for sample %@ and locus %@",datumMO.sample.name,datumMO.locus.locusId);
+        else {
+            NSLog(@"has no alleles for sample %@ and locus %@", datumMO.sample.name, datumMO.locus.locusId);
         }
     }
-        STAssertTrue(snpsCount>0, @"Should have snps on Datum, %ld", snpsCount);
-        STAssertTrue(allelesCount>0, @"Should have alleles on Datum, %ld", allelesCount);
+    STAssertTrue(snpsCount > 0, @"Should have snps on Datum, %ld", snpsCount);
+    STAssertTrue(allelesCount > 0, @"Should have alleles on Datum, %ld", allelesCount);
 }
 
 
-- (void)testCreateLargeStore{
+- (void)testCreateLargeStore {
 //    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
     NSString *examplePath = @"/tmp/stacks_large/";
     NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
@@ -375,7 +374,7 @@
     STAssertFalse([fileManager fileExistsAtPath:filePath], @"Should be false");
 
     StacksDocument *stacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
-    NSManagedObjectContext *moc =  stacksDocument.managedObjectContext;
+    NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
     stacksDocument = [stacksConverter loadDocument:stacksDocument];
     if (stacksDocument == nil) {
         STFail(@"There was an error reading in the stacks Document ");
@@ -392,12 +391,12 @@
     }
 
     NSArray *datumArray = [datumRepository getAllDatum:moc];
-    NSRange nsRange ;
-    nsRange.length=10 ;
-    nsRange.location=0 ;
+    NSRange nsRange;
+    nsRange.length = 10;
+    nsRange.location = 0;
     for (DatumMO *datumMO in [datumArray subarrayWithRange:nsRange]) {
 //        NSLog(@"# of entries per stack %ld for sample %@ and loci %@", stackMO.stackEntries.count, stackMO.datum.sample.name, stackMO.datum.locus.locusId);
-        STAssertTrue(datumMO.stackEntries.count>5, @"should have atleast 5 %ld", datumMO.stackEntries.count);
+        STAssertTrue(datumMO.stackEntries.count > 5, @"should have atleast 5 %ld", datumMO.stackEntries.count);
     }
 
 }
@@ -458,20 +457,18 @@
     NSLog(@"has samples %ld", populationMO.samples.count);
 
 
-
     NSEntityDescription *datumEntityDescription = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:moc];
     NSFetchRequest *datumRequest = [[NSFetchRequest alloc] init];
     [datumRequest setEntity:datumEntityDescription];
     NSError *datumFetchError;
     NSArray *datumArray = [moc executeFetchRequest:datumRequest error:&datumFetchError];
 
-    NSLog(@"num datum: %ld",datumArray.count);
-    DatumMO* datumMO = [datumArray objectAtIndex:0];
-    NSSet* stackEntries = datumMO.stackEntries ;
-    STAssertTrue(stackEntries.count>5, @"should have at least 5 entries %ld",stackEntries.count);
-    STAssertTrue(stackEntries.count<100, @"but less than 100 entries %ld",stackEntries.count);
-    STAssertTrue(datumMO.depths.count>0, @"should have at least one depth");
-
+    NSLog(@"num datum: %ld", datumArray.count);
+    DatumMO *datumMO = [datumArray objectAtIndex:0];
+    NSSet *stackEntries = datumMO.stackEntries;
+    STAssertTrue(stackEntries.count > 5, @"should have at least 5 entries %ld", stackEntries.count);
+    STAssertTrue(stackEntries.count < 100, @"but less than 100 entries %ld", stackEntries.count);
+    STAssertTrue(datumMO.depths.count > 0, @"should have at least one depth");
 
 
 }
