@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -126,7 +126,7 @@ int main (int argc, char* argv[]) {
 	cerr << "Filtering reads by kmer frequency...\n";
 
 	for (uint i = 0; i < pair_files.size(); i += 2) {
-	    cerr << "Processing paired file " << i+1 << " of " << pair_files.size() << " [" << pair_files[i].second << "]\n";
+	    cerr << "Processing paired file " << i+1 << " of " << (pair_files.size() / 2) << " [" << pair_files[i].second << "]\n";
 
 	    counters[pair_files[i].second]["total"]      = 0;
 	    counters[pair_files[i].second]["retained"]   = 0;
@@ -184,15 +184,18 @@ int main (int argc, char* argv[]) {
 	    for (uint i = 0; i < pair_files.size(); i += 2) {
 		file  = pair_files[i].second;
 		pos   = file.find_last_of(".");
-		file  = file.substr(0, pos) + ".rem";
+		if (file.substr(pos - 2, 2) == ".1")
+		    pos -= 2;
+		file  = file.substr(0, pos) + ".rem.fil";
 		file += out_file_type == fastq ? ".fq" : ".fa";
-		cerr << "Adding remainder file generate in previous step to queue, '" << file << "\n";
+		cerr << "Adding remainder file generated in previous step to queue, '" << file << "\n";
 		files.push_back(make_pair(pair_files[i].first, file));
 	    }
 	}
 
 	for (uint i = 0; i < pair_files.size(); i += 2) {
-	    cerr << "Processing paired file " << i+1 << " of " << pair_files.size() << " [" << pair_files[i].second << "]\n";
+	    cerr << "Processing paired files " << i+1 << " of " << (pair_files.size() / 2) 
+		 << " [" << pair_files[i].second << " / " << pair_files[i+1].second << "]\n";
 
 	    counters[pair_files[i].second]["total"]    = 0;
 	    counters[pair_files[i].second]["retained"] = 0;
@@ -241,50 +244,49 @@ int process_paired_reads(string in_path_1,
 			 string in_file_2,
 			 SeqKmerHash &kmers,
 			 map<string, long> &counter) {
-    Input *fh_1, *fh_2;
+    Input    *fh_1, *fh_2;
     ofstream *discard_fh_1, *discard_fh_2;
+    int       pos;
+    string    path;
 
     string path_1 = in_path_1 + in_file_1;
     string path_2 = in_path_2 + in_file_2;
 
     if (in_file_type == fastq) {
-        fh_1 = new Fastq(path_1.c_str());
-        fh_2 = new Fastq(path_2.c_str());
+        fh_1 = new Fastq(path_1);
+        fh_2 = new Fastq(path_2);
     } else if (in_file_type == fasta) {
-        fh_1 = new Fasta(path_1.c_str());
-        fh_2 = new Fasta(path_2.c_str());
+        fh_1 = new Fasta(path_1);
+        fh_2 = new Fasta(path_2);
     } else if (in_file_type == gzfasta) {
-        fh_1 = new GzFasta(path_1.c_str());
-        fh_2 = new GzFasta(path_2.c_str());
+        fh_1 = new GzFasta(path_1 + ".gz");
+        fh_2 = new GzFasta(path_2 + ".gz");
     } else if (in_file_type == gzfastq) {
-        fh_1 = new GzFastq(path_1.c_str());
-        fh_2 = new GzFastq(path_2.c_str());
+        fh_1 = new GzFastq(path_1 + ".gz");
+        fh_2 = new GzFastq(path_2 + ".gz");
     } else if (in_file_type == bustard) {
-        fh_1 = new Bustard(path_1.c_str());
-        fh_2 = new Bustard(path_2.c_str());
+        fh_1 = new Bustard(path_1);
+        fh_2 = new Bustard(path_2);
     }
 
     //
     // Open the output files.
     //
-    string    path  = in_file_1;
-    int       pos_1 = path.find_last_of(".");
-    if (path.substr(pos_1) == ".gz") {
-	path = path.substr(0, pos_1);
-	pos_1  = path.find_last_of(".");
-    }
-    path = out_path + path.substr(0, pos_1) + ".fil" + path.substr(pos_1);
+    pos  = in_file_1.find_last_of(".");
+    path = out_path + in_file_1.substr(0, pos) + ".fil" + in_file_1.substr(pos);
     ofstream *ofh_1 = new ofstream(path.c_str(), ifstream::out);
 
-    path  = in_file_2;
-    pos_1 = path.find_last_of(".");
-    if (path.substr(pos_1) == ".gz") {
-	path = path.substr(0, pos_1);
-	pos_1  = path.find_last_of(".");
-    }
-    path  = out_path + path.substr(0, pos_1) + ".fil" + path.substr(pos_1);
+    pos  = in_file_2.find_last_of(".");
+    path = out_path + in_file_2.substr(0, pos) + ".fil" + in_file_2.substr(pos);
     ofstream *ofh_2  = new ofstream(path.c_str(), ifstream::out);
-    path  = out_path + path.substr(0, pos_1) + ".fil.rem";
+
+    pos  = in_file_2.find_last_of(".");
+    //
+    // Pull the ".2" suffix off the paired file name to make the remainder file name.
+    //
+    if (in_file_2.substr(pos - 2, 2) == ".2")
+	pos -= 2;
+    path  = out_path + in_file_2.substr(0, pos) + ".rem.fil";
     path += out_file_type == fastq ? ".fq" : ".fa";
     ofstream *rem_fh = new ofstream(path.c_str(), ifstream::out);
 
@@ -292,7 +294,7 @@ int process_paired_reads(string in_path_1,
     // Open a file for recording discarded reads
     //
     if (discards) {
-	int pos = in_file_1.find_last_of(".");
+	pos  = in_file_1.find_last_of(".");
 	path = out_path + in_file_1.substr(0, pos) + ".discards" + in_file_1.substr(pos);
 	discard_fh_1 = new ofstream(path.c_str(), ifstream::out);
 
@@ -327,7 +329,7 @@ int process_paired_reads(string in_path_1,
 
     long i = 1;
     do {
-	if (i % 10000 == 0) cerr << "  Processing short read " << i << "       \r";
+	if (i % 10000 == 0) cerr << "  Processing short read pair " << i << "       \r";
 	counter["total"] += 2;
 	stringstream msg_1, msg_2;
 
@@ -432,39 +434,35 @@ int process_reads(string in_path,
 		  string in_file,
 		  SeqKmerHash &kmers,
 		  map<string, long> &counter) {
-    Input *fh;
+    Input    *fh;
     ofstream *discard_fh;
+    int       pos;
 
     string path = in_path + in_file;
 
     if (in_file_type == fastq)
-        fh = new Fastq(path.c_str());
+        fh = new Fastq(path);
     else if (in_file_type == fasta)
-        fh = new Fasta(path.c_str());
+        fh = new Fasta(path);
     else if (in_file_type == gzfastq)
-        fh = new GzFastq(path.c_str());
+        fh = new GzFastq(path + ".gz");
     else if (in_file_type == gzfasta)
-        fh = new GzFasta(path.c_str());
+        fh = new GzFasta(path + ".gz");
     else if (in_file_type == bustard)
-        fh = new Bustard(path.c_str());
+        fh = new Bustard(path);
 
     //
     // Open the output file.
     //
-    path    = in_file;
-    int pos = path.find_last_of(".");
-    if (path.substr(pos) == ".gz") {
-	path = path.substr(0, pos);
-	pos  = path.find_last_of(".");
-    }
-    path = out_path + path.substr(0, pos) + ".fil" + path.substr(pos);
+    pos  = in_file.find_last_of(".");
+    path = out_path + in_file.substr(0, pos) + ".fil" + in_file.substr(pos);
     ofstream *out_fh = new ofstream(path.c_str(), ifstream::out);    
 
     //
     // Open a file for recording discarded reads
     //
     if (discards) {
-	int pos = in_file.find_last_of(".");
+	pos  = in_file.find_last_of(".");
 	path = out_path + in_file.substr(0, pos) + ".discards" + in_file.substr(pos);
 	discard_fh = new ofstream(path.c_str(), ifstream::out);
 
@@ -558,55 +556,86 @@ normalize_paired_reads(string in_path_1,
     int       pos;
 
     if (filter_abundant_k || filter_rare_k) {
+	//
+	// If we already filtered the data, open the files we created in the output
+	// directory to normalize.
+	//
 	pos    = in_file_1.find_last_of(".");
 	path_1 = out_path + in_file_1.substr(0, pos) + ".fil" + in_file_1.substr(pos);
+
 	pos    = in_file_2.find_last_of(".");
 	path_2 = out_path + in_file_2.substr(0, pos) + ".fil" + in_file_2.substr(pos);
+
+	if (in_file_type == fastq) {
+	    fh_1 = new Fastq(path_1);
+	    fh_2 = new Fastq(path_2);
+	} else if (in_file_type == gzfastq) {
+	    fh_1 = new Fastq(path_1);
+	    fh_2 = new Fastq(path_2);
+	} else if (in_file_type == fasta) {
+	    fh_1 = new Fasta(path_1);
+	    fh_2 = new Fasta(path_2);
+	} else if (in_file_type == gzfasta) {
+	    fh_1 = new Fasta(path_1);
+	    fh_2 = new Fasta(path_2);
+	}
     } else {
+	//
+	// Otherwise, open unmodified files.
+	//
 	path_1 = in_path_1 + in_file_1;
 	path_2 = in_path_2 + in_file_2;
-    }
 
-    if (in_file_type == fastq) {
-        fh_1 = new Fastq(path_1.c_str());
-        fh_2 = new Fastq(path_2.c_str());
-    } else if (in_file_type == gzfastq) {
-        fh_1 = new GzFastq(path_1.c_str());
-        fh_2 = new GzFastq(path_1.c_str());
-    } else if (in_file_type == fasta) {
-        fh_1 = new Fasta(path_1.c_str());
-        fh_2 = new Fasta(path_2.c_str());
-    } else if (in_file_type == gzfasta) {
-        fh_1 = new GzFasta(path_1.c_str());
-        fh_2 = new GzFasta(path_2.c_str());
-    } else if (in_file_type == bustard) {
-        fh_1 = new Bustard(path_1.c_str());
-        fh_2 = new Bustard(path_2.c_str());
+	if (in_file_type == fastq) {
+	    fh_1 = new Fastq(path_1);
+	    fh_2 = new Fastq(path_2);
+	} else if (in_file_type == gzfastq) {
+	    fh_1 = new GzFastq(path_1 + ".gz");
+	    fh_2 = new GzFastq(path_2 + ".gz");
+	} else if (in_file_type == fasta) {
+	    fh_1 = new Fasta(path_1);
+	    fh_2 = new Fasta(path_2);
+	} else if (in_file_type == gzfasta) {
+	    fh_1 = new GzFasta(path_1 + ".gz");
+	    fh_2 = new GzFasta(path_2 + ".gz");
+	} else if (in_file_type == bustard) {
+	    fh_1 = new Bustard(path_1);
+	    fh_2 = new Bustard(path_2);
+	}
     }
 
     //
     // Open the output files.
     //
     if (filter_abundant_k || filter_rare_k) {
-	pos     = in_file_1.find_last_of(".");
-	path_1  = out_path + in_file_1.substr(0, pos) + ".fil" + in_file_1.substr(pos);
-	ofh_1   = new ofstream(path_1.c_str(), ifstream::out);
-	pos     = in_file_2.find_last_of(".");
-	path_1  = out_path + in_file_2.substr(0, pos) + ".fil" + in_file_2.substr(pos);
-	ofh_2   = new ofstream(path_1.c_str(), ifstream::out);
-	path_1  = out_path + in_file_2.substr(0, pos) + ".fil.rem";
-	path_1 += out_file_type == fastq ? ".fq" : ".fa";
-	rem_fh  = new ofstream(path_1.c_str(), ifstream::out);
+	pos    = in_file_1.find_last_of(".");
+	path_1 = out_path + in_file_1.substr(0, pos) + ".fil.norm" + in_file_1.substr(pos);
+	ofh_1  = new ofstream(path_1.c_str(), ifstream::out);
+
+	pos    = in_file_2.find_last_of(".");
+	path_2 = out_path + in_file_2.substr(0, pos) + ".fil.norm" + in_file_2.substr(pos);
+	ofh_2  = new ofstream(path_2.c_str(), ifstream::out);
+
+	if (in_file_2.substr(pos - 2, 2) == ".2") 
+	    pos -= 2;
+	path_2  = out_path + in_file_2.substr(0, pos) + ".fil.norm.rem";
+	path_2 += out_file_type == fastq ? ".fq" : ".fa";
+	rem_fh  = new ofstream(path_2.c_str(), ifstream::out);
+
     } else {
-	pos     = in_file_1.find_last_of(".");
-	path_1  = out_path + in_file_1.substr(0, pos) + ".fil_norm" + in_file_1.substr(pos);
-	ofh_1   = new ofstream(path_1.c_str(), ifstream::out);
-	pos     = in_file_2.find_last_of(".");
-	path_1  = out_path + in_file_2.substr(0, pos) + ".fil_norm" + in_file_2.substr(pos);
-	ofh_2   = new ofstream(path_1.c_str(), ifstream::out);
-	path_1  = out_path + in_file_2.substr(0, pos) + ".fil_norm.rem";
-	path_1 += out_file_type == fastq ? ".fq" : ".fa";
-	rem_fh  = new ofstream(path_1.c_str(), ifstream::out);
+	pos    = in_file_1.find_last_of(".");
+	path_1 = out_path + in_file_1.substr(0, pos) + ".norm" + in_file_1.substr(pos);
+	ofh_1  = new ofstream(path_1.c_str(), ifstream::out);
+
+	pos    = in_file_2.find_last_of(".");
+	path_2 = out_path + in_file_2.substr(0, pos) + ".norm" + in_file_2.substr(pos);
+	ofh_2  = new ofstream(path_2.c_str(), ifstream::out);
+
+	if (in_file_2.substr(pos - 2, 2) == ".2") 
+	    pos -= 2;
+	path_2  = out_path + in_file_2.substr(0, pos) + ".norm.rem";
+	path_2 += out_file_type == fastq ? ".fq" : ".fa";
+	rem_fh  = new ofstream(path_2.c_str(), ifstream::out);
     }
 
     //
@@ -655,7 +684,7 @@ normalize_paired_reads(string in_path_1,
 
     long i = 1;
     do {
-	if (i % 10000 == 0) cerr << "  Processing short read " << i << "       \r";
+	if (i % 10000 == 0) cerr << "  Processing short read pair " << i << "       \r";
 	counter["total"] += 2;
 
 	retain_1  = true;
@@ -743,25 +772,47 @@ normalize_reads(string in_path,
 
     int pos = in_file.find_last_of(".");
 
-    if (filter_abundant_k || filter_rare_k)
-	path = out_path + in_file.substr(0, pos) + ".fil" + in_file.substr(pos);
-    else
+    if (filter_abundant_k || filter_rare_k) {
+	if (in_file.substr(pos - 4, 4) == ".fil")
+	    path = out_path + in_file;
+	else
+	    path = out_path + in_file.substr(0, pos) + ".fil" + in_file.substr(pos);
+
+	if (in_file_type == fastq)
+	    fh = new Fastq(path);
+	else if (in_file_type == gzfastq)
+	    fh = new Fastq(path);
+	else if (in_file_type == fasta)
+	    fh = new Fasta(path);
+	else if (in_file_type == gzfasta)
+	    fh = new Fasta(path);
+	else if (in_file_type == bustard)
+	    fh = new Bustard(path);
+
+    } else {
 	path = in_path + in_file;
 
-    if (in_file_type == fastq)
-        fh = new Fastq(path.c_str());
-    else if (in_file_type == fasta)
-        fh = new Fasta(path.c_str());
-    else if (in_file_type == bustard)
-        fh = new Bustard(path.c_str());
+	if (in_file_type == fastq)
+	    fh = new Fastq(path);
+	else if (in_file_type == gzfastq)
+	    fh = new GzFastq(path + ".gz");
+	else if (in_file_type == fasta)
+	    fh = new Fasta(path);
+	else if (in_file_type == gzfasta)
+	    fh = new GzFasta(path + ".gz");
+	else if (in_file_type == bustard)
+	    fh = new Bustard(path);
+    }
 
     //
     // Open the output file.
     //
-    if (filter_abundant_k || filter_rare_k)
-	path = out_path + in_file.substr(0, pos) + ".norm" + in_file.substr(pos);
-    else
-	path = out_path + in_file.substr(0, pos) + ".fil_norm" + in_file.substr(pos);
+    // if (filter_abundant_k || filter_rare_k) {
+    // 	path = out_path + in_file.substr(0, pos) + ".norm" + in_file.substr(pos);
+    // } else {
+    // 	path = out_path + in_file.substr(0, pos) + ".norm" + in_file.substr(pos);
+    // }
+    path = out_path + in_file.substr(0, pos) + ".norm" + in_file.substr(pos);
     ofstream *out_fh = new ofstream(path.c_str(), ifstream::out);    
 
     //
@@ -1136,7 +1187,7 @@ normalize_kmer_lookup(SeqKmerHash &kmer_map,
     for (int j = 0; j < num_kmers; j++) {
 	strncpy(kmer, read + j, kmer_len);
 
-	cnt = kmer_map[kmer];
+	cnt = kmer_map.count(kmer) > 0 ? kmer_map[kmer] : 0;
 	sorted_cnts.push_back(cnt);
 
 	// cout << kmer << "\t" << j << "\t" << cnt << "\n";
@@ -1162,19 +1213,19 @@ normalize_kmer_lookup(SeqKmerHash &kmer_map,
     kmer[kmer_len] = '\0';
 
     for (int j = 0; j < num_kmers; j++) {
-	strncpy(kmer, read + j, kmer_len);
+    	strncpy(kmer, read + j, kmer_len);
 
-	exists = kmer_map.count(kmer) == 0 ? false : true;
+    	exists = kmer_map.count(kmer) == 0 ? false : true;
 
-	if (exists) {
-	    hash_key = kmer;
-	} else {
-	    hash_key = new char [kmer_len + 1];
-	    strcpy(hash_key, kmer);
-	    kmer_keys.push_back(hash_key);
-	}
+    	if (exists) {
+    	    hash_key = kmer;
+    	} else {
+    	    hash_key = new char [kmer_len + 1];
+    	    strcpy(hash_key, kmer);
+    	    kmer_keys.push_back(hash_key);
+    	}
 
-	kmer_map[hash_key]++;
+    	kmer_map[hash_key]++;
     }
 
     return retain;
@@ -1472,13 +1523,22 @@ int build_file_list(vector<string> &in_files, vector<pair<string, string> > &fil
 	while ((direntry = readdir(dir)) != NULL) {
 	    file = direntry->d_name;
 
-	    if (file == "." || file == "..")
+	    if (file.substr(0, 1) == ".")
 		continue;
 
 	    //
-	    // Check that the file has the right suffix.
+	    // If the file is gzip'ed, remove the '.gz' suffix. 
 	    //
-	    pos     = file.find_last_of(".");
+	    pos  = file.find_last_of(".");
+	    if ((in_file_type == gzfastq || in_file_type == gzfasta) && 
+		file.substr(pos) == ".gz") {
+		file = file.substr(0, pos);
+		pos  = file.find_last_of(".");
+	    }
+
+	    //
+	    // Check that the remaining file name has the right suffix.
+	    //
 	    suffix = file.substr(pos + 1);
 	    if (in_file_type == fastq && (suffix.substr(0, 2) == "fq" || suffix.substr(0, 5) == "fastq"))
 		files.push_back(make_pair(in_path, file));
@@ -1496,8 +1556,15 @@ int build_file_list(vector<string> &in_files, vector<pair<string, string> > &fil
 	    //
 	    // Files specified directly:
 	    //    Break off file path and store path and file name.
+	    //    Check if this is a gzip'ed file and if so, remove 'gz' suffix.
 	    //
  	    file = in_files[i];
+	    pos  = file.find_last_of(".");
+	    if ((in_file_type == gzfastq || in_file_type == gzfasta) && 
+		file.substr(pos) == ".gz") {
+		file = file.substr(0, pos);
+		pos  = file.find_last_of(".");
+	    }
 	    pos  = file.find_last_of("/");
 	    path = file.substr(0, pos + 1);
 	    files.push_back(make_pair(path, file.substr(pos+1)));

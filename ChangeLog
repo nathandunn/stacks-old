@@ -1,3 +1,6 @@
+	Bugfix: corrected handling of files in kmer_filter. Adding support for gzipped files
+	broke file handling in some cases.
+
 Stacks 0.999991 - May 14, 2013
 ------------------------------
 	Feature: changed populations to use AMOVA Fst for batch_1.fst_summary.tsv file. Previously

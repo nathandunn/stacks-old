@@ -38,6 +38,13 @@ public:
             exit(EXIT_FAILURE);
 	}
     };
+    GzFastq(string path) : Input() { 
+	this->gz_fh = gzopen(path.c_str(), "rb");
+	if (!this->gz_fh) {
+	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
+            exit(EXIT_FAILURE);
+	}
+    };
     ~GzFastq() {
 	gzclose(this->gz_fh);
     };
