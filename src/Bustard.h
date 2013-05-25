@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -36,6 +36,7 @@ class Bustard: public Input {
 
  public:
     Bustard(const char *path) : Input(path) {};
+    Bustard(string path) : Input(path.c_str()) {};
     ~Bustard() {};
     Seq *next_seq();
     int  next_seq(Seq &);
