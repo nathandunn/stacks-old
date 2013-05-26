@@ -62,4 +62,20 @@
     NSError *error1;
     return [context executeFetchRequest:request1 error:&error1];
 }
+
+- (NSArray *)getDatumsOrdered:(NSManagedObjectContext *)context locus:(LocusMO *)locus andPopulation:(PopulationMO *)population {
+    NSArray *unsortedArray = [self getDatums:context locus:locus andPopulation:population];
+    NSArray *sortedArray;
+    sortedArray = [unsortedArray sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
+        NSString *first = [(DatumMO*)a name];
+        NSString *second = [(DatumMO*)b name];
+
+//        NSDate *first = [(Person*)a birthDate];
+//        NSDate *second = [(Person*)b birthDate];
+
+
+        return [first compare:second];
+    }];
+    return sortedArray;
+}
 @end
