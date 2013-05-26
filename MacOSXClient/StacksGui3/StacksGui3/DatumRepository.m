@@ -70,9 +70,13 @@
         NSString *first = [(DatumMO*)a name];
         NSString *second = [(DatumMO*)b name];
 
-//        NSDate *first = [(Person*)a birthDate];
-//        NSDate *second = [(Person*)b birthDate];
-
+        if([first isEqualToString:@"male"]) return NSOrderedAscending;
+        if([first isEqualToString:@"female"] && [second isEqualToString:@"male"]){
+          return NSOrderedDescending;
+        }
+        if([first isEqualToString:@"male"] && [second isEqualToString:@"female"]){
+            return NSOrderedAscending;
+        }
 
         return [first compare:second];
     }];
