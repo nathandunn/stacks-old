@@ -37,11 +37,13 @@ map_types map_type    = none;
 out_types out_type    = joinmap;
 string    in_path;
 string    out_path;
+string    cor_path;
 string    out_file;
 string    bl_file;
 string    wl_file;
 string    enz;
 int       progeny_limit   = 1;
+bool      man_corrections = false;
 bool      corrections     = false;
 bool      expand_id       = false;
 bool      sql_out         = false;
@@ -103,9 +105,6 @@ int main (int argc, char* argv[]) {
      	return 0;
     }
 
-    set<int> parent_ids;
-    identify_parental_ids(catalog, parent_ids);
-
     //
     // Implement the black/white list
     //
@@ -132,6 +131,9 @@ int main (int argc, char* argv[]) {
     }
 
     sort(sample_ids.begin(), sample_ids.end());
+
+    set<int> parent_ids;
+    identify_parental_ids(catalog, sample_ids, parent_ids);
 
     //
     // Create the population map
@@ -168,6 +170,12 @@ int main (int argc, char* argv[]) {
     // 
     if (corrections)
 	automated_corrections(samples, parent_ids, catalog, catalog_matches, pmap);
+
+    //
+    // Incorporate manual corrections exported from a Stacks SQL database.
+    //
+    if (man_corrections)
+	manual_corrections(cor_path, pmap);
 
     //
     // If a mapping type was specified, output it.
@@ -258,17 +266,31 @@ int reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &
     return 0;
 }
 
-int identify_parental_ids(map<int, CSLocus *> &catalog, set<int> &parents) {
+int identify_parental_ids(map<int, CSLocus *> &catalog, vector<int> &sample_ids, set<int> &parents) {
+    set<int> catalog_parents;
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
     int      sample_id;
 
+    //
+    // We assume the catalog was constructed from one or more parents of one
+    // or more crosses. These are listed in the catalog.tags.tsv file, column 8.
+    //
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 	for (uint i = 0; i < loc->comp.size(); i++) {
 	    sample_id = (int) strtol(loc->comp[i], NULL, 10);
 	}
-	parents.insert(sample_id);
+	catalog_parents.insert(sample_id);
+    }
+
+    //
+    // Now we want to iterate over those individuals genotypes found when
+    // searching the Stacks directory and crosscheck those found in the catalog.
+    //
+    for (uint i = 0; i < sample_ids.size(); i++) {
+	if (catalog_parents.count(sample_ids[i]) > 0)
+	    parents.insert(sample_ids[i]);
     }
 
     set<int>::iterator sit;
@@ -627,8 +649,9 @@ int call_population_genotypes(CSLocus *locus,
     return 0;
 }
 
-int automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<int, CSLocus *> &catalog,
-			  vector<vector<CatMatch *> > &matches, PopMap<CSLocus> *pmap) {
+int 
+automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<int, CSLocus *> &catalog,
+		      vector<vector<CatMatch *> > &matches, PopMap<CSLocus> *pmap) {
     int sample_id, catalog_id, tag_id;
     Datum *d;
     Locus *s;
@@ -909,6 +932,117 @@ int check_homozygosity(vector<char *> &reads, int col, char rank_1, char rank_2,
 	homozygous = "unknown";
 
     //cerr << "      Homozygous: " << homozygous << "\n";
+
+    return 0;
+}
+
+int  
+manual_corrections(string cor_path, PopMap<CSLocus> *pmap)
+{
+    //
+    // Load manual corrections from a tab-seprated file, as exported from a Stacks SQL 
+    // dataabse. Has the format:
+    //   id<tab>batch_id<tab>catalog_id<tab>sample_id<tab>genotype
+    //
+    char     line[max_len];
+    ifstream fh(cor_path.c_str(), ifstream::in);
+
+    if (fh.fail()) {
+        cerr << "Error opening manual corrections file '" << cor_path << "'\n";
+	exit(1);
+    }
+
+    vector<string> parts;
+    int   catalog_id, sample_id, len;
+    char  gtype[id_len];
+    char *e;
+
+    int   line_num = 0;
+    int   total    = 0;
+    int   skipped  = 0;
+    int   success  = 0;
+    int   i;
+
+    while (fh.good()) {
+	fh.getline(line, id_len);
+	line_num++;
+
+	len = strlen(line);
+	if (len == 0) continue;
+
+	//
+	// Check that there is no carraige return in the buffer.
+	//
+	if (line[len - 1] == '\r') line[len - 1] = '\0';
+
+	//
+	// Ignore comments
+	//
+	if (line[0] == '#') continue;
+
+	parse_tsv(line, parts);
+
+        if (parts.size() != 5) {
+            cerr << "Error parsing '" << line << "' at line: " << line_num << ". (" << parts.size() << " fields).\n";
+            return 0;
+        }
+
+	catalog_id = (int) strtol(parts[2].c_str(), &e, 10);
+	if (*e != '\0') {
+            cerr << "Error parsing '" << parts[2].c_str() << "' at line: " << line_num << ".\n";
+            return 0;
+        }
+	sample_id = (int) strtol(parts[3].c_str(), &e, 10);
+	if (*e != '\0') {
+            cerr << "Error parsing '" << parts[3].c_str() << "' at line: " << line_num << ".\n";
+            return 0;
+        }
+	strcpy(gtype, parts[4].c_str());
+
+	//
+	// Overwrite the genotype in the PopMap.
+	//
+	Datum **d = pmap->locus(catalog_id);
+	total++;
+
+	if (d == NULL) {
+	    skipped++;
+	    continue;
+	}
+
+	if ((i = pmap->sample_index(sample_id)) < 0) {
+	    skipped++;
+	    continue;
+	}
+
+	if (d[i] == NULL) {
+	    skipped++;
+	    continue;
+	}
+
+	for (uint k = 0; k < strlen(gtype); k++)
+	    gtype[k] = tolower(gtype[k]);
+
+	if (strcmp(gtype, "--") == 0)
+	    strcpy(gtype, "-");
+
+	if (d[i]->gtype != NULL)
+	    delete [] d[i]->gtype;
+
+	d[i]->gtype = new char[strlen(gtype) + 1];
+	strcpy(d[i]->gtype, gtype);
+
+	d[i]->corrected = true;
+
+	success++;
+    }
+
+    fh.close();
+
+    cerr << "Successfully imported " 
+	 << success << " manually corrected genotypes. Skipped " 
+	 << skipped << " genotypes due to invalid catalog or sample IDs, " 
+	 << total << " genotypes read from file.\n";
 
     return 0;
 }
@@ -2165,13 +2299,14 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"renz",         required_argument, NULL, 'e'},
 	    {"whitelist",    required_argument, NULL, 'W'},
 	    {"blacklist",    required_argument, NULL, 'B'},
+	    {"man_corr",     required_argument, NULL, 'C'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:e:H:N:X:W:B:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:e:H:N:X:W:B:C:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -2232,6 +2367,10 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'B':
 	    bl_file = optarg;
+	    break;
+	case 'C':
+	    man_corrections = true;
+	    cor_path = optarg;
 	    break;
 	case 'm':
 	    min_stack_depth = is_integer(optarg);
@@ -2325,7 +2464,9 @@ void help() {
 	      << "  Automated corrections options:\n"
 	      << "    --min_hom_seqs: minimum number of reads required at a stack to call a homozygous genotype (default 5).\n"
 	      << "    --min_het_seqs: below this minor allele frequency a stack is called a homozygote, above it (but below --max_het_seqs) it is called unknown (default 0.05).\n"
-	      << "    --max_het_seqs: minimum frequency of minor allele to call a heterozygote (default 0.1).\n";
+	      << "    --max_het_seqs: minimum frequency of minor allele to call a heterozygote (default 0.1).\n"
+	      << "  Manual corrections options:\n"
+	      << "    --cor_path <path>: path to file containing manual genotype corrections from a Stacks SQL database to incorporate into output.\n";
 
     exit(0);
 }

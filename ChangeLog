@@ -1,3 +1,9 @@
+	Feature: for genetic maps, catalog may now be constructed out of mulitple parents, 
+	genotypes is smart enough to cross check the parents used to construct the catalog
+	against those submitted to genotypes for producing a map. Will allow for a single 
+	catalog to be used across a series of crosses so all maps share the same catalog IDs.
+	Feature: added option to genotypes to import manual corrections exported from Stacks
+	SQL database.
 	Bugfix: corrected handling of files in kmer_filter. Adding support for gzipped files
 	broke file handling in some cases.
 

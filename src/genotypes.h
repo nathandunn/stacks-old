@@ -52,6 +52,7 @@ using std::map;
 using std::set;
 
 #include "constants.h"
+#include "input.h"
 #include "stacks.h"
 #include "locus.h"
 #include "renz.h"
@@ -68,7 +69,7 @@ void version( void );
 int  parse_command_line(int, char**);
 int  build_file_list(vector<string> &);
 int  load_marker_list(string, set<int> &);
-int  identify_parental_ids(map<int, CSLocus *> &, set<int> &);
+int  identify_parental_ids(map<int, CSLocus *> &, vector<int> &, set<int> &);
 int  reduce_catalog(map<int, CSLocus *> &, set<int> &, set<int> &);
 int  find_markers(map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &);
 int  calculate_f(map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &);
@@ -82,6 +83,7 @@ int  automated_corrections(map<int, string> &, set<int> &, map<int, CSLocus *> &
 int  check_uncalled_snps(CSLocus *, Locus *, Datum *);
 int  call_alleles(vector<SNP *> &, vector<char *> &, vector<string> &);
 int  check_homozygosity(vector<char *> &, int, char, char, string &);
+int  manual_corrections(string, PopMap<CSLocus> *);
 
 int  export_gen_map(map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &, map<int, string> &);
 int  export_cp_map(map<int, CSLocus *> &,  PopMap<CSLocus> *, set<int> &, map<int, string> &);
