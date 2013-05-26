@@ -35,4 +35,109 @@
 @dynamic snps;
 @dynamic stackEntries;
 
+
+- (NSAttributedString *)renderName {
+    NSString *formattedString = [self.name stringByReplacingOccurrencesOfString:@"_" withString:@" "];
+    formattedString = [formattedString capitalizedString];
+
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:formattedString];
+
+    NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
+    [mutParaStyle setAlignment:NSCenterTextAlignment];
+    [string addAttributes:[NSDictionary dictionaryWithObject:mutParaStyle
+                                                      forKey:NSParagraphStyleAttributeName]
+                    range:NSMakeRange(0, [[string string] length])];
+
+    return string;
+}
+
+- (NSAttributedString *)renderHaplotypes {
+
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
+
+//    for (NSUInteger i = 0; i < self.haplotypes.count; i++) {
+    int i = 0;
+    for (HaplotypeMO *haplotype  in self.haplotypes) {
+//        NSString *haplotype = [self.haplotypes objectAtIndex:i];
+        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype.haplotype];
+        NSRange selectedRange = NSMakeRange(0, haplotype.haplotype.length);
+        [appendString beginEditing];
+        NSDictionary *attributes;
+        if (i % 2 == 0) {
+            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor greenColor], NSForegroundColorAttributeName,
+                    nil];
+        }
+        else {
+            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor redColor], NSForegroundColorAttributeName,
+                    nil];
+        }
+        [appendString setAttributes:attributes range:selectedRange];
+        [appendString endEditing];
+
+        [string appendAttributedString:appendString];
+        if (i < self.haplotypes.count - 1) {
+            [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
+        }
+
+        ++i;
+    }
+
+    NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
+    [mutParaStyle setAlignment:NSCenterTextAlignment];
+    [string addAttributes:[NSDictionary dictionaryWithObject:mutParaStyle
+                                                      forKey:NSParagraphStyleAttributeName]
+                    range:NSMakeRange(0, [[string string] length])];
+
+    return string;
+}
+
+- (NSAttributedString *)renderDepths {
+
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
+
+//    for(NSNumber *depth in self.depths){
+//        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@",depth]];
+//        [string appendAttributedString:appendString];
+//    }
+//    for (NSUInteger i = 0; i < self.depths.count; i++) {
+    int i = 0;
+    for (DepthMO *depth in  self.depths) {
+//        NSString *depth = [(NSNumber *) [self.depths objectAtIndex:i] stringValue];
+        NSString* numberString =  [NSString stringWithFormat:@"%@",depth.depth];
+        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:numberString ];
+        NSRange selectedRange = NSMakeRange(0, numberString.length);
+        [appendString beginEditing];
+        NSDictionary *attributes;
+        if (i % 2 == 0) {
+            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor greenColor], NSForegroundColorAttributeName,
+                    nil];
+        }
+        else {
+            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor redColor], NSForegroundColorAttributeName,
+                    nil];
+        }
+        [appendString setAttributes:attributes range:selectedRange];
+        [appendString endEditing];
+
+        [string appendAttributedString:appendString];
+        if (i < self.depths.count - 1) {
+            [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
+        }
+        ++i;
+    }
+
+
+    NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
+    [mutParaStyle setAlignment:NSCenterTextAlignment];
+    [string addAttributes:[NSDictionary dictionaryWithObject:mutParaStyle
+                                                      forKey:NSParagraphStyleAttributeName]
+                    range:NSMakeRange(0, [[string string] length])];
+
+    return string;
+}
+
 @end
