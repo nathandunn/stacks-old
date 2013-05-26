@@ -83,9 +83,10 @@ public:
     int prune(set<int> &);
 
     int loci_cnt() { return this->num_loci; }
-    int rev_locus_index(int index) { return this->rev_locus_order[index]; }
+    int rev_locus_index(int index) { if (this->rev_locus_order.count(index) == 0) return -1; return this->rev_locus_order[index]; }
     int sample_cnt() { return this->num_samples; }
-    int rev_sample_index(int index) { return this->rev_sample_order[index]; }
+    int sample_index(int index) { if (this->sample_order.count(index) == 0) return -1; return this->sample_order[index]; }
+    int rev_sample_index(int index) { if (this->rev_sample_order.count(index) == 0) return -1; return this->rev_sample_order[index]; }
 
     Datum **locus(int);
     Datum  *datum(int, int);
