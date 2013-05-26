@@ -711,7 +711,7 @@
 			</object>
 			<object class="NSCollectionViewItem" id="599496054"/>
 			<object class="NSView" id="767095797">
-				<nil key="NSNextResponder"/>
+				<reference key="NSNextResponder"/>
 				<int key="NSvFlags">256</int>
 				<array class="NSMutableArray" key="NSSubviews">
 					<object class="NSTextField" id="538772466">
@@ -719,6 +719,8 @@
 						<int key="NSvFlags">268</int>
 						<string key="NSFrame">{{4, 7}, {92, 17}}</string>
 						<reference key="NSSuperview" ref="767095797"/>
+						<reference key="NSWindow"/>
+						<reference key="NSNextKeyView"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
 						<object class="NSTextFieldCell" key="NSCell" id="130752030">
@@ -734,6 +736,8 @@
 					</object>
 				</array>
 				<string key="NSFrameSize">{100, 30}</string>
+				<reference key="NSSuperview"/>
+				<reference key="NSWindow"/>
 				<reference key="NSNextKeyView" ref="538772466"/>
 			</object>
 			<object class="NSArrayController" id="508374123">
@@ -1078,6 +1082,22 @@
 						</object>
 					</object>
 					<int key="connectionID">100245</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBBindingConnection" key="connection">
+						<string key="label">sortDescriptors: selectedDatums.name</string>
+						<reference key="source" ref="929007184"/>
+						<reference key="destination" ref="512844837"/>
+						<object class="NSNibBindingConnector" key="connector">
+							<reference key="NSSource" ref="929007184"/>
+							<reference key="NSDestination" ref="512844837"/>
+							<string key="NSLabel">sortDescriptors: selectedDatums.name</string>
+							<string key="NSBinding">sortDescriptors</string>
+							<string key="NSKeyPath">selectedDatums.name</string>
+							<int key="NSNibBindingConnectorVersion">2</int>
+						</object>
+					</object>
+					<int key="connectionID">100373</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
@@ -1754,7 +1774,7 @@
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">100370</int>
+			<int key="maxID">100373</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">
