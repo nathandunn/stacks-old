@@ -42,6 +42,7 @@
 		63D5373EE2F31FA8CF4F5F1A /* LocusCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53152900941A896B8CCE9 /* LocusCell.m */; };
 		63D539193E198FC341D4D036 /* LocusRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53558BC604AF5CB21EDEE /* LocusRepository.m */; };
 		63D53922F24CBD38E628870C /* DepthRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D530556A0C5C6B869DB3BF /* DepthRepository.m */; };
+		63D53A37F18B0802DB8CEEAF /* DatumCollectionViewItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53377E126294FBBA3CAFF /* DatumCollectionViewItem.m */; };
 		63D53A7B98C0266C27BCB428 /* GenotypeEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D534676BD27E8518BBDB92 /* GenotypeEntry.m */; };
 		63D53BAAED00BA9776516730 /* StacksConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 63D534F6AA587D896D3DC11B /* StacksConverter.mm */; };
 		63D53BDDE2EE5FB78660C9E1 /* LocusView.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5311F44388AEE157BD2CD /* LocusView.m */; };
@@ -52,6 +53,7 @@
 		63D53E8EEFB2658C1ABFB10C /* DatumRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D535F2DD9F93E6A22D2211 /* DatumRepository.m */; };
 		63D53E9B9995E1FAAA1FF1ED /* StackEntryRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53146E34901E5A22B3D33 /* StackEntryRepository.m */; };
 		63D53F09D355842335914336 /* StacksDocument.xib in Resources */ = {isa = PBXBuildFile; fileRef = 63D53D3DA1B67441F7C8386C /* StacksDocument.xib */; };
+		6B3207E41752CC04009FF9FB /* DatumView.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B3207E31752CC04009FF9FB /* DatumView.m */; };
 		6B46749D173183AB00E42419 /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B467486173183AB00E42419 /* DNANSeq.cc */; };
 		6B46749E173183AB00E42419 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B467488173183AB00E42419 /* DNASeq.cc */; };
 		6B46749F173183AB00E42419 /* locus.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B46748F173183AB00E42419 /* locus.cc */; };
@@ -137,12 +139,14 @@
 		63D5300CEE50E2EFF99D9FA9 /* SnpView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpView.m; sourceTree = "<group>"; };
 		63D530556A0C5C6B869DB3BF /* DepthRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DepthRepository.m; sourceTree = "<group>"; };
 		63D530B3764932ACC9CE8F92 /* DepthRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DepthRepository.h; sourceTree = "<group>"; };
+		63D530C2EAE981EF9A5E44E4 /* DatumCollectionViewItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumCollectionViewItem.h; sourceTree = "<group>"; };
 		63D530DF0317609848E07684 /* LocusRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusRepository.h; sourceTree = "<group>"; };
 		63D5311F44388AEE157BD2CD /* LocusView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusView.m; sourceTree = "<group>"; };
 		63D53146E34901E5A22B3D33 /* StackEntryRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntryRepository.m; sourceTree = "<group>"; };
 		63D53152900941A896B8CCE9 /* LocusCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusCell.m; sourceTree = "<group>"; };
 		63D531804419CD422905AD3F /* StacksView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksView.h; sourceTree = "<group>"; };
 		63D532EFC82E0AE433712145 /* GenotypeEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeEntry.h; sourceTree = "<group>"; };
+		63D53377E126294FBBA3CAFF /* DatumCollectionViewItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumCollectionViewItem.m; sourceTree = "<group>"; };
 		63D534676BD27E8518BBDB92 /* GenotypeEntry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenotypeEntry.m; sourceTree = "<group>"; };
 		63D534CA97F7DF4D5667189A /* HaplotypeRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HaplotypeRepository.h; sourceTree = "<group>"; };
 		63D534F6AA587D896D3DC11B /* StacksConverter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = StacksConverter.mm; sourceTree = "<group>"; };
@@ -163,6 +167,8 @@
 		63D53ED3BED907B741C5C706 /* DatumRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumRepository.h; sourceTree = "<group>"; };
 		63D53EFA95D4B7DF21498B77 /* StacksView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksView.m; sourceTree = "<group>"; };
 		63D53F98F88E905D5B4D6620 /* SnpView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpView.h; sourceTree = "<group>"; };
+		6B3207E21752CC04009FF9FB /* DatumView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumView.h; sourceTree = "<group>"; };
+		6B3207E31752CC04009FF9FB /* DatumView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumView.m; sourceTree = "<group>"; };
 		6B467482173183AB00E42419 /* Bam.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bam.h; path = ../../../src/Bam.h; sourceTree = "<group>"; };
 		6B467483173183AB00E42419 /* Bowtie.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bowtie.h; path = ../../../src/Bowtie.h; sourceTree = "<group>"; };
 		6B467484173183AB00E42419 /* Bustard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bustard.h; path = ../../../src/Bustard.h; sourceTree = "<group>"; };
@@ -367,6 +373,10 @@
 				14A72B4C1746A7DC0024B2D1 /* DatumArrayController.m */,
 				14A72B4E1746A7F80024B2D1 /* StackEntryArrayController.h */,
 				14A72B4F1746A7F80024B2D1 /* StackEntryArrayController.m */,
+				6B3207E21752CC04009FF9FB /* DatumView.h */,
+				6B3207E31752CC04009FF9FB /* DatumView.m */,
+				63D53377E126294FBBA3CAFF /* DatumCollectionViewItem.m */,
+				63D530C2EAE981EF9A5E44E4 /* DatumCollectionViewItem.h */,
 			);
 			name = GUI;
 			sourceTree = "<group>";
@@ -596,6 +606,8 @@
 				14A72B4A1746A5500024B2D1 /* PopulationArrayController.m in Sources */,
 				14A72B4D1746A7DC0024B2D1 /* DatumArrayController.m in Sources */,
 				14A72B501746A7F80024B2D1 /* StackEntryArrayController.m in Sources */,
+				6B3207E41752CC04009FF9FB /* DatumView.m in Sources */,
+				63D53A37F18B0802DB8CEEAF /* DatumCollectionViewItem.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
