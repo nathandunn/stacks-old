@@ -720,7 +720,7 @@
 						<string key="NSFrame">{{4, 45}, {92, 17}}</string>
 						<reference key="NSSuperview" ref="767095797"/>
 						<reference key="NSWindow"/>
-						<reference key="NSNextKeyView" ref="6101557"/>
+						<reference key="NSNextKeyView" ref="1046029364"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
 						<object class="NSTextFieldCell" key="NSCell" id="130752030">
@@ -734,27 +734,27 @@
 							<reference key="NSTextColor" ref="638047246"/>
 						</object>
 					</object>
-					<object class="NSTextField" id="6101557">
+					<object class="NSTextField" id="1046029364">
 						<reference key="NSNextResponder" ref="767095797"/>
 						<int key="NSvFlags">268</int>
 						<string key="NSFrame">{{5, 25}, {92, 17}}</string>
 						<reference key="NSSuperview" ref="767095797"/>
 						<reference key="NSWindow"/>
-						<reference key="NSNextKeyView" ref="726188409"/>
+						<reference key="NSNextKeyView" ref="263223948"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
-						<object class="NSTextFieldCell" key="NSCell" id="947561117">
+						<object class="NSTextFieldCell" key="NSCell" id="668325674">
 							<int key="NSCellFlags">68157504</int>
 							<int key="NSCellFlags2">1212158976</int>
 							<string key="NSContents">Haplotypes</string>
 							<reference key="NSSupport" ref="216874794"/>
 							<string key="NSCellIdentifier">_NS:1535</string>
-							<reference key="NSControlView" ref="6101557"/>
+							<reference key="NSControlView" ref="1046029364"/>
 							<reference key="NSBackgroundColor" ref="766441978"/>
 							<reference key="NSTextColor" ref="638047246"/>
 						</object>
 					</object>
-					<object class="NSTextField" id="726188409">
+					<object class="NSTextField" id="263223948">
 						<reference key="NSNextResponder" ref="767095797"/>
 						<int key="NSvFlags">268</int>
 						<string key="NSFrame">{{5, 6}, {92, 17}}</string>
@@ -763,13 +763,13 @@
 						<reference key="NSNextKeyView"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
-						<object class="NSTextFieldCell" key="NSCell" id="747752150">
+						<object class="NSTextFieldCell" key="NSCell" id="984928538">
 							<int key="NSCellFlags">68157504</int>
 							<int key="NSCellFlags2">1212158976</int>
 							<string key="NSContents">Depths</string>
 							<reference key="NSSupport" ref="216874794"/>
 							<string key="NSCellIdentifier">_NS:1535</string>
-							<reference key="NSControlView" ref="726188409"/>
+							<reference key="NSControlView" ref="263223948"/>
 							<reference key="NSBackgroundColor" ref="766441978"/>
 							<reference key="NSTextColor" ref="638047246"/>
 						</object>
@@ -1371,10 +1371,10 @@
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">value: representedObject.renderHaplotypes</string>
-						<reference key="source" ref="6101557"/>
+						<reference key="source" ref="1046029364"/>
 						<reference key="destination" ref="599496054"/>
 						<object class="NSNibBindingConnector" key="connector">
-							<reference key="NSSource" ref="6101557"/>
+							<reference key="NSSource" ref="1046029364"/>
 							<reference key="NSDestination" ref="599496054"/>
 							<string key="NSLabel">value: representedObject.renderHaplotypes</string>
 							<string key="NSBinding">value</string>
@@ -1387,10 +1387,10 @@
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">value: representedObject.renderDepths</string>
-						<reference key="source" ref="726188409"/>
+						<reference key="source" ref="263223948"/>
 						<reference key="destination" ref="599496054"/>
 						<object class="NSNibBindingConnector" key="connector">
-							<reference key="NSSource" ref="726188409"/>
+							<reference key="NSSource" ref="263223948"/>
 							<reference key="NSDestination" ref="599496054"/>
 							<string key="NSLabel">value: representedObject.renderDepths</string>
 							<string key="NSBinding">value</string>
@@ -1572,8 +1572,8 @@
 						<reference key="object" ref="767095797"/>
 						<array class="NSMutableArray" key="children">
 							<reference ref="538772466"/>
-							<reference ref="726188409"/>
-							<reference ref="6101557"/>
+							<reference ref="263223948"/>
+							<reference ref="1046029364"/>
 						</array>
 						<reference key="parent" ref="0"/>
 					</object>
@@ -1778,29 +1778,29 @@
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100378</int>
-						<reference key="object" ref="726188409"/>
+						<reference key="object" ref="263223948"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="747752150"/>
+							<reference ref="984928538"/>
 						</array>
 						<reference key="parent" ref="767095797"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100379</int>
-						<reference key="object" ref="747752150"/>
-						<reference key="parent" ref="726188409"/>
+						<reference key="object" ref="984928538"/>
+						<reference key="parent" ref="263223948"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100375</int>
-						<reference key="object" ref="6101557"/>
+						<reference key="object" ref="1046029364"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="947561117"/>
+							<reference ref="668325674"/>
 						</array>
 						<reference key="parent" ref="767095797"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100376</int>
-						<reference key="object" ref="947561117"/>
-						<reference key="parent" ref="6101557"/>
+						<reference key="object" ref="668325674"/>
+						<reference key="parent" ref="1046029364"/>
 					</object>
 				</array>
 			</object>
@@ -1813,7 +1813,9 @@
 				<string key="100136.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="100137.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="100138.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
+				<string key="100139.CustomClassName">DatumCollectionViewItem</string>
 				<string key="100139.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
+				<string key="100140.CustomClassName">DatumView</string>
 				<string key="100140.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="100151.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="100152.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
@@ -1888,6 +1890,22 @@
 					<object class="IBClassDescriptionSource" key="sourceIdentifier">
 						<string key="majorKey">IBProjectSource</string>
 						<string key="minorKey">./Classes/DatumArrayController.h</string>
+					</object>
+				</object>
+				<object class="IBPartialClassDescription">
+					<string key="className">DatumCollectionViewItem</string>
+					<string key="superclassName">NSCollectionViewItem</string>
+					<object class="IBClassDescriptionSource" key="sourceIdentifier">
+						<string key="majorKey">IBProjectSource</string>
+						<string key="minorKey">./Classes/DatumCollectionViewItem.h</string>
+					</object>
+				</object>
+				<object class="IBPartialClassDescription">
+					<string key="className">DatumView</string>
+					<string key="superclassName">NSView</string>
+					<object class="IBClassDescriptionSource" key="sourceIdentifier">
+						<string key="majorKey">IBProjectSource</string>
+						<string key="minorKey">./Classes/DatumView.h</string>
 					</object>
 				</object>
 				<object class="IBPartialClassDescription">

@@ -1,6 +1,5 @@
 #!/bin/sh
-gunzip pop_stacks_example.tar.gz
-
+#gunzip pop_stacks_example.tar.gz
 TARGET=$HOME/Desktop/stacks_large
 tar xf pop_stacks_example.tar
 mv -f $TARGET $TARGET.old

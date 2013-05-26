@@ -9,7 +9,7 @@
 #import "DatumRepository.h"
 #import "DatumMO.h"
 #import "SampleMO.h"
-#import "LocusMO.h"
+#import "LocusMO.ht -q
 #import "PopulationMO.h"
 
 
