@@ -720,7 +720,7 @@
 						<string key="NSFrame">{{4, 45}, {92, 17}}</string>
 						<reference key="NSSuperview" ref="767095797"/>
 						<reference key="NSWindow"/>
-						<reference key="NSNextKeyView" ref="1046029364"/>
+						<reference key="NSNextKeyView" ref="521267879"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
 						<object class="NSTextFieldCell" key="NSCell" id="130752030">
@@ -734,27 +734,27 @@
 							<reference key="NSTextColor" ref="638047246"/>
 						</object>
 					</object>
-					<object class="NSTextField" id="1046029364">
+					<object class="NSTextField" id="521267879">
 						<reference key="NSNextResponder" ref="767095797"/>
 						<int key="NSvFlags">268</int>
 						<string key="NSFrame">{{5, 25}, {92, 17}}</string>
 						<reference key="NSSuperview" ref="767095797"/>
 						<reference key="NSWindow"/>
-						<reference key="NSNextKeyView" ref="263223948"/>
+						<reference key="NSNextKeyView" ref="149628886"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
-						<object class="NSTextFieldCell" key="NSCell" id="668325674">
+						<object class="NSTextFieldCell" key="NSCell" id="88324212">
 							<int key="NSCellFlags">68157504</int>
 							<int key="NSCellFlags2">1212158976</int>
 							<string key="NSContents">Haplotypes</string>
 							<reference key="NSSupport" ref="216874794"/>
 							<string key="NSCellIdentifier">_NS:1535</string>
-							<reference key="NSControlView" ref="1046029364"/>
+							<reference key="NSControlView" ref="521267879"/>
 							<reference key="NSBackgroundColor" ref="766441978"/>
 							<reference key="NSTextColor" ref="638047246"/>
 						</object>
 					</object>
-					<object class="NSTextField" id="263223948">
+					<object class="NSTextField" id="149628886">
 						<reference key="NSNextResponder" ref="767095797"/>
 						<int key="NSvFlags">268</int>
 						<string key="NSFrame">{{5, 6}, {92, 17}}</string>
@@ -763,13 +763,13 @@
 						<reference key="NSNextKeyView"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
-						<object class="NSTextFieldCell" key="NSCell" id="984928538">
+						<object class="NSTextFieldCell" key="NSCell" id="352870584">
 							<int key="NSCellFlags">68157504</int>
 							<int key="NSCellFlags2">1212158976</int>
 							<string key="NSContents">Depths</string>
 							<reference key="NSSupport" ref="216874794"/>
 							<string key="NSCellIdentifier">_NS:1535</string>
-							<reference key="NSControlView" ref="263223948"/>
+							<reference key="NSControlView" ref="149628886"/>
 							<reference key="NSBackgroundColor" ref="766441978"/>
 							<reference key="NSTextColor" ref="638047246"/>
 						</object>
@@ -973,15 +973,15 @@
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
-						<string key="label">value: arrangedObjects.populationId</string>
+						<string key="label">value: arrangedObjects.name</string>
 						<reference key="source" ref="493456174"/>
 						<reference key="destination" ref="661553704"/>
 						<object class="NSNibBindingConnector" key="connector">
 							<reference key="NSSource" ref="493456174"/>
 							<reference key="NSDestination" ref="661553704"/>
-							<string key="NSLabel">value: arrangedObjects.populationId</string>
+							<string key="NSLabel">value: arrangedObjects.name</string>
 							<string key="NSBinding">value</string>
-							<string key="NSKeyPath">arrangedObjects.populationId</string>
+							<string key="NSKeyPath">arrangedObjects.name</string>
 							<dictionary key="NSOptions">
 								<boolean value="NO" key="NSAllowsEditingMultipleValuesSelection"/>
 								<boolean value="NO" key="NSConditionallySetsEditable"/>
@@ -989,7 +989,7 @@
 							<int key="NSNibBindingConnectorVersion">2</int>
 						</object>
 					</object>
-					<int key="connectionID">100220</int>
+					<int key="connectionID">100387</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
@@ -1371,10 +1371,10 @@
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">value: representedObject.renderHaplotypes</string>
-						<reference key="source" ref="1046029364"/>
+						<reference key="source" ref="521267879"/>
 						<reference key="destination" ref="599496054"/>
 						<object class="NSNibBindingConnector" key="connector">
-							<reference key="NSSource" ref="1046029364"/>
+							<reference key="NSSource" ref="521267879"/>
 							<reference key="NSDestination" ref="599496054"/>
 							<string key="NSLabel">value: representedObject.renderHaplotypes</string>
 							<string key="NSBinding">value</string>
@@ -1387,10 +1387,10 @@
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">value: representedObject.renderDepths</string>
-						<reference key="source" ref="263223948"/>
+						<reference key="source" ref="149628886"/>
 						<reference key="destination" ref="599496054"/>
 						<object class="NSNibBindingConnector" key="connector">
-							<reference key="NSSource" ref="263223948"/>
+							<reference key="NSSource" ref="149628886"/>
 							<reference key="NSDestination" ref="599496054"/>
 							<string key="NSLabel">value: representedObject.renderDepths</string>
 							<string key="NSBinding">value</string>
@@ -1572,8 +1572,8 @@
 						<reference key="object" ref="767095797"/>
 						<array class="NSMutableArray" key="children">
 							<reference ref="538772466"/>
-							<reference ref="263223948"/>
-							<reference ref="1046029364"/>
+							<reference ref="149628886"/>
+							<reference ref="521267879"/>
 						</array>
 						<reference key="parent" ref="0"/>
 					</object>
@@ -1778,29 +1778,29 @@
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100378</int>
-						<reference key="object" ref="263223948"/>
+						<reference key="object" ref="149628886"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="984928538"/>
+							<reference ref="352870584"/>
 						</array>
 						<reference key="parent" ref="767095797"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100379</int>
-						<reference key="object" ref="984928538"/>
-						<reference key="parent" ref="263223948"/>
+						<reference key="object" ref="352870584"/>
+						<reference key="parent" ref="149628886"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100375</int>
-						<reference key="object" ref="1046029364"/>
+						<reference key="object" ref="521267879"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="668325674"/>
+							<reference ref="88324212"/>
 						</array>
 						<reference key="parent" ref="767095797"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">100376</int>
-						<reference key="object" ref="668325674"/>
-						<reference key="parent" ref="1046029364"/>
+						<reference key="object" ref="88324212"/>
+						<reference key="parent" ref="521267879"/>
 					</object>
 				</array>
 			</object>
@@ -1880,7 +1880,7 @@
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">100386</int>
+			<int key="maxID">100387</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">
