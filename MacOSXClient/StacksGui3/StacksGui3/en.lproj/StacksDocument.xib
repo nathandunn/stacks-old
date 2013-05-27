@@ -558,9 +558,9 @@
 													<double key="NSMaxWidth">3.4028234663852886e+38</double>
 													<object class="NSTableHeaderCell" key="NSHeaderCell">
 														<int key="NSCellFlags">612499008</int>
-														<int key="NSCellFlags2">2048</int>
+														<int key="NSCellFlags2">67110912</int>
 														<string key="NSContents">Sequence ID</string>
-														<object class="NSFont" key="NSSupport" id="67358405">
+														<object class="NSFont" key="NSSupport" id="648471971">
 															<string key="NSName">Courier</string>
 															<double key="NSSize">14</double>
 															<int key="NSfFlags">16</int>
@@ -594,7 +594,7 @@
 														<int key="NSCellFlags">612499008</int>
 														<int key="NSCellFlags2">2048</int>
 														<string key="NSContents">Sequence</string>
-														<reference key="NSSupport" ref="67358405"/>
+														<reference key="NSSupport" ref="648471971"/>
 														<reference key="NSBackgroundColor" ref="1035311678"/>
 														<reference key="NSTextColor" ref="45504897"/>
 													</object>
