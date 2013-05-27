@@ -241,39 +241,6 @@
         }
 
     }
-//        if ([[genotypesController selectedObjects] count] > 0) {
-//            if ([[genotypesController selectedObjects] count] == 1) {
-//                GenotypeEntry *genotypeEntry = (GenotypeEntry *) [[genotypesController selectedObjects] objectAtIndex:0];
-//
-//                if ([genotypeEntry.name isEqualToString:self.previousStacksName]) {
-//                    return;
-//                }
-//
-//                NSLog(@"object %@",object);
-//                NSLog(@"object %@",object);
-//                NSLog(@"selected %ld ",[genotypesController selectionIndex]);
-//                for(NSString *key in change){
-//                    NSLog(@"key %@ - value %@",key,[change objectForKey:key]);
-//                }
-//
-//                self.previousStacksName = genotypeEntry.name;
-//
-////                NSLog(@"selected genotype %@ and tagID %ld", genotypeEntry.name,genotypeEntry.tagId);
-////                LocusView *locusView = self.selectedLocusView;
-//
-////                StacksView *stacksView = [self.stacksLoader
-////                        loadStacksView:genotypeEntry.name
-////                                atPath:stacksDocument.path
-////                                forTag:genotypeEntry.tagId
-////                                 locus:locusView];
-////                self.selectedStacks = stacksView;
-//            }
-//        }
-//        else {
-//            self.selectedStacks = nil ;
-//        }
-//        [self showTagsTable:self.selectedStacks];
-//        [self.stacksTableView reloadData];
 }
 
 @end

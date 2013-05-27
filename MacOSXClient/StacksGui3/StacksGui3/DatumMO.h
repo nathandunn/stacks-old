@@ -55,4 +55,7 @@
 - (void)addStackEntries:(NSSet *)values;
 - (void)removeStackEntries:(NSSet *)values;
 
+
+- (NSArray*)getOrderedStackEntries;
+
 @end
