@@ -146,30 +146,22 @@
         StackEntryMO *second = (StackEntryMO*)b ;
         NSString *firstRelationship = first.relationship ;
         NSString *secondRelationship = second.relationship ;
+
+        int firstCount = 0 ;
+        int secondCount = 0 ;
         //reference
         //consensus
         //model
-        if([firstRelationship isEqualToString:@"reference"]){
-            return NSOrderedAscending;
-        }
-        if([secondRelationship isEqualToString:@"reference"]){
-            return NSOrderedDescending;
-        }
-        if([firstRelationship isEqualToString:@"consensus"]){
-            return ([secondRelationship isEqualToString:@"reference"]?NSOrderedDescending:NSOrderedAscending);
-        }
-        if([firstRelationship isEqualToString:@"model"]){
-            return ([secondRelationship isEqualToString:@"consensus"]||[secondRelationship isEqualToString:@"reference"]?NSOrderedDescending:NSOrderedAscending);
-         }
-        
-//        if([secondRelationship isEqualToString:@"primary"] && firstRelationship
-//           ){
-//            return (![secondRelationship isEqualToString:@"model"]?NSOrderedAscending:NSOrderedDescending);
-//        }
-        // primary / secondary (just use entry id)
-        NSComparisonResult result = [first.entryId compare:second.entryId];
+        firstCount += [firstRelationship isEqualToString:@"reference"]?10000:0;
+        secondCount += [secondRelationship isEqualToString:@"reference"]?10000:0;
+        firstCount += [firstRelationship isEqualToString:@"model"]?1000:0;
+        secondCount += [secondRelationship isEqualToString:@"model"]?10000:0;
+        firstCount += [firstRelationship isEqualToString:@"consensus"]?100:0;
+        secondCount += [secondRelationship isEqualToString:@"consensus"]?100:0;
+        firstCount -= [first.entryId intValue];
+        secondCount -= [second.entryId intValue];
+        NSComparisonResult result = (firstCount>secondCount)?NSOrderedAscending:NSOrderedDescending;
         return result ;
-
     }];
 
     return sortedArray;
