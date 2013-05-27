@@ -37,6 +37,7 @@ using std::ofstream;
 #import "DatumAlleleMO.h"
 #import "AlleleRepository.h"
 #import "LocusAlleleMO.h"
+#import "ConsensusStackEntryMO.h"
 
 
 #include <sys/time.h>
@@ -712,6 +713,11 @@ using std::ofstream;
                                                                                sequence:[columns objectAtIndex:9]
                                                                                   datum:datumMO
                     ];
+                    datumMO.reference = [stackEntryRepository insertReferenceStackEntry:moc
+                                                                                 sequence:[columns objectAtIndex:9]
+                                                                                  datum:datumMO
+                    ];
+
                 }
                 else if ([relationship isEqualToString:@"model"]) {
                     datumMO.model = [stackEntryRepository insertModelStackEntry:moc

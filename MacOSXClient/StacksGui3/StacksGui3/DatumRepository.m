@@ -22,10 +22,6 @@
     newDatumMO.sampleId = id ;
     newDatumMO.sample = sample ;
     newDatumMO.locus = locus ;
-
-    // TODO
-    // insertReference
-
     return newDatumMO ;
 }
 

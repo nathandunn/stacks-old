@@ -11,6 +11,7 @@
 #import "ConsensusStackEntryMO.h"
 #import "DatumMO.h"
 #import "ModelStackEntryMO.h"
+#import "ReferenceStackEntryMO.h"
 
 
 @implementation StackEntryRepository {
@@ -46,6 +47,16 @@
     stackEntryMO.sequenceId = sequenceId ;
     stackEntryMO.sequence = sequence ;
     stackEntryMO.datum = datum ;
+    return stackEntryMO ;
+}
+
+
+
+- (ReferenceStackEntryMO *)insertReferenceStackEntry:(NSManagedObjectContext *)context sequence:(NSString *)sequence datum:(DatumMO *)datum {
+    ReferenceStackEntryMO *stackEntryMO = [NSEntityDescription insertNewObjectForEntityForName:@"ReferenceStackEntry" inManagedObjectContext:context];
+    stackEntryMO.relationship = @"reference" ;
+    stackEntryMO.datum = datum ;
+    stackEntryMO.sequence = sequence ;
     return stackEntryMO ;
 }
 @end
