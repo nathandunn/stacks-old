@@ -141,13 +141,34 @@
 }
 
 - (NSArray *)getOrderedStackEntries {
-    return [[self.stackEntries allObjects] sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
+    NSArray *sortedArray = [[self.stackEntries allObjects] sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
         StackEntryMO *first = (StackEntryMO*)a ;
         StackEntryMO *second = (StackEntryMO*)b ;
+        NSString *firstRelationship = first.relationship ;
+        NSString *secondRelationship = second.relationship ;
+        //reference
+        //consensus
+        //model
+        if([firstRelationship isEqualToString:@"reference"]){
+            return NSOrderedAscending;
+        }
+        if([firstRelationship isEqualToString:@"consensus"]){
+            return NSOrderedAscending;
+        }
+        if([firstRelationship isEqualToString:@"model"]){
+            return NSOrderedAscending;
+        }
+        // primary / secondary (just use entry id)
+        else{
+            return [first.entryId compare:second.entryId];
+        }
 
-//        if(first.relationship)
-        return [first.sequence compare:second.sequence];
     }];
+
+    return sortedArray;
+
+//    NSOrderedSet *orderedSet = [NSOrderedSet orderedSetWithArray:sortedArray];
+//    return orderedSet;
 
 }
 
