@@ -105,8 +105,8 @@
     int i = 0;
     for (DepthMO *depth in  self.depths) {
 //        NSString *depth = [(NSNumber *) [self.depths objectAtIndex:i] stringValue];
-        NSString* numberString =  [NSString stringWithFormat:@"%@",depth.depth];
-        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:numberString ];
+        NSString *numberString = [NSString stringWithFormat:@"%@", depth.depth];
+        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:numberString];
         NSRange selectedRange = NSMakeRange(0, numberString.length);
         [appendString beginEditing];
         NSDictionary *attributes;
@@ -139,5 +139,17 @@
 
     return string;
 }
+
+- (NSArray *)getOrderedStackEntries {
+    return [[self.stackEntries allObjects] sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
+        StackEntryMO *first = (StackEntryMO*)a ;
+        StackEntryMO *second = (StackEntryMO*)b ;
+
+//        if(first.relationship)
+        return [first.sequence compare:second.sequence];
+    }];
+
+}
+
 
 @end
