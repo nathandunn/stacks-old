@@ -152,16 +152,23 @@
         if([firstRelationship isEqualToString:@"reference"]){
             return NSOrderedAscending;
         }
+        if([secondRelationship isEqualToString:@"reference"]){
+            return NSOrderedDescending;
+        }
         if([firstRelationship isEqualToString:@"consensus"]){
-            return NSOrderedAscending;
+            return ([secondRelationship isEqualToString:@"reference"]?NSOrderedDescending:NSOrderedAscending);
         }
         if([firstRelationship isEqualToString:@"model"]){
-            return NSOrderedAscending;
-        }
+            return ([secondRelationship isEqualToString:@"consensus"]||[secondRelationship isEqualToString:@"reference"]?NSOrderedDescending:NSOrderedAscending);
+         }
+        
+//        if([secondRelationship isEqualToString:@"primary"] && firstRelationship
+//           ){
+//            return (![secondRelationship isEqualToString:@"model"]?NSOrderedAscending:NSOrderedDescending);
+//        }
         // primary / secondary (just use entry id)
-        else{
-            return [first.entryId compare:second.entryId];
-        }
+        NSComparisonResult result = [first.entryId compare:second.entryId];
+        return result ;
 
     }];
 
