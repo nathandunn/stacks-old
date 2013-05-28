@@ -28,9 +28,8 @@
     return stackEntryMO ;
 }
 
-- (ConsensusStackEntryMO *)insertConsensusStackEntry:(NSManagedObjectContext *)context entryId:(NSNumber *)entryId block:(NSString*)block sequenceId:(NSString*)sequenceId sequence:(NSString*)sequence datum:(DatumMO *)datum {
+- (ConsensusStackEntryMO *)insertConsensusStackEntry:(NSManagedObjectContext *)context block:(NSString*)block sequenceId:(NSString*)sequenceId sequence:(NSString*)sequence datum:(DatumMO *)datum {
     ConsensusStackEntryMO *stackEntryMO = [NSEntityDescription insertNewObjectForEntityForName:@"ConsensusStackEntry" inManagedObjectContext:context];
-    stackEntryMO.entryId = entryId;
     stackEntryMO.relationship = @"consensus" ;
     stackEntryMO.block = block ;
     stackEntryMO.sequenceId = sequenceId ;
@@ -39,9 +38,8 @@
     return stackEntryMO ;
 }
 
-- (ModelStackEntryMO *)insertModelStackEntry:(NSManagedObjectContext *)context entryId:(NSNumber *)entryId block:(NSString *)block sequenceId:(NSString *)sequenceId sequence:(id)sequence datum:(DatumMO *)datum {
+- (ModelStackEntryMO *)insertModelStackEntry:(NSManagedObjectContext *)context block:(NSString *)block sequenceId:(NSString *)sequenceId sequence:(id)sequence datum:(DatumMO *)datum {
     ModelStackEntryMO *stackEntryMO = [NSEntityDescription insertNewObjectForEntityForName:@"ModelStackEntry" inManagedObjectContext:context];
-    stackEntryMO.entryId = entryId;
     stackEntryMO.relationship = @"model" ;
     stackEntryMO.block = block ;
     stackEntryMO.sequenceId = sequenceId ;
