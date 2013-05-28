@@ -21,4 +21,9 @@
     return string ;
 }
 
+- (NSAttributedString *)renderSequence {
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:self.sequence];
+    return string;
+}
+
 @end
