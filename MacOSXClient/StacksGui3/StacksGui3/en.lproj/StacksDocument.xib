@@ -664,6 +664,7 @@
 									<string key="NSFrame">{{1, 272}, {455, 15}}</string>
 									<reference key="NSSuperview" ref="59706283"/>
 									<reference key="NSWindow"/>
+									<reference key="NSNextKeyView"/>
 									<string key="NSReuseIdentifierKey">_NS:60</string>
 									<int key="NSsFlags">1</int>
 									<reference key="NSTarget" ref="59706283"/>
@@ -767,6 +768,7 @@
 						<string key="NSFrame">{{5, 6}, {92, 17}}</string>
 						<reference key="NSSuperview" ref="767095797"/>
 						<reference key="NSWindow"/>
+						<reference key="NSNextKeyView"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
 						<object class="NSTextFieldCell" key="NSCell" id="875333516">
@@ -1345,15 +1347,15 @@
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
-						<string key="label">value: objectValue.consensus</string>
+						<string key="label">value: objectValue.renderConsensus</string>
 						<reference key="source" ref="117096700"/>
 						<reference key="destination" ref="895738995"/>
 						<object class="NSNibBindingConnector" key="connector">
 							<reference key="NSSource" ref="117096700"/>
 							<reference key="NSDestination" ref="895738995"/>
-							<string key="NSLabel">value: objectValue.consensus</string>
+							<string key="NSLabel">value: objectValue.renderConsensus</string>
 							<string key="NSBinding">value</string>
-							<string key="NSKeyPath">objectValue.consensus</string>
+							<string key="NSKeyPath">objectValue.renderConsensus</string>
 							<object class="NSDictionary" key="NSOptions">
 								<string key="NS.key.0">NSValidatesImmediately</string>
 								<boolean value="YES" key="NS.object.0"/>
@@ -1361,7 +1363,7 @@
 							<int key="NSNibBindingConnectorVersion">2</int>
 						</object>
 					</object>
-					<int key="connectionID">100354</int>
+					<int key="connectionID">100398</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
@@ -1895,7 +1897,7 @@
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">100397</int>
+			<int key="maxID">100398</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">

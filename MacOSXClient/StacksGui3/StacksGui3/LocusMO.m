@@ -23,4 +23,22 @@
 @dynamic datums;
 @dynamic snps;
 
+
+- (NSAttributedString *)renderConsensus{
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:self.consensus];
+    [string beginEditing];
+//        NSNumber *snpIndex;
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+            [NSColor blueColor], NSForegroundColorAttributeName,
+            [NSColor grayColor], NSBackgroundColorAttributeName,
+            [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
+            nil];
+    for (LocusSnpMO *snp in self.snps) {
+        NSRange selectedRange = NSMakeRange([snp.column unsignedIntegerValue], 1);
+        [string setAttributes:attributes range:selectedRange];
+    }
+    [string endEditing];
+    return string ;
+}
+
 @end
