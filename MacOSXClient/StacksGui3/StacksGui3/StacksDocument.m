@@ -101,6 +101,7 @@
     if(self.selectedLocus!=nil && self.selectedPopulation!=nil){
 //        self.selectedDatums = [self.datumRepository getDatums:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
         self.selectedDatums = [self.datumRepository getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
+        self.selectedDatum = [self.selectedDatums objectAtIndex:0];
     }
     else{
         self.selectedDatums = nil ;
