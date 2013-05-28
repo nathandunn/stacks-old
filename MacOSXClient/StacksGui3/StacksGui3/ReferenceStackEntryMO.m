@@ -11,6 +11,16 @@
 
 @implementation ReferenceStackEntryMO
 
+- (NSAttributedString *)renderEntryId{
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@""];
+    return string ;
+}
+
+- (NSAttributedString *)renderRelationship{
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@""];
+    return string ;
+}
+
 - (NSAttributedString *)renderSequence {
     // create a string from 0-9 for sequenceSize
     NSUInteger sequenceSize = self.sequence.length ;

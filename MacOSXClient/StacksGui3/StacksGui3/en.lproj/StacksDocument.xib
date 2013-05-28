@@ -525,10 +525,11 @@
 													</object>
 													<int key="NSResizingMask">3</int>
 													<bool key="NSIsResizeable">YES</bool>
+													<bool key="NSIsEditable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 												<object class="NSTableColumn" id="366787094">
-													<double key="NSWidth">99</double>
+													<double key="NSWidth">82</double>
 													<double key="NSMinWidth">40</double>
 													<double key="NSMaxWidth">1000</double>
 													<object class="NSTableHeaderCell" key="NSHeaderCell">
@@ -550,6 +551,7 @@
 													</object>
 													<int key="NSResizingMask">3</int>
 													<bool key="NSIsResizeable">YES</bool>
+													<bool key="NSIsEditable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 												<object class="NSTableColumn" id="4512364">
@@ -560,11 +562,7 @@
 														<int key="NSCellFlags">612499008</int>
 														<int key="NSCellFlags2">67110912</int>
 														<string key="NSContents">Sequence ID</string>
-														<object class="NSFont" key="NSSupport" id="648471971">
-															<string key="NSName">Courier</string>
-															<double key="NSSize">14</double>
-															<int key="NSfFlags">16</int>
-														</object>
+														<reference key="NSSupport" ref="216874794"/>
 														<object class="NSColor" key="NSBackgroundColor" id="1035311678">
 															<int key="NSColorSpace">6</int>
 															<string key="NSCatalogName">System</string>
@@ -575,40 +573,50 @@
 													</object>
 													<object class="NSTextFieldCell" key="NSDataCell" id="830659763">
 														<int key="NSCellFlags">874643008</int>
-														<int key="NSCellFlags2">2048</int>
+														<int key="NSCellFlags2">1140852736</int>
 														<string key="NSContents">Text Cell</string>
-														<reference key="NSSupport" ref="216874794"/>
+														<object class="NSFont" key="NSSupport">
+															<string key="NSName">Courier</string>
+															<double key="NSSize">12</double>
+															<int key="NSfFlags">16</int>
+														</object>
 														<reference key="NSControlView" ref="125525310"/>
 														<reference key="NSBackgroundColor" ref="190012126"/>
 														<reference key="NSTextColor" ref="638047246"/>
 													</object>
 													<int key="NSResizingMask">3</int>
 													<bool key="NSIsResizeable">YES</bool>
+													<bool key="NSIsEditable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 												<object class="NSTableColumn" id="151258412">
-													<double key="NSWidth">444</double>
+													<double key="NSWidth">461</double>
 													<double key="NSMinWidth">10</double>
 													<double key="NSMaxWidth">3.4028234663852886e+38</double>
 													<object class="NSTableHeaderCell" key="NSHeaderCell">
 														<int key="NSCellFlags">612499008</int>
 														<int key="NSCellFlags2">2048</int>
 														<string key="NSContents">Sequence</string>
-														<reference key="NSSupport" ref="648471971"/>
+														<reference key="NSSupport" ref="216874794"/>
 														<reference key="NSBackgroundColor" ref="1035311678"/>
 														<reference key="NSTextColor" ref="45504897"/>
 													</object>
 													<object class="NSTextFieldCell" key="NSDataCell" id="712931500">
-														<int key="NSCellFlags">874643008</int>
-														<int key="NSCellFlags2">2048</int>
+														<int key="NSCellFlags">604110400</int>
+														<int key="NSCellFlags2">1073743936</int>
 														<string key="NSContents">Text Cell</string>
-														<reference key="NSSupport" ref="216874794"/>
+														<object class="NSFont" key="NSSupport">
+															<string key="NSName">Courier</string>
+															<double key="NSSize">14</double>
+															<int key="NSfFlags">16</int>
+														</object>
 														<reference key="NSControlView" ref="125525310"/>
 														<reference key="NSBackgroundColor" ref="190012126"/>
 														<reference key="NSTextColor" ref="638047246"/>
 													</object>
 													<int key="NSResizingMask">3</int>
 													<bool key="NSIsResizeable">YES</bool>
+													<bool key="NSIsEditable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 											</array>
@@ -993,35 +1001,35 @@
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
-						<string key="label">value: arrangedObjects.entryId</string>
+						<string key="label">value: arrangedObjects.renderEntryId</string>
 						<reference key="source" ref="689593662"/>
 						<reference key="destination" ref="428912267"/>
 						<object class="NSNibBindingConnector" key="connector">
 							<reference key="NSSource" ref="689593662"/>
 							<reference key="NSDestination" ref="428912267"/>
-							<string key="NSLabel">value: arrangedObjects.entryId</string>
+							<string key="NSLabel">value: arrangedObjects.renderEntryId</string>
 							<string key="NSBinding">value</string>
-							<string key="NSKeyPath">arrangedObjects.entryId</string>
+							<string key="NSKeyPath">arrangedObjects.renderEntryId</string>
 							<int key="NSNibBindingConnectorVersion">2</int>
 						</object>
 					</object>
-					<int key="connectionID">100260</int>
+					<int key="connectionID">100396</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
-						<string key="label">value: arrangedObjects.relationship</string>
+						<string key="label">value: arrangedObjects.renderRelationship</string>
 						<reference key="source" ref="366787094"/>
 						<reference key="destination" ref="428912267"/>
 						<object class="NSNibBindingConnector" key="connector">
 							<reference key="NSSource" ref="366787094"/>
 							<reference key="NSDestination" ref="428912267"/>
-							<string key="NSLabel">value: arrangedObjects.relationship</string>
+							<string key="NSLabel">value: arrangedObjects.renderRelationship</string>
 							<string key="NSBinding">value</string>
-							<string key="NSKeyPath">arrangedObjects.relationship</string>
+							<string key="NSKeyPath">arrangedObjects.renderRelationship</string>
 							<int key="NSNibBindingConnectorVersion">2</int>
 						</object>
 					</object>
-					<int key="connectionID">100269</int>
+					<int key="connectionID">100397</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
@@ -1889,7 +1897,7 @@
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">100395</int>
+			<int key="maxID">100397</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">
