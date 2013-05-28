@@ -224,7 +224,7 @@ public:
     LocSum  **locus(int);
     LocSum   *pop(int, int);
     LocTally *locus_tally(int);
-    PopPair  *Fst(int, int, int, int);
+    PopPair  *Fst(int, int, int, int, ofstream *);
     int       fishers_exact_test(PopPair *, double, double, double, double);
 
 private:
@@ -529,7 +529,7 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
 }
 
 template<class LocusT>
-PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) 
+PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos, ofstream *log_fh) 
 {
     LocSum  *s_1  = this->pop(locus, pop_1);
     LocSum  *s_2  = this->pop(locus, pop_2);
@@ -611,6 +611,21 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
 
     double Fst = 1 - (num / den);
 
+    if (log_fh != NULL)
+	*log_fh << n_1 << "\t"
+		<< n_2 << "\t"
+		<< tot_alleles << "\t"
+		<< p_1 << "\t"
+		<< q_1 << "\t"
+		<< p_2 << "\t"
+		<< q_2 << "\t"
+		<< pi_1 << "\t"
+		<< pi_2 << "\t"
+		<< pi_all << "\t"
+		<< bcoeff_1 << "\t"
+		<< bcoeff_2 << "\t"
+		<< Fst << "\t\t";
+
     pair->alleles = tot_alleles;
     pair->fst     = Fst;
     pair->pi      = pi_all;
@@ -654,6 +669,15 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
 	 )
 	/ 
 	(p_avg_cor * (1 - p_avg_cor));
+
+    if (log_fh != NULL)
+	*log_fh << p_1_freq << "\t"
+		<< q_1_freq << "\t"
+		<< p_2_freq << "\t"
+		<< q_2_freq << "\t"
+		<< p_avg_cor << "\t"
+		<< n_avg_cor << "\t"
+		<< pair->amova_fst << "\n";
 
     // //
     // // Calculate Fst using a pure parametric method (assumes allele counts are real, not 

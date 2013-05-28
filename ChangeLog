@@ -4,6 +4,8 @@
 	catalog to be used across a series of crosses so all maps share the same catalog IDs.
 	Feature: added option to genotypes to import manual corrections exported from Stacks
 	SQL database.
+	Feature: added --log_fst_comp option to populations to log components of the Fst
+	calculations to a file for debugging / testing purposes.
 	Bugfix: corrected handling of files in kmer_filter. Adding support for gzipped files
 	broke file handling in some cases.
 

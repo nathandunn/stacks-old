@@ -399,8 +399,7 @@ int find_markers(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &
             //
 	    } else if (allele_cnt_1 == 1 && allele_cnt_2 == 1) {
 
-		if (strcmp(d_1->obshap[0], "consensus") != 0 &&
-		    strcmp(d_2->obshap[0], "consensus") != 0)
+		if (strcmp(d_1->obshap[0], d_2->obshap[0]) != 0)
                     loc->marker = "aa/bb";
 	    }
         //
