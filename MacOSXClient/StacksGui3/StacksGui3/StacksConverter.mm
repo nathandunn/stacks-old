@@ -706,8 +706,8 @@ using std::ofstream;
                 NSString *relationship = [columns objectAtIndex:6];
 
                 if ([relationship isEqualToString:@"consensus"]) {
+                    row = 1 ;
                     datumMO.consensus = [stackEntryRepository insertConsensusStackEntry:moc
-                                                                                entryId:[NSNumber numberWithInteger:row]
                                                                                   block:[columns objectAtIndex:7]
                                                                              sequenceId:[columns objectAtIndex:8]
                                                                                sequence:[columns objectAtIndex:9]
@@ -721,7 +721,6 @@ using std::ofstream;
                 }
                 else if ([relationship isEqualToString:@"model"]) {
                     datumMO.model = [stackEntryRepository insertModelStackEntry:moc
-                                                                        entryId:[NSNumber numberWithInteger:row]
                                                                           block:[columns objectAtIndex:7]
                                                                      sequenceId:[columns objectAtIndex:8]
                                                                        sequence:[columns objectAtIndex:9]
