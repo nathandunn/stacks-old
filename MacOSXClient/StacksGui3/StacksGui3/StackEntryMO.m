@@ -19,6 +19,33 @@
 @dynamic sequenceId;
 @dynamic datum;
 
+
+- (NSAttributedString *)renderEntryId{
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@",self.entryId] ];
+    return string ;
+}
+
+- (NSAttributedString *)renderRelationship{
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@",self.relationship] ];
+    [string beginEditing];
+    NSDictionary *attributes ;
+
+    if([self.relationship isEqualToString:@"primary"]){
+    attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+            [NSColor greenColor], NSForegroundColorAttributeName,
+            nil];
+    }
+    // secondary
+    else{
+        attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+                [NSColor redColor], NSForegroundColorAttributeName,
+                nil];
+    }
+    [string setAttributes:attributes range:NSMakeRange(0, self.relationship.length)];
+    [string endEditing];
+    return string ;
+}
+
 - (NSAttributedString *)renderSequence {
 //    NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:self.sequence];
 

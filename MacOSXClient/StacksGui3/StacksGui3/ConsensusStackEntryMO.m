@@ -11,5 +11,14 @@
 
 @implementation ConsensusStackEntryMO
 
+- (NSAttributedString *)renderEntryId{
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@""];
+    return string ;
+}
+
+- (NSAttributedString *)renderRelationship{
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:self.relationship];
+    return string ;
+}
 
 @end
