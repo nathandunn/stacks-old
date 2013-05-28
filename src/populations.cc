@@ -58,6 +58,7 @@ bool      phylip_out        = false;
 bool      phylip_var        = false;
 bool      kernel_smoothed   = false;
 bool      loci_ordered      = false;
+bool      log_fst_comp      = false;
 int       min_stack_depth   = 0;
 double    minor_allele_freq = 0;
 double    p_value_cutoff    = 0.05;
@@ -1377,8 +1378,46 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    ofstream fh(file.c_str(), ofstream::out);
 
 	    if (fh.fail()) {
-		cerr << "Error opening generic output file '" << file << "'\n";
+		cerr << "Error opening Fst output file '" << file << "'\n";
 		exit(1);
+	    }
+
+	    //
+	    // If requested, log Fst component calculations to a file.
+	    //
+	    ofstream *comp_fh = NULL;
+	    if (log_fst_comp) {
+		pop_name.str("");
+		pop_name << "batch_" << batch_id << ".fst-comp_" << pop_1 << "-" << pop_2 << ".tsv";
+
+		file = in_path + pop_name.str();
+		comp_fh = new ofstream(file.c_str(), ofstream::out);
+
+		if (comp_fh->fail()) {
+		    cerr << "Error opening Fst component output file '" << file << "'\n";
+		    exit(1);
+		}
+
+		*comp_fh << "# " << "n_1" << "\t"
+			 << "n_2" << "\t"
+			 << "tot_alleles" << "\t"
+			 << "p_1" << "\t"
+			 << "q_1" << "\t"
+			 << "p_2" << "\t"
+			 << "q_2" << "\t"
+			 << "pi_1" << "\t"
+			 << "pi_2" << "\t"
+			 << "pi_all" << "\t"
+			 << "bcoeff_1" << "\t"
+			 << "bcoeff_2" << "\t"
+			 << "binomial_fst" << "\t\t"
+			 << "p_1_freq" << "\t"
+			 << "q_1_freq" << "\t"
+			 << "p_2_freq" << "\t"
+			 << "q_2_freq" << "\t"
+			 << "p_avg_cor" << "\t"
+			 << "n_avg_cor" << "\t"
+			 << "amova_fst" << "\n";
 	    }
 
 	    cerr << "Calculating Fst for populations " << pop_1 << " and " << pop_2 << " and writing it to file, '" << file << "'\n";
@@ -1430,7 +1469,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
 		    for (int k = 0; k < len; k++) {
 
-			pair = psum->Fst(loc->id, pop_1, pop_2, k);
+			pair = psum->Fst(loc->id, pop_1, pop_2, k, comp_fh);
 
 			//
 			// Locus is incompatible, log this position.
@@ -1612,6 +1651,9 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    cerr << "Pooled populations " << pop_1 << " and " << pop_2 << " contained: " << incompatible_loci << " incompatible loci; " 
 		 << multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 	    fh.close();
+
+	    if (log_fst_comp) 
+		comp_fh->close();
 	}
     }
 
@@ -4063,6 +4105,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"blacklist",   required_argument, NULL, 'B'},
 	    {"write_single_snp",  no_argument,       NULL, 'I'},
             {"kernel_smoothed",   no_argument,       NULL, 'k'},
+            {"log_fst_comp",      no_argument,       NULL, 'l'},
             {"bootstrap",         required_argument, NULL, 'O'},
 	    {"bootstrap_reps",    required_argument, NULL, 'R'},
 	    {"min_populations",   required_argument, NULL, 'p'},
@@ -4075,7 +4118,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hkSLYVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlkSLYVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -4109,6 +4152,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'k':
 	    kernel_smoothed = true;
+	    break;
+	case 'l':
+	    log_fst_comp = true;
 	    break;
 	case 'O':
 	    bootstrap = true;
@@ -4284,7 +4330,9 @@ void help() {
 	      << "    --structure: output results in Structure format.\n"
 	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
 	      << "      --phylip_var: include variable sites in the phylip output.\n"
-	      << "    --write_single_snp: write only the first SNP per locus in Genepop and Structure outputs.\n";
+	      << "    --write_single_snp: write only the first SNP per locus in Genepop and Structure outputs.\n\n"
+	      << "  Debugging:\n"
+	      << "    --log_fst_comp: log components of Fst calculations to a file.\n";
 
     exit(0);
 }
