@@ -154,10 +154,10 @@
         //model
         firstCount += [firstRelationship isEqualToString:@"reference"]?10000:0;
         secondCount += [secondRelationship isEqualToString:@"reference"]?10000:0;
-        firstCount += [firstRelationship isEqualToString:@"model"]?1000:0;
-        secondCount += [secondRelationship isEqualToString:@"model"]?1000:0;
-        firstCount += [firstRelationship isEqualToString:@"consensus"]?100:0;
-        secondCount += [secondRelationship isEqualToString:@"consensus"]?100:0;
+        firstCount += [firstRelationship isEqualToString:@"consensus"]?1000:0;
+        secondCount += [secondRelationship isEqualToString:@"consensus"]?1000:0;
+        firstCount += [firstRelationship isEqualToString:@"model"]?100:0;
+        secondCount += [secondRelationship isEqualToString:@"model"]?100:0;
         firstCount -= [first.entryId intValue];
         secondCount -= [second.entryId intValue];
         NSComparisonResult result = (firstCount>secondCount)?NSOrderedAscending:NSOrderedDescending;
