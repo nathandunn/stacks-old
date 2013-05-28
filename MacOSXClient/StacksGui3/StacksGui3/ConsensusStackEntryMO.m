@@ -27,7 +27,7 @@
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:self.sequence];
     [string beginEditing];
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-            [NSColor blueColor], NSForegroundColorAttributeName,
+            [NSColor redColor], NSForegroundColorAttributeName,
             [NSColor grayColor], NSBackgroundColorAttributeName,
             [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
             nil];
