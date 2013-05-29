@@ -525,7 +525,6 @@
 													</object>
 													<int key="NSResizingMask">3</int>
 													<bool key="NSIsResizeable">YES</bool>
-													<bool key="NSIsEditable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 												<object class="NSTableColumn" id="366787094">
@@ -551,7 +550,6 @@
 													</object>
 													<int key="NSResizingMask">3</int>
 													<bool key="NSIsResizeable">YES</bool>
-													<bool key="NSIsEditable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 												<object class="NSTableColumn" id="4512364">
@@ -586,7 +584,6 @@
 													</object>
 													<int key="NSResizingMask">3</int>
 													<bool key="NSIsResizeable">YES</bool>
-													<bool key="NSIsEditable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 												<object class="NSTableColumn" id="151258412">
@@ -602,8 +599,8 @@
 														<reference key="NSTextColor" ref="45504897"/>
 													</object>
 													<object class="NSTextFieldCell" key="NSDataCell" id="712931500">
-														<int key="NSCellFlags">605158976</int>
-														<int key="NSCellFlags2">1073742848</int>
+														<int key="NSCellFlags">604110336</int>
+														<int key="NSCellFlags2">1073746432</int>
 														<string key="NSContents">Sequence</string>
 														<object class="NSFont" key="NSSupport">
 															<string key="NSName">Courier</string>
@@ -616,7 +613,6 @@
 													</object>
 													<int key="NSResizingMask">3</int>
 													<bool key="NSIsResizeable">YES</bool>
-													<bool key="NSIsEditable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 											</array>
@@ -664,6 +660,7 @@
 									<string key="NSFrame">{{1, 273}, {899, 15}}</string>
 									<reference key="NSSuperview" ref="59706283"/>
 									<reference key="NSWindow"/>
+									<reference key="NSNextKeyView"/>
 									<string key="NSReuseIdentifierKey">_NS:60</string>
 									<int key="NSsFlags">1</int>
 									<reference key="NSTarget" ref="59706283"/>
@@ -691,7 +688,7 @@
 							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="931628719"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
-							<int key="NSsFlags">133170</int>
+							<int key="NSsFlags">165938</int>
 							<reference key="NSVScroller" ref="236817503"/>
 							<reference key="NSHScroller" ref="959805455"/>
 							<reference key="NSContentView" ref="177183700"/>
@@ -705,7 +702,7 @@
 					<reference key="NSWindow"/>
 					<reference key="NSNextKeyView" ref="776896794"/>
 				</object>
-				<string key="NSScreenRect">{{0, 0}, {1440, 878}}</string>
+				<string key="NSScreenRect">{{0, 0}, {1920, 1058}}</string>
 				<string key="NSMinSize">{94, 108}</string>
 				<string key="NSMaxSize">{10000000000000, 10000000000000}</string>
 				<bool key="NSWindowIsRestorable">YES</bool>
@@ -767,6 +764,7 @@
 						<string key="NSFrame">{{5, 6}, {92, 17}}</string>
 						<reference key="NSSuperview" ref="767095797"/>
 						<reference key="NSWindow"/>
+						<reference key="NSNextKeyView"/>
 						<string key="NSReuseIdentifierKey">_NS:1535</string>
 						<bool key="NSEnabled">YES</bool>
 						<object class="NSTextFieldCell" key="NSCell" id="875333516">

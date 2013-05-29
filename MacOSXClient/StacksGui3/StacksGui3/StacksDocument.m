@@ -84,6 +84,7 @@
     [super windowControllerDidLoadNib:aController];
     // Add any code here that needs to be executed once the windowController has loaded the document's window.
 //    [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld) context:nil];
+    [self.stacksTableView setIntercellSpacing:NSMakeSize(0, 0)];
 }
 
 + (BOOL)autosavesInPlace {
