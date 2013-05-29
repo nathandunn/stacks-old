@@ -95,8 +95,12 @@
         NSLog(@"getting selected locus %@",self.selectedLocus.locusId);
         NSLog(@"getting selected population %@",self.selectedPopulation.name);
         self.selectedDatums = [self.datumRepository getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
-//        self.selectedDatum = nil ;
-        self.selectedDatum = [self.selectedDatums objectAtIndex:0];
+        if(self.selectedDatums!=nil && self.selectedDatums.count>0){
+                self.selectedDatum = [self.selectedDatums objectAtIndex:0];
+        }
+        else{
+            self.selectedDatum = nil ;
+        }
     }
     else{
         self.selectedDatums = nil ;

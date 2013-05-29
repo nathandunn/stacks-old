@@ -498,9 +498,9 @@
 											</object>
 											<array class="NSMutableArray" key="NSTableColumns">
 												<object class="NSTableColumn" id="689593662">
-													<double key="NSWidth">40</double>
-													<double key="NSMinWidth">40</double>
-													<double key="NSMaxWidth">1000</double>
+													<double key="NSWidth">30</double>
+													<double key="NSMinWidth">30</double>
+													<double key="NSMaxWidth">30</double>
 													<object class="NSTableHeaderCell" key="NSHeaderCell">
 														<int key="NSCellFlags">612368448</int>
 														<int key="NSCellFlags2">2048</int>
@@ -526,8 +526,8 @@
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 												<object class="NSTableColumn" id="366787094">
-													<double key="NSWidth">82</double>
-													<double key="NSMinWidth">40</double>
+													<double key="NSWidth">62</double>
+													<double key="NSMinWidth">60</double>
 													<double key="NSMaxWidth">1000</double>
 													<object class="NSTableHeaderCell" key="NSHeaderCell">
 														<int key="NSCellFlags">612368448</int>
@@ -546,14 +546,12 @@
 														<reference key="NSBackgroundColor" ref="190012126"/>
 														<reference key="NSTextColor" ref="638047246"/>
 													</object>
-													<int key="NSResizingMask">1</int>
-													<bool key="NSIsResizeable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 												<object class="NSTableColumn" id="4512364">
-													<double key="NSWidth">246</double>
+													<double key="NSWidth">250</double>
 													<double key="NSMinWidth">210</double>
-													<double key="NSMaxWidth">3.4028234663852886e+38</double>
+													<double key="NSMaxWidth">1000</double>
 													<object class="NSTableHeaderCell" key="NSHeaderCell">
 														<int key="NSCellFlags">612499008</int>
 														<int key="NSCellFlags2">67110912</int>
@@ -568,7 +566,7 @@
 														<reference key="NSTextColor" ref="45504897"/>
 													</object>
 													<object class="NSTextFieldCell" key="NSDataCell" id="830659763">
-														<int key="NSCellFlags">874642944</int>
+														<int key="NSCellFlags">604110336</int>
 														<int key="NSCellFlags2">1140855296</int>
 														<string key="NSContents">Text Cell</string>
 														<object class="NSFont" key="NSSupport">
@@ -580,12 +578,10 @@
 														<reference key="NSBackgroundColor" ref="190012126"/>
 														<reference key="NSTextColor" ref="638047246"/>
 													</object>
-													<int key="NSResizingMask">2</int>
-													<bool key="NSIsResizeable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 												<object class="NSTableColumn" id="151258412">
-													<double key="NSWidth">534</double>
+													<double key="NSWidth">560</double>
 													<double key="NSMinWidth">10</double>
 													<double key="NSMaxWidth">3.4028234663852886e+38</double>
 													<object class="NSTableHeaderCell" key="NSHeaderCell">
@@ -609,7 +605,7 @@
 														<reference key="NSBackgroundColor" ref="190012126"/>
 														<reference key="NSTextColor" ref="638047246"/>
 													</object>
-													<int key="NSResizingMask">2</int>
+													<int key="NSResizingMask">3</int>
 													<bool key="NSIsResizeable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
@@ -655,7 +651,7 @@
 								<object class="NSScroller" id="959805455">
 									<reference key="NSNextResponder" ref="59706283"/>
 									<int key="NSvFlags">-2147483392</int>
-									<string key="NSFrame">{{1, 273}, {899, 15}}</string>
+									<string key="NSFrame">{{1, 273}, {914, 15}}</string>
 									<reference key="NSSuperview" ref="59706283"/>
 									<reference key="NSWindow"/>
 									<reference key="NSNextKeyView"/>
@@ -663,7 +659,7 @@
 									<int key="NSsFlags">1</int>
 									<reference key="NSTarget" ref="59706283"/>
 									<string key="NSAction">_doScroller:</string>
-									<double key="NSPercent">0.99881235154394299</double>
+									<double key="NSPercent">0.99890710382513659</double>
 								</object>
 								<object class="NSClipView" id="931628719">
 									<reference key="NSNextResponder" ref="59706283"/>
@@ -700,7 +696,7 @@
 					<reference key="NSWindow"/>
 					<reference key="NSNextKeyView" ref="776896794"/>
 				</object>
-				<string key="NSScreenRect">{{0, 0}, {1440, 878}}</string>
+				<string key="NSScreenRect">{{0, 0}, {2560, 1418}}</string>
 				<string key="NSMinSize">{94, 108}</string>
 				<string key="NSMaxSize">{10000000000000, 10000000000000}</string>
 				<bool key="NSWindowIsRestorable">YES</bool>
