@@ -137,7 +137,7 @@
                                                                        NSInferMappingModelAutomaticallyOption, nil];
 
 
-    NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.sqlite", name]];
+    NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
     NSLog(@"saving to %@ from %@", path, storeUrl);
     NSPersistentStoreCoordinator *persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
     NSError *error = nil;
