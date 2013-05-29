@@ -254,14 +254,12 @@ using std::ofstream;
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
 
-    NSMutableDictionary *locusDictionary = [[NSMutableDictionary alloc] init];
-
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
         LocusMO *locusMO = [locusRepository insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).first]
                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
         ];
-        [locusDictionary setValue:locusMO forKey:locusMO.locusId.stringValue];
+        NSLog(@"inserting locus %ld",locusMO.locusId);
         vector<SNP *> snps = catalogIterator->second->snps;
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
@@ -328,7 +326,15 @@ using std::ofstream;
             NSArray *locusArray = [loci allObjects];
             // TODO: use a lookup here to speed up
             NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
-            locusMO = [locusDictionary objectForKey:lookupKey];
+//            locusMO = [lociDictionary objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
+            locusMO = [lociDictionary objectForKey:lookupKey];
+            if(locusMO==nil){
+                for(int i = 0 ; i < 10 ; i++ ){
+                    NSLog(@"HOSEED %ld",it->first);
+                }
+                return 0 ;
+            }
+
 //            for (LocusMO *aLocus in locusArray) {
 //                if ([lookupKey isEqualToNumber:aLocus.locusId]) {
 //                    locusMO = aLocus;
