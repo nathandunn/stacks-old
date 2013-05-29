@@ -88,7 +88,7 @@
 			<key>NSDocumentClass</key>
 			<string>StacksDocument</string>
 			<key>NSPersistentStoreTypeKey</key>
-			<string>NSSQLiteStoreType</string>
+			<string>SQLite</string>
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
