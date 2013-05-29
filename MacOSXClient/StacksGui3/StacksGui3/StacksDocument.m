@@ -14,6 +14,7 @@
 #import "PopulationRepository.h"
 #import "LocusRepository.h"
 #import "PopulationArrayController.h"
+#import "DatumArrayController.h"
 
 @interface StacksDocument()
 
@@ -21,7 +22,7 @@
 @property(weak) IBOutlet NSTableView *populationTableView;
 @property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
-@property(weak) IBOutlet NSArrayController *datumController ;
+@property(weak) IBOutlet DatumArrayController *datumController ;
 //@property(weak) IBOutlet PopulationArrayController *populationController ;
 
 //@property(weak) IBOutlet NSArrayController *stacksController ;
@@ -55,8 +56,6 @@
         datumRepository = [[DatumRepository alloc] init];
         locusRepository = [[LocusRepository alloc] init];
         populationRepository = [[PopulationRepository alloc] init];
-        
-//        [datumController addObserver:self forKeyPath:@"selectionIndexes" options:NSKeyValueObservingOptionInitial context:nil];
     }
     return self;
 }
@@ -73,17 +72,10 @@
 }
 
 - (void)windowControllerDidLoadNib:(NSWindowController *)aController {
-//    NSString *aControllerName = [anIdentifier stringByAppendingString: @"ViewController"];
-//    NSString *aNibName = [anIdentifier stringByAppendingString: @"View"];
-//    Class aControllerClass = NSClassFromString(aControllerName);
-//    [self setCurrentController: [[aControllerClass alloc] initWithNibName: aNibName bundle: [NSBundle mainBundle]]];
     [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew) context:nil];
-//    [populationController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew) context:nil];
-//    [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld) context:nil];
 
     [super windowControllerDidLoadNib:aController];
     // Add any code here that needs to be executed once the windowController has loaded the document's window.
-//    [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld) context:nil];
     [self.stacksTableView setIntercellSpacing:NSMakeSize(0, 0)];
 }
 
@@ -98,9 +90,7 @@
     self.selectedLocus = [self findSelectedLocus];
     self.selectedPopulation = [self findSelectedPopulation];
 
-//    NSLog(@"selected locus: %@ and population: %@",self.selectedLocus.locusId,self.selectedPopulation.populationId);
     if(self.selectedLocus!=nil && self.selectedPopulation!=nil){
-//        self.selectedDatums = [self.datumRepository getDatums:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
         self.selectedDatums = [self.datumRepository getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
         self.selectedDatum = [self.selectedDatums objectAtIndex:0];
     }
@@ -123,60 +113,9 @@
     NSInteger selectedRow = [self.locusTableView selectedRow];
     if(selectedRow>=0){
         return [locusRepository getLocus:self.managedObjectContext forId:selectedRow];
-//        return (LocusMO*) [[self.loci allObjects] objectAtIndex: (NSUInteger) selectedRow];
     }
     return nil ;
-//    NSArray *sortedKeys = [[self.stacksDocument.locusViews allKeys] sortedArrayUsingComparator:(NSComparator) ^(id obj1, id obj2) {
-//        return [obj1 integerValue] - [obj2 integerValue];
-//    }];
-//    NSString *key = [sortedKeys objectAtIndexedSubscript:selectedRow];
-//    LocusView *locusView = [self.stacksDocument.locusViews objectForKey:key];
-//    return locusView;
 }
-
-
-//- (NSMutableArray *)findPopulations {
-//
-//    NSMutableArray *populations = [[NSMutableArray alloc] init];
-//
-//    NSString *population;
-//    for (population in self.populationLookup.allValues) {
-//        if (![populations containsObject:population]) {
-//            [populations addObject:population];
-//        }
-//    }
-//
-//    return populations;
-//}
-
-//- (NSManagedObjectContext *)getContext {
-//    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES],NSMigratePersistentStoresAutomaticallyOption,
-//                                                                       [NSNumber numberWithBool:YES],
-//                                                                       NSInferMappingModelAutomaticallyOption, nil];
-//
-//
-//    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-//    NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
-//    NSURL *storeUrl = [NSURL fileURLWithPath:[basePath stringByAppendingFormat:@"/StacksDocument.sqlite"]];
-//    NSLog(@"saving to %@ from %@",basePath,storeUrl);
-//    NSPersistentStoreCoordinator *persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
-//    NSError *error = nil;
-//
-//    if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
-//        NSLog(@"error loading persistent store..");
-//        [[NSFileManager defaultManager] removeItemAtPath:storeUrl.path error:nil];
-//        if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
-//            NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
-//            //abort();
-//        }
-//    }
-//
-//
-//    NSManagedObjectContext *context = [[NSManagedObjectContext alloc] init];
-//    [context setPersistentStoreCoordinator:persistentStoreCoordinator];
-//
-//    return context;
-//}
 
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path {

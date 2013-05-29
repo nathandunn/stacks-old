@@ -372,7 +372,7 @@
 								</object>
 								<reference ref="118385172"/>
 							</array>
-							<string key="NSFrame">{{190, -2}, {139, 498}}</string>
+							<string key="NSFrame">{{191, -2}, {139, 498}}</string>
 							<reference key="NSSuperview" ref="568628114"/>
 							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="1065922613"/>
@@ -911,7 +911,7 @@
 							<int key="NSNibBindingConnectorVersion">2</int>
 						</object>
 					</object>
-					<int key="connectionID">100226</int>
+					<int key="connectionID">100405</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
@@ -932,7 +932,7 @@
 							<int key="NSNibBindingConnectorVersion">2</int>
 						</object>
 					</object>
-					<int key="connectionID">100246</int>
+					<int key="connectionID">100406</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBOutletConnection" key="connection">
@@ -1157,10 +1157,14 @@
 							<string key="NSLabel">value: representedObject.renderName</string>
 							<string key="NSBinding">value</string>
 							<string key="NSKeyPath">representedObject.renderName</string>
+							<object class="NSDictionary" key="NSOptions">
+								<string key="NS.key.0">NSAllowsEditingMultipleValuesSelection</string>
+								<boolean value="NO" key="NS.object.0"/>
+							</object>
 							<int key="NSNibBindingConnectorVersion">2</int>
 						</object>
 					</object>
-					<int key="connectionID">100374</int>
+					<int key="connectionID">100410</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
@@ -1583,9 +1587,9 @@
 						<int key="objectID">100140</int>
 						<reference key="object" ref="767095797"/>
 						<array class="NSMutableArray" key="children">
-							<reference ref="538772466"/>
 							<reference ref="744863113"/>
 							<reference ref="562073478"/>
+							<reference ref="538772466"/>
 						</array>
 						<reference key="parent" ref="0"/>
 					</object>
@@ -1892,7 +1896,7 @@
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">100400</int>
+			<int key="maxID">100410</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">
@@ -1949,7 +1953,7 @@
 					<string key="superclassName">NSPersistentDocument</string>
 					<dictionary class="NSMutableDictionary" key="outlets">
 						<string key="datumCollectionView">NSCollectionView</string>
-						<string key="datumController">NSArrayController</string>
+						<string key="datumController">DatumArrayController</string>
 						<string key="locusTableView">NSTableView</string>
 						<string key="populationTableView">NSTableView</string>
 						<string key="stacksTableView">NSTableView</string>
@@ -1961,7 +1965,7 @@
 						</object>
 						<object class="IBToOneOutletInfo" key="datumController">
 							<string key="name">datumController</string>
-							<string key="candidateClassName">NSArrayController</string>
+							<string key="candidateClassName">DatumArrayController</string>
 						</object>
 						<object class="IBToOneOutletInfo" key="locusTableView">
 							<string key="name">locusTableView</string>
