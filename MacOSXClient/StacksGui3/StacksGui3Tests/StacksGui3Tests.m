@@ -76,7 +76,7 @@
                                             forKey:NSReadOnlyPersistentStoreOption];
 
         NSString *filePath = [NSString stringWithFormat:@"file://%@", examplePath];
-        NSURL *storeURL = [NSURL URLWithString:[filePath stringByAppendingFormat:@"StacksDocument.sqlite"]];
+        NSURL *storeURL = [NSURL URLWithString:[filePath stringByAppendingFormat:@"StacksDocument.stacks"]];
 //    NSLog(@"store URL %@ fileUrl %@",storeURL,[NSURL fileURLWithPath:storeURL]);
         NSLog(@"store URL %@", storeURL);
 
@@ -125,7 +125,7 @@
 - (void)testCreatePopulatedStoreToPathAndContext {
 //    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
     NSString *examplePath = @"/tmp/stacks_tut/";
-    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
+    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.stacks"];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSError *fileError;
@@ -230,7 +230,7 @@
 
 - (void)testReadPopulatedDataStore {
     NSString *examplePath = @"/tmp/stacks_tut/";
-    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
+    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.stacks"];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL existsAtPath = [fileManager fileExistsAtPath:filePath];
@@ -243,7 +243,7 @@
     NSError *stacksDocumentCreateError;
 //    StacksDocument *newStacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
 //    NSURL *fileUrl = [NSURL fileURLWithPath:filePath]
-    NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.sqlite"]];
+    NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.stacks"]];
 //    StacksDocument *newStacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
     StacksDocument *newStacksDocument = [[StacksDocument alloc]
             initWithContentsOfURL:fileUrl ofType:NSSQLiteStoreType error:&stacksDocumentCreateError];
@@ -316,7 +316,7 @@
     NSString *examplePath = @"/tmp/stacks_tut/";
 
     NSError *stacksDocumentCreateError;
-    NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.sqlite"]];
+    NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.stacks"]];
     StacksDocument *newStacksDocument = [[StacksDocument alloc] initWithContentsOfURL:fileUrl ofType:NSSQLiteStoreType error:&stacksDocumentCreateError];
     if (stacksDocumentCreateError) {
         STFail(@"failed to load . . .error %@", stacksDocumentCreateError);
@@ -361,7 +361,7 @@
 - (void)testCreateLargeStore {
 //    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
     NSString *examplePath = @"/Users/NathanDunn/Desktop/stacks_large/";
-    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
+    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.stacks"];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSError *fileError;
@@ -403,7 +403,7 @@
 
 - (void)testReadLargeDataStore {
     NSString *examplePath = @"/Users/NathanDunn/Desktop/stacks_large/";
-    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.sqlite"];
+    NSString *filePath = [examplePath stringByAppendingString:@"/StacksDocument.stacks"];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL existsAtPath = [fileManager fileExistsAtPath:filePath];
@@ -416,7 +416,7 @@
     NSError *stacksDocumentCreateError;
 //    StacksDocument *newStacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
 //    NSURL *fileUrl = [NSURL fileURLWithPath:filePath]
-    NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.sqlite"]];
+    NSURL *fileUrl = [NSURL fileURLWithPath:[examplePath stringByAppendingString:@"/StacksDocument.stacks"]];
 //    StacksDocument *newStacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
     StacksDocument *newStacksDocument = [[StacksDocument alloc]
             initWithContentsOfURL:fileUrl ofType:NSSQLiteStoreType error:&stacksDocumentCreateError];
