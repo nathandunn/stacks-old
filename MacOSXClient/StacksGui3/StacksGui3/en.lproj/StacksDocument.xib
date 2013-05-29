@@ -474,8 +474,7 @@
 									<array class="NSMutableArray" key="NSSubviews">
 										<object class="NSTableView" id="125525310">
 											<reference key="NSNextResponder" ref="177183700"/>
-											<int key="NSvFlags">256</int>
-											<string key="NSFrameSize">{899, 256}</string>
+											<string key="NSFrameSize">{914, 271}</string>
 											<reference key="NSSuperview" ref="177183700"/>
 											<reference key="NSWindow"/>
 											<reference key="NSNextKeyView" ref="236817503"/>
@@ -483,7 +482,7 @@
 											<object class="NSTableHeaderView" key="NSHeaderView" id="805219153">
 												<reference key="NSNextResponder" ref="931628719"/>
 												<int key="NSvFlags">256</int>
-												<string key="NSFrameSize">{899, 17}</string>
+												<string key="NSFrameSize">{914, 17}</string>
 												<reference key="NSSuperview" ref="931628719"/>
 												<reference key="NSWindow"/>
 												<reference key="NSNextKeyView" ref="1041544849"/>
@@ -491,7 +490,7 @@
 											</object>
 											<object class="_NSCornerView" key="NSCornerView" id="1041544849">
 												<reference key="NSNextResponder" ref="59706283"/>
-												<int key="NSvFlags">256</int>
+												<int key="NSvFlags">-2147483392</int>
 												<string key="NSFrame">{{900, 0}, {16, 17}}</string>
 												<reference key="NSSuperview" ref="59706283"/>
 												<reference key="NSWindow"/>
@@ -523,7 +522,7 @@
 														<reference key="NSBackgroundColor" ref="190012126"/>
 														<reference key="NSTextColor" ref="638047246"/>
 													</object>
-													<int key="NSResizingMask">3</int>
+													<int key="NSResizingMask">1</int>
 													<bool key="NSIsResizeable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
@@ -548,13 +547,13 @@
 														<reference key="NSBackgroundColor" ref="190012126"/>
 														<reference key="NSTextColor" ref="638047246"/>
 													</object>
-													<int key="NSResizingMask">3</int>
+													<int key="NSResizingMask">1</int>
 													<bool key="NSIsResizeable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 												<object class="NSTableColumn" id="4512364">
 													<double key="NSWidth">246</double>
-													<double key="NSMinWidth">10</double>
+													<double key="NSMinWidth">210</double>
 													<double key="NSMaxWidth">3.4028234663852886e+38</double>
 													<object class="NSTableHeaderCell" key="NSHeaderCell">
 														<int key="NSCellFlags">612499008</int>
@@ -570,8 +569,8 @@
 														<reference key="NSTextColor" ref="45504897"/>
 													</object>
 													<object class="NSTextFieldCell" key="NSDataCell" id="830659763">
-														<int key="NSCellFlags">874643008</int>
-														<int key="NSCellFlags2">1140852736</int>
+														<int key="NSCellFlags">874642944</int>
+														<int key="NSCellFlags2">1140855296</int>
 														<string key="NSContents">Text Cell</string>
 														<object class="NSFont" key="NSSupport">
 															<string key="NSName">Courier</string>
@@ -582,12 +581,12 @@
 														<reference key="NSBackgroundColor" ref="190012126"/>
 														<reference key="NSTextColor" ref="638047246"/>
 													</object>
-													<int key="NSResizingMask">3</int>
+													<int key="NSResizingMask">2</int>
 													<bool key="NSIsResizeable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
 												<object class="NSTableColumn" id="151258412">
-													<double key="NSWidth">519</double>
+													<double key="NSWidth">534</double>
 													<double key="NSMinWidth">10</double>
 													<double key="NSMaxWidth">3.4028234663852886e+38</double>
 													<object class="NSTableHeaderCell" key="NSHeaderCell">
@@ -611,7 +610,7 @@
 														<reference key="NSBackgroundColor" ref="190012126"/>
 														<reference key="NSTextColor" ref="638047246"/>
 													</object>
-													<int key="NSResizingMask">3</int>
+													<int key="NSResizingMask">2</int>
 													<bool key="NSIsResizeable">YES</bool>
 													<reference key="NSTableView" ref="125525310"/>
 												</object>
@@ -633,18 +632,18 @@
 											<int key="NSTableViewGroupRowStyle">1</int>
 										</object>
 									</array>
-									<string key="NSFrame">{{1, 17}, {899, 256}}</string>
+									<string key="NSFrame">{{1, 17}, {914, 271}}</string>
 									<reference key="NSSuperview" ref="59706283"/>
 									<reference key="NSWindow"/>
 									<reference key="NSNextKeyView" ref="125525310"/>
 									<string key="NSReuseIdentifierKey">_NS:11</string>
 									<reference key="NSDocView" ref="125525310"/>
 									<reference key="NSBGColor" ref="190012126"/>
-									<int key="NScvFlags">6</int>
+									<int key="NScvFlags">4</int>
 								</object>
 								<object class="NSScroller" id="236817503">
 									<reference key="NSNextResponder" ref="59706283"/>
-									<int key="NSvFlags">256</int>
+									<int key="NSvFlags">-2147483392</int>
 									<string key="NSFrame">{{900, 17}, {15, 256}}</string>
 									<reference key="NSSuperview" ref="59706283"/>
 									<reference key="NSWindow"/>
@@ -656,7 +655,7 @@
 								</object>
 								<object class="NSScroller" id="959805455">
 									<reference key="NSNextResponder" ref="59706283"/>
-									<int key="NSvFlags">256</int>
+									<int key="NSvFlags">-2147483392</int>
 									<string key="NSFrame">{{1, 273}, {899, 15}}</string>
 									<reference key="NSSuperview" ref="59706283"/>
 									<reference key="NSWindow"/>
@@ -673,7 +672,7 @@
 									<array class="NSMutableArray" key="NSSubviews">
 										<reference ref="805219153"/>
 									</array>
-									<string key="NSFrame">{{1, 0}, {899, 17}}</string>
+									<string key="NSFrame">{{1, 0}, {914, 17}}</string>
 									<reference key="NSSuperview" ref="59706283"/>
 									<reference key="NSWindow"/>
 									<reference key="NSNextKeyView" ref="805219153"/>
@@ -688,7 +687,7 @@
 							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="931628719"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
-							<int key="NSsFlags">165938</int>
+							<int key="NSsFlags">166450</int>
 							<reference key="NSVScroller" ref="236817503"/>
 							<reference key="NSHScroller" ref="959805455"/>
 							<reference key="NSContentView" ref="177183700"/>
