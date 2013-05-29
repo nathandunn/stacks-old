@@ -178,9 +178,7 @@
                 self.selectedDatum = datumMO;
                 self.previousStacksName = datumMO.name ;
             }
-
         }
-
     }
 }
 
