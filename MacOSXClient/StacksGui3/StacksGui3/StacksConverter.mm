@@ -253,11 +253,15 @@ using std::ofstream;
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
+
+    NSMutableDictionary *locusDictionary = [[NSMutableDictionary alloc] init];
+
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
         LocusMO *locusMO = [locusRepository insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).first]
                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
         ];
+        [locusDictionary setValue:locusMO forKey:locusMO.locusId.stringValue];
         vector<SNP *> snps = catalogIterator->second->snps;
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
@@ -279,8 +283,8 @@ using std::ofstream;
 //        map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
         map<string, int> alleles = catalogIterator->second->alleles;
         map<string, int>::iterator allelesIterator = alleles.begin();
-        string allele;
-        int column;
+//        string allele;
+//        int column;
         for (; allelesIterator != alleles.end(); ++allelesIterator) {
             string allele = allelesIterator->first;
             int column = allelesIterator->second;
@@ -323,12 +327,13 @@ using std::ofstream;
             LocusMO *locusMO = nil ;
             NSArray *locusArray = [loci allObjects];
             // TODO: use a lookup here to speed up
-            for (LocusMO *aLocus in locusArray) {
-                NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
-                if ([lookupKey isEqualToNumber:aLocus.locusId]) {
-                    locusMO = aLocus;
-                }
-            }
+            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
+            locusMO = [locusDictionary objectForKey:lookupKey];
+//            for (LocusMO *aLocus in locusArray) {
+//                if ([lookupKey isEqualToNumber:aLocus.locusId]) {
+//                    locusMO = aLocus;
+//                }
+//            }
 
             if (datum != NULL && locusMO != nil) {
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
