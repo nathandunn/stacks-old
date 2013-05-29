@@ -259,7 +259,7 @@ using std::ofstream;
         LocusMO *locusMO = [locusRepository insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).first]
                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
         ];
-        NSLog(@"inserting locus %ld",locusMO.locusId);
+//        NSLog(@"inserting locus %@",locusMO.locusId);
         vector<SNP *> snps = catalogIterator->second->snps;
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
@@ -321,27 +321,33 @@ using std::ofstream;
         for (it = catalog.begin(); it != catalog.end(); it++) {
             loc = it->second;
             datum = pmap->datum(loc->id, sample_ids[i]);
+            if (loc->id == 1) {
+                NSLog(@"locus 1 - getting sample id %ld for id %ld", sample_ids[i], i);
+                NSLog(@"datum is null? %@",(datum==NULL ? @"YES": @"NO"));
+            }
+
+//            datum = pmap->datum(loc->id, i);
+
+//            if(datum==NULL){
+//                for(int i = 0 ; i < 10 ; i++ ){
+//                    NSLog(@"Could not find Datum! %ld",loc->id);
+//                }
+//                return nil ;
+//            }
 
             LocusMO *locusMO = nil ;
-            NSArray *locusArray = [loci allObjects];
             // TODO: use a lookup here to speed up
             NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
 //            locusMO = [lociDictionary objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
             locusMO = [lociDictionary objectForKey:lookupKey];
-            if(locusMO==nil){
-                for(int i = 0 ; i < 10 ; i++ ){
-                    NSLog(@"HOSEED %ld",it->first);
+            if (locusMO == nil) {
+                for (int i = 0; i < 10; i++) {
+                    NSLog(@"Could not find Locus! %ld", it->first);
                 }
-                return 0 ;
+                return nil;
             }
 
-//            for (LocusMO *aLocus in locusArray) {
-//                if ([lookupKey isEqualToNumber:aLocus.locusId]) {
-//                    locusMO = aLocus;
-//                }
-//            }
-
-            if (datum != NULL && locusMO != nil) {
+            if (datum != NULL) {
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
 
                 SampleMO *sampleMO = [sampleRepository getSampleForName:key andContext:moc andError:nil];
@@ -350,6 +356,9 @@ using std::ofstream;
                 vector<int> depths = datum->depth;
                 int numLetters = obshape.size();
                 // TODO: should be entering this for the locus as well?
+                if(loc->id==1){
+                    NSLog(@"insertign datum for sample %@ locus %@ and sampleId %i",sampleMO.name,locusMO.locusId,sample_ids[i]);
+                }
                 DatumMO *newDatumMO = [datumRepository insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO locus:locusMO];
 
                 // get catalogs for matches
@@ -451,7 +460,7 @@ using std::ofstream;
             [self loadSnpFileForDatum:document fromFile:filePath];
         }
         else {
-            NSLog(@"not loading tag file %@", filePath);
+//            NSLog(@"not loading tag file %@", filePath);
         }
     }
 }
@@ -471,7 +480,7 @@ using std::ofstream;
             [self loadAlleleFileForDatum:document fromFile:filePath];
         }
         else {
-            NSLog(@"not loading alleles file %@", filePath);
+//            NSLog(@"not loading alleles file %@", filePath);
         }
     }
 }
@@ -661,7 +670,7 @@ using std::ofstream;
             [self loadTagFile:document fromFile:filePath];
         }
         else {
-            NSLog(@"not loading tag file %@", filePath);
+//            NSLog(@"not loading tag file %@", filePath);
         }
     }
 
@@ -717,7 +726,7 @@ using std::ofstream;
                 NSString *relationship = [columns objectAtIndex:6];
 
                 if ([relationship isEqualToString:@"consensus"]) {
-                    row = 1 ;
+                    row = 1;
                     datumMO.consensus = [stackEntryRepository insertConsensusStackEntry:moc
                                                                                   block:[columns objectAtIndex:7]
                                                                              sequenceId:[columns objectAtIndex:8]
@@ -725,7 +734,7 @@ using std::ofstream;
                                                                                   datum:datumMO
                     ];
                     datumMO.reference = [stackEntryRepository insertReferenceStackEntry:moc
-                                                                                 sequence:[columns objectAtIndex:9]
+                                                                               sequence:[columns objectAtIndex:9]
                                                                                   datum:datumMO
                     ];
 
