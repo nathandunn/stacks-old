@@ -49,4 +49,22 @@
         return nil ;
     }
 }
+
+- (PopulationMO *)getPopulation:(NSManagedObjectContext *)context byIndexSortedByName:(NSInteger)index {
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Population" inManagedObjectContext:context];
+    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+    [request1 setEntity:entityDescription1];
+    NSError *error1;
+    NSArray *populationArray = [context executeFetchRequest:request1 error:&error1];
+    if (populationArray != nil || populationArray.count > 0) {
+        NSSortDescriptor *descriptor = [NSSortDescriptor sortDescriptorWithKey:@"populationId"
+                                                                     ascending:YES];
+        NSArray *sortedArray = [populationArray sortedArrayUsingDescriptors:[NSArray arrayWithObject:descriptor]];
+        PopulationMO *returnedPopulation = [sortedArray objectAtIndex:index] ;
+        return returnedPopulation ;
+    }
+    else{
+        return nil ;
+    }
+}
 @end

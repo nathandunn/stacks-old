@@ -84,14 +84,18 @@
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
-//    NSString *tableName = [[aNotification object] identifier];
-//    NSLog(@"table selected!! %@",tableName);
+    NSString *tableName = [[aNotification object] identifier];
+    NSLog(@"table selected!! %@",tableName);
+
 
     self.selectedLocus = [self findSelectedLocus];
     self.selectedPopulation = [self findSelectedPopulation];
 
     if(self.selectedLocus!=nil && self.selectedPopulation!=nil){
+        NSLog(@"getting selected locus %@",self.selectedLocus.locusId);
+        NSLog(@"getting selected population %@",self.selectedPopulation.name);
         self.selectedDatums = [self.datumRepository getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
+//        self.selectedDatum = nil ;
         self.selectedDatum = [self.selectedDatums objectAtIndex:0];
     }
     else{
@@ -104,7 +108,7 @@
 - (PopulationMO *)findSelectedPopulation {
     NSInteger selectedRow = [self.populationTableView selectedRow];
     if(selectedRow>=0){
-        return [[populationRepository getAllPopulations:self.managedObjectContext] objectAtIndex:selectedRow];
+         return [populationRepository getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
     }
     return nil ;
 }
@@ -112,7 +116,8 @@
 - (LocusMO *)findSelectedLocus {
     NSInteger selectedRow = [self.locusTableView selectedRow];
     if(selectedRow>=0){
-        return [locusRepository getLocus:self.managedObjectContext forId:selectedRow];
+        // id starts at 1 + row  . . . I hope this is always true
+        return [locusRepository getLocus:self.managedObjectContext forId:selectedRow+1];
     }
     return nil ;
 }

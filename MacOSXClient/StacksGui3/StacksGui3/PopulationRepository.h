@@ -17,4 +17,6 @@
 - (NSArray *)getAllPopulations:(NSManagedObjectContext *)context;
 
 - (PopulationMO *)getPopulation:(NSManagedObjectContext *)context name:(NSString *)name;
+
+- (PopulationMO *)getPopulation:(NSManagedObjectContext *)context byIndexSortedByName:(NSInteger)index;
 @end
