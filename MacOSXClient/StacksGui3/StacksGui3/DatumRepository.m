@@ -65,19 +65,46 @@
 - (NSArray *)getDatumsOrdered:(NSManagedObjectContext *)context locus:(LocusMO *)locus andPopulation:(PopulationMO *)population {
     NSArray *unsortedArray = [self getDatums:context locus:locus andPopulation:population];
     NSArray *sortedArray;
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+
     sortedArray = [unsortedArray sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
         NSString *first = [(DatumMO*)a name];
         NSString *second = [(DatumMO*)b name];
 
-        if([first isEqualToString:@"male"]) return NSOrderedAscending;
-        if([first isEqualToString:@"female"] && [second isEqualToString:@"male"]){
-          return NSOrderedDescending;
+        int firstScore = 0 ;
+        int secondScore = 0 ;
+
+
+
+        if([first isEqualToString:@"male"]) firstScore -= 1000 ;
+        if([second isEqualToString:@"male"]) secondScore -= 1000 ;
+        if([first isEqualToString:@"female"]) firstScore -= 100 ;
+        if([second isEqualToString:@"female"]) secondScore -= 100 ;
+
+        // handle sample_ vs progeny_
+
+        NSArray *stringOne  = [first componentsSeparatedByString:@"_"];
+        NSArray *stringTwo = [second componentsSeparatedByString:@"_"];
+
+        if(stringOne.count>1){
+            firstScore += [[numberFormatter numberFromString:[stringOne objectAtIndex:1]] intValue];
         }
-        if([first isEqualToString:@"male"] && [second isEqualToString:@"female"]){
-            return NSOrderedAscending;
+        if(stringTwo.count>1){
+            secondScore += [[numberFormatter numberFromString:[stringTwo objectAtIndex:1]] intValue];
         }
 
-        return [first compare:second];
+
+//        if([first isEqualToString:@"female"] && [second isEqualToString:@"male"]){
+//          return NSOrderedDescending;
+//        }
+//        if([first isEqualToString:@"male"] && [second isEqualToString:@"female"]){
+//            return NSOrderedAscending;
+//        }
+
+        return (firstScore-secondScore<0) ? NSOrderedAscending : NSOrderedDescending ;
+//
+//        return [first compare:second];
     }];
     return sortedArray;
 }
