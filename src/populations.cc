@@ -817,135 +817,135 @@ write_linkage_stats(map<int, pair<int, int> > &pop_indexes, map<int, CSLocus *> 
     // We want to iterate over each population and calculate D', r^2 and chi-square significance
     // for the first nucleotide of each locus.
     //
-    map<string, vector<CSLocus *> >::iterator it;
+    // map<string, vector<CSLocus *> >::iterator it;
 
-    vector<int> pops;
-    map<int, pair<int, int> >::iterator pit;
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
-	pops.push_back(pit->first);
+    // vector<int> pops;
+    // map<int, pair<int, int> >::iterator pit;
+    // for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
+    // 	pops.push_back(pit->first);
 
-    int      num_loci = pmap->loci_cnt();
-    double **dprime   = new double *[num_loci];
-    double **rsq      = new double *[num_loci];
-    double **chisq    = new double *[num_loci];
+    // int      num_loci = pmap->loci_cnt();
+    // double **dprime   = new double *[num_loci];
+    // double **rsq      = new double *[num_loci];
+    // double **chisq    = new double *[num_loci];
 
-    for (uint i = 0; i < num_loci; i++) {
-	dprime[i] = new double[num_loci];
-	rsq[i]    = new double[num_loci];
-	chisq[i]  = new double[num_loci];
-    }
+    // for (uint i = 0; i < num_loci; i++) {
+    // 	dprime[i] = new double[num_loci];
+    // 	rsq[i]    = new double[num_loci];
+    // 	chisq[i]  = new double[num_loci];
+    // }
 
-    for (uint i = 0; i < pops.size(); i++) {
+    // for (uint i = 0; i < pops.size(); i++) {
 
-	int start = pop_indexes[pops[i]].first;
-	int end   = pop_indexes[pops[i]].second;
+    // 	int start = pop_indexes[pops[i]].first;
+    // 	int end   = pop_indexes[pops[i]].second;
 
-	//
-	// Clear the two-dimensional arrays for the next population.
-	//
-	for (uint j = 0; j < num_loci; j++) {
-	    memset(dprime[j], 0, num_loci);
-	    memset(rsq[j],    0, num_loci);
-	    memset(chisq[j],  0, num_loci);
-	}
+    // 	//
+    // 	// Clear the two-dimensional arrays for the next population.
+    // 	//
+    // 	for (uint j = 0; j < num_loci; j++) {
+    // 	    memset(dprime[j], 0, num_loci);
+    // 	    memset(rsq[j],    0, num_loci);
+    // 	    memset(chisq[j],  0, num_loci);
+    // 	}
 
-	CSLocus  *loc_1;
-	LocSum  **s_1;
-	Datum   **d_1;
+    // 	CSLocus  *loc_1;
+    // 	LocSum  **s_1;
+    // 	Datum   **d_1;
 
-	uint col_1, col_2, tot;
-	char p_nuc_1, q_nuc_1, p_nuc_2, q_nuc_2;
+    // 	uint col_1, col_2, tot;
+    // 	char p_nuc_1, q_nuc_1, p_nuc_2, q_nuc_2;
 
-	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-	    string chr = it->first;
-	    for (uint pos_1 = 0; pos_1 < it->second.size(); pos_1++) {
-		loc_1 = it->second[pos_1];
-		s_1   = psum->locus(loc_1->id);
-		d_1   = pmap->locus(loc_1->id);
+    // 	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    // 	    string chr = it->first;
+    // 	    for (uint pos_1 = 0; pos_1 < it->second.size(); pos_1++) {
+    // 		loc_1 = it->second[pos_1];
+    // 		s_1   = psum->locus(loc_1->id);
+    // 		d_1   = pmap->locus(loc_1->id);
 
-		for (uint k = 0; k < loc_1->snps.size(); k++) {
-		    col_1   = loc_1->snps[k]->col;
-		    p_nuc_1 = s_1->nucs[col_1].p_nuc;
-		    q_nuc_1 = s_1->nucs[col_1].q_nuc;
+    // 		for (uint k = 0; k < loc_1->snps.size(); k++) {
+    // 		    col_1   = loc_1->snps[k]->col;
+    // 		    p_nuc_1 = s_1->nucs[col_1].p_nuc;
+    // 		    q_nuc_1 = s_1->nucs[col_1].q_nuc;
 
-		    //
-		    // Compare this locus against every other locus in the data set.
-		    //
-		    CSLocus  *loc_2;
-		    LocSum  **s_2;
-		    Datum   **d_2;
+    // 		    //
+    // 		    // Compare this locus against every other locus in the data set.
+    // 		    //
+    // 		    CSLocus  *loc_2;
+    // 		    LocSum  **s_2;
+    // 		    Datum   **d_2;
 
-		    map<string, vector<CSLocus *> >::iterator chr_it;
-		    for (uint pos_2 = 0; pos_2 < chr_it->second.size(); pos_2++) {
-			loc_2 = chr_it->second[pos_2];
-			s_2   = psum->locus(loc_2->id);
-			d_2   = pmap->locus(loc_2->id);
+    // 		    map<string, vector<CSLocus *> >::iterator chr_it;
+    // 		    for (uint pos_2 = 0; pos_2 < chr_it->second.size(); pos_2++) {
+    // 			loc_2 = chr_it->second[pos_2];
+    // 			s_2   = psum->locus(loc_2->id);
+    // 			d_2   = pmap->locus(loc_2->id);
 
-			for (uint n = 0; n < loc_2->snps.size(); n++) {
-			    col_2   = loc_2->snps[n]->col;
-			    p_nuc_2 = s_2->nucs[col_2].p_nuc;
-			    q_nuc_2 = s_2->nucs[col_2].q_nuc;
+    // 			for (uint n = 0; n < loc_2->snps.size(); n++) {
+    // 			    col_2   = loc_2->snps[n]->col;
+    // 			    p_nuc_2 = s_2->nucs[col_2].p_nuc;
+    // 			    q_nuc_2 = s_2->nucs[col_2].q_nuc;
 
-			    tot = 0;
+    // 			    tot = 0;
 
-			    for (uint m = start; m <= end; m++) {
-				if (d_1[m] == NULL || col_1 >= d_1[m]->len ||
-				    d_2[m] == NULL || col_2 >= d_2[m]->len) 
-				    continue;
-				if (d_1[m]->obshap.size() < 2 ||
-				    d_2[m]->obshap.size() < 2 ||
-				    psum->tally_observed_haplotypes(d_1[m]->obshap, k) != 2 ||
-				    psum->tally_observed_haplotypes(d_2[m]->obshap, n) != 2)
-				    continue;
+    // 			    for (uint m = start; m <= end; m++) {
+    // 				if (d_1[m] == NULL || col_1 >= d_1[m]->len ||
+    // 				    d_2[m] == NULL || col_2 >= d_2[m]->len) 
+    // 				    continue;
+    // 				if (d_1[m]->obshap.size() < 2 ||
+    // 				    d_2[m]->obshap.size() < 2 ||
+    // 				    psum->tally_observed_haplotypes(d_1[m]->obshap, k) != 2 ||
+    // 				    psum->tally_observed_haplotypes(d_2[m]->obshap, n) != 2)
+    // 				    continue;
 
-				tot++;
+    // 				tot++;
 
-				if (d_1[m]->obshap[0] == q_nuc_1) {
-				    if (d_2[m]->obshap[0] == q_nuc_2)
-					q1q2++;
-				    else if (d_2[m]->obshap[0] == p_nuc_2)
-					q1p2++;
-				} else if (d_1[m]->obshap[0] == p_nuc_1) {
-				    if (d_2[m]->obshap[0] == q_nuc_2)
-					p1q2++;
-				    else if (d_2[m]->obshap[0] == p_nuc_2)
-					p1p2++;
-				} else if (d_1[m]->obshap[1] == q_nuc_1) {
-				    if (d_2[m]->obshap[0] == q_nuc_2)
-					q1q2++;
-				    else if (d_2[m]->obshap[0] == p_nuc_2)
-					q1p2++;
-				} else if (d_1[m]->obshap[1] == p_nuc_1) {
-				    if (d_2[m]->obshap[0] == q_nuc_2)
-					p1q2++;
-				    else if (d_2[m]->obshap[0] == p_nuc_2)
-					p1p2++;
-				}
-			    }
+    // 				if (d_1[m]->obshap[0] == q_nuc_1) {
+    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
+    // 					q1q2++;
+    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
+    // 					q1p2++;
+    // 				} else if (d_1[m]->obshap[0] == p_nuc_1) {
+    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
+    // 					p1q2++;
+    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
+    // 					p1p2++;
+    // 				} else if (d_1[m]->obshap[1] == q_nuc_1) {
+    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
+    // 					q1q2++;
+    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
+    // 					q1p2++;
+    // 				} else if (d_1[m]->obshap[1] == p_nuc_1) {
+    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
+    // 					p1q2++;
+    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
+    // 					p1p2++;
+    // 				}
+    // 			    }
 
-			    if (write_single_snp) 
-				break;
-			}
-		    }
+    // 			    if (write_single_snp) 
+    // 				break;
+    // 			}
+    // 		    }
 		    
-		    if (write_single_snp) 
-			break;
-		}
-	    }
-	}
-    }
+    // 		    if (write_single_snp) 
+    // 			break;
+    // 		}
+    // 	    }
+    // 	}
+    // }
 
-    //
-    // Free the two-dimensional arrays.
-    //
-    for (uint i = 0; i < num_loci; i++) {
-	delete [] dprime[i];
-        delete [] rsq[i];
-	delete [] chisq[i];
-    }
-    delete [] dprime;
-    delete [] rsq;
-    delete [] chisq;
+    // //
+    // // Free the two-dimensional arrays.
+    // //
+    // for (uint i = 0; i < num_loci; i++) {
+    // 	delete [] dprime[i];
+    //     delete [] rsq[i];
+    // 	delete [] chisq[i];
+    // }
+    // delete [] dprime;
+    // delete [] rsq;
+    // delete [] chisq;
 
     return 0;
 }
