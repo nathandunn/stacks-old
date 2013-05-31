@@ -206,7 +206,7 @@ my ($rid, $pfile, $parents, $cat_file);
 #
 # Generate catalog of RAD-Tags
 #
-print STDERR "Generating RAD-Tag catalog...\n";
+print STDERR "Generating catalog...\n";
 foreach $sample (@parents, @samples) {
     my ($prefix, $suffix) = ($sample =~ /^(.+)\.(.+)$/);
 
