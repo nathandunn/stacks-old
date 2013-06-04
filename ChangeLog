@@ -1,3 +1,6 @@
+	Feature: refactored command line handling in denovo_map.pl and ref_map.pl to be much 
+	more flexible. Arbitrary command line options can now be passed to particular pipeline
+	programs using the -X flag.
 	Feature: for genetic maps, catalog may now be constructed out of mulitple parents, 
 	genotypes is smart enough to cross check the parents used to construct the catalog
 	against those submitted to genotypes for producing a map. Will allow for a single 
