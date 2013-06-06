@@ -1,5 +1,6 @@
 Stacks 1.0 - June 06, 2013
 --------------------------
+	Feature: added XbaI and BamHI restriction enzymes to process_radtags.
 	Feature: added code to output genotypes in PHASE/fastPHASE format.
 	Feature: extended combinatorial barcodes support so one can process single-end data
 	that contains both an inline and indexed barcode.
