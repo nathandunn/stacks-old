@@ -66,6 +66,10 @@ const char *sexAI[]   = {"CCAGGT", "CCTGGT",  // A/CCWGGT, SexAI; W=A or T
 			 "ACCTGG", "ACCAGG"};
 const char *sau3AI[]  = {"GATC",              // GATC, Sau3AI
 			 "GATC"};
+const char *bamHI[]   = {"GATCC",             // G/GATCC, BamHI
+			 "GGATC"};
+const char *xbaI[]    = {"CTAGA",             // T/CTAGA, XbaI
+			 "TCTAG"};
 
 void 
 initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, map<string, int> &renz_len) {
@@ -88,6 +92,8 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz["mspI"]    = mspI;    // C/CGG, MspI
     renz["sexAI"]   = sexAI;   // A/CCWGGT, SexAI; W=A or T
     renz["sau3AI"]  = sau3AI;  // GATC, Sau3AI
+    renz["bamHI"]   = bamHI;   // G/GATCC, BamHI
+    renz["xbaI"]    = xbaI;    // T/CTAGA, XbaI
 
     renz_cnt["sbfI"]    = 1;
     renz_cnt["pstI"]    = 1;
@@ -107,6 +113,8 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["mspI"]    = 1;
     renz_cnt["sexAI"]   = 2;
     renz_cnt["sau3AI"]  = 1;
+    renz_cnt["bamHI"]   = 1;
+    renz_cnt["xbaI"]    = 1;
 
     renz_len["sbfI"]    = 6;
     renz_len["pstI"]    = 5;
@@ -126,6 +134,8 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["mspI"]    = 3;
     renz_len["sexAI"]   = 6;
     renz_len["sau3AI"]  = 4;
+    renz_len["bamHI"]   = 5;
+    renz_len["xbaI"]    = 5;
 }
 
 #endif // __RENZ_H__
