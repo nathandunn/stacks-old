@@ -44,6 +44,7 @@ enum barcodet {null_null,
 	       inline_null,   index_null, 
 	       inline_inline, index_index, 
 	       inline_index,  index_inline};
+enum seqt {single_end, paired_end};
 
 extern int      bc_size_1, bc_size_2;
 extern barcodet barcode_type;
@@ -126,7 +127,10 @@ public:
 class Read {
 public:
     fastqt  fastq_type;
-    char   *barcode;
+    char   *inline_bc;
+    char   *index_bc;
+    char   *se_bc;
+    char   *pe_bc;
     char   *machine;
     int     lane;
     int     tile;
@@ -146,7 +150,8 @@ public:
     double  stop_pos;
 
     Read(uint buf_len, int read, int barcode_size, double win_size) {
-	this->barcode       = new char[id_len  + 1];
+	this->inline_bc     = new char[id_len  + 1];
+	this->index_bc      = new char[id_len  + 1];
 	this->machine       = new char[id_len  + 1];
 	this->seq           = new char[buf_len + 1];
 	this->phred         = new char[buf_len + 1];
@@ -162,15 +167,53 @@ public:
 	this->y             = 0;
 	this->index         = 0;
 
-	this->barcode[0] = '\0';
-	this->machine[0] = '\0';
-	this->seq[0]     = '\0';
-	this->phred[0]   = '\0';
+	this->inline_bc[0] = '\0';
+	this->index_bc[0]  = '\0';
+	this->machine[0]   = '\0';
+	this->seq[0]       = '\0';
+	this->phred[0]     = '\0';
 
 	this->set_len(buf_len);
+
+	this->se_bc = NULL;
+	this->pe_bc = NULL;
+	if (this->read == 1) {
+	    switch(barcode_type) {
+	    case index_inline:
+		this->se_bc = this->index_bc;
+		this->pe_bc = this->inline_bc;
+		break;
+	    case inline_index:
+		this->se_bc = this->inline_bc;
+		this->pe_bc = this->index_bc;
+		break;
+	    case inline_null:
+	    case inline_inline:
+		this->se_bc = this->inline_bc;
+		break;
+	    case index_null:
+	    case index_index:
+		this->se_bc = this->index_bc;
+		break;
+	    default:
+		break;
+	    }
+	} else if (this->read == 2) {
+	    switch(barcode_type) {
+	    case index_inline:
+		this->pe_bc = this->inline_bc;
+		break;
+	    case inline_index:
+		this->pe_bc = this->index_bc;
+		break;
+	    default:
+		break;
+	    }
+	}
     }
     ~Read() {
-	delete [] this->barcode;
+	delete [] this->inline_bc;
+	delete [] this->index_bc;
 	delete [] this->machine;
 	delete [] this->seq;
 	delete [] this->phred;
@@ -208,6 +251,64 @@ public:
 
 	return 0;
     }
+    /*    char *barcode() {
+	switch (this->read) {
+	case 1:
+	    switch (barcode_type) {
+	    case index_null:
+		return this->index_bc;
+		break;
+	    case inline_null:
+		return this->inline_bc;
+	    }
+	    break;
+	case 2:
+	    switch (barcode_type) {
+	    case inline_index:
+		return this->index_bc;
+		break;
+	    case index_inline:
+		return this->inline_bc;
+	    }
+	    break;
+	}
+	return NULL;
+    }
+    char *barcode(char *bc) {
+	switch (this->read) {
+	case 1:
+	    switch (barcode_type) {
+	    case index_null:
+	    case index_index:
+		strncpy(this->index_bc, bc,  bc_size_1);
+		this->index_bc[bc_size_1] = '\0';
+		return this->index_bc;
+		break;
+	    case inline_null:
+	    case inline_inline:
+		strncpy(this->inline_bc, bc,  bc_size_1);
+		this->inline_bc[bc_size_1] = '\0';
+		return this->inline_bc;
+	    }
+	    break;
+	case 2:
+	    switch (barcode_type) {
+	    case inline_index:
+	    case index_index:
+		strncpy(this->index_bc, bc,  bc_size_2);
+		this->index_bc[bc_size_2] = '\0';
+		return this->index_bc;
+		break;
+	    case index_inline:
+	    case inline_inline:
+		strncpy(this->inline_bc, bc, bc_size_2);
+		this->inline_bc[bc_size_2] = '\0';
+		return this->inline_bc;
+	    }
+	    break;
+	}
+	return NULL;
+	}*/
 };
 
 typedef unordered_map<const char *, vector<int>, std::tr1::hash<const char *>, eqstr> AdapterHash;
@@ -222,7 +323,7 @@ int  process_barcode(Read *, Read *, BarcodePair &,
 		     map<BarcodePair, ofstream *> &,
 		     set<string> &, set<string> &, 
 		     map<BarcodePair, map<string, long> > &, map<string, long> &); 
-bool correct_barcode(set<string> &, Read *);
+bool correct_barcode(set<string> &, Read *, seqt);
 
 int  filter_adapter_seq(Read *, char *, int, AdapterHash &, int, int, int);
 int  init_adapter_seq(int, char *, int &, AdapterHash &, vector<char *> &);

@@ -187,19 +187,32 @@ int parse_input_record(Seq *s, Read *r) {
 	//
 	for (p = q+1, q = p; q < stop; q++);
 
-	if (r->read == 1 && 
-	    (barcode_type == index_null ||
-	     barcode_type == index_index || 
-	     barcode_type == index_inline)) {
-	    strncpy(r->barcode, p,  bc_size_1);
-	    r->barcode[bc_size_1] = '\0';
-	} else if (r->read == 2 &&
-		   (barcode_type == index_index || 
-		    barcode_type == inline_index)) {
-	    strncpy(r->barcode, p,  bc_size_2);
-	    r->barcode[bc_size_2] = '\0';
+	if (*p != '\0' && r->read == 1) {
+	    switch (barcode_type) {
+	    case index_null:
+	    case index_index:
+	    case index_inline:
+		strncpy(r->index_bc, p,  bc_size_1);
+		r->index_bc[bc_size_1] = '\0';
+		break;
+	    case inline_index:
+		strncpy(r->index_bc, p,  bc_size_2);
+		r->index_bc[bc_size_2] = '\0';
+		break;
+	    default:
+		break;
+	    }
+	} else if (*p != '\0' && r->read == 2) {
+	    switch (barcode_type) { 
+	    case index_index:
+	    case inline_index:
+		strncpy(r->index_bc, p,  bc_size_2);
+		r->index_bc[bc_size_2] = '\0';
+		break;
+	    default:
+		break;
+	    }
 	}
-		   
 
     } else if (colon_cnt == 4 && hash_cnt == 1) {
 	r->fastq_type = illv1_fastq;
@@ -259,17 +272,26 @@ int parse_input_record(Seq *s, Read *r) {
     strncpy(r->phred, s->qual, r->len);
     r->phred[r->len] = '\0';
 
-    if (r->read == 1 && 
-	(barcode_type == inline_null ||
-	 barcode_type == inline_inline || 
-	 barcode_type == inline_index)) {
-	strncpy(r->barcode, r->seq,  bc_size_1);
-	r->barcode[bc_size_1] = '\0';
+    if (r->read == 1) {
+	    switch (barcode_type) {
+	    case inline_null:
+	    case inline_inline:
+	    case inline_index:
+		strncpy(r->inline_bc, r->seq, bc_size_1);
+		r->inline_bc[bc_size_1] = '\0';
+		break;
+	    case index_inline:
+		strncpy(r->inline_bc, r->seq, bc_size_2);
+		r->inline_bc[bc_size_2] = '\0';
+		break;
+	    default:
+		break;
+	    }
     } else if (r->read == 2 &&
 	       (barcode_type == inline_inline ||
 		barcode_type == index_inline)) {
-	strncpy(r->barcode, r->seq,  bc_size_2);
-	r->barcode[bc_size_2] = '\0';
+	strncpy(r->inline_bc, r->seq, bc_size_2);
+	r->inline_bc[bc_size_2] = '\0';
     }
 
     r->retain = 1;
@@ -474,14 +496,14 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
     	//
 	if (paired) {
 	    if (se_bc.count(bc.se) == 0)
-		se_correct = correct_barcode(se_bc, href_1);
+		se_correct = correct_barcode(se_bc, href_1, single_end);
 	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
-		pe_correct = correct_barcode(pe_bc, href_2);
+		pe_correct = correct_barcode(pe_bc, href_2, paired_end);
 
 	    if (se_correct)
-		bc.se = string(href_1->barcode);
+		bc.se = string(href_1->se_bc);
 	    if (pe_bc.size() > 0 && pe_correct)
-		bc.pe = string(href_2->barcode);
+		bc.pe = string(href_2->pe_bc);
 	    //
 	    // After correcting the individual barcodes, check if the combination is valid.
 	    //
@@ -493,11 +515,16 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 
 	} else {
 	    if (se_bc.count(bc.se) == 0)
-		se_correct = correct_barcode(se_bc, href_1);
+		se_correct = correct_barcode(se_bc, href_1, single_end);
+	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
+		pe_correct = correct_barcode(pe_bc, href_1, paired_end);
 
-	    if (se_correct) {
-		bc.se = string(href_1->barcode);
-	    } else {
+	    if (se_correct)
+		bc.se = string(href_1->se_bc);
+	    if (pe_bc.size() > 0 && pe_correct)
+		bc.pe = string(href_1->pe_bc);
+
+	    if (fhs.count(bc) == 0) {
 		counter["ambiguous"]++;
 		href_1->retain = 0;
 	    }
@@ -519,7 +546,7 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 }
 
 bool 
-correct_barcode(set<string> &bcs, Read *href) 
+correct_barcode(set<string> &bcs, Read *href, seqt type) 
 {
     if (recover == false)
 	return 0;
@@ -533,7 +560,7 @@ correct_barcode(set<string> &bcs, Read *href)
     //
     const char *p; char *q;
     int d, close;
-    string barcode, b, old_barcode;
+    string b;
     set<string>::iterator it;
 
     int num_errs = barcode_dist - 1;
@@ -542,7 +569,7 @@ correct_barcode(set<string> &bcs, Read *href)
     for (it = bcs.begin(); it != bcs.end(); it++) {
 
 	d = 0; 
-	for (p = it->c_str(), q = href->barcode; *p != '\0'; p++, q++)
+	for (p = it->c_str(), q = type == single_end ? href->se_bc : href->pe_bc; *p != '\0'; p++, q++)
 	    if (*p != *q) d++;
 
 	if (d <= num_errs) {
@@ -556,8 +583,10 @@ correct_barcode(set<string> &bcs, Read *href)
 	//
 	// Correct the barcode.
 	//
-	old_barcode = string(href->barcode);
-	strcpy(href->barcode, b.c_str());
+	if (type == single_end)
+	    strcpy(href->se_bc, b.c_str());
+	else 
+	    strcpy(href->pe_bc, b.c_str());
 
 	return true;
     }

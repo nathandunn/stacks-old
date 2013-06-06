@@ -264,7 +264,7 @@ int process_paired_reads(string prefix_1,
     // that reads are written to an output file of the same name as the input file.
     //
     if (bc_size_1 == 0)
-    	strncpy(r_1->barcode, prefix_1.c_str(), id_len);
+    	strncpy(r_1->inline_bc, prefix_1.c_str(), id_len);
 
     //
     // Compute the parameters for the second read.
@@ -273,7 +273,7 @@ int process_paired_reads(string prefix_1,
     r_2     = new Read(buf_len, 2, pe_offset, win_size);
 
     if (bc_size_1 == 0)
-	strncpy(r_2->barcode, prefix_2.c_str(), id_len);
+	strncpy(r_2->inline_bc, prefix_2.c_str(), id_len);
 	
     BarcodePair bc;
     long i = 1;
@@ -284,8 +284,8 @@ int process_paired_reads(string prefix_1,
 	parse_input_record(s_1, r_1);
 	parse_input_record(s_2, r_2);
 	counter["total"] += 2;
-
-	bc.set(r_1->barcode, r_2->barcode);
+	
+	bc.set(r_1->se_bc, r_2->pe_bc);
 
 	process_barcode(r_1, r_2, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
 
@@ -390,21 +390,23 @@ int process_reads(string prefix,
     	exit(1);
     }
 
-    int buf_len = truncate_seq > 0 ? bc_size_1 + truncate_seq : strlen(s->seq);
-
-    r = new Read(buf_len, 1, bc_size_1, win_size);
-
+    int buf_len   = truncate_seq > 0 ? bc_size_1 + truncate_seq : strlen(s->seq);
     int se_offset = 0;
 
-    if (barcode_type == inline_null)
+    if (barcode_type == inline_null ||
+	barcode_type == inline_index)
 	se_offset = bc_size_1;
+    else if (barcode_type == index_inline)
+	se_offset = bc_size_2;
+
+    r = new Read(buf_len, 1, se_offset, win_size);
 
     //
     // If no barcodes were specified, set r->barcode to be the input file name so
     // that reads are written to an output file of the same name as the input file.
     //
     if (bc_size_1 == 0)
-	strncpy(r->barcode, prefix.c_str(), id_len);
+	strncpy(r->inline_bc, prefix.c_str(), id_len);
 
     //cerr << "Length: " << r->len << "; Window length: " << r->win_len << "; Stop position: " << r->stop_pos << "\n";
 
@@ -416,7 +418,12 @@ int process_reads(string prefix,
 
 	parse_input_record(s, r);
 
-	bc.set(r->barcode);
+	if (barcode_type == inline_null ||
+	    barcode_type == index_null)
+	    bc.set(r->se_bc);
+	else if (barcode_type == index_inline ||
+		 barcode_type == inline_index)
+	    bc.set(r->se_bc, r->pe_bc);
 
 	process_barcode(r, NULL, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
 
