@@ -1,3 +1,10 @@
+Stacks 1.0 - June 06, 2013
+--------------------------
+	Feature: added code to output genotypes in PHASE/fastPHASE format.
+	Feature: extended combinatorial barcodes support so one can process single-end data
+	that contains both an inline and indexed barcode.
+	Feature: added command line option and supporting code to cstacks to allow samples
+	to be added to an existing catalog.
 	Feature: refactored command line handling in denovo_map.pl and ref_map.pl to be much 
 	more flexible. Arbitrary command line options can now be passed to particular pipeline
 	programs using the -X flag.

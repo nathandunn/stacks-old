@@ -54,6 +54,7 @@ bool      vcf_out           = false;
 bool      genepop_out       = false;
 bool      genomic_out       = false;
 bool      structure_out     = false;
+bool      phase_out         = false;
 bool      phylip_out        = false;
 bool      phylip_var        = false;
 bool      kernel_smoothed   = false;
@@ -294,6 +295,9 @@ int main (int argc, char* argv[]) {
 
     if (structure_out)
 	write_structure(catalog, pmap, psum, pop_indexes, samples);
+
+    if (phase_out)
+	write_phase(catalog, pmap, psum, pop_indexes, samples);
 
     if (phylip_out)
 	write_phylip(catalog, pmap, psum, pop_indexes, samples);
@@ -3617,6 +3621,204 @@ write_structure(map<int, CSLocus *> &catalog,
 }
 
 int 
+write_phase(map<int, CSLocus *> &catalog, 
+	    PopMap<CSLocus> *pmap, 
+	    PopSum<CSLocus> *psum, 
+	    map<int, pair<int, int> > &pop_indexes, 
+	    map<int, string> &samples) 
+{
+    //
+    // Write a PHASE/fastPHASE file as defined here: http://stephenslab.uchicago.edu/software.html
+    //
+    // We will write one file per chromosome.
+    //
+    cerr << "Writing population data to PHASE/fastPHASE files...";
+
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
+    Datum   **d;
+    LocSum  **s;
+    LocTally *t;
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+
+	stringstream pop_name;
+	pop_name << "batch_" << batch_id << "." << it->first << ".phase.inp";
+	string file = in_path + pop_name.str();
+
+	ofstream fh(file.c_str(), ofstream::out);
+
+	if (fh.fail()) {
+	    cerr << "Error opening PHASE file '" << file << "'\n";
+	    exit(1);
+	}
+
+	//
+	// Tally up the number of sites
+	//
+	int  total_sites = 0;
+	uint col;
+    	for (uint pos = 0; pos < it->second.size(); pos++) {
+    	    loc = it->second[pos];
+	    t   = psum->locus_tally(loc->id);
+
+    	    for (uint i = 0; i < loc->snps.size(); i++) {
+    		col = loc->snps[i]->col;
+		if (t->nucs[col].allele_cnt == 2) {
+		    total_sites++;
+		    if (write_single_snp) 
+			break;
+		}
+	    }
+	}
+
+	//
+	// Output the total number of SNP sites and the number of individuals.
+	//
+	fh << samples.size() << "\n"
+	   << total_sites << "\n";
+
+	//
+	// Output the position of each site according to its basepair.
+	//
+	fh << "P";
+    	for (uint pos = 0; pos < it->second.size(); pos++) {
+    	    loc = it->second[pos];
+	    t   = psum->locus_tally(loc->id);
+
+    	    for (uint i = 0; i < loc->snps.size(); i++) {
+    		col = loc->snps[i]->col;
+		if (t->nucs[col].allele_cnt == 2) {
+		    fh << " " << loc->sort_bp(col);
+		    if (write_single_snp) 
+			break;
+		}
+	    }
+	}
+	fh << "\n";
+
+	//
+	// Output a line of 'S' characters, one per site, indicating that these are SNP markers.
+	//
+	string snp_markers, gtypes_str;
+	snp_markers.assign(total_sites, 'S');
+	fh << snp_markers << '\n';	    
+
+	//
+	// Now output each sample name followed by a new line, then all of the genotypes for that sample
+	// on two lines.
+	//
+
+	map<int, pair<int, int> >::iterator pit;
+	int          start_index, end_index, pop_id;
+	char         p_allele, q_allele;
+	stringstream gtypes;
+
+	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	    pop_id      = pit->first;
+	    start_index = pit->second.first;
+	    end_index   = pit->second.second;
+
+	    for (int j = start_index; j <= end_index; j++) {
+		//
+		// Output all the loci for this sample, printing only the p allele
+		//
+		fh << samples[pmap->rev_sample_index(j)] << "\n";
+		
+		gtypes.str("");
+		for (uint pos = 0; pos < it->second.size(); pos++) {
+		    loc = it->second[pos];
+
+		    s = psum->locus(loc->id);
+		    d = pmap->locus(loc->id);
+		    t = psum->locus_tally(loc->id);
+
+		    for (uint i = 0; i < loc->snps.size(); i++) {
+			col = loc->snps[i]->col;
+
+			// 
+			// If this site is fixed in all populations or has too many alleles don't output it.
+			//
+			if (t->nucs[col].allele_cnt != 2) 
+			    continue;
+
+			if (d[j] == NULL) {
+			    //
+			    // Data does not exist.
+			    //
+			    gtypes << "? ";
+			} else if (d[j]->model[col] == 'U') {
+			    //
+			    // Data exists, but the model call was uncertain.
+			    //
+			    gtypes << "? ";
+			} else {
+			    //
+			    // Tally up the nucleotide calls.
+			    //
+			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
+
+			    if (p_allele == 0 && q_allele == 0)
+				gtypes << "? ";
+			    else if (p_allele == 0)
+				gtypes << q_allele << " ";
+			    else
+				gtypes << p_allele << " ";
+			}
+			if (write_single_snp) break;
+		    }
+		}
+		gtypes_str = gtypes.str();
+		fh << gtypes_str.substr(0, gtypes_str.length() - 1) << "\n";
+
+		//
+		// Output all the loci for this sample again, now for the q allele
+		//
+		gtypes.str("");
+		for (uint pos = 0; pos < it->second.size(); pos++) {
+		    loc = it->second[pos];
+
+		    s = psum->locus(loc->id);
+		    d = pmap->locus(loc->id);
+		    t = psum->locus_tally(loc->id);
+
+		    for (uint i = 0; i < loc->snps.size(); i++) {
+			uint col = loc->snps[i]->col;
+
+			if (t->nucs[col].allele_cnt != 2) 
+			    continue;
+
+			if (d[j] == NULL) {
+			    gtypes << "? ";
+			} else if (d[j]->model[col] == 'U') {
+			    gtypes << "? ";
+			} else {
+			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
+
+			    if (p_allele == 0 && q_allele == 0)
+				gtypes << "? ";
+			    else if (q_allele == 0)
+				gtypes << p_allele << " ";
+			    else
+				gtypes << q_allele << " ";
+			}
+			if (write_single_snp) break;
+		    }
+		}
+		gtypes_str = gtypes.str();
+		fh << gtypes_str.substr(0, gtypes_str.length() - 1) << "\n";
+	    }
+	}
+
+	fh.close();
+    }
+
+    cerr << "done.\n";
+
+    return 0;
+}
+
+int 
 write_phylip(map<int, CSLocus *> &catalog, 
 	     PopMap<CSLocus> *pmap, 
 	     PopSum<CSLocus> *psum, 
@@ -4237,6 +4439,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"sql",         no_argument,       NULL, 's'},
             {"vcf",         no_argument,       NULL, 'V'},
             {"structure",   no_argument,       NULL, 'S'},
+            {"phase",       no_argument,       NULL, 'A'},
             {"genomic",     no_argument,       NULL, 'g'},
 	    {"genepop",     no_argument,       NULL, 'G'},
 	    {"phylip",      no_argument,       NULL, 'Y'},
@@ -4267,7 +4470,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlDkSLYVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlDkSALYVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -4342,6 +4545,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'S':
 	    structure_out = true;
+	    break;
+	case 'A':
+	    phase_out = true;
 	    break;
 	case 'Y':
 	    phylip_out = true;
@@ -4482,6 +4688,7 @@ void help() {
 	      << "    --vcf: output results in Variant Call Format (VCF).\n"
 	      << "    --genepop: output results in GenePop format.\n"
 	      << "    --structure: output results in Structure format.\n"
+	      << "    --phase: output results in PHASE/fastPHASE format.\n"
 	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
 	      << "      --phylip_var: include variable sites in the phylip output.\n"
 	      << "    --write_single_snp: write only the first SNP per locus in Genepop and Structure outputs.\n\n"

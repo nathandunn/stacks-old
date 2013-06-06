@@ -323,10 +323,16 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
 	cerr << "Searching for single and paired-end, inlined barcodes.\n";
 	break;
     case inline_index:
-	cerr << "Searching for single-end, inlined and paired-end, indexed barcodes.\n";
+	if (paired)
+	    cerr << "Searching for single-end, inlined and paired-end, indexed barcodes.\n";
+	else
+	    cerr << "Searching for sigle-end inlined and indexed barcodes.\n";
 	break;
     case index_inline:
-	cerr << "Searching for single-end, indexed and paired-end, inlined barcodes.\n";
+	if (paired)
+	    cerr << "Searching for single-end, indexed and paired-end, inlined barcodes.\n";
+	else
+	    cerr << "Searching for single-end, indexed and inlined barcodes.\n";
 	break;
     }
 
@@ -475,7 +481,7 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
     }
 
     //
-    // If paired barcodes were supplied chech that a paired barcode type was 
+    // If paired barcodes were supplied check that a paired barcode type was 
     // specified and vice versa.
     //
     if (se_bc.size() > 0 && pe_bc.size() > 0) {
