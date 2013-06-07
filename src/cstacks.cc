@@ -1182,7 +1182,7 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
 }
 
 int parse_command_line(int argc, char* argv[]) {
-    int c, sid;
+    int    c;
     string sstr;
 
     while (1) {

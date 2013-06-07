@@ -1,3 +1,9 @@
+Stacks 1.01 - June 07, 2013
+---------------------------
+	Bugfix: an off-by-one error was preventing haplotypes from being verified by sstacks
+	if a SNP occurred in the last position of the read. This could cause tags to fail
+	to match to the catalog if there is a SNP in the final position.
+
 Stacks 1.0 - June 06, 2013
 --------------------------
 	Feature: added XbaI and BamHI restriction enzymes to process_radtags.

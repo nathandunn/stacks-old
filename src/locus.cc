@@ -72,7 +72,7 @@ Locus::populate_alleles()
 	k = 0;
 
 	for (i = this->snps.begin(); i != this->snps.end(); i++) {
-	    if ((*i)->col < this->len - 1)
+	    if ((*i)->col < this->len)
 		s.replace((*i)->col, 1, 1, j->first[k]);
 	    k++;
 	}
