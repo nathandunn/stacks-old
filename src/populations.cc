@@ -4456,7 +4456,6 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"blacklist",   required_argument, NULL, 'B'},
 	    {"write_single_snp",  no_argument,       NULL, 'I'},
             {"kernel_smoothed",   no_argument,       NULL, 'k'},
-            {"linkage_stats",     no_argument,       NULL, 'D'},
             {"log_fst_comp",      no_argument,       NULL, 'l'},
             {"bootstrap",         required_argument, NULL, 'O'},
 	    {"bootstrap_reps",    required_argument, NULL, 'R'},
@@ -4470,7 +4469,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlDkSALYVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlkSALYVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -4504,9 +4503,6 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'k':
 	    kernel_smoothed = true;
-	    break;
-	case 'D':
-	    linkage_stats = true;
 	    break;
 	case 'l':
 	    log_fst_comp = true;
@@ -4678,8 +4674,6 @@ void help() {
 	      << "  Kernel-smoothing algorithm:\n" 
 	      << "    k: enable kernel-smoothed Pi, Fis, and Fst calculations.\n"
 	      << "    --window_size [num]: distance over which to average values (sigma, default 150Kb)\n\n"
-	      << "  Linkage Disequilibrium:\n"
-	      << "    --linkage_stats: enable calculation of D' and r^2 for each locus in each population.\n\n"
 	      << "  Bootstrap Resampling:\n" 
 	      << "    --bootstrap [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
 	      << "    --bootstrap_reps [num]: number of bootstrap resamplings to calculate (default 100).\n\n"
