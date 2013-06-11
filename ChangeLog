@@ -1,3 +1,12 @@
+Stacks 1.02 - June 11, 2013
+---------------------------
+	Feature: Modified the minor allele frequency (MAF) filter to remove polymorphic nucleotide
+	SNPs from Stacks output on a per-population basis. So, if a second allele is present
+	at a frequency below the MAF, that nucleotide site is not output (although other sites
+	at the same RAD locus could still be output).
+	Bugfix: Tri-allelic loci were being output into the STRUCTURE, GENEPOP and PHASE
+	output (but not in sumstats or Fst).
+
 Stacks 1.01 - June 07, 2013
 ---------------------------
 	Bugfix: an off-by-one error was preventing haplotypes from being verified by sstacks

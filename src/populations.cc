@@ -285,6 +285,11 @@ int main (int argc, char* argv[]) {
 	write_sql(catalog, pmap);
 
     //
+    // Output the locus-level summary statistics.
+    //
+    write_summary_stats(files, pop_indexes, catalog, pmap, psum);
+
+    //
     // Output data in requested formats
     //
     if (vcf_out)
@@ -306,17 +311,6 @@ int main (int argc, char* argv[]) {
     // Output the observed haplotypes.
     //
     write_generic(catalog, pmap, samples, false);
-
-    //
-    // Output the locus-level summary statistics.
-    //
-    write_summary_stats(files, pop_indexes, catalog, pmap, psum);
-
-    //
-    // Calculate D', r^2 and Chi-square significance for each locus in each population.
-    //
-    if (linkage_stats)
-	write_linkage_stats(pop_indexes, catalog, pmap, psum);
 
     //
     // Calculate and write Fst.
@@ -3334,7 +3328,7 @@ write_genepop(map<int, CSLocus *> &catalog,
     Datum   **d;
     LocSum  **s;
     LocTally *t;
-    int      len, start_index, end_index, col;
+    int      len, start_index, end_index, col, pop_id;
     char     p_allele, q_allele;
 
     //
@@ -3373,6 +3367,7 @@ write_genepop(map<int, CSLocus *> &catalog,
     nuc_map['T'] = "04";
 
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	pop_id      = psum->pop_index(pit->first);
 	start_index = pit->second.first;
 	end_index   = pit->second.second;
 
@@ -3396,7 +3391,14 @@ write_genepop(map<int, CSLocus *> &catalog,
 		    if (t->nucs[col].allele_cnt != 2) 
 			continue;
 
-		    if (d[j] == NULL) {
+		    if (s[pop_id]->nucs[col].incompatible_site ||
+			s[pop_id]->nucs[col].filtered_site) {
+			//
+			// This site contains more than two alleles in this population or was filtered
+			// due to a minor allele frequency that is too low.
+			//
+			fh << "\t0000";
+		    } else if (d[j] == NULL) {
 			//
 			// Data does not exist.
 			//
@@ -3512,10 +3514,11 @@ write_structure(map<int, CSLocus *> &catalog,
     nuc_map['T'] = "4";
 
     map<int, pair<int, int> >::iterator pit;
-    int       start_index, end_index, pop_id;
+    int       start_index, end_index, pop_id, p;
     char      p_allele, q_allele;
 
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	p           = psum->pop_index(pit->first);
 	pop_id      = pit->first;
 	start_index = pit->second.first;
 	end_index   = pit->second.second;
@@ -3543,7 +3546,14 @@ write_structure(map<int, CSLocus *> &catalog,
 			if (t->nucs[col].allele_cnt != 2) 
 			    continue;
 
-			if (d[j] == NULL) {
+			if (s[p]->nucs[col].incompatible_site ||
+			    s[p]->nucs[col].filtered_site) {
+			    //
+			    // This site contains more than two alleles in this population or was filtered
+			    // due to a minor allele frequency that is too low.
+			    //
+			    fh << "\t" << "0";
+			} else if (d[j] == NULL) {
 			    //
 			    // Data does not exist.
 			    //
@@ -3591,7 +3601,10 @@ write_structure(map<int, CSLocus *> &catalog,
 			if (t->nucs[col].allele_cnt != 2) 
 			    continue;
 
-			if (d[j] == NULL) {
+			if (s[p]->nucs[col].incompatible_site ||
+			    s[p]->nucs[col].filtered_site) {
+			    fh << "\t" << "0";
+			} else if (d[j] == NULL) {
 			    fh << "\t" << "0";
 			} else if (d[j]->model[col] == 'U') {
 			    fh << "\t" << "0";
@@ -3715,7 +3728,7 @@ write_phase(map<int, CSLocus *> &catalog,
 	stringstream gtypes;
 
 	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-	    pop_id      = pit->first;
+	    pop_id      = psum->pop_index(pit->first);
 	    start_index = pit->second.first;
 	    end_index   = pit->second.second;
 
@@ -3742,7 +3755,15 @@ write_phase(map<int, CSLocus *> &catalog,
 			if (t->nucs[col].allele_cnt != 2) 
 			    continue;
 
-			if (d[j] == NULL) {
+			if (s[pop_id]->nucs[col].incompatible_site ||
+			    s[pop_id]->nucs[col].filtered_site) {
+			    //
+			    // This site contains more than two alleles in this population or was filtered
+			    // due to a minor allele frequency that is too low.
+			    //
+			    gtypes << "? ";
+
+			} else if (d[j] == NULL) {
 			    //
 			    // Data does not exist.
 			    //
@@ -3783,15 +3804,21 @@ write_phase(map<int, CSLocus *> &catalog,
 		    t = psum->locus_tally(loc->id);
 
 		    for (uint i = 0; i < loc->snps.size(); i++) {
-			uint col = loc->snps[i]->col;
+			col = loc->snps[i]->col;
 
 			if (t->nucs[col].allele_cnt != 2) 
 			    continue;
 
-			if (d[j] == NULL) {
+			if (s[pop_id]->nucs[col].incompatible_site ||
+			    s[pop_id]->nucs[col].filtered_site) {
 			    gtypes << "? ";
+
+			} else if (d[j] == NULL) {
+			    gtypes << "? ";
+
 			} else if (d[j]->model[col] == 'U') {
 			    gtypes << "? ";
+
 			} else {
 			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
 

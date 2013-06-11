@@ -88,6 +88,8 @@ class SumStat {
 public:
     int    loc_id;
     int    bp;
+    bool   incompatible_site;
+    bool   filtered_site;
     double num_indv;
     char   p_nuc;
     char   q_nuc;
@@ -124,6 +126,8 @@ public:
 	wFis      = 0.0;
 	wFis_pval = 0.0;
 	snp_cnt   = 0;
+	incompatible_site = false;
+	filtered_site     = false;
     }
 };
 
@@ -219,6 +223,7 @@ public:
     int loci_cnt() { return this->num_loci; }
     int rev_locus_index(int index) { return this->rev_locus_order[index]; }
     int pop_cnt()  { return this->num_pops; }
+    int pop_index(int index)     { return this->pop_order[index]; }
     int rev_pop_index(int index) { return this->rev_pop_order[index]; }
 
     LocSum  **locus(int);
@@ -319,13 +324,15 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	    // Site is incompatible, log it.
 	    //
 	    if (res < 0) {
+		s[pop_index]->nucs[loc->snps[k]->col].incompatible_site = true;
+
 		incompatible_loci++;
 		log_fh << "within_population\t"
 		       << "incompatible_locus\t"
 		       << loc->id << "\t"
 		       << loc->loc.chr << "\t"
-		       << loc->sort_bp(k) << "\t"
-		       << k << "\t" 
+		       << loc->sort_bp(loc->snps[k]->col) << "\t"
+		       << loc->snps[k]->col << "\t" 
 		       << population_id << "\n";
 	    }
 
@@ -893,15 +900,15 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     if (minor_allele_freq > 0) {
 	if (allele_p < allele_q) {
 	    if (allele_p < minor_allele_freq) {
-		allele_q += allele_p;
-		allele_p  = 0;
 		s->nucs[pos].pi = 0;
+		s->nucs[pos].filtered_site = true;
+		return 0;
 	    }
 	} else {
 	    if (allele_q < minor_allele_freq) {
-		allele_p += allele_q;
-		allele_q  = 0;
 		s->nucs[pos].pi = 0;
+		s->nucs[pos].filtered_site = true;
+		return 0;
 	    }
 	}
     }
