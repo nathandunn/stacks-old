@@ -4153,7 +4153,7 @@ write_beagle(map<int, CSLocus *> &catalog,
 	    start_index = pit->second.first;
 	    end_index   = pit->second.second;
 
-	    fh << "I";
+	    fh << "I\tid";
 	    for (int j = start_index; j <= end_index; j++)
 		fh << "\t" << samples[pmap->rev_sample_index(j)] << "\t" << samples[pmap->rev_sample_index(j)];
 	}
@@ -4167,7 +4167,7 @@ write_beagle(map<int, CSLocus *> &catalog,
 	    start_index = pit->second.first;
 	    end_index   = pit->second.second;
 
-	    fh << "S";
+	    fh << "S\tid";
 	    for (int j = start_index; j <= end_index; j++)
 		fh << "\t" << pop_id << "\t" << pop_id;
 	}
