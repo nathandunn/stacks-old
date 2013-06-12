@@ -55,6 +55,8 @@ bool      genepop_out       = false;
 bool      genomic_out       = false;
 bool      structure_out     = false;
 bool      phase_out         = false;
+bool      beagle_out        = false;
+bool      plink_out         = false;
 bool      phylip_out        = false;
 bool      phylip_var        = false;
 bool      kernel_smoothed   = false;
@@ -303,6 +305,12 @@ int main (int argc, char* argv[]) {
 
     if (phase_out)
 	write_phase(catalog, pmap, psum, pop_indexes, samples);
+
+    if (beagle_out)
+	write_beagle(catalog, pmap, psum, pop_indexes, samples);
+
+    if (plink_out)
+	write_plink(catalog, pmap, psum, pop_indexes, samples);
 
     if (phylip_out)
 	write_phylip(catalog, pmap, psum, pop_indexes, samples);
@@ -3846,6 +3854,428 @@ write_phase(map<int, CSLocus *> &catalog,
 }
 
 int 
+write_plink(map<int, CSLocus *> &catalog, 
+	    PopMap<CSLocus> *pmap, 
+	    PopSum<CSLocus> *psum, 
+	    map<int, pair<int, int> > &pop_indexes, 
+	    map<int, string> &samples) 
+{
+    //
+    // Write a PLINK file as defined here: http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml
+    //
+    // We will write one file per chromosome.
+    //
+    cerr << "Writing population data to PLINK files...";
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
+    Datum   **d;
+    LocSum  **s;
+    LocTally *t;
+    string    chr;
+
+    //
+    // First, write a markers file containing each marker, the chromosome it falls on,
+    // an empty centiMorgan field, and finally its genomic position in basepairs.
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".plink.map";
+    string file = in_path + pop_name.str();
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+	cerr << "Error opening PLINK markers file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Output the header.
+    //
+    fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	chr = it->first;
+
+    	for (uint pos = 0; pos < it->second.size(); pos++) {
+    	    loc = it->second[pos];
+	    t   = psum->locus_tally(loc->id);
+
+    	    for (uint i = 0; i < loc->snps.size(); i++) {
+    		uint col = loc->snps[i]->col;
+		if (t->nucs[col].allele_cnt == 2) {
+		    fh << chr << "\t"
+		       << loc->id;
+		    if (!write_single_snp) 
+			fh << "_" << col;
+		    fh << "\t0\t" << loc->sort_bp(col) << "\n";
+		    if (write_single_snp)
+			break;
+		}
+	    }
+	}
+    }
+    fh.close();
+
+    //
+    // Now output the genotypes in a separate file.
+    //
+    pop_name.str("");
+    pop_name << "batch_" << batch_id << ".plink.ped";
+    file = in_path + pop_name.str();
+
+    fh.open(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+	cerr << "Error opening PLINK markers file '" << file << "'\n";
+	exit(1);
+    }
+
+    fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
+
+    map<int, pair<int, int> >::iterator pit;
+    int  start_index, end_index, pop_id;
+    char p_allele, q_allele;
+
+    //
+    //  marker, output the genotypes for each sample in two successive columns.
+    //
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	pop_id      = psum->pop_index(pit->first);
+	start_index = pit->second.first;
+	end_index   = pit->second.second;
+
+	for (int j = start_index; j <= end_index; j++) {
+
+	    fh << pit->first << "\t"
+	       << samples[pmap->rev_sample_index(j)] << "\t"
+	       << "0\t"  // Paternal ID
+	       << "0\t"  // Maternal ID
+	       << "0\t"  // Sex
+	       << "0";   // Phenotype
+
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		for (uint pos = 0; pos < it->second.size(); pos++) {
+		    loc = it->second[pos];
+
+		    s = psum->locus(loc->id);
+		    d = pmap->locus(loc->id);
+		    t = psum->locus_tally(loc->id);
+ 
+		    for (uint i = 0; i < loc->snps.size(); i++) {
+			uint col = loc->snps[i]->col;
+
+			// 
+			// If this site is fixed in all populations or has too many alleles don't output it.
+			//
+			if (t->nucs[col].allele_cnt != 2) 
+			    continue;
+			//
+			// Output the p allele
+			//
+			if (s[pop_id]->nucs[col].incompatible_site ||
+			    s[pop_id]->nucs[col].filtered_site) {
+			    //
+			    // This site contains more than two alleles in this population or was filtered
+			    // due to a minor allele frequency that is too low.
+			    //
+			    fh << "\t" << "?";
+			} else if (d[j] == NULL) {
+			    //
+			    // Data does not exist.
+			    //
+			    fh << "\t" << "?";
+			} else if (d[j]->model[col] == 'U') {
+			    //
+			    // Data exists, but the model call was uncertain.
+			    //
+			    fh << "\t" << "?";
+			} else {
+			    //
+			    // Tally up the nucleotide calls.
+			    //
+			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
+
+			    if (p_allele == 0 && q_allele == 0)
+				fh << "\t" << "?";
+			    else if (p_allele == 0)
+				fh << "\t" << q_allele;
+			    else
+				fh << "\t" << p_allele;
+			}
+
+			//
+			// Now output the q allele
+			//
+			if (s[pop_id]->nucs[col].incompatible_site ||
+			    s[pop_id]->nucs[col].filtered_site) {
+			    fh << "\t" << "?";
+
+			} else if (d[j] == NULL) {
+			    fh << "\t" << "?";
+
+			} else if (d[j]->model[col] == 'U') {
+			    fh << "\t" << "?";
+
+			} else {
+			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
+
+			    if (p_allele == 0 && q_allele == 0)
+				fh << "\t" << "?";
+			    else if (q_allele == 0)
+				fh << "\t" << p_allele;
+			    else
+				fh << "\t" << q_allele;
+			}
+		    }
+		    if (write_single_snp) break;
+		}
+	    }
+	    fh << "\n";
+	}
+    }
+
+    fh.close();
+
+    cerr << "done.\n";
+
+    return 0;
+}
+
+int 
+write_beagle(map<int, CSLocus *> &catalog, 
+	    PopMap<CSLocus> *pmap, 
+	    PopSum<CSLocus> *psum, 
+	    map<int, pair<int, int> > &pop_indexes, 
+	    map<int, string> &samples) 
+{
+    //
+    // Write a Beagle file as defined here: http://faculty.washington.edu/browning/beagle/beagle.html
+    //
+    // We will write one file per chromosome.
+    //
+    cerr << "Writing population data to Beagle files...";
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
+    Datum   **d;
+    LocSum  **s;
+    LocTally *t;
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+
+	//
+	// First, write a markers file containing each marker, its genomic position in basepairs
+	// and the two alternative alleles at this position.
+	//
+	stringstream pop_name;
+	pop_name << "batch_" << batch_id << "." << it->first << ".markers";
+	string file = in_path + pop_name.str();
+
+	ofstream fh(file.c_str(), ofstream::out);
+
+	if (fh.fail()) {
+	    cerr << "Error opening Beagle markers file '" << file << "'\n";
+	    exit(1);
+	}
+
+	//
+	// Output the header.
+	//
+	fh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
+
+    	for (uint pos = 0; pos < it->second.size(); pos++) {
+    	    loc = it->second[pos];
+	    t   = psum->locus_tally(loc->id);
+
+    	    for (uint i = 0; i < loc->snps.size(); i++) {
+    		uint col = loc->snps[i]->col;
+		if (t->nucs[col].allele_cnt == 2) {
+		    fh << loc->id;
+		    if (!write_single_snp) 
+			fh << "_" << col;
+		    fh << "\t" << loc->sort_bp(col) << "\t" 
+		       << t->nucs[col].p_allele     << "\t" 
+		       << t->nucs[col].q_allele     << "\n";
+		    if (write_single_snp)
+			break;
+		}
+	    }
+	}
+
+	fh.close();
+
+	//
+	// Now output the genotypes in a separate file.
+	//
+	pop_name.str("");
+	pop_name << "batch_" << batch_id << "." << it->first << ".unphased.bgl";
+	file = in_path + pop_name.str();
+
+	fh.open(file.c_str(), ofstream::out);
+
+	if (fh.fail()) {
+	    cerr << "Error opening Beagle markers file '" << file << "'\n";
+	    exit(1);
+	}
+
+	fh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
+
+	map<int, pair<int, int> >::iterator pit;
+	int  start_index, end_index, pop_id;
+	char p_allele, q_allele;
+
+	//
+	// Output a list of all the samples in the data set.
+	//
+	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	    pop_id      = psum->pop_index(pit->first);
+	    start_index = pit->second.first;
+	    end_index   = pit->second.second;
+
+	    fh << "I";
+	    for (int j = start_index; j <= end_index; j++)
+		fh << "\t" << samples[pmap->rev_sample_index(j)] << "\t" << samples[pmap->rev_sample_index(j)];
+	}
+	fh << "\n";
+
+	//
+	// Output population IDs for each sample.
+	//
+	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	    pop_id      = pit->first;
+	    start_index = pit->second.first;
+	    end_index   = pit->second.second;
+
+	    fh << "S";
+	    for (int j = start_index; j <= end_index; j++)
+		fh << "\t" << pop_id << "\t" << pop_id;
+	}
+	fh << "\n";
+
+	//
+	// For each marker, output the genotypes for each sample in two successive columns.
+	//
+	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	    pop_id      = psum->pop_index(pit->first);
+	    start_index = pit->second.first;
+	    end_index   = pit->second.second;
+
+	    for (uint pos = 0; pos < it->second.size(); pos++) {
+		loc = it->second[pos];
+
+		s = psum->locus(loc->id);
+		d = pmap->locus(loc->id);
+		t = psum->locus_tally(loc->id);
+
+		for (uint i = 0; i < loc->snps.size(); i++) {
+		    uint col = loc->snps[i]->col;
+
+		    // 
+		    // If this site is fixed in all populations or has too many alleles don't output it.
+		    //
+		    if (t->nucs[col].allele_cnt != 2) 
+			continue;
+
+		    fh << "M" << "\t" << loc->id;
+		    if (!write_single_snp)
+			fh << "_" << loc->snps[i]->col;
+
+		    for (int j = start_index; j <= end_index; j++) {
+			//
+			// Output the p allele
+			//
+			if (s[pop_id]->nucs[col].incompatible_site ||
+			    s[pop_id]->nucs[col].filtered_site) {
+			    //
+			    // This site contains more than two alleles in this population or was filtered
+			    // due to a minor allele frequency that is too low.
+			    //
+			    fh << "\t" << "?";
+
+			} else if (d[j] == NULL) {
+			    //
+			    // Data does not exist.
+			    //
+			    fh << "\t" << "?";
+			} else if (d[j]->model[col] == 'U') {
+			    //
+			    // Data exists, but the model call was uncertain.
+			    //
+			    fh << "\t" << "?";
+			} else {
+			    //
+			    // Tally up the nucleotide calls.
+			    //
+			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
+
+			    if (p_allele == 0 && q_allele == 0)
+				fh << "\t" << "?";
+			    else if (p_allele == 0)
+				fh << "\t" << q_allele;
+			    else
+				fh << "\t" << p_allele;
+			}
+
+			//
+			// Now output the q allele
+			//
+			if (s[pop_id]->nucs[col].incompatible_site ||
+			    s[pop_id]->nucs[col].filtered_site) {
+			    fh << "\t" << "?";
+
+			} else if (d[j] == NULL) {
+			    fh << "\t" << "?";
+
+			} else if (d[j]->model[col] == 'U') {
+			    fh << "\t" << "?";
+
+			} else {
+			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
+
+			    if (p_allele == 0 && q_allele == 0)
+				fh << "\t" << "?";
+			    else if (q_allele == 0)
+				fh << "\t" << p_allele;
+			    else
+				fh << "\t" << q_allele;
+			}
+		    }
+		    fh << "\n";
+		    if (write_single_snp) break;
+		}
+	    }
+	}
+
+	fh.close();
+    }
+
+    cerr << "done.\n";
+
+    return 0;
+}
+
+int 
 write_phylip(map<int, CSLocus *> &catalog, 
 	     PopMap<CSLocus> *pmap, 
 	     PopSum<CSLocus> *psum, 
@@ -4467,6 +4897,8 @@ int parse_command_line(int argc, char* argv[]) {
             {"vcf",         no_argument,       NULL, 'V'},
             {"structure",   no_argument,       NULL, 'S'},
             {"phase",       no_argument,       NULL, 'A'},
+            {"beagle",      no_argument,       NULL, 'E'},
+            {"plink",       no_argument,       NULL, 'K'},
             {"genomic",     no_argument,       NULL, 'g'},
 	    {"genepop",     no_argument,       NULL, 'G'},
 	    {"phylip",      no_argument,       NULL, 'Y'},
@@ -4496,7 +4928,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlkSALYVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlkKSALEYVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -4571,6 +5003,12 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'A':
 	    phase_out = true;
+	    break;
+	case 'E':
+	    beagle_out = true;
+	    break;
+	case 'K':
+	    plink_out = true;
 	    break;
 	case 'Y':
 	    phylip_out = true;
@@ -4695,7 +5133,7 @@ void help() {
 	      << "    r: minimum percentage of individuals in a population required to process a locus for that population.\n"
 	      << "    p: minimum number of populations a locus must be present in to process a locus.\n"
 	      << "    m: specify a minimum stack depth required for individuals at a locus.\n"
-	      << "    a: specify a minimum minor allele frequency required before calculating Fst at a locus (0 < a < 0.5).\n"
+	      << "    a: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < a < 0.5).\n"
 	      << "    f: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'.\n"
 	      << "    --p_value_cutoff [num]: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n\n"
 	      << "  Kernel-smoothing algorithm:\n" 
@@ -4709,7 +5147,9 @@ void help() {
 	      << "    --vcf: output results in Variant Call Format (VCF).\n"
 	      << "    --genepop: output results in GenePop format.\n"
 	      << "    --structure: output results in Structure format.\n"
-	      << "    --phase: output results in PHASE/fastPHASE format.\n"
+	      << "    --phase: output genotypes in PHASE/fastPHASE format.\n"
+	      << "    --beagle: output genotypes in Beagle format.\n"
+	      << "    --plink: output genotypes in PLINK format.\n"
 	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
 	      << "      --phylip_var: include variable sites in the phylip output.\n"
 	      << "    --write_single_snp: write only the first SNP per locus in Genepop and Structure outputs.\n\n"
