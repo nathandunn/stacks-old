@@ -3981,7 +3981,7 @@ write_plink(map<int, CSLocus *> &catalog,
 			if (t->nucs[col].allele_cnt != 2) 
 			    continue;
 			//
-			// Output the p allele
+			// Output the p and q alleles
 			//
 			if (s[pop_id]->nucs[col].incompatible_site ||
 			    s[pop_id]->nucs[col].filtered_site) {
@@ -3989,17 +3989,17 @@ write_plink(map<int, CSLocus *> &catalog,
 			    // This site contains more than two alleles in this population or was filtered
 			    // due to a minor allele frequency that is too low.
 			    //
-			    fh << "\t" << "?";
+			    fh << "\t" << "0" << "\t" << "0";
 			} else if (d[j] == NULL) {
 			    //
 			    // Data does not exist.
 			    //
-			    fh << "\t" << "?";
+			    fh << "\t" << "0" << "\t" << "0";
 			} else if (d[j]->model[col] == 'U') {
 			    //
 			    // Data exists, but the model call was uncertain.
 			    //
-			    fh << "\t" << "?";
+			    fh << "\t" << "0" << "\t" << "0";
 			} else {
 			    //
 			    // Tally up the nucleotide calls.
@@ -4007,38 +4007,17 @@ write_plink(map<int, CSLocus *> &catalog,
 			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
 
 			    if (p_allele == 0 && q_allele == 0)
-				fh << "\t" << "?";
+				fh << "\t" << "0" << "\t" << "0";
 			    else if (p_allele == 0)
-				fh << "\t" << q_allele;
-			    else
-				fh << "\t" << p_allele;
-			}
-
-			//
-			// Now output the q allele
-			//
-			if (s[pop_id]->nucs[col].incompatible_site ||
-			    s[pop_id]->nucs[col].filtered_site) {
-			    fh << "\t" << "?";
-
-			} else if (d[j] == NULL) {
-			    fh << "\t" << "?";
-
-			} else if (d[j]->model[col] == 'U') {
-			    fh << "\t" << "?";
-
-			} else {
-			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-			    if (p_allele == 0 && q_allele == 0)
-				fh << "\t" << "?";
+				fh << "\t" << q_allele << "\t" << q_allele;
 			    else if (q_allele == 0)
-				fh << "\t" << p_allele;
+				fh << "\t" << p_allele << "\t" << p_allele;
 			    else
-				fh << "\t" << q_allele;
+				fh << "\t" << p_allele << "\t" << q_allele;
 			}
+
+			if (write_single_snp) break;
 		    }
-		    if (write_single_snp) break;
 		}
 	    }
 	    fh << "\n";
