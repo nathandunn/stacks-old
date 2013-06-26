@@ -284,7 +284,11 @@ int process_paired_reads(string prefix_1,
 	parse_input_record(s_2, r_2);
 	counter["total"] += 2;
 
-	bc.set(r_1->se_bc, r_2->pe_bc);
+	if (barcode_type != inline_null &&
+	    barcode_type != index_null)
+	    bc.set(r_1->se_bc, r_2->pe_bc);
+	else
+	    bc.set(r_1->se_bc);
 
 	process_barcode(r_1, r_2, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
 
