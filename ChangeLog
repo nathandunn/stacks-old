@@ -1,5 +1,7 @@
-Stacks 1.02 - June 11, 2013
+Stacks 1.02 - June 24, 2013
 ---------------------------
+	Bugfix: single-end barcode, double-digested data were not being handled properly by
+	process_radtags causing a crash.
 	Feature: added support for PLINK and Beagle output files from the populations program.
 	Feature: Modified the minor allele frequency (MAF) filter to remove polymorphic nucleotide
 	SNPs from Stacks output on a per-population basis. So, if a second allele is present

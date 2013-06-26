@@ -35,9 +35,12 @@ use constant truecolor => 1;
 use constant true  => 1;
 use constant false => 0;
 
-my $debug     = 0;
-my $org       = "gac";
-my $out_path  = "";
+my $debug      = 0;
+my $color_type = "green";
+my $min_radius = 0.55;
+my $max_radius = 0.8;
+my $org        = "gac";
+my $out_path   = "";
 
 #
 # defines physical characteristics for each genome,
@@ -54,6 +57,11 @@ my %orgs = ('gac' => {'groupI'    => 28185914, 'groupII'   => 23295652, 'groupII
 		      '14' => 125194864, '10' => 129993255,  '8' => 131738871,  '6' => 149517037, '7' => 152524553,
 		      '5' => 152537259,   '4' => 155630120,  '3' => 159599783,  'X' => 166650296, '2' => 181748087,
 		      '1' => 197195432});
+my %ochrs = ('gac' => ['groupI', 'groupII', 'groupIII', 'groupIV', 'groupV', 'groupVI', 'groupVII',
+		       'groupVIII', 'groupIX', 'groupX', 'groupXI', 'groupXII', 'groupXIII', 'groupXIV', 
+		       'groupXV', 'groupXVI', 'groupXVII', 'groupXVIII', 'groupXIX', 'groupXX', 'groupXXI'],
+	     'mmu' => ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', 
+		       '12', '13', '14', '15', '16', '17', '18', '19', 'X', 'Y']);
 
 #
 # Define the path to the font we plan to use in the image
@@ -75,7 +83,7 @@ if ($img{'type'} eq "gd") {
     generate_png(\@chrs, \%fst, \%img);
 
 } else {
-    generate_pdf(\@chrs, \%fst, \%img);
+    generate_pdf(\@fst_files, \@chrs, \%fst, \%img);
 }
 
 sub populate_fst {
@@ -107,7 +115,7 @@ sub populate_fst {
 }
 
 sub generate_pdf {
-    my ($chrs, $fst, $img) = @_;
+    my ($files, $chrs, $fst, $img) = @_;
 
     my (%colors, $chr, $key);
 
@@ -118,6 +126,8 @@ sub generate_pdf {
     $img->{'margin_x'}   = 0/px;
     $img->{'margin_y'}   = 0/px;
     $img->{'arc_margin'} = 2/deg;
+    $img->{'chr_stroke'} = 24/pt;
+    $img->{'fst_stroke'} = 22/pt;
 
     #
     # Open the file and set the font
@@ -136,8 +146,13 @@ sub generate_pdf {
     $img->{'center_y'}      = floor(($img->{'height'} + $img->{'margin_y'}) / 2);
     $img->{'circle_width'}  = floor($img->{'width'}   * 0.8);
     $img->{'circle_height'} = floor($img->{'height'}  * 0.8);
-    $img->{'min_radius'}    = floor($img->{'width'}   / 2 * 0.4);
-    $img->{'max_radius'}    = floor($img->{'width'}   / 2 * 0.8);
+    $img->{'min_radius'}    = floor($img->{'width'}   / 2 * $min_radius);
+    $img->{'max_radius'}    = floor($img->{'width'}   / 2 * $max_radius);
+
+    #
+    # Record the filenames in the image.
+    #
+    draw_filenames_pdf($img, \%colors, $files);
 
     # Determine the length of each chromosome in degrees.
     determine_chromosome_lengths($img, $chrs);
@@ -166,66 +181,173 @@ sub generate_pdf {
     my $labels = false;
     my $fst_key;
 
-    for $key (1..$num_circles) {
-	$labels = $key == $num_circles ? true : false;
-	$fst_key = shift @fst_keys;
+    my $i = 1;
+    for $key (@{$files}) {
+	$labels = $i == $num_circles ? true : false;
 
 	foreach $chr (@chrs) {
 	    draw_chromosome_arc_pdf($img, \%colors, $chr, $radius, $labels);
-	    draw_fst_pdf($img, $fst->{$fst_key}, $chr, $radius);
+	    draw_fst_pdf($img, $fst->{$key}, $chr, $radius);
 	}
 
 	$radius += $radius_dist;
+	$i++;
     }
 
     $img{'pdf'}->save();
 }
 
+# sub draw_fst_pdf {
+#     my ($img, $fsts, $chr, $radius) = @_;
+
+#     my ($fst_cnt, $line, $bp, $fst, $start_point, $end_point, $x1, $y1, $x2, $y2, $c, $chr_len, $tics, $r, $g, $b, $color);
+
+#     my $min_rad = $radius - 6;
+#     my $max_rad = $radius + 6;
+
+#     $c       = $img->{'chrs'}->{$chr};
+#     $chr_len = $orgs{$org}->{$chr};
+#     $fst_cnt = scalar(@{$fsts->{$chr}->{'bp'}});
+
+#     foreach my $i (0..$fst_cnt - 1) {
+# 	$bp  = $fsts->{$chr}->{'bp'}->[$i];
+# 	$fst = $fsts->{$chr}->{'fst'}->[$i];
+
+# 	($r, $g, $b) = hsv2rgb(scale_color($fst), 0.99, 0.99);
+# 	$color       = color2hex($r, $g, $b);
+
+# 	# print STDERR "Fst: $fst has color: $color\n";
+
+# 	#
+# 	# Scale the starting point for proper placement on the chromosome arc
+# 	#
+# 	$start_point = ($bp / $chr_len) * ($c->{'end_deg'} - $c->{'start_deg'} + 1);
+# 	$start_point = $c->{'start_deg'} + $start_point;
+
+# 	#
+# 	# Convert the point to an x,y coordinate
+# 	#
+# 	$x1 = $min_rad * cos(deg2rad($start_point)) + $img->{'center_x'};
+# 	$y1 = $min_rad * sin(deg2rad($start_point)) + $img->{'center_y'};
+
+# 	$x2 = $max_rad * cos(deg2rad($start_point)) + $img->{'center_x'};
+# 	$y2 = $max_rad * sin(deg2rad($start_point)) + $img->{'center_y'};
+
+# 	$line = $img->{'pdf_page'}->gfx();
+
+# 	$line->strokecolor($color);
+# 	$line->linewidth(1/pt);
+
+# 	$line->move($x1, $y1);
+# 	$line->line($x2, $y2);
+# 	$line->stroke();
+#     }
+# }
+
 sub draw_fst_pdf {
     my ($img, $fsts, $chr, $radius) = @_;
 
-    my ($fst_cnt, $line, $bp, $fst, $start_point, $end_point, $x1, $y1, $x2, $y2, $c, $chr_len, $tics, $r, $g, $b, $color);
+    my ($arc, $start_deg, $end_deg, $r, $g, $b, $color, $aref, $fst);
 
-    my $min_rad = $radius - 6;
-    my $max_rad = $radius + 6;
+    #
+    # Determine the number of degrees occupied by this chromosome.
+    #
+    my $bucket_size = 4;
+    my $c   = $img->{'chrs'}->{$chr};
+    my $deg = $c->{'end_deg'} - $c->{'start_deg'};
 
-    $c       = $img->{'chrs'}->{$chr};
-    $chr_len = $orgs{$org}->{$chr};
-    $fst_cnt = scalar(@{$fsts->{$chr}->{'bp'}});
+    my @buckets;
+    my $bcnt = $deg * $bucket_size;
 
-    foreach my $i (0..$fst_cnt - 1) {
+    @buckets = @{bucket_fst_values($img, $chr, $fsts, $radius, $bcnt)};
+
+    my $cnt = 0;
+    $start_deg = $c->{'start_deg'};
+    foreach $aref (@buckets) {
+	$end_deg = $start_deg + 1/$bucket_size;
+	$fst = avg($aref);
+
+	if ($color_type eq "green") {
+	    ($r, $g, $b) = hsv2rgb(scale_color($fst), 1.0, 0.85);
+	} elsif ($color_type eq "purple") {
+	    ($r, $g, $b) = hsv2rgb(scale_color($fst), 1.0, 1.0);
+	}
+	$color = color2hex($r, $g, $b);
+
+	$arc = $img->{'pdf_page'}->gfx();
+	$arc->fillcolor($color);
+	$arc->strokecolor($color);
+	$arc->linewidth($img->{'fst_stroke'}/pt);
+
+	# print STDERR "    ", scalar(@{$aref}), " items in bucket; Drawing arc from $start_deg to $end_deg degrees.\n";
+
+	$arc->arc($img->{'center_x'}, $img->{'center_y'}, 
+		  $radius, $radius, $start_deg, $end_deg, 1);
+	$arc->stroke();
+
+	$start_deg = $end_deg;
+	$cnt++;
+    }
+
+    print STDERR "Drew $cnt buckets, from $c->{'start_deg'} to $c->{'end_deg'} degrees\n";
+}
+
+sub bucket_fst_values {
+    my ($img, $chr, $fsts, $radius, $bcnt) = @_;
+
+    my ($i, $bp, $fst, $lim, $aref);
+
+    my $buckets;
+    my $c       = $img->{'chrs'}->{$chr};
+    my $chr_len = $orgs{$org}->{$chr};
+    my $fst_cnt = scalar(@{$fsts->{$chr}->{'bp'}});
+
+    #
+    # How many basepairs can we fit into each bucket?
+    #
+    my @blimits;
+    my $bps = ceil($orgs{$org}->{$chr} / $bcnt);
+
+    print STDERR 
+	"Chromosome $chr, $orgs{$org}->{$chr}bps\n",
+	"  $bcnt buckets; $bps basepairs per bucket.\n";
+
+    #
+    # Create an array of buckets, divided into 1/8ths of a degree.
+    #
+    $lim     = 0;
+    $buckets = ();
+    foreach $i (0..$bcnt - 1) {
+	$lim += $bps;
+	$buckets->[$i] = [];
+	push(@blimits, $lim);
+    }
+
+    #
+    # Sort the Fst values.
+    #
+    my @sorted_fst;
+    foreach $i (0..$fst_cnt - 1) {
 	$bp  = $fsts->{$chr}->{'bp'}->[$i];
 	$fst = $fsts->{$chr}->{'fst'}->[$i];
-
-	($r, $g, $b) = hsv2rgb(scale_color($fst), 0.99, 0.99);
-	$color       = color2hex($r, $g, $b);
-
-	# print STDERR "Fst: $fst has color: $color\n";
-
-	#
-	# Scale the starting point for proper placement on the chromosome arc
-	#
-	$start_point = ($bp / $chr_len) * ($c->{'end_deg'} - $c->{'start_deg'});
-	$start_point = $c->{'start_deg'} + $start_point;
-
-	#
-	# Convert the point to an x,y coordinate
-	#
-	$x1 = $min_rad * cos(deg2rad($start_point)) + $img->{'center_x'};
-	$y1 = $min_rad * sin(deg2rad($start_point)) + $img->{'center_y'};
-
-	$x2 = $max_rad * cos(deg2rad($start_point)) + $img->{'center_x'};
-	$y2 = $max_rad * sin(deg2rad($start_point)) + $img->{'center_y'};
-
-	$line = $img->{'pdf_page'}->gfx();
-
-	$line->strokecolor($color);
-	$line->linewidth(1/pt);
-
-	$line->move($x1, $y1);
-	$line->line($x2, $y2);
-	$line->stroke();
+	push(@sorted_fst, [$bp, $fst]);
     }
+    @sorted_fst = sort {$a->[0] <=> $b->[0]} @sorted_fst;
+
+    #
+    # Iterate over the sorted Fst values and place them into the proper bucket.
+    #
+    $lim = shift @blimits;
+    $i   = 0;
+    foreach $aref (@sorted_fst) {
+	while ($aref->[0] > $lim) {
+	    $i++;
+	    $lim = shift @blimits;
+	}
+	push(@{$buckets->[$i]}, $aref->[1]);
+    }
+
+    return $buckets;
 }
 
 sub draw_key_pdf {
@@ -247,8 +369,12 @@ sub draw_key_pdf {
     $y = $y1;
 
     for ($i = 0; $i <= 1; $i += .005) {
-	($r, $g, $b) = hsv2rgb(scale_color($i), 0.99, 0.99);
-	$color       = color2hex($r, $g, $b);
+	if ($color_type eq "green") {
+	    ($r, $g, $b) = hsv2rgb(scale_color($i), 1.0, 0.85);
+	} elsif ($color_type eq "purple") {
+	    ($r, $g, $b) = hsv2rgb(scale_color($i), 1.0, 1.0);
+	}
+	$color = color2hex($r, $g, $b);
 	
 	$key->strokecolor($color);
 	$key->linewidth(1/pt);
@@ -299,8 +425,8 @@ sub draw_scale_pdf {
 
     my ($chr, $line, $start_bp, $start_point, $end_point, $x1, $y1, $x2, $y2, $c, $chr_len, $tics, $text);
 
-    my $min_rad = $img->{'min_radius'} - floor($img->{'width'} / 2 * 0.05);
-    my $max_rad = $img->{'max_radius'} + floor($img->{'width'} / 2 * 0.05);
+    my $min_rad = $img->{'min_radius'} - floor($img->{'width'} / 2 * 0.06);
+    my $max_rad = $img->{'max_radius'} + floor($img->{'width'} / 2 * 0.06);
 
     foreach $chr (@{$chrs}) {
 	$c       = $img->{'chrs'}->{$chr};
@@ -330,10 +456,10 @@ sub draw_scale_pdf {
 	    $y2 = $max_rad * sin(deg2rad($start_point)) + $img->{'center_y'};
 
 	    $line = $img->{'pdf_page'}->gfx();
-	    $line->linedash(6, 3);
+	    $line->linedash(4, 1);
 
 	    if ($start_bp % 10000000 == 0) {
-		$line->strokecolor($colors->{'black'});
+		$line->strokecolor($colors->{'dgrey'});
 		$line->linewidth(2/pt);
 	    } else {
 		$line->strokecolor($colors->{'grey'});
@@ -367,15 +493,15 @@ sub draw_scale_pdf {
 
 		if ($text_loc >= 0 && $text_loc <= 1.57) {
 		    # Top right quadrant
-		    $w -= ($text_width / 2 + 0.5);
+		    $w -= ($text_width / 3 + 0.5);
 		    $h -= $text_height;
 		} elsif ($text_loc > 1.57 && $text_loc <= 3.14) {
 		    # Top left quadrant
-		    $w -= ($text_width / 2 + 0.5);
+		    $w -= ($text_width / 3 + 0.5);
 		    $h -= $text_height;
 		} elsif ($text_loc > 3.14 && $text_loc <= 4.71) {
 		    # Bottom left quadrant
-		    $w -= ($text_width / 2 + 0.5);
+		    $w -= ($text_width / 3 + 0.5);
 		    $h += ($text_height / 2 + 0.5);
 		} elsif ($text_loc > 4.71) {
 		    # Bottom right quadrant
@@ -404,7 +530,7 @@ sub draw_chromosome_arc_pdf {
     $arc = $img->{'pdf_page'}->gfx();
     $arc->fillcolor($colors->{'grey'});
     $arc->strokecolor($colors->{'grey'});
-    $arc->linewidth(12/pt);
+    $arc->linewidth($img->{'chr_stroke'}/pt);
 
     $arc->arc($img->{'center_x'}, $img->{'center_y'}, 
 	      $radius, $radius, $start_deg, $end_deg, 1);
@@ -415,10 +541,11 @@ sub draw_chromosome_arc_pdf {
     #
     if ($labels == true) {
 	$text      = $chr;
+	$text      =~ s/group//;
 	$text_loc  = deg2rad(int((($end_deg + $start_deg) / 2) + 0.5));
 
-	$x = int(($img->{'max_radius'} + 20) * cos($text_loc) + $img->{'center_x'} + 0.5);
-	$y = int(($img->{'max_radius'} + 20) * sin($text_loc) + $img->{'center_y'} + 0.5);
+	$x = int(($img->{'max_radius'} + 30) * cos($text_loc) + $img->{'center_x'} + 0.5);
+	$y = int(($img->{'max_radius'} + 30) * sin($text_loc) + $img->{'center_y'} + 0.5);
 
 	$label = $img->{'pdf_page'}->text();
 	$label->font($img->{'pdf_font'}, $img->{'font_size'});
@@ -457,6 +584,30 @@ sub draw_chromosome_arc_pdf {
 	"    starting degree: $start_deg, end degree: $end_deg; length: ", 
 	$end_deg - $start_deg, "; arc_len: $arc_len\n",
 	"    text_loc: $text_loc, X: $x, Y: $y\n" if ($debug);
+}
+
+sub draw_filenames_pdf {
+    my ($img, $colors, $files) = @_;
+
+    my ($i, $f, $file);
+
+    my $label       = $img->{'pdf_page'}->text();
+    my $text_height = 6/pt;
+    my $y = $img->{'height'} - $text_height - 5;
+
+    $label->font($img->{'pdf_font'}, $img->{'font_size'} - 2);
+    $label->fillcolor($colors->{'black'});
+
+    $i = 1;
+    foreach $f (@{$files}) {
+	($file) = ($f =~ /.*\/(\w.+)$/);
+
+	$label->translate(5, $y);
+	$label->text($i . ". " . $file);
+
+	$y -= $text_height + 7;
+	$i++;
+    }
 }
 
 sub generate_png {
@@ -548,6 +699,8 @@ sub determine_chromosome_lengths {
 
 	$img->{'chrs'}->{$chr}->{'start_deg'} = $start_deg;
 	$img->{'chrs'}->{$chr}->{'end_deg'}   = $end_deg;
+
+	print STDERR "Chromosome $chr goes from $start_deg to $end_deg\n";
 
 	$degrees = $end_deg;
     }
@@ -644,6 +797,22 @@ sub draw_chromosome_arc {
 	"    text_loc: $text_loc, X: $x, Y: $y\n" if ($debug);
 }
 
+sub avg {
+    my ($aref) = @_;
+
+    return 0 if (scalar(@{$aref}) == 0);
+
+    my $i;
+    my $cnt = 0;
+    my $tot = 0;
+    foreach $i (@{$aref}) {
+	$cnt++;
+	$tot += $i;
+    }
+
+    return $tot / $cnt;
+}
+
 sub deg2rad { 
     return PI * $_[0] / 180;
 }
@@ -654,21 +823,30 @@ sub scale_color {
     my $min_range = 1;
     my $max_range = 10;
 
-    my $min_color = 0.0;
-    my $max_color = 0.68;
+    if ($color_type eq "green") {
+	my $min_color = 0.0;
+	my $max_color = 0.25;
 
-    return $max_color if ($val == 0);
+	return $max_color if ($val == 0);
 
-    $val = ($max_range - $min_range) * $val + 1;
+	$val = ($max_range - $min_range) * $val + 1;
 
-    my $color = (log($val)/log(10)) * ($max_color - $min_color);
-    #my $color = $val * ($max_color - $min_color);
+	my $color = (log($val)/log(10)) * ($max_color - $min_color);
 
-    return $max_color - $color;
+	return $max_color - $color;
 
-    #return log($val)/log(10);
+    } elsif ($color_type eq "purple") {
+	my $min_color = 0.66;
+	my $max_color = 1.0;
 
-    #return $val;
+	return $min_color if ($val == 0);
+
+	$val = ($max_range - $min_range) * $val + 1;
+
+	my $color = (log($val)/log(10)) * ($max_color - $min_color);
+
+	return $min_color + $color;
+    }
 }
 
 sub hsv2rgb {
@@ -731,6 +909,7 @@ sub allocate_png_colors {
     $colors->{'black'} = $gd_img->colorAllocate(  0,   0,   0);
     $colors->{'white'} = $gd_img->colorAllocate(255, 255, 255);
     $colors->{'grey'}  = $gd_img->colorAllocate(127, 127, 127); #7f7f7f;
+    $colors->{'dgrey'} = $gd_img->colorAllocate( 90,  90,  90); #5a5a5a;
 }
 
 sub allocate_pdf_colors {
@@ -739,6 +918,7 @@ sub allocate_pdf_colors {
     $colors->{'black'}  = "#000000";
     $colors->{'white'}  = "#ffffff";
     $colors->{'grey'}   = "#7f7f7f";
+    $colors->{'dgrey'}  = "#5a5a5a";
 }
 
 sub parse_command_line {
@@ -749,9 +929,12 @@ sub parse_command_line {
     while (@ARGV) {
 	$_ = shift @ARGV;
 	if ($_ =~ /^-d$/)     { $debug++; }
-	elsif ($_ =~ /^-o$/)  { $out_path  = shift @ARGV; }
-	elsif ($_ =~ /^-O$/)  { $org       = shift @ARGV; }
-	elsif ($_ =~ /^-c$/)  { $chr_list  = shift @ARGV; }
+	elsif ($_ =~ /^-o$/)  { $out_path   = shift @ARGV; }
+	elsif ($_ =~ /^-O$/)  { $org        = shift @ARGV; }
+	elsif ($_ =~ /^-c$/)  { $chr_list   = shift @ARGV; }
+	elsif ($_ =~ /^-C$/)  { $color_type = shift @ARGV; }
+	elsif ($_ =~ /^-m$/)  { $min_radius = shift @ARGV; }
+	elsif ($_ =~ /^-M$/)  { $max_radius = shift @ARGV; }
 	elsif ($_ =~ /^-f$/)  { push(@fst_files, shift @ARGV); }
 	elsif ($_ =~ /^-t$/)  { $img->{'type'}  = shift @ARGV; }
 	elsif ($_ =~ /^-s$/)  { $img->{'width'} = shift @ARGV; }
@@ -772,6 +955,21 @@ sub parse_command_line {
 	usage();
     }
 
+    if ($min_radius < 0 || $min_radius > 1.0) {
+	print STDERR "Minimum radius must be between 0 and 1.0.\n";
+	usage();
+    }
+
+    if ($max_radius < 0 || $max_radius > 1.0) {
+	print STDERR "Maximum radius must be between 0 and 1.0.\n";
+	usage();
+    }
+
+    if ($color_type ne "green" && $color_type ne "purple") {
+	print STDERR "Unknown color type specified: $color_type\n";
+	usage();
+    }
+
     #
     # Generate a list of chromosomes to plot, either those the user specified, or
     # the full genome.
@@ -788,18 +986,21 @@ sub parse_command_line {
 	    help();
 	}
     } else {
-	@chrs = keys %{$orgs{$org}};
+	@chrs = @{$ochrs{$org}};
     }
 }
 
 sub usage {
 	print << "EOQ";
-plot_concentric_fst.pl -o path -f fst_path [-f fst_path...] [-c chr1,chr2] [-O org] [-h]
+plot_concentric_fst.pl -o path -f fst_path [-f fst_path...] [-c chr1,chr2] [-O org] [-C color] [-m min_radius] [-M max_radius] [-h]
   o:  write output to this file.
   f:  Stacks Fst file.
   c:  comma-seperated list of chromosomes to plot.
   O:  organism to plot, either 'gac' or 'mmu'.
   t:  image type, either 'gd' or 'pdf'.
+  C:  color type, either 'green' for green/red, or 'purple' for purple/red.
+  m:  minimum radius, between 0 and 1.0 (default 0.55).
+  M:  maximum radius, between 0 and 1.0 (default 0.8).
   h:  display this help message.
   d:  turn on debug output.
 
