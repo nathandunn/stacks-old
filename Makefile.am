@@ -107,7 +107,7 @@ dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.p
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
 	scripts/index_radtags.pl scripts/load_radtags.pl scripts/stacks_export_notify.pl
 
-dist_noinst_SCRIPTS = autogen.sh
+dist_noinst_SCRIPTS = autogen.sh scripts/extract_interpop_chars.pl
 
 nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sql/tag_index.sql sql/chr_index.sql \
 	php/CatalogClass.php php/annotate_marker.php php/constants.php.dist php/index.php php/tags.php \
@@ -148,7 +148,7 @@ install-data-hook:
 	sed -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/exec_velvet.pl > $(DESTDIR)$(bindir)/exec_velvet.pl.subst
 	mv $(DESTDIR)$(bindir)/exec_velvet.pl.subst $(DESTDIR)$(bindir)/exec_velvet.pl
 	chmod +x $(DESTDIR)$(bindir)/exec_velvet.pl
-	sed -e 's,_VERSION_,$(VERSION),' $(DESTDIR)$(bindir)/load_sequences.pl > $(DESTDIR)$(bindir)/load_sequences.pl.subst
+	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/load_sequences.pl > $(DESTDIR)$(bindir)/load_sequences.pl.subst
 	mv $(DESTDIR)$(bindir)/load_sequences.pl.subst $(DESTDIR)$(bindir)/load_sequences.pl
 	chmod +x $(DESTDIR)$(bindir)/load_sequences.pl
 	sed -e 's,_VERSION_,$(VERSION),' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' -e 's,_BINDIR_,$(bindir)/,g' \
