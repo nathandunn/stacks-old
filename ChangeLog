@@ -1,3 +1,7 @@
+Stacks 1.03 - June 28, 2013
+---------------------------
+	Bugfix: non-barcoded data were not being handled properly by process_radtags/process_shortreads.
+
 Stacks 1.02 - June 24, 2013
 ---------------------------
 	Bugfix: single-end barcode, double-digested data were not being handled properly by

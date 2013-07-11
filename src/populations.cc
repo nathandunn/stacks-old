@@ -4347,6 +4347,10 @@ write_phylip(map<int, CSLocus *> &catalog,
 		    index++;
 
 		} else {
+		    //
+		    // Encode SNPs that are variable within a population as well, using IUPAC notation:
+		    //     http://en.wikipedia.org/wiki/Nucleic_acid_notation#IUPAC_notation
+		    //
 		    if (t->nucs[col].allele_cnt != 2)
 			continue;
 
@@ -5097,7 +5101,7 @@ void version() {
 
 void help() {
     std::cerr << "populations " << VERSION << "\n"
-              << "populations -b batch_id -P path -M path [-r min] [-m min] [-g] [-V] [-B blacklist] [-W whitelist] [-s] [-e renz] [-t threads] [-v] [-h]" << "\n"
+              << "populations -b batch_id -P path -M path [-r min] [-m min] [-B blacklist] [-W whitelist] [-s] [-e renz] [-t threads] [-v] [-h]" << "\n"
 	      << "  b: Batch ID to examine when exporting from the catalog.\n"
 	      << "  P: path to the Stacks output files.\n"
 	      << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
@@ -5130,7 +5134,7 @@ void help() {
 	      << "    --beagle: output genotypes in Beagle format.\n"
 	      << "    --plink: output genotypes in PLINK format.\n"
 	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
-	      << "      --phylip_var: include variable sites in the phylip output.\n"
+	      << "      --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
 	      << "    --write_single_snp: write only the first SNP per locus in Genepop and Structure outputs.\n\n"
 	      << "  Debugging:\n"
 	      << "    --log_fst_comp: log components of Fst calculations to a file.\n";

@@ -23,12 +23,13 @@ use DBI;
 
 use constant stacks_version => "_VERSION_";
 
-my $debug    = 0;
-my $db       = "";
-my $batch_id = 0;
-my $in_path  = "";
-my $seq_path = "";
-my $seq_type = "";
+my $debug        = 0;
+my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
+my $db           = "";
+my $batch_id     = 0;
+my $in_path      = "";
+my $seq_path     = "";
+my $seq_type     = "";
 
 parse_command_line();
 
@@ -181,9 +182,8 @@ sub load_blast_hits {
 sub prepare_sql_handles {
     my ($sth) = @_;
 
-    # Connect to the database, assumes user has a MySQL ~/.my.cnf file to 
-    # specify the host, username and password
-    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=" . $ENV{"HOME"} . "/.my.cnf")
+    my $cnf = (defined($ENV{"HOME"}) && -e $ENV{"HOME"} . "/.my.cnf") ? $ENV{"HOME"} . "/.my.cnf" : $mysql_config;
+    $sth->{'dbh'} = DBI->connect("DBI:mysql:$db:mysql_read_default_file=$cnf")
 	or die("Unable to connect to the $db MySQL Database!\n" . $DBI::errstr);
 
     my $query;

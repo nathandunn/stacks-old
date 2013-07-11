@@ -237,6 +237,9 @@ sub parse_interspecies_tags {
 	($barcode, $catalog_id) = ($parts[7] =~ /^(\d+)\_(\d+)/);
         #($barcode, $catalog_id) = ($parts[4] =~ /^(\d+)\_(\d+)/);
 
+	#print STDERR "Barcode_key: $barcode, $barcode_key{$barcode}\n";
+	#next if ($barcode_key{$barcode} eq "CB2");
+
 	if (!defined($ids->{$id})) {
 	    $ids->{$id} = {};
             $ids->{$id}->{'id'}       = $parts[2];
@@ -263,7 +266,7 @@ sub load_barcode_list {
     while ($line = <BC>) {
 	chomp $line;
 
-	next if (length($line) == 0);
+	next if (length($line) == 0 || substr($line, 0, 1) eq "#");
 
 	($pop_id, $sample_id) = ($line =~ /^(\w+)\t(\d+)$/);
 

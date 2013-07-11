@@ -94,6 +94,16 @@ public:
 	this->se = string(p);
 	this->pe = "";
     }
+    void set(string p, string q)
+    {
+	this->se = p;
+	this->pe = q;
+    }
+    void set(string p)
+    {
+	this->se = p;
+	this->pe = "";
+    }
     string str() 
     {
 	if (this->pe.length() > 0)
@@ -226,7 +236,7 @@ public:
 	this->size  = size;
 	this->seq   = new char[this->size];
 	this->phred = new char[this->size];
-	this->int_scores = new int[this->len];
+	this->int_scores = new int[this->size - 1];
 
 	this->set_len(size - 1);
 

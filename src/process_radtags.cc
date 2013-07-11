@@ -260,22 +260,18 @@ int process_paired_reads(string prefix_1,
     r_1 = new Read(buf_len, 1, se_offset, win_size);
 
     //
-    // If no barcodes were specified, set r->barcode to be the input file name so
-    // that reads are written to an output file of the same name as the input file.
-    //
-    if (bc_size_1 == 0)
-    	strncpy(r_1->inline_bc, prefix_1.c_str(), id_len);
-
-    //
     // Compute the parameters for the second read.
     //
     buf_len = truncate_seq > 0 ? pe_offset + truncate_seq : strlen(s_2->seq);
     r_2     = new Read(buf_len, 2, pe_offset, win_size);
 
-    if (bc_size_1 == 0)
-	strncpy(r_2->inline_bc, prefix_2.c_str(), id_len);
-	
     BarcodePair bc;
+    //
+    // If no barcodes were specified, set the barcode object to be the input file names.
+    //
+    if (bc_size_1 == 0)
+	bc.set(prefix_1, prefix_2);
+	
     long i = 1;
 
     do {
@@ -285,11 +281,11 @@ int process_paired_reads(string prefix_1,
 	parse_input_record(s_2, r_2);
 	counter["total"] += 2;
 
-	
-	if (barcode_type != inline_null &&
+	if (barcode_type != null_null &&
+	    barcode_type != inline_null &&
 	    barcode_type != index_null)
 	    bc.set(r_1->se_bc, r_2->pe_bc);
-	else
+	else if (barcode_type != null_null)
 	    bc.set(r_1->se_bc);
 
 	process_barcode(r_1, r_2, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
@@ -406,16 +402,16 @@ int process_reads(string prefix,
 
     r = new Read(buf_len, 1, se_offset, win_size);
 
+    BarcodePair bc;
     //
-    // If no barcodes were specified, set r->barcode to be the input file name so
+    // If no barcodes were specified, set the barcode object to be the input file name so
     // that reads are written to an output file of the same name as the input file.
     //
     if (bc_size_1 == 0)
-	strncpy(r->inline_bc, prefix.c_str(), id_len);
+	bc.set(prefix);
 
     //cerr << "Length: " << r->len << "; Window length: " << r->win_len << "; Stop position: " << r->stop_pos << "\n";
 
-    BarcodePair bc;
     long i = 1;
     do {
 	if (i % 10000 == 0) cerr << "  Processing RAD-Tag " << i << "       \r";
@@ -438,7 +434,7 @@ int process_reads(string prefix,
 	 if (r->retain)
 	     out_file_type == fastq ? 
 		 write_fastq(pair_1_fhs[bc], r, overhang) : 
-		 write_fasta(pair_1_fhs[bc], r, overhang);
+ 		 write_fasta(pair_1_fhs[bc], r, overhang);
 
 	 if (discards && !r->retain)
 	     out_file_type == fastq ? 
