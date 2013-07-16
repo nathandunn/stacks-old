@@ -48,6 +48,8 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
+#include <iomanip> // std::setprecision
+
 #include <vector>
 using std::vector;
 #include <map>
