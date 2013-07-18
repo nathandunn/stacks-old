@@ -52,11 +52,13 @@ class Locus {
     char    *model; // Model calls for each nucleotide
     uint       len; // Sequence length
 
-    vector<char *>      comp;   // Raw components in this stack.
-    vector<char *>     reads;   // Sequence reads contributing to this stack.
-    PhyLoc               loc;   // Physical genome location of this stack.
-    vector<SNP *>       snps;   // Single Nucleotide Polymorphisms in this stack.
-    map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
+    vector<char *>          comp;   // Raw components in this stack.
+    vector<char *>         reads;   // Sequence reads contributing to this locus.
+    vector<uint>        comp_cnt;   // Counter for internal stacks merged into this locus.
+    vector<read_type>  comp_type;   // Read types for reads contributing to this locus.
+    PhyLoc                   loc;   // Physical genome location of this stack.
+    vector<SNP *>           snps;   // Single Nucleotide Polymorphisms in this stack.
+    map<string, int>     alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
     vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
 
     Locus()  { 

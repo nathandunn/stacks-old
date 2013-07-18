@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -98,7 +98,7 @@ int main (int argc, char* argv[]) {
 	s = samples.front();
 	samples.pop();
 
-	if (!load_loci(s.second, sample, false)) {
+	if (!load_loci(s.second, sample, false, false)) {
             cerr << "Failed to load sample " << i << "\n";
             continue;
         }
@@ -190,6 +190,7 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
 	    (*c != *q) && (*c != 'N' && *q != 'N')) {
 
             SNP *s = new SNP;
+	    s->type   = snp_type_het;
             s->col    = c - c_beg;
             s->lratio = 0;
             s->rank_1 = *c;
@@ -201,6 +202,7 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
             catalog_tag->snps.push_back(s);
 
             s = new SNP;
+	    s->type   = snp_type_het;
             s->col    = q - q_beg;
             s->lratio = 0;
             s->rank_1 = *q;
@@ -870,7 +872,9 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
 	    new_allele += (k->second->col > matched_tag->len - 1) ? 'N' : matched_tag->con[k->second->col];
 	}
-	merged_alleles.insert(new_allele);
+
+	if (new_allele.length() > 0)
+	    merged_alleles.insert(new_allele);
     }
 
     //
@@ -888,6 +892,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
 	SNP *snp    = new SNP;
 	snp->col    = (*k).second->col;
+	snp->type   = (*k).second->type;
 	snp->lratio = 0.0;
 	snp->rank_1 = (*k).second->rank_1;
 	snp->rank_2 = (*k).second->rank_2;
@@ -1081,8 +1086,22 @@ int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofs
 
 	snp_file << "0\t" << 
 	    batch_id          << "\t" <<
-	    tag->id          << "\t" << 
-	    (*snp_it)->col    << "\t" << 
+	    tag->id           << "\t" << 
+	    (*snp_it)->col    << "\t";
+
+	switch((*snp_it)->type) {
+	case snp_type_het:
+	    snp_file << "E\t";
+	    break;
+	case snp_type_hom:
+	    snp_file << "O\t";
+	    break;
+	default:
+	    snp_file << "U\t";
+	    break;
+	}
+
+	snp_file << 
 	    (*snp_it)->lratio << "\t" << 
 	    (*snp_it)->rank_1 << "\t" << 
 	    (*snp_it)->rank_2 << "\t" << 
@@ -1094,12 +1113,13 @@ int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofs
     // Output the alleles associated with the two matched tags
     //
     for (all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++)
-	all_file << "0\t" << 
-	    batch_id  << "\t" <<
-	    tag->id  << "\t" << 
+	all_file << 
+	    "0"           << "\t" << 
+	    batch_id      << "\t" <<
+	    tag->id       << "\t" <<
 	    all_it->first << "\t" <<
-            0 << "\t" <<              // These two fields are used in the pstacks output, not in
-            0 << "\n";
+            "0"           << "\t" <<    // These two fields are used in the 
+            "0"           << "\n";      // ustacks/pstacks output, not in cstacks.
 
     return 0;
 }
@@ -1112,7 +1132,7 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
-    if (!load_loci(sample.second, tmp_catalog, false))
+    if (!load_loci(sample.second, tmp_catalog, false, false))
         return 0;
 
     sample.first = tmp_catalog.begin()->second->sample_id;
@@ -1141,7 +1161,7 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
-    if (!load_loci(catalog_path, catalog, false))
+    if (!load_loci(catalog_path, catalog, false, false))
         return 0;
 
     //

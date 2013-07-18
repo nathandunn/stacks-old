@@ -134,7 +134,7 @@ call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n, bool record_
 	    snp->col    = col;
 	    snp->lratio = l_ratio;
 	    snp->rank_1 = nuc[0].first;
-	    snp->rank_2 = nuc[1].first;
+	    snp->rank_2 = nuc[1].second > 0 ? nuc[1].first : '-';
 
 	    tag->snps.push_back(snp);
 	}

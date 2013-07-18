@@ -73,7 +73,7 @@ int main (int argc, char* argv[]) {
     map<int, CSLocus *> catalog;
     int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
+    if ((res = load_loci(catalog_file.str(), catalog, false, false)) == 0) {
     	cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
      	return 0;
     }
@@ -110,56 +110,78 @@ int main (int argc, char* argv[]) {
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
 
-    cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
-    map<int, CSLocus *>::iterator it;
-    map<int, ModRes *>::iterator mit;
+    int      catalog_id, sample_id, tag_id;
+    string   file;
     Datum   *d;
-    CSLocus *loc;
+    Locus   *loc;
+    CSLocus *cloc;
 
     //
-    // Load the output from the SNP calling model for each individual at each locus.
+    // Process samples matched to the catalog, one by one.
     //
-    for (uint i = 0; i < sample_ids.size(); i++) {
-    	map<int, ModRes *> modres;
-    	load_model_results(in_path + samples[sample_ids[i]], modres);
+    for (uint i = 0; i < catalog_matches.size(); i++) {
+	sample_id = catalog_matches[i][0]->sample_id;
+	file      = samples[sample_id];
 
-    	if (modres.size() == 0) {
-    	    cerr << "Warning: unable to find any model results in file '" << samples[sample_ids[i]] << "', excluding this sample from population analysis.\n";
-    	    continue;
-    	}
+	cerr << "Making corrections to sample " << file << "...\n";
 
-    	for (it = catalog.begin(); it != catalog.end(); it++) {
-    	    loc = it->second;
-    	    d = pmap->datum(loc->id, sample_ids[i]);
+	map<int, Locus *> stacks;
+	int res;
+	if ((res = load_loci(in_path + file, stacks, true, true)) == 0) {
+	    cerr << "Unable to load sample file '" << file << "'\n";
+	    return 0;
+	}
 
-    	    if (d != NULL) {
-		if (modres.count(d->id) == 0) {
-		    cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id 
-			 << ", sample ID " << sample_ids[i] << ", sample locus " << d->id 
-			 << "; likely IDs were mismatched when running pipeline.\n";
-		    exit(0);
-		}
-		d->len   = strlen(modres[d->id]->model);
-    		d->model = new char[d->len + 1];
-    		strcpy(d->model, modres[d->id]->model);
-    	    }
-    	}
+	set<pair<int, int> > processed;
 
-    	for (mit = modres.begin(); mit != modres.end(); mit++)
-    	    delete mit->second;
-    	modres.clear();
+	for (uint j = 0; j < catalog_matches[i].size(); j++) {
+	     catalog_id = catalog_matches[i][j]->cat_id;
+	     sample_id  = catalog_matches[i][j]->sample_id;
+	     tag_id     = catalog_matches[i][j]->tag_id;
+
+	     if (catalog.count(catalog_id) == 0) continue;
+
+	     //
+	     // There are multiple matches per stack, but we only need to process
+	     // each stack once to make corrections.
+	     //
+	     if (processed.count(make_pair(catalog_id, tag_id)) == 0) {
+		 processed.insert(make_pair(catalog_id, tag_id));
+
+		 d = pmap->datum(catalog_id, sample_id);
+
+		 if (d == NULL) continue;
+
+		 cloc = catalog[catalog_id];
+		 loc  = stacks[tag_id];
+
+		 prune_reads(cloc, loc);
+	     }
+	}
+
+	//
+	// Re-execute model across locus nucleotides.
+	//
+
+	//
+	// Rewrite stacks, model outputs, and haplotypes.
+	//
+	write_results(file, stacks);
+
+	//
+	// Free up memory
+	//
+	map<int, Locus *>::iterator it;
+	for (it = stacks.begin(); it != stacks.end(); it++)
+	    delete it->second;
+
+	break;
     }
 
-    //
-    // Idenitfy polymorphic loci, tabulate haplotypes present.
-    //
-    tabulate_haplotypes(catalog, pmap);
-
-    //
-    // Output a list of heterozygous loci and the associate haplotype frequencies.
-    //
-    if (sql_out)
-	write_sql(catalog, pmap);
+    // //
+    // // Idenitfy polymorphic loci, tabulate haplotypes present.
+    // //
+    // tabulate_haplotypes(catalog, pmap);
 
     log_fh.close();
 
@@ -167,425 +189,253 @@ int main (int argc, char* argv[]) {
 }
 
 
-int tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
-    map<int, CSLocus *>::iterator it;
-    vector<char *>::iterator hit;
-    Datum  **d;
-    CSLocus *loc;
-
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
-	d   = pmap->locus(loc->id);
-
-	for (int i = 0; i < pmap->sample_cnt(); i++) {
-	    if (d[i] == NULL) 
-		continue;
-
-	    if (d[i]->obshap.size() > 1)
-		loc->marker = "heterozygous";
-	}
-
-	if (loc->marker.length() > 0) {
-     	    create_genotype_map(loc, pmap);
-	    call_population_genotypes(loc, pmap);
-	}
-    }
-
-    return 0;
-}
-
-int create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap) {
+int
+prune_reads(CSLocus *cloc, Locus *loc)
+{
     //
-    // Create a genotype map. For any set of haplotypes, this routine will
-    // assign each haplotype to a genotype, e.g. given the haplotypes 
-    // 'AC' and 'GT' in the population, this routine will assign 'AC' == 'a' 
-    // and 'GT' == 'b'. If an individual is homozygous for 'AC', they will be 
-    // assigned an 'aa' genotype.
+    // 1. Identify nucleotides in the locus for which model calls could not 
+    //    be made.
+    // 2. Check these nucleotides in the catalog to identify which alleles 
+    //    are present in the wider population. 
+    // 3. Remove reads from locus that contain alleles that are not present 
+    //    in the wider population.
     //
-    //cerr << "Creating genotype map for catalog ID " << locus->id  << ", marker: " << locus->marker << ".\n";
 
-    char gtypes[26] ={'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
-		      'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-		      'u', 'v', 'w', 'x', 'y', 'z'};
+    set<char> nucs;
+    set<char>::iterator it;
 
-    Datum **d;
-    map<string, int> haplotypes;
-    map<string, int>::iterator k;
-    vector<pair<string, int> > sorted_haplotypes;
+    set<int>  read_blacklist;
+    set<int>::iterator  it_bl;
 
-    d = pmap->locus(locus->id);
+    int  sample_col  = 0;
+    int  catalog_col = 0;
+    uint j           = 0;
 
-    for (int i = 0; i < pmap->sample_cnt(); i++) {
+    for (uint i = 0; i < loc->snps.size(); i++) {
+	if (loc->snps[i]->type == snp_type_unk && 
+	    loc->snps[i]->rank_1 != 'N') {
+	    cerr << "  We have found an unknown SNP call in tag " << loc->id << " at position " << i << "; col: " << loc->snps[i]->col << "\n";
 
-	if (d[i] != NULL)
-	    for (uint n = 0; n < d[i]->obshap.size(); n++)
-		haplotypes[d[i]->obshap[n]]++;
-    }
+	    cerr << "    Sample has nucleotides: '" << loc->snps[i]->rank_1 << "' and '" << loc->snps[i]->rank_2 << "'\n";
 
-    //
-    // Check that there are not more haplotypes than we have encodings.
-    //
-    if (haplotypes.size() > 26) return 0;
-
-    // 
-    // Sort the haplotypes map by value
-    //
-    for (k = haplotypes.begin(); k != haplotypes.end(); k++)
-	sorted_haplotypes.push_back(*k);
-    sort(sorted_haplotypes.begin(), sorted_haplotypes.end(), hap_compare);
-
-    for (uint n = 0, index = 0; n < sorted_haplotypes.size() && index <= 26; n++, index++) {
-	locus->gmap[sorted_haplotypes[n].first] = gtypes[index];
-	//cerr << "GMAP: " << sorted_haplotypes[n].first << " == " << gtypes[index] << "\n";
-    }
-
-    return 0;
-}
-
-int call_population_genotypes(CSLocus *locus, 
-			      PopMap<CSLocus> *pmap) {
-    //
-    // Fetch the array of observed haplotypes from the population
-    //
-    Datum **d = pmap->locus(locus->id);
-
-    for (int i = 0; i < pmap->sample_cnt(); i++) {
-	if (d[i] == NULL) 
-	    continue;
-
-	vector<string> gtypes;
-	string gtype;
-
-	//cerr << "Sample Id: " << pmap->rev_sample_index(i) << "\n";
-
-	for (uint j = 0; j < d[i]->obshap.size(); j++) {
 	    //
-	    // Impossible allele encountered.
+	    // Advance to the appropriate catalog locus column.
 	    //
-	    if (locus->gmap.count(d[i]->obshap[j]) == 0) {
-		gtypes.clear();
-		gtypes.push_back("-");
-		goto impossible;
+	    while (j < cloc->snps.size() && catalog_col < sample_col) {
+		catalog_col = cloc->snps[j]->col;
+
+		if (catalog_col < sample_col)
+		    j++;
 	    }
 
-	    gtypes.push_back(locus->gmap[d[i]->obshap[j]]);
-	    //cerr << "  Observed Haplotype: " << d[i]->obshap[j] << ", Genotype: " << locus->gmap[d[i]->obshap[j]] << "\n";
+	    if (catalog_col != sample_col) {
+		//
+		// If there is no SNP object in the catalog locus to represent this site
+		// then we assume it is a homozygous site in the population.
+		//
+		nucs.insert(cloc->con[sample_col]);
+	    } else {
+		//
+		// Otherwise it is a heterozygous site in the catalog and we can check the 
+		// alleles in the catalog against those nucleotides at this site.
+		//
+		nucs.insert(cloc->snps[j]->rank_1);
+		if (cloc->snps[j]->rank_2 != 0) nucs.insert(cloc->snps[j]->rank_2);
+		if (cloc->snps[j]->rank_3 != 0) nucs.insert(cloc->snps[j]->rank_3);
+		if (cloc->snps[j]->rank_4 != 0) nucs.insert(cloc->snps[j]->rank_4);
+	    }
+
+	    cerr << "    Catalog has nucleotides: '";
+	    for (it = nucs.begin(); it != nucs.end(); it++)
+		cerr << *it << ", ";
+	    cerr << "\n";
+
+	    //
+	    // Mark reads for removal that contain alleles not present in the rest of 
+	    // the population.
+	    //
+	    for (uint k = 0; k < loc->reads.size(); k++) {
+		if (nucs.count(loc->reads[k][sample_col]) == 0 &&
+		    loc->reads[k][sample_col] != 'N') 
+		    read_blacklist.insert(k);
+	    }
 	}
 
-    impossible:
-	sort(gtypes.begin(), gtypes.end());
- 	for (uint j = 0; j < gtypes.size(); j++) {
-	    gtype += gtypes[j];
-	    //cerr << "  Adding genotype to string: " << gtypes[j] << "; " << gtype << "\n";
-	}
-
- 	string m = gtype.length() == 1 ? 
-	    gtype + gtype : gtype;
-
-	d[i]->gtype = new char[m.length() + 1];
-	strcpy(d[i]->gtype, m.c_str());
-
-	if (m != "-")
-	    locus->gcnt++;
-
-	//cerr << "Assigning datum, marker: " << locus->marker << ", string: " << m << ", haplotype: " << d[i]->obshap[0] << ", gtype: " << gtype << "\n";
-     }
-
-    return 0;
-}
-
-int tally_haplotype_freq(CSLocus *locus, PopMap<CSLocus> *pmap,
-			 int &total, double &max, string &freq_str) {
-
-    map<string, double> freq;
-    Datum **d = pmap->locus(locus->id);
-
-    total = 0;
-    max   = 0;
-
-    //cerr << "Examining marker: " << locus->id << "\n";
-
-    for (int i = 0; i < pmap->sample_cnt(); i++) {
-	if (d[i] == NULL) continue;
-
-	//cerr << "  Sample: " << i << "; Haplotype: " << d[i]->obshap[0] << "; Genotype: " << d[i]->gtype << "\n";
-	if (d[i]->gtype[0] != '-') {
-	    freq[d[i]->gtype]++;
-	    total++;
-	}
+	sample_col++;
+	nucs.clear();
     }
 
-    if (total == 0)
-	return 0;
-
-    double frac;
-    stringstream s;
-    char   f[id_len];
-    map<string, double>::iterator it;
-    for (it = freq.begin(); it != freq.end(); it++) {
-	frac = (double) it->second / (double) total * 100;
-	if (frac > max) max = frac;
-	sprintf(f, "(%0.1f%%);", frac);
-	s << it->first << ":" << it->second << f;
-    }
-
-    freq_str = s.str();
-
-    return 0;
-}
-
-int 
-write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) 
-{
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".markers.tsv";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing SQL markers file to '" << file << "'\n";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening markers SQL file '" << file << "'\n";
-	exit(1);
-    }
-
-    map<int, CSLocus *>::iterator it;
-    CSLocus *loc;
-    char    f[id_len], g[id_len];
-    stringstream gtype_map;
-
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
-
-	if (loc->marker.length() == 0) continue;
-
-	string freq  = "";
-	double max   = 0.0;
-	int    total = 0;
-	tally_haplotype_freq(loc, pmap, total, max, freq);
-
-	sprintf(f, "%0.1f", max);
-	sprintf(g, "%0.2f", loc->f);
+    if (read_blacklist.size() > 0) {
+	cerr << "    Reads marked for removal: ";
+	for (it_bl = read_blacklist.begin(); it_bl != read_blacklist.end(); it_bl++)
+	    cerr << *it_bl << ", ";
+	cerr << "\n";
 
 	//
-	// Record the haplotype to genotype map.
+	// Remove the reads.
 	//
-	map<string, string>::iterator j;
-	gtype_map.str("");
-	for (j = loc->gmap.begin(); j != loc->gmap.end(); j++)
-	    gtype_map << j->first << ":" << j->second << ";";
+	vector<char *> reads, read_ids;
+	for (uint k = 0; k < loc->reads.size(); k++) {
+	    if (read_blacklist.count(k) > 0) {
+		delete [] loc->reads[k];
+		delete [] loc->comp[k];
+	    } else {
+		reads.push_back(loc->reads[k]);
+		read_ids.push_back(loc->comp[k]);
+	    }
+	}
 
-	fh << 0 << "\t" 
-	   << batch_id << "\t" 
-	   << loc->id << "\t" 
-	   << "\t"              // Marker
-	   << total << "\t"
-	   << f << "\t"
-	   << freq << "\t"
-	   << g << "\t"
-           << gtype_map.str() <<"\n";
+	loc->reads = reads;
+	loc->comp  = read_ids;
     }
-
-    fh.close();
 
     return 0;
 }
 
 int 
-tally_ref_alleles(LocSum **s, int pop_cnt, int snp_index, char &p_allele, char &q_allele) 
+write_results(string file, map<int, Locus *> &m) 
 {
-    int  nucs[4] = {0};
-    char nuc[2];
-
-    for (int j = 0; j < pop_cnt; j++) {
-	nuc[0] = 0;
-	nuc[1] = 0;
-        nuc[0] = s[j]->nucs[snp_index].p_nuc;
-        nuc[1] = s[j]->nucs[snp_index].q_nuc;
-
-	for (uint k = 0; k < 2; k++) 
-	    switch(nuc[k]) {
-	    case 'A':
-	    case 'a':
-		nucs[0]++;
-		break;
-	    case 'C':
-	    case 'c':
-		nucs[1]++;
-		break;
-	    case 'G':
-	    case 'g':
-		nucs[2]++;
-		break;
-	    case 'T':
-	    case 't':
-		nucs[3]++;
-		break;
-	    }
-    }
+    map<int, Locus *>::iterator i;
+    vector<char *>::iterator    j;
+    vector<int>::iterator       k;
+    map<string, int>::iterator  t;
+    Locus *tag_1;
 
     //
-    // Determine how many alleles are present at this position in this population.
-    // We cannot deal with more than two alternative alleles, if there are more than two
-    // in a single population, print a warning and exclude this nucleotide position.
+    // Parse the input file name to create the output files
     //
-    int i;
-    int allele_cnt = 0;
-    for (i = 0; i < 4; i++)
-	if (nucs[i] > 0) allele_cnt++;
+    string tag_file = out_path + file + ".tags.tsv";
+    string snp_file = out_path + file + ".snps.tsv";
+    string all_file = out_path + file + ".alleles.tsv";
 
-    if (allele_cnt > 2) {
-	p_allele = 0;
-	q_allele = 0;
-	return 0;
-    }
+    // Open the output files for writing.
+    std::ofstream tags(tag_file.c_str());
+    std::ofstream snps(snp_file.c_str());
+    std::ofstream alle(all_file.c_str());
 
-    //
-    // Record which nucleotide is the P allele and which is the Q allele.
-    //
-    p_allele = 0;
-    q_allele = 0;
+    int wrote = 0;
 
-    i = 0;
-    while (p_allele == 0 && i < 4) {
-	if (nucs[i] > 0) {
-	    switch(i) {
-	    case 0:
-		p_allele = 'A';
+    for (i = m.begin(); i != m.end(); i++) {
+	tag_1 = i->second;
+
+	wrote++;
+
+	// First write the consensus sequence
+	tags << "0" << "\t" 
+	     << tag_1->sample_id << "\t" 
+	     << tag_1->id << "\t" 
+             << tag_1->loc.chr << "\t"
+             << tag_1->loc.bp << "\t"
+             << (tag_1->loc.strand == plus ? "+" : "-") << "\t"
+	     << "consensus\t" << "\t\t" 
+	     << tag_1->con << "\t" 
+	     << "0" << "\t" 
+	     << "0" << "\t"
+	     << "0" << "\n";
+
+	//
+	// Write a sequence recording the output of the SNP model for each nucleotide.
+	//
+	tags << "0"              << "\t" 
+	     << tag_1->sample_id << "\t" 
+	     << tag_1->id        << "\t" 
+             << "\t"
+             << "\t"
+             << "\t"
+	     << "model"          << "\t"
+	     << "\t"
+	     << "\t";
+	for (uint j = 0; j < tag_1->snps.size(); j++) {
+	    switch(tag_1->snps[j]->type) {
+	    case snp_type_het:
+		tags << "E";
 		break;
-	    case 1:
-		p_allele = 'C';
+	    case snp_type_hom:
+		tags << "O";
 		break;
-	    case 2:
-		p_allele = 'G';
-		break;
-	    case 3:
-		p_allele = 'T';
+	    default:
+		tags << "U";
 		break;
 	    }
 	}
-	i++;
-    }
-    while (q_allele == 0 && i < 4) {
-	if (nucs[i] > 0) {
-	    switch(i) {
-	    case 1:
-		q_allele = 'C';
+	tags << "\t"
+	     << "\t"
+	     << "\t"
+	     << "\n";
+	
+	//
+	// Now write out each read from this locus.
+	//
+	for (uint j = 0; j < tag_1->reads.size(); j++) {
+	    tags << "0"                 << "\t" 
+		 << tag_1->sample_id    << "\t" 
+		 << tag_1->id           << "\t\t\t\t";
+
+	    if (tag_1->comp_type[j] == primary)
+		tags << "primary" << "\t";
+	    else
+		tags << "secondary" << "\t";
+
+	    tags << tag_1->comp_cnt[j]  << "\t" 
+		 << tag_1->comp[j]      << "\t" 
+		 << tag_1->reads[j]     << "\t\t\t\n";
+	}
+
+	//
+	// Write out the model calls for each nucleotide in this locus.
+	//
+	for (uint j = 0; j < tag_1->snps.size(); j++) {
+	    snps << "0"                 << "\t"
+		 << tag_1->sample_id    << "\t" 
+		 << tag_1->id           << "\t" 
+		 << tag_1->snps[j]->col << "\t";
+
+	    switch(tag_1->snps[j]->type) {
+	    case snp_type_het:
+		snps << "E\t";
 		break;
-	    case 2:
-		q_allele = 'G';
+	    case snp_type_hom:
+		snps << "O\t";
 		break;
-	    case 3:
-		q_allele = 'T';
+	    default:
+		snps << "U\t";
 		break;
 	    }
+
+	    snps << std::fixed   << std::setprecision(2)
+		 << tag_1->snps[j]->lratio << "\t" 
+		 << tag_1->snps[j]->rank_1 << "\t" 
+		 << tag_1->snps[j]->rank_2 << "\t\t\n";
 	}
-	i++;
-    }
 
-    return 1;
-}
-
-int 
-tally_observed_haplotypes(vector<char *> &obshap, int snp_index, char &p_allele, char &q_allele) 
-{
-    int  nucs[4] = {0};
-    char nuc;
-
-    //
-    // Pull each allele for this SNP from the observed haplotype.
-    //
-    for (uint j = 0; j < obshap.size(); j++) {
-        nuc = obshap[j][snp_index];
-
-	switch(nuc) {
-	case 'A':
-	case 'a':
-	    nucs[0]++;
-	    break;
-	case 'C':
-	case 'c':
-	    nucs[1]++;
-	    break;
-	case 'G':
-	case 'g':
-	    nucs[2]++;
-	    break;
-	case 'T':
-	case 't':
-	    nucs[3]++;
-	    break;
+	//
+	// Write the expressed alleles seen for the recorded SNPs and
+	// the percentage of tags a particular allele occupies.
+	//
+        char pct[id_len];
+	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
+            sprintf(pct, "%.2f", ((t->second/double(tag_1->reads.size())) * 100));
+	    alle << "0"              << "\t" 
+		 << tag_1->sample_id << "\t" 
+		 << tag_1->id        << "\t" 
+		 << t->first         << "\t" 
+		 << pct              << "\t" 
+		 << t->second        << "\n";
 	}
     }
 
-    //
-    // Determine how many alleles are present at this position in this population.
-    // We cannot deal with more than two alternative alleles, if there are more than two
-    // in a single population, print a warning and exclude this nucleotide position.
-    //
-    int i;
-    int allele_cnt = 0;
-    for (i = 0; i < 4; i++)
-	if (nucs[i] > 0) allele_cnt++;
+    tags.close();
+    snps.close();
+    alle.close();
 
-    if (allele_cnt > 2) {
-	p_allele = 0;
-	q_allele = 0;
-	return -1;
-    }
-
-    //
-    // Record which nucleotide is the P allele and which is the Q allele.
-    //
-    p_allele = 0;
-    q_allele = 0;
-
-    i = 0;
-    while (p_allele == 0 && i < 4) {
-	if (nucs[i] > 0) {
-	    switch(i) {
-	    case 0:
-		p_allele = 'A';
-		break;
-	    case 1:
-		p_allele = 'C';
-		break;
-	    case 2:
-		p_allele = 'G';
-		break;
-	    case 3:
-		p_allele = 'T';
-		break;
-	    }
-	}
-	i++;
-    }
-    while (q_allele == 0 && i < 4) {
-	if (nucs[i] > 0) {
-	    switch(i) {
-	    case 1:
-		q_allele = 'C';
-		break;
-	    case 2:
-		q_allele = 'G';
-		break;
-	    case 3:
-		q_allele = 'T';
-		break;
-	    }
-	}
-	i++;
-    }
+    cerr << "  Wrote " << wrote << " loci.\n";
 
     return 0;
 }
 
 int build_file_list(vector<pair<int, string> > &files) {
-    char   line[max_len];
     vector<string> parts;
     string f;
-    uint   len;
 
     //
     // Read all the files from the Stacks directory.
@@ -638,17 +488,17 @@ int parse_command_line(int argc, char* argv[]) {
 	static struct option long_options[] = {
 	    {"help",        no_argument,       NULL, 'h'},
             {"version",     no_argument,       NULL, 'v'},
-            {"sql",         no_argument,       NULL, 's'},
 	    {"num_threads", required_argument, NULL, 't'},
 	    {"batch_id",    required_argument, NULL, 'b'},
 	    {"in_path",     required_argument, NULL, 'P'},
+	    {"outpath",     required_argument, NULL, 'o'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvst:b:P:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvo:t:b:P:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -671,8 +521,8 @@ int parse_command_line(int argc, char* argv[]) {
 		help();
 	    }
 	    break;
-	case 's':
-	    sql_out = true;
+	case 'o':
+	    out_path = optarg;
 	    break;
         case 'v':
             version();
@@ -695,6 +545,12 @@ int parse_command_line(int argc, char* argv[]) {
     if (in_path.at(in_path.length() - 1) != '/') 
 	in_path += "/";
 
+    if (out_path.length() == 0) 
+	out_path = in_path;
+
+    if (out_path.at(out_path.length() - 1) != '/') 
+	out_path += "/";
+
     if (batch_id == 0) {
 	cerr << "You must specify a batch ID.\n";
 	help();
@@ -711,9 +567,10 @@ void version() {
 
 void help() {
     std::cerr << "rxstacks " << VERSION << "\n"
-              << "rxstackss -b batch_id -P path [-t threads] [-v] [-h]" << "\n"
+              << "rxstackss -b batch_id -P path [-o path] [-t threads] [-v] [-h]" << "\n"
 	      << "  b: Batch ID to examine when exporting from the catalog.\n"
 	      << "  P: path to the Stacks output files.\n"
+	      << "  o: output path to write results.\n"
 	      << "  t: number of threads to run in parallel sections of code.\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n";

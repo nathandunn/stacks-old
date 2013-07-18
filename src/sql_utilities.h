@@ -34,12 +34,12 @@
 // The expected number of tab-separated fields in our SQL input files.
 //
 const uint num_tags_fields    = 13;
-const uint num_snps_fields    =  9;
+const uint num_snps_fields    = 10;
 const uint num_alleles_fields =  6;
 const uint num_matches_fields =  7;
 
 template <class LocusT>
-int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
+int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_all_model_calls) {
     LocusT        *c;
     SNP           *snp;
     string         f;
@@ -112,6 +112,22 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 			char *read = new char[parts[9].length() + 1];
 			strcpy(read, parts[9].c_str());
 			loci[id]->reads.push_back(read);
+
+			char *read_id = new char[parts[8].length() + 1];
+			strcpy(read_id, parts[8].c_str());
+			loci[id]->comp.push_back(read_id);
+			//
+			// Store the internal stack number for this read.
+			//
+			loci[id]->comp_cnt.push_back(atoi(parts[7].c_str()));
+
+			//
+			// Store the read type.
+			//
+			if (parts[6] == "primary")
+			    loci[id]->comp_type.push_back(primary);
+			else
+			    loci[id]->comp_type.push_back(secondary);
 		    }
 		}
 
@@ -163,7 +179,7 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
     fh.close();
 
     // 
-    // Next, parse the SNP file
+    // Next, parse the SNP file and load model calls.
     //
     f = sample + ".snps.tsv";
     fh.open(f.c_str(), ifstream::in);
@@ -194,15 +210,28 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 	if (blacklisted.count(id))
 	    continue;
 
+	//
+	// Only load heterozygous model calls.
+	//
+	if (load_all_model_calls == false && parts[4] != "E") 
+	    continue;
+
 	snp         = new SNP;
 	snp->col    = atoi(parts[3].c_str());
-	snp->lratio = atof(parts[4].c_str());
-	snp->rank_1 = parts[5].at(0);
-	snp->rank_2 = parts[6].at(0);
+	snp->lratio = atof(parts[5].c_str());
+	snp->rank_1 = parts[6].at(0);
+	snp->rank_2 = parts[7].at(0);
 
-	if (parts.size() == 9) {
-	    snp->rank_3 = parts[7].length() == 0 ? 0 : parts[7].at(0);
-	    snp->rank_4 = parts[8].length() == 0 ? 0 : parts[8].at(0);
+	if (parts[4] == "E") 
+	    snp->type = snp_type_het;
+	else if (parts[4] == "O")
+	    snp->type = snp_type_hom;
+	else
+	    snp->type = snp_type_unk;
+
+	if (parts.size() == 10) {
+	    snp->rank_3 = parts[8].length() == 0 ? 0 : parts[8].at(0);
+	    snp->rank_4 = parts[9].length() == 0 ? 0 : parts[9].at(0);
 	}
 
         if (loci.count(id) > 0) {
