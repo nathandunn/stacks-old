@@ -60,12 +60,15 @@ using std::set;
 #include "PopSum.h"
 #include "utils.h"
 #include "sql_utilities.h"
+#include "models.h"
 
 void    help( void );
 void    version( void );
 int     parse_command_line(int, char**);
 int     build_file_list(vector<pair<int, string> > &);
 int     prune_reads(CSLocus *, Locus *);
+int     invoke_model(map<int, Locus *> &);
+int     call_alleles(Locus *); 
 int     write_results(string, map<int, Locus *> &);
 
 bool    hap_compare(pair<string, int>, pair<string, int>);

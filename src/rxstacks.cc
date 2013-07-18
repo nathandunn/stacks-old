@@ -35,11 +35,42 @@ int       batch_id    = 0;
 bool      sql_out     = false;
 string    in_path;
 string    out_path;
-string    out_file;
+
+//
+// For use with the multinomial model to call fixed nucleotides.
+//
+modelt model_type         = snp;
+double alpha              = 0.05;
+double bound_low          = 0.0;
+double bound_high         = 1.0;
+double p_freq             = 0.5;
+double barcode_err_freq   = 0.0;
+double heterozygote_limit = -2.71;
+double homozygote_limit   =  2.71;
+const int barcode_size    = 5;
 
 int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
+
+    //
+    // Set limits to call het or homozygote according to chi-square distribution with one 
+    // degree of freedom:
+    //   http://en.wikipedia.org/wiki/Chi-squared_distribution#Table_of_.CF.872_value_vs_p-value
+    //
+    if (alpha == 0.1) {
+	heterozygote_limit = -2.71;
+	homozygote_limit   =  2.71;
+    } else if (alpha == 0.05) {
+	heterozygote_limit = -3.84;
+	homozygote_limit   =  3.84;
+    } else if (alpha == 0.01) {
+	heterozygote_limit = -6.64;
+	homozygote_limit   =  6.64;
+    } else if (alpha == 0.001) {
+	heterozygote_limit = -10.83;
+	homozygote_limit   =  10.83;
+    }
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -162,6 +193,7 @@ int main (int argc, char* argv[]) {
 	//
 	// Re-execute model across locus nucleotides.
 	//
+	invoke_model(stacks);
 
 	//
 	// Rewrite stacks, model outputs, and haplotypes.
@@ -177,11 +209,6 @@ int main (int argc, char* argv[]) {
 
 	break;
     }
-
-    // //
-    // // Idenitfy polymorphic loci, tabulate haplotypes present.
-    // //
-    // tabulate_haplotypes(catalog, pmap);
 
     log_fh.close();
 
@@ -200,7 +227,6 @@ prune_reads(CSLocus *cloc, Locus *loc)
     // 3. Remove reads from locus that contain alleles that are not present 
     //    in the wider population.
     //
-
     set<char> nucs;
     set<char>::iterator it;
 
@@ -287,6 +313,107 @@ prune_reads(CSLocus *cloc, Locus *loc)
 
 	loc->reads = reads;
 	loc->comp  = read_ids;
+    }
+
+    return 0;
+}
+
+int 
+invoke_model(map<int, Locus *> &stacks) 
+{
+    //
+    // OpenMP can't parallelize random access iterators, so we convert
+    // our map to a vector of integer keys.
+    //
+    map<int, Locus *>::iterator it;
+    vector<int> keys;
+    for (it = stacks.begin(); it != stacks.end(); it++) 
+	keys.push_back(it->first);
+
+    int i;
+    for (i = 0; i < (int) keys.size(); i++) {
+	Locus *loc;
+
+	loc = stacks[keys[i]];
+
+	//
+	// Iterate over each column of the array and call the consensus base.
+	//
+	int row, col;
+	int length = strlen(loc->reads[0]);
+	int height = loc->reads.size();
+	string con;
+	map<char, int> nuc;
+	map<char, int>::iterator max, n;
+
+	for (col = 0; col < length; col++) {
+	    nuc['A'] = 0;
+	    nuc['C'] = 0;
+	    nuc['G'] = 0;
+	    nuc['T'] = 0;
+	    nuc['N'] = 0;
+
+	    for (row = 0; row < height; row++) {
+		if (nuc.count(loc->reads[row][col]))
+		    nuc[loc->reads[row][col]]++;
+	    }
+
+	    //
+	    // Search this column for the presence of a SNP
+	    //
+	    switch(model_type) {
+	    case snp:
+		call_multinomial_snp(loc, col, nuc);
+		break;
+	    case bounded:
+		call_bounded_multinomial_snp(loc, col, nuc);
+		break;
+	    default: 
+		break;
+	    }
+	}
+
+	loc->alleles.clear();
+
+	call_alleles(loc);
+    }
+
+    return 0;
+}
+
+int 
+call_alleles(Locus *loc) 
+{
+    int      row;
+    int      height = loc->reads.size();
+    string   allele;
+    char     base;
+    vector<SNP *>::iterator snp;
+
+    for (row = 0; row < height; row++) {
+	allele.clear();
+
+	uint snp_cnt = 0;
+
+	for (snp = loc->snps.begin(); snp != loc->snps.end(); snp++) {
+	    if ((*snp)->type != snp_type_het) continue;
+
+	    snp_cnt++;
+
+	    base = loc->reads[row][(*snp)->col];
+
+	    //
+	    // Check to make sure the nucleotide at the location of this SNP is
+	    // of one of the two possible states the multinomial model called.
+	    //
+	    if (base == (*snp)->rank_1 || base == (*snp)->rank_2) 
+		allele += base;
+	    else
+		break;
+	}
+
+	if (snp_cnt > 0 && allele.length() == snp_cnt)
+	    loc->alleles[allele]++;
     }
 
     return 0;
@@ -492,13 +619,17 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"batch_id",    required_argument, NULL, 'b'},
 	    {"in_path",     required_argument, NULL, 'P'},
 	    {"outpath",     required_argument, NULL, 'o'},
+	    {"model_type",   required_argument, NULL, 'T'},
+	    {"bound_low",    required_argument, NULL, 'L'},
+	    {"bound_high",   required_argument, NULL, 'U'},
+	    {"alpha",        required_argument, NULL, 'A'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvo:t:b:P:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvo:t:b:P:T:L:U:A:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -523,6 +654,26 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'o':
 	    out_path = optarg;
+	    break;
+     	case 'T':
+            if (strcmp(optarg, "snp") == 0) {
+                model_type = snp;
+            } else if (strcmp(optarg, "fixed") == 0) {
+                model_type = fixed;
+            } else if (strcmp(optarg, "bounded") == 0) {
+                model_type = bounded;
+            } else {
+                cerr << "Unknown model type specified '" << optarg << "'\n";
+                help();
+            }
+	case 'L':
+	    bound_low  = atof(optarg);
+	    break;
+	case 'U':
+	    bound_high = atof(optarg);
+	    break;
+	case 'A':
+	    alpha = atof(optarg);
 	    break;
         case 'v':
             version();
@@ -556,6 +707,25 @@ int parse_command_line(int argc, char* argv[]) {
 	help();
     }
 
+    if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
+	cerr << "SNP model alpha significance level must be either 0.1, 0.05, 0.01, or 0.001.\n";
+	help();
+    }
+
+    if (bound_low != 0 && (bound_low < 0 || bound_low >= 1.0)) {
+	cerr << "SNP model lower bound must be between 0.0 and 1.0.\n";
+	help();
+    }
+
+    if (bound_high != 1 && (bound_high <= 0 || bound_high > 1.0)) {
+	cerr << "SNP model upper bound must be between 0.0 and 1.0.\n";
+	help();
+    }
+
+    if (bound_low > 0 || bound_high < 1.0) {
+	model_type = bounded;
+    }
+
     return 0;
 }
 
@@ -573,7 +743,13 @@ void help() {
 	      << "  o: output path to write results.\n"
 	      << "  t: number of threads to run in parallel sections of code.\n"
 	      << "  v: print program version." << "\n"
-	      << "  h: display this help messsage." << "\n\n";
-
+	      << "  h: display this help messsage." << "\n\n"
+	      << "  Model options:\n" 
+	      << "    --model_type <type>: either 'snp' (default), 'bounded', or 'fixed'\n"
+	      << "    For the SNP or Bounded SNP model:\n"
+	      << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1 (default), 0.05, 0.01, or 0.001.\n"
+	      << "    For the Bounded SNP model:\n"
+	      << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
+	      << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n";
     exit(0);
 }

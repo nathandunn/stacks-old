@@ -43,6 +43,7 @@ using std::endl;
 #include "constants.h"
 #include "utils.h"
 #include "mstack.h"
+#include "locus.h"
 
 //
 // Possible models for calling nucleotide positions as fixed or variable
@@ -62,7 +63,9 @@ extern double heterozygote_limit;
 extern double homozygote_limit;
 
 snp_type call_bounded_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
+snp_type call_bounded_multinomial_snp(Locus *, int, map<char, int> &);
 snp_type call_multinomial_snp(MergedStack *, int, map<char, int> &, bool);
+snp_type call_multinomial_snp(Locus *, int, map<char, int> &);
 int      call_multinomial_fixed(MergedStack *, int, map<char, int> &);
 double   heterozygous_likelihood(int, map<char, int> &);
 double   homozygous_likelihood(int, map<char, int> &);
