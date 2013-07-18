@@ -40,7 +40,7 @@ string    out_path;
 // For use with the multinomial model to call fixed nucleotides.
 //
 modelt model_type         = snp;
-double alpha              = 0.05;
+double alpha              = 0.1;
 double bound_low          = 0.0;
 double bound_high         = 1.0;
 double p_freq             = 0.5;
