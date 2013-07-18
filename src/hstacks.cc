@@ -72,7 +72,7 @@ int main (int argc, char* argv[]) {
 	size_t pos_2     = (*in_file).find_last_of(".");
 	string sample_id = (*in_file).substr(pos_1 + 1, (pos_2 - pos_1 - 1));
 
-	load_loci(*in_file, sample, false);
+	load_loci(*in_file, sample, false, false);
 
         //
         // Give each locus a unique ID among all samples

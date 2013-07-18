@@ -43,6 +43,7 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
+#include <iomanip> // std::setprecision
 #include <sstream>
 using std::stringstream;
 #include <vector>
@@ -64,16 +65,9 @@ void    help( void );
 void    version( void );
 int     parse_command_line(int, char**);
 int     build_file_list(vector<pair<int, string> > &);
-int     call_population_genotypes(CSLocus *, PopMap<CSLocus> *);
-int     tally_haplotype_freq(CSLocus *, PopMap<CSLocus> *, int &, double &, string &);
-int     tabulate_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int     create_genotype_map(CSLocus *, PopMap<CSLocus> *);
+int     prune_reads(CSLocus *, Locus *);
+int     write_results(string, map<int, Locus *> &);
 
-int  write_sql(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int  tally_observed_haplotypes(vector<char *> &, int, char &, char &);
-int  tally_ref_alleles(LocSum **, int, int, char &, char &);
-int  load_snp_calls(string,  PopMap<CSLocus> *);
-
-bool hap_compare(pair<string, int>, pair<string, int>);
+bool    hap_compare(pair<string, int>, pair<string, int>);
 
 #endif // __RXSTACKS_H__

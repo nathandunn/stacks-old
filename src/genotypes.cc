@@ -100,7 +100,7 @@ int main (int argc, char* argv[]) {
     map<int, CSLocus *> catalog;
     int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
+    if ((res = load_loci(catalog_file.str(), catalog, false, false)) == 0) {
     	cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
      	return 0;
     }
@@ -667,7 +667,7 @@ automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<int, 
 
 	map<int, Locus *> stacks;
 	int res;
-	if ((res = load_loci(in_path + file, stacks, true)) == 0) {
+	if ((res = load_loci(in_path + file, stacks, true, false)) == 0) {
 	    cerr << "Unable to load sample file '" << file << "'\n";
 	    return 0;
 	}
