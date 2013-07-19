@@ -220,7 +220,7 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool l
 	snp->col    = atoi(parts[3].c_str());
 	snp->lratio = atof(parts[5].c_str());
 	snp->rank_1 = parts[6].at(0);
-	snp->rank_2 = parts[7].at(0);
+	snp->rank_2 = parts[7].at(0) == '-' ? 0 : parts[7].at(0);
 
 	if (parts[4] == "E") 
 	    snp->type = snp_type_het;

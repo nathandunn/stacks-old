@@ -1,4 +1,8 @@
-	
+	Bugfix: when merging a homozygous locus into the catalog, if homozygous allele conflicted
+	with existing catalog SNP alleles, new allele was not added to SNP object (but was added to
+	the allele list).
+	Bugfix: found small memory leak in cstacks - old SNP objects were not being freed when new
+	SNPs were merged into the catalog.
 	Bugfix: empty alleles were being output to the batch_X.catalog.alleles file by cstacks. Did
 	not affect the function of the program.
 
