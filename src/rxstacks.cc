@@ -148,9 +148,6 @@ int main (int argc, char* argv[]) {
 
     int      catalog_id, sample_id, tag_id;
     string   file;
-    Datum   *d;
-    Locus   *loc;
-    CSLocus *cloc;
 
     //
     // Process samples matched to the catalog, one by one.
@@ -159,17 +156,25 @@ int main (int argc, char* argv[]) {
 	sample_id = catalog_matches[i][0]->sample_id;
 	file      = samples[sample_id];
 
-	cerr << "Making corrections to sample " << file << "...\n";
+	cerr << "Loading stacks from sample " << file << "...\n";
 
 	map<int, Locus *> stacks;
 	int res;
 	if ((res = load_loci(in_path + file, stacks, true, true)) == 0) {
 	    cerr << "Unable to load sample file '" << file << "'\n";
-	    return 0;
+	    continue;
 	}
 
+	cerr << "Making corrections to sample " << file << "...";
+
+        // #pragma omp parallel private(sample_id, catalog_id, tag_id)
+	// { 
+	Datum   *d;
+	Locus   *loc;
+	CSLocus *cloc;
 	set<pair<int, int> > processed;
 
+        // #pragma omp for schedule(dynamic, 1) 
 	for (uint j = 0; j < catalog_matches[i].size(); j++) {
 	     catalog_id = catalog_matches[i][j]->cat_id;
 	     sample_id  = catalog_matches[i][j]->sample_id;
@@ -194,6 +199,10 @@ int main (int argc, char* argv[]) {
 		 prune_nucleotides(cloc, loc, log_fh);
 	     }
 	}
+        // }
+
+	cerr << "done.\n"
+	     << "Writing modified stacks, SNPs, alleles...";
 
 	//
 	// Rewrite stacks, model outputs, and haplotypes.
@@ -546,7 +555,7 @@ write_results(string file, map<int, Locus *> &m)
     snps.close();
     alle.close();
 
-    cerr << "  Wrote " << wrote << " loci.\n";
+    cerr << "wrote " << wrote << " loci.\n";
 
     return 0;
 }
