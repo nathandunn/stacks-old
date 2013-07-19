@@ -48,6 +48,8 @@ using std::endl;
 using std::stringstream;
 #include <vector>
 using std::vector;
+#include <queue>
+using std::queue;
 #include <map>
 using std::map;
 #include <set>
@@ -66,9 +68,11 @@ void    help( void );
 void    version( void );
 int     parse_command_line(int, char**);
 int     build_file_list(vector<pair<int, string> > &);
-int     prune_reads(CSLocus *, Locus *);
-int     invoke_model(map<int, Locus *> &);
-int     call_alleles(Locus *); 
+int     prune_nucleotides(CSLocus *, Locus *, ofstream &);
+int     invoke_model(Locus *, int, map<char, int> &, ofstream &);
+int     call_alleles(Locus *, set<int> &); 
+int     fill_catalog_snps(map<int, CSLocus *> &);
+int     log_model_calls(ofstream &, Locus *);
 int     write_results(string, map<int, Locus *> &);
 
 bool    hap_compare(pair<string, int>, pair<string, int>);

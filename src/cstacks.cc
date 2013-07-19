@@ -827,7 +827,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     // Merge the alleles accounting for any SNPs added from either of the two samples.
     //
     string allele, new_allele;
-    int pos;
+    int    pos;
 
     for (j = this->alleles.begin(); j != this->alleles.end(); j++) {
 	allele     = j->first;
@@ -867,10 +867,30 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	merged_alleles.insert(new_allele);
     }
 
+    //
+    // If the matching tag being merged into the catalog had no called SNPs
+    // create alleles from the consensus sequence and check that catalog SNP
+    // objects contain all the nucleoties.
+    //
     if (matched_tag->alleles.size() == 0) {
+	char c;
 	new_allele = "";
 	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
-	    new_allele += (k->second->col > matched_tag->len - 1) ? 'N' : matched_tag->con[k->second->col];
+	    csnp = k->second;
+	    c    = matched_tag->con[k->second->col];
+
+	    new_allele += (csnp->col > matched_tag->len - 1) ? 'N' : c;
+
+	    if (c != csnp->rank_1 &&
+		c != csnp->rank_2 &&
+		c != csnp->rank_3 &&
+		c != csnp->rank_4) {
+
+		if (csnp->rank_3 == 0)
+		    csnp->rank_3 = c;
+		else 
+		    csnp->rank_4 = c;
+	    }
 	}
 
 	if (new_allele.length() > 0)
@@ -900,6 +920,9 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	snp->rank_4 = (*k).second->rank_4;
 
 	this->snps.push_back(snp);
+
+	if (k->first == "catalog" || k->first == "both")
+	    delete k->second;
     }
 
     this->alleles.clear();
