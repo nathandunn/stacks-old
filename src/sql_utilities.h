@@ -230,8 +230,15 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool l
 	    snp->type = snp_type_unk;
 
 	if (parts.size() == 10) {
-	    snp->rank_3 = parts[8].length() == 0 ? 0 : parts[8].at(0);
-	    snp->rank_4 = parts[9].length() == 0 ? 0 : parts[9].at(0);
+	    if (parts[8].length() == 0 || parts[8].at(0) == '-')
+		snp->rank_3 = 0;
+	    else 
+		snp->rank_3 = parts[8].at(0);
+
+	    if (parts[9].length() == 0 || parts[9].at(0) == '-')
+		snp->rank_4 = 0;
+	    else
+		snp->rank_4 = parts[9].at(0);
 	}
 
         if (loci.count(id) > 0) {
