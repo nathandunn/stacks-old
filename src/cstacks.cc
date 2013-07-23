@@ -1099,18 +1099,11 @@ int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofs
     //
     // Output the SNPs associated with the catalog tag
     //
-    char rank_3[2], rank_4[2];
-    rank_3[1] = '\0';
-    rank_4[1] = '\0';
-
     for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
-	rank_3[0] = (*snp_it)->rank_3 == 0 ? '\0' : (*snp_it)->rank_3;
-	rank_4[0] = (*snp_it)->rank_4 == 0 ? '\0' : (*snp_it)->rank_4;
-
-	snp_file << "0\t" << 
-	    batch_id          << "\t" <<
-	    tag->id           << "\t" << 
-	    (*snp_it)->col    << "\t";
+	snp_file << "0"    << "\t" << 
+	    batch_id       << "\t" <<
+	    tag->id        << "\t" << 
+	    (*snp_it)->col << "\t";
 
 	switch((*snp_it)->type) {
 	case snp_type_het:
@@ -1128,8 +1121,8 @@ int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofs
 	    (*snp_it)->lratio << "\t" << 
 	    (*snp_it)->rank_1 << "\t" << 
 	    (*snp_it)->rank_2 << "\t" << 
-	    rank_3            << "\t" << 
-	    rank_4            << "\n";
+	    ((*snp_it)->rank_3 == 0 ? '-' : (*snp_it)->rank_3) << "\t" << 
+	    ((*snp_it)->rank_4 == 0 ? '-' : (*snp_it)->rank_4) << "\n";
     }
 
     //
