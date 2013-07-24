@@ -881,6 +881,8 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 
 	    new_allele += (csnp->col > matched_tag->len - 1) ? 'N' : c;
 
+	    if (csnp->col > matched_tag->len - 1) continue;
+
 	    if (c != csnp->rank_1 &&
 		c != csnp->rank_2 &&
 		c != csnp->rank_3 &&
