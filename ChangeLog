@@ -1,3 +1,9 @@
+Stacks 1.04 - July 25, 2013
+---------------------------
+	Bugfix: process_radtags was not properly handling index_index and inline_inline barcode types.
+	Bugfix: the hindIII restriction enzyme sequence was incorrectly specified in renz.h.
+	Bugfix: ustacks wasn't properly removing file suffix when gzip files are processed.
+
 Stacks 1.03 - June 28, 2013
 ---------------------------
 	Bugfix: non-barcoded data were not being handled properly by process_radtags/process_shortreads.
