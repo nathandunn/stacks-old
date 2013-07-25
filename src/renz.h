@@ -44,8 +44,8 @@ const char *mseI[]    = {"TAA",               // T/TAA, MseI
  			 "TTA"};
 const char *apeKI[]   = {"CAGC", "CTGC",      // G/CWGC, ApeKI; W=A or T
  			 "GTCG", "GACG"};
-const char *hindIII[] = {"AAGCT",             // A/AGCTT, HindIII
-			 "TTCGA"};
+const char *hindIII[] = {"AGCTT",             // A/AGCTT, HindIII
+			 "TCGAA"};
 const char *dpnII[]   = {"GATC",              // GATC, DpnII
 			 "GATC"};
 const char *sphI[]    = {"CATGC",             // GCATG/C, SphI
