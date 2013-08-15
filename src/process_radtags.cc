@@ -505,6 +505,8 @@ process_singlet(Read *href,
 	    if (*p == '.' || *p == 'N') {
 		counter["low_quality"]++;
 		href->retain = 0;
+		if (barcode_type != null_null) 
+		    bc_log["low_qual"]++;
 		return 0;
 	    }
     }
@@ -515,6 +517,8 @@ process_singlet(Read *href,
     if (quality && 
 	check_quality_scores(href, qual_offset, score_limit, len_limit, offset) <= 0) {
     	counter["low_quality"]++;
+	if (barcode_type != null_null) 
+	    bc_log["low_qual"]++;
     	href->retain = 0;
     	return 0;
     }
@@ -692,6 +696,7 @@ print_results(int argc, char **argv,
 	<< "Barcode\t" 
 	<< "Total\t"
 	<< "No RadTag\t"
+	<< "Low Quality\t"
 	<< "Retained\n";
 
     set<BarcodePair> barcode_list;
@@ -700,11 +705,12 @@ print_results(int argc, char **argv,
 	barcode_list.insert(barcodes[i]);
 
         if (barcode_log.count(barcodes[i]) == 0)
-            log << barcodes[i] << "\t" << "0\t" << "0\t" << "0\n";
+            log << barcodes[i] << "\t" << "0\t" << "0\t" << "0\t" << "0\n";
         else
 	    log << barcodes[i] << "\t"
                 << barcode_log[barcodes[i]]["total"]    << "\t"
 		<< barcode_log[barcodes[i]]["noradtag"] << "\t"
+		<< barcode_log[barcodes[i]]["low_qual"] << "\t"
                 << barcode_log[barcodes[i]]["retained"] << "\n";
     }
 
