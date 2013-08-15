@@ -479,9 +479,10 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
     if (barcode_log.count(bc) == 0) {
 	barcode_log[bc]["noradtag"] = 0;
 	barcode_log[bc]["total"]    = 0;
+	barcode_log[bc]["low_qual"] = 0;
 	barcode_log[bc]["retained"] = 0;
     }
-    barcode_log[bc]["total"]++;
+    barcode_log[bc]["total"] += paired ? 2 : 1;
 
     bool se_correct, pe_correct;
 
@@ -531,14 +532,15 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 	}
 
 	if (href_1->retain) {
-	    counter["recovered"]++;
-	    barcode_log[old_barcode]["total"]--;
+	    counter["recovered"] += paired ? 2 : 1;
+	    barcode_log[old_barcode]["total"] -= paired ? 2 : 1;
 	    if (barcode_log.count(bc) == 0) {
 		barcode_log[bc]["total"]    = 0;
 		barcode_log[bc]["retained"] = 0;
+		barcode_log[bc]["low_qual"] = 0;
 		barcode_log[bc]["noradtag"] = 0;
 	    }
-	    barcode_log[bc]["total"]++;
+	    barcode_log[bc]["total"] += paired ? 2 : 1;
 	}
     }
 

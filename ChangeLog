@@ -1,3 +1,9 @@
+Stacks 1.05 - August 15, 2013
+-----------------------------
+	Bugfix: corrected barcode-specific counters in process_radtags. Overall counts were correct
+	but counts for barcodes were off due to shuffling of code that happened with support of
+	combinatorial barcodes.
+
 Stacks 1.04 - July 25, 2013
 ---------------------------
 	Bugfix: process_radtags was not properly handling index_index and inline_inline barcode types.
