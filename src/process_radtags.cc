@@ -71,7 +71,7 @@ int      num_threads  = 1;
 // How to shift FASTQ-encoded quality scores from ASCII down to raw scores
 //     score = encoded letter - 64; Illumina version 1.3 - 1.5
 //     score = encoded letter - 33; Sanger / Illumina version 1.6+
-int qual_offset  = 33;     
+int qual_offset  = 33;
 
 //
 // Kmer data for adapter filtering.
@@ -80,7 +80,6 @@ int kmer_size = 5;
 int distance  = 1;
 int adp_1_len = 0;
 int adp_2_len = 0;
-vector<char *> adp_1_keys, adp_2_keys;
 AdapterHash adp_1_kmers, adp_2_kmers;
 
 map<string, const char **> renz;
@@ -100,15 +99,16 @@ int main (int argc, char* argv[]) {
 	cerr << "Discarding reads marked as 'failed' by Illumina's chastity/purity filters.\n";
     if (filter_adapter) {
 	cerr << "Filtering reads for adapter sequence:\n";
-	if (paired)
-	    cerr << "  " << adapter_1 << "\n"
-		 << "  " << adapter_2 << "\n";
-	else
+	if (adapter_1 != NULL) {
 	    cerr << "  " << adapter_1 << "\n";
+	    init_adapter_seq(kmer_size, adapter_1, adp_1_len, adp_1_kmers);
+	}
+	if (adapter_2 != NULL) {
+	    cerr << "  " << adapter_2 << "\n";
+	    init_adapter_seq(kmer_size, adapter_2, adp_2_len, adp_2_kmers);
+	}
+
 	cerr << "    " << distance << " mismatches allowed to adapter sequence.\n";
-	init_adapter_seq(kmer_size, adapter_1, adp_1_len, adp_1_kmers, adp_1_keys);
-	if (paired)
-	    init_adapter_seq(kmer_size, adapter_2, adp_2_len, adp_2_kmers, adp_2_keys);
     }
 
     vector<pair<string, string> >        files;
@@ -169,12 +169,6 @@ int main (int argc, char* argv[]) {
     }
 
     print_results(argc, argv, barcodes, counters, barcode_log);
-
-    if (filter_adapter) {
-	free_adapter_seq(adp_1_keys);
-	if (paired)
-	    free_adapter_seq(adp_2_keys);
-    }
 
     return 0;
 }
@@ -517,7 +511,7 @@ process_singlet(Read *href,
     if (quality && 
 	check_quality_scores(href, qual_offset, score_limit, len_limit, offset) <= 0) {
     	counter["low_quality"]++;
-	if (barcode_type != null_null) 
+	if (barcode_type != null_null)
 	    bc_log["low_qual"]++;
     	href->retain = 0;
     	return 0;
@@ -527,21 +521,22 @@ process_singlet(Read *href,
     // Drop this sequence if it contains adapter sequence.
     //
     if (filter_adapter) {
-	int res;
-	if (paired_end)
+	int res = 1;
+	if (paired_end == true  && adp_2_len > 0)
 	    res = filter_adapter_seq(href, adapter_2, adp_2_len, adp_2_kmers,
 				     kmer_size, distance, len_limit);
-	else
+	if (paired_end == false && adp_1_len > 0)
 	    res = filter_adapter_seq(href, adapter_1, adp_1_len, adp_1_kmers,
 				     kmer_size, distance, len_limit);
 	if (res <= 0) {
+	    // cerr << "Sequence " << href->seq << " contains adapter.\n";
 	    counter["adapter"]++;
 	    href->retain = 0;
 	    return 0;
 	}
     }
 
-    if (barcode_type != null_null) 
+    if (barcode_type != null_null)
 	bc_log["retained"]++;
     counter["retained"]++;
 

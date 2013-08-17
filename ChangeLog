@@ -1,8 +1,13 @@
-Stacks 1.05 - August 15, 2013
+Stacks 1.05 - August 17, 2013
 -----------------------------
-	Bugfix: corrected barcode-specific counters in process_radtags. Overall counts were correct
-	but counts for barcodes were off due to shuffling of code that happened with support of
-	combinatorial barcodes.
+	Bugfix: adapter filtering code in process_radtags/process_shortreads bit rotted and was not
+	properly functioning. Switching from deprecated hash function to TR1 hash broke the expected
+	hashing	behavior for char *.
+	Bugfix: modified process_radtags/process_shortreads to handle single adapters when processing
+	paired-end data (previously you had to specify two adapters for paired data).
+	Bugfix: corrected barcode-specific counters in process_radtags/process_shortreads. Overall counts
+	were correct but counts for barcodes were off due to shuffling of code that happened with support
+	of combinatorial barcodes.
 
 Stacks 1.04 - July 25, 2013
 ---------------------------
