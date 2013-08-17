@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -600,38 +600,18 @@ correct_barcode(set<string> &bcs, Read *href, seqt type)
 // Functions for filtering adapter sequence
 //
 int
-init_adapter_seq(int kmer_size, char *adapter, int &adp_len, AdapterHash &kmers, vector<char *> &keys)
+init_adapter_seq(int kmer_size, char *adapter, int &adp_len, AdapterHash &kmers)
 {
-    char *kmer;
-    bool  exists;
-
+    string kmer;
     adp_len = strlen(adapter);
 
     int   num_kmers = adp_len - kmer_size + 1;
     char *p = adapter;
     for (int i = 0; i < num_kmers; i++) {
-	kmer = new char[kmer_size + 1];
-	kmer[kmer_size] = '\0';
-	strncpy(kmer, p, kmer_size);
-
-	exists = kmers.count(kmer) == 0 ? false : true;
+	kmer.assign(p, kmer_size);
 	kmers[kmer].push_back(i);
-	if (exists)
-	    delete [] kmer;
-	else
-	    keys.push_back(kmer);
 	p++;
     }
-
-    return 0;
-}
-
-int
-free_adapter_seq(vector<char *> &keys)
-{
-    for (uint i = 0; i < keys.size(); i++)
-	delete [] keys[i];
-    keys.clear();
 
     return 0;
 }
@@ -641,32 +621,28 @@ filter_adapter_seq(Read *href, char *adapter, int adp_len, AdapterHash &adp_kmer
 		   int kmer_size, int distance, int len_limit) 
 {
     vector<pair<int, int> > hits;
-    int   num_kmers = strlen(href->seq) - kmer_size + 1;
-    char *p = href->seq;
-
-    char *kmer = new char[kmer_size + 1];
-    kmer[kmer_size] = '\0';
+    int   num_kmers = href->len - kmer_size + 1;
+    const char *p   = href->seq;
+    string kmer;
 
     //
     // Identify matching kmers and their locations of occurance.
     //
-    // cerr << "Num kmers: " << num_kmers << "; P: " << p << "\n";
     for (int i = 0; i < num_kmers; i++) {
-	strncpy(kmer, p, kmer_size);
+	kmer.assign(p, kmer_size);
 
 	if (adp_kmers.count(kmer) > 0) {
 	    for (uint j = 0; j < adp_kmers[kmer].size(); j++) {
-		//cerr << "Kmer hit " << kmer << " at query position " << i << " at hit position " << adp_kmers[kmer][j] << "\n";
+		// cerr << "Kmer hit " << kmer << " at query position " << i << " at hit position " << adp_kmers[kmer][j] << "\n";
 		hits.push_back(make_pair(i, adp_kmers[kmer][j]));
 	    }
 	}
 	p++;
     }
 
-    delete [] kmer;
-
     //
-    // Scan backwards and then forwards and count the number of mismatches.
+    // Scan backwards from the position of the k-mer and then scan forwards 
+    // counting the number of mismatches.
     //
     int mismatches, i, j, start_pos;
 
@@ -684,7 +660,8 @@ filter_adapter_seq(Read *href, char *adapter, int adp_len, AdapterHash &adp_kmer
 	    j--;
 	}
 
-	if (mismatches > distance) continue;
+	if (mismatches > distance)
+	    continue;
 
 	start_pos = i + 1;
 	i = hits[k].first;
@@ -698,7 +675,7 @@ filter_adapter_seq(Read *href, char *adapter, int adp_len, AdapterHash &adp_kmer
 	}
 
 	// cerr << "Starting position: " << start_pos << "; Query end (i): " << i << "; adapter end (j): " << j 
-	//      << "; number of mismatches: " << mismatches << "; Seq Len: " << href->len << "\n";
+	//      << "; number of mismatches: " << mismatches << "; Seq Len: " << href->len << "; SeqSeq Len: " << strlen(href->seq) << "\n";
 
 	if (mismatches <= distance && (i == (int) href->len || j == adp_len)) {
 	    // cerr << "  Trimming or dropping.\n";

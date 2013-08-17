@@ -323,7 +323,7 @@ public:
 	}*/
 };
 
-typedef unordered_map<const char *, vector<int>, std::tr1::hash<const char *>, eqstr> AdapterHash;
+typedef unordered_map<string, vector<int>, std::tr1::hash<string> > AdapterHash;
 
 int  parse_illumina_v1(const char *);
 int  parse_illumina_v2(const char *);
@@ -338,8 +338,7 @@ int  process_barcode(Read *, Read *, BarcodePair &,
 bool correct_barcode(set<string> &, Read *, seqt);
 
 int  filter_adapter_seq(Read *, char *, int, AdapterHash &, int, int, int);
-int  init_adapter_seq(int, char *, int &, AdapterHash &, vector<char *> &);
-int  free_adapter_seq(vector<char *> &);
+int  init_adapter_seq(int, char *, int &, AdapterHash &);
 
 int  check_quality_scores(Read *, int, int, int, int);
 
