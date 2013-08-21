@@ -152,6 +152,12 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool l
 	c->id        = id;
 	c->add_consensus(parts[9].c_str());
 
+	//
+	// Read in the flags
+	//
+	c->deleveraged     = (parts[10] == "1" ? true : false);
+	c->lumberjackstack = (parts[12] == "1" ? true : false);
+
         //
         // Parse the physical genome location of this locus.
         //

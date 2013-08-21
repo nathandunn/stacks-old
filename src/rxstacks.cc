@@ -34,6 +34,8 @@ int    num_threads = 1;
 int    batch_id    = 0;
 string in_path;
 string out_path;
+double confounded_limit  = 0.75;
+bool   filter_confounded = false;
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -146,8 +148,8 @@ int main (int argc, char* argv[]) {
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
 
-    int      catalog_id, sample_id, tag_id;
-    string   file;
+    int    catalog_id, sample_id, tag_id;
+    string file;
 
     //
     // Process samples matched to the catalog, one by one.
@@ -167,39 +169,58 @@ int main (int argc, char* argv[]) {
 
 	cerr << "Making corrections to sample " << file << "...";
 
-        // #pragma omp parallel private(sample_id, catalog_id, tag_id)
-	// { 
-	Datum   *d;
-	Locus   *loc;
-	CSLocus *cloc;
-	set<pair<int, int> > processed;
+	set<pair<int, int> >           uniq_matches;
+	set<pair<int, int> >::iterator it;
+	vector<pair<int, int> >        matches;
 
-        // #pragma omp for schedule(dynamic, 1) 
+	//
+	// There are multiple matches per stack, but we only need to process
+	// each stack once to make corrections.
+	//
 	for (uint j = 0; j < catalog_matches[i].size(); j++) {
-	     catalog_id = catalog_matches[i][j]->cat_id;
-	     sample_id  = catalog_matches[i][j]->sample_id;
-	     tag_id     = catalog_matches[i][j]->tag_id;
+	    catalog_id = catalog_matches[i][j]->cat_id;
+	    tag_id     = catalog_matches[i][j]->tag_id;
 
-	     if (catalog.count(catalog_id) == 0) continue;
-
-	     //
-	     // There are multiple matches per stack, but we only need to process
-	     // each stack once to make corrections.
-	     //
-	     if (processed.count(make_pair(catalog_id, tag_id)) == 0) {
-		 processed.insert(make_pair(catalog_id, tag_id));
-
-		 d = pmap->datum(catalog_id, sample_id);
-
-		 if (d == NULL) continue;
-
-		 cloc = catalog[catalog_id];
-		 loc  = stacks[tag_id];
-
-		 prune_nucleotides(cloc, loc, log_fh);
-	     }
+	    uniq_matches.insert(make_pair(catalog_id, tag_id));
 	}
-        // }
+
+	//
+	// Put the catalog/tag ID pairs into a vector for parallel processing.
+	//
+	for (it = uniq_matches.begin(); it != uniq_matches.end(); it++)
+	    matches.push_back(*it);
+
+        #pragma omp parallel private(catalog_id, tag_id)
+	{ 
+	    Datum   *d;
+	    Locus   *loc;
+	    CSLocus *cloc;
+
+	    #pragma omp for schedule(dynamic, 1) 
+	    for (uint j = 0; j < matches.size(); j++) {
+		catalog_id = matches[j].first;
+		tag_id     = matches[j].second;
+
+		if (catalog.count(catalog_id) == 0) continue;
+
+		cloc = catalog[catalog_id];
+		loc  = stacks[tag_id];
+
+		if (filter_confounded && 
+		    ((double) cloc->confounded_cnt / (double) cloc->cnt > confounded_limit)) {
+		    // cerr << "Catalog locus " << cloc->id << " is confounded; confounded cnt: " 
+		    // 	 << cloc->confounded_cnt << "; total: " << cloc->cnt 
+		    // 	 << "; freq: " << (double) cloc->confounded_cnt / (double)cloc->cnt << "\n";
+		    loc->blacklisted = true;
+		}
+
+		d = pmap->datum(catalog_id, sample_id);
+
+		if (d == NULL) continue;
+
+		prune_nucleotides(cloc, loc, log_fh);
+	    }
+        }
 
 	cerr << "done.\n"
 	     << "Writing modified stacks, SNPs, alleles...";
@@ -212,9 +233,9 @@ int main (int argc, char* argv[]) {
 	//
 	// Free up memory
 	//
-	map<int, Locus *>::iterator it;
-	for (it = stacks.begin(); it != stacks.end(); it++)
-	    delete it->second;
+	map<int, Locus *>::iterator stack_it;
+	for (stack_it = stacks.begin(); stack_it != stacks.end(); stack_it++)
+	    delete stack_it->second;
     }
 
     log_fh.close();
@@ -252,7 +273,7 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, ofstream &log_fh)
 	    if (cloc->snps[i]->rank_2 != 0) cnucs.insert(cloc->snps[i]->rank_2);
 	    if (cloc->snps[i]->rank_3 != 0) cnucs.insert(cloc->snps[i]->rank_3);
 	    if (cloc->snps[i]->rank_4 != 0) cnucs.insert(cloc->snps[i]->rank_4);
-	    
+
 	    // cerr << "    Catalog has nucleotides: ";
 	    // for (it = cnucs.begin(); it != cnucs.end(); it++)
 	    // 	cerr << *it << ", ";
@@ -315,7 +336,7 @@ invoke_model(Locus *loc, int col, map<char, int> &nucs, ofstream &log_fh)
 	break;
     }
 
-    log_model_calls(log_fh, loc);
+    //log_model_calls(log_fh, loc);
 
     return 0;
 }
@@ -454,11 +475,13 @@ write_results(string file, map<int, Locus *> &m)
              << tag_1->loc.chr << "\t"
              << tag_1->loc.bp << "\t"
              << (tag_1->loc.strand == plus ? "+" : "-") << "\t"
-	     << "consensus\t" << "\t\t" 
+	     << "consensus" << "\t" 
+	     << "\t"
+	     << "\t" 
 	     << tag_1->con << "\t" 
-	     << "0" << "\t" 
-	     << "0" << "\t"
-	     << "0" << "\n";
+	     << (tag_1->deleveraged == true ? "1" : "0") << "\t"
+	     << (tag_1->blacklisted == true ? "1" : "0") << "\t"
+	     << (tag_1->lumberjackstack == true ? "1" : "0") << "\n";
 
 	//
 	// Write a sequence recording the output of the SNP model for each nucleotide.
@@ -645,23 +668,25 @@ parse_command_line(int argc, char* argv[])
      
     while (1) {
 	static struct option long_options[] = {
-	    {"help",        no_argument,       NULL, 'h'},
-            {"version",     no_argument,       NULL, 'v'},
-	    {"num_threads", required_argument, NULL, 't'},
-	    {"batch_id",    required_argument, NULL, 'b'},
-	    {"in_path",     required_argument, NULL, 'P'},
-	    {"outpath",     required_argument, NULL, 'o'},
+	    {"help",         no_argument,       NULL, 'h'},
+            {"version",      no_argument,       NULL, 'v'},
+	    {"conf_filter",  no_argument,       NULL, 'F'},
+	    {"num_threads",  required_argument, NULL, 't'},
+	    {"batch_id",     required_argument, NULL, 'b'},
+	    {"in_path",      required_argument, NULL, 'P'},
+	    {"outpath",      required_argument, NULL, 'o'},
 	    {"model_type",   required_argument, NULL, 'T'},
 	    {"bound_low",    required_argument, NULL, 'L'},
 	    {"bound_high",   required_argument, NULL, 'U'},
 	    {"alpha",        required_argument, NULL, 'A'},
+	    {"conf_lim",     required_argument, NULL, 'C'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvo:t:b:P:T:L:U:A:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvFo:t:b:P:T:L:U:A:C:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -706,6 +731,13 @@ parse_command_line(int argc, char* argv[])
 	    break;
 	case 'A':
 	    alpha = atof(optarg);
+	    break;
+	case 'F':
+	    filter_confounded = true;
+	    break;
+	case 'C':
+	    confounded_limit = is_double(optarg);
+	    filter_confounded = true;
 	    break;
         case 'v':
             version();
@@ -758,6 +790,11 @@ parse_command_line(int argc, char* argv[])
 	model_type = bounded;
     }
 
+    if (filter_confounded == true && (confounded_limit < 0 || confounded_limit > 1.0)) {
+	cerr << "Confounded locus limit is a percentage and must be between 0.0 and 1.0.\n";
+	help();
+    }
+
     return 0;
 }
 
@@ -776,6 +813,9 @@ void help() {
 	      << "  t: number of threads to run in parallel sections of code.\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n"
+	      << "  Filtering options:\n"
+	      << "    --conf_filter: filter confounded limit.\n"
+	      << "    --conf_lim <limit>: between 0.0 and 1.0 (default 0.75).\n"
 	      << "  Model options:\n" 
 	      << "    --model_type <type>: either 'snp' (default), 'bounded', or 'fixed'\n"
 	      << "    For the SNP or Bounded SNP model:\n"
