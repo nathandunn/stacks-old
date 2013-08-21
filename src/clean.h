@@ -210,9 +210,11 @@ public:
 	    }
 	} else if (this->read == 2) {
 	    switch(barcode_type) {
+	    case inline_inline:
 	    case index_inline:
 		this->pe_bc = this->inline_bc;
 		break;
+	    case index_index:
 	    case inline_index:
 		this->pe_bc = this->index_bc;
 		break;
