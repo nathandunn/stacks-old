@@ -136,7 +136,7 @@ public:
     };
     string annotation;
     string marker;
-    map<string, double> hap_freq; // Frequencies of observed haplotypes for this locus in the population.
+    map<string, int> hap_cnts;    // Counts of each observed haplotype for this locus in the population.
     double f;                     // Inbreeder's coefficient
     map<string, string> gmap;     // Observed haplotype to genotype map for this locus.
     int confounded_cnt;           // Number of samples/progeny containing confounded loci (more than one 

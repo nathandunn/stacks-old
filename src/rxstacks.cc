@@ -36,6 +36,8 @@ string in_path;
 string out_path;
 double confounded_limit  = 0.75;
 bool   filter_confounded = false;
+bool   prune_haplotypes  = false;
+int    max_haplotype_cnt = 0;
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -97,6 +99,17 @@ int main (int argc, char* argv[]) {
 	exit(1);
     }
 
+    log_fh << "# Sample\t"
+	   << "Confounded loci\t"
+	   << "Total nucs\t"
+	   << "Total nucs converted\t"
+	   << "Unk to Hom\t"
+	   << "Unk to Het\t"
+	   << "Hom to Unk\t"
+	   << "Het to Unk\t"
+	   << "Hom to Het\t"
+	   << "Het to Hom\t"
+	   << "Pruned Haplotypes\n";
 
     //
     // Load the catalog
@@ -190,13 +203,25 @@ int main (int argc, char* argv[]) {
 	for (it = uniq_matches.begin(); it != uniq_matches.end(); it++)
 	    matches.push_back(*it);
 
+	unsigned long int nuc_cnt        = 0;
+	unsigned long int unk_hom_cnt    = 0;
+	unsigned long int unk_het_cnt    = 0;
+	unsigned long int het_unk_cnt    = 0;
+	unsigned long int hom_unk_cnt    = 0;
+	unsigned long int het_hom_cnt    = 0;
+	unsigned long int hom_het_cnt    = 0;
+	unsigned long int conf_loci_cnt  = 0;
+	unsigned long int pruned_hap_cnt = 0;
+
         #pragma omp parallel private(catalog_id, tag_id)
 	{ 
 	    Datum   *d;
 	    Locus   *loc;
 	    CSLocus *cloc;
 
-	    #pragma omp for schedule(dynamic, 1) 
+            #pragma omp for schedule(dynamic, 1) reduction(+:nuc_cnt) reduction(+:unk_hom_cnt) reduction(+:unk_het_cnt) \
+		reduction(+:hom_unk_cnt) reduction(+:het_unk_cnt) reduction(+:hom_het_cnt) reduction(+:het_hom_cnt) \
+		reduction(+:conf_loci_cnt) reduction(+:pruned_hap_cnt)
 	    for (uint j = 0; j < matches.size(); j++) {
 		catalog_id = matches[j].first;
 		tag_id     = matches[j].second;
@@ -212,18 +237,55 @@ int main (int argc, char* argv[]) {
 		    // 	 << cloc->confounded_cnt << "; total: " << cloc->cnt 
 		    // 	 << "; freq: " << (double) cloc->confounded_cnt / (double)cloc->cnt << "\n";
 		    loc->blacklisted = true;
+		    conf_loci_cnt++;
 		}
 
 		d = pmap->datum(catalog_id, sample_id);
 
 		if (d == NULL) continue;
 
-		prune_nucleotides(cloc, loc, log_fh);
+		prune_nucleotides(cloc, loc, 
+				  nuc_cnt, 
+				  unk_hom_cnt, unk_het_cnt, 
+				  hom_unk_cnt, het_unk_cnt, 
+				  hom_het_cnt, het_hom_cnt);
+
+		//
+		// Prune haplotypes from this locus.
+		//
+		if (prune_haplotypes)
+		    prune_locus_haplotypes(cloc, d, loc, pruned_hap_cnt);
 	    }
         }
 
-	cerr << "done.\n"
-	     << "Writing modified stacks, SNPs, alleles...";
+	cerr << "done.\n";
+
+	unsigned long int total = unk_hom_cnt + unk_het_cnt + hom_unk_cnt + het_unk_cnt + hom_het_cnt + het_hom_cnt;
+
+	cerr << conf_loci_cnt << " confounded loci were blacklisted and not processed.\n"
+	     << "Total nucleotides processed: " << nuc_cnt << "\n"
+	     << "  Total nucleotides converted: " << total << "\n"
+	     << "    Converted from unknown to homozygous:      " << unk_hom_cnt << " nucleotides.\n"
+	     << "    Converted from unknown to heterozygous:    " << unk_het_cnt << " nucleotides.\n"
+	     << "    Converted from homozygous to unknown:      " << hom_unk_cnt << " nucleotides.\n"
+	     << "    Converted from heterozygous to unknown:    " << het_unk_cnt << " nucleotides.\n"
+	     << "    Converted from homozygous to heterozygous: " << hom_het_cnt << " nucleotides.\n"
+	     << "    Converted from heterozygous to homozygous: " << het_hom_cnt << " nucleotides.\n"
+	     << pruned_hap_cnt << " haplotypes were pruned.\n";
+
+	log_fh << file           << "\t"
+	       << conf_loci_cnt  << "\t"
+	       << nuc_cnt        << "\t"
+	       << total          << "\t"
+	       << unk_hom_cnt    << "\t"
+	       << unk_het_cnt    << "\t"
+	       << hom_unk_cnt    << "\t"
+	       << het_unk_cnt    << "\t"
+	       << hom_het_cnt    << "\t"
+	       << het_hom_cnt    << "\t"
+	       << pruned_hap_cnt << "\n";
+
+	cerr << "Writing modified stacks, SNPs, alleles...";
 
 	//
 	// Rewrite stacks, model outputs, and haplotypes.
@@ -243,14 +305,123 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
+int
+prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_hap_cnt)
+{
+    if (d->obshap.size() <= 2) return 0;
+
+    //
+    // Identify the two most frequent haplotypes in this sample.
+    //
+    vector<pair<string, int> > haplotypes;
+
+    for (uint i = 0; i < d->obshap.size(); i++) {
+	//
+	// Lookup the number of occurrences of this haplotype in the 
+	// population and store the result.
+	//
+	haplotypes.push_back(make_pair(string(d->obshap[i]), cloc->hap_cnts[d->obshap[i]]));
+    }
+
+    //
+    // Sort according to haplotype frequency.
+    //
+    sort(haplotypes.begin(), haplotypes.end(), compare_pair_haplotype);
+
+    if (haplotypes.size() <= 2) {
+	cerr << "Error processing catalog locus " << cloc->id << "\n";
+	return -1;
+    }
+
+    //
+    // Prune out excess haplotypes.
+    //
+    map<string, int>::iterator it;
+    uint   j, k, cat_snp, cat_idx, loc_snp, loc_idx;
+    string hap;
+
+    for (uint i = 2; i < haplotypes.size(); i++) {
+	//
+	// Make sure that those haplotypes we want to discard occur at a frequency lower
+	// than the second most frequent haplotype, instead of being tied for second.
+	//
+	if (haplotypes[i].second >= haplotypes[1].second ||
+	    (max_haplotype_cnt > 0 && haplotypes[i].second > max_haplotype_cnt))
+	    continue;
+
+	cat_snp =  0;
+	cat_idx = -1;
+	loc_snp =  0;
+	loc_idx = -1;
+	k   = -1;
+	j   = -1;
+	hap = "";
+
+	do {
+	    j++;
+	    loc_idx++;
+	    //
+	    // Advance to a het in the sample locus.
+	    //
+	    while (j < loc->snps.size() && loc->snps[j]->type != snp_type_het) j++;
+	    if (j >= loc->snps.size()) break;
+	    loc_snp = loc->snps[j]->col;
+
+	    do {
+		k++;
+		cat_idx++;
+		//
+		// Advance to the het in the catalog locus that corresponds to the sample locus.
+		//
+		while (k < cloc->snps.size() && cloc->snps[k]->type != snp_type_het) k++;
+		if (k >= cloc->snps.size()) break;
+		cat_snp = cloc->snps[k]->col;
+
+	    } while (cat_snp < loc_snp);
+
+	    //
+	    // Extract out the nucleotide from the catalog haplotype that matches the sample 
+	    // haplotype. For example, catalog haplotype may be 'ACGTG' while sample haplotype 
+	    // is 'CT'.
+	    //
+	    if (j < loc->snps.size() && k < cloc->snps.size() && cat_snp == loc_snp) {
+		hap += haplotypes[i].first.at(cat_idx);
+	    } else {
+		cerr << "Error processing catalog locus " << cloc->id << "\n";
+		return -1;
+	    }
+
+	} while (j < loc->snps.size());
+
+	//
+	// Remove the haplotype.
+	//
+	it = loc->alleles.find(hap);
+
+	if (it != loc->alleles.end()) {
+	    loc->alleles.erase(it);
+	    pruned_hap_cnt++;
+	} 
+	// else {
+	//     cerr << "Error erasing haplotype '" << hap << "' in catalog locus " << cloc->id << ", sample locus " << loc->id << "\n";
+	// }
+    }
+
+    return 0;
+}
 
 int
-prune_nucleotides(CSLocus *cloc, Locus *loc, ofstream &log_fh)
+prune_nucleotides(CSLocus *cloc, Locus *loc, unsigned long int &nuc_cnt, 
+		  unsigned long int &unk_hom_cnt, unsigned long int &unk_het_cnt, 
+		  unsigned long int &hom_unk_cnt, unsigned long int &het_unk_cnt, 
+		  unsigned long int &hom_het_cnt, unsigned long int &het_hom_cnt)
 {
     map<char, int>      nucs;
     set<char>           cnucs;
     set<char>::iterator it;
     set<int>            rows;
+
+    nuc_cnt += loc->len;
 
     for (uint i = 0; i < loc->snps.size() && i < cloc->snps.size(); i++) {
 	//
@@ -302,7 +473,12 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, ofstream &log_fh)
 	    //
 	    // Test pruned data for homozygosity or heterozygosity.
 	    //
-	    invoke_model(loc, i, nucs, log_fh);
+	    invoke_model(loc, i, nucs);
+
+	    log_model_calls(loc,
+			    unk_hom_cnt, unk_het_cnt, 
+			    hom_unk_cnt, het_unk_cnt, 
+			    hom_het_cnt, het_hom_cnt);
 	}
 
 	nucs.clear();
@@ -320,7 +496,7 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, ofstream &log_fh)
 }
 
 int 
-invoke_model(Locus *loc, int col, map<char, int> &nucs, ofstream &log_fh) 
+invoke_model(Locus *loc, int col, map<char, int> &nucs) 
 {
     //
     // Search this column for the presence of a SNP
@@ -335,8 +511,6 @@ invoke_model(Locus *loc, int col, map<char, int> &nucs, ofstream &log_fh)
     default: 
 	break;
     }
-
-    //log_model_calls(log_fh, loc);
 
     return 0;
 }
@@ -387,7 +561,10 @@ call_alleles(Locus *loc, set<int> &rows)
 }
 
 int
-log_model_calls(ofstream &log_fh, Locus *loc)
+log_model_calls(Locus *loc,
+		unsigned long int &unk_hom_cnt, unsigned long int &unk_het_cnt, 
+		unsigned long int &hom_unk_cnt, unsigned long int &het_unk_cnt, 
+		unsigned long int &hom_het_cnt, unsigned long int &het_hom_cnt)
 {
     //
     // Log model call changes
@@ -397,10 +574,12 @@ log_model_calls(ofstream &log_fh, Locus *loc)
 	case 'U':
 	    switch(loc->snps[j]->type) {
 	    case snp_type_het:
-		log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'U' << "\t" << 'E' << "\n";
+		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'U' << "\t" << 'E' << "\n";
+		unk_het_cnt++;
 		break;
 	    case snp_type_hom:
-		log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'U' << "\t" << 'O' << "\n";
+		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'U' << "\t" << 'O' << "\n";
+		unk_hom_cnt++;
 		break;
 	    case snp_type_unk:
 	    default:
@@ -412,11 +591,13 @@ log_model_calls(ofstream &log_fh, Locus *loc)
 	    case snp_type_het:
 		break;
 	    case snp_type_hom:
-		log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'E' << "\t" << 'O' << "\n";
+		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'E' << "\t" << 'O' << "\n";
+		het_hom_cnt++;
 		break;
 	    case snp_type_unk:
 	    default:
-		log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'E' << "\t" << 'U' << "\n";
+		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'E' << "\t" << 'U' << "\n";
+		het_unk_cnt++;
 		break;
 	    }
 	    break;
@@ -424,13 +605,15 @@ log_model_calls(ofstream &log_fh, Locus *loc)
 	default:
 	    switch(loc->snps[j]->type) {
 	    case snp_type_het:
-		log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'O' << "\t" << 'E' << "\n";
+		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'O' << "\t" << 'E' << "\n";
+		hom_het_cnt++;
 		break;
 	    case snp_type_hom:
 		break;
 	    case snp_type_unk:
 	    default:
-		log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'O' << "\t" << 'U' << "\n";
+		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'O' << "\t" << 'U' << "\n";
+		hom_unk_cnt++;
 		break;
 	    }
 	    break;
@@ -565,11 +748,11 @@ write_results(string file, map<int, Locus *> &m)
         char pct[id_len];
 	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
             sprintf(pct, "%.2f", ((t->second/double(tag_1->reads.size())) * 100));
-	    alle << "0"              << "\t" 
-		 << tag_1->sample_id << "\t" 
-		 << tag_1->id        << "\t" 
-		 << t->first         << "\t" 
-		 << pct              << "\t" 
+	    alle << "0"              << "\t"
+		 << tag_1->sample_id << "\t"
+		 << tag_1->id        << "\t"
+		 << t->first         << "\t"
+		 << pct              << "\t"
 		 << t->second        << "\n";
 	}
     }
@@ -671,6 +854,7 @@ parse_command_line(int argc, char* argv[])
 	    {"help",         no_argument,       NULL, 'h'},
             {"version",      no_argument,       NULL, 'v'},
 	    {"conf_filter",  no_argument,       NULL, 'F'},
+	    {"prune_haplo",  no_argument,       NULL, 'H'},
 	    {"num_threads",  required_argument, NULL, 't'},
 	    {"batch_id",     required_argument, NULL, 'b'},
 	    {"in_path",      required_argument, NULL, 'P'},
@@ -680,13 +864,14 @@ parse_command_line(int argc, char* argv[])
 	    {"bound_high",   required_argument, NULL, 'U'},
 	    {"alpha",        required_argument, NULL, 'A'},
 	    {"conf_lim",     required_argument, NULL, 'C'},
+	    {"max_haplo",    required_argument, NULL, 'M'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvFo:t:b:P:T:L:U:A:C:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvFHo:t:b:P:T:L:U:A:C:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -738,6 +923,12 @@ parse_command_line(int argc, char* argv[])
 	case 'C':
 	    confounded_limit = is_double(optarg);
 	    filter_confounded = true;
+	    break;
+	case 'H':
+	    prune_haplotypes = true;
+	    break;
+	case 'M':
+	    max_haplotype_cnt = is_integer(optarg);
 	    break;
         case 'v':
             version();
@@ -806,7 +997,7 @@ void version() {
 
 void help() {
     std::cerr << "rxstacks " << VERSION << "\n"
-              << "rxstackss -b batch_id -P path [-o path] [-t threads] [-v] [-h]" << "\n"
+              << "rxstacks -b batch_id -P path [-o path] [-t threads] [-v] [-h]" << "\n"
 	      << "  b: Batch ID to examine when exporting from the catalog.\n"
 	      << "  P: path to the Stacks output files.\n"
 	      << "  o: output path to write results.\n"
@@ -814,8 +1005,10 @@ void help() {
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n"
 	      << "  Filtering options:\n"
-	      << "    --conf_filter: filter confounded limit.\n"
-	      << "    --conf_lim <limit>: between 0.0 and 1.0 (default 0.75).\n"
+	      << "    --conf_filter: filter confounded loci.\n"
+	      << "    --conf_lim <limit>: between 0.0 and 1.0 (default 0.75), proportion of loci in population that must be confounded relative to the catalog locus.\n"
+	      << "    --prune_haplo: prune out non-biological haplotypes unlikely to occur in the population.\n"
+	      << "    --max_haplo_cnt <limit>: only consider haplotypes for pruning if they occur in fewer than max_haplo_cnt samples.\n"
 	      << "  Model options:\n" 
 	      << "    --model_type <type>: either 'snp' (default), 'bounded', or 'fixed'\n"
 	      << "    For the SNP or Bounded SNP model:\n"

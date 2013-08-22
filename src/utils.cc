@@ -150,3 +150,7 @@ bool compare_ints(int a, int b) {
 bool compare_pair_snp(pair<string, SNP *> a, pair<string, SNP *> b) {
     return (a.second->col < b.second->col);
 }
+
+bool compare_pair_haplotype(pair<string, int> a, pair<string, int> b) {
+    return (a.second > b.second);
+}
