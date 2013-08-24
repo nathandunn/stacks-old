@@ -38,6 +38,7 @@ double confounded_limit  = 0.75;
 bool   filter_confounded = false;
 bool   prune_haplotypes  = false;
 int    max_haplotype_cnt = 0;
+bool   verbose           = false;
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -78,6 +79,7 @@ int main (int argc, char* argv[]) {
     //
     // Set the number of OpenMP parallel threads to execute.
     //
+    if (verbose) num_threads = 1;
     #ifdef _OPENMP
     omp_set_num_threads(num_threads);
     #endif
@@ -87,29 +89,10 @@ int main (int argc, char* argv[]) {
 	exit(1);
 
     //
-    // Open the log file.
+    // Open and initialize the log file.
     //
-    stringstream log;
-    log << "batch_" << batch_id << ".rxstacks.log";
-    string log_path = out_path + log.str();
-    ofstream log_fh(log_path.c_str(), ofstream::out);
-
-    if (log_fh.fail()) {
-        cerr << "Error opening log file '" << log_path << "'\n";
-	exit(1);
-    }
-
-    log_fh << "# Sample\t"
-	   << "Confounded loci\t"
-	   << "Total nucs\t"
-	   << "Total nucs converted\t"
-	   << "Unk to Hom\t"
-	   << "Unk to Het\t"
-	   << "Hom to Unk\t"
-	   << "Het to Unk\t"
-	   << "Hom to Het\t"
-	   << "Het to Hom\t"
-	   << "Pruned Haplotypes\n";
+    ofstream log_fh;
+    init_log(argc, argv, log_fh);
 
     //
     // Load the catalog
@@ -181,7 +164,14 @@ int main (int argc, char* argv[]) {
 	}
 
 	cerr << "Making corrections to sample " << file << "...";
-
+	if (verbose)
+	    log_fh << "\n# Sample " << file << ", Sample ID " << sample_id << "\n"
+		   << "# Sample Id\t" 
+		   << "Locus ID\t" 
+		   << "SNP Col\t" 
+		   << "Orig Value\t" 
+		   << "Corr Value\n";
+	
 	set<pair<int, int> >           uniq_matches;
 	set<pair<int, int> >::iterator it;
 	vector<pair<int, int> >        matches;
@@ -244,8 +234,8 @@ int main (int argc, char* argv[]) {
 
 		if (d == NULL) continue;
 
-		prune_nucleotides(cloc, loc, 
-				  nuc_cnt, 
+		prune_nucleotides(cloc, loc, log_fh,
+				  nuc_cnt,
 				  unk_hom_cnt, unk_het_cnt, 
 				  hom_unk_cnt, het_unk_cnt, 
 				  hom_het_cnt, het_hom_cnt);
@@ -273,6 +263,18 @@ int main (int argc, char* argv[]) {
 	     << "    Converted from heterozygous to homozygous: " << het_hom_cnt << " nucleotides.\n"
 	     << pruned_hap_cnt << " haplotypes were pruned.\n";
 
+	if (verbose)
+	    log_fh << "# Sample\t"
+		   << "Confounded loci\t"
+		   << "Total nucs\t"
+		   << "Total nucs converted\t"
+		   << "Unk to Hom\t"
+		   << "Unk to Het\t"
+		   << "Hom to Unk\t"
+		   << "Het to Unk\t"
+		   << "Hom to Het\t"
+		   << "Het to Hom\t"
+		   << "Pruned Haplotypes\n";
 	log_fh << file           << "\t"
 	       << conf_loci_cnt  << "\t"
 	       << nuc_cnt        << "\t"
@@ -411,7 +413,7 @@ prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &prune
 }
 
 int
-prune_nucleotides(CSLocus *cloc, Locus *loc, unsigned long int &nuc_cnt, 
+prune_nucleotides(CSLocus *cloc, Locus *loc, ofstream &log_fh, unsigned long int &nuc_cnt, 
 		  unsigned long int &unk_hom_cnt, unsigned long int &unk_het_cnt, 
 		  unsigned long int &hom_unk_cnt, unsigned long int &het_unk_cnt, 
 		  unsigned long int &hom_het_cnt, unsigned long int &het_hom_cnt)
@@ -475,7 +477,7 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, unsigned long int &nuc_cnt,
 	    //
 	    invoke_model(loc, i, nucs);
 
-	    log_model_calls(loc,
+	    log_model_calls(loc, log_fh,
 			    unk_hom_cnt, unk_het_cnt, 
 			    hom_unk_cnt, het_unk_cnt, 
 			    hom_het_cnt, het_hom_cnt);
@@ -561,7 +563,7 @@ call_alleles(Locus *loc, set<int> &rows)
 }
 
 int
-log_model_calls(Locus *loc,
+log_model_calls(Locus *loc, ofstream &log_fh,
 		unsigned long int &unk_hom_cnt, unsigned long int &unk_het_cnt, 
 		unsigned long int &hom_unk_cnt, unsigned long int &het_unk_cnt, 
 		unsigned long int &hom_het_cnt, unsigned long int &het_hom_cnt)
@@ -574,11 +576,13 @@ log_model_calls(Locus *loc,
 	case 'U':
 	    switch(loc->snps[j]->type) {
 	    case snp_type_het:
-		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'U' << "\t" << 'E' << "\n";
+		if (verbose)
+		    log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'U' << "\t" << 'E' << "\n";
 		unk_het_cnt++;
 		break;
 	    case snp_type_hom:
-		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'U' << "\t" << 'O' << "\n";
+		if (verbose)
+		    log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'U' << "\t" << 'O' << "\n";
 		unk_hom_cnt++;
 		break;
 	    case snp_type_unk:
@@ -591,12 +595,14 @@ log_model_calls(Locus *loc,
 	    case snp_type_het:
 		break;
 	    case snp_type_hom:
-		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'E' << "\t" << 'O' << "\n";
+		if (verbose)
+		    log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'E' << "\t" << 'O' << "\n";
 		het_hom_cnt++;
 		break;
 	    case snp_type_unk:
 	    default:
-		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'E' << "\t" << 'U' << "\n";
+	        if (verbose)
+		    log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'E' << "\t" << 'U' << "\n";
 		het_unk_cnt++;
 		break;
 	    }
@@ -605,14 +611,16 @@ log_model_calls(Locus *loc,
 	default:
 	    switch(loc->snps[j]->type) {
 	    case snp_type_het:
-		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'O' << "\t" << 'E' << "\n";
+		if (verbose)
+		    log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'O' << "\t" << 'E' << "\n";
 		hom_het_cnt++;
 		break;
 	    case snp_type_hom:
 		break;
 	    case snp_type_unk:
 	    default:
-		// log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'O' << "\t" << 'U' << "\n";
+		if (verbose)
+		    log_fh << loc->sample_id << "\t" << loc->id << "\t" << loc->snps[j]->col << "\t" << 'O' << "\t" << 'U' << "\n";
 		hom_unk_cnt++;
 		break;
 	    }
@@ -844,6 +852,54 @@ fill_catalog_snps(map<int, CSLocus *> &catalog)
     return 0;
 }
 
+int
+init_log(int argc, char **argv, ofstream &log_fh)
+{
+    //
+    // Open the log file.
+    //
+    stringstream log;
+    log << "batch_" << batch_id << ".rxstacks.log";
+    string log_path = out_path + log.str();
+    log_fh.open(log_path.c_str(), ofstream::out);
+
+    if (log_fh.fail()) {
+        cerr << "Error opening log file '" << log_path << "'\n";
+	exit(1);
+    }
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
+
+    log_fh << "#";
+    for (int i = 0; i < argc; i++)
+	log_fh << " " << argv[i]; 
+    log_fh << "\n" << "# rxstacks executed " << date;
+
+    if (!verbose)
+	log_fh << "\n" 
+	       << "# Sample\t"
+	       << "Confounded loci\t"
+	       << "Total nucs\t"
+	       << "Total nucs converted\t"
+	       << "Unk to Hom\t"
+	       << "Unk to Het\t"
+	       << "Hom to Unk\t"
+	       << "Het to Unk\t"
+	       << "Hom to Het\t"
+	       << "Het to Hom\t"
+	       << "Pruned Haplotypes\n";
+
+    return 0;
+}
+
 int 
 parse_command_line(int argc, char* argv[]) 
 {
@@ -855,6 +911,7 @@ parse_command_line(int argc, char* argv[])
             {"version",      no_argument,       NULL, 'v'},
 	    {"conf_filter",  no_argument,       NULL, 'F'},
 	    {"prune_haplo",  no_argument,       NULL, 'H'},
+	    {"verbose",      no_argument,       NULL, 'V'},
 	    {"num_threads",  required_argument, NULL, 't'},
 	    {"batch_id",     required_argument, NULL, 'b'},
 	    {"in_path",      required_argument, NULL, 'P'},
@@ -871,7 +928,7 @@ parse_command_line(int argc, char* argv[])
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvFHo:t:b:P:T:L:U:A:C:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvVFHo:t:b:P:T:L:U:A:C:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -929,6 +986,9 @@ parse_command_line(int argc, char* argv[])
 	    break;
 	case 'M':
 	    max_haplotype_cnt = is_integer(optarg);
+	    break;
+	case 'V':
+	    verbose = true;
 	    break;
         case 'v':
             version();
@@ -1015,6 +1075,8 @@ void help() {
 	      << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1 (default), 0.05, 0.01, or 0.001.\n"
 	      << "    For the Bounded SNP model:\n"
 	      << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
-	      << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n";
+	      << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
+	      << "  Logging Options:\n"
+	      << "      --verbose: extended logging, including coordinates of all changed nucleotides (forces single-threaded execution).\n";
     exit(0);
 }

@@ -68,14 +68,15 @@ void    help( void );
 void    version( void );
 int     parse_command_line(int, char**);
 int     build_file_list(vector<pair<int, string> > &);
+int     init_log(int, char **, ofstream &);
 int     prune_locus_haplotypes(CSLocus *, Datum *, Locus *, unsigned long int &);
-int     prune_nucleotides(CSLocus *, Locus *, unsigned long int &,
+int     prune_nucleotides(CSLocus *, Locus *, ofstream &, unsigned long int &,
 			  unsigned long int &, unsigned long int &, unsigned long int &,
 			  unsigned long int &, unsigned long int &, unsigned long int &);
 int     invoke_model(Locus *, int, map<char, int> &);
 int     call_alleles(Locus *, set<int> &); 
 int     fill_catalog_snps(map<int, CSLocus *> &);
-int     log_model_calls(Locus *, 
+int     log_model_calls(Locus *, ofstream &,
 			unsigned long int &, unsigned long int &, unsigned long int &,
 			unsigned long int &, unsigned long int &, unsigned long int &);
 int     write_results(string, map<int, Locus *> &);
