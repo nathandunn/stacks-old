@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
 #
 # This file is part of Stacks.
 #
@@ -38,6 +38,7 @@ my $cat_white_list = "";
 my $in_path        = "";
 my $out_path       = "";
 my $samp_path      = "";
+my $out_type       = "fasta";
 
 parse_command_line();
 
@@ -45,7 +46,7 @@ my (@files, %matches, %stacks, %reads, %marker_wl);
 
 build_file_list(\@files);
 
-my ($file, $num_files, $i);
+my ($file, $num_files, $i, $key);
 
 if (length($cat_white_list) > 0) {
     load_white_list($cat_white_list, \%marker_wl);
@@ -55,7 +56,7 @@ if (length($cat_white_list) > 0) {
 $num_files = scalar(@files);
 $i         = 1;
 foreach $file (@files) {
-    printf(STDERR "Processing tag file % 2s of % 2s [%s]\n", $i, $num_files, $file);
+    printf(STDERR "Processing tag file % 2s of % 2s [%s]\n", $i, $num_files, $file->{'prefix'});
     #
     # Load the sstacks file, listing matches between the stacks and the catalog
     #
@@ -64,22 +65,22 @@ foreach $file (@files) {
     #
     # Load the ustacks tag file for each sample, containing the read-to-stack mappings
     #
-    $stacks{$file} = {};
+    $stacks{$file->{'prefix'}} = {};
 
-    load_stacks($in_path, $file, $stacks{$file});
+    load_stacks($in_path, $file, $stacks{$file->{'prefix'}});
 
     $i++;
 }
 
 $i = 1;
 foreach $file (@files) {
-    printf(STDERR "Processing sample file % 2s of % 2s [%s]\n", $i, $num_files, $file);
+    printf(STDERR "Processing sample file % 2s of % 2s [%s]\n", $i, $num_files, $file->{'prefix'});
 
-    $reads{$file} = {};
+    $reads{$file->{'prefix'}} = {};
     #
     # Map the read-pairs to the stack/catalog match they correspond to.
     #
-    process_read_pairs($samp_path, $file, \%stacks, $reads{$file});
+    process_read_pairs($samp_path, $file, \%stacks, $reads{$file->{'prefix'}});
 
     $i++;
 }
@@ -93,7 +94,7 @@ sub load_matches {
 
     my ($file, $in_fh, $line, @parts, $key);
 
-    $file = $in_path . "/" . $in_file . ".matches.tsv";
+    $file = $in_path . "/" . $in_file->{'prefix'} . $in_file->{'suffix'} . ".matches.tsv";
     open($in_fh, "<$file") or die("Unable to open '$file', $!\n");
 
     while ($line = <$in_fh>) {
@@ -109,9 +110,9 @@ sub load_matches {
         }
 
         #
-        # Index by catalog ID -> sample/stack ID
+        # Index by catalog_ID -> sample_ID|stack_ID
         #
-        $key = $in_file . "|" . $parts[4];
+        $key = $in_file->{'prefix'} . "|" . $parts[4];
         $matches->{$parts[2]}->{$key}++;
     }
 
@@ -123,14 +124,14 @@ sub load_stacks {
 
     my ($file, $in_fh, $line, @parts);
 
-    $file = $in_path . "/" . $in_file . ".tags.tsv";
+    $file = $in_path . "/" . $in_file->{'prefix'} . $in_file->{'suffix'} . ".tags.tsv";
     open($in_fh, "<$file") or die("Unable to open '$file', $!\n");
 
     while ($line = <$in_fh>) {
         chomp $line;
         @parts = split(/\t/, $line);
 
-        next if ($parts[6] eq "consensus");
+        next if ($parts[6] eq "consensus" || $parts[6] eq "model");
 
         #
         # Index by sequence ID -> stack ID
@@ -144,9 +145,13 @@ sub load_stacks {
 sub process_read_pairs {
     my ($in_path, $in_file, $stacks, $reads) = @_;
 
-    my ($file, $in_fh, $line, $seq, $key, $read_id);
+    my ($file, $in_fh, $line, $seq, $qual, $key, $read_id);
 
-    $file = $in_path . "/" . $in_file . ".fq_2";
+    if ($in_file->{'suffix'} eq ".1") {
+	$file = $in_path . "/" . $in_file->{'prefix'} . ".2.fq";
+    } else {
+	$file = $in_path . "/" . $in_file->{'prefix'} . ".fq_2";
+    }
     open($in_fh, "<$file") or die("Unable to open paired-end input file '$file'\n");
 
     while ($line = <$in_fh>) {
@@ -161,9 +166,10 @@ sub process_read_pairs {
 	# Read the repeated ID and the quality scores.
 	#
 	<$in_fh>;
-	<$in_fh>;
+	$qual = <$in_fh>;
+	chomp $qual;
 
-        $key = $stacks->{$in_file}->{$read_id};
+        $key = $stacks->{$in_file->{'prefix'}}->{$read_id};
 
         next if (!defined($key));
 
@@ -171,7 +177,7 @@ sub process_read_pairs {
             $reads->{$key} = [];
         }
 
-        push(@{$reads->{$key}}, {'id' => $read_id, 'seq' => $seq});
+        push(@{$reads->{$key}}, {'id' => $read_id, 'seq' => $seq, 'qual' => $qual});
     }
 }
 
@@ -194,16 +200,26 @@ sub print_results {
         #
         next if (count_reads($matches->{$cat_id}, $reads) < $read_lim);
 
-        $path = $out_path . "/" . $cat_id . ".fa";
+        $path  = $out_path . "/" . $cat_id;
+	$path .= $out_type eq "fasta" ? ".fa" : ".fq";
         open($out_fh, ">$path") or die("Unable to open $path; '$!'\n");
 
         foreach $key (keys %{$matches->{$cat_id}}) {
+
             ($sample, $stack_id) = split(/\|/, $key);
 
             foreach $read (@{$reads->{$sample}->{$stack_id}}) {
-                print $out_fh
-                    ">", $cat_id, "|", $stack_id, "|", $read->{'id'}, "\n",
-                    $read->{'seq'}, "\n";
+		if ($out_type eq "fasta") {
+		    print $out_fh
+			">", $cat_id, "|", $sample, "|", $stack_id, "|", $read->{'id'}, "\n",
+			$read->{'seq'}, "\n";
+		} else {
+		    print $out_fh
+			"@", $cat_id, "|", $sample, "|", $stack_id, "|", $read->{'id'}, "\n",
+			$read->{'seq'}, "\n",
+			"+\n",
+			$read->{'qual'}, "\n";
+		}
             }
         }
 
@@ -255,7 +271,7 @@ sub count_reads {
 sub build_file_list {
     my ($files) = @_;
 
-    my (@ls, $line, $file);
+    my (@ls, $line, $file, $prefix, $suffix);
 
     # Load a white list of files to process if it is supplied.
     my %wl;
@@ -278,7 +294,14 @@ sub build_file_list {
 	    next if (!defined($wl{$file}));
 	}
 
-	push(@{$files}, $file);
+	if ($file =~ /\.1$/) {
+	    ($prefix, $suffix) = ($file =~ /^(.+)(\.1)$/);
+	} else {
+	    $prefix = $file;
+	    $suffix = "";
+	}
+
+	push(@{$files}, {'prefix' => $prefix, 'suffix' => $suffix});
     }
 }
 
@@ -294,6 +317,7 @@ sub load_white_list {
 	chomp $line;
 
 	next if (length($line) == 0);
+	next if ($line =~ /^\s*#/);
 
 	$wl->{$line}++;
     }
@@ -308,6 +332,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-o$/) { $out_path   = shift @ARGV; }
 	elsif ($_ =~ /^-s$/) { $samp_path  = shift @ARGV; }
         elsif ($_ =~ /^-r$/) { $read_lim   = shift @ARGV; }
+	elsif ($_ =~ /^-t$/) { $out_type   = shift @ARGV; }
 	elsif ($_ =~ /^-W$/) { $white_list = shift @ARGV; }
 	elsif ($_ =~ /^-w$/) { $cat_white_list = shift @ARGV; }
 	elsif ($_ =~ /^-d$/) { $debug++; }
@@ -317,6 +342,11 @@ sub parse_command_line {
 	    print STDERR "Unknown command line option: '$_'\n";
 	    usage();
 	}
+    }
+
+    if ($out_type ne "fasta" && $out_type ne "fastq") {
+	pritn STDERR "Output type must be either 'fasta' or 'fastq'.\n";
+	usage();
     }
 
     $in_path   = substr($in_path, 0, -1)   if (substr($in_path, -1)   eq "/");
@@ -332,10 +362,11 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-sort_read_pairs.pl -p path -s path -o path [-r reads] [-W white_list] [-w white_list] [-d] [-h]
+sort_read_pairs.pl -p path -s path -o path [-t type] [-r reads] [-W white_list] [-w white_list] [-d] [-h]
     p: path to the stacks output files.
     s: path to paired-end sample files.
     o: path to output the collated FASTA files.
+    t: output type, either 'fasta' (default) or 'fastq'.
     r: number of reads required to output data for a particular stack.
     W: a white list of files to process in the input path.
     w: a white list of catalog IDs to include.

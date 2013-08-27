@@ -1,7 +1,93 @@
+Stacks 1.05 - August 17, 2013
+-----------------------------
+	Bugfix: adapter filtering code in process_radtags/process_shortreads bit rotted and was not
+	properly functioning. Switching from deprecated hash function to TR1 hash broke the expected
+	hashing	behavior for char *.
+	Bugfix: modified process_radtags/process_shortreads to handle single adapters when processing
+	paired-end data (previously you had to specify two adapters for paired data).
+	Bugfix: corrected barcode-specific counters in process_radtags/process_shortreads. Overall counts
+	were correct but counts for barcodes were off due to shuffling of code that happened with support
+	of combinatorial barcodes.
+
+Stacks 1.04 - July 25, 2013
+---------------------------
+	Bugfix: process_radtags was not properly handling index_index and inline_inline barcode types.
+	Bugfix: the hindIII restriction enzyme sequence was incorrectly specified in renz.h.
+	Bugfix: ustacks wasn't properly removing file suffix when gzip files are processed.
+
+Stacks 1.03 - June 28, 2013
+---------------------------
+	Bugfix: non-barcoded data were not being handled properly by process_radtags/process_shortreads.
+
+Stacks 1.02 - June 24, 2013
+---------------------------
+	Bugfix: single-end barcode, double-digested data were not being handled properly by
+	process_radtags causing a crash.
+	Feature: added support for PLINK and Beagle output files from the populations program.
+	Feature: Modified the minor allele frequency (MAF) filter to remove polymorphic nucleotide
+	SNPs from Stacks output on a per-population basis. So, if a second allele is present
+	at a frequency below the MAF, that nucleotide site is not output (although other sites
+	at the same RAD locus could still be output).
+	Bugfix: Tri-allelic loci were being output into the STRUCTURE, GENEPOP and PHASE
+	output (but not in sumstats or Fst).
+
+Stacks 1.01 - June 07, 2013
+---------------------------
+	Bugfix: an off-by-one error was preventing haplotypes from being verified by sstacks
+	if a SNP occurred in the last position of the read. This could cause tags to fail
+	to match to the catalog if there is a SNP in the final position.
+
+Stacks 1.0 - June 06, 2013
+--------------------------
+	Feature: added XbaI and BamHI restriction enzymes to process_radtags.
+	Feature: added code to output genotypes in PHASE/fastPHASE format.
+	Feature: extended combinatorial barcodes support so one can process single-end data
+	that contains both an inline and indexed barcode.
+	Feature: added command line option and supporting code to cstacks to allow samples
+	to be added to an existing catalog.
+	Feature: refactored command line handling in denovo_map.pl and ref_map.pl to be much 
+	more flexible. Arbitrary command line options can now be passed to particular pipeline
+	programs using the -X flag.
+	Feature: for genetic maps, catalog may now be constructed out of mulitple parents, 
+	genotypes is smart enough to cross check the parents used to construct the catalog
+	against those submitted to genotypes for producing a map. Will allow for a single 
+	catalog to be used across a series of crosses so all maps share the same catalog IDs.
+	Feature: added option to genotypes to import manual corrections exported from Stacks
+	SQL database.
+	Feature: added --log_fst_comp option to populations to log components of the Fst
+	calculations to a file for debugging / testing purposes.
+	Bugfix: corrected handling of files in kmer_filter. Adding support for gzipped files
+	broke file handling in some cases.
+
+Stacks 0.999991 - May 14, 2013
+------------------------------
+	Feature: changed populations to use AMOVA Fst for batch_1.fst_summary.tsv file. Previously
+	it used the Binomial Fst.
+	Bugfix: If --write_single_snp not specified, Structure output was not naming loci properly (it
+	was naming each SNP from the same RAD locus using the same ID, instead of differentiating each
+	SNP in each RAD locus).
+	Feature: Added Sau3AI and SexAI restriction enzymes. Fixed bug in specificaion of MseI, MspI
+	enzymes.
+	Bugfix: changed VCF and Fst code in populations to output SNPs from reads aligned to the
+	negative strand on a reference genome correctly.
+
+Stacks 0.99999 - May 06, 2013
+-----------------------------
+	Bugfix: process_shortreads/process_radtags not working with non-barcoded data.
+
+Stacks 0.99998 - May 01, 2013
+-----------------------------
+	Feature: Added option to sort_read_pairs.pl to output FASTQ if desired.
+	Bugfix: make sort_read_pairs.pl understand new file naming scheme.
+	Feature: added mseI, mspI restriction enzymes to process_radtags.
+	Bugfix: corrected sphI cutsite sequence in process_radtags.
+	Bugfix: stopped "uninitialized value" errors in export_sql.pl when marker type is
+	undefined for a particular map.
+
 Stacks 0.99997 - April 01, 2013
 -------------------------------
-	Bugfix: paired barcode could become uninitialized on second pair of files in 
-	process_radtags/process_shortreads causing all barcodes to mismatch. Made Read 
+	Bugfix: paired barcode could become uninitialized on second pair of files in
+	process_radtags/process_shortreads causing all barcodes to mismatch. Made Read
 	class explicitly initialize everything.
 
 Stacks 0.99996 - March 24, 2013

@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -28,6 +28,7 @@ class Fasta: public Input {
 
  public:
     Fasta(const char *path) : Input(path) { };
+    Fasta(string path) : Input(path.c_str()) { };
     ~Fasta() {};
     Seq *next_seq();
     int  next_seq(Seq &);

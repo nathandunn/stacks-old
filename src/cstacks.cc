@@ -25,14 +25,13 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-// $Id$
-//
 
 #include "cstacks.h"
 
 // Global variables to hold command-line options.
 queue<pair<int, string> > samples;
 string  out_path;
+string  catalog_path;
 int     batch_id        = 0;
 int     ctag_dist       = 0;
 searcht search_type     = sequence;
@@ -59,14 +58,27 @@ int main (int argc, char* argv[]) {
     map<int, CLocus *> catalog;
     map<int, CLocus *>::iterator cat_it;
     map<int, QLocus *>::iterator query_it;
+    pair<int, string> s;
+    int i;
 
-    pair<int, string> s = samples.front();
-    samples.pop();
+    if (catalog_path.length() > 0) {
+	cerr << "Initializing existing catalog...\n";
+	if (!initialize_existing_catalog(catalog_path, catalog)) {
+	    cerr << "Failed to initialize the catalog.\n";
+	    return 1;
+	}
+	i = 1;
 
-    cerr << "Initializing catalog...\n";
-    if (!initialize_catalog(s, catalog)) {
-        cerr << "Failed to initialize the catalog.\n";
-        return 1;
+    } else {
+	s = samples.front();
+	samples.pop();
+
+	cerr << "Initializing new catalog...\n";
+	if (!initialize_new_catalog(s, catalog)) {
+	    cerr << "Failed to initialize the catalog.\n";
+	    return 1;
+	}
+	i = 2;
     }
 
     //
@@ -78,7 +90,6 @@ int main (int argc, char* argv[]) {
 	update_catalog_index(catalog, cat_index);
     }
 
-    int i = 2;
     while (!samples.empty()) {
         map<int, QLocus *> sample;
 
@@ -1093,7 +1104,9 @@ int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofs
     return 0;
 }
 
-int initialize_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog) {
+int 
+initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog) 
+{
     map<int, CLocus *> tmp_catalog;
 
     //
@@ -1122,8 +1135,54 @@ int initialize_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog) {
     return 1;
 }
 
+int 
+initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog) 
+{
+    //
+    // Parse the input files.
+    //
+    if (!load_loci(catalog_path, catalog, false))
+        return 0;
+
+    //
+    // Iterate over the catalog entires and convert the stack components
+    // into source objects, to record what samples each locus came from.
+    //
+    map<int, CLocus *>::iterator j;
+    CLocus *loc;
+    char   *p, *q;
+    int     sample_id, locus_id;
+
+    for (j = catalog.begin(); j != catalog.end(); j++) {
+	loc = j->second;
+
+	for (uint i = 0; i < loc->comp.size(); i++) {
+	    //
+	    // Parse the ID into sample ID / locus ID, given 43_1356, parse into
+	    // sample ID 43 and locus ID 1356.
+	    //
+	    for (p = loc->comp[i]; *p != '_' && *p != '\0'; p++);
+	    if (*p != '_') 
+		return 0;
+	    p++;
+	    sample_id = strtol(loc->comp[i], &q, 10);
+	    if (*q != '_') 
+		return 0;
+
+	    locus_id = strtol(p, &q, 10);
+
+	    if (*q != '\0')
+		return 0;
+
+	    loc->sources.push_back(make_pair(sample_id, locus_id));
+	}
+    }
+
+    return 1;
+}
+
 int parse_command_line(int argc, char* argv[]) {
-    int c, sid;
+    int    c;
     string sstr;
 
     while (1) {
@@ -1136,8 +1195,8 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"report_mmatches",    no_argument, NULL, 'R'},
 	    {"batch_id",     required_argument, NULL, 'b'},
 	    {"ctag_dist",    required_argument, NULL, 'n'},
+	    {"catalog",      required_argument, NULL, 'c'},
 	    {"sample",       required_argument, NULL, 's'},
-	    {"sample_id",    required_argument, NULL, 'S'},
 	    {"outpath",      required_argument, NULL, 'o'},
 	    {"num_threads",  required_argument, NULL, 'p'},
 	    {0, 0, 0, 0}
@@ -1146,7 +1205,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgvuRmo:s:S:b:p:n:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgvuRmo:s:c:b:p:n:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1178,6 +1237,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 's':
 	    sstr = optarg;
 	    samples.push(make_pair(0, sstr));
+	    break;
+	case 'c':
+	    catalog_path = optarg;
 	    break;
      	case 'o':
 	    out_path = optarg;
@@ -1223,7 +1285,7 @@ void version() {
 
 void help() {
     std::cerr << "cstacks " << VERSION << "\n"
-              << "cstacks -b batch_id -s sample_file [-s sample_file_2 ...] [-o path] [-g] [-n num] [-p num_threads] [-h]" << "\n"
+              << "cstacks -b batch_id -s sample_file [-s sample_file_2 ...] [-o path] [-g] [-n num] [-p num_threads] [--catalog path] [-h]" << "\n"
 	      << "  b: MySQL ID of this batch." << "\n"
 	      << "  s: filename prefix from which to load loci into the catalog." << "\n"
 	      << "  o: output path to write results." << "\n"
@@ -1231,7 +1293,9 @@ void help() {
 	      << "  m: include tags in the catalog that match to more than one entry (default false)." << "\n"
               << "  n: number of mismatches allowed between sample tags when generating the catalog (default 0)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-	      << "  h: display this help messsage." << "\n"
+	      << "  h: display this help messsage." << "\n\n"
+	      << "  Catalog editing:\n"
+	      << "    --catalog <path>: provide the path to an existing catalog. cstacks will add data to this existing catalog.\n\n"
 	      << "  Advanced options:\n" 
 	      << "    --report_mmatches: report query loci that match more than one catalog locus.\n";
 

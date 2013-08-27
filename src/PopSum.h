@@ -44,6 +44,7 @@ class PopPair {
 public:
     int    loc_id;
     int    bp;
+    int    col;
     double alleles; // Number of alleles sampled at this location.
     double pi;
     double fst;
@@ -57,14 +58,14 @@ public:
     double wfst;       // Weigted Fst (kernel-smoothed)
     double wfst_pval;  // p-value of weighted Fst from bootstrapping.
     double amova_fst;  // AMOVA Fst method, from Weir, Genetic Data Analysis II .
-    double wamova_fst; // Kernel-smoothed amova Fst value.
-    double jakob_fst;  // Jakobsson, Edge, Rosenberg (2013), Fst based on equation 4.
-    double wjakob_fst; // Kernel-smoothed Jakobsson Fst value.
+    double camova_fst; // Corrected AMOVA Fst value.
+    double wamova_fst; // Kernel-smoothed AMOVA Fst value.
     int    snp_cnt;    // Number of SNPs in kernel-smoothed window centered on this SNP.
 
     PopPair() { 
 	loc_id     = 0;
 	bp         = 0;
+	col        = 0;
 	alleles    = 0.0;
 	pi         = 0.0;
 	fst        = 0.0;
@@ -77,9 +78,8 @@ public:
 	ci_high    = 0.0;
 	wfst_pval  = 0.0;
 	amova_fst  = 0.0;
+	camova_fst = 0.0;
 	wamova_fst = 0.0;
-	jakob_fst  = 0.0;
-	wjakob_fst = 0.0;
 	snp_cnt    = 0;
     }
 };
@@ -88,6 +88,8 @@ class SumStat {
 public:
     int    loc_id;
     int    bp;
+    bool   incompatible_site;
+    bool   filtered_site;
     double num_indv;
     char   p_nuc;
     char   q_nuc;
@@ -124,6 +126,8 @@ public:
 	wFis      = 0.0;
 	wFis_pval = 0.0;
 	snp_cnt   = 0;
+	incompatible_site = false;
+	filtered_site     = false;
     }
 };
 
@@ -219,12 +223,13 @@ public:
     int loci_cnt() { return this->num_loci; }
     int rev_locus_index(int index) { return this->rev_locus_order[index]; }
     int pop_cnt()  { return this->num_pops; }
+    int pop_index(int index)     { return this->pop_order[index]; }
     int rev_pop_index(int index) { return this->rev_pop_order[index]; }
 
     LocSum  **locus(int);
     LocSum   *pop(int, int);
     LocTally *locus_tally(int);
-    PopPair  *Fst(int, int, int, int);
+    PopPair  *Fst(int, int, int, int, ofstream *);
     int       fishers_exact_test(PopPair *, double, double, double, double);
 
 private:
@@ -319,13 +324,15 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	    // Site is incompatible, log it.
 	    //
 	    if (res < 0) {
+		s[pop_index]->nucs[loc->snps[k]->col].incompatible_site = true;
+
 		incompatible_loci++;
 		log_fh << "within_population\t"
 		       << "incompatible_locus\t"
 		       << loc->id << "\t"
 		       << loc->loc.chr << "\t"
-		       << loc->sort_bp() + k << "\t"
-		       << k << "\t" 
+		       << loc->sort_bp(loc->snps[k]->col) << "\t"
+		       << loc->snps[k]->col << "\t" 
 		       << population_id << "\n";
 	    }
 
@@ -529,7 +536,7 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
 }
 
 template<class LocusT>
-PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) 
+PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos, ofstream *log_fh) 
 {
     LocSum  *s_1  = this->pop(locus, pop_1);
     LocSum  *s_2  = this->pop(locus, pop_2);
@@ -611,6 +618,21 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
 
     double Fst = 1 - (num / den);
 
+    if (log_fh != NULL)
+	*log_fh << n_1 << "\t"
+		<< n_2 << "\t"
+		<< tot_alleles << "\t"
+		<< p_1 << "\t"
+		<< q_1 << "\t"
+		<< p_2 << "\t"
+		<< q_2 << "\t"
+		<< pi_1 << "\t"
+		<< pi_2 << "\t"
+		<< pi_all << "\t"
+		<< bcoeff_1 << "\t"
+		<< bcoeff_2 << "\t"
+		<< Fst << "\t\t";
+
     pair->alleles = tot_alleles;
     pair->fst     = Fst;
     pair->pi      = pi_all;
@@ -655,17 +677,26 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
 	/ 
 	(p_avg_cor * (1 - p_avg_cor));
 
-    //
-    // Calculate Fst using a pure parametric method (assumes allele counts are real, not 
-    // samples). Jakobsson, Edge, and Rosenberg. "The Relationship Between Fst and the 
-    // Frequency of the Most Frequent Allele." Genetics 193:515-528. Equation 4.
-    //
-    double sigma_1 = p_1_freq + q_1_freq;
-    double sigma_2 = p_2_freq + q_2_freq;
-    double delta_1 = fabs(p_1_freq - p_2_freq);
-    double delta_2 = fabs(q_1_freq - q_2_freq);
+    if (log_fh != NULL)
+	*log_fh << p_1_freq << "\t"
+		<< q_1_freq << "\t"
+		<< p_2_freq << "\t"
+		<< q_2_freq << "\t"
+		<< p_avg_cor << "\t"
+		<< n_avg_cor << "\t"
+		<< pair->amova_fst << "\n";
 
-    pair->jakob_fst = (pow(delta_1, 2) + pow(delta_2, 2)) / ( 4 - (pow(sigma_1, 2) + pow(sigma_2, 2)) );
+    // //
+    // // Calculate Fst using a pure parametric method (assumes allele counts are real, not 
+    // // samples). Jakobsson, Edge, and Rosenberg. "The Relationship Between Fst and the 
+    // // Frequency of the Most Frequent Allele." Genetics 193:515-528. Equation 4.
+    // //
+    // double sigma_1 = p_1_freq + q_1_freq;
+    // double sigma_2 = p_2_freq + q_2_freq;
+    // double delta_1 = fabs(p_1_freq - p_2_freq);
+    // double delta_2 = fabs(q_1_freq - q_2_freq);
+
+    // pair->jakob_fst = (pow(delta_1, 2) + pow(delta_2, 2)) / ( 4 - (pow(sigma_1, 2) + pow(sigma_2, 2)) );
 
     return pair;
 }
@@ -694,8 +725,7 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
     // Record the results in the PopSum object.
     //
     s->nucs[pos].loc_id   = locus->id;
-    //s->nucs[pos].bp       = locus->loc.bp + pos;
-    s->nucs[pos].bp       = locus->sort_bp() + pos;
+    s->nucs[pos].bp       = locus->sort_bp(pos);
     s->nucs[pos].num_indv = num_indv;
 
     if (num_indv > 0) {
@@ -870,15 +900,15 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     if (minor_allele_freq > 0) {
 	if (allele_p < allele_q) {
 	    if (allele_p < minor_allele_freq) {
-		allele_q += allele_p;
-		allele_p  = 0;
 		s->nucs[pos].pi = 0;
+		s->nucs[pos].filtered_site = true;
+		return 0;
 	    }
 	} else {
 	    if (allele_q < minor_allele_freq) {
-		allele_p += allele_q;
-		allele_q  = 0;
 		s->nucs[pos].pi = 0;
+		s->nucs[pos].filtered_site = true;
+		return 0;
 	    }
 	}
     }
@@ -901,9 +931,8 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     //
     // Record the results in the PopSum object.
     //
-    //s->nucs[pos].bp       = locus->loc.bp + pos;
     s->nucs[pos].loc_id   = locus->id;
-    s->nucs[pos].bp       = locus->sort_bp() + pos;
+    s->nucs[pos].bp       = locus->sort_bp(pos);
     s->nucs[pos].num_indv = num_indv;
     s->nucs[pos].p        = allele_p > allele_q ? allele_p : allele_q;
     s->nucs[pos].p_nuc    = allele_p > allele_q ? p_allele : q_allele;
