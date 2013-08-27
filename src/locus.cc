@@ -27,8 +27,11 @@
 //
 #include "locus.h"
 
-uint Locus::sort_bp() {
-    return this->loc.strand == plus ? this->loc.bp : (this->loc.bp - this->len);
+uint Locus::sort_bp(uint k) {
+    if (this->loc.strand == plus)
+	return this->loc.bp + k;
+    else
+	return k == 0 ? this->loc.bp - this->len : this->loc.bp - k;
 }
 
 int Locus::add_consensus(const char *seq) {
@@ -69,7 +72,7 @@ Locus::populate_alleles()
 	k = 0;
 
 	for (i = this->snps.begin(); i != this->snps.end(); i++) {
-	    if ((*i)->col < this->len - 1)
+	    if ((*i)->col < this->len)
 		s.replace((*i)->col, 1, 1, j->first[k]);
 	    k++;
 	}

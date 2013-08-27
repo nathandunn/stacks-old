@@ -1396,6 +1396,12 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
     //
     size_t pos_1 = in_file.find_last_of("/");
     size_t pos_2 = in_file.find_last_of(".");
+
+    if (in_file.substr(pos_2) == ".gz") {
+	in_file = in_file.substr(0, pos_2);
+	pos_2   = in_file.find_last_of(".");
+    }
+
     string tag_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".tags.tsv";
     string snp_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".snps.tsv";
     string all_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".alleles.tsv";

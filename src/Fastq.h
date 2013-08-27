@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -27,6 +27,7 @@ class Fastq: public Input {
 
 public:
     Fastq(const char *path) : Input(path) { };
+    Fastq(string path) : Input(path.c_str()) { };
     ~Fastq() {};
     Seq *next_seq();
     int  next_seq(Seq &s);

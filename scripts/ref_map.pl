@@ -41,21 +41,16 @@ my $out_path     = "";
 my $popmap_path  = "";
 my $db           = "";
 my $data_type    = "map";
-my $min_cov      = 0;
-my $min_dist     = 0;
-my $fuzzy_match  = 0;
-my $num_threads  = 0;
 my $batch_id     = -1;
 my $sample_id    = 1;
 my $desc         = ""; # Database description of this dataset
 my $date         = ""; # Date relevent to this data, formatted for SQL: 2009-05-31
-my $alpha        = 0;
-my $bound_low    = 0;
-my $bound_high   = 1;
 
 my @parents;
 my @progeny;
 my @samples;
+
+my (@_pstacks, @_cstacks, @_sstacks, @_genotypes, @_populations);
 
 my $cmd_str = $0 . " " . join(" ", @ARGV);
 
@@ -96,17 +91,9 @@ foreach $parent (@samples) {
     push(@types, "sample");
 }
 
-my (@results, $cmd, $threads, $fuzzym, $minc, $ppath, $pop_cnt, $bl, $bh, $al, $model);
+my (@results, $cmd, $pop_cnt);
 
 $pop_cnt = scalar(keys %pops);
-$minc    = $min_cov     > 0 ? "-m $min_cov"     : "";
-$threads = $num_threads > 0 ? "-p $num_threads" : "";
-$fuzzym  = $fuzzy_match > 0 ? "-n $fuzzy_match" : "";
-$ppath   = length($popmap_path) > 0 ? "-M $popmap_path" : "";
-$bl      = $bound_low   > 0 ? "--bound_low $bound_low" : "";
-$bh      = $bound_high  < 1 ? "--bound_high $bound_high" : "";
-$al      = $alpha       > 0 ? "--alpha $alpha" : "";
-$model   = (length($bl) > 0 || length($bh) > 0) ? "--model_type bounded" : "";
 
 #
 # Open the log file
@@ -118,13 +105,13 @@ print $log_fh
     "ref_map.pl started at ", strftime("%Y-%m-%d %H:%M:%S",(localtime(time))), "\n",
     $cmd_str, "\n";
 
-if ($sql == 1 && $dry_run == 0) {
+if ($sql == 1) {
     #
     # SQL Batch ID for this set of Radtags, along with description and date of 
     # sequencing. Insert this batch data into the database.
     # 
-    `mysql --defaults-file=$cnf $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'"`;
-} else {
+    `mysql --defaults-file=$cnf $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'"` if ($dry_run == 0);
+
     print STDERR  "mysql --defaults-file=$cnf $db -e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'\"\n";
     print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'\"\n";
 }
@@ -158,22 +145,26 @@ foreach $sample (@parents, @progeny, @samples) {
     printf("Identifying unique stacks; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
     printf($log_fh "Identifying unique stacks; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
 
-    if ($sql == 1 && $dry_run == 0) {
-	`mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop"`;
-	@results = `mysql --defaults-file=$cnf $db -N -B -e "SELECT id FROM samples WHERE sample_id=$i AND batch_id=$batch_id AND type='$type' AND file='$pfile'"`;
-	chomp $results[0];
-	$sample_id = $results[0];
-    } else {
-	print STDERR "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop\"\n";
+    if ($sql == 1) {
+	if ($dry_run == 0) {
+	    `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop"`;
+	    @results = `mysql --defaults-file=$cnf $db -N -B -e "SELECT id FROM samples WHERE sample_id=$i AND batch_id=$batch_id AND type='$type' AND file='$pfile'"`;
+	    chomp $results[0];
+	    $sample_id = $results[0];
+	}
+	print STDERR  "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop\"\n";
+	print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop\"\n";
     }
 
     $map{$pfile} = $sample_id;
 
-    $cmd = $exe_path . "pstacks -t $ftype -f $sample -o $out_path -i $sample_id $minc $model $bl $bh $al $threads 2>&1";
-    print STDERR "$cmd\n";
-    print $log_fh    "$cmd\n";
+    $cmd = $exe_path . "pstacks -t $ftype -f $sample -o $out_path -i $sample_id " . join(" ", @_pstacks) . " 2>&1";
+    print STDERR  "$cmd\n";
+    print $log_fh "$cmd\n";
     @results = `$cmd` if ($dry_run == 0);
     write_results(\@results, $log_fh);
+
+    print STDERR "  Loading pstacks output to $db..." if ($sql == 1);
 
     $file = "$out_path/$pfile" . ".tags.tsv";
     import_sql_file($log_fh, $file, "unique_tags", 0);
@@ -183,6 +174,8 @@ foreach $sample (@parents, @progeny, @samples) {
 
     $file = "$out_path/$pfile" . ".alleles.tsv";
     import_sql_file($log_fh, $file, "alleles", 0);
+
+    print STDERR "done.\n" if ($sql == 1);
 
     $i++;
 
@@ -194,7 +187,7 @@ my ($rid, $pfile, $parents, $cat_file);
 #
 # Generate catalog of RAD-Tags
 #
-print STDERR "Generating RAD-Tag catalog...\n";
+print STDERR "Generating catalog...\n";
 foreach $sample (@parents, @samples) {
     my ($prefix, $suffix) = ($sample =~ /^(.+)\.(.+)$/);
 
@@ -208,13 +201,14 @@ foreach $sample (@parents, @samples) {
 }
 
 $cat_file = "batch_" . $batch_id;
-$cmd      = $exe_path . "cstacks -g -b $batch_id -o $out_path $parents $threads $fuzzym 2>&1";
+$cmd      = $exe_path . "cstacks -g -b $batch_id -o $out_path $parents " . join(" ", @_cstacks) . " 2>&1";
 print STDERR  "$cmd\n";
 print $log_fh "$cmd\n";
 @results =    `$cmd` if ($dry_run == 0);
 print $log_fh @results;
 
-print STDERR "Importing catalog to MySQL database\n";
+print STDERR "Importing catalog to MySQL database..." if ($sql == 1);
+
 $file = "$out_path/$cat_file" . ".catalog.tags.tsv";
 import_sql_file($log_fh, $file, "catalog_tags", 0);
 
@@ -223,6 +217,8 @@ import_sql_file($log_fh, $file, "catalog_snps", 0);
 
 $file = "$out_path/$cat_file" . ".catalog.alleles.tsv";
 import_sql_file($log_fh, $file, "catalog_alleles", 0);
+
+print STDERR "done.\n" if ($sql == 1);
 
 #
 # Match parents and progeny to the catalog
@@ -240,11 +236,11 @@ foreach $sample (@parents, @progeny, @samples) {
         $pfile = $prefix;
     }
 
-    printf(STDERR "Matching RAD-Tags to catalog; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
+    printf(STDERR "Matching samples to catalog; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
 
     $rid = $map{$pfile};
 
-    $cmd = $exe_path . "sstacks -g -b $batch_id -c $out_path/$cat_file -s $out_path/$pfile -o $out_path $threads 2>&1";
+    $cmd = $exe_path . "sstacks -g -b $batch_id -c $out_path/$cat_file -s $out_path/$pfile -o $out_path " . join(" ", @_sstacks) . " 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd` if ($dry_run == 0);
@@ -260,7 +256,9 @@ if ($data_type eq "map") {
     #
     # Generate a set of observed haplotypes and a set of markers and generic genotypes
     #
-    $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -t gen -r 1 -c -s  2>&1";
+    printf(STDERR "Generating genotypes...\n");
+
+    $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -t gen -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd` if ($dry_run == 0);
@@ -271,8 +269,11 @@ if ($data_type eq "map") {
 
     $file = "$out_path/batch_" . $batch_id . ".genotypes_1.txt";
     import_sql_file($log_fh, $file, "catalog_genotypes", 0);
+
 } else {
-    $cmd = $exe_path . "populations -b $batch_id -P $out_path -s $ppath 2>&1";
+    printf(STDERR "Calculating population-level summary statistics\n");
+
+    $cmd = $exe_path . "populations -b $batch_id -P $out_path -s " . join(" ", @_populations) . "2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd` if ($dry_run == 0);
@@ -431,20 +432,22 @@ sub import_sql_file {
     $ignore = "IGNORE $skip_lines LINES" if ($skip_lines > 0);
 
     @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore"` if ($sql == 1 && $dry_run == 0);
-    print STDERR  "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
-    print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
+
+    if ($sql == 1) {
+	print STDERR  "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
+	print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
+    }
 }
 
 sub parse_command_line {
+    my $arg;
+
     while (@ARGV) {
 	$_ = shift @ARGV;
 	if    ($_ =~ /^-p$/) { push(@parents, shift @ARGV); }
 	elsif ($_ =~ /^-r$/) { push(@progeny, shift @ARGV); }
 	elsif ($_ =~ /^-s$/) { push(@samples, shift @ARGV); }
 	elsif ($_ =~ /^-o$/) { $out_path    = shift @ARGV; }
-	elsif ($_ =~ /^-m$/) { $min_cov     = shift @ARGV; }
-        elsif ($_ =~ /^-n$/) { $fuzzy_match = shift @ARGV; }
-        elsif ($_ =~ /^-T$/) { $num_threads = shift @ARGV; }
 	elsif ($_ =~ /^-D$/) { $desc        = shift @ARGV; }
 	elsif ($_ =~ /^-e$/) { $exe_path    = shift @ARGV; }
 	elsif ($_ =~ /^-b$/) { $batch_id    = shift @ARGV; }
@@ -452,11 +455,62 @@ sub parse_command_line {
 	elsif ($_ =~ /^-a$/) { $date        = shift @ARGV; }
 	elsif ($_ =~ /^-S$/) { $sql         = 0; }
 	elsif ($_ =~ /^-B$/) { $db          = shift @ARGV; }
-	elsif ($_ =~ /^-O$/) { $popmap_path = shift @ARGV; }
-	elsif ($_ =~ /^--bound_low$/)  { $bound_low  = shift @ARGV; }
-	elsif ($_ =~ /^--bound_high$/) { $bound_high = shift @ARGV; }
-	elsif ($_ =~ /^--alpha$/)      { $alpha      = shift @ARGV; }
 	elsif ($_ =~ /^-d$/) { $dry_run++; }
+	elsif ($_ =~ /^-O$/) { 
+	    $popmap_path = shift @ARGV;
+	    push(@_populations, "-M " . $popmap_path); 
+
+	} elsif ($_ =~ /^-T$/) {
+	    $arg = shift @ARGV;
+	    push(@_pstacks, "-p " . $arg); 
+	    push(@_cstacks, "-p " . $arg); 
+	    push(@_sstacks, "-p " . $arg); 
+	    push(@_populations, "-t " . $arg); 
+
+	} elsif ($_ =~ /^-m$/) { 
+	    push(@_pstacks,   "-m " . shift @ARGV); 
+
+	} elsif ($_ =~ /^-n$/) { 
+	    push(@_cstacks, "-n " . shift @ARGV); 
+
+	} elsif ($_ =~ /^--bound_low$/) { 
+	    push(@_pstacks, "--bound_low " . shift @ARGV); 
+	    push(@_pstacks, "--model_type bounded");
+
+	} elsif ($_ =~ /^--bound_high$/) { 
+	    push(@_pstacks, "--bound_high " . shift @ARGV); 
+	    push(@_pstacks, "--model_type bounded");
+	} elsif ($_ =~ /^--alpha$/) { 
+	    push(@_pstacks, "--alpha " . shift @ARGV); 
+
+	} elsif ($_ =~ /^-X$/) {
+	    #
+	    # Pass an arbitrary command-line option to a pipeline program.
+	    #
+	    # Command line option must be of the form '-X "program:option"'
+	    #
+	    $arg = shift @ARGV;
+	    my ($prog, $opt) = ($arg =~ /^(\w+):(.+)$/);
+
+	    if ($prog eq "pstacks") {
+		push(@_pstacks, $opt); 
+
+	    } elsif ($prog eq "cstacks") {
+		push(@_cstacks, $opt); 
+
+	    } elsif ($prog eq "sstacks") {
+		push(@_sstacks, $opt); 
+
+	    } elsif ($prog eq "genotypes") {
+		push(@_genotypes, $opt); 
+
+	    } elsif ($prog eq "populations") {
+		push(@_populations, $opt); 
+	    } else {
+		print STDERR "Unknown pipeline program, '$arg'\n";
+		usage();
+	    }
+	}
 	elsif ($_ =~ /^-v$/) { version(); exit(); }
 	elsif ($_ =~ /^-h$/) { usage(); }
 	else {
@@ -491,18 +545,6 @@ sub parse_command_line {
 	$data_type = "population";
     } else {
 	$data_type = "map";
-    }
-
-    if ($alpha != 0 && $alpha != 0.1 && $alpha != 0.05 && $alpha != 0.01 && $alpha != 0.001) {
-	print STDERR "The value of alpha must be 0.1, 0.05, 0.01, or 0.001.\n";
-	usage();
-    }
-
-    if ($bound_low != 0 || $bound_high != 1) {
-	if ($bound_low < 0 || $bound_low > 1 || $bound_high < 0 || $bound_high > 1) {
-	    print STDERR "SNP model bounds must be between 0 and 1.0.\n";
-	    usage();
-	}
     }
 }
 
@@ -539,6 +581,9 @@ ref_map.pl -p path -r path [-s path] -o path [-n mismatches] [-m min_cov] [-T nu
     --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).
     --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).
     --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.
+
+  Arbitrary command line options:
+    -X "program:option": pass a command line option to one of the pipeline components, e.g.'-X "sstacks:-x"'.
 
 EOQ
 

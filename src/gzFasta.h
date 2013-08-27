@@ -39,6 +39,13 @@ class GzFasta: public Input {
             exit(EXIT_FAILURE);
 	}
     };
+    GzFasta(string path) : Input() { 
+	this->gz_fh = gzopen(path.c_str(), "rb");
+	if (!this->gz_fh) {
+	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
+            exit(EXIT_FAILURE);
+	}
+    };
     ~GzFasta() {
 	gzclose(this->gz_fh);
     };

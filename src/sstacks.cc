@@ -531,7 +531,7 @@ int find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sa
     #pragma omp parallel
     {
         #pragma omp for reduction(+:matches) reduction(+:tot_hap) reduction(+:ver_hap) reduction(+:nomatch) reduction(+:mmatch)
-	for (uint k = 0; k < keys.size(); k++) {
+ 	for (uint k = 0; k < keys.size(); k++) {
 	    QLocus *query = sample_2[keys[k]];	    
 
             //
@@ -544,13 +544,13 @@ int find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sa
 	    set<int> loci_hit;
 
             for (q = query->strings.begin(); q != query->strings.end(); q++) {
-                //cerr << "  Looking for haplotype: " << q->first << " with sequence " << q->second.substr(0, min_tag_len) << "\n";
+                // cerr << "  Looking for haplotype: " << q->first << " with sequence " << q->second.substr(0, min_tag_len) << "\n";
 
                 hit = sample_1_map.find(q->second.substr(0, min_tag_len).c_str());
 
                 if (hit != sample_1_map.end()) {
 		    tot_hap++;
-                    //cerr << "    Found a match for " << hit->first << "\n";
+                    // cerr << "    Found a match for " << hit->first << "\n";
 
                     for (c = hit->second.begin(); c != hit->second.end(); c++) {
 			//
