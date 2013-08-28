@@ -32,7 +32,6 @@ use constant true  => 1;
 use constant false => 0;
 
 my $debug          = 0;
-my $read_lim       = 8;
 my $white_list     = "";
 my $cat_white_list = "";
 my $in_path        = "";
@@ -249,11 +248,6 @@ sub print_results {
         #
         next if (check_mult_catalog_matches($matches->{$cat_id}) == true);
 
-        #
-        # Check that we have reads for this catalog ID to avoid opening mostly empty files.
-        #
-        # next if (count_reads($matches->{$cat_id}, $reads) < $read_lim);
-
         $path  = $out_path . "/" . $cat_id;
 	$path .= $out_type eq "fasta" ? ".fa" : ".fq";
         open($out_fh, ">>$path") or die("Unable to open $path; '$!'\n");
@@ -389,7 +383,6 @@ sub parse_command_line {
 	if    ($_ =~ /^-p$/) { $in_path    = shift @ARGV; }
 	elsif ($_ =~ /^-o$/) { $out_path   = shift @ARGV; }
 	elsif ($_ =~ /^-s$/) { $samp_path  = shift @ARGV; }
-        elsif ($_ =~ /^-r$/) { $read_lim   = shift @ARGV; }
 	elsif ($_ =~ /^-t$/) { $out_type   = shift @ARGV; }
 	elsif ($_ =~ /^-W$/) { $white_list = shift @ARGV; }
 	elsif ($_ =~ /^-w$/) { $cat_white_list = shift @ARGV; }
@@ -420,12 +413,11 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-sort_read_pairs.pl -p path -s path -o path [-t type] [-r reads] [-W white_list] [-w white_list] [-d] [-h]
+sort_read_pairs.pl -p path -s path -o path [-t type] [-W white_list] [-w white_list] [-d] [-h]
     p: path to the stacks output files.
     s: path to paired-end sample files.
     o: path to output the collated FASTA files.
     t: output type, either 'fasta' (default) or 'fastq'.
-    r: number of reads required to output data for a particular stack.
     W: a white list of files to process in the input path.
     w: a white list of catalog IDs to include.
     h: display this help message.
