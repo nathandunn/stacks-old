@@ -40,7 +40,8 @@ class Bam: public Input {
     int parse_header();
     int parse_cigar(const char *, vector<pair<char, uint> > &, bool);
     int parse_bam_cigar(vector<pair<char, uint> > &, bool);
-    int find_start_bp(int, vector<pair<char, uint> > &);
+    int find_start_bp_pos(int, vector<pair<char, uint> > &);
+    int find_start_bp_neg(int, vector<pair<char, uint> > &);
     int edit_gaps(vector<pair<char, uint> > &, char *);
 
  public:
@@ -112,7 +113,9 @@ Bam::next_seq()
     vector<pair<char, uint> > cigar;
     this->parse_bam_cigar(cigar, flag);
 
-    uint bp = flag ? this->find_start_bp(this->aln->core.pos, cigar) : this->aln->core.pos;
+    uint bp = flag ? 
+	this->find_start_bp_neg(this->aln->core.pos, cigar) : 
+	this->find_start_bp_pos(this->aln->core.pos, cigar);
 
     //
     // Fetch the sequence.
@@ -244,7 +247,7 @@ Bam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool o
 }
 
 int 
-Bam::find_start_bp(int aln_bp, vector<pair<char, uint> > &cigar)
+Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
 {
     uint size = cigar.size();
     char op;
@@ -255,15 +258,30 @@ Bam::find_start_bp(int aln_bp, vector<pair<char, uint> > &cigar)
 	dist = cigar[i].second;
 
 	switch(op) {
-	case 'S':
-	case 'D':
-	    break;
-	case 'M':
 	case 'I':
+	    break;
+	case 'S':
+	case 'M':
+	case 'D':
 	    aln_bp += dist;
 	    break;
 	}
     }
+
+    return aln_bp;
+}
+
+int 
+Bam::find_start_bp_pos(int aln_bp, vector<pair<char, uint> > &cigar)
+{
+    char op;
+    uint dist;
+
+    op   = cigar[0].first;
+    dist = cigar[0].second;
+
+    if (op == 'S')
+	aln_bp -= dist;
 
     return aln_bp;
 }

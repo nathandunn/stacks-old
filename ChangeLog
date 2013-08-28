@@ -1,3 +1,6 @@
+Stacks 1.06 - August 28, 2013
+-----------------------------
+	Bugfix: corrected locus starting base in reference-aligned data.
 	Feature: refactored sort_read_pairs.pl to process input files one at a time, without retaining
 	them in memory. The program should now be able to handle an arbitrary number of samples.
 	Feature: sort_read_pairs.pl can now read gzipped files directly.

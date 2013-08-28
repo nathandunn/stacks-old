@@ -34,7 +34,8 @@
 
 class Sam: public Input {
     int parse_cigar(const char *, vector<pair<char, uint> > &, bool);
-    int find_start_bp(int, vector<pair<char, uint> > &);
+    int find_start_bp_neg(int, vector<pair<char, uint> > &);
+    int find_start_bp_pos(int, vector<pair<char, uint> > &);
     int edit_gaps(vector<pair<char, uint> > &, char *);
 
  public:
@@ -94,7 +95,9 @@ Sam::next_seq()
     vector<pair<char, uint> > cigar;
     this->parse_cigar(parts[5].c_str(), cigar, flag);
 
-    int bp = flag ? this->find_start_bp(atoi(parts[3].c_str()), cigar) : atoi(parts[3].c_str());
+    int bp = flag ? 
+	this->find_start_bp_neg(atoi(parts[3].c_str()), cigar) : 
+	this->find_start_bp_pos(atoi(parts[3].c_str()), cigar);
 
     //
     // Sam format has a 1-based offset for chrmosome/basepair positions, adjust it to match
@@ -147,7 +150,7 @@ Sam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool o
 }
 
 int 
-Sam::find_start_bp(int aln_bp, vector<pair<char, uint> > &cigar)
+Sam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
 {
     uint size = cigar.size();
     char op;
@@ -158,15 +161,30 @@ Sam::find_start_bp(int aln_bp, vector<pair<char, uint> > &cigar)
 	dist = cigar[i].second;
 
 	switch(op) {
-	case 'S':
-	case 'D':
-	    break;
-	case 'M':
 	case 'I':
+	    break;
+	case 'S':
+	case 'M':
+	case 'D':
 	    aln_bp += dist;
 	    break;
 	}
     }
+
+    return aln_bp;
+}
+
+int 
+Sam::find_start_bp_pos(int aln_bp, vector<pair<char, uint> > &cigar)
+{
+    char op;
+    uint dist;
+
+    op   = cigar[0].first;
+    dist = cigar[0].second;
+
+    if (op == 'S')
+	aln_bp -= dist;
 
     return aln_bp;
 }
@@ -223,7 +241,7 @@ Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 	case 'I':
 	    //
 	    // An insertion has occurred in the read relative to the reference genome. Delete the
-	    // inserted bases and padd the end of the read with Ns.
+	    // inserted bases and pad the end of the read with Ns.
 	    //
 	    k = bp + dist;
 	    strncpy(buf, seq + k, id_len - 1);
