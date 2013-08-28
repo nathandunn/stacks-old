@@ -1,3 +1,7 @@
+	Feature: refactored sort_read_pairs.pl to process input files one at a time, without retaining
+	them in memory. The program should now be able to handle an arbitrary number of samples.
+	Feature: sort_read_pairs.pl can now read gzipped files directly.
+
 Stacks 1.05 - August 17, 2013
 -----------------------------
 	Bugfix: adapter filtering code in process_radtags/process_shortreads bit rotted and was not
