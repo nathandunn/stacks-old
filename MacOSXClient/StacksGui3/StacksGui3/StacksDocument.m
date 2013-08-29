@@ -15,6 +15,7 @@
 #import "LocusRepository.h"
 #import "PopulationArrayController.h"
 #import "DatumArrayController.h"
+#import "StacksConverter.h"
 
 @interface StacksDocument()
 
@@ -189,6 +190,28 @@
             }
         }
     }
+}
+
+- (IBAction) importDocument:(id)sender{
+    NSLog(@"Importing doc");
+    NSOpenPanel * panel = [NSOpenPanel openPanel];
+    [panel setAllowsMultipleSelection:NO];
+    [panel setCanChooseDirectories:YES];
+    [panel setCanChooseFiles:NO];
+    [panel setFloatingPanel:YES];
+    NSInteger result = [panel runModal];
+
+    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
+//    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
+    if(result == NSOKButton) {
+        NSLog(@"ok !!");
+        [stacksConverter loadLociAndGenotypes:panel.directoryURL.path];
+//        return [panel URLs];
+    }
+    else{
+            NSLog(@"NOT ok !!");
+    }
+//    return nil;
 }
 
 @end
