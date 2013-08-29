@@ -1,5 +1,7 @@
 Stacks 1.06 - August 28, 2013
 -----------------------------
+	Bugfix: Illumina FASTQ header specifying read pair could override internal enumeration
+	of read pair if paired-end data was fed in as a single-end file.
 	Bugfix: corrected locus starting base in reference-aligned data.
 	Feature: refactored sort_read_pairs.pl to process input files one at a time, without retaining
 	them in memory. The program should now be able to handle an arbitrary number of samples.
