@@ -44,4 +44,6 @@
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path;
 - (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name;
+- (IBAction) importDocument:(id)sender;
+
 @end
