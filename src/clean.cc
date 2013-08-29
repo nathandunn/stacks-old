@@ -106,7 +106,9 @@ int parse_illumina_v2(const char *file) {
     return 0;
 }
 
-int parse_input_record(Seq *s, Read *r) {
+int 
+parse_input_record(Seq *s, Read *r) 
+{
     char *p, *q;
     //
     // Count the number of colons to differentiate Illumina version.
@@ -170,7 +172,7 @@ int parse_input_record(Seq *s, Read *r) {
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
-	r->read = atoi(p);
+	// r->read = atoi(p);
 	*q = ':';
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
@@ -248,7 +250,7 @@ int parse_input_record(Seq *s, Read *r) {
 	*q = '/';
 
 	for (p = q+1, q = p; *q != '\0' && q < stop; q++);
-	r->read = atoi(p);
+	// r->read = atoi(p);
 
     } else {
 	r->fastq_type = generic_fastq;
@@ -462,7 +464,7 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
 }
 
 //
-// Funtion to process barcodes
+// Function to process barcodes
 //
 int 
 process_barcode(Read *href_1, Read *href_2, BarcodePair &bc, 
@@ -484,7 +486,8 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
     }
     barcode_log[bc]["total"] += paired ? 2 : 1;
 
-    bool se_correct, pe_correct;
+    bool se_correct = false;
+    bool pe_correct = false;
 
     //
     // Is this a legitimate barcode?
@@ -505,6 +508,7 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 		bc.se = string(href_1->se_bc);
 	    if (pe_bc.size() > 0 && pe_correct)
 		bc.pe = string(href_2->pe_bc);
+ 
 	    //
 	    // After correcting the individual barcodes, check if the combination is valid.
 	    //
@@ -531,7 +535,7 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 	    }
 	}
 
-	if (href_1->retain) {
+	if (href_1->retain && (se_correct || pe_correct)) {
 	    counter["recovered"] += paired ? 2 : 1;
 	    barcode_log[old_barcode]["total"] -= paired ? 2 : 1;
 	    if (barcode_log.count(bc) == 0) {
@@ -551,7 +555,7 @@ bool
 correct_barcode(set<string> &bcs, Read *href, seqt type) 
 {
     if (recover == false)
-	return 0;
+	return false;
 
     //
     // The barcode_dist variable specifies how far apart in sequence space barcodes are. If barcodes
