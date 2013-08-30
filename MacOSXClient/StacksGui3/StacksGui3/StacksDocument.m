@@ -25,6 +25,7 @@
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController ;
 @property(weak) IBOutlet NSProgressIndicator *loadProgress;
+@property(weak) IBOutlet NSPanel *progressPanel ;
 //@property(weak) IBOutlet PopulationArrayController *populationController ;
 
 //@property(weak) IBOutlet NSArrayController *stacksController ;
@@ -51,6 +52,7 @@
 @synthesize datumController ;
 //@synthesize populationController;
 @synthesize loadProgress;
+@synthesize progressPanel;
 
 
 
@@ -113,7 +115,7 @@
         self.selectedDatums = nil ;
         self.selectedDatum = nil ;
     }
-    
+
 }
 
 - (PopulationMO *)findSelectedPopulation {
@@ -217,10 +219,7 @@
 
 //        StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
 //        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
-        [loadProgress displayIfNeeded];
-        [loadProgress setIndeterminate:false];
-        [loadProgress setDisplayedWhenStopped:false];
-        [loadProgress setNeedsDisplay:true];
+        [self startProgressPanel:@"starting"];
         [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:loadProgress];
 //        NSString* directoryStructure = []
 //        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/StacksDocument.stacks"];
@@ -243,5 +242,71 @@
     }
 //    return nil;
 }
+
+//- (void) startIndeterminateProgressPanel:(NSString *)message
+//{
+//    // Display a progress panel as a sheet
+//    self.progressMessage = message;
+//    [progressIndicator setIndeterminate: YES];
+//    [progressIndicator startAnimation: self];
+//    [progressCancelButton setEnabled: NO];
+//    [NSApp beginSheet: progressPanel
+//       modalForWindow: window
+//        modalDelegate: self
+//       didEndSelector: @selector(progressDidEnd: returnCode: contextInfo:)
+//          contextInfo: NULL];
+//}
+- (void) startProgressPanel:(NSString *)message
+{
+    [loadProgress displayIfNeeded];
+    [loadProgress setIndeterminate:false];
+    [loadProgress setDisplayedWhenStopped:false];
+    [loadProgress setNeedsDisplay:true];
+    // Display a progress panel as a sheet
+//    self.progressMessage = message;
+//    [progressIndicator setIndeterminate: YES];
+//    [progressIndicator startAnimation: self];
+//    [progressCancelButton setEnabled: NO];
+
+    // TODO: find acces to the modal window we are using
+//    [NSApp beginSheet: progressPanel
+//       modalForWindow: self.windowForSheet
+//        modalDelegate: self
+//       didEndSelector: @selector(progressDidEnd: returnCode: contextInfo:)
+//          contextInfo: NULL];
+}
+- (void) progressDidEnd:(NSWindow *)panel returnCode:(int)returnCode contextInfo:(void *)context
+{
+//    xpc_connection_t connection = (xpc_connection_t)context;
+//
+//    if (returnCode != 0) {
+//        // The cancel button was pressed.
+//        NSBeep();
+//    }
+//
+//    if (connection != NULL) {
+//        // Cancel and release the anonymous connection which signals the remote
+//        // service to stop, if working.
+//        xpc_connection_cancel(connection);
+//        xpc_release(connection);
+//    }
+}
+
+
+
+
+- (void) stopProgressPanel
+{
+
+    [progressPanel orderOut: self];
+    [NSApp endSheet: progressPanel returnCode: 0];
+}
+
+- (IBAction)cancelAction:(id)sender {
+
+    [progressPanel orderOut: self];
+    [NSApp endSheet: progressPanel returnCode: 1];
+}
+
 
 @end
