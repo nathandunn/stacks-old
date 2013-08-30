@@ -93,16 +93,16 @@ using std::ofstream;
     return self;
 }
 
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path {
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressBar:(NSProgressIndicator *)progressBar {
 
     StacksDocument *stacksDocument = [self createStacksDocumentForPath:path];
     if (stacksDocument == nil) {
         return nil;
     }
 
-    return [self loadDocument:stacksDocument];
-
+    return [self loadDocument:stacksDocument withProgressBar:progressBar];
 }
+
 
 - (NSMutableDictionary *)loadPopulation:(NSString *)path {
     NSMutableDictionary *populationLookup = [[NSMutableDictionary alloc] init];
@@ -171,7 +171,11 @@ using std::ofstream;
     }
 }
 
-- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument {
+- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument withProgressBar:(NSProgressIndicator *) bar {
+    if(bar!=nil){
+        [bar display];
+        [bar incrementBy:1];
+    }
     NSString *path = stacksDocument.path;
     [self checkFile:path];
     map<int, CSLocus *> catalog;
@@ -182,6 +186,7 @@ using std::ofstream;
 
 
     load_loci([catalogFile UTF8String], catalog, false);
+    [bar incrementBy:2];
     gettimeofday(&time2, NULL);
     NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
 
@@ -193,6 +198,7 @@ using std::ofstream;
     vector<int> sample_ids;
 
     vector<pair<int, string>> files = [self buildFileList:path];
+    [bar incrementBy:2];
     NSLog(@"number of files %ld", files.size());
 
 
@@ -200,6 +206,7 @@ using std::ofstream;
     // loci loaded . . . now loading datum
     NSLog(@"model size %d", (int) catalog.size());
 
+    double incrementAmount = 20.0 / files.size();
     gettimeofday(&time1, NULL);
     for (uint i = 0; i < files.size(); i++) {
         vector<CatMatch *> m;
@@ -218,6 +225,7 @@ using std::ofstream;
             cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this stacksDocuments set, likely the pipeline was run incorrectly.\n";
             exit(1);
         }
+        [bar incrementBy:incrementAmount];
     }
     gettimeofday(&time2, NULL);
     NSLog(@"catalog matches %ld", (time2.tv_sec - time1.tv_sec));
@@ -225,8 +233,10 @@ using std::ofstream;
 
     NSLog(@"input populations %ld", stacksDocument.populations.count);
     [self addPopulationsToDocument:stacksDocument forPath:path];
+    [bar incrementBy:5];
     NSLog(@"output populations %ld", stacksDocument.populations.count);
     [self addSamplesToDocument:stacksDocument forSampleIds:sample_ids andSamples:samples];
+    [bar incrementBy:5];
     NSLog(@"output populations after samples %ld", stacksDocument.populations.count);
     for (PopulationMO *populationMo in stacksDocument.populations) {
         NSLog(@"samples %ld per population %@", populationMo.samples.count, populationMo.name);
@@ -240,6 +250,7 @@ using std::ofstream;
     gettimeofday(&time1, NULL);
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
+    [bar incrementBy:15];
     gettimeofday(&time2, NULL);
     NSLog(@"population pmap %ld", (time2.tv_sec - time1.tv_sec));
 
@@ -253,6 +264,7 @@ using std::ofstream;
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
+    incrementAmount = 20 / catalog.size();
 
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
@@ -298,6 +310,7 @@ using std::ofstream;
         [loci addObject:locusMO];
         [lociDictionary setObject:locusMO forKey:locusMO.locusId];
         ++catalogIterator;
+        [bar incrementBy:incrementAmount];
     }
     gettimeofday(&time2, NULL);
     NSLog(@"populating snps %ld", (time2.tv_sec - time1.tv_sec));
@@ -310,6 +323,7 @@ using std::ofstream;
     NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
 
     long totalCatalogTime = 0;
+    incrementAmount = 20 / sample_ids.size();
     //go through all samples
     for (uint i = 0; i < sample_ids.size(); i++) {
         int sampleId = sample_ids[i];
@@ -385,12 +399,14 @@ using std::ofstream;
         NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
 
+        [bar incrementBy:incrementAmount];
 
     }
 
     NSError *innerError = nil ;
     stacksDocument.loci = loci;
     [stacksDocument.managedObjectContext save:&innerError];
+    [bar incrementBy:5];
     if (innerError != nil) {
         NSLog(@"error doing inner save: ", innerError);
         return nil;
@@ -441,6 +457,7 @@ using std::ofstream;
     NSError *error;
     BOOL success = [stacksDocument.managedObjectContext save:&error];
     NSLog(@"saved %d", success);
+    [bar incrementBy:5];
 
     return stacksDocument;
 }
