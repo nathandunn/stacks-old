@@ -62,6 +62,7 @@
 		6B4674A2173183AB00E42419 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B46749B173183AB00E42419 /* utils.cc */; };
 		6B4674A4173183C300E42419 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B4674A3173183C300E42419 /* libz.1.2.7.dylib */; };
 		6B4674AA1731872600E42419 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674A81731872600E42419 /* input.cc */; };
+		6B77C0E117D1467600987B98 /* StacksDocumentController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B77C0E017D1467600987B98 /* StacksDocumentController.m */; };
 		6BE2E32E17459949005E3C81 /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BE2E32D17459949005E3C81 /* AlleleMO.m */; };
 		D793C0F3A4CB3044602B1F3F /* SampleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C907D04E589764C9E424 /* SampleRepository.m */; };
 		D793C6F5BDAD1E1FA91892F2 /* AlleleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C907C035E29655E283F1 /* AlleleRepository.m */; };
@@ -199,6 +200,8 @@
 		6B4674A3173183C300E42419 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libz.1.2.7.dylib; sourceTree = "<group>"; };
 		6B4674A81731872600E42419 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = input.cc; path = ../../../src/input.cc; sourceTree = "<group>"; };
 		6B4674A91731872600E42419 /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../../../src/input.h; sourceTree = "<group>"; };
+		6B77C0DF17D1467600987B98 /* StacksDocumentController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksDocumentController.h; sourceTree = "<group>"; };
+		6B77C0E017D1467600987B98 /* StacksDocumentController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksDocumentController.m; sourceTree = "<group>"; };
 		6BE2E32C17459949005E3C81 /* AlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleMO.h; sourceTree = "<group>"; };
 		6BE2E32D17459949005E3C81 /* AlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleMO.m; sourceTree = "<group>"; };
 		D793C4A57535355A029B6C52 /* SampleRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SampleRepository.h; sourceTree = "<group>"; };
@@ -377,6 +380,8 @@
 				6B3207E31752CC04009FF9FB /* DatumView.m */,
 				63D53377E126294FBBA3CAFF /* DatumCollectionViewItem.m */,
 				63D530C2EAE981EF9A5E44E4 /* DatumCollectionViewItem.h */,
+				6B77C0DF17D1467600987B98 /* StacksDocumentController.h */,
+				6B77C0E017D1467600987B98 /* StacksDocumentController.m */,
 			);
 			name = GUI;
 			sourceTree = "<group>";
@@ -608,6 +613,7 @@
 				14A72B501746A7F80024B2D1 /* StackEntryArrayController.m in Sources */,
 				6B3207E41752CC04009FF9FB /* DatumView.m in Sources */,
 				63D53A37F18B0802DB8CEEAF /* DatumCollectionViewItem.m in Sources */,
+				6B77C0E117D1467600987B98 /* StacksDocumentController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
