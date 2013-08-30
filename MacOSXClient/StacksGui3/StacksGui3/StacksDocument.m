@@ -205,14 +205,27 @@
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if(result == NSOKButton) {
         NSLog(@"ok !!");
+        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/StacksDocument.stacks"];
+        BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:stacksDocumentPath error:NULL];
+        NSLog(@"file removed %i",fileRemoved);
+
 //        StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
         [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
 //        NSString* directoryStructure = []
-        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/StacksDocument.stacks"];
+//        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/StacksDocument.stacks"];
 //        NSString *[path stringByAppendingString:<#(NSString *)aString#>]
 //        [stacksDocument open];
 //        return [panel URLs];
         [[NSDocumentController sharedDocumentController]openDocumentWithContentsOfURL: [NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
+
+//        NSMenu *mainMenu = [[NSApplication sharedApplication] mainMenu];
+//        NSMenu *appMenu = [[mainMenu itemAtIndex:1] submenu];
+//        NSMenuItem *menuItem = [appMenu itemAtIndex:3];
+//        [menuItem setEnabled:false];
+
+//        for (NSMenuItem *item in [appMenu itemArray]) {
+//            NSLog(@"%@", [item title]);
+//        }
     }
     else{
             NSLog(@"NOT ok !!");
