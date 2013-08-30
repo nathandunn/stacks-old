@@ -16,6 +16,7 @@
 #import "PopulationArrayController.h"
 #import "DatumArrayController.h"
 #import "StacksConverter.h"
+#import "StacksDocumentController.h"
 
 @interface StacksDocument()
 
@@ -219,6 +220,8 @@
 
 //        StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
 //        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
+
+
         [self startProgressPanel:@"starting"];
         [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:loadProgress];
 //        NSString* directoryStructure = []
@@ -226,7 +229,7 @@
 //        NSString *[path stringByAppendingString:<#(NSString *)aString#>]
 //        [stacksDocument open];
 //        return [panel URLs];
-        [[NSDocumentController sharedDocumentController]openDocumentWithContentsOfURL: [NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
+        [[StacksDocumentController sharedDocumentController]openDocumentWithContentsOfURL: [NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
 
 //        NSMenu *mainMenu = [[NSApplication sharedApplication] mainMenu];
 //        NSMenu *appMenu = [[mainMenu itemAtIndex:1] submenu];
