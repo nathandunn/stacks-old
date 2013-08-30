@@ -205,8 +205,14 @@
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if(result == NSOKButton) {
         NSLog(@"ok !!");
-        [stacksConverter loadLociAndGenotypes:panel.directoryURL.path];
+//        StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
+        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
+//        NSString* directoryStructure = []
+        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/StacksDocument.stacks"];
+//        NSString *[path stringByAppendingString:<#(NSString *)aString#>]
+//        [stacksDocument open];
 //        return [panel URLs];
+        [[NSDocumentController sharedDocumentController]openDocumentWithContentsOfURL: [NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
     }
     else{
             NSLog(@"NOT ok !!");
