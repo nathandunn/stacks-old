@@ -61,7 +61,7 @@
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
     if (existsAtPath) {
 //        [self loadApplication:examplePath];
-        StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:examplePath];
+        StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:examplePath progressBar:nil ];
         NSSet *loci = stacksDocument.loci;
         STAssertEquals( (NSUInteger) 462, loci.count, @"should match loci count");
 
@@ -139,7 +139,7 @@
 
     StacksDocument *stacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
     NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
-    stacksDocument = [stacksConverter loadDocument:stacksDocument];
+    stacksDocument = [stacksConverter loadDocument:stacksDocument withProgressBar:0];
     if (stacksDocument == nil) {
         STFail(@"There was an error reading in the stacks Document ");
     }
@@ -375,7 +375,7 @@
 
     StacksDocument *stacksDocument = [stacksConverter createStacksDocumentForPath:examplePath];
     NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
-    stacksDocument = [stacksConverter loadDocument:stacksDocument];
+    stacksDocument = [stacksConverter loadDocument:stacksDocument withProgressBar:0];
     if (stacksDocument == nil) {
         STFail(@"There was an error reading in the stacks Document ");
     }

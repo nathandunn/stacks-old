@@ -37,12 +37,15 @@
 
 
 - (id)init ;
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path;
+
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressBar:(NSProgressIndicator *)bar;
 - (NSMutableDictionary *)loadPopulation:(NSString *)path;
-- (StacksDocument *)loadDocument:(StacksDocument *)document;
+
+- (StacksDocument *)loadDocument:(StacksDocument *)document withProgressBar:(NSProgressIndicator *) bar;
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path;
 
 //- (StacksDocument *)getStacksDocumentForPath:(NSString *)string;
+//- (void)loadLociAndGenotypes:(NSString *)appendingString progressBar:(NSProgressIndicator *)bar;
 @end
 
 

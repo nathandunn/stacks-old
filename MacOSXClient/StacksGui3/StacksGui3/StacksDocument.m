@@ -24,6 +24,7 @@
 @property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController ;
+@property(weak) IBOutlet NSProgressIndicator *loadProgress;
 //@property(weak) IBOutlet PopulationArrayController *populationController ;
 
 //@property(weak) IBOutlet NSArrayController *stacksController ;
@@ -49,6 +50,7 @@
 // array controller
 @synthesize datumController ;
 //@synthesize populationController;
+@synthesize loadProgress;
 
 
 
@@ -214,7 +216,12 @@
         NSLog(@"file removed %i",fileRemoved);
 
 //        StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
-        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
+//        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
+        [loadProgress displayIfNeeded];
+        [loadProgress setIndeterminate:false];
+        [loadProgress setDisplayedWhenStopped:false];
+        [loadProgress setNeedsDisplay:true];
+        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:loadProgress];
 //        NSString* directoryStructure = []
 //        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/StacksDocument.stacks"];
 //        NSString *[path stringByAppendingString:<#(NSString *)aString#>]
