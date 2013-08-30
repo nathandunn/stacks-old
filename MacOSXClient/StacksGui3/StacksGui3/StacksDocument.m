@@ -50,6 +50,8 @@
 @synthesize datumController ;
 //@synthesize populationController;
 
+
+
 - (id)init {
     self = [super init];
     if (self) {
@@ -83,6 +85,8 @@
 + (BOOL)autosavesInPlace {
     return YES;
 }
+
+
 
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
     NSString *tableName = [[aNotification object] identifier];
