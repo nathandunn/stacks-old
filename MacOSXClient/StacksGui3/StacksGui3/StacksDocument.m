@@ -262,6 +262,23 @@
     [loadProgress setIndeterminate:false];
     [loadProgress setDisplayedWhenStopped:false];
     [loadProgress setNeedsDisplay:true];
+
+//    [NSApp beginSheet: progressPanel
+//       modalForWindow: self.windowForSheet
+//        modalDelegate: self
+//       didEndSelector: nil
+//          contextInfo: nil];
+//    [NSApp runModalForWindow: progressPanel];
+//    // Dialog is up here.
+//    [NSApp endSheet: progressPanel];
+//    [progressPanel orderOut: self];
+
+//    [NSApp beginSheet: progressPanel
+//       modalForWindow: self.windowForSheet
+//        modalDelegate: nil
+//       didEndSelector: nil
+//          contextInfo: nil];
+
     // Display a progress panel as a sheet
 //    self.progressMessage = message;
 //    [progressIndicator setIndeterminate: YES];
