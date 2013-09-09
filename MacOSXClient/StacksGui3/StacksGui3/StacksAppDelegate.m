@@ -25,9 +25,14 @@
 
 
 - (void)applicationWillFinishLaunching:(NSNotification *)notification {
-//    NSLog(@"app did finish launcing");
+    NSLog(@"app did finish launcing");
 
 }
+
+//- (BOOL)validateUserInterfaceItem:(id < NSValidatedUserInterfaceItem >)anItem{
+//    NSLog(@"should be avlidating something");
+//    return YES;
+//}
 
 
 @end
