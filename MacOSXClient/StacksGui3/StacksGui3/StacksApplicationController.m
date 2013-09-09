@@ -23,21 +23,21 @@
 //    return self;
 //}
 
-- (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
-    NSLog(@"validating UI item in App Controller %@",anItem) ;
-    return [super validateUserInterfaceItem:anItem];
-}
+//- (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
+////    NSLog(@"validating UI item in App Controller %@",anItem) ;
+//    return [super validateUserInterfaceItem:anItem];
+//}
 
-- (BOOL)validateMenuItem:(NSMenuItem *)item {
-    NSLog(@"validating in App Controller menu item %@",item) ;
-//    return [super validateUserInterfaceItem:item];
-    if(item.tag==77){
-        NSLog(@"should be returning true!");
-        return YES;
-    }
-    else{
-        return [super validateMenuItem:item];
-    }
-}
+//- (BOOL)validateMenuItem:(NSMenuItem *)item {
+//    NSLog(@"validating in App Controller menu item %@",item) ;
+////    return [super validateUserInterfaceItem:item];
+//    if(item.tag==77){
+//        NSLog(@"should be returning true!");
+//        return YES;
+//    }
+//    else{
+//        return [super validateMenuItem:item];
+//    }
+//}
 
 @end
