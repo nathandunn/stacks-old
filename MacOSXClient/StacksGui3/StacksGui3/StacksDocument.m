@@ -208,6 +208,11 @@
     [panel setCanChooseDirectories:YES];
     [panel setCanChooseFiles:NO];
     [panel setFloatingPanel:YES];
+    NSSize minSize ;
+    minSize.height=600;
+    minSize.width=500;
+
+    [panel setMinSize:minSize];
     NSInteger result = [panel runModal];
 
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
@@ -230,6 +235,8 @@
 //        [stacksDocument open];
 //        return [panel URLs];
         [[StacksDocumentController sharedDocumentController]openDocumentWithContentsOfURL: [NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
+
+        // if any other documents are around
 
         // set the file menu to enable "auto"
 
