@@ -231,6 +231,8 @@
 //        return [panel URLs];
         [[StacksDocumentController sharedDocumentController]openDocumentWithContentsOfURL: [NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
 
+        // set the file menu to enable "auto"
+
 //        NSMenu *mainMenu = [[NSApplication sharedApplication] mainMenu];
 //        NSMenu *appMenu = [[mainMenu itemAtIndex:1] submenu];
 //        NSMenuItem *menuItem = [appMenu itemAtIndex:3];
@@ -245,6 +247,8 @@
     }
 //    return nil;
 }
+
+
 
 //- (void) startIndeterminateProgressPanel:(NSString *)message
 //{
@@ -328,5 +332,22 @@
     [NSApp endSheet: progressPanel returnCode: 1];
 }
 
+
+- (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
+    NSLog(@"validating UI item in Stacks Document%@",anItem) ;
+    return [super validateUserInterfaceItem:anItem];
+}
+
+- (BOOL)validateMenuItem:(NSMenuItem *)item {
+    NSLog(@"validating in in Stacks Document menu item %@",item) ;
+//    return [super validateUserInterfaceItem:item];
+    if(item.tag==77){
+        NSLog(@"should be returning true!");
+        return YES;
+    }
+    else{
+        return [super validateMenuItem:item];
+    }
+}
 
 @end
