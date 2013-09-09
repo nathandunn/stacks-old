@@ -25,8 +25,9 @@
 @property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController ;
-@property(weak) IBOutlet NSProgressIndicator *loadProgress;
-@property(weak) IBOutlet NSPanel *progressPanel ;
+//@property(weak) IBOutlet NSProgressIndicator *loadProgress;
+//@property(weak) IBOutlet NSPanel *progressPanel ;
+
 //@property(weak) IBOutlet PopulationArrayController *populationController ;
 
 //@property(weak) IBOutlet NSArrayController *stacksController ;
@@ -52,8 +53,8 @@
 // array controller
 @synthesize datumController ;
 //@synthesize populationController;
-@synthesize loadProgress;
-@synthesize progressPanel;
+//@synthesize loadProgress;
+//@synthesize progressPanel;
 
 
 
@@ -201,143 +202,7 @@
     }
 }
 
-- (IBAction) importDocument:(id)sender{
-    NSLog(@"Importing doc");
-    NSOpenPanel * panel = [NSOpenPanel openPanel];
-    [panel setAllowsMultipleSelection:NO];
-    [panel setCanChooseDirectories:YES];
-    [panel setCanChooseFiles:NO];
-    [panel setFloatingPanel:YES];
-    NSSize minSize ;
-    minSize.height=600;
-    minSize.width=500;
 
-    [panel setMinSize:minSize];
-    NSInteger result = [panel runModal];
-
-    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
-//    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
-    if(result == NSOKButton) {
-        NSLog(@"ok !!");
-        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/StacksDocument.stacks"];
-        BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:stacksDocumentPath error:NULL];
-        NSLog(@"file removed %i",fileRemoved);
-
-//        StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
-//        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
-
-
-        [self startProgressPanel:@"starting"];
-        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:loadProgress];
-//        NSString* directoryStructure = []
-//        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/StacksDocument.stacks"];
-//        NSString *[path stringByAppendingString:<#(NSString *)aString#>]
-//        [stacksDocument open];
-//        return [panel URLs];
-        [[StacksDocumentController sharedDocumentController]openDocumentWithContentsOfURL: [NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
-
-        // if any other documents are around
-
-        // set the file menu to enable "auto"
-
-//        NSMenu *mainMenu = [[NSApplication sharedApplication] mainMenu];
-//        NSMenu *appMenu = [[mainMenu itemAtIndex:1] submenu];
-//        NSMenuItem *menuItem = [appMenu itemAtIndex:3];
-//        [menuItem setEnabled:false];
-
-//        for (NSMenuItem *item in [appMenu itemArray]) {
-//            NSLog(@"%@", [item title]);
-//        }
-    }
-    else{
-            NSLog(@"NOT ok !!");
-    }
-//    return nil;
-}
-
-
-
-//- (void) startIndeterminateProgressPanel:(NSString *)message
-//{
-//    // Display a progress panel as a sheet
-//    self.progressMessage = message;
-//    [progressIndicator setIndeterminate: YES];
-//    [progressIndicator startAnimation: self];
-//    [progressCancelButton setEnabled: NO];
-//    [NSApp beginSheet: progressPanel
-//       modalForWindow: window
-//        modalDelegate: self
-//       didEndSelector: @selector(progressDidEnd: returnCode: contextInfo:)
-//          contextInfo: NULL];
-//}
-- (void) startProgressPanel:(NSString *)message
-{
-    [loadProgress displayIfNeeded];
-    [loadProgress setIndeterminate:false];
-    [loadProgress setDisplayedWhenStopped:false];
-    [loadProgress setNeedsDisplay:true];
-
-//    [NSApp beginSheet: progressPanel
-//       modalForWindow: self.windowForSheet
-//        modalDelegate: self
-//       didEndSelector: nil
-//          contextInfo: nil];
-//    [NSApp runModalForWindow: progressPanel];
-//    // Dialog is up here.
-//    [NSApp endSheet: progressPanel];
-//    [progressPanel orderOut: self];
-
-//    [NSApp beginSheet: progressPanel
-//       modalForWindow: self.windowForSheet
-//        modalDelegate: nil
-//       didEndSelector: nil
-//          contextInfo: nil];
-
-    // Display a progress panel as a sheet
-//    self.progressMessage = message;
-//    [progressIndicator setIndeterminate: YES];
-//    [progressIndicator startAnimation: self];
-//    [progressCancelButton setEnabled: NO];
-
-    // TODO: find acces to the modal window we are using
-//    [NSApp beginSheet: progressPanel
-//       modalForWindow: self.windowForSheet
-//        modalDelegate: self
-//       didEndSelector: @selector(progressDidEnd: returnCode: contextInfo:)
-//          contextInfo: NULL];
-}
-- (void) progressDidEnd:(NSWindow *)panel returnCode:(int)returnCode contextInfo:(void *)context
-{
-//    xpc_connection_t connection = (xpc_connection_t)context;
-//
-//    if (returnCode != 0) {
-//        // The cancel button was pressed.
-//        NSBeep();
-//    }
-//
-//    if (connection != NULL) {
-//        // Cancel and release the anonymous connection which signals the remote
-//        // service to stop, if working.
-//        xpc_connection_cancel(connection);
-//        xpc_release(connection);
-//    }
-}
-
-
-
-
-- (void) stopProgressPanel
-{
-
-    [progressPanel orderOut: self];
-    [NSApp endSheet: progressPanel returnCode: 0];
-}
-
-- (IBAction)cancelAction:(id)sender {
-
-    [progressPanel orderOut: self];
-    [NSApp endSheet: progressPanel returnCode: 1];
-}
 
 
 - (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {

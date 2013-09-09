@@ -11,6 +11,9 @@
 
 @interface StacksApplicationController : NSDocumentController
 
+@property(weak) IBOutlet NSPanel *progressPanel ;
+@property(weak) IBOutlet NSProgressIndicator *loadProgress;
+- (IBAction) importDocument:(id)sender;
 
 
 @end
