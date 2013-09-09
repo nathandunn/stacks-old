@@ -65,7 +65,9 @@
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if (result == NSOKButton) {
         NSLog(@"ok !!");
-        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/StacksDocument.stacks"];
+        NSLog(@"directory URL: %@",panel.directoryURL.path);
+//        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/%@.stacks",panel.directoryURL.path.lastPathComponent];
+        NSString *stacksDocumentPath = [stacksConverter generateFilePathForUrl:panel.directoryURL];
         BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:stacksDocumentPath error:NULL];
         NSLog(@"file removed %i", fileRemoved);
 

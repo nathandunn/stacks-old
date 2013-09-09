@@ -46,6 +46,8 @@ using std::ofstream;
 
 }
 
+
+
 /**
 * https://casspr.fogbugz.com/default.asp?1144
 * 1 - add pops
@@ -92,6 +94,11 @@ using std::ofstream;
     }
     return self;
 }
+
+- (NSString *)generateFilePathForUrl:(NSURL *)url {
+    return [url.path stringByAppendingFormat:@"/%@.stacks",url.path.lastPathComponent];
+}
+
 
 - (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressBar:(NSProgressIndicator *)progressBar {
 
@@ -910,9 +917,10 @@ using std::ofstream;
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path {
     NSError *stacksDocumentCreateError;
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
+    stacksDocument.path = path;
+    stacksDocument.name = path.lastPathComponent;
     NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
     stacksDocument.managedObjectContext = moc;
-    stacksDocument.path = path;
     if (stacksDocumentCreateError) {
         NSLog(@"error creating stacks document %@", stacksDocumentCreateError);
         return nil;

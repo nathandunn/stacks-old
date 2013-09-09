@@ -38,6 +38,7 @@
 
 - (id)init ;
 
+- (NSString *) generateFilePathForUrl:(NSURL *) url;
 - (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressBar:(NSProgressIndicator *)bar;
 - (NSMutableDictionary *)loadPopulation:(NSString *)path;
 

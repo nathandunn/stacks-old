@@ -139,7 +139,13 @@
 
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path {
-    return [self getContextForPath:path andName:@"StacksDocument"];
+    if(self.name==NULL){
+        return [self getContextForPath:path andName:@"StacksDocument"];
+    }
+    else{
+
+        return [self getContextForPath:path andName:self.name];
+    }
 }
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path andName:(NSString *)name {

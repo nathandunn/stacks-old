@@ -42,6 +42,8 @@
 //- (NSMutableArray *)findPopulations;
 
 
+@property(nonatomic, copy) NSString *name;
+
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path;
 - (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name;
 
