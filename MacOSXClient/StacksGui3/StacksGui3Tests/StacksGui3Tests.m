@@ -474,4 +474,14 @@
 }
 
 
+- (void)testGetFinalPath{
+   NSString* path = @"/Users/NathanDunn/stacks_tut2";
+    NSString* lastComponent = path.lastPathComponent;
+    NSLog(@"evaluating %@",lastComponent);
+    STAssertEqualObjects(@"stacks_tut2", lastComponent, @"Should be equals");
+    NSLog(@"passed!!! %@",lastComponent);
+    //    STAssertTrue([path isEqualToString:lastComponent], @"should be equals" );
+}
+
+
 @end
