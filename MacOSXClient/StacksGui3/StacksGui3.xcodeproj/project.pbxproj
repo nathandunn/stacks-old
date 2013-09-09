@@ -65,6 +65,8 @@
 		6B77C0E117D1467600987B98 /* StacksDocumentController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B77C0E017D1467600987B98 /* StacksDocumentController.m */; };
 		6BE2E32E17459949005E3C81 /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BE2E32D17459949005E3C81 /* AlleleMO.m */; };
 		D793C0F3A4CB3044602B1F3F /* SampleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C907D04E589764C9E424 /* SampleRepository.m */; };
+		D793C1B281A1C40A30CE8AEF /* StacksApplicationController.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C30B70F0B18AAD31F9DB /* StacksApplicationController.m */; };
+		D793C43EDB0ABD3CE3E0047B /* StacksAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = D793CFCB30840FDE9B15DB2D /* StacksAppDelegate.m */; };
 		D793C6F5BDAD1E1FA91892F2 /* AlleleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C907C035E29655E283F1 /* AlleleRepository.m */; };
 /* End PBXBuildFile section */
 
@@ -204,10 +206,14 @@
 		6B77C0E017D1467600987B98 /* StacksDocumentController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksDocumentController.m; sourceTree = "<group>"; };
 		6BE2E32C17459949005E3C81 /* AlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleMO.h; sourceTree = "<group>"; };
 		6BE2E32D17459949005E3C81 /* AlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleMO.m; sourceTree = "<group>"; };
+		D793C0562E8CF1695DFEB1B1 /* StacksAppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksAppDelegate.h; sourceTree = "<group>"; };
+		D793C09ACB3E8D99724E31E1 /* StacksApplicationController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksApplicationController.h; sourceTree = "<group>"; };
+		D793C30B70F0B18AAD31F9DB /* StacksApplicationController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksApplicationController.m; sourceTree = "<group>"; };
 		D793C4A57535355A029B6C52 /* SampleRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SampleRepository.h; sourceTree = "<group>"; };
 		D793C634902255B9E726C00C /* AlleleRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleRepository.h; sourceTree = "<group>"; };
 		D793C907C035E29655E283F1 /* AlleleRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleRepository.m; sourceTree = "<group>"; };
 		D793C907D04E589764C9E424 /* SampleRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SampleRepository.m; sourceTree = "<group>"; };
+		D793CFCB30840FDE9B15DB2D /* StacksAppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksAppDelegate.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -382,6 +388,10 @@
 				63D530C2EAE981EF9A5E44E4 /* DatumCollectionViewItem.h */,
 				6B77C0DF17D1467600987B98 /* StacksDocumentController.h */,
 				6B77C0E017D1467600987B98 /* StacksDocumentController.m */,
+				D793CFCB30840FDE9B15DB2D /* StacksAppDelegate.m */,
+				D793C0562E8CF1695DFEB1B1 /* StacksAppDelegate.h */,
+				D793C30B70F0B18AAD31F9DB /* StacksApplicationController.m */,
+				D793C09ACB3E8D99724E31E1 /* StacksApplicationController.h */,
 			);
 			name = GUI;
 			sourceTree = "<group>";
@@ -614,6 +624,8 @@
 				6B3207E41752CC04009FF9FB /* DatumView.m in Sources */,
 				63D53A37F18B0802DB8CEEAF /* DatumCollectionViewItem.m in Sources */,
 				6B77C0E117D1467600987B98 /* StacksDocumentController.m in Sources */,
+				D793C43EDB0ABD3CE3E0047B /* StacksAppDelegate.m in Sources */,
+				D793C1B281A1C40A30CE8AEF /* StacksApplicationController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
