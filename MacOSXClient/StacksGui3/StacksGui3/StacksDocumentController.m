@@ -10,9 +10,10 @@
 
 @implementation StacksDocumentController
 
-//- (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
-//    return [super validateUserInterfaceItem:anItem];
-//}
+- (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
+    NSLog(@"item value %@",anItem);
+    return [super validateUserInterfaceItem:anItem];
+}
 
 
 @end
