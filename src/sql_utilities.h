@@ -33,25 +33,25 @@
 //
 // The expected number of tab-separated fields in our SQL input files.
 //
-const uint num_tags_fields    = 13;
-const uint num_snps_fields    =  9;
-const uint num_alleles_fields =  6;
-const uint num_matches_fields =  7;
+const uint num_tags_fields = 13;
+const uint num_snps_fields = 9;
+const uint num_alleles_fields = 6;
+const uint num_matches_fields = 7;
 
 template <class LocusT>
-int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
-    LocusT        *c;
-    SNP           *snp;
-    string         f;
-    char          *line, *cmp;
-    const char    *p, *q;
-    int            len, size;
+int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads) {
+    LocusT *c;
+    SNP *snp;
+    string f;
+    char *line, *cmp;
+    const char *p, *q;
+    int len, size;
     vector<string> parts;
-    set<int>       blacklisted;
-    long int       line_num;
-    ifstream       fh;
+    set<int> blacklisted;
+    long int line_num;
+    ifstream fh;
 
-    line = new char[max_len];
+    line = new char [max_len];
     size = max_len;
 
     // 
@@ -74,10 +74,10 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
     while (fh.good()) {
         read_line(fh, &line, &size);
 
-	if (!fh.good() && strlen(line) == 0)
-	    continue;
+        if (!fh.good() && strlen(line) == 0)
+            continue;
 
-	parse_tsv(line, parts);
+        parse_tsv(line, parts);
 
         if (parts.size() != num_tags_fields) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
@@ -86,76 +86,76 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 
         id = atoi(parts[2].c_str());
 
-	if (parts[6] != "consensus") {
+        if (parts[6] != "consensus") {
             if (blacklisted.count(id)) continue;
 
-	    //
-	    // Make sure this locus has already been defined (consensus sequence SHOULD always 
-	    // be specified first in the file for a particular locus).
-	    //
-	    if (loci.count(id) > 0) {
-		//
-		// Read the model sequence, a series of letters specifying if the model called a
-		// homozygous base (O), a heterozygous base (E), or if the base type was unknown (U).
-		//
-		if (parts[6] == "model") {
-		    loci[id]->model = new char[parts[9].length() + 1];
-		    strcpy(loci[id]->model, parts[9].c_str());
+            //
+            // Make sure this locus has already been defined (consensus sequence SHOULD always
+            // be specified first in the file for a particular locus).
+            //
+            if (loci.count(id) > 0) {
+                //
+                // Read the model sequence, a series of letters specifying if the model called a
+                // homozygous base (O), a heterozygous base (E), or if the base type was unknown (U).
+                //
+                if (parts[6] == "model") {
+                    loci[id]->model = new char [parts[9].length() + 1];
+                    strcpy(loci[id]->model, parts[9].c_str());
 
-		} else {
-		    //
-		    // Otherwise, we expect a primary or secondary read, record these if specified.
-		    //
-		    loci[id]->depth++;
+                } else {
+                    //
+                    // Otherwise, we expect a primary or secondary read, record these if specified.
+                    //
+                    loci[id]->depth++;
 
-		    if (store_reads) {
-			char *read = new char[parts[9].length() + 1];
-			strcpy(read, parts[9].c_str());
-			loci[id]->reads.push_back(read);
-		    }
-		}
+                    if (store_reads) {
+                        char *read = new char [parts[9].length() + 1];
+                        strcpy(read, parts[9].c_str());
+                        loci[id]->reads.push_back(read);
+                    }
+                }
 
-		continue;
+                continue;
             } else {
                 cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (stack " << id << " does not exist).\n";
                 return 0;
             }
         }
 
-	//
-	// Do not include blacklisted tags in the catalog. They are tags that are composed 
-	// of noise and/or repetitive sequence.
-	//
-	if (parts[11] == "1") {
-	    blacklisted.insert(id);
-	    continue;
-	}
+        //
+        // Do not include blacklisted tags in the catalog. They are tags that are composed
+        // of noise and/or repetitive sequence.
+        //
+        if (parts[11] == "1") {
+            blacklisted.insert(id);
+            continue;
+        }
 
-	c = new LocusT;
+        c = new LocusT;
         c->sample_id = atoi(parts[1].c_str());
-	c->id        = id;
-	c->add_consensus(parts[9].c_str());
+        c->id = id;
+        c->add_consensus(parts[9].c_str());
 
         //
         // Parse the physical genome location of this locus.
         //
-	c->loc.set(parts[3].c_str(), atoi(parts[4].c_str()), (parts[5] == "+" ? plus : minus));
+        c->loc.set(parts[3].c_str(), atoi(parts[4].c_str()), (parts[5] == "+" ? plus : minus));
 
-	//
-	// Parse the components of this stack (either the Illumina ID, or the catalog constituents)
-	//
-	q = parts[8].c_str();
-	while (*q != '\0') {
-	    for (p = q; *q != ',' && *q != '\0'; q++);
-	    len = q - p;
-	    cmp = new char[len + 1];
-	    strncpy(cmp, p, len);
-	    cmp[len] = '\0';
-	    c->comp.push_back(cmp);
-	    if (*q != '\0') q++;
-	}
+        //
+        // Parse the components of this stack (either the Illumina ID, or the catalog constituents)
+        //
+        q = parts[8].c_str();
+        while (*q != '\0') {
+            for (p = q; *q != ',' && *q != '\0'; q++);
+            len = q - p;
+            cmp = new char [len + 1];
+            strncpy(cmp, p, len);
+            cmp[len] = '\0';
+            c->comp.push_back(cmp);
+            if (*q != '\0') q++;
+        }
 
-	loci[c->id] = c;
+        loci[c->id] = c;
 
         line_num++;
     }
@@ -179,10 +179,10 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
     while (fh.good()) {
         read_line(fh, &line, &size);
 
-	if (!fh.good() && strlen(line) == 0)
-	    continue;
+        if (!fh.good() && strlen(line) == 0)
+            continue;
 
-	parse_tsv(line, parts);
+        parse_tsv(line, parts);
 
         if (parts.size() != num_snps_fields && parts.size() != num_snps_fields - 2) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
@@ -191,19 +191,19 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 
         id = atoi(parts[2].c_str());
 
-	if (blacklisted.count(id))
-	    continue;
+        if (blacklisted.count(id))
+            continue;
 
-	snp         = new SNP;
-	snp->col    = atoi(parts[3].c_str());
-	snp->lratio = atof(parts[4].c_str());
-	snp->rank_1 = parts[5].at(0);
-	snp->rank_2 = parts[6].at(0);
+        snp = new SNP;
+        snp->col = atoi(parts[3].c_str());
+        snp->lratio = atof(parts[4].c_str());
+        snp->rank_1 = parts[5].at(0);
+        snp->rank_2 = parts[6].at(0);
 
-	if (parts.size() == 9) {
-	    snp->rank_3 = parts[7].length() == 0 ? 0 : parts[7].at(0);
-	    snp->rank_4 = parts[8].length() == 0 ? 0 : parts[8].at(0);
-	}
+        if (parts.size() == 9) {
+            snp->rank_3 = parts[7].length() == 0 ? 0 : parts[7].at(0);
+            snp->rank_4 = parts[8].length() == 0 ? 0 : parts[8].at(0);
+        }
 
         if (loci.count(id) > 0) {
             loci[id]->snps.push_back(snp);
@@ -234,10 +234,10 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
     while (fh.good()) {
         read_line(fh, &line, &size);
 
-	if (!fh.good() && strlen(line) == 0)
-	    continue;
+        if (!fh.good() && strlen(line) == 0)
+            continue;
 
-	parse_tsv(line, parts);
+        parse_tsv(line, parts);
 
         if (parts.size() != num_alleles_fields) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
@@ -246,8 +246,8 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 
         id = atoi(parts[2].c_str());
 
-	if (blacklisted.count(id))
-	    continue;
+        if (blacklisted.count(id))
+            continue;
 
         if (loci.count(id) > 0) {
             loci[id]->alleles[parts[3]] = atoi(parts[5].c_str());
@@ -277,31 +277,31 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads) {
 template <class LocusT>
 int dump_loci(map<int, LocusT *> &u) {
     typename map<int, LocusT *>::iterator i;
-    vector<SNP *>::iterator      s;
+    vector<SNP *>::iterator s;
 
     for (i = u.begin(); i != u.end(); i++) {
 
-	cerr << "Locus ID:    " << i->second->id << "\n"
-	     << "  Consensus: " << i->second->con << "\n"
-             << "  Genomic Location: " << i->second->loc.chr << "; " << i->second->loc.bp << "bp\n"
-	     << "  SNPs:\n";
+        cerr << "Locus ID:    " << i->second->id << "\n"
+                << "  Consensus: " << i->second->con << "\n"
+                << "  Genomic Location: " << i->second->loc.chr << "; " << i->second->loc.bp << "bp\n"
+                << "  SNPs:\n";
 
-	for (s = i->second->snps.begin(); s != i->second->snps.end(); s++)
-	    cerr << "    Col: " << (*s)->col << " rank 1: " << (*s)->rank_1 << " rank 2: " << (*s)->rank_2 << "\n";
+        for (s = i->second->snps.begin(); s != i->second->snps.end(); s++)
+            cerr << "    Col: " << (*s)->col << " rank 1: " << (*s)->rank_1 << " rank 2: " << (*s)->rank_2 << "\n";
 
-	cerr << "\n";
+        cerr << "\n";
     }
 
     return 0;
 }
 
-int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
-    CatMatch      *m;
-    string         f;
-    char           line[max_len];
+int load_catalog_matches(string sample, vector<CatMatch *> &matches) {
+    CatMatch *m;
+    string f;
+    char line[max_len];
     vector<string> parts;
-    long int       line_num;
-    ifstream       fh;
+    long int line_num;
+    ifstream fh;
 
     f = sample + ".matches.tsv";
     fh.open(f.c_str(), ifstream::in);
@@ -315,29 +315,29 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
 
     line_num = 0;
     while (fh.good()) {
-	fh.getline(line, max_len);
+        fh.getline(line, max_len);
         line_num++;
 
-	if (!fh.good() && strlen(line) == 0)
-	    continue;
+        if (!fh.good() && strlen(line) == 0)
+            continue;
 
-	parse_tsv(line, parts);
+        parse_tsv(line, parts);
 
         if (parts.size() != num_matches_fields) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
 
-	m = new CatMatch;
-	m->batch_id  = atoi(parts[1].c_str());
-	m->cat_id    = atoi(parts[2].c_str());
+        m = new CatMatch;
+        m->batch_id = atoi(parts[1].c_str());
+        m->cat_id = atoi(parts[2].c_str());
         m->sample_id = atoi(parts[3].c_str());
-	m->tag_id    = atoi(parts[4].c_str());
-	m->haplotype = new char[parts[5].length() + 1];
-	strcpy(m->haplotype, parts[5].c_str());
-	m->depth     = atoi(parts[6].c_str());
+        m->tag_id = atoi(parts[4].c_str());
+        m->haplotype = new char [parts[5].length() + 1];
+        strcpy(m->haplotype, parts[5].c_str());
+        m->depth = atoi(parts[6].c_str());
 
-	matches.push_back(m);
+        matches.push_back(m);
     }
 
     fh.close();
@@ -345,13 +345,13 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
     return 0;
 }
 
-int load_model_results(string sample,  map<int, ModRes *> &modres) {
-    string         f;
-    char          *line;
-    int            size;
+int load_model_results(string sample, map<int, ModRes *> &modres) {
+    string f;
+    char *line;
+    int size;
     vector<string> parts;
-    long int       line_num;
-    ifstream       fh;
+    long int line_num;
+    ifstream fh;
 
     line = (char *) malloc(sizeof(char) * max_len);
     size = max_len;
@@ -371,34 +371,34 @@ int load_model_results(string sample,  map<int, ModRes *> &modres) {
     }
 
     ModRes *mod;
-    uint    tag_id, samp_id;
+    uint tag_id, samp_id;
 
     line_num = 0;
     while (fh.good()) {
         read_line(fh, &line, &size);
         line_num++;
 
-	if (!fh.good() && strlen(line) == 0)
-	    continue;
+        if (!fh.good() && strlen(line) == 0)
+            continue;
 
-	parse_tsv(line, parts);
+        parse_tsv(line, parts);
 
         if (parts.size() != num_tags_fields) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
 
-	//
-	// Read the model sequence, a series of letters specifying if the model called a
-	// homozygous base (O), a heterozygous base (E), or if the base type was unknown (U).
-	//
-	if (parts[6] != "model") continue;
+        //
+        // Read the model sequence, a series of letters specifying if the model called a
+        // homozygous base (O), a heterozygous base (E), or if the base type was unknown (U).
+        //
+        if (parts[6] != "model") continue;
 
-	samp_id = atoi(parts[1].c_str()); 
-	tag_id  = atoi(parts[2].c_str());
-	mod     = new ModRes(samp_id, tag_id, parts[9].c_str());
+        samp_id = atoi(parts[1].c_str());
+        tag_id = atoi(parts[2].c_str());
+        mod = new ModRes(samp_id, tag_id, parts[9].c_str());
 
-	modres[tag_id] = mod;
+        modres[tag_id] = mod;
     }
 
     fh.close();
@@ -408,15 +408,15 @@ int load_model_results(string sample,  map<int, ModRes *> &modres) {
     return 1;
 }
 
-int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
-    string         f;
-    char          *line;
-    int            size, id, samp_id;
+int load_snp_calls(string sample, map<int, SNPRes *> &snpres) {
+    string f;
+    char *line;
+    int size, id, samp_id;
     vector<string> parts;
-    long int       line_num;
-    SNP           *snp;
-    SNPRes        *snpr;
-    ifstream       fh;
+    long int line_num;
+    SNP *snp;
+    SNPRes *snpr;
+    ifstream fh;
 
     line = (char *) malloc(sizeof(char) * max_len);
     size = max_len;
@@ -438,35 +438,35 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
     while (fh.good()) {
         read_line(fh, &line, &size);
 
-	if (!fh.good() && strlen(line) == 0)
-	    continue;
+        if (!fh.good() && strlen(line) == 0)
+            continue;
 
-	parse_tsv(line, parts);
+        parse_tsv(line, parts);
 
         if (parts.size() != num_snps_fields && parts.size() != num_snps_fields - 2) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
 
-	samp_id = atoi(parts[1].c_str()); 
-        id      = atoi(parts[2].c_str());
+        samp_id = atoi(parts[1].c_str());
+        id = atoi(parts[2].c_str());
 
-	snp         = new SNP;
-	snp->col    = atoi(parts[3].c_str());
-	snp->lratio = atof(parts[4].c_str());
-	snp->rank_1 = parts[5].at(0);
-	snp->rank_2 = parts[6].at(0);
+        snp = new SNP;
+        snp->col = atoi(parts[3].c_str());
+        snp->lratio = atof(parts[4].c_str());
+        snp->rank_1 = parts[5].at(0);
+        snp->rank_2 = parts[6].at(0);
 
-	if (parts.size() == 9) {
-	    snp->rank_3 = parts[7].length() == 0 ? 0 : parts[7].at(0);
-	    snp->rank_4 = parts[8].length() == 0 ? 0 : parts[8].at(0);
-	}
+        if (parts.size() == 9) {
+            snp->rank_3 = parts[7].length() == 0 ? 0 : parts[7].at(0);
+            snp->rank_4 = parts[8].length() == 0 ? 0 : parts[8].at(0);
+        }
 
         if (snpres.count(id) == 0) {
-	    snpr = new SNPRes(samp_id, id);
-	    snpres[id] = snpr;
+            snpr = new SNPRes(samp_id, id);
+            snpres[id] = snpr;
         }
-	snpres[id]->snps.push_back(snp);
+        snpres[id]->snps.push_back(snp);
 
         line_num++;
     }

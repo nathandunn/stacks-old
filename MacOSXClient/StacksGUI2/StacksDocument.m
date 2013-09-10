@@ -11,6 +11,8 @@
 
 @implementation StacksDocument
 
+@synthesize locusViews;
+
 - (id)initWithLocusView:(NSMutableDictionary*)locusViews {
     if ((self = [super init])) {
         self.locusViews = locusViews;
@@ -22,7 +24,6 @@
     return self ;
 }
 
-@synthesize locusViews;
 
 - (NSMutableArray *)findPopulations {
 
