@@ -8,12 +8,14 @@
 
 #import <Foundation/Foundation.h>
 
+@class ProgressController ;
 
-@interface StacksApplicationController : NSDocumentController
+@interface StacksApplicationController : NSDocumentController{
+    ProgressController *progressController ;
+}
 
-@property(weak) IBOutlet NSPanel *progressPanel ;
-@property(weak) IBOutlet NSProgressIndicator *loadProgress;
 - (IBAction) importDocument:(id)sender;
 
 
 @end
+

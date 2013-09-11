@@ -10,6 +10,7 @@
 #import "StacksConverter.h"
 #import "StacksDocumentController.h"
 #import "StacksDocument.h"
+#import "ProgressController.h"
 
 
 @implementation StacksApplicationController {
@@ -18,8 +19,6 @@
 }
 
 
-@synthesize  loadProgress;
-@synthesize  progressPanel;
 
 //- (id)init {
 //    self = [super init];
@@ -65,7 +64,7 @@
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if (result == NSOKButton) {
         NSLog(@"ok !!");
-        NSLog(@"directory URL: %@",panel.directoryURL.path);
+        NSLog(@"directory URL: %@", panel.directoryURL.path);
 //        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/%@.stacks",panel.directoryURL.path.lastPathComponent];
         NSString *stacksDocumentPath = [stacksConverter generateFilePathForUrl:panel.directoryURL];
         BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:stacksDocumentPath error:NULL];
@@ -76,7 +75,28 @@
 
 
 //        [self startProgressPanel:@"starting"];
-        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:loadProgress];
+
+        if (!progressController) {
+            NSLog(@"loadding progress!!!");
+            progressController = [[ProgressController alloc] init];
+
+            [progressController showWindow:self];
+            [NSApp beginSheet:[progressController window] modalForWindow:self modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
+
+//            [progressController showWindow:[StacksDocumentController sharedDocumentController]];
+        }
+
+
+//        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+//            [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:nil];
+//        });
+        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:progressController.loadProgress];
+
+//        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:loadProgress];
+
+        if (progressController) {
+            [progressController close];
+        }
 //        NSString* directoryStructure = []
 //        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/StacksDocument.stacks"];
 //        NSString *[path stringByAppendingString:<#(NSString *)aString#>]
@@ -112,6 +132,8 @@
 //    return nil;
 }
 
+
+
 //- (void) startIndeterminateProgressPanel:(NSString *)message
 //{
 //    // Display a progress panel as a sheet
@@ -125,12 +147,14 @@
 //       didEndSelector: @selector(progressDidEnd: returnCode: contextInfo:)
 //          contextInfo: NULL];
 //}
-- (void) startProgressPanel:(NSString *)message
-{
-    [loadProgress displayIfNeeded];
-    [loadProgress setIndeterminate:false];
-    [loadProgress setDisplayedWhenStopped:false];
-    [loadProgress setNeedsDisplay:true];
+- (void)startProgressPanel:(NSString *)message {
+//    [loadProgress displayIfNeeded];
+//    [loadProgress setIndeterminate:false];
+//    [loadProgress setDisplayedWhenStopped:false];
+//    [loadProgress setNeedsDisplay:true];
+
+//    [self beginSheetModalForWindow:[ progressPanel window]  modalDelegate:self  didEndSelector:@ selector( alertEnded:code:context:)  contextInfo:NULL];
+
 
 //    [NSApp beginSheet: progressPanel
 //       modalForWindow: self.windowForSheet
@@ -161,8 +185,8 @@
 //       didEndSelector: @selector(progressDidEnd: returnCode: contextInfo:)
 //          contextInfo: NULL];
 }
-- (void) progressDidEnd:(NSWindow *)panel returnCode:(int)returnCode contextInfo:(void *)context
-{
+
+- (void)progressDidEnd:(NSWindow *)panel returnCode:(int)returnCode contextInfo:(void *)context {
 //    xpc_connection_t connection = (xpc_connection_t)context;
 //
 //    if (returnCode != 0) {
@@ -179,19 +203,16 @@
 }
 
 
+- (void)stopProgressPanel {
 
-
-- (void) stopProgressPanel
-{
-
-    [progressPanel orderOut: self];
-    [NSApp endSheet: progressPanel returnCode: 0];
+//    [progressPanel orderOut: self];
+//    [NSApp endSheet: progressPanel returnCode: 0];
 }
 
 - (IBAction)cancelAction:(id)sender {
 
-    [progressPanel orderOut: self];
-    [NSApp endSheet: progressPanel returnCode: 1];
+//    [progressPanel orderOut: self];
+//    [NSApp endSheet: progressPanel returnCode: 1];
 }
 
 

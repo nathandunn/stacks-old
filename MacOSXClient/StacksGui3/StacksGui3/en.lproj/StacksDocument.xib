@@ -15,7 +15,6 @@
 			<string>NSCollectionView</string>
 			<string>NSCollectionViewItem</string>
 			<string>NSCustomObject</string>
-			<string>NSProgressIndicator</string>
 			<string>NSScrollView</string>
 			<string>NSScroller</string>
 			<string>NSTableCellView</string>
@@ -70,7 +69,7 @@
 											<string key="NSFrameSize">{191, 479}</string>
 											<reference key="NSSuperview" ref="348858861"/>
 											<reference key="NSWindow"/>
-											<reference key="NSNextKeyView" ref="895738995"/>
+											<reference key="NSNextKeyView" ref="261955227"/>
 											<int key="NSViewLayerContentsRedrawPolicy">2</int>
 											<string key="NSReuseIdentifierKey">_NS:13</string>
 											<bool key="NSEnabled">YES</bool>
@@ -231,7 +230,7 @@
 							<string key="NSFrame">{{-1, -1}, {193, 497}}</string>
 							<reference key="NSSuperview" ref="568628114"/>
 							<reference key="NSWindow"/>
-							<reference key="NSNextKeyView" ref="261955227"/>
+							<reference key="NSNextKeyView" ref="348858861"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<int key="NSsFlags">133682</int>
 							<reference key="NSVScroller" ref="45604386"/>
@@ -254,7 +253,7 @@
 											<string key="NSFrameSize">{137, 480}</string>
 											<reference key="NSSuperview" ref="852008943"/>
 											<reference key="NSWindow"/>
-											<reference key="NSNextKeyView" ref="679404349"/>
+											<reference key="NSNextKeyView" ref="1065922613"/>
 											<string key="NSReuseIdentifierKey">_NS:13</string>
 											<bool key="NSEnabled">YES</bool>
 											<object class="NSTableHeaderView" key="NSHeaderView" id="827759626">
@@ -375,7 +374,7 @@
 							<string key="NSFrame">{{191, -2}, {139, 498}}</string>
 							<reference key="NSSuperview" ref="568628114"/>
 							<reference key="NSWindow"/>
-							<reference key="NSNextKeyView" ref="1065922613"/>
+							<reference key="NSNextKeyView" ref="852008943"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<int key="NSsFlags">133682</int>
 							<reference key="NSVScroller" ref="679404349"/>
@@ -477,7 +476,7 @@
 											<string key="NSFrameSize">{914, 271}</string>
 											<reference key="NSSuperview" ref="177183700"/>
 											<reference key="NSWindow"/>
-											<reference key="NSNextKeyView" ref="236817503"/>
+											<reference key="NSNextKeyView" ref="931628719"/>
 											<string key="NSReuseIdentifierKey">_NS:13</string>
 											<object class="NSTableHeaderView" key="NSHeaderView" id="805219153">
 												<reference key="NSNextResponder" ref="931628719"/>
@@ -655,7 +654,6 @@
 									<string key="NSFrame">{{1, 273}, {914, 15}}</string>
 									<reference key="NSSuperview" ref="59706283"/>
 									<reference key="NSWindow"/>
-									<reference key="NSNextKeyView"/>
 									<string key="NSReuseIdentifierKey">_NS:60</string>
 									<int key="NSsFlags">1</int>
 									<reference key="NSTarget" ref="59706283"/>
@@ -681,7 +679,7 @@
 							<string key="NSFrame">{{327, -2}, {916, 289}}</string>
 							<reference key="NSSuperview" ref="568628114"/>
 							<reference key="NSWindow"/>
-							<reference key="NSNextKeyView" ref="931628719"/>
+							<reference key="NSNextKeyView" ref="177183700"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<int key="NSsFlags">166450</int>
 							<reference key="NSVScroller" ref="236817503"/>
@@ -820,42 +818,6 @@
 				<bool key="NSFilterRestrictsInsertion">YES</bool>
 				<bool key="NSClearsFilterPredicateOnInsertion">YES</bool>
 			</object>
-			<object class="NSWindowTemplate" id="346721466">
-				<int key="NSWindowStyleMask">79</int>
-				<int key="NSWindowBacking">2</int>
-				<string key="NSWindowRect">{{196, 112}, {649, 137}}</string>
-				<int key="NSWTFlags">-1535638528</int>
-				<string key="NSWindowTitle">Window</string>
-				<string key="NSWindowClass">NSPanel</string>
-				<nil key="NSViewClass"/>
-				<nil key="NSUserInterfaceItemIdentifier"/>
-				<object class="NSView" key="NSWindowView" id="408717010">
-					<reference key="NSNextResponder"/>
-					<int key="NSvFlags">256</int>
-					<array class="NSMutableArray" key="NSSubviews">
-						<object class="NSProgressIndicator" id="965706028">
-							<reference key="NSNextResponder" ref="408717010"/>
-							<int key="NSvFlags">268</int>
-							<string key="NSFrame">{{78, 59}, {506, 20}}</string>
-							<reference key="NSSuperview" ref="408717010"/>
-							<reference key="NSWindow"/>
-							<reference key="NSNextKeyView"/>
-							<string key="NSReuseIdentifierKey">_NS:9</string>
-							<string key="NSHuggingPriority">{250, 250}</string>
-							<int key="NSpiFlags">16397</int>
-							<double key="NSMaxValue">100</double>
-						</object>
-					</array>
-					<string key="NSFrameSize">{649, 137}</string>
-					<reference key="NSSuperview"/>
-					<reference key="NSWindow"/>
-					<reference key="NSNextKeyView" ref="965706028"/>
-					<string key="NSReuseIdentifierKey">_NS:21</string>
-				</object>
-				<string key="NSScreenRect">{{0, 0}, {1920, 1058}}</string>
-				<string key="NSMaxSize">{10000000000000, 10000000000000}</string>
-				<bool key="NSWindowIsRestorable">YES</bool>
-			</object>
 		</array>
 		<object class="IBObjectContainer" key="IBDocument.Objects">
 			<array class="NSMutableArray" key="connectionRecords">
@@ -906,14 +868,6 @@
 						<reference key="destination" ref="125525310"/>
 					</object>
 					<int key="connectionID">100247</int>
-				</object>
-				<object class="IBConnectionRecord">
-					<object class="IBOutletConnection" key="connection">
-						<string key="label">loadProgress</string>
-						<reference key="source" ref="512844837"/>
-						<reference key="destination" ref="965706028"/>
-					</object>
-					<int key="connectionID">100423</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBOutletConnection" key="connection">
@@ -1838,27 +1792,6 @@
 						<reference key="object" ref="847840269"/>
 						<reference key="parent" ref="562073478"/>
 					</object>
-					<object class="IBObjectRecord">
-						<int key="objectID">100424</int>
-						<reference key="object" ref="346721466"/>
-						<array class="NSMutableArray" key="children">
-							<reference ref="408717010"/>
-						</array>
-						<reference key="parent" ref="0"/>
-					</object>
-					<object class="IBObjectRecord">
-						<int key="objectID">100425</int>
-						<reference key="object" ref="408717010"/>
-						<array class="NSMutableArray" key="children">
-							<reference ref="965706028"/>
-						</array>
-						<reference key="parent" ref="346721466"/>
-					</object>
-					<object class="IBObjectRecord">
-						<int key="objectID">100422</int>
-						<reference key="object" ref="965706028"/>
-						<reference key="parent" ref="408717010"/>
-					</object>
 				</array>
 			</object>
 			<dictionary class="NSMutableDictionary" key="flattenedProperties">
@@ -1931,12 +1864,6 @@
 				<string key="100376.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="100378.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="100379.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
-				<boolean value="NO" key="100422.IBNSViewMetadataLastInspectedTranslatesAutoresizingMaskIntoConstraints"/>
-				<string key="100422.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
-				<string key="100422.userInterfaceItemIdentifier">ProgressBar</string>
-				<string key="100424.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
-				<boolean value="NO" key="100424.NSWindowTemplate.visibleAtLaunch"/>
-				<string key="100425.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="5.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="5.IBWindowTemplateEditedContentRect">{{133, 170}, {507, 413}}</string>
 				<string key="6.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
@@ -2000,27 +1927,11 @@
 				<object class="IBPartialClassDescription">
 					<string key="className">StacksDocument</string>
 					<string key="superclassName">NSPersistentDocument</string>
-					<dictionary class="NSMutableDictionary" key="actions">
-						<string key="cancelAction:">id</string>
-						<string key="importDocument:">id</string>
-					</dictionary>
-					<dictionary class="NSMutableDictionary" key="actionInfosByName">
-						<object class="IBActionInfo" key="cancelAction:">
-							<string key="name">cancelAction:</string>
-							<string key="candidateClassName">id</string>
-						</object>
-						<object class="IBActionInfo" key="importDocument:">
-							<string key="name">importDocument:</string>
-							<string key="candidateClassName">id</string>
-						</object>
-					</dictionary>
 					<dictionary class="NSMutableDictionary" key="outlets">
 						<string key="datumCollectionView">NSCollectionView</string>
 						<string key="datumController">DatumArrayController</string>
-						<string key="loadProgress">NSProgressIndicator</string>
 						<string key="locusTableView">NSTableView</string>
 						<string key="populationTableView">NSTableView</string>
-						<string key="progressPanel">NSPanel</string>
 						<string key="stacksTableView">NSTableView</string>
 					</dictionary>
 					<dictionary class="NSMutableDictionary" key="toOneOutletInfosByName">
@@ -2032,10 +1943,6 @@
 							<string key="name">datumController</string>
 							<string key="candidateClassName">DatumArrayController</string>
 						</object>
-						<object class="IBToOneOutletInfo" key="loadProgress">
-							<string key="name">loadProgress</string>
-							<string key="candidateClassName">NSProgressIndicator</string>
-						</object>
 						<object class="IBToOneOutletInfo" key="locusTableView">
 							<string key="name">locusTableView</string>
 							<string key="candidateClassName">NSTableView</string>
@@ -2043,10 +1950,6 @@
 						<object class="IBToOneOutletInfo" key="populationTableView">
 							<string key="name">populationTableView</string>
 							<string key="candidateClassName">NSTableView</string>
-						</object>
-						<object class="IBToOneOutletInfo" key="progressPanel">
-							<string key="name">progressPanel</string>
-							<string key="candidateClassName">NSPanel</string>
 						</object>
 						<object class="IBToOneOutletInfo" key="stacksTableView">
 							<string key="name">stacksTableView</string>
