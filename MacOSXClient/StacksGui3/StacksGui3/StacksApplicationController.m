@@ -81,7 +81,7 @@
             progressController = [[ProgressController alloc] init];
 
             [progressController showWindow:self];
-            [NSApp beginSheet:[progressController window] modalForWindow:self modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
+            [NSApp beginSheet:[progressController window] modalForWindow:[progressController window] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
 
 //            [progressController showWindow:[StacksDocumentController sharedDocumentController]];
         }
@@ -94,14 +94,10 @@
 
 //        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:loadProgress];
 
+        [NSApp stopModal];
         if (progressController) {
             [progressController close];
         }
-//        NSString* directoryStructure = []
-//        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/StacksDocument.stacks"];
-//        NSString *[path stringByAppendingString:<#(NSString *)aString#>]
-//        [stacksDocument open];
-//        return [panel URLs];
 
         StacksDocument *opendDoc = [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
         opendDoc.path = stacksDocumentPath;
