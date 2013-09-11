@@ -9,15 +9,18 @@
 #import "ProgressController.h"
 #import "StacksAppDelegate.h"
 
-@interface ProgressController ()
+//@interface ProgressController (){
+//
+//}
+//
+//@end
 
-@end
-
-//@synthesize  loadProgress;
 //@synthesize  progressPanel;
 
 
 @implementation ProgressController
+
+@synthesize  loadProgress ;
 
 - (id)init {
     NSLog(@"initializaing") ;

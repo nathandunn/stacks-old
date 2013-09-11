@@ -38,6 +38,7 @@ using std::ofstream;
 #import "AlleleRepository.h"
 #import "LocusAlleleMO.h"
 #import "ConsensusStackEntryMO.h"
+#import "ProgressController.h"
 
 
 #include <sys/time.h>
@@ -100,14 +101,14 @@ using std::ofstream;
 }
 
 
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressBar:(NSProgressIndicator *)progressBar {
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController*)progressController {
 
     StacksDocument *stacksDocument = [self createStacksDocumentForPath:path];
     if (stacksDocument == nil) {
         return nil;
     }
 
-    return [self loadDocument:stacksDocument withProgressBar:progressBar];
+    return [self loadDocument:stacksDocument progressWindow:progressController];
 }
 
 
@@ -178,8 +179,10 @@ using std::ofstream;
     }
 }
 
-- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument withProgressBar:(NSProgressIndicator *) bar {
+- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *) progressWindow {
+    NSProgressIndicator *bar = progressWindow.loadProgress;
     if(bar!=nil){
+        bar.doubleValue=0;
         [bar display];
         [bar incrementBy:1];
     }
@@ -257,7 +260,7 @@ using std::ofstream;
     gettimeofday(&time1, NULL);
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
-    [bar incrementBy:15];
+    [bar incrementBy:5];
     gettimeofday(&time2, NULL);
     NSLog(@"population pmap %ld", (time2.tv_sec - time1.tv_sec));
 
@@ -271,7 +274,7 @@ using std::ofstream;
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
-    incrementAmount = 20 / catalog.size();
+    incrementAmount = 10 / catalog.size();
 
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
