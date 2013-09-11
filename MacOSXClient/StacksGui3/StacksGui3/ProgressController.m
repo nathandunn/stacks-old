@@ -7,6 +7,7 @@
 //
 
 #import "ProgressController.h"
+#import "StacksAppDelegate.h"
 
 @interface ProgressController ()
 
@@ -23,6 +24,7 @@
     self = [super init];
     if (self) {
         self = [super initWithWindowNibName:@"ProgressController"];
+//        _stacksAppDelegate = [[NSApplication sharedApplication] delegate];
     }
 
     return self;

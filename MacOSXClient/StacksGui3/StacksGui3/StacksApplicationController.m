@@ -79,12 +79,12 @@
         if (!progressController) {
             NSLog(@"loadding progress!!!");
             progressController = [[ProgressController alloc] init];
+        }
 
-            [progressController showWindow:self];
-            [NSApp beginSheet:[progressController window] modalForWindow:[progressController window] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
+        [progressController showWindow:self];
+        [NSApp beginSheet:[progressController window] modalForWindow:[progressController window] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
 
 //            [progressController showWindow:[StacksDocumentController sharedDocumentController]];
-        }
 
 
 //        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
@@ -127,7 +127,6 @@
     }
 //    return nil;
 }
-
 
 
 //- (void) startIndeterminateProgressPanel:(NSString *)message

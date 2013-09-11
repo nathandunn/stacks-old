@@ -8,7 +8,10 @@
 
 #import <Cocoa/Cocoa.h>
 
+@class StacksAppDelegate;
+
 @interface ProgressController : NSWindowController{
+
 
 }
 
@@ -22,5 +25,7 @@
 @property(weak) IBOutlet NSTextField *actionMessage;
 //@property(weak) IBOutlet NSTe*cancelButton;
 - (IBAction) cancelCurrentAction: (id) sender ;
+
+@property(weak) StacksAppDelegate *stacksAppDelegate ;
 
 @end
