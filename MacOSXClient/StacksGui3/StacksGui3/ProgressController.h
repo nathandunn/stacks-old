@@ -19,7 +19,7 @@
 //@property(weak) IBOutlet NSProgressIndicator *loadProgress;
 //@property(weak) IBOutlet NSButton *cancelButton;
 
-@property(weak) IBOutlet NSProgressIndicator *loadProgress;
+@property(strong) IBOutlet NSProgressIndicator *loadProgress;
 @property(weak) IBOutlet NSButton *cancelButton;
 @property(weak) IBOutlet NSTextField *actionTitle ;
 @property(weak) IBOutlet NSTextField *actionMessage;
