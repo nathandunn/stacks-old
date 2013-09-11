@@ -80,40 +80,45 @@
             NSLog(@"loadding progress!!!");
             progressController = [[ProgressController alloc] init];
         }
-
         [progressController showWindow:self];
-        
-//        NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+
+
+//        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+//            [NSApp runModalForWindow:[progressController window]];
+
+//            [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:nil];
+//        NSAlert *alert = [[NSAlert alloc] init] ;
+//        [alert addButtonWithTitle:@"OK"];
+//        [alert addButtonWithTitle:@"Cancel"];
+//        [alert setMessageText:@"Sheet Title"];
+//        [alert setInformativeText:@"Message text goes here."];
+//        [alert setAlertStyle:NSWarningAlertStyle];
+////        [alert beginSheetModalForWindow:mainWindow modalDelegate:self didEndSelector:@selector(someMethodDidEnd:returnCode:contextInfo:) contextInfo:nil];
+//        [alert beginSheetModalForWindow:[NSApp mainWindow] modalDelegate:self didEndSelector:@selector(someMethodDidEnd:returnCode:contextInfo:) contextInfo:nil];
+//        });
+
+//        NSAlert *alert = [[NSAlert alloc] init] ;
 //        [alert addButtonWithTitle:@"OK"];
 //        [alert addButtonWithTitle:@"Cancel"];
 //        [alert setMessageText:@"Sheet Title"];
 //        [alert setInformativeText:@"Message text goes here."];
 //        [alert setAlertStyle:NSWarningAlertStyle];
 //        [alert beginSheetModalForWindow:mainWindow modalDelegate:self didEndSelector:@selector(someMethodDidEnd:returnCode:contextInfo:) contextInfo:nil];
-//        
-//        - (void) someMethodDidEnd:(NSAlert *)alert returnCode:(int)returnCode contextInfo:(void *)contextInfo
-//        {
-//            if(returnCode == NSAlertFirstButtonReturn)
-//            {
-//                // Do something
-//            }
-//        }
-        
-        [NSApp beginSheet:[progressController window] modalForWindow:[progressController window] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
+//        [alert beginSheetModalForWindow:[NSApp mainWindow] modalDelegate:self didEndSelector:@selector(someMethodDidEnd:returnCode:contextInfo:) contextInfo:nil];
+
+//        [NSApp beginSheet:[progressController window] modalForWindow:[NSApp mainWindow] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
 //        [NSApp beginSheet:[progressController window] modalForWindow:[StacksApplicationController sharedDocumentController ] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
 //        [NSApp beginSheet:[progressController window] modalForWindow:[[StacksDocumentController sharedDocumentController ] window] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
-        
+
 //            [progressController showWindow:[StacksDocumentController sharedDocumentController]];
 
 
 //        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-//            [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:nil];
+//            [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow: progressController];
 //        });
         [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
 
-//        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:loadProgress];
-
-        [NSApp stopModal];
+//        [NSApp stopModal];
         if (progressController) {
             [progressController close];
         }
@@ -229,5 +234,11 @@
 //    [NSApp endSheet: progressPanel returnCode: 1];
 }
 
+//
+- (void)someMethodDidEnd:(NSAlert *)alert returnCode:(int)returnCode contextInfo:(void *)contextInfo {
+    if (returnCode == NSAlertFirstButtonReturn) {
+        // Do something
+    }
+}
 
 @end
