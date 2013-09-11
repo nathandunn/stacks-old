@@ -82,8 +82,27 @@
         }
 
         [progressController showWindow:self];
+        
+//        NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+//        [alert addButtonWithTitle:@"OK"];
+//        [alert addButtonWithTitle:@"Cancel"];
+//        [alert setMessageText:@"Sheet Title"];
+//        [alert setInformativeText:@"Message text goes here."];
+//        [alert setAlertStyle:NSWarningAlertStyle];
+//        [alert beginSheetModalForWindow:mainWindow modalDelegate:self didEndSelector:@selector(someMethodDidEnd:returnCode:contextInfo:) contextInfo:nil];
+//        
+//        - (void) someMethodDidEnd:(NSAlert *)alert returnCode:(int)returnCode contextInfo:(void *)contextInfo
+//        {
+//            if(returnCode == NSAlertFirstButtonReturn)
+//            {
+//                // Do something
+//            }
+//        }
+        
         [NSApp beginSheet:[progressController window] modalForWindow:[progressController window] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
-
+//        [NSApp beginSheet:[progressController window] modalForWindow:[StacksApplicationController sharedDocumentController ] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
+//        [NSApp beginSheet:[progressController window] modalForWindow:[[StacksDocumentController sharedDocumentController ] window] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
+        
 //            [progressController showWindow:[StacksDocumentController sharedDocumentController]];
 
 
