@@ -11,6 +11,7 @@
 #import "StacksDocumentController.h"
 #import "StacksDocument.h"
 #import "ProgressController.h"
+#import "StacksAppDelegate.h"
 
 
 @implementation StacksApplicationController {
@@ -80,7 +81,9 @@
             NSLog(@"loadding progress!!!");
             progressController = [[ProgressController alloc] init];
         }
-        [progressController showWindow:self];
+//        [progressController showWindow:self];
+        [progressController showWindow:[NSApp mainWindow]];
+//        [progressController showWindow:[[StacksApplicationController sharedDocumentController] window] ]];
 
 
 //        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
