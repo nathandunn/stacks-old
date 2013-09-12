@@ -7,6 +7,7 @@
 //
 
 #import "ProgressController.h"
+#import "StacksConverter.h"
 #import "StacksAppDelegate.h"
 
 //@interface ProgressController (){
@@ -20,7 +21,7 @@
 
 @implementation ProgressController
 
-@synthesize  loadProgress ;
+@synthesize  stacksConverter;
 
 - (id)init {
     NSLog(@"initializaing") ;
@@ -55,6 +56,8 @@
 
 - (IBAction)cancelCurrentAction:(id)sender {
     NSLog(@"cancelling current action from %@",sender);
+    stacksConverter.stopProcess = true ;
+    [self close];
 }
 
 

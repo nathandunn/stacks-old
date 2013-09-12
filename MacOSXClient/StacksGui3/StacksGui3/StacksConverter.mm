@@ -74,6 +74,7 @@ using std::ofstream;
 
 // lookups
 @synthesize lociDictionary;
+@synthesize stopProcess;
 
 
 - (id)init {
@@ -92,6 +93,7 @@ using std::ofstream;
 
 
         lociDictionary = [[NSMutableDictionary alloc] init];
+        stopProcess = true ;
     }
     return self;
 }

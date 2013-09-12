@@ -9,6 +9,7 @@
 #import <Cocoa/Cocoa.h>
 
 @class StacksAppDelegate;
+@class StacksConverter;
 
 @interface ProgressController : NSWindowController{
 
@@ -28,4 +29,5 @@
 
 @property(weak) StacksAppDelegate *stacksAppDelegate ;
 
+@property(nonatomic, strong) StacksConverter *stacksConverter;
 @end
