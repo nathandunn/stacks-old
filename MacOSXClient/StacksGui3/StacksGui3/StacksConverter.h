@@ -37,6 +37,8 @@
 @property(nonatomic, strong) NSMutableDictionary *lociDictionary ;
 
 
+@property(nonatomic) bool stopProcess;
+
 - (id)init ;
 
 - (NSString *) generateFilePathForUrl:(NSURL *) url;

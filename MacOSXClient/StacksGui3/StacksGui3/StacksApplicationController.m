@@ -73,6 +73,7 @@
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
             NSLog(@"loadding progress!!! in thread");
             ProgressController *progressController = [[ProgressController alloc] init];
+            progressController.stacksConverter = stacksConverter;
             [progressController showWindow:[NSApp mainWindow]];
             [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
             [progressController close];
