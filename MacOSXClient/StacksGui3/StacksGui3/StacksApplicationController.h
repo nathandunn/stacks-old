@@ -11,7 +11,7 @@
 @class ProgressController ;
 
 @interface StacksApplicationController : NSDocumentController{
-    ProgressController *progressController ;
+//    ProgressController *progressController ;
 }
 
 - (IBAction) importDocument:(id)sender;
