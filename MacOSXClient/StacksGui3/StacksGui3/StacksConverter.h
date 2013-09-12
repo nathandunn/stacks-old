@@ -17,6 +17,7 @@
 @class SnpRepository;
 @class StackEntryRepository;
 @class AlleleRepository;
+@class ProgressController;
 
 
 @interface StacksConverter : NSObject
@@ -39,10 +40,10 @@
 - (id)init ;
 
 - (NSString *) generateFilePathForUrl:(NSURL *) url;
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressBar:(NSProgressIndicator *)bar;
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController;
 - (NSMutableDictionary *)loadPopulation:(NSString *)path;
 
-- (StacksDocument *)loadDocument:(StacksDocument *)document withProgressBar:(NSProgressIndicator *) bar;
+- (StacksDocument *)loadDocument:(StacksDocument *)document progressWindow:(ProgressController *) bar;
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path;
 
 //- (StacksDocument *)getStacksDocumentForPath:(NSString *)string;

@@ -38,6 +38,7 @@ using std::ofstream;
 #import "AlleleRepository.h"
 #import "LocusAlleleMO.h"
 #import "ConsensusStackEntryMO.h"
+#import "ProgressController.h"
 
 
 #include <sys/time.h>
@@ -100,14 +101,14 @@ using std::ofstream;
 }
 
 
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressBar:(NSProgressIndicator *)progressBar {
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController*)progressController {
 
     StacksDocument *stacksDocument = [self createStacksDocumentForPath:path];
     if (stacksDocument == nil) {
         return nil;
     }
 
-    return [self loadDocument:stacksDocument withProgressBar:progressBar];
+    return [self loadDocument:stacksDocument progressWindow:progressController];
 }
 
 
@@ -178,8 +179,12 @@ using std::ofstream;
     }
 }
 
-- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument withProgressBar:(NSProgressIndicator *) bar {
+- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *) progressWindow {
+    NSProgressIndicator *bar = progressWindow.loadProgress;
     if(bar!=nil){
+        progressWindow.actionTitle.stringValue = [NSString stringWithFormat:@"Importing %@",stacksDocument.name];
+        progressWindow.actionMessage.stringValue = @"Begin import";
+        bar.doubleValue=0;
         [bar display];
         [bar incrementBy:1];
     }
@@ -193,6 +198,7 @@ using std::ofstream;
 
 
     load_loci([catalogFile UTF8String], catalog, false);
+    progressWindow.actionMessage.stringValue = @"Loading loci";
     [bar incrementBy:2];
     gettimeofday(&time2, NULL);
     NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
@@ -204,6 +210,7 @@ using std::ofstream;
     map<int, string> samples;
     vector<int> sample_ids;
 
+    progressWindow.actionMessage.stringValue = @"Building file list";
     vector<pair<int, string>> files = [self buildFileList:path];
     [bar incrementBy:2];
     NSLog(@"number of files %ld", files.size());
@@ -211,6 +218,7 @@ using std::ofstream;
 
 
     // loci loaded . . . now loading datum
+    progressWindow.actionMessage.stringValue = @"Matching catalogs";
     NSLog(@"model size %d", (int) catalog.size());
 
     double incrementAmount = 20.0 / files.size();
@@ -239,8 +247,10 @@ using std::ofstream;
 
 
     NSLog(@"input populations %ld", stacksDocument.populations.count);
+    progressWindow.actionMessage.stringValue = @"Adding populations";
     [self addPopulationsToDocument:stacksDocument forPath:path];
     [bar incrementBy:5];
+    progressWindow.actionMessage.stringValue = @"Adding samples";
     NSLog(@"output populations %ld", stacksDocument.populations.count);
     [self addSamplesToDocument:stacksDocument forSampleIds:sample_ids andSamples:samples];
     [bar incrementBy:5];
@@ -255,11 +265,13 @@ using std::ofstream;
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
 
     gettimeofday(&time1, NULL);
+    progressWindow.actionMessage.stringValue = @"Populating samples";
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
-    [bar incrementBy:15];
+    [bar incrementBy:5];
     gettimeofday(&time2, NULL);
     NSLog(@"population pmap %ld", (time2.tv_sec - time1.tv_sec));
+    progressWindow.actionMessage.stringValue = @"Populated Samples";
 
 
     NSMutableSet *loci = [[NSMutableSet alloc] init];
@@ -271,8 +283,9 @@ using std::ofstream;
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
-    incrementAmount = 20 / catalog.size();
+    incrementAmount = 10 / catalog.size();
 
+    progressWindow.actionMessage.stringValue = @"Importing locus snps";
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
         LocusMO *locusMO = [locusRepository insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).first]
@@ -326,6 +339,7 @@ using std::ofstream;
     Datum *datum;
     CSLocus *loc;
 
+    progressWindow.actionMessage.stringValue = @"Importing datums";
     // for each sample process the catalog
     NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
 
@@ -412,6 +426,7 @@ using std::ofstream;
 
     NSError *innerError = nil ;
     stacksDocument.loci = loci;
+    progressWindow.actionMessage.stringValue = @"Saving doc";
     [stacksDocument.managedObjectContext save:&innerError];
     [bar incrementBy:5];
     if (innerError != nil) {
@@ -429,6 +444,7 @@ using std::ofstream;
 
     gettimeofday(&time1, NULL);
     // TODO: I don't think this does anything hear
+    progressWindow.actionMessage.stringValue = @"Reading populations";
     [self readPopulations:stacksDocument];
 
     LocusMO *bLocusMO = [loci.allObjects objectAtIndex:0];
@@ -443,6 +459,7 @@ using std::ofstream;
 
 
     NSLog(@"loading stack entries");
+    progressWindow.actionMessage.stringValue = @"Loading stack entries";
     gettimeofday(&time1, NULL);
     [self loadStacksEntriesFromTagFile:stacksDocument];
     gettimeofday(&time2, NULL);
@@ -450,18 +467,21 @@ using std::ofstream;
 
     NSLog(@"loading snps onto datums");
     gettimeofday(&time1, NULL);
+    progressWindow.actionMessage.stringValue = @"Loading datum snps";
     [self loadSnpsOntoDatum:stacksDocument];
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading snps onto datum time %ld", time2.tv_sec - time1.tv_sec);
 
     NSLog(@"loading alleles onto datums");
     gettimeofday(&time1, NULL);
+    progressWindow.actionMessage.stringValue = @"Loading datum alleles";
     [self loadAllelesOntoDatum:stacksDocument];
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading alleles onto datum time %ld", time2.tv_sec - time1.tv_sec);
 
 
     NSError *error;
+    progressWindow.actionMessage.stringValue = @"Final save";
     BOOL success = [stacksDocument.managedObjectContext save:&error];
     NSLog(@"saved %d", success);
     [bar incrementBy:5];
