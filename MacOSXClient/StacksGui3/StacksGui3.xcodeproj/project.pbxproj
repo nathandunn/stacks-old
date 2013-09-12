@@ -63,6 +63,8 @@
 		6B4674A4173183C300E42419 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6B4674A3173183C300E42419 /* libz.1.2.7.dylib */; };
 		6B4674AA1731872600E42419 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6B4674A81731872600E42419 /* input.cc */; };
 		6B77C0E117D1467600987B98 /* StacksDocumentController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B77C0E017D1467600987B98 /* StacksDocumentController.m */; };
+		6B81723E17DFD684002FB907 /* ProgressController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B81723C17DFD684002FB907 /* ProgressController.m */; };
+		6B81723F17DFD684002FB907 /* ProgressController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6B81723D17DFD684002FB907 /* ProgressController.xib */; };
 		6BE2E32E17459949005E3C81 /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BE2E32D17459949005E3C81 /* AlleleMO.m */; };
 		D793C0F3A4CB3044602B1F3F /* SampleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C907D04E589764C9E424 /* SampleRepository.m */; };
 		D793C1B281A1C40A30CE8AEF /* StacksApplicationController.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C30B70F0B18AAD31F9DB /* StacksApplicationController.m */; };
@@ -205,6 +207,9 @@
 		6B4674A91731872600E42419 /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../../../src/input.h; sourceTree = "<group>"; };
 		6B77C0DF17D1467600987B98 /* StacksDocumentController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksDocumentController.h; sourceTree = "<group>"; };
 		6B77C0E017D1467600987B98 /* StacksDocumentController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksDocumentController.m; sourceTree = "<group>"; };
+		6B81723B17DFD684002FB907 /* ProgressController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProgressController.h; sourceTree = "<group>"; };
+		6B81723C17DFD684002FB907 /* ProgressController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ProgressController.m; sourceTree = "<group>"; };
+		6B81723D17DFD684002FB907 /* ProgressController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ProgressController.xib; sourceTree = "<group>"; };
 		6BE2E32C17459949005E3C81 /* AlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleMO.h; sourceTree = "<group>"; };
 		6BE2E32D17459949005E3C81 /* AlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleMO.m; sourceTree = "<group>"; };
 		D793C0562E8CF1695DFEB1B1 /* StacksAppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksAppDelegate.h; sourceTree = "<group>"; };
@@ -397,6 +402,9 @@
 				D793C09ACB3E8D99724E31E1 /* StacksApplicationController.h */,
 				D793C0D6DD3279E830428307 /* StacksImportMenuItem.m */,
 				D793CD5C363C8FDC0CBA649A /* StacksImportMenuItem.h */,
+				6B81723B17DFD684002FB907 /* ProgressController.h */,
+				6B81723C17DFD684002FB907 /* ProgressController.m */,
+				6B81723D17DFD684002FB907 /* ProgressController.xib */,
 			);
 			name = GUI;
 			sourceTree = "<group>";
@@ -546,6 +554,7 @@
 				1442E1A917206DBB004B6361 /* Credits.rtf in Resources */,
 				1442E1B217206DBB004B6361 /* MainMenu.xib in Resources */,
 				63D53F09D355842335914336 /* StacksDocument.xib in Resources */,
+				6B81723F17DFD684002FB907 /* ProgressController.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -632,6 +641,7 @@
 				D793C43EDB0ABD3CE3E0047B /* StacksAppDelegate.m in Sources */,
 				D793C1B281A1C40A30CE8AEF /* StacksApplicationController.m in Sources */,
 				D793C7E7AAF6AF5E0DAA658E /* StacksImportMenuItem.m in Sources */,
+				6B81723E17DFD684002FB907 /* ProgressController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
