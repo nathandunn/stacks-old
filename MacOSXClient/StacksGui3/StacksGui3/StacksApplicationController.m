@@ -66,88 +66,33 @@
     if (result == NSOKButton) {
         NSLog(@"ok !!");
         NSLog(@"directory URL: %@", panel.directoryURL.path);
-//        NSString *stacksDocumentPath = [panel.directoryURL.path stringByAppendingFormat:@"/%@.stacks",panel.directoryURL.path.lastPathComponent];
         NSString *stacksDocumentPath = [stacksConverter generateFilePathForUrl:panel.directoryURL];
         BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:stacksDocumentPath error:NULL];
         NSLog(@"file removed %i", fileRemoved);
 
-//        StacksDocument *stacksDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
-//        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"]];
-
-
-//        [self startProgressPanel:@"starting"];
-
-        if (!progressController) {
-            NSLog(@"loadding progress!!!");
-            progressController = [[ProgressController alloc] init];
-        }
-//        [progressController showWindow:self];
-        [progressController showWindow:[NSApp mainWindow]];
-//        [progressController showWindow:[[StacksApplicationController sharedDocumentController] window] ]];
-
-
-//        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-//            [NSApp runModalForWindow:[progressController window]];
-
-//            [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressBar:nil];
-//        NSAlert *alert = [[NSAlert alloc] init] ;
-//        [alert addButtonWithTitle:@"OK"];
-//        [alert addButtonWithTitle:@"Cancel"];
-//        [alert setMessageText:@"Sheet Title"];
-//        [alert setInformativeText:@"Message text goes here."];
-//        [alert setAlertStyle:NSWarningAlertStyle];
-////        [alert beginSheetModalForWindow:mainWindow modalDelegate:self didEndSelector:@selector(someMethodDidEnd:returnCode:contextInfo:) contextInfo:nil];
-//        [alert beginSheetModalForWindow:[NSApp mainWindow] modalDelegate:self didEndSelector:@selector(someMethodDidEnd:returnCode:contextInfo:) contextInfo:nil];
-//        });
-
-//        NSAlert *alert = [[NSAlert alloc] init] ;
-//        [alert addButtonWithTitle:@"OK"];
-//        [alert addButtonWithTitle:@"Cancel"];
-//        [alert setMessageText:@"Sheet Title"];
-//        [alert setInformativeText:@"Message text goes here."];
-//        [alert setAlertStyle:NSWarningAlertStyle];
-//        [alert beginSheetModalForWindow:mainWindow modalDelegate:self didEndSelector:@selector(someMethodDidEnd:returnCode:contextInfo:) contextInfo:nil];
-//        [alert beginSheetModalForWindow:[NSApp mainWindow] modalDelegate:self didEndSelector:@selector(someMethodDidEnd:returnCode:contextInfo:) contextInfo:nil];
-
-//        [NSApp beginSheet:[progressController window] modalForWindow:[NSApp mainWindow] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
-//        [NSApp beginSheet:[progressController window] modalForWindow:[StacksApplicationController sharedDocumentController ] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
-//        [NSApp beginSheet:[progressController window] modalForWindow:[[StacksDocumentController sharedDocumentController ] window] modalDelegate:nil didEndSelector:NULL contextInfo:NULL];
-
-//            [progressController showWindow:[StacksDocumentController sharedDocumentController]];
-
-
-//        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-//            [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow: progressController];
-//        });
-        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
-
-//        [NSApp stopModal];
-        if (progressController) {
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            NSLog(@"loadding progress!!! in thread");
+            ProgressController *progressController = [[ProgressController alloc] init];
+            [progressController showWindow:[NSApp mainWindow]];
+            [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
             [progressController close];
-        }
-
-        StacksDocument *opendDoc = [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
-        opendDoc.path = stacksDocumentPath;
-        for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
-            NSLog(@"stacks doc: %@", stacksDocument.path);
-            if (stacksDocument.path == NULL) {
-                [stacksDocument close];
+            NSLog(@"LOADED progress!!! in thread");
+//        [NSApp stopModal];
+            NSLog(@"trying to open");
+            StacksDocument *opendDoc = [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
+            opendDoc.path = stacksDocumentPath;
+            for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
+                NSLog(@"stacks doc: %@", stacksDocument.path);
+                if (stacksDocument.path == NULL) {
+                    [stacksDocument close];
 //                [[StacksDocumentController sharedDocumentController] perform]
+                }
             }
-        }
+        });
+//        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
 
-        // if any other documents are around
 
-        // set the file menu to enable "auto"
 
-//        NSMenu *mainMenu = [[NSApplication sharedApplication] mainMenu];
-//        NSMenu *appMenu = [[mainMenu itemAtIndex:1] submenu];
-//        NSMenuItem *menuItem = [appMenu itemAtIndex:3];
-//        [menuItem setEnabled:false];
-
-//        for (NSMenuItem *item in [appMenu itemArray]) {
-//            NSLog(@"%@", [item title]);
-//        }
     }
     else {
         NSLog(@"NOT ok !!");
