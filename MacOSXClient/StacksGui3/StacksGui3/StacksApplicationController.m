@@ -75,19 +75,26 @@
             ProgressController *progressController = [[ProgressController alloc] init];
             progressController.stacksConverter = stacksConverter;
             [progressController showWindow:[NSApp mainWindow]];
-            [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
-            [progressController close];
-            NSLog(@"LOADED progress!!! in thread");
+            if ([stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController] != nil) {
+                [progressController close];
+                NSLog(@"LOADED progress!!! in thread");
 //        [NSApp stopModal];
-            NSLog(@"trying to open");
-            StacksDocument *opendDoc = [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
-            opendDoc.path = stacksDocumentPath;
-            for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
-                NSLog(@"stacks doc: %@", stacksDocument.path);
-                if (stacksDocument.path == NULL) {
-                    [stacksDocument close];
+                NSLog(@"trying to open");
+                StacksDocument *opendDoc = [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
+                opendDoc.path = stacksDocumentPath;
+                for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
+                    NSLog(@"stacks doc: %@", stacksDocument.path);
+                    if (stacksDocument.path == NULL) {
+                        [stacksDocument close];
 //                [[StacksDocumentController sharedDocumentController] perform]
+                    }
                 }
+
+            }
+            else {
+                [progressController close];
+                NSLog(@"must have been cancelled") ;
+
             }
         });
 //        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
