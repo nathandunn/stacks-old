@@ -93,7 +93,7 @@ using std::ofstream;
 
 
         lociDictionary = [[NSMutableDictionary alloc] init];
-        stopProcess = true ;
+        stopProcess = false ;
     }
     return self;
 }
@@ -341,6 +341,7 @@ using std::ofstream;
     Datum *datum;
     CSLocus *loc;
 
+    if(stopProcess)  return nil ;
     progressWindow.actionMessage.stringValue = @"Importing datums";
     // for each sample process the catalog
     NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
@@ -428,6 +429,10 @@ using std::ofstream;
 
     NSError *innerError = nil ;
     stacksDocument.loci = loci;
+    if(stopProcess)  {
+        stopProcess = false ;
+        return nil ;
+    }
     progressWindow.actionMessage.stringValue = @"Saving doc";
     [stacksDocument.managedObjectContext save:&innerError];
     [bar incrementBy:5];
@@ -446,6 +451,10 @@ using std::ofstream;
 
     gettimeofday(&time1, NULL);
     // TODO: I don't think this does anything hear
+    if(stopProcess)  {
+        stopProcess = false ;
+        return nil ;
+    }
     progressWindow.actionMessage.stringValue = @"Reading populations";
     [self readPopulations:stacksDocument];
 
@@ -461,9 +470,17 @@ using std::ofstream;
 
 
     NSLog(@"loading stack entries");
+    if(stopProcess)  {
+        stopProcess = false ;
+        return nil ;
+    }
     progressWindow.actionMessage.stringValue = @"Loading stack entries";
     gettimeofday(&time1, NULL);
     [self loadStacksEntriesFromTagFile:stacksDocument];
+    if(stopProcess)  {
+        stopProcess = false ;
+        return nil ;
+    }
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading stacks entries time %ld", time2.tv_sec - time1.tv_sec);
 
@@ -713,6 +730,7 @@ using std::ofstream;
     // 2 - for each file, read the .tags file
     for (NSString *filePath in files) {
         if ([filePath hasSuffix:@".tags.tsv"] && ![filePath hasPrefix:@"batch"]) {
+            if(stopProcess)  return ;
             [self loadTagFile:document fromFile:filePath];
         }
         else {
