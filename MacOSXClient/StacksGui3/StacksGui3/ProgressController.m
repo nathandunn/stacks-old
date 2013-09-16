@@ -56,7 +56,7 @@
 
 - (IBAction)cancelCurrentAction:(id)sender {
     NSLog(@"cancelling current action from %@",sender);
-    stacksConverter.stopProcess = true ;
+//    stacksConverter.stopProcess = true ;
     [self close];
 }
 
