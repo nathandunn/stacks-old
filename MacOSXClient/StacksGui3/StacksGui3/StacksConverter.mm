@@ -437,7 +437,7 @@ using std::ofstream;
     [stacksDocument.managedObjectContext save:&innerError];
     [bar incrementBy:5];
     if (innerError != nil) {
-        NSLog(@"error doing inner save: ", innerError);
+        NSLog(@"error doing inner save: %@", innerError);
         return nil;
     }
 
