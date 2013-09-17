@@ -642,6 +642,12 @@ using std::ofstream;
     NSLog(@"sampleName %@", sampleName);
     // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
+    // create matches file name
+    NSString *matchesFileName = [document.path stringByAppendingString:[sampleName stringByAppendingString:@".matches.tsv"]];
+    NSLog(@"matches filename %@",matchesFileName) ;
+
+    NSMutableDictionary *lookupDictionary = [self loadMatchesDictionary:matchesFileName];
+
     NSManagedObjectContext *moc = document.managedObjectContext;
     SampleMO *sampleMO = [sampleRepository getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
 
@@ -678,7 +684,10 @@ using std::ofstream;
 
             // if the StackMO is found
 //            sampleId = [[columns objectAtIndex:1] integerValue];
-            newLocusId = [[columns objectAtIndex:2] integerValue];
+            NSString *internalIndex = [[columns objectAtIndex:2] stringValue];
+//            newLocusId = [[columns objectAtIndex:2] integerValue];
+            newLocusId = [[lookupDictionary objectForKey:internalIndex] integerValue];
+
             column = [[columns objectAtIndex:3] integerValue];
             lratio = [[columns objectAtIndex:4] floatValue];
 
@@ -717,6 +726,28 @@ using std::ofstream;
         NSLog(@"error saving %@", saveError);
     }
 
+}
+
+- (NSMutableDictionary *)loadMatchesDictionary:(NSString *)name {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    if(![fileManager fileExistsAtPath:name]) return nil ;
+
+//    NSString* contents = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding]
+    NSError *error2 ;
+    NSArray *fileData = [[NSString stringWithContentsOfFile:name encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
+    NSMutableDictionary *lookupDictionary = [[NSMutableDictionary alloc] init];
+    NSString *line;
+    for (line in fileData) {
+        NSArray *columns = [line componentsSeparatedByString:@"\t"];
+        if(columns.count>5){
+//        NSLog(@"column 2 values [%@] - [%@]",[columns objectAtIndex:2],[columns objectAtIndex:4]);
+        NSString* internalId = [columns objectAtIndex:2];
+        NSString* externalId = [columns objectAtIndex:4];
+        [lookupDictionary setObject:externalId forKey:internalId];
+        }
+    }
+
+    return lookupDictionary;
 }
 
 - (void)loadStacksEntriesFromTagFile:(StacksDocument *)document {
