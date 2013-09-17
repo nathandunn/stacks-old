@@ -227,7 +227,9 @@ using std::ofstream;
     gettimeofday(&time1, NULL);
     for (uint i = 0; i < files.size(); i++) {
         vector<CatMatch *> m;
-        load_catalog_matches([[path stringByAppendingString:@"/"] UTF8String] + files[i].second, m);
+        NSString* matchString = [path stringByAppendingFormat:@"/%@",[NSString stringWithUTF8String:files[i].second.c_str()]] ;
+        NSLog(@"loading match file %@",matchString);
+        load_catalog_matches([matchString UTF8String], m);
 
         if (m.size() == 0) {
             cerr << "Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from population analysis.\n";
@@ -290,11 +292,12 @@ using std::ofstream;
     progressWindow.actionMessage.stringValue = @"Importing locus snps";
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
-        LocusMO *locusMO = [locusRepository insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).first]
+        LocusMO *locusMO = [locusRepository insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).second->id]
                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
         ];
-//        NSLog(@"inserting locus %@",locusMO.locusId);
         vector<SNP *> snps = catalogIterator->second->snps;
+        NSLog(@"inserting locus %@ with sequence %@",locusMO.locusId , [NSString stringWithUTF8String:read]);
+
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
         for (; snpsIterator != snps.end(); ++snpsIterator) {
@@ -360,7 +363,7 @@ using std::ofstream;
             loc = it->second;
             datum = pmap->datum(loc->id, sample_ids[i]);
             if (loc->id == 1) {
-                NSLog(@"locus 1 - getting sample id %ld for id %ld", sample_ids[i], i);
+                NSLog(@"locus 1 - getting sample id %d for id %d", sample_ids[i], i);
                 NSLog(@"datum is null? %@",(datum==NULL ? @"YES": @"NO"));
             }
 
@@ -375,7 +378,7 @@ using std::ofstream;
 
             LocusMO *locusMO = nil ;
             // TODO: use a lookup here to speed up
-            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%ld", it->first] integerValue]];
+            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
 //            locusMO = [lociDictionary objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
             locusMO = [lociDictionary objectForKey:lookupKey];
             if (locusMO == nil) {
@@ -578,7 +581,7 @@ using std::ofstream;
     NSInteger locusId = -1;
     NSInteger newLocusId;
     DatumMO *datumMO = nil ;
-    char allele;
+//    char allele;
     int depth;
     float ratio;
 //    LocusMO *locusMO = nil ;
@@ -959,6 +962,8 @@ using std::ofstream;
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
     stacksDocument.path = path;
     stacksDocument.name = path.lastPathComponent;
+//    NSManagedObjectContext *context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+
     NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
     stacksDocument.managedObjectContext = moc;
     if (stacksDocumentCreateError) {
