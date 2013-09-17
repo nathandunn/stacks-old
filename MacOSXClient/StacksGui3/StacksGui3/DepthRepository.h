@@ -12,5 +12,5 @@
 
 
 @interface DepthRepository : NSObject
-- (DepthMO *)insertDepth:(NSManagedObjectContext *)context depth:(NSNumber *)depth;
+- (DepthMO *)insertDepth:(NSManagedObjectContext *)context depth:(NSNumber *)depth andOrder:(int)order;
 @end

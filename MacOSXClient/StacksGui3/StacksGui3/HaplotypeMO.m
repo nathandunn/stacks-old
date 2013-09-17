@@ -2,7 +2,7 @@
 //  HaplotypeMO.m
 //  StacksGui3
 //
-//  Created by Nathan Dunn on 5/15/13.
+//  Created by Nathan Dunn on 9/17/13.
 //  Copyright (c) 2013 Nathan Dunn. All rights reserved.
 //
 
@@ -13,6 +13,7 @@
 @implementation HaplotypeMO
 
 @dynamic haplotype;
+@dynamic order;
 @dynamic datum;
 
 @end

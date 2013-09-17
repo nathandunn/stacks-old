@@ -12,5 +12,5 @@
 
 
 @interface HaplotypeRepository : NSObject
-- (HaplotypeMO *)insertHaplotype:(NSManagedObjectContext *)context haplotype:(NSString *)haplotype;
+- (HaplotypeMO *)insertHaplotype:(NSManagedObjectContext *)context haplotype:(NSString *)haplotype andOrder:(int)order;
 @end

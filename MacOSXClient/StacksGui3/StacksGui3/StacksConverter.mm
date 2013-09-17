@@ -409,10 +409,10 @@ using std::ofstream;
 
                 if (depths.size() == numLetters) {
                     for (int j = 0; j < numLetters; j++) {
-                        HaplotypeMO *haplotypeMO = [haplotypeRepository insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]]];
+                        HaplotypeMO *haplotypeMO = [haplotypeRepository insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]] andOrder:j];
                         [newDatumMO addHaplotypesObject:haplotypeMO];
 
-                        DepthMO *depthMO = [depthRepository insertDepth:moc depth:[NSNumber numberWithInt:depths[j]]];
+                        DepthMO *depthMO = [depthRepository insertDepth:moc depth:[NSNumber numberWithInt:depths[j]] andOrder:j];
                         [newDatumMO addDepthsObject:depthMO];
                     }
                     [locusMO addDatumsObject:newDatumMO];

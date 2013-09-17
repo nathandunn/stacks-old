@@ -57,7 +57,11 @@
 
 //    for (NSUInteger i = 0; i < self.haplotypes.count; i++) {
     int i = 0;
-    for (HaplotypeMO *haplotype  in self.haplotypes) {
+//    NSArray *sortByOrder = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
+
+    NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
+
+    for (HaplotypeMO *haplotype  in [self.haplotypes sortedArrayUsingDescriptors:sortDescriptors]) {
 //        NSString *haplotype = [self.haplotypes objectAtIndex:i];
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype.haplotype];
         NSRange selectedRange = NSMakeRange(0, haplotype.haplotype.length);
@@ -103,7 +107,8 @@
 //    }
 //    for (NSUInteger i = 0; i < self.depths.count; i++) {
     int i = 0;
-    for (DepthMO *depth in  self.depths) {
+    NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
+    for (DepthMO *depth in  [self.depths sortedArrayUsingDescriptors:sortDescriptors]) {
 //        NSString *depth = [(NSNumber *) [self.depths objectAtIndex:i] stringValue];
         NSString *numberString = [NSString stringWithFormat:@"%@", depth.depth];
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:numberString];
