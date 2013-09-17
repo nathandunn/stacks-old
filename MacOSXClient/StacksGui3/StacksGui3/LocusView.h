@@ -35,8 +35,7 @@
 
 - (NSInteger) matchingParents;
 
-- (BOOL)hasMale;
-- (BOOL)hasFemale;
-
-- (NSInteger)count;
+//- (BOOL)hasMale;
+//- (BOOL)hasFemale;
+//- (NSInteger)count;
 @end
