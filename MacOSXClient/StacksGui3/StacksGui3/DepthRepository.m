@@ -13,9 +13,10 @@
 @implementation DepthRepository {
 
 }
-- (DepthMO *)insertDepth:(NSManagedObjectContext *)context depth:(NSNumber *)depth {
+- (DepthMO *)insertDepth:(NSManagedObjectContext *)context depth:(NSNumber *)depth andOrder:(int)order {
     DepthMO *depthMO = [NSEntityDescription insertNewObjectForEntityForName:@"Depth" inManagedObjectContext:context];
     depthMO.depth = depth ;
+    depthMO.order = [NSNumber numberWithInt:order];
     return depthMO ;
 }
 @end

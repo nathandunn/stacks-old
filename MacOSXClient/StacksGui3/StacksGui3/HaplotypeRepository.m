@@ -13,9 +13,11 @@
 @implementation HaplotypeRepository {
 
 }
-- (HaplotypeMO *)insertHaplotype:(NSManagedObjectContext *)context haplotype:(NSString *)haplotype {
+- (HaplotypeMO *)insertHaplotype:(NSManagedObjectContext *)context haplotype:(NSString *)haplotype andOrder:(int)order {
     HaplotypeMO *haplotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Haplotype" inManagedObjectContext:context];
     haplotypeMO.haplotype = haplotype ;
+    haplotypeMO.order = [NSNumber numberWithInt:order];
+    order ;
     return haplotypeMO ;
 }
 @end

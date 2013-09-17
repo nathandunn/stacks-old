@@ -29,10 +29,12 @@
     </entity>
     <entity name="Depth" representedClassName="DepthMO" syncable="YES">
         <attribute name="depth" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="order" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="depths" inverseEntity="Datum" syncable="YES"/>
     </entity>
     <entity name="Haplotype" representedClassName="HaplotypeMO" syncable="YES">
         <attribute name="haplotype" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="order" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="haplotypes" inverseEntity="Datum" syncable="YES"/>
     </entity>
     <entity name="Locus" representedClassName="LocusMO" syncable="YES">
@@ -82,13 +84,13 @@
         <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="stackEntries" inverseEntity="Datum" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Allele" positionX="936" positionY="18" width="128" height="90"/>
+        <element name="Allele" positionX="936" positionY="18" width="128" height="105"/>
         <element name="ConsensusStackEntry" positionX="207" positionY="-36" width="128" height="45"/>
         <element name="Datum" positionX="214" positionY="201" width="128" height="240"/>
         <element name="DatumAllele" positionX="522" positionY="480" width="128" height="60"/>
         <element name="DatumSnp" positionX="709" positionY="471" width="128" height="60"/>
-        <element name="Depth" positionX="981" positionY="357" width="128" height="75"/>
-        <element name="Haplotype" positionX="9" positionY="297" width="128" height="75"/>
+        <element name="Depth" positionX="981" positionY="357" width="128" height="90"/>
+        <element name="Haplotype" positionX="9" positionY="297" width="128" height="90"/>
         <element name="Locus" positionX="493" positionY="-66" width="128" height="165"/>
         <element name="LocusAllele" positionX="115" positionY="525" width="128" height="60"/>
         <element name="LocusSnp" positionX="-27" positionY="516" width="128" height="60"/>
