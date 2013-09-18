@@ -10,6 +10,7 @@
 #import "DatumMO.h"
 #import "LocusAlleleMO.h"
 #import "LocusSnpMO.h"
+#import "SampleMO.h"
 
 
 @implementation LocusMO
@@ -23,6 +24,16 @@
 @dynamic datums;
 @dynamic snps;
 
+- (NSInteger) countProgeny{
+    NSInteger count =0 ;
+    for(DatumMO *datumMO in self.datums){
+        NSString* sampleName = datumMO.sample.name ;
+        if([sampleName rangeOfString:@"male"].location==NSNotFound){
+            ++count ;
+        }
+    }
+    return count  ;
+}
 
 - (NSAttributedString *)renderConsensus{
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:self.consensus];
