@@ -10,6 +10,8 @@
 #import "DatumMO.h"
 #import "SnpMO.h"
 #import "DatumSnpMO.h"
+#import "LocusSnpMO.h"
+#import "LocusMO.h"
 
 
 @implementation StackEntryMO
@@ -85,7 +87,7 @@
     }
 
     [string setAttributes:blockAttribute range:NSMakeRange(0, self.sequence.length)];
-    for (DatumSnpMO *snp in self.datum.snps) {
+    for (LocusSnpMO *snp in self.datum.locus.snps) {
         NSRange selectedRange = NSMakeRange([snp.column unsignedIntegerValue], 1);
         [string setAttributes:snpAttribute range:selectedRange];
     }
