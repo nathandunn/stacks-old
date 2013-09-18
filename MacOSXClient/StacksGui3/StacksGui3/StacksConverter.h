@@ -35,6 +35,8 @@
 
 // a lookup
 @property(nonatomic, strong) NSMutableDictionary *lociDictionary ;
+// sample:Dictionary<internalid,externalid>
+@property(nonatomic, strong) NSMutableDictionary *sampleLookupDictionary;
 
 
 @property(nonatomic) bool stopProcess;
