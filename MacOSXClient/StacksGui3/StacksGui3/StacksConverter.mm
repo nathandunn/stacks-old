@@ -93,17 +93,17 @@ using std::ofstream;
 
 
         lociDictionary = [[NSMutableDictionary alloc] init];
-        stopProcess = false ;
+        stopProcess = false;
     }
     return self;
 }
 
 - (NSString *)generateFilePathForUrl:(NSURL *)url {
-    return [url.path stringByAppendingFormat:@"/%@.stacks",url.path.lastPathComponent];
+    return [url.path stringByAppendingFormat:@"/%@.stacks", url.path.lastPathComponent];
 }
 
 
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController*)progressController {
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController {
 
     StacksDocument *stacksDocument = [self createStacksDocumentForPath:path];
     if (stacksDocument == nil) {
@@ -181,12 +181,12 @@ using std::ofstream;
     }
 }
 
-- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *) progressWindow {
+- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *)progressWindow {
     NSProgressIndicator *bar = progressWindow.loadProgress;
-    if(bar!=nil){
-        progressWindow.actionTitle.stringValue = [NSString stringWithFormat:@"Importing %@",stacksDocument.name];
+    if (bar != nil) {
+        progressWindow.actionTitle.stringValue = [NSString stringWithFormat:@"Importing %@", stacksDocument.name];
         progressWindow.actionMessage.stringValue = @"Begin import";
-        bar.doubleValue=0;
+        bar.doubleValue = 0;
         [bar display];
         [bar incrementBy:1];
     }
@@ -227,8 +227,8 @@ using std::ofstream;
     gettimeofday(&time1, NULL);
     for (uint i = 0; i < files.size(); i++) {
         vector<CatMatch *> m;
-        NSString* matchString = [path stringByAppendingFormat:@"/%@",[NSString stringWithUTF8String:files[i].second.c_str()]] ;
-        NSLog(@"loading match file %@",matchString);
+        NSString *matchString = [path stringByAppendingFormat:@"/%@", [NSString stringWithUTF8String:files[i].second.c_str()]];
+        NSLog(@"loading match file %@", matchString);
         load_catalog_matches([matchString UTF8String], m);
 
         if (m.size() == 0) {
@@ -296,7 +296,7 @@ using std::ofstream;
                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
         ];
         vector<SNP *> snps = catalogIterator->second->snps;
-        NSLog(@"inserting locus %@ with sequence %@",locusMO.locusId , [NSString stringWithUTF8String:read]);
+        NSLog(@"inserting locus %@ with sequence %@", locusMO.locusId, [NSString stringWithUTF8String:read]);
 
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
@@ -344,7 +344,7 @@ using std::ofstream;
     Datum *datum;
     CSLocus *loc;
 
-    if(stopProcess)  return nil ;
+    if (stopProcess) return nil;
     progressWindow.actionMessage.stringValue = @"Importing datums";
     // for each sample process the catalog
     NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
@@ -364,7 +364,7 @@ using std::ofstream;
             datum = pmap->datum(loc->id, sample_ids[i]);
             if (loc->id == 1) {
                 NSLog(@"locus 1 - getting sample id %d for id %d", sample_ids[i], i);
-                NSLog(@"datum is null? %@",(datum==NULL ? @"YES": @"NO"));
+                NSLog(@"datum is null? %@", (datum == NULL ? @"YES" : @"NO"));
             }
 
 //            datum = pmap->datum(loc->id, i);
@@ -397,8 +397,8 @@ using std::ofstream;
                 vector<int> depths = datum->depth;
                 int numLetters = obshape.size();
                 // TODO: should be entering this for the locus as well?
-                if(loc->id==1){
-                    NSLog(@"insertign datum for sample %@ locus %@ and sampleId %i",sampleMO.name,locusMO.locusId,sample_ids[i]);
+                if (loc->id == 1) {
+                    NSLog(@"insertign datum for sample %@ locus %@ and sampleId %i", sampleMO.name, locusMO.locusId, sample_ids[i]);
                 }
                 DatumMO *newDatumMO = [datumRepository insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO locus:locusMO];
 
@@ -432,9 +432,9 @@ using std::ofstream;
 
     NSError *innerError = nil ;
     stacksDocument.loci = loci;
-    if(stopProcess)  {
-        stopProcess = false ;
-        return nil ;
+    if (stopProcess) {
+        stopProcess = false;
+        return nil;
     }
     progressWindow.actionMessage.stringValue = @"Saving doc";
     [stacksDocument.managedObjectContext save:&innerError];
@@ -454,9 +454,9 @@ using std::ofstream;
 
     gettimeofday(&time1, NULL);
     // TODO: I don't think this does anything hear
-    if(stopProcess)  {
-        stopProcess = false ;
-        return nil ;
+    if (stopProcess) {
+        stopProcess = false;
+        return nil;
     }
     progressWindow.actionMessage.stringValue = @"Reading populations";
     [self readPopulations:stacksDocument];
@@ -473,16 +473,16 @@ using std::ofstream;
 
 
     NSLog(@"loading stack entries");
-    if(stopProcess)  {
-        stopProcess = false ;
-        return nil ;
+    if (stopProcess) {
+        stopProcess = false;
+        return nil;
     }
     progressWindow.actionMessage.stringValue = @"Loading stack entries";
     gettimeofday(&time1, NULL);
     [self loadStacksEntriesFromTagFile:stacksDocument];
-    if(stopProcess)  {
-        stopProcess = false ;
-        return nil ;
+    if (stopProcess) {
+        stopProcess = false;
+        return nil;
     }
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading stacks entries time %ld", time2.tv_sec - time1.tv_sec);
@@ -644,9 +644,10 @@ using std::ofstream;
 
     // create matches file name
     NSString *matchesFileName = [document.path stringByAppendingString:[sampleName stringByAppendingString:@".matches.tsv"]];
-    NSLog(@"matches filename %@",matchesFileName) ;
+    NSLog(@"matches filename %@", matchesFileName);
 
     NSMutableDictionary *lookupDictionary = [self loadMatchesDictionary:matchesFileName];
+    NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
 
     NSManagedObjectContext *moc = document.managedObjectContext;
     SampleMO *sampleMO = [sampleRepository getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
@@ -684,9 +685,11 @@ using std::ofstream;
 
             // if the StackMO is found
 //            sampleId = [[columns objectAtIndex:1] integerValue];
-            NSString *internalIndex = [[columns objectAtIndex:2] stringValue];
+            NSString *internalIndex = (NSString*) [columns objectAtIndex:2];
 //            newLocusId = [[columns objectAtIndex:2] integerValue];
-            newLocusId = [[lookupDictionary objectForKey:internalIndex] integerValue];
+            NSString *retrievedObject = (NSString*) [lookupDictionary objectForKey:internalIndex];
+            NSLog(@"retrieved object: %@", retrievedObject);
+            newLocusId = [retrievedObject integerValue];
 
             column = [[columns objectAtIndex:3] integerValue];
             lratio = [[columns objectAtIndex:4] floatValue];
@@ -730,20 +733,20 @@ using std::ofstream;
 
 - (NSMutableDictionary *)loadMatchesDictionary:(NSString *)name {
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    if(![fileManager fileExistsAtPath:name]) return nil ;
+    if (![fileManager fileExistsAtPath:name]) return nil;
 
 //    NSString* contents = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding]
-    NSError *error2 ;
+    NSError *error2;
     NSArray *fileData = [[NSString stringWithContentsOfFile:name encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
     NSMutableDictionary *lookupDictionary = [[NSMutableDictionary alloc] init];
     NSString *line;
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
-        if(columns.count>5){
+        if (columns.count > 5) {
 //        NSLog(@"column 2 values [%@] - [%@]",[columns objectAtIndex:2],[columns objectAtIndex:4]);
-        NSString* internalId = [columns objectAtIndex:2];
-        NSString* externalId = [columns objectAtIndex:4];
-        [lookupDictionary setObject:externalId forKey:internalId];
+            NSString* internalId = [columns objectAtIndex:2] ;
+            NSString* externalId = [columns objectAtIndex:4] ;
+            [lookupDictionary setObject:externalId forKey:internalId];
         }
     }
 
@@ -764,7 +767,7 @@ using std::ofstream;
     // 2 - for each file, read the .tags file
     for (NSString *filePath in files) {
         if ([filePath hasSuffix:@".tags.tsv"] && ![filePath hasPrefix:@"batch"]) {
-            if(stopProcess)  return ;
+            if (stopProcess) return;
             [self loadTagFile:document fromFile:filePath];
         }
         else {
