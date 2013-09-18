@@ -769,8 +769,8 @@ using std::ofstream;
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
         if (columns.count > 5) {
 //        NSLog(@"column 2 values [%@] - [%@]",[columns objectAtIndex:2],[columns objectAtIndex:4]);
-            NSString* internalId = [columns objectAtIndex:2] ;
-            NSString* externalId = [columns objectAtIndex:4] ;
+            NSString* internalId = [columns objectAtIndex:4] ;
+            NSString* externalId = [columns objectAtIndex:2] ;
             [lookupDictionary setObject:externalId forKey:internalId];
         }
     }
