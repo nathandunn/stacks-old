@@ -187,7 +187,7 @@
 }
 
 - (IBAction)cancelAction:(id)sender {
-
+    NSLog(@"in stacksappcontroller . .. cancelling action") ;
 //    [progressPanel orderOut: self];
 //    [NSApp endSheet: progressPanel returnCode: 1];
 }

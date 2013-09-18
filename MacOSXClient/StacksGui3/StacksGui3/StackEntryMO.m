@@ -12,6 +12,7 @@
 #import "DatumSnpMO.h"
 #import "LocusSnpMO.h"
 #import "LocusMO.h"
+#import "ConsensusStackEntryMO.h"
 
 
 @implementation StackEntryMO
@@ -53,13 +54,13 @@
 - (NSAttributedString *)renderSequence {
 //    NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:self.sequence];
 
-    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:self.sequence];
+    NSMutableAttributedString *sequenceAttributedString = [[NSMutableAttributedString alloc] initWithString:self.sequence];
 
-    [string beginEditing];
+    [sequenceAttributedString beginEditing];
     NSDictionary *blockAttribute;
-
-
     NSDictionary *snpAttribute;
+    NSDictionary *defectAttribute;
+
 
     if(![self.block isEqualToString:@"1"]){
         snpAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -70,6 +71,11 @@
         blockAttribute= [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blackColor], NSForegroundColorAttributeName,
                 [NSColor whiteColor], NSBackgroundColorAttributeName,
+                [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
+                nil];
+        defectAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
+                [NSColor blackColor], NSForegroundColorAttributeName,
+                [NSColor redColor], NSBackgroundColorAttributeName,
                 [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
                 nil];
     }
@@ -84,15 +90,40 @@
                 [NSColor grayColor], NSBackgroundColorAttributeName,
                 [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
                 nil];
+        defectAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
+                [NSColor whiteColor], NSForegroundColorAttributeName,
+                [NSColor redColor] , NSBackgroundColorAttributeName,
+                [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
+                nil];
     }
 
-    [string setAttributes:blockAttribute range:NSMakeRange(0, self.sequence.length)];
+    [sequenceAttributedString setAttributes:blockAttribute range:NSMakeRange(0, self.sequence.length)];
+
+    NSMutableArray* snps = [[NSMutableArray alloc] init];
     for (LocusSnpMO *snp in self.datum.locus.snps) {
         NSRange selectedRange = NSMakeRange([snp.column unsignedIntegerValue], 1);
-        [string setAttributes:snpAttribute range:selectedRange];
+        [sequenceAttributedString setAttributes:snpAttribute range:selectedRange];
+        [snps addObject:snp.column];
     }
-    [string endEditing];
-    return string;
+
+    NSString* consensusSequence = self.datum.consensus.sequence;
+    NSString* mySequence = [sequenceAttributedString string];
+    if(![consensusSequence isEqualToString:mySequence]){
+        for(int i = 0 ; i < mySequence.length && i < consensusSequence.length ; i++){
+            if([consensusSequence characterAtIndex:i]!=[mySequence characterAtIndex:i]){
+                // if is actually a defined SNP, then we ignore
+                if(![snps containsObject:[NSNumber numberWithInt:i]]){
+                    NSRange selectedRange = NSMakeRange(i, 1);
+                    [sequenceAttributedString setAttributes:defectAttribute range:selectedRange];
+                }
+            }
+        }
+    }
+
+
+
+    [sequenceAttributedString endEditing];
+    return sequenceAttributedString;
 
 
 //    return attributedString ;
