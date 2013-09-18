@@ -84,7 +84,7 @@
         <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="stackEntries" inverseEntity="Datum" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Allele" positionX="936" positionY="18" width="128" height="105"/>
+        <element name="Allele" positionX="682" positionY="63" width="128" height="105"/>
         <element name="ConsensusStackEntry" positionX="207" positionY="-36" width="128" height="45"/>
         <element name="Datum" positionX="214" positionY="201" width="128" height="240"/>
         <element name="DatumAllele" positionX="522" positionY="480" width="128" height="60"/>
@@ -98,7 +98,7 @@
         <element name="Population" positionX="16" positionY="18" width="128" height="90"/>
         <element name="ReferenceStackEntry" positionX="223" positionY="144" width="128" height="45"/>
         <element name="Sample" positionX="25" positionY="156" width="128" height="105"/>
-        <element name="Snp" positionX="988" positionY="111" width="128" height="150"/>
+        <element name="Snp" positionX="799" positionY="192" width="128" height="150"/>
         <element name="StackEntry" positionX="502" positionY="234" width="128" height="135"/>
     </elements>
 </model>
