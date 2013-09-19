@@ -18,4 +18,24 @@
 }
 
 
+
+- (NSArray *)arrangeObjects:(NSArray *)objects {
+    return [super arrangeObjects:objects];
+
+//    if (searchString == nil) {
+//        return [super arrangeObjects:objects];
+//    }
+//
+//    NSMutableArray *filteredObjects = [NSMutableArray arrayWithCapacity:[objects count]];
+//    NSEnumerator *objectsEnumerator = [objects objectEnumerator];
+//    id item;
+//
+//    while (item = [objectsEnumerator nextObject]) {
+//        if ([[item valueForKeyPath:@"title"] rangeOfString:searchString options:NSAnchoredSearch].location != NSNotFound) {
+//            [filteredObjects addObject:item];
+//        }
+//    }
+//    return [super arrangeObjects:filteredObjects];
+}
+
 @end
