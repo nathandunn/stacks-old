@@ -17,7 +17,7 @@
 
 - (id)openDocumentWithContentsOfURL:(NSURL *)url display:(BOOL)displayDocument error:(NSError **)outError {
     NSLog(@"using subclass!!");
-    [super openDocumentWithContentsOfURL:url display:displayDocument error:outError];
+    return [super openDocumentWithContentsOfURL:url display:displayDocument error:outError];
 }
 
 - (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
