@@ -7,8 +7,11 @@
 //
 
 #import "LocusArrayController.h"
+#import "LocusMO.h"
 
-@implementation LocusArrayController
+@implementation LocusArrayController {
+
+}
 
 @synthesize minSnpValue;
 
@@ -20,7 +23,9 @@
 
 
 - (NSArray *)arrangeObjects:(NSArray *)objects {
-    return [super arrangeObjects:objects];
+//    return [super arrangeObjects:objects];
+
+    NSLog(@"calculating objects iwth minSnp %ld for objects %ld",minSnpValue,objects.count);
 
     if (minSnpValue == 0) {
         return [super arrangeObjects:objects];
@@ -29,14 +34,16 @@
 
     // these are all LocusMO objects
 
-    NSEnumerator *objectsEnumerator = [objects objectEnumerator];
-    id item;
-
-    while (item = [objectsEnumerator nextObject]) {
+//    while (item = [objectsEnumerator nextObject]) {
+    for (LocusMO *locusMO in objects) {
+        if(locusMO.snps.count>=minSnpValue){
 //        if ([[item valueForKeyPath:@"title"] rangeOfString:searchString options:NSAnchoredSearch].location != NSNotFound) {
-            [filteredObjects addObject:item];
+            [filteredObjects addObject:locusMO];
 //        }
+        }
     }
+    NSLog(@"filtered objects left %ld",filteredObjects.count);
+
     return [super arrangeObjects:filteredObjects];
 }
 
@@ -44,6 +51,7 @@
     NSTextField *value = sender;
     minSnpValue = value.intValue;
     NSLog(@"setting value %ld", minSnpValue);
+    [self rearrangeObjects];
 }
 
 @end
