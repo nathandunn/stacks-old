@@ -24,6 +24,9 @@
 
 }
 
+- (NSInteger) countAll{
+    return 7 ;
+}
 
 - (NSArray *)arrangeObjects:(NSArray *)objects {
 //    return [super arrangeObjects:objects];
@@ -40,15 +43,18 @@
     // TODO: objects are not all a type of locusMO
 
 //    while (item = [objectsEnumerator nextObject]) {
-    for (LocusMO *locusMO in objects) {
+    for (id item in objects) {
+        if ([item isKindOfClass:[LocusMO class]]) {
+            LocusMO *locusMO = (LocusMO *) item;
 //        NSInteger snpCount = locusMO.snps.count;
-        if (locusMO.snps != nil) {
+            if (locusMO.snps != nil) {
 
-            if (locusMO.snps.count >= minSnpValue && locusMO.snps.count <= maxSnpValue) {
-                NSLog(@"snpCount %ld >= %ld && %ld <= %ld", locusMO.snps.count, minSnpValue, locusMO.snps.count, maxSnpValue);
+                if (locusMO.snps.count >= minSnpValue && locusMO.snps.count <= maxSnpValue) {
+//                    NSLog(@"snpCount %ld >= %ld && %ld <= %ld", locusMO.snps.count, minSnpValue, locusMO.snps.count, maxSnpValue);
 //        if ([[item valueForKeyPath:@"title"] rangeOfString:searchString options:NSAnchoredSearch].location != NSNotFound) {
-                [filteredObjects addObject:locusMO];
+                    [filteredObjects addObject:locusMO];
 //        }
+                }
             }
         }
     }
