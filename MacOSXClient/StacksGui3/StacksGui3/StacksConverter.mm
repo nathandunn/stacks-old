@@ -392,7 +392,7 @@ using std::ofstream;
             locusMO = [lociDictionary objectForKey:lookupKey];
             if (locusMO == nil) {
                 for (int i = 0; i < 10; i++) {
-                    NSLog(@"Could not find Locus! %ld", it->first);
+                    NSLog(@"Could not find Locus! %d", it->first);
                 }
                 return nil;
             }
@@ -404,7 +404,7 @@ using std::ofstream;
 
                 vector<char *> obshape = datum->obshap;
                 vector<int> depths = datum->depth;
-                int numLetters = obshape.size();
+                int numLetters = (int) obshape.size();
                 // TODO: should be entering this for the locus as well?
                 if (loc->id == 1) {
                     NSLog(@"insertign datum for sample %@ locus %@ and sampleId %i", sampleMO.name, locusMO.locusId, sample_ids[i]);
