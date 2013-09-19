@@ -10,6 +10,7 @@
 
 @implementation LocusArrayController
 
+@synthesize minSnpValue;
 
 - (void)awakeFromNib {
     [super awakeFromNib];
@@ -18,24 +19,31 @@
 }
 
 
-
 - (NSArray *)arrangeObjects:(NSArray *)objects {
     return [super arrangeObjects:objects];
 
-//    if (searchString == nil) {
-//        return [super arrangeObjects:objects];
-//    }
-//
-//    NSMutableArray *filteredObjects = [NSMutableArray arrayWithCapacity:[objects count]];
-//    NSEnumerator *objectsEnumerator = [objects objectEnumerator];
-//    id item;
-//
-//    while (item = [objectsEnumerator nextObject]) {
+    if (minSnpValue == 0) {
+        return [super arrangeObjects:objects];
+    }
+    NSMutableArray *filteredObjects = [NSMutableArray arrayWithCapacity:[objects count]];
+
+    // these are all LocusMO objects
+
+    NSEnumerator *objectsEnumerator = [objects objectEnumerator];
+    id item;
+
+    while (item = [objectsEnumerator nextObject]) {
 //        if ([[item valueForKeyPath:@"title"] rangeOfString:searchString options:NSAnchoredSearch].location != NSNotFound) {
-//            [filteredObjects addObject:item];
+            [filteredObjects addObject:item];
 //        }
-//    }
-//    return [super arrangeObjects:filteredObjects];
+    }
+    return [super arrangeObjects:filteredObjects];
+}
+
+- (IBAction)setMinSnpValue:(id)sender {
+    NSTextField *value = sender;
+    minSnpValue = value.intValue;
+    NSLog(@"setting value %ld", minSnpValue);
 }
 
 @end
