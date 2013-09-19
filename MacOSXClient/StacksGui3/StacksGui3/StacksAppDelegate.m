@@ -17,6 +17,7 @@
 - (id)init {
     self = [super init];
     if (self) {
+        // registers controller as the shared internal controller internally 
         StacksApplicationController *stacksApplicationController = [[StacksApplicationController alloc] init];
     }
 
