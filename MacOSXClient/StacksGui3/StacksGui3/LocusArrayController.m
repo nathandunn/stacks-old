@@ -13,7 +13,10 @@
 
 }
 
+
 @synthesize minSnpValue;
+@synthesize maxSnpValue;
+
 
 - (void)awakeFromNib {
     [super awakeFromNib];
@@ -25,33 +28,51 @@
 - (NSArray *)arrangeObjects:(NSArray *)objects {
 //    return [super arrangeObjects:objects];
 
-    NSLog(@"calculating objects iwth minSnp %ld for objects %ld",minSnpValue,objects.count);
+    NSLog(@"calculating objects iwth minSnp %ld and maxSnp %ld for objects %ld", minSnpValue, maxSnpValue, objects.count);
 
-    if (minSnpValue == 0) {
+    if (minSnpValue == 0 && maxSnpValue == NSIntegerMax) {
         return [super arrangeObjects:objects];
     }
     NSMutableArray *filteredObjects = [NSMutableArray arrayWithCapacity:[objects count]];
 
     // these are all LocusMO objects
 
+    // TODO: objects are not all a type of locusMO
+
 //    while (item = [objectsEnumerator nextObject]) {
     for (LocusMO *locusMO in objects) {
-        if(locusMO.snps.count>=minSnpValue){
+//        NSInteger snpCount = locusMO.snps.count;
+        if (locusMO.snps != nil) {
+
+            if (locusMO.snps.count >= minSnpValue && locusMO.snps.count <= maxSnpValue) {
+                NSLog(@"snpCount %ld >= %ld && %ld <= %ld", locusMO.snps.count, minSnpValue, locusMO.snps.count, maxSnpValue);
 //        if ([[item valueForKeyPath:@"title"] rangeOfString:searchString options:NSAnchoredSearch].location != NSNotFound) {
-            [filteredObjects addObject:locusMO];
+                [filteredObjects addObject:locusMO];
 //        }
+            }
         }
     }
-    NSLog(@"filtered objects left %ld",filteredObjects.count);
+    NSLog(@"filtered objects left %ld", filteredObjects.count);
 
     return [super arrangeObjects:filteredObjects];
 }
 
 - (IBAction)setMinSnpValue:(id)sender {
     NSTextField *value = sender;
-    minSnpValue = value.intValue;
-    NSLog(@"setting value %ld", minSnpValue);
-    [self rearrangeObjects];
+    if (value.stringValue.length > 0) {
+        minSnpValue = value.intValue;
+        NSLog(@"setting MIN value %ld", minSnpValue);
+        [self rearrangeObjects];
+    }
+}
+
+- (IBAction)setMaxSnpValue:(id)sender {
+    NSTextField *value = sender;
+    if (value.stringValue.length > 0) {
+        maxSnpValue = value.intValue;
+        NSLog(@"setting MAX value %ld", maxSnpValue);
+        [self rearrangeObjects];
+    }
 }
 
 @end
