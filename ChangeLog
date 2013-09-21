@@ -1,5 +1,8 @@
 Stacks 1.07 - Sept 21, 2013
 ---------------------------
+	Feature: changed process_radtags to drop reads already shorter than limit if sequence
+	truncation turned on. You can also specify the read length limit to drop reads if your
+	data have already been trimmed.
 	Bugfix: Updated VCF ouput, missing genotypes now reported as "./." instead of "."
 	Bugfix: Updated VCF ouput, alleles reported on the negative strand are now complemented
 	so their positive strand conterparts are reported and will align aginst a reference genome.
