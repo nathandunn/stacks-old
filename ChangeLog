@@ -1,3 +1,10 @@
+Stacks 1.07 - Sept 21, 2013
+---------------------------
+	Bugfix: Updated VCF ouput, missing genotypes now reported as "./." instead of "."
+	Bugfix: Updated VCF ouput, alleles reported on the negative strand are now complemented
+	so their positive strand conterparts are reported and will align aginst a reference genome.
+	Bugfix: Updated VCF ouput, "reference allele" is now always reported as most frequent allele.
+
 Stacks 1.06 - August 28, 2013
 -----------------------------
 	Bugfix: Illumina FASTQ header specifying read pair could override internal enumeration

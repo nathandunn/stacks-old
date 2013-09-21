@@ -29,6 +29,32 @@
 //
 #include "utils.h"
 
+char reverse(char c) {
+        switch (c) {
+        case 'A':
+        case 'a':
+            return 'T';
+            break;
+        case 'C':
+        case 'c':
+            return 'G';
+            break;
+        case 'G':
+        case 'g':
+            return 'C';
+            break;
+        case 'T':
+        case 't':
+            return 'A';
+            break;
+	case 'N':
+	case 'n':
+	case '.':
+	    return 'N';
+	    break;
+        }
+}
+
 int is_integer(char *str) {
     //
     // Adapted from the strtol manpage.
