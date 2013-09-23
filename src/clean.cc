@@ -266,7 +266,9 @@ parse_input_record(Seq *s, Read *r)
     //
     if (truncate_seq == 0 && len > r->size - 1)
 	r->resize(len + 1);
-    else if (truncate_seq == 0)
+    else if (truncate_seq > 0 && len >= (truncate_seq + r->inline_bc_len))
+	r->set_len(truncate_seq + r->inline_bc_len);
+    else
 	r->set_len(len);
 
     strncpy(r->seq,   s->seq,  r->len); 

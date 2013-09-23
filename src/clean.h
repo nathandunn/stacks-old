@@ -48,7 +48,7 @@ enum seqt {single_end, paired_end};
 
 extern int      bc_size_1, bc_size_2;
 extern barcodet barcode_type;
-extern int      truncate_seq;
+extern uint     truncate_seq;
 extern double   win_size;
 extern bool     paired;
 extern bool     recover;

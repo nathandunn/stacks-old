@@ -29,7 +29,7 @@
 #ifdef HAVE_BAM
 
 #include "input.h"
-#include "bam.h"
+#include "bam/bam.h"
 
 class Bam: public Input {
     bamFile  bam_fh;
