@@ -58,7 +58,7 @@ bool     discards        = false;
 bool     overhang        = false;
 bool     filter_illumina = false;
 bool     check_radtag    = true;
-int      truncate_seq = 0;
+uint     truncate_seq = 0;
 int      bc_size_1    = 0;
 int      bc_size_2    = 0;
 int      barcode_dist = 2;
@@ -483,7 +483,7 @@ process_singlet(Read *href,
     //
     // If this read is already shorter than our length limit, discard it.
     //
-    if (len_limit > 0 && ((strlen(href->seq) - offset) < len_limit)) {
+    if (len_limit > 0 && (href->len - offset) < len_limit) {
     	counter["low_quality"]++;
 	if (barcode_type != null_null)
 	    bc_log["low_qual"]++;
