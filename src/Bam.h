@@ -271,7 +271,7 @@ Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
 	}
     }
 
-    return aln_bp;
+    return aln_bp - 1;
 }
 
 int 

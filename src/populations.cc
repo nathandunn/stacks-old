@@ -3238,14 +3238,14 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 		q_allele = loc->loc.strand == minus ? reverse(t->nucs[col].q_allele) : t->nucs[col].q_allele;
 
 		fh << loc->loc.chr << "\t" 
-		   << loc->sort_bp(col) << "\t" 
+		   << loc->sort_bp(col) + 1 << "\t" 
 		   << loc->id << "\t"
 		   << p_allele << "\t"              // REFerence allele
 		   << q_allele << "\t"              // ALTernate allele
 		   << "."        << "\t"            // QUAL
 		   << "PASS"     << "\t"            // FILTER
 		   << "NS="      << num_indv << ";" // INFO
-		   << "AF="      << p_str << ":" << q_str << ";" << "\t" // INFO
+		   << "AF="      << p_str << "," << q_str << "\t" // INFO
 		   << "GT:DP:GL";                   // FORMAT
 
 		d = pmap->locus(loc->id);
