@@ -1,5 +1,19 @@
+Stacks 1.07 - Sept 21, 2013
+---------------------------
+	Bugfix: corrected build failures on Mac OS X due to Samtools' bam.h header conflicting
+	with Stacks' Bam.h header when building on OS X's case insensitive file system.
+	Feature: changed process_radtags to drop reads already shorter than limit if sequence
+	truncation turned on. You can also specify the read length limit to drop reads if your
+	data have already been trimmed.
+	Bugfix: Updated VCF ouput, missing genotypes now reported as "./." instead of "."
+	Bugfix: Updated VCF ouput, alleles reported on the negative strand are now complemented
+	so their positive strand conterparts are reported and will align aginst a reference genome.
+	Bugfix: Updated VCF ouput, "reference allele" is now always reported as most frequent allele.
+
 Stacks 1.06 - August 28, 2013
 -----------------------------
+	Bugfix: Illumina FASTQ header specifying read pair could override internal enumeration
+	of read pair if paired-end data was fed in as a single-end file.
 	Bugfix: corrected locus starting base in reference-aligned data.
 	Feature: refactored sort_read_pairs.pl to process input files one at a time, without retaining
 	them in memory. The program should now be able to handle an arbitrary number of samples.
