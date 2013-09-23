@@ -3215,19 +3215,38 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 		if (t->nucs[col].allele_cnt != 2) 
 		    continue;
 
-		sprintf(p_str, "%0.3f", p_freq);
-		sprintf(q_str, "%0.3f", 1 - p_freq);
+		//
+		// We want to report the most frequent allele as the P allele. Reorder the alleles 
+		// if necessary.
+		//
+		if (p_freq < 0.5) {
+		    char a = t->nucs[col].p_allele;
+		    t->nucs[col].p_allele = t->nucs[col].q_allele;
+		    t->nucs[col].q_allele = a;
+
+		    sprintf(q_str, "%0.3f", p_freq);
+		    sprintf(p_str, "%0.3f", 1 - p_freq);
+		} else {
+		    sprintf(p_str, "%0.3f", p_freq);
+		    sprintf(q_str, "%0.3f", 1 - p_freq);
+		}
+
+		//
+		// If on the negative strand, complement the alleles.
+		//
+		p_allele = loc->loc.strand == minus ? reverse(t->nucs[col].p_allele) : t->nucs[col].p_allele;
+		q_allele = loc->loc.strand == minus ? reverse(t->nucs[col].q_allele) : t->nucs[col].q_allele;
 
 		fh << loc->loc.chr << "\t" 
-		   << loc->sort_bp(col) << "\t" 
+		   << loc->sort_bp(col) + 1 << "\t" 
 		   << loc->id << "\t"
-		   << t->nucs[col].p_allele << "\t"            // REFerence allele
-		   << t->nucs[col].q_allele << "\t"            // ALTernate allele
-		   << "."        << "\t"                       // QUAL
-		   << "PASS"     << "\t"                       // FILTER
-		   << "NS="      << num_indv << ";"            // INFO
-		   << "AF="      << p_str << ":" << q_str << ";" << "\t" // INFO
-		   << "GT:DP:GL";                              // FORMAT
+		   << p_allele << "\t"              // REFerence allele
+		   << q_allele << "\t"              // ALTernate allele
+		   << "."        << "\t"            // QUAL
+		   << "PASS"     << "\t"            // FILTER
+		   << "NS="      << num_indv << ";" // INFO
+		   << "AF="      << p_str << "," << q_str << "\t" // INFO
+		   << "GT:DP:GL";                   // FORMAT
 
 		d = pmap->locus(loc->id);
 
@@ -3238,12 +3257,12 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 			//
 			// Data does not exist.
 			//
-			fh << ".:0:.,.,.";
+			fh << "./.:0:.,.,.";
 		    } else if (d[j]->model[col] == 'U') {
 			//
 			// Data exists, but the model call was uncertain.
 			//
-			fh << ".:" << d[j]->tot_depth << ":.,.,.";
+			fh << "./.:" << d[j]->tot_depth << ":.,.,.";
 		    } else {
 			//
 			// Tally up the nucleotide calls.
@@ -3252,7 +3271,7 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 
 			if (p_allele == 0 && q_allele == 0) {
 			    // More than two potential alleles.
-			    fh << ".:" << d[j]->tot_depth << ":.,.,.";
+			    fh << "./.:" << d[j]->tot_depth << ":.,.,.";
 			} else if (p_allele == 0) {
 			    gt_1 = q_allele == t->nucs[col].p_allele ? 0 : 1;
 			    fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";

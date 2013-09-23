@@ -29,7 +29,7 @@
 #ifdef HAVE_BAM
 
 #include "input.h"
-#include "bam.h"
+#include "bam/bam.h"
 
 class Bam: public Input {
     bamFile  bam_fh;
@@ -261,6 +261,9 @@ Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
 	case 'I':
 	    break;
 	case 'S':
+	    if (i < size - 1)
+		aln_bp += dist;
+	    break;
 	case 'M':
 	case 'D':
 	    aln_bp += dist;
@@ -268,7 +271,7 @@ Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
 	}
     }
 
-    return aln_bp;
+    return aln_bp - 1;
 }
 
 int 

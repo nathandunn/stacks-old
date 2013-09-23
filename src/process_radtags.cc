@@ -58,13 +58,13 @@ bool     discards        = false;
 bool     overhang        = false;
 bool     filter_illumina = false;
 bool     check_radtag    = true;
-int      truncate_seq = 0;
+uint     truncate_seq = 0;
 int      bc_size_1    = 0;
 int      bc_size_2    = 0;
 int      barcode_dist = 2;
 double   win_size     = 0.15;
 int      score_limit  = 10;
-int      len_limit    = 100000;
+int      len_limit    = 0;
 int      num_threads  = 1;
 
 //
@@ -254,6 +254,13 @@ int process_paired_reads(string prefix_1,
     r_1 = new Read(buf_len, 1, se_offset, win_size);
 
     //
+    // Set len_limit so that if we encounter reads already shorter than truncate_seq limit
+    // they will be discarded.
+    //
+    if (truncate_seq > 0)
+	len_limit = truncate_seq;
+
+    //
     // Compute the parameters for the second read.
     //
     buf_len = truncate_seq > 0 ? pe_offset + truncate_seq : strlen(s_2->seq);
@@ -388,6 +395,13 @@ int process_reads(string prefix,
     int buf_len   = truncate_seq > 0 ? bc_size_1 + truncate_seq : strlen(s->seq);
     int se_offset = 0;
 
+    //
+    // Set len_limit so that if we encounter reads already shorter than truncate_seq limit
+    // they will be discarded.
+    //
+    if (truncate_seq > 0)
+	len_limit = truncate_seq;
+
     if (barcode_type == inline_null ||
 	barcode_type == inline_index)
 	se_offset = bc_size_1;
@@ -462,6 +476,17 @@ process_singlet(Read *href,
 
     if (filter_illumina && href->filter) {
 	counter["ill_filtered"]++;
+	href->retain = 0;
+	return 0;
+    }
+
+    //
+    // If this read is already shorter than our length limit, discard it.
+    //
+    if (len_limit > 0 && (href->len - offset) < len_limit) {
+    	counter["low_quality"]++;
+	if (barcode_type != null_null)
+	    bc_log["low_qual"]++;
 	href->retain = 0;
 	return 0;
     }
@@ -777,6 +802,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"window_size",  required_argument, NULL, 'w'},
 	    {"score_limit",  required_argument, NULL, 's'},
 	    {"encoding",     required_argument, NULL, 'E'},
+	    {"len_limit",    required_argument, NULL, 'L'},
 	    {"adapter_1",    required_argument, NULL, 'A'},
 	    {"adapter_2",    required_argument, NULL, 'G'},
 	    {"adapter_mm",   required_argument, NULL, 'T'},
@@ -786,7 +812,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "uVWxYZhvRFIcqrDPmB:i:y:f:o:t:e:z:b:1:2:p:s:w:E:A:G:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "uVWxYZhvRFIcqrDPmB:i:y:f:o:t:e:z:b:1:2:p:s:w:E:L:A:G:T:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -913,6 +939,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 'T':
 	    distance = is_integer(optarg);
+	    break;
+ 	case 'L':
+	    len_limit = is_integer(optarg);
 	    break;
  	case 'w':
 	    win_size = is_double(optarg);
@@ -1072,6 +1101,7 @@ void help() {
 	      << "  Advanced options:\n"
 	      << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
 	      << "    --disable_rad_check: disable checking if the RAD site is intact.\n"
+	      << "    --len_limit <limit>: specify a minimum sequence length (useful if your data has already been trimmed).\n"
 	      << "    --barcode_dist: provide the distace between barcodes to allow for barcode rescue (default 2)\n";
 
     exit(0);
