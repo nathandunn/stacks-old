@@ -18,8 +18,8 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __BAM_H__
-#define __BAM_H__
+#ifndef __BAMI_H__
+#define __BAMI_H__
 
 //
 // Code to parse binary BAM format. This format is created for
@@ -29,7 +29,7 @@
 #ifdef HAVE_BAM
 
 #include "input.h"
-#include "bam/bam.h"
+#include "bam.h"
 
 class Bam: public Input {
     bamFile  bam_fh;
@@ -386,4 +386,4 @@ class Bam: public Input {
 
 #endif // HAVE_BAM
 
-#endif // __BAM_H__
+#endif // __BAMI_H__
