@@ -144,6 +144,11 @@ int main (int argc, char* argv[]) {
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
 
+    //
+    // Sum haplotype counts across the population for each catalog locus.
+    //
+    sum_haplotype_counts(catalog, pmap);
+
     int    catalog_id, sample_id, tag_id;
     string file;
 
@@ -156,7 +161,7 @@ int main (int argc, char* argv[]) {
 
 	cerr << "Loading stacks from sample " << file << "...\n";
 
-	if (sample_id != 160) continue;
+	//// if (sample_id != 160 && sample_id != 147) continue;
 
 	map<int, Locus *> stacks;
 	int res;
@@ -219,9 +224,9 @@ int main (int argc, char* argv[]) {
 		catalog_id = matches[j].first;
 		tag_id     = matches[j].second;
 
-		if (tag_id == 8334) {
-		    cerr << "Hit the tag.\n";
-		}
+		//// if (tag_id == 8334) {
+		////     cerr << "Hit the tag.\n";
+		//// }
 
 		if (catalog.count(catalog_id) == 0) continue;
 
@@ -325,6 +330,41 @@ int main (int argc, char* argv[]) {
 }
 
 int
+sum_haplotype_counts(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+{
+    map<int, CSLocus *>::iterator it;
+    CSLocus *cloc;
+    Datum  **d;
+    uint     cnt;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	cloc = it->second;
+
+	d   = pmap->locus(cloc->id);
+	cnt = pmap->sample_cnt();
+
+	for (uint i = 0; i < cnt; i++) {
+	    if (d[i] == NULL) continue;
+
+	    if (d[i]->obshap.size() == 1) {
+		if (cloc->hap_cnts.count(d[i]->obshap[0]) == 0)
+		    cloc->hap_cnts[d[i]->obshap[0]]  = 2;
+		else
+		    cloc->hap_cnts[d[i]->obshap[0]] += 2;
+	    } else {
+		for (uint j = 0; j < d[i]->obshap.size(); j++)
+		    if (cloc->hap_cnts.count(d[i]->obshap[j]) == 0)
+			cloc->hap_cnts[d[i]->obshap[j]]  = 1;
+		    else
+			cloc->hap_cnts[d[i]->obshap[j]] += 1;
+	    }
+	}
+    }
+
+    return 0;
+}
+
+int
 prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_hap_cnt)
 {
     if (d->obshap.size() <= 2) return 0;
@@ -332,14 +372,18 @@ prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &prune
     //
     // Identify the two most frequent haplotypes in this sample.
     //
-    vector<pair<string, int> > haplotypes;
+    vector<pair<string, double> > haplotypes;
+    double weighted_hap;
 
     for (uint i = 0; i < d->obshap.size(); i++) {
 	//
 	// Lookup the number of occurrences of this haplotype in the 
-	// population and store the result.
+	// population as well as the depth of the haplotype in this indiviudal. 
+	// We will weight the occurrences of the haplotype in the population by the natural log
+	// of the read depth of the haplotype in this individual, storing the result.
 	//
-	haplotypes.push_back(make_pair(string(d->obshap[i]), cloc->hap_cnts[d->obshap[i]]));
+	weighted_hap = (double) cloc->hap_cnts[d->obshap[i]] * log((double) d->depth[i]);
+	haplotypes.push_back(make_pair(string(d->obshap[i]), weighted_hap));
     }
 
     //

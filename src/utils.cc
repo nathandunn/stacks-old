@@ -50,6 +50,7 @@ char reverse(char c) {
 	case 'N':
 	case 'n':
 	case '.':
+	default:
 	    return 'N';
 	    break;
         }
@@ -177,6 +178,6 @@ bool compare_pair_snp(pair<string, SNP *> a, pair<string, SNP *> b) {
     return (a.second->col < b.second->col);
 }
 
-bool compare_pair_haplotype(pair<string, int> a, pair<string, int> b) {
+bool compare_pair_haplotype(pair<string, double> a, pair<string, double> b) {
     return (a.second > b.second);
 }

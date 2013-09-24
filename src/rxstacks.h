@@ -69,6 +69,7 @@ void    version( void );
 int     parse_command_line(int, char**);
 int     build_file_list(vector<pair<int, string> > &);
 int     init_log(int, char **, ofstream &);
+int     sum_haplotype_counts(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int     prune_locus_haplotypes(CSLocus *, Datum *, Locus *, unsigned long int &);
 int     prune_nucleotides(CSLocus *, Locus *, ofstream &, unsigned long int &,
 			  unsigned long int &, unsigned long int &, unsigned long int &,
