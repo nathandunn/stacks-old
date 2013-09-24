@@ -1,5 +1,7 @@
-Stacks 1.07 - Sept 21, 2013
+Stacks 1.07 - Sept 23, 2013
 ---------------------------
+	Bugfix: updated process_radtags to drop reads shorter than length
+	limit when read trimming turned on.
 	Bugfix: corrected build failures on Mac OS X due to Samtools' bam.h header conflicting
 	with Stacks' Bam.h header when building on OS X's case insensitive file system.
 	Feature: changed process_radtags to drop reads already shorter than limit if sequence
