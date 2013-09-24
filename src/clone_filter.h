@@ -57,11 +57,11 @@ using google::sparse_hash_map;
 #endif
 
 #include "kmers.h"
-#include "Bustard.h"   // Reading input files in Tab-separated Bustard format
-#include "Fastq.h"     // Reading input files in FASTQ format
-#include "Fasta.h"     // Reading input files in FASTA format
-#include "gzFasta.h"   // Reading gzipped input files in FASTA format
-#include "gzFastq.h"   // Reading gzipped input files in FASTQ format
+#include "BustardI.h"   // Reading input files in Tab-separated Bustard format
+#include "FastqI.h"     // Reading input files in FASTQ format
+#include "FastaI.h"     // Reading input files in FASTA format
+#include "gzFasta.h"    // Reading gzipped input files in FASTA format
+#include "gzFastq.h"    // Reading gzipped input files in FASTQ format
 
 typedef unsigned int uint;
 

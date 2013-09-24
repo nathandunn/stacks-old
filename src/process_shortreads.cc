@@ -58,7 +58,7 @@ bool     matepair        = false;
 bool     filter_illumina = false;
 bool     ill_barcode     = false;
 bool     trim_reads      = true;
-int      truncate_seq = 0;
+uint     truncate_seq = 0;
 int      bc_size_1    = 0;
 int      bc_size_2    = 0;
 int      barcode_dist = 2;
@@ -80,7 +80,6 @@ int kmer_size = 5;
 int distance  = 1;
 int adp_1_len = 0;
 int adp_2_len = 0;
-vector<char *> adp_1_keys, adp_2_keys;
 AdapterHash adp_1_kmers, adp_2_kmers;
 
 int main (int argc, char* argv[]) {
@@ -96,15 +95,15 @@ int main (int argc, char* argv[]) {
 
     if (filter_adapter) {
 	cerr << "Filtering reads for adapter sequence:\n";
-	if (paired)
-	    cerr << "  " << adapter_1 << "\n"
-		 << "  " << adapter_2 << "\n";
-	else
+	if (adapter_1 != NULL) {
 	    cerr << "  " << adapter_1 << "\n";
+	    init_adapter_seq(kmer_size, adapter_1, adp_1_len, adp_1_kmers);
+	}
+	if (adapter_2 != NULL) {
+	    cerr << "  " << adapter_2 << "\n";
+	    init_adapter_seq(kmer_size, adapter_2, adp_2_len, adp_2_kmers);
+	}
 	cerr << "    " << distance << " mismatches allowed to adapter sequence.\n";
-	init_adapter_seq(kmer_size, adapter_1, adp_1_len, adp_1_kmers, adp_1_keys);
-	if (paired)
-	    init_adapter_seq(kmer_size, adapter_2, adp_2_len, adp_2_kmers, adp_2_keys);
     }
 
     vector<pair<string, string> >        files;
@@ -168,12 +167,6 @@ int main (int argc, char* argv[]) {
     }
 
     print_results(argc, argv, barcodes, counters, barcode_log);
-
-    if (filter_adapter) {
-	free_adapter_seq(adp_1_keys);
-	if (paired)
-	    free_adapter_seq(adp_2_keys);
-    }
 
     return 0;
 }
@@ -509,11 +502,11 @@ process_singlet(Read *href,
     // Drop or trim this sequence if it contains adapter sequence.
     //
     if (filter_adapter) {
-	int res;
-	if (paired_end)
+	int res = 1;
+	if (paired_end == true  && adp_2_len > 0)
 	    res = filter_adapter_seq(href, adapter_2, adp_2_len, adp_2_kmers, 
 				     kmer_size, distance, len_limit);
-	else
+	if (paired_end == false && adp_1_len > 0)
 	    res = filter_adapter_seq(href, adapter_1, adp_1_len, adp_1_kmers, 
 				     kmer_size, distance, len_limit);
 	if (res == 0) {

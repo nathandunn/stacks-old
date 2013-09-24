@@ -50,6 +50,18 @@ prior to building Stacks.
   1. http://samtools.sourceforge.net/.
   2. http://code.google.com/p/sparsehash/
 
+If you are running a version of Linux, all of the above software can be installed via the 
+package manager. If you are using Ubuntu, you can install the following packages:
+
+% sudo apt-get install mysql-server php5 apache2
+% sudo apt-get install php-mdb2 php-mdb2-driver-mysql
+% sudo apt-get install libdbd-mysql-perl
+% sudo apt-get install samtools
+% sudo apt-get install libbam-dev
+
+A similar set of commands using yum, or another package manager on other Linux 
+distributions.
+
 1. Build the software. Stacks uses the standard autotools install:
 
 % tar xfvz stacks_x.xx.tar.gz
@@ -69,11 +81,17 @@ You can enable Sparsehash and BAM by adding the following options:
 
 % ./configure --enable-sparsehash --enable-bam
 
-If you installed Samtools by hand you may need to specify the library location:
+You may need to specify the BAM library location:
 
 % ./configure --enable-bam \
               --with-bam-include-path=/usr/local/include/bam \
               --with-bam-lib-path=/usr/local/lib
+
+Or, if you installed with Ubuntu packages:
+
+% ./configure --enable-bam \
+              --with-bam-include-path=/usr/include/samtools \
+              --with-bam-lib-path=/usr/lib
 
 A default install will install files in the following way:
 
@@ -99,6 +117,17 @@ Stacks-distributed copy. If you already have a personal account set up
 and configured (in ~/.my.cnf) you can continue to use these
 credentials instead of setting up new, common ones.
 
+If you just installed MySQL and have not added any users, you can do so with these
+commands:
+
+% mysql
+mysql> GRANT ALL ON *.* TO 'stacks_user'@'localhost' IDENTIFIED BY 'stackspassword';
+
+Edit /usr/local/share/stacks/sql/mysql.cnf to contain the username and password
+you specified to MySQL.
+
+(This information was taken from: http://dev.mysql.com/doc/refman/5.1/en/grant.html)
+
 3. Enable the Stacks web interface in the Apache webserver.
 
 Add the following lines to your Apache configuration to make the Stacks PHP
@@ -113,6 +142,16 @@ them:
 
 Alias /stacks "/usr/local/share/stacks/php"
 
+A sensible way to do this is to create the file stacks.conf in either the
+
+/etc/apache2/conf.d/ or /etc/httpd/conf.d/
+
+directory (depending on your Linux distro). Place the above lines in this file and 
+restart the apache server:
+
+# vi /etc/apache2/conf.d/stacks.conf
+# apachectl restart
+
 (See the Apache configuration for more information on what these do:
 http://httpd.apache.org/docs/2.0/mod/core.html#directory)
 
@@ -121,8 +160,8 @@ MySQL database. Change the file to include the proper database
 username ($db_user), password ($db_pass), and hostname ($db_host). Rename the 
 distribution file so it is active.
 
-% vi /usr/local/share/stacks/php/constants.php
 % cp /usr/local/share/stacks/php/constants.php.dist /usr/local/share/stacks/php/constants.php
+% vi /usr/local/share/stacks/php/constants.php
 
 You may find it advantageous to create a specific MySQL user with limited
 permissions - SELECT, UPDATE, and DELETE to allow users to interact

@@ -54,14 +54,14 @@ using std::set;
 using std::pair;
 
 #include "constants.h" 
-#include "stacks.h"    // Major data structures for holding stacks
+#include "stacks.h"     // Major data structures for holding stacks
 #include "mstack.h"
 #include "utils.h"
-#include "models.h"    // Contains maximum likelihood statistical models.
-#include "Tsv.h"       // Reading input files in Tab-separated values format
-#include "Bowtie.h"    // Reading input files in Bowtie format
-#include "Sam.h"       // Reading input files in SAM format
-#include "Bam.h"       // Reading input files in BAM format
+#include "models.h"     // Contains maximum likelihood statistical models.
+#include "Tsv.h"        // Reading input files in Tab-separated values format
+#include "BowtieI.h"    // Reading input files in Bowtie format
+#include "SamI.h"       // Reading input files in SAM format
+#include "BamI.h"       // Reading input files in BAM format
 #include "DNANSeq.h"
 
 const int barcode_size = 5;
