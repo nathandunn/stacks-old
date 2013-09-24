@@ -18,8 +18,8 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __SAM_H__
-#define __SAM_H__
+#ifndef __SAMI_H__
+#define __SAMI_H__
 
 //
 // Code to parse Sam format. This format is created for
@@ -174,7 +174,7 @@ Sam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
 	}
     }
 
-    return aln_bp;
+    return aln_bp - 1;
 }
 
 int 
@@ -275,4 +275,4 @@ Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
     return 0;
 }
 
-#endif // __SAM_H__
+#endif // __SAMI_H__

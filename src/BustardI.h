@@ -25,8 +25,8 @@
 //
 // One record per line.
 //
-#ifndef __BUSTARD_H__
-#define __BUSTARD_H__
+#ifndef __BUSTARDI_H__
+#define __BUSTARDI_H__
 
 #include "input.h"
 
@@ -110,4 +110,4 @@ int Bustard::next_seq(Seq &s) {
     return 1;
 }
 
-#endif // __BUSTARD_H__
+#endif // __BUSTARDI_H__

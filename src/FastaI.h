@@ -18,8 +18,8 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __FASTA_H__
-#define __FASTA_H__
+#ifndef __FASTAI_H__
+#define __FASTAI_H__
 
 #include "input.h"
 
@@ -141,4 +141,4 @@ int Fasta::next_seq(Seq &s) {
     return 1;
 }
 
-#endif // __FASTA_H__
+#endif // __FASTAI_H__

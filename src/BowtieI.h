@@ -18,8 +18,8 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __BOWTIE_H__
-#define __BOWTIE_H__
+#ifndef __BOWTIEI_H__
+#define __BOWTIEI_H__
 
 //
 // Code to parse Bowtie's alignment format. This format is created for
@@ -70,4 +70,4 @@ Seq *Bowtie::next_seq() {
     return s;
 }
 
-#endif // __BOWTIE_H__
+#endif // __BOWTIEI_H__
