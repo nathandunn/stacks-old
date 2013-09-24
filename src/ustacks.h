@@ -67,15 +67,15 @@ using google::sparse_hash_map;
 
 #include "kmers.h"
 #include "utils.h"
-#include "DNASeq.h"    // Class for storing two-bit compressed DNA sequences
-#include "stacks.h"    // Major data structures for holding stacks
+#include "DNASeq.h"     // Class for storing two-bit compressed DNA sequences
+#include "stacks.h"     // Major data structures for holding stacks
 #include "mstack.h"
-#include "mst.h"       // Minimum spanning tree implementation
-#include "models.h"    // Contains maximum likelihood statistical models.
-#include "Fasta.h"     // Reading input files in FASTA format
-#include "Fastq.h"     // Reading input files in FASTQ format
-#include "gzFasta.h"   // Reading gzipped input files in FASTA format
-#include "gzFastq.h"   // Reading gzipped input files in FASTQ format
+#include "mst.h"        // Minimum spanning tree implementation
+#include "models.h"     // Contains maximum likelihood statistical models.
+#include "FastaI.h"     // Reading input files in FASTA format
+#include "FastqI.h"     // Reading input files in FASTQ format
+#include "gzFasta.h"    // Reading gzipped input files in FASTA format
+#include "gzFastq.h"    // Reading gzipped input files in FASTQ format
 
 typedef unsigned int uint;
 

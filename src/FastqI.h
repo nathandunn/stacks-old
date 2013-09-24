@@ -18,8 +18,8 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __FASTQ_H__
-#define __FASTQ_H__
+#ifndef __FASTQI_H__
+#define __FASTQI_H__
 
 #include "input.h"
 
@@ -181,4 +181,4 @@ int Fastq::next_seq(Seq &s) {
     return 1;
 }
 
-#endif // __FASTQ_H__
+#endif // __FASTQI_H__

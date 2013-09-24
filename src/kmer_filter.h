@@ -60,11 +60,11 @@ using google::sparse_hash_map;
 #include "utils.h"
 #include "kmers.h"
 #include "write.h"
-#include "Bustard.h"   // Reading input files in Tab-separated Bustard format
-#include "Fasta.h"     // Reading input files in FASTA format
-#include "Fastq.h"     // Reading input files in FASTQ format
-#include "gzFasta.h"   // Reading gzipped input files in FASTA format
-#include "gzFastq.h"   // Reading gzipped input files in FASTQ format
+#include "BustardI.h"   // Reading input files in Tab-separated Bustard format
+#include "FastaI.h"     // Reading input files in FASTA format
+#include "FastqI.h"     // Reading input files in FASTQ format
+#include "gzFasta.h"    // Reading gzipped input files in FASTA format
+#include "gzFastq.h"    // Reading gzipped input files in FASTQ format
 
 #ifdef HAVE_SPARSEHASH
 typedef sparse_hash_map<char *, long, hash_charptr, eqstr> SeqKmerHash;
