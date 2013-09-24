@@ -156,6 +156,8 @@ int main (int argc, char* argv[]) {
 
 	cerr << "Loading stacks from sample " << file << "...\n";
 
+	if (sample_id != 160) continue;
+
 	map<int, Locus *> stacks;
 	int res;
 	if ((res = load_loci(in_path + file, stacks, true, true)) == 0) {
@@ -202,6 +204,7 @@ int main (int argc, char* argv[]) {
 	unsigned long int hom_het_cnt    = 0;
 	unsigned long int conf_loci_cnt  = 0;
 	unsigned long int pruned_hap_cnt = 0;
+	unsigned long int blacklist_cnt  = 0;
 
         #pragma omp parallel private(catalog_id, tag_id)
 	{ 
@@ -211,10 +214,14 @@ int main (int argc, char* argv[]) {
 
             #pragma omp for schedule(dynamic, 1) reduction(+:nuc_cnt) reduction(+:unk_hom_cnt) reduction(+:unk_het_cnt) \
 		reduction(+:hom_unk_cnt) reduction(+:het_unk_cnt) reduction(+:hom_het_cnt) reduction(+:het_hom_cnt) \
-		reduction(+:conf_loci_cnt) reduction(+:pruned_hap_cnt)
+		reduction(+:conf_loci_cnt) reduction(+:pruned_hap_cnt) reduction(+:blacklist_cnt)
 	    for (uint j = 0; j < matches.size(); j++) {
 		catalog_id = matches[j].first;
 		tag_id     = matches[j].second;
+
+		if (tag_id == 8334) {
+		    cerr << "Hit the tag.\n";
+		}
 
 		if (catalog.count(catalog_id) == 0) continue;
 
@@ -243,8 +250,15 @@ int main (int argc, char* argv[]) {
 		//
 		// Prune haplotypes from this locus.
 		//
-		if (prune_haplotypes)
+		if (prune_haplotypes) {
 		    prune_locus_haplotypes(cloc, d, loc, pruned_hap_cnt);
+
+		    if (loc->blacklisted) {
+			if (verbose)
+			    log_fh << "Blacklisted sample " << sample_id << ", locus " << loc->id << " due to inability to call haplotypes.\n";
+			blacklist_cnt++;
+		    }
+		}
 	    }
         }
 
@@ -261,6 +275,7 @@ int main (int argc, char* argv[]) {
 	     << "    Converted from heterozygous to unknown:    " << het_unk_cnt << " nucleotides.\n"
 	     << "    Converted from homozygous to heterozygous: " << hom_het_cnt << " nucleotides.\n"
 	     << "    Converted from heterozygous to homozygous: " << het_hom_cnt << " nucleotides.\n"
+	     << "    Blacklisted: " << blacklist_cnt << " loci due to inability to call haplotypes.\n"
 	     << pruned_hap_cnt << " haplotypes were pruned.\n";
 
 	if (verbose)
@@ -274,6 +289,7 @@ int main (int argc, char* argv[]) {
 		   << "Het to Unk\t"
 		   << "Hom to Het\t"
 		   << "Het to Hom\t"
+		   << "Blacklisted\t"
 		   << "Pruned Haplotypes\n";
 	log_fh << file           << "\t"
 	       << conf_loci_cnt  << "\t"
@@ -285,6 +301,7 @@ int main (int argc, char* argv[]) {
 	       << het_unk_cnt    << "\t"
 	       << hom_het_cnt    << "\t"
 	       << het_hom_cnt    << "\t"
+	       << blacklist_cnt  << "\t"
 	       << pruned_hap_cnt << "\n";
 
 	cerr << "Writing modified stacks, SNPs, alleles...";
@@ -494,6 +511,18 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, ofstream &log_fh, unsigned long int
 
     call_alleles(loc, rows);
 
+    //
+    // If SNPs were called at this locus but no alleles could be determined,
+    // blacklist this tag. This can occur if a fixed nucleotide isn't captured in
+    // the catalog and all the reads are removed for the purpose of reading haplotypes.
+    //
+    if (loc->alleles.empty())
+	for (uint j = 0; j < loc->snps.size(); j++)
+	    if (loc->snps[j]->type == snp_type_het) {
+		loc->blacklisted = 1;
+		break;
+	    }
+
     return 0;
 }
 
@@ -528,7 +557,7 @@ call_alleles(Locus *loc, set<int> &rows)
 
     for (row = 0; row < height; row++) {
 	//
-	// If a read had a nucleotide not present in the catalot, do not call
+	// If a read had a nucleotide not present in the catalog, do not call
 	// a haplotype from it.
 	//
 	if (rows.count(row) > 0)
