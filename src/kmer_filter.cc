@@ -46,7 +46,7 @@ bool   write_k_freq = false;
 bool   read_k_freq  = false;
 bool   kmer_distr   = false;
 bool   ill_barcode  = false;
-int    truncate_seq = 0;
+uint   truncate_seq = 0;
 int    transition_lim = 3;
 int    normalize_lim  = 0;
 int    kmer_len       = 15;
@@ -1763,18 +1763,18 @@ void help() {
 	      << "  Filtering options:\n"
 	      << "    --rare: turn on filtering based on rare k-mers.\n"
 	      << "    --abundant: turn on filtering based on abundant k-mers.\n"
-	      << "    --k_len: specify k-mer size (default 15).\n\n"
+	      << "    --k_len <len>: specify k-mer size (default 15).\n\n"
 	      << "  Advanced filtering options:\n"
-	      << "    --max_k_freq: specify the number of times a kmer must occur to be considered abundant (default 20,000).\n"
-	      << "    --min_lim: specify number of rare kmers occuring in a row required to discard a read (default 80% of the k-mer length).\n"
-	      << "    --max_lim: specify number of abundant kmers required to discard a read (default 80% of the k-mers in a read).\n\n"
+	      << "    --max_k_freq <value>: specify the number of times a kmer must occur to be considered abundant (default 20,000).\n"
+	      << "    --min_lim <value>: specify number of rare kmers occuring in a row required to discard a read (default 80% of the k-mer length).\n"
+	      << "    --max_lim <value>: specify number of abundant kmers required to discard a read (default 80% of the k-mers in a read).\n\n"
 	      << "  Normalize data:\n"
 	      << "    --normalize <depth>: normalize read depth according to k-mer coverage.\n\n"
 	      << "  Characterizing K-mers:\n"
 	      << "    --write_k_freq: write kmers along with their frequency of occurrence and exit.\n"
 	      << "    --k_dist: print k-mer frequency distribution and exit.\n\n"
 	      << "  Advanced input options:\n"
-	      << "    --read_k_freq: read a set of kmers along with their frequencies of occurrence instead of reading raw input files.\n"
+	      << "    --read_k_freq <path>: read a set of kmers along with their frequencies of occurrence instead of reading raw input files.\n"
 	      << "\n";
 
     exit(0);

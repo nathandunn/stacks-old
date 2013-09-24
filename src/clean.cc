@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -106,7 +106,9 @@ int parse_illumina_v2(const char *file) {
     return 0;
 }
 
-int parse_input_record(Seq *s, Read *r) {
+int 
+parse_input_record(Seq *s, Read *r) 
+{
     char *p, *q;
     //
     // Count the number of colons to differentiate Illumina version.
@@ -170,7 +172,7 @@ int parse_input_record(Seq *s, Read *r) {
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
 	*q = '\0';
-	r->read = atoi(p);
+	// r->read = atoi(p);
 	*q = ':';
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
@@ -248,7 +250,7 @@ int parse_input_record(Seq *s, Read *r) {
 	*q = '/';
 
 	for (p = q+1, q = p; *q != '\0' && q < stop; q++);
-	r->read = atoi(p);
+	// r->read = atoi(p);
 
     } else {
 	r->fastq_type = generic_fastq;
@@ -264,7 +266,9 @@ int parse_input_record(Seq *s, Read *r) {
     //
     if (truncate_seq == 0 && len > r->size - 1)
 	r->resize(len + 1);
-    else if (truncate_seq == 0)
+    else if (truncate_seq > 0 && len >= (truncate_seq + r->inline_bc_len))
+	r->set_len(truncate_seq + r->inline_bc_len);
+    else
 	r->set_len(len);
 
     strncpy(r->seq,   s->seq,  r->len); 
@@ -462,7 +466,7 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
 }
 
 //
-// Funtion to process barcodes
+// Function to process barcodes
 //
 int 
 process_barcode(Read *href_1, Read *href_2, BarcodePair &bc, 
@@ -479,11 +483,13 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
     if (barcode_log.count(bc) == 0) {
 	barcode_log[bc]["noradtag"] = 0;
 	barcode_log[bc]["total"]    = 0;
+	barcode_log[bc]["low_qual"] = 0;
 	barcode_log[bc]["retained"] = 0;
     }
-    barcode_log[bc]["total"]++;
+    barcode_log[bc]["total"] += paired ? 2 : 1;
 
-    bool se_correct, pe_correct;
+    bool se_correct = false;
+    bool pe_correct = false;
 
     //
     // Is this a legitimate barcode?
@@ -504,6 +510,7 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 		bc.se = string(href_1->se_bc);
 	    if (pe_bc.size() > 0 && pe_correct)
 		bc.pe = string(href_2->pe_bc);
+ 
 	    //
 	    // After correcting the individual barcodes, check if the combination is valid.
 	    //
@@ -530,15 +537,16 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 	    }
 	}
 
-	if (href_1->retain) {
-	    counter["recovered"]++;
-	    barcode_log[old_barcode]["total"]--;
+	if (href_1->retain && (se_correct || pe_correct)) {
+	    counter["recovered"] += paired ? 2 : 1;
+	    barcode_log[old_barcode]["total"] -= paired ? 2 : 1;
 	    if (barcode_log.count(bc) == 0) {
 		barcode_log[bc]["total"]    = 0;
 		barcode_log[bc]["retained"] = 0;
+		barcode_log[bc]["low_qual"] = 0;
 		barcode_log[bc]["noradtag"] = 0;
 	    }
-	    barcode_log[bc]["total"]++;
+	    barcode_log[bc]["total"] += paired ? 2 : 1;
 	}
     }
 
@@ -549,7 +557,7 @@ bool
 correct_barcode(set<string> &bcs, Read *href, seqt type) 
 {
     if (recover == false)
-	return 0;
+	return false;
 
     //
     // The barcode_dist variable specifies how far apart in sequence space barcodes are. If barcodes
@@ -598,38 +606,18 @@ correct_barcode(set<string> &bcs, Read *href, seqt type)
 // Functions for filtering adapter sequence
 //
 int
-init_adapter_seq(int kmer_size, char *adapter, int &adp_len, AdapterHash &kmers, vector<char *> &keys)
+init_adapter_seq(int kmer_size, char *adapter, int &adp_len, AdapterHash &kmers)
 {
-    char *kmer;
-    bool  exists;
-
+    string kmer;
     adp_len = strlen(adapter);
 
     int   num_kmers = adp_len - kmer_size + 1;
     char *p = adapter;
     for (int i = 0; i < num_kmers; i++) {
-	kmer = new char[kmer_size + 1];
-	kmer[kmer_size] = '\0';
-	strncpy(kmer, p, kmer_size);
-
-	exists = kmers.count(kmer) == 0 ? false : true;
+	kmer.assign(p, kmer_size);
 	kmers[kmer].push_back(i);
-	if (exists)
-	    delete [] kmer;
-	else
-	    keys.push_back(kmer);
 	p++;
     }
-
-    return 0;
-}
-
-int
-free_adapter_seq(vector<char *> &keys)
-{
-    for (uint i = 0; i < keys.size(); i++)
-	delete [] keys[i];
-    keys.clear();
 
     return 0;
 }
@@ -639,32 +627,28 @@ filter_adapter_seq(Read *href, char *adapter, int adp_len, AdapterHash &adp_kmer
 		   int kmer_size, int distance, int len_limit) 
 {
     vector<pair<int, int> > hits;
-    int   num_kmers = strlen(href->seq) - kmer_size + 1;
-    char *p = href->seq;
-
-    char *kmer = new char[kmer_size + 1];
-    kmer[kmer_size] = '\0';
+    int   num_kmers = href->len - kmer_size + 1;
+    const char *p   = href->seq;
+    string kmer;
 
     //
     // Identify matching kmers and their locations of occurance.
     //
-    // cerr << "Num kmers: " << num_kmers << "; P: " << p << "\n";
     for (int i = 0; i < num_kmers; i++) {
-	strncpy(kmer, p, kmer_size);
+	kmer.assign(p, kmer_size);
 
 	if (adp_kmers.count(kmer) > 0) {
 	    for (uint j = 0; j < adp_kmers[kmer].size(); j++) {
-		//cerr << "Kmer hit " << kmer << " at query position " << i << " at hit position " << adp_kmers[kmer][j] << "\n";
+		// cerr << "Kmer hit " << kmer << " at query position " << i << " at hit position " << adp_kmers[kmer][j] << "\n";
 		hits.push_back(make_pair(i, adp_kmers[kmer][j]));
 	    }
 	}
 	p++;
     }
 
-    delete [] kmer;
-
     //
-    // Scan backwards and then forwards and count the number of mismatches.
+    // Scan backwards from the position of the k-mer and then scan forwards 
+    // counting the number of mismatches.
     //
     int mismatches, i, j, start_pos;
 
@@ -682,7 +666,8 @@ filter_adapter_seq(Read *href, char *adapter, int adp_len, AdapterHash &adp_kmer
 	    j--;
 	}
 
-	if (mismatches > distance) continue;
+	if (mismatches > distance)
+	    continue;
 
 	start_pos = i + 1;
 	i = hits[k].first;
@@ -696,7 +681,7 @@ filter_adapter_seq(Read *href, char *adapter, int adp_len, AdapterHash &adp_kmer
 	}
 
 	// cerr << "Starting position: " << start_pos << "; Query end (i): " << i << "; adapter end (j): " << j 
-	//      << "; number of mismatches: " << mismatches << "; Seq Len: " << href->len << "\n";
+	//      << "; number of mismatches: " << mismatches << "; Seq Len: " << href->len << "; SeqSeq Len: " << strlen(href->seq) << "\n";
 
 	if (mismatches <= distance && (i == (int) href->len || j == adp_len)) {
 	    // cerr << "  Trimming or dropping.\n";

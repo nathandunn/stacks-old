@@ -53,16 +53,16 @@ using google::sparse_hash_map;
 #endif
 
 #include "constants.h" 
-#include "stacks.h"    // Major data structures for holding stacks
+#include "stacks.h"     // Major data structures for holding stacks
 #include "kmers.h"
 #include "mstack.h"
 #include "utils.h"
-#include "models.h"    // Contains maximum likelihood statistical models.
-#include "Tsv.h"       // Reading input files in Tab-separated values format
-#include "Bowtie.h"    // Reading input files in Bowtie format
-#include "Sam.h"       // Reading input files in SAM format
-#include "Fasta.h"     // Reading input files in FASTA format
-#include "Fastq.h"     // Reading input files in FASTQ format
+#include "models.h"     // Contains maximum likelihood statistical models.
+#include "Tsv.h"        // Reading input files in Tab-separated values format
+#include "BowtieI.h"    // Reading input files in Bowtie format
+#include "SamI.h"       // Reading input files in SAM format
+#include "FastaI.h"     // Reading input files in FASTA format
+#include "FastqI.h"     // Reading input files in FASTQ format
 #include "DNANSeq.h"
 
 const int barcode_size = 5;

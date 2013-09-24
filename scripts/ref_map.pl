@@ -273,7 +273,7 @@ if ($data_type eq "map") {
 } else {
     printf(STDERR "Calculating population-level summary statistics\n");
 
-    $cmd = $exe_path . "populations -b $batch_id -P $out_path -s " . join(" ", @_populations) . "2>&1";
+    $cmd = $exe_path . "populations -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd` if ($dry_run == 0);
