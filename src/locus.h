@@ -52,20 +52,32 @@ class Locus {
     char    *model; // Model calls for each nucleotide
     uint       len; // Sequence length
 
-    vector<char *>      comp;   // Raw components in this stack.
-    vector<char *>     reads;   // Sequence reads contributing to this stack.
-    PhyLoc               loc;   // Physical genome location of this stack.
-    vector<SNP *>       snps;   // Single Nucleotide Polymorphisms in this stack.
-    map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
+    //
+    // Flags
+    //
+    bool blacklisted;
+    bool deleveraged;
+    bool lumberjackstack;
+
+    vector<char *>          comp;   // Raw components in this stack.
+    vector<char *>         reads;   // Sequence reads contributing to this locus.
+    vector<uint>        comp_cnt;   // Counter for internal stacks merged into this locus.
+    vector<read_type>  comp_type;   // Read types for reads contributing to this locus.
+    PhyLoc                   loc;   // Physical genome location of this stack.
+    vector<SNP *>           snps;   // Single Nucleotide Polymorphisms in this stack.
+    map<string, int>     alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
     vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
 
     Locus()  { 
-	id        = 0; 
-	sample_id = 0; 
-	depth     = 0; 
-	model     = NULL;
-	con       = NULL; 
-	len       = 0;
+	id              = 0; 
+	sample_id       = 0; 
+	depth           = 0; 
+	model           = NULL;
+	con             = NULL; 
+	len             = 0;
+	blacklisted     = false;
+        deleveraged     = false;
+	lumberjackstack = false;
     }
     virtual ~Locus() { 
         delete [] con; 
@@ -115,19 +127,25 @@ class CLocus : public Locus {
 class CSLocus : public Locus {
 public:
     CSLocus() : Locus() { 
-	this->f    = 0.0; 
+	this->f    = 0.0;
+	this->cnt  = 0; 
 	this->hcnt = 0; 
 	this->gcnt = 0; 
 	this->trans_gcnt = 0; 
+	this->confounded_cnt = 0;
     };
     string annotation;
     string marker;
-    double f;                 // Inbreeder's coefficient
-    map<string, string> gmap; // Observed haplotype to genotype map for this locus.
-    int hcnt;                 // Number of progeny containing a haplotype for this locus.
-    int gcnt;                 // Number of progeny containing a valid genotype.
-    int trans_gcnt;           // Number of progeny containing a valid 
-                              // genotype, translated for a particular map type.
+    map<string, int> hap_cnts;    // Counts of each observed haplotype for this locus in the population.
+    double f;                     // Inbreeder's coefficient
+    map<string, string> gmap;     // Observed haplotype to genotype map for this locus.
+    int confounded_cnt;           // Number of samples/progeny containing confounded loci (more than one 
+                                  //   locus from an individual sample matches this catalog locus).
+    int hcnt;                     // Number of samples/progeny containing a haplotype for this locus.
+    int cnt;                      // Number of samples/progeny containing data for this locus.
+    int gcnt;                     // Number of progeny containing a valid genotype.
+    int trans_gcnt;               // Number of progeny containing a valid 
+                                  //   genotype, translated for a particular map type.
 };
 
 bool bp_compare(Locus *, Locus *);

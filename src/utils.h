@@ -50,7 +50,7 @@ bool compare_ints(int, int);
 bool compare_pair(pair<char, int>, pair<char, int>);
 bool compare_pair_intdouble(pair<int, double>, pair<int, double>);
 bool compare_pair_snp(pair<string, SNP *>, pair<string, SNP *>);
-
+bool compare_pair_haplotype(pair<string, double>, pair<string, double>);
 
 //
 // Comparison classes for STL sets

@@ -51,7 +51,7 @@ int main (int argc, char* argv[]) {
     string s = samples.front();
     samples.pop();
 
-    if (!load_loci(s, sample, false)) {
+    if (!load_loci(s, sample, false, false)) {
         cerr << "Failed to load sample " << s.c_str() << "\n";
         return 1;
     }

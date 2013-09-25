@@ -1,3 +1,11 @@
+	Bugfix: when merging a homozygous locus into the catalog, if homozygous allele conflicted
+	with existing catalog SNP alleles, new allele was not added to SNP object (but was added to
+	the allele list).
+	Bugfix: found small memory leak in cstacks - old SNP objects were not being freed when new
+	SNPs were merged into the catalog.
+	Bugfix: empty alleles were being output to the batch_X.catalog.alleles file by cstacks. Did
+	not affect the function of the program.
+
 Stacks 1.08 - Sept 24, 2013
 ---------------------------
 	Feature: added a FASTA output to populations to output the full locus sequence
@@ -17,6 +25,7 @@ Stacks 1.07 - Sept 23, 2013
 	Bugfix: Updated VCF ouput, alleles reported on the negative strand are now complemented
 	so their positive strand conterparts are reported and will align aginst a reference genome.
 	Bugfix: Updated VCF ouput, "reference allele" is now always reported as most frequent allele.
+
 
 Stacks 1.06 - August 28, 2013
 -----------------------------

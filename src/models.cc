@@ -30,7 +30,7 @@
 #include "models.h"
 
 snp_type 
-call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n, bool record_snps) 
+call_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_snps) 
 {
     vector<pair<char, int> > nuc;
     map<char, int>::iterator i;
@@ -134,10 +134,109 @@ call_multinomial_snp (MergedStack *tag, int col, map<char, int> &n, bool record_
 	    snp->col    = col;
 	    snp->lratio = l_ratio;
 	    snp->rank_1 = nuc[0].first;
-	    snp->rank_2 = nuc[1].first;
+	    snp->rank_2 = nuc[1].second > 0 ? nuc[1].first : '-';
 
 	    tag->snps.push_back(snp);
 	}
+
+	res = snp_type_unk;
+    }
+
+    return res;
+}
+
+snp_type 
+call_multinomial_snp(Locus *tag, int col, map<char, int> &n) 
+{
+    vector<pair<char, int> > nuc;
+    map<char, int>::iterator i;
+
+    int total = 0;
+    for (i = n.begin(); i != n.end(); i++) {
+	if (i->first != 'N') {
+	    total += i->second;
+	    nuc.push_back(make_pair(i->first, i->second));
+	}
+    }
+
+    sort(nuc.begin(), nuc.end(), compare_pair);
+
+    //
+    // If this column was simply uncalled Ns, return.
+    //
+    if (nuc[0].second == 0) {
+	tag->snps[col]->type   = snp_type_unk;
+	tag->snps[col]->col    = col;
+	tag->snps[col]->lratio = 0;
+	tag->snps[col]->rank_1 = 'N';
+	tag->snps[col]->rank_2 = '-';
+
+	return snp_type_unk;
+    }
+
+    //
+    // Method of Paul Hohenlohe <hohenlohe@uidaho.edu>, personal communication.
+    //
+    // For a diploid individual, there are ten possible genotypes
+    // (four homozygous and six heterozygous genotypes).  We calculate
+    // the likelihood of each possible genotype by using a multinomial
+    // sampling distribution, which gives the probability of observing
+    // a set of read counts (n1,n2,n3,n4) given a particular genotype.
+    //
+    double nuc_1   = nuc[0].second;
+    double nuc_2   = nuc[1].second;
+    double nuc_3   = nuc[2].second;
+    double nuc_4   = nuc[3].second;
+    double l_ratio = 0;
+
+    l_ratio = (nuc_1 * log(nuc_1 / total));
+
+    if (total - nuc_1 > 0)
+    	l_ratio += ((total - nuc_1) * log((total - nuc_1) / (3 * total)));
+
+    if (nuc_1 + nuc_2 > 0)
+	l_ratio -= ((nuc_1 + nuc_2) * log((nuc_1 + nuc_2) / (2 * total)));
+
+    if (nuc_3 + nuc_4 > 0)
+	l_ratio -= ((nuc_3 + nuc_4) * log((nuc_3 + nuc_4) / (2 * total)));
+
+    l_ratio *= 2;
+
+    snp_type res;
+
+    if (l_ratio <= heterozygote_limit) {
+	//
+        // This locus is a heterozygote.
+	//
+	tag->snps[col]->type   = snp_type_het;
+	tag->snps[col]->col    = col;
+	tag->snps[col]->lratio = l_ratio;
+	tag->snps[col]->rank_1 = nuc[0].first;
+	tag->snps[col]->rank_2 = nuc[1].first;
+
+	res = snp_type_het;
+
+    } else if (l_ratio >= homozygote_limit) {
+	//
+        // This locus is a homozygote.
+	//
+	tag->snps[col]->type   = snp_type_hom;
+	tag->snps[col]->col    = col;
+	tag->snps[col]->lratio = l_ratio;
+	tag->snps[col]->rank_1 = nuc[0].first;
+	tag->snps[col]->rank_2 = '-';
+
+	res = snp_type_hom;
+
+    } else {
+	//
+        // Unknown whether this is a heterozygote or homozygote.
+	//
+	tag->snps[col]->type   = snp_type_unk;
+	tag->snps[col]->col    = col;
+	tag->snps[col]->lratio = l_ratio;
+	tag->snps[col]->rank_1 = nuc[0].first;
+	tag->snps[col]->rank_2 = nuc[1].second > 0 ? nuc[1].first : '-';
 
 	res = snp_type_unk;
     }
@@ -277,6 +376,128 @@ call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool 
 
 	    tag->snps.push_back(snp);
 	}
+	res = snp_type_unk;
+    }
+
+    return res;
+}
+
+snp_type 
+call_bounded_multinomial_snp(Locus *tag, int col, map<char, int> &n) 
+{
+    vector<pair<char, int> > nuc;
+    map<char, int>::iterator i;
+
+    double total = 0.0;
+    for (i = n.begin(); i != n.end(); i++) {
+	if (i->first != 'N') {
+	    total += i->second;
+	    nuc.push_back(make_pair(i->first, i->second));
+	}
+    }
+
+    sort(nuc.begin(), nuc.end(), compare_pair);
+
+    //
+    // If this column was simply uncalled Ns, return.
+    //
+    if (nuc[0].second == 0) {
+	tag->snps[col]->type   = snp_type_unk;
+	tag->snps[col]->col    = col;
+	tag->snps[col]->lratio = 0;
+	tag->snps[col]->rank_1 = 'N';
+	tag->snps[col]->rank_2 = '-';
+
+	return snp_type_unk;
+    }
+
+    double nuc_1   = nuc[0].second;
+    double nuc_2   = nuc[1].second;
+    double nuc_3   = nuc[2].second;
+    double nuc_4   = nuc[3].second;
+
+    //
+    // Method of Paul Hohenlohe <hohenlohe@uidaho.edu>, personal communication.
+    //
+
+    //
+    // Calculate the site specific error rate for homozygous and heterozygous genotypes.
+    //
+    double epsilon_hom  = (4.0 / 3.0) * ((total - nuc_1) / total);
+    double epsilon_het  = 2.0 * ((nuc_3 + nuc_4) / total);
+
+    // cerr << "Epsilon_hom: " << epsilon_hom << "; epsilon_het: " << epsilon_het << "\n";
+
+    //
+    // Check if the error rate is above or below the specified bound.
+    //
+    if (epsilon_hom < bound_low)
+	epsilon_hom = bound_low;
+    else if (epsilon_hom > bound_high)
+	epsilon_hom = bound_high;
+
+    if (epsilon_het < bound_low)
+	epsilon_het = bound_low;
+    else if (epsilon_het > bound_high)
+	epsilon_het = bound_high;
+
+    //
+    // Calculate the log likelihood for the homozygous and heterozygous genotypes.
+    //
+    double ln_L_hom = nuc_1 * log(1 - ((3.0/4.0) * epsilon_hom));
+    ln_L_hom += epsilon_hom > 0 ? ((nuc_2 + nuc_3 + nuc_4) * log(epsilon_hom / 4.0)) : 0;
+
+    double ln_L_het = (nuc_1 + nuc_2) * log(0.5 - (epsilon_het / 4.0));
+    ln_L_het += epsilon_het > 0 ? ((nuc_3 + nuc_4) * log(epsilon_het / 4.0)) : 0;
+
+    // 
+    // Calculate the likelihood ratio.
+    //
+    double l_ratio  = 2 * (ln_L_hom - ln_L_het);
+
+    // cerr << "  Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Nuc_3: " << nuc_3 << " Nuc_4: " << nuc_4 
+    // 	 << " epsilon homozygote: " << epsilon_hom 
+    // 	 << " epsilon heterozygote: " << epsilon_het
+    // 	 << " Log likelihood hom: " << ln_L_hom 
+    // 	 << " Log likelihood het: " << ln_L_het 
+    // 	 << " Likelihood ratio: " << l_ratio << "\n";
+
+    snp_type res;
+
+    if (l_ratio <= heterozygote_limit) {
+	//
+        // This locus is a heterozygote.
+	//
+	tag->snps[col]->type   = snp_type_het;
+	tag->snps[col]->col    = col;
+	tag->snps[col]->lratio = l_ratio;
+	tag->snps[col]->rank_1 = nuc[0].first;
+	tag->snps[col]->rank_2 = nuc[1].first;
+
+	res = snp_type_het;
+
+    } else if (l_ratio >= homozygote_limit) {
+	//
+        // This locus is a homozygote.
+	//
+	tag->snps[col]->type   = snp_type_hom;
+	tag->snps[col]->col    = col;
+	tag->snps[col]->lratio = l_ratio;
+	tag->snps[col]->rank_1 = nuc[0].first;
+	tag->snps[col]->rank_2 = '-';
+
+	res = snp_type_hom;
+
+    } else {
+	//
+        // Unknown whether this is a heterozygote or homozygote.
+	//
+	tag->snps[col]->type   = snp_type_unk;
+	tag->snps[col]->col    = col;
+	tag->snps[col]->lratio = l_ratio;
+	tag->snps[col]->rank_1 = nuc[0].first;
+	tag->snps[col]->rank_2 = nuc[1].first;
+
 	res = snp_type_unk;
     }
 
