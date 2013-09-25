@@ -51,6 +51,7 @@ bool      write_single_snp  = false;
 bool      expand_id         = false;
 bool      sql_out           = false;
 bool      vcf_out           = false;
+bool      fasta_out         = false;
 bool      genepop_out       = false;
 bool      genomic_out       = false;
 bool      structure_out     = false;
@@ -294,6 +295,9 @@ int main (int argc, char* argv[]) {
     //
     // Output data in requested formats
     //
+    if (fasta_out)
+	write_fasta(catalog, pmap, samples, sample_ids);
+
     if (vcf_out)
 	write_vcf(catalog, pmap, psum, samples, sample_ids);
 
@@ -3103,6 +3107,70 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 }
 
 int 
+write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string> &samples, vector<int> &sample_ids) 
+{
+    //
+    // Write a FASTA file containing each allele from each locus from 
+    // each sample in the population.
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".fa";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing population alleles to FASTA file '" << file << "'\n";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening FASTA file '" << file << "'\n";
+	exit(1);
+    }
+
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus *loc;
+    Datum  **d;
+    string   seq;
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint pos = 0; pos < it->second.size(); pos++) {
+	    loc = it->second[pos];
+	    seq = loc->con;
+	    d   = pmap->locus(loc->id);
+
+	    for (int j = 0; j < pmap->sample_cnt(); j++) {
+
+		if (d[j] == NULL) 
+		    continue;
+
+		for (uint k = 0; k < d[j]->obshap.size(); k++) {
+
+		    for (uint i = 0; i < loc->snps.size(); i++) {
+			uint col = loc->snps[i]->col;
+
+			if (col < loc->len)
+			    seq.replace(col, 1, d[j]->obshap[k], i, 1);
+		    }
+
+		    fh << ">CLocus_" << loc->id 
+		       << "_Sample_" << pmap->rev_sample_index(j)
+		       << "_Locus_"  << d[j]->id 
+		       << "_Allele_" << k;
+
+		    if (strcmp(loc->loc.chr, "un") != 0)
+			fh << " [" << loc->loc.chr << ", " << loc->loc.bp << "]";
+		    fh << "\n"
+		       << seq << "\n";
+		}
+	    }
+	}
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int 
 write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, map<int, string> &samples, vector<int> &sample_ids) 
 {
     //
@@ -4897,6 +4965,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"corr",        no_argument,       NULL, 'c'},
             {"sql",         no_argument,       NULL, 's'},
             {"vcf",         no_argument,       NULL, 'V'},
+            {"fasta",       no_argument,       NULL, 'F'},
             {"structure",   no_argument,       NULL, 'S'},
             {"phase",       no_argument,       NULL, 'A'},
             {"beagle",      no_argument,       NULL, 'E'},
@@ -4930,7 +4999,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlkKSALEYVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlkKSALEYFVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -4996,6 +5065,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'V':
 	    vcf_out = true;
+	    break;
+	case 'F':
+	    fasta_out = true;
 	    break;
 	case 'G':
 	    genepop_out = true;
@@ -5146,6 +5218,7 @@ void help() {
 	      << "    --bootstrap_reps [num]: number of bootstrap resamplings to calculate (default 100).\n\n"
 	      << "  File ouput options:\n"
 	      << "    --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file.\n"
+	      << "    --fasta: output full sequence for each allele, from each sample locus in FASTA format.\n"
 	      << "    --vcf: output results in Variant Call Format (VCF).\n"
 	      << "    --genepop: output results in GenePop format.\n"
 	      << "    --structure: output results in Structure format.\n"
