@@ -1,3 +1,9 @@
+Stacks 1.08 - Sept 24, 2013
+---------------------------
+	Feature: added a FASTA output to populations to output the full locus sequence
+	for each allele at each sample locus, applying any filters or whitelists supplied to
+	populations.
+
 Stacks 1.07 - Sept 23, 2013
 ---------------------------
 	Bugfix: updated process_radtags to drop reads shorter than length
