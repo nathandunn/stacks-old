@@ -184,6 +184,7 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 		    this->data[locus][sample] = d;
 
 		    catalog[matches[i][j]->cat_id]->hcnt++;
+		    catalog[matches[i][j]->cat_id]->cnt++;
 		}
 	    } else {
 		// cerr << "  Adding haplotype to existing datum: sample: " << matches[i][j]->sample_id << ". tag: " << matches[i][j]->tag_id << "\n";
@@ -197,12 +198,14 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 		    this->data[locus][sample]->obshap.push_back(h);
 		    this->data[locus][sample]->depth.push_back(matches[i][j]->depth);
 		    this->data[locus][sample]->tot_depth += matches[i][j]->depth;
+
 		} else {
 		    //cerr << "    Deleting sample, multiple tag matches\n";
 		    delete this->data[locus][sample];
 		    this->data[locus][sample] = NULL;
 		    this->blacklist.insert(make_pair(matches[i][j]->sample_id, matches[i][j]->cat_id));
 		    catalog[matches[i][j]->cat_id]->hcnt--;
+		    catalog[matches[i][j]->cat_id]->confounded_cnt++;
 		}
 	    }
 	}
