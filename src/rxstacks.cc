@@ -159,7 +159,7 @@ int main (int argc, char* argv[]) {
 	sample_id = catalog_matches[i][0]->sample_id;
 	file      = samples[sample_id];
 
-	cerr << "Loading stacks from sample " << file << "...\n";
+	cerr << "Loading stacks from sample " << file << " [" << i+1 << " of " << catalog_matches.size() << "]...\n";
 
 	//// if (sample_id != 160 && sample_id != 147) continue;
 
