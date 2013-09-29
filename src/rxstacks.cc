@@ -61,9 +61,9 @@ int main (int argc, char* argv[]) {
     parse_command_line(argc, argv);
 
     cerr
-	<< "Log liklihood filtering: " << (filter_lnl        == true ? "on" : "off") << "; threshold: " << lnl_limit << "\n"
-	<< "Prune haplotypes: "        << (prune_haplotypes  == true ? "on" : "off") << "\n"
-	<< "Filter confounded loci: "  << (filter_confounded == true ? "on" : "off") << "\n";
+	<< "Log liklihood filtering: " << (filter_lnl        == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
+	<< "Prune haplotypes: "        << (prune_haplotypes  == true ? "yes" : "no")  << "\n"
+	<< "Filter confounded loci: "  << (filter_confounded == true ? "yes" : "no")  << "\n";
 
     //
     // Set limits to call het or homozygote according to chi-square distribution with one 
@@ -389,6 +389,8 @@ calc_lnl_means(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 	    lnls.push_back(d[i]->lnl);
 	    mean += d[i]->lnl;
 	}
+
+	if (lnls.size() == 0) continue;
 
 	sort(lnls.begin(), lnls.end());
 

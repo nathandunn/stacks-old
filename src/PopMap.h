@@ -47,8 +47,7 @@ public:
     char          *model;        // String representing SNP model output for each nucleotide at this locus.
     char          *gtype;        // Genotype
     char          *trans_gtype;  // Translated Genotype
-    double         err_rate;
-    double         lnl;
+    double         lnl;          // Log likelihood of this locus.
     vector<char *> obshap;       // Observed Haplotypes
     vector<SNP *>  snps;
     Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; len = 0; }
