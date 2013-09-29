@@ -246,6 +246,8 @@ int main (int argc, char* argv[]) {
 
 		if (d == NULL) continue;
 
+		measure_error(cloc, loc, d, log_fh);
+
 		prune_nucleotides(cloc, loc, log_fh,
 				  nuc_cnt,
 				  unk_hom_cnt, unk_het_cnt, 
@@ -309,7 +311,7 @@ int main (int argc, char* argv[]) {
 	       << blacklist_cnt  << "\t"
 	       << pruned_hap_cnt << "\n";
 
-	cerr << "Writing modified stacks, SNPs, alleles...";
+	cerr << "Writing modified stacks, SNPs, alleles to '" << out_path << "'...";
 
 	//
 	// Rewrite stacks, model outputs, and haplotypes.
@@ -322,6 +324,76 @@ int main (int argc, char* argv[]) {
 	map<int, Locus *>::iterator stack_it;
 	for (stack_it = stacks.begin(); stack_it != stacks.end(); stack_it++)
 	    delete stack_it->second;
+    }
+
+    check_error_rates(catalog, pmap);
+
+    log_fh.close();
+
+    return 0;
+}
+
+int
+check_error_rates(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+{
+    map<int, CSLocus *>::iterator it;
+    CSLocus *cloc;
+    Datum  **d;
+    uint     cnt, mid, len;
+    double   median, mean, lnl_median, lnl_mean;
+    vector<double> rates, lnls;
+
+    stringstream log;
+    log << "batch_" << batch_id << ".rxstacks_err_rates.log";
+    string log_path = out_path + log.str();
+    ofstream log_fh(log_path.c_str(), ofstream::out);
+
+    if (log_fh.fail()) {
+        cerr << "Error opening log file '" << log_path << "'\n";
+	exit(1);
+    }
+    log_fh << "# Catalog Locus\tNum SNPs\tMean ErrRate\tMedian ErrRate\tLnl Mean\tLnl Median\n";
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	cloc = it->second;
+
+	d    = pmap->locus(cloc->id);
+	cnt  = pmap->sample_cnt();
+	mean     = 0.0;
+	lnl_mean = 0.0;
+	rates.clear();
+	lnls.clear();
+
+	for (uint i = 0; i < cnt; i++) {
+	    if (d[i] == NULL) continue;
+
+	    rates.push_back(d[i]->err_rate);
+	    lnls.push_back(d[i]->lnl);
+	    mean += d[i]->err_rate;
+	    lnl_mean += d[i]->lnl;
+	}
+
+	sort(rates.begin(), rates.end());
+	sort(lnls.begin(), lnls.end());
+
+	mid    = rates.size() / 2;
+	median = rates.size() % 2 == 0 ? rates[mid] + rates[mid+1] / 2.0 : rates[mid+1];
+	mean   = mean / (double) rates.size(); 
+
+	lnl_median = lnls.size() % 2 == 0 ? lnls[mid] + lnls[mid+1] / 2.0 : lnls[mid+1];
+	lnl_mean   = lnl_mean / (double) lnls.size(); 
+
+	if (cloc->alleles.size() > 0)
+	    len = (cloc->alleles.begin())->first.length();
+	else
+	    len = 0;
+
+	log_fh << cloc->id << "\t" 
+	       << len << "\t"
+	       << mean << "\t"
+	       << median << "\t"
+	       << lnl_mean << "\t"
+	       << lnl_median << "\n";
     }
 
     log_fh.close();
@@ -367,7 +439,7 @@ sum_haplotype_counts(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 int
 prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &pruned_hap_cnt)
 {
-    if (d->obshap.size() <= 2) return 0;
+    if (d->obshap.size() < 2) return 0;
 
     //
     // Identify the two most frequent haplotypes in this sample.
@@ -391,7 +463,7 @@ prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &prune
     //
     sort(haplotypes.begin(), haplotypes.end(), compare_pair_haplotype);
 
-    if (haplotypes.size() <= 2) {
+    if (haplotypes.size() == 0) {
 	cerr << "Error processing catalog locus " << cloc->id << "\n";
 	return -1;
     }
@@ -474,6 +546,36 @@ prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &prune
 }
 
 int
+measure_error(CSLocus *cloc, Locus *loc, Datum *d, ofstream &log_fh)
+{
+    char   con_bp  = 0;
+    double err_cnt = 0.0;
+    double total   = 0.0;
+
+    for (uint i = 0; i < loc->snps.size() && i < cloc->snps.size(); i++) {
+
+	if (cloc->snps[i]->type == snp_type_het)
+	    continue;
+
+	con_bp = cloc->snps[i]->rank_1;
+
+	for (uint k = 0; k < loc->reads.size(); k++) {
+	    if (loc->reads[k][i] == 'N')
+		continue;
+
+	    total++;
+
+	    if (loc->reads[k][i] != con_bp)
+		err_cnt++;
+	}
+    }
+
+    d->err_rate = err_cnt / total * 100;
+
+    return 0;
+}
+
+int
 prune_nucleotides(CSLocus *cloc, Locus *loc, ofstream &log_fh, unsigned long int &nuc_cnt, 
 		  unsigned long int &unk_hom_cnt, unsigned long int &unk_het_cnt, 
 		  unsigned long int &hom_unk_cnt, unsigned long int &het_unk_cnt, 
@@ -488,8 +590,7 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, ofstream &log_fh, unsigned long int
 
     for (uint i = 0; i < loc->snps.size() && i < cloc->snps.size(); i++) {
 	//
-	// replace this with two cases: either their is an unknown call in locus, and no data in catalog, allowing us 
-	// to look for a homozygote, or, there is a snp in the catalog and any state in the locus.
+	// Either their is an unknown call in locus, or, there is a snp in the catalog and any state in the locus.
 	//
 	if ((loc->snps[i]->type == snp_type_unk) || 
 	    (cloc->snps[i]->type == snp_type_het && loc->snps[i]->type == snp_type_hom)) {
@@ -560,7 +661,7 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, ofstream &log_fh, unsigned long int
     // blacklist this tag. This can occur if a fixed nucleotide isn't captured in
     // the catalog and all the reads are removed for the purpose of reading haplotypes.
     //
-    if (loc->alleles.empty())
+    if (loc->alleles.size() <= 1)
 	for (uint j = 0; j < loc->snps.size(); j++)
 	    if (loc->snps[j]->type == snp_type_het) {
 		loc->blacklisted = 1;
@@ -743,9 +844,10 @@ write_results(string file, map<int, Locus *> &m)
 	     << "\t"
 	     << "\t" 
 	     << tag_1->con << "\t" 
-	     << (tag_1->deleveraged == true ? "1" : "0") << "\t"
-	     << (tag_1->blacklisted == true ? "1" : "0") << "\t"
-	     << (tag_1->lumberjackstack == true ? "1" : "0") << "\n";
+	     << (tag_1->deleveraged == true ? "1" : "0")     << "\t"
+	     << (tag_1->blacklisted == true ? "1" : "0")     << "\t"
+	     << (tag_1->lumberjackstack == true ? "1" : "0") << "\t"
+	     << tag_1->lnl << "\n";
 
 	//
 	// Write a sequence recording the output of the SNP model for each nucleotide.
@@ -775,6 +877,7 @@ write_results(string file, map<int, Locus *> &m)
 	tags << "\t"
 	     << "\t"
 	     << "\t"
+	     << "\t"
 	     << "\n";
 	
 	//
@@ -792,7 +895,7 @@ write_results(string file, map<int, Locus *> &m)
 
 	    tags << tag_1->comp_cnt[j]  << "\t" 
 		 << tag_1->comp[j]      << "\t" 
-		 << tag_1->reads[j]     << "\t\t\t\n";
+		 << tag_1->reads[j]     << "\t\t\t\t\n";
 	}
 
 	//

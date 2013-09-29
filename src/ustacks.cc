@@ -175,8 +175,9 @@ int main (int argc, char* argv[]) {
 
     count_raw_reads(unique, remainders, merged);
 
-    cerr << "Writing results\n";
+    cerr << "Writing loci, SNPs, and alleles to '" << out_path << "'...\n";
     write_results(merged, unique, remainders);
+    cerr << "done.\n";
 
     return 0;
 }
@@ -426,8 +427,8 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
 
     	    for (col = 0; col < length; col++) {
     		nuc['A'] = 0; 
-    		nuc['C'] = 0;
     		nuc['G'] = 0;
+    		nuc['C'] = 0;
     		nuc['T'] = 0;
 
     		for (row = 0; row < height; row++) {
@@ -1433,6 +1434,12 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	float total = 0;
 	tag_1 = i->second;
 
+	//
+	// Calculate the log likelihood of this merged stack.
+	//
+	tag_1->gen_matrix(u, r);
+	tag_1->calc_likelihood();
+
 	// First write the consensus sequence
 	tags << "0"              << "\t" 
 	     << sql_id           << "\t" 
@@ -1446,7 +1453,8 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	     << tag_1->con         << "\t" 
 	     << tag_1->deleveraged << "\t" 
 	     << tag_1->blacklisted << "\t"
-	     << tag_1->lumberjackstack << "\n";
+	     << tag_1->lumberjackstack << "\t"
+	     << tag_1->lnl << "\n";
 
 	//
 	// Write a sequence recording the output of the SNP model for each nucleotide.
@@ -1476,6 +1484,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	tags << "\t" 
 	     << "\t"
 	     << "\t"
+	     << "\t"
 	     << "\n";
 
 	//
@@ -1498,7 +1507,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 		     << id << "\t" 
 		     << seq_ids[tag_2->map[j]] << "\t" 
 		     << tag_2->seq->seq(buf) 
-		     << "\t\t\t\n";
+		     << "\t\t\t\t\n";
 	    }
 
 	    id++;
@@ -1523,7 +1532,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 		     << "\t" 
 		     << seq_ids[rem->map[j]] << "\t" 
 		     << rem->seq->seq(buf) 
-		     << "\t\t\t\n";
+		     << "\t\t\t\t\n";
 	}
 
 	//

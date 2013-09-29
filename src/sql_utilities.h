@@ -29,14 +29,15 @@
 #define __SQL_UTILITIES_H__
 
 #include "input.h"
+#include "utils.h"
 
 //
 // The expected number of tab-separated fields in our SQL input files.
 //
-const uint num_tags_fields    = 13;
+const uint num_tags_fields    = 14;
 const uint num_snps_fields    = 10;
 const uint num_alleles_fields =  6;
-const uint num_matches_fields =  7;
+const uint num_matches_fields =  8;
 
 template <class LocusT>
 int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_all_model_calls) {
@@ -157,6 +158,11 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool l
 	//
 	c->deleveraged     = (parts[10] == "1" ? true : false);
 	c->lumberjackstack = (parts[12] == "1" ? true : false);
+
+	//
+	// Read in the log likelihood of the locus.
+	//
+ 	c->lnl = is_double(parts[13].c_str());
 
         //
         // Parse the physical genome location of this locus.
@@ -378,7 +384,7 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
 	m->haplotype = new char[parts[5].length() + 1];
 	strcpy(m->haplotype, parts[5].c_str());
 	m->depth     = atoi(parts[6].c_str());
-
+	m->lnl       = is_double(parts[7].c_str());
 	matches.push_back(m);
     }
 

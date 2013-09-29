@@ -31,6 +31,7 @@ hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/constants.h \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/kmers.h src/kmers.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
+	src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
 sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/constants.h \
