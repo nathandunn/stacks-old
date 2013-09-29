@@ -38,6 +38,9 @@ double confounded_limit  = 0.75;
 bool   filter_confounded = false;
 bool   prune_haplotypes  = false;
 int    max_haplotype_cnt = 0;
+bool   lnl_dist          = false;
+bool   filter_lnl        = false;
+double lnl_limit         = 0.0;
 bool   verbose           = false;
 
 //
@@ -56,6 +59,11 @@ const int barcode_size    = 5;
 int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
+
+    cerr
+	<< "Log liklihood filtering: " << (filter_lnl        == true ? "on" : "off") << "; threshold: " << lnl_limit << "\n"
+	<< "Prune haplotypes: "        << (prune_haplotypes  == true ? "on" : "off") << "\n"
+	<< "Filter confounded loci: "  << (filter_confounded == true ? "on" : "off") << "\n";
 
     //
     // Set limits to call het or homozygote according to chi-square distribution with one 
@@ -149,6 +157,11 @@ int main (int argc, char* argv[]) {
     //
     sum_haplotype_counts(catalog, pmap);
 
+    //
+    // Calculate mean log likelihood across the population for each catalog locus.
+    //
+    calc_lnl_means(catalog, pmap);
+
     int    catalog_id, sample_id, tag_id;
     string file;
 
@@ -210,6 +223,7 @@ int main (int argc, char* argv[]) {
 	unsigned long int conf_loci_cnt  = 0;
 	unsigned long int pruned_hap_cnt = 0;
 	unsigned long int blacklist_cnt  = 0;
+	unsigned long int lnl_cnt        = 0;
 
         #pragma omp parallel private(catalog_id, tag_id)
 	{ 
@@ -219,7 +233,7 @@ int main (int argc, char* argv[]) {
 
             #pragma omp for schedule(dynamic, 1) reduction(+:nuc_cnt) reduction(+:unk_hom_cnt) reduction(+:unk_het_cnt) \
 		reduction(+:hom_unk_cnt) reduction(+:het_unk_cnt) reduction(+:hom_het_cnt) reduction(+:het_hom_cnt) \
-		reduction(+:conf_loci_cnt) reduction(+:pruned_hap_cnt) reduction(+:blacklist_cnt)
+		reduction(+:conf_loci_cnt) reduction(+:pruned_hap_cnt) reduction(+:blacklist_cnt) reduction(+:lnl_cnt)
 	    for (uint j = 0; j < matches.size(); j++) {
 		catalog_id = matches[j].first;
 		tag_id     = matches[j].second;
@@ -246,7 +260,10 @@ int main (int argc, char* argv[]) {
 
 		if (d == NULL) continue;
 
-		measure_error(cloc, loc, d, log_fh);
+		if (filter_lnl && cloc->lnl < lnl_limit) {
+		    loc->blacklisted = true;
+		    lnl_cnt++;
+		}
 
 		prune_nucleotides(cloc, loc, log_fh,
 				  nuc_cnt,
@@ -283,6 +300,7 @@ int main (int argc, char* argv[]) {
 	     << "    Converted from homozygous to heterozygous: " << hom_het_cnt << " nucleotides.\n"
 	     << "    Converted from heterozygous to homozygous: " << het_hom_cnt << " nucleotides.\n"
 	     << "    Blacklisted: " << blacklist_cnt << " loci due to inability to call haplotypes.\n"
+	     << "    Blacklisted: " << lnl_cnt << " loci due to log likelihoods below threshold.\n"
 	     << pruned_hap_cnt << " haplotypes were pruned.\n";
 
 	if (verbose)
@@ -297,6 +315,7 @@ int main (int argc, char* argv[]) {
 		   << "Hom to Het\t"
 		   << "Het to Hom\t"
 		   << "Blacklisted\t"
+		   << "Lnl Blacklisted\t"
 		   << "Pruned Haplotypes\n";
 	log_fh << file           << "\t"
 	       << conf_loci_cnt  << "\t"
@@ -309,6 +328,7 @@ int main (int argc, char* argv[]) {
 	       << hom_het_cnt    << "\t"
 	       << het_hom_cnt    << "\t"
 	       << blacklist_cnt  << "\t"
+	       << lnl_cnt        << "\t"
 	       << pruned_hap_cnt << "\n";
 
 	cerr << "Writing modified stacks, SNPs, alleles to '" << out_path << "'...";
@@ -326,33 +346,34 @@ int main (int argc, char* argv[]) {
 	    delete stack_it->second;
     }
 
-    check_error_rates(catalog, pmap);
-
     log_fh.close();
 
     return 0;
 }
 
 int
-check_error_rates(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+calc_lnl_means(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
     map<int, CSLocus *>::iterator it;
     CSLocus *cloc;
     Datum  **d;
-    uint     cnt, mid, len;
-    double   median, mean, lnl_median, lnl_mean;
-    vector<double> rates, lnls;
+    uint     cnt, mid;
+    double   median, mean;
+    vector<double> lnls, means;
+    ofstream log_fh;
 
-    stringstream log;
-    log << "batch_" << batch_id << ".rxstacks_err_rates.log";
-    string log_path = out_path + log.str();
-    ofstream log_fh(log_path.c_str(), ofstream::out);
+    if (lnl_dist) {
+	stringstream log;
+	log << "batch_" << batch_id << ".rxstacks_lnls.tsv";
+	string log_path = out_path + log.str();
+	log_fh.open(log_path.c_str(), ofstream::out);
 
-    if (log_fh.fail()) {
-        cerr << "Error opening log file '" << log_path << "'\n";
-	exit(1);
+	if (log_fh.fail()) {
+	    cerr << "Error opening log file '" << log_path << "'\n";
+	    exit(1);
+	}
+	log_fh << "# Catalog Locus\tMean\tMedian\n";
     }
-    log_fh << "# Catalog Locus\tNum SNPs\tMean ErrRate\tMedian ErrRate\tLnl Mean\tLnl Median\n";
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	cloc = it->second;
@@ -360,43 +381,33 @@ check_error_rates(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 	d    = pmap->locus(cloc->id);
 	cnt  = pmap->sample_cnt();
 	mean     = 0.0;
-	lnl_mean = 0.0;
-	rates.clear();
 	lnls.clear();
 
 	for (uint i = 0; i < cnt; i++) {
 	    if (d[i] == NULL) continue;
 
-	    rates.push_back(d[i]->err_rate);
 	    lnls.push_back(d[i]->lnl);
-	    mean += d[i]->err_rate;
-	    lnl_mean += d[i]->lnl;
+	    mean += d[i]->lnl;
 	}
 
-	sort(rates.begin(), rates.end());
 	sort(lnls.begin(), lnls.end());
 
-	mid    = rates.size() / 2;
-	median = rates.size() % 2 == 0 ? rates[mid] + rates[mid+1] / 2.0 : rates[mid+1];
-	mean   = mean / (double) rates.size(); 
+	mid    = lnls.size() / 2;
+	median = lnls.size() % 2 == 0 ? lnls[mid] + lnls[mid+1] / 2.0 : lnls[mid+1];
+	mean   = mean / (double) lnls.size(); 
 
-	lnl_median = lnls.size() % 2 == 0 ? lnls[mid] + lnls[mid+1] / 2.0 : lnls[mid+1];
-	lnl_mean   = lnl_mean / (double) lnls.size(); 
+	cloc->lnl = mean;
 
-	if (cloc->alleles.size() > 0)
-	    len = (cloc->alleles.begin())->first.length();
-	else
-	    len = 0;
+	means.push_back(mean);
 
-	log_fh << cloc->id << "\t" 
-	       << len << "\t"
-	       << mean << "\t"
-	       << median << "\t"
-	       << lnl_mean << "\t"
-	       << lnl_median << "\n";
+	if (lnl_dist)
+	    log_fh << cloc->id << "\t" 
+		   << mean << "\t"
+		   << median << "\n";
     }
 
-    log_fh.close();
+    if (lnl_dist)
+	log_fh.close();
 
     return 0;
 }
@@ -541,36 +552,6 @@ prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &prune
 	//     cerr << "Error erasing haplotype '" << hap << "' in catalog locus " << cloc->id << ", sample locus " << loc->id << "\n";
 	// }
     }
-
-    return 0;
-}
-
-int
-measure_error(CSLocus *cloc, Locus *loc, Datum *d, ofstream &log_fh)
-{
-    char   con_bp  = 0;
-    double err_cnt = 0.0;
-    double total   = 0.0;
-
-    for (uint i = 0; i < loc->snps.size() && i < cloc->snps.size(); i++) {
-
-	if (cloc->snps[i]->type == snp_type_het)
-	    continue;
-
-	con_bp = cloc->snps[i]->rank_1;
-
-	for (uint k = 0; k < loc->reads.size(); k++) {
-	    if (loc->reads[k][i] == 'N')
-		continue;
-
-	    total++;
-
-	    if (loc->reads[k][i] != con_bp)
-		err_cnt++;
-	}
-    }
-
-    d->err_rate = err_cnt / total * 100;
 
     return 0;
 }
@@ -1087,6 +1068,8 @@ parse_command_line(int argc, char* argv[])
             {"version",      no_argument,       NULL, 'v'},
 	    {"conf_filter",  no_argument,       NULL, 'F'},
 	    {"prune_haplo",  no_argument,       NULL, 'H'},
+	    {"lnl_filter",   no_argument,       NULL, 'G'},
+	    {"lnl_dist",     no_argument,       NULL, 'D'},
 	    {"verbose",      no_argument,       NULL, 'V'},
 	    {"num_threads",  required_argument, NULL, 't'},
 	    {"batch_id",     required_argument, NULL, 'b'},
@@ -1098,13 +1081,14 @@ parse_command_line(int argc, char* argv[])
 	    {"alpha",        required_argument, NULL, 'A'},
 	    {"conf_lim",     required_argument, NULL, 'C'},
 	    {"max_haplo",    required_argument, NULL, 'M'},
+	    {"lnl_lim",      required_argument, NULL, 'I'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvVFHo:t:b:P:T:L:U:A:C:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvVFGDHo:t:b:P:T:L:U:A:C:I:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1154,7 +1138,7 @@ parse_command_line(int argc, char* argv[])
 	    filter_confounded = true;
 	    break;
 	case 'C':
-	    confounded_limit = is_double(optarg);
+	    confounded_limit  = is_double(optarg);
 	    filter_confounded = true;
 	    break;
 	case 'H':
@@ -1162,6 +1146,16 @@ parse_command_line(int argc, char* argv[])
 	    break;
 	case 'M':
 	    max_haplotype_cnt = is_integer(optarg);
+	    break;
+	case 'G':
+	    filter_lnl = true;
+	    break;
+	case 'I':
+	    lnl_limit  = is_double(optarg);
+	    filter_lnl = true;
+	    break;
+	case 'D':
+	    lnl_dist = true;
 	    break;
 	case 'V':
 	    verbose = true;
@@ -1241,6 +1235,9 @@ void help() {
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n"
 	      << "  Filtering options:\n"
+	      << "    --lnl_filter: filter catalog loci based on the mean log likelihood of the catalog locus in the population.\n"
+	      << "      --lnl_lim <limit>: minimum log likelihood required to keep a catalog locus.\n"
+	      << "      --lnl_dist: print distribution of mean log likelihoods for catalog loci.\n"
 	      << "    --conf_filter: filter confounded loci.\n"
 	      << "    --conf_lim <limit>: between 0.0 and 1.0 (default 0.75), proportion of loci in population that must be confounded relative to the catalog locus.\n"
 	      << "    --prune_haplo: prune out non-biological haplotypes unlikely to occur in the population.\n"
