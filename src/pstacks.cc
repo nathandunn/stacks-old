@@ -121,7 +121,7 @@ int main (int argc, char* argv[]) {
 
     count_raw_reads(unique, merged);
 
-    cerr << "Writing results\n";
+    cerr << "Writing loci, SNPs, alleles to '" << out_path << "...'\n";
     write_results(merged, unique);
 
     return 0;
@@ -350,6 +350,12 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	    continue;
 	}
 
+	//
+	// Calculate the log likelihood of this merged stack.
+	//
+	tag_1->gen_matrix(u);
+	tag_1->calc_likelihood_pstacks();
+
 	wrote++;
 
 	if (tag_1->blacklisted) blacklisted++;
@@ -365,7 +371,8 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	     << tag_1->con << "\t" 
 	     << tag_1->deleveraged << "\t" 
 	     << tag_1->blacklisted << "\t"
-	     << tag_1->lumberjackstack << "\n";
+	     << tag_1->lumberjackstack << "\t"
+	     << tag_1->lnl << "\n";
 
 	//
 	// Write a sequence recording the output of the SNP model for each nucleotide.
@@ -394,6 +401,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	tags << "\t"
 	     << "\t"
 	     << "\t"
+	     << "\t"
 	     << "\n";
 	
 	//
@@ -405,7 +413,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	    buf = tag_2->seq->seq();
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\n";
+		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\t\n";
 	    }
 	    id++;
 	    delete [] buf;

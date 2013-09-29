@@ -56,7 +56,7 @@ char reverse(char c) {
         }
 }
 
-int is_integer(char *str) {
+int is_integer(const char *str) {
     //
     // Adapted from the strtol manpage.
     //
@@ -80,7 +80,7 @@ int is_integer(char *str) {
     return (int) val;
 }
 
-double is_double(char *str) {
+double is_double(const char *str) {
     //
     // Adapted from the strtol manpage.
     //
