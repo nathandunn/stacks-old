@@ -72,7 +72,7 @@ int     init_log(int, char **, ofstream &);
 int     sum_haplotype_counts(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int     prune_locus_haplotypes(CSLocus *, Datum *, Locus *, unsigned long int &);
 int     measure_error(CSLocus *, Locus *, Datum *, ofstream &);
-int     check_error_rates(map<int, CSLocus *> &, PopMap<CSLocus> *);
+int     calc_lnl_means(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int     prune_nucleotides(CSLocus *, Locus *, ofstream &, unsigned long int &,
 			  unsigned long int &, unsigned long int &, unsigned long int &,
 			  unsigned long int &, unsigned long int &, unsigned long int &);
