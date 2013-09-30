@@ -10,4 +10,9 @@
 
 @interface LocusArrayController : NSArrayController
 
+@property NSInteger minSnpValue;
+@property NSInteger maxSnpValue;
+- (IBAction) setMinSnpValue:(NSInteger) sender;
+- (IBAction) setMaxSnpValue:(NSInteger) sender;
 @end
+
