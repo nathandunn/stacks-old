@@ -44,9 +44,11 @@ int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
+    uint sample_cnt = samples.size();
+
     cerr << "Number of mismatches allowed between stacks: " << ctag_dist << "\n"
 	 << "Loci matched based on " << (search_type == sequence ? "sequence identity" : "genomic location") << ".\n"
-	 << "Constructing catalog from " << samples.size() << " samples.\n";
+	 << "Constructing catalog from " << sample_cnt << " samples.\n";
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -93,7 +95,7 @@ int main (int argc, char* argv[]) {
     while (!samples.empty()) {
         map<int, QLocus *> sample;
 
-	cerr << "Processing sample " << i << "\n";
+	cerr << "Processing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
 
 	s = samples.front();
 	samples.pop();
