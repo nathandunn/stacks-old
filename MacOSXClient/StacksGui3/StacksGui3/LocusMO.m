@@ -24,11 +24,25 @@
 @dynamic datums;
 @dynamic snps;
 
-- (NSInteger) countProgeny{
+- (NSInteger) countParents{
     NSInteger count =0 ;
     for(DatumMO *datumMO in self.datums){
         NSString* sampleName = datumMO.sample.name ;
+        if([sampleName rangeOfString:@"male"].location!=NSNotFound){
+            ++count ;
+        }
+    }
+    return count  ;
+}
+
+- (NSInteger) countProgeny{
+    NSInteger count =0 ;
+    NSLog(@"number of datums!! %ld",self.datums.count);
+    for(DatumMO *datumMO in self.datums){
+        NSString* sampleName = datumMO.sample.name ;
+        NSLog(@"sample name %@",sampleName);
         if([sampleName rangeOfString:@"male"].location==NSNotFound){
+            NSLog(@"not found!!") ;
             ++count ;
         }
     }
