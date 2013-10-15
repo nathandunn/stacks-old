@@ -46,5 +46,7 @@
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path;
 - (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name;
+- (IBAction) updateSelections: (id) sender ;
+
 
 @end
