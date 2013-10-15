@@ -55,6 +55,7 @@
 
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
 
+
 //    for (NSUInteger i = 0; i < self.haplotypes.count; i++) {
     int i = 0;
 //    NSArray *sortByOrder = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
@@ -63,6 +64,11 @@
 
     for (HaplotypeMO *haplotype  in [self.haplotypes sortedArrayUsingDescriptors:sortDescriptors]) {
 //        NSString *haplotype = [self.haplotypes objectAtIndex:i];
+        NSUInteger order = [self.locus lookupHaplotypeOrder:haplotype.haplotype];
+        NSLog(@"order gotten %ld",order);
+
+
+
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype.haplotype];
         NSRange selectedRange = NSMakeRange(0, haplotype.haplotype.length);
         [appendString beginEditing];

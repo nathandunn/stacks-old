@@ -27,6 +27,17 @@
 @dynamic datums;
 @dynamic snps;
 
+@synthesize haplotypeOrder;
+
+- (id)init {
+    self = [super init];
+    if (self) {
+    }
+
+    return self;
+}
+
+
 - (NSInteger) countParents{
     NSInteger count =0 ;
     for(DatumMO *datumMO in self.datums){
@@ -69,4 +80,30 @@
     return string ;
 }
 
+- (NSUInteger) lookupHaplotypeOrder:(NSString *)haplotype {
+    if(haplotypeOrder==nil){
+        haplotypeOrder = [[NSMutableDictionary alloc] init];
+        [haplotypeOrder setValue:[NSNumber numberWithInt:0] forKey:haplotype];
+        return 0 ;
+    }
+
+    NSNumber *returnType = [haplotypeOrder objectForKey:haplotype];
+    if(returnType==nil){
+        NSUInteger maxValue = 0 ;
+        for(NSNumber *aValue in haplotypeOrder.allValues){
+           if([aValue unsignedIntegerValue]>maxValue) {
+               maxValue = [aValue unsignedIntegerValue];
+           }
+        }
+        ++maxValue;
+        [haplotypeOrder setValue:[NSNumber numberWithInt:maxValue] forKey:haplotype];
+        // actually we get he max value here first .
+
+        return maxValue ;
+    }
+    else{
+        return [returnType unsignedIntegerValue];
+    }
+
+}
 @end
