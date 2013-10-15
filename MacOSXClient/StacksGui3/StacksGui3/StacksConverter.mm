@@ -45,6 +45,8 @@ using std::ofstream;
 
 NSString *calculateType(NSString *file);
 
+void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
+
 @implementation StacksConverter {
 
 }
@@ -362,6 +364,10 @@ NSString *calculateType(NSString *file);
         [bar incrementBy:incrementAmount];
     }
     gettimeofday(&time2, NULL);
+
+
+    setParentCounts(lociDictionary,catalogTagFile);
+
     NSLog(@"populating snps %ld", (time2.tv_sec - time1.tv_sec));
 
     map<int, CSLocus *>::iterator it;
@@ -1071,6 +1077,23 @@ NSString *calculateType(NSString *file);
 //    return stacksDocument;
 //}
 @end
+
+void setParentCounts(NSMutableDictionary *dictionary, NSString *file) {
+    NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
+    NSString *line;
+    for (line in fileData) {
+        NSArray *columns = [line componentsSeparatedByString:@"\t"];
+        // should be column 8
+        if (columns.count > 9) {
+            NSLog(@"input value is %@",columns[2]);
+            NSNumber* locusId = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%@", columns[2]] integerValue]];
+//            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
+            NSArray *parents = [columns[8] componentsSeparatedByString:@","];
+            NSLog(@"parent count for %@ is %ld",locusId,parents.count);
+            ((LocusMO *)[dictionary objectForKey:locusId]).parentCount = [NSNumber numberWithUnsignedInt:parents.count];
+        }
+    }
+}
 
 NSString *calculateType(NSString *file) {
     NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];

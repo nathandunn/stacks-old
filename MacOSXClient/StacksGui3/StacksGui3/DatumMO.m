@@ -67,8 +67,6 @@ NSDictionary *getColorForOrder(NSUInteger order);
     for (HaplotypeMO *haplotype  in [self.haplotypes sortedArrayUsingDescriptors:sortDescriptors]) {
 //        NSString *haplotype = [self.haplotypes objectAtIndex:i];
         NSUInteger order = [self.locus lookupHaplotypeOrder:haplotype.haplotype];
-        NSLog(@"order gotten %ld",order);
-
 
 
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype.haplotype];
