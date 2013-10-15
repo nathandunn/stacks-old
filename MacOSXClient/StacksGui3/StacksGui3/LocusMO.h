@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class DatumMO, LocusAlleleMO, LocusSnpMO;
+@class DatumMO, LocusAlleleMO, LocusSnpMO, DepthMO;
 
 @interface LocusMO : NSManagedObject
 
@@ -33,6 +33,8 @@
 - (NSUInteger)getHaplotypeOrder:(NSString *)haplotype;
 
 - (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype;
+
+- (NSUInteger)lookupDepthOrder:(DepthMO *)mo;
 @end
 
 @interface LocusMO (CoreDataGeneratedAccessors)

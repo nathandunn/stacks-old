@@ -11,6 +11,8 @@
 #import "LocusAlleleMO.h"
 #import "LocusSnpMO.h"
 #import "SampleMO.h"
+#import "DepthMO.h"
+#import "HaplotypeMO.h"
 
 
 @implementation LocusMO
@@ -105,5 +107,17 @@
         return [returnType unsignedIntegerValue];
     }
 
+}
+
+- (NSUInteger)lookupDepthOrder:(DepthMO *)depthMO{
+    // assume that it is there . . .
+    NSNumber *order = depthMO.order;
+    for(HaplotypeMO *haplotypeMO in depthMO.datum.haplotypes.allObjects){
+        if([haplotypeMO.order isEqualToNumber:order]){
+            return [self lookupHaplotypeOrder:haplotypeMO.haplotype];
+        }
+    }
+
+    return 0;
 }
 @end
