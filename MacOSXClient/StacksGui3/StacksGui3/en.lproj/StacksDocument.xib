@@ -360,10 +360,14 @@
                                             <menuItem title="Item 3" id="100511"/>
                                         </items>
                                     </menu>
+                                    <connections>
+                                        <binding destination="100206" name="selectedIndex" keyPath="selectionIndex" id="zrg-rB-ivS"/>
+                                    </connections>
                                 </popUpButtonCell>
                                 <connections>
                                     <action selector="updateSelections:" target="-2" id="ldh-EC-Epf"/>
                                     <binding destination="100206" name="content" keyPath="arrangedObjects.name" id="100516"/>
+                                    <binding destination="100206" name="contentValues" keyPath="arrangedObjects.name" previousBinding="100516" id="p6u-0D-Jhc"/>
                                 </connections>
                             </popUpButton>
                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" id="P29-1k-fQd">
