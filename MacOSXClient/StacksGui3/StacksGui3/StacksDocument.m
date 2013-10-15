@@ -26,6 +26,8 @@
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController ;
 @property(weak) IBOutlet NSTextField *totalLoci;
+@property(weak) IBOutlet NSPopUpButton *populationSelector;
+
 
 //@property(weak) IBOutlet NSProgressIndicator *loadProgress;
 //@property(weak) IBOutlet NSPanel *progressPanel ;
@@ -55,6 +57,7 @@
 // array controller
 @synthesize datumController ;
 @synthesize totalLoci;
+@synthesize populationSelector;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -105,11 +108,14 @@
     return YES;
 }
 
+- (IBAction)updateSelections:(id)sender {
+    [self tableViewSelectionDidChange:nil];
+}
 
 
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
-    NSString *tableName = [[aNotification object] identifier];
-    NSLog(@"table selected!! %@",tableName);
+//    NSString *tableName = [[aNotification object] identifier];
+//    NSLog(@"table selected!! %@",tableName);
 
 
     self.selectedLocus = [self findSelectedLocus];
@@ -134,7 +140,8 @@
 }
 
 - (PopulationMO *)findSelectedPopulation {
-    NSInteger selectedRow = [self.populationTableView selectedRow];
+//    NSInteger selectedRow = [self.populationTableView selectedRow];
+    NSInteger selectedRow = [self.populationSelector indexOfSelectedItem];
     if(selectedRow>=0){
          return [populationRepository getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
     }
