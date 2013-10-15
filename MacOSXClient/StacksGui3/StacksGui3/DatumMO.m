@@ -19,6 +19,8 @@
 #import "StackEntryMO.h"
 
 
+NSDictionary *getColorForOrder(NSUInteger order);
+
 @implementation DatumMO
 
 @dynamic name;
@@ -72,17 +74,7 @@
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype.haplotype];
         NSRange selectedRange = NSMakeRange(0, haplotype.haplotype.length);
         [appendString beginEditing];
-        NSDictionary *attributes;
-        if (i % 2 == 0) {
-            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor greenColor], NSForegroundColorAttributeName,
-                    nil];
-        }
-        else {
-            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor redColor], NSForegroundColorAttributeName,
-                    nil];
-        }
+        NSDictionary *attributes = getColorForOrder(order);
         [appendString setAttributes:attributes range:selectedRange];
         [appendString endEditing];
 
@@ -116,21 +108,15 @@
     NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
     for (DepthMO *depth in  [self.depths sortedArrayUsingDescriptors:sortDescriptors]) {
 //        NSString *depth = [(NSNumber *) [self.depths objectAtIndex:i] stringValue];
+
+        NSUInteger order = [self.locus lookupDepthOrder:depth];
+
+
         NSString *numberString = [NSString stringWithFormat:@"%@", depth.depth];
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:numberString];
         NSRange selectedRange = NSMakeRange(0, numberString.length);
         [appendString beginEditing];
-        NSDictionary *attributes;
-        if (i % 2 == 0) {
-            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor greenColor], NSForegroundColorAttributeName,
-                    nil];
-        }
-        else {
-            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor redColor], NSForegroundColorAttributeName,
-                    nil];
-        }
+        NSDictionary *attributes = getColorForOrder(order);
         [appendString setAttributes:attributes range:selectedRange];
         [appendString endEditing];
 
@@ -184,3 +170,29 @@
 
 
 @end
+
+NSDictionary *getColorForOrder(NSUInteger order) {
+
+    switch(order%3){
+        case 0:
+            return [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor greenColor], NSForegroundColorAttributeName,
+                    nil];
+        case 1:
+            return [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor redColor], NSForegroundColorAttributeName,
+                    nil];
+        case 2:
+            return [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor orangeColor], NSForegroundColorAttributeName,
+                    nil];
+        case 3:
+            return [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor yellowColor], NSForegroundColorAttributeName,
+                    nil];
+        default:
+            return [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSColor blueColor], NSForegroundColorAttributeName,
+                    nil];
+    }
+}
