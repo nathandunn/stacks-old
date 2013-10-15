@@ -8,7 +8,8 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface LocusArrayController : NSArrayController
+@interface LocusArrayController : NSArrayController{
+}
 
 @property NSInteger minSnpValue;
 @property NSInteger maxSnpValue;
