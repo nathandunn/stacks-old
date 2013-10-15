@@ -19,6 +19,7 @@
 @property (nonatomic, retain) NSString * consensus;
 @property (nonatomic, retain) NSNumber * length;
 @property (nonatomic, retain) NSNumber * locusId;
+@property (nonatomic, retain) NSNumber * parentCount;
 @property (nonatomic, retain) NSString * marker;
 @property (nonatomic, retain) NSString * ratio;
 
@@ -29,8 +30,6 @@
 // not a managed part, populated by datum rendering . . .
 @property (atomic, retain) NSDictionary *haplotypeOrder;
 
-
-- (NSUInteger)getHaplotypeOrder:(NSString *)haplotype;
 
 - (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype;
 

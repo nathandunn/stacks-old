@@ -18,6 +18,7 @@
 @implementation LocusMO
 
 @dynamic basePairs;
+@dynamic parentCount;
 @dynamic chromosome;
 @dynamic strand;
 @dynamic consensus;
