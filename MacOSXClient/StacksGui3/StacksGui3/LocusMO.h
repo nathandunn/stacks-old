@@ -18,6 +18,7 @@
 @property (nonatomic, retain) NSNumber * locusId;
 @property (nonatomic, retain) NSString * marker;
 @property (nonatomic, retain) NSString * ratio;
+
 @property (nonatomic, retain) NSSet *alleles;
 @property (nonatomic, retain) NSSet *datums;
 @property (nonatomic, retain) NSSet *snps;

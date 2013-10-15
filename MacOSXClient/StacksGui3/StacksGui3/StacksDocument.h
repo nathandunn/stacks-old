@@ -8,6 +8,7 @@
 
 #import <Cocoa/Cocoa.h>
 
+
 @class DatumMO;
 @class LocusMO;
 @class PopulationMO;
@@ -43,6 +44,9 @@
 
 
 @property(nonatomic, copy) NSString *name;
+
+// this will be GeneticMap or Population
+@property(nonatomic, strong) NSString *type;
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path;
 - (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name;
