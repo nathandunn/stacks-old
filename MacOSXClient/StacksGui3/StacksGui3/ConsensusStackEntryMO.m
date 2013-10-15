@@ -9,6 +9,7 @@
 #import "ConsensusStackEntryMO.h"
 #import "DatumSnpMO.h"
 #import "DatumMO.h"
+#import "LocusMO.h"
 
 
 @implementation ConsensusStackEntryMO
@@ -39,7 +40,7 @@
             [NSColor grayColor], NSBackgroundColorAttributeName,
             [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
             nil];
-    for (DatumSnpMO *snp in self.datum.snps) {
+    for (DatumSnpMO *snp in self.datum.locus.snps) {
         NSRange selectedRange = NSMakeRange([snp.column unsignedIntegerValue], 1);
         [string setAttributes:attributes range:selectedRange];
     }
