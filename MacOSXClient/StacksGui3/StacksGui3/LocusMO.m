@@ -37,12 +37,12 @@
 
 - (NSInteger) countProgeny{
     NSInteger count =0 ;
-    NSLog(@"number of datums!! %ld",self.datums.count);
+//    NSLog(@"number of datums!! %ld",self.datums.count);
     for(DatumMO *datumMO in self.datums){
         NSString* sampleName = datumMO.sample.name ;
-        NSLog(@"sample name %@",sampleName);
+//        NSLog(@"sample name %@",sampleName);
         if([sampleName rangeOfString:@"male"].location==NSNotFound){
-            NSLog(@"not found!!") ;
+//            NSLog(@"not found!!") ;
             ++count ;
         }
     }

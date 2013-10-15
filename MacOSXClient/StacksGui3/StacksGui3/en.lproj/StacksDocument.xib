@@ -10,6 +10,7 @@
                 <outlet property="datumController" destination="100221" id="100237"/>
                 <outlet property="locusTableView" destination="100152" id="100231"/>
                 <outlet property="stacksTableView" destination="100170" id="100247"/>
+                <outlet property="totalLoci" destination="P29-1k-fQd" id="dNB-x0-4hp"/>
                 <outlet property="window" destination="5" id="18"/>
             </connections>
         </customObject>
@@ -334,37 +335,16 @@
                                 </connections>
                             </textField>
                             <textField verticalHuggingPriority="750" id="100452">
-                                <rect key="frame" x="180" y="57" width="52" height="17"/>
+                                <rect key="frame" x="271" y="61" width="45" height="17"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Filtered" id="100453">
+                                <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Filtered" id="100453">
                                     <font key="font" metaFont="system"/>
-                                    <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="textColor" red="0.25220788043478259" green="0.25220788043478259" blue="0.25220788043478259" alpha="1" colorSpace="calibratedRGB"/>
                                     <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                                 <connections>
                                     <binding destination="100193" name="value" keyPath="arrangedObjects.@count" id="100461"/>
                                 </connections>
-                            </textField>
-                            <textField verticalHuggingPriority="750" id="100454">
-                                <rect key="frame" x="254" y="57" width="37" height="17"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Total" id="100455">
-                                    <font key="font" metaFont="system"/>
-                                    <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
-                                    <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
-                                </textFieldCell>
-                                <connections>
-                                    <binding destination="-2" name="value" keyPath="self.loci.@count" id="100527"/>
-                                </connections>
-                            </textField>
-                            <textField verticalHuggingPriority="750" id="100493">
-                                <rect key="frame" x="229" y="58" width="27" height="17"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="---" id="100494">
-                                    <font key="font" metaFont="system"/>
-                                    <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
-                                    <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
-                                </textFieldCell>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" id="100506">
                                 <rect key="frame" x="46" y="53" width="100" height="26"/>
@@ -384,6 +364,15 @@
                                     <binding destination="100206" name="content" keyPath="arrangedObjects.name" id="100516"/>
                                 </connections>
                             </popUpButton>
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" id="P29-1k-fQd">
+                                <rect key="frame" x="268" y="43" width="48" height="17"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="right" title="Total" placeholderString="" usesSingleLineMode="YES" id="7mp-uI-GfD">
+                                    <font key="font" metaFont="system"/>
+                                    <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                                </textFieldCell>
+                            </textField>
                         </subviews>
                     </customView>
                 </subviews>
