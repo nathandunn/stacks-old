@@ -25,6 +25,8 @@
 @property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController ;
+@property(weak) IBOutlet NSTextField *totalLoci;
+
 //@property(weak) IBOutlet NSProgressIndicator *loadProgress;
 //@property(weak) IBOutlet NSPanel *progressPanel ;
 
@@ -52,6 +54,7 @@
 
 // array controller
 @synthesize datumController ;
+@synthesize totalLoci;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -65,6 +68,8 @@
         datumRepository = [[DatumRepository alloc] init];
         locusRepository = [[LocusRepository alloc] init];
         populationRepository = [[PopulationRepository alloc] init];
+        
+        
     }
     return self;
 }
@@ -86,6 +91,14 @@
     [super windowControllerDidLoadNib:aController];
     // Add any code here that needs to be executed once the windowController has loaded the document's window.
     [self.stacksTableView setIntercellSpacing:NSMakeSize(0, 0)];
+    
+    
+    NSInteger lociCount = [locusRepository getAllLoci:self.managedObjectContext].count;
+    NSString* newString = [NSString stringWithFormat:@"%ld",lociCount];
+    NSLog(@"setting the string value here!! %@",newString);
+    [totalLoci setStringValue:newString];
+//    totalLoci.stringValue = @"dogz";
+
 }
 
 + (BOOL)autosavesInPlace {
@@ -187,6 +200,8 @@
 //    }
 //    NSLog(@"error reading success %ld",  returnType);
 
+
+
     return returnType;
 }
 
@@ -210,7 +225,6 @@
 
 
 
-
 - (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
     NSLog(@"validating UI item in Stacks Document%@",anItem) ;
     return [super validateUserInterfaceItem:anItem];
@@ -227,5 +241,6 @@
         return [super validateMenuItem:item];
     }
 }
+
 
 @end

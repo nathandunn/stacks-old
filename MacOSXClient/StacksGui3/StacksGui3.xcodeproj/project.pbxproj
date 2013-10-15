@@ -524,7 +524,7 @@
 			isa = PBXProject;
 			attributes = {
 				CLASSPREFIX = Stacks;
-				LastUpgradeCheck = 0460;
+				LastUpgradeCheck = 0500;
 				ORGANIZATIONNAME = "Nathan Dunn";
 			};
 			buildConfigurationList = 1442E19017206DBB004B6361 /* Build configuration list for PBXProject "StacksGui3" */;
@@ -711,7 +711,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -737,7 +736,7 @@
 				MACH_O_TYPE = mh_execute;
 				MACOSX_DEPLOYMENT_TARGET = "";
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx10.8;
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
@@ -745,7 +744,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -764,7 +762,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACH_O_TYPE = mh_execute;
 				MACOSX_DEPLOYMENT_TARGET = "";
-				SDKROOT = macosx10.8;
+				SDKROOT = macosx;
 			};
 			name = Release;
 		};

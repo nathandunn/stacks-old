@@ -29,6 +29,15 @@
 //- (NSInteger) countAll{
 //    return 7 ;
 //}
+- (NSArray *)snpValues:(NSArray *)objects {
+    NSMutableArray *filteredObjects = [NSMutableArray arrayWithCapacity:[objects count]];
+
+    return filteredObjects;
+}
+
+- (NSArray *)allObjects:(NSArray *)objects {
+    return objects;
+}
 
 - (NSArray *)arrangeObjects:(NSArray *)objects {
 //    return [super arrangeObjects:objects];
