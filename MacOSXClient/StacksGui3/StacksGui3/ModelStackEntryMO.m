@@ -23,6 +23,12 @@
 
 - (NSAttributedString *)renderSequence {
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:self.sequence];
+    NSDictionary *blockAttribute= [NSDictionary dictionaryWithObjectsAndKeys:
+            [NSColor blackColor], NSForegroundColorAttributeName,
+            [NSColor whiteColor], NSBackgroundColorAttributeName,
+            [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
+            nil];
+    [string setAttributes:blockAttribute range:NSMakeRange(0, self.sequence.length)];
     return string;
 }
 
