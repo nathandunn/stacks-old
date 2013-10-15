@@ -24,14 +24,14 @@
                 <rect key="frame" x="0.0" y="0.0" width="1242" height="495"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
-                    <scrollView autohidesScrollers="YES" horizontalLineScroll="83" horizontalPageScroll="10" verticalLineScroll="83" verticalPageScroll="10" usesPredominantAxisScrolling="NO" id="100151">
+                    <scrollView autohidesScrollers="YES" horizontalLineScroll="19" horizontalPageScroll="10" verticalLineScroll="19" verticalPageScroll="10" usesPredominantAxisScrolling="NO" id="100151">
                         <rect key="frame" x="-1" y="-1" width="330" height="412"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" heightSizable="YES"/>
                         <clipView key="contentView" id="SKC-I2-XUh">
                             <rect key="frame" x="1" y="17" width="328" height="394"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
-                                <tableView identifier="LocusTable" verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" alternatingRowBackgroundColors="YES" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowHeight="81" rowSizeStyle="automatic" headerView="100281" viewBased="YES" id="100152">
+                                <tableView identifier="LocusTable" verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" alternatingRowBackgroundColors="YES" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" headerView="100281" viewBased="YES" id="100152">
                                     <rect key="frame" x="0.0" y="0.0" width="328" height="394"/>
                                     <autoresizingMask key="autoresizingMask"/>
                                     <size key="intercellSpacing" width="3" height="2"/>
@@ -224,7 +224,7 @@
                                                 <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="headerColor" catalog="System" colorSpace="catalog"/>
                                             </tableHeaderCell>
-                                            <textFieldCell key="dataCell" lineBreakMode="charWrapping" selectable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="right" title="Text Cell" allowsEditingTextAttributes="YES" id="100179">
+                                            <textFieldCell key="dataCell" lineBreakMode="charWrapping" selectable="YES" enabled="NO" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="right" title="Text Cell" allowsEditingTextAttributes="YES" id="100179">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -242,7 +242,7 @@
                                                 <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="headerColor" catalog="System" colorSpace="catalog"/>
                                             </tableHeaderCell>
-                                            <textFieldCell key="dataCell" lineBreakMode="charWrapping" selectable="YES" editable="YES" allowsUndo="NO" alignment="left" title="Sequence" allowsEditingTextAttributes="YES" id="100181">
+                                            <textFieldCell key="dataCell" lineBreakMode="charWrapping" selectable="YES" editable="YES" enabled="NO" allowsUndo="NO" alignment="left" title="Sequence" allowsEditingTextAttributes="YES" id="100181">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -317,9 +317,12 @@
                                     <color key="textColor" name="textColor" catalog="System" colorSpace="catalog"/>
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
+                                <connections>
+                                    <action selector="writeMinSnpValue:" target="100193" id="4gD-ID-dxB"/>
+                                </connections>
                             </textField>
                             <textField verticalHuggingPriority="750" id="100446">
-                                <rect key="frame" x="104" y="21" width="30" height="26"/>
+                                <rect key="frame" x="103" y="22" width="30" height="26"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="10" drawsBackground="YES" id="100447">
                                     <font key="font" metaFont="system"/>
@@ -327,7 +330,7 @@
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                                 <connections>
-                                    <action selector="writeMaxSnpValue:" target="-1" id="100512"/>
+                                    <action selector="writeMaxSnpValue:" target="100193" id="7pr-eu-pDP"/>
                                 </connections>
                             </textField>
                             <textField verticalHuggingPriority="750" id="100452">
@@ -368,7 +371,7 @@
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <popUpButtonCell key="cell" type="push" title="Item 1" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="100509" id="100507">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
-                                    <font key="font" metaFont="system"/>
+                                    <font key="font" metaFont="menu"/>
                                     <menu key="menu" title="OtherViews" id="100508">
                                         <items>
                                             <menuItem title="Item 1" state="on" id="100509"/>
@@ -467,13 +470,13 @@
         </arrayController>
         <arrayController id="100249" userLabel="StackEntryController" customClass="StackEntryArrayController">
             <connections>
+                <binding destination="-2" name="managedObjectContext" keyPath="managedObjectContext" id="100257"/>
                 <binding destination="-2" name="contentArray" keyPath="selectedDatum.getOrderedStackEntries" id="100413">
                     <dictionary key="options">
                         <bool key="NSConditionallySetsEditable" value="NO"/>
                         <bool key="NSValidatesImmediately" value="YES"/>
                     </dictionary>
                 </binding>
-                <binding destination="-2" name="managedObjectContext" keyPath="managedObjectContext" id="100257"/>
                 <outlet property="content" destination="-2" id="100258"/>
             </connections>
         </arrayController>

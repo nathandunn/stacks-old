@@ -20,13 +20,15 @@
 
 - (void)awakeFromNib {
     [super awakeFromNib];
+    // apparently this is called before  / instead of init
+    minSnpValue = 0 ;
+    maxSnpValue = 10 ;
     [self setSortDescriptors:[NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"locusId" ascending:YES selector:@selector(compare:)]]];
-
 }
 
-- (NSInteger) countAll{
-    return 7 ;
-}
+//- (NSInteger) countAll{
+//    return 7 ;
+//}
 
 - (NSArray *)arrangeObjects:(NSArray *)objects {
 //    return [super arrangeObjects:objects];
