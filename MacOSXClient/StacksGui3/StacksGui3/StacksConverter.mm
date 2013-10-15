@@ -43,6 +43,8 @@ using std::ofstream;
 
 #include <sys/time.h>
 
+NSString *calculateType(NSString *file);
+
 @implementation StacksConverter {
 
 }
@@ -196,6 +198,9 @@ using std::ofstream;
     NSString *path = stacksDocument.path;
     [self checkFile:path];
     map<int, CSLocus *> catalog;
+    NSString *catalogTagFile = [path stringByAppendingString:@"batch_1.catalog.tags.tsv"];
+    stacksDocument.type = calculateType(catalogTagFile);
+    NSLog(@"type is %@",stacksDocument.type);
     NSString *catalogFile = [path stringByAppendingString:@"batch_1.catalog"];
 
     struct timeval time1, time2;
@@ -513,6 +518,7 @@ using std::ofstream;
     [self loadAllelesOntoDatum:stacksDocument];
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading alleles onto datum time %ld", time2.tv_sec - time1.tv_sec);
+
 
 
     NSError *error;
@@ -1055,4 +1061,22 @@ using std::ofstream;
 //    return stacksDocument;
 //}
 @end
+
+NSString *calculateType(NSString *file) {
+    NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
+    NSString *line;
+    for (line in fileData) {
+        NSArray *columns = [line componentsSeparatedByString:@"\t"];
+        // should be column 8
+        NSLog(@"count is %ld",columns.count);
+        if (columns.count > 9) {
+            NSArray *parents = [columns[8] componentsSeparatedByString:@","];
+            NSLog(@"parents %@ count %ld",columns[8],parents.count);
+            if(parents.count>2){
+                return @"Population";
+            }
+        }
+    }
+    return @"GeneticMap";
+}
 
