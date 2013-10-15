@@ -9,6 +9,7 @@
                 <outlet property="datumCollectionView" destination="100136" id="100233"/>
                 <outlet property="datumController" destination="100221" id="100237"/>
                 <outlet property="locusTableView" destination="100152" id="100231"/>
+                <outlet property="populationSelector" destination="100506" id="vdt-Y0-AGp"/>
                 <outlet property="stacksTableView" destination="100170" id="100247"/>
                 <outlet property="totalLoci" destination="P29-1k-fQd" id="dNB-x0-4hp"/>
                 <outlet property="window" destination="5" id="18"/>
@@ -361,6 +362,7 @@
                                     </menu>
                                 </popUpButtonCell>
                                 <connections>
+                                    <action selector="updateSelections:" target="-2" id="ldh-EC-Epf"/>
                                     <binding destination="100206" name="content" keyPath="arrangedObjects.name" id="100516"/>
                                 </connections>
                             </popUpButton>
@@ -372,6 +374,23 @@
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                     <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
+                            </textField>
+                            <textField verticalHuggingPriority="750" id="Xqz-ZQ-4mF">
+                                <rect key="frame" x="148" y="55" width="64" height="22"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="nob-x0-SFI">
+                                    <font key="font" metaFont="system"/>
+                                    <color key="textColor" name="textColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                </textFieldCell>
+                                <connections>
+                                    <binding destination="100206" name="value" keyPath="selection.name" id="Zpb-Zh-t5e">
+                                        <dictionary key="options">
+                                            <bool key="NSConditionallySetsEditable" value="NO"/>
+                                            <bool key="NSContinuouslyUpdatesValue" value="YES"/>
+                                        </dictionary>
+                                    </binding>
+                                </connections>
                             </textField>
                         </subviews>
                     </customView>
