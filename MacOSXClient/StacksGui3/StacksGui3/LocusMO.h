@@ -25,6 +25,14 @@
 @property (nonatomic, retain) NSSet *alleles;
 @property (nonatomic, retain) NSSet *datums;
 @property (nonatomic, retain) NSSet *snps;
+
+// not a managed part, populated by datum rendering . . .
+@property (atomic, retain) NSDictionary *haplotypeOrder;
+
+
+- (NSUInteger)getHaplotypeOrder:(NSString *)haplotype;
+
+- (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype;
 @end
 
 @interface LocusMO (CoreDataGeneratedAccessors)
