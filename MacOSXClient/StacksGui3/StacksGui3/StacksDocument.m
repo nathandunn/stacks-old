@@ -20,17 +20,19 @@
 
 @interface StacksDocument()
 
+@property BOOL editingPopulation ;
+@property NSInteger previousSelectedItem ;
+
 @property(weak) IBOutlet NSTableView *locusTableView;
-@property(weak) IBOutlet NSTableView *populationTableView;
 @property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController ;
-//@property(weak) IBOutlet NSProgressIndicator *loadProgress;
-//@property(weak) IBOutlet NSPanel *progressPanel ;
+@property(weak) IBOutlet NSTextField *totalLoci;
+@property(weak) IBOutlet NSPopUpButton *populationSelector;
+@property(weak) IBOutlet NSButton *editPopulationButton;
+@property(weak) IBOutlet NSTextField *populationNameField;
 
-//@property(weak) IBOutlet PopulationArrayController *populationController ;
 
-//@property(weak) IBOutlet NSArrayController *stacksController ;
 
 @end
 
@@ -52,6 +54,14 @@
 
 // array controller
 @synthesize datumController ;
+@synthesize totalLoci;
+@synthesize populationSelector;
+@synthesize populationNameField;
+@synthesize editPopulationButton;
+
+
+@synthesize editingPopulation;
+@synthesize previousSelectedItem;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -65,6 +75,8 @@
         datumRepository = [[DatumRepository alloc] init];
         locusRepository = [[LocusRepository alloc] init];
         populationRepository = [[PopulationRepository alloc] init];
+        
+        
     }
     return self;
 }
@@ -86,17 +98,52 @@
     [super windowControllerDidLoadNib:aController];
     // Add any code here that needs to be executed once the windowController has loaded the document's window.
     [self.stacksTableView setIntercellSpacing:NSMakeSize(0, 0)];
+    
+    
+    NSInteger lociCount = [locusRepository getAllLoci:self.managedObjectContext].count;
+    NSString* newString = [NSString stringWithFormat:@"%ld",lociCount];
+    [totalLoci setStringValue:newString];
+
+    editingPopulation = false ;
+
+
 }
 
 + (BOOL)autosavesInPlace {
     return YES;
 }
 
+- (IBAction)updateSelections:(id)sender {
+    [self tableViewSelectionDidChange:nil];
+}
+
+- (IBAction)togglePopulationEdit:(id)sender {
+    NSLog(@"editing %d",editingPopulation) ;
+    if(editingPopulation){
+        NSLog(@"setting to edit");
+        editPopulationButton.title = @"Edit";
+
+        [populationSelector setHidden:false];
+        [populationNameField setHidden:true];
+
+        [populationSelector selectItemAtIndex:previousSelectedItem];
+        NSLog(@"selected item index %ld",populationSelector.indexOfSelectedItem);
+    }
+    else{
+        NSLog(@"setting to DONE");
+        previousSelectedItem = populationSelector.indexOfSelectedItem;
+        editPopulationButton.title = @"Done";
+        [populationSelector setHidden:true];
+        [populationNameField setHidden:false];
+    }
+
+    editingPopulation = !editingPopulation;
+}
 
 
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
-    NSString *tableName = [[aNotification object] identifier];
-    NSLog(@"table selected!! %@",tableName);
+//    NSString *tableName = [[aNotification object] identifier];
+//    NSLog(@"table selected!! %@",tableName);
 
 
     self.selectedLocus = [self findSelectedLocus];
@@ -121,7 +168,7 @@
 }
 
 - (PopulationMO *)findSelectedPopulation {
-    NSInteger selectedRow = [self.populationTableView selectedRow];
+    NSInteger selectedRow = [self.populationSelector indexOfSelectedItem];
     if(selectedRow>=0){
          return [populationRepository getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
     }
@@ -187,6 +234,8 @@
 //    }
 //    NSLog(@"error reading success %ld",  returnType);
 
+
+
     return returnType;
 }
 
@@ -210,7 +259,6 @@
 
 
 
-
 - (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
     NSLog(@"validating UI item in Stacks Document%@",anItem) ;
     return [super validateUserInterfaceItem:anItem];
@@ -227,5 +275,6 @@
         return [super validateMenuItem:item];
     }
 }
+
 
 @end
