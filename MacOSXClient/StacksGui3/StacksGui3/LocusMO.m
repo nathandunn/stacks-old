@@ -15,6 +15,9 @@
 
 @implementation LocusMO
 
+@dynamic basePairs;
+@dynamic chromosome;
+@dynamic strand;
 @dynamic consensus;
 @dynamic length;
 @dynamic locusId;

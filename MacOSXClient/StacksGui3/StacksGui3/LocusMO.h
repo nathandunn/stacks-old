@@ -13,6 +13,9 @@
 
 @interface LocusMO : NSManagedObject
 
+@property (nonatomic, retain) NSNumber * basePairs;
+@property (nonatomic, retain) NSString * chromosome;
+@property (nonatomic, retain) NSString * strand;
 @property (nonatomic, retain) NSString * consensus;
 @property (nonatomic, retain) NSNumber * length;
 @property (nonatomic, retain) NSNumber * locusId;
