@@ -8,7 +8,9 @@
             <connections>
                 <outlet property="datumCollectionView" destination="100136" id="100233"/>
                 <outlet property="datumController" destination="100221" id="100237"/>
+                <outlet property="editPopulationButton" destination="sfi-Rd-oH1" id="Gob-x2-9kp"/>
                 <outlet property="locusTableView" destination="100152" id="100231"/>
+                <outlet property="populationNameField" destination="Xqz-ZQ-4mF" id="ESW-TJ-AC1"/>
                 <outlet property="populationSelector" destination="100506" id="vdt-Y0-AGp"/>
                 <outlet property="stacksTableView" destination="100170" id="100247"/>
                 <outlet property="totalLoci" destination="P29-1k-fQd" id="dNB-x0-4hp"/>
@@ -348,7 +350,7 @@
                                 </connections>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" id="100506">
-                                <rect key="frame" x="46" y="53" width="100" height="26"/>
+                                <rect key="frame" x="46" y="53" width="90" height="26"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <popUpButtonCell key="cell" type="push" title="Item 1" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="100509" id="100507">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -379,8 +381,8 @@
                                     <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                             </textField>
-                            <textField verticalHuggingPriority="750" id="Xqz-ZQ-4mF">
-                                <rect key="frame" x="148" y="55" width="64" height="22"/>
+                            <textField hidden="YES" verticalHuggingPriority="750" id="Xqz-ZQ-4mF">
+                                <rect key="frame" x="48" y="56" width="85" height="22"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="nob-x0-SFI">
                                     <font key="font" metaFont="system"/>
@@ -396,6 +398,17 @@
                                     </binding>
                                 </connections>
                             </textField>
+                            <button id="sfi-Rd-oH1">
+                                <rect key="frame" x="141" y="55" width="35" height="23"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <buttonCell key="cell" type="square" title="Edit" bezelStyle="shadowlessSquare" imagePosition="overlaps" alignment="left" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="QX3-jb-L4D">
+                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" size="10" name="LucidaGrande"/>
+                                </buttonCell>
+                                <connections>
+                                    <action selector="togglePopulationEdit:" target="-2" id="GkC-Wt-zfn"/>
+                                </connections>
+                            </button>
                         </subviews>
                     </customView>
                 </subviews>

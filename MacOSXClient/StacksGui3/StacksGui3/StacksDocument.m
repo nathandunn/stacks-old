@@ -20,21 +20,19 @@
 
 @interface StacksDocument()
 
+@property BOOL editingPopulation ;
+@property NSInteger previousSelectedItem ;
+
 @property(weak) IBOutlet NSTableView *locusTableView;
-@property(weak) IBOutlet NSTableView *populationTableView;
 @property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController ;
 @property(weak) IBOutlet NSTextField *totalLoci;
 @property(weak) IBOutlet NSPopUpButton *populationSelector;
+@property(weak) IBOutlet NSButton *editPopulationButton;
+@property(weak) IBOutlet NSTextField *populationNameField;
 
 
-//@property(weak) IBOutlet NSProgressIndicator *loadProgress;
-//@property(weak) IBOutlet NSPanel *progressPanel ;
-
-//@property(weak) IBOutlet PopulationArrayController *populationController ;
-
-//@property(weak) IBOutlet NSArrayController *stacksController ;
 
 @end
 
@@ -58,6 +56,12 @@
 @synthesize datumController ;
 @synthesize totalLoci;
 @synthesize populationSelector;
+@synthesize populationNameField;
+@synthesize editPopulationButton;
+
+
+@synthesize editingPopulation;
+@synthesize previousSelectedItem;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -98,9 +102,10 @@
     
     NSInteger lociCount = [locusRepository getAllLoci:self.managedObjectContext].count;
     NSString* newString = [NSString stringWithFormat:@"%ld",lociCount];
-    NSLog(@"setting the string value here!! %@",newString);
     [totalLoci setStringValue:newString];
-//    totalLoci.stringValue = @"dogz";
+
+    editingPopulation = false ;
+
 
 }
 
@@ -110,6 +115,29 @@
 
 - (IBAction)updateSelections:(id)sender {
     [self tableViewSelectionDidChange:nil];
+}
+
+- (IBAction)togglePopulationEdit:(id)sender {
+    NSLog(@"editing %d",editingPopulation) ;
+    if(editingPopulation){
+        NSLog(@"setting to edit");
+        editPopulationButton.title = @"Edit";
+
+        [populationSelector setHidden:false];
+        [populationNameField setHidden:true];
+
+        [populationSelector selectItemAtIndex:previousSelectedItem];
+        NSLog(@"selected item index %ld",populationSelector.indexOfSelectedItem);
+    }
+    else{
+        NSLog(@"setting to DONE");
+        previousSelectedItem = populationSelector.indexOfSelectedItem;
+        editPopulationButton.title = @"Done";
+        [populationSelector setHidden:true];
+        [populationNameField setHidden:false];
+    }
+
+    editingPopulation = !editingPopulation;
 }
 
 
@@ -140,7 +168,6 @@
 }
 
 - (PopulationMO *)findSelectedPopulation {
-//    NSInteger selectedRow = [self.populationTableView selectedRow];
     NSInteger selectedRow = [self.populationSelector indexOfSelectedItem];
     if(selectedRow>=0){
          return [populationRepository getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
