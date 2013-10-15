@@ -309,6 +309,16 @@ NSString *calculateType(NSString *file);
         LocusMO *locusMO = [locusRepository insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).second->id]
                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
         ];
+        
+        NSLog(@"chromosme %@",[NSString stringWithUTF8String:catalogIterator->second->loc.chr]);
+
+        locusMO.chromosome = [NSString stringWithUTF8String:catalogIterator->second->loc.chr];
+        unsigned int intValue = (unsigned int)catalogIterator->second->loc.bp;
+        NSLog(@"int value %@",[NSNumber numberWithUnsignedInt:intValue]);
+//        locusMO.basePairs = [NSNumber numberWithUnsignedInt:catalogIterator->second->loc.bp];
+        locusMO.basePairs = [NSNumber numberWithUnsignedInt:intValue];
+        locusMO.strand= catalogIterator->second->loc.strand==plus ? @"+" : @"-";
+
         vector<SNP *> snps = catalogIterator->second->snps;
 //        NSLog(@"inserting locus %@ with sequence %@", locusMO.locusId, [NSString stringWithUTF8String:read]);
 

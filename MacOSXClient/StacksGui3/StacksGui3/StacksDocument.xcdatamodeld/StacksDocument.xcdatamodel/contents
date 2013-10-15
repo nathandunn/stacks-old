@@ -38,11 +38,14 @@
         <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="haplotypes" inverseEntity="Datum" syncable="YES"/>
     </entity>
     <entity name="Locus" representedClassName="LocusMO" syncable="YES">
+        <attribute name="basePairs" optional="YES" attributeType="Integer 64" minValueString="0" defaultValueString="0" indexed="YES" syncable="YES"/>
+        <attribute name="chromosome" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="consensus" attributeType="String" syncable="YES"/>
         <attribute name="length" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <attribute name="locusId" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
         <attribute name="marker" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="ratio" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="strand" optional="YES" attributeType="String" defaultValueString="+" syncable="YES"/>
         <relationship name="alleles" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="LocusAllele" inverseName="locus" inverseEntity="LocusAllele" syncable="YES"/>
         <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="locus" inverseEntity="Datum" syncable="YES"/>
         <relationship name="snps" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="LocusSnp" inverseName="locus" inverseEntity="LocusSnp" syncable="YES"/>
