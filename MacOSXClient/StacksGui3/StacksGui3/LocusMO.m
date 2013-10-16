@@ -66,6 +66,12 @@
     return count  ;
 }
 
+- (NSAttributedString *)renderChromosome{
+    NSString *inputString = [NSString stringWithFormat:@"%@ %@ Mb %@",self.chromosome,self.basePairs,self.strand];
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:inputString];
+    return string ;
+}
+
 - (NSAttributedString *)renderConsensus{
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:self.consensus];
     [string beginEditing];
