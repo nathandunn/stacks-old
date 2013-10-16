@@ -312,15 +312,16 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
         ];
         
-        NSLog(@"chromosme %@",[NSString stringWithUTF8String:catalogIterator->second->loc.chr]);
+//        NSLog(@"chromosme %@",[NSString stringWithUTF8String:catalogIterator->second->loc.chr]);
 
         locusMO.chromosome = [NSString stringWithUTF8String:catalogIterator->second->loc.chr];
         unsigned int intValue = (unsigned int)catalogIterator->second->loc.bp;
-        NSLog(@"int value %@",[NSNumber numberWithUnsignedInt:intValue]);
+//        NSLog(@"int value %@",[NSNumber numberWithUnsignedInt:intValue]);
 //        locusMO.basePairs = [NSNumber numberWithUnsignedInt:catalogIterator->second->loc.bp];
         locusMO.basePairs = [NSNumber numberWithUnsignedInt:intValue];
         locusMO.strand= catalogIterator->second->loc.strand==plus ? @"+" : @"-";
 
+//        catalogIterator->second->
         vector<SNP *> snps = catalogIterator->second->snps;
 //        NSLog(@"inserting locus %@ with sequence %@", locusMO.locusId, [NSString stringWithUTF8String:read]);
 
@@ -1089,8 +1090,12 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file) {
             NSNumber* locusId = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%@", columns[2]] integerValue]];
 //            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
             NSArray *parents = [columns[8] componentsSeparatedByString:@","];
-            NSLog(@"parent count for %@ is %ld",locusId,parents.count);
-            ((LocusMO *)[dictionary objectForKey:locusId]).parentCount = [NSNumber numberWithUnsignedInt:parents.count];
+            NSMutableSet* parentIds = [[NSMutableSet alloc] initWithCapacity:parents.count];
+            for(NSString *parentString in parents){
+                [parentIds addObject:[parentString componentsSeparatedByString:@"_"][0]];
+            }
+            NSLog(@"parent count for %@ is %ld",locusId,parentIds.count);
+            ((LocusMO *)[dictionary objectForKey:locusId]).parentCount = [NSNumber numberWithUnsignedInt:parentIds.count];
         }
     }
 }
