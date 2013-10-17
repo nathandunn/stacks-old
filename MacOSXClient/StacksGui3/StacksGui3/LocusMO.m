@@ -77,7 +77,7 @@
     return string ;
 }
 
-- (NSString *)renderDescription{
+- (NSAttributedString *)renderDescription{
     NSUInteger parentCount = self.parentCount;
     NSUInteger progenyCount = [self countProgeny];
     NSUInteger snpCount = self.snps.count;
@@ -96,10 +96,27 @@
 
     NSString *inputString = [NSString stringWithFormat:@"%@ %ld Prog %ld Snps %ld %@",parentString,parentCount,progenyCount,snpCount,chromosomeString];
 
-    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@"abc123"];
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:inputString];
     [string beginEditing];
+    
+       NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
+    paragraph.alignment = NSRightTextAlignment;
+    NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
+            [NSColor grayColor], NSForegroundColorAttributeName,
+            [NSColor whiteColor], NSBackgroundColorAttributeName,
+            [NSFont fontWithName:@"Courier" size:10.0], NSFontAttributeName,
+                                paragraph,NSParagraphStyleAttributeName,
+                                   nil];
+    
+    
+    // Add attribute NSParagraphStyleAttributeName
+//    [string addAttribute:NSParagraphStyleAttributeName
+//                             value:paragraph range:NSMakeRange(0, string.length)];
+   
+    NSRange selectedRange = NSMakeRange(0, string.length);
+    [string setAttributes:attributes range:selectedRange];
     [string endEditing];
-    return inputString ;
+    return string;
 }
 
 - (NSAttributedString *)renderConsensus{
