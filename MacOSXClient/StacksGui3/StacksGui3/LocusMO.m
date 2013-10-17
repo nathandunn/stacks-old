@@ -20,6 +20,7 @@
 @dynamic basePairs;
 @dynamic parentCount;
 @dynamic chromosome;
+@dynamic type;
 @dynamic strand;
 @dynamic consensus;
 @dynamic length;
@@ -77,16 +78,23 @@
 }
 
 - (NSString *)renderDescription{
-    NSUInteger parentCount = [self countParents];
+    NSUInteger parentCount = self.parentCount;
     NSUInteger progenyCount = [self countProgeny];
     NSUInteger snpCount = self.snps.count;
+    NSString* parentString ;
+    if([self.type isEqualToString:@"GeneticMap"]){
+        parentString = @"Parents";
+    }
+    else{
+        parentString = @"Samples";
+    }
     NSString *chromosomeString = @"";
     if(self.chromosome!=nil && self.chromosome.length>0){
         chromosomeString = [NSString stringWithFormat:@"%@ %@ Mb %@",self.chromosome,self.basePairs,self.strand];
     }
     
 
-    NSString *inputString = [NSString stringWithFormat:@"Parents %ld Prog %ld Snps %ld %@",parentCount,progenyCount,snpCount,chromosomeString];
+    NSString *inputString = [NSString stringWithFormat:@"%@ %ld Prog %ld Snps %ld %@",parentString,parentCount,progenyCount,snpCount,chromosomeString];
 
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@"abc123"];
     [string beginEditing];

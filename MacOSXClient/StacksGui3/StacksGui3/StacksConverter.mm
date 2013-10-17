@@ -312,6 +312,8 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
         ];
         
+        locusMO.type = stacksDocument.type ;
+
 //        NSLog(@"chromosme %@",[NSString stringWithUTF8String:catalogIterator->second->loc.chr]);
 
         locusMO.chromosome = [NSString stringWithUTF8String:catalogIterator->second->loc.chr];
@@ -1086,7 +1088,6 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
         // should be column 8
         if (columns.count > 9) {
-            NSLog(@"input value is %@",columns[2]);
             NSNumber* locusId = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%@", columns[2]] integerValue]];
 //            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
             NSArray *parents = [columns[8] componentsSeparatedByString:@","];
