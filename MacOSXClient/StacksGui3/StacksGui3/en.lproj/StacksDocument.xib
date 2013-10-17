@@ -71,50 +71,21 @@
                                                                 <binding destination="100292" name="value" keyPath="objectValue.locusId" id="100351"/>
                                                             </connections>
                                                         </textField>
-                                                        <textField verticalHuggingPriority="750" id="100297">
-                                                            <rect key="frame" x="184" y="55" width="50" height="21"/>
-                                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                                            <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Snps" id="100300">
-                                                                <font key="font" metaFont="system"/>
-                                                                <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
-                                                                <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
-                                                            </textFieldCell>
-                                                            <connections>
-                                                                <binding destination="100292" name="displayPatternValue1" keyPath="objectValue.snps.@count" id="100364">
-                                                                    <dictionary key="options">
-                                                                        <string key="NSDisplayPattern">Snps %{value1}@ </string>
-                                                                    </dictionary>
-                                                                </binding>
-                                                            </connections>
-                                                        </textField>
                                                         <textField verticalHuggingPriority="750" id="N1l-c3-D3l">
-                                                            <rect key="frame" x="122" y="55" width="65" height="21"/>
+                                                            <rect key="frame" x="78" y="48" width="228" height="28"/>
                                                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                                            <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Parents" id="bnV-K2-Vtb">
-                                                                <font key="font" metaFont="system"/>
+                                                            <textFieldCell key="cell" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="right" title="Description" id="bnV-K2-Vtb">
+                                                                <font key="font" size="9" name="LucidaGrande"/>
                                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                                 <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                                                                <allowedInputSourceLocales>
+                                                                    <string>NSAllRomanInputSourcesLocaleIdentifier</string>
+                                                                </allowedInputSourceLocales>
                                                             </textFieldCell>
                                                             <connections>
-                                                                <binding destination="100292" name="displayPatternValue1" keyPath="objectValue.parentCount" id="uoi-UD-CSd">
+                                                                <binding destination="100292" name="displayPatternValue1" keyPath="objectValue.renderDescription" id="3SO-r3-UqH">
                                                                     <dictionary key="options">
-                                                                        <string key="NSDisplayPattern">Parents %{value1}@ </string>
-                                                                    </dictionary>
-                                                                </binding>
-                                                            </connections>
-                                                        </textField>
-                                                        <textField verticalHuggingPriority="750" id="100365">
-                                                            <rect key="frame" x="230" y="55" width="84" height="21"/>
-                                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                                            <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Progeny" id="100366">
-                                                                <font key="font" metaFont="system"/>
-                                                                <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
-                                                                <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
-                                                            </textFieldCell>
-                                                            <connections>
-                                                                <binding destination="100292" name="displayPatternValue1" keyPath="objectValue.countProgeny" id="100430">
-                                                                    <dictionary key="options">
-                                                                        <string key="NSDisplayPattern">Progeny %{value1}@ </string>
+                                                                        <string key="NSDisplayPattern">%{value1}@</string>
                                                                     </dictionary>
                                                                 </binding>
                                                             </connections>
