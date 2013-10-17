@@ -67,9 +67,31 @@
 }
 
 - (NSAttributedString *)renderChromosome{
-    NSString *inputString = [NSString stringWithFormat:@"%@ %@ Mb %@",self.chromosome,self.basePairs,self.strand];
+    NSString *inputString = @"";
+    NSLog(@"self.chromosome %@",self.chromosome);
+    if(self.chromosome!=nil && self.chromosome.length>0){
+        inputString = [NSString stringWithFormat:@"%@ %@ Mb %@",self.chromosome,self.basePairs,self.strand];
+    }
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:inputString];
     return string ;
+}
+
+- (NSString *)renderDescription{
+    NSUInteger parentCount = [self countParents];
+    NSUInteger progenyCount = [self countProgeny];
+    NSUInteger snpCount = self.snps.count;
+    NSString *chromosomeString = @"";
+    if(self.chromosome!=nil && self.chromosome.length>0){
+        chromosomeString = [NSString stringWithFormat:@"%@ %@ Mb %@",self.chromosome,self.basePairs,self.strand];
+    }
+    
+
+    NSString *inputString = [NSString stringWithFormat:@"Parents %ld Prog %ld Snps %ld %@",parentCount,progenyCount,snpCount,chromosomeString];
+
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@"abc123"];
+    [string beginEditing];
+    [string endEditing];
+    return inputString ;
 }
 
 - (NSAttributedString *)renderConsensus{
