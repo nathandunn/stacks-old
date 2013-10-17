@@ -28,14 +28,14 @@
                 <rect key="frame" x="0.0" y="0.0" width="1400" height="500"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
-                    <scrollView autohidesScrollers="YES" horizontalLineScroll="83" horizontalPageScroll="10" verticalLineScroll="83" verticalPageScroll="10" usesPredominantAxisScrolling="NO" id="100151">
+                    <scrollView autohidesScrollers="YES" horizontalLineScroll="19" horizontalPageScroll="10" verticalLineScroll="19" verticalPageScroll="10" usesPredominantAxisScrolling="NO" id="100151">
                         <rect key="frame" x="-1" y="-1" width="330" height="417"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" heightSizable="YES"/>
                         <clipView key="contentView" id="SKC-I2-XUh">
                             <rect key="frame" x="1" y="17" width="328" height="399"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
-                                <tableView identifier="LocusTable" verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" alternatingRowBackgroundColors="YES" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowHeight="81" rowSizeStyle="automatic" headerView="100281" viewBased="YES" id="100152">
+                                <tableView identifier="LocusTable" verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" alternatingRowBackgroundColors="YES" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" headerView="100281" viewBased="YES" id="100152">
                                     <rect key="frame" x="0.0" y="0.0" width="328" height="399"/>
                                     <autoresizingMask key="autoresizingMask"/>
                                     <size key="intercellSpacing" width="3" height="2"/>
@@ -72,20 +72,17 @@
                                                             </connections>
                                                         </textField>
                                                         <textField verticalHuggingPriority="750" id="N1l-c3-D3l">
-                                                            <rect key="frame" x="78" y="48" width="228" height="28"/>
+                                                            <rect key="frame" x="78" y="53" width="228" height="28"/>
                                                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                                            <textFieldCell key="cell" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="right" title="Description" id="bnV-K2-Vtb">
-                                                                <font key="font" size="9" name="LucidaGrande"/>
+                                                            <textFieldCell key="cell" selectable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="right" title="Description" allowsEditingTextAttributes="YES" id="bnV-K2-Vtb">
+                                                                <font key="font" size="10" name="LucidaGrande"/>
                                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                                 <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
-                                                                <allowedInputSourceLocales>
-                                                                    <string>NSAllRomanInputSourcesLocaleIdentifier</string>
-                                                                </allowedInputSourceLocales>
                                                             </textFieldCell>
                                                             <connections>
-                                                                <binding destination="100292" name="displayPatternValue1" keyPath="objectValue.renderDescription" id="3SO-r3-UqH">
+                                                                <binding destination="100292" name="value" keyPath="objectValue.renderDescription" id="Ipj-zv-PNM">
                                                                     <dictionary key="options">
-                                                                        <string key="NSDisplayPattern">%{value1}@</string>
+                                                                        <bool key="NSAllowsEditingMultipleValuesSelection" value="NO"/>
                                                                     </dictionary>
                                                                 </binding>
                                                             </connections>
