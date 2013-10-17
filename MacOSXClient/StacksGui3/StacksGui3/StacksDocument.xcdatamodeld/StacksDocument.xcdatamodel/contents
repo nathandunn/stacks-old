@@ -47,6 +47,7 @@
         <attribute name="parentCount" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <attribute name="ratio" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="strand" optional="YES" attributeType="String" defaultValueString="+" syncable="YES"/>
+        <attribute name="type" optional="YES" attributeType="String" syncable="YES"/>
         <relationship name="alleles" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="LocusAllele" inverseName="locus" inverseEntity="LocusAllele" syncable="YES"/>
         <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="locus" inverseEntity="Datum" syncable="YES"/>
         <relationship name="snps" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="LocusSnp" inverseName="locus" inverseEntity="LocusSnp" syncable="YES"/>
