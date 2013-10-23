@@ -225,6 +225,19 @@
     return context;
 }
 
+- (NSSet*) getLociLocations{
+    NSArray* locusArray = [locusRepository getLociWithChromsomes:self.managedObjectContext];
+   
+    return [NSSet setWithArray:locusArray];
+}
+
+- (NSUInteger) getMaxLocations{
+    return 12 ;
+}
+
+- (BOOL) hasLociLocations{
+    return true ;
+}
 
 - (BOOL)readFromURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)error {
     BOOL returnType = [super readFromURL:absoluteURL ofType:typeName error:error];
