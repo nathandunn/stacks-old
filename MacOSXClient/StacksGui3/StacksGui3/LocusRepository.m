@@ -50,7 +50,7 @@
     NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:context];
     NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
     [request1 setEntity:entityDescription1];
-    
+
     NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"chromosome!=nil"];
     [request1 setPredicate:predicate1];
     NSError *error1;
@@ -58,4 +58,58 @@
     return locusArray ;
 }
 
+- (NSArray *)getLociLocations:(NSManagedObjectContext *)context{
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:context];
+    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+    [request1 setEntity:entityDescription1];
+
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"chromosome!=nil"];
+    NSSortDescriptor *sortDescriptor = [[NSSortDescriptor alloc] initWithKey:@"chromosome" ascending:YES];
+    NSArray *sortDescriptors = [[NSArray alloc] initWithObjects:sortDescriptor, nil];
+    [request1 setPredicate:predicate1];
+    [request1 setSortDescriptors:sortDescriptors];
+
+    request1.resultType = NSDictionaryResultType;
+    request1.propertiesToFetch = [NSArray arrayWithObject:[[entityDescription1 propertiesByName] objectForKey:@"chromosome"]];
+    request1.returnsDistinctResults = YES;
+
+    NSError *error1;
+    NSArray *locusArray = [context executeFetchRequest:request1 error:&error1];
+
+
+    NSMutableArray *returnArray = [[NSMutableArray alloc] init];
+    for(NSDictionary *l in locusArray){
+//        NSLog(@"out %@",l);
+//        NSLog(@"out2 %@",l.allKeys);
+        for(id key in l.allKeys){
+//            NSLog(@"out3 %@", [l valueForKey:key]);
+            [returnArray addObject:[l valueForKey:key]];
+        }
+    }
+
+    return returnArray;
+}
+
+- (NSUInteger)getMaxLocation:(NSManagedObjectContext *)context {
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:context];
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    NSSortDescriptor *sortDescriptor = [[NSSortDescriptor alloc] initWithKey:@"basePairs" ascending:NO];
+    NSArray *sortDescriptors = [[NSArray alloc] initWithObjects:sortDescriptor, nil];
+
+
+    [request setEntity:entityDescription1];
+    [request setFetchLimit:1];
+    [request setSortDescriptors:sortDescriptors];
+
+
+
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"chromosome!=nil"];
+    [request setPredicate:predicate1];
+    NSError *error1;
+    NSArray *locusArray = [context executeFetchRequest:request error:&error1];
+//    if(locusArray!=nil && locusArray.count==1){
+//        return [[[locusArray objectAtIndex:0] basePairs] unsignedIntegerValue];
+//    }
+    return 0 ;
+}
 @end

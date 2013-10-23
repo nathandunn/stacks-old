@@ -17,4 +17,7 @@
 
 - (LocusMO *)getLocus:(NSManagedObjectContext *)context forId:(NSInteger)id;
 - (NSArray *)getLociWithChromsomes:(NSManagedObjectContext *)context;
+- (NSArray *)getLociLocations:(NSManagedObjectContext *)context;
+
+- (NSUInteger)getMaxLocation:(NSManagedObjectContext *)context;
 @end
