@@ -10,6 +10,7 @@
 #import <CoreData/CoreData.h>
 
 @class ConsensusStackEntryMO, DatumAlleleMO, DatumSnpMO, DepthMO, HaplotypeMO, LocusMO, ModelStackEntryMO, ReferenceStackEntryMO, SampleMO, StackEntryMO;
+@class ColorGenerator;
 
 @interface DatumMO : NSManagedObject
 
@@ -26,9 +27,14 @@
 @property (nonatomic, retain) SampleMO *sample;
 @property (nonatomic, retain) NSSet *snps;
 @property (nonatomic, retain) NSSet *stackEntries;
+
+@property (nonatomic, retain) ColorGenerator *colorGenerator;
 @end
 
 @interface DatumMO (CoreDataGeneratedAccessors)
+
+
+- (NSDictionary*)generateColorForOrder:(NSUInteger) order;
 
 - (void)addAllelesObject:(DatumAlleleMO *)value;
 - (void)removeAllelesObject:(DatumAlleleMO *)value;
