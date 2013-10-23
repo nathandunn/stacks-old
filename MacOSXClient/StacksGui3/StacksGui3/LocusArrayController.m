@@ -26,8 +26,8 @@
     minSnpValue = 0;
     maxSnpValue = 1000;
     chromosomeLocation = nil ;
-    minBasePairs = -1;
-    maxBasePairs = -1;
+    minBasePairs = 0;
+    maxBasePairs = 1000000 * 100 ; // 100 MB
     [self setSortDescriptors:[NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"locusId" ascending:YES selector:@selector(compare:)]]];
 }
 
@@ -65,8 +65,8 @@
             if (locusMO.snps != nil) {
                 if (locusMO.snps.count >= minSnpValue && locusMO.snps.count <= maxSnpValue) {
                     if ([locusMO.type isEqualToString:@"Population"]) {
-                        if ((minBasePairs < 0 || [locusMO.basePairs integerValue] > minBasePairs)
-                                && (maxBasePairs < 0 || [locusMO.basePairs integerValue] < maxBasePairs)
+                        if (([locusMO.basePairs integerValue] >= minBasePairs)
+                                && ([locusMO.basePairs integerValue] <= maxBasePairs)
                                 && (chromosomeLocation == nil  || [locusMO.chromosome isEqualToString:chromosomeLocation])
                                 ) {
                             [filteredObjects addObject:locusMO];
@@ -117,8 +117,8 @@
 - (IBAction)writeMinBasePairs:(id)sender {
     NSTextField *value = sender;
     if (value.stringValue.length > 0) {
-        minBasePairs = value.integerValue;
-        NSLog(@"min baise pairs %ld", minBasePairs);
+        minBasePairs = value.doubleValue * 1000000;
+        NSLog(@"min baise pairs %f", minBasePairs);
         [self rearrangeObjects];
     }
 
@@ -127,8 +127,8 @@
 - (IBAction)writeMaxBasePairs:(id)sender {
     NSTextField *value = sender;
     if (value.stringValue.length > 0) {
-        maxBasePairs = value.integerValue;
-        NSLog(@"max base pairs %ld", maxBasePairs);
+        maxBasePairs = value.doubleValue* 1000000;
+        NSLog(@"max base pairs %f", maxBasePairs);
         [self rearrangeObjects];
     }
 

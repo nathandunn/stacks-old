@@ -90,7 +90,9 @@
     }
     NSString *chromosomeString = @"";
     if(self.chromosome!=nil && self.chromosome.length>0){
-        chromosomeString = [NSString stringWithFormat:@"%@ %@ Mb %@",self.chromosome,self.basePairs,self.strand];
+        double basePairsValue = [self.basePairs doubleValue] / 1000000.0f;
+        NSString *basePairsString = [NSString stringWithFormat:@"%1.2f",basePairsValue];
+        chromosomeString = [NSString stringWithFormat:@"%@ %@ Mb %@",self.chromosome,basePairsString ,self.strand];
     }
     
 
@@ -103,7 +105,7 @@
     paragraph.alignment = NSRightTextAlignment;
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
             [NSColor grayColor], NSForegroundColorAttributeName,
-            [NSColor whiteColor], NSBackgroundColorAttributeName,
+//            [NSColor whiteColor], NSBackgroundColorAttributeName,
             [NSFont fontWithName:@"Courier" size:10.0], NSFontAttributeName,
                                 paragraph,NSParagraphStyleAttributeName,
                                    nil];
