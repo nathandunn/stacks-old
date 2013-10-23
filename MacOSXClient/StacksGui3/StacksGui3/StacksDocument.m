@@ -262,8 +262,9 @@
 }
 
 - (BOOL) noLociLocations{
-    return false ;
-//    return self.getLociLocations.count==0;
+    NSUInteger locusCount = [locusRepository getLociWithChromsomes:self.managedObjectContext].count;
+//    NSLog(@"NO LOCI LOCATIONS count %ld",locusCount);
+    return locusCount==0 ;
 }
 
 - (BOOL)readFromURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)error {
