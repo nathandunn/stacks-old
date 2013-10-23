@@ -19,5 +19,5 @@
 - (NSArray *)getLociWithChromsomes:(NSManagedObjectContext *)context;
 - (NSArray *)getLociLocations:(NSManagedObjectContext *)context;
 
-- (NSUInteger)getMaxLocation:(NSManagedObjectContext *)context;
+- (double)getMaxLocation:(NSManagedObjectContext *)context;
 @end
