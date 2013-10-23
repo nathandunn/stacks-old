@@ -10,6 +10,7 @@
                 <outlet property="datumController" destination="100221" id="100237"/>
                 <outlet property="editPopulationButton" destination="sfi-Rd-oH1" id="Gob-x2-9kp"/>
                 <outlet property="locusTableView" destination="100152" id="100231"/>
+                <outlet property="maxLocusTextField" destination="VzT-Yh-SXs" id="fNf-Gz-FT9"/>
                 <outlet property="populationNameField" destination="Xqz-ZQ-4mF" id="ESW-TJ-AC1"/>
                 <outlet property="populationSelector" destination="100506" id="vdt-Y0-AGp"/>
                 <outlet property="stacksTableView" destination="100170" id="100247"/>

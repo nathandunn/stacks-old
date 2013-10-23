@@ -31,6 +31,7 @@
 @property(weak) IBOutlet NSPopUpButton *populationSelector;
 @property(weak) IBOutlet NSButton *editPopulationButton;
 @property(weak) IBOutlet NSTextField *populationNameField;
+@property(weak) IBOutlet NSTextField *maxLocusTextField;
 
 
 
@@ -64,6 +65,7 @@
 @synthesize previousSelectedItem;
 @synthesize lociLocations;
 @synthesize maxLocation;
+@synthesize maxLocusTextField;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -87,7 +89,6 @@
 //    [super makeWindowControllers];
 //}
 
-
 - (NSString *)windowNibName {
     // Override returning the nib file name of the document
     // If you need to use a subclass of NSWindowController or if your document supports multiple NSWindowControllers, you should remove this method and override -makeWindowControllers instead.
@@ -108,6 +109,8 @@
 
     editingPopulation = false ;
 
+    double maxLocationVariable = [locusRepository getMaxLocation:self.managedObjectContext]/ 1000000;
+    maxLocusTextField.stringValue = [NSString stringWithFormat:@"%1.2f",maxLocationVariable];
 
 }
 

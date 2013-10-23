@@ -8,6 +8,7 @@
 
 #import "LocusArrayController.h"
 #import "LocusMO.h"
+#import "LocusRepository.h"
 
 @implementation LocusArrayController {
 
@@ -27,7 +28,8 @@
     maxSnpValue = 1000;
     chromosomeLocation = nil ;
     minBasePairs = 0;
-    maxBasePairs = 1000000 * 100 ; // 100 MB
+    maxBasePairs = 0 ;
+
     [self setSortDescriptors:[NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"locusId" ascending:YES selector:@selector(compare:)]]];
 }
 

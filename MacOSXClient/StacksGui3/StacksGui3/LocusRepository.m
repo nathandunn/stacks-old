@@ -90,7 +90,7 @@
     return returnArray;
 }
 
-- (NSUInteger)getMaxLocation:(NSManagedObjectContext *)context {
+- (double)getMaxLocation:(NSManagedObjectContext *)context {
     NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:context];
     NSFetchRequest *request = [[NSFetchRequest alloc] init];
     NSSortDescriptor *sortDescriptor = [[NSSortDescriptor alloc] initWithKey:@"basePairs" ascending:NO];
@@ -107,9 +107,11 @@
     [request setPredicate:predicate1];
     NSError *error1;
     NSArray *locusArray = [context executeFetchRequest:request error:&error1];
-//    if(locusArray!=nil && locusArray.count==1){
-//        return [[[locusArray objectAtIndex:0] basePairs] unsignedIntegerValue];
-//    }
-    return 0 ;
+    if(locusArray!=nil && locusArray.count==1){
+        double doubleValue = [[[locusArray objectAtIndex:0] basePairs] doubleValue];
+        NSLog(@"max value is %f",doubleValue);
+        return doubleValue ;
+    }
+//    return 0 ;
 }
 @end
