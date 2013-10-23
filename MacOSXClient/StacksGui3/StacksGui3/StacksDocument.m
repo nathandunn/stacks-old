@@ -62,6 +62,8 @@
 
 @synthesize editingPopulation;
 @synthesize previousSelectedItem;
+@synthesize lociLocations;
+@synthesize maxLocation;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -225,18 +227,40 @@
     return context;
 }
 
-- (NSSet*) getLociLocations{
-    NSArray* locusArray = [locusRepository getLociWithChromsomes:self.managedObjectContext];
-   
-    return [NSSet setWithArray:locusArray];
+- (NSArray*) generateLociLocations{
+    NSArray* locusArray = [locusRepository getLociLocations:self.managedObjectContext];
+//    NSLog(@"size of array %ld",locusArray.count);
+
+//    if(lociLocations==nil){
+//        NSMutableSet* set = [[NSMutableSet alloc] init];
+//        for(LocusMO *locus in locusArray){
+//            [set addObject:locus.chromosome];
+//        }
+
+//        lociLocations = [[NSSet alloc] initWithSet:set];
+//        lociLocations = set ;
+//    }
+
+//    return lociLocations;
+//    return set ;
+
+    return locusArray;
+
+//    NSMutableArray *bots = [[NSMutableArray alloc] init];
+//    [bots addObject:@"dogs"];
+//    [bots addObject:@"cats"];
+//
+//    return bots ;
 }
 
-- (NSUInteger) getMaxLocations{
-    return 12 ;
+- (NSUInteger) getMaxLocation{
+    NSUInteger maxLocation= [locusRepository getMaxLocation:self.managedObjectContext];
+    return maxLocation;
 }
 
-- (BOOL) hasLociLocations{
-    return true ;
+- (BOOL) noLociLocations{
+    return false ;
+//    return self.getLociLocations.count==0;
 }
 
 - (BOOL)readFromURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)error {

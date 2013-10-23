@@ -92,8 +92,8 @@
     [[NSScanner scannerWithString:gString] scanHexInt:&g];
     [[NSScanner scannerWithString:bString] scanHexInt:&b];
 
-    NSLog(@"%f,%f,%f", (float) r, (float) g, (float) b);
-    NSLog(@"%f,%f,%f,%f",(CGFloat) r / 255.0f ,(CGFloat) g / 255.0f ,(CGFloat) b / 255.0f ,(CGFloat) 1.0f);
+//    NSLog(@"%f,%f,%f", (float) r, (float) g, (float) b);
+//    NSLog(@"%f,%f,%f,%f",(CGFloat) r / 255.0f ,(CGFloat) g / 255.0f ,(CGFloat) b / 255.0f ,(CGFloat) 1.0f);
 
 //    NSColor *testColor = [NSColor colorWithColorSpace:colorSpace components:SRGB];
 //    NSColorSpace *colorSpace = [NSColorSpace sRGBColorSpace];
@@ -115,7 +115,7 @@
 //    color.gr= 0.75;
 //    NSColor* color = [NSColor colorWithCalibratedRed:0.75 green:0.25 blue:0.1 alpha:1];
 
-    NSColorSpace *colorSpace = [NSColorSpace sRGBColorSpace];
+//    NSColorSpace *colorSpace = [NSColorSpace sRGBColorSpace];
 
 
 //    NSColor *color = [NSColor colorWithColorSpace:colorSpace components:SRGB count:4];

@@ -48,6 +48,9 @@
 // this will be GeneticMap or Population
 @property(nonatomic, strong) NSString *type;
 
+@property(nonatomic, strong) NSSet *lociLocations;
+@property NSUInteger  maxLocation;
+
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path;
 - (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name;
 - (IBAction) updateSelections: (id) sender ;
