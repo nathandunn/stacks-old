@@ -271,7 +271,7 @@
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <subviews>
                             <textField verticalHuggingPriority="750" id="100432">
-                                <rect key="frame" x="11" y="28" width="34" height="17"/>
+                                <rect key="frame" x="11" y="35" width="34" height="17"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Snps" id="100433">
                                     <font key="font" metaFont="system"/>
@@ -289,7 +289,7 @@
                                 </textFieldCell>
                             </textField>
                             <textField verticalHuggingPriority="750" id="100434">
-                                <rect key="frame" x="82" y="26" width="25" height="17"/>
+                                <rect key="frame" x="82" y="33" width="25" height="17"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="—" id="100435">
                                     <font key="font" metaFont="system"/>
@@ -298,7 +298,7 @@
                                 </textFieldCell>
                             </textField>
                             <textField verticalHuggingPriority="750" id="100444">
-                                <rect key="frame" x="50" y="25" width="30" height="20"/>
+                                <rect key="frame" x="50" y="32" width="30" height="20"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="0" drawsBackground="YES" id="100445">
                                     <font key="font" metaFont="system"/>
@@ -310,9 +310,9 @@
                                 </connections>
                             </textField>
                             <textField verticalHuggingPriority="750" id="100446">
-                                <rect key="frame" x="100" y="25" width="30" height="20"/>
+                                <rect key="frame" x="100" y="32" width="59" height="20"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="10" drawsBackground="YES" id="100447">
+                                <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="1000" drawsBackground="YES" id="100447">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="textColor" catalog="System" colorSpace="catalog"/>
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -349,7 +349,7 @@
                                 </textFieldCell>
                             </textField>
                             <textField verticalHuggingPriority="750" id="OTU-9w-U6z">
-                                <rect key="frame" x="177" y="5" width="30" height="20"/>
+                                <rect key="frame" x="174" y="3" width="34" height="20"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="0" drawsBackground="YES" id="wAb-7j-Ta3">
                                     <font key="font" metaFont="system"/>
@@ -357,11 +357,11 @@
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                                 <connections>
-                                    <action selector="writeMinSnpValue:" target="100193" id="c2C-38-N2P"/>
+                                    <action selector="writeMinBasePairs:" target="100193" id="UNi-YV-asd"/>
                                 </connections>
                             </textField>
                             <textField verticalHuggingPriority="750" id="VzT-Yh-SXs">
-                                <rect key="frame" x="268" y="5" width="30" height="20"/>
+                                <rect key="frame" x="264" y="5" width="30" height="20"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="10" drawsBackground="YES" id="N7Q-5l-blc">
                                     <font key="font" metaFont="system"/>
@@ -369,7 +369,7 @@
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                                 <connections>
-                                    <action selector="writeMaxSnpValue:" target="100193" id="evR-cN-gPm"/>
+                                    <action selector="writeMaxBasePairs:" target="100193" id="5oF-AO-IbZ"/>
                                 </connections>
                             </textField>
                             <textField verticalHuggingPriority="750" id="100452">
@@ -454,11 +454,11 @@
                                 </connections>
                             </button>
                             <popUpButton verticalHuggingPriority="750" id="8jv-T8-N1N">
-                                <rect key="frame" x="175" y="29" width="148" height="26"/>
+                                <rect key="frame" x="175" y="27" width="148" height="26"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <popUpButtonCell key="cell" type="push" title="Item 1" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="KXT-oC-ZJz" id="FY4-wu-DDP">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
-                                    <font key="font" metaFont="system"/>
+                                    <font key="font" metaFont="menu"/>
                                     <menu key="menu" title="OtherViews" id="iVj-Y4-6pY">
                                         <items>
                                             <menuItem title="Item 1" state="on" id="KXT-oC-ZJz"/>
@@ -468,6 +468,7 @@
                                     </menu>
                                 </popUpButtonCell>
                                 <connections>
+                                    <action selector="writeLocationValue:" target="100193" id="EUb-2e-bKg"/>
                                     <binding destination="-2" name="contentValues" keyPath="self.generateLociLocations" id="Q7T-zt-1a0">
                                         <dictionary key="options">
                                             <string key="NSNullPlaceholder">All Chromosomes</string>
