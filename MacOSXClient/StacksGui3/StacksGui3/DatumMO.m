@@ -17,9 +17,9 @@
 #import "ReferenceStackEntryMO.h"
 #import "SampleMO.h"
 #import "StackEntryMO.h"
+#import "ColorGenerator.h"
 
 
-NSDictionary *getColorForOrder(NSUInteger order);
 
 @implementation DatumMO
 
@@ -36,6 +36,8 @@ NSDictionary *getColorForOrder(NSUInteger order);
 @dynamic sample;
 @dynamic snps;
 @dynamic stackEntries;
+
+@synthesize colorGenerator ;
 
 
 - (NSAttributedString *)renderName {
@@ -72,7 +74,7 @@ NSDictionary *getColorForOrder(NSUInteger order);
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype.haplotype];
         NSRange selectedRange = NSMakeRange(0, haplotype.haplotype.length);
         [appendString beginEditing];
-        NSDictionary *attributes = getColorForOrder(order);
+        NSDictionary *attributes = [self generateColorForOrder:order];
         [appendString setAttributes:attributes range:selectedRange];
         [appendString endEditing];
 
@@ -114,7 +116,7 @@ NSDictionary *getColorForOrder(NSUInteger order);
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:numberString];
         NSRange selectedRange = NSMakeRange(0, numberString.length);
         [appendString beginEditing];
-        NSDictionary *attributes = getColorForOrder(order);
+        NSDictionary *attributes = [self generateColorForOrder:order];
         [appendString setAttributes:attributes range:selectedRange];
         [appendString endEditing];
 
@@ -166,31 +168,44 @@ NSDictionary *getColorForOrder(NSUInteger order);
 
 }
 
+- (NSDictionary*)generateColorForOrder:(NSUInteger) order {
+    if(colorGenerator==nil){
+        colorGenerator = [[ColorGenerator alloc] init];
+    }
+
+    NSColor *color = [colorGenerator generateColorForOrder:order];
+//    NSLog(@"color %f,%f,%f",color.redComponent,color.greenComponent,color.yellowComponent);
+//    NSColor *color = []
+//    NSColor* color = [NSColor colorWithSRGBRed:0.8 green:0.1 blue:0.1 alpha:1.0];
+//    NSColor* color = [NSColor colorWithSRGBRed:0.1 green:0.2 blue:0.3 alpha:1.0];
+//    NSColor* color = [NSColor ];
+    return [NSDictionary dictionaryWithObjectsAndKeys:
+            color, NSForegroundColorAttributeName,
+            nil];
+
+//    switch(order%3){
+//        case 0:
+//            return [NSDictionary dictionaryWithObjectsAndKeys:
+//                    [NSColor greenColor], NSForegroundColorAttributeName,
+//                    nil];
+//        case 1:
+//            return [NSDictionary dictionaryWithObjectsAndKeys:
+//                    [NSColor redColor], NSForegroundColorAttributeName,
+//                    nil];
+//        case 2:
+//            return [NSDictionary dictionaryWithObjectsAndKeys:
+//                    [NSColor orangeColor], NSForegroundColorAttributeName,
+//                    nil];
+//        case 3:
+//            return [NSDictionary dictionaryWithObjectsAndKeys:
+//                    [NSColor yellowColor], NSForegroundColorAttributeName,
+//                    nil];
+//        default:
+//            return [NSDictionary dictionaryWithObjectsAndKeys:
+//                    [NSColor blueColor], NSForegroundColorAttributeName,
+//                    nil];
+//    }
+}
 
 @end
 
-NSDictionary *getColorForOrder(NSUInteger order) {
-
-    switch(order%3){
-        case 0:
-            return [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor greenColor], NSForegroundColorAttributeName,
-                    nil];
-        case 1:
-            return [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor redColor], NSForegroundColorAttributeName,
-                    nil];
-        case 2:
-            return [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor orangeColor], NSForegroundColorAttributeName,
-                    nil];
-        case 3:
-            return [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor yellowColor], NSForegroundColorAttributeName,
-                    nil];
-        default:
-            return [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor blueColor], NSForegroundColorAttributeName,
-                    nil];
-    }
-}
