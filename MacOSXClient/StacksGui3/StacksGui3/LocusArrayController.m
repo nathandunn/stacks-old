@@ -16,13 +16,18 @@
 
 @synthesize minSnpValue;
 @synthesize maxSnpValue;
-
+@synthesize chromosomeLocation;
+@synthesize minBasePairs;
+@synthesize maxBasePairs;
 
 - (void)awakeFromNib {
     [super awakeFromNib];
     // apparently this is called before  / instead of init
-    minSnpValue = 0 ;
-    maxSnpValue = 10 ;
+    minSnpValue = 0;
+    maxSnpValue = 1000;
+    chromosomeLocation = nil ;
+    minBasePairs = -1;
+    maxBasePairs = -1;
     [self setSortDescriptors:[NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"locusId" ascending:YES selector:@selector(compare:)]]];
 }
 
@@ -57,14 +62,19 @@
     for (id item in objects) {
         if ([item isKindOfClass:[LocusMO class]]) {
             LocusMO *locusMO = (LocusMO *) item;
-//        NSInteger snpCount = locusMO.snps.count;
             if (locusMO.snps != nil) {
-
                 if (locusMO.snps.count >= minSnpValue && locusMO.snps.count <= maxSnpValue) {
-//                    NSLog(@"snpCount %ld >= %ld && %ld <= %ld", locusMO.snps.count, minSnpValue, locusMO.snps.count, maxSnpValue);
-//        if ([[item valueForKeyPath:@"title"] rangeOfString:searchString options:NSAnchoredSearch].location != NSNotFound) {
-                    [filteredObjects addObject:locusMO];
-//        }
+                    if ([locusMO.type isEqualToString:@"Population"]) {
+                        if ((minBasePairs < 0 || [locusMO.basePairs integerValue] > minBasePairs)
+                                && (maxBasePairs < 0 || [locusMO.basePairs integerValue] < maxBasePairs)
+                                && (chromosomeLocation == nil  || [locusMO.chromosome isEqualToString:chromosomeLocation])
+                                ) {
+                            [filteredObjects addObject:locusMO];
+                        }
+                    }
+                    else {
+                        [filteredObjects addObject:locusMO];
+                    }
                 }
             }
         }
@@ -91,5 +101,38 @@
         [self rearrangeObjects];
     }
 }
+
+- (IBAction)writeLocationValue:(id)sender {
+    NSPopUpButton *value = sender;
+    if (value.stringValue.length > 0) {
+        chromosomeLocation = value.titleOfSelectedItem;
+        if([chromosomeLocation isEqualToString:@"All Chromosomes"]){
+            chromosomeLocation= nil ;
+        }
+//        NSLog(@"setting Location Value %@", chromosomeLocation);
+        [self rearrangeObjects];
+    }
+}
+
+- (IBAction)writeMinBasePairs:(id)sender {
+    NSTextField *value = sender;
+    if (value.stringValue.length > 0) {
+        minBasePairs = value.integerValue;
+        NSLog(@"min baise pairs %ld", minBasePairs);
+        [self rearrangeObjects];
+    }
+
+}
+
+- (IBAction)writeMaxBasePairs:(id)sender {
+    NSTextField *value = sender;
+    if (value.stringValue.length > 0) {
+        maxBasePairs = value.integerValue;
+        NSLog(@"max base pairs %ld", maxBasePairs);
+        [self rearrangeObjects];
+    }
+
+}
+
 
 @end

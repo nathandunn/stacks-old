@@ -13,7 +13,15 @@
 
 @property NSInteger minSnpValue;
 @property NSInteger maxSnpValue;
+@property (nonatomic, retain) NSString*chromosomeLocation;
+@property NSInteger minBasePairs;
+@property NSInteger maxBasePairs;
+
 - (IBAction) setMinSnpValue:(NSInteger) sender;
 - (IBAction) setMaxSnpValue:(NSInteger) sender;
+
+- (IBAction)writeLocationValue:(id)sender;
+- (IBAction)writeMinBasePairs:(id)sender;
+- (IBAction)writeMaxBasePairs:(id)sender;
 @end
 
