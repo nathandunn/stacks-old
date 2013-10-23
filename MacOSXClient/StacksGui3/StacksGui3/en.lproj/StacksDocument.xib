@@ -330,6 +330,9 @@
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                     <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
+                                <connections>
+                                    <binding destination="-2" name="hidden" keyPath="self.noLociLocations" id="njT-wR-6Pc"/>
+                                </connections>
                             </textField>
                             <textField verticalHuggingPriority="750" id="ucp-ii-HYv">
                                 <rect key="frame" x="193" y="5" width="26" height="17"/>
@@ -339,6 +342,9 @@
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                     <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
+                                <connections>
+                                    <binding destination="-2" name="hidden" keyPath="self.noLociLocations" id="jes-3O-nmB"/>
+                                </connections>
                             </textField>
                             <textField verticalHuggingPriority="750" id="Hwu-Q5-IeI">
                                 <rect key="frame" x="298" y="5" width="25" height="17"/>
@@ -348,6 +354,9 @@
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                     <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
+                                <connections>
+                                    <binding destination="-2" name="hidden" keyPath="self.noLociLocations" id="o9k-bn-91b"/>
+                                </connections>
                             </textField>
                             <textField verticalHuggingPriority="750" id="OTU-9w-U6z">
                                 <rect key="frame" x="130" y="5" width="60" height="20"/>
@@ -359,6 +368,7 @@
                                 </textFieldCell>
                                 <connections>
                                     <action selector="writeMinBasePairs:" target="100193" id="UNi-YV-asd"/>
+                                    <binding destination="-2" name="hidden" keyPath="self.noLociLocations" id="48R-fW-4Vo"/>
                                 </connections>
                             </textField>
                             <textField verticalHuggingPriority="750" id="VzT-Yh-SXs">
@@ -371,6 +381,7 @@
                                 </textFieldCell>
                                 <connections>
                                     <action selector="writeMaxBasePairs:" target="100193" id="5oF-AO-IbZ"/>
+                                    <binding destination="-2" name="hidden" keyPath="self.noLociLocations" id="ukv-xF-sge"/>
                                 </connections>
                             </textField>
                             <textField verticalHuggingPriority="750" id="100452">
@@ -470,6 +481,7 @@
                                 </popUpButtonCell>
                                 <connections>
                                     <action selector="writeLocationValue:" target="100193" id="EUb-2e-bKg"/>
+                                    <binding destination="-2" name="hidden" keyPath="self.noLociLocations" id="xzC-IR-AzF"/>
                                     <binding destination="-2" name="contentValues" keyPath="self.generateLociLocations" id="Q7T-zt-1a0">
                                         <dictionary key="options">
                                             <string key="NSNullPlaceholder">All Chromosomes</string>

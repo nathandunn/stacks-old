@@ -53,6 +53,9 @@
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path;
 - (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name;
+
+- (BOOL)noLociLocations;
+
 - (IBAction) updateSelections: (id) sender ;
 
 

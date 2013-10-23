@@ -51,8 +51,10 @@
     NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
     [request1 setEntity:entityDescription1];
 
-    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"chromosome!=nil"];
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"chromosome != nil"];
+    NSPredicate *predicate2 = [NSPredicate predicateWithFormat:@"chromosome != ''"];
     [request1 setPredicate:predicate1];
+    [request1 setPredicate:predicate2];
     NSError *error1;
     NSArray *locusArray = [context executeFetchRequest:request1 error:&error1];
     return locusArray ;

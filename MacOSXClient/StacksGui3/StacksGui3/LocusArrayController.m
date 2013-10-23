@@ -28,7 +28,7 @@
     maxSnpValue = 1000;
     chromosomeLocation = nil ;
     minBasePairs = 0;
-    maxBasePairs = 0 ;
+    maxBasePairs = 1000000 * 10000 ;
 
     [self setSortDescriptors:[NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"locusId" ascending:YES selector:@selector(compare:)]]];
 }
