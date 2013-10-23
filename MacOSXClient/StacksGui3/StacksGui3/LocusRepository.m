@@ -45,4 +45,17 @@
         return nil ;
     }
 }
+
+- (NSArray *)getLociWithChromsomes:(NSManagedObjectContext *)context{
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:context];
+    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+    [request1 setEntity:entityDescription1];
+    
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"chromosome!=nil"];
+    [request1 setPredicate:predicate1];
+    NSError *error1;
+    NSArray *locusArray = [context executeFetchRequest:request1 error:&error1];
+    return locusArray ;
+}
+
 @end
