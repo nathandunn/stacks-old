@@ -60,8 +60,20 @@
     NSDictionary *blockAttribute;
     NSDictionary *snpAttribute;
     NSDictionary *defectAttribute;
+    
+    
+    /**
+     https://casspr.fogbugz.com/default.asp?1550#11745
+     Catalog SNP but not a local SNP, column (background) color is blueish: #d8f3ff
+     Catalog SNP and local SNP, column (background) color is greyish: #ccddd4
+     Catalog SNP and local SNP, column (foreground) color is #a93535, bold for first allele, #29356c, bold for second allele
+     
+     SNP background color is #EEE
+     */
+    
 
 
+    // DEFINE BLOCK
     if(![self.block isEqualToString:@"1"]){
         snpAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blackColor], NSForegroundColorAttributeName,
@@ -98,6 +110,9 @@
     }
 
     [sequenceAttributedString setAttributes:blockAttribute range:NSMakeRange(0, self.sequence.length)];
+   
+    // get a local snp
+    NSSet* localSnps = self.datum.snps;
 
     NSMutableArray* snps = [[NSMutableArray alloc] init];
     for (LocusSnpMO *snp in self.datum.locus.snps) {
