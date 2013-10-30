@@ -3795,12 +3795,12 @@ write_phase(map<int, CSLocus *> &catalog,
 	// Output the total number of SNP sites and the number of individuals.
 	//
 	fh << samples.size() << "\n"
-	   << total_sites << "\n";
+	   << total_sites    << "\n";
 
 	//
-	// Output the position of each site according to its basepair.
+	// We need to determine an ordering that can take into account overlapping RAD sites.
 	//
-	fh << "P";
+	vector<GenPos> ordered_loci;
     	for (uint pos = 0; pos < it->second.size(); pos++) {
     	    loc = it->second[pos];
 	    t   = psum->locus_tally(loc->id);
@@ -3808,11 +3808,22 @@ write_phase(map<int, CSLocus *> &catalog,
     	    for (uint i = 0; i < loc->snps.size(); i++) {
     		col = loc->snps[i]->col;
 		if (t->nucs[col].allele_cnt == 2) {
-		    fh << " " << loc->sort_bp(col);
+		    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
 		    if (write_single_snp) 
 			break;
 		}
 	    }
+	}
+	sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
+
+	//
+	// Output the position of each site according to its basepair.
+	//
+	fh << "P";
+    	for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+    	    loc = catalog[ordered_loci[pos].id];
+	    col = loc->snps[ordered_loci[pos].snp_index]->col;
+	    fh << " " << ordered_loci[pos].bp;
 	}
 	fh << "\n";
 
@@ -3845,54 +3856,50 @@ write_phase(map<int, CSLocus *> &catalog,
 		fh << samples[pmap->rev_sample_index(j)] << "\n";
 		
 		gtypes.str("");
-		for (uint pos = 0; pos < it->second.size(); pos++) {
-		    loc = it->second[pos];
+		for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+		    loc = catalog[ordered_loci[pos].id];
+		    col = loc->snps[ordered_loci[pos].snp_index]->col;
 
 		    s = psum->locus(loc->id);
 		    d = pmap->locus(loc->id);
 		    t = psum->locus_tally(loc->id);
 
-		    for (uint i = 0; i < loc->snps.size(); i++) {
-			col = loc->snps[i]->col;
+		    // 
+		    // If this site is fixed in all populations or has too many alleles don't output it.
+		    //
+		    if (t->nucs[col].allele_cnt != 2) 
+			continue;
 
-			// 
-			// If this site is fixed in all populations or has too many alleles don't output it.
+		    if (s[pop_id]->nucs[col].incompatible_site ||
+			s[pop_id]->nucs[col].filtered_site) {
 			//
-			if (t->nucs[col].allele_cnt != 2) 
-			    continue;
+			// This site contains more than two alleles in this population or was filtered
+			// due to a minor allele frequency that is too low.
+			//
+			gtypes << "? ";
 
-			if (s[pop_id]->nucs[col].incompatible_site ||
-			    s[pop_id]->nucs[col].filtered_site) {
-			    //
-			    // This site contains more than two alleles in this population or was filtered
-			    // due to a minor allele frequency that is too low.
-			    //
-			    gtypes << "? ";
+		    } else if (d[j] == NULL) {
+			//
+			// Data does not exist.
+			//
+			gtypes << "? ";
+		    } else if (d[j]->model[col] == 'U') {
+			//
+			// Data exists, but the model call was uncertain.
+			//
+			gtypes << "? ";
+		    } else {
+			//
+			// Tally up the nucleotide calls.
+			//
+			tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
 
-			} else if (d[j] == NULL) {
-			    //
-			    // Data does not exist.
-			    //
+			if (p_allele == 0 && q_allele == 0)
 			    gtypes << "? ";
-			} else if (d[j]->model[col] == 'U') {
-			    //
-			    // Data exists, but the model call was uncertain.
-			    //
-			    gtypes << "? ";
-			} else {
-			    //
-			    // Tally up the nucleotide calls.
-			    //
-			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-			    if (p_allele == 0 && q_allele == 0)
-				gtypes << "? ";
-			    else if (p_allele == 0)
-				gtypes << q_allele << " ";
-			    else
-				gtypes << p_allele << " ";
-			}
-			if (write_single_snp) break;
+			else if (p_allele == 0)
+			    gtypes << q_allele << " ";
+			else
+			    gtypes << p_allele << " ";
 		    }
 		}
 		gtypes_str = gtypes.str();
@@ -3902,40 +3909,37 @@ write_phase(map<int, CSLocus *> &catalog,
 		// Output all the loci for this sample again, now for the q allele
 		//
 		gtypes.str("");
-		for (uint pos = 0; pos < it->second.size(); pos++) {
-		    loc = it->second[pos];
+		for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+		    loc = catalog[ordered_loci[pos].id];
+		    col = loc->snps[ordered_loci[pos].snp_index]->col;
+
 
 		    s = psum->locus(loc->id);
 		    d = pmap->locus(loc->id);
 		    t = psum->locus_tally(loc->id);
 
-		    for (uint i = 0; i < loc->snps.size(); i++) {
-			col = loc->snps[i]->col;
+		    if (t->nucs[col].allele_cnt != 2) 
+			continue;
 
-			if (t->nucs[col].allele_cnt != 2) 
-			    continue;
+		    if (s[pop_id]->nucs[col].incompatible_site ||
+			s[pop_id]->nucs[col].filtered_site) {
+			gtypes << "? ";
 
-			if (s[pop_id]->nucs[col].incompatible_site ||
-			    s[pop_id]->nucs[col].filtered_site) {
+		    } else if (d[j] == NULL) {
+			gtypes << "? ";
+
+		    } else if (d[j]->model[col] == 'U') {
+			gtypes << "? ";
+
+		    } else {
+			tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
+
+			if (p_allele == 0 && q_allele == 0)
 			    gtypes << "? ";
-
-			} else if (d[j] == NULL) {
-			    gtypes << "? ";
-
-			} else if (d[j]->model[col] == 'U') {
-			    gtypes << "? ";
-
-			} else {
-			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-			    if (p_allele == 0 && q_allele == 0)
-				gtypes << "? ";
-			    else if (q_allele == 0)
-				gtypes << p_allele << " ";
-			    else
-				gtypes << q_allele << " ";
-			}
-			if (write_single_snp) break;
+			else if (q_allele == 0)
+			    gtypes << p_allele << " ";
+			else
+			    gtypes << q_allele << " ";
 		    }
 		}
 		gtypes_str = gtypes.str();
@@ -4964,6 +4968,10 @@ bool compare_pop_map(pair<int, string> a, pair<int, string> b) {
 
 bool hap_compare(pair<string, int> a, pair<string, int> b) {
     return (a.second > b.second);
+}
+
+bool compare_genpos(GenPos a, GenPos b) {
+    return (a.bp < b.bp);
 }
 
 int parse_command_line(int argc, char* argv[]) {
