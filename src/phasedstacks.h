@@ -82,18 +82,17 @@ class NucSum {
 public:
     uint  bp;
     uint  clocus;
-    uint  nuc[4];
     float freq;
-
+    uint  nuc[4];
     // nuc[0] == A
     // nuc[1] == C
     // nuc[2] == G
     // nuc[3] == T
 
     NucSum() {
-	this->freq   = 1.0;
-	this->bp     = 0;
-	this->clocus = 0;
+	this->freq    = 1.0;
+	this->bp      = 0;
+	this->clocus  = 0;
 	for (uint i = 0; i < 4; i++)
 	    this->nuc[i] = 0;
     }
@@ -108,6 +107,7 @@ public:
     NucSum  *nucs;
     Sample  *samples;
     float  **dprime;
+    bool   **recomb;
 
     PhasedSummary(uint num_samples, uint num_genotypes) {
 	this->sample_cnt = num_samples;
@@ -119,6 +119,11 @@ public:
 	    this->dprime[i] = new float[this->size];
 	    memset(this->dprime[i], 0, this->size);
 	}
+	this->recomb     = new bool *[this->size];
+	for (uint i = 0; i < this->size; i++) {
+	    this->recomb[i] = new bool[this->size];
+	    memset(this->recomb[i], 0, this->size);
+	}
     }
     ~PhasedSummary() {
 	if (this->nucs != NULL)
@@ -127,6 +132,11 @@ public:
 	    for (uint i = 0; i < this->size; i++)
 		delete [] this->dprime[i];
 	    delete [] this->dprime;
+	}
+	if (this->recomb != NULL) {
+	    for (uint i = 0; i < this->size; i++)
+		delete [] this->recomb[i];
+	    delete [] this->recomb;
 	}
 	if (this->samples != NULL)
 	    delete [] this->samples;
@@ -148,5 +158,6 @@ int   summarize_phased_genotypes(PhasedSummary *);
 int   calc_dprime(PhasedSummary *);
 int   assign_alleles(NucSum, char &, char &, float &, float &);
 int   write_dprime(string, PhasedSummary *);
+int   four_gamete_test(string, PhasedSummary *);
 
 #endif // __PHASEDSTACKS_H__
