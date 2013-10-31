@@ -159,7 +159,7 @@ load_onemap_cp_dictionary(map<string, string> &types, map<string, map<string, st
 
     // B3.7
     dictionary["abxab"]["-"]  = "-";
-    dictionary["abxab"]["ab"] = "2ab";
+    dictionary["abxab"]["ab"] = "ab";
     dictionary["abxab"]["aa"] = "a";
     dictionary["abxab"]["bb"] = "b";
 
