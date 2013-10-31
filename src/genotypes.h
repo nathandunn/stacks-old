@@ -95,6 +95,7 @@ int  write_generic(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &,
 int  write_sql(map<int, CSLocus *> &,     PopMap<CSLocus> *, set<int> &);
 int  write_joinmap(map<int, CSLocus *> &, PopMap<CSLocus> *, map<string, string> &, map<int, string> &, set<int> &);
 int  write_onemap(map<int, CSLocus *> &,  PopMap<CSLocus> *, map<string, string> &, map<int, string> &, set<int> &);
+int  write_onemap_mapmaker(map<int, CSLocus *> &,  PopMap<CSLocus> *, map<string, string> &, map<int, string> &, set<int> &);
 int  write_rqtl(map<int, CSLocus *> &,    PopMap<CSLocus> *, map<string, string> &, map<int, string> &, set<int> &);
 int  write_genomic(map<int, CSLocus *> &, PopMap<CSLocus> *);
 
