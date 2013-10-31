@@ -1,9 +1,12 @@
-Stacks 1.09 - Oct 17, 2013
+Stacks 1.09 - Oct 30, 2013
 --------------------------
-	Feature: added EaeI and TaqI restriction enzymes to process_radtags.
+	Feature: added EaeI, ClaI, and TaqI restriction enzymes to process_radtags.
 	Feature: changed populations bootstrap to use AMOVA Fst.
 	Feature: added bootstrap whitelist to populations, so users can restrict the loci that
 	are bootstrapped to a particular set (e.g. on a single chromosome).
+	Bugfix: modified PHASE output so that SNPs are ordered properly. Previously, although
+	RAD loci are ordered properly, some individual SNPs between RAD loci could still be output
+	out of order.
 
 Stacks 1.08 - Sept 24, 2013
 ---------------------------
