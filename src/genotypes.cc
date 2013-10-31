@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -24,8 +24,6 @@
 // Julian Catchen
 // jcatchen@uoregon.edu
 // University of Oregon
-//
-// $Id: genotypes.cc 2117 2011-05-07 00:54:22Z catchen $
 //
 
 #include "genotypes.h"
@@ -1173,6 +1171,9 @@ int export_f2_map(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> 
     case rqtl:
 	write_rqtl(catalog, pmap, types, samples, parent_ids);
 	break;
+    case onemap:
+	write_onemap_mapmaker(catalog, pmap, types, samples, parent_ids);
+	break;
     default:
 	break;
     }
@@ -1311,6 +1312,9 @@ int export_bc1_map(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int>
 	break;
     case rqtl:
 	write_rqtl(catalog, pmap, types, samples, parent_ids);
+	break;
+    case onemap:
+	write_onemap_mapmaker(catalog, pmap, types, samples, parent_ids);
 	break;
     default:
 	break;
@@ -1921,6 +1925,78 @@ write_joinmap(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, s
     for (s = samples.begin(); s != samples.end(); s++) {
 	if (parent_ids.count(s->first)) continue;
 	fh << s->second << "\n";
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int 
+write_onemap_mapmaker(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<string, string> &types, map<int, string> &samples, set<int> &parent_ids)
+{
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".genotypes_" << progeny_limit;
+    string file = in_path + pop_name.str() + ".onemap.txt";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening joinmap output file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Count the number of mappable progeny
+    //
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
+    int num_loci = 0;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+	if (loc->trans_gcnt < progeny_limit) continue;
+
+	num_loci++;
+    }
+    cerr << "Writing " << num_loci << " loci to OneMap file, '" << file << "'\n";
+
+    //
+    // Output map type.
+    //
+    if (map_type == f2 )
+	fh << "data type f2 intercross\n";
+    else if (map_type == bc1)
+	fh << "data type f2 backcross\n";
+
+    //
+    // Output the header: number of individuals, number of markers, number of 
+    // quantitative traits (none).
+    //
+    fh << pmap->sample_cnt() - parent_ids.size() << " " << num_loci << " " << "0\n\n";
+       
+    //
+    // Output each locus.
+    //
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+
+	if (loc->trans_gcnt < progeny_limit) continue;
+
+	fh << "*" << loc->id;
+
+	Datum **d = pmap->locus(loc->id);
+
+	for (int i = 0; i < pmap->sample_cnt(); i++) {
+	    if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+	    fh << " ";
+
+	    if (d[i] == NULL) 
+		fh << "-";
+	    else
+		fh << d[i]->trans_gtype;
+	}
+	fh << "\n";
     }
 
     fh.close();
