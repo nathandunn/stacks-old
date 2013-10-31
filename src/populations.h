@@ -87,6 +87,22 @@ public:
     }
 };
 
+//
+// Bootstrap resamplign structure.
+//
+class GenPos {
+public:
+    uint id;
+    uint bp;
+    uint snp_index;
+
+    GenPos(int id, int snp_index, int bp) {
+	this->id        = id;
+	this->snp_index = snp_index;
+	this->bp        = bp;
+    }
+};
+
 void    help( void );
 void    version( void );
 int     parse_command_line(int, char**);
@@ -133,5 +149,6 @@ int  load_snp_calls(string,  PopMap<CSLocus> *);
 
 bool compare_pop_map(pair<int, string>, pair<int, string>);
 bool hap_compare(pair<string, int>, pair<string, int>);
+bool compare_genpos(GenPos, GenPos);
 
 #endif // __POPULATIONS_H__

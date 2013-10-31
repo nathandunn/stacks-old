@@ -38,6 +38,7 @@ string    out_file;
 string    pmap_path;
 string    bl_file;
 string    wl_file;
+string    bs_wl_file;
 string    enz;
 double    sigma             = 150000;
 double    sample_limit      = 0;
@@ -46,6 +47,7 @@ int       population_limit  = 1;
 bool      bootstrap         = false;
 bs_type   bootstrap_type    = bs_none;
 int       bootstrap_reps    = 100;
+bool      bootstrap_wl      = false;
 bool      corrections       = false;
 bool      write_single_snp  = false;
 bool      expand_id         = false;
@@ -70,7 +72,7 @@ double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
 
 map<int, pair<int, int> > pop_indexes;
-set<int> whitelist, blacklist;
+set<int> whitelist, blacklist, bootstraplist;
 
 //
 // Hold information about restriction enzymes
@@ -136,6 +138,10 @@ int main (int argc, char* argv[]) {
     if (bl_file.length() > 0) {
 	load_marker_list(bl_file, blacklist);
 	cerr << "Loaded " << blacklist.size() << " blacklisted markers.\n";
+    }
+    if (bs_wl_file.length() > 0) {
+	load_marker_list(bs_wl_file, bootstraplist);
+	cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
     }
 
     //
@@ -1596,10 +1602,10 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	       << "LOD"        << "\t"
 	       << "Corrected Fst" << "\t"
 	       << "Smoothed Fst"  << "\t"
-	       << "Smoothed Fst P-value" << "\t"
 	       << "AMOVA Fst" << "\t"
 	       << "Corrected AMOVA Fst" << "\t"
 	       << "Smoothed AMOVA Fst" << "\t"
+	       << "Smoothed AMOVA Fst P-value" << "\t"
 	       << "Window SNP Count" << "\n";
 
 	    map<string, vector<CSLocus *> >::iterator it;
@@ -1720,7 +1726,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		if (bootstrap)
 		    for (uint i = 0; i < pairs.size(); i++) {
 			if (pairs[i] != NULL) {
-			    fst_samples.push_back(pairs[i]->cfst);
+			    fst_samples.push_back(pairs[i]->camova_fst);
 			    allele_depth_samples.push_back(pairs[i]->alleles);
 			}
 		    }
@@ -1794,10 +1800,10 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		       << pairs[i]->lod     << "\t"
 		       << cfst_str          << "\t"
 		       << wfst_str          << "\t"
-		       << pairs[i]->wfst_pval << "\t"
 		       << afst_str            << "\t"
 		       << cafst_str           << "\t"
 		       << wafst_str           << "\t"
+		       << pairs[i]->wfst_pval << "\t"
 		       << pairs[i]->snp_cnt   << "\n";
 
 		    delete pairs[i];
@@ -2123,8 +2129,10 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 		c->wFis    = weighted_fis / sum_fis;
 		c->wPi     = weighted_pi  / sum_pi;
 
-		if (bootstrap && bootstrap_type == bs_exact)
-		    bootstrap_popstats(fis_samples, pi_samples, sites, pos_l, pos_u, weights, c);
+		if (bootstrap && bootstrap_type == bs_exact) {
+		    if (bootstrap_wl == false || bootstraplist.count(c->loc_id) > 0)
+			bootstrap_popstats(fis_samples, pi_samples, sites, pos_l, pos_u, weights, c);
+		}
 	    }
 	}
 	sites.clear();
@@ -2831,6 +2839,9 @@ bootstrap_fst(vector<double> &fst_samples, vector<PopPair *> &pairs, double *wei
 	    if (c == NULL)
 		continue;
 
+	    if (bootstrap_wl && bootstraplist.count(c->loc_id) == 0)
+		continue;
+
 	    limit_l = c->bp - limit > 0 ? c->bp - limit : 0;
 	    limit_u = c->bp + limit;
 
@@ -2920,7 +2931,7 @@ bootstrap_fst(vector<double> &fst_samples, vector<PopPair *> &pairs, double *wei
 	    // Cacluate the p-value for this window based on the empirical Fst distribution.
 	    //
 	    sort(fsts.begin(), fsts.end());
- 	    c->wfst_pval = bootstrap_pval(c->wfst, fsts);
+ 	    c->wfst_pval = bootstrap_pval(c->wamova_fst, fsts);
 
 	    delete [] bs;
 	}
@@ -3784,12 +3795,12 @@ write_phase(map<int, CSLocus *> &catalog,
 	// Output the total number of SNP sites and the number of individuals.
 	//
 	fh << samples.size() << "\n"
-	   << total_sites << "\n";
+	   << total_sites    << "\n";
 
 	//
-	// Output the position of each site according to its basepair.
+	// We need to determine an ordering that can take into account overlapping RAD sites.
 	//
-	fh << "P";
+	vector<GenPos> ordered_loci;
     	for (uint pos = 0; pos < it->second.size(); pos++) {
     	    loc = it->second[pos];
 	    t   = psum->locus_tally(loc->id);
@@ -3797,11 +3808,22 @@ write_phase(map<int, CSLocus *> &catalog,
     	    for (uint i = 0; i < loc->snps.size(); i++) {
     		col = loc->snps[i]->col;
 		if (t->nucs[col].allele_cnt == 2) {
-		    fh << " " << loc->sort_bp(col);
+		    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
 		    if (write_single_snp) 
 			break;
 		}
 	    }
+	}
+	sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
+
+	//
+	// Output the position of each site according to its basepair.
+	//
+	fh << "P";
+    	for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+    	    loc = catalog[ordered_loci[pos].id];
+	    col = loc->snps[ordered_loci[pos].snp_index]->col;
+	    fh << " " << ordered_loci[pos].bp;
 	}
 	fh << "\n";
 
@@ -3834,54 +3856,50 @@ write_phase(map<int, CSLocus *> &catalog,
 		fh << samples[pmap->rev_sample_index(j)] << "\n";
 		
 		gtypes.str("");
-		for (uint pos = 0; pos < it->second.size(); pos++) {
-		    loc = it->second[pos];
+		for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+		    loc = catalog[ordered_loci[pos].id];
+		    col = loc->snps[ordered_loci[pos].snp_index]->col;
 
 		    s = psum->locus(loc->id);
 		    d = pmap->locus(loc->id);
 		    t = psum->locus_tally(loc->id);
 
-		    for (uint i = 0; i < loc->snps.size(); i++) {
-			col = loc->snps[i]->col;
+		    // 
+		    // If this site is fixed in all populations or has too many alleles don't output it.
+		    //
+		    if (t->nucs[col].allele_cnt != 2) 
+			continue;
 
-			// 
-			// If this site is fixed in all populations or has too many alleles don't output it.
+		    if (s[pop_id]->nucs[col].incompatible_site ||
+			s[pop_id]->nucs[col].filtered_site) {
 			//
-			if (t->nucs[col].allele_cnt != 2) 
-			    continue;
+			// This site contains more than two alleles in this population or was filtered
+			// due to a minor allele frequency that is too low.
+			//
+			gtypes << "? ";
 
-			if (s[pop_id]->nucs[col].incompatible_site ||
-			    s[pop_id]->nucs[col].filtered_site) {
-			    //
-			    // This site contains more than two alleles in this population or was filtered
-			    // due to a minor allele frequency that is too low.
-			    //
-			    gtypes << "? ";
+		    } else if (d[j] == NULL) {
+			//
+			// Data does not exist.
+			//
+			gtypes << "? ";
+		    } else if (d[j]->model[col] == 'U') {
+			//
+			// Data exists, but the model call was uncertain.
+			//
+			gtypes << "? ";
+		    } else {
+			//
+			// Tally up the nucleotide calls.
+			//
+			tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
 
-			} else if (d[j] == NULL) {
-			    //
-			    // Data does not exist.
-			    //
+			if (p_allele == 0 && q_allele == 0)
 			    gtypes << "? ";
-			} else if (d[j]->model[col] == 'U') {
-			    //
-			    // Data exists, but the model call was uncertain.
-			    //
-			    gtypes << "? ";
-			} else {
-			    //
-			    // Tally up the nucleotide calls.
-			    //
-			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-			    if (p_allele == 0 && q_allele == 0)
-				gtypes << "? ";
-			    else if (p_allele == 0)
-				gtypes << q_allele << " ";
-			    else
-				gtypes << p_allele << " ";
-			}
-			if (write_single_snp) break;
+			else if (p_allele == 0)
+			    gtypes << q_allele << " ";
+			else
+			    gtypes << p_allele << " ";
 		    }
 		}
 		gtypes_str = gtypes.str();
@@ -3891,40 +3909,37 @@ write_phase(map<int, CSLocus *> &catalog,
 		// Output all the loci for this sample again, now for the q allele
 		//
 		gtypes.str("");
-		for (uint pos = 0; pos < it->second.size(); pos++) {
-		    loc = it->second[pos];
+		for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+		    loc = catalog[ordered_loci[pos].id];
+		    col = loc->snps[ordered_loci[pos].snp_index]->col;
+
 
 		    s = psum->locus(loc->id);
 		    d = pmap->locus(loc->id);
 		    t = psum->locus_tally(loc->id);
 
-		    for (uint i = 0; i < loc->snps.size(); i++) {
-			col = loc->snps[i]->col;
+		    if (t->nucs[col].allele_cnt != 2) 
+			continue;
 
-			if (t->nucs[col].allele_cnt != 2) 
-			    continue;
+		    if (s[pop_id]->nucs[col].incompatible_site ||
+			s[pop_id]->nucs[col].filtered_site) {
+			gtypes << "? ";
 
-			if (s[pop_id]->nucs[col].incompatible_site ||
-			    s[pop_id]->nucs[col].filtered_site) {
+		    } else if (d[j] == NULL) {
+			gtypes << "? ";
+
+		    } else if (d[j]->model[col] == 'U') {
+			gtypes << "? ";
+
+		    } else {
+			tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
+
+			if (p_allele == 0 && q_allele == 0)
 			    gtypes << "? ";
-
-			} else if (d[j] == NULL) {
-			    gtypes << "? ";
-
-			} else if (d[j]->model[col] == 'U') {
-			    gtypes << "? ";
-
-			} else {
-			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-			    if (p_allele == 0 && q_allele == 0)
-				gtypes << "? ";
-			    else if (q_allele == 0)
-				gtypes << p_allele << " ";
-			    else
-				gtypes << q_allele << " ";
-			}
-			if (write_single_snp) break;
+			else if (q_allele == 0)
+			    gtypes << p_allele << " ";
+			else
+			    gtypes << q_allele << " ";
 		    }
 		}
 		gtypes_str = gtypes.str();
@@ -4955,6 +4970,10 @@ bool hap_compare(pair<string, int> a, pair<string, int> b) {
     return (a.second > b.second);
 }
 
+bool compare_genpos(GenPos a, GenPos b) {
+    return (a.bp < b.bp);
+}
+
 int parse_command_line(int argc, char* argv[]) {
     int c;
      
@@ -4989,6 +5008,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"log_fst_comp",      no_argument,       NULL, 'l'},
             {"bootstrap",         required_argument, NULL, 'O'},
 	    {"bootstrap_reps",    required_argument, NULL, 'R'},
+	    {"bootstrap_wl",      required_argument, NULL, 'Q'},
 	    {"min_populations",   required_argument, NULL, 'p'},
 	    {"minor_allele_freq", required_argument, NULL, 'a'},
 	    {"fst_correction",    required_argument, NULL, 'f'},
@@ -4999,7 +5019,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlkKSALEYFVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlkKSALEYFVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -5050,6 +5070,10 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'R':
 	    bootstrap_reps = atoi(optarg);
+	    break;
+	case 'Q':
+	    bs_wl_file = optarg;
+	    bootstrap_wl = true;
 	    break;
 	case 'c':
 	    corrections = true;
@@ -5215,7 +5239,8 @@ void help() {
 	      << "    --window_size [num]: distance over which to average values (sigma, default 150Kb)\n\n"
 	      << "  Bootstrap Resampling:\n" 
 	      << "    --bootstrap [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
-	      << "    --bootstrap_reps [num]: number of bootstrap resamplings to calculate (default 100).\n\n"
+	      << "    --bootstrap_reps [num]: number of bootstrap resamplings to calculate (default 100).\n"
+	      << "    --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n\n"
 	      << "  File ouput options:\n"
 	      << "    --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file.\n"
 	      << "    --fasta: output full sequence for each allele, from each sample locus in FASTA format.\n"
