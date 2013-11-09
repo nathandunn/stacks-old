@@ -98,6 +98,23 @@ public:
     }
 };
 
+class dPrime {
+public:
+    double dprime;
+    bool   chisq_p;
+    double var;
+    double ci_high;
+    double ci_low;
+
+    dPrime() {
+	this->dprime  = 0.0;
+	this->chisq_p = false;
+	this->var     = 0.0;
+	this->ci_high = 0.0;
+	this->ci_low  = 0.0;
+    }
+};
+
 class PhasedSummary {
     map<string, int> sample_map;
 
@@ -106,7 +123,7 @@ public:
     uint     sample_cnt;
     NucSum  *nucs;
     Sample  *samples;
-    float  **dprime;
+    dPrime **dprime;
     bool   **recomb;
 
     PhasedSummary(uint num_samples, uint num_genotypes) {
@@ -114,11 +131,10 @@ public:
 	this->samples    = new Sample[this->sample_cnt];
 	this->size       = num_genotypes;
 	this->nucs       = new NucSum[this->size];
-	this->dprime     = new float *[this->size];
-	for (uint i = 0; i < this->size; i++) {
-	    this->dprime[i] = new float[this->size];
-	    memset(this->dprime[i], 0, this->size);
-	}
+	this->dprime     = new dPrime *[this->size];
+	for (uint i = 0; i < this->size; i++)
+	    this->dprime[i] = new dPrime[this->size];
+
 	this->recomb     = new bool *[this->size];
 	for (uint i = 0; i < this->size; i++) {
 	    this->recomb[i] = new bool[this->size];
@@ -156,8 +172,8 @@ int   build_file_list(vector<pair<int, string> > &);
 PhasedSummary *parse_phase(string);
 int   summarize_phased_genotypes(PhasedSummary *);
 int   calc_dprime(PhasedSummary *);
-int   assign_alleles(NucSum, char &, char &, float &, float &);
+int   assign_alleles(NucSum, char &, char &, double &, double &);
 int   write_dprime(string, PhasedSummary *);
-int   four_gamete_test(string, PhasedSummary *);
+int   four_gamete_test(string, PhasedSummary *, map<int, int> &, map<int, int> &);
 
 #endif // __PHASEDSTACKS_H__
