@@ -95,7 +95,7 @@ int main (int argc, char* argv[]) {
 
     for (uint i = 0; i < files.size(); i++) {
 
-	if (files[i].second != "batch_1.groupV.phase") continue;
+	// if (files[i].second != "batch_1.groupV.phase") continue;
 
 	PhasedSummary *psum;
 
@@ -1173,6 +1173,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"in_path",     required_argument, NULL, 'P'},
 	    {"minor_allele_freq", required_argument, NULL, 'a'},
+	    {"min_inform_pairs",  required_argument, NULL, 'm'},
 	    {0, 0, 0, 0}
 	};
 	
@@ -1194,6 +1195,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'a':
 	    minor_freq_lim = atof(optarg);
+	    break;
+	case 'm':
+	    min_inform_pairs = atof(optarg);
 	    break;
 	case 'P':
 	    in_path = optarg;
@@ -1235,6 +1239,11 @@ int parse_command_line(int argc, char* argv[]) {
 	}
     }
 
+    if (min_inform_pairs > 0) {
+	if (min_inform_pairs > 1)
+	    min_inform_pairs = min_inform_pairs / 100;
+    }
+
     return 0;
 }
 
@@ -1249,10 +1258,13 @@ void help() {
               << "phasedstacks -P path -t file_type [-p threads] [-v] [-h]" << "\n"
 	      << "  P: path to the phased Stacks output files.\n"
 	      << "  t: input file type. Supported types: phase.\n"
-	      << "  a: specify a minimum minor allele frequency required to process a nucleotide site (0 < a < 0.5).\n"
 	      << "  p: number of processes to run in parallel sections of code.\n"
 	      << "  v: print program version." << "\n"
-	      << "  h: display this help messsage." << "\n\n";
+	      << "  h: display this help messsage." << "\n\n"
+	      << "  Filtering options:\n"
+	      << "  --minor_allele_freq: specify a minimum minor allele frequency required to process a nucleotide site (0 < a < 0.5).\n"
+	      << "  --min_inform_pairs: when building D' haplotype blocks, the minimum number of informative D' measures to combine two blocks (default 0.9).\n\n";
+
 
     exit(0);
 }
