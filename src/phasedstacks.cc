@@ -341,13 +341,12 @@ dprime_blocks(string path, PhasedSummary *psum, map<int, int> &len_buckets, map<
 	}
     }
 
-    map<int, vector<int> >::iterator it;
-
-    for (it = ld_map.begin(); it != ld_map.end(); it++) {
-	cerr << "      " << it->first << " ->\n";
-	for (uint i = 0; i < it->second.size(); i++)
-	    cerr << "         " << it->second[i] << " dist: " << (psum->nucs[it->second[i]].bp - psum->nucs[it->first].bp + 1) << "bp\n";
-    }
+    // map<int, vector<int> >::iterator it;
+    // for (it = ld_map.begin(); it != ld_map.end(); it++) {
+    // 	cerr << "      " << it->first << " ->\n";
+    // 	for (uint i = 0; i < it->second.size(); i++)
+    // 	    cerr << "         " << it->second[i] << " dist: " << (psum->nucs[it->second[i]].bp - psum->nucs[it->first].bp + 1) << "bp\n";
+    // }
 
     cerr << "    Total pairs examined: " << tot_pairs 
 	 << "; Strong LD pairs: " << ld_pairs.size() 
@@ -461,7 +460,9 @@ check_adjacent_blocks(PhasedSummary *psum, HBlock *block)
 	}
     }
 
-    cerr << "Comparing range " << start << " to " << end << "; total pairs: " << tot << "; strong LD: " << strong_ld << "; proportion: " << std::setprecision(3) << strong_ld / tot << "\n";
+    // cerr << "Comparing range " << start << " to " << end 
+    // 	 << "; total pairs: " << tot << "; strong LD: " << strong_ld 
+    // 	 << "; proportion: " << std::setprecision(3) << strong_ld / tot << "\n";
 
     if (strong_ld / tot >= min_inform_pairs)
 	return true;
