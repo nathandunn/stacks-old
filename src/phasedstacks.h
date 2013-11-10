@@ -56,6 +56,8 @@ using std::set;
 #include "constants.h"
 #include "utils.h"
 
+enum loc_t {strong_ld, recomb, uninformative};
+
 class Sample {
 public:
     string name;
@@ -105,6 +107,8 @@ public:
     double var;
     double ci_high;
     double ci_low;
+    bool   informative;
+    loc_t  type;
 
     dPrime() {
 	this->dprime  = 0.0;
@@ -112,6 +116,7 @@ public:
 	this->var     = 0.0;
 	this->ci_high = 0.0;
 	this->ci_low  = 0.0;
+	this->type    = uninformative;
     }
 };
 
@@ -165,6 +170,42 @@ public:
     }
 };
 
+class HBlock {
+public:
+    vector<int> loci;
+    HBlock *next;
+
+    HBlock() {
+	this->next = NULL;
+    }
+};
+
+class dPrimeBlocks {
+    HBlock *_head;
+
+public:
+    dPrimeBlocks() {
+	this->_head = NULL;
+    }
+    ~dPrimeBlocks() {
+	HBlock *cur, *next;
+	cur  = this->_head;
+	next = cur->next;
+
+	while (next != NULL) {
+	    delete cur;
+	    cur  = next;
+	    next = cur->next;
+	}
+    }
+    HBlock *head() {
+	return this->_head;
+    }
+    HBlock *initialize(set<int> &);
+    HBlock *merge_adjacent(HBlock *);
+    int     print();
+};
+
 void  help( void );
 void  version( void );
 int   parse_command_line(int, char**);
@@ -175,5 +216,8 @@ int   calc_dprime(PhasedSummary *);
 int   assign_alleles(NucSum, char &, char &, double &, double &);
 int   write_dprime(string, PhasedSummary *);
 int   four_gamete_test(string, PhasedSummary *, map<int, int> &, map<int, int> &);
+int   dprime_blocks(string, PhasedSummary *, map<int, int> &, map<int, int> &);
+bool  check_adjacent_blocks(PhasedSummary *, HBlock *);
+int   enumerate_haplotypes(ofstream &, PhasedSummary *, uint, uint);
 
 #endif // __PHASEDSTACKS_H__
