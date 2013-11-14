@@ -520,7 +520,7 @@
                 <textField verticalHuggingPriority="750" id="100238">
                     <rect key="frame" x="4" y="45" width="92" height="17"/>
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                    <textFieldCell key="cell" selectable="YES" continuous="YES" refusesFirstResponder="YES" allowsUndo="NO" alignment="center" title="Name" allowsEditingTextAttributes="YES" id="100239">
+                    <textFieldCell key="cell" continuous="YES" refusesFirstResponder="YES" allowsUndo="NO" alignment="center" title="Name" allowsEditingTextAttributes="YES" id="100239">
                         <font key="font" size="12" name="LucidaGrande"/>
                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
@@ -539,7 +539,7 @@
                 <textField verticalHuggingPriority="750" id="100375">
                     <rect key="frame" x="5" y="25" width="92" height="17"/>
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" allowsUndo="NO" alignment="center" title="Haplotypes" allowsEditingTextAttributes="YES" id="100376">
+                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" allowsUndo="NO" alignment="center" title="Haplotypes" allowsEditingTextAttributes="YES" id="100376">
                         <font key="font" metaFont="cellTitle"/>
                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
@@ -551,7 +551,7 @@
                 <textField verticalHuggingPriority="750" id="100378">
                     <rect key="frame" x="5" y="6" width="92" height="17"/>
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" allowsUndo="NO" alignment="center" title="Depths" allowsEditingTextAttributes="YES" id="100379">
+                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" allowsUndo="NO" alignment="center" title="Depths" allowsEditingTextAttributes="YES" id="100379">
                         <font key="font" metaFont="system"/>
                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
