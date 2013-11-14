@@ -72,32 +72,35 @@
 
 
 //        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            NSLog(@"loadding progress!!! in thread");
+        NSLog(@"loadding progress!!! in thread");
 
-            ProgressController *progressController = [[ProgressController alloc] init];
-            progressController.stacksConverter = stacksConverter;
-            [progressController showWindow:[NSApp mainWindow]];
-            if ([stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController] != nil) {
-                [progressController close];
-                NSLog(@"LOADED progress!!! in thread");
+        ProgressController *progressController = [[ProgressController alloc] init];
+        progressController.stacksConverter = stacksConverter;
+        [progressController showWindow:[NSApp mainWindow]];
+        if ([stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController] != nil) {
+            [progressController close];
+            NSLog(@"LOADED progress!!! in thread");
 //        [NSApp stopModal];
-                NSLog(@"trying to open");
+            NSLog(@"trying to open");
+
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                 StacksDocument *opendDoc = [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
                 opendDoc.path = stacksDocumentPath;
-                for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
-                    NSLog(@"stacks doc: %@", stacksDocument.path);
-                    if (stacksDocument.path == NULL) {
-                        [stacksDocument close];
+            });
+            for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
+                NSLog(@"stacks doc: %@", stacksDocument.path);
+                if (stacksDocument.path == NULL) {
+                    [stacksDocument close];
 //                [[StacksDocumentController sharedDocumentController] perform]
-                    }
                 }
-
             }
-            else {
-                [progressController close];
-                NSLog(@"must have been cancelled") ;
 
-            }
+        }
+        else {
+            [progressController close];
+            NSLog(@"must have been cancelled");
+
+        }
 //        });
 //        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
 
@@ -187,7 +190,7 @@
 }
 
 - (IBAction)cancelAction:(id)sender {
-    NSLog(@"in stacksappcontroller . .. cancelling action") ;
+    NSLog(@"in stacksappcontroller . .. cancelling action");
 //    [progressPanel orderOut: self];
 //    [NSApp endSheet: progressPanel returnCode: 1];
 }
