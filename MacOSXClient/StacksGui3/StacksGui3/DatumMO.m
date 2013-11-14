@@ -20,7 +20,6 @@
 #import "ColorGenerator.h"
 
 
-
 @implementation DatumMO
 
 @dynamic name;
@@ -37,7 +36,7 @@
 @dynamic snps;
 @dynamic stackEntries;
 
-@synthesize colorGenerator ;
+@synthesize colorGenerator;
 
 
 - (NSAttributedString *)renderName {
@@ -48,9 +47,11 @@
 
     NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
     [mutParaStyle setAlignment:NSCenterTextAlignment];
+    NSRange selectedRange = NSMakeRange(0, [[string string] length]);
     [string addAttributes:[NSDictionary dictionaryWithObject:mutParaStyle
-                                                      forKey:NSParagraphStyleAttributeName]
-                    range:NSMakeRange(0, [[string string] length])];
+                                                      forKey:NSParagraphStyleAttributeName ] range:selectedRange];
+//    NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+//    [string addAttributes:fontAttributes range:selectedRange];
 
     return string;
 }
@@ -76,6 +77,8 @@
         [appendString beginEditing];
         NSDictionary *attributes = [self generateColorForOrder:order];
         [appendString setAttributes:attributes range:selectedRange];
+        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+        [appendString addAttributes:fontAttributes range:selectedRange];
         [appendString endEditing];
 
         [string appendAttributedString:appendString];
@@ -118,6 +121,8 @@
         [appendString beginEditing];
         NSDictionary *attributes = [self generateColorForOrder:order];
         [appendString setAttributes:attributes range:selectedRange];
+        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+        [appendString addAttributes:fontAttributes range:selectedRange];
         [appendString endEditing];
 
         [string appendAttributedString:appendString];
@@ -139,26 +144,26 @@
 
 - (NSArray *)getOrderedStackEntries {
     NSArray *sortedArray = [[self.stackEntries allObjects] sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
-        StackEntryMO *first = (StackEntryMO*)a ;
-        StackEntryMO *second = (StackEntryMO*)b ;
-        NSString *firstRelationship = first.relationship ;
-        NSString *secondRelationship = second.relationship ;
+        StackEntryMO *first = (StackEntryMO *) a;
+        StackEntryMO *second = (StackEntryMO *) b;
+        NSString *firstRelationship = first.relationship;
+        NSString *secondRelationship = second.relationship;
 
-        int firstCount = 0 ;
-        int secondCount = 0 ;
+        int firstCount = 0;
+        int secondCount = 0;
         //reference
         //consensus
         //model
-        firstCount += [firstRelationship isEqualToString:@"reference"]?10000:0;
-        secondCount += [secondRelationship isEqualToString:@"reference"]?10000:0;
-        firstCount += [firstRelationship isEqualToString:@"consensus"]?1000:0;
-        secondCount += [secondRelationship isEqualToString:@"consensus"]?1000:0;
-        firstCount += [firstRelationship isEqualToString:@"model"]?100:0;
-        secondCount += [secondRelationship isEqualToString:@"model"]?100:0;
+        firstCount += [firstRelationship isEqualToString:@"reference"] ? 10000 : 0;
+        secondCount += [secondRelationship isEqualToString:@"reference"] ? 10000 : 0;
+        firstCount += [firstRelationship isEqualToString:@"consensus"] ? 1000 : 0;
+        secondCount += [secondRelationship isEqualToString:@"consensus"] ? 1000 : 0;
+        firstCount += [firstRelationship isEqualToString:@"model"] ? 100 : 0;
+        secondCount += [secondRelationship isEqualToString:@"model"] ? 100 : 0;
         firstCount -= [first.entryId intValue];
         secondCount -= [second.entryId intValue];
-        NSComparisonResult result = (firstCount>secondCount)?NSOrderedAscending:NSOrderedDescending;
-        return result ;
+        NSComparisonResult result = (firstCount > secondCount) ? NSOrderedAscending : NSOrderedDescending;
+        return result;
     }];
 
     return sortedArray;
@@ -168,8 +173,8 @@
 
 }
 
-- (NSDictionary*)generateColorForOrder:(NSUInteger) order {
-    if(colorGenerator==nil){
+- (NSDictionary *)generateColorForOrder:(NSUInteger)order {
+    if (colorGenerator == nil) {
         colorGenerator = [[ColorGenerator alloc] init];
     }
 

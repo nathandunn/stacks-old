@@ -17,6 +17,9 @@
     [super setSelected:flag];
     [(DatumView *)[self view] setSelected:flag];
     [(DatumView *)[self view] setNeedsDisplay:YES];
+
+    [[self view] invalidateIntrinsicContentSize];
+    
 }
 
 
