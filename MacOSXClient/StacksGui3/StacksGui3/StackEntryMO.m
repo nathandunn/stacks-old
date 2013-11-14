@@ -58,7 +58,13 @@
 
     [sequenceAttributedString beginEditing];
     NSDictionary *blockAttribute;
+
+    // for both a catalog and local snp
     NSDictionary *snpAttribute;
+
+    // for both a catalog and local snp
+    NSDictionary *catalogSnpAttribute;
+
     NSDictionary *defectAttribute;
     
     
@@ -80,6 +86,11 @@
                 [NSColor controlShadowColor], NSBackgroundColorAttributeName,
                 [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
                 nil];
+        catalogSnpAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
+                [NSColor blackColor], NSForegroundColorAttributeName,
+                [NSColor brownColor], NSBackgroundColorAttributeName,
+                [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
+                nil];
         blockAttribute= [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blackColor], NSForegroundColorAttributeName,
                 [NSColor whiteColor], NSBackgroundColorAttributeName,
@@ -97,6 +108,11 @@
                 [NSColor lightGrayColor], NSBackgroundColorAttributeName,
                 [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
                 nil];
+        catalogSnpAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
+                [NSColor blackColor], NSForegroundColorAttributeName,
+                [NSColor brownColor], NSBackgroundColorAttributeName,
+                [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
+                nil];
         blockAttribute= [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blackColor], NSForegroundColorAttributeName,
                 [NSColor grayColor], NSBackgroundColorAttributeName,
@@ -112,13 +128,23 @@
     [sequenceAttributedString setAttributes:blockAttribute range:NSMakeRange(0, self.sequence.length)];
    
     // get a local snp
-    NSSet* localSnps = self.datum.snps;
+    NSSet*datumSnps = self.datum.snps;
+    NSSet* locusSnps = self.datum.locus.snps;
 
-    NSMutableArray* snps = [[NSMutableArray alloc] init];
-    for (LocusSnpMO *snp in self.datum.locus.snps) {
-        NSRange selectedRange = NSMakeRange([snp.column unsignedIntegerValue], 1);
-        [sequenceAttributedString setAttributes:snpAttribute range:selectedRange];
-        [snps addObject:snp.column];
+    NSMutableArray *snpColumns = [[NSMutableArray alloc] init];
+
+    // process locus snps
+    for (LocusSnpMO *locusSnp in locusSnps) {
+        NSRange selectedRange = NSMakeRange([locusSnp.column unsignedIntegerValue], 1);
+
+        if([datumSnps containsObject:locusSnp]){
+            [sequenceAttributedString setAttributes:snpAttribute range:selectedRange];
+        }
+        else{
+            [sequenceAttributedString setAttributes:catalogSnpAttribute range:selectedRange];
+        }
+
+        [snpColumns addObject:locusSnp.column];
     }
 
     NSString* consensusSequence = self.datum.consensus.sequence;
@@ -127,7 +153,7 @@
         for(int i = 0 ; i < mySequence.length && i < consensusSequence.length ; i++){
             if([consensusSequence characterAtIndex:i]!=[mySequence characterAtIndex:i]){
                 // if is actually a defined SNP, then we ignore
-                if(![snps containsObject:[NSNumber numberWithInt:i]]){
+                if(![locusSnps containsObject:[NSNumber numberWithInt:i]]){
                     NSRange selectedRange = NSMakeRange(i, 1);
                     [sequenceAttributedString setAttributes:defectAttribute range:selectedRange];
                 }

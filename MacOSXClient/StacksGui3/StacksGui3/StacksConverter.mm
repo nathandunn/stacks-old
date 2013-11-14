@@ -116,7 +116,19 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
         return nil;
     }
 
-    return [self loadDocument:stacksDocument progressWindow:progressController];
+    stacksDocument = [self loadDocument:stacksDocument progressWindow:progressController];
+    NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
+    NSError *error ;
+    [moc save:&error];
+    NSLog(@"error %@",error);
+    [[moc parentContext] save:&error];
+    NSLog(@"error 2 %@",error);
+//    [[moc parentContext] performBlock:^(){
+//        [[moc parentContext] save:NULL];
+//    }];
+
+
+    return stacksDocument;
 }
 
 
