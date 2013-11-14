@@ -64,7 +64,7 @@
 //    [NSColorSpace genericRGBColorSpace];
 //    NSLog(@"hex %@", hex);
     NSString *cString = [[hex stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] uppercaseString];
-    NSLog(@"hex->cString %@->%@", hex, cString);
+//    NSLog(@"hex->cString %@->%@", hex, cString);
 
     // String should be 6 or 8 characters
     if ([cString length] < 6) return [NSColor grayColor];
