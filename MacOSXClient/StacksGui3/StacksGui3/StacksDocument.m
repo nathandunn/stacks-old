@@ -101,7 +101,8 @@
     [super windowControllerDidLoadNib:aController];
     // Add any code here that needs to be executed once the windowController has loaded the document's window.
     [self.stacksTableView setIntercellSpacing:NSMakeSize(0, 0)];
-    
+    [self.stacksTableView setEnabled:true];
+
     
     NSInteger lociCount = [locusRepository getAllLoci:self.managedObjectContext].count;
     NSString* newString = [NSString stringWithFormat:@"%ld",lociCount];
