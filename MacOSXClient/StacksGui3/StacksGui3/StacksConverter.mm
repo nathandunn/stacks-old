@@ -190,7 +190,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 /**
 * Exist on error.
 */
-- (void)checkFile:(NSString *)examplePath {
+- (NSString *)checkFile:(NSString *)examplePath {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
 
@@ -198,6 +198,28 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
         NSLog(@"files do not exist %@", examplePath);
         exit(1);
     }
+
+    NSError *error;
+    NSArray *files = [fileManager contentsOfDirectoryAtPath:examplePath error:&error];
+    if(error){
+        NSLog(@"error %@",error);
+        return nil ;
+    }
+    NSPredicate *fltr = [NSPredicate predicateWithFormat:@"self ENDSWITH '.catalog.tags.tsv'"];
+    NSPredicate *batch = [NSPredicate predicateWithFormat:@"self BEGINSWITH 'batch'"];
+    NSArray *onlyCatalog = [[files filteredArrayUsingPredicate:fltr] filteredArrayUsingPredicate:batch];
+
+    NSLog(@"# of files: %ld",onlyCatalog.count);
+    for(NSString *file in onlyCatalog){
+        NSLog(@"file %@",file);
+    }
+
+    NSString* originalFile = [onlyCatalog objectAtIndex:0];
+    NSUInteger firstIndex = [originalFile rangeOfString:@"."].location;
+    NSString* batchName = [originalFile substringToIndex:firstIndex];
+
+    return batchName;
+
 }
 
 - (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *)progressWindow {
@@ -210,12 +232,14 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
         [bar incrementBy:1];
     }
     NSString *path = stacksDocument.path;
-    [self checkFile:path];
+    // returns batch_1, batch_2, etc. whatever exists
+    NSString* batchName = [self checkFile:path];
+    NSLog(@"returned batch name: %@",batchName);
     map<int, CSLocus *> catalog;
-    NSString *catalogTagFile = [path stringByAppendingString:@"batch_1.catalog.tags.tsv"];
+    NSString *catalogTagFile = [path stringByAppendingFormat:@"%@.catalog.tags.tsv",batchName];
     stacksDocument.type = calculateType(catalogTagFile);
     NSLog(@"type is %@",stacksDocument.type);
-    NSString *catalogFile = [path stringByAppendingString:@"batch_1.catalog"];
+    NSString *catalogFile = [path stringByAppendingFormat:@"%@.catalog",batchName];
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
@@ -1107,7 +1131,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file) {
             for(NSString *parentString in parents){
                 [parentIds addObject:[parentString componentsSeparatedByString:@"_"][0]];
             }
-            NSLog(@"parent count for %@ is %ld",locusId,parentIds.count);
+//            NSLog(@"parent count for %@ is %ld",locusId,parentIds.count);
             ((LocusMO *)[dictionary objectForKey:locusId]).parentCount = [NSNumber numberWithUnsignedInt:parentIds.count];
         }
     }
@@ -1119,10 +1143,10 @@ NSString *calculateType(NSString *file) {
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
         // should be column 8
-        NSLog(@"count is %ld",columns.count);
+//        NSLog(@"count is %ld",columns.count);
         if (columns.count > 9) {
             NSArray *parents = [columns[8] componentsSeparatedByString:@","];
-            NSLog(@"parents %@ count %ld",columns[8],parents.count);
+//            NSLog(@"parents %@ count %ld",columns[8],parents.count);
             if(parents.count>2){
                 return @"Population";
             }
