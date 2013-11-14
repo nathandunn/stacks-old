@@ -10,6 +10,7 @@
 #import <CoreData/CoreData.h>
 
 @class DatumMO;
+@class ColorGenerator;
 
 @interface StackEntryMO : NSManagedObject
 
@@ -20,4 +21,8 @@
 @property (nonatomic, retain) NSString * sequenceId;
 @property (nonatomic, retain) DatumMO *datum;
 
+
+@property (nonatomic, retain) ColorGenerator *colorGenerator;
+
+- (ColorGenerator *)getColorGenerator;
 @end

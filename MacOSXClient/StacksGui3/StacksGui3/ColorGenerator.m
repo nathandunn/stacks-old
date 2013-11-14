@@ -52,19 +52,19 @@
     }
 }
 
-- (NSColor *)colorWithHexStringA:(NSString *)hexString {
-    unsigned rgbValue = 0;
-    NSScanner *scanner = [NSScanner scannerWithString:hexString];
-    [scanner setScanLocation:1]; // bypass '#' character
-    [scanner scanHexInt:&rgbValue];
-    return [NSColor colorWithDeviceRed:((rgbValue & 0xFF0000) >> 16)/255.0 green:((rgbValue & 0xFF00) >> 8)/255.0 blue:(rgbValue & 0xFF)/255.0 alpha:1.0];
-}
+//- (NSColor *)colorWithHexStringA:(NSString *)hexString {
+//    unsigned rgbValue = 0;
+//    NSScanner *scanner = [NSScanner scannerWithString:hexString];
+//    [scanner setScanLocation:1]; // bypass '#' character
+//    [scanner scanHexInt:&rgbValue];
+//    return [NSColor colorWithDeviceRed:((rgbValue & 0xFF0000) >> 16)/255.0 green:((rgbValue & 0xFF00) >> 8)/255.0 blue:(rgbValue & 0xFF)/255.0 alpha:1.0];
+//}
 
 - (NSColor *)colorWithHexString:(NSString *)hex {
 //    [NSColorSpace genericRGBColorSpace];
 //    NSLog(@"hex %@", hex);
     NSString *cString = [[hex stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] uppercaseString];
-//    NSLog(@"hex->cString %@->%@", hex, cString);
+    NSLog(@"hex->cString %@->%@", hex, cString);
 
     // String should be 6 or 8 characters
     if ([cString length] < 6) return [NSColor grayColor];
@@ -129,6 +129,11 @@
 //    return [NSColor colorWithCalibratedRed:(CGFloat) r / 255.0f green:(CGFloat) g / 255.0f blue:(CGFloat) b / 255.0f alpha:(CGFloat) 1.0f];
 //    return [NSColor colorWithDeviceRed:(CGFloat) r / 255.0f green:(CGFloat) g / 255.0f blue:(CGFloat) b / 255.0f alpha:(CGFloat) 1.0f];
 //    return [NSColor colorWithCalibratedRed:r/255.0f green:g/255.0f blue:b/255.0f alpha:1.0f];
+
+
+//    NSLog(@"%f,%f,%f", (float) r, (float) g, (float) b);
+//    NSLog(@"%f,%f,%f,%f",(CGFloat) r / 255.0f ,(CGFloat) g / 255.0f ,(CGFloat) b / 255.0f ,(CGFloat) 1.0f);
+
     return [NSColor colorWithSRGBRed:((float) r / 255.0f)
                                green:((float) g / 255.0f)
                                 blue:((float) b / 255.0f)
