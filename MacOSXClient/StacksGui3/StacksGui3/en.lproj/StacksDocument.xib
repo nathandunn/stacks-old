@@ -182,7 +182,7 @@
                                                 <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" white="0.33333298560000002" alpha="1" colorSpace="calibratedWhite"/>
                                             </tableHeaderCell>
-                                            <textFieldCell key="dataCell" lineBreakMode="truncatingTail" truncatesLastVisibleLine="YES" selectable="YES" sendsActionOnEndEditing="YES" alignment="left" title="Text Cell" allowsEditingTextAttributes="YES" usesSingleLineMode="YES" id="100177">
+                                            <textFieldCell key="dataCell" lineBreakMode="truncatingTail" truncatesLastVisibleLine="YES" selectable="YES" enabled="NO" sendsActionOnEndEditing="YES" alignment="left" title="Text Cell" allowsEditingTextAttributes="YES" usesSingleLineMode="YES" id="100177">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -201,7 +201,7 @@
                                                 <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" white="0.33333298560000002" alpha="1" colorSpace="calibratedWhite"/>
                                             </tableHeaderCell>
-                                            <textFieldCell key="dataCell" lineBreakMode="truncatingTail" selectable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="left" title="Text Cell" allowsEditingTextAttributes="YES" usesSingleLineMode="YES" id="100176">
+                                            <textFieldCell key="dataCell" lineBreakMode="truncatingTail" selectable="YES" enabled="NO" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="left" title="Text Cell" allowsEditingTextAttributes="YES" usesSingleLineMode="YES" id="100176">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -220,7 +220,7 @@
                                                 <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="headerColor" catalog="System" colorSpace="catalog"/>
                                             </tableHeaderCell>
-                                            <textFieldCell key="dataCell" lineBreakMode="truncatingTail" selectable="YES" allowsUndo="NO" alignment="right" title="Text Cell" allowsEditingTextAttributes="YES" usesSingleLineMode="YES" id="100179">
+                                            <textFieldCell key="dataCell" lineBreakMode="truncatingTail" selectable="YES" enabled="NO" allowsUndo="NO" alignment="right" title="Text Cell" allowsEditingTextAttributes="YES" usesSingleLineMode="YES" id="100179">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -239,7 +239,7 @@
                                                 <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="headerColor" catalog="System" colorSpace="catalog"/>
                                             </tableHeaderCell>
-                                            <textFieldCell key="dataCell" lineBreakMode="truncatingTail" truncatesLastVisibleLine="YES" selectable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="left" title="Sequence" drawsBackground="YES" allowsEditingTextAttributes="YES" usesSingleLineMode="YES" id="100181">
+                                            <textFieldCell key="dataCell" lineBreakMode="truncatingTail" truncatesLastVisibleLine="YES" selectable="YES" enabled="NO" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="left" title="Sequence" drawsBackground="YES" allowsEditingTextAttributes="YES" usesSingleLineMode="YES" id="100181">
                                                 <font key="font" metaFont="smallSystem"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -514,16 +514,19 @@
             </connections>
         </collectionViewItem>
         <view id="100140" customClass="DatumView">
-            <rect key="frame" x="0.0" y="0.0" width="100" height="63"/>
+            <rect key="frame" x="0.0" y="0.0" width="100" height="62"/>
             <autoresizingMask key="autoresizingMask"/>
             <subviews>
                 <textField verticalHuggingPriority="750" id="100238">
                     <rect key="frame" x="4" y="45" width="92" height="17"/>
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="center" title="Name" id="100239">
-                        <font key="font" metaFont="system"/>
+                    <textFieldCell key="cell" selectable="YES" continuous="YES" refusesFirstResponder="YES" allowsUndo="NO" alignment="center" title="Name" allowsEditingTextAttributes="YES" id="100239">
+                        <font key="font" size="12" name="LucidaGrande"/>
                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                        <allowedInputSourceLocales>
+                            <string>NSAllRomanInputSourcesLocaleIdentifier</string>
+                        </allowedInputSourceLocales>
                     </textFieldCell>
                     <connections>
                         <binding destination="100139" name="value" keyPath="representedObject.renderName" id="100410">
@@ -536,8 +539,8 @@
                 <textField verticalHuggingPriority="750" id="100375">
                     <rect key="frame" x="5" y="25" width="92" height="17"/>
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="center" title="Haplotypes" allowsEditingTextAttributes="YES" id="100376">
-                        <font key="font" metaFont="system"/>
+                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" allowsUndo="NO" alignment="center" title="Haplotypes" allowsEditingTextAttributes="YES" id="100376">
+                        <font key="font" metaFont="cellTitle"/>
                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                     </textFieldCell>
@@ -548,7 +551,7 @@
                 <textField verticalHuggingPriority="750" id="100378">
                     <rect key="frame" x="5" y="6" width="92" height="17"/>
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="center" title="Depths" allowsEditingTextAttributes="YES" id="100379">
+                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" allowsUndo="NO" alignment="center" title="Depths" allowsEditingTextAttributes="YES" id="100379">
                         <font key="font" metaFont="system"/>
                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
