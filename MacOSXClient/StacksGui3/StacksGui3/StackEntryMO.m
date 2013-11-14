@@ -63,7 +63,8 @@
     NSDictionary *blockAttribute;
 
     // for both a catalog and local snp
-    NSDictionary *snpAttribute;
+    NSDictionary *snpAllele1Attribute;
+    NSDictionary *snpAllele2Attribute;
 
     // for both a catalog and local snp
     NSDictionary *catalogSnpOnlyAttribute;
@@ -85,29 +86,31 @@
     // DEFINE BLOCK
     NSInteger blockValue = [self.block integerValue];
 
-    NSLog(@"START defining attributes!! %@", self.getColorGenerator);
-
-
     defectAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
             [NSColor blackColor], NSForegroundColorAttributeName,
             [self.getColorGenerator colorWithHexString:@"fcdba7"], NSBackgroundColorAttributeName,
             [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
             nil];
 
+    snpAllele1Attribute = [NSDictionary dictionaryWithObjectsAndKeys:
+            [self.getColorGenerator colorWithHexString:@"a93535"], NSForegroundColorAttributeName,
+            [self.getColorGenerator colorWithHexString:@"d8f3ff"], NSBackgroundColorAttributeName,
+            [NSFont fontWithName:@"Courier-Bold" size:14.0], NSFontAttributeName,
+            nil];
+
+    snpAllele2Attribute = [NSDictionary dictionaryWithObjectsAndKeys:
+            [self.getColorGenerator colorWithHexString:@"29356c"], NSForegroundColorAttributeName,
+            [self.getColorGenerator colorWithHexString:@"d8f3ff"], NSBackgroundColorAttributeName,
+            [NSFont fontWithName:@"Courier-Bold" size:14.0], NSFontAttributeName,
+            nil];
+
     if (blockValue % 2 == 0) {
-//        NSLog(@"block 1->%@",self.block);
         catalogSnpOnlyAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blackColor], NSForegroundColorAttributeName,
                 [self.getColorGenerator colorWithHexString:@"d8f3ff"], NSBackgroundColorAttributeName,
                 [NSFont fontWithName:@"Courier-Bold" size:14.0], NSFontAttributeName,
                 nil];
 
-        snpAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
-                [self.getColorGenerator colorWithHexString:@"a93535"], NSForegroundColorAttributeName,
-//                [self.getColorGenerator colorWithHexString:@"ccddd4"], NSBackgroundColorAttributeName,
-                [self.getColorGenerator colorWithHexString:@"d8f3ff"], NSBackgroundColorAttributeName,
-                [NSFont fontWithName:@"Courier-Bold" size:14.0], NSFontAttributeName,
-                nil];
         blockAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blackColor], NSForegroundColorAttributeName,
                 [NSColor whiteColor], NSBackgroundColorAttributeName,
@@ -115,7 +118,6 @@
                 nil];
     }
     else {
-//        NSLog(@"block 0->%@",self.block);
 
         catalogSnpOnlyAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blackColor], NSForegroundColorAttributeName,
@@ -123,20 +125,12 @@
                 [NSFont fontWithName:@"Courier-Bold" size:14.0], NSFontAttributeName,
                 nil];
 
-        snpAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
-                [self.getColorGenerator colorWithHexString:@"29356c"], NSForegroundColorAttributeName,
-//                [self.getColorGenerator colorWithHexString:@"ccddd4"], NSBackgroundColorAttributeName,
-                [self.getColorGenerator colorWithHexString:@"d8f3ff"], NSBackgroundColorAttributeName,
-                [NSFont fontWithName:@"Courier-Bold" size:14.0], NSFontAttributeName,
-                nil];
         blockAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
                 [NSColor blackColor], NSForegroundColorAttributeName,
                 [self.getColorGenerator colorWithHexString:@"dddddd"], NSBackgroundColorAttributeName,
                 [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
                 nil];
     }
-
-    NSLog(@"END defining attributes!!");
 
     [sequenceAttributedString setAttributes:blockAttribute range:NSMakeRange(0, self.sequence.length)];
 
@@ -157,12 +151,20 @@
         [datumSnpColumns addObject:datumSnp.column];
     }
 
+    NSString *consensusSequence = self.datum.consensus.sequence;
+
     // color Snps
     for (NSNumber *column in locusSnpColumns) {
         NSRange selectedRange = NSMakeRange([column unsignedIntegerValue], 1);
 
         if ([datumSnpColumns containsObject:column]) {
-            [sequenceAttributedString setAttributes:snpAttribute range:selectedRange];
+            // if at column . . matches
+            if([consensusSequence characterAtIndex:column.unsignedIntegerValue]== [sequenceAttributedString.string characterAtIndex:column.unsignedIntegerValue]){
+                [sequenceAttributedString setAttributes:snpAllele1Attribute range:selectedRange];
+            }
+            else{
+                [sequenceAttributedString setAttributes:snpAllele2Attribute range:selectedRange];
+            }
         }
         else {
             [sequenceAttributedString setAttributes:catalogSnpOnlyAttribute range:selectedRange];
@@ -171,7 +173,6 @@
 
 
     // color any part of the consensus sequence that does not match.
-    NSString *consensusSequence = self.datum.consensus.sequence;
     NSString *mySequence = [sequenceAttributedString string];
     if (![consensusSequence isEqualToString:mySequence]) {
         for (int i = 0; i < mySequence.length && i < consensusSequence.length; i++) {
