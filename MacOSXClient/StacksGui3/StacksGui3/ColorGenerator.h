@@ -11,4 +11,6 @@
 @interface ColorGenerator : NSObject
 
 - (NSColor *)generateColorForOrder:(NSUInteger)order;
+- (NSColor *)colorWithHexString:(NSString *)hex;
+
 @end
