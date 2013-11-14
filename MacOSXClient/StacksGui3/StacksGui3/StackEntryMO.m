@@ -40,13 +40,13 @@
 
     if ([self.relationship isEqualToString:@"primary"]) {
         attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                [NSColor greenColor], NSForegroundColorAttributeName,
+                [[self getColorGenerator] generateColorForOrder:0], NSForegroundColorAttributeName,
                 nil];
     }
             // secondary
     else {
         attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                [NSColor redColor], NSForegroundColorAttributeName,
+                      [[self getColorGenerator] generateColorForOrder:1], NSForegroundColorAttributeName,
                 nil];
     }
     [string setAttributes:attributes range:NSMakeRange(0, self.relationship.length)];
