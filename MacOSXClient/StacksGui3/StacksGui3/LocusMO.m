@@ -125,15 +125,29 @@
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:self.consensus];
     [string beginEditing];
 //        NSNumber *snpIndex;
+
+    NSRange range = NSMakeRange(0, string.length);
+    float fontSize = 12 ;
+    NSDictionary *globalAttribute= [NSDictionary dictionaryWithObjectsAndKeys:
+            [NSColor blackColor], NSForegroundColorAttributeName,
+//            [NSColor whiteColor], NSBackgroundColorAttributeName,
+                    [NSFont fontWithName:@"Courier" size:fontSize], NSFontAttributeName,
+            nil];
+    [string setAttributes:globalAttribute range:range];
+
+
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
             [NSColor blueColor], NSForegroundColorAttributeName,
             [NSColor grayColor], NSBackgroundColorAttributeName,
-            [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
+                    [NSFont fontWithName:@"Courier" size:fontSize], NSFontAttributeName,
             nil];
     for (LocusSnpMO *snp in self.snps) {
         NSRange selectedRange = NSMakeRange([snp.column unsignedIntegerValue], 1);
-        [string setAttributes:attributes range:selectedRange];
+        [string addAttributes:attributes range:selectedRange];
     }
+
+
+
     [string endEditing];
     return string ;
 }
