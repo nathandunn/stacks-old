@@ -258,8 +258,7 @@
 }
 
 - (NSUInteger) getMaxLocation{
-    NSUInteger maxLocation= [locusRepository getMaxLocation:self.managedObjectContext];
-    return maxLocation;
+     return [locusRepository getMaxLocation:self.managedObjectContext];
 }
 
 - (BOOL) noLociLocations{

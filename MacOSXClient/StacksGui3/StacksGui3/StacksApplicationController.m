@@ -70,26 +70,26 @@
         BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:stacksDocumentPath error:NULL];
         NSLog(@"file removed %i", fileRemoved);
 
-
-//        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSLog(@"loadding progress!!! in thread");
 
         ProgressController *progressController = [[ProgressController alloc] init];
         progressController.stacksConverter = stacksConverter;
         [progressController showWindow:[NSApp mainWindow]];
-        if ([stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController] != nil) {
+        StacksDocument* newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
+        if (newDocument != nil) {
             [progressController close];
             NSLog(@"LOADED progress!!! in thread");
 //        [NSApp stopModal];
             NSLog(@"trying to open");
 
+            NSError* error3 = nil ;
+            newDocument.path = stacksDocumentPath;
+            [newDocument makeWindowControllers];
+            [newDocument showWindows];
 
-            StacksDocument *opendDoc = [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
-            opendDoc.path = stacksDocumentPath;
-//            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-//                StacksDocument *opendDoc = [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
-//                opendDoc.path = stacksDocumentPath;
-//            });
+            if(error3!=nil){
+                NSLog(@"error3 %@",error3);
+            }
             for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
                 NSLog(@"stacks doc: %@", stacksDocument.path);
                 if (stacksDocument.path == NULL) {
