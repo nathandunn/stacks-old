@@ -123,6 +123,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     NSLog(@"error %@",error);
     [[moc parentContext] save:&error];
     NSLog(@"error 2 %@",error);
+    [[moc parentContext] save:&error];
 //    [[moc parentContext] performBlock:^(){
 //        [[moc parentContext] save:NULL];
 //    }];
@@ -1069,7 +1070,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
                 if (newPopulationMO != nil) {
                     [populations addObject:newPopulationMO];
-                }
+//                }
             }
             else {
                 NSLog(@"something wrong with the column count %@", line);
@@ -1095,6 +1096,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 //    NSManagedObjectContext *context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
 
     NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
+    [moc setUndoManager:nil];
     stacksDocument.managedObjectContext = moc;
     if (stacksDocumentCreateError) {
         NSLog(@"error creating stacks document %@", stacksDocumentCreateError);

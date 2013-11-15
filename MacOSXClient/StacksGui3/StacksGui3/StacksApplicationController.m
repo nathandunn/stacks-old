@@ -83,10 +83,13 @@
 //        [NSApp stopModal];
             NSLog(@"trying to open");
 
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                StacksDocument *opendDoc = [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
-                opendDoc.path = stacksDocumentPath;
-            });
+
+            StacksDocument *opendDoc = [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
+            opendDoc.path = stacksDocumentPath;
+//            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+//                StacksDocument *opendDoc = [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES error:NULL];
+//                opendDoc.path = stacksDocumentPath;
+//            });
             for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
                 NSLog(@"stacks doc: %@", stacksDocument.path);
                 if (stacksDocument.path == NULL) {
