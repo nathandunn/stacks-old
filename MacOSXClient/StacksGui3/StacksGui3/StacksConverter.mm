@@ -579,7 +579,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     NSError *error;
     progressWindow.actionMessage.stringValue = @"Final save";
     BOOL success = [stacksDocument.managedObjectContext save:&error];
-    NSLog(@"saved %d", success);
+//    NSLog(@"saved %d", success);
     [bar incrementBy:5];
 
     return stacksDocument;
@@ -709,7 +709,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     // save old
     NSError *saveError;
     BOOL success = [moc save:&saveError];
-    NSLog(@"saved %d", success);
+//    NSLog(@"saved %d", success);
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
     }
@@ -729,9 +729,9 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
 //    NSMutableDictionary *lookupDictionary = [self loadMatchesDictionary:matchesFileName];
     NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
-    for(id key in [sampleLookupDictionary allKeys]){
-        NSLog(@"keys: %@",key);
-    }
+//    for(id key in [sampleLookupDictionary allKeys]){
+//        NSLog(@"keys: %@",key);
+//    }
     NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
 
     NSManagedObjectContext *moc = document.managedObjectContext;
@@ -810,7 +810,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     // save old
     NSError *saveError;
     BOOL success = [moc save:&saveError];
-    NSLog(@"saved %d", success);
+//    NSLog(@"saved %d", success);
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
     }
@@ -966,7 +966,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     // save old
     NSError *saveError;
     BOOL success = [moc save:&saveError];
-    NSLog(@"saved %d", success);
+//    NSLog(@"saved %d", success);
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
     }
