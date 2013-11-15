@@ -48,7 +48,24 @@
 //}
 
 - (IBAction)importDocument:(id)sender {
+
+    NSDate* now = [NSDate date];
+    // get year and month
+    NSInteger  year = [[now dateWithCalendarFormat:nil timeZone:nil] yearOfCommonEra];
+    NSInteger  month = [[now dateWithCalendarFormat:nil timeZone:nil] monthOfYear];
+    NSLog(@"year Y%ld M%ld",year,month);
     NSLog(@"Importing doc");
+    if(year>2013 && month > 4){
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert setMessageText:@"Trial License Expired"];
+        [alert addButtonWithTitle:@"OK"];
+
+        [alert runModal];
+        return ;
+    }
+
+
+
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     [panel setAllowsMultipleSelection:NO];
     [panel setCanChooseDirectories:YES];
@@ -73,6 +90,7 @@
         NSLog(@"loadding progress!!! in thread");
 
         ProgressController *progressController = [[ProgressController alloc] init];
+
         progressController.stacksConverter = stacksConverter;
         [progressController showWindow:[NSApp mainWindow]];
         StacksDocument* newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
@@ -83,9 +101,12 @@
             NSLog(@"trying to open");
 
             NSError* error3 = nil ;
+//            [[StacksDocumentController sharedDocumentController]
             newDocument.path = stacksDocumentPath;
+            [self addDocument:newDocument];
             [newDocument makeWindowControllers];
             [newDocument showWindows];
+//            [[StacksDocumentController sharedDocumentController] addDocument:newDocument];
 
             if(error3!=nil){
                 NSLog(@"error3 %@",error3);
