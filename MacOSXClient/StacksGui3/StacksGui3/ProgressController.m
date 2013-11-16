@@ -22,6 +22,9 @@
 @implementation ProgressController
 
 @synthesize  stacksConverter;
+@synthesize  actionMessage;
+@synthesize  actionTitle;
+@synthesize  cancelButton;
 
 - (id)init {
     NSLog(@"initializaing") ;
@@ -57,7 +60,11 @@
 - (IBAction)cancelCurrentAction:(id)sender {
     NSLog(@"cancelling current action from %@",sender);
 //    stacksConverter.stopProcess = true ;
-    [self close];
+    stacksConverter.stopProcess = YES ;
+    actionTitle.stringValue = @"Cancelling";
+    actionMessage.stringValue = @"Cancelling .. please wait.";
+    [cancelButton setEnabled:NO];
+//    [self close];
 }
 
 
