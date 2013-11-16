@@ -101,10 +101,9 @@
 //        [NSApp stopModal];
             NSLog(@"trying to open");
 
-            NSError *error3 = nil ;
             [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES completionHandler:^(NSDocument *doc, BOOL documentWasAlreadyOpened, NSError *error) {
                 if (error != nil) {
-                    NSLog(@"error3 %@", error3);
+                    NSLog(@"error3 %@", error);
                 }
             }];
 
