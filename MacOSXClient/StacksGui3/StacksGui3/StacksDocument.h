@@ -32,10 +32,9 @@
 @property(nonatomic, strong) DatumMO *selectedDatum;
 
 // repositories
-@property(nonatomic, strong) DatumRepository *datumRepository ;
-@property(nonatomic, strong) LocusRepository *locusRepository ;
-@property(nonatomic, strong) PopulationRepository *populationRepository ;
-
+@property(nonatomic, strong) DatumRepository *datumRepository;
+@property(nonatomic, strong) LocusRepository *locusRepository;
+@property(nonatomic, strong) PopulationRepository *populationRepository;
 
 
 @property(nonatomic, copy) NSString *previousStacksName;
@@ -49,14 +48,11 @@
 @property(nonatomic, strong) NSString *type;
 
 @property(nonatomic, strong) NSSet *lociLocations;
-@property NSUInteger  maxLocation;
-
-- (NSManagedObjectContext *)getContextForPath:(NSString *)path;
-- (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name;
+@property NSUInteger maxLocation;
 
 - (BOOL)noLociLocations;
 
-- (IBAction) updateSelections: (id) sender ;
+- (IBAction)updateSelections:(id)sender;
 
 
 @end

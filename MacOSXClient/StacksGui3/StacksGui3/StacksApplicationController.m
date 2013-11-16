@@ -49,21 +49,20 @@
 
 - (IBAction)importDocument:(id)sender {
 
-    NSDate* now = [NSDate date];
+    NSDate *now = [NSDate date];
     // get year and month
-    NSInteger  year = [[now dateWithCalendarFormat:nil timeZone:nil] yearOfCommonEra];
-    NSInteger  month = [[now dateWithCalendarFormat:nil timeZone:nil] monthOfYear];
-    NSLog(@"year Y%ld M%ld",year,month);
+    NSInteger year = [[now dateWithCalendarFormat:nil timeZone:nil] yearOfCommonEra];
+    NSInteger month = [[now dateWithCalendarFormat:nil timeZone:nil] monthOfYear];
+    NSLog(@"year Y%ld M%ld", year, month);
     NSLog(@"Importing doc");
-    if(year>2013 && month > 4){
+    if (year > 2013 && month > 4) {
         NSAlert *alert = [[NSAlert alloc] init];
         [alert setMessageText:@"Trial License Expired"];
         [alert addButtonWithTitle:@"OK"];
 
         [alert runModal];
-        return ;
+        return;
     }
-
 
 
     NSOpenPanel *panel = [NSOpenPanel openPanel];
@@ -93,24 +92,23 @@
 
         progressController.stacksConverter = stacksConverter;
         [progressController showWindow:[NSApp mainWindow]];
-        StacksDocument* newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
+        StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
+        newDocument.path = stacksDocumentPath;
+        [newDocument.managedObjectContext save:nil];
         if (newDocument != nil) {
             [progressController close];
             NSLog(@"LOADED progress!!! in thread");
 //        [NSApp stopModal];
             NSLog(@"trying to open");
 
-            NSError* error3 = nil ;
-//            [[StacksDocumentController sharedDocumentController]
-            newDocument.path = stacksDocumentPath;
-            [self addDocument:newDocument];
-            [newDocument makeWindowControllers];
-            [newDocument showWindows];
-//            [[StacksDocumentController sharedDocumentController] addDocument:newDocument];
+            NSError *error3 = nil ;
+            [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES completionHandler:^(NSDocument *doc, BOOL documentWasAlreadyOpened, NSError *error) {
+                if (error != nil) {
+                    NSLog(@"error3 %@", error3);
+                }
+            }];
 
-            if(error3!=nil){
-                NSLog(@"error3 %@",error3);
-            }
+
             for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
                 NSLog(@"stacks doc: %@", stacksDocument.path);
                 if (stacksDocument.path == NULL) {
