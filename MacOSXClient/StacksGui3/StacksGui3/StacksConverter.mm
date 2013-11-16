@@ -82,6 +82,9 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 @synthesize stopProcess;
 
 
+@synthesize persistentStoreCoordinator;
+
+
 - (id)init {
     self = [super init];
     if (self) {
@@ -100,6 +103,9 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
         lociDictionary = [[NSMutableDictionary alloc] init];
         sampleLookupDictionary = [[NSMutableDictionary alloc] init];
         stopProcess = false;
+
+
+        persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
     }
     return self;
 }
@@ -131,6 +137,48 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     return stacksDocument;
 }
+
+//- (NSManagedObjectContext *)getContextForPath:(NSString *)path andDocument:(StacksDocument *)document{
+//    if(document.name==NULL){
+//        return [self getContextForPath:path andName:@"StacksDocument" andDocument:document];
+//    }
+//    else{
+//
+//        return [self getContextForPath:path andName:document.name  andDocument:document];
+//    }
+//}
+
+
+- (NSManagedObjectContext *)getContextForPath:(NSString *)path andName:(NSString *)name andDocument:(StacksDocument *) document {
+    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption,
+                                                                       [NSNumber numberWithBool:YES],
+                                                                       NSInferMappingModelAutomaticallyOption, nil];
+
+
+    NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
+    NSLog(@"saving to %@ from %@", path, storeUrl);
+    NSPersistentStoreCoordinator *persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
+    NSError *error = nil;
+
+    if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
+        NSLog(@"error loading persistent store..");
+        [[NSFileManager defaultManager] removeItemAtPath:storeUrl.path error:nil];
+        if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
+            NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
+            //abort();
+        }
+    }
+
+
+    NSManagedObjectContext *context = [[NSManagedObjectContext alloc] init];
+    [context setPersistentStoreCoordinator:persistentStoreCoordinator];
+    document.managedObjectContext = context;
+    document.path = path;
+
+
+    return context;
+}
+
 
 
 
@@ -1095,7 +1143,8 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     stacksDocument.name = path.lastPathComponent;
 //    NSManagedObjectContext *context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
 
-    NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
+//    NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
+    NSManagedObjectContext *moc = [self getContextForPath:path andName:path.lastPathComponent andDocument:stacksDocument];
     [moc setUndoManager:nil];
     stacksDocument.managedObjectContext = moc;
     if (stacksDocumentCreateError) {

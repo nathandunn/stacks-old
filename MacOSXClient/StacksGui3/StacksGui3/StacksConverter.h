@@ -41,6 +41,8 @@
 
 @property(nonatomic) bool stopProcess;
 
+@property(atomic, strong) NSPersistentStoreCoordinator *persistentStoreCoordinator ;
+
 - (id)init ;
 
 - (NSString *) generateFilePathForUrl:(NSURL *) url;
@@ -49,6 +51,10 @@
 
 - (StacksDocument *)loadDocument:(StacksDocument *)document progressWindow:(ProgressController *) bar;
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path;
+
+- (NSManagedObjectContext *)getContextForPath:(NSString *)path andDocument:(StacksDocument *) document;
+- (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name  andDocument:(StacksDocument *) document;
+
 
 //- (StacksDocument *)getStacksDocumentForPath:(NSString *)string;
 //- (void)loadLociAndGenotypes:(NSString *)appendingString progressBar:(NSProgressIndicator *)bar;

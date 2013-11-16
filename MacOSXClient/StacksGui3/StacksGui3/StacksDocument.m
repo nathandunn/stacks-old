@@ -191,45 +191,6 @@
 }
 
 
-- (NSManagedObjectContext *)getContextForPath:(NSString *)path {
-    if(self.name==NULL){
-        return [self getContextForPath:path andName:@"StacksDocument"];
-    }
-    else{
-
-        return [self getContextForPath:path andName:self.name];
-    }
-}
-
-- (NSManagedObjectContext *)getContextForPath:(NSString *)path andName:(NSString *)name {
-    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption,
-                                                                       [NSNumber numberWithBool:YES],
-                                                                       NSInferMappingModelAutomaticallyOption, nil];
-
-
-    NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
-    NSLog(@"saving to %@ from %@", path, storeUrl);
-    NSPersistentStoreCoordinator *persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
-    NSError *error = nil;
-
-    if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
-        NSLog(@"error loading persistent store..");
-        [[NSFileManager defaultManager] removeItemAtPath:storeUrl.path error:nil];
-        if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
-            NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
-            //abort();
-        }
-    }
-
-
-    NSManagedObjectContext *context = [[NSManagedObjectContext alloc] init];
-    [context setPersistentStoreCoordinator:persistentStoreCoordinator];
-    self.managedObjectContext = context;
-    self.path = path;
-
-
-    return context;
-}
 
 - (NSArray*) generateLociLocations{
     NSArray* locusArray = [locusRepository getLociLocations:self.managedObjectContext];
