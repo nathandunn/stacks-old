@@ -1,3 +1,8 @@
+Stacks 1.091 - Nov 23, 2013
+--------------------------
+	Bugfix: allele percentages from ustacks were off since ustacks was changed to load/unload
+	read IDs from disk (Stacks 0.99995).
+
 Stacks 1.09 - Oct 30, 2013
 --------------------------
 	Feature: added export support for F2 and backcross map types for Onemap to genotypes.
