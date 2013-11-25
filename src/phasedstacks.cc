@@ -143,7 +143,7 @@ int main (int argc, char* argv[]) {
     }
 
     //
-    // Write the bucketed distances.
+    // Write the FGT bucketed distances.
     //
     log_fh << "# Distribution of FGT haplotype block lengths.\n";
     map<int, int>::iterator buck_it;
@@ -151,11 +151,27 @@ int main (int argc, char* argv[]) {
 	log_fh << buck_it->first << "\t" << buck_it->second << "\n";
 
     //
-    // Write the bucketed SNP counts.
+    // Write the FGT bucketed SNP counts.
     //
     log_fh << "\n\n"
 	   << "# Distribution of FGT SNP counts per haplotype block.\n";
     for (buck_it = fgt_snp_cnts.begin(); buck_it != fgt_snp_cnts.end(); buck_it++)
+	log_fh << buck_it->first << "\t" << buck_it->second << "\n";
+
+    //
+    // Write the D' haplotype block bucketed distances.
+    //
+    log_fh << "\n\n" 
+	   << "# Distribution of D' haplotype block lengths.\n";
+    for (buck_it = dp_block_lens.begin(); buck_it != dp_block_lens.end(); buck_it++)
+	log_fh << buck_it->first << "\t" << buck_it->second << "\n";
+
+    //
+    // Write the D' bucketed SNP counts.
+    //
+    log_fh << "\n\n"
+	   << "# Distribution of D' SNP counts per haplotype block.\n";
+    for (buck_it = dp_snp_cnts.begin(); buck_it != dp_snp_cnts.end(); buck_it++)
 	log_fh << buck_it->first << "\t" << buck_it->second << "\n";
 
     log_fh.close();
@@ -422,6 +438,29 @@ dprime_blocks(string path, PhasedSummary *psum, map<int, int> &len_buckets, map<
 	id++;
 	cur = cur->next;
     } while (cur != NULL);
+
+    //
+    // Write the bucketed distances.
+    //
+    fh << "\n\n"
+       << "# Distribution of D' haplotype block lengths.\n";
+    map<int, int>::iterator it;
+    for (it = buckets.begin(); it != buckets.end(); it++) {
+	fh << it->first << "\t" << it->second << "\n";
+
+	len_buckets[it->first] += it->second;
+    }
+
+    //
+    // Write the bucketed SNP counts.
+    //
+    fh << "\n\n"
+       << "# Distribution of SNP counts per D' haplotype block.\n";
+    for (it = snps.begin(); it != snps.end(); it++) {
+	fh << it->first << "\t" << it->second << "\n";
+
+	snp_buckets[it->first] += it->second;
+    }
 
     fh.close();
 
