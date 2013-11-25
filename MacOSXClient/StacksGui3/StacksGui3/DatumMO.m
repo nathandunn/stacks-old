@@ -102,11 +102,6 @@
 
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
 
-//    for(NSNumber *depth in self.depths){
-//        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@",depth]];
-//        [string appendAttributedString:appendString];
-//    }
-//    for (NSUInteger i = 0; i < self.depths.count; i++) {
     int i = 0;
     NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
     for (DepthMO *depth in  [self.depths sortedArrayUsingDescriptors:sortDescriptors]) {
@@ -179,37 +174,10 @@
     }
 
     NSColor *color = [colorGenerator generateColorForOrder:order];
-//    NSLog(@"color %f,%f,%f",color.redComponent,color.greenComponent,color.yellowComponent);
-//    NSColor *color = []
-//    NSColor* color = [NSColor colorWithSRGBRed:0.8 green:0.1 blue:0.1 alpha:1.0];
-//    NSColor* color = [NSColor colorWithSRGBRed:0.1 green:0.2 blue:0.3 alpha:1.0];
-//    NSColor* color = [NSColor ];
     return [NSDictionary dictionaryWithObjectsAndKeys:
             color, NSForegroundColorAttributeName,
             nil];
 
-//    switch(order%3){
-//        case 0:
-//            return [NSDictionary dictionaryWithObjectsAndKeys:
-//                    [NSColor greenColor], NSForegroundColorAttributeName,
-//                    nil];
-//        case 1:
-//            return [NSDictionary dictionaryWithObjectsAndKeys:
-//                    [NSColor redColor], NSForegroundColorAttributeName,
-//                    nil];
-//        case 2:
-//            return [NSDictionary dictionaryWithObjectsAndKeys:
-//                    [NSColor orangeColor], NSForegroundColorAttributeName,
-//                    nil];
-//        case 3:
-//            return [NSDictionary dictionaryWithObjectsAndKeys:
-//                    [NSColor yellowColor], NSForegroundColorAttributeName,
-//                    nil];
-//        default:
-//            return [NSDictionary dictionaryWithObjectsAndKeys:
-//                    [NSColor blueColor], NSForegroundColorAttributeName,
-//                    nil];
-//    }
 }
 
 @end

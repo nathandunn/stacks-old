@@ -10,6 +10,7 @@
 #import <CoreData/CoreData.h>
 
 @class DatumMO, LocusAlleleMO, LocusSnpMO, DepthMO;
+@class ColorGenerator;
 
 @interface LocusMO : NSManagedObject
 
@@ -30,6 +31,7 @@
 
 // not a managed part, populated by datum rendering . . .
 @property (atomic, retain) NSDictionary *haplotypeOrder;
+@property (atomic, retain) ColorGenerator *colorGenerator;
 
 
 - (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype;
