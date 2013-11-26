@@ -87,18 +87,18 @@
 }
 
 - (IBAction)writeMinSnpValue:(id)sender {
-    NSTextField *value = sender;
+    NSPopUpButton *value = sender;
     if (value.stringValue.length > 0) {
-        minSnpValue = value.intValue;
+        minSnpValue = value.titleOfSelectedItem.integerValue;
         NSLog(@"setting MIN value %ld", minSnpValue);
         [self rearrangeObjects];
     }
 }
 
 - (IBAction)writeMaxSnpValue:(id)sender {
-    NSTextField *value = sender;
+    NSPopUpButton *value = sender;
     if (value.stringValue.length > 0) {
-        maxSnpValue = value.intValue;
+        maxSnpValue = value.titleOfSelectedItem.integerValue;
         NSLog(@"setting MAX value %ld", maxSnpValue);
         [self rearrangeObjects];
     }

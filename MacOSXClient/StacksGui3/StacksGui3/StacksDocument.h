@@ -38,6 +38,7 @@
 
 
 @property(nonatomic, copy) NSString *previousStacksName;
+@property(nonatomic, copy) NSMutableArray *snpFilterValues;
 
 //- (NSMutableArray *)findPopulations;
 
@@ -54,5 +55,6 @@
 
 - (IBAction)updateSelections:(id)sender;
 
+- (NSArray *) getSnpFilterValues;
 
 @end
