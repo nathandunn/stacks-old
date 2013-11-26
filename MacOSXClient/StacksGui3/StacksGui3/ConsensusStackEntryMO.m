@@ -10,6 +10,7 @@
 #import "DatumSnpMO.h"
 #import "DatumMO.h"
 #import "LocusMO.h"
+#import "LocusSnpMO.h"
 
 
 @implementation ConsensusStackEntryMO
@@ -40,7 +41,16 @@
             [NSColor grayColor], NSBackgroundColorAttributeName,
             [NSFont fontWithName:@"Courier Bold" size:14.0], NSFontAttributeName,
             nil];
-    for (DatumSnpMO *snp in self.datum.locus.snps) {
+
+
+    NSSet *locusSnps = self.datum.locus.snps ;
+    NSMutableArray *locusSnpColumns = [[NSMutableArray alloc] init];
+    // process locus snps
+    for (LocusSnpMO *locusSnp in locusSnps) {
+        [locusSnpColumns addObject:locusSnp.column];
+    }
+
+    for (DatumSnpMO *snp in locusSnps) {
         NSRange selectedRange = NSMakeRange([snp.column unsignedIntegerValue], 1);
         [string setAttributes:attributes range:selectedRange];
     }
