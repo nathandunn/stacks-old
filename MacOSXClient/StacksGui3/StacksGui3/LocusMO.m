@@ -56,8 +56,8 @@
     return count;
 }
 
-- (NSInteger)countProgeny {
-    NSInteger count = 0;
+- (NSUInteger)countProgeny {
+    NSUInteger count = 0;
 //    NSLog(@"number of datums!! %ld",self.datums.count);
     for (DatumMO *datumMO in self.datums) {
         NSString *sampleName = datumMO.sample.name;
@@ -81,16 +81,11 @@
 }
 
 - (NSAttributedString *)renderDescription {
-    NSUInteger parentCount = self.parentCount;
-    NSUInteger progenyCount = [self countProgeny];
+    NSNumber *parentCount = self.parentCount;
+    NSUInteger progenyCount = self.countProgeny;
     NSUInteger snpCount = self.snps.count;
-    NSString *parentString;
-    if ([self.type isEqualToString:@"GeneticMap"]) {
-        parentString = @"Parents";
-    }
-    else {
-        parentString = @"Samples";
-    }
+//    NSString *parentString;
+
     NSString *chromosomeString = @"";
     if (self.chromosome != nil && self.chromosome.length > 0) {
         double basePairsValue = [self.basePairs doubleValue] / 1000000.0f;
@@ -98,8 +93,19 @@
         chromosomeString = [NSString stringWithFormat:@"%@ %@ Mb %@", self.chromosome, basePairsString, self.strand];
     }
 
+    NSString *inputString ;
+    NSLog(@"type %@",self.type);
+    if ([self.type isEqualToString:@"GeneticMap"]) {
+//        parentString = @"Parents";
+        inputString = [NSString stringWithFormat:@"Parents %ld Prog %ld Snps %ld %@",  parentCount.integerValue, progenyCount, snpCount, chromosomeString];
+    }
+    else {
+//        parentString = @"Samples";
+        inputString = [NSString stringWithFormat:@"Samples %ld Snps %ld %@", progenyCount, snpCount, chromosomeString];
+    }
 
-    NSString *inputString = [NSString stringWithFormat:@"%@ %ld Prog %ld Snps %ld %@", parentString, parentCount, progenyCount, snpCount, chromosomeString];
+
+
 
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:inputString];
     [string beginEditing];
@@ -107,9 +113,10 @@
     NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
     paragraph.alignment = NSRightTextAlignment;
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-            [NSColor grayColor], NSForegroundColorAttributeName,
+            [NSColor blackColor], NSForegroundColorAttributeName,
 //            [NSColor whiteColor], NSBackgroundColorAttributeName,
-            [NSFont fontWithName:@"Courier" size:10.0], NSFontAttributeName,
+//            [NSFont fontWithName:@"Courier" size:12.0], NSFontAttributeName,
+                    [NSFont fontWithName:@"Helvetica" size:12.0], NSFontAttributeName,
             paragraph, NSParagraphStyleAttributeName,
             nil];
 

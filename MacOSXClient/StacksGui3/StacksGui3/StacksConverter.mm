@@ -477,6 +477,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
         int sampleId = sample_ids[i];
         CHECK_STOP
         string sampleString = samples[sampleId];
+        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Importing datum %i/%ld",i+1,sample_ids.size()];
 
 
         gettimeofday(&time1, NULL);
@@ -596,7 +597,8 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     }
     progressWindow.actionMessage.stringValue = @"Loading stack entries";
     gettimeofday(&time1, NULL);
-    [self loadStacksEntriesFromTagFile:stacksDocument];
+//    [self loadStacksEntriesFromTagFile:stacksDocument];
+    [self loadStacksEntriesFromTagFile:stacksDocument progressWindow:progressWindow];
     CHECK_STOP
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading stacks entries time %ld", time2.tv_sec - time1.tv_sec);
@@ -880,7 +882,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     return lookupDictionary;
 }
 
-- (void)loadStacksEntriesFromTagFile:(StacksDocument *)document {
+- (void)loadStacksEntriesFromTagFile:(StacksDocument *)document progressWindow:(ProgressController *)progressWindow{
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *path = document.path;
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
@@ -892,14 +894,19 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     NSLog(@"# of files for directory %ld", files.count);
 
     // 2 - for each file, read the .tags file
+    int fileNumber = 0 ;
+    int numFiles = files.count;
     for (NSString *filePath in files) {
         if ([filePath hasSuffix:@".tags.tsv"] && ![filePath hasPrefix:@"batch"]) {
+//            CHECK_STOP
+            progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %i",fileNumber+1,numFiles];
             if (stopProcess) return;
             [self loadTagFile:document fromFile:filePath];
         }
         else {
-//            NSLog(@"not loading tag file %@", filePath);
+            NSLog(@"not loading tag file %@", filePath);
         }
+        ++fileNumber;
     }
 
 
