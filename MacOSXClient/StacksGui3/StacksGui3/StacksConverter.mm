@@ -1171,6 +1171,18 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 //}
 @end
 
+NSUInteger countParents(NSArray* parents){
+    NSUInteger  parentCount = 0 ;
+
+    NSMutableSet *parentIds = [[NSMutableSet alloc] initWithCapacity:parents.count];
+    for (NSString *parentString in parents) {
+        [parentIds addObject:[parentString componentsSeparatedByString:@"_"][0]];
+    }
+    parentCount = parentIds.count;
+
+    return parentCount ;
+}
+
 void setParentCounts(NSMutableDictionary *dictionary, NSString *file) {
     NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
     NSString *line;
@@ -1181,15 +1193,14 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file) {
             NSNumber *locusId = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%@", columns[2]] integerValue]];
 //            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
             NSArray *parents = [columns[8] componentsSeparatedByString:@","];
-            NSMutableSet *parentIds = [[NSMutableSet alloc] initWithCapacity:parents.count];
-            for (NSString *parentString in parents) {
-                [parentIds addObject:[parentString componentsSeparatedByString:@"_"][0]];
-            }
-//            NSLog(@"parent count for %@ is %ld",locusId,parentIds.count);
-            ((LocusMO *) [dictionary objectForKey:locusId]).parentCount = [NSNumber numberWithUnsignedInt:parentIds.count];
+
+            NSInteger parentCount = countParents(parents);
+            NSLog(@"parent count for %@ is %ld",locusId,parentCount);
+            ((LocusMO *) [dictionary objectForKey:locusId]).parentCount = [NSNumber numberWithUnsignedInt:parentCount];
         }
     }
 }
+
 
 NSString *calculateType(NSString *file) {
     NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
@@ -1200,8 +1211,9 @@ NSString *calculateType(NSString *file) {
 //        NSLog(@"count is %ld",columns.count);
         if (columns.count > 9) {
             NSArray *parents = [columns[8] componentsSeparatedByString:@","];
-//            NSLog(@"parents %@ count %ld",columns[8],parents.count);
-            if (parents.count > 2) {
+            NSInteger parentCount = countParents(parents);
+            NSLog(@"parents %@ count %ld",columns[8],parentCount);
+            if ( parentCount > 2) {
                 return @"Population";
             }
         }
