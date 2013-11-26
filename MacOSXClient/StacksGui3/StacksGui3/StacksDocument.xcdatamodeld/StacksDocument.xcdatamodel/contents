@@ -1,22 +1,31 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model userDefinedModelVersionIdentifier="" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="3401" systemVersion="13A603" minimumToolsVersion="Automatic" macOSVersion="Automatic" iOSVersion="Automatic">
+<model userDefinedModelVersionIdentifier="" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="3401" systemVersion="13A603" minimumToolsVersion="Xcode 4.5" macOSVersion="Automatic" iOSVersion="Automatic">
     <entity name="Allele" representedClassName="AlleleMO" isAbstract="YES" syncable="YES">
         <attribute name="allele" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <attribute name="depth" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <attribute name="ratio" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
     </entity>
-    <entity name="ConsensusStackEntry" representedClassName="ConsensusStackEntryMO" parentEntity="StackEntry" syncable="YES"/>
+    <entity name="ConsensusStackEntry" representedClassName="ConsensusStackEntryMO" syncable="YES">
+        <attribute name="block" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="datumSnps" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="entryId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
+        <attribute name="locusSnps" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="relationship" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sequence" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sequenceId" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Deny" destinationEntity="Datum" inverseName="consensus" inverseEntity="Datum" syncable="YES"/>
+    </entity>
     <entity name="Datum" representedClassName="DatumMO" syncable="YES">
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sampleId" optional="YES" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
         <attribute name="tagId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
         <relationship name="alleles" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="DatumAllele" inverseName="datum" inverseEntity="DatumAllele" syncable="YES"/>
-        <relationship name="consensus" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="ConsensusStackEntry" inverseName="datum" inverseEntity="StackEntry" syncable="YES"/>
+        <relationship name="consensus" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="ConsensusStackEntry" inverseName="datum" inverseEntity="ConsensusStackEntry" syncable="YES"/>
         <relationship name="depths" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Depth" inverseName="datum" inverseEntity="Depth" syncable="YES"/>
         <relationship name="haplotypes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Haplotype" inverseName="datum" inverseEntity="Haplotype" syncable="YES"/>
         <relationship name="locus" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="datums" inverseEntity="Locus" syncable="YES"/>
-        <relationship name="model" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="ModelStackEntry" inverseName="datum" inverseEntity="StackEntry" syncable="YES"/>
-        <relationship name="reference" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="ReferenceStackEntry" inverseName="datum" inverseEntity="StackEntry" syncable="YES"/>
+        <relationship name="model" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="ModelStackEntry" inverseName="datum" inverseEntity="ModelStackEntry" syncable="YES"/>
+        <relationship name="reference" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="ReferenceStackEntry" inverseName="datum" inverseEntity="ReferenceStackEntry" syncable="YES"/>
         <relationship name="sample" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Sample" inverseName="datums" inverseEntity="Sample" syncable="YES"/>
         <relationship name="snps" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="DatumSnp" inverseName="datum" inverseEntity="DatumSnp" syncable="YES"/>
         <relationship name="stackEntries" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="StackEntry" inverseName="datum" inverseEntity="StackEntry" syncable="YES"/>
@@ -58,13 +67,31 @@
     <entity name="LocusSnp" representedClassName="LocusSnpMO" parentEntity="Snp" syncable="YES">
         <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="snps" inverseEntity="Locus" syncable="YES"/>
     </entity>
-    <entity name="ModelStackEntry" representedClassName="ModelStackEntryMO" parentEntity="StackEntry" syncable="YES"/>
+    <entity name="ModelStackEntry" representedClassName="ModelStackEntryMO" syncable="YES">
+        <attribute name="block" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="datumSnps" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="entryId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
+        <attribute name="locusSnps" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="relationship" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sequence" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sequenceId" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Deny" destinationEntity="Datum" inverseName="model" inverseEntity="Datum" syncable="YES"/>
+    </entity>
     <entity name="Population" representedClassName="PopulationMO" syncable="YES">
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="populationId" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <relationship name="samples" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Sample" inverseName="population" inverseEntity="Sample" syncable="YES"/>
     </entity>
-    <entity name="ReferenceStackEntry" representedClassName="ReferenceStackEntryMO" parentEntity="StackEntry" syncable="YES"/>
+    <entity name="ReferenceStackEntry" representedClassName="ReferenceStackEntryMO" syncable="YES">
+        <attribute name="block" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="datumSnps" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="entryId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
+        <attribute name="locusSnps" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="relationship" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sequence" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sequenceId" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Deny" destinationEntity="Datum" inverseName="reference" inverseEntity="Datum" syncable="YES"/>
+    </entity>
     <entity name="Sample" representedClassName="SampleMO" syncable="YES">
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sampleId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
@@ -88,7 +115,7 @@
         <attribute name="relationship" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sequence" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sequenceId" optional="YES" attributeType="String" syncable="YES"/>
-        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" inverseName="stackEntries" inverseEntity="Datum" syncable="YES"/>
+        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Deny" destinationEntity="Datum" inverseName="stackEntries" inverseEntity="Datum" syncable="YES"/>
     </entity>
     <elements>
         <element name="Allele" positionX="0" positionY="0" width="0" height="0"/>
