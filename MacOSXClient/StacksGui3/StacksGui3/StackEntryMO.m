@@ -46,7 +46,7 @@
             // secondary
     else {
         attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                      [[self getColorGenerator] generateColorForOrder:1], NSForegroundColorAttributeName,
+                [[self getColorGenerator] generateColorForOrder:1], NSForegroundColorAttributeName,
                 nil];
     }
     [string setAttributes:attributes range:NSMakeRange(0, self.relationship.length)];
@@ -141,50 +141,54 @@
     NSMutableArray *locusSnpColumns = [[NSMutableArray alloc] init];
     NSMutableArray *datumSnpColumns = [[NSMutableArray alloc] init];
 
-    // process locus snps
-    for (LocusSnpMO *locusSnp in locusSnps) {
-
-        [locusSnpColumns addObject:locusSnp.column];
-    }
-
-    for (LocusSnpMO *datumSnp in datumSnps) {
-        [datumSnpColumns addObject:datumSnp.column];
-    }
-
     NSString *consensusSequence = self.datum.consensus.sequence;
-
-    // color Snps
-    for (NSNumber *column in locusSnpColumns) {
-        NSRange selectedRange = NSMakeRange([column unsignedIntegerValue], 1);
-
-        if ([datumSnpColumns containsObject:column]) {
-            // if at column . . matches
-            if([consensusSequence characterAtIndex:column.unsignedIntegerValue]== [sequenceAttributedString.string characterAtIndex:column.unsignedIntegerValue]){
-                [sequenceAttributedString setAttributes:snpAllele1Attribute range:selectedRange];
-            }
-            else{
-                [sequenceAttributedString setAttributes:snpAllele2Attribute range:selectedRange];
-            }
+    // process locus snps
+    if (locusSnps != nil && locusSnps.count>0) {
+        for (LocusSnpMO *locusSnp in locusSnps) {
+            [locusSnpColumns addObject:locusSnp.column];
         }
-        else {
-            [sequenceAttributedString setAttributes:catalogSnpOnlyAttribute range:selectedRange];
+
+        // color Snps
+        for (NSNumber *column in locusSnpColumns) {
+            NSRange selectedRange = NSMakeRange([column unsignedIntegerValue], 1);
+
+            if ([datumSnpColumns containsObject:column]) {
+                // if at column . . matches
+                if ([consensusSequence characterAtIndex:column.unsignedIntegerValue] == [sequenceAttributedString.string characterAtIndex:column.unsignedIntegerValue]) {
+                    [sequenceAttributedString setAttributes:snpAllele1Attribute range:selectedRange];
+                }
+                else {
+                    [sequenceAttributedString setAttributes:snpAllele2Attribute range:selectedRange];
+                }
+            }
+            else {
+                [sequenceAttributedString setAttributes:catalogSnpOnlyAttribute range:selectedRange];
+            }
         }
     }
 
-
-    // color any part of the consensus sequence that does not match.
-    NSString *mySequence = [sequenceAttributedString string];
-    if (![consensusSequence isEqualToString:mySequence]) {
-        for (int i = 0; i < mySequence.length && i < consensusSequence.length; i++) {
-            if ([consensusSequence characterAtIndex:i] != [mySequence characterAtIndex:i]) {
-                // if is actually a defined SNP, then we ignore
-                if (![locusSnpColumns containsObject:[NSNumber numberWithInt:i]]) {
-                    NSRange selectedRange = NSMakeRange(i, 1);
-                    [sequenceAttributedString setAttributes:defectAttribute range:selectedRange];
+    if (datumSnps != nil && datumSnps.count>0) {
+        for (LocusSnpMO *datumSnp in datumSnps) {
+            [datumSnpColumns addObject:datumSnp.column];
+        }
+        // color any part of the consensus sequence that does not match.
+        NSString *mySequence = [sequenceAttributedString string];
+        if (![consensusSequence isEqualToString:mySequence]) {
+            for (int i = 0; i < mySequence.length && i < consensusSequence.length; i++) {
+                if ([consensusSequence characterAtIndex:i] != [mySequence characterAtIndex:i]) {
+                    // if is actually a defined SNP, then we ignore
+                    if (![locusSnpColumns containsObject:[NSNumber numberWithInt:i]]) {
+                        NSRange selectedRange = NSMakeRange(i, 1);
+                        [sequenceAttributedString setAttributes:defectAttribute range:selectedRange];
+                    }
                 }
             }
         }
     }
+
+
+
+
 
     [sequenceAttributedString endEditing];
     return sequenceAttributedString;
