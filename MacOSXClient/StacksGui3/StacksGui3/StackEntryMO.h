@@ -20,6 +20,8 @@
 @property (nonatomic, retain) NSString * sequence;
 @property (nonatomic, retain) NSString * sequenceId;
 @property (nonatomic, retain) DatumMO *datum;
+@property (nonatomic, retain) NSString * locusSnps;
+@property (nonatomic, retain) NSString * datumSnps;
 
 
 @property (nonatomic, retain) ColorGenerator *colorGenerator;
