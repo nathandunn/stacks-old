@@ -179,7 +179,7 @@
             }
         }
         ++maxValue;
-        [haplotypeOrder setValue:[NSNumber numberWithInt:maxValue] forKey:haplotype];
+        [haplotypeOrder setValue:[NSNumber numberWithInteger:maxValue] forKey:haplotype];
         // actually we get he max value here first .
 
         return maxValue;
