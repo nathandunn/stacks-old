@@ -114,6 +114,6 @@
         NSLog(@"max value is %f",doubleValue);
         return doubleValue ;
     }
-//    return 0 ;
+    return -1.0;
 }
 @end

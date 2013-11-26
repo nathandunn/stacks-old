@@ -161,7 +161,9 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
     NSLog(@"saving to %@ from %@", path, storeUrl);
-    NSPersistentStoreCoordinator *persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
+    if(persistentStoreCoordinator==nil){
+         persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
+    }
     NSError *error = nil;
 
     if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
@@ -373,7 +375,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     gettimeofday(&time1, NULL);
     progressWindow.actionMessage.stringValue = @"Populating samples";
-    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>((int) sample_ids.size(), (int) catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
     [bar incrementBy:5];
     gettimeofday(&time2, NULL);
@@ -440,8 +442,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
             string allele = allelesIterator->first;
             int column = allelesIterator->second;
 
-            LocusAlleleMO *locusAlleleMO = [alleleRepository insertLocusAllele:moc
-                                                                         depth:[NSNumber numberWithInt:column]
+            [alleleRepository insertLocusAllele:moc depth:[NSNumber numberWithInt:column]
                                                                         allele:[numberFormatter numberFromString:[NSString stringWithUTF8String:allele.c_str()]]
                                                                          locus:locusMO
             ];
@@ -620,7 +621,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     NSError *error;
     progressWindow.actionMessage.stringValue = @"Final save";
-    BOOL success = [stacksDocument.managedObjectContext save:&error];
+    [stacksDocument.managedObjectContext save:&error];
 //    NSLog(@"saved %d", success);
     [bar incrementBy:5];
 
@@ -727,22 +728,16 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
             if (locusId != newLocusId) {
                 locusId = newLocusId;
-//                locusMO = [locusRepository getLocus:moc forId:locusId];
-                // search for the new locus
-                // TODO: get from in-memory lookup?
                 datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name];
             }
 
             if (datumMO != nil) {
-                DatumAlleleMO *datumAlleleMO = [alleleRepository insertDatumAllele:moc
+                [alleleRepository insertDatumAllele:moc
                                                                              ratio:[NSNumber numberWithFloat:ratio]
                                                                              depth:[NSNumber numberWithInt:depth]
                                                                             allele:[numberFormatter numberFromString:[columns objectAtIndex:3]]
                                                                              datum:datumMO
                 ];
-//                [datumMO addSnpsObject:datumSnpMO];
-//                [datumMO addAllelesObject:datumAlleleMO];
-//                NSLog(@"inserted allele at %@ for sample %@ and locus %@", datumAlleleMO.allele, datumMO.sample.name, datumMO.locus.locusId);
             }
         }
     }
@@ -751,7 +746,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     // save old
     NSError *saveError;
-    BOOL success = [moc save:&saveError];
+    [moc save:&saveError];
 //    NSLog(@"saved %d", success);
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
@@ -833,8 +828,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
             }
 
             if (datumMO != nil) {
-                DatumSnpMO *datumSnpMO = [snpRepository insertDatumSnp:moc
-                                                                column:[NSNumber numberWithInteger:column]
+                [snpRepository insertDatumSnp:moc column:[NSNumber numberWithInteger:column]
                                                                 lratio:[NSNumber numberWithFloat:lratio]
                                                                  rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
                                                                  rank2:[numberFormatter numberFromString:[columns objectAtIndex:6]]
@@ -852,8 +846,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     // save old
     NSError *saveError;
-    BOOL success = [moc save:&saveError];
-//    NSLog(@"saved %d", success);
+    [moc save:&saveError];
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
     }
@@ -896,11 +889,11 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     // 2 - for each file, read the .tags file
     int fileNumber = 0 ;
-    int numFiles = files.count;
+    NSUInteger numFiles = files.count;
     double incrementAmount = 30 / numFiles;
 
     for (NSString *filePath in files) {
-        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %i",fileNumber+1,numFiles];
+        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld",fileNumber+1,numFiles];
         if (stopProcess) return;
         if ([filePath hasSuffix:@".tags.tsv"] && ![filePath hasPrefix:@"batch"]) {
 //            CHECK_STOP
@@ -1017,8 +1010,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     // save old
     NSError *saveError;
-    BOOL success = [moc save:&saveError];
-//    NSLog(@"saved %d", success);
+    [moc save:&saveError];
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
     }
