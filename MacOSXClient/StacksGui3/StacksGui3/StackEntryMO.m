@@ -24,6 +24,8 @@
 @dynamic sequence;
 @dynamic sequenceId;
 @dynamic datum;
+@dynamic locusSnps;
+@dynamic datumSnps;
 
 @synthesize colorGenerator;
 

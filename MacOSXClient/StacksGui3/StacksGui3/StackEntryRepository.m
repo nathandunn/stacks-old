@@ -12,7 +12,11 @@
 #import "DatumMO.h"
 #import "ModelStackEntryMO.h"
 #import "ReferenceStackEntryMO.h"
+#import "DatumSnpMO.h"
+#import "LocusMO.h"
 
+
+NSString *generateSnpString(NSSet *set);
 
 @implementation StackEntryRepository {
 
@@ -25,6 +29,10 @@
     stackEntryMO.sequenceId = sequenceId ;
     stackEntryMO.sequence = sequence ;
     stackEntryMO.datum = datum ;
+
+    stackEntryMO.datumSnps = generateSnpString(datum.snps);
+    stackEntryMO.locusSnps = generateSnpString(datum.locus.snps);
+
     return stackEntryMO ;
 }
 
@@ -35,6 +43,10 @@
     stackEntryMO.sequenceId = sequenceId ;
     stackEntryMO.sequence = sequence ;
     stackEntryMO.datum = datum ;
+
+    stackEntryMO.datumSnps = generateSnpString(datum.snps);
+    stackEntryMO.locusSnps = generateSnpString(datum.locus.snps);
+
     return stackEntryMO ;
 }
 
@@ -45,6 +57,10 @@
     stackEntryMO.sequenceId = sequenceId ;
     stackEntryMO.sequence = sequence ;
     stackEntryMO.datum = datum ;
+
+    stackEntryMO.datumSnps = generateSnpString(datum.snps);
+    stackEntryMO.locusSnps = generateSnpString(datum.locus.snps);
+
     return stackEntryMO ;
 }
 
@@ -55,6 +71,20 @@
     stackEntryMO.relationship = @"reference" ;
     stackEntryMO.datum = datum ;
     stackEntryMO.sequence = sequence ;
+
+
+
     return stackEntryMO ;
 }
 @end
+
+NSString *generateSnpString(NSSet *set) {
+    NSString *datumSnpString = @"";
+    for(DatumSnpMO *datumSnpMO in set){
+        datumSnpString = [datumSnpString stringByAppendingFormat:@"%ld,",datumSnpMO.column.integerValue];
+    }
+    if(datumSnpString.length>0){
+        datumSnpString = [datumSnpString substringToIndex:datumSnpString.length-1];
+    }
+    return datumSnpString;
+}

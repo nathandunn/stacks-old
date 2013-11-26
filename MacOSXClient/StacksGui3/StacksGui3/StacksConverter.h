@@ -52,7 +52,7 @@
 - (StacksDocument *)loadDocument:(StacksDocument *)document progressWindow:(ProgressController *) bar;
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path;
 
-- (NSManagedObjectContext *)getContextForPath:(NSString *)path andDocument:(StacksDocument *) document;
+//- (NSManagedObjectContext *)getContextForPath:(NSString *)path andDocument:(StacksDocument *) document;
 - (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name  andDocument:(StacksDocument *) document;
 
 
