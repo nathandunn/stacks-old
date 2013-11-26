@@ -15,21 +15,21 @@
 
 @implementation ConsensusStackEntryMO
 
-- (NSAttributedString *)renderEntryId{
+- (NSAttributedString *)renderEntryId {
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:@""];
-    return string ;
+    return string;
 }
 
-- (NSAttributedString *)renderRelationship{
+- (NSAttributedString *)renderRelationship {
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:self.relationship];
-    return string ;
+    return string;
 }
 
 - (NSAttributedString *)renderSequence {
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:self.sequence];
     [string beginEditing];
 
-    NSDictionary *blockAttribute= [NSDictionary dictionaryWithObjectsAndKeys:
+    NSDictionary *blockAttribute = [NSDictionary dictionaryWithObjectsAndKeys:
             [NSColor blackColor], NSForegroundColorAttributeName,
 //            [NSColor whiteColor], NSBackgroundColorAttributeName,
             [NSFont fontWithName:@"Courier" size:14.0], NSFontAttributeName,
@@ -43,18 +43,13 @@
             nil];
 
 
-    NSSet *locusSnps = self.datum.locus.snps ;
+//    NSSet *locusSnps = self.datum.locus.snps ;
     // process locus snps
-    if(locusSnps!=nil && locusSnps.count>0){
-        NSMutableArray *locusSnpColumns = [[NSMutableArray alloc] init];
-        for (LocusSnpMO *locusSnp in locusSnps) {
-            [locusSnpColumns addObject:locusSnp.column];
-        }
+    NSMutableArray *locusSnpColumns = [self getLocusSnps];
 
-        for (NSNumber *snpColumn in locusSnpColumns) {
-            NSRange selectedRange = NSMakeRange([snpColumn unsignedIntegerValue], 1);
-            [string setAttributes:attributes range:selectedRange];
-        }
+    for (NSNumber *snpColumn in locusSnpColumns) {
+        NSRange selectedRange = NSMakeRange([snpColumn unsignedIntegerValue], 1);
+        [string setAttributes:attributes range:selectedRange];
     }
     [string endEditing];
     return string;
