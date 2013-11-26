@@ -18,21 +18,20 @@
 #import "StacksConverter.h"
 #import "StacksDocumentController.h"
 
-@interface StacksDocument()
+@interface StacksDocument ()
 
-@property BOOL editingPopulation ;
-@property NSInteger previousSelectedItem ;
+@property BOOL editingPopulation;
+@property NSInteger previousSelectedItem;
 
 @property(weak) IBOutlet NSTableView *locusTableView;
 @property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
-@property(weak) IBOutlet DatumArrayController *datumController ;
+@property(weak) IBOutlet DatumArrayController *datumController;
 @property(weak) IBOutlet NSTextField *totalLoci;
 @property(weak) IBOutlet NSPopUpButton *populationSelector;
 @property(weak) IBOutlet NSButton *editPopulationButton;
 @property(weak) IBOutlet NSTextField *populationNameField;
 @property(weak) IBOutlet NSTextField *maxLocusTextField;
-
 
 
 @end
@@ -54,7 +53,7 @@
 @synthesize populationRepository;
 
 // array controller
-@synthesize datumController ;
+@synthesize datumController;
 @synthesize totalLoci;
 @synthesize populationSelector;
 @synthesize populationNameField;
@@ -79,8 +78,8 @@
         datumRepository = [[DatumRepository alloc] init];
         locusRepository = [[LocusRepository alloc] init];
         populationRepository = [[PopulationRepository alloc] init];
-        
-        
+
+
     }
     return self;
 }
@@ -103,15 +102,15 @@
     [self.stacksTableView setIntercellSpacing:NSMakeSize(0, 0)];
     [self.stacksTableView setEnabled:true];
 
-    
+
     NSInteger lociCount = [locusRepository getAllLoci:self.managedObjectContext].count;
-    NSString* newString = [NSString stringWithFormat:@"%ld",lociCount];
+    NSString *newString = [NSString stringWithFormat:@"%ld", lociCount];
     [totalLoci setStringValue:newString];
 
     editingPopulation = false ;
 
-    double maxLocationVariable = [locusRepository getMaxLocation:self.managedObjectContext]/ 1000000;
-    maxLocusTextField.stringValue = [NSString stringWithFormat:@"%1.2f",maxLocationVariable];
+    double maxLocationVariable = [locusRepository getMaxLocation:self.managedObjectContext] / 1000000;
+    maxLocusTextField.stringValue = [NSString stringWithFormat:@"%1.2f", maxLocationVariable];
 
 }
 
@@ -124,8 +123,8 @@
 }
 
 - (IBAction)togglePopulationEdit:(id)sender {
-    NSLog(@"editing %d",editingPopulation) ;
-    if(editingPopulation){
+    NSLog(@"editing %d", editingPopulation);
+    if (editingPopulation) {
         NSLog(@"setting to edit");
         editPopulationButton.title = @"Edit";
 
@@ -133,9 +132,9 @@
         [populationNameField setHidden:true];
 
         [populationSelector selectItemAtIndex:previousSelectedItem];
-        NSLog(@"selected item index %ld",populationSelector.indexOfSelectedItem);
+        NSLog(@"selected item index %ld", populationSelector.indexOfSelectedItem);
     }
-    else{
+    else {
         NSLog(@"setting to DONE");
         previousSelectedItem = populationSelector.indexOfSelectedItem;
         editPopulationButton.title = @"Done";
@@ -155,18 +154,18 @@
     self.selectedLocus = [self findSelectedLocus];
     self.selectedPopulation = [self findSelectedPopulation];
 
-    if(self.selectedLocus!=nil && self.selectedPopulation!=nil){
-        NSLog(@"getting selected locus %@",self.selectedLocus.locusId);
-        NSLog(@"getting selected population %@",self.selectedPopulation.name);
+    if (self.selectedLocus != nil && self.selectedPopulation != nil) {
+        NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
+        NSLog(@"getting selected population %@", self.selectedPopulation.name);
         self.selectedDatums = [self.datumRepository getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
-        if(self.selectedDatums!=nil && self.selectedDatums.count>0){
-                self.selectedDatum = [self.selectedDatums objectAtIndex:0];
+        if (self.selectedDatums != nil && self.selectedDatums.count > 0) {
+            self.selectedDatum = [self.selectedDatums objectAtIndex:0];
         }
-        else{
+        else {
             self.selectedDatum = nil ;
         }
     }
-    else{
+    else {
         self.selectedDatums = nil ;
         self.selectedDatum = nil ;
     }
@@ -175,25 +174,24 @@
 
 - (PopulationMO *)findSelectedPopulation {
     NSInteger selectedRow = [self.populationSelector indexOfSelectedItem];
-    if(selectedRow>=0){
-         return [populationRepository getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
+    if (selectedRow >= 0) {
+        return [populationRepository getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
     }
-    return nil ;
+    return nil;
 }
 
 - (LocusMO *)findSelectedLocus {
     NSInteger selectedRow = [self.locusTableView selectedRow];
-    if(selectedRow>=0){
+    if (selectedRow >= 0) {
         // id starts at 1 + row  . . . I hope this is always true
-        return [locusRepository getLocus:self.managedObjectContext forId:selectedRow+1];
+        return [locusRepository getLocus:self.managedObjectContext forId:selectedRow + 1];
     }
-    return nil ;
+    return nil;
 }
 
 
-
-- (NSArray*) generateLociLocations{
-    NSArray* locusArray = [locusRepository getLociLocations:self.managedObjectContext];
+- (NSArray *)generateLociLocations {
+    NSArray *locusArray = [locusRepository getLociLocations:self.managedObjectContext];
 //    NSLog(@"size of array %ld",locusArray.count);
 
 //    if(lociLocations==nil){
@@ -218,14 +216,14 @@
 //    return bots ;
 }
 
-- (NSUInteger) getMaxLocation{
-     return [locusRepository getMaxLocation:self.managedObjectContext];
+- (NSUInteger)getMaxLocation {
+    return [locusRepository getMaxLocation:self.managedObjectContext];
 }
 
-- (BOOL) noLociLocations{
+- (BOOL)noLociLocations {
     NSUInteger locusCount = [locusRepository getLociWithChromsomes:self.managedObjectContext].count;
 //    NSLog(@"NO LOCI LOCATIONS count %ld",locusCount);
-    return locusCount==0 ;
+    return locusCount == 0;
 }
 
 - (BOOL)readFromURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)error {
@@ -253,29 +251,40 @@
                     return;
                 }
                 self.selectedDatum = datumMO;
-                self.previousStacksName = datumMO.name ;
+                self.previousStacksName = datumMO.name;
             }
         }
     }
 }
 
 
-
 - (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
-    NSLog(@"validating UI item in Stacks Document%@",anItem) ;
+    NSLog(@"validating UI item in Stacks Document%@", anItem);
     return [super validateUserInterfaceItem:anItem];
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)item {
-    NSLog(@"validating in in Stacks Document menu item %@",item) ;
+    NSLog(@"validating in in Stacks Document menu item %@", item);
 //    return [super validateUserInterfaceItem:item];
-    if(item.tag==77){
+    if (item.tag == 77) {
         NSLog(@"should be returning true!");
         return YES;
     }
-    else{
+    else {
         return [super validateMenuItem:item];
     }
+}
+
+- (void)showHelp:(id)sender {
+    NSLog(@"coalling stacks doc help");
+//    NSString *help = [[NSBundle mainBundle] pathForResource:@"Some Help" ofType:@"html"];
+//    NSString *help = [[NSBundle mainBundle] pathForResource:@"Some Help" ofType:@"html"];
+//    NSURL *url = [NSURL :@"http://creskolab.uoregon.edu/stacks/index.html"];
+     NSString* url = @"http://creskolab.uoregon.edu/stacks" ;
+//    NSLog(@"%@", url);
+//    [[NSApplication sharedApplication]
+//    NSString* url = @"NSLog(@\"%@\", [NSURL URLWithString:[self.storyLink description]])";
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
 
 
