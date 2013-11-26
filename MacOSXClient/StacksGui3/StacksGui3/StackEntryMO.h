@@ -27,4 +27,6 @@
 @property (nonatomic, retain) ColorGenerator *colorGenerator;
 
 - (ColorGenerator *)getColorGenerator;
+- (NSMutableArray *)getLocusSnps;
+- (NSMutableArray *)getDatumSnps;
 @end
