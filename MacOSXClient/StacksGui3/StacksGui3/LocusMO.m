@@ -94,7 +94,7 @@
     }
 
     NSString *inputString ;
-    NSLog(@"type %@",self.type);
+//    NSLog(@"type %@",self.type);
     if ([self.type isEqualToString:@"GeneticMap"]) {
 //        parentString = @"Parents";
         inputString = [NSString stringWithFormat:@"Parents %ld Prog %ld Snps %ld %@",  parentCount.integerValue, progenyCount, snpCount, chromosomeString];

@@ -44,15 +44,17 @@
 
 
     NSSet *locusSnps = self.datum.locus.snps ;
-    NSMutableArray *locusSnpColumns = [[NSMutableArray alloc] init];
     // process locus snps
-    for (LocusSnpMO *locusSnp in locusSnps) {
-        [locusSnpColumns addObject:locusSnp.column];
-    }
+    if(locusSnps!=nil && locusSnps.count>0){
+        NSMutableArray *locusSnpColumns = [[NSMutableArray alloc] init];
+        for (LocusSnpMO *locusSnp in locusSnps) {
+            [locusSnpColumns addObject:locusSnp.column];
+        }
 
-    for (DatumSnpMO *snp in locusSnps) {
-        NSRange selectedRange = NSMakeRange([snp.column unsignedIntegerValue], 1);
-        [string setAttributes:attributes range:selectedRange];
+        for (NSNumber *snpColumn in locusSnpColumns) {
+            NSRange selectedRange = NSMakeRange([snpColumn unsignedIntegerValue], 1);
+            [string setAttributes:attributes range:selectedRange];
+        }
     }
     [string endEditing];
     return string;
