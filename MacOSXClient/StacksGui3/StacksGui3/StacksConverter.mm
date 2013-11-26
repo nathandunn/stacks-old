@@ -280,7 +280,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
         progressWindow.actionMessage.stringValue = @"Begin import";
         bar.doubleValue = 0;
         [bar display];
-        [bar incrementBy:1];
+//        [bar incrementBy:1];
     }
     NSString *path = stacksDocument.path;
     // returns batch_1, batch_2, etc. whatever exists
@@ -298,7 +298,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     load_loci([catalogFile UTF8String], catalog, false);
     progressWindow.actionMessage.stringValue = @"Loading loci";
-    [bar incrementBy:2];
+//    [bar incrementBy:2];
     gettimeofday(&time2, NULL);
     NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
 
@@ -311,7 +311,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     progressWindow.actionMessage.stringValue = @"Building file list";
     vector<pair<int, string>> files = [self buildFileList:path];
-    [bar incrementBy:2];
+//    [bar incrementBy:2];
     NSLog(@"number of files %ld", files.size());
 
 
@@ -320,7 +320,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     progressWindow.actionMessage.stringValue = @"Matching catalogs";
     NSLog(@"model size %d", (int) catalog.size());
 
-    double incrementAmount = 20.0 / files.size();
+    double incrementAmount = 5.0 / files.size();
     gettimeofday(&time1, NULL);
     for (uint i = 0; i < files.size(); i++) {
         vector<CatMatch *> m;
@@ -471,7 +471,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
 
     long totalCatalogTime = 0;
-    incrementAmount = 20 / sample_ids.size();
+    incrementAmount = 30 / sample_ids.size();
     //go through all samples
     for (uint i = 0; i < sample_ids.size(); i++) {
         int sampleId = sample_ids[i];
@@ -893,19 +893,23 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     NSArray *files = [fileManager contentsOfDirectoryAtPath:path error:&error];
     NSLog(@"# of files for directory %ld", files.count);
 
+
     // 2 - for each file, read the .tags file
     int fileNumber = 0 ;
     int numFiles = files.count;
+    double incrementAmount = 30 / numFiles;
+
     for (NSString *filePath in files) {
+        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %i",fileNumber+1,numFiles];
+        if (stopProcess) return;
         if ([filePath hasSuffix:@".tags.tsv"] && ![filePath hasPrefix:@"batch"]) {
 //            CHECK_STOP
-            progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %i",fileNumber+1,numFiles];
-            if (stopProcess) return;
             [self loadTagFile:document fromFile:filePath];
         }
         else {
             NSLog(@"not loading tag file %@", filePath);
         }
+        [progressWindow.loadProgress incrementBy:incrementAmount];
         ++fileNumber;
     }
 
