@@ -32,6 +32,7 @@
 @property(weak) IBOutlet NSButton *editPopulationButton;
 @property(weak) IBOutlet NSTextField *populationNameField;
 @property(weak) IBOutlet NSTextField *maxLocusTextField;
+@property(weak) IBOutlet NSPopUpButton *maxSnpPopupButton;
 
 
 @end
@@ -65,6 +66,8 @@
 @synthesize lociLocations;
 @synthesize maxLocation;
 @synthesize maxLocusTextField;
+@synthesize snpFilterValues;
+@synthesize maxSnpPopupButton;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -78,8 +81,6 @@
         datumRepository = [[DatumRepository alloc] init];
         locusRepository = [[LocusRepository alloc] init];
         populationRepository = [[PopulationRepository alloc] init];
-
-
     }
     return self;
 }
@@ -111,6 +112,8 @@
 
     double maxLocationVariable = [locusRepository getMaxLocation:self.managedObjectContext] / 1000000;
     maxLocusTextField.stringValue = [NSString stringWithFormat:@"%1.2f", maxLocationVariable];
+
+    [maxSnpPopupButton selectItemAtIndex:[self getSnpFilterValues].count-1];
 
 }
 
@@ -286,6 +289,25 @@
 //    NSString* url = @"NSLog(@\"%@\", [NSURL URLWithString:[self.storyLink description]])";
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
+
+- (NSArray *) getSnpFilterValues{
+    if(snpFilterValues==nil){
+        snpFilterValues = [[NSMutableArray alloc] init];
+
+        for(int i = 1 ; i < 10 ; i++){
+            [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
+        }
+
+        for(int i = 10 ; i < 105 ; i+=5){
+            [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
+        }
+
+        [snpFilterValues addObject:[NSNumber numberWithInteger:1000]];
+    }
+
+    return snpFilterValues;
+}
+
 
 
 @end
