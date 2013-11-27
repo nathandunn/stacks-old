@@ -3766,13 +3766,13 @@ write_fastphase(map<int, CSLocus *> &catalog,
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 
 	stringstream pop_name;
-	pop_name << "batch_" << batch_id << "." << it->first << ".phase.inp";
+	pop_name << "batch_" << batch_id << "." << it->first << ".fastphase.inp";
 	string file = in_path + pop_name.str();
 
 	ofstream fh(file.c_str(), ofstream::out);
 
 	if (fh.fail()) {
-	    cerr << "Error opening PHASE file '" << file << "'\n";
+	    cerr << "Error opening fastPHASE file '" << file << "'\n";
 	    exit(1);
 	}
 
@@ -3969,7 +3969,7 @@ write_phase(map<int, CSLocus *> &catalog,
     //
     // Write a PHASE file as defined here: http://stephenslab.uchicago.edu/software.html
     //
-    // Data will be written as mixture of multiple allele, already phased RAD sites 
+    // Data will be written as mixture of multiple allele, linked RAD sites 
     // (SNPs within a single RAD locus are already phased), and bi-allelic SNPs. We 
     // will write one file per chromosome.
     //
@@ -3995,66 +3995,68 @@ write_phase(map<int, CSLocus *> &catalog,
 	}
 
 	//
-	// Tally up the number of sites
+	// We need to determine an ordering for all legitimate loci/SNPs.
 	//
-	int  total_sites = 0;
-	uint col;
-    	for (uint pos = 0; pos < it->second.size(); pos++) {
-    	    loc = it->second[pos];
-	    t   = psum->locus_tally(loc->id);
-
-    	    for (uint i = 0; i < loc->snps.size(); i++) {
-    		col = loc->snps[i]->col;
-		if (t->nucs[col].allele_cnt == 2) {
-		    total_sites++;
-		    if (write_single_snp) 
-			break;
-		}
-	    }
-	}
-
-	//
-	// Output the total number of SNP sites and the number of individuals.
-	//
-	fh << samples.size() << "\n"
-	   << total_sites    << "\n";
-
-	//
-	// We need to determine an ordering that can take into account overlapping RAD sites.
-	//
+	uint           col;
 	vector<GenPos> ordered_loci;
     	for (uint pos = 0; pos < it->second.size(); pos++) {
     	    loc = it->second[pos];
 	    t   = psum->locus_tally(loc->id);
 
-    	    for (uint i = 0; i < loc->snps.size(); i++) {
-    		col = loc->snps[i]->col;
-		if (t->nucs[col].allele_cnt == 2) {
-		    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
-		    if (write_single_snp) 
+	    if (loc->snps.size() == 0) continue;
+
+	    //
+	    // Will we output this locus as a haplotype or as a SNP?
+	    //
+	    if (loc->snps.size() > 1) {
+		//
+		// Iterate over the population to determine that this subset of the population
+		// has data at this locus.
+		//
+		d = pmap->locus(loc->id);
+
+		for (int j = 0; j < pmap->sample_cnt(); j++) {
+		    if (d[j] != NULL &&
+			d[j]->obshap.size() > 0 && 
+			d[j]->obshap.size() <= 2) {
+			//
+			// Data exists, and their are the corrent number of haplotypes.
+			//
+			ordered_loci.push_back(GenPos(loc->id, 0, loc->sort_bp(), haplotype));
 			break;
+		    }
 		}
+	    } else {
+		col = loc->snps[0]->col;
+
+		if (t->nucs[col].allele_cnt == 2)
+		    ordered_loci.push_back(GenPos(loc->id, 0, loc->sort_bp(col), snp));
 	    }
 	}
 	sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
 
 	//
+	// Output the total number of SNP sites and the number of individuals.
+	//
+	fh << samples.size()      << "\n"
+	   << ordered_loci.size() << "\n";
+
+	//
 	// Output the position of each site according to its basepair.
 	//
 	fh << "P";
-    	for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-    	    loc = catalog[ordered_loci[pos].id];
-	    col = loc->snps[ordered_loci[pos].snp_index]->col;
+    	for (uint pos = 0; pos < ordered_loci.size(); pos++)
 	    fh << " " << ordered_loci[pos].bp;
-	}
 	fh << "\n";
 
 	//
-	// Output a line of 'S' characters, one per site, indicating that these are SNP markers.
+	// Output a line of 'S' characters for SNP markers, 'M' characters for multiallelic haplotypes.
 	//
-	string snp_markers, gtypes_str;
-	snp_markers.assign(total_sites, 'S');
-	fh << snp_markers << '\n';	    
+    	for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+	    if (pos > 0) fh << " ";
+	    fh << (ordered_loci[pos].type == snp ? "S" : "M");
+	}
+	fh << "\n";
 
 	//
 	// Now output each sample name followed by a new line, then all of the genotypes for that sample
@@ -4062,6 +4064,8 @@ write_phase(map<int, CSLocus *> &catalog,
 	//
 
 	map<int, pair<int, int> >::iterator pit;
+	string       gtypes_str;
+	bool         found;
 	int          start_index, end_index, pop_id;
 	char         p_allele, q_allele;
 	stringstream gtypes;
@@ -4080,48 +4084,74 @@ write_phase(map<int, CSLocus *> &catalog,
 		gtypes.str("");
 		for (uint pos = 0; pos < ordered_loci.size(); pos++) {
 		    loc = catalog[ordered_loci[pos].id];
-		    col = loc->snps[ordered_loci[pos].snp_index]->col;
 
 		    s = psum->locus(loc->id);
 		    d = pmap->locus(loc->id);
 		    t = psum->locus_tally(loc->id);
 
-		    // 
-		    // If this site is fixed in all populations or has too many alleles don't output it.
 		    //
-		    if (t->nucs[col].allele_cnt != 2) 
-			continue;
-
-		    if (s[pop_id]->nucs[col].incompatible_site ||
-			s[pop_id]->nucs[col].filtered_site) {
-			//
-			// This site contains more than two alleles in this population or was filtered
-			// due to a minor allele frequency that is too low.
-			//
-			gtypes << "? ";
-
-		    } else if (d[j] == NULL) {
-			//
-			// Data does not exist.
-			//
-			gtypes << "? ";
-		    } else if (d[j]->model[col] == 'U') {
-			//
-			// Data exists, but the model call was uncertain.
-			//
-			gtypes << "? ";
+		    // Will we output this locus as a haplotype or as a SNP?
+		    //
+		    if (ordered_loci[pos].type == haplotype) {
+			if (d[j] == NULL) {
+			    //
+			    // Data does not exist.
+			    //
+			    gtypes << "-1 ";
+			} else {
+			    //
+			    // Data exists, output the first haplotype. We will assume the haplotypes are 
+			    // numbered by their position in the loc->strings vector.
+			    //
+			    if (d[j]->obshap.size() > 2)  {
+				// cerr << "Warning: too many haplotypes, catalog locus: " << loc->id << "\n";
+				gtypes << "-1 ";
+			    } else {
+				found = false;
+				for (uint k = 0; k < loc->strings.size(); k++)
+				    if (d[j]->obshap[0] == loc->strings[k].first) {
+					found = true;
+					gtypes << k + 1 << " ";
+				    }
+				if (found == false)
+				    cerr << "Unable to find haplotype " << d[j]->obshap[0] << " from individual " 
+					 << samples[pmap->rev_sample_index(j)] << "; catalog locus: " << loc->id << "\n";
+			    }
+			}
 		    } else {
-			//
-			// Tally up the nucleotide calls.
-			//
-			tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
+			col = loc->snps[ordered_loci[pos].snp_index]->col;
 
-			if (p_allele == 0 && q_allele == 0)
+			if (s[pop_id]->nucs[col].incompatible_site ||
+			    s[pop_id]->nucs[col].filtered_site) {
+			    //
+			    // This site contains more than two alleles in this population or was filtered
+			    // due to a minor allele frequency that is too low.
+			    //
 			    gtypes << "? ";
-			else if (p_allele == 0)
-			    gtypes << q_allele << " ";
-			else
-			    gtypes << p_allele << " ";
+
+			} else if (d[j] == NULL) {
+			    //
+			    // Data does not exist.
+			    //
+			    gtypes << "? ";
+			} else if (d[j]->model[col] == 'U') {
+			    //
+			    // Data exists, but the model call was uncertain.
+			    //
+			    gtypes << "? ";
+			} else {
+			    //
+			    // Tally up the nucleotide calls.
+			    //
+			    tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
+
+			    if (p_allele == 0 && q_allele == 0)
+				gtypes << "? ";
+			    else if (p_allele == 0)
+				gtypes << q_allele << " ";
+			    else
+				gtypes << p_allele << " ";
+			}
 		    }
 		}
 		gtypes_str = gtypes.str();
@@ -4133,35 +4163,73 @@ write_phase(map<int, CSLocus *> &catalog,
 		gtypes.str("");
 		for (uint pos = 0; pos < ordered_loci.size(); pos++) {
 		    loc = catalog[ordered_loci[pos].id];
-		    col = loc->snps[ordered_loci[pos].snp_index]->col;
-
 
 		    s = psum->locus(loc->id);
 		    d = pmap->locus(loc->id);
 		    t = psum->locus_tally(loc->id);
 
-		    if (t->nucs[col].allele_cnt != 2) 
-			continue;
-
-		    if (s[pop_id]->nucs[col].incompatible_site ||
-			s[pop_id]->nucs[col].filtered_site) {
-			gtypes << "? ";
-
-		    } else if (d[j] == NULL) {
-			gtypes << "? ";
-
-		    } else if (d[j]->model[col] == 'U') {
-			gtypes << "? ";
-
+		    //
+		    // Will we output this locus as a haplotype or as a SNP?
+		    //
+		    if (ordered_loci[pos].type == haplotype) {
+			if (d[j] == NULL) {
+			    //
+			    // Data does not exist.
+			    //
+			    gtypes << "-1 ";
+			} else {
+			    //
+			    // Data exists, output the second haplotype. We will assume the haplotypes are 
+			    // numbered by their position in the loc->strings vector.
+			    //
+			    if (d[j]->obshap.size() > 2)  {
+				// cerr << "Warning: too many haplotypes, catalog locus: " << loc->id << "\n";
+				gtypes << "-1 ";
+			    } else if (d[j]->obshap.size() > 1)  {
+				found = false;
+				for (uint k = 0; k < loc->strings.size(); k++)
+				    if (d[j]->obshap[1] == loc->strings[k].first) {
+					found = true;
+					gtypes << k + 1 << " ";
+				    }
+				if (found == false)
+				    cerr << "Unable to find haplotype " << d[j]->obshap[1] << " from individual " 
+					 << samples[pmap->rev_sample_index(j)] << "; catalog locus: " << loc->id << "\n";
+			    } else {
+				found = false;
+				for (uint k = 0; k < loc->strings.size(); k++)
+				    if (d[j]->obshap[0] == loc->strings[k].first) {
+					found = true;
+					gtypes << k + 1 << " ";
+				    }
+				if (found == false)
+				    cerr << "Unable to find haplotype " << d[j]->obshap[0] << " from individual " 
+					 << samples[pmap->rev_sample_index(j)] << "; catalog locus: " << loc->id << "\n";
+			    }
+			}
 		    } else {
-			tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
+			col = loc->snps[ordered_loci[pos].snp_index]->col;
 
-			if (p_allele == 0 && q_allele == 0)
+			if (s[pop_id]->nucs[col].incompatible_site ||
+			    s[pop_id]->nucs[col].filtered_site) {
 			    gtypes << "? ";
-			else if (q_allele == 0)
-			    gtypes << p_allele << " ";
-			else
-			    gtypes << q_allele << " ";
+
+			} else if (d[j] == NULL) {
+			    gtypes << "? ";
+
+			} else if (d[j]->model[col] == 'U') {
+			    gtypes << "? ";
+
+			} else {
+			    tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
+
+			    if (p_allele == 0 && q_allele == 0)
+				gtypes << "? ";
+			    else if (q_allele == 0)
+				gtypes << p_allele << " ";
+			    else
+				gtypes << q_allele << " ";
+			}
 		    }
 		}
 		gtypes_str = gtypes.str();
