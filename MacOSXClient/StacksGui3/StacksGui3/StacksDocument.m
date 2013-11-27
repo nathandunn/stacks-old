@@ -293,16 +293,9 @@
 - (NSArray *) getSnpFilterValues{
     if(snpFilterValues==nil){
         snpFilterValues = [[NSMutableArray alloc] init];
-
-        for(int i = 1 ; i < 10 ; i++){
+        for(int i = 0 ; i < 15 ; i++){
             [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
-
-        for(int i = 10 ; i < 105 ; i+=5){
-            [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
-        }
-
-        [snpFilterValues addObject:[NSNumber numberWithInteger:1000]];
     }
 
     return snpFilterValues;
