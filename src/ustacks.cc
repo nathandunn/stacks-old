@@ -1519,7 +1519,9 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 		     << "\t\t\t\n";
 	}
 
+	//
 	// Write out any SNPs detected in this unique tag.
+	//
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
 	    if ((*s)->type == snp_type_het)
 		snps << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" 
@@ -1527,8 +1529,10 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 		     << (*s)->rank_1 << "\t" << (*s)->rank_2 << "\t\t\n";
 	}
 
+	//
 	// Write the expressed alleles seen for the recorded SNPs and
 	// the percentage of tags a particular allele occupies.
+	//
 	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
 	    alle << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << (*t).first << "\t" << (((*t).second/total) * 100) << "\t" << (*t).second << "\n";
 	}
