@@ -90,18 +90,18 @@
     if (self.chromosome != nil && self.chromosome.length > 0) {
         double basePairsValue = [self.basePairs doubleValue] / 1000000.0f;
         NSString *basePairsString = [NSString stringWithFormat:@"%1.2f", basePairsValue];
-        chromosomeString = [NSString stringWithFormat:@"%@ %@ Mb %@", self.chromosome, basePairsString, self.strand];
+        chromosomeString = [NSString stringWithFormat:@"%@ %@Mb %@", self.chromosome, basePairsString, self.strand];
     }
 
     NSString *inputString ;
 //    NSLog(@"type %@",self.type);
     if ([self.type isEqualToString:@"GeneticMap"]) {
 //        parentString = @"Parents";
-        inputString = [NSString stringWithFormat:@"Parents %ld Prog %ld Snps %ld %@",  parentCount.integerValue, progenyCount, snpCount, chromosomeString];
+        inputString = [NSString stringWithFormat:@"Parents %ld Prog %ld Snps %ld\n%@",  parentCount.integerValue, progenyCount, snpCount, chromosomeString];
     }
     else {
 //        parentString = @"Samples";
-        inputString = [NSString stringWithFormat:@"Samples %ld Snps %ld %@", progenyCount, snpCount, chromosomeString];
+        inputString = [NSString stringWithFormat:@"Samples %ld Snps %ld\n%@", progenyCount, snpCount, chromosomeString];
     }
 
 
@@ -116,7 +116,7 @@
             [NSColor blackColor], NSForegroundColorAttributeName,
 //            [NSColor whiteColor], NSBackgroundColorAttributeName,
 //            [NSFont fontWithName:@"Courier" size:12.0], NSFontAttributeName,
-                    [NSFont fontWithName:@"Helvetica" size:12.0], NSFontAttributeName,
+                    [NSFont fontWithName:@"Helvetica" size:10.0], NSFontAttributeName,
             paragraph, NSParagraphStyleAttributeName,
             nil];
 
