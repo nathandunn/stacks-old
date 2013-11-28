@@ -60,6 +60,7 @@ bool      structure_out     = false;
 bool      phase_out         = false;
 bool      fastphase_out     = false;
 bool      beagle_out        = false;
+bool      beagle_phased_out = false;
 bool      plink_out         = false;
 bool      phylip_out        = false;
 bool      phylip_var        = false;
@@ -322,6 +323,9 @@ int main (int argc, char* argv[]) {
 
     if (beagle_out)
 	write_beagle(catalog, pmap, psum, pop_indexes, samples);
+
+    if (beagle_phased_out)
+	write_beagle_phased(catalog, pmap, psum, pop_indexes, samples);
 
     if (plink_out)
 	write_plink(catalog, pmap, psum, pop_indexes, samples);
@@ -4010,11 +4014,15 @@ write_phase(map<int, CSLocus *> &catalog,
 	    //
 	    if (loc->snps.size() > 1) {
 		//
+		// Check that there aren't too many haplotypes (PHASE has a max of 50).
+		//
+		if (loc->alleles.size() > 40) continue;
+
+		//
 		// Iterate over the population to determine that this subset of the population
 		// has data at this locus.
 		//
 		d = pmap->locus(loc->id);
-
 		for (int j = 0; j < pmap->sample_cnt(); j++) {
 		    if (d[j] != NULL &&
 			d[j]->obshap.size() > 0 && 
@@ -4647,6 +4655,198 @@ write_beagle(map<int, CSLocus *> &catalog,
 }
 
 int 
+write_beagle_phased(map<int, CSLocus *> &catalog, 
+		    PopMap<CSLocus> *pmap, 
+		    PopSum<CSLocus> *psum, 
+		    map<int, pair<int, int> > &pop_indexes, 
+		    map<int, string> &samples) 
+{
+    //
+    // Write a Beagle file as a set of haplotpyes as defined here: 
+    //   http://faculty.washington.edu/browning/beagle/beagle.html
+    //
+    // We will write one file per chromosome.
+    //
+    cerr << "Writing population data to Beagle files...";
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
+    Datum   **d;
+    LocTally *t;
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+
+	//
+	// We need to determine an ordering for all legitimate loci/SNPs.
+	//
+	vector<GenPos> ordered_loci;
+    	for (uint pos = 0; pos < it->second.size(); pos++) {
+    	    loc = it->second[pos];
+	    t   = psum->locus_tally(loc->id);
+
+	    if (loc->snps.size() == 0) continue;
+
+	    //
+	    // Check that there aren't too many haplotypes (PHASE has a max of 50).
+	    //
+	    if (loc->alleles.size() > 40) continue;
+
+	    //
+	    // Iterate over the population to determine that this subset of the population
+	    // has data at this locus.
+	    //
+	    d = pmap->locus(loc->id);
+	    for (int j = 0; j < pmap->sample_cnt(); j++) {
+		if (d[j] != NULL &&
+		    d[j]->obshap.size() > 0 && 
+		    d[j]->obshap.size() <= 2) {
+		    //
+		    // Data exists, and their are the corrent number of haplotypes.
+		    //
+		    ordered_loci.push_back(GenPos(loc->id, 0, loc->sort_bp(), haplotype));
+		    break;
+		}
+	    }
+	}
+	sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
+
+	//
+	// First, write a markers file containing each marker, its genomic position in basepairs
+	// and the two alternative alleles at this position.
+	//
+	stringstream pop_name;
+	pop_name << "batch_" << batch_id << "." << it->first << ".markers";
+	string file = in_path + pop_name.str();
+
+	ofstream fh(file.c_str(), ofstream::out);
+
+	if (fh.fail()) {
+	    cerr << "Error opening Beagle markers file '" << file << "'\n";
+	    exit(1);
+	}
+
+	//
+	// Output the header.
+	//
+	fh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
+
+    	for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+    	    loc = catalog[ordered_loci[pos].id];
+
+	    fh << loc->id << "\t" 
+	       << loc->sort_bp();
+	    for (uint j = 0; j < loc->strings.size(); j++)
+		fh << "\t" << loc->strings[j].first;
+	    fh << "\n";
+	}
+
+	fh.close();
+
+	//
+	// Now output the haplotypes in a separate file.
+	//
+	pop_name.str("");
+	pop_name << "batch_" << batch_id << "." << it->first << ".phased.bgl";
+	file = in_path + pop_name.str();
+
+	fh.open(file.c_str(), ofstream::out);
+
+	if (fh.fail()) {
+	    cerr << "Error opening Beagle markers file '" << file << "'\n";
+	    exit(1);
+	}
+
+	fh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
+
+	map<int, pair<int, int> >::iterator pit;
+	int  start_index, end_index, pop_id;
+
+	//
+	// Output a list of all the samples in the data set.
+	//
+	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	    pop_id      = psum->pop_index(pit->first);
+	    start_index = pit->second.first;
+	    end_index   = pit->second.second;
+
+	    fh << "I\tid";
+	    for (int j = start_index; j <= end_index; j++)
+		fh << "\t" << samples[pmap->rev_sample_index(j)] << "\t" << samples[pmap->rev_sample_index(j)];
+	}
+	fh << "\n";
+
+	//
+	// Output population IDs for each sample.
+	//
+	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	    pop_id      = pit->first;
+	    start_index = pit->second.first;
+	    end_index   = pit->second.second;
+
+	    fh << "S\tid";
+	    for (int j = start_index; j <= end_index; j++)
+		fh << "\t" << pop_id << "\t" << pop_id;
+	}
+	fh << "\n";
+
+	//
+	// For each marker, output the genotypes for each sample in two successive columns.
+	//
+	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	    pop_id      = psum->pop_index(pit->first);
+	    start_index = pit->second.first;
+	    end_index   = pit->second.second;
+
+	    for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+		loc = catalog[ordered_loci[pos].id];
+		d   = pmap->locus(loc->id);
+
+		fh << "M" << "\t" << loc->id;
+
+		for (int j = start_index; j <= end_index; j++) {
+		    //
+		    // Output the p and the q haplotype
+		    //
+		    if (d[j] == NULL) {
+			//
+			// Data does not exist.
+			//
+			fh << "\t" << "?" << "\t" << "?";
+		    } else {
+			//
+			// Data exists, output the first haplotype. We will assume the haplotypes are 
+			// numbered by their position in the loc->strings vector.
+			//
+			if (d[j]->obshap.size() > 2)
+			    fh << "\t" << "?" << "\t" << "?";
+			else if (d[j]->obshap.size() == 2)
+			    fh << "\t" << d[j]->obshap[0] << "\t" << d[j]->obshap[1];
+			else
+			    fh << "\t" << d[j]->obshap[0] << "\t" << d[j]->obshap[0];
+		    }
+		}
+		fh << "\n";
+	    }   
+	    fh.close();
+	}
+    }
+
+    cerr << "done.\n";
+
+    return 0;
+}
+
+int 
 write_phylip(map<int, CSLocus *> &catalog, 
 	     PopMap<CSLocus> *pmap, 
 	     PopSum<CSLocus> *psum, 
@@ -5269,31 +5469,32 @@ int parse_command_line(int argc, char* argv[]) {
      
     while (1) {
 	static struct option long_options[] = {
-	    {"help",        no_argument,       NULL, 'h'},
-            {"version",     no_argument,       NULL, 'v'},
-            {"corr",        no_argument,       NULL, 'c'},
-            {"sql",         no_argument,       NULL, 's'},
-            {"vcf",         no_argument,       NULL, 'V'},
-            {"fasta",       no_argument,       NULL, 'F'},
-            {"structure",   no_argument,       NULL, 'S'},
-            {"fastphase",   no_argument,       NULL, 'A'},
-            {"phase",       no_argument,       NULL, 'C'},
-            {"beagle",      no_argument,       NULL, 'E'},
-            {"plink",       no_argument,       NULL, 'K'},
-            {"genomic",     no_argument,       NULL, 'g'},
-	    {"genepop",     no_argument,       NULL, 'G'},
-	    {"phylip",      no_argument,       NULL, 'Y'},
-	    {"phylip_var",  no_argument,       NULL, 'L'},
-	    {"window_size", required_argument, NULL, 'w'},
-	    {"num_threads", required_argument, NULL, 't'},
-	    {"batch_id",    required_argument, NULL, 'b'},
-	    {"in_path",     required_argument, NULL, 'P'},
-	    {"progeny",     required_argument, NULL, 'r'},
-	    {"min_depth",   required_argument, NULL, 'm'},
-	    {"renz",        required_argument, NULL, 'e'},
-	    {"pop_map",     required_argument, NULL, 'M'},
-	    {"whitelist",   required_argument, NULL, 'W'},
-	    {"blacklist",   required_argument, NULL, 'B'},
+	    {"help",          no_argument,       NULL, 'h'},
+            {"version",       no_argument,       NULL, 'v'},
+            {"corr",          no_argument,       NULL, 'c'},
+            {"sql",           no_argument,       NULL, 's'},
+            {"vcf",           no_argument,       NULL, 'V'},
+            {"fasta",         no_argument,       NULL, 'F'},
+            {"structure",     no_argument,       NULL, 'S'},
+            {"fastphase",     no_argument,       NULL, 'A'},
+            {"phase",         no_argument,       NULL, 'C'},
+            {"beagle",        no_argument,       NULL, 'E'},
+            {"beagle_phased", no_argument,       NULL, 'H'},
+            {"plink",         no_argument,       NULL, 'K'},
+            {"genomic",       no_argument,       NULL, 'g'},
+	    {"genepop",       no_argument,       NULL, 'G'},
+	    {"phylip",        no_argument,       NULL, 'Y'},
+	    {"phylip_var",    no_argument,       NULL, 'L'},
+	    {"window_size",   required_argument, NULL, 'w'},
+	    {"num_threads",   required_argument, NULL, 't'},
+	    {"batch_id",      required_argument, NULL, 'b'},
+	    {"in_path",       required_argument, NULL, 'P'},
+	    {"progeny",       required_argument, NULL, 'r'},
+	    {"min_depth",     required_argument, NULL, 'm'},
+	    {"renz",          required_argument, NULL, 'e'},
+	    {"pop_map",       required_argument, NULL, 'M'},
+	    {"whitelist",     required_argument, NULL, 'W'},
+	    {"blacklist",     required_argument, NULL, 'B'},
 	    {"write_single_snp",  no_argument,       NULL, 'I'},
             {"kernel_smoothed",   no_argument,       NULL, 'k'},
             {"log_fst_comp",      no_argument,       NULL, 'l'},
@@ -5310,7 +5511,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlkKSACLEYFVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlkKSACLHEYFVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -5398,6 +5599,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'E':
 	    beagle_out = true;
+	    break;
+	case 'H':
+	    beagle_phased_out = true;
 	    break;
 	case 'K':
 	    plink_out = true;
@@ -5544,6 +5748,7 @@ void help() {
 	      << "    --phase: output genotypes in PHASE format.\n"
 	      << "    --fastphase: output genotypes in fastPHASE format.\n"
 	      << "    --beagle: output genotypes in Beagle format.\n"
+	      << "    --beagle_phased: output haplotypes in Beagle format.\n"
 	      << "    --plink: output genotypes in PLINK format.\n"
 	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
 	      << "      --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
