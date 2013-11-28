@@ -151,6 +151,7 @@ int  write_structure(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *
 int  write_phase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_fastphase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_beagle(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
+int  write_beagle_phased(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_plink(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  tally_observed_haplotypes(vector<char *> &, int, char &, char &);
