@@ -3176,7 +3176,7 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string
 		       << "_Allele_" << k;
 
 		    if (strcmp(loc->loc.chr, "un") != 0)
-			fh << " [" << loc->loc.chr << ", " << loc->loc.bp << "]";
+			fh << " [" << loc->loc.chr << ", " << loc->loc.bp << ", " << (loc->loc.strand == plus ? "+" : "-") << "]";
 		    fh << "\n"
 		       << seq << "\n";
 		}

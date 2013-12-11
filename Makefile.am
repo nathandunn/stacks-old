@@ -81,7 +81,7 @@ populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h
 
 phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h \
-	src/utils.h src/utils.cc
+	src/input.h src/input.cc src/utils.h src/utils.cc
 
 ustacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 ustacks_LDFLAGS  = $(OPENMP_CFLAGS)

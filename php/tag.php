@@ -275,7 +275,10 @@ echo <<< EOQ
 
 EOQ;
 
-$s = print_scale(strlen($seqs['consensus'][0]['s']));
+$con_len = isset($seqs['consensus'][0]) ? strlen($seqs['consensus'][0]['s']) : 0;
+$con_seq = isset($seqs['consensus'][0]) ? $seqs['consensus'][0]['s'] : "";
+
+$s = print_scale($con_len);
 print
     "<tr>\n" .
     "  <td class=\"num\">&nbsp;</td>\n" .
@@ -284,16 +287,16 @@ print
     "  <td class=\"tag\">" . $s . "</td>\n" .
     "</tr>\n";
 
-$s = print_snps($seqs['consensus'][0]['s'], $seqs['consensus'][0]['s'], $snps, false);
+$s = print_snps($con_seq, $con_seq, $snps, false);
 print
     "<tr>\n" .
     "  <td class=\"num\">&nbsp;</td>\n" .
     "  <td class=\"con\">consensus</td>\n" .
-    "  <td class=\"id\">"  . $seqs['consensus'][0]['id'] . "</td>\n" .
+    "  <td class=\"id\">"  . (isset($seqs['consensus'][0]) ? $seqs['consensus'][0]['id'] : "") . "</td>\n" .
     "  <td class=\"tag\">" . $s . "</td>\n" .
     "</tr>\n";
 
-$s = $seqs['model'][0]['s'];
+$s = isset($seqs['model'][0]) ? $seqs['model'][0]['s'] : "";
 echo <<< EOQ
 </table>
 </div>
@@ -311,7 +314,7 @@ EOQ;
 $i = 1;
 foreach (array('primary', 'secondary') as $key) {
     foreach ($seqs[$key] as $seq) {
-        $s = print_snps_errs($seqs['consensus'][0]['s'], $seq['s'], $snps, $cat_snps);
+        $s = print_snps_errs($con_seq, $seq['s'], $snps, $cat_snps);
 
 	if ($key == "primary" && $seq['sub_id'] % 2 == 1) 
 	    $bg = "style=\"background-color: #dddddd;\"";
