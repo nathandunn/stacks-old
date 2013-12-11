@@ -1,5 +1,6 @@
-Stacks 1.091 - Nov 23, 2013
+Stacks 1.091 - Dec 10, 2013
 --------------------------
+	Bugfix: Corrected PHP warnings; enabled scrolling in catalog.php for iframes.
 	Bugfix: allele percentages from ustacks were off since ustacks was changed to load/unload
 	read IDs from disk (Stacks 0.99995).
 
