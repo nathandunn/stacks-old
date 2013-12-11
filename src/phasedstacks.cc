@@ -34,11 +34,15 @@ int       num_threads  = 1;
 string    in_path;
 string    out_path;
 string    out_file;
+string    pmap_path;
 double    p_value_cutoff   = 0.05;
 double    chi_sq_limit     = 3.84;
 double    minor_freq_lim   = 0.2;
 double    min_inform_pairs = 0.90;
 uint      max_pair_dist    = 1000000;
+
+map<string, int> pop_map;
+map<int, int>    pop_cnts;
 
 int main (int argc, char* argv[]) {
 
@@ -63,6 +67,11 @@ int main (int argc, char* argv[]) {
 	break;
     }
     cerr << " input files.\n";
+
+    //
+    // Parse the population map.
+    //
+    parse_population_map(pmap_path, pop_map, pop_cnts);
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -129,12 +138,12 @@ int main (int argc, char* argv[]) {
 	//
 	// Generate haplotype blocks based on D'.
 	//
-	dprime_blocks(in_path + files[i].second, psum, dp_block_lens, dp_snp_cnts);
+	dprime_blocks(in_path + files[i].second, pop_map, psum, dp_block_lens, dp_snp_cnts);
 
 	//
 	// Generate haplotype blocks using the four gamete test.
 	//
-	four_gamete_test(in_path + files[i].second, psum, fgt_block_lens, fgt_snp_cnts);
+	four_gamete_test(in_path + files[i].second, pop_map, psum, fgt_block_lens, fgt_snp_cnts);
 	
 	//
 	// Free the Samples objects
@@ -180,7 +189,7 @@ int main (int argc, char* argv[]) {
 }
 
 int
-four_gamete_test(string path, PhasedSummary *psum, map<int, int> &len_buckets, map<int, int> &snp_buckets)
+four_gamete_test(string path, map<string, int> &pop_map, PhasedSummary *psum, map<int, int> &len_buckets, map<int, int> &snp_buckets)
 {
     //
     // Write haplotypes as found by the four gamete test:
@@ -197,7 +206,7 @@ four_gamete_test(string path, PhasedSummary *psum, map<int, int> &len_buckets, m
 	exit(1);
     }
 
-    fh << "# ID\tStart\tEnd\tLen\tSNP Count\tHaplotype Count\tHaplotype\n";
+    fh << "# ID\tStart\tEnd\tLen\tSNP Count\tHaplotype Count\tHaplotype\tPopulations\tHapPopCnt\n";
 
     uint id = 1;
     uint start, end, cnt, dist;
@@ -256,7 +265,7 @@ four_gamete_test(string path, PhasedSummary *psum, map<int, int> &len_buckets, m
 	dist = (psum->nucs[end].bp - psum->nucs[start].bp + 1) / 10000 * 10000;
 	buckets[dist]++;
 
-	enumerate_haplotypes(fh, psum, start, end);
+	enumerate_haplotypes(fh, pop_map, psum, start, end);
 
 	i = end;
 	id++;
@@ -293,7 +302,7 @@ four_gamete_test(string path, PhasedSummary *psum, map<int, int> &len_buckets, m
 }
 
 int
-dprime_blocks(string path, PhasedSummary *psum, map<int, int> &len_buckets, map<int, int> &snp_buckets)
+dprime_blocks(string path, map<string, int> &pop_map, PhasedSummary *psum, map<int, int> &len_buckets, map<int, int> &snp_buckets)
 {
     //
     // Generate haplotype blocks according to strength of linkage disequilibrium measured using D'.
@@ -310,7 +319,7 @@ dprime_blocks(string path, PhasedSummary *psum, map<int, int> &len_buckets, map<
 	exit(1);
     }
 
-    fh << "# ID\tStart\tEnd\tLen\tSNP Count\tHaplotype Count\tHaplotype\n";
+    fh << "# ID\tStart\tEnd\tLen\tSNP Count\tHaplotype Count\tHaplotype\tPopulations\tHapPopCnt\n";
 
     uint dist;
     set<int> loci;
@@ -433,7 +442,7 @@ dprime_blocks(string path, PhasedSummary *psum, map<int, int> &len_buckets, map<
     	dist = (psum->nucs[end].bp - psum->nucs[start].bp + 1) / 10000 * 10000;
     	buckets[dist]++;
 
-	enumerate_haplotypes(fh, psum, start, end);
+	enumerate_haplotypes(fh, pop_map, psum, start, end);
 
 	id++;
 	cur = cur->next;
@@ -587,25 +596,29 @@ dPrimeBlocks::print()
 }
 
 int
-enumerate_haplotypes(ofstream &fh, PhasedSummary *psum, uint start, uint end)
+enumerate_haplotypes(ofstream &fh, map<string, int> &pop_map, PhasedSummary *psum, uint start, uint end)
 {
+    map<string, map<int, int> >::iterator it;
+    map<string, map<int, int> > haplotypes;
+    map<int, int>::iterator sit;
+    string haplotype;
+    set<int> pops;
+
     //
     // Enumerate all haplotypes occurring in this block.
     //
-    map<string, int>::iterator it;
-    map<string, int> haplotypes;
-    string           haplotype;
-
     for (uint k = 0; k < psum->sample_cnt; k++) {
 
 	for (uint n = start; n <= end; n++)
 	    if (psum->nucs[n].freq >= minor_freq_lim)
 		haplotype += psum->samples[k].nucs_1[n];
 
+	pops.insert(pop_map[psum->samples[k].name]);
+
 	if (haplotypes.count(haplotype) == 0)
-	    haplotypes[haplotype] = 1;
+	    haplotypes[haplotype][pop_map[psum->samples[k].name]] = 1;
 	else
-	    haplotypes[haplotype]++;
+	    haplotypes[haplotype][pop_map[psum->samples[k].name]]++;
 	haplotype.clear();
     }
 
@@ -615,23 +628,61 @@ enumerate_haplotypes(ofstream &fh, PhasedSummary *psum, uint start, uint end)
 	    if (psum->nucs[n].freq >= minor_freq_lim)
 		haplotype += psum->samples[k].nucs_2[n];
 
+	pops.insert(pop_map[psum->samples[k].name]);
+
 	if (haplotypes.count(haplotype) == 0)
-	    haplotypes[haplotype] = 1;
+	    haplotypes[haplotype][pop_map[psum->samples[k].name]] = 1;
 	else
-	    haplotypes[haplotype]++;
+	    haplotypes[haplotype][pop_map[psum->samples[k].name]]++;
 	haplotype.clear();
     }
 
     //
     // Write the haplotypes.
     //
+    float tot;
+
     fh << haplotypes.size() << "\t";
     for (it = haplotypes.begin(); it != haplotypes.end(); it++) {
+	//
+	// Haplotypes are stored per population; sum them up here.
+	//
+	for (sit = it->second.begin(); sit != it->second.end(); sit++)
+	    tot += sit->second;
+
 	if (it != haplotypes.begin())
 	    fh << ",";
 	fh << it->first << "|" 
-	   << std::setprecision(3) << (float) it->second / ((float) psum->sample_cnt * 2.0);
-	}
+	   << std::setprecision(3) << tot / ((float) psum->sample_cnt * 2.0);
+    }
+    fh << "\t";
+
+    set<int>::iterator pit;
+    stringstream       pops_str;
+
+    //
+    // Write which populations this haplotype block occurs in.
+    //
+    if (pops.size() == 0)
+	fh << "-1\t";
+    else
+	for (pit = pops.begin(); pit != pops.end(); pit++)
+	    pops_str << *pit << ",";
+    fh << pops_str.str().substr(0, pops_str.str().length()-1);
+    pops_str.str("");
+
+    //
+    // Write the frequency of occurence of each haplotype in each population.
+    //
+    for (it = haplotypes.begin(); it != haplotypes.end(); it++) {
+	pops_str << "\t";
+	for (pit = pops.begin(); pit != pops.end(); pit++)
+	    pops_str << (it->second)[*pit] << "|" 
+		     << std::setprecision(3)
+		     << (float) (it->second)[*pit] / (float) (pop_cnts[*pit] * 2.0) << ",";
+	fh << pops_str.str().substr(0, pops_str.str().length()-1);
+	pops_str.str("");
+    }
     fh << "\n";
 
     return 0;
@@ -735,10 +786,10 @@ calc_dprime(PhasedSummary *psum)
 
 		if (D > 0) {
 		    min = (freq_A * freq_b) < (freq_a * freq_B) ? (freq_A * freq_b) : (freq_a * freq_B);
-		    psum->dprime[i][j].dprime = D / min;
+		    psum->dprime[i][j].dprime = min == 0 ? 0.0 : D / min;
 		} else {
 		    min = (freq_A * freq_B) < (freq_a * freq_b) ? (freq_A * freq_B) : (freq_a * freq_b);
-		    psum->dprime[i][j].dprime = (-1 * D) / min;
+		    psum->dprime[i][j].dprime = min == 0 ? 0.0 :(-1 * D) / min;
 		}
 
 		//
@@ -1155,7 +1206,78 @@ parse_phase(string path)
     return psum;
 }
 
-int build_file_list(vector<pair<int, string> > &files) {
+int
+parse_population_map(string popmap_path, map<string, int> &pop_map, map<int, int> &pop_cnts)
+{
+    char   line[max_len];
+    char   pop_id_str[id_len];
+    vector<string> parts;
+    uint   len;
+
+    if (pmap_path.length() == 0) 
+	return 0;
+
+    cerr << "Parsing population map.\n";
+
+    ifstream fh(popmap_path.c_str(), ifstream::in);
+
+    if (fh.fail()) {
+	cerr << "Error opening population map '" << popmap_path << "'\n";
+	return 0;
+    }
+
+    while (fh.good()) {
+	fh.getline(line, max_len);
+
+	len = strlen(line);
+	if (len == 0) continue;
+
+	//
+	// Check that there is no carraige return in the buffer.
+	//
+	if (line[len - 1] == '\r') line[len - 1] = '\0';
+
+	//
+	// Ignore comments
+	//
+	if (line[0] == '#') continue;
+
+	//
+	// Parse the population map, we expect:
+	// <file name> <tab> <population ID>
+	//
+	parse_tsv(line, parts);
+
+	if (parts.size() != 2) {
+	    cerr << "Population map is not formated correctly: expecting two, tab separated columns, found " << parts.size() << ".\n";
+	    return 0;
+	}
+
+	strncpy(pop_id_str, parts[1].c_str(), id_len);
+	for (int i = 0; i < id_len && pop_id_str[i] != '\0'; i++)
+	    if (!isdigit(pop_id_str[i])) {
+		cerr << "Population map is not formated correctly: expecting numerical ID in second column, found '" << parts[1] << "'.\n";
+		return 0;
+	    }
+
+	//
+	// Add the sample name to population number mapping.
+	//
+	pop_map[parts[0]] = atoi(parts[1].c_str());
+	if (pop_cnts.count(atoi(parts[1].c_str())) == 0)
+	    pop_cnts[atoi(parts[1].c_str())] = 1;
+	else
+	    pop_cnts[atoi(parts[1].c_str())]++;
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int 
+build_file_list(vector<pair<int, string> > &files)
+{
     vector<string> parts;
     string pattern;
 
@@ -1211,6 +1333,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"infile_type", required_argument, NULL, 't'},
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"in_path",     required_argument, NULL, 'P'},
+	    {"pop_map",     required_argument, NULL, 'M'},
 	    {"minor_allele_freq", required_argument, NULL, 'a'},
 	    {"min_inform_pairs",  required_argument, NULL, 'm'},
 	    {0, 0, 0, 0}
@@ -1219,7 +1342,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvAt:P:p:a:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvAM:t:P:p:a:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1246,6 +1369,9 @@ int parse_command_line(int argc, char* argv[]) {
                 in_file_type = phase;
             else
                 in_file_type = unknown;
+	    break;
+	case 'M':
+	    pmap_path = optarg;
 	    break;
         case 'v':
             version();
@@ -1294,10 +1420,11 @@ void version() {
 
 void help() {
     std::cerr << "phasedstacks " << VERSION << "\n"
-              << "phasedstacks -P path -t file_type [-p threads] [-v] [-h]" << "\n"
+              << "phasedstacks -P path -t file_type [-p threads] [-M popmap] [-v] [-h]" << "\n"
 	      << "  P: path to the phased Stacks output files.\n"
 	      << "  t: input file type. Supported types: phase.\n"
 	      << "  p: number of processes to run in parallel sections of code.\n"
+	      << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n"
 	      << "  Filtering options:\n"
