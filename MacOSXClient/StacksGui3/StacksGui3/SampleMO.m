@@ -2,12 +2,13 @@
 //  SampleMO.m
 //  StacksGui3
 //
-//  Created by Nathan Dunn on 5/15/13.
+//  Created by Nathan Dunn on 12/12/13.
 //  Copyright (c) 2013 Nathan Dunn. All rights reserved.
 //
 
 #import "SampleMO.h"
 #import "DatumMO.h"
+#import "MatchMO.h"
 #import "PopulationMO.h"
 
 
@@ -17,5 +18,6 @@
 @dynamic sampleId;
 @dynamic datums;
 @dynamic population;
+@dynamic matches;
 
 @end
