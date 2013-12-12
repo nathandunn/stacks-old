@@ -49,7 +49,8 @@ using std::ofstream;
 
 NSString *calculateType(NSString *file);
 
-void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
+//void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
+//void setParentCounts(NSString *file);
 
 @implementation StacksConverter {
 
@@ -81,7 +82,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
 
 // lookups
-@synthesize lociDictionary;
+//@synthesize lociDictionary;
 @synthesize sampleLookupDictionary;
 @synthesize stopProcess;
 
@@ -104,7 +105,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
         alleleRepository = [[AlleleRepository alloc] init];
 
 
-        lociDictionary = [[NSMutableDictionary alloc] init];
+//        lociDictionary = [[NSMutableDictionary alloc] init];
         sampleLookupDictionary = [[NSMutableDictionary alloc] init];
         stopProcess = false;
 
@@ -138,7 +139,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 //        [[moc parentContext] save:NULL];
 //    }];
 
-    [lociDictionary removeAllObjects];
+//    [lociDictionary removeAllObjects];
     [sampleLookupDictionary removeAllObjects];
     [moc reset];
     [[moc parentContext] reset];
@@ -333,7 +334,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
         vector<CatMatch *> m;
         NSString *sampleString = [NSString stringWithUTF8String:files[i].second.c_str()];
         NSString *matchString = [path stringByAppendingFormat:@"/%@", sampleString];
-        NSLog(@"loading match file %@ for sample name %@", matchString, sampleString);
+//        NSLog(@"loading match file %@ for sample name %@", matchString, sampleString);
         if (([sampleString rangeOfString:@"catalog"]).location == NSNotFound) {
             NSMutableDictionary *matchDictionary = [self loadMatchesDictionary:[matchString stringByAppendingString:@".matches.tsv"]];
             [sampleLookupDictionary setObject:matchDictionary forKey:sampleString];
@@ -382,6 +383,11 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     progressWindow.actionMessage.stringValue = @"Populating samples";
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>((int) sample_ids.size(), (int) catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
+
+//    delete catalog_matches;
+//    catalog_matches.erase (catalog_matches.begin(),catalog_matches.end());
+
+
     [bar incrementBy:5];
     gettimeofday(&time2, NULL);
     NSLog(@"population pmap %ld", (time2.tv_sec - time1.tv_sec));
@@ -455,14 +461,15 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
 
         [loci addObject:locusMO];
-        [lociDictionary setObject:locusMO forKey:locusMO.locusId];
+//        [lociDictionary setObject:locusMO forKey:locusMO.locusId];
         ++catalogIterator;
         [bar incrementBy:incrementAmount];
     }
     gettimeofday(&time2, NULL);
 
 
-    setParentCounts(lociDictionary, catalogTagFile);
+//    setParentCounts(lociDictionary, catalogTagFile);
+    [self setParentCounts:stacksDocument.managedObjectContext forFile:catalogTagFile];
 
     NSLog(@"populating snps %ld", (time2.tv_sec - time1.tv_sec));
 
@@ -478,6 +485,8 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     long totalCatalogTime = 0;
     incrementAmount = 30 / sample_ids.size();
+
+    uint saveAfterSamples = 7 ;
     //go through all samples
     for (uint i = 0; i < sample_ids.size(); i++) {
         int sampleId = sample_ids[i];
@@ -491,10 +500,10 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
         for (it = catalog.begin(); it != catalog.end(); it++) {
             loc = it->second;
             datum = pmap->datum(loc->id, sample_ids[i]);
-            if (loc->id == 1) {
-                NSLog(@"locus 1 - getting sample id %d for id %d", sample_ids[i], i);
-                NSLog(@"datum is null? %@", (datum == NULL ? @"YES" : @"NO"));
-            }
+//            if (loc->id == 1) {
+//                NSLog(@"locus 1 - getting sample id %d for id %d", sample_ids[i], i);
+//                NSLog(@"datum is null? %@", (datum == NULL ? @"YES" : @"NO"));
+//            }
 
 //            datum = pmap->datum(loc->id, i);
 
@@ -505,11 +514,11 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 //                return nil ;
 //            }
 
-            LocusMO *locusMO = nil ;
             // TODO: use a lookup here to speed up
             NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
 //            locusMO = [lociDictionary objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
-            locusMO = [lociDictionary objectForKey:lookupKey];
+            LocusMO *locusMO = [locusRepository getLocus:stacksDocument.managedObjectContext forId:lookupKey.integerValue];
+//            locusMO = [lociDictionary objectForKey:lookupKey];
             if (locusMO == nil) {
                 for (int i = 0; i < 10; i++) {
                     NSLog(@"Could not find Locus! %d", it->first);
@@ -526,9 +535,9 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
                 vector<int> depths = datum->depth;
                 int numLetters = (int) obshape.size();
                 // TODO: should be entering this for the locus as well?
-                if (loc->id == 1) {
-                    NSLog(@"insertign datum for sample %@ locus %@ and sampleId %i", sampleMO.name, locusMO.locusId, sample_ids[i]);
-                }
+//                if (loc->id == 1) {
+//                    NSLog(@"insertign datum for sample %@ locus %@ and sampleId %i", sampleMO.name, locusMO.locusId, sample_ids[i]);
+//                }
                 DatumMO *newDatumMO = [datumRepository insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO locus:locusMO];
 
                 // get catalogs for matches
@@ -554,6 +563,19 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
         gettimeofday(&time2, NULL);
         NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
+
+        if(i%saveAfterSamples==0){
+            NSError *innerError = nil ;
+            NSLog(@"saving samples");
+            [stacksDocument.managedObjectContext save:&innerError];
+            if (innerError != nil) {
+                NSLog(@"error doing inner save: %@", innerError);
+                return nil;
+            }
+        }
+//        else{
+//            NSLog(@"NOT saving sample %i vs %i",i, (i%saveAfterSamples) );
+//        }
 
         [bar incrementBy:incrementAmount];
 
@@ -598,9 +620,9 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     NSLog(@"loading stack entries");
     CHECK_STOP
 
-    for (id key in [sampleLookupDictionary allKeys]) {
-        NSLog(@"keys 1: %@", key);
-    }
+//    for (id key in [sampleLookupDictionary allKeys]) {
+//        NSLog(@"keys 1: %@", key);
+//    }
     progressWindow.actionMessage.stringValue = @"Loading stack entries";
     gettimeofday(&time1, NULL);
 //    [self loadStacksEntriesFromTagFile:stacksDocument];
@@ -632,6 +654,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     return stacksDocument;
 }
+
 
 
 - (void)loadSnpsOntoDatum:(StacksDocument *)document {
@@ -1164,6 +1187,26 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     return stacksDocument;
 }
 
+- (void)setParentCounts:(NSManagedObjectContext *)context forFile:(NSString *)file {
+    NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
+    NSString *line;
+    for (line in fileData) {
+        NSArray *columns = [line componentsSeparatedByString:@"\t"];
+// should be column 8
+        if (columns.count > 9) {
+            NSInteger  locusId = [[NSString stringWithFormat:@"%@", columns[2]] integerValue];
+//            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
+            NSArray *parents = [columns[8] componentsSeparatedByString:@","];
+
+            NSInteger parentCount = countParents(parents);
+//            NSLog(@"parent count for %ld is %ld",locusId,parentCount);
+
+            LocusMO *locusMO = [locusRepository getLocus:context forId:locusId];
+            locusMO.parentCount = [NSNumber numberWithInteger:parentCount];
+        }
+    }
+}
+
 //- (StacksDocument *)getStacksDocumentForPath:(NSString *)path {
 //    NSError *stacksDocumentCreateError;
 //    StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
@@ -1190,23 +1233,44 @@ NSUInteger countParents(NSArray* parents){
     return parentCount ;
 }
 
-void setParentCounts(NSMutableDictionary *dictionary, NSString *file) {
-    NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
-    NSString *line;
-    for (line in fileData) {
-        NSArray *columns = [line componentsSeparatedByString:@"\t"];
-        // should be column 8
-        if (columns.count > 9) {
-            NSNumber *locusId = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%@", columns[2]] integerValue]];
-//            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
-            NSArray *parents = [columns[8] componentsSeparatedByString:@","];
 
-            NSInteger parentCount = countParents(parents);
-            NSLog(@"parent count for %@ is %ld",locusId,parentCount);
-            ((LocusMO *) [dictionary objectForKey:locusId]).parentCount = [NSNumber numberWithUnsignedInt:parentCount];
-        }
-    }
-}
+
+//void setParentCounts(NSString *file) {
+//    NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
+//    NSString *line;
+//    for (line in fileData) {
+//        NSArray *columns = [line componentsSeparatedByString:@"\t"];
+//        // should be column 8
+//        if (columns.count > 9) {
+//            NSNumber *locusId = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%@", columns[2]] integerValue]];
+////            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
+//            NSArray *parents = [columns[8] componentsSeparatedByString:@","];
+//
+//            NSInteger parentCount = countParents(parents);
+//            NSLog(@"parent count for %@ is %ld",locusId,parentCount);
+//
+//            ((LocusMO *) [dictionary objectForKey:locusId]).parentCount = [NSNumber numberWithUnsignedInt:parentCount];
+//        }
+//    }
+//}
+
+//void setParentCounts(NSMutableDictionary *dictionary, NSString *file) {
+//    NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
+//    NSString *line;
+//    for (line in fileData) {
+//        NSArray *columns = [line componentsSeparatedByString:@"\t"];
+//        // should be column 8
+//        if (columns.count > 9) {
+//            NSNumber *locusId = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%@", columns[2]] integerValue]];
+////            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
+//            NSArray *parents = [columns[8] componentsSeparatedByString:@","];
+//
+//            NSInteger parentCount = countParents(parents);
+//            NSLog(@"parent count for %@ is %ld",locusId,parentCount);
+//            ((LocusMO *) [dictionary objectForKey:locusId]).parentCount = [NSNumber numberWithUnsignedInt:parentCount];
+//        }
+//    }
+//}
 
 
 NSString *calculateType(NSString *file) {
@@ -1219,7 +1283,7 @@ NSString *calculateType(NSString *file) {
         if (columns.count > 9) {
             NSArray *parents = [columns[8] componentsSeparatedByString:@","];
             NSInteger parentCount = countParents(parents);
-            NSLog(@"parents %@ count %ld",columns[8],parentCount);
+//            NSLog(@"parents %@ count %ld",columns[8],parentCount);
             if ( parentCount > 2) {
                 return @"Population";
             }
