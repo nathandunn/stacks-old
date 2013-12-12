@@ -138,6 +138,11 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 //        [[moc parentContext] save:NULL];
 //    }];
 
+    [lociDictionary removeAllObjects];
+    [sampleLookupDictionary removeAllObjects];
+    [moc reset];
+    [[moc parentContext] reset];
+
 
     return stacksDocument;
 }
@@ -278,7 +283,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 - (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *)progressWindow {
     NSProgressIndicator *bar = progressWindow.loadProgress;
     if (bar != nil) {
-        progressWindow.actionTitle.stringValue = [NSString stringWithFormat:@"Importing %@", stacksDocument.name];
+        progressWindow.actionTitle.stringValue = [NSString stringWithFormat:@"Loading %@", stacksDocument.name];
         progressWindow.actionMessage.stringValue = @"Begin import";
         bar.doubleValue = 0;
         [bar display];
@@ -394,7 +399,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     incrementAmount = 10 / catalog.size();
 
-    progressWindow.actionMessage.stringValue = @"Importing locus snps";
+    progressWindow.actionMessage.stringValue = @"Loading locus snps";
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
         LocusMO *locusMO = [locusRepository insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).second->id]
@@ -467,7 +472,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
 
     CHECK_STOP
-    progressWindow.actionMessage.stringValue = @"Importing datums";
+    progressWindow.actionMessage.stringValue = @"Loading datums";
     // for each sample process the catalog
     NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
 
@@ -478,7 +483,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
         int sampleId = sample_ids[i];
         CHECK_STOP
         string sampleString = samples[sampleId];
-        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Importing datum %i/%ld",i+1,sample_ids.size()];
+        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum %i/%ld",i+1,sample_ids.size()];
 
 
         gettimeofday(&time1, NULL);
@@ -883,16 +888,25 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 
     // 1- get all files i the directory named *.tag.tsv"
     NSError *error;
+//    NSArray *files = [fileManager contentsOfDirectoryAtPath:path error:&error];
     NSArray *files = [fileManager contentsOfDirectoryAtPath:path error:&error];
+    NSMutableArray *realFiles = [[NSMutableArray alloc] init];
+
+    for (NSString *filePath in files) {
+        if ([filePath hasSuffix:@".tags.tsv"] && ![filePath hasPrefix:@"batch"]) {
+            [realFiles addObject:filePath];
+        }
+    }
+
     NSLog(@"# of files for directory %ld", files.count);
 
 
     // 2 - for each file, read the .tags file
     int fileNumber = 0 ;
-    NSUInteger numFiles = files.count;
+    NSUInteger numFiles = realFiles.count;
     double incrementAmount = 30 / numFiles;
 
-    for (NSString *filePath in files) {
+    for (NSString *filePath in realFiles) {
         progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld",fileNumber+1,numFiles];
         if (stopProcess) return;
         if ([filePath hasSuffix:@".tags.tsv"] && ![filePath hasPrefix:@"batch"]) {
@@ -940,9 +954,9 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
     NSInteger newLocusId;
     DatumMO *datumMO = nil ;
     NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
-    for (id key in [sampleLookupDictionary allKeys]) {
-        NSLog(@"keys 3: %@", key);
-    }
+//    for (id key in [sampleLookupDictionary allKeys]) {
+//        NSLog(@"keys 3: %@", key);
+//    }
     NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
 
     for (line in fileData) {
@@ -1090,6 +1104,7 @@ void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 - (void)readPopulations:(StacksDocument *)document {
     NSMutableArray *populations = [[NSMutableArray alloc] init];
     NSManagedObjectContext *moc = document.managedObjectContext;
+    [moc setUndoManager:nil];
 
     NSString *path = document.path;
     NSLog(@"reading population for file %@", path);
