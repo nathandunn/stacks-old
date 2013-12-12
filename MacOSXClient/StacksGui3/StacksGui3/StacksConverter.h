@@ -34,7 +34,7 @@
 @property(nonatomic, strong) AlleleRepository* alleleRepository;
 
 // a lookup
-@property(nonatomic, strong) NSMutableDictionary *lociDictionary ;
+//@property(nonatomic, strong) NSMutableDictionary *lociDictionary ;
 // sample:Dictionary<internalid,externalid>
 @property(nonatomic, strong) NSMutableDictionary *sampleLookupDictionary;
 
@@ -59,5 +59,7 @@
 //- (StacksDocument *)getStacksDocumentForPath:(NSString *)string;
 //- (void)loadLociAndGenotypes:(NSString *)appendingString progressBar:(NSProgressIndicator *)bar;
 @end
+
+NSUInteger  countParents(NSArray *parents);
 
 
