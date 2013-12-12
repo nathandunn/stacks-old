@@ -158,8 +158,8 @@
     self.selectedPopulation = [self findSelectedPopulation];
 
     if (self.selectedLocus != nil && self.selectedPopulation != nil) {
-        NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
-        NSLog(@"getting selected population %@", self.selectedPopulation.name);
+//        NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
+//        NSLog(@"getting selected population %@", self.selectedPopulation.name);
         self.selectedDatums = [self.datumRepository getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
         if (self.selectedDatums != nil && self.selectedDatums.count > 0) {
             self.selectedDatum = [self.selectedDatums objectAtIndex:0];
