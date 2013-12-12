@@ -982,6 +982,9 @@ NSString *calculateType(NSString *file);
 //    }
     NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
 
+    NSUInteger saveAtLine = 50000 ;
+    NSUInteger saveCounter = 1 ;
+
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
@@ -1038,8 +1041,21 @@ NSString *calculateType(NSString *file);
                     [datumMO addStackEntriesObject:stackEntryMO];
                     ++row;
                 }
+
+                if(saveCounter%saveAtLine==0){
+                    NSLog(@"SAVING");
+                    NSError *saveError;
+                    [moc save:&saveError];
+                    if (saveError != nil ) {
+                        NSLog(@"error saving %@", saveError);
+                    }
+                }
+                ++saveCounter ;
             }
+
+
         }
+
     }
     gettimeofday(&time2, NULL);
     NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
