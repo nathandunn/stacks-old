@@ -4443,7 +4443,7 @@ write_beagle(map<int, CSLocus *> &catalog,
     //
     // We will write one file per chromosome.
     //
-    cerr << "Writing population data to Beagle files...";
+    cerr << "Writing population data to unphased Beagle files...";
 
     //
     // Obtain the current date.
@@ -4460,15 +4460,35 @@ write_beagle(map<int, CSLocus *> &catalog,
     Datum   **d;
     LocSum  **s;
     LocTally *t;
+    uint      col;
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+
+	//
+	// We need to determine an ordering that can take into account overlapping RAD sites.
+	//
+	vector<GenPos> ordered_loci;
+	for (uint pos = 0; pos < it->second.size(); pos++) {
+	    loc = it->second[pos];
+	    t   = psum->locus_tally(loc->id);
+
+	    for (uint i = 0; i < loc->snps.size(); i++) {
+		col = loc->snps[i]->col;
+		if (t->nucs[col].allele_cnt == 2) {
+		    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
+		    if (write_single_snp) 
+			break;
+		}
+	    }
+	}
+	sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
 
 	//
 	// First, write a markers file containing each marker, its genomic position in basepairs
 	// and the two alternative alleles at this position.
 	//
 	stringstream pop_name;
-	pop_name << "batch_" << batch_id << "." << it->first << ".markers";
+	pop_name << "batch_" << batch_id << "." << it->first << ".unphased.bgl.markers";
 	string file = in_path + pop_name.str();
 
 	ofstream fh(file.c_str(), ofstream::out);
@@ -4483,22 +4503,20 @@ write_beagle(map<int, CSLocus *> &catalog,
 	//
 	fh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
 
-    	for (uint pos = 0; pos < it->second.size(); pos++) {
-    	    loc = it->second[pos];
+	for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+	    loc = catalog[ordered_loci[pos].id];
 	    t   = psum->locus_tally(loc->id);
+	    col = loc->snps[ordered_loci[pos].snp_index]->col;
 
-    	    for (uint i = 0; i < loc->snps.size(); i++) {
-    		uint col = loc->snps[i]->col;
-		if (t->nucs[col].allele_cnt == 2) {
-		    fh << loc->id;
-		    if (!write_single_snp) 
-			fh << "_" << col;
-		    fh << "\t" << loc->sort_bp(col) << "\t" 
-		       << t->nucs[col].p_allele     << "\t" 
-		       << t->nucs[col].q_allele     << "\n";
-		    if (write_single_snp)
-			break;
-		}
+	    if (t->nucs[col].allele_cnt == 2) {
+		fh << loc->id;
+		if (!write_single_snp) 
+		    fh << "_" << col;
+		fh << "\t" << loc->sort_bp(col) << "\t" 
+		   << t->nucs[col].p_allele     << "\t" 
+		   << t->nucs[col].q_allele     << "\n";
+		if (write_single_snp)
+		    break;
 	    }
 	}
 
@@ -4527,12 +4545,12 @@ write_beagle(map<int, CSLocus *> &catalog,
 	//
 	// Output a list of all the samples in the data set.
 	//
+	fh << "I\tid";
 	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
 	    pop_id      = psum->pop_index(pit->first);
 	    start_index = pit->second.first;
 	    end_index   = pit->second.second;
 
-	    fh << "I\tid";
 	    for (int j = start_index; j <= end_index; j++)
 		fh << "\t" << samples[pmap->rev_sample_index(j)] << "\t" << samples[pmap->rev_sample_index(j)];
 	}
@@ -4541,12 +4559,12 @@ write_beagle(map<int, CSLocus *> &catalog,
 	//
 	// Output population IDs for each sample.
 	//
+	fh << "S\tid";
 	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
 	    pop_id      = pit->first;
 	    start_index = pit->second.first;
 	    end_index   = pit->second.second;
 
-	    fh << "S\tid";
 	    for (int j = start_index; j <= end_index; j++)
 		fh << "\t" << pop_id << "\t" << pop_id;
 	}
@@ -4555,98 +4573,93 @@ write_beagle(map<int, CSLocus *> &catalog,
 	//
 	// For each marker, output the genotypes for each sample in two successive columns.
 	//
-	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-	    pop_id      = psum->pop_index(pit->first);
-	    start_index = pit->second.first;
-	    end_index   = pit->second.second;
+	for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+	    loc = catalog[ordered_loci[pos].id];
 
-	    for (uint pos = 0; pos < it->second.size(); pos++) {
-		loc = it->second[pos];
+	    s   = psum->locus(loc->id);
+	    d   = pmap->locus(loc->id);
+	    t   = psum->locus_tally(loc->id);
+	    col = loc->snps[ordered_loci[pos].snp_index]->col;
 
-		s = psum->locus(loc->id);
-		d = pmap->locus(loc->id);
-		t = psum->locus_tally(loc->id);
+	    // 
+	    // If this site is fixed in all populations or has too many alleles don't output it.
+	    //
+	    if (t->nucs[col].allele_cnt != 2) 
+		continue;
 
-		for (uint i = 0; i < loc->snps.size(); i++) {
-		    uint col = loc->snps[i]->col;
+	    fh << "M" << "\t" << loc->id;
+	    if (!write_single_snp)
+		fh << "_" << col;
 
-		    // 
-		    // If this site is fixed in all populations or has too many alleles don't output it.
+	    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+		pop_id      = psum->pop_index(pit->first);
+		start_index = pit->second.first;
+		end_index   = pit->second.second;
+
+		for (int j = start_index; j <= end_index; j++) {
 		    //
-		    if (t->nucs[col].allele_cnt != 2) 
-			continue;
-
-		    fh << "M" << "\t" << loc->id;
-		    if (!write_single_snp)
-			fh << "_" << loc->snps[i]->col;
-
-		    for (int j = start_index; j <= end_index; j++) {
+		    // Output the p allele
+		    //
+		    if (s[pop_id]->nucs[col].incompatible_site ||
+			s[pop_id]->nucs[col].filtered_site) {
 			//
-			// Output the p allele
+			// This site contains more than two alleles in this population or was filtered
+			// due to a minor allele frequency that is too low.
 			//
-			if (s[pop_id]->nucs[col].incompatible_site ||
-			    s[pop_id]->nucs[col].filtered_site) {
-			    //
-			    // This site contains more than two alleles in this population or was filtered
-			    // due to a minor allele frequency that is too low.
-			    //
-			    fh << "\t" << "?";
+			fh << "\t" << "?";
 
-			} else if (d[j] == NULL) {
-			    //
-			    // Data does not exist.
-			    //
-			    fh << "\t" << "?";
-			} else if (d[j]->model[col] == 'U') {
-			    //
-			    // Data exists, but the model call was uncertain.
-			    //
-			    fh << "\t" << "?";
-			} else {
-			    //
-			    // Tally up the nucleotide calls.
-			    //
-			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-			    if (p_allele == 0 && q_allele == 0)
-				fh << "\t" << "?";
-			    else if (p_allele == 0)
-				fh << "\t" << q_allele;
-			    else
-				fh << "\t" << p_allele;
-			}
-
+		    } else if (d[j] == NULL) {
 			//
-			// Now output the q allele
+			// Data does not exist.
 			//
-			if (s[pop_id]->nucs[col].incompatible_site ||
-			    s[pop_id]->nucs[col].filtered_site) {
+			fh << "\t" << "?";
+		    } else if (d[j]->model[col] == 'U') {
+			//
+			// Data exists, but the model call was uncertain.
+			//
+			fh << "\t" << "?";
+		    } else {
+			//
+			// Tally up the nucleotide calls.
+			//
+			tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
+
+			if (p_allele == 0 && q_allele == 0)
 			    fh << "\t" << "?";
-
-			} else if (d[j] == NULL) {
-			    fh << "\t" << "?";
-
-			} else if (d[j]->model[col] == 'U') {
-			    fh << "\t" << "?";
-
-			} else {
-			    tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-			    if (p_allele == 0 && q_allele == 0)
-				fh << "\t" << "?";
-			    else if (q_allele == 0)
-				fh << "\t" << p_allele;
-			    else
-				fh << "\t" << q_allele;
-			}
+			else if (p_allele == 0)
+			    fh << "\t" << q_allele;
+			else
+			    fh << "\t" << p_allele;
 		    }
-		    fh << "\n";
-		    if (write_single_snp) break;
+
+		    //
+		    // Now output the q allele
+		    //
+		    if (s[pop_id]->nucs[col].incompatible_site ||
+			s[pop_id]->nucs[col].filtered_site) {
+			fh << "\t" << "?";
+
+		    } else if (d[j] == NULL) {
+			fh << "\t" << "?";
+
+		    } else if (d[j]->model[col] == 'U') {
+			fh << "\t" << "?";
+
+		    } else {
+			if (p_allele == 0 && q_allele == 0)
+			    fh << "\t" << "?";
+			else if (q_allele == 0)
+			    fh << "\t" << p_allele;
+			else
+			    fh << "\t" << q_allele;
+		    }
 		}
 	    }
+	    fh << "\n";
+	    if (write_single_snp) break;
 	}
 
-	fh.close();
+    	fh.close();
     }
 
     cerr << "done.\n";
@@ -4667,7 +4680,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
     //
     // We will write one file per chromosome.
     //
-    cerr << "Writing population data to Beagle files...";
+    cerr << "Writing population data to phased Beagle files...";
 
     //
     // Obtain the current date.
@@ -4725,7 +4738,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
 	// and the two alternative alleles at this position.
 	//
 	stringstream pop_name;
-	pop_name << "batch_" << batch_id << "." << it->first << ".markers";
+	pop_name << "batch_" << batch_id << "." << it->first << ".phased.bgl.markers";
 	string file = in_path + pop_name.str();
 
 	ofstream fh(file.c_str(), ofstream::out);
@@ -4774,12 +4787,12 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
 	//
 	// Output a list of all the samples in the data set.
 	//
+	fh << "I\tid";
 	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
 	    pop_id      = psum->pop_index(pit->first);
 	    start_index = pit->second.first;
 	    end_index   = pit->second.second;
 
-	    fh << "I\tid";
 	    for (int j = start_index; j <= end_index; j++)
 		fh << "\t" << samples[pmap->rev_sample_index(j)] << "\t" << samples[pmap->rev_sample_index(j)];
 	}
@@ -4788,12 +4801,12 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
 	//
 	// Output population IDs for each sample.
 	//
+	fh << "S\tid";
 	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
 	    pop_id      = pit->first;
 	    start_index = pit->second.first;
 	    end_index   = pit->second.second;
 
-	    fh << "S\tid";
 	    for (int j = start_index; j <= end_index; j++)
 		fh << "\t" << pop_id << "\t" << pop_id;
 	}
@@ -4802,16 +4815,16 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
 	//
 	// For each marker, output the genotypes for each sample in two successive columns.
 	//
-	for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-	    pop_id      = psum->pop_index(pit->first);
-	    start_index = pit->second.first;
-	    end_index   = pit->second.second;
+	for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+	    loc = catalog[ordered_loci[pos].id];
+	    d   = pmap->locus(loc->id);
 
-	    for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-		loc = catalog[ordered_loci[pos].id];
-		d   = pmap->locus(loc->id);
+	    fh << "M" << "\t" << loc->id;
 
-		fh << "M" << "\t" << loc->id;
+	    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+		pop_id      = psum->pop_index(pit->first);
+		start_index = pit->second.first;
+		end_index   = pit->second.second;
 
 		for (int j = start_index; j <= end_index; j++) {
 		    //
@@ -4835,10 +4848,10 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
 			    fh << "\t" << d[j]->obshap[0] << "\t" << d[j]->obshap[0];
 		    }
 		}
-		fh << "\n";
 	    }   
-	    fh.close();
+	    fh << "\n";
 	}
+	fh.close();
     }
 
     cerr << "done.\n";
