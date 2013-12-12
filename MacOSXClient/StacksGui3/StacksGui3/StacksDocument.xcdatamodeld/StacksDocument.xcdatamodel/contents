@@ -58,6 +58,11 @@
     <entity name="LocusSnp" representedClassName="LocusSnpMO" parentEntity="Snp" syncable="YES">
         <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="snps" inverseEntity="Locus" syncable="YES"/>
     </entity>
+    <entity name="Match" representedClassName="MatchMO" syncable="YES">
+        <attribute name="externalId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
+        <attribute name="internalId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
+        <relationship name="sample" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Sample" inverseName="matches" inverseEntity="Sample" syncable="YES"/>
+    </entity>
     <entity name="ModelStackEntry" representedClassName="ModelStackEntryMO" parentEntity="StackEntry" syncable="YES"/>
     <entity name="Population" representedClassName="PopulationMO" syncable="YES">
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
@@ -69,6 +74,7 @@
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sampleId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
         <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="sample" inverseEntity="Datum" syncable="YES"/>
+        <relationship name="matches" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Match" inverseName="sample" inverseEntity="Match" syncable="YES"/>
         <relationship name="population" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Population" inverseName="samples" inverseEntity="Population" syncable="YES"/>
     </entity>
     <entity name="Snp" representedClassName="SnpMO" isAbstract="YES" syncable="YES">
@@ -107,5 +113,6 @@
         <element name="Sample" positionX="0" positionY="0" width="0" height="0"/>
         <element name="Snp" positionX="0" positionY="0" width="0" height="0"/>
         <element name="StackEntry" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Match" positionX="0" positionY="0" width="0" height="0"/>
     </elements>
 </model>

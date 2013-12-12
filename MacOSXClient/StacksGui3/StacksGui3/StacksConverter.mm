@@ -167,8 +167,8 @@ NSString *calculateType(NSString *file);
 
     NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
     NSLog(@"saving to %@ from %@", path, storeUrl);
-    if(persistentStoreCoordinator==nil){
-         persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
+    if (persistentStoreCoordinator == nil) {
+        persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
     }
     NSError *error = nil;
 
@@ -337,6 +337,9 @@ NSString *calculateType(NSString *file);
 //        NSLog(@"loading match file %@ for sample name %@", matchString, sampleString);
         if (([sampleString rangeOfString:@"catalog"]).location == NSNotFound) {
             NSMutableDictionary *matchDictionary = [self loadMatchesDictionary:[matchString stringByAppendingString:@".matches.tsv"]];
+            // TODO: for each match, insert into match dictionary . . . flush after so many
+            // attach to a sample I think 
+            
             [sampleLookupDictionary setObject:matchDictionary forKey:sampleString];
         }
 
@@ -454,8 +457,8 @@ NSString *calculateType(NSString *file);
             int column = allelesIterator->second;
 
             [alleleRepository insertLocusAllele:moc depth:[NSNumber numberWithInt:column]
-                                                                        allele:[numberFormatter numberFromString:[NSString stringWithUTF8String:allele.c_str()]]
-                                                                         locus:locusMO
+                                         allele:[numberFormatter numberFromString:[NSString stringWithUTF8String:allele.c_str()]]
+                                          locus:locusMO
             ];
         }
 
@@ -486,13 +489,13 @@ NSString *calculateType(NSString *file);
     long totalCatalogTime = 0;
     incrementAmount = 30 / sample_ids.size();
 
-    uint saveAfterSamples = 7 ;
+    uint saveAfterSamples = 7;
     //go through all samples
     for (uint i = 0; i < sample_ids.size(); i++) {
         int sampleId = sample_ids[i];
         CHECK_STOP
         string sampleString = samples[sampleId];
-        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum %i/%ld",i+1,sample_ids.size()];
+        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum %i/%ld", i + 1, sample_ids.size()];
 
 
         gettimeofday(&time1, NULL);
@@ -564,7 +567,7 @@ NSString *calculateType(NSString *file);
         NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
 
-        if(i%saveAfterSamples==0){
+        if (i % saveAfterSamples == 0) {
             NSError *innerError = nil ;
             NSLog(@"saving samples");
             [stacksDocument.managedObjectContext save:&innerError];
@@ -654,7 +657,6 @@ NSString *calculateType(NSString *file);
 
     return stacksDocument;
 }
-
 
 
 - (void)loadSnpsOntoDatum:(StacksDocument *)document {
@@ -761,10 +763,10 @@ NSString *calculateType(NSString *file);
 
             if (datumMO != nil) {
                 [alleleRepository insertDatumAllele:moc
-                                                                             ratio:[NSNumber numberWithFloat:ratio]
-                                                                             depth:[NSNumber numberWithInt:depth]
-                                                                            allele:[numberFormatter numberFromString:[columns objectAtIndex:3]]
-                                                                             datum:datumMO
+                                              ratio:[NSNumber numberWithFloat:ratio]
+                                              depth:[NSNumber numberWithInt:depth]
+                                             allele:[numberFormatter numberFromString:[columns objectAtIndex:3]]
+                                              datum:datumMO
                 ];
             }
         }
@@ -857,12 +859,12 @@ NSString *calculateType(NSString *file);
 
             if (datumMO != nil) {
                 [snpRepository insertDatumSnp:moc column:[NSNumber numberWithInteger:column]
-                                                                lratio:[NSNumber numberWithFloat:lratio]
-                                                                 rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
-                                                                 rank2:[numberFormatter numberFromString:[columns objectAtIndex:6]]
-                                                                 rank3:[numberFormatter numberFromString:[columns objectAtIndex:7]]
-                                                                 rank4:[numberFormatter numberFromString:[columns objectAtIndex:8]]
-                                                                 datum:datumMO
+                                       lratio:[NSNumber numberWithFloat:lratio]
+                                        rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
+                                        rank2:[numberFormatter numberFromString:[columns objectAtIndex:6]]
+                                        rank3:[numberFormatter numberFromString:[columns objectAtIndex:7]]
+                                        rank4:[numberFormatter numberFromString:[columns objectAtIndex:8]]
+                                        datum:datumMO
                 ];
 //                [datumMO addSnpsObject:datumSnpMO];
 //                NSLog(@"inserted snp at %@ for sample %@ and locus %@",datumSnpMO.column,datumMO.sample.name,datumMO.locus.locusId);
@@ -903,7 +905,7 @@ NSString *calculateType(NSString *file);
     return lookupDictionary;
 }
 
-- (void)loadStacksEntriesFromTagFile:(StacksDocument *)document progressWindow:(ProgressController *)progressWindow{
+- (void)loadStacksEntriesFromTagFile:(StacksDocument *)document progressWindow:(ProgressController *)progressWindow {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *path = document.path;
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
@@ -925,12 +927,12 @@ NSString *calculateType(NSString *file);
 
 
     // 2 - for each file, read the .tags file
-    int fileNumber = 0 ;
+    int fileNumber = 0;
     NSUInteger numFiles = realFiles.count;
     double incrementAmount = 30 / numFiles;
 
     for (NSString *filePath in realFiles) {
-        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld",fileNumber+1,numFiles];
+        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld", fileNumber + 1, numFiles];
         if (stopProcess) return;
         if ([filePath hasSuffix:@".tags.tsv"] && ![filePath hasPrefix:@"batch"]) {
 //            CHECK_STOP
@@ -982,8 +984,8 @@ NSString *calculateType(NSString *file);
 //    }
     NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
 
-    NSUInteger saveAtLine = 50000 ;
-    NSUInteger saveCounter = 1 ;
+    NSUInteger saveAtLine = 50000;
+    NSUInteger saveCounter = 1;
 
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
@@ -1042,7 +1044,7 @@ NSString *calculateType(NSString *file);
                     ++row;
                 }
 
-                if(saveCounter%saveAtLine==0){
+                if (saveCounter % saveAtLine == 0) {
                     NSLog(@"SAVING");
                     NSError *saveError;
                     [moc save:&saveError];
@@ -1050,12 +1052,9 @@ NSString *calculateType(NSString *file);
                         NSLog(@"error saving %@", saveError);
                     }
                 }
-                ++saveCounter ;
+                ++saveCounter;
             }
-
-
         }
-
     }
     gettimeofday(&time2, NULL);
     NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
@@ -1067,6 +1066,7 @@ NSString *calculateType(NSString *file);
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
     }
+    [moc reset];
 }
 
 - (void)addSamplesToDocument:(StacksDocument *)document forSampleIds:(vector<int>)sampleIds andSamples:(map<int, string>)samples {
@@ -1210,7 +1210,7 @@ NSString *calculateType(NSString *file);
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 // should be column 8
         if (columns.count > 9) {
-            NSInteger  locusId = [[NSString stringWithFormat:@"%@", columns[2]] integerValue];
+            NSInteger locusId = [[NSString stringWithFormat:@"%@", columns[2]] integerValue];
 //            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
             NSArray *parents = [columns[8] componentsSeparatedByString:@","];
 
@@ -1237,8 +1237,8 @@ NSString *calculateType(NSString *file);
 //}
 @end
 
-NSUInteger countParents(NSArray* parents){
-    NSUInteger  parentCount = 0 ;
+NSUInteger countParents(NSArray *parents) {
+    NSUInteger parentCount = 0;
 
     NSMutableSet *parentIds = [[NSMutableSet alloc] initWithCapacity:parents.count];
     for (NSString *parentString in parents) {
@@ -1246,7 +1246,7 @@ NSUInteger countParents(NSArray* parents){
     }
     parentCount = parentIds.count;
 
-    return parentCount ;
+    return parentCount;
 }
 
 
@@ -1300,7 +1300,7 @@ NSString *calculateType(NSString *file) {
             NSArray *parents = [columns[8] componentsSeparatedByString:@","];
             NSInteger parentCount = countParents(parents);
 //            NSLog(@"parents %@ count %ld",columns[8],parentCount);
-            if ( parentCount > 2) {
+            if (parentCount > 2) {
                 return @"Population";
             }
         }
