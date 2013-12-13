@@ -1044,7 +1044,7 @@ void version() {
 void help() {
     std::cerr << "process_radtags " << VERSION << "\n"
               << "process_radtags [-f in_file | -p in_dir [-P] | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim] [-h]\n"
-	      << "  f: path to the input file if processing single-end seqeunces.\n"
+	      << "  f: path to the input file if processing single-end sequences.\n"
 	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, 'fastq', or 'gzfastq' for gzipped Fastq (default 'fastq').\n"
 	      << "  p: path to a directory of files.\n"
 	      << "  P: files contained within directory specified by '-p' are paired.\n"

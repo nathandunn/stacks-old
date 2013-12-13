@@ -55,6 +55,7 @@ using std::set;
 
 #include "constants.h"
 #include "utils.h"
+#include "input.h"
 
 enum loc_t {strong_ld, recomb, uninformative};
 
@@ -210,14 +211,15 @@ void  help( void );
 void  version( void );
 int   parse_command_line(int, char**);
 int   build_file_list(vector<pair<int, string> > &);
+int   parse_population_map(string, map<string, int> &, map<int, int> &);
 PhasedSummary *parse_phase(string);
 int   summarize_phased_genotypes(PhasedSummary *);
 int   calc_dprime(PhasedSummary *);
 int   assign_alleles(NucSum, char &, char &, double &, double &);
 int   write_dprime(string, PhasedSummary *);
-int   four_gamete_test(string, PhasedSummary *, map<int, int> &, map<int, int> &);
-int   dprime_blocks(string, PhasedSummary *, map<int, int> &, map<int, int> &);
+int   four_gamete_test(string, map<string, int> &, PhasedSummary *, map<int, int> &, map<int, int> &);
+int   dprime_blocks(string, map<string, int> &, PhasedSummary *, map<int, int> &, map<int, int> &);
 bool  check_adjacent_blocks(PhasedSummary *, HBlock *);
-int   enumerate_haplotypes(ofstream &, PhasedSummary *, uint, uint);
+int   enumerate_haplotypes(ofstream &, map<string, int> &, PhasedSummary *, uint, uint);
 
 #endif // __PHASEDSTACKS_H__
