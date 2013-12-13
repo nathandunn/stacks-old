@@ -1,8 +1,13 @@
-Stacks 1.091 - Dec 10, 2013
+Stacks 1.10 - Dec 10, 2013
 --------------------------
+	Featrue: Added phased output for PHASE and Beagle. The phased output writes multiple SNPs
+	in a single RAD locus as an already phased haplotype, leaving PHASE and Beagle to only phase
+	between these haplotypes, instead of having to re-phase SNPs from within the same RAD site.
+	Bugfix: corrected the SNP genotype output for Beagle.
 	Bugfix: Corrected PHP warnings; enabled scrolling in catalog.php for iframes.
 	Bugfix: allele percentages from ustacks were off since ustacks was changed to load/unload
-	read IDs from disk (Stacks 0.99995).
+	read IDs from disk (Stacks 0.99995). Only the calculation of the percentages was affected, 
+	not the underlying algorithms.
 
 Stacks 1.09 - Oct 30, 2013
 --------------------------
