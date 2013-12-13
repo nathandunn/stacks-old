@@ -66,6 +66,7 @@ enum map_types {unk, none, gen, dh, cp, bc1, f2};
 enum out_types {rqtl, joinmap, genomic};
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
+enum loc_type  {haplotype, snp};
 
 const int max_snp_dist = 500;
 
@@ -92,14 +93,22 @@ public:
 //
 class GenPos {
 public:
-    uint id;
-    uint bp;
-    uint snp_index;
+    uint     id;
+    uint     bp;
+    uint     snp_index;
+    loc_type type;
 
     GenPos(int id, int snp_index, int bp) {
 	this->id        = id;
 	this->snp_index = snp_index;
 	this->bp        = bp;
+	this->type      = snp;
+    }
+    GenPos(int id, int snp_index, int bp, loc_type type) {
+	this->id        = id;
+	this->snp_index = snp_index;
+	this->bp        = bp;
+	this->type      = type;
     }
 };
 
@@ -140,7 +149,9 @@ int  write_vcf(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<
 int  write_genepop(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_structure(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_phase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
+int  write_fastphase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_beagle(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
+int  write_beagle_phased(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_plink(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  tally_observed_haplotypes(vector<char *> &, int, char &, char &);

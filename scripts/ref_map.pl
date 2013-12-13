@@ -559,7 +559,7 @@ sub usage {
 ref_map.pl -p path -r path [-s path] -o path [-n mismatches] [-m min_cov] [-T num_threads] [-O popmap] [-B db -b batch_id -D "desc" -a yyyy-mm-dd] [-S -i id] [-e path] [-d] [-h]
     p: path to a Bowtie/SAM/BAM file containing parent sequences from a mapping cross.
     r: path to a Bowtie/SAM/BAM file containing progeny sequences from a mapping cross.
-    s: path to a Bowtie/SAM/BAM file contiaining an individual sample from a population.
+    s: path to a Bowtie/SAM/BAM file containing an individual sample from a population.
     o: path to write pipeline output files.
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
     T: specify the number of threads to execute.
