@@ -18,8 +18,8 @@
 @property NSString *subScript;
 
 // replaced with this:
-@property (retain) NSMutableArray *haplotypes;
-@property (retain) NSMutableArray *depths;
+@property (weak) NSMutableArray *haplotypes;
+@property (weak) NSMutableArray *depths;
 
 
 // link info
