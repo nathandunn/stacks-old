@@ -23,8 +23,8 @@
 @interface StacksConverter : NSObject
 
 
-@property(nonatomic, strong) DatumRepository* datumRepository ;
-@property(nonatomic, strong) DepthRepository* depthRepository;
+@property(strong) DatumRepository* datumRepository ;
+@property(strong) DepthRepository* depthRepository;
 @property(nonatomic, strong) HaplotypeRepository* haplotypeRepository;
 @property(nonatomic, strong) LocusRepository* locusRepository;
 @property(nonatomic, strong) PopulationRepository* populationRepository;

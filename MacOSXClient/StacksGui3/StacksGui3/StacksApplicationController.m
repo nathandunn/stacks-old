@@ -77,11 +77,11 @@
     [panel setMinSize:minSize];
     NSInteger result = [panel runModal];
 
-    StacksConverter *stacksConverter = [[StacksConverter alloc] init];
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if (result == NSOKButton) {
         NSLog(@"ok !!");
         NSLog(@"directory URL: %@", panel.directoryURL.path);
+        StacksConverter *stacksConverter = [[StacksConverter alloc] init];
         NSString *stacksDocumentPath = [stacksConverter generateFilePathForUrl:panel.directoryURL];
         BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:stacksDocumentPath error:NULL];
         NSLog(@"file removed %i", fileRemoved);
@@ -125,8 +125,7 @@
                 NSLog(@"must have been cancelled");
 
             }
-        }
-        );
+        } );
 //        });
 //        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
 

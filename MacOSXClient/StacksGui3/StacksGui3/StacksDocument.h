@@ -21,15 +21,15 @@
 @property(strong) NSString *path;
 @property(atomic, retain) NSMutableDictionary *populationLookup;
 
-@property(nonatomic, strong) NSSet *loci;
-@property(nonatomic, strong) NSSet *populations;
+@property(nonatomic, weak) NSSet *loci;
+@property(nonatomic, weak) NSSet *populations;
 
 
 // handle selections
-@property(nonatomic, strong) LocusMO *selectedLocus;
-@property(nonatomic, strong) PopulationMO *selectedPopulation;
-@property(nonatomic, strong) NSArray *selectedDatums;
-@property(nonatomic, strong) DatumMO *selectedDatum;
+@property(nonatomic, weak) LocusMO *selectedLocus;
+@property(nonatomic, weak) PopulationMO *selectedPopulation;
+@property(nonatomic, weak) NSArray *selectedDatums;
+@property(nonatomic, weak) DatumMO *selectedDatum;
 
 // repositories
 @property(nonatomic, strong) DatumRepository *datumRepository;

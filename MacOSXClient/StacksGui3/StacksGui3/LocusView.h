@@ -19,10 +19,10 @@
 @interface LocusView : NSObject
 
 @property NSInteger locusId;
-@property (strong) NSMutableArray *snps;
-@property (strong) NSString *consensus;
-@property (strong) NSString *marker ;
-@property (strong) NSString *ratio ;
+@property (weak) NSMutableArray *snps;
+@property (weak) NSString *consensus;
+@property (weak) NSString *marker ;
+@property (weak) NSString *ratio ;
 
 
 @property (strong) NSMutableDictionary *genotypes;
