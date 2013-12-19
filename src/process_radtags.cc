@@ -625,21 +625,7 @@ print_results(int argc, char **argv,
 
     cerr << "Outputing details to log: '" << log_path << "'\n\n";
 
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%F %T", timeinfo);
-
-    for (int i = 0; i < argc; i++) {
-	log << argv[i]; 
-	if (i < argc - 1) log << " ";
-    }
-    log << "\n" << "process_radtags executed " << date << "\n\n";
+    init_log(log, argc, argv);
 
     log << "File\t"
 	<< "Retained Reads\t";

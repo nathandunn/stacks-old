@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -18,29 +18,18 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __CONSTANTS_H__
-#define __CONSTANTS_H__
+#ifndef __CATALOG_UTILS_H__
+#define __CATALOG_UTILS_H__
 
-//
-// Pull in the configuration variables from the configure script
-//
-#if HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <map>
+using std::map;
+#include <set>
+using std::set;
 
-//
-// Maximum line length for parsing input files.
-//
-const int max_len = 1024;
+#include "constants.h"
+#include "stacks.h"
+#include "locus.h"
 
-//
-// Maximum length of idetifiers, such as sequence IDs and chromosome names.
-//
-const int id_len = 255;
+int reduce_catalog(map<int, CSLocus *> &, set<int> &, set<int> &);
 
-//
-// Supported file types
-//
-enum file_type {unknown, sql, fasta, fastq, gzfasta, gzfastq, bowtie, sam, bam, tsv, bustard, phase, fastphase, beagle};
-
-#endif
+#endif // __CATALOG_UTILS_H__

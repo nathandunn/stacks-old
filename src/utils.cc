@@ -25,8 +25,6 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-// $Id: utils.cc 1989 2010-11-03 01:00:23Z catchen $
-//
 #include "utils.h"
 
 char reverse(char c) {
@@ -57,7 +55,7 @@ char reverse(char c) {
     return 'N';
 }
 
-int is_integer(char *str) {
+int is_integer(const char *str) {
     //
     // Adapted from the strtol manpage.
     //
@@ -81,7 +79,7 @@ int is_integer(char *str) {
     return (int) val;
 }
 
-double is_double(char *str) {
+double is_double(const char *str) {
     //
     // Adapted from the strtol manpage.
     //

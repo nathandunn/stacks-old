@@ -80,6 +80,7 @@ class Input {
 
 char *rev_comp(const char *);
 int   parse_tsv(const char *, vector<string> &);
+int   parse_ssv(const char *, vector<string> &);
 int   read_line(ifstream &, char **, int *);
 
 #endif // __INPUT_H__

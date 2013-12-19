@@ -55,7 +55,16 @@ using std::set;
 
 #include "constants.h"
 #include "utils.h"
+#include "log_utils.h"
+#include "catalog_utils.h"
 #include "input.h"
+#include "sql_utilities.h"
+#include "locus.h"
+
+#ifdef HAVE_LIBZ
+#include <errno.h>
+#include <zlib.h>
+#endif
 
 enum loc_t {strong_ld, recomb, uninformative};
 
@@ -84,6 +93,7 @@ public:
 class NucSum {
 public:
     uint  bp;
+    uint  col;
     uint  clocus;
     float freq;
     uint  nuc[4];
@@ -212,7 +222,11 @@ void  version( void );
 int   parse_command_line(int, char**);
 int   build_file_list(vector<pair<int, string> > &);
 int   parse_population_map(string, map<string, int> &, map<int, int> &);
-PhasedSummary *parse_phase(string);
+
+PhasedSummary *parse_fastphase(string);
+PhasedSummary *parse_beagle(map<int, CSLocus *> &, string);
+PhasedSummary *parse_beagle_haplotypes(map<int, CSLocus *> &, string);
+
 int   summarize_phased_genotypes(PhasedSummary *);
 int   calc_dprime(PhasedSummary *);
 int   assign_alleles(NucSum, char &, char &, double &, double &);

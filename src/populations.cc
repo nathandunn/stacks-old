@@ -494,32 +494,6 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int 
-reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blacklist) 
-{
-    map<int, CSLocus *> list;
-    map<int, CSLocus *>::iterator it;
-    CSLocus *loc;
-
-    if (whitelist.size() == 0 && blacklist.size() == 0) 
-	return 0;
- 
-    int i = 0;
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
-
-	if (whitelist.size() > 0 && whitelist.count(loc->id) == 0) continue;
-	if (blacklist.count(loc->id)) continue;
-
-	list[it->first] = it->second;
-	i++;
-    }
-
-    catalog = list;
-
-    return i;
-}
-
 bool 
 order_unordered_loci(map<int, CSLocus *> &catalog) 
 {

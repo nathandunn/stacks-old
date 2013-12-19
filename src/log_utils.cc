@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -18,29 +18,29 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __CONSTANTS_H__
-#define __CONSTANTS_H__
+#include "log_utils.h"
 
-//
-// Pull in the configuration variables from the configure script
-//
-#if HAVE_CONFIG_H
-#include "config.h"
-#endif
+int
+init_log(ofstream &fh, int argc, char **argv)
+{
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
 
-//
-// Maximum line length for parsing input files.
-//
-const int max_len = 1024;
+    //
+    // Write the command line that was executed.
+    //
+    for (int i = 0; i < argc; i++) {
+	fh << argv[i]; 
+	if (i < argc - 1) fh << " ";
+    }
+    fh << "\n" << argv[0] << " executed " << date << "\n\n";
 
-//
-// Maximum length of idetifiers, such as sequence IDs and chromosome names.
-//
-const int id_len = 255;
-
-//
-// Supported file types
-//
-enum file_type {unknown, sql, fasta, fastq, gzfasta, gzfastq, bowtie, sam, bam, tsv, bustard, phase, fastphase, beagle};
-
-#endif
+    return 0;
+}
