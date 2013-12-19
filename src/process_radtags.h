@@ -53,6 +53,7 @@ using std::pair;
 #include "file_io.h"
 #include "write.h"
 #include "utils.h"
+#include "log_utils.h"
 #include "BustardI.h"   // Reading input files in Tab-separated Bustard format
 #include "FastqI.h"     // Reading input files in FASTQ format
 #include "gzFastq.h"    // Reading gzipped input files in FASTQ format

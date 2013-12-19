@@ -139,7 +139,9 @@ char *rev_comp(const char *seq) {
     return com;
 }
 
-int parse_tsv(const char *line, vector<string> &parts) {
+int 
+parse_tsv(const char *line, vector<string> &parts) 
+{
     const char  *p, *q;
     string part;
 
@@ -160,6 +162,29 @@ int parse_tsv(const char *line, vector<string> &parts) {
     //for (size_t i = 0; i < parts.size(); i++)
     //    cerr << "Parts[" << i << "]: " << parts[i].c_str() << "\n";
     //cerr << "\n";
+
+    return 0;
+}
+
+int 
+parse_ssv(const char *line, vector<string> &parts) 
+{
+    const char  *p, *q;
+    string part;
+
+    parts.clear();
+    p = line;
+
+    do {
+	for (q = p; *q != ' ' && *q != '\0'; q++);
+	if (q - p == 0) 
+	    part = "";
+	else
+	    part.assign(p, (q - p));
+	parts.push_back(string(part));
+
+	p = q + 1;
+    } while (*q != '\0');
 
     return 0;
 }

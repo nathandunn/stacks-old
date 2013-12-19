@@ -243,27 +243,6 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blacklist) {
-    map<int, CSLocus *> list;
-    map<int, CSLocus *>::iterator it;
-    CSLocus *loc;
-
-    if (whitelist.size() == 0 && blacklist.size() == 0) 
-	return 0;
- 
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
-
-	if (whitelist.size() > 0 && whitelist.count(loc->id) == 0) continue;
-	if (blacklist.count(loc->id)) continue;
-	list[it->first] = it->second;
-    }
-
-    catalog = list;
-
-    return 0;
-}
-
 int identify_parental_ids(map<int, CSLocus *> &catalog, vector<int> &sample_ids, set<int> &parents) {
     set<int> catalog_parents;
     map<int, CSLocus *>::iterator it;

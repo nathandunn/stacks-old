@@ -31,15 +31,20 @@
 // Global variables to hold command-line options.
 file_type in_file_type = unknown;
 int       num_threads  = 1;
+int       batch_id     = 0;
+string    cat_path;
 string    in_path;
 string    out_path;
 string    out_file;
 string    pmap_path;
+bool      haplotypes       = false;
 double    p_value_cutoff   = 0.05;
 double    chi_sq_limit     = 3.84;
 double    minor_freq_lim   = 0.2;
 double    min_inform_pairs = 0.90;
 uint      max_pair_dist    = 1000000;
+
+set<int> whitelist, blacklist;
 
 map<string, int> pop_map;
 map<int, int>    pop_cnts;
@@ -61,9 +66,15 @@ int main (int argc, char* argv[]) {
     cerr << "Minor allele frequency cutoff: " << minor_freq_lim << "\n"
 	 << "Looking for ";
     switch(in_file_type) {
+    case beagle:
+	cerr << "Beagle";
+	break;
     case phase:
+	cerr << "PHASE";
+	break;
+    case fastphase:
     default:
-	cerr << "Phase";
+	cerr << "fastPhase";
 	break;
     }
     cerr << " input files.\n";
@@ -99,6 +110,27 @@ int main (int argc, char* argv[]) {
 	exit(1);
     }
 
+    init_log(log_fh, argc, argv);
+
+    //
+    // Load the catalog
+    //
+    cerr << "Parsing the catalog...\n";
+    stringstream catalog_file;
+    map<int, CSLocus *> catalog;
+    int res;
+    catalog_file << cat_path << "batch_" << batch_id << ".catalog";
+    if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
+    	cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
+     	return 0;
+    }
+    cerr << "done.\n";
+
+    //
+    // Implement the black/white list
+    //
+    reduce_catalog(catalog, whitelist, blacklist);
+
     map<int, int> fgt_block_lens, fgt_snp_cnts;
     map<int, int> dp_block_lens, dp_snp_cnts;
 
@@ -108,9 +140,21 @@ int main (int argc, char* argv[]) {
 
 	PhasedSummary *psum;
 
-	if ((psum = parse_phase(in_path + files[i].second)) == NULL) {
-	    cerr << "Unable to parse input files.\n";
-	    exit(1);
+	if (in_file_type == fastphase) {
+	    if ((psum = parse_fastphase(in_path + files[i].second)) == NULL) {
+		cerr << "Unable to parse fastPhase input files.\n";
+		exit(1);
+	    }
+	} else if (in_file_type == beagle && haplotypes) {
+	    if ((psum = parse_beagle_haplotypes(catalog, in_path + files[i].second)) == NULL) {
+		cerr << "Unable to parse Beagle input files.\n";
+		exit(1);
+	    }
+	} else if (in_file_type == beagle) {
+	    if ((psum = parse_beagle(catalog, in_path + files[i].second)) == NULL) {
+		cerr << "Unable to parse Beagle input files.\n";
+		exit(1);
+	    }
 	}
 
 	//
@@ -1012,7 +1056,7 @@ summarize_phased_genotypes(PhasedSummary *psum)
 // Code to parse fastPhase format. 
 //
 PhasedSummary * 
-parse_phase(string path) 
+parse_fastphase(string path) 
 {
     ifstream    fh;
     char        line[max_len];
@@ -1023,7 +1067,7 @@ parse_phase(string path)
     memset(line, '\0', max_len);
 
     //
-    // Read in the original PHASE export from Stacks to obtain the original base pair positions.
+    // Read in the original fastPhase export from Stacks to obtain the original base pair positions.
     //
     //
     // Open the file for reading
@@ -1206,6 +1250,331 @@ parse_phase(string path)
     return psum;
 }
 
+//
+// Code to parse Beagle format. 
+//
+PhasedSummary * 
+parse_beagle(map<int, CSLocus *> &catalog, string path) 
+{
+    gzFile      gz_fh;
+    char        *line;
+    string      buf, filepath;
+    const char *p, *q;
+    uint        len, line_len, i, sindex;
+    bool        eol;
+
+    line_len = max_len;
+    line = new char[line_len];
+    memset(line, '\0', line_len);
+
+    //
+    // Open the Beagle file for reading
+    //
+    filepath = path + ".unphased.bgl.phased.gz";
+    gz_fh = gzopen(filepath.c_str(), "rb");
+    if (!gz_fh) {
+	cerr << "Failed to open gzipped file '" << filepath << "': " << strerror(errno) << ".\n";
+	return NULL;
+    }
+
+    cerr << "Parsing " << filepath << "...\n";
+
+    vector<string> parts;
+    uint num_samples   = 0;
+    uint num_genotypes = 0;
+    char cat_loc_str[id_len], col_str[id_len];
+
+    //
+    // Parse the file twice. On the first round:
+    //   1. Determine the number of samples in the dataset (column count)
+    //   2. Determine the number of markers (row count).
+    // On the second round, parse the SNP genotypes.
+    //
+
+    //
+    // Read each line in the file. If it starts with:
+    //   '#' it is a comment, skip the line.
+    //   'I' it is the list of samples, parse them.
+    //   'S' is the population ID for each SNP, skip this line.
+    //   'M' is a marker, count the number of markers.
+    //
+    do {
+	eol = false;
+	buf.clear();
+	do {
+	    gzgets(gz_fh, line, line_len);
+	    buf += line;
+
+	    len = strlen(line);
+	    if (len > 0 && line[len - 1] == '\n') {
+		eol = true;
+		line[len - 1] = '\0';
+	    }
+	} while (!gzeof(gz_fh) && !eol);
+
+	if (line_len < buf.length()) {
+	    // cerr << "Resizing line buffer from " << line_len << " to " << buf.length() << "\n";
+	    delete [] line;
+	    line = new char[buf.length() + 1];
+	    line_len = buf.length() + 1;
+	    memset(line, '\0', line_len);
+	}
+
+	if (buf[0] == 'M') {
+	    num_genotypes++;
+	} else if (buf[0] == 'I') {
+	    //
+	    // Count the number of samples.
+	    //
+	    parse_ssv(buf.c_str(), parts);
+	    num_samples = (parts.size() - 2) / 2;
+	}
+
+    } while (!gzeof(gz_fh));
+
+    PhasedSummary *psum = new PhasedSummary(num_samples, num_genotypes);
+
+    for (uint j = 2; j < parts.size(); j++) {
+	if (j % 2 == 0) {
+	    sindex = psum->add_sample(parts[j]);
+	    psum->samples[sindex].size   = num_genotypes;
+	    psum->samples[sindex].nucs_1 = new char[psum->samples[sindex].size];
+	    psum->samples[sindex].nucs_2 = new char[psum->samples[sindex].size];
+	}
+    }
+
+    cerr << "  Found " << num_samples << " samples; " << num_genotypes << " genotypes.\n";
+
+    gzrewind(gz_fh);
+
+    uint marker_num = 0;
+    memset(line, '\0', line_len);
+
+    do {
+	do {
+	    gzgets(gz_fh, line, line_len);
+	} while (!gzeof(gz_fh) && line[0] != 'M');
+
+	len = strlen(line);
+
+	if (len == 0) break;
+	if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
+
+	parse_ssv(line, parts);
+
+	//
+	// Parse the catalog locus ID and the column number of the SNP:
+	//   e.g. LocId_column or 10329_37
+	//
+	p = parts[1].c_str();
+	for (q = p + 1; *q != '_' && *q != '\0'; q++);
+	strncpy(cat_loc_str, p, q - p);
+	cat_loc_str[q-p] = '\0';
+	q++;
+	strcpy(col_str, q);
+
+	psum->nucs[marker_num].clocus = is_integer(cat_loc_str);
+	psum->nucs[marker_num].col    = is_integer(col_str);
+
+    	//
+    	// Store the genotypes into our internal buffer.
+    	//
+	sindex = 0;
+	i      = 2;
+	while (i < parts.size()) {
+	    p = parts[i].c_str();
+	    psum->samples[sindex].nucs_1[marker_num] = *p;
+	    i++;
+	    p = parts[i].c_str();
+	    psum->samples[sindex].nucs_2[marker_num] = *p;
+	    i++;
+	    sindex++;
+	}
+
+	marker_num++;
+
+    } while (!gzeof(gz_fh));
+
+    gzclose(gz_fh);
+
+    //
+    // Use the catalog to look up the basepair positions for each catalog locus.
+    //
+    CSLocus *loc;
+    for (i = 0; i < psum->size; i++) {
+	loc = catalog[psum->nucs[i].clocus];
+	psum->nucs[i].bp = loc->sort_bp(psum->nucs[i].col);
+    }
+
+    return psum;
+}
+
+//
+// Code to parse Beagle format. 
+//
+PhasedSummary * 
+parse_beagle_haplotypes(map<int, CSLocus *> &catalog, string path) 
+{
+    gzFile      gz_fh;
+    char        *line;
+    string      buf, filepath;
+    const char *p;
+    uint        len, line_len, i, j, sindex;
+    bool        eol;
+
+    line_len = max_len;
+    line = new char[line_len];
+    memset(line, '\0', line_len);
+
+    //
+    // Open the Beagle file for reading
+    //
+    filepath = path + ".phased.bgl.phased.gz";
+    gz_fh = gzopen(filepath.c_str(), "rb");
+    if (!gz_fh) {
+	cerr << "Failed to open gzipped file '" << filepath << "': " << strerror(errno) << ".\n";
+	return NULL;
+    }
+
+    cerr << "Parsing " << filepath << "...\n";
+
+    vector<string> parts, samples;
+    uint num_samples   = 0;
+    uint num_genotypes = 0;
+    uint cat_loc;
+
+    //
+    // Parse the file twice. On the first round:
+    //   1. Determine the number of samples in the dataset (column count)
+    //   2. Determine the number of markers (row count).
+    // On the second round, parse the SNP genotypes.
+    //
+
+    //
+    // Read each line in the file. If it starts with:
+    //   '#' it is a comment, skip the line.
+    //   'I' it is the list of samples, parse them.
+    //   'S' is the population ID for each SNP, skip this line.
+    //   'M' is a marker, count the number of markers.
+    //
+    do {
+	eol = false;
+	buf.clear();
+	do {
+	    gzgets(gz_fh, line, line_len);
+	    buf += line;
+
+	    len = strlen(line);
+	    if (len > 0 && line[len - 1] == '\n') {
+		eol = true;
+		line[len - 1] = '\0';
+	    }
+	} while (!gzeof(gz_fh) && !eol);
+
+	if (line_len < buf.length()) {
+	    // cerr << "Resizing line buffer from " << line_len << " to " << buf.length() << "\n";
+	    delete [] line;
+	    line = new char[buf.length() + 1];
+	    line_len = buf.length() + 1;
+	    memset(line, '\0', line_len);
+	}
+
+	if (buf[0] == 'M') {
+	    //
+	    // Count the number of genotypes by counting the number or nucleotides in each
+	    // haplotype for each marker.
+	    //
+	    parse_ssv(buf.c_str(), parts);
+	    num_genotypes += parts[2].length();
+	    
+	} else if (buf[0] == 'I') {
+	    //
+	    // Count the number of samples.
+	    //
+	    parse_ssv(buf.c_str(), samples);
+	    num_samples = (samples.size() - 2) / 2;
+	}
+
+    } while (!gzeof(gz_fh));
+
+    PhasedSummary *psum = new PhasedSummary(num_samples, num_genotypes);
+
+    for (uint j = 2; j < samples.size(); j++) {
+	if (j % 2 == 0) {
+	    sindex = psum->add_sample(samples[j]);
+	    psum->samples[sindex].size   = num_genotypes;
+	    psum->samples[sindex].nucs_1 = new char[psum->samples[sindex].size];
+	    psum->samples[sindex].nucs_2 = new char[psum->samples[sindex].size];
+	}
+    }
+
+    cerr << "  Found " << num_samples << " samples; " << num_genotypes << " genotypes.\n";
+
+    gzrewind(gz_fh);
+
+    CSLocus *loc;
+    uint hap_len    = 0;
+    uint marker_num = 0;
+    memset(line, '\0', line_len);
+
+    do {
+	do {
+	    gzgets(gz_fh, line, line_len);
+	} while (!gzeof(gz_fh) && line[0] != 'M');
+
+	len = strlen(line);
+
+	if (len == 0) break;
+	if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
+
+	parse_ssv(line, parts);
+
+	//
+	// Use the catalog to look up the basepair positions for each catalog locus.
+	//
+	cat_loc = is_integer(parts[1].c_str());
+	loc     = catalog[cat_loc];
+	hap_len = parts[2].length();
+
+	if (hap_len != loc->snps.size())
+	    cerr << "Haplotypes don't match between catalog and beagle; Locus ID: " << loc->id << "; beagle hap len: " << hap_len << "; catalog hap len: " << loc->snps.size() << "\n";
+
+	for (j = 0, i = marker_num; i < marker_num + hap_len; i++, j++) {
+	    psum->nucs[i].clocus = cat_loc;
+	    psum->nucs[i].col    = loc->snps[j]->col;
+	    psum->nucs[i].bp     = loc->sort_bp(psum->nucs[i].col);
+	}
+
+    	//
+    	// Store the genotypes into our internal buffer.
+    	//
+	sindex = 0;
+	i      = 2;
+	while (i < parts.size()) {
+	    p = parts[i].c_str();
+	    for (j = marker_num; j < marker_num + hap_len; j++) {
+		psum->samples[sindex].nucs_1[j] = *p;
+		p++;
+	    }
+	    i++;
+	    p = parts[i].c_str();
+	    for (j = marker_num; j < marker_num + hap_len; j++) {
+		psum->samples[sindex].nucs_2[j] = *p;
+		p++;
+	    }
+	    i++;
+	    sindex++;
+	}
+
+	marker_num += hap_len;
+
+    } while (!gzeof(gz_fh));
+
+    gzclose(gz_fh);
+
+    return psum;
+}
+
 int
 parse_population_map(string popmap_path, map<string, int> &pop_map, map<int, int> &pop_cnts)
 {
@@ -1296,7 +1665,10 @@ build_file_list(vector<pair<int, string> > &files)
     }
 
     switch(in_file_type) {
-    case phase:
+    case beagle:
+	pattern = haplotypes ? ".phased.bgl.phased.gz" : ".unphased.bgl.phased.gz";
+	break;
+    case fastphase:
     default:
 	pattern = "_hapguess_switch.out";
 	break;
@@ -1330,10 +1702,13 @@ int parse_command_line(int argc, char* argv[]) {
 	static struct option long_options[] = {
 	    {"help",        no_argument,       NULL, 'h'},
             {"version",     no_argument,       NULL, 'v'},
+	    {"haplotypes",  no_argument,       NULL, 'H'},
             {"infile_type", required_argument, NULL, 't'},
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"in_path",     required_argument, NULL, 'P'},
+	    {"cat_path",    required_argument, NULL, 'S'},
 	    {"pop_map",     required_argument, NULL, 'M'},
+	    {"batch_id",    required_argument, NULL, 'b'},
 	    {"minor_allele_freq", required_argument, NULL, 'a'},
 	    {"min_inform_pairs",  required_argument, NULL, 'm'},
 	    {0, 0, 0, 0}
@@ -1341,8 +1716,8 @@ int parse_command_line(int argc, char* argv[]) {
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
-     
-	c = getopt_long(argc, argv, "hvAM:t:P:p:a:", long_options, &option_index);
+
+	c = getopt_long(argc, argv, "hvHAb:M:t:P:S:p:a:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1351,6 +1726,13 @@ int parse_command_line(int argc, char* argv[]) {
 	switch (c) {
 	case 'h':
 	    help();
+	    break;
+	case 'b':
+	    batch_id = is_integer(optarg);
+	    if (batch_id < 0) {
+		cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
+		help();
+	    }
 	    break;
 	case 'p':
 	    num_threads = atoi(optarg);
@@ -1364,14 +1746,24 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'P':
 	    in_path = optarg;
 	    break;
+	case 'S':
+	    cat_path = optarg;
+	    break;
      	case 't':
             if (strcasecmp(optarg, "phase") == 0)
                 in_file_type = phase;
+            else if (strcasecmp(optarg, "fastphase") == 0)
+                in_file_type = fastphase;
+            else if (strcasecmp(optarg, "beagle") == 0)
+                in_file_type = beagle;
             else
                 in_file_type = unknown;
 	    break;
 	case 'M':
 	    pmap_path = optarg;
+	    break;
+	case 'H':
+	    haplotypes = true;
 	    break;
         case 'v':
             version();
@@ -1420,14 +1812,17 @@ void version() {
 
 void help() {
     std::cerr << "phasedstacks " << VERSION << "\n"
-              << "phasedstacks -P path -t file_type [-p threads] [-M popmap] [-v] [-h]" << "\n"
-	      << "  P: path to the phased Stacks output files.\n"
-	      << "  t: input file type. Supported types: phase.\n"
+              << "phasedstacks -b id -S path -P path -t file_type [-p threads] [-M popmap] [-v] [-h]" << "\n"
+	      << "  b: Stacks batch ID.\n"
+	      << "  P: path to the phased output files.\n"
+	      << "  S: path to the Stacks output files.\n"
+	      << "  t: input file type. Supported types: fastphase, and beagle.\n"
 	      << "  p: number of processes to run in parallel sections of code.\n"
 	      << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n"
 	      << "  Filtering options:\n"
+	      << "  --haplotypes: data were phased as RAD locus haplotypes.\n"
 	      << "  --minor_allele_freq: specify a minimum minor allele frequency required to process a nucleotide site (0 < a < 0.5).\n"
 	      << "  --min_inform_pairs: when building D' haplotype blocks, the minimum number of informative D' measures to combine two blocks (default 0.9).\n\n";
 
