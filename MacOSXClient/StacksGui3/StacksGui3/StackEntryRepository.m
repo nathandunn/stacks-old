@@ -36,13 +36,14 @@ NSString *generateSnpString(NSSet *set);
     return stackEntryMO ;
 }
 
-- (ConsensusStackEntryMO *)insertConsensusStackEntry:(NSManagedObjectContext *)context block:(NSString*)block sequenceId:(NSString*)sequenceId sequence:(NSString*)sequence datum:(DatumMO *)datum {
+- (ConsensusStackEntryMO *)insertConsensusStackEntry:(NSManagedObjectContext *)context block:(NSString*)block sequenceId:(NSString*)sequenceId sequence:(NSString*)sequence consensus:(NSString*)consensus datum:(DatumMO *)datum {
     ConsensusStackEntryMO *stackEntryMO = [NSEntityDescription insertNewObjectForEntityForName:@"ConsensusStackEntry" inManagedObjectContext:context];
     stackEntryMO.relationship = @"consensus" ;
     stackEntryMO.block = block ;
     stackEntryMO.sequenceId = sequenceId ;
     stackEntryMO.sequence = sequence ;
     stackEntryMO.datum = datum ;
+    stackEntryMO.consensus = consensus;
 
     stackEntryMO.datumSnps = generateSnpString(datum.snps);
     stackEntryMO.locusSnps = generateSnpString(datum.locus.snps);

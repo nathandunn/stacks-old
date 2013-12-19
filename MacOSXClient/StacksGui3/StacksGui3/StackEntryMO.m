@@ -26,6 +26,7 @@
 @dynamic datum;
 @dynamic locusSnps;
 @dynamic datumSnps;
+@dynamic consensus;
 
 @synthesize colorGenerator;
 
@@ -141,7 +142,8 @@
     NSMutableArray *datumSnpColumns = [self getDatumSnps];
 
 
-    NSString *consensusSequence = self.datum.consensus.sequence;
+//    NSString *consensusSequence = self.datum.consensus.sequence;
+    NSString *consensusSequence = self.sequence ;
     // process locus snps
     // color Snps
     for (NSNumber *column in locusSnpColumns) {
