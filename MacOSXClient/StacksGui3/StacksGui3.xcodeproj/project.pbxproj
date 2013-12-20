@@ -69,6 +69,7 @@
 		6BEBC5E417E8F71C00B48C79 /* SnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBC5E317E8F71C00B48C79 /* SnpMO.m */; };
 		D793C0F3A4CB3044602B1F3F /* SampleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C907D04E589764C9E424 /* SampleRepository.m */; };
 		D793C1B281A1C40A30CE8AEF /* StacksApplicationController.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C30B70F0B18AAD31F9DB /* StacksApplicationController.m */; };
+		D793C309645E2B03A5B980F1 /* StacksEntryView.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C912A36EC59D0DDD8E85 /* StacksEntryView.m */; };
 		D793C43EDB0ABD3CE3E0047B /* StacksAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = D793CFCB30840FDE9B15DB2D /* StacksAppDelegate.m */; };
 		D793C6F5BDAD1E1FA91892F2 /* AlleleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C907C035E29655E283F1 /* AlleleRepository.m */; };
 		D793C7E7AAF6AF5E0DAA658E /* StacksImportMenuItem.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C0D6DD3279E830428307 /* StacksImportMenuItem.m */; };
@@ -222,6 +223,8 @@
 		D793C634902255B9E726C00C /* AlleleRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleRepository.h; sourceTree = "<group>"; };
 		D793C907C035E29655E283F1 /* AlleleRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleRepository.m; sourceTree = "<group>"; };
 		D793C907D04E589764C9E424 /* SampleRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SampleRepository.m; sourceTree = "<group>"; };
+		D793C912A36EC59D0DDD8E85 /* StacksEntryView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksEntryView.m; sourceTree = "<group>"; };
+		D793C964A737402550F7E78F /* StacksEntryView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksEntryView.h; sourceTree = "<group>"; };
 		D793CD5C363C8FDC0CBA649A /* StacksImportMenuItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksImportMenuItem.h; sourceTree = "<group>"; };
 		D793CFCB30840FDE9B15DB2D /* StacksAppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksAppDelegate.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -297,6 +300,8 @@
 				6B4674A5173183F700E42419 /* GUI */,
 				6B4674811731835500E42419 /* stacks */,
 				1442E19F17206DBB004B6361 /* Supporting Files */,
+				D793C912A36EC59D0DDD8E85 /* StacksEntryView.m */,
+				D793C964A737402550F7E78F /* StacksEntryView.h */,
 			);
 			path = StacksGui3;
 			sourceTree = "<group>";
@@ -646,6 +651,7 @@
 				6BEBC5DE17E8F71C00B48C79 /* AlleleMO.m in Sources */,
 				6BEBC5E117E8F71C00B48C79 /* DepthMO.m in Sources */,
 				6BEBC5E417E8F71C00B48C79 /* SnpMO.m in Sources */,
+				D793C309645E2B03A5B980F1 /* StacksEntryView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
