@@ -143,7 +143,7 @@
 
 
 //    NSString *consensusSequence = self.datum.consensus.sequence;
-    NSString *consensusSequence = self.sequence ;
+    NSString *consensusSequence = self.consensus ;
     // process locus snps
     // color Snps
     for (NSNumber *column in locusSnpColumns) {
