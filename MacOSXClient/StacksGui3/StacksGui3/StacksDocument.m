@@ -13,10 +13,11 @@
 #import "DatumRepository.h"
 #import "PopulationRepository.h"
 #import "LocusRepository.h"
-#import "PopulationArrayController.h"
+//#import "PopulationArrayController.h"
 #import "DatumArrayController.h"
-#import "StacksConverter.h"
-#import "StacksDocumentController.h"
+//#import "StacksConverter.h"
+//#import "StacksDocumentController.h"
+#import <WebKit/WebKit.h>
 
 @interface StacksDocument ()
 
@@ -24,7 +25,7 @@
 @property NSInteger previousSelectedItem;
 
 @property(weak) IBOutlet NSTableView *locusTableView;
-@property(weak) IBOutlet NSTableView *stacksTableView;
+//@property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController;
 @property(weak) IBOutlet NSTextField *totalLoci;
@@ -33,6 +34,7 @@
 @property(weak) IBOutlet NSTextField *populationNameField;
 @property(weak) IBOutlet NSTextField *maxLocusTextField;
 @property(weak) IBOutlet NSPopUpButton *maxSnpPopupButton;
+@property(weak) IBOutlet WebView *stacksWebView;
 
 
 @end
@@ -68,6 +70,7 @@
 @synthesize maxLocusTextField;
 @synthesize snpFilterValues;
 @synthesize maxSnpPopupButton;
+@synthesize stacksWebView;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -95,13 +98,15 @@
     return @"StacksDocument";
 }
 
+
+
 - (void)windowControllerDidLoadNib:(NSWindowController *)aController {
     [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew) context:nil];
 
     [super windowControllerDidLoadNib:aController];
     // Add any code here that needs to be executed once the windowController has loaded the document's window.
-    [self.stacksTableView setIntercellSpacing:NSMakeSize(0, 0)];
-    [self.stacksTableView setEnabled:true];
+//    [self.stacksTableView setIntercellSpacing:NSMakeSize(0, 0)];
+//    [self.stacksTableView setEnabled:true];
 
 
     NSInteger lociCount = [locusRepository getAllLoci:self.managedObjectContext].count;
@@ -115,6 +120,24 @@
 
     [maxSnpPopupButton selectItemAtIndex:[self getSnpFilterValues].count-1];
 
+    [self updateStacksView];
+}
+
+- (void)updateStacksView {
+
+//    DatumMO *datumMO = [[datumRepository getAllDatum:[self managedObjectContext]] objectAtIndex:0];
+    if(self.selectedDatum!=nil && self.selectedDatum.stackData!=nil){
+        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:nil];
+        [stacksWebView setHidden:NO];
+    }
+    else{
+        [stacksWebView setHidden:YES];
+    }
+
+//    NSURL *url = [NSURL URLWithString:@"http://www.apple.com"];
+//    NSURLRequest *urlRequest = [NSURLRequest requestWithURL:url];
+////    [[[self webView] mainFrame] loadRequest:urlRequest];
+//    [[stacksWebView mainFrame] loadRequest:urlRequest];
 }
 
 + (BOOL)autosavesInPlace {
@@ -172,6 +195,7 @@
         self.selectedDatums = nil ;
         self.selectedDatum = nil ;
     }
+    [self updateStacksView];
 
 }
 
@@ -255,9 +279,11 @@
                 }
                 self.selectedDatum = datumMO;
                 self.previousStacksName = datumMO.name;
+
             }
         }
     }
+    [self updateStacksView];
 }
 
 

@@ -1007,39 +1007,42 @@ NSString *calculateType(NSString *file);
 
                 if ([relationship isEqualToString:@"consensus"]) {
                     row = 1;
-                    datumMO.consensus = [stackEntryRepository insertConsensusStackEntry:moc
-                                                                                  block:[columns objectAtIndex:7]
-                                                                             sequenceId:[columns objectAtIndex:8]
-                                                                               sequence:[columns objectAtIndex:9]
-                                                                                  datum:datumMO
-                    ];
-                    datumMO.reference = [stackEntryRepository insertReferenceStackEntry:moc
-                                                                               sequence:[columns objectAtIndex:9]
-                                                                                  datum:datumMO
-                    ];
+//                    datumMO.consensus = [stackEntryRepository insertConsensusStackEntry:moc
+//                                                                                  block:[columns objectAtIndex:7]
+//                                                                             sequenceId:[columns objectAtIndex:8]
+//                                                                               sequence:[columns objectAtIndex:9]
+//                                                                                  datum:datumMO
+//                    ];
+//                    datumMO.reference = [stackEntryRepository insertReferenceStackEntry:moc
+//                                                                               sequence:[columns objectAtIndex:9]
+//                                                                                  datum:datumMO
+//                    ];
 
                 }
                 else if ([relationship isEqualToString:@"model"]) {
-                    datumMO.model = [stackEntryRepository insertModelStackEntry:moc
-                                                                          block:[columns objectAtIndex:7]
-                                                                     sequenceId:[columns objectAtIndex:8]
-                                                                       sequence:[columns objectAtIndex:9]
-                                                                          datum:datumMO
-                    ];
+//                    datumMO.model = [stackEntryRepository insertModelStackEntry:moc
+//                                                                          block:[columns objectAtIndex:7]
+//                                                                     sequenceId:[columns objectAtIndex:8]
+//                                                                       sequence:[columns objectAtIndex:9]
+//                                                                          datum:datumMO
+//                    ];
                 }
                 else {
-                    StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
-                                                                                entryId:[NSNumber numberWithInteger:row]
-                                                                           relationship:[columns objectAtIndex:6]
-                                                                                  block:[columns objectAtIndex:7]
-                                                                             sequenceId:[columns objectAtIndex:8]
-                                                                               sequence:[columns objectAtIndex:9]
-                                                                              consensus:datumMO.consensus.sequence
-                                                                                  datum:datumMO
-                    ];
-                    [datumMO addStackEntriesObject:stackEntryMO];
+//                    StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
+//                                                                                entryId:[NSNumber numberWithInteger:row]
+//                                                                           relationship:[columns objectAtIndex:6]
+//                                                                                  block:[columns objectAtIndex:7]
+//                                                                             sequenceId:[columns objectAtIndex:8]
+//                                                                               sequence:[columns objectAtIndex:9]
+//                                                                              consensus:datumMO.consensus.sequence
+//                                                                                  datum:datumMO
+//                    ];
+//                    [datumMO addStackEntriesObject:stackEntryMO];
                     ++row;
                 }
+
+                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
+
 
                 if (saveCounter % saveAtLine == 0) {
                     NSLog(@"SAVING");
@@ -1049,6 +1052,8 @@ NSString *calculateType(NSString *file);
                         NSLog(@"error saving %@", saveError);
                     }
                 }
+
+
                 ++saveCounter;
             }
 
@@ -1057,7 +1062,8 @@ NSString *calculateType(NSString *file);
 
     }
     gettimeofday(&time2, NULL);
-    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
+//    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
+    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackData!=nil ? datumMO.stackData.length : 0, (time2.tv_sec - time1.tv_sec));
 
 
     // save old

@@ -18,15 +18,16 @@
 @property (nonatomic, retain) NSNumber * sampleId;
 @property (nonatomic, retain) NSNumber * tagId;
 @property (nonatomic, retain) NSSet *alleles;
-@property (nonatomic, retain) ConsensusStackEntryMO *consensus;
+//@property (nonatomic, retain) ConsensusStackEntryMO *consensus;
 @property (nonatomic, retain) NSSet *depths;
 @property (nonatomic, retain) NSSet *haplotypes;
 @property (nonatomic, retain) LocusMO *locus;
-@property (nonatomic, retain) ModelStackEntryMO *model;
-@property (nonatomic, retain) ReferenceStackEntryMO *reference;
+//@property (nonatomic, retain) ModelStackEntryMO *model;
+//@property (nonatomic, retain) ReferenceStackEntryMO *reference;
 @property (nonatomic, retain) SampleMO *sample;
 @property (nonatomic, retain) NSSet *snps;
-@property (nonatomic, retain) NSSet *stackEntries;
+//@property (nonatomic, retain) NSSet *stackEntries;
+@property (nonatomic, retain) NSString * stackData;
 
 @property (nonatomic, retain) ColorGenerator *colorGenerator;
 @end
@@ -56,12 +57,12 @@
 - (void)addSnps:(NSSet *)values;
 - (void)removeSnps:(NSSet *)values;
 
-- (void)addStackEntriesObject:(StackEntryMO *)value;
-- (void)removeStackEntriesObject:(StackEntryMO *)value;
-- (void)addStackEntries:(NSSet *)values;
-- (void)removeStackEntries:(NSSet *)values;
+//- (void)addStackEntriesObject:(StackEntryMO *)value;
+//- (void)removeStackEntriesObject:(StackEntryMO *)value;
+//- (void)addStackEntries:(NSSet *)values;
+//- (void)removeStackEntries:(NSSet *)values;
 
 
-- (NSArray*)getOrderedStackEntries;
+//- (NSArray*)getOrderedStackEntries;
 
 @end

@@ -33,7 +33,7 @@
 		14A72B471746A1E60024B2D1 /* LocusArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A72B461746A1E60024B2D1 /* LocusArrayController.m */; };
 		14A72B4A1746A5500024B2D1 /* PopulationArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A72B491746A5500024B2D1 /* PopulationArrayController.m */; };
 		14A72B4D1746A7DC0024B2D1 /* DatumArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A72B4C1746A7DC0024B2D1 /* DatumArrayController.m */; };
-		14A72B501746A7F80024B2D1 /* StackEntryArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A72B4F1746A7F80024B2D1 /* StackEntryArrayController.m */; };
+		14DD8DA21864CE93005DA30C /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14DD8DA11864CE93005DA30C /* WebKit.framework */; };
 		63D5324CC3F9B03789008CE5 /* HaplotypeRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D5361AB5A4A6EAA62C5CE7 /* HaplotypeRepository.m */; };
 		63D5347912394D8EC31E2F3E /* PopulationRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D538AE43D06E9B03B0BC59 /* PopulationRepository.m */; };
 		63D5373EE2F31FA8CF4F5F1A /* LocusCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53152900941A896B8CCE9 /* LocusCell.m */; };
@@ -135,8 +135,7 @@
 		14A72B491746A5500024B2D1 /* PopulationArrayController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationArrayController.m; sourceTree = "<group>"; };
 		14A72B4B1746A7DC0024B2D1 /* DatumArrayController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumArrayController.h; sourceTree = "<group>"; };
 		14A72B4C1746A7DC0024B2D1 /* DatumArrayController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumArrayController.m; sourceTree = "<group>"; };
-		14A72B4E1746A7F80024B2D1 /* StackEntryArrayController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackEntryArrayController.h; sourceTree = "<group>"; };
-		14A72B4F1746A7F80024B2D1 /* StackEntryArrayController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntryArrayController.m; sourceTree = "<group>"; };
+		14DD8DA11864CE93005DA30C /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		63D5300CEE50E2EFF99D9FA9 /* SnpView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpView.m; sourceTree = "<group>"; };
 		63D530556A0C5C6B869DB3BF /* DepthRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DepthRepository.m; sourceTree = "<group>"; };
 		63D530B3764932ACC9CE8F92 /* DepthRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DepthRepository.h; sourceTree = "<group>"; };
@@ -232,6 +231,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				14DD8DA21864CE93005DA30C /* WebKit.framework in Frameworks */,
 				1442E19917206DBB004B6361 /* Cocoa.framework in Frameworks */,
 				6B4674A4173183C300E42419 /* libz.1.2.7.dylib in Frameworks */,
 			);
@@ -271,6 +271,7 @@
 		1442E19717206DBB004B6361 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				14DD8DA11864CE93005DA30C /* WebKit.framework */,
 				1442E19817206DBB004B6361 /* Cocoa.framework */,
 				1442E1BC17206DBC004B6361 /* SenTestingKit.framework */,
 				1442E19A17206DBB004B6361 /* Other Frameworks */,
@@ -393,8 +394,6 @@
 				14A72B491746A5500024B2D1 /* PopulationArrayController.m */,
 				14A72B4B1746A7DC0024B2D1 /* DatumArrayController.h */,
 				14A72B4C1746A7DC0024B2D1 /* DatumArrayController.m */,
-				14A72B4E1746A7F80024B2D1 /* StackEntryArrayController.h */,
-				14A72B4F1746A7F80024B2D1 /* StackEntryArrayController.m */,
 				6B3207E21752CC04009FF9FB /* DatumView.h */,
 				6B3207E31752CC04009FF9FB /* DatumView.m */,
 				63D53377E126294FBBA3CAFF /* DatumCollectionViewItem.m */,
@@ -636,7 +635,6 @@
 				14A72B471746A1E60024B2D1 /* LocusArrayController.m in Sources */,
 				14A72B4A1746A5500024B2D1 /* PopulationArrayController.m in Sources */,
 				14A72B4D1746A7DC0024B2D1 /* DatumArrayController.m in Sources */,
-				14A72B501746A7F80024B2D1 /* StackEntryArrayController.m in Sources */,
 				6B3207E41752CC04009FF9FB /* DatumView.m in Sources */,
 				63D53A37F18B0802DB8CEEAF /* DatumCollectionViewItem.m in Sources */,
 				6B77C0E117D1467600987B98 /* StacksDocumentController.m in Sources */,
