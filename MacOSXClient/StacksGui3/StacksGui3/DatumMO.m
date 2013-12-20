@@ -26,15 +26,16 @@
 @dynamic sampleId;
 @dynamic tagId;
 @dynamic alleles;
-@dynamic consensus;
+//@dynamic consensus;
 @dynamic depths;
 @dynamic haplotypes;
 @dynamic locus;
-@dynamic model;
-@dynamic reference;
+//@dynamic model;
+//@dynamic reference;
 @dynamic sample;
 @dynamic snps;
-@dynamic stackEntries;
+//@dynamic stackEntries;
+@dynamic stackData;
 
 @synthesize colorGenerator;
 
@@ -137,36 +138,36 @@
     return string;
 }
 
-- (NSArray *)getOrderedStackEntries {
-    NSArray *sortedArray = [[self.stackEntries allObjects] sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
-        StackEntryMO *first = (StackEntryMO *) a;
-        StackEntryMO *second = (StackEntryMO *) b;
-        NSString *firstRelationship = first.relationship;
-        NSString *secondRelationship = second.relationship;
-
-        int firstCount = 0;
-        int secondCount = 0;
-        //reference
-        //consensus
-        //model
-        firstCount += [firstRelationship isEqualToString:@"reference"] ? 10000 : 0;
-        secondCount += [secondRelationship isEqualToString:@"reference"] ? 10000 : 0;
-        firstCount += [firstRelationship isEqualToString:@"consensus"] ? 1000 : 0;
-        secondCount += [secondRelationship isEqualToString:@"consensus"] ? 1000 : 0;
-        firstCount += [firstRelationship isEqualToString:@"model"] ? 100 : 0;
-        secondCount += [secondRelationship isEqualToString:@"model"] ? 100 : 0;
-        firstCount -= [first.entryId intValue];
-        secondCount -= [second.entryId intValue];
-        NSComparisonResult result = (firstCount > secondCount) ? NSOrderedAscending : NSOrderedDescending;
-        return result;
-    }];
-
-    return sortedArray;
-
-//    NSOrderedSet *orderedSet = [NSOrderedSet orderedSetWithArray:sortedArray];
-//    return orderedSet;
-
-}
+//- (NSArray *)getOrderedStackEntries {
+//    NSArray *sortedArray = [[self.stackEntries allObjects] sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
+//        StackEntryMO *first = (StackEntryMO *) a;
+//        StackEntryMO *second = (StackEntryMO *) b;
+//        NSString *firstRelationship = first.relationship;
+//        NSString *secondRelationship = second.relationship;
+//
+//        int firstCount = 0;
+//        int secondCount = 0;
+//        //reference
+//        //consensus
+//        //model
+//        firstCount += [firstRelationship isEqualToString:@"reference"] ? 10000 : 0;
+//        secondCount += [secondRelationship isEqualToString:@"reference"] ? 10000 : 0;
+//        firstCount += [firstRelationship isEqualToString:@"consensus"] ? 1000 : 0;
+//        secondCount += [secondRelationship isEqualToString:@"consensus"] ? 1000 : 0;
+//        firstCount += [firstRelationship isEqualToString:@"model"] ? 100 : 0;
+//        secondCount += [secondRelationship isEqualToString:@"model"] ? 100 : 0;
+//        firstCount -= [first.entryId intValue];
+//        secondCount -= [second.entryId intValue];
+//        NSComparisonResult result = (firstCount > secondCount) ? NSOrderedAscending : NSOrderedDescending;
+//        return result;
+//    }];
+//
+//    return sortedArray;
+//
+////    NSOrderedSet *orderedSet = [NSOrderedSet orderedSetWithArray:sortedArray];
+////    return orderedSet;
+//
+//}
 
 - (NSDictionary *)generateColorForOrder:(NSUInteger)order {
     if (colorGenerator == nil) {
