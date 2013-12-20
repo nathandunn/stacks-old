@@ -16,6 +16,18 @@
 @implementation AlleleRepository {
 
 }
+
++ (AlleleRepository *)sharedInstance
+{
+    static AlleleRepository *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[AlleleRepository alloc] init];
+        // Do any other initialisation stuff here
+    });
+    return sharedInstance;
+}
+
 - (DatumAlleleMO *)insertDatumAllele:(NSManagedObjectContext *)context ratio:(NSNumber *)ratio depth:(NSNumber *)depth allele:(NSNumber *)allele datum:(DatumMO *)datum {
     DatumAlleleMO *datumAlleleMO = [NSEntityDescription insertNewObjectForEntityForName:@"DatumAllele" inManagedObjectContext:context];
 

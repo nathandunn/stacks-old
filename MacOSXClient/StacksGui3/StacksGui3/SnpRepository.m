@@ -12,12 +12,24 @@
 #import "DatumMO.h"
 #import "LocusSnpMO.h"
 #import "DatumSnpMO.h"
-#import "DatumAlleleMO.h"
+#import "DatumSnpMO.h"
 
 
 @implementation SnpRepository {
 
 }
+
++ (SnpRepository *)sharedInstance
+{
+    static SnpRepository *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[SnpRepository alloc] init];
+        // Do any other initialisation stuff here
+    });
+    return sharedInstance;
+}
+
 - (LocusSnpMO *)insertLocusSnp:(NSManagedObjectContext *)context column:(NSNumber *)column lratio:(NSNumber *)lratio rank1:(NSNumber *)rank1 rank2:(NSNumber *)rank2 rank3:(NSNumber *)rank3 rank4:(NSNumber *)rank4 locus:(LocusMO *)locus {
     LocusSnpMO *snpMO = [NSEntityDescription insertNewObjectForEntityForName:@"LocusSnp" inManagedObjectContext:context];
 

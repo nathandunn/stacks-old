@@ -13,6 +13,18 @@
 @implementation LocusRepository {
 
 }
+
++ (LocusRepository *)sharedInstance
+{
+    static LocusRepository *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[LocusRepository alloc] init];
+        // Do any other initialisation stuff here
+    });
+    return sharedInstance;
+}
+
 - (LocusMO *)insertNewLocus:(NSManagedObjectContext *)model withId:(NSNumber *)id andConsensus:(NSString *)consensus andMarker:(NSString *)markers {
     LocusMO *locusMO = [NSEntityDescription insertNewObjectForEntityForName:@"Locus" inManagedObjectContext:model];
     locusMO.locusId = id ;

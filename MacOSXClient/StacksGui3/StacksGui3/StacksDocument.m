@@ -51,9 +51,9 @@
 @synthesize selectedDatum;
 
 // repository
-@synthesize datumRepository;
-@synthesize locusRepository;
-@synthesize populationRepository;
+//@synthesize datumRepository;
+//@synthesize [LocusRepository sharedInstance];
+//@synthesize populationRepository;
 
 // array controller
 @synthesize datumController;
@@ -81,9 +81,9 @@
     self = [super init];
     if (self) {
         // Add your subclass-specific initialization here.
-        datumRepository = [[DatumRepository alloc] init];
-        locusRepository = [[LocusRepository alloc] init];
-        populationRepository = [[PopulationRepository alloc] init];
+//        datumRepository = [[DatumRepository alloc] init];
+//        [LocusRepository sharedInstance] = [[LocusRepository alloc] init];
+//        populationRepository = [[PopulationRepository alloc] init];
     }
     return self;
 }
@@ -109,13 +109,13 @@
 //    [self.stacksTableView setEnabled:true];
 
 
-    NSInteger lociCount = [locusRepository getAllLoci:self.managedObjectContext].count;
+    NSInteger lociCount = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext].count;
     NSString *newString = [NSString stringWithFormat:@"%ld", lociCount];
     [totalLoci setStringValue:newString];
 
     editingPopulation = false ;
 
-    double maxLocationVariable = [locusRepository getMaxLocation:self.managedObjectContext] / 1000000;
+    double maxLocationVariable = [[LocusRepository sharedInstance] getMaxLocation:self.managedObjectContext] / 1000000;
     maxLocusTextField.stringValue = [NSString stringWithFormat:@"%1.2f", maxLocationVariable];
 
     [maxSnpPopupButton selectItemAtIndex:[self getSnpFilterValues].count-1];
@@ -183,7 +183,7 @@
     if (self.selectedLocus != nil && self.selectedPopulation != nil) {
 //        NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
 //        NSLog(@"getting selected population %@", self.selectedPopulation.name);
-        self.selectedDatums = [self.datumRepository getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
+        self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
         if (self.selectedDatums != nil && self.selectedDatums.count > 0) {
             self.selectedDatum = [self.selectedDatums objectAtIndex:0];
         }
@@ -202,7 +202,7 @@
 - (PopulationMO *)findSelectedPopulation {
     NSInteger selectedRow = [self.populationSelector indexOfSelectedItem];
     if (selectedRow >= 0) {
-        return [populationRepository getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
+        return [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
     }
     return nil;
 }
@@ -211,14 +211,14 @@
     NSInteger selectedRow = [self.locusTableView selectedRow];
     if (selectedRow >= 0) {
         // id starts at 1 + row  . . . I hope this is always true
-        return [locusRepository getLocus:self.managedObjectContext forId:selectedRow + 1];
+        return [[LocusRepository sharedInstance] getLocus:self.managedObjectContext forId:selectedRow + 1];
     }
     return nil;
 }
 
 
 - (NSArray *)generateLociLocations {
-    NSArray *locusArray = [locusRepository getLociLocations:self.managedObjectContext];
+    NSArray *locusArray = [[LocusRepository sharedInstance] getLociLocations:self.managedObjectContext];
 //    NSLog(@"size of array %ld",locusArray.count);
 
 //    if(lociLocations==nil){
@@ -244,11 +244,11 @@
 }
 
 - (NSUInteger)getMaxLocation {
-    return [locusRepository getMaxLocation:self.managedObjectContext];
+    return [[LocusRepository sharedInstance] getMaxLocation:self.managedObjectContext];
 }
 
 - (BOOL)noLociLocations {
-    NSUInteger locusCount = [locusRepository getLociWithChromsomes:self.managedObjectContext].count;
+    NSUInteger locusCount = [[LocusRepository sharedInstance] getLociWithChromsomes:self.managedObjectContext].count;
 //    NSLog(@"NO LOCI LOCATIONS count %ld",locusCount);
     return locusCount == 0;
 }

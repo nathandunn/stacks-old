@@ -16,6 +16,18 @@
 @implementation DatumRepository {
 
 }
+
++ (DatumRepository *)sharedInstance
+{
+    static DatumRepository *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[DatumRepository alloc] init];
+        // Do any other initialisation stuff here
+    });
+    return sharedInstance;
+}
+
 - (DatumMO *)insertDatum:(NSManagedObjectContext *)context name:(NSString *)name sampleId:(NSNumber *)id sample:(SampleMO *)sample locus:(LocusMO *)locus {
     DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:context];
     newDatumMO.name = name;

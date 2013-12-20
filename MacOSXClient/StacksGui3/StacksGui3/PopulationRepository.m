@@ -14,6 +14,17 @@
 
 }
 
++ (PopulationRepository *)sharedInstance
+{
+    static PopulationRepository *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[PopulationRepository alloc] init];
+        // Do any other initialisation stuff here
+    });
+    return sharedInstance;
+}
+
 - (PopulationMO *)insertPopulation:(NSManagedObjectContext *)context id:(NSNumber *)id name:(NSString *)name {
     PopulationMO *populationMO = [NSEntityDescription insertNewObjectForEntityForName:@"Population" inManagedObjectContext:context];
     populationMO.populationId = id;

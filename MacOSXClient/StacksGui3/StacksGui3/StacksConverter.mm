@@ -32,7 +32,7 @@ using std::ofstream;
 #import "PopulationMO.h"
 #import "SampleMO.h"
 #import "SnpRepository.h"
-#import "StackEntryRepository.h"
+//#import "StackEntryRepository.h"
 #import "DatumSnpMO.h"
 #import "DatumAlleleMO.h"
 #import "AlleleRepository.h"
@@ -69,15 +69,15 @@ NSString *calculateType(NSString *file);
 */
 
 // repositories
-@synthesize datumRepository;
-@synthesize depthRepository;
-@synthesize haplotypeRepository;
-@synthesize locusRepository;
-@synthesize populationRepository;
-@synthesize sampleRepository;
-@synthesize snpRepository;
-@synthesize stackEntryRepository;
-@synthesize alleleRepository;
+//@synthesize [DatumRepository sharedInstance];
+//@synthesize [DepthRepository sharedInstance];
+//@synthesize [HaplotypeRepository sharedInstance];
+//@synthesize [LocusRepository sharedInstance];
+//@synthesize [PopulationRepository sharedInstance];
+//@synthesize [SampleRepository sharedInstance];
+//@synthesize [SnpRepository sharedInstance];
+//@synthesize stackEntryRepository;
+//@synthesize [AlleleRepository sharedInstance];
 
 
 // lookups
@@ -93,15 +93,15 @@ NSString *calculateType(NSString *file);
     self = [super init];
     if (self) {
         // nothing write now
-        datumRepository = [[DatumRepository alloc] init];
-        depthRepository = [[DepthRepository alloc] init];
-        haplotypeRepository = [[HaplotypeRepository alloc] init];
-        locusRepository = [[LocusRepository alloc] init];
-        populationRepository = [[PopulationRepository alloc] init];
-        sampleRepository = [[SampleRepository alloc] init];
-        snpRepository = [[SnpRepository alloc] init];
-        stackEntryRepository = [[StackEntryRepository alloc] init];
-        alleleRepository = [[AlleleRepository alloc] init];
+//        [DatumRepository sharedInstance] = [[DatumRepository alloc] init];
+//        [DepthRepository sharedInstance] = [[DepthRepository alloc] init];
+//        [HaplotypeRepository sharedInstance] = [[HaplotypeRepository alloc] init];
+//        [LocusRepository sharedInstance] = [[LocusRepository alloc] init];
+//        [PopulationRepository sharedInstance] = [[PopulationRepository alloc] init];
+//        [SampleRepository sharedInstance] = [[SampleRepository alloc] init];
+//        [SnpRepository sharedInstance] = [[SnpRepository alloc] init];
+//        stackEntryRepository = [[StackEntryRepository alloc] init];
+//        [AlleleRepository sharedInstance] = [[AlleleRepository alloc] init];
 
 
 //        lociDictionary = [[NSMutableDictionary alloc] init];
@@ -407,7 +407,7 @@ NSString *calculateType(NSString *file);
     progressWindow.actionMessage.stringValue = @"Loading locus snps";
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
-        LocusMO *locusMO = [locusRepository insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).second->id]
+        LocusMO *locusMO = [[LocusRepository sharedInstance] insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).second->id]
                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
         ];
 
@@ -431,7 +431,7 @@ NSString *calculateType(NSString *file);
         for (; snpsIterator != snps.end(); ++snpsIterator) {
             SNP *snp = (*snpsIterator);
 
-            LocusSnpMO *snpMO = [snpRepository insertLocusSnp:moc
+            LocusSnpMO *snpMO = [[SnpRepository sharedInstance] insertLocusSnp:moc
                                                        column:[NSNumber numberWithInt:snp->col]
                                                        lratio:[NSNumber numberWithFloat:snp->lratio]
                                                         rank1:[NSNumber numberWithInt:snp->rank_1]
@@ -452,7 +452,7 @@ NSString *calculateType(NSString *file);
             string allele = allelesIterator->first;
             int column = allelesIterator->second;
 
-            [alleleRepository insertLocusAllele:moc depth:[NSNumber numberWithInt:column]
+            [[AlleleRepository sharedInstance] insertLocusAllele:moc depth:[NSNumber numberWithInt:column]
                                          allele:[numberFormatter numberFromString:[NSString stringWithUTF8String:allele.c_str()]]
                                           locus:locusMO
             ];
@@ -516,7 +516,7 @@ NSString *calculateType(NSString *file);
             // TODO: use a lookup here to speed up
             NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
 //            locusMO = [lociDictionary objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
-            LocusMO *locusMO = [locusRepository getLocus:stacksDocument.managedObjectContext forId:lookupKey.integerValue];
+            LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:stacksDocument.managedObjectContext forId:lookupKey.integerValue];
 //            locusMO = [lociDictionary objectForKey:lookupKey];
             if (locusMO == nil) {
                 for (int i = 0; i < 10; i++) {
@@ -528,7 +528,7 @@ NSString *calculateType(NSString *file);
             if (datum != NULL) {
                 NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
 
-                SampleMO *sampleMO = [sampleRepository getSampleForName:key andContext:moc andError:nil];
+                SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:key andContext:moc andError:nil];
 
                 vector<char *> obshape = datum->obshap;
                 vector<int> depths = datum->depth;
@@ -537,7 +537,7 @@ NSString *calculateType(NSString *file);
 //                if (loc->id == 1) {
 //                    NSLog(@"insertign datum for sample %@ locus %@ and sampleId %i", sampleMO.name, locusMO.locusId, sample_ids[i]);
 //                }
-                DatumMO *newDatumMO = [datumRepository insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO locus:locusMO];
+                DatumMO *newDatumMO = [[DatumRepository sharedInstance] insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO locus:locusMO];
 
                 // get catalogs for matches
                 // TODO: is not the locus the same thing as the id?  can I use the loc->id here?
@@ -546,10 +546,10 @@ NSString *calculateType(NSString *file);
 
                 if (depths.size() == numLetters) {
                     for (int j = 0; j < numLetters; j++) {
-                        HaplotypeMO *haplotypeMO = [haplotypeRepository insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]] andOrder:j];
+                        HaplotypeMO *haplotypeMO = [[HaplotypeRepository sharedInstance] insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]] andOrder:j];
                         [newDatumMO addHaplotypesObject:haplotypeMO];
 
-                        DepthMO *depthMO = [depthRepository insertDepth:moc depth:[NSNumber numberWithInt:depths[j]] andOrder:j];
+                        DepthMO *depthMO = [[DepthRepository sharedInstance] insertDepth:moc depth:[NSNumber numberWithInt:depths[j]] andOrder:j];
                         [newDatumMO addDepthsObject:depthMO];
                     }
                     [locusMO addDatumsObject:newDatumMO];
@@ -704,7 +704,7 @@ NSString *calculateType(NSString *file);
     // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
     NSManagedObjectContext *moc = document.managedObjectContext;
-    SampleMO *sampleMO = [sampleRepository getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
+    SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
@@ -754,11 +754,11 @@ NSString *calculateType(NSString *file);
 
             if (locusId != newLocusId) {
                 locusId = newLocusId;
-                datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name];
+                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleName:sampleMO.name];
             }
 
             if (datumMO != nil) {
-                [alleleRepository insertDatumAllele:moc
+                [[AlleleRepository sharedInstance] insertDatumAllele:moc
                                               ratio:[NSNumber numberWithFloat:ratio]
                                               depth:[NSNumber numberWithInt:depth]
                                              allele:[numberFormatter numberFromString:[columns objectAtIndex:3]]
@@ -799,7 +799,7 @@ NSString *calculateType(NSString *file);
     NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
 
     NSManagedObjectContext *moc = document.managedObjectContext;
-    SampleMO *sampleMO = [sampleRepository getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
+    SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
@@ -847,14 +847,14 @@ NSString *calculateType(NSString *file);
 
             if (locusId != newLocusId) {
                 locusId = newLocusId;
-//                locusMO = [locusRepository getLocus:moc forId:locusId];
+//                locusMO = [[LocusRepository sharedInstance] getLocus:moc forId:locusId];
                 // search for the new locus
                 // TODO: get from in-memory lookup?
-                datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name];
+                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleName:sampleMO.name];
             }
 
             if (datumMO != nil) {
-                [snpRepository insertDatumSnp:moc column:[NSNumber numberWithInteger:column]
+                [[SnpRepository sharedInstance] insertDatumSnp:moc column:[NSNumber numberWithInteger:column]
                                        lratio:[NSNumber numberWithFloat:lratio]
                                         rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
                                         rank2:[numberFormatter numberFromString:[columns objectAtIndex:6]]
@@ -953,7 +953,7 @@ NSString *calculateType(NSString *file);
     // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
     NSManagedObjectContext *moc = document.managedObjectContext;
-    SampleMO *sampleMO = [sampleRepository getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
+    SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
@@ -999,7 +999,7 @@ NSString *calculateType(NSString *file);
                 locusId = newLocusId;
                 // search for the new locus
                 // TODO: get from in-memory lookup?
-                datumMO = [datumRepository getDatum:moc locusId:locusId andSampleName:sampleMO.name];
+                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleName:sampleMO.name];
             }
 
             if (datumMO != nil) {
@@ -1077,12 +1077,12 @@ NSString *calculateType(NSString *file);
 - (void)addSamplesToDocument:(StacksDocument *)document forSampleIds:(vector<int>)sampleIds andSamples:(map<int, string>)samples {
 
     if (document.populationLookup == nil || document.populationLookup.count == 0) {
-        PopulationMO *populationMO = [populationRepository insertPopulation:document.managedObjectContext id:[NSNumber numberWithInt:1] name:@"All"];
+        PopulationMO *populationMO = [[PopulationRepository sharedInstance] insertPopulation:document.managedObjectContext id:[NSNumber numberWithInt:1] name:@"All"];
         document.populations = [NSSet setWithObjects:populationMO, nil];
 
         // set each sample to populationMO
         for (int i = 0; i < sampleIds.size(); i++) {
-            SampleMO *sampleMO = [sampleRepository insertSample:document.managedObjectContext id:[NSNumber numberWithInt:sampleIds[i]] name:[NSString stringWithUTF8String:samples[sampleIds[i]].c_str()]];
+            SampleMO *sampleMO = [[SampleRepository sharedInstance] insertSample:document.managedObjectContext id:[NSNumber numberWithInt:sampleIds[i]] name:[NSString stringWithUTF8String:samples[sampleIds[i]].c_str()]];
 
             [populationMO addSamplesObject:sampleMO];
         }
@@ -1091,7 +1091,7 @@ NSString *calculateType(NSString *file);
         NSNumberFormatter *f = [[NSNumberFormatter alloc] init];
         // else
         for (int i = 0; i < sampleIds.size(); i++) {
-            SampleMO *sampleMO = [sampleRepository insertSample:document.managedObjectContext
+            SampleMO *sampleMO = [[SampleRepository sharedInstance] insertSample:document.managedObjectContext
                                                              id:[NSNumber numberWithInt:sampleIds[i]]
                                                            name:[NSString stringWithUTF8String:samples[sampleIds[i]].c_str()]];
 
@@ -1136,10 +1136,10 @@ NSString *calculateType(NSString *file);
     for (NSString *popId in populationIdsSet) {
         NSLog(@"adding population %@", popId);
         NSNumber *myNumber = [f numberFromString:popId];
-        [populationRepository insertPopulation:document.managedObjectContext id:myNumber name:popId];
+        [[PopulationRepository sharedInstance] insertPopulation:document.managedObjectContext id:myNumber name:popId];
     }
 
-    NSArray *populationArray = [populationRepository getAllPopulations:document.managedObjectContext];
+    NSArray *populationArray = [[PopulationRepository sharedInstance] getAllPopulations:document.managedObjectContext];
 
     document.populations = [NSSet setWithArray:populationArray];
 
@@ -1168,7 +1168,7 @@ NSString *calculateType(NSString *file);
 //                NSString *sampleName = [columns objectAtIndex:0]; // the sample name . . . male, female, progeny, etc.
 
                 NSString *populationName = [columns objectAtIndex:1]; // initially an integer
-                PopulationMO *newPopulationMO = [populationRepository getPopulation:moc name:populationName];
+                PopulationMO *newPopulationMO = [[PopulationRepository sharedInstance] getPopulation:moc name:populationName];
 
                 if (newPopulationMO != nil) {
                     [populations addObject:newPopulationMO];
@@ -1222,7 +1222,7 @@ NSString *calculateType(NSString *file);
             NSInteger parentCount = countParents(parents);
 //            NSLog(@"parent count for %ld is %ld",locusId,parentCount);
 
-            LocusMO *locusMO = [locusRepository getLocus:context forId:locusId];
+            LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:context forId:locusId];
             locusMO.parentCount = [NSNumber numberWithInteger:parentCount];
         }
     }
