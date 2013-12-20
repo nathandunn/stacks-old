@@ -39,6 +39,7 @@ using std::ofstream;
 #import "LocusAlleleMO.h"
 #import "ConsensusStackEntryMO.h"
 #import "ProgressController.h"
+#import "StacksEntryView.h"
 
 
 #include <sys/time.h>
@@ -974,6 +975,9 @@ NSString *calculateType(NSString *file);
     NSInteger locusId = -1;
     NSInteger newLocusId;
     DatumMO *datumMO = nil ;
+
+    StacksEntryView* stackEntryView = nil ;
+
     NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
 //    for (id key in [sampleLookupDictionary allKeys]) {
 //        NSLog(@"keys 3: %@", key);
@@ -996,10 +1000,23 @@ NSString *calculateType(NSString *file);
             newLocusId = [retrievedObject integerValue];
             if (locusId != newLocusId) {
 
+                // cleanup old object if exists
+//                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
+                if( stackEntryView !=nil){
+                    datumMO.stackData = [stackEntryView renderHtml] ;
+                }
+
+
+
                 locusId = newLocusId;
                 // search for the new locus
                 // TODO: get from in-memory lookup?
                 datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleName:sampleMO.name];
+                stackEntryView = [[StacksEntryView alloc] init];
+                stackEntryView.locusId = locusId ;
+                stackEntryView.sampleName = datumMO.sample.name;
+                
+                // TODO: map locus and datum snps 
             }
 
             if (datumMO != nil) {
@@ -1007,6 +1024,7 @@ NSString *calculateType(NSString *file);
 
                 if ([relationship isEqualToString:@"consensus"]) {
                     row = 1;
+                    stackEntryView.consensus = [columns objectAtIndex:9] ;
 //                    datumMO.consensus = [stackEntryRepository insertConsensusStackEntry:moc
 //                                                                                  block:[columns objectAtIndex:7]
 //                                                                             sequenceId:[columns objectAtIndex:8]
@@ -1020,6 +1038,7 @@ NSString *calculateType(NSString *file);
 
                 }
                 else if ([relationship isEqualToString:@"model"]) {
+                    stackEntryView.model = [columns objectAtIndex:9] ;
 //                    datumMO.model = [stackEntryRepository insertModelStackEntry:moc
 //                                                                          block:[columns objectAtIndex:7]
 //                                                                     sequenceId:[columns objectAtIndex:8]
@@ -1028,6 +1047,7 @@ NSString *calculateType(NSString *file);
 //                    ];
                 }
                 else {
+                    [stackEntryView.sequences addObject:[columns objectAtIndex:9]];
 //                    StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
 //                                                                                entryId:[NSNumber numberWithInteger:row]
 //                                                                           relationship:[columns objectAtIndex:6]
@@ -1041,7 +1061,7 @@ NSString *calculateType(NSString *file);
                     ++row;
                 }
 
-                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
+//                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
 
 
                 if (saveCounter % saveAtLine == 0) {
