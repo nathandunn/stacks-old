@@ -15,6 +15,8 @@
 
 
 @interface AlleleRepository : NSObject
++ (AlleleRepository *)sharedInstance;
+
 - (DatumAlleleMO *)insertDatumAllele:(NSManagedObjectContext *)context ratio:(NSNumber *)ratio depth:(NSNumber *)depth allele:(NSNumber *)allele datum:(DatumMO *)datum;
 
 - (LocusAlleleMO *)insertLocusAllele:(NSManagedObjectContext *)context depth:(NSNumber *)column allele:(NSNumber *)allele locus:(LocusMO *)locus;

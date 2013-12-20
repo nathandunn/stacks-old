@@ -13,6 +13,18 @@
 @implementation HaplotypeRepository {
 
 }
+
++ (HaplotypeRepository *)sharedInstance
+{
+    static HaplotypeRepository *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[HaplotypeRepository alloc] init];
+        // Do any other initialisation stuff here
+    });
+    return sharedInstance;
+}
+
 - (HaplotypeMO *)insertHaplotype:(NSManagedObjectContext *)context haplotype:(NSString *)haplotype andOrder:(int)order {
     HaplotypeMO *haplotypeMO = [NSEntityDescription insertNewObjectForEntityForName:@"Haplotype" inManagedObjectContext:context];
     haplotypeMO.haplotype = haplotype ;

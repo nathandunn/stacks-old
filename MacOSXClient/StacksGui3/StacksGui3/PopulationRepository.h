@@ -12,6 +12,8 @@
 
 
 @interface PopulationRepository : NSObject
+
++ (PopulationRepository *)sharedInstance;
 - (PopulationMO *)insertPopulation:(NSManagedObjectContext *)context id:(NSNumber *)id name:(NSString *)name;
 
 - (NSArray *)getAllPopulations:(NSManagedObjectContext *)context;

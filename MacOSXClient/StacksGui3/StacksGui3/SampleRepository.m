@@ -13,6 +13,19 @@
 @implementation SampleRepository {
 
 }
+
+
++ (SampleRepository *)sharedInstance
+{
+    static SampleRepository *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[SampleRepository alloc] init];
+        // Do any other initialisation stuff here
+    });
+    return sharedInstance;
+}
+
 - (SampleMO *)getSampleForName:(NSString *)name andContext:(NSManagedObjectContext *)moc andError:(NSError *)error {
 //    if (error == nil) {
 //        error = [[NSError alloc] init];

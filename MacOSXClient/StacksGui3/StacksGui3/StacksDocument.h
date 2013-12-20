@@ -12,9 +12,9 @@
 @class DatumMO;
 @class LocusMO;
 @class PopulationMO;
-@class DatumRepository;
-@class PopulationRepository;
-@class LocusRepository;
+//@class DatumRepository;
+//@class PopulationRepository;
+//@class LocusRepository;
 
 @interface StacksDocument : NSPersistentDocument
 
@@ -32,9 +32,9 @@
 @property(nonatomic, strong) DatumMO *selectedDatum;
 
 // repositories
-@property(nonatomic, strong) DatumRepository *datumRepository;
-@property(nonatomic, strong) LocusRepository *locusRepository;
-@property(nonatomic, strong) PopulationRepository *populationRepository;
+//@property(nonatomic, strong) DatumRepository *datumRepository;
+//@property(nonatomic, strong) LocusRepository *locusRepository;
+//@property(nonatomic, strong) PopulationRepository *populationRepository;
 
 
 @property(nonatomic, copy) NSString *previousStacksName;
