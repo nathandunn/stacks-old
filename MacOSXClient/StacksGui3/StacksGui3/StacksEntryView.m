@@ -26,7 +26,7 @@
 
 
 - (NSString *)renderHtml {
-     NSString* returnHTML = [NSString stringWithFormat:@"<table><tr><td col=4>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</td></tr>",sampleName,locusId,[sequences count]];
+    NSString* returnHTML = [NSString stringWithFormat:@"<script type='text/javascript'></script> <table><tr><td col=4><div style='color:red;display:inline;' class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>",sampleName,locusId,[sequences count]];
 
     returnHTML = [NSString stringWithFormat:@"%@%@",returnHTML,[self renderSequences]]; ;
 
@@ -39,7 +39,7 @@
 - (NSString *)renderSequences {
     NSString* returnString = @"";
     for(NSString* sequence in sequences){
-        returnString = [NSString stringWithFormat:@"%@<tr><td col=4>%@</td></tr>",returnString,sequence];
+        returnString = [NSString stringWithFormat:@"%@<tr><td col=4 style='font-family:monospace';>%@</td></tr>",returnString,sequence];
     }
     return returnString;
 }
