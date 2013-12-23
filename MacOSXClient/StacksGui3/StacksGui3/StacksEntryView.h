@@ -12,6 +12,7 @@
 @property(nonatomic, copy) NSString *sampleName;
 @property(nonatomic, copy) NSString* consensus;
 @property(nonatomic, copy) NSString*  model;
+@property(nonatomic, copy) NSMutableArray*  sequenceIds;
 @property(nonatomic, copy) NSMutableArray*  sequences;
 
 - (NSString *)renderHtml;

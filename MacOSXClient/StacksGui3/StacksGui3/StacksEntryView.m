@@ -14,6 +14,7 @@
 @synthesize sampleName ;
 @synthesize locusId;
 @synthesize sequences;
+@synthesize sequenceIds;
 
 - (id)init {
     self = [super init];
@@ -37,10 +38,16 @@
 }
 
 - (NSString *)renderSequences {
-    NSString* returnString = @"";
-    for(NSString* sequence in sequences){
-        returnString = [NSString stringWithFormat:@"%@<tr><td col=4 style='font-family:monospace';>%@</td></tr>",returnString,sequence];
+    NSMutableString* returnString = [[NSMutableString alloc] init];
+    NSString *sequence  ;
+    NSString *sequenceId  ;
+    for(int i = 0 ; i < sequences.count ; i++){
+        sequence = [sequences objectAtIndex:i];
+        sequenceId = [sequenceIds objectAtIndex:i];
+        [returnString appendFormat:@"<tr><td col=4 style='font-family:monospace';>%@ - %@</td></tr>",sequenceId,sequence];
     }
+//    for(NSString* sequence in sequences){
+//    }
     return returnString;
 }
 @end
