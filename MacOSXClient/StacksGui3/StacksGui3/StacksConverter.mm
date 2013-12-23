@@ -515,7 +515,9 @@ NSString *calculateType(NSString *file);
 //            }
 
             // TODO: use a lookup here to speed up
-            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
+            
+            NSNumber *lookupKey = [NSNumber numberWithInt:it->first];
+//            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
 //            locusMO = [lociDictionary objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
             LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:stacksDocument.managedObjectContext forId:lookupKey.integerValue];
 //            locusMO = [lociDictionary objectForKey:lookupKey];
@@ -1004,6 +1006,8 @@ NSString *calculateType(NSString *file);
 //                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
                 if( stackEntryView !=nil){
                     datumMO.stackData = [stackEntryView renderHtml] ;
+                    datumMO = nil ;
+                    stackEntryView = nil ;
                 }
 
 
@@ -1047,6 +1051,7 @@ NSString *calculateType(NSString *file);
 //                    ];
                 }
                 else {
+                    [stackEntryView.sequenceIds addObject:[columns objectAtIndex:8]];
                     [stackEntryView.sequences addObject:[columns objectAtIndex:9]];
 //                    StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
 //                                                                                entryId:[NSNumber numberWithInteger:row]
@@ -1081,10 +1086,14 @@ NSString *calculateType(NSString *file);
         }
 
     }
+
+
     gettimeofday(&time2, NULL);
 //    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
     NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackData!=nil ? datumMO.stackData.length : 0, (time2.tv_sec - time1.tv_sec));
 
+    datumMO = nil ;
+    stackEntryView = nil ;
 
     // save old
     NSError *saveError;
@@ -1092,6 +1101,7 @@ NSString *calculateType(NSString *file);
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
     }
+//    [moc reset];
 }
 
 - (void)addSamplesToDocument:(StacksDocument *)document forSampleIds:(vector<int>)sampleIds andSamples:(map<int, string>)samples {
