@@ -28,11 +28,17 @@
 
 
 - (NSString *)renderHtml {
-    NSString* returnHTML = [NSString stringWithFormat:@"<script type='text/javascript'></script> <table><tr><td col=4><div style='color:red;display:inline;' class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>",sampleName,locusId,[sequences count]];
+//    NSString* headerHTML= @"<head><link rel='stylesheet' type='text/css' href='test.css'/></head><body>" ;
+    NSString* cssPath = [[NSBundle mainBundle] pathForResource:@"test" ofType:@"css"];
+//    NSLog(@"css path %@",cssPath) ;
+    NSString *cssString = [NSString stringWithContentsOfFile:cssPath encoding:NSUTF8StringEncoding error:NULL];
+//    NSLog(@"css string %@",cssString) ;
+
+    NSString* returnHTML = [NSString stringWithFormat:@"<style type='text/css'>%@</style><div class='sample'>testy</div><table><tr><td col=4><div class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>",cssString,sampleName,locusId,[sequences count]];
 
     returnHTML = [NSString stringWithFormat:@"%@%@",returnHTML,[self renderSequences]]; ;
 
-    returnHTML = [NSString stringWithFormat:@"%@</table>",returnHTML];
+    returnHTML = [NSString stringWithFormat:@"%@</table></body>",returnHTML];
     return returnHTML ;
 }
 
@@ -45,8 +51,6 @@
         sequenceId = [sequenceIds objectAtIndex:i];
         [returnString appendFormat:@"<tr><td>%@</td><td col=3>%@</td></tr>",sequenceId,sequence];
     }
-//    for(NSString* sequence in sequences){
-//    }
     return returnString;
 }
 @end

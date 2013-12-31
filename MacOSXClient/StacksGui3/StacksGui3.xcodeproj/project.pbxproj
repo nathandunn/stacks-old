@@ -28,6 +28,7 @@
 		1442E1C617206DBC004B6361 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1442E1C417206DBC004B6361 /* InfoPlist.strings */; };
 		1442E1C917206DBC004B6361 /* StacksGui3Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1442E1C817206DBC004B6361 /* StacksGui3Tests.m */; };
 		1466633D17445AF80051E40C /* DatumAlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1466633C17445AF80051E40C /* DatumAlleleMO.m */; };
+		149BCBAB1872312F0078D099 /* test.css in Resources */ = {isa = PBXBuildFile; fileRef = 149BCBAA1872312F0078D099 /* test.css */; };
 		14A1E8E8174449D00056C06F /* DatumSnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A1E8E7174449D00056C06F /* DatumSnpMO.m */; };
 		14A1E8EB174449D80056C06F /* LocusSnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A1E8EA174449D80056C06F /* LocusSnpMO.m */; };
 		14A72B471746A1E60024B2D1 /* LocusArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14A72B461746A1E60024B2D1 /* LocusArrayController.m */; };
@@ -63,8 +64,6 @@
 		6B81723E17DFD684002FB907 /* ProgressController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B81723C17DFD684002FB907 /* ProgressController.m */; };
 		6B81723F17DFD684002FB907 /* ProgressController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6B81723D17DFD684002FB907 /* ProgressController.xib */; };
 		6BB1484F181737B700D87C87 /* ColorGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BB1484E181737B600D87C87 /* ColorGenerator.m */; };
-		6BDD89381868D19100906562 /* test.js in Sources */ = {isa = PBXBuildFile; fileRef = 6BDD89371868D19100906562 /* test.js */; };
-		6BDD893C1868D47200906562 /* test.css in Resources */ = {isa = PBXBuildFile; fileRef = 6BDD893B1868D47200906562 /* test.css */; };
 		6BEBC5DB17E8F71B00B48C79 /* HaplotypeMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBC5DA17E8F71B00B48C79 /* HaplotypeMO.m */; };
 		6BEBC5DE17E8F71C00B48C79 /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBC5DD17E8F71C00B48C79 /* AlleleMO.m */; };
 		6BEBC5E117E8F71C00B48C79 /* DepthMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBC5E017E8F71C00B48C79 /* DepthMO.m */; };
@@ -128,6 +127,7 @@
 		1442E1C817206DBC004B6361 /* StacksGui3Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StacksGui3Tests.m; sourceTree = "<group>"; };
 		1466633B17445AF80051E40C /* DatumAlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumAlleleMO.h; sourceTree = "<group>"; };
 		1466633C17445AF80051E40C /* DatumAlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumAlleleMO.m; sourceTree = "<group>"; };
+		149BCBAA1872312F0078D099 /* test.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = test.css; sourceTree = "<group>"; };
 		14A1E8E6174449D00056C06F /* DatumSnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumSnpMO.h; sourceTree = "<group>"; };
 		14A1E8E7174449D00056C06F /* DatumSnpMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumSnpMO.m; sourceTree = "<group>"; };
 		14A1E8E9174449D80056C06F /* LocusSnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusSnpMO.h; sourceTree = "<group>"; };
@@ -209,8 +209,6 @@
 		6B81723D17DFD684002FB907 /* ProgressController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ProgressController.xib; sourceTree = "<group>"; };
 		6BB1484D181737B600D87C87 /* ColorGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorGenerator.h; sourceTree = "<group>"; };
 		6BB1484E181737B600D87C87 /* ColorGenerator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ColorGenerator.m; sourceTree = "<group>"; };
-		6BDD89371868D19100906562 /* test.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = test.js; sourceTree = "<group>"; };
-		6BDD893B1868D47200906562 /* test.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = test.css; sourceTree = "<group>"; };
 		6BEBC5D917E8F71B00B48C79 /* HaplotypeMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HaplotypeMO.h; sourceTree = "<group>"; };
 		6BEBC5DA17E8F71B00B48C79 /* HaplotypeMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HaplotypeMO.m; sourceTree = "<group>"; };
 		6BEBC5DC17E8F71C00B48C79 /* AlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleMO.h; sourceTree = "<group>"; };
@@ -496,23 +494,14 @@
 			isa = PBXGroup;
 			children = (
 				6BDD893A1868D46800906562 /* css */,
-				6BDD89391868D32800906562 /* js */,
 			);
 			name = www;
-			sourceTree = "<group>";
-		};
-		6BDD89391868D32800906562 /* js */ = {
-			isa = PBXGroup;
-			children = (
-				6BDD89371868D19100906562 /* test.js */,
-			);
-			name = js;
 			sourceTree = "<group>";
 		};
 		6BDD893A1868D46800906562 /* css */ = {
 			isa = PBXGroup;
 			children = (
-				6BDD893B1868D47200906562 /* test.css */,
+				149BCBAA1872312F0078D099 /* test.css */,
 			);
 			name = css;
 			sourceTree = "<group>";
@@ -593,8 +582,8 @@
 				1442E1A917206DBB004B6361 /* Credits.rtf in Resources */,
 				1442E1B217206DBB004B6361 /* MainMenu.xib in Resources */,
 				63D53F09D355842335914336 /* StacksDocument.xib in Resources */,
+				149BCBAB1872312F0078D099 /* test.css in Resources */,
 				6B81723F17DFD684002FB907 /* ProgressController.xib in Resources */,
-				6BDD893C1868D47200906562 /* test.css in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -679,7 +668,6 @@
 				D793C7E7AAF6AF5E0DAA658E /* StacksImportMenuItem.m in Sources */,
 				6B81723E17DFD684002FB907 /* ProgressController.m in Sources */,
 				6BEBC5DB17E8F71B00B48C79 /* HaplotypeMO.m in Sources */,
-				6BDD89381868D19100906562 /* test.js in Sources */,
 				6BEBC5DE17E8F71C00B48C79 /* AlleleMO.m in Sources */,
 				6BEBC5E117E8F71C00B48C79 /* DepthMO.m in Sources */,
 				6BEBC5E417E8F71C00B48C79 /* SnpMO.m in Sources */,
