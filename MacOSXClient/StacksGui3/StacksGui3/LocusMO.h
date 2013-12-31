@@ -30,6 +30,7 @@
 //@property (nonatomic, retain) NSSet *snps;
 
 @property (nonatomic, retain) NSString *alleleData;
+//@property (nonatomic, retain) NSString *snpData;
 @property (nonatomic, retain) NSString *snpData;
 
 // not a managed part, populated by datum rendering . . .

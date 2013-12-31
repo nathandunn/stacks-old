@@ -429,37 +429,58 @@ NSString *calculateType(NSString *file);
 
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
+
+        NSMutableArray *snpArray = [[NSMutableArray alloc] init];
         for (; snpsIterator != snps.end(); ++snpsIterator) {
             SNP *snp = (*snpsIterator);
 
-            // TODO: convert
-//            LocusSnpMO *snpMO = [[SnpRepository sharedInstance] insertLocusSnp:moc
-//                                                       column:[NSNumber numberWithInt:snp->col]
-//                                                       lratio:[NSNumber numberWithFloat:snp->lratio]
-//                                                        rank1:[NSNumber numberWithInt:snp->rank_1]
-//                                                        rank2:[NSNumber numberWithInt:snp->rank_2]
-//                                                        rank3:[NSNumber numberWithInt:snp->rank_3]
-//                                                        rank4:[NSNumber numberWithInt:snp->rank_4]
-//                                                        locus:locusMO
-//            ];
-//            [locusMO addSnpsObject:snpMO];
+            NSDictionary *snpDictionary= [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSString stringWithFormat:@"%i",snp->col],@"column"
+            ,[NSNumber numberWithFloat:snp->lratio],@"lratio"
+                    ,[NSNumber numberWithFloat:snp->rank_1],@"rank1"
+                    ,[NSNumber numberWithFloat:snp->rank_2],@"rank2"
+                    ,[NSNumber numberWithFloat:snp->rank_3],@"rank3"
+                    ,[NSNumber numberWithFloat:snp->rank_4],@"rank4"
+                    ,nil ] ;
+            [snpArray addObject:snpDictionary];
+
+//            NSError* error ;
+//            NSData* snpData = [NSJSONSerialization dataWithJSONObject:snpDictionary options:NSJSONWritingPrettyPrinted error:&error];
+//            NSString* snpString = [[NSString alloc] initWithData:snpData encoding:NSUTF8StringEncoding];
+//
+//            NSLog(@"snpString %@",snpString) ;
+
         }
+
+        NSError* error2 ;
+        NSData* snpArrayData = [NSJSONSerialization dataWithJSONObject:snpArray options:NSJSONWritingPrettyPrinted error:&error2];
+        NSString* snpArrayString = [[NSString alloc] initWithData:snpArrayData encoding:NSUTF8StringEncoding];
+        NSLog(@"snpArrayString %@",snpArrayString) ;
+        locusMO.snpData = snpArrayString ;
 
 //        map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
         map<string, int> alleles = catalogIterator->second->alleles;
         map<string, int>::iterator allelesIterator = alleles.begin();
 //        string allele;
 //        int column;
+        NSMutableArray *alleleArray = [[NSMutableArray alloc] init];
         for (; allelesIterator != alleles.end(); ++allelesIterator) {
             string allele = allelesIterator->first;
             int column = allelesIterator->second;
 
-            // TODO: convert
-//            [[AlleleRepository sharedInstance] insertLocusAllele:moc depth:[NSNumber numberWithInt:column]
-//                                         allele:[numberFormatter numberFromString:[NSString stringWithUTF8String:allele.c_str()]]
-//                                          locus:locusMO
-//            ];
+            NSDictionary *alleleDictionary= [NSDictionary dictionaryWithObjectsAndKeys:
+                    [NSNumber numberWithInt:column],@"depth"
+                    ,[NSString stringWithUTF8String:allele.c_str()],@"allele"
+//                    ,[NSNumber numberWithFloat:snp->rank_1],@"ratio"
+                    ,nil ] ;
+            [alleleArray addObject:alleleDictionary];
         }
+
+        NSError* error3 ;
+        NSData* alleleArrayData = [NSJSONSerialization dataWithJSONObject:alleleArray  options:NSJSONWritingPrettyPrinted error:&error2];
+        NSString* alleleArrayString = [[NSString alloc] initWithData:alleleArrayData encoding:NSUTF8StringEncoding];
+        NSLog(@"alleleArrayString %@",alleleArrayString) ;
+        locusMO.alleleData = alleleArrayString ;
 
 
         [loci addObject:locusMO];
