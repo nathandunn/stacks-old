@@ -31,7 +31,7 @@
 
 @property (nonatomic, retain) NSString *alleleData;
 //@property (nonatomic, retain) NSString *snpData;
-@property (nonatomic, retain) NSString *snpData;
+@property (nonatomic, retain) NSData *snpData;
 
 // not a managed part, populated by datum rendering . . .
 @property (atomic, retain) NSDictionary *haplotypeOrder;
