@@ -86,9 +86,10 @@
     NSNumber *parentCount = self.parentCount;
     NSUInteger progenyCount = self.countProgeny;
     // TODO: convert
-//    NSUInteger snpCount = self.snps.count;
-    NSUInteger snpCount = 1 ;
-//    NSString *parentString;
+
+    NSError *error;
+    NSDictionary* json = [NSJSONSerialization JSONObjectWithData:self.snpData options:kNilOptions error:&error];
+    NSUInteger snpCount = json.count;
 
     NSString *chromosomeString = @"";
     if (self.chromosome != nil && self.chromosome.length > 0) {
