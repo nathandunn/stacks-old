@@ -25,9 +25,12 @@
 @property (nonatomic, retain) NSString * marker;
 @property (nonatomic, retain) NSString * ratio;
 
-@property (nonatomic, retain) NSSet *alleles;
+//@property (nonatomic, retain) NSSet *alleles;
 @property (nonatomic, retain) NSSet *datums;
-@property (nonatomic, retain) NSSet *snps;
+//@property (nonatomic, retain) NSSet *snps;
+
+@property (nonatomic, retain) NSString *alleleData;
+@property (nonatomic, retain) NSString *snpData;
 
 // not a managed part, populated by datum rendering . . .
 @property (atomic, retain) NSDictionary *haplotypeOrder;
@@ -41,19 +44,19 @@
 
 @interface LocusMO (CoreDataGeneratedAccessors)
 
-- (void)addAllelesObject:(LocusAlleleMO *)value;
-- (void)removeAllelesObject:(LocusAlleleMO *)value;
-- (void)addAlleles:(NSSet *)values;
-- (void)removeAlleles:(NSSet *)values;
+//- (void)addAllelesObject:(LocusAlleleMO *)value;
+//- (void)removeAllelesObject:(LocusAlleleMO *)value;
+//- (void)addAlleles:(NSSet *)values;
+//- (void)removeAlleles:(NSSet *)values;
 
 - (void)addDatumsObject:(DatumMO *)value;
 - (void)removeDatumsObject:(DatumMO *)value;
 - (void)addDatums:(NSSet *)values;
 - (void)removeDatums:(NSSet *)values;
 
-- (void)addSnpsObject:(LocusSnpMO *)value;
-- (void)removeSnpsObject:(LocusSnpMO *)value;
-- (void)addSnps:(NSSet *)values;
-- (void)removeSnps:(NSSet *)values;
+//- (void)addSnpsObject:(LocusSnpMO *)value;
+//- (void)removeSnpsObject:(LocusSnpMO *)value;
+//- (void)addSnps:(NSSet *)values;
+//- (void)removeSnps:(NSSet *)values;
 
 @end

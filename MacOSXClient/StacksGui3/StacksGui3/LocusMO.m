@@ -28,9 +28,11 @@
 @dynamic locusId;
 @dynamic marker;
 @dynamic ratio;
-@dynamic alleles;
+//@dynamic alleles;
+@dynamic alleleData;
 @dynamic datums;
-@dynamic snps;
+//@dynamic snps;
+@dynamic snpData;
 
 @synthesize haplotypeOrder;
 
@@ -83,7 +85,9 @@
 - (NSAttributedString *)renderDescription {
     NSNumber *parentCount = self.parentCount;
     NSUInteger progenyCount = self.countProgeny;
-    NSUInteger snpCount = self.snps.count;
+    // TODO: convert
+//    NSUInteger snpCount = self.snps.count;
+    NSUInteger snpCount = 1 ;
 //    NSString *parentString;
 
     NSString *chromosomeString = @"";
@@ -153,10 +157,12 @@
 //                    [NSColor grayColor], NSBackgroundColorAttributeName,
             [NSFont fontWithName:@"Courier-Bold" size:fontSize], NSFontAttributeName,
             nil];
-    for (LocusSnpMO *snp in self.snps) {
-        NSRange selectedRange = NSMakeRange([snp.column unsignedIntegerValue], 1);
-        [string addAttributes:attributes range:selectedRange];
-    }
+
+    // TODO: convert
+//    for (LocusSnpMO *snp in self.snps) {
+//        NSRange selectedRange = NSMakeRange([snp.column unsignedIntegerValue], 1);
+//        [string addAttributes:attributes range:selectedRange];
+//    }
 
 
     [string endEditing];
@@ -193,11 +199,12 @@
 - (NSUInteger)lookupDepthOrder:(DepthMO *)depthMO {
     // assume that it is there . . .
     NSNumber *order = depthMO.order;
-    for (HaplotypeMO *haplotypeMO in depthMO.datum.haplotypes.allObjects) {
-        if ([haplotypeMO.order isEqualToNumber:order]) {
-            return [self lookupHaplotypeOrder:haplotypeMO.haplotype];
-        }
-    }
+    // TODO: convert
+//    for (HaplotypeMO *haplotypeMO in depthMO.datum.haplotypes.allObjects) {
+//        if ([haplotypeMO.order isEqualToNumber:order]) {
+//            return [self lookupHaplotypeOrder:haplotypeMO.haplotype];
+//        }
+//    }
 
     return 0;
 }

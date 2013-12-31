@@ -7,16 +7,16 @@
 //
 
 #import "DatumMO.h"
-#import "ConsensusStackEntryMO.h"
-#import "DatumAlleleMO.h"
-#import "DatumSnpMO.h"
-#import "DepthMO.h"
-#import "HaplotypeMO.h"
-#import "LocusMO.h"
-#import "ModelStackEntryMO.h"
-#import "ReferenceStackEntryMO.h"
-#import "SampleMO.h"
-#import "StackEntryMO.h"
+//#import "ConsensusStackEntryMO.h"
+//#import "DatumAlleleMO.h"
+//#import "DatumSnpMO.h"
+//#import "DepthMO.h"
+//#import "HaplotypeMO.h"
+//#import "LocusMO.h"
+//#import "ModelStackEntryMO.h"
+//#import "ReferenceStackEntryMO.h"
+//#import "SampleMO.h"
+//#import "StackEntryMO.h"
 #import "ColorGenerator.h"
 
 
@@ -25,15 +25,19 @@
 @dynamic name;
 @dynamic sampleId;
 @dynamic tagId;
-@dynamic alleles;
+//@dynamic alleles;
+@dynamic alleleData;
 //@dynamic consensus;
-@dynamic depths;
-@dynamic haplotypes;
+//@dynamic depths;
+@dynamic depthData;
+//@dynamic haplotypes;
+@dynamic haplotypeData;
 @dynamic locus;
 //@dynamic model;
 //@dynamic reference;
 @dynamic sample;
-@dynamic snps;
+//@dynamic snps;
+@dynamic snpData;
 //@dynamic stackEntries;
 @dynamic stackData;
 
@@ -50,7 +54,7 @@
     [mutParaStyle setAlignment:NSCenterTextAlignment];
     NSRange selectedRange = NSMakeRange(0, [[string string] length]);
     [string addAttributes:[NSDictionary dictionaryWithObject:mutParaStyle
-                                                      forKey:NSParagraphStyleAttributeName ] range:selectedRange];
+                                                      forKey:NSParagraphStyleAttributeName] range:selectedRange];
 //    NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
 //    [string addAttributes:fontAttributes range:selectedRange];
 
@@ -68,27 +72,28 @@
 
     NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
 
-    for (HaplotypeMO *haplotype  in [self.haplotypes sortedArrayUsingDescriptors:sortDescriptors]) {
-//        NSString *haplotype = [self.haplotypes objectAtIndex:i];
-        NSUInteger order = [self.locus lookupHaplotypeOrder:haplotype.haplotype];
-
-
-        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype.haplotype];
-        NSRange selectedRange = NSMakeRange(0, haplotype.haplotype.length);
-        [appendString beginEditing];
-        NSDictionary *attributes = [self generateColorForOrder:order];
-        [appendString setAttributes:attributes range:selectedRange];
-        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
-        [appendString addAttributes:fontAttributes range:selectedRange];
-        [appendString endEditing];
-
-        [string appendAttributedString:appendString];
-        if (i < self.haplotypes.count - 1) {
-            [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
-        }
-
-        ++i;
-    }
+    // TODO: convert
+//    for (HaplotypeMO *haplotype  in [self.haplotypes sortedArrayUsingDescriptors:sortDescriptors]) {
+////        NSString *haplotype = [self.haplotypes objectAtIndex:i];
+//        NSUInteger order = [self.locus lookupHaplotypeOrder:haplotype.haplotype];
+//
+//
+//        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype.haplotype];
+//        NSRange selectedRange = NSMakeRange(0, haplotype.haplotype.length);
+//        [appendString beginEditing];
+//        NSDictionary *attributes = [self generateColorForOrder:order];
+//        [appendString setAttributes:attributes range:selectedRange];
+//        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+//        [appendString addAttributes:fontAttributes range:selectedRange];
+//        [appendString endEditing];
+//
+//        [string appendAttributedString:appendString];
+//        if (i < self.haplotypes.count - 1) {
+//            [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
+//        }
+//
+//        ++i;
+//    }
 
     NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
     [mutParaStyle setAlignment:NSCenterTextAlignment];
@@ -105,28 +110,29 @@
 
     int i = 0;
     NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
-    for (DepthMO *depth in  [self.depths sortedArrayUsingDescriptors:sortDescriptors]) {
-//        NSString *depth = [(NSNumber *) [self.depths objectAtIndex:i] stringValue];
-
-        NSUInteger order = [self.locus lookupDepthOrder:depth];
-
-
-        NSString *numberString = [NSString stringWithFormat:@"%@", depth.depth];
-        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:numberString];
-        NSRange selectedRange = NSMakeRange(0, numberString.length);
-        [appendString beginEditing];
-        NSDictionary *attributes = [self generateColorForOrder:order];
-        [appendString setAttributes:attributes range:selectedRange];
-        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
-        [appendString addAttributes:fontAttributes range:selectedRange];
-        [appendString endEditing];
-
-        [string appendAttributedString:appendString];
-        if (i < self.depths.count - 1) {
-            [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
-        }
-        ++i;
-    }
+    // TODO: convert
+//    for (DepthMO *depth in  [self.depths sortedArrayUsingDescriptors:sortDescriptors]) {
+////        NSString *depth = [(NSNumber *) [self.depths objectAtIndex:i] stringValue];
+//
+//        NSUInteger order = [self.locus lookupDepthOrder:depth];
+//
+//
+//        NSString *numberString = [NSString stringWithFormat:@"%@", depth.depth];
+//        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:numberString];
+//        NSRange selectedRange = NSMakeRange(0, numberString.length);
+//        [appendString beginEditing];
+//        NSDictionary *attributes = [self generateColorForOrder:order];
+//        [appendString setAttributes:attributes range:selectedRange];
+//        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+//        [appendString addAttributes:fontAttributes range:selectedRange];
+//        [appendString endEditing];
+//
+//        [string appendAttributedString:appendString];
+//        if (i < self.depths.count - 1) {
+//            [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
+//        }
+//        ++i;
+//    }
 
 
     NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
