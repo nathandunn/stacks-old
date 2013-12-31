@@ -28,7 +28,7 @@
     maxSnpValue = 1000;
     chromosomeLocation = nil ;
     minBasePairs = 0;
-    maxBasePairs = 1000000 * 10000 ;
+    maxBasePairs = 1000000 * 10000;
 
     [self setSortDescriptors:[NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"locusId" ascending:YES selector:@selector(compare:)]]];
 }
@@ -64,21 +64,23 @@
     for (id item in objects) {
         if ([item isKindOfClass:[LocusMO class]]) {
             LocusMO *locusMO = (LocusMO *) item;
-            if (locusMO.snps != nil) {
-                if (locusMO.snps.count >= minSnpValue && locusMO.snps.count <= maxSnpValue) {
-                    if ([locusMO.type isEqualToString:@"Population"]) {
-                        if (([locusMO.basePairs integerValue] >= minBasePairs)
-                                && ([locusMO.basePairs integerValue] <= maxBasePairs)
-                                && (chromosomeLocation == nil  || [locusMO.chromosome isEqualToString:chromosomeLocation])
-                                ) {
-                            [filteredObjects addObject:locusMO];
-                        }
-                    }
-                    else {
-                        [filteredObjects addObject:locusMO];
-                    }
-                }
-            }
+            // TODO: convert 
+//            if (locusMO.snps != nil) {
+//                if (locusMO.snps.count >= minSnpValue && locusMO.snps.count <= maxSnpValue) {
+//                    if ([locusMO.type isEqualToString:@"Population"]) {
+//                        if (([locusMO.basePairs integerValue] >= minBasePairs)
+//                                && ([locusMO.basePairs integerValue] <= maxBasePairs)
+//                                && (chromosomeLocation == nil  || [locusMO.chromosome isEqualToString:chromosomeLocation])
+//                                ) {
+//                            [filteredObjects addObject:locusMO];
+//                        }
+//                    }
+//                    else {
+//                        [filteredObjects addObject:locusMO];
+//                    }
+//                }
+//            }
+            [filteredObjects addObject:locusMO];
         }
     }
     NSLog(@"filtered objects left %ld", filteredObjects.count);
@@ -108,8 +110,8 @@
     NSPopUpButton *value = sender;
     if (value.stringValue.length > 0) {
         chromosomeLocation = value.titleOfSelectedItem;
-        if([chromosomeLocation isEqualToString:@"All Chromosomes"]){
-            chromosomeLocation= nil ;
+        if ([chromosomeLocation isEqualToString:@"All Chromosomes"]) {
+            chromosomeLocation = nil ;
         }
 //        NSLog(@"setting Location Value %@", chromosomeLocation);
         [self rearrangeObjects];
@@ -129,7 +131,7 @@
 - (IBAction)writeMaxBasePairs:(id)sender {
     NSTextField *value = sender;
     if (value.stringValue.length > 0) {
-        maxBasePairs = value.doubleValue* 1000000;
+        maxBasePairs = value.doubleValue * 1000000;
         NSLog(@"max base pairs %f", maxBasePairs);
         [self rearrangeObjects];
     }

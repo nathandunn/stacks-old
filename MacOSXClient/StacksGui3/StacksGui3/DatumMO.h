@@ -17,15 +17,19 @@
 @property (nonatomic, retain) NSString * name;
 @property (nonatomic, retain) NSNumber * sampleId;
 @property (nonatomic, retain) NSNumber * tagId;
-@property (nonatomic, retain) NSSet *alleles;
+//@property (nonatomic, retain) NSSet *alleles;
+@property (nonatomic, retain) NSString * alleleData;
 //@property (nonatomic, retain) ConsensusStackEntryMO *consensus;
-@property (nonatomic, retain) NSSet *depths;
-@property (nonatomic, retain) NSSet *haplotypes;
+//@property (nonatomic, retain) NSSet *depths;
+@property (nonatomic, retain) NSString * depthData;
+//@property (nonatomic, retain) NSSet *haplotypes;
+@property (nonatomic, retain) NSString * haplotypeData;
 @property (nonatomic, retain) LocusMO *locus;
 //@property (nonatomic, retain) ModelStackEntryMO *model;
 //@property (nonatomic, retain) ReferenceStackEntryMO *reference;
 @property (nonatomic, retain) SampleMO *sample;
-@property (nonatomic, retain) NSSet *snps;
+//@property (nonatomic, retain) NSSet *snps;
+@property (nonatomic, retain) NSString *snpData;
 //@property (nonatomic, retain) NSSet *stackEntries;
 @property (nonatomic, retain) NSString * stackData;
 
@@ -37,25 +41,25 @@
 
 - (NSDictionary*)generateColorForOrder:(NSUInteger) order;
 
-- (void)addAllelesObject:(DatumAlleleMO *)value;
-- (void)removeAllelesObject:(DatumAlleleMO *)value;
-- (void)addAlleles:(NSSet *)values;
-- (void)removeAlleles:(NSSet *)values;
-
-- (void)addDepthsObject:(DepthMO *)value;
-- (void)removeDepthsObject:(DepthMO *)value;
-- (void)addDepths:(NSSet *)values;
-- (void)removeDepths:(NSSet *)values;
-
-- (void)addHaplotypesObject:(HaplotypeMO *)value;
-- (void)removeHaplotypesObject:(HaplotypeMO *)value;
-- (void)addHaplotypes:(NSSet *)values;
-- (void)removeHaplotypes:(NSSet *)values;
-
-- (void)addSnpsObject:(DatumSnpMO *)value;
-- (void)removeSnpsObject:(DatumSnpMO *)value;
-- (void)addSnps:(NSSet *)values;
-- (void)removeSnps:(NSSet *)values;
+//- (void)addAllelesObject:(DatumAlleleMO *)value;
+//- (void)removeAllelesObject:(DatumAlleleMO *)value;
+//- (void)addAlleles:(NSSet *)values;
+//- (void)removeAlleles:(NSSet *)values;
+//
+//- (void)addDepthsObject:(DepthMO *)value;
+//- (void)removeDepthsObject:(DepthMO *)value;
+//- (void)addDepths:(NSSet *)values;
+//- (void)removeDepths:(NSSet *)values;
+//
+//- (void)addHaplotypesObject:(HaplotypeMO *)value;
+//- (void)removeHaplotypesObject:(HaplotypeMO *)value;
+//- (void)addHaplotypes:(NSSet *)values;
+//- (void)removeHaplotypes:(NSSet *)values;
+//
+//- (void)addSnpsObject:(DatumSnpMO *)value;
+//- (void)removeSnpsObject:(DatumSnpMO *)value;
+//- (void)addSnps:(NSSet *)values;
+//- (void)removeSnps:(NSSet *)values;
 
 //- (void)addStackEntriesObject:(StackEntryMO *)value;
 //- (void)removeStackEntriesObject:(StackEntryMO *)value;

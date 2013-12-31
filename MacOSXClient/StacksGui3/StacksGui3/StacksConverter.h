@@ -11,12 +11,12 @@
 @class SampleRepository;
 @class PopulationRepository;
 @class DatumRepository;
-@class DepthRepository;
-@class HaplotypeRepository;
+//@class DepthRepository;
+//@class HaplotypeRepository;
 @class LocusRepository;
-@class SnpRepository;
+//@class SnpRepository;
 //@class StackEntryRepository;
-@class AlleleRepository;
+//@class AlleleRepository;
 @class ProgressController;
 
 

@@ -18,26 +18,26 @@ using std::ifstream;
 using std::ofstream;
 
 
-#import "StackEntryMO.h"
+//#import "StackEntryMO.h"
 #import "SampleRepository.h"
 #import "StacksConverter.h"
 #import "PopulationRepository.h"
-#import "DepthRepository.h"
+//#import "DepthRepository.h"
 #import "DatumRepository.h"
-#import "HaplotypeRepository.h"
+//#import "HaplotypeRepository.h"
 #import "LocusRepository.h"
 #import "DatumMO.h"
-#import "HaplotypeMO.h"
-#import "DepthMO.h"
+//#import "HaplotypeMO.h"
+//#import "DepthMO.h"
 #import "PopulationMO.h"
 #import "SampleMO.h"
-#import "SnpRepository.h"
+//#import "SnpRepository.h"
 //#import "StackEntryRepository.h"
-#import "DatumSnpMO.h"
-#import "DatumAlleleMO.h"
-#import "AlleleRepository.h"
-#import "LocusAlleleMO.h"
-#import "ConsensusStackEntryMO.h"
+//#import "DatumSnpMO.h"
+//#import "DatumAlleleMO.h"
+//#import "AlleleRepository.h"
+//#import "LocusAlleleMO.h"
+//#import "ConsensusStackEntryMO.h"
 #import "ProgressController.h"
 #import "StacksEntryView.h"
 
@@ -432,16 +432,17 @@ NSString *calculateType(NSString *file);
         for (; snpsIterator != snps.end(); ++snpsIterator) {
             SNP *snp = (*snpsIterator);
 
-            LocusSnpMO *snpMO = [[SnpRepository sharedInstance] insertLocusSnp:moc
-                                                       column:[NSNumber numberWithInt:snp->col]
-                                                       lratio:[NSNumber numberWithFloat:snp->lratio]
-                                                        rank1:[NSNumber numberWithInt:snp->rank_1]
-                                                        rank2:[NSNumber numberWithInt:snp->rank_2]
-                                                        rank3:[NSNumber numberWithInt:snp->rank_3]
-                                                        rank4:[NSNumber numberWithInt:snp->rank_4]
-                                                        locus:locusMO
-            ];
-            [locusMO addSnpsObject:snpMO];
+            // TODO: convert
+//            LocusSnpMO *snpMO = [[SnpRepository sharedInstance] insertLocusSnp:moc
+//                                                       column:[NSNumber numberWithInt:snp->col]
+//                                                       lratio:[NSNumber numberWithFloat:snp->lratio]
+//                                                        rank1:[NSNumber numberWithInt:snp->rank_1]
+//                                                        rank2:[NSNumber numberWithInt:snp->rank_2]
+//                                                        rank3:[NSNumber numberWithInt:snp->rank_3]
+//                                                        rank4:[NSNumber numberWithInt:snp->rank_4]
+//                                                        locus:locusMO
+//            ];
+//            [locusMO addSnpsObject:snpMO];
         }
 
 //        map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
@@ -453,10 +454,11 @@ NSString *calculateType(NSString *file);
             string allele = allelesIterator->first;
             int column = allelesIterator->second;
 
-            [[AlleleRepository sharedInstance] insertLocusAllele:moc depth:[NSNumber numberWithInt:column]
-                                         allele:[numberFormatter numberFromString:[NSString stringWithUTF8String:allele.c_str()]]
-                                          locus:locusMO
-            ];
+            // TODO: convert
+//            [[AlleleRepository sharedInstance] insertLocusAllele:moc depth:[NSNumber numberWithInt:column]
+//                                         allele:[numberFormatter numberFromString:[NSString stringWithUTF8String:allele.c_str()]]
+//                                          locus:locusMO
+//            ];
         }
 
 
@@ -547,19 +549,20 @@ NSString *calculateType(NSString *file);
                 newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
                 locusMO.length = [NSNumber numberWithInt:loc->depth];
 
-                if (depths.size() == numLetters) {
-                    for (int j = 0; j < numLetters; j++) {
-                        HaplotypeMO *haplotypeMO = [[HaplotypeRepository sharedInstance] insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]] andOrder:j];
-                        [newDatumMO addHaplotypesObject:haplotypeMO];
-
-                        DepthMO *depthMO = [[DepthRepository sharedInstance] insertDepth:moc depth:[NSNumber numberWithInt:depths[j]] andOrder:j];
-                        [newDatumMO addDepthsObject:depthMO];
-                    }
-                    [locusMO addDatumsObject:newDatumMO];
-                }
-                else {
-                    NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
-                }
+                // TODO: convert 
+//                if (depths.size() == numLetters) {
+//                    for (int j = 0; j < numLetters; j++) {
+//                        HaplotypeMO *haplotypeMO = [[HaplotypeRepository sharedInstance] insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]] andOrder:j];
+//                        [newDatumMO addHaplotypesObject:haplotypeMO];
+//
+//                        DepthMO *depthMO = [[DepthRepository sharedInstance] insertDepth:moc depth:[NSNumber numberWithInt:depths[j]] andOrder:j];
+//                        [newDatumMO addDepthsObject:depthMO];
+//                    }
+//                    [locusMO addDatumsObject:newDatumMO];
+//                }
+//                else {
+//                    NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
+//                }
             }
         }
         gettimeofday(&time2, NULL);
@@ -761,12 +764,13 @@ NSString *calculateType(NSString *file);
             }
 
             if (datumMO != nil) {
-                [[AlleleRepository sharedInstance] insertDatumAllele:moc
-                                              ratio:[NSNumber numberWithFloat:ratio]
-                                              depth:[NSNumber numberWithInt:depth]
-                                             allele:[numberFormatter numberFromString:[columns objectAtIndex:3]]
-                                              datum:datumMO
-                ];
+                // TODO: convert
+//                [[AlleleRepository sharedInstance] insertDatumAllele:moc
+//                                              ratio:[NSNumber numberWithFloat:ratio]
+//                                              depth:[NSNumber numberWithInt:depth]
+//                                             allele:[numberFormatter numberFromString:[columns objectAtIndex:3]]
+//                                              datum:datumMO
+//                ];
             }
         }
     }
@@ -857,14 +861,15 @@ NSString *calculateType(NSString *file);
             }
 
             if (datumMO != nil) {
-                [[SnpRepository sharedInstance] insertDatumSnp:moc column:[NSNumber numberWithInteger:column]
-                                       lratio:[NSNumber numberWithFloat:lratio]
-                                        rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
-                                        rank2:[numberFormatter numberFromString:[columns objectAtIndex:6]]
-                                        rank3:[numberFormatter numberFromString:[columns objectAtIndex:7]]
-                                        rank4:[numberFormatter numberFromString:[columns objectAtIndex:8]]
-                                        datum:datumMO
-                ];
+                // TODO: convert
+//                [[SnpRepository sharedInstance] insertDatumSnp:moc column:[NSNumber numberWithInteger:column]
+//                                       lratio:[NSNumber numberWithFloat:lratio]
+//                                        rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
+//                                        rank2:[numberFormatter numberFromString:[columns objectAtIndex:6]]
+//                                        rank3:[numberFormatter numberFromString:[columns objectAtIndex:7]]
+//                                        rank4:[numberFormatter numberFromString:[columns objectAtIndex:8]]
+//                                        datum:datumMO
+//                ];
 //                [datumMO addSnpsObject:datumSnpMO];
 //                NSLog(@"inserted snp at %@ for sample %@ and locus %@",datumSnpMO.column,datumMO.sample.name,datumMO.locus.locusId);
             }

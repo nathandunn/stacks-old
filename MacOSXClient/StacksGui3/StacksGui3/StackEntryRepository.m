@@ -31,8 +31,9 @@ NSString *generateSnpString(NSSet *set);
     stackEntryMO.datum = datum ;
     stackEntryMO.consensus = consensus;
 
-    stackEntryMO.datumSnps = generateSnpString(datum.snps);
-    stackEntryMO.locusSnps = generateSnpString(datum.locus.snps);
+    // TODO: convert 
+//    stackEntryMO.datumSnps = generateSnpString(datum.snps);
+//    stackEntryMO.locusSnps = generateSnpString(datum.locus.snps);
 
     return stackEntryMO ;
 }
@@ -45,8 +46,9 @@ NSString *generateSnpString(NSSet *set);
     stackEntryMO.sequence = sequence ;
     stackEntryMO.datum = datum ;
 
-    stackEntryMO.datumSnps = generateSnpString(datum.snps);
-    stackEntryMO.locusSnps = generateSnpString(datum.locus.snps);
+    // TODO: convert
+//    stackEntryMO.datumSnps = generateSnpString(datum.snps);
+//    stackEntryMO.locusSnps = generateSnpString(datum.locus.snps);
 
     return stackEntryMO ;
 }
@@ -59,8 +61,9 @@ NSString *generateSnpString(NSSet *set);
     stackEntryMO.sequence = sequence ;
     stackEntryMO.datum = datum ;
 
-    stackEntryMO.datumSnps = generateSnpString(datum.snps);
-    stackEntryMO.locusSnps = generateSnpString(datum.locus.snps);
+    // TODO: convert 
+//    stackEntryMO.datumSnps = generateSnpString(datum.snps);
+//    stackEntryMO.locusSnps = generateSnpString(datum.locus.snps);
 
     return stackEntryMO ;
 }
