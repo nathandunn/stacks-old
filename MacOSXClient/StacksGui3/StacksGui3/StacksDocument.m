@@ -127,7 +127,43 @@
 
 //    DatumMO *datumMO = [[datumRepository getAllDatum:[self managedObjectContext]] objectAtIndex:0];
     if(self.selectedDatum!=nil && self.selectedDatum.stackData!=nil){
-        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:nil];
+//        NSLog(@"loading data %@ with url %@",self.selectedDatum.stackData, [[NSBundle mainBundle] bundleURL]);
+        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
+
+        NSURL *cssUrl = [[NSBundle mainBundle] URLForResource:@"test" withExtension: @"css"];
+        NSLog(@"css url: %@",cssUrl);
+
+        
+        DOMDocument* dom = [[stacksWebView mainFrame] DOMDocument];
+        
+        DOMElement* link = [dom createElement:@"link"];
+        
+        [link setAttribute:@"rel" value:@"StyleSheet"];
+        [link setAttribute:@"type" value:@"text/css"];
+        [link setAttribute:@"href" value: [cssUrl relativeString]];
+        
+        DOMElement* head = (DOMElement*) [[dom getElementsByTagName:@"head"] item:0];
+        DOMElement* headFirstChild = head.firstElementChild;
+        
+        if( headFirstChild ){
+            [head insertBefore:link refChild:(DOMNode *)headFirstChild];
+        }
+        else{
+            [head appendChild:(DOMNode *)link];
+        }
+        
+
+//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[NSURL URLWithString:@"file://localhost/"]];
+//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
+
+//        DOMElement* styleElement=[domDocument createElement:@"link"];
+//        [styleElement setAttribute:@"type" value:@"text/css"];
+//        DOMText* cssText=[domDocument createTextNode:@"body{color:yellow;}"];
+//        [styleElement appendChild:cssText];
+//        DOMElement* headElement=(DOMElement*)[[domDocument getElementsByTagName:@"head"] item:0];
+//        [headElement appendChild:styleElement];
+        
+        
         [stacksWebView setHidden:NO];
     }
     else{
