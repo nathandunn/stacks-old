@@ -18,11 +18,11 @@
 
 - (DatumMO *)insertDatum:(NSManagedObjectContext *)context name:(NSString *)name sampleId:(NSNumber *)id sample:(SampleMO *)sample locus:(LocusMO *)locus;
 
-- (DatumMO *)getDatum:(NSManagedObjectContext *)context locusId:(NSInteger)locusId andSampleName:(NSString *)sampleName;
+- (DatumMO *)getDatum:(NSManagedObjectContext *)context locusId:(NSInteger)locusId andSampleId:(NSInteger)sampleId;
 
-- (NSArray *)getDatums:(NSManagedObjectContext *)context locus:(LocusMO *)locus andPopulation:(PopulationMO *)population;
+- (NSArray *)getDatums:(NSManagedObjectContext *)context locus:(NSNumber *)locus andPopulation:(PopulationMO *)population;
 
 - (NSArray *)getAllDatum:(NSManagedObjectContext *)context;
 
-- (NSArray *)getDatumsOrdered:(NSManagedObjectContext *)context locus:(LocusMO *)locus andPopulation:(PopulationMO *)population;
+- (NSArray *)getDatumsOrdered:(NSManagedObjectContext *)context locus:(NSNumber *)locus andPopulation:(PopulationMO *)population;
 @end

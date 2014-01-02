@@ -551,8 +551,8 @@ NSString *calculateType(NSString *file);
 
             if (datum != NULL) {
 
-                vector<char *> obshape = datum->obshap;
-                vector<int> depths = datum->depth;
+//                vector<char *> obshape = datum->obshap;
+//                vector<int> depths = datum->depth;
 //                int numLetters = (int) obshape.size();
                 // TODO: should be entering this for the locus as well?
 //                if (loc->id == 1) {
@@ -570,6 +570,7 @@ NSString *calculateType(NSString *file);
 //                newDatumMO.tagId;
 //                return newDatumMO ;
                 newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
+//                NSLog(@"loading tag id %@",newDatumMO.tagId);
                 
                 // get catalogs for matches
 //                locusMO.length = [NSNumber numberWithInt:loc->depth];
@@ -602,8 +603,8 @@ NSString *calculateType(NSString *file);
                     return nil;
                 }
             }
-
         }
+
         gettimeofday(&time2, NULL);
         NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
@@ -795,7 +796,7 @@ NSString *calculateType(NSString *file);
 
             if (locusId != newLocusId) {
                 locusId = newLocusId;
-                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleName:sampleMO.name];
+                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
             }
 
             if (datumMO != nil) {
@@ -892,7 +893,7 @@ NSString *calculateType(NSString *file);
 //                locusMO = [[LocusRepository sharedInstance] getLocus:moc forId:locusId];
                 // search for the new locus
                 // TODO: get from in-memory lookup?
-                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleName:sampleMO.name];
+                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
             }
 
             if (datumMO != nil) {
@@ -1055,7 +1056,7 @@ NSString *calculateType(NSString *file);
                 locusId = newLocusId;
                 // search for the new locus
                 // TODO: get from in-memory lookup?
-                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleName:sampleMO.name];
+                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
                 stackEntryView = [[StacksEntryView alloc] init];
                 stackEntryView.locusId = locusId ;
                 stackEntryView.sampleName = datumMO.sample.name;

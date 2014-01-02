@@ -11,6 +11,7 @@
 #import "SampleMO.h"
 #import "LocusMO.h"
 #import "PopulationMO.h"
+#import "LocusRepository.h"
 
 
 @implementation DatumRepository {
@@ -38,12 +39,14 @@
 }
 
 
-- (DatumMO *)getDatum:(NSManagedObjectContext *)moc locusId:(NSInteger)locusId andSampleName:(NSString *)sampleName {
+//- (DatumMO *)getDatum:(NSManagedObjectContext *)moc locusId:(NSInteger)locusId andSampleName:(NSString *)sampleName {
+    - (DatumMO *)getDatum:(NSManagedObjectContext *)moc locusId:(NSInteger)locusId andSampleId:(NSInteger)sampleId {
     NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:moc];
     NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
     [request1 setEntity:entityDescription1];
 
-    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus.locusId == %ld and sample.name == %@ ", locusId, sampleName];
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus.locusId == %ld and sample.name == %ld ", locusId, sampleName];
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %ld and sampleId == %ld ", locusId, sampleId];
     [request1 setPredicate:predicate1];
     NSError *error1;
     NSArray *datumArray = [moc executeFetchRequest:request1 error:&error1];
@@ -55,11 +58,28 @@
     }
 }
 
-- (NSArray *)getDatums:(NSManagedObjectContext *)context locus:(LocusMO *)locus andPopulation:(PopulationMO *)population {
+- (NSArray *)getDatums:(NSManagedObjectContext *)context locus:(NSNumber *)locus andPopulation:(PopulationMO *)population {
+
+    LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:context forId:locus.integerValue];
+//    NSLog(@"locus %@",locusMO);
+
+
     NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:context];
     NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
-//    NSLog(@"locusID: %@",locus);
-    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus == %@ and sample.population == %@ ", locus,population];
+//    NSLog(@"locusID: %@ population: %@",locus,population);
+    NSMutableArray *sampleIds = [[NSMutableArray alloc] init];
+
+    for(SampleMO *sampleMO in population.samples){
+        [sampleIds addObject:sampleMO.sampleId];
+    }
+
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus.locusId == %@ and sample.population.populationId == %@ ", locus,population];
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ and sample.population.populationId == %@ ", locus,population];
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ ", locus];
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ and sampleId == %@ ", locus,population];
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ and sampleId in (%@) ", locus,sampleIds];
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus == %@ ", locusMO];
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ ", locusMO];
     [request1 setPredicate:predicate1];
     [request1 setEntity:entityDescription1];
     NSError *error1;
@@ -74,8 +94,9 @@
     return [context executeFetchRequest:request1 error:&error1];
 }
 
-- (NSArray *)getDatumsOrdered:(NSManagedObjectContext *)context locus:(LocusMO *)locus andPopulation:(PopulationMO *)population {
+- (NSArray *)getDatumsOrdered:(NSManagedObjectContext *)context locus:(NSNumber *)locus andPopulation:(PopulationMO *)population {
     NSArray *unsortedArray = [self getDatums:context locus:locus andPopulation:population];
+//    NSLog(@"datums returned: %ld",unsortedArray.count) ;
     NSArray *sortedArray;
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;

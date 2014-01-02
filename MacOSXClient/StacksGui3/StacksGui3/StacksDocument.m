@@ -126,6 +126,7 @@
 - (void)updateStacksView {
 
 //    DatumMO *datumMO = [[datumRepository getAllDatum:[self managedObjectContext]] objectAtIndex:0];
+    NSArray* datums = [[DatumRepository sharedInstance]  getAllDatum:[self managedObjectContext]];
     if(self.selectedDatum!=nil && self.selectedDatum.stackData!=nil){
 //        NSLog(@"loading data %@ with url %@",self.selectedDatum.stackData, [[NSBundle mainBundle] bundleURL]);
         [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
@@ -219,7 +220,7 @@
     if (self.selectedLocus != nil && self.selectedPopulation != nil) {
 //        NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
 //        NSLog(@"getting selected population %@", self.selectedPopulation.name);
-        self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
+        self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:self.selectedPopulation];
         if (self.selectedDatums != nil && self.selectedDatums.count > 0) {
             self.selectedDatum = [self.selectedDatums objectAtIndex:0];
         }
@@ -310,7 +311,8 @@
         if ([[datumController selectedObjects] count] > 0) {
             if ([[datumController selectedObjects] count] == 1) {
                 DatumMO *datumMO = (DatumMO *) [[datumController selectedObjects] objectAtIndex:0];
-                if ([datumMO.name isEqualToString:self.previousStacksName]) {
+                NSLog(@"current name: %@ vs previous: ",datumMO.name,self.previousStacksName);
+                if (self.previousStacksName != nil && [datumMO.name isEqualToString:self.previousStacksName]) {
                     return;
                 }
                 self.selectedDatum = datumMO;
