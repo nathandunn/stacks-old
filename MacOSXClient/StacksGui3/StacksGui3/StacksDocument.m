@@ -132,7 +132,7 @@
         [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
 
         NSURL *cssUrl = [[NSBundle mainBundle] URLForResource:@"test" withExtension: @"css"];
-        NSLog(@"css url: %@",cssUrl);
+//        NSLog(@"css url: %@",cssUrl);
 
         
         DOMDocument* dom = [[stacksWebView mainFrame] DOMDocument];
@@ -311,7 +311,7 @@
         if ([[datumController selectedObjects] count] > 0) {
             if ([[datumController selectedObjects] count] == 1) {
                 DatumMO *datumMO = (DatumMO *) [[datumController selectedObjects] objectAtIndex:0];
-                NSLog(@"current name: %@ vs previous: %@",datumMO.name,self.previousStacksName);
+//                NSLog(@"current name: %@ vs previous: %@",datumMO.name,self.previousStacksName);
                 if (self.previousStacksName != nil && [datumMO.name isEqualToString:self.previousStacksName]) {
                     return;
                 }

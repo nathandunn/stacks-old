@@ -72,14 +72,7 @@
     for(SampleMO *sampleMO in population.samples){
         [sampleIds addObject:sampleMO.sampleId];
     }
-
-//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus.locusId == %@ and sample.population.populationId == %@ ", locus,population];
-//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ and sample.population.populationId == %@ ", locus,population];
-//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ ", locus];
-//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ and sampleId == %@ ", locus,population];
     NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ and sampleId in (%@) ", locus,sampleIds];
-//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locus == %@ ", locusMO];
-//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ ", locusMO];
     [request1 setPredicate:predicate1];
     [request1 setEntity:entityDescription1];
     NSError *error1;
@@ -140,5 +133,26 @@
 //        return [first compare:second];
     }];
     return sortedArray;
+}
+
+- (NSDictionary *)getDatums:(NSManagedObjectContext *)context forSample:(NSNumber*)sampleId{
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:context];
+    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@" sampleId == %@ ", sampleId];
+    [request1 setPredicate:predicate1];
+    [request1 setEntity:entityDescription1];
+    NSError *error1;
+    NSArray *datums = [context executeFetchRequest:request1 error:&error1];
+
+    NSMutableDictionary *dictionary = [[NSMutableDictionary alloc] initWithCapacity:datums.count];
+
+    for(DatumMO *datumMO in datums){
+//        [dictionary insertValue:datumMO inPropertyWithKey:datumMO.tagId.stringValue];
+        [dictionary setObject:datumMO forKey:datumMO.tagId.stringValue];
+    }
+
+    return dictionary ;
+
 }
 @end

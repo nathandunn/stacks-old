@@ -25,4 +25,6 @@
 - (NSArray *)getAllDatum:(NSManagedObjectContext *)context;
 
 - (NSArray *)getDatumsOrdered:(NSManagedObjectContext *)context locus:(NSNumber *)locus andPopulation:(PopulationMO *)population;
+
+- (NSDictionary *)getDatums:(NSManagedObjectContext *)context forSample:(NSNumber*)sampleId;
 @end
