@@ -13,9 +13,9 @@
 
 @interface SampleMO : NSManagedObject
 
-@property (nonatomic, retain) NSString * name;
-@property (nonatomic, retain) NSNumber * sampleId;
-@property (nonatomic, retain) NSSet *datums;
+@property (nonatomic, copy) NSString * name;
+@property (nonatomic, copy) NSNumber * sampleId;
+@property (nonatomic, copy) NSSet *datums;
 @property (nonatomic, retain) PopulationMO *population;
 @end
 

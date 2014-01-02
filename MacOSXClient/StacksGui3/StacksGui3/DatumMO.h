@@ -14,24 +14,24 @@
 
 @interface DatumMO : NSManagedObject
 
-@property (nonatomic, retain) NSString * name;
-@property (nonatomic, retain) NSNumber * sampleId;
-@property (nonatomic, retain) NSNumber * tagId;
-//@property (nonatomic, retain) NSSet *alleles;
-@property (nonatomic, retain) NSString * alleleData;
-//@property (nonatomic, retain) ConsensusStackEntryMO *consensus;
-//@property (nonatomic, retain) NSSet *depths;
-@property (nonatomic, retain) NSString * depthData;
-//@property (nonatomic, retain) NSSet *haplotypes;
-@property (nonatomic, retain) NSString * haplotypeData;
+@property (nonatomic, copy) NSString * name;
+@property (nonatomic, copy) NSNumber * sampleId;
+@property (nonatomic, copy) NSNumber * tagId;
+//@property (nonatomic, copy) NSSet *alleles;
+@property (nonatomic, copy) NSString * alleleData;
+//@property (nonatomic, copy) ConsensusStackEntryMO *consensus;
+//@property (nonatomic, copy) NSSet *depths;
+@property (nonatomic, copy) NSString * depthData;
+//@property (nonatomic, copy) NSSet *haplotypes;
+@property (nonatomic, copy) NSString * haplotypeData;
 @property (nonatomic, retain) LocusMO *locus;
 //@property (nonatomic, retain) ModelStackEntryMO *model;
 //@property (nonatomic, retain) ReferenceStackEntryMO *reference;
 @property (nonatomic, retain) SampleMO *sample;
 //@property (nonatomic, retain) NSSet *snps;
-@property (nonatomic, retain) NSString *snpData;
-//@property (nonatomic, retain) NSSet *stackEntries;
-@property (nonatomic, retain) NSString * stackData;
+@property (nonatomic, copy) NSString *snpData;
+//@property (nonatomic, copy) NSSet *stackEntries;
+@property (nonatomic, copy) NSString * stackData;
 
 @property (nonatomic, retain) ColorGenerator *colorGenerator;
 @end

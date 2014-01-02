@@ -13,9 +13,9 @@
 
 @interface PopulationMO : NSManagedObject
 
-@property (nonatomic, retain) NSString * name;
-@property (nonatomic, retain) NSNumber * populationId;
-@property (nonatomic, retain) NSSet *samples;
+@property (nonatomic, copy) NSString * name;
+@property (nonatomic, copy) NSNumber * populationId;
+@property (nonatomic, copy) NSSet *samples;
 @end
 
 @interface PopulationMO (CoreDataGeneratedAccessors)

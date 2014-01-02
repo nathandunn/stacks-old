@@ -14,24 +14,24 @@
 
 @interface LocusMO : NSManagedObject
 
-@property (nonatomic, retain) NSNumber * basePairs;
-@property (nonatomic, retain) NSString * chromosome;
-@property (nonatomic, retain) NSString * strand;
-@property (nonatomic, retain) NSString * type;
-@property (nonatomic, retain) NSString * consensus;
-@property (nonatomic, retain) NSNumber * length;
-@property (nonatomic, retain) NSNumber * locusId;
-@property (nonatomic, retain) NSNumber * parentCount;
-@property (nonatomic, retain) NSString * marker;
-@property (nonatomic, retain) NSString * ratio;
+@property (nonatomic, copy) NSNumber * basePairs;
+@property (nonatomic, copy) NSString * chromosome;
+@property (nonatomic, copy) NSString * strand;
+@property (nonatomic, copy) NSString * type;
+@property (nonatomic, copy) NSString * consensus;
+@property (nonatomic, copy) NSNumber * length;
+@property (nonatomic, copy) NSNumber * locusId;
+@property (nonatomic, copy) NSNumber * parentCount;
+@property (nonatomic, copy) NSString * marker;
+@property (nonatomic, copy) NSString * ratio;
 
-//@property (nonatomic, retain) NSSet *alleles;
-@property (nonatomic, retain) NSSet *datums;
-//@property (nonatomic, retain) NSSet *snps;
+//@property (nonatomic, copy) NSSet *alleles;
+@property (nonatomic, copy) NSSet *datums;
+//@property (nonatomic, copy) NSSet *snps;
 
-@property (nonatomic, retain) NSString *alleleData;
-//@property (nonatomic, retain) NSString *snpData;
-@property (nonatomic, retain) NSData *snpData;
+@property (nonatomic, copy) NSString *alleleData;
+//@property (nonatomic, copy) NSString *snpData;
+@property (nonatomic, copy) NSData *snpData;
 
 // not a managed part, populated by datum rendering . . .
 @property (atomic, retain) NSDictionary *haplotypeOrder;
