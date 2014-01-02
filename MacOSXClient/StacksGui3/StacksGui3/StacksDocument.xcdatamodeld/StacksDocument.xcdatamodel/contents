@@ -14,8 +14,8 @@
         <attribute name="snpData" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="stackData" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="tagId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
-        <relationship name="locus" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="datums" inverseEntity="Locus" syncable="YES"/>
-        <relationship name="sample" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Sample" inverseName="datums" inverseEntity="Sample" syncable="YES"/>
+        <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="datums" inverseEntity="Locus" syncable="YES"/>
+        <relationship name="sample" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Sample" inverseName="datums" inverseEntity="Sample" syncable="YES"/>
     </entity>
     <entity name="DatumAllele" representedClassName="DatumAlleleMO" parentEntity="Allele" syncable="YES">
         <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" syncable="YES"/>

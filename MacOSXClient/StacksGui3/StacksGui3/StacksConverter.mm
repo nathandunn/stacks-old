@@ -412,6 +412,9 @@ NSString *calculateType(NSString *file);
                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
         ];
 
+        // get catalogs for matches
+        // TODO: double-check that this is correct . . .
+        locusMO.length = [NSNumber numberWithInt:catalogIterator->second->depth];
         locusMO.type = stacksDocument.type;
 
 //        NSLog(@"chromosme %@",[NSString stringWithUTF8String:catalogIterator->second->loc.chr]);
@@ -510,7 +513,7 @@ NSString *calculateType(NSString *file);
     incrementAmount = 30 / sample_ids.size();
 
     // 7 is 400 X 7 = 3K . . .
-    uint saveAfterSamples = 3000 ;
+    uint saveAfterSamples = 100000 ;
 
 
     gettimeofday(&time1, NULL);
@@ -534,17 +537,17 @@ NSString *calculateType(NSString *file);
 
             // TODO: use a lookup here to speed up
             
-            NSNumber *lookupKey = [NSNumber numberWithInt:it->first];
+//            NSNumber *lookupKey = [NSNumber numberWithInt:it->first];
 //            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
 //            locusMO = [lociDictionary objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
-            LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:stacksDocument.managedObjectContext forId:lookupKey.integerValue];
+//            LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:stacksDocument.managedObjectContext forId:lookupKey.integerValue];
 //            locusMO = [lociDictionary objectForKey:lookupKey];
-            if (locusMO == nil) {
-                for (int i = 0; i < 10; i++) {
-                    NSLog(@"Could not find Locus! %d", it->first);
-                }
-                return nil;
-            }
+//            if (locusMO == nil) {
+//                for (int i = 0; i < 10; i++) {
+//                    NSLog(@"Could not find Locus! %d", it->first);
+//                }
+//                return nil;
+//            }
 
             if (datum != NULL) {
 
@@ -555,14 +558,21 @@ NSString *calculateType(NSString *file);
 //                if (loc->id == 1) {
 //                    NSLog(@"insertign datum for sample %@ locus %@ and sampleId %i", sampleMO.name, locusMO.locusId, sample_ids[i]);
 //                }
-                DatumMO *newDatumMO = [[DatumRepository sharedInstance] insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO locus:locusMO];
+//                DatumMO *newDatumMO = [[DatumRepository sharedInstance] insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO locus:locusMO];
 
                 // TODO: NECESSARY, or can be done above??
                 // TODO: is not the locus the same thing as the id?  can I use the loc->id here?
+                DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:moc];
+                newDatumMO.name = key ;
+                newDatumMO.sampleId = [NSNumber numberWithInt:sample_ids[i]];
+//                newDatumMO.sample = sample ;
+//                newDatumMO.locus = locus ;
+//                newDatumMO.tagId;
+//                return newDatumMO ;
                 newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
                 
                 // get catalogs for matches
-                locusMO.length = [NSNumber numberWithInt:loc->depth];
+//                locusMO.length = [NSNumber numberWithInt:loc->depth];
 
                 // TODO: CONVERT TO USE DATA
 //                if (depths.size() == numLetters) {
@@ -598,6 +608,8 @@ NSString *calculateType(NSString *file);
         NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
 
+
+
 //        else{
 //            NSLog(@"NOT saving sample %i vs %i",i, (i%saveAfterSamples) );
 //        }
@@ -605,6 +617,8 @@ NSString *calculateType(NSString *file);
         [bar incrementBy:incrementAmount];
 
     }
+
+    NSLog(@"datum count: %ld",[[DatumRepository sharedInstance] getAllDatum:moc].count );
 
 
     NSError *innerError = nil ;
