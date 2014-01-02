@@ -34,23 +34,32 @@
     NSString *cssString = [NSString stringWithContentsOfFile:cssPath encoding:NSUTF8StringEncoding error:NULL];
 //    NSLog(@"css string %@",cssString) ;
 
-    NSString* returnHTML = [NSString stringWithFormat:@"<style type='text/css'>%@</style><div class='sample'>testy</div><table><tr><td col=4><div class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>",cssString,sampleName,locusId,[sequences count]];
+//    NSString* returnHTML = [NSString stringWithFormat:@"<style type='text/css'>%@</style><div class='sample'>testy</div><table><tr><td col=4><div class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>",cssString,sampleName,locusId,[sequences count]];
+    
+    NSMutableString* returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style><div class='sample'>testy</div><table><tr><td col=4><div class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>",cssString,sampleName,locusId,[sequences count]];
 
-    returnHTML = [NSString stringWithFormat:@"%@%@",returnHTML,[self renderSequences]]; ;
-
-    returnHTML = [NSString stringWithFormat:@"%@</table></body>",returnHTML];
+//    returnHTML = [NSString stringWithFormat:@"%@%@",returnHTML,[self renderSequences]]; ;
+    [returnHTML appendString:[self renderSequences]];
+    [returnHTML appendString:@"</table></body>"];
     return returnHTML ;
 }
 
-- (NSString *)renderSequences {
+- (NSMutableString *)renderSequences {
     NSMutableString* returnString = [[NSMutableString alloc] init];
-    NSString *sequence  ;
-    NSString *sequenceId  ;
+//    NSString *sequence  ;
+//    NSString *sequenceId  ;
     for(int i = 0 ; i < sequences.count ; i++){
-        sequence = [sequences objectAtIndex:i];
-        sequenceId = [sequenceIds objectAtIndex:i];
-        [returnString appendFormat:@"<tr><td>%@</td><td col=3>%@</td></tr>",sequenceId,sequence];
+        [returnString appendFormat:@"<tr><td>%@</td><td col=3>%@</td></tr>",[sequences objectAtIndex:i],[sequenceIds objectAtIndex:i]];
     }
     return returnString;
+}
+
+- (BOOL)isEmpty {
+    return sequences.count==0;
+}
+
+- (void)clear {
+    [sequences removeAllObjects];
+    [sequenceIds removeAllObjects];
 }
 @end
