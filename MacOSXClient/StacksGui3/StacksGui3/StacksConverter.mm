@@ -988,9 +988,13 @@ NSString *calculateType(NSString *file);
     long saveAtLine = 500000;
     NSUInteger saveCounter = 1;
     
-    NSMutableSet* savedDatums = [[NSMutableSet alloc] init];
-    
+//    NSMutableSet* savedDatums = [[NSMutableSet alloc] init];
+
+    NSString* cssPath = [[NSBundle mainBundle] pathForResource:@"test" ofType:@"css"];
+//    NSLog(@"css path %@",cssPath) ;
+    NSString *cssString = [NSString stringWithContentsOfFile:cssPath encoding:NSUTF8StringEncoding error:NULL];
     StacksEntryView *stackEntryView = [[StacksEntryView alloc] init];
+    stackEntryView.cssString = cssString;
     NSManagedObjectContext *moc = document.managedObjectContext;
 
     for (NSString *tagFileName in realFiles) {
@@ -1073,7 +1077,7 @@ NSString *calculateType(NSString *file);
                         datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
                        
                         if(datumMO!=nil){
-                        [savedDatums addObject:datumMO];
+//                        [savedDatums addObject:datumMO];
 //                NSLog(@"%@ vs %@",sampleMO.sampleId,datumMO.sampleId );
 //                        stackEntryView = [[StacksEntryView alloc] init];
                         [stackEntryView clear];
@@ -1142,11 +1146,11 @@ NSString *calculateType(NSString *file);
                             if (saveError != nil ) {
                                 NSLog(@"error saving %@", saveError);
                             }
-                            for(DatumMO* datumMO in savedDatums){
-                                [moc refreshObject:datumMO mergeChanges:NO];
-                            }
-                            [savedDatums removeAllObjects];
-                            NSLog(@"saved datums count: %ld",savedDatums.count);
+//                            for(DatumMO* datumMO in savedDatums){
+//                                [moc refreshObject:datumMO mergeChanges:NO];
+//                            }
+//                            [savedDatums removeAllObjects];
+//                            NSLog(@"saved datums count: %ld",savedDatums.count);
                         }
 
 
@@ -1160,14 +1164,6 @@ NSString *calculateType(NSString *file);
             
             
 
-//            if (saveCounter % saveAtLine == 0) {
-//                NSLog(@"SAVING");
-//                NSError *saveError;
-//                [moc save:&saveError];
-//                if (saveError != nil ) {
-//                    NSLog(@"error saving %@", saveError);
-//                }
-//            }
 
 
             gettimeofday(&time2, NULL);
