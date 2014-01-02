@@ -37,8 +37,8 @@
 //@property(nonatomic, strong) PopulationRepository *populationRepository;
 
 
-@property(nonatomic, copy) NSString *previousStacksName;
-@property(nonatomic, copy) NSMutableArray *snpFilterValues;
+@property(nonatomic, retain) NSString *previousStacksName;
+@property(nonatomic, retain) NSMutableArray *snpFilterValues;
 
 //- (NSMutableArray *)findPopulations;
 
