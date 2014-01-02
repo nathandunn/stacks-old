@@ -459,7 +459,7 @@ NSString *calculateType(NSString *file);
         NSData* snpArrayData = [NSJSONSerialization dataWithJSONObject:snpArray options:NSJSONWritingPrettyPrinted error:&error2];
         locusMO.snpData = snpArrayData ;
         NSString* snpArrayString = [[NSString alloc] initWithData:snpArrayData encoding:NSUTF8StringEncoding];
-        NSLog(@"snpArrayString %@",snpArrayString) ;
+//        NSLog(@"snpArrayString %@",snpArrayString) ;
 
 //        map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
         map<string, int> alleles = catalogIterator->second->alleles;
@@ -564,14 +564,17 @@ NSString *calculateType(NSString *file);
                 // TODO: is not the locus the same thing as the id?  can I use the loc->id here?
                 DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:moc];
                 newDatumMO.name = key ;
-                newDatumMO.sampleId = [NSNumber numberWithInt:sample_ids[i]];
+                newDatumMO.sampleId = [NSNumber numberWithInt:sampleId];
 //                newDatumMO.sample = sample ;
 //                newDatumMO.locus = locus ;
 //                newDatumMO.tagId;
 //                return newDatumMO ;
                 newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
-//                NSLog(@"loading tag id %@",newDatumMO.tagId);
-                
+
+                if(newDatumMO.sampleId==nil){
+                    NSLog(@"loading sample ID %@",newDatumMO.sampleId);
+                }
+
                 // get catalogs for matches
 //                locusMO.length = [NSNumber numberWithInt:loc->depth];
 
@@ -606,7 +609,7 @@ NSString *calculateType(NSString *file);
         }
 
         gettimeofday(&time2, NULL);
-        NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
+//        NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
 
 
@@ -971,6 +974,9 @@ NSString *calculateType(NSString *file);
     NSUInteger numFiles = realFiles.count;
     double incrementAmount = 30 / numFiles;
 
+    struct timeval time1, time2;
+    gettimeofday(&time1, NULL);
+
     for (NSString *filePath in realFiles) {
         progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld", fileNumber + 1, numFiles];
         if (stopProcess) return;
@@ -984,7 +990,9 @@ NSString *calculateType(NSString *file);
         [progressWindow.loadProgress incrementBy:incrementAmount];
         ++fileNumber;
     }
+    gettimeofday(&time2, NULL);
 
+    NSLog(@"time for %ld file: %ld s and loci %ld", numFiles,  (time2.tv_sec - time1.tv_sec),document.loci.count);
 
 }
 
@@ -993,7 +1001,7 @@ NSString *calculateType(NSString *file);
 
     NSUInteger fileNameLength = tagFileName.length;
     NSString *sampleName = [tagFileName substringToIndex:fileNameLength - 9];
-    NSLog(@"sampleName %@", sampleName);
+//    NSLog(@"sampleName %@", sampleName);
     // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
     NSManagedObjectContext *moc = document.managedObjectContext;
@@ -1005,7 +1013,6 @@ NSString *calculateType(NSString *file);
     NSError *error2 = nil;
     NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", tagFileName];
     NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
-    gettimeofday(&time2, NULL);
 //    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
 
     if (error2) {
@@ -1025,7 +1032,7 @@ NSString *calculateType(NSString *file);
 //    for (id key in [sampleLookupDictionary allKeys]) {
 //        NSLog(@"keys 3: %@", key);
 //    }
-    NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
+//    NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
 
     NSUInteger saveAtLine = 50000;
     NSUInteger saveCounter = 1;
@@ -1057,6 +1064,7 @@ NSString *calculateType(NSString *file);
                 // search for the new locus
                 // TODO: get from in-memory lookup?
                 datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
+//                NSLog(@"%@ vs %@",sampleMO.sampleId,datumMO.sampleId );
                 stackEntryView = [[StacksEntryView alloc] init];
                 stackEntryView.locusId = locusId ;
                 stackEntryView.sampleName = datumMO.sample.name;
