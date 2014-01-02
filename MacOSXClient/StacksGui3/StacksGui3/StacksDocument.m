@@ -311,7 +311,7 @@
         if ([[datumController selectedObjects] count] > 0) {
             if ([[datumController selectedObjects] count] == 1) {
                 DatumMO *datumMO = (DatumMO *) [[datumController selectedObjects] objectAtIndex:0];
-                NSLog(@"current name: %@ vs previous: ",datumMO.name,self.previousStacksName);
+                NSLog(@"current name: %@ vs previous: %@",datumMO.name,self.previousStacksName);
                 if (self.previousStacksName != nil && [datumMO.name isEqualToString:self.previousStacksName]) {
                     return;
                 }
