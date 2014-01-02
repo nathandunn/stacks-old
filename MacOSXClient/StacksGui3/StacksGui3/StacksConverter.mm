@@ -517,6 +517,9 @@ NSString *calculateType(NSString *file);
         string sampleString = samples[sampleId];
         progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum %i/%ld", i + 1, sample_ids.size()];
 
+        NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
+
+        SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:key andContext:moc andError:nil];
 
         gettimeofday(&time1, NULL);
         // go through all loci
@@ -552,25 +555,24 @@ NSString *calculateType(NSString *file);
             }
 
             if (datum != NULL) {
-                NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
-
-                SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:key andContext:moc andError:nil];
 
                 vector<char *> obshape = datum->obshap;
                 vector<int> depths = datum->depth;
-                int numLetters = (int) obshape.size();
+//                int numLetters = (int) obshape.size();
                 // TODO: should be entering this for the locus as well?
 //                if (loc->id == 1) {
 //                    NSLog(@"insertign datum for sample %@ locus %@ and sampleId %i", sampleMO.name, locusMO.locusId, sample_ids[i]);
 //                }
                 DatumMO *newDatumMO = [[DatumRepository sharedInstance] insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO locus:locusMO];
 
-                // get catalogs for matches
+                // TODO: NECESSARY, or can be done above??
                 // TODO: is not the locus the same thing as the id?  can I use the loc->id here?
                 newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
+                
+                // get catalogs for matches
                 locusMO.length = [NSNumber numberWithInt:loc->depth];
 
-                // TODO: convert 
+                // TODO: CONVERT TO USE DATA
 //                if (depths.size() == numLetters) {
 //                    for (int j = 0; j < numLetters; j++) {
 //                        HaplotypeMO *haplotypeMO = [[HaplotypeRepository sharedInstance] insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]] andOrder:j];
@@ -585,6 +587,10 @@ NSString *calculateType(NSString *file);
 //                    NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
 //                }
             }
+            
+            // end of process loci from catalogs
+            
+            // TODO: save within here! 
         }
         gettimeofday(&time2, NULL);
         NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
