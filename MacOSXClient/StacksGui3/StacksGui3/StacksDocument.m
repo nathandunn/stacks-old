@@ -109,7 +109,13 @@
 //    [self.stacksTableView setEnabled:true];
 
 
-    NSInteger lociCount = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext].count;
+//    NSInteger lociCount = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext].count;
+
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:self.managedObjectContext];
+    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+    [request1 setEntity:entityDescription1];
+    NSError *error1;
+    NSInteger lociCount = [self.managedObjectContext executeFetchRequest:request1 error:&error1].count;
     NSString *newString = [NSString stringWithFormat:@"%ld", lociCount];
     [totalLoci setStringValue:newString];
 
@@ -248,7 +254,21 @@
     NSInteger selectedRow = [self.locusTableView selectedRow];
     if (selectedRow >= 0) {
         // id starts at 1 + row  . . . I hope this is always true
-        return [[LocusRepository sharedInstance] getLocus:self.managedObjectContext forId:selectedRow + 1];
+        NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:self.managedObjectContext];
+        NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+        [request1 setEntity:entityDescription1];
+
+        NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locusId == %ld ", selectedRow];
+        [request1 setPredicate:predicate1];
+        NSError *error1;
+        NSArray *locusArray = [self.managedObjectContext executeFetchRequest:request1 error:&error1];
+        if(locusArray!=nil && locusArray.count==1){
+            return [locusArray objectAtIndex:0] ;
+        }
+        else{
+            return nil ;
+        }
+//        return [[LocusRepository sharedInstance] getLocus:self.managedObjectContext forId:selectedRow + 1];
     }
     return nil;
 }

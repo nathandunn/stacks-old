@@ -16,7 +16,7 @@
 @interface StacksView : NSObject
 
 // a list of StacksEntry's
-@property (strong) NSMutableArray *stackEntries;
+@property (copy) NSMutableArray *stackEntries;
 @property (strong) StackEntryMO *consensus;
 @property (strong) StackEntryMO *model;
 @property (strong) StackEntryMO *reference;

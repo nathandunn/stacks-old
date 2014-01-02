@@ -8,7 +8,7 @@
 
 #import "LocusArrayController.h"
 #import "LocusMO.h"
-#import "LocusRepository.h"
+//#import "LocusRepository.h"
 
 @implementation LocusArrayController {
 
