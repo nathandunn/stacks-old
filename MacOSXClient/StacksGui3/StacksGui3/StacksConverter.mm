@@ -509,7 +509,13 @@ NSString *calculateType(NSString *file);
     long totalCatalogTime = 0;
     incrementAmount = 30 / sample_ids.size();
 
-    uint saveAfterSamples = 7;
+    // 7 is 400 X 7 = 3K . . .
+    uint saveAfterSamples = 3000 ;
+
+
+    gettimeofday(&time1, NULL);
+
+    long iterCount =  0 ;
     //go through all samples
     for (uint i = 0; i < sample_ids.size(); i++) {
         int sampleId = sample_ids[i];
@@ -518,27 +524,13 @@ NSString *calculateType(NSString *file);
         progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum %i/%ld", i + 1, sample_ids.size()];
 
         NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
-
         SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:key andContext:moc andError:nil];
 
         gettimeofday(&time1, NULL);
         // go through all loci
-        for (it = catalog.begin(); it != catalog.end(); it++) {
+        for (it = catalog.begin(); it != catalog.end(); it++, iterCount++) {
             loc = it->second;
             datum = pmap->datum(loc->id, sample_ids[i]);
-//            if (loc->id == 1) {
-//                NSLog(@"locus 1 - getting sample id %d for id %d", sample_ids[i], i);
-//                NSLog(@"datum is null? %@", (datum == NULL ? @"YES" : @"NO"));
-//            }
-
-//            datum = pmap->datum(loc->id, i);
-
-//            if(datum==NULL){
-//                for(int i = 0 ; i < 10 ; i++ ){
-//                    NSLog(@"Could not find Datum! %ld",loc->id);
-//                }
-//                return nil ;
-//            }
 
             // TODO: use a lookup here to speed up
             
@@ -590,21 +582,22 @@ NSString *calculateType(NSString *file);
             
             // end of process loci from catalogs
             
-            // TODO: save within here! 
+            // TODO: save within here!
+            if (iterCount % saveAfterSamples == 0) {
+                NSError *innerError = nil ;
+                NSLog(@"saving samples");
+                [stacksDocument.managedObjectContext save:&innerError];
+                if (innerError != nil) {
+                    NSLog(@"error doing inner save: %@", innerError);
+                    return nil;
+                }
+            }
+
         }
         gettimeofday(&time2, NULL);
         NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
 
-        if (i % saveAfterSamples == 0) {
-            NSError *innerError = nil ;
-            NSLog(@"saving samples");
-            [stacksDocument.managedObjectContext save:&innerError];
-            if (innerError != nil) {
-                NSLog(@"error doing inner save: %@", innerError);
-                return nil;
-            }
-        }
 //        else{
 //            NSLog(@"NOT saving sample %i vs %i",i, (i%saveAfterSamples) );
 //        }
@@ -612,6 +605,7 @@ NSString *calculateType(NSString *file);
         [bar incrementBy:incrementAmount];
 
     }
+
 
     NSError *innerError = nil ;
     stacksDocument.loci = loci;
