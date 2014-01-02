@@ -142,7 +142,9 @@ NSString *calculateType(NSString *file);
 
 //    [lociDictionary removeAllObjects];
     [sampleLookupDictionary removeAllObjects];
+    [[moc undoManager] removeAllActions];
     [moc reset];
+    [[[moc parentContext] undoManager] removeAllActions];
     [[moc parentContext] reset];
 
 
@@ -409,9 +411,14 @@ NSString *calculateType(NSString *file);
     progressWindow.actionMessage.stringValue = @"Loading locus snps";
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
-        LocusMO *locusMO = [[LocusRepository sharedInstance] insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).second->id]
-                                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
-        ];
+//        LocusMO *locusMO = [[LocusRepository sharedInstance] insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).second->id]
+//                                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
+//        ];
+
+        LocusMO *locusMO = [NSEntityDescription insertNewObjectForEntityForName:@"Locus" inManagedObjectContext:stacksDocument.managedObjectContext];
+        locusMO.locusId = [NSNumber numberWithInt:(*catalogIterator).second->id] ;
+        locusMO.consensus = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
+        locusMO.marker = [NSString stringWithUTF8String:catalogIterator->second->marker.c_str()];
 
         // get catalogs for matches
         // TODO: double-check that this is correct . . .
@@ -984,6 +991,7 @@ NSString *calculateType(NSString *file);
     NSMutableSet* savedDatums = [[NSMutableSet alloc] init];
     
     StacksEntryView *stackEntryView = [[StacksEntryView alloc] init];
+    NSManagedObjectContext *moc = document.managedObjectContext;
 
     for (NSString *tagFileName in realFiles) {
         progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld", fileNumber + 1, numFiles];
@@ -999,8 +1007,7 @@ NSString *calculateType(NSString *file);
 //    NSLog(@"sampleName %@", sampleName);
             // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
-            NSManagedObjectContext *moc = document.managedObjectContext;
-            SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
+            SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:sampleName andContext:moc andError:nil];
 
             struct timeval time1, time2;
             gettimeofday(&time1, NULL);
@@ -1021,7 +1028,7 @@ NSString *calculateType(NSString *file);
             NSInteger newLocusId;
             DatumMO *datumMO = nil ;
 
-            NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
+            NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:moc forSample:sampleMO.sampleId];
 
 
             NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
@@ -1136,7 +1143,7 @@ NSString *calculateType(NSString *file);
                                 NSLog(@"error saving %@", saveError);
                             }
                             for(DatumMO* datumMO in savedDatums){
-                                [moc refreshObject:datumMO mergeChanges:YES];
+                                [moc refreshObject:datumMO mergeChanges:NO];
                             }
                             [savedDatums removeAllObjects];
                             NSLog(@"saved datums count: %ld",savedDatums.count);
@@ -1181,7 +1188,7 @@ NSString *calculateType(NSString *file);
 
     // save old
     NSError *saveError;
-    [document.managedObjectContext save:&saveError];
+    [moc save:&saveError];
     NSLog(@"regular save") ;
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
@@ -1438,7 +1445,6 @@ NSString *calculateType(NSString *file);
 - (void)readPopulations:(StacksDocument *)document {
     NSMutableArray *populations = [[NSMutableArray alloc] init];
     NSManagedObjectContext *moc = document.managedObjectContext;
-    [moc setUndoManager:nil];
 
     NSString *path = document.path;
     NSLog(@"reading population for file %@", path);
@@ -1489,7 +1495,6 @@ NSString *calculateType(NSString *file);
 
 //    NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
     NSManagedObjectContext *moc = [self getContextForPath:path andName:path.lastPathComponent andDocument:stacksDocument];
-    [moc setUndoManager:nil];
     stacksDocument.managedObjectContext = moc;
     if (stacksDocumentCreateError) {
         NSLog(@"error creating stacks document %@", stacksDocumentCreateError);
@@ -1512,7 +1517,21 @@ NSString *calculateType(NSString *file);
             NSInteger parentCount = countParents(parents);
 //            NSLog(@"parent count for %ld is %ld",locusId,parentCount);
 
-            LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:context forId:locusId];
+//            LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:context forId:locusId];
+
+            LocusMO* locusMO = nil ;
+            NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:context];
+            NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+            [request1 setEntity:entityDescription1];
+
+            NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locusId == %ld ", locusId];
+            [request1 setPredicate:predicate1];
+            NSError *error1;
+            NSArray *locusArray = [context executeFetchRequest:request1 error:&error1];
+            if(locusArray!=nil && locusArray.count==1){
+                locusMO = [locusArray objectAtIndex:0] ;
+            }
+
             locusMO.parentCount = [NSNumber numberWithInteger:parentCount];
         }
     }

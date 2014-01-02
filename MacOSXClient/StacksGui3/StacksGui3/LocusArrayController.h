@@ -18,7 +18,7 @@
 @property (nonatomic, retain) NSString*chromosomeLocation;
 @property double minBasePairs;
 @property double maxBasePairs;
-@property(nonatomic, strong) LocusRepository* locusRepository;
+//@property(nonatomic, strong) LocusRepository* locusRepository;
 
 
 - (IBAction) setMinSnpValue:(NSInteger) sender;
