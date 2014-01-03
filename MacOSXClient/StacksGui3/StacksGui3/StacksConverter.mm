@@ -405,7 +405,7 @@ NSString *calculateType(NSString *file);
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
-    incrementAmount = 10 / catalog.size();
+    incrementAmount = 10.0 / catalog.size();
 
     progressWindow.actionMessage.stringValue = @"Loading locus snps";
     while (catalogIterator != catalog.end()) {
@@ -512,7 +512,7 @@ NSString *calculateType(NSString *file);
     NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
 
     long totalCatalogTime = 0;
-    incrementAmount = 30 / sample_ids.size();
+    incrementAmount = 30.0 / ( sample_ids.size() * catalog.size()) ;
 
     // 7 is 400 X 7 = 3K . . .
     uint saveAfterSamples = 100000;
@@ -779,6 +779,8 @@ NSString *calculateType(NSString *file);
 //    LocusMO *locusMO = nil ;
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+    
+    NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
@@ -801,7 +803,9 @@ NSString *calculateType(NSString *file);
 
             if (locusId != newLocusId) {
                 locusId = newLocusId;
-                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
+//                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
+                
+                datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
             }
 
             if (datumMO != nil) {
@@ -874,6 +878,9 @@ NSString *calculateType(NSString *file);
     DatumMO *datumMO = nil ;
 //    LocusMO *locusMO = nil ;
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    
+    NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
+    
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
@@ -898,7 +905,8 @@ NSString *calculateType(NSString *file);
 //                locusMO = [[LocusRepository sharedInstance] getLocus:moc forId:locusId];
                 // search for the new locus
                 // TODO: get from in-memory lookup?
-                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
+//                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
+                datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
             }
 
             if (datumMO != nil) {
@@ -974,7 +982,7 @@ NSString *calculateType(NSString *file);
     // 2 - for each file, read the .tags file
     int fileNumber = 0;
     NSUInteger numFiles = realFiles.count;
-    double incrementAmount = 30 / numFiles;
+    double incrementAmount = 30.0 / numFiles;
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
