@@ -15,6 +15,8 @@
 @property(nonatomic, copy) NSMutableArray*  sequenceIds;
 @property(nonatomic, copy) NSMutableArray*  sequences;
 
+@property(nonatomic, copy) NSString* cssString;
+
 - (NSString *)renderHtml;
 
 - (BOOL)isEmpty;

@@ -27,16 +27,25 @@
 }
 
 
+
 - (NSString *)renderHtml {
 //    NSString* headerHTML= @"<head><link rel='stylesheet' type='text/css' href='test.css'/></head><body>" ;
-    NSString* cssPath = [[NSBundle mainBundle] pathForResource:@"test" ofType:@"css"];
+//    NSString* cssPath = [[NSBundle mainBundle] pathForResource:@"test" ofType:@"css"];
 //    NSLog(@"css path %@",cssPath) ;
-    NSString *cssString = [NSString stringWithContentsOfFile:cssPath encoding:NSUTF8StringEncoding error:NULL];
+//    NSString *cssString = [NSString stringWithContentsOfFile:cssPath encoding:NSUTF8StringEncoding error:NULL];
+    
 //    NSLog(@"css string %@",cssString) ;
 
 //    NSString* returnHTML = [NSString stringWithFormat:@"<style type='text/css'>%@</style><div class='sample'>testy</div><table><tr><td col=4><div class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>",cssString,sampleName,locusId,[sequences count]];
-    
-    NSMutableString* returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style><div class='sample'>testy</div><table><tr><td col=4><div class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>",cssString,sampleName,locusId,[sequences count]];
+
+    NSMutableString* returnHTML = [NSMutableString stringWithString:@"<style type='text/css'>"];
+    [returnHTML appendString:self.cssString];
+    [returnHTML appendString:@"</style><div class='sample'>testy</div><table><tr><td col=4><div class='sample'>RENDERED Some stack data for sample "];
+    [returnHTML appendString:sampleName];
+    [returnHTML appendString:@"</div></td></tr>"];
+
+//    [returnHTML appendString:@"</style><div class='sample'>testy</div><table><tr><td col=4><div class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>"];
+//    NSMutableString* returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style><div class='sample'>testy</div><table><tr><td col=4><div class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>",cssString,sampleName,locusId,[sequences count]];
 
 //    returnHTML = [NSString stringWithFormat:@"%@%@",returnHTML,[self renderSequences]]; ;
     [returnHTML appendString:[self renderSequences]];

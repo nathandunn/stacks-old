@@ -37,7 +37,7 @@
 //@property(nonatomic, strong) PopulationRepository *populationRepository;
 
 
-@property(nonatomic, retain) NSString *previousStacksName;
+@property(nonatomic, copy) NSString *previousStacksName;
 @property(nonatomic, copy) NSMutableArray *snpFilterValues;
 
 //- (NSMutableArray *)findPopulations;
@@ -46,7 +46,7 @@
 @property(nonatomic, copy) NSString *name;
 
 // this will be GeneticMap or Population
-@property(nonatomic, strong) NSString *type;
+@property(nonatomic, copy) NSString *type;
 
 @property(nonatomic, copy) NSSet *lociLocations;
 @property NSUInteger maxLocation;

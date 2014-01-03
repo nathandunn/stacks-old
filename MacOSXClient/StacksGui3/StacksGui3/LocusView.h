@@ -19,13 +19,13 @@
 @interface LocusView : NSObject
 
 @property NSInteger locusId;
-@property (strong) NSMutableArray *snps;
-@property (strong) NSString *consensus;
-@property (strong) NSString *marker ;
-@property (strong) NSString *ratio ;
+@property (copy) NSMutableArray *snps;
+@property (copy) NSString *consensus;
+@property (copy) NSString *marker ;
+@property (copy) NSString *ratio ;
 
 
-@property (strong) NSMutableDictionary *genotypes;
+@property (copy) NSMutableDictionary *genotypes;
 
 // use PopMap to get the GenotypesView
 
