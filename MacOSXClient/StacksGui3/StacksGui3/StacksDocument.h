@@ -21,14 +21,14 @@
 @property(strong) NSString *path;
 @property(atomic, retain) NSMutableDictionary *populationLookup;
 
-@property(nonatomic, copy) NSSet *loci;
-@property(nonatomic, copy) NSSet *populations;
+@property(nonatomic, strong) NSSet *loci;
+@property(nonatomic, strong) NSSet *populations;
 
 
 // handle selections
 @property(nonatomic, strong) LocusMO *selectedLocus;
 @property(nonatomic, strong) PopulationMO *selectedPopulation;
-@property(nonatomic, copy) NSArray *selectedDatums;
+@property(nonatomic, strong) NSArray *selectedDatums;
 @property(nonatomic, strong) DatumMO *selectedDatum;
 
 // repositories
@@ -38,7 +38,7 @@
 
 
 @property(nonatomic, copy) NSString *previousStacksName;
-@property(nonatomic, copy) NSMutableArray *snpFilterValues;
+@property(nonatomic, strong) NSMutableArray *snpFilterValues;
 
 //- (NSMutableArray *)findPopulations;
 
@@ -48,7 +48,7 @@
 // this will be GeneticMap or Population
 @property(nonatomic, copy) NSString *type;
 
-@property(nonatomic, copy) NSSet *lociLocations;
+@property(nonatomic, strong) NSSet *lociLocations;
 @property NSUInteger maxLocation;
 
 - (BOOL)noLociLocations;

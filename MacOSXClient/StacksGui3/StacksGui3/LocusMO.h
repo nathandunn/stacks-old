@@ -26,15 +26,15 @@
 @property (nonatomic, copy) NSString * ratio;
 
 //@property (nonatomic, copy) NSSet *alleles;
-@property (nonatomic, copy) NSSet *datums;
+@property (nonatomic, strong) NSSet *datums;
 //@property (nonatomic, copy) NSSet *snps;
 
 @property (nonatomic, copy) NSString *alleleData;
 //@property (nonatomic, copy) NSString *snpData;
-@property (nonatomic, copy) NSData *snpData;
+@property (nonatomic, strong) NSData *snpData;
 
 // not a managed part, populated by datum rendering . . .
-@property (atomic, retain) NSDictionary *haplotypeOrder;
+@property (atomic, strong) NSDictionary *haplotypeOrder;
 @property (atomic, retain) ColorGenerator *colorGenerator;
 
 
