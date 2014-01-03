@@ -126,7 +126,6 @@
 - (void)updateStacksView {
 
 //    DatumMO *datumMO = [[datumRepository getAllDatum:[self managedObjectContext]] objectAtIndex:0];
-//    NSArray* datums = [[DatumRepository sharedInstance]  getAllDatum:[self managedObjectContext]];
     if(self.selectedDatum!=nil && self.selectedDatum.stackData!=nil){
 //        NSLog(@"loading data %@ with url %@",self.selectedDatum.stackData, [[NSBundle mainBundle] bundleURL]);
         [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
