@@ -142,7 +142,9 @@ NSString *calculateType(NSString *file);
 
 //    [lociDictionary removeAllObjects];
     [sampleLookupDictionary removeAllObjects];
+    [[moc undoManager] removeAllActions];
     [moc reset];
+    [[[moc parentContext] undoManager] removeAllActions];
     [[moc parentContext] reset];
 
 
@@ -409,9 +411,16 @@ NSString *calculateType(NSString *file);
     progressWindow.actionMessage.stringValue = @"Loading locus snps";
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
-        LocusMO *locusMO = [[LocusRepository sharedInstance] insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).second->id]
-                                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
-        ];
+//        LocusMO *locusMO = [[LocusRepository sharedInstance] insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).second->id]
+//                                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
+//        ];
+        
+        
+        LocusMO *locusMO = [NSEntityDescription insertNewObjectForEntityForName:@"Locus" inManagedObjectContext:stacksDocument.managedObjectContext];
+        locusMO.locusId = [NSNumber numberWithInt:(*catalogIterator).second->id] ;
+        locusMO.consensus = [[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding];
+        locusMO.marker = [NSString stringWithUTF8String:catalogIterator->second->marker.c_str()];
+
 
         // get catalogs for matches
         // TODO: double-check that this is correct . . .
@@ -1512,7 +1521,25 @@ NSString *calculateType(NSString *file);
             NSInteger parentCount = countParents(parents);
 //            NSLog(@"parent count for %ld is %ld",locusId,parentCount);
 
-            LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:context forId:locusId];
+//            LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:context forId:locusId];
+           
+            LocusMO* locusMO = nil ;
+            NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Locus" inManagedObjectContext:context];
+            NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+            [request1 setEntity:entityDescription1];
+
+           NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"locusId == %ld ", locusId];
+            [request1 setPredicate:predicate1];
+            NSError *error1;
+            NSArray *locusArray = [context executeFetchRequest:request1 error:&error1];
+            if(locusArray!=nil && locusArray.count==1){
+                    locusMO = [locusArray objectAtIndex:0] ;
+                }
+            
+
+            
+            
+            
             locusMO.parentCount = [NSNumber numberWithInteger:parentCount];
         }
     }
