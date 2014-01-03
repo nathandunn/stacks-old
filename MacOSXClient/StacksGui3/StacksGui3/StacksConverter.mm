@@ -53,6 +53,7 @@ NSString *calculateType(NSString *file);
 //void setParentCounts(NSMutableDictionary *dictionary, NSString *file);
 //void setParentCounts(NSString *file);
 
+
 @implementation StacksConverter {
 
 }
