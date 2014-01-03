@@ -17,21 +17,15 @@
         <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="datums" inverseEntity="Locus" syncable="YES"/>
         <relationship name="sample" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Sample" inverseName="datums" inverseEntity="Sample" syncable="YES"/>
     </entity>
-    <entity name="DatumAllele" representedClassName="DatumAlleleMO" parentEntity="Allele" syncable="YES">
-        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" syncable="YES"/>
-    </entity>
-    <entity name="DatumSnp" representedClassName="DatumSnpMO" parentEntity="Snp" syncable="YES">
-        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" syncable="YES"/>
-    </entity>
+    <entity name="DatumAllele" representedClassName="DatumAlleleMO" parentEntity="Allele" syncable="YES"/>
+    <entity name="DatumSnp" representedClassName="DatumSnpMO" parentEntity="Snp" syncable="YES"/>
     <entity name="Depth" representedClassName="DepthMO" syncable="YES">
         <attribute name="depth" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <attribute name="order" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
-        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" syncable="YES"/>
     </entity>
     <entity name="Haplotype" representedClassName="HaplotypeMO" syncable="YES">
         <attribute name="haplotype" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="order" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
-        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" syncable="YES"/>
     </entity>
     <entity name="Locus" representedClassName="LocusMO" syncable="YES">
         <attribute name="alleleData" optional="YES" attributeType="String" syncable="YES"/>
@@ -48,12 +42,8 @@
         <attribute name="type" optional="YES" attributeType="String" syncable="YES"/>
         <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="locus" inverseEntity="Datum" syncable="YES"/>
     </entity>
-    <entity name="LocusAllele" representedClassName="LocusAlleleMO" parentEntity="Allele" syncable="YES">
-        <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" syncable="YES"/>
-    </entity>
-    <entity name="LocusSnp" representedClassName="LocusSnpMO" parentEntity="Snp" syncable="YES">
-        <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" syncable="YES"/>
-    </entity>
+    <entity name="LocusAllele" representedClassName="LocusAlleleMO" parentEntity="Allele" syncable="YES"/>
+    <entity name="LocusSnp" representedClassName="LocusSnpMO" parentEntity="Snp" syncable="YES"/>
     <entity name="Population" representedClassName="PopulationMO" syncable="YES">
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="populationId" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
