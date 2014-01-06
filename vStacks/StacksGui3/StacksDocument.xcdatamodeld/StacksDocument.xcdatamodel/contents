@@ -34,7 +34,7 @@
         <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" syncable="YES"/>
     </entity>
     <entity name="Locus" representedClassName="LocusMO" syncable="YES">
-        <attribute name="alleleData" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="alleleData" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="basePairs" optional="YES" attributeType="Integer 64" minValueString="0" defaultValueString="0" indexed="YES" syncable="YES"/>
         <attribute name="chromosome" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="consensus" attributeType="String" syncable="YES"/>

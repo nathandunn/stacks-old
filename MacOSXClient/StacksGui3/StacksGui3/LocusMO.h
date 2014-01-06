@@ -29,7 +29,7 @@
 @property (nonatomic, copy) NSSet *datums;
 //@property (nonatomic, copy) NSSet *snps;
 
-@property (nonatomic, copy) NSString *alleleData;
+@property (nonatomic, copy) NSData *alleleData;
 //@property (nonatomic, copy) NSString *snpData;
 @property (nonatomic, copy) NSData *snpData;
 

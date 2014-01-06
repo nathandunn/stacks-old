@@ -483,9 +483,9 @@ NSString *calculateType(NSString *file);
 
         NSError *error3;
         NSData *alleleArrayData = [NSJSONSerialization dataWithJSONObject:alleleArray options:NSJSONWritingPrettyPrinted error:&error2];
-        NSString *alleleArrayString = [[NSString alloc] initWithData:alleleArrayData encoding:NSUTF8StringEncoding];
+//        NSString *alleleArrayString = [[NSString alloc] initWithData:alleleArrayData encoding:NSUTF8StringEncoding];
 //        NSLog(@"alleleArrayString %@",alleleArrayString) ;
-        locusMO.alleleData = alleleArrayString;
+        locusMO.alleleData = alleleArrayData ;
 
 
         [loci addObject:locusMO];
