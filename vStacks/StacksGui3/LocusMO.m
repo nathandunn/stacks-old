@@ -88,7 +88,7 @@
     // TODO: convert
 
     NSError *error;
-    NSDictionary* json = [NSJSONSerialization JSONObjectWithData:self.snpData options:kNilOptions error:&error];
+    NSDictionary *json = [NSJSONSerialization JSONObjectWithData:self.snpData options:kNilOptions error:&error];
     NSUInteger snpCount = json.count;
 
     NSString *chromosomeString = @"";
@@ -98,18 +98,16 @@
         chromosomeString = [NSString stringWithFormat:@"%@ %@Mb %@", self.chromosome, basePairsString, self.strand];
     }
 
-    NSString *inputString ;
+    NSString *inputString;
 //    NSLog(@"type %@",self.type);
     if ([self.type isEqualToString:@"GeneticMap"]) {
 //        parentString = @"Parents";
-        inputString = [NSString stringWithFormat:@"Parents %ld Prog %ld Snps %ld\n%@",  parentCount.integerValue, progenyCount, snpCount, chromosomeString];
+        inputString = [NSString stringWithFormat:@"Parents %ld Prog %ld Snps %ld\n%@", parentCount.integerValue, progenyCount, snpCount, chromosomeString];
     }
     else {
 //        parentString = @"Samples";
         inputString = [NSString stringWithFormat:@"Samples %ld Snps %ld\n%@", progenyCount, snpCount, chromosomeString];
     }
-
-
 
 
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:inputString];
@@ -121,7 +119,7 @@
             [NSColor blackColor], NSForegroundColorAttributeName,
 //            [NSColor whiteColor], NSBackgroundColorAttributeName,
 //            [NSFont fontWithName:@"Courier" size:12.0], NSFontAttributeName,
-                    [NSFont fontWithName:@"Helvetica" size:10.0], NSFontAttributeName,
+            [NSFont fontWithName:@"Helvetica" size:10.0], NSFontAttributeName,
             paragraph, NSParagraphStyleAttributeName,
             nil];
 
@@ -160,10 +158,13 @@
             nil];
 
     // TODO: convert
-//    for (LocusSnpMO *snp in self.snps) {
-//        NSRange selectedRange = NSMakeRange([snp.column unsignedIntegerValue], 1);
-//        [string addAttributes:attributes range:selectedRange];
-//    }
+    NSError* error ;
+    NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:self.snpData options:kNilOptions error:&error];
+       for(NSDictionary *snp in snpJson){
+           NSInteger startRange = [[snp valueForKey:@"column"] integerValue];
+        NSRange selectedRange = NSMakeRange(startRange , 1);
+        [string addAttributes:attributes range:selectedRange];
+    }
 
 
     [string endEditing];
