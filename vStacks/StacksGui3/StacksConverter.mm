@@ -1110,6 +1110,7 @@ NSString *calculateType(NSString *file);
                         if ([relationship isEqualToString:@"consensus"]) {
                             row = 1;
                             stackEntryView.consensus = [columns objectAtIndex:9];
+                            [stackEntryView.relationships addObject:@"consensus"];
 //                    datumMO.consensus = [stackEntryRepository insertConsensusStackEntry:moc
 //                                                                                  block:[columns objectAtIndex:7]
 //                                                                             sequenceId:[columns objectAtIndex:8]
@@ -1124,6 +1125,7 @@ NSString *calculateType(NSString *file);
                         }
                         else if ([relationship isEqualToString:@"model"]) {
                             stackEntryView.model = [columns objectAtIndex:9];
+                            [stackEntryView.relationships addObject:@"model"];
 //                    datumMO.model = [stackEntryRepository insertModelStackEntry:moc
 //                                                                          block:[columns objectAtIndex:7]
 //                                                                     sequenceId:[columns objectAtIndex:8]
@@ -1134,6 +1136,9 @@ NSString *calculateType(NSString *file);
                         else {
                             [stackEntryView.sequenceIds addObject:[columns objectAtIndex:8]];
                             [stackEntryView.sequences addObject:[columns objectAtIndex:9]];
+                            [stackEntryView.relationships addObject:[columns objectAtIndex:6]];
+                            [stackEntryView.blocks addObject:[columns objectAtIndex:7]];
+                            [stackEntryView.entryIds addObject:[NSNumber numberWithInteger:row]];
 //                    StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
 //                                                                                entryId:[NSNumber numberWithInteger:row]
 //                                                                           relationship:[columns objectAtIndex:6]
