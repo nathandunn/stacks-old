@@ -63,6 +63,7 @@
 		6B77C0E117D1467600987B98 /* StacksDocumentController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B77C0E017D1467600987B98 /* StacksDocumentController.m */; };
 		6B81723E17DFD684002FB907 /* ProgressController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B81723C17DFD684002FB907 /* ProgressController.m */; };
 		6B81723F17DFD684002FB907 /* ProgressController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6B81723D17DFD684002FB907 /* ProgressController.xib */; };
+		6B866D56187B639800952435 /* stacks.css in Resources */ = {isa = PBXBuildFile; fileRef = 6B866D55187B639800952435 /* stacks.css */; };
 		6BB1484F181737B700D87C87 /* ColorGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BB1484E181737B600D87C87 /* ColorGenerator.m */; };
 		6BEBC5DB17E8F71B00B48C79 /* HaplotypeMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBC5DA17E8F71B00B48C79 /* HaplotypeMO.m */; };
 		6BEBC5DE17E8F71C00B48C79 /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBC5DD17E8F71C00B48C79 /* AlleleMO.m */; };
@@ -206,6 +207,7 @@
 		6B81723B17DFD684002FB907 /* ProgressController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProgressController.h; sourceTree = "<group>"; };
 		6B81723C17DFD684002FB907 /* ProgressController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ProgressController.m; sourceTree = "<group>"; };
 		6B81723D17DFD684002FB907 /* ProgressController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ProgressController.xib; sourceTree = "<group>"; };
+		6B866D55187B639800952435 /* stacks.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = stacks.css; sourceTree = "<group>"; };
 		6BB1484D181737B600D87C87 /* ColorGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorGenerator.h; sourceTree = "<group>"; };
 		6BB1484E181737B600D87C87 /* ColorGenerator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ColorGenerator.m; sourceTree = "<group>"; };
 		6BEBC5D917E8F71B00B48C79 /* HaplotypeMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HaplotypeMO.h; sourceTree = "<group>"; };
@@ -500,6 +502,7 @@
 		6BDD893A1868D46800906562 /* css */ = {
 			isa = PBXGroup;
 			children = (
+				6B866D55187B639800952435 /* stacks.css */,
 				149BCBAA1872312F0078D099 /* test.css */,
 			);
 			name = css;
@@ -578,6 +581,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1442E1A317206DBB004B6361 /* InfoPlist.strings in Resources */,
+				6B866D56187B639800952435 /* stacks.css in Resources */,
 				1442E1A917206DBB004B6361 /* Credits.rtf in Resources */,
 				1442E1B217206DBB004B6361 /* MainMenu.xib in Resources */,
 				63D53F09D355842335914336 /* StacksDocument.xib in Resources */,

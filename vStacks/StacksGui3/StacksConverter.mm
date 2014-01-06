@@ -1110,7 +1110,7 @@ NSString *calculateType(NSString *file);
                         if ([relationship isEqualToString:@"consensus"]) {
                             row = 1;
                             stackEntryView.consensus = [columns objectAtIndex:9];
-                            [stackEntryView.relationships addObject:@"consensus"];
+//                            [stackEntryView.relationships addObject:@"consensus"];
 //                    datumMO.consensus = [stackEntryRepository insertConsensusStackEntry:moc
 //                                                                                  block:[columns objectAtIndex:7]
 //                                                                             sequenceId:[columns objectAtIndex:8]
@@ -1125,7 +1125,7 @@ NSString *calculateType(NSString *file);
                         }
                         else if ([relationship isEqualToString:@"model"]) {
                             stackEntryView.model = [columns objectAtIndex:9];
-                            [stackEntryView.relationships addObject:@"model"];
+//                            [stackEntryView.relationships addObject:@"model"];
 //                    datumMO.model = [stackEntryRepository insertModelStackEntry:moc
 //                                                                          block:[columns objectAtIndex:7]
 //                                                                     sequenceId:[columns objectAtIndex:8]
