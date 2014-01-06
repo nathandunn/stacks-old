@@ -47,6 +47,7 @@
     
 //    NSMutableString* returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style><div class='sample'>testy</div><table><tr><td col=4><div class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>",cssString,sampleName,locusId,[sequences count]];
     NSMutableString* returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style><table class='radtag'>",cssString];
+    [returnHTML appendString:[self renderHeader]];
     [returnHTML appendString:[self renderReference]];
     [returnHTML appendString:[self renderConsensus]];
     [returnHTML appendString:[self renderModel]];
@@ -55,28 +56,48 @@
     return returnHTML ;
 }
 
+- (NSString *)renderHeader {
+    NSMutableString* returnString = [[NSMutableString alloc] init];
+    [returnString appendString:@"<tr>"];
+    [returnString appendString:@"<th style='width: 5%;'>&nbsp;</th>"];
+    [returnString appendString:@"<th style='width: 15%;'>Relationship</th>"];
+    [returnString appendString:@"<th style='width: 20%;'>Seq ID</th>"];
+    [returnString appendString:@"<th style='width: 60%;'>Sequence</th>"];
+    [returnString appendString:@"</tr>"];
+    return returnString ;
+}
+
 
 - (NSString *)renderReference {
     NSMutableString* returnString = [[NSMutableString alloc] init];
     NSMutableString *referenceString = [[NSMutableString alloc] init];
     NSUInteger sequenceSize = consensus.length ;
 
+    BOOL chunk1 = 0 ;
     for (NSUInteger i = 0; i < sequenceSize; i++) {
+        if(i%10==0){
+            if(i>0){
+                [referenceString appendString:@"</span>"];
+            }
+            chunk1 = !chunk1 ; // flip it
+            [referenceString appendFormat:@"<span class='%@'>",(chunk1 ? @"light_scale" : @"dark_scale")];
+        }
         [referenceString appendFormat:@"%ld", i % 10];
     }
-    [returnString appendFormat:@"<tr><td class='id'></td><td></td><td></td><td class='tag'>%@</td></tr>",referenceString];
+    [referenceString appendString:@"</span>"];
+    [returnString appendFormat:@"<tr><td class='num'></td><td class='con'></td><td class='id'></td><td class='tag'>%@</td></tr>",referenceString];
     return returnString ;
 }
 
 - (NSString *)renderConsensus {
     NSMutableString* returnString = [[NSMutableString alloc] init];
-    [returnString appendFormat:@"<tr><td class='id'></td><td class='con'>consensus</td><td></td><td class='tag'>%@</td></tr>",consensus];
+    [returnString appendFormat:@"<tr><td class='num'></td><td class='con'>consensus</td><td class='id'></td><td class='tag'>%@</td></tr>",consensus];
     return returnString ;
 }
 
 - (NSString *)renderModel {
     NSMutableString* returnString = [[NSMutableString alloc] init];
-    [returnString appendFormat:@"<tr><td class='id'></td><td class='num'>model</td><td></td><td class='tag'>%@</td></tr>",model];
+    [returnString appendFormat:@"<tr><td class='num'></td><td class='con'>model</td><td class='id'></td><td class='tag'>%@</td></tr>",model];
     return returnString ;
 }
 
@@ -87,7 +108,7 @@
 //    NSString *sequence  ;
 //    NSString *sequenceId  ;
     for(int i = 0 ; i < sequences.count ; i++){
-        [returnString appendFormat:@"<tr><td class='id'>%@</td><td class='%@'>%@</td><td>%@</td><td class='tag'>%@</td></tr>",[entryIds objectAtIndex:i],[relationships objectAtIndex:i],[relationships objectAtIndex:i],[sequenceIds objectAtIndex:i],[sequences objectAtIndex:i]];
+        [returnString appendFormat:@"<tr><td class='num'>%@</td><td class='%@'>%@</td><td class='id'>%@</td><td class='tag'>%@</td></tr>",[entryIds objectAtIndex:i],[relationships objectAtIndex:i],[relationships objectAtIndex:i],[sequenceIds objectAtIndex:i],[sequences objectAtIndex:i]];
     }
     return returnString;
 }
