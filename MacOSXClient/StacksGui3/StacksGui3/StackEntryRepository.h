@@ -15,7 +15,7 @@
 @class ReferenceStackEntryMO;
 
 @interface StackEntryRepository : NSObject
-- (StackEntryMO *)insertStackEntry:(NSManagedObjectContext *)context entryId:(NSNumber *)id relationship:(NSString *)relationship block:(NSString *)block sequenceId:(NSString *)sequenceId sequence:(NSString *)sequence datum:(DatumMO *)datum;
+- (StackEntryMO *)insertStackEntry:(NSManagedObjectContext *)context entryId:(NSNumber *)id relationship:(NSString *)relationship block:(NSString *)block sequenceId:(NSString *)sequenceId sequence:(NSString *)sequence consensus:(id)consensus datum:(DatumMO *)datum;
 
 - (ConsensusStackEntryMO *)insertConsensusStackEntry:(NSManagedObjectContext *)context block:(id)block sequenceId:(id)id1 sequence:(id)sequence datum:(DatumMO *)datum;
 
