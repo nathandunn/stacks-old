@@ -158,11 +158,11 @@
             nil];
 
     // TODO: convert
-    NSError* error ;
+    NSError *error;
     NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:self.snpData options:kNilOptions error:&error];
-       for(NSDictionary *snp in snpJson){
-           NSInteger startRange = [[snp valueForKey:@"column"] integerValue];
-        NSRange selectedRange = NSMakeRange(startRange , 1);
+    for (NSDictionary *snp in snpJson) {
+        NSInteger startRange = [[snp valueForKey:@"column"] integerValue];
+        NSRange selectedRange = NSMakeRange(startRange, 1);
         [string addAttributes:attributes range:selectedRange];
     }
 
