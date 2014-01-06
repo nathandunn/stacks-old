@@ -22,6 +22,7 @@
 @property (nonatomic, retain) DatumMO *datum;
 @property (nonatomic, retain) NSString * locusSnps;
 @property (nonatomic, retain) NSString * datumSnps;
+@property (nonatomic, retain) NSString * consensus;
 
 
 @property (nonatomic, retain) ColorGenerator *colorGenerator;
