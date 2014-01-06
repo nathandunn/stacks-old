@@ -23,7 +23,7 @@
 //@property (nonatomic, copy) NSSet *depths;
 @property (nonatomic, copy) NSString * depthData;
 //@property (nonatomic, copy) NSSet *haplotypes;
-@property (nonatomic, copy) NSString * haplotypeData;
+@property (nonatomic, copy) NSData * haplotypeData;
 @property (nonatomic, retain) LocusMO *locus;
 //@property (nonatomic, retain) ModelStackEntryMO *model;
 //@property (nonatomic, retain) ReferenceStackEntryMO *reference;
@@ -32,6 +32,7 @@
 @property (nonatomic, copy) NSString *snpData;
 //@property (nonatomic, copy) NSSet *stackEntries;
 @property (nonatomic, copy) NSString * stackData;
+//@property (nonatomic, copy) NSData * haploytpeData;
 
 @property (nonatomic, retain) ColorGenerator *colorGenerator;
 @end

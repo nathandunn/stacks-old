@@ -73,27 +73,35 @@
     NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
 
     // TODO: convert
+    NSError *error;
+    NSDictionary *haplotypeJson = [NSJSONSerialization JSONObjectWithData:self.haplotypeData options:kNilOptions error:&error];
+    NSUInteger haplotypeCount = haplotypeJson.count;
+    for (NSDictionary *haplotype in haplotypeJson) {
 //    for (HaplotypeMO *haplotype  in [self.haplotypes sortedArrayUsingDescriptors:sortDescriptors]) {
 ////        NSString *haplotype = [self.haplotypes objectAtIndex:i];
+
 //        NSUInteger order = [self.locus lookupHaplotypeOrder:haplotype.haplotype];
-//
-//
-//        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype.haplotype];
-//        NSRange selectedRange = NSMakeRange(0, haplotype.haplotype.length);
-//        [appendString beginEditing];
-//        NSDictionary *attributes = [self generateColorForOrder:order];
-//        [appendString setAttributes:attributes range:selectedRange];
-//        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
-//        [appendString addAttributes:fontAttributes range:selectedRange];
-//        [appendString endEditing];
-//
-//        [string appendAttributedString:appendString];
+        NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
+        NSString *haplotypeString = [haplotype valueForKey:@"haplotype"];
+        NSUInteger depth = [[haplotype valueForKey:@"depth"] unsignedIntegerValue];
+
+
+        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotypeString];
+        NSRange selectedRange = NSMakeRange(0, haplotypeString.length);
+        [appendString beginEditing];
+        NSDictionary *attributes = [self generateColorForOrder:order];
+        [appendString setAttributes:attributes range:selectedRange];
+        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+        [appendString addAttributes:fontAttributes range:selectedRange];
+        [appendString endEditing];
+
+        [string appendAttributedString:appendString];
 //        if (i < self.haplotypes.count - 1) {
-//            [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
-//        }
-//
-//        ++i;
-//    }
+        if (i < haplotypeCount - 1 ) {
+            [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
+        }
+        ++i;
+    }
 
     NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
     [mutParaStyle setAlignment:NSCenterTextAlignment];

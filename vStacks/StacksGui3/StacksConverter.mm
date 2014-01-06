@@ -481,11 +481,11 @@ NSString *calculateType(NSString *file);
             [alleleArray addObject:alleleDictionary];
         }
 
-        NSError *error3;
+//        NSError *error3;
         NSData *alleleArrayData = [NSJSONSerialization dataWithJSONObject:alleleArray options:NSJSONWritingPrettyPrinted error:&error2];
-        NSString *alleleArrayString = [[NSString alloc] initWithData:alleleArrayData encoding:NSUTF8StringEncoding];
+//        NSString *alleleArrayString = [[NSString alloc] initWithData:alleleArrayData encoding:NSUTF8StringEncoding];
 //        NSLog(@"alleleArrayString %@",alleleArrayString) ;
-        locusMO.alleleData = alleleArrayString;
+        locusMO.alleleData = alleleArrayData;
 
 
         [loci addObject:locusMO];
@@ -512,7 +512,7 @@ NSString *calculateType(NSString *file);
     NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
 
     long totalCatalogTime = 0;
-    incrementAmount = 30.0 / ( sample_ids.size() * catalog.size()) ;
+    incrementAmount = 30.0 / (sample_ids.size() * catalog.size());
 
     // 7 is 400 X 7 = 3K . . .
     uint saveAfterSamples = 100000;
@@ -553,9 +553,9 @@ NSString *calculateType(NSString *file);
 
             if (datum != NULL) {
 
-//                vector<char *> obshape = datum->obshap;
-//                vector<int> depths = datum->depth;
-//                int numLetters = (int) obshape.size();
+                vector<char *> obshape = datum->obshap;
+                vector<int> depths = datum->depth;
+                int numLetters = (int) obshape.size();
                 // TODO: should be entering this for the locus as well?
 //                if (loc->id == 1) {
 //                    NSLog(@"insertign datum for sample %@ locus %@ and sampleId %i", sampleMO.name, locusMO.locusId, sample_ids[i]);
@@ -581,19 +581,32 @@ NSString *calculateType(NSString *file);
 //                locusMO.length = [NSNumber numberWithInt:loc->depth];
 
                 // TODO: CONVERT TO USE DATA
-//                if (depths.size() == numLetters) {
-//                    for (int j = 0; j < numLetters; j++) {
+                NSMutableArray *datumDataArray = [[NSMutableArray alloc] init];
+                if (depths.size() == numLetters && numLetters > 0 ) {
+                    for (int j = 0; j < numLetters; j++) {
+
+                        NSDictionary *dataDictionary = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSString stringWithUTF8String:obshape[j]], @"haplotype"
+                                , [NSNumber numberWithInt:j], @"order"
+                                , [NSNumber numberWithInt:depths[j]], @"depth"
+                                , nil ];
+//                        NSLog(@"haplotype %@",dataDictionary);
+                        [datumDataArray addObject:dataDictionary];
 //                        HaplotypeMO *haplotypeMO = [[HaplotypeRepository sharedInstance] insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]] andOrder:j];
 //                        [newDatumMO addHaplotypesObject:haplotypeMO];
 //
 //                        DepthMO *depthMO = [[DepthRepository sharedInstance] insertDepth:moc depth:[NSNumber numberWithInt:depths[j]] andOrder:j];
 //                        [newDatumMO addDepthsObject:depthMO];
-//                    }
+                    }
+
+                    NSError *error ;
+                    NSData *datumData = [NSJSONSerialization dataWithJSONObject:datumDataArray options:NSJSONWritingPrettyPrinted error:&error];
+                    newDatumMO.haplotypeData = datumData ;
 //                    [locusMO addDatumsObject:newDatumMO];
-//                }
-//                else {
-//                    NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
-//                }
+                }
+                else {
+                    NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
+                }
             }
 
             // end of process loci from catalogs
@@ -779,7 +792,7 @@ NSString *calculateType(NSString *file);
 //    LocusMO *locusMO = nil ;
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
-    
+
     NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
@@ -804,7 +817,7 @@ NSString *calculateType(NSString *file);
             if (locusId != newLocusId) {
                 locusId = newLocusId;
 //                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
-                
+
                 datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
             }
 
@@ -878,9 +891,9 @@ NSString *calculateType(NSString *file);
     DatumMO *datumMO = nil ;
 //    LocusMO *locusMO = nil ;
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-    
+
     NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
-    
+
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
@@ -989,9 +1002,9 @@ NSString *calculateType(NSString *file);
 
     long saveAtLine = 500000;
     NSUInteger saveCounter = 1;
-    
-    NSMutableSet* savedDatums = [[NSMutableSet alloc] init];
-    
+
+    NSMutableSet *savedDatums = [[NSMutableSet alloc] init];
+
     StacksEntryView *stackEntryView = [[StacksEntryView alloc] init];
 
     for (NSString *tagFileName in realFiles) {
@@ -1055,7 +1068,7 @@ NSString *calculateType(NSString *file);
 
                         // cleanup old object if exists
 //                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
-                        if (false==[stackEntryView isEmpty]) {
+                        if (false == [stackEntryView isEmpty]) {
                             datumMO.stackData = [stackEntryView renderHtml];
 
 //                    NSLog(@"saving for new locus");
@@ -1073,18 +1086,18 @@ NSString *calculateType(NSString *file);
                         // TODO: get from in-memory lookup?
 //                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
                         datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
-                       
-                        if(datumMO!=nil){
-                        [savedDatums addObject:datumMO];
+
+                        if (datumMO != nil) {
+                            [savedDatums addObject:datumMO];
 //                NSLog(@"%@ vs %@",sampleMO.sampleId,datumMO.sampleId );
 //                        stackEntryView = [[StacksEntryView alloc] init];
-                        [stackEntryView clear];
-                        
-                        stackEntryView.locusId = locusId;
-//                        stackEntryView.sampleName = datumMO.sample.name;
-                        stackEntryView.sampleName = sampleMO.name ;
+                            [stackEntryView clear];
 
-                        // TODO: map locus and datum snps
+                            stackEntryView.locusId = locusId;
+//                        stackEntryView.sampleName = datumMO.sample.name;
+                            stackEntryView.sampleName = sampleMO.name;
+
+                            // TODO: map locus and datum snps
                         }
 //                        else{
 //                            NSLog(@"no datum found for locus: %ld and sample %@",locusId,sampleMO.name);
@@ -1144,11 +1157,11 @@ NSString *calculateType(NSString *file);
                             if (saveError != nil ) {
                                 NSLog(@"error saving %@", saveError);
                             }
-                            for(DatumMO* datumMO in savedDatums){
+                            for (DatumMO *datumMO in savedDatums) {
                                 [moc refreshObject:datumMO mergeChanges:YES];
                             }
                             [savedDatums removeAllObjects];
-                            NSLog(@"saved datums count: %ld",savedDatums.count);
+                            NSLog(@"saved datums count: %ld", savedDatums.count);
                         }
 
 
@@ -1159,8 +1172,8 @@ NSString *calculateType(NSString *file);
                 }
 
             }
-            
-            
+
+
 
 //            if (saveCounter % saveAtLine == 0) {
 //                NSLog(@"SAVING");
@@ -1191,7 +1204,7 @@ NSString *calculateType(NSString *file);
     // save old
     NSError *saveError;
     [document.managedObjectContext save:&saveError];
-    NSLog(@"regular save") ;
+    NSLog(@"regular save");
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
     }
@@ -1527,7 +1540,7 @@ NSString *calculateType(NSString *file);
     }
 }
 
-- (void) dealloc {
+- (void)dealloc {
     [sampleLookupDictionary removeAllObjects];
     persistentStoreCoordinator = nil ;
 }
