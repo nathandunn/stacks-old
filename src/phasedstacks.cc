@@ -38,9 +38,10 @@ string    out_path;
 string    out_file;
 string    pmap_path;
 bool      haplotypes       = false;
+bool      write_zeros      = true;
 double    p_value_cutoff   = 0.05;
 double    chi_sq_limit     = 3.84;
-double    minor_freq_lim   = 0.2;
+double    minor_freq_lim   = 0.1;
 double    min_inform_pairs = 0.90;
 uint      max_pair_dist    = 1000000;
 
@@ -949,6 +950,9 @@ write_dprime(string path, PhasedSummary *psum)
 		psum->nucs[j].freq < minor_freq_lim)
 		continue;
 
+	    if (write_zeros == false && psum->dprime[i][j].chisq_p == false)
+	     	continue;
+
 	    fh << psum->nucs[i].bp << "\t" 
 	       << psum->nucs[j].bp << "\t"
 	       << std::setprecision(3) << psum->dprime[i][j].dprime << "\t"
@@ -1703,6 +1707,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"help",        no_argument,       NULL, 'h'},
             {"version",     no_argument,       NULL, 'v'},
 	    {"haplotypes",  no_argument,       NULL, 'H'},
+	    {"skip_zeros",  no_argument,       NULL, 'Z'},
             {"infile_type", required_argument, NULL, 't'},
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"in_path",     required_argument, NULL, 'P'},
@@ -1717,7 +1722,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvHAb:M:t:P:S:p:a:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvZHAb:M:t:P:S:p:a:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1764,6 +1769,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'H':
 	    haplotypes = true;
+	    break;
+	case 'Z':
+	    write_zeros = false;
 	    break;
         case 'v':
             version();
@@ -1820,9 +1828,10 @@ void help() {
 	      << "  p: number of processes to run in parallel sections of code.\n"
 	      << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
 	      << "  v: print program version." << "\n"
-	      << "  h: display this help messsage." << "\n\n"
+	      << "  h: display this help messsage." << "\n"
+	      << "  --haplotypes: data were phased as RAD locus haplotypes.\n\n"
 	      << "  Filtering options:\n"
-	      << "  --haplotypes: data were phased as RAD locus haplotypes.\n"
+	      << "  --skip_zeros: do not include D' values of zero in the D' output.\n"
 	      << "  --minor_allele_freq: specify a minimum minor allele frequency required to process a nucleotide site (0 < a < 0.5).\n"
 	      << "  --min_inform_pairs: when building D' haplotype blocks, the minimum number of informative D' measures to combine two blocks (default 0.9).\n\n";
 
