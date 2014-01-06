@@ -14,6 +14,9 @@
 @property(nonatomic, copy) NSString*  model;
 @property(nonatomic, copy) NSMutableArray*  sequenceIds;
 @property(nonatomic, copy) NSMutableArray*  sequences;
+@property(nonatomic, copy) NSMutableArray*  blocks;
+@property(nonatomic, copy) NSMutableArray*  relationships;
+@property(nonatomic, copy) NSMutableArray*  entryIds;
 
 - (NSString *)renderHtml;
 
