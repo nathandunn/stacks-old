@@ -1,0 +1,7 @@
+//
+// Prefix header for all source files of the 'StacksGui3' target in the 'StacksGui3' project
+//
+
+#ifdef __OBJC__
+    #import <Cocoa/Cocoa.h>
+#endif
