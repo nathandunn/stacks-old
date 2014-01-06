@@ -83,7 +83,7 @@
 //        NSUInteger order = [self.locus lookupHaplotypeOrder:haplotype.haplotype];
         NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
         NSString *haplotypeString = [haplotype valueForKey:@"haplotype"];
-        NSUInteger depth = [[haplotype valueForKey:@"depth"] unsignedIntegerValue];
+//        NSUInteger depth = [[haplotype valueForKey:@"depth"] unsignedIntegerValue];
 
 
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotypeString];
@@ -117,6 +117,39 @@
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
 
     int i = 0;
+    NSError *error ;
+    NSDictionary *haplotypeJson = [NSJSONSerialization JSONObjectWithData:self.haplotypeData options:kNilOptions error:&error];
+    NSUInteger haplotypeCount = haplotypeJson.count;
+    for (NSDictionary *haplotype in haplotypeJson) {
+//    for (HaplotypeMO *haplotype  in [self.haplotypes sortedArrayUsingDescriptors:sortDescriptors]) {
+////        NSString *haplotype = [self.haplotypes objectAtIndex:i];
+
+//        NSUInteger order = [self.locus lookupHaplotypeOrder:haplotype.haplotype];
+        NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
+//        NSString *haplotypeString = [haplotype valueForKey:@"haplotype"];
+//        NSUInteger depth = [[haplotype valueForKey:@"depth"] unsignedIntegerValue];
+        NSString *depthString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"depth"]];
+
+
+        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:depthString];
+        NSRange selectedRange = NSMakeRange(0, depthString.length);
+        [appendString beginEditing];
+        NSDictionary *attributes = [self generateColorForOrder:order];
+        [appendString setAttributes:attributes range:selectedRange];
+        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+        [appendString addAttributes:fontAttributes range:selectedRange];
+        [appendString endEditing];
+
+        [string appendAttributedString:appendString];
+//        if (i < self.haplotypes.count - 1) {
+        if (i < haplotypeCount - 1 ) {
+            [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
+        }
+        ++i;
+    }
+
+
+
     NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
     // TODO: convert
 //    for (DepthMO *depth in  [self.depths sortedArrayUsingDescriptors:sortDescriptors]) {
