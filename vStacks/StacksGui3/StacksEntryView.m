@@ -20,6 +20,7 @@
 @synthesize entryIds;
 @synthesize model;
 @synthesize consensus;
+@synthesize snpData;
 
 - (id)init {
     self = [super init];
@@ -91,6 +92,8 @@
 
 - (NSString *)renderConsensus {
     NSMutableString* returnString = [[NSMutableString alloc] init];
+
+
     [returnString appendFormat:@"<tr><td class='num'></td><td class='con'>consensus</td><td class='id'></td><td class='tag'>%@</td></tr>",consensus];
     return returnString ;
 }

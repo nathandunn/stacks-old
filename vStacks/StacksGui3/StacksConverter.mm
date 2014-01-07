@@ -1094,6 +1094,7 @@ NSString *calculateType(NSString *file);
                             [stackEntryView clear];
 
                             stackEntryView.locusId = locusId;
+
 //                        stackEntryView.sampleName = datumMO.sample.name;
                             stackEntryView.sampleName = sampleMO.name;
 
