@@ -130,27 +130,27 @@
 //        NSLog(@"loading data %@ with url %@",self.selectedDatum.stackData, [[NSBundle mainBundle] bundleURL]);
         [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
 
-        NSURL *cssUrl = [[NSBundle mainBundle] URLForResource:@"test" withExtension: @"css"];
+//        NSURL *cssUrl = [[NSBundle mainBundle] URLForResource:@"test" withExtension: @"css"];
 //        NSLog(@"css url: %@",cssUrl);
 
         
-        DOMDocument* dom = [[stacksWebView mainFrame] DOMDocument];
-        
-        DOMElement* link = [dom createElement:@"link"];
-        
-        [link setAttribute:@"rel" value:@"StyleSheet"];
-        [link setAttribute:@"type" value:@"text/css"];
-        [link setAttribute:@"href" value: [cssUrl relativeString]];
-        
-        DOMElement* head = (DOMElement*) [[dom getElementsByTagName:@"head"] item:0];
-        DOMElement* headFirstChild = head.firstElementChild;
-        
-        if( headFirstChild ){
-            [head insertBefore:link refChild:(DOMNode *)headFirstChild];
-        }
-        else{
-            [head appendChild:(DOMNode *)link];
-        }
+//        DOMDocument* dom = [[stacksWebView mainFrame] DOMDocument];
+//
+//        DOMElement* link = [dom createElement:@"link"];
+//
+//        [link setAttribute:@"rel" value:@"StyleSheet"];
+//        [link setAttribute:@"type" value:@"text/css"];
+//        [link setAttribute:@"href" value: [cssUrl relativeString]];
+//
+//        DOMElement* head = (DOMElement*) [[dom getElementsByTagName:@"head"] item:0];
+//        DOMElement* headFirstChild = head.firstElementChild;
+//
+//        if( headFirstChild ){
+//            [head insertBefore:link refChild:(DOMNode *)headFirstChild];
+//        }
+//        else{
+//            [head appendChild:(DOMNode *)link];
+//        }
         
 
 //        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[NSURL URLWithString:@"file://localhost/"]];
