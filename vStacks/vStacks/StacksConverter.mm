@@ -460,7 +460,7 @@ NSString *calculateType(NSString *file);
         NSError *error2;
         NSData *snpArrayData = [NSJSONSerialization dataWithJSONObject:snpArray options:NSJSONWritingPrettyPrinted error:&error2];
         locusMO.snpData = snpArrayData;
-        NSString *snpArrayString = [[NSString alloc] initWithData:snpArrayData encoding:NSUTF8StringEncoding];
+//        NSString *snpArrayString = [[NSString alloc] initWithData:snpArrayData encoding:NSUTF8StringEncoding];
 //        NSLog(@"snpArrayString %@",snpArrayString) ;
 
 //        map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
@@ -895,6 +895,8 @@ NSString *calculateType(NSString *file);
     NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
 
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+
+    NSDictionary *snpLociMap = [self getLocusSnpsForDocument:document];
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
@@ -924,6 +926,19 @@ NSString *calculateType(NSString *file);
 
             if (datumMO != nil) {
                 // TODO: convert
+                datumMO.snpData = [snpLociMap valueForKey:[NSString stringWithFormat:@"%ld",locusId]] ;
+
+
+//                NSError *error;
+//                NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:datumMO.snpData options:kNilOptions error:&error];
+//                NSMutableDictionary *snpLookup = [[NSMutableDictionary  alloc] init];
+//                for (NSDictionary *snp in snpJson) {
+////                    NSInteger startRange = [[snp valueForKey:@"column"] integerValue];
+////                    [snpInts addObject:[snp valueForKey:@"column"]];
+//                    [snpLookup setObject:snp forKey:[snp valueForKey:@"column"]];
+////                    NSRange selectedRange = NSMakeRange(startRange, 1);
+////                    [string addAttributes:attributes range:selectedRange];
+//                }
 //                [[SnpRepository sharedInstance] insertDatumSnp:moc column:[NSNumber numberWithInteger:column]
 //                                       lratio:[NSNumber numberWithFloat:lratio]
 //                                        rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
@@ -1110,6 +1125,8 @@ NSString *calculateType(NSString *file);
 
                     if (datumMO != nil) {
                         NSString *relationship = [columns objectAtIndex:6];
+
+
 
                         if ([relationship isEqualToString:@"consensus"]) {
                             row = 1;

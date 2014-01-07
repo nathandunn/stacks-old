@@ -18,6 +18,7 @@
 @property(nonatomic, copy) NSMutableArray*  relationships;
 @property(nonatomic, copy) NSMutableArray*  entryIds;
 @property(nonatomic, copy) NSData*  snpData;
+@property(nonatomic, copy) NSMutableDictionary*  snpLookup;
 
 - (NSString *)renderHtml;
 

@@ -29,7 +29,8 @@
 //@property (nonatomic, retain) ReferenceStackEntryMO *reference;
 @property (nonatomic, retain) SampleMO *sample;
 //@property (nonatomic, retain) NSSet *snps;
-@property (nonatomic, copy) NSString *snpData;
+//@property (nonatomic, copy) NSString *snpData;
+@property (nonatomic, copy) NSData *snpData;
 //@property (nonatomic, copy) NSSet *stackEntries;
 @property (nonatomic, copy) NSString * stackData;
 //@property (nonatomic, copy) NSData * haploytpeData;

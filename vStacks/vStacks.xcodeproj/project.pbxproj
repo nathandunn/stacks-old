@@ -557,7 +557,7 @@
 				ORGANIZATIONNAME = "Nathan Dunn";
 				TargetAttributes = {
 					14370541187B876A0007BDE5 = {
-						TestTargetID = 1437051A187B87690007BDE5 /* vStacks */;
+						TestTargetID = 1437051A187B87690007BDE5;
 					};
 				};
 			};
