@@ -1,0 +1,568 @@
+/*
+ Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+
+ This file is part of Stacks.
+
+ Stacks is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ Stacks is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+body {
+  font-family: bitstream vera sans, arial, sans;
+}
+
+a:link { 
+  color: #29356c; 
+}
+
+a:visited { 
+  color: #29356c; 
+}
+
+a:hover { 
+  color: #a93535; 
+}
+
+img { 
+  border: 0;
+}
+
+strong { 
+  color: #333333;
+}
+
+acronym {
+    border-bottom: 1px dotted;
+    cursor: help;
+}
+
+iframe { 
+    width: 100%;
+    height: 500px;
+}
+
+.s {
+    font-size: small;
+}
+
+div.main { 
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#header {
+  background-color: #455372;
+  background-image: url(./images/stacks_bg.png);
+  background-repeat: repeat-x;
+  min-height: 75px;
+  height: 75px;
+
+  -moz-border-radius: 10px;
+  -webkit-border-radius: 10px;
+  border-radius: 10px;
+}
+	
+#header h1 {
+  position: relative;
+  top: 0px;
+  left: 0.75em;
+  font-size: 16pt; 
+}
+
+#header h1 a,
+#header p  a {
+  text-decoration: none;
+  color: #ffffff;
+}
+
+#header p a:hover {
+    color: #a93535; 
+}
+
+#header p {
+    float: right;
+    position: relative;
+    top: -6em;
+    padding-right: 0.75em;
+    font-size: 10pt;
+}
+
+div.footer { 
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: small; 
+  clear: both;
+  padding-top: 20px;
+}
+
+h3.info_head,
+h4.info_head,
+h5.info_head {
+    margin-left: auto;
+    margin-right: auto;
+    width: 80%;
+    padding-bottom: 0px;
+    margin-bottom: 5px;
+}
+
+h3.info_head a:hover,
+h4.info_head a:hover {
+    cursor: pointer;
+}
+
+table.loc_filter {
+    width: 100%;
+    vertical-align: top;
+    margin-left: auto;
+    margin-right: auto;
+    border: thin solid black;
+    background-color: #eeeeee;
+    padding-right: 10px;
+    height: 160px;
+}
+
+div.filter {
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+table.filter {
+    width: 100%;
+    vertical-align: top;
+    margin-left: auto;
+    margin-right: auto;
+    border: thin solid black;
+    background-color: #eeeeee;
+    padding-left: 10px;
+    height: 160px;
+}
+
+table.filter td {
+    border: 0px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+table.filter td.active_filter,
+table.loc_filter td.active_filter {
+    background-color: #a93535;
+}
+
+table.filter td.active_filter a:hover,
+table.loc_filter td.active_filter a:hover {
+    color: #ffffff;
+}
+
+table.db { 
+  margin-left: auto; 
+  margin-right: auto;
+  border: 1px solid black; 
+  line-height: 1.25;
+  width: 90%;
+  text-align: center; 
+  border-spacing: 0px 1px; 
+  border-collapse: collapse;
+}
+
+table.db th { 
+  border: 1px solid black;
+  line-height: 1;
+  padding: 7px;
+  background-color: #dddddd;
+}
+
+table.db td { 
+  border: 1px solid black; 
+  padding: 5px;
+}
+
+/* Internal table, should be invisible in terms of borders and the like */
+table.int {
+    border: none;
+    border-collapse: collapse;
+    width: 100%;
+    margin-left: auto; 
+    margin-right: auto;
+    text-align: center;
+    padding: 0px;
+    margin: 0px;
+}
+
+table.int td {
+    border: none; 
+}
+
+td.seq {
+    text-align: center;
+}
+
+td.seq div.seq {
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    text-align: left;
+    font-family: monospace;
+}
+
+table.radtag { 
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table.radtag th { 
+    border-bottom: thin solid black;
+    background-color: #cccccc;
+}
+
+table.radtag td {
+    padding: 0;
+    margin: 0;
+}
+
+table.radtag td.num { 
+    text-align: center;
+    font-size: smaller;
+    width: 5%;
+}
+
+table.radtag td.con { 
+    padding-left: 3em;
+    font-size: smaller;
+}
+
+table.radtag td.primary { 
+    padding-left: 3em;
+    font-size: smaller;
+    color: #32773f;
+    width: 15%;
+}
+
+table.radtag td.secondary {
+    padding-left: 3em;
+    font-size: smaller; 
+    color: #870214;
+    width: 15%;
+}
+
+table.radtag td.tertiary { 
+    padding-left: 3em;
+    font-size: smaller;
+    color: #3d5aff;
+    width: 15%;
+}
+
+table.radtag td.id { 
+    font-family: monospace;
+    text-align: right;
+    padding-right: 4px;
+    width: 20%;
+}
+
+table.radtag td.tag { 
+    font-family: monospace;
+    text-align: left;
+    border-left: thin solid black;
+    padding-left: 4px;
+    width: 60%;
+}
+
+div.seq_frame_head {
+    margin-left: auto;
+    margin-right: auto;
+    width: 95%;
+    overflow-y: scroll;
+}
+
+div.seq_frame {
+    margin-left: auto;
+    margin-right: auto;
+    width: 95%;
+    overflow-y: scroll;
+    height: 35em;
+}
+
+table.catalog {
+    width: 100%; 
+    text-align: center;
+}
+
+table.catalog th {
+    background-color: #eeeeee;
+}
+
+table.catalog td {
+    vertical-align: top;
+}
+
+span.rank_1 {
+    background-color: #ccddd4;
+    color: #a93535;
+    font-weight: bold;
+}
+
+span.rank_2 {
+    background-color: #ccddd4;
+    color: #29356c; 
+    font-weight: bold;
+}
+
+span.err {
+    background-color: #fcdba7;
+    color: #29356c; 
+}
+
+span.cat_snp {
+    background-color: #d8f3ff;
+    color: #29356c; 
+}
+
+div.footer {
+    clear: both;
+}
+
+td.catlink {
+    font-size: small;
+}
+
+td.catlink,div.catlink a:hover {
+    cursor: pointer;
+}
+
+span.light_scale {
+    color: #888888;
+    background-color: #e29c71;
+}
+
+span.dark_scale {
+    color: #888888;
+    background-color: #bbd5ff;
+}
+
+table.genotypes td.gtype_toggle {
+    font-size: smaller;
+    text-align: right;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+}
+
+table.genotypes {
+    padding: 1em;
+    margin-top: 0.5em;
+    margin-bottom: 1em;
+    margin-left: auto;
+    margin-right: auto;
+    border-collapse: collapse;
+}
+
+table.genotypes td {
+    padding: 3px;
+    border: thin solid #aaaaaa;
+    text-align: center;
+    width: 10%;
+    word-wrap: break-word;
+}
+
+table.genotypes td a:hover {
+    cursor: pointer;
+}
+
+table.genotypes span.title {
+    white-space: pre;
+    font-size: smaller;
+    color: #aaaaaa;
+}
+
+table.genotypes td.pop_id {
+    height: 1.5em;
+    text-align: left;
+    font-size: 12pt;
+    padding-left: 10px;
+    background-color: #eeeeee;
+}
+
+div.pop_annotation {
+    display: inline;
+}
+
+div.pop_annotation:hover {
+    cursor: pointer;
+}
+
+span.corrected {
+    font-weight: bold;
+    color: #870214;
+}
+
+a.annotation {
+    font-size: small;
+}
+
+td.export_icon a:hover {
+    cursor: pointer;
+}
+
+div#export_popup {
+    position: absolute;
+    right: 7%;
+    /*top: 2%;*/
+    border: 2px solid black;
+    background-color: #6f9b6d;
+    width: 350px;
+    height: 250px;
+    font-size: smaller;
+    text-align: center;
+    padding: 1em;
+    -moz-box-shadow: 4px 4px 7px #888;
+    -webkit-box-shadow: 4px 4px 7px #888;
+    box-shadow: 4px 4px 7px #888;
+}
+
+div#export_popup h3 {
+    color: #ffc600;
+    text-decoration: underline;
+    margin-top: 0px;
+    padding-top: 0px;
+}
+
+.r {
+    font-weight: bold;
+    color: #a93535;
+}
+
+#stacks_filter  {
+    margin-left: auto;
+    margin-right: auto;
+    width: 85%;
+    padding-bottom: 20px;
+}
+
+div.gloc {
+    margin-top: 0.5em;
+    margin-left: 0.5em;
+    float: left;
+    font-size: smaller;
+    font-family: bitstream vera sans, arial, sans;
+    clear: both;
+}
+
+div.haplotype_def {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+    max-width: 150px;
+    word-wrap: break-word;
+}
+
+div.haplotype {
+    max-width: 85px;
+    word-wrap: break-word;
+}
+
+div.snps {
+    text-align: left;
+    width: 49.5%;
+    float: left;
+}
+
+div.snps span.snp, 
+div.snps span.snp_sel {
+    margin-left: 10%;
+}
+
+div.alleles {
+    width: 49.5%;
+    float: right;
+}
+
+div.alleles h3, div.snps h3 {
+    background-color: #eeeeee;
+    font-size: 12pt;
+    padding: 3px;
+    text-align: center;
+}
+
+div.sumstats {
+    clear: both;
+    padding-top: 2em;
+}
+
+table.sumstats, table.fst {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+    margin-bottom: 2em;
+}
+
+table.sumstats td, table.fst td {
+    height: 2em;
+    border: thin solid #aaa;
+    vertical-align: middle;
+}
+
+table.sumstats td.pop_id, 
+table.fst td.pop_id {
+    width: 5%;
+    background-color: #eeeeee;
+    border-left: 0px;
+}
+
+table.sumstats td.key, 
+table.fst td.key {
+    border-top: 0px;
+    background-color: #eeeeee;
+    padding: 2px;
+}
+
+table.fst td.diagonal {
+    background-color: #888;
+}
+
+table.fst td.fst, 
+table.fst_key td.fst {
+    background-color: #aee2f3;
+}
+
+table.fst td.pi, 
+table.fst_key td.pi {
+    background-color: #fdc4b8;
+}
+
+table.fst_key {
+    font-size: 10pt;
+    width: 100%;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+table.fst_key td {
+    font-weight: bold;
+    width: 45%;
+}
+
+span.snp {
+    font-weight: normal;
+}
+
+span.snp:hover {
+    color: #a93535; 
+    cursor: pointer;
+}
+
+span.snp_sel {
+    font-weight: bold;
+    text-decoration: underline;
+}

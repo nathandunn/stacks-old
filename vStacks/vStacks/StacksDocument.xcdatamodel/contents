@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model userDefinedModelVersionIdentifier="" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="3401" systemVersion="13B42" minimumToolsVersion="Automatic" macOSVersion="Automatic" iOSVersion="Automatic">
+    <entity name="Allele" representedClassName="AlleleMO" isAbstract="YES" syncable="YES">
+        <attribute name="allele" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="depth" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="ratio" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+    </entity>
+    <entity name="Datum" representedClassName="DatumMO" syncable="YES">
+        <attribute name="alleleData" optional="YES" attributeType="Transformable" syncable="YES"/>
+        <attribute name="datumData" optional="YES" attributeType="Transformable" syncable="YES"/>
+        <attribute name="depthData" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="haplotypeData" optional="YES" attributeType="Transformable" syncable="YES"/>
+        <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sampleId" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
+        <attribute name="snpData" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="stackData" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="tagId" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
+        <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="datums" inverseEntity="Locus" syncable="YES"/>
+        <relationship name="sample" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Sample" inverseName="datums" inverseEntity="Sample" syncable="YES"/>
+    </entity>
+    <entity name="DatumAllele" representedClassName="DatumAlleleMO" parentEntity="Allele" syncable="YES">
+        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" syncable="YES"/>
+    </entity>
+    <entity name="DatumSnp" representedClassName="DatumSnpMO" parentEntity="Snp" syncable="YES">
+        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" syncable="YES"/>
+    </entity>
+    <entity name="Depth" representedClassName="DepthMO" syncable="YES">
+        <attribute name="depth" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="order" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" syncable="YES"/>
+    </entity>
+    <entity name="Haplotype" representedClassName="HaplotypeMO" syncable="YES">
+        <attribute name="haplotype" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="order" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <relationship name="datum" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Datum" syncable="YES"/>
+    </entity>
+    <entity name="Locus" representedClassName="LocusMO" syncable="YES">
+        <attribute name="alleleData" optional="YES" attributeType="Transformable" syncable="YES"/>
+        <attribute name="basePairs" optional="YES" attributeType="Integer 64" minValueString="0" defaultValueString="0" indexed="YES" syncable="YES"/>
+        <attribute name="chromosome" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="consensus" attributeType="String" syncable="YES"/>
+        <attribute name="length" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="locusId" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
+        <attribute name="marker" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="parentCount" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="ratio" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="snpData" optional="YES" attributeType="Transformable" syncable="YES"/>
+        <attribute name="strand" optional="YES" attributeType="String" defaultValueString="+" syncable="YES"/>
+        <attribute name="type" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="locus" inverseEntity="Datum" syncable="YES"/>
+    </entity>
+    <entity name="LocusAllele" representedClassName="LocusAlleleMO" parentEntity="Allele" syncable="YES">
+        <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" syncable="YES"/>
+    </entity>
+    <entity name="LocusSnp" representedClassName="LocusSnpMO" parentEntity="Snp" syncable="YES">
+        <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" syncable="YES"/>
+    </entity>
+    <entity name="Population" representedClassName="PopulationMO" syncable="YES">
+        <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="populationId" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <relationship name="samples" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Sample" inverseName="population" inverseEntity="Sample" syncable="YES"/>
+    </entity>
+    <entity name="Sample" representedClassName="SampleMO" syncable="YES">
+        <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sampleId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
+        <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="sample" inverseEntity="Datum" syncable="YES"/>
+        <relationship name="population" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Population" inverseName="samples" inverseEntity="Population" syncable="YES"/>
+    </entity>
+    <entity name="Snp" representedClassName="SnpMO" isAbstract="YES" syncable="YES">
+        <attribute name="column" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
+        <attribute name="lratio" optional="YES" attributeType="Float" defaultValueString="0.0" syncable="YES"/>
+        <attribute name="rank1" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
+        <attribute name="rank2" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
+        <attribute name="rank3" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
+        <attribute name="rank4" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
+        <attribute name="type" optional="YES" attributeType="Integer 16" minValueString="0" syncable="YES"/>
+    </entity>
+    <elements>
+        <element name="Allele" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Datum" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="DatumAllele" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="DatumSnp" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Depth" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Haplotype" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Locus" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="LocusAllele" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="LocusSnp" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Population" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Sample" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Snp" positionX="0" positionY="0" width="0" height="0"/>
+    </elements>
+</model>
