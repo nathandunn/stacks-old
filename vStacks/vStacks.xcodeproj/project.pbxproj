@@ -76,6 +76,7 @@
 		1437061A187B89490007BDE5 /* stacks.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370618187B89490007BDE5 /* stacks.css */; };
 		1437061B187B89490007BDE5 /* test.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370619187B89490007BDE5 /* test.css */; };
 		1437061D187B8BC20007BDE5 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437061C187B8BC20007BDE5 /* libz.1.2.7.dylib */; };
+		14370620187CAEFC0007BDE5 /* GZIP.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437061F187CAEFC0007BDE5 /* GZIP.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -231,6 +232,8 @@
 		14370618187B89490007BDE5 /* stacks.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = stacks.css; sourceTree = "<group>"; };
 		14370619187B89490007BDE5 /* test.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = test.css; sourceTree = "<group>"; };
 		1437061C187B8BC20007BDE5 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libz.1.2.7.dylib; sourceTree = "<group>"; };
+		1437061E187CAEFC0007BDE5 /* GZIP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GZIP.h; sourceTree = "<group>"; };
+		1437061F187CAEFC0007BDE5 /* GZIP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GZIP.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -353,6 +356,8 @@
 		1437055E187B88060007BDE5 /* Service */ = {
 			isa = PBXGroup;
 			children = (
+				1437061E187CAEFC0007BDE5 /* GZIP.h */,
+				1437061F187CAEFC0007BDE5 /* GZIP.m */,
 				143705D5187B88E50007BDE5 /* StacksConverter.mm */,
 				143705D6187B88E50007BDE5 /* StacksConverter.h */,
 				143705D7187B88E50007BDE5 /* SampleRepository.m */,
@@ -611,6 +616,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				14370620187CAEFC0007BDE5 /* GZIP.m in Sources */,
 				14370594187B88C70007BDE5 /* LocusView.m in Sources */,
 				14370591187B88C70007BDE5 /* LocusCell.m in Sources */,
 				143705CE187B88D80007BDE5 /* ModelStackEntryMO.m in Sources */,

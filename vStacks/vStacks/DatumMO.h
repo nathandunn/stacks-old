@@ -32,7 +32,7 @@
 //@property (nonatomic, copy) NSString *snpData;
 @property (nonatomic, copy) NSData *snpData;
 //@property (nonatomic, copy) NSSet *stackEntries;
-@property (nonatomic, copy) NSString * stackData;
+@property (nonatomic, copy) NSData *stackData;
 //@property (nonatomic, copy) NSData * haploytpeData;
 
 @property (nonatomic, retain) ColorGenerator *colorGenerator;
