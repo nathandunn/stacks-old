@@ -29,13 +29,13 @@
 - (id)init {
     self = [super init];
     if (self) {
-        sequences = [[NSMutableArray alloc] init];
-        sequenceIds = [[NSMutableArray alloc] init];
-        blocks = [[NSMutableArray alloc] init];
-        relationships = [[NSMutableArray alloc] init];
-        entryIds = [[NSMutableArray alloc] init];
-        snpLocusLookup = [[NSMutableDictionary alloc] init];
-        snpDatumLookup = [[NSMutableDictionary alloc] init];
+        sequences = [NSMutableArray array];
+        sequenceIds = [NSMutableArray array];
+        blocks = [NSMutableArray array];
+        relationships = [NSMutableArray array];
+        entryIds = [NSMutableArray array];
+        snpLocusLookup = [NSMutableDictionary dictionary];
+        snpDatumLookup = [NSMutableDictionary dictionary];
     }
 
     return self;
@@ -44,10 +44,18 @@
 
 - (NSString *)renderHtml {
 
+
     NSError *error;
     NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
     for (NSDictionary *snp in snpJson) {
         [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
+    }
+   
+    if(snpDatumData!=nil){
+        snpJson = [NSJSONSerialization JSONObjectWithData:snpDatumData options:kNilOptions error:&error];
+        for (NSDictionary *snp in snpJson) {
+            [snpDatumLookup setObject:snp forKey:[snp valueForKey:@"column"]];
+        }
     }
 
 //    NSString* headerHTML= @"<head><link rel='stylesheet' type='text/css' href='test.css'/></head><body>" ;
@@ -134,8 +142,11 @@
 
 - (NSMutableString *)renderSequences {
 //    NSLog(@"sequences %ld entryIds %ld relatinships %ld sequenceIds %ld",sequences.count,entryIds.count,relationships.count,sequenceIds.count) ;
+    
 
     NSMutableString *returnString = [NSMutableString string];
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
     NSString *blockStyle;
     for (NSUInteger  i = 0; i < sequences.count; i++) {
@@ -152,16 +163,36 @@
 
         // a dictionary of locations (integer) and formats to apply in reverse order
         NSMutableDictionary *formatDictionary = [NSMutableDictionary dictionary];
+        NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(compare:)];
 
         // handle SNPS
         // for each locus snp, if a datum snp at the same location then
+
+        for (NSString *snpColumnString in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
+            NSNumber *snpColumn = [numberFormatter numberFromString:snpColumnString];
+            NSUInteger column = snpColumn.unsignedIntegerValue;
+
+            if([snpDatumLookup objectForKey:snpColumn]!=nil){
+                if([consensus characterAtIndex:column]==[sequenceString characterAtIndex:column]) {
+                    [formatDictionary setObject:@"rank_1" forKey:snpColumn];
+                }
+                else{
+                    [formatDictionary setObject:@"rank_2" forKey:snpColumn];
+                }
+            }
+            else{
+                [formatDictionary setObject:@"cat_snp" forKey:snpColumn];
+            }
+
+        }
+
 
 
         // handle errors
         if([consensus isNotEqualTo:sequenceString]){
             for (int i = 0; i < sequenceString.length && i < consensus.length; i++) {
                 if([ consensus characterAtIndex:i] != [sequenceString characterAtIndex:i]){
-                    if([snpLocusLookup objectForKey:[NSNumber numberWithInt:i]]==nil){
+                    if([snpLocusLookup objectForKey:[NSNumber numberWithInt:i]]==nil && [formatDictionary objectForKey:[NSNumber numberWithInt:i]]==nil){
                         [formatDictionary setObject:@"err" forKey:[NSNumber numberWithInt:i]];
                     }
                 }
@@ -169,7 +200,6 @@
         }
         
         // apply for the formats!!
-        NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(compare:)];
         for (NSNumber *formatKey in [[formatDictionary allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
 //            NSUInteger column = [[NSNumber numberWithInteger:formatKey.integerValue] unsignedIntegerValue];
             NSUInteger column = [formatKey unsignedIntegerValue];

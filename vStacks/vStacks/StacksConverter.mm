@@ -676,6 +676,20 @@ NSString *calculateType(NSString *file);
     gettimeofday(&time2, NULL);
     NSLog(@"create stacks document time %ld", time2.tv_sec - time1.tv_sec);
 
+    NSLog(@"loading snps onto datums");
+    gettimeofday(&time1, NULL);
+    progressWindow.actionMessage.stringValue = @"Loading datum snps";
+    [self loadSnpsOntoDatum:stacksDocument];
+    gettimeofday(&time2, NULL);
+    NSLog(@"finished loading snps onto datum time %ld", time2.tv_sec - time1.tv_sec);
+
+    NSLog(@"loading alleles onto datums");
+    gettimeofday(&time1, NULL);
+    progressWindow.actionMessage.stringValue = @"Loading datum alleles";
+    [self loadAllelesOntoDatum:stacksDocument];
+    gettimeofday(&time2, NULL);
+    NSLog(@"finished loading alleles onto datum time %ld", time2.tv_sec - time1.tv_sec);
+
 
     NSLog(@"loading stack entries");
     CHECK_STOP
@@ -691,19 +705,6 @@ NSString *calculateType(NSString *file);
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading stacks entries time %ld", time2.tv_sec - time1.tv_sec);
 
-    NSLog(@"loading snps onto datums");
-    gettimeofday(&time1, NULL);
-    progressWindow.actionMessage.stringValue = @"Loading datum snps";
-    [self loadSnpsOntoDatum:stacksDocument];
-    gettimeofday(&time2, NULL);
-    NSLog(@"finished loading snps onto datum time %ld", time2.tv_sec - time1.tv_sec);
-
-    NSLog(@"loading alleles onto datums");
-    gettimeofday(&time1, NULL);
-    progressWindow.actionMessage.stringValue = @"Loading datum alleles";
-    [self loadAllelesOntoDatum:stacksDocument];
-    gettimeofday(&time2, NULL);
-    NSLog(@"finished loading alleles onto datum time %ld", time2.tv_sec - time1.tv_sec);
 
 
     NSError *error;
@@ -757,11 +758,11 @@ NSString *calculateType(NSString *file);
 }
 
 - (void)loadAlleleFileForDatum:(StacksDocument *)document fromFile:(NSString *)alleleFileName {
-    NSLog(@"Loading allele file %@", alleleFileName);
+//    NSLog(@"Loading allele file %@", alleleFileName);
 
     NSUInteger fileNameLength = alleleFileName.length;
     NSString *sampleName = [alleleFileName substringToIndex:fileNameLength - 12];
-    NSLog(@"sampleName %@", sampleName);
+//    NSLog(@"sampleName %@", sampleName);
     // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
     NSManagedObjectContext *moc = document.managedObjectContext;
@@ -846,23 +847,23 @@ NSString *calculateType(NSString *file);
 }
 
 - (void)loadSnpFileForDatum:(StacksDocument *)document fromFile:(NSString *)snpFileName {
-    NSLog(@"Loading snps file %@", snpFileName);
+//    NSLog(@"Loading snps file %@", snpFileName);
 
     NSUInteger fileNameLength = snpFileName.length;
     NSString *sampleName = [snpFileName substringToIndex:fileNameLength - 9];
-    NSLog(@"sampleName %@", sampleName);
+//    NSLog(@"sampleName %@", sampleName);
     // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
     // create matches file name
-    NSString *matchesFileName = [document.path stringByAppendingString:[sampleName stringByAppendingString:@".matches.tsv"]];
-    NSLog(@"matches filename %@", matchesFileName);
+//    NSString *matchesFileName = [document.path stringByAppendingString:[sampleName stringByAppendingString:@".matches.tsv"]];
+//    NSLog(@"matches filename %@", matchesFileName);
 
 //    NSMutableDictionary *lookupDictionary = [self loadMatchesDictionary:matchesFileName];
     NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
 //    for(id key in [sampleLookupDictionary allKeys]){
 //        NSLog(@"keys: %@",key);
 //    }
-    NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
+//    NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
 
     NSManagedObjectContext *moc = document.managedObjectContext;
     SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
@@ -897,7 +898,7 @@ NSString *calculateType(NSString *file);
 
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
-    NSDictionary *snpLociMap = [self getLocusSnpsForDocument:document];
+//    NSDictionary *snpLociMap = [self getLocusSnpsForDocument:document];
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
@@ -1241,7 +1242,7 @@ NSString *calculateType(NSString *file);
 
             gettimeofday(&time2, NULL);
 //    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
-            NSLog(@"parse entries lines %ld time: %ld", fileData.count, (time2.tv_sec - time1.tv_sec));
+//            NSLog(@"parse entries lines %ld time: %ld", fileData.count, (time2.tv_sec - time1.tv_sec));
 
 
         }
