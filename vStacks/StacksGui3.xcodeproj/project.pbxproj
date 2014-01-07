@@ -557,7 +557,7 @@
 				LastUpgradeCheck = 0500;
 				ORGANIZATIONNAME = "Nathan Dunn";
 			};
-			buildConfigurationList = 1442E19017206DBB004B6361 /* Build configuration list for PBXProject "vStacks" */;
+			buildConfigurationList = 1442E19017206DBB004B6361 /* Build configuration list for PBXProject "StacksGui3" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -868,7 +868,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		1442E19017206DBB004B6361 /* Build configuration list for PBXProject "vStacks" */ = {
+		1442E19017206DBB004B6361 /* Build configuration list for PBXProject "StacksGui3" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1442E1CA17206DBC004B6361 /* Debug */,
