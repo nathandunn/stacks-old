@@ -5,6 +5,7 @@
 
 
 #import "StackEntryRenderer.h"
+#import "GZIP.h"
 
 
 @implementation StackEntryRenderer {
@@ -46,8 +47,10 @@
 
 //    https://github.com/nicklockwood/GZIP/blob/master/Tests/UnitTests/DataTests.m
     NSData *inputData = [html dataUsingEncoding:NSUTF8StringEncoding];
+    NSData *compressedData = [inputData gzippedData];
 
-    return inputData ;
+
+    return compressedData;
 
 }
 
