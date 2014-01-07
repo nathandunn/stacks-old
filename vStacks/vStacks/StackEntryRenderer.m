@@ -58,13 +58,17 @@
 
 
     NSError *error;
-    NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
-    for (NSDictionary *snp in snpJson) {
-        [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
+    // should ALWAYS be true, except for in test instances
+    if(snpLocusData != nil ){
+        NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
+        for (NSDictionary *snp in snpJson) {
+            [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
+        }
+
     }
-   
+
     if(snpDatumData!=nil){
-        snpJson = [NSJSONSerialization JSONObjectWithData:snpDatumData options:kNilOptions error:&error];
+        NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpDatumData options:kNilOptions error:&error];
         for (NSDictionary *snp in snpJson) {
             [snpDatumLookup setObject:snp forKey:[snp valueForKey:@"column"]];
         }
