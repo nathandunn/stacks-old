@@ -37,6 +37,7 @@
 //@property(nonatomic, strong) NSMutableDictionary *lociDictionary ;
 // sample:Dictionary<internalid,externalid>
 @property(nonatomic, strong) NSMutableDictionary *sampleLookupDictionary;
+@property(nonatomic, strong) NSMutableDictionary *locusSnpMap;
 
 
 @property(nonatomic) bool stopProcess;

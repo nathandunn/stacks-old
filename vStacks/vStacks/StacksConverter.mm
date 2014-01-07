@@ -86,6 +86,7 @@ NSString *calculateType(NSString *file);
 //@synthesize lociDictionary;
 @synthesize sampleLookupDictionary;
 @synthesize stopProcess;
+@synthesize locusSnpMap;
 
 
 @synthesize persistentStoreCoordinator;
@@ -926,7 +927,9 @@ NSString *calculateType(NSString *file);
 
             if (datumMO != nil) {
                 // TODO: convert
-                datumMO.snpData = [snpLociMap valueForKey:[NSString stringWithFormat:@"%ld",locusId]] ;
+//                datumMO.snpData = [snpLociMap valueForKey:[NSString stringWithFormat:@"%ld",locusId]] ;
+
+                // if we ahve data, then we want to add it
 
 
 //                NSError *error;
@@ -939,6 +942,29 @@ NSString *calculateType(NSString *file);
 ////                    NSRange selectedRange = NSMakeRange(startRange, 1);
 ////                    [string addAttributes:attributes range:selectedRange];
 //                }
+
+                NSDictionary *snpDictionary = [NSDictionary dictionaryWithObjectsAndKeys:
+                        [NSNumber numberWithInteger:column], @"column"
+                        , [NSNumber numberWithFloat:lratio], @"lratio"
+                        , [numberFormatter numberFromString:[columns objectAtIndex:5]], @"rank1"
+                        , [numberFormatter numberFromString:[columns objectAtIndex:6]], @"rank2"
+                        , [numberFormatter numberFromString:[columns objectAtIndex:7]], @"rank3"
+                        , [numberFormatter numberFromString:[columns objectAtIndex:8]], @"rank4"
+                        , nil ];
+                
+                NSMutableArray *snpArray;
+                if(datumMO.snpData==nil){
+                    snpArray = [[NSMutableArray alloc] init];
+                }
+                else{
+                   snpArray = [NSMutableArray arrayWithArray:[NSJSONSerialization JSONObjectWithData:datumMO.snpData options:kNilOptions error:&error2]];
+                }
+                
+                [snpArray addObject:snpDictionary];
+
+                NSData *snpArrayData = [NSJSONSerialization dataWithJSONObject:snpArray options:NSJSONWritingPrettyPrinted error:&error2];
+                datumMO.snpData = snpArrayData;
+
 //                [[SnpRepository sharedInstance] insertDatumSnp:moc column:[NSNumber numberWithInteger:column]
 //                                       lratio:[NSNumber numberWithFloat:lratio]
 //                                        rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
@@ -1240,9 +1266,11 @@ NSString *calculateType(NSString *file);
 }
 
 - (NSDictionary *)getLocusSnpsForDocument:(StacksDocument *)document {
-    NSMutableDictionary *locusSnpMap = [[NSMutableDictionary alloc] init];
-    for(LocusMO *locusMO in document.loci){
-        [locusSnpMap setObject:locusMO.snpData forKey:locusMO.locusId];
+    if(locusSnpMap==nil){
+        locusSnpMap = [[NSMutableDictionary alloc] init];
+        for(LocusMO *locusMO in document.loci){
+            [locusSnpMap setObject:locusMO.snpData forKey:locusMO.locusId];
+        }
     }
     return locusSnpMap;
 }
