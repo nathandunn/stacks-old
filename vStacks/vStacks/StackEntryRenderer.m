@@ -5,6 +5,7 @@
 
 
 #import "StackEntryRenderer.h"
+#import "GZIP.h"
 
 
 @implementation StackEntryRenderer {
@@ -41,6 +42,17 @@
     return self;
 }
 
+- (NSData *)renderData {
+    NSString *html = [self renderHtml];
+
+//    https://github.com/nicklockwood/GZIP/blob/master/Tests/UnitTests/DataTests.m
+    NSData *inputData = [html dataUsingEncoding:NSUTF8StringEncoding];
+    NSData *compressedData = [inputData gzippedData];
+
+
+    return compressedData;
+
+}
 
 - (NSString *)renderHtml {
 
@@ -234,4 +246,5 @@
     snpDatumData = nil ;
     [snpDatumLookup removeAllObjects];
 }
+
 @end

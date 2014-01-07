@@ -1113,7 +1113,7 @@ NSString *calculateType(NSString *file);
 //                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
                         if (false == [stackEntryRenderer isEmpty]) {
                             stackEntryRenderer.snpDatumData = datumMO.snpData ;
-                            datumMO.stackData = [stackEntryRenderer renderHtml];
+                            datumMO.stackData = [stackEntryRenderer renderData];
 
 //                    NSLog(@"saving for new locus");
 //                    NSError *error;
