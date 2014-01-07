@@ -44,8 +44,8 @@ using std::set;
 #include <utility>
 using std::pair;
 
-#include <tr1/unordered_map>
-using std::tr1::unordered_map;
+#include <unordered_map>
+using std::unordered_map;
 
 #ifdef HAVE_SPARSEHASH
 #include <sparsehash/sparse_hash_map>
