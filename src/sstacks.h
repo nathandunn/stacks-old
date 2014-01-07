@@ -53,8 +53,8 @@ using std::map;
 #include <set>
 using std::set;
 
-#include <tr1/unordered_map>
-using std::tr1::unordered_map;
+#include <unordered_map>
+using std::unordered_map;
 
 #ifdef HAVE_SPARSEHASH
 #include <sparsehash/sparse_hash_map>

@@ -40,8 +40,8 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
-#include <tr1/unordered_map>
-using std::tr1::unordered_map;
+#include <unordered_map>
+using std::unordered_map;
 
 #ifdef HAVE_SPARSEHASH
 #include <sparsehash/sparse_hash_map>

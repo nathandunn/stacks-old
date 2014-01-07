@@ -52,8 +52,8 @@ using std::endl;
 using std::vector;
 #include <map>
 using std::map;
-#include <tr1/unordered_map>
-using std::tr1::unordered_map;
+#include <unordered_map>
+using std::unordered_map;
 #include <queue>
 using std::queue;
 #include <set>
