@@ -27,6 +27,8 @@
 @synthesize snpLocusLookup;
 @synthesize snpDatumLookup;
 
+@synthesize numberFormatter;
+
 - (id)init {
     self = [super init];
     if (self) {
@@ -37,6 +39,10 @@
         entryIds = [NSMutableArray array];
         snpLocusLookup = [NSMutableDictionary dictionary];
         snpDatumLookup = [NSMutableDictionary dictionary];
+
+
+        numberFormatter = [[NSNumberFormatter alloc] init];
+        numberFormatter.numberStyle = NSNumberFormatterNoStyle;
     }
 
     return self;
@@ -62,7 +68,9 @@
     if(snpLocusData != nil ){
         NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
         for (NSDictionary *snp in snpJson) {
-            [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
+            // not sure why this is a string, clearly an NSNumber when put in . . . weird
+            [snpLocusLookup setObject:snp forKey:[numberFormatter numberFromString:[snp valueForKey:@"column"]]];
+//            [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
         }
 
     }
@@ -70,6 +78,7 @@
     if(snpDatumData!=nil){
         NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpDatumData options:kNilOptions error:&error];
         for (NSDictionary *snp in snpJson) {
+//            [snpDatumLookup setObject:snp forKey:[numberFormatter numberFromString:[snp valueForKey:@"column"]]];
             [snpDatumLookup setObject:snp forKey:[snp valueForKey:@"column"]];
         }
     }
@@ -134,13 +143,9 @@
 
 
     // TODO: sort by NSDictionary
-    NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(localizedCompare:)];
-    for (NSString *snpKey in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
-//        for (id snp in [snpJson allKeys]){
-//        if(snpJson.count>1){
-//            NSLog(@"snp %@ ",snpKey);
-//        }
-        NSUInteger column = [[NSNumber numberWithInteger:snpKey.integerValue] unsignedIntegerValue];
+    NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(compare:)];
+    for (NSNumber *snpKey in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
+        NSUInteger column = snpKey.unsignedIntegerValue;
         [consensusString insertString:@"</span>" atIndex:(column + 1)];
         [consensusString insertString:@"<span class='rank_1'>" atIndex:(column)];
     }
@@ -161,8 +166,6 @@
     
 
     NSMutableString *returnString = [NSMutableString string];
-    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
     NSString *blockStyle;
     for (NSUInteger  i = 0; i < sequences.count; i++) {
@@ -184,8 +187,7 @@
         // handle SNPS
         // for each locus snp, if a datum snp at the same location then
 
-        for (NSString *snpColumnString in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
-            NSNumber *snpColumn = [numberFormatter numberFromString:snpColumnString];
+        for (NSNumber *snpColumn in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
             NSUInteger column = snpColumn.unsignedIntegerValue;
 
             if([snpDatumLookup objectForKey:snpColumn]!=nil){

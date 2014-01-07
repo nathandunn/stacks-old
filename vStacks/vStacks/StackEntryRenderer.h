@@ -20,6 +20,7 @@
 @property(nonatomic, copy) NSData *snpLocusData;
 @property(nonatomic, copy) NSMutableDictionary*snpLocusLookup;
 @property(nonatomic, copy) NSMutableDictionary*snpDatumLookup;
+@property(nonatomic, copy) NSNumberFormatter *numberFormatter;
 
 @property(nonatomic, copy) NSData *snpDatumData;
 
