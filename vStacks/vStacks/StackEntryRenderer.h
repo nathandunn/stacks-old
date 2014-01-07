@@ -7,7 +7,7 @@
 #import <Foundation/Foundation.h>
 
 
-@interface StacksEntryView : NSObject
+@interface StackEntryRenderer : NSObject
 @property(nonatomic) NSInteger locusId;
 @property(nonatomic, copy) NSString *sampleName;
 @property(nonatomic, copy) NSString* consensus;

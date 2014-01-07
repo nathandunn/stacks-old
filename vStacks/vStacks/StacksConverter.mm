@@ -39,7 +39,7 @@ using std::ofstream;
 //#import "LocusAlleleMO.h"
 //#import "ConsensusStackEntryMO.h"
 #import "ProgressController.h"
-#import "StacksEntryView.h"
+#import "StackEntryRenderer.h"
 
 
 #include <sys/time.h>
@@ -1020,7 +1020,7 @@ NSString *calculateType(NSString *file);
 
     NSMutableSet *savedDatums = [[NSMutableSet alloc] init];
 
-    StacksEntryView *stackEntryView = [[StacksEntryView alloc] init];
+    StackEntryRenderer *stackEntryView = [[StackEntryRenderer alloc] init];
 
     for (NSString *tagFileName in realFiles) {
         progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld", fileNumber + 1, numFiles];
@@ -1107,7 +1107,7 @@ NSString *calculateType(NSString *file);
                         if (datumMO != nil) {
                             [savedDatums addObject:datumMO];
 //                NSLog(@"%@ vs %@",sampleMO.sampleId,datumMO.sampleId );
-//                        stackEntryView = [[StacksEntryView alloc] init];
+//                        stackEntryView = [[StackEntryRenderer alloc] init];
                             [stackEntryView clear];
 
                             stackEntryView.locusId = locusId;
@@ -1279,7 +1279,7 @@ NSString *calculateType(NSString *file);
 //
 //    NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
 //
-//    StacksEntryView *stackEntryView = nil ;
+//    StackEntryRenderer *stackEntryView = nil ;
 //
 //    NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
 ////    for (id key in [sampleLookupDictionary allKeys]) {
@@ -1324,7 +1324,7 @@ NSString *calculateType(NSString *file);
 ////                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
 //                datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
 ////                NSLog(@"%@ vs %@",sampleMO.sampleId,datumMO.sampleId );
-//                stackEntryView = [[StacksEntryView alloc] init];
+//                stackEntryView = [[StackEntryRenderer alloc] init];
 //                stackEntryView.locusId = locusId;
 //                stackEntryView.sampleName = datumMO.sample.name;
 //

@@ -16,7 +16,7 @@
 		14370545187B876A0007BDE5 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437051E187B87690007BDE5 /* Cocoa.framework */; };
 		1437054D187B876A0007BDE5 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1437054B187B876A0007BDE5 /* InfoPlist.strings */; };
 		1437054F187B876A0007BDE5 /* vStacksTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437054E187B876A0007BDE5 /* vStacksTests.m */; };
-		1437055A187B87DF0007BDE5 /* StacksEntryView.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370558187B87DF0007BDE5 /* StacksEntryView.m */; };
+		1437055A187B87DF0007BDE5 /* StackEntryRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370558187B87DF0007BDE5 /* StackEntryRenderer.m */; };
 		14370563187B882D0007BDE5 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14370562187B882D0007BDE5 /* WebKit.framework */; };
 		1437058C187B88C70007BDE5 /* ColorGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370568187B88C70007BDE5 /* ColorGenerator.m */; };
 		1437058D187B88C70007BDE5 /* StacksDocument.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14370569187B88C70007BDE5 /* StacksDocument.xib */; };
@@ -105,8 +105,8 @@
 		1437054A187B876A0007BDE5 /* vStacksTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "vStacksTests-Info.plist"; sourceTree = "<group>"; };
 		1437054C187B876A0007BDE5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1437054E187B876A0007BDE5 /* vStacksTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = vStacksTests.m; sourceTree = "<group>"; };
-		14370558187B87DF0007BDE5 /* StacksEntryView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksEntryView.m; sourceTree = "<group>"; };
-		14370559187B87DF0007BDE5 /* StacksEntryView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksEntryView.h; sourceTree = "<group>"; };
+		14370558187B87DF0007BDE5 /* StackEntryRenderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntryRenderer.m; sourceTree = "<group>"; };
+		14370559187B87DF0007BDE5 /* StackEntryRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackEntryRenderer.h; sourceTree = "<group>"; };
 		14370562187B882D0007BDE5 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = WebKit.framework; sourceTree = "<group>"; };
 		14370567187B88C70007BDE5 /* ColorGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorGenerator.h; sourceTree = "<group>"; };
 		14370568187B88C70007BDE5 /* ColorGenerator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ColorGenerator.m; sourceTree = "<group>"; };
@@ -305,8 +305,8 @@
 				1437055F187B880E0007BDE5 /* Model */,
 				14370560187B88140007BDE5 /* GUI */,
 				14370525187B87690007BDE5 /* Supporting Files */,
-				14370558187B87DF0007BDE5 /* StacksEntryView.m */,
-				14370559187B87DF0007BDE5 /* StacksEntryView.h */,
+				14370558187B87DF0007BDE5 /* StackEntryRenderer.m */,
+				14370559187B87DF0007BDE5 /* StackEntryRenderer.h */,
 				1437053C187B876A0007BDE5 /* Images.xcassets */,
 			);
 			path = vStacks;
@@ -637,7 +637,7 @@
 				14370599187B88C70007BDE5 /* DatumCollectionViewItem.m in Sources */,
 				1437052B187B87690007BDE5 /* main.m in Sources */,
 				14370592187B88C70007BDE5 /* PopulationCell.m in Sources */,
-				1437055A187B87DF0007BDE5 /* StacksEntryView.m in Sources */,
+				1437055A187B87DF0007BDE5 /* StackEntryRenderer.m in Sources */,
 				14370615187B88F10007BDE5 /* mst.cc in Sources */,
 				14370598187B88C70007BDE5 /* DatumView.m in Sources */,
 				143705C3187B88D80007BDE5 /* StacksDocument.m in Sources */,
