@@ -22,7 +22,9 @@
 @synthesize consensus;
 @synthesize snpLocusData;
 @synthesize snpDatumData;
-//@synthesize snpLocusLookup;
+
+@synthesize snpLocusLookup;
+@synthesize snpDatumLookup;
 
 - (id)init {
     self = [super init];
@@ -32,7 +34,7 @@
         blocks = [[NSMutableArray alloc] init];
         relationships = [[NSMutableArray alloc] init];
         entryIds = [[NSMutableArray alloc] init];
-//        snpLocusData = nil ;
+        snpLocusLookup = [[NSMutableDictionary alloc] init];
     }
 
     return self;
@@ -41,19 +43,17 @@
 
 - (NSString *)renderHtml {
 
-//    snpLocusLookup = [[NSMutableDictionary alloc] init];
     NSError *error ;
-    NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
-
-    // TODO: sort by NSDictionary
-    for (NSDictionary *snp in snpJson) {
-//        [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
-//                    NSInteger startRange = [[snp valueForKey:@"column"] integerValue];
-//                    [snpInts addObject:[snp valueForKey:@"column"]];
-//        [snpLookup setObject:snp forKey:[snp valueForKey:@"column"]];
-//                    NSRange selectedRange = NSMakeRange(startRange, 1);
-//                    [string addAttributes:attributes range:selectedRange];
+    NSDictionary *snpLocusJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
+    for (NSDictionary *snp in snpLocusJson){
+        [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
     }
+
+//    NSDictionary *snpDatumJson = [NSJSONSerialization JSONObjectWithData:snpDatumData options:kNilOptions error:&error];
+//    for (NSDictionary *snp in snpDatumJson){
+//        [snpDatumLookup setObject:snp forKey:[snp valueForKey:@"column"]];
+//    }
+
 
 //    NSString* headerHTML= @"<head><link rel='stylesheet' type='text/css' href='test.css'/></head><body>" ;
 //    NSString* cssPath = [[NSBundle mainBundle] pathForResource:@"test" ofType:@"css"];
@@ -76,7 +76,7 @@
 }
 
 - (NSString *)renderHeader {
-    NSMutableString *returnString = [[NSMutableString alloc] init];
+    NSMutableString *returnString = [NSMutableString string];
     [returnString appendString:@"<tr>"];
     [returnString appendString:@"<th style='width: 5%;'>&nbsp;</th>"];
     [returnString appendString:@"<th style='width: 15%;'>Relationship</th>"];
@@ -88,8 +88,8 @@
 
 
 - (NSString *)renderReference {
-    NSMutableString *returnString = [[NSMutableString alloc] init];
-    NSMutableString *referenceString = [[NSMutableString alloc] init];
+    NSMutableString *returnString = [NSMutableString string];
+    NSMutableString *referenceString = [NSMutableString string];
     NSUInteger sequenceSize = consensus.length;
 
     BOOL chunk1 = 0;
@@ -109,15 +109,28 @@
 }
 
 - (NSString *)renderConsensus {
-    NSMutableString *returnString = [[NSMutableString alloc] init];
+    NSMutableString *returnString = [NSMutableString string];
+    NSMutableString *consensusString = [NSMutableString stringWithString:consensus];
 
 
-    [returnString appendFormat:@"<tr><td class='num'></td><td class='con'>consensus</td><td class='id'></td><td class='tag'>%@</td></tr>", consensus];
+    // TODO: sort by NSDictionary
+    NSSortDescriptor* sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(localizedCompare:)];
+    for (NSString* snpKey in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]  ]){
+//        for (id snp in [snpJson allKeys]){
+//        if(snpJson.count>1){
+//            NSLog(@"snp %@ ",snpKey);
+//        }
+        NSUInteger column = [[NSNumber numberWithInteger:snpKey.integerValue] unsignedIntegerValue];
+        [consensusString insertString:@"</span>" atIndex:(column+1)];
+        [consensusString insertString:@"<span class='rank_1'>" atIndex:(column)];
+    }
+
+    [returnString appendFormat:@"<tr><td class='num'></td><td class='con'>consensus</td><td class='id'></td><td class='tag'>%@</td></tr>", consensusString];
     return returnString;
 }
 
 - (NSString *)renderModel {
-    NSMutableString *returnString = [[NSMutableString alloc] init];
+    NSMutableString *returnString = [NSMutableString string];
     [returnString appendFormat:@"<tr><td class='num'></td><td class='con'>model</td><td class='id'></td><td class='tag'>%@</td></tr>", model];
     return returnString;
 }
@@ -125,7 +138,7 @@
 
 - (NSMutableString *)renderSequences {
 //    NSLog(@"sequences %ld entryIds %ld relatinships %ld sequenceIds %ld",sequences.count,entryIds.count,relationships.count,sequenceIds.count) ;
-    NSMutableString *returnString = [[NSMutableString alloc] init];
+    NSMutableString *returnString = [NSMutableString string];
 //    NSString *sequence  ;
 //    NSString *sequenceId  ;
     for (int i = 0; i < sequences.count; i++) {
