@@ -23,8 +23,8 @@
 @synthesize snpLocusData;
 @synthesize snpDatumData;
 
-@synthesize snpLocusLookup;
-@synthesize snpDatumLookup;
+//@synthesize snpLocusLookup;
+//@synthesize snpDatumLookup;
 
 - (id)init {
     self = [super init];
@@ -34,7 +34,7 @@
         blocks = [[NSMutableArray alloc] init];
         relationships = [[NSMutableArray alloc] init];
         entryIds = [[NSMutableArray alloc] init];
-        snpLocusLookup = [[NSMutableDictionary alloc] init];
+//        snpLocusLookup = [[NSMutableDictionary alloc] init];
     }
 
     return self;
@@ -42,17 +42,6 @@
 
 
 - (NSString *)renderHtml {
-
-    NSError *error ;
-    NSDictionary *snpLocusJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
-    for (NSDictionary *snp in snpLocusJson){
-        [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
-    }
-
-//    NSDictionary *snpDatumJson = [NSJSONSerialization JSONObjectWithData:snpDatumData options:kNilOptions error:&error];
-//    for (NSDictionary *snp in snpDatumJson){
-//        [snpDatumLookup setObject:snp forKey:[snp valueForKey:@"column"]];
-//    }
 
 
 //    NSString* headerHTML= @"<head><link rel='stylesheet' type='text/css' href='test.css'/></head><body>" ;
@@ -111,6 +100,13 @@
 - (NSString *)renderConsensus {
     NSMutableString *returnString = [NSMutableString string];
     NSMutableString *consensusString = [NSMutableString stringWithString:consensus];
+
+    NSError *error ;
+    NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
+    NSMutableDictionary* snpLocusLookup = [[NSMutableDictionary alloc] init];
+    for (NSDictionary *snp in snpJson){
+        [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
+    }
 
 
     // TODO: sort by NSDictionary
