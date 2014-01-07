@@ -32,8 +32,8 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
-#include <tr1/unordered_map>
-using std::tr1::unordered_map;
+#include <unordered_map>
+using std::unordered_map;
 
 #include "input.h"
 #include "kmers.h"
@@ -323,7 +323,7 @@ public:
 	}*/
 };
 
-typedef unordered_map<string, vector<int>, std::tr1::hash<string> > AdapterHash;
+typedef unordered_map<string, vector<int>, std::hash<string> > AdapterHash;
 
 int  parse_illumina_v1(const char *);
 int  parse_illumina_v2(const char *);
