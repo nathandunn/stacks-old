@@ -41,6 +41,15 @@
     return self;
 }
 
+- (NSData *)renderData {
+    NSString *html = [self renderHtml];
+
+//    https://github.com/nicklockwood/GZIP/blob/master/Tests/UnitTests/DataTests.m
+    NSData *inputData = [html dataUsingEncoding:NSUTF8StringEncoding];
+
+    return inputData ;
+
+}
 
 - (NSString *)renderHtml {
 
@@ -234,4 +243,5 @@
     snpDatumData = nil ;
     [snpDatumLookup removeAllObjects];
 }
+
 @end

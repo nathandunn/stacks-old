@@ -28,4 +28,6 @@
 - (BOOL)isEmpty;
 
 - (void)clear;
+
+- (NSData *)renderData;
 @end

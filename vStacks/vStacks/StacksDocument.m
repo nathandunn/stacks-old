@@ -128,7 +128,9 @@
 //    DatumMO *datumMO = [[datumRepository getAllDatum:[self managedObjectContext]] objectAtIndex:0];
     if(self.selectedDatum!=nil && self.selectedDatum.stackData!=nil){
 //        NSLog(@"loading data %@ with url %@",self.selectedDatum.stackData, [[NSBundle mainBundle] bundleURL]);
-        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
+//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
+//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
+        [[stacksWebView mainFrame] loadData:self.selectedDatum.stackData MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
 
 //        NSURL *cssUrl = [[NSBundle mainBundle] URLForResource:@"test" withExtension: @"css"];
 //        NSLog(@"css url: %@",cssUrl);
