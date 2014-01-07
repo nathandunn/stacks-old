@@ -15,6 +15,7 @@
 #import "LocusRepository.h"
 //#import "PopulationArrayController.h"
 #import "DatumArrayController.h"
+#import "GZIP.h"
 //#import "StacksConverter.h"
 //#import "StacksDocumentController.h"
 #import <WebKit/WebKit.h>
@@ -128,7 +129,9 @@
 //    DatumMO *datumMO = [[datumRepository getAllDatum:[self managedObjectContext]] objectAtIndex:0];
     if(self.selectedDatum!=nil && self.selectedDatum.stackData!=nil){
 //        NSLog(@"loading data %@ with url %@",self.selectedDatum.stackData, [[NSBundle mainBundle] bundleURL]);
-        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
+//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
+//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
+        [[stacksWebView mainFrame] loadData:[self.selectedDatum.stackData gunzippedData] MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
 
 //        NSURL *cssUrl = [[NSBundle mainBundle] URLForResource:@"test" withExtension: @"css"];
 //        NSLog(@"css url: %@",cssUrl);
