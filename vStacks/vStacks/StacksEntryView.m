@@ -23,8 +23,8 @@
 @synthesize snpLocusData;
 @synthesize snpDatumData;
 
-//@synthesize snpLocusLookup;
-//@synthesize snpDatumLookup;
+@synthesize snpLocusLookup;
+@synthesize snpDatumLookup;
 
 - (id)init {
     self = [super init];
@@ -34,7 +34,8 @@
         blocks = [[NSMutableArray alloc] init];
         relationships = [[NSMutableArray alloc] init];
         entryIds = [[NSMutableArray alloc] init];
-//        snpLocusLookup = [[NSMutableDictionary alloc] init];
+        snpLocusLookup = [[NSMutableDictionary alloc] init];
+        snpDatumLookup = [[NSMutableDictionary alloc] init];
     }
 
     return self;
@@ -101,23 +102,22 @@
     NSMutableString *returnString = [NSMutableString string];
     NSMutableString *consensusString = [NSMutableString stringWithString:consensus];
 
-    NSError *error ;
+    NSError *error;
     NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
-    NSMutableDictionary* snpLocusLookup = [[NSMutableDictionary alloc] init];
-    for (NSDictionary *snp in snpJson){
+    for (NSDictionary *snp in snpJson) {
         [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
     }
 
 
     // TODO: sort by NSDictionary
-    NSSortDescriptor* sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(localizedCompare:)];
-    for (NSString* snpKey in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]  ]){
+    NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(localizedCompare:)];
+    for (NSString *snpKey in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
 //        for (id snp in [snpJson allKeys]){
 //        if(snpJson.count>1){
 //            NSLog(@"snp %@ ",snpKey);
 //        }
         NSUInteger column = [[NSNumber numberWithInteger:snpKey.integerValue] unsignedIntegerValue];
-        [consensusString insertString:@"</span>" atIndex:(column+1)];
+        [consensusString insertString:@"</span>" atIndex:(column + 1)];
         [consensusString insertString:@"<span class='rank_1'>" atIndex:(column)];
     }
 
@@ -148,7 +148,18 @@
 }
 
 - (void)clear {
+    sampleName = @"";
+    consensus = @"";
+    model = @"";
+
     [sequences removeAllObjects];
     [sequenceIds removeAllObjects];
+    [blocks removeAllObjects];
+    [relationships removeAllObjects];
+    [entryIds removeAllObjects];
+    snpLocusData = nil ;
+    [snpLocusLookup removeAllObjects];
+    snpDatumData = nil ;
+    [snpDatumLookup removeAllObjects];
 }
 @end
