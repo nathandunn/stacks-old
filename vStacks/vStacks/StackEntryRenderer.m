@@ -44,6 +44,11 @@
 
 - (NSString *)renderHtml {
 
+    NSError *error;
+    NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
+    for (NSDictionary *snp in snpJson) {
+        [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
+    }
 
 //    NSString* headerHTML= @"<head><link rel='stylesheet' type='text/css' href='test.css'/></head><body>" ;
 //    NSString* cssPath = [[NSBundle mainBundle] pathForResource:@"test" ofType:@"css"];
@@ -102,11 +107,6 @@
     NSMutableString *returnString = [NSMutableString string];
     NSMutableString *consensusString = [NSMutableString stringWithString:consensus];
 
-    NSError *error;
-    NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
-    for (NSDictionary *snp in snpJson) {
-        [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
-    }
 
 
     // TODO: sort by NSDictionary
@@ -134,11 +134,22 @@
 
 - (NSMutableString *)renderSequences {
 //    NSLog(@"sequences %ld entryIds %ld relatinships %ld sequenceIds %ld",sequences.count,entryIds.count,relationships.count,sequenceIds.count) ;
+
     NSMutableString *returnString = [NSMutableString string];
-//    NSString *sequence  ;
-//    NSString *sequenceId  ;
-    for (int i = 0; i < sequences.count; i++) {
-        [returnString appendFormat:@"<tr><td class='num'>%@</td><td class='%@'>%@</td><td class='id'>%@</td><td class='tag'>%@</td></tr>", [entryIds objectAtIndex:i], [relationships objectAtIndex:i], [relationships objectAtIndex:i], [sequenceIds objectAtIndex:i], [sequences objectAtIndex:i]];
+    NSString *style = @"";
+    for (NSUInteger  i = 0; i < sequences.count; i++) {
+
+        id blockValue = [blocks objectAtIndex:i];
+//        NSLog(@"block value: %@ index %ld",blockValue,i);
+
+        if([blockValue integerValue]%2 ==0 ){
+            style=@"";
+        }
+        else{
+            style=@" style='background-color: #dddddd;' ";
+//            NSLog(@"returnString %@",returnString );
+        }
+        [returnString appendFormat:@"<tr><td class='num'>%@</td><td class='%@'>%@</td><td class='id'>%@</td><td class='tag' %@>%@</td></tr>", [entryIds objectAtIndex:i], [relationships objectAtIndex:i], [relationships objectAtIndex:i], [sequenceIds objectAtIndex:i], style,[sequences objectAtIndex:i]];
     }
     return returnString;
 }

@@ -1046,7 +1046,7 @@ NSString *calculateType(NSString *file);
 
     NSMutableSet *savedDatums = [[NSMutableSet alloc] init];
 
-    StackEntryRenderer *stackEntryView = [[StackEntryRenderer alloc] init];
+    StackEntryRenderer *stackEntryRenderer = [[StackEntryRenderer alloc] init];
 
     for (NSString *tagFileName in realFiles) {
         progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld", fileNumber + 1, numFiles];
@@ -1110,9 +1110,9 @@ NSString *calculateType(NSString *file);
 
                         // cleanup old object if exists
 //                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
-                        if (false == [stackEntryView isEmpty]) {
-                            stackEntryView.snpDatumData = datumMO.snpData ;
-                            datumMO.stackData = [stackEntryView renderHtml];
+                        if (false == [stackEntryRenderer isEmpty]) {
+                            stackEntryRenderer.snpDatumData = datumMO.snpData ;
+                            datumMO.stackData = [stackEntryRenderer renderHtml];
 
 //                    NSLog(@"saving for new locus");
 //                    NSError *error;
@@ -1134,15 +1134,15 @@ NSString *calculateType(NSString *file);
                             [savedDatums addObject:datumMO];
 //                NSLog(@"%@ vs %@",sampleMO.sampleId,datumMO.sampleId );
 //                        stackEntryView = [[StackEntryRenderer alloc] init];
-                            [stackEntryView clear];
+                            [stackEntryRenderer clear];
 
-                            stackEntryView.locusId = locusId;
+                            stackEntryRenderer.locusId = locusId;
 
-                            stackEntryView.snpLocusData = [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
+                            stackEntryRenderer.snpLocusData = [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
 //                            stackEntryView.sn= [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
 
 //                        stackEntryView.sampleName = datumMO.sample.name;
-                            stackEntryView.sampleName = sampleMO.name;
+                            stackEntryRenderer.sampleName = sampleMO.name;
 
                             // TODO: map locus and datum snps
                         }
@@ -1158,7 +1158,7 @@ NSString *calculateType(NSString *file);
 
                         if ([relationship isEqualToString:@"consensus"]) {
                             row = 1;
-                            stackEntryView.consensus = [columns objectAtIndex:9];
+                            stackEntryRenderer.consensus = [columns objectAtIndex:9];
 //                            [stackEntryView.relationships addObject:@"consensus"];
 //                    datumMO.consensus = [stackEntryRepository insertConsensusStackEntry:moc
 //                                                                                  block:[columns objectAtIndex:7]
@@ -1173,7 +1173,7 @@ NSString *calculateType(NSString *file);
 
                         }
                         else if ([relationship isEqualToString:@"model"]) {
-                            stackEntryView.model = [columns objectAtIndex:9];
+                            stackEntryRenderer.model = [columns objectAtIndex:9];
 //                            [stackEntryView.relationships addObject:@"model"];
 //                    datumMO.model = [stackEntryRepository insertModelStackEntry:moc
 //                                                                          block:[columns objectAtIndex:7]
@@ -1183,11 +1183,11 @@ NSString *calculateType(NSString *file);
 //                    ];
                         }
                         else {
-                            [stackEntryView.sequenceIds addObject:[columns objectAtIndex:8]];
-                            [stackEntryView.sequences addObject:[columns objectAtIndex:9]];
-                            [stackEntryView.relationships addObject:[columns objectAtIndex:6]];
-                            [stackEntryView.blocks addObject:[columns objectAtIndex:7]];
-                            [stackEntryView.entryIds addObject:[NSNumber numberWithInteger:row]];
+                            [stackEntryRenderer.sequenceIds addObject:[columns objectAtIndex:8]];
+                            [stackEntryRenderer.sequences addObject:[columns objectAtIndex:9]];
+                            [stackEntryRenderer.relationships addObject:[columns objectAtIndex:6]];
+                            [stackEntryRenderer.blocks addObject:[columns objectAtIndex:7]];
+                            [stackEntryRenderer.entryIds addObject:[NSNumber numberWithInteger:row]];
 //                    StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
 //                                                                                entryId:[NSNumber numberWithInteger:row]
 //                                                                           relationship:[columns objectAtIndex:6]
