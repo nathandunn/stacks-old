@@ -20,8 +20,9 @@
 @synthesize entryIds;
 @synthesize model;
 @synthesize consensus;
-@synthesize snpData;
-@synthesize snpLookup;
+@synthesize snpLocusData;
+@synthesize snpDatumData;
+//@synthesize snpLocusLookup;
 
 - (id)init {
     self = [super init];
@@ -31,7 +32,7 @@
         blocks = [[NSMutableArray alloc] init];
         relationships = [[NSMutableArray alloc] init];
         entryIds = [[NSMutableArray alloc] init];
-        snpData = nil ;
+//        snpLocusData = nil ;
     }
 
     return self;
@@ -40,13 +41,13 @@
 
 - (NSString *)renderHtml {
 
-    snpLookup = [[NSMutableDictionary alloc] init];
+//    snpLocusLookup = [[NSMutableDictionary alloc] init];
     NSError *error ;
-    NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpData options:kNilOptions error:&error];
+    NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
 
     // TODO: sort by NSDictionary
     for (NSDictionary *snp in snpJson) {
-        [snpLookup setObject:snp forKey:[snp valueForKey:@"column"]];
+//        [snpLocusLookup setObject:snp forKey:[snp valueForKey:@"column"]];
 //                    NSInteger startRange = [[snp valueForKey:@"column"] integerValue];
 //                    [snpInts addObject:[snp valueForKey:@"column"]];
 //        [snpLookup setObject:snp forKey:[snp valueForKey:@"column"]];

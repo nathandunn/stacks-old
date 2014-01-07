@@ -17,8 +17,10 @@
 @property(nonatomic, copy) NSMutableArray*  blocks;
 @property(nonatomic, copy) NSMutableArray*  relationships;
 @property(nonatomic, copy) NSMutableArray*  entryIds;
-@property(nonatomic, copy) NSData*  snpData;
-@property(nonatomic, copy) NSMutableDictionary*  snpLookup;
+@property(nonatomic, copy) NSData*snpLocusData;
+//@property(nonatomic, copy) NSMutableDictionary*snpLocusLookup;
+
+@property(nonatomic, copy) NSData *snpDatumData;
 
 - (NSString *)renderHtml;
 
