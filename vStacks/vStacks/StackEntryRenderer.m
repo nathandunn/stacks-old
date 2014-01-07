@@ -4,10 +4,10 @@
 //
 
 
-#import "StacksEntryView.h"
+#import "StackEntryRenderer.h"
 
 
-@implementation StacksEntryView {
+@implementation StackEntryRenderer {
 
 }
 
