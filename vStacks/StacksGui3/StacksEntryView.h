@@ -17,6 +17,7 @@
 @property(nonatomic, copy) NSMutableArray*  blocks;
 @property(nonatomic, copy) NSMutableArray*  relationships;
 @property(nonatomic, copy) NSMutableArray*  entryIds;
+@property(nonatomic, copy) NSData*  snpData;
 
 - (NSString *)renderHtml;
 
