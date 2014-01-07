@@ -1044,6 +1044,7 @@ NSString *calculateType(NSString *file);
             DatumMO *datumMO = nil ;
 
             NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
+            NSDictionary *snpLociMap = [self getLocusSnpsForDocument:document];
 
 
             NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
@@ -1094,6 +1095,8 @@ NSString *calculateType(NSString *file);
                             [stackEntryView clear];
 
                             stackEntryView.locusId = locusId;
+
+                            stackEntryView.snpData = [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
 
 //                        stackEntryView.sampleName = datumMO.sample.name;
                             stackEntryView.sampleName = sampleMO.name;
@@ -1215,6 +1218,14 @@ NSString *calculateType(NSString *file);
         NSLog(@"error saving %@", saveError);
     }
 
+}
+
+- (NSDictionary *)getLocusSnpsForDocument:(StacksDocument *)document {
+    NSMutableDictionary *locusSnpMap = [[NSMutableDictionary alloc] init];
+    for(LocusMO *locusMO in document.loci){
+        [locusSnpMap setObject:locusMO.snpData forKey:locusMO.locusId];
+    }
+    return locusSnpMap;
 }
 
 //- (void)loadTagFile:(StacksDocument *)document fromFile:(NSString *)tagFileName {
