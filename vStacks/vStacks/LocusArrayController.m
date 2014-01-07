@@ -58,29 +58,28 @@
 
     // these are all LocusMO objects
 
-    // TODO: objects are not all a type of locusMO
-
-//    while (item = [objectsEnumerator nextObject]) {
     for (id item in objects) {
         if ([item isKindOfClass:[LocusMO class]]) {
             LocusMO *locusMO = (LocusMO *) item;
-            // TODO: convert 
-//            if (locusMO.snps != nil) {
-//                if (locusMO.snps.count >= minSnpValue && locusMO.snps.count <= maxSnpValue) {
-//                    if ([locusMO.type isEqualToString:@"Population"]) {
-//                        if (([locusMO.basePairs integerValue] >= minBasePairs)
-//                                && ([locusMO.basePairs integerValue] <= maxBasePairs)
-//                                && (chromosomeLocation == nil  || [locusMO.chromosome isEqualToString:chromosomeLocation])
-//                                ) {
-//                            [filteredObjects addObject:locusMO];
-//                        }
-//                    }
-//                    else {
-//                        [filteredObjects addObject:locusMO];
-//                    }
-//                }
-//            }
-            [filteredObjects addObject:locusMO];
+            NSError *error;
+
+            if (locusMO.snpData != nil) {
+                NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:locusMO.snpData options:kNilOptions error:&error];
+                NSUInteger snpCount = snpJson.count;
+                if (snpCount >= minSnpValue && snpCount <= maxSnpValue) {
+                    if ([locusMO.type isEqualToString:@"Population"]) {
+                        if (([locusMO.basePairs integerValue] >= minBasePairs)
+                                && ([locusMO.basePairs integerValue] <= maxBasePairs)
+                                && (chromosomeLocation == nil  || [locusMO.chromosome isEqualToString:chromosomeLocation])
+                                ) {
+                            [filteredObjects addObject:locusMO];
+                        }
+                    }
+                    else {
+                        [filteredObjects addObject:locusMO];
+                    }
+                }
+            }
         }
     }
     NSLog(@"filtered objects left %ld", filteredObjects.count);
