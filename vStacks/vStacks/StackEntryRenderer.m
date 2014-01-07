@@ -160,9 +160,24 @@
         // handle errors
         if([consensus isNotEqualTo:sequenceString]){
             for (int i = 0; i < sequenceString.length && i < consensus.length; i++) {
-
+                if([ consensus characterAtIndex:i] != [sequenceString characterAtIndex:i]){
+                    if([snpLocusLookup objectForKey:[NSNumber numberWithInt:i]]==nil){
+                        [formatDictionary setObject:@"err" forKey:[NSNumber numberWithInt:i]];
+                    }
+                }
             }
         }
+        
+        // apply for the formats!!
+        NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(compare:)];
+        for (NSNumber *formatKey in [[formatDictionary allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
+//            NSUInteger column = [[NSNumber numberWithInteger:formatKey.integerValue] unsignedIntegerValue];
+            NSUInteger column = [formatKey unsignedIntegerValue];
+            NSString* value = [formatDictionary objectForKey:formatKey];
+            [formattedSequenceString insertString:@"</span>" atIndex:(column + 1)];
+            [formattedSequenceString insertString:[NSString stringWithFormat:@"<span class='%@'>",value] atIndex:(column)];
+        }
+
 
 
         [returnString appendFormat:@"<tr><td class='num'>%@</td><td class='%@'>%@</td><td class='id'>%@</td><td class='tag' %@>%@</td></tr>", [entryIds objectAtIndex:i], [relationships objectAtIndex:i], [relationships objectAtIndex:i], [sequenceIds objectAtIndex:i], blockStyle, formattedSequenceString];
