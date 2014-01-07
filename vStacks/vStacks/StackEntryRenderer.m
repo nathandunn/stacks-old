@@ -136,20 +136,36 @@
 //    NSLog(@"sequences %ld entryIds %ld relatinships %ld sequenceIds %ld",sequences.count,entryIds.count,relationships.count,sequenceIds.count) ;
 
     NSMutableString *returnString = [NSMutableString string];
-    NSString *style = @"";
+
+    NSString *blockStyle;
     for (NSUInteger  i = 0; i < sequences.count; i++) {
 
-        id blockValue = [blocks objectAtIndex:i];
-//        NSLog(@"block value: %@ index %ld",blockValue,i);
-
-        if([blockValue integerValue]%2 ==0 ){
-            style=@"";
+        // handle BLOCKS
+        if([[blocks objectAtIndex:i] integerValue]%2 ==0 ){
+            blockStyle =@"";
         }
         else{
-            style=@" style='background-color: #dddddd;' ";
-//            NSLog(@"returnString %@",returnString );
+            blockStyle =@" style='background-color: #dddddd;' ";
         }
-        [returnString appendFormat:@"<tr><td class='num'>%@</td><td class='%@'>%@</td><td class='id'>%@</td><td class='tag' %@>%@</td></tr>", [entryIds objectAtIndex:i], [relationships objectAtIndex:i], [relationships objectAtIndex:i], [sequenceIds objectAtIndex:i], style,[sequences objectAtIndex:i]];
+        NSString* sequenceString = [sequences objectAtIndex:i] ;
+        NSMutableString *formattedSequenceString = [NSMutableString stringWithString:sequenceString];
+
+        // a dictionary of locations (integer) and formats to apply in reverse order
+        NSMutableDictionary *formatDictionary = [NSMutableDictionary dictionary];
+
+        // handle SNPS
+        // for each locus snp, if a datum snp at the same location then
+
+
+        // handle errors
+        if([consensus isNotEqualTo:sequenceString]){
+            for (int i = 0; i < sequenceString.length && i < consensus.length; i++) {
+
+            }
+        }
+
+
+        [returnString appendFormat:@"<tr><td class='num'>%@</td><td class='%@'>%@</td><td class='id'>%@</td><td class='tag' %@>%@</td></tr>", [entryIds objectAtIndex:i], [relationships objectAtIndex:i], [relationships objectAtIndex:i], [sequenceIds objectAtIndex:i], blockStyle, formattedSequenceString];
     }
     return returnString;
 }
