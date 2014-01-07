@@ -69,13 +69,13 @@
 		14370610187B88F10007BDE5 /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 143705F6187B88F10007BDE5 /* DNANSeq.cc */; };
 		14370611187B88F10007BDE5 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 143705F8187B88F10007BDE5 /* DNASeq.cc */; };
 		14370612187B88F10007BDE5 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 143705FF187B88F10007BDE5 /* input.cc */; };
-		14370613187B88F10007BDE5 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 14370601187B88F10007BDE5 /* libz.1.2.7.dylib */; };
 		14370614187B88F10007BDE5 /* locus.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14370602187B88F10007BDE5 /* locus.cc */; };
 		14370615187B88F10007BDE5 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14370604187B88F10007BDE5 /* mst.cc */; };
 		14370616187B88F10007BDE5 /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1437060B187B88F10007BDE5 /* stacks.cc */; };
 		14370617187B88F10007BDE5 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1437060E187B88F10007BDE5 /* utils.cc */; };
 		1437061A187B89490007BDE5 /* stacks.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370618187B89490007BDE5 /* stacks.css */; };
 		1437061B187B89490007BDE5 /* test.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370619187B89490007BDE5 /* test.css */; };
+		1437061D187B8BC20007BDE5 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437061C187B8BC20007BDE5 /* libz.1.2.7.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -214,7 +214,6 @@
 		143705FE187B88F10007BDE5 /* gzFastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzFastq.h; path = ../../src/gzFastq.h; sourceTree = "<group>"; };
 		143705FF187B88F10007BDE5 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = input.cc; path = ../../src/input.cc; sourceTree = "<group>"; };
 		14370600187B88F10007BDE5 /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../../src/input.h; sourceTree = "<group>"; };
-		14370601187B88F10007BDE5 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.1.2.7.dylib; path = ../../old.vStacks/StacksGui3/libz.1.2.7.dylib; sourceTree = "<group>"; };
 		14370602187B88F10007BDE5 /* locus.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = locus.cc; path = ../../src/locus.cc; sourceTree = "<group>"; };
 		14370603187B88F10007BDE5 /* locus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = locus.h; path = ../../src/locus.h; sourceTree = "<group>"; };
 		14370604187B88F10007BDE5 /* mst.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mst.cc; path = ../../src/mst.cc; sourceTree = "<group>"; };
@@ -231,6 +230,7 @@
 		1437060F187B88F10007BDE5 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = utils.h; path = ../../src/utils.h; sourceTree = "<group>"; };
 		14370618187B89490007BDE5 /* stacks.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = stacks.css; sourceTree = "<group>"; };
 		14370619187B89490007BDE5 /* test.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = test.css; sourceTree = "<group>"; };
+		1437061C187B8BC20007BDE5 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libz.1.2.7.dylib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -240,7 +240,7 @@
 			files = (
 				14370563187B882D0007BDE5 /* WebKit.framework in Frameworks */,
 				1437051F187B87690007BDE5 /* Cocoa.framework in Frameworks */,
-				14370613187B88F10007BDE5 /* libz.1.2.7.dylib in Frameworks */,
+				1437061D187B8BC20007BDE5 /* libz.1.2.7.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -489,7 +489,7 @@
 				143705FE187B88F10007BDE5 /* gzFastq.h */,
 				143705FF187B88F10007BDE5 /* input.cc */,
 				14370600187B88F10007BDE5 /* input.h */,
-				14370601187B88F10007BDE5 /* libz.1.2.7.dylib */,
+				1437061C187B8BC20007BDE5 /* libz.1.2.7.dylib */,
 				14370602187B88F10007BDE5 /* locus.cc */,
 				14370603187B88F10007BDE5 /* locus.h */,
 				14370604187B88F10007BDE5 /* mst.cc */,
@@ -787,16 +787,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					/Users/NathanDunn/hg/stacks/vStacks,
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "vStacks/vStacks-Prefix.pch";
 				INFOPLIST_FILE = "vStacks/vStacks-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/NathanDunn/hg/stacks/old.vStacks/StacksGui3,
+					/Users/NathanDunn/hg/stacks/vStacks/vStacks,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -808,16 +805,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					/Users/NathanDunn/hg/stacks/vStacks,
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "vStacks/vStacks-Prefix.pch";
 				INFOPLIST_FILE = "vStacks/vStacks-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/NathanDunn/hg/stacks/old.vStacks/StacksGui3,
+					/Users/NathanDunn/hg/stacks/vStacks/vStacks,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -883,6 +877,7 @@
 				14370554187B876A0007BDE5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		14370555187B876A0007BDE5 /* Build configuration list for PBXNativeTarget "vStacksTests" */ = {
 			isa = XCConfigurationList;
@@ -891,6 +886,7 @@
 				14370557187B876A0007BDE5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
