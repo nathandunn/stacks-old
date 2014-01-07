@@ -1085,6 +1085,7 @@ NSString *calculateType(NSString *file);
                         // cleanup old object if exists
 //                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
                         if (false == [stackEntryView isEmpty]) {
+                            stackEntryView.snpDatumData = datumMO.snpData ;
                             datumMO.stackData = [stackEntryView renderHtml];
 
 //                    NSLog(@"saving for new locus");
@@ -1111,7 +1112,8 @@ NSString *calculateType(NSString *file);
 
                             stackEntryView.locusId = locusId;
 
-                            stackEntryView.snpData = [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
+                            stackEntryView.snpLocusData = [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
+//                            stackEntryView.sn= [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
 
 //                        stackEntryView.sampleName = datumMO.sample.name;
                             stackEntryView.sampleName = sampleMO.name;
