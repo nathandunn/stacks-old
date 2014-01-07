@@ -1,0 +1,898 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1437051F187B87690007BDE5 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437051E187B87690007BDE5 /* Cocoa.framework */; };
+		14370529187B87690007BDE5 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 14370527187B87690007BDE5 /* InfoPlist.strings */; };
+		1437052B187B87690007BDE5 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437052A187B87690007BDE5 /* main.m */; };
+		1437052F187B87690007BDE5 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 1437052D187B87690007BDE5 /* Credits.rtf */; };
+		1437053D187B876A0007BDE5 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1437053C187B876A0007BDE5 /* Images.xcassets */; };
+		14370544187B876A0007BDE5 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14370543187B876A0007BDE5 /* XCTest.framework */; };
+		14370545187B876A0007BDE5 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437051E187B87690007BDE5 /* Cocoa.framework */; };
+		1437054D187B876A0007BDE5 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1437054B187B876A0007BDE5 /* InfoPlist.strings */; };
+		1437054F187B876A0007BDE5 /* vStacksTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437054E187B876A0007BDE5 /* vStacksTests.m */; };
+		1437055A187B87DF0007BDE5 /* StacksEntryView.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370558187B87DF0007BDE5 /* StacksEntryView.m */; };
+		14370563187B882D0007BDE5 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14370562187B882D0007BDE5 /* WebKit.framework */; };
+		1437058C187B88C70007BDE5 /* ColorGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370568187B88C70007BDE5 /* ColorGenerator.m */; };
+		1437058D187B88C70007BDE5 /* StacksDocument.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14370569187B88C70007BDE5 /* StacksDocument.xib */; };
+		1437058E187B88C70007BDE5 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1437056A187B88C70007BDE5 /* MainMenu.xib */; };
+		1437058F187B88C70007BDE5 /* StacksView.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437056B187B88C70007BDE5 /* StacksView.m */; };
+		14370590187B88C70007BDE5 /* SnpView.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437056D187B88C70007BDE5 /* SnpView.m */; };
+		14370591187B88C70007BDE5 /* LocusCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437056F187B88C70007BDE5 /* LocusCell.m */; };
+		14370592187B88C70007BDE5 /* PopulationCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370572187B88C70007BDE5 /* PopulationCell.m */; };
+		14370593187B88C70007BDE5 /* GenotypeEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370574187B88C70007BDE5 /* GenotypeEntry.m */; };
+		14370594187B88C70007BDE5 /* LocusView.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370576187B88C70007BDE5 /* LocusView.m */; };
+		14370595187B88C70007BDE5 /* LocusArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370578187B88C70007BDE5 /* LocusArrayController.m */; };
+		14370596187B88C70007BDE5 /* PopulationArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057A187B88C70007BDE5 /* PopulationArrayController.m */; };
+		14370597187B88C70007BDE5 /* DatumArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057C187B88C70007BDE5 /* DatumArrayController.m */; };
+		14370598187B88C70007BDE5 /* DatumView.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057E187B88C70007BDE5 /* DatumView.m */; };
+		14370599187B88C70007BDE5 /* DatumCollectionViewItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057F187B88C70007BDE5 /* DatumCollectionViewItem.m */; };
+		1437059A187B88C70007BDE5 /* StacksDocumentController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370582187B88C70007BDE5 /* StacksDocumentController.m */; };
+		1437059B187B88C70007BDE5 /* StacksAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370583187B88C70007BDE5 /* StacksAppDelegate.m */; };
+		1437059C187B88C70007BDE5 /* StacksApplicationController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370585187B88C70007BDE5 /* StacksApplicationController.m */; };
+		1437059D187B88C70007BDE5 /* StacksImportMenuItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370587187B88C70007BDE5 /* StacksImportMenuItem.m */; };
+		1437059E187B88C70007BDE5 /* ProgressController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437058A187B88C70007BDE5 /* ProgressController.m */; };
+		1437059F187B88C70007BDE5 /* ProgressController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1437058B187B88C70007BDE5 /* ProgressController.xib */; };
+		143705C3187B88D80007BDE5 /* StacksDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705A1187B88D80007BDE5 /* StacksDocument.m */; };
+		143705C4187B88D80007BDE5 /* StacksDocument.xcdatamodel in Sources */ = {isa = PBXBuildFile; fileRef = 143705A2187B88D80007BDE5 /* StacksDocument.xcdatamodel */; };
+		143705C5187B88D80007BDE5 /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705A4187B88D80007BDE5 /* AlleleMO.m */; };
+		143705C6187B88D80007BDE5 /* SnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705A6187B88D80007BDE5 /* SnpMO.m */; };
+		143705C7187B88D80007BDE5 /* DepthMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705A8187B88D80007BDE5 /* DepthMO.m */; };
+		143705C8187B88D80007BDE5 /* HaplotypeMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705AA187B88D80007BDE5 /* HaplotypeMO.m */; };
+		143705C9187B88D80007BDE5 /* DatumAlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705AC187B88D80007BDE5 /* DatumAlleleMO.m */; };
+		143705CA187B88D80007BDE5 /* LocusSnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705AE187B88D80007BDE5 /* LocusSnpMO.m */; };
+		143705CB187B88D80007BDE5 /* DatumSnpMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705B0187B88D80007BDE5 /* DatumSnpMO.m */; };
+		143705CC187B88D80007BDE5 /* ConsensusStackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705B2187B88D80007BDE5 /* ConsensusStackEntryMO.m */; };
+		143705CD187B88D80007BDE5 /* SampleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705B4187B88D80007BDE5 /* SampleMO.m */; };
+		143705CE187B88D80007BDE5 /* ModelStackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705B6187B88D80007BDE5 /* ModelStackEntryMO.m */; };
+		143705CF187B88D80007BDE5 /* LocusAlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705B8187B88D80007BDE5 /* LocusAlleleMO.m */; };
+		143705D0187B88D80007BDE5 /* PopulationMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705BA187B88D80007BDE5 /* PopulationMO.m */; };
+		143705D1187B88D80007BDE5 /* StackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705BC187B88D80007BDE5 /* StackEntryMO.m */; };
+		143705D2187B88D80007BDE5 /* ReferenceStackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705BE187B88D80007BDE5 /* ReferenceStackEntryMO.m */; };
+		143705D3187B88D80007BDE5 /* DatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705C0187B88D80007BDE5 /* DatumMO.m */; };
+		143705D4187B88D80007BDE5 /* LocusMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705C2187B88D80007BDE5 /* LocusMO.m */; };
+		143705E9187B88E50007BDE5 /* StacksConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 143705D5187B88E50007BDE5 /* StacksConverter.mm */; };
+		143705EA187B88E50007BDE5 /* SampleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705D7187B88E50007BDE5 /* SampleRepository.m */; };
+		143705EB187B88E50007BDE5 /* PopulationRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705D9187B88E50007BDE5 /* PopulationRepository.m */; };
+		143705EC187B88E50007BDE5 /* SnpRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705DB187B88E50007BDE5 /* SnpRepository.m */; };
+		143705ED187B88E50007BDE5 /* DatumRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705DD187B88E50007BDE5 /* DatumRepository.m */; };
+		143705EE187B88E50007BDE5 /* DepthRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705DF187B88E50007BDE5 /* DepthRepository.m */; };
+		143705EF187B88E50007BDE5 /* LocusRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705E1187B88E50007BDE5 /* LocusRepository.m */; };
+		143705F0187B88E50007BDE5 /* HaplotypeRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705E3187B88E50007BDE5 /* HaplotypeRepository.m */; };
+		143705F1187B88E50007BDE5 /* StackEntryRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705E5187B88E50007BDE5 /* StackEntryRepository.m */; };
+		143705F2187B88E50007BDE5 /* AlleleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705E7187B88E50007BDE5 /* AlleleRepository.m */; };
+		14370610187B88F10007BDE5 /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 143705F6187B88F10007BDE5 /* DNANSeq.cc */; };
+		14370611187B88F10007BDE5 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 143705F8187B88F10007BDE5 /* DNASeq.cc */; };
+		14370612187B88F10007BDE5 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 143705FF187B88F10007BDE5 /* input.cc */; };
+		14370613187B88F10007BDE5 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 14370601187B88F10007BDE5 /* libz.1.2.7.dylib */; };
+		14370614187B88F10007BDE5 /* locus.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14370602187B88F10007BDE5 /* locus.cc */; };
+		14370615187B88F10007BDE5 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 14370604187B88F10007BDE5 /* mst.cc */; };
+		14370616187B88F10007BDE5 /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1437060B187B88F10007BDE5 /* stacks.cc */; };
+		14370617187B88F10007BDE5 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1437060E187B88F10007BDE5 /* utils.cc */; };
+		1437061A187B89490007BDE5 /* stacks.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370618187B89490007BDE5 /* stacks.css */; };
+		1437061B187B89490007BDE5 /* test.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370619187B89490007BDE5 /* test.css */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		14370546187B876A0007BDE5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 14370513187B87690007BDE5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1437051A187B87690007BDE5;
+			remoteInfo = vStacks;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1437051B187B87690007BDE5 /* vStacks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = vStacks.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1437051E187B87690007BDE5 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		14370521187B87690007BDE5 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		14370522187B87690007BDE5 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		14370523187B87690007BDE5 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		14370526187B87690007BDE5 /* vStacks-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "vStacks-Info.plist"; sourceTree = "<group>"; };
+		14370528187B87690007BDE5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		1437052A187B87690007BDE5 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		1437052C187B87690007BDE5 /* vStacks-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "vStacks-Prefix.pch"; sourceTree = "<group>"; };
+		1437052E187B87690007BDE5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
+		1437053C187B876A0007BDE5 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
+		14370542187B876A0007BDE5 /* vStacksTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = vStacksTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		14370543187B876A0007BDE5 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
+		1437054A187B876A0007BDE5 /* vStacksTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "vStacksTests-Info.plist"; sourceTree = "<group>"; };
+		1437054C187B876A0007BDE5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		1437054E187B876A0007BDE5 /* vStacksTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = vStacksTests.m; sourceTree = "<group>"; };
+		14370558187B87DF0007BDE5 /* StacksEntryView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksEntryView.m; sourceTree = "<group>"; };
+		14370559187B87DF0007BDE5 /* StacksEntryView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksEntryView.h; sourceTree = "<group>"; };
+		14370562187B882D0007BDE5 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = WebKit.framework; sourceTree = "<group>"; };
+		14370567187B88C70007BDE5 /* ColorGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorGenerator.h; sourceTree = "<group>"; };
+		14370568187B88C70007BDE5 /* ColorGenerator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ColorGenerator.m; sourceTree = "<group>"; };
+		14370569187B88C70007BDE5 /* StacksDocument.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = StacksDocument.xib; sourceTree = "<group>"; };
+		1437056A187B88C70007BDE5 /* MainMenu.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = MainMenu.xib; sourceTree = "<group>"; };
+		1437056B187B88C70007BDE5 /* StacksView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksView.m; sourceTree = "<group>"; };
+		1437056C187B88C70007BDE5 /* StacksView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksView.h; sourceTree = "<group>"; };
+		1437056D187B88C70007BDE5 /* SnpView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpView.m; sourceTree = "<group>"; };
+		1437056E187B88C70007BDE5 /* SnpView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpView.h; sourceTree = "<group>"; };
+		1437056F187B88C70007BDE5 /* LocusCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusCell.m; sourceTree = "<group>"; };
+		14370570187B88C70007BDE5 /* LocusCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusCell.h; sourceTree = "<group>"; };
+		14370571187B88C70007BDE5 /* PopulationCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationCell.h; sourceTree = "<group>"; };
+		14370572187B88C70007BDE5 /* PopulationCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationCell.m; sourceTree = "<group>"; };
+		14370573187B88C70007BDE5 /* LocusView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusView.h; sourceTree = "<group>"; };
+		14370574187B88C70007BDE5 /* GenotypeEntry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenotypeEntry.m; sourceTree = "<group>"; };
+		14370575187B88C70007BDE5 /* GenotypeEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenotypeEntry.h; sourceTree = "<group>"; };
+		14370576187B88C70007BDE5 /* LocusView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusView.m; sourceTree = "<group>"; };
+		14370577187B88C70007BDE5 /* LocusArrayController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusArrayController.h; sourceTree = "<group>"; };
+		14370578187B88C70007BDE5 /* LocusArrayController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusArrayController.m; sourceTree = "<group>"; };
+		14370579187B88C70007BDE5 /* PopulationArrayController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationArrayController.h; sourceTree = "<group>"; };
+		1437057A187B88C70007BDE5 /* PopulationArrayController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationArrayController.m; sourceTree = "<group>"; };
+		1437057B187B88C70007BDE5 /* DatumArrayController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumArrayController.h; sourceTree = "<group>"; };
+		1437057C187B88C70007BDE5 /* DatumArrayController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumArrayController.m; sourceTree = "<group>"; };
+		1437057D187B88C70007BDE5 /* DatumView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumView.h; sourceTree = "<group>"; };
+		1437057E187B88C70007BDE5 /* DatumView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumView.m; sourceTree = "<group>"; };
+		1437057F187B88C70007BDE5 /* DatumCollectionViewItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumCollectionViewItem.m; sourceTree = "<group>"; };
+		14370580187B88C70007BDE5 /* DatumCollectionViewItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumCollectionViewItem.h; sourceTree = "<group>"; };
+		14370581187B88C70007BDE5 /* StacksDocumentController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksDocumentController.h; sourceTree = "<group>"; };
+		14370582187B88C70007BDE5 /* StacksDocumentController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksDocumentController.m; sourceTree = "<group>"; };
+		14370583187B88C70007BDE5 /* StacksAppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksAppDelegate.m; sourceTree = "<group>"; };
+		14370584187B88C70007BDE5 /* StacksAppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksAppDelegate.h; sourceTree = "<group>"; };
+		14370585187B88C70007BDE5 /* StacksApplicationController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksApplicationController.m; sourceTree = "<group>"; };
+		14370586187B88C70007BDE5 /* StacksApplicationController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksApplicationController.h; sourceTree = "<group>"; };
+		14370587187B88C70007BDE5 /* StacksImportMenuItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksImportMenuItem.m; sourceTree = "<group>"; };
+		14370588187B88C70007BDE5 /* StacksImportMenuItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksImportMenuItem.h; sourceTree = "<group>"; };
+		14370589187B88C70007BDE5 /* ProgressController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProgressController.h; sourceTree = "<group>"; };
+		1437058A187B88C70007BDE5 /* ProgressController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ProgressController.m; sourceTree = "<group>"; };
+		1437058B187B88C70007BDE5 /* ProgressController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ProgressController.xib; sourceTree = "<group>"; };
+		143705A0187B88D80007BDE5 /* StacksDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksDocument.h; sourceTree = "<group>"; };
+		143705A1187B88D80007BDE5 /* StacksDocument.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksDocument.m; sourceTree = "<group>"; };
+		143705A2187B88D80007BDE5 /* StacksDocument.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = StacksDocument.xcdatamodel; sourceTree = "<group>"; };
+		143705A3187B88D80007BDE5 /* AlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleMO.h; sourceTree = "<group>"; };
+		143705A4187B88D80007BDE5 /* AlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleMO.m; sourceTree = "<group>"; };
+		143705A5187B88D80007BDE5 /* SnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpMO.h; sourceTree = "<group>"; };
+		143705A6187B88D80007BDE5 /* SnpMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpMO.m; sourceTree = "<group>"; };
+		143705A7187B88D80007BDE5 /* DepthMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DepthMO.h; sourceTree = "<group>"; };
+		143705A8187B88D80007BDE5 /* DepthMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DepthMO.m; sourceTree = "<group>"; };
+		143705A9187B88D80007BDE5 /* HaplotypeMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HaplotypeMO.h; sourceTree = "<group>"; };
+		143705AA187B88D80007BDE5 /* HaplotypeMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HaplotypeMO.m; sourceTree = "<group>"; };
+		143705AB187B88D80007BDE5 /* DatumAlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumAlleleMO.h; sourceTree = "<group>"; };
+		143705AC187B88D80007BDE5 /* DatumAlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumAlleleMO.m; sourceTree = "<group>"; };
+		143705AD187B88D80007BDE5 /* LocusSnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusSnpMO.h; sourceTree = "<group>"; };
+		143705AE187B88D80007BDE5 /* LocusSnpMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusSnpMO.m; sourceTree = "<group>"; };
+		143705AF187B88D80007BDE5 /* DatumSnpMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumSnpMO.h; sourceTree = "<group>"; };
+		143705B0187B88D80007BDE5 /* DatumSnpMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumSnpMO.m; sourceTree = "<group>"; };
+		143705B1187B88D80007BDE5 /* ConsensusStackEntryMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConsensusStackEntryMO.h; sourceTree = "<group>"; };
+		143705B2187B88D80007BDE5 /* ConsensusStackEntryMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ConsensusStackEntryMO.m; sourceTree = "<group>"; };
+		143705B3187B88D80007BDE5 /* SampleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SampleMO.h; sourceTree = "<group>"; };
+		143705B4187B88D80007BDE5 /* SampleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SampleMO.m; sourceTree = "<group>"; };
+		143705B5187B88D80007BDE5 /* ModelStackEntryMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ModelStackEntryMO.h; sourceTree = "<group>"; };
+		143705B6187B88D80007BDE5 /* ModelStackEntryMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ModelStackEntryMO.m; sourceTree = "<group>"; };
+		143705B7187B88D80007BDE5 /* LocusAlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusAlleleMO.h; sourceTree = "<group>"; };
+		143705B8187B88D80007BDE5 /* LocusAlleleMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusAlleleMO.m; sourceTree = "<group>"; };
+		143705B9187B88D80007BDE5 /* PopulationMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationMO.h; sourceTree = "<group>"; };
+		143705BA187B88D80007BDE5 /* PopulationMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationMO.m; sourceTree = "<group>"; };
+		143705BB187B88D80007BDE5 /* StackEntryMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackEntryMO.h; sourceTree = "<group>"; };
+		143705BC187B88D80007BDE5 /* StackEntryMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntryMO.m; sourceTree = "<group>"; };
+		143705BD187B88D80007BDE5 /* ReferenceStackEntryMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReferenceStackEntryMO.h; sourceTree = "<group>"; };
+		143705BE187B88D80007BDE5 /* ReferenceStackEntryMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ReferenceStackEntryMO.m; sourceTree = "<group>"; };
+		143705BF187B88D80007BDE5 /* DatumMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumMO.h; sourceTree = "<group>"; };
+		143705C0187B88D80007BDE5 /* DatumMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumMO.m; sourceTree = "<group>"; };
+		143705C1187B88D80007BDE5 /* LocusMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusMO.h; sourceTree = "<group>"; };
+		143705C2187B88D80007BDE5 /* LocusMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusMO.m; sourceTree = "<group>"; };
+		143705D5187B88E50007BDE5 /* StacksConverter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = StacksConverter.mm; sourceTree = "<group>"; };
+		143705D6187B88E50007BDE5 /* StacksConverter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksConverter.h; sourceTree = "<group>"; };
+		143705D7187B88E50007BDE5 /* SampleRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SampleRepository.m; sourceTree = "<group>"; };
+		143705D8187B88E50007BDE5 /* SampleRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SampleRepository.h; sourceTree = "<group>"; };
+		143705D9187B88E50007BDE5 /* PopulationRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationRepository.m; sourceTree = "<group>"; };
+		143705DA187B88E50007BDE5 /* PopulationRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationRepository.h; sourceTree = "<group>"; };
+		143705DB187B88E50007BDE5 /* SnpRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SnpRepository.m; sourceTree = "<group>"; };
+		143705DC187B88E50007BDE5 /* SnpRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SnpRepository.h; sourceTree = "<group>"; };
+		143705DD187B88E50007BDE5 /* DatumRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DatumRepository.m; sourceTree = "<group>"; };
+		143705DE187B88E50007BDE5 /* DatumRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DatumRepository.h; sourceTree = "<group>"; };
+		143705DF187B88E50007BDE5 /* DepthRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DepthRepository.m; sourceTree = "<group>"; };
+		143705E0187B88E50007BDE5 /* DepthRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DepthRepository.h; sourceTree = "<group>"; };
+		143705E1187B88E50007BDE5 /* LocusRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LocusRepository.m; sourceTree = "<group>"; };
+		143705E2187B88E50007BDE5 /* LocusRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocusRepository.h; sourceTree = "<group>"; };
+		143705E3187B88E50007BDE5 /* HaplotypeRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HaplotypeRepository.m; sourceTree = "<group>"; };
+		143705E4187B88E50007BDE5 /* HaplotypeRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HaplotypeRepository.h; sourceTree = "<group>"; };
+		143705E5187B88E50007BDE5 /* StackEntryRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntryRepository.m; sourceTree = "<group>"; };
+		143705E6187B88E50007BDE5 /* StackEntryRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackEntryRepository.h; sourceTree = "<group>"; };
+		143705E7187B88E50007BDE5 /* AlleleRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AlleleRepository.m; sourceTree = "<group>"; };
+		143705E8187B88E50007BDE5 /* AlleleRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleRepository.h; sourceTree = "<group>"; };
+		143705F3187B88F10007BDE5 /* BowtieI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BowtieI.h; path = ../../src/BowtieI.h; sourceTree = "<group>"; };
+		143705F4187B88F10007BDE5 /* BustardI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BustardI.h; path = ../../src/BustardI.h; sourceTree = "<group>"; };
+		143705F5187B88F10007BDE5 /* constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = constants.h; path = ../../src/constants.h; sourceTree = "<group>"; };
+		143705F6187B88F10007BDE5 /* DNANSeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DNANSeq.cc; path = ../../src/DNANSeq.cc; sourceTree = "<group>"; };
+		143705F7187B88F10007BDE5 /* DNANSeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DNANSeq.h; path = ../../src/DNANSeq.h; sourceTree = "<group>"; };
+		143705F8187B88F10007BDE5 /* DNASeq.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DNASeq.cc; path = ../../src/DNASeq.cc; sourceTree = "<group>"; };
+		143705F9187B88F10007BDE5 /* DNASeq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DNASeq.h; path = ../../src/DNASeq.h; sourceTree = "<group>"; };
+		143705FA187B88F10007BDE5 /* FastaI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FastaI.h; path = ../../src/FastaI.h; sourceTree = "<group>"; };
+		143705FB187B88F10007BDE5 /* FastqI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FastqI.h; path = ../../src/FastqI.h; sourceTree = "<group>"; };
+		143705FC187B88F10007BDE5 /* genotype_dictionaries.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = genotype_dictionaries.h; path = ../../src/genotype_dictionaries.h; sourceTree = "<group>"; };
+		143705FD187B88F10007BDE5 /* gzFasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzFasta.h; path = ../../src/gzFasta.h; sourceTree = "<group>"; };
+		143705FE187B88F10007BDE5 /* gzFastq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzFastq.h; path = ../../src/gzFastq.h; sourceTree = "<group>"; };
+		143705FF187B88F10007BDE5 /* input.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = input.cc; path = ../../src/input.cc; sourceTree = "<group>"; };
+		14370600187B88F10007BDE5 /* input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = input.h; path = ../../src/input.h; sourceTree = "<group>"; };
+		14370601187B88F10007BDE5 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.1.2.7.dylib; path = ../../old.vStacks/StacksGui3/libz.1.2.7.dylib; sourceTree = "<group>"; };
+		14370602187B88F10007BDE5 /* locus.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = locus.cc; path = ../../src/locus.cc; sourceTree = "<group>"; };
+		14370603187B88F10007BDE5 /* locus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = locus.h; path = ../../src/locus.h; sourceTree = "<group>"; };
+		14370604187B88F10007BDE5 /* mst.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mst.cc; path = ../../src/mst.cc; sourceTree = "<group>"; };
+		14370605187B88F10007BDE5 /* mst.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mst.h; path = ../../src/mst.h; sourceTree = "<group>"; };
+		14370606187B88F10007BDE5 /* PopMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopMap.h; path = ../../src/PopMap.h; sourceTree = "<group>"; };
+		14370607187B88F10007BDE5 /* PopSum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopSum.h; path = ../../src/PopSum.h; sourceTree = "<group>"; };
+		14370608187B88F10007BDE5 /* renz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = renz.h; path = ../../src/renz.h; sourceTree = "<group>"; };
+		14370609187B88F10007BDE5 /* SamI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SamI.h; path = ../../src/SamI.h; sourceTree = "<group>"; };
+		1437060A187B88F10007BDE5 /* sql_utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sql_utilities.h; path = ../../src/sql_utilities.h; sourceTree = "<group>"; };
+		1437060B187B88F10007BDE5 /* stacks.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = stacks.cc; path = ../../src/stacks.cc; sourceTree = "<group>"; };
+		1437060C187B88F10007BDE5 /* stacks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stacks.h; path = ../../src/stacks.h; sourceTree = "<group>"; };
+		1437060D187B88F10007BDE5 /* Tsv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tsv.h; path = ../../src/Tsv.h; sourceTree = "<group>"; };
+		1437060E187B88F10007BDE5 /* utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = utils.cc; path = ../../src/utils.cc; sourceTree = "<group>"; };
+		1437060F187B88F10007BDE5 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = utils.h; path = ../../src/utils.h; sourceTree = "<group>"; };
+		14370618187B89490007BDE5 /* stacks.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = stacks.css; sourceTree = "<group>"; };
+		14370619187B89490007BDE5 /* test.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = test.css; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		14370518187B87690007BDE5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14370563187B882D0007BDE5 /* WebKit.framework in Frameworks */,
+				1437051F187B87690007BDE5 /* Cocoa.framework in Frameworks */,
+				14370613187B88F10007BDE5 /* libz.1.2.7.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1437053F187B876A0007BDE5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14370545187B876A0007BDE5 /* Cocoa.framework in Frameworks */,
+				14370544187B876A0007BDE5 /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		14370512187B87690007BDE5 = {
+			isa = PBXGroup;
+			children = (
+				14370524187B87690007BDE5 /* vStacks */,
+				14370548187B876A0007BDE5 /* vStacksTests */,
+				1437051D187B87690007BDE5 /* Frameworks */,
+				1437051C187B87690007BDE5 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		1437051C187B87690007BDE5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1437051B187B87690007BDE5 /* vStacks.app */,
+				14370542187B876A0007BDE5 /* vStacksTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		1437051D187B87690007BDE5 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				14370562187B882D0007BDE5 /* WebKit.framework */,
+				1437051E187B87690007BDE5 /* Cocoa.framework */,
+				14370543187B876A0007BDE5 /* XCTest.framework */,
+				14370520187B87690007BDE5 /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		14370520187B87690007BDE5 /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				14370521187B87690007BDE5 /* AppKit.framework */,
+				14370522187B87690007BDE5 /* CoreData.framework */,
+				14370523187B87690007BDE5 /* Foundation.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		14370524187B87690007BDE5 /* vStacks */ = {
+			isa = PBXGroup;
+			children = (
+				14370566187B88560007BDE5 /* stacks */,
+				1437055D187B88000007BDE5 /* www */,
+				1437055E187B88060007BDE5 /* Service */,
+				1437055F187B880E0007BDE5 /* Model */,
+				14370560187B88140007BDE5 /* GUI */,
+				14370525187B87690007BDE5 /* Supporting Files */,
+				14370558187B87DF0007BDE5 /* StacksEntryView.m */,
+				14370559187B87DF0007BDE5 /* StacksEntryView.h */,
+				1437053C187B876A0007BDE5 /* Images.xcassets */,
+			);
+			path = vStacks;
+			sourceTree = "<group>";
+		};
+		14370525187B87690007BDE5 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				14370526187B87690007BDE5 /* vStacks-Info.plist */,
+				14370527187B87690007BDE5 /* InfoPlist.strings */,
+				1437052A187B87690007BDE5 /* main.m */,
+				1437052C187B87690007BDE5 /* vStacks-Prefix.pch */,
+				1437052D187B87690007BDE5 /* Credits.rtf */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		14370548187B876A0007BDE5 /* vStacksTests */ = {
+			isa = PBXGroup;
+			children = (
+				1437054E187B876A0007BDE5 /* vStacksTests.m */,
+				14370549187B876A0007BDE5 /* Supporting Files */,
+			);
+			path = vStacksTests;
+			sourceTree = "<group>";
+		};
+		14370549187B876A0007BDE5 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				1437054A187B876A0007BDE5 /* vStacksTests-Info.plist */,
+				1437054B187B876A0007BDE5 /* InfoPlist.strings */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		1437055D187B88000007BDE5 /* www */ = {
+			isa = PBXGroup;
+			children = (
+				14370561187B881B0007BDE5 /* css */,
+			);
+			name = www;
+			sourceTree = "<group>";
+		};
+		1437055E187B88060007BDE5 /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				143705D5187B88E50007BDE5 /* StacksConverter.mm */,
+				143705D6187B88E50007BDE5 /* StacksConverter.h */,
+				143705D7187B88E50007BDE5 /* SampleRepository.m */,
+				143705D8187B88E50007BDE5 /* SampleRepository.h */,
+				143705D9187B88E50007BDE5 /* PopulationRepository.m */,
+				143705DA187B88E50007BDE5 /* PopulationRepository.h */,
+				143705DB187B88E50007BDE5 /* SnpRepository.m */,
+				143705DC187B88E50007BDE5 /* SnpRepository.h */,
+				143705DD187B88E50007BDE5 /* DatumRepository.m */,
+				143705DE187B88E50007BDE5 /* DatumRepository.h */,
+				143705DF187B88E50007BDE5 /* DepthRepository.m */,
+				143705E0187B88E50007BDE5 /* DepthRepository.h */,
+				143705E1187B88E50007BDE5 /* LocusRepository.m */,
+				143705E2187B88E50007BDE5 /* LocusRepository.h */,
+				143705E3187B88E50007BDE5 /* HaplotypeRepository.m */,
+				143705E4187B88E50007BDE5 /* HaplotypeRepository.h */,
+				143705E5187B88E50007BDE5 /* StackEntryRepository.m */,
+				143705E6187B88E50007BDE5 /* StackEntryRepository.h */,
+				143705E7187B88E50007BDE5 /* AlleleRepository.m */,
+				143705E8187B88E50007BDE5 /* AlleleRepository.h */,
+			);
+			name = Service;
+			sourceTree = "<group>";
+		};
+		1437055F187B880E0007BDE5 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				143705A0187B88D80007BDE5 /* StacksDocument.h */,
+				143705A1187B88D80007BDE5 /* StacksDocument.m */,
+				143705A2187B88D80007BDE5 /* StacksDocument.xcdatamodel */,
+				143705A3187B88D80007BDE5 /* AlleleMO.h */,
+				143705A4187B88D80007BDE5 /* AlleleMO.m */,
+				143705A5187B88D80007BDE5 /* SnpMO.h */,
+				143705A6187B88D80007BDE5 /* SnpMO.m */,
+				143705A7187B88D80007BDE5 /* DepthMO.h */,
+				143705A8187B88D80007BDE5 /* DepthMO.m */,
+				143705A9187B88D80007BDE5 /* HaplotypeMO.h */,
+				143705AA187B88D80007BDE5 /* HaplotypeMO.m */,
+				143705AB187B88D80007BDE5 /* DatumAlleleMO.h */,
+				143705AC187B88D80007BDE5 /* DatumAlleleMO.m */,
+				143705AD187B88D80007BDE5 /* LocusSnpMO.h */,
+				143705AE187B88D80007BDE5 /* LocusSnpMO.m */,
+				143705AF187B88D80007BDE5 /* DatumSnpMO.h */,
+				143705B0187B88D80007BDE5 /* DatumSnpMO.m */,
+				143705B1187B88D80007BDE5 /* ConsensusStackEntryMO.h */,
+				143705B2187B88D80007BDE5 /* ConsensusStackEntryMO.m */,
+				143705B3187B88D80007BDE5 /* SampleMO.h */,
+				143705B4187B88D80007BDE5 /* SampleMO.m */,
+				143705B5187B88D80007BDE5 /* ModelStackEntryMO.h */,
+				143705B6187B88D80007BDE5 /* ModelStackEntryMO.m */,
+				143705B7187B88D80007BDE5 /* LocusAlleleMO.h */,
+				143705B8187B88D80007BDE5 /* LocusAlleleMO.m */,
+				143705B9187B88D80007BDE5 /* PopulationMO.h */,
+				143705BA187B88D80007BDE5 /* PopulationMO.m */,
+				143705BB187B88D80007BDE5 /* StackEntryMO.h */,
+				143705BC187B88D80007BDE5 /* StackEntryMO.m */,
+				143705BD187B88D80007BDE5 /* ReferenceStackEntryMO.h */,
+				143705BE187B88D80007BDE5 /* ReferenceStackEntryMO.m */,
+				143705BF187B88D80007BDE5 /* DatumMO.h */,
+				143705C0187B88D80007BDE5 /* DatumMO.m */,
+				143705C1187B88D80007BDE5 /* LocusMO.h */,
+				143705C2187B88D80007BDE5 /* LocusMO.m */,
+			);
+			name = Model;
+			sourceTree = "<group>";
+		};
+		14370560187B88140007BDE5 /* GUI */ = {
+			isa = PBXGroup;
+			children = (
+				14370567187B88C70007BDE5 /* ColorGenerator.h */,
+				14370568187B88C70007BDE5 /* ColorGenerator.m */,
+				14370569187B88C70007BDE5 /* StacksDocument.xib */,
+				1437056A187B88C70007BDE5 /* MainMenu.xib */,
+				1437056B187B88C70007BDE5 /* StacksView.m */,
+				1437056C187B88C70007BDE5 /* StacksView.h */,
+				1437056D187B88C70007BDE5 /* SnpView.m */,
+				1437056E187B88C70007BDE5 /* SnpView.h */,
+				1437056F187B88C70007BDE5 /* LocusCell.m */,
+				14370570187B88C70007BDE5 /* LocusCell.h */,
+				14370571187B88C70007BDE5 /* PopulationCell.h */,
+				14370572187B88C70007BDE5 /* PopulationCell.m */,
+				14370573187B88C70007BDE5 /* LocusView.h */,
+				14370574187B88C70007BDE5 /* GenotypeEntry.m */,
+				14370575187B88C70007BDE5 /* GenotypeEntry.h */,
+				14370576187B88C70007BDE5 /* LocusView.m */,
+				14370577187B88C70007BDE5 /* LocusArrayController.h */,
+				14370578187B88C70007BDE5 /* LocusArrayController.m */,
+				14370579187B88C70007BDE5 /* PopulationArrayController.h */,
+				1437057A187B88C70007BDE5 /* PopulationArrayController.m */,
+				1437057B187B88C70007BDE5 /* DatumArrayController.h */,
+				1437057C187B88C70007BDE5 /* DatumArrayController.m */,
+				1437057D187B88C70007BDE5 /* DatumView.h */,
+				1437057E187B88C70007BDE5 /* DatumView.m */,
+				1437057F187B88C70007BDE5 /* DatumCollectionViewItem.m */,
+				14370580187B88C70007BDE5 /* DatumCollectionViewItem.h */,
+				14370581187B88C70007BDE5 /* StacksDocumentController.h */,
+				14370582187B88C70007BDE5 /* StacksDocumentController.m */,
+				14370583187B88C70007BDE5 /* StacksAppDelegate.m */,
+				14370584187B88C70007BDE5 /* StacksAppDelegate.h */,
+				14370585187B88C70007BDE5 /* StacksApplicationController.m */,
+				14370586187B88C70007BDE5 /* StacksApplicationController.h */,
+				14370587187B88C70007BDE5 /* StacksImportMenuItem.m */,
+				14370588187B88C70007BDE5 /* StacksImportMenuItem.h */,
+				14370589187B88C70007BDE5 /* ProgressController.h */,
+				1437058A187B88C70007BDE5 /* ProgressController.m */,
+				1437058B187B88C70007BDE5 /* ProgressController.xib */,
+			);
+			name = GUI;
+			sourceTree = "<group>";
+		};
+		14370561187B881B0007BDE5 /* css */ = {
+			isa = PBXGroup;
+			children = (
+				14370618187B89490007BDE5 /* stacks.css */,
+				14370619187B89490007BDE5 /* test.css */,
+			);
+			name = css;
+			sourceTree = "<group>";
+		};
+		14370566187B88560007BDE5 /* stacks */ = {
+			isa = PBXGroup;
+			children = (
+				143705F3187B88F10007BDE5 /* BowtieI.h */,
+				143705F4187B88F10007BDE5 /* BustardI.h */,
+				143705F5187B88F10007BDE5 /* constants.h */,
+				143705F6187B88F10007BDE5 /* DNANSeq.cc */,
+				143705F7187B88F10007BDE5 /* DNANSeq.h */,
+				143705F8187B88F10007BDE5 /* DNASeq.cc */,
+				143705F9187B88F10007BDE5 /* DNASeq.h */,
+				143705FA187B88F10007BDE5 /* FastaI.h */,
+				143705FB187B88F10007BDE5 /* FastqI.h */,
+				143705FC187B88F10007BDE5 /* genotype_dictionaries.h */,
+				143705FD187B88F10007BDE5 /* gzFasta.h */,
+				143705FE187B88F10007BDE5 /* gzFastq.h */,
+				143705FF187B88F10007BDE5 /* input.cc */,
+				14370600187B88F10007BDE5 /* input.h */,
+				14370601187B88F10007BDE5 /* libz.1.2.7.dylib */,
+				14370602187B88F10007BDE5 /* locus.cc */,
+				14370603187B88F10007BDE5 /* locus.h */,
+				14370604187B88F10007BDE5 /* mst.cc */,
+				14370605187B88F10007BDE5 /* mst.h */,
+				14370606187B88F10007BDE5 /* PopMap.h */,
+				14370607187B88F10007BDE5 /* PopSum.h */,
+				14370608187B88F10007BDE5 /* renz.h */,
+				14370609187B88F10007BDE5 /* SamI.h */,
+				1437060A187B88F10007BDE5 /* sql_utilities.h */,
+				1437060B187B88F10007BDE5 /* stacks.cc */,
+				1437060C187B88F10007BDE5 /* stacks.h */,
+				1437060D187B88F10007BDE5 /* Tsv.h */,
+				1437060E187B88F10007BDE5 /* utils.cc */,
+				1437060F187B88F10007BDE5 /* utils.h */,
+			);
+			name = stacks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1437051A187B87690007BDE5 /* vStacks */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 14370552187B876A0007BDE5 /* Build configuration list for PBXNativeTarget "vStacks" */;
+			buildPhases = (
+				14370517187B87690007BDE5 /* Sources */,
+				14370518187B87690007BDE5 /* Frameworks */,
+				14370519187B87690007BDE5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = vStacks;
+			productName = vStacks;
+			productReference = 1437051B187B87690007BDE5 /* vStacks.app */;
+			productType = "com.apple.product-type.application";
+		};
+		14370541187B876A0007BDE5 /* vStacksTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 14370555187B876A0007BDE5 /* Build configuration list for PBXNativeTarget "vStacksTests" */;
+			buildPhases = (
+				1437053E187B876A0007BDE5 /* Sources */,
+				1437053F187B876A0007BDE5 /* Frameworks */,
+				14370540187B876A0007BDE5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				14370547187B876A0007BDE5 /* PBXTargetDependency */,
+			);
+			name = vStacksTests;
+			productName = vStacksTests;
+			productReference = 14370542187B876A0007BDE5 /* vStacksTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		14370513187B87690007BDE5 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				CLASSPREFIX = Stacks;
+				LastUpgradeCheck = 0500;
+				ORGANIZATIONNAME = "Nathan Dunn";
+				TargetAttributes = {
+					14370541187B876A0007BDE5 = {
+						TestTargetID = 1437051A187B87690007BDE5;
+					};
+				};
+			};
+			buildConfigurationList = 14370516187B87690007BDE5 /* Build configuration list for PBXProject "vStacks" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 14370512187B87690007BDE5;
+			productRefGroup = 1437051C187B87690007BDE5 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1437051A187B87690007BDE5 /* vStacks */,
+				14370541187B876A0007BDE5 /* vStacksTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		14370519187B87690007BDE5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14370529187B87690007BDE5 /* InfoPlist.strings in Resources */,
+				1437061A187B89490007BDE5 /* stacks.css in Resources */,
+				1437058E187B88C70007BDE5 /* MainMenu.xib in Resources */,
+				1437059F187B88C70007BDE5 /* ProgressController.xib in Resources */,
+				1437053D187B876A0007BDE5 /* Images.xcassets in Resources */,
+				1437052F187B87690007BDE5 /* Credits.rtf in Resources */,
+				1437058D187B88C70007BDE5 /* StacksDocument.xib in Resources */,
+				1437061B187B89490007BDE5 /* test.css in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		14370540187B876A0007BDE5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1437054D187B876A0007BDE5 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		14370517187B87690007BDE5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14370594187B88C70007BDE5 /* LocusView.m in Sources */,
+				14370591187B88C70007BDE5 /* LocusCell.m in Sources */,
+				143705CE187B88D80007BDE5 /* ModelStackEntryMO.m in Sources */,
+				143705D1187B88D80007BDE5 /* StackEntryMO.m in Sources */,
+				143705C9187B88D80007BDE5 /* DatumAlleleMO.m in Sources */,
+				143705ED187B88E50007BDE5 /* DatumRepository.m in Sources */,
+				14370611187B88F10007BDE5 /* DNASeq.cc in Sources */,
+				143705CD187B88D80007BDE5 /* SampleMO.m in Sources */,
+				1437059A187B88C70007BDE5 /* StacksDocumentController.m in Sources */,
+				143705EA187B88E50007BDE5 /* SampleRepository.m in Sources */,
+				14370614187B88F10007BDE5 /* locus.cc in Sources */,
+				143705EE187B88E50007BDE5 /* DepthRepository.m in Sources */,
+				14370616187B88F10007BDE5 /* stacks.cc in Sources */,
+				1437059D187B88C70007BDE5 /* StacksImportMenuItem.m in Sources */,
+				143705C6187B88D80007BDE5 /* SnpMO.m in Sources */,
+				143705C7187B88D80007BDE5 /* DepthMO.m in Sources */,
+				143705F1187B88E50007BDE5 /* StackEntryRepository.m in Sources */,
+				143705F0187B88E50007BDE5 /* HaplotypeRepository.m in Sources */,
+				14370612187B88F10007BDE5 /* input.cc in Sources */,
+				143705C8187B88D80007BDE5 /* HaplotypeMO.m in Sources */,
+				143705D2187B88D80007BDE5 /* ReferenceStackEntryMO.m in Sources */,
+				1437059B187B88C70007BDE5 /* StacksAppDelegate.m in Sources */,
+				14370596187B88C70007BDE5 /* PopulationArrayController.m in Sources */,
+				14370599187B88C70007BDE5 /* DatumCollectionViewItem.m in Sources */,
+				1437052B187B87690007BDE5 /* main.m in Sources */,
+				14370592187B88C70007BDE5 /* PopulationCell.m in Sources */,
+				1437055A187B87DF0007BDE5 /* StacksEntryView.m in Sources */,
+				14370615187B88F10007BDE5 /* mst.cc in Sources */,
+				14370598187B88C70007BDE5 /* DatumView.m in Sources */,
+				143705C3187B88D80007BDE5 /* StacksDocument.m in Sources */,
+				1437058C187B88C70007BDE5 /* ColorGenerator.m in Sources */,
+				14370597187B88C70007BDE5 /* DatumArrayController.m in Sources */,
+				1437058F187B88C70007BDE5 /* StacksView.m in Sources */,
+				143705D4187B88D80007BDE5 /* LocusMO.m in Sources */,
+				143705D3187B88D80007BDE5 /* DatumMO.m in Sources */,
+				14370590187B88C70007BDE5 /* SnpView.m in Sources */,
+				143705CA187B88D80007BDE5 /* LocusSnpMO.m in Sources */,
+				143705EF187B88E50007BDE5 /* LocusRepository.m in Sources */,
+				143705EB187B88E50007BDE5 /* PopulationRepository.m in Sources */,
+				143705C4187B88D80007BDE5 /* StacksDocument.xcdatamodel in Sources */,
+				1437059C187B88C70007BDE5 /* StacksApplicationController.m in Sources */,
+				143705E9187B88E50007BDE5 /* StacksConverter.mm in Sources */,
+				1437059E187B88C70007BDE5 /* ProgressController.m in Sources */,
+				143705CC187B88D80007BDE5 /* ConsensusStackEntryMO.m in Sources */,
+				143705CF187B88D80007BDE5 /* LocusAlleleMO.m in Sources */,
+				14370610187B88F10007BDE5 /* DNANSeq.cc in Sources */,
+				14370595187B88C70007BDE5 /* LocusArrayController.m in Sources */,
+				143705C5187B88D80007BDE5 /* AlleleMO.m in Sources */,
+				143705F2187B88E50007BDE5 /* AlleleRepository.m in Sources */,
+				14370617187B88F10007BDE5 /* utils.cc in Sources */,
+				143705D0187B88D80007BDE5 /* PopulationMO.m in Sources */,
+				143705EC187B88E50007BDE5 /* SnpRepository.m in Sources */,
+				14370593187B88C70007BDE5 /* GenotypeEntry.m in Sources */,
+				143705CB187B88D80007BDE5 /* DatumSnpMO.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1437053E187B876A0007BDE5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1437054F187B876A0007BDE5 /* vStacksTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		14370547187B876A0007BDE5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1437051A187B87690007BDE5 /* vStacks */;
+			targetProxy = 14370546187B876A0007BDE5 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		14370527187B87690007BDE5 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				14370528187B87690007BDE5 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		1437052D187B87690007BDE5 /* Credits.rtf */ = {
+			isa = PBXVariantGroup;
+			children = (
+				1437052E187B87690007BDE5 /* en */,
+			);
+			name = Credits.rtf;
+			sourceTree = "<group>";
+		};
+		1437054B187B876A0007BDE5 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				1437054C187B876A0007BDE5 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		14370550187B876A0007BDE5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		14370551187B876A0007BDE5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		14370553187B876A0007BDE5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/Users/NathanDunn/hg/stacks/vStacks,
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "vStacks/vStacks-Prefix.pch";
+				INFOPLIST_FILE = "vStacks/vStacks-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/Users/NathanDunn/hg/stacks/old.vStacks/StacksGui3,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Debug;
+		};
+		14370554187B876A0007BDE5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/Users/NathanDunn/hg/stacks/vStacks,
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "vStacks/vStacks-Prefix.pch";
+				INFOPLIST_FILE = "vStacks/vStacks-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/Users/NathanDunn/hg/stacks/old.vStacks/StacksGui3,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Release;
+		};
+		14370556187B876A0007BDE5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/vStacks.app/Contents/MacOS/vStacks";
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "vStacks/vStacks-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "vStacksTests/vStacksTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Debug;
+		};
+		14370557187B876A0007BDE5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/vStacks.app/Contents/MacOS/vStacks";
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "vStacks/vStacks-Prefix.pch";
+				INFOPLIST_FILE = "vStacksTests/vStacksTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		14370516187B87690007BDE5 /* Build configuration list for PBXProject "vStacks" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14370550187B876A0007BDE5 /* Debug */,
+				14370551187B876A0007BDE5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		14370552187B876A0007BDE5 /* Build configuration list for PBXNativeTarget "vStacks" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14370553187B876A0007BDE5 /* Debug */,
+				14370554187B876A0007BDE5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+		14370555187B876A0007BDE5 /* Build configuration list for PBXNativeTarget "vStacksTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14370556187B876A0007BDE5 /* Debug */,
+				14370557187B876A0007BDE5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 14370513187B87690007BDE5 /* Project object */;
+}
