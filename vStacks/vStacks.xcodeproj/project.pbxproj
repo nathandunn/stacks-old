@@ -793,7 +793,7 @@
 				INFOPLIST_FILE = "vStacks/vStacks-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/NathanDunn/hg/stacks/vStacks/vStacks,
+					"vStacks/**",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -811,7 +811,7 @@
 				INFOPLIST_FILE = "vStacks/vStacks-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/NathanDunn/hg/stacks/vStacks/vStacks,
+					"vStacks/**",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
