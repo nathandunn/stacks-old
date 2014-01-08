@@ -1216,8 +1216,8 @@ NSString *calculateType(NSString *file);
                             if (saveError != nil ) {
                                 NSLog(@"error saving %@", saveError);
                             }
-                            for (DatumMO *datumMO in savedDatums) {
-                                [moc refreshObject:datumMO mergeChanges:YES];
+                            for (DatumMO *datumMO1 in savedDatums) {
+                                [moc refreshObject:datumMO1 mergeChanges:YES];
                             }
                             [savedDatums removeAllObjects];
                             NSLog(@"saved datums count: %ld", savedDatums.count);
@@ -1246,7 +1246,7 @@ NSString *calculateType(NSString *file);
 
             gettimeofday(&time2, NULL);
 //    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
-//            NSLog(@"parse entries lines %ld time: %ld", fileData.count, (time2.tv_sec - time1.tv_sec));
+            NSLog(@"parse entries lines %ld time: %ld", fileData.count, (time2.tv_sec - time1.tv_sec));
 
 
         }

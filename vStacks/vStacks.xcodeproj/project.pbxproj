@@ -77,6 +77,8 @@
 		1437061B187B89490007BDE5 /* test.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370619187B89490007BDE5 /* test.css */; };
 		1437061D187B8BC20007BDE5 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437061C187B8BC20007BDE5 /* libz.1.2.7.dylib */; };
 		14370620187CAEFC0007BDE5 /* GZIP.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437061F187CAEFC0007BDE5 /* GZIP.m */; };
+		6B50150C187DF77300550146 /* CHCSVParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B50150B187DF77300550146 /* CHCSVParser.m */; };
+		6B50150E187DF81F00550146 /* test.tsv in Resources */ = {isa = PBXBuildFile; fileRef = 6B50150D187DF81F00550146 /* test.tsv */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -234,6 +236,9 @@
 		1437061C187B8BC20007BDE5 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libz.1.2.7.dylib; sourceTree = "<group>"; };
 		1437061E187CAEFC0007BDE5 /* GZIP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GZIP.h; sourceTree = "<group>"; };
 		1437061F187CAEFC0007BDE5 /* GZIP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GZIP.m; sourceTree = "<group>"; };
+		6B50150A187DF77300550146 /* CHCSVParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CHCSVParser.h; sourceTree = "<group>"; };
+		6B50150B187DF77300550146 /* CHCSVParser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CHCSVParser.m; sourceTree = "<group>"; };
+		6B50150D187DF81F00550146 /* test.tsv */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test.tsv; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -330,6 +335,7 @@
 		14370548187B876A0007BDE5 /* vStacksTests */ = {
 			isa = PBXGroup;
 			children = (
+				6B50150D187DF81F00550146 /* test.tsv */,
 				1437054E187B876A0007BDE5 /* vStacksTests.m */,
 				14370549187B876A0007BDE5 /* Supporting Files */,
 			);
@@ -356,6 +362,8 @@
 		1437055E187B88060007BDE5 /* Service */ = {
 			isa = PBXGroup;
 			children = (
+				6B50150A187DF77300550146 /* CHCSVParser.h */,
+				6B50150B187DF77300550146 /* CHCSVParser.m */,
 				1437061E187CAEFC0007BDE5 /* GZIP.h */,
 				1437061F187CAEFC0007BDE5 /* GZIP.m */,
 				143705D5187B88E50007BDE5 /* StacksConverter.mm */,
@@ -606,6 +614,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1437054D187B876A0007BDE5 /* InfoPlist.strings in Resources */,
+				6B50150E187DF81F00550146 /* test.tsv in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -644,6 +653,7 @@
 				1437052B187B87690007BDE5 /* main.m in Sources */,
 				14370592187B88C70007BDE5 /* PopulationCell.m in Sources */,
 				1437055A187B87DF0007BDE5 /* StackEntryRenderer.m in Sources */,
+				6B50150C187DF77300550146 /* CHCSVParser.m in Sources */,
 				14370615187B88F10007BDE5 /* mst.cc in Sources */,
 				14370598187B88C70007BDE5 /* DatumView.m in Sources */,
 				143705C3187B88D80007BDE5 /* StacksDocument.m in Sources */,

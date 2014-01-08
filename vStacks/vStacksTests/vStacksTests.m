@@ -7,6 +7,7 @@
 //
 
 #import <XCTest/XCTest.h>
+#import "CHCSVParser.h"
 
 @interface vStacksTests : XCTestCase
 
@@ -28,6 +29,22 @@
 
 - (void)testExample
 {
+    NSString *file = [[NSBundle bundleForClass:[self class]] pathForResource:@"test" ofType:@"tsv"];
+    
+//    NSArray *fields = [NSArray arrayWithContentsOfCSVFile:file options:CHCSVParserOptionsRecognizesBackslashesAsEscapes];
+//    NSArray *fields = [NSArray arrayWithContentsOfCSVFile:file options:CHCSVParserOptionsRecognizesBackslashesAsEscapes];
+    NSArray *fields = [NSArray arrayWithContentsOfTSVFile:file options:CHCSVParserOptionsRecognizesBackslashesAsEscapes];
+    NSLog(@"# of rows %ld",fields.count);
+    
+    for(int i = 0 ; i < fields.count ; i++){
+        NSArray* field = [fields objectAtIndex:i];
+        XCTAssert(field.count>1, @"should have parsed");
+        XCTAssert(field.count<20, @"should have not everything");
+        NSLog(@"read: %ld", field.count);
+    }
+    XCTAssert(true, @"test succeeds");
+    
+//    NSArray *expectedFields = [self expectedFields];
     XCTFail(@"No implementation for \"%s\"", __PRETTY_FUNCTION__);
 }
 
