@@ -40,6 +40,7 @@ using std::ofstream;
 //#import "ConsensusStackEntryMO.h"
 #import "ProgressController.h"
 #import "StackEntryRenderer.h"
+#import "CHCSVParser.h"
 
 
 #include <sys/time.h>
@@ -1075,14 +1076,17 @@ NSString *calculateType(NSString *file);
 
             NSError *error2 = nil;
             NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", tagFileName];
-            NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
-//    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
+//            NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
+            
+            NSArray *fileData = [NSArray arrayWithContentsOfTSVFile:absoluteFileName options:CHCSVParserOptionsRecognizesBackslashesAsEscapes];
+            
+            //    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
 
             if (error2) {
                 NSLog(@"error loading file [%@]: %@", tagFileName, error2);
             }
 
-            NSString *line;
+//            NSString *line;
             NSUInteger row = 1;
             gettimeofday(&time1, NULL);
             NSInteger locusId = -1;
@@ -1098,10 +1102,11 @@ NSString *calculateType(NSString *file);
 //        NSLog(@"keys 3: %@", key);
 //    }
 //    NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
+            
+            NSUInteger lineCount = fileData.count ;
 
-
-            for (line in fileData) {
-                NSArray *columns = [line componentsSeparatedByString:@"\t"];
+            for(int i = 0 ; i < lineCount ; i++){
+                NSArray* columns = [fileData objectAtIndex:i];
 
                 if (columns.count > 8) {
 
@@ -1230,6 +1235,10 @@ NSString *calculateType(NSString *file);
 
                 }
 
+                if(i%100==0){
+                    progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld  %f % ", fileNumber + 1, numFiles,i/(float) lineCount];
+                }
+                
             }
 
 
