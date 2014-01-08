@@ -31,21 +31,24 @@
 {
     NSString *file = [[NSBundle bundleForClass:[self class]] pathForResource:@"test" ofType:@"tsv"];
     
-//    NSArray *fields = [NSArray arrayWithContentsOfCSVFile:file options:CHCSVParserOptionsRecognizesBackslashesAsEscapes];
-//    NSArray *fields = [NSArray arrayWithContentsOfCSVFile:file options:CHCSVParserOptionsRecognizesBackslashesAsEscapes];
     NSArray *fields = [NSArray arrayWithContentsOfTSVFile:file options:CHCSVParserOptionsRecognizesBackslashesAsEscapes];
     NSLog(@"# of rows %ld",fields.count);
     
     for(int i = 0 ; i < fields.count ; i++){
         NSArray* field = [fields objectAtIndex:i];
-        XCTAssert(field.count>1, @"should have parsed");
-        XCTAssert(field.count<20, @"should have not everything");
-        NSLog(@"read: %ld", field.count);
+        if(field.count==1){
+            XCTAssert([[field objectAtIndex:0] isEqualToString:@""], @"should be an empty string");
+        }
+        else{
+            XCTAssert(field.count>1, @"should have parsed");
+            XCTAssert(field.count<20, @"should have not everything");
+        }
+//        NSLog(@"read: %ld", field.count);
     }
-    XCTAssert(true, @"test succeeds");
+    XCTAssert(fields.count>10, @"test succeeds");
     
 //    NSArray *expectedFields = [self expectedFields];
-    XCTFail(@"No implementation for \"%s\"", __PRETTY_FUNCTION__);
+//    XCTFail(@"No implementation for \"%s\"", __PRETTY_FUNCTION__);
 }
 
 @end

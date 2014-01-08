@@ -31,7 +31,7 @@ NSString *const CHCSVErrorDomain = @"com.davedelong.csv";
 #define DOUBLE_QUOTE '"'
 #define COMMA ','
 //#define TAB 0x2192
-#define TAB "\t"
+#define TAB '\t'
 #define OCTOTHORPE '#'
 #define BACKSLASH '\\'
 
