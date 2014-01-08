@@ -726,16 +726,17 @@ NSString *calculateType(NSString *file);
     NSArray *files = [fileManager contentsOfDirectoryAtPath:path error:&error];
     NSLog(@"# of files for directory %ld", files.count);
 
-    NSUInteger  count =
+    NSUInteger  count = 0 ;
     // 2 - for each file, read the .tags file
     for (NSString *filePath in files) {
         if ([filePath hasSuffix:@".snps.tsv"] && ![filePath hasPrefix:@"batch"]) {
             [self loadSnpFileForDatum:document fromFile:filePath];
-            NSLog(@"")
         }
         else {
 //            NSLog(@"not loading tag file %@", filePath);
         }
+        window.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum snp %ld/%ld",count,files.count];
+        ++count ;
     }
 }
 
