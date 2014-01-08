@@ -1076,9 +1076,12 @@ NSString *calculateType(NSString *file);
 
             NSError *error2 = nil;
             NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", tagFileName];
-//            NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
+            NSLog(@"parsing");
+            NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
+            NSLog(@"parsed");
             
-            NSArray *fileData = [NSArray arrayWithContentsOfTSVFile:absoluteFileName options:CHCSVParserOptionsRecognizesBackslashesAsEscapes];
+//            NSArray *fileData = [NSArray arrayWithContentsOfTSVFile:absoluteFileName options:CHCSVParserOptionsRecognizesBackslashesAsEscapes];
+            
             
             //    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
 
@@ -1106,7 +1109,7 @@ NSString *calculateType(NSString *file);
             NSUInteger lineCount = fileData.count ;
 
             for(int i = 0 ; i < lineCount ; i++){
-                NSArray* columns = [fileData objectAtIndex:i];
+                NSArray* columns = [(NSString*)[fileData objectAtIndex:i] componentsSeparatedByString:@"\t"] ;
 
                 if (columns.count > 8) {
 
@@ -1235,8 +1238,8 @@ NSString *calculateType(NSString *file);
 
                 }
 
-                if(i%100==0){
-                    progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld  %f % ", fileNumber + 1, numFiles,i/(float) lineCount];
+                if(i%  int (lineCount / 100.0) ==0){
+                    progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld  %i %@", fileNumber + 1, numFiles,(int) (100 * i/(float) lineCount),@"%"];
                 }
                 
             }
