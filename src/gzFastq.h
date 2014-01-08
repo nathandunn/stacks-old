@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -31,18 +31,18 @@ class GzFastq: public Input {
     gzFile gz_fh;
 
 public:
-    GzFastq(const char *path) : Input() { 
-	this->gz_fh = gzopen(path, "rb");
-	if (!this->gz_fh) {
-	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
-            exit(EXIT_FAILURE);
-	}
-    };
     GzFastq(string path) : Input() { 
 	this->gz_fh = gzopen(path.c_str(), "rb");
 	if (!this->gz_fh) {
 	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
-            exit(EXIT_FAILURE);
+	    exit(EXIT_FAILURE);
+	}
+    };
+    GzFastq(const char *path) : Input() { 
+	this->gz_fh = gzopen(path, "rb");
+	if (!this->gz_fh) {
+	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
+	    exit(EXIT_FAILURE);
 	}
     };
     ~GzFastq() {
@@ -224,6 +224,7 @@ int GzFastq::next_seq(Seq &s) {
 class GzFastq: public Input {
  public:
     GzFastq(const char *path) : Input() { cerr << "Gzip support was not enabled when Stacks was compiled.\n"; };
+    GzFastq(string path) : Input() { cerr << "Gzip support was not enabled when Stacks was compiled.\n"; };
     ~GzFastq() {};
     Seq *next_seq()      { return NULL; };
     int  next_seq(Seq &) { return 0; };
