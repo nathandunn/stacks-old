@@ -227,7 +227,13 @@
 //            NSUInteger column = [[NSNumber numberWithInteger:formatKey.integerValue] unsignedIntegerValue];
             NSUInteger column = [formatKey unsignedIntegerValue];
             NSString* value = [formatDictionary objectForKey:formatKey];
-            [formattedSequenceString insertString:@"</span>" atIndex:(column + 1)];
+            
+            if( column  >= formattedSequenceString.length ){
+                [formattedSequenceString appendString:@"</span>"];
+           }
+            else{
+                [formattedSequenceString insertString:@"</span>" atIndex:(column + 1)];
+            }
             [formattedSequenceString insertString:[NSString stringWithFormat:@"<span class='%@'>",value] atIndex:(column)];
         }
 
