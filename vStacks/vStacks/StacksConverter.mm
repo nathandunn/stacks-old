@@ -108,7 +108,7 @@ NSString *calculateType(NSString *file);
 
 
 //        lociDictionary = [[NSMutableDictionary alloc] init];
-        sampleLookupDictionary = [[NSMutableDictionary alloc] init];
+        sampleLookupDictionary = [NSMutableDictionary dictionary];
         stopProcess = false;
 
 
@@ -196,7 +196,7 @@ NSString *calculateType(NSString *file);
 
 
 - (NSMutableDictionary *)loadPopulation:(NSString *)path {
-    NSMutableDictionary *populationLookup = [[NSMutableDictionary alloc] init];
+    NSMutableDictionary *populationLookup = [NSMutableDictionary dictionary];
 
     NSString *popmapFile = [path stringByAppendingString:@"popmap"];
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -397,7 +397,7 @@ NSString *calculateType(NSString *file);
     progressWindow.actionMessage.stringValue = @"Populated Samples";
 
 
-    NSMutableSet *loci = [[NSMutableSet alloc] init];
+    NSMutableSet *loci = [NSMutableSet set];
 
     gettimeofday(&time1, NULL);
     map<int, CSLocus *>::iterator catalogIterator = catalog.begin();
@@ -436,7 +436,7 @@ NSString *calculateType(NSString *file);
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
 
-        NSMutableArray *snpArray = [[NSMutableArray alloc] init];
+        NSMutableArray *snpArray = [NSMutableArray array];
         for (; snpsIterator != snps.end(); ++snpsIterator) {
             SNP *snp = (*snpsIterator);
 
@@ -469,7 +469,7 @@ NSString *calculateType(NSString *file);
         map<string, int>::iterator allelesIterator = alleles.begin();
 //        string allele;
 //        int column;
-        NSMutableArray *alleleArray = [[NSMutableArray alloc] init];
+        NSMutableArray *alleleArray = [NSMutableArray array];
         for (; allelesIterator != alleles.end(); ++allelesIterator) {
             string allele = allelesIterator->first;
             int column = allelesIterator->second;
@@ -582,7 +582,7 @@ NSString *calculateType(NSString *file);
 //                locusMO.length = [NSNumber numberWithInt:loc->depth];
 
                 // TODO: CONVERT TO USE DATA
-                NSMutableArray *datumDataArray = [[NSMutableArray alloc] init];
+                NSMutableArray *datumDataArray = [NSMutableArray array] ;
                 if (depths.size() == numLetters && numLetters > 0 ) {
                     for (int j = 0; j < numLetters; j++) {
 
@@ -955,7 +955,7 @@ NSString *calculateType(NSString *file);
                 
                 NSMutableArray *snpArray;
                 if(datumMO.snpData==nil){
-                    snpArray = [[NSMutableArray alloc] init];
+                    snpArray = [NSMutableArray array] ;
                 }
                 else{
                    snpArray = [NSMutableArray arrayWithArray:[NSJSONSerialization JSONObjectWithData:datumMO.snpData options:kNilOptions error:&error2]];
@@ -998,7 +998,7 @@ NSString *calculateType(NSString *file);
 //    NSString* contents = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding]
     NSError *error2;
     NSArray *fileData = [[NSString stringWithContentsOfFile:name encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
-    NSMutableDictionary *lookupDictionary = [[NSMutableDictionary alloc] init];
+    NSMutableDictionary *lookupDictionary = [NSMutableDictionary dictionary];
     NSString *line;
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
@@ -1023,7 +1023,7 @@ NSString *calculateType(NSString *file);
     NSError *error;
 //    NSArray *files = [fileManager contentsOfDirectoryAtPath:path error:&error];
     NSArray *files = [fileManager contentsOfDirectoryAtPath:path error:&error];
-    NSMutableArray *realFiles = [[NSMutableArray alloc] init];
+    NSMutableArray *realFiles = [NSMutableArray array];
 
     for (NSString *filePath in files) {
         if ([filePath hasSuffix:@".tags.tsv"] && ![filePath hasPrefix:@"batch"]) {
@@ -1045,7 +1045,7 @@ NSString *calculateType(NSString *file);
     long saveAtLine = 500000;
     NSUInteger saveCounter = 1;
 
-    NSMutableSet *savedDatums = [[NSMutableSet alloc] init];
+    NSMutableSet *savedDatums = [NSMutableSet set];
 
     StackEntryRenderer *stackEntryRenderer = [[StackEntryRenderer alloc] init];
 
@@ -1268,7 +1268,7 @@ NSString *calculateType(NSString *file);
 
 - (NSDictionary *)getLocusSnpsForDocument:(StacksDocument *)document {
     if(locusSnpMap==nil){
-        locusSnpMap = [[NSMutableDictionary alloc] init];
+        locusSnpMap = [NSMutableDictionary dictionary];
         for(LocusMO *locusMO in document.loci){
             [locusSnpMap setObject:locusMO.snpData forKey:locusMO.locusId];
         }
@@ -1505,7 +1505,7 @@ NSString *calculateType(NSString *file);
 //    [f setNumberStyle:NSNumberFormatterDecimalStyle];
 
     // creates a unique set
-    NSMutableSet *populationIdsSet = [[NSMutableSet alloc] init];
+    NSMutableSet *populationIdsSet = [NSMutableSet set] ;
     for (NSString *populationId in populationLookup.allValues) {
         [populationIdsSet addObject:populationId];
     }
@@ -1523,7 +1523,7 @@ NSString *calculateType(NSString *file);
 }
 
 - (void)readPopulations:(StacksDocument *)document {
-    NSMutableArray *populations = [[NSMutableArray alloc] init];
+    NSMutableArray *populations = [NSMutableArray array];
     NSManagedObjectContext *moc = document.managedObjectContext;
     [moc setUndoManager:nil];
 
@@ -1562,7 +1562,7 @@ NSString *calculateType(NSString *file);
 
     NSLog(@"population size %ld", populations.count);
 //    [document.populations setWithArray:populations ];
-    document.populations = [[NSSet alloc] initWithArray:populations];
+    document.populations = [NSSet setWithArray:populations];
 //    return populationLookup;
 
 }
@@ -1627,7 +1627,7 @@ NSString *calculateType(NSString *file);
 NSUInteger countParents(NSArray *parents) {
     NSUInteger parentCount = 0;
 
-    NSMutableSet *parentIds = [[NSMutableSet alloc] initWithCapacity:parents.count];
+    NSMutableSet *parentIds = [NSMutableSet setWithCapacity:parents.count];
     for (NSString *parentString in parents) {
         [parentIds addObject:[parentString componentsSeparatedByString:@"_"][0]];
     }

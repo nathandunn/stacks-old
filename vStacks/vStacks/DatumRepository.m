@@ -145,7 +145,8 @@
     NSError *error1;
     NSArray *datums = [context executeFetchRequest:request1 error:&error1];
 
-    NSMutableDictionary *dictionary = [[NSMutableDictionary alloc] initWithCapacity:datums.count];
+//    NSMutableDictionary *dictionary = [[NSMutableDictionary alloc] initWithCapacity:datums.count];
+    NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:datums.count];
 
     for(DatumMO *datumMO in datums){
 //        [dictionary insertValue:datumMO inPropertyWithKey:datumMO.tagId.stringValue];
