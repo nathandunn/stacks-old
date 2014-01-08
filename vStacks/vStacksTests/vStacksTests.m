@@ -28,7 +28,20 @@
 
 - (void)testExample
 {
-    XCTFail(@"No implementation for \"%s\"", __PRETTY_FUNCTION__);
+    NSString* testString = @"TGCAGGCCCTGGAGGAGGAGTTTTCCAGGAAGCTGCAGGAACAGGAAGTGTTCTTTAAGATGAGCGGCGAATCGGAGTGCCTTAACCCCTCCAGC" ;
+    NSMutableString *testAString = [NSMutableString stringWithString:testString];
+   
+    NSLog(@"testString length %ld",testString.length);
+    XCTAssert(testString.length==95, @"should be 94");
+    XCTAssert(testAString.length==95, @"should be 94");
+    
+    [testAString insertString:@"test" atIndex:95];
+    
+    NSLog(@"testString length %ld",testString.length);
+    XCTAssert(testAString.length==95+4, @"should be 98");
+    
+    
+//    XCTFail(@"No implementation for \"%s\"", __PRETTY_FUNCTION__);
 }
 
 @end
