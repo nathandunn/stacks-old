@@ -572,7 +572,8 @@ NSString *calculateType(NSString *file);
 //                newDatumMO.locus = locus ;
 //                newDatumMO.tagId;
 //                return newDatumMO ;
-                newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
+//                newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
+                newDatumMO.tagId = [NSNumber numberWithInt:loc->id];
 
                 if (newDatumMO.sampleId == nil) {
                     NSLog(@"loading sample ID %@", newDatumMO.sampleId);
