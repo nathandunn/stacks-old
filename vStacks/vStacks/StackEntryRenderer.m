@@ -146,7 +146,7 @@
     NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(compare:)];
     for (NSNumber *snpKey in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
         NSUInteger column = snpKey.unsignedIntegerValue;
-        if( column  >= consensusString.length ){
+        if( column  >= consensusString.length-1 ){
             [consensusString appendString:@"</span>"];
         }
         else{
@@ -228,7 +228,7 @@
             NSUInteger column = [formatKey unsignedIntegerValue];
             NSString* value = [formatDictionary objectForKey:formatKey];
             
-            if( column  >= formattedSequenceString.length ){
+            if( column  >= formattedSequenceString.length-1 ){
                 [formattedSequenceString appendString:@"</span>"];
            }
             else{
