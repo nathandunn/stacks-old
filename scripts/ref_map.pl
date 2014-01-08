@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 #
 # This file is part of Stacks.
 #
@@ -112,7 +112,6 @@ if ($sql == 1) {
     # 
     `mysql --defaults-file=$cnf $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'"` if ($dry_run == 0);
 
-    print STDERR  "mysql --defaults-file=$cnf $db -e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'\"\n";
     print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'\"\n";
 }
 
@@ -152,7 +151,6 @@ foreach $sample (@parents, @progeny, @samples) {
 	    chomp $results[0];
 	    $sample_id = $results[0];
 	}
-	print STDERR  "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop\"\n";
 	print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop\"\n";
     }
 
@@ -204,8 +202,14 @@ $cat_file = "batch_" . $batch_id;
 $cmd      = $exe_path . "cstacks -g -b $batch_id -o $out_path $parents " . join(" ", @_cstacks) . " 2>&1";
 print STDERR  "$cmd\n";
 print $log_fh "$cmd\n";
-@results =    `$cmd` if ($dry_run == 0);
-print $log_fh @results;
+
+if ($dry_run == 0) {
+    open($pipe_fh, "$cmd |");
+    while (<$pipe_fh>) {
+	print $log_fh $_;
+    }
+    close($pipe_fh);
+}
 
 print STDERR "Importing catalog to MySQL database..." if ($sql == 1);
 
@@ -261,8 +265,14 @@ if ($data_type eq "map") {
     $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -t gen -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
-    @results =    `$cmd` if ($dry_run == 0);
-    print $log_fh @results;
+
+    if ($dry_run == 0) {
+	open($pipe_fh, "$cmd |");
+	while (<$pipe_fh>) {
+	    print $log_fh $_;
+	}
+	close($pipe_fh);
+    }
 
     $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
     import_sql_file($log_fh, $file, "markers", 0);
@@ -276,8 +286,14 @@ if ($data_type eq "map") {
     $cmd = $exe_path . "populations -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
-    @results =    `$cmd` if ($dry_run == 0);
-    print $log_fh @results;
+
+    if ($dry_run == 0) {
+	open($pipe_fh, "$cmd |");
+	while (<$pipe_fh>) {
+	    print $log_fh $_;
+	}
+	close($pipe_fh);
+    }
 
     $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
     import_sql_file($log_fh, $file, "markers", 0);
@@ -519,7 +535,7 @@ sub parse_command_line {
 	}
     }
 
-    $exe_path = $exe_path . "/"          if (substr($out_path, -1) ne "/");
+    $exe_path = $exe_path . "/"          if (substr($exe_path, -1) ne "/");
     $out_path = substr($out_path, 0, -1) if (substr($out_path, -1) eq "/");
 
     if ($batch_id !~ /^\d+$/ || $batch_id < 0) {
