@@ -65,7 +65,7 @@
 
     NSError *error;
     // should ALWAYS be true, except for in test instances
-    if(snpLocusData != nil ){
+    if (snpLocusData != nil ) {
         NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpLocusData options:kNilOptions error:&error];
         for (NSDictionary *snp in snpJson) {
             // not sure why this is a string, clearly an NSNumber when put in . . . weird
@@ -75,7 +75,7 @@
 
     }
 
-    if(snpDatumData!=nil){
+    if (snpDatumData != nil) {
         NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpDatumData options:kNilOptions error:&error];
         for (NSDictionary *snp in snpJson) {
 //            [snpDatumLookup setObject:snp forKey:[numberFormatter numberFromString:[snp valueForKey:@"column"]]];
@@ -146,13 +146,18 @@
     NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(compare:)];
     for (NSNumber *snpKey in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
         NSUInteger column = snpKey.unsignedIntegerValue;
-        if( column  >= consensusString.length-1 ){
-            [consensusString appendString:@"</span>"];
+        if (column > consensusString.length) {
+            NSLog(@"column %ld is greater %ld ", column, consensusString.length);
         }
-        else{
-            [consensusString insertString:@"</span>" atIndex:(column + 1)];
+        else {
+            if (column >= consensusString.length - 1) {
+                [consensusString appendString:@"</span>"];
+            }
+            else {
+                [consensusString insertString:@"</span>" atIndex:(column + 1)];
+            }
+            [consensusString insertString:@"<span class='rank_1'>" atIndex:(column)];
         }
-        [consensusString insertString:@"<span class='rank_1'>" atIndex:(column)];
     }
 
     [returnString appendFormat:@"<tr><td class='num'></td><td class='con'>consensus</td><td class='id'></td><td class='tag'>%@</td></tr>", consensusString];
@@ -168,21 +173,21 @@
 
 - (NSMutableString *)renderSequences {
 //    NSLog(@"sequences %ld entryIds %ld relatinships %ld sequenceIds %ld",sequences.count,entryIds.count,relationships.count,sequenceIds.count) ;
-    
+
 
     NSMutableString *returnString = [NSMutableString string];
 
     NSString *blockStyle;
-    for (NSUInteger  i = 0; i < sequences.count; i++) {
+    for (NSUInteger i = 0; i < sequences.count; i++) {
 
         // handle BLOCKS
-        if([[blocks objectAtIndex:i] integerValue]%2 ==0 ){
-            blockStyle =@"";
+        if ([[blocks objectAtIndex:i] integerValue] % 2 == 0) {
+            blockStyle = @"";
         }
-        else{
-            blockStyle =@" style='background-color: #dddddd;' ";
+        else {
+            blockStyle = @" style='background-color: #dddddd;' ";
         }
-        NSString* sequenceString = [sequences objectAtIndex:i] ;
+        NSString *sequenceString = [sequences objectAtIndex:i];
         NSMutableString *formattedSequenceString = [NSMutableString stringWithString:sequenceString];
 
         // a dictionary of locations (integer) and formats to apply in reverse order
@@ -195,15 +200,15 @@
         for (NSNumber *snpColumn in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
             NSUInteger column = snpColumn.unsignedIntegerValue;
 
-            if([snpDatumLookup objectForKey:snpColumn]!=nil){
-                if([consensus characterAtIndex:column]==[sequenceString characterAtIndex:column]) {
+            if ([snpDatumLookup objectForKey:snpColumn] != nil) {
+                if ([consensus characterAtIndex:column] == [sequenceString characterAtIndex:column]) {
                     [formatDictionary setObject:@"rank_1" forKey:snpColumn];
                 }
-                else{
+                else {
                     [formatDictionary setObject:@"rank_2" forKey:snpColumn];
                 }
             }
-            else{
+            else {
                 [formatDictionary setObject:@"cat_snp" forKey:snpColumn];
             }
 
@@ -212,31 +217,35 @@
 
 
         // handle errors
-        if([consensus isNotEqualTo:sequenceString]){
+        if ([consensus isNotEqualTo:sequenceString]) {
             for (int i = 0; i < sequenceString.length && i < consensus.length; i++) {
-                if([ consensus characterAtIndex:i] != [sequenceString characterAtIndex:i]){
-                    if([snpLocusLookup objectForKey:[NSNumber numberWithInt:i]]==nil && [formatDictionary objectForKey:[NSNumber numberWithInt:i]]==nil){
+                if ([consensus characterAtIndex:i] != [sequenceString characterAtIndex:i]) {
+                    if ([snpLocusLookup objectForKey:[NSNumber numberWithInt:i]] == nil && [formatDictionary objectForKey:[NSNumber numberWithInt:i]] == nil) {
                         [formatDictionary setObject:@"err" forKey:[NSNumber numberWithInt:i]];
                     }
                 }
             }
         }
-        
+
         // apply for the formats!!
         for (NSNumber *formatKey in [[formatDictionary allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
 //            NSUInteger column = [[NSNumber numberWithInteger:formatKey.integerValue] unsignedIntegerValue];
             NSUInteger column = [formatKey unsignedIntegerValue];
-            NSString* value = [formatDictionary objectForKey:formatKey];
-            
-            if( column  >= formattedSequenceString.length-1 ){
-                [formattedSequenceString appendString:@"</span>"];
-           }
-            else{
-                [formattedSequenceString insertString:@"</span>" atIndex:(column + 1)];
-            }
-            [formattedSequenceString insertString:[NSString stringWithFormat:@"<span class='%@'>",value] atIndex:(column)];
-        }
+            NSString *value = [formatDictionary objectForKey:formatKey];
 
+            if (column > formattedSequenceString.length) {
+                NSLog(@"bad format %ld > %ld",column,formattedSequenceString.length);
+            }
+            else {
+                if (column >= formattedSequenceString.length - 1) {
+                    [formattedSequenceString appendString:@"</span>"];
+                }
+                else {
+                    [formattedSequenceString insertString:@"</span>" atIndex:(column + 1)];
+                }
+                [formattedSequenceString insertString:[NSString stringWithFormat:@"<span class='%@'>", value] atIndex:(column)];
+            }
+        }
 
 
         [returnString appendFormat:@"<tr><td class='num'>%@</td><td class='%@'>%@</td><td class='id'>%@</td><td class='tag' %@>%@</td></tr>", [entryIds objectAtIndex:i], [relationships objectAtIndex:i], [relationships objectAtIndex:i], [sequenceIds objectAtIndex:i], blockStyle, formattedSequenceString];
