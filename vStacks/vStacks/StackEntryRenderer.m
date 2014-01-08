@@ -146,7 +146,12 @@
     NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(compare:)];
     for (NSNumber *snpKey in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
         NSUInteger column = snpKey.unsignedIntegerValue;
-        [consensusString insertString:@"</span>" atIndex:(column + 1)];
+        if( column  >= consensusString.length ){
+            [consensusString appendString:@"</span>"];
+        }
+        else{
+            [consensusString insertString:@"</span>" atIndex:(column + 1)];
+        }
         [consensusString insertString:@"<span class='rank_1'>" atIndex:(column)];
     }
 
