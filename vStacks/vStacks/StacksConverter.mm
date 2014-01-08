@@ -498,7 +498,7 @@ NSString *calculateType(NSString *file);
 
 
 //    setParentCounts(lociDictionary, catalogTagFile);
-    [self setParentCounts:stacksDocument.managedObjectContext forFile:catalogTagFile];
+    [self setParentCounts:stacksDocument.managedObjectContext forFile:catalogTagFile loci:loci];
 
     NSLog(@"populating snps %ld", (time2.tv_sec - time1.tv_sec));
 
@@ -679,7 +679,7 @@ NSString *calculateType(NSString *file);
     NSLog(@"loading snps onto datums");
     gettimeofday(&time1, NULL);
     progressWindow.actionMessage.stringValue = @"Loading datum snps";
-    [self loadSnpsOntoDatum:stacksDocument];
+    [self loadSnpsOntoDatum:stacksDocument progressWindow:progressWindow];
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading snps onto datum time %ld", time2.tv_sec - time1.tv_sec);
 
@@ -717,7 +717,7 @@ NSString *calculateType(NSString *file);
 }
 
 
-- (void)loadSnpsOntoDatum:(StacksDocument *)document {
+- (void)loadSnpsOntoDatum:(StacksDocument *)document progressWindow:(ProgressController *)window {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *path = document.path;
 
@@ -726,10 +726,12 @@ NSString *calculateType(NSString *file);
     NSArray *files = [fileManager contentsOfDirectoryAtPath:path error:&error];
     NSLog(@"# of files for directory %ld", files.count);
 
+    NSUInteger  count =
     // 2 - for each file, read the .tags file
     for (NSString *filePath in files) {
         if ([filePath hasSuffix:@".snps.tsv"] && ![filePath hasPrefix:@"batch"]) {
             [self loadSnpFileForDatum:document fromFile:filePath];
+            NSLog(@"")
         }
         else {
 //            NSLog(@"not loading tag file %@", filePath);
@@ -1585,21 +1587,35 @@ NSString *calculateType(NSString *file);
     return stacksDocument;
 }
 
-- (void)setParentCounts:(NSManagedObjectContext *)context forFile:(NSString *)file {
+- (void)setParentCounts:(NSManagedObjectContext*) managedObjectContext forFile:(NSString *)file loci:(NSSet*) loci{
     NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
+
+    NSLog(@"creating map %ld",loci.count) ;
+    NSMutableDictionary *lociLookup = [NSMutableDictionary dictionaryWithCapacity:loci.count];
+    for(LocusMO *locusMO in loci){
+        [lociLookup setObject:locusMO forKey:locusMO.locusId];
+    }
+    NSLog(@"processing parents %ld",lociLookup.count) ;
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+
     NSString *line;
+    LocusMO *locusMO ;
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 // should be column 8
         if (columns.count > 9) {
-            NSInteger locusId = [[NSString stringWithFormat:@"%@", columns[2]] integerValue];
+//            NSInteger locusId = [[NSString stringWithFormat:@"%@", columns[2]] integerValue];
+            NSNumber *locusId = [numberFormatter numberFromString:columns[2]];
 //            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
             NSArray *parents = [columns[8] componentsSeparatedByString:@","];
 
             NSInteger parentCount = countParents(parents);
 //            NSLog(@"parent count for %ld is %ld",locusId,parentCount);
 
-            LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:context forId:locusId];
+//            LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:document.managedObjectContext forId:locusId];
+            locusMO = [lociLookup objectForKey:locusId];
+
             locusMO.parentCount = [NSNumber numberWithInteger:parentCount];
         }
     }
