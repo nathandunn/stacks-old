@@ -131,18 +131,20 @@ NSString *calculateType(NSString *file);
 }
 
 
-- (StacksDocument *)loadLociAndGenotypes:(NSURL *)fileUrl progressWindow:(ProgressController *)progressController {
+- (BOOL)loadLociAndGenotypes:(NSURL *)fileUrl progressWindow:(ProgressController *)progressController {
 
     NSString* filePathForUrl = [self generateFilePathForUrl:fileUrl];
     NSString* directory = [fileUrl.path stringByAppendingString:@"/"];
-    
+
     NSLog(@"path %@ exactPath %@ fileUrl.path %@", filePathForUrl,directory,fileUrl.path);
 
-    StacksDocument *stacksDocument = [self createStacksDocumentForPath:directory];
+    StacksDocument *stacksDocument = [self createStacksDocumentForPath:fileUrl.path];
     if (stacksDocument == nil) {
-        return nil;
+        [stacksDocument dealloc];
+        stacksDocument = nil ;
+        return NO;
     }
-    stacksDocument.path = filePathForUrl;
+    stacksDocument.path = directory;
     stacksDocument.name = stacksDocument.path.lastPathComponent;
 
     stacksDocument = [self loadDocument:stacksDocument progressWindow:progressController];
@@ -164,8 +166,10 @@ NSString *calculateType(NSString *file);
     [moc reset];
     [[moc parentContext] reset];
 
+    [stacksDocument dealloc];
+    stacksDocument = nil ;
 
-    return stacksDocument;
+    return YES;
 }
 
 //- (NSManagedObjectContext *)getContextForPath:(NSString *)path andDocument:(StacksDocument *)document{
