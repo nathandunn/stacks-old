@@ -109,7 +109,8 @@ NSString *calculateType(NSString *file);
 
 
 //        lociDictionary = [[NSMutableDictionary alloc] init];
-        sampleLookupDictionary = [NSMutableDictionary dictionary];
+//        sampleLookupDictionary = [NSMutableDictionary dictionary];
+        sampleLookupDictionary = [[NSMutableDictionary alloc] init];
         stopProcess = false;
 
 
@@ -132,9 +133,10 @@ NSString *calculateType(NSString *file);
 
     stacksDocument = [self loadDocument:stacksDocument progressWindow:progressController];
     NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
-    NSError *error;
+    NSError *error = nil ;
     [moc save:&error];
     NSLog(@"error %@", error);
+    error = nil ;
     [[moc parentContext] save:&error];
     NSLog(@"error 2 %@", error);
     [moc reset];
@@ -262,9 +264,9 @@ NSString *calculateType(NSString *file);
         exit(1);
     }
 
-    NSError *error;
+    NSError *error = nil ;
     NSArray *files = [fileManager contentsOfDirectoryAtPath:examplePath error:&error];
-    if (error) {
+    if (error!=nil) {
         NSLog(@"error %@", error);
         return nil;
     }
@@ -842,7 +844,7 @@ NSString *calculateType(NSString *file);
 
 
     // save old
-    NSError *saveError;
+    NSError *saveError = nil ;
     [moc save:&saveError];
 //    NSLog(@"saved %d", success);
     if (saveError != nil ) {
@@ -987,7 +989,7 @@ NSString *calculateType(NSString *file);
 
 
     // save old
-    NSError *saveError;
+    NSError *saveError = nil;
     [moc save:&saveError];
     if (saveError != nil ) {
         NSLog(@"error saving %@", saveError);
