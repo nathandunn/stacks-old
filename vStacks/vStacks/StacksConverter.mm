@@ -40,6 +40,7 @@ using std::ofstream;
 //#import "ConsensusStackEntryMO.h"
 #import "ProgressController.h"
 #import "StackEntryRenderer.h"
+#import "GZIP.h"
 
 
 #include <sys/time.h>
@@ -583,8 +584,8 @@ NSString *calculateType(NSString *file);
 //                locusMO.length = [NSNumber numberWithInt:loc->depth];
 
                 // TODO: CONVERT TO USE DATA
-                NSMutableArray *datumDataArray = [NSMutableArray array] ;
-                if (depths.size() == numLetters && numLetters > 0 ) {
+                NSMutableArray *datumDataArray = [NSMutableArray array];
+                if (depths.size() == numLetters && numLetters > 0) {
                     for (int j = 0; j < numLetters; j++) {
 
                         NSDictionary *dataDictionary = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -601,9 +602,9 @@ NSString *calculateType(NSString *file);
 //                        [newDatumMO addDepthsObject:depthMO];
                     }
 
-                    NSError *error ;
+                    NSError *error;
                     NSData *datumData = [NSJSONSerialization dataWithJSONObject:datumDataArray options:NSJSONWritingPrettyPrinted error:&error];
-                    newDatumMO.haplotypeData = datumData ;
+                    newDatumMO.haplotypeData = datumData;
 //                    [locusMO addDatumsObject:newDatumMO];
                 }
                 else {
@@ -707,7 +708,6 @@ NSString *calculateType(NSString *file);
     NSLog(@"finished loading stacks entries time %ld", time2.tv_sec - time1.tv_sec);
 
 
-
     NSError *error;
     progressWindow.actionMessage.stringValue = @"Final save";
     [stacksDocument.managedObjectContext save:&error];
@@ -727,7 +727,7 @@ NSString *calculateType(NSString *file);
     NSArray *files = [fileManager contentsOfDirectoryAtPath:path error:&error];
     NSLog(@"# of files for directory %ld", files.count);
 
-    NSUInteger  count = 0 ;
+    NSUInteger count = 0;
     // 2 - for each file, read the .tags file
     for (NSString *filePath in files) {
         if ([filePath hasSuffix:@".snps.tsv"] && ![filePath hasPrefix:@"batch"]) {
@@ -736,8 +736,8 @@ NSString *calculateType(NSString *file);
         else {
 //            NSLog(@"not loading tag file %@", filePath);
         }
-        window.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum snp %ld/%ld",count,files.count];
-        ++count ;
+        window.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum snp %ld/%ld", count, files.count];
+        ++count;
     }
 }
 
@@ -956,15 +956,15 @@ NSString *calculateType(NSString *file);
                         , [numberFormatter numberFromString:[columns objectAtIndex:7]], @"rank3"
                         , [numberFormatter numberFromString:[columns objectAtIndex:8]], @"rank4"
                         , nil ];
-                
+
                 NSMutableArray *snpArray;
-                if(datumMO.snpData==nil){
-                    snpArray = [NSMutableArray array] ;
+                if (datumMO.snpData == nil) {
+                    snpArray = [NSMutableArray array];
                 }
-                else{
-                   snpArray = [NSMutableArray arrayWithArray:[NSJSONSerialization JSONObjectWithData:datumMO.snpData options:kNilOptions error:&error2]];
+                else {
+                    snpArray = [NSMutableArray arrayWithArray:[NSJSONSerialization JSONObjectWithData:datumMO.snpData options:kNilOptions error:&error2]];
                 }
-                
+
                 [snpArray addObject:snpDictionary];
 
                 NSData *snpArrayData = [NSJSONSerialization dataWithJSONObject:snpArray options:NSJSONWritingPrettyPrinted error:&error2];
@@ -1049,13 +1049,26 @@ NSString *calculateType(NSString *file);
     long saveAtLine = 500000;
     NSUInteger saveCounter = 1;
 
-    NSMutableSet *savedDatums = [NSMutableSet set];
+//    NSMutableSet *savedDatums = [NSMutableSet set];
 
     StackEntryRenderer *stackEntryRenderer = [[StackEntryRenderer alloc] init];
+
+    int size;
+    char *line;
+    ifstream fh;
+    vector<string> parts;
+    line = new char [max_len];
+    size = max_len;
+    long int line_num;
+
+    struct timeval time3, time4;
+    gettimeofday(&time3, NULL);
 
     for (NSString *tagFileName in realFiles) {
         progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld", fileNumber + 1, numFiles];
         if (stopProcess) return;
+
+
         if ([tagFileName hasSuffix:@".tags.tsv"] && ![tagFileName hasPrefix:@"batch"]) {
 //            CHECK_STOP
 //            [self loadTagFile:document fromFile:filePath];
@@ -1070,21 +1083,10 @@ NSString *calculateType(NSString *file);
             NSManagedObjectContext *moc = document.managedObjectContext;
             SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
 
-            struct timeval time1, time2;
-            gettimeofday(&time1, NULL);
 
-            NSError *error2 = nil;
-            NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", tagFileName];
-            NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
-//    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
-
-            if (error2) {
-                NSLog(@"error loading file [%@]: %@", tagFileName, error2);
-            }
-
-            NSString *line;
+//            NSString *line;
             NSUInteger row = 1;
-            gettimeofday(&time1, NULL);
+//            gettimeofday(&time3, NULL);
             NSInteger locusId = -1;
             NSInteger newLocusId;
             DatumMO *datumMO = nil ;
@@ -1099,25 +1101,79 @@ NSString *calculateType(NSString *file);
 //    }
 //    NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
 
+//            NSError *error2 = nil;
+            NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", tagFileName];
+            string f = [absoluteFileName cStringUsingEncoding:NSUTF8StringEncoding];
+//            NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
 
-            for (line in fileData) {
-                NSArray *columns = [line componentsSeparatedByString:@"\t"];
+////    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
+//
+//            if (error2) {
+//                NSLog(@"error loading file [%@]: %@", tagFileName, error2);
+//            }
 
-                if (columns.count > 8) {
+            fh.open(f.c_str(), ifstream::in);
 
-                    // if the StackMO is found
+//            if (fh.fail()) {
+//                cerr << " Unable to open " << absoluteFileName << "\n";
+//                return;
+//            } else {
+//                cerr << "  Parsing " << f.c_str() << "\n";
+//            }
+
+//            for (line in fileData) {
+            if (fh.fail()) {
+//                cerr << " Unable to open " << absoluteFileName << "\n"; ;
+                NSLog(@"unable to open file: %@",absoluteFileName) ;
+
+            }
+            else {
+                NSLog(@"opening good file: %@",absoluteFileName) ;
+
+                while (fh.good()) {
+//                NSArray *columns = [NSArray arrayWithObjects:<#(id)firstObj, ...#>]
+//                NSArray *columns = [line componentsSeparatedByString:@"\t"];
+
+                    read_line(fh, &line, &size);
+
+//                if (!fh.good() && strlen(line) == 0){
+//                    NSLog(@"no good!");
+//                    continue;
+//                }
+
+                    if (fh.good() && strlen(line) > 0) {
+
+                        parse_tsv(line, parts);
+
+                        if (parts.size() != num_tags_fields) {
+                            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+                            NSLog(@"error Parings %ld -> %ld", line_num, parts.size());
+                            return;
+                        }
+
+
+//                if (columns.count > 8) {
+
+
+                        // if the StackMO is found
 //            newLocusId = [[columns objectAtIndex:2] integerValue];
-                    NSString *internalIndex = (NSString *) [columns objectAtIndex:2];
-                    NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+//                    NSString *internalIndex = (NSString *) [columns objectAtIndex:2];
+                        NSString *internalIndex = [NSString stringWithUTF8String:parts[2].c_str()];
+                        NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
 //            NSLog(@"retrieved object: %@", retrievedObject);
-                    newLocusId = [retrievedObject integerValue];
-                    if (locusId != newLocusId) {
+                        newLocusId = [retrievedObject integerValue];
+                        if (locusId != newLocusId) {
 
-                        // cleanup old object if exists
+                            // cleanup old object if exists
 //                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
-                        if (false == [stackEntryRenderer isEmpty]) {
-                            stackEntryRenderer.snpDatumData = datumMO.snpData ;
-                            datumMO.stackData = [stackEntryRenderer renderData];
+                            if (false == [stackEntryRenderer isEmpty]) {
+                                stackEntryRenderer.snpDatumData = datumMO.snpData;
+                                datumMO.stackData = [stackEntryRenderer renderData];
+//                        NSLog(@"setting data %ld for locus %ld",datumMO.stackData.length,locusId);
+//                        if(locusId==16){
+////            NSString* snpString = [[NSString alloc] initWithData:snpData encoding:NSUTF8StringEncoding];
+//                            NSLog(@"data %@", [[NSString alloc] initWithData:[datumMO.stackData gunzippedData] encoding:NSUTF8StringEncoding]);
+//                        }
 
 //                    NSLog(@"saving for new locus");
 //                    NSError *error;
@@ -1126,44 +1182,45 @@ NSString *calculateType(NSString *file);
 
 //                    datumMO = nil ;
 //                    stackEntryView = nil ;
-                        }
+                            }
 
 
-                        locusId = newLocusId;
-                        // search for the new locus
-                        // TODO: get from in-memory lookup?
+                            locusId = newLocusId;
+                            // search for the new locus
+                            // TODO: get from in-memory lookup?
 //                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
-                        datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
+                            datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
 
-                        if (datumMO != nil) {
-                            [savedDatums addObject:datumMO];
+                            if (datumMO != nil) {
+//                        [savedDatums addObject:datumMO];
 //                NSLog(@"%@ vs %@",sampleMO.sampleId,datumMO.sampleId );
 //                        stackEntryView = [[StackEntryRenderer alloc] init];
-                            [stackEntryRenderer clear];
+                                [stackEntryRenderer clear];
 
-                            stackEntryRenderer.locusId = locusId;
+                                stackEntryRenderer.locusId = locusId;
 
-                            stackEntryRenderer.snpLocusData = [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
+                                stackEntryRenderer.snpLocusData = [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
 //                            stackEntryView.sn= [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
 
 //                        stackEntryView.sampleName = datumMO.sample.name;
-                            stackEntryRenderer.sampleName = sampleMO.name;
+                                stackEntryRenderer.sampleName = sampleMO.name;
 
-                            // TODO: map locus and datum snps
-                        }
+                                // TODO: map locus and datum snps
+                            }
 //                        else{
 //                            NSLog(@"no datum found for locus: %ld and sample %@",locusId,sampleMO.name);
 //                        }
-                    }
+                        }
 
-                    if (datumMO != nil) {
-                        NSString *relationship = [columns objectAtIndex:6];
+                        if (datumMO != nil) {
+//                        NSString *relationship = [columns objectAtIndex:6];
+                            NSString *relationship = [NSString stringWithUTF8String:parts[6].c_str()];
 
 
-
-                        if ([relationship isEqualToString:@"consensus"]) {
-                            row = 1;
-                            stackEntryRenderer.consensus = [columns objectAtIndex:9];
+                            if ([relationship isEqualToString:@"consensus"]) {
+                                row = 1;
+//                            stackEntryRenderer.consensus = [columns objectAtIndex:9];
+                                stackEntryRenderer.consensus = [NSString stringWithUTF8String:parts[9].c_str()];
 //                            [stackEntryView.relationships addObject:@"consensus"];
 //                    datumMO.consensus = [stackEntryRepository insertConsensusStackEntry:moc
 //                                                                                  block:[columns objectAtIndex:7]
@@ -1176,9 +1233,10 @@ NSString *calculateType(NSString *file);
 //                                                                                  datum:datumMO
 //                    ];
 
-                        }
-                        else if ([relationship isEqualToString:@"model"]) {
-                            stackEntryRenderer.model = [columns objectAtIndex:9];
+                            }
+                            else if ([relationship isEqualToString:@"model"]) {
+//                            stackEntryRenderer.model = [columns objectAtIndex:9];
+                                stackEntryRenderer.model = [NSString stringWithUTF8String:parts[9].c_str()];
 //                            [stackEntryView.relationships addObject:@"model"];
 //                    datumMO.model = [stackEntryRepository insertModelStackEntry:moc
 //                                                                          block:[columns objectAtIndex:7]
@@ -1186,13 +1244,17 @@ NSString *calculateType(NSString *file);
 //                                                                       sequence:[columns objectAtIndex:9]
 //                                                                          datum:datumMO
 //                    ];
-                        }
-                        else {
-                            [stackEntryRenderer.sequenceIds addObject:[columns objectAtIndex:8]];
-                            [stackEntryRenderer.sequences addObject:[columns objectAtIndex:9]];
-                            [stackEntryRenderer.relationships addObject:[columns objectAtIndex:6]];
-                            [stackEntryRenderer.blocks addObject:[columns objectAtIndex:7]];
-                            [stackEntryRenderer.entryIds addObject:[NSNumber numberWithInteger:row]];
+                            }
+                            else {
+//                            [stackEntryRenderer.sequenceIds addObject:[columns objectAtIndex:8]];
+                                [stackEntryRenderer.sequenceIds addObject:[NSString stringWithUTF8String:parts[8].c_str()]];
+//                            [stackEntryRenderer.sequences addObject:[columns objectAtIndex:9]];
+                                [stackEntryRenderer.sequences addObject:[NSString stringWithUTF8String:parts[9].c_str()]];
+//                            [stackEntryRenderer.relationships addObject:[columns objectAtIndex:6]];
+                                [stackEntryRenderer.relationships addObject:[NSString stringWithUTF8String:parts[6].c_str()]];
+//                            [stackEntryRenderer.blocks addObject:[columns objectAtIndex:7]];
+                                [stackEntryRenderer.blocks addObject:[NSString stringWithUTF8String:parts[7].c_str()]];
+                                [stackEntryRenderer.entryIds addObject:[NSNumber numberWithInteger:row]];
 //                    StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
 //                                                                                entryId:[NSNumber numberWithInteger:row]
 //                                                                           relationship:[columns objectAtIndex:6]
@@ -1203,34 +1265,34 @@ NSString *calculateType(NSString *file);
 //                                                                                  datum:datumMO
 //                    ];
 //                    [datumMO addStackEntriesObject:stackEntryMO];
-                            ++row;
-                        }
+                                ++row;
+                            }
 
 //                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
 
 
-                        if (saveCounter % saveAtLine == 0) {
-                            NSLog(@"SAVING");
-                            NSError *saveError;
-                            [moc save:&saveError];
-                            if (saveError != nil ) {
-                                NSLog(@"error saving %@", saveError);
+                            if (saveCounter % saveAtLine == 0) {
+                                NSLog(@"SAVING");
+                                NSError *saveError;
+                                [moc save:&saveError];
+                                if (saveError != nil ) {
+                                    NSLog(@"error saving %@", saveError);
+                                }
+//                        for (DatumMO *datumMO in savedDatums) {
+//                            [moc refreshObject:datumMO mergeChanges:YES];
+//                        }
+//                        [savedDatums removeAllObjects];
+//                        NSLog(@"saved datums count: %ld", savedDatums.count);
                             }
-                            for (DatumMO *datumMO in savedDatums) {
-                                [moc refreshObject:datumMO mergeChanges:YES];
-                            }
-                            [savedDatums removeAllObjects];
-                            NSLog(@"saved datums count: %ld", savedDatums.count);
+
+
+                            ++saveCounter;
                         }
 
 
-                        ++saveCounter;
                     }
 
-
                 }
-
-            }
 
 
 
@@ -1244,10 +1306,13 @@ NSString *calculateType(NSString *file);
 //            }
 
 
-            gettimeofday(&time2, NULL);
-//    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time2.tv_sec - time1.tv_sec));
-//            NSLog(@"parse entries lines %ld time: %ld", fileData.count, (time2.tv_sec - time1.tv_sec));
+                gettimeofday(&time4, NULL);
+//    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time4.tv_sec - time3.tv_sec));
+                NSLog(@"parse entries lines time: %ld", (time4.tv_sec - time3.tv_sec));
 
+            }
+
+            fh.close();
 
         }
         else {
@@ -1271,9 +1336,9 @@ NSString *calculateType(NSString *file);
 }
 
 - (NSDictionary *)getLocusSnpsForDocument:(StacksDocument *)document {
-    if(locusSnpMap==nil){
+    if (locusSnpMap == nil) {
         locusSnpMap = [NSMutableDictionary dictionary];
-        for(LocusMO *locusMO in document.loci){
+        for (LocusMO *locusMO in document.loci) {
             [locusSnpMap setObject:locusMO.snpData forKey:locusMO.locusId];
         }
     }
@@ -1509,7 +1574,7 @@ NSString *calculateType(NSString *file);
 //    [f setNumberStyle:NSNumberFormatterDecimalStyle];
 
     // creates a unique set
-    NSMutableSet *populationIdsSet = [NSMutableSet set] ;
+    NSMutableSet *populationIdsSet = [NSMutableSet set];
     for (NSString *populationId in populationLookup.allValues) {
         [populationIdsSet addObject:populationId];
     }
@@ -1589,20 +1654,20 @@ NSString *calculateType(NSString *file);
     return stacksDocument;
 }
 
-- (void)setParentCounts:(NSManagedObjectContext*) managedObjectContext forFile:(NSString *)file loci:(NSSet*) loci{
+- (void)setParentCounts:(NSManagedObjectContext *)managedObjectContext forFile:(NSString *)file loci:(NSSet *)loci {
     NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
 
-    NSLog(@"creating map %ld",loci.count) ;
+    NSLog(@"creating map %ld", loci.count);
     NSMutableDictionary *lociLookup = [NSMutableDictionary dictionaryWithCapacity:loci.count];
-    for(LocusMO *locusMO in loci){
+    for (LocusMO *locusMO in loci) {
         [lociLookup setObject:locusMO forKey:locusMO.locusId];
     }
-    NSLog(@"processing parents %ld",lociLookup.count) ;
+    NSLog(@"processing parents %ld", lociLookup.count);
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
     NSString *line;
-    LocusMO *locusMO ;
+    LocusMO *locusMO;
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 // should be column 8
