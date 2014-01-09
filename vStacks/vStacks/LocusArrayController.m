@@ -10,11 +10,18 @@
 #import "LocusMO.h"
 #import "LocusRepository.h"
 
+@interface LocusArrayController()
+
+@property(weak) IBOutlet NSTextField *lociField;
+
+@end
+
 @implementation LocusArrayController {
 
 }
 
 
+@synthesize lociField;
 @synthesize minSnpValue;
 @synthesize maxSnpValue;
 @synthesize chromosomeLocation;
@@ -29,7 +36,13 @@
     chromosomeLocation = nil ;
     minBasePairs = 0;
     maxBasePairs = 1000000 * 10000;
-
+    
+    
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    [numberFormatter setNumberStyle:NSNumberFormatterNoStyle];
+//    [lociField setFormatter:numberFormatter];
+    [[lociField cell] setFormatter:numberFormatter];
+    
     [self setSortDescriptors:[NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"locusId" ascending:YES selector:@selector(compare:)]]];
 }
 

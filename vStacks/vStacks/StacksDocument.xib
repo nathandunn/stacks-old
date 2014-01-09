@@ -10,6 +10,7 @@
                 <outlet property="datumCollectionView" destination="100136" id="100233"/>
                 <outlet property="datumController" destination="100221" id="100237"/>
                 <outlet property="editPopulationButton" destination="sfi-Rd-oH1" id="Gob-x2-9kp"/>
+                <outlet property="filteredLoci" destination="100452" id="XLA-wg-0dM"/>
                 <outlet property="locusTableView" destination="100152" id="100231"/>
                 <outlet property="maxLocusTextField" destination="VzT-Yh-SXs" id="fNf-Gz-FT9"/>
                 <outlet property="maxSnpPopupButton" destination="9V1-Wf-eD6" id="3tj-lQ-Xl9"/>
@@ -298,7 +299,7 @@
                             <button verticalHuggingPriority="750" id="sfi-Rd-oH1">
                                 <rect key="frame" x="141" y="58" width="46" height="19"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <buttonCell key="cell" type="roundRect" title="Edit" bezelStyle="roundedRect" image="E6E5178E-2531-446F-82D6-45131513BF93" imagePosition="overlaps" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="QX3-jb-L4D">
+                                <buttonCell key="cell" type="roundRect" title="Edit" bezelStyle="roundedRect" image="12CD9587-ECFE-474B-B1EC-29798010D2E4" imagePosition="overlaps" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="QX3-jb-L4D">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="cellTitle"/>
                                 </buttonCell>
@@ -492,6 +493,7 @@
             <connections>
                 <binding destination="-2" name="managedObjectContext" keyPath="managedObjectContext" id="100199"/>
                 <outlet property="content" destination="-2" id="100201"/>
+                <outlet property="lociField" destination="100296" id="Ee2-us-Ayc"/>
             </connections>
         </arrayController>
         <arrayController mode="entity" entityName="Population" usesLazyFetching="YES" automaticallyPreparesContent="YES" automaticallyRearrangesObjects="YES" id="100206" userLabel="PopulationController" customClass="PopulationArrayController">
@@ -521,7 +523,7 @@
         </button>
     </objects>
     <resources>
-        <image name="E6E5178E-2531-446F-82D6-45131513BF93" width="1" height="1">
+        <image name="12CD9587-ECFE-474B-B1EC-29798010D2E4" width="1" height="1">
             <mutableData key="keyedArchiveRepresentation">
 YnBsaXN0MDDUAQIDBAUGPj9YJHZlcnNpb25YJG9iamVjdHNZJGFyY2hpdmVyVCR0b3ASAAGGoK4HCBMU
 GR4fIyQsLzI4O1UkbnVsbNUJCgsMDQ4PEBESVk5TU2l6ZVYkY2xhc3NcTlNJbWFnZUZsYWdzVk5TUmVw
