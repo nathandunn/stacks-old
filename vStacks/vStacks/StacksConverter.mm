@@ -1062,7 +1062,6 @@ NSString *calculateType(NSString *file);
     long int line_num;
 
     struct timeval time3, time4;
-    gettimeofday(&time3, NULL);
 
     for (NSString *tagFileName in realFiles) {
         progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld", fileNumber + 1, numFiles];
@@ -1086,7 +1085,7 @@ NSString *calculateType(NSString *file);
 
 //            NSString *line;
             NSUInteger row = 1;
-//            gettimeofday(&time3, NULL);
+            gettimeofday(&time3, NULL);
             NSInteger locusId = -1;
             NSInteger newLocusId;
             DatumMO *datumMO = nil ;
