@@ -88,6 +88,7 @@ NSString *calculateType(NSString *file);
 @synthesize sampleLookupDictionary;
 @synthesize stopProcess;
 @synthesize locusSnpMap;
+@synthesize numberFormatter;
 
 
 @synthesize persistentStoreCoordinator;
@@ -115,9 +116,15 @@ NSString *calculateType(NSString *file);
 
 
         persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
+
+        numberFormatter = [[NSNumberFormatter alloc] init];
+        numberFormatter.numberStyle = NSNumberFormatterNoStyle;
     }
     return self;
 }
+
+
+
 
 - (NSString *)generateFilePathForUrl:(NSURL *)url {
     return [url.path stringByAppendingFormat:@"/%@.stacks", url.path.lastPathComponent];
@@ -406,17 +413,14 @@ NSString *calculateType(NSString *file);
     map<int, CSLocus *>::iterator catalogIterator = catalog.begin();
     NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
 
-    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
-
     incrementAmount = 10.0 / catalog.size();
 
     progressWindow.actionMessage.stringValue = @"Loading locus snps";
     while (catalogIterator != catalog.end()) {
         const char *read = (*catalogIterator).second->con;
         LocusMO *locusMO = [[LocusRepository sharedInstance] insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).second->id]
-                                                               andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
-        ];
+                                                               andConsensus:[NSString stringWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]];
+
 
         // get catalogs for matches
         // TODO: double-check that this is correct . . .
@@ -798,8 +802,6 @@ NSString *calculateType(NSString *file);
     int depth;
     float ratio;
 //    LocusMO *locusMO = nil ;
-    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
     NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
     for (line in fileData) {
@@ -898,11 +900,8 @@ NSString *calculateType(NSString *file);
 //    char rank1, rank2, rank3, rank4;
     DatumMO *datumMO = nil ;
 //    LocusMO *locusMO = nil ;
-    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
 
     NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
-
-    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
 //    NSDictionary *snpLociMap = [self getLocusSnpsForDocument:document];
     for (line in fileData) {
@@ -1638,7 +1637,7 @@ NSString *calculateType(NSString *file);
 }
 
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path {
-    NSError *stacksDocumentCreateError;
+    NSError *stacksDocumentCreateError = nil ;
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
     stacksDocument.path = path;
     stacksDocument.name = path.lastPathComponent;
@@ -1652,6 +1651,7 @@ NSString *calculateType(NSString *file);
         NSLog(@"error creating stacks document %@", stacksDocumentCreateError);
         return nil;
     }
+    
     return stacksDocument;
 }
 
@@ -1664,8 +1664,6 @@ NSString *calculateType(NSString *file);
         [lociLookup setObject:locusMO forKey:locusMO.locusId];
     }
     NSLog(@"processing parents %ld", lociLookup.count);
-    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
     NSString *line;
     LocusMO *locusMO;
@@ -1689,8 +1687,16 @@ NSString *calculateType(NSString *file);
     }
 }
 
+
 - (void)dealloc {
+    NSLog(@"deallocing !!!!!") ;
+//    [super dealloc];
     [sampleLookupDictionary removeAllObjects];
+    sampleLookupDictionary = nil ;
+    [locusSnpMap removeAllObjects];
+    locusSnpMap = nil ;
+    numberFormatter = nil ;
+
     persistentStoreCoordinator = nil ;
 }
 
