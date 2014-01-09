@@ -147,7 +147,7 @@
     for (NSNumber *snpKey in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
         NSUInteger column = snpKey.unsignedIntegerValue;
         if (column > consensusString.length) {
-            NSLog(@"column %ld is greater %ld ", column, consensusString.length);
+            NSLog(@"consensus snp column %ld is greater %ld ", column, consensusString.length);
         }
         else {
             if (column >= consensusString.length - 1) {
@@ -234,7 +234,7 @@
             NSString *value = [formatDictionary objectForKey:formatKey];
 
             if (column > formattedSequenceString.length) {
-                NSLog(@"bad format %ld > %ld",column,formattedSequenceString.length);
+                NSLog(@"bad format on sequence string %ld > %ld",column,formattedSequenceString.length);
             }
             else {
                 if (column >= formattedSequenceString.length - 1) {
