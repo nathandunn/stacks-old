@@ -56,7 +56,7 @@
 		143705D2187B88D80007BDE5 /* ReferenceStackEntryMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705BE187B88D80007BDE5 /* ReferenceStackEntryMO.m */; };
 		143705D3187B88D80007BDE5 /* DatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705C0187B88D80007BDE5 /* DatumMO.m */; };
 		143705D4187B88D80007BDE5 /* LocusMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705C2187B88D80007BDE5 /* LocusMO.m */; };
-		143705E9187B88E50007BDE5 /* StacksConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 143705D5187B88E50007BDE5 /* StacksConverter.mm */; };
+		143705E9187B88E50007BDE5 /* StacksConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 143705D5187B88E50007BDE5 /* StacksConverter.mm */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		143705EA187B88E50007BDE5 /* SampleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705D7187B88E50007BDE5 /* SampleRepository.m */; };
 		143705EB187B88E50007BDE5 /* PopulationRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705D9187B88E50007BDE5 /* PopulationRepository.m */; };
 		143705EC187B88E50007BDE5 /* SnpRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705DB187B88E50007BDE5 /* SnpRepository.m */; };
@@ -562,7 +562,7 @@
 				ORGANIZATIONNAME = "Nathan Dunn";
 				TargetAttributes = {
 					14370541187B876A0007BDE5 = {
-						TestTargetID = 1437051A187B87690007BDE5 /* vStacks */;
+						TestTargetID = 1437051A187B87690007BDE5;
 					};
 				};
 			};
