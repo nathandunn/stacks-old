@@ -375,6 +375,9 @@
     return snpFilterValues;
 }
 
+- (void)dealloc {
+//    self.managedObjectContext = nil ;
+}
 
 
 @end
