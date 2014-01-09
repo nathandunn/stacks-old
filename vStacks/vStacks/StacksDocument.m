@@ -29,6 +29,7 @@
 //@property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController;
+@property(weak) IBOutlet NSTextField *filteredLoci;
 @property(weak) IBOutlet NSTextField *totalLoci;
 @property(weak) IBOutlet NSPopUpButton *populationSelector;
 @property(weak) IBOutlet NSButton *editPopulationButton;
@@ -44,6 +45,7 @@
 
 // TODO: remove these in favor of NSSet loci
 //@synthesize locusViews;
+@synthesize filteredLoci;
 @synthesize loci;
 @synthesize populations;
 
@@ -120,6 +122,12 @@
     maxLocusTextField.stringValue = [NSString stringWithFormat:@"%1.2f", maxLocationVariable];
 
     [maxSnpPopupButton selectItemAtIndex:[self getSnpFilterValues].count-1];
+    
+    
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    [numberFormatter setNumberStyle:NSNumberFormatterNoStyle];
+//    [filteredLoci setFormatter:numberFormatter];
+    [[filteredLoci cell  ]setFormatter:numberFormatter];
 
     [self updateStacksView];
 }
