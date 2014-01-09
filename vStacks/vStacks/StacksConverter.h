@@ -48,7 +48,7 @@
 - (id)init ;
 
 - (NSString *) generateFilePathForUrl:(NSURL *) url;
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController;
+- (StacksDocument *)loadLociAndGenotypes:(NSURL *)fileUrl progressWindow:(ProgressController *)progressController;
 - (NSMutableDictionary *)loadPopulation:(NSString *)path;
 
 - (StacksDocument *)loadDocument:(StacksDocument *)document progressWindow:(ProgressController *) bar;

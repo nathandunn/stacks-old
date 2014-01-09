@@ -131,12 +131,19 @@ NSString *calculateType(NSString *file);
 }
 
 
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController {
+- (StacksDocument *)loadLociAndGenotypes:(NSURL *)fileUrl progressWindow:(ProgressController *)progressController {
 
-    StacksDocument *stacksDocument = [self createStacksDocumentForPath:path];
+    NSString* filePathForUrl = [self generateFilePathForUrl:fileUrl];
+    NSString* directory = [fileUrl.path stringByAppendingString:@"/"];
+    
+    NSLog(@"path %@ exactPath %@ fileUrl.path %@", filePathForUrl,directory,fileUrl.path);
+
+    StacksDocument *stacksDocument = [self createStacksDocumentForPath:directory];
     if (stacksDocument == nil) {
         return nil;
     }
+    stacksDocument.path = filePathForUrl;
+    stacksDocument.name = stacksDocument.path.lastPathComponent;
 
     stacksDocument = [self loadDocument:stacksDocument progressWindow:progressController];
     NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
@@ -198,7 +205,7 @@ NSString *calculateType(NSString *file);
     NSManagedObjectContext *context = [[NSManagedObjectContext alloc] init];
     [context setPersistentStoreCoordinator:persistentStoreCoordinator];
     document.managedObjectContext = context;
-    document.path = path;
+//    document.path = path;
 
 
     return context;
@@ -1639,8 +1646,6 @@ NSString *calculateType(NSString *file);
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path {
     NSError *stacksDocumentCreateError = nil ;
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
-    stacksDocument.path = path;
-    stacksDocument.name = path.lastPathComponent;
 //    NSManagedObjectContext *context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
 
 //    NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
