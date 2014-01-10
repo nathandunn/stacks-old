@@ -809,12 +809,14 @@ NSString *calculateType(NSString *file);
     NSInteger newLocusId;
     DatumMO *datumMO = nil ;
     NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+    [lookupDictionary retain];
 //    char allele;
     int depth;
     float ratio;
 //    LocusMO *locusMO = nil ;
 
     NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
+    [datumLociMap retain];
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
@@ -855,6 +857,8 @@ NSString *calculateType(NSString *file);
     }
     gettimeofday(&time2, NULL);
 
+    [datumLociMap release];
+    [lookupDictionary release];
 
     // save old
     NSError *saveError = nil ;
