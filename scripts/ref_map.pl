@@ -250,8 +250,12 @@ foreach $sample (@parents, @progeny, @samples) {
     @results =    `$cmd` if ($dry_run == 0);
     print $log_fh @results;
 
+    print STDERR "  Loading sstacks output to $db..." if ($sql == 1);
+
     $file = "$out_path/" . $pfile . ".matches.tsv";
     import_sql_file($log_fh, $file, "matches", 0);
+
+    print STDERR "done.\n" if ($sql == 1);
 
     $i++;
 }
