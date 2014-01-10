@@ -385,7 +385,12 @@ sub parse_population_map {
     }
 
     foreach $path (@{$samples}) {
-	my ($prefix, $suffix) = ($path =~ /^(.+)\.(.+)$/);
+	my ($prefix, $suffix);
+	if ($path =~ /^.+\..+\.gz$/) {
+	    ($prefix, $suffix) = ($path =~ /^(.+)\.(.+)\.gz$/);
+	} else {
+	    ($prefix, $suffix) = ($path =~ /^(.+)\.(.+)$/);
+	}
 
 	if ($prefix =~ /^.*\/.+$/) {
 	    ($file) = ($prefix =~ /^.*\/(.+)$/);
