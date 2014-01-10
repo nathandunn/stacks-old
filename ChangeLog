@@ -1,3 +1,6 @@
+Stacks 1.10.Beta1 - Sept 30, 2013
+---------------------------------
+	Feature: completed implementation of rxstacks.
 	Bugfix: when merging a homozygous locus into the catalog, if homozygous allele conflicted
 	with existing catalog SNP alleles, new allele was not added to SNP object (but was added to
 	the allele list).
