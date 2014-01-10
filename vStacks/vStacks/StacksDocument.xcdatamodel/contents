@@ -75,6 +75,15 @@
         <attribute name="rank4" optional="YES" attributeType="Integer 16" minValueString="0" defaultValueString="0" syncable="YES"/>
         <attribute name="type" optional="YES" attributeType="Integer 16" minValueString="0" syncable="YES"/>
     </entity>
+    <entity name="StackEntryLine" representedClassName="StackEntryLine" syncable="YES">
+        <attribute name="block" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="index" optional="YES" attributeType="Integer 64" defaultValueString="0" syncable="YES"/>
+        <attribute name="locusId" optional="YES" attributeType="Integer 64" defaultValueString="0" syncable="YES"/>
+        <attribute name="relationship" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sampleId" optional="YES" attributeType="Integer 64" defaultValueString="0" syncable="YES"/>
+        <attribute name="sequence" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sequenceId" optional="YES" attributeType="String" syncable="YES"/>
+    </entity>
     <elements>
         <element name="Allele" positionX="0" positionY="0" width="0" height="0"/>
         <element name="Datum" positionX="0" positionY="0" width="0" height="0"/>
@@ -88,5 +97,6 @@
         <element name="Population" positionX="0" positionY="0" width="0" height="0"/>
         <element name="Sample" positionX="0" positionY="0" width="0" height="0"/>
         <element name="Snp" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="StackEntryLine" positionX="0" positionY="0" width="0" height="0"/>
     </elements>
 </model>
