@@ -1,8 +1,11 @@
-Stacks 1.11
+Stacks 1.11 - Jan 09, 2014
 --------------------------
 	Feature: changed build to work properly with g++ and clang, which is the native compiler on
 	Apple's OS X.
 	Feature: Added NheI restriction enzyme.
+	Bugfix: changed logging in denovo_map.pl/ref_map.pl to write outputs from Stacks programs continuously
+	instead of waiting until the program completed to write output to log file.
+	Bugfix: corrected parsing of population map for gzipped input files for denovo_map.pl.
 
 Stacks 1.10 - Dec 10, 2013
 --------------------------
