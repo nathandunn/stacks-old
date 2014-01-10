@@ -1051,7 +1051,7 @@ NSString *calculateType(NSString *file);
     NSUInteger saveCounter = 1;
 
 //    NSMutableSet *savedDatums = [NSMutableSet set];
-    NSMutableSet *savedStackEntries = [NSMutableSet set];
+//    NSMutableSet *savedStackEntries = [NSMutableSet set];
 
 //    StackEntryRenderer *stackEntryRenderer = [[StackEntryRenderer alloc] init];
 
@@ -1175,7 +1175,7 @@ NSString *calculateType(NSString *file);
                         stackEntryLine.sequence = [NSString stringWithUTF8String:parts[9].c_str()];
                         stackEntryLine.block = [NSString stringWithUTF8String:parts[7].c_str()];
 
-                        [savedStackEntries addObject:stackEntryLine];
+//                        [savedStackEntries addObject:stackEntryLine];
 //                        [stackEntryRenderer.blocks addObject:[NSString stringWithUTF8String:parts[7].c_str()]];
 
 //                        [stackEntryRenderer.sequenceIds addObject:[NSString stringWithUTF8String:parts[8].c_str()]];
@@ -1313,11 +1313,11 @@ NSString *calculateType(NSString *file);
 //                        [savedDatums removeAllObjects];
 //                        NSLog(@"saved datums count: %ld", savedDatums.count);
 
-                            for (StackEntryLine *stackEntry in savedStackEntries) {
-                                [moc refreshObject:stackEntry mergeChanges:YES];
-                            }
-                            [savedStackEntries removeAllObjects];
-                            NSLog(@"saved stack entries count: %ld", savedStackEntries.count);
+//                            for (StackEntryLine *stackEntry in savedStackEntries) {
+//                                [moc refreshObject:stackEntry mergeChanges:YES];
+//                            }
+//                            [savedStackEntries removeAllObjects];
+//                            NSLog(@"saved stack entries count: %ld", savedStackEntries.count);
                         }
 
 
