@@ -44,4 +44,14 @@
 //    XCTFail(@"No implementation for \"%s\"", __PRETTY_FUNCTION__);
 }
 
+
+- (void)testFail
+{
+    NSMutableDictionary *d1 = [NSMutableDictionary dictionary] ;
+    id someeObject = [d1 objectForKey:@"asdfa"];
+    
+    NSMutableDictionary *d2 = nil ;
+    [d2 objectForKey:@"t2"];
+}
+
 @end
