@@ -70,7 +70,7 @@ die ("Unable to find '" . $exe_path . "genotypes'.\n") if (!-e $exe_path . "geno
 die ("Unable to find '" . $exe_path . "populations'.\n") if (!-e $exe_path . "populations" || !-x $exe_path . "populations");
 die ("Unable to find '" . $exe_path . "index_radtags.pl'.\n") if (!-e $exe_path . "index_radtags.pl" || !-x $exe_path . "index_radtags.pl");
 
-my ($i, $log, $log_fh, $pfile, $file, $num_files, $parent, $sample, %map);
+my ($i, $log, $log_fh, $pipe_fh, $pfile, $file, $num_files, $parent, $sample, %map);
 
 $i         = 1;
 $num_files = scalar(@parents) + scalar(@progeny) + scalar(@samples);
