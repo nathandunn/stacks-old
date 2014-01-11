@@ -1245,6 +1245,7 @@ NSString *calculateType(NSString *file);
 //                    ];
                             }
                             else {
+
 //                            [stackEntryRenderer.sequenceIds addObject:[columns objectAtIndex:8]];
                                 [stackEntryRenderer.sequenceIds addObject:[NSString stringWithUTF8String:parts[8].c_str()]];
 //                            [stackEntryRenderer.sequences addObject:[columns objectAtIndex:9]];
