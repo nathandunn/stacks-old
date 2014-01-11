@@ -1084,6 +1084,7 @@ NSString *calculateType(NSString *file);
             // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
 
             NSManagedObjectContext *moc = document.managedObjectContext;
+            [moc setUndoManager:nil];
             SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
 
 
@@ -1097,7 +1098,7 @@ NSString *calculateType(NSString *file);
 //            NSDictionary *snpLociMap = [self getLocusSnpsForDocument:document];
 
 
-            NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+//            NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
 //    for (id key in [sampleLookupDictionary allKeys]) {
 //        NSLog(@"keys 3: %@", key);
 //    }
