@@ -41,6 +41,7 @@ using std::ofstream;
 #import "ProgressController.h"
 #import "StackEntryRenderer.h"
 #import "GZIP.h"
+#import "StackEntryDatumMO.h"
 
 
 #include <sys/time.h>
@@ -1051,7 +1052,7 @@ NSString *calculateType(NSString *file);
 
 //    NSMutableSet *savedDatums = [NSMutableSet set];
 
-    StackEntryRenderer *stackEntryRenderer = [[StackEntryRenderer alloc] init];
+//    StackEntryRenderer *stackEntryRenderer = [[StackEntryRenderer alloc] init];
 
     int size;
     char *line;
@@ -1087,61 +1088,34 @@ NSString *calculateType(NSString *file);
             NSUInteger row = 1;
             gettimeofday(&time3, NULL);
             NSInteger locusId = -1;
-            NSInteger newLocusId;
-            DatumMO *datumMO = nil ;
+            NSInteger newLocusId = 0 ;
 
-            NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
-            NSDictionary *snpLociMap = [self getLocusSnpsForDocument:document];
+            StackEntryDatumMO *stackEntryDatumMO = nil ;
 
 
             NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
-//    for (id key in [sampleLookupDictionary allKeys]) {
-//        NSLog(@"keys 3: %@", key);
-//    }
-//    NSLog(@"size of lookupDictionary %ld", lookupDictionary.count);
 
-//            NSError *error2 = nil;
             NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", tagFileName];
             string f = [absoluteFileName cStringUsingEncoding:NSUTF8StringEncoding];
-//            NSArray *fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
-
-////    NSLog(@"load file data and split %ld", (time2.tv_sec - time1.tv_sec));
-//
-//            if (error2) {
-//                NSLog(@"error loading file [%@]: %@", tagFileName, error2);
-//            }
 
             fh.open(f.c_str(), ifstream::in);
+            line_num = 0 ;
 
-//            if (fh.fail()) {
-//                cerr << " Unable to open " << absoluteFileName << "\n";
-//                return;
-//            } else {
-//                cerr << "  Parsing " << f.c_str() << "\n";
-//            }
-
-//            for (line in fileData) {
             if (fh.fail()) {
-//                cerr << " Unable to open " << absoluteFileName << "\n"; ;
-                NSLog(@"unable to open file: %@",absoluteFileName) ;
+                NSLog(@"unable to open file: %@", absoluteFileName);
 
             }
             else {
-                NSLog(@"opening good file: %@",absoluteFileName) ;
+                NSLog(@"opening good file: %@", absoluteFileName);
+
+                NSMutableArray *stackEntryArray = [NSMutableArray array];
+                int row = 0 ;
 
                 while (fh.good()) {
-//                NSArray *columns = [NSArray arrayWithObjects:<#(id)firstObj, ...#>]
-//                NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
                     read_line(fh, &line, &size);
 
-//                if (!fh.good() && strlen(line) == 0){
-//                    NSLog(@"no good!");
-//                    continue;
-//                }
-
                     if (fh.good() && strlen(line) > 0) {
-
                         parse_tsv(line, parts);
 
                         if (parts.size() != num_tags_fields) {
@@ -1150,159 +1124,64 @@ NSString *calculateType(NSString *file);
                             return;
                         }
 
-
-//                if (columns.count > 8) {
-
-
-                        // if the StackMO is found
-//            newLocusId = [[columns objectAtIndex:2] integerValue];
-//                    NSString *internalIndex = (NSString *) [columns objectAtIndex:2];
                         NSString *internalIndex = [NSString stringWithUTF8String:parts[2].c_str()];
                         NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
-//            NSLog(@"retrieved object: %@", retrievedObject);
                         newLocusId = [retrievedObject integerValue];
                         if (locusId != newLocusId) {
 
-                            // cleanup old object if exists
-//                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
-                            if (false == [stackEntryRenderer isEmpty]) {
-                                stackEntryRenderer.snpDatumData = datumMO.snpData;
-                                datumMO.stackData = [stackEntryRenderer renderData];
-//                        NSLog(@"setting data %ld for locus %ld",datumMO.stackData.length,locusId);
-//                        if(locusId==16){
-////            NSString* snpString = [[NSString alloc] initWithData:snpData encoding:NSUTF8StringEncoding];
-//                            NSLog(@"data %@", [[NSString alloc] initWithData:[datumMO.stackData gunzippedData] encoding:NSUTF8StringEncoding]);
-//                        }
+                            if (stackEntryDatumMO != nil) {
+                                NSData *stackArrayData = [NSJSONSerialization dataWithJSONObject:stackEntryArray options:NSJSONWritingPrettyPrinted error:&error];
+                                stackEntryDatumMO.stackData = [stackArrayData gzippedData];
 
-//                    NSLog(@"saving for new locus");
-//                    NSError *error;
-//                    [moc save:&error];
-//                    [moc refreshObject:datumMO mergeChanges:YES];
 
-//                    datumMO = nil ;
-//                    stackEntryView = nil ;
+                                [moc save:&error];
+                                [moc refreshObject:stackEntryDatumMO mergeChanges:YES];
+                                row = 0 ;
                             }
 
+                            [stackEntryArray removeAllObjects];
 
                             locusId = newLocusId;
-                            // search for the new locus
-                            // TODO: get from in-memory lookup?
-//                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
-                            datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
+                            stackEntryDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"StackEntryDatum" inManagedObjectContext:document.managedObjectContext];
+                            stackEntryDatumMO.sampleId = sampleMO.sampleId;
+                            stackEntryDatumMO.name = sampleMO.name;
+                            stackEntryDatumMO.tagId = [NSNumber numberWithInteger:locusId];
 
-                            if (datumMO != nil) {
-//                        [savedDatums addObject:datumMO];
-//                NSLog(@"%@ vs %@",sampleMO.sampleId,datumMO.sampleId );
-//                        stackEntryView = [[StackEntryRenderer alloc] init];
-                                [stackEntryRenderer clear];
-
-                                stackEntryRenderer.locusId = locusId;
-
-                                stackEntryRenderer.snpLocusData = [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
-//                            stackEntryView.sn= [snpLociMap objectForKey:[NSNumber numberWithInteger:locusId]];
-
-//                        stackEntryView.sampleName = datumMO.sample.name;
-                                stackEntryRenderer.sampleName = sampleMO.name;
-
-                                // TODO: map locus and datum snps
-                            }
-//                        else{
-//                            NSLog(@"no datum found for locus: %ld and sample %@",locusId,sampleMO.name);
-//                        }
                         }
 
-                        if (datumMO != nil) {
-//                        NSString *relationship = [columns objectAtIndex:6];
-                            NSString *relationship = [NSString stringWithUTF8String:parts[6].c_str()];
+                        NSString *relationship = [NSString stringWithUTF8String:parts[6].c_str()];
+
+                        NSDictionary *stackDictionary = [NSDictionary dictionaryWithObjectsAndKeys:
+                                [NSString stringWithUTF8String:parts[6].c_str()], @"relationship"
+                                , [NSString stringWithUTF8String:parts[8].c_str()], @"sequenceId"
+                                , [NSString stringWithUTF8String:parts[9].c_str()], @"sequence"
+                                , [NSString stringWithUTF8String:parts[7].c_str()], @"block"
+                                , [NSNumber numberWithInteger:row], @"entryId"
+                                , nil ];
+                        [stackEntryArray addObject:stackDictionary];
 
 
-                            if ([relationship isEqualToString:@"consensus"]) {
-                                row = 1;
-//                            stackEntryRenderer.consensus = [columns objectAtIndex:9];
-                                stackEntryRenderer.consensus = [NSString stringWithUTF8String:parts[9].c_str()];
-//                            [stackEntryView.relationships addObject:@"consensus"];
-//                    datumMO.consensus = [stackEntryRepository insertConsensusStackEntry:moc
-//                                                                                  block:[columns objectAtIndex:7]
-//                                                                             sequenceId:[columns objectAtIndex:8]
-//                                                                               sequence:[columns objectAtIndex:9]
-//                                                                                  datum:datumMO
-//                    ];
-//                    datumMO.reference = [stackEntryRepository insertReferenceStackEntry:moc
-//                                                                               sequence:[columns objectAtIndex:9]
-//                                                                                  datum:datumMO
-//                    ];
-
-                            }
-                            else if ([relationship isEqualToString:@"model"]) {
-//                            stackEntryRenderer.model = [columns objectAtIndex:9];
-                                stackEntryRenderer.model = [NSString stringWithUTF8String:parts[9].c_str()];
-//                            [stackEntryView.relationships addObject:@"model"];
-//                    datumMO.model = [stackEntryRepository insertModelStackEntry:moc
-//                                                                          block:[columns objectAtIndex:7]
-//                                                                     sequenceId:[columns objectAtIndex:8]
-//                                                                       sequence:[columns objectAtIndex:9]
-//                                                                          datum:datumMO
-//                    ];
-                            }
-                            else {
-//                            [stackEntryRenderer.sequenceIds addObject:[columns objectAtIndex:8]];
-                                [stackEntryRenderer.sequenceIds addObject:[NSString stringWithUTF8String:parts[8].c_str()]];
-//                            [stackEntryRenderer.sequences addObject:[columns objectAtIndex:9]];
-                                [stackEntryRenderer.sequences addObject:[NSString stringWithUTF8String:parts[9].c_str()]];
-//                            [stackEntryRenderer.relationships addObject:[columns objectAtIndex:6]];
-                                [stackEntryRenderer.relationships addObject:[NSString stringWithUTF8String:parts[6].c_str()]];
-//                            [stackEntryRenderer.blocks addObject:[columns objectAtIndex:7]];
-                                [stackEntryRenderer.blocks addObject:[NSString stringWithUTF8String:parts[7].c_str()]];
-                                [stackEntryRenderer.entryIds addObject:[NSNumber numberWithInteger:row]];
-//                    StackEntryMO *stackEntryMO = [stackEntryRepository insertStackEntry:moc
-//                                                                                entryId:[NSNumber numberWithInteger:row]
-//                                                                           relationship:[columns objectAtIndex:6]
-//                                                                                  block:[columns objectAtIndex:7]
-//                                                                             sequenceId:[columns objectAtIndex:8]
-//                                                                               sequence:[columns objectAtIndex:9]
-//                                                                              consensus:datumMO.consensus.sequence
-//                                                                                  datum:datumMO
-//                    ];
-//                    [datumMO addStackEntriesObject:stackEntryMO];
-                                ++row;
-                            }
-
-//                datumMO.stackData = [NSString stringWithFormat:@"<p>Some stack data for sample '%@' and locus '%@'</p>",datumMO.sample.name,datumMO.locus.locusId];
-
-
-                            if (saveCounter % saveAtLine == 0) {
-                                NSLog(@"SAVING");
-                                NSError *saveError;
-                                [moc save:&saveError];
-                                if (saveError != nil ) {
-                                    NSLog(@"error saving %@", saveError);
-                                }
-//                        for (DatumMO *datumMO in savedDatums) {
-//                            [moc refreshObject:datumMO mergeChanges:YES];
+//                        if ([relationship isEqualToString:@"consensus"]) {
+//                            row = 1;
+//                            stackEntryRenderer.consensus = [NSString stringWithUTF8String:parts[9].c_str()];
 //                        }
-//                        [savedDatums removeAllObjects];
-//                        NSLog(@"saved datums count: %ld", savedDatums.count);
-                            }
+//                        else if ([relationship isEqualToString:@"model"]) {
+//                            stackEntryRenderer.model = [NSString stringWithUTF8String:parts[9].c_str()];
+//                        }
+//                        else {
+//                            [stackEntryRenderer.sequenceIds addObject:[NSString stringWithUTF8String:parts[8].c_str()]];
+//                            [stackEntryRenderer.sequences addObject:[NSString stringWithUTF8String:parts[9].c_str()]];
+//                            [stackEntryRenderer.relationships addObject:[NSString stringWithUTF8String:parts[6].c_str()]];
+//                            [stackEntryRenderer.blocks addObject:[NSString stringWithUTF8String:parts[7].c_str()]];
+//                            [stackEntryRenderer.entryIds addObject:[NSNumber numberWithInteger:row]];
+//                        }
+                        ++saveCounter;
 
-
-                            ++saveCounter;
-                        }
-
-
+                        ++row;
                     }
 
+                    ++line_num;
                 }
-
-
-
-//            if (saveCounter % saveAtLine == 0) {
-//                NSLog(@"SAVING");
-//                NSError *saveError;
-//                [moc save:&saveError];
-//                if (saveError != nil ) {
-//                    NSLog(@"error saving %@", saveError);
-//                }
-//            }
 
 
                 gettimeofday(&time4, NULL);
@@ -1310,6 +1189,9 @@ NSString *calculateType(NSString *file);
                 NSLog(@"parse entries lines time: %ld", (time4.tv_sec - time3.tv_sec));
 
             }
+
+            [moc save:&error];
+            [moc refreshObject:sampleMO mergeChanges:YES];
 
             fh.close();
 
