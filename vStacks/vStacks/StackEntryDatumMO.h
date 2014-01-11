@@ -12,9 +12,9 @@
 
 @interface StackEntryDatumMO : NSManagedObject
 
-@property (nonatomic, retain) NSString * name;
-@property (nonatomic, retain) NSNumber * sampleId;
-@property (nonatomic, retain) id stackData;
-@property (nonatomic, retain) NSNumber * tagId;
+@property (nonatomic, copy) NSString * name;
+@property (nonatomic, copy) NSNumber * sampleId;
+@property (nonatomic, copy) NSData * stackData;
+@property (nonatomic, copy) NSNumber * tagId;
 
 @end
