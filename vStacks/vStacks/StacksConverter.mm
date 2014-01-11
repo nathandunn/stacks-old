@@ -138,7 +138,7 @@ NSString *calculateType(NSString *file);
     NSLog(@"error %@", error);
     [[moc parentContext] save:&error];
     NSLog(@"error 2 %@", error);
-    [moc reset];
+//    [moc reset];
 //    [[moc parentContext] save:&error];
 //    [[moc parentContext] performBlock:^(){
 //        [[moc parentContext] save:NULL];
@@ -146,8 +146,8 @@ NSString *calculateType(NSString *file);
 
 //    [lociDictionary removeAllObjects];
     [sampleLookupDictionary removeAllObjects];
-    [moc reset];
-    [[moc parentContext] reset];
+//    [moc reset];
+//    [[moc parentContext] reset];
 
 
     return stacksDocument;
