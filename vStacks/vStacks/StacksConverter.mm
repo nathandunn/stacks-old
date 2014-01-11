@@ -1126,6 +1126,7 @@ NSString *calculateType(NSString *file);
 
                         NSString *internalIndex = [NSString stringWithUTF8String:parts[2].c_str()];
                         NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+
                         newLocusId = [retrievedObject integerValue];
                         if (locusId != newLocusId) {
 
