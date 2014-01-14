@@ -22,4 +22,6 @@
 - (NSArray *)getLociLocations:(NSManagedObjectContext *)context;
 
 - (double)getMaxLocation:(NSManagedObjectContext *)context;
+
+- (NSNumber *)getProgenyCount:(NSManagedObjectContext *)context locus:(LocusMO *)locus;
 @end

@@ -128,4 +128,25 @@
     }
     return -1.0;
 }
+
+- (NSNumber *)getProgenyCount:(NSManagedObjectContext *)context locus:(LocusMO *)locus {
+    NSEntityDescription *entityDescription = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:context];
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId = %@",locus.locusId];
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    [request setIncludesSubentities:NO]; //Omit subentities. Default is YES (i.e. include subentities)
+
+
+    [request setEntity:entityDescription];
+    [request setPredicate:predicate1];
+
+
+
+    NSError *err;
+    NSUInteger count = [context countForFetchRequest:request error:&err];
+    if(count == NSNotFound) {
+        //Handle error
+        count = 0 ;
+    }
+    return [NSNumber numberWithInt:count];
+}
 @end

@@ -20,6 +20,7 @@
 
 @dynamic basePairs;
 @dynamic parentCount;
+@dynamic progenyCount;
 @dynamic chromosome;
 @dynamic type;
 @dynamic strand;
@@ -58,6 +59,20 @@
     return count;
 }
 
+//- (NSUInteger)countProgeny {
+//    NSUInteger count = 0;
+////    NSLog(@"number of datums!! %ld",self.datums.count);
+//    for (DatumMO *datumMO in self.datums) {
+//        NSString *sampleName = datumMO.sample.name;
+////        NSLog(@"sample name %@",sampleName);
+//        if ([sampleName rangeOfString:@"male"].location == NSNotFound) {
+////            NSLog(@"not found!!") ;
+//            ++count;
+//        }
+//    }
+//    return count;
+//}
+
 - (NSUInteger)countProgeny {
     NSUInteger count = 0;
 //    NSLog(@"number of datums!! %ld",self.datums.count);
@@ -84,7 +99,7 @@
 
 - (NSAttributedString *)renderDescription {
     NSNumber *parentCount = self.parentCount;
-    NSUInteger progenyCount = self.countProgeny;
+    NSUInteger progenyCount = self.progenyCount.unsignedIntegerValue - parentCount.unsignedIntegerValue;
     // TODO: convert
 
     NSError *error;

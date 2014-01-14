@@ -22,6 +22,7 @@
 @property (nonatomic, copy) NSNumber * length;
 @property (nonatomic, copy) NSNumber * locusId;
 @property (nonatomic, copy) NSNumber * parentCount;
+@property (nonatomic, copy) NSNumber * progenyCount;
 @property (nonatomic, copy) NSString * marker;
 @property (nonatomic, copy) NSString * ratio;
 
@@ -36,6 +37,7 @@
 // not a managed part, populated by datum rendering . . .
 @property (atomic, retain) NSDictionary *haplotypeOrder;
 @property (atomic, retain) ColorGenerator *colorGenerator;
+
 
 
 - (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype;
