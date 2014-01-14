@@ -17,6 +17,8 @@
 #import "DatumArrayController.h"
 #import "GZIP.h"
 #import "StackEntryDatumMO.h"
+#import "StackEntryRenderer.h"
+#import "StacksEntryDatumRenderer.h"
 //#import "StacksConverter.h"
 //#import "StacksDocumentController.h"
 #import <WebKit/WebKit.h>
@@ -103,7 +105,6 @@
 }
 
 
-
 - (void)windowControllerDidLoadNib:(NSWindowController *)aController {
     [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew) context:nil];
 
@@ -122,13 +123,13 @@
     double maxLocationVariable = [[LocusRepository sharedInstance] getMaxLocation:self.managedObjectContext] / 1000000;
     maxLocusTextField.stringValue = [NSString stringWithFormat:@"%1.2f", maxLocationVariable];
 
-    [maxSnpPopupButton selectItemAtIndex:[self getSnpFilterValues].count-1];
-    
-    
+    [maxSnpPopupButton selectItemAtIndex:[self getSnpFilterValues].count - 1];
+
+
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     [numberFormatter setNumberStyle:NSNumberFormatterNoStyle];
 //    [filteredLoci setFormatter:numberFormatter];
-    [[filteredLoci cell  ]setFormatter:numberFormatter];
+    [[filteredLoci cell] setFormatter:numberFormatter];
 
     [self updateStacksView];
 }
@@ -136,30 +137,34 @@
 - (void)updateStacksView {
 
 //    DatumMO *datumMO = [[datumRepository getAllDatum:[self managedObjectContext]] objectAtIndex:0];
-    if(self.selectedDatum!=nil){
+    if (self.selectedDatum != nil) {
 //        NSLog(@"loading data %@ with url %@",self.selectedDatum.stackData, [[NSBundle mainBundle] bundleURL]);
 //        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
 //        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
 //        [[stacksWebView mainFrame] loadData:[self.selectedDatum.stackData gunzippedData] MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
 
         StackEntryDatumMO *stackEntryDatumMO = [[DatumRepository sharedInstance] getStackEntryDatum:self.managedObjectContext datum:self.selectedDatum];
-        if(stackEntryDatumMO!=nil){
+        if (stackEntryDatumMO != nil) {
 
-            NSData* jsonData = [stackEntryDatumMO.stackData gunzippedData];
-            NSError *error ;
-            NSDictionary *stackEntryData = [NSJSONSerialization JSONObjectWithData:jsonData options:kNilOptions error:&error];
+            NSData *jsonData = [stackEntryDatumMO.stackData gunzippedData];
+            NSError *error;
+//            NSDictionary *stackEntryData = [NSJSONSerialization JSONObjectWithData:jsonData options:kNilOptions error:&error];
 
-            [[stacksWebView mainFrame] loadData:jsonData MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
+            StacksEntryDatumRenderer *stacksEntryDatumRenderer = [[StacksEntryDatumRenderer alloc] init];
+            NSString *html = [stacksEntryDatumRenderer renderHtmlForData:jsonData datumSnps:self.selectedDatum.snpData locusSnps:self.selectedLocus.snpData];
+
+//            [[stacksWebView mainFrame] loadData:jsonData MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
+            [[stacksWebView mainFrame] loadHTMLString:html baseURL:[[NSBundle mainBundle] bundleURL]];
 
             [stacksWebView setHidden:NO];
         }
-        else{
+        else {
 
             [stacksWebView setHidden:YES];
         }
 
     }
-    else{
+    else {
         [stacksWebView setHidden:YES];
     }
 
@@ -339,24 +344,23 @@
 //    NSString *help = [[NSBundle mainBundle] pathForResource:@"Some Help" ofType:@"html"];
 //    NSString *help = [[NSBundle mainBundle] pathForResource:@"Some Help" ofType:@"html"];
 //    NSURL *url = [NSURL :@"http://creskolab.uoregon.edu/stacks/index.html"];
-     NSString* url = @"http://creskolab.uoregon.edu/stacks" ;
+    NSString *url = @"http://creskolab.uoregon.edu/stacks";
 //    NSLog(@"%@", url);
 //    [[NSApplication sharedApplication]
 //    NSString* url = @"NSLog(@\"%@\", [NSURL URLWithString:[self.storyLink description]])";
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
 
-- (NSArray *) getSnpFilterValues{
-    if(snpFilterValues==nil){
+- (NSArray *)getSnpFilterValues {
+    if (snpFilterValues == nil) {
         snpFilterValues = [NSMutableArray array];
-        for(int i = 0 ; i < 15 ; i++){
+        for (int i = 0; i < 15; i++) {
             [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
 
     return snpFilterValues;
 }
-
 
 
 @end

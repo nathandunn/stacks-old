@@ -78,6 +78,7 @@
 		1437061B187B89490007BDE5 /* test.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370619187B89490007BDE5 /* test.css */; };
 		1437061D187B8BC20007BDE5 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437061C187B8BC20007BDE5 /* libz.1.2.7.dylib */; };
 		14370620187CAEFC0007BDE5 /* GZIP.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437061F187CAEFC0007BDE5 /* GZIP.m */; };
+		D793CD98D5347B963755DE08 /* StacksEntryDatumRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = D793CE87A0282D76171B5705 /* StacksEntryDatumRenderer.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -237,6 +238,8 @@
 		1437061C187B8BC20007BDE5 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libz.1.2.7.dylib; sourceTree = "<group>"; };
 		1437061E187CAEFC0007BDE5 /* GZIP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GZIP.h; sourceTree = "<group>"; };
 		1437061F187CAEFC0007BDE5 /* GZIP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GZIP.m; sourceTree = "<group>"; };
+		D793CBB9D5EB558052FC2E35 /* StacksEntryDatumRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksEntryDatumRenderer.h; sourceTree = "<group>"; };
+		D793CE87A0282D76171B5705 /* StacksEntryDatumRenderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksEntryDatumRenderer.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -381,6 +384,8 @@
 				143705E6187B88E50007BDE5 /* StackEntryRepository.h */,
 				143705E7187B88E50007BDE5 /* AlleleRepository.m */,
 				143705E8187B88E50007BDE5 /* AlleleRepository.h */,
+				D793CE87A0282D76171B5705 /* StacksEntryDatumRenderer.m */,
+				D793CBB9D5EB558052FC2E35 /* StacksEntryDatumRenderer.h */,
 			);
 			name = Service;
 			sourceTree = "<group>";
@@ -677,6 +682,7 @@
 				143705EC187B88E50007BDE5 /* SnpRepository.m in Sources */,
 				14370593187B88C70007BDE5 /* GenotypeEntry.m in Sources */,
 				143705CB187B88D80007BDE5 /* DatumSnpMO.m in Sources */,
+				D793CD98D5347B963755DE08 /* StacksEntryDatumRenderer.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

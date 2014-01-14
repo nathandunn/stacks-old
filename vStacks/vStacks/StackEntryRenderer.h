@@ -26,6 +26,8 @@
 
 - (NSString *)renderHtml;
 
++ (NSString *)renderHtmlForData:(NSData *)data;
+
 - (BOOL)isEmpty;
 
 - (void)clear;
