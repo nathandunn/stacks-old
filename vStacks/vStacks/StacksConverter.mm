@@ -1150,7 +1150,7 @@ NSString *calculateType(NSString *file);
 
                         }
 
-                        NSString *relationship = [NSString stringWithUTF8String:parts[6].c_str()];
+//                        NSString *relationship = [NSString stringWithUTF8String:parts[6].c_str()];
 
                         NSDictionary *stackDictionary = [NSDictionary dictionaryWithObjectsAndKeys:
                                 [NSString stringWithUTF8String:parts[6].c_str()], @"relationship"
