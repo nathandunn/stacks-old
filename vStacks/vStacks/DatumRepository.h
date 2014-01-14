@@ -12,6 +12,7 @@
 @class SampleMO ;
 @class LocusMO;
 @class PopulationMO;
+@class StackEntryDatumMO;
 
 @interface DatumRepository : NSObject
 + (DatumRepository *)sharedInstance;
@@ -27,4 +28,6 @@
 - (NSArray *)getDatumsOrdered:(NSManagedObjectContext *)context locus:(NSNumber *)locus andPopulation:(PopulationMO *)population;
 
 - (NSDictionary *)getDatums:(NSManagedObjectContext *)context forSample:(NSNumber*)sampleId;
+
+- (StackEntryDatumMO *)getStackEntryDatum:(NSManagedObjectContext *)context datum:(DatumMO *)datum;
 @end

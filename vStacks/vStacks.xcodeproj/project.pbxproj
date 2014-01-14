@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1409C4F11885B2120061E10F /* StackEntryDatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1409C4F01885B2120061E10F /* StackEntryDatumMO.m */; };
 		1437051F187B87690007BDE5 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437051E187B87690007BDE5 /* Cocoa.framework */; };
 		14370529187B87690007BDE5 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 14370527187B87690007BDE5 /* InfoPlist.strings */; };
 		1437052B187B87690007BDE5 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437052A187B87690007BDE5 /* main.m */; };
@@ -90,6 +91,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1409C4EF1885B2120061E10F /* StackEntryDatumMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackEntryDatumMO.h; sourceTree = "<group>"; };
+		1409C4F01885B2120061E10F /* StackEntryDatumMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntryDatumMO.m; sourceTree = "<group>"; };
 		1437051B187B87690007BDE5 /* vStacks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = vStacks.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1437051E187B87690007BDE5 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		14370521187B87690007BDE5 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -385,6 +388,8 @@
 		1437055F187B880E0007BDE5 /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				1409C4EF1885B2120061E10F /* StackEntryDatumMO.h */,
+				1409C4F01885B2120061E10F /* StackEntryDatumMO.m */,
 				143705A0187B88D80007BDE5 /* StacksDocument.h */,
 				143705A1187B88D80007BDE5 /* StacksDocument.m */,
 				143705A2187B88D80007BDE5 /* StacksDocument.xcdatamodel */,
@@ -562,7 +567,7 @@
 				ORGANIZATIONNAME = "Nathan Dunn";
 				TargetAttributes = {
 					14370541187B876A0007BDE5 = {
-						TestTargetID = 1437051A187B87690007BDE5;
+						TestTargetID = 1437051A187B87690007BDE5 /* vStacks */;
 					};
 				};
 			};
@@ -645,6 +650,7 @@
 				14370592187B88C70007BDE5 /* PopulationCell.m in Sources */,
 				1437055A187B87DF0007BDE5 /* StackEntryRenderer.m in Sources */,
 				14370615187B88F10007BDE5 /* mst.cc in Sources */,
+				1409C4F11885B2120061E10F /* StackEntryDatumMO.m in Sources */,
 				14370598187B88C70007BDE5 /* DatumView.m in Sources */,
 				143705C3187B88D80007BDE5 /* StacksDocument.m in Sources */,
 				1437058C187B88C70007BDE5 /* ColorGenerator.m in Sources */,
