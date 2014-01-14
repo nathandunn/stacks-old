@@ -61,7 +61,7 @@
 
 - (NSArray *)getDatums:(NSManagedObjectContext *)context locus:(NSNumber *)locus andPopulation:(PopulationMO *)population {
 
-    LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:context forId:locus.integerValue];
+//    LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:context forId:locus.integerValue];
 //    NSLog(@"locus %@",locusMO);
 
 

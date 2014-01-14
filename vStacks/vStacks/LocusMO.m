@@ -8,11 +8,7 @@
 
 #import "LocusMO.h"
 #import "DatumMO.h"
-#import "LocusAlleleMO.h"
-#import "LocusSnpMO.h"
 #import "SampleMO.h"
-#import "DepthMO.h"
-#import "HaplotypeMO.h"
 #import "ColorGenerator.h"
 
 
@@ -29,13 +25,9 @@
 @dynamic locusId;
 @dynamic marker;
 @dynamic ratio;
-//@dynamic alleles;
 @dynamic alleleData;
 @dynamic datums;
-//@dynamic snps;
 @dynamic snpData;
-
-@synthesize haplotypeOrder;
 
 @synthesize colorGenerator;
 
@@ -186,45 +178,32 @@
     return string;
 }
 
-- (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype {
-    if (haplotypeOrder == nil) {
-        haplotypeOrder = [[NSMutableDictionary alloc] init];
-        [haplotypeOrder setValue:[NSNumber numberWithInt:0] forKey:haplotype];
-        return 0;
-    }
-
-    NSNumber *returnType = [haplotypeOrder objectForKey:haplotype];
-    if (returnType == nil) {
-        NSUInteger maxValue = 0;
-        for (NSNumber *aValue in haplotypeOrder.allValues) {
-            if ([aValue unsignedIntegerValue] > maxValue) {
-                maxValue = [aValue unsignedIntegerValue];
-            }
-        }
-        ++maxValue;
-        [haplotypeOrder setValue:[NSNumber numberWithInteger:maxValue] forKey:haplotype];
-        // actually we get he max value here first .
-
-        return maxValue;
-    }
-    else {
-        return [returnType unsignedIntegerValue];
-    }
-
-}
-
-- (NSUInteger)lookupDepthOrder:(DepthMO *)depthMO {
-    // assume that it is there . . .
-    NSNumber *order = depthMO.order;
-    // TODO: convert
-//    for (HaplotypeMO *haplotypeMO in depthMO.datum.haplotypes.allObjects) {
-//        if ([haplotypeMO.order isEqualToNumber:order]) {
-//            return [self lookupHaplotypeOrder:haplotypeMO.haplotype];
-//        }
+//- (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype {
+//    if (haplotypeOrder == nil) {
+//        haplotypeOrder = [[NSMutableDictionary alloc] init];
+//        [haplotypeOrder setValue:[NSNumber numberWithInt:0] forKey:haplotype];
+//        return 0;
 //    }
-
-    return 0;
-}
+//
+//    NSNumber *returnType = [haplotypeOrder objectForKey:haplotype];
+//    if (returnType == nil) {
+//        NSUInteger maxValue = 0;
+//        for (NSNumber *aValue in haplotypeOrder.allValues) {
+//            if ([aValue unsignedIntegerValue] > maxValue) {
+//                maxValue = [aValue unsignedIntegerValue];
+//            }
+//        }
+//        ++maxValue;
+//        [haplotypeOrder setValue:[NSNumber numberWithInteger:maxValue] forKey:haplotype];
+//        // actually we get he max value here first .
+//
+//        return maxValue;
+//    }
+//    else {
+//        return [returnType unsignedIntegerValue];
+//    }
+//
+//}
 
 - (ColorGenerator *)getColorGenerator {
     if (colorGenerator == nil) {

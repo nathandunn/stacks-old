@@ -70,7 +70,7 @@
     int i = 0;
 //    NSArray *sortByOrder = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
 
-    NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
+//    NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
 
     // TODO: convert
     NSError *error;
@@ -150,7 +150,7 @@
 
 
 
-    NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
+//    NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
     // TODO: convert
 //    for (DepthMO *depth in  [self.depths sortedArrayUsingDescriptors:sortDescriptors]) {
 ////        NSString *depth = [(NSNumber *) [self.depths objectAtIndex:i] stringValue];

@@ -147,7 +147,7 @@
         if (stackEntryDatumMO != nil && stackEntryDatumMO.stackData!=nil) {
 
             NSData *jsonData = [stackEntryDatumMO.stackData gunzippedData];
-            NSError *error;
+//            NSError *error;
 //            NSDictionary *stackEntryData = [NSJSONSerialization JSONObjectWithData:jsonData options:kNilOptions error:&error];
 
             StacksEntryDatumRenderer *stacksEntryDatumRenderer = [[StacksEntryDatumRenderer alloc] init];
