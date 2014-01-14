@@ -144,7 +144,7 @@
 //        [[stacksWebView mainFrame] loadData:[self.selectedDatum.stackData gunzippedData] MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
 
         StackEntryDatumMO *stackEntryDatumMO = [[DatumRepository sharedInstance] getStackEntryDatum:self.managedObjectContext datum:self.selectedDatum];
-        if (stackEntryDatumMO != nil) {
+        if (stackEntryDatumMO != nil && stackEntryDatumMO.stackData!=nil) {
 
             NSData *jsonData = [stackEntryDatumMO.stackData gunzippedData];
             NSError *error;

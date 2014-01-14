@@ -1108,7 +1108,8 @@ NSString *calculateType(NSString *file);
             else {
                 NSLog(@"opening good file: %@", absoluteFileName);
 
-                NSMutableArray *stackEntryArray = [NSMutableArray array];
+//                NSMutableArray *stackEntryArray = [NSMutableArray array];
+                NSMutableDictionary *stackEntryDictionary = [NSMutableDictionary dictionary];
                 int row = 0 ;
 
                 while (fh.good()) {
@@ -1131,7 +1132,7 @@ NSString *calculateType(NSString *file);
                         if (locusId != newLocusId) {
 
                             if (stackEntryDatumMO != nil) {
-                                NSData *stackArrayData = [NSJSONSerialization dataWithJSONObject:stackEntryArray options:NSJSONWritingPrettyPrinted error:&error];
+                                NSData *stackArrayData = [NSJSONSerialization dataWithJSONObject:stackEntryDictionary options:NSJSONWritingPrettyPrinted error:&error];
                                 stackEntryDatumMO.stackData = [stackArrayData gzippedData];
 
 
@@ -1140,7 +1141,7 @@ NSString *calculateType(NSString *file);
                                 row = 0 ;
                             }
 
-                            [stackEntryArray removeAllObjects];
+                            [stackEntryDictionary removeAllObjects];
 
                             locusId = newLocusId;
                             stackEntryDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"StackEntryDatum" inManagedObjectContext:document.managedObjectContext];
@@ -1150,7 +1151,7 @@ NSString *calculateType(NSString *file);
 
                         }
 
-//                        NSString *relationship = [NSString stringWithUTF8String:parts[6].c_str()];
+                        NSString *relationship = [NSString stringWithUTF8String:parts[6].c_str()];
 
                         NSDictionary *stackDictionary = [NSDictionary dictionaryWithObjectsAndKeys:
                                 [NSString stringWithUTF8String:parts[6].c_str()], @"relationship"
@@ -1159,7 +1160,13 @@ NSString *calculateType(NSString *file);
                                 , [NSString stringWithUTF8String:parts[7].c_str()], @"block"
                                 , [NSNumber numberWithInteger:row], @"entryId"
                                 , nil ];
-                        [stackEntryArray addObject:stackDictionary];
+
+                        if([relationship isEqualToString:@"consensus"] || [relationship isEqualToString:@"model"]){
+                            [stackEntryDictionary setObject:stackDictionary forKey:relationship];
+                        }
+                        else{
+                            [stackEntryDictionary setObject:stackDictionary forKey:[NSNumber numberWithInt:row].stringValue];
+                        }
 
 
 //                        if ([relationship isEqualToString:@"consensus"]) {
