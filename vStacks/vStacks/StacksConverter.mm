@@ -647,7 +647,7 @@ NSString *calculateType(NSString *file);
 
     NSError *innerError = nil ;
     stacksDocument.loci = loci;
-    [loci removeAllObjects];
+//    [loci removeAllObjects];
     loci = nil ;
     CHECK_STOP
     progressWindow.actionMessage.stringValue = @"Saving doc";
@@ -656,6 +656,11 @@ NSString *calculateType(NSString *file);
     if (innerError != nil) {
         NSLog(@"error doing inner save: %@", innerError);
         return nil;
+    }
+
+    NSLog(@"loci on doc %ld",stacksDocument.loci.count);
+    for(LocusMO* locus in stacksDocument.loci){
+        [stacksDocument.managedObjectContext refreshObject:locus mergeChanges:YES];
     }
 
     NSLog(@"total time %ld", totalCatalogTime);
@@ -705,10 +710,23 @@ NSString *calculateType(NSString *file);
         locus.progenyCount = [progenyDictionary objectForKey:locus.locusId];
 //        locus.progenyCount = [[LocusRepository sharedInstance] getProgenyCount:moc  locus:locus];
     }
+    
+    progressWindow.actionMessage.stringValue = @"Saving doc";
+    [stacksDocument.managedObjectContext save:&innerError];
+//    [bar incrementBy:5];
+    if (innerError != nil) {
+        NSLog(@"error doing inner save: %@", innerError);
+        return nil;
+    }
+    NSLog(@"loci on doc %ld",stacksDocument.loci.count);
+    for(LocusMO* locus in stacksDocument.loci){
+        [stacksDocument.managedObjectContext refreshObject:locus mergeChanges:YES];
+    }
 
     gettimeofday(&time2, NULL);
     NSLog(@"progeny count time: %ld", time2.tv_sec - time1.tv_sec);
 
+    [stacksDocument.managedObjectContext reset];
 
 
     NSLog(@"loading stack entries");
