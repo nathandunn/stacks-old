@@ -22,6 +22,7 @@
         <attribute name="locusId" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
         <attribute name="marker" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="parentCount" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="progenyCount" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <attribute name="ratio" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="snpData" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="strand" optional="YES" attributeType="String" defaultValueString="+" syncable="YES"/>

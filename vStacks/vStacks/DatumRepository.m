@@ -171,9 +171,9 @@
     [request1 setPredicate:predicate1];
     NSError *error1;
     NSArray *stackEntryDatums= [context executeFetchRequest:request1 error:&error1];
-    NSLog(@"error %@",error1);
-    NSLog(@"objects %@",stackEntryDatums);
-    NSLog(@"count %ld",stackEntryDatums.count);
+//    NSLog(@"error %@",error1);
+//    NSLog(@"objects %@",stackEntryDatums);
+//    NSLog(@"count %ld",stackEntryDatums.count);
 
 //    NSMutableDictionary *dictionary = [[NSMutableDictionary alloc] initWithCapacity:datums.count];
     if(stackEntryDatums.count==1){

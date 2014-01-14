@@ -644,8 +644,18 @@ NSString *calculateType(NSString *file);
     NSLog(@"datum count: %ld", [[DatumRepository sharedInstance] getAllDatum:moc].count);
 
 
+    progressWindow.actionMessage.stringValue = @"Loading progeny counts";
+    gettimeofday(&time1, NULL);
+    for(LocusMO *locus in loci){
+        locus.progenyCount = [[LocusRepository sharedInstance] getProgenyCount:moc  locus:locus];
+    }
+    gettimeofday(&time2, NULL);
+    NSLog(@"progeny count time: %ld -> %ld", loci.count ,time2.tv_sec - time1.tv_sec);
+
     NSError *innerError = nil ;
     stacksDocument.loci = loci;
+    [loci removeAllObjects];
+    loci = nil ;
     CHECK_STOP
     progressWindow.actionMessage.stringValue = @"Saving doc";
     [stacksDocument.managedObjectContext save:&innerError];
@@ -1110,7 +1120,7 @@ NSString *calculateType(NSString *file);
 
 //                NSMutableArray *stackEntryArray = [NSMutableArray array];
                 NSMutableDictionary *stackEntryDictionary = [NSMutableDictionary dictionary];
-                int row = 0 ;
+                int row = 1 ;
 
                 while (fh.good()) {
 
@@ -1138,7 +1148,7 @@ NSString *calculateType(NSString *file);
 
                                 [moc save:&error];
                                 [moc refreshObject:stackEntryDatumMO mergeChanges:YES];
-                                row = 0 ;
+                                row = 1 ;
                             }
 
                             [stackEntryDictionary removeAllObjects];
@@ -1163,9 +1173,11 @@ NSString *calculateType(NSString *file);
 
                         if([relationship isEqualToString:@"consensus"] || [relationship isEqualToString:@"model"]){
                             [stackEntryDictionary setObject:stackDictionary forKey:relationship];
+                            row = 1; 
                         }
                         else{
                             [stackEntryDictionary setObject:stackDictionary forKey:[NSNumber numberWithInt:row].stringValue];
+                            ++row ;
                         }
 
 
@@ -1185,7 +1197,7 @@ NSString *calculateType(NSString *file);
 //                        }
                         ++saveCounter;
 
-                        ++row;
+//                        ++row;
                     }
 
                     ++line_num;
