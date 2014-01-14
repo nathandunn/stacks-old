@@ -340,15 +340,18 @@
 }
 
 - (void)showHelp:(id)sender {
-    NSLog(@"coalling stacks doc help");
-//    NSString *help = [[NSBundle mainBundle] pathForResource:@"Some Help" ofType:@"html"];
-//    NSString *help = [[NSBundle mainBundle] pathForResource:@"Some Help" ofType:@"html"];
-//    NSURL *url = [NSURL :@"http://creskolab.uoregon.edu/stacks/index.html"];
     NSString *url = @"http://creskolab.uoregon.edu/stacks";
-//    NSLog(@"%@", url);
-//    [[NSApplication sharedApplication]
-//    NSString* url = @"NSLog(@\"%@\", [NSURL URLWithString:[self.storyLink description]])";
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
+}
+
+- (void)provideFeedback:(id)sender {
+    NSString *recipients = @"mailto:jcatchen@uoregon.edu?cc=ndunn@uoregon.edu&subject=vStacks Feedback";
+    NSString *body = @"&body=Feedback for vStacks";
+    NSString *email = [NSString stringWithFormat:@"%@%@", recipients, body];
+    
+    email = [email stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+    
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:email]];
 }
 
 - (NSArray *)getSnpFilterValues {

@@ -26,6 +26,12 @@
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
                             <menuItem title="Preferences…" keyEquivalent="," id="129"/>
+                            <menuItem title="Provide Feedback" id="yZ8-XB-MRe">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="provideFeedback:" target="-1" id="Ee4-vL-Kkz"/>
+                                </connections>
+                            </menuItem>
                             <menuItem isSeparatorItem="YES" id="143">
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
@@ -350,21 +356,6 @@
                                 <connections>
                                     <action selector="showHelp:" target="-1" id="494"/>
                                 </connections>
-                            </menuItem>
-                        </items>
-                    </menu>
-                </menuItem>
-                <menuItem title="Item" id="571">
-                    <menu key="submenu" id="572">
-                        <items>
-                            <menuItem title="Item 1" id="573">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                            </menuItem>
-                            <menuItem title="Item 2" id="574">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                            </menuItem>
-                            <menuItem title="Item 3" id="575">
-                                <modifierMask key="keyEquivalentModifierMask"/>
                             </menuItem>
                         </items>
                     </menu>
