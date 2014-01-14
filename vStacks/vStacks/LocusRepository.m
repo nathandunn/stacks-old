@@ -149,4 +149,60 @@
     }
     return [NSNumber numberWithInt:count];
 }
+
+- (NSDictionary *)getAggregateProgenyCount:(NSManagedObjectContext *)context {
+//    NSFetchRequest *fetch = [[NSFetchRequest alloc] init];
+//    [fetchRequest setEntity:entity];
+    NSFetchRequest* fetch = [NSFetchRequest fetchRequestWithEntityName:@"Datum"];
+
+
+//    NSExpressionDescription* ex = [[NSExpressionDescription alloc] init];
+//    [ex setExpression:[NSExpression expressionWithFormat:@"@count.sampleId"]];
+//    [ex setName:@"count"];
+
+    NSEntityDescription *entity = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:context];
+    NSAttributeDescription* statusDesc = [entity.attributesByName objectForKey:@"tagId"];
+    NSExpression *keyPathExpression = [NSExpression expressionForKeyPath: @"sampleId"]; // Does not really matter
+    NSExpression *countExpression = [NSExpression expressionForFunction: @"count:"
+                                                              arguments: [NSArray arrayWithObject:keyPathExpression]];
+    NSExpressionDescription *expressionDescription = [[NSExpressionDescription alloc] init];
+    [expressionDescription setName: @"count"];
+    [expressionDescription setExpression: countExpression];
+    [expressionDescription setExpressionResultType: NSInteger32AttributeType];
+//    [ex setExpressionResultType:NSDecimalAttributeType];
+
+
+    [fetch setPropertiesToFetch:[NSArray arrayWithObjects:statusDesc, expressionDescription, nil]];
+    [fetch setPropertiesToGroupBy:[NSArray arrayWithObject:statusDesc]];
+    [fetch setResultType:NSDictionaryResultType];
+    NSError* error = nil;
+    NSArray *results = [context executeFetchRequest:fetch error:&error];
+
+
+    NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:results.count];
+
+    for(NSDictionary *aDic in results){
+        [dictionary setObject:[aDic objectForKey:@"count"] forKey:[aDic objectForKey:@"tagId"]];
+//        NSLog(@"key count %ld",aDic.count);
+//        for(id key in [aDic allKeys]){
+//            NSLog(@"setting %@ for %@",[aDic objectForKey:key],key);
+//            [dictionary setObject:[aDic objectForKey:key] forKey:key];
+//        }
+    }
+    
+    NSLog(@"final # of loci: %ld vs %ld",results.count , dictionary.count) ;
+
+    return dictionary;
+
+//    [fetchRequest setPropertiesToFetch:[NSArray arrayWithObjects:@"tagId", ex, nil]];
+//    [fetchRequest setPropertiesToGroupBy:[NSArray arrayWithObject:@"tagId"]];
+//    [fetchRequest setResultType:NSDictionaryResultType ];
+
+//    NSError *error ;
+//    NSDictionary *progenyCountDictionary = [context executeFetchRequest:fetchRequest error:&error];
+//    NSLog(@"progenyCount: %ld",progenyCountDictionary.count);
+//    return progenyCountDictionary;
+
+
+}
 @end

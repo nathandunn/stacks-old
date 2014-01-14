@@ -644,13 +644,6 @@ NSString *calculateType(NSString *file);
     NSLog(@"datum count: %ld", [[DatumRepository sharedInstance] getAllDatum:moc].count);
 
 
-    progressWindow.actionMessage.stringValue = @"Loading progeny counts";
-    gettimeofday(&time1, NULL);
-    for(LocusMO *locus in loci){
-        locus.progenyCount = [[LocusRepository sharedInstance] getProgenyCount:moc  locus:locus];
-    }
-    gettimeofday(&time2, NULL);
-    NSLog(@"progeny count time: %ld -> %ld", loci.count ,time2.tv_sec - time1.tv_sec);
 
     NSError *innerError = nil ;
     stacksDocument.loci = loci;
@@ -702,6 +695,20 @@ NSString *calculateType(NSString *file);
     [self loadAllelesOntoDatum:stacksDocument];
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading alleles onto datum time %ld", time2.tv_sec - time1.tv_sec);
+
+    progressWindow.actionMessage.stringValue = @"Loading progeny counts";
+    gettimeofday(&time1, NULL);
+
+
+    NSDictionary *progenyDictionary = [[LocusRepository sharedInstance] getAggregateProgenyCount:moc];
+    for(LocusMO *locus in [[LocusRepository sharedInstance] getAllLoci:moc]){
+        locus.progenyCount = [progenyDictionary objectForKey:locus.locusId];
+//        locus.progenyCount = [[LocusRepository sharedInstance] getProgenyCount:moc  locus:locus];
+    }
+
+    gettimeofday(&time2, NULL);
+    NSLog(@"progeny count time: %ld", time2.tv_sec - time1.tv_sec);
+
 
 
     NSLog(@"loading stack entries");
