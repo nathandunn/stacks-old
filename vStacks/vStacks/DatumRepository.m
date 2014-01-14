@@ -12,6 +12,7 @@
 #import "LocusMO.h"
 #import "PopulationMO.h"
 #import "LocusRepository.h"
+#import "StackEntryDatumMO.h"
 
 
 @implementation DatumRepository {
@@ -155,5 +156,32 @@
 
     return dictionary ;
 
+}
+
+- (StackEntryDatumMO *)getStackEntryDatum:(NSManagedObjectContext *)context datum:(DatumMO *)datum {
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"StackEntryDatum" inManagedObjectContext:context];
+    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+    [request1 setEntity:entityDescription1];
+
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"sampleId = %@ AND tagId = %@", datum.sampleId,datum.tagId];
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@" (sampleId == %@) ", datum.sampleId];
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@" (tagId == %@) ", datum.tagId];
+
+
+    [request1 setPredicate:predicate1];
+    NSError *error1;
+    NSArray *stackEntryDatums= [context executeFetchRequest:request1 error:&error1];
+    NSLog(@"error %@",error1);
+    NSLog(@"objects %@",stackEntryDatums);
+    NSLog(@"count %ld",stackEntryDatums.count);
+
+//    NSMutableDictionary *dictionary = [[NSMutableDictionary alloc] initWithCapacity:datums.count];
+    if(stackEntryDatums.count==1){
+        return [stackEntryDatums objectAtIndex:0];
+    }
+    else{
+        NSLog(@"bad count %ld",stackEntryDatums.count);
+        return nil ;
+    }
 }
 @end

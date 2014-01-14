@@ -16,6 +16,7 @@
 //#import "PopulationArrayController.h"
 #import "DatumArrayController.h"
 #import "GZIP.h"
+#import "StackEntryDatumMO.h"
 //#import "StacksConverter.h"
 //#import "StacksDocumentController.h"
 #import <WebKit/WebKit.h>
@@ -135,47 +136,28 @@
 - (void)updateStacksView {
 
 //    DatumMO *datumMO = [[datumRepository getAllDatum:[self managedObjectContext]] objectAtIndex:0];
-    if(self.selectedDatum!=nil && self.selectedDatum.stackData!=nil){
+    if(self.selectedDatum!=nil){
 //        NSLog(@"loading data %@ with url %@",self.selectedDatum.stackData, [[NSBundle mainBundle] bundleURL]);
 //        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
 //        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
-        [[stacksWebView mainFrame] loadData:[self.selectedDatum.stackData gunzippedData] MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
+//        [[stacksWebView mainFrame] loadData:[self.selectedDatum.stackData gunzippedData] MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
 
-//        NSURL *cssUrl = [[NSBundle mainBundle] URLForResource:@"test" withExtension: @"css"];
-//        NSLog(@"css url: %@",cssUrl);
+        StackEntryDatumMO *stackEntryDatumMO = [[DatumRepository sharedInstance] getStackEntryDatum:self.managedObjectContext datum:self.selectedDatum];
+        if(stackEntryDatumMO!=nil){
 
-        
-//        DOMDocument* dom = [[stacksWebView mainFrame] DOMDocument];
-//
-//        DOMElement* link = [dom createElement:@"link"];
-//
-//        [link setAttribute:@"rel" value:@"StyleSheet"];
-//        [link setAttribute:@"type" value:@"text/css"];
-//        [link setAttribute:@"href" value: [cssUrl relativeString]];
-//
-//        DOMElement* head = (DOMElement*) [[dom getElementsByTagName:@"head"] item:0];
-//        DOMElement* headFirstChild = head.firstElementChild;
-//
-//        if( headFirstChild ){
-//            [head insertBefore:link refChild:(DOMNode *)headFirstChild];
-//        }
-//        else{
-//            [head appendChild:(DOMNode *)link];
-//        }
-        
+            NSData* jsonData = [stackEntryDatumMO.stackData gunzippedData];
+            NSError *error ;
+            NSDictionary *stackEntryData = [NSJSONSerialization JSONObjectWithData:jsonData options:kNilOptions error:&error];
 
-//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[NSURL URLWithString:@"file://localhost/"]];
-//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
+            [[stacksWebView mainFrame] loadData:jsonData MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
 
-//        DOMElement* styleElement=[domDocument createElement:@"link"];
-//        [styleElement setAttribute:@"type" value:@"text/css"];
-//        DOMText* cssText=[domDocument createTextNode:@"body{color:yellow;}"];
-//        [styleElement appendChild:cssText];
-//        DOMElement* headElement=(DOMElement*)[[domDocument getElementsByTagName:@"head"] item:0];
-//        [headElement appendChild:styleElement];
-        
-        
-        [stacksWebView setHidden:NO];
+            [stacksWebView setHidden:NO];
+        }
+        else{
+
+            [stacksWebView setHidden:YES];
+        }
+
     }
     else{
         [stacksWebView setHidden:YES];
