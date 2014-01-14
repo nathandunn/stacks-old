@@ -6,7 +6,6 @@
 
 
 #import "StacksView.h"
-#import "StackEntryMO.h"
 
 
 @implementation StacksView {

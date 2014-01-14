@@ -1082,7 +1082,7 @@ NSString *calculateType(NSString *file);
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
 
-    long saveAtLine = 500000;
+//    long saveAtLine = 500000;
     NSUInteger saveCounter = 1;
 
 //    NSMutableSet *savedDatums = [NSMutableSet set];
@@ -1120,7 +1120,7 @@ NSString *calculateType(NSString *file);
 
 
 //            NSString *line;
-            NSUInteger row = 1;
+//            NSUInteger row = 1;
             gettimeofday(&time3, NULL);
             NSInteger locusId = -1;
             NSInteger newLocusId = 0 ;

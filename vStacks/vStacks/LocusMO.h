@@ -35,14 +35,14 @@
 @property (nonatomic, copy) NSData *snpData;
 
 // not a managed part, populated by datum rendering . . .
-@property (atomic, retain) NSDictionary *haplotypeOrder;
+//@property (atomic, retain) NSDictionary *haplotypeOrder;
 @property (atomic, retain) ColorGenerator *colorGenerator;
 
 
 
-- (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype;
-
-- (NSUInteger)lookupDepthOrder:(DepthMO *)mo;
+//- (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype;
+//
+//- (NSUInteger)lookupDepthOrder:(DepthMO *)mo;
 @end
 
 @interface LocusMO (CoreDataGeneratedAccessors)
