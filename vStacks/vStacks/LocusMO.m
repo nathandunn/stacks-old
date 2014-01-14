@@ -99,7 +99,7 @@
 
 - (NSAttributedString *)renderDescription {
     NSNumber *parentCount = self.parentCount;
-    NSUInteger progenyCount = self.progenyCount.unsignedIntegerValue - parentCount.unsignedIntegerValue;
+    NSUInteger progenyCount = self.progenyCount.unsignedIntegerValue ;
     // TODO: convert
 
     NSError *error;
@@ -117,7 +117,7 @@
 //    NSLog(@"type %@",self.type);
     if ([self.type isEqualToString:@"GeneticMap"]) {
 //        parentString = @"Parents";
-        inputString = [NSString stringWithFormat:@"Parents %ld Prog %ld Snps %ld\n%@", parentCount.integerValue, progenyCount, snpCount, chromosomeString];
+        inputString = [NSString stringWithFormat:@"Parents %ld Prog %ld Snps %ld\n%@", parentCount.integerValue, progenyCount-parentCount.unsignedIntegerValue, snpCount, chromosomeString];
     }
     else {
 //        parentString = @"Samples";
