@@ -138,16 +138,16 @@ NSString *calculateType(NSString *file);
     NSLog(@"error %@", error);
     [[moc parentContext] save:&error];
     NSLog(@"error 2 %@", error);
-    [moc reset];
+//    [moc reset];
 //    [[moc parentContext] save:&error];
 //    [[moc parentContext] performBlock:^(){
 //        [[moc parentContext] save:NULL];
 //    }];
 
 //    [lociDictionary removeAllObjects];
-    [sampleLookupDictionary removeAllObjects];
-    [moc reset];
-    [[moc parentContext] reset];
+//    [sampleLookupDictionary removeAllObjects];
+//    [moc reset];
+//    [[moc parentContext] reset];
 
 
     return stacksDocument;
@@ -718,15 +718,15 @@ NSString *calculateType(NSString *file);
         NSLog(@"error doing inner save: %@", innerError);
         return nil;
     }
-    NSLog(@"loci on doc %ld",stacksDocument.loci.count);
-    for(LocusMO* locus in stacksDocument.loci){
-        [stacksDocument.managedObjectContext refreshObject:locus mergeChanges:YES];
-    }
+//    NSLog(@"loci on doc %ld",stacksDocument.loci.count);
+//    for(LocusMO* locus in stacksDocument.loci){
+//        [stacksDocument.managedObjectContext refreshObject:locus mergeChanges:YES];
+//    }
 
     gettimeofday(&time2, NULL);
     NSLog(@"progeny count time: %ld", time2.tv_sec - time1.tv_sec);
 
-    [stacksDocument.managedObjectContext reset];
+//    [stacksDocument.managedObjectContext reset];
 
 
     NSLog(@"loading stack entries");
