@@ -518,7 +518,7 @@ NSString *calculateType(NSString *file);
     incrementAmount = 30.0 / (sample_ids.size() * catalog.size());
 
     // 7 is 400 X 7 = 3K . . .
-    uint saveAfterSamples = 100000;
+    uint saveAfterSamples = 1000;
 
 
     gettimeofday(&time1, NULL);
@@ -532,7 +532,6 @@ NSString *calculateType(NSString *file);
         progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum %i/%ld", i + 1, sample_ids.size()];
 
         NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
-//        SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:key andContext:moc andError:nil];
 
         gettimeofday(&time1, NULL);
         // go through all loci
@@ -540,49 +539,19 @@ NSString *calculateType(NSString *file);
             loc = it->second;
             datum = pmap->datum(loc->id, sample_ids[i]);
 
-            // TODO: use a lookup here to speed up
-
-//            NSNumber *lookupKey = [NSNumber numberWithInt:it->first];
-//            NSNumber *lookupKey = [NSNumber numberWithInteger:[[NSString stringWithFormat:@"%d", it->first] integerValue]];
-//            locusMO = [lociDictionary objectForKey:[NSString stringWithFormat:@"%ld", it->first]];
-//            LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:stacksDocument.managedObjectContext forId:lookupKey.integerValue];
-//            locusMO = [lociDictionary objectForKey:lookupKey];
-//            if (locusMO == nil) {
-//                for (int i = 0; i < 10; i++) {
-//                    NSLog(@"Could not find Locus! %d", it->first);
-//                }
-//                return nil;
-//            }
-
             if (datum != NULL) {
 
                 vector<char *> obshape = datum->obshap;
                 vector<int> depths = datum->depth;
                 int numLetters = (int) obshape.size();
-                // TODO: should be entering this for the locus as well?
-//                if (loc->id == 1) {
-//                    NSLog(@"insertign datum for sample %@ locus %@ and sampleId %i", sampleMO.name, locusMO.locusId, sample_ids[i]);
-//                }
-//                DatumMO *newDatumMO = [[DatumRepository sharedInstance] insertDatum:moc name:key sampleId:[NSNumber numberWithInt:sample_ids[i]] sample:sampleMO locus:locusMO];
-
-                // TODO: NECESSARY, or can be done above??
-                // TODO: is not the locus the same thing as the id?  can I use the loc->id here?
                 DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:moc];
                 newDatumMO.name = key;
                 newDatumMO.sampleId = [NSNumber numberWithInt:sampleId];
-//                newDatumMO.sample = sample ;
-//                newDatumMO.locus = locus ;
-//                newDatumMO.tagId;
-//                return newDatumMO ;
-//                newDatumMO.tagId = [NSNumber numberWithInt:datum->id];
                 newDatumMO.tagId = [NSNumber numberWithInt:loc->id];
 
                 if (newDatumMO.sampleId == nil) {
                     NSLog(@"loading sample ID %@", newDatumMO.sampleId);
                 }
-
-                // get catalogs for matches
-//                locusMO.length = [NSNumber numberWithInt:loc->depth];
 
                 // TODO: CONVERT TO USE DATA
                 NSMutableArray *datumDataArray = [NSMutableArray array];
@@ -594,31 +563,20 @@ NSString *calculateType(NSString *file);
                                 , [NSNumber numberWithInt:j], @"order"
                                 , [NSNumber numberWithInt:depths[j]], @"depth"
                                 , nil ];
-//                        NSLog(@"haplotype %@",dataDictionary);
                         [datumDataArray addObject:dataDictionary];
-//                        HaplotypeMO *haplotypeMO = [[HaplotypeRepository sharedInstance] insertHaplotype:moc haplotype:[NSString stringWithUTF8String:obshape[j]] andOrder:j];
-//                        [newDatumMO addHaplotypesObject:haplotypeMO];
-//
-//                        DepthMO *depthMO = [[DepthRepository sharedInstance] insertDepth:moc depth:[NSNumber numberWithInt:depths[j]] andOrder:j];
-//                        [newDatumMO addDepthsObject:depthMO];
                     }
 
                     NSError *error;
                     NSData *datumData = [NSJSONSerialization dataWithJSONObject:datumDataArray options:NSJSONWritingPrettyPrinted error:&error];
                     newDatumMO.haplotypeData = datumData;
-//                    [locusMO addDatumsObject:newDatumMO];
                 }
                 else {
                     NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
                 }
             }
-//            else{
-//                NSLog(@"SHOULD NEVER GET A NULL DATUM for LOCUS %i and sample i %i sample{id] %i",loc->id,i,sample_ids[i]);
-//            }
 
             // end of process loci from catalogs
 
-            // TODO: save within here!
             if (iterCount % saveAfterSamples == 0) {
                 NSError *innerError = nil ;
                 NSLog(@"saving samples");
@@ -628,6 +586,22 @@ NSString *calculateType(NSString *file);
                     return nil;
                 }
             }
+        }
+
+
+        if (iterCount % saveAfterSamples == 0) {
+            NSError *innerError = nil ;
+            NSLog(@"final datum save ");
+            [stacksDocument.managedObjectContext save:&innerError];
+            if (innerError != nil) {
+                NSLog(@"error doing inner save: %@", innerError);
+                return nil;
+            }
+        }
+
+        NSArray *allDatums = [[DatumRepository sharedInstance] getAllDatum:moc];
+        for(DatumMO *datumMO in allDatums){
+            [moc refreshObject:datumMO mergeChanges:YES];
         }
 
         gettimeofday(&time2, NULL);
@@ -962,30 +936,10 @@ NSString *calculateType(NSString *file);
 
             if (locusId != newLocusId) {
                 locusId = newLocusId;
-//                locusMO = [[LocusRepository sharedInstance] getLocus:moc forId:locusId];
-                // search for the new locus
-                // TODO: get from in-memory lookup?
-//                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
                 datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
             }
 
             if (datumMO != nil) {
-                // TODO: convert
-//                datumMO.snpData = [snpLociMap valueForKey:[NSString stringWithFormat:@"%ld",locusId]] ;
-
-                // if we ahve data, then we want to add it
-
-
-//                NSError *error;
-//                NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:datumMO.snpData options:kNilOptions error:&error];
-//                NSMutableDictionary *snpLookup = [[NSMutableDictionary  alloc] init];
-//                for (NSDictionary *snp in snpJson) {
-////                    NSInteger startRange = [[snp valueForKey:@"column"] integerValue];
-////                    [snpInts addObject:[snp valueForKey:@"column"]];
-//                    [snpLookup setObject:snp forKey:[snp valueForKey:@"column"]];
-////                    NSRange selectedRange = NSMakeRange(startRange, 1);
-////                    [string addAttributes:attributes range:selectedRange];
-//                }
 
                 NSDictionary *snpDictionary = [NSDictionary dictionaryWithObjectsAndKeys:
                         [NSNumber numberWithInteger:column], @"column"
@@ -1009,16 +963,6 @@ NSString *calculateType(NSString *file);
                 NSData *snpArrayData = [NSJSONSerialization dataWithJSONObject:snpArray options:NSJSONWritingPrettyPrinted error:&error2];
                 datumMO.snpData = snpArrayData;
 
-//                [[SnpRepository sharedInstance] insertDatumSnp:moc column:[NSNumber numberWithInteger:column]
-//                                       lratio:[NSNumber numberWithFloat:lratio]
-//                                        rank1:[numberFormatter numberFromString:[columns objectAtIndex:5]]
-//                                        rank2:[numberFormatter numberFromString:[columns objectAtIndex:6]]
-//                                        rank3:[numberFormatter numberFromString:[columns objectAtIndex:7]]
-//                                        rank4:[numberFormatter numberFromString:[columns objectAtIndex:8]]
-//                                        datum:datumMO
-//                ];
-//                [datumMO addSnpsObject:datumSnpMO];
-//                NSLog(@"inserted snp at %@ for sample %@ and locus %@",datumSnpMO.column,datumMO.sample.name,datumMO.locus.locusId);
             }
         }
     }
@@ -1085,12 +1029,8 @@ NSString *calculateType(NSString *file);
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
 
-//    long saveAtLine = 500000;
     NSUInteger saveCounter = 1;
 
-//    NSMutableSet *savedDatums = [NSMutableSet set];
-
-//    StackEntryRenderer *stackEntryRenderer = [[StackEntryRenderer alloc] init];
 
     int size;
     char *line;
@@ -1209,23 +1149,7 @@ NSString *calculateType(NSString *file);
                         }
 
 
-//                        if ([relationship isEqualToString:@"consensus"]) {
-//                            row = 1;
-//                            stackEntryRenderer.consensus = [NSString stringWithUTF8String:parts[9].c_str()];
-//                        }
-//                        else if ([relationship isEqualToString:@"model"]) {
-//                            stackEntryRenderer.model = [NSString stringWithUTF8String:parts[9].c_str()];
-//                        }
-//                        else {
-//                            [stackEntryRenderer.sequenceIds addObject:[NSString stringWithUTF8String:parts[8].c_str()]];
-//                            [stackEntryRenderer.sequences addObject:[NSString stringWithUTF8String:parts[9].c_str()]];
-//                            [stackEntryRenderer.relationships addObject:[NSString stringWithUTF8String:parts[6].c_str()]];
-//                            [stackEntryRenderer.blocks addObject:[NSString stringWithUTF8String:parts[7].c_str()]];
-//                            [stackEntryRenderer.entryIds addObject:[NSNumber numberWithInteger:row]];
-//                        }
                         ++saveCounter;
-
-//                        ++row;
                     }
 
                     ++line_num;
