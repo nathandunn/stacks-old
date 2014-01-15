@@ -436,7 +436,6 @@ NSString *calculateType(NSString *file);
         NSMutableArray *snpArray = [NSMutableArray array];
         for (; snpsIterator != snps.end(); ++snpsIterator) {
             SNP *snp = (*snpsIterator);
-
             NSDictionary *snpDictionary = [NSDictionary dictionaryWithObjectsAndKeys:
                     [NSString stringWithFormat:@"%i", snp->col], @"column"
                     , [NSNumber numberWithFloat:snp->lratio], @"lratio"
@@ -450,8 +449,8 @@ NSString *calculateType(NSString *file);
         }
 
         NSError *error2;
-        NSData *snpArrayData = [NSJSONSerialization dataWithJSONObject:snpArray options:NSJSONWritingPrettyPrinted error:&error2];
-        locusMO.snpData = snpArrayData;
+        locusMO.snpData = [NSJSONSerialization dataWithJSONObject:snpArray options:0 error:&error2];;
+
 
         map<string, int> alleles = catalogIterator->second->alleles;
         map<string, int>::iterator allelesIterator = alleles.begin();
@@ -468,8 +467,7 @@ NSString *calculateType(NSString *file);
             [alleleArray addObject:alleleDictionary];
         }
 
-        NSData *alleleArrayData = [NSJSONSerialization dataWithJSONObject:alleleArray options:NSJSONWritingPrettyPrinted error:&error2];
-        locusMO.alleleData = alleleArrayData;
+        locusMO.alleleData = [NSJSONSerialization dataWithJSONObject:alleleArray options:0 error:&error2];;
 
 
         [loci addObject:locusMO];
@@ -546,8 +544,7 @@ NSString *calculateType(NSString *file);
                     }
 
                     NSError *error;
-                    NSData *datumData = [NSJSONSerialization dataWithJSONObject:datumDataArray options:NSJSONWritingPrettyPrinted error:&error];
-                    newDatumMO.haplotypeData = datumData;
+                    newDatumMO.haplotypeData =  [NSJSONSerialization dataWithJSONObject:datumDataArray options:0 error:&error];;
                 }
                 else {
                     NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
@@ -576,11 +573,6 @@ NSString *calculateType(NSString *file);
             return nil;
         }
 
-        NSArray *allDatums = [[DatumRepository sharedInstance] getAllDatum:moc];
-        for (DatumMO *datumMO in allDatums) {
-            [moc refreshObject:datumMO mergeChanges:YES];
-        }
-
 
         gettimeofday(&time2, NULL);
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
@@ -590,7 +582,10 @@ NSString *calculateType(NSString *file);
 
     }
 
-    NSLog(@"datum count: %ld", [[DatumRepository sharedInstance] getAllDatum:moc].count);
+    NSArray *allDatums = [[DatumRepository sharedInstance] getAllDatum:moc];
+    for (DatumMO *datumMO in allDatums) {
+        [moc refreshObject:datumMO mergeChanges:YES];
+    }
 
 
     NSError *innerError = nil ;
@@ -930,9 +925,7 @@ NSString *calculateType(NSString *file);
                 }
 
                 [snpArray addObject:snpDictionary];
-
-                NSData *snpArrayData = [NSJSONSerialization dataWithJSONObject:snpArray options:NSJSONWritingPrettyPrinted error:&error2];
-                datumMO.snpData = snpArrayData;
+                datumMO.snpData = [NSJSONSerialization dataWithJSONObject:snpArray options:0 error:&error2];;
 
             }
         }
@@ -1080,8 +1073,7 @@ NSString *calculateType(NSString *file);
                         if (locusId != newLocusId) {
 
                             if (stackEntryDatumMO != nil) {
-                                NSData *stackArrayData = [NSJSONSerialization dataWithJSONObject:stackEntryDictionary options:NSJSONWritingPrettyPrinted error:&error];
-                                stackEntryDatumMO.stackData = [stackArrayData gzippedData];
+                                stackEntryDatumMO.stackData = [[NSJSONSerialization dataWithJSONObject:stackEntryDictionary options:0 error:&error]gzippedData];
 
 
                                 [moc save:&error];
