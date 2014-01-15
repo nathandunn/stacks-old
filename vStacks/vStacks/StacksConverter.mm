@@ -426,15 +426,10 @@ NSString *calculateType(NSString *file);
 
         locusMO.chromosome = [NSString stringWithUTF8String:catalogIterator->second->loc.chr];
         unsigned int intValue = (unsigned int) catalogIterator->second->loc.bp;
-//        NSLog(@"int value %@",[NSNumber numberWithUnsignedInt:intValue]);
-//        locusMO.basePairs = [NSNumber numberWithUnsignedInt:catalogIterator->second->loc.bp];
         locusMO.basePairs = [NSNumber numberWithUnsignedInt:intValue];
         locusMO.strand = catalogIterator->second->loc.strand == plus ? @"+" : @"-";
 
-//        catalogIterator->second->
         vector<SNP *> snps = catalogIterator->second->snps;
-//        NSLog(@"inserting locus %@ with sequence %@", locusMO.locusId, [NSString stringWithUTF8String:read]);
-
         vector<SNP *>::iterator snpsIterator = snps.begin();
 
 
@@ -452,25 +447,14 @@ NSString *calculateType(NSString *file);
                     , nil ];
             [snpArray addObject:snpDictionary];
 
-//            NSError* error ;
-//            NSData* snpData = [NSJSONSerialization dataWithJSONObject:snpDictionary options:NSJSONWritingPrettyPrinted error:&error];
-//            NSString* snpString = [[NSString alloc] initWithData:snpData encoding:NSUTF8StringEncoding];
-//
-//            NSLog(@"snpString %@",snpString) ;
-
         }
 
         NSError *error2;
         NSData *snpArrayData = [NSJSONSerialization dataWithJSONObject:snpArray options:NSJSONWritingPrettyPrinted error:&error2];
         locusMO.snpData = snpArrayData;
-//        NSString *snpArrayString = [[NSString alloc] initWithData:snpArrayData encoding:NSUTF8StringEncoding];
-//        NSLog(@"snpArrayString %@",snpArrayString) ;
 
-//        map<string, int> alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
         map<string, int> alleles = catalogIterator->second->alleles;
         map<string, int>::iterator allelesIterator = alleles.begin();
-//        string allele;
-//        int column;
         NSMutableArray *alleleArray = [NSMutableArray array];
         for (; allelesIterator != alleles.end(); ++allelesIterator) {
             string allele = allelesIterator->first;
@@ -484,22 +468,17 @@ NSString *calculateType(NSString *file);
             [alleleArray addObject:alleleDictionary];
         }
 
-//        NSError *error3;
         NSData *alleleArrayData = [NSJSONSerialization dataWithJSONObject:alleleArray options:NSJSONWritingPrettyPrinted error:&error2];
-//        NSString *alleleArrayString = [[NSString alloc] initWithData:alleleArrayData encoding:NSUTF8StringEncoding];
-//        NSLog(@"alleleArrayString %@",alleleArrayString) ;
         locusMO.alleleData = alleleArrayData;
 
 
         [loci addObject:locusMO];
-//        [lociDictionary setObject:locusMO forKey:locusMO.locusId];
         ++catalogIterator;
         [bar incrementBy:incrementAmount];
     }
     gettimeofday(&time2, NULL);
 
 
-//    setParentCounts(lociDictionary, catalogTagFile);
     [self setParentCounts:stacksDocument.managedObjectContext forFile:catalogTagFile loci:loci];
 
     NSLog(@"populating snps %ld", (time2.tv_sec - time1.tv_sec));
@@ -604,14 +583,8 @@ NSString *calculateType(NSString *file);
 
 
         gettimeofday(&time2, NULL);
-//        NSLog(@"iterating sample %d - time %ld", sample_ids[i], (time2.tv_sec - time1.tv_sec));
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
 
-
-
-//        else{
-//            NSLog(@"NOT saving sample %i vs %i",i, (i%saveAfterSamples) );
-//        }
 
         [bar incrementBy:incrementAmount];
 
