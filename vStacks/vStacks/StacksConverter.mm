@@ -612,6 +612,9 @@ NSString *calculateType(NSString *file);
                     NSLog(@"mismatchon %@", [NSString stringWithUTF8String:sampleString.c_str()]);
                 }
             }
+            else{
+                NSLog(@"SHOULD NEVER GET A NULL DATUM for LOCUS %i and sample i %i sample{id] %i",loc->id,i,sample_ids[i]);
+            }
 
             // end of process loci from catalogs
 
