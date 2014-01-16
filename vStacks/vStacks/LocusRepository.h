@@ -26,4 +26,6 @@
 //- (NSNumber *)getProgenyCount:(NSManagedObjectContext *)context locus:(LocusMO *)locus;
 
 - (NSDictionary *)getAggregateProgenyCount:(NSManagedObjectContext *)context;
+
+- (NSDictionary *)getAggregateProgenyCount:(NSManagedObjectContext *)context;
 @end
