@@ -98,19 +98,6 @@ NSString *calculateType(NSString *file);
 - (id)init {
     self = [super init];
     if (self) {
-        // nothing write now
-//        [DatumRepository sharedInstance] = [[DatumRepository alloc] init];
-//        [DepthRepository sharedInstance] = [[DepthRepository alloc] init];
-//        [HaplotypeRepository sharedInstance] = [[HaplotypeRepository alloc] init];
-//        [LocusRepository sharedInstance] = [[LocusRepository alloc] init];
-//        [PopulationRepository sharedInstance] = [[PopulationRepository alloc] init];
-//        [SampleRepository sharedInstance] = [[SampleRepository alloc] init];
-//        [SnpRepository sharedInstance] = [[SnpRepository alloc] init];
-//        stackEntryRepository = [[StackEntryRepository alloc] init];
-//        [AlleleRepository sharedInstance] = [[AlleleRepository alloc] init];
-
-
-//        lociDictionary = [[NSMutableDictionary alloc] init];
         sampleLookupDictionary = [NSMutableDictionary dictionary];
         stopProcess = false;
         numberFormatter = [[NSNumberFormatter alloc] init];
@@ -338,7 +325,9 @@ NSString *calculateType(NSString *file);
 
     double incrementAmount = 5.0 / files.size();
     gettimeofday(&time1, NULL);
+    @autoreleasepool {
     for (uint i = 0; i < files.size(); i++) {
+        @autoreleasepool {
         vector<CatMatch *> m;
         NSString *sampleString = [NSString stringWithUTF8String:files[i].second.c_str()];
         NSString *matchString = [path stringByAppendingFormat:@"/%@", sampleString];
@@ -364,7 +353,10 @@ NSString *calculateType(NSString *file);
             exit(1);
         }
         [bar incrementBy:incrementAmount];
+        }
     }
+    }
+    // end of for
     gettimeofday(&time2, NULL);
     NSLog(@"catalog matches %ld", (time2.tv_sec - time1.tv_sec));
 
@@ -414,6 +406,7 @@ NSString *calculateType(NSString *file);
     progressWindow.actionMessage.stringValue = @"Loading locus snps";
     @autoreleasepool {
         while (catalogIterator != catalog.end()) {
+            @autoreleasepool {
             const char *read = (*catalogIterator).second->con;
             LocusMO *locusMO = [[LocusRepository sharedInstance] insertNewLocus:moc withId:[NSNumber numberWithInt:(*catalogIterator).second->id]
                                                                    andConsensus:[[NSString alloc] initWithCString:read encoding:NSUTF8StringEncoding] andMarker:[NSString stringWithUTF8String:catalogIterator->second->marker.c_str()]
@@ -489,6 +482,7 @@ NSString *calculateType(NSString *file);
             ++catalogIterator;
             [bar incrementBy:incrementAmount];
         }
+        }
     }
     gettimeofday(&time2, NULL);
 
@@ -511,7 +505,7 @@ NSString *calculateType(NSString *file);
     incrementAmount = 30.0 / (sample_ids.size() * catalog.size());
 
     // 7 is 400 X 7 = 3K . . .
-    uint saveAfterSamples = 1000;
+    uint saveAfterSamples = 10000;
 
 
     gettimeofday(&time1, NULL);
@@ -731,6 +725,7 @@ NSString *calculateType(NSString *file);
 
     NSUInteger count = 0;
     // 2 - for each file, read the .tags file
+    @autoreleasepool {
     for (NSString *filePath in files) {
         if ([filePath hasSuffix:@".snps.tsv"] && ![filePath hasPrefix:@"batch"]) {
             [self loadSnpFileForDatum:document fromFile:filePath];
@@ -740,6 +735,7 @@ NSString *calculateType(NSString *file);
         }
         window.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum snp %ld/%ld", count, files.count];
         ++count;
+    }
     }
 }
 
@@ -755,7 +751,9 @@ NSString *calculateType(NSString *file);
     // 2 - for each file, read the .tags file
     for (NSString *filePath in files) {
         if ([filePath hasSuffix:@".alleles.tsv"] && ![filePath hasPrefix:@"batch"]) {
+            @autoreleasepool {
             [self loadAlleleFileForDatum:document fromFile:filePath];
+            }
         }
         else {
 //            NSLog(@"not loading alleles file %@", filePath);
@@ -798,9 +796,8 @@ NSString *calculateType(NSString *file);
     int depth;
     float ratio;
 //    LocusMO *locusMO = nil ;
-    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
+    @autoreleasepool {
     NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
@@ -811,6 +808,8 @@ NSString *calculateType(NSString *file);
 //            sampleId = [[columns objectAtIndex:1] integerValue];
 //            newLocusId = [[columns objectAtIndex:2] integerValue];
 
+           
+            @autoreleasepool {
             NSString *internalIndex = (NSString *) [columns objectAtIndex:2];
             NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
             newLocusId = [retrievedObject integerValue];
@@ -828,17 +827,19 @@ NSString *calculateType(NSString *file);
 
                 datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
             }
-
-            if (datumMO != nil) {
-                // TODO: convert
-//                [[AlleleRepository sharedInstance] insertDatumAllele:moc
-//                                              ratio:[NSNumber numberWithFloat:ratio]
-//                                              depth:[NSNumber numberWithInt:depth]
-//                                             allele:[numberFormatter numberFromString:[columns objectAtIndex:3]]
-//                                              datum:datumMO
-//                ];
             }
+
+//            if (datumMO != nil) {
+//                // TODO: convert
+////                [[AlleleRepository sharedInstance] insertDatumAllele:moc
+////                                              ratio:[NSNumber numberWithFloat:ratio]
+////                                              depth:[NSNumber numberWithInt:depth]
+////                                             allele:[numberFormatter numberFromString:[columns objectAtIndex:3]]
+////                                              datum:datumMO
+////                ];
+//            }
         }
+    }
     }
     gettimeofday(&time2, NULL);
 
@@ -876,22 +877,17 @@ NSString *calculateType(NSString *file);
     }
 
     NSString *line;
-//    NSUInteger row = 1;
     gettimeofday(&time1, NULL);
     NSInteger locusId = -1;
-//    NSInteger sampleId = -1;
     NSInteger newLocusId;
     NSInteger column;
     float lratio;
-//    char rank1, rank2, rank3, rank4;
     DatumMO *datumMO = nil ;
-//    LocusMO *locusMO = nil ;
-    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
     NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
 
 
+    @autoreleasepool {
     NSMutableArray *snpArray;
 
 //    NSDictionary *snpLociMap = [self getLocusSnpsForDocument:document];
@@ -906,6 +902,7 @@ NSString *calculateType(NSString *file);
 //            sampleId = [[columns objectAtIndex:1] integerValue];
 //            newLocusId = [[columns objectAtIndex:2] integerValue];
 
+                @autoreleasepool {
                 NSString *internalIndex = (NSString *) [columns objectAtIndex:2];
                 NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
 //            NSLog(@"retrieved object: %@", retrievedObject);
@@ -936,22 +933,29 @@ NSString *calculateType(NSString *file);
                             snpArray = [NSMutableArray array];
                         }
                         else {
+                            @autoreleasepool {
                             snpArray = [NSMutableArray arrayWithArray:[NSJSONSerialization JSONObjectWithData:datumMO.snpData options:kNilOptions error:&error2]];
+                            }
                         }
 
+                        @autoreleasepool {
                         [snpArray addObject:snpDictionary];
                         datumMO.snpData = [NSJSONSerialization dataWithJSONObject:snpArray options:0 error:&error2];
+                        }
                     }
 
 
                 }
                 datumMO = nil ;
             }
+            }
         }
     }
 
     snpArray = nil ;
+        
     gettimeofday(&time2, NULL);
+    }
 
 
     // save old
@@ -1023,6 +1027,8 @@ NSString *calculateType(NSString *file);
     line = new char [max_len];
     size = max_len;
     long int line_num;
+    long int totalLineNum = 0;
+    long int totalSaves = 0 ;
 
     struct timeval time3, time4;
 
@@ -1142,10 +1148,12 @@ NSString *calculateType(NSString *file);
 
 
                                 ++saveCounter;
+                                ++totalSaves;
                             }
                         }
 
                         ++line_num;
+                        ++totalLineNum;
                     }
                 }
 
@@ -1154,7 +1162,7 @@ NSString *calculateType(NSString *file);
 
                 gettimeofday(&time4, NULL);
 //    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time4.tv_sec - time3.tv_sec));
-                NSLog(@"parse entries lines time: %ld", (time4.tv_sec - time3.tv_sec));
+                NSLog(@"parse entries lines %ld saves %ld time: %ld s",totalLineNum,totalSaves, (time4.tv_sec - time3.tv_sec));
 
             }
 
@@ -1210,7 +1218,6 @@ NSString *calculateType(NSString *file);
         }
     }
     else {
-        NSNumberFormatter *f = [[NSNumberFormatter alloc] init];
         // else
         for (int i = 0; i < sampleIds.size(); i++) {
             SampleMO *sampleMO = [[SampleRepository sharedInstance] insertSample:document.managedObjectContext
@@ -1223,7 +1230,7 @@ NSString *calculateType(NSString *file);
                 // lets get the population . . can use lookup, but this is usually pretty small
                 NSLog(@"tyring to populate popid %@", populationId);
                 for (PopulationMO *populationMO in document.populations) {
-                    NSNumber *endNumber = [f numberFromString:populationId];
+                    NSNumber *endNumber = [numberFormatter numberFromString:populationId];
                     NSLog(@"comparing to %@ vs %@", populationMO.populationId, endNumber);
                     if ([populationMO.populationId isEqualToNumber:endNumber]) {
                         NSLog(@"FOuND population ID %@", populationMO.populationId);
@@ -1246,7 +1253,6 @@ NSString *calculateType(NSString *file);
 
 
     // scan and create the populations . . .
-    NSNumberFormatter *f = [[NSNumberFormatter alloc] init];
 //    [f setNumberStyle:NSNumberFormatterDecimalStyle];
 
     // creates a unique set
@@ -1257,7 +1263,7 @@ NSString *calculateType(NSString *file);
 
     for (NSString *popId in populationIdsSet) {
         NSLog(@"adding population %@", popId);
-        NSNumber *myNumber = [f numberFromString:popId];
+        NSNumber *myNumber = [numberFormatter numberFromString:popId];
         [[PopulationRepository sharedInstance] insertPopulation:document.managedObjectContext id:myNumber name:popId];
     }
 
