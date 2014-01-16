@@ -38,6 +38,7 @@
 // sample:Dictionary<internalid,externalid>
 @property(nonatomic, strong) NSMutableDictionary *sampleLookupDictionary;
 @property(nonatomic, strong) NSMutableDictionary *locusSnpMap;
+@property(nonatomic, strong) NSNumberFormatter *numberFormatter;
 
 
 @property(nonatomic) bool stopProcess;
