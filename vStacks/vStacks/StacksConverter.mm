@@ -586,6 +586,7 @@ NSString *calculateType(NSString *file);
     for (DatumMO *datumMO in allDatums) {
         [moc refreshObject:datumMO mergeChanges:YES];
     }
+    allDatums = nil ;
 
 
     NSError *innerError = nil ;
@@ -619,13 +620,6 @@ NSString *calculateType(NSString *file);
     CHECK_STOP
     progressWindow.actionMessage.stringValue = @"Reading populations";
     [self readPopulations:stacksDocument];
-
-//    LocusMO *bLocusMO = [loci.allObjects objectAtIndex:0];
-//    NSLog(@"pre locus %@ datums %ld", bLocusMO.locusId, bLocusMO.datums.count);
-//
-    stacksDocument.loci = loci;
-//    LocusMO *cLocusMO = [stacksDocument.loci.allObjects objectAtIndex:0];
-//    NSLog(@"post locus %@ datums %ld", cLocusMO.locusId, cLocusMO.datums.count);
 
     gettimeofday(&time2, NULL);
     NSLog(@"create stacks document time %ld", time2.tv_sec - time1.tv_sec);
@@ -881,6 +875,8 @@ NSString *calculateType(NSString *file);
 
     numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
+    NSMutableArray *snpArray;
+
 //    NSDictionary *snpLociMap = [self getLocusSnpsForDocument:document];
     for (line in fileData) {
         NSArray *columns = [line componentsSeparatedByString:@"\t"];
@@ -916,7 +912,6 @@ NSString *calculateType(NSString *file);
                         , [numberFormatter numberFromString:[columns objectAtIndex:8]], @"rank4"
                         , nil ];
 
-                NSMutableArray *snpArray;
                 if (datumMO.snpData == nil) {
                     snpArray = [NSMutableArray array];
                 }
@@ -927,9 +922,13 @@ NSString *calculateType(NSString *file);
                 [snpArray addObject:snpDictionary];
                 datumMO.snpData = [NSJSONSerialization dataWithJSONObject:snpArray options:0 error:&error2];;
 
+
             }
+            datumMO = nil ;
         }
     }
+
+    snpArray = nil ;
     gettimeofday(&time2, NULL);
 
 
@@ -1078,6 +1077,7 @@ NSString *calculateType(NSString *file);
 
                                 [moc save:&error];
                                 [moc refreshObject:stackEntryDatumMO mergeChanges:YES];
+                                stackEntryDatumMO = nil ;
                                 row = 1;
                             }
 
@@ -1110,12 +1110,16 @@ NSString *calculateType(NSString *file);
                             ++row;
                         }
 
+                        stackDictionary = nil ;
+
 
                         ++saveCounter;
                     }
 
                     ++line_num;
                 }
+
+                stackEntryDictionary = nil ;
 
 
                 gettimeofday(&time4, NULL);
@@ -1128,6 +1132,7 @@ NSString *calculateType(NSString *file);
             [moc refreshObject:sampleMO mergeChanges:YES];
 
             fh.close();
+            sampleMO =  nil ;
 
         }
         else {
