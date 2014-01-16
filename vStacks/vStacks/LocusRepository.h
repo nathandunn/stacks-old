@@ -27,5 +27,4 @@
 
 - (NSDictionary *)getAggregateProgenyCount:(NSManagedObjectContext *)context;
 
-- (NSDictionary *)getAggregateProgenyCount:(NSManagedObjectContext *)context;
 @end
