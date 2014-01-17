@@ -505,7 +505,7 @@ NSString *calculateType(NSString *file);
     incrementAmount = 30.0 / (sample_ids.size() * catalog.size());
 
     // 7 is 400 X 7 = 3K . . .
-    uint saveAfterSamples = 10000;
+    uint saveAfterSamples = 100;
 
 
     gettimeofday(&time1, NULL);
@@ -536,7 +536,8 @@ NSString *calculateType(NSString *file);
                         vector<char *> obshape = datum->obshap;
                         vector<int> depths = datum->depth;
                         int numLetters = (int) obshape.size();
-                        DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:moc];
+                       
+                        DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum"   inManagedObjectContext:moc];
                         newDatumMO.name = key;
                         newDatumMO.sampleId = [NSNumber numberWithInt:sampleId];
                         newDatumMO.tagId = [NSNumber numberWithInt:loc->id];
@@ -559,9 +560,9 @@ NSString *calculateType(NSString *file);
                                 }
                             }
 
-                            NSError *error;
                             @autoreleasepool {
-                                newDatumMO.haplotypeData = [NSJSONSerialization dataWithJSONObject:datumDataArray options:0 error:&error];;
+                                NSError *error;
+                                newDatumMO.haplotypeData = [NSJSONSerialization dataWithJSONObject:datumDataArray options:0 error:&error];
                             }
                         }
                         else {
@@ -573,15 +574,15 @@ NSString *calculateType(NSString *file);
 
                 // end of process loci from catalogs
 
-                if (iterCount % saveAfterSamples == 0) {
+//                if (iterCount % saveAfterSamples == 0) {
                     NSError *innerError = nil ;
-                    NSLog(@"saving samples");
+//                    NSLog(@"saving samples");
                     [stacksDocument.managedObjectContext save:&innerError];
                     if (innerError != nil) {
                         NSLog(@"error doing inner save: %@", innerError);
                         return nil;
                     }
-                }
+//                }
             }
         }
 
