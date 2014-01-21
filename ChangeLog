@@ -1,3 +1,7 @@
+Stacks 1.12 - Jan 21, 2014
+--------------------------
+	Bugfix: accidentally broke gzipped FASTQ support through a typo in gzFastq.h.
+
 Stacks 1.11 - Jan 09, 2014
 --------------------------
 	Feature: changed build to work properly with g++ and clang, which is the native compiler on
