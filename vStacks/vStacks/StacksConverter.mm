@@ -462,7 +462,7 @@ NSString *calculateType(NSString *file);
         @autoreleasepool {
 
             string sampleString = samples[sampleId];
-            progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum %i/%ld", i + 1, sample_ids.size()];
+            progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datums - sample %i/%ld", i + 1, sample_ids.size()];
 
             NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
 
@@ -1289,15 +1289,14 @@ NSString *calculateType(NSString *file);
         }
 // should be column 8
         if (columns.count > 9) {
+            NSNumber *locusId = [numberFormatter numberFromString:columns[2]];
             @autoreleasepool {
-                NSNumber *locusId = [numberFormatter numberFromString:columns[2]];
                 NSArray *parents = [columns[8] componentsSeparatedByString:@","];
-
                 NSInteger parentCount = countParents(parents);
                 locusMO = [lociLookup objectForKey:locusId];
-
                 locusMO.parentCount = [NSNumber numberWithInteger:parentCount];
             }
+
         }
     }
 }
@@ -1314,7 +1313,9 @@ NSUInteger countParents(NSArray *parents) {
 
     NSMutableSet *parentIds = [NSMutableSet setWithCapacity:parents.count];
     for (NSString *parentString in parents) {
-        [parentIds addObject:[parentString componentsSeparatedByString:@"_"][0]];
+        @autoreleasepool {
+            [parentIds addObject:[parentString componentsSeparatedByString:@"_"][0]];
+        }
     }
     parentCount = parentIds.count;
 
@@ -1323,17 +1324,25 @@ NSUInteger countParents(NSArray *parents) {
 
 
 NSString *calculateType(NSString *file) {
-    NSArray *fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
+    NSArray *fileData;
+    @autoreleasepool {
+        fileData = [[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] componentsSeparatedByString:@"\n"];
+    }
+
     NSString *line;
     for (line in fileData) {
-        NSArray *columns = [line componentsSeparatedByString:@"\t"];
+        NSArray *columns;
+        @autoreleasepool {
+            columns = [line componentsSeparatedByString:@"\t"];
+        }
         // should be column 8
         if (columns.count > 9) {
-            NSArray *parents = [columns[8] componentsSeparatedByString:@","];
-            NSInteger parentCount = countParents(parents);
-//            NSLog(@"parents %@ count %ld",columns[8],parentCount);
-            if (parentCount > 2) {
-                return @"Population";
+            @autoreleasepool {
+                NSArray *parents = [columns[8] componentsSeparatedByString:@","];
+                NSInteger parentCount = countParents(parents);
+                if (parentCount > 2) {
+                    return @"Population";
+                }
             }
         }
     }
