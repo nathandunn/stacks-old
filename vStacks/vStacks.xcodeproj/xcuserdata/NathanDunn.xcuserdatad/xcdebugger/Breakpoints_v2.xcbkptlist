@@ -171,7 +171,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "1141"
             endingLineNumber = "1141"
-            landmarkName = "-loadStacksEntriesFromTagFile:progressWindow:"
+            landmarkName = "-addSamplesToDocument:forSampleIds:andSamples:"
             landmarkType = "5">
             <Locations>
                <Location
@@ -217,7 +217,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "1269"
             endingLineNumber = "1269"
-            landmarkName = "-readPopulations:"
+            landmarkName = "-createStacksDocumentForPath:"
             landmarkType = "5">
             <Locations>
                <Location
@@ -283,7 +283,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "189"
             endingLineNumber = "189"
-            landmarkName = "-getContextForPath:andName:andDocument:"
+            landmarkName = "-buildFileList:"
             landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
@@ -347,7 +347,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "731"
             endingLineNumber = "731"
-            landmarkName = "-loadAllelesOntoDatum:"
+            landmarkName = "-loadAlleleFileForDatum:fromFile:"
             landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
@@ -363,7 +363,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "663"
             endingLineNumber = "663"
-            landmarkName = "-loadDocument:progressWindow:"
+            landmarkName = "-loadSnpsOntoDatum:progressWindow:"
             landmarkType = "5">
             <Locations>
                <Location
@@ -409,7 +409,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "667"
             endingLineNumber = "667"
-            landmarkName = "-loadDocument:progressWindow:"
+            landmarkName = "-loadSnpsOntoDatum:progressWindow:"
             landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
