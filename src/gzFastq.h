@@ -21,7 +21,7 @@
 #ifndef __GZFASTQ_H__
 #define __GZFASTQ_H__
 
-#ifdef HAVE_IBZ
+#ifdef HAVE_LIBZ
 
 #include <errno.h>
 #include <zlib.h>
