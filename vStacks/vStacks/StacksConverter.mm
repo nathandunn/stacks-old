@@ -1277,8 +1277,6 @@ NSString *calculateType(NSString *file);
         [lociLookup setObject:locusMO forKey:locusMO.locusId];
     }
     NSLog(@"processing parents %ld", lociLookup.count);
-    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
     NSString *line;
     LocusMO *locusMO;
