@@ -355,14 +355,32 @@
 }
 
 - (NSArray *)getSnpFilterValues {
+
+    NSUInteger maxLocusSnps = [self getMaxLocusSnps];
+
     if (snpFilterValues == nil) {
         snpFilterValues = [NSMutableArray array];
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < maxLocusSnps; i++) {
             [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
 
     return snpFilterValues;
+}
+
+- (NSUInteger)getMaxLocusSnps {
+
+    NSArray* allLocusArray = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext] ;
+
+    NSUInteger maxLocusSnps = 0 ;
+    for( LocusMO* locusMO in  allLocusArray){
+        NSArray *snps = [NSJSONSerialization JSONObjectWithData:locusMO.snpData options:kNilOptions error:nil];
+        if(snps.count > maxLocusSnps){
+            maxLocusSnps = snps.count ;
+        }
+    }
+
+    return maxLocusSnps ;
 }
 
 
