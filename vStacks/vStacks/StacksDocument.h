@@ -33,6 +33,7 @@
 
 @property(nonatomic, retain) NSString *previousStacksName;
 @property(nonatomic, retain) NSMutableArray *snpFilterValues;
+@property(nonatomic, retain) NSMutableArray *sampleFilterValues;
 
 
 @property(nonatomic, copy) NSString *name;

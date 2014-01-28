@@ -75,6 +75,7 @@
 @synthesize maxLocation;
 @synthesize maxLocusTextField;
 @synthesize snpFilterValues;
+@synthesize sampleFilterValues;
 @synthesize maxSnpPopupButton;
 @synthesize stacksWebView;
 //@synthesize populationController;
@@ -366,6 +367,24 @@
     }
 
     return snpFilterValues;
+}
+
+- (NSArray *)getSampleFilterValues {
+
+    NSUInteger maxLocusSamples = [self getMaxLocusSamples];
+
+    if (sampleFilterValues == nil) {
+        sampleFilterValues = [NSMutableArray array];
+        for (int i = 0; i < maxLocusSamples; i++) {
+            [sampleFilterValues addObject:[NSNumber numberWithInteger:i]];
+        }
+    }
+
+    return sampleFilterValues;
+}
+
+- (NSUInteger)getMaxLocusSamples {
+    return 10;
 }
 
 - (NSUInteger)getMaxLocusSnps {
