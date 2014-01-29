@@ -30,8 +30,8 @@
 #include "populations.h"
 
 // Global variables to hold command-line options.
-int       num_threads = 1;
-int       batch_id    = 0;
+int       num_threads =  1;
+int       batch_id    = -1;
 string    in_path;
 string    out_path;
 string    out_file;
@@ -3248,125 +3248,136 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
     char      p_allele, q_allele, p_str[32], q_str[32];
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-	for (uint pos = 0; pos < it->second.size(); pos++) {
-	    loc = it->second[pos];
+
+	//
+	// We need to order the SNPs so negative and positive strand SNPs are properly ordered.
+	//
+	vector<GenPos> ordered_loci;
+	uint           col;
+    	for (uint pos = 0; pos < it->second.size(); pos++) {
+    	    loc = it->second[pos];
+	    t   = psum->locus_tally(loc->id);
+
+    	    for (uint i = 0; i < loc->snps.size(); i++) {
+    		col = loc->snps[i]->col;
+		if (t->nucs[col].allele_cnt == 2) {
+		    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
+		    if (write_single_snp) 
+			break;
+		}
+	    }
+	}
+	sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
+
+	for (uint pos = 0; pos < ordered_loci.size(); pos++) {
+    	    loc = catalog[ordered_loci[pos].id];
+	    col = loc->snps[ordered_loci[pos].snp_index]->col;
 
 	    s   = psum->locus(loc->id);
 	    t   = psum->locus_tally(loc->id);
 	    len = strlen(loc->con);
 
-	    for (uint i = 0; i < loc->snps.size(); i++) {
-		uint col = loc->snps[i]->col;
+	    num_indv = (double) t->nucs[col].num_indv;
+	    p_freq   = 0.0;
+	    for (int j = 0; j < pop_cnt; j++) {
+		//
+		// Sum the most frequent allele across populations.
+		//
+		if (s[j]->nucs[col].p_nuc == t->nucs[col].p_allele)
+		    p_freq += s[j]->nucs[col].p * (s[j]->nucs[col].num_indv / num_indv);
+		else 
+		    p_freq += (1 - s[j]->nucs[col].p) * (s[j]->nucs[col].num_indv / num_indv);
+	    }
 
-		num_indv = (double) t->nucs[col].num_indv;
-		p_freq   = 0.0;
-		for (int j = 0; j < pop_cnt; j++) {
+	    //
+	    // We want to report the most frequent allele as the P allele. Reorder the alleles 
+	    // if necessary.
+	    //
+	    if (p_freq < 0.5) {
+		char a = t->nucs[col].p_allele;
+		t->nucs[col].p_allele = t->nucs[col].q_allele;
+		t->nucs[col].q_allele = a;
+
+		sprintf(q_str, "%0.3f", p_freq);
+		sprintf(p_str, "%0.3f", 1 - p_freq);
+	    } else {
+		sprintf(p_str, "%0.3f", p_freq);
+		sprintf(q_str, "%0.3f", 1 - p_freq);
+	    }
+
+	    //
+	    // If on the negative strand, complement the alleles.
+	    //
+	    p_allele = loc->loc.strand == minus ? reverse(t->nucs[col].p_allele) : t->nucs[col].p_allele;
+	    q_allele = loc->loc.strand == minus ? reverse(t->nucs[col].q_allele) : t->nucs[col].q_allele;
+
+	    fh << loc->loc.chr << "\t" 
+	       << loc->sort_bp(col) + 1 << "\t" 
+	       << loc->id << "\t"
+	       << p_allele << "\t"              // REFerence allele
+	       << q_allele << "\t"              // ALTernate allele
+	       << "."        << "\t"            // QUAL
+	       << "PASS"     << "\t"            // FILTER
+	       << "NS="      << num_indv << ";" // INFO
+	       << "AF="      << p_str << "," << q_str << "\t" // INFO
+	       << "GT:DP:GL";                   // FORMAT
+
+	    d = pmap->locus(loc->id);
+
+	    for (int j = 0; j < pmap->sample_cnt(); j++) {
+		fh << "\t";
+
+		if (d[j] == NULL) {
 		    //
-		    // Sum the most frequent allele across populations.
+		    // Data does not exist.
 		    //
-		    if (s[j]->nucs[col].p_nuc == t->nucs[col].p_allele)
-			p_freq += s[j]->nucs[col].p * (s[j]->nucs[col].num_indv / num_indv);
-		    else 
-			p_freq += (1 - s[j]->nucs[col].p) * (s[j]->nucs[col].num_indv / num_indv);
-		}
-
-		// 
-		// If this site is fixed in all populations or has too many alleles don't output it.
-		//
-		if (t->nucs[col].allele_cnt != 2) 
-		    continue;
-
-		//
-		// We want to report the most frequent allele as the P allele. Reorder the alleles 
-		// if necessary.
-		//
-		if (p_freq < 0.5) {
-		    char a = t->nucs[col].p_allele;
-		    t->nucs[col].p_allele = t->nucs[col].q_allele;
-		    t->nucs[col].q_allele = a;
-
-		    sprintf(q_str, "%0.3f", p_freq);
-		    sprintf(p_str, "%0.3f", 1 - p_freq);
+		    fh << "./.:0:.,.,.";
+		} else if (d[j]->model[col] == 'U') {
+		    //
+		    // Data exists, but the model call was uncertain.
+		    //
+		    fh << "./.:" << d[j]->tot_depth << ":.,.,.";
 		} else {
-		    sprintf(p_str, "%0.3f", p_freq);
-		    sprintf(q_str, "%0.3f", 1 - p_freq);
-		}
+		    //
+		    // Tally up the nucleotide calls.
+		    //
+		    tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
 
-		//
-		// If on the negative strand, complement the alleles.
-		//
-		p_allele = loc->loc.strand == minus ? reverse(t->nucs[col].p_allele) : t->nucs[col].p_allele;
-		q_allele = loc->loc.strand == minus ? reverse(t->nucs[col].q_allele) : t->nucs[col].q_allele;
-
-		fh << loc->loc.chr << "\t" 
-		   << loc->sort_bp(col) + 1 << "\t" 
-		   << loc->id << "\t"
-		   << p_allele << "\t"              // REFerence allele
-		   << q_allele << "\t"              // ALTernate allele
-		   << "."        << "\t"            // QUAL
-		   << "PASS"     << "\t"            // FILTER
-		   << "NS="      << num_indv << ";" // INFO
-		   << "AF="      << p_str << "," << q_str << "\t" // INFO
-		   << "GT:DP:GL";                   // FORMAT
-
-		d = pmap->locus(loc->id);
-
-		for (int j = 0; j < pmap->sample_cnt(); j++) {
-		    fh << "\t";
-
-		    if (d[j] == NULL) {
-			//
-			// Data does not exist.
-			//
-			fh << "./.:0:.,.,.";
-		    } else if (d[j]->model[col] == 'U') {
-			//
-			// Data exists, but the model call was uncertain.
-			//
+		    if (p_allele == 0 && q_allele == 0) {
+			// More than two potential alleles.
 			fh << "./.:" << d[j]->tot_depth << ":.,.,.";
+		    } else if (p_allele == 0) {
+			gt_1 = q_allele == t->nucs[col].p_allele ? 0 : 1;
+			fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
+		    } else if (q_allele == 0) {
+			gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
+			fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
 		    } else {
+			gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
+			gt_2 = q_allele == t->nucs[col].p_allele ? 0 : 1;
+			fh << gt_1 << "/" << gt_2 << ":" << d[j]->tot_depth;
 			//
-			// Tally up the nucleotide calls.
+			// Find the heterozygous SNP call for this column and output it.
 			//
-			tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-			if (p_allele == 0 && q_allele == 0) {
-			    // More than two potential alleles.
-			    fh << "./.:" << d[j]->tot_depth << ":.,.,.";
-			} else if (p_allele == 0) {
-			    gt_1 = q_allele == t->nucs[col].p_allele ? 0 : 1;
-			    fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
-			} else if (q_allele == 0) {
-			    gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
-			    fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
-			} else {
-			    gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
-			    gt_2 = q_allele == t->nucs[col].p_allele ? 0 : 1;
-			    fh << gt_1 << "/" << gt_2 << ":" << d[j]->tot_depth;
-			    //
-			    // Find the heterozygous SNP call for this column and output it.
-			    //
-			    int  snp_index = -1;
-			    uint k;
-			    for (k = 0; k < d[j]->snps.size(); k++)
-				if (d[j]->snps[k]->col == col) {
-				    snp_index = k;
-				    break;
-				}
-			    if (snp_index >= 0) {
-				fh << ":.," << d[j]->snps[k]->lratio << ",.";
-			    } else {
-				cerr << "Warning, unable to locate SNP call for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
-				fh << ":.,.,.";
+			int  snp_index = -1;
+			uint k;
+			for (k = 0; k < d[j]->snps.size(); k++)
+			    if (d[j]->snps[k]->col == col) {
+				snp_index = k;
+				break;
 			    }
+			if (snp_index >= 0) {
+			    fh << ":.," << d[j]->snps[k]->lratio << ",.";
+			} else {
+			    cerr << "Warning, unable to locate SNP call for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
+			    fh << ":.,.,.";
 			}
 		    }
 		}
-		fh << "\n";
 	    }
+	    fh << "\n";
 	}
     }
-
     fh.close();
 
     return 0;
@@ -5660,7 +5671,7 @@ int parse_command_line(int argc, char* argv[]) {
 	cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
     }
 
-    if (batch_id == 0) {
+    if (batch_id < 0) {
 	cerr << "You must specify a batch ID.\n";
 	help();
     }
