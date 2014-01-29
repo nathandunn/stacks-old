@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="4514" systemVersion="13A603" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="4514" systemVersion="13B42" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none">
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="4514"/>
     </dependencies>
@@ -17,18 +17,15 @@
         <window title="STACKS Import" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" oneShot="NO" wantsToBeColor="NO" animationBehavior="default" id="1">
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
-            <rect key="contentRect" x="196" y="240" width="648" height="179"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="2560" height="1418"/>
+            <rect key="contentRect" x="196" y="240" width="545" height="110"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1440" height="878"/>
             <view key="contentView" id="2">
-                <rect key="frame" x="0.0" y="0.0" width="648" height="179"/>
+                <rect key="frame" x="0.0" y="0.0" width="545" height="110"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
-                    <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="98">
-                        <rect key="frame" x="518" y="9" width="119" height="32"/>
+                    <button verticalHuggingPriority="750" id="98">
+                        <rect key="frame" x="417" y="10" width="119" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <constraints>
-                            <constraint firstAttribute="width" constant="107" id="102"/>
-                        </constraints>
                         <buttonCell key="cell" type="push" title="Cancel" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="99">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                             <font key="font" metaFont="system"/>
@@ -40,33 +37,22 @@ Gw
                             <action selector="cancelCurrentAction:" target="-2" id="140"/>
                         </connections>
                     </button>
-                    <progressIndicator maxValue="100" style="bar" translatesAutoresizingMaskIntoConstraints="NO" id="106">
-                        <rect key="frame" x="51" y="71" width="518" height="20"/>
+                    <progressIndicator maxValue="100" style="bar" id="106">
+                        <rect key="frame" x="12" y="49" width="518" height="20"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <constraints>
-                            <constraint firstAttribute="width" constant="518" id="110"/>
-                        </constraints>
                     </progressIndicator>
-                    <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="119">
-                        <rect key="frame" x="48" y="109" width="583" height="43"/>
+                    <textField verticalHuggingPriority="750" id="119">
+                        <rect key="frame" x="10" y="71" width="521" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <constraints>
-                            <constraint firstAttribute="height" constant="43" id="124"/>
-                            <constraint firstAttribute="width" constant="579" id="136"/>
-                        </constraints>
                         <textFieldCell key="cell" lineBreakMode="truncatingTail" allowsUndo="NO" sendsActionOnEndEditing="YES" title="Importing . . . " allowsEditingTextAttributes="YES" usesSingleLineMode="YES" id="120">
-                            <font key="font" metaFont="system" size="26"/>
+                            <font key="font" metaFont="system" size="22"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                         </textFieldCell>
                     </textField>
-                    <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="125">
-                        <rect key="frame" x="45" y="13" width="458" height="29"/>
+                    <textField verticalHuggingPriority="750" id="125">
+                        <rect key="frame" x="10" y="3" width="402" height="33"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <constraints>
-                            <constraint firstAttribute="width" constant="454" id="126"/>
-                            <constraint firstAttribute="height" constant="29" id="132"/>
-                        </constraints>
                         <textFieldCell key="cell" lineBreakMode="truncatingTail" allowsUndo="NO" sendsActionOnEndEditing="YES" title="Importing message" allowsEditingTextAttributes="YES" usesSingleLineMode="YES" id="128">
                             <font key="font" metaFont="system"/>
                             <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -74,16 +60,6 @@ Gw
                         </textFieldCell>
                     </textField>
                 </subviews>
-                <constraints>
-                    <constraint firstAttribute="trailing" secondItem="98" secondAttribute="trailing" constant="17" id="117"/>
-                    <constraint firstAttribute="bottom" secondItem="98" secondAttribute="bottom" constant="16" id="118"/>
-                    <constraint firstItem="119" firstAttribute="leading" secondItem="2" secondAttribute="leading" constant="50" id="121"/>
-                    <constraint firstItem="119" firstAttribute="top" secondItem="2" secondAttribute="top" constant="27" id="122"/>
-                    <constraint firstAttribute="bottom" secondItem="125" secondAttribute="bottom" constant="13" id="134"/>
-                    <constraint firstItem="125" firstAttribute="leading" secondItem="2" secondAttribute="leading" constant="47" id="135"/>
-                    <constraint firstItem="106" firstAttribute="leading" secondItem="2" secondAttribute="leading" constant="51" id="137"/>
-                    <constraint firstAttribute="bottom" secondItem="106" secondAttribute="bottom" constant="72" id="138"/>
-                </constraints>
             </view>
         </window>
     </objects>

@@ -75,6 +75,7 @@
 @synthesize maxLocation;
 @synthesize maxLocusTextField;
 @synthesize snpFilterValues;
+@synthesize sampleFilterValues;
 @synthesize maxSnpPopupButton;
 @synthesize stacksWebView;
 //@synthesize populationController;
@@ -355,14 +356,50 @@
 }
 
 - (NSArray *)getSnpFilterValues {
+
+    NSUInteger maxLocusSnps = [self getMaxLocusSnps];
+
     if (snpFilterValues == nil) {
         snpFilterValues = [NSMutableArray array];
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < maxLocusSnps; i++) {
             [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
 
     return snpFilterValues;
+}
+
+- (NSArray *)getSampleFilterValues {
+
+    NSUInteger maxLocusSamples = [self getMaxLocusSamples];
+
+    if (sampleFilterValues == nil) {
+        sampleFilterValues = [NSMutableArray array];
+        for (int i = 0; i < maxLocusSamples; i++) {
+            [sampleFilterValues addObject:[NSNumber numberWithInteger:i]];
+        }
+    }
+
+    return sampleFilterValues;
+}
+
+- (NSUInteger)getMaxLocusSamples {
+    return 10;
+}
+
+- (NSUInteger)getMaxLocusSnps {
+
+    NSArray* allLocusArray = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext] ;
+
+    NSUInteger maxLocusSnps = 0 ;
+    for( LocusMO* locusMO in  allLocusArray){
+        NSArray *snps = [NSJSONSerialization JSONObjectWithData:locusMO.snpData options:kNilOptions error:nil];
+        if(snps.count > maxLocusSnps){
+            maxLocusSnps = snps.count ;
+        }
+    }
+
+    return maxLocusSnps ;
 }
 
 
