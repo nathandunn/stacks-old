@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -44,9 +44,11 @@ int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
+    uint sample_cnt = samples.size();
+
     cerr << "Number of mismatches allowed between stacks: " << ctag_dist << "\n"
 	 << "Loci matched based on " << (search_type == sequence ? "sequence identity" : "genomic location") << ".\n"
-	 << "Constructing catalog from " << samples.size() << " samples.\n";
+	 << "Constructing catalog from " << sample_cnt << " samples.\n";
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -93,12 +95,12 @@ int main (int argc, char* argv[]) {
     while (!samples.empty()) {
         map<int, QLocus *> sample;
 
-	cerr << "Processing sample " << i << "\n";
+	cerr << "Processing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
 
 	s = samples.front();
 	samples.pop();
 
-	if (!load_loci(s.second, sample, false)) {
+	if (!load_loci(s.second, sample, false, false)) {
             cerr << "Failed to load sample " << i << "\n";
             continue;
         }
@@ -190,6 +192,7 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
 	    (*c != *q) && (*c != 'N' && *q != 'N')) {
 
             SNP *s = new SNP;
+	    s->type   = snp_type_het;
             s->col    = c - c_beg;
             s->lratio = 0;
             s->rank_1 = *c;
@@ -201,6 +204,7 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
             catalog_tag->snps.push_back(s);
 
             s = new SNP;
+	    s->type   = snp_type_het;
             s->col    = q - q_beg;
             s->lratio = 0;
             s->rank_1 = *q;
@@ -825,7 +829,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     // Merge the alleles accounting for any SNPs added from either of the two samples.
     //
     string allele, new_allele;
-    int pos;
+    int    pos;
 
     for (j = this->alleles.begin(); j != this->alleles.end(); j++) {
 	allele     = j->first;
@@ -865,12 +869,36 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	merged_alleles.insert(new_allele);
     }
 
+    //
+    // If the matching tag being merged into the catalog had no called SNPs
+    // create alleles from the consensus sequence and check that catalog SNP
+    // objects contain all the nucleoties.
+    //
     if (matched_tag->alleles.size() == 0) {
+	char c;
 	new_allele = "";
 	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
-	    new_allele += (k->second->col > matched_tag->len - 1) ? 'N' : matched_tag->con[k->second->col];
+	    csnp = k->second;
+	    c    = matched_tag->con[k->second->col];
+
+	    new_allele += (csnp->col > matched_tag->len - 1) ? 'N' : c;
+
+	    if (csnp->col > matched_tag->len - 1) continue;
+
+	    if (c != csnp->rank_1 &&
+		c != csnp->rank_2 &&
+		c != csnp->rank_3 &&
+		c != csnp->rank_4) {
+
+		if (csnp->rank_3 == 0)
+		    csnp->rank_3 = c;
+		else 
+		    csnp->rank_4 = c;
+	    }
 	}
-	merged_alleles.insert(new_allele);
+
+	if (new_allele.length() > 0)
+	    merged_alleles.insert(new_allele);
     }
 
     //
@@ -888,6 +916,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
 	SNP *snp    = new SNP;
 	snp->col    = (*k).second->col;
+	snp->type   = (*k).second->type;
 	snp->lratio = 0.0;
 	snp->rank_1 = (*k).second->rank_1;
 	snp->rank_2 = (*k).second->rank_2;
@@ -895,6 +924,9 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	snp->rank_4 = (*k).second->rank_4;
 
 	this->snps.push_back(snp);
+
+	if (k->first == "catalog" || k->first == "both")
+	    delete k->second;
     }
 
     this->alleles.clear();
@@ -1066,40 +1098,49 @@ int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofs
 	tag->con     << "\t" << 
         0            << "\t" <<  // These flags are unused in cstacks, but important in ustacks
         0            << "\t" <<
+        0            << "\t" <<
         0            << "\n";
 
     //
     // Output the SNPs associated with the catalog tag
     //
-    char rank_3[2], rank_4[2];
-    rank_3[1] = '\0';
-    rank_4[1] = '\0';
-
     for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
-	rank_3[0] = (*snp_it)->rank_3 == 0 ? '\0' : (*snp_it)->rank_3;
-	rank_4[0] = (*snp_it)->rank_4 == 0 ? '\0' : (*snp_it)->rank_4;
+	snp_file << "0"    << "\t" << 
+	    batch_id       << "\t" <<
+	    tag->id        << "\t" << 
+	    (*snp_it)->col << "\t";
 
-	snp_file << "0\t" << 
-	    batch_id          << "\t" <<
-	    tag->id          << "\t" << 
-	    (*snp_it)->col    << "\t" << 
+	switch((*snp_it)->type) {
+	case snp_type_het:
+	    snp_file << "E\t";
+	    break;
+	case snp_type_hom:
+	    snp_file << "O\t";
+	    break;
+	default:
+	    snp_file << "U\t";
+	    break;
+	}
+
+	snp_file << 
 	    (*snp_it)->lratio << "\t" << 
 	    (*snp_it)->rank_1 << "\t" << 
 	    (*snp_it)->rank_2 << "\t" << 
-	    rank_3            << "\t" << 
-	    rank_4            << "\n";
+	    ((*snp_it)->rank_3 == 0 ? '-' : (*snp_it)->rank_3) << "\t" << 
+	    ((*snp_it)->rank_4 == 0 ? '-' : (*snp_it)->rank_4) << "\n";
     }
 
     //
     // Output the alleles associated with the two matched tags
     //
     for (all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++)
-	all_file << "0\t" << 
-	    batch_id  << "\t" <<
-	    tag->id  << "\t" << 
+	all_file << 
+	    "0"           << "\t" << 
+	    batch_id      << "\t" <<
+	    tag->id       << "\t" <<
 	    all_it->first << "\t" <<
-            0 << "\t" <<              // These two fields are used in the pstacks output, not in
-            0 << "\n";
+            "0"           << "\t" <<    // These two fields are used in the 
+            "0"           << "\n";      // ustacks/pstacks output, not in cstacks.
 
     return 0;
 }
@@ -1112,7 +1153,7 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
-    if (!load_loci(sample.second, tmp_catalog, false))
+    if (!load_loci(sample.second, tmp_catalog, false, false))
         return 0;
 
     sample.first = tmp_catalog.begin()->second->sample_id;
@@ -1141,7 +1182,7 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
-    if (!load_loci(catalog_path, catalog, false))
+    if (!load_loci(catalog_path, catalog, false, false))
         return 0;
 
     //

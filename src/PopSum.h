@@ -217,7 +217,7 @@ public:
     ~PopSum();
 
     int initialize(PopMap<LocusT> *);
-    int add_population(map<int, LocusT *> &, PopMap<LocusT> *, uint, uint, uint, ofstream &);
+    int add_population(map<int, LocusT *> &, PopMap<LocusT> *, uint, uint, uint, bool, ofstream &);
     int tally(map<int, LocusT *> &);
 
     int loci_cnt() { return this->num_loci; }
@@ -284,9 +284,10 @@ int PopSum<LocusT>::initialize(PopMap<LocusT> *pmap) {
 
 template<class LocusT>
 int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
-				   PopMap<LocusT> *pmap, 
-				   uint population_id,
-				   uint start_index, uint end_index, ofstream &log_fh) {
+			       PopMap<LocusT> *pmap, 
+			       uint population_id,
+			       uint start_index, uint end_index, 
+			       bool verbose, ofstream &log_fh) {
     LocusT  *loc;
     Datum  **d;
     LocSum **s;
@@ -327,13 +328,14 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 		s[pop_index]->nucs[loc->snps[k]->col].incompatible_site = true;
 
 		incompatible_loci++;
-		log_fh << "within_population\t"
-		       << "incompatible_locus\t"
-		       << loc->id << "\t"
-		       << loc->loc.chr << "\t"
-		       << loc->sort_bp(loc->snps[k]->col) << "\t"
-		       << loc->snps[k]->col << "\t" 
-		       << population_id << "\n";
+		if (verbose)
+		    log_fh << "within_population\t"
+			   << "incompatible_locus\t"
+			   << loc->id << "\t"
+			   << loc->loc.chr << "\t"
+			   << loc->sort_bp(loc->snps[k]->col) << "\t"
+			   << loc->snps[k]->col << "\t" 
+			   << population_id << "\n";
 	    }
 
 	    snp_cols.insert(loc->snps[k]->col);
@@ -351,6 +353,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
     }
 
     cerr << "Population " << population_id << " contained " << incompatible_loci << " incompatible loci.\n";
+    log_fh <<  "Population " << population_id << " contained " << incompatible_loci << " incompatible loci.\n";
 
     return 0;
 }

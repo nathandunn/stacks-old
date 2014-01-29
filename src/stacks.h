@@ -127,9 +127,9 @@ class PStack {
 	for (unsigned int i = 0; i < this->map.size(); i++) 
 	    delete [] this->map[i]; 
     }
-    int add_id(const char *);
-    int add_seq(const char *);
-    int add_seq(DNANSeq *);
+    int  add_id(const char *);
+    int  add_seq(const char *);
+    int  add_seq(DNANSeq *);
 };
 
 class Stack {
@@ -171,12 +171,13 @@ class Rem {
 
 class CatMatch {
 public:
-    int   batch_id;
-    int   cat_id;
-    int   sample_id;
-    int   tag_id;
-    int   depth;
-    char *haplotype;
+    int    batch_id;
+    int    cat_id;
+    int    sample_id;
+    int    tag_id;
+    int    depth;
+    double lnl;
+    char  *haplotype;
 
     CatMatch() { 
 	batch_id  = 0; 
@@ -184,6 +185,7 @@ public:
 	sample_id = 0; 
 	tag_id    = 0; 
 	depth     = 0; 
+	lnl       = 0.0;
 	haplotype = NULL; 
     }
     ~CatMatch() { 
