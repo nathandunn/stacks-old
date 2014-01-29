@@ -10,7 +10,7 @@
 #import "LocusMO.h"
 #import "LocusRepository.h"
 
-@interface LocusArrayController()
+@interface LocusArrayController ()
 
 @property(weak) IBOutlet NSTextField *lociField;
 
@@ -24,6 +24,8 @@
 @synthesize lociField;
 @synthesize minSnpValue;
 @synthesize maxSnpValue;
+@synthesize minSampleValue;
+@synthesize maxSampleValue;
 @synthesize chromosomeLocation;
 @synthesize minBasePairs;
 @synthesize maxBasePairs;
@@ -33,16 +35,18 @@
     // apparently this is called before  / instead of init
     minSnpValue = 0;
     maxSnpValue = 1000;
+    minSampleValue = 0;
+    maxSampleValue = 10000;
     chromosomeLocation = nil ;
     minBasePairs = 0;
     maxBasePairs = 1000000 * 10000;
-    
-    
+
+
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     [numberFormatter setNumberStyle:NSNumberFormatterNoStyle];
 //    [lociField setFormatter:numberFormatter];
     [[lociField cell] setFormatter:numberFormatter];
-    
+
     [self setSortDescriptors:[NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"locusId" ascending:YES selector:@selector(compare:)]]];
 }
 
@@ -79,17 +83,22 @@
             if (locusMO.snpData != nil) {
                 NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:locusMO.snpData options:kNilOptions error:&error];
                 NSUInteger snpCount = snpJson.count;
+                NSUInteger progenyCount = locusMO.progenyCount.unsignedIntegerValue;
                 if (snpCount >= minSnpValue && snpCount <= maxSnpValue) {
                     if ([locusMO.type isEqualToString:@"Population"]) {
                         if (([locusMO.basePairs integerValue] >= minBasePairs)
                                 && ([locusMO.basePairs integerValue] <= maxBasePairs)
                                 && (chromosomeLocation == nil  || [locusMO.chromosome isEqualToString:chromosomeLocation])
+                                && progenyCount >= minSampleValue && progenyCount <= maxSampleValue
                                 ) {
                             [filteredObjects addObject:locusMO];
                         }
                     }
                     else {
-                        [filteredObjects addObject:locusMO];
+                        progenyCount -= locusMO.parentCount.unsignedIntegerValue;
+                        if (progenyCount >= minSampleValue && progenyCount <= maxSampleValue) {
+                            [filteredObjects addObject:locusMO];
+                        }
                     }
                 }
             }
@@ -114,6 +123,24 @@
     if (value.stringValue.length > 0) {
         maxSnpValue = value.titleOfSelectedItem.integerValue;
         NSLog(@"setting MAX value %ld", maxSnpValue);
+        [self rearrangeObjects];
+    }
+}
+
+- (IBAction)writeMinSampleValue:(id)sender {
+    NSPopUpButton *value = sender;
+    if (value.stringValue.length > 0) {
+        minSampleValue = value.titleOfSelectedItem.integerValue;
+        NSLog(@"setting MIN value %ld", minSampleValue);
+        [self rearrangeObjects];
+    }
+}
+
+- (IBAction)writeMaxSampleValue:(id)sender {
+    NSPopUpButton *value = sender;
+    if (value.stringValue.length > 0) {
+        maxSampleValue = value.titleOfSelectedItem.integerValue;
+        NSLog(@"setting MAX value %ld", maxSampleValue);
         [self rearrangeObjects];
     }
 }

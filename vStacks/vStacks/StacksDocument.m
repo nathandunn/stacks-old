@@ -39,6 +39,7 @@
 @property(weak) IBOutlet NSTextField *populationNameField;
 @property(weak) IBOutlet NSTextField *maxLocusTextField;
 @property(weak) IBOutlet NSPopUpButton *maxSnpPopupButton;
+@property(weak) IBOutlet NSPopUpButton *maxSamplesPopupButton;
 @property(weak) IBOutlet WebView *stacksWebView;
 
 
@@ -77,6 +78,7 @@
 @synthesize snpFilterValues;
 @synthesize sampleFilterValues;
 @synthesize maxSnpPopupButton;
+@synthesize maxSamplesPopupButton;
 @synthesize stacksWebView;
 //@synthesize populationController;
 //@synthesize loadProgress;
@@ -125,6 +127,7 @@
     maxLocusTextField.stringValue = [NSString stringWithFormat:@"%1.2f", maxLocationVariable];
 
     [maxSnpPopupButton selectItemAtIndex:[self getSnpFilterValues].count - 1];
+    [maxSamplesPopupButton selectItemAtIndex:[self getSampleFilterValues].count - 1];
 
 
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
@@ -384,7 +387,17 @@
 }
 
 - (NSUInteger)getMaxLocusSamples {
-    return 10;
+    NSArray* allLocusArray = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext] ;
+
+    NSUInteger maxLocusSamples = 0 ;
+    for( LocusMO* locusMO in  allLocusArray){
+
+        if(locusMO.progenyCount.unsignedIntegerValue > maxLocusSamples){
+            maxLocusSamples = locusMO.progenyCount.unsignedIntegerValue ;
+        }
+    }
+
+    return maxLocusSamples ;
 }
 
 - (NSUInteger)getMaxLocusSnps {
