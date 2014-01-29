@@ -15,6 +15,8 @@
 
 @property NSInteger minSnpValue;
 @property NSInteger maxSnpValue;
+@property NSInteger minSampleValue;
+@property NSInteger maxSampleValue;
 @property (nonatomic, retain) NSString*chromosomeLocation;
 @property double minBasePairs;
 @property double maxBasePairs;
