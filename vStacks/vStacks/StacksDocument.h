@@ -12,9 +12,6 @@
 @class DatumMO;
 @class LocusMO;
 @class PopulationMO;
-//@class DatumRepository;
-//@class PopulationRepository;
-//@class LocusRepository;
 
 @interface StacksDocument : NSPersistentDocument
 
@@ -32,15 +29,11 @@
 @property(nonatomic, strong) DatumMO *selectedDatum;
 
 // repositories
-//@property(nonatomic, strong) DatumRepository *datumRepository;
-//@property(nonatomic, strong) LocusRepository *locusRepository;
-//@property(nonatomic, strong) PopulationRepository *populationRepository;
 
 
 @property(nonatomic, retain) NSString *previousStacksName;
 @property(nonatomic, retain) NSMutableArray *snpFilterValues;
-
-//- (NSMutableArray *)findPopulations;
+@property(nonatomic, retain) NSMutableArray *sampleFilterValues;
 
 
 @property(nonatomic, copy) NSString *name;
