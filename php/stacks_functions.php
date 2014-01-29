@@ -106,6 +106,8 @@ EOQ;
 }
 
 function print_scale($max_len) {
+    if ($max_len == 0) return "";
+
     $class = array("light_scale", "dark_scale");
     $str   = "";
     $c     = 0;

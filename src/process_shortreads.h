@@ -51,6 +51,7 @@ using std::pair;
 #include "clean.h"
 #include "file_io.h"
 #include "utils.h"
+#include "log_utils.h"
 #include "write.h"
 #include "BustardI.h"   // Reading input files in Tab-separated Bustard format
 #include "FastqI.h"     // Reading input files in FASTQ format

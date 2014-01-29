@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 #
 # This file is part of Stacks.
 #
@@ -70,7 +70,7 @@ die ("Unable to find '" . $exe_path . "genotypes'.\n") if (!-e $exe_path . "geno
 die ("Unable to find '" . $exe_path . "populations'.\n") if (!-e $exe_path . "populations" || !-x $exe_path . "populations");
 die ("Unable to find '" . $exe_path . "index_radtags.pl'.\n") if (!-e $exe_path . "index_radtags.pl" || !-x $exe_path . "index_radtags.pl");
 
-my ($i, $log, $log_fh, $pfile, $file, $num_files, $parent, $sample, %map);
+my ($i, $log, $log_fh, $pipe_fh, $pfile, $file, $num_files, $parent, $sample, %map);
 
 $i         = 1;
 $num_files = scalar(@parents) + scalar(@progeny) + scalar(@samples);
@@ -112,7 +112,6 @@ if ($sql == 1) {
     # 
     `mysql --defaults-file=$cnf $db -e "INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'"` if ($dry_run == 0);
 
-    print STDERR  "mysql --defaults-file=$cnf $db -e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'\"\n";
     print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'\"\n";
 }
 
@@ -152,7 +151,6 @@ foreach $sample (@parents, @progeny, @samples) {
 	    chomp $results[0];
 	    $sample_id = $results[0];
 	}
-	print STDERR  "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop\"\n";
 	print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop\"\n";
     }
 
@@ -204,8 +202,14 @@ $cat_file = "batch_" . $batch_id;
 $cmd      = $exe_path . "cstacks -g -b $batch_id -o $out_path $parents " . join(" ", @_cstacks) . " 2>&1";
 print STDERR  "$cmd\n";
 print $log_fh "$cmd\n";
-@results =    `$cmd` if ($dry_run == 0);
-print $log_fh @results;
+
+if ($dry_run == 0) {
+    open($pipe_fh, "$cmd |");
+    while (<$pipe_fh>) {
+	print $log_fh $_;
+    }
+    close($pipe_fh);
+}
 
 print STDERR "Importing catalog to MySQL database..." if ($sql == 1);
 
@@ -246,8 +250,12 @@ foreach $sample (@parents, @progeny, @samples) {
     @results =    `$cmd` if ($dry_run == 0);
     print $log_fh @results;
 
+    print STDERR "  Loading sstacks output to $db..." if ($sql == 1);
+
     $file = "$out_path/" . $pfile . ".matches.tsv";
     import_sql_file($log_fh, $file, "matches", 0);
+
+    print STDERR "done.\n" if ($sql == 1);
 
     $i++;
 }
@@ -261,8 +269,14 @@ if ($data_type eq "map") {
     $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -t gen -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
-    @results =    `$cmd` if ($dry_run == 0);
-    print $log_fh @results;
+
+    if ($dry_run == 0) {
+	open($pipe_fh, "$cmd |");
+	while (<$pipe_fh>) {
+	    print $log_fh $_;
+	}
+	close($pipe_fh);
+    }
 
     $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
     import_sql_file($log_fh, $file, "markers", 0);
@@ -276,8 +290,14 @@ if ($data_type eq "map") {
     $cmd = $exe_path . "populations -b $batch_id -P $out_path -s " . join(" ", @_populations) . " 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
-    @results =    `$cmd` if ($dry_run == 0);
-    print $log_fh @results;
+
+    if ($dry_run == 0) {
+	open($pipe_fh, "$cmd |");
+	while (<$pipe_fh>) {
+	    print $log_fh $_;
+	}
+	close($pipe_fh);
+    }
 
     $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
     import_sql_file($log_fh, $file, "markers", 0);
@@ -434,7 +454,6 @@ sub import_sql_file {
     @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore"` if ($sql == 1 && $dry_run == 0);
 
     if ($sql == 1) {
-	print STDERR  "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
 	print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
     }
 }
@@ -519,7 +538,7 @@ sub parse_command_line {
 	}
     }
 
-    $exe_path = $exe_path . "/"          if (substr($out_path, -1) ne "/");
+    $exe_path = $exe_path . "/"          if (substr($exe_path, -1) ne "/");
     $out_path = substr($out_path, 0, -1) if (substr($out_path, -1) eq "/");
 
     if ($batch_id !~ /^\d+$/ || $batch_id < 0) {
@@ -559,7 +578,7 @@ sub usage {
 ref_map.pl -p path -r path [-s path] -o path [-n mismatches] [-m min_cov] [-T num_threads] [-O popmap] [-B db -b batch_id -D "desc" -a yyyy-mm-dd] [-S -i id] [-e path] [-d] [-h]
     p: path to a Bowtie/SAM/BAM file containing parent sequences from a mapping cross.
     r: path to a Bowtie/SAM/BAM file containing progeny sequences from a mapping cross.
-    s: path to a Bowtie/SAM/BAM file contiaining an individual sample from a population.
+    s: path to a Bowtie/SAM/BAM file containing an individual sample from a population.
     o: path to write pipeline output files.
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
     T: specify the number of threads to execute.

@@ -1516,10 +1516,10 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	//
 	// Write out the remainder tags merged into this unique tag.
 	//
-	total += tag_1->remtags.size();
-
 	for (k = tag_1->remtags.begin(); k != tag_1->remtags.end(); k++) {
-	    rem = r[*k];
+	    rem    = r[*k];
+	    total += rem->map.size();
+
 	    for (uint j = 0; j < rem->map.size(); j++)
 		tags << "0"       << "\t" 
 		     << sql_id    << "\t" 

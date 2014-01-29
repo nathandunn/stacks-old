@@ -62,6 +62,7 @@
 		6B77C0E117D1467600987B98 /* StacksDocumentController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B77C0E017D1467600987B98 /* StacksDocumentController.m */; };
 		6B81723E17DFD684002FB907 /* ProgressController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B81723C17DFD684002FB907 /* ProgressController.m */; };
 		6B81723F17DFD684002FB907 /* ProgressController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6B81723D17DFD684002FB907 /* ProgressController.xib */; };
+		6BB1484F181737B700D87C87 /* ColorGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BB1484E181737B600D87C87 /* ColorGenerator.m */; };
 		6BEBC5DB17E8F71B00B48C79 /* HaplotypeMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBC5DA17E8F71B00B48C79 /* HaplotypeMO.m */; };
 		6BEBC5DE17E8F71C00B48C79 /* AlleleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBC5DD17E8F71C00B48C79 /* AlleleMO.m */; };
 		6BEBC5E117E8F71C00B48C79 /* DepthMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBC5E017E8F71C00B48C79 /* DepthMO.m */; };
@@ -204,6 +205,8 @@
 		6B81723B17DFD684002FB907 /* ProgressController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProgressController.h; sourceTree = "<group>"; };
 		6B81723C17DFD684002FB907 /* ProgressController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ProgressController.m; sourceTree = "<group>"; };
 		6B81723D17DFD684002FB907 /* ProgressController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ProgressController.xib; sourceTree = "<group>"; };
+		6BB1484D181737B600D87C87 /* ColorGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorGenerator.h; sourceTree = "<group>"; };
+		6BB1484E181737B600D87C87 /* ColorGenerator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ColorGenerator.m; sourceTree = "<group>"; };
 		6BEBC5D917E8F71B00B48C79 /* HaplotypeMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HaplotypeMO.h; sourceTree = "<group>"; };
 		6BEBC5DA17E8F71B00B48C79 /* HaplotypeMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HaplotypeMO.m; sourceTree = "<group>"; };
 		6BEBC5DC17E8F71C00B48C79 /* AlleleMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AlleleMO.h; sourceTree = "<group>"; };
@@ -368,6 +371,8 @@
 		6B4674A5173183F700E42419 /* GUI */ = {
 			isa = PBXGroup;
 			children = (
+				6BB1484D181737B600D87C87 /* ColorGenerator.h */,
+				6BB1484E181737B600D87C87 /* ColorGenerator.m */,
 				63D53D3DA1B67441F7C8386C /* StacksDocument.xib */,
 				1442E1B017206DBB004B6361 /* MainMenu.xib */,
 				63D53EFA95D4B7DF21498B77 /* StacksView.m */,
@@ -524,7 +529,7 @@
 			isa = PBXProject;
 			attributes = {
 				CLASSPREFIX = Stacks;
-				LastUpgradeCheck = 0460;
+				LastUpgradeCheck = 0500;
 				ORGANIZATIONNAME = "Nathan Dunn";
 			};
 			buildConfigurationList = 1442E19017206DBB004B6361 /* Build configuration list for PBXProject "StacksGui3" */;
@@ -612,6 +617,7 @@
 				63D53E8EEFB2658C1ABFB10C /* DatumRepository.m in Sources */,
 				63D53922F24CBD38E628870C /* DepthRepository.m in Sources */,
 				63D539193E198FC341D4D036 /* LocusRepository.m in Sources */,
+				6BB1484F181737B700D87C87 /* ColorGenerator.m in Sources */,
 				63D5324CC3F9B03789008CE5 /* HaplotypeRepository.m in Sources */,
 				63D53E9B9995E1FAAA1FF1ED /* StackEntryRepository.m in Sources */,
 				1431B43417440CF7006FD2BC /* LocusMO.m in Sources */,
@@ -711,7 +717,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -735,9 +740,9 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACH_O_TYPE = mh_execute;
-				MACOSX_DEPLOYMENT_TARGET = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx10.8;
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
@@ -745,7 +750,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -763,8 +767,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACH_O_TYPE = mh_execute;
-				MACOSX_DEPLOYMENT_TARGET = "";
-				SDKROOT = macosx10.8;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				SDKROOT = macosx;
 			};
 			name = Release;
 		};

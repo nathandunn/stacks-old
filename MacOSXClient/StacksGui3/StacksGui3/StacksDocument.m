@@ -18,19 +18,22 @@
 #import "StacksConverter.h"
 #import "StacksDocumentController.h"
 
-@interface StacksDocument()
+@interface StacksDocument ()
+
+@property BOOL editingPopulation;
+@property NSInteger previousSelectedItem;
 
 @property(weak) IBOutlet NSTableView *locusTableView;
-@property(weak) IBOutlet NSTableView *populationTableView;
 @property(weak) IBOutlet NSTableView *stacksTableView;
 @property(weak) IBOutlet NSCollectionView *datumCollectionView;
-@property(weak) IBOutlet DatumArrayController *datumController ;
-//@property(weak) IBOutlet NSProgressIndicator *loadProgress;
-//@property(weak) IBOutlet NSPanel *progressPanel ;
+@property(weak) IBOutlet DatumArrayController *datumController;
+@property(weak) IBOutlet NSTextField *totalLoci;
+@property(weak) IBOutlet NSPopUpButton *populationSelector;
+@property(weak) IBOutlet NSButton *editPopulationButton;
+@property(weak) IBOutlet NSTextField *populationNameField;
+@property(weak) IBOutlet NSTextField *maxLocusTextField;
+@property(weak) IBOutlet NSPopUpButton *maxSnpPopupButton;
 
-//@property(weak) IBOutlet PopulationArrayController *populationController ;
-
-//@property(weak) IBOutlet NSArrayController *stacksController ;
 
 @end
 
@@ -51,7 +54,20 @@
 @synthesize populationRepository;
 
 // array controller
-@synthesize datumController ;
+@synthesize datumController;
+@synthesize totalLoci;
+@synthesize populationSelector;
+@synthesize populationNameField;
+@synthesize editPopulationButton;
+
+
+@synthesize editingPopulation;
+@synthesize previousSelectedItem;
+@synthesize lociLocations;
+@synthesize maxLocation;
+@synthesize maxLocusTextField;
+@synthesize snpFilterValues;
+@synthesize maxSnpPopupButton;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -73,7 +89,6 @@
 //    [super makeWindowControllers];
 //}
 
-
 - (NSString *)windowNibName {
     // Override returning the nib file name of the document
     // If you need to use a subclass of NSWindowController or if your document supports multiple NSWindowControllers, you should remove this method and override -makeWindowControllers instead.
@@ -86,34 +101,74 @@
     [super windowControllerDidLoadNib:aController];
     // Add any code here that needs to be executed once the windowController has loaded the document's window.
     [self.stacksTableView setIntercellSpacing:NSMakeSize(0, 0)];
+    [self.stacksTableView setEnabled:true];
+
+
+    NSInteger lociCount = [locusRepository getAllLoci:self.managedObjectContext].count;
+    NSString *newString = [NSString stringWithFormat:@"%ld", lociCount];
+    [totalLoci setStringValue:newString];
+
+    editingPopulation = false ;
+
+    double maxLocationVariable = [locusRepository getMaxLocation:self.managedObjectContext] / 1000000;
+    maxLocusTextField.stringValue = [NSString stringWithFormat:@"%1.2f", maxLocationVariable];
+
+    [maxSnpPopupButton selectItemAtIndex:[self getSnpFilterValues].count-1];
+
 }
 
 + (BOOL)autosavesInPlace {
     return YES;
 }
 
+- (IBAction)updateSelections:(id)sender {
+    [self tableViewSelectionDidChange:nil];
+}
+
+- (IBAction)togglePopulationEdit:(id)sender {
+    NSLog(@"editing %d", editingPopulation);
+    if (editingPopulation) {
+        NSLog(@"setting to edit");
+        editPopulationButton.title = @"Edit";
+
+        [populationSelector setHidden:false];
+        [populationNameField setHidden:true];
+
+        [populationSelector selectItemAtIndex:previousSelectedItem];
+        NSLog(@"selected item index %ld", populationSelector.indexOfSelectedItem);
+    }
+    else {
+        NSLog(@"setting to DONE");
+        previousSelectedItem = populationSelector.indexOfSelectedItem;
+        editPopulationButton.title = @"Done";
+        [populationSelector setHidden:true];
+        [populationNameField setHidden:false];
+    }
+
+    editingPopulation = !editingPopulation;
+}
 
 
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
-    NSString *tableName = [[aNotification object] identifier];
-    NSLog(@"table selected!! %@",tableName);
+//    NSString *tableName = [[aNotification object] identifier];
+//    NSLog(@"table selected!! %@",tableName);
 
 
     self.selectedLocus = [self findSelectedLocus];
     self.selectedPopulation = [self findSelectedPopulation];
 
-    if(self.selectedLocus!=nil && self.selectedPopulation!=nil){
-        NSLog(@"getting selected locus %@",self.selectedLocus.locusId);
-        NSLog(@"getting selected population %@",self.selectedPopulation.name);
+    if (self.selectedLocus != nil && self.selectedPopulation != nil) {
+//        NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
+//        NSLog(@"getting selected population %@", self.selectedPopulation.name);
         self.selectedDatums = [self.datumRepository getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus andPopulation:self.selectedPopulation];
-        if(self.selectedDatums!=nil && self.selectedDatums.count>0){
-                self.selectedDatum = [self.selectedDatums objectAtIndex:0];
+        if (self.selectedDatums != nil && self.selectedDatums.count > 0) {
+            self.selectedDatum = [self.selectedDatums objectAtIndex:0];
         }
-        else{
+        else {
             self.selectedDatum = nil ;
         }
     }
-    else{
+    else {
         self.selectedDatums = nil ;
         self.selectedDatum = nil ;
     }
@@ -121,63 +176,58 @@
 }
 
 - (PopulationMO *)findSelectedPopulation {
-    NSInteger selectedRow = [self.populationTableView selectedRow];
-    if(selectedRow>=0){
-         return [populationRepository getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
+    NSInteger selectedRow = [self.populationSelector indexOfSelectedItem];
+    if (selectedRow >= 0) {
+        return [populationRepository getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
     }
-    return nil ;
+    return nil;
 }
 
 - (LocusMO *)findSelectedLocus {
     NSInteger selectedRow = [self.locusTableView selectedRow];
-    if(selectedRow>=0){
+    if (selectedRow >= 0) {
         // id starts at 1 + row  . . . I hope this is always true
-        return [locusRepository getLocus:self.managedObjectContext forId:selectedRow+1];
+        return [locusRepository getLocus:self.managedObjectContext forId:selectedRow + 1];
     }
-    return nil ;
+    return nil;
 }
 
 
-- (NSManagedObjectContext *)getContextForPath:(NSString *)path {
-    if(self.name==NULL){
-        return [self getContextForPath:path andName:@"StacksDocument"];
-    }
-    else{
+- (NSArray *)generateLociLocations {
+    NSArray *locusArray = [locusRepository getLociLocations:self.managedObjectContext];
+//    NSLog(@"size of array %ld",locusArray.count);
 
-        return [self getContextForPath:path andName:self.name];
-    }
+//    if(lociLocations==nil){
+//        NSMutableSet* set = [[NSMutableSet alloc] init];
+//        for(LocusMO *locus in locusArray){
+//            [set addObject:locus.chromosome];
+//        }
+
+//        lociLocations = [[NSSet alloc] initWithSet:set];
+//        lociLocations = set ;
+//    }
+
+//    return lociLocations;
+//    return set ;
+
+    return locusArray;
+
+//    NSMutableArray *bots = [[NSMutableArray alloc] init];
+//    [bots addObject:@"dogs"];
+//    [bots addObject:@"cats"];
+//
+//    return bots ;
 }
 
-- (NSManagedObjectContext *)getContextForPath:(NSString *)path andName:(NSString *)name {
-    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption,
-                                                                       [NSNumber numberWithBool:YES],
-                                                                       NSInferMappingModelAutomaticallyOption, nil];
-
-
-    NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
-    NSLog(@"saving to %@ from %@", path, storeUrl);
-    NSPersistentStoreCoordinator *persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
-    NSError *error = nil;
-
-    if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
-        NSLog(@"error loading persistent store..");
-        [[NSFileManager defaultManager] removeItemAtPath:storeUrl.path error:nil];
-        if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
-            NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
-            //abort();
-        }
-    }
-
-
-    NSManagedObjectContext *context = [[NSManagedObjectContext alloc] init];
-    [context setPersistentStoreCoordinator:persistentStoreCoordinator];
-    self.managedObjectContext = context;
-    self.path = path;
-
-
-    return context;
+- (NSUInteger)getMaxLocation {
+    return [locusRepository getMaxLocation:self.managedObjectContext];
 }
 
+- (BOOL)noLociLocations {
+    NSUInteger locusCount = [locusRepository getLociWithChromsomes:self.managedObjectContext].count;
+//    NSLog(@"NO LOCI LOCATIONS count %ld",locusCount);
+    return locusCount == 0;
+}
 
 - (BOOL)readFromURL:(NSURL *)absoluteURL ofType:(NSString *)typeName error:(NSError **)error {
     BOOL returnType = [super readFromURL:absoluteURL ofType:typeName error:error];
@@ -186,6 +236,8 @@
 //        NSLog(@"error reading %@", error);
 //    }
 //    NSLog(@"error reading success %ld",  returnType);
+
+
 
     return returnType;
 }
@@ -202,30 +254,53 @@
                     return;
                 }
                 self.selectedDatum = datumMO;
-                self.previousStacksName = datumMO.name ;
+                self.previousStacksName = datumMO.name;
             }
         }
     }
 }
 
 
-
-
 - (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
-    NSLog(@"validating UI item in Stacks Document%@",anItem) ;
+    NSLog(@"validating UI item in Stacks Document%@", anItem);
     return [super validateUserInterfaceItem:anItem];
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)item {
-    NSLog(@"validating in in Stacks Document menu item %@",item) ;
+    NSLog(@"validating in in Stacks Document menu item %@", item);
 //    return [super validateUserInterfaceItem:item];
-    if(item.tag==77){
+    if (item.tag == 77) {
         NSLog(@"should be returning true!");
         return YES;
     }
-    else{
+    else {
         return [super validateMenuItem:item];
     }
 }
+
+- (void)showHelp:(id)sender {
+    NSLog(@"coalling stacks doc help");
+//    NSString *help = [[NSBundle mainBundle] pathForResource:@"Some Help" ofType:@"html"];
+//    NSString *help = [[NSBundle mainBundle] pathForResource:@"Some Help" ofType:@"html"];
+//    NSURL *url = [NSURL :@"http://creskolab.uoregon.edu/stacks/index.html"];
+     NSString* url = @"http://creskolab.uoregon.edu/stacks" ;
+//    NSLog(@"%@", url);
+//    [[NSApplication sharedApplication]
+//    NSString* url = @"NSLog(@\"%@\", [NSURL URLWithString:[self.storyLink description]])";
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
+}
+
+- (NSArray *) getSnpFilterValues{
+    if(snpFilterValues==nil){
+        snpFilterValues = [[NSMutableArray alloc] init];
+        for(int i = 0 ; i < 15 ; i++){
+            [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
+        }
+    }
+
+    return snpFilterValues;
+}
+
+
 
 @end

@@ -58,6 +58,7 @@ using std::set;
 #include "renz.h"
 #include "PopMap.h"
 #include "sql_utilities.h"
+#include "catalog_utils.h"
 #include "utils.h"
 #include "genotype_dictionaries.h"
 
@@ -70,7 +71,6 @@ int  parse_command_line(int, char**);
 int  build_file_list(vector<string> &);
 int  load_marker_list(string, set<int> &);
 int  identify_parental_ids(map<int, CSLocus *> &, vector<int> &, set<int> &);
-int  reduce_catalog(map<int, CSLocus *> &, set<int> &, set<int> &);
 int  find_markers(map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &);
 int  calculate_f(map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &);
 int  create_genotype_map(CSLocus *, PopMap<CSLocus> *, set<int> &);
@@ -95,6 +95,7 @@ int  write_generic(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &,
 int  write_sql(map<int, CSLocus *> &,     PopMap<CSLocus> *, set<int> &);
 int  write_joinmap(map<int, CSLocus *> &, PopMap<CSLocus> *, map<string, string> &, map<int, string> &, set<int> &);
 int  write_onemap(map<int, CSLocus *> &,  PopMap<CSLocus> *, map<string, string> &, map<int, string> &, set<int> &);
+int  write_onemap_mapmaker(map<int, CSLocus *> &,  PopMap<CSLocus> *, map<string, string> &, map<int, string> &, set<int> &);
 int  write_rqtl(map<int, CSLocus *> &,    PopMap<CSLocus> *, map<string, string> &, map<int, string> &, set<int> &);
 int  write_genomic(map<int, CSLocus *> &, PopMap<CSLocus> *);
 

@@ -223,8 +223,8 @@ Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 	    // sequence down. Trim the final length to keep the read length consistent.
 	    //
 	    strncpy(buf, seq + bp, id_len - 1);
-	    buf[id_len] = '\0';
-	    buf_len     = strlen(buf);
+	    buf[id_len - 1] = '\0';
+	    buf_len         = strlen(buf);
 
 	    stop = bp + dist;
 	    stop = stop > len ? len : stop;
@@ -248,8 +248,8 @@ Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 	    //
 	    k = bp + dist;
 	    strncpy(buf, seq + k, id_len - 1);
-	    buf[id_len] = '\0';
-	    buf_len     = strlen(buf);
+	    buf[id_len - 1] = '\0';
+	    buf_len         = strlen(buf);
 
 	    j = bp;
 	    k = 0;

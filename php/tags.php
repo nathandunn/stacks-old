@@ -212,6 +212,7 @@ write_footer();
 function generate_hidden_form_vars($var) {
     global $root_path, $display;
 
+    $vars = "";
     foreach ($display as $key => $d) {
 	if (strstr($key, $var))
 	    continue;
@@ -438,11 +439,20 @@ function write_filter() {
 		     "delv"  => array(),
 		     "rem"   => array());
 
-    $depth_ctl = generate_element_select("filter_depth", array(1, 5, 10, 20), $display['filter_depth'], "");
-    $snps_ctl  = generate_element_select("filter_snps",  array(1, 2, 3, 4, 5), $display['filter_snps'], "");
-    $delv_ctl  = generate_key_element_select("filter_delv",  array(1 => "True", 0 => "False"), $display['filter_delv'], "");
-    $rem_ctl   = generate_key_element_select("filter_rem",   array(1 => "True", 0 => "False"), $display['filter_rem'], "");
-    $black_ctl = generate_key_element_select("filter_black", array(1 => "True", 0 => "False"), $display['filter_black'], "");
+    $ele_name  = isset($display['filter_depth']) ? $display['filter_depth'] : "";
+    $depth_ctl = generate_element_select("filter_depth", array(1, 5, 10, 20), $ele_name, "");
+
+    $ele_name  = isset($display['filter_snps']) ? $display['filter_snps'] : "";
+    $snps_ctl  = generate_element_select("filter_snps",  array(1, 2, 3, 4, 5), $ele_name, "");
+
+    $ele_name  = isset($display['filter_delv']) ? $display['filter_delv'] : "";
+    $delv_ctl  = generate_key_element_select("filter_delv",  array(1 => "True", 0 => "False"), $ele_name, "");
+
+    $ele_name  = isset($display['filter_rem']) ? $display['filter_rem'] : "";
+    $rem_ctl   = generate_key_element_select("filter_rem",   array(1 => "True", 0 => "False"), $ele_name, "");
+
+    $ele_name  = isset($display['filter_black']) ? $display['filter_black'] : "";
+    $black_ctl = generate_key_element_select("filter_black", array(1 => "True", 0 => "False"), $ele_name, "");
 
     if (isset($display['filter_type'])) {
 
@@ -459,12 +469,14 @@ function write_filter() {
 	$filters['none']['sel'] = "checked=\"checked\"";
     }
 
+    $tagid = isset($display['filter_tagid']) ? $display['filter_tagid'] : "";
+
     echo <<< EOQ
 <h4 class="info_head">
   <img id="filter_img" src="$img_path/caret-d.png" />
   <a onclick="toggle_div('filter', '$img_path', 'page_state');">Filter Results</a>
 </h4>
-<div id="filter">
+<div class="filter">
 <form id="filter_results" name="filter_results" method="get" action="$root_path/tags.php">
 $hidden_vars
 <table class="filter">
@@ -472,7 +484,7 @@ $hidden_vars
   <td><input type="checkbox" name="filter_type[]" value="tagid" onchange="rebuild_display_select()" {$filters['tagid']['sel']} /> 
       <a onclick="toggle_cb('filter_results', 'tagid')">Filter by Tag ID:</a></td>
   <td>
-    <input name="filter_tagid" value="$display[filter_tagid]" size="15" />
+    <input name="filter_tagid" value="$tagid" size="15" />
   </td>
 </tr>
 <tr {$filters['depth']['tr']}>
@@ -592,6 +604,7 @@ function apply_query_filters($display_params) {
 	      "rem"   => "(tag_index.removed = ?)");
 
     $filters = $display_params['filter_type'];
+    $query   = "";
 
     if (count($filters) > 0) {
 	$query = " AND ";

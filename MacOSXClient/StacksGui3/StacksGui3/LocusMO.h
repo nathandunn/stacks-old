@@ -9,18 +9,34 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class DatumMO, LocusAlleleMO, LocusSnpMO;
+@class DatumMO, LocusAlleleMO, LocusSnpMO, DepthMO;
+@class ColorGenerator;
 
 @interface LocusMO : NSManagedObject
 
+@property (nonatomic, retain) NSNumber * basePairs;
+@property (nonatomic, retain) NSString * chromosome;
+@property (nonatomic, retain) NSString * strand;
+@property (nonatomic, retain) NSString * type;
 @property (nonatomic, retain) NSString * consensus;
 @property (nonatomic, retain) NSNumber * length;
 @property (nonatomic, retain) NSNumber * locusId;
+@property (nonatomic, retain) NSNumber * parentCount;
 @property (nonatomic, retain) NSString * marker;
 @property (nonatomic, retain) NSString * ratio;
+
 @property (nonatomic, retain) NSSet *alleles;
 @property (nonatomic, retain) NSSet *datums;
 @property (nonatomic, retain) NSSet *snps;
+
+// not a managed part, populated by datum rendering . . .
+@property (atomic, retain) NSDictionary *haplotypeOrder;
+@property (atomic, retain) ColorGenerator *colorGenerator;
+
+
+- (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype;
+
+- (NSUInteger)lookupDepthOrder:(DepthMO *)mo;
 @end
 
 @interface LocusMO (CoreDataGeneratedAccessors)
