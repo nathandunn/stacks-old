@@ -1,3 +1,11 @@
+Stacks 1.13 - Jan 28, 2014
+--------------------------
+	Bugfix: allow batch IDs of 0 in populations and genotypes.
+	Bugfix: in populations, changed VCF output to be ordered by basepair.
+	Bugfix: in populations, change value of expected homozygosity to be set to 1 - expected heterozygosity
+	instead of 1 - Pi. Pi (computed as [1 - ((p choose 2) + (q choose 2) / (n choose 2))] and expected
+	heterozygosity (2pq) can produce sligthly different estimates resulting in exp het + exp hom != 1.
+
 Stacks 1.12 - Jan 21, 2014
 --------------------------
 	Bugfix: accidentally broke gzipped FASTQ support through a typo in gzFastq.h.

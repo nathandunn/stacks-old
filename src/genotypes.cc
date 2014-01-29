@@ -29,8 +29,8 @@
 #include "genotypes.h"
 
 // Global variables to hold command-line options.
-int       num_threads = 1;
-int       batch_id    = 0;
+int       num_threads =  1;
+int       batch_id    = -1;
 map_types map_type    = none;
 out_types out_type    = joinmap;
 string    in_path;
@@ -2462,7 +2462,7 @@ int parse_command_line(int argc, char* argv[]) {
     if (in_path.at(in_path.length() - 1) != '/') 
 	in_path += "/";
 
-    if (batch_id == 0) {
+    if (batch_id < 0) {
 	cerr << "You must specify a batch ID.\n";
 	help();
     }

@@ -939,7 +939,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     s->nucs[pos].q_nuc    = allele_p > allele_q ? q_allele : p_allele;
     s->nucs[pos].obs_hom  = 1 - obs_het;
     s->nucs[pos].obs_het  = obs_het;
-    s->nucs[pos].exp_hom  = 1 - s->nucs[pos].pi;
+    s->nucs[pos].exp_hom  = 1 - exp_het;
     s->nucs[pos].exp_het  = exp_het;
 
     //
