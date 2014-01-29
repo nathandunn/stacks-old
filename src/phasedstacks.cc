@@ -121,7 +121,7 @@ int main (int argc, char* argv[]) {
     map<int, CSLocus *> catalog;
     int res;
     catalog_file << cat_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
+    if ((res = load_loci(catalog_file.str(), catalog, false, false)) == 0) {
     	cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
      	return 0;
     }

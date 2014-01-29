@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -121,8 +121,8 @@ int main (int argc, char* argv[]) {
 
     count_raw_reads(unique, merged);
 
-    cerr << "Writing results\n";
-    write_sql(merged, unique);
+    cerr << "Writing loci, SNPs, alleles to '" << out_path << "...'\n";
+    write_results(merged, unique);
 
     return 0;
 }
@@ -309,7 +309,7 @@ int count_raw_reads(map<int, PStack *> &unique, map<int, MergedStack *> &merged)
     return 0;
 }
 
-int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
+int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     map<int, MergedStack *>::iterator i;
     vector<char *>::iterator   j;
     vector<int>::iterator      k;
@@ -350,6 +350,12 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	    continue;
 	}
 
+	//
+	// Calculate the log likelihood of this merged stack.
+	//
+	tag_1->gen_matrix(u);
+	tag_1->calc_likelihood_pstacks();
+
 	wrote++;
 
 	if (tag_1->blacklisted) blacklisted++;
@@ -365,7 +371,8 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	     << tag_1->con << "\t" 
 	     << tag_1->deleveraged << "\t" 
 	     << tag_1->blacklisted << "\t"
-	     << tag_1->lumberjackstack << "\n";
+	     << tag_1->lumberjackstack << "\t"
+	     << tag_1->lnl << "\n";
 
 	//
 	// Write a sequence recording the output of the SNP model for each nucleotide.
@@ -379,47 +386,79 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	     << "model\t" << "\t"
 	     << "\t";
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-	    if ((*s)->type == snp_type_het)
+	    switch((*s)->type) {
+	    case snp_type_het:
 		tags << "E";
-	    else if ((*s)->type == snp_type_hom)
+		break;
+	    case snp_type_hom:
 		tags << "O";
-	    else
+		break;
+	    default:
 		tags << "U";
+		break;
+	    }
 	}
 	tags << "\t"
 	     << "\t"
 	     << "\t"
+	     << "\t"
 	     << "\n";
-
-	// Now write out the components of each unique tag merged into this one.
+	
+	//
+	// Now write out the components of each unique tag merged into this locus.
+	//
 	id = 0;
 	for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++) {
 	    tag_2  = u[*k];
 	    buf = tag_2->seq->seq();
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\n";
+		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\t\n";
 	    }
 	    id++;
 	    delete [] buf;
 	}
 
 	//
-	// Write out any SNPs detected in this unique tag.
+	// Write out the model calls for each nucleotide in this locus.
 	//
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-	    if ((*s)->type == snp_type_het)
-		snps << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" 
-		     << (*s)->col << "\t" << (*s)->lratio << "\t" 
-		     << (*s)->rank_1 << "\t" << (*s)->rank_2 << "\t\t\n";
+	    snps << "0"          << "\t" 
+		 << sql_id       << "\t" 
+		 << tag_1->id    << "\t" 
+		 << (*s)->col    << "\t";
+
+	    switch((*s)->type) {
+	    case snp_type_het:
+		snps << "E\t";
+		break;
+	    case snp_type_hom:
+		snps << "O\t";
+		break;
+	    default:
+		snps << "U\t";
+		break;
+	    }
+
+	    snps << std::fixed   << std::setprecision(2)
+		 << (*s)->lratio << "\t" 
+		 << (*s)->rank_1 << "\t" 
+		 << (*s)->rank_2 << "\t\t\n";
 	}
 
+	//
 	// Write the expressed alleles seen for the recorded SNPs and
 	// the percentage of tags a particular allele occupies.
+	//
         char pct[id_len];
 	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
             sprintf(pct, "%.2f", ((t->second/total) * 100));
-	    alle << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << t->first << "\t" << pct << "\t" << t->second << "\n";
+	    alle << "0"       << "\t" 
+		 << sql_id    << "\t" 
+		 << tag_1->id << "\t" 
+		 << t->first  << "\t" 
+		 << pct       << "\t" 
+		 << t->second << "\n";
 	}
     }
 
@@ -432,10 +471,6 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     return 0;
 }
 
-int write_sam(map<int, MergedStack *> &m, map<int, PStack *> &u) {
-    return 0;
-}
-
 int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
     map<int, PStack *>::iterator i;
     map<int, MergedStack *>::iterator it_new, it_old;
@@ -445,7 +480,7 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
     char         id[id_len];
     PStack      *u;
     MergedStack *m;
-    int global_id = 0;
+    int global_id = 1;
 
     //
     // Create a map of each unique Stack that has been aligned to the same genomic location.

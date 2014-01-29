@@ -1,4 +1,4 @@
-bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks hstacks process_radtags process_shortreads \
+bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks rxstacks hstacks process_radtags process_shortreads \
 	kmer_filter clone_filter genotypes populations phasedstacks
 
 ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h \
@@ -32,11 +32,19 @@ hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/constants.h \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/kmers.h src/kmers.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
+	src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
 sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/constants.h \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc src/utils.h src/utils.cc \
+	src/input.h src/input.cc src/sql_utilities.h
+
+rxstacks_SOURCES = src/rxstacks.h src/rxstacks.cc src/constants.h \
+	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
+	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
+	src/models.h src/models.cc \
+	src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
@@ -88,19 +96,21 @@ phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h \
 	src/log_utils.h src/log_utils.cc \
 	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc 
 
-ustacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-ustacks_LDFLAGS  = $(OPENMP_CFLAGS)
-pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
-pstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-pstacks_LDADD    = $(BAM_LIBS)
-estacks_CXXFLAGS = $(OPENMP_CFLAGS)
-estacks_LDFLAGS  = $(OPENMP_CFLAGS)
-cstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
-cstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-hstacks_CXXFLAGS = $(OPENMP_CFLAGS)
-hstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-sstacks_CXXFLAGS = $(OPENMP_CFLAGS)
-sstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+ustacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+ustacks_LDFLAGS   = $(OPENMP_CFLAGS)
+pstacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
+pstacks_LDFLAGS   = $(OPENMP_CFLAGS)
+pstacks_LDADD     = $(BAM_LIBS)
+estacks_CXXFLAGS  = $(OPENMP_CFLAGS)
+estacks_LDFLAGS   = $(OPENMP_CFLAGS)
+cstacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+cstacks_LDFLAGS   = $(OPENMP_CFLAGS)
+hstacks_CXXFLAGS  = $(OPENMP_CFLAGS)
+hstacks_LDFLAGS   = $(OPENMP_CFLAGS)
+sstacks_CXXFLAGS  = $(OPENMP_CFLAGS)
+sstacks_LDFLAGS   = $(OPENMP_CFLAGS)
+rxstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+rxstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 process_radtags_CXXFLAGS = $(OPENMP_CFLAGS)
 process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
 process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS)
