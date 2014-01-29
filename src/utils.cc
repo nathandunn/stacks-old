@@ -25,35 +25,35 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-// $Id: utils.cc 1989 2010-11-03 01:00:23Z catchen $
-//
 #include "utils.h"
 
 char reverse(char c) {
-        switch (c) {
-        case 'A':
-        case 'a':
-            return 'T';
-            break;
-        case 'C':
-        case 'c':
-            return 'G';
-            break;
-        case 'G':
-        case 'g':
-            return 'C';
-            break;
-        case 'T':
-        case 't':
-            return 'A';
-            break;
-	case 'N':
-	case 'n':
-	case '.':
+    switch (c) {
+    case 'A':
+    case 'a':
+	return 'T';
+	break;
+    case 'C':
+    case 'c':
+	return 'G';
+	break;
+    case 'G':
+    case 'g':
+	return 'C';
+	break;
+    case 'T':
+    case 't':
+	return 'A';
+	break;
+    case 'N':
+    case 'n':
+    case '.':
 	default:
-	    return 'N';
-	    break;
-        }
+	return 'N';
+	break;
+    }
+
+    return 'N';
 }
 
 int is_integer(const char *str) {

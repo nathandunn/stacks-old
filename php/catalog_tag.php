@@ -167,7 +167,7 @@ echo <<< EOQ
 EOQ;
 
 $alleles = array();
-$i       = 0;
+$alleles['consensus'] = "default";
 
 $result = $db['map_sth']->execute(array($batch_id, $tag_id));
 check_db_error($result, __FILE__, __LINE__);
@@ -182,6 +182,7 @@ if (isset($row['geno_map'])) {
   $map = array();
 
   $genos = explode(";", $row['geno_map']);
+  $i     = 0;
   foreach ($genos as $g) {
       if (strlen($g) == 0) continue;
       $m = explode(":", $g);

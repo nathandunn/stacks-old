@@ -417,7 +417,7 @@ echo <<< EOQ
   <td colspan="$num_cols">
     <iframe id="{$row['tag_id']}_iframe" 
             frameborder="0" 
-            scrolling="no" 
+            scrolling="auto" 
             onload="this.style.height = (this.contentWindow.document.body.offsetHeight+25) + 'px';"
             src=""></iframe>
   </td>
@@ -426,7 +426,7 @@ echo <<< EOQ
   <td colspan="$num_cols">
     <iframe id="{$row['tag_id']}_blast_iframe" 
             frameborder="0" 
-            scrolling="no" 
+            scrolling="auto" 
             onload="this.style.height = (this.contentWindow.document.body.offsetHeight+25) + 'px';" 
             src=""></iframe>
   </td>

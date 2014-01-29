@@ -17,6 +17,7 @@
 #import "ReferenceStackEntryMO.h"
 #import "SampleMO.h"
 #import "StackEntryMO.h"
+#import "ColorGenerator.h"
 
 
 @implementation DatumMO
@@ -35,6 +36,8 @@
 @dynamic snps;
 @dynamic stackEntries;
 
+@synthesize colorGenerator;
+
 
 - (NSAttributedString *)renderName {
     NSString *formattedString = [self.name stringByReplacingOccurrencesOfString:@"_" withString:@" "];
@@ -44,9 +47,11 @@
 
     NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
     [mutParaStyle setAlignment:NSCenterTextAlignment];
+    NSRange selectedRange = NSMakeRange(0, [[string string] length]);
     [string addAttributes:[NSDictionary dictionaryWithObject:mutParaStyle
-                                                      forKey:NSParagraphStyleAttributeName]
-                    range:NSMakeRange(0, [[string string] length])];
+                                                      forKey:NSParagraphStyleAttributeName ] range:selectedRange];
+//    NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+//    [string addAttributes:fontAttributes range:selectedRange];
 
     return string;
 }
@@ -54,6 +59,7 @@
 - (NSAttributedString *)renderHaplotypes {
 
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
+
 
 //    for (NSUInteger i = 0; i < self.haplotypes.count; i++) {
     int i = 0;
@@ -63,21 +69,16 @@
 
     for (HaplotypeMO *haplotype  in [self.haplotypes sortedArrayUsingDescriptors:sortDescriptors]) {
 //        NSString *haplotype = [self.haplotypes objectAtIndex:i];
+        NSUInteger order = [self.locus lookupHaplotypeOrder:haplotype.haplotype];
+
+
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotype.haplotype];
         NSRange selectedRange = NSMakeRange(0, haplotype.haplotype.length);
         [appendString beginEditing];
-        NSDictionary *attributes;
-        if (i % 2 == 0) {
-            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor greenColor], NSForegroundColorAttributeName,
-                    nil];
-        }
-        else {
-            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor redColor], NSForegroundColorAttributeName,
-                    nil];
-        }
+        NSDictionary *attributes = [self generateColorForOrder:order];
         [appendString setAttributes:attributes range:selectedRange];
+        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+        [appendString addAttributes:fontAttributes range:selectedRange];
         [appendString endEditing];
 
         [string appendAttributedString:appendString];
@@ -101,31 +102,22 @@
 
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
 
-//    for(NSNumber *depth in self.depths){
-//        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@",depth]];
-//        [string appendAttributedString:appendString];
-//    }
-//    for (NSUInteger i = 0; i < self.depths.count; i++) {
     int i = 0;
     NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
     for (DepthMO *depth in  [self.depths sortedArrayUsingDescriptors:sortDescriptors]) {
 //        NSString *depth = [(NSNumber *) [self.depths objectAtIndex:i] stringValue];
+
+        NSUInteger order = [self.locus lookupDepthOrder:depth];
+
+
         NSString *numberString = [NSString stringWithFormat:@"%@", depth.depth];
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:numberString];
         NSRange selectedRange = NSMakeRange(0, numberString.length);
         [appendString beginEditing];
-        NSDictionary *attributes;
-        if (i % 2 == 0) {
-            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor greenColor], NSForegroundColorAttributeName,
-                    nil];
-        }
-        else {
-            attributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                    [NSColor redColor], NSForegroundColorAttributeName,
-                    nil];
-        }
+        NSDictionary *attributes = [self generateColorForOrder:order];
         [appendString setAttributes:attributes range:selectedRange];
+        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+        [appendString addAttributes:fontAttributes range:selectedRange];
         [appendString endEditing];
 
         [string appendAttributedString:appendString];
@@ -147,26 +139,26 @@
 
 - (NSArray *)getOrderedStackEntries {
     NSArray *sortedArray = [[self.stackEntries allObjects] sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
-        StackEntryMO *first = (StackEntryMO*)a ;
-        StackEntryMO *second = (StackEntryMO*)b ;
-        NSString *firstRelationship = first.relationship ;
-        NSString *secondRelationship = second.relationship ;
+        StackEntryMO *first = (StackEntryMO *) a;
+        StackEntryMO *second = (StackEntryMO *) b;
+        NSString *firstRelationship = first.relationship;
+        NSString *secondRelationship = second.relationship;
 
-        int firstCount = 0 ;
-        int secondCount = 0 ;
+        int firstCount = 0;
+        int secondCount = 0;
         //reference
         //consensus
         //model
-        firstCount += [firstRelationship isEqualToString:@"reference"]?10000:0;
-        secondCount += [secondRelationship isEqualToString:@"reference"]?10000:0;
-        firstCount += [firstRelationship isEqualToString:@"consensus"]?1000:0;
-        secondCount += [secondRelationship isEqualToString:@"consensus"]?1000:0;
-        firstCount += [firstRelationship isEqualToString:@"model"]?100:0;
-        secondCount += [secondRelationship isEqualToString:@"model"]?100:0;
+        firstCount += [firstRelationship isEqualToString:@"reference"] ? 10000 : 0;
+        secondCount += [secondRelationship isEqualToString:@"reference"] ? 10000 : 0;
+        firstCount += [firstRelationship isEqualToString:@"consensus"] ? 1000 : 0;
+        secondCount += [secondRelationship isEqualToString:@"consensus"] ? 1000 : 0;
+        firstCount += [firstRelationship isEqualToString:@"model"] ? 100 : 0;
+        secondCount += [secondRelationship isEqualToString:@"model"] ? 100 : 0;
         firstCount -= [first.entryId intValue];
         secondCount -= [second.entryId intValue];
-        NSComparisonResult result = (firstCount>secondCount)?NSOrderedAscending:NSOrderedDescending;
-        return result ;
+        NSComparisonResult result = (firstCount > secondCount) ? NSOrderedAscending : NSOrderedDescending;
+        return result;
     }];
 
     return sortedArray;
@@ -176,5 +168,17 @@
 
 }
 
+- (NSDictionary *)generateColorForOrder:(NSUInteger)order {
+    if (colorGenerator == nil) {
+        colorGenerator = [[ColorGenerator alloc] init];
+    }
+
+    NSColor *color = [colorGenerator generateColorForOrder:order];
+    return [NSDictionary dictionaryWithObjectsAndKeys:
+            color, NSForegroundColorAttributeName,
+            nil];
+
+}
 
 @end
+

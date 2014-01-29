@@ -59,6 +59,7 @@ using std::set;
 #include "PopMap.h"
 #include "PopSum.h"
 #include "utils.h"
+#include "catalog_utils.h"
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"
 
@@ -66,6 +67,7 @@ enum map_types {unk, none, gen, dh, cp, bc1, f2};
 enum out_types {rqtl, joinmap, genomic};
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
+enum loc_type  {haplotype, snp};
 
 const int max_snp_dist = 500;
 
@@ -87,12 +89,35 @@ public:
     }
 };
 
+//
+// Bootstrap resamplign structure.
+//
+class GenPos {
+public:
+    uint     id;
+    uint     bp;
+    uint     snp_index;
+    loc_type type;
+
+    GenPos(int id, int snp_index, int bp) {
+	this->id        = id;
+	this->snp_index = snp_index;
+	this->bp        = bp;
+	this->type      = snp;
+    }
+    GenPos(int id, int snp_index, int bp, loc_type type) {
+	this->id        = id;
+	this->snp_index = snp_index;
+	this->bp        = bp;
+	this->type      = type;
+    }
+};
+
 void    help( void );
 void    version( void );
 int     parse_command_line(int, char**);
 int     build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &);
 int     load_marker_list(string, set<int> &);
-int     reduce_catalog(map<int, CSLocus *> &, set<int> &, set<int> &);
 int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<int, int> > &);
 int     log_haplotype_cnts(map<int, CSLocus *> &, ofstream &);
 bool    order_unordered_loci(map<int, CSLocus *> &);
@@ -125,7 +150,9 @@ int  write_vcf(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<
 int  write_genepop(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_structure(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_phase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
+int  write_fastphase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_beagle(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
+int  write_beagle_phased(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_plink(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  tally_observed_haplotypes(vector<char *> &, int, char &, char &);
@@ -134,5 +161,6 @@ int  load_snp_calls(string,  PopMap<CSLocus> *);
 
 bool compare_pop_map(pair<int, string>, pair<int, string>);
 bool hap_compare(pair<string, int>, pair<string, int>);
+bool compare_genpos(GenPos, GenPos);
 
 #endif // __POPULATIONS_H__

@@ -34,12 +34,14 @@
 @property(nonatomic, strong) AlleleRepository* alleleRepository;
 
 // a lookup
-@property(nonatomic, strong) NSMutableDictionary *lociDictionary ;
+//@property(nonatomic, strong) NSMutableDictionary *lociDictionary ;
 // sample:Dictionary<internalid,externalid>
 @property(nonatomic, strong) NSMutableDictionary *sampleLookupDictionary;
 
 
 @property(nonatomic) bool stopProcess;
+
+@property(atomic, strong) NSPersistentStoreCoordinator *persistentStoreCoordinator ;
 
 - (id)init ;
 
@@ -50,8 +52,14 @@
 - (StacksDocument *)loadDocument:(StacksDocument *)document progressWindow:(ProgressController *) bar;
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path;
 
+//- (NSManagedObjectContext *)getContextForPath:(NSString *)path andDocument:(StacksDocument *) document;
+- (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name  andDocument:(StacksDocument *) document;
+
+
 //- (StacksDocument *)getStacksDocumentForPath:(NSString *)string;
 //- (void)loadLociAndGenotypes:(NSString *)appendingString progressBar:(NSProgressIndicator *)bar;
 @end
+
+NSUInteger  countParents(NSArray *parents);
 
 

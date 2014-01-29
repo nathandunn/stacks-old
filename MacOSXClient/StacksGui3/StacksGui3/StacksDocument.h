@@ -8,6 +8,7 @@
 
 #import <Cocoa/Cocoa.h>
 
+
 @class DatumMO;
 @class LocusMO;
 @class PopulationMO;
@@ -31,20 +32,29 @@
 @property(nonatomic, strong) DatumMO *selectedDatum;
 
 // repositories
-@property(nonatomic, strong) DatumRepository *datumRepository ;
-@property(nonatomic, strong) LocusRepository *locusRepository ;
-@property(nonatomic, strong) PopulationRepository *populationRepository ;
-
+@property(nonatomic, strong) DatumRepository *datumRepository;
+@property(nonatomic, strong) LocusRepository *locusRepository;
+@property(nonatomic, strong) PopulationRepository *populationRepository;
 
 
 @property(nonatomic, copy) NSString *previousStacksName;
+@property(nonatomic, copy) NSMutableArray *snpFilterValues;
 
 //- (NSMutableArray *)findPopulations;
 
 
 @property(nonatomic, copy) NSString *name;
 
-- (NSManagedObjectContext *)getContextForPath:(NSString *)path;
-- (NSManagedObjectContext *)getContextForPath:(NSString *)string andName:(NSString *)name;
+// this will be GeneticMap or Population
+@property(nonatomic, strong) NSString *type;
+
+@property(nonatomic, strong) NSSet *lociLocations;
+@property NSUInteger maxLocation;
+
+- (BOOL)noLociLocations;
+
+- (IBAction)updateSelections:(id)sender;
+
+- (NSArray *) getSnpFilterValues;
 
 @end
