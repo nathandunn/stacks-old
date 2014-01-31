@@ -1,0 +1,108 @@
+Tests in the Stacks Test Suite are written to the TAP (Test Anything Protocol)
+specification.  See the following references for more information:
+    * http://en.wikipedia.org/wiki/Test_Anything_Protocol
+    * https://metacpan.org/pod/release/PETDANCE/Test-Harness-2.64/lib/Test/Harness/TAP.pod
+    
+#####################
+### Running tests ###
+#####################
+
+Tests are located in the tests/ directory.  To run the tests:
+
+    make check
+
+Test files are simply shell scripts, and you may run individual tests by hand,
+like so:
+
+    tests/process_radtags.t
+
+But by doing so, you lose color output.  You may also run a specific list of
+tests via make like so:
+
+    env TESTS='process_radtags.t kmer_filter.t' make -e check
+
+Tests are run by config/tap-driver.sh, which is provided by automake.  Though
+of questionable utility, you can pass flags to the tap driver like so:
+
+    env LOG_DRIVER_FLAGS='--color-tests=no' make -e check
+
+When running tests, summary information is shown in the terminal.  More
+detailed information can be found in the top level log file test-suite.log, as
+well as individual log files at tests/*.log.
+
+#####################
+### Writing tests ###
+#####################
+
+The test library tests/libtap.sh (provided by automake) provides useful
+functions to run tests.  A simple test file containing four tests might look
+like the following:
+    
+    source libtap.sh
+    ok "This test will pass" true
+    ok "This test will fail" ls -al /this/file/does/not/exist
+    ok "This test is expected to fail# TODO fix this" ls -al /neither/does/this/file
+    skip "This command doesn't make sense:" more /dev/null
+
+The four tests above result in result codes of PASS, FAIL, XFAIL, and SKIP
+respectively.  Results for the first and second tests above should be
+intuitive.  The third test fails obviously, but by placing a "# TODO ..."
+stanza in the description, we convert it to an expected failure (XFAIL).  The
+fourth test is simply skipped with skip() (result is SKIP).
+
+The test above gives the following output:
+
+[0;32mPASS[m: tests/process_radtags.t 1 - This test will pass
+[0;31mFAIL[m: tests/process_radtags.t 2 - This test will fail
+[0;32mXFAIL[m: tests/process_radtags.t 3 - This test is expected to fail # TODO fix this
+[1;34mSKIP[m: tests/process_radtags.t 4 # SKIP This command doesn't make sense: more /dev/null
+
+You can also add comments to the test-suite.log with the 'diag()' command:
+    
+    diag 'This is a comment.'
+
+Because the majority of Stacks components take file(s) as input and result in
+file(s) as output, we have written libtap-like test functions that confirm that
+the Stacks command under test produces output file(s) that match(es) expected
+output file(s).
+
+The Stacks testing function ok_() takes a test description, an io_directory
+which contains input data and expected output data, and the command under test.
+For example:
+
+    ok_ 'process_radtags input gzfastq' \
+        001_input_gzfastq \
+        "process_radtags -i gzfastq -p %in -o %out -b $barcodes -E phred33 -e sbfI"
+
+There are several items of note above.  First, is that the command is passed as
+a string to ok_() (in contrast to ok()).  Next, for convenience, if present,
+the strings %in and %out are replaced by ok_() with the input and expected
+output directories (in this case tests/process_radtags/001_input_gzfastq/in and
+tests/process_radtags/001_input_gzfastq/eout respecively).  
+
+It is *not* required to use %in or %out. This means you may explicitly define
+input and output.  We recommend you use $test_data_path (which provides the
+full path) like so:
+
+    in=$test_data_path/002_kmer_filter_fun/in/in.fastq
+    ok_ 'kmer_filter fun' \
+        002_kmer_filter_fun \
+        "kmer_filter -f $in -o %out -y fastq --max_k_freq 1000 -i fastq"
+
+Note that %in and $in in the above examples are different creatures.  $in is
+a shell variable that is interpolated by the shell, whereas %in is effectively
+a Stacks Test Suite variable, interpolated by the ok_() function.
+
+skip_() is the Stacks analog to skip().  skip_() can take the place of ok_() in
+the same way that skip() can take the place of ok().
+
+Input and expected output can be found under a directory with the same name as
+the test file with the '.t' removed.  For example, here is a partial directory
+listing for process_radtags.t and associated input and expected output
+directories for two tests:
+
+    tests/process_radtags.t
+    tests/process_radtags/001_input_gzfastq/in/
+    tests/process_radtags/001_input_gzfastq/eout/
+    tests/process_radtags/002_input_fastq/in/
+    tests/process_radtags/002_input_fastq/eout/
