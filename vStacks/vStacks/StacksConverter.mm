@@ -110,7 +110,15 @@ NSString *calculateType(NSString *file);
                                                                        NSInferMappingModelAutomaticallyOption, nil];
 
 
-    NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
+    NSURL *storeUrl ;
+    NSLog(@"input %@ %@",path,name);
+    NSLog(@"extends %@ %i",name.pathExtension,[name.pathExtension isEqualToString:@"stacks"]);
+    if([name.pathExtension isEqualToString:@"stacks"]){
+        storeUrl = [NSURL fileURLWithPath:path];
+    }
+    else{
+        storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
+    }
     NSLog(@"saving to %@ from %@", path, storeUrl);
     if (persistentStoreCoordinator == nil) {
         persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];

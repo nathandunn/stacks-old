@@ -76,16 +76,37 @@
 
     [panel setMinSize:minSize];
     NSInteger result = [panel runModal];
-
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if (result == NSOKButton) {
         NSLog(@"ok !!");
-        NSLog(@"directory URL: %@", panel.directoryURL.path);
-        NSString *stacksDocumentPath = [stacksConverter generateFilePathForUrl:panel.directoryURL];
+        
+        // now we open the save panel for our stacks file.
+        NSSavePanel *savePanel = [NSSavePanel savePanel];
+        NSString *pathName = panel.directoryURL.lastPathComponent;
+        savePanel.nameFieldStringValue = [pathName stringByAppendingString:@".stacks"];
+        
+        NSInteger saveResult = [savePanel runModal];
+        if(saveResult!=NSOKButton){
+            NSLog(@"cancelled") ;
+            return ;
+        }
+        
+        NSLog(@"directory URL: %@ %@ %@", savePanel.directoryURL.path ,savePanel.directoryURL.pathExtension,savePanel.directoryURL.parameterString);
+        NSLog(@"save URL: %@", savePanel.nameFieldStringValue);
+        NSString *fileName = savePanel.nameFieldStringValue ;
+        NSString *extension = [fileName pathExtension] ;
+        if([extension isNotEqualTo:@"stacks"]){
+            fileName = [fileName stringByAppendingString:@".stacks"];
+            NSLog(@"has correct filename %i",[[fileName exposedBindings] isEqualTo:@"stacks"]);
+            NSLog(@"filename: %@",fileName) ;
+        }
+        NSString *stacksDocumentPath = [savePanel.directoryURL.path stringByAppendingFormat:@"/%@",fileName];
+        NSLog(@"stacks doc path %@",stacksDocumentPath);
+        BOOL fileExistsAtPath = [[NSFileManager defaultManager] fileExistsAtPath:stacksDocumentPath isDirectory:NULL];
         BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:stacksDocumentPath error:NULL];
         NSLog(@"file removed %i", fileRemoved);
-
+        
         NSLog(@"loadding progress!!! in thread");
 
         ProgressController *progressController = [[ProgressController alloc] init];
@@ -95,7 +116,8 @@
 
 //        dispatch_async(dispatch_get_main_queue(),^ {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
+//            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
+            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:stacksDocumentPath progressWindow:progressController];
             newDocument.path = stacksDocumentPath;
             [newDocument.managedObjectContext save:nil];
             if (newDocument != nil) {
@@ -153,7 +175,7 @@
 //       didEndSelector: @selector(progressDidEnd: returnCode: contextInfo:)
 //          contextInfo: NULL];
 //}
-- (void)startProgressPanel:(NSString *)message {
+//- (void)startProgressPanel:(NSString *)message {
 //    [loadProgress displayIfNeeded];
 //    [loadProgress setIndeterminate:false];
 //    [loadProgress setDisplayedWhenStopped:false];
@@ -190,9 +212,9 @@
 //        modalDelegate: self
 //       didEndSelector: @selector(progressDidEnd: returnCode: contextInfo:)
 //          contextInfo: NULL];
-}
+//}
 
-- (void)progressDidEnd:(NSWindow *)panel returnCode:(int)returnCode contextInfo:(void *)context {
+//- (void)progressDidEnd:(NSWindow *)panel returnCode:(int)returnCode contextInfo:(void *)context {
 //    xpc_connection_t connection = (xpc_connection_t)context;
 //
 //    if (returnCode != 0) {
@@ -206,7 +228,7 @@
 //        xpc_connection_cancel(connection);
 //        xpc_release(connection);
 //    }
-}
+//}
 
 
 - (void)stopProgressPanel {
