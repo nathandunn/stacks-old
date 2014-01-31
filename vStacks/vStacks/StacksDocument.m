@@ -364,7 +364,7 @@
 
     if (snpFilterValues == nil) {
         snpFilterValues = [NSMutableArray array];
-        for (int i = 0; i < maxLocusSnps; i++) {
+        for (int i = 0; i < maxLocusSnps+1; i++) {
             [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
@@ -378,7 +378,7 @@
 
     if (sampleFilterValues == nil) {
         sampleFilterValues = [NSMutableArray array];
-        for (int i = 0; i < maxLocusSamples; i++) {
+        for (int i = 1; i < maxLocusSamples+1; i++) {
             [sampleFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
