@@ -43,6 +43,7 @@
 
 @property(nonatomic, strong) NSSet *lociLocations;
 @property NSUInteger maxLocation;
+@property(nonatomic, strong) NSNumberFormatter *numberFormatter;
 
 - (BOOL)noLociLocations;
 
