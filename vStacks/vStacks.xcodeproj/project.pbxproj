@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		1409C4F11885B2120061E10F /* StackEntryDatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1409C4F01885B2120061E10F /* StackEntryDatumMO.m */; };
+		1419704E189C617100C9BF1C /* 128x128.png in Resources */ = {isa = PBXBuildFile; fileRef = 1419704B189C617100C9BF1C /* 128x128.png */; };
+		14197052189C61FE00C9BF1C /* 512x512.png in Resources */ = {isa = PBXBuildFile; fileRef = 14197051189C61FE00C9BF1C /* 512x512.png */; };
+		1419705C189C69CD00C9BF1C /* icon_512x512.png in Resources */ = {isa = PBXBuildFile; fileRef = 1419705B189C69CD00C9BF1C /* icon_512x512.png */; };
 		1437051F187B87690007BDE5 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437051E187B87690007BDE5 /* Cocoa.framework */; };
 		14370529187B87690007BDE5 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 14370527187B87690007BDE5 /* InfoPlist.strings */; };
 		1437052B187B87690007BDE5 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437052A187B87690007BDE5 /* main.m */; };
@@ -77,6 +80,9 @@
 /* Begin PBXFileReference section */
 		1409C4EF1885B2120061E10F /* StackEntryDatumMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackEntryDatumMO.h; sourceTree = "<group>"; };
 		1409C4F01885B2120061E10F /* StackEntryDatumMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StackEntryDatumMO.m; sourceTree = "<group>"; };
+		1419704B189C617100C9BF1C /* 128x128.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = 128x128.png; sourceTree = "<group>"; };
+		14197051189C61FE00C9BF1C /* 512x512.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = 512x512.png; sourceTree = "<group>"; };
+		1419705B189C69CD00C9BF1C /* icon_512x512.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = icon_512x512.png; path = resources/icon_512x512.png; sourceTree = SOURCE_ROOT; };
 		1437051B187B87690007BDE5 /* vStacks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = vStacks.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1437051E187B87690007BDE5 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		14370521187B87690007BDE5 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -273,6 +279,9 @@
 		14370525187B87690007BDE5 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				1419705B189C69CD00C9BF1C /* icon_512x512.png */,
+				1419704B189C617100C9BF1C /* 128x128.png */,
+				14197051189C61FE00C9BF1C /* 512x512.png */,
 				14370526187B87690007BDE5 /* vStacks-Info.plist */,
 				14370527187B87690007BDE5 /* InfoPlist.strings */,
 				1437052A187B87690007BDE5 /* main.m */,
@@ -487,7 +496,7 @@
 				ORGANIZATIONNAME = "Nathan Dunn";
 				TargetAttributes = {
 					14370541187B876A0007BDE5 = {
-						TestTargetID = 1437051A187B87690007BDE5;
+						TestTargetID = 1437051A187B87690007BDE5 /* vStacks */;
 					};
 				};
 			};
@@ -521,8 +530,11 @@
 				1437059F187B88C70007BDE5 /* ProgressController.xib in Resources */,
 				1437053D187B876A0007BDE5 /* Images.xcassets in Resources */,
 				1437052F187B87690007BDE5 /* Credits.rtf in Resources */,
+				14197052189C61FE00C9BF1C /* 512x512.png in Resources */,
+				1419704E189C617100C9BF1C /* 128x128.png in Resources */,
 				1437058D187B88C70007BDE5 /* StacksDocument.xib in Resources */,
 				1437061B187B89490007BDE5 /* test.css in Resources */,
+				1419705C189C69CD00C9BF1C /* icon_512x512.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

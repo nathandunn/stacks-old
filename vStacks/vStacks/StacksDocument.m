@@ -80,6 +80,7 @@
 @synthesize maxSnpPopupButton;
 @synthesize maxSamplesPopupButton;
 @synthesize stacksWebView;
+@synthesize numberFormatter ;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -93,6 +94,9 @@
 //        datumRepository = [[DatumRepository alloc] init];
 //        [LocusRepository sharedInstance] = [[LocusRepository alloc] init];
 //        populationRepository = [[PopulationRepository alloc] init];
+
+        numberFormatter = [[NSNumberFormatter alloc] init];
+        numberFormatter.numberStyle = NSNumberFormatterNoStyle;
     }
     return self;
 }
@@ -130,8 +134,6 @@
     [maxSamplesPopupButton selectItemAtIndex:[self getSampleFilterValues].count - 1];
 
 
-    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-    [numberFormatter setNumberStyle:NSNumberFormatterNoStyle];
 //    [filteredLoci setFormatter:numberFormatter];
     [[filteredLoci cell] setFormatter:numberFormatter];
 
@@ -219,9 +221,10 @@
     self.selectedPopulation = [self findSelectedPopulation];
 
     if (self.selectedLocus != nil && self.selectedPopulation != nil) {
-//        NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
+        NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
 //        NSLog(@"getting selected population %@", self.selectedPopulation.name);
         self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:self.selectedPopulation];
+        NSLog(@"got selected Datums: %ld",self.selectedDatums.count);
         if (self.selectedDatums != nil && self.selectedDatums.count > 0) {
             self.selectedDatum = [self.selectedDatums objectAtIndex:0];
         }
@@ -246,10 +249,18 @@
 }
 
 - (LocusMO *)findSelectedLocus {
-    NSInteger selectedRow = [self.locusTableView selectedRow];
-    if (selectedRow >= 0) {
+    NSInteger selectedRowIndex = [self.locusTableView selectedRow];
+    NSTableCellView *selectedRow = [self.locusTableView viewAtColumn:0 row:selectedRowIndex makeIfNecessary:YES];
+    NSArray *subviews = selectedRow.subviews;
+    NSInteger locusId = -1 ;
+    for(NSTextField *subview in subviews){
+        if([subview.identifier isEqualToString:@"LocusId"]){
+            locusId = [numberFormatter numberFromString:subview.stringValue].integerValue ;
+        }
+    }
+    if (locusId >= 0) {
         // id starts at 1 + row  . . . I hope this is always true
-        return [[LocusRepository sharedInstance] getLocus:self.managedObjectContext forId:selectedRow + 1];
+        return [[LocusRepository sharedInstance] getLocus:self.managedObjectContext forId:locusId];
     }
     return nil;
 }
@@ -364,7 +375,7 @@
 
     if (snpFilterValues == nil) {
         snpFilterValues = [NSMutableArray array];
-        for (int i = 0; i < maxLocusSnps; i++) {
+        for (int i = 0; i < maxLocusSnps+1; i++) {
             [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
@@ -378,7 +389,7 @@
 
     if (sampleFilterValues == nil) {
         sampleFilterValues = [NSMutableArray array];
-        for (int i = 0; i < maxLocusSamples; i++) {
+        for (int i = 1; i < maxLocusSamples+1; i++) {
             [sampleFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
