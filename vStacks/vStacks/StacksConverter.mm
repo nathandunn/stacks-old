@@ -139,6 +139,8 @@ NSString *calculateType(NSString *file);
     [context setPersistentStoreCoordinator:persistentStoreCoordinator];
     document.managedObjectContext = context;
     document.path = path;
+    
+    NSLog(@"path %@",path);
 
 
     return context;
@@ -1258,11 +1260,14 @@ NSString *calculateType(NSString *file);
 
 }
 
-- (StacksDocument *)createStacksDocumentForPath:(NSString *)path {
+- (StacksDocument *)createStacksDocumentForPath:(NSString *)filePath {
     NSError *stacksDocumentCreateError;
+    NSURL *pathUrl = [NSURL fileURLWithPath:filePath] ;
+    NSString *path = pathUrl.filePathURL.path;
+
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
     stacksDocument.path = path;
-    stacksDocument.name = path.lastPathComponent;
+    stacksDocument.name = filePath.lastPathComponent;
 //    NSManagedObjectContext *context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
 
 //    NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
