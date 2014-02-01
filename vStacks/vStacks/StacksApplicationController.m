@@ -12,6 +12,10 @@
 #import "StacksDocument.h"
 #import "ProgressController.h"
 #import "StacksAppDelegate.h"
+#import "SampleRepository.h"
+#import "SampleMO.h"
+#import "PopulationRepository.h"
+#import "PopulationMO.h"
 
 
 @implementation StacksApplicationController {
@@ -237,6 +241,69 @@
 //        xpc_release(connection);
 //    }
 //}
+
+
+// TODO: change for file, etc. etc. etc.
+- (IBAction)applyPopmap:(id)sender {
+
+    NSOpenPanel *importPanel = [NSOpenPanel openPanel];
+    [importPanel setAllowsMultipleSelection:NO];
+    [importPanel setCanChooseDirectories:NO];
+    [importPanel setCanChooseFiles:YES];
+    [importPanel setFloatingPanel:YES];
+    NSSize minSize;
+    minSize.height = 600;
+    minSize.width = 500;
+
+
+    [importPanel setMinSize:minSize];
+    NSInteger result = [importPanel runModal];
+
+    if (result == NSOKButton) {
+        NSLog(@"ok !!");
+        NSString *importPath = [importPanel.directoryURL.path stringByAppendingString:@"/"];
+        NSLog(@"import path %@",importPath);
+        NSString *importPathName = importPanel.directoryURL.lastPathComponent;
+        NSLog(@"import path name %@",importPathName);
+
+        StacksDocument *stacksDocument = [[StacksDocumentController sharedDocumentController] currentDocument];
+        if(stacksDocument==nil) return ;
+
+        // remove the old populations from the samples
+        NSArray *sampleArray = [[SampleRepository sharedInstance] getAllSamples:stacksDocument.managedObjectContext];
+        for(SampleMO *sampleMO in sampleArray){
+            sampleMO.population = nil ;
+        }
+
+        // remove the old populations
+        NSArray *allPopulation = [[PopulationRepository sharedInstance] getAllPopulations:stacksDocument.managedObjectContext];
+        for(PopulationMO *populationMO in allPopulation){
+            [stacksDocument.managedObjectContext deleteObject:populationMO];
+        }
+
+
+
+        StacksConverter* stacksConverter = [[StacksConverter alloc] init];
+        [stacksConverter addPopulationsToDocument:stacksDocument forPath:importPath];
+
+
+        NSError *saveError = nil ;
+        [stacksDocument.managedObjectContext save:&saveError];
+
+
+//        for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
+//            NSLog(@"stacks doc: %@", stacksDocument.path);
+//            if (stacksDocument.path == NULL) {
+//                [stacksDocument close];
+////                [[StacksDocumentController sharedDocumentController] perform]
+//            }
+//        }
+
+
+    }
+
+}
+
 
 
 - (void)stopProgressPanel {

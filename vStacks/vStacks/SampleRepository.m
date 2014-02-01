@@ -61,4 +61,13 @@
     sampleMO.name = name ;
     return sampleMO;
 }
+
+- (NSArray *)getAllSamples:(NSManagedObjectContext *)context {
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Sample" inManagedObjectContext:context];
+    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+    [request1 setEntity:entityDescription1];
+    NSError *error1;
+    return [context executeFetchRequest:request1 error:&error1];
+}
+
 @end

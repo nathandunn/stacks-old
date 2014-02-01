@@ -61,6 +61,10 @@
 
 //- (StacksDocument *)getStacksDocumentForPath:(NSString *)string;
 //- (void)loadLociAndGenotypes:(NSString *)appendingString progressBar:(NSProgressIndicator *)bar;
+
+- (void)addPopulationsToDocument:(StacksDocument *)document forPath:(NSString *)path ;
+
+
 @end
 
 NSUInteger  countParents(NSArray *parents);
