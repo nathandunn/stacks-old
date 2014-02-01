@@ -20,3 +20,5 @@ out/
 *.swp
 web-app/plugins
 web-app/WEB-INF/classes
+tests/*.log
+tests/*.trs
