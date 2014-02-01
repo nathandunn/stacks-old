@@ -122,6 +122,8 @@ ok_ () {
             # Bad return status.
             failed=`expr $failed + 1`
             echo not ok "$count$tap_desc"
+            echo "  ## The following command failed with non-zero status:"
+            echo "  $cmd"
             echo "$tap_output" | sed 's/^/  /'
         else
             # Confirm files same...
@@ -131,7 +133,7 @@ ok_ () {
             else
                 failed=`expr $failed + 1`
                 echo not ok "$count$tap_desc"
-                echo "  ## The following command failed:"
+                echo "  ## The following command failed with unexpected output:"
                 echo "  $cmd"
                 echo "$tap_output" | sed 's/^/  /'
                 echo "  ## Differences between expected and actual output:"
