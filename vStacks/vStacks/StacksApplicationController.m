@@ -266,6 +266,11 @@
         NSString *importPathName = importPanel.directoryURL.lastPathComponent;
         NSLog(@"import path name %@",importPathName);
 
+
+        // TODO: validate the file!!!
+
+
+
         StacksDocument *stacksDocument = [[StacksDocumentController sharedDocumentController] currentDocument];
         if(stacksDocument==nil) return ;
 
@@ -281,23 +286,21 @@
             [stacksDocument.managedObjectContext deleteObject:populationMO];
         }
 
+        // TODO: validate deletions!!!
 
 
+        // TODO: refactor to take a filename
         StacksConverter* stacksConverter = [[StacksConverter alloc] init];
         [stacksConverter addPopulationsToDocument:stacksDocument forPath:importPath];
+
+        // TODO: reapply to the samples
+
 
 
         NSError *saveError = nil ;
         [stacksDocument.managedObjectContext save:&saveError];
 
-
-//        for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
-//            NSLog(@"stacks doc: %@", stacksDocument.path);
-//            if (stacksDocument.path == NULL) {
-//                [stacksDocument close];
-////                [[StacksDocumentController sharedDocumentController] perform]
-//            }
-//        }
+        // TODO: reapply to the  UI
 
 
     }
