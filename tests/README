@@ -21,7 +21,7 @@ tests via make like so:
 
     env TESTS='process_radtags.t kmer_filter.t' make -e check
 
-Tests are run by config/tap-driver.sh, which is provided by automake.  Though
+Tests are run by config/tap-driver.sh, which is provided by autoconf.  Though
 of questionable utility, you can pass flags to the tap driver like so:
 
     env LOG_DRIVER_FLAGS='--color-tests=no' make -e check
@@ -34,7 +34,7 @@ well as individual log files at tests/*.log.
 ### Writing tests ###
 #####################
 
-The test library tests/libtap.sh (provided by automake) provides useful
+The test library tests/libtap.sh (provided by autoconf) provides useful
 functions to run tests.  A simple test file containing four tests might look
 like the following:
     
