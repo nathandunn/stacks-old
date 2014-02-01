@@ -65,26 +65,31 @@
     }
 
 
-    NSOpenPanel *panel = [NSOpenPanel openPanel];
-    [panel setAllowsMultipleSelection:NO];
-    [panel setCanChooseDirectories:YES];
-    [panel setCanChooseFiles:NO];
-    [panel setFloatingPanel:YES];
+    NSOpenPanel *importPanel = [NSOpenPanel openPanel];
+    [importPanel setAllowsMultipleSelection:NO];
+    [importPanel setCanChooseDirectories:YES];
+    [importPanel setCanChooseFiles:NO];
+    [importPanel setFloatingPanel:YES];
     NSSize minSize;
     minSize.height = 600;
     minSize.width = 500;
 
-    [panel setMinSize:minSize];
-    NSInteger result = [panel runModal];
+
+    [importPanel setMinSize:minSize];
+    NSInteger result = [importPanel runModal];
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if (result == NSOKButton) {
         NSLog(@"ok !!");
-        
+        NSString *importPath = [importPanel.directoryURL.path stringByAppendingString:@"/"];
+        NSLog(@"import path %@",importPath);
+        NSString *importPathName = importPanel.directoryURL.lastPathComponent;
+        NSLog(@"import path name %@",importPathName);
+
+
         // now we open the save panel for our stacks file.
         NSSavePanel *savePanel = [NSSavePanel savePanel];
-        NSString *pathName = panel.directoryURL.lastPathComponent;
-        savePanel.nameFieldStringValue = [pathName stringByAppendingString:@".stacks"];
+        savePanel.nameFieldStringValue = [importPathName stringByAppendingString:@".stacks"];
         
         NSInteger saveResult = [savePanel runModal];
         if(saveResult!=NSOKButton){
@@ -101,13 +106,14 @@
             NSLog(@"has correct filename %i",[[fileName exposedBindings] isEqualTo:@"stacks"]);
             NSLog(@"filename: %@",fileName) ;
         }
-        NSString *stacksDocumentPath = [savePanel.directoryURL.path stringByAppendingFormat:@"/%@",fileName];
-        NSLog(@"stacks doc path %@",stacksDocumentPath);
-        BOOL fileExistsAtPath = [[NSFileManager defaultManager] fileExistsAtPath:stacksDocumentPath isDirectory:NULL];
-        BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:stacksDocumentPath error:NULL];
-        NSLog(@"file removed %i", fileRemoved);
-        
-        NSLog(@"loadding progress!!! in thread");
+        NSString *savedStacksDocumentPath = [savePanel.directoryURL.path stringByAppendingFormat:@"/%@",fileName];
+        NSLog(@"stacks doc path %@", savedStacksDocumentPath);
+        BOOL fileExistsAtPath = [[NSFileManager defaultManager] fileExistsAtPath:savedStacksDocumentPath isDirectory:NULL];
+        if(fileExistsAtPath){
+            BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:savedStacksDocumentPath error:NULL];
+            NSLog(@"file removed %i", fileRemoved);
+        }
+
 
         ProgressController *progressController = [[ProgressController alloc] init];
 
@@ -116,9 +122,11 @@
 
 //        dispatch_async(dispatch_get_main_queue(),^ {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+
+            NSLog(@"loadding progress!!! in thread");
 //            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
-            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:stacksDocumentPath progressWindow:progressController];
-            newDocument.path = stacksDocumentPath;
+            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:savedStacksDocumentPath progressWindow:progressController importPath:importPath ];
+            newDocument.path = savedStacksDocumentPath;
             [newDocument.managedObjectContext save:nil];
             if (newDocument != nil) {
                 [progressController close];
@@ -126,7 +134,7 @@
 //        [NSApp stopModal];
                 NSLog(@"trying to open");
 
-                [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES completionHandler:^(NSDocument *doc, BOOL documentWasAlreadyOpened, NSError *error) {
+                [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:savedStacksDocumentPath] display:YES completionHandler:^(NSDocument *doc, BOOL documentWasAlreadyOpened, NSError *error) {
                     if (error != nil) {
                         NSLog(@"error3 %@", error);
                     }

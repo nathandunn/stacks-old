@@ -48,10 +48,11 @@
 - (id)init ;
 
 - (NSString *) generateFilePathForUrl:(NSURL *) url;
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController;
+
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController importPath:(NSString *)path1;
 - (NSMutableDictionary *)loadPopulation:(NSString *)path;
 
-- (StacksDocument *)loadDocument:(StacksDocument *)document progressWindow:(ProgressController *) bar;
+- (StacksDocument *)loadDocument:(StacksDocument *)document progressWindow:(ProgressController *)bar importPath:(NSString *)path;
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path;
 
 //- (NSManagedObjectContext *)getContextForPath:(NSString *)path andDocument:(StacksDocument *) document;
