@@ -22,3 +22,5 @@ web-app/plugins
 web-app/WEB-INF/classes
 tests/*.log
 tests/*.trs
+config/tap-driver.sh
+config/test-driver
