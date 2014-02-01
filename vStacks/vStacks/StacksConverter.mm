@@ -84,14 +84,15 @@ NSString *calculateType(NSString *file);
 }
 
 
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController {
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController importPath:(NSString *)importPath{
 
     StacksDocument *stacksDocument = [self createStacksDocumentForPath:path];
+    stacksDocument.importPath = importPath ;
     if (stacksDocument == nil) {
         return nil;
     }
 
-    stacksDocument = [self loadDocument:stacksDocument progressWindow:progressController];
+    stacksDocument = [self loadDocument:stacksDocument progressWindow:progressController importPath:importPath];
     NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
     NSError *error;
     [moc save:&error];
@@ -236,7 +237,7 @@ NSString *calculateType(NSString *file);
 
 }
 
-- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *)progressWindow {
+- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *)progressWindow importPath:(NSString *)importPath{
     NSProgressIndicator *bar = progressWindow.loadProgress;
     if (bar != nil) {
         progressWindow.actionTitle.stringValue = [NSString stringWithFormat:@"Loading %@", stacksDocument.name];
@@ -245,15 +246,16 @@ NSString *calculateType(NSString *file);
         [bar display];
 //        [bar incrementBy:1];
     }
-    NSString *path = stacksDocument.path;
+//    NSString *path = stacksDocument.path;
+    NSString *importPath1 = stacksDocument.importPath;
     // returns batch_1, batch_2, etc. whatever exists
-    NSString *batchName = [self checkFile:path];
+    NSString *batchName = [self checkFile:importPath1];
     NSLog(@"returned batch name: %@", batchName);
     map<int, CSLocus *> catalog;
-    NSString *catalogTagFile = [path stringByAppendingFormat:@"%@.catalog.tags.tsv", batchName];
+    NSString *catalogTagFile = [importPath1 stringByAppendingFormat:@"%@.catalog.tags.tsv", batchName];
     stacksDocument.type = calculateType(catalogTagFile);
     NSLog(@"type is %@", stacksDocument.type);
-    NSString *catalogFile = [path stringByAppendingFormat:@"%@.catalog", batchName];
+    NSString *catalogFile = [importPath1 stringByAppendingFormat:@"%@.catalog", batchName];
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
@@ -273,7 +275,7 @@ NSString *calculateType(NSString *file);
     vector<int> sample_ids;
 
     progressWindow.actionMessage.stringValue = @"Building file list";
-    vector<pair<int, string>> files = [self buildFileList:path];
+    vector<pair<int, string>> files = [self buildFileList:importPath1];
 //    [bar incrementBy:2];
     NSLog(@"number of files %ld", files.size());
 
@@ -290,7 +292,7 @@ NSString *calculateType(NSString *file);
             @autoreleasepool {
                 vector<CatMatch *> m;
                 NSString *sampleString = [NSString stringWithUTF8String:files[i].second.c_str()];
-                NSString *matchString = [path stringByAppendingFormat:@"/%@", sampleString];
+                NSString *matchString = [importPath1 stringByAppendingFormat:@"/%@", sampleString];
 //        NSLog(@"loading match file %@ for sample name %@", matchString, sampleString);
                 if (([sampleString rangeOfString:@"catalog"]).location == NSNotFound) {
                     @autoreleasepool {
@@ -325,7 +327,7 @@ NSString *calculateType(NSString *file);
 
     NSLog(@"input populations %ld", stacksDocument.populations.count);
     progressWindow.actionMessage.stringValue = @"Adding populations";
-    [self addPopulationsToDocument:stacksDocument forPath:path];
+    [self addPopulationsToDocument:stacksDocument forPath:importPath1];
     [bar incrementBy:5];
     progressWindow.actionMessage.stringValue = @"Adding samples";
     NSLog(@"output populations %ld", stacksDocument.populations.count);
@@ -658,7 +660,7 @@ NSString *calculateType(NSString *file);
 
 - (void)loadSnpsOntoDatum:(StacksDocument *)document progressWindow:(ProgressController *)window {
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSString *path = document.path;
+    NSString *path = document.importPath;
 
     // 1- get all files i the directory named *.tag.tsv"
     NSError *error;
@@ -689,7 +691,7 @@ NSString *calculateType(NSString *file);
 
 - (void)loadAllelesOntoDatum:(StacksDocument *)document {
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSString *path = document.path;
+    NSString *path = document.importPath;
 
     // 1- get all files i the directory named *.tag.tsv"
     NSError *error;
@@ -730,7 +732,7 @@ NSString *calculateType(NSString *file);
     NSArray *fileData;
     NSError *error2 = nil;
     @autoreleasepool {
-        NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", alleleFileName];
+        NSString *absoluteFileName = [document.importPath stringByAppendingFormat:@"/%@", alleleFileName];
         fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
     }
     gettimeofday(&time2, NULL);
@@ -822,7 +824,7 @@ NSString *calculateType(NSString *file);
     NSError *error2 = nil;
     NSArray *fileData;
     @autoreleasepool {
-        NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", snpFileName];
+        NSString *absoluteFileName = [document.importPath stringByAppendingFormat:@"/%@", snpFileName];
         fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
     }
 
@@ -944,7 +946,7 @@ NSString *calculateType(NSString *file);
 
 - (void)loadStacksEntriesFromTagFile:(StacksDocument *)document progressWindow:(ProgressController *)progressWindow {
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSString *path = document.path;
+    NSString *path = document.importPath;
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
     // TODO: or *|!male|!female_N.tags.tsv
 
@@ -1017,7 +1019,7 @@ NSString *calculateType(NSString *file);
 
             NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
 
-            NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", tagFileName];
+            NSString *absoluteFileName = [document.importPath stringByAppendingFormat:@"/%@", tagFileName];
             string f = [absoluteFileName cStringUsingEncoding:NSUTF8StringEncoding];
 
             fh.open(f.c_str(), ifstream::in);
@@ -1220,7 +1222,7 @@ NSString *calculateType(NSString *file);
     NSManagedObjectContext *moc = document.managedObjectContext;
     [moc setUndoManager:nil];
 
-    NSString *path = document.path;
+    NSString *path = document.importPath;
     NSLog(@"reading population for file %@", path);
 
     NSString *popmapFile = [path stringByAppendingString:@"popmap"];

@@ -81,6 +81,9 @@
 @synthesize maxSamplesPopupButton;
 @synthesize stacksWebView;
 @synthesize numberFormatter ;
+
+@synthesize importPath ;
+@synthesize path;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
