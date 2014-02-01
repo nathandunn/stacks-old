@@ -93,8 +93,8 @@ Note that %in and $in in the above examples are different creatures.  $in is
 a shell variable that is interpolated by the shell, whereas %in is effectively
 a Stacks Test Suite variable, interpolated by the ok_() function.
 
-skip_() is the Stacks analog to skip().  skip_() can take the place of ok_() in
-the same way that skip() can take the place of ok().
+skip_() is the Stacks analog to skip().  skip_() can take the place of skip() in
+the same way that ok_() can take the place of ok().
 
 Input and expected output can be found under a directory with the same name as
 the test file with the '.t' removed.  For example, here is a partial directory
