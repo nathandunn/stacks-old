@@ -81,10 +81,11 @@
                                     <action selector="importDocument:" target="-1" id="579"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Apply Popmap" tag="77" keyEquivalent="p" id="Sdy-ZG-qtW" customClass="StacksImportMenuItem">
+                            <menuItem title="Apply Popmap" tag="78" enabled="NO" keyEquivalent="p" id="Sdy-ZG-qtW" customClass="StacksImportMenuItem">
                                 <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                 <connections>
                                     <action selector="applyPopmap:" target="-1" id="H0u-vu-VGg"/>
+                                    <binding destination="537" name="enabled" keyPath="self.hasOpenDocument" id="TzU-bM-mcO"/>
                                 </connections>
                             </menuItem>
                             <menuItem title="Open Recent" id="124">

@@ -8,6 +8,7 @@
 
 #import "StacksAppDelegate.h"
 #import "StacksApplicationController.h"
+#import "StacksDocumentController.h"
 
 
 @implementation StacksAppDelegate {
@@ -35,6 +36,13 @@
 //    return YES;
 //}
 
+- (BOOL) hasOpenDocument{
+    NSLog(@" in this method ");
+    id currentDocument = [[StacksDocumentController sharedDocumentController] currentDocument];
+    NSLog(@"current doc %@",currentDocument) ;
+    NSLog(@"is not nil %i",currentDocument!=nil) ;
+    return [[StacksDocumentController sharedDocumentController] currentDocument]!=nil;
+}
 
 @end
 
