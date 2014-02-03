@@ -148,10 +148,10 @@ NSString *calculateType(NSString *file);
 }
 
 
-- (NSMutableDictionary *)loadPopulation:(NSString *)path {
+- (NSMutableDictionary *)loadPopulation:(NSString *)popmapFile{
     NSMutableDictionary *populationLookup = [NSMutableDictionary dictionary];
 
-    NSString *popmapFile = [path stringByAppendingString:@"popmap"];
+//    NSString *popmapFile = [path stringByAppendingString:@"popmap"];
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL exists = [fileManager fileExistsAtPath:popmapFile];
 
@@ -327,7 +327,7 @@ NSString *calculateType(NSString *file);
 
     NSLog(@"input populations %ld", stacksDocument.populations.count);
     progressWindow.actionMessage.stringValue = @"Adding populations";
-    [self addPopulationsToDocument:stacksDocument forPath:importPath1];
+    [self addPopulationsToDocument:stacksDocument forPath:[NSString stringWithFormat:@"%@/popmap",importPath1]];
     [bar incrementBy:5];
     progressWindow.actionMessage.stringValue = @"Adding samples";
     NSLog(@"output populations %ld", stacksDocument.populations.count);
@@ -1176,9 +1176,9 @@ NSString *calculateType(NSString *file);
                 // lets get the population . . can use lookup, but this is usually pretty small
                 NSLog(@"tyring to populate popid %@", populationId);
                 for (PopulationMO *populationMO in document.populations) {
-                    NSNumber *endNumber = [numberFormatter numberFromString:populationId];
-                    NSLog(@"comparing to %@ vs %@", populationMO.populationId, endNumber);
-                    if ([populationMO.populationId isEqualToNumber:endNumber]) {
+//                    NSNumber *endNumber = [numberFormatter numberFromString:populationId];
+//                    NSLog(@"comparing to %@ vs %@", populationMO.populationId, endNumber);
+                    if ([populationMO.name isEqualToString:populationId]) {
                         NSLog(@"FOuND population ID %@", populationMO.populationId);
                         [populationMO addSamplesObject:sampleMO];
                     }

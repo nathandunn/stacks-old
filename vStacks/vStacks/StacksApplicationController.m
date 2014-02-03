@@ -25,15 +25,18 @@
 }
 
 
+@synthesize numberFormatter;
 
-//- (id)init {
-//    self = [super init];
-//    if (self) {
-//
-//    }
-//
-//    return self;
-//}
+- (id)init {
+    self = [super init];
+    if (self) {
+
+        numberFormatter = [[NSNumberFormatter alloc] init];
+        numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+    }
+
+    return self;
+}
 
 //- (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
 ////    NSLog(@"validating UI item in App Controller %@",anItem) ;
@@ -248,7 +251,7 @@
 - (IBAction)applyPopmap:(id)sender {
 
     StacksDocument *stacksDocument = [[StacksDocumentController sharedDocumentController] currentDocument];
-    NSLog(@"stacksDocu?  %@",stacksDocument) ;
+    NSLog(@"stacksDocu?  %@", stacksDocument);
     if (stacksDocument == nil) {
         NSAlert *alert = [NSAlert alertWithMessageText:@"Error applying Population Map"
                                          defaultButton:@"OK"
@@ -274,19 +277,19 @@
 
 
     if (result == NSOKButton) {
-        NSString *fileUrlString = [NSString stringWithFormat:@"%@", [importPanel.URL absoluteString]];
+        NSString *fileUrlString = [NSString stringWithFormat:@"%@", [importPanel.URL path]];
         NSLog(@"import file %@", fileUrlString);
 
         NSString *errorCondition = [[PopulationService sharedInstance] validatePopmap:importPanel.URL];
         if (errorCondition != nil) {
             NSLog(@"Bad Popmap %@", errorCondition);
 
-            NSAlert *alert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"Unable to apply Population Map %@",importPanel.URL.path]
+            NSAlert *alert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"Unable to apply Population Map %@", importPanel.URL.path]
                                              defaultButton:@"OK"
                                            alternateButton:nil
                                                otherButton:nil
                                  informativeTextWithFormat:errorCondition];
-            
+
             [alert runModal];
 
             return;
@@ -306,18 +309,48 @@
             [stacksDocument.managedObjectContext deleteObject:populationMO];
         }
 
+        [stacksDocument.populationLookup removeAllObjects];
+        stacksDocument.populationLookup = nil ;
+
         // TODO: validate deletions!!!
 
 
         // TODO: refactor to take a filename
         StacksConverter *stacksConverter = [[StacksConverter alloc] init];
-//        [stacksConverter addPopulationsToDocument:stacksDocument forPath:importPath.URL];
+        [stacksConverter addPopulationsToDocument:stacksDocument forPath:fileUrlString];
+        NSLog(@"population lookup size: %ld", stacksDocument.populationLookup.count);
 
         // TODO: reapply to the samples
+        for (SampleMO *sampleMO in sampleArray) {
+            NSString *populationId = [stacksDocument.populationLookup objectForKey:sampleMO.name];
+
+            if (populationId != nil) {
+                // lets get the population . . can use lookup, but this is usually pretty small
+                NSLog(@"tyring to populate popid %@", populationId);
+                for (PopulationMO *populationMO in stacksDocument.populations) {
+//                    NSNumber *endNumber = [numberFormatter numberFromString:populationId];
+//                    NSLog(@"comparing to %@ vs %@", populationMO.populationId, endNumber);
+                    if ([populationMO.name isEqualToString:populationId]) {
+                        NSLog(@"FOuND population ID %@", populationMO.populationId);
+                        [populationMO addSamplesObject:sampleMO];
+                    }
+                }
+            }
+        }
 
 
         NSError *saveError = nil ;
         [stacksDocument.managedObjectContext save:&saveError];
+        if (saveError != nil) {
+            NSLog(@"save error %@", saveError);
+        }
+
+
+        NSURL *url = stacksDocument.fileURL;
+        NSError *openError = nil ;
+        [[self currentDocument] close];
+        [self reopenDocumentForURL:url withContentsOfURL:url error:&openError];
+//        [self openDocumentWithContentsOfURL: display:<#(BOOL)displayDocument#> error:<#(NSError **)outError#>:stacksDocument];
 
         // TODO: reapply to the  UI
 
@@ -325,7 +358,6 @@
     }
 
 }
-
 
 
 - (void)stopProgressPanel {
