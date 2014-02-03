@@ -68,7 +68,7 @@
     NSString *model = [[jsonData objectForKey:@"model"] objectForKey:@"sequence"];
 
 
-    [returnHTML appendString:[self renderHeader]];
+//    [returnHTML appendString:[self renderHeader]];
     [returnHTML appendString:[self renderReference:consensus]];
     [returnHTML appendString:[self renderConsensus:consensus]];
     [returnHTML appendString:[self renderModel:model]];
