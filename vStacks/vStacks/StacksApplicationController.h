@@ -14,6 +14,8 @@
 //    ProgressController *progressController ;
 }
 
+@property(nonatomic, strong) NSNumberFormatter *numberFormatter;
+
 - (IBAction) importDocument:(id)sender;
 
 
