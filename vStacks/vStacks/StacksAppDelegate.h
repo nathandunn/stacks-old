@@ -9,5 +9,10 @@
 #import <Foundation/Foundation.h>
 
 
-@interface StacksAppDelegate : NSObject<NSApplicationDelegate>
+@interface StacksAppDelegate : NSObject<NSApplicationDelegate>{
+
+}
+
+- (BOOL) hasOpenDocument ;
+
 @end

@@ -16,6 +16,7 @@
 #import "SampleMO.h"
 #import "PopulationRepository.h"
 #import "PopulationMO.h"
+#import "PopulationService.h"
 
 
 @implementation StacksApplicationController {
@@ -86,34 +87,34 @@
     if (result == NSOKButton) {
         NSLog(@"ok !!");
         NSString *importPath = [importPanel.directoryURL.path stringByAppendingString:@"/"];
-        NSLog(@"import path %@",importPath);
+        NSLog(@"import path %@", importPath);
         NSString *importPathName = importPanel.directoryURL.lastPathComponent;
-        NSLog(@"import path name %@",importPathName);
+        NSLog(@"import path name %@", importPathName);
 
 
         // now we open the save panel for our stacks file.
         NSSavePanel *savePanel = [NSSavePanel savePanel];
         savePanel.nameFieldStringValue = [importPathName stringByAppendingString:@".stacks"];
-        
+
         NSInteger saveResult = [savePanel runModal];
-        if(saveResult!=NSOKButton){
-            NSLog(@"cancelled") ;
-            return ;
+        if (saveResult != NSOKButton) {
+            NSLog(@"cancelled");
+            return;
         }
-        
-        NSLog(@"directory URL: %@ %@ %@", savePanel.directoryURL.path ,savePanel.directoryURL.pathExtension,savePanel.directoryURL.parameterString);
+
+        NSLog(@"directory URL: %@ %@ %@", savePanel.directoryURL.path, savePanel.directoryURL.pathExtension, savePanel.directoryURL.parameterString);
         NSLog(@"save URL: %@", savePanel.nameFieldStringValue);
-        NSString *fileName = savePanel.nameFieldStringValue ;
-        NSString *extension = [fileName pathExtension] ;
-        if([extension isNotEqualTo:@"stacks"]){
+        NSString *fileName = savePanel.nameFieldStringValue;
+        NSString *extension = [fileName pathExtension];
+        if ([extension isNotEqualTo:@"stacks"]) {
             fileName = [fileName stringByAppendingString:@".stacks"];
-            NSLog(@"has correct filename %i",[[fileName exposedBindings] isEqualTo:@"stacks"]);
-            NSLog(@"filename: %@",fileName) ;
+            NSLog(@"has correct filename %i", [[fileName exposedBindings] isEqualTo:@"stacks"]);
+            NSLog(@"filename: %@", fileName);
         }
-        NSString *savedStacksDocumentPath = [savePanel.directoryURL.path stringByAppendingFormat:@"/%@",fileName];
+        NSString *savedStacksDocumentPath = [savePanel.directoryURL.path stringByAppendingFormat:@"/%@", fileName];
         NSLog(@"stacks doc path %@", savedStacksDocumentPath);
         BOOL fileExistsAtPath = [[NSFileManager defaultManager] fileExistsAtPath:savedStacksDocumentPath isDirectory:NULL];
-        if(fileExistsAtPath){
+        if (fileExistsAtPath) {
             BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:savedStacksDocumentPath error:NULL];
             NSLog(@"file removed %i", fileRemoved);
         }
@@ -129,7 +130,7 @@
 
             NSLog(@"loadding progress!!! in thread");
 //            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
-            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:savedStacksDocumentPath progressWindow:progressController importPath:importPath ];
+            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:savedStacksDocumentPath progressWindow:progressController importPath:importPath];
             newDocument.path = savedStacksDocumentPath;
             [newDocument.managedObjectContext save:nil];
             if (newDocument != nil) {
@@ -212,13 +213,13 @@
 //       didEndSelector: nil
 //          contextInfo: nil];
 
-    // Display a progress panel as a sheet
+// Display a progress panel as a sheet
 //    self.progressMessage = message;
 //    [progressIndicator setIndeterminate: YES];
 //    [progressIndicator startAnimation: self];
 //    [progressCancelButton setEnabled: NO];
 
-    // TODO: find acces to the modal window we are using
+// TODO: find acces to the modal window we are using
 //    [NSApp beginSheet: progressPanel
 //       modalForWindow: self.windowForSheet
 //        modalDelegate: self
@@ -246,6 +247,18 @@
 // TODO: change for file, etc. etc. etc.
 - (IBAction)applyPopmap:(id)sender {
 
+    StacksDocument *stacksDocument = [[StacksDocumentController sharedDocumentController] currentDocument];
+    NSLog(@"stacksDocu?  %@",stacksDocument) ;
+    if (stacksDocument == nil) {
+        NSAlert *alert = [NSAlert alertWithMessageText:@"Error applying Population Map"
+                                         defaultButton:@"OK"
+                                       alternateButton:nil
+                                           otherButton:nil
+                             informativeTextWithFormat:@"Must have an open STACKS document in order to apply a Population Map"];
+        [alert runModal];
+        return;
+    }
+
     NSOpenPanel *importPanel = [NSOpenPanel openPanel];
     [importPanel setAllowsMultipleSelection:NO];
     [importPanel setCanChooseDirectories:NO];
@@ -259,30 +272,37 @@
     [importPanel setMinSize:minSize];
     NSInteger result = [importPanel runModal];
 
+
     if (result == NSOKButton) {
-        NSLog(@"ok !!");
-        NSString *importPath = [importPanel.directoryURL.path stringByAppendingString:@"/"];
-        NSLog(@"import path %@",importPath);
-        NSString *importPathName = importPanel.directoryURL.lastPathComponent;
-        NSLog(@"import path name %@",importPathName);
+        NSString *fileUrlString = [NSString stringWithFormat:@"%@", [importPanel.URL absoluteString]];
+        NSLog(@"import file %@", fileUrlString);
+
+        NSString *errorCondition = [[PopulationService sharedInstance] validatePopmap:importPanel.URL];
+        if (errorCondition != nil) {
+            NSLog(@"Bad Popmap %@", errorCondition);
+
+            NSAlert *alert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"Unable to apply Population Map %@",importPanel.URL.path]
+                                             defaultButton:@"OK"
+                                           alternateButton:nil
+                                               otherButton:nil
+                                 informativeTextWithFormat:errorCondition];
+            
+            [alert runModal];
+
+            return;
+        }
 
 
-        // TODO: validate the file!!!
-
-
-
-        StacksDocument *stacksDocument = [[StacksDocumentController sharedDocumentController] currentDocument];
-        if(stacksDocument==nil) return ;
 
         // remove the old populations from the samples
         NSArray *sampleArray = [[SampleRepository sharedInstance] getAllSamples:stacksDocument.managedObjectContext];
-        for(SampleMO *sampleMO in sampleArray){
+        for (SampleMO *sampleMO in sampleArray) {
             sampleMO.population = nil ;
         }
 
         // remove the old populations
         NSArray *allPopulation = [[PopulationRepository sharedInstance] getAllPopulations:stacksDocument.managedObjectContext];
-        for(PopulationMO *populationMO in allPopulation){
+        for (PopulationMO *populationMO in allPopulation) {
             [stacksDocument.managedObjectContext deleteObject:populationMO];
         }
 
@@ -290,11 +310,10 @@
 
 
         // TODO: refactor to take a filename
-        StacksConverter* stacksConverter = [[StacksConverter alloc] init];
-        [stacksConverter addPopulationsToDocument:stacksDocument forPath:importPath];
+        StacksConverter *stacksConverter = [[StacksConverter alloc] init];
+//        [stacksConverter addPopulationsToDocument:stacksDocument forPath:importPath.URL];
 
         // TODO: reapply to the samples
-
 
 
         NSError *saveError = nil ;
