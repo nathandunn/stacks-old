@@ -16,4 +16,17 @@
 
 }
 
+
+
+- (NSArray *)arrangedObjects {
+    NSMutableArray *defaultArrangedObjects = [NSMutableArray arrayWithArray:[super arrangedObjects]];
+
+    NSDictionary *dictionary = [NSDictionary dictionaryWithObjectsAndKeys:
+            @"All", @"name", @"No Filter", @"value", nil];
+    [defaultArrangedObjects insertObject:dictionary atIndex:0];
+
+    return defaultArrangedObjects;
+}
+
+
 @end
