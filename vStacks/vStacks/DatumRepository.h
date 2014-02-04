@@ -30,4 +30,6 @@
 - (NSDictionary *)getDatums:(NSManagedObjectContext *)context forSample:(NSNumber*)sampleId;
 
 - (StackEntryDatumMO *)getStackEntryDatum:(NSManagedObjectContext *)context datum:(DatumMO *)datum;
+
+- (NSArray *)getDatumsOrdered:(NSManagedObjectContext *)context locus:(NSNumber *)locus;
 @end

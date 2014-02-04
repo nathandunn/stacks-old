@@ -60,14 +60,8 @@
 }
 
 - (NSArray *)getDatums:(NSManagedObjectContext *)context locus:(NSNumber *)locus andPopulation:(PopulationMO *)population {
-
-//    LocusMO *locusMO = [[LocusRepository sharedInstance] getLocus:context forId:locus.integerValue];
-//    NSLog(@"locus %@",locusMO);
-
-
     NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:context];
     NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
-//    NSLog(@"locusID: %@ population: %@",locus,population);
     NSMutableArray *sampleIds = [[NSMutableArray alloc] init];
 
     for(SampleMO *sampleMO in population.samples){
@@ -183,5 +177,71 @@
         NSLog(@"bad count %ld",stackEntryDatums.count);
         return nil ;
     }
+}
+
+- (NSArray *)getDatumsOrdered:(NSManagedObjectContext *)context locus:(NSNumber *)locus {
+    NSArray *unsortedArray = [self getDatums:context locus:locus];
+//    NSLog(@"datums returned: %ld",unsortedArray.count) ;
+    NSArray *sortedArray;
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+
+    sortedArray = [unsortedArray sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
+        NSString *first = [(DatumMO*)a name];
+        NSString *second = [(DatumMO*)b name];
+
+        int firstScore = 0 ;
+        int secondScore = 0 ;
+
+
+
+        if([first isEqualToString:@"male"]) firstScore -= 1000 ;
+        if([second isEqualToString:@"male"]) secondScore -= 1000 ;
+        if([first isEqualToString:@"female"]) firstScore -= 100 ;
+        if([second isEqualToString:@"female"]) secondScore -= 100 ;
+
+        // handle sample_ vs progeny_
+
+        NSArray *stringOne  = [first componentsSeparatedByString:@"_"];
+        NSArray *stringTwo = [second componentsSeparatedByString:@"_"];
+
+        if(stringOne.count>1){
+            firstScore += [[numberFormatter numberFromString:[stringOne objectAtIndex:1]] intValue];
+        }
+        if(stringTwo.count>1){
+            secondScore += [[numberFormatter numberFromString:[stringTwo objectAtIndex:1]] intValue];
+        }
+
+
+//        if([first isEqualToString:@"female"] && [second isEqualToString:@"male"]){
+//          return NSOrderedDescending;
+//        }
+//        if([first isEqualToString:@"male"] && [second isEqualToString:@"female"]){
+//            return NSOrderedAscending;
+//        }
+
+        return (firstScore-secondScore<0) ? NSOrderedAscending : NSOrderedDescending ;
+//
+//        return [first compare:second];
+    }];
+    return sortedArray;
+}
+
+- (NSArray *)getDatums:(NSManagedObjectContext *)context locus:(NSNumber *)locus {
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Datum" inManagedObjectContext:context];
+    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+    [request1 setEntity:entityDescription1];
+
+    // TODO: may need this for coloring later
+//    NSMutableArray *sampleIds = [[NSMutableArray alloc] init];
+//
+//    for(SampleMO *sampleMO in population.samples){
+//        [sampleIds addObject:sampleMO.sampleId];
+//    }
+//    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ and sampleId in (%@) ", locus,sampleIds];
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"tagId == %@ ", locus];
+    [request1 setPredicate:predicate1];
+    NSError *error1;
+    return [context executeFetchRequest:request1 error:&error1];
 }
 @end
