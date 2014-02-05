@@ -27,7 +27,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="133" y="235" width="1400" height="500"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="2560" height="1418"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1440" height="878"/>
             <value key="minSize" type="size" width="1400" height="500"/>
             <view key="contentView" id="6">
                 <rect key="frame" x="0.0" y="0.0" width="1400" height="500"/>
@@ -87,7 +87,7 @@
                                                                 </binding>
                                                             </connections>
                                                         </textField>
-                                                        <textField verticalHuggingPriority="750" id="N1l-c3-D3l">
+                                                        <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" id="N1l-c3-D3l">
                                                             <rect key="frame" x="113" y="53" width="193" height="28"/>
                                                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                                             <textFieldCell key="cell" selectable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" alignment="right" title="Description" allowsEditingTextAttributes="YES" id="bnV-K2-Vtb">
@@ -103,7 +103,7 @@
                                                                 </binding>
                                                             </connections>
                                                         </textField>
-                                                        <textField verticalHuggingPriority="750" id="100298">
+                                                        <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" id="100298">
                                                             <rect key="frame" x="1" y="2" width="306" height="50"/>
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                             <textFieldCell key="cell" selectable="YES" allowsUndo="NO" sendsActionOnEndEditing="YES" title="Consensus" allowsEditingTextAttributes="YES" id="100299">
@@ -290,19 +290,11 @@
                                     <color key="textColor" name="textColor" catalog="System" colorSpace="catalog"/>
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
-                                <connections>
-                                    <binding destination="100206" name="value" keyPath="selection.name" id="Zpb-Zh-t5e">
-                                        <dictionary key="options">
-                                            <bool key="NSConditionallySetsEditable" value="NO"/>
-                                            <bool key="NSContinuouslyUpdatesValue" value="YES"/>
-                                        </dictionary>
-                                    </binding>
-                                </connections>
                             </textField>
                             <button verticalHuggingPriority="750" id="sfi-Rd-oH1">
                                 <rect key="frame" x="165" y="84" width="46" height="19"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <buttonCell key="cell" type="roundRect" title="Edit" bezelStyle="roundedRect" image="611F9E03-4F5A-44D5-8E42-187B6DA1619D" imagePosition="overlaps" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="QX3-jb-L4D">
+                                <buttonCell key="cell" type="roundRect" title="Edit" bezelStyle="roundedRect" image="3B970765-FFD1-40A0-9F59-04A169A88CF9" imagePosition="overlaps" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="QX3-jb-L4D">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="cellTitle"/>
                                 </buttonCell>
@@ -503,7 +495,7 @@
             <rect key="frame" x="0.0" y="0.0" width="100" height="62"/>
             <autoresizingMask key="autoresizingMask" flexibleMinX="YES" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
             <subviews>
-                <textField verticalHuggingPriority="750" id="100238">
+                <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" id="100238">
                     <rect key="frame" x="0.0" y="45" width="100" height="17"/>
                     <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                     <textFieldCell key="cell" continuous="YES" refusesFirstResponder="YES" allowsUndo="NO" alignment="center" title="Name" allowsEditingTextAttributes="YES" id="100239">
@@ -582,7 +574,7 @@
         </button>
     </objects>
     <resources>
-        <image name="611F9E03-4F5A-44D5-8E42-187B6DA1619D" width="1" height="1">
+        <image name="3B970765-FFD1-40A0-9F59-04A169A88CF9" width="1" height="1">
             <mutableData key="keyedArchiveRepresentation">
 YnBsaXN0MDDUAQIDBAUGPj9YJHZlcnNpb25YJG9iamVjdHNZJGFyY2hpdmVyVCR0b3ASAAGGoK4HCBMU
 GR4fIyQsLzI4O1UkbnVsbNUJCgsMDQ4PEBESVk5TU2l6ZVYkY2xhc3NcTlNJbWFnZUZsYWdzVk5TUmVw

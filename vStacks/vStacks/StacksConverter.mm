@@ -1153,14 +1153,15 @@ NSString *calculateType(NSString *file);
 - (void)addSamplesToDocument:(StacksDocument *)document forSampleIds:(vector<int>)sampleIds andSamples:(map<int, string>)samples {
 
     if (document.populationLookup == nil || document.populationLookup.count == 0) {
-        PopulationMO *populationMO = [[PopulationRepository sharedInstance] insertPopulation:document.managedObjectContext id:[NSNumber numberWithInt:1] name:@"All"];
-        document.populations = [NSSet setWithObjects:populationMO, nil];
+//        PopulationMO *populationMO = [[PopulationRepository sharedInstance] insertPopulation:document.managedObjectContext id:[NSNumber numberWithInt:1] name:@"All"];
+//        document.populations = [NSSet setWithObjects:populationMO, nil];
+        document.populations = [NSSet set];
 
         // set each sample to populationMO
         for (int i = 0; i < sampleIds.size(); i++) {
             SampleMO *sampleMO = [[SampleRepository sharedInstance] insertSample:document.managedObjectContext id:[NSNumber numberWithInt:sampleIds[i]] name:[NSString stringWithUTF8String:samples[sampleIds[i]].c_str()]];
-
-            [populationMO addSamplesObject:sampleMO];
+//
+//            [populationMO addSamplesObject:sampleMO];
         }
     }
     else {
@@ -1170,7 +1171,7 @@ NSString *calculateType(NSString *file);
                                                                               id:[NSNumber numberWithInt:sampleIds[i]]
                                                                             name:[NSString stringWithUTF8String:samples[sampleIds[i]].c_str()]];
 
-            NSString *populationId = [document.populationLookup objectForKey:sampleMO.name];
+            NSString *populationId = [document.populationLookup objectForKey:sampleMO.name];;
 
             if (populationId != nil) {
                 // lets get the population . . can use lookup, but this is usually pretty small
@@ -1240,7 +1241,7 @@ NSString *calculateType(NSString *file);
 //                NSString *sampleName = [columns objectAtIndex:0]; // the sample name . . . male, female, progeny, etc.
 
                 NSString *populationName = [columns objectAtIndex:1]; // initially an integer
-                PopulationMO *newPopulationMO = [[PopulationRepository sharedInstance] getPopulation:moc name:populationName];
+                PopulationMO *newPopulationMO = [[PopulationRepository sharedInstance] getPopulationOrCreate:moc name:populationName];
 
                 if (newPopulationMO != nil) {
                     [populations addObject:newPopulationMO];
