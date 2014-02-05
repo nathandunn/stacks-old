@@ -8,12 +8,15 @@
 
 #import <Cocoa/Cocoa.h>
 
+@class DatumMO;
+
 //@interface DatumView : NSCollectionViewItem
 @interface DatumView : NSView{
     BOOL selected ;
 }
 
 @property (readwrite) BOOL selected;
+@property (weak) IBOutlet NSTextField* haplotypeField;
 
 
 

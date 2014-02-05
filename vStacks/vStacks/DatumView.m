@@ -32,6 +32,8 @@
         [[NSColor lightGrayColor] set];
         NSRectFill([self bounds]);
     }
+    else{
+    }
 }
 
 @end

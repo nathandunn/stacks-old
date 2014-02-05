@@ -18,6 +18,8 @@
 //#import "SampleMO.h"
 //#import "StackEntryMO.h"
 #import "ColorGenerator.h"
+#import "SampleMO.h"
+#import "PopulationMO.h"
 
 
 @implementation DatumMO
@@ -45,7 +47,38 @@
 
 
 - (NSAttributedString *)renderName {
+
+    PopulationMO *populationMO = self.sample.population;
+    NSString* populationName = @"";
+    if(populationMO!=nil) {
+        populationName = [populationName stringByAppendingFormat:@": %@",populationName];
+    }
+    NSLog(@"population name: %@",populationName) ;
+
+
     NSString *formattedString = [self.name stringByReplacingOccurrencesOfString:@"_" withString:@" "];
+    formattedString = [formattedString capitalizedString];
+    formattedString = [formattedString stringByAppendingString:populationName];
+
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:formattedString];
+
+    NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
+    [mutParaStyle setAlignment:NSCenterTextAlignment];
+    NSRange selectedRange = NSMakeRange(0, [[string string] length]);
+    [string addAttributes:[NSDictionary dictionaryWithObject:mutParaStyle
+                                                      forKey:NSParagraphStyleAttributeName] range:selectedRange];
+//    NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+//    [string addAttributes:fontAttributes range:selectedRange];
+
+    return string;
+}
+
+- (NSAttributedString *)renderPopulation{
+    PopulationMO *populationMO = self.sample.population;
+    if(populationMO==nil) {
+        return [[NSAttributedString alloc] init];
+    }
+    NSString *formattedString = [populationMO.name stringByReplacingOccurrencesOfString:@"_" withString:@" "];
     formattedString = [formattedString capitalizedString];
 
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:formattedString];
