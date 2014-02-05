@@ -925,7 +925,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 		for (uint i = 0; i < haplotypes.size(); i++) {
 		    s[pop_index]->gdiv += hap_freq[haplotypes[i]] * hap_freq[haplotypes[i]];
 		}
-		s[pop_index]->gdiv = 1 - s[pop_index]->gdiv;
+		s[pop_index]->gdiv = (n / (n - 1)) * (1 - s[pop_index]->gdiv);
 
 		s[pop_index]->n       = n;
 		s[pop_index]->hap_cnt = haplotypes.size();
