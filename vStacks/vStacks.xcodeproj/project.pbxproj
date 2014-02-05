@@ -65,6 +65,11 @@
 		1437061D187B8BC20007BDE5 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437061C187B8BC20007BDE5 /* libz.1.2.7.dylib */; };
 		14370620187CAEFC0007BDE5 /* GZIP.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437061F187CAEFC0007BDE5 /* GZIP.m */; };
 		63D539B1A6C10C80338A325A /* PopulationService.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53C680185B4D1179C406B /* PopulationService.m */; };
+		6BD8C86B18A2DA92000C3A16 /* datum.html in Resources */ = {isa = PBXBuildFile; fileRef = 63D53E9C323D32F9FBF8FA40 /* datum.html */; };
+		6BD8C86D18A2DABE000C3A16 /* stacks.js in Sources */ = {isa = PBXBuildFile; fileRef = 6BD8C86C18A2DABE000C3A16 /* stacks.js */; };
+		6BD8C86E18A2DAD3000C3A16 /* stacks.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86C18A2DABE000C3A16 /* stacks.js */; };
+		6BD8C87018A2DB05000C3A16 /* jquery-1.11.0.min.js in Sources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
+		6BD8C87118A2DB28000C3A16 /* jquery-1.11.0.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
 		D793CD98D5347B963755DE08 /* StacksEntryDatumRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = D793CE87A0282D76171B5705 /* StacksEntryDatumRenderer.m */; };
 /* End PBXBuildFile section */
 
@@ -195,7 +200,10 @@
 		1437061E187CAEFC0007BDE5 /* GZIP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GZIP.h; sourceTree = "<group>"; };
 		1437061F187CAEFC0007BDE5 /* GZIP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GZIP.m; sourceTree = "<group>"; };
 		63D53C680185B4D1179C406B /* PopulationService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationService.m; sourceTree = "<group>"; };
+		63D53E9C323D32F9FBF8FA40 /* datum.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = datum.html; sourceTree = "<group>"; };
 		63D53F5AAC71FFFCDACB4C93 /* PopulationService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationService.h; sourceTree = "<group>"; };
+		6BD8C86C18A2DABE000C3A16 /* stacks.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = stacks.js; sourceTree = "<group>"; };
+		6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = "jquery-1.11.0.min.js"; sourceTree = "<group>"; };
 		D793CBB9D5EB558052FC2E35 /* StacksEntryDatumRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksEntryDatumRenderer.h; sourceTree = "<group>"; };
 		D793CE87A0282D76171B5705 /* StacksEntryDatumRenderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksEntryDatumRenderer.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -315,6 +323,8 @@
 		1437055D187B88000007BDE5 /* www */ = {
 			isa = PBXGroup;
 			children = (
+				6BD8C86A18A2D9EF000C3A16 /* js */,
+				6BD8C86918A2D9E9000C3A16 /* html */,
 				14370561187B881B0007BDE5 /* css */,
 			);
 			name = www;
@@ -452,6 +462,23 @@
 			name = stacks;
 			sourceTree = "<group>";
 		};
+		6BD8C86918A2D9E9000C3A16 /* html */ = {
+			isa = PBXGroup;
+			children = (
+				63D53E9C323D32F9FBF8FA40 /* datum.html */,
+			);
+			name = html;
+			sourceTree = "<group>";
+		};
+		6BD8C86A18A2D9EF000C3A16 /* js */ = {
+			isa = PBXGroup;
+			children = (
+				6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */,
+				6BD8C86C18A2DABE000C3A16 /* stacks.js */,
+			);
+			name = js;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -529,6 +556,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6BD8C87118A2DB28000C3A16 /* jquery-1.11.0.min.js in Resources */,
+				6BD8C86E18A2DAD3000C3A16 /* stacks.js in Resources */,
+				6BD8C86B18A2DA92000C3A16 /* datum.html in Resources */,
 				14370529187B87690007BDE5 /* InfoPlist.strings in Resources */,
 				1437061A187B89490007BDE5 /* stacks.css in Resources */,
 				1437058E187B88C70007BDE5 /* MainMenu.xib in Resources */,
@@ -559,6 +589,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				14370620187CAEFC0007BDE5 /* GZIP.m in Sources */,
+				6BD8C86D18A2DABE000C3A16 /* stacks.js in Sources */,
 				14370594187B88C70007BDE5 /* LocusView.m in Sources */,
 				14370591187B88C70007BDE5 /* LocusCell.m in Sources */,
 				143705ED187B88E50007BDE5 /* DatumRepository.m in Sources */,
@@ -597,6 +628,7 @@
 				14370617187B88F10007BDE5 /* utils.cc in Sources */,
 				143705D0187B88D80007BDE5 /* PopulationMO.m in Sources */,
 				14370593187B88C70007BDE5 /* GenotypeEntry.m in Sources */,
+				6BD8C87018A2DB05000C3A16 /* jquery-1.11.0.min.js in Sources */,
 				D793CD98D5347B963755DE08 /* StacksEntryDatumRenderer.m in Sources */,
 				63D539B1A6C10C80338A325A /* PopulationService.m in Sources */,
 			);

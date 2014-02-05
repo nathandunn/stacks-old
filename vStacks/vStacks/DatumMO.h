@@ -41,6 +41,8 @@
 @interface DatumMO (CoreDataGeneratedAccessors)
 
 
+- (NSAttributedString *)renderHaplotypes ;
+- (NSAttributedString *)renderDepths;
 - (NSDictionary*)generateColorForOrder:(NSUInteger) order;
 
 //- (void)addAllelesObject:(DatumAlleleMO *)value;
