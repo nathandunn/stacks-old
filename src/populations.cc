@@ -289,6 +289,8 @@ int main (int argc, char* argv[]) {
     //
     tabulate_haplotypes(catalog, pmap);
 
+    calculate_haplotype_stats(files, pop_indexes, catalog, pmap, psum);
+
     //
     // Output a list of heterozygous loci and the associate haplotype frequencies.
     //
@@ -296,9 +298,9 @@ int main (int argc, char* argv[]) {
 	write_sql(catalog, pmap);
 
     //
-    // Output the locus-level summary statistics.
+    // Calculate and output the locus-level summary statistics.
     //
-    write_summary_stats(files, pop_indexes, catalog, pmap, psum);
+    calculate_summary_stats(files, pop_indexes, catalog, pmap, psum);
 
     //
     // Output data in requested formats
@@ -808,149 +810,240 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 }
 
 int 
-write_linkage_stats(map<int, pair<int, int> > &pop_indexes, map<int, CSLocus *> &catalog, 
-		    PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
+			  map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
+    map<string, vector<CSLocus *> >::iterator it;
+    map<string, double>::iterator hit;
+    CSLocus  *loc;
+    LocSum  **s;
+    Datum   **d;
+    char      pistr[32];
+
     //
-    // We want to iterate over each population and calculate D', r^2 and chi-square significance
-    // for the first nucleotide of each locus.
+    // Iterate over the members of each population.
     //
-    // map<string, vector<CSLocus *> >::iterator it;
+    int start, end, pop_id, pop_index;
+    int pop_cnt = pop_indexes.size();
+    map<int, pair<int, int> >::iterator pit;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	start     = pit->second.first;
+	end       = pit->second.second;
+	pop_id    = pit->first;
+	pop_index = psum->pop_index(pop_id);
 
-    // vector<int> pops;
-    // map<int, pair<int, int> >::iterator pit;
-    // for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
-    // 	pops.push_back(pit->first);
+	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	    for (uint pos = 0; pos < it->second.size(); pos++) {
+		loc = it->second[pos];
+		s   = psum->locus(loc->id);
+		d   = pmap->locus(loc->id);
 
-    // int      num_loci = pmap->loci_cnt();
-    // double **dprime   = new double *[num_loci];
-    // double **rsq      = new double *[num_loci];
-    // double **chisq    = new double *[num_loci];
+		cerr << "Looking at locus " << loc->id << "\n";
 
-    // for (uint i = 0; i < num_loci; i++) {
-    // 	dprime[i] = new double[num_loci];
-    // 	rsq[i]    = new double[num_loci];
-    // 	chisq[i]  = new double[num_loci];
-    // }
+		vector<string>      haplotypes;
+		map<string, double> hap_freq;
+		map<string, int>    hap_index;
+		double n = 0.0;
+		//
+		// Tabulate the haplotypes in this population.
+		//
+		for (int i = start; i <= end; i++) {
+		    if (d[i] == NULL) continue;
 
-    // for (uint i = 0; i < pops.size(); i++) {
+		    if (d[i]->obshap.size() > 2) { 
+			continue;
 
-    // 	int start = pop_indexes[pops[i]].first;
-    // 	int end   = pop_indexes[pops[i]].second;
+		    } else if (d[i]->obshap.size() == 1 && 
+			       strcmp(d[i]->obshap[0], "consensus") == 0) {
+			continue;
 
-    // 	//
-    // 	// Clear the two-dimensional arrays for the next population.
-    // 	//
-    // 	for (uint j = 0; j < num_loci; j++) {
-    // 	    memset(dprime[j], 0, num_loci);
-    // 	    memset(rsq[j],    0, num_loci);
-    // 	    memset(chisq[j],  0, num_loci);
-    // 	}
+		    } else if (d[i]->obshap.size() == 1) {
+			n += 2;
+			hap_freq[d[i]->obshap[0]] += 2;
 
-    // 	CSLocus  *loc_1;
-    // 	LocSum  **s_1;
-    // 	Datum   **d_1;
+		    } else {
+			for (uint j = 0; j < d[i]->obshap.size(); j++) {
+			    n++;
+			    hap_freq[d[i]->obshap[j]]++;
+			}
+		    }
+		}
 
-    // 	uint col_1, col_2, tot;
-    // 	char p_nuc_1, q_nuc_1, p_nuc_2, q_nuc_2;
+		cerr << "  " << n << " total haplotypes observed.\n";
 
-    // 	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-    // 	    string chr = it->first;
-    // 	    for (uint pos_1 = 0; pos_1 < it->second.size(); pos_1++) {
-    // 		loc_1 = it->second[pos_1];
-    // 		s_1   = psum->locus(loc_1->id);
-    // 		d_1   = pmap->locus(loc_1->id);
+		//
+		// If this haplotype is fixed, don't calculate any statistics.
+		//
+		if (n == 0) 
+		    continue;
 
-    // 		for (uint k = 0; k < loc_1->snps.size(); k++) {
-    // 		    col_1   = loc_1->snps[k]->col;
-    // 		    p_nuc_1 = s_1->nucs[col_1].p_nuc;
-    // 		    q_nuc_1 = s_1->nucs[col_1].q_nuc;
+		//
+		// Determine an ordering for the haplotypes. Convert haplotype counts into frequencies.
+		//
+		uint k = 0;
+		for (hit = hap_freq.begin(); hit != hap_freq.end(); hit++) {
+		    hap_index[hit->first] = k;
+		    haplotypes.push_back(hit->first);
+		    k++;
 
-    // 		    //
-    // 		    // Compare this locus against every other locus in the data set.
-    // 		    //
-    // 		    CSLocus  *loc_2;
-    // 		    LocSum  **s_2;
-    // 		    Datum   **d_2;
+		    cerr << "  Haplotype '" << hit->first << "' occured " << hit->second  << " times; ";
 
-    // 		    map<string, vector<CSLocus *> >::iterator chr_it;
-    // 		    for (uint pos_2 = 0; pos_2 < chr_it->second.size(); pos_2++) {
-    // 			loc_2 = chr_it->second[pos_2];
-    // 			s_2   = psum->locus(loc_2->id);
-    // 			d_2   = pmap->locus(loc_2->id);
+		    hit->second = hit->second / n;
 
-    // 			for (uint n = 0; n < loc_2->snps.size(); n++) {
-    // 			    col_2   = loc_2->snps[n]->col;
-    // 			    p_nuc_2 = s_2->nucs[col_2].p_nuc;
-    // 			    q_nuc_2 = s_2->nucs[col_2].q_nuc;
+		    cerr << " frequency of " << hit->second << "%\n";
+		}
+		//
+		// Initialize a two-dimensional array to hold distances between haplotyes.
+		//
+		double **hdists = new double *[hap_index.size()];
+		for (k = 0; k < hap_index.size(); k++) {
+		    hdists[k] = new double[hap_index.size()];
+		    memset(hdists[k], 0, hap_index.size());
+		}
 
-    // 			    tot = 0;
+		//
+		// Calculate the distances between haplotypes.
+		//
+		nuc_substitution_dist(hap_index, hdists);
 
-    // 			    for (uint m = start; m <= end; m++) {
-    // 				if (d_1[m] == NULL || col_1 >= d_1[m]->len ||
-    // 				    d_2[m] == NULL || col_2 >= d_2[m]->len) 
-    // 				    continue;
-    // 				if (d_1[m]->obshap.size() < 2 ||
-    // 				    d_2[m]->obshap.size() < 2 ||
-    // 				    psum->tally_observed_haplotypes(d_1[m]->obshap, k) != 2 ||
-    // 				    psum->tally_observed_haplotypes(d_2[m]->obshap, n) != 2)
-    // 				    continue;
+		//
+		// Calculate haplotype diversity, Pi.
+		//
+		for (uint i = 0; i < haplotypes.size(); i++) {
+		    for (uint j = 0; j < haplotypes.size(); j++) {
+			s[pop_index]->pi += 
+			    hap_freq[haplotypes[i]] * 
+			    hap_freq[haplotypes[j]] * 
+			    hdists[hap_index[haplotypes[i]]][hap_index[haplotypes[j]]];
+		    }
+		}
+		s[pop_index]->pi  = (n / (n-1)) * s[pop_index]->pi;
 
-    // 				tot++;
+		//
+		// Calculate gene diversity. 
+		//
+		for (uint i = 0; i < haplotypes.size(); i++) {
+		    s[pop_index]->gdiv += hap_freq[haplotypes[i]] * hap_freq[haplotypes[i]];
+		}
+		s[pop_index]->gdiv = 1 - s[pop_index]->gdiv;
 
-    // 				if (d_1[m]->obshap[0] == q_nuc_1) {
-    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
-    // 					q1q2++;
-    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
-    // 					q1p2++;
-    // 				} else if (d_1[m]->obshap[0] == p_nuc_1) {
-    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
-    // 					p1q2++;
-    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
-    // 					p1p2++;
-    // 				} else if (d_1[m]->obshap[1] == q_nuc_1) {
-    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
-    // 					q1q2++;
-    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
-    // 					q1p2++;
-    // 				} else if (d_1[m]->obshap[1] == p_nuc_1) {
-    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
-    // 					p1q2++;
-    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
-    // 					p1p2++;
-    // 				}
-    // 			    }
+		s[pop_index]->n       = n;
+		s[pop_index]->hap_cnt = haplotypes.size();
 
-    // 			    if (write_single_snp) 
-    // 				break;
-    // 			}
-    // 		    }
-		    
-    // 		    if (write_single_snp) 
-    // 			break;
-    // 		}
-    // 	    }
-    // 	}
-    // }
+		cerr << "  Population " << pop_id << " has haplotype diversity (pi) of " << s[pop_index]->pi << "\n";
 
-    // //
-    // // Free the two-dimensional arrays.
-    // //
-    // for (uint i = 0; i < num_loci; i++) {
-    // 	delete [] dprime[i];
-    //     delete [] rsq[i];
-    // 	delete [] chisq[i];
-    // }
-    // delete [] dprime;
-    // delete [] rsq;
-    // delete [] chisq;
+		for (k = 0; k < hap_index.size(); k++)
+		    delete hdists[k];
+		delete hdists;
+	    }
+	}
+    }
+
+
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".hapstats" << ".tsv";
+
+    string file = in_path + pop_name.str();
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening sumstats file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Write the population members.
+    //
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	start = pit->second.first;
+	end   = pit->second.second;
+	fh << "# " << pit->first << "\t";
+	for (int i = start; i <= end; i++) {
+	    fh << files[i].second;
+	    if (i < end) fh << ",";
+	}
+	fh << "\n";
+    }
+
+    cerr << "Writing " << catalog.size() << " loci to haplotype statistics file, '" << file << "'\n";
+
+    fh << "# Batch ID "    << "\t"
+       << "Locus ID"       << "\t"
+       << "Chr"            << "\t"
+       << "BP"             << "\t"
+       << "Pop ID"         << "\t"
+       << "N"              << "\t"
+       << "Haplotype Cnt"  << "\t"
+       << "Gene Diversity" << "\t"
+       << "Pi"             << "\n";
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint pos = 0; pos < it->second.size(); pos++) {
+	    loc = it->second[pos];
+	    s   = psum->locus(loc->id);
+
+	    for (int j = 0; j < pop_cnt; j++) {
+
+		if (s[j]->n == 0) continue;
+
+		sprintf(pistr,  "%0.3f", s[j]->pi);
+
+		fh << batch_id       << "\t"
+		   << loc->id        << "\t"
+		   << loc->loc.chr   << "\t"
+		   << loc->sort_bp() << "\t"
+		   << psum->rev_pop_index(j) << "\t"
+		   << s[j]->n        << "\t"
+		   << s[j]->hap_cnt  << "\t"
+		   << s[j]->gdiv     << "\t"
+		   << s[j]->pi       << "\n";
+	    }
+	}
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int
+nuc_substitution_dist(map<string, int> &hap_index, double **hdists) 
+{
+    vector<string> haplotypes;
+    map<string, int>::iterator it;
+    uint i, j;
+
+    for (it = hap_index.begin(); it != hap_index.end(); it++)
+	haplotypes.push_back(it->first);
+
+    const char *p, *q;
+    double dist;
+
+    for (i = 0; i < haplotypes.size(); i++) {
+	for (j = i; j < haplotypes.size(); j++) {
+
+	    dist = 0.0;
+	    p    = haplotypes[i].c_str();
+	    q    = haplotypes[j].c_str();
+
+	    while (*p != '\0' && *q != '\0') {
+		if (*p != *q) dist++;
+		p++;
+		q++;
+	    }
+
+	    hdists[i][j] = dist;
+	    hdists[j][i] = dist;
+	}
+    }
 
     return 0;
 }
 
 int 
-write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
-		    map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
+			map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
