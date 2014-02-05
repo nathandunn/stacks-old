@@ -133,10 +133,19 @@ public:
 
 class LocSum {
 public:
-    SumStat *nucs; // Array containing summary statistics for 
-                   // each nucleotide position at this locus.
+    double   n;       // Sample size AKA number of chromosomes sampled, or number of individuals times two.
+    uint     hap_cnt; // Number of unique haplotypes at this locus. 
+    double   gdiv;    // Gene diversity for this locus.
+    double   pi;      // Haplotype frequency for this locus.
+    SumStat *nucs;    // Array containing summary statistics for 
+                      // each nucleotide position at this locus.
 
     LocSum(int len)  { 
+	this->n       = 0.0;
+	this->hap_cnt = 0;
+	this->pi      = 0.0;
+	this->gdiv    = 0.0;
+
 	this->nucs = new SumStat[len]; 
     }
     ~LocSum() {
