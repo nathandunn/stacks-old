@@ -1240,7 +1240,7 @@ NSString *calculateType(NSString *file);
 //                NSString *sampleName = [columns objectAtIndex:0]; // the sample name . . . male, female, progeny, etc.
 
                 NSString *populationName = [columns objectAtIndex:1]; // initially an integer
-                PopulationMO *newPopulationMO = [[PopulationRepository sharedInstance] getPopulation:moc name:populationName];
+                PopulationMO *newPopulationMO = [[PopulationRepository sharedInstance] getPopulationOrCreate:moc name:populationName];
 
                 if (newPopulationMO != nil) {
                     [populations addObject:newPopulationMO];

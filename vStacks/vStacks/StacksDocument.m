@@ -193,8 +193,15 @@
         NSLog(@"hit DONE, setting button to edit");
         editPopulationButton.title = @"Edit";
 
-       PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
-        if (![populationNameField.stringValue isEqualToString:oldPopulationTitle]) {
+        for (id item in populationSelector.itemArray) {
+            NSLog(@"item in there: %@",item) ;
+        }
+
+
+//        PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
+        PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
+        NSLog(@"popMO: %@",populationMO);
+        if (populationMO !=nil && ![populationNameField.stringValue isEqualToString:oldPopulationTitle]) {
             populationMO.name = populationNameField.stringValue;
             NSError *error;
             [self.managedObjectContext save:&error];
@@ -211,6 +218,9 @@
         NSLog(@"selected item index %ld", populationSelector.indexOfSelectedItem);
     }
     else {
+        if (populationSelector.indexOfSelectedItem == 0) {
+            return;
+        }
         NSLog(@"setting to DONE");
         previousSelectedItem = populationSelector.indexOfSelectedItem;
         oldPopulationTitle = populationSelector.titleOfSelectedItem;
@@ -266,6 +276,9 @@
 
 - (LocusMO *)findSelectedLocus {
     NSInteger selectedRowIndex = [self.locusTableView selectedRow];
+    if(selectedRowIndex<0) {
+        return nil ;
+    }
     NSTableCellView *selectedRow = [self.locusTableView viewAtColumn:0 row:selectedRowIndex makeIfNecessary:YES];
     NSArray *subviews = selectedRow.subviews;
     NSInteger locusId = -1;
