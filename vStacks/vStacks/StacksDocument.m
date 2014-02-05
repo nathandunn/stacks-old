@@ -41,6 +41,7 @@
 @property(weak) IBOutlet NSPopUpButton *maxSnpPopupButton;
 @property(weak) IBOutlet NSPopUpButton *maxSamplesPopupButton;
 @property(weak) IBOutlet WebView *stacksWebView;
+@property(weak) IBOutlet WebView *datumWebView;
 
 
 @end
@@ -75,6 +76,7 @@
 @synthesize maxSnpPopupButton;
 @synthesize maxSamplesPopupButton;
 @synthesize stacksWebView;
+@synthesize datumWebView;
 @synthesize numberFormatter;
 
 @synthesize importPath;
@@ -262,8 +264,67 @@
         self.selectedDatums = nil ;
         self.selectedDatum = nil ;
     }
+    [self updateDatumView];
     [self updateStacksView];
 
+}
+
+- (void)updateDatumView {
+//   datumWebView.
+    NSString *cssPath = [[NSBundle mainBundle] pathForResource:@"stacks" ofType:@"css"];
+    NSLog(@"cssPAth %@",cssPath);
+    NSString *cssString = [NSString stringWithContentsOfFile:cssPath encoding:NSUTF8StringEncoding error:NULL];
+
+//    NSString *datumPath = [[NSBundle mainBundle] pathForResource:@"datum" ofType:@"html"];
+//    NSLog(@"datum path: %@",datumPath);
+//    NSString *datumString = [NSString stringWithContentsOfFile:datumPath encoding:NSUTF8StringEncoding error:NULL];
+
+    NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style>",cssString ];
+//    NSMutableString *returnHTML = [NSMutableString stringWithString:datumString ];
+//    [returnHTML appendString:@"<script>function ouch(){ alert('ouch'); }</script> "];
+
+    if(self.selectedPopulation){
+        [returnHTML appendFormat:@"<h3>Population %@</h3>",self.selectedPopulation.name];
+    }
+    for(DatumMO *datum in self.selectedDatums){
+        NSString* haploytpeString = [[datum renderHaplotypes] string];
+        NSString* depthString = [[datum renderDepths] string];
+        NSString* datumIndex = [NSString stringWithFormat:@"%@:%@",datum.tagId,datum.sampleId];
+        NSString* selectedClass = ([datum isEqualTo:self.selectedDatum]) ? @" selected-datum" : @"";
+        [returnHTML appendFormat:@"<div class='population%ld datum%@'>",self.selectedPopulation.populationId.longValue,selectedClass];
+        [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>",datumIndex,datum.name];
+        [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>",datumIndex,haploytpeString];
+        [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>",datumIndex,depthString];
+        [returnHTML appendFormat:@"</div>"];
+    }
+    [[datumWebView mainFrame] loadHTMLString:returnHTML baseURL:[[NSBundle mainBundle] bundleURL]];
+}
+
+- (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
+        request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener {
+    NSLog(@"handling click policy!!! %@", [[request URL] lastPathComponent]);
+
+    [listener use];
+    NSArray *pathComponents = [[[request URL] lastPathComponent] componentsSeparatedByString:@":"];
+    if(pathComponents.count!=2){
+        NSLog(@"path path for URL %@",request.URL);
+        return ;
+    }
+    NSUInteger  locusId = [numberFormatter numberFromString:[pathComponents objectAtIndex:0]].unsignedIntegerValue;
+    NSUInteger  sampleId = [numberFormatter numberFromString:[pathComponents objectAtIndex:1]].unsignedIntegerValue;
+    DatumMO *datumMO = [[DatumRepository sharedInstance] getDatum:self.managedObjectContext locusId:locusId andSampleId:sampleId];
+    if(![datumMO isEqualTo:self.selectedDatum]){
+        self.selectedDatum = datumMO ;
+        [self updateStacksView];
+        [self updateDatumView];
+    }
+
+
+//    NSString *host = [[request URL] host];
+//    if ([host hasSuffix:@"company.com"])
+//        [listener ignore];
+//    else
+//        [listener use];
 }
 
 - (PopulationMO *)findSelectedPopulation {

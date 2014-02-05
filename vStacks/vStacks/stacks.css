@@ -566,3 +566,24 @@ span.snp_sel {
     font-weight: bold;
     text-decoration: underline;
 }
+
+div.selected-datum{
+    background-color: darkblue;
+    color: black;
+    cursor: crosshair;
+}
+
+div.datum{
+    float: left;
+    padding: 2px;
+    margin: 2px;
+    text-align: center;
+}
+
+div.datum:hover{
+    background-color: lightblue;
+    color: darkblue;
+    cursor: pointer;
+}
+
+
