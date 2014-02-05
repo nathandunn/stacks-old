@@ -43,7 +43,7 @@
     return populationArray;
 }
 
-- (PopulationMO *)getPopulation:(NSManagedObjectContext *)context name:(NSString *)populationName{
+- (PopulationMO *)getPopulationOrCreate:(NSManagedObjectContext *)context name:(NSString *)populationName{
     NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Population" inManagedObjectContext:context];
     NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
     NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"name == %@", populationName];
@@ -57,7 +57,8 @@
         return newPopulationMO ;
     }
     else{
-        return nil ;
+        PopulationMO *newPopulationMO = [populationArray objectAtIndex:0];
+        return newPopulationMO ;
     }
 }
 
@@ -76,6 +77,23 @@
     }
     else{
         return nil ;
+    }
+}
+
+- (PopulationMO *)getPopulation:(NSManagedObjectContext *)context name:(NSString *)populationName{
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Population" inManagedObjectContext:context];
+    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"name == %@", populationName];
+    [request1 setPredicate:predicate1];
+    [request1 setEntity:entityDescription1];
+    NSError *error1;
+    NSArray *populationArray = [context executeFetchRequest:request1 error:&error1];
+    if (populationArray == nil || populationArray.count == 0) {
+        return nil ;
+    }
+    else{
+        PopulationMO *newPopulationMO = [populationArray objectAtIndex:0];
+        return newPopulationMO ;
     }
 }
 @end

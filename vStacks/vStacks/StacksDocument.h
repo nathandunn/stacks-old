@@ -44,6 +44,7 @@
 
 @property(nonatomic, strong) NSSet *lociLocations;
 @property NSUInteger maxLocation;
+@property(strong) NSString *oldPopulationTitle;
 @property(nonatomic, strong) NSNumberFormatter *numberFormatter;
 
 - (BOOL)noLociLocations;

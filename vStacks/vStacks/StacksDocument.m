@@ -57,11 +57,6 @@
 @synthesize selectedDatums;
 @synthesize selectedDatum;
 
-// repository
-//@synthesize datumRepository;
-//@synthesize [LocusRepository sharedInstance];
-//@synthesize populationRepository;
-
 // array controller
 @synthesize datumController;
 @synthesize totalLoci;
@@ -80,10 +75,11 @@
 @synthesize maxSnpPopupButton;
 @synthesize maxSamplesPopupButton;
 @synthesize stacksWebView;
-@synthesize numberFormatter ;
+@synthesize numberFormatter;
 
-@synthesize importPath ;
+@synthesize importPath;
 @synthesize path;
+@synthesize oldPopulationTitle;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -153,7 +149,7 @@
 //        [[stacksWebView mainFrame] loadData:[self.selectedDatum.stackData gunzippedData] MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
 
         StackEntryDatumMO *stackEntryDatumMO = [[DatumRepository sharedInstance] getStackEntryDatum:self.managedObjectContext datum:self.selectedDatum];
-        if (stackEntryDatumMO != nil && stackEntryDatumMO.stackData!=nil) {
+        if (stackEntryDatumMO != nil && stackEntryDatumMO.stackData != nil) {
 
             NSData *jsonData = [stackEntryDatumMO.stackData gunzippedData];
 //            NSError *error;
@@ -194,8 +190,26 @@
 - (IBAction)togglePopulationEdit:(id)sender {
     NSLog(@"editing %d", editingPopulation);
     if (editingPopulation) {
-        NSLog(@"setting to edit");
+        NSLog(@"hit DONE, setting button to edit");
         editPopulationButton.title = @"Edit";
+
+        for (id item in populationSelector.itemArray) {
+            NSLog(@"item in there: %@",item) ;
+        }
+
+
+//        PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
+        PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
+        NSLog(@"popMO: %@",populationMO);
+        if (populationMO !=nil && ![populationNameField.stringValue isEqualToString:oldPopulationTitle]) {
+            populationMO.name = populationNameField.stringValue;
+            NSError *error;
+            [self.managedObjectContext save:&error];
+            if (error) {
+                NSLog(@"error");
+                return;
+            }
+        }
 
         [populationSelector setHidden:false];
         [populationNameField setHidden:true];
@@ -204,11 +218,18 @@
         NSLog(@"selected item index %ld", populationSelector.indexOfSelectedItem);
     }
     else {
+        if (populationSelector.indexOfSelectedItem == 0) {
+            return;
+        }
         NSLog(@"setting to DONE");
         previousSelectedItem = populationSelector.indexOfSelectedItem;
+        oldPopulationTitle = populationSelector.titleOfSelectedItem;
         editPopulationButton.title = @"Done";
         [populationSelector setHidden:true];
         [populationNameField setHidden:false];
+
+        populationNameField.stringValue = oldPopulationTitle;
+
     }
 
     editingPopulation = !editingPopulation;
@@ -216,18 +237,20 @@
 
 
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
-//    NSString *tableName = [[aNotification object] identifier];
-//    NSLog(@"table selected!! %@",tableName);
-
 
     self.selectedLocus = [self findSelectedLocus];
     self.selectedPopulation = [self findSelectedPopulation];
 
-    if (self.selectedLocus != nil && self.selectedPopulation != nil) {
+    if (self.selectedLocus != nil) {
         NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
 //        NSLog(@"getting selected population %@", self.selectedPopulation.name);
-        self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:self.selectedPopulation];
-        NSLog(@"got selected Datums: %ld",self.selectedDatums.count);
+        if (self.selectedPopulation != nil) {
+            self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:self.selectedPopulation];
+        }
+        else {
+            self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus.locusId];
+        }
+        NSLog(@"got selected Datums: %ld", self.selectedDatums.count);
         if (self.selectedDatums != nil && self.selectedDatums.count > 0) {
             self.selectedDatum = [self.selectedDatums objectAtIndex:0];
         }
@@ -245,20 +268,23 @@
 
 - (PopulationMO *)findSelectedPopulation {
     NSInteger selectedRow = [self.populationSelector indexOfSelectedItem];
-    if (selectedRow >= 0) {
-        return [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
+    if (selectedRow > 0) {
+        return [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow - 1];
     }
     return nil;
 }
 
 - (LocusMO *)findSelectedLocus {
     NSInteger selectedRowIndex = [self.locusTableView selectedRow];
+    if(selectedRowIndex<0) {
+        return nil ;
+    }
     NSTableCellView *selectedRow = [self.locusTableView viewAtColumn:0 row:selectedRowIndex makeIfNecessary:YES];
     NSArray *subviews = selectedRow.subviews;
-    NSInteger locusId = -1 ;
-    for(NSTextField *subview in subviews){
-        if([subview.identifier isEqualToString:@"LocusId"]){
-            locusId = [numberFormatter numberFromString:subview.stringValue].integerValue ;
+    NSInteger locusId = -1;
+    for (NSTextField *subview in subviews) {
+        if ([subview.identifier isEqualToString:@"LocusId"]) {
+            locusId = [numberFormatter numberFromString:subview.stringValue].integerValue;
         }
     }
     if (locusId >= 0) {
@@ -366,9 +392,9 @@
     NSString *recipients = @"mailto:jcatchen@uoregon.edu?cc=ndunn@uoregon.edu&subject=vStacks Feedback";
     NSString *body = @"&body=Feedback for vStacks";
     NSString *email = [NSString stringWithFormat:@"%@%@", recipients, body];
-    
+
     email = [email stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
-    
+
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:email]];
 }
 
@@ -378,7 +404,7 @@
 
     if (snpFilterValues == nil) {
         snpFilterValues = [NSMutableArray array];
-        for (int i = 0; i < maxLocusSnps+1; i++) {
+        for (int i = 0; i < maxLocusSnps + 1; i++) {
             [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
@@ -392,7 +418,7 @@
 
     if (sampleFilterValues == nil) {
         sampleFilterValues = [NSMutableArray array];
-        for (int i = 1; i < maxLocusSamples+1; i++) {
+        for (int i = 1; i < maxLocusSamples + 1; i++) {
             [sampleFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
@@ -401,32 +427,32 @@
 }
 
 - (NSUInteger)getMaxLocusSamples {
-    NSArray* allLocusArray = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext] ;
+    NSArray *allLocusArray = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext];
 
-    NSUInteger maxLocusSamples = 0 ;
-    for( LocusMO* locusMO in  allLocusArray){
+    NSUInteger maxLocusSamples = 0;
+    for (LocusMO *locusMO in  allLocusArray) {
 
-        if(locusMO.progenyCount.unsignedIntegerValue > maxLocusSamples){
-            maxLocusSamples = locusMO.progenyCount.unsignedIntegerValue ;
+        if (locusMO.progenyCount.unsignedIntegerValue > maxLocusSamples) {
+            maxLocusSamples = locusMO.progenyCount.unsignedIntegerValue;
         }
     }
 
-    return maxLocusSamples ;
+    return maxLocusSamples;
 }
 
 - (NSUInteger)getMaxLocusSnps {
 
-    NSArray* allLocusArray = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext] ;
+    NSArray *allLocusArray = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext];
 
-    NSUInteger maxLocusSnps = 0 ;
-    for( LocusMO* locusMO in  allLocusArray){
+    NSUInteger maxLocusSnps = 0;
+    for (LocusMO *locusMO in  allLocusArray) {
         NSArray *snps = [NSJSONSerialization JSONObjectWithData:locusMO.snpData options:kNilOptions error:nil];
-        if(snps.count > maxLocusSnps){
-            maxLocusSnps = snps.count ;
+        if (snps.count > maxLocusSnps) {
+            maxLocusSnps = snps.count;
         }
     }
 
-    return maxLocusSnps ;
+    return maxLocusSnps;
 }
 
 
