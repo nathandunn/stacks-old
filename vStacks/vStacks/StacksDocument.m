@@ -63,6 +63,7 @@
 @synthesize populationSelector;
 @synthesize populationNameField;
 @synthesize editPopulationButton;
+@synthesize datumCollectionView;
 
 
 @synthesize editingPopulation;
@@ -262,6 +263,27 @@
         self.selectedDatums = nil ;
         self.selectedDatum = nil ;
     }
+
+    [datumCollectionView autoresizesSubviews];
+//    CGFloat width = [datumCollectionView bounds].size.width;
+//    NSSize maxItemSize = datumCollectionView.maxItemSize;
+//    NSLog(@"max item size %f X %f",maxItemSize.height,maxItemSize.width);
+//    NSSize minItemSize = datumCollectionView.minItemSize;
+//    NSLog(@"min item size %f X %f",minItemSize.height,minItemSize.width);
+//    CGFloat width = [[datumCollectionView enclosingScrollView] bounds].size.width;
+//    NSLog(@"width %f",width);
+////    NSSize size = NSMakeSize(width, 85);
+//    NSSize size ;
+//    if(maxItemSize.width==0 && minItemSize.width!=0){
+//        size = NSMakeSize(minItemSize.width, 85);
+//    }
+//    else{
+//        size = NSMakeSize(maxItemSize.width, 85);
+//    }
+//
+//    [datumCollectionView setMinItemSize:size];
+//    [datumCollectionView setMaxItemSize:size];
+
     [self updateStacksView];
 
 }
