@@ -285,10 +285,7 @@
 //        [sampleLookupDictionary setObject:sampleMO forKey:sampleMO.sampleId];
 //    }
 
-    NSLog(@"selected poputation: %@", self.selectedPopulation);
     NSArray *populations = [[PopulationRepository sharedInstance] getAllPopulations:self.managedObjectContext];
-    NSLog(@"populations: %@", populations);
-    NSLog(@"populations count: %ld", populations.count);
 
     if (self.selectedPopulation) {
         [returnHTML appendFormat:@"<h3>Population %@</h3>", self.selectedPopulation.name];
