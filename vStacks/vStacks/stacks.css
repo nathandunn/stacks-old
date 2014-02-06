@@ -577,7 +577,7 @@ div.selected-datum{
 div.datum{
     float: left;
     padding: 5px;
-    margin: 12px;
+    margin: 5px;
     text-align: center;
     border-radius: 5px;
     /*border: 1px;*/
@@ -623,10 +623,12 @@ div.datum-depth{
 div.datum-pop{
     /*font-family: monospace;*/
     /*font-size: 14;*/
-    display: block;
+    display: table;
     width: 100%;
 }
 
 div.population-header{
+    margin-top: 10px;
     width: 100%;
+    display: table-caption;
 }
