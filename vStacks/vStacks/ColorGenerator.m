@@ -52,6 +52,34 @@
     }
 }
 
+- (NSString *)generateColorStringForOrder:(NSUInteger)order {
+    switch (order % 10) {
+        case 0:
+            return @"008000";
+        case 1:
+            return @"c00000";
+        case 2:
+            return @"ffc600";
+        case 3:
+            return @"29356c";
+        case 4:
+            return @"860000";
+        case 5:
+            return @"dc6200";
+        case 6:
+            return @"4b398e";
+        case 7:
+            return @"008f56";
+        case 8:
+            return @"bf1e25";
+        case 9:
+            return @"4cb8ff";
+        default:
+            NSLog(@"should never be hear");
+            return nil;
+    }
+}
+
 //- (NSColor *)colorWithHexStringA:(NSString *)hexString {
 //    unsigned rgbValue = 0;
 //    NSScanner *scanner = [NSScanner scannerWithString:hexString];

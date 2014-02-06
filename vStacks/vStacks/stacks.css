@@ -597,3 +597,15 @@ div.none{
     font-size: large;
 }
 
+div.datum-name{
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}
+
+div.datum-depth{
+    font-family: monospace;
+    font-size: 14;
+    display: inline-block;
+}
+
