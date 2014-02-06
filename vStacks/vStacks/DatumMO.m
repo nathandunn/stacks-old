@@ -233,6 +233,29 @@
 - (NSMutableString *)renderHaplotypeHtml {
     NSMutableString *returnHTML = [NSMutableString string];
 
+    int i = 0;
+    NSError *error;
+    NSDictionary *haplotypeJson = [NSJSONSerialization JSONObjectWithData:self.haplotypeData options:kNilOptions error:&error];
+    NSUInteger haplotypeCount = haplotypeJson.count;
+    [returnHTML appendString:@"<div class='datum-depth'>" ];
+    for (NSDictionary *haplotype in haplotypeJson) {
+        NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
+        NSString *depthString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"haplotype"]];
+
+        NSMutableString *appendString = [NSMutableString stringWithString:depthString];
+        NSString *colorString = [[self colorGenerator] generateColorStringForOrder:order];
+        [appendString insertString:[NSString stringWithFormat:@"<font color='#%@'>",colorString] atIndex:0];
+        [appendString appendString:@"</font>"];
+//        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+
+        [returnHTML appendString:appendString];
+        if (i < haplotypeCount - 1) {
+            [returnHTML appendString:@" / "];
+        }
+        ++i;
+    }
+    [returnHTML appendString:@"</div>" ];
+
     return returnHTML;
 }
 

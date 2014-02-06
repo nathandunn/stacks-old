@@ -332,7 +332,8 @@
     NSMutableString *returnHTML = [NSMutableString string];
     NSString *nameString = [datum renderNameHtml] ;
 //    NSString *haploytpeString = [datum renderHaplotypeHtml] ;
-    NSString *haploytpeString = [[datum renderHaplotypes] string];
+//    NSString *haploytpeString = [[datum renderHaplotypes] string];
+    NSString *haploytpeString = [datum renderHaplotypeHtml];
 //    NSString *depthString = [[datum renderDepths] string];
     NSString *depthString = [datum renderDepthHtml] ;
     NSString *datumIndex = [NSString stringWithFormat:@"%@:%@", datum.tagId, datum.sampleId];
