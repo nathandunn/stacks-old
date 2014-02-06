@@ -279,7 +279,7 @@
     NSArray *allPopulations = [[PopulationRepository sharedInstance] getAllPopulations:self.managedObjectContext];
 
     if (self.selectedPopulation) {
-        [returnHTML appendFormat:@"<div class='datum-pop'><h3>Population %@</h3>", self.selectedPopulation.name];
+        [returnHTML appendFormat:@"<div class='datum-pop'><h3>%@</h3>", self.selectedPopulation.annotatedName];
         if(self.selectedDatums.count>0){
             for (DatumMO *datum in self.selectedDatums.reverseObjectEnumerator) {
                 [returnHTML appendString:[self renderDatumHtml:datum]];
@@ -294,17 +294,16 @@
         for (PopulationMO *populationMO in allPopulations) {
             NSArray *datums = [[DatumRepository sharedInstance] getDatums:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:populationMO];
             if (datums.count > 0) {
-                [returnHTML appendFormat:@"<div class='datum-pop'><h3>Population %@</h3>", populationMO.name];
+                [returnHTML appendFormat:@"<div class='datum-pop'><h3>%@</h3>", populationMO.annotatedName];
                 for (DatumMO *datum in datums.reverseObjectEnumerator) {
                     [returnHTML appendString:[self renderDatumHtml:datum]];
                 }
-//                [returnHTML appendString:@"<br/><br/><br/>"];
-                [returnHTML appendFormat:@"<br/></div><br/><br/>"];
+                [returnHTML appendFormat:@"<br/><br/></div><br/><br/>"];
             }
         }
     }
             // if no population!
-    else {
+else {
         [returnHTML appendFormat:@"<div class='datum-pop'><h3>Population - Unspecified</h3>"];
         for (DatumMO *datum in self.selectedDatums.reverseObjectEnumerator) {
             [returnHTML appendString:[self renderDatumHtml:datum]];

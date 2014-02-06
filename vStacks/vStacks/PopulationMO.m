@@ -16,4 +16,17 @@
 @dynamic populationId;
 @dynamic samples;
 
+- (NSString *)annotatedName {
+
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+
+    NSNumber* number = [numberFormatter numberFromString:self.name];
+    if(number==nil){
+        return self.name ;
+    }
+    else{
+        return [NSString stringWithFormat:@"Population %@",self.name];
+    }
+}
 @end
