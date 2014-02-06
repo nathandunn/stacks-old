@@ -12,5 +12,6 @@
 
 - (NSColor *)generateColorForOrder:(NSUInteger)order;
 - (NSColor *)colorWithHexString:(NSString *)hex;
+- (NSString *)generateColorStringForOrder:(NSUInteger)order ;
 
 @end

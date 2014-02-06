@@ -330,12 +330,15 @@
 
 - (NSString *)renderDatumHtml:(DatumMO *)datum {
     NSMutableString *returnHTML = [NSMutableString string];
+    NSString *nameString = [datum renderNameHtml] ;
+//    NSString *haploytpeString = [datum renderHaplotypeHtml] ;
     NSString *haploytpeString = [[datum renderHaplotypes] string];
-    NSString *depthString = [[datum renderDepths] string];
+//    NSString *depthString = [[datum renderDepths] string];
+    NSString *depthString = [datum renderDepthHtml] ;
     NSString *datumIndex = [NSString stringWithFormat:@"%@:%@", datum.tagId, datum.sampleId];
     NSString *selectedClass = ([datum isEqualTo:self.selectedDatum]) ? @" selected-datum" : @"";
     [returnHTML appendFormat:@"<div class='population%ld datum%@'>", self.selectedPopulation.populationId.longValue, selectedClass];
-    [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>", datumIndex, datum.name];
+    [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>", datumIndex, nameString];
     [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>", datumIndex, haploytpeString];
     [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>", datumIndex, depthString];
     [returnHTML appendFormat:@"</div>"];

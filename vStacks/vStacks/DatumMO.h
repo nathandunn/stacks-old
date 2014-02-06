@@ -36,10 +36,14 @@
 //@property (nonatomic, copy) NSData * haploytpeData;
 
 @property (nonatomic, retain) ColorGenerator *colorGenerator;
+
 @end
 
 @interface DatumMO (CoreDataGeneratedAccessors)
 
+- (NSMutableString *)renderHaplotypeHtml;
+- (NSMutableString *)renderDepthHtml;
+- (NSMutableString *)renderNameHtml;
 
 - (NSAttributedString *)renderHaplotypes ;
 - (NSAttributedString *)renderDepths;

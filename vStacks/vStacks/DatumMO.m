@@ -97,7 +97,7 @@
 
         [string appendAttributedString:appendString];
 //        if (i < self.haplotypes.count - 1) {
-        if (i < haplotypeCount - 1 ) {
+        if (i < haplotypeCount - 1) {
             [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
         }
         ++i;
@@ -117,7 +117,7 @@
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
 
     int i = 0;
-    NSError *error ;
+    NSError *error;
     NSDictionary *haplotypeJson = [NSJSONSerialization JSONObjectWithData:self.haplotypeData options:kNilOptions error:&error];
     NSUInteger haplotypeCount = haplotypeJson.count;
     for (NSDictionary *haplotype in haplotypeJson) {
@@ -142,7 +142,7 @@
 
         [string appendAttributedString:appendString];
 //        if (i < self.haplotypes.count - 1) {
-        if (i < haplotypeCount - 1 ) {
+        if (i < haplotypeCount - 1) {
             [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
         }
         ++i;
@@ -230,5 +230,59 @@
 
 }
 
+- (NSMutableString *)renderHaplotypeHtml {
+    NSMutableString *returnHTML = [NSMutableString string];
+
+    return returnHTML;
+}
+
+- (NSMutableString *)renderDepthHtml {
+    NSMutableString *returnHTML = [NSMutableString string];
+
+    int i = 0;
+    NSError *error;
+    NSDictionary *haplotypeJson = [NSJSONSerialization JSONObjectWithData:self.haplotypeData options:kNilOptions error:&error];
+    NSUInteger haplotypeCount = haplotypeJson.count;
+    [returnHTML appendString:@"<div class='datum-depth'>" ];
+    for (NSDictionary *haplotype in haplotypeJson) {
+        NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
+        NSString *depthString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"depth"]];
+
+        NSMutableString *appendString = [NSMutableString stringWithString:depthString];
+        NSString *colorString = [[self colorGenerator] generateColorStringForOrder:order];
+        [appendString insertString:[NSString stringWithFormat:@"<font color='#%@'>",colorString] atIndex:0];
+        [appendString appendString:@"</font>"];
+//        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+
+        [returnHTML appendString:appendString];
+        if (i < haplotypeCount - 1) {
+            [returnHTML appendString:@" / "];
+        }
+        ++i;
+    }
+    [returnHTML appendString:@"</div>" ];
+
+    return returnHTML;
+}
+
+- (NSMutableString *)renderNameHtml {
+    NSString *formattedString = [self.name stringByReplacingOccurrencesOfString:@"_" withString:@" "];
+    formattedString = [formattedString capitalizedString];
+
+    NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<div class='datum-name title'>%@</div>",formattedString];
+
+
+//    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:formattedString];
+
+//    NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
+//    [mutParaStyle setAlignment:NSCenterTextAlignment];
+//    NSRange selectedRange = NSMakeRange(0, [[string string] length]);
+//    [string addAttributes:[NSDictionary dictionaryWithObject:mutParaStyle
+//                                                      forKey:NSParagraphStyleAttributeName] range:selectedRange];
+//    NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
+//    [string addAttributes:fontAttributes range:selectedRange];
+
+    return returnHTML;
+}
 @end
 
