@@ -7,7 +7,6 @@
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="StacksDocument">
             <connections>
-                <outlet property="datumCollectionView" destination="100136" id="100233"/>
                 <outlet property="datumController" destination="100221" id="100237"/>
                 <outlet property="datumWebView" destination="J7s-WS-16N" id="MYe-V8-6B5"/>
                 <outlet property="editPopulationButton" destination="sfi-Rd-oH1" id="Gob-x2-9kp"/>
@@ -295,7 +294,7 @@
                             <button verticalHuggingPriority="750" id="sfi-Rd-oH1">
                                 <rect key="frame" x="165" y="84" width="46" height="19"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <buttonCell key="cell" type="roundRect" title="Edit" bezelStyle="roundedRect" image="1C2BB962-BE40-4FE0-9334-73F0B0D4F38D" imagePosition="overlaps" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="QX3-jb-L4D">
+                                <buttonCell key="cell" type="roundRect" title="Edit" bezelStyle="roundedRect" image="ECADD45F-0D8F-48EC-88C9-7AD86B82EFE6" imagePosition="overlaps" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="QX3-jb-L4D">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="cellTitle"/>
                                 </buttonCell>
@@ -429,7 +428,7 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <webView id="J7s-WS-16N">
-                                <rect key="frame" x="0.0" y="0.0" width="1071" height="139"/>
+                                <rect key="frame" x="0.0" y="0.0" width="1071" height="209"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <webPreferences key="preferences" defaultFontSize="12" defaultFixedFontSize="12">
                                     <nil key="identifier"/>
@@ -438,44 +437,12 @@
                                     <outlet property="policyDelegate" destination="-2" id="rs6-w6-5MH"/>
                                 </connections>
                             </webView>
-                            <scrollView autohidesScrollers="YES" horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" usesPredominantAxisScrolling="NO" id="100135">
-                                <rect key="frame" x="0.0" y="149" width="1071" height="154"/>
-                                <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
-                                <clipView key="contentView" id="rGk-yg-fbC">
-                                    <rect key="frame" x="1" y="1" width="1069" height="152"/>
-                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                                    <subviews>
-                                        <collectionView selectable="YES" id="100136">
-                                            <rect key="frame" x="0.0" y="0.0" width="1069" height="152"/>
-                                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                                            <color key="primaryBackgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
-                                            <connections>
-                                                <binding destination="100221" name="content" keyPath="arrangedObjects" id="100405"/>
-                                                <binding destination="100221" name="selectionIndexes" keyPath="selectionIndexes" previousBinding="100405" id="100406">
-                                                    <dictionary key="options">
-                                                        <bool key="NSRaisesForNotApplicableKeys" value="NO"/>
-                                                    </dictionary>
-                                                </binding>
-                                                <outlet property="itemPrototype" destination="100139" id="100141"/>
-                                            </connections>
-                                        </collectionView>
-                                    </subviews>
-                                </clipView>
-                                <scroller key="horizontalScroller" hidden="YES" verticalHuggingPriority="750" horizontal="YES" id="100137">
-                                    <rect key="frame" x="1" y="144" width="233" height="15"/>
-                                    <autoresizingMask key="autoresizingMask"/>
-                                </scroller>
-                                <scroller key="verticalScroller" hidden="YES" verticalHuggingPriority="750" doubleValue="1" horizontal="NO" id="100138">
-                                    <rect key="frame" x="234" y="1" width="15" height="143"/>
-                                    <autoresizingMask key="autoresizingMask"/>
-                                </scroller>
-                            </scrollView>
                             <customView id="l4K-c0-vtz">
-                                <rect key="frame" x="0.0" y="313" width="1071" height="187"/>
+                                <rect key="frame" x="0.0" y="219" width="1071" height="281"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <subviews>
                                     <webView id="p93-W0-mV8">
-                                        <rect key="frame" x="0.0" y="0.0" width="1072" height="188"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="1072" height="282"/>
                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxX="YES" heightSizable="YES"/>
                                         <webPreferences key="preferences" defaultFontSize="12" defaultFixedFontSize="12">
                                             <nil key="identifier"/>
@@ -485,7 +452,6 @@
                             </customView>
                         </subviews>
                         <holdingPriorities>
-                            <real value="250"/>
                             <real value="250"/>
                             <real value="250"/>
                         </holdingPriorities>
@@ -518,13 +484,6 @@
                             <string>NSAllRomanInputSourcesLocaleIdentifier</string>
                         </allowedInputSourceLocales>
                     </textFieldCell>
-                    <connections>
-                        <binding destination="100139" name="value" keyPath="representedObject.renderName" id="100410">
-                            <dictionary key="options">
-                                <bool key="NSAllowsEditingMultipleValuesSelection" value="NO"/>
-                            </dictionary>
-                        </binding>
-                    </connections>
                 </textField>
                 <textField verticalHuggingPriority="750" id="100375">
                     <rect key="frame" x="0.0" y="25" width="100" height="17"/>
@@ -546,9 +505,6 @@
                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                     </textFieldCell>
-                    <connections>
-                        <binding destination="100139" name="value" keyPath="representedObject.renderDepths" id="100386"/>
-                    </connections>
                 </textField>
             </subviews>
         </view>
@@ -578,7 +534,7 @@
         </arrayController>
     </objects>
     <resources>
-        <image name="1C2BB962-BE40-4FE0-9334-73F0B0D4F38D" width="1" height="1">
+        <image name="ECADD45F-0D8F-48EC-88C9-7AD86B82EFE6" width="1" height="1">
             <mutableData key="keyedArchiveRepresentation">
 YnBsaXN0MDDUAQIDBAUGPj9YJHZlcnNpb25YJG9iamVjdHNZJGFyY2hpdmVyVCR0b3ASAAGGoK4HCBMU
 GR4fIyQsLzI4O1UkbnVsbNUJCgsMDQ4PEBESVk5TU2l6ZVYkY2xhc3NcTlNJbWFnZUZsYWdzVk5TUmVw
