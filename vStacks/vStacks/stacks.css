@@ -616,10 +616,17 @@ div.datum-depth{
     font-family: monospace;
     font-size: 14;
     display: inline-block;
+    max-width: 200px;
+    word-wrap: break-word;
 }
 
 div.datum-pop{
     /*font-family: monospace;*/
     /*font-size: 14;*/
     display: block;
+    width: 100%;
+}
+
+div.population-header{
+    width: 100%;
 }
