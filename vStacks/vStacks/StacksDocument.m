@@ -297,7 +297,7 @@
         [returnHTML appendFormat:@"</div>"];
     }
 
-    NSLog(@"return HTML: %@",returnHTML);
+//    NSLog(@"return HTML: %@",returnHTML);
 
     [[datumWebView mainFrame] loadHTMLString:returnHTML baseURL:[[NSBundle mainBundle] bundleURL]];
 }
