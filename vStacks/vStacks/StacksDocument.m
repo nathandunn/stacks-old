@@ -19,6 +19,8 @@
 #import "StackEntryDatumMO.h"
 #import "StackEntryRenderer.h"
 #import "StacksEntryDatumRenderer.h"
+#import "SampleRepository.h"
+#import "SampleMO.h"
 //#import "StacksConverter.h"
 //#import "StacksDocumentController.h"
 #import <WebKit/WebKit.h>
@@ -196,14 +198,14 @@
         editPopulationButton.title = @"Edit";
 
         for (id item in populationSelector.itemArray) {
-            NSLog(@"item in there: %@",item) ;
+            NSLog(@"item in there: %@", item);
         }
 
 
 //        PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
         PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
-        NSLog(@"popMO: %@",populationMO);
-        if (populationMO !=nil && ![populationNameField.stringValue isEqualToString:oldPopulationTitle]) {
+        NSLog(@"popMO: %@", populationMO);
+        if (populationMO != nil && ![populationNameField.stringValue isEqualToString:oldPopulationTitle]) {
             populationMO.name = populationNameField.stringValue;
             NSError *error;
             [self.managedObjectContext save:&error];
@@ -272,32 +274,72 @@
 - (void)updateDatumView {
 //   datumWebView.
     NSString *cssPath = [[NSBundle mainBundle] pathForResource:@"stacks" ofType:@"css"];
-    NSLog(@"cssPAth %@",cssPath);
+    NSLog(@"cssPAth %@", cssPath);
     NSString *cssString = [NSString stringWithContentsOfFile:cssPath encoding:NSUTF8StringEncoding error:NULL];
+    NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style>", cssString];
 
-//    NSString *datumPath = [[NSBundle mainBundle] pathForResource:@"datum" ofType:@"html"];
-//    NSLog(@"datum path: %@",datumPath);
-//    NSString *datumString = [NSString stringWithContentsOfFile:datumPath encoding:NSUTF8StringEncoding error:NULL];
+//    NSMutableDictionary *populationDatumMap = [NSMutableDictionary dictionary];
+//    NSArray *samples = [[SampleRepository sharedInstance] getAllSamples:self.managedObjectContext];
+//    NSMutableDictionary *sampleLookupDictionary = [NSMutableDictionary dictionaryWithCapacity:samples.count];
+//    for(SampleMO *sampleMO in samples){
+//        [sampleLookupDictionary setObject:sampleMO forKey:sampleMO.sampleId];
+//    }
 
-    NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style>",cssString ];
-//    NSMutableString *returnHTML = [NSMutableString stringWithString:datumString ];
-//    [returnHTML appendString:@"<script>function ouch(){ alert('ouch'); }</script> "];
+    NSLog(@"selected poputation: %@", self.selectedPopulation);
+    NSArray *populations = [[PopulationRepository sharedInstance] getAllPopulations:self.managedObjectContext];
+    NSLog(@"populations: %@", populations);
+    NSLog(@"populations count: %ld", populations.count);
 
-    if(self.selectedPopulation){
-        [returnHTML appendFormat:@"<h3>Population %@</h3>",self.selectedPopulation.name];
+    if (self.selectedPopulation) {
+        [returnHTML appendFormat:@"<h3>Population %@</h3>", self.selectedPopulation.name];
+        if(self.selectedDatums.count>0){
+            for (DatumMO *datum in self.selectedDatums.reverseObjectEnumerator) {
+                [returnHTML appendString:[self renderDatumHtml:datum]];
+            }
+        }
+        else{
+            [returnHTML appendFormat:@"<div class='none'>None</div>"];
+        }
     }
-    for(DatumMO *datum in self.selectedDatums){
-        NSString* haploytpeString = [[datum renderHaplotypes] string];
-        NSString* depthString = [[datum renderDepths] string];
-        NSString* datumIndex = [NSString stringWithFormat:@"%@:%@",datum.tagId,datum.sampleId];
-        NSString* selectedClass = ([datum isEqualTo:self.selectedDatum]) ? @" selected-datum" : @"";
-        [returnHTML appendFormat:@"<div class='population%ld datum%@'>",self.selectedPopulation.populationId.longValue,selectedClass];
-        [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>",datumIndex,datum.name];
-        [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>",datumIndex,haploytpeString];
-        [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>",datumIndex,depthString];
-        [returnHTML appendFormat:@"</div>"];
+    else if (self.selectedPopulation == nil && populations != nil && populations.count > 0) {
+        for (PopulationMO *populationMO in populations) {
+            NSArray *datums = [[DatumRepository sharedInstance] getDatums:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:populationMO];
+            NSLog(@"GOT DATUMS!!");
+
+            if (datums.count > 0) {
+                [returnHTML appendFormat:@"<h3>Population %@</h3>", populationMO.name];
+                for (DatumMO *datum in datums.reverseObjectEnumerator) {
+                    [returnHTML appendString:[self renderDatumHtml:datum]];
+                }
+                [returnHTML appendString:@"<br/><br/><br/>"];
+            }
+        }
     }
+            // if no population!
+    else {
+        NSLog(@"NO POP!!");
+        NSArray *datums = [NSArray arrayWithObject:self.selectedDatums];
+        [returnHTML appendFormat:@"<h3>Population %@</h3>", self.selectedPopulation.name];
+        for (DatumMO *datum in datums.reverseObjectEnumerator) {
+            [returnHTML appendString:[self renderDatumHtml:datum]];
+        }
+    }
+
     [[datumWebView mainFrame] loadHTMLString:returnHTML baseURL:[[NSBundle mainBundle] bundleURL]];
+}
+
+- (NSString *)renderDatumHtml:(DatumMO *)datum {
+    NSMutableString *returnHTML = [NSMutableString string];
+    NSString *haploytpeString = [[datum renderHaplotypes] string];
+    NSString *depthString = [[datum renderDepths] string];
+    NSString *datumIndex = [NSString stringWithFormat:@"%@:%@", datum.tagId, datum.sampleId];
+    NSString *selectedClass = ([datum isEqualTo:self.selectedDatum]) ? @" selected-datum" : @"";
+    [returnHTML appendFormat:@"<div class='population%ld datum%@'>", self.selectedPopulation.populationId.longValue, selectedClass];
+    [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>", datumIndex, datum.name];
+    [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>", datumIndex, haploytpeString];
+    [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>", datumIndex, depthString];
+    [returnHTML appendFormat:@"</div>"];
+    return returnHTML;
 }
 
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
@@ -306,15 +348,15 @@
 
     [listener use];
     NSArray *pathComponents = [[[request URL] lastPathComponent] componentsSeparatedByString:@":"];
-    if(pathComponents.count!=2){
-        NSLog(@"path path for URL %@",request.URL);
-        return ;
+    if (pathComponents.count != 2) {
+        NSLog(@"path path for URL %@", request.URL);
+        return;
     }
-    NSUInteger  locusId = [numberFormatter numberFromString:[pathComponents objectAtIndex:0]].unsignedIntegerValue;
-    NSUInteger  sampleId = [numberFormatter numberFromString:[pathComponents objectAtIndex:1]].unsignedIntegerValue;
+    NSUInteger locusId = [numberFormatter numberFromString:[pathComponents objectAtIndex:0]].unsignedIntegerValue;
+    NSUInteger sampleId = [numberFormatter numberFromString:[pathComponents objectAtIndex:1]].unsignedIntegerValue;
     DatumMO *datumMO = [[DatumRepository sharedInstance] getDatum:self.managedObjectContext locusId:locusId andSampleId:sampleId];
-    if(![datumMO isEqualTo:self.selectedDatum]){
-        self.selectedDatum = datumMO ;
+    if (![datumMO isEqualTo:self.selectedDatum]) {
+        self.selectedDatum = datumMO;
         [self updateStacksView];
         [self updateDatumView];
     }
@@ -337,8 +379,8 @@
 
 - (LocusMO *)findSelectedLocus {
     NSInteger selectedRowIndex = [self.locusTableView selectedRow];
-    if(selectedRowIndex<0) {
-        return nil ;
+    if (selectedRowIndex < 0) {
+        return nil;
     }
     NSTableCellView *selectedRow = [self.locusTableView viewAtColumn:0 row:selectedRowIndex makeIfNecessary:YES];
     NSArray *subviews = selectedRow.subviews;

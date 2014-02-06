@@ -564,13 +564,14 @@ span.snp:hover {
 
 span.snp_sel {
     font-weight: bold;
-    text-decoration: underline;
+    text-decoration: underline;/erro
 }
 
 div.selected-datum{
-    background-color: darkblue;
-    color: black;
-    cursor: crosshair;
+    background-color: lightskyblue;
+    cursor: move;
+    /*-moz-border-radius: 10px;*/
+    border-radius: 10px;
 }
 
 div.datum{
@@ -586,4 +587,13 @@ div.datum:hover{
     cursor: pointer;
 }
 
+div.big-error{
+    color: red;
+    font-size: large;
+}
+
+div.none{
+    color: lightskyblue;
+    font-size: large;
+}
 
