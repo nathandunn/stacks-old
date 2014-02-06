@@ -16,6 +16,8 @@
 @property (nonatomic, copy) NSString * name;
 @property (nonatomic, copy) NSNumber * populationId;
 @property (nonatomic, copy) NSSet *samples;
+
+- (NSString *)annotatedName;
 @end
 
 @interface PopulationMO (CoreDataGeneratedAccessors)
