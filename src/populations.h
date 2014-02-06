@@ -116,7 +116,7 @@ public:
 void    help( void );
 void    version( void );
 int     parse_command_line(int, char**);
-int     build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &);
+int     build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &);
 int     load_marker_list(string, set<int> &);
 int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<int, int> > &);
 bool    order_unordered_loci(map<int, CSLocus *> &);
@@ -140,6 +140,7 @@ double *calculate_weights(void);
 
 int  calculate_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int  calculate_haplotype_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int  calculate_haplotype_amova(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int  nuc_substitution_dist(map<string, int> &, double **);
 
 int  write_sql(map<int, CSLocus *> &, PopMap<CSLocus> *);
