@@ -453,7 +453,7 @@ NSString *calculateType(NSString *file);
 
 
     CHECK_STOP
-    progressWindow.actionMessage.stringValue = @"Loading datums";
+    progressWindow.actionMessage.stringValue = @"Loading catalog matches";
     // for each sample process the catalog
     NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
 
@@ -474,7 +474,7 @@ NSString *calculateType(NSString *file);
         @autoreleasepool {
 
             string sampleString = samples[sampleId];
-            progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datums - sample %i/%ld", i + 1, sample_ids.size()];
+            progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading catalog matches - sample %i/%ld", i + 1, sample_ids.size()];
 
             NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
 
@@ -606,19 +606,19 @@ NSString *calculateType(NSString *file);
 
     NSLog(@"loading snps onto datums");
     gettimeofday(&time1, NULL);
-    progressWindow.actionMessage.stringValue = @"Loading datum snps";
+    progressWindow.actionMessage.stringValue = @"Loading SNPs";
     [self loadSnpsOntoDatum:stacksDocument progressWindow:progressWindow];
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading snps onto datum time %ld", time2.tv_sec - time1.tv_sec);
 
     NSLog(@"loading alleles onto datums");
     gettimeofday(&time1, NULL);
-    progressWindow.actionMessage.stringValue = @"Loading datum alleles";
+    progressWindow.actionMessage.stringValue = @"Loading alleles";
     [self loadAllelesOntoDatum:stacksDocument];
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading alleles onto datum time %ld", time2.tv_sec - time1.tv_sec);
 
-    progressWindow.actionMessage.stringValue = @"Loading progeny counts";
+    progressWindow.actionMessage.stringValue = @"Calculating progeny";
     gettimeofday(&time1, NULL);
 
 
@@ -641,7 +641,7 @@ NSString *calculateType(NSString *file);
     NSLog(@"loading stack entries");
     CHECK_STOP
 
-    progressWindow.actionMessage.stringValue = @"Loading stack entries";
+    progressWindow.actionMessage.stringValue = @"Loading loci";
     gettimeofday(&time1, NULL);
     [self loadStacksEntriesFromTagFile:stacksDocument progressWindow:progressWindow];
     CHECK_STOP
@@ -683,9 +683,9 @@ NSString *calculateType(NSString *file);
 //            else {
 //            NSLog(@"not loading tag file %@", filePath);
 //            }
-            window.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum snp %ld/%ld", count, files.count];
-            ++count;
+            window.actionMessage.stringValue = [NSString stringWithFormat:@"Loading SNPs for sample %ld/%ld", count, onlySnps.count];
         }
+        ++count;
     }
 }
 
@@ -989,7 +989,7 @@ NSString *calculateType(NSString *file);
     struct timeval time3, time4;
 
     for (NSString *tagFileName in realFiles) {
-        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld", fileNumber + 1, numFiles];
+        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading loci for sample %i / %ld", fileNumber + 1, numFiles];
         if (stopProcess) return;
 
 

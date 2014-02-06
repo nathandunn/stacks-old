@@ -226,7 +226,7 @@
     NSString *formattedString = [self.name stringByReplacingOccurrencesOfString:@"_" withString:@" "];
     formattedString = [formattedString capitalizedString];
 
-    NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<div class='datum-name title'>%@</div>", formattedString];
+    NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<div class='datum-name'>%@</div>", formattedString];
 
     return returnHTML;
 }

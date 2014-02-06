@@ -568,23 +568,28 @@ span.snp_sel {
 }
 
 div.selected-datum{
-    background-color: lightskyblue;
+    background-color: lightskyblue !important;
     cursor: move;
     /*-moz-border-radius: 10px;*/
-    border-radius: 10px;
+    border-radius: 5px;
 }
 
 div.datum{
     float: left;
-    padding: 2px;
-    margin: 2px;
+    padding: 5px;
+    margin: 12px;
     text-align: center;
+    border-radius: 5px;
+    /*border: 1px;*/
+    /*border-style: solid;*/
+    background-color: #eeeeee;
 }
 
 div.datum:hover{
     background-color: lightblue;
     color: darkblue;
     cursor: pointer;
+    border-radius: 5px;
 }
 
 div.big-error{
@@ -601,6 +606,10 @@ div.datum-name{
     text-align: center;
     text-decoration: none;
     display: inline-block;
+    white-space: pre;
+    font-size: smaller;
+    /*color: #aaaaaa;*/
+    color: #888888;
 }
 
 div.datum-depth{
@@ -612,5 +621,5 @@ div.datum-depth{
 div.datum-pop{
     /*font-family: monospace;*/
     /*font-size: 14;*/
-    /*display: inline-block;*/
+    display: block;
 }
