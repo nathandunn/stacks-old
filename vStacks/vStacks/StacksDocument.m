@@ -145,24 +145,15 @@
 
 - (void)updateStacksView {
 
-//    DatumMO *datumMO = [[datumRepository getAllDatum:[self managedObjectContext]] objectAtIndex:0];
     if (self.selectedDatum != nil) {
-//        NSLog(@"loading data %@ with url %@",self.selectedDatum.stackData, [[NSBundle mainBundle] bundleURL]);
-//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
-//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
-//        [[stacksWebView mainFrame] loadData:[self.selectedDatum.stackData gunzippedData] MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
 
         StackEntryDatumMO *stackEntryDatumMO = [[DatumRepository sharedInstance] getStackEntryDatum:self.managedObjectContext datum:self.selectedDatum];
         if (stackEntryDatumMO != nil && stackEntryDatumMO.stackData != nil) {
 
             NSData *jsonData = [stackEntryDatumMO.stackData gunzippedData];
-//            NSError *error;
-//            NSDictionary *stackEntryData = [NSJSONSerialization JSONObjectWithData:jsonData options:kNilOptions error:&error];
-
             StacksEntryDatumRenderer *stacksEntryDatumRenderer = [[StacksEntryDatumRenderer alloc] init];
             NSString *html = [stacksEntryDatumRenderer renderHtmlForData:jsonData datumSnps:self.selectedDatum.snpData locusSnps:self.selectedLocus.snpData];
 
-//            [[stacksWebView mainFrame] loadData:jsonData MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
             [[stacksWebView mainFrame] loadHTMLString:html baseURL:[[NSBundle mainBundle] bundleURL]];
 
             [stacksWebView setHidden:NO];
@@ -176,11 +167,6 @@
     else {
         [stacksWebView setHidden:YES];
     }
-
-//    NSURL *url = [NSURL URLWithString:@"http://www.apple.com"];
-//    NSURLRequest *urlRequest = [NSURLRequest requestWithURL:url];
-////    [[[self webView] mainFrame] loadRequest:urlRequest];
-//    [[stacksWebView mainFrame] loadRequest:urlRequest];
 }
 
 + (BOOL)autosavesInPlace {
@@ -280,12 +266,12 @@
 
     if (self.selectedPopulation) {
         [returnHTML appendFormat:@"<div class='datum-pop'><div class='population-header'>%@</div>", self.selectedPopulation.annotatedName];
-        if(self.selectedDatums.count>0){
+        if (self.selectedDatums.count > 0) {
             for (DatumMO *datum in self.selectedDatums.reverseObjectEnumerator) {
                 [returnHTML appendString:[self renderDatumHtml:datum]];
             }
         }
-        else{
+        else {
             [returnHTML appendFormat:@"<div class='none'>None</div>"];
         }
         [returnHTML appendFormat:@"</div>"];
@@ -294,34 +280,36 @@
         for (PopulationMO *populationMO in allPopulations) {
             NSArray *datums = [[DatumRepository sharedInstance] getDatums:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:populationMO];
             if (datums.count > 0) {
-                [returnHTML appendFormat:@"<br/><div class='datum-pop'><div class='population-header'>%@</div>", populationMO.annotatedName];
+                [returnHTML appendFormat:@"<div class='datum-pop'><div class='population-header'>%@</div>", populationMO.annotatedName];
                 for (DatumMO *datum in datums.reverseObjectEnumerator) {
                     [returnHTML appendString:[self renderDatumHtml:datum]];
                 }
-                [returnHTML appendFormat:@"<br/><br/></div><br/><br/>"];
+                [returnHTML appendFormat:@"</div>"];
             }
         }
     }
             // if no population!
-else {
+    else {
         [returnHTML appendFormat:@"<div class='datum-pop'><div class='population-header'>Population - Unspecified</div>"];
         for (DatumMO *datum in self.selectedDatums.reverseObjectEnumerator) {
             [returnHTML appendString:[self renderDatumHtml:datum]];
         }
-        [returnHTML appendFormat:@"<br/></div><br/><br/>"];
+        [returnHTML appendFormat:@"</div>"];
     }
+
+    NSLog(@"return HTML: %@",returnHTML);
 
     [[datumWebView mainFrame] loadHTMLString:returnHTML baseURL:[[NSBundle mainBundle] bundleURL]];
 }
 
 - (NSString *)renderDatumHtml:(DatumMO *)datum {
     NSMutableString *returnHTML = [NSMutableString string];
-    NSString *nameString = [datum renderNameHtml] ;
+    NSString *nameString = [datum renderNameHtml];
 //    NSString *haploytpeString = [datum renderHaplotypeHtml] ;
 //    NSString *haploytpeString = [[datum renderHaplotypes] string];
     NSString *haploytpeString = [datum renderHaplotypeHtml];
 //    NSString *depthString = [[datum renderDepths] string];
-    NSString *depthString = [datum renderDepthHtml] ;
+    NSString *depthString = [datum renderDepthHtml];
     NSString *datumIndex = [NSString stringWithFormat:@"%@:%@", datum.tagId, datum.sampleId];
     NSString *selectedClass = ([datum isEqualTo:self.selectedDatum]) ? @" selected-datum" : @"";
     [returnHTML appendFormat:@"<div class='population%ld datum%@'>", self.selectedPopulation.populationId.longValue, selectedClass];
