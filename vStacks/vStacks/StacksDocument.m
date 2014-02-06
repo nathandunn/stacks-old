@@ -272,23 +272,14 @@
 }
 
 - (void)updateDatumView {
-//   datumWebView.
     NSString *cssPath = [[NSBundle mainBundle] pathForResource:@"stacks" ofType:@"css"];
-    NSLog(@"cssPAth %@", cssPath);
     NSString *cssString = [NSString stringWithContentsOfFile:cssPath encoding:NSUTF8StringEncoding error:NULL];
     NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style>", cssString];
 
-//    NSMutableDictionary *populationDatumMap = [NSMutableDictionary dictionary];
-//    NSArray *samples = [[SampleRepository sharedInstance] getAllSamples:self.managedObjectContext];
-//    NSMutableDictionary *sampleLookupDictionary = [NSMutableDictionary dictionaryWithCapacity:samples.count];
-//    for(SampleMO *sampleMO in samples){
-//        [sampleLookupDictionary setObject:sampleMO forKey:sampleMO.sampleId];
-//    }
-
-    NSArray *populations = [[PopulationRepository sharedInstance] getAllPopulations:self.managedObjectContext];
+    NSArray *allPopulations = [[PopulationRepository sharedInstance] getAllPopulations:self.managedObjectContext];
 
     if (self.selectedPopulation) {
-        [returnHTML appendFormat:@"<h3>Population %@</h3>", self.selectedPopulation.name];
+        [returnHTML appendFormat:@"<div class='datum-pop'><h3>Population %@</h3>", self.selectedPopulation.name];
         if(self.selectedDatums.count>0){
             for (DatumMO *datum in self.selectedDatums.reverseObjectEnumerator) {
                 [returnHTML appendString:[self renderDatumHtml:datum]];
@@ -297,14 +288,13 @@
         else{
             [returnHTML appendFormat:@"<div class='none'>None</div>"];
         }
+        [returnHTML appendFormat:@"</div>"];
     }
-    else if (self.selectedPopulation == nil && populations != nil && populations.count > 0) {
-        for (PopulationMO *populationMO in populations) {
+    else if (self.selectedPopulation == nil && allPopulations != nil && allPopulations.count > 0) {
+        for (PopulationMO *populationMO in allPopulations) {
             NSArray *datums = [[DatumRepository sharedInstance] getDatums:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:populationMO];
-            NSLog(@"GOT DATUMS!!");
-
             if (datums.count > 0) {
-                [returnHTML appendFormat:@"<h3>Population %@</h3>", populationMO.name];
+                [returnHTML appendFormat:@"<br/><br/><h3>Population %@</h3>", populationMO.name];
                 for (DatumMO *datum in datums.reverseObjectEnumerator) {
                     [returnHTML appendString:[self renderDatumHtml:datum]];
                 }
@@ -314,9 +304,8 @@
     }
             // if no population!
     else {
-        NSLog(@"NO POP!!");
         NSArray *datums = [NSArray arrayWithObject:self.selectedDatums];
-        [returnHTML appendFormat:@"<h3>Population %@</h3>", self.selectedPopulation.name];
+        [returnHTML appendFormat:@"<br/><h3>Population %@</h3>", self.selectedPopulation.name];
         for (DatumMO *datum in datums.reverseObjectEnumerator) {
             [returnHTML appendString:[self renderDatumHtml:datum]];
         }

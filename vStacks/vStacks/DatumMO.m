@@ -66,24 +66,15 @@
     NSMutableAttributedString *string = [[NSMutableAttributedString alloc] init];
 
 
-//    for (NSUInteger i = 0; i < self.haplotypes.count; i++) {
     int i = 0;
-//    NSArray *sortByOrder = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
-
-//    NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
 
     // TODO: convert
     NSError *error;
     NSDictionary *haplotypeJson = [NSJSONSerialization JSONObjectWithData:self.haplotypeData options:kNilOptions error:&error];
     NSUInteger haplotypeCount = haplotypeJson.count;
     for (NSDictionary *haplotype in haplotypeJson) {
-//    for (HaplotypeMO *haplotype  in [self.haplotypes sortedArrayUsingDescriptors:sortDescriptors]) {
-////        NSString *haplotype = [self.haplotypes objectAtIndex:i];
-
-//        NSUInteger order = [self.locus lookupHaplotypeOrder:haplotype.haplotype];
         NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
         NSString *haplotypeString = [haplotype valueForKey:@"haplotype"];
-//        NSUInteger depth = [[haplotype valueForKey:@"depth"] unsignedIntegerValue];
 
 
         NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:haplotypeString];
@@ -121,13 +112,7 @@
     NSDictionary *haplotypeJson = [NSJSONSerialization JSONObjectWithData:self.haplotypeData options:kNilOptions error:&error];
     NSUInteger haplotypeCount = haplotypeJson.count;
     for (NSDictionary *haplotype in haplotypeJson) {
-//    for (HaplotypeMO *haplotype  in [self.haplotypes sortedArrayUsingDescriptors:sortDescriptors]) {
-////        NSString *haplotype = [self.haplotypes objectAtIndex:i];
-
-//        NSUInteger order = [self.locus lookupHaplotypeOrder:haplotype.haplotype];
         NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
-//        NSString *haplotypeString = [haplotype valueForKey:@"haplotype"];
-//        NSUInteger depth = [[haplotype valueForKey:@"depth"] unsignedIntegerValue];
         NSString *depthString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"depth"]];
 
 
@@ -141,39 +126,11 @@
         [appendString endEditing];
 
         [string appendAttributedString:appendString];
-//        if (i < self.haplotypes.count - 1) {
         if (i < haplotypeCount - 1) {
             [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
         }
         ++i;
     }
-
-
-
-//    NSArray *sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"order" ascending:YES]];
-    // TODO: convert
-//    for (DepthMO *depth in  [self.depths sortedArrayUsingDescriptors:sortDescriptors]) {
-////        NSString *depth = [(NSNumber *) [self.depths objectAtIndex:i] stringValue];
-//
-//        NSUInteger order = [self.locus lookupDepthOrder:depth];
-//
-//
-//        NSString *numberString = [NSString stringWithFormat:@"%@", depth.depth];
-//        NSMutableAttributedString *appendString = [[NSMutableAttributedString alloc] initWithString:numberString];
-//        NSRange selectedRange = NSMakeRange(0, numberString.length);
-//        [appendString beginEditing];
-//        NSDictionary *attributes = [self generateColorForOrder:order];
-//        [appendString setAttributes:attributes range:selectedRange];
-//        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
-//        [appendString addAttributes:fontAttributes range:selectedRange];
-//        [appendString endEditing];
-//
-//        [string appendAttributedString:appendString];
-//        if (i < self.depths.count - 1) {
-//            [string appendAttributedString:[[NSAttributedString alloc] initWithString:@" / "]];
-//        }
-//        ++i;
-//    }
 
 
     NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
@@ -185,37 +142,14 @@
     return string;
 }
 
-//- (NSArray *)getOrderedStackEntries {
-//    NSArray *sortedArray = [[self.stackEntries allObjects] sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
-//        StackEntryMO *first = (StackEntryMO *) a;
-//        StackEntryMO *second = (StackEntryMO *) b;
-//        NSString *firstRelationship = first.relationship;
-//        NSString *secondRelationship = second.relationship;
-//
-//        int firstCount = 0;
-//        int secondCount = 0;
-//        //reference
-//        //consensus
-//        //model
-//        firstCount += [firstRelationship isEqualToString:@"reference"] ? 10000 : 0;
-//        secondCount += [secondRelationship isEqualToString:@"reference"] ? 10000 : 0;
-//        firstCount += [firstRelationship isEqualToString:@"consensus"] ? 1000 : 0;
-//        secondCount += [secondRelationship isEqualToString:@"consensus"] ? 1000 : 0;
-//        firstCount += [firstRelationship isEqualToString:@"model"] ? 100 : 0;
-//        secondCount += [secondRelationship isEqualToString:@"model"] ? 100 : 0;
-//        firstCount -= [first.entryId intValue];
-//        secondCount -= [second.entryId intValue];
-//        NSComparisonResult result = (firstCount > secondCount) ? NSOrderedAscending : NSOrderedDescending;
-//        return result;
-//    }];
-//
-//    return sortedArray;
-//
-////    NSOrderedSet *orderedSet = [NSOrderedSet orderedSetWithArray:sortedArray];
-////    return orderedSet;
-//
-//}
 
+- (NSString *)generateColorStringForOrder:(NSUInteger)order {
+    if (colorGenerator == nil) {
+        colorGenerator = [[ColorGenerator alloc] init];
+    }
+
+    return [colorGenerator generateColorStringForOrder:order];
+}
 
 
 - (NSDictionary *)generateColorForOrder:(NSUInteger)order {
@@ -237,14 +171,14 @@
     NSError *error;
     NSDictionary *haplotypeJson = [NSJSONSerialization JSONObjectWithData:self.haplotypeData options:kNilOptions error:&error];
     NSUInteger haplotypeCount = haplotypeJson.count;
-    [returnHTML appendString:@"<div class='datum-depth'>" ];
+    [returnHTML appendString:@"<div class='datum-depth'>"];
     for (NSDictionary *haplotype in haplotypeJson) {
         NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
         NSString *depthString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"haplotype"]];
 
         NSMutableString *appendString = [NSMutableString stringWithString:depthString];
-        NSString *colorString = [[self colorGenerator] generateColorStringForOrder:order];
-        [appendString insertString:[NSString stringWithFormat:@"<font color='#%@'>",colorString] atIndex:0];
+        NSString *colorString = [self generateColorStringForOrder:order];
+        [appendString insertString:[NSString stringWithFormat:@"<font color='#%@'>", colorString] atIndex:0];
         [appendString appendString:@"</font>"];
 //        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
 
@@ -254,7 +188,7 @@
         }
         ++i;
     }
-    [returnHTML appendString:@"</div>" ];
+    [returnHTML appendString:@"</div>"];
 
     return returnHTML;
 }
@@ -266,14 +200,14 @@
     NSError *error;
     NSDictionary *haplotypeJson = [NSJSONSerialization JSONObjectWithData:self.haplotypeData options:kNilOptions error:&error];
     NSUInteger haplotypeCount = haplotypeJson.count;
-    [returnHTML appendString:@"<div class='datum-depth'>" ];
+    [returnHTML appendString:@"<div class='datum-depth'>"];
     for (NSDictionary *haplotype in haplotypeJson) {
         NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
         NSString *depthString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"depth"]];
 
         NSMutableString *appendString = [NSMutableString stringWithString:depthString];
-        NSString *colorString = [[self colorGenerator] generateColorStringForOrder:order];
-        [appendString insertString:[NSString stringWithFormat:@"<font color='#%@'>",colorString] atIndex:0];
+        NSString *colorString = [self generateColorStringForOrder:order];
+        [appendString insertString:[NSString stringWithFormat:@"<font color='#%@'>", colorString] atIndex:0];
         [appendString appendString:@"</font>"];
 //        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
 
@@ -283,7 +217,7 @@
         }
         ++i;
     }
-    [returnHTML appendString:@"</div>" ];
+    [returnHTML appendString:@"</div>"];
 
     return returnHTML;
 }
@@ -292,18 +226,7 @@
     NSString *formattedString = [self.name stringByReplacingOccurrencesOfString:@"_" withString:@" "];
     formattedString = [formattedString capitalizedString];
 
-    NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<div class='datum-name title'>%@</div>",formattedString];
-
-
-//    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithString:formattedString];
-
-//    NSMutableParagraphStyle *mutParaStyle = [[NSMutableParagraphStyle alloc] init];
-//    [mutParaStyle setAlignment:NSCenterTextAlignment];
-//    NSRange selectedRange = NSMakeRange(0, [[string string] length]);
-//    [string addAttributes:[NSDictionary dictionaryWithObject:mutParaStyle
-//                                                      forKey:NSParagraphStyleAttributeName] range:selectedRange];
-//    NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
-//    [string addAttributes:fontAttributes range:selectedRange];
+    NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<div class='datum-name title'>%@</div>", formattedString];
 
     return returnHTML;
 }
