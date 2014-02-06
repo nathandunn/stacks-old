@@ -294,21 +294,22 @@
         for (PopulationMO *populationMO in allPopulations) {
             NSArray *datums = [[DatumRepository sharedInstance] getDatums:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:populationMO];
             if (datums.count > 0) {
-                [returnHTML appendFormat:@"<br/><br/><h3>Population %@</h3>", populationMO.name];
+                [returnHTML appendFormat:@"<div class='datum-pop'><h3>Population %@</h3>", populationMO.name];
                 for (DatumMO *datum in datums.reverseObjectEnumerator) {
                     [returnHTML appendString:[self renderDatumHtml:datum]];
                 }
-                [returnHTML appendString:@"<br/><br/><br/>"];
+//                [returnHTML appendString:@"<br/><br/><br/>"];
+                [returnHTML appendFormat:@"<br/></div><br/><br/>"];
             }
         }
     }
             // if no population!
     else {
-        NSArray *datums = [NSArray arrayWithObject:self.selectedDatums];
-        [returnHTML appendFormat:@"<br/><h3>Population %@</h3>", self.selectedPopulation.name];
-        for (DatumMO *datum in datums.reverseObjectEnumerator) {
+        [returnHTML appendFormat:@"<div class='datum-pop'><h3>Population - Unspecified</h3>"];
+        for (DatumMO *datum in self.selectedDatums.reverseObjectEnumerator) {
             [returnHTML appendString:[self renderDatumHtml:datum]];
         }
+        [returnHTML appendFormat:@"<br/></div><br/><br/>"];
     }
 
     [[datumWebView mainFrame] loadHTMLString:returnHTML baseURL:[[NSBundle mainBundle] bundleURL]];
