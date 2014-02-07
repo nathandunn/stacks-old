@@ -3122,7 +3122,7 @@ Specified Locus}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2588.9986102786856, 993.60953861645874}, {399, 41}}</string>
+			<string>{{2798.4382835336387, 915.21614128595695}, {399, 41}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -3148,7 +3148,7 @@ Specified Locus}</string>
 				<key>ID</key>
 				<integer>9064</integer>
 				<key>Position</key>
-				<real>0.39565657052495828</real>
+				<real>0.19676846426518232</real>
 				<key>RotationType</key>
 				<integer>0</integer>
 			</dict>
@@ -3196,7 +3196,7 @@ Specified Locus}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2187.653115784226, 791.61620851064288}, {282, 41}}</string>
+			<string>{{2099.9554348923525, 778.96460051918154}, {282, 41}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -3323,7 +3323,7 @@ Specified Locus}</string>
 			<integer>9064</integer>
 			<key>Points</key>
 			<array>
-				<string>{2766.1482223380999, 878.74101020943999}</string>
+				<string>{3055.0545277259553, 848.7019782424353}</string>
 				<string>{2820.25, 1206.4166660308838}</string>
 			</array>
 			<key>Style</key>
@@ -3361,7 +3361,7 @@ Specified Locus}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2738.1482223380999, 851.3243441785562}, {56, 54.833332061767578}}</string>
+			<string>{{3027.0545277259553, 821.28531221155151}, {56, 54.833332061767578}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FontInfo</key>
@@ -3542,7 +3542,7 @@ Specified Locus}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2754.561143534097, 796.49101211678862}, {56, 54.833332061767578}}</string>
+			<string>{{2571.4822223380997, 770.15600973060998}, {56, 54.833332061767578}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FontInfo</key>
@@ -3645,7 +3645,7 @@ Specified Locus}</string>
 			<key>Points</key>
 			<array>
 				<string>{1909.0546604616341, 801.21602137315676}</string>
-				<string>{2782.561143534097, 823.90767814767241}</string>
+				<string>{2599.4822223380997, 797.57267576149377}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -140308,7 +140308,7 @@ Here we describe
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{1808.5148910855255, 746.54814064864684}, {1714.2877026648066, 669.5694351128468}}</string>
+			<string>{{1808.5148910855255, 746.54814064864695}, {1714.2877026648066, 693.45185935135305}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FontInfo</key>
@@ -140326,7 +140326,7 @@ Here we describe
 			<key>ID</key>
 			<integer>10202</integer>
 			<key>ImageID</key>
-			<integer>115</integer>
+			<integer>116</integer>
 			<key>Shape</key>
 			<string>Rectangle</string>
 			<key>Style</key>
@@ -140361,7 +140361,7 @@ Here we describe
 	<key>HPages</key>
 	<integer>3</integer>
 	<key>ImageCounter</key>
-	<integer>116</integer>
+	<integer>117</integer>
 	<key>ImageLinkBack</key>
 	<array>
 		<dict/>
@@ -140384,7 +140384,7 @@ Here we describe
 	</array>
 	<key>ImageList</key>
 	<array>
-		<string>image115.png</string>
+		<string>image116.png</string>
 		<string>image111.png</string>
 		<string>image108.tiff</string>
 		<string>image107.tiff</string>
@@ -140441,7 +140441,7 @@ Here we describe
 	<key>MasterSheets</key>
 	<array/>
 	<key>ModificationDate</key>
-	<string>2014-02-07 22:05:49 +0000</string>
+	<string>2014-02-07 23:03:44 +0000</string>
 	<key>Modifier</key>
 	<string>Nathan Dunn</string>
 	<key>NotesVisible</key>
@@ -140539,7 +140539,7 @@ Here we describe
 		<key>SidebarWidth</key>
 		<integer>0</integer>
 		<key>VisibleRegion</key>
-		<string>{{426, 856}, {4338, 2522}}</string>
+		<string>{{426, 492}, {4338, 2522}}</string>
 		<key>Zoom</key>
 		<real>0.5</real>
 		<key>ZoomValues</key>
