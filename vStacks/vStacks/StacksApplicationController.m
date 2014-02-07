@@ -379,4 +379,19 @@
     }
 }
 
+- (void)provideFeedback:(id)sender {
+    NSString *recipients = @"mailto:jcatchen@uoregon.edu?cc=ndunn@uoregon.edu&subject=vStacks Feedback";
+    NSString *body = @"&body=Feedback for vStacks";
+    NSString *email = [NSString stringWithFormat:@"%@%@", recipients, body];
+
+    email = [email stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:email]];
+}
+
+- (void)helpMe:(id)sender {
+    NSString *url = @"http://creskolab.uoregon.edu/stacks";
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
+}
+
 @end

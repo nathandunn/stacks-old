@@ -26,7 +26,7 @@
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
                             <menuItem title="Preferences…" keyEquivalent="," id="129"/>
-                            <menuItem title="Provide Feedback" id="yZ8-XB-MRe">
+                            <menuItem title="Provide Feedback" id="yZ8-XB-MRe" customClass="ProvideFeedbackMenuItem">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="provideFeedback:" target="-1" id="Ee4-vL-Kkz"/>
@@ -81,7 +81,7 @@
                                     <action selector="importDocument:" target="-1" id="579"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Set Populations" tag="78" enabled="NO" keyEquivalent="p" id="Sdy-ZG-qtW" customClass="StacksImportMenuItem">
+                            <menuItem title="Set Populations" tag="78" enabled="NO" keyEquivalent="p" id="Sdy-ZG-qtW">
                                 <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                 <connections>
                                     <action selector="applyPopmap:" target="-1" id="H0u-vu-VGg"/>
@@ -361,7 +361,7 @@
                         <items>
                             <menuItem title="vStacks Help" keyEquivalent="r" id="493">
                                 <connections>
-                                    <action selector="showHelp:" target="-1" id="494"/>
+                                    <action selector="helpMe:" target="-1" id="zYh-Id-qxx"/>
                                 </connections>
                             </menuItem>
                         </items>

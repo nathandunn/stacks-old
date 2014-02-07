@@ -17,6 +17,8 @@
 @property(nonatomic, strong) NSNumberFormatter *numberFormatter;
 
 - (IBAction) importDocument:(id)sender;
+- (IBAction)provideFeedback:(id)sender;
+- (IBAction) helpMe:(id)sender;
 
 
 @end

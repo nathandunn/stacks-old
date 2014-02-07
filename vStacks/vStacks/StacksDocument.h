@@ -50,7 +50,6 @@
 - (BOOL)noLociLocations;
 
 - (IBAction)updateSelections:(id)sender;
-- (IBAction)provideFeedback:(id)sender;
 
 - (NSArray *) getSnpFilterValues;
 
