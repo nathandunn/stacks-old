@@ -174,6 +174,7 @@
     [returnHTML appendString:@"<div class='datum-depth'>"];
     for (NSDictionary *haplotype in haplotypeJson) {
         NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
+        NSLog(@"rednering order: %ld",order);
         NSString *depthString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"haplotype"]];
 
         NSMutableString *appendString = [NSMutableString stringWithString:depthString];
