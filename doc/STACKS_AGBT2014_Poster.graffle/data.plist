@@ -2503,7 +2503,7 @@ SDVPERSIPITREEKPAIAGSQRK\
 			<integer>9081</integer>
 			<key>Points</key>
 			<array>
-				<string>{2874, 1926.4166660308838}</string>
+				<string>{2846.816699690014, 1912.3989857933361}</string>
 				<string>{3024, 1843.8354096647458}</string>
 				<string>{3205, 1872.4166660308838}</string>
 			</array>
@@ -2566,7 +2566,7 @@ SDVPERSIPITREEKPAIAGSQRK\
 			<array>
 				<string>{2500.75, 1926.4166660308838}</string>
 				<string>{2644, 1906.7611757614932}</string>
-				<string>{2874, 1926.4166660308838}</string>
+				<string>{2846.816699690014, 1912.3989857933361}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -2665,7 +2665,7 @@ SDVPERSIPITREEKPAIAGSQRK\
 			<integer>9078</integer>
 			<key>Points</key>
 			<array>
-				<string>{2058.75, 1944.1805039116311}</string>
+				<string>{2058.75, 1961.6805039116311}</string>
 				<string>{2304, 1882}</string>
 				<string>{2500.75, 1926.4166660308838}</string>
 			</array>
@@ -2704,11 +2704,11 @@ SDVPERSIPITREEKPAIAGSQRK\
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2776.5, 1761.4166660308838}, {195, 330}}</string>
+			<string>{{2745, 1747.3989857933361}, {203.6333993800281, 330}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
-			<string>YES</string>
+			<string>Vertical</string>
 			<key>Flow</key>
 			<string>Resize</string>
 			<key>FontInfo</key>
@@ -2765,12 +2765,10 @@ s13_fw_06   s13 fw\
 s13_fw_07   s13 fw\
 s13_fw_08   s13 fw}</string>
 			</dict>
-			<key>Wrap</key>
-			<string>NO</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{1804.5, 1916.6805039116311}, {508.5, 55}}</string>
+			<string>{{1804.5, 1916.6805039116311}, {508.5, 90}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -2837,51 +2835,9 @@ s13_fw_08   s13 fw}</string>
 \deftab720
 \pard\pardeftab720\sl288\slmult1\qj
 
-\f0\fs48 \cf0 Popmap can be re-applied arbitrarily}</string>
+\f0\fs48 \cf0 Samples can be assigned and re-assigned to populations}</string>
 				<key>VerticalPad</key>
 				<integer>10</integer>
-			</dict>
-		</dict>
-		<dict>
-			<key>Bounds</key>
-			<string>{{2389.5, 1829.25}, {208.83555685211729, 213.32664409624886}}</string>
-			<key>Class</key>
-			<string>ShapedGraphic</string>
-			<key>FontInfo</key>
-			<dict>
-				<key>Color</key>
-				<dict>
-					<key>w</key>
-					<string>0</string>
-				</dict>
-				<key>Font</key>
-				<string>Helvetica</string>
-				<key>Size</key>
-				<real>12</real>
-			</dict>
-			<key>ID</key>
-			<integer>9075</integer>
-			<key>ImageID</key>
-			<integer>104</integer>
-			<key>Shape</key>
-			<string>Rectangle</string>
-			<key>Style</key>
-			<dict>
-				<key>fill</key>
-				<dict>
-					<key>Draws</key>
-					<string>NO</string>
-				</dict>
-				<key>shadow</key>
-				<dict>
-					<key>Draws</key>
-					<string>NO</string>
-				</dict>
-				<key>stroke</key>
-				<dict>
-					<key>Draws</key>
-					<string>NO</string>
-				</dict>
 			</dict>
 		</dict>
 		<dict>
@@ -3100,7 +3056,7 @@ s13_fw_08   s13 fw}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2027.25, 926.7776757614937}, {221, 72}}</string>
+			<string>{{2021.25, 926.7776757614937}, {233, 72}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -3158,7 +3114,7 @@ s13_fw_08   s13 fw}</string>
 {\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qc
 
-\f0\b\fs52 \cf2 View Datums for \
+\f0\b\fs52 \cf2 View Samples for \
 Specified Locus}</string>
 			</dict>
 			<key>Wrap</key>
@@ -3166,7 +3122,7 @@ Specified Locus}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2699.0073047072578, 1028.5547534030527}, {276, 41}}</string>
+			<string>{{2479.1229037111716, 1041.4622965718249}, {399, 41}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -3192,7 +3148,7 @@ Specified Locus}</string>
 				<key>ID</key>
 				<integer>9064</integer>
 				<key>Position</key>
-				<real>0.30434219416655706</real>
+				<real>0.39565657052495828</real>
 				<key>RotationType</key>
 				<integer>0</integer>
 			</dict>
@@ -3219,7 +3175,7 @@ Specified Locus}</string>
 {\colortbl;\red255\green255\blue255;}
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qc
 
-\f0\b\fs52 \cf0 View Stack for Datum}</string>
+\f0\b\fs52 \cf0 View Stack for selected Sample}</string>
 			</dict>
 			<key>Wrap</key>
 			<string>NO</string>
@@ -3353,7 +3309,7 @@ Specified Locus}</string>
 			<integer>9064</integer>
 			<key>Points</key>
 			<array>
-				<string>{2824.4404723380994, 886.91704179237752}</string>
+				<string>{2552.5, 841.3900417923777}</string>
 				<string>{2863, 1384.4134189409006}</string>
 			</array>
 			<key>Style</key>
@@ -3391,7 +3347,7 @@ Specified Locus}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2796.4404723380994, 859.50037576149373}, {56, 54.833332061767578}}</string>
+			<string>{{2524.5, 813.97337576149391}, {56, 54.833332061767578}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FontInfo</key>
@@ -3708,48 +3664,6 @@ Specified Locus}</string>
 			<dict>
 				<key>ID</key>
 				<integer>9061</integer>
-			</dict>
-		</dict>
-		<dict>
-			<key>Bounds</key>
-			<string>{{1789.2963986230193, 706.19007882246058}, {1723.5284027539615, 810.86329387806563}}</string>
-			<key>Class</key>
-			<string>ShapedGraphic</string>
-			<key>FontInfo</key>
-			<dict>
-				<key>Color</key>
-				<dict>
-					<key>w</key>
-					<string>0</string>
-				</dict>
-				<key>Font</key>
-				<string>Helvetica</string>
-				<key>Size</key>
-				<real>12</real>
-			</dict>
-			<key>ID</key>
-			<integer>9054</integer>
-			<key>ImageID</key>
-			<integer>102</integer>
-			<key>Shape</key>
-			<string>Rectangle</string>
-			<key>Style</key>
-			<dict>
-				<key>fill</key>
-				<dict>
-					<key>Draws</key>
-					<string>NO</string>
-				</dict>
-				<key>shadow</key>
-				<dict>
-					<key>Draws</key>
-					<string>NO</string>
-				</dict>
-				<key>stroke</key>
-				<dict>
-					<key>Draws</key>
-					<string>NO</string>
-				</dict>
 			</dict>
 		</dict>
 		<dict>
@@ -140336,6 +140250,90 @@ Here we describe
 				<integer>10</integer>
 			</dict>
 		</dict>
+		<dict>
+			<key>Bounds</key>
+			<string>{{1796.6297195841385, 700.23221306725509}, {1721.7521519570382, 773.03557386548982}}</string>
+			<key>Class</key>
+			<string>ShapedGraphic</string>
+			<key>FontInfo</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>w</key>
+					<string>0</string>
+				</dict>
+				<key>Font</key>
+				<string>Helvetica</string>
+				<key>Size</key>
+				<real>12</real>
+			</dict>
+			<key>ID</key>
+			<integer>10198</integer>
+			<key>ImageID</key>
+			<integer>110</integer>
+			<key>Shape</key>
+			<string>Rectangle</string>
+			<key>Style</key>
+			<dict>
+				<key>fill</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>shadow</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>stroke</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+			</dict>
+		</dict>
+		<dict>
+			<key>Bounds</key>
+			<string>{{2394.5, 1860.8989857933361}, {186, 103}}</string>
+			<key>Class</key>
+			<string>ShapedGraphic</string>
+			<key>FontInfo</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>w</key>
+					<string>0</string>
+				</dict>
+				<key>Font</key>
+				<string>Helvetica</string>
+				<key>Size</key>
+				<real>12</real>
+			</dict>
+			<key>ID</key>
+			<integer>10199</integer>
+			<key>ImageID</key>
+			<integer>111</integer>
+			<key>Shape</key>
+			<string>Rectangle</string>
+			<key>Style</key>
+			<dict>
+				<key>fill</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>shadow</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>stroke</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+			</dict>
+		</dict>
 	</array>
 	<key>GridInfo</key>
 	<dict>
@@ -140349,7 +140347,7 @@ Here we describe
 	<key>HPages</key>
 	<integer>3</integer>
 	<key>ImageCounter</key>
-	<integer>110</integer>
+	<integer>112</integer>
 	<key>ImageLinkBack</key>
 	<array>
 		<dict/>
@@ -140372,12 +140370,12 @@ Here we describe
 	</array>
 	<key>ImageList</key>
 	<array>
+		<string>image111.png</string>
+		<string>image110.png</string>
 		<string>image108.tiff</string>
 		<string>image107.tiff</string>
 		<string>image106.png</string>
 		<string>image105.tiff</string>
-		<string>image104.png</string>
-		<string>image102.png</string>
 		<string>image101.png</string>
 		<string>image98.png</string>
 		<string>image97.png</string>
@@ -140429,7 +140427,7 @@ Here we describe
 	<key>MasterSheets</key>
 	<array/>
 	<key>ModificationDate</key>
-	<string>2014-02-07 20:30:25 +0000</string>
+	<string>2014-02-07 20:57:48 +0000</string>
 	<key>Modifier</key>
 	<string>Nathan Dunn</string>
 	<key>NotesVisible</key>
@@ -140527,7 +140525,7 @@ Here we describe
 		<key>SidebarWidth</key>
 		<integer>0</integer>
 		<key>VisibleRegion</key>
-		<string>{{0, 38}, {4338, 2522}}</string>
+		<string>{{426, 58}, {4338, 2522}}</string>
 		<key>Zoom</key>
 		<real>0.5</real>
 		<key>ZoomValues</key>
