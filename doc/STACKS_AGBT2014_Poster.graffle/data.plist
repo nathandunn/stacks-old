@@ -1623,6 +1623,193 @@
 	<array>
 		<dict>
 			<key>Bounds</key>
+			<string>{{747.85418750066299, 947.59317576149385}, {766, 50}}</string>
+			<key>Class</key>
+			<string>ShapedGraphic</string>
+			<key>FitText</key>
+			<string>YES</string>
+			<key>Flow</key>
+			<string>Resize</string>
+			<key>FontInfo</key>
+			<dict>
+				<key>Size</key>
+				<real>16</real>
+			</dict>
+			<key>ID</key>
+			<integer>10197</integer>
+			<key>Shape</key>
+			<string>Rectangle</string>
+			<key>Style</key>
+			<dict>
+				<key>fill</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>shadow</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>stroke</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+			</dict>
+			<key>Text</key>
+			<dict>
+				<key>Align</key>
+				<integer>0</integer>
+				<key>Text</key>
+				<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural
+{\field{\*\fldinst{HYPERLINK "http://creskolab.uoregon.edu/stacks/"}}{\fldrslt 
+\f0\fs66 \cf0 http://creskolab.uoregon.edu/stacks/}}
+\f0\fs66 vStacks-pre.zip}</string>
+			</dict>
+			<key>Wrap</key>
+			<string>NO</string>
+		</dict>
+		<dict>
+			<key>Bounds</key>
+			<string>{{1070.1242712672292, 870.58347576149379}, {87, 87}}</string>
+			<key>Class</key>
+			<string>ShapedGraphic</string>
+			<key>FontInfo</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>w</key>
+					<string>0</string>
+				</dict>
+				<key>Font</key>
+				<string>Helvetica</string>
+				<key>Size</key>
+				<real>12</real>
+			</dict>
+			<key>ID</key>
+			<integer>10196</integer>
+			<key>ImageID</key>
+			<integer>97</integer>
+			<key>Shape</key>
+			<string>Rectangle</string>
+			<key>Style</key>
+			<dict>
+				<key>fill</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>shadow</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>stroke</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+			</dict>
+		</dict>
+		<dict>
+			<key>Bounds</key>
+			<string>{{283.5, 876.58347576149379}, {145.45214391143904, 75.948999999999955}}</string>
+			<key>Class</key>
+			<string>ShapedGraphic</string>
+			<key>FontInfo</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>w</key>
+					<string>0</string>
+				</dict>
+				<key>Font</key>
+				<string>Helvetica</string>
+				<key>Size</key>
+				<real>12</real>
+			</dict>
+			<key>ID</key>
+			<integer>10194</integer>
+			<key>ImageID</key>
+			<integer>87</integer>
+			<key>Shape</key>
+			<string>Rectangle</string>
+			<key>Style</key>
+			<dict>
+				<key>fill</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>shadow</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>stroke</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+			</dict>
+		</dict>
+		<dict>
+			<key>Bounds</key>
+			<string>{{88.785794990275804, 948.63317576149382}, {541, 50}}</string>
+			<key>Class</key>
+			<string>ShapedGraphic</string>
+			<key>FitText</key>
+			<string>YES</string>
+			<key>Flow</key>
+			<string>Resize</string>
+			<key>FontInfo</key>
+			<dict>
+				<key>Size</key>
+				<real>16</real>
+			</dict>
+			<key>ID</key>
+			<integer>10193</integer>
+			<key>Shape</key>
+			<string>Rectangle</string>
+			<key>Style</key>
+			<dict>
+				<key>fill</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>shadow</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+				<key>stroke</key>
+				<dict>
+					<key>Draws</key>
+					<string>NO</string>
+				</dict>
+			</dict>
+			<key>Text</key>
+			<dict>
+				<key>Align</key>
+				<integer>0</integer>
+				<key>Text</key>
+				<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural
+{\field{\*\fldinst{HYPERLINK "http://creskolab.uoregon.edu/stacks/"}}{\fldrslt 
+\f0\fs66 \cf0 http://creskolab.uoregon.edu/stacks/}}}</string>
+			</dict>
+			<key>Wrap</key>
+			<string>NO</string>
+		</dict>
+		<dict>
+			<key>Bounds</key>
 			<string>{{2853.8420000000001, 2386.5682291343956}, {117.65799999999996, 117.65799999999996}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
@@ -2735,8 +2922,17 @@ s13_fw_08   s13 fw}</string>
 			<dict>
 				<key>fill</key>
 				<dict>
-					<key>Draws</key>
-					<string>NO</string>
+					<key>Color</key>
+					<dict>
+						<key>a</key>
+						<string>0.51</string>
+						<key>b</key>
+						<string>1</string>
+						<key>g</key>
+						<string>1</string>
+						<key>r</key>
+						<string>1</string>
+					</dict>
 				</dict>
 				<key>shadow</key>
 				<dict>
@@ -2754,10 +2950,10 @@ s13_fw_08   s13 fw}</string>
 				<key>Text</key>
 				<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 {\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qc
 
-\f0\b\fs52 \cf0 Filter Loci}</string>
+\f0\b\fs52 \cf2 Filter Loci}</string>
 			</dict>
 			<key>Wrap</key>
 			<string>NO</string>
@@ -139973,7 +140169,7 @@ Catchen, J., Amores, A., Hohenlohe, P. A., Cresko, W. A., &amp; Postlethwait, J.
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{65.25, 503.93373119031378}, {1442.1221446761997, 476}}</string>
+			<string>{{65.25, 503.93373119031378}, {1442.1221446761997, 372}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -140020,11 +140216,13 @@ Catchen, J., Amores, A., Hohenlohe, P. A., Cresko, W. A., &amp; Postlethwait, J.
 \deftab720
 \pard\pardeftab720\sl288\slmult1\qj
 
-\f0\fs60 \cf0 Massively parallel short-read sequencing technologies, coupled with powerful software platforms, are enabling investigators to analyze tens of thousands of genetic markers in scores of populations. This wealth of data is rapidly expanding and allowing biological questions to be addressed with unprecedented scope and precision. The sizes of the data sets are now posing significant data processing and analysis challenges. Bioinformatics algorithms \'96 for generating population genomic statistics, structural analyses, or phylogenetic trees \'96 are not effective without human interpretation and these interpretations cannot be done unless large data sets can be properly visualized and presented to the experimenter. \
+\f0\fs52 \cf0 Massively parallel short-read sequencing technologies, coupled with powerful software platforms, are enabling investigators to analyze tens of thousands of genetic markers in scores of populations. This wealth of data is rapidly expanding and allowing biological questions to be addressed with unprecedented scope and precision. The sizes of the data sets are now posing significant data processing and analysis challenges. Bioinformatics algorithms \'96 for generating population genomic statistics, structural analyses, or phylogenetic trees \'96 are not effective without human interpretation and these interpretations cannot be done unless large data sets can be properly visualized and presented to the experimenter. \
 \
 Here we describe 
 \b vStacks
-\b0 , a Mac Application soon to be available through Apple\'92s Mac Store, which is used to view and annotate data generated by the Stacks pipeline \'96 reduced representation data derived from restriction enzyme digestion of thousands of genomes.}</string>
+\b0 , a Mac Application soon to be available through Apple\'92s Mac Store, which is used to view and annotate data generated by the 
+\b Stacks
+\b0  pipeline \'96 reduced representation data derived from restriction enzyme digestion of thousands of genomes.}</string>
 				<key>VerticalPad</key>
 				<integer>0</integer>
 			</dict>
@@ -140231,7 +140429,7 @@ Here we describe
 	<key>MasterSheets</key>
 	<array/>
 	<key>ModificationDate</key>
-	<string>2014-02-07 20:17:49 +0000</string>
+	<string>2014-02-07 20:30:25 +0000</string>
 	<key>Modifier</key>
 	<string>Nathan Dunn</string>
 	<key>NotesVisible</key>
@@ -140329,7 +140527,7 @@ Here we describe
 		<key>SidebarWidth</key>
 		<integer>0</integer>
 		<key>VisibleRegion</key>
-		<string>{{670, 496}, {4338, 2522}}</string>
+		<string>{{0, 38}, {4338, 2522}}</string>
 		<key>Zoom</key>
 		<real>0.5</real>
 		<key>ZoomValues</key>
