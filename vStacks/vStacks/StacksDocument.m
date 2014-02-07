@@ -281,7 +281,7 @@
             NSArray *datums = [[DatumRepository sharedInstance] getDatums:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:populationMO];
             if (datums.count > 0) {
                 [returnHTML appendFormat:@"<div class='datum-pop'><div class='population-header'>%@</div>", populationMO.annotatedName];
-                for (DatumMO *datum in datums.reverseObjectEnumerator) {
+                for (DatumMO *datum in datums) {
                     [returnHTML appendString:[self renderDatumHtml:datum]];
                 }
                 [returnHTML appendFormat:@"</div>"];
