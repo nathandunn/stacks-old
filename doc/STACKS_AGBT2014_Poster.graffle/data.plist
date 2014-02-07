@@ -1623,7 +1623,7 @@
 	<array>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2857.3493047072579, 2391.3284900685317}, {117.65799999999996, 117.65799999999996}}</string>
+			<string>{{2853.8420000000001, 2386.5682291343956}, {117.65799999999996, 117.65799999999996}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FontInfo</key>
@@ -2254,7 +2254,7 @@ SDVPERSIPITREEKPAIAGSQRK\
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{3187.170987904396, 1703.25}, {56, 54.833332061767578}}</string>
+			<string>{{3177, 1845}, {56, 54.833332061767578}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FontInfo</key>
@@ -2316,9 +2316,9 @@ SDVPERSIPITREEKPAIAGSQRK\
 			<integer>9081</integer>
 			<key>Points</key>
 			<array>
-				<string>{2871, 1895.5}</string>
+				<string>{2874, 1926.4166660308838}</string>
 				<string>{3024, 1843.8354096647458}</string>
-				<string>{3215.170987904396, 1730.6666660308838}</string>
+				<string>{3205, 1872.4166660308838}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -2377,9 +2377,9 @@ SDVPERSIPITREEKPAIAGSQRK\
 			<integer>9080</integer>
 			<key>Points</key>
 			<array>
-				<string>{2488.9977847827336, 1816.4187436338621}</string>
-				<string>{2647, 1842.8354096647458}</string>
-				<string>{2871, 1895.5}</string>
+				<string>{2500.75, 1926.4166660308838}</string>
+				<string>{2644, 1906.7611757614932}</string>
+				<string>{2874, 1926.4166660308838}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -2416,7 +2416,7 @@ SDVPERSIPITREEKPAIAGSQRK\
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2460.9977847827336, 1789.0020776029783}, {56, 54.833332061767578}}</string>
+			<string>{{2472.75, 1899}, {56, 54.833332061767578}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FontInfo</key>
@@ -2478,9 +2478,9 @@ SDVPERSIPITREEKPAIAGSQRK\
 			<integer>9078</integer>
 			<key>Points</key>
 			<array>
-				<string>{2058.75, 1784.75}</string>
-				<string>{2326.375, 1796.3340736427945}</string>
-				<string>{2488.9977847827336, 1816.4187436338621}</string>
+				<string>{2058.75, 1944.1805039116311}</string>
+				<string>{2304, 1882}</string>
+				<string>{2500.75, 1926.4166660308838}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -2517,7 +2517,7 @@ SDVPERSIPITREEKPAIAGSQRK\
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2763, 1714.5}, {216, 362}}</string>
+			<string>{{2776.5, 1761.4166660308838}, {195, 330}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -2561,7 +2561,7 @@ SDVPERSIPITREEKPAIAGSQRK\
 {\colortbl;\red255\green255\blue255;}
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural
 
-\f0\fs38 \cf0 \CocoaLigature0 s13_an_01   s13 an\
+\f0\fs34 \cf0 \CocoaLigature0 s13_an_01   s13 an\
 s13_an_02   s13 an\
 s13_an_03   s13 an\
 s13_an_04   s13 an\
@@ -2583,7 +2583,7 @@ s13_fw_08   s13 fw}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{1804.5, 1757.25}, {508.5, 55}}</string>
+			<string>{{1804.5, 1916.6805039116311}, {508.5, 55}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -2657,7 +2657,7 @@ s13_fw_08   s13 fw}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2384.5800063566749, 1732.5}, {208.83555685211729, 213.32664409624886}}</string>
+			<string>{{2389.5, 1829.25}, {208.83555685211729, 213.32664409624886}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FontInfo</key>
@@ -3642,7 +3642,7 @@ Specified Locus}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2295, 1596.863364302139}, {758.25, 90}}</string>
+			<string>{{1854.5626603323162, 1586.7954684788283}, {648, 90}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -3920,7 +3920,7 @@ Specified Locus}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{3120.75, 1674}, {362.83019337468431, 169.83540966474584}}</string>
+			<string>{{3102.75, 1807.4800011205571}, {362.83019337468431, 169.83540966474584}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FontInfo</key>
@@ -71808,7 +71808,7 @@ OPULATIONS}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{1804.5, 1564.644975761493}, {374.08019337468426, 154.43677708129167}}</string>
+			<string>{{2540.25, 1554.5770799381826}, {374.08019337468426, 154.43677708129167}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FontInfo</key>
@@ -140231,7 +140231,7 @@ Here we describe
 	<key>MasterSheets</key>
 	<array/>
 	<key>ModificationDate</key>
-	<string>2014-02-07 20:14:41 +0000</string>
+	<string>2014-02-07 20:17:49 +0000</string>
 	<key>Modifier</key>
 	<string>Nathan Dunn</string>
 	<key>NotesVisible</key>
@@ -140329,7 +140329,7 @@ Here we describe
 		<key>SidebarWidth</key>
 		<integer>0</integer>
 		<key>VisibleRegion</key>
-		<string>{{670, 574}, {4338, 2522}}</string>
+		<string>{{670, 496}, {4338, 2522}}</string>
 		<key>Zoom</key>
 		<real>0.5</real>
 		<key>ZoomValues</key>
