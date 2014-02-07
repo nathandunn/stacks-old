@@ -32,7 +32,7 @@
 
 @property(weak) IBOutlet NSTableView *locusTableView;
 //@property(weak) IBOutlet NSTableView *stacksTableView;
-@property(weak) IBOutlet NSCollectionView *datumCollectionView;
+//@property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController;
 @property(weak) IBOutlet NSTextField *filteredLoci;
 @property(weak) IBOutlet NSTextField *totalLoci;
