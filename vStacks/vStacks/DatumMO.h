@@ -37,12 +37,14 @@
 
 @property (nonatomic, retain) ColorGenerator *colorGenerator;
 
+- (NSDictionary *)getHaplotypeOrder:(NSMutableArray *)alleleArray;
 @end
 
 @interface DatumMO (CoreDataGeneratedAccessors)
 
-- (NSMutableString *)renderHaplotypeHtml;
-- (NSMutableString *)renderDepthHtml;
+- (NSMutableString *)renderHaplotypeHtml:(NSDictionary *)dictionary;
+
+- (NSMutableString *)renderDepthHtml:(NSDictionary *)dictionary;
 - (NSMutableString *)renderNameHtml;
 
 - (NSAttributedString *)renderHaplotypes ;
