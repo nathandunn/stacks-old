@@ -629,6 +629,14 @@ div.datum-pop{
 
 div.population-header{
     margin-top: 10px;
+    margin-left: 5px;
+    padding: 3px;
+    color: #000000;
+    text-align: center;
+       background-color: #DFEFF0;
+    font-style: bolder;
+    border-radius: 5px;
+
     width: 100%;
     display: table-caption;
 }
