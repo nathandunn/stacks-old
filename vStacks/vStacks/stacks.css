@@ -616,7 +616,8 @@ div.datum-depth{
     font-family: monospace;
     font-size: 14;
     display: inline-block;
-    max-width: 200px;
+    min-width: 150px;
+    max-width: 150px;
     word-wrap: break-word;
 }
 
@@ -633,7 +634,7 @@ div.population-header{
     padding: 3px;
     color: #000000;
     text-align: center;
-       background-color: #DFEFF0;
+    background-color: #DFEFF0;
     font-style: bolder;
     border-radius: 5px;
 
