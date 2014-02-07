@@ -164,8 +164,9 @@
 
 }
 
-- (NSMutableString *)renderHaplotypeHtml {
+- (NSMutableString *)renderHaplotypeHtml:(NSDictionary *)hapReorder{
     NSMutableString *returnHTML = [NSMutableString string];
+
 
     int i = 0;
     NSError *error;
@@ -173,12 +174,13 @@
     NSUInteger haplotypeCount = haplotypeJson.count;
     [returnHTML appendString:@"<div class='datum-depth'>"];
     for (NSDictionary *haplotype in haplotypeJson) {
-        NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
-        NSLog(@"rednering order: %ld",order);
-        NSString *depthString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"haplotype"]];
+//        NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
+        NSNumber *order = [hapReorder objectForKey:[haplotype valueForKey:@"order"]];
+//        NSLog(@"rednering order: %ld", order);
+        NSString *haplotypeString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"haplotype"]];
 
-        NSMutableString *appendString = [NSMutableString stringWithString:depthString];
-        NSString *colorString = [self generateColorStringForOrder:order];
+        NSMutableString *appendString = [NSMutableString stringWithString:haplotypeString];
+        NSString *colorString = [self generateColorStringForOrder:order.unsignedIntegerValue];
         [appendString insertString:[NSString stringWithFormat:@"<font color='#%@'>", colorString] atIndex:0];
         [appendString appendString:@"</font>"];
 //        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
@@ -194,7 +196,7 @@
     return returnHTML;
 }
 
-- (NSMutableString *)renderDepthHtml {
+- (NSMutableString *)renderDepthHtml:(NSDictionary *)hapReorder{
     NSMutableString *returnHTML = [NSMutableString string];
 
     int i = 0;
@@ -203,11 +205,12 @@
     NSUInteger haplotypeCount = haplotypeJson.count;
     [returnHTML appendString:@"<div class='datum-depth'>"];
     for (NSDictionary *haplotype in haplotypeJson) {
-        NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
+//        NSUInteger order = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
+        NSNumber *order = [hapReorder objectForKey:[haplotype valueForKey:@"order"]];
         NSString *depthString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"depth"]];
 
         NSMutableString *appendString = [NSMutableString stringWithString:depthString];
-        NSString *colorString = [self generateColorStringForOrder:order];
+        NSString *colorString = [self generateColorStringForOrder:order.unsignedIntegerValue];
         [appendString insertString:[NSString stringWithFormat:@"<font color='#%@'>", colorString] atIndex:0];
         [appendString appendString:@"</font>"];
 //        NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
@@ -230,6 +233,31 @@
     NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<div class='datum-name'>%@</div>", formattedString];
 
     return returnHTML;
+}
+
+/**
+* Gets an arbitrary allele array
+*/
+- (NSDictionary *)getHaplotypeOrder:(NSMutableArray *)alleleArray {
+    NSError *error;
+    NSMutableDictionary *haplotypeOrder = [NSMutableDictionary dictionaryWithCapacity:alleleArray.count];
+
+    NSDictionary *haplotypeJson = [NSJSONSerialization JSONObjectWithData:self.haplotypeData options:kNilOptions error:&error];
+    for (NSDictionary *haplotype in haplotypeJson) {
+        NSString *haplotypeString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"haplotype"]];
+//        NSUInteger oldOrder = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
+        NSString* oldOrder = [haplotype valueForKey:@"order"] ;
+        NSUInteger index =0 ;
+        for (NSString *item in alleleArray) {
+            if ([item rangeOfString:haplotypeString].location != NSNotFound) {
+                [haplotypeOrder setObject:[NSNumber numberWithUnsignedInteger:index] forKey:oldOrder];
+            }
+            index++;
+        }
+//        NSString *colorString = [self generateColorStringForOrder:order];
+    }
+
+    return haplotypeOrder;
 }
 @end
 

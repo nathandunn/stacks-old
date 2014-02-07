@@ -305,11 +305,19 @@
 - (NSString *)renderDatumHtml:(DatumMO *)datum {
     NSMutableString *returnHTML = [NSMutableString string];
     NSString *nameString = [datum renderNameHtml];
-//    NSString *haploytpeString = [datum renderHaplotypeHtml] ;
-//    NSString *haploytpeString = [[datum renderHaplotypes] string];
-    NSString *haploytpeString = [datum renderHaplotypeHtml];
-//    NSString *depthString = [[datum renderDepths] string];
-    NSString *depthString = [datum renderDepthHtml];
+    NSMutableArray *alleles = [NSMutableArray array];
+    NSLog(@"self.selectedLocus %@",self.selectedLocus);
+    NSLog(@"self.selectedLocus.alleleData %@",self.selectedLocus.alleleData);
+    if(self.selectedLocus.alleleData!=nil){
+        for(NSDictionary *allele in [NSJSONSerialization JSONObjectWithData:self.selectedLocus.alleleData options:kNilOptions error:nil]){
+            [alleles addObject:[allele objectForKey:@"allele"]];
+        }
+    }
+    NSDictionary *hapReorder = [datum getHaplotypeOrder:alleles];
+
+
+    NSString *haploytpeString = [datum renderHaplotypeHtml:hapReorder];
+    NSString *depthString = [datum renderDepthHtml:hapReorder];
     NSString *datumIndex = [NSString stringWithFormat:@"%@:%@", datum.tagId, datum.sampleId];
     NSString *selectedClass = ([datum isEqualTo:self.selectedDatum]) ? @" selected-datum" : @"";
     [returnHTML appendFormat:@"<div class='population%ld datum%@'>", self.selectedPopulation.populationId.longValue, selectedClass];
