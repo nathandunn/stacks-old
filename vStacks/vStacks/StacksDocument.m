@@ -331,14 +331,14 @@
 
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
         request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener {
-    NSLog(@"handling URL!!! %@", [request URL] );
+//    NSLog(@"handling URL!!! %@", [request URL] );
     NSString* lastPathComponent = [[request URL] fragment];
-    NSLog(@"last path componets!!! %@", lastPathComponent);
+//    NSLog(@"last path componets!!! %@", lastPathComponent);
 
     [listener use ];
     NSArray *pathComponents = [lastPathComponent componentsSeparatedByString:@":"] ;
     if (pathComponents.count != 2) {
-        NSLog(@"path path for URL %@", request.URL);
+//        NSLog(@"path path for URL %@", request.URL);
         return;
     }
     
