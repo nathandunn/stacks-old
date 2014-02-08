@@ -575,6 +575,7 @@ div.selected-datum{
 }
 
 div.datum{
+
     float: left;
     padding: 5px;
     margin: 5px;
@@ -625,17 +626,18 @@ div.datum-pop{
     /*font-family: monospace;*/
     /*font-size: 14;*/
     display: table;
-    width: 100%;
+    width: 98%;
 }
 
 div.population-header{
     margin-top: 10px;
     margin-left: 5px;
+    margin-right: 5px;
     padding: 3px;
     color: #000000;
     text-align: center;
     background-color: #DFEFF0;
-    font-style: bolder;
+    font-weight: bold;
     border-radius: 5px;
 
     width: 100%;

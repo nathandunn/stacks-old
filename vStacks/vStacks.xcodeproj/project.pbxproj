@@ -70,7 +70,6 @@
 		6BD8C86E18A2DAD3000C3A16 /* stacks.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86C18A2DABE000C3A16 /* stacks.js */; };
 		6BD8C87018A2DB05000C3A16 /* jquery-1.11.0.min.js in Sources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
 		6BD8C87118A2DB28000C3A16 /* jquery-1.11.0.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
-		D793C906D89FB22606CBC02B /* ProvideFeedbackMenuItem.m in Sources */ = {isa = PBXBuildFile; fileRef = D793C9A901B9AEBC949CDFB0 /* ProvideFeedbackMenuItem.m */; };
 		D793CD98D5347B963755DE08 /* StacksEntryDatumRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = D793CE87A0282D76171B5705 /* StacksEntryDatumRenderer.m */; };
 /* End PBXBuildFile section */
 
@@ -205,9 +204,7 @@
 		63D53F5AAC71FFFCDACB4C93 /* PopulationService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationService.h; sourceTree = "<group>"; };
 		6BD8C86C18A2DABE000C3A16 /* stacks.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = stacks.js; sourceTree = "<group>"; };
 		6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = "jquery-1.11.0.min.js"; sourceTree = "<group>"; };
-		D793C9A901B9AEBC949CDFB0 /* ProvideFeedbackMenuItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ProvideFeedbackMenuItem.m; sourceTree = "<group>"; };
 		D793CBB9D5EB558052FC2E35 /* StacksEntryDatumRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksEntryDatumRenderer.h; sourceTree = "<group>"; };
-		D793CC363F0A5FD6323391D3 /* ProvideFeedbackMenuItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProvideFeedbackMenuItem.h; sourceTree = "<group>"; };
 		D793CE87A0282D76171B5705 /* StacksEntryDatumRenderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksEntryDatumRenderer.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -286,8 +283,6 @@
 				14370558187B87DF0007BDE5 /* StackEntryRenderer.m */,
 				14370559187B87DF0007BDE5 /* StackEntryRenderer.h */,
 				1437053C187B876A0007BDE5 /* Images.xcassets */,
-				D793C9A901B9AEBC949CDFB0 /* ProvideFeedbackMenuItem.m */,
-				D793CC363F0A5FD6323391D3 /* ProvideFeedbackMenuItem.h */,
 			);
 			path = vStacks;
 			sourceTree = "<group>";
@@ -636,7 +631,6 @@
 				6BD8C87018A2DB05000C3A16 /* jquery-1.11.0.min.js in Sources */,
 				D793CD98D5347B963755DE08 /* StacksEntryDatumRenderer.m in Sources */,
 				63D539B1A6C10C80338A325A /* PopulationService.m in Sources */,
-				D793C906D89FB22606CBC02B /* ProvideFeedbackMenuItem.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
