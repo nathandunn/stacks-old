@@ -15,6 +15,7 @@
 
 @interface StacksDocument : NSPersistentDocument
 
+@property(strong) NSString *datumPath;
 @property(strong) NSString *path;
 @property(strong) NSString *importPath;
 @property(atomic, retain) NSMutableDictionary *populationLookup;

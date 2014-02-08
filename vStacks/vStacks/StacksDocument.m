@@ -84,6 +84,7 @@
 @synthesize importPath;
 @synthesize path;
 @synthesize oldPopulationTitle;
+@synthesize datumPath;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -178,14 +179,14 @@
 }
 
 - (IBAction)togglePopulationEdit:(id)sender {
-    NSLog(@"editing %d", editingPopulation);
+//    NSLog(@"editing %d", editingPopulation);
     if (editingPopulation) {
-        NSLog(@"hit DONE, setting button to edit");
+//        NSLog(@"hit DONE, setting button to edit");
         editPopulationButton.title = @"Edit";
 
-        for (id item in populationSelector.itemArray) {
-            NSLog(@"item in there: %@", item);
-        }
+//        for (id item in populationSelector.itemArray) {
+//            NSLog(@"item in there: %@", item);
+//        }
 
 
 //        PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
@@ -300,14 +301,13 @@
 //    NSLog(@"return HTML: %@",returnHTML);
 
     [[datumWebView mainFrame] loadHTMLString:returnHTML baseURL:[[NSBundle mainBundle] bundleURL]];
+//    [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"window.location.hash='#%@:%@'",self.selectedDatum.tagId,self.selectedDatum.sampleId]];
 }
 
 - (NSString *)renderDatumHtml:(DatumMO *)datum {
     NSMutableString *returnHTML = [NSMutableString string];
     NSString *nameString = [datum renderNameHtml];
     NSMutableArray *alleles = [NSMutableArray array];
-    NSLog(@"self.selectedLocus %@",self.selectedLocus);
-    NSLog(@"self.selectedLocus.alleleData %@",self.selectedLocus.alleleData);
     if(self.selectedLocus.alleleData!=nil){
         for(NSDictionary *allele in [NSJSONSerialization JSONObjectWithData:self.selectedLocus.alleleData options:kNilOptions error:nil]){
             [alleles addObject:[allele objectForKey:@"allele"]];
@@ -320,24 +320,34 @@
     NSString *depthString = [datum renderDepthHtml:hapReorder];
     NSString *datumIndex = [NSString stringWithFormat:@"%@:%@", datum.tagId, datum.sampleId];
     NSString *selectedClass = ([datum isEqualTo:self.selectedDatum]) ? @" selected-datum" : @"";
-    [returnHTML appendFormat:@"<div class='population%ld datum%@'>", self.selectedPopulation.populationId.longValue, selectedClass];
-    [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>", datumIndex, nameString];
-    [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>", datumIndex, haploytpeString];
-    [returnHTML appendFormat:@"<a href='%@'>%@</a><br/>", datumIndex, depthString];
+    [returnHTML appendFormat:@"<div id='%@' class='population%ld datum%@'>", datumIndex,self.selectedPopulation.populationId.longValue, selectedClass];
+    [returnHTML appendFormat:@"<a name='%@'></a>",datumIndex];
+    [returnHTML appendFormat:@"<a href='#%@'>%@</a><br/>", datumIndex, nameString];
+    [returnHTML appendFormat:@"<a href='#%@'>%@</a><br/>", datumIndex, haploytpeString];
+    [returnHTML appendFormat:@"<a href='#%@'>%@</a><br/>", datumIndex, depthString];
     [returnHTML appendFormat:@"</div>"];
     return returnHTML;
 }
 
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
         request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener {
-    NSLog(@"handling click policy!!! %@", [[request URL] lastPathComponent]);
+    NSLog(@"handling URL!!! %@", [request URL] );
+    NSString* lastPathComponent = [[request URL] fragment];
+    NSLog(@"last path componets!!! %@", lastPathComponent);
 
-    [listener use];
-    NSArray *pathComponents = [[[request URL] lastPathComponent] componentsSeparatedByString:@":"];
+    [listener use ];
+    NSArray *pathComponents = [lastPathComponent componentsSeparatedByString:@":"] ;
     if (pathComponents.count != 2) {
         NSLog(@"path path for URL %@", request.URL);
         return;
     }
+    
+
+//    if([lastPathComponent characterAtIndex:0]=='#'){
+//        return ;
+//    }
+
+    self.datumPath = lastPathComponent ;
     NSUInteger locusId = [numberFormatter numberFromString:[pathComponents objectAtIndex:0]].unsignedIntegerValue;
     NSUInteger sampleId = [numberFormatter numberFromString:[pathComponents objectAtIndex:1]].unsignedIntegerValue;
     DatumMO *datumMO = [[DatumRepository sharedInstance] getDatum:self.managedObjectContext locusId:locusId andSampleId:sampleId];
@@ -345,15 +355,35 @@
         self.selectedDatum = datumMO;
         [self updateStacksView];
         [self updateDatumView];
+//        [datumWebView stringByEvaluatingJavaScriptFromString: @"window.location.hash='#%@'"];
+//    [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"window.location.hash='%@'",lastPathComponent]];
+//        [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"addClass('%@','selected-datum');",[[NSBundle mainBundle] bundleURL],[[request URL] lastPathComponent]]];
     }
 
+//    [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"window.location='%@#%@'",[[NSBundle mainBundle] bundleURL],[[request URL] lastPathComponent]]];
 
+//    [listener use];
 //    NSString *host = [[request URL] host];
 //    if ([host hasSuffix:@"company.com"])
 //        [listener ignore];
 //    else
 //        [listener use];
 }
+
+- (void)webView:(WebView *)sender didFinishLoadForFrame:(WebFrame *)frame{
+
+//    NSLog(@"finished loading main frame %@",self.datumPath);
+    NSArray *pathComponents = [self.datumPath componentsSeparatedByString:@":"] ;
+    if(pathComponents.count!=2){
+        return ;
+    }
+//    pathComponents = [[pathComponents objectAtIndex:1] componentsSeparatedByString:@":"];
+
+//    NSLog(@"finished loading! %@",last);
+
+    [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"window.location.hash='#%@'",self.datumPath]];
+}
+
 
 - (PopulationMO *)findSelectedPopulation {
     NSInteger selectedRow = [self.populationSelector indexOfSelectedItem];
@@ -456,15 +486,15 @@
 
 
 - (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
-    NSLog(@"validating UI item in Stacks Document%@", anItem);
+//    NSLog(@"validating UI item in Stacks Document%@", anItem);
     return [super validateUserInterfaceItem:anItem];
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)item {
-    NSLog(@"validating in in Stacks Document menu item %@", item);
+//    NSLog(@"validating in in Stacks Document menu item %@", item);
 //    return [super validateUserInterfaceItem:item];
     if (item.tag == 77) {
-        NSLog(@"should be returning true!");
+//        NSLog(@"should be returning true!");
         return YES;
     }
     else {
