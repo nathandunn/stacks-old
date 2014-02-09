@@ -139347,7 +139347,7 @@ OPULATIONS}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{1849.5, 2699.0768378818011}, {1579.5, 140}}</string>
+			<string>{{1849.5, 2673.0768378818011}, {1579.5, 140}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -139402,7 +139402,7 @@ Catchen, J., Amores, A., Hohenlohe, P. A., Cresko, W. A., &amp; Postlethwait, J.
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{1804.5, 2632.3812473533048}, {1679.0801933746843, 54.833332061767578}}</string>
+			<string>{{1804.5, 2616.3812473533048}, {1679.0801933746843, 54.833332061767578}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>ID</key>
@@ -139772,7 +139772,7 @@ Catchen, J., Amores, A., Hohenlohe, P. A., Cresko, W. A., &amp; Postlethwait, J.
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{1849.5, 2922.3273902990409}, {1601.8301933746843, 70}}</string>
+			<string>{{1849.5, 2892.3273902990409}, {1601.8301933746843, 105}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -139814,14 +139814,14 @@ Catchen, J., Amores, A., Hohenlohe, P. A., Cresko, W. A., &amp; Postlethwait, J.
 \deftab720
 \pard\pardeftab720\ri-23280\sl288\slmult1
 
-\f0\fs48 \cf0 Acknowledgements: This research was supported by the University of Oregon Office of Research, NIH NRSA Ruth L. Kirschstein fellowship F32GM095213-01}</string>
+\f0\fs48 \cf0 Development of this software was funded by grants from the National Science Foundation (IOS-1027283, DEB-0949053) and the National Institute of Health (1R24GM079486-01A1 and the NRSA Ruth L. Kirschstein fellowship F32GM095213-01).  Further funding was provided by the University of Oregon Office of Research and the University of Oregon College of Arts and Sciences IT department.}</string>
 				<key>VerticalPad</key>
 				<integer>0</integer>
 			</dict>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{1804.5, 2856.6036820809959}, {1679.0801933746843, 54.833332061767578}}</string>
+			<string>{{1804.5, 2830.6036820809959}, {1679.0801933746843, 54.833332061767578}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>ID</key>
@@ -140442,7 +140442,7 @@ Here we describe
 	<key>MasterSheets</key>
 	<array/>
 	<key>ModificationDate</key>
-	<string>2014-02-08 21:40:13 +0000</string>
+	<string>2014-02-09 01:22:07 +0000</string>
 	<key>Modifier</key>
 	<string>Nathan Dunn</string>
 	<key>NotesVisible</key>
@@ -140540,7 +140540,7 @@ Here we describe
 		<key>SidebarWidth</key>
 		<integer>0</integer>
 		<key>VisibleRegion</key>
-		<string>{{0, 292}, {2240, 1472}}</string>
+		<string>{{1438, 1988}, {2240, 1472}}</string>
 		<key>Zoom</key>
 		<real>0.5</real>
 		<key>ZoomValues</key>
