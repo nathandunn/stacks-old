@@ -40,12 +40,43 @@ using std::make_pair;
 extern int    progeny_limit;
 extern double minor_allele_freq;
 
+class HapStat {
+public:
+    int     loc_id;
+    int     bp;
+    double  alleles;    // Number of alleles sampled at this location.
+    double  phi_st;
+    double  phi_ct;
+    double  phi_sc;
+    double  wphi_st;
+    double  wphi_ct;
+    double  wphi_sc;
+    double *comp;
+
+    HapStat() {
+	loc_id  = 0;
+	bp      = 0;
+	alleles = 0.0;
+	phi_st  = 0.0;
+	phi_ct  = 0.0;
+	phi_sc  = 0.0;
+	wphi_st = 0.0;
+	wphi_ct = 0.0;
+	wphi_sc = 0.0;
+	comp    = NULL;
+    }
+    ~HapStat() {
+	if (this->comp != NULL)
+	    delete [] comp;
+    }
+};
+
 class PopPair {
 public:
     int    loc_id;
     int    bp;
     int    col;
-    double alleles; // Number of alleles sampled at this location.
+    double alleles;    // Number of alleles sampled at this location.
     double pi;
     double fst;
     double fet_p;      // Fisher's Exact Test p-value.

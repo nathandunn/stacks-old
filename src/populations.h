@@ -126,6 +126,8 @@ int     call_population_genotypes(CSLocus *, PopMap<CSLocus> *);
 int     tally_haplotype_freq(CSLocus *, PopMap<CSLocus> *, int &, double &, string &);
 int     translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &);
 int     correct_fst_bonferroni_win(vector<PopPair *> &);
+int     init_chr_loci(map<string, vector<HapStat *> > &, string, map<uint, uint> &, vector<CSLocus *> &);
+int     kernel_smoothed_phist(vector<HapStat *> &, double *);
 int     init_chr_pairs(map<string, vector<PopPair *> > &, string, map<uint, uint> &, vector<CSLocus *> &);
 int     kernel_smoothed_fst(vector<PopPair *> &, double *, int *);
 int     bootstrap_fst(vector<double> &, vector<PopPair *> &, double *);
