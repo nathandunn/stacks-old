@@ -73,6 +73,7 @@ double    minor_allele_freq = 0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
 
+map<int, string>          pop_key, grp_key;
 map<int, pair<int, int> > pop_indexes;
 map<int, vector<int> >    grp_members;
 
@@ -995,7 +996,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 		   << loc->id        << "\t"
 		   << loc->loc.chr   << "\t"
 		   << loc->sort_bp() << "\t"
-		   << psum->rev_pop_index(j) << "\t"
+		   << pop_key[psum->rev_pop_index(j)] << "\t"
 		   << s[j]->n        << "\t"
 		   << s[j]->hap_cnt  << "\t"
 		   << s[j]->gdiv     << "\t"
@@ -1100,7 +1101,7 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 	fh << "\n";
     }
 
-    cerr << "Writing " << catalog.size() << " loci to haplotype Phi_st file, '" << file << "'\n";
+    cerr << "Calculating haplotype F statistics... ";
 
     fh << "# Batch ID " << "\t"
        << "Locus ID"    << "\t"
@@ -1133,9 +1134,7 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
     for (git = grp_members.begin(); git != grp_members.end(); git++)
 	grps.push_back(git->first);
 
-    //
-    // Create a matrix of haplotype distances for all haplotypes at this locus.
-    //
+    uint cnt = 0;
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	for (uint pos = 0; pos < it->second.size(); pos++) {
 	    loc = it->second[pos];
@@ -1144,12 +1143,16 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 
 	    if (loc->snps.size() == 0) continue;
 
+	    cnt++;
 	    // cerr << "Processing locus " << loc->id << "\n";
 
 	    map<string, int>          loc_hap_index;
 	    vector<string>            loc_haplotypes;
 	    map<int, vector<string> > pop_haplotypes;
 
+	    //
+	    // Tabulate the occurences of haplotypes at this locus.
+	    //
 	    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
 		start  = pit->second.first;
 		end    = pit->second.second;
@@ -1488,6 +1491,8 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
     }
 
     fh.close();
+
+    cerr << "wrote " << cnt << " loci to haplotype Phi_st file, '" << file << "'\n";
 
     return 0;
 }
@@ -1892,7 +1897,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
     }
 
     for (int j = 0; j < pop_cnt; j++)
-	fh << psum->rev_pop_index(j) << "\t" 
+	fh << pop_key[psum->rev_pop_index(j)] << "\t" 
 	   << private_cnt[j]         << "\t"
 	   << num_indv_mean[j]       << "\t"
 	   << num_indv_var[j]        << "\t"
@@ -1954,7 +1959,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
     for (int j = 0; j < pop_cnt; j++) {
 	sprintf(sitesstr, "%.0f", n_all[j]);
 
-	fh << psum->rev_pop_index(j)     << "\t" 
+	fh << pop_key[psum->rev_pop_index(j)] << "\t" 
 	   << private_cnt[j]             << "\t"
 	   << sitesstr                   << "\t"
 	   << n[j]                       << "\t"
@@ -2062,7 +2067,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    int multiple_loci     = 0;
 
 	    stringstream pop_name;
-	    pop_name << "batch_" << batch_id << ".fst_" << pop_1 << "-" << pop_2 << ".tsv";
+	    pop_name << "batch_" << batch_id << ".fst_" << pop_key[pop_1] << "-" << pop_key[pop_2] << ".tsv";
 
 	    string file = in_path + pop_name.str();
 	    ofstream fh(file.c_str(), ofstream::out);
@@ -2078,7 +2083,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    ofstream *comp_fh = NULL;
 	    if (log_fst_comp) {
 		pop_name.str("");
-		pop_name << "batch_" << batch_id << ".fst-comp_" << pop_1 << "-" << pop_2 << ".tsv";
+		pop_name << "batch_" << batch_id << ".fst-comp_" << pop_key[pop_1] << "-" << pop_key[pop_2] << ".tsv";
 
 		file = in_path + pop_name.str();
 		comp_fh = new ofstream(file.c_str(), ofstream::out);
@@ -2110,7 +2115,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 			 << "amova_fst" << "\n";
 	    }
 
-	    cerr << "Calculating Fst for populations " << pop_1 << " and " << pop_2 << " and writing it to file, '" << file << "'\n";
+	    cerr << "Calculating Fst for populations " << pop_key[pop_1] << " and " << pop_key[pop_2] << " and writing it to file, '" << file << "'\n";
 
 	    fh << "# Batch ID" << "\t"
 	       << "Locus ID"   << "\t"
@@ -2201,8 +2206,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 				   << loc->loc.chr << "\t"
 				   << pair->bp << "\t"
 				   << k << "\t" 
-				   << pop_1 << "\t" 
-				   << pop_2 << "\n";
+				   << pop_key[pop_1] << "\t" 
+				   << pop_key[pop_2] << "\n";
 			    delete pair;
 			    continue;
 			}
@@ -2312,8 +2317,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
 		    fh << batch_id          << "\t"
 		       << pairs[i]->loc_id  << "\t"
-		       << pop_1             << "\t"
-		       << pop_2             << "\t"
+		       << pop_key[pop_1]    << "\t"
+		       << pop_key[pop_2]    << "\t"
 		       << chr               << "\t"
 		       << pairs[i]->bp      << "\t"
 		       << pairs[i]->col     << "\t"
@@ -2365,12 +2370,12 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     // Write out X-axis header.
     //
     for (uint i = 0; i < pops.size(); i++)
-	fh << "\t" << pops[i];
+	fh << "\t" << pop_key[pops[i]];
     fh << "\n";
 
     uint n = 0;
     for (uint i = 0; i < pops.size() - 1; i++) {
-	fh << pops[i];
+	fh << pop_key[pops[i]];
 
 	for (uint k = 0; k <= i; k++)
 	    fh << "\t";
@@ -5844,9 +5849,9 @@ build_file_list(vector<pair<int, string> > &files,
 		map<int, pair<int, int> > &pop_indexes, 
 		map<int, vector<int> > &grp_members) 
 {
-    char   line[max_len];
-    char   pop_id_str[id_len];
+    char           line[max_len];
     vector<string> parts;
+    set<string>    pop_names, grp_names;
     string f;
     uint   len;
 
@@ -5859,6 +5864,9 @@ build_file_list(vector<pair<int, string> > &files,
 	    cerr << "Error opening population map '" << pmap_path << "'\n";
 	    return 0;
 	}
+
+	uint pop_id = 0;
+	uint grp_id = 0;
 
 	while (fh.good()) {
 	    fh.getline(line, max_len);
@@ -5878,21 +5886,33 @@ build_file_list(vector<pair<int, string> > &files,
 
 	    //
 	    // Parse the population map, we expect:
-	    // <file name> <tab> <population ID>
+	    // <file name><tab><population string>[<tab><group string>]
 	    //
 	    parse_tsv(line, parts);
 
-	    if (parts.size() != 2) {
-		cerr << "Population map is not formated correctly: expecting two, tab separated columns, found " << parts.size() << ".\n";
+	    if (parts.size() < 2 || parts.size() > 3) {
+		cerr << "Population map is not formated correctly: expecting two or three, tab separated columns, found " << parts.size() << ".\n";
 		return 0;
 	    }
 
-	    strncpy(pop_id_str, parts[1].c_str(), id_len);
-	    for (int i = 0; i < id_len && pop_id_str[i] != '\0'; i++)
-		if (!isdigit(pop_id_str[i])) {
-		    cerr << "Population map is not formated correctly: expecting numerical ID in second column, found '" << parts[1] << "'.\n";
-		    return 0;
-		}
+	    //
+	    // Have we seen this population or group before?
+	    //
+	    if (pop_names.count(parts[1]) == 0) {
+		pop_names.insert(parts[1]);
+		pop_id++;
+		pop_key[pop_id] = parts[1];
+	    }
+	    if (parts.size() == 3 && grp_names.count(parts[2]) == 0) {
+		grp_names.insert(parts[2]);
+		grp_id++;
+		grp_key[grp_id] = parts[2];
+
+		//
+		// Associate the current population with the group.
+		//
+		grp_members[grp_id].push_back(pop_id);		
+	    }
 
 	    //
 	    // Test that file exists before adding to list.
@@ -5904,7 +5924,7 @@ build_file_list(vector<pair<int, string> > &files,
 		cerr << " Unable to find " << f.c_str() << ", excluding it from the analysis.\n";
 	    } else {
 		test_fh.close();
-		files.push_back(make_pair(atoi(parts[1].c_str()), parts[0]));
+		files.push_back(make_pair(pop_id, parts[0]));
 	    }
 	}
 
@@ -5940,6 +5960,8 @@ build_file_list(vector<pair<int, string> > &files,
 		files.push_back(make_pair(1, file.substr(0, pos)));
 	}
 
+	pop_key[1] = "1";
+
 	closedir(dir);
     }
 
@@ -5971,7 +5993,9 @@ build_file_list(vector<pair<int, string> > &files,
 	}
     } while (end < (int) files.size());
 
-    cerr << "  " << pop_indexes.size() << " populations found\n";
+    pop_indexes.size() == 1 ?
+	cerr << "  " << pop_indexes.size() << " population found\n" :
+	cerr << "  " << pop_indexes.size() << " populations found\n";
 
     if (population_limit > (int) pop_indexes.size()) {
 	cerr << "Population limit (" 
@@ -5985,7 +6009,7 @@ build_file_list(vector<pair<int, string> > &files,
     for (it = pop_indexes.begin(); it != pop_indexes.end(); it++) {
 	start = it->second.first;
 	end   = it->second.second;
-	cerr << "    " << it->first << ": ";
+	cerr << "    " << pop_key[it->first] << ": ";
 	for (int i = start; i <= end; i++) {
 	    cerr << files[i].second;
 	    if (i < end) cerr << ", ";
@@ -5997,9 +6021,24 @@ build_file_list(vector<pair<int, string> > &files,
     // If no group membership is specified in the population map, create a default 
     // group with each population ID as a member.
     //
-    if (grp_members.size() == 0)
+    if (grp_members.size() == 0) {
 	for (it = pop_indexes.begin(); it != pop_indexes.end(); it++)
 	    grp_members[1].push_back(it->first);
+	grp_key[1] = "1";
+    }
+
+    grp_members.size() == 1 ?
+	cerr << "  " << grp_members.size() << " group of populations found\n" :
+	cerr << "  " << grp_members.size() << " groups of populations found\n";
+    map<int, vector<int> >::iterator git;
+    for (git = grp_members.begin(); git != grp_members.end(); git++) {
+	cerr << "    " << grp_key[git->first] << ": ";
+	for (uint i = 0; i < git->second.size(); i++) {
+	    cerr << pop_key[git->second[i]];
+	    if (i < git->second.size() - 1) cerr << ", ";
+	}
+	cerr << "\n";
+    }
 
     return 1;
 }

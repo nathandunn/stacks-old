@@ -11,7 +11,8 @@ create table samples (
        sample_id int unsigned not null,
        type      enum('parent', 'progeny', 'sample'),
        file      varchar(128),
-       pop_id	 int unsigned not null
+       pop_id	 varchar(32),
+       group_id	 varchar(32)
 );
 
 create table populations (
