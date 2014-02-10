@@ -1,3 +1,9 @@
+Stacks 1.14 - Feb 9, 2014
+--------------------------
+	Feature: populations in the population map can now be specified as text strings or numbers. Groups
+	of populations can now be specified by adding a third column to the population map for each individual
+	and listing the group they belong to (again as a text string or number).
+
 Stacks 1.13 - Jan 28, 2014
 --------------------------
 	Bugfix: allow batch IDs of 0 in populations and genotypes.
