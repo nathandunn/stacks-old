@@ -1230,6 +1230,7 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 
 		for (uint g = 0; g < grps.size(); g++) {
 
+		    ssd_1 = 0.0;
 		    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
 			pop_id_1 = grp_members[grps[g]][r];
 
@@ -1253,6 +1254,7 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 
 		    ssd_1 = ssd_1 / den;
 
+		    ssd_2 = 0.0;
 		    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
 			pop_id = grp_members[grps[g]][r];
 			ssd = 0.0;
@@ -1399,11 +1401,11 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 		double phi_sc = 0.0;
 
 		if (grps.size() > 1) {
-		    phi_st = (sigma_a + sigma_b) / sigma_total;
-		    phi_ct = sigma_a / sigma_total;
-		    phi_sc = sigma_b / (sigma_b + sigma_c);
+		    phi_st = sigma_total > 0.0 ? (sigma_a + sigma_b) / sigma_total : 0.0;
+		    phi_ct = sigma_total > 0.0 ?  sigma_a / sigma_total : 0.0;
+		    phi_sc = (sigma_a + sigma_b) > 0.0 ?  sigma_b / (sigma_b + sigma_c) : 0.0;
 		} else {
-		    phi_st = sigma_b / sigma_total;
+		    phi_st = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
 		}
 
 		// cerr 
@@ -3276,11 +3278,16 @@ kernel_smoothed_phist(vector<HapStat *> &hapstats, double *weights)
 		weighted_phict += p->phi_ct * final_weight;
 		weighted_phisc += p->phi_sc * final_weight;
 		sum            += final_weight;
+
+		// cerr << "   final_weight: " << final_weight << "; weighted_phist: " << weighted_phist << "; sum: " << sum << "\n";
 	    }
 
 	    c->wphi_st = weighted_phist / sum;
 	    c->wphi_ct = weighted_phict / sum;
 	    c->wphi_sc = weighted_phisc / sum;
+
+	    // cerr << "   wphi_st: " << c->wphi_st << "\n";
+	    // break;
 	}
     }
 
