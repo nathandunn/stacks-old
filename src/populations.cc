@@ -1047,7 +1047,7 @@ nuc_substitution_dist(map<string, int> &hap_index, double **hdists)
 int 
 calculate_haplotype_amova(vector<pair<int, string> > &files, 
 			  map<int, pair<int, int> > &pop_indexes, 
-			  map<int, vector<int> > &grp_members,
+			  map<int, vector<int> > &master_grp_members,
 			  map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
     map<string, vector<CSLocus *> >::iterator it;
@@ -1063,9 +1063,10 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
     // Create a list of all the groups we have.
     //
     map<int, vector<int> >::iterator git;
-    vector<int> grps;
-    for (git = grp_members.begin(); git != grp_members.end(); git++)
-	grps.push_back(git->first);
+    map<int, int> pop_grp_key;
+    for (git = master_grp_members.begin(); git != master_grp_members.end(); git++)
+	for (uint i = 0; i < git->second.size(); i++)
+	    pop_grp_key[git->second[i]] = git->first;
 
     map<string, vector<HapStat *> > genome_hapstats;
     map<uint, uint> hapstats_key;
@@ -1104,6 +1105,8 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 		map<string, int>          loc_hap_index;
 		vector<string>            loc_haplotypes;
 		map<int, vector<string> > pop_haplotypes;
+		map<int, vector<int> >    grp_members;
+		vector<int>               grps;
 
 		//
 		// Tabulate the occurences of haplotypes at this locus.
@@ -1137,7 +1140,38 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 		}
 
 		//
-		// Determine an ordering for the haplotypes. Convert haplotype counts into frequencies.
+		// If we filtered a population out at this locus make sure that we still have at least one
+		// representative present in each group.
+		//
+		set<int> uniq_grps;
+		for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+		    pop_id = pit->first;
+
+		    if (pop_haplotypes.count(pop_id) > 0) {
+			uniq_grps.insert(pop_grp_key[pop_id]);
+			grp_members[pop_grp_key[pop_id]].push_back(pop_id);
+		    }
+		}
+		set<int>::iterator uit;
+		for (uit = uniq_grps.begin(); uit != uniq_grps.end(); uit++)
+		    grps.push_back(*uit);
+
+		if (grps.size() == 0)
+		    continue;
+
+		// cerr << "Groups: ";
+		// for (uint i = 0; i < grps.size(); i++)
+		//     cerr << grps[i] << ", ";
+		// cerr << "\n";
+		// for (git = grp_members.begin(); git != grp_members.end(); git++) {
+		//     cerr << "Group " << git->first << ": ";
+  		//     for (uint i = 0; i < git->second.size(); i++)
+		// 	cerr << git->second[i] << ", ";
+		//     cerr << "\n";
+	        // }
+
+		//
+		// Determine an ordering for the haplotypes.
 		//
 		uint m = 0;
 		for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
@@ -1281,7 +1315,7 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 		    ssd = 0.0;
 
 		    for (uint g = 0; g < grps.size(); g++) {
-			ssd_1 = 0;
+			ssd_1 = 0.0;
 
 			for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
 			    pop_id_1 = grp_members[grps[g]][r];
@@ -1389,7 +1423,7 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 		double msd_total = ssd_total / ((double) (loc_haplotypes.size() - 1));
 
 		double sigma_c     = msd_wp;
-		double sigma_b     = (msd_ap_wg - sigma_c) / n;
+		double sigma_b     = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
 		double sigma_a     = 0.0;
 		double sigma_total = msd_total;
 
@@ -1408,10 +1442,9 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 		    phi_st = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
 		}
 
-		// cerr 
-		// 	<< "  MSD(AG): " << msd_ag  << "; MSD(AP/WG): " << msd_ap_wg << "; MSD(WP): " << msd_wp  << "; MSD(TOTAL): "  << msd_total   << "\n"
-		// 	<< "  Sigma_a: " << sigma_a << "; Sigma_b: "    << sigma_b   << "; Sigma_c: " << sigma_c << "; Sigma_Total: " << sigma_total << "\n"
-		// 	<< "  Phi_st: "  << phi_st  << "; Phi_ct: "     << phi_ct    << "; Phi_sc: "  << phi_sc  << "\n";
+		// cerr << "  MSD(AG): " << msd_ag  << "; MSD(AP/WG): " << msd_ap_wg << "; MSD(WP): " << msd_wp  << "; MSD(TOTAL): "  << msd_total   << "\n"
+		//      << "  Sigma_a: " << sigma_a << "; Sigma_b: "    << sigma_b   << "; Sigma_c: " << sigma_c << "; Sigma_Total: " << sigma_total << "\n"
+		//      << "  Phi_st: "  << phi_st  << "; Phi_ct: "     << phi_ct    << "; Phi_sc: "  << phi_sc  << "\n";
 
 		//
 		// Cache the results so we can print them in order below, once the parallel code has executed.
@@ -2433,10 +2466,10 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    delete pairs[i];
 		}
 	    }
-	    cerr << "Pop 1: " << pop_1 << "; Pop 2: " << pop_2 << "; mean Fst: " << (sum / cnt) << "\n";
+	    cerr << "Pop 1: " << pop_key[pop_1] << "; Pop 2: " << pop_key[pop_2] << "; mean Fst: " << (sum / cnt) << "\n";
 	    means.push_back(sum / cnt);
 
-	    cerr << "Pooled populations " << pop_1 << " and " << pop_2 << " contained: " << incompatible_loci << " incompatible loci; " 
+	    cerr << "Pooled populations " << pop_key[pop_1] << " and " << pop_key[pop_2] << " contained: " << incompatible_loci << " incompatible loci; " 
 		 << multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 	    fh.close();
 
@@ -2791,7 +2824,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 	}
 	sites.clear();
     }
-    cerr << "Population " << pop_id << " contained " << multiple_loci << " nucleotides covered by more than one RAD locus.\n";
+    cerr << "Population " << pop_key[pop_id] << " contained " << multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 
     //
     // If bootstrap resampling method is approximate, generate our single, empirical distribution.

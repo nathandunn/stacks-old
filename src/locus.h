@@ -119,7 +119,6 @@ public:
 	this->hcnt = 0; 
 	this->gcnt = 0; 
 	this->trans_gcnt = 0; 
-	this->hap_fstats = NULL;
     };
     string annotation;
     string marker;
@@ -129,7 +128,6 @@ public:
     int gcnt;                 // Number of progeny containing a valid genotype.
     int trans_gcnt;           // Number of progeny containing a valid 
                               // genotype, translated for a particular map type.
-    double *hap_fstats;
 };
 
 bool bp_compare(Locus *, Locus *);
