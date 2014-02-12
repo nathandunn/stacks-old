@@ -164,10 +164,13 @@ public:
 
 class LocSum {
 public:
+    int      bp;      // Genomic location of this locus (for kernal smoothing).
     double   n;       // Sample size AKA number of chromosomes sampled, or number of individuals times two.
     uint     hap_cnt; // Number of unique haplotypes at this locus. 
     double   gdiv;    // Gene diversity for this locus.
+    double   wgdiv;   // Kernel-smoothed gene diversity.
     double   pi;      // Haplotype frequency for this locus.
+    double   wpi;     // Kernel-smoothed haplotype frequency.
     SumStat *nucs;    // Array containing summary statistics for 
                       // each nucleotide position at this locus.
 
@@ -175,7 +178,9 @@ public:
 	this->n       = 0.0;
 	this->hap_cnt = 0;
 	this->pi      = 0.0;
+	this->wpi     = 0.0;
 	this->gdiv    = 0.0;
+	this->wgdiv   = 0.0;
 
 	this->nucs = new SumStat[len]; 
     }
