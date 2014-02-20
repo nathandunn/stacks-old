@@ -18,7 +18,8 @@
 
 - (IBAction) importDocument:(id)sender;
 - (IBAction)provideFeedback:(id)sender;
-- (IBAction) helpMe:(id)sender;
+- (IBAction) helpStacks:(id)sender;
+- (IBAction) helpVStacks:(id)sender;
 
 
 @end
