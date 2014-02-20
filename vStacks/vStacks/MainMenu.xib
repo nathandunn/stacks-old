@@ -360,14 +360,22 @@
                     <modifierMask key="keyEquivalentModifierMask"/>
                     <menu key="submenu" title="Help" systemMenu="help" id="492">
                         <items>
-                            <menuItem title="Stacks Help" keyEquivalent="r" id="493">
+                            <menuItem title="Stacks Help" id="493">
+                                <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="helpStacks:" target="-1" id="6WT-WT-iaE"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="vStacks Help" keyEquivalent="r" id="zST-Bf-oe1">
+                            <menuItem title="vStacks Help" id="zST-Bf-oe1">
+                                <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="helpVStacks:" target="-1" id="Kdt-5y-afX"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="License" id="Iwp-EL-Efc">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="license:" target="-1" id="rHf-UB-SoY"/>
                                 </connections>
                             </menuItem>
                         </items>

@@ -399,4 +399,9 @@
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
 
+- (void)license:(id)sender {
+    NSString *url = @"http://creskolab.uoregon.edu/vStacks/license.php";
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
+}
+
 @end
