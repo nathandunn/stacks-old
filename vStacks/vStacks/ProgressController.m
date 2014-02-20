@@ -3,7 +3,7 @@
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 9/10/13.
-//  Copyright (c) 2013 Nathan Dunn. All rights reserved.
+//  Copyright (c) 2014 University of Oregon. All rights reserved.
 //
 
 #import "ProgressController.h"

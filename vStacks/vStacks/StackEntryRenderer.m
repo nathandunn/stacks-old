@@ -1,6 +1,6 @@
 //
 // Created by Nathan Dunn on 12/20/13.
-// Copyright (c) 2013 Nathan Dunn. All rights reserved.
+// Copyright (c) 2014 University of Oregon. All rights reserved.
 //
 
 

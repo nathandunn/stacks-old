@@ -1,7 +1,8 @@
 //
-// Created by ndunn on 2/27/13.
+// Copyright (c) 2014 University of Oregon.  All rights reserved.
+// Created by Nathan Dunn on 2/27/13.
 //
-// To change the template use AppCode | Preferences | File Templates.
+//
 //
 
 
