@@ -389,8 +389,13 @@
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:email]];
 }
 
-- (void)helpMe:(id)sender {
-    NSString *url = @"http://creskolab.uoregon.edu/stacks";
+- (void)helpStacks:(id)sender {
+    NSString *url = @"http://creskolab.uoregon.edu/stacks/index.php";
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
+}
+
+- (void)helpVStacks:(id)sender {
+    NSString *url = @"http://creskolab.uoregon.edu/stacks/index.php#vStacks";
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
 
