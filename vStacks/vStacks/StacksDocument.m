@@ -191,7 +191,7 @@
 
 //        PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
         PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
-        NSLog(@"popMO: %@", populationMO);
+//        NSLog(@"popMO: %@", populationMO);
         if (populationMO != nil && ![populationNameField.stringValue isEqualToString:oldPopulationTitle]) {
             populationMO.name = populationNameField.stringValue;
             NSError *error;
@@ -206,7 +206,7 @@
         [populationNameField setHidden:true];
 
         [populationSelector selectItemAtIndex:previousSelectedItem];
-        NSLog(@"selected item index %ld", populationSelector.indexOfSelectedItem);
+//        NSLog(@"selected item index %ld", populationSelector.indexOfSelectedItem);
     }
     else {
         if (populationSelector.indexOfSelectedItem == 0) {
@@ -233,7 +233,7 @@
     self.selectedPopulation = [self findSelectedPopulation];
 
     if (self.selectedLocus != nil) {
-        NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
+//        NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
 //        NSLog(@"getting selected population %@", self.selectedPopulation.name);
         if (self.selectedPopulation != nil) {
             self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:self.selectedPopulation];
@@ -241,7 +241,7 @@
         else {
             self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus.locusId];
         }
-        NSLog(@"got selected Datums: %ld", self.selectedDatums.count);
+//        NSLog(@"got selected Datums: %ld", self.selectedDatums.count);
         if (self.selectedDatums != nil && self.selectedDatums.count > 0) {
             self.selectedDatum = [self.selectedDatums objectAtIndex:0];
         }

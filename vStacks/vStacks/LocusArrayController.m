@@ -66,7 +66,7 @@
 - (NSArray *)arrangeObjects:(NSArray *)objects {
 //    return [super arrangeObjects:objects];
 
-    NSLog(@"calculating objects iwth minSnp %ld and maxSnp %ld for objects %ld", minSnpValue, maxSnpValue, objects.count);
+//    NSLog(@"calculating objects iwth minSnp %ld and maxSnp %ld for objects %ld", minSnpValue, maxSnpValue, objects.count);
 
     if (minSnpValue == 0 && maxSnpValue == NSIntegerMax) {
         return [super arrangeObjects:objects];
@@ -104,7 +104,7 @@
             }
         }
     }
-    NSLog(@"filtered objects left %ld", filteredObjects.count);
+//    NSLog(@"filtered objects left %ld", filteredObjects.count);
 
     return [super arrangeObjects:filteredObjects];
 }
@@ -113,7 +113,7 @@
     NSPopUpButton *value = sender;
     if (value.stringValue.length > 0) {
         minSnpValue = value.titleOfSelectedItem.integerValue;
-        NSLog(@"setting MIN value %ld", minSnpValue);
+//        NSLog(@"setting MIN value %ld", minSnpValue);
         [self rearrangeObjects];
     }
 }
@@ -122,7 +122,7 @@
     NSPopUpButton *value = sender;
     if (value.stringValue.length > 0) {
         maxSnpValue = value.titleOfSelectedItem.integerValue;
-        NSLog(@"setting MAX value %ld", maxSnpValue);
+//        NSLog(@"setting MAX value %ld", maxSnpValue);
         [self rearrangeObjects];
     }
 }
@@ -131,7 +131,7 @@
     NSPopUpButton *value = sender;
     if (value.stringValue.length > 0) {
         minSampleValue = value.titleOfSelectedItem.integerValue;
-        NSLog(@"setting MIN value %ld", minSampleValue);
+//        NSLog(@"setting MIN value %ld", minSampleValue);
         [self rearrangeObjects];
     }
 }
@@ -140,7 +140,7 @@
     NSPopUpButton *value = sender;
     if (value.stringValue.length > 0) {
         maxSampleValue = value.titleOfSelectedItem.integerValue;
-        NSLog(@"setting MAX value %ld", maxSampleValue);
+//        NSLog(@"setting MAX value %ld", maxSampleValue);
         [self rearrangeObjects];
     }
 }
@@ -161,7 +161,7 @@
     NSTextField *value = sender;
     if (value.stringValue.length > 0) {
         minBasePairs = value.doubleValue * 1000000;
-        NSLog(@"min baise pairs %f", minBasePairs);
+//        NSLog(@"min baise pairs %f", minBasePairs);
         [self rearrangeObjects];
     }
 
@@ -171,7 +171,7 @@
     NSTextField *value = sender;
     if (value.stringValue.length > 0) {
         maxBasePairs = value.doubleValue * 1000000;
-        NSLog(@"max base pairs %f", maxBasePairs);
+//        NSLog(@"max base pairs %f", maxBasePairs);
         [self rearrangeObjects];
     }
 

@@ -81,7 +81,7 @@
 
 - (NSAttributedString *)renderChromosome {
     NSString *inputString = @"";
-    NSLog(@"self.chromosome %@", self.chromosome);
+//    NSLog(@"self.chromosome %@", self.chromosome);
     if (self.chromosome != nil && self.chromosome.length > 0) {
         inputString = [NSString stringWithFormat:@"%@ %@ Mb %@", self.chromosome, self.basePairs, self.strand];
     }

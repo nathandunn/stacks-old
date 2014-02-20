@@ -120,7 +120,7 @@
     NSArray *locusArray = [context executeFetchRequest:request error:&error1];
     if(locusArray!=nil && locusArray.count==1){
         double doubleValue = [[[locusArray objectAtIndex:0] basePairs] doubleValue];
-        NSLog(@"max value is %f",doubleValue);
+//        NSLog(@"max value is %f",doubleValue);
         return doubleValue ;
     }
     return -1.0;

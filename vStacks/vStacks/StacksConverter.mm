@@ -96,9 +96,13 @@ NSString *calculateType(NSString *file);
     NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
     NSError *error;
     [moc save:&error];
-    NSLog(@"error %@", error);
+    if(error){
+        NSLog(@"error saving %@",error);
+    }
     [[moc parentContext] save:&error];
-    NSLog(@"error 2 %@", error);
+    if(error){
+        NSLog(@"Error saving from parent context %@",error);
+    }
 
 
     return stacksDocument;
@@ -112,7 +116,7 @@ NSString *calculateType(NSString *file);
 
 
     NSURL *storeUrl ;
-    NSLog(@"input %@ %@",path,name);
+//    NSLog(@"input %@ %@",path,name);
     NSLog(@"extends %@ %i",name.pathExtension,[name.pathExtension isEqualToString:@"stacks"]);
     if([name.pathExtension isEqualToString:@"stacks"]){
         storeUrl = [NSURL fileURLWithPath:path];
@@ -120,14 +124,14 @@ NSString *calculateType(NSString *file);
     else{
         storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
     }
-    NSLog(@"saving to %@ from %@", path, storeUrl);
+    NSLog(@"Saving file to %@ from %@", path, storeUrl);
     if (persistentStoreCoordinator == nil) {
         persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
     }
     NSError *error = nil;
 
     if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
-        NSLog(@"error loading persistent store..");
+        NSLog(@"Error loading persistent store.. %@",error);
         [[NSFileManager defaultManager] removeItemAtPath:storeUrl.path error:nil];
         if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
             NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
@@ -141,7 +145,7 @@ NSString *calculateType(NSString *file);
     document.managedObjectContext = context;
     document.path = path;
     
-    NSLog(@"path %@",path);
+    NSLog(@"Save path %@",path);
 
 
     return context;
@@ -169,7 +173,7 @@ NSString *calculateType(NSString *file);
         }
     }
     else {
-        NSLog(@"does not exist at %@", popmapFile);
+        NSLog(@"Default popmap does not exist at %@", popmapFile);
     }
 
     return populationLookup;
@@ -210,23 +214,23 @@ NSString *calculateType(NSString *file);
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
 
     if (!existsAtPath) {
-        NSLog(@"files do not exist %@", examplePath);
+        NSLog(@"Files do not exist at %@", examplePath);
         exit(1);
     }
 
     NSError *error;
     NSArray *files = [fileManager contentsOfDirectoryAtPath:examplePath error:&error];
     if (error) {
-        NSLog(@"error %@", error);
+        NSLog(@"Error which checking directory path %@", error);
         return nil;
     }
     NSPredicate *fltr = [NSPredicate predicateWithFormat:@"self ENDSWITH '.catalog.tags.tsv'"];
     NSPredicate *batch = [NSPredicate predicateWithFormat:@"self BEGINSWITH 'batch'"];
     NSArray *onlyCatalog = [[files filteredArrayUsingPredicate:fltr] filteredArrayUsingPredicate:batch];
 
-    NSLog(@"# of files: %ld", onlyCatalog.count);
+    NSLog(@"File count in directory: %ld", onlyCatalog.count);
     for (NSString *file in onlyCatalog) {
-        NSLog(@"file %@", file);
+        NSLog(@"File in catalog: %@", file);
     }
 
     NSString *originalFile = [onlyCatalog objectAtIndex:0];
@@ -250,11 +254,11 @@ NSString *calculateType(NSString *file);
     NSString *importPath1 = stacksDocument.importPath;
     // returns batch_1, batch_2, etc. whatever exists
     NSString *batchName = [self checkFile:importPath1];
-    NSLog(@"returned batch name: %@", batchName);
+    NSLog(@"Batch name: %@", batchName);
     map<int, CSLocus *> catalog;
     NSString *catalogTagFile = [importPath1 stringByAppendingFormat:@"%@.catalog.tags.tsv", batchName];
     stacksDocument.type = calculateType(catalogTagFile);
-    NSLog(@"type is %@", stacksDocument.type);
+    NSLog(@"Stacks type is %@", stacksDocument.type);
     NSString *catalogFile = [importPath1 stringByAppendingFormat:@"%@.catalog", batchName];
 
     struct timeval time1, time2;
