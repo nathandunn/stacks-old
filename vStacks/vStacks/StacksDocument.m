@@ -21,6 +21,7 @@
 #import "StacksEntryDatumRenderer.h"
 #import "SampleRepository.h"
 #import "SampleMO.h"
+#import "SplashWindowController.h"
 //#import "StacksConverter.h"
 //#import "StacksDocumentController.h"
 #import <WebKit/WebKit.h>
@@ -44,6 +45,7 @@
 @property(weak) IBOutlet NSPopUpButton *maxSamplesPopupButton;
 @property(weak) IBOutlet WebView *stacksWebView;
 @property(weak) IBOutlet WebView *datumWebView;
+@property(weak) IBOutlet SplashWindowController *splashWindowController;
 
 
 @end
@@ -85,6 +87,7 @@
 @synthesize path;
 @synthesize oldPopulationTitle;
 @synthesize datumPath;
+@synthesize splashWindowController ;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -118,6 +121,14 @@
 - (void)windowControllerWillLoadNib:(NSWindowController *)windowController {
     [super windowControllerWillLoadNib:windowController];
     NSLog(@"will load ");
+
+    [[NSDocumentController sharedDocumentController] newDocument:self];
+
+    splashWindowController = [[SplashWindowController alloc] initWithWindowNibName:@"SplashWindowController"];
+    [splashWindowController showWindow:[NSApp mainWindow]];
+//    [splashWindowController showWindow:self];
+//    [splashWindowController.window orderFront:self];
+    NSLog(@"why don't I see a splash? ");
 }
 
 

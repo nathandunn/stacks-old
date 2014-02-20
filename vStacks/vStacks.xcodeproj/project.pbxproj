@@ -65,7 +65,6 @@
 		6BCC7EEA18B6C041007BB3A7 /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7EE018B6C041007BB3A7 /* stacks.cc */; };
 		6BCC7EEB18B6C041007BB3A7 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7EE318B6C041007BB3A7 /* utils.cc */; };
 		6BCC7EED18B6C07A007BB3A7 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6BCC7EEC18B6C07A007BB3A7 /* libz.1.2.7.dylib */; };
-		6BCC7EF118B6C7D2007BB3A7 /* SplashWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6BCC7EF018B6C7D2007BB3A7 /* SplashWindow.xib */; };
 		6BCC7EF518B6C82A007BB3A7 /* SplashWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7EF318B6C82A007BB3A7 /* SplashWindowController.m */; };
 		6BCC7EF618B6C82A007BB3A7 /* SplashWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6BCC7EF418B6C82A007BB3A7 /* SplashWindowController.xib */; };
 		6BD8C86B18A2DA92000C3A16 /* datum.html in Resources */ = {isa = PBXBuildFile; fileRef = 63D53E9C323D32F9FBF8FA40 /* datum.html */; };
@@ -205,7 +204,6 @@
 		6BCC7EE318B6C041007BB3A7 /* utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = utils.cc; sourceTree = "<group>"; };
 		6BCC7EE418B6C041007BB3A7 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		6BCC7EEC18B6C07A007BB3A7 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libz.1.2.7.dylib; sourceTree = "<group>"; };
-		6BCC7EF018B6C7D2007BB3A7 /* SplashWindow.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = SplashWindow.xib; sourceTree = "<group>"; };
 		6BCC7EF218B6C82A007BB3A7 /* SplashWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SplashWindowController.h; sourceTree = "<group>"; };
 		6BCC7EF318B6C82A007BB3A7 /* SplashWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SplashWindowController.m; sourceTree = "<group>"; };
 		6BCC7EF418B6C82A007BB3A7 /* SplashWindowController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = SplashWindowController.xib; sourceTree = "<group>"; };
@@ -420,7 +418,6 @@
 				14370589187B88C70007BDE5 /* ProgressController.h */,
 				1437058A187B88C70007BDE5 /* ProgressController.m */,
 				1437058B187B88C70007BDE5 /* ProgressController.xib */,
-				6BCC7EF018B6C7D2007BB3A7 /* SplashWindow.xib */,
 				6BCC7EF218B6C82A007BB3A7 /* SplashWindowController.h */,
 				6BCC7EF318B6C82A007BB3A7 /* SplashWindowController.m */,
 				6BCC7EF418B6C82A007BB3A7 /* SplashWindowController.xib */,
@@ -581,7 +578,6 @@
 				1419704E189C617100C9BF1C /* 128x128.png in Resources */,
 				1437058D187B88C70007BDE5 /* StacksDocument.xib in Resources */,
 				1437061B187B89490007BDE5 /* test.css in Resources */,
-				6BCC7EF118B6C7D2007BB3A7 /* SplashWindow.xib in Resources */,
 				1419705C189C69CD00C9BF1C /* icon_512x512.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
