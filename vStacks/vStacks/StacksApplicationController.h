@@ -7,7 +7,7 @@
 
 
 #import <Foundation/Foundation.h>
-n @class ProgressController ;
+@class ProgressController ;
 
 @interface StacksApplicationController : NSDocumentController{
 //    ProgressController *progressController ;
