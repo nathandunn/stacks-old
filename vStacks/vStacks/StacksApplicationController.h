@@ -20,6 +20,7 @@
 - (IBAction)provideFeedback:(id)sender;
 - (IBAction) helpStacks:(id)sender;
 - (IBAction) helpVStacks:(id)sender;
+- (IBAction) license:(id)sender;
 
 
 @end
