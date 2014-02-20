@@ -37,10 +37,8 @@
 //}
 
 - (BOOL) hasOpenDocument{
-    NSLog(@" in this method ");
     id currentDocument = [[StacksDocumentController sharedDocumentController] currentDocument];
-    NSLog(@"current doc %@",currentDocument) ;
-    NSLog(@"is not nil %i",currentDocument!=nil) ;
+    NSLog(@"Valid Document %i",currentDocument!=nil) ;
     return [[StacksDocumentController sharedDocumentController] currentDocument]!=nil;
 }
 

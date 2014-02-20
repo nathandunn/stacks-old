@@ -57,12 +57,13 @@
 
 - (IBAction)importDocument:(id)sender {
 
+    NSLog(@"Importing Doucment");
+
     NSDate *now = [NSDate date];
     // get year and month
     NSInteger year = [[now dateWithCalendarFormat:nil timeZone:nil] yearOfCommonEra];
     NSInteger month = [[now dateWithCalendarFormat:nil timeZone:nil] monthOfYear];
     NSLog(@"year Y%ld M%ld", year, month);
-    NSLog(@"Importing doc");
     if (year > 2013 && month > 4) {
         NSAlert *alert = [[NSAlert alloc] init];
         [alert setMessageText:@"Trial License Expired"];
@@ -88,7 +89,6 @@
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if (result == NSOKButton) {
-        NSLog(@"ok !!");
         NSString *importPath = [importPanel.directoryURL.path stringByAppendingString:@"/"];
         NSLog(@"import path %@", importPath);
         NSString *importPathName = importPanel.directoryURL.lastPathComponent;
@@ -101,7 +101,7 @@
 
         NSInteger saveResult = [savePanel runModal];
         if (saveResult != NSOKButton) {
-            NSLog(@"cancelled");
+            NSLog(@"Cancelled import");
             return;
         }
 
