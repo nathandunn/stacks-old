@@ -13,6 +13,10 @@
 
 }
 
+
 - (BOOL) hasOpenDocument ;
+
+
+
 
 @end
