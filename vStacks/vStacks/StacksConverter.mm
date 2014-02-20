@@ -548,7 +548,7 @@ NSString *calculateType(NSString *file);
 
 
         NSError *innerError = nil ;
-        NSLog(@"final datum save ");
+        // NSLog(@"final datum save ");
         [stacksDocument.managedObjectContext save:&innerError];
         if (innerError != nil) {
             NSLog(@"error doing inner save: %@", innerError);
@@ -1030,11 +1030,11 @@ NSString *calculateType(NSString *file);
             line_num = 0;
 
             if (fh.fail()) {
-                NSLog(@"unable to open file: %@", absoluteFileName);
+                NSLog(@"Unable to open stacks file: %@", absoluteFileName);
 
             }
             else {
-                NSLog(@"opening good file: %@", absoluteFileName);
+                NSLog(@"Opening stacks file: %@", absoluteFileName);
 
 //                NSMutableArray *stackEntryArray = [NSMutableArray array];
                 NSMutableDictionary *stackEntryDictionary = [NSMutableDictionary dictionary];
