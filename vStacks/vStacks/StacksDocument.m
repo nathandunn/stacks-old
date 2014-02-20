@@ -115,8 +115,14 @@
     return @"StacksDocument";
 }
 
+- (void)windowControllerWillLoadNib:(NSWindowController *)windowController {
+    [super windowControllerWillLoadNib:windowController];
+    NSLog(@"will load ");
+}
+
 
 - (void)windowControllerDidLoadNib:(NSWindowController *)aController {
+    NSLog(@"will DID load ");
     [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew) context:nil];
 
     [super windowControllerDidLoadNib:aController];

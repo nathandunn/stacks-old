@@ -9,12 +9,15 @@
 #import "StacksAppDelegate.h"
 #import "StacksApplicationController.h"
 #import "StacksDocumentController.h"
+#import "SplashWindowController.h"
 
 
 @implementation StacksAppDelegate {
 
 
 }
+
+
 - (id)init {
     self = [super init];
     if (self) {
@@ -27,8 +30,14 @@
 
 
 - (void)applicationWillFinishLaunching:(NSNotification *)notification {
-    NSLog(@"app did finish launcing");
+    NSLog(@"app WILL finish launcing");
+    SplashWindowController *controllerWindow = [[SplashWindowController alloc] initWithWindowNibName:@"SplashWindowController"];
+//    SplashWindowController *controllerWindow = [[SplashWindowController alloc] init];
+    [controllerWindow showWindow:self];
+}
 
+- (void)applicationDidFinishLaunching:(NSNotification *)notification {
+    NSLog(@"app DID finish launcing");
 }
 
 //- (BOOL)validateUserInterfaceItem:(id < NSValidatedUserInterfaceItem >)anItem{
