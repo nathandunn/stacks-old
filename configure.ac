@@ -74,7 +74,6 @@ AC_FUNC_REALLOC
 AC_CHECK_FUNCS([floor memset pow sqrt])
 
 # For test harness
-AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_PROG_AWK
 
 AC_CONFIG_FILES([Makefile])
