@@ -227,6 +227,10 @@ NSString *calculateType(NSString *file);
     NSPredicate *fltr = [NSPredicate predicateWithFormat:@"self ENDSWITH '.catalog.tags.tsv'"];
     NSPredicate *batch = [NSPredicate predicateWithFormat:@"self BEGINSWITH 'batch'"];
     NSArray *onlyCatalog = [[files filteredArrayUsingPredicate:fltr] filteredArrayUsingPredicate:batch];
+    
+    if(onlyCatalog.count==0){
+        return nil ;
+    }
 
     NSLog(@"File count in directory: %ld", onlyCatalog.count);
     for (NSString *file in onlyCatalog) {
@@ -254,6 +258,15 @@ NSString *calculateType(NSString *file);
     NSString *importPath1 = stacksDocument.importPath;
     // returns batch_1, batch_2, etc. whatever exists
     NSString *batchName = [self checkFile:importPath1];
+    if(batchName==nil){
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert setMessageText:@"Not a valid Stacks directory."];
+        [alert addButtonWithTitle:@"OK"];
+        [alert runModal];
+        return nil ;
+    }
+    
+    
     NSLog(@"Batch name: %@", batchName);
     map<int, CSLocus *> catalog;
     NSString *catalogTagFile = [importPath1 stringByAppendingFormat:@"%@.catalog.tags.tsv", batchName];
