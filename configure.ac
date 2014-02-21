@@ -4,8 +4,7 @@
 AC_PREREQ(2.59)
 AC_INIT([Stacks], [1.13])
 AC_CONFIG_AUX_DIR([config])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign parallel-tests subdir-objects])
 AC_CONFIG_SRCDIR([src/ustacks.cc])
 AC_CONFIG_HEADERS([config.h])
 m4_pattern_allow([AC_OPENMP])
@@ -73,6 +72,10 @@ AC_FUNC_CLOSEDIR_VOID
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([floor memset pow sqrt])
+
+# For test harness
+AC_REQUIRE_AUX_FILE([tap-driver.sh])
+AC_PROG_AWK
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
