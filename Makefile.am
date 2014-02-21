@@ -131,7 +131,7 @@ nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sq
 	php/images/stacks_logo_rev_small.png
 
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(abs_top_srcdir)/config/tap-driver.sh
-TESTS = tests/process_radtags.t tests/ref_map.t tests/kmer_filter.t
+TESTS = tests/process_radtags.t tests/kmer_filter.t
 
 EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README ChangeLog $(TESTS)
 
