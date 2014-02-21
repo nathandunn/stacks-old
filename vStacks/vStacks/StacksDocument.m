@@ -21,6 +21,7 @@
 #import "StacksEntryDatumRenderer.h"
 #import "SampleRepository.h"
 #import "SampleMO.h"
+#import "SplashWindowController.h"
 //#import "StacksConverter.h"
 //#import "StacksDocumentController.h"
 #import <WebKit/WebKit.h>
@@ -46,9 +47,12 @@
 @property(weak) IBOutlet WebView *datumWebView;
 
 
+
 @end
 
 @implementation StacksDocument
+
+SplashWindowController *splashWindowController ;
 
 // TODO: remove these in favor of NSSet loci
 //@synthesize locusViews;
@@ -101,6 +105,8 @@
 
         numberFormatter = [[NSNumberFormatter alloc] init];
         numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+
+        splashWindowController = [[SplashWindowController alloc] initWithWindowNibName:@"SplashWindowController"];
     }
     return self;
 }
@@ -115,8 +121,18 @@
     return @"StacksDocument";
 }
 
+- (void)windowControllerWillLoadNib:(NSWindowController *)windowController {
+    [super windowControllerWillLoadNib:windowController];
+    NSLog(@"will load ");
+//    [splashWindowController showWindow:self];
+////    [splashWindowController activ
+//    [splashWindowController.window setLevel:NSScreenSaverWindowLevel + 1];
+//    [splashWindowController.window  orderFront:nil];
+}
+
 
 - (void)windowControllerDidLoadNib:(NSWindowController *)aController {
+    NSLog(@"did load");
     [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew) context:nil];
 
     [super windowControllerDidLoadNib:aController];
@@ -142,6 +158,8 @@
 //    [[filteredLoci cell] setFormatter:numberFormatter];
 
     [self updateStacksView];
+//    [splashWindowController close];
+
 }
 
 - (void)updateStacksView {
