@@ -12,6 +12,7 @@
 @class DatumMO;
 @class LocusMO;
 @class PopulationMO;
+@class SplashWindowController;
 
 @interface StacksDocument : NSPersistentDocument
 
@@ -47,6 +48,7 @@
 @property NSUInteger maxLocation;
 @property(strong) NSString *oldPopulationTitle;
 @property(nonatomic, strong) NSNumberFormatter *numberFormatter;
+
 
 - (BOOL)noLociLocations;
 
