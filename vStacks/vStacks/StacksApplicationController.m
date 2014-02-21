@@ -390,17 +390,17 @@
 }
 
 - (void)helpStacks:(id)sender {
-    NSString *url = @"http://creskolab.uoregon.edu/stacks/index.php";
+    NSString *url = @"http://creskolab.uoregon.edu/stacks/";
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
 
 - (void)helpVStacks:(id)sender {
-    NSString *url = @"http://creskolab.uoregon.edu/stacks/index.php#vStacks";
+    NSString *url = @"http://creskolab.uoregon.edu/stacks/manual/#vstacks";
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
 
 - (void)license:(id)sender {
-    NSString *url = @"http://creskolab.uoregon.edu/vStacks/license.php";
+    NSString *url = @"http://creskolab.uoregon.edu/stacks/vstacks/license.php";
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
 
