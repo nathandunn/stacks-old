@@ -28,6 +28,7 @@
 @dynamic alleleData;
 @dynamic datums;
 @dynamic snpData;
+@dynamic metaData;
 
 @synthesize colorGenerator;
 

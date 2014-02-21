@@ -15,5 +15,6 @@
 @dynamic sampleId;
 @dynamic stackData;
 @dynamic tagId;
+@dynamic metaData;
 
 @end

@@ -15,6 +15,7 @@
 @dynamic name;
 @dynamic populationId;
 @dynamic samples;
+@dynamic metaData;
 
 - (NSString *)annotatedName {
 

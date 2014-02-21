@@ -40,6 +40,7 @@
 @dynamic snpData;
 //@dynamic stackEntries;
 @dynamic stackData;
+@dynamic metaData;
 
 @synthesize colorGenerator;
 
