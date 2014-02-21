@@ -40,8 +40,8 @@ _interpolate_command () {
     in_path="$2"
     out_path="$3"
 
-    cmd=`echo $cmd | sed -e "s@[[:blank:]]%in[[:blank:]]@ $in_path @"`
-    cmd=`echo $cmd | sed -e "s@[[:blank:]]%out[[:blank:]]@ $out_path @"`
+    cmd=`echo $cmd | sed -e "s@%in@$in_path@"`
+    cmd=`echo $cmd | sed -e "s@%out@$out_path@"`
 
     echo $cmd
 }
