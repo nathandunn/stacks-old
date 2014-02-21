@@ -116,7 +116,7 @@ public:
 void    help( void );
 void    version( void );
 int     parse_command_line(int, char**);
-int     build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &);
+int     build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &);
 int     load_marker_list(string, set<int> &);
 int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<int, int> > &);
 bool    order_unordered_loci(map<int, CSLocus *> &);
@@ -126,6 +126,8 @@ int     call_population_genotypes(CSLocus *, PopMap<CSLocus> *);
 int     tally_haplotype_freq(CSLocus *, PopMap<CSLocus> *, int &, double &, string &);
 int     translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &);
 int     correct_fst_bonferroni_win(vector<PopPair *> &);
+int     init_chr_loci(map<string, vector<HapStat *> > &, string, map<uint, uint> &, vector<CSLocus *> &);
+int     kernel_smoothed_phist(vector<HapStat *> &, double *);
 int     init_chr_pairs(map<string, vector<PopPair *> > &, string, map<uint, uint> &, vector<CSLocus *> &);
 int     kernel_smoothed_fst(vector<PopPair *> &, double *, int *);
 int     bootstrap_fst(vector<double> &, vector<PopPair *> &, double *);
@@ -138,10 +140,15 @@ double  bootstrap_pval(double, vector<double> &);
 double  bootstrap_approximate_pval(int, double, map<int, vector<double> > &);
 double *calculate_weights(void);
 
+int  calculate_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int  calculate_haplotype_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int  kernel_smoothed_hapstats(vector<CSLocus *> &, PopSum<CSLocus> *, int, double *);
+int  init_chr_sites(vector<LocSum *> &, int, vector<CSLocus *> &, PopSum<CSLocus> *);
+int  calculate_haplotype_amova(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int  nuc_substitution_dist(map<string, int> &, double **);
+
 int  write_sql(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int  write_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int  write_fst_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, ofstream &);
-int  write_linkage_stats(map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int  write_generic(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, bool);
 int  write_genomic(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int  write_fasta(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, vector<int> &);

@@ -33,9 +33,9 @@ use strict;
 use POSIX;
 use constant stacks_version => "_VERSION_";
 
-my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
 my $dry_run      = 0;
 my $sql          = 1;
+my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
 my $exe_path     = "_BINDIR_";
 my $out_path     = "";
 my $popmap_path  = "";
@@ -77,17 +77,19 @@ my ($i, $log, $log_fh, $pipe_fh, $pfile, $file, $num_files, $parent, $sample, %m
 $i         = 1;
 $num_files = scalar(@parents) + scalar(@progeny) + scalar(@samples);
 
-my (@types, $type, @pop_ids, $pop, %pops);
+my (@types, $type, @pop_ids, $pop, %pops, @grp_ids, $grp, %grps);
 
-parse_population_map(\@samples, \@pop_ids, \%pops) if ($data_type eq "population");
+parse_population_map(\@samples, \@pop_ids, \%pops, \@grp_ids, \%grps) if ($data_type eq "population");
 
 foreach $parent (@parents) {
     push(@types, "parent");
-    push(@pop_ids, 1);
+    push(@pop_ids, "1");
+    push(@grp_ids, "1");
 }
 foreach $parent (@progeny) {
     push(@types, "progeny");
-    push(@pop_ids, 1);
+    push(@pop_ids, "1");
+    push(@grp_ids, "1");
 }
 foreach $parent (@samples) {
     push(@types, "sample");
@@ -156,18 +158,19 @@ foreach $sample (@parents, @progeny, @samples) {
 
     $type = shift @types;
     $pop  = shift @pop_ids;
+    $grp  = shift @grp_ids;
 
     printf("Identifying unique stacks; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
     printf($log_fh "Identifying unique stacks; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
 
     if ($sql == 1) {
 	if ($dry_run == 0) {
-	    `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop"`;
+	    `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id='$pop', group_id='$grp'"`;
 	    @results = `mysql --defaults-file=$cnf $db -N -B -e "SELECT id FROM samples WHERE sample_id=$i AND batch_id=$batch_id AND type='$type' AND file='$pfile'"`;
 	    chomp $results[0];
 	    $sample_id = $results[0];
 	}
-	print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id=$pop\"\n";
+	print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO samples SET sample_id=$i, batch_id=$batch_id, type='$type', file='$pfile', pop_id='$pop', group_id='$grp'\"\n";
     }
 
     $map{$pfile} = $sample_id;
@@ -267,7 +270,7 @@ foreach $sample (@parents, @progeny, @samples) {
         $pfile = $prefix;
     }
 
-    printf(STDERR "Matching RAD-Tags to catalog; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
+    printf(STDERR "Matching samples to catalog; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
 
     $cmd = $exe_path . "sstacks -b $batch_id -c $out_path/$cat_file -s $out_path/$pfile -o $out_path " . join(" ", @_sstacks) . " 2>&1";
     print STDERR  "  $cmd\n";
@@ -289,7 +292,7 @@ if ($data_type eq "map") {
     #
     # Generate a set of observed haplotypes and a set of markers and generic genotypes
     #
-    printf(STDERR "Generating genotypes\n");
+    printf(STDERR "Generating genotypes...\n");
 
     $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -t gen -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
     print STDERR  "$cmd\n";
@@ -359,14 +362,16 @@ print $log_fh "denovo_map.pl completed at ", strftime("%Y-%m-%d %H:%M:%S",(local
 close($log_fh);
 
 sub parse_population_map {
-    my ($samples, $pop_ids, $pops) = @_;
+    my ($samples, $pop_ids, $pops, $grp_ids, $grps) = @_;
 
     my ($fh, @parts, $line, %ids, $file, $path);
 
     if (length($popmap_path) == 0) {
 	foreach $path (@{$samples}) {
-	    push(@{$pop_ids}, 1);
-	    $pops->{1}++;
+	    push(@{$pop_ids}, "1");
+	    push(@{$grp_ids}, "1");
+	    $pops->{"1"}++;
+	    $grps->{"1"}++;
 	}
 	return;
     }
@@ -377,15 +382,20 @@ sub parse_population_map {
 	chomp $line;
 	@parts = split(/\t/, $line);
 
-	if (scalar(@parts) > 2) {
-	    die("Unable to parse population map, '$popmap_path' (map should contain no more than two columns).\n");
-	}
-
-	if ($parts[1] !~ /\d+/) {
-	    die("Unable to parse population map, '$popmap_path' (population ID in second column should be an integer).\n");
+	if (scalar(@parts) > 3) {
+	    die("Unable to parse population map, '$popmap_path' (map should contain no more than three columns).\n");
 	}
 
 	$ids{$parts[0]} = $parts[1];
+
+	if (scalar(@parts) > 2) {
+	    push(@{$grp_ids}, $parts[2]);
+	    $grps->{$parts[2]}++;
+	}
+    }
+
+    if (scalar(keys %{$grps}) == 0) {
+	$grps->{"1"}++;
     }
 
     foreach $path (@{$samples}) {
@@ -410,7 +420,10 @@ sub parse_population_map {
 	$pops->{$ids{$file}}++;
     }
 
-    print STDERR "Parsed population map: ", scalar(@{$samples}), " files in ", scalar(keys %{$pops}), " populations.\n";
+    print STDERR "Parsed population map: ", scalar(@{$samples}), " files in ", scalar(keys %{$pops});
+    scalar(keys %{$pops}) == 1 ?  print STDERR " population" : print STDERR " populations";
+    print STDERR " and ", scalar(keys %{$grps});
+    scalar(keys %{$grps}) == 1 ? print STDERR " group.\n" : print STDERR " groups.\n";
 
     close($fh);
 }
