@@ -27,10 +27,10 @@
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                             </menuItem>
                             <menuItem title="Preferences…" keyEquivalent="," id="129"/>
-                            <menuItem title="Provide Feedback" id="yZ8-XB-MRe" customClass="ProvideFeedbackMenuItem">
+                            <menuItem title="License" id="Iwp-EL-Efc">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
-                                    <action selector="provideFeedback:" target="-1" id="Ee4-vL-Kkz"/>
+                                    <action selector="license:" target="-1" id="rHf-UB-SoY"/>
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="143">
@@ -360,22 +360,24 @@
                     <modifierMask key="keyEquivalentModifierMask"/>
                     <menu key="submenu" title="Help" systemMenu="help" id="492">
                         <items>
-                            <menuItem title="Stacks Help" id="493">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="helpStacks:" target="-1" id="6WT-WT-iaE"/>
-                                </connections>
-                            </menuItem>
                             <menuItem title="vStacks Help" id="zST-Bf-oe1">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="helpVStacks:" target="-1" id="Kdt-5y-afX"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="License" id="Iwp-EL-Efc">
+                            <menuItem isSeparatorItem="YES" id="ZCp-Rj-6TQ"/>
+                            <menuItem title="Stacks Help" id="493">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
-                                    <action selector="license:" target="-1" id="rHf-UB-SoY"/>
+                                    <action selector="helpStacks:" target="-1" id="6WT-WT-iaE"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="9lR-PC-R3s"/>
+                            <menuItem title="Provide Feedback" id="yZ8-XB-MRe" customClass="ProvideFeedbackMenuItem">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="provideFeedback:" target="-1" id="Ee4-vL-Kkz"/>
                                 </connections>
                             </menuItem>
                         </items>
