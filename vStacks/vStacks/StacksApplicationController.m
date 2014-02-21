@@ -257,7 +257,7 @@
                                          defaultButton:@"OK"
                                        alternateButton:nil
                                            otherButton:nil
-                             informativeTextWithFormat:@"Must have an open STACKS document in order to apply a Population Map"];
+                             informativeTextWithFormat:@"Must have an open Stacks document in order to apply a Population Map"];
         [alert runModal];
         return;
     }

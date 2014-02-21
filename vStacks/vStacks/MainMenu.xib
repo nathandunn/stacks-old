@@ -367,7 +367,7 @@
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="ZCp-Rj-6TQ"/>
-                            <menuItem title="Stacks Help" id="493">
+                            <menuItem title="Stacks" id="493">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="helpStacks:" target="-1" id="6WT-WT-iaE"/>
