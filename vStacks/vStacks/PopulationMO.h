@@ -16,6 +16,7 @@
 @property (nonatomic, copy) NSString * name;
 @property (nonatomic, copy) NSNumber * populationId;
 @property (nonatomic, copy) NSSet *samples;
+@property (nonatomic, copy) NSData *metaData;
 
 - (NSString *)annotatedName;
 @end

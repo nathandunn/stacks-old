@@ -25,6 +25,7 @@
 @property (nonatomic, copy) NSNumber * progenyCount;
 @property (nonatomic, copy) NSString * marker;
 @property (nonatomic, copy) NSString * ratio;
+@property (nonatomic, copy) NSData *metaData;
 
 //@property (nonatomic, copy) NSSet *alleles;
 @property (nonatomic, copy) NSSet *datums;

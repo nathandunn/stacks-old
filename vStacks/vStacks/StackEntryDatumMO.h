@@ -16,5 +16,6 @@
 @property (nonatomic, copy) NSNumber * sampleId;
 @property (nonatomic, copy) NSData * stackData;
 @property (nonatomic, copy) NSNumber * tagId;
+@property (nonatomic, copy) NSData * metaData;
 
 @end

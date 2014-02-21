@@ -17,5 +17,6 @@
 @dynamic sampleId;
 @dynamic datums;
 @dynamic population;
+@dynamic metaData;
 
 @end
