@@ -1,4 +1,4 @@
-Stacks 1.14 - Feb 9, 2014
+Stacks 1.14 - Feb 24, 2014
 --------------------------
 	Feature: We have implemented the first set of haplotype-level population genetics statistics. Specifically,
 	we are now calculating gene diversity and haplotype diversity (pi) for each locus, as well as F statistics
