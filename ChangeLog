@@ -1,5 +1,17 @@
-Stacks 1.13 - Jan 28, 2014
+Stacks 1.14 - Feb 24, 2014
 --------------------------
+	Feature: We have implemented the first set of haplotype-level population genetics statistics. Specifically,
+	we are now calculating gene diversity and haplotype diversity (pi) for each locus, as well as F statistics
+	for haplotypes including, Phi_st, Phi_ct, and Phi_sc, which are calculated using Analysis of Molecular
+	Variance (AMOVA):
+	    Excoffier, Smouse, & Quattro, (1992). Analysis of molecular variance inferred from metric distances
+	    among DNA haplotypes: application to human mitochondrial DNA restriction data. Genetics.
+	Data can be analyzed as populations of individuals (the previous default) and now using populations
+	of individuals, and groups of populations.
+	Feature: If a reference genome is available, haplotype F statistics can also be kernel-smoothed.
+	Feature: populations in the population map can now be specified as text strings or numbers. Groups
+	of populations can now be specified by adding a third column to the population map for each individual
+	and listing the group they belong to (again as a text string or number).
 	Bugfix: allow batch IDs of 0 in populations and genotypes.
 	Bugfix: in populations, changed VCF output to be ordered by basepair.
 	Bugfix: in populations, change value of expected homozygosity to be set to 1 - expected heterozygosity
