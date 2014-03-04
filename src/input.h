@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -21,6 +21,8 @@
 #ifndef __INPUT_H__
 #define __INPUT_H__
 
+#include <errno.h>
+#include <zlib.h>
 #include <stdlib.h>
 #include <string.h>
 #include <string>
@@ -82,5 +84,6 @@ char *rev_comp(const char *);
 int   parse_tsv(const char *, vector<string> &);
 int   parse_ssv(const char *, vector<string> &);
 int   read_line(ifstream &, char **, int *);
+int   read_gzip_line(gzFile &, char **, int *);
 
 #endif // __INPUT_H__
