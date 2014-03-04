@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -24,25 +24,24 @@
 #ifdef _OPENMP
 #include <omp.h>    // OpenMP library
 #endif
+
+#include <errno.h>
+#include <zlib.h>   // Support for gzipped output files.
+
 #include <getopt.h> // Process command-line options
 #include <string.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
+using std::ofstream;
 using std::stringstream;
 using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
 
-#ifdef __GNUC__
-#include <ext/hash_map>
-using __gnu_cxx::hash_map;
-using __gnu_cxx::hash;
-#else
-#include <hash_map>
-#endif
-
+#include <unordered_map>
+using std::unordered_map;
 #include <vector>
 using std::vector;
 #include <map>
@@ -55,6 +54,7 @@ using std::pair;
 #include "constants.h" 
 #include "stacks.h"     // Major data structures for holding stacks
 #include "mstack.h"
+#include "kmers.h"
 #include "utils.h"
 #include "models.h"     // Contains maximum likelihood statistical models.
 #include "Tsv.h"        // Reading input files in Tab-separated values format
@@ -65,13 +65,7 @@ using std::pair;
 
 const int barcode_size = 5;
 
-struct eqstr {
-    bool operator()(const char* s1, const char* s2) const {
-	return strcmp(s1, s2) == 0;
-    }
-};
-
-typedef hash_map<const char *, vector<Seq *>, hash<const char *>, eqstr> HashMap;
+typedef unordered_map<const char *, vector<Seq *>, hash_charptr, eqstr> HashMap;
 
 void help( void );
 void version( void );
@@ -83,7 +77,6 @@ int  call_consensus(map<int, MergedStack *> &, map<int, PStack *> &, bool);
 int  call_alleles(MergedStack *, vector<DNANSeq *> &);
 int  count_raw_reads(map<int, PStack *> &, map<int, MergedStack *> &);
 int  write_sql(map<int, MergedStack *> &, map<int, PStack *> &);
-int  write_sam(map<int, MergedStack *> &, map<int, PStack *> &);
 
 //
 // Debugging

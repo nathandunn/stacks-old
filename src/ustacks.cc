@@ -1376,14 +1376,19 @@ int count_raw_reads(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Me
     return 0;
 }
 
-int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> &r) {
+int 
+write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> &r) 
+{
     map<int, MergedStack *>::iterator i;
     vector<int>::iterator      k;
     vector<SNP *>::iterator    s;
     map<string, int>::iterator t;
-    MergedStack *tag_1;
-    Stack *tag_2;
-    Rem   *rem;
+    MergedStack  *tag_1;
+    Stack        *tag_2;
+    Rem          *rem;
+    stringstream  sstr;
+
+    bool gzip = (in_file_type == gzfastq || in_file_type == gzfasta) ? true : false;
 
     //
     // Read in the set of sequencing IDs so they can be included in the output.
@@ -1406,25 +1411,51 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
     string snp_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".snps.tsv";
     string all_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".alleles.tsv";
 
+    if (gzip) {
+	tag_file += ".gz";
+	snp_file += ".gz";
+	all_file += ".gz";
+    }
+
     //
     // Open the output files for writing.
     //
-    std::ofstream tags, snps, alle;
-    tags.open(tag_file.c_str());
-    if (tags.fail()) {
-	cerr << "Error: Unable to open tag file for writing.\n";
-	exit(1);
+    gzFile   gz_tags, gz_snps, gz_alle;
+    ofstream tags, snps, alle;
+    if (gzip) {
+	gz_tags = gzopen(tag_file.c_str(), "wb");
+	if (!gz_tags) {
+	    cerr << "Error: Unable to open gzipped tag file '" << tag_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+	gz_snps = gzopen(snp_file.c_str(), "wb");
+	if (!gz_snps) {
+	    cerr << "Error: Unable to open gzipped snps file '" << snp_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+	gz_alle = gzopen(all_file.c_str(), "wb");
+	if (!gz_alle) {
+	    cerr << "Error: Unable to open gzipped alleles file '" << all_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+    } else {
+	tags.open(tag_file.c_str());
+	if (tags.fail()) {
+	    cerr << "Error: Unable to open tag file for writing.\n";
+	    exit(1);
+	}
+	snps.open(snp_file.c_str());
+	if (snps.fail()) {
+	    cerr << "Error: Unable to open SNPs file for writing.\n";
+	    exit(1);
+	}
+	alle.open(all_file.c_str());
+	if (alle.fail()) {
+	    cerr << "Error: Unable to open allele file for writing.\n";
+	    exit(1);
+	}
     }
-    snps.open(snp_file.c_str());
-    if (snps.fail()) {
-	cerr << "Error: Unable to open SNPs file for writing.\n";
-	exit(1);
-    }
-    alle.open(all_file.c_str());
-    if (alle.fail()) {
-	cerr << "Error: Unable to open allele file for writing.\n";
-	exit(1);
-    }
+
     int id;
 
     char *buf = new char[m.begin()->second->len + 1];
@@ -1434,13 +1465,13 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	tag_1 = i->second;
 
 	// First write the consensus sequence
-	tags << "0"              << "\t" 
+	sstr << "0"              << "\t" 
 	     << sql_id           << "\t" 
 	     << tag_1->id        << "\t"
 	    //<< tag_1->cohort_id << "\t"
-             << ""               << "\t" // chr
-             << 0                << "\t" // bp
-             << "+"              << "\t" // strand
+	     << ""               << "\t" // chr
+	     << 0                << "\t" // bp
+	     << "+"              << "\t" // strand
 	     << "consensus\t"    << "\t" 
 	     << "\t" 
 	     << tag_1->con         << "\t" 
@@ -1451,27 +1482,30 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	//
 	// Write a sequence recording the output of the SNP model for each nucleotide.
 	//
-	tags << "0" << "\t" 
+	sstr << "0" << "\t" 
 	     << sql_id << "\t" 
 	     << tag_1->id << "\t" 
 	    //<< "\t" // cohort_id
-             << "\t"  // chr
-             << "\t"  // bp
-             << "\t"  // strand
+	     << "\t"  // chr
+	     << "\t"  // bp
+	     << "\t"  // strand
 	     << "model\t" << "\t"
 	     << "\t";
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
 	    if ((*s)->type == snp_type_het)
-		tags << "E";
+		sstr << "E";
 	    else if ((*s)->type == snp_type_hom)
-		tags << "O";
+		sstr << "O";
 	    else
-		tags << "U";
+		sstr << "U";
 	}
-	tags << "\t" 
+	sstr << "\t" 
 	     << "\t"
 	     << "\t"
 	     << "\n";
+
+	if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
+	sstr.str("");
 
 	// Now write out the components of each unique tag merged into this one.
 	id = 0;
@@ -1480,7 +1514,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	    total += tag_2->count();
 
 	    for (uint j = 0; j < tag_2->map.size(); j++) {
-		tags << "0"       << "\t"
+		sstr << "0"       << "\t"
 		     << sql_id    << "\t"
 		     << tag_1->id << "\t"
 		    //<< "\t" // cohort_id
@@ -1492,6 +1526,9 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 		     << seq_ids[tag_2->map[j]] << "\t" 
 		     << tag_2->seq->seq(buf) 
 		     << "\t\t\t\n";
+
+		if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
+		sstr.str("");
 	    }
 
 	    id++;
@@ -1505,7 +1542,7 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	    total += rem->map.size();
 
 	    for (uint j = 0; j < rem->map.size(); j++)
-		tags << "0"       << "\t" 
+		sstr << "0"       << "\t" 
 		     << sql_id    << "\t" 
 		     << tag_1->id << "\t"
 		    //<< "\t" // cohort_id
@@ -1517,6 +1554,9 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 		     << seq_ids[rem->map[j]] << "\t" 
 		     << rem->seq->seq(buf) 
 		     << "\t\t\t\n";
+
+	    if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
+	    sstr.str("");
 	}
 
 	//
@@ -1524,23 +1564,35 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
 	//
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
 	    if ((*s)->type == snp_type_het)
-		snps << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" 
+		sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" 
 		     << (*s)->col << "\t" << (*s)->lratio << "\t" 
 		     << (*s)->rank_1 << "\t" << (*s)->rank_2 << "\t\t\n";
 	}
+
+	if (gzip) gzputs(gz_snps, sstr.str().c_str()); else snps << sstr.str();
+	sstr.str("");
 
 	//
 	// Write the expressed alleles seen for the recorded SNPs and
 	// the percentage of tags a particular allele occupies.
 	//
 	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
-	    alle << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << (*t).first << "\t" << (((*t).second/total) * 100) << "\t" << (*t).second << "\n";
+	    sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << (*t).first << "\t" << (((*t).second/total) * 100) << "\t" << (*t).second << "\n";
 	}
+	if (gzip) gzputs(gz_alle, sstr.str().c_str()); else alle << sstr.str();
+	sstr.str("");
+
     }
 
-    tags.close();
-    snps.close();
-    alle.close();
+    if (gzip) {
+	gzclose(gz_tags);
+	gzclose(gz_snps);
+	gzclose(gz_alle);
+    } else {
+	tags.close();
+	snps.close();
+	alle.close();
+    }
 
     //
     // Free sequence IDs.
@@ -1554,19 +1606,33 @@ int write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem
     if (retain_rem_reads) {
 	string unused_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".unused.fa";
 
-	std::ofstream unused;
-	unused.open(unused_file.c_str());
-	if (unused.fail()) {
-	    cerr << "Error: Unable to open discard file for writing.\n";
-	    exit(1);
+	gzFile   gz_unused;
+	ofstream unused;
+
+	if (gzip) {
+	    unused_file += ".gz";
+	    gz_unused = gzopen(unused_file.c_str(), "wb");
+	    if (!gz_unused) {
+		cerr << "Error: Unable to open gzipped discard file '" << unused_file << "': " << strerror(errno) << ".\n";
+		exit(1);
+	    }
+	} else {
+	    unused.open(unused_file.c_str());
+	    if (unused.fail()) {
+		cerr << "Error: Unable to open discard file for writing.\n";
+		exit(1);
+	    }
 	}
 
  	map<int, Rem *>::iterator r_it;
-	for (r_it = r.begin(); r_it != r.end(); r_it++)
+	for (r_it = r.begin(); r_it != r.end(); r_it++) {
 	    if (r_it->second->utilized == false)
-		unused << ">" << r_it->second->id << "\n" << r_it->second->seq->seq(buf) << "\n";
+		sstr << ">" << r_it->second->id << "\n" << r_it->second->seq->seq(buf) << "\n";
+	    if (gzip) gzputs(gz_unused, sstr.str().c_str()); else unused << sstr.str();
+	    sstr.str("");
+	}
 
-	unused.close();
+	if (gzip) gzclose(gz_unused); else unused.close();
     }
 
     delete [] buf;

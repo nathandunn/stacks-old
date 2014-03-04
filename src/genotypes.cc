@@ -96,9 +96,10 @@ int main (int argc, char* argv[]) {
     //
     stringstream catalog_file;
     map<int, CSLocus *> catalog;
+    bool compressed = false;
     int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false)) == 0) {
+    if ((res = load_loci(catalog_file.str(), catalog, false, compressed)) == 0) {
     	cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
      	return 0;
     }
@@ -643,8 +644,9 @@ automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<int, 
 	if (parent_ids.count(sample_id)) continue;
 
 	map<int, Locus *> stacks;
-	int res;
-	if ((res = load_loci(in_path + file, stacks, true)) == 0) {
+	bool compressed = false;
+	int  res;
+	if ((res = load_loci(in_path + file, stacks, true, compressed)) == 0) {
 	    cerr << "Unable to load sample file '" << file << "'\n";
 	    return 0;
 	}

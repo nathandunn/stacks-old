@@ -41,6 +41,11 @@ const int id_len = 255;
 //
 // Supported file types
 //
-enum file_type {unknown, sql, fasta, fastq, gzfasta, gzfastq, bowtie, sam, bam, tsv, bustard, phase, fastphase, beagle};
+enum file_type {unknown, 
+		sql,     gzsql, 
+		fasta,   gzfasta, 
+		fastq,   gzfastq, 
+		bowtie,  sam, bam, tsv, 
+		bustard, phase, fastphase, beagle};
 
 #endif

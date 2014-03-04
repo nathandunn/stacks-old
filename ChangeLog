@@ -1,3 +1,7 @@
+Stacks 1.14 - Mar 03, 2014
+--------------------------
+	Feture: Stacks files are now kept in gzipped format if FASTQ data is fed into pipeline gzipped or as a BAM.
+	
 Stacks 1.13 - Feb 24, 2014
 --------------------------
 	Feature: We have implemented the first set of haplotype-level population genetics statistics. Specifically,

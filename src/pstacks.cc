@@ -317,6 +317,9 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     map<string, int>::iterator t;
     MergedStack *tag_1;
     PStack      *tag_2;
+    stringstream sstr;
+
+    bool gzip = (in_file_type == bam) ? true : false;
 
     //
     // Parse the input file name to create the output files
@@ -327,10 +330,51 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     string snp_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".snps.tsv";
     string all_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".alleles.tsv";
 
+    if (gzip) {
+	tag_file += ".gz";
+	snp_file += ".gz";
+	all_file += ".gz";
+    }
+
+    //
     // Open the output files for writing.
-    std::ofstream tags(tag_file.c_str());
-    std::ofstream snps(snp_file.c_str());
-    std::ofstream alle(all_file.c_str());
+    //
+    gzFile   gz_tags, gz_snps, gz_alle;
+    ofstream tags, snps, alle;
+    if (gzip) {
+	gz_tags = gzopen(tag_file.c_str(), "wb");
+	if (!gz_tags) {
+	    cerr << "Error: Unable to open gzipped tag file '" << tag_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+	gz_snps = gzopen(snp_file.c_str(), "wb");
+	if (!gz_snps) {
+	    cerr << "Error: Unable to open gzipped snps file '" << snp_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+	gz_alle = gzopen(all_file.c_str(), "wb");
+	if (!gz_alle) {
+	    cerr << "Error: Unable to open gzipped alleles file '" << all_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+    } else {
+	tags.open(tag_file.c_str());
+	if (tags.fail()) {
+	    cerr << "Error: Unable to open tag file for writing.\n";
+	    exit(1);
+	}
+	snps.open(snp_file.c_str());
+	if (snps.fail()) {
+	    cerr << "Error: Unable to open SNPs file for writing.\n";
+	    exit(1);
+	}
+	alle.open(all_file.c_str());
+	if (alle.fail()) {
+	    cerr << "Error: Unable to open allele file for writing.\n";
+	    exit(1);
+	}
+    }
+
     int id;
 
     char *buf; // = new char[m.begin()->second->len + 1];
@@ -355,7 +399,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	if (tag_1->blacklisted) blacklisted++;
 
 	// First write the consensus sequence
-	tags << "0" << "\t" 
+	sstr << "0" << "\t" 
 	     << sql_id << "\t" 
 	     << tag_1->id << "\t" 
              << tag_1->loc.chr << "\t"
@@ -370,7 +414,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	//
 	// Write a sequence recording the output of the SNP model for each nucleotide.
 	//
-	tags << "0" << "\t" 
+	sstr << "0" << "\t" 
 	     << sql_id << "\t" 
 	     << tag_1->id << "\t" 
              << "\t"
@@ -380,16 +424,19 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	     << "\t";
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
 	    if ((*s)->type == snp_type_het)
-		tags << "E";
+		sstr << "E";
 	    else if ((*s)->type == snp_type_hom)
-		tags << "O";
+		sstr << "O";
 	    else
-		tags << "U";
+		sstr << "U";
 	}
-	tags << "\t"
+	sstr << "\t"
 	     << "\t"
 	     << "\t"
 	     << "\n";
+
+	if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
+	sstr.str("");
 
 	// Now write out the components of each unique tag merged into this one.
 	id = 0;
@@ -398,7 +445,9 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	    buf = tag_2->seq->seq();
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		tags << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\n";
+		sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\n";
+		if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
+		sstr.str("");
 	    }
 	    id++;
 	    delete [] buf;
@@ -409,30 +458,37 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	//
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
 	    if ((*s)->type == snp_type_het)
-		snps << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" 
+		sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" 
 		     << (*s)->col << "\t" << (*s)->lratio << "\t" 
 		     << (*s)->rank_1 << "\t" << (*s)->rank_2 << "\t\t\n";
 	}
+
+	if (gzip) gzputs(gz_snps, sstr.str().c_str()); else snps << sstr.str();
+	sstr.str("");
 
 	// Write the expressed alleles seen for the recorded SNPs and
 	// the percentage of tags a particular allele occupies.
         char pct[id_len];
 	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
             sprintf(pct, "%.2f", ((t->second/total) * 100));
-	    alle << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << t->first << "\t" << pct << "\t" << t->second << "\n";
+	    sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << t->first << "\t" << pct << "\t" << t->second << "\n";
 	}
+	if (gzip) gzputs(gz_snps, sstr.str().c_str()); else snps << sstr.str();
+	sstr.str("");
     }
 
-    tags.close();
-    snps.close();
-    alle.close();
+    if (gzip) {
+	gzclose(gz_tags);
+	gzclose(gz_snps);
+	gzclose(gz_alle);
+    } else {
+	tags.close();
+	snps.close();
+	alle.close();
+    }
 
     cerr << "  Wrote " << wrote << " loci, excluded " << excluded << " loci due to insuffient depth of coverage; blacklisted " << blacklisted << " loci.\n";
 
-    return 0;
-}
-
-int write_sam(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     return 0;
 }
 

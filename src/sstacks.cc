@@ -56,13 +56,14 @@ int main (int argc, char* argv[]) {
 
     map<int, Locus *>  sample_1;
     map<int, QLocus *> sample_2;
-    int res;
+    bool compressed = false;
+    int  res;
 
     if (catalog) {
         sample_1_file += ".catalog";
-	res = load_loci(sample_1_file, sample_1, false);
+	res = load_loci(sample_1_file, sample_1, false, compressed);
     } else {
-	res = load_loci(sample_1_file, sample_1, false);
+	res = load_loci(sample_1_file, sample_1, false, compressed);
     }
 
     if (res == 0) {
@@ -70,7 +71,7 @@ int main (int argc, char* argv[]) {
 	return 0;
     }
 
-    res = load_loci(sample_2_file, sample_2, false);
+    res = load_loci(sample_2_file, sample_2, false, compressed);
 
     if (res == 0) {
 	cerr << "Unable to parse '" << sample_2_file << "'\n";
