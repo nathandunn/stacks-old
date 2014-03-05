@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -25,23 +25,22 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-// $Id$
-//
 
 #include "sstacks.h"
 
 // Global variables to hold command-line options.
-string  sample_1_file;
-string  sample_2_file;
-string  out_path;
-int     num_threads = 1;
-int     batch_id    = 0;
-int     samp_id     = 0; 
-int     catalog     = 0;
-bool    verify_haplotypes = true;
-bool    impute_haplotypes = true;
-bool    require_uniq_haplotypes = false;
-searcht search_type = sequence;
+string    sample_1_file;
+string    sample_2_file;
+string    out_path;
+file_type in_file_type = sql;
+int       num_threads  = 1;
+int       batch_id     = 0;
+int       samp_id      = 0; 
+int       catalog      = 0;
+bool      verify_haplotypes       = true;
+bool      impute_haplotypes       = true;
+bool      require_uniq_haplotypes = false;
+searcht   search_type             = sequence;
 
 int main (int argc, char* argv[]) {
 
@@ -77,6 +76,9 @@ int main (int argc, char* argv[]) {
 	cerr << "Unable to parse '" << sample_2_file << "'\n";
 	return 0;
     }
+
+    in_file_type = compressed == true ? gzsql : sql;
+
     //
     // Assign the ID for this sample data.
     //
@@ -702,19 +704,33 @@ int write_matches(map<int, QLocus *> &sample) {
     size_t pos_1    = sample_2_file.find_last_of("/");
     string out_file = out_path + sample_2_file.substr(pos_1 + 1)  + ".matches.tsv";
 
+    if (in_file_type == gzsql)
+	out_file += ".gz";
+
     //
     // Open the output files for writing.
     //
-    std::ofstream matches;
-    matches.open(out_file.c_str());
-    if (matches.fail()) {
-	cerr << "Error: Unable to open matches file for writing.\n";
-	exit(1);
+    gzFile   gz_matches;
+    ofstream matches;
+    if (in_file_type == gzsql) {
+	gz_matches = gzopen(out_file.c_str(), "wb");
+	if (!gz_matches) {
+	    cerr << "Error: Unable to open gzipped matches file '" << out_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+    } else {
+	matches.open(out_file.c_str());
+	if (matches.fail()) {
+	    cerr << "Error: Unable to open matches file for writing.\n";
+	    exit(1);
+	}
     }
 
-    string type;
-    uint   match_depth;
-    cerr << "Outputing to file " << out_file.c_str() << "\n";
+    string       type;
+    uint         match_depth;
+    stringstream sstr;
+
+    cerr << "Outputing to file " << out_file << "\n";
 
     for (i = sample.begin(); i != sample.end(); i++) {
 
@@ -726,7 +742,7 @@ int write_matches(map<int, QLocus *> &sample) {
 		    i->second->alleles.count(i->second->matches[j]->cat_type) > 0 ? 
 		    i->second->alleles[i->second->matches[j]->cat_type] : i->second->depth;
 
-	    matches << 
+	    sstr << 
 		"0"           << "\t" <<
 		batch_id      << "\t" <<
 		i->second->matches[j]->cat_id   << "\t" <<
@@ -735,9 +751,15 @@ int write_matches(map<int, QLocus *> &sample) {
 		i->second->matches[j]->cat_type << "\t" <<
 		match_depth   << "\n";
 	}
+
+	if (in_file_type == gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
+	sstr.str("");
     }
 
-    matches.close();
+        if (in_file_type == gzsql)
+	    gzclose(gz_matches);
+	else
+	    matches.close();
 
     return 0;
 }
