@@ -179,6 +179,10 @@ int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads, bool &c
     // 
     // Next, parse the SNP file.
     //
+    gzip      = false;
+    fh_status = 1;
+    line_num  = 0;
+
     f = sample + ".snps.tsv";
     fh.open(f.c_str(), ifstream::in);
     if (fh.fail()) {
@@ -195,10 +199,6 @@ int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads, bool &c
 	compressed = true;
     }
     cerr << "  Parsing " << f.c_str() << "\n";
-
-    gzip      = false;
-    fh_status = 1;
-    line_num  = 0;
 
     while (fh_status) {
         fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
@@ -247,6 +247,10 @@ int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads, bool &c
     // 
     // Finally, parse the Alleles file
     //
+    gzip      = false;
+    fh_status = 1;
+    line_num  = 0;
+
     f = sample + ".alleles.tsv";
     fh.open(f.c_str(), ifstream::in);
     if (fh.fail()) {
@@ -263,10 +267,6 @@ int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads, bool &c
 	compressed = true;
     }
     cerr << "  Parsing " << f.c_str() << "\n";
-
-    gzip      = false;
-    fh_status = 1;
-    line_num  = 0;
 
     while (fh_status) {
         fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
