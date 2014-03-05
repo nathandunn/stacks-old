@@ -6379,11 +6379,24 @@ build_file_list(vector<pair<int, string> > &files,
 	    //
 	    // Test that file exists before adding to list.
 	    //
+	    ifstream test_fh;
+	    gzFile   gz_test_fh;
+
 	    f = in_path.c_str() + parts[0] + ".matches.tsv";
-	    ifstream test_fh(f.c_str(), ifstream::in);
+	    test_fh.open(f.c_str());
 
 	    if (test_fh.fail()) {
-		cerr << " Unable to find " << f.c_str() << ", excluding it from the analysis.\n";
+		//
+		// Test for a gzipped file.
+		//
+		f = in_path.c_str() + parts[0] + ".matches.tsv.gz";
+		gz_test_fh = gzopen(f.c_str(), "rb");
+		if (!gz_test_fh) {
+		    cerr << " Unable to find " << f.c_str() << ", excluding it from the analysis.\n";
+		} else {
+		    gzclose(gz_test_fh);
+		    files.push_back(make_pair(pop_id, parts[0]));
+		}
 	    } else {
 		test_fh.close();
 		files.push_back(make_pair(pop_id, parts[0]));
@@ -6418,8 +6431,13 @@ build_file_list(vector<pair<int, string> > &files,
 		continue;
 
 	    pos = file.rfind(".tags.tsv");
-	    if (pos < file.length())
+	    if (pos < file.length()) {
 		files.push_back(make_pair(1, file.substr(0, pos)));
+	    } else {
+		pos = file.rfind(".tags.tsv.gz");
+		if (pos < file.length())
+		    files.push_back(make_pair(1, file.substr(0, pos)));
+	    }
 	}
 
 	pop_key[1] = "1";

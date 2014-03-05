@@ -414,13 +414,17 @@ int load_model_results(string sample, map<int, ModRes *> &modres) {
     // First, parse the tag file and pull in the consensus sequence
     // for each Radtag.
     //
+    gzip      = false;
+    fh_status = 1;
+    line_num  = 0;
+
     f = sample + ".tags.tsv";
     fh.open(f.c_str(), ifstream::in);
     if (fh.fail()) {
 	//
 	// Test for a gzipped file.
 	//
-	f += sample + ".tags.tsv.gz";
+	f = sample + ".tags.tsv.gz";
 	gz_fh = gzopen(f.c_str(), "rb");
 	if (!gz_fh) {
 	    cerr << " Unable to open '" << sample << "'\n";
@@ -432,10 +436,6 @@ int load_model_results(string sample, map<int, ModRes *> &modres) {
 
     ModRes *mod;
     uint tag_id, samp_id;
-
-    gzip      = false;
-    fh_status = 1;
-    line_num = 0;
 
     while (fh_status) {
         fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
@@ -458,8 +458,8 @@ int load_model_results(string sample, map<int, ModRes *> &modres) {
         if (parts[6] != "model") continue;
 
         samp_id = atoi(parts[1].c_str());
-        tag_id = atoi(parts[2].c_str());
-        mod = new ModRes(samp_id, tag_id, parts[9].c_str());
+        tag_id  = atoi(parts[2].c_str());
+        mod     = new ModRes(samp_id, tag_id, parts[9].c_str());
 
         modres[tag_id] = mod;
     }
