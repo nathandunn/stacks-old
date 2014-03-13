@@ -91,7 +91,7 @@ int parse_illumina_v2(const char *file) {
     // Find the part of the name marking the pair, "_R1_", make sure it is not the paired-end file.
     //
     p = file;
-    while (p != '\0') {
+    while (*p != '\0') {
 	for (; *p != '_' && *p != '\0'; p++);
 	if (*p == '\0') return 0;
 	if (strncmp(p, "_R1_", 4) == 0) {

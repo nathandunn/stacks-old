@@ -494,13 +494,19 @@ int load_snp_calls(string sample, map<int, SNPRes *> &snpres) {
     //
     f = sample + ".snps.tsv";
     fh.open(f.c_str(), ifstream::in);
-
     if (fh.fail()) {
-        cerr << " Unable to open " << f.c_str() << "\n";
-        return 0;
-    } else {
-        cerr << "  Parsing " << f.c_str() << "\n";
+	//
+	// Test for a gzipped file.
+	//
+	f = sample + ".snps.tsv.gz";
+	gz_fh = gzopen(f.c_str(), "rb");
+	if (!gz_fh) {
+	    cerr << " Unable to open '" << sample << "'\n";
+	    return 0;
+	}
+	gzip = true;
     }
+    cerr << "  Parsing " << f.c_str() << "\n";
 
     line_num = 0;
     while (fh_status) {
