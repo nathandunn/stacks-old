@@ -473,7 +473,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
             sprintf(pct, "%.2f", ((t->second/total) * 100));
 	    sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << t->first << "\t" << pct << "\t" << t->second << "\n";
 	}
-	if (gzip) gzputs(gz_snps, sstr.str().c_str()); else snps << sstr.str();
+	if (gzip) gzputs(gz_alle, sstr.str().c_str()); else alle << sstr.str();
 	sstr.str("");
     }
 
