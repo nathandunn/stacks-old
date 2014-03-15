@@ -31,6 +31,8 @@
 
 use strict;
 use POSIX;
+use File::Temp qw/ mktemp /;
+use File::Spec;
 use constant stacks_version => "_VERSION_";
 
 my $dry_run      = 0;
@@ -104,7 +106,7 @@ $log = "$out_path/ref_map.log";
 open($log_fh, ">$log") or die("Unable to open log file '$log'; $!\n");
 
 print $log_fh 
-    "ref_map.pl started at ", strftime("%Y-%m-%d %H:%M:%S",(localtime(time))), "\n",
+    "ref_map.pl version ", stacks_version, " started at ", strftime("%Y-%m-%d %H:%M:%S",(localtime(time))), "\n",
     $cmd_str, "\n";
 
 if ($sql == 1) {
@@ -116,6 +118,8 @@ if ($sql == 1) {
 
     print $log_fh "mysql --defaults-file=$cnf $db -e \"INSERT INTO batches SET id=$batch_id, description='$desc', date='$date', type='$data_type'\"\n";
 }
+
+my $gzip = 0;
 
 foreach $sample (@parents, @progeny, @samples) {
     my ($ftype, $pfile) = "";
@@ -134,6 +138,7 @@ foreach $sample (@parents, @progeny, @samples) {
         $ftype = "sam";
     } elsif ($suffix =~ /^bam$/) {
         $ftype = "bam";
+	$gzip  = 1;
     } elsif ($suffix =~ /^map$/) {
         $ftype = "tsv";
     } else {
@@ -160,22 +165,33 @@ foreach $sample (@parents, @progeny, @samples) {
     $map{$pfile} = $sample_id;
 
     $cmd = $exe_path . "pstacks -t $ftype -f $sample -o $out_path -i $sample_id " . join(" ", @_pstacks) . " 2>&1";
-    print STDERR  "$cmd\n";
+    print STDERR  "  $cmd\n";
     print $log_fh "$cmd\n";
     @results = `$cmd` if ($dry_run == 0);
     write_results(\@results, $log_fh);
 
     print STDERR "  Loading pstacks output to $db..." if ($sql == 1);
 
-    $file = "$out_path/$pfile" . ".tags.tsv";
-    import_sql_file($log_fh, $file, "unique_tags", 0);
+    if ($gzip == 1) {
+	$file = "$out_path/$pfile" . ".tags.tsv.gz";
+	import_gzsql_file($log_fh, $file, "unique_tags", 0);
 
-    $file = "$out_path/$pfile" . ".snps.tsv";
-    import_sql_file($log_fh, $file, "snps", 0);
+	$file = "$out_path/$pfile" . ".snps.tsv.gz";
+	import_gzsql_file($log_fh, $file, "snps", 0);
 
-    $file = "$out_path/$pfile" . ".alleles.tsv";
-    import_sql_file($log_fh, $file, "alleles", 0);
+	$file = "$out_path/$pfile" . ".alleles.tsv.gz";
+	import_gzsql_file($log_fh, $file, "alleles", 0);
 
+    } else {
+	$file = "$out_path/$pfile" . ".tags.tsv";
+	import_sql_file($log_fh, $file, "unique_tags", 0);
+
+	$file = "$out_path/$pfile" . ".snps.tsv";
+	import_sql_file($log_fh, $file, "snps", 0);
+
+	$file = "$out_path/$pfile" . ".alleles.tsv";
+	import_sql_file($log_fh, $file, "alleles", 0);
+    }
     print STDERR "done.\n" if ($sql == 1);
 
     $i++;
@@ -203,7 +219,7 @@ foreach $sample (@parents, @samples) {
 
 $cat_file = "batch_" . $batch_id;
 $cmd      = $exe_path . "cstacks -g -b $batch_id -o $out_path $parents " . join(" ", @_cstacks) . " 2>&1";
-print STDERR  "$cmd\n";
+print STDERR  "  $cmd\n";
 print $log_fh "$cmd\n";
 
 if ($dry_run == 0) {
@@ -216,15 +232,26 @@ if ($dry_run == 0) {
 
 print STDERR "  Importing catalog to MySQL database..." if ($sql == 1);
 
-$file = "$out_path/$cat_file" . ".catalog.tags.tsv";
-import_sql_file($log_fh, $file, "catalog_tags", 0);
+if ($gzip == 1) {
+    $file = "$out_path/$cat_file" . ".catalog.tags.tsv.gz";
+    import_gzsql_file($log_fh, $file, "catalog_tags", 0);
 
-$file = "$out_path/$cat_file" . ".catalog.snps.tsv";
-import_sql_file($log_fh, $file, "catalog_snps", 0);
+    $file = "$out_path/$cat_file" . ".catalog.snps.tsv.gz";
+    import_gzsql_file($log_fh, $file, "catalog_snps", 0);
 
-$file = "$out_path/$cat_file" . ".catalog.alleles.tsv";
-import_sql_file($log_fh, $file, "catalog_alleles", 0);
+    $file = "$out_path/$cat_file" . ".catalog.alleles.tsv.gz";
+    import_gzsql_file($log_fh, $file, "catalog_alleles", 0);
 
+} else {
+    $file = "$out_path/$cat_file" . ".catalog.tags.tsv";
+    import_sql_file($log_fh, $file, "catalog_tags", 0);
+
+    $file = "$out_path/$cat_file" . ".catalog.snps.tsv";
+    import_sql_file($log_fh, $file, "catalog_snps", 0);
+
+    $file = "$out_path/$cat_file" . ".catalog.alleles.tsv";
+    import_sql_file($log_fh, $file, "catalog_alleles", 0);
+}
 print STDERR "done.\n" if ($sql == 1);
 
 #
@@ -248,16 +275,21 @@ foreach $sample (@parents, @progeny, @samples) {
     $rid = $map{$pfile};
 
     $cmd = $exe_path . "sstacks -g -b $batch_id -c $out_path/$cat_file -s $out_path/$pfile -o $out_path " . join(" ", @_sstacks) . " 2>&1";
-    print STDERR  "$cmd\n";
+    print STDERR  "  $cmd\n";
     print $log_fh "$cmd\n";
     @results =    `$cmd` if ($dry_run == 0);
     print $log_fh @results;
 
     print STDERR "  Loading sstacks output to $db..." if ($sql == 1);
 
-    $file = "$out_path/" . $pfile . ".matches.tsv";
-    import_sql_file($log_fh, $file, "matches", 0);
+    if ($gzip == 1) {
+	$file = "$out_path/" . $pfile . ".matches.tsv.gz";
+	import_gzsql_file($log_fh, $file, "matches", 0);
 
+    } else {
+	$file = "$out_path/" . $pfile . ".matches.tsv";
+	import_sql_file($log_fh, $file, "matches", 0);
+    }
     print STDERR "done.\n" if ($sql == 1);
 
     $i++;
@@ -474,6 +506,40 @@ sub import_sql_file {
     if ($sql == 1) {
 	print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
     }
+}
+
+sub import_gzsql_file {
+    my ($log_fh, $file, $table, $skip_lines) = @_;
+
+    my (@results, $ignore);
+
+    $ignore = "IGNORE $skip_lines LINES" if ($skip_lines > 0);
+
+    #
+    # Get a temporary file name and create a named pipe.
+    #
+    my $tmpdir     = File::Spec->tmpdir();
+    my $named_pipe = mktemp($tmpdir . "/denovo_map_XXXXXX");
+    if ($sql == 1 && $dry_run == 0) {
+	mkfifo($named_pipe, 0700) || die("Unable to create named pipe for loading gzipped data: $named_pipe, $!");
+    }
+    print $log_fh "Streaming $file into named pipe $named_pipe.\n";
+
+    #
+    # Dump our gzipped data onto the named pipe.
+    #
+    system("gunzip -c $file > $named_pipe &") if ($sql == 1 && $dry_run == 0);
+
+    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore"` if ($sql == 1 && $dry_run == 0);
+
+    if ($sql == 1) {
+	print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore\"\n", @results;
+    }
+
+    #
+    # Remove the pipe.
+    #
+    unlink($named_pipe) if ($sql == 1 && $dry_run == 0);
 }
 
 sub parse_command_line {
