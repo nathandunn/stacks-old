@@ -3433,9 +3433,6 @@ kernel_smoothed_hapstats(vector<CSLocus *> &loci, PopSum<CSLocus> *psum, int pop
 	for (uint pos_c = 0; pos_c < sites.size(); pos_c++) {
 	    c = sites[pos_c];
 
-	    if (c->pi == 0)
-		continue;
-
 	    weighted_gdiv = 0.0;
 	    weighted_pi   = 0.0;
 	    sum           = 0.0;
