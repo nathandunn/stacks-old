@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2012-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -273,7 +273,7 @@ int main (int argc, char* argv[]) {
     	start_index = pit->second.first;
     	end_index   = pit->second.second;
     	pop_id      = pit->first;
-    	cerr << "Generating nucleotide-level summary statistics for population " << pop_id << "\n";
+    	cerr << "Generating nucleotide-level summary statistics for population '" << pop_key[pop_id] << "'\n";
     	psum->add_population(catalog, pmap, pop_id, start_index, end_index, log_fh);
 
 	if (kernel_smoothed && loci_ordered) {
@@ -843,6 +843,8 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 	pop_id    = pit->first;
 	pop_index = psum->pop_index(pop_id);
 
+    	cerr << "Generating haplotype-level summary statistics for population '" << pop_key[pop_id] << "'\n";
+
 	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	    for (uint pos = 0; pos < it->second.size(); pos++) {
 		loc = it->second[pos];
@@ -885,6 +887,14 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 		//
 		if (n == 0) 
 		    continue;
+
+		//
+		// Store a summary of the haplotype counts to output below.
+		//
+		stringstream sstr;
+		for (hit = hap_freq.begin(); hit != hap_freq.end(); hit++)
+		    sstr << hit->first << ":" << hit->second  << ";";
+		s[pop_index]->hap_str = sstr.str().substr(0, -1);
 
 		//
 		// Determine an ordering for the haplotypes. Convert haplotype counts into frequencies.
@@ -947,7 +957,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 	    }
 
 	    if (kernel_smoothed && loci_ordered) {
-		cerr << "    Processing chromosome " << it->first << "\n";
+		cerr << "    Kernel-smoothing statistics on chromosome " << it->first << "\n";
 		kernel_smoothed_hapstats(it->second, psum, pop_id, weights);
 	    }
 	}
@@ -991,7 +1001,8 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
        << "Gene Diversity"      << "\t"
        << "Smoothed Gene Diversity"      << "\t"
        << "Haplotype Diversity"          << "\t"
-       << "Smoothed Haplotype Diversity" << "\n";
+       << "Smoothed Haplotype Diversity" << "\t"
+       << "Haplotypes"                   << "\n";
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	for (uint pos = 0; pos < it->second.size(); pos++) {
@@ -1014,7 +1025,8 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 		   << s[j]->gdiv     << "\t"
 		   << s[j]->wgdiv    << "\t"
 		   << s[j]->pi       << "\t"
-		   << s[j]->wpi      << "\n";
+		   << s[j]->wpi      << "\t"
+		   << s[j]->hap_str  << "\n";
 	    }
 	}
     }

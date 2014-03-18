@@ -167,6 +167,7 @@ public:
     int      bp;      // Genomic location of this locus (for kernal smoothing).
     double   n;       // Sample size AKA number of chromosomes sampled, or number of individuals times two.
     uint     hap_cnt; // Number of unique haplotypes at this locus. 
+    string   hap_str; // Human-readable string of haplotype counts.
     double   gdiv;    // Gene diversity for this locus.
     double   wgdiv;   // Kernel-smoothed gene diversity.
     double   pi;      // Haplotype frequency for this locus.
