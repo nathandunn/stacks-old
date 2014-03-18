@@ -1,5 +1,6 @@
 Stacks 1.16 - Mar 17, 2014
 --------------------------
+	Feature: added haplotype counts for each population and locus to the batch_X.hapstats.tsv file.
 	Bugfix: kernel-smoothing not correct for haplotype/gene diversity.
 
 Stacks 1.15 - Mar 15, 2014
