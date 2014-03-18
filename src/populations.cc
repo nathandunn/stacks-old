@@ -894,7 +894,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 		stringstream sstr;
 		for (hit = hap_freq.begin(); hit != hap_freq.end(); hit++)
 		    sstr << hit->first << ":" << hit->second  << ";";
-		s[pop_index]->hap_str = sstr.str().substr(0, -1);
+		s[pop_index]->hap_str = sstr.str().substr(0, sstr.str().length() - 1);
 
 		//
 		// Determine an ordering for the haplotypes. Convert haplotype counts into frequencies.
