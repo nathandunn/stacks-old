@@ -59,19 +59,19 @@
 
     NSLog(@"Importing Doucment");
 
-    NSDate *now = [NSDate date];
-    // get year and month
-    NSInteger year = [[now dateWithCalendarFormat:nil timeZone:nil] yearOfCommonEra];
-    NSInteger month = [[now dateWithCalendarFormat:nil timeZone:nil] monthOfYear];
-    NSLog(@"year Y%ld M%ld", year, month);
-    if (year > 2013 && month > 6) {
-        NSAlert *alert = [[NSAlert alloc] init];
-        [alert setMessageText:@"Trial License Expired"];
-        [alert addButtonWithTitle:@"OK"];
-
-        [alert runModal];
-        return;
-    }
+//    NSDate *now = [NSDate date];
+//    // get year and month
+//    NSInteger year = [[now dateWithCalendarFormat:nil timeZone:nil] yearOfCommonEra];
+//    NSInteger month = [[now dateWithCalendarFormat:nil timeZone:nil] monthOfYear];
+//    NSLog(@"year Y%ld M%ld", year, month);
+//    if (year > 2014 && month > 6) {
+//        NSAlert *alert = [[NSAlert alloc] init];
+//        [alert setMessageText:@"Trial License Expired"];
+//        [alert addButtonWithTitle:@"OK"];
+//
+//        [alert runModal];
+//        return;
+//    }
 
 
     NSOpenPanel *importPanel = [NSOpenPanel openPanel];
