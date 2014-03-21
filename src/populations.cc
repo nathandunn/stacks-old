@@ -957,7 +957,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 	    }
 
 	    if (kernel_smoothed && loci_ordered) {
-		cerr << "    Kernel-smoothing statistics on chromosome " << it->first << "\n";
+		cerr << "    Generating kernel-smoothed statistics on chromosome " << it->first << "\n";
 		kernel_smoothed_hapstats(it->second, psum, pop_id, weights);
 	    }
 	}
@@ -2495,7 +2495,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    cerr << "Pop 1: " << pop_key[pop_1] << "; Pop 2: " << pop_key[pop_2] << "; mean Fst: " << (sum / cnt) << "\n";
 	    means.push_back(sum / cnt);
 
-	    cerr << "Pooled populations " << pop_key[pop_1] << " and " << pop_key[pop_2] << " contained: " << incompatible_loci << " incompatible loci; " 
+	    cerr << "Pooled populations '" << pop_key[pop_1] << "' and '" << pop_key[pop_2] << "' contained: " << incompatible_loci << " incompatible loci; " 
 		 << multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 	    fh.close();
 
@@ -2850,7 +2850,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 	}
 	sites.clear();
     }
-    cerr << "Population " << pop_key[pop_id] << " contained " << multiple_loci << " nucleotides covered by more than one RAD locus.\n";
+    cerr << "Population '" << pop_key[pop_id] << "' contained " << multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 
     //
     // If bootstrap resampling method is approximate, generate our single, empirical distribution.
@@ -6313,7 +6313,7 @@ build_file_list(vector<pair<int, string> > &files,
 {
     char             line[max_len];
     vector<string>   parts;
-    map<string, int> grp_key_rev;
+    map<string, int> pop_key_rev, grp_key_rev;
     set<string>      pop_names, grp_names;
     string f;
     uint   len;
@@ -6364,7 +6364,8 @@ build_file_list(vector<pair<int, string> > &files,
 	    if (pop_names.count(parts[1]) == 0) {
 		pop_names.insert(parts[1]);
 		pop_id++;
-		pop_key[pop_id] = parts[1];
+		pop_key[pop_id]       = parts[1];
+		pop_key_rev[parts[1]] = pop_id;
 
 		//
 		// If this is the first time we have seen this population, but not the
@@ -6404,11 +6405,11 @@ build_file_list(vector<pair<int, string> > &files,
 		    cerr << " Unable to find " << f.c_str() << ", excluding it from the analysis.\n";
 		} else {
 		    gzclose(gz_test_fh);
-		    files.push_back(make_pair(pop_id, parts[0]));
+		    files.push_back(make_pair(pop_key_rev[parts[1]], parts[0]));
 		}
 	    } else {
 		test_fh.close();
-		files.push_back(make_pair(pop_id, parts[0]));
+		files.push_back(make_pair(pop_key_rev[parts[1]], parts[0]));
 	    }
 	}
 
