@@ -1,6 +1,7 @@
-Stacks 1.16 - Mar 17, 2014
+Stacks 1.16 - Mar 21, 2014
 --------------------------
 	Feature: added haplotype counts for each population and locus to the batch_X.hapstats.tsv file.
+	Bugfix: fixed small bug in Phi_st calculations.
 	Bugfix: Fixed bug in parsing of populations maps with strings for population identifiers.
 	Bugfix: kernel-smoothing not correct for haplotype/gene diversity.
 

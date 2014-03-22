@@ -39,6 +39,11 @@ const int max_len = 1024;
 const int id_len = 255;
 
 //
+// Size to use for internal buffer size for gzipped files being read with libz.
+//
+const int libz_buffer_size = 1048576;
+
+//
 // Supported file types
 //
 enum file_type {unknown, 

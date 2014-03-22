@@ -297,6 +297,8 @@ int main (int argc, char* argv[]) {
 
     calculate_haplotype_amova(files, pop_indexes, grp_members, catalog, pmap, psum);
 
+    calculate_haplotype_amova_pairwise(files, pop_indexes, grp_members, catalog, pmap, psum);
+
     //
     // Output a list of heterozygous loci and the associate haplotype frequencies.
     //
@@ -1078,10 +1080,7 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 {
     map<string, vector<CSLocus *> >::iterator it;
 
-    int pop_cnt = pop_indexes.size();
-
-    cerr << "Calculating haplotype F statistics... ";
-    if (kernel_smoothed && loci_ordered) cerr << "\n";
+    cerr << "Calculating haplotype F statistics across all populations/groups...\n";
 
     double *weights = calculate_weights();
 
@@ -1094,6 +1093,15 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 	for (uint i = 0; i < git->second.size(); i++)
 	    pop_grp_key[git->second[i]] = git->first;
 
+    //
+    // Create a list of all the populations we have.
+    //
+    vector<int> pop_ids;
+
+    map<int, pair<int, int> >::iterator pit;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
+	pop_ids.push_back(pit->first);
+
     map<string, vector<HapStat *> > genome_hapstats;
     map<uint, uint> hapstats_key;
 
@@ -1101,20 +1109,18 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	string chr = it->first;
 
+	cerr << "  Generating haplotype F statistics for " << chr << "...";
+
 	init_chr_loci(genome_hapstats, chr, hapstats_key, it->second);
 
 	vector<HapStat *> &hapstats = genome_hapstats[chr];
 
         #pragma omp parallel
 	{ 
-	    map<string, int>::iterator hit, hit_2;
 	    CSLocus  *loc;
 	    LocSum  **s;
 	    Datum   **d;
 	    HapStat  *h;
-
-	    map<int, pair<int, int> >::iterator pit;
-	    int start, end, pop_id, pop_id_1, pop_id_2;
 
             #pragma omp for schedule(dynamic, 1) reduction(+:cnt)
 	    for (uint pos = 0; pos < it->second.size(); pos++) {
@@ -1128,396 +1134,26 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 		cnt++;
 		// cerr << "Processing locus " << loc->id << "\n";
 
-		map<string, int>          loc_hap_index;
-		vector<string>            loc_haplotypes;
-		map<int, vector<string> > pop_haplotypes;
-		map<int, vector<int> >    grp_members;
-		vector<int>               grps;
+		h = haplotype_amova(pop_grp_key, pop_indexes, d, s, pop_ids);
 
-		//
-		// Tabulate the occurences of haplotypes at this locus.
-		//
-		for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-		    start  = pit->second.first;
-		    end    = pit->second.second;
-		    pop_id = pit->first;
-
-		    for (int i = start; i <= end; i++) {
-			if (d[i] == NULL) continue;
-
-			if (d[i]->obshap.size() > 2) { 
-			    continue;
-
-			} else if (d[i]->obshap.size() == 1) {
-			    loc_hap_index[d[i]->obshap[0]]++;
-			    loc_haplotypes.push_back(d[i]->obshap[0]);
-			    loc_haplotypes.push_back(d[i]->obshap[0]);
-			    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-			    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-
-			} else {
-			    for (uint j = 0; j < d[i]->obshap.size(); j++) {
-				loc_hap_index[d[i]->obshap[j]]++;
-				loc_haplotypes.push_back(d[i]->obshap[j]);
-				pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
-			    }
-			}
-		    }
+		if (h != NULL) {
+		    h->loc_id = loc->id;
+		    h->bp     = loc->sort_bp();
+		    hapstats[hapstats_key[h->bp]] = h;
 		}
-
-		//
-		// If we filtered a population out at this locus make sure that we still have at least one
-		// representative present in each group.
-		//
-		set<int> uniq_grps;
-		for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-		    pop_id = pit->first;
-
-		    if (pop_haplotypes.count(pop_id) > 0) {
-			uniq_grps.insert(pop_grp_key[pop_id]);
-			grp_members[pop_grp_key[pop_id]].push_back(pop_id);
-		    }
-		}
-		set<int>::iterator uit;
-		for (uit = uniq_grps.begin(); uit != uniq_grps.end(); uit++)
-		    grps.push_back(*uit);
-
-		if (grps.size() == 0)
-		    continue;
-
-		// cerr << "Groups: ";
-		// for (uint i = 0; i < grps.size(); i++)
-		//     cerr << grps[i] << ", ";
-		// cerr << "\n";
-		// for (git = grp_members.begin(); git != grp_members.end(); git++) {
-		//     cerr << "Group " << git->first << ": ";
-  		//     for (uint i = 0; i < git->second.size(); i++)
-		// 	cerr << git->second[i] << ", ";
-		//     cerr << "\n";
-	        // }
-
-		//
-		// Determine an ordering for the haplotypes.
-		//
-		uint m = 0;
-		for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
-		    loc_hap_index[hit->first] = m;
-		    m++;
-		}
-
-		//
-		// Initialize a two-dimensional array to hold distances between haplotyes.
-		//
-		double **hdists = new double *[loc_hap_index.size()];
-		for (uint k = 0; k < loc_hap_index.size(); k++) {
-		    hdists[k] = new double[loc_hap_index.size()];
-		    memset(hdists[k], 0, loc_hap_index.size());
-		}
-
-		//
-		// Calculate the distances between haplotypes.
-		//
-		nuc_substitution_dist(loc_hap_index, hdists);
-
-		// //
-		// // Print the distance matrix.
-		// //
-		// cerr << "  ";
-		// for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++)
-		// 	cerr << "\t" << hit->first;
-		// cerr << "\n";
-		// for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
-		// 	cerr << "  " << hit->first;
-		// 	for (hit_2 = loc_hap_index.begin(); hit_2 != loc_hap_index.end(); hit_2++)
-		// 	    cerr << "\t" << hdists[hit->second][hit_2->second];
-		// 	cerr << "\n";
-		// }
-		// cerr << "\n";
-
-		//
-		// Calculate sum of squared deviations for the total sample, SSD(Total)
-		//
-		double ssd_total = 0.0;
-
-		for (uint j = 0; j < loc_haplotypes.size(); j++) {
-		    for (uint k = 0; k < loc_haplotypes.size(); k++) {
-			ssd_total += hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]];
-			// cerr << j << "\t" 
-			// 	 << k << "\t" 
-			// 	 << loc_haplotypes[j] << "\t" 
-			// 	 << loc_haplotypes[k] << "\t" 
-			// 	 << hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]] << "\n";
-		    }
-		}
-		ssd_total = (1.0 / (double) (2*loc_haplotypes.size())) * ssd_total;
-		// cerr << "  ssd_total: "<< ssd_total << "\n";
-
-		//
-		// Calculate the sum of squared deviations within populations, SSD(WP)
-		//
-		double ssd_wp = 0.0;
-		double ssd    = 0.0;
-
-		for (uint g = 0; g < grps.size(); g++) {
-		    for (uint i = 0; i < grp_members[grps[g]].size(); i++) {
-			pop_id = grp_members[grps[g]][i];
-			ssd = 0.0;
-
-			for (uint j = 0; j < pop_haplotypes[pop_id].size(); j++) {
-			    for (uint k = 0; k < pop_haplotypes[pop_id].size(); k++) {
-				ssd += hdists[loc_hap_index[pop_haplotypes[pop_id][j]]][loc_hap_index[pop_haplotypes[pop_id][k]]];
-				// cerr << pop_id << "\t"
-				// 	 << j << "\t"
-				// 	 << k << "\t" 
-				// 	 << loc_haplotypes[j] << "\t" 
-				// 	 << loc_haplotypes[k] << "\t" 
-				// 	 << hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]] << "\n";
-			    }
-			}
-			ssd_wp += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
-		    }
-		}
-
-		// cerr << "  ssd_wp: "<< ssd_wp << "\n";
-
-		//
-		// Calculate the sum of squared deviations across populations and within groups, SSD(AP/WG)
-		//
-		double ssd_ap_wg = 0.0;
-		double ssd_1 = 0.0;
-		double ssd_2 = 0.0;
-		double den   = 0.0;
-
-		for (uint g = 0; g < grps.size(); g++) {
-
-		    ssd_1 = 0.0;
-		    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-			pop_id_1 = grp_members[grps[g]][r];
-
-			for (uint j = 0; j < pop_haplotypes[pop_id_1].size(); j++) {
-
-			    for (uint s = 0; s < grp_members[grps[g]].size(); s++) {
-				pop_id_2 = grp_members[grps[g]][s];
-
-				for (uint k = 0; k < pop_haplotypes[pop_id_2].size(); k++) {
-				    ssd_1 += hdists[loc_hap_index[pop_haplotypes[pop_id_1][j]]][loc_hap_index[pop_haplotypes[pop_id_2][k]]];
-				}
-			    }
-			}
-		    }
-
-		    den = 0.0;
-		    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-			pop_id_1 = grp_members[grps[g]][r];
-			den += 2 * pop_haplotypes[pop_id_1].size();
-		    }
-
-		    ssd_1 = ssd_1 / den;
-
-		    ssd_2 = 0.0;
-		    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-			pop_id = grp_members[grps[g]][r];
-			ssd = 0.0;
-
-			for (uint j = 0; j < pop_haplotypes[pop_id].size(); j++) {
-			    for (uint k = 0; k < pop_haplotypes[pop_id].size(); k++) {
-				ssd += hdists[loc_hap_index[pop_haplotypes[pop_id][j]]][loc_hap_index[pop_haplotypes[pop_id][k]]];
-			    }
-			}
-			ssd_2 += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
-		    }
-
-		    ssd_ap_wg += ssd_1 - ssd_2;
-		}
-
-		// cerr << "  ssd_ap_wg: "<< ssd_ap_wg << "\n";
-
-		//
-		// Calculate the sum of squared deviations across groups, SSD(AG)
-		//
-		double ssd_ag = 0.0;
-
-		if (grps.size() > 1) {
-		    ssd = 0.0;
-
-		    for (uint g = 0; g < grps.size(); g++) {
-			ssd_1 = 0.0;
-
-			for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-			    pop_id_1 = grp_members[grps[g]][r];
-
-			    for (uint j = 0; j < pop_haplotypes[pop_id_1].size(); j++) {
-
-				for (uint s = 0; s < grp_members[grps[g]].size(); s++) {
-				    pop_id_2 = grp_members[grps[g]][s];
-
-				    for (uint k = 0; k < pop_haplotypes[pop_id_2].size(); k++) {
-					ssd_1 += hdists[loc_hap_index[pop_haplotypes[pop_id_1][j]]][loc_hap_index[pop_haplotypes[pop_id_2][k]]];
-				    }
-				}
-			    }
-			}
-
-			den = 0.0;
-			for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-			    pop_id_1 = grp_members[grps[g]][r];
-			    den += 2 * pop_haplotypes[pop_id_1].size();
-			}
-
-			ssd += ssd_1 / den;
-		    }
-
-		    ssd_ag = ssd_total - ssd;
-
-		    // cerr << "  ssd_ag: "<< ssd_ag << "\n";
-		}
-
-		//
-		// Calculate n
-		//
-		double n        = 0.0;
-		double n_1      = 0.0;
-		double n_2      = 0.0;
-		double s_g      = 0.0;
-		double tot_cnt  = 0.0;
-		double grp_cnt  = 0.0;
-		double num_grps = grps.size();
-		double a        = 0.0;
-		double b        = 0.0;
-
-		for (uint g = 0; g < num_grps; g++) {
-		    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-			pop_id_1 = grp_members[grps[g]][r];
-			tot_cnt += (double) pop_haplotypes[pop_id_1].size();
-		    }
-		}
-		for (uint g = 0; g < num_grps; g++) {
-		    grp_cnt = 0.0;
-		    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-			pop_id_1 = grp_members[grps[g]][r];
-			grp_cnt += (double) pop_haplotypes[pop_id_1].size();
-		    }
-
-		    a = 0.0;
-		    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-			pop_id_1 = grp_members[grps[g]][r];
-			a += (double) (pop_haplotypes[pop_id_1].size() * pop_haplotypes[pop_id_1].size()) / grp_cnt;
-		    }
-		    s_g += a;
-		}
-		n = (tot_cnt - s_g) / (double) (pop_cnt - num_grps);
-
-		// cerr << "  n: "<< n << "\n";
-
-		if (num_grps > 1) {
-		    //
-		    // Calculate n'
-		    //
-		    a = 0.0;
-		    for (uint g = 0; g < num_grps; g++) {
-			for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-			    pop_id_1 = grp_members[grps[g]][r];
-			    a += ((double) (pop_haplotypes[pop_id_1].size() * pop_haplotypes[pop_id_1].size()) / tot_cnt);
-			}
-		    }
-		    n_1 = (s_g - a) / (double) (num_grps - 1.0);
-
-		    // cerr << "  n': "<< n_1 << "\n";
-
-		    //
-		    // Calculate n''
-		    //
-		    for (uint g = 0; g < num_grps; g++) {
-			a = 0.0;
-			for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-			    pop_id_1 = grp_members[grps[g]][r];
-			    a += pop_haplotypes[pop_id_1].size();
-			}
-			b += ((a * a) / tot_cnt);
-		    }
-		    n_2 = (tot_cnt - b) / (double) (num_grps - 1);
-
-		    // cerr << "  n'': "<< n_2 << "\n";
-		}
-
-		//
-		// Calculate the mean square deviations, equal to SSD divided by degrees of freedom.
-		//
-		double msd_ag    = num_grps > 1 ? ssd_ag / (double) (num_grps - 1) : 0.0;
-		double msd_ap_wg = ssd_ap_wg / ((double) (pop_cnt - num_grps));
-		double msd_wp    = ssd_wp    / ((double) (loc_haplotypes.size() - pop_cnt));
-		double msd_total = ssd_total / ((double) (loc_haplotypes.size() - 1));
-
-		double sigma_c     = msd_wp;
-		double sigma_b     = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
-		double sigma_a     = 0.0;
-		double sigma_total = msd_total;
-
-		if (grps.size() > 1)
-		    sigma_a = (msd_ag - sigma_c - (n_1 * sigma_b)) / n_2;
-
-		double phi_st = 0.0;
-		double phi_ct = 0.0;
-		double phi_sc = 0.0;
-
-		if (grps.size() > 1) {
-		    phi_st = sigma_total > 0.0 ? (sigma_a + sigma_b) / sigma_total : 0.0;
-		    phi_ct = sigma_total > 0.0 ?  sigma_a / sigma_total : 0.0;
-		    phi_sc = (sigma_a + sigma_b) > 0.0 ?  sigma_b / (sigma_b + sigma_c) : 0.0;
-		} else {
-		    phi_st = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
-		}
-
-		// cerr << "  MSD(AG): " << msd_ag  << "; MSD(AP/WG): " << msd_ap_wg << "; MSD(WP): " << msd_wp  << "; MSD(TOTAL): "  << msd_total   << "\n"
-		//      << "  Sigma_a: " << sigma_a << "; Sigma_b: "    << sigma_b   << "; Sigma_c: " << sigma_c << "; Sigma_Total: " << sigma_total << "\n"
-		//      << "  Phi_st: "  << phi_st  << "; Phi_ct: "     << phi_ct    << "; Phi_sc: "  << phi_sc  << "\n";
-
-		//
-		// Cache the results so we can print them in order below, once the parallel code has executed.
-		//
-		h = new HapStat;
-		h->loc_id  = loc->id;
-		h->bp      = loc->sort_bp();
-		h->alleles = tot_cnt;
-
-		if (log_fst_comp) {
-		    h->comp = new double[15];
-		    h->comp[0]  = ssd_wp;
-		    h->comp[1]  = ssd_ap_wg;
-		    h->comp[2]  = ssd_ag;
-		    h->comp[3]  = ssd_total;
-		    h->comp[4]  = msd_wp;
-		    h->comp[5]  = msd_ap_wg;
-		    h->comp[6]  = msd_ag;
-		    h->comp[7]  = msd_total;
-		    h->comp[8]  = n;
-		    h->comp[9]  = n_1;
-		    h->comp[10] = n_2;
-		    h->comp[11] = sigma_a;
-		    h->comp[12] = sigma_b;
-		    h->comp[13] = sigma_c;
-		    h->comp[14] = sigma_total;
-		}
-
-		h->phi_st = phi_st;
-		h->phi_ct = phi_ct;
-		h->phi_sc = phi_sc;
-
-		hapstats[hapstats_key[h->bp]] = h;
-
-		for (uint k = 0; k < loc_hap_index.size(); k++)
-		    delete hdists[k];
-		delete hdists;
 	    }
 
 	}
+
+	cerr << "done.\n";
 
 	//
 	// Calculate kernel-smoothed Fst values.
 	//
 	if (kernel_smoothed && loci_ordered) {
-	    cerr << "  Generating kernel-smoothed Phi_st for " << it->first << ".\n";
+	    cerr << "  Generating kernel-smoothed Phi_st for " << it->first << "...";
 	    kernel_smoothed_phist(hapstats, weights);
+	    cerr << "done.\n";
 	}
     }
 
@@ -1525,9 +1161,9 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 
     cerr << "Writing haplotype F statistics... ";
 
-    char      phi_st_str[32],  phi_sc_str[32],  phi_ct_str[32];
-    char     wphi_st_str[32], wphi_sc_str[32], wphi_ct_str[32];
-    int      start, end;
+    char phi_st_str[32],  phi_sc_str[32],  phi_ct_str[32];
+    char wphi_st_str[32], wphi_sc_str[32], wphi_ct_str[32];
+    int  start, end;
 
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".phistats" << ".tsv";
@@ -1544,14 +1180,13 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
     //
     // Write the population members.
     //
-    map<int, pair<int, int> >::iterator pit;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
 	start = pit->second.first;
 	end   = pit->second.second;
 	fh << "# Population " << pop_key[pit->first] << "\t";
-	for (int i = start; i <= end; i++) {
-	    fh << files[i].second;
-	    if (i < end) fh << ",";
+	for (int k = start; k <= end; k++) {
+	    fh << files[k].second;
+	    if (k < end) fh << ",";
 	}
 	fh << "\n";
     }
@@ -1562,9 +1197,9 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
     for (git = grp_members.begin(); git != grp_members.end(); git++) {
 	end = git->second.size();
 	fh << "# Group " << grp_key[git->first] << "\t";
-	for (int i = 0; i < end; i++) {
-	    fh << git->second[i];
-	    if (i < end - 1) fh << ",";
+	for (int k = 0; k < end; k++) {
+	    fh << git->second[k];
+	    if (k < end - 1) fh << ",";
 	}
 	fh << "\n";
     }
@@ -1601,36 +1236,36 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 
 	vector<HapStat *> &hapstats = genome_hapstats[chr];
 
-	for (uint i = 0; i < hapstats.size(); i++) {
-	    if (hapstats[i] == NULL) continue;
+	for (uint k = 0; k < hapstats.size(); k++) {
+	    if (hapstats[k] == NULL) continue;
 
-	    sprintf(phi_st_str, "%0.4f", hapstats[i]->phi_st);
-	    sprintf(phi_ct_str, "%0.4f", hapstats[i]->phi_ct);
-	    sprintf(phi_sc_str, "%0.4f", hapstats[i]->phi_sc);
-	    sprintf(wphi_st_str, "%0.4f", hapstats[i]->wphi_st);
-	    sprintf(wphi_ct_str, "%0.4f", hapstats[i]->wphi_ct);
-	    sprintf(wphi_sc_str, "%0.4f", hapstats[i]->wphi_sc);
+	    sprintf(phi_st_str, "%0.4f", hapstats[k]->phi_st);
+	    sprintf(phi_ct_str, "%0.4f", hapstats[k]->phi_ct);
+	    sprintf(phi_sc_str, "%0.4f", hapstats[k]->phi_sc);
+	    sprintf(wphi_st_str, "%0.4f", hapstats[k]->wphi_st);
+	    sprintf(wphi_ct_str, "%0.4f", hapstats[k]->wphi_ct);
+	    sprintf(wphi_sc_str, "%0.4f", hapstats[k]->wphi_sc);
     
 	    fh << batch_id            << "\t"
-	       << hapstats[i]->loc_id << "\t"
+	       << hapstats[k]->loc_id << "\t"
 	       << chr                 << "\t"
-	       << hapstats[i]->bp     << "\t";
+	       << hapstats[k]->bp     << "\t";
 	    if (log_fst_comp)
-		fh << hapstats[i]->comp[0]  << "\t"
-		   << hapstats[i]->comp[1]  << "\t"
-		   << hapstats[i]->comp[2]  << "\t"
-		   << hapstats[i]->comp[3]  << "\t"
-		   << hapstats[i]->comp[4]  << "\t" 
-		   << hapstats[i]->comp[5]  << "\t" 
-		   << hapstats[i]->comp[6]  << "\t"
-		   << hapstats[i]->comp[7]  << "\t"
-		   << hapstats[i]->comp[8]  << "\t"
-		   << hapstats[i]->comp[9]  << "\t"
-		   << hapstats[i]->comp[10] << "\t"
-		   << hapstats[i]->comp[11] << "\t" 
-		   << hapstats[i]->comp[12] << "\t"
-		   << hapstats[i]->comp[13] << "\t"
-		   << hapstats[i]->comp[14] << "\t";
+		fh << hapstats[k]->comp[0]  << "\t"
+		   << hapstats[k]->comp[1]  << "\t"
+		   << hapstats[k]->comp[2]  << "\t"
+		   << hapstats[k]->comp[3]  << "\t"
+		   << hapstats[k]->comp[4]  << "\t" 
+		   << hapstats[k]->comp[5]  << "\t" 
+		   << hapstats[k]->comp[6]  << "\t"
+		   << hapstats[k]->comp[7]  << "\t"
+		   << hapstats[k]->comp[8]  << "\t"
+		   << hapstats[k]->comp[9]  << "\t"
+		   << hapstats[k]->comp[10] << "\t"
+		   << hapstats[k]->comp[11] << "\t" 
+		   << hapstats[k]->comp[12] << "\t"
+		   << hapstats[k]->comp[13] << "\t"
+		   << hapstats[k]->comp[14] << "\t";
 	    fh << phi_st_str  << "\t"
 	       << wphi_st_str << "\t"
 	       << phi_ct_str  << "\t"
@@ -1638,7 +1273,7 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 	       << phi_sc_str  << "\t"
 	       << wphi_sc_str << "\n";
 
-	    delete hapstats[i];
+	    delete hapstats[k];
 	}
     }
 
@@ -1647,6 +1282,608 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
     cerr << "wrote " << cnt << " loci to haplotype Phi_st file, '" << file << "'\n";
 
     return 0;
+}
+
+int 
+calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files, 
+				   map<int, pair<int, int> > &pop_indexes, 
+				   map<int, vector<int> > &master_grp_members,
+				   map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+{
+    map<string, vector<CSLocus *> >::iterator it;
+
+    cerr << "Calculating pairwise haplotype F statistics...\n";
+
+    double *weights = calculate_weights();
+
+    //
+    // Assign all individuals to one group for the pairwise calculations.
+    //
+    map<int, vector<int> >::iterator git;
+    map<int, int> pop_grp_key;
+    for (git = master_grp_members.begin(); git != master_grp_members.end(); git++)
+	for (uint i = 0; i < git->second.size(); i++)
+	    pop_grp_key[git->second[i]] = 1;
+
+    map<int, pair<int, int> >::iterator pit;
+    vector<int> pop_ids;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
+	pop_ids.push_back(pit->first);
+
+    for (uint i = 0; i < pop_ids.size(); i++) {
+	for (uint j = i + 1; j < pop_ids.size(); j++) {
+
+	    map<string, vector<HapStat *> > genome_hapstats;
+	    map<uint, uint> hapstats_key;
+	    vector<int> subpop_ids;
+
+	    subpop_ids.push_back(pop_ids[i]);
+	    subpop_ids.push_back(pop_ids[j]);
+
+	    cerr << "  Processing populations '" << pop_key[pop_ids[i]] << "' and '" << pop_key[pop_ids[j]] << "'\n";
+
+	    uint cnt = 0;
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		string chr = it->first;
+
+		cerr << "    Generating pairwise haplotype F statistics for " << chr << "...";
+
+		init_chr_loci(genome_hapstats, chr, hapstats_key, it->second);
+
+		vector<HapStat *> &hapstats = genome_hapstats[chr];
+
+                #pragma omp parallel
+		{ 
+		    CSLocus  *loc;
+		    LocSum  **s;
+		    Datum   **d;
+		    HapStat  *h;
+
+                    #pragma omp for schedule(dynamic, 1) reduction(+:cnt)
+		    for (uint pos = 0; pos < it->second.size(); pos++) {
+			loc = it->second[pos];
+			s   = psum->locus(loc->id);
+			d   = pmap->locus(loc->id);
+
+			if (loc->snps.size() == 0)
+			    continue;
+
+			cnt++;
+			// cerr << "Processing locus " << loc->id << "\n";
+
+			h = haplotype_amova(pop_grp_key, pop_indexes, d, s, subpop_ids);
+
+			if (h != NULL) {
+			    h->loc_id = loc->id;
+			    h->bp     = loc->sort_bp();
+			    hapstats[hapstats_key[h->bp]] = h;
+			}
+		    }
+		}
+
+		cerr << "done.\n";
+
+		//
+		// Calculate kernel-smoothed Fst values.
+		//
+		if (kernel_smoothed && loci_ordered) {
+		    cerr << "    Generating kernel-smoothed Phi_st for " << it->first << "...";
+		    kernel_smoothed_phist(hapstats, weights);
+		    cerr << "done.\n";
+		}
+	    }
+
+	    cerr << "done.\n";
+
+	    cerr << "Writing haplotype F statistics... ";
+
+	    char phi_st_str[32],  phi_sc_str[32],  phi_ct_str[32];
+	    char wphi_st_str[32], wphi_sc_str[32], wphi_ct_str[32];
+	    int  start, end;
+
+	    stringstream pop_name;
+	    pop_name << "batch_" << batch_id << ".phistats_" << pop_key[pop_ids[i]] << "-" << pop_key[pop_ids[j]] << ".tsv";
+
+	    string file = in_path + pop_name.str();
+
+	    ofstream fh(file.c_str(), ofstream::out);
+
+	    if (fh.fail()) {
+		cerr << "Error opening haplotype Phi_st file '" << file << "'\n";
+		exit(1);
+	    }
+
+	    //
+	    // Write the population members.
+	    //
+	    for (uint k = 0; k < subpop_ids.size(); k++) {
+		start = pop_indexes[subpop_ids[k]].first;
+		end   = pop_indexes[subpop_ids[k]].second;
+		fh << "# Population " << pop_key[subpop_ids[k]] << "\t";
+		for (int n = start; n <= end; n++) {
+		    fh << files[n].second;
+		    if (n < end) fh << ",";
+		}
+		fh << "\n";
+	    }
+
+	    fh << "# Batch ID " << "\t"
+	       << "Locus ID"    << "\t"
+	       << "Pop 1 ID"   << "\t"
+	       << "Pop 2 ID"   << "\t"
+	       << "Chr"         << "\t"
+	       << "BP"          << "\t";
+	    if (log_fst_comp)
+		fh << "SSD(WP)"     << "\t"
+		   << "SSD(AP/WG)"  << "\t"
+		   << "SSD(AG)"     << "\t"
+		   << "SSD(TOTAL)"  << "\t"
+		   << "MSD(WP)"     << "\t" 
+		   << "MSD(AP/WG)"  << "\t" 
+		   << "MSD(AG)"     << "\t"
+		   << "MSD(TOTAL)"  << "\t"
+		   << "n"           << "\t"
+		   << "n'"          << "\t"
+		   << "n''"         << "\t"
+		   << "Sigma2_a"    << "\t" 
+		   << "Sigma2_b"    << "\t"
+		   << "Sigma2_c"    << "\t"
+		   << "Sigma_Total" << "\t";
+	    fh << "phi_st"          << "\t"
+	       << "Smoothed Phi_st" << "\t"
+	       << "Phi_ct"          << "\t"
+	       << "Smoothed Phi_ct" << "\t"
+	       << "Phi_sc"          << "\t"
+	       << "Smoothed Phi_sc" << "\n";
+
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		string chr = it->first;
+
+		vector<HapStat *> &hapstats = genome_hapstats[chr];
+
+		for (uint k = 0; k < hapstats.size(); k++) {
+		    if (hapstats[k] == NULL) continue;
+
+		    sprintf(phi_st_str, "%0.4f", hapstats[k]->phi_st);
+		    sprintf(phi_ct_str, "%0.4f", hapstats[k]->phi_ct);
+		    sprintf(phi_sc_str, "%0.4f", hapstats[k]->phi_sc);
+		    sprintf(wphi_st_str, "%0.4f", hapstats[k]->wphi_st);
+		    sprintf(wphi_ct_str, "%0.4f", hapstats[k]->wphi_ct);
+		    sprintf(wphi_sc_str, "%0.4f", hapstats[k]->wphi_sc);
+    
+		    fh << batch_id            << "\t"
+		       << hapstats[k]->loc_id << "\t"
+		       << pop_key[pop_ids[i]] << "\t"
+		       << pop_key[pop_ids[j]] << "\t"
+		       << chr                 << "\t"
+		       << hapstats[k]->bp     << "\t";
+		    if (log_fst_comp)
+			fh << hapstats[k]->comp[0]  << "\t"
+			   << hapstats[k]->comp[1]  << "\t"
+			   << hapstats[k]->comp[2]  << "\t"
+			   << hapstats[k]->comp[3]  << "\t"
+			   << hapstats[k]->comp[4]  << "\t" 
+			   << hapstats[k]->comp[5]  << "\t" 
+			   << hapstats[k]->comp[6]  << "\t"
+			   << hapstats[k]->comp[7]  << "\t"
+			   << hapstats[k]->comp[8]  << "\t"
+			   << hapstats[k]->comp[9]  << "\t"
+			   << hapstats[k]->comp[10] << "\t"
+			   << hapstats[k]->comp[11] << "\t" 
+			   << hapstats[k]->comp[12] << "\t"
+			   << hapstats[k]->comp[13] << "\t"
+			   << hapstats[k]->comp[14] << "\t";
+		    fh << phi_st_str  << "\t"
+		       << wphi_st_str << "\t"
+		       << phi_ct_str  << "\t"
+		       << wphi_ct_str << "\t"
+		       << phi_sc_str  << "\t"
+		       << wphi_sc_str << "\n";
+
+		    delete hapstats[k];
+		}
+	    }
+
+	    fh.close();
+
+	    cerr << "wrote " << cnt << " loci to pairwise haplotype file, '" << file << "'\n";
+	}
+    }
+
+    return 0;
+}
+
+HapStat *
+haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_indexes, 
+		Datum **d, LocSum **s, vector<int> &pop_ids)
+{
+    map<string, int>          loc_hap_index;
+    vector<string>            loc_haplotypes;
+    map<int, vector<string> > pop_haplotypes;
+    map<int, vector<int> >    grp_members;
+    vector<int>               grps;
+
+    map<string, int>::iterator hit, hit_2;
+    map<int, pair<int, int> >::iterator pit;
+    int start, end, pop_id, pop_id_1, pop_id_2;
+
+    HapStat  *h;
+    int pop_cnt = pop_indexes.size();
+
+    //
+    // Tabulate the occurences of haplotypes at this locus.
+    //
+    for (uint p = 0; p < pop_ids.size(); p++) {
+	start  = pop_indexes[pop_ids[p]].first;
+	end    = pop_indexes[pop_ids[p]].second;
+	pop_id = pop_ids[p];
+
+	for (int i = start; i <= end; i++) {
+	    if (d[i] == NULL) continue;
+
+	    if (d[i]->obshap.size() > 2) { 
+		continue;
+
+	    } else if (d[i]->obshap.size() == 1) {
+		loc_hap_index[d[i]->obshap[0]]++;
+		loc_haplotypes.push_back(d[i]->obshap[0]);
+		loc_haplotypes.push_back(d[i]->obshap[0]);
+		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+
+	    } else {
+		for (uint j = 0; j < d[i]->obshap.size(); j++) {
+		    loc_hap_index[d[i]->obshap[j]]++;
+		    loc_haplotypes.push_back(d[i]->obshap[j]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		}
+	    }
+	}
+    }
+
+    //
+    // If we filtered a population out at this locus make sure that we still have at least one
+    // representative present in each group.
+    //
+    set<int> uniq_grps;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	pop_id = pit->first;
+
+	if (pop_haplotypes.count(pop_id) > 0) {
+	    uniq_grps.insert(pop_grp_key[pop_id]);
+	    grp_members[pop_grp_key[pop_id]].push_back(pop_id);
+	}
+    }
+    set<int>::iterator uit;
+    for (uit = uniq_grps.begin(); uit != uniq_grps.end(); uit++)
+	grps.push_back(*uit);
+
+    if (grps.size() == 0)
+	return NULL;
+
+    // cerr << "Groups: ";
+    // for (uint i = 0; i < grps.size(); i++)
+    //     cerr << grps[i] << ", ";
+    // cerr << "\n";
+    // for (git = grp_members.begin(); git != grp_members.end(); git++) {
+    //     cerr << "Group " << git->first << ": ";
+    //     for (uint i = 0; i < git->second.size(); i++)
+    // 	cerr << git->second[i] << ", ";
+    //     cerr << "\n";
+    // }
+
+    //
+    // Determine an ordering for the haplotypes.
+    //
+    uint m = 0;
+    for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
+	loc_hap_index[hit->first] = m;
+	m++;
+    }
+
+    //
+    // Initialize a two-dimensional array to hold distances between haplotyes.
+    //
+    double **hdists = new double *[loc_hap_index.size()];
+    for (uint k = 0; k < loc_hap_index.size(); k++) {
+	hdists[k] = new double[loc_hap_index.size()];
+	memset(hdists[k], 0, loc_hap_index.size());
+    }
+
+    //
+    // Calculate the distances between haplotypes.
+    //
+    nuc_substitution_dist(loc_hap_index, hdists);
+
+    // //
+    // // Print the distance matrix.
+    // //
+    // cerr << "  ";
+    // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++)
+    // 	cerr << "\t" << hit->first;
+    // cerr << "\n";
+    // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
+    // 	cerr << "  " << hit->first;
+    // 	for (hit_2 = loc_hap_index.begin(); hit_2 != loc_hap_index.end(); hit_2++)
+    // 	    cerr << "\t" << hdists[hit->second][hit_2->second];
+    // 	cerr << "\n";
+    // }
+    // cerr << "\n";
+
+    //
+    // Calculate sum of squared deviations for the total sample, SSD(Total)
+    //
+    double ssd_total = 0.0;
+
+    for (uint j = 0; j < loc_haplotypes.size(); j++) {
+	for (uint k = 0; k < loc_haplotypes.size(); k++) {
+	    ssd_total += hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]];
+	    // cerr << j << "\t" 
+	    // 	 << k << "\t" 
+	    // 	 << loc_haplotypes[j] << "\t" 
+	    // 	 << loc_haplotypes[k] << "\t" 
+	    // 	 << hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]] << "\n";
+	}
+    }
+    ssd_total = (1.0 / (double) (2*loc_haplotypes.size())) * ssd_total;
+    // cerr << "  ssd_total: "<< ssd_total << "\n";
+
+    //
+    // Calculate the sum of squared deviations within populations, SSD(WP)
+    //
+    double ssd_wp = 0.0;
+    double ssd    = 0.0;
+
+    for (uint g = 0; g < grps.size(); g++) {
+	for (uint i = 0; i < grp_members[grps[g]].size(); i++) {
+	    pop_id = grp_members[grps[g]][i];
+	    ssd = 0.0;
+
+	    for (uint j = 0; j < pop_haplotypes[pop_id].size(); j++) {
+		for (uint k = 0; k < pop_haplotypes[pop_id].size(); k++) {
+		    ssd += hdists[loc_hap_index[pop_haplotypes[pop_id][j]]][loc_hap_index[pop_haplotypes[pop_id][k]]];
+		    // cerr << pop_id << "\t"
+		    // 	 << j << "\t"
+		    // 	 << k << "\t" 
+		    // 	 << loc_haplotypes[j] << "\t" 
+		    // 	 << loc_haplotypes[k] << "\t" 
+		    // 	 << hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]] << "\n";
+		}
+	    }
+	    ssd_wp += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
+	}
+    }
+
+    // cerr << "  ssd_wp: "<< ssd_wp << "\n";
+
+    //
+    // Calculate the sum of squared deviations across populations and within groups, SSD(AP/WG)
+    //
+    double ssd_ap_wg = 0.0;
+    double ssd_1 = 0.0;
+    double ssd_2 = 0.0;
+    double den   = 0.0;
+
+    for (uint g = 0; g < grps.size(); g++) {
+
+	ssd_1 = 0.0;
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+
+	    for (uint j = 0; j < pop_haplotypes[pop_id_1].size(); j++) {
+
+		for (uint s = 0; s < grp_members[grps[g]].size(); s++) {
+		    pop_id_2 = grp_members[grps[g]][s];
+
+		    for (uint k = 0; k < pop_haplotypes[pop_id_2].size(); k++) {
+			ssd_1 += hdists[loc_hap_index[pop_haplotypes[pop_id_1][j]]][loc_hap_index[pop_haplotypes[pop_id_2][k]]];
+		    }
+		}
+	    }
+	}
+
+	den = 0.0;
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+	    den += 2 * pop_haplotypes[pop_id_1].size();
+	}
+
+	ssd_1 = ssd_1 / den;
+
+	ssd_2 = 0.0;
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id = grp_members[grps[g]][r];
+	    ssd = 0.0;
+
+	    for (uint j = 0; j < pop_haplotypes[pop_id].size(); j++) {
+		for (uint k = 0; k < pop_haplotypes[pop_id].size(); k++) {
+		    ssd += hdists[loc_hap_index[pop_haplotypes[pop_id][j]]][loc_hap_index[pop_haplotypes[pop_id][k]]];
+		}
+	    }
+	    ssd_2 += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
+	}
+
+	ssd_ap_wg += ssd_1 - ssd_2;
+    }
+
+    // cerr << "  ssd_ap_wg: "<< ssd_ap_wg << "\n";
+
+    //
+    // Calculate the sum of squared deviations across groups, SSD(AG)
+    //
+    double ssd_ag = 0.0;
+
+    if (grps.size() > 1) {
+	ssd = 0.0;
+
+	for (uint g = 0; g < grps.size(); g++) {
+	    ssd_1 = 0.0;
+
+	    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+		pop_id_1 = grp_members[grps[g]][r];
+
+		for (uint j = 0; j < pop_haplotypes[pop_id_1].size(); j++) {
+
+		    for (uint s = 0; s < grp_members[grps[g]].size(); s++) {
+			pop_id_2 = grp_members[grps[g]][s];
+
+			for (uint k = 0; k < pop_haplotypes[pop_id_2].size(); k++) {
+			    ssd_1 += hdists[loc_hap_index[pop_haplotypes[pop_id_1][j]]][loc_hap_index[pop_haplotypes[pop_id_2][k]]];
+			}
+		    }
+		}
+	    }
+
+	    den = 0.0;
+	    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+		pop_id_1 = grp_members[grps[g]][r];
+		den += 2 * pop_haplotypes[pop_id_1].size();
+	    }
+
+	    ssd += ssd_1 / den;
+	}
+
+	ssd_ag = ssd_total - ssd;
+
+	// cerr << "  ssd_ag: "<< ssd_ag << "\n";
+    }
+
+    //
+    // Calculate n
+    //
+    double n        = 0.0;
+    double n_1      = 0.0;
+    double n_2      = 0.0;
+    double s_g      = 0.0;
+    double tot_cnt  = 0.0;
+    double grp_cnt  = 0.0;
+    double num_grps = grps.size();
+    double a        = 0.0;
+    double b        = 0.0;
+
+    for (uint g = 0; g < num_grps; g++) {
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+	    tot_cnt += (double) pop_haplotypes[pop_id_1].size();
+	}
+    }
+    for (uint g = 0; g < num_grps; g++) {
+	grp_cnt = 0.0;
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+	    grp_cnt += (double) pop_haplotypes[pop_id_1].size();
+	}
+
+	a = 0.0;
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+	    a += (double) (pop_haplotypes[pop_id_1].size() * pop_haplotypes[pop_id_1].size()) / grp_cnt;
+	}
+	s_g += a;
+    }
+    n = (tot_cnt - s_g) / (double) (pop_cnt - num_grps);
+
+    // cerr << "  n: "<< n << "\n";
+
+    if (num_grps > 1) {
+	//
+	// Calculate n'
+	//
+	a = 0.0;
+	for (uint g = 0; g < num_grps; g++) {
+	    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+		pop_id_1 = grp_members[grps[g]][r];
+		a += ((double) (pop_haplotypes[pop_id_1].size() * pop_haplotypes[pop_id_1].size()) / tot_cnt);
+	    }
+	}
+	n_1 = (s_g - a) / (double) (num_grps - 1.0);
+
+	// cerr << "  n': "<< n_1 << "\n";
+
+	//
+	// Calculate n''
+	//
+	for (uint g = 0; g < num_grps; g++) {
+	    a = 0.0;
+	    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+		pop_id_1 = grp_members[grps[g]][r];
+		a += pop_haplotypes[pop_id_1].size();
+	    }
+	    b += ((a * a) / tot_cnt);
+	}
+	n_2 = (tot_cnt - b) / (double) (num_grps - 1);
+
+	// cerr << "  n'': "<< n_2 << "\n";
+    }
+
+    //
+    // Calculate the mean square deviations, equal to SSD divided by degrees of freedom.
+    //
+    double msd_ag    = num_grps > 1 ? ssd_ag / (double) (num_grps - 1) : 0.0;
+    double msd_ap_wg = ssd_ap_wg / ((double) (pop_cnt - num_grps));
+    double msd_wp    = ssd_wp    / ((double) (loc_haplotypes.size() - pop_cnt));
+    double msd_total = ssd_total / ((double) (loc_haplotypes.size() - 1));
+
+    double sigma_c     = msd_wp;
+    double sigma_b     = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
+    double sigma_a     = 0.0;
+
+    if (grps.size() > 1)
+	sigma_a = (msd_ag - sigma_c - (n_1 * sigma_b)) / n_2;
+
+    // Arlequin seems to sum the variance components instead of independently calculating sigma_total: MSD(total) = SSD(total)/degrees.of.freedom
+    double sigma_total = sigma_a + sigma_b + sigma_c; // msd_total; 
+
+    double phi_st = 0.0;
+    double phi_ct = 0.0;
+    double phi_sc = 0.0;
+
+    if (grps.size() > 1) {
+	phi_st = sigma_total > 0.0 ? (sigma_a + sigma_b) / sigma_total : 0.0;
+	phi_ct = sigma_total > 0.0 ?  sigma_a / sigma_total : 0.0;
+	phi_sc = (sigma_a + sigma_b) > 0.0 ?  sigma_b / (sigma_b + sigma_c) : 0.0;
+    } else {
+	phi_st = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
+    }
+
+    // cerr << "  MSD(AG): " << msd_ag  << "; MSD(AP/WG): " << msd_ap_wg << "; MSD(WP): " << msd_wp  << "; MSD(TOTAL): "  << msd_total   << "\n"
+    //      << "  Sigma_a: " << sigma_a << "; Sigma_b: "    << sigma_b   << "; Sigma_c: " << sigma_c << "; Sigma_Total: " << sigma_total << "\n"
+    //      << "  Phi_st: "  << phi_st  << "; Phi_ct: "     << phi_ct    << "; Phi_sc: "  << phi_sc  << "\n";
+
+    //
+    // Cache the results so we can print them in order below, once the parallel code has executed.
+    //
+    h = new HapStat;
+    h->alleles = tot_cnt;
+
+    if (log_fst_comp) {
+	h->comp = new double[15];
+	h->comp[0]  = ssd_wp;
+	h->comp[1]  = ssd_ap_wg;
+	h->comp[2]  = ssd_ag;
+	h->comp[3]  = ssd_total;
+	h->comp[4]  = msd_wp;
+	h->comp[5]  = msd_ap_wg;
+	h->comp[6]  = msd_ag;
+	h->comp[7]  = msd_total;
+	h->comp[8]  = n;
+	h->comp[9]  = n_1;
+	h->comp[10] = n_2;
+	h->comp[11] = sigma_a;
+	h->comp[12] = sigma_b;
+	h->comp[13] = sigma_c;
+	h->comp[14] = sigma_total;
+    }
+
+    h->phi_st = phi_st;
+    h->phi_ct = phi_ct;
+    h->phi_sc = phi_sc;
+
+    for (uint k = 0; k < loc_hap_index.size(); k++)
+	delete hdists[k];
+    delete hdists;
+
+    return h;
 }
 
 int 
