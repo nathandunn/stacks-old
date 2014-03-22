@@ -37,6 +37,7 @@ public:
 	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
 	    exit(EXIT_FAILURE);
 	}
+	gzbuffer(this->gz_fh, libz_buffer_size);
     };
     GzFastq(const char *path) : Input() { 
 	this->gz_fh = gzopen(path, "rb");
@@ -44,6 +45,7 @@ public:
 	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
 	    exit(EXIT_FAILURE);
 	}
+	gzbuffer(this->gz_fh, libz_buffer_size);
     };
     ~GzFastq() {
 	gzclose(this->gz_fh);

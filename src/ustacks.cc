@@ -1428,16 +1428,19 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 	    cerr << "Error: Unable to open gzipped tag file '" << tag_file << "': " << strerror(errno) << ".\n";
 	    exit(1);
 	}
+	gzbuffer(gz_tags, libz_buffer_size);
 	gz_snps = gzopen(snp_file.c_str(), "wb");
 	if (!gz_snps) {
 	    cerr << "Error: Unable to open gzipped snps file '" << snp_file << "': " << strerror(errno) << ".\n";
 	    exit(1);
 	}
+	gzbuffer(gz_snps, libz_buffer_size);
 	gz_alle = gzopen(all_file.c_str(), "wb");
 	if (!gz_alle) {
 	    cerr << "Error: Unable to open gzipped alleles file '" << all_file << "': " << strerror(errno) << ".\n";
 	    exit(1);
 	}
+	gzbuffer(gz_alle, libz_buffer_size);
     } else {
 	tags.open(tag_file.c_str());
 	if (tags.fail()) {
@@ -1616,6 +1619,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 		cerr << "Error: Unable to open gzipped discard file '" << unused_file << "': " << strerror(errno) << ".\n";
 		exit(1);
 	    }
+	    gzbuffer(gz_unused, libz_buffer_size);
 	} else {
 	    unused.open(unused_file.c_str());
 	    if (unused.fail()) {
