@@ -1508,7 +1508,7 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     int start, end, pop_id, pop_id_1, pop_id_2;
 
     HapStat  *h;
-    int pop_cnt = pop_indexes.size();
+    int pop_cnt = pop_ids.size();
 
     //
     // Tabulate the occurences of haplotypes at this locus.
