@@ -74,7 +74,9 @@ int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads, bool &c
 	    cerr << " Unable to open '" << sample << "'\n";
 	    return 0;
 	}
+        #if ZLIB_VERNUM >= 0x1240
 	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
 	gzip       = true;
 	compressed = true;
     }
@@ -196,7 +198,9 @@ int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads, bool &c
 	    cerr << " Unable to open '" << sample << "'\n";
 	    return 0;
 	}
+        #if ZLIB_VERNUM >= 0x1240
 	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
 	gzip       = true;
 	compressed = true;
     }
@@ -265,7 +269,9 @@ int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads, bool &c
 	    cerr << " Unable to open '" << sample << "'\n";
 	    return 0;
 	}
+        #if ZLIB_VERNUM >= 0x1240
 	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
 	gzip       = true;
 	compressed = true;
     }
@@ -362,7 +368,9 @@ int load_catalog_matches(string sample, vector<CatMatch *> &matches) {
 	    cerr << " Unable to open '" << sample << "'\n";
 	    return 0;
 	}
+        #if ZLIB_VERNUM >= 0x1240
 	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
 	gzip = true;
     }
     cerr << "  Parsing " << f.c_str() << "\n";
@@ -434,7 +442,9 @@ int load_model_results(string sample, map<int, ModRes *> &modres) {
 	    cerr << " Unable to open '" << sample << "'\n";
 	    return 0;
 	}
+        #if ZLIB_VERNUM >= 0x1240
 	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
 	gzip = true;
     }
     cerr << "  Parsing " << f.c_str() << "\n";
@@ -509,7 +519,9 @@ int load_snp_calls(string sample, map<int, SNPRes *> &snpres) {
 	    cerr << " Unable to open '" << sample << "'\n";
 	    return 0;
 	}
+        #if ZLIB_VERNUM >= 0x1240
 	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
 	gzip = true;
     }
     cerr << "  Parsing " << f.c_str() << "\n";

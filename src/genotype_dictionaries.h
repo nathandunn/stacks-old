@@ -80,7 +80,9 @@ initialize_dictionaries(map<string, map<string, string> > &global_dictionary)
 }
 
 void 
-load_joinmap_cp_dictionary(map<string, string> &types, map<string, map<string, string> > &dictionary) 
+load_joinmap_cp_dictionary(map<string, string> &types, 
+			   map<string, map<string, string> > &dictionary,
+			   map<string, map<string, double> > &segregation_ratios)
 {
     types["ab/--"] = "lmx--";
     types["--/ab"] = "--xnp";
@@ -122,6 +124,32 @@ load_joinmap_cp_dictionary(map<string, string> &types, map<string, map<string, s
     dictionary["abxcd"]["ad"] = "ad";
     dictionary["abxcd"]["bc"] = "bc";
     dictionary["abxcd"]["bd"] = "bd";
+
+    segregation_ratios["lmx--"]["aa"] = 0.50;
+    segregation_ratios["lmx--"]["bb"] = 0.50;
+
+    segregation_ratios["--xnp"]["aa"] = 0.50;
+    segregation_ratios["--xnp"]["bb"] = 0.50;
+
+    segregation_ratios["lmxll"]["aa"] = 0.50;
+    segregation_ratios["lmxll"]["ab"] = 0.50;
+
+    segregation_ratios["nnxnp"]["aa"] = 0.50;
+    segregation_ratios["nnxnp"]["ab"] = 0.50;
+
+    segregation_ratios["hkxhk"]["ab"] = 0.50;
+    segregation_ratios["hkxhk"]["aa"] = 0.25;
+    segregation_ratios["hkxhk"]["bb"] = 0.25;
+
+    segregation_ratios["efxeg"]["ab"] = 0.25;
+    segregation_ratios["efxeg"]["ac"] = 0.25;
+    segregation_ratios["efxeg"]["bc"] = 0.25;
+    segregation_ratios["efxeg"]["aa"] = 0.25;
+
+    segregation_ratios["abxcd"]["ac"] = 0.25;
+    segregation_ratios["abxcd"]["ad"] = 0.25;
+    segregation_ratios["abxcd"]["bc"] = 0.25;
+    segregation_ratios["abxcd"]["bd"] = 0.25;
 
     return;
 }

@@ -78,7 +78,7 @@ int  apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int  call_population_genotypes(CSLocus *, PopMap<CSLocus> *, map<string, map<string, string> > &);
 int  tally_progeny_haplotypes(CSLocus *, PopMap<CSLocus> *, set<int> &, int &, double &, string &);
 int  translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &);
-
+int  calc_segregation_distortion(map<string, string> &, map<string, map<string, double> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &); 
 int  automated_corrections(map<int, string> &, set<int> &, map<int, CSLocus *> &, vector<vector<CatMatch *> > &, PopMap<CSLocus> *);
 int  check_uncalled_snps(CSLocus *, Locus *, Datum *);
 int  call_alleles(vector<SNP *> &, vector<char *> &, vector<string> &);

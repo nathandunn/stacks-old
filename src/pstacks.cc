@@ -347,19 +347,25 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	    cerr << "Error: Unable to open gzipped tag file '" << tag_file << "': " << strerror(errno) << ".\n";
 	    exit(1);
 	}
+        #if ZLIB_VERNUM >= 0x1240
 	gzbuffer(gz_tags, libz_buffer_size);
+	#endif
 	gz_snps = gzopen(snp_file.c_str(), "wb");
 	if (!gz_snps) {
 	    cerr << "Error: Unable to open gzipped snps file '" << snp_file << "': " << strerror(errno) << ".\n";
 	    exit(1);
 	}
+        #if ZLIB_VERNUM >= 0x1240
 	gzbuffer(gz_snps, libz_buffer_size);
+	#endif
 	gz_alle = gzopen(all_file.c_str(), "wb");
 	if (!gz_alle) {
 	    cerr << "Error: Unable to open gzipped alleles file '" << all_file << "': " << strerror(errno) << ".\n";
 	    exit(1);
 	}
+        #if ZLIB_VERNUM >= 0x1240
 	gzbuffer(gz_alle, libz_buffer_size);
+	#endif
     } else {
 	tags.open(tag_file.c_str());
 	if (tags.fail()) {

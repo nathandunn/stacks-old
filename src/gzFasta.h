@@ -38,7 +38,9 @@ class GzFasta: public Input {
 	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
             exit(EXIT_FAILURE);
 	}
+	#if ZLIB_VERNUM >= 0x1240
 	gzbuffer(this->gz_fh, libz_buffer_size);
+	#endif
     };
     GzFasta(string path) : Input() { 
 	this->gz_fh = gzopen(path.c_str(), "rb");
@@ -46,7 +48,9 @@ class GzFasta: public Input {
 	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
             exit(EXIT_FAILURE);
 	}
+	#if ZLIB_VERNUM >= 0x1240
 	gzbuffer(this->gz_fh, libz_buffer_size);
+	#endif
     };
     ~GzFasta() {
 	gzclose(this->gz_fh);

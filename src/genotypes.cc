@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -1339,10 +1339,11 @@ int export_cp_map(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> 
     //
     map<string, string> types;
     map<string, map<string, string> > dictionary;
+    map<string, map<string, double> > seg_ratios;
 
     switch(out_type) {
     case joinmap:
-	load_joinmap_cp_dictionary(types, dictionary);
+	load_joinmap_cp_dictionary(types, dictionary, seg_ratios);
 	break;
     case onemap:
 	load_onemap_cp_dictionary(types, dictionary);
@@ -1355,6 +1356,11 @@ int export_cp_map(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> 
     // Translate the genotypes for this particular map type.
     //
     translate_genotypes(types, dictionary, catalog, pmap, samples, parent_ids);
+
+    //
+    // Calculate segregation distortion using chi-squared test.
+    //
+    calc_segregation_distortion(types, seg_ratios, catalog, pmap, parent_ids);
 
     //
     // Output the results
@@ -1376,9 +1382,67 @@ int export_cp_map(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> 
     return 0;
 }
 
-int translate_genotypes(map<string, string> &types, map<string, map<string, string> > &dictionary, 
-			map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string> &samples,
-			set<int> &parent_ids) {
+int 
+calc_segregation_distortion(map<string, string> &types, map<string, map<string, double> > &seg_ratios, 
+			    map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &parent_ids) 
+{
+    map<string, double>::iterator sit;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+
+	if (types.count(loc->marker) == 0) continue;
+
+	map<string, int> cnts;
+
+	Datum **d = pmap->locus(loc->id);
+	double  n = 0.0;
+
+	for (int i = 0; i < pmap->sample_cnt(); i++) {
+	    if (d[i] == NULL) continue;
+
+	    if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+
+	    if (strcmp(d[i]->trans_gtype, "-") == 0 || 
+		strcmp(d[i]->trans_gtype, "--") == 0)
+		continue;
+
+	    n++;
+
+	    if (cnts.count(d[i]->trans_gtype) > 0)
+		cnts[d[i]->trans_gtype]++;
+	    else
+		cnts[d[i]->trans_gtype] = 1;
+	}
+
+	//
+	// Calculate chi-square value.
+	//   sit->second * n == the expected value for this genotype
+	//
+	double chisq = 0.0;
+	double exp   = 0.0;
+	double obs   = 0.0;
+	double df    = seg_ratios[loc->marker].size() - 1;
+
+	for (sit = seg_ratios[loc->marker].begin(); sit != seg_ratios[loc->marker].end(); sit++) {
+	    obs = cnts.count(sit->first) == 0 ? 0 : cnts[sit->first];
+	    exp = sit->second * n;
+		
+	    chisq += ((obs - exp) * (obs - exp)) / exp;
+	}
+	loc->chisq = chisq / df;
+    }
+
+    return 0;
+}
+
+int 
+translate_genotypes(map<string, string> &types, map<string, map<string, string> > &dictionary, 
+		    map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string> &samples,
+		    set<int> &parent_ids) 
+{
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
 
@@ -1496,7 +1560,7 @@ int write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &par
 
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
-    char    f[id_len], g[id_len];
+    char    f[id_len], g[id_len], chisq[id_len];
     stringstream gtype_map;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
@@ -1511,6 +1575,7 @@ int write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &par
 
 	sprintf(f, "%0.1f", max);
 	sprintf(g, "%0.2f", loc->f);
+	sprintf(chisq, "%0.3f", loc->chisq);
 
 	//
 	// Record the haplotype to genotype map.
@@ -1528,7 +1593,8 @@ int write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &par
 	   << f << "\t"
 	   << freq << "\t"
 	   << g << "\t"
-           << gtype_map.str() <<"\n";
+           << gtype_map.str() << "\t"
+	   << chisq << "\n";
     }
 
     fh.close();

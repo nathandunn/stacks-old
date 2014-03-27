@@ -1,8 +1,15 @@
-Stacks 1.16 - Mar 21, 2014
+Stacks 1.17 - Mar 26, 2014
+--------------------------
+	Bugfix: Added #ifdefs to deal with missing functions in older versions of zlib.
+
+Stacks 1.16 - Mar 25, 2014
 --------------------------
 	Feature: added haplotype counts for each population and locus to the batch_X.hapstats.tsv file.
-	Bugfix: fixed small bug in Phi_st calculations.
-	Bugfix: Fixed bug in parsing of populations maps with strings for population identifiers.
+	Feature: haplotype F statistics are now calculated for the whole set of populations (one analysis
+	of variance calculation for all populations), and also as a set of pairwise calculations to mirror
+	the existing Fst calculations.
+	Bugfix: fixed small bug in calculation of MSD(Total) component of Phi_st (haplotype F statistics).
+	Bugfix: fixed bug in parsing of populations maps when using strings for population identifiers.
 	Bugfix: kernel-smoothing not correct for haplotype/gene diversity.
 
 Stacks 1.15 - Mar 15, 2014
