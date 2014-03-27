@@ -1151,7 +1151,7 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 	// Calculate kernel-smoothed Fst values.
 	//
 	if (kernel_smoothed && loci_ordered) {
-	    cerr << "  Generating kernel-smoothed Phi_st for " << it->first << "...";
+	    cerr << "  Generating kernel-smoothed haplotype F statistics for " << it->first << "...";
 	    kernel_smoothed_phist(hapstats, weights);
 	    cerr << "done.\n";
 	}

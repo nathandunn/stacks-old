@@ -37,7 +37,9 @@ public:
 	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
 	    exit(EXIT_FAILURE);
 	}
+	#if ZLIB_VERNUM >= 0x1240
 	gzbuffer(this->gz_fh, libz_buffer_size);
+	#endif
     };
     GzFastq(const char *path) : Input() { 
 	this->gz_fh = gzopen(path, "rb");
@@ -45,7 +47,9 @@ public:
 	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
 	    exit(EXIT_FAILURE);
 	}
+	#if ZLIB_VERNUM >= 0x1240
 	gzbuffer(this->gz_fh, libz_buffer_size);
+	#endif
     };
     ~GzFastq() {
 	gzclose(this->gz_fh);
