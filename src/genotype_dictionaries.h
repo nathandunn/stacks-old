@@ -125,26 +125,26 @@ load_joinmap_cp_dictionary(map<string, string> &types,
     dictionary["abxcd"]["bc"] = "bc";
     dictionary["abxcd"]["bd"] = "bd";
 
-    segregation_ratios["lmx--"]["aa"] = 0.50;
-    segregation_ratios["lmx--"]["bb"] = 0.50;
+    segregation_ratios["lmx--"]["ll"] = 0.50;
+    segregation_ratios["lmx--"]["lm"] = 0.50;
 
-    segregation_ratios["--xnp"]["aa"] = 0.50;
-    segregation_ratios["--xnp"]["bb"] = 0.50;
+    segregation_ratios["--xnp"]["nn"] = 0.50;
+    segregation_ratios["--xnp"]["np"] = 0.50;
 
-    segregation_ratios["lmxll"]["aa"] = 0.50;
-    segregation_ratios["lmxll"]["ab"] = 0.50;
+    segregation_ratios["lmxll"]["ll"] = 0.50;
+    segregation_ratios["lmxll"]["lm"] = 0.50;
 
-    segregation_ratios["nnxnp"]["aa"] = 0.50;
-    segregation_ratios["nnxnp"]["ab"] = 0.50;
+    segregation_ratios["nnxnp"]["nn"] = 0.50;
+    segregation_ratios["nnxnp"]["np"] = 0.50;
 
-    segregation_ratios["hkxhk"]["ab"] = 0.50;
-    segregation_ratios["hkxhk"]["aa"] = 0.25;
-    segregation_ratios["hkxhk"]["bb"] = 0.25;
+    segregation_ratios["hkxhk"]["hk"] = 0.50;
+    segregation_ratios["hkxhk"]["hh"] = 0.25;
+    segregation_ratios["hkxhk"]["kk"] = 0.25;
 
-    segregation_ratios["efxeg"]["ab"] = 0.25;
-    segregation_ratios["efxeg"]["ac"] = 0.25;
-    segregation_ratios["efxeg"]["bc"] = 0.25;
-    segregation_ratios["efxeg"]["aa"] = 0.25;
+    segregation_ratios["efxeg"]["ef"] = 0.25;
+    segregation_ratios["efxeg"]["eg"] = 0.25;
+    segregation_ratios["efxeg"]["fg"] = 0.25;
+    segregation_ratios["efxeg"]["ee"] = 0.25;
 
     segregation_ratios["abxcd"]["ac"] = 0.25;
     segregation_ratios["abxcd"]["ad"] = 0.25;

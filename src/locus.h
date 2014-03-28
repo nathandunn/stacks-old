@@ -119,7 +119,7 @@ public:
 	this->hcnt       = 0; 
 	this->gcnt       = 0; 
 	this->trans_gcnt = 0; 
-	this->chisq      = 0.0;
+	this->chisq      = 1.0;
     };
     string annotation;
     string marker;
@@ -129,7 +129,7 @@ public:
     int gcnt;                 // Number of progeny containing a valid genotype.
     int trans_gcnt;           // Number of progeny containing a valid 
                               // genotype, translated for a particular map type.
-    double chisq;
+    double chisq;             // Chi squared p-value testing the null hypothesis of no segregation distortion.
 };
 
 bool bp_compare(Locus *, Locus *);
