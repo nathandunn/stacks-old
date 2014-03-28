@@ -258,8 +258,8 @@ int identify_parental_ids(map<int, CSLocus *> &catalog, vector<int> &sample_ids,
 	loc = it->second;
 	for (uint i = 0; i < loc->comp.size(); i++) {
 	    sample_id = (int) strtol(loc->comp[i], NULL, 10);
+	    catalog_parents.insert(sample_id);
 	}
-	catalog_parents.insert(sample_id);
     }
 
     //
@@ -1417,25 +1417,50 @@ calc_segregation_distortion(map<string, string> &types, map<string, map<string, 
 		cnts[d[i]->trans_gtype] = 1;
 	}
 
+	if (n == 0) continue;
+
 	//
 	// Calculate chi-square value.
 	//   sit->second * n == the expected value for this genotype
 	//
-	double chisq = 0.0;
-	double exp   = 0.0;
-	double obs   = 0.0;
-	double df    = seg_ratios[loc->marker].size() - 1;
+	string marker = types[loc->marker];
+	double chisq  = 0.0;
+	double exp    = 0.0;
+	double obs    = 0.0;
+	double df     = seg_ratios[marker].size() - 1;
 
-	for (sit = seg_ratios[loc->marker].begin(); sit != seg_ratios[loc->marker].end(); sit++) {
+	for (sit = seg_ratios[marker].begin(); sit != seg_ratios[marker].end(); sit++) {
 	    obs = cnts.count(sit->first) == 0 ? 0 : cnts[sit->first];
 	    exp = sit->second * n;
 		
 	    chisq += ((obs - exp) * (obs - exp)) / exp;
 	}
-	loc->chisq = chisq / df;
+	chisq = chisq / df;
+
+	//
+	// Determine p-value
+	//
+	loc->chisq = chisq_pvalue(df, chisq);
+
+	// cerr << "ID: " << loc->id << "; Marker: " << marker << "; df: " << df << "; Chisq value: " << chisq << "; pvalue: " << loc->chisq << "\n";
     }
 
     return 0;
+}
+
+double
+chisq_pvalue(int df, double chisq)
+{
+    int i = 0; 
+    while (chisq > chisq_crit_values[df][i] &&
+	   i < chisq_crit_values_size) {
+	i++;
+    }
+
+    if (i == chisq_crit_values_size)
+	return chisq_crit_values[0][chisq_crit_values_size - 1];
+
+    return chisq_crit_values[0][i];
 }
 
 int 
@@ -1558,9 +1583,19 @@ int write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &par
 	exit(1);
     }
 
+    fh << "SQL ID" << "\t" 
+       << "Batch ID" << "\t" 
+       << "Catalog Locus ID" << "\t" 
+       << "Marker Type" << "\t"
+       << "Total Genotypes" << "\t"
+       << "Segregation Distortion" << "\t"
+       << "Genotype Freqs" << "\t"
+       << "Max" << "\t"
+       << "Genotype Map" << "\n";
+
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
-    char    f[id_len], g[id_len], chisq[id_len];
+    char    g[id_len];
     stringstream gtype_map;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
@@ -1573,9 +1608,7 @@ int write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &par
 	int    total = 0;
 	tally_progeny_haplotypes(loc, pmap, parent_ids, total, max, freq);
 
-	sprintf(f, "%0.1f", max);
-	sprintf(g, "%0.2f", loc->f);
-	sprintf(chisq, "%0.3f", loc->chisq);
+	sprintf(g, "%0.2f", max);
 
 	//
 	// Record the haplotype to genotype map.
@@ -1585,16 +1618,15 @@ int write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &par
 	for (j = loc->gmap.begin(); j != loc->gmap.end(); j++)
 	    gtype_map << j->first << ":" << j->second << ";";
 
-	fh << 0 << "\t" 
-	   << batch_id << "\t" 
-	   << loc->id << "\t" 
-	   << loc->marker << "\t"
-	   << total << "\t"
-	   << f << "\t"
-	   << freq << "\t"
-	   << g << "\t"
-           << gtype_map.str() << "\t"
-	   << chisq << "\n";
+	fh << 0               << "\t" 
+	   << batch_id        << "\t" 
+	   << loc->id         << "\t" 
+	   << loc->marker     << "\t"
+	   << total           << "\t"
+	   << g               << "\t"
+	   << freq            << "\t"
+	   << loc->chisq      << "\t"
+           << gtype_map.str() << "\n";
     }
 
     fh.close();
