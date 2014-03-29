@@ -40,15 +40,16 @@ string    out_file;
 string    bl_file;
 string    wl_file;
 string    enz;
-int       progeny_limit   = 1;
-bool      man_corrections = false;
-bool      corrections     = false;
-bool      expand_id       = false;
-bool      sql_out         = false;
-int       min_stack_depth = 0;
-int       min_hom_seqs    = 5;
-double    min_het_seqs    = 0.05;
-double    max_het_seqs    = 0.1;
+int       progeny_limit    = 1;
+bool      man_corrections  = false;
+bool      corrections      = false;
+bool      expand_id        = false;
+bool      sql_out          = false;
+double    chisq_pval_limit = 0.05;
+int       min_stack_depth  = 0;
+int       min_hom_seqs     = 5;
+double    min_het_seqs     = 0.05;
+double    max_het_seqs     = 0.1;
 
 set<int> whitelist, blacklist;
 
@@ -163,6 +164,11 @@ int main (int argc, char* argv[]) {
 	    call_population_genotypes(it->second, pmap, global_dictionary);
 	}
     }
+
+    //
+    // Check markers for potentially missing alleles.
+    //
+    correct_markers_missing_alleles(parent_ids, catalog, pmap);
 
     //
     // Make automated corrections
@@ -515,7 +521,7 @@ int create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap, set<int> &parent_
 	if (sorted_haplotypes[n].second > 1) {
 	    locus->gmap[sorted_haplotypes[n].first] = types[index];
 	    com_gtypes[types[index]]++;
-	    //cerr << "  Assinging common allele " << sorted_haplotypes[n].first << " to genotype '" << locus->gmap[sorted_haplotypes[n].first] << "'\n";
+	    // cerr << "  Assigning common allele " << sorted_haplotypes[n].first << " to genotype '" << locus->gmap[sorted_haplotypes[n].first] << "'\n";
 	}
     }
 
@@ -526,7 +532,7 @@ int create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap, set<int> &parent_
 	legal_gtypes.clear();
 	for (i = p1_gtypes.begin(); i != p1_gtypes.end(); i++)
 	    if (*i != '-' && com_gtypes.count(*i) == 0) {
-		//cerr << "  Adding " << *i << " to first parent genotypes\n";
+		// cerr << "  Adding " << *i << " to first parent genotypes\n";
 		legal_gtypes[*i]++;
 	    }
 	types.clear();
@@ -540,7 +546,7 @@ int create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap, set<int> &parent_
 		continue;
 	    }
 	    locus->gmap[d_1->obshap[n]] = types[index];
-	    //cerr << "  Assinging '" << d_1->obshap[n] << "' to first parent genotype '" << locus->gmap[d_1->obshap[n]] << "'\n";
+	    // cerr << "  Assinging '" << d_1->obshap[n] << "' to first parent genotype '" << locus->gmap[d_1->obshap[n]] << "'\n";
 	}
     }
 
@@ -551,7 +557,7 @@ int create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap, set<int> &parent_
 	legal_gtypes.clear();
 	for (i = p2_gtypes.begin(); i != p2_gtypes.end(); i++)
 	    if (*i != '-' && com_gtypes.count(*i) == 0) {
-		//cerr << "  Adding " << *i << " to second genotypes\n";
+		// cerr << "  Adding " << *i << " to second genotypes\n";
 		legal_gtypes[*i]++;
 	    }
 	types.clear();
@@ -565,7 +571,7 @@ int create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap, set<int> &parent_
 		continue;
 	    }
 	    locus->gmap[d_2->obshap[n]] = types[index];
-	    //cerr << "  Assinging '" << d_2->obshap[n] << "' to second parent genotype '" << locus->gmap[d_2->obshap[n]] << "'\n";
+	    // cerr << "  Assinging '" << d_2->obshap[n] << "' to second parent genotype '" << locus->gmap[d_2->obshap[n]] << "'\n";
 	}
     }
 
@@ -614,6 +620,9 @@ int call_population_genotypes(CSLocus *locus,
 	    dictionary[locus->marker][gtype] : 
 	    "-";
 
+	if (d[i]->gtype != NULL)
+	    delete d[i]->gtype;
+
 	d[i]->gtype = new char[m.length() + 1];
 	strcpy(d[i]->gtype, m.c_str());
 
@@ -627,8 +636,110 @@ int call_population_genotypes(CSLocus *locus,
 }
 
 int 
+correct_markers_missing_alleles(set<int> &parent_ids, map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+{
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
+
+    map<string, map<string, double> > seg_ratios;
+
+    seg_ratios["ab/aa"]["aa"] = 0.50;
+    seg_ratios["ab/aa"]["ab"] = 0.25;
+    seg_ratios["ab/aa"]["bb"] = 0.25;
+ 
+    seg_ratios["aa/ab"]["aa"] = 0.50;
+    seg_ratios["aa/ab"]["ab"] = 0.25;
+    seg_ratios["aa/ab"]["bb"] = 0.25;
+
+    seg_ratios["ab/cc"]["ac"] = 0.25;
+    seg_ratios["ab/cc"]["bc"] = 0.25;
+    seg_ratios["ab/cc"]["aa"] = 0.25;
+    seg_ratios["ab/cc"]["bb"] = 0.25;
+
+    seg_ratios["cc/ab"]["ac"] = 0.25;
+    seg_ratios["cc/ab"]["bc"] = 0.25;
+    seg_ratios["cc/ab"]["aa"] = 0.25;
+    seg_ratios["cc/ab"]["bb"] = 0.25;
+
+    cerr << "Testing catalog loci for mapping parents with missing alleles...";
+    int corrected = 0;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+
+	//
+	// We only want to examine markers where one parent is homozygous.
+	//
+	if (loc->marker != "ab/aa" && 
+	    loc->marker != "aa/ab" &&
+	    loc->marker != "ab/cc" &&
+	    loc->marker != "cc/ab") continue;
+
+	map<string, int> cnts;
+
+	//
+	// Calculate initial segregation distortion.
+	//
+	double n          = tally_generic_gtypes(loc->id, pmap, parent_ids, cnts);
+	double chisq_pval = chisq_test(seg_ratios, cnts, loc->marker, n);
+
+	//
+	// Check if our genotype ratios match the segregation ratios specified above. If so, 
+	// we have a dropped allele in one of the parents.
+	//
+	if (chisq_pval < chisq_pval_limit) 
+	    continue;
+
+	corrected++;
+
+	if (loc->marker == "ab/aa")
+	    loc->marker = "ab/a-";
+	else if (loc->marker == "aa/ab")
+	    loc->marker = "-a/ab";
+	else if (loc->marker == "ab/cc")
+	    loc->marker = "ab/c-";
+	else if (loc->marker == "cc/ab")
+	    loc->marker = "-c/ab";
+
+	Datum **d = pmap->locus(loc->id);
+
+	if (loc->marker == "ab/a-" || loc->marker == "-a/ab") {
+
+	    for (int i = 0; i < pmap->sample_cnt(); i++) {
+		if (d[i] == NULL) continue;
+
+		if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+
+		if (strcmp(d[i]->gtype, "bb") == 0)
+		    strcpy(d[i]->gtype, "ab");
+	    }
+
+	} else if (loc->marker == "ab/c-" || loc->marker == "-c/ab") {
+
+	    for (int i = 0; i < pmap->sample_cnt(); i++) {
+		if (d[i] == NULL) continue;
+
+		if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+
+		if (strcmp(d[i]->gtype, "bb") == 0)
+		    strcpy(d[i]->gtype, "ab");
+		else if (strcmp(d[i]->gtype, "bc") == 0)
+		    strcpy(d[i]->gtype, "ab");
+		else if (strcmp(d[i]->gtype, "ac") == 0)
+		    strcpy(d[i]->gtype, "aa");
+	    }
+	}
+    }
+
+    cerr << "corrected " << corrected << " catalog loci.\n";
+
+    return 0;
+}
+
+int 
 automated_corrections(map<int, string> &samples, set<int> &parent_ids, map<int, CSLocus *> &catalog,
-		      vector<vector<CatMatch *> > &matches, PopMap<CSLocus> *pmap) {
+		      vector<vector<CatMatch *> > &matches, PopMap<CSLocus> *pmap) 
+{
     int sample_id, catalog_id, tag_id;
     Datum *d;
     Locus *s;
@@ -1383,10 +1494,9 @@ int export_cp_map(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> 
 }
 
 int 
-calc_segregation_distortion(map<string, string> &types, map<string, map<string, double> > &seg_ratios, 
-			    map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &parent_ids) 
+calc_segregation_distortion(map<string, string> &types, map<string, map<string, double> > &seg_ratios,
+			    map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &parent_ids)
 {
-    map<string, double>::iterator sit;
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
 
@@ -1397,55 +1507,95 @@ calc_segregation_distortion(map<string, string> &types, map<string, map<string, 
 
 	map<string, int> cnts;
 
-	Datum **d = pmap->locus(loc->id);
-	double  n = 0.0;
-
-	for (int i = 0; i < pmap->sample_cnt(); i++) {
-	    if (d[i] == NULL) continue;
-
-	    if (parent_ids.count(pmap->rev_sample_index(i))) continue;
-
-	    if (strcmp(d[i]->trans_gtype, "-") == 0 || 
-		strcmp(d[i]->trans_gtype, "--") == 0)
-		continue;
-
-	    n++;
-
-	    if (cnts.count(d[i]->trans_gtype) > 0)
-		cnts[d[i]->trans_gtype]++;
-	    else
-		cnts[d[i]->trans_gtype] = 1;
-	}
+	double n = tally_translated_gtypes(loc->id, pmap, parent_ids, cnts);
 
 	if (n == 0) continue;
 
-	//
-	// Calculate chi-square value.
-	//   sit->second * n == the expected value for this genotype
-	//
-	string marker = types[loc->marker];
-	double chisq  = 0.0;
-	double exp    = 0.0;
-	double obs    = 0.0;
-	double df     = seg_ratios[marker].size() - 1;
-
-	for (sit = seg_ratios[marker].begin(); sit != seg_ratios[marker].end(); sit++) {
-	    obs = cnts.count(sit->first) == 0 ? 0 : cnts[sit->first];
-	    exp = sit->second * n;
-		
-	    chisq += ((obs - exp) * (obs - exp)) / exp;
-	}
-	chisq = chisq / df;
-
-	//
-	// Determine p-value
-	//
-	loc->chisq = chisq_pvalue(df, chisq);
+	loc->chisq = chisq_test(seg_ratios, cnts, types[loc->marker], n);
 
 	// cerr << "ID: " << loc->id << "; Marker: " << marker << "; df: " << df << "; Chisq value: " << chisq << "; pvalue: " << loc->chisq << "\n";
     }
 
     return 0;
+}
+
+double
+tally_translated_gtypes(int loc_id, PopMap<CSLocus> *pmap, set<int> &parent_ids, map<string, int> &cnts)
+{
+    Datum **d = pmap->locus(loc_id);
+    double  n = 0.0;
+
+    for (int i = 0; i < pmap->sample_cnt(); i++) {
+	if (d[i] == NULL) continue;
+
+	if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+
+	if (strcmp(d[i]->trans_gtype, "-") == 0 || 
+	    strcmp(d[i]->trans_gtype, "--") == 0)
+	    continue;
+
+	n++;
+
+	if (cnts.count(d[i]->trans_gtype) > 0)
+	    cnts[d[i]->trans_gtype]++;
+	else
+	    cnts[d[i]->trans_gtype] = 1;
+    }
+
+    return n;
+}
+
+double
+tally_generic_gtypes(int loc_id, PopMap<CSLocus> *pmap, set<int> &parent_ids, map<string, int> &cnts)
+{
+    Datum **d = pmap->locus(loc_id);
+    double  n = 0.0;
+
+    for (int i = 0; i < pmap->sample_cnt(); i++) {
+	if (d[i] == NULL) continue;
+
+	if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+
+	if (strcmp(d[i]->gtype, "-") == 0)
+	    continue;
+
+	n++;
+
+	if (cnts.count(d[i]->gtype) > 0)
+	    cnts[d[i]->gtype]++;
+	else
+	    cnts[d[i]->gtype] = 1;
+    }
+
+    return n;
+}
+
+double
+chisq_test(map<string, map<string, double> > &seg_ratios, map<string, int> &cnts, string marker, double n)
+{
+    //
+    // Calculate chi-square value.
+    //   sit->second * n == the expected value for this genotype
+    //
+    double chisq  = 0.0;
+    double exp    = 0.0;
+    double obs    = 0.0;
+    double df     = seg_ratios[marker].size() - 1;
+
+    map<string, double>::iterator sit;
+
+    for (sit = seg_ratios[marker].begin(); sit != seg_ratios[marker].end(); sit++) {
+	obs = cnts.count(sit->first) == 0 ? 0 : cnts[sit->first];
+	exp = sit->second * n;
+
+	chisq += ((obs - exp) * (obs - exp)) / exp;
+    }
+    chisq = chisq / df;
+
+    //
+    // Determine p-value
+    //
+    return chisq_pvalue(df, chisq);
 }
 
 double
@@ -1560,7 +1710,7 @@ int tally_progeny_haplotypes(CSLocus *locus, PopMap<CSLocus> *pmap, set<int> &pa
 	s << it->first << ":" << it->second << f;
     }
 
-    freq_str = s.str();
+    freq_str = s.str().substr(0, s.str().length() - 1);
 
     return 0;
 }
@@ -1583,27 +1733,28 @@ int write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &par
 	exit(1);
     }
 
-    fh << "SQL ID" << "\t" 
-       << "Batch ID" << "\t" 
+    fh << "# SQL ID"         << "\t" 
+       << "Batch ID"         << "\t" 
        << "Catalog Locus ID" << "\t" 
-       << "Marker Type" << "\t"
-       << "Total Genotypes" << "\t"
+       << "Marker Type"      << "\t"
+       << "Total Genotypes"  << "\t"
        << "Segregation Distortion" << "\t"
-       << "Genotype Freqs" << "\t"
-       << "Max" << "\t"
-       << "Genotype Map" << "\n";
+       << "Genotype Freqs"   << "\t"
+       << "Max"              << "\t"
+       << "Genotype Map"     << "\n";
 
     map<int, CSLocus *>::iterator it;
-    CSLocus *loc;
-    char    g[id_len];
+    map<string, string>::iterator j;
+    CSLocus     *loc;
+    char         g[id_len];
     stringstream gtype_map;
+    string       freq, map;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 
 	if (loc->marker.length() == 0) continue;
 
-	string freq  = "";
 	double max   = 0.0;
 	int    total = 0;
 	tally_progeny_haplotypes(loc, pmap, parent_ids, total, max, freq);
@@ -1613,20 +1764,20 @@ int write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &par
 	//
 	// Record the haplotype to genotype map.
 	//
-	map<string, string>::iterator j;
 	gtype_map.str("");
 	for (j = loc->gmap.begin(); j != loc->gmap.end(); j++)
 	    gtype_map << j->first << ":" << j->second << ";";
+	map = gtype_map.str().substr(0, gtype_map.str().length() - 1);
 
-	fh << 0               << "\t" 
-	   << batch_id        << "\t" 
-	   << loc->id         << "\t" 
-	   << loc->marker     << "\t"
-	   << total           << "\t"
-	   << g               << "\t"
-	   << freq            << "\t"
-	   << loc->chisq      << "\t"
-           << gtype_map.str() << "\n";
+	fh << 0           << "\t" 
+	   << batch_id    << "\t" 
+	   << loc->id     << "\t" 
+	   << loc->marker << "\t"
+	   << total       << "\t"
+	   << g           << "\t"
+	   << freq        << "\t"
+	   << loc->chisq  << "\t"
+           << map         << "\n";
     }
 
     fh.close();
@@ -1828,13 +1979,13 @@ int write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, 
     //
     // Write the header
     //
-    fh << "Catalog ID\t";
+    fh << "# Catalog ID\t";
     if (expand_id)
 	fh << "\t";
     if (write_gtypes)
 	fh << "Marker\t";
     fh << "Cnt\t"
-       << "F\t";
+       << "Seg Dist\t";
 
     map<int, string>::iterator s;
     for (int i = 0; i < pmap->sample_cnt(); i++) {
@@ -1874,7 +2025,7 @@ int write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, 
 	    fh << "\t" << loc->marker;
 
 	write_gtypes ? fh << "\t" << loc->gcnt : fh << "\t" << loc->hcnt;
-	fh << "\t" << loc->f;
+	fh << "\t" << loc->chisq;
 
 	Datum **d = pmap->locus(loc->id);
 	string  obshap;
@@ -2436,24 +2587,24 @@ int parse_command_line(int argc, char* argv[]) {
      
     while (1) {
 	static struct option long_options[] = {
-	    {"help",         no_argument,       NULL, 'h'},
-            {"version",      no_argument,       NULL, 'v'},
-            {"corr",         no_argument,       NULL, 'c'},
-            {"sql",          no_argument,       NULL, 's'},
-	    {"num_threads",  required_argument, NULL, 'p'},
-	    {"batch_id",     required_argument, NULL, 'b'},
-	    {"in_path",      required_argument, NULL, 'P'},
-	    {"map_type",     required_argument, NULL, 't'},
-	    {"out_type",     required_argument, NULL, 'o'},
-	    {"progeny",      required_argument, NULL, 'r'},
-	    {"min_depth",    required_argument, NULL, 'm'},
-	    {"min_hom_seqs", required_argument, NULL, 'H'},
-	    {"min_het_seqs", required_argument, NULL, 'N'},
-	    {"max_het_seqs", required_argument, NULL, 'X'},
-	    {"renz",         required_argument, NULL, 'e'},
-	    {"whitelist",    required_argument, NULL, 'W'},
-	    {"blacklist",    required_argument, NULL, 'B'},
-	    {"man_corr",     required_argument, NULL, 'C'},
+	    {"help",          no_argument,       NULL, 'h'},
+            {"version",       no_argument,       NULL, 'v'},
+            {"corr",          no_argument,       NULL, 'c'},
+            {"sql",           no_argument,       NULL, 's'},
+	    {"num_threads",   required_argument, NULL, 'p'},
+	    {"batch_id",      required_argument, NULL, 'b'},
+	    {"in_path",       required_argument, NULL, 'P'},
+	    {"map_type",      required_argument, NULL, 't'},
+	    {"out_type",      required_argument, NULL, 'o'},
+	    {"progeny",       required_argument, NULL, 'r'},
+	    {"min_depth",     required_argument, NULL, 'm'},
+	    {"min_hom_seqs",  required_argument, NULL, 'H'},
+	    {"min_het_seqs",  required_argument, NULL, 'N'},
+	    {"max_het_seqs",  required_argument, NULL, 'X'},
+	    {"renz",          required_argument, NULL, 'e'},
+	    {"whitelist",     required_argument, NULL, 'W'},
+	    {"blacklist",     required_argument, NULL, 'B'},
+	    {"man_corr",      required_argument, NULL, 'C'},
 	    {0, 0, 0, 0}
 	};
 	

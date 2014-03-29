@@ -88,17 +88,29 @@ load_joinmap_cp_dictionary(map<string, string> &types,
     types["--/ab"] = "--xnp";
     types["ab/aa"] = "lmxll";
     types["aa/ab"] = "nnxnp";
+    types["ab/a-"] = "lmx--";
+    types["-a/ab"] = "--xnp";
+    types["ab/c-"] = "lmx--";
+    types["-c/ab"] = "--xnp";
+    types["ab/cc"] = "lmx--";
+    types["cc/ab"] = "--xnp";
     types["ab/ab"] = "hkxhk";
     types["ab/ac"] = "efxeg";
     types["ab/cd"] = "abxcd";
 
     dictionary["lmx--"]["-"]  = "--";
     dictionary["lmx--"]["aa"] = "ll";
+    dictionary["lmx--"]["ab"] = "lm";
     dictionary["lmx--"]["bb"] = "lm";
+    dictionary["lmx--"]["ac"] = "ll";
+    dictionary["lmx--"]["bc"] = "lm";
 
     dictionary["--xnp"]["-"]  = "--";
     dictionary["--xnp"]["aa"] = "nn";
+    dictionary["--xnp"]["ab"] = "np";
     dictionary["--xnp"]["bb"] = "np";
+    dictionary["--xnp"]["ac"] = "nn";
+    dictionary["--xnp"]["bc"] = "np";
 
     dictionary["lmxll"]["-"]  = "--";
     dictionary["lmxll"]["aa"] = "ll";
@@ -206,6 +218,64 @@ load_onemap_cp_dictionary(map<string, string> &types, map<string, map<string, st
     dictionary["abxcd"]["bd"] = "bd";
 
     return;
+}
+
+void 
+load_generic_dictionaries(map<string, map<string, string> > &global_dictionary) 
+{
+    global_dictionary["ab/--"]["a"]  = "aa";
+    global_dictionary["ab/--"]["b"]  = "bb";
+
+    global_dictionary["--/ab"]["a"]  = "aa";
+    global_dictionary["--/ab"]["b"]  = "bb";
+
+    global_dictionary["aa/bb"]["a"]  = "-";
+    global_dictionary["aa/bb"]["ab"] = "ab";
+    global_dictionary["aa/bb"]["b"]  = "-";
+
+    global_dictionary["ab/ac"]["a"]  = "aa";
+    global_dictionary["ab/ac"]["ab"] = "ab";
+    global_dictionary["ab/ac"]["b"]  = "-";
+    global_dictionary["ab/ac"]["ac"] = "ac";
+    global_dictionary["ab/ac"]["c"]  = "-";
+    global_dictionary["ab/ac"]["bc"] = "bc";
+
+    global_dictionary["ab/cd"]["a"]  = "-";
+    global_dictionary["ab/cd"]["ab"] = "-";
+    global_dictionary["ab/cd"]["b"]  = "-";
+    global_dictionary["ab/cd"]["c"]  = "-";
+    global_dictionary["ab/cd"]["cd"] = "-";
+    global_dictionary["ab/cd"]["d"]  = "-";
+    global_dictionary["ab/cd"]["ac"] = "ac";
+    global_dictionary["ab/cd"]["ad"] = "ad";
+    global_dictionary["ab/cd"]["bc"] = "bc";
+    global_dictionary["ab/cd"]["bd"] = "bd";
+
+    global_dictionary["ab/aa"]["a"]  = "aa";
+    global_dictionary["ab/aa"]["ab"] = "ab";
+    global_dictionary["ab/aa"]["b"]  = "-";
+
+    global_dictionary["aa/ab"]["a"]  = "aa";
+    global_dictionary["aa/ab"]["ab"] = "ab";
+    global_dictionary["aa/ab"]["b"]  = "-";
+
+    global_dictionary["ab/cc"]["a"]  = "-";
+    global_dictionary["ab/cc"]["ab"] = "-";
+    global_dictionary["ab/cc"]["b"]  = "-";
+    global_dictionary["ab/cc"]["c"]  = "-";
+    global_dictionary["ab/cc"]["ac"] = "ac";
+    global_dictionary["ab/cc"]["bc"] = "bc";
+
+    global_dictionary["cc/ab"]["a"]  = "-";
+    global_dictionary["cc/ab"]["ab"] = "-";
+    global_dictionary["cc/ab"]["b"]  = "-";
+    global_dictionary["cc/ab"]["c"]  = "-";
+    global_dictionary["cc/ab"]["ac"] = "ac";
+    global_dictionary["cc/ab"]["bc"] = "bc";
+
+    global_dictionary["ab/ab"]["a"]  = "aa";
+    global_dictionary["ab/ab"]["b"]  = "bb";
+    global_dictionary["ab/ab"]["ab"] = "ab";
 }
 
 inline
