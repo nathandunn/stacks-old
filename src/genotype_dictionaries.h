@@ -101,14 +101,12 @@ load_joinmap_cp_dictionary(map<string, string> &types,
     dictionary["lmx--"]["-"]  = "--";
     dictionary["lmx--"]["aa"] = "ll";
     dictionary["lmx--"]["ab"] = "lm";
-    dictionary["lmx--"]["bb"] = "lm";
     dictionary["lmx--"]["ac"] = "ll";
     dictionary["lmx--"]["bc"] = "lm";
 
     dictionary["--xnp"]["-"]  = "--";
     dictionary["--xnp"]["aa"] = "nn";
     dictionary["--xnp"]["ab"] = "np";
-    dictionary["--xnp"]["bb"] = "np";
     dictionary["--xnp"]["ac"] = "nn";
     dictionary["--xnp"]["bc"] = "np";
 
