@@ -28,6 +28,7 @@ using std::ofstream;
 #import "ProgressController.h"
 #import "GZIP.h"
 #import "StackEntryDatumMO.h"
+#import "GenericHashRepository.h"
 
 
 #include <sys/time.h>
@@ -314,6 +315,7 @@ NSString *calculateType(NSString *file);
                 if (([sampleString rangeOfString:@"catalog"]).location == NSNotFound) {
                     @autoreleasepool {
                         NSMutableDictionary *matchDictionary = [self loadMatchesDictionary:[matchString stringByAppendingString:@".matches.tsv"]];
+                        [[GenericHashRepository sharedInstance] store:stacksDocument.managedObjectContext key:sampleString dictionary:matchDictionary type:@"MatchDictionaryForSample"];
                         [sampleLookupDictionary setObject:matchDictionary forKey:sampleString];
                     }
                 }
@@ -766,6 +768,7 @@ NSString *calculateType(NSString *file);
     NSInteger newLocusId;
     DatumMO *datumMO = nil ;
     NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+    NSDictionary *otherLookupDictionary = [[GenericHashRepository sharedInstance] getDictionary:document.managedObjectContext forKey:sampleName];
 //    char allele;
     int depth;
     float ratio;
@@ -831,6 +834,7 @@ NSString *calculateType(NSString *file);
     NSUInteger fileNameLength = snpFileName.length;
     NSString *sampleName = [snpFileName substringToIndex:fileNameLength - 9];
     NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+    NSDictionary *otherLookupDictionary = [[GenericHashRepository sharedInstance] getDictionary:document.managedObjectContext forKey:sampleName];
 
     NSManagedObjectContext *moc = document.managedObjectContext;
     SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
@@ -1035,6 +1039,7 @@ NSString *calculateType(NSString *file);
 
 
             NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+            NSDictionary *otherLookupDictionary = [[GenericHashRepository sharedInstance] getDictionary:document.managedObjectContext forKey:sampleName];
 
             NSString *absoluteFileName = [document.importPath stringByAppendingFormat:@"/%@", tagFileName];
             string f = [absoluteFileName cStringUsingEncoding:NSUTF8StringEncoding];
@@ -1334,6 +1339,7 @@ NSString *calculateType(NSString *file);
 
 - (void)dealloc {
     [sampleLookupDictionary removeAllObjects];
+    [[GenericHashRepository sharedInstance] detachAll];
     persistentStoreCoordinator = nil ;
 }
 

@@ -56,6 +56,7 @@
 		1437061A187B89490007BDE5 /* stacks.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370618187B89490007BDE5 /* stacks.css */; };
 		1437061B187B89490007BDE5 /* test.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370619187B89490007BDE5 /* test.css */; };
 		14370620187CAEFC0007BDE5 /* GZIP.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437061F187CAEFC0007BDE5 /* GZIP.m */; };
+		63D5365B1669C02129DD4AC0 /* GenericHashRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D539ADFBD4D66EF302C92C /* GenericHashRepository.m */; };
 		63D539B1A6C10C80338A325A /* PopulationService.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53C680185B4D1179C406B /* PopulationService.m */; };
 		6B0183DD18B6D14E00CEEF1D /* SplashWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B0183DB18B6D14E00CEEF1D /* SplashWindowController.m */; };
 		6B0183DE18B6D14E00CEEF1D /* SplashWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6B0183DC18B6D14E00CEEF1D /* SplashWindowController.xib */; };
@@ -174,7 +175,9 @@
 		14370619187B89490007BDE5 /* test.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = test.css; sourceTree = "<group>"; };
 		1437061E187CAEFC0007BDE5 /* GZIP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GZIP.h; sourceTree = "<group>"; };
 		1437061F187CAEFC0007BDE5 /* GZIP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GZIP.m; sourceTree = "<group>"; };
+		63D539ADFBD4D66EF302C92C /* GenericHashRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenericHashRepository.m; sourceTree = "<group>"; };
 		63D53C680185B4D1179C406B /* PopulationService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationService.m; sourceTree = "<group>"; };
+		63D53D340A41B723EB1C381F /* GenericHashRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenericHashRepository.h; sourceTree = "<group>"; };
 		63D53E9C323D32F9FBF8FA40 /* datum.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = datum.html; sourceTree = "<group>"; };
 		63D53F5AAC71FFFCDACB4C93 /* PopulationService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PopulationService.h; sourceTree = "<group>"; };
 		6B0183DA18B6D14E00CEEF1D /* SplashWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SplashWindowController.h; sourceTree = "<group>"; };
@@ -359,6 +362,8 @@
 				D793CBB9D5EB558052FC2E35 /* StacksEntryDatumRenderer.h */,
 				63D53C680185B4D1179C406B /* PopulationService.m */,
 				63D53F5AAC71FFFCDACB4C93 /* PopulationService.h */,
+				63D539ADFBD4D66EF302C92C /* GenericHashRepository.m */,
+				63D53D340A41B723EB1C381F /* GenericHashRepository.h */,
 			);
 			name = Service;
 			sourceTree = "<group>";
@@ -651,6 +656,7 @@
 				6BD8C87018A2DB05000C3A16 /* jquery-1.11.0.min.js in Sources */,
 				D793CD98D5347B963755DE08 /* StacksEntryDatumRenderer.m in Sources */,
 				63D539B1A6C10C80338A325A /* PopulationService.m in Sources */,
+				63D5365B1669C02129DD4AC0 /* GenericHashRepository.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
