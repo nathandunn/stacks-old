@@ -268,6 +268,10 @@ sub prepare_filter_parameters {
             push(@{$params}, $filters->{'pare_l'});
             push(@{$params}, $filters->{'pare_u'});
 
+        } elsif ($filter eq "chisq") {
+            push(@{$params}, $filters->{'chisq_l'});
+            push(@{$params}, $filters->{'chisq_u'});
+
         } elsif ($filter eq "prog") {
             push(@{$params}, $filters->{'prog'});
 
@@ -324,6 +328,7 @@ sub apply_query_filters {
          "pe"    => "(pe_radtags > ?)",
          "blast" => "(blast_hits > ?)",
 	 "gcnt"  => "(geno_cnt >= ?)",
+	 "chisq" => "(chisq_pval >= ? AND chisq_pval <= ?)",
 	 "ref"   => "(catalog_index.type = ?)",
 	 "loc"   => "(catalog_index.chr = ? && catalog_index.bp >= ? && catalog_index.bp <= ?)");
     
@@ -588,6 +593,12 @@ sub translate_marker {
 
     $dictionary{"cp"}->{"ab/--"}  = "lmx--";
     $dictionary{"cp"}->{"--/ab"}  = "--xnp";
+    $dictionary{"cp"}->{"ab/a-"}  = "lmx--";
+    $dictionary{"cp"}->{"-a/ab"}  = "--xnp";
+    $dictionary{"cp"}->{"ab/c-"}  = "lmx--";
+    $dictionary{"cp"}->{"-c/ab"}  = "--xnp";
+    $dictionary{"cp"}->{"ab/cc"}  = "lmx--";
+    $dictionary{"cp"}->{"cc/ab"}  = "--xnp";
     $dictionary{"cp"}->{"ab/aa"}  = "lmxll";
     $dictionary{"cp"}->{"aa/ab"}  = "nnxnp";
     $dictionary{"cp"}->{"ab/ab"}  = "hkxhk";
@@ -767,10 +778,16 @@ sub trans_cp_map {
     $dictionary{"lmx--"}->{"-"}  = "--";
     $dictionary{"lmx--"}->{"aa"} = "ll";
     $dictionary{"lmx--"}->{"bb"} = "lm";
+    $dictionary{"lmx--"}->{"bb"} = "lm";
+    $dictionary{"lmx--"}->{"ac"} = "ll";
+    $dictionary{"lmx--"}->{"bc"} = "lm";
 
     $dictionary{"--xnp"}->{"-"}  = "--";
     $dictionary{"--xnp"}->{"aa"} = "nn";
     $dictionary{"--xnp"}->{"bb"} = "np";
+    $dictionary{"--xnp"}->{"bb"} = "lm";
+    $dictionary{"--xnp"}->{"ac"} = "ll";
+    $dictionary{"--xnp"}->{"bc"} = "lm";
 
     $dictionary{"lmxll"}->{"-"}  = "--";
     $dictionary{"lmxll"}->{"aa"} = "ll";
