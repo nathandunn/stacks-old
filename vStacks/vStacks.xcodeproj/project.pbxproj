@@ -180,6 +180,7 @@
 		6B0183DA18B6D14E00CEEF1D /* SplashWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SplashWindowController.h; sourceTree = "<group>"; };
 		6B0183DB18B6D14E00CEEF1D /* SplashWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SplashWindowController.m; sourceTree = "<group>"; };
 		6B0183DC18B6D14E00CEEF1D /* SplashWindowController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = SplashWindowController.xib; sourceTree = "<group>"; };
+		6B87200618ECC08800925DD4 /* vStacks.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = vStacks.entitlements; sourceTree = "<group>"; };
 		6BCC7EC918B6C041007BB3A7 /* BowtieI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BowtieI.h; sourceTree = "<group>"; };
 		6BCC7ECA18B6C041007BB3A7 /* BustardI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BustardI.h; sourceTree = "<group>"; };
 		6BCC7ECB18B6C041007BB3A7 /* constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = constants.h; sourceTree = "<group>"; };
@@ -286,6 +287,7 @@
 		14370524187B87690007BDE5 /* vStacks */ = {
 			isa = PBXGroup;
 			children = (
+				6B87200618ECC08800925DD4 /* vStacks.entitlements */,
 				14370566187B88560007BDE5 /* stacks */,
 				1437055D187B88000007BDE5 /* www */,
 				1437055E187B88060007BDE5 /* Service */,
@@ -547,6 +549,11 @@
 				TargetAttributes = {
 					1437051A187B87690007BDE5 = {
 						DevelopmentTeam = A8S657VR7S;
+						SystemCapabilities = {
+							com.apple.Sandbox = {
+								enabled = 1;
+							};
+						};
 					};
 					14370541187B876A0007BDE5 = {
 						TestTargetID = 1437051A187B87690007BDE5;
@@ -783,8 +790,9 @@
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "";
+				CODE_SIGN_ENTITLEMENTS = vStacks/vStacks.entitlements;
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
@@ -798,7 +806,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "41EB7F40-EC6B-4137-AF36-CFC6BC16D991";
+				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -808,8 +816,9 @@
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "Mac Developer: Charles Williams (NAW5UAW7BN)";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer: Charles Williams (NAW5UAW7BN)";
+				CODE_SIGN_ENTITLEMENTS = vStacks/vStacks.entitlements;
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -822,7 +831,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "41EB7F40-EC6B-4137-AF36-CFC6BC16D991";
+				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
