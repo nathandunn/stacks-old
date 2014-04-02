@@ -56,134 +56,6 @@
 		1437061A187B89490007BDE5 /* stacks.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370618187B89490007BDE5 /* stacks.css */; };
 		1437061B187B89490007BDE5 /* test.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370619187B89490007BDE5 /* test.css */; };
 		14370620187CAEFC0007BDE5 /* GZIP.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437061F187CAEFC0007BDE5 /* GZIP.m */; };
-		14D3AE6518EC76B900C69C48 /* GZIP.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437061F187CAEFC0007BDE5 /* GZIP.m */; };
-		14D3AE6618EC76B900C69C48 /* stacks.js in Sources */ = {isa = PBXBuildFile; fileRef = 6BD8C86C18A2DABE000C3A16 /* stacks.js */; };
-		14D3AE6718EC76B900C69C48 /* SplashWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B0183DB18B6D14E00CEEF1D /* SplashWindowController.m */; };
-		14D3AE6818EC76B900C69C48 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ED518B6C041007BB3A7 /* input.cc */; };
-		14D3AE6918EC76B900C69C48 /* LocusView.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370576187B88C70007BDE5 /* LocusView.m */; };
-		14D3AE6A18EC76B900C69C48 /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7EE018B6C041007BB3A7 /* stacks.cc */; };
-		14D3AE6B18EC76B900C69C48 /* LocusCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437056F187B88C70007BDE5 /* LocusCell.m */; };
-		14D3AE6C18EC76B900C69C48 /* DatumRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705DD187B88E50007BDE5 /* DatumRepository.m */; };
-		14D3AE6D18EC76B900C69C48 /* SampleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705B4187B88D80007BDE5 /* SampleMO.m */; };
-		14D3AE6E18EC76B900C69C48 /* StacksDocumentController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370582187B88C70007BDE5 /* StacksDocumentController.m */; };
-		14D3AE6F18EC76B900C69C48 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ED918B6C041007BB3A7 /* mst.cc */; };
-		14D3AE7018EC76B900C69C48 /* SampleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705D7187B88E50007BDE5 /* SampleRepository.m */; };
-		14D3AE7118EC76B900C69C48 /* StacksImportMenuItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370587187B88C70007BDE5 /* StacksImportMenuItem.m */; };
-		14D3AE7218EC76B900C69C48 /* locus.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ED718B6C041007BB3A7 /* locus.cc */; };
-		14D3AE7318EC76B900C69C48 /* ImportDataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 6BDE5F6E18E3602600B23E9D /* ImportDataModel.xcdatamodeld */; };
-		14D3AE7418EC76B900C69C48 /* StacksAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370583187B88C70007BDE5 /* StacksAppDelegate.m */; };
-		14D3AE7518EC76B900C69C48 /* PopulationArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057A187B88C70007BDE5 /* PopulationArrayController.m */; };
-		14D3AE7618EC76B900C69C48 /* DatumCollectionViewItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057F187B88C70007BDE5 /* DatumCollectionViewItem.m */; };
-		14D3AE7718EC76B900C69C48 /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ECC18B6C041007BB3A7 /* DNANSeq.cc */; };
-		14D3AE7818EC76B900C69C48 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ECE18B6C041007BB3A7 /* DNASeq.cc */; };
-		14D3AE7918EC76B900C69C48 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437052A187B87690007BDE5 /* main.m */; };
-		14D3AE7A18EC76B900C69C48 /* PopulationCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370572187B88C70007BDE5 /* PopulationCell.m */; };
-		14D3AE7B18EC76B900C69C48 /* StackEntryRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370558187B87DF0007BDE5 /* StackEntryRenderer.m */; };
-		14D3AE7C18EC76B900C69C48 /* StackEntryDatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1409C4F01885B2120061E10F /* StackEntryDatumMO.m */; };
-		14D3AE7D18EC76B900C69C48 /* DatumView.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057E187B88C70007BDE5 /* DatumView.m */; };
-		14D3AE7E18EC76B900C69C48 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7EE318B6C041007BB3A7 /* utils.cc */; };
-		14D3AE7F18EC76B900C69C48 /* StacksDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705A1187B88D80007BDE5 /* StacksDocument.m */; };
-		14D3AE8018EC76B900C69C48 /* ColorGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370568187B88C70007BDE5 /* ColorGenerator.m */; };
-		14D3AE8118EC76B900C69C48 /* DatumArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057C187B88C70007BDE5 /* DatumArrayController.m */; };
-		14D3AE8218EC76B900C69C48 /* StacksView.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437056B187B88C70007BDE5 /* StacksView.m */; };
-		14D3AE8318EC76B900C69C48 /* LocusMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705C2187B88D80007BDE5 /* LocusMO.m */; };
-		14D3AE8418EC76B900C69C48 /* DatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705C0187B88D80007BDE5 /* DatumMO.m */; };
-		14D3AE8518EC76B900C69C48 /* SnpView.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437056D187B88C70007BDE5 /* SnpView.m */; };
-		14D3AE8618EC76B900C69C48 /* LocusRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705E1187B88E50007BDE5 /* LocusRepository.m */; };
-		14D3AE8718EC76B900C69C48 /* PopulationRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705D9187B88E50007BDE5 /* PopulationRepository.m */; };
-		14D3AE8818EC76B900C69C48 /* StacksDocument.xcdatamodel in Sources */ = {isa = PBXBuildFile; fileRef = 143705A2187B88D80007BDE5 /* StacksDocument.xcdatamodel */; };
-		14D3AE8918EC76B900C69C48 /* StacksApplicationController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370585187B88C70007BDE5 /* StacksApplicationController.m */; };
-		14D3AE8A18EC76B900C69C48 /* StacksConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 143705D5187B88E50007BDE5 /* StacksConverter.mm */; };
-		14D3AE8B18EC76B900C69C48 /* ProgressController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437058A187B88C70007BDE5 /* ProgressController.m */; };
-		14D3AE8C18EC76B900C69C48 /* LocusArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370578187B88C70007BDE5 /* LocusArrayController.m */; };
-		14D3AE8D18EC76B900C69C48 /* PopulationMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705BA187B88D80007BDE5 /* PopulationMO.m */; };
-		14D3AE8E18EC76B900C69C48 /* GenericHashMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BDE5F7518E3618C00B23E9D /* GenericHashMO.m */; };
-		14D3AE8F18EC76B900C69C48 /* GenotypeEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370574187B88C70007BDE5 /* GenotypeEntry.m */; };
-		14D3AE9018EC76B900C69C48 /* jquery-1.11.0.min.js in Sources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
-		14D3AE9118EC76B900C69C48 /* StacksEntryDatumRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = D793CE87A0282D76171B5705 /* StacksEntryDatumRenderer.m */; };
-		14D3AE9218EC76B900C69C48 /* PopulationService.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53C680185B4D1179C406B /* PopulationService.m */; };
-		14D3AE9418EC76B900C69C48 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6BCC7EEC18B6C07A007BB3A7 /* libz.1.2.7.dylib */; };
-		14D3AE9518EC76B900C69C48 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14370562187B882D0007BDE5 /* WebKit.framework */; };
-		14D3AE9618EC76B900C69C48 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437051E187B87690007BDE5 /* Cocoa.framework */; };
-		14D3AE9818EC76B900C69C48 /* jquery-1.11.0.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
-		14D3AE9918EC76B900C69C48 /* stacks.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86C18A2DABE000C3A16 /* stacks.js */; };
-		14D3AE9A18EC76B900C69C48 /* datum.html in Resources */ = {isa = PBXBuildFile; fileRef = 63D53E9C323D32F9FBF8FA40 /* datum.html */; };
-		14D3AE9B18EC76B900C69C48 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 14370527187B87690007BDE5 /* InfoPlist.strings */; };
-		14D3AE9C18EC76B900C69C48 /* stacks.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370618187B89490007BDE5 /* stacks.css */; };
-		14D3AE9D18EC76B900C69C48 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1437056A187B88C70007BDE5 /* MainMenu.xib */; };
-		14D3AE9E18EC76B900C69C48 /* ProgressController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1437058B187B88C70007BDE5 /* ProgressController.xib */; };
-		14D3AE9F18EC76B900C69C48 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1437053C187B876A0007BDE5 /* Images.xcassets */; };
-		14D3AEA018EC76B900C69C48 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 1437052D187B87690007BDE5 /* Credits.rtf */; };
-		14D3AEA118EC76B900C69C48 /* 512x512.png in Resources */ = {isa = PBXBuildFile; fileRef = 14197051189C61FE00C9BF1C /* 512x512.png */; };
-		14D3AEA218EC76B900C69C48 /* SplashWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6B0183DC18B6D14E00CEEF1D /* SplashWindowController.xib */; };
-		14D3AEA318EC76B900C69C48 /* 128x128.png in Resources */ = {isa = PBXBuildFile; fileRef = 1419704B189C617100C9BF1C /* 128x128.png */; };
-		14D3AEA418EC76B900C69C48 /* StacksDocument.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14370569187B88C70007BDE5 /* StacksDocument.xib */; };
-		14D3AEA518EC76B900C69C48 /* test.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370619187B89490007BDE5 /* test.css */; };
-		14D3AEA618EC76B900C69C48 /* icon_512x512.png in Resources */ = {isa = PBXBuildFile; fileRef = 1419705B189C69CD00C9BF1C /* icon_512x512.png */; };
-		14D3AEAE18EC76C500C69C48 /* GZIP.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437061F187CAEFC0007BDE5 /* GZIP.m */; };
-		14D3AEAF18EC76C500C69C48 /* stacks.js in Sources */ = {isa = PBXBuildFile; fileRef = 6BD8C86C18A2DABE000C3A16 /* stacks.js */; };
-		14D3AEB018EC76C500C69C48 /* SplashWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B0183DB18B6D14E00CEEF1D /* SplashWindowController.m */; };
-		14D3AEB118EC76C500C69C48 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ED518B6C041007BB3A7 /* input.cc */; };
-		14D3AEB218EC76C500C69C48 /* LocusView.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370576187B88C70007BDE5 /* LocusView.m */; };
-		14D3AEB318EC76C500C69C48 /* stacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7EE018B6C041007BB3A7 /* stacks.cc */; };
-		14D3AEB418EC76C500C69C48 /* LocusCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437056F187B88C70007BDE5 /* LocusCell.m */; };
-		14D3AEB518EC76C500C69C48 /* DatumRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705DD187B88E50007BDE5 /* DatumRepository.m */; };
-		14D3AEB618EC76C500C69C48 /* SampleMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705B4187B88D80007BDE5 /* SampleMO.m */; };
-		14D3AEB718EC76C500C69C48 /* StacksDocumentController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370582187B88C70007BDE5 /* StacksDocumentController.m */; };
-		14D3AEB818EC76C500C69C48 /* mst.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ED918B6C041007BB3A7 /* mst.cc */; };
-		14D3AEB918EC76C500C69C48 /* SampleRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705D7187B88E50007BDE5 /* SampleRepository.m */; };
-		14D3AEBA18EC76C500C69C48 /* StacksImportMenuItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370587187B88C70007BDE5 /* StacksImportMenuItem.m */; };
-		14D3AEBB18EC76C500C69C48 /* locus.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ED718B6C041007BB3A7 /* locus.cc */; };
-		14D3AEBC18EC76C500C69C48 /* ImportDataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 6BDE5F6E18E3602600B23E9D /* ImportDataModel.xcdatamodeld */; };
-		14D3AEBD18EC76C500C69C48 /* StacksAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370583187B88C70007BDE5 /* StacksAppDelegate.m */; };
-		14D3AEBE18EC76C500C69C48 /* PopulationArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057A187B88C70007BDE5 /* PopulationArrayController.m */; };
-		14D3AEBF18EC76C500C69C48 /* DatumCollectionViewItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057F187B88C70007BDE5 /* DatumCollectionViewItem.m */; };
-		14D3AEC018EC76C500C69C48 /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ECC18B6C041007BB3A7 /* DNANSeq.cc */; };
-		14D3AEC118EC76C500C69C48 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ECE18B6C041007BB3A7 /* DNASeq.cc */; };
-		14D3AEC218EC76C500C69C48 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437052A187B87690007BDE5 /* main.m */; };
-		14D3AEC318EC76C500C69C48 /* PopulationCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370572187B88C70007BDE5 /* PopulationCell.m */; };
-		14D3AEC418EC76C500C69C48 /* StackEntryRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370558187B87DF0007BDE5 /* StackEntryRenderer.m */; };
-		14D3AEC518EC76C500C69C48 /* StackEntryDatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 1409C4F01885B2120061E10F /* StackEntryDatumMO.m */; };
-		14D3AEC618EC76C500C69C48 /* DatumView.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057E187B88C70007BDE5 /* DatumView.m */; };
-		14D3AEC718EC76C500C69C48 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7EE318B6C041007BB3A7 /* utils.cc */; };
-		14D3AEC818EC76C500C69C48 /* StacksDocument.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705A1187B88D80007BDE5 /* StacksDocument.m */; };
-		14D3AEC918EC76C500C69C48 /* ColorGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370568187B88C70007BDE5 /* ColorGenerator.m */; };
-		14D3AECA18EC76C500C69C48 /* DatumArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437057C187B88C70007BDE5 /* DatumArrayController.m */; };
-		14D3AECB18EC76C500C69C48 /* StacksView.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437056B187B88C70007BDE5 /* StacksView.m */; };
-		14D3AECC18EC76C500C69C48 /* LocusMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705C2187B88D80007BDE5 /* LocusMO.m */; };
-		14D3AECD18EC76C500C69C48 /* DatumMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705C0187B88D80007BDE5 /* DatumMO.m */; };
-		14D3AECE18EC76C500C69C48 /* SnpView.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437056D187B88C70007BDE5 /* SnpView.m */; };
-		14D3AECF18EC76C500C69C48 /* LocusRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705E1187B88E50007BDE5 /* LocusRepository.m */; };
-		14D3AED018EC76C500C69C48 /* PopulationRepository.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705D9187B88E50007BDE5 /* PopulationRepository.m */; };
-		14D3AED118EC76C500C69C48 /* StacksDocument.xcdatamodel in Sources */ = {isa = PBXBuildFile; fileRef = 143705A2187B88D80007BDE5 /* StacksDocument.xcdatamodel */; };
-		14D3AED218EC76C500C69C48 /* StacksApplicationController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370585187B88C70007BDE5 /* StacksApplicationController.m */; };
-		14D3AED318EC76C500C69C48 /* StacksConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 143705D5187B88E50007BDE5 /* StacksConverter.mm */; };
-		14D3AED418EC76C500C69C48 /* ProgressController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1437058A187B88C70007BDE5 /* ProgressController.m */; };
-		14D3AED518EC76C500C69C48 /* LocusArrayController.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370578187B88C70007BDE5 /* LocusArrayController.m */; };
-		14D3AED618EC76C500C69C48 /* PopulationMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 143705BA187B88D80007BDE5 /* PopulationMO.m */; };
-		14D3AED718EC76C500C69C48 /* GenericHashMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BDE5F7518E3618C00B23E9D /* GenericHashMO.m */; };
-		14D3AED818EC76C500C69C48 /* GenotypeEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 14370574187B88C70007BDE5 /* GenotypeEntry.m */; };
-		14D3AED918EC76C500C69C48 /* jquery-1.11.0.min.js in Sources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
-		14D3AEDA18EC76C500C69C48 /* StacksEntryDatumRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = D793CE87A0282D76171B5705 /* StacksEntryDatumRenderer.m */; };
-		14D3AEDB18EC76C500C69C48 /* PopulationService.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53C680185B4D1179C406B /* PopulationService.m */; };
-		14D3AEDD18EC76C500C69C48 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6BCC7EEC18B6C07A007BB3A7 /* libz.1.2.7.dylib */; };
-		14D3AEDE18EC76C500C69C48 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14370562187B882D0007BDE5 /* WebKit.framework */; };
-		14D3AEDF18EC76C500C69C48 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1437051E187B87690007BDE5 /* Cocoa.framework */; };
-		14D3AEE118EC76C500C69C48 /* jquery-1.11.0.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
-		14D3AEE218EC76C500C69C48 /* stacks.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86C18A2DABE000C3A16 /* stacks.js */; };
-		14D3AEE318EC76C500C69C48 /* datum.html in Resources */ = {isa = PBXBuildFile; fileRef = 63D53E9C323D32F9FBF8FA40 /* datum.html */; };
-		14D3AEE418EC76C500C69C48 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 14370527187B87690007BDE5 /* InfoPlist.strings */; };
-		14D3AEE518EC76C500C69C48 /* stacks.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370618187B89490007BDE5 /* stacks.css */; };
-		14D3AEE618EC76C500C69C48 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1437056A187B88C70007BDE5 /* MainMenu.xib */; };
-		14D3AEE718EC76C500C69C48 /* ProgressController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1437058B187B88C70007BDE5 /* ProgressController.xib */; };
-		14D3AEE818EC76C500C69C48 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1437053C187B876A0007BDE5 /* Images.xcassets */; };
-		14D3AEE918EC76C500C69C48 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 1437052D187B87690007BDE5 /* Credits.rtf */; };
-		14D3AEEA18EC76C500C69C48 /* 512x512.png in Resources */ = {isa = PBXBuildFile; fileRef = 14197051189C61FE00C9BF1C /* 512x512.png */; };
-		14D3AEEB18EC76C500C69C48 /* SplashWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6B0183DC18B6D14E00CEEF1D /* SplashWindowController.xib */; };
-		14D3AEEC18EC76C500C69C48 /* 128x128.png in Resources */ = {isa = PBXBuildFile; fileRef = 1419704B189C617100C9BF1C /* 128x128.png */; };
-		14D3AEED18EC76C500C69C48 /* StacksDocument.xib in Resources */ = {isa = PBXBuildFile; fileRef = 14370569187B88C70007BDE5 /* StacksDocument.xib */; };
-		14D3AEEE18EC76C500C69C48 /* test.css in Resources */ = {isa = PBXBuildFile; fileRef = 14370619187B89490007BDE5 /* test.css */; };
-		14D3AEEF18EC76C500C69C48 /* icon_512x512.png in Resources */ = {isa = PBXBuildFile; fileRef = 1419705B189C69CD00C9BF1C /* icon_512x512.png */; };
 		63D539B1A6C10C80338A325A /* PopulationService.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53C680185B4D1179C406B /* PopulationService.m */; };
 		6B0183DD18B6D14E00CEEF1D /* SplashWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B0183DB18B6D14E00CEEF1D /* SplashWindowController.m */; };
 		6B0183DE18B6D14E00CEEF1D /* SplashWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6B0183DC18B6D14E00CEEF1D /* SplashWindowController.xib */; };
@@ -196,9 +68,7 @@
 		6BCC7EEB18B6C041007BB3A7 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7EE318B6C041007BB3A7 /* utils.cc */; };
 		6BCC7EED18B6C07A007BB3A7 /* libz.1.2.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 6BCC7EEC18B6C07A007BB3A7 /* libz.1.2.7.dylib */; };
 		6BD8C86B18A2DA92000C3A16 /* datum.html in Resources */ = {isa = PBXBuildFile; fileRef = 63D53E9C323D32F9FBF8FA40 /* datum.html */; };
-		6BD8C86D18A2DABE000C3A16 /* stacks.js in Sources */ = {isa = PBXBuildFile; fileRef = 6BD8C86C18A2DABE000C3A16 /* stacks.js */; };
 		6BD8C86E18A2DAD3000C3A16 /* stacks.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86C18A2DABE000C3A16 /* stacks.js */; };
-		6BD8C87018A2DB05000C3A16 /* jquery-1.11.0.min.js in Sources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
 		6BD8C87118A2DB28000C3A16 /* jquery-1.11.0.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
 		6BDE5F7018E3602600B23E9D /* ImportDataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 6BDE5F6E18E3602600B23E9D /* ImportDataModel.xcdatamodeld */; };
 		6BDE5F7618E3618C00B23E9D /* GenericHashMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BDE5F7518E3618C00B23E9D /* GenericHashMO.m */; };
@@ -302,9 +172,7 @@
 		14370619187B89490007BDE5 /* test.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = test.css; sourceTree = "<group>"; };
 		1437061E187CAEFC0007BDE5 /* GZIP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GZIP.h; sourceTree = "<group>"; };
 		1437061F187CAEFC0007BDE5 /* GZIP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GZIP.m; sourceTree = "<group>"; };
-		14D3AEAA18EC76B900C69C48 /* vStacks copy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "vStacks copy.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		14D3AEAB18EC76BA00C69C48 /* vStacks copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "vStacks copy-Info.plist"; path = "/Users/NathanDunn/hg/stacks/vStacks/vStacks copy-Info.plist"; sourceTree = "<absolute>"; };
-		14D3AEF318EC76C500C69C48 /* vStacks-dev copy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "vStacks-dev copy.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		14D3AEF418EC76C500C69C48 /* vStacks-dev copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "vStacks-dev copy-Info.plist"; path = "/Users/NathanDunn/hg/stacks/vStacks/vStacks-dev copy-Info.plist"; sourceTree = "<absolute>"; };
 		63D53C680185B4D1179C406B /* PopulationService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationService.m; sourceTree = "<group>"; };
 		63D53E9C323D32F9FBF8FA40 /* datum.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = datum.html; sourceTree = "<group>"; };
@@ -370,26 +238,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		14D3AE9318EC76B900C69C48 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				14D3AE9418EC76B900C69C48 /* libz.1.2.7.dylib in Frameworks */,
-				14D3AE9518EC76B900C69C48 /* WebKit.framework in Frameworks */,
-				14D3AE9618EC76B900C69C48 /* Cocoa.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		14D3AEDC18EC76C500C69C48 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				14D3AEDD18EC76C500C69C48 /* libz.1.2.7.dylib in Frameworks */,
-				14D3AEDE18EC76C500C69C48 /* WebKit.framework in Frameworks */,
-				14D3AEDF18EC76C500C69C48 /* Cocoa.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -410,8 +258,6 @@
 			children = (
 				1437051B187B87690007BDE5 /* vStacks.app */,
 				14370542187B876A0007BDE5 /* vStacksTests.xctest */,
-				14D3AEAA18EC76B900C69C48 /* vStacks copy.app */,
-				14D3AEF318EC76C500C69C48 /* vStacks-dev copy.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -689,40 +535,6 @@
 			productReference = 14370542187B876A0007BDE5 /* vStacksTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		14D3AE6318EC76B900C69C48 /* vStacks-dev */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 14D3AEA718EC76B900C69C48 /* Build configuration list for PBXNativeTarget "vStacks-dev" */;
-			buildPhases = (
-				14D3AE6418EC76B900C69C48 /* Sources */,
-				14D3AE9318EC76B900C69C48 /* Frameworks */,
-				14D3AE9718EC76B900C69C48 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = "vStacks-dev";
-			productName = vStacks;
-			productReference = 14D3AEAA18EC76B900C69C48 /* vStacks copy.app */;
-			productType = "com.apple.product-type.application";
-		};
-		14D3AEAC18EC76C500C69C48 /* vStacks-nosign */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 14D3AEF018EC76C500C69C48 /* Build configuration list for PBXNativeTarget "vStacks-nosign" */;
-			buildPhases = (
-				14D3AEAD18EC76C500C69C48 /* Sources */,
-				14D3AEDC18EC76C500C69C48 /* Frameworks */,
-				14D3AEE018EC76C500C69C48 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = "vStacks-nosign";
-			productName = vStacks;
-			productReference = 14D3AEF318EC76C500C69C48 /* vStacks-dev copy.app */;
-			productType = "com.apple.product-type.application";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -739,12 +551,6 @@
 					14370541187B876A0007BDE5 = {
 						TestTargetID = 1437051A187B87690007BDE5;
 					};
-					14D3AE6318EC76B900C69C48 = {
-						DevelopmentTeam = A8S657VR7S;
-					};
-					14D3AEAC18EC76C500C69C48 = {
-						DevelopmentTeam = A8S657VR7S;
-					};
 				};
 			};
 			buildConfigurationList = 14370516187B87690007BDE5 /* Build configuration list for PBXProject "vStacks" */;
@@ -760,8 +566,6 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				14D3AEAC18EC76C500C69C48 /* vStacks-nosign */,
-				14D3AE6318EC76B900C69C48 /* vStacks-dev */,
 				1437051A187B87690007BDE5 /* vStacks */,
 				14370541187B876A0007BDE5 /* vStacksTests */,
 			);
@@ -799,50 +603,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		14D3AE9718EC76B900C69C48 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				14D3AE9818EC76B900C69C48 /* jquery-1.11.0.min.js in Resources */,
-				14D3AE9918EC76B900C69C48 /* stacks.js in Resources */,
-				14D3AE9A18EC76B900C69C48 /* datum.html in Resources */,
-				14D3AE9B18EC76B900C69C48 /* InfoPlist.strings in Resources */,
-				14D3AE9C18EC76B900C69C48 /* stacks.css in Resources */,
-				14D3AE9D18EC76B900C69C48 /* MainMenu.xib in Resources */,
-				14D3AE9E18EC76B900C69C48 /* ProgressController.xib in Resources */,
-				14D3AE9F18EC76B900C69C48 /* Images.xcassets in Resources */,
-				14D3AEA018EC76B900C69C48 /* Credits.rtf in Resources */,
-				14D3AEA118EC76B900C69C48 /* 512x512.png in Resources */,
-				14D3AEA218EC76B900C69C48 /* SplashWindowController.xib in Resources */,
-				14D3AEA318EC76B900C69C48 /* 128x128.png in Resources */,
-				14D3AEA418EC76B900C69C48 /* StacksDocument.xib in Resources */,
-				14D3AEA518EC76B900C69C48 /* test.css in Resources */,
-				14D3AEA618EC76B900C69C48 /* icon_512x512.png in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		14D3AEE018EC76C500C69C48 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				14D3AEE118EC76C500C69C48 /* jquery-1.11.0.min.js in Resources */,
-				14D3AEE218EC76C500C69C48 /* stacks.js in Resources */,
-				14D3AEE318EC76C500C69C48 /* datum.html in Resources */,
-				14D3AEE418EC76C500C69C48 /* InfoPlist.strings in Resources */,
-				14D3AEE518EC76C500C69C48 /* stacks.css in Resources */,
-				14D3AEE618EC76C500C69C48 /* MainMenu.xib in Resources */,
-				14D3AEE718EC76C500C69C48 /* ProgressController.xib in Resources */,
-				14D3AEE818EC76C500C69C48 /* Images.xcassets in Resources */,
-				14D3AEE918EC76C500C69C48 /* Credits.rtf in Resources */,
-				14D3AEEA18EC76C500C69C48 /* 512x512.png in Resources */,
-				14D3AEEB18EC76C500C69C48 /* SplashWindowController.xib in Resources */,
-				14D3AEEC18EC76C500C69C48 /* 128x128.png in Resources */,
-				14D3AEED18EC76C500C69C48 /* StacksDocument.xib in Resources */,
-				14D3AEEE18EC76C500C69C48 /* test.css in Resources */,
-				14D3AEEF18EC76C500C69C48 /* icon_512x512.png in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -851,7 +611,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				14370620187CAEFC0007BDE5 /* GZIP.m in Sources */,
-				6BD8C86D18A2DABE000C3A16 /* stacks.js in Sources */,
 				6B0183DD18B6D14E00CEEF1D /* SplashWindowController.m in Sources */,
 				6BCC7EE718B6C041007BB3A7 /* input.cc in Sources */,
 				14370594187B88C70007BDE5 /* LocusView.m in Sources */,
@@ -893,7 +652,6 @@
 				143705D0187B88D80007BDE5 /* PopulationMO.m in Sources */,
 				6BDE5F7618E3618C00B23E9D /* GenericHashMO.m in Sources */,
 				14370593187B88C70007BDE5 /* GenotypeEntry.m in Sources */,
-				6BD8C87018A2DB05000C3A16 /* jquery-1.11.0.min.js in Sources */,
 				D793CD98D5347B963755DE08 /* StacksEntryDatumRenderer.m in Sources */,
 				63D539B1A6C10C80338A325A /* PopulationService.m in Sources */,
 			);
@@ -904,112 +662,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				1437054F187B876A0007BDE5 /* vStacksTests.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		14D3AE6418EC76B900C69C48 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				14D3AE6518EC76B900C69C48 /* GZIP.m in Sources */,
-				14D3AE6618EC76B900C69C48 /* stacks.js in Sources */,
-				14D3AE6718EC76B900C69C48 /* SplashWindowController.m in Sources */,
-				14D3AE6818EC76B900C69C48 /* input.cc in Sources */,
-				14D3AE6918EC76B900C69C48 /* LocusView.m in Sources */,
-				14D3AE6A18EC76B900C69C48 /* stacks.cc in Sources */,
-				14D3AE6B18EC76B900C69C48 /* LocusCell.m in Sources */,
-				14D3AE6C18EC76B900C69C48 /* DatumRepository.m in Sources */,
-				14D3AE6D18EC76B900C69C48 /* SampleMO.m in Sources */,
-				14D3AE6E18EC76B900C69C48 /* StacksDocumentController.m in Sources */,
-				14D3AE6F18EC76B900C69C48 /* mst.cc in Sources */,
-				14D3AE7018EC76B900C69C48 /* SampleRepository.m in Sources */,
-				14D3AE7118EC76B900C69C48 /* StacksImportMenuItem.m in Sources */,
-				14D3AE7218EC76B900C69C48 /* locus.cc in Sources */,
-				14D3AE7318EC76B900C69C48 /* ImportDataModel.xcdatamodeld in Sources */,
-				14D3AE7418EC76B900C69C48 /* StacksAppDelegate.m in Sources */,
-				14D3AE7518EC76B900C69C48 /* PopulationArrayController.m in Sources */,
-				14D3AE7618EC76B900C69C48 /* DatumCollectionViewItem.m in Sources */,
-				14D3AE7718EC76B900C69C48 /* DNANSeq.cc in Sources */,
-				14D3AE7818EC76B900C69C48 /* DNASeq.cc in Sources */,
-				14D3AE7918EC76B900C69C48 /* main.m in Sources */,
-				14D3AE7A18EC76B900C69C48 /* PopulationCell.m in Sources */,
-				14D3AE7B18EC76B900C69C48 /* StackEntryRenderer.m in Sources */,
-				14D3AE7C18EC76B900C69C48 /* StackEntryDatumMO.m in Sources */,
-				14D3AE7D18EC76B900C69C48 /* DatumView.m in Sources */,
-				14D3AE7E18EC76B900C69C48 /* utils.cc in Sources */,
-				14D3AE7F18EC76B900C69C48 /* StacksDocument.m in Sources */,
-				14D3AE8018EC76B900C69C48 /* ColorGenerator.m in Sources */,
-				14D3AE8118EC76B900C69C48 /* DatumArrayController.m in Sources */,
-				14D3AE8218EC76B900C69C48 /* StacksView.m in Sources */,
-				14D3AE8318EC76B900C69C48 /* LocusMO.m in Sources */,
-				14D3AE8418EC76B900C69C48 /* DatumMO.m in Sources */,
-				14D3AE8518EC76B900C69C48 /* SnpView.m in Sources */,
-				14D3AE8618EC76B900C69C48 /* LocusRepository.m in Sources */,
-				14D3AE8718EC76B900C69C48 /* PopulationRepository.m in Sources */,
-				14D3AE8818EC76B900C69C48 /* StacksDocument.xcdatamodel in Sources */,
-				14D3AE8918EC76B900C69C48 /* StacksApplicationController.m in Sources */,
-				14D3AE8A18EC76B900C69C48 /* StacksConverter.mm in Sources */,
-				14D3AE8B18EC76B900C69C48 /* ProgressController.m in Sources */,
-				14D3AE8C18EC76B900C69C48 /* LocusArrayController.m in Sources */,
-				14D3AE8D18EC76B900C69C48 /* PopulationMO.m in Sources */,
-				14D3AE8E18EC76B900C69C48 /* GenericHashMO.m in Sources */,
-				14D3AE8F18EC76B900C69C48 /* GenotypeEntry.m in Sources */,
-				14D3AE9018EC76B900C69C48 /* jquery-1.11.0.min.js in Sources */,
-				14D3AE9118EC76B900C69C48 /* StacksEntryDatumRenderer.m in Sources */,
-				14D3AE9218EC76B900C69C48 /* PopulationService.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		14D3AEAD18EC76C500C69C48 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				14D3AEAE18EC76C500C69C48 /* GZIP.m in Sources */,
-				14D3AEAF18EC76C500C69C48 /* stacks.js in Sources */,
-				14D3AEB018EC76C500C69C48 /* SplashWindowController.m in Sources */,
-				14D3AEB118EC76C500C69C48 /* input.cc in Sources */,
-				14D3AEB218EC76C500C69C48 /* LocusView.m in Sources */,
-				14D3AEB318EC76C500C69C48 /* stacks.cc in Sources */,
-				14D3AEB418EC76C500C69C48 /* LocusCell.m in Sources */,
-				14D3AEB518EC76C500C69C48 /* DatumRepository.m in Sources */,
-				14D3AEB618EC76C500C69C48 /* SampleMO.m in Sources */,
-				14D3AEB718EC76C500C69C48 /* StacksDocumentController.m in Sources */,
-				14D3AEB818EC76C500C69C48 /* mst.cc in Sources */,
-				14D3AEB918EC76C500C69C48 /* SampleRepository.m in Sources */,
-				14D3AEBA18EC76C500C69C48 /* StacksImportMenuItem.m in Sources */,
-				14D3AEBB18EC76C500C69C48 /* locus.cc in Sources */,
-				14D3AEBC18EC76C500C69C48 /* ImportDataModel.xcdatamodeld in Sources */,
-				14D3AEBD18EC76C500C69C48 /* StacksAppDelegate.m in Sources */,
-				14D3AEBE18EC76C500C69C48 /* PopulationArrayController.m in Sources */,
-				14D3AEBF18EC76C500C69C48 /* DatumCollectionViewItem.m in Sources */,
-				14D3AEC018EC76C500C69C48 /* DNANSeq.cc in Sources */,
-				14D3AEC118EC76C500C69C48 /* DNASeq.cc in Sources */,
-				14D3AEC218EC76C500C69C48 /* main.m in Sources */,
-				14D3AEC318EC76C500C69C48 /* PopulationCell.m in Sources */,
-				14D3AEC418EC76C500C69C48 /* StackEntryRenderer.m in Sources */,
-				14D3AEC518EC76C500C69C48 /* StackEntryDatumMO.m in Sources */,
-				14D3AEC618EC76C500C69C48 /* DatumView.m in Sources */,
-				14D3AEC718EC76C500C69C48 /* utils.cc in Sources */,
-				14D3AEC818EC76C500C69C48 /* StacksDocument.m in Sources */,
-				14D3AEC918EC76C500C69C48 /* ColorGenerator.m in Sources */,
-				14D3AECA18EC76C500C69C48 /* DatumArrayController.m in Sources */,
-				14D3AECB18EC76C500C69C48 /* StacksView.m in Sources */,
-				14D3AECC18EC76C500C69C48 /* LocusMO.m in Sources */,
-				14D3AECD18EC76C500C69C48 /* DatumMO.m in Sources */,
-				14D3AECE18EC76C500C69C48 /* SnpView.m in Sources */,
-				14D3AECF18EC76C500C69C48 /* LocusRepository.m in Sources */,
-				14D3AED018EC76C500C69C48 /* PopulationRepository.m in Sources */,
-				14D3AED118EC76C500C69C48 /* StacksDocument.xcdatamodel in Sources */,
-				14D3AED218EC76C500C69C48 /* StacksApplicationController.m in Sources */,
-				14D3AED318EC76C500C69C48 /* StacksConverter.mm in Sources */,
-				14D3AED418EC76C500C69C48 /* ProgressController.m in Sources */,
-				14D3AED518EC76C500C69C48 /* LocusArrayController.m in Sources */,
-				14D3AED618EC76C500C69C48 /* PopulationMO.m in Sources */,
-				14D3AED718EC76C500C69C48 /* GenericHashMO.m in Sources */,
-				14D3AED818EC76C500C69C48 /* GenotypeEntry.m in Sources */,
-				14D3AED918EC76C500C69C48 /* jquery-1.11.0.min.js in Sources */,
-				14D3AEDA18EC76C500C69C48 /* StacksEntryDatumRenderer.m in Sources */,
-				14D3AEDB18EC76C500C69C48 /* PopulationService.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1055,6 +707,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -1066,7 +719,9 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "";
 				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
@@ -1082,9 +737,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx10.8;
+				PROVISIONING_PROFILE = "CCDD55E2-58BB-405C-B1EA-E2C67A7170B7";
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
@@ -1092,6 +748,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -1103,6 +760,7 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1114,18 +772,21 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
-				SDKROOT = macosx10.8;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				PROVISIONING_PROFILE = "CCDD55E2-58BB-405C-B1EA-E2C67A7170B7";
+				SDKROOT = macosx;
 			};
 			name = Release;
 		};
 		14370553187B876A0007BDE5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "Mac Developer";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "vStacks/vStacks-Prefix.pch";
@@ -1135,9 +796,9 @@
 					"vStacks/**",
 					/Users/ndunn/hg/stacks/vStacks/vStacks,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE = "41EB7F40-EC6B-4137-AF36-CFC6BC16D991";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -1145,9 +806,10 @@
 		14370554187B876A0007BDE5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "Mac Developer";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "3rd Party Mac Developer Application";
+				CODE_SIGN_IDENTITY = "Mac Developer: Charles Williams (NAW5UAW7BN)";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer: Charles Williams (NAW5UAW7BN)";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -1158,9 +820,9 @@
 					"vStacks/**",
 					/Users/ndunn/hg/stacks/vStacks/vStacks,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE = "41EB7F40-EC6B-4137-AF36-CFC6BC16D991";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
@@ -1205,98 +867,6 @@
 			};
 			name = Release;
 		};
-		14D3AEA818EC76B900C69C48 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "Mac Developer";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
-				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "vStacks/vStacks-Prefix.pch";
-				INFOPLIST_FILE = "vStacks copy-Info.plist";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"vStacks/**",
-					/Users/ndunn/hg/stacks/vStacks/vStacks,
-				);
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
-				PRODUCT_NAME = "vStacks copy";
-				PROVISIONING_PROFILE = "";
-				WRAPPER_EXTENSION = app;
-			};
-			name = Debug;
-		};
-		14D3AEA918EC76B900C69C48 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "Mac Developer";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
-				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "vStacks/vStacks-Prefix.pch";
-				INFOPLIST_FILE = "vStacks copy-Info.plist";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"vStacks/**",
-					/Users/ndunn/hg/stacks/vStacks/vStacks,
-				);
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
-				PRODUCT_NAME = "vStacks copy";
-				PROVISIONING_PROFILE = "";
-				WRAPPER_EXTENSION = app;
-			};
-			name = Release;
-		};
-		14D3AEF118EC76C500C69C48 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
-				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "vStacks/vStacks-Prefix.pch";
-				INFOPLIST_FILE = "vStacks-dev copy-Info.plist";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"vStacks/**",
-					/Users/ndunn/hg/stacks/vStacks/vStacks,
-				);
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
-				PRODUCT_NAME = "vStacks-dev copy";
-				PROVISIONING_PROFILE = "";
-				SDKROOT = macosx;
-				WRAPPER_EXTENSION = app;
-			};
-			name = Debug;
-		};
-		14D3AEF218EC76C500C69C48 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
-				COMBINE_HIDPI_IMAGES = YES;
-				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "vStacks/vStacks-Prefix.pch";
-				INFOPLIST_FILE = "vStacks-dev copy-Info.plist";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"vStacks/**",
-					/Users/ndunn/hg/stacks/vStacks/vStacks,
-				);
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
-				PRODUCT_NAME = "vStacks-dev copy";
-				PROVISIONING_PROFILE = "";
-				SDKROOT = macosx;
-				WRAPPER_EXTENSION = app;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1323,24 +893,6 @@
 			buildConfigurations = (
 				14370556187B876A0007BDE5 /* Debug */,
 				14370557187B876A0007BDE5 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		14D3AEA718EC76B900C69C48 /* Build configuration list for PBXNativeTarget "vStacks-dev" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				14D3AEA818EC76B900C69C48 /* Debug */,
-				14D3AEA918EC76B900C69C48 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		14D3AEF018EC76C500C69C48 /* Build configuration list for PBXNativeTarget "vStacks-nosign" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				14D3AEF118EC76C500C69C48 /* Debug */,
-				14D3AEF218EC76C500C69C48 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
