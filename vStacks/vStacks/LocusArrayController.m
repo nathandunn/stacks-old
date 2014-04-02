@@ -95,7 +95,8 @@
                         }
                     }
                     else {
-                        progenyCount -= locusMO.parentCount.unsignedIntegerValue;
+                        // REMOVED this as it was conflusing in the interface
+//                        progenyCount -= locusMO.parentCount.unsignedIntegerValue;
                         if (progenyCount >= minSampleValue && progenyCount <= maxSampleValue) {
                             [filteredObjects addObject:locusMO];
                         }
