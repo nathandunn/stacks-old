@@ -63,8 +63,8 @@ using std::set;
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"
 
-enum map_types {unk, none, gen, dh, cp, bc1, f2};
-enum out_types {rqtl, joinmap, genomic};
+// enum map_types {unk, none, gen, dh, cp, bc1, f2};
+// enum out_types {rqtl, joinmap, genomic};
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
 enum loc_type  {haplotype, snp};

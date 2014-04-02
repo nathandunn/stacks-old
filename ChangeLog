@@ -1,5 +1,7 @@
-Stacks 1.18 - Mar 27, 2014
+Stacks 1.18 - Mar 28, 2014
 --------------------------
+	Feature: reworked genetic map display of web interface. Included chisq p-value from segregation distortion
+	test as a filter.
 	Feature: implemented measure of segregation distortion in genotypes program based on chi square test of
 	genotype counts. Removed deprecated measure of F, inbreeding coefficient, replaced it with segregation
 	distortion.

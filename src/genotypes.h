@@ -62,9 +62,6 @@ using std::set;
 #include "utils.h"
 #include "genotype_dictionaries.h"
 
-enum map_types {unk, none, gen, dh, cp, bc1, f2};
-enum out_types {rqtl, joinmap, onemap, genomic};
-
 //
 // Chi-squared distribution critical values
 //   [0] => p-values
@@ -72,12 +69,12 @@ enum out_types {rqtl, joinmap, onemap, genomic};
 //   [2] => two degrees of freedom
 //   [3] => three degrees of freedom
 //
-const int chisq_crit_values_size = 9;
-const double chisq_crit_values[4][9] = {
-    {0.25, 0.20, 0.15, 0.10, 0.05,  0.01,  0.005,  0.001,  0.0005},
-    {1.32, 1.64, 2.07, 2.71, 3.84,  6.63,  7.88,  10.83,  12.12},
-    {2.77, 3.22, 3.79, 4.61, 5.99,  9.21, 10.60,  13.82,  15.20},
-    {4.11, 4.64, 5.32, 6.25, 7.81, 11.34, 12.84,  16.27,  17.73}
+const int chisq_crit_values_size = 10;
+const double chisq_crit_values[4][10] = {
+    {0.50, 0.25, 0.20, 0.15, 0.10, 0.05,  0.01,  0.005,  0.001,  0.0005},
+    {0.46, 1.32, 1.64, 2.07, 2.71, 3.84,  6.63,  7.88,  10.83,  12.12},
+    {1.39, 2.77, 3.22, 3.79, 4.61, 5.99,  9.21, 10.60,  13.82,  15.20},
+    {2.37, 4.11, 4.64, 5.32, 6.25, 7.81, 11.34, 12.84,  16.27,  17.73}
 };
 
 void   help( void );
@@ -92,6 +89,7 @@ int    create_genotype_map(CSLocus *, PopMap<CSLocus> *, set<int> &);
 int    apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int    call_population_genotypes(CSLocus *, PopMap<CSLocus> *, map<string, map<string, string> > &);
 int    tally_progeny_haplotypes(CSLocus *, PopMap<CSLocus> *, set<int> &, int &, double &, string &);
+int    map_specific_genotypes(map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &);
 int    translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &);
 int    automated_corrections(map<int, string> &, set<int> &, map<int, CSLocus *> &, vector<vector<CatMatch *> > &, PopMap<CSLocus> *);
 int    check_uncalled_snps(CSLocus *, Locus *, Datum *);
@@ -99,10 +97,10 @@ int    call_alleles(vector<SNP *> &, vector<char *> &, vector<string> &);
 int    check_homozygosity(vector<char *> &, int, char, char, string &);
 int    manual_corrections(string, PopMap<CSLocus> *);
 
-int    correct_markers_missing_alleles(set<int> &, map<int, CSLocus *> &, PopMap<CSLocus> *);
-int    calc_segregation_distortion(map<string, string> &, map<string, map<string, double> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &); 
+int    correct_cp_markers_missing_alleles(set<int> &, map<int, CSLocus *> &, PopMap<CSLocus> *);
+int    calc_segregation_distortion(map<string, map<string, double> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &); 
 double tally_generic_gtypes(int, PopMap<CSLocus> *, set<int> &, map<string, int> &);
-double tally_translated_gtypes(int, PopMap<CSLocus> *, set<int> &, map<string, int> &);
+double tally_translated_gtypes(int, PopMap<CSLocus> *, set<int> &, map<string, string> &, map<string, int> &);
 double chisq_test(map<string, map<string, double> > &, map<string, int> &, string, double);
 double chisq_pvalue(int, double);
 

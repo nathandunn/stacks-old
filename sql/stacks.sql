@@ -2,7 +2,7 @@ create table batches (
        id           int unsigned not null primary key auto_increment,
        date         DATE not null,
        description  tinytext,
-       type	    enum('map', 'population')
+       type         enum('map', 'population')
 );
 
 create table samples (
@@ -219,11 +219,11 @@ create table markers (
        id         int unsigned not null primary key auto_increment,
        batch_id   int unsigned not null,
        catalog_id int unsigned not null,
-       type       enum('aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'),
+       type       enum('aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/a-', '-a/ab', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab', 'ab/c-', '-c/ab'),
        progeny    int unsigned not null default 0,
        max_pct    float,
        ratio      varchar(512),
-       f          float,
+       chisq_pval float,
        geno_map   text
 );
 

@@ -123,6 +123,7 @@ public:
     };
     string annotation;
     string marker;
+    string uncor_marker;
     double f;                 // Inbreeder's coefficient
     map<string, string> gmap; // Observed haplotype to genotype map for this locus.
     int hcnt;                 // Number of progeny containing a haplotype for this locus.
