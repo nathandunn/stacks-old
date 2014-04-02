@@ -1135,7 +1135,7 @@
 					"vStacks/**",
 					/Users/ndunn/hg/stacks/vStacks/vStacks,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
@@ -1158,7 +1158,7 @@
 					"vStacks/**",
 					/Users/ndunn/hg/stacks/vStacks/vStacks,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
@@ -1266,7 +1266,7 @@
 					"vStacks/**",
 					/Users/ndunn/hg/stacks/vStacks/vStacks,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				PRODUCT_NAME = "vStacks-dev copy";
 				PROVISIONING_PROFILE = "";
 				SDKROOT = macosx;
@@ -1289,7 +1289,7 @@
 					"vStacks/**",
 					/Users/ndunn/hg/stacks/vStacks/vStacks,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				PRODUCT_NAME = "vStacks-dev copy";
 				PROVISIONING_PROFILE = "";
 				SDKROOT = macosx;
