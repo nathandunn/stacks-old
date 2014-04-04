@@ -63,8 +63,8 @@ using std::set;
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"
 
-enum map_types {unk, none, gen, dh, cp, bc1, f2};
-enum out_types {rqtl, joinmap, genomic};
+// enum map_types {unk, none, gen, dh, cp, bc1, f2};
+// enum out_types {rqtl, joinmap, genomic};
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
 enum loc_type  {haplotype, snp};
@@ -144,7 +144,9 @@ int  calculate_summary_stats(vector<pair<int, string> > &, map<int, pair<int, in
 int  calculate_haplotype_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int  kernel_smoothed_hapstats(vector<CSLocus *> &, PopSum<CSLocus> *, int, double *);
 int  init_chr_sites(vector<LocSum *> &, int, vector<CSLocus *> &, PopSum<CSLocus> *);
-int  calculate_haplotype_amova(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int      calculate_haplotype_amova(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int      calculate_haplotype_amova_pairwise(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+HapStat *haplotype_amova(map<int, int> &, map<int, pair<int, int> > &, Datum **, LocSum **, vector<int> &);
 int  nuc_substitution_dist(map<string, int> &, double **);
 
 int  write_sql(map<int, CSLocus *> &, PopMap<CSLocus> *);
