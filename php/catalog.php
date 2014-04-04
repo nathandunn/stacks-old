@@ -270,7 +270,7 @@ check_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT catalog_index.tag_id as tag_id, alleles, parents, progeny, valid_progeny, " . 
-    "seq, marker, chisq_pval, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt, " .
+    "seq, marker, uncor_marker, chisq_pval, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt, " .
     "catalog_index.chr, catalog_index.bp, catalog_tags.strand, catalog_index.type, gene, ext_id, ex_start, ex_end, ex_index " .
     "FROM catalog_index " .
     "JOIN catalog_tags ON (catalog_index.cat_id=catalog_tags.id) " . 
@@ -381,8 +381,12 @@ EOQ;
 	"<strong> / </strong> " . 
 	"<acronym title=\"Mappable Progeny\"><span style=\"color: $colors[6]\">$row[valid_progeny]</span></acronym>" . 
 	"<strong> / </strong> " . 
-	"<acronym title=\"Assigned Genotypes\"><span style=\"color: $colors[7]\">$row[geno_cnt]</span></acronym></td>\n" .
-	"  <td>$row[marker]</td>\n";
+	"<acronym title=\"Assigned Genotypes\"><span style=\"color: $colors[7]\">$row[geno_cnt]</span></acronym></td>\n";
+
+      if (strlen($row['uncor_marker']) > 0 && $row['marker'] != $row['uncor_marker'])
+	print "  <td><acronym title=\"Uncorrected marker: $row[uncor_marker]\">$row[marker]*</acronym></td>\n";
+      else
+	print "  <td>$row[marker]</td>\n";
     } else {
       print
 	"  <td>$row[parents]</td>\n";
@@ -737,7 +741,7 @@ function write_map_filter($cols) {
     $ebp_ctl     = generate_element_select("filter_ebp",   range(0, $max_chr_len), $feb, "");
     $ref_ctl     = generate_element_select("filter_ref",  array("exon", "intron", "genomic"), $ref, "");
     $mark_ctl    = generate_element_select("filter_mark", 
-					   array('Any', 'aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', '-a/ab', 'ab/a-', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab', 'ab/c-', '-c/ab'), 
+					   array('Any', 'aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'), 
 					   $fma, "");
 
     if (isset($display['filter_type'])) {

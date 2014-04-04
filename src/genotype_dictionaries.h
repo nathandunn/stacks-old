@@ -99,6 +99,8 @@ load_cp_dictionary(map<string, string> &types,
     types["ab/ab"] = "ab/ab";
     types["ab/ac"] = "ab/ac";
     types["ab/cd"] = "ab/cd";
+    types["-a/bb"] = "ab/--";
+    types["aa/b-"] = "--/ab";
 
     dictionary["ab/--"]["--"] = "--";
     dictionary["ab/--"]["aa"] = "aa";
