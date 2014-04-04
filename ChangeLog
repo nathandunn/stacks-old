@@ -1,5 +1,9 @@
-Stacks 1.18 - Mar 28, 2014
+Stacks 1.18 - Apr 04, 2014
 --------------------------
+	Feature: we now use chi squared segregation ratios to detect missing alleles in parental mapping markers.
+	in F1 crosses (CP map type). We can now map ab/a- and -a/ab as ab/--, and --/ab markers; we can map
+	ab/c- and -c/ab markers as ab/cd markers; we can map aa/b- and -a/bb markers as ab/-- and --/ab markers.
+	Feature: in F1 crosses we are now mapping ab/cc and cc/ab markers as ab/-- and --/ab markers.
 	Feature: reworked genetic map display of web interface. Included chisq p-value from segregation distortion
 	test as a filter.
 	Feature: implemented measure of segregation distortion in genotypes program based on chi square test of
@@ -10,6 +14,7 @@ Stacks 1.18 - Mar 28, 2014
 	from the analysis.
 	Bugfix: changed genotype mappings for generic map types to make certain non-biologically plausible genotype
 	combinations illegal.
+	Bugfix: fixed compilation issues when using Google's SparseHash (thanks to khuck@cs.uoregon.edu for the patch).
 
 Stacks 1.17 - Mar 26, 2014
 --------------------------
