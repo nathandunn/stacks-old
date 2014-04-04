@@ -39,6 +39,7 @@ using std::make_pair;
 
 extern int    progeny_limit;
 extern double minor_allele_freq;
+extern map<int, string> pop_key;
 
 class HapStat {
 public:
@@ -167,6 +168,7 @@ public:
     int      bp;      // Genomic location of this locus (for kernal smoothing).
     double   n;       // Sample size AKA number of chromosomes sampled, or number of individuals times two.
     uint     hap_cnt; // Number of unique haplotypes at this locus. 
+    string   hap_str; // Human-readable string of haplotype counts.
     double   gdiv;    // Gene diversity for this locus.
     double   wgdiv;   // Kernel-smoothed gene diversity.
     double   pi;      // Haplotype frequency for this locus.
@@ -395,7 +397,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	snp_cols.clear();
     }
 
-    cerr << "Population " << population_id << " contained " << incompatible_loci << " incompatible loci.\n";
+    cerr << "Population '" << pop_key[population_id] << "' contained " << incompatible_loci << " incompatible loci.\n";
 
     return 0;
 }

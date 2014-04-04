@@ -65,7 +65,11 @@ using std::pair;
 
 const int barcode_size = 5;
 
+#ifdef HAVE_SPARSEHASH
+typedef sparse_hash_map<const char *, vector<Seq *>, hash_charptr, eqstr> HashMap;
+#else
 typedef unordered_map<const char *, vector<Seq *>, hash_charptr, eqstr> HashMap;
+#endif
 
 void help( void );
 void version( void );
