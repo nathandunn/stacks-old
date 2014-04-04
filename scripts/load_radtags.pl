@@ -179,10 +179,10 @@ if ($catalog) {
 
 if ($stacks_type eq "map") {
     $f = "$in_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($f, "markers", 0);
+    import_sql_file($f, "markers", 1);
 
     $f = "$in_path/batch_" . $batch_id . ".genotypes_1.txt";
-    import_sql_file($f, "catalog_genotypes", 0);
+    import_sql_file($f, "catalog_genotypes", 1);
 
 } elsif ($stacks_type eq "population") {
     $f = "$in_path/batch_" . $batch_id . ".markers.tsv";
@@ -501,7 +501,7 @@ load_radtags.pl -D db -p path -b batch_id [-B -e desc] [-c] [-M pop_map] [-d] [-
     d: perform a dry run. Do not actually load any data, just print what would be executed.
     W: only load file found on this white list.
     U: do not load stacks to unique_tags table to save database space.
-    t: pipeline type (either 'map' or 'population'), load_radtags.pl will guess based on the presence/absence of progeny file types.
+    t: pipeline type (either 'map' or 'population'), load_radtags.pl will guess based on the number or indiviuduals used to build the catalog.
     h: display this help message.
 
 EOQ
