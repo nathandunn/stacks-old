@@ -62,9 +62,8 @@ using std::set;
 #include "catalog_utils.h"
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"
+#include "smoothing.h"
 
-// enum map_types {unk, none, gen, dh, cp, bc1, f2};
-// enum out_types {rqtl, joinmap, genomic};
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
 enum loc_type  {haplotype, snp};
@@ -90,7 +89,7 @@ public:
 };
 
 //
-// Bootstrap resamplign structure.
+// Bootstrap resampling structure.
 //
 class GenPos {
 public:
@@ -127,7 +126,6 @@ int     tally_haplotype_freq(CSLocus *, PopMap<CSLocus> *, int &, double &, stri
 int     translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &);
 int     correct_fst_bonferroni_win(vector<PopPair *> &);
 int     init_chr_loci(map<string, vector<HapStat *> > &, string, map<uint, uint> &, vector<CSLocus *> &);
-int     kernel_smoothed_phist(vector<HapStat *> &, double *);
 int     init_chr_pairs(map<string, vector<PopPair *> > &, string, map<uint, uint> &, vector<CSLocus *> &);
 int     kernel_smoothed_fst(vector<PopPair *> &, double *, int *);
 int     bootstrap_fst(vector<double> &, vector<PopPair *> &, double *);
