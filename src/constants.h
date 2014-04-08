@@ -29,6 +29,11 @@
 #endif
 
 //
+//
+//
+const unsigned int fieldw = 4;
+
+//
 // Maximum line length for parsing input files.
 //
 const int max_len = 1024;

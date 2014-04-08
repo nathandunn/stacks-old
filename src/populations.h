@@ -43,6 +43,8 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
+#include <iomanip>
+using std::setw;
 #include <sstream>
 using std::stringstream;
 #include <vector>
@@ -62,11 +64,11 @@ using std::set;
 #include "catalog_utils.h"
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"
+#include "ordered.h"
 #include "smoothing.h"
 
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
-enum loc_type  {haplotype, snp};
 
 const int max_snp_dist = 500;
 
