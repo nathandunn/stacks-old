@@ -749,7 +749,7 @@ correct_cp_markers_missing_alleles(set<int> &parent_ids, map<int, CSLocus *> &ca
 		    strcpy(d[i]->gtype, "ab");
 	    }
 
-	} else if (loc->marker == "ab/c-" || loc->marker == "-c/ab") {
+	} else if (loc->marker == "ab/c-") {
 
 	    for (int i = 0; i < pmap->sample_cnt(); i++) {
 		if (d[i] == NULL) continue;
@@ -760,6 +760,23 @@ correct_cp_markers_missing_alleles(set<int> &parent_ids, map<int, CSLocus *> &ca
 		    strcpy(d[i]->gtype, "bd");
 		else if (strcmp(d[i]->gtype, "aa") == 0)
 		    strcpy(d[i]->gtype, "ad");
+	    }
+
+	} else if (loc->marker == "-c/ab") {
+
+	    for (int i = 0; i < pmap->sample_cnt(); i++) {
+		if (d[i] == NULL) continue;
+
+		if (parent_ids.count(pmap->rev_sample_index(i))) continue;
+
+		if (strcmp(d[i]->gtype, "bb") == 0)
+		    strcpy(d[i]->gtype, "ad");
+		else if (strcmp(d[i]->gtype, "aa") == 0)
+		    strcpy(d[i]->gtype, "ac");
+		else if (strcmp(d[i]->gtype, "bc") == 0)
+		    strcpy(d[i]->gtype, "bd");
+		else if (strcmp(d[i]->gtype, "ac") == 0)
+		    strcpy(d[i]->gtype, "bc");
 	    }
 	}
     }

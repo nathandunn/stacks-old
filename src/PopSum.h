@@ -47,6 +47,7 @@ public:
     int    loc_id;
     int    bp;
     double alleles;    // Number of alleles sampled at this location.
+    uint   snp_cnt;    // Number of SNPs in kernel-smoothed window centered on this SNP.
     double stat[PopStatSize];
     double smoothed[PopStatSize];
     double bs[PopStatSize];
@@ -55,6 +56,7 @@ public:
 	this->loc_id  = 0;
 	this->bp      = 0;
 	this->alleles = 0.0;
+	this->snp_cnt = 0;
 
 	memset(this->stat, 0, PopStatSize);
 	memset(this->smoothed, 0, PopStatSize);
@@ -80,14 +82,11 @@ public:
     }
 };
 
-class PopPair {
-    // PopStat[0]: corrected fst
-    // PopStat[1]: corrected amova fst
+class PopPair: public PopStat {
+    // PopStat[0]: corrected Fst, (by p-value or Bonferroni p-value).
+    // PopStat[1]: corrected AMOVA Fst
 public:
-    int    loc_id;
-    int    bp;
     int    col;
-    double alleles;    // Number of alleles sampled at this location.
     double pi;
     double fst;
     double fet_p;      // Fisher's Exact Test p-value.
@@ -96,33 +95,21 @@ public:
     double lod;        // base 10 logarithm of odds score.
     double ci_low;     // Fisher's exact test lower confidence interval.
     double ci_high;    // Fisher's exact test higher confidence interval.
-    double cfst;       // Corrected Fst (by p-value or Bonferroni p-value).
-    double wfst;       // Weigted Fst (kernel-smoothed)
     double wfst_pval;  // p-value of weighted Fst from bootstrapping.
     double amova_fst;  // AMOVA Fst method, from Weir, Genetic Data Analysis II .
-    double camova_fst; // Corrected AMOVA Fst value.
-    double wamova_fst; // Kernel-smoothed AMOVA Fst value.
-    int    snp_cnt;    // Number of SNPs in kernel-smoothed window centered on this SNP.
 
     PopPair() { 
-	loc_id     = 0;
-	bp         = 0;
-	col        = 0;
-	alleles    = 0.0;
-	pi         = 0.0;
-	fst        = 0.0;
-	cfst       = 0.0;
-	wfst       = 0.0;
-	fet_p      = 0.0;
-	fet_or     = 0.0;
-	lod        = 0.0;
-	ci_low     = 0.0;
-	ci_high    = 0.0;
-	wfst_pval  = 0.0;
-	amova_fst  = 0.0;
-	camova_fst = 0.0;
-	wamova_fst = 0.0;
-	snp_cnt    = 0;
+	col       = 0;
+	pi        = 0.0;
+	fst       = 0.0;
+	fet_p     = 0.0;
+	fet_or    = 0.0;
+	or_se     = 0.0;
+	lod       = 0.0;
+	ci_low    = 0.0;
+	ci_high   = 0.0;
+	wfst_pval = 0.0;
+	amova_fst = 0.0;
     }
 };
 

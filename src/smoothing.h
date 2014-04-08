@@ -164,15 +164,10 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
 		for (uint i = 0; i < this->size; i++)
 		    c->smoothed[i] += p->stat[i] * final_weight;
 		sum += final_weight;
-
-		// cerr << "   final_weight: " << final_weight << "; weighted_phist: " << weighted_phist << "; sum: " << sum << "\n";
 	    }
 
 	    for (uint i = 0; i < this->size; i++)
 		c->smoothed[i] /= sum;
-
-	    // cerr << "   wphi_st: " << c->wphi_st << "\n";
-	    // break;
 	}
     }
 
