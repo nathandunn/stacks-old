@@ -76,9 +76,13 @@
 
     NSOpenPanel *importPanel = [NSOpenPanel openPanel];
     [importPanel setAllowsMultipleSelection:NO];
+    
     [importPanel setCanChooseDirectories:YES];
     [importPanel setCanChooseFiles:NO];
+    
     [importPanel setFloatingPanel:YES];
+    
+
 //    [importPanel setTreatsFilePackagesAsDirectories:NO];
     NSSize minSize;
     minSize.height = 600;
@@ -96,7 +100,17 @@
         NSString *importPath = [importPanel.directoryURL.path stringByAppendingString:@"/"];
         NSLog(@"import path %@", importPath);
         NSString *importPathName = importPanel.directoryURL.lastPathComponent;
+        
+        
         NSLog(@"import path name %@", importPathName);
+
+        NSFileManager *fileManager = [NSFileManager defaultManager] ;
+        NSArray *files = [fileManager contentsOfDirectoryAtPath:importPath error:nil];
+        NSLog(@"# of files %ld",files.count);
+        for(id file in files){
+           NSLog(@"file %@",file) ;
+        }
+//        [fileManager dir
 
 
         // now we open the save panel for our stacks file.
