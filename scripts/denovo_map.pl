@@ -545,8 +545,8 @@ sub import_gzsql_file {
     my $named_pipe = mktemp($tmpdir . "/denovo_map_XXXXXX");
     if ($sql == 1 && $dry_run == 0) {
 	mkfifo($named_pipe, 0700) || die("Unable to create named pipe for loading gzipped data: $named_pipe, $!");
+	print $log_fh "Streaming $file into named pipe $named_pipe.\n";
     }
-    print $log_fh "Streaming $file into named pipe $named_pipe.\n";
 
     #
     # Dump our gzipped data onto the named pipe.
@@ -704,12 +704,12 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-T num_threads] [-M type] [-O popmap] [-B db -b batch_id -D "desc"] [-S -i num] [-e path] [-d] [-h]
+denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches] [-n mismatches] [-T num_threads] [-A type] [-O popmap] [-B db -b batch_id -D "desc"] [-S -i num] [-e path] [-d] [-h]
     p: path to a FASTQ/FASTA file containing parent sequences from a mapping cross.
     r: path to a FASTQ/FASTA file containing progeny sequences from a mapping cross.
     s: path to a FASTQ/FASTA file containing an individual sample from a population.
     o: path to write pipeline output files.
-    M: if processing a genetic map, specify the cross type, 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
+    A: if processing a genetic map, specify the cross type, 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
     O: if analyzing one or more populations, specify a pOpulation map.
     T: specify the number of threads to execute.
     e: executable path, location of pipeline programs.

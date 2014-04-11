@@ -40,35 +40,42 @@ enum loc_type {haplotype, snp};
 
 template<class StatT>
 class Ordered {
-    ofstream        log_fh;
-    loc_type        type;
-    map<uint, uint> sites_key;
-
 public:
+    ofstream        *log_fh;
+    loc_type         type;
+    PopSum<CSLocus> *psum;
+
+    int incompatible_loci;
+    int multiple_loci;
+
     Ordered(loc_type type)  { 
-	this->type   = type;
+	this->type = type;
     }
     virtual ~Ordered() { 
     }
 
-    int init_sites(vector<StatT> &, int, vector<CSLocus *> &, PopSum<CSLocus> *);
-    int init_haplotypes(vector<StatT> &, int, vector<CSLocus *> &, PopSum<CSLocus> *);
+    int init_sites(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &, int);
+    int init_sites(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &, int, int);
+    int init_haplotypes(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &);
 };
 
 template<class StatT>
 int 
-Ordered<StatT>::init_sites(vector<StatT> &sites, int pop_id, 
-			   vector<CSLocus *> &sorted_loci, PopSum<CSLocus> *psum) 
+Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci, int pop_id)
 {
     CSLocus *loc;
     LocSum  *lsum;
     int      len;
     set<int> bps;
 
+    //
+    // We need to create an array to store all the summary statistics for smoothing. We must
+    // account for positions in the genome that are covered by more than one RAD tag.
+    //
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
 	loc  = sorted_loci[pos];
 	len  = strlen(loc->con);
-	lsum = psum->pop(loc->id, pop_id);
+	lsum = this->psum->pop(loc->id, pop_id);
 
 	for (int k = 0; k < len; k++) {
 	    if (lsum->nucs[k].num_indv > 0)
@@ -84,7 +91,7 @@ Ordered<StatT>::init_sites(vector<StatT> &sites, int pop_id,
     set<int>::iterator it;
     int i = 0;
     for (it = bps.begin(); it != bps.end(); it++) {
-	this->sites_key[*it] = i;
+	sites_key[*it] = i;
 	i++;
     }
 
@@ -93,20 +100,28 @@ Ordered<StatT>::init_sites(vector<StatT> &sites, int pop_id,
 
 template<class StatT>
 int 
-Ordered<StatT>::init_haplotypes(vector<StatT> &sites, int pop_id, 
-				vector<CSLocus *> &sorted_loci, PopSum<CSLocus> *psum) 
+Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci, int pop_id_1, int pop_id_2)
 {
     CSLocus *loc;
-    LocSum  *lsum;
+    LocSum  *lsum_1, *lsum_2;
+    int      len;
     set<int> bps;
 
+    //
+    // We need to create an array to store all the pair values for computing smoothed Fst. We must
+    // account for positions in the genome that are covered by more than one RAD tag.
+    //
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
-	loc      = sorted_loci[pos];
-	lsum     = psum->pop(loc->id, pop_id);
-	lsum->bp = loc->sort_bp();
+	loc    = sorted_loci[pos];
+	len    = strlen(loc->con);
+	lsum_1 = this->psum->pop(loc->id, pop_id_1);
+	lsum_2 = this->psum->pop(loc->id, pop_id_2);
 
-	if (lsum->alleles > 0) 
-	    bps.insert(lsum->bp);
+	for (int k = 0; k < len; k++) {
+	    if (lsum_1->nucs[k].num_indv > 0 &&
+		lsum_2->nucs[k].num_indv > 0)
+		bps.insert(lsum_1->nucs[k].bp);
+	}
     }
 
     sites.resize(bps.size(), NULL);
@@ -117,7 +132,37 @@ Ordered<StatT>::init_haplotypes(vector<StatT> &sites, int pop_id,
     set<int>::iterator it;
     int i = 0;
     for (it = bps.begin(); it != bps.end(); it++) {
-	this->sites_key[*it] = i;
+	sites_key[*it] = i;
+	i++;
+    }
+
+    return 0;
+}
+
+template<class StatT>
+int 
+Ordered<StatT>::init_haplotypes(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci) 
+{
+    CSLocus *loc;
+    int      bp;
+    set<int> bps;
+
+    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
+	loc = sorted_loci[pos];
+	bp  = loc->sort_bp();
+
+	bps.insert(bp);
+    }
+
+    sites.resize(bps.size(), NULL);
+
+    //
+    // Create a key describing where in the sites array to find each basepair coordinate.
+    //
+    set<int>::iterator it;
+    int i = 0;
+    for (it = bps.begin(); it != bps.end(); it++) {
+	sites_key[*it] = i;
 	i++;
     }
 
@@ -129,16 +174,161 @@ class OHaplotypes: public Ordered<StatT> {
 public:
     OHaplotypes(loc_type type): Ordered<StatT>(type) { }
 
-    int init_sites(vector<StatT> &);
-    int init_haplotypes(vector<StatT> &);
-    int order(vector<StatT> &, int, vector<CSLocus *> &, PopSum<CSLocus> *);
+    int order(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &);
 };
 
 template<class StatT>
 int 
-OHaplotypes<StatT>::order(vector<StatT> &sites, int pop_id, 
-			  vector<CSLocus *> &sorted_loci, PopSum<CSLocus> *psum) 
+OHaplotypes<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci) 
 {
+    this->init_haplotypes(sites, sites_key, sorted_loci);
+
+    return 0;
+};
+
+template<class StatT>
+class OPopPair: public Ordered<StatT> {
+public:
+    OPopPair(loc_type type, PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>(type) { 
+	this->log_fh = &log_fh;
+	this->psum   = psum;
+    }
+
+    int order(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &, int, int);
+};
+
+template<class StatT>
+int 
+OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci, int pop_1, int pop_2) 
+{
+    CSLocus *loc;
+    StatT   *pair;
+    int      len;
+
+    this->incompatible_loci = 0;
+    this->multiple_loci     = 0;
+
+    this->init_sites(sites, sites_key, sorted_loci, pop_1, pop_2);
+
+    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
+	loc = sorted_loci[pos];
+	len = strlen(loc->con);
+
+	for (int k = 0; k < len; k++) {
+
+	    pair = this->psum->Fst(loc->id, pop_1, pop_2, k);
+
+	    //
+	    // Locus is incompatible, log this position.
+	    //
+	    if (pair == NULL) {
+		this->incompatible_loci++;
+		*(this->log_fh) << "between_population\t"
+				<< "incompatible_locus\t"
+				<< loc->id << "\t"
+				<< loc->loc.chr << "\t"
+				<< loc->sort_bp(k) << "\t"
+				<< k << "\t" 
+				<< pop_1 << "\t" 
+				<< pop_2 << "\n";
+		delete pair;
+		continue;
+	    }
+
+	    pair->loc_id = loc->id;
+	    pair->bp     = loc->sort_bp(k);
+	    pair->col    = k;
+
+	    //
+	    // Locus is fixed in both populations, or was only found in one population.
+	    //
+	    if (pair->pi == 0) {
+		delete pair;
+		continue;
+	    }
+
+	    //
+	    // Check if this basepair position is already covered by a RAD site.
+	    //
+	    if (sites[sites_key[pair->bp]] != NULL) {
+		this->multiple_loci++;
+		*(this->log_fh) << "between_population\t"
+				<< "multiple_locus\t"
+				<< loc->id << "\t"
+				<< loc->loc.chr << "\t"
+				<< pair->bp << "\t"
+				<< k << "\t" 
+				<< pop_key[pop_1] << "\t" 
+				<< pop_key[pop_2] << "\n";
+		delete pair;
+		continue;
+	    }
+
+	    sites[sites_key[pair->bp]] = pair;
+	}
+    }
+
+    return 0;
+};
+
+template<class StatT>
+class OSumStat: public Ordered<StatT> {
+public:
+    OSumStat(loc_type type, PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>(type) { 
+	this->log_fh = &log_fh;
+	this->psum   = psum;
+    }
+
+    int order(vector<StatT *> &, vector<CSLocus *> &, int);
+};
+
+template<class StatT>
+int 
+OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, int pop_id) 
+{
+    this->incompatible_loci = 0;
+    this->multiple_loci     = 0;
+
+    map<uint, uint> sites_key;
+
+    this->init_sites(sites, sites_key, sorted_loci, pop_id);
+
+    CSLocus *loc;
+    LocSum  *lsum;
+    int      len;
+
+    //
+    // Assign nucleotides to their proper, ordered location in the genome, 
+    // checking that a site hasn't already been covered by another RAD locus.
+    //
+    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
+	loc  = sorted_loci[pos];
+	len  = strlen(loc->con);
+	lsum = this->psum->pop(loc->id, pop_id);
+
+	for (int k = 0; k < len; k++) {
+	    if (lsum->nucs[k].num_indv == 0) continue;
+
+	    if (sites_key.count(lsum->nucs[k].bp) == 0) {
+		cerr << "Error: locus " << lsum->nucs[k].loc_id << " at " << lsum->nucs[k].bp << "bp is not defined in the sites map.\n";
+
+	    } else if (sites[sites_key[lsum->nucs[k].bp]] == NULL) {
+		sites[sites_key[lsum->nucs[k].bp]] = &(lsum->nucs[k]);
+
+	    } else {
+		this->multiple_loci++;
+		*(this->log_fh) << "within_population\t"
+				<< "multiple_locus\t"
+				<< loc->id << "\t"
+				<< loc->loc.chr << "\t"
+				<< lsum->nucs[k].bp << "\t"
+				<< k << "\t" 
+				<< pop_id << "\t"
+				<< "conflicts with locus " << sites[sites_key[lsum->nucs[k].bp]]->loc_id << "\n";
+	    }
+	}
+    }
+
     return 0;
 };
 
