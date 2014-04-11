@@ -160,11 +160,22 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
 		    continue;
 		}
 
+		// sites_cnt++;
+
 		final_weight = (p->alleles - 1) * this->weights[dist];
 		for (uint i = 0; i < this->size; i++)
 		    c->smoothed[i] += p->stat[i] * final_weight;
 		sum += final_weight;
 	    }
+
+	    // sites_per_snp += (sites_cnt / snp_cnt);
+	    // tot_windows++;
+	    //
+	    // if (snp_cnt < max_snp_dist) {
+	    //     #pragma omp atomic
+	    //     snp_dist[snp_cnt]++;
+	    // }
+	    // c->snp_cnt = snp_cnt;
 
 	    for (uint i = 0; i < this->size; i++)
 		c->smoothed[i] /= sum;

@@ -522,8 +522,8 @@ sub import_gzsql_file {
     my $named_pipe = mktemp($tmpdir . "/denovo_map_XXXXXX");
     if ($sql == 1 && $dry_run == 0) {
 	mkfifo($named_pipe, 0700) || die("Unable to create named pipe for loading gzipped data: $named_pipe, $!");
+	print $log_fh "Streaming $file into named pipe $named_pipe.\n";
     }
-    print $log_fh "Streaming $file into named pipe $named_pipe.\n";
 
     #
     # Dump our gzipped data onto the named pipe.
