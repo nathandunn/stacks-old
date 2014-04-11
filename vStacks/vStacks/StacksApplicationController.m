@@ -57,7 +57,7 @@
 
 - (IBAction)importDocument:(id)sender {
 
-    NSLog(@"Importing Doucment");
+    NSLog(@"Importing Document");
 
 //    NSDate *now = [NSDate date];
 //    // get year and month
@@ -79,6 +79,7 @@
     [importPanel setCanChooseDirectories:YES];
     [importPanel setCanChooseFiles:NO];
     [importPanel setFloatingPanel:YES];
+//    [importPanel setTreatsFilePackagesAsDirectories:NO];
     NSSize minSize;
     minSize.height = 600;
     minSize.width = 500;
@@ -86,6 +87,9 @@
 
     [importPanel setMinSize:minSize];
     NSInteger result = [importPanel runModal];
+    NSLog(@"import result %ld",result);
+    
+    
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if (result == NSOKButton) {
