@@ -27,7 +27,7 @@ extern double sigma;
 
 template<class StatT=PopStat>
 class KSmooth {
-    int     size;    // Number of elements expected in the StatT class to smooth.
+    uint    size;    // Number of elements expected in the StatT class to smooth.
     double *weights; // Weight matrix to apply while smoothing.
 
     int calc_weights();
@@ -166,6 +166,13 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
 		for (uint i = 0; i < this->size; i++)
 		    c->smoothed[i] += p->stat[i] * final_weight;
 		sum += final_weight;
+
+		// cerr << "    dist: " << dist 
+		//      << "; weight: " << weights[dist] 
+		//      << "; final_weight: " << final_weight 
+		//      << "; pi: " << p->stat[0] 
+		//      << "; sum: " << sum 
+		//      << "; smoothed: " << c->smoothed[0] << "\n";
 	    }
 
 	    // sites_per_snp += (sites_cnt / snp_cnt);

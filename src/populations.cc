@@ -280,9 +280,7 @@ int main (int argc, char* argv[]) {
     	psum->add_population(catalog, pmap, pop_id, start_index, end_index, log_fh);
 
 	if (kernel_smoothed && loci_ordered) {
-	    cerr << "  Generating kernel-smoothed population statistics";
-	    if (bootstrap) cerr << " and bootstrap resampling";
-	    cerr << "...\n";
+	    cerr << "  Generating kernel-smoothed population statistics...\n";
 	    kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
 	}
     }
@@ -886,7 +884,6 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
     //
     // Iterate over the members of each population.
     //
-    int pop_cnt = pop_indexes.size();
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
 	start     = pit->second.first;
 	end       = pit->second.second;
@@ -2563,7 +2560,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
 	    map<string, vector<CSLocus *> >::iterator it;
 	    map<string, vector<PopPair *> > genome_pairs;
-	    int snp_dist[max_snp_dist] = {0};
+	    // int snp_dist[max_snp_dist] = {0};
 
 	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 		string chr = it->first;
@@ -2820,14 +2817,10 @@ correct_fst_bonferroni_win(vector<PopPair *> &pairs)
 int 
 kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, int pop_id, ofstream &log_fh) 
 {
+    // int snp_dist[max_snp_dist] = {0};
+    // int sites_per_snp = 0;
+    // int tot_windows = 0;
     map<string, vector<CSLocus *> >::iterator it;
-    CSLocus *loc;
-    LocSum  *lsum;
-    int      len;
-
-    int snp_dist[max_snp_dist] = {0};
-    int sites_per_snp = 0;
-    int tot_windows = 0;
     map<string, vector<SumStat *> > genome_pairs;
 
     //
@@ -2837,20 +2830,20 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
     OSumStat<SumStat>  *ord = new OSumStat<SumStat>(psum, log_fh);
     Bootstrap<SumStat> *bs;
 
-    if (bootstrap)
+    if (bootstrap_pifis)
 	bs = new Bootstrap<SumStat>(2);
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	vector<SumStat *> &sites = genome_pairs[it->first];
 
 	ord->order(sites, it->second, pop_id);
-	if (bootstrap) bs->add_data(sites);
+	if (bootstrap_pifis) bs->add_data(sites);
     }
 
-    cerr << "Population '" << pop_key[pop_id] << "' contained " << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
+    cerr << "    Population '" << pop_key[pop_id] << "' contained " << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-	if (bootstrap)
+	if (bootstrap_pifis)
 	    cerr << "    Smoothing and bootstrapping chromosome " << it->first << "\n";
 	else
 	    cerr << "    Smoothing chromosome " << it->first << "\n";
@@ -2859,16 +2852,13 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 
 	ks->smooth(sites);
 
-	if (bootstrap && bootstrap_type == bs_exact)
+	if (bootstrap_pifis && bootstrap_type == bs_exact)
 	    bs->execute(sites);
-
-	for (uint i = 0; i < sites.size(); i++)
-	    delete sites[i];
     }
 
     delete ks;
     delete ord;
-    if (bootstrap) delete bs;
+    if (bootstrap_pifis) delete bs;
 
 //     //
 //     // If bootstrap resampling method is approximate, generate our single, empirical distribution.
@@ -5891,7 +5881,7 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'k':
 	    kernel_smoothed = true;
 	    break;
-	case 'l':
+ 	case 'l':
 	    log_fst_comp = true;
 	    break;
 	case '1':
@@ -5910,9 +5900,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    bootstrap_pifis = true;
 	    break;
 	case 'O':
-	    if (strcmp(optarg, "exact") == 0)
+	    if (strcasecmp(optarg, "exact") == 0)
 		bootstrap_type = bs_exact;
-	    else if (strcmp(optarg, "approx") == 0)
+	    else if (strcasecmp(optarg, "approx") == 0)
 		bootstrap_type = bs_approx;
 	    else {
 		cerr << "Unknown bootstrap type specified '" << optarg << "'\n";
@@ -5987,11 +5977,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    minor_allele_freq = atof(optarg);
 	    break;
 	case 'f':
-	    if (strcmp(optarg, "p_value") == 0)
+	    if (strcasecmp(optarg, "p_value") == 0)
 		fst_correction = p_value;
-	    else if (strcmp(optarg, "bonferroni_win") == 0)
+	    else if (strcasecmp(optarg, "bonferroni_win") == 0)
 		fst_correction = bonferroni_win;
-	    else if (strcmp(optarg, "bonferroni_gen") == 0)
+	    else if (strcasecmp(optarg, "bonferroni_gen") == 0)
 		fst_correction = bonferroni_gen;
 	    else {
 		cerr << "Unknown Fst correction specified '" << optarg << "'\n";
