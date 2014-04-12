@@ -59,10 +59,10 @@ public:
 	this->alleles = 0.0;
 	this->snp_cnt = 0;
 
-	memset(this->stat, 0, PopStatSize);
+	memset(this->stat,     0, PopStatSize);
 	memset(this->smoothed, 0, PopStatSize);
-	memset(this->bs, 0, PopStatSize);
-    }
+	memset(this->bs,       0, PopStatSize);
+     }
     virtual ~PopStat() {
     }
 };
@@ -109,7 +109,6 @@ public:
     double  lod;        // base 10 logarithm of odds score.
     double  ci_low;     // Fisher's exact test lower confidence interval.
     double  ci_high;    // Fisher's exact test higher confidence interval.
-    double  wfst_pval;  // p-value of weighted Fst from bootstrapping.
     double  amova_fst;  // AMOVA Fst method, from Weir, Genetic Data Analysis II .
     double *comp;
 
@@ -123,7 +122,6 @@ public:
 	lod       = 0.0;
 	ci_low    = 0.0;
 	ci_high   = 0.0;
-	wfst_pval = 0.0;
 	amova_fst = 0.0;
 	comp      = NULL;
     }
@@ -149,8 +147,6 @@ public:
     double  obs_hom;
     double  exp_het;
     double  exp_hom;
-    double  wPi_pval;
-    double  wFis_pval;
     double *pi;
 
     SumStat() {
@@ -164,8 +160,6 @@ public:
 	obs_hom   = 0.0;
 	exp_het   = 0.0;
 	exp_hom   = 0.0;
-	wPi_pval  = 0.0;
-	wFis_pval = 0.0;
 	snp_cnt   = 0;
 	incompatible_site = false;
 	filtered_site     = false;

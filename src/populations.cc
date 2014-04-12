@@ -45,7 +45,10 @@ double    sample_limit      = 0;
 int       progeny_limit     = 0;
 int       population_limit  = 1;
 bool      bootstrap         = false;
-bs_type   bootstrap_type    = bs_none;
+bool      bootstrap_fst     = false;
+bool      bootstrap_pifis   = false;
+bool      bootstrap_phist   = false;
+bs_type   bootstrap_type    = bs_exact;
 int       bootstrap_reps    = 100;
 bool      bootstrap_wl      = false;
 bool      corrections       = false;
@@ -834,7 +837,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
     OHaplotypes<LocStat> *ord;
     if (kernel_smoothed && loci_ordered) {
 	ks  = new KSmooth<LocStat>(2);
-	ord = new OHaplotypes<LocStat>(haplotype);
+	ord = new OHaplotypes<LocStat>();
     }
 
     //
@@ -1026,7 +1029,7 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
     OHaplotypes<HapStat> *ord;
     if (kernel_smoothed && loci_ordered) {
 	ks  = new KSmooth<HapStat>(3);
-	ord = new OHaplotypes<HapStat>(haplotype);
+	ord = new OHaplotypes<HapStat>();
     }
 
     map<string, vector<HapStat *> > genome_hapstats;
@@ -1235,7 +1238,7 @@ calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files,
     OHaplotypes<HapStat> *ord;
     if (kernel_smoothed && loci_ordered) {
 	ks  = new KSmooth<HapStat>(3);
-	ord = new OHaplotypes<HapStat>(haplotype);
+	ord = new OHaplotypes<HapStat>();
     }
 
     for (uint i = 0; i < pop_ids.size(); i++) {
@@ -2195,11 +2198,11 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 			   << s[j]->nucs[i].exp_het   << "\t"
 			   << s[j]->nucs[i].exp_hom   << "\t"
 			   << s[j]->nucs[i].stat[0]   << "\t" // Pi
-			   << setw(fieldw) << s[j]->nucs[i].smoothed[0] << "\t" // Smoothed Pi
-			   << s[j]->nucs[i].wPi_pval  << "\t"
-			   << setw(fieldw) << s[j]->nucs[i].stat[1]     << "\t" // Fis
-			   << setw(fieldw) << s[j]->nucs[i].smoothed[1] << "\t" // Smoothed Fis
-			   << s[j]->nucs[i].wFis_pval << "\t";
+			   << setw(fieldw) << s[j]->nucs[i].smoothed[0] << "\t"  // Smoothed Pi
+			   << setw(fieldw) << s[j]->nucs[i].bs[0]       << "\t"  // Pi bootstrapped p-value
+			   << setw(fieldw) << s[j]->nucs[i].stat[1]     << "\t"  // Fis
+			   << setw(fieldw) << s[j]->nucs[i].smoothed[1] << "\t"  // Smoothed Fis
+			   << setw(fieldw) << s[j]->nucs[i].bs[1]       << "\t"; // Fis bootstrapped p-value.
 			(t->nucs[i].priv_allele == j) ? fh << "1\n" : fh << "0\n";
 
 			//
@@ -2478,8 +2481,12 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     OPopPair<PopPair> *ord;
     if (kernel_smoothed && loci_ordered) {
 	ks  = new KSmooth<PopPair>(2);
-	ord = new OPopPair<PopPair>(snp, psum, log_fh);
+	ord = new OPopPair<PopPair>(psum, log_fh);
     }
+
+    Bootstrap<PopPair> *bs;
+    if (bootstrap)
+	bs = new Bootstrap<PopPair>(2);
 
     for (uint i = 0; i < pops.size(); i++) {
 
@@ -2555,11 +2562,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    }
 
 	    map<string, vector<CSLocus *> >::iterator it;
-
 	    map<string, vector<PopPair *> > genome_pairs;
-	    vector<double> fst_samples;
-	    vector<int>    allele_depth_samples;
-	    int            snp_dist[max_snp_dist] = {0};
+	    int snp_dist[max_snp_dist] = {0};
 
 	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 		string chr = it->first;
@@ -2611,12 +2615,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		// If bootstrapping is enabled, record all Fst values.
 		//
 		if (bootstrap)
-		    for (uint i = 0; i < pairs.size(); i++) {
-			if (pairs[i] != NULL) {
-			    fst_samples.push_back(pairs[i]->stat[1]);
-			    allele_depth_samples.push_back(pairs[i]->alleles);
-			}
-		    }
+		    bs->add_data(pairs);
 
 		//
 		// Calculate kernel-smoothed Fst values.
@@ -2643,7 +2642,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		//
 		if (bootstrap && bootstrap_type == bs_exact) {
 		    cerr << "  Bootstrap resampling kernel-smoothed Fst for " << it->first << ".\n";
-		    // bootstrap_fst(fst_samples, pairs, weights);
+		    bs->execute(pairs);
 		}
 
 		for (uint i = 0; i < pairs.size(); i++) {
@@ -2654,8 +2653,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    //
 		    // Calculate Fst P-value from approximate distribution.
 		    //
-		    if (bootstrap && bootstrap_type == bs_approx)
-			pairs[i]->wfst_pval = bootstrap_approximate_pval(pairs[i]->snp_cnt, pairs[i]->stat[0], approx_fst_dist);
+		    // if (bootstrap && bootstrap_type == bs_approx)
+		    //     pairs[i]->bs[0] = bootstrap_approximate_pval(pairs[i]->snp_cnt, pairs[i]->stat[0], approx_fst_dist);
 
 		    cnt++;
 		    sum += pairs[i]->stat[1]; // Corrected AMOVA Fst
@@ -2679,7 +2678,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		       << setw(fieldw) << pairs[i]->amova_fst   << "\t"
 		       << setw(fieldw) << pairs[i]->stat[1]     << "\t"
 		       << setw(fieldw) << pairs[i]->smoothed[1] << "\t"
-		       << pairs[i]->wfst_pval << "\t"
+		       << setw(fieldw) << pairs[i]->bs[1] << "\t"
 		       << pairs[i]->snp_cnt;
 
 		    if (log_fst_comp) {
@@ -2757,8 +2756,12 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
     fh.close();
 
-    if (kernel_smoothed && loci_ordered)
+    if (kernel_smoothed && loci_ordered) {
 	delete ks;
+	delete ord;
+    }
+    if (bootstrap)
+	delete bs;
 
     return 0;
 }
@@ -2822,55 +2825,50 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
     LocSum  *lsum;
     int      len;
 
-    vector<double> pi_samples;
-    vector<double> fis_samples;
-    vector<int>    allele_depth_samples;
-    int            snp_dist[max_snp_dist] = {0};
-    int            sites_per_snp = 0;
-    int            tot_windows = 0;
-    
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-
-	for (uint pos = 0; pos < it->second.size(); pos++) {
-	    loc  = it->second[pos];
-	    len  = strlen(loc->con);
-	    lsum = psum->pop(loc->id, pop_id);
-
-	    for (int k = 0; k < len; k++)
-		if (lsum->nucs[k].num_indv > 0 && bootstrap && lsum->nucs[k].pi > 0) {
-		    fis_samples.push_back(lsum->nucs[k].stat[1]);
-		    pi_samples.push_back(lsum->nucs[k].stat[0]);
-		    allele_depth_samples.push_back(lsum->nucs[k].num_indv * 2);
-		}
-	}
-    }
+    int snp_dist[max_snp_dist] = {0};
+    int sites_per_snp = 0;
+    int tot_windows = 0;
+    map<string, vector<SumStat *> > genome_pairs;
 
     //
     // Instantiate the kernel smoothing object if requested.
     //
-    KSmooth<SumStat>  *ks  = new KSmooth<SumStat>(2);
-    OSumStat<SumStat> *ord = new OSumStat<SumStat>(snp, psum, log_fh);
+    KSmooth<SumStat>   *ks  = new KSmooth<SumStat>(2);
+    OSumStat<SumStat>  *ord = new OSumStat<SumStat>(psum, log_fh);
+    Bootstrap<SumStat> *bs;
+
+    if (bootstrap)
+	bs = new Bootstrap<SumStat>(2);
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-
-	vector<SumStat *> sites;
-
-	cerr << "    Processing chromosome " << it->first << "\n";
+	vector<SumStat *> &sites = genome_pairs[it->first];
 
 	ord->order(sites, it->second, pop_id);
+	if (bootstrap) bs->add_data(sites);
+    }
+
+    cerr << "Population '" << pop_key[pop_id] << "' contained " << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	if (bootstrap)
+	    cerr << "    Smoothing and bootstrapping chromosome " << it->first << "\n";
+	else
+	    cerr << "    Smoothing chromosome " << it->first << "\n";
+
+	vector<SumStat *> &sites = genome_pairs[it->first];
+
 	ks->smooth(sites);
 
-	// if (bootstrap && bootstrap_type == bs_exact) {
-	//     if (bootstrap_wl == false || bootstraplist.count(c->loc_id) > 0)
-	//         bootstrap_popstats(fis_samples, pi_samples, sites, pos_l, pos_u, weights, c);
-	// }
+	if (bootstrap && bootstrap_type == bs_exact)
+	    bs->execute(sites);
 
-	sites.clear();
+	for (uint i = 0; i < sites.size(); i++)
+	    delete sites[i];
     }
-    cerr << "Population '" << pop_key[pop_id] << "' contained " << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 
     delete ks;
     delete ord;
+    if (bootstrap) delete bs;
 
 //     //
 //     // If bootstrap resampling method is approximate, generate our single, empirical distribution.
@@ -2979,13 +2977,13 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 		start = pos - half > 0 ? pos - half : 0;
 		end   = pos + half < win_size ? pos + half : win_size;
 		for (int n = start; n < end; n++) {
-		    bs[n].f       = 0;
-		    bs[n].pi      = 0;
+		    // bs[n].f       = 0;
+		    // bs[n].pi      = 0;
 		    bs[n].alleles = bs[pos].alleles;
 		    poss.push_back(n);
 		}
-		bs[pos].f       = fis_samples[index_1];
-		bs[pos].pi      = pi_samples[index_2];
+		// bs[pos].f       = fis_samples[index_1];
+		// bs[pos].pi      = pi_samples[index_2];
 		bs[pos].alleles = allele_samples[index_3];
 		// cerr << "      Placing SNP at position: " << pos << "; with data from " << index_1 << " filling area from " << start << " to " << end << "\n";
 
@@ -3005,13 +3003,13 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 		    start = pos - half > 0 ? pos - half : 0;
 		    end   = pos + half < win_size ? pos + half : win_size;
 		    for (int n = start; n < end; n++) {
-			bs[n].f       = 0;
-			bs[n].pi      = 0;
+			// bs[n].f       = 0;
+			// bs[n].pi      = 0;
 			bs[n].alleles = bs[pos].alleles;
 			poss.push_back(n);
 		    }
-		    bs[pos].f       = fis_samples[index_1];
-		    bs[pos].pi      = pi_samples[index_2];
+		    // bs[pos].f       = fis_samples[index_1];
+		    // bs[pos].pi      = pi_samples[index_2];
 		    bs[pos].alleles = allele_samples[index_3];
 		    // cerr << "      Placing SNP at position: " << pos << "; with data from " << index_1 << " filling area from " << start << " to " << end << "\n";
 		}
@@ -3022,19 +3020,19 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 		sum_pi       = 0.0;
 
 		for (int n = 0; n < win_size; n++) {
-		    if (bs[n].pi < 0.0)
-			continue;
+		    // if (bs[n].pi < 0.0)
+		    // continue;
 		    //
 		    // Calculate weighted Fst at this position.
 		    //
 		    dist = bs[n].bp > bs[win_cntr].bp ? bs[n].bp - bs[win_cntr].bp : bs[win_cntr].bp - bs[n].bp;
 
 		    final_weight_fis = (bs[n].alleles - 1) * weights[dist];
-		    weighted_fis    += bs[n].f * final_weight_fis;
+		    // weighted_fis    += bs[n].f * final_weight_fis;
 		    sum_fis         += final_weight_fis;
 
 		    final_weight_pi  = (bs[n].alleles - 1) * weights[dist];
-		    weighted_pi     += bs[n].pi * final_weight_pi;
+		    // weighted_pi     += bs[n].pi * final_weight_pi;
 		    sum_pi          += final_weight_pi;
 		}
 
@@ -3043,21 +3041,21 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 		// cerr << "      New weighted fis value: " << weighted_fis / sum_fis << "; size: " << fiss.size() << "\n";
 
 		for (uint n = 0; n < poss.size(); n++) {
-		    bs[poss[n]].f  = 0.0;
-		    bs[poss[n]].pi = -1.0;
+		    // bs[poss[n]].f  = 0.0;
+		    // bs[poss[n]].pi = -1.0;
 		}
 		poss.clear();
 	    }
 
-	    #pragma omp critical
-	    {
-		vector<double> &f = approx_fis_dist[i];
-		for (uint n = 0; n < fiss.size(); n++)
-		    f.push_back(fiss[n]);
-		vector<double> &p = approx_pi_dist[i];
-		for (uint n = 0; n < pis.size(); n++)
-		    p.push_back(pis[n]);
-	    }
+// 	    #pragma omp critical
+// 	    {
+// 		vector<double> &f = approx_fis_dist[i];
+// 		for (uint n = 0; n < fiss.size(); n++)
+// 		    f.push_back(fiss[n]);
+// 		vector<double> &p = approx_pi_dist[i];
+// 		for (uint n = 0; n < pis.size(); n++)
+// 		    p.push_back(pis[n]);
+// 	    }
 
 	    delete [] bs;
 	}
@@ -3065,117 +3063,6 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 	sort(approx_fis_dist[i].begin(), approx_fis_dist[i].end());
 	sort(approx_pi_dist[i].begin(),  approx_pi_dist[i].end());
     }
-
-    return 0;
-}
-
-int
-bootstrap_popstats(vector<double> &fis_samples, vector<double> &pi_samples, 
-		   vector<SumStat *> &sites, int pos_l, int pos_u, 
-		   double *weights,
-		   SumStat *c)
-{
-    int    size = pos_u - pos_l;
-    int    dist, index;
-    double weighted_fis, weighted_pi, partial_weighted_fis, partial_weighted_pi; 
-    double partial_sum_fis, partial_sum_pi, sum_fis, sum_pi;
-    double final_weight_fis, final_weight_pi;
-
-    //
-    // Allocate an array of bootstrap resampling objects.
-    //
-    BSample *bs = new BSample[size];
-
-    //
-    // Populate the BSample objects.
-    //
-    int j = 0;
-    for (int i = pos_l; i < pos_u;  i++) {
-	bs[j].f       = sites[i]->stat[1]; // Fis
- 	bs[j].pi      = sites[i]->stat[0]; // Pi
-	bs[j].bp      = sites[i]->bp;
-	bs[j].alleles = sites[i]->num_indv * 2;
-	j++;
-    }
-
-    vector<double> fiss, pis;
-    fiss.reserve(bootstrap_reps);
-    pis.reserve(bootstrap_reps);
-
-    // cerr << "Window starts at " << bs[0].bp << "; Window center is " << c->bp << "\n";
-
-    //
-    // Precompute the fraction of the window that will not change during resampling.
-    //
-    partial_weighted_fis = 0.0;
-    partial_sum_fis      = 0.0;
-    partial_weighted_pi  = 0.0;
-    partial_sum_pi       = 0.0;
-
-    for (j = 0; j < size; j++) {
-	if (bs[j].pi > 0) continue;
-
-	dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
-
-	final_weight_fis      = (bs[j].alleles - 1.0) * weights[dist];
-	partial_weighted_fis += bs[j].f * final_weight_fis;
-	partial_sum_fis      += final_weight_fis;
-
-	final_weight_pi      = (bs[j].alleles - 1.0) * weights[dist];
-	partial_weighted_pi += bs[j].pi * final_weight_pi;
-	partial_sum_pi      += final_weight_pi;
-    }
-
-    //
-    // Bootstrap this bitch.
-    //
-    for (int i = 0; i < bootstrap_reps; i++) {
-	// cerr << "  Bootsrap rep " << i << "\n";
-
-	weighted_fis = partial_weighted_fis;
-	weighted_pi  = partial_weighted_pi;
-	sum_fis      = partial_sum_fis;
-	sum_pi       = partial_sum_pi;
-
-	for (j = 0; j < size; j++) {
-	    //
-	    // Resample for this round of bootstrapping.
-	    //
-	    if (bs[j].pi == 0) 
-		continue;
-
-	    index = (int) (fis_samples.size() * (random() / (RAND_MAX + 1.0)));
-	    // cerr << "      WinPos: " << j << "; Randomly selecting " << index << " out of " << pi_samples.size() << " possible values giving Pi value: " << pi_samples[index] << "\n";
-
-	    //
-	    // Calculate weighted Fis/Pi at this position.
-	    //
-	    dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
-
-	    final_weight_fis = (bs[j].alleles - 1.0) * weights[dist];
-	    weighted_fis    += fis_samples[index] * final_weight_fis;
-	    sum_fis         += final_weight_fis;
-
-	    final_weight_pi = (bs[j].alleles - 1.0) * weights[dist];
-	    weighted_pi    += pi_samples[index] * final_weight_pi;
-	    sum_pi         += final_weight_pi;
-	}
-
-	// cerr << "    New weighted Pi value: " << weighted_pi / sum_pi << "\n";
-	fiss.push_back(weighted_fis / sum_fis);
-	pis.push_back(weighted_pi / sum_pi);
-    }
-
-    delete [] bs;
-
-    //
-    // Cacluate the p-value for this window based on the empirical Fst distribution.
-    //
-    sort(fiss.begin(), fiss.end());
-    c->wFis_pval = bootstrap_pval(c->smoothed[1], fiss);
-
-    sort(pis.begin(), pis.end());
-    c->wPi_pval = bootstrap_pval(c->smoothed[0], pis);
 
     return 0;
 }
@@ -3238,7 +3125,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 		pos     = win_cntr;
 		index_1 = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
 		index_2 = (int) (allele_samples.size() * (random() / (RAND_MAX + 1.0)));
-		bs[pos].f       = fst_samples[index_1];
+		// bs[pos].f       = fst_samples[index_1];
 		bs[pos].alleles = allele_samples[index_2];
 
 		//
@@ -3248,8 +3135,8 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 		    pos     = (int) (win_size * (random() / (RAND_MAX + 1.0)));
 		    index_1 = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
 		    index_2 = (int) (allele_samples.size() * (random() / (RAND_MAX + 1.0)));
-		    bs[pos].f       = fst_samples[index_1];
-		    bs[pos].alleles = allele_samples[index_2];
+		    // bs[pos].f       = fst_samples[index_1];
+		    // bs[pos].alleles = allele_samples[index_2];
 		    // cerr << "  " << j << ": Placing SNP at position: " << pos << " with data from index " << index_1 << "\n";
 
 		    poss.push_back(pos);
@@ -3259,32 +3146,32 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 		sum          = 0.0;
 
 		for (int n = 0; n < win_size; n++) {
-		    if (bs[n].f == 0.0)
-			continue;
+		    // if (bs[n].f == 0.0)
+		    // continue;
 		    //
 		    // Calculate weighted Fst at this position.
 		    //
 		    dist = bs[n].bp > bs[win_cntr].bp ? bs[n].bp - bs[win_cntr].bp : bs[win_cntr].bp - bs[n].bp;
 
 		    final_weight  = (bs[n].alleles - 1) * weights[dist];
-		    weighted_fst += bs[n].f * final_weight;
+		    // weighted_fst += bs[n].f * final_weight;
 		    sum          += final_weight;
 		}
 
 		fsts.push_back(weighted_fst / sum);
 		// cerr << "    New weighted Fst value: " << weighted_fst / sum << "; size: " << fsts.size() << "\n";
 
-		for (uint n = 0; n < poss.size(); n++)
-		    bs[poss[n]].f = 0.0;
+		// for (uint n = 0; n < poss.size(); n++)
+		// bs[poss[n]].f = 0.0;
 		poss.clear();
 	    }
 
-	    #pragma omp critical
-	    {
-		vector<double> &f = approx_fst_dist[i];
-		for (uint n = 0; n < fsts.size(); n++)
-		    f.push_back(fsts[n]);
-	    }
+// 	    #pragma omp critical
+// 	    {
+// 		vector<double> &f = approx_fst_dist[i];
+// 		for (uint n = 0; n < fsts.size(); n++)
+// 		    f.push_back(fsts[n]);
+// 	    }
 
 	    delete [] bs;
 	}
@@ -3325,173 +3212,6 @@ bootstrap_approximate_pval(int snp_cnt, double stat, map<int, vector<double> > &
     // 	 << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
 
     return res;
-}
-
-double
-bootstrap_pval(double stat, vector<double> &dist)
-{
-    vector<double>::iterator up;
-    double pos;
-
-    up = upper_bound(dist.begin(), dist.end(), stat);
-
-    if (up == dist.begin())
-	pos = 1;
-    else if (up == dist.end())
-	pos = dist.size();
-    else 
-	pos = up - dist.begin() + 1;
-
-    double res = 1.0 - (pos / (double) dist.size());
-
-    // cerr << "Generated Smoothed Fst Distribution:\n";
-    // for (uint n = 0; n < dist.size(); n++)
-    // 	cerr << "  n: " << n << "; Fst: " << dist[n] << "\n";
-
-    // cerr << "Comparing Fst value: " << stat 
-    // 	 << " at position " << (up - dist.begin()) << " out of " 
-    // 	 << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
-
-    return res;
-}
-
-int
-bootstrap_fst(vector<double> &fst_samples, vector<PopPair *> &pairs, double *weights) 
-{
-    #pragma omp parallel
-    { 
-	PopPair *c;
-	double final_weight, weighted_fst, sum;
-	int  dist, index, limit_l, limit_u;
-	int  limit = 3 * sigma;
-	uint pos_l = 0;
-	uint pos_u = 0;
-
-        #pragma omp for schedule(dynamic, 1)  
-	for (uint pos_c = 0; pos_c < pairs.size(); pos_c++) {
-	    c = pairs[pos_c];
-
-	    if (c == NULL)
-		continue;
-
-	    if (bootstrap_wl && bootstraplist.count(c->loc_id) == 0)
-		continue;
-
-	    limit_l = c->bp - limit > 0 ? c->bp - limit : 0;
-	    limit_u = c->bp + limit;
-
-	    while (pos_l < pairs.size()) {
-		if (pairs[pos_l] == NULL) {
-		    pos_l++;
-		} else {
-		    if (pairs[pos_l]->bp < limit_l) 
-			pos_l++;
-		    else
-			break;
-		}
-	    }
-	    while (pos_u < pairs.size()) {
-		if (pairs[pos_u] == NULL) {
-		    pos_u++;
-		} else {
-		    if (pairs[pos_u]->bp < limit_u)
-			pos_u++;
-		    else
-			break;
-		}
-	    }
-	    if (pos_u < pairs.size() && pairs[pos_u]->bp > limit_u) pos_u--;
-
-	    int size = 0;
-	    for (uint i = pos_l; i < pos_u;  i++) {
-		if (pairs[i] == NULL) continue;
-		size++;
-	    }
-
-	    //
-	    // Allocate an array of bootstrap resampling objects.
-	    //
-	    BSample *bs = new BSample[size];
-
-	    //
-	    // Populate the BSample objects.
-	    //
-	    int j = 0;
-	    for (uint i = pos_l; i < pos_u;  i++) {
-		if (pairs[i] == NULL) continue;
-
-		bs[j].bp      = pairs[i]->bp;
-		bs[j].alleles = pairs[i]->alleles;
-		j++;
-	    }
-
-	    vector<double> fsts;
-	    fsts.reserve(bootstrap_reps);
-	    vector<double>::iterator up;
-
-	    // cerr << "Window starts at " << bs[0].bp << "; centered on " << c->bp << "\n";
-
-	    //
-	    // Bootstrap this bitch.
-	    //
-	    for (int i = 0; i < bootstrap_reps; i++) {
-		// cerr << "  Bootsrap rep " << i << "\n";
-
-		weighted_fst = 0.0;
-		sum          = 0.0;
-
-		for (j = 0; j < size; j++) {
-		    //
-		    // Resample for this round of bootstrapping.
-		    //
-		    index   = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
-		    bs[j].f = fst_samples[index];
-		    // cerr << "      WinPos: " << j << "; Randomly selecting " << index << " out of " << fst_samples.size() << " possible values giving Fst value: " << bs[j].f << "\n";
-
-		    //
-		    // Calculate weighted Fst at this position.
-		    //
-		    dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
-
-		    final_weight  = (bs[j].alleles - 1) * weights[dist];
-		    weighted_fst += bs[j].f * final_weight;
-		    sum          += final_weight;
-		}
-
-		// cerr << "    New weighted Fst value: " << weighted_fst / sum << "\n";
-		fsts.push_back(weighted_fst / sum);
-	    }
-
-	    //
-	    // Cacluate the p-value for this window based on the empirical Fst distribution.
-	    //
-	    sort(fsts.begin(), fsts.end());
- 	    c->wfst_pval = bootstrap_pval(c->smoothed[1], fsts);
-
-	    delete [] bs;
-	}
-    }
-
-    return 0;
-}
-
-double *
-calculate_weights() 
-{
-    int limit = 3 * sigma;
-    //
-    // Calculate weights for window smoothing operations.
-    //
-    // For each genomic region centered on a nucleotide position c, the contribution of the population 
-    // genetic statistic at position p to the region average was weighted by the Gaussian function:
-    //   exp( (-1 * (p - c)^2) / (2 * sigma^2))
-    //
-    double *weights = new double[limit + 1];
-
-    for (int i = 0; i <= limit; i++)
-	weights[i] = exp((-1 * pow(i, 2)) / (2 * pow(sigma, 2)));
-
-    return weights;
 }
 
 int
@@ -6119,9 +5839,13 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"write_single_snp",  no_argument,       NULL, 'I'},
             {"kernel_smoothed",   no_argument,       NULL, 'k'},
             {"log_fst_comp",      no_argument,       NULL, 'l'},
-            {"bootstrap",         required_argument, NULL, 'O'},
+            {"bootstrap_type",    required_argument, NULL, 'O'},
 	    {"bootstrap_reps",    required_argument, NULL, 'R'},
 	    {"bootstrap_wl",      required_argument, NULL, 'Q'},
+            {"bootstrap",         no_argument,       NULL, '1'},
+            {"bootstrap_fst",     no_argument,       NULL, '2'},
+            {"bootstrap_phist",   no_argument,       NULL, '3'},
+            {"bootstrap_pifis",   no_argument,       NULL, '4'},
 	    {"min_populations",   required_argument, NULL, 'p'},
 	    {"minor_allele_freq", required_argument, NULL, 'a'},
 	    {"fst_correction",    required_argument, NULL, 'f'},
@@ -6132,7 +5856,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlkKSACLHEYFVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlkKSACLHEYFVG1234gvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -6170,8 +5894,22 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'l':
 	    log_fst_comp = true;
 	    break;
+	case '1':
+	    bootstrap       = true;
+	    bootstrap_fst   = true;
+	    bootstrap_phist = true;
+	    bootstrap_pifis = true;
+	    break;
+	case '2':
+	    bootstrap_fst   = true;
+	    break;
+	case '3':
+	    bootstrap_phist = true;
+	    break;
+	case '4':
+	    bootstrap_pifis = true;
+	    break;
 	case 'O':
-	    bootstrap = true;
 	    if (strcmp(optarg, "exact") == 0)
 		bootstrap_type = bs_exact;
 	    else if (strcmp(optarg, "approx") == 0)
@@ -6354,10 +6092,13 @@ void help() {
 	      << "    f: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'.\n"
 	      << "    --p_value_cutoff [num]: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n\n"
 	      << "  Kernel-smoothing algorithm:\n" 
-	      << "    k: enable kernel-smoothed Pi, Fis, and Fst calculations.\n"
+	      << "    k: enable kernel-smoothed Pi, Fis, Fst, and Phi_st calculations.\n"
 	      << "    --window_size [num]: distance over which to average values (sigma, default 150Kb)\n\n"
 	      << "  Bootstrap Resampling:\n" 
-	      << "    --bootstrap [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
+	      << "    --bootstrap: turn on boostrap resampling for all smoothed statistics.\n"
+	      << "    --bootstrap_fst: turn on boostrap resampling only for smoothed Fst calculations based on pairwise population comparison of SNPs.\n"
+	      << "    --bootstrap_phist: turn on boostrap resampling only for smoothed Phi_st calculations based on haplotypes.\n"
+	      << "    --bootstrap_pifis: turn on boostrap resampling only for smoothed Pi and Fis calculations.\n"
 	      << "    --bootstrap_reps [num]: number of bootstrap resamplings to calculate (default 100).\n"
 	      << "    --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n\n"
 	      << "  File ouput options:\n"
@@ -6376,6 +6117,7 @@ void help() {
 	      << "    --write_single_snp: write only the first SNP per locus in Genepop and Structure outputs.\n\n"
 	      << "  Debugging:\n"
 	      << "    --log_fst_comp: log components of Fst calculations to a file.\n";
+    // << "    --bootstrap_type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
 
     exit(0);
 }

@@ -42,17 +42,13 @@ template<class StatT>
 class Ordered {
 public:
     ofstream        *log_fh;
-    loc_type         type;
     PopSum<CSLocus> *psum;
 
     int incompatible_loci;
     int multiple_loci;
 
-    Ordered(loc_type type)  { 
-	this->type = type;
-    }
-    virtual ~Ordered() { 
-    }
+    Ordered()  { }
+    virtual ~Ordered() { }
 
     int init_sites(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &, int);
     int init_sites(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &, int, int);
@@ -172,7 +168,7 @@ Ordered<StatT>::init_haplotypes(vector<StatT *> &sites, map<uint, uint> &sites_k
 template<class StatT>
 class OHaplotypes: public Ordered<StatT> {
 public:
-    OHaplotypes(loc_type type): Ordered<StatT>(type) { }
+    OHaplotypes(): Ordered<StatT>() { }
 
     int order(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &);
 };
@@ -189,7 +185,7 @@ OHaplotypes<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, ve
 template<class StatT>
 class OPopPair: public Ordered<StatT> {
 public:
-    OPopPair(loc_type type, PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>(type) { 
+    OPopPair(PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>() { 
 	this->log_fh = &log_fh;
 	this->psum   = psum;
     }
@@ -274,7 +270,7 @@ OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vecto
 template<class StatT>
 class OSumStat: public Ordered<StatT> {
 public:
-    OSumStat(loc_type type, PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>(type) { 
+    OSumStat(PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>() { 
 	this->log_fh = &log_fh;
 	this->psum   = psum;
     }
