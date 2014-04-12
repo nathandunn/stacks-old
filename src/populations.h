@@ -66,33 +66,13 @@ using std::set;
 #include "genotype_dictionaries.h"
 #include "ordered.h"
 #include "smoothing.h"
+#include "bootstrap.h"
 
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
 
 const int max_snp_dist = 500;
 
-//
-// Bootstrap resamplign structure.
-//
-class BSample {
-public:
-    int    bp;
-    int    alleles;
-    double f;
-    double pi;
-
-    BSample() {
-	this->bp      = 0;
-	this->alleles = 0;
-	this->f       = 0.0;
-	this->pi      = -1.0;
-    }
-};
-
-//
-// Bootstrap resampling structure.
-//
 class GenPos {
 public:
     uint     id;
@@ -127,13 +107,9 @@ int     call_population_genotypes(CSLocus *, PopMap<CSLocus> *);
 int     tally_haplotype_freq(CSLocus *, PopMap<CSLocus> *, int &, double &, string &);
 int     translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &);
 int     correct_fst_bonferroni_win(vector<PopPair *> &);
-int     kernel_smoothed_fst(vector<PopPair *> &, double *, int *);
-int     bootstrap_fst(vector<double> &, vector<PopPair *> &, double *);
 int     bootstrap_fst_approximate_dist(vector<double> &, vector<int>  &, double *, int *, map<int, vector<double> > &);
 int     kernel_smoothed_popstats(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, int, ofstream &);
-int     bootstrap_popstats(vector<double> &, vector<double> &, vector<SumStat *> &, int, int, double *, SumStat *); 
 int     bootstrap_popstats_approximate_dist(vector<double> &, vector<double> &, vector<int>  &, double *, int *, int, map<int, vector<double> > &, map<int, vector<double> > &);
-double  bootstrap_pval(double, vector<double> &);
 double  bootstrap_approximate_pval(int, double, map<int, vector<double> > &);
 double *calculate_weights(void);
 
