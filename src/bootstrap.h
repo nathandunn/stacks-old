@@ -42,7 +42,7 @@ public:
     BSample() {
 	this->bp      = 0;
 	this->alleles = 0;
-	for (uint i = 0; i < PopStatSize; i++)
+	for (int i = 0; i < PopStatSize; i++)
 	    this->stat[i] = 0.0;
 
     }
@@ -52,12 +52,12 @@ template<class StatT=PopStat>
 class Bootstrap {
     double                 *weights; // Weight matrix to apply while smoothing.
     vector<vector<double> > stats;
-    int                     num_stats;
+    uint                    num_stats;
 
     int calc_weights();
 
 public:
-    Bootstrap(int size)  { 
+    Bootstrap(uint size)  { 
 	this->num_stats = size;
 	this->calc_weights();
 

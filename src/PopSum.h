@@ -135,8 +135,6 @@ class SumStat: public PopStat {
     // PopStat[0]: pi
     // PopStat[1]: fis
 public:
-    int     loc_id;
-    int     bp;
     bool    incompatible_site;
     bool    filtered_site;
     double  num_indv;
@@ -149,9 +147,7 @@ public:
     double  exp_hom;
     double *pi;
 
-    SumStat() {
-	loc_id    = 0;
-	bp        = 0;
+    SumStat(): PopStat() {
 	num_indv  = 0.0;
 	p         = 0.0;
 	p_nuc     = 0;
