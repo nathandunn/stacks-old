@@ -47,6 +47,7 @@ class PopStat {
 public:
     int    loc_id;
     int    bp;
+    bool   fixed;
     double alleles;    // Number of alleles sampled at this location.
     uint   snp_cnt;    // Number of SNPs in kernel-smoothed window centered on this SNP.
     double stat[PopStatSize];
@@ -56,6 +57,7 @@ public:
     PopStat() {
 	this->loc_id  = 0;
 	this->bp      = 0;
+	this->fixed   = false;
 	this->alleles = 0.0;
 	this->snp_cnt = 0;
 
@@ -145,9 +147,9 @@ public:
     double  obs_hom;
     double  exp_het;
     double  exp_hom;
-    double *pi;
+    double &pi;
 
-    SumStat(): PopStat() {
+    SumStat(): PopStat(), pi(this->stat[0]) {
 	num_indv  = 0.0;
 	p         = 0.0;
 	p_nuc     = 0;
@@ -159,7 +161,6 @@ public:
 	snp_cnt   = 0;
 	incompatible_site = false;
 	filtered_site     = false;
-	pi = &this->stat[0];
     }
 };
 
@@ -415,7 +416,7 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 		ltally->nucs[col].num_indv += s[j]->nucs[col].num_indv;
 		ltally->nucs[col].pop_cnt  += s[j]->nucs[col].num_indv > 0 ? 1 : 0;
 
-		if (*(s[j]->nucs[col].pi) != 0)
+		if (s[j]->nucs[col].pi != 0)
 		    ltally->nucs[col].fixed = false;
 	    }
 
@@ -588,8 +589,8 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
 
     n_1  = s_1->nucs[pos].num_indv * 2;
     n_2  = s_2->nucs[pos].num_indv * 2;
-    pi_1 = *(s_1->nucs[pos].pi);
-    pi_2 = *(s_2->nucs[pos].pi);
+    pi_1 = s_1->nucs[pos].pi;
+    pi_2 = s_2->nucs[pos].pi;
 
     if (pi_1 == 0 && pi_2 == 0 && s_1->nucs[pos].p_nuc == s_2->nucs[pos].p_nuc)
 	return pair;
@@ -755,6 +756,7 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
     //
     s->nucs[pos].loc_id   = locus->id;
     s->nucs[pos].bp       = locus->sort_bp(pos);
+    s->nucs[pos].fixed    = true;
     s->nucs[pos].num_indv = num_indv;
     s->nucs[pos].alleles  = 2 * num_indv;
 
@@ -765,7 +767,7 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
 	s->nucs[pos].obs_het  = 0.0;
 	s->nucs[pos].exp_hom  = 1.0;
 	s->nucs[pos].exp_het  = 0.0;
-	*(s->nucs[pos].pi)    = 0.0;
+	s->nucs[pos].pi       = 0.0;
     }
 
     return 0;
@@ -916,6 +918,9 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     //
     s->nucs[pos].stat[0] = this->pi(tot_alleles, allele_p, allele_q);
 
+    if (s->nucs[pos].stat[0] == 0.0)
+	s->nucs[pos].fixed = true;
+
     //
     // Convert to allele frequencies
     //
@@ -930,13 +935,15 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     if (minor_allele_freq > 0) {
 	if (allele_p < allele_q) {
 	    if (allele_p < minor_allele_freq) {
-		s->nucs[pos].pi = 0;
+		s->nucs[pos].pi            = 0.0;
+		s->nucs[pos].fixed         = true;
 		s->nucs[pos].filtered_site = true;
 		return 0;
 	    }
 	} else {
 	    if (allele_q < minor_allele_freq) {
-		s->nucs[pos].pi = 0;
+		s->nucs[pos].pi            = 0.0;
+		s->nucs[pos].fixed         = true;
 		s->nucs[pos].filtered_site = true;
 		return 0;
 	    }
@@ -977,7 +984,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     // Calculate F_is, the inbreeding coefficient of an individual (I) relative to the subpopulation (S):
     //   Fis = (exp_het - obs_het) / exp_het
     //
-    double fis = *(s->nucs[pos].pi) == 0 ? 0 : (*(s->nucs[pos].pi) - obs_het) / *(s->nucs[pos].pi);
+    double fis = s->nucs[pos].pi == 0 ? 0 : (s->nucs[pos].pi - obs_het) / s->nucs[pos].pi;
 
     s->nucs[pos].stat[1] = fis;
 

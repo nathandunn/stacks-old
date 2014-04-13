@@ -48,6 +48,7 @@ bool      bootstrap         = false;
 bool      bootstrap_fst     = false;
 bool      bootstrap_pifis   = false;
 bool      bootstrap_phist   = false;
+bool      bootstrap_div     = false;
 bs_type   bootstrap_type    = bs_exact;
 int       bootstrap_reps    = 100;
 bool      bootstrap_wl      = false;
@@ -133,7 +134,8 @@ int main (int argc, char* argv[]) {
     //
     // Seed the random number generator
     //
-    srandom(time(NULL));
+    //srandom(time(NULL));
+    srandom(1);
 
     vector<pair<int, string> > files;
     if (!build_file_list(files, pop_indexes, grp_members))
@@ -829,14 +831,18 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
     LocStat  *l;
 
     //
-    // Instantiate the kernel smoothing object if requested.
+    // Instantiate the kernel smoothing and bootstrap objects if requested.
     //
     KSmooth<LocStat>     *ks;
     OHaplotypes<LocStat> *ord;
+    Bootstrap<LocStat>   *bs;
     if (kernel_smoothed && loci_ordered) {
 	ks  = new KSmooth<LocStat>(2);
 	ord = new OHaplotypes<LocStat>();
     }
+
+    if (bootstrap_div)
+	bs = new Bootstrap<LocStat>(2);
 
     //
     // Open output file and print header.
@@ -891,11 +897,12 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 	pop_index = psum->pop_index(pop_id);
 
     	cerr << "Generating haplotype-level summary statistics for population '" << pop_key[pop_id] << "'\n";
+	map<string, vector<LocStat *> > genome_locstats;
 
 	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 
-	    vector<LocStat *> locstats;
-	    map<uint, uint>   locstats_key;
+	    vector<LocStat *> &locstats = genome_locstats[it->first];
+	    map<uint, uint>    locstats_key;
 	    ord->order(locstats, locstats_key, it->second);
 
 	    for (uint pos = 0; pos < it->second.size(); pos++) {
@@ -922,6 +929,9 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 		ks->smooth(locstats);
 	    }
 
+	    if (bootstrap_div) 
+		bs->add_data(locstats);
+
 	    //
 	    // Write results.
 	    //
@@ -941,8 +951,15 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 		   << setw(fieldw)    << l->stat[1]     << "\t"
 		   << setw(fieldw)    << l->smoothed[1] << "\t"
 		   << l->hap_str      << "\n";
+	    }
+	}
 
-		delete locstats[k];
+	if (bootstrap_div) {
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		vector<LocStat *> &locstats = genome_locstats[it->first];
+		bs->execute(locstats);
+		for (uint k = 0; k < locstats.size(); k++) 
+		    delete locstats[k];
 	    }
 	}
     }
@@ -951,6 +968,8 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 	delete ks;
 	delete ord;
     }
+    if (bootstrap_div) 
+	delete bs;
 
     fh.close();
 
@@ -999,7 +1018,10 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 {
     map<string, vector<CSLocus *> >::iterator it;
 
-    cerr << "Calculating haplotype F statistics across all populations/groups...\n";
+    if (bootstrap_phist)
+	cerr << "Calculating halotype F statistics across all populations/groups and bootstrap resampling...\n";
+    else
+	cerr << "Calculating haplotype F statistics across all populations/groups...\n";
 
     //
     // Create a list of all the groups we have.
@@ -1024,10 +1046,14 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
     //
     KSmooth<HapStat>     *ks;
     OHaplotypes<HapStat> *ord;
+    Bootstrap<HapStat>   *bs;
     if (kernel_smoothed && loci_ordered) {
 	ks  = new KSmooth<HapStat>(3);
 	ord = new OHaplotypes<HapStat>();
     }
+
+    if (bootstrap_phist)
+	bs = new Bootstrap<HapStat>(3);
 
     map<string, vector<HapStat *> > genome_hapstats;
 
@@ -1070,6 +1096,9 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 	    }
 	}
 
+	if (bootstrap_phist)
+	    bs->add_data(hapstats);
+
 	cerr << "done.\n";
 
 	//
@@ -1082,12 +1111,20 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 	}
     }
 
+    if (bootstrap_phist) {
+	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++)
+	    bs->execute(genome_hapstats[it->first]);
+    }
+
     cerr << "done.\n";
 
     if (kernel_smoothed && loci_ordered) {
 	delete ks;
 	delete ord;
     }
+
+    if (bootstrap_phist)
+	delete bs;
 
     cerr << "Writing haplotype F statistics... ";
 
@@ -1212,7 +1249,10 @@ calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files,
 {
     map<string, vector<CSLocus *> >::iterator it;
 
-    cerr << "Calculating pairwise haplotype F statistics...\n";
+    if (bootstrap_phist)
+	cerr << "Calculating pairwise halotype F statistics and bootstrap resampling...\n";
+    else
+	cerr << "Calculating pairwise haplotype F statistics...\n";
 
     //
     // Assign all individuals to one group for the pairwise calculations.
@@ -1231,8 +1271,9 @@ calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files,
     //
     // Instantiate the kernel smoothing object if requested.
     //
-    KSmooth<HapStat> *ks;
+    KSmooth<HapStat>     *ks;
     OHaplotypes<HapStat> *ord;
+    Bootstrap<HapStat>   *bs;
     if (kernel_smoothed && loci_ordered) {
 	ks  = new KSmooth<HapStat>(3);
 	ord = new OHaplotypes<HapStat>();
@@ -1240,6 +1281,9 @@ calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files,
 
     for (uint i = 0; i < pop_ids.size(); i++) {
 	for (uint j = i + 1; j < pop_ids.size(); j++) {
+
+	    if (bootstrap_phist)
+		bs = new Bootstrap<HapStat>(3);
 
 	    map<string, vector<HapStat *> > genome_hapstats;
 	    vector<int> subpop_ids;
@@ -1288,6 +1332,9 @@ calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files,
 		    }
 		}
 
+		if (bootstrap_phist)
+		    bs->add_data(hapstats);
+
 		cerr << "done.\n";
 
 		//
@@ -1300,7 +1347,15 @@ calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files,
 		}
 	    }
 
+	    if (bootstrap_phist) {
+		for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++)
+		    bs->execute(genome_hapstats[it->first]);
+	    }
+
 	    cerr << "done.\n";
+
+	    if (bootstrap_phist)
+		delete bs;
 
 	    cerr << "Writing haplotype F statistics... ";
 
@@ -2821,7 +2876,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
     // int sites_per_snp = 0;
     // int tot_windows = 0;
     map<string, vector<CSLocus *> >::iterator it;
-    map<string, vector<SumStat *> > genome_pairs;
+    map<string, vector<SumStat *> > genome_sites;
 
     //
     // Instantiate the kernel smoothing object if requested.
@@ -2834,7 +2889,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 	bs = new Bootstrap<SumStat>(2);
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-	vector<SumStat *> &sites = genome_pairs[it->first];
+	vector<SumStat *> &sites = genome_sites[it->first];
 
 	ord->order(sites, it->second, pop_id);
 	if (bootstrap_pifis) bs->add_data(sites);
@@ -2848,12 +2903,12 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 	else
 	    cerr << "    Smoothing chromosome " << it->first << "\n";
 
-	vector<SumStat *> &sites = genome_pairs[it->first];
+	vector<SumStat *> &sites = genome_sites[it->first];
 
 	ks->smooth(sites);
 
 	if (bootstrap_pifis && bootstrap_type == bs_exact)
-	    bs->execute(sites);
+	    bs->execute_mixed(sites);
     }
 
     delete ks;
@@ -5835,7 +5890,8 @@ int parse_command_line(int argc, char* argv[]) {
             {"bootstrap",         no_argument,       NULL, '1'},
             {"bootstrap_fst",     no_argument,       NULL, '2'},
             {"bootstrap_phist",   no_argument,       NULL, '3'},
-            {"bootstrap_pifis",   no_argument,       NULL, '4'},
+            {"bootstrap_div",     no_argument,       NULL, '4'},
+            {"bootstrap_pifis",   no_argument,       NULL, '5'},
 	    {"min_populations",   required_argument, NULL, 'p'},
 	    {"minor_allele_freq", required_argument, NULL, 'a'},
 	    {"fst_correction",    required_argument, NULL, 'f'},
@@ -5889,6 +5945,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    bootstrap_fst   = true;
 	    bootstrap_phist = true;
 	    bootstrap_pifis = true;
+	    bootstrap_div   = true;
 	    break;
 	case '2':
 	    bootstrap_fst   = true;
@@ -5897,6 +5954,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    bootstrap_phist = true;
 	    break;
 	case '4':
+	    bootstrap_div = true;
+	    break;
+	case '5':
 	    bootstrap_pifis = true;
 	    break;
 	case 'O':
@@ -6086,9 +6146,10 @@ void help() {
 	      << "    --window_size [num]: distance over which to average values (sigma, default 150Kb)\n\n"
 	      << "  Bootstrap Resampling:\n" 
 	      << "    --bootstrap: turn on boostrap resampling for all smoothed statistics.\n"
-	      << "    --bootstrap_fst: turn on boostrap resampling only for smoothed Fst calculations based on pairwise population comparison of SNPs.\n"
-	      << "    --bootstrap_phist: turn on boostrap resampling only for smoothed Phi_st calculations based on haplotypes.\n"
-	      << "    --bootstrap_pifis: turn on boostrap resampling only for smoothed Pi and Fis calculations.\n"
+	      << "    --bootstrap_pifis: turn on boostrap resampling for smoothed SNP-based Pi and Fis calculations.\n"
+	      << "    --bootstrap_fst: turn on boostrap resampling for smoothed Fst calculations based on pairwise population comparison of SNPs.\n"
+	      << "    --bootstrap_div: turn on boostrap resampling for smoothed haplotype diveristy and gene diversity calculations based on haplotypes.\n"
+	      << "    --bootstrap_phist: turn on boostrap resampling for smoothed Phi_st calculations based on haplotypes.\n"
 	      << "    --bootstrap_reps [num]: number of bootstrap resamplings to calculate (default 100).\n"
 	      << "    --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n\n"
 	      << "  File ouput options:\n"
@@ -6106,7 +6167,7 @@ void help() {
 	      << "      --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
 	      << "    --write_single_snp: write only the first SNP per locus in Genepop and Structure outputs.\n\n"
 	      << "  Debugging:\n"
-	      << "    --log_fst_comp: log components of Fst calculations to a file.\n";
+	      << "    --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n";
     // << "    --bootstrap_type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
 
     exit(0);
