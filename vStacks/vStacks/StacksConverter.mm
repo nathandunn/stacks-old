@@ -260,7 +260,7 @@ NSString *calculateType(NSString *file);
     NSString *batchName = [self checkFile:importPath1];
     if(batchName==nil){
         NSAlert *alert = [[NSAlert alloc] init];
-        [alert setMessageText:[NSString stringWithFormat:@"The directory %@ does not contain valid stacks files.",importPath1]];
+        [alert setMessageText:[NSString stringWithFormat:@"The directory '%@' does not contain a valid stack file of the form batch*.catalog.tags.tsv",importPath1]];
         [alert addButtonWithTitle:@"OK"];
         [alert runModal];
         return nil ;
