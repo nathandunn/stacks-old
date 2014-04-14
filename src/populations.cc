@@ -134,8 +134,7 @@ int main (int argc, char* argv[]) {
     //
     // Seed the random number generator
     //
-    //srandom(time(NULL));
-    srandom(1);
+    srandom(time(NULL));
 
     vector<pair<int, string> > files;
     if (!build_file_list(files, pop_indexes, grp_members))
@@ -2531,14 +2530,11 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     //
     KSmooth<PopPair>  *ks;
     OPopPair<PopPair> *ord;
+    Bootstrap<PopPair> *bs;
     if (kernel_smoothed && loci_ordered) {
 	ks  = new KSmooth<PopPair>(2);
 	ord = new OPopPair<PopPair>(psum, log_fh);
     }
-
-    Bootstrap<PopPair> *bs;
-    if (bootstrap)
-	bs = new Bootstrap<PopPair>(2);
 
     for (uint i = 0; i < pops.size(); i++) {
 
@@ -2560,7 +2556,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		exit(1);
 	    }
 
-	    cerr << "Calculating Fst for populations " << pop_key[pop_1] << " and " << pop_key[pop_2] << " and writing it to file, '" << file << "'\n";
+	    cerr << "Calculating Fst for populations '" << pop_key[pop_1] << "' and '" << pop_key[pop_2] << "' and writing it to file, '" << file << "'\n";
 
 	    fh << "# Batch ID" << "\t"
 	       << "Locus ID"   << "\t"
@@ -2612,6 +2608,9 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    } else {
 		fh << "\n";
 	    }
+
+	    if (bootstrap_fst)
+		bs = new Bootstrap<PopPair>(2);
 
 	    map<string, vector<CSLocus *> >::iterator it;
 	    map<string, vector<PopPair *> > genome_pairs;
@@ -2666,7 +2665,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		//
 		// If bootstrapping is enabled, record all Fst values.
 		//
-		if (bootstrap)
+		if (bootstrap_fst)
 		    bs->add_data(pairs);
 
 		//
@@ -2682,7 +2681,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    // If bootstrap resampling method is approximate, generate our single, empirical distribution.
 	    //
 	    map<int, vector<double> > approx_fst_dist;
-	    // if (bootstrap && bootstrap_type == bs_approx) 
+	    // if (bootstrap_fst && bootstrap_type == bs_approx) 
 	    // 	bootstrap_fst_approximate_dist(fst_samples, allele_depth_samples, weights, snp_dist, approx_fst_dist);
 
 	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
@@ -2692,7 +2691,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		//
 		// Bootstrap resample this chromosome.
 		//
-		if (bootstrap && bootstrap_type == bs_exact) {
+		if (bootstrap_fst && bootstrap_type == bs_exact) {
 		    cerr << "  Bootstrap resampling kernel-smoothed Fst for " << it->first << ".\n";
 		    bs->execute(pairs);
 		}
@@ -2705,7 +2704,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    //
 		    // Calculate Fst P-value from approximate distribution.
 		    //
-		    // if (bootstrap && bootstrap_type == bs_approx)
+		    // if (bootstrap_fst && bootstrap_type == bs_approx)
 		    //     pairs[i]->bs[0] = bootstrap_approximate_pval(pairs[i]->snp_cnt, pairs[i]->stat[0], approx_fst_dist);
 
 		    cnt++;
@@ -2768,6 +2767,9 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    cerr << "Pooled populations '" << pop_key[pop_1] << "' and '" << pop_key[pop_2] << "' contained: " << ord->incompatible_loci << " incompatible loci; " 
 		 << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 	    fh.close();
+
+	    if (bootstrap_fst)
+		delete bs;
 	}
     }
 
@@ -2812,8 +2814,6 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	delete ks;
 	delete ord;
     }
-    if (bootstrap)
-	delete bs;
 
     return 0;
 }

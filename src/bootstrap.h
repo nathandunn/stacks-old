@@ -99,7 +99,7 @@ Bootstrap<StatT>::execute(vector<StatT *> &sites)
 	uint pos_l = 0;
 	uint pos_u = 0;
 
-        #pragma omp for schedule(dynamic, 1)  
+        //#pragma omp for schedule(dynamic, 1)  
 	for (uint pos_c = 0; pos_c < sites.size(); pos_c++) {
 	    c = sites[pos_c];
 
@@ -109,7 +109,7 @@ Bootstrap<StatT>::execute(vector<StatT *> &sites)
 	    if (bootstrap_wl && bootstraplist.count(c->loc_id) == 0)
 		continue;
 
-	    cerr << "Bootstrapping " << c->loc_id << "; pos_c: " << pos_c << "; bp: " << c->bp << "\n";
+	    // cerr << "Bootstrapping " << c->loc_id << "; pos_c: " << pos_c << "; bp: " << c->bp << "\n";
 
 	    determine_window_limits(sites, c->bp, pos_l, pos_u);
 
@@ -141,8 +141,7 @@ Bootstrap<StatT>::execute(vector<StatT *> &sites)
 	    // Bootstrap this bitch.
 	    //
 	    for (int i = 0; i < bootstrap_reps; i++) {
-		if (i % 100 == 0)
-		    cerr << "      Bootsrap rep " << i << "\n";
+		// if (i % 100 == 0) cerr << "      Bootsrap rep " << i << "\n";
 
 		for (uint k = 0; k < this->num_stats; k++)
 		    weighted_stat[k] = 0.0;
@@ -160,7 +159,7 @@ Bootstrap<StatT>::execute(vector<StatT *> &sites)
 		    for (uint k = 0; k < this->num_stats; k++)
 			bs[j].stat[k] = this->stats[k][index];
 
-		    final_weight = (bs[j].alleles - 1) * weights[dist];
+		    final_weight = (bs[j].alleles - 1) * this->weights[dist];
 		    for (uint k = 0; k < this->num_stats; k++)
 			weighted_stat[k] += bs[j].stat[k] * final_weight;
 		    sum += final_weight;
@@ -190,8 +189,8 @@ template<class StatT>
 int
 Bootstrap<StatT>::execute_mixed(vector<StatT *> &sites)
 {
-    //    #pragma omp parallel
-    //{ 
+    #pragma omp parallel
+    { 
 	PopStat *c;
 	double final_weight, sum, weighted_stat[PopStatSize];
 	int  dist, index;
@@ -208,7 +207,7 @@ Bootstrap<StatT>::execute_mixed(vector<StatT *> &sites)
 	    if (bootstrap_wl && bootstraplist.count(c->loc_id) == 0)
 		continue;
 
-	    cerr << "Bootstrapping " << c->loc_id << "; pos_c: " << pos_c << "; bp: " << c->bp << "\n";
+	    // cerr << "Bootstrapping " << c->loc_id << "; pos_c: " << pos_c << "; bp: " << c->bp << "\n";
 
 	    determine_window_limits(sites, c->bp, pos_l, pos_u);
 
@@ -264,7 +263,7 @@ Bootstrap<StatT>::execute_mixed(vector<StatT *> &sites)
 	    // Bootstrap this bitch.
 	    //
 	    for (int i = 0; i < bootstrap_reps; i++) {
-		if (i % 100 == 0) cerr << "      Bootsrap rep " << i << "\n";
+		// if (i % 100 == 0) cerr << "      Bootsrap rep " << i << "\n";
 
 		for (uint k = 0; k < this->num_stats; k++)
 		    weighted_stat[k] = partial_weighted_stat[k];
@@ -304,7 +303,7 @@ Bootstrap<StatT>::execute_mixed(vector<StatT *> &sites)
 
 	    delete [] bs;
 	}
-	//}
+    }
 
     return 0;
 }
