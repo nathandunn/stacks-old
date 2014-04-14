@@ -398,7 +398,7 @@
 }
 
 - (void)provideFeedback:(id)sender {
-    NSString *recipients = @"mailto:jcatchen@uoregon.edu?cc=ndunn@uoregon.edu&subject=vStacks Feedback";
+    NSString *recipients = @"mailto:jcatchen@uoregon.edu?cc=ndunn@uoregon.edu&subject=vStacks Feedback 0.8.1";
     NSString *body = @"&body=Feedback for vStacks";
     NSString *email = [NSString stringWithFormat:@"%@%@", recipients, body];
 
@@ -418,7 +418,7 @@
 }
 
 - (void)license:(id)sender {
-    NSString *url = @"http://creskolab.uoregon.edu/stacks/vstacks/license.php";
+    NSString *url = @"http://creskolab.uoregon.edu/stacks/vstacks/apple-license.php";
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
 
