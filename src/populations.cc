@@ -297,9 +297,9 @@ int main (int argc, char* argv[]) {
 
     calculate_haplotype_stats(files, pop_indexes, catalog, pmap, psum);
 
-    calculate_haplotype_amova(files, pop_indexes, grp_members, catalog, pmap, psum);
+    calculate_haplotype_divergence(files, pop_indexes, grp_members, catalog, pmap, psum);
 
-    calculate_haplotype_amova_pairwise(files, pop_indexes, grp_members, catalog, pmap, psum);
+    calculate_haplotype_divergence_pairwise(files, pop_indexes, grp_members, catalog, pmap, psum);
 
     //
     // Output a list of heterozygous loci and the associate haplotype frequencies.
@@ -840,9 +840,6 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 	ord = new OHaplotypes<LocStat>();
     }
 
-    if (bootstrap_div)
-	bs = new Bootstrap<LocStat>(2);
-
     //
     // Open output file and print header.
     //
@@ -882,8 +879,10 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
        << "Haplotype Cnt"  << "\t"
        << "Gene Diversity" << "\t"
        << "Smoothed Gene Diversity"      << "\t"
+       << "Smoothed Gene Diversity P-value"      << "\t"
        << "Haplotype Diversity"          << "\t"
        << "Smoothed Haplotype Diversity" << "\t"
+       << "Smoothed Haplotype Diversity P-value" << "\t"
        << "Haplotypes"                   << "\n";
 
     //
@@ -899,6 +898,9 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 	map<string, vector<LocStat *> > genome_locstats;
 
 	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+
+	    if (bootstrap_div)
+		bs = new Bootstrap<LocStat>(2);
 
 	    vector<LocStat *> &locstats = genome_locstats[it->first];
 	    map<uint, uint>    locstats_key;
@@ -930,6 +932,13 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 
 	    if (bootstrap_div) 
 		bs->add_data(locstats);
+	}
+
+	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	    vector<LocStat *> &locstats = genome_locstats[it->first];
+
+	    if (bootstrap_div)
+		bs->execute(locstats);
 
 	    //
 	    // Write results.
@@ -947,28 +956,25 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 		   << l->hap_cnt      << "\t"
 		   << setw(fieldw)    << l->stat[0]     << "\t"
 		   << setw(fieldw)    << l->smoothed[0] << "\t"
+		   << setw(fieldw)    << l->bs[0]       << "\t"
 		   << setw(fieldw)    << l->stat[1]     << "\t"
 		   << setw(fieldw)    << l->smoothed[1] << "\t"
+		   << setw(fieldw)    << l->bs[1]       << "\t"
 		   << l->hap_str      << "\n";
 	    }
+
+	    for (uint k = 0; k < locstats.size(); k++) 
+		delete locstats[k];
 	}
 
-	if (bootstrap_div) {
-	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-		vector<LocStat *> &locstats = genome_locstats[it->first];
-		bs->execute(locstats);
-		for (uint k = 0; k < locstats.size(); k++) 
-		    delete locstats[k];
-	    }
-	}
+	if (bootstrap_div) 
+	    delete bs;
     }
 
     if (kernel_smoothed && loci_ordered) {
 	delete ks;
 	delete ord;
     }
-    if (bootstrap_div) 
-	delete bs;
 
     fh.close();
 
@@ -1010,10 +1016,10 @@ nuc_substitution_dist(map<string, int> &hap_index, double **hdists)
 }
 
 int 
-calculate_haplotype_amova(vector<pair<int, string> > &files, 
-			  map<int, pair<int, int> > &pop_indexes, 
-			  map<int, vector<int> > &master_grp_members,
-			  map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_haplotype_divergence(vector<pair<int, string> > &files, 
+			       map<int, pair<int, int> > &pop_indexes, 
+			       map<int, vector<int> > &master_grp_members,
+			       map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
     map<string, vector<CSLocus *> >::iterator it;
 
@@ -1047,12 +1053,12 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
     OHaplotypes<HapStat> *ord;
     Bootstrap<HapStat>   *bs;
     if (kernel_smoothed && loci_ordered) {
-	ks  = new KSmooth<HapStat>(3);
+	ks  = new KSmooth<HapStat>(4);
 	ord = new OHaplotypes<HapStat>();
     }
 
     if (bootstrap_phist)
-	bs = new Bootstrap<HapStat>(3);
+	bs = new Bootstrap<HapStat>(4);
 
     map<string, vector<HapStat *> > genome_hapstats;
 
@@ -1086,6 +1092,8 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 		// cerr << "Processing locus " << loc->id << "\n";
 
 		h = haplotype_amova(pop_grp_key, pop_indexes, d, s, pop_ids);
+
+		h->stat[3] = haplotype_d_est(pop_indexes, d, s, pop_ids);
 
 		if (h != NULL) {
 		    h->loc_id = loc->id;
@@ -1189,10 +1197,16 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 	   << "Sigma_Total" << "\t";
     fh << "phi_st"          << "\t"
        << "Smoothed Phi_st" << "\t"
+       << "Smoothed Phi_st P-value" << "\t"
        << "Phi_ct"          << "\t"
        << "Smoothed Phi_ct" << "\t"
+       << "Smoothed Phi_ct P-value" << "\t"
        << "Phi_sc"          << "\t"
-       << "Smoothed Phi_sc" << "\n";
+       << "Smoothed Phi_sc" << "\t"
+       << "Smoothed Phi_sc P-value" << "\t"
+       << "D_est"           << "\t"
+       << "Smoothed D_est"  << "\t"
+       << "Smoothed D_est P-value"  << "\n";
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	string chr = it->first;
@@ -1224,10 +1238,16 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 		   << hapstats[k]->comp[14] << "\t";
 	    fh << setw(fieldw) << hapstats[k]->stat[0]     << "\t"
 	       << setw(fieldw) << hapstats[k]->smoothed[0] << "\t"
+	       << setw(fieldw) << hapstats[k]->bs[0]       << "\t"
 	       << setw(fieldw) << hapstats[k]->stat[1]     << "\t"
 	       << setw(fieldw) << hapstats[k]->smoothed[1] << "\t"
+	       << setw(fieldw) << hapstats[k]->bs[1]       << "\t"
 	       << setw(fieldw) << hapstats[k]->stat[2]     << "\t"
-	       << setw(fieldw) << hapstats[k]->smoothed[2] << "\n";
+	       << setw(fieldw) << hapstats[k]->smoothed[2] << "\t"
+	       << setw(fieldw) << hapstats[k]->bs[2]       << "\t"
+	       << setw(fieldw) << hapstats[k]->stat[3]     << "\t"
+	       << setw(fieldw) << hapstats[k]->smoothed[3] << "\t"
+	       << setw(fieldw) << hapstats[k]->bs[3]       << "\n";
 
 	    delete hapstats[k];
 	}
@@ -1241,10 +1261,10 @@ calculate_haplotype_amova(vector<pair<int, string> > &files,
 }
 
 int 
-calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files, 
-				   map<int, pair<int, int> > &pop_indexes, 
-				   map<int, vector<int> > &master_grp_members,
-				   map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files, 
+					map<int, pair<int, int> > &pop_indexes, 
+					map<int, vector<int> > &master_grp_members,
+					map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
     map<string, vector<CSLocus *> >::iterator it;
 
@@ -1274,7 +1294,7 @@ calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files,
     OHaplotypes<HapStat> *ord;
     Bootstrap<HapStat>   *bs;
     if (kernel_smoothed && loci_ordered) {
-	ks  = new KSmooth<HapStat>(3);
+	ks  = new KSmooth<HapStat>(4);
 	ord = new OHaplotypes<HapStat>();
     }
 
@@ -1282,7 +1302,7 @@ calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files,
 	for (uint j = i + 1; j < pop_ids.size(); j++) {
 
 	    if (bootstrap_phist)
-		bs = new Bootstrap<HapStat>(3);
+		bs = new Bootstrap<HapStat>(4);
 
 	    map<string, vector<HapStat *> > genome_hapstats;
 	    vector<int> subpop_ids;
@@ -1324,6 +1344,8 @@ calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files,
 			h = haplotype_amova(pop_grp_key, pop_indexes, d, s, subpop_ids);
 
 			if (h != NULL) {
+			    h->stat[3] = haplotype_d_est(pop_indexes, d, s, subpop_ids);
+
 			    h->loc_id = loc->id;
 			    h->bp     = loc->sort_bp();
 			    hapstats[hapstats_key[h->bp]] = h;
@@ -1409,10 +1431,16 @@ calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files,
 		   << "Sigma_Total" << "\t";
 	    fh << "phi_st"          << "\t"
 	       << "Smoothed Phi_st" << "\t"
+	       << "Smoothed Phi_st P-value" << "\t"
 	       << "Phi_ct"          << "\t"
 	       << "Smoothed Phi_ct" << "\t"
+	       << "Smoothed Phi_st P-value" << "\t"
 	       << "Phi_sc"          << "\t"
-	       << "Smoothed Phi_sc" << "\n";
+	       << "Smoothed Phi_sc" << "\t"
+	       << "Smoothed Phi_st P-value" << "\t"
+	       << "D_est"          << "\t"
+	       << "Smoothed D_est" << "\t"
+	       << "Smoothed D_est P-value" << "\n";
 
 	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 		string chr = it->first;
@@ -1446,10 +1474,16 @@ calculate_haplotype_amova_pairwise(vector<pair<int, string> > &files,
 			   << hapstats[k]->comp[14] << "\t";
 		    fh << setw(fieldw) << hapstats[k]->stat[0]     << "\t"
 		       << setw(fieldw) << hapstats[k]->smoothed[0] << "\t"
+		       << setw(fieldw) << hapstats[k]->bs[0]       << "\t"
 		       << setw(fieldw) << hapstats[k]->stat[1]     << "\t"
 		       << setw(fieldw) << hapstats[k]->smoothed[1] << "\t"
+		       << setw(fieldw) << hapstats[k]->bs[1]       << "\t"
 		       << setw(fieldw) << hapstats[k]->stat[2]     << "\t"
-		       << setw(fieldw) << hapstats[k]->smoothed[2] << "\n";
+		       << setw(fieldw) << hapstats[k]->smoothed[2] << "\t"
+		       << setw(fieldw) << hapstats[k]->bs[2]       << "\t"
+		       << setw(fieldw) << hapstats[k]->stat[3]     << "\t"
+		       << setw(fieldw) << hapstats[k]->smoothed[3] << "\t"
+		       << setw(fieldw) << hapstats[k]->bs[3]       << "\n";
 
 		    delete hapstats[k];
 		}
@@ -1975,6 +2009,88 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     delete hdists;
 
     return h;
+}
+
+double
+haplotype_d_est(map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum **s, vector<int> &pop_ids)
+{
+    //
+    // Calculate D_est, fixation index, as described by 
+    //   Bird, et al., 2011, Detecting and measuring genetic differentiation
+    //     +-Equation 11
+    // and
+    //   Jost, 2008, GST and its relatives do not measure differentiation, Molecular Ecology
+    //     +- Equation 13, D_est_chao
+    //
+    map<string, double>            loc_haplotypes;
+    map<int, map<string, double> > pop_haplotypes;
+    map<int, double>               pop_totals;
+
+    map<string, double>::iterator it;
+    int start, end, pop_id;
+
+    uint pop_cnt = pop_ids.size();
+
+    //
+    // Tabulate the occurences of haplotypes at this locus.
+    //
+    for (uint p = 0; p < pop_cnt; p++) {
+    	start  = pop_indexes[pop_ids[p]].first;
+    	end    = pop_indexes[pop_ids[p]].second;
+    	pop_id = pop_ids[p];
+
+    	for (int i = start; i <= end; i++) {
+    	    if (d[i] == NULL) continue;
+
+    	    if (d[i]->obshap.size() > 2) { 
+    		continue;
+
+    	    } else if (d[i]->obshap.size() == 1) {
+    		loc_haplotypes[d[i]->obshap[0]]         += 2;
+    		pop_haplotypes[pop_id][d[i]->obshap[0]] += 2;
+
+    	    } else {
+    		for (uint j = 0; j < d[i]->obshap.size(); j++) {
+		    loc_haplotypes[d[i]->obshap[j]]++;
+		    pop_haplotypes[pop_id][d[i]->obshap[j]]++;
+    		}
+    	    }
+    	}
+
+	for (it = pop_haplotypes[pop_id].begin(); it != pop_haplotypes[pop_id].end(); it++)
+	    pop_totals[pop_id] += it->second;
+    }
+
+    double x = 0.0;
+
+    for (it = loc_haplotypes.begin(); it != loc_haplotypes.end(); it++) {
+
+	double freq_sum_sq = 0.0;
+	double freq_sq_sum = 0.0;
+	for (uint p = 0; p < pop_cnt; p++) {
+	    pop_id = pop_ids[p];
+	    freq_sum_sq += (pop_haplotypes[pop_id][it->first] / pop_totals[pop_id]);
+	    freq_sq_sum += pow((pop_haplotypes[pop_id][it->first] / pop_totals[pop_id]), 2);
+	}
+	freq_sum_sq = pow(freq_sum_sq, 2);
+
+	x += (freq_sum_sq - freq_sq_sum) / (pop_cnt - 1);
+    }
+
+    double y = 0.0;
+
+    for (it = loc_haplotypes.begin(); it != loc_haplotypes.end(); it++) {
+	for (uint p = 0; p < pop_cnt; p++) {
+	    pop_id = pop_ids[p];
+
+	    y += (pop_haplotypes[pop_id][it->first] * (pop_haplotypes[pop_id][it->first] - 1)) /
+		(pop_totals[pop_id] * (pop_totals[pop_id] - 1));
+	}
+    }
+
+    double d_est = 1.0 - (x / y);
+
+    return d_est;
 }
 
 int 
@@ -2528,13 +2644,11 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     //
     // Instantiate the kernel smoothing object if requested.
     //
-    KSmooth<PopPair>  *ks;
-    OPopPair<PopPair> *ord;
+    OPopPair<PopPair>  *ord = new OPopPair<PopPair>(psum, log_fh);
+    KSmooth<PopPair>   *ks;
     Bootstrap<PopPair> *bs;
-    if (kernel_smoothed && loci_ordered) {
+    if (kernel_smoothed && loci_ordered)
 	ks  = new KSmooth<PopPair>(2);
-	ord = new OPopPair<PopPair>(psum, log_fh);
-    }
 
     for (uint i = 0; i < pops.size(); i++) {
 
@@ -2810,9 +2924,9 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
     fh.close();
 
+    delete ord;
     if (kernel_smoothed && loci_ordered) {
 	delete ks;
-	delete ord;
     }
 
     return 0;
