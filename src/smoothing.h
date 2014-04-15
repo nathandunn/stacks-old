@@ -22,20 +22,17 @@
 #define __SMOOTHING_H__
 
 #include <math.h>
-
-extern double sigma;
+#include "smoothing_utils.h"
 
 template<class StatT=PopStat>
 class KSmooth {
     uint    size;    // Number of elements expected in the StatT class to smooth.
     double *weights; // Weight matrix to apply while smoothing.
 
-    int calc_weights();
-
 public:
     KSmooth(int size)  { 
-	this->size = size;
-	this->calc_weights();
+	this->size    = size;
+	this->weights = calc_weights();
 
     }
     ~KSmooth() { 
@@ -44,26 +41,6 @@ public:
 
     int smooth(vector<StatT *> &popstats);
 };
-
-template<class StatT>
-int 
-KSmooth<StatT>::calc_weights() 
-{
-    int limit = 3 * sigma;
-    //
-    // Calculate weights for window smoothing operations.
-    //
-    // For each genomic region centered on a nucleotide position c, the contribution of the population 
-    // genetic statistic at position p to the region average was weighted by the Gaussian function:
-    //   exp( (-1 * (p - c)^2) / (2 * sigma^2))
-    //
-    this->weights = new double[limit + 1];
-
-    for (int i = 0; i <= limit; i++)
-	this->weights[i] = exp((-1 * pow(i, 2)) / (2 * pow(sigma, 2)));
-
-    return 0;
-}
 
 template<class StatT>
 int
@@ -84,8 +61,7 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
     //
     #pragma omp parallel
     { 
-	int      limit = 3 * sigma;
-	int      dist, limit_l, limit_u;
+	int      dist;
 	uint     pos_l, pos_u;
 	double   sum, final_weight;
 	PopStat *c, *p;
@@ -104,33 +80,7 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
 		c->smoothed[i] = 0.0;
 	    sum = 0.0;
 
-	    limit_l = c->bp - limit > 0 ? c->bp - limit : 0;
-	    limit_u = c->bp + limit;
-
-	    while (pos_l < popstats.size()) {
-		if (popstats[pos_l] == NULL) {
-		    pos_l++;
-		} else {
-		    if (popstats[pos_l]->bp < limit_l) 
-			pos_l++;
-		    else
-			break;
-		}
-	    }
-	    while (pos_u < popstats.size()) {
-		if (popstats[pos_u] == NULL) {
-		    pos_u++;
-		} else {
-		    if (popstats[pos_u]->bp < limit_u)
-			pos_u++;
-		    else
-			break;
-		}
-	    }
-
-	    // cerr << "Calculating sliding window; start position: " << pos_l << ", " << popstats[pos_l]->bp << "bp; end position: " 
-	    //      << pos_u << ", " << popstats[pos_u]->bp << "bp; center: " 
-	    //      << pos_c << ", " << popstats[pos_c]->bp << "bp\n";
+	    determine_window_limits(popstats, c->bp, pos_l, pos_u);
 
 	    for (uint pos_p = pos_l; pos_p < pos_u; pos_p++) {
 		p = popstats[pos_p];
