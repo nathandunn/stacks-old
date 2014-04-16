@@ -41,7 +41,7 @@ extern bool   log_fst_comp;
 extern int    progeny_limit;
 extern double minor_allele_freq;
 extern map<int, string> pop_key;
-const  int    PopStatSize = 4;
+const  int    PopStatSize = 5;
 
 class PopStat {
 public:
@@ -70,10 +70,11 @@ public:
 };
 
 class HapStat: public PopStat {
-    // PopStat[0]: phi_st
-    // PopStat[1]: phi_ct
-    // PopStat[2]: phi_sc
-    // PopStat[3]: D_est
+    // PopStat[0]: Phi_st
+    // PopStat[1]: Phi_ct
+    // PopStat[2]: Phi_sc
+    // PopStat[3]: Fst'
+    // PopStat[4]: D_est
 public:
     double *comp;
 
