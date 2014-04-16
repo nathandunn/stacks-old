@@ -117,10 +117,19 @@ int      calculate_haplotype_stats(vector<pair<int, string> > &, map<int, pair<i
 int      kernel_smoothed_hapstats(vector<CSLocus *> &, PopSum<CSLocus> *, int, double *);
 int      calculate_haplotype_divergence(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int      calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+
+int      nuc_substitution_dist(map<string, int> &, double **);
+int      nuc_substitution_identity(map<string, int> &, double **);
+int      nuc_substitution_identity_max(map<string, int> &, double **);
+
 HapStat *haplotype_amova(map<int, int> &, map<int, pair<int, int> > &, Datum **, LocSum **, vector<int> &);
+double   amova_ssd_total(vector<string> &, map<string, int> &, double **);
+double   amova_ssd_wp(vector<int> &, map<int, vector<int> > &, map<string, int> &, map<int, vector<string> > &, double **);
+double   amova_ssd_ap_wg(vector<int> &, map<int, vector<int> > &, map<string, int> &, map<int, vector<string> > &, double **);
+double   amova_ssd_ag(vector<int> &, map<int, vector<int> > &, map<string, int> &, map<int, vector<string> > &, double **, double);
+
 double   haplotype_d_est(map<int, pair<int, int> > &, Datum **, LocSum **, vector<int> &);
 LocStat *haplotype_diversity(int, int, Datum **);
-int      nuc_substitution_dist(map<string, int> &, double **);
 
 int  write_sql(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int  write_fst_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, ofstream &);
