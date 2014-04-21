@@ -117,12 +117,15 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
 		    c->smoothed[i] += p->stat[i] * final_weight;
 		sum += final_weight;
 
-		// cerr << "    dist: " << dist 
-		//      << "; weight: " << weights[dist] 
-		//      << "; final_weight: " << final_weight 
-		//      << "; pi: " << p->stat[0] 
-		//      << "; sum: " << sum 
-		//      << "; smoothed: " << c->smoothed[0] << "\n";
+		// if (c->loc_id == 9314) {
+		//     cerr << "    id: " << p->loc_id 
+		// 	 << "; dist: " << dist 
+		// 	 << "; weight: " << weights[dist] 
+		// 	 << "; final_weight: " << final_weight 
+		// 	 << "; fst': " << p->stat[3] 
+		// 	 << "; sum: " << sum 
+		// 	 << "; smoothed: " << c->smoothed[3] << "\n";
+		// }
 	    }
 
 	    // sites_per_snp += (sites_cnt / snp_cnt);

@@ -46,7 +46,7 @@ public:
 	this->bp      = 0;
 	this->alleles = 0;
 	this->fixed   = false;
-	for (int i = 0; i < PopStatSize; i++)
+	for (uint i = 0; i < PopStatSize; i++)
 	    this->stat[i] = 0.0;
 
     }

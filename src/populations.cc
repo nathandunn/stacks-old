@@ -282,7 +282,7 @@ int main (int argc, char* argv[]) {
 
 	if (kernel_smoothed && loci_ordered) {
 	    cerr << "  Generating kernel-smoothed population statistics...\n";
-	    kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
+	    // kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
 	}
     }
 
@@ -852,6 +852,8 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
         cerr << "Error opening haplotype stats file '" << file << "'\n";
 	exit(1);
     }
+    fh.precision(fieldw);
+    fh.setf(std::ios::fixed);
 
     map<int, pair<int, int> >::iterator pit;
     int start, end, pop_id, pop_index;
@@ -947,20 +949,20 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 		l = locstats[k];
 		if (l == NULL) continue;
 
-		fh << batch_id        << "\t"
-		   << l->loc_id       << "\t"
-		   << it->first       << "\t"
-		   << l->bp           << "\t"
-		   << pop_key[pop_id] << "\t"
-		   << l->alleles      << "\t"
-		   << l->hap_cnt      << "\t"
-		   << setw(fieldw)    << l->stat[0]     << "\t"
-		   << setw(fieldw)    << l->smoothed[0] << "\t"
-		   << setw(fieldw)    << l->bs[0]       << "\t"
-		   << setw(fieldw)    << l->stat[1]     << "\t"
-		   << setw(fieldw)    << l->smoothed[1] << "\t"
-		   << setw(fieldw)    << l->bs[1]       << "\t"
-		   << l->hap_str      << "\n";
+		fh << batch_id         << "\t"
+		   << l->loc_id        << "\t"
+		   << it->first        << "\t"
+		   << l->bp            << "\t"
+		   << pop_key[pop_id]  << "\t"
+		   << (int) l->alleles << "\t"
+		   << l->hap_cnt       << "\t"
+		   << l->stat[0]       << "\t"
+		   << l->smoothed[0]   << "\t"
+		   << l->bs[0]         << "\t"
+		   << l->stat[1]       << "\t"
+		   << l->smoothed[1]   << "\t"
+		   << l->bs[1]         << "\t"
+		   << l->hap_str       << "\n";
 	    }
 
 	    for (uint k = 0; k < locstats.size(); k++) 
@@ -1116,12 +1118,12 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
     OHaplotypes<HapStat> *ord;
     Bootstrap<HapStat>   *bs;
     if (kernel_smoothed && loci_ordered) {
-	ks  = new KSmooth<HapStat>(4);
+	ks  = new KSmooth<HapStat>(5);
 	ord = new OHaplotypes<HapStat>();
     }
 
     if (bootstrap_phist)
-	bs = new Bootstrap<HapStat>(4);
+	bs = new Bootstrap<HapStat>(5);
 
     map<string, vector<HapStat *> > genome_hapstats;
 
@@ -1149,6 +1151,13 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
 		d   = pmap->locus(loc->id);
 
 		if (loc->snps.size() == 0)
+		    continue;
+
+		//
+		// If this locus only appears in one population or there is only a single haplotype,
+		// do not calculate haplotype F stats.
+		//
+		if (fixed_locus(pop_indexes, d, pop_ids))
 		    continue;
 
 		cnt++;
@@ -1204,11 +1213,12 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
     string file = in_path + pop_name.str();
 
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening haplotype Phi_st file '" << file << "'\n";
 	exit(1);
     }
+    fh.precision(fieldw);
+    fh.setf(std::ios::fixed);
 
     //
     // Write the population members.
@@ -1302,21 +1312,21 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
 		   << hapstats[k]->comp[12] << "\t"
 		   << hapstats[k]->comp[13] << "\t"
 		   << hapstats[k]->comp[14] << "\t";
-	    fh << setw(fieldw) << hapstats[k]->stat[0]     << "\t"
-	       << setw(fieldw) << hapstats[k]->smoothed[0] << "\t"
-	       << setw(fieldw) << hapstats[k]->bs[0]       << "\t"
-	       << setw(fieldw) << hapstats[k]->stat[1]     << "\t"
-	       << setw(fieldw) << hapstats[k]->smoothed[1] << "\t"
-	       << setw(fieldw) << hapstats[k]->bs[1]       << "\t"
-	       << setw(fieldw) << hapstats[k]->stat[2]     << "\t"
-	       << setw(fieldw) << hapstats[k]->smoothed[2] << "\t"
-	       << setw(fieldw) << hapstats[k]->bs[2]       << "\t"
-	       << setw(fieldw) << hapstats[k]->stat[3]     << "\t"
-	       << setw(fieldw) << hapstats[k]->smoothed[3] << "\t"
-	       << setw(fieldw) << hapstats[k]->bs[3]       << "\t"
-	       << setw(fieldw) << hapstats[k]->stat[4]     << "\t"
-	       << setw(fieldw) << hapstats[k]->smoothed[4] << "\t"
-	       << setw(fieldw) << hapstats[k]->bs[4]       << "\n";
+	    fh << hapstats[k]->stat[0]     << "\t"
+	       << hapstats[k]->smoothed[0] << "\t"
+	       << hapstats[k]->bs[0]       << "\t"
+	       << hapstats[k]->stat[1]     << "\t"
+	       << hapstats[k]->smoothed[1] << "\t"
+	       << hapstats[k]->bs[1]       << "\t"
+	       << hapstats[k]->stat[2]     << "\t"
+	       << hapstats[k]->smoothed[2] << "\t"
+	       << hapstats[k]->bs[2]       << "\t"
+	       << hapstats[k]->stat[3]     << "\t"
+	       << hapstats[k]->smoothed[3] << "\t"
+	       << hapstats[k]->bs[3]       << "\t"
+	       << hapstats[k]->stat[4]     << "\t"
+	       << hapstats[k]->smoothed[4] << "\t"
+	       << hapstats[k]->bs[4]       << "\n";
 
 	    delete hapstats[k];
 	}
@@ -1363,7 +1373,7 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
     OHaplotypes<HapStat> *ord;
     Bootstrap<HapStat>   *bs;
     if (kernel_smoothed && loci_ordered) {
-	ks  = new KSmooth<HapStat>(4);
+	ks  = new KSmooth<HapStat>(5);
 	ord = new OHaplotypes<HapStat>();
     }
 
@@ -1371,7 +1381,7 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
 	for (uint j = i + 1; j < pop_ids.size(); j++) {
 
 	    if (bootstrap_phist)
-		bs = new Bootstrap<HapStat>(4);
+		bs = new Bootstrap<HapStat>(5);
 
 	    map<string, vector<HapStat *> > genome_hapstats;
 	    vector<int> subpop_ids;
@@ -1405,6 +1415,13 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
 			d   = pmap->locus(loc->id);
 
 			if (loc->snps.size() == 0)
+			    continue;
+
+			//
+			// If this locus only appears in one population or there is only a single haplotype,
+			// do not calculate haplotype F stats.
+			//
+			if (fixed_locus(pop_indexes, d, subpop_ids))
 			    continue;
 
 			cnt++;
@@ -1455,11 +1472,12 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
 	    string file = in_path + pop_name.str();
 
 	    ofstream fh(file.c_str(), ofstream::out);
-
 	    if (fh.fail()) {
 		cerr << "Error opening haplotype Phi_st file '" << file << "'\n";
 		exit(1);
 	    }
+	    fh.precision(fieldw);
+	    fh.setf(std::ios::fixed);
 
 	    //
 	    // Write the population members.
@@ -1501,12 +1519,6 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
 	    fh << "phi_st"          << "\t"
 	       << "Smoothed Phi_st" << "\t"
 	       << "Smoothed Phi_st P-value" << "\t"
-	       << "Phi_ct"          << "\t"
-	       << "Smoothed Phi_ct" << "\t"
-	       << "Smoothed Phi_ct P-value" << "\t"
-	       << "Phi_sc"          << "\t"
-	       << "Smoothed Phi_sc" << "\t"
-	       << "Smoothed Phi_sc P-value" << "\t"
 	       << "Fst'"            << "\t"
 	       << "Smoothed Fst'"   << "\t"
 	       << "Smoothed Fst' P-value"   << "\t"
@@ -1544,21 +1556,15 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
 			   << hapstats[k]->comp[12] << "\t"
 			   << hapstats[k]->comp[13] << "\t"
 			   << hapstats[k]->comp[14] << "\t";
-		    fh << setw(fieldw) << hapstats[k]->stat[0]     << "\t"
-		       << setw(fieldw) << hapstats[k]->smoothed[0] << "\t"
-		       << setw(fieldw) << hapstats[k]->bs[0]       << "\t"
-		       << setw(fieldw) << hapstats[k]->stat[1]     << "\t"
-		       << setw(fieldw) << hapstats[k]->smoothed[1] << "\t"
-		       << setw(fieldw) << hapstats[k]->bs[1]       << "\t"
-		       << setw(fieldw) << hapstats[k]->stat[2]     << "\t"
-		       << setw(fieldw) << hapstats[k]->smoothed[2] << "\t"
-		       << setw(fieldw) << hapstats[k]->bs[2]       << "\t"
-		       << setw(fieldw) << hapstats[k]->stat[3]     << "\t"
-		       << setw(fieldw) << hapstats[k]->smoothed[3] << "\t"
-		       << setw(fieldw) << hapstats[k]->bs[3]       << "\t"
-		       << setw(fieldw) << hapstats[k]->stat[4]     << "\t"
-		       << setw(fieldw) << hapstats[k]->smoothed[4] << "\t"
-		       << setw(fieldw) << hapstats[k]->bs[4]       << "\n";
+		    fh << hapstats[k]->stat[0]     << "\t"
+		       << hapstats[k]->smoothed[0] << "\t"
+		       << hapstats[k]->bs[0]       << "\t"
+		       << hapstats[k]->stat[3]     << "\t"
+		       << hapstats[k]->smoothed[3] << "\t"
+		       << hapstats[k]->bs[3]       << "\t"
+		       << hapstats[k]->stat[4]     << "\t"
+		       << hapstats[k]->smoothed[4] << "\t"
+		       << hapstats[k]->bs[4]       << "\n";
 
 		    delete hapstats[k];
 		}
@@ -1576,6 +1582,63 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
     }
 
     return 0;
+}
+
+bool
+fixed_locus(map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_ids)
+{
+    set<string>               loc_haplotypes;
+    map<int, vector<string> > pop_haplotypes;
+    int start, end, pop_id;
+    int pop_cnt = pop_ids.size();
+
+    for (int p = 0; p < pop_cnt; p++) {
+	start  = pop_indexes[pop_ids[p]].first;
+	end    = pop_indexes[pop_ids[p]].second;
+	pop_id = pop_ids[p];
+
+	for (int i = start; i <= end; i++) {
+	    if (d[i] == NULL) continue;
+
+	    if (d[i]->obshap.size() > 2) { 
+		continue;
+
+	    } else if (d[i]->obshap.size() == 1) {
+		loc_haplotypes.insert(d[i]->obshap[0]);
+		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+
+	    } else {
+		for (uint j = 0; j < d[i]->obshap.size(); j++) {
+		    loc_haplotypes.insert(d[i]->obshap[j]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		}
+	    }
+	}
+    }
+
+    int valid_pops = 0;
+
+    for (int p = 0; p < pop_cnt; p++) {
+	pop_id = pop_ids[p];
+
+	if (pop_haplotypes[pop_id].size() > 0) 
+	    valid_pops++;
+    }
+
+    //
+    // Check that more than one population has data for this locus.
+    //
+    if (valid_pops <= 1) 
+	return true;
+
+    //
+    // Check that there is more than one haplotype at this locus.
+    //
+    if (loc_haplotypes.size() == 1)
+	return true;
+
+    return false;
 }
 
 LocStat *
@@ -1713,7 +1776,7 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     //
     // Tabulate the occurences of haplotypes at this locus.
     //
-    for (uint p = 0; p < pop_cnt; p++) {
+    for (int p = 0; p < pop_cnt; p++) {
 	start  = pop_indexes[pop_ids[p]].first;
 	end    = pop_indexes[pop_ids[p]].second;
 	pop_id = pop_ids[p];
@@ -1947,7 +2010,7 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     sigma_b   = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
 
     double fst_max = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
-    double fst_1   = fst / fst_max;
+    double fst_1   = fst_max > 0.0     ? fst / fst_max         : 0.0;
 
     //
     // Cache the results so we can print them in order below, once the parallel code has executed.
@@ -2431,11 +2494,12 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
     string file = in_path + pop_name.str();
 
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening sumstats file '" << file << "'\n";
 	exit(1);
     }
+    fh.precision(fieldw);
+    fh.setf(std::ios::fixed);
 
     int start, end;
     //
@@ -2515,11 +2579,11 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 			   << s[j]->nucs[i].exp_het   << "\t"
 			   << s[j]->nucs[i].exp_hom   << "\t"
 			   << s[j]->nucs[i].stat[0]   << "\t" // Pi
-			   << setw(fieldw) << s[j]->nucs[i].smoothed[0] << "\t"  // Smoothed Pi
-			   << setw(fieldw) << s[j]->nucs[i].bs[0]       << "\t"  // Pi bootstrapped p-value
-			   << setw(fieldw) << s[j]->nucs[i].stat[1]     << "\t"  // Fis
-			   << setw(fieldw) << s[j]->nucs[i].smoothed[1] << "\t"  // Smoothed Fis
-			   << setw(fieldw) << s[j]->nucs[i].bs[1]       << "\t"; // Fis bootstrapped p-value.
+			   << s[j]->nucs[i].smoothed[0] << "\t"  // Smoothed Pi
+			   << s[j]->nucs[i].bs[0]       << "\t"  // Pi bootstrapped p-value
+			   << s[j]->nucs[i].stat[1]     << "\t"  // Fis
+			   << s[j]->nucs[i].smoothed[1] << "\t"  // Smoothed Fis
+			   << s[j]->nucs[i].bs[1]       << "\t"; // Fis bootstrapped p-value.
 			(t->nucs[i].priv_allele == j) ? fh << "1\n" : fh << "0\n";
 
 			//
@@ -2812,13 +2876,14 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    stringstream pop_name;
 	    pop_name << "batch_" << batch_id << ".fst_" << pop_key[pop_1] << "-" << pop_key[pop_2] << ".tsv";
 
-	    string file = in_path + pop_name.str();
+	    string   file = in_path + pop_name.str();
 	    ofstream fh(file.c_str(), ofstream::out);
-
 	    if (fh.fail()) {
 		cerr << "Error opening Fst output file '" << file << "'\n";
 		exit(1);
 	    }
+	    fh.precision(fieldw);
+	    fh.setf(std::ios::fixed);
 
 	    cerr << "Calculating Fst for populations '" << pop_key[pop_1] << "' and '" << pop_key[pop_2] << "' and writing it to file, '" << file << "'\n";
 
@@ -2982,18 +3047,18 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		       << pairs[i]->bp      << "\t"
 		       << pairs[i]->col     << "\t"
 		       << pairs[i]->pi      << "\t"
-		       << setw(fieldw) << pairs[i]->fst << "\t"
+		       << pairs[i]->fst << "\t"
 		       << pairs[i]->fet_p   << "\t"
 		       << pairs[i]->fet_or  << "\t"
 		       << pairs[i]->ci_low  << "\t"
 		       << pairs[i]->ci_high << "\t"
 		       << pairs[i]->lod     << "\t"
-		       << setw(fieldw) << pairs[i]->stat[0]     << "\t"
-		       << setw(fieldw) << pairs[i]->smoothed[0] << "\t"
-		       << setw(fieldw) << pairs[i]->amova_fst   << "\t"
-		       << setw(fieldw) << pairs[i]->stat[1]     << "\t"
-		       << setw(fieldw) << pairs[i]->smoothed[1] << "\t"
-		       << setw(fieldw) << pairs[i]->bs[1] << "\t"
+		       << pairs[i]->stat[0]     << "\t"
+		       << pairs[i]->smoothed[0] << "\t"
+		       << pairs[i]->amova_fst   << "\t"
+		       << pairs[i]->stat[1]     << "\t"
+		       << pairs[i]->smoothed[1] << "\t"
+		       << pairs[i]->bs[1] << "\t"
 		       << pairs[i]->snp_cnt;
 
 		    if (log_fst_comp) {
@@ -3633,11 +3698,12 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     cerr << "Writing SQL markers file to '" << file << "'\n";
 
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening markers SQL file '" << file << "'\n";
 	exit(1);
     }
+    fh.precision(fieldw);
+    fh.setf(std::ios::fixed);
 
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
@@ -3663,12 +3729,12 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 
 	fh << 0 << "\t" 
 	   << batch_id << "\t" 
-	   << loc->id << "\t" 
+	   << loc->id  << "\t" 
 	   << "\t"              // Marker
-	   << total << "\t"
-	   << setw(fieldw) << max << "\t"
-	   << freq << "\t"
-	   << setw(fieldw) << loc->f << "\t"
+	   << total    << "\t"
+	   << max      << "\t"
+	   << freq     << "\t"
+	   << loc->f   << "\t"
            << gtype_map.str() <<"\n";
     }
 

@@ -45,6 +45,8 @@ using std::cerr;
 using std::endl;
 #include <iomanip>
 using std::setw;
+using std::setprecision;
+using std::fixed;
 #include <sstream>
 using std::stringstream;
 #include <vector>
@@ -117,6 +119,7 @@ int      calculate_haplotype_stats(vector<pair<int, string> > &, map<int, pair<i
 int      kernel_smoothed_hapstats(vector<CSLocus *> &, PopSum<CSLocus> *, int, double *);
 int      calculate_haplotype_divergence(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int      calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+bool     fixed_locus(map<int, pair<int, int> > &, Datum **, vector<int> &);
 
 int      nuc_substitution_dist(map<string, int> &, double **);
 int      nuc_substitution_identity(map<string, int> &, double **);
