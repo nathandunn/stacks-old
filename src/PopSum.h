@@ -41,7 +41,7 @@ extern bool   log_fst_comp;
 extern int    progeny_limit;
 extern double minor_allele_freq;
 extern map<int, string> pop_key;
-const  int    PopStatSize = 5;
+const  uint   PopStatSize = 5;
 
 class PopStat {
 public:
@@ -61,9 +61,11 @@ public:
 	this->alleles = 0.0;
 	this->snp_cnt = 0;
 
-	memset(this->stat,     0, PopStatSize);
-	memset(this->smoothed, 0, PopStatSize);
-	memset(this->bs,       0, PopStatSize);
+	for (uint i = 0; i < PopStatSize; i++) {
+	    this->stat[i]     = 0.0;
+	    this->smoothed[i] = 0.0;
+	    this->bs[i]       = 0.0;
+	}
      }
     virtual ~PopStat() {
     }
@@ -577,8 +579,7 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
     PopPair *pair = new PopPair();
 
     //
-    // If this locus only appears in one population, or it does not have sufficient 
-    // samples in the population, do not calculate Fst.
+    // If this locus only appears in one population do not calculate Fst.
     //
     if (s_1->nucs[pos].num_indv == 0 || s_2->nucs[pos].num_indv == 0) 
 	return pair;
