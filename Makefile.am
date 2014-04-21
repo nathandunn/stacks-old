@@ -132,9 +132,12 @@ nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sq
 	php/images/stacks_logo_rev_small.png
 
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(abs_top_srcdir)/tests/tap-driver.sh
+
+#TESTS = tests/process_radtags.t tests/kmer_filter.t tests/ustacks.t tests/pstacks.t tests/ref_map.t
 TESTS = tests/process_radtags.t tests/kmer_filter.t tests/ustacks.t
 #TESTS = tests/process_radtags.t tests/kmer_filter.t tests/ustacks.t tests/pstacks.t tests/ref_map.t
 #TESTS = tests/ustacks.t
+
 EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README ChangeLog $(TESTS)
 
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
