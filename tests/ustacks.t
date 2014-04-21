@@ -59,9 +59,9 @@ ok_ 'enable deleveraging algorithm' \
     011_deleverage \
     "ustacks -t gzfastq -f %in/in.fastq.gz -o %out -d"
 
-skip_ 'specify max number of stacks at a de novo locus' \
+ok_ 'specify max number of stacks at a de novo locus' \
     012_maxlocus \
-    "ustacks -t gzfastq -f %in -o %out"
+    "ustacks -t gzfastq -f %in/in.fastq.gz -o %out --max_locus_stacks 4"
 
 ok_ 'specify chi square significance level for calling heteroz/homozygote' \
     013_alpha0.1 \
