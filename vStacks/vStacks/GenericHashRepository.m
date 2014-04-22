@@ -48,8 +48,12 @@
     NSError *error1;
     NSArray *resultArray = [context executeFetchRequest:request1 error:&error1];
     if(resultArray !=nil && resultArray.count==1){
-        NSData* resultData = [resultArray objectAtIndex:0] ;
-        NSDictionary *myDictionary = (NSDictionary*) [NSKeyedUnarchiver unarchiveObjectWithData:resultData];
+        NSString* className = [[resultArray objectAtIndex:0] className];
+        // is GenericHasMO
+        GenericHashMO* resultData = [resultArray objectAtIndex:0] ;
+//        id value = resultData.dataValue
+
+        NSDictionary *myDictionary = (NSDictionary*) [NSKeyedUnarchiver unarchiveObjectWithData:resultData.dataValue];
         return myDictionary ;
     }
     else{

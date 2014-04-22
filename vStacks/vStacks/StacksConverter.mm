@@ -57,9 +57,9 @@ NSString *calculateType(NSString *file);
 */
 
 // lookups
-@synthesize sampleLookupDictionary;
+//@synthesize sampleLookupDictionary;
 @synthesize stopProcess;
-@synthesize locusSnpMap;
+//@synthesize locusSnpMap;
 @synthesize numberFormatter;
 
 
@@ -69,7 +69,7 @@ NSString *calculateType(NSString *file);
 - (id)init {
     self = [super init];
     if (self) {
-        sampleLookupDictionary = [NSMutableDictionary dictionary];
+//        sampleLookupDictionary = [NSMutableDictionary dictionary];
         stopProcess = false;
         numberFormatter = [[NSNumberFormatter alloc] init];
         numberFormatter.numberStyle = NSNumberFormatterNoStyle;
@@ -316,7 +316,7 @@ NSString *calculateType(NSString *file);
                     @autoreleasepool {
                         NSMutableDictionary *matchDictionary = [self loadMatchesDictionary:[matchString stringByAppendingString:@".matches.tsv"]];
                         [[GenericHashRepository sharedInstance] store:stacksDocument.managedObjectContext key:sampleString dictionary:matchDictionary type:@"MatchDictionaryForSample"];
-                        [sampleLookupDictionary setObject:matchDictionary forKey:sampleString];
+//                        [sampleLookupDictionary setObject:matchDictionary forKey:sampleString];
                     }
                 }
 
@@ -767,7 +767,7 @@ NSString *calculateType(NSString *file);
     NSInteger locusId = -1;
     NSInteger newLocusId;
     DatumMO *datumMO = nil ;
-    NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+//    NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
     NSDictionary *otherLookupDictionary = [[GenericHashRepository sharedInstance] getDictionary:document.managedObjectContext forKey:sampleName];
 //    char allele;
     int depth;
@@ -788,7 +788,8 @@ NSString *calculateType(NSString *file);
 
             @autoreleasepool {
                 NSString *internalIndex = (NSString *) [columns objectAtIndex:2];
-                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+//                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+                NSString *retrievedObject = (NSString *) [otherLookupDictionary objectForKey:internalIndex];
                 newLocusId = [retrievedObject integerValue];
 
 
@@ -833,7 +834,7 @@ NSString *calculateType(NSString *file);
 
     NSUInteger fileNameLength = snpFileName.length;
     NSString *sampleName = [snpFileName substringToIndex:fileNameLength - 9];
-    NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+//    NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
     NSDictionary *otherLookupDictionary = [[GenericHashRepository sharedInstance] getDictionary:document.managedObjectContext forKey:sampleName];
 
     NSManagedObjectContext *moc = document.managedObjectContext;
@@ -879,7 +880,8 @@ NSString *calculateType(NSString *file);
                 // if the StackMO is found
 
                 NSString *internalIndex = (NSString *) [columns objectAtIndex:2];
-                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+//                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+                NSString *retrievedObject = (NSString *) [otherLookupDictionary objectForKey:internalIndex];
 //            NSLog(@"retrieved object: %@", retrievedObject);
                 newLocusId = [retrievedObject integerValue];
 
@@ -1038,7 +1040,7 @@ NSString *calculateType(NSString *file);
             StackEntryDatumMO *stackEntryDatumMO = nil ;
 
 
-            NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+//            NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
             NSDictionary *otherLookupDictionary = [[GenericHashRepository sharedInstance] getDictionary:document.managedObjectContext forKey:sampleName];
 
             NSString *absoluteFileName = [document.importPath stringByAppendingFormat:@"/%@", tagFileName];
@@ -1074,7 +1076,8 @@ NSString *calculateType(NSString *file);
 
                             @autoreleasepool {
                                 NSString *internalIndex = [NSString stringWithUTF8String:parts[2].c_str()];
-                                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+//                                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+                                NSString *retrievedObject = (NSString *) [otherLookupDictionary objectForKey:internalIndex];
 
                                 newLocusId = [retrievedObject integerValue];
                                 if (locusId != newLocusId) {
@@ -1338,8 +1341,10 @@ NSString *calculateType(NSString *file);
 }
 
 - (void)dealloc {
-    [sampleLookupDictionary removeAllObjects];
+//    [sampleLookupDictionary removeAllObjects];
     [[GenericHashRepository sharedInstance] detachAll];
+    // TODO: remove file!!!
+    
     persistentStoreCoordinator = nil ;
 }
 
