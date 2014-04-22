@@ -480,7 +480,7 @@ NSString *calculateType(NSString *file);
     incrementAmount = 30.0 / (sample_ids.size() * catalog.size());
 
     // 7 is 400 X 7 = 3K . . .
-    uint saveAfterSamples = 100;
+    uint saveAfterSamples = 1000;
 
 
     gettimeofday(&time1, NULL);
@@ -574,6 +574,7 @@ NSString *calculateType(NSString *file);
         gettimeofday(&time2, NULL);
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
 
+        NSLog(@"split time %ld", time2.tv_sec - time1.tv_sec);
 
         [bar incrementBy:incrementAmount];
 
