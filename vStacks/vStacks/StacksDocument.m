@@ -336,7 +336,7 @@ SplashWindowController *splashWindowController ;
 
     NSString *haploytpeString = [datum renderHaplotypeHtml:hapReorder];
     NSString *depthString = [datum renderDepthHtml:hapReorder];
-    NSString *datumIndex = [NSString stringWithFormat:@"%@:%@", datum.tagId, datum.sampleId];
+    NSString *datumIndex = [NSString stringWithFormat:@"%i:%@", datum.tagId, datum.sampleId];
     NSString *selectedClass = ([datum isEqualTo:self.selectedDatum]) ? @" selected-datum" : @"";
     [returnHTML appendFormat:@"<div id='%@' class='population%ld datum%@'>", datumIndex,self.selectedPopulation.populationId.longValue, selectedClass];
     [returnHTML appendFormat:@"<a name='%@'></a>",datumIndex];

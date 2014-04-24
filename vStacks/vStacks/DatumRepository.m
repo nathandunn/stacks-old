@@ -157,7 +157,7 @@
     NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
     [request1 setEntity:entityDescription1];
 
-    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"sampleId = %@ AND tagId = %@", datum.sampleId,datum.tagId];
+    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@"sampleId = %@ AND tagId = %i", datum.sampleId,datum.tagId];
 //    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@" (sampleId == %@) ", datum.sampleId];
 //    NSPredicate *predicate1 = [NSPredicate predicateWithFormat:@" (tagId == %@) ", datum.tagId];
 
