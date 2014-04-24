@@ -24,7 +24,7 @@
 
 @dynamic name;
 @dynamic sampleId;
-@dynamic tagId;
+
 //@dynamic alleles;
 @dynamic alleleData;
 //@dynamic consensus;
@@ -43,6 +43,40 @@
 @dynamic metaData;
 
 @synthesize colorGenerator;
+
+//@dynamic tagId;
+//@dynamic primitiveTagId;
+
+- (void)fetch {
+    // Fire the fault.
+    [self willAccessValueForKey:nil];
+    [self didAccessValueForKey:nil];
+}
+
+
+- (int)tagId {
+    [self willAccessValueForKey:@"tagId"];
+    NSNumber* value = self.primitiveTagId ;
+    [self didAccessValueForKey:@"tagId"];
+    return [value intValue];
+//    [self willAccessValueForKey:@"length"];
+//    NSNumber *tmpValue = [self primitiveLength];
+//    [self didAccessValueForKey:@"length"];
+//    return (tmpValue!=nil) ? [tmpValue doubleValue] : 0.0; // Or a suitable representation for nil.
+    
+//    if ([self isFault]){
+//        [self fetch];
+//    }
+//    return self.primitiveTagId;
+}
+
+- (void)setTagId:(int)value {
+    NSNumber *temp = @(value);
+
+    [self willChangeValueForKey:@"tagId"];
+    self.primitiveTagId = temp;
+    [self didChangeValueForKey:@"tagId"];
+}
 
 
 - (NSAttributedString *)renderName {

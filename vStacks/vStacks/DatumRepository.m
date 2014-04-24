@@ -145,7 +145,7 @@
 
     for(DatumMO *datumMO in datums){
 //        [dictionary insertValue:datumMO inPropertyWithKey:datumMO.tagId.stringValue];
-        [dictionary setObject:datumMO forKey:datumMO.tagId.stringValue];
+        [dictionary setObject:datumMO forKey:[NSString stringWithFormat:@"%i",datumMO.tagId]];
     }
 
     return dictionary ;
