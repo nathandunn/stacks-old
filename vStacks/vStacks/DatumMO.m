@@ -47,18 +47,31 @@
 //@dynamic tagId;
 //@dynamic primitiveTagId;
 
+
 - (void)fetch {
     // Fire the fault.
     [self willAccessValueForKey:nil];
     [self didAccessValueForKey:nil];
+    _fetched = YES;
+}
+
+- (void)didTurnIntoFault {
+    _fetched = NO;
+    [super didTurnIntoFault];
 }
 
 
 - (int)tagId {
-    [self willAccessValueForKey:@"tagId"];
-    NSNumber* value = self.primitiveTagId ;
-    [self didAccessValueForKey:@"tagId"];
-    return [value intValue];
+//    [self willAccessValueForKey:@"tagId"];
+//    int value = self.primitiveTagId ;
+//    [self didAccessValueForKey:@"tagId"];
+//    return value ;
+//    
+    if (!_fetched){
+      [self fetch];
+    }
+    
+    return _tagId;
 //    [self willAccessValueForKey:@"length"];
 //    NSNumber *tmpValue = [self primitiveLength];
 //    [self didAccessValueForKey:@"length"];
@@ -71,11 +84,17 @@
 }
 
 - (void)setTagId:(int)value {
-    NSNumber *temp = @(value);
-
     [self willChangeValueForKey:@"tagId"];
-    self.primitiveTagId = temp;
+    self.primitiveTagId = value;
     [self didChangeValueForKey:@"tagId"];
+}
+
+- (int)primitiveTagId {
+    return _tagId;
+}
+
+- (void)setPrimitiveTagId:(int)value {
+    _tagId = value;
 }
 
 
