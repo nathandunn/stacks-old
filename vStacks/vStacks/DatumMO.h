@@ -16,7 +16,11 @@
 
 @property (nonatomic, copy) NSString * name;
 @property (nonatomic, copy) NSNumber * sampleId;
-@property (nonatomic, copy) NSNumber * tagId;
+@property (nonatomic) int tagId;
+@property (nonatomic, strong) NSNumber * primitiveTagId;
+//@property int  tagId;
+//@property int primitiveTagId;
+
 //@property (nonatomic, copy) NSSet *alleles;
 @property (nonatomic, copy) NSString * alleleData;
 //@property (nonatomic, copy) ConsensusStackEntryMO *consensus;

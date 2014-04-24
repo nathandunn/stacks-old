@@ -85,10 +85,10 @@ NSString *calculateType(NSString *file);
 }
 
 
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController importPath:(NSString *)importPath{
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController importPath:(NSString *)importPath {
 
     StacksDocument *stacksDocument = [self createStacksDocumentForPath:path];
-    stacksDocument.importPath = importPath ;
+    stacksDocument.importPath = importPath;
     if (stacksDocument == nil) {
         return nil;
     }
@@ -97,12 +97,12 @@ NSString *calculateType(NSString *file);
     NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
     NSError *error;
     [moc save:&error];
-    if(error){
-        NSLog(@"error saving %@",error);
+    if (error) {
+        NSLog(@"error saving %@", error);
     }
     [[moc parentContext] save:&error];
-    if(error){
-        NSLog(@"Error saving from parent context %@",error);
+    if (error) {
+        NSLog(@"Error saving from parent context %@", error);
     }
 
 
@@ -116,13 +116,13 @@ NSString *calculateType(NSString *file);
                                                                        NSInferMappingModelAutomaticallyOption, nil];
 
 
-    NSURL *storeUrl ;
+    NSURL *storeUrl;
 //    NSLog(@"input %@ %@",path,name);
-    NSLog(@"extends %@ %i",name.pathExtension,[name.pathExtension isEqualToString:@"stacks"]);
-    if([name.pathExtension isEqualToString:@"stacks"]){
+    NSLog(@"extends %@ %i", name.pathExtension, [name.pathExtension isEqualToString:@"stacks"]);
+    if ([name.pathExtension isEqualToString:@"stacks"]) {
         storeUrl = [NSURL fileURLWithPath:path];
     }
-    else{
+    else {
         storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
     }
     NSLog(@"Saving file to %@ from %@", path, storeUrl);
@@ -132,7 +132,7 @@ NSString *calculateType(NSString *file);
     NSError *error = nil;
 
     if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
-        NSLog(@"Error loading persistent store.. %@",error);
+        NSLog(@"Error loading persistent store.. %@", error);
         [[NSFileManager defaultManager] removeItemAtPath:storeUrl.path error:nil];
         if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
             NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
@@ -145,15 +145,15 @@ NSString *calculateType(NSString *file);
     [context setPersistentStoreCoordinator:persistentStoreCoordinator];
     document.managedObjectContext = context;
     document.path = path;
-    
-    NSLog(@"Save path %@",path);
+
+    NSLog(@"Save path %@", path);
 
 
     return context;
 }
 
 
-- (NSMutableDictionary *)loadPopulation:(NSString *)popmapFile{
+- (NSMutableDictionary *)loadPopulation:(NSString *)popmapFile {
     NSMutableDictionary *populationLookup = [NSMutableDictionary dictionary];
 
 //    NSString *popmapFile = [path stringByAppendingString:@"popmap"];
@@ -228,9 +228,9 @@ NSString *calculateType(NSString *file);
     NSPredicate *fltr = [NSPredicate predicateWithFormat:@"self ENDSWITH '.catalog.tags.tsv'"];
     NSPredicate *batch = [NSPredicate predicateWithFormat:@"self BEGINSWITH 'batch'"];
     NSArray *onlyCatalog = [[files filteredArrayUsingPredicate:fltr] filteredArrayUsingPredicate:batch];
-    
-    if(onlyCatalog.count==0){
-        return nil ;
+
+    if (onlyCatalog.count == 0) {
+        return nil;
     }
 
     NSLog(@"File count in directory: %ld", onlyCatalog.count);
@@ -246,7 +246,7 @@ NSString *calculateType(NSString *file);
 
 }
 
-- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *)progressWindow importPath:(NSString *)importPath{
+- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *)progressWindow importPath:(NSString *)importPath {
     NSProgressIndicator *bar = progressWindow.loadProgress;
     if (bar != nil) {
         progressWindow.actionTitle.stringValue = [NSString stringWithFormat:@"Loading %@", stacksDocument.name];
@@ -259,15 +259,15 @@ NSString *calculateType(NSString *file);
     NSString *importPath1 = stacksDocument.importPath;
     // returns batch_1, batch_2, etc. whatever exists
     NSString *batchName = [self checkFile:importPath1];
-    if(batchName==nil){
+    if (batchName == nil) {
         NSAlert *alert = [[NSAlert alloc] init];
         [alert setMessageText:@"Not a valid Stacks directory."];
         [alert addButtonWithTitle:@"OK"];
         [alert runModal];
-        return nil ;
+        return nil;
     }
-    
-    
+
+
     NSLog(@"Batch name: %@", batchName);
     map<int, CSLocus *> catalog;
     NSString *catalogTagFile = [importPath1 stringByAppendingFormat:@"%@.catalog.tags.tsv", batchName];
@@ -346,7 +346,7 @@ NSString *calculateType(NSString *file);
 
     NSLog(@"input populations %ld", stacksDocument.populations.count);
     progressWindow.actionMessage.stringValue = @"Adding populations";
-    [self addPopulationsToDocument:stacksDocument forPath:[NSString stringWithFormat:@"%@/popmap",importPath1]];
+    [self addPopulationsToDocument:stacksDocument forPath:[NSString stringWithFormat:@"%@/popmap", importPath1]];
     [bar incrementBy:5];
     progressWindow.actionMessage.stringValue = @"Adding samples";
     NSLog(@"output populations %ld", stacksDocument.populations.count);
@@ -515,7 +515,8 @@ NSString *calculateType(NSString *file);
                         DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:moc];
                         newDatumMO.name = key;
                         newDatumMO.sampleId = [NSNumber numberWithInt:sampleId];
-                        newDatumMO.tagId = [NSNumber numberWithInt:loc->id];
+//                        newDatumMO.tagId = [NSNumber numberWithInt:loc->id];
+                        newDatumMO.tagId = loc->id;
 
                         if (newDatumMO.sampleId == nil) {
                             NSLog(@"loading sample ID %@", newDatumMO.sampleId);
@@ -1291,7 +1292,7 @@ NSString *calculateType(NSString *file);
 
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)filePath {
     NSError *stacksDocumentCreateError;
-    NSURL *pathUrl = [NSURL fileURLWithPath:filePath] ;
+    NSURL *pathUrl = [NSURL fileURLWithPath:filePath];
     NSString *path = pathUrl.filePathURL.path;
 
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
@@ -1345,7 +1346,7 @@ NSString *calculateType(NSString *file);
 //    [sampleLookupDictionary removeAllObjects];
     [[GenericHashRepository sharedInstance] detachAll];
     // TODO: remove file!!!
-    
+
     persistentStoreCoordinator = nil ;
 }
 
