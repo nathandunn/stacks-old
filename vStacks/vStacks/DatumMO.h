@@ -12,12 +12,19 @@
 @class ConsensusStackEntryMO, DatumAlleleMO, DatumSnpMO, DepthMO, HaplotypeMO, LocusMO, ModelStackEntryMO, ReferenceStackEntryMO, SampleMO, StackEntryMO;
 @class ColorGenerator;
 
-@interface DatumMO : NSManagedObject
+@interface DatumMO : NSManagedObject{
+    int _tagId ;
+    BOOL _fetched ;
+
+
+}
+- (void)fetch;
+
 
 @property (nonatomic, copy) NSString * name;
 @property (nonatomic, copy) NSNumber * sampleId;
-@property (nonatomic) int tagId;
-@property (nonatomic, strong) NSNumber * primitiveTagId;
+@property (nonatomic, assign) int tagId;
+@property (nonatomic, assign) int  primitiveTagId;
 //@property int  tagId;
 //@property int primitiveTagId;
 
@@ -43,9 +50,12 @@
 @property (nonatomic, retain) ColorGenerator *colorGenerator;
 
 - (NSDictionary *)getHaplotypeOrder:(NSMutableArray *)alleleArray;
+
 @end
 
 @interface DatumMO (CoreDataGeneratedAccessors)
+
+
 
 - (NSMutableString *)renderHaplotypeHtml:(NSDictionary *)dictionary;
 
