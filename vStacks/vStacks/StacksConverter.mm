@@ -115,10 +115,12 @@ NSString *calculateType(NSString *file);
     NSMutableDictionary *pragmaOptions = [NSMutableDictionary dictionary];
     [pragmaOptions setObject:@"EXCLUSIVE" forKey:@"locking_mode"];
     [pragmaOptions setObject:@"NORMAL" forKey:@"synchronous"];
+//    [pragmaOptions setObject:[NSNumber numberWithInt:4096] forKey:@"page_size"];
     [pragmaOptions setObject:[NSNumber numberWithInt:4096] forKey:@"page_size"];
 //    [pragmaOptions setObject:[NSNumber numberWithInt:5000] forKey:@"cache_size"];
-    [pragmaOptions setObject:[NSNumber numberWithInt:10000] forKey:@"cache_size"];
-    [pragmaOptions setObject:@"WAL" forKey:@"journal_mode"];
+    [pragmaOptions setObject:[NSNumber numberWithInt:20000] forKey:@"cache_size"];
+//    [pragmaOptions setObject:@"WAL" forKey:@"journal_mode"];
+    [pragmaOptions setObject:@"OFF" forKey:@"journal_mode"];
     [pragmaOptions setObject:@"MEMORY" forKey:@"temp_store"];
 
     
