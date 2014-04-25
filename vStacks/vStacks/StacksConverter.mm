@@ -111,9 +111,42 @@ NSString *calculateType(NSString *file);
 
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path andName:(NSString *)name andDocument:(StacksDocument *)document {
-    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption,
-                                                                       [NSNumber numberWithBool:YES],
-                                                                       NSInferMappingModelAutomaticallyOption, nil];
+    
+    NSMutableDictionary *pragmaOptions = [NSMutableDictionary dictionary];
+    [pragmaOptions setObject:@"EXCLUSIVE" forKey:@"locking_mode"];
+    [pragmaOptions setObject:@"NORMAL" forKey:@"synchronous"];
+    [pragmaOptions setObject:[NSNumber numberWithInt:4096] forKey:@"page_size"];
+//    [pragmaOptions setObject:[NSNumber numberWithInt:5000] forKey:@"cache_size"];
+    [pragmaOptions setObject:[NSNumber numberWithInt:10000] forKey:@"cache_size"];
+    [pragmaOptions setObject:@"WAL" forKey:@"journal_mode"];
+    [pragmaOptions setObject:@"MEMORY" forKey:@"temp_store"];
+
+    
+    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
+                             [NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption
+                             ,[NSNumber numberWithBool:YES],NSInferMappingModelAutomaticallyOption
+                             ,pragmaOptions,NSSQLitePragmasOption
+                             , nil];
+    
+    //    PRAGMA main.page_size = 4096;
+    //    PRAGMA main.cache_size=10000;
+    //    PRAGMA main.locking_mode=EXCLUSIVE;
+    //    PRAGMA main.synchronous=NORMAL;
+    //    PRAGMA main.journal_mode=WAL;
+    
+    
+    //    PRAGMA main.cache_size=5000;
+    
+    //    NSDictionary *pragmaOptions = @{ @"synchronous": @"NORMAL" };
+    //    NSDictionary *pragmaOptions = @{ @"cache_size": @"10000" };
+    //    NSDictionary *pragmaOptions = @{ @"locking_mode": @"EXCLUSIVE" };
+    //    NSDictionary *pragmaOptions = [NSDictionary dictionaryWithObjectsAndKeys:[ @"journal_mode": @"WAL"]
+    //                                     ,[@"locking_mode": @"EXCLUSIVE"]
+    //                                     , [@"page_size":@"4096"]
+    //                                     ,[@"cache_size": @"5000"]
+    //                                     ,[@"synchronous": [@"NORMAL" ]
+    //                                     ];
+
 
 
     NSURL *storeUrl;
