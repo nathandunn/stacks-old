@@ -26,7 +26,7 @@
 @dynamic marker;
 @dynamic ratio;
 @dynamic alleleData;
-@dynamic datums;
+//@dynamic datums;
 @dynamic snpData;
 @dynamic metaData;
 
@@ -43,12 +43,14 @@
 
 - (NSInteger)countParents {
     NSInteger count = 0;
-    for (DatumMO *datumMO in self.datums) {
-        NSString *sampleName = datumMO.sample.name;
-        if ([sampleName rangeOfString:@"male"].location != NSNotFound) {
-            ++count;
-        }
-    }
+    // TODO: fix
+
+    //    for (DatumMO *datumMO in self.datums) {
+//        NSString *sampleName = datumMO.sample.name;
+//        if ([sampleName rangeOfString:@"male"].location != NSNotFound) {
+//            ++count;
+//        }
+//    }
     return count;
 }
 
@@ -68,15 +70,16 @@
 
 - (NSUInteger)countProgeny {
     NSUInteger count = 0;
+    // TODO: fix
 //    NSLog(@"number of datums!! %ld",self.datums.count);
-    for (DatumMO *datumMO in self.datums) {
-        NSString *sampleName = datumMO.sample.name;
-//        NSLog(@"sample name %@",sampleName);
-        if ([sampleName rangeOfString:@"male"].location == NSNotFound) {
-//            NSLog(@"not found!!") ;
-            ++count;
-        }
-    }
+//    for (DatumMO *datumMO in self.datums) {
+//        NSString *sampleName = datumMO.sample.name;
+////        NSLog(@"sample name %@",sampleName);
+//        if ([sampleName rangeOfString:@"male"].location == NSNotFound) {
+////            NSLog(@"not found!!") ;
+//            ++count;
+//        }
+//    }
     return count;
 }
 

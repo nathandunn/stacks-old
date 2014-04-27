@@ -15,7 +15,7 @@
 
 @dynamic name;
 @dynamic sampleId;
-@dynamic datums;
+//@dynamic datums;
 @dynamic population;
 @dynamic metaData;
 
