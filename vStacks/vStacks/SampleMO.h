@@ -15,7 +15,7 @@
 
 @property (nonatomic, copy) NSString * name;
 @property (nonatomic, copy) NSNumber * sampleId;
-@property (nonatomic, copy) NSSet *datums;
+//@property (nonatomic, copy) NSSet *datums;
 @property (nonatomic, copy) NSData *metaData;
 @property (nonatomic, retain) PopulationMO *population;
 @end
