@@ -612,7 +612,7 @@ NSString *calculateType(NSString *file);
         gettimeofday(&time2, NULL);
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
 
-        NSLog(@"split time %ld", time2.tv_sec - time1.tv_sec);
+        NSLog(@"sample: %i, time %ld",i, time2.tv_sec - time1.tv_sec);
 
         [bar incrementBy:incrementAmount];
 
@@ -716,7 +716,7 @@ NSString *calculateType(NSString *file);
 }
 
 
-- (void)loadSnpsOntoDatum:(StacksDocument *)document progressWindow:(ProgressController *)window {
+- (void*)loadSnpsOntoDatum:(StacksDocument *)document progressWindow:(ProgressController *)progressWindow {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *path = document.importPath;
 
@@ -734,6 +734,7 @@ NSString *calculateType(NSString *file);
 
 
     for (NSString *filePath in onlySnps) {
+        CHECK_STOP
         @autoreleasepool {
 //            if ([filePath hasSuffix:@".snps.tsv"] && ![filePath hasPrefix:@"batch"]) {
             [self loadSnpFileForDatum:document fromFile:filePath];
@@ -741,10 +742,11 @@ NSString *calculateType(NSString *file);
 //            else {
 //            NSLog(@"not loading tag file %@", filePath);
 //            }
-            window.actionMessage.stringValue = [NSString stringWithFormat:@"Loading SNPs for sample %ld/%ld", count, onlySnps.count];
+            progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading SNPs for sample %ld/%ld", count, onlySnps.count];
         }
         ++count;
     }
+    return nil ;
 }
 
 - (void)loadAllelesOntoDatum:(StacksDocument *)document {
@@ -1050,6 +1052,7 @@ NSString *calculateType(NSString *file);
 
     struct timeval time3, time4;
 
+    int fileCount = 1 ;
     for (NSString *tagFileName in realFiles) {
         progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading loci for sample %i / %ld", fileNumber + 1, numFiles];
         if (stopProcess) return;
@@ -1183,7 +1186,8 @@ NSString *calculateType(NSString *file);
 
                 gettimeofday(&time4, NULL);
 //    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time4.tv_sec - time3.tv_sec));
-                NSLog(@"parse entries lines %ld saves %ld time: %ld s", totalLineNum, totalSaves, (time4.tv_sec - time3.tv_sec));
+                NSLog(@"process tag %@ (%i/%ld) entries lines %ld saves %ld time: %ld s", tagFileName,fileCount,realFiles.count,totalLineNum, totalSaves, (time4.tv_sec - time3.tv_sec));
+                ++fileCount ;
 
             }
 
