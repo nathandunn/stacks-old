@@ -517,7 +517,7 @@ NSString *calculateType(NSString *file);
     incrementAmount = 30.0 / (sample_ids.size() * catalog.size());
 
     // 7 is 400 X 7 = 3K . . .
-    uint saveAfterSamples = 1000;
+    uint saveAfterSamples = 10000;
 
 
     gettimeofday(&time1, NULL);
