@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class DatumMO, LocusAlleleMO, LocusSnpMO, DepthMO;
+//@class LocusAlleleMO, LocusSnpMO, DepthMO;
 @class ColorGenerator;
 
 @interface LocusMO : NSManagedObject
@@ -28,7 +28,8 @@
 @property (nonatomic, copy) NSData *metaData;
 
 //@property (nonatomic, copy) NSSet *alleles;
-@property (nonatomic, copy) NSSet *datums;
+
+//@property (nonatomic, copy) NSSet *datums;
 //@property (nonatomic, copy) NSSet *snps;
 
 @property (nonatomic, copy) NSData *alleleData;
@@ -53,10 +54,10 @@
 //- (void)addAlleles:(NSSet *)values;
 //- (void)removeAlleles:(NSSet *)values;
 
-- (void)addDatumsObject:(DatumMO *)value;
-- (void)removeDatumsObject:(DatumMO *)value;
-- (void)addDatums:(NSSet *)values;
-- (void)removeDatums:(NSSet *)values;
+//- (void)addDatumsObject:(DatumMO *)value;
+//- (void)removeDatumsObject:(DatumMO *)value;
+//- (void)addDatums:(NSSet *)values;
+//- (void)removeDatums:(NSSet *)values;
 
 //- (void)addSnpsObject:(LocusSnpMO *)value;
 //- (void)removeSnpsObject:(LocusSnpMO *)value;

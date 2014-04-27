@@ -32,10 +32,10 @@
 @dynamic depthData;
 //@dynamic haplotypes;
 @dynamic haplotypeData;
-@dynamic locus;
+//@dynamic locus;
 //@dynamic model;
 //@dynamic reference;
-@dynamic sample;
+//@dynamic sample;
 //@dynamic snps;
 @dynamic snpData;
 //@dynamic stackEntries;

@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class ConsensusStackEntryMO, DatumAlleleMO, DatumSnpMO, DepthMO, HaplotypeMO, LocusMO, ModelStackEntryMO, ReferenceStackEntryMO, SampleMO, StackEntryMO;
+@class SampleMO;
 @class ColorGenerator;
 
 @interface DatumMO : NSManagedObject{
@@ -35,10 +35,10 @@
 @property (nonatomic, copy) NSString * depthData;
 //@property (nonatomic, copy) NSSet *haplotypes;
 @property (nonatomic, copy) NSData * haplotypeData;
-@property (nonatomic, retain) LocusMO *locus;
+//@property (nonatomic, retain) LocusMO *locus;
 //@property (nonatomic, retain) ModelStackEntryMO *model;
 //@property (nonatomic, retain) ReferenceStackEntryMO *reference;
-@property (nonatomic, retain) SampleMO *sample;
+//@property (nonatomic, retain) SampleMO *sample;
 //@property (nonatomic, retain) NSSet *snps;
 //@property (nonatomic, copy) NSString *snpData;
 @property (nonatomic, copy) NSData *snpData;

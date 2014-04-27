@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class DatumMO, PopulationMO;
+@class PopulationMO;
 
 @interface SampleMO : NSManagedObject
 
@@ -22,9 +22,9 @@
 
 @interface SampleMO (CoreDataGeneratedAccessors)
 
-- (void)addDatumsObject:(DatumMO *)value;
-- (void)removeDatumsObject:(DatumMO *)value;
-- (void)addDatums:(NSSet *)values;
-- (void)removeDatums:(NSSet *)values;
+//- (void)addDatumsObject:(DatumMO *)value;
+//- (void)removeDatumsObject:(DatumMO *)value;
+//- (void)addDatums:(NSSet *)values;
+//- (void)removeDatums:(NSSet *)values;
 
 @end

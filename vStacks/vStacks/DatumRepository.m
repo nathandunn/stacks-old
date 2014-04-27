@@ -34,8 +34,8 @@
     DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:context];
     newDatumMO.name = name;
     newDatumMO.sampleId = id ;
-    newDatumMO.sample = sample ;
-    newDatumMO.locus = locus ;
+//    newDatumMO.sample = sample ;
+//    newDatumMO.locus = locus ;
     return newDatumMO ;
 }
 
