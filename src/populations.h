@@ -43,6 +43,10 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
+#include <iomanip>
+using std::setw;
+using std::setprecision;
+using std::fixed;
 #include <sstream>
 using std::stringstream;
 #include <vector>
@@ -62,36 +66,15 @@ using std::set;
 #include "catalog_utils.h"
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"
+#include "ordered.h"
+#include "smoothing.h"
+#include "bootstrap.h"
 
-enum map_types {unk, none, gen, dh, cp, bc1, f2};
-enum out_types {rqtl, joinmap, genomic};
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
-enum loc_type  {haplotype, snp};
 
 const int max_snp_dist = 500;
 
-//
-// Bootstrap resamplign structure.
-//
-class BSample {
-public:
-    int    bp;
-    int    alleles;
-    double f;
-    double pi;
-
-    BSample() {
-	this->bp      = 0;
-	this->alleles = 0;
-	this->f       = 0.0;
-	this->pi      = -1.0;
-    }
-};
-
-//
-// Bootstrap resamplign structure.
-//
 class GenPos {
 public:
     uint     id;
@@ -126,26 +109,30 @@ int     call_population_genotypes(CSLocus *, PopMap<CSLocus> *);
 int     tally_haplotype_freq(CSLocus *, PopMap<CSLocus> *, int &, double &, string &);
 int     translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &);
 int     correct_fst_bonferroni_win(vector<PopPair *> &);
-int     init_chr_loci(map<string, vector<HapStat *> > &, string, map<uint, uint> &, vector<CSLocus *> &);
-int     kernel_smoothed_phist(vector<HapStat *> &, double *);
-int     init_chr_pairs(map<string, vector<PopPair *> > &, string, map<uint, uint> &, vector<CSLocus *> &);
-int     kernel_smoothed_fst(vector<PopPair *> &, double *, int *);
-int     bootstrap_fst(vector<double> &, vector<PopPair *> &, double *);
 int     bootstrap_fst_approximate_dist(vector<double> &, vector<int>  &, double *, int *, map<int, vector<double> > &);
-int     init_chr_sites(vector<SumStat *> &, int, vector<CSLocus *> &, PopSum<CSLocus> *, uint &, ofstream &);
 int     kernel_smoothed_popstats(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, int, ofstream &);
-int     bootstrap_popstats(vector<double> &, vector<double> &, vector<SumStat *> &, int, int, double *, SumStat *); 
 int     bootstrap_popstats_approximate_dist(vector<double> &, vector<double> &, vector<int>  &, double *, int *, int, map<int, vector<double> > &, map<int, vector<double> > &);
-double  bootstrap_pval(double, vector<double> &);
 double  bootstrap_approximate_pval(int, double, map<int, vector<double> > &);
-double *calculate_weights(void);
 
-int  calculate_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  calculate_haplotype_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  kernel_smoothed_hapstats(vector<CSLocus *> &, PopSum<CSLocus> *, int, double *);
-int  init_chr_sites(vector<LocSum *> &, int, vector<CSLocus *> &, PopSum<CSLocus> *);
-int  calculate_haplotype_amova(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  nuc_substitution_dist(map<string, int> &, double **);
+int      calculate_summary_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int      calculate_haplotype_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int      kernel_smoothed_hapstats(vector<CSLocus *> &, PopSum<CSLocus> *, int, double *);
+int      calculate_haplotype_divergence(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int      calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+bool     fixed_locus(map<int, pair<int, int> > &, Datum **, vector<int> &);
+
+int      nuc_substitution_dist(map<string, int> &, double **);
+int      nuc_substitution_identity(map<string, int> &, double **);
+int      nuc_substitution_identity_max(map<string, int> &, double **);
+
+HapStat *haplotype_amova(map<int, int> &, map<int, pair<int, int> > &, Datum **, LocSum **, vector<int> &);
+double   amova_ssd_total(vector<string> &, map<string, int> &, double **);
+double   amova_ssd_wp(vector<int> &, map<int, vector<int> > &, map<string, int> &, map<int, vector<string> > &, double **);
+double   amova_ssd_ap_wg(vector<int> &, map<int, vector<int> > &, map<string, int> &, map<int, vector<string> > &, double **, double **);
+double   amova_ssd_ag(vector<int> &, map<int, vector<int> > &, map<string, int> &, map<int, vector<string> > &, double **, double);
+
+double   haplotype_d_est(map<int, pair<int, int> > &, Datum **, LocSum **, vector<int> &);
+LocStat *haplotype_diversity(int, int, Datum **);
 
 int  write_sql(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int  write_fst_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, ofstream &);

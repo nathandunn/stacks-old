@@ -301,7 +301,7 @@ if ($data_type eq "map") {
     #
     printf(STDERR "Generating genotypes...\n");
 
-    $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -t gen -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
+    $cmd = $exe_path . "genotypes -b $batch_id -P $out_path -r 1 -c -s " . join(" ", @_genotypes) . " 2>&1";
     print STDERR  "$cmd\n";
     print $log_fh "$cmd\n";
 
@@ -314,10 +314,10 @@ if ($data_type eq "map") {
     }
 
     $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($log_fh, $file, "markers", 0);
+    import_sql_file($log_fh, $file, "markers", 1);
 
     $file = "$out_path/batch_" . $batch_id . ".genotypes_1.txt";
-    import_sql_file($log_fh, $file, "catalog_genotypes", 0);
+    import_sql_file($log_fh, $file, "catalog_genotypes", 1);
 
 } else {
     printf(STDERR "Calculating population-level summary statistics\n");
@@ -522,8 +522,8 @@ sub import_gzsql_file {
     my $named_pipe = mktemp($tmpdir . "/denovo_map_XXXXXX");
     if ($sql == 1 && $dry_run == 0) {
 	mkfifo($named_pipe, 0700) || die("Unable to create named pipe for loading gzipped data: $named_pipe, $!");
+	print $log_fh "Streaming $file into named pipe $named_pipe.\n";
     }
-    print $log_fh "Streaming $file into named pipe $named_pipe.\n";
 
     #
     # Dump our gzipped data onto the named pipe.
@@ -562,6 +562,16 @@ sub parse_command_line {
 	elsif ($_ =~ /^-O$/) { 
 	    $popmap_path = shift @ARGV;
 	    push(@_populations, "-M " . $popmap_path); 
+
+	} elsif ($_ =~ /^-A$/) { 
+	    $arg = shift @ARGV;
+	    push(@_genotypes, "-t " . $arg); 
+
+	    $arg = lc($arg);
+	    if ($arg ne "gen" && $arg ne "cp" && $arg ne "f2" && $arg ne "bc1" && $arg ne "dh") {
+		print STDERR "Unknown genetic mapping cross specified: '$arg'\n";
+		usage();
+	    }
 
 	} elsif ($_ =~ /^-T$/) {
 	    $arg = shift @ARGV;
@@ -659,11 +669,12 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-ref_map.pl -p path -r path [-s path] -o path [-n mismatches] [-m min_cov] [-T num_threads] [-O popmap] [-B db -b batch_id -D "desc" -a yyyy-mm-dd] [-S -i id] [-e path] [-d] [-h]
+ref_map.pl -p path -r path [-s path] -o path [-n mismatches] [-m min_cov] [-T num_threads] [-A type] [-O popmap] [-B db -b batch_id -D "desc" -a yyyy-mm-dd] [-S -i id] [-e path] [-d] [-h]
     p: path to a Bowtie/SAM/BAM file containing parent sequences from a mapping cross.
     r: path to a Bowtie/SAM/BAM file containing progeny sequences from a mapping cross.
     s: path to a Bowtie/SAM/BAM file containing an individual sample from a population.
     o: path to write pipeline output files.
+    A: if processing a genetic map, specify the cross type, 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
     n: specify the number of mismatches allowed between loci when building the catalog (default 0).
     T: specify the number of threads to execute.
     m: specify the minimum depth of coverage to report a stack in pstacks (default 1).

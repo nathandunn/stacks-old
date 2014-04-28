@@ -95,7 +95,8 @@
                         }
                     }
                     else {
-                        progenyCount -= locusMO.parentCount.unsignedIntegerValue;
+                        // REMOVED this as it was conflusing in the interface
+//                        progenyCount -= locusMO.parentCount.unsignedIntegerValue;
                         if (progenyCount >= minSampleValue && progenyCount <= maxSampleValue) {
                             [filteredObjects addObject:locusMO];
                         }
@@ -110,6 +111,7 @@
 }
 
 - (IBAction)writeMinSnpValue:(id)sender {
+    NSLog(@"writing MIN SNP value");
     NSPopUpButton *value = sender;
     if (value.stringValue.length > 0) {
         minSnpValue = value.titleOfSelectedItem.integerValue;
@@ -119,28 +121,31 @@
 }
 
 - (IBAction)writeMaxSnpValue:(id)sender {
+    NSLog(@"writing MAX SNP value");
     NSPopUpButton *value = sender;
     if (value.stringValue.length > 0) {
         maxSnpValue = value.titleOfSelectedItem.integerValue;
-//        NSLog(@"setting MAX value %ld", maxSnpValue);
+        NSLog(@"setting MAX value %ld", maxSnpValue);
         [self rearrangeObjects];
     }
 }
 
 - (IBAction)writeMinSampleValue:(id)sender {
+    NSLog(@"writing MIN SAMPLE value");
     NSPopUpButton *value = sender;
     if (value.stringValue.length > 0) {
         minSampleValue = value.titleOfSelectedItem.integerValue;
-//        NSLog(@"setting MIN value %ld", minSampleValue);
+        NSLog(@"setting MIN value %ld", minSampleValue);
         [self rearrangeObjects];
     }
 }
 
 - (IBAction)writeMaxSampleValue:(id)sender {
+    NSLog(@"writing MAX SAMPLE value");
     NSPopUpButton *value = sender;
     if (value.stringValue.length > 0) {
         maxSampleValue = value.titleOfSelectedItem.integerValue;
-//        NSLog(@"setting MAX value %ld", maxSampleValue);
+        NSLog(@"setting MAX value %ld", maxSampleValue);
         [self rearrangeObjects];
     }
 }

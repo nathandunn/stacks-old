@@ -24,3 +24,5 @@ tests/*.log
 tests/*.trs
 config/tap-driver.sh
 config/test-driver
+tests/ref_map*
+tests/kmer_filter*
