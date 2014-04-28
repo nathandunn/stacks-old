@@ -540,7 +540,7 @@ SplashWindowController *splashWindowController ;
 
     if (sampleFilterValues == nil) {
         sampleFilterValues = [NSMutableArray array];
-        for (int i = 1; i < maxLocusSamples + 1; i++) {
+        for (int i = 0; i < maxLocusSamples + 1; i++) {
             [sampleFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
