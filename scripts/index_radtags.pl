@@ -82,8 +82,8 @@ sub gen_cat_index {
 
     my ($fh, $catalog_file) = tempfile("catalog_index_XXXXXXXX", UNLINK => 1, TMPDIR => 1);
 
-    my ($row, $tag, $count, $par_cnt, $pro_cnt, $allele_cnt, $marker, $valid_pro, 
-        $max_pct, $ratio, $ests, $pe_radtags, $blast_hits, $geno_cnt, $ref_type, $ref_id, $bp);
+    my ($row, $tag, $count, $par_cnt, $pro_cnt, $allele_cnt, $marker, $uncor_marker, $valid_pro, 
+        $chisq_pval, $ratio, $ests, $pe_radtags, $blast_hits, $geno_cnt, $ref_type, $ref_id, $bp);
 
     my (%snps, %markers, %genotypes, %seqs, %hits, %parents, %progeny, %alleles, %chrs, %radome);
 
@@ -217,16 +217,18 @@ sub gen_cat_index {
 	# Does this RAD-Tag have a mappable marker?
 	#
 	if (defined($markers{$row->{'batch_id'}}->{$row->{'tag_id'}})) {
-	    $tag       = $markers{$row->{'batch_id'}}->{$row->{'tag_id'}};
-	    $marker    = $tag->{'marker'};
-	    $max_pct   = $tag->{'max_pct'};
-	    $valid_pro = $tag->{'valid_pro'};
-	    $ratio     = $tag->{'ratio'};
+	    $tag          = $markers{$row->{'batch_id'}}->{$row->{'tag_id'}};
+	    $marker       = $tag->{'marker'};
+	    $uncor_marker = $tag->{'uncor_marker'};
+	    $chisq_pval   = $tag->{'chisq_pval'};
+	    $valid_pro    = $tag->{'valid_pro'};
+	    $ratio        = $tag->{'ratio'};
 	} else {
-	    $marker    = "";
-	    $valid_pro = 0;
-	    $max_pct   = 0;
-	    $ratio     = "";
+	    $marker       = "";
+	    $uncor_marker = "";
+	    $valid_pro    = 0;
+	    $chisq_pval   = 1.0;
+	    $ratio        = "";
 	}
 
 	#
@@ -248,8 +250,9 @@ sub gen_cat_index {
 	    $pro_cnt, "\t",
 	    $allele_cnt, "\t",
 	    $marker, "\t",
+	    $uncor_marker, "\t",
 	    $valid_pro, "\t",
-	    $max_pct, "\t",
+	    $chisq_pval, "\t",
 	    $ratio, "\t",
             $ests, "\t",
             $pe_radtags, "\t",
@@ -342,10 +345,11 @@ sub fetch_markers {
 
     while ($row = $sth->{'marker'}->fetchrow_hashref()) {
 	$tag = {};
-	$tag->{'marker'}    = $row->{'type'};
-	$tag->{'max_pct'}   = $row->{'max_pct'};
-	$tag->{'valid_pro'} = $row->{'progeny'};
-	$tag->{'ratio'}     = $row->{'ratio'};
+	$tag->{'marker'}       = $row->{'type'};
+	$tag->{'uncor_marker'} = $row->{'uncor_type'};
+	$tag->{'chisq_pval'}   = $row->{'chisq_pval'};
+	$tag->{'valid_pro'}    = $row->{'progeny'};
+	$tag->{'ratio'}        = $row->{'ratio'};
 
 	if (!defined($markers->{$row->{'batch_id'}})) {
 	    $markers->{$row->{'batch_id'}} = {};
@@ -612,7 +616,7 @@ sub prepare_sql_handles {
     $sth->{'cat_geno'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-	"SELECT batch_id, catalog_id, type, progeny, max_pct, ratio FROM markers";
+	"SELECT batch_id, catalog_id, type, uncor_type, progeny, chisq_pval, ratio FROM markers";
     $sth->{'marker'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 

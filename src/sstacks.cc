@@ -718,6 +718,9 @@ int write_matches(map<int, QLocus *> &sample) {
 	    cerr << "Error: Unable to open gzipped matches file '" << out_file << "': " << strerror(errno) << ".\n";
 	    exit(1);
 	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_matches, libz_buffer_size);
+	#endif
     } else {
 	matches.open(out_file.c_str());
 	if (matches.fail()) {

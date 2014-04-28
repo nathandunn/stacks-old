@@ -57,7 +57,7 @@
 
 - (IBAction)importDocument:(id)sender {
 
-    NSLog(@"Importing Doucment");
+    NSLog(@"Importing Document");
 
 //    NSDate *now = [NSDate date];
 //    // get year and month
@@ -76,9 +76,14 @@
 
     NSOpenPanel *importPanel = [NSOpenPanel openPanel];
     [importPanel setAllowsMultipleSelection:NO];
+    
     [importPanel setCanChooseDirectories:YES];
     [importPanel setCanChooseFiles:NO];
+    
     [importPanel setFloatingPanel:YES];
+    
+
+//    [importPanel setTreatsFilePackagesAsDirectories:NO];
     NSSize minSize;
     minSize.height = 600;
     minSize.width = 500;
@@ -86,13 +91,26 @@
 
     [importPanel setMinSize:minSize];
     NSInteger result = [importPanel runModal];
+    NSLog(@"import result %ld",result);
+    
+    
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if (result == NSOKButton) {
         NSString *importPath = [importPanel.directoryURL.path stringByAppendingString:@"/"];
         NSLog(@"import path %@", importPath);
         NSString *importPathName = importPanel.directoryURL.lastPathComponent;
+        
+        
         NSLog(@"import path name %@", importPathName);
+
+        NSFileManager *fileManager = [NSFileManager defaultManager] ;
+        NSArray *files = [fileManager contentsOfDirectoryAtPath:importPath error:nil];
+        NSLog(@"# of files %ld",files.count);
+        for(id file in files){
+           NSLog(@"file %@",file) ;
+        }
+//        [fileManager dir
 
 
         // now we open the save panel for our stacks file.
@@ -380,7 +398,7 @@
 }
 
 - (void)provideFeedback:(id)sender {
-    NSString *recipients = @"mailto:jcatchen@uoregon.edu?cc=ndunn@uoregon.edu&subject=vStacks Feedback";
+    NSString *recipients = @"mailto:jcatchen@uoregon.edu?cc=ndunn@uoregon.edu&subject=vStacks Feedback 0.8.1";
     NSString *body = @"&body=Feedback for vStacks";
     NSString *email = [NSString stringWithFormat:@"%@%@", recipients, body];
 
@@ -400,7 +418,7 @@
 }
 
 - (void)license:(id)sender {
-    NSString *url = @"http://creskolab.uoregon.edu/stacks/vstacks/license.php";
+    NSString *url = @"http://creskolab.uoregon.edu/stacks/vstacks/apple-license.php";
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
 
