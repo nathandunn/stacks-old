@@ -175,6 +175,7 @@
 		14370619187B89490007BDE5 /* test.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = test.css; sourceTree = "<group>"; };
 		1437061E187CAEFC0007BDE5 /* GZIP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GZIP.h; sourceTree = "<group>"; };
 		1437061F187CAEFC0007BDE5 /* GZIP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GZIP.m; sourceTree = "<group>"; };
+		14EB651F19103792005B288D /* vStacks.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = vStacks.entitlements; sourceTree = "<group>"; };
 		63D539ADFBD4D66EF302C92C /* GenericHashRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenericHashRepository.m; sourceTree = "<group>"; };
 		63D53C680185B4D1179C406B /* PopulationService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationService.m; sourceTree = "<group>"; };
 		63D53D340A41B723EB1C381F /* GenericHashRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenericHashRepository.h; sourceTree = "<group>"; };
@@ -287,6 +288,7 @@
 		14370524187B87690007BDE5 /* vStacks */ = {
 			isa = PBXGroup;
 			children = (
+				14EB651F19103792005B288D /* vStacks.entitlements */,
 				14370566187B88560007BDE5 /* stacks */,
 				1437055D187B88000007BDE5 /* www */,
 				1437055E187B88060007BDE5 /* Service */,
@@ -550,6 +552,11 @@
 				TargetAttributes = {
 					1437051A187B87690007BDE5 = {
 						DevelopmentTeam = A8S657VR7S;
+						SystemCapabilities = {
+							com.apple.Sandbox = {
+								enabled = 1;
+							};
+						};
 					};
 					14370541187B876A0007BDE5 = {
 						TestTargetID = 1437051A187B87690007BDE5;
@@ -781,6 +788,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = vStacks/vStacks.entitlements;
 				CODE_SIGN_IDENTITY = "Mac Developer";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -804,6 +812,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = vStacks/vStacks.entitlements;
 				CODE_SIGN_IDENTITY = "Mac Developer";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
