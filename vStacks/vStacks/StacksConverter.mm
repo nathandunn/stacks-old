@@ -117,13 +117,17 @@ NSString *calculateType(NSString *file);
     [pragmaOptions setObject:@"EXCLUSIVE" forKey:@"locking_mode"];
 //    [pragmaOptions setObject:@"NORMAL" forKey:@"synchronous"];
     [pragmaOptions setObject:@"OFF" forKey:@"synchronous"];
-    [pragmaOptions setObject:[NSNumber numberWithInt:4096] forKey:@"page_size"];
+//    [pragmaOptions setObject:[NSNumber numberWithInt:4096] forKey:@"page_size"];
 //    [pragmaOptions setObject:[NSNumber numberWithInt:5000] forKey:@"cache_size"];
-    [pragmaOptions setObject:[NSNumber numberWithInt:10000] forKey:@"cache_size"];
+//    [pragmaOptions setObject:[NSNumber numberWithInt:10000] forKey:@"cache_size"];
+    [pragmaOptions setObject:[NSNumber numberWithInt:400000] forKey:@"cache_size"];
 //    [pragmaOptions setObject:@"WAL" forKey:@"journal_mode"];
-    [pragmaOptions setObject:@"DELETE" forKey:@"journal_mode"];
+//    [pragmaOptions setObject:@"DELETE" forKey:@"journal_mode"];
+    [pragmaOptions setObject:@"MEMORY" forKey:@"journal_mode"];
     [pragmaOptions setObject:@"MEMORY" forKey:@"temp_store"];
 //    [pragmaOptions setObject:@"memory" forKey:@"temp_store"];
+    [pragmaOptions setObject:@"OFF" forKey:@"count_changes"];
+    [pragmaOptions setObject:@"NONE" forKey:@"auto_vacuum"];
 
     
     NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
