@@ -250,6 +250,7 @@
     fileURL = [NSURL URLByResolvingBookmarkData:bookmark options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:nil error:&error];
     BOOL ok = [fileURL startAccessingSecurityScopedResource];
     NSLog(@"Accessed ok: %d %@", ok, [fileURL relativePath]);
+    [fileURL stopAccessingSecurityScopedResource];
 }
 
 
