@@ -15,8 +15,8 @@
 	<key>com.apple.security.device.usb</key>
 	<true/>
 	<key>com.apple.security.device.serial</key>
-	<string></string>
+	<true/>
 	<key>com.apple.security.device.firewire</key>
-	<string></string>
+	<true/>
 </dict>
 </plist>
