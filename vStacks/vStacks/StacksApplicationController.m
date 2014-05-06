@@ -114,31 +114,53 @@
 
 
         // now we open the save panel for our stacks file.
-        NSSavePanel *savePanel = [NSSavePanel savePanel];
-        savePanel.nameFieldStringValue = [importPathName stringByAppendingString:@".stacks"];
+//        NSSavePanel *savePanel = [NSSavePanel savePanel];
+//        savePanel.nameFieldStringValue = [importPathName stringByAppendingString:@".stacks"];
 
-        NSInteger saveResult = [savePanel runModal];
-        if (saveResult != NSOKButton) {
-            NSLog(@"Cancelled import");
-            return;
-        }
+//        NSInteger saveResult = [savePanel runModal];
+//        if (saveResult != NSOKButton) {
+//            NSLog(@"Cancelled import");
+//            return;
+//        }
 
-        NSLog(@"directory URL: %@ %@ %@", savePanel.directoryURL.path, savePanel.directoryURL.pathExtension, savePanel.directoryURL.parameterString);
-        NSLog(@"save URL: %@", savePanel.nameFieldStringValue);
-        NSString *fileName = savePanel.nameFieldStringValue;
+//        NSLog(@"directory URL: %@ %@ %@", savePanel.directoryURL.path, savePanel.directoryURL.pathExtension, savePanel.directoryURL.parameterString);
+//        NSLog(@"save URL: %@", savePanel.nameFieldStringValue);
+//        NSString *fileName = savePanel.nameFieldStringValue;
+        NSString *fileName = [importPathName stringByAppendingString:@".stacks"];
         NSString *extension = [fileName pathExtension];
         if ([extension isNotEqualTo:@"stacks"]) {
             fileName = [fileName stringByAppendingString:@".stacks"];
             NSLog(@"has correct filename %i", [[fileName exposedBindings] isEqualTo:@"stacks"]);
             NSLog(@"filename: %@", fileName);
         }
-        NSString *savedStacksDocumentPath = [savePanel.directoryURL.path stringByAppendingFormat:@"/%@", fileName];
+        NSString *savedStacksDocumentPath = [importPath stringByAppendingFormat:@"/%@", fileName];
         NSLog(@"stacks doc path %@", savedStacksDocumentPath);
-        BOOL fileExistsAtPath = [[NSFileManager defaultManager] fileExistsAtPath:savedStacksDocumentPath isDirectory:NULL];
-        if (fileExistsAtPath) {
-            BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:savedStacksDocumentPath error:NULL];
-            NSLog(@"file removed %i", fileRemoved);
+        NSString* resultFileName = fileName ;
+        
+        int i = 1 ;
+        while([[NSFileManager defaultManager] fileExistsAtPath:savedStacksDocumentPath isDirectory:NULL]){
+            resultFileName = [importPathName stringByAppendingFormat:@"%i.stacks",i];
+            savedStacksDocumentPath = [importPath stringByAppendingFormat:@"%@", resultFileName ];
+            ++i ;
         }
+        fileName = resultFileName ;
+        
+        
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert setMessageText:[NSString stringWithFormat:@"Create stacks file %@?",savedStacksDocumentPath]];
+        [alert addButtonWithTitle:@"Cancel"];
+        [alert addButtonWithTitle:@"OK"];
+        
+        NSInteger runAlert = [alert runModal];
+        if(runAlert==NSAlertFirstButtonReturn){
+            NSLog(@"Cancelling");
+            return ;
+        }
+    
+//        if (fileExistsAtPath) {
+//            BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:savedStacksDocumentPath error:NULL];
+//            NSLog(@"file removed %i", fileRemoved);
+//        }
 
 
         ProgressController *progressController = [[ProgressController alloc] init];
