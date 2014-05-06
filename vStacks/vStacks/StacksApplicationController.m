@@ -76,12 +76,12 @@
 
     NSOpenPanel *importPanel = [NSOpenPanel openPanel];
     [importPanel setAllowsMultipleSelection:NO];
-    
+
     [importPanel setCanChooseDirectories:YES];
     [importPanel setCanChooseFiles:NO];
-    
+
     [importPanel setFloatingPanel:YES];
-    
+
 
 //    [importPanel setTreatsFilePackagesAsDirectories:NO];
     NSSize minSize;
@@ -91,24 +91,24 @@
 
     [importPanel setMinSize:minSize];
     NSInteger result = [importPanel runModal];
-    NSLog(@"import result %ld",result);
-    
-    
+    NSLog(@"import result %ld", result);
+
+
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if (result == NSOKButton) {
         NSString *importPath = [importPanel.directoryURL.path stringByAppendingString:@"/"];
         NSLog(@"import path %@", importPath);
         NSString *importPathName = importPanel.directoryURL.lastPathComponent;
-        
-        
+
+
         NSLog(@"import path name %@", importPathName);
 
-        NSFileManager *fileManager = [NSFileManager defaultManager] ;
+        NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray *files = [fileManager contentsOfDirectoryAtPath:importPath error:nil];
-        NSLog(@"# of files %ld",files.count);
-        for(id file in files){
-           NSLog(@"file %@",file) ;
+        NSLog(@"# of files %ld", files.count);
+        for (id file in files) {
+            NSLog(@"file %@", file);
         }
 //        [fileManager dir
 
@@ -133,30 +133,48 @@
             NSLog(@"has correct filename %i", [[fileName exposedBindings] isEqualTo:@"stacks"]);
             NSLog(@"filename: %@", fileName);
         }
-        NSString *savedStacksDocumentPath = [importPath stringByAppendingFormat:@"/%@", fileName];
+        NSString *savedStacksDocumentPath = [importPath stringByAppendingFormat:@"%@", fileName];
         NSLog(@"stacks doc path %@", savedStacksDocumentPath);
-        NSString* resultFileName = fileName ;
-        
-        int i = 1 ;
-        while([[NSFileManager defaultManager] fileExistsAtPath:savedStacksDocumentPath isDirectory:NULL]){
-            resultFileName = [importPathName stringByAppendingFormat:@"%i.stacks",i];
-            savedStacksDocumentPath = [importPath stringByAppendingFormat:@"%@", resultFileName ];
-            ++i ;
+        NSString *resultFileName ;
+
+        if ([[NSFileManager defaultManager] fileExistsAtPath:savedStacksDocumentPath isDirectory:NULL]) {
+            NSAlert *alertReplace = [[NSAlert alloc] init];
+            [alertReplace setMessageText:[NSString stringWithFormat:@"Replace stacks file or create new%@?", savedStacksDocumentPath]];
+            [alertReplace addButtonWithTitle:@"Cancel"];
+            [alertReplace addButtonWithTitle:@"Replace"];
+            [alertReplace addButtonWithTitle:@"Create New"];
+
+            NSInteger runAlertReplace = [alertReplace runModal];
+            if (runAlertReplace == NSAlertFirstButtonReturn) {
+                NSLog(@"Cancelling");
+                return;
+            }
+            if (runAlertReplace == NSAlertSecondButtonReturn) {
+                BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:savedStacksDocumentPath error:NULL];
+                NSLog(@"file removed %i", fileRemoved);
+            }
         }
-        fileName = resultFileName ;
-        
-        
-        NSAlert *alert = [[NSAlert alloc] init];
-        [alert setMessageText:[NSString stringWithFormat:@"Create stacks file %@?",savedStacksDocumentPath]];
-        [alert addButtonWithTitle:@"Cancel"];
-        [alert addButtonWithTitle:@"OK"];
-        
-        NSInteger runAlert = [alert runModal];
-        if(runAlert==NSAlertFirstButtonReturn){
+
+        int i = 1;
+        while ([[NSFileManager defaultManager] fileExistsAtPath:savedStacksDocumentPath isDirectory:NULL]) {
+            resultFileName = [importPathName stringByAppendingFormat:@"%i.stacks", i];
+            savedStacksDocumentPath = [importPath stringByAppendingFormat:@"%@", resultFileName];
+            ++i;
+        }
+//        fileName = resultFileName ;
+
+
+        NSAlert *alertCancel = [[NSAlert alloc] init];
+        [alertCancel setMessageText:[NSString stringWithFormat:@"Create stacks file %@?", savedStacksDocumentPath]];
+        [alertCancel addButtonWithTitle:@"Cancel"];
+        [alertCancel addButtonWithTitle:@"OK"];
+
+        NSInteger runAlert = [alertCancel runModal];
+        if (runAlert == NSAlertFirstButtonReturn) {
             NSLog(@"Cancelling");
-            return ;
+            return;
         }
-    
+
 //        if (fileExistsAtPath) {
 //            BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:savedStacksDocumentPath error:NULL];
 //            NSLog(@"file removed %i", fileRemoved);
