@@ -129,20 +129,6 @@
                     NSString *filename = [fileURL path];
                 NSLog(@"setting file URL %@",filename);
 //                NSLog(@"setting directory URL %@",[directoryURL path]);
-                    [[NSUserDefaults standardUserDefaults] setObject:filename forKey:@"PathToFolder"];
-                    
-                    NSError *error = nil;
-                    NSData *bookmark = [fileURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
-                                         includingResourceValuesForKeys:nil
-                                                          relativeToURL:nil
-                                                                  error:&error];
-                    if (error) {
-                        NSLog(@"Error creating bookmark for URL (%@): %@", fileURL, error);
-                        [NSApp presentError:error];
-                    } else {
-                        [[NSUserDefaults standardUserDefaults] setObject:bookmark forKey:@"PathToFolder"];
-                        [[NSUserDefaults standardUserDefaults] synchronize];
-                    }
                 
                 NSLog(@"directory URL: %@ %@ %@", savePanel.directoryURL.path, savePanel.directoryURL.pathExtension, savePanel.directoryURL.parameterString);
                 NSLog(@"save URL: %@", savePanel.nameFieldStringValue);
@@ -160,8 +146,10 @@
                     BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:savedStacksDocumentPath error:NULL];
                     NSLog(@"file removed %i", fileRemoved);
                 }
-                
-                
+
+                [self touchAndBookmark:filename];
+//                [self touchAndBookmark:[NSString stringWithFormat:@"%@-shm",filename]];
+
                 ProgressController *progressController = [[ProgressController alloc] init];
                 
                 progressController.stacksConverter = stacksConverter;
@@ -227,6 +215,41 @@
         NSLog(@"NOT ok !!");
     }
 //    return nil;
+}
+
+- (void)touchAndBookmark:(NSString *)filename {
+    [[NSUserDefaults standardUserDefaults] setObject:filename forKey:@"PathToFolder"];
+    //                NSString *content = @"Put this in a file please.";
+    //                NSData *fileContents = [content dataUsingEncoding:NSUTF8StringEncoding];
+    
+     NSFileManager* fileManager = [NSFileManager defaultManager];
+    [fileManager createFileAtPath:filename contents:nil attributes:nil];
+    NSLog(@"exists %i",[fileManager fileExistsAtPath:filename]);
+
+
+    NSError *error = nil;
+    NSURL* fileURL = [NSURL fileURLWithPath:filename];
+    NSLog(@"creating bookmark for '%@'",filename);
+    NSLog(@"creating bookmark at '%@'",fileURL);
+
+    NSData *bookmark = [fileURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
+                         includingResourceValuesForKeys:nil
+                                          relativeToURL:nil
+                                                  error:&error];
+
+    if (error) {
+        NSLog(@"Error creating bookmark for URL (%@): %@", fileURL, error);
+        [NSApp presentError:error];
+    } else {
+        [[NSUserDefaults standardUserDefaults] setObject:bookmark forKey:@"PathToFolder"];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+    }
+
+    error = nil;
+    bookmark = [[NSUserDefaults standardUserDefaults] objectForKey:@"PathToFolder"];
+    fileURL = [NSURL URLByResolvingBookmarkData:bookmark options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:nil error:&error];
+    BOOL ok = [fileURL startAccessingSecurityScopedResource];
+    NSLog(@"Accessed ok: %d %@", ok, [fileURL relativePath]);
 }
 
 
