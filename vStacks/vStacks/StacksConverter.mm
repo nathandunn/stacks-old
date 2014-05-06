@@ -174,8 +174,10 @@ NSString *calculateType(NSString *file);
     
     NSData *bookmark = [[NSUserDefaults standardUserDefaults] objectForKey:@"PathToFolder"];
     NSURL* bookmarkedURL = [NSURL URLByResolvingBookmarkData:bookmark options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:nil error:&error];
+    NSLog(@"bookmarked URL %@ vs stored %@",bookmarkedURL,storeUrl);
     BOOL ok = [bookmarkedURL startAccessingSecurityScopedResource];
     NSLog(@"Accessed ok: %d %@", ok, [bookmarkedURL relativePath]);
+    
 
     if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
         NSLog(@"Error loading persistent store.. %@", error);
