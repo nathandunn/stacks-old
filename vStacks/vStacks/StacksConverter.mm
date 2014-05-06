@@ -171,13 +171,19 @@ NSString *calculateType(NSString *file);
         persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
     }
     NSError *error = nil;
+    
+    NSData *bookmark = [[NSUserDefaults standardUserDefaults] objectForKey:@"PathToFolder"];
+    NSURL* bookmarkedURL = [NSURL URLByResolvingBookmarkData:bookmark options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:nil error:&error];
+    BOOL ok = [bookmarkedURL startAccessingSecurityScopedResource];
+    NSLog(@"Accessed ok: %d %@", ok, [bookmarkedURL relativePath]);
 
     if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
         NSLog(@"Error loading persistent store.. %@", error);
         [[NSFileManager defaultManager] removeItemAtPath:storeUrl.path error:nil];
         if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
             NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
-            //abort();
+            [persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:@{NSMigratePersistentStoresAutomaticallyOption:@YES} error:&error];
+            abort();
         }
     }
 
