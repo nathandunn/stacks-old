@@ -117,72 +117,106 @@
         NSSavePanel *savePanel = [NSSavePanel savePanel];
         savePanel.nameFieldStringValue = [importPathName stringByAppendingString:@".stacks"];
 
-        NSInteger saveResult = [savePanel runModal];
-        if (saveResult != NSOKButton) {
-            NSLog(@"Cancelled import");
-            return;
-        }
+//        NSInteger saveResult = [savePanel runModal];
+        [savePanel setCanCreateDirectories:YES];
+        
+        [savePanel beginWithCompletionHandler:^(NSInteger result){
+            if (result == NSOKButton) {
+//                for (NSURL *fileURL in [savePanel URL]) {
+                NSURL *fileURL = [savePanel URL];
+//                NSURL *directoryURL = [savePanel directoryURL];
 
-        NSLog(@"directory URL: %@ %@ %@", savePanel.directoryURL.path, savePanel.directoryURL.pathExtension, savePanel.directoryURL.parameterString);
-        NSLog(@"save URL: %@", savePanel.nameFieldStringValue);
-        NSString *fileName = savePanel.nameFieldStringValue;
-        NSString *extension = [fileName pathExtension];
-        if ([extension isNotEqualTo:@"stacks"]) {
-            fileName = [fileName stringByAppendingString:@".stacks"];
-            NSLog(@"has correct filename %i", [[fileName exposedBindings] isEqualTo:@"stacks"]);
-            NSLog(@"filename: %@", fileName);
-        }
-        NSString *savedStacksDocumentPath = [savePanel.directoryURL.path stringByAppendingFormat:@"/%@", fileName];
-        NSLog(@"stacks doc path %@", savedStacksDocumentPath);
-        BOOL fileExistsAtPath = [[NSFileManager defaultManager] fileExistsAtPath:savedStacksDocumentPath isDirectory:NULL];
-        if (fileExistsAtPath) {
-            BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:savedStacksDocumentPath error:NULL];
-            NSLog(@"file removed %i", fileRemoved);
-        }
-
-
-        ProgressController *progressController = [[ProgressController alloc] init];
-
-        progressController.stacksConverter = stacksConverter;
-        [progressController showWindow:[NSApp mainWindow]];
-
-//        dispatch_async(dispatch_get_main_queue(),^ {
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-
-            NSLog(@"loadding progress!!! in thread");
-//            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
-            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:savedStacksDocumentPath progressWindow:progressController importPath:importPath];
-            newDocument.path = savedStacksDocumentPath;
-            [newDocument.managedObjectContext save:nil];
-            if (newDocument != nil) {
-                [progressController close];
-                NSLog(@"LOADED progress!!! in thread");
-//        [NSApp stopModal];
-                NSLog(@"trying to open");
-
-                [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:savedStacksDocumentPath] display:YES completionHandler:^(NSDocument *doc, BOOL documentWasAlreadyOpened, NSError *error) {
-                    if (error != nil) {
-                        NSLog(@"error3 %@", error);
+                    NSString *filename = [fileURL path];
+                NSLog(@"setting file URL %@",filename);
+//                NSLog(@"setting directory URL %@",[directoryURL path]);
+                    [[NSUserDefaults standardUserDefaults] setObject:filename forKey:@"PathToFolder"];
+                    
+                    NSError *error = nil;
+                    NSData *bookmark = [fileURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
+                                         includingResourceValuesForKeys:nil
+                                                          relativeToURL:nil
+                                                                  error:&error];
+                    if (error) {
+                        NSLog(@"Error creating bookmark for URL (%@): %@", fileURL, error);
+                        [NSApp presentError:error];
+                    } else {
+                        [[NSUserDefaults standardUserDefaults] setObject:bookmark forKey:@"PathToFolder"];
+                        [[NSUserDefaults standardUserDefaults] synchronize];
                     }
-                }];
-
-
-                for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
-                    NSLog(@"stacks doc: %@", stacksDocument.path);
-                    if (stacksDocument.path == NULL) {
-                        [stacksDocument close];
-//                [[StacksDocumentController sharedDocumentController] perform]
+                
+                NSLog(@"directory URL: %@ %@ %@", savePanel.directoryURL.path, savePanel.directoryURL.pathExtension, savePanel.directoryURL.parameterString);
+                NSLog(@"save URL: %@", savePanel.nameFieldStringValue);
+                NSString *fileName = savePanel.nameFieldStringValue;
+                NSString *extension = [fileName pathExtension];
+                if ([extension isNotEqualTo:@"stacks"]) {
+                    fileName = [fileName stringByAppendingString:@".stacks"];
+                    NSLog(@"has correct filename %i", [[fileName exposedBindings] isEqualTo:@"stacks"]);
+                    NSLog(@"filename: %@", fileName);
+                }
+                NSString *savedStacksDocumentPath = [savePanel.directoryURL.path stringByAppendingFormat:@"/%@", fileName];
+                NSLog(@"stacks doc path %@", savedStacksDocumentPath);
+                BOOL fileExistsAtPath = [[NSFileManager defaultManager] fileExistsAtPath:savedStacksDocumentPath isDirectory:NULL];
+                if (fileExistsAtPath) {
+                    BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:savedStacksDocumentPath error:NULL];
+                    NSLog(@"file removed %i", fileRemoved);
+                }
+                
+                
+                ProgressController *progressController = [[ProgressController alloc] init];
+                
+                progressController.stacksConverter = stacksConverter;
+                [progressController showWindow:[NSApp mainWindow]];
+                
+                //        dispatch_async(dispatch_get_main_queue(),^ {
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                    
+                    NSLog(@"loadding progress!!! in thread");
+                    //            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
+                    StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:savedStacksDocumentPath progressWindow:progressController importPath:importPath];
+                    newDocument.path = savedStacksDocumentPath;
+                    [newDocument.managedObjectContext save:nil];
+                    if (newDocument != nil) {
+                        [progressController close];
+                        NSLog(@"LOADED progress!!! in thread");
+                        //        [NSApp stopModal];
+                        NSLog(@"trying to open");
+                        
+                        [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:savedStacksDocumentPath] display:YES completionHandler:^(NSDocument *doc, BOOL documentWasAlreadyOpened, NSError *error) {
+                            if (error != nil) {
+                                NSLog(@"error3 %@", error);
+                            }
+                        }];
+                        
+                        
+                        for (StacksDocument *stacksDocument in [[StacksDocumentController sharedDocumentController] documents]) {
+                            NSLog(@"stacks doc: %@", stacksDocument.path);
+                            if (stacksDocument.path == NULL) {
+                                [stacksDocument close];
+                                //                [[StacksDocumentController sharedDocumentController] perform]
+                            }
+                        }
+                        
+                    }
+                    else {
+                        [progressController close];
+                        NSLog(@"must have been cancelled");
+                        
                     }
                 }
+                               );
 
+//                    break;
+//                }
             }
-            else {
-                [progressController close];
-                NSLog(@"must have been cancelled");
+            else
+            if (result != NSOKButton) {
+                NSLog(@"Cancelled import");
+                return;
+            }
 
-            }
-        }
-        );
+        }];
+        
+
 //        });
 //        [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
 
