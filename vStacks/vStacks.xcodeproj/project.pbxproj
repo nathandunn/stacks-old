@@ -73,7 +73,6 @@
 		6BD8C86E18A2DAD3000C3A16 /* stacks.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86C18A2DABE000C3A16 /* stacks.js */; };
 		6BD8C87018A2DB05000C3A16 /* jquery-1.11.0.min.js in Sources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
 		6BD8C87118A2DB28000C3A16 /* jquery-1.11.0.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */; };
-		6BDE5F7018E3602600B23E9D /* ImportDataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 6BDE5F6E18E3602600B23E9D /* ImportDataModel.xcdatamodeld */; };
 		6BDE5F7618E3618C00B23E9D /* GenericHashMO.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BDE5F7518E3618C00B23E9D /* GenericHashMO.m */; };
 		D793CD98D5347B963755DE08 /* StacksEntryDatumRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = D793CE87A0282D76171B5705 /* StacksEntryDatumRenderer.m */; };
 /* End PBXBuildFile section */
@@ -215,7 +214,6 @@
 		6BCC7EEC18B6C07A007BB3A7 /* libz.1.2.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libz.1.2.7.dylib; sourceTree = "<group>"; };
 		6BD8C86C18A2DABE000C3A16 /* stacks.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = stacks.js; sourceTree = "<group>"; };
 		6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = "jquery-1.11.0.min.js"; sourceTree = "<group>"; };
-		6BDE5F6F18E3602600B23E9D /* ImportDataModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ImportDataModel.xcdatamodel; sourceTree = "<group>"; };
 		6BDE5F7418E3618C00B23E9D /* GenericHashMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenericHashMO.h; sourceTree = "<group>"; };
 		6BDE5F7518E3618C00B23E9D /* GenericHashMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenericHashMO.m; sourceTree = "<group>"; };
 		D793CBB9D5EB558052FC2E35 /* StacksEntryDatumRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksEntryDatumRenderer.h; sourceTree = "<group>"; };
@@ -386,7 +384,6 @@
 				143705C0187B88D80007BDE5 /* DatumMO.m */,
 				143705C1187B88D80007BDE5 /* LocusMO.h */,
 				143705C2187B88D80007BDE5 /* LocusMO.m */,
-				6BDE5F6E18E3602600B23E9D /* ImportDataModel.xcdatamodeld */,
 				6BDE5F7418E3618C00B23E9D /* GenericHashMO.h */,
 				6BDE5F7518E3618C00B23E9D /* GenericHashMO.m */,
 			);
@@ -634,7 +631,6 @@
 				143705EA187B88E50007BDE5 /* SampleRepository.m in Sources */,
 				1437059D187B88C70007BDE5 /* StacksImportMenuItem.m in Sources */,
 				6BCC7EE818B6C041007BB3A7 /* locus.cc in Sources */,
-				6BDE5F7018E3602600B23E9D /* ImportDataModel.xcdatamodeld in Sources */,
 				1437059B187B88C70007BDE5 /* StacksAppDelegate.m in Sources */,
 				14370596187B88C70007BDE5 /* PopulationArrayController.m in Sources */,
 				14370599187B88C70007BDE5 /* DatumCollectionViewItem.m in Sources */,
@@ -905,19 +901,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCVersionGroup section */
-		6BDE5F6E18E3602600B23E9D /* ImportDataModel.xcdatamodeld */ = {
-			isa = XCVersionGroup;
-			children = (
-				6BDE5F6F18E3602600B23E9D /* ImportDataModel.xcdatamodel */,
-			);
-			currentVersion = 6BDE5F6F18E3602600B23E9D /* ImportDataModel.xcdatamodel */;
-			path = ImportDataModel.xcdatamodeld;
-			sourceTree = "<group>";
-			versionGroupType = wrapper.xcdatamodel;
-		};
-/* End XCVersionGroup section */
 	};
 	rootObject = 14370513187B87690007BDE5 /* Project object */;
 }
