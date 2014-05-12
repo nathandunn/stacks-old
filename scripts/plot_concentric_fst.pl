@@ -63,12 +63,18 @@ my %ochrs = ('gac' => ['groupI', 'groupII', 'groupIII', 'groupIV', 'groupV', 'gr
 	     'mmu' => ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', 
 		       '12', '13', '14', '15', '16', '17', '18', '19', 'X', 'Y']);
 
+my %cols = (
+    'fst'   => 18,
+    'phist' => 22,
+    'fstp'  => 25
+    );
+
 #
 # Define the path to the font we plan to use in the image
 #
 my $font = "/usr/share/fonts/liberation/LiberationSans-Regular.ttf";
 
-my (@chrs, @fst_files, %img, %fst);
+my (@chrs, @fst_files, @file_types, %img, %fst);
 
 $img{'type'}      = "pdf";
 $img{'width'}     = 800/px;
@@ -77,21 +83,23 @@ $img{'font_size'} = 16;
 
 parse_command_line(\%img);
 
-populate_fst(\@fst_files, \%fst);
+populate_fst(\@fst_files, \@file_types, \%fst);
 
 if ($img{'type'} eq "gd") {
     generate_png(\@chrs, \%fst, \%img);
 
 } else {
-    generate_pdf(\@fst_files, \@chrs, \%fst, \%img);
+    generate_pdf(\@fst_files, \@file_types, \@chrs, \%fst, \%img);
 }
 
 sub populate_fst {
-    my ($fst_files, $fst) = @_;
+    my ($fst_files, $file_types, $fst) = @_;
 
-    my ($fh, $line, @parts);
+    my ($fh, $line, @parts, $file, $ftype);
 
-    foreach my $file (@{$fst_files}) {
+    for (my $i = 0; $i < scalar(@{$fst_files}); $i++) {
+	$file  = $fst_files->[$i];
+	$ftype = $file_types->[$i];
 
 	open($fh, "<$file") or die("Unable to open fst file '$file' ($!)\n");
 
@@ -107,7 +115,7 @@ sub populate_fst {
 	    next if (!defined($orgs{$org}->{$parts[4]}));
 
 	    push(@{$fst->{$file}->{$parts[4]}->{'bp'}},  $parts[5]);
-	    push(@{$fst->{$file}->{$parts[4]}->{'fst'}}, $parts[19]);
+	    push(@{$fst->{$file}->{$parts[4]}->{'fst'}}, $parts[$cols{$ftype}]);
 	}
 
 	close($fh);
@@ -115,7 +123,7 @@ sub populate_fst {
 }
 
 sub generate_pdf {
-    my ($files, $chrs, $fst, $img) = @_;
+    my ($files, $file_types, $chrs, $fst, $img) = @_;
 
     my (%colors, $chr, $key);
 
@@ -152,7 +160,7 @@ sub generate_pdf {
     #
     # Record the filenames in the image.
     #
-    draw_filenames_pdf($img, \%colors, $files);
+    draw_filenames_pdf($img, \%colors, $files, $file_types);
 
     # Determine the length of each chromosome in degrees.
     determine_chromosome_lengths($img, $chrs);
@@ -160,8 +168,7 @@ sub generate_pdf {
     #
     # Determine the number of concentric circles to draw, and radial spacing for each.
     #
-    my @fst_keys    = keys %{$fst};
-    my $num_circles = scalar(@fst_keys); 
+    my $num_circles = scalar(@fst_files); 
     my $radius_dist = ($img->{'max_radius'} - $img->{'min_radius'}) / ($num_circles - 1);
 
     #
@@ -289,7 +296,7 @@ sub draw_fst_pdf {
 	$cnt++;
     }
 
-    print STDERR "Drew $cnt buckets, from $c->{'start_deg'} to $c->{'end_deg'} degrees\n";
+    # print STDERR "Drew $cnt buckets, from $c->{'start_deg'} to $c->{'end_deg'} degrees\n";
 }
 
 sub bucket_fst_values {
@@ -308,9 +315,9 @@ sub bucket_fst_values {
     my @blimits;
     my $bps = ceil($orgs{$org}->{$chr} / $bcnt);
 
-    print STDERR 
-	"Chromosome $chr, $orgs{$org}->{$chr}bps\n",
-	"  $bcnt buckets; $bps basepairs per bucket.\n";
+    # print STDERR 
+    # 	"Chromosome $chr, $orgs{$org}->{$chr}bps\n",
+    # 	"  $bcnt buckets; $bps basepairs per bucket.\n";
 
     #
     # Create an array of buckets, divided into 1/8ths of a degree.
@@ -587,9 +594,9 @@ sub draw_chromosome_arc_pdf {
 }
 
 sub draw_filenames_pdf {
-    my ($img, $colors, $files) = @_;
+    my ($img, $colors, $files, $file_types) = @_;
 
-    my ($i, $f, $file);
+    my ($i, $f, $file, $ftype);
 
     my $label       = $img->{'pdf_page'}->text();
     my $text_height = 6/pt;
@@ -598,15 +605,26 @@ sub draw_filenames_pdf {
     $label->font($img->{'pdf_font'}, $img->{'font_size'} - 2);
     $label->fillcolor($colors->{'black'});
 
-    $i = 1;
-    foreach $f (@{$files}) {
+    $i = scalar(@{$files});
+    for (my $j = scalar(@{$files}) - 1; $j >= 0; $j--) {
+	$f     = $files->[$j];
+	$ftype = $file_types->[$j];
+
 	($file) = ($f =~ /.*\/(\w.+)$/);
+
+	if ($ftype eq "fst") {
+	    $file = "Fst; " . $file;
+	} elsif ($ftype eq "fstp") {
+	    $file = "Fst'; " . $file;
+	} elsif ($ftype eq "phist") {
+	    $file = "Phi_st; " . $file;
+	}
 
 	$label->translate(5, $y);
 	$label->text($i . ". " . $file);
 
 	$y -= $text_height + 7;
-	$i++;
+	$i--;
     }
 }
 
@@ -700,7 +718,7 @@ sub determine_chromosome_lengths {
 	$img->{'chrs'}->{$chr}->{'start_deg'} = $start_deg;
 	$img->{'chrs'}->{$chr}->{'end_deg'}   = $end_deg;
 
-	print STDERR "Chromosome $chr goes from $start_deg to $end_deg\n";
+	# print STDERR "Chromosome $chr goes from $start_deg to $end_deg\n";
 
 	$degrees = $end_deg;
     }
@@ -935,7 +953,9 @@ sub parse_command_line {
 	elsif ($_ =~ /^-C$/)  { $color_type = shift @ARGV; }
 	elsif ($_ =~ /^-m$/)  { $min_radius = shift @ARGV; }
 	elsif ($_ =~ /^-M$/)  { $max_radius = shift @ARGV; }
-	elsif ($_ =~ /^-f$/)  { push(@fst_files, shift @ARGV); }
+	elsif ($_ =~ /^-f$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'fst');   }
+	elsif ($_ =~ /^-F$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'fstp');  }
+	elsif ($_ =~ /^-P$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'phist'); }
 	elsif ($_ =~ /^-t$/)  { $img->{'type'}  = shift @ARGV; }
 	elsif ($_ =~ /^-s$/)  { $img->{'width'} = shift @ARGV; }
 	elsif ($_ =~ /^-h$/)  { usage(); }
