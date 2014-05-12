@@ -81,7 +81,7 @@ populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/PopMap.h src/PopSum.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h \
-	src/bootstrap.h src/ordered.h src/smoothed.h
+	src/bootstrap.h src/ordered.h src/smoothing.h src/smoothing_utils.h
 
 phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h \
 	src/locus.h src/locus.cc \
@@ -114,6 +114,8 @@ populations_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 populations_LDFLAGS   = $(OPENMP_CFLAGS)
 phasedstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 phasedstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+clone_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+clone_filter_LDFLAGS  = $(OPENMP_CFLAGS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl \
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
