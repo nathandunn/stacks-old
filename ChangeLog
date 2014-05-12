@@ -1,3 +1,18 @@
+Stacks 1.19 - Apr 23, 2014
+--------------------------
+	Feature: the populations program now calculates Fst' and D_est on haplotypes between all pairwise
+	populations. Our implementations are based on:
+	    Bird, Karl, Smouse & Toonen. (2011) Detecting and measuring genetic differentiation.
+	    D_est: Jost. (2008) Gst and its relatives do not measure differentiation.
+	    Fst': based on modifying the AMOVA implementation from Excoffier, Smouse, & Quattro (1992).
+	Feature: we have refactored the populations program to use a common framework for kernel smoothing
+	and bootstrapping. This has allowed us to add smoothing and bootstrapping to all statistics calculated
+	by the populations program: pi, Fis, Fst, Fst', D_est, Phi_st, Phi_ct, Phi_sc, Haplotype diversity,
+	gene diversity.
+	Feature: we have implemented fine-grained control of bootstrapping by providing flags to turn on
+	bootstrapping for each group of population statistics, as well as providing a bootstrapping whitelist
+	allowing only certain loci to be included in the bootstrapping calculations.
+
 Stacks 1.18 - Apr 04, 2014
 --------------------------
 	Feature: we now use chi squared segregation ratios to detect missing alleles in parental mapping markers.
