@@ -2566,7 +2566,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 			   << loc->loc.chr << "\t"
 			   << loc->sort_bp(i) << "\t"
 			   << i << "\t"
-			   << psum->rev_pop_index(j) << "\t"
+			   << pop_key[psum->rev_pop_index(j)] << "\t"
 			   << s[j]->nucs[i].p_nuc << "\t";
 
 			if (s[j]->nucs[i].q_nuc != 0) 
@@ -3047,8 +3047,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		       << pairs[i]->bp      << "\t"
 		       << pairs[i]->col     << "\t"
 		       << pairs[i]->pi      << "\t"
-		       << pairs[i]->fst << "\t"
-		       << pairs[i]->fet_p   << "\t"
+		       << pairs[i]->fst     << "\t"
+		       << std::setprecision(9) << pairs[i]->fet_p << "\t"
 		       << pairs[i]->fet_or  << "\t"
 		       << pairs[i]->ci_low  << "\t"
 		       << pairs[i]->ci_high << "\t"
