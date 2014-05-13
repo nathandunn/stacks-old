@@ -1,8 +1,8 @@
 //
 // Created by Nathan Dunn on 5/8/13.
-// Copyright (c) 2013 Nathan Dunn. All rights reserved.
+// Copyright (c) 2014 University of Oregon. All rights reserved.
 //
-// To change the template use AppCode | Preferences | File Templates.
+//
 //
 
 
@@ -18,7 +18,9 @@
 
 - (NSArray *)getAllPopulations:(NSManagedObjectContext *)context;
 
-- (PopulationMO *)getPopulation:(NSManagedObjectContext *)context name:(NSString *)name;
+- (PopulationMO *)getPopulationOrCreate:(NSManagedObjectContext *)context name:(NSString *)name;
 
 - (PopulationMO *)getPopulation:(NSManagedObjectContext *)context byIndexSortedByName:(NSInteger)index;
+
+- (PopulationMO *)getPopulation:(NSManagedObjectContext *)context name:(NSString *)name;
 @end

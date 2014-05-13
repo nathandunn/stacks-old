@@ -3,7 +3,7 @@
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 4/18/13.
-//  Copyright (c) 2013 Nathan Dunn. All rights reserved.
+//  Copyright (c) 2014 University of Oregon. All rights reserved.
 //
 
 #import "StacksDocument.h"
@@ -19,6 +19,9 @@
 #import "StackEntryDatumMO.h"
 #import "StackEntryRenderer.h"
 #import "StacksEntryDatumRenderer.h"
+#import "SampleRepository.h"
+#import "SampleMO.h"
+#import "SplashWindowController.h"
 //#import "StacksConverter.h"
 //#import "StacksDocumentController.h"
 #import <WebKit/WebKit.h>
@@ -30,36 +33,36 @@
 
 @property(weak) IBOutlet NSTableView *locusTableView;
 //@property(weak) IBOutlet NSTableView *stacksTableView;
-@property(weak) IBOutlet NSCollectionView *datumCollectionView;
+//@property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController;
-@property(weak) IBOutlet NSTextField *filteredLoci;
+//@property(weak) IBOutlet NSTextField *filteredLoci;
 @property(weak) IBOutlet NSTextField *totalLoci;
 @property(weak) IBOutlet NSPopUpButton *populationSelector;
 @property(weak) IBOutlet NSButton *editPopulationButton;
 @property(weak) IBOutlet NSTextField *populationNameField;
 @property(weak) IBOutlet NSTextField *maxLocusTextField;
 @property(weak) IBOutlet NSPopUpButton *maxSnpPopupButton;
+@property(weak) IBOutlet NSPopUpButton *maxSamplesPopupButton;
 @property(weak) IBOutlet WebView *stacksWebView;
+@property(weak) IBOutlet WebView *datumWebView;
+
 
 
 @end
 
 @implementation StacksDocument
 
+SplashWindowController *splashWindowController ;
+
 // TODO: remove these in favor of NSSet loci
 //@synthesize locusViews;
-@synthesize filteredLoci;
+//@synthesize filteredLoci;
 @synthesize loci;
 @synthesize populations;
 
 // selected stuff
 @synthesize selectedDatums;
 @synthesize selectedDatum;
-
-// repository
-//@synthesize datumRepository;
-//@synthesize [LocusRepository sharedInstance];
-//@synthesize populationRepository;
 
 // array controller
 @synthesize datumController;
@@ -77,7 +80,15 @@
 @synthesize snpFilterValues;
 @synthesize sampleFilterValues;
 @synthesize maxSnpPopupButton;
+@synthesize maxSamplesPopupButton;
 @synthesize stacksWebView;
+@synthesize datumWebView;
+@synthesize numberFormatter;
+
+@synthesize importPath;
+@synthesize path;
+@synthesize oldPopulationTitle;
+@synthesize datumPath;
 //@synthesize populationController;
 //@synthesize loadProgress;
 //@synthesize progressPanel;
@@ -91,6 +102,11 @@
 //        datumRepository = [[DatumRepository alloc] init];
 //        [LocusRepository sharedInstance] = [[LocusRepository alloc] init];
 //        populationRepository = [[PopulationRepository alloc] init];
+
+        numberFormatter = [[NSNumberFormatter alloc] init];
+        numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+
+        splashWindowController = [[SplashWindowController alloc] initWithWindowNibName:@"SplashWindowController"];
     }
     return self;
 }
@@ -105,8 +121,18 @@
     return @"StacksDocument";
 }
 
+- (void)windowControllerWillLoadNib:(NSWindowController *)windowController {
+    [super windowControllerWillLoadNib:windowController];
+    NSLog(@"will load ");
+//    [splashWindowController showWindow:self];
+////    [splashWindowController activ
+//    [splashWindowController.window setLevel:NSScreenSaverWindowLevel + 1];
+//    [splashWindowController.window  orderFront:nil];
+}
+
 
 - (void)windowControllerDidLoadNib:(NSWindowController *)aController {
+    NSLog(@"did load");
     [datumController addObserver:self forKeyPath:@"selectionIndexes" options:(NSKeyValueObservingOptionNew) context:nil];
 
     [super windowControllerDidLoadNib:aController];
@@ -125,36 +151,28 @@
     maxLocusTextField.stringValue = [NSString stringWithFormat:@"%1.2f", maxLocationVariable];
 
     [maxSnpPopupButton selectItemAtIndex:[self getSnpFilterValues].count - 1];
+    [maxSamplesPopupButton selectItemAtIndex:[self getSampleFilterValues].count - 1];
 
 
-    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-    [numberFormatter setNumberStyle:NSNumberFormatterNoStyle];
 //    [filteredLoci setFormatter:numberFormatter];
-    [[filteredLoci cell] setFormatter:numberFormatter];
+//    [[filteredLoci cell] setFormatter:numberFormatter];
 
     [self updateStacksView];
+//    [splashWindowController close];
+
 }
 
 - (void)updateStacksView {
 
-//    DatumMO *datumMO = [[datumRepository getAllDatum:[self managedObjectContext]] objectAtIndex:0];
     if (self.selectedDatum != nil) {
-//        NSLog(@"loading data %@ with url %@",self.selectedDatum.stackData, [[NSBundle mainBundle] bundleURL]);
-//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
-//        [[stacksWebView mainFrame] loadHTMLString:self.selectedDatum.stackData baseURL:[[NSBundle mainBundle] bundleURL]];
-//        [[stacksWebView mainFrame] loadData:[self.selectedDatum.stackData gunzippedData] MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
 
         StackEntryDatumMO *stackEntryDatumMO = [[DatumRepository sharedInstance] getStackEntryDatum:self.managedObjectContext datum:self.selectedDatum];
-        if (stackEntryDatumMO != nil && stackEntryDatumMO.stackData!=nil) {
+        if (stackEntryDatumMO != nil && stackEntryDatumMO.stackData != nil) {
 
             NSData *jsonData = [stackEntryDatumMO.stackData gunzippedData];
-//            NSError *error;
-//            NSDictionary *stackEntryData = [NSJSONSerialization JSONObjectWithData:jsonData options:kNilOptions error:&error];
-
             StacksEntryDatumRenderer *stacksEntryDatumRenderer = [[StacksEntryDatumRenderer alloc] init];
             NSString *html = [stacksEntryDatumRenderer renderHtmlForData:jsonData datumSnps:self.selectedDatum.snpData locusSnps:self.selectedLocus.snpData];
 
-//            [[stacksWebView mainFrame] loadData:jsonData MIMEType:@"text/html" textEncodingName:@"UTF8" baseURL:[[NSBundle mainBundle] bundleURL]];
             [[stacksWebView mainFrame] loadHTMLString:html baseURL:[[NSBundle mainBundle] bundleURL]];
 
             [stacksWebView setHidden:NO];
@@ -168,11 +186,6 @@
     else {
         [stacksWebView setHidden:YES];
     }
-
-//    NSURL *url = [NSURL URLWithString:@"http://www.apple.com"];
-//    NSURLRequest *urlRequest = [NSURLRequest requestWithURL:url];
-////    [[[self webView] mainFrame] loadRequest:urlRequest];
-//    [[stacksWebView mainFrame] loadRequest:urlRequest];
 }
 
 + (BOOL)autosavesInPlace {
@@ -184,23 +197,48 @@
 }
 
 - (IBAction)togglePopulationEdit:(id)sender {
-    NSLog(@"editing %d", editingPopulation);
+//    NSLog(@"editing %d", editingPopulation);
     if (editingPopulation) {
-        NSLog(@"setting to edit");
+//        NSLog(@"hit DONE, setting button to edit");
         editPopulationButton.title = @"Edit";
+
+//        for (id item in populationSelector.itemArray) {
+//            NSLog(@"item in there: %@", item);
+//        }
+
+
+//        PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
+        PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
+//        NSLog(@"popMO: %@", populationMO);
+        if (populationMO != nil && ![populationNameField.stringValue isEqualToString:oldPopulationTitle]) {
+            populationMO.name = populationNameField.stringValue;
+            NSError *error;
+            [self.managedObjectContext save:&error];
+            if (error) {
+                NSLog(@"error");
+                return;
+            }
+        }
 
         [populationSelector setHidden:false];
         [populationNameField setHidden:true];
 
         [populationSelector selectItemAtIndex:previousSelectedItem];
-        NSLog(@"selected item index %ld", populationSelector.indexOfSelectedItem);
+//        NSLog(@"selected item index %ld", populationSelector.indexOfSelectedItem);
     }
     else {
+        if (populationSelector.indexOfSelectedItem == 0) {
+            return;
+        }
         NSLog(@"setting to DONE");
         previousSelectedItem = populationSelector.indexOfSelectedItem;
+        oldPopulationTitle = populationSelector.titleOfSelectedItem;
         editPopulationButton.title = @"Done";
         [populationSelector setHidden:true];
         [populationNameField setHidden:false];
+
+        populationNameField.stringValue = oldPopulationTitle;
+
     }
 
     editingPopulation = !editingPopulation;
@@ -208,17 +246,20 @@
 
 
 - (void)tableViewSelectionDidChange:(NSNotification *)aNotification {
-//    NSString *tableName = [[aNotification object] identifier];
-//    NSLog(@"table selected!! %@",tableName);
-
 
     self.selectedLocus = [self findSelectedLocus];
     self.selectedPopulation = [self findSelectedPopulation];
 
-    if (self.selectedLocus != nil && self.selectedPopulation != nil) {
+    if (self.selectedLocus != nil) {
 //        NSLog(@"getting selected locus %@", self.selectedLocus.locusId);
 //        NSLog(@"getting selected population %@", self.selectedPopulation.name);
-        self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:self.selectedPopulation];
+        if (self.selectedPopulation != nil) {
+            self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:self.selectedPopulation];
+        }
+        else {
+            self.selectedDatums = [[DatumRepository sharedInstance] getDatumsOrdered:self.managedObjectContext locus:self.selectedLocus.locusId];
+        }
+//        NSLog(@"got selected Datums: %ld", self.selectedDatums.count);
         if (self.selectedDatums != nil && self.selectedDatums.count > 0) {
             self.selectedDatum = [self.selectedDatums objectAtIndex:0];
         }
@@ -230,23 +271,162 @@
         self.selectedDatums = nil ;
         self.selectedDatum = nil ;
     }
+    [self updateDatumView];
     [self updateStacksView];
 
 }
 
+- (void)updateDatumView {
+    NSString *cssPath = [[NSBundle mainBundle] pathForResource:@"stacks" ofType:@"css"];
+    NSString *cssString = [NSString stringWithContentsOfFile:cssPath encoding:NSUTF8StringEncoding error:NULL];
+    NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style>", cssString];
+
+    NSArray *allPopulations = [[PopulationRepository sharedInstance] getAllPopulations:self.managedObjectContext];
+
+    if (self.selectedPopulation) {
+        [returnHTML appendFormat:@"<div class='datum-pop'><div class='population-header'>%@</div>", self.selectedPopulation.annotatedName];
+        if (self.selectedDatums.count > 0) {
+            for (DatumMO *datum in self.selectedDatums.reverseObjectEnumerator) {
+                [returnHTML appendString:[self renderDatumHtml:datum]];
+            }
+        }
+        else {
+            [returnHTML appendFormat:@"<div class='none'>None</div>"];
+        }
+        [returnHTML appendFormat:@"</div>"];
+    }
+    else if (self.selectedPopulation == nil && allPopulations != nil && allPopulations.count > 0) {
+        for (PopulationMO *populationMO in allPopulations) {
+            NSArray *datums = [[DatumRepository sharedInstance] getDatums:self.managedObjectContext locus:self.selectedLocus.locusId andPopulation:populationMO];
+            if (datums.count > 0) {
+                [returnHTML appendFormat:@"<div class='datum-pop'><div class='population-header'>%@</div>", populationMO.annotatedName];
+                for (DatumMO *datum in datums) {
+                    [returnHTML appendString:[self renderDatumHtml:datum]];
+                }
+                [returnHTML appendFormat:@"</div>"];
+            }
+        }
+    }
+            // if no population!
+    else {
+        [returnHTML appendFormat:@"<div class='datum-pop'><div class='population-header'>Population - Unspecified</div>"];
+        for (DatumMO *datum in self.selectedDatums.reverseObjectEnumerator) {
+            [returnHTML appendString:[self renderDatumHtml:datum]];
+        }
+        [returnHTML appendFormat:@"</div>"];
+    }
+
+//    NSLog(@"return HTML: %@",returnHTML);
+
+    [[datumWebView mainFrame] loadHTMLString:returnHTML baseURL:[[NSBundle mainBundle] bundleURL]];
+//    [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"window.location.hash='#%@:%@'",self.selectedDatum.tagId,self.selectedDatum.sampleId]];
+}
+
+- (NSString *)renderDatumHtml:(DatumMO *)datum {
+    NSMutableString *returnHTML = [NSMutableString string];
+    NSString *nameString = [datum renderNameHtml];
+    NSMutableArray *alleles = [NSMutableArray array];
+    if(self.selectedLocus.alleleData!=nil){
+        for(NSDictionary *allele in [NSJSONSerialization JSONObjectWithData:self.selectedLocus.alleleData options:kNilOptions error:nil]){
+            [alleles addObject:[allele objectForKey:@"allele"]];
+        }
+    }
+    NSDictionary *hapReorder = [datum getHaplotypeOrder:alleles];
+
+
+    NSString *haploytpeString = [datum renderHaplotypeHtml:hapReorder];
+    NSString *depthString = [datum renderDepthHtml:hapReorder];
+    NSString *datumIndex = [NSString stringWithFormat:@"%i:%@", datum.tagId, datum.sampleId];
+    NSString *selectedClass = ([datum isEqualTo:self.selectedDatum]) ? @" selected-datum" : @"";
+    [returnHTML appendFormat:@"<div id='%@' class='population%ld datum%@'>", datumIndex,self.selectedPopulation.populationId.longValue, selectedClass];
+    [returnHTML appendFormat:@"<a name='%@'></a>",datumIndex];
+    [returnHTML appendFormat:@"<a href='#%@'>%@</a><br/>", datumIndex, nameString];
+    [returnHTML appendFormat:@"<a href='#%@'>%@</a><br/>", datumIndex, haploytpeString];
+    [returnHTML appendFormat:@"<a href='#%@'>%@</a><br/>", datumIndex, depthString];
+    [returnHTML appendFormat:@"</div>"];
+    return returnHTML;
+}
+
+- (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
+        request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener {
+//    NSLog(@"handling URL!!! %@", [request URL] );
+    NSString* lastPathComponent = [[request URL] fragment];
+//    NSLog(@"last path componets!!! %@", lastPathComponent);
+
+    [listener use ];
+    NSArray *pathComponents = [lastPathComponent componentsSeparatedByString:@":"] ;
+    if (pathComponents.count != 2) {
+//        NSLog(@"path path for URL %@", request.URL);
+        return;
+    }
+    
+
+//    if([lastPathComponent characterAtIndex:0]=='#'){
+//        return ;
+//    }
+
+    self.datumPath = lastPathComponent ;
+    NSUInteger locusId = [numberFormatter numberFromString:[pathComponents objectAtIndex:0]].unsignedIntegerValue;
+    NSUInteger sampleId = [numberFormatter numberFromString:[pathComponents objectAtIndex:1]].unsignedIntegerValue;
+    DatumMO *datumMO = [[DatumRepository sharedInstance] getDatum:self.managedObjectContext locusId:locusId andSampleId:sampleId];
+    if (![datumMO isEqualTo:self.selectedDatum]) {
+        self.selectedDatum = datumMO;
+        [self updateStacksView];
+        [self updateDatumView];
+//        [datumWebView stringByEvaluatingJavaScriptFromString: @"window.location.hash='#%@'"];
+//    [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"window.location.hash='%@'",lastPathComponent]];
+//        [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"addClass('%@','selected-datum');",[[NSBundle mainBundle] bundleURL],[[request URL] lastPathComponent]]];
+    }
+
+//    [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"window.location='%@#%@'",[[NSBundle mainBundle] bundleURL],[[request URL] lastPathComponent]]];
+
+//    [listener use];
+//    NSString *host = [[request URL] host];
+//    if ([host hasSuffix:@"company.com"])
+//        [listener ignore];
+//    else
+//        [listener use];
+}
+
+- (void)webView:(WebView *)sender didFinishLoadForFrame:(WebFrame *)frame{
+
+//    NSLog(@"finished loading main frame %@",self.datumPath);
+    NSArray *pathComponents = [self.datumPath componentsSeparatedByString:@":"] ;
+    if(pathComponents.count!=2){
+        return ;
+    }
+//    pathComponents = [[pathComponents objectAtIndex:1] componentsSeparatedByString:@":"];
+
+//    NSLog(@"finished loading! %@",last);
+
+    [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"window.location.hash='#%@'",self.datumPath]];
+}
+
+
 - (PopulationMO *)findSelectedPopulation {
     NSInteger selectedRow = [self.populationSelector indexOfSelectedItem];
-    if (selectedRow >= 0) {
-        return [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow];
+    if (selectedRow > 0) {
+        return [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext byIndexSortedByName:selectedRow - 1];
     }
     return nil;
 }
 
 - (LocusMO *)findSelectedLocus {
-    NSInteger selectedRow = [self.locusTableView selectedRow];
-    if (selectedRow >= 0) {
+    NSInteger selectedRowIndex = [self.locusTableView selectedRow];
+    if (selectedRowIndex < 0) {
+        return nil;
+    }
+    NSTableCellView *selectedRow = [self.locusTableView viewAtColumn:0 row:selectedRowIndex makeIfNecessary:YES];
+    NSArray *subviews = selectedRow.subviews;
+    NSInteger locusId = -1;
+    for (NSTextField *subview in subviews) {
+        if ([subview.identifier isEqualToString:@"LocusId"]) {
+            locusId = [numberFormatter numberFromString:subview.stringValue].integerValue;
+        }
+    }
+    if (locusId >= 0) {
         // id starts at 1 + row  . . . I hope this is always true
-        return [[LocusRepository sharedInstance] getLocus:self.managedObjectContext forId:selectedRow + 1];
+        return [[LocusRepository sharedInstance] getLocus:self.managedObjectContext forId:locusId];
     }
     return nil;
 }
@@ -324,35 +504,20 @@
 
 
 - (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
-    NSLog(@"validating UI item in Stacks Document%@", anItem);
+//    NSLog(@"validating UI item in Stacks Document%@", anItem);
     return [super validateUserInterfaceItem:anItem];
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)item {
-    NSLog(@"validating in in Stacks Document menu item %@", item);
+//    NSLog(@"validating in in Stacks Document menu item %@", item);
 //    return [super validateUserInterfaceItem:item];
     if (item.tag == 77) {
-        NSLog(@"should be returning true!");
+//        NSLog(@"should be returning true!");
         return YES;
     }
     else {
         return [super validateMenuItem:item];
     }
-}
-
-- (void)showHelp:(id)sender {
-    NSString *url = @"http://creskolab.uoregon.edu/stacks";
-    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
-}
-
-- (void)provideFeedback:(id)sender {
-    NSString *recipients = @"mailto:jcatchen@uoregon.edu?cc=ndunn@uoregon.edu&subject=vStacks Feedback";
-    NSString *body = @"&body=Feedback for vStacks";
-    NSString *email = [NSString stringWithFormat:@"%@%@", recipients, body];
-    
-    email = [email stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
-    
-    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:email]];
 }
 
 - (NSArray *)getSnpFilterValues {
@@ -361,7 +526,7 @@
 
     if (snpFilterValues == nil) {
         snpFilterValues = [NSMutableArray array];
-        for (int i = 0; i < maxLocusSnps; i++) {
+        for (int i = 0; i < maxLocusSnps + 1; i++) {
             [snpFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
@@ -375,7 +540,7 @@
 
     if (sampleFilterValues == nil) {
         sampleFilterValues = [NSMutableArray array];
-        for (int i = 0; i < maxLocusSamples; i++) {
+        for (int i = 0; i < maxLocusSamples + 1; i++) {
             [sampleFilterValues addObject:[NSNumber numberWithInteger:i]];
         }
     }
@@ -384,22 +549,32 @@
 }
 
 - (NSUInteger)getMaxLocusSamples {
-    return 10;
+    NSArray *allLocusArray = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext];
+
+    NSUInteger maxLocusSamples = 0;
+    for (LocusMO *locusMO in  allLocusArray) {
+
+        if (locusMO.progenyCount.unsignedIntegerValue > maxLocusSamples) {
+            maxLocusSamples = locusMO.progenyCount.unsignedIntegerValue;
+        }
+    }
+
+    return maxLocusSamples;
 }
 
 - (NSUInteger)getMaxLocusSnps {
 
-    NSArray* allLocusArray = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext] ;
+    NSArray *allLocusArray = [[LocusRepository sharedInstance] getAllLoci:self.managedObjectContext];
 
-    NSUInteger maxLocusSnps = 0 ;
-    for( LocusMO* locusMO in  allLocusArray){
+    NSUInteger maxLocusSnps = 0;
+    for (LocusMO *locusMO in  allLocusArray) {
         NSArray *snps = [NSJSONSerialization JSONObjectWithData:locusMO.snpData options:kNilOptions error:nil];
-        if(snps.count > maxLocusSnps){
-            maxLocusSnps = snps.count ;
+        if (snps.count > maxLocusSnps) {
+            maxLocusSnps = snps.count;
         }
     }
 
-    return maxLocusSnps ;
+    return maxLocusSnps;
 }
 
 

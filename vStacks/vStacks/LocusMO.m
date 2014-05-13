@@ -3,7 +3,7 @@
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 5/15/13.
-//  Copyright (c) 2013 Nathan Dunn. All rights reserved.
+//  Copyright (c) 2014 University of Oregon. All rights reserved.
 //
 
 #import "LocusMO.h"
@@ -26,8 +26,9 @@
 @dynamic marker;
 @dynamic ratio;
 @dynamic alleleData;
-@dynamic datums;
+//@dynamic datums;
 @dynamic snpData;
+@dynamic metaData;
 
 @synthesize colorGenerator;
 
@@ -42,12 +43,14 @@
 
 - (NSInteger)countParents {
     NSInteger count = 0;
-    for (DatumMO *datumMO in self.datums) {
-        NSString *sampleName = datumMO.sample.name;
-        if ([sampleName rangeOfString:@"male"].location != NSNotFound) {
-            ++count;
-        }
-    }
+    // TODO: fix
+
+    //    for (DatumMO *datumMO in self.datums) {
+//        NSString *sampleName = datumMO.sample.name;
+//        if ([sampleName rangeOfString:@"male"].location != NSNotFound) {
+//            ++count;
+//        }
+//    }
     return count;
 }
 
@@ -67,21 +70,22 @@
 
 - (NSUInteger)countProgeny {
     NSUInteger count = 0;
+    // TODO: fix
 //    NSLog(@"number of datums!! %ld",self.datums.count);
-    for (DatumMO *datumMO in self.datums) {
-        NSString *sampleName = datumMO.sample.name;
-//        NSLog(@"sample name %@",sampleName);
-        if ([sampleName rangeOfString:@"male"].location == NSNotFound) {
-//            NSLog(@"not found!!") ;
-            ++count;
-        }
-    }
+//    for (DatumMO *datumMO in self.datums) {
+//        NSString *sampleName = datumMO.sample.name;
+////        NSLog(@"sample name %@",sampleName);
+//        if ([sampleName rangeOfString:@"male"].location == NSNotFound) {
+////            NSLog(@"not found!!") ;
+//            ++count;
+//        }
+//    }
     return count;
 }
 
 - (NSAttributedString *)renderChromosome {
     NSString *inputString = @"";
-    NSLog(@"self.chromosome %@", self.chromosome);
+//    NSLog(@"self.chromosome %@", self.chromosome);
     if (self.chromosome != nil && self.chromosome.length > 0) {
         inputString = [NSString stringWithFormat:@"%@ %@ Mb %@", self.chromosome, self.basePairs, self.strand];
     }

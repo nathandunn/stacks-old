@@ -1,7 +1,7 @@
 //
 // Created by NathanDunn on 2/28/13.
 //
-// To change the template use AppCode | Preferences | File Templates.
+//
 //
 
 
@@ -36,8 +36,8 @@
 // a lookup
 //@property(nonatomic, strong) NSMutableDictionary *lociDictionary ;
 // sample:Dictionary<internalid,externalid>
-@property(nonatomic, strong) NSMutableDictionary *sampleLookupDictionary;
-@property(nonatomic, strong) NSMutableDictionary *locusSnpMap;
+//@property(nonatomic, strong) NSMutableDictionary *sampleLookupDictionary;
+//@property(nonatomic, strong) NSMutableDictionary *locusSnpMap;
 @property(nonatomic, strong) NSNumberFormatter *numberFormatter;
 
 
@@ -48,10 +48,11 @@
 - (id)init ;
 
 - (NSString *) generateFilePathForUrl:(NSURL *) url;
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController;
+
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController importPath:(NSString *)path1;
 - (NSMutableDictionary *)loadPopulation:(NSString *)path;
 
-- (StacksDocument *)loadDocument:(StacksDocument *)document progressWindow:(ProgressController *) bar;
+- (StacksDocument *)loadDocument:(StacksDocument *)document progressWindow:(ProgressController *)bar importPath:(NSString *)path;
 - (StacksDocument *)createStacksDocumentForPath:(NSString *)path;
 
 //- (NSManagedObjectContext *)getContextForPath:(NSString *)path andDocument:(StacksDocument *) document;
@@ -60,6 +61,10 @@
 
 //- (StacksDocument *)getStacksDocumentForPath:(NSString *)string;
 //- (void)loadLociAndGenotypes:(NSString *)appendingString progressBar:(NSProgressIndicator *)bar;
+
+- (void)addPopulationsToDocument:(StacksDocument *)document forPath:(NSString *)path ;
+
+
 @end
 
 NSUInteger  countParents(NSArray *parents);

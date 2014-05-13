@@ -3,13 +3,13 @@
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 5/15/13.
-//  Copyright (c) 2013 Nathan Dunn. All rights reserved.
+//  Copyright (c) 2014 University of Oregon. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class DatumMO, LocusAlleleMO, LocusSnpMO, DepthMO;
+//@class LocusAlleleMO, LocusSnpMO, DepthMO;
 @class ColorGenerator;
 
 @interface LocusMO : NSManagedObject
@@ -25,9 +25,11 @@
 @property (nonatomic, copy) NSNumber * progenyCount;
 @property (nonatomic, copy) NSString * marker;
 @property (nonatomic, copy) NSString * ratio;
+@property (nonatomic, copy) NSData *metaData;
 
 //@property (nonatomic, copy) NSSet *alleles;
-@property (nonatomic, copy) NSSet *datums;
+
+//@property (nonatomic, copy) NSSet *datums;
 //@property (nonatomic, copy) NSSet *snps;
 
 @property (nonatomic, copy) NSData *alleleData;
@@ -52,10 +54,10 @@
 //- (void)addAlleles:(NSSet *)values;
 //- (void)removeAlleles:(NSSet *)values;
 
-- (void)addDatumsObject:(DatumMO *)value;
-- (void)removeDatumsObject:(DatumMO *)value;
-- (void)addDatums:(NSSet *)values;
-- (void)removeDatums:(NSSet *)values;
+//- (void)addDatumsObject:(DatumMO *)value;
+//- (void)removeDatumsObject:(DatumMO *)value;
+//- (void)addDatums:(NSSet *)values;
+//- (void)removeDatums:(NSSet *)values;
 
 //- (void)addSnpsObject:(LocusSnpMO *)value;
 //- (void)removeSnpsObject:(LocusSnpMO *)value;

@@ -29,6 +29,11 @@
 #endif
 
 //
+//
+//
+const unsigned int fieldw = 4;
+
+//
 // Maximum line length for parsing input files.
 //
 const int max_len = 1024;
@@ -39,8 +44,18 @@ const int max_len = 1024;
 const int id_len = 255;
 
 //
+// Size to use for internal buffer size for gzipped files being read with libz.
+//
+const int libz_buffer_size = 1048576;
+
+//
 // Supported file types
 //
-enum file_type {unknown, sql, fasta, fastq, gzfasta, gzfastq, bowtie, sam, bam, tsv, bustard, phase, fastphase, beagle};
+enum file_type {unknown, 
+		sql,     gzsql, 
+		fasta,   gzfasta, 
+		fastq,   gzfastq, 
+		bowtie,  sam, bam, tsv, 
+		bustard, phase, fastphase, beagle};
 
 #endif

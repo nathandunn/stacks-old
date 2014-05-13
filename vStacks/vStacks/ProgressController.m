@@ -3,7 +3,7 @@
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 9/10/13.
-//  Copyright (c) 2013 Nathan Dunn. All rights reserved.
+//  Copyright (c) 2014 University of Oregon. All rights reserved.
 //
 
 #import "ProgressController.h"
@@ -27,7 +27,7 @@
 @synthesize  cancelButton;
 
 - (id)init {
-    NSLog(@"initializaing") ;
+//    NSLog(@"initializaing") ;
     self = [super init];
     if (self) {
         self = [super initWithWindowNibName:@"ProgressController"];
@@ -50,9 +50,9 @@
 
 - (void)windowDidLoad
 {
-    NSLog(@"trying to load window");
+//    NSLog(@"trying to load window");
     [super windowDidLoad];
-    NSLog(@"window really did load");
+//    NSLog(@"window really did load");
     
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
 }

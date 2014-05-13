@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -40,16 +40,16 @@ $display['pp']       = $per_page;
 //
 // Prepare the possible select lists we will want to construct to manualy correct genotypes.
 //
-$marker_types = array('ab/--' => array('aa', 'bb', '-'),
-		      '--/ab' => array('aa', 'bb', '-'),
-		      'ab/aa' => array('aa', 'ab', '-', 'clr'),
-                      'aa/ab' => array('aa', 'ab', '-'),
-                      'ab/ab' => array('aa', 'ab', 'bb', '-'),
-                      'ab/ac' => array('aa', 'ab', 'ac', 'bc', '-'),
-                      'ab/cd' => array('aa', 'bb', 'cc', 'dd', 'ac', 'ad', 'bc', 'bd', '-'),
-                      'aa/bb' => array('aa', 'bb', 'ab', '-'),
-                      'ab/cc' => array('aa', 'bb', 'ab', 'ac', 'bc', 'cc', '-'),
-                      'cc/ab' => array('aa', 'bb', 'ab', 'ac', 'bc', 'cc', '-'));
+$marker_types = array('ab/--' => array('aa', 'bb', 'ab', '--'),
+		      '--/ab' => array('aa', 'bb', 'ab', '--'),
+		      'ab/aa' => array('aa', 'bb', 'ab', '--'),
+                      'aa/ab' => array('aa', 'bb', 'ab', '--'),
+                      'ab/ab' => array('aa', 'ab', 'bb', '--'),
+                      'ab/ac' => array('aa', 'ab', 'ac', 'bc', '--'),
+                      'ab/cd' => array('aa', 'bb', 'cc', 'dd', 'ac', 'ad', 'bc', 'bd', '--'),
+                      'aa/bb' => array('aa', 'bb', 'ab', '--'),
+                      'ab/cc' => array('aa', 'bb', 'ab', 'ac', 'bc', 'cc', '--'),
+                      'cc/ab' => array('aa', 'bb', 'ab', 'ac', 'bc', 'cc', '--'));
 
 //
 // Prepare some SQL queries

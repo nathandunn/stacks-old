@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -40,42 +40,57 @@ const uint num_alleles_fields =  6;
 const uint num_matches_fields =  8;
 
 template <class LocusT>
+int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads, bool &compressed) {
 int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_all_model_calls) {
     LocusT        *c;
     SNP           *snp;
     string         f;
     char          *line, *cmp;
     const char    *p, *q;
-    int            len, size;
+    int            len;
     vector<string> parts;
     set<int>       blacklisted;
     long int       line_num;
     ifstream       fh;
+    gzFile         gz_fh;
 
-    line = new char[max_len];
-    size = max_len;
+    char *line      = (char *) malloc(sizeof(char) * max_len);
+    int   size      = max_len;
+    bool  gzip      = false;
+    int   fh_status = 1;
 
     // 
     // First, parse the tag file and pull in the consensus sequence
-    // for each Radtag.
+    // for each locus.
     //
     f = sample + ".tags.tsv";
     fh.open(f.c_str(), ifstream::in);
 
     if (fh.fail()) {
-        cerr << " Unable to open " << f.c_str() << "\n";
-        return 0;
-    } else {
-        cerr << "  Parsing " << f.c_str() << "\n";
+	//
+	// Test for a gzipped file.
+	//
+	f = sample + ".tags.tsv.gz";
+	gz_fh = gzopen(f.c_str(), "rb");
+	if (!gz_fh) {
+	    cerr << " Unable to open '" << sample << "'\n";
+	    return 0;
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
+	gzip       = true;
+	compressed = true;
     }
+    cerr << "  Parsing " << f.c_str() << "\n";
 
     uint id;
 
     line_num = 0;
-    while (fh.good()) {
-        read_line(fh, &line, &size);
+    while (fh_status) {
+        fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
 
-	if (!fh.good() && strlen(line) == 0)
+        if (!fh_status && strlen(line) == 0)
 	    continue;
 
 	parse_tsv(line, parts);
@@ -188,26 +203,42 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool l
         line_num++;
     }
 
-    fh.close();
+    if (gzip)
+	gzclose(gz_fh);
+    else
+	fh.close();
 
     // 
     // Next, parse the SNP file and load model calls.
     //
+    gzip      = false;
+    fh_status = 1;
+    line_num  = 0;
+
     f = sample + ".snps.tsv";
     fh.open(f.c_str(), ifstream::in);
-
     if (fh.fail()) {
-        cerr << " Unable to open " << f.c_str() << "\n";
-        return 0;
-    } else {
-        cerr << "  Parsing " << f.c_str() << "\n";
+	//
+	// Test for a gzipped file.
+	//
+	f = sample + ".snps.tsv.gz";
+	gz_fh = gzopen(f.c_str(), "rb");
+	if (!gz_fh) {
+	    cerr << " Unable to open '" << sample << "'\n";
+	    return 0;
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
+	gzip       = true;
+	compressed = true;
     }
+    cerr << "  Parsing " << f.c_str() << "\n";
 
-    line_num = 0;
-    while (fh.good()) {
-        read_line(fh, &line, &size);
+    while (fh_status) {
+        fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
 
-	if (!fh.good() && strlen(line) == 0)
+        if (!fh_status && strlen(line) == 0)
 	    continue;
 
 	parse_tsv(line, parts);
@@ -263,26 +294,42 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool l
         line_num++;
     }
 
-    fh.close();
+    if (gzip)
+	gzclose(gz_fh);
+    else
+	fh.close();
 
     // 
     // Finally, parse the Alleles file
     //
+    gzip      = false;
+    fh_status = 1;
+    line_num  = 0;
+
     f = sample + ".alleles.tsv";
     fh.open(f.c_str(), ifstream::in);
-
     if (fh.fail()) {
-        cerr << " Unable to open " << f.c_str() << "\n";
-        return 0;
-    } else {
-        cerr << "  Parsing " << f.c_str() << "\n";
+	//
+	// Test for a gzipped file.
+	//
+	f = sample + ".alleles.tsv.gz";
+	gz_fh = gzopen(f.c_str(), "rb");
+	if (!gz_fh) {
+	    cerr << " Unable to open '" << sample << "'\n";
+	    return 0;
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
+	gzip       = true;
+	compressed = true;
     }
+    cerr << "  Parsing " << f.c_str() << "\n";
 
-    line_num = 0;
-    while (fh.good()) {
-        read_line(fh, &line, &size);
+    while (fh_status) {
+        fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
 
-	if (!fh.good() && strlen(line) == 0)
+        if (!fh_status && strlen(line) == 0)
 	    continue;
 
 	parse_tsv(line, parts);
@@ -307,15 +354,17 @@ int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool l
         line_num++;
     }
 
+    if (gzip)
+	gzclose(gz_fh);
+    else
+	fh.close();
+
     //
     // Populate the strings member with the sequence for each allele for each Locus.
     //
     typename map<int, LocusT *>::iterator i;
     for (i = loci.begin(); i != loci.end(); i++)
         i->second->populate_alleles();
-
-
-    fh.close();
 
     delete [] line;
 
@@ -346,27 +395,41 @@ int dump_loci(map<int, LocusT *> &u) {
 int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
     CatMatch      *m;
     string         f;
-    char           line[max_len];
     vector<string> parts;
     long int       line_num;
     ifstream       fh;
+    gzFile         gz_fh;
+
+    char *line      = (char *) malloc(sizeof(char) * max_len);
+    int   size      = max_len;
+    bool  gzip      = false;
+    int   fh_status = 1;
 
     f = sample + ".matches.tsv";
     fh.open(f.c_str(), ifstream::in);
-
     if (fh.fail()) {
-        cerr << " Unable to open " << f.c_str() << "\n";
-        return 0;
-    } else {
-        cerr << "  Parsing " << f.c_str() << "\n";
+	//
+	// Test for a gzipped file.
+	//
+	f = sample + ".matches.tsv.gz";
+	gz_fh = gzopen(f.c_str(), "rb");
+	if (!gz_fh) {
+	    cerr << " Unable to open '" << sample << "'\n";
+	    return 0;
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
+	gzip = true;
     }
+    cerr << "  Parsing " << f.c_str() << "\n";
 
     line_num = 0;
-    while (fh.good()) {
-	fh.getline(line, max_len);
+    while (fh_status) {
+        fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
         line_num++;
 
-	if (!fh.good() && strlen(line) == 0)
+        if (!fh_status && strlen(line) == 0)
 	    continue;
 
 	parse_tsv(line, parts);
@@ -388,45 +451,61 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
 	matches.push_back(m);
     }
 
-    fh.close();
+    if (gzip)
+	gzclose(gz_fh);
+    else
+	fh.close();
 
     return 0;
 }
 
 int load_model_results(string sample,  map<int, ModRes *> &modres) {
     string         f;
-    char          *line;
-    int            size;
     vector<string> parts;
     long int       line_num;
     ifstream       fh;
+    gzFile   gz_fh;
 
-    line = (char *) malloc(sizeof(char) * max_len);
-    size = max_len;
+    char *line      = (char *) malloc(sizeof(char) * max_len);
+    int   size      = max_len;
+    bool  gzip      = false;
+    int   fh_status = 1;
 
     // 
     // First, parse the tag file and pull in the consensus sequence
     // for each Radtag.
     //
+    gzip      = false;
+    fh_status = 1;
+    line_num  = 0;
+
     f = sample + ".tags.tsv";
     fh.open(f.c_str(), ifstream::in);
-
     if (fh.fail()) {
-        cerr << " Unable to open " << f.c_str() << "\n";
-        return 0;
-    } else {
-        cerr << "  Parsing " << f.c_str() << "\n";
+	//
+	// Test for a gzipped file.
+	//
+	f = sample + ".tags.tsv.gz";
+	gz_fh = gzopen(f.c_str(), "rb");
+	if (!gz_fh) {
+	    cerr << " Unable to open '" << sample << "'\n";
+	    return 0;
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
+	gzip = true;
     }
+    cerr << "  Parsing " << f.c_str() << "\n";
 
     ModRes *mod;
     uint    tag_id, samp_id;
 
-    line_num = 0;
-    while (fh.good()) {
-        read_line(fh, &line, &size);
+    while (fh_status) {
+        fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
         line_num++;
 
-	if (!fh.good() && strlen(line) == 0)
+        if (!fh_status && strlen(line) == 0)
 	    continue;
 
 	parse_tsv(line, parts);
@@ -443,13 +522,16 @@ int load_model_results(string sample,  map<int, ModRes *> &modres) {
 	if (parts[6] != "model") continue;
 
 	samp_id = atoi(parts[1].c_str()); 
-	tag_id  = atoi(parts[2].c_str());
-	mod     = new ModRes(samp_id, tag_id, parts[9].c_str());
+        tag_id  = atoi(parts[2].c_str());
+        mod     = new ModRes(samp_id, tag_id, parts[9].c_str());
 
 	modres[tag_id] = mod;
     }
 
-    fh.close();
+    if (gzip)
+	gzclose(gz_fh);
+    else
+	fh.close();
 
     delete [] line;
 
@@ -458,35 +540,46 @@ int load_model_results(string sample,  map<int, ModRes *> &modres) {
 
 int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
     string         f;
-    char          *line;
-    int            size, id, samp_id;
+    int id, samp_id;
     vector<string> parts;
     long int       line_num;
     SNP           *snp;
     SNPRes        *snpr;
     ifstream       fh;
+    gzFile   gz_fh;
 
-    line = (char *) malloc(sizeof(char) * max_len);
-    size = max_len;
+    char *line      = (char *) malloc(sizeof(char) * max_len);
+    int   size      = max_len;
+    bool  gzip      = false;
+    int   fh_status = 1;
 
     // 
     // Parse the SNP file
     //
     f = sample + ".snps.tsv";
     fh.open(f.c_str(), ifstream::in);
-
     if (fh.fail()) {
-        cerr << " Unable to open " << f.c_str() << "\n";
-        return 0;
-    } else {
-        cerr << "  Parsing " << f.c_str() << "\n";
+	//
+	// Test for a gzipped file.
+	//
+	f = sample + ".snps.tsv.gz";
+	gz_fh = gzopen(f.c_str(), "rb");
+	if (!gz_fh) {
+	    cerr << " Unable to open '" << sample << "'\n";
+	    return 0;
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_fh, libz_buffer_size);
+	#endif
+	gzip = true;
     }
+    cerr << "  Parsing " << f.c_str() << "\n";
 
     line_num = 0;
-    while (fh.good()) {
-        read_line(fh, &line, &size);
+    while (fh_status) {
+        fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
 
-	if (!fh.good() && strlen(line) == 0)
+        if (!fh_status && strlen(line) == 0)
 	    continue;
 
 	parse_tsv(line, parts);
@@ -519,7 +612,11 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
         line_num++;
     }
 
-    fh.close();
+    if (gzip)
+	gzclose(gz_fh);
+    else
+	fh.close();
+
     delete [] line;
 
     return 1;

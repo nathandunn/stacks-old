@@ -119,9 +119,10 @@ int main (int argc, char* argv[]) {
     cerr << "Parsing the catalog...\n";
     stringstream catalog_file;
     map<int, CSLocus *> catalog;
-    int res;
+    bool compressed = false;
+    int  res;
     catalog_file << cat_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false, false)) == 0) {
+    if ((res = load_loci(catalog_file.str(), catalog, false, compressed)) == 0) {
     	cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
      	return 0;
     }
@@ -1066,7 +1067,7 @@ parse_fastphase(string path)
     char        line[max_len];
     string      buf, filepath;
     const char *p, *q, *end;
-    int         i, sindex;
+    int         i, sindex, pos;
 
     memset(line, '\0', max_len);
 
@@ -1138,12 +1139,14 @@ parse_fastphase(string path)
 	}
 	strncpy(bp, p, q - p);
 	bp[q - p] = '\0';
-	psum->nucs[i].bp = is_integer(bp);
+	pos = is_integer(bp);
 
-	if (psum->nucs[i].bp < 0) {
+	if (pos < 0) {
 	    cerr << "Unable to parse base pair positions.\n";
 	    delete psum;
 	    return NULL;
+	} else {
+	    psum->nucs[i].bp = (uint) pos;
 	}
 
 	i++;

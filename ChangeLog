@@ -2,8 +2,76 @@ Stacks 1.20.Beta2 - Jan 10, 2013
 ---------------------------------
 	Synced corrections module branch with main Stacks branch.
 
-Stacks 1.13 - Jan 28, 2014
+Stacks 1.19 - Apr 23, 2014
 --------------------------
+	Feature: the populations program now calculates Fst' and D_est on haplotypes between all pairwise
+	populations. Our implementations are based on:
+	    Bird, Karl, Smouse & Toonen. (2011) Detecting and measuring genetic differentiation.
+	    D_est: Jost. (2008) Gst and its relatives do not measure differentiation.
+	    Fst': based on modifying the AMOVA implementation from Excoffier, Smouse, & Quattro (1992).
+	Feature: we have refactored the populations program to use a common framework for kernel smoothing
+	and bootstrapping. This has allowed us to add smoothing and bootstrapping to all statistics calculated
+	by the populations program: pi, Fis, Fst, Fst', D_est, Phi_st, Phi_ct, Phi_sc, Haplotype diversity,
+	gene diversity.
+	Feature: we have implemented fine-grained control of bootstrapping by providing flags to turn on
+	bootstrapping for each group of population statistics, as well as providing a bootstrapping whitelist
+	allowing only certain loci to be included in the bootstrapping calculations.
+
+Stacks 1.18 - Apr 04, 2014
+--------------------------
+	Feature: we now use chi squared segregation ratios to detect missing alleles in parental mapping markers.
+	in F1 crosses (CP map type). We can now map ab/a- and -a/ab as ab/--, and --/ab markers; we can map
+	ab/c- and -c/ab markers as ab/cd markers; we can map aa/b- and -a/bb markers as ab/-- and --/ab markers.
+	Feature: in F1 crosses we are now mapping ab/cc and cc/ab markers as ab/-- and --/ab markers.
+	Feature: reworked genetic map display of web interface. Included chisq p-value from segregation distortion
+	test as a filter.
+	Feature: implemented measure of segregation distortion in genotypes program based on chi square test of
+	genotype counts. Removed deprecated measure of F, inbreeding coefficient, replaced it with segregation
+	distortion.
+	Bugfix: corrected calling of markers in genotypes program. When a whitelist with a small number of markers
+	is specified, some of the parental IDs could be missed, causing markers not to be called and hence dropped
+	from the analysis.
+	Bugfix: changed genotype mappings for generic map types to make certain non-biologically plausible genotype
+	combinations illegal.
+	Bugfix: fixed compilation issues when using Google's SparseHash (thanks to khuck@cs.uoregon.edu for the patch).
+
+Stacks 1.17 - Mar 26, 2014
+--------------------------
+	Bugfix: Added #ifdefs to deal with missing functions in older versions of zlib.
+
+Stacks 1.16 - Mar 25, 2014
+--------------------------
+	Feature: added haplotype counts for each population and locus to the batch_X.hapstats.tsv file.
+	Feature: haplotype F statistics are now calculated for the whole set of populations (one analysis
+	of variance calculation for all populations), and also as a set of pairwise calculations to mirror
+	the existing Fst calculations.
+	Bugfix: fixed small bug in calculation of MSD(Total) component of Phi_st (haplotype F statistics).
+	Bugfix: fixed bug in parsing of populations maps when using strings for population identifiers.
+	Bugfix: kernel-smoothing not correct for haplotype/gene diversity.
+
+Stacks 1.15 - Mar 15, 2014
+--------------------------
+	Bugfix: fix various bugs related to gzip support.
+
+Stacks 1.14 - Mar 14, 2014
+--------------------------
+	Feature: Stacks files are now kept in gzipped format if FASTQ data is fed into pipeline gzipped or as a BAM.
+	Bugfix: fixed some compile bugs on OSX Mavericks.
+
+Stacks 1.13 - Feb 24, 2014
+--------------------------
+	Feature: We have implemented the first set of haplotype-level population genetics statistics. Specifically,
+	we are now calculating gene diversity and haplotype diversity (pi) for each locus, as well as F statistics
+	for haplotypes including, Phi_st, Phi_ct, and Phi_sc, which are calculated using Analysis of Molecular
+	Variance (AMOVA):
+	    Excoffier, Smouse, & Quattro, (1992). Analysis of molecular variance inferred from metric distances
+	    among DNA haplotypes: application to human mitochondrial DNA restriction data. Genetics.
+	Data can be analyzed as populations of individuals (the previous default) and now using populations
+	of individuals, and groups of populations.
+	Feature: If a reference genome is available, haplotype F statistics can also be kernel-smoothed.
+	Feature: populations in the population map can now be specified as text strings or numbers. Groups
+	of populations can now be specified by adding a third column to the population map for each individual
+	and listing the group they belong to (again as a text string or number).
 	Bugfix: allow batch IDs of 0 in populations and genotypes.
 	Bugfix: in populations, changed VCF output to be ordered by basepair.
 	Bugfix: in populations, change value of expected homozygosity to be set to 1 - expected heterozygosity

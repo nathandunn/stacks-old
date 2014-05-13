@@ -1,8 +1,8 @@
 //
 // Created by Nathan Dunn on 5/8/13.
-// Copyright (c) 2013 Nathan Dunn. All rights reserved.
+// Copyright (c) 2014 University of Oregon. All rights reserved.
 //
-// To change the template use AppCode | Preferences | File Templates.
+//
 //
 
 
@@ -30,4 +30,6 @@
 - (NSDictionary *)getDatums:(NSManagedObjectContext *)context forSample:(NSNumber*)sampleId;
 
 - (StackEntryDatumMO *)getStackEntryDatum:(NSManagedObjectContext *)context datum:(DatumMO *)datum;
+
+- (NSArray *)getDatumsOrdered:(NSManagedObjectContext *)context locus:(NSNumber *)locus;
 @end

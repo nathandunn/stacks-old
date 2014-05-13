@@ -241,10 +241,10 @@ if ($batch['type'] == "map") {
   <th style="width: 10%;">Id</th>
   <th style="width: 5%;">SNP</th>
   <th style="width: 45%;">Consensus</th>
-  <th style="width: 5%;">Matching Parents</th>
-  <th style="width: 5%;">Progeny</th>
+  <th style="width: 12%;">Matches</th>
   <th style="width: 5%;">Marker</th>
   <th style="width: 10%;">Ratio</th>
+  <th style="width: 3%; font-size: smaller;">ChiSq P-value</th>
 
 EOQ;
 } else {
@@ -255,14 +255,11 @@ EOQ;
   <th style="width: 10%;">Id</th>
   <th style="width: 5%;">SNP</th>
   <th style="width: 50%;">Consensus</th>
-  <th style="width: 5%;">Matching Samples</th>
+  <th style="width: 5%;">Matches</th>
   <th style="width: 15%;">Ratio</th>
 
 EOQ;
 }
-
-if ($cols['gcnt'] == true)
-  print "  <th style=\"width: 5%\">Genotypes</th>\n";
 
 if ($cols['seq'] == true)
   print "  <th style=\"width: 10%\">Sequence</th>\n";
@@ -273,7 +270,7 @@ check_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT catalog_index.tag_id as tag_id, alleles, parents, progeny, valid_progeny, " . 
-    "seq, marker, max_pct, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt, " .
+    "seq, marker, uncor_marker, chisq_pval, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt, " .
     "catalog_index.chr, catalog_index.bp, catalog_tags.strand, catalog_index.type, gene, ext_id, ex_start, ex_end, ex_index " .
     "FROM catalog_index " .
     "JOIN catalog_tags ON (catalog_index.cat_id=catalog_tags.id) " . 
@@ -376,13 +373,24 @@ EOQ;
       print "<td class=\"seq\"><div class=\"seq\">$s</div></td>\n";
     }
 
-
-    print "<td>$row[parents]</td>\n";
-
-    if ($batch['type'] == "map")
+    if ($batch['type'] == "map") {
       print 
-	"  <td><acronym title=\"Matching Progeny\">$row[progeny]</acronym> <strong>/</strong> <acronym title=\"Mappable Progeny\">$row[valid_progeny]</acronym></td>\n" .
-	"  <td>$row[marker]</td>\n";
+	"  <td style=\"font-size: smaller;\"><acronym title=\"Matching Parents\"><span style=\"color: $colors[4]\">$row[parents]</span></acronym>" .
+	"<strong> / </strong> " .  
+	"<acronym title=\"Matching Progeny\"><span style=\"color: $colors[5]\">$row[progeny]</span></acronym>" . 
+	"<strong> / </strong> " . 
+	"<acronym title=\"Mappable Progeny\"><span style=\"color: $colors[6]\">$row[valid_progeny]</span></acronym>" . 
+	"<strong> / </strong> " . 
+	"<acronym title=\"Assigned Genotypes\"><span style=\"color: $colors[7]\">$row[geno_cnt]</span></acronym></td>\n";
+
+      if (strlen($row['uncor_marker']) > 0 && $row['marker'] != $row['uncor_marker'])
+	print "  <td><acronym title=\"Uncorrected marker: $row[uncor_marker]\">$row[marker]*</acronym></td>\n";
+      else
+	print "  <td>$row[marker]</td>\n";
+    } else {
+      print
+	"  <td>$row[parents]</td>\n";
+    }
 
     echo <<< EOQ
   <td style="text-align: left; font-size: smaller;">
@@ -391,11 +399,8 @@ EOQ;
 
 EOQ;
 
-    if ($cols['gcnt'] == true)
-        echo <<< EOQ
-  <td>$row[geno_cnt]</td>
-
-EOQ;
+    if ($batch['type'] == "map")
+      print "<td>$row[chisq_pval]</td>\n";
 
     if ($cols['seq'] == true)
         echo <<< EOQ
@@ -690,26 +695,29 @@ function write_map_filter($cols) {
 		     "vprog" => array(),
 		     "mark"  => array(),
 		     "gcnt"  => array(),
+		     "chisq" => array(),
 		     "loc"   => array(),
 		     "ref"   => array(),
                      "est"   => array(),
                      "pe"    => array(),
                      "blast" => array());
 
-    $fall = isset($display['filter_alle_l'])  ? $display['filter_alle_l'] : "";
-    $falu = isset($display['filter_alle_u'])  ? $display['filter_alle_u'] : "";
-    $fsnl = isset($display['filter_snps_l'])  ? $display['filter_snps_l'] : "";
-    $fsnu = isset($display['filter_snps_u'])  ? $display['filter_snps_u'] : "";
-    $fpal = isset($display['filter_pare_l'])  ? $display['filter_pare_l'] : "";
-    $fpau = isset($display['filter_pare_u'])  ? $display['filter_pare_u'] : "";
-    $fpr  = isset($display['filter_prog'])    ? $display['filter_prog']   : "";
-    $fvp  = isset($display['filter_vprog'])   ? $display['filter_vprog']  : "";
-    $fgc  = isset($display['filter_gcnt'])    ? $display['filter_gcnt']   : "";
-    $fma  = isset($display['filter_mark'])    ? $display['filter_mark']   : "";
-    $ref  = isset($display['filter_ref'])     ? $display['filter_ref']    : "";
-    $fch  = isset($display['filter_chr'])     ? $display['filter_chr']    : "";
-    $fsb  = isset($display['filter_sbp'])     ? $display['filter_sbp']    : 0;
-    $feb  = isset($display['filter_ebp'])     ? $display['filter_ebp']    : $max_chr_len;
+    $fall = isset($display['filter_alle_l'])  ? $display['filter_alle_l']  : "";
+    $falu = isset($display['filter_alle_u'])  ? $display['filter_alle_u']  : "100";
+    $fsnl = isset($display['filter_snps_l'])  ? $display['filter_snps_l']  : "";
+    $fsnu = isset($display['filter_snps_u'])  ? $display['filter_snps_u']  : "100";
+    $fpal = isset($display['filter_pare_l'])  ? $display['filter_pare_l']  : "";
+    $fpau = isset($display['filter_pare_u'])  ? $display['filter_pare_u']  : "2";
+    $fpr  = isset($display['filter_prog'])    ? $display['filter_prog']    : "";
+    $fvp  = isset($display['filter_vprog'])   ? $display['filter_vprog']   : "";
+    $fgc  = isset($display['filter_gcnt'])    ? $display['filter_gcnt']    : "";
+    $csql = isset($display['filter_chisq_l']) ? $display['filter_chisq_l'] : "0.0";
+    $csqu = isset($display['filter_chisq_u']) ? $display['filter_chisq_u'] : "1.0";
+    $fma  = isset($display['filter_mark'])    ? $display['filter_mark']    : "";
+    $ref  = isset($display['filter_ref'])     ? $display['filter_ref']     : "";
+    $fch  = isset($display['filter_chr'])     ? $display['filter_chr']     : "";
+    $fsb  = isset($display['filter_sbp'])     ? $display['filter_sbp']     : 0;
+    $feb  = isset($display['filter_ebp'])     ? $display['filter_ebp']     : $max_chr_len;
 
     $r = range(1, 9);
     $r = array_merge($r, range(10, 100, 5));
@@ -720,19 +728,21 @@ function write_map_filter($cols) {
     $snps_u_ctl  = generate_element_select("filter_snps_u",  $r,   $fsnu, "");
     $r = range(1, 9);
     $r = array_merge($r, range(10, 500, 10));
-    array_push($r, 1000);
+    array_push($r, 1000, 2000, 10000);
     $pare_l_ctl  = generate_element_select("filter_pare_l",  $r, $fpal, "");
     $pare_u_ctl  = generate_element_select("filter_pare_u",  $r, $fpau, "");
     $prog_ctl    = generate_element_select("filter_prog",  $r, $fpr, "");
     $vprog_ctl   = generate_element_select("filter_vprog", $r, $fvp, "");
     $gcnt_ctl    = generate_element_select("filter_gcnt",  $r, $fgc, "");
+    $csql_ctl    = generate_element_select("filter_chisq_l", array(0.0, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 1.0), $csql, "");
+    $csqu_ctl    = generate_element_select("filter_chisq_u", array(0.0, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 1.0), $csqu, "");
     $chr_ctl     = generate_element_select("filter_chr",   $chrs, $fch, "");
     $sbp_ctl     = generate_element_select("filter_sbp",   range(0, $max_chr_len), $fsb, "");
     $ebp_ctl     = generate_element_select("filter_ebp",   range(0, $max_chr_len), $feb, "");
     $ref_ctl     = generate_element_select("filter_ref",  array("exon", "intron", "genomic"), $ref, "");
     $mark_ctl    = generate_element_select("filter_mark", 
-                                         array('Any', 'aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'), 
-                                         $fma, "");
+					   array('Any', 'aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab'), 
+					   $fma, "");
 
     if (isset($display['filter_type'])) {
 
@@ -872,8 +882,13 @@ $prog_ctl
   </td>
   </tr>
   <tr>
-    <td>&nbsp;</td>
-    <td>&nbsp;</td>
+  <td {$filters['chisq']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="chisq" onchange="rebuild_display_select()" {$filters['chisq']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'chisq')">
+      <acronym title="A chi-square test for segregation distortion. The smaller the p-value, the more likely the genotype ratios are distorted from the expectation for this marker.">Segregation distortion</acronym>:</a></td>
+  <td {$filters['chisq']['tr']}>
+$csql_ctl $csqu_ctl
+  </td>
   </tr>
   </table>
   </td>
@@ -899,11 +914,6 @@ $vprog_ctl
 $mark_ctl
   </td>
   </tr>
-
-EOQ;
-
-if ($cols['gcnt'] == true) {
-  echo <<< EOQ
   <tr>
   <td {$filters['gcnt']['tr']}>
       <input type="checkbox" name="filter_type[]" value="gcnt" onchange="rebuild_display_select()" {$filters['gcnt']['sel']} /> 
@@ -913,20 +923,6 @@ if ($cols['gcnt'] == true) {
 $gcnt_ctl
   </td>
   </tr>
-
-EOQ;
-
-} else {
-  echo <<< EOQ
-  <tr>
-    <td>&nbsp;</td>
-    <td>&nbsp;</td>
-  </tr>
-
-EOQ;
-}
-
-echo <<< EOQ
   </table>
   </td>
 </tr>
@@ -954,6 +950,7 @@ EOQ;
 </tr>
 
 EOQ;
+
     echo <<< EOQ
 </table>
 </td>
@@ -985,11 +982,11 @@ function write_pop_filter($cols) {
                      "blast" => array());
 
     $fall = isset($display['filter_alle_l'])  ? $display['filter_alle_l'] : "";
-    $falu = isset($display['filter_alle_u'])  ? $display['filter_alle_u'] : "";
+    $falu = isset($display['filter_alle_u'])  ? $display['filter_alle_u'] : "100";
     $fsnl = isset($display['filter_snps_l'])  ? $display['filter_snps_l'] : "";
-    $fsnu = isset($display['filter_snps_u'])  ? $display['filter_snps_u'] : "";
+    $fsnu = isset($display['filter_snps_u'])  ? $display['filter_snps_u'] : "100";
     $fpal = isset($display['filter_pare_l'])  ? $display['filter_pare_l'] : "";
-    $fpau = isset($display['filter_pare_u'])  ? $display['filter_pare_u'] : "";
+    $fpau = isset($display['filter_pare_u'])  ? $display['filter_pare_u'] : "1000";
     $ref  = isset($display['filter_ref'])     ? $display['filter_ref']    : "";
     $fch  = isset($display['filter_chr'])     ? $display['filter_chr']    : "";
     $fsb  = isset($display['filter_sbp'])     ? $display['filter_sbp']    : 0;
@@ -1004,7 +1001,7 @@ function write_pop_filter($cols) {
     $snps_u_ctl  = generate_element_select("filter_snps_u",  $r,  $fsnu, "");
     $r = range(1, 9);
     $r = array_merge($r, range(10, 500, 10));
-    array_push($r, 1000);
+    array_push($r, 1000, 2000, 10000);
     $pare_l_ctl  = generate_element_select("filter_pare_l",  $r, $fpal, "");
     $pare_u_ctl  = generate_element_select("filter_pare_u",  $r, $fpau, "");
     $chr_ctl   = generate_element_select("filter_chr",   $chrs, $fch, "");
@@ -1097,7 +1094,7 @@ EOQ;
   </td>
 </tr>
 <tr>
-  <td style="width: 27%; text-align: left;">
+  <td style="width: 40%; text-align: left;">
   <table style="text-align: left;">
   <tr>
   <td {$filters['alle']['tr']}>
@@ -1126,7 +1123,7 @@ $snps_l_ctl $snps_u_ctl
   </table>
   </td>
 
-  <td style="width: 39%; text-align: center;">
+  <td style="width: 45%; text-align: center;">
   <table style="text-align: left;">
   <tr>
   <td {$filters['pare']['tr']}>
@@ -1149,7 +1146,7 @@ $pare_l_ctl $pare_u_ctl
   </table>
   </td>
 
-  <td style="width: 33%; text-align: right;">
+  <td style="width: 15%; text-align: right;">
   <table style="text-align: left;">
   <tr>
     <td>&nbsp;</td>
@@ -1258,6 +1255,10 @@ function process_filter(&$display_params) {
 	} else if ($filter == "gcnt") {
 	    $display_params['filter_gcnt'] = $_GET['filter_gcnt'];
 
+	} else if ($filter == "chisq") {
+	    $display_params['filter_chisq_l'] = $_GET['filter_chisq_l'];
+	    $display_params['filter_chisq_u'] = $_GET['filter_chisq_u'];
+
 	} else if ($filter == "ref") {
 	    $display_params['filter_ref'] = $_GET['filter_ref'];
 
@@ -1310,6 +1311,10 @@ function prepare_filter_parameters($display_params, &$param) {
 	} else if ($filter == "gcnt") {
 	    array_push($param, $display_params['filter_gcnt']);
 	
+	} else if ($filter == "chisq") {
+	    array_push($param, $display_params['filter_chisq_l']);
+	    array_push($param, $display_params['filter_chisq_u']);
+	
 	} else if ($filter == "ref") {
 	    array_push($param, $display_params['filter_ref']);
 	
@@ -1343,6 +1348,7 @@ function apply_query_filters($display_params) {
               "pe"    => "(pe_radtags > ?)",
               "blast" => "(blast_hits > ?)",
 	      "gcnt"  => "(geno_cnt >= ?)",
+	      "chisq" => "(chisq_pval >= ? AND chisq_pval <= ?)",
 	      "ref"   => "(catalog_index.type = ?)",
 	      "loc"   => "(catalog_index.chr = ? && catalog_index.bp >= ? && catalog_index.bp <= ?)");
 

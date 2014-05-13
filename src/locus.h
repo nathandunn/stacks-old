@@ -129,15 +129,17 @@ class CLocus : public Locus {
 class CSLocus : public Locus {
 public:
     CSLocus() : Locus() { 
-	this->f    = 0.0;
+	this->f          = 0.0; 
 	this->cnt  = 0; 
-	this->hcnt = 0; 
-	this->gcnt = 0; 
+	this->hcnt       = 0; 
+	this->gcnt       = 0; 
 	this->trans_gcnt = 0; 
+	this->chisq      = 1.0;
 	this->confounded_cnt = 0;
     };
     string annotation;
     string marker;
+    string uncor_marker;
     map<string, int> hap_cnts;    // Counts of each observed haplotype for this locus in the population.
     double f;                     // Inbreeder's coefficient
     map<string, string> gmap;     // Observed haplotype to genotype map for this locus.
@@ -148,6 +150,7 @@ public:
     int gcnt;                     // Number of progeny containing a valid genotype.
     int trans_gcnt;               // Number of progeny containing a valid 
                                   //   genotype, translated for a particular map type.
+    double chisq;             // Chi squared p-value testing the null hypothesis of no segregation distortion.
 };
 
 bool bp_compare(Locus *, Locus *);

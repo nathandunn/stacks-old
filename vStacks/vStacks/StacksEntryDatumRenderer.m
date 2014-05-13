@@ -1,6 +1,6 @@
 //
 // Created by Nathan Dunn on 1/14/14.
-// Copyright (c) 2014 Nathan Dunn. All rights reserved.
+// Copyright (c) 2014 University of Oregon. All rights reserved.
 //
 
 
@@ -68,7 +68,7 @@
     NSString *model = [[jsonData objectForKey:@"model"] objectForKey:@"sequence"];
 
 
-    [returnHTML appendString:[self renderHeader]];
+//    [returnHTML appendString:[self renderHeader]];
     [returnHTML appendString:[self renderReference:consensus]];
     [returnHTML appendString:[self renderConsensus:consensus]];
     [returnHTML appendString:[self renderModel:model]];
@@ -120,7 +120,7 @@
     for (NSNumber *snpKey in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
         NSUInteger column = snpKey.unsignedIntegerValue;
         if (column > consensusString.length) {
-            NSLog(@"consensus snp column %ld is greater %ld ", column, consensusString.length);
+            NSLog(@"Consensus snp column %ld is greater %ld ", column, consensusString.length);
         }
         else {
             if (column >= consensusString.length - 1) {
@@ -161,11 +161,11 @@
 
         NSString *key = [NSNumber numberWithInt:i+1].stringValue;
         NSDictionary *sequenceObject = [sequenceDictionary objectForKey:key];
-        if(sequenceObject==nil){
-            for(id aKey in [sequenceDictionary allKeys]){
-                NSLog(@"aKey: %@ not %@",aKey,key);
-            }
-        }
+//        if(sequenceObject==nil){
+//            for(id aKey in [sequenceDictionary allKeys]){
+//                NSLog(@"aKey: %@ not %@",aKey,key);
+//            }
+//        }
         NSString *block = [sequenceObject objectForKey:@"block"];
 
         // handle BLOCKS
@@ -224,7 +224,7 @@
             NSString *value = [formatDictionary objectForKey:formatKey];
 
             if (column > formattedSequenceString.length) {
-                NSLog(@"bad format on sequence string %ld > %ld", column, formattedSequenceString.length);
+                NSLog(@"Bad format on sequence string %ld > %ld", column, formattedSequenceString.length);
             }
             else {
                 if (column >= formattedSequenceString.length - 1) {
