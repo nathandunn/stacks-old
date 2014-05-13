@@ -58,11 +58,16 @@ int main (int argc, char* argv[]) {
     bool compressed = false;
     int  res;
 
+    if (search_type == sequence) 
+ 	cerr << "Searching for matches by sequence identity...\n";
+    else if (search_type == genomic_loc)
+	cerr << "Searching for matches by genomic location...\n";
+
     if (catalog) {
         sample_1_file += ".catalog";
-	res = load_loci(sample_1_file, sample_1, false, compressed);
+	res = load_loci(sample_1_file, sample_1, false, false, compressed);
     } else {
-	res = load_loci(sample_1_file, sample_1, false, compressed);
+	res = load_loci(sample_1_file, sample_1, false, false, compressed);
     }
 
     if (res == 0) {
@@ -70,7 +75,7 @@ int main (int argc, char* argv[]) {
 	return 0;
     }
 
-    res = load_loci(sample_2_file, sample_2, false, compressed);
+    res = load_loci(sample_2_file, sample_2, false, false, compressed);
 
     if (res == 0) {
 	cerr << "Unable to parse '" << sample_2_file << "'\n";

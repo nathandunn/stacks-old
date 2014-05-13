@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -24,8 +24,6 @@
 // Julian Catchen
 // jcatchen@uoregon.edu
 // University of Oregon
-//
-// $Id$
 //
 
 #include "pstacks.h"
@@ -467,7 +465,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	    buf = tag_2->seq->seq();
 
 	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\n";
+		sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\t\n";
 		if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
 		sstr.str("");
 	    }
@@ -479,24 +477,24 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	// Write out the model calls for each nucleotide in this locus.
 	//
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-	    snps << "0"          << "\t" 
+	    sstr << "0"          << "\t" 
 		 << sql_id       << "\t" 
 		 << tag_1->id    << "\t" 
 		 << (*s)->col    << "\t";
 
 	    switch((*s)->type) {
 	    case snp_type_het:
-		snps << "E\t";
+		sstr << "E\t";
 		break;
 	    case snp_type_hom:
-		snps << "O\t";
+		sstr << "O\t";
 		break;
 	    default:
-		snps << "U\t";
+		sstr << "U\t";
 		break;
 	    }
 
-	    snps << std::fixed   << std::setprecision(2)
+	    sstr << std::fixed   << std::setprecision(2)
 		 << (*s)->lratio << "\t" 
 		 << (*s)->rank_1 << "\t" 
 		 << (*s)->rank_2 << "\t\t\n";
@@ -511,7 +509,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         char pct[id_len];
 	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
             sprintf(pct, "%.2f", ((t->second/total) * 100));
-	    alle << "0"       << "\t" 
+	    sstr << "0"       << "\t" 
 		 << sql_id    << "\t" 
 		 << tag_1->id << "\t" 
 		 << t->first  << "\t" 
