@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -1588,24 +1588,24 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 	// Write out the model calls for each nucleotide in this locus.
 	//
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-	    snps << "0"          << "\t" 
+	    sstr << "0"          << "\t" 
 		 << sql_id       << "\t" 
 		 << tag_1->id    << "\t" 
 		 << (*s)->col    << "\t";
 
 	    switch((*s)->type) {
 	    case snp_type_het:
-		snps << "E\t";
+		sstr << "E\t";
 		break;
 	    case snp_type_hom:
-		snps << "O\t";
+		sstr << "O\t";
 		break;
 	    default:
-		snps << "U\t";
+		sstr << "U\t";
 		break;
 	    }
 
-	    snps << std::fixed   << std::setprecision(2)
+	    sstr << std::fixed   << std::setprecision(2)
 		 << (*s)->lratio << "\t" 
 		 << (*s)->rank_1 << "\t" 
 		 << (*s)->rank_2 << "\t\t\n";
@@ -1619,7 +1619,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 	// the percentage of tags a particular allele occupies.
 	//
 	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
-	    alle << "0"         << "\t" 
+	    sstr << "0"         << "\t" 
 		 << sql_id      << "\t" 
 		 << tag_1->id   << "\t" 
 		 << (*t).first  << "\t" 

@@ -73,7 +73,7 @@ int main (int argc, char* argv[]) {
 	string sample_id = (*in_file).substr(pos_1 + 1, (pos_2 - pos_1 - 1));
 
 	bool compressed = false;
-	load_loci(*in_file, sample, false, compressed);
+	load_loci(*in_file, sample, false, false, compressed);
 
         //
         // Give each locus a unique ID among all samples

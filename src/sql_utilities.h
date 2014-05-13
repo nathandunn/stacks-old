@@ -40,12 +40,13 @@ const uint num_alleles_fields =  6;
 const uint num_matches_fields =  8;
 
 template <class LocusT>
-int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads, bool &compressed) {
-int load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_all_model_calls) {
+int 
+load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_all_model_calls, bool &compressed) 
+{
     LocusT        *c;
     SNP           *snp;
     string         f;
-    char          *line, *cmp;
+    char          *cmp;
     const char    *p, *q;
     int            len;
     vector<string> parts;

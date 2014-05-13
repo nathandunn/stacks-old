@@ -110,7 +110,7 @@ hstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 hstacks_LDFLAGS   = $(OPENMP_CFLAGS)
 sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 sstacks_LDFLAGS   = $(OPENMP_CFLAGS)
-rxstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+rxstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 rxstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 process_radtags_CXXFLAGS = $(OPENMP_CFLAGS)
 process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
@@ -153,7 +153,7 @@ EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README ChangeLog $(TESTS)
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 
 debug:
-	$(MAKE) all "CXXFLAGS=-g -Wall -DDEBUG"
+	$(MAKE) all "CXXFLAGS=-g -Wall -DDEBUG -std=gnu++0x"
 
 install-data-hook:
 	sed -e 's,_VERSION_,$(VERSION),' -e 's,_BINDIR_,$(bindir)/,g' -e 's,_PKGDATADIR_,$(pkgdatadir)/,g' $(DESTDIR)$(bindir)/denovo_map.pl > $(DESTDIR)$(bindir)/denovo_map.pl.subst

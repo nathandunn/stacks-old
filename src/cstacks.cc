@@ -102,7 +102,7 @@ int main (int argc, char* argv[]) {
 	s = samples.front();
 	samples.pop();
 
-	if (!load_loci(s.second, sample, false, compressed)) {
+	if (!load_loci(s.second, sample, false, false, compressed)) {
             cerr << "Failed to load sample " << i << "\n";
             continue;
         }
@@ -143,8 +143,9 @@ int main (int argc, char* argv[]) {
 	sample.clear();
     }
 
-    cerr << "Writing catalog...\n";
+    cerr << "Writing catalog to '" << out_path << "...";
     write_catalog(catalog);
+    cerr << " done.\n";
 
     return 0;
 }
@@ -352,6 +353,7 @@ int add_unique_tag(pair<int, string> &sample_file, map<int, CLocus *> &catalog, 
     for (i = qloc->snps.begin(); i != qloc->snps.end(); i++) {
 	SNP *snp    = new SNP;
 	snp->col    = (*i)->col;
+	snp->type   = (*i)->type;
 	snp->lratio = (*i)->lratio;
 	snp->rank_1 = (*i)->rank_1;
 	snp->rank_2 = (*i)->rank_2;
@@ -1204,6 +1206,7 @@ write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_f
 	tag->con     << "\t" << 
         0            << "\t" <<  // These flags are unused in cstacks, but important in ustacks
         0            << "\t" <<
+        0            << "\t" <<
         0            << "\n";
 
     gzputs(cat_file, sstr.str().c_str());
@@ -1212,23 +1215,30 @@ write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_f
     //
     // Output the SNPs associated with the catalog tag
     //
-    char rank_3[2], rank_4[2];
-    rank_3[1] = '\0';
-    rank_4[1] = '\0';
-
     for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
-	rank_3[0] = (*snp_it)->rank_3 == 0 ? '\0' : (*snp_it)->rank_3;
-	rank_4[0] = (*snp_it)->rank_4 == 0 ? '\0' : (*snp_it)->rank_4;
+	sstr << "0"        << "\t" << 
+	    batch_id       << "\t" <<
+	    tag->id        << "\t" << 
+	    (*snp_it)->col << "\t";
 
-	sstr << "0\t" << 
-	    batch_id          << "\t" <<
-	    tag->id           << "\t" << 
-	    (*snp_it)->col    << "\t" << 
-	    (*snp_it)->lratio << "\t" << 
-	    (*snp_it)->rank_1 << "\t" << 
-	    (*snp_it)->rank_2 << "\t" << 
-	    rank_3            << "\t" << 
-	    rank_4            << "\n";
+	switch((*snp_it)->type) {
+	case snp_type_het:
+	    sstr << "E\t";
+	    break;
+	case snp_type_hom:
+	    sstr << "O\t";
+	    break;
+	default:
+	    sstr << "U\t";
+	    break;
+	}
+
+	sstr << 
+	    (*snp_it)->lratio << "\t" <<
+	    (*snp_it)->rank_1 << "\t" <<
+	    (*snp_it)->rank_2 << "\t" <<
+	    ((*snp_it)->rank_3 == 0 ? '-' : (*snp_it)->rank_3) << "\t" << 
+	    ((*snp_it)->rank_4 == 0 ? '-' : (*snp_it)->rank_4) << "\n";
     }
 
     gzputs(snp_file, sstr.str().c_str());
@@ -1260,7 +1270,7 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
-    if (!load_loci(sample.second, tmp_catalog, false, compressed))
+    if (!load_loci(sample.second, tmp_catalog, false, false, compressed))
         return 0;
 
     in_file_type = compressed == true ? gzsql : sql;
@@ -1293,7 +1303,7 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
-    if (!load_loci(catalog_path, catalog, false, compressed))
+    if (!load_loci(catalog_path, catalog, false, false, compressed))
         return 0;
 
     in_file_type = compressed == true ? gzsql : sql;
