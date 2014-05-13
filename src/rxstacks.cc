@@ -30,18 +30,19 @@
 #include "rxstacks.h"
 
 // Global variables to hold command-line options.
-int    num_threads = 1;
-int    batch_id    = 0;
-string in_path;
-string out_path;
-double confounded_limit  = 0.75;
-bool   filter_confounded = false;
-bool   prune_haplotypes  = false;
-int    max_haplotype_cnt = 0;
-bool   lnl_dist          = false;
-bool   filter_lnl        = false;
-double lnl_limit         = 0.0;
-bool   verbose           = false;
+int       num_threads = 1;
+int       batch_id    = 0;
+string    in_path;
+string    out_path;
+file_type in_file_type      = sql;
+double    confounded_limit  = 0.75;
+bool      filter_confounded = false;
+bool      prune_haplotypes  = false;
+int       max_haplotype_cnt = 0;
+bool      lnl_dist          = false;
+bool      filter_lnl        = false;
+double    lnl_limit         = 0.0;
+bool      verbose           = false;
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -114,6 +115,8 @@ int main (int argc, char* argv[]) {
     	cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
      	return 0;
     }
+
+    in_file_type = compressed == true ? gzsql : sql;
 
     //
     // Let's fill in the SNP model calls to include both hets and homozygotes to 
@@ -796,7 +799,10 @@ write_results(string file, map<int, Locus *> &m)
     vector<char *>::iterator    j;
     vector<int>::iterator       k;
     map<string, int>::iterator  t;
-    Locus *tag_1;
+    Locus                      *tag_1;
+    stringstream                sstr; 
+
+    bool gzip = (in_file_type == gzsql) ? true : false;
 
     //
     // Parse the input file name to create the output files
@@ -805,10 +811,59 @@ write_results(string file, map<int, Locus *> &m)
     string snp_file = out_path + file + ".snps.tsv";
     string all_file = out_path + file + ".alleles.tsv";
 
+    if (gzip) {
+	tag_file += ".gz";
+	snp_file += ".gz";
+	all_file += ".gz";
+    }
+
+    //
     // Open the output files for writing.
-    std::ofstream tags(tag_file.c_str());
-    std::ofstream snps(snp_file.c_str());
-    std::ofstream alle(all_file.c_str());
+    //
+    gzFile   gz_tags, gz_snps, gz_alle;
+    ofstream tags, snps, alle;
+    if (gzip) {
+	gz_tags = gzopen(tag_file.c_str(), "wb");
+	if (!gz_tags) {
+	    cerr << "Error: Unable to open gzipped catalog tag file '" << tag_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_tags, libz_buffer_size);
+	#endif
+	gz_snps = gzopen(snp_file.c_str(), "wb");
+	if (!gz_snps) {
+	    cerr << "Error: Unable to open gzipped catalog snps file '" << snp_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_snps, libz_buffer_size);
+	#endif
+	gz_alle = gzopen(all_file.c_str(), "wb");
+	if (!gz_alle) {
+	    cerr << "Error: Unable to open gzipped catalog alleles file '" << all_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_alle, libz_buffer_size);
+	#endif
+    } else {
+	tags.open(tag_file.c_str());
+	if (tags.fail()) {
+	    cerr << "Error: Unable to open catalog tag file for writing.\n";
+	    exit(1);
+	}
+	snps.open(snp_file.c_str());
+	if (snps.fail()) {
+	    cerr << "Error: Unable to open catalog SNPs file for writing.\n";
+	    exit(1);
+	}
+	alle.open(all_file.c_str());
+	if (alle.fail()) {
+	    cerr << "Error: Unable to open catalog alleles file for writing.\n";
+	    exit(1);
+	}
+    }
 
     int wrote = 0;
 
@@ -818,7 +873,7 @@ write_results(string file, map<int, Locus *> &m)
 	wrote++;
 
 	// First write the consensus sequence
-	tags << "0" << "\t" 
+	sstr << "0" << "\t" 
 	     << tag_1->sample_id << "\t" 
 	     << tag_1->id << "\t" 
              << tag_1->loc.chr << "\t"
@@ -836,7 +891,7 @@ write_results(string file, map<int, Locus *> &m)
 	//
 	// Write a sequence recording the output of the SNP model for each nucleotide.
 	//
-	tags << "0"              << "\t" 
+	sstr << "0"              << "\t" 
 	     << tag_1->sample_id << "\t" 
 	     << tag_1->id        << "\t" 
              << "\t"
@@ -848,66 +903,75 @@ write_results(string file, map<int, Locus *> &m)
 	for (uint j = 0; j < tag_1->snps.size(); j++) {
 	    switch(tag_1->snps[j]->type) {
 	    case snp_type_het:
-		tags << "E";
+		sstr << "E";
 		break;
 	    case snp_type_hom:
-		tags << "O";
+		sstr << "O";
 		break;
 	    default:
-		tags << "U";
+		sstr << "U";
 		break;
 	    }
 	}
-	tags << "\t"
+	sstr << "\t"
 	     << "\t"
 	     << "\t"
 	     << "\t"
 	     << "\n";
-	
+
+	if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
+	sstr.str("");
+
 	//
 	// Now write out each read from this locus.
 	//
 	for (uint j = 0; j < tag_1->reads.size(); j++) {
-	    tags << "0"                 << "\t" 
+	    sstr << "0"                 << "\t" 
 		 << tag_1->sample_id    << "\t" 
 		 << tag_1->id           << "\t\t\t\t";
 
 	    if (tag_1->comp_type[j] == primary)
-		tags << "primary" << "\t";
+		sstr << "primary" << "\t";
 	    else
-		tags << "secondary" << "\t";
+		sstr << "secondary" << "\t";
 
-	    tags << tag_1->comp_cnt[j]  << "\t" 
+	    sstr << tag_1->comp_cnt[j]  << "\t" 
 		 << tag_1->comp[j]      << "\t" 
 		 << tag_1->reads[j]     << "\t\t\t\t\n";
 	}
+
+	if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
+	sstr.str("");
 
 	//
 	// Write out the model calls for each nucleotide in this locus.
 	//
 	for (uint j = 0; j < tag_1->snps.size(); j++) {
-	    snps << "0"                 << "\t"
+	    sstr << "0"                 << "\t"
 		 << tag_1->sample_id    << "\t" 
 		 << tag_1->id           << "\t" 
 		 << tag_1->snps[j]->col << "\t";
 
 	    switch(tag_1->snps[j]->type) {
 	    case snp_type_het:
-		snps << "E\t";
+		sstr << "E\t";
 		break;
 	    case snp_type_hom:
-		snps << "O\t";
+		sstr << "O\t";
 		break;
 	    default:
-		snps << "U\t";
+		sstr << "U\t";
 		break;
 	    }
 
-	    snps << std::fixed   << std::setprecision(2)
+	    sstr << std::fixed   << std::setprecision(3)
 		 << tag_1->snps[j]->lratio << "\t" 
 		 << tag_1->snps[j]->rank_1 << "\t" 
 		 << (tag_1->snps[j]->rank_2 == 0 ? '-' : tag_1->snps[j]->rank_2) << "\t\t\n";
 	}
+
+	if (gzip) gzputs(gz_snps, sstr.str().c_str()); else snps << sstr.str();
+	sstr.str("");
 
 	//
 	// Write the expressed alleles seen for the recorded SNPs and
@@ -916,18 +980,27 @@ write_results(string file, map<int, Locus *> &m)
         char pct[id_len];
 	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
             sprintf(pct, "%.2f", ((t->second/double(tag_1->reads.size())) * 100));
-	    alle << "0"              << "\t"
+	    sstr << "0"              << "\t"
 		 << tag_1->sample_id << "\t"
 		 << tag_1->id        << "\t"
 		 << t->first         << "\t"
 		 << pct              << "\t"
 		 << t->second        << "\n";
 	}
+
+	if (gzip) gzputs(gz_alle, sstr.str().c_str()); else alle << sstr.str();
+	sstr.str("");
     }
 
-    tags.close();
-    snps.close();
-    alle.close();
+    if (gzip) {
+	gzclose(gz_tags);
+	gzclose(gz_snps);
+	gzclose(gz_alle);
+    } else {
+	tags.close();
+	snps.close();
+	alle.close();
+    }
 
     cerr << "wrote " << wrote << " loci.\n";
 
