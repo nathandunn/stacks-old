@@ -215,5 +215,47 @@ int read_line(ifstream &fh, char **line, int *size) {
         }
     } while (fh.fail() && !fh.bad() && !fh.eof());
 
-    return 0;
+    if (fh.eof() || fh.bad())
+	return 0;
+
+    return 1;
+}
+
+int read_gzip_line(gzFile &fh, char **line, int *size) {
+    char  buf[max_len];
+    int   blen, llen;
+    bool  eol;
+
+    memset(*line, 0, *size);
+    llen = 0;
+    eol  = false;
+
+    //
+    // Make sure we read the entire line.
+    //
+    do {
+	gzgets(fh, buf, max_len);
+
+        blen = strlen(buf);
+
+	if (blen > 0 && buf[blen - 1] == '\n') {
+	    eol = true;
+	    buf[blen - 1] = '\0';
+	}
+
+        if (blen + llen <= (*size) - 1) {
+            strcat(*line, buf);
+            llen += blen;
+        } else {
+            *size *= 2;
+            llen  += blen;
+            *line  = (char *) realloc(*line, *size);
+            strcat(*line, buf);
+        }
+    } while (!gzeof(fh) && !eol);
+
+    if (gzeof(fh))
+	return 0;
+
+    return 1;
 }

@@ -1,6 +1,6 @@
 //
 // Created by Nathan Dunn on 12/20/13.
-// Copyright (c) 2013 Nathan Dunn. All rights reserved.
+// Copyright (c) 2014 University of Oregon. All rights reserved.
 //
 
 
@@ -96,7 +96,7 @@
 
 //    NSMutableString* returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style><div class='sample'>testy</div><table><tr><td col=4><div class='sample'>RENDERED Some stack data for sample '%@' and locus '%ld' and # stacks: %ld</div></td></tr>",cssString,sampleName,locusId,[sequences count]];
     NSMutableString *returnHTML = [NSMutableString stringWithFormat:@"<style type='text/css'>%@</style><table class='radtag'>", cssString];
-    [returnHTML appendString:[self renderHeader]];
+//    [returnHTML appendString:[self renderHeader]];
     [returnHTML appendString:[self renderReference]];
     [returnHTML appendString:[self renderConsensus]];
     [returnHTML appendString:[self renderModel]];

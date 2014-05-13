@@ -50,6 +50,10 @@ my $translate_genotypes = {'dh'  => \&trans_dh_map,
 			   'f2'  => \&trans_f2_map,
 			   'gen' => \&trans_gen_map};
 
+my @valid_filters = ("cata", "alle_l", "alle_u", "snps_l", "snps_u", "pare_l", "pare_u",
+		     "prog",  "vprog", "mark", "est",  "pe", "blast", "gcnt",
+		     "chisq_l", "chisq_u", "ref", "loc");
+
 parse_command_line();
 
 my (%sth, %loci, %samples, %depths, %filters);
@@ -268,6 +272,10 @@ sub prepare_filter_parameters {
             push(@{$params}, $filters->{'pare_l'});
             push(@{$params}, $filters->{'pare_u'});
 
+        } elsif ($filter eq "chisq") {
+            push(@{$params}, $filters->{'chisq_l'});
+            push(@{$params}, $filters->{'chisq_u'});
+
         } elsif ($filter eq "prog") {
             push(@{$params}, $filters->{'prog'});
 
@@ -324,9 +332,10 @@ sub apply_query_filters {
          "pe"    => "(pe_radtags > ?)",
          "blast" => "(blast_hits > ?)",
 	 "gcnt"  => "(geno_cnt >= ?)",
+	 "chisq" => "(chisq_pval >= ? AND chisq_pval <= ?)",
 	 "ref"   => "(catalog_index.type = ?)",
 	 "loc"   => "(catalog_index.chr = ? && catalog_index.bp >= ? && catalog_index.bp <= ?)");
-    
+
     if (scalar(keys %{$filters}) > 0) {
 
         foreach $filter (keys %{$filters}) {
@@ -620,24 +629,24 @@ sub trans_bc1_map {
     $dictionary{"abxcc"} = {};
     $dictionary{"ccxab"} = {};
 
-    $dictionary{"aaxbb"}->{"-"}  = "-";
+    $dictionary{"aaxbb"}->{"--"} = "-";
     $dictionary{"aaxbb"}->{"aa"} = "b";
     $dictionary{"aaxbb"}->{"ab"} = "h";
     $dictionary{"aaxbb"}->{"bb"} = "h";
 
-    $dictionary{"bbxaa"}->{"-"}  = "-";
+    $dictionary{"bbxaa"}->{"--"} = "-";
     $dictionary{"bbxaa"}->{"aa"} = "h";
     $dictionary{"bbxaa"}->{"ab"} = "h";
     $dictionary{"bbxaa"}->{"bb"} = "a";
 
-    $dictionary{"abxcc"}->{"-"}  = "-";
+    $dictionary{"abxcc"}->{"--"} = "-";
     $dictionary{"abxcc"}->{"ac"} = "h";
     $dictionary{"abxcc"}->{"bc"} = "h";
     $dictionary{"abxcc"}->{"ab"} = "b";
     $dictionary{"abxcc"}->{"aa"} = "b";
     $dictionary{"abxcc"}->{"bb"} = "b";
 
-    $dictionary{"ccxab"}->{"-"}  = "-";
+    $dictionary{"ccxab"}->{"--"} = "-";
     $dictionary{"ccxab"}->{"ac"} = "h";
     $dictionary{"ccxab"}->{"bc"} = "h";
     $dictionary{"ccxab"}->{"ab"} = "a";
@@ -666,11 +675,11 @@ sub trans_dh_map {
 
     $dictionary{"abx--"}->{"aa"} = "a";
     $dictionary{"abx--"}->{"bb"} = "b";
-    $dictionary{"abx--"}->{"-"}  = "-";
+    $dictionary{"abx--"}->{"--"} = "-";
 
     $dictionary{"--xab"}->{"aa"} = "a";
     $dictionary{"--xab"}->{"bb"} = "b";
-    $dictionary{"--xab"}->{"-"}  = "-";
+    $dictionary{"--xab"}->{"--"} = "-";
 
     my $out_gtype = 
 	defined($dictionary{$marker}->{lc($in_gtype)}) ? 
@@ -699,7 +708,7 @@ sub trans_f2_map {
     $dictionary{"aaxbb"}->{"aa"} = "a";
     $dictionary{"aaxbb"}->{"ab"} = "h";
     $dictionary{"aaxbb"}->{"bb"} = "b";
-    $dictionary{"aaxbb"}->{"-"}  = "-";
+    $dictionary{"aaxbb"}->{"--"} = "-";
 
     $dictionary{"abxcd"}->{"aa"} = "a";
     $dictionary{"abxcd"}->{"ab"} = "a";
@@ -711,17 +720,17 @@ sub trans_f2_map {
     $dictionary{"abxcd"}->{"ad"} = "h";
     $dictionary{"abxcd"}->{"bc"} = "h";
     $dictionary{"abxcd"}->{"bd"} = "h";
-    $dictionary{"abxcd"}->{"-"}  = "-";
+    $dictionary{"abxcd"}->{"--"} = "-";
 
     $dictionary{"abxaa"}->{"aa"} = "-";
     $dictionary{"abxaa"}->{"ab"} = "-";
     $dictionary{"abxaa"}->{"bb"} = "a";
-    $dictionary{"abxaa"}->{"-"}  = "-";
+    $dictionary{"abxaa"}->{"--"} = "-";
 
     $dictionary{"aaxab"}->{"aa"} = "-";
     $dictionary{"aaxab"}->{"ab"} = "-";
     $dictionary{"aaxab"}->{"bb"} = "b";
-    $dictionary{"aaxab"}->{"-"}  = "-";
+    $dictionary{"aaxab"}->{"--"} = "-";
 
     $dictionary{"abxcc"}->{"a"}  = "a";
     $dictionary{"abxcc"}->{"ab"} = "a";
@@ -729,7 +738,7 @@ sub trans_f2_map {
     $dictionary{"abxcc"}->{"cc"} = "b";
     $dictionary{"abxcc"}->{"ac"} = "-";
     $dictionary{"abxcc"}->{"bc"} = "-";
-    $dictionary{"abxcc"}->{"-"}  = "-";
+    $dictionary{"abxcc"}->{"--"} = "-";
 
     $dictionary{"ccxab"}->{"aa"} = "b";
     $dictionary{"ccxab"}->{"ab"} = "b";
@@ -737,7 +746,7 @@ sub trans_f2_map {
     $dictionary{"ccxab"}->{"cc"} = "a";
     $dictionary{"ccxab"}->{"ac"} = "-";
     $dictionary{"ccxab"}->{"bc"} = "-";
-    $dictionary{"ccxab"}->{"-"}  = "-";
+    $dictionary{"ccxab"}->{"--"} = "-";
 
     my $out_gtype = 
 	defined($dictionary{$marker}->{lc($in_gtype)}) ? 
@@ -764,34 +773,36 @@ sub trans_cp_map {
     $dictionary{"efxeg"} = {};
     $dictionary{"abxcd"} = {};
 
-    $dictionary{"lmx--"}->{"-"}  = "--";
+    $dictionary{"lmx--"}->{"--"} = "--";
     $dictionary{"lmx--"}->{"aa"} = "ll";
     $dictionary{"lmx--"}->{"bb"} = "lm";
+    $dictionary{"lmx--"}->{"ab"} = "lm";
 
-    $dictionary{"--xnp"}->{"-"}  = "--";
+    $dictionary{"--xnp"}->{"--"} = "--";
     $dictionary{"--xnp"}->{"aa"} = "nn";
     $dictionary{"--xnp"}->{"bb"} = "np";
+    $dictionary{"--xnp"}->{"ab"} = "np";
 
-    $dictionary{"lmxll"}->{"-"}  = "--";
+    $dictionary{"lmxll"}->{"--"} = "--";
     $dictionary{"lmxll"}->{"aa"} = "ll";
     $dictionary{"lmxll"}->{"ab"} = "lm";
 
-    $dictionary{"nnxnp"}->{"-"}  = "--";
+    $dictionary{"nnxnp"}->{"--"} = "--";
     $dictionary{"nnxnp"}->{"aa"} = "nn";
     $dictionary{"nnxnp"}->{"ab"} = "np";
 
-    $dictionary{"hkxhk"}->{"-"}  = "--";
+    $dictionary{"hkxhk"}->{"--"} = "--";
     $dictionary{"hkxhk"}->{"ab"} = "hk";
     $dictionary{"hkxhk"}->{"aa"} = "hh";
     $dictionary{"hkxhk"}->{"bb"} = "kk";
 
-    $dictionary{"efxeg"}->{"-"}  = "--";
+    $dictionary{"efxeg"}->{"--"} = "--";
     $dictionary{"efxeg"}->{"ab"} = "ef";
     $dictionary{"efxeg"}->{"ac"} = "eg";
     $dictionary{"efxeg"}->{"bc"} = "fg";
     $dictionary{"efxeg"}->{"aa"} = "ee";
 
-    $dictionary{"abxcd"}->{"-"}  = "--";
+    $dictionary{"abxcd"}->{"--"} = "--";
     $dictionary{"abxcd"}->{"ac"} = "ac";
     $dictionary{"abxcd"}->{"ad"} = "ad";
     $dictionary{"abxcd"}->{"bc"} = "bc";
@@ -879,7 +890,7 @@ sub prepare_sql_handles {
     $query = 
         "SELECT catalog_index.tag_id as tag_id, catalog_index.chr, catalog_index.bp, " .
 	"snps, alleles, parents, progeny, valid_progeny, " . 
-        "seq, marker, max_pct, ratio, ests, pe_radtags, blast_hits, geno_cnt, external_id " .
+        "seq, marker, ratio, ests, pe_radtags, blast_hits, geno_cnt, external_id " .
         "FROM catalog_index " .
         "JOIN catalog_tags ON (catalog_index.cat_id=catalog_tags.id) " . 
         "LEFT JOIN catalog_annotations ON " . 
@@ -991,7 +1002,7 @@ sub parse_command_line {
 	$map_type  ne "f2" && 
 	$map_type  ne "cp" && 
 	$map_type  ne "gen") {
-	print STDERR "Unknown data type specified, 'haplo' and 'gen' are currently accepted.\n";
+	print STDERR "Unknown map type specified, 'bc1', 'dh', 'f2', 'cp', and 'gen' are currently accepted.\n";
 	usage();
     }
 
@@ -1013,6 +1024,12 @@ sub version {
 sub usage {
     version();
 
+    my $filt;
+    foreach my $f (@valid_filters) {
+	$filt .= $f . ", ";
+    }
+    $filt = substr($filt, 0, -2);
+
     print STDERR 
         "export_sql.pl -D db -b batch_id -a type -f file -o tsv|xls [-m type -c] [-F filter=value ...] [-L lim] [-d] [-h]\n", 
         "    D: database to export from.\n",
@@ -1021,11 +1038,12 @@ sub usage {
         "    f: file to output data.\n",
         "    o: type of data to export: 'tsv' or 'xls'.\n",
 	"    d: output depths of alleles instead of the allele values (must use 'haplo' data type).\n",
-        "    F: one or more filters in the format name=value.\n",
 	"    A: if exporting observed haplotypes, specify an allele depth limit.\n",
 	"    L: if exporting observed haplotypes, specify a locus depth limit.\n",
 	"    m: map type. If genotypes are to be exported, specify the map type.\n",
 	"    c: include manual corrections if exporting genotypes.\n",
+        "    F: one or more filters in the format name=value.\n",
+	"       Supported filters: $filt\n",
         "    h: display this help message.\n\n";
     exit(0);
 }

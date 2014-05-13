@@ -88,7 +88,8 @@ populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/PopMap.h src/PopSum.h src/genotype_dictionaries.h \
-	src/input.h src/input.cc src/sql_utilities.h src/renz.h
+	src/input.h src/input.cc src/sql_utilities.h src/renz.h \
+	src/bootstrap.h src/ordered.h src/smoothing.h src/smoothing_utils.h
 
 phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h \
 	src/locus.h src/locus.cc \
@@ -98,31 +99,33 @@ phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h \
 
 ustacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 ustacks_LDFLAGS   = $(OPENMP_CFLAGS)
-pstacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(BAM_CFLAGS)
+pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
 pstacks_LDFLAGS   = $(OPENMP_CFLAGS)
 pstacks_LDADD     = $(BAM_LIBS)
-estacks_CXXFLAGS  = $(OPENMP_CFLAGS)
+estacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 estacks_LDFLAGS   = $(OPENMP_CFLAGS)
 cstacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 cstacks_LDFLAGS   = $(OPENMP_CFLAGS)
-hstacks_CXXFLAGS  = $(OPENMP_CFLAGS)
+hstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 hstacks_LDFLAGS   = $(OPENMP_CFLAGS)
-sstacks_CXXFLAGS  = $(OPENMP_CFLAGS)
+sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 sstacks_LDFLAGS   = $(OPENMP_CFLAGS)
 rxstacks_CXXFLAGS = $(OPENMP_CFLAGS)
 rxstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 process_radtags_CXXFLAGS = $(OPENMP_CFLAGS)
 process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
-process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS)
+process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 process_shortreads_LDFLAGS  = $(OPENMP_CFLAGS)
-kmer_filter_CXXFLAGS  = $(OPENMP_CFLAGS)
+kmer_filter_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 kmer_filter_LDFLAGS   = $(OPENMP_CFLAGS)
-genotypes_CXXFLAGS    = $(OPENMP_CFLAGS)
+genotypes_CXXFLAGS    = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 genotypes_LDFLAGS     = $(OPENMP_CFLAGS)
-populations_CXXFLAGS  = $(OPENMP_CFLAGS)
+populations_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 populations_LDFLAGS   = $(OPENMP_CFLAGS)
-phasedstacks_CXXFLAGS = $(OPENMP_CFLAGS)
+phasedstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 phasedstacks_LDFLAGS  = $(OPENMP_CFLAGS)
+clone_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+clone_filter_LDFLAGS  = $(OPENMP_CFLAGS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl \
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
@@ -140,7 +143,12 @@ nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sq
 	php/images/l-arrow.png php/images/r-arrow-disabled.png php/images/r-arrow.png php/images/stacks_bg.png \
 	php/images/stacks_logo_rev_small.png
 
-EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README ChangeLog
+LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(abs_top_srcdir)/tests/tap-driver.sh
+
+#TESTS = tests/process_radtags.t tests/kmer_filter.t tests/ustacks.t tests/pstacks.t tests/ref_map.t
+TESTS = tests/process_radtags.t tests/kmer_filter.t tests/ustacks.t tests/pstacks.t
+
+EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README ChangeLog $(TESTS)
 
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 

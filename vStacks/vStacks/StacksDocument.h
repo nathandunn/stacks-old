@@ -3,7 +3,7 @@
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 4/18/13.
-//  Copyright (c) 2013 Nathan Dunn. All rights reserved.
+//  Copyright (c) 2014 University of Oregon. All rights reserved.
 //
 
 #import <Cocoa/Cocoa.h>
@@ -12,10 +12,13 @@
 @class DatumMO;
 @class LocusMO;
 @class PopulationMO;
+@class SplashWindowController;
 
 @interface StacksDocument : NSPersistentDocument
 
+@property(strong) NSString *datumPath;
 @property(strong) NSString *path;
+@property(strong) NSString *importPath;
 @property(atomic, retain) NSMutableDictionary *populationLookup;
 
 @property(nonatomic, strong) NSSet *loci;
@@ -43,11 +46,13 @@
 
 @property(nonatomic, strong) NSSet *lociLocations;
 @property NSUInteger maxLocation;
+@property(strong) NSString *oldPopulationTitle;
+@property(nonatomic, strong) NSNumberFormatter *numberFormatter;
+
 
 - (BOOL)noLociLocations;
 
 - (IBAction)updateSelections:(id)sender;
-- (IBAction)provideFeedback:(id)sender;
 
 - (NSArray *) getSnpFilterValues;
 

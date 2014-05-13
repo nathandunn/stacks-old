@@ -1,8 +1,8 @@
 //
 // Created by Nathan Dunn on 5/8/13.
-// Copyright (c) 2013 Nathan Dunn. All rights reserved.
+// Copyright (c) 2014 University of Oregon. All rights reserved.
 //
-// To change the template use AppCode | Preferences | File Templates.
+//
 //
 
 
@@ -61,4 +61,13 @@
     sampleMO.name = name ;
     return sampleMO;
 }
+
+- (NSArray *)getAllSamples:(NSManagedObjectContext *)context {
+    NSEntityDescription *entityDescription1 = [NSEntityDescription entityForName:@"Sample" inManagedObjectContext:context];
+    NSFetchRequest *request1 = [[NSFetchRequest alloc] init];
+    [request1 setEntity:entityDescription1];
+    NSError *error1;
+    return [context executeFetchRequest:request1 error:&error1];
+}
+
 @end

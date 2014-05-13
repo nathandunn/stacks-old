@@ -28,6 +28,7 @@ using std::ofstream;
 #import "ProgressController.h"
 #import "GZIP.h"
 #import "StackEntryDatumMO.h"
+#import "GenericHashRepository.h"
 
 
 #include <sys/time.h>
@@ -56,9 +57,9 @@ NSString *calculateType(NSString *file);
 */
 
 // lookups
-@synthesize sampleLookupDictionary;
+//@synthesize sampleLookupDictionary;
 @synthesize stopProcess;
-@synthesize locusSnpMap;
+//@synthesize locusSnpMap;
 @synthesize numberFormatter;
 
 
@@ -68,7 +69,7 @@ NSString *calculateType(NSString *file);
 - (id)init {
     self = [super init];
     if (self) {
-        sampleLookupDictionary = [NSMutableDictionary dictionary];
+//        sampleLookupDictionary = [NSMutableDictionary dictionary];
         stopProcess = false;
         numberFormatter = [[NSNumberFormatter alloc] init];
         numberFormatter.numberStyle = NSNumberFormatterNoStyle;
@@ -84,20 +85,25 @@ NSString *calculateType(NSString *file);
 }
 
 
-- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController {
+- (StacksDocument *)loadLociAndGenotypes:(NSString *)path progressWindow:(ProgressController *)progressController importPath:(NSString *)importPath {
 
     StacksDocument *stacksDocument = [self createStacksDocumentForPath:path];
+    stacksDocument.importPath = importPath;
     if (stacksDocument == nil) {
         return nil;
     }
 
-    stacksDocument = [self loadDocument:stacksDocument progressWindow:progressController];
+    stacksDocument = [self loadDocument:stacksDocument progressWindow:progressController importPath:importPath];
     NSManagedObjectContext *moc = stacksDocument.managedObjectContext;
     NSError *error;
     [moc save:&error];
-    NSLog(@"error %@", error);
+    if (error) {
+        NSLog(@"error saving %@", error);
+    }
     [[moc parentContext] save:&error];
-    NSLog(@"error 2 %@", error);
+    if (error) {
+        NSLog(@"Error saving from parent context %@", error);
+    }
 
 
     return stacksDocument;
@@ -105,20 +111,69 @@ NSString *calculateType(NSString *file);
 
 
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path andName:(NSString *)name andDocument:(StacksDocument *)document {
-    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption,
-                                                                       [NSNumber numberWithBool:YES],
-                                                                       NSInferMappingModelAutomaticallyOption, nil];
+    
+    NSMutableDictionary *pragmaOptions = [NSMutableDictionary dictionary];
+//    [pragmaOptions setObject:@"NORMAL" forKey:@"locking_mode"];
+    [pragmaOptions setObject:@"EXCLUSIVE" forKey:@"locking_mode"];
+//    [pragmaOptions setObject:@"NORMAL" forKey:@"synchronous"];
+    [pragmaOptions setObject:@"OFF" forKey:@"synchronous"];
+//    [pragmaOptions setObject:[NSNumber numberWithInt:4096] forKey:@"page_size"];
+//    [pragmaOptions setObject:[NSNumber numberWithInt:5000] forKey:@"cache_size"];
+//    [pragmaOptions setObject:[NSNumber numberWithInt:10000] forKey:@"cache_size"];
+    [pragmaOptions setObject:[NSNumber numberWithInt:400000] forKey:@"cache_size"];
+//    [pragmaOptions setObject:@"WAL" forKey:@"journal_mode"];
+//    [pragmaOptions setObject:@"DELETE" forKey:@"journal_mode"];
+    [pragmaOptions setObject:@"MEMORY" forKey:@"journal_mode"];
+    [pragmaOptions setObject:@"MEMORY" forKey:@"temp_store"];
+//    [pragmaOptions setObject:@"memory" forKey:@"temp_store"];
+    [pragmaOptions setObject:@"OFF" forKey:@"count_changes"];
+    [pragmaOptions setObject:@"NONE" forKey:@"auto_vacuum"];
+
+    
+    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
+                             [NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption
+                             ,[NSNumber numberWithBool:YES],NSInferMappingModelAutomaticallyOption
+                             ,pragmaOptions,NSSQLitePragmasOption
+                             , nil];
+    
+    //    PRAGMA main.page_size = 4096;
+    //    PRAGMA main.cache_size=10000;
+    //    PRAGMA main.locking_mode=EXCLUSIVE;
+    //    PRAGMA main.synchronous=NORMAL;
+    //    PRAGMA main.journal_mode=WAL;
+    
+    
+    //    PRAGMA main.cache_size=5000;
+    
+    //    NSDictionary *pragmaOptions = @{ @"synchronous": @"NORMAL" };
+    //    NSDictionary *pragmaOptions = @{ @"cache_size": @"10000" };
+    //    NSDictionary *pragmaOptions = @{ @"locking_mode": @"EXCLUSIVE" };
+    //    NSDictionary *pragmaOptions = [NSDictionary dictionaryWithObjectsAndKeys:[ @"journal_mode": @"WAL"]
+    //                                     ,[@"locking_mode": @"EXCLUSIVE"]
+    //                                     , [@"page_size":@"4096"]
+    //                                     ,[@"cache_size": @"5000"]
+    //                                     ,[@"synchronous": [@"NORMAL" ]
+    //                                     ];
 
 
-    NSURL *storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
-    NSLog(@"saving to %@ from %@", path, storeUrl);
+
+    NSURL *storeUrl;
+//    NSLog(@"input %@ %@",path,name);
+    NSLog(@"extends %@ %i", name.pathExtension, [name.pathExtension isEqualToString:@"stacks"]);
+    if ([name.pathExtension isEqualToString:@"stacks"]) {
+        storeUrl = [NSURL fileURLWithPath:path];
+    }
+    else {
+        storeUrl = [NSURL fileURLWithPath:[path stringByAppendingFormat:@"/%@.stacks", name]];
+    }
+    NSLog(@"Saving file to %@ from %@", path, storeUrl);
     if (persistentStoreCoordinator == nil) {
         persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[NSManagedObjectModel mergedModelFromBundles:nil]];
     }
     NSError *error = nil;
 
     if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
-        NSLog(@"error loading persistent store..");
+        NSLog(@"Error loading persistent store.. %@", error);
         [[NSFileManager defaultManager] removeItemAtPath:storeUrl.path error:nil];
         if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
             NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
@@ -132,15 +187,17 @@ NSString *calculateType(NSString *file);
     document.managedObjectContext = context;
     document.path = path;
 
+    NSLog(@"Save path %@", path);
+
 
     return context;
 }
 
 
-- (NSMutableDictionary *)loadPopulation:(NSString *)path {
+- (NSMutableDictionary *)loadPopulation:(NSString *)popmapFile {
     NSMutableDictionary *populationLookup = [NSMutableDictionary dictionary];
 
-    NSString *popmapFile = [path stringByAppendingString:@"popmap"];
+//    NSString *popmapFile = [path stringByAppendingString:@"popmap"];
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL exists = [fileManager fileExistsAtPath:popmapFile];
 
@@ -158,7 +215,7 @@ NSString *calculateType(NSString *file);
         }
     }
     else {
-        NSLog(@"does not exist at %@", popmapFile);
+        NSLog(@"Default popmap does not exist at %@", popmapFile);
     }
 
     return populationLookup;
@@ -199,23 +256,27 @@ NSString *calculateType(NSString *file);
     BOOL existsAtPath = [fileManager fileExistsAtPath:examplePath];
 
     if (!existsAtPath) {
-        NSLog(@"files do not exist %@", examplePath);
+        NSLog(@"Files do not exist at %@", examplePath);
         exit(1);
     }
 
     NSError *error;
     NSArray *files = [fileManager contentsOfDirectoryAtPath:examplePath error:&error];
     if (error) {
-        NSLog(@"error %@", error);
+        NSLog(@"Error which checking directory path %@", error);
         return nil;
     }
     NSPredicate *fltr = [NSPredicate predicateWithFormat:@"self ENDSWITH '.catalog.tags.tsv'"];
     NSPredicate *batch = [NSPredicate predicateWithFormat:@"self BEGINSWITH 'batch'"];
     NSArray *onlyCatalog = [[files filteredArrayUsingPredicate:fltr] filteredArrayUsingPredicate:batch];
 
-    NSLog(@"# of files: %ld", onlyCatalog.count);
+    if (onlyCatalog.count == 0) {
+        return nil;
+    }
+
+    NSLog(@"File count in directory: %ld", onlyCatalog.count);
     for (NSString *file in onlyCatalog) {
-        NSLog(@"file %@", file);
+        NSLog(@"File in catalog: %@", file);
     }
 
     NSString *originalFile = [onlyCatalog objectAtIndex:0];
@@ -226,7 +287,7 @@ NSString *calculateType(NSString *file);
 
 }
 
-- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *)progressWindow {
+- (StacksDocument *)loadDocument:(StacksDocument *)stacksDocument progressWindow:(ProgressController *)progressWindow importPath:(NSString *)importPath {
     NSProgressIndicator *bar = progressWindow.loadProgress;
     if (bar != nil) {
         progressWindow.actionTitle.stringValue = [NSString stringWithFormat:@"Loading %@", stacksDocument.name];
@@ -235,15 +296,25 @@ NSString *calculateType(NSString *file);
         [bar display];
 //        [bar incrementBy:1];
     }
-    NSString *path = stacksDocument.path;
+//    NSString *path = stacksDocument.path;
+    NSString *importPath1 = stacksDocument.importPath;
     // returns batch_1, batch_2, etc. whatever exists
-    NSString *batchName = [self checkFile:path];
-    NSLog(@"returned batch name: %@", batchName);
+    NSString *batchName = [self checkFile:importPath1];
+    if (batchName == nil) {
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert setMessageText:[NSString stringWithFormat:@"The directory '%@' does not contain a valid catalog.",importPath1]];
+        [alert addButtonWithTitle:@"OK"];
+        [alert runModal];
+        return nil;
+    }
+
+
+    NSLog(@"Batch name: %@", batchName);
     map<int, CSLocus *> catalog;
-    NSString *catalogTagFile = [path stringByAppendingFormat:@"%@.catalog.tags.tsv", batchName];
+    NSString *catalogTagFile = [importPath1 stringByAppendingFormat:@"%@.catalog.tags.tsv", batchName];
     stacksDocument.type = calculateType(catalogTagFile);
-    NSLog(@"type is %@", stacksDocument.type);
-    NSString *catalogFile = [path stringByAppendingFormat:@"%@.catalog", batchName];
+    NSLog(@"Stacks type is %@", stacksDocument.type);
+    NSString *catalogFile = [importPath1 stringByAppendingFormat:@"%@.catalog", batchName];
 
     struct timeval time1, time2;
     gettimeofday(&time1, NULL);
@@ -263,7 +334,7 @@ NSString *calculateType(NSString *file);
     vector<int> sample_ids;
 
     progressWindow.actionMessage.stringValue = @"Building file list";
-    vector<pair<int, string>> files = [self buildFileList:path];
+    vector<pair<int, string>> files = [self buildFileList:importPath1];
 //    [bar incrementBy:2];
     NSLog(@"number of files %ld", files.size());
 
@@ -280,12 +351,13 @@ NSString *calculateType(NSString *file);
             @autoreleasepool {
                 vector<CatMatch *> m;
                 NSString *sampleString = [NSString stringWithUTF8String:files[i].second.c_str()];
-                NSString *matchString = [path stringByAppendingFormat:@"/%@", sampleString];
+                NSString *matchString = [importPath1 stringByAppendingFormat:@"/%@", sampleString];
 //        NSLog(@"loading match file %@ for sample name %@", matchString, sampleString);
                 if (([sampleString rangeOfString:@"catalog"]).location == NSNotFound) {
                     @autoreleasepool {
                         NSMutableDictionary *matchDictionary = [self loadMatchesDictionary:[matchString stringByAppendingString:@".matches.tsv"]];
-                        [sampleLookupDictionary setObject:matchDictionary forKey:sampleString];
+                        [[GenericHashRepository sharedInstance] store:stacksDocument.managedObjectContext key:sampleString dictionary:matchDictionary type:@"MatchDictionaryForSample"];
+//                        [sampleLookupDictionary setObject:matchDictionary forKey:sampleString];
                     }
                 }
 
@@ -315,7 +387,7 @@ NSString *calculateType(NSString *file);
 
     NSLog(@"input populations %ld", stacksDocument.populations.count);
     progressWindow.actionMessage.stringValue = @"Adding populations";
-    [self addPopulationsToDocument:stacksDocument forPath:path];
+    [self addPopulationsToDocument:stacksDocument forPath:[NSString stringWithFormat:@"%@/popmap", importPath1]];
     [bar incrementBy:5];
     progressWindow.actionMessage.stringValue = @"Adding samples";
     NSLog(@"output populations %ld", stacksDocument.populations.count);
@@ -441,7 +513,7 @@ NSString *calculateType(NSString *file);
 
 
     CHECK_STOP
-    progressWindow.actionMessage.stringValue = @"Loading datums";
+    progressWindow.actionMessage.stringValue = @"Loading catalog matches";
     // for each sample process the catalog
     NSLog(@"samples %ld X catalog %ld = %ld ", sample_ids.size(), catalog.size(), sample_ids.size() * catalog.size());
 
@@ -449,7 +521,7 @@ NSString *calculateType(NSString *file);
     incrementAmount = 30.0 / (sample_ids.size() * catalog.size());
 
     // 7 is 400 X 7 = 3K . . .
-    uint saveAfterSamples = 100;
+    uint saveAfterSamples = 10000;
 
 
     gettimeofday(&time1, NULL);
@@ -462,7 +534,7 @@ NSString *calculateType(NSString *file);
         @autoreleasepool {
 
             string sampleString = samples[sampleId];
-            progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datums - sample %i/%ld", i + 1, sample_ids.size()];
+            progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading catalog matches - sample %i/%ld", i + 1, sample_ids.size()];
 
             NSString *key = [NSString stringWithUTF8String:sampleString.c_str()];
 
@@ -484,7 +556,8 @@ NSString *calculateType(NSString *file);
                         DatumMO *newDatumMO = [NSEntityDescription insertNewObjectForEntityForName:@"Datum" inManagedObjectContext:moc];
                         newDatumMO.name = key;
                         newDatumMO.sampleId = [NSNumber numberWithInt:sampleId];
-                        newDatumMO.tagId = [NSNumber numberWithInt:loc->id];
+//                        newDatumMO.tagId = [NSNumber numberWithInt:loc->id];
+                        newDatumMO.tagId = loc->id;
 
                         if (newDatumMO.sampleId == nil) {
                             NSLog(@"loading sample ID %@", newDatumMO.sampleId);
@@ -532,7 +605,7 @@ NSString *calculateType(NSString *file);
 
 
         NSError *innerError = nil ;
-        NSLog(@"final datum save ");
+        // NSLog(@"final datum save ");
         [stacksDocument.managedObjectContext save:&innerError];
         if (innerError != nil) {
             NSLog(@"error doing inner save: %@", innerError);
@@ -543,6 +616,7 @@ NSString *calculateType(NSString *file);
         gettimeofday(&time2, NULL);
         totalCatalogTime += time2.tv_sec - time1.tv_sec;
 
+        NSLog(@"sample: %i, time %ld",i, time2.tv_sec - time1.tv_sec);
 
         [bar incrementBy:incrementAmount];
 
@@ -594,19 +668,19 @@ NSString *calculateType(NSString *file);
 
     NSLog(@"loading snps onto datums");
     gettimeofday(&time1, NULL);
-    progressWindow.actionMessage.stringValue = @"Loading datum snps";
+    progressWindow.actionMessage.stringValue = @"Loading SNPs";
     [self loadSnpsOntoDatum:stacksDocument progressWindow:progressWindow];
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading snps onto datum time %ld", time2.tv_sec - time1.tv_sec);
 
     NSLog(@"loading alleles onto datums");
     gettimeofday(&time1, NULL);
-    progressWindow.actionMessage.stringValue = @"Loading datum alleles";
+    progressWindow.actionMessage.stringValue = @"Loading alleles";
     [self loadAllelesOntoDatum:stacksDocument];
     gettimeofday(&time2, NULL);
     NSLog(@"finished loading alleles onto datum time %ld", time2.tv_sec - time1.tv_sec);
 
-    progressWindow.actionMessage.stringValue = @"Loading progeny counts";
+    progressWindow.actionMessage.stringValue = @"Calculating progeny";
     gettimeofday(&time1, NULL);
 
 
@@ -629,7 +703,7 @@ NSString *calculateType(NSString *file);
     NSLog(@"loading stack entries");
     CHECK_STOP
 
-    progressWindow.actionMessage.stringValue = @"Loading stack entries";
+    progressWindow.actionMessage.stringValue = @"Loading loci";
     gettimeofday(&time1, NULL);
     [self loadStacksEntriesFromTagFile:stacksDocument progressWindow:progressWindow];
     CHECK_STOP
@@ -646,9 +720,9 @@ NSString *calculateType(NSString *file);
 }
 
 
-- (void)loadSnpsOntoDatum:(StacksDocument *)document progressWindow:(ProgressController *)window {
+- (void*)loadSnpsOntoDatum:(StacksDocument *)document progressWindow:(ProgressController *)progressWindow {
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSString *path = document.path;
+    NSString *path = document.importPath;
 
     // 1- get all files i the directory named *.tag.tsv"
     NSError *error;
@@ -664,6 +738,7 @@ NSString *calculateType(NSString *file);
 
 
     for (NSString *filePath in onlySnps) {
+        CHECK_STOP
         @autoreleasepool {
 //            if ([filePath hasSuffix:@".snps.tsv"] && ![filePath hasPrefix:@"batch"]) {
             [self loadSnpFileForDatum:document fromFile:filePath];
@@ -671,15 +746,16 @@ NSString *calculateType(NSString *file);
 //            else {
 //            NSLog(@"not loading tag file %@", filePath);
 //            }
-            window.actionMessage.stringValue = [NSString stringWithFormat:@"Loading datum snp %ld/%ld", count, files.count];
-            ++count;
+            progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading SNPs for sample %ld/%ld", count, onlySnps.count];
         }
+        ++count;
     }
+    return nil ;
 }
 
 - (void)loadAllelesOntoDatum:(StacksDocument *)document {
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSString *path = document.path;
+    NSString *path = document.importPath;
 
     // 1- get all files i the directory named *.tag.tsv"
     NSError *error;
@@ -720,7 +796,7 @@ NSString *calculateType(NSString *file);
     NSArray *fileData;
     NSError *error2 = nil;
     @autoreleasepool {
-        NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", alleleFileName];
+        NSString *absoluteFileName = [document.importPath stringByAppendingFormat:@"/%@", alleleFileName];
         fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
     }
     gettimeofday(&time2, NULL);
@@ -736,7 +812,8 @@ NSString *calculateType(NSString *file);
     NSInteger locusId = -1;
     NSInteger newLocusId;
     DatumMO *datumMO = nil ;
-    NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+//    NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+    NSDictionary *otherLookupDictionary = [[GenericHashRepository sharedInstance] getDictionary:document.managedObjectContext forKey:sampleName];
 //    char allele;
     int depth;
     float ratio;
@@ -756,7 +833,8 @@ NSString *calculateType(NSString *file);
 
             @autoreleasepool {
                 NSString *internalIndex = (NSString *) [columns objectAtIndex:2];
-                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+//                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+                NSString *retrievedObject = (NSString *) [otherLookupDictionary objectForKey:internalIndex];
                 newLocusId = [retrievedObject integerValue];
 
 
@@ -801,7 +879,8 @@ NSString *calculateType(NSString *file);
 
     NSUInteger fileNameLength = snpFileName.length;
     NSString *sampleName = [snpFileName substringToIndex:fileNameLength - 9];
-    NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+//    NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+    NSDictionary *otherLookupDictionary = [[GenericHashRepository sharedInstance] getDictionary:document.managedObjectContext forKey:sampleName];
 
     NSManagedObjectContext *moc = document.managedObjectContext;
     SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
@@ -812,7 +891,7 @@ NSString *calculateType(NSString *file);
     NSError *error2 = nil;
     NSArray *fileData;
     @autoreleasepool {
-        NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", snpFileName];
+        NSString *absoluteFileName = [document.importPath stringByAppendingFormat:@"/%@", snpFileName];
         fileData = [[NSString stringWithContentsOfFile:absoluteFileName encoding:NSUTF8StringEncoding error:&error2] componentsSeparatedByString:@"\n"];
     }
 
@@ -846,7 +925,8 @@ NSString *calculateType(NSString *file);
                 // if the StackMO is found
 
                 NSString *internalIndex = (NSString *) [columns objectAtIndex:2];
-                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+//                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+                NSString *retrievedObject = (NSString *) [otherLookupDictionary objectForKey:internalIndex];
 //            NSLog(@"retrieved object: %@", retrievedObject);
                 newLocusId = [retrievedObject integerValue];
 
@@ -934,7 +1014,7 @@ NSString *calculateType(NSString *file);
 
 - (void)loadStacksEntriesFromTagFile:(StacksDocument *)document progressWindow:(ProgressController *)progressWindow {
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSString *path = document.path;
+    NSString *path = document.importPath;
     // TODO: if male . . .male.tags.tsv / female.tags.tsv
     // TODO: or *|!male|!female_N.tags.tsv
 
@@ -976,8 +1056,9 @@ NSString *calculateType(NSString *file);
 
     struct timeval time3, time4;
 
+    int fileCount = 1 ;
     for (NSString *tagFileName in realFiles) {
-        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading stack entry %i / %ld", fileNumber + 1, numFiles];
+        progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading loci for sample %i / %ld", fileNumber + 1, numFiles];
         if (stopProcess) return;
 
 
@@ -1005,20 +1086,21 @@ NSString *calculateType(NSString *file);
             StackEntryDatumMO *stackEntryDatumMO = nil ;
 
 
-            NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+//            NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
+            NSDictionary *otherLookupDictionary = [[GenericHashRepository sharedInstance] getDictionary:document.managedObjectContext forKey:sampleName];
 
-            NSString *absoluteFileName = [document.path stringByAppendingFormat:@"/%@", tagFileName];
+            NSString *absoluteFileName = [document.importPath stringByAppendingFormat:@"/%@", tagFileName];
             string f = [absoluteFileName cStringUsingEncoding:NSUTF8StringEncoding];
 
             fh.open(f.c_str(), ifstream::in);
             line_num = 0;
 
             if (fh.fail()) {
-                NSLog(@"unable to open file: %@", absoluteFileName);
+                NSLog(@"Unable to open stacks file: %@", absoluteFileName);
 
             }
             else {
-                NSLog(@"opening good file: %@", absoluteFileName);
+                NSLog(@"Opening stacks file: %@", absoluteFileName);
 
 //                NSMutableArray *stackEntryArray = [NSMutableArray array];
                 NSMutableDictionary *stackEntryDictionary = [NSMutableDictionary dictionary];
@@ -1040,7 +1122,8 @@ NSString *calculateType(NSString *file);
 
                             @autoreleasepool {
                                 NSString *internalIndex = [NSString stringWithUTF8String:parts[2].c_str()];
-                                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+//                                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
+                                NSString *retrievedObject = (NSString *) [otherLookupDictionary objectForKey:internalIndex];
 
                                 newLocusId = [retrievedObject integerValue];
                                 if (locusId != newLocusId) {
@@ -1051,8 +1134,9 @@ NSString *calculateType(NSString *file);
 
                                         }
 
-                                        [moc save:&error];
-                                        [moc refreshObject:stackEntryDatumMO mergeChanges:YES];
+                                        // TODO: do not think this has any effect, other than slowing this down
+//                                        [moc save:&error];
+//                                        [moc refreshObject:stackEntryDatumMO mergeChanges:YES];
                                         stackEntryDatumMO = nil ;
                                         row = 1;
                                     }
@@ -1106,7 +1190,8 @@ NSString *calculateType(NSString *file);
 
                 gettimeofday(&time4, NULL);
 //    NSLog(@"parse entries lines %ld produce %ld - %ld", fileData.count, datumMO.stackEntries.count, (time4.tv_sec - time3.tv_sec));
-                NSLog(@"parse entries lines %ld saves %ld time: %ld s", totalLineNum, totalSaves, (time4.tv_sec - time3.tv_sec));
+                NSLog(@"process tag %@ (%i/%ld) entries lines %ld saves %ld time: %ld s", tagFileName,fileCount,realFiles.count,totalLineNum, totalSaves, (time4.tv_sec - time3.tv_sec));
+                ++fileCount ;
 
             }
 
@@ -1141,14 +1226,15 @@ NSString *calculateType(NSString *file);
 - (void)addSamplesToDocument:(StacksDocument *)document forSampleIds:(vector<int>)sampleIds andSamples:(map<int, string>)samples {
 
     if (document.populationLookup == nil || document.populationLookup.count == 0) {
-        PopulationMO *populationMO = [[PopulationRepository sharedInstance] insertPopulation:document.managedObjectContext id:[NSNumber numberWithInt:1] name:@"All"];
-        document.populations = [NSSet setWithObjects:populationMO, nil];
+//        PopulationMO *populationMO = [[PopulationRepository sharedInstance] insertPopulation:document.managedObjectContext id:[NSNumber numberWithInt:1] name:@"All"];
+//        document.populations = [NSSet setWithObjects:populationMO, nil];
+        document.populations = [NSSet set];
 
         // set each sample to populationMO
         for (int i = 0; i < sampleIds.size(); i++) {
             SampleMO *sampleMO = [[SampleRepository sharedInstance] insertSample:document.managedObjectContext id:[NSNumber numberWithInt:sampleIds[i]] name:[NSString stringWithUTF8String:samples[sampleIds[i]].c_str()]];
-
-            [populationMO addSamplesObject:sampleMO];
+//
+//            [populationMO addSamplesObject:sampleMO];
         }
     }
     else {
@@ -1158,15 +1244,15 @@ NSString *calculateType(NSString *file);
                                                                               id:[NSNumber numberWithInt:sampleIds[i]]
                                                                             name:[NSString stringWithUTF8String:samples[sampleIds[i]].c_str()]];
 
-            NSString *populationId = [document.populationLookup objectForKey:sampleMO.name];
+            NSString *populationId = [document.populationLookup objectForKey:sampleMO.name];;
 
             if (populationId != nil) {
                 // lets get the population . . can use lookup, but this is usually pretty small
                 NSLog(@"tyring to populate popid %@", populationId);
                 for (PopulationMO *populationMO in document.populations) {
-                    NSNumber *endNumber = [numberFormatter numberFromString:populationId];
-                    NSLog(@"comparing to %@ vs %@", populationMO.populationId, endNumber);
-                    if ([populationMO.populationId isEqualToNumber:endNumber]) {
+//                    NSNumber *endNumber = [numberFormatter numberFromString:populationId];
+//                    NSLog(@"comparing to %@ vs %@", populationMO.populationId, endNumber);
+                    if ([populationMO.name isEqualToString:populationId]) {
                         NSLog(@"FOuND population ID %@", populationMO.populationId);
                         [populationMO addSamplesObject:sampleMO];
                     }
@@ -1210,7 +1296,7 @@ NSString *calculateType(NSString *file);
     NSManagedObjectContext *moc = document.managedObjectContext;
     [moc setUndoManager:nil];
 
-    NSString *path = document.path;
+    NSString *path = document.importPath;
     NSLog(@"reading population for file %@", path);
 
     NSString *popmapFile = [path stringByAppendingString:@"popmap"];
@@ -1228,7 +1314,7 @@ NSString *calculateType(NSString *file);
 //                NSString *sampleName = [columns objectAtIndex:0]; // the sample name . . . male, female, progeny, etc.
 
                 NSString *populationName = [columns objectAtIndex:1]; // initially an integer
-                PopulationMO *newPopulationMO = [[PopulationRepository sharedInstance] getPopulation:moc name:populationName];
+                PopulationMO *newPopulationMO = [[PopulationRepository sharedInstance] getPopulationOrCreate:moc name:populationName];
 
                 if (newPopulationMO != nil) {
                     [populations addObject:newPopulationMO];
@@ -1250,11 +1336,14 @@ NSString *calculateType(NSString *file);
 
 }
 
-- (StacksDocument *)createStacksDocumentForPath:(NSString *)path {
+- (StacksDocument *)createStacksDocumentForPath:(NSString *)filePath {
     NSError *stacksDocumentCreateError;
+    NSURL *pathUrl = [NSURL fileURLWithPath:filePath];
+    NSString *path = pathUrl.filePathURL.path;
+
     StacksDocument *stacksDocument = [[StacksDocument alloc] initWithType:NSSQLiteStoreType error:&stacksDocumentCreateError];
     stacksDocument.path = path;
-    stacksDocument.name = path.lastPathComponent;
+    stacksDocument.name = filePath.lastPathComponent;
 //    NSManagedObjectContext *context = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
 
 //    NSManagedObjectContext *moc = [stacksDocument getContextForPath:path];
@@ -1300,7 +1389,10 @@ NSString *calculateType(NSString *file);
 }
 
 - (void)dealloc {
-    [sampleLookupDictionary removeAllObjects];
+//    [sampleLookupDictionary removeAllObjects];
+    [[GenericHashRepository sharedInstance] detachAll];
+    // TODO: remove file!!!
+
     persistentStoreCoordinator = nil ;
 }
 

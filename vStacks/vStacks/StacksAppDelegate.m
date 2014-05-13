@@ -1,13 +1,14 @@
 //
 // Created by Nathan Dunn on 9/9/13.
-// Copyright (c) 2013 Nathan Dunn. All rights reserved.
+// Copyright (c) 2014 University of Oregon. All rights reserved.
 //
-// To change the template use AppCode | Preferences | File Templates.
+//
 //
 
 
 #import "StacksAppDelegate.h"
 #import "StacksApplicationController.h"
+#import "StacksDocumentController.h"
 
 
 @implementation StacksAppDelegate {
@@ -35,6 +36,11 @@
 //    return YES;
 //}
 
+- (BOOL) hasOpenDocument{
+    id currentDocument = [[StacksDocumentController sharedDocumentController] currentDocument];
+    NSLog(@"Valid Document %i",currentDocument!=nil) ;
+    return [[StacksDocumentController sharedDocumentController] currentDocument]!=nil;
+}
 
 @end
 

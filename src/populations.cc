@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2012-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -45,7 +45,11 @@ double    sample_limit      = 0;
 int       progeny_limit     = 0;
 int       population_limit  = 1;
 bool      bootstrap         = false;
-bs_type   bootstrap_type    = bs_none;
+bool      bootstrap_fst     = false;
+bool      bootstrap_pifis   = false;
+bool      bootstrap_phist   = false;
+bool      bootstrap_div     = false;
+bs_type   bootstrap_type    = bs_exact;
 int       bootstrap_reps    = 100;
 bool      bootstrap_wl      = false;
 bool      corrections       = false;
@@ -74,7 +78,10 @@ double    minor_allele_freq = 0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
 
+map<int, string>          pop_key, grp_key;
 map<int, pair<int, int> > pop_indexes;
+map<int, vector<int> >    grp_members;
+
 set<int> whitelist, blacklist, bootstraplist;
 
 //
@@ -131,7 +138,7 @@ int main (int argc, char* argv[]) {
     srandom(time(NULL));
 
     vector<pair<int, string> > files;
-    if (!build_file_list(files, pop_indexes))
+    if (!build_file_list(files, pop_indexes, grp_members))
 	exit(1);
 
     if (wl_file.length() > 0) {
@@ -166,9 +173,10 @@ int main (int argc, char* argv[]) {
     //
     stringstream catalog_file;
     map<int, CSLocus *> catalog;
-    int res;
+    bool compressed = false;
+    int  res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false, false)) == 0) {
+    if ((res = load_loci(catalog_file.str(), catalog, false, compressed)) == 0) {
     	cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
      	return 0;
     }
@@ -276,14 +284,12 @@ int main (int argc, char* argv[]) {
     	start_index = pit->second.first;
     	end_index   = pit->second.second;
     	pop_id      = pit->first;
-    	cerr << "Generating nucleotide-level summary statistics for population " << pop_id << "\n";
+    	cerr << "Generating nucleotide-level summary statistics for population '" << pop_key[pop_id] << "'\n";
     	psum->add_population(catalog, pmap, pop_id, start_index, end_index, verbose, log_fh);
 
 	if (kernel_smoothed && loci_ordered) {
-	    cerr << "  Generating kernel-smoothed population statistics";
-	    if (bootstrap) cerr << " and bootstrap resampling";
-	    cerr << "...\n";
-	    kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
+	    cerr << "  Generating kernel-smoothed population statistics...\n";
+	    // kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
 	}
     }
 
@@ -296,6 +302,12 @@ int main (int argc, char* argv[]) {
     //
     tabulate_haplotypes(catalog, pmap);
 
+    calculate_haplotype_stats(files, pop_indexes, catalog, pmap, psum);
+
+    calculate_haplotype_divergence(files, pop_indexes, grp_members, catalog, pmap, psum);
+
+    calculate_haplotype_divergence_pairwise(files, pop_indexes, grp_members, catalog, pmap, psum);
+
     //
     // Output a list of heterozygous loci and the associate haplotype frequencies.
     //
@@ -303,9 +315,9 @@ int main (int argc, char* argv[]) {
 	write_sql(catalog, pmap);
 
     //
-    // Output the locus-level summary statistics.
+    // Calculate and output the locus-level summary statistics.
     //
-    write_summary_stats(files, pop_indexes, catalog, pmap, psum);
+    calculate_summary_stats(files, pop_indexes, catalog, pmap, psum);
 
     //
     // Output data in requested formats
@@ -869,149 +881,1495 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 }
 
 int 
-write_linkage_stats(map<int, pair<int, int> > &pop_indexes, map<int, CSLocus *> &catalog, 
-		    PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
+			  map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
+    LocSum  **s;
+    Datum   **d;
+    LocStat  *l;
+
     //
-    // We want to iterate over each population and calculate D', r^2 and chi-square significance
-    // for the first nucleotide of each locus.
+    // Instantiate the kernel smoothing and bootstrap objects if requested.
     //
-    // map<string, vector<CSLocus *> >::iterator it;
+    KSmooth<LocStat>     *ks;
+    OHaplotypes<LocStat> *ord;
+    Bootstrap<LocStat>   *bs;
+    if (kernel_smoothed && loci_ordered) {
+	ks  = new KSmooth<LocStat>(2);
+	ord = new OHaplotypes<LocStat>();
+    }
 
-    // vector<int> pops;
-    // map<int, pair<int, int> >::iterator pit;
-    // for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
-    // 	pops.push_back(pit->first);
+    //
+    // Open output file and print header.
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".hapstats" << ".tsv";
+    string file = in_path + pop_name.str();
 
-    // int      num_loci = pmap->loci_cnt();
-    // double **dprime   = new double *[num_loci];
-    // double **rsq      = new double *[num_loci];
-    // double **chisq    = new double *[num_loci];
+    ofstream fh(file.c_str(), ofstream::out);
+    if (fh.fail()) {
+        cerr << "Error opening haplotype stats file '" << file << "'\n";
+	exit(1);
+    }
+    fh.precision(fieldw);
+    fh.setf(std::ios::fixed);
 
-    // for (uint i = 0; i < num_loci; i++) {
-    // 	dprime[i] = new double[num_loci];
-    // 	rsq[i]    = new double[num_loci];
-    // 	chisq[i]  = new double[num_loci];
-    // }
+    map<int, pair<int, int> >::iterator pit;
+    int start, end, pop_id, pop_index;
 
-    // for (uint i = 0; i < pops.size(); i++) {
+    //
+    // Write the population members.
+    //
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	start = pit->second.first;
+	end   = pit->second.second;
+	fh << "# " << pop_key[pit->first] << "\t";
+	for (int i = start; i <= end; i++) {
+	    fh << files[i].second;
+	    if (i < end) fh << ",";
+	}
+	fh << "\n";
+    }
 
-    // 	int start = pop_indexes[pops[i]].first;
-    // 	int end   = pop_indexes[pops[i]].second;
+    fh << "# Batch ID "    << "\t"
+       << "Locus ID"       << "\t"
+       << "Chr"            << "\t"
+       << "BP"             << "\t"
+       << "Pop ID"         << "\t"
+       << "N"              << "\t"
+       << "Haplotype Cnt"  << "\t"
+       << "Gene Diversity" << "\t"
+       << "Smoothed Gene Diversity"      << "\t"
+       << "Smoothed Gene Diversity P-value"      << "\t"
+       << "Haplotype Diversity"          << "\t"
+       << "Smoothed Haplotype Diversity" << "\t"
+       << "Smoothed Haplotype Diversity P-value" << "\t"
+       << "Haplotypes"                   << "\n";
 
-    // 	//
-    // 	// Clear the two-dimensional arrays for the next population.
-    // 	//
-    // 	for (uint j = 0; j < num_loci; j++) {
-    // 	    memset(dprime[j], 0, num_loci);
-    // 	    memset(rsq[j],    0, num_loci);
-    // 	    memset(chisq[j],  0, num_loci);
-    // 	}
+    //
+    // Iterate over the members of each population.
+    //
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	start     = pit->second.first;
+	end       = pit->second.second;
+	pop_id    = pit->first;
+	pop_index = psum->pop_index(pop_id);
 
-    // 	CSLocus  *loc_1;
-    // 	LocSum  **s_1;
-    // 	Datum   **d_1;
+    	cerr << "Generating haplotype-level summary statistics for population '" << pop_key[pop_id] << "'\n";
+	map<string, vector<LocStat *> > genome_locstats;
 
-    // 	uint col_1, col_2, tot;
-    // 	char p_nuc_1, q_nuc_1, p_nuc_2, q_nuc_2;
+	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 
-    // 	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-    // 	    string chr = it->first;
-    // 	    for (uint pos_1 = 0; pos_1 < it->second.size(); pos_1++) {
-    // 		loc_1 = it->second[pos_1];
-    // 		s_1   = psum->locus(loc_1->id);
-    // 		d_1   = pmap->locus(loc_1->id);
+	    if (bootstrap_div)
+		bs = new Bootstrap<LocStat>(2);
 
-    // 		for (uint k = 0; k < loc_1->snps.size(); k++) {
-    // 		    col_1   = loc_1->snps[k]->col;
-    // 		    p_nuc_1 = s_1->nucs[col_1].p_nuc;
-    // 		    q_nuc_1 = s_1->nucs[col_1].q_nuc;
+	    vector<LocStat *> &locstats = genome_locstats[it->first];
+	    map<uint, uint>    locstats_key;
+	    ord->order(locstats, locstats_key, it->second);
 
-    // 		    //
-    // 		    // Compare this locus against every other locus in the data set.
-    // 		    //
-    // 		    CSLocus  *loc_2;
-    // 		    LocSum  **s_2;
-    // 		    Datum   **d_2;
+	    for (uint pos = 0; pos < it->second.size(); pos++) {
+		loc = it->second[pos];
+		s   = psum->locus(loc->id);
+		d   = pmap->locus(loc->id);
 
-    // 		    map<string, vector<CSLocus *> >::iterator chr_it;
-    // 		    for (uint pos_2 = 0; pos_2 < chr_it->second.size(); pos_2++) {
-    // 			loc_2 = chr_it->second[pos_2];
-    // 			s_2   = psum->locus(loc_2->id);
-    // 			d_2   = pmap->locus(loc_2->id);
+		if (loc->snps.size() == 0) 
+		    continue;
 
-    // 			for (uint n = 0; n < loc_2->snps.size(); n++) {
-    // 			    col_2   = loc_2->snps[n]->col;
-    // 			    p_nuc_2 = s_2->nucs[col_2].p_nuc;
-    // 			    q_nuc_2 = s_2->nucs[col_2].q_nuc;
+		// cerr << "Looking at locus " << loc->id << "\n";
 
-    // 			    tot = 0;
+		l = haplotype_diversity(start, end, d);
 
-    // 			    for (uint m = start; m <= end; m++) {
-    // 				if (d_1[m] == NULL || col_1 >= d_1[m]->len ||
-    // 				    d_2[m] == NULL || col_2 >= d_2[m]->len) 
-    // 				    continue;
-    // 				if (d_1[m]->obshap.size() < 2 ||
-    // 				    d_2[m]->obshap.size() < 2 ||
-    // 				    psum->tally_observed_haplotypes(d_1[m]->obshap, k) != 2 ||
-    // 				    psum->tally_observed_haplotypes(d_2[m]->obshap, n) != 2)
-    // 				    continue;
+		if (l != NULL) {
+		    l->loc_id = loc->id;
+		    l->bp     = loc->sort_bp();
+		    locstats[locstats_key[l->bp]] = l;
+		}
+	    }
 
-    // 				tot++;
+	    if (kernel_smoothed && loci_ordered) {
+		cerr << "    Generating kernel-smoothed statistics on chromosome " << it->first << "\n";
+		ks->smooth(locstats);
+	    }
 
-    // 				if (d_1[m]->obshap[0] == q_nuc_1) {
-    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
-    // 					q1q2++;
-    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
-    // 					q1p2++;
-    // 				} else if (d_1[m]->obshap[0] == p_nuc_1) {
-    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
-    // 					p1q2++;
-    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
-    // 					p1p2++;
-    // 				} else if (d_1[m]->obshap[1] == q_nuc_1) {
-    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
-    // 					q1q2++;
-    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
-    // 					q1p2++;
-    // 				} else if (d_1[m]->obshap[1] == p_nuc_1) {
-    // 				    if (d_2[m]->obshap[0] == q_nuc_2)
-    // 					p1q2++;
-    // 				    else if (d_2[m]->obshap[0] == p_nuc_2)
-    // 					p1p2++;
-    // 				}
-    // 			    }
+	    if (bootstrap_div) 
+		bs->add_data(locstats);
+	}
 
-    // 			    if (write_single_snp) 
-    // 				break;
-    // 			}
-    // 		    }
-		    
-    // 		    if (write_single_snp) 
-    // 			break;
-    // 		}
-    // 	    }
-    // 	}
-    // }
+	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	    vector<LocStat *> &locstats = genome_locstats[it->first];
+
+	    if (bootstrap_div)
+		bs->execute(locstats);
+
+	    //
+	    // Write results.
+	    //
+	    for (uint k = 0; k < locstats.size(); k++) {
+		l = locstats[k];
+		if (l == NULL) continue;
+
+		fh << batch_id         << "\t"
+		   << l->loc_id        << "\t"
+		   << it->first        << "\t"
+		   << l->bp            << "\t"
+		   << pop_key[pop_id]  << "\t"
+		   << (int) l->alleles << "\t"
+		   << l->hap_cnt       << "\t"
+		   << l->stat[0]       << "\t"
+		   << l->smoothed[0]   << "\t"
+		   << l->bs[0]         << "\t"
+		   << l->stat[1]       << "\t"
+		   << l->smoothed[1]   << "\t"
+		   << l->bs[1]         << "\t"
+		   << l->hap_str       << "\n";
+	    }
+
+	    for (uint k = 0; k < locstats.size(); k++) 
+		delete locstats[k];
+	}
+
+	if (bootstrap_div) 
+	    delete bs;
+    }
+
+    if (kernel_smoothed && loci_ordered) {
+	delete ks;
+	delete ord;
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int
+nuc_substitution_dist(map<string, int> &hap_index, double **hdists) 
+{
+    vector<string> haplotypes;
+    map<string, int>::iterator it;
+    uint i, j;
+
+    for (it = hap_index.begin(); it != hap_index.end(); it++)
+	haplotypes.push_back(it->first);
+
+    const char *p, *q;
+    double dist;
+
+    for (i = 0; i < haplotypes.size(); i++) {
+	for (j = i; j < haplotypes.size(); j++) {
+
+	    dist = 0.0;
+	    p    = haplotypes[i].c_str();
+	    q    = haplotypes[j].c_str();
+
+	    while (*p != '\0' && *q != '\0') {
+		if (*p != *q) dist++;
+		p++;
+		q++;
+	    }
+
+	    hdists[i][j] = dist;
+	    hdists[j][i] = dist;
+	}
+    }
 
     // //
-    // // Free the two-dimensional arrays.
+    // // Print the distance matrix.
     // //
-    // for (uint i = 0; i < num_loci; i++) {
-    // 	delete [] dprime[i];
-    //     delete [] rsq[i];
-    // 	delete [] chisq[i];
+    // cerr << "  ";
+    // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++)
+    // 	cerr << "\t" << hit->first;
+    // cerr << "\n";
+    // for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
+    // 	cerr << "  " << hit->first;
+    // 	for (hit_2 = loc_hap_index.begin(); hit_2 != loc_hap_index.end(); hit_2++)
+    // 	    cerr << "\t" << hdists[hit->second][hit_2->second];
+    // 	cerr << "\n";
     // }
-    // delete [] dprime;
-    // delete [] rsq;
-    // delete [] chisq;
+    // cerr << "\n";
+
+    return 0;
+}
+
+int
+nuc_substitution_identity(map<string, int> &hap_index, double **hdists) 
+{
+    vector<string> haplotypes;
+    map<string, int>::iterator it;
+    uint i, j;
+
+    for (it = hap_index.begin(); it != hap_index.end(); it++)
+	haplotypes.push_back(it->first);
+
+    double dist;
+
+    for (i = 0; i < haplotypes.size(); i++) {
+	for (j = i; j < haplotypes.size(); j++) {
+
+	    if (haplotypes[i] == haplotypes[j])
+		dist = 0.0;
+	    else
+		dist = 1.0;
+
+	    hdists[i][j] = dist;
+	    hdists[j][i] = dist;
+	}
+    }
+
+    return 0;
+}
+
+int
+nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists) 
+{
+    vector<string> haplotypes;
+    map<string, int>::iterator it;
+    uint i, j;
+
+    for (it = hap_index.begin(); it != hap_index.end(); it++)
+	haplotypes.push_back(it->first);
+
+    for (i = 0; i < haplotypes.size(); i++) {
+	for (j = i; j < haplotypes.size(); j++) {
+	    hdists[i][j] = 1.0;
+	    hdists[j][i] = 1.0;
+	}
+    }
 
     return 0;
 }
 
 int 
-write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
-		    map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_haplotype_divergence(vector<pair<int, string> > &files, 
+			       map<int, pair<int, int> > &pop_indexes, 
+			       map<int, vector<int> > &master_grp_members,
+			       map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+{
+    map<string, vector<CSLocus *> >::iterator it;
+
+    if (bootstrap_phist)
+	cerr << "Calculating halotype F statistics across all populations/groups and bootstrap resampling...\n";
+    else
+	cerr << "Calculating haplotype F statistics across all populations/groups...\n";
+
+    //
+    // Create a list of all the groups we have.
+    //
+    map<int, vector<int> >::iterator git;
+    map<int, int> pop_grp_key;
+    for (git = master_grp_members.begin(); git != master_grp_members.end(); git++)
+	for (uint i = 0; i < git->second.size(); i++)
+	    pop_grp_key[git->second[i]] = git->first;
+
+    //
+    // Create a list of all the populations we have.
+    //
+    vector<int> pop_ids;
+
+    map<int, pair<int, int> >::iterator pit;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
+	pop_ids.push_back(pit->first);
+
+    //
+    // Instantiate the kernel smoothing object and associated ordering object if requested.
+    //
+    KSmooth<HapStat>     *ks;
+    OHaplotypes<HapStat> *ord;
+    Bootstrap<HapStat>   *bs;
+    if (kernel_smoothed && loci_ordered) {
+	ks  = new KSmooth<HapStat>(5);
+	ord = new OHaplotypes<HapStat>();
+    }
+
+    if (bootstrap_phist)
+	bs = new Bootstrap<HapStat>(5);
+
+    map<string, vector<HapStat *> > genome_hapstats;
+
+    uint cnt = 0;
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	string chr = it->first;
+
+	cerr << "  Generating haplotype F statistics for " << chr << "...";
+
+	map<uint, uint>    hapstats_key;
+	vector<HapStat *> &hapstats = genome_hapstats[chr];
+	ord->order(hapstats, hapstats_key, it->second);
+
+        #pragma omp parallel
+	{ 
+	    CSLocus  *loc;
+	    LocSum  **s;
+	    Datum   **d;
+	    HapStat  *h;
+
+            #pragma omp for schedule(dynamic, 1) reduction(+:cnt)
+	    for (uint pos = 0; pos < it->second.size(); pos++) {
+		loc = it->second[pos];
+		s   = psum->locus(loc->id);
+		d   = pmap->locus(loc->id);
+
+		if (loc->snps.size() == 0)
+		    continue;
+
+		//
+		// If this locus only appears in one population or there is only a single haplotype,
+		// do not calculate haplotype F stats.
+		//
+		if (fixed_locus(pop_indexes, d, pop_ids))
+		    continue;
+
+		cnt++;
+		// cerr << "Processing locus " << loc->id << "\n";
+
+		h = haplotype_amova(pop_grp_key, pop_indexes, d, s, pop_ids);
+
+		if (h != NULL) {
+		    h->stat[4] = haplotype_d_est(pop_indexes, d, s, pop_ids);
+
+		    h->loc_id = loc->id;
+		    h->bp     = loc->sort_bp();
+		    hapstats[hapstats_key[h->bp]] = h;
+		}
+	    }
+	}
+
+	if (bootstrap_phist)
+	    bs->add_data(hapstats);
+
+	cerr << "done.\n";
+
+	//
+	// Calculate kernel-smoothed Fst values.
+	//
+	if (kernel_smoothed && loci_ordered) {
+	    cerr << "  Generating kernel-smoothed haplotype F statistics for " << it->first << "...";
+	    ks->smooth(hapstats);
+	    cerr << "done.\n";
+	}
+    }
+
+    if (bootstrap_phist) {
+	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++)
+	    bs->execute(genome_hapstats[it->first]);
+    }
+
+    cerr << "done.\n";
+
+    if (kernel_smoothed && loci_ordered) {
+	delete ks;
+	delete ord;
+    }
+
+    if (bootstrap_phist)
+	delete bs;
+
+    cerr << "Writing haplotype F statistics... ";
+
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".phistats" << ".tsv";
+
+    string file = in_path + pop_name.str();
+
+    ofstream fh(file.c_str(), ofstream::out);
+    if (fh.fail()) {
+        cerr << "Error opening haplotype Phi_st file '" << file << "'\n";
+	exit(1);
+    }
+    fh.precision(fieldw);
+    fh.setf(std::ios::fixed);
+
+    //
+    // Write the population members.
+    //
+    int start, end;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	start = pit->second.first;
+	end   = pit->second.second;
+	fh << "# Population " << pop_key[pit->first] << "\t";
+	for (int k = start; k <= end; k++) {
+	    fh << files[k].second;
+	    if (k < end) fh << ",";
+	}
+	fh << "\n";
+    }
+
+    //
+    // Write the group members.
+    //
+    for (git = grp_members.begin(); git != grp_members.end(); git++) {
+	end = git->second.size();
+	fh << "# Group " << grp_key[git->first] << "\t";
+	for (int k = 0; k < end; k++) {
+	    fh << git->second[k];
+	    if (k < end - 1) fh << ",";
+	}
+	fh << "\n";
+    }
+
+    fh << "# Batch ID " << "\t"
+       << "Locus ID"    << "\t"
+       << "Chr"         << "\t"
+       << "BP"          << "\t";
+    if (log_fst_comp)
+	fh << "SSD(WP)"     << "\t"
+	   << "SSD(AP/WG)"  << "\t"
+	   << "SSD(AG)"     << "\t"
+	   << "SSD(TOTAL)"  << "\t"
+	   << "MSD(WP)"     << "\t" 
+	   << "MSD(AP/WG)"  << "\t" 
+	   << "MSD(AG)"     << "\t"
+	   << "MSD(TOTAL)"  << "\t"
+	   << "n"           << "\t"
+	   << "n'"          << "\t"
+	   << "n''"         << "\t"
+	   << "Sigma2_a"    << "\t" 
+	   << "Sigma2_b"    << "\t"
+	   << "Sigma2_c"    << "\t"
+	   << "Sigma_Total" << "\t";
+    fh << "phi_st"          << "\t"
+       << "Smoothed Phi_st" << "\t"
+       << "Smoothed Phi_st P-value" << "\t"
+       << "Phi_ct"          << "\t"
+       << "Smoothed Phi_ct" << "\t"
+       << "Smoothed Phi_ct P-value" << "\t"
+       << "Phi_sc"          << "\t"
+       << "Smoothed Phi_sc" << "\t"
+       << "Smoothed Phi_sc P-value" << "\t"
+       << "Fst'"            << "\t"
+       << "Smoothed Fst'"   << "\t"
+       << "Smoothed Fst' P-value"   << "\t"
+       << "D_est"           << "\t"
+       << "Smoothed D_est"  << "\t"
+       << "Smoothed D_est P-value"  << "\n";
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	string chr = it->first;
+
+	vector<HapStat *> &hapstats = genome_hapstats[chr];
+
+	for (uint k = 0; k < hapstats.size(); k++) {
+	    if (hapstats[k] == NULL) continue;
+
+	    fh << batch_id            << "\t"
+	       << hapstats[k]->loc_id << "\t"
+	       << chr                 << "\t"
+	       << hapstats[k]->bp     << "\t";
+	    if (log_fst_comp)
+		fh << hapstats[k]->comp[0]  << "\t"
+		   << hapstats[k]->comp[1]  << "\t"
+		   << hapstats[k]->comp[2]  << "\t"
+		   << hapstats[k]->comp[3]  << "\t"
+		   << hapstats[k]->comp[4]  << "\t" 
+		   << hapstats[k]->comp[5]  << "\t" 
+		   << hapstats[k]->comp[6]  << "\t"
+		   << hapstats[k]->comp[7]  << "\t"
+		   << hapstats[k]->comp[8]  << "\t"
+		   << hapstats[k]->comp[9]  << "\t"
+		   << hapstats[k]->comp[10] << "\t"
+		   << hapstats[k]->comp[11] << "\t" 
+		   << hapstats[k]->comp[12] << "\t"
+		   << hapstats[k]->comp[13] << "\t"
+		   << hapstats[k]->comp[14] << "\t";
+	    fh << hapstats[k]->stat[0]     << "\t"
+	       << hapstats[k]->smoothed[0] << "\t"
+	       << hapstats[k]->bs[0]       << "\t"
+	       << hapstats[k]->stat[1]     << "\t"
+	       << hapstats[k]->smoothed[1] << "\t"
+	       << hapstats[k]->bs[1]       << "\t"
+	       << hapstats[k]->stat[2]     << "\t"
+	       << hapstats[k]->smoothed[2] << "\t"
+	       << hapstats[k]->bs[2]       << "\t"
+	       << hapstats[k]->stat[3]     << "\t"
+	       << hapstats[k]->smoothed[3] << "\t"
+	       << hapstats[k]->bs[3]       << "\t"
+	       << hapstats[k]->stat[4]     << "\t"
+	       << hapstats[k]->smoothed[4] << "\t"
+	       << hapstats[k]->bs[4]       << "\n";
+
+	    delete hapstats[k];
+	}
+    }
+
+    fh.close();
+
+    cerr << "wrote " << cnt << " loci to haplotype Phi_st file, '" << file << "'\n";
+
+    return 0;
+}
+
+int 
+calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files, 
+					map<int, pair<int, int> > &pop_indexes, 
+					map<int, vector<int> > &master_grp_members,
+					map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+{
+    map<string, vector<CSLocus *> >::iterator it;
+
+    if (bootstrap_phist)
+	cerr << "Calculating pairwise halotype F statistics and bootstrap resampling...\n";
+    else
+	cerr << "Calculating pairwise haplotype F statistics...\n";
+
+    //
+    // Assign all individuals to one group for the pairwise calculations.
+    //
+    map<int, vector<int> >::iterator git;
+    map<int, int> pop_grp_key;
+    for (git = master_grp_members.begin(); git != master_grp_members.end(); git++)
+	for (uint i = 0; i < git->second.size(); i++)
+	    pop_grp_key[git->second[i]] = 1;
+
+    map<int, pair<int, int> >::iterator pit;
+    vector<int> pop_ids;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
+	pop_ids.push_back(pit->first);
+
+    //
+    // Instantiate the kernel smoothing object if requested.
+    //
+    KSmooth<HapStat>     *ks;
+    OHaplotypes<HapStat> *ord;
+    Bootstrap<HapStat>   *bs;
+    if (kernel_smoothed && loci_ordered) {
+	ks  = new KSmooth<HapStat>(5);
+	ord = new OHaplotypes<HapStat>();
+    }
+
+    for (uint i = 0; i < pop_ids.size(); i++) {
+	for (uint j = i + 1; j < pop_ids.size(); j++) {
+
+	    if (bootstrap_phist)
+		bs = new Bootstrap<HapStat>(5);
+
+	    map<string, vector<HapStat *> > genome_hapstats;
+	    vector<int> subpop_ids;
+
+	    subpop_ids.push_back(pop_ids[i]);
+	    subpop_ids.push_back(pop_ids[j]);
+
+	    cerr << "  Processing populations '" << pop_key[pop_ids[i]] << "' and '" << pop_key[pop_ids[j]] << "'\n";
+
+	    uint cnt = 0;
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		string chr = it->first;
+
+		cerr << "    Generating pairwise haplotype F statistics for " << chr << "...";
+
+		map<uint, uint>    hapstats_key;
+		vector<HapStat *> &hapstats = genome_hapstats[chr];
+		ord->order(hapstats, hapstats_key, it->second);
+
+                #pragma omp parallel
+		{ 
+		    CSLocus  *loc;
+		    LocSum  **s;
+		    Datum   **d;
+		    HapStat  *h;
+
+                    #pragma omp for schedule(dynamic, 1) reduction(+:cnt)
+		    for (uint pos = 0; pos < it->second.size(); pos++) {
+			loc = it->second[pos];
+			s   = psum->locus(loc->id);
+			d   = pmap->locus(loc->id);
+
+			if (loc->snps.size() == 0)
+			    continue;
+
+			//
+			// If this locus only appears in one population or there is only a single haplotype,
+			// do not calculate haplotype F stats.
+			//
+			if (fixed_locus(pop_indexes, d, subpop_ids))
+			    continue;
+
+			cnt++;
+			// cerr << "Processing locus " << loc->id << "\n";
+
+			h = haplotype_amova(pop_grp_key, pop_indexes, d, s, subpop_ids);
+
+			if (h != NULL) {
+			    h->stat[4] = haplotype_d_est(pop_indexes, d, s, subpop_ids);
+
+			    h->loc_id = loc->id;
+			    h->bp     = loc->sort_bp();
+			    hapstats[hapstats_key[h->bp]] = h;
+			}
+		    }
+		}
+
+		if (bootstrap_phist)
+		    bs->add_data(hapstats);
+
+		cerr << "done.\n";
+
+		//
+		// Calculate kernel-smoothed Fst values.
+		//
+		if (kernel_smoothed && loci_ordered) {
+		    cerr << "    Generating kernel-smoothed Phi_st for " << it->first << "...";
+		    ks->smooth(hapstats);
+		    cerr << "done.\n";
+		}
+	    }
+
+	    if (bootstrap_phist) {
+		for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++)
+		    bs->execute(genome_hapstats[it->first]);
+	    }
+
+	    cerr << "done.\n";
+
+	    if (bootstrap_phist)
+		delete bs;
+
+	    cerr << "Writing haplotype F statistics... ";
+
+	    stringstream pop_name;
+	    pop_name << "batch_" << batch_id << ".phistats_" << pop_key[pop_ids[i]] << "-" << pop_key[pop_ids[j]] << ".tsv";
+
+	    string file = in_path + pop_name.str();
+
+	    ofstream fh(file.c_str(), ofstream::out);
+	    if (fh.fail()) {
+		cerr << "Error opening haplotype Phi_st file '" << file << "'\n";
+		exit(1);
+	    }
+	    fh.precision(fieldw);
+	    fh.setf(std::ios::fixed);
+
+	    //
+	    // Write the population members.
+	    //
+	    int start, end;
+	    for (uint k = 0; k < subpop_ids.size(); k++) {
+		start = pop_indexes[subpop_ids[k]].first;
+		end   = pop_indexes[subpop_ids[k]].second;
+		fh << "# Population " << pop_key[subpop_ids[k]] << "\t";
+		for (int n = start; n <= end; n++) {
+		    fh << files[n].second;
+		    if (n < end) fh << ",";
+		}
+		fh << "\n";
+	    }
+
+	    fh << "# Batch ID " << "\t"
+	       << "Locus ID"    << "\t"
+	       << "Pop 1 ID"   << "\t"
+	       << "Pop 2 ID"   << "\t"
+	       << "Chr"         << "\t"
+	       << "BP"          << "\t";
+	    if (log_fst_comp)
+		fh << "SSD(WP)"     << "\t"
+		   << "SSD(AP/WG)"  << "\t"
+		   << "SSD(AG)"     << "\t"
+		   << "SSD(TOTAL)"  << "\t"
+		   << "MSD(WP)"     << "\t" 
+		   << "MSD(AP/WG)"  << "\t" 
+		   << "MSD(AG)"     << "\t"
+		   << "MSD(TOTAL)"  << "\t"
+		   << "n"           << "\t"
+		   << "n'"          << "\t"
+		   << "n''"         << "\t"
+		   << "Sigma2_a"    << "\t" 
+		   << "Sigma2_b"    << "\t"
+		   << "Sigma2_c"    << "\t"
+		   << "Sigma_Total" << "\t";
+	    fh << "phi_st"          << "\t"
+	       << "Smoothed Phi_st" << "\t"
+	       << "Smoothed Phi_st P-value" << "\t"
+	       << "Fst'"            << "\t"
+	       << "Smoothed Fst'"   << "\t"
+	       << "Smoothed Fst' P-value"   << "\t"
+	       << "D_est"          << "\t"
+	       << "Smoothed D_est" << "\t"
+	       << "Smoothed D_est P-value" << "\n";
+
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		string chr = it->first;
+
+		vector<HapStat *> &hapstats = genome_hapstats[chr];
+
+		for (uint k = 0; k < hapstats.size(); k++) {
+		    if (hapstats[k] == NULL) continue;
+
+		    fh << batch_id            << "\t"
+		       << hapstats[k]->loc_id << "\t"
+		       << pop_key[pop_ids[i]] << "\t"
+		       << pop_key[pop_ids[j]] << "\t"
+		       << chr                 << "\t"
+		       << hapstats[k]->bp     << "\t";
+		    if (log_fst_comp)
+			fh << hapstats[k]->comp[0]  << "\t"
+			   << hapstats[k]->comp[1]  << "\t"
+			   << hapstats[k]->comp[2]  << "\t"
+			   << hapstats[k]->comp[3]  << "\t"
+			   << hapstats[k]->comp[4]  << "\t" 
+			   << hapstats[k]->comp[5]  << "\t" 
+			   << hapstats[k]->comp[6]  << "\t"
+			   << hapstats[k]->comp[7]  << "\t"
+			   << hapstats[k]->comp[8]  << "\t"
+			   << hapstats[k]->comp[9]  << "\t"
+			   << hapstats[k]->comp[10] << "\t"
+			   << hapstats[k]->comp[11] << "\t" 
+			   << hapstats[k]->comp[12] << "\t"
+			   << hapstats[k]->comp[13] << "\t"
+			   << hapstats[k]->comp[14] << "\t";
+		    fh << hapstats[k]->stat[0]     << "\t"
+		       << hapstats[k]->smoothed[0] << "\t"
+		       << hapstats[k]->bs[0]       << "\t"
+		       << hapstats[k]->stat[3]     << "\t"
+		       << hapstats[k]->smoothed[3] << "\t"
+		       << hapstats[k]->bs[3]       << "\t"
+		       << hapstats[k]->stat[4]     << "\t"
+		       << hapstats[k]->smoothed[4] << "\t"
+		       << hapstats[k]->bs[4]       << "\n";
+
+		    delete hapstats[k];
+		}
+	    }
+
+	    fh.close();
+
+	    cerr << "wrote " << cnt << " loci to pairwise haplotype file, '" << file << "'\n";
+	}
+    }
+
+    if (kernel_smoothed && loci_ordered) {
+	delete ks;
+	delete ord;
+    }
+
+    return 0;
+}
+
+bool
+fixed_locus(map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_ids)
+{
+    set<string>               loc_haplotypes;
+    map<int, vector<string> > pop_haplotypes;
+    int start, end, pop_id;
+    int pop_cnt = pop_ids.size();
+
+    for (int p = 0; p < pop_cnt; p++) {
+	start  = pop_indexes[pop_ids[p]].first;
+	end    = pop_indexes[pop_ids[p]].second;
+	pop_id = pop_ids[p];
+
+	for (int i = start; i <= end; i++) {
+	    if (d[i] == NULL) continue;
+
+	    if (d[i]->obshap.size() > 2) { 
+		continue;
+
+	    } else if (d[i]->obshap.size() == 1) {
+		loc_haplotypes.insert(d[i]->obshap[0]);
+		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+
+	    } else {
+		for (uint j = 0; j < d[i]->obshap.size(); j++) {
+		    loc_haplotypes.insert(d[i]->obshap[j]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		}
+	    }
+	}
+    }
+
+    int valid_pops = 0;
+
+    for (int p = 0; p < pop_cnt; p++) {
+	pop_id = pop_ids[p];
+
+	if (pop_haplotypes[pop_id].size() > 0) 
+	    valid_pops++;
+    }
+
+    //
+    // Check that more than one population has data for this locus.
+    //
+    if (valid_pops <= 1) 
+	return true;
+
+    //
+    // Check that there is more than one haplotype at this locus.
+    //
+    if (loc_haplotypes.size() == 1)
+	return true;
+
+    return false;
+}
+
+LocStat *
+haplotype_diversity(int start, int end, Datum **d)
+{
+    map<string, double>::iterator hit;
+    vector<string>      haplotypes;
+    map<string, double> hap_freq;
+    map<string, int>    hap_index;
+    double   n              = 0.0;
+    double   gene_diversity = 0.0;
+    double   hapl_diversity = 0.0;
+    LocStat *lstat;
+
+    //
+    // Tabulate the haplotypes in this population.
+    //
+    for (int i = start; i <= end; i++) {
+	if (d[i] == NULL) continue;
+
+	if (d[i]->obshap.size() > 2) { 
+	    continue;
+
+	} else if (d[i]->obshap.size() == 1) {
+	    n += 2;
+	    hap_freq[d[i]->obshap[0]] += 2;
+
+	} else {
+	    for (uint j = 0; j < d[i]->obshap.size(); j++) {
+		n++;
+		hap_freq[d[i]->obshap[j]]++;
+	    }
+	}
+    }
+
+    // cerr << "  " << n << " total haplotypes observed.\n";
+
+    //
+    // If this haplotype is fixed, don't calculate any statistics.
+    //
+    if (n == 0) 
+	return NULL;
+
+    lstat = new LocStat;
+
+    //
+    // Store a summary of the haplotype counts to output below.
+    //
+    stringstream sstr;
+    for (hit = hap_freq.begin(); hit != hap_freq.end(); hit++)
+	sstr << hit->first << ":" << hit->second  << ";";
+    lstat->hap_str = sstr.str().substr(0, sstr.str().length() - 1);
+
+    //
+    // Determine an ordering for the haplotypes. Convert haplotype counts into frequencies.
+    //
+    uint k = 0;
+    for (hit = hap_freq.begin(); hit != hap_freq.end(); hit++) {
+	hap_index[hit->first] = k;
+	haplotypes.push_back(hit->first);
+	k++;
+
+	// cerr << "  Haplotype '" << hit->first << "' occured " << hit->second  << " times; ";
+
+	hit->second = hit->second / n;
+
+	// cerr << " frequency of " << hit->second << "%\n";
+    }
+    //
+    // Initialize a two-dimensional array to hold distances between haplotyes.
+    //
+    double **hdists = new double *[hap_index.size()];
+    for (k = 0; k < hap_index.size(); k++) {
+	hdists[k] = new double[hap_index.size()];
+	memset(hdists[k], 0, hap_index.size());
+    }
+
+    //
+    // Calculate the distances between haplotypes.
+    //
+    nuc_substitution_dist(hap_index, hdists);
+
+    //
+    // Calculate haplotype diversity, Pi.
+    //
+    for (uint i = 0; i < haplotypes.size(); i++) {
+	for (uint j = 0; j < haplotypes.size(); j++) {
+	    hapl_diversity += 
+		hap_freq[haplotypes[i]] * 
+		hap_freq[haplotypes[j]] * 
+		hdists[hap_index[haplotypes[i]]][hap_index[haplotypes[j]]];
+	}
+    }
+    hapl_diversity = (n / (n-1)) * hapl_diversity;
+
+    //
+    // Calculate gene diversity. 
+    //
+    for (uint i = 0; i < haplotypes.size(); i++) {
+	gene_diversity += hap_freq[haplotypes[i]] * hap_freq[haplotypes[i]];
+    }
+    gene_diversity = (n / (n - 1)) * (1 - gene_diversity);
+
+    lstat->alleles = n;
+    lstat->stat[0] = gene_diversity;
+    lstat->stat[1] = hapl_diversity;
+    lstat->hap_cnt = haplotypes.size();
+
+    // cerr << "  Population " << pop_id << " has haplotype diversity (pi) of " << s[pop_index]->pi << "\n";
+
+    for (k = 0; k < hap_index.size(); k++)
+	delete hdists[k];
+    delete hdists;
+
+    return lstat;
+}
+
+HapStat *
+haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_indexes, 
+		Datum **d, LocSum **s, vector<int> &pop_ids)
+{
+    map<string, int>          loc_hap_index;
+    vector<string>            loc_haplotypes;
+    map<int, vector<string> > pop_haplotypes;
+    map<int, vector<int> >    grp_members;
+    vector<int>               grps;
+
+    map<string, int>::iterator hit, hit_2;
+    map<int, pair<int, int> >::iterator pit;
+    int start, end, pop_id, pop_id_1;
+
+    HapStat  *h;
+    int pop_cnt = pop_ids.size();
+
+    //
+    // Tabulate the occurences of haplotypes at this locus.
+    //
+    for (int p = 0; p < pop_cnt; p++) {
+	start  = pop_indexes[pop_ids[p]].first;
+	end    = pop_indexes[pop_ids[p]].second;
+	pop_id = pop_ids[p];
+
+	for (int i = start; i <= end; i++) {
+	    if (d[i] == NULL) continue;
+
+	    if (d[i]->obshap.size() > 2) { 
+		continue;
+
+	    } else if (d[i]->obshap.size() == 1) {
+		loc_hap_index[d[i]->obshap[0]]++;
+		loc_haplotypes.push_back(d[i]->obshap[0]);
+		loc_haplotypes.push_back(d[i]->obshap[0]);
+		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+
+	    } else {
+		for (uint j = 0; j < d[i]->obshap.size(); j++) {
+		    loc_hap_index[d[i]->obshap[j]]++;
+		    loc_haplotypes.push_back(d[i]->obshap[j]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		}
+	    }
+	}
+    }
+
+    //
+    // If we filtered a population out at this locus make sure that we still have at least one
+    // representative present in each group.
+    //
+    set<int> uniq_grps;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	pop_id = pit->first;
+
+	if (pop_haplotypes.count(pop_id) > 0) {
+	    uniq_grps.insert(pop_grp_key[pop_id]);
+	    grp_members[pop_grp_key[pop_id]].push_back(pop_id);
+	}
+    }
+    set<int>::iterator uit;
+    for (uit = uniq_grps.begin(); uit != uniq_grps.end(); uit++)
+	grps.push_back(*uit);
+
+    if (grps.size() == 0)
+	return NULL;
+
+    // cerr << "Groups: ";
+    // for (uint i = 0; i < grps.size(); i++)
+    //     cerr << grps[i] << ", ";
+    // cerr << "\n";
+    // for (git = grp_members.begin(); git != grp_members.end(); git++) {
+    //     cerr << "Group " << git->first << ": ";
+    //     for (uint i = 0; i < git->second.size(); i++)
+    // 	cerr << git->second[i] << ", ";
+    //     cerr << "\n";
+    // }
+
+    //
+    // Determine an ordering for the haplotypes.
+    //
+    uint m = 0;
+    for (hit = loc_hap_index.begin(); hit != loc_hap_index.end(); hit++) {
+	loc_hap_index[hit->first] = m;
+	m++;
+    }
+
+    //
+    // Initialize a two-dimensional array to hold distances between haplotyes.
+    //
+    double **hdists     = new double *[loc_hap_index.size()];
+    double **hdists_max = new double *[loc_hap_index.size()];
+    for (uint k = 0; k < loc_hap_index.size(); k++) {
+	hdists[k] = new double[loc_hap_index.size()];
+	memset(hdists[k], 0, loc_hap_index.size());
+	hdists_max[k] = new double[loc_hap_index.size()];
+	memset(hdists_max[k], 0, loc_hap_index.size());
+    }
+
+    //
+    // Calculate the distances between haplotypes.
+    //
+    nuc_substitution_dist(loc_hap_index, hdists);
+
+    //
+    // Calculate the sum of squared distances in each subset: total, within populations, across populations 
+    // and withing groups, and across groups.
+    //
+    double ssd_total = amova_ssd_total(loc_haplotypes, loc_hap_index, hdists);
+    double ssd_wp    = amova_ssd_wp(grps, grp_members, loc_hap_index, pop_haplotypes, hdists);
+    double ssd_ap_wg = amova_ssd_ap_wg(grps, grp_members, loc_hap_index, pop_haplotypes, hdists, hdists);
+    double ssd_ag    = grps.size() > 1 ? amova_ssd_ag(grps, grp_members, loc_hap_index, pop_haplotypes, hdists, ssd_total) : 0.0;
+
+    //
+    // Calculate n
+    //
+    double n        = 0.0;
+    double n_1      = 0.0;
+    double n_2      = 0.0;
+    double s_g      = 0.0;
+    double tot_cnt  = 0.0;
+    double grp_cnt  = 0.0;
+    double num_grps = grps.size();
+    double a        = 0.0;
+    double b        = 0.0;
+
+    for (uint g = 0; g < num_grps; g++) {
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+	    tot_cnt += (double) pop_haplotypes[pop_id_1].size();
+	}
+    }
+    for (uint g = 0; g < num_grps; g++) {
+	grp_cnt = 0.0;
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+	    grp_cnt += (double) pop_haplotypes[pop_id_1].size();
+	}
+
+	a = 0.0;
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+	    a += (double) (pop_haplotypes[pop_id_1].size() * pop_haplotypes[pop_id_1].size()) / grp_cnt;
+	}
+	s_g += a;
+    }
+    n = (tot_cnt - s_g) / (double) (pop_cnt - num_grps);
+
+    // cerr << "  n: "<< n << "\n";
+
+    if (num_grps > 1) {
+	//
+	// Calculate n'
+	//
+	a = 0.0;
+	for (uint g = 0; g < num_grps; g++) {
+	    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+		pop_id_1 = grp_members[grps[g]][r];
+		a += ((double) (pop_haplotypes[pop_id_1].size() * pop_haplotypes[pop_id_1].size()) / tot_cnt);
+	    }
+	}
+	n_1 = (s_g - a) / (double) (num_grps - 1.0);
+
+	// cerr << "  n': "<< n_1 << "\n";
+
+	//
+	// Calculate n''
+	//
+	for (uint g = 0; g < num_grps; g++) {
+	    a = 0.0;
+	    for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+		pop_id_1 = grp_members[grps[g]][r];
+		a += pop_haplotypes[pop_id_1].size();
+	    }
+	    b += ((a * a) / tot_cnt);
+	}
+	n_2 = (tot_cnt - b) / (double) (num_grps - 1);
+
+	// cerr << "  n'': "<< n_2 << "\n";
+    }
+
+    //
+    // Calculate the mean square deviations, equal to SSD divided by degrees of freedom.
+    //
+    double msd_ag    = num_grps > 1 ? ssd_ag / (double) (num_grps - 1) : 0.0;
+    double msd_ap_wg = ssd_ap_wg / ((double) (pop_cnt - num_grps));
+    double msd_wp    = ssd_wp    / ((double) (loc_haplotypes.size() - pop_cnt));
+    double msd_total = ssd_total / ((double) (loc_haplotypes.size() - 1));
+
+    double sigma_c     = msd_wp;
+    double sigma_b     = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
+    double sigma_a     = 0.0;
+
+    if (grps.size() > 1)
+	sigma_a = (msd_ag - sigma_c - (n_1 * sigma_b)) / n_2;
+
+    // Arlequin seems to sum the variance components instead of independently calculating sigma_total: MSD(total) = SSD(total)/degrees.of.freedom
+    double sigma_total = sigma_a + sigma_b + sigma_c; // msd_total; 
+
+    double phi_st = 0.0;
+    double phi_ct = 0.0;
+    double phi_sc = 0.0;
+
+    if (grps.size() > 1) {
+	phi_st = sigma_total > 0.0 ? (sigma_a + sigma_b) / sigma_total : 0.0;
+	phi_ct = sigma_total > 0.0 ?  sigma_a / sigma_total : 0.0;
+	phi_sc = (sigma_a + sigma_b) > 0.0 ?  sigma_b / (sigma_b + sigma_c) : 0.0;
+    } else {
+	phi_st = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
+    }
+
+    // cerr << "  MSD(AG): " << msd_ag  << "; MSD(AP/WG): " << msd_ap_wg << "; MSD(WP): " << msd_wp  << "; MSD(TOTAL): "  << msd_total   << "\n"
+    //      << "  Sigma_a: " << sigma_a << "; Sigma_b: "    << sigma_b   << "; Sigma_c: " << sigma_c << "; Sigma_Total: " << sigma_total << "\n"
+    //      << "  Phi_st: "  << phi_st  << "; Phi_ct: "     << phi_ct    << "; Phi_sc: "  << phi_sc  << "\n";
+
+
+    //
+    // Calculate Fst' = Fst / Fst_max
+    //
+    // First calculate Fst.
+    //
+    // To calculate Fst instead of Phi_st, we need to reset our distance matrix to return 1 if haplotypes are different, 0 otherwise.
+    //
+    nuc_substitution_identity(loc_hap_index, hdists);
+    ssd_wp    = amova_ssd_wp(grps, grp_members, loc_hap_index, pop_haplotypes, hdists);
+    ssd_ap_wg = amova_ssd_ap_wg(grps, grp_members, loc_hap_index, pop_haplotypes, hdists, hdists);
+    //
+    // Calculate the mean square deviations, equal to SSD divided by degrees of freedom.
+    //
+    msd_ap_wg   = ssd_ap_wg / ((double) (pop_cnt - num_grps));
+    msd_wp      = ssd_wp    / ((double) (loc_haplotypes.size() - pop_cnt));
+    sigma_c     = msd_wp;
+    sigma_b     = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
+    sigma_total = sigma_b + sigma_c;
+
+    double fst = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
+
+    //
+    // Now calculate Fst_max.
+    //
+    // Reset our distance matrix to give maximum possible distance between haplotypes
+    // and recalculate sum of squared deviations across groups.
+    //
+    nuc_substitution_identity_max(loc_hap_index, hdists_max);
+    ssd_ap_wg = amova_ssd_ap_wg(grps, grp_members, loc_hap_index, pop_haplotypes, hdists, hdists_max);
+
+    //
+    // Recalculate the mean square deviations, given maximum divergence between populations.
+    //
+    msd_ap_wg = ssd_ap_wg / ((double) (pop_cnt - num_grps));
+    sigma_b   = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
+
+    double fst_max = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
+    double fst_1   = fst_max > 0.0     ? fst / fst_max         : 0.0;
+
+    //
+    // Cache the results so we can print them in order below, once the parallel code has executed.
+    //
+    h = new HapStat;
+    h->alleles = tot_cnt;
+
+    if (log_fst_comp) {
+	h->comp = new double[15];
+	h->comp[0]  = ssd_wp;
+	h->comp[1]  = ssd_ap_wg;
+	h->comp[2]  = ssd_ag;
+	h->comp[3]  = ssd_total;
+	h->comp[4]  = msd_wp;
+	h->comp[5]  = msd_ap_wg;
+	h->comp[6]  = msd_ag;
+	h->comp[7]  = msd_total;
+	h->comp[8]  = n;
+	h->comp[9]  = n_1;
+	h->comp[10] = n_2;
+	h->comp[11] = sigma_a;
+	h->comp[12] = sigma_b;
+	h->comp[13] = sigma_c;
+	h->comp[14] = sigma_total;
+    }
+
+    h->stat[0] = phi_st;
+    h->stat[1] = phi_ct;
+    h->stat[2] = phi_sc;
+    h->stat[3] = fst_1;
+
+    for (uint k = 0; k < loc_hap_index.size(); k++) {
+	delete [] hdists[k];
+	delete [] hdists_max[k];
+    }
+    delete [] hdists;
+    delete [] hdists_max;
+
+    return h;
+}
+
+double
+amova_ssd_total(vector<string> &loc_haplotypes, map<string, int> &loc_hap_index, double **hdists)
+{
+    //
+    // Calculate sum of squared deviations for the total sample, SSD(Total)
+    //
+    double ssd_total = 0.0;
+
+    for (uint j = 0; j < loc_haplotypes.size(); j++) {
+	for (uint k = 0; k < loc_haplotypes.size(); k++) {
+	    ssd_total += hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]];
+	    // cerr << j << "\t" 
+	    // 	 << k << "\t" 
+	    // 	 << loc_haplotypes[j] << "\t" 
+	    // 	 << loc_haplotypes[k] << "\t" 
+	    // 	 << hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]] << "\n";
+	}
+    }
+    ssd_total = (1.0 / (double) (2*loc_haplotypes.size())) * ssd_total;
+    // cerr << "  ssd_total: "<< ssd_total << "\n";
+
+    return ssd_total;
+}
+
+double
+amova_ssd_wp(vector<int> &grps, map<int, vector<int> > &grp_members, 
+	     map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes, 
+	     double **hdists)
+{
+    //
+    // Calculate the sum of squared deviations within populations, SSD(WP)
+    //
+    double ssd_wp = 0.0;
+    double ssd    = 0.0;
+    int    pop_id;
+
+    for (uint g = 0; g < grps.size(); g++) {
+	for (uint i = 0; i < grp_members[grps[g]].size(); i++) {
+	    pop_id = grp_members[grps[g]][i];
+	    ssd = 0.0;
+
+	    for (uint j = 0; j < pop_haplotypes[pop_id].size(); j++) {
+		for (uint k = 0; k < pop_haplotypes[pop_id].size(); k++) {
+		    ssd += hdists[loc_hap_index[pop_haplotypes[pop_id][j]]][loc_hap_index[pop_haplotypes[pop_id][k]]];
+		    // cerr << pop_id << "\t"
+		    // 	 << j << "\t"
+		    // 	 << k << "\t" 
+		    // 	 << loc_haplotypes[j] << "\t" 
+		    // 	 << loc_haplotypes[k] << "\t" 
+		    // 	 << hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]] << "\n";
+		}
+	    }
+	    ssd_wp += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
+	}
+    }
+    // cerr << "  ssd_wp: "<< ssd_wp << "\n";
+
+    return ssd_wp;
+}
+
+double
+amova_ssd_ap_wg(vector<int> &grps, map<int, vector<int> > &grp_members, 
+		map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes, 
+		double **hdists_1, double **hdists_2)
+{
+    //
+    // Calculate the sum of squared deviations across populations and within groups, SSD(AP/WG)
+    //
+    double ssd_ap_wg = 0.0;
+    double ssd       = 0.0;
+    double ssd_1     = 0.0;
+    double ssd_2     = 0.0;
+    double den       = 0.0;
+    int    pop_id, pop_id_1, pop_id_2;
+
+    for (uint g = 0; g < grps.size(); g++) {
+
+	ssd_1 = 0.0;
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+
+	    for (uint j = 0; j < pop_haplotypes[pop_id_1].size(); j++) {
+
+		for (uint s = 0; s < grp_members[grps[g]].size(); s++) {
+		    pop_id_2 = grp_members[grps[g]][s];
+
+		    for (uint k = 0; k < pop_haplotypes[pop_id_2].size(); k++) {
+			if (pop_id_1 == pop_id_2)
+			    ssd_1 += hdists_1[loc_hap_index[pop_haplotypes[pop_id_1][j]]][loc_hap_index[pop_haplotypes[pop_id_2][k]]];
+			else
+			    ssd_1 += hdists_2[loc_hap_index[pop_haplotypes[pop_id_1][j]]][loc_hap_index[pop_haplotypes[pop_id_2][k]]];
+		    }
+		}
+	    }
+	}
+
+	den = 0.0;
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+	    den += 2 * pop_haplotypes[pop_id_1].size();
+	}
+
+	ssd_1 = ssd_1 / den;
+
+	ssd_2 = 0.0;
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id = grp_members[grps[g]][r];
+	    ssd = 0.0;
+
+	    for (uint j = 0; j < pop_haplotypes[pop_id].size(); j++) {
+		for (uint k = 0; k < pop_haplotypes[pop_id].size(); k++) {
+		    ssd += hdists_1[loc_hap_index[pop_haplotypes[pop_id][j]]][loc_hap_index[pop_haplotypes[pop_id][k]]];
+		}
+	    }
+	    ssd_2 += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
+	}
+
+	ssd_ap_wg += ssd_1 - ssd_2;
+    }
+    // cerr << "  ssd_ap_wg: "<< ssd_ap_wg << "\n";
+
+    return ssd_ap_wg;
+}
+
+double
+amova_ssd_ag(vector<int> &grps, map<int, vector<int> > &grp_members, 
+	     map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes, 
+	     double **hdists, double ssd_total)
+{
+    //
+    // Calculate the sum of squared deviations across groups, SSD(AG)
+    //
+    int    pop_id_1, pop_id_2;
+    double ssd_ag = 0.0;
+    double ssd    = 0.0;
+    double ssd_1  = 0.0;
+    double den    = 0.0;
+
+    for (uint g = 0; g < grps.size(); g++) {
+	ssd_1 = 0.0;
+
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+
+	    for (uint j = 0; j < pop_haplotypes[pop_id_1].size(); j++) {
+
+		for (uint s = 0; s < grp_members[grps[g]].size(); s++) {
+		    pop_id_2 = grp_members[grps[g]][s];
+
+		    for (uint k = 0; k < pop_haplotypes[pop_id_2].size(); k++) {
+			ssd_1 += hdists[loc_hap_index[pop_haplotypes[pop_id_1][j]]][loc_hap_index[pop_haplotypes[pop_id_2][k]]];
+		    }
+		}
+	    }
+	}
+
+	den = 0.0;
+	for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
+	    pop_id_1 = grp_members[grps[g]][r];
+	    den += 2 * pop_haplotypes[pop_id_1].size();
+	}
+
+	ssd += ssd_1 / den;
+    }
+
+    ssd_ag = ssd_total - ssd;
+
+    // cerr << "  ssd_ag: "<< ssd_ag << "\n";
+
+    return ssd_ag;
+}
+
+double
+haplotype_d_est(map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum **s, vector<int> &pop_ids)
+{
+    //
+    // Calculate D_est, fixation index, as described by 
+    //   Bird, et al., 2011, Detecting and measuring genetic differentiation
+    //     +-Equation 11
+    // and
+    //   Jost, 2008, GST and its relatives do not measure differentiation, Molecular Ecology
+    //     +- Equation 13, D_est_chao
+    //
+    map<string, double>            loc_haplotypes;
+    map<int, map<string, double> > pop_haplotypes;
+    map<int, double>               pop_totals;
+
+    map<string, double>::iterator it;
+    int start, end, pop_id;
+
+    uint pop_cnt = pop_ids.size();
+
+    //
+    // Tabulate the occurences of haplotypes at this locus.
+    //
+    for (uint p = 0; p < pop_cnt; p++) {
+    	start  = pop_indexes[pop_ids[p]].first;
+    	end    = pop_indexes[pop_ids[p]].second;
+    	pop_id = pop_ids[p];
+
+    	for (int i = start; i <= end; i++) {
+    	    if (d[i] == NULL) continue;
+
+    	    if (d[i]->obshap.size() > 2) { 
+    		continue;
+
+    	    } else if (d[i]->obshap.size() == 1) {
+    		loc_haplotypes[d[i]->obshap[0]]         += 2;
+    		pop_haplotypes[pop_id][d[i]->obshap[0]] += 2;
+
+    	    } else {
+    		for (uint j = 0; j < d[i]->obshap.size(); j++) {
+		    loc_haplotypes[d[i]->obshap[j]]++;
+		    pop_haplotypes[pop_id][d[i]->obshap[j]]++;
+    		}
+    	    }
+    	}
+
+	for (it = pop_haplotypes[pop_id].begin(); it != pop_haplotypes[pop_id].end(); it++)
+	    pop_totals[pop_id] += it->second;
+    }
+
+    double x = 0.0;
+
+    for (it = loc_haplotypes.begin(); it != loc_haplotypes.end(); it++) {
+
+	double freq_sum_sq = 0.0;
+	double freq_sq_sum = 0.0;
+	for (uint p = 0; p < pop_cnt; p++) {
+	    pop_id = pop_ids[p];
+	    freq_sum_sq += (pop_haplotypes[pop_id][it->first] / pop_totals[pop_id]);
+	    freq_sq_sum += pow((pop_haplotypes[pop_id][it->first] / pop_totals[pop_id]), 2);
+	}
+	freq_sum_sq = pow(freq_sum_sq, 2);
+
+	x += (freq_sum_sq - freq_sq_sum) / (pop_cnt - 1);
+    }
+
+    double y = 0.0;
+
+    for (it = loc_haplotypes.begin(); it != loc_haplotypes.end(); it++) {
+	for (uint p = 0; p < pop_cnt; p++) {
+	    pop_id = pop_ids[p];
+
+	    y += (pop_haplotypes[pop_id][it->first] * (pop_haplotypes[pop_id][it->first] - 1)) /
+		(pop_totals[pop_id] * (pop_totals[pop_id] - 1));
+	}
+    }
+
+    double d_est = 1.0 - (x / y);
+
+    return d_est;
+}
+
+int 
+calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
+			map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
@@ -1019,7 +2377,6 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     LocTally *t;
     int       len;
     int       pop_cnt = psum->pop_cnt();
-    char      fisstr[32], wfisstr[32], wpistr[32], sitesstr[32];
 
     //
     // Calculate the means for each summary statistic.
@@ -1139,8 +2496,8 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			obs_hom_mean[j]  += s[j]->nucs[i].obs_hom;
 			exp_het_mean[j]  += s[j]->nucs[i].exp_het;
 			exp_hom_mean[j]  += s[j]->nucs[i].exp_hom;
-			pi_mean[j]       += s[j]->nucs[i].pi;
-			fis_mean[j]      += s[j]->nucs[i].Fis;
+			pi_mean[j]       += s[j]->nucs[i].stat[0];
+			fis_mean[j]      += s[j]->nucs[i].stat[1];
 
 			n_all[j]++;
 			num_indv_mean_all[j] += s[j]->nucs[i].num_indv;
@@ -1149,8 +2506,8 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			obs_hom_mean_all[j]  += s[j]->nucs[i].obs_hom;
 			exp_het_mean_all[j]  += s[j]->nucs[i].exp_het;
 			exp_hom_mean_all[j]  += s[j]->nucs[i].exp_hom;
-			pi_mean_all[j]       += s[j]->nucs[i].pi;
-			fis_mean_all[j]      += s[j]->nucs[i].Fis;
+			pi_mean_all[j]       += s[j]->nucs[i].stat[0];
+			fis_mean_all[j]      += s[j]->nucs[i].stat[1];
 		    }
 
 		} else if (t->nucs[i].allele_cnt == 1) {
@@ -1164,8 +2521,8 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			obs_hom_mean_all[j]  += s[j]->nucs[i].obs_hom;
 			exp_het_mean_all[j]  += s[j]->nucs[i].exp_het;
 			exp_hom_mean_all[j]  += s[j]->nucs[i].exp_hom;
-			pi_mean_all[j]       += s[j]->nucs[i].pi;
-			fis_mean_all[j]      += s[j]->nucs[i].Fis;
+			pi_mean_all[j]       += s[j]->nucs[i].stat[0];
+			fis_mean_all[j]      += s[j]->nucs[i].stat[1];
 		    }
 		}
 	    }
@@ -1198,11 +2555,12 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     string file = in_path + pop_name.str();
 
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening sumstats file '" << file << "'\n";
 	exit(1);
     }
+    fh.precision(fieldw);
+    fh.setf(std::ios::fixed);
 
     int start, end;
     //
@@ -1264,16 +2622,12 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
 			if (s[j]->nucs[i].num_indv == 0) continue;
 
-			sprintf(fisstr,  "%0.10f", s[j]->nucs[i].Fis);
-			sprintf(wfisstr, "%0.10f", s[j]->nucs[i].wFis);
-			sprintf(wpistr,  "%0.10f", s[j]->nucs[i].wPi);
-
 			fh << batch_id << "\t"
 			   << loc->id << "\t"
 			   << loc->loc.chr << "\t"
 			   << loc->sort_bp(i) << "\t"
 			   << i << "\t"
-			   << psum->rev_pop_index(j) << "\t"
+			   << pop_key[psum->rev_pop_index(j)] << "\t"
 			   << s[j]->nucs[i].p_nuc << "\t";
 
 			if (s[j]->nucs[i].q_nuc != 0) 
@@ -1285,12 +2639,12 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			   << s[j]->nucs[i].obs_hom   << "\t"
 			   << s[j]->nucs[i].exp_het   << "\t"
 			   << s[j]->nucs[i].exp_hom   << "\t"
-			   << s[j]->nucs[i].pi        << "\t"
-			   << wpistr                  << "\t"
-			   << s[j]->nucs[i].wPi_pval  << "\t"
-			   << fisstr                  << "\t"
-			   << wfisstr                 << "\t"
-			   << s[j]->nucs[i].wFis_pval << "\t";
+			   << s[j]->nucs[i].stat[0]   << "\t" // Pi
+			   << s[j]->nucs[i].smoothed[0] << "\t"  // Smoothed Pi
+			   << s[j]->nucs[i].bs[0]       << "\t"  // Pi bootstrapped p-value
+			   << s[j]->nucs[i].stat[1]     << "\t"  // Fis
+			   << s[j]->nucs[i].smoothed[1] << "\t"  // Smoothed Fis
+			   << s[j]->nucs[i].bs[1]       << "\t"; // Fis bootstrapped p-value.
 			(t->nucs[i].priv_allele == j) ? fh << "1\n" : fh << "0\n";
 
 			//
@@ -1302,8 +2656,8 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			obs_hom_var[j]  += pow((s[j]->nucs[i].obs_hom  - obs_hom_mean[j]),  2);
 			exp_het_var[j]  += pow((s[j]->nucs[i].exp_het  - exp_het_mean[j]),  2);
 			exp_hom_var[j]  += pow((s[j]->nucs[i].exp_hom  - exp_hom_mean[j]),  2);
-			pi_var[j]       += pow((s[j]->nucs[i].pi       - pi_mean[j]),       2);
-			fis_var[j]      += pow((s[j]->nucs[i].Fis      - fis_mean[j]),      2);
+			pi_var[j]       += pow((s[j]->nucs[i].stat[0]  - pi_mean[j]),       2);
+			fis_var[j]      += pow((s[j]->nucs[i].stat[1]  - fis_mean[j]),      2);
 
 			num_indv_var_all[j] += pow((s[j]->nucs[i].num_indv - num_indv_mean_all[j]), 2);
 			p_var_all[j]        += pow((s[j]->nucs[i].p        - p_mean_all[j]),        2);
@@ -1311,8 +2665,8 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			obs_hom_var_all[j]  += pow((s[j]->nucs[i].obs_hom  - obs_hom_mean_all[j]),  2);
 			exp_het_var_all[j]  += pow((s[j]->nucs[i].exp_het  - exp_het_mean_all[j]),  2);
 			exp_hom_var_all[j]  += pow((s[j]->nucs[i].exp_hom  - exp_hom_mean_all[j]),  2);
-			pi_var_all[j]       += pow((s[j]->nucs[i].pi       - pi_mean_all[j]),       2);
-			fis_var_all[j]      += pow((s[j]->nucs[i].Fis      - fis_mean_all[j]),      2);
+			pi_var_all[j]       += pow((s[j]->nucs[i].stat[0]  - pi_mean_all[j]),       2);
+			fis_var_all[j]      += pow((s[j]->nucs[i].stat[1]  - fis_mean_all[j]),      2);
 		    }
 		} else if (t->nucs[i].allele_cnt == 1) {
 		    for (int j = 0; j < pop_cnt; j++) {
@@ -1324,8 +2678,8 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
 			obs_hom_var_all[j]  += pow((s[j]->nucs[i].obs_hom  - obs_hom_mean_all[j]),  2);
 			exp_het_var_all[j]  += pow((s[j]->nucs[i].exp_het  - exp_het_mean_all[j]),  2);
 			exp_hom_var_all[j]  += pow((s[j]->nucs[i].exp_hom  - exp_hom_mean_all[j]),  2);
-			pi_var_all[j]       += pow((s[j]->nucs[i].pi       - pi_mean_all[j]),       2);
-			fis_var_all[j]      += pow((s[j]->nucs[i].Fis      - fis_mean_all[j]),      2);
+			pi_var_all[j]       += pow((s[j]->nucs[i].stat[0]  - pi_mean_all[j]),       2);
+			fis_var_all[j]      += pow((s[j]->nucs[i].stat[1]  - fis_mean_all[j]),      2);
 		    }
 		}
 	    }
@@ -1409,7 +2763,7 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
     }
 
     for (int j = 0; j < pop_cnt; j++)
-	fh << psum->rev_pop_index(j) << "\t" 
+	fh << pop_key[psum->rev_pop_index(j)] << "\t" 
 	   << private_cnt[j]         << "\t"
 	   << num_indv_mean[j]       << "\t"
 	   << num_indv_var[j]        << "\t"
@@ -1469,11 +2823,9 @@ write_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> >
        << "StdErr\n";
 
     for (int j = 0; j < pop_cnt; j++) {
-	sprintf(sitesstr, "%.0f", n_all[j]);
-
-	fh << psum->rev_pop_index(j)     << "\t" 
+	fh << pop_key[psum->rev_pop_index(j)] << "\t" 
 	   << private_cnt[j]             << "\t"
-	   << sitesstr                   << "\t"
+	   << n_all[j]                   << "\t"
 	   << n[j]                       << "\t"
 	   << var_sites[j]               << "\t"
 	   << var_sites[j] / n_all[j] * 100 << "\t"
@@ -1564,7 +2916,14 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
     if (pops.size() == 1) return 0;
 
-    double *weights = calculate_weights();
+    //
+    // Instantiate the kernel smoothing object if requested.
+    //
+    OPopPair<PopPair>  *ord = new OPopPair<PopPair>(psum, log_fh);
+    KSmooth<PopPair>   *ks;
+    Bootstrap<PopPair> *bs;
+    if (kernel_smoothed && loci_ordered)
+	ks  = new KSmooth<PopPair>(2);
 
     for (uint i = 0; i < pops.size(); i++) {
 
@@ -1575,59 +2934,19 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    double sum = 0.0;
 	    double cnt = 0.0;
 
-	    int incompatible_loci = 0;
-	    int multiple_loci     = 0;
-
 	    stringstream pop_name;
-	    pop_name << "batch_" << batch_id << ".fst_" << pop_1 << "-" << pop_2 << ".tsv";
+	    pop_name << "batch_" << batch_id << ".fst_" << pop_key[pop_1] << "-" << pop_key[pop_2] << ".tsv";
 
-	    string file = in_path + pop_name.str();
+	    string   file = in_path + pop_name.str();
 	    ofstream fh(file.c_str(), ofstream::out);
-
 	    if (fh.fail()) {
 		cerr << "Error opening Fst output file '" << file << "'\n";
 		exit(1);
 	    }
+	    fh.precision(fieldw);
+	    fh.setf(std::ios::fixed);
 
-	    //
-	    // If requested, log Fst component calculations to a file.
-	    //
-	    ofstream *comp_fh = NULL;
-	    if (log_fst_comp) {
-		pop_name.str("");
-		pop_name << "batch_" << batch_id << ".fst-comp_" << pop_1 << "-" << pop_2 << ".tsv";
-
-		file = in_path + pop_name.str();
-		comp_fh = new ofstream(file.c_str(), ofstream::out);
-
-		if (comp_fh->fail()) {
-		    cerr << "Error opening Fst component output file '" << file << "'\n";
-		    exit(1);
-		}
-
-		*comp_fh << "# " << "n_1" << "\t"
-			 << "n_2" << "\t"
-			 << "tot_alleles" << "\t"
-			 << "p_1" << "\t"
-			 << "q_1" << "\t"
-			 << "p_2" << "\t"
-			 << "q_2" << "\t"
-			 << "pi_1" << "\t"
-			 << "pi_2" << "\t"
-			 << "pi_all" << "\t"
-			 << "bcoeff_1" << "\t"
-			 << "bcoeff_2" << "\t"
-			 << "binomial_fst" << "\t\t"
-			 << "p_1_freq" << "\t"
-			 << "q_1_freq" << "\t"
-			 << "p_2_freq" << "\t"
-			 << "q_2_freq" << "\t"
-			 << "p_avg_cor" << "\t"
-			 << "n_avg_cor" << "\t"
-			 << "amova_fst" << "\n";
-	    }
-
-	    cerr << "Calculating Fst for populations " << pop_1 << " and " << pop_2 << " and writing it to file, '" << file << "'\n";
+	    cerr << "Calculating Fst for populations '" << pop_key[pop_1] << "' and '" << pop_key[pop_2] << "' and writing it to file, '" << file << "'\n";
 
 	    fh << "# Batch ID" << "\t"
 	       << "Locus ID"   << "\t"
@@ -1649,84 +2968,54 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	       << "Corrected AMOVA Fst" << "\t"
 	       << "Smoothed AMOVA Fst" << "\t"
 	       << "Smoothed AMOVA Fst P-value" << "\t"
-	       << "Window SNP Count" << "\n";
+	       << "Window SNP Count";
+
+	    //
+	    // If requested, log Fst component calculations to a file.
+	    //
+	    if (log_fst_comp) {
+		fh << "\t"
+		   << "n_1" << "\t"
+		   << "n_2" << "\t"
+		   << "tot_alleles" << "\t"
+		   << "p_1" << "\t"
+		   << "q_1" << "\t"
+		   << "p_2" << "\t"
+		   << "q_2" << "\t"
+		   << "pi_1" << "\t"
+		   << "pi_2" << "\t"
+		   << "pi_all" << "\t"
+		   << "bcoeff_1" << "\t"
+		   << "bcoeff_2" << "\t"
+		   << "binomial_fst" << "\t"
+		   << "p_1_freq" << "\t"
+		   << "q_1_freq" << "\t"
+		   << "p_2_freq" << "\t"
+		   << "q_2_freq" << "\t"
+		   << "p_avg_cor" << "\t"
+		   << "n_avg_cor" << "\t"
+		   << "amova_fst" << "\n";
+	    } else {
+		fh << "\n";
+	    }
+
+	    if (bootstrap_fst)
+		bs = new Bootstrap<PopPair>(2);
 
 	    map<string, vector<CSLocus *> >::iterator it;
-	    CSLocus *loc;
-	    PopPair *pair;
-	    int      len;
-	    char     fst_str[32], wfst_str[32], cfst_str[32], afst_str[32], cafst_str[32], wafst_str[32];
-
 	    map<string, vector<PopPair *> > genome_pairs;
-	    vector<double> fst_samples;
-	    vector<int>    allele_depth_samples;
-	    int            snp_dist[max_snp_dist] = {0};
+	    // int snp_dist[max_snp_dist] = {0};
 
 	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 		string chr = it->first;
-		map<uint, uint> pairs_key;
 
-		init_chr_pairs(genome_pairs, chr, pairs_key, it->second);
-
+		map<uint, uint>    pairs_key;
 		vector<PopPair *> &pairs = genome_pairs[chr];
 
-		for (uint pos = 0; pos < it->second.size(); pos++) {
-		    loc = it->second[pos];
-		    len = strlen(loc->con);
-
-		    for (int k = 0; k < len; k++) {
-
-			pair = psum->Fst(loc->id, pop_1, pop_2, k, comp_fh);
-
-			//
-			// Locus is incompatible, log this position.
-			//
-			if (pair == NULL) {
-			    incompatible_loci++;
-			    log_fh << "between_population\t"
-				   << "incompatible_locus\t"
-				   << loc->id << "\t"
-				   << loc->loc.chr << "\t"
-				   << loc->sort_bp(k) << "\t"
-				   << k << "\t" 
-				   << pop_1 << "\t" 
-				   << pop_2 << "\n";
-			    delete pair;
-			    continue;
-			}
-
-			pair->loc_id = loc->id;
-			pair->bp     = loc->sort_bp(k);
-			pair->col    = k;
-
-			//
-			// Locus is fixed in both populations, or was only found in one population.
-			//
-			if (pair->pi == 0) {
-			    delete pair;
-			    continue;
-			}
-
-			//
-			// Check if this basepair position is already covered by a RAD site.
-			//
-			if (pairs[pairs_key[pair->bp]] != NULL) {
-			    multiple_loci++;
-			    log_fh << "between_population\t"
-				   << "multiple_locus\t"
-				   << loc->id << "\t"
-				   << loc->loc.chr << "\t"
-				   << pair->bp << "\t"
-				   << k << "\t" 
-				   << pop_1 << "\t" 
-				   << pop_2 << "\n";
-			    delete pair;
-			    continue;
-			}
-
-			pairs[pairs_key[pair->bp]] = pair;
-		    }
-		}
+		//
+		// Order loci between the two populations and calculate Fst
+		//
+		ord->order(pairs, pairs_key, it->second, pop_1, pop_2);
 
 		//
 		// Apply user-selected correction to the Fst values.
@@ -1736,8 +3025,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		case p_value:
 		    for (uint i = 0; i < pairs.size(); i++) {
 			if (pairs[i] != NULL) {
-			    pairs[i]->cfst       = pairs[i]->fet_p < p_value_cutoff ? pairs[i]->fst : 0;
-			    pairs[i]->camova_fst = pairs[i]->fet_p < p_value_cutoff ? pairs[i]->amova_fst : 0;
+			    pairs[i]->stat[0] = pairs[i]->fet_p < p_value_cutoff ? pairs[i]->fst : 0;
+			    pairs[i]->stat[1] = pairs[i]->fet_p < p_value_cutoff ? pairs[i]->amova_fst : 0;
 			}
 		    }
 		    break;
@@ -1748,16 +3037,16 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    correction = p_value_cutoff / catalog.size();
 		    for (uint i = 0; i < pairs.size(); i++) {
 			if (pairs[i] != NULL) {
-			    pairs[i]->cfst       = pairs[i]->fet_p < correction ? pairs[i]->fst : 0;
-			    pairs[i]->camova_fst = pairs[i]->fet_p < correction ? pairs[i]->amova_fst : 0;
+			    pairs[i]->stat[0] = pairs[i]->fet_p < correction ? pairs[i]->fst : 0;
+			    pairs[i]->stat[1] = pairs[i]->fet_p < correction ? pairs[i]->amova_fst : 0;
 			}
 		    }
 		    break;
 		case no_correction:
 		    for (uint i = 0; i < pairs.size(); i++) {
 			if (pairs[i] != NULL) {
-			    pairs[i]->cfst = pairs[i]->fst;
-			    pairs[i]->camova_fst = pairs[i]->amova_fst;
+			    pairs[i]->stat[0] = pairs[i]->fst;
+			    pairs[i]->stat[1] = pairs[i]->amova_fst;
 			}
 		    }
 		    break;
@@ -1766,20 +3055,15 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		//
 		// If bootstrapping is enabled, record all Fst values.
 		//
-		if (bootstrap)
-		    for (uint i = 0; i < pairs.size(); i++) {
-			if (pairs[i] != NULL) {
-			    fst_samples.push_back(pairs[i]->camova_fst);
-			    allele_depth_samples.push_back(pairs[i]->alleles);
-			}
-		    }
+		if (bootstrap_fst)
+		    bs->add_data(pairs);
 
 		//
 		// Calculate kernel-smoothed Fst values.
 		//
 		if (kernel_smoothed && loci_ordered) {
 		    cerr << "  Generating kernel-smoothed Fst for " << it->first << ".\n";
-		    kernel_smoothed_fst(pairs, weights, snp_dist);
+		    ks->smooth(pairs);
 		}
 	    }
 
@@ -1787,8 +3071,8 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 	    // If bootstrap resampling method is approximate, generate our single, empirical distribution.
 	    //
 	    map<int, vector<double> > approx_fst_dist;
-	    if (bootstrap && bootstrap_type == bs_approx) 
-		bootstrap_fst_approximate_dist(fst_samples, allele_depth_samples, weights, snp_dist, approx_fst_dist);
+	    // if (bootstrap_fst && bootstrap_type == bs_approx) 
+	    // 	bootstrap_fst_approximate_dist(fst_samples, allele_depth_samples, weights, snp_dist, approx_fst_dist);
 
 	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 		string chr = it->first;
@@ -1797,9 +3081,9 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		//
 		// Bootstrap resample this chromosome.
 		//
-		if (bootstrap && bootstrap_type == bs_exact) {
+		if (bootstrap_fst && bootstrap_type == bs_exact) {
 		    cerr << "  Bootstrap resampling kernel-smoothed Fst for " << it->first << ".\n";
-		    bootstrap_fst(fst_samples, pairs, weights);
+		    bs->execute(pairs);
 		}
 
 		for (uint i = 0; i < pairs.size(); i++) {
@@ -1807,60 +3091,75 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 		    if (pairs[i] == NULL)
 			continue;
 
-		    // if (pairs[i]->bp < 2110730 || pairs[i]->bp > 2110750) {
-		    //     continue;
-		    // }
-
 		    //
 		    // Calculate Fst P-value from approximate distribution.
 		    //
-		    if (bootstrap && bootstrap_type == bs_approx)
-			pairs[i]->wfst_pval = bootstrap_approximate_pval(pairs[i]->snp_cnt, pairs[i]->wfst, approx_fst_dist);
+		    // if (bootstrap_fst && bootstrap_type == bs_approx)
+		    //     pairs[i]->bs[0] = bootstrap_approximate_pval(pairs[i]->snp_cnt, pairs[i]->stat[0], approx_fst_dist);
 
 		    cnt++;
-		    sum += pairs[i]->camova_fst;
-
-		    sprintf(fst_str,   "%0.10f", pairs[i]->fst);
-		    sprintf(cfst_str,  "%0.10f", pairs[i]->cfst);
-		    sprintf(wfst_str,  "%0.10f", pairs[i]->wfst);
-		    sprintf(afst_str,  "%0.10f", pairs[i]->amova_fst);
-		    sprintf(cafst_str, "%0.10f", pairs[i]->camova_fst);
-		    sprintf(wafst_str, "%0.10f", pairs[i]->wamova_fst);
+		    sum += pairs[i]->stat[1]; // Corrected AMOVA Fst
 
 		    fh << batch_id          << "\t"
 		       << pairs[i]->loc_id  << "\t"
-		       << pop_1             << "\t"
-		       << pop_2             << "\t"
+		       << pop_key[pop_1]    << "\t"
+		       << pop_key[pop_2]    << "\t"
 		       << chr               << "\t"
 		       << pairs[i]->bp      << "\t"
 		       << pairs[i]->col     << "\t"
 		       << pairs[i]->pi      << "\t"
-		       << fst_str           << "\t"
-		       << pairs[i]->fet_p   << "\t"
+		       << pairs[i]->fst     << "\t"
+		       << std::setprecision(9) << pairs[i]->fet_p << "\t"
 		       << pairs[i]->fet_or  << "\t"
 		       << pairs[i]->ci_low  << "\t"
 		       << pairs[i]->ci_high << "\t"
 		       << pairs[i]->lod     << "\t"
-		       << cfst_str          << "\t"
-		       << wfst_str          << "\t"
-		       << afst_str            << "\t"
-		       << cafst_str           << "\t"
-		       << wafst_str           << "\t"
-		       << pairs[i]->wfst_pval << "\t"
-		       << pairs[i]->snp_cnt   << "\n";
+		       << pairs[i]->stat[0]     << "\t"
+		       << pairs[i]->smoothed[0] << "\t"
+		       << pairs[i]->amova_fst   << "\t"
+		       << pairs[i]->stat[1]     << "\t"
+		       << pairs[i]->smoothed[1] << "\t"
+		       << pairs[i]->bs[1] << "\t"
+		       << pairs[i]->snp_cnt;
+
+		    if (log_fst_comp) {
+			fh << "\t"
+			   << pairs[i]->comp[0]   << "\t"
+			   << pairs[i]->comp[1]   << "\t"
+			   << pairs[i]->comp[2]   << "\t"
+			   << pairs[i]->comp[3]   << "\t"
+			   << pairs[i]->comp[4]   << "\t"
+			   << pairs[i]->comp[5]   << "\t"
+			   << pairs[i]->comp[6]   << "\t"
+			   << pairs[i]->comp[7]   << "\t"
+			   << pairs[i]->comp[8]   << "\t"
+			   << pairs[i]->comp[9]   << "\t"
+			   << pairs[i]->comp[10]  << "\t"
+			   << pairs[i]->comp[11]  << "\t"
+			   << pairs[i]->fst       << "\t"
+			   << pairs[i]->comp[12]  << "\t"
+			   << pairs[i]->comp[13]  << "\t"
+			   << pairs[i]->comp[14]  << "\t"
+			   << pairs[i]->comp[15]  << "\t"
+			   << pairs[i]->comp[16]  << "\t"
+			   << pairs[i]->comp[17]  << "\t"
+			   << pairs[i]->amova_fst << "\n";
+		    } else {
+			fh << "\n";
+		    }
 
 		    delete pairs[i];
 		}
 	    }
-	    cerr << "Pop 1: " << pop_1 << "; Pop 2: " << pop_2 << "; mean Fst: " << (sum / cnt) << "\n";
+	    cerr << "Pop 1: " << pop_key[pop_1] << "; Pop 2: " << pop_key[pop_2] << "; mean Fst: " << (sum / cnt) << "\n";
 	    means.push_back(sum / cnt);
 
-	    cerr << "Pooled populations " << pop_1 << " and " << pop_2 << " contained: " << incompatible_loci << " incompatible loci; " 
-		 << multiple_loci << " nucleotides covered by more than one RAD locus.\n";
+	    cerr << "Pooled populations '" << pop_key[pop_1] << "' and '" << pop_key[pop_2] << "' contained: " << ord->incompatible_loci << " incompatible loci; " 
+		 << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 	    fh.close();
 
-	    if (log_fst_comp) 
-		comp_fh->close();
+	    if (bootstrap_fst)
+		delete bs;
 	}
     }
 
@@ -1882,12 +3181,12 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     // Write out X-axis header.
     //
     for (uint i = 0; i < pops.size(); i++)
-	fh << "\t" << pops[i];
+	fh << "\t" << pop_key[pops[i]];
     fh << "\n";
 
     uint n = 0;
     for (uint i = 0; i < pops.size() - 1; i++) {
-	fh << pops[i];
+	fh << pop_key[pops[i]];
 
 	for (uint k = 0; k <= i; k++)
 	    fh << "\t";
@@ -1901,40 +3200,9 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
 
     fh.close();
 
-    delete [] weights;
-
-    return 0;
-}
-
-int
-init_chr_pairs(map<string, vector<PopPair *> > &genome_chrs, string chr, map<uint, uint> &pairs_key, vector<CSLocus *> &sorted_loci)
-{
-    CSLocus *loc;
-    int      len, bp;
-
-    //
-    // We need to create an array to store all the pair values for computing Fst. We must
-    // account for positions in the genome that are covered by more than one RAD tag.
-    //
-    set<int> bps;
-
-    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
-	loc = sorted_loci[pos];
-	len = strlen(loc->con);
-
-	for (int k = 0; k < len; k++) {
-	    bp  = loc->sort_bp(k);
-	    bps.insert(bp);
-	}
-    }
-
-    genome_chrs[chr].resize(bps.size(), NULL);
-
-    set<int>::iterator it;
-    int i = 0;
-    for (it = bps.begin(); it != bps.end(); it++) {
-	pairs_key[*it] = i;
-	i++;
+    delete ord;
+    if (kernel_smoothed && loci_ordered) {
+	delete ks;
     }
 
     return 0;
@@ -1985,7 +3253,7 @@ correct_fst_bonferroni_win(vector<PopPair *> &pairs)
 	}
 
 	correction = p_value_cutoff / cnt;
-	pairs[pos_c]->cfst = pairs[pos_c]->fet_p < correction ? pairs[pos_c]->fst : 0;
+	pairs[pos_c]->stat[0] = pairs[pos_c]->fet_p < correction ? pairs[pos_c]->fst : 0;
     }
 
     return 0;
@@ -1994,303 +3262,81 @@ correct_fst_bonferroni_win(vector<PopPair *> &pairs)
 int 
 kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, int pop_id, ofstream &log_fh) 
 {
-    //
-    // We calculate a kernel-smoothing moving average of Pi and Fis values along each ordered chromosome.
-    //
-    // For each genomic region centered on a nucleotide position c, the contribution of the population 
-    // genetic statistic at position p to the region average was weighted by the Gaussian function:
-    //   exp( (-1 * (p - c)^2) / (2 * sigma^2))
-    // 
-    // In addition, we weight each position according to (n_k - 1), where n_k is the number of alleles
-    // sampled at that location.
-    //
-    // By default, sigma = 150Kb, for computational efficiency, only calculate average out to 3sigma.
-    //
-    int limit = 3 * sigma;
-    int alleles;
-
-    //
-    // Precalculate weights.
-    //
-    double *weights = calculate_weights();
-
-    //
-    // Create a list of all nucleotide positions in this population to make it easy to iterate over
-    // with the sliding window.
-    //
+    // int snp_dist[max_snp_dist] = {0};
+    // int sites_per_snp = 0;
+    // int tot_windows = 0;
     map<string, vector<CSLocus *> >::iterator it;
-    CSLocus *loc;
-    LocSum  *lsum;
-    int      len;
+    map<string, vector<SumStat *> > genome_sites;
 
-    vector<double> pi_samples;
-    vector<double> fis_samples;
-    vector<int>    allele_depth_samples;
-    int            snp_dist[max_snp_dist] = {0};
-    int            sites_per_snp = 0;
-    int            tot_windows = 0;
-    
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    //
+    // Instantiate the kernel smoothing object if requested.
+    //
+    KSmooth<SumStat>   *ks  = new KSmooth<SumStat>(2);
+    OSumStat<SumStat>  *ord = new OSumStat<SumStat>(psum, log_fh);
+    Bootstrap<SumStat> *bs;
 
-	for (uint pos = 0; pos < it->second.size(); pos++) {
-	    loc  = it->second[pos];
-	    len  = strlen(loc->con);
-	    lsum = psum->pop(loc->id, pop_id);
-
-	    for (int k = 0; k < len; k++)
-		if (lsum->nucs[k].num_indv > 0 && bootstrap && lsum->nucs[k].pi > 0) {
-		    fis_samples.push_back(lsum->nucs[k].Fis);
-		    pi_samples.push_back(lsum->nucs[k].pi);
-		    allele_depth_samples.push_back(lsum->nucs[k].num_indv * 2);
-		}
-	}
-    }
-
-    uint multiple_loci = 0;
+    if (bootstrap_pifis)
+	bs = new Bootstrap<SumStat>(2);
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-	vector<SumStat *> sites;
+	vector<SumStat *> &sites = genome_sites[it->first];
 
-	// if (it->first != "groupI") continue;
-
-	init_chr_sites(sites, pop_id, it->second, psum, multiple_loci, log_fh);
-
-	cerr << "    Processing chromosome " << it->first << "\n";
-	#pragma omp parallel private(alleles)
-	{
-	    int      dist, limit_l, limit_u;
-	    uint     pos_l, pos_u;
-	    double   weighted_fis, weighted_pi, sum_fis, sum_pi, final_weight_fis, final_weight_pi;
-	    SumStat *c, *p;
-
-	    pos_l = 0;
-	    pos_u = 0;
-
-	    //
-	    // Center the window on each variable nucleotide position.
-	    //
-            #pragma omp for schedule(dynamic, 1) reduction(+:tot_windows) reduction(+:sites_per_snp)
-	    for (uint pos_c = 0; pos_c < sites.size(); pos_c++) {
-		c = sites[pos_c];
-
-		if (c->pi == 0)
-		    continue;
-
-		////
-		////if (c->bp != 1190640) continue;
-
-		weighted_fis = 0.0;
-		sum_fis      = 0.0;
-		weighted_pi  = 0.0;
-		sum_pi       = 0.0;
-
-		limit_l = c->bp - limit > 0 ? c->bp - limit : 0;
-		limit_u = c->bp + limit;
-
-		while (pos_l < sites.size()) {
-		    if (sites[pos_l] == NULL) {
-			pos_l++;
-		    } else {
-			if (sites[pos_l]->bp < limit_l) 
-			    pos_l++;
-			else
-			    break;
-		    }
-		}
-		while (pos_u < sites.size()) {
-		    if (sites[pos_u] == NULL) {
-			pos_u++;
-		    } else {
-			if (sites[pos_u]->bp < limit_u)
-			    pos_u++;
-			else
-			    break;
-		    }
-		}
-		//if (pos_u < sites.size() && sites[pos_u]->bp > limit_u) pos_u--;
-
-		// if (pos_u < sites.size())
-		// 	cerr << "Calculating sliding window; start position: " << pos_l << ", " << sites[pos_l]->bp << "bp; end position: " 
-		// 	     << pos_u << ", " << sites[pos_u]->bp << "bp; center: " 
-		// 	     << pos_c << ", " << sites[pos_c]->bp << "bp; total size: " << sites[pos_u]->bp - sites[pos_l]->bp << "\n";
-		int snp_cnt   = 0;
-		int sites_cnt = 0;
-
-		for (uint pos_p = pos_l; pos_p < pos_u; pos_p++) {
-		    p = sites[pos_p];
-
-		    if (p == NULL)
-			continue;
-
-		    sites_cnt++;
-
-		    alleles = p->num_indv * 2;
-		    dist    = p->bp > c->bp ? p->bp - c->bp : c->bp - p->bp;
-
-		    if (dist > limit || dist < 0) {
-                        #pragma omp critical
-			{
-			    cerr << "ERROR: current basepair is out of the sliding window.\n"
-				 << "  Calculating sliding window; start position: " << pos_l << ", " << (sites[pos_l] == NULL ? -1 : sites[pos_l]->bp) << "bp; end position: " 
-				 << pos_u << ", " << (sites[pos_u] == NULL ? -1 : sites[pos_u]->bp) << "bp; center: " 
-				 << pos_c << ", " << sites[pos_c]->bp << "bp\n"
-				 << "  Current position: " << pos_p << ", " << sites[pos_p]->bp << "; Dist: " << dist << "\n"
-				 << "  Window positions:\n";
-
-			    for (uint j = pos_l; j < pos_u; j++) {
-				p = sites[j];
-				if (p == NULL) continue;
-				cerr << "    Position: " << j << "; " << p->bp << "bp\n";
-			    }
-			}
-			continue;
-		    }
-		    //cerr << "Window centered on: " << c->bp << "; Examining bp " << p->bp << "; distance from center: " << dist << "\n";
-
-		    if (p->pi > 0) {
-			snp_cnt++;
-
-			final_weight_fis = (alleles - 1) * weights[dist];
-			weighted_fis    += p->Fis * final_weight_fis;
-			sum_fis         += final_weight_fis;
-		    }
-
-		    final_weight_pi = (alleles - 1) * weights[dist];
-		    weighted_pi    += p->pi * final_weight_pi;
-		    sum_pi         += final_weight_pi;
-		}
-
-		sites_per_snp += (sites_cnt / snp_cnt);
-		tot_windows++;
-
-		if (snp_cnt < max_snp_dist) {
-                    #pragma omp atomic
-		    snp_dist[snp_cnt]++;
-		}
-
-		c->snp_cnt = snp_cnt;
-		c->wFis    = weighted_fis / sum_fis;
-		c->wPi     = weighted_pi  / sum_pi;
-
-		if (bootstrap && bootstrap_type == bs_exact) {
-		    if (bootstrap_wl == false || bootstraplist.count(c->loc_id) > 0)
-			bootstrap_popstats(fis_samples, pi_samples, sites, pos_l, pos_u, weights, c);
-		}
-	    }
-	}
-	sites.clear();
-    }
-    cerr << "Population " << pop_id << " contained " << multiple_loci << " nucleotides covered by more than one RAD locus.\n";
-
-    //
-    // If bootstrap resampling method is approximate, generate our single, empirical distribution.
-    //
-    map<int, vector<double> > approx_fis_dist;
-    map<int, vector<double> > approx_pi_dist;
-    if (bootstrap && bootstrap_type == bs_approx) {
-    	sites_per_snp = sites_per_snp / tot_windows;
-
-    	// cerr << "Sites per snp: " << sites_per_snp << "\n";
-
-    	bootstrap_popstats_approximate_dist(fis_samples, pi_samples, allele_depth_samples, 
-    					    weights, snp_dist, sites_per_snp, 
-    					    approx_fis_dist, approx_pi_dist);
-
-    	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-
-    	    for (uint pos = 0; pos < it->second.size(); pos++) {
-    		loc  = it->second[pos];
-    		len  = strlen(loc->con);
-    		lsum = psum->pop(loc->id, pop_id);
-
-    		for (int k = 0; k < len; k++)
-    		    if (lsum->nucs[k].num_indv > 0 && bootstrap && lsum->nucs[k].pi > 0) {
-    			//
-    			// Calculate Fis/Pi p-values from approximate distribution.
-    			//
-    			lsum->nucs[k].wFis_pval = bootstrap_approximate_pval(lsum->nucs[k].snp_cnt, lsum->nucs[k].wFis, approx_fis_dist);
-    			lsum->nucs[k].wPi_pval  = bootstrap_approximate_pval(lsum->nucs[k].snp_cnt, lsum->nucs[k].wPi, approx_pi_dist);
-    		    }
-    	    }
-    	}
+	ord->order(sites, it->second, pop_id);
+	if (bootstrap_pifis) bs->add_data(sites);
     }
 
-    delete [] weights;
+    cerr << "    Population '" << pop_key[pop_id] << "' contained " << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 
-    return 0;
-}
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	if (bootstrap_pifis)
+	    cerr << "    Smoothing and bootstrapping chromosome " << it->first << "\n";
+	else
+	    cerr << "    Smoothing chromosome " << it->first << "\n";
 
-int
-init_chr_sites(vector<SumStat *> &sites, 
-	       int pop_id, vector<CSLocus *> &sorted_loci, PopSum<CSLocus> *psum, 
-	       uint &multiple_loci, ofstream &log_fh)
-{
-    CSLocus *loc;
-    LocSum  *lsum;
-    int      len;
+	vector<SumStat *> &sites = genome_sites[it->first];
 
-    //
-    // We need to create an array to store all the nucleotide values for computing kernel-smoothed
-    // statistics for this population. We must account for positions in the genome that are covered 
-    // by more than one RAD tag.
-    //
-    set<int> bps;
+	ks->smooth(sites);
 
-    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
-	loc  = sorted_loci[pos];
-	len  = strlen(loc->con);
-	lsum = psum->pop(loc->id, pop_id);
-
-	for (int k = 0; k < len; k++) {
-	    if (lsum->nucs[k].num_indv > 0) 
-		bps.insert(lsum->nucs[k].bp);
-	}
+	if (bootstrap_pifis && bootstrap_type == bs_exact)
+	    bs->execute_mixed(sites);
     }
 
-    sites.resize(bps.size(), NULL);
+    delete ks;
+    delete ord;
+    if (bootstrap_pifis) delete bs;
 
-    //
-    // Create a key describing where in the sites array to find each basepair coordinate.
-    //
-    map<uint, uint>    sites_key;
-    set<int>::iterator it;
-    int i = 0;
-    for (it = bps.begin(); it != bps.end(); it++) {
-	sites_key[*it] = i;
-	i++;
-    }
+//     //
+//     // If bootstrap resampling method is approximate, generate our single, empirical distribution.
+//     //
+//     map<int, vector<double> > approx_fis_dist;
+//     map<int, vector<double> > approx_pi_dist;
+//     if (bootstrap && bootstrap_type == bs_approx) {
+//     	sites_per_snp = sites_per_snp / tot_windows;
 
-    //
-    // Assign nucleotides to their proper, ordered location in the genome, 
-    // checking that a site hasn't already been covered by another RAD locus.
-    //
-    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
-	loc  = sorted_loci[pos];
-	len  = strlen(loc->con);
-	lsum = psum->pop(loc->id, pop_id);
+//     	// cerr << "Sites per snp: " << sites_per_snp << "\n";
 
-	for (int k = 0; k < len; k++) {
-	    if (lsum->nucs[k].num_indv == 0) continue;
+//     	bootstrap_popstats_approximate_dist(fis_samples, pi_samples, allele_depth_samples, 
+//     					    weights, snp_dist, sites_per_snp, 
+//     					    approx_fis_dist, approx_pi_dist);
 
-	    if (sites_key.count(lsum->nucs[k].bp) == 0) {
-		cerr << "Error: locus " << lsum->nucs[k].loc_id << " at " << lsum->nucs[k].bp << "bp is not defined in the sites map.\n";
+//     	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 
-	    } else if (sites[sites_key[lsum->nucs[k].bp]] == NULL) {
-		sites[sites_key[lsum->nucs[k].bp]] = &(lsum->nucs[k]);
+//     	    for (uint pos = 0; pos < it->second.size(); pos++) {
+//     		loc  = it->second[pos];
+//     		len  = strlen(loc->con);
+//     		lsum = psum->pop(loc->id, pop_id);
 
-	    } else {
-		multiple_loci++;
-		log_fh << "within_population\t"
-		       << "multiple_locus\t"
-		       << loc->id << "\t"
-		       << loc->loc.chr << "\t"
-		       << lsum->nucs[k].bp << "\t"
-		       << k << "\t" 
-		       << pop_id << "\t"
-		       << "conflicts with locus " << sites[sites_key[lsum->nucs[k].bp]]->loc_id << "\n";
-	    }
-	}
-    }
+//     		for (int k = 0; k < len; k++)
+//     		    if (lsum->nucs[k].num_indv > 0 && bootstrap && lsum->nucs[k].pi > 0) {
+//     			//
+//     			// Calculate Fis/Pi p-values from approximate distribution.
+//     			//
+//     			lsum->nucs[k].wFis_pval = bootstrap_approximate_pval(lsum->nucs[k].snp_cnt, lsum->nucs[k].wFis, approx_fis_dist);
+//     			lsum->nucs[k].wPi_pval  = bootstrap_approximate_pval(lsum->nucs[k].snp_cnt, lsum->nucs[k].wPi, approx_pi_dist);
+//     		    }
+//     	    }
+//     	}
+//     }
 
     return 0;
 }
@@ -2366,13 +3412,13 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 		start = pos - half > 0 ? pos - half : 0;
 		end   = pos + half < win_size ? pos + half : win_size;
 		for (int n = start; n < end; n++) {
-		    bs[n].f       = 0;
-		    bs[n].pi      = 0;
+		    // bs[n].f       = 0;
+		    // bs[n].pi      = 0;
 		    bs[n].alleles = bs[pos].alleles;
 		    poss.push_back(n);
 		}
-		bs[pos].f       = fis_samples[index_1];
-		bs[pos].pi      = pi_samples[index_2];
+		// bs[pos].f       = fis_samples[index_1];
+		// bs[pos].pi      = pi_samples[index_2];
 		bs[pos].alleles = allele_samples[index_3];
 		// cerr << "      Placing SNP at position: " << pos << "; with data from " << index_1 << " filling area from " << start << " to " << end << "\n";
 
@@ -2392,13 +3438,13 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 		    start = pos - half > 0 ? pos - half : 0;
 		    end   = pos + half < win_size ? pos + half : win_size;
 		    for (int n = start; n < end; n++) {
-			bs[n].f       = 0;
-			bs[n].pi      = 0;
+			// bs[n].f       = 0;
+			// bs[n].pi      = 0;
 			bs[n].alleles = bs[pos].alleles;
 			poss.push_back(n);
 		    }
-		    bs[pos].f       = fis_samples[index_1];
-		    bs[pos].pi      = pi_samples[index_2];
+		    // bs[pos].f       = fis_samples[index_1];
+		    // bs[pos].pi      = pi_samples[index_2];
 		    bs[pos].alleles = allele_samples[index_3];
 		    // cerr << "      Placing SNP at position: " << pos << "; with data from " << index_1 << " filling area from " << start << " to " << end << "\n";
 		}
@@ -2409,19 +3455,19 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 		sum_pi       = 0.0;
 
 		for (int n = 0; n < win_size; n++) {
-		    if (bs[n].pi < 0.0)
-			continue;
+		    // if (bs[n].pi < 0.0)
+		    // continue;
 		    //
 		    // Calculate weighted Fst at this position.
 		    //
 		    dist = bs[n].bp > bs[win_cntr].bp ? bs[n].bp - bs[win_cntr].bp : bs[win_cntr].bp - bs[n].bp;
 
 		    final_weight_fis = (bs[n].alleles - 1) * weights[dist];
-		    weighted_fis    += bs[n].f * final_weight_fis;
+		    // weighted_fis    += bs[n].f * final_weight_fis;
 		    sum_fis         += final_weight_fis;
 
 		    final_weight_pi  = (bs[n].alleles - 1) * weights[dist];
-		    weighted_pi     += bs[n].pi * final_weight_pi;
+		    // weighted_pi     += bs[n].pi * final_weight_pi;
 		    sum_pi          += final_weight_pi;
 		}
 
@@ -2430,259 +3476,27 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 		// cerr << "      New weighted fis value: " << weighted_fis / sum_fis << "; size: " << fiss.size() << "\n";
 
 		for (uint n = 0; n < poss.size(); n++) {
-		    bs[poss[n]].f  = 0.0;
-		    bs[poss[n]].pi = -1.0;
+		    // bs[poss[n]].f  = 0.0;
+		    // bs[poss[n]].pi = -1.0;
 		}
 		poss.clear();
 	    }
 
-	    #pragma omp critical
-	    {
-		vector<double> &f = approx_fis_dist[i];
-		for (uint n = 0; n < fiss.size(); n++)
-		    f.push_back(fiss[n]);
-		vector<double> &p = approx_pi_dist[i];
-		for (uint n = 0; n < pis.size(); n++)
-		    p.push_back(pis[n]);
-	    }
+// 	    #pragma omp critical
+// 	    {
+// 		vector<double> &f = approx_fis_dist[i];
+// 		for (uint n = 0; n < fiss.size(); n++)
+// 		    f.push_back(fiss[n]);
+// 		vector<double> &p = approx_pi_dist[i];
+// 		for (uint n = 0; n < pis.size(); n++)
+// 		    p.push_back(pis[n]);
+// 	    }
 
 	    delete [] bs;
 	}
 
 	sort(approx_fis_dist[i].begin(), approx_fis_dist[i].end());
 	sort(approx_pi_dist[i].begin(),  approx_pi_dist[i].end());
-    }
-
-    return 0;
-}
-
-int
-bootstrap_popstats(vector<double> &fis_samples, vector<double> &pi_samples, 
-		   vector<SumStat *> &sites, int pos_l, int pos_u, 
-		   double *weights,
-		   SumStat *c)
-{
-    int    size = pos_u - pos_l;
-    int    dist, index;
-    double weighted_fis, weighted_pi, partial_weighted_fis, partial_weighted_pi; 
-    double partial_sum_fis, partial_sum_pi, sum_fis, sum_pi;
-    double final_weight_fis, final_weight_pi;
-
-    //
-    // Allocate an array of bootstrap resampling objects.
-    //
-    BSample *bs = new BSample[size];
-
-    //
-    // Populate the BSample objects.
-    //
-    int j = 0;
-    for (int i = pos_l; i < pos_u;  i++) {
-	bs[j].f       = sites[i]->Fis;
- 	bs[j].pi      = sites[i]->pi;
-	bs[j].bp      = sites[i]->bp;
-	bs[j].alleles = sites[i]->num_indv * 2;
-	j++;
-    }
-
-    vector<double> fiss, pis;
-    fiss.reserve(bootstrap_reps);
-    pis.reserve(bootstrap_reps);
-
-    // cerr << "Window starts at " << bs[0].bp << "; Window center is " << c->bp << "\n";
-
-    //
-    // Precompute the fraction of the window that will not change during resampling.
-    //
-    partial_weighted_fis = 0.0;
-    partial_sum_fis      = 0.0;
-    partial_weighted_pi  = 0.0;
-    partial_sum_pi       = 0.0;
-
-    for (j = 0; j < size; j++) {
-	if (bs[j].pi > 0) continue;
-
-	dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
-
-	final_weight_fis      = (bs[j].alleles - 1.0) * weights[dist];
-	partial_weighted_fis += bs[j].f * final_weight_fis;
-	partial_sum_fis      += final_weight_fis;
-
-	final_weight_pi      = (bs[j].alleles - 1.0) * weights[dist];
-	partial_weighted_pi += bs[j].pi * final_weight_pi;
-	partial_sum_pi      += final_weight_pi;
-    }
-
-    //
-    // Bootstrap this bitch.
-    //
-    for (int i = 0; i < bootstrap_reps; i++) {
-	// cerr << "  Bootsrap rep " << i << "\n";
-
-	weighted_fis = partial_weighted_fis;
-	weighted_pi  = partial_weighted_pi;
-	sum_fis      = partial_sum_fis;
-	sum_pi       = partial_sum_pi;
-
-	for (j = 0; j < size; j++) {
-	    //
-	    // Resample for this round of bootstrapping.
-	    //
-	    if (bs[j].pi == 0) 
-		continue;
-
-	    index = (int) (fis_samples.size() * (random() / (RAND_MAX + 1.0)));
-	    // cerr << "      WinPos: " << j << "; Randomly selecting " << index << " out of " << pi_samples.size() << " possible values giving Pi value: " << pi_samples[index] << "\n";
-
-	    //
-	    // Calculate weighted Fis/Pi at this position.
-	    //
-	    dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
-
-	    final_weight_fis = (bs[j].alleles - 1.0) * weights[dist];
-	    weighted_fis    += fis_samples[index] * final_weight_fis;
-	    sum_fis         += final_weight_fis;
-
-	    final_weight_pi = (bs[j].alleles - 1.0) * weights[dist];
-	    weighted_pi    += pi_samples[index] * final_weight_pi;
-	    sum_pi         += final_weight_pi;
-	}
-
-	// cerr << "    New weighted Pi value: " << weighted_pi / sum_pi << "\n";
-	fiss.push_back(weighted_fis / sum_fis);
-	pis.push_back(weighted_pi / sum_pi);
-    }
-
-    delete [] bs;
-
-    //
-    // Cacluate the p-value for this window based on the empirical Fst distribution.
-    //
-    sort(fiss.begin(), fiss.end());
-    c->wFis_pval = bootstrap_pval(c->wFis, fiss);
-
-    sort(pis.begin(), pis.end());
-    c->wPi_pval = bootstrap_pval(c->wPi, pis);
-
-    return 0;
-}
-
-int
-kernel_smoothed_fst(vector<PopPair *> &pairs, double *weights, int *snp_dist) 
-{
-    //
-    // To generate smooth genome-wide distributions of Fst, we calculate a kernel-smoothing 
-    // moving average of Fst values along each ordered chromosome.
-    //
-    // For each genomic region centered on a nucleotide position c, the contribution of the population 
-    // genetic statistic at position p to the region average was weighted by the Gaussian function:
-    //   exp( (-1 * (p - c)^2) / (2 * sigma^2))
-    // 
-    // In addition, we weight each position according to (n_k - 1), where n_k is the number of alleles
-    // sampled at that location.
-    //
-    // By default, sigma = 150Kb, for computational efficiency, only calculate average out to 3sigma.
-    //
-    #pragma omp parallel
-    { 
-	int      limit = 3 * sigma;
-	int      dist, limit_l, limit_u;
-	uint     pos_l, pos_u;
-	double   weighted_fst, weighted_amova_fst, sum, final_weight;
-	PopPair *c, *p;
-
-	pos_l = 0;
-	pos_u = 0;
-
-        #pragma omp for schedule(dynamic, 1)
-	for (uint pos_c = 0; pos_c < pairs.size(); pos_c++) {
-	    c = pairs[pos_c];
-
-	    if (c == NULL)
-		continue;
-
-	    weighted_fst       = 0.0;
-	    weighted_amova_fst = 0.0;
-	    sum                = 0.0;
-
-	    limit_l = c->bp - limit > 0 ? c->bp - limit : 0;
-	    limit_u = c->bp + limit;
-
-	    while (pos_l < pairs.size()) {
-		if (pairs[pos_l] == NULL) {
-		    pos_l++;
-		} else {
-		    if (pairs[pos_l]->bp < limit_l) 
-			pos_l++;
-		    else
-			break;
-		}
-	    }
-	    while (pos_u < pairs.size()) {
-		if (pairs[pos_u] == NULL) {
-		    pos_u++;
-		} else {
-		    if (pairs[pos_u]->bp < limit_u)
-			pos_u++;
-		    else
-			break;
-		}
-	    }
-	    //if (pos_u < pairs.size() && pairs[pos_u]->bp > limit_u) 
-		//do { pos_u--; } while (pairs[pos_u] == NULL);
-
-	    // cerr << "Calculating sliding window; start position: " << pos_l << ", " << pairs[pos_l]->bp << "bp; end position: " 
-	    //      << pos_u << ", " << pairs[pos_u]->bp << "bp; center: " 
-	    //      << pos_c << ", " << pairs[pos_c]->bp << "bp\n";
-	    int snp_cnt = 0;
-
-	    for (uint pos_p = pos_l; pos_p < pos_u; pos_p++) {
-		p = pairs[pos_p];
-
-		if (p == NULL)
-		    continue;
-
-		snp_cnt++;
-
-		dist = p->bp > c->bp ? p->bp - c->bp : c->bp - p->bp;
-
-		if (dist > limit || dist < 0) {
-		    #pragma omp critical
-		    {
-			cerr << "ERROR: current basepair is out of the sliding window.\n"
-			     << "  Calculating sliding window; start position: " << pos_l << ", " << (pairs[pos_l] == NULL ? -1 : pairs[pos_l]->bp) << "bp; end position: " 
-			     << pos_u << ", " << (pairs[pos_u] == NULL ? -1 : pairs[pos_u]->bp) << "bp; center: " 
-			     << pos_c << ", " << pairs[pos_c]->bp << "bp\n"
-			     << "  Current position: " << pos_p << ", " << pairs[pos_p]->bp << "; Dist: " << dist << "\n"
-			     << "  Window positions:\n";
-
-			for (uint j = pos_l; j < pos_u; j++) {
-			    p = pairs[j];
-			    if (p == NULL) continue;
-			    cerr << "    Position: " << j << "; " << p->bp << "bp\n";
-			}
-			//exit(0);
-		    }
-		    continue;
-		}
-
-		final_weight        = (p->alleles - 1) * weights[dist];
-		weighted_fst       += p->cfst * final_weight;
-		weighted_amova_fst += p->camova_fst * final_weight;
-		sum                += final_weight;
-	    }
-
-	    // cerr << "Fst measure at " << c->bp << "bp has " << snp_cnt << " snps.\n";
-
-	    if (snp_cnt < max_snp_dist) {
-		#pragma omp atomic
-		snp_dist[snp_cnt]++;
-	    }
-
-	    c->snp_cnt    = snp_cnt;
-	    c->wfst       = weighted_fst / sum;
-	    c->wamova_fst = weighted_amova_fst / sum;
-	}
     }
 
     return 0;
@@ -2746,7 +3560,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 		pos     = win_cntr;
 		index_1 = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
 		index_2 = (int) (allele_samples.size() * (random() / (RAND_MAX + 1.0)));
-		bs[pos].f       = fst_samples[index_1];
+		// bs[pos].f       = fst_samples[index_1];
 		bs[pos].alleles = allele_samples[index_2];
 
 		//
@@ -2756,8 +3570,8 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 		    pos     = (int) (win_size * (random() / (RAND_MAX + 1.0)));
 		    index_1 = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
 		    index_2 = (int) (allele_samples.size() * (random() / (RAND_MAX + 1.0)));
-		    bs[pos].f       = fst_samples[index_1];
-		    bs[pos].alleles = allele_samples[index_2];
+		    // bs[pos].f       = fst_samples[index_1];
+		    // bs[pos].alleles = allele_samples[index_2];
 		    // cerr << "  " << j << ": Placing SNP at position: " << pos << " with data from index " << index_1 << "\n";
 
 		    poss.push_back(pos);
@@ -2767,32 +3581,32 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 		sum          = 0.0;
 
 		for (int n = 0; n < win_size; n++) {
-		    if (bs[n].f == 0.0)
-			continue;
+		    // if (bs[n].f == 0.0)
+		    // continue;
 		    //
 		    // Calculate weighted Fst at this position.
 		    //
 		    dist = bs[n].bp > bs[win_cntr].bp ? bs[n].bp - bs[win_cntr].bp : bs[win_cntr].bp - bs[n].bp;
 
 		    final_weight  = (bs[n].alleles - 1) * weights[dist];
-		    weighted_fst += bs[n].f * final_weight;
+		    // weighted_fst += bs[n].f * final_weight;
 		    sum          += final_weight;
 		}
 
 		fsts.push_back(weighted_fst / sum);
 		// cerr << "    New weighted Fst value: " << weighted_fst / sum << "; size: " << fsts.size() << "\n";
 
-		for (uint n = 0; n < poss.size(); n++)
-		    bs[poss[n]].f = 0.0;
+		// for (uint n = 0; n < poss.size(); n++)
+		// bs[poss[n]].f = 0.0;
 		poss.clear();
 	    }
 
-	    #pragma omp critical
-	    {
-		vector<double> &f = approx_fst_dist[i];
-		for (uint n = 0; n < fsts.size(); n++)
-		    f.push_back(fsts[n]);
-	    }
+// 	    #pragma omp critical
+// 	    {
+// 		vector<double> &f = approx_fst_dist[i];
+// 		for (uint n = 0; n < fsts.size(); n++)
+// 		    f.push_back(fsts[n]);
+// 	    }
 
 	    delete [] bs;
 	}
@@ -2833,173 +3647,6 @@ bootstrap_approximate_pval(int snp_cnt, double stat, map<int, vector<double> > &
     // 	 << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
 
     return res;
-}
-
-double
-bootstrap_pval(double stat, vector<double> &dist)
-{
-    vector<double>::iterator up;
-    double pos;
-
-    up = upper_bound(dist.begin(), dist.end(), stat);
-
-    if (up == dist.begin())
-	pos = 1;
-    else if (up == dist.end())
-	pos = dist.size();
-    else 
-	pos = up - dist.begin() + 1;
-
-    double res = 1.0 - (pos / (double) dist.size());
-
-    // cerr << "Generated Smoothed Fst Distribution:\n";
-    // for (uint n = 0; n < dist.size(); n++)
-    // 	cerr << "  n: " << n << "; Fst: " << dist[n] << "\n";
-
-    // cerr << "Comparing Fst value: " << stat 
-    // 	 << " at position " << (up - dist.begin()) << " out of " 
-    // 	 << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
-
-    return res;
-}
-
-int
-bootstrap_fst(vector<double> &fst_samples, vector<PopPair *> &pairs, double *weights) 
-{
-    #pragma omp parallel
-    { 
-	PopPair *c;
-	double final_weight, weighted_fst, sum;
-	int  dist, index, limit_l, limit_u;
-	int  limit = 3 * sigma;
-	uint pos_l = 0;
-	uint pos_u = 0;
-
-        #pragma omp for schedule(dynamic, 1)  
-	for (uint pos_c = 0; pos_c < pairs.size(); pos_c++) {
-	    c = pairs[pos_c];
-
-	    if (c == NULL)
-		continue;
-
-	    if (bootstrap_wl && bootstraplist.count(c->loc_id) == 0)
-		continue;
-
-	    limit_l = c->bp - limit > 0 ? c->bp - limit : 0;
-	    limit_u = c->bp + limit;
-
-	    while (pos_l < pairs.size()) {
-		if (pairs[pos_l] == NULL) {
-		    pos_l++;
-		} else {
-		    if (pairs[pos_l]->bp < limit_l) 
-			pos_l++;
-		    else
-			break;
-		}
-	    }
-	    while (pos_u < pairs.size()) {
-		if (pairs[pos_u] == NULL) {
-		    pos_u++;
-		} else {
-		    if (pairs[pos_u]->bp < limit_u)
-			pos_u++;
-		    else
-			break;
-		}
-	    }
-	    if (pos_u < pairs.size() && pairs[pos_u]->bp > limit_u) pos_u--;
-
-	    int size = 0;
-	    for (uint i = pos_l; i < pos_u;  i++) {
-		if (pairs[i] == NULL) continue;
-		size++;
-	    }
-
-	    //
-	    // Allocate an array of bootstrap resampling objects.
-	    //
-	    BSample *bs = new BSample[size];
-
-	    //
-	    // Populate the BSample objects.
-	    //
-	    int j = 0;
-	    for (uint i = pos_l; i < pos_u;  i++) {
-		if (pairs[i] == NULL) continue;
-
-		bs[j].bp      = pairs[i]->bp;
-		bs[j].alleles = pairs[i]->alleles;
-		j++;
-	    }
-
-	    vector<double> fsts;
-	    fsts.reserve(bootstrap_reps);
-	    vector<double>::iterator up;
-
-	    // cerr << "Window starts at " << bs[0].bp << "; centered on " << c->bp << "\n";
-
-	    //
-	    // Bootstrap this bitch.
-	    //
-	    for (int i = 0; i < bootstrap_reps; i++) {
-		// cerr << "  Bootsrap rep " << i << "\n";
-
-		weighted_fst = 0.0;
-		sum          = 0.0;
-
-		for (j = 0; j < size; j++) {
-		    //
-		    // Resample for this round of bootstrapping.
-		    //
-		    index   = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
-		    bs[j].f = fst_samples[index];
-		    // cerr << "      WinPos: " << j << "; Randomly selecting " << index << " out of " << fst_samples.size() << " possible values giving Fst value: " << bs[j].f << "\n";
-
-		    //
-		    // Calculate weighted Fst at this position.
-		    //
-		    dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
-
-		    final_weight  = (bs[j].alleles - 1) * weights[dist];
-		    weighted_fst += bs[j].f * final_weight;
-		    sum          += final_weight;
-		}
-
-		// cerr << "    New weighted Fst value: " << weighted_fst / sum << "\n";
-		fsts.push_back(weighted_fst / sum);
-	    }
-
-	    //
-	    // Cacluate the p-value for this window based on the empirical Fst distribution.
-	    //
-	    sort(fsts.begin(), fsts.end());
- 	    c->wfst_pval = bootstrap_pval(c->wamova_fst, fsts);
-
-	    delete [] bs;
-	}
-    }
-
-    return 0;
-}
-
-double *
-calculate_weights() 
-{
-    int limit = 3 * sigma;
-    //
-    // Calculate weights for window smoothing operations.
-    //
-    // For each genomic region centered on a nucleotide position c, the contribution of the population 
-    // genetic statistic at position p to the region average was weighted by the Gaussian function:
-    //   exp( (-1 * (p - c)^2) / (2 * sigma^2))
-    //
-    double *weights = new double[limit + 1];
-
-    for (int i = 0; i <= limit; i++)
-	weights[i] = exp((-1 * pow(i, 2)) / (2 * pow(sigma, 2)));
-
-    return weights;
 }
 
 int
@@ -3112,15 +3759,15 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     cerr << "Writing SQL markers file to '" << file << "'\n";
 
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening markers SQL file '" << file << "'\n";
 	exit(1);
     }
+    fh.precision(fieldw);
+    fh.setf(std::ios::fixed);
 
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
-    char    f[id_len], g[id_len];
     stringstream gtype_map;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
@@ -3133,9 +3780,6 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 	int    total = 0;
 	tally_haplotype_freq(loc, pmap, total, max, freq);
 
-	sprintf(f, "%0.1f", max);
-	sprintf(g, "%0.2f", loc->f);
-
 	//
 	// Record the haplotype to genotype map.
 	//
@@ -3146,12 +3790,12 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 
 	fh << 0 << "\t" 
 	   << batch_id << "\t" 
-	   << loc->id << "\t" 
+	   << loc->id  << "\t" 
 	   << "\t"              // Marker
-	   << total << "\t"
-	   << f << "\t"
-	   << freq << "\t"
-	   << g << "\t"
+	   << total    << "\t"
+	   << max      << "\t"
+	   << freq     << "\t"
+	   << loc->f   << "\t"
            << gtype_map.str() <<"\n";
     }
 
@@ -5356,10 +6000,15 @@ int load_marker_list(string path, set<int> &list) {
     return 0;
 }
 
-int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes) {
-    char   line[max_len];
-    char   pop_id_str[id_len];
-    vector<string> parts;
+int 
+build_file_list(vector<pair<int, string> > &files, 
+		map<int, pair<int, int> > &pop_indexes, 
+		map<int, vector<int> > &grp_members) 
+{
+    char             line[max_len];
+    vector<string>   parts;
+    map<string, int> pop_key_rev, grp_key_rev;
+    set<string>      pop_names, grp_names;
     string f;
     uint   len;
 
@@ -5372,6 +6021,9 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
 	    cerr << "Error opening population map '" << pmap_path << "'\n";
 	    return 0;
 	}
+
+	uint pop_id = 0;
+	uint grp_id = 0;
 
 	while (fh.good()) {
 	    fh.getline(line, max_len);
@@ -5391,33 +6043,67 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
 
 	    //
 	    // Parse the population map, we expect:
-	    // <file name> <tab> <population ID>
+	    // <file name><tab><population string>[<tab><group string>]
 	    //
 	    parse_tsv(line, parts);
 
-	    if (parts.size() != 2) {
-		cerr << "Population map is not formated correctly: expecting two, tab separated columns, found " << parts.size() << ".\n";
+	    if (parts.size() < 2 || parts.size() > 3) {
+		cerr << "Population map is not formated correctly: expecting two or three, tab separated columns, found " << parts.size() << ".\n";
 		return 0;
 	    }
 
-	    strncpy(pop_id_str, parts[1].c_str(), id_len);
-	    for (int i = 0; i < id_len && pop_id_str[i] != '\0'; i++)
-		if (!isdigit(pop_id_str[i])) {
-		    cerr << "Population map is not formated correctly: expecting numerical ID in second column, found '" << parts[1] << "'.\n";
-		    return 0;
-		}
+	    //
+	    // Have we seen this population or group before?
+	    //
+	    if (pop_names.count(parts[1]) == 0) {
+		pop_names.insert(parts[1]);
+		pop_id++;
+		pop_key[pop_id]       = parts[1];
+		pop_key_rev[parts[1]] = pop_id;
+
+		//
+		// If this is the first time we have seen this population, but not the
+		// first time we have seen this group, add the population to the group list.
+		//
+		if (parts.size() == 3 && grp_key_rev.count(parts[2]) > 0)
+		    grp_members[grp_key_rev[parts[2]]].push_back(pop_id);
+	    }
+	    if (parts.size() == 3 && grp_names.count(parts[2]) == 0) {
+		grp_names.insert(parts[2]);
+		grp_id++;
+		grp_key[grp_id] = parts[2];
+		grp_key_rev[parts[2]] = grp_id;
+
+		//
+		// Associate the current population with the group.
+		//
+		grp_members[grp_id].push_back(pop_id);
+	    }
 
 	    //
 	    // Test that file exists before adding to list.
 	    //
+	    ifstream test_fh;
+	    gzFile   gz_test_fh;
+
 	    f = in_path.c_str() + parts[0] + ".matches.tsv";
-	    ifstream test_fh(f.c_str(), ifstream::in);
+	    test_fh.open(f.c_str());
 
 	    if (test_fh.fail()) {
-		cerr << " Unable to find " << f.c_str() << ", excluding it from the analysis.\n";
+		//
+		// Test for a gzipped file.
+		//
+		f = in_path.c_str() + parts[0] + ".matches.tsv.gz";
+		gz_test_fh = gzopen(f.c_str(), "rb");
+		if (!gz_test_fh) {
+		    cerr << " Unable to find " << f.c_str() << ", excluding it from the analysis.\n";
+		} else {
+		    gzclose(gz_test_fh);
+		    files.push_back(make_pair(pop_key_rev[parts[1]], parts[0]));
+		}
 	    } else {
 		test_fh.close();
-		files.push_back(make_pair(atoi(parts[1].c_str()), parts[0]));
+		files.push_back(make_pair(pop_key_rev[parts[1]], parts[0]));
 	    }
 	}
 
@@ -5449,9 +6135,16 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
 		continue;
 
 	    pos = file.rfind(".tags.tsv");
-	    if (pos < file.length())
+	    if (pos < file.length()) {
 		files.push_back(make_pair(1, file.substr(0, pos)));
+	    } else {
+		pos = file.rfind(".tags.tsv.gz");
+		if (pos < file.length())
+		    files.push_back(make_pair(1, file.substr(0, pos)));
+	    }
 	}
+
+	pop_key[1] = "1";
 
 	closedir(dir);
     }
@@ -5484,7 +6177,9 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
 	}
     } while (end < (int) files.size());
 
-    cerr << "  " << pop_indexes.size() << " populations found\n";
+    pop_indexes.size() == 1 ?
+	cerr << "  " << pop_indexes.size() << " population found\n" :
+	cerr << "  " << pop_indexes.size() << " populations found\n";
 
     if (population_limit > (int) pop_indexes.size()) {
 	cerr << "Population limit (" 
@@ -5498,10 +6193,33 @@ int build_file_list(vector<pair<int, string> > &files, map<int, pair<int, int> >
     for (it = pop_indexes.begin(); it != pop_indexes.end(); it++) {
 	start = it->second.first;
 	end   = it->second.second;
-	cerr << "    " << it->first << ": ";
+	cerr << "    " << pop_key[it->first] << ": ";
 	for (int i = start; i <= end; i++) {
 	    cerr << files[i].second;
 	    if (i < end) cerr << ", ";
+	}
+	cerr << "\n";
+    }
+
+    //
+    // If no group membership is specified in the population map, create a default 
+    // group with each population ID as a member.
+    //
+    if (grp_members.size() == 0) {
+	for (it = pop_indexes.begin(); it != pop_indexes.end(); it++)
+	    grp_members[1].push_back(it->first);
+	grp_key[1] = "1";
+    }
+
+    grp_members.size() == 1 ?
+	cerr << "  " << grp_members.size() << " group of populations found\n" :
+	cerr << "  " << grp_members.size() << " groups of populations found\n";
+    map<int, vector<int> >::iterator git;
+    for (git = grp_members.begin(); git != grp_members.end(); git++) {
+	cerr << "    " << grp_key[git->first] << ": ";
+	for (uint i = 0; i < git->second.size(); i++) {
+	    cerr << pop_key[git->second[i]];
+	    if (i < git->second.size() - 1) cerr << ", ";
 	}
 	cerr << "\n";
     }
@@ -5557,9 +6275,14 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"write_single_snp",  no_argument,       NULL, 'I'},
             {"kernel_smoothed",   no_argument,       NULL, 'k'},
             {"log_fst_comp",      no_argument,       NULL, 'l'},
-            {"bootstrap",         required_argument, NULL, 'O'},
+            {"bootstrap_type",    required_argument, NULL, 'O'},
 	    {"bootstrap_reps",    required_argument, NULL, 'R'},
 	    {"bootstrap_wl",      required_argument, NULL, 'Q'},
+            {"bootstrap",         no_argument,       NULL, '1'},
+            {"bootstrap_fst",     no_argument,       NULL, '2'},
+            {"bootstrap_phist",   no_argument,       NULL, '3'},
+            {"bootstrap_div",     no_argument,       NULL, '4'},
+            {"bootstrap_pifis",   no_argument,       NULL, '5'},
 	    {"min_populations",   required_argument, NULL, 'p'},
 	    {"minor_allele_freq", required_argument, NULL, 'a'},
 	    {"fst_correction",    required_argument, NULL, 'f'},
@@ -5570,7 +6293,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlkKSACLHEYFVGgvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlkKSACLHEYFVG1234gvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -5605,14 +6328,32 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'k':
 	    kernel_smoothed = true;
 	    break;
-	case 'l':
+ 	case 'l':
 	    log_fst_comp = true;
 	    break;
+	case '1':
+	    bootstrap       = true;
+	    bootstrap_fst   = true;
+	    bootstrap_phist = true;
+	    bootstrap_pifis = true;
+	    bootstrap_div   = true;
+	    break;
+	case '2':
+	    bootstrap_fst   = true;
+	    break;
+	case '3':
+	    bootstrap_phist = true;
+	    break;
+	case '4':
+	    bootstrap_div = true;
+	    break;
+	case '5':
+	    bootstrap_pifis = true;
+	    break;
 	case 'O':
-	    bootstrap = true;
-	    if (strcmp(optarg, "exact") == 0)
+	    if (strcasecmp(optarg, "exact") == 0)
 		bootstrap_type = bs_exact;
-	    else if (strcmp(optarg, "approx") == 0)
+	    else if (strcasecmp(optarg, "approx") == 0)
 		bootstrap_type = bs_approx;
 	    else {
 		cerr << "Unknown bootstrap type specified '" << optarg << "'\n";
@@ -5687,11 +6428,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    minor_allele_freq = atof(optarg);
 	    break;
 	case 'f':
-	    if (strcmp(optarg, "p_value") == 0)
+	    if (strcasecmp(optarg, "p_value") == 0)
 		fst_correction = p_value;
-	    else if (strcmp(optarg, "bonferroni_win") == 0)
+	    else if (strcasecmp(optarg, "bonferroni_win") == 0)
 		fst_correction = bonferroni_win;
-	    else if (strcmp(optarg, "bonferroni_gen") == 0)
+	    else if (strcasecmp(optarg, "bonferroni_gen") == 0)
 		fst_correction = bonferroni_gen;
 	    else {
 		cerr << "Unknown Fst correction specified '" << optarg << "'\n";
@@ -5792,10 +6533,14 @@ void help() {
 	      << "    f: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'.\n"
 	      << "    --p_value_cutoff [num]: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n\n"
 	      << "  Kernel-smoothing algorithm:\n" 
-	      << "    k: enable kernel-smoothed Pi, Fis, and Fst calculations.\n"
+	      << "    k: enable kernel-smoothed Pi, Fis, Fst, and Phi_st calculations.\n"
 	      << "    --window_size [num]: distance over which to average values (sigma, default 150Kb)\n\n"
 	      << "  Bootstrap Resampling:\n" 
-	      << "    --bootstrap [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
+	      << "    --bootstrap: turn on boostrap resampling for all smoothed statistics.\n"
+	      << "    --bootstrap_pifis: turn on boostrap resampling for smoothed SNP-based Pi and Fis calculations.\n"
+	      << "    --bootstrap_fst: turn on boostrap resampling for smoothed Fst calculations based on pairwise population comparison of SNPs.\n"
+	      << "    --bootstrap_div: turn on boostrap resampling for smoothed haplotype diveristy and gene diversity calculations based on haplotypes.\n"
+	      << "    --bootstrap_phist: turn on boostrap resampling for smoothed Phi_st calculations based on haplotypes.\n"
 	      << "    --bootstrap_reps [num]: number of bootstrap resamplings to calculate (default 100).\n"
 	      << "    --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n\n"
 	      << "  File ouput options:\n"
@@ -5813,7 +6558,8 @@ void help() {
 	      << "      --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
 	      << "    --write_single_snp: write only the first SNP per locus in Genepop and Structure outputs.\n\n"
 	      << "  Debugging:\n"
-	      << "    --log_fst_comp: log components of Fst calculations to a file.\n";
+	      << "    --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n";
+    // << "    --bootstrap_type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
 
     exit(0);
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright 2011-2012, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
 #
 # This file is part of Stacks.
 #
@@ -21,14 +21,13 @@
 #
 # Load a set of output files from the Stacks pipeline into a Stacks MySQL database.
 #
-# In order to differentiate parents from progeny, the script expects parents
-# to have 'male' and/or 'female' as part of the filename.
-#
 # By Julian Catchen <jcatchen@uoregon.edu>
 #
 
 use strict;
 use POSIX;
+use File::Temp qw/ mktemp /;
+use File::Spec;
 use constant stacks_version => "_VERSION_";
 
 my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
@@ -36,8 +35,8 @@ my $dry_run      = 0;
 my $db           = "";
 my $in_path      = ".";
 my $sample_id    = 0;
-my $desc         = ""; #"Lepisosteus oculatus RAD-Tag Samples";
-my $date         = ""; #"2009-05-31";
+my $desc         = "";
+my $date         = "";
 my $batch_id     = 0;
 my $batch        = 0;
 my $catalog      = 0;
@@ -91,8 +90,6 @@ $cnt = scalar(@files);
 foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
     print STDERR "Processing sample $i of $cnt\n";
 
-    $f = $in_path . "/$file" . ".tags.tsv";
-
     #
     # Pull out the sample ID and insert it into the database
     #
@@ -113,19 +110,37 @@ foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
 	"-e \"INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id\"\n", 
 	@results;
 
-    #
-    # Import the unique tag files.
-    #
-    import_sql_file($f, "unique_tags", 0) if ($ignore_tags == 0);
+    $f = $in_path . "/$file" . ".tags.tsv";
+    if (-e $f) {
+	import_sql_file($f, "unique_tags", 0) if ($ignore_tags == 0);
+    } elsif (-e $f . ".gz") {
+	$f = $in_path . "/$file" . ".tags.tsv.gz";
+	import_gzsql_file($f, "unique_tags", 0) if ($ignore_tags == 0);
+    }
 
     $f = $in_path . "/$file" . ".snps.tsv";
-    import_sql_file($f, "snps", 0);
+    if (-e $f) {
+	import_sql_file($f, "snps", 0);
+    } elsif (-e $f . ".gz") {
+	$f = $in_path . "/$file" . ".snps.tsv.gz";
+	import_gzsql_file($f, "snps", 0);
+    }
 
     $f = $in_path . "/$file" . ".alleles.tsv";
-    import_sql_file($f, "alleles", 0);
+    if (-e $f) {
+	import_sql_file($f, "alleles", 0);
+    } elsif (-e $f . ".gz") {
+	$f = $in_path . "/$file" . ".alleles.tsv.gz";
+	import_gzsql_file($f, "alleles", 0);
+    }
 
     $f = $in_path . "/$file" . ".matches.tsv";
-    import_sql_file($f, "matches", 0);
+    if (-e $f) {
+	import_sql_file($f, "matches", 0);
+    } elsif (-e $f . ".gz") {
+	$f = $in_path . "/$file" . ".matches.tsv.gz";
+	import_gzsql_file($f, "matches", 0);
+    }
 
     $i++;
 }
@@ -135,23 +150,39 @@ foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
 #
 if ($catalog) {
     foreach $file (@catalog) {
-        $f = $in_path . "/$file" . ".catalog.tags.tsv";
-        import_sql_file($f, "catalog_tags", 0);
+
+	$f = $in_path . "/$file" . ".catalog.tags.tsv";
+	if (-e $f) {
+	    import_sql_file($f, "catalog_tags", 0);
+	} elsif (-e $f . ".gz") {
+	    $f = $in_path . "/$file" . ".catalog.tags.tsv.gz";
+	    import_gzsql_file($f, "catalog_tags", 0);
+	}
 
         $f = $in_path . "/$file" . ".catalog.snps.tsv";
-        import_sql_file($f, "catalog_snps", 0);
+	if (-e $f) {
+	    import_sql_file($f, "catalog_snps", 0);
+	} elsif (-e $f . ".gz") {
+	    $f = $in_path . "/$file" . ".catalog.snps.tsv.gz";
+	    import_gzsql_file($f, "catalog_snps", 0);
+	}
 
         $f = $in_path . "/$file" . ".catalog.alleles.tsv";
-        import_sql_file($f, "catalog_alleles", 0);
+	if (-e $f) {
+	    import_sql_file($f, "catalog_alleles", 0);
+	} elsif (-e $f . ".gz") {
+	    $f = $in_path . "/$file" . ".catalog.alleles.tsv.gz";
+	    import_gzsql_file($f, "catalog_alleles", 0);
+	}
     }
 }
 
 if ($stacks_type eq "map") {
     $f = "$in_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($f, "markers", 0);
+    import_sql_file($f, "markers", 1);
 
     $f = "$in_path/batch_" . $batch_id . ".genotypes_1.txt";
-    import_sql_file($f, "catalog_genotypes", 0);
+    import_sql_file($f, "catalog_genotypes", 1);
 
 } elsif ($stacks_type eq "population") {
     $f = "$in_path/batch_" . $batch_id . ".markers.tsv";
@@ -194,12 +225,8 @@ sub parse_population_map {
 	chomp $line;
 	@parts = split(/\t/, $line);
 
-	if (scalar(@parts) > 2) {
-	    die("Unable to parse population map, '$popmap_path' (map should contain no more than two columns).\n");
-	}
-
-	if ($parts[1] !~ /\d+/) {
-	    die("Unable to parse population map, '$popmap_path' (population ID in second column should be an integer).\n");
+	if (scalar(@parts) > 3) {
+	    die("Unable to parse population map, '$popmap_path' (map should contain no more than three columns).\n");
 	}
 
 	$ids{$parts[0]} = $parts[1];
@@ -229,7 +256,11 @@ sub extract_parental_ids {
     foreach $prefix (@catalog) {
         $path = $in_path . "/" . $prefix . ".catalog.tags.tsv";
 
-	open($fh, "<$path") or die("Unable to open catalog file: '$path', $!\n");
+	if (-e $path) {
+	    open($fh, "<$path") or die("Unable to open catalog file: '$path', $!\n");
+	} elsif (-e $path . ".gz") {
+	    open($fh, "gunzip -c " . $path . ".gz |") or die("Unable to open catalog file: '$path', $!\n");
+	}
 
 	while ($line = <$fh>) {
 	    chomp $line;
@@ -270,7 +301,16 @@ sub extract_sample_ids {
     foreach $file (@{$files}) {
 	$f = $in_path . "/$file" . ".tags.tsv";
 
-	@results = `head -n 1 $f`;
+	if (-e $f) {
+	    @results = `head -n 1 $f`;
+
+	} elsif (-e $f . ".gz") {
+	    $f = $in_path . "/$file" . ".tags.tsv.gz";
+	    @results = `gunzip -c $f | head -n 1`;
+	} else {
+	    die("Unable to find file $f\n");
+	}
+
 	chomp $results[0];
 	@parts = split(/\t/, $results[0]);
 
@@ -299,6 +339,38 @@ sub import_sql_file {
 	@results;
 }
 
+sub import_gzsql_file {
+    my ($file, $table, $skip_lines) = @_;
+
+    my (@results, $ignore);
+
+    $ignore = "IGNORE $skip_lines LINES" if ($skip_lines > 0);
+
+    #
+    # Get a temporary file name and create a named pipe.
+    #
+    my $tmpdir     = File::Spec->tmpdir();
+    my $named_pipe = mktemp($tmpdir . "/denovo_map_XXXXXX");
+    if ($dry_run == 0) {
+	mkfifo($named_pipe, 0700) || die("Unable to create named pipe for loading gzipped data: $named_pipe, $!");
+    }
+    print STDERR "Streaming $file into named pipe $named_pipe.\n";
+
+    #
+    # Dump our gzipped data onto the named pipe.
+    #
+    system("gunzip -c $file > $named_pipe &") if ($dry_run == 0);
+
+    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore"` if ($dry_run == 0);
+
+    print STDERR "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore\"\n", @results;
+
+    #
+    # Remove the pipe.
+    #
+    unlink($named_pipe) if ($dry_run == 0);
+}
+
 sub build_file_list {
     my ($files, $catalog_files) = @_;
 
@@ -309,7 +381,7 @@ sub build_file_list {
         load_white_list(\@wl);
     }
 
-    @ls = `ls -1 $in_path/*.tags.tsv 2> /dev/null`;
+    @ls = `ls -1 $in_path/*.tags.tsv* 2> /dev/null`;
 
     if (scalar(@ls) == 0) {
 	print STDERR "Unable to locate any input files to process within '$in_path'\n";
@@ -319,7 +391,11 @@ sub build_file_list {
     foreach $line (@ls) {
 	chomp $line;
 
-	($prefix) = ($line =~ /$in_path\/(.+)\.tags\.tsv/);
+	if ($line =~ /\.tags\.tsv\.gz$/) {
+	    ($prefix) = ($line =~ /$in_path\/(.+)\.tags\.tsv\.gz/);
+	} else {
+	    ($prefix) = ($line =~ /$in_path\/(.+)\.tags\.tsv/);
+	}
 
         next if ($prefix =~ /catalog/);
 
@@ -331,7 +407,7 @@ sub build_file_list {
     }
 
     if ($catalog > 0) {
-        @ls = `ls -1 $in_path/*.catalog.tags.tsv 2> /dev/null`;
+        @ls = `ls -1 $in_path/*.catalog.tags.tsv* 2> /dev/null`;
 
         if (scalar(@ls) == 0) {
             print STDERR "Unable to locate any catalog input files to process within '$in_path'\n";
@@ -341,7 +417,11 @@ sub build_file_list {
         foreach $line (@ls) {
             chomp $line;
 
-            ($prefix) = ($line =~ /$in_path\/(.+)\.catalog.tags\.tsv/);
+	    if ($line =~ /\.catalog\.tags\.tsv\.gz$/) {
+		($prefix) = ($line =~ /$in_path\/(.+)\.catalog\.tags\.tsv\.gz/);
+	    } else {
+		($prefix) = ($line =~ /$in_path\/(.+)\.catalog\.tags\.tsv/);
+	    }
 
             if (scalar(@wl) > 0) {
                 next if (!grep(/^$prefix$/, @wl));
@@ -421,7 +501,7 @@ load_radtags.pl -D db -p path -b batch_id [-B -e desc] [-c] [-M pop_map] [-d] [-
     d: perform a dry run. Do not actually load any data, just print what would be executed.
     W: only load file found on this white list.
     U: do not load stacks to unique_tags table to save database space.
-    t: pipeline type (either 'map' or 'population'), load_radtags.pl will guess based on the presence/absence of progeny file types.
+    t: pipeline type (either 'map' or 'population'), load_radtags.pl will guess based on the number or indiviuduals used to build the catalog.
     h: display this help message.
 
 EOQ

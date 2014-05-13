@@ -1,8 +1,8 @@
 //
 // Created by Nathan Dunn on 5/8/13.
-// Copyright (c) 2013 Nathan Dunn. All rights reserved.
+// Copyright (c) 2014 University of Oregon. All rights reserved.
 //
-// To change the template use AppCode | Preferences | File Templates.
+//
 //
 
 
@@ -120,7 +120,7 @@
     NSArray *locusArray = [context executeFetchRequest:request error:&error1];
     if(locusArray!=nil && locusArray.count==1){
         double doubleValue = [[[locusArray objectAtIndex:0] basePairs] doubleValue];
-        NSLog(@"max value is %f",doubleValue);
+//        NSLog(@"max value is %f",doubleValue);
         return doubleValue ;
     }
     return -1.0;

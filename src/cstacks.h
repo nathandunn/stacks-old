@@ -24,6 +24,10 @@
 #ifdef _OPENMP
 #include <omp.h>    // OpenMP library
 #endif
+
+#include <errno.h>
+#include <zlib.h>   // Support for gzipped output files.
+
 #include <getopt.h> // Process command-line options
 #include <string.h>
 #include <math.h>
@@ -76,8 +80,11 @@ int  merge_allele(Locus *locus, SNP *snp);
 int  merge_matches(map<int, CLocus *> &, map<int, QLocus *> &, pair<int, string> &, int, uint &);
 int  add_unique_tag(pair<int, string> &, map<int, CLocus *> &, QLocus *);
 bool compare_dist(pair<int, int>, pair<int, int>);
+
 int  write_catalog(map<int, CLocus *> &);
 int  write_simple_output(CLocus *, ofstream &, ofstream &, ofstream &);
+int  write_gzip_output(CLocus *, gzFile &, gzFile &, gzFile &);
+
 bool compare_matches(Match *, Match *);
 
 int  populate_kmer_hash(map<int, CLocus *> &, CatKmerHashMap &, vector<char *> &, int);

@@ -1,8 +1,8 @@
 //
 // Created by Nathan Dunn on 9/9/13.
-// Copyright (c) 2013 Nathan Dunn. All rights reserved.
+// Copyright (c) 2014 University of Oregon. All rights reserved.
 //
-// To change the template use AppCode | Preferences | File Templates.
+//
 //
 
 
@@ -12,6 +12,11 @@
 #import "StacksDocument.h"
 #import "ProgressController.h"
 #import "StacksAppDelegate.h"
+#import "SampleRepository.h"
+#import "SampleMO.h"
+#import "PopulationRepository.h"
+#import "PopulationMO.h"
+#import "PopulationService.h"
 
 
 @implementation StacksApplicationController {
@@ -20,15 +25,18 @@
 }
 
 
+@synthesize numberFormatter;
 
-//- (id)init {
-//    self = [super init];
-//    if (self) {
-//
-//    }
-//
-//    return self;
-//}
+- (id)init {
+    self = [super init];
+    if (self) {
+
+        numberFormatter = [[NSNumberFormatter alloc] init];
+        numberFormatter.numberStyle = NSNumberFormatterNoStyle;
+    }
+
+    return self;
+}
 
 //- (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
 ////    NSLog(@"validating UI item in App Controller %@",anItem) ;
@@ -49,44 +57,129 @@
 
 - (IBAction)importDocument:(id)sender {
 
-    NSDate *now = [NSDate date];
-    // get year and month
-    NSInteger year = [[now dateWithCalendarFormat:nil timeZone:nil] yearOfCommonEra];
-    NSInteger month = [[now dateWithCalendarFormat:nil timeZone:nil] monthOfYear];
-    NSLog(@"year Y%ld M%ld", year, month);
-    NSLog(@"Importing doc");
-    if (year > 2013 && month > 4) {
-        NSAlert *alert = [[NSAlert alloc] init];
-        [alert setMessageText:@"Trial License Expired"];
-        [alert addButtonWithTitle:@"OK"];
+    NSLog(@"Importing Document");
 
-        [alert runModal];
-        return;
-    }
+//    NSDate *now = [NSDate date];
+//    // get year and month
+//    NSInteger year = [[now dateWithCalendarFormat:nil timeZone:nil] yearOfCommonEra];
+//    NSInteger month = [[now dateWithCalendarFormat:nil timeZone:nil] monthOfYear];
+//    NSLog(@"year Y%ld M%ld", year, month);
+//    if (year > 2014 && month > 6) {
+//        NSAlert *alert = [[NSAlert alloc] init];
+//        [alert setMessageText:@"Trial License Expired"];
+//        [alert addButtonWithTitle:@"OK"];
+//
+//        [alert runModal];
+//        return;
+//    }
 
 
-    NSOpenPanel *panel = [NSOpenPanel openPanel];
-    [panel setAllowsMultipleSelection:NO];
-    [panel setCanChooseDirectories:YES];
-    [panel setCanChooseFiles:NO];
-    [panel setFloatingPanel:YES];
+    NSOpenPanel *importPanel = [NSOpenPanel openPanel];
+    [importPanel setAllowsMultipleSelection:NO];
+
+    [importPanel setCanChooseDirectories:YES];
+    [importPanel setCanChooseFiles:NO];
+
+    [importPanel setFloatingPanel:YES];
+
+
+//    [importPanel setTreatsFilePackagesAsDirectories:NO];
     NSSize minSize;
     minSize.height = 600;
     minSize.width = 500;
 
-    [panel setMinSize:minSize];
-    NSInteger result = [panel runModal];
+
+    [importPanel setMinSize:minSize];
+    NSInteger result = [importPanel runModal];
+    NSLog(@"import result %ld", result);
+
 
     StacksConverter *stacksConverter = [[StacksConverter alloc] init];
 //    NSInteger result = [panel runModalForDirectory:NSHomeDirectory() file:nil types:nil];
     if (result == NSOKButton) {
-        NSLog(@"ok !!");
-        NSLog(@"directory URL: %@", panel.directoryURL.path);
-        NSString *stacksDocumentPath = [stacksConverter generateFilePathForUrl:panel.directoryURL];
-        BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:stacksDocumentPath error:NULL];
-        NSLog(@"file removed %i", fileRemoved);
+        NSString *importPath = [importPanel.directoryURL.path stringByAppendingString:@"/"];
+        NSLog(@"import path %@", importPath);
+        NSString *importPathName = importPanel.directoryURL.lastPathComponent;
 
-        NSLog(@"loadding progress!!! in thread");
+
+        NSLog(@"import path name %@", importPathName);
+
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        NSArray *files = [fileManager contentsOfDirectoryAtPath:importPath error:nil];
+        NSLog(@"# of files %ld", files.count);
+        for (id file in files) {
+            NSLog(@"file %@", file);
+        }
+//        [fileManager dir
+
+
+        // now we open the save panel for our stacks file.
+//        NSSavePanel *savePanel = [NSSavePanel savePanel];
+//        savePanel.nameFieldStringValue = [importPathName stringByAppendingString:@".stacks"];
+
+//        NSInteger saveResult = [savePanel runModal];
+//        if (saveResult != NSOKButton) {
+//            NSLog(@"Cancelled import");
+//            return;
+//        }
+
+//        NSLog(@"directory URL: %@ %@ %@", savePanel.directoryURL.path, savePanel.directoryURL.pathExtension, savePanel.directoryURL.parameterString);
+//        NSLog(@"save URL: %@", savePanel.nameFieldStringValue);
+//        NSString *fileName = savePanel.nameFieldStringValue;
+        NSString *fileName = [importPathName stringByAppendingString:@".stacks"];
+        NSString *extension = [fileName pathExtension];
+        if ([extension isNotEqualTo:@"stacks"]) {
+            fileName = [fileName stringByAppendingString:@".stacks"];
+            NSLog(@"has correct filename %i", [[fileName exposedBindings] isEqualTo:@"stacks"]);
+            NSLog(@"filename: %@", fileName);
+        }
+        NSString *savedStacksDocumentPath = [importPath stringByAppendingFormat:@"%@", fileName];
+        NSLog(@"stacks doc path %@", savedStacksDocumentPath);
+        NSString *resultFileName ;
+
+        if ([[NSFileManager defaultManager] fileExistsAtPath:savedStacksDocumentPath isDirectory:NULL]) {
+            NSAlert *alertReplace = [[NSAlert alloc] init];
+            [alertReplace setMessageText:[NSString stringWithFormat:@"Replace stacks file or create new%@?", savedStacksDocumentPath]];
+            [alertReplace addButtonWithTitle:@"Cancel"];
+            [alertReplace addButtonWithTitle:@"Replace"];
+            [alertReplace addButtonWithTitle:@"Create New"];
+
+            NSInteger runAlertReplace = [alertReplace runModal];
+            if (runAlertReplace == NSAlertFirstButtonReturn) {
+                NSLog(@"Cancelling");
+                return;
+            }
+            if (runAlertReplace == NSAlertSecondButtonReturn) {
+                BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:savedStacksDocumentPath error:NULL];
+                NSLog(@"file removed %i", fileRemoved);
+            }
+        }
+
+        int i = 1;
+        while ([[NSFileManager defaultManager] fileExistsAtPath:savedStacksDocumentPath isDirectory:NULL]) {
+            resultFileName = [importPathName stringByAppendingFormat:@"%i.stacks", i];
+            savedStacksDocumentPath = [importPath stringByAppendingFormat:@"%@", resultFileName];
+            ++i;
+        }
+//        fileName = resultFileName ;
+
+
+        NSAlert *alertCancel = [[NSAlert alloc] init];
+        [alertCancel setMessageText:[NSString stringWithFormat:@"Create stacks file %@?", savedStacksDocumentPath]];
+        [alertCancel addButtonWithTitle:@"Cancel"];
+        [alertCancel addButtonWithTitle:@"OK"];
+
+        NSInteger runAlert = [alertCancel runModal];
+        if (runAlert == NSAlertFirstButtonReturn) {
+            NSLog(@"Cancelling");
+            return;
+        }
+
+//        if (fileExistsAtPath) {
+//            BOOL fileRemoved = [[NSFileManager defaultManager] removeItemAtPath:savedStacksDocumentPath error:NULL];
+//            NSLog(@"file removed %i", fileRemoved);
+//        }
+
 
         ProgressController *progressController = [[ProgressController alloc] init];
 
@@ -95,8 +188,11 @@
 
 //        dispatch_async(dispatch_get_main_queue(),^ {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
-            newDocument.path = stacksDocumentPath;
+
+            NSLog(@"loadding progress!!! in thread");
+//            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:[panel.directoryURL.path stringByAppendingString:@"/"] progressWindow:progressController];
+            StacksDocument *newDocument = [stacksConverter loadLociAndGenotypes:savedStacksDocumentPath progressWindow:progressController importPath:importPath];
+            newDocument.path = savedStacksDocumentPath;
             [newDocument.managedObjectContext save:nil];
             if (newDocument != nil) {
                 [progressController close];
@@ -104,7 +200,7 @@
 //        [NSApp stopModal];
                 NSLog(@"trying to open");
 
-                [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:stacksDocumentPath] display:YES completionHandler:^(NSDocument *doc, BOOL documentWasAlreadyOpened, NSError *error) {
+                [[StacksDocumentController sharedDocumentController] openDocumentWithContentsOfURL:[NSURL fileURLWithPath:savedStacksDocumentPath] display:YES completionHandler:^(NSDocument *doc, BOOL documentWasAlreadyOpened, NSError *error) {
                     if (error != nil) {
                         NSLog(@"error3 %@", error);
                     }
@@ -153,7 +249,7 @@
 //       didEndSelector: @selector(progressDidEnd: returnCode: contextInfo:)
 //          contextInfo: NULL];
 //}
-- (void)startProgressPanel:(NSString *)message {
+//- (void)startProgressPanel:(NSString *)message {
 //    [loadProgress displayIfNeeded];
 //    [loadProgress setIndeterminate:false];
 //    [loadProgress setDisplayedWhenStopped:false];
@@ -178,21 +274,21 @@
 //       didEndSelector: nil
 //          contextInfo: nil];
 
-    // Display a progress panel as a sheet
+// Display a progress panel as a sheet
 //    self.progressMessage = message;
 //    [progressIndicator setIndeterminate: YES];
 //    [progressIndicator startAnimation: self];
 //    [progressCancelButton setEnabled: NO];
 
-    // TODO: find acces to the modal window we are using
+// TODO: find acces to the modal window we are using
 //    [NSApp beginSheet: progressPanel
 //       modalForWindow: self.windowForSheet
 //        modalDelegate: self
 //       didEndSelector: @selector(progressDidEnd: returnCode: contextInfo:)
 //          contextInfo: NULL];
-}
+//}
 
-- (void)progressDidEnd:(NSWindow *)panel returnCode:(int)returnCode contextInfo:(void *)context {
+//- (void)progressDidEnd:(NSWindow *)panel returnCode:(int)returnCode contextInfo:(void *)context {
 //    xpc_connection_t connection = (xpc_connection_t)context;
 //
 //    if (returnCode != 0) {
@@ -206,6 +302,119 @@
 //        xpc_connection_cancel(connection);
 //        xpc_release(connection);
 //    }
+//}
+
+
+// TODO: change for file, etc. etc. etc.
+- (IBAction)applyPopmap:(id)sender {
+
+    StacksDocument *stacksDocument = [[StacksDocumentController sharedDocumentController] currentDocument];
+    NSLog(@"stacksDocu?  %@", stacksDocument);
+    if (stacksDocument == nil) {
+        NSAlert *alert = [NSAlert alertWithMessageText:@"Error applying Population Map"
+                                         defaultButton:@"OK"
+                                       alternateButton:nil
+                                           otherButton:nil
+                             informativeTextWithFormat:@"Must have an open Stacks document in order to apply a Population Map"];
+        [alert runModal];
+        return;
+    }
+
+    NSOpenPanel *importPanel = [NSOpenPanel openPanel];
+    [importPanel setAllowsMultipleSelection:NO];
+    [importPanel setCanChooseDirectories:NO];
+    [importPanel setCanChooseFiles:YES];
+    [importPanel setFloatingPanel:YES];
+    NSSize minSize;
+    minSize.height = 600;
+    minSize.width = 500;
+
+
+    [importPanel setMinSize:minSize];
+    NSInteger result = [importPanel runModal];
+
+
+    if (result == NSOKButton) {
+        NSString *fileUrlString = [NSString stringWithFormat:@"%@", [importPanel.URL path]];
+        NSLog(@"import file %@", fileUrlString);
+
+        NSString *errorCondition = [[PopulationService sharedInstance] validatePopmap:importPanel.URL];
+        if (errorCondition != nil) {
+            NSLog(@"Bad Popmap %@", errorCondition);
+
+            NSAlert *alert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"Unable to apply Population Map %@", importPanel.URL.path]
+                                             defaultButton:@"OK"
+                                           alternateButton:nil
+                                               otherButton:nil
+                                 informativeTextWithFormat:errorCondition];
+
+            [alert runModal];
+
+            return;
+        }
+
+
+
+        // remove the old populations from the samples
+        NSArray *sampleArray = [[SampleRepository sharedInstance] getAllSamples:stacksDocument.managedObjectContext];
+        for (SampleMO *sampleMO in sampleArray) {
+            sampleMO.population = nil ;
+        }
+
+        // remove the old populations
+        NSArray *allPopulation = [[PopulationRepository sharedInstance] getAllPopulations:stacksDocument.managedObjectContext];
+        for (PopulationMO *populationMO in allPopulation) {
+            [stacksDocument.managedObjectContext deleteObject:populationMO];
+        }
+
+        [stacksDocument.populationLookup removeAllObjects];
+        stacksDocument.populationLookup = nil ;
+
+        // TODO: validate deletions!!!
+
+
+        // TODO: refactor to take a filename
+        StacksConverter *stacksConverter = [[StacksConverter alloc] init];
+        [stacksConverter addPopulationsToDocument:stacksDocument forPath:fileUrlString];
+        NSLog(@"population lookup size: %ld", stacksDocument.populationLookup.count);
+
+        // TODO: reapply to the samples
+        for (SampleMO *sampleMO in sampleArray) {
+            NSString *populationId = [stacksDocument.populationLookup objectForKey:sampleMO.name];
+
+            if (populationId != nil) {
+                // lets get the population . . can use lookup, but this is usually pretty small
+                NSLog(@"tyring to populate popid %@", populationId);
+                for (PopulationMO *populationMO in stacksDocument.populations) {
+//                    NSNumber *endNumber = [numberFormatter numberFromString:populationId];
+//                    NSLog(@"comparing to %@ vs %@", populationMO.populationId, endNumber);
+                    if ([populationMO.name isEqualToString:populationId]) {
+                        NSLog(@"FOuND population ID %@", populationMO.populationId);
+                        [populationMO addSamplesObject:sampleMO];
+                    }
+                }
+            }
+        }
+
+
+        NSError *saveError = nil ;
+        [stacksDocument.managedObjectContext save:&saveError];
+        if (saveError != nil) {
+            NSLog(@"save error %@", saveError);
+        }
+
+
+        NSURL *url = stacksDocument.fileURL;
+        NSError *openError = nil ;
+        [[self currentDocument] close];
+        [self reopenDocumentForURL:url withContentsOfURL:url error:&openError];
+//        [self openDocumentWithContentsOfURL: display:<#(BOOL)displayDocument#> error:<#(NSError **)outError#>:stacksDocument];
+
+        // TODO: reapply to the  UI
+
+
+    }
+
 }
 
 
@@ -226,6 +435,31 @@
     if (returnCode == NSAlertFirstButtonReturn) {
         // Do something
     }
+}
+
+- (void)provideFeedback:(id)sender {
+    NSString *recipients = @"mailto:jcatchen@uoregon.edu?cc=ndunn@uoregon.edu&subject=vStacks Feedback 0.8.2";
+    NSString *body = @"&body=Feedback for vStacks";
+    NSString *email = [NSString stringWithFormat:@"%@%@", recipients, body];
+
+    email = [email stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:email]];
+}
+
+- (void)helpStacks:(id)sender {
+    NSString *url = @"http://creskolab.uoregon.edu/stacks/";
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
+}
+
+- (void)helpVStacks:(id)sender {
+    NSString *url = @"http://creskolab.uoregon.edu/stacks/manual/#vstacks";
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
+}
+
+- (void)license:(id)sender {
+    NSString *url = @"http://creskolab.uoregon.edu/stacks/vstacks/apple-license.php";
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
 
 @end

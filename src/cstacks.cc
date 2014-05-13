@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -30,15 +30,16 @@
 
 // Global variables to hold command-line options.
 queue<pair<int, string> > samples;
-string  out_path;
-string  catalog_path;
-int     batch_id        = 0;
-int     ctag_dist       = 0;
-searcht search_type     = sequence;
-int     num_threads     = 1;
-bool    mult_matches    = false;
-bool    report_mmatches = false;
-bool    require_uniq_haplotypes = false;
+string    out_path;
+string    catalog_path;
+file_type in_file_type    = sql;
+int       batch_id        = 0;
+int       ctag_dist       = 0;
+searcht   search_type     = sequence;
+int       num_threads     = 1;
+bool      mult_matches    = false;
+bool      report_mmatches = false;
+bool      require_uniq_haplotypes = false;
 
 int main (int argc, char* argv[]) {
 
@@ -61,7 +62,8 @@ int main (int argc, char* argv[]) {
     map<int, CLocus *>::iterator cat_it;
     map<int, QLocus *>::iterator query_it;
     pair<int, string> s;
-    int i;
+    bool compressed = false;
+    int  i;
 
     if (catalog_path.length() > 0) {
 	cerr << "Initializing existing catalog...\n";
@@ -100,7 +102,7 @@ int main (int argc, char* argv[]) {
 	s = samples.front();
 	samples.pop();
 
-	if (!load_loci(s.second, sample, false, false)) {
+	if (!load_loci(s.second, sample, false, compressed)) {
             cerr << "Failed to load sample " << i << "\n";
             continue;
         }
@@ -583,65 +585,90 @@ int write_catalog(map<int, CLocus *> &catalog) {
     CLocus  *tag;
     set<int> matches;
 
+    bool gzip = (in_file_type == gzsql) ? true : false;
+
     //
     // Parse the input file names to create the output file
     //
     stringstream prefix; 
     prefix << out_path << "batch_" << batch_id;
 
-    //
-    // Output the tags
-    //
-    ofstream cat_file, snp_file, all_file;
+    string tag_file = prefix.str() + ".catalog.tags.tsv";
+    string snp_file = prefix.str() + ".catalog.snps.tsv";
+    string all_file = prefix.str() + ".catalog.alleles.tsv";
 
-    string out_file = prefix.str() + ".catalog.tags.tsv";
-    cat_file.open(out_file.c_str());
-    if (cat_file.fail()) {
-	cerr << "Error: Unable to open catalog tag file for writing.\n";
-	exit(1);
+    if (gzip) {
+	tag_file += ".gz";
+	snp_file += ".gz";
+	all_file += ".gz";
     }
 
-    out_file = prefix.str() + ".catalog.snps.tsv";
-    snp_file.open(out_file.c_str());
-    if (snp_file.fail()) {
-	cerr << "Error: Unable to open catalog SNP file for writing.\n";
-	exit(1);
-    }
-
-    out_file = prefix.str() + ".catalog.alleles.tsv";
-    all_file.open(out_file.c_str());
-    if (all_file.fail()) {
-	cerr << "Error: Unable to open catalog allele file for writing.\n";
-	exit(1);
+    //
+    // Open the output files for writing.
+    //
+    gzFile   gz_tags, gz_snps, gz_alle;
+    ofstream tags, snps, alle;
+    if (gzip) {
+	gz_tags = gzopen(tag_file.c_str(), "wb");
+	if (!gz_tags) {
+	    cerr << "Error: Unable to open gzipped catalog tag file '" << tag_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_tags, libz_buffer_size);
+	#endif
+	gz_snps = gzopen(snp_file.c_str(), "wb");
+	if (!gz_snps) {
+	    cerr << "Error: Unable to open gzipped catalog snps file '" << snp_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_snps, libz_buffer_size);
+	#endif
+	gz_alle = gzopen(all_file.c_str(), "wb");
+	if (!gz_alle) {
+	    cerr << "Error: Unable to open gzipped catalog alleles file '" << all_file << "': " << strerror(errno) << ".\n";
+	    exit(1);
+	}
+        #if ZLIB_VERNUM >= 0x1240
+	gzbuffer(gz_alle, libz_buffer_size);
+	#endif
+    } else {
+	tags.open(tag_file.c_str());
+	if (tags.fail()) {
+	    cerr << "Error: Unable to open catalog tag file for writing.\n";
+	    exit(1);
+	}
+	snps.open(snp_file.c_str());
+	if (snps.fail()) {
+	    cerr << "Error: Unable to open catalog SNPs file for writing.\n";
+	    exit(1);
+	}
+	alle.open(all_file.c_str());
+	if (alle.fail()) {
+	    cerr << "Error: Unable to open catalog alleles file for writing.\n";
+	    exit(1);
+	}
     }
 
     for (i = catalog.begin(); i != catalog.end(); i++) {
 	tag = i->second;
 
-	write_simple_output(tag, cat_file, snp_file, all_file);
-
-// 	//
-// 	// Debugging code.
-// 	//
-//  	if (tag->matches.size() > 0) {
-//  	    cerr << "Found match: " << tag->matches.size() << " matches.\n";
-//  	}
-
-//  	for (mat_it = tag->matches.begin(); mat_it != tag->matches.end(); mat_it++) {
-//  	    matched_tag = parent_2[(*mat_it).first];
-//  	    if (strcmp(matched_tag->con, tag->con) == 0)
-//  		cerr << "  Match " << tag->id << " -> " << matched_tag->id << ": consensus matches.\n";
-//  	    else 
-//  		cerr << "  Match " << tag->id << " -> " << matched_tag->id << ": consensus does not match;\n" 
-//  		     << "    " << matched_tag->con << "\n" 
-//  		     << "    " << tag->con << "\n";
-//  	}
-
+	if (gzip)
+	    write_gzip_output(tag, gz_tags, gz_snps, gz_alle);
+	else 
+	    write_simple_output(tag, tags, snps, alle);
     }
 
-    cat_file.close();
-    snp_file.close();
-    all_file.close();
+    if (gzip) {
+	gzclose(gz_tags);
+	gzclose(gz_snps);
+	gzclose(gz_alle);
+    } else {
+	tags.close();
+	snps.close();
+	alle.close();
+    }
 
     return 0;
 }
@@ -1072,7 +1099,9 @@ populate_kmer_hash(map<int, CLocus *> &catalog, CatKmerHashMap &kmer_map, vector
     return 0;
 }
 
-int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstream &all_file) {
+int 
+write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstream &all_file) 
+{
     vector<SNP *>::iterator           snp_it;
     map<string, int>::iterator        all_it;
     vector<pair<int, int> >::iterator src_it;
@@ -1146,15 +1175,95 @@ int write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofs
 }
 
 int 
+write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_file) 
+{
+    vector<SNP *>::iterator           snp_it;
+    map<string, int>::iterator        all_it;
+    vector<pair<int, int> >::iterator src_it;
+    string       sources;
+    stringstream sstr; 
+
+    for (src_it = tag->sources.begin(); src_it != tag->sources.end(); src_it++) {
+	sstr << (*src_it).first << "_" << (*src_it).second << ",";
+    }
+    sources = sstr.str();
+    sources = sources.substr(0, sources.length() - 1);    
+
+    sstr.str("");
+
+    sstr << 
+	"0"          << "\t" << 
+	batch_id     << "\t" <<
+	tag->id      << "\t" <<
+        tag->loc.chr << "\t" <<
+        tag->loc.bp  << "\t" <<
+        (tag->loc.strand == plus ? "+" : "-") << "\t" <<
+	"consensus"  << "\t" <<
+	"0"          << "\t" <<
+	sources      << "\t" <<
+	tag->con     << "\t" << 
+        0            << "\t" <<  // These flags are unused in cstacks, but important in ustacks
+        0            << "\t" <<
+        0            << "\n";
+
+    gzputs(cat_file, sstr.str().c_str());
+    sstr.str("");
+
+    //
+    // Output the SNPs associated with the catalog tag
+    //
+    char rank_3[2], rank_4[2];
+    rank_3[1] = '\0';
+    rank_4[1] = '\0';
+
+    for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
+	rank_3[0] = (*snp_it)->rank_3 == 0 ? '\0' : (*snp_it)->rank_3;
+	rank_4[0] = (*snp_it)->rank_4 == 0 ? '\0' : (*snp_it)->rank_4;
+
+	sstr << "0\t" << 
+	    batch_id          << "\t" <<
+	    tag->id           << "\t" << 
+	    (*snp_it)->col    << "\t" << 
+	    (*snp_it)->lratio << "\t" << 
+	    (*snp_it)->rank_1 << "\t" << 
+	    (*snp_it)->rank_2 << "\t" << 
+	    rank_3            << "\t" << 
+	    rank_4            << "\n";
+    }
+
+    gzputs(snp_file, sstr.str().c_str());
+    sstr.str("");
+
+    //
+    // Output the alleles associated with the two matched tags
+    //
+    for (all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++)
+	sstr 
+	    << "0\t" 
+	    << batch_id  << "\t" 
+	    << tag->id  << "\t" 
+	    << all_it->first << "\t" 
+	    << 0 << "\t" 
+	    << 0 << "\n";
+
+    gzputs(all_file, sstr.str().c_str());
+
+    return 0;
+}
+
+int 
 initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog) 
 {
     map<int, CLocus *> tmp_catalog;
+    bool compressed = false;
 
     //
     // Parse the input files.
     //
-    if (!load_loci(sample.second, tmp_catalog, false, false))
+    if (!load_loci(sample.second, tmp_catalog, false, compressed))
         return 0;
+
+    in_file_type = compressed == true ? gzsql : sql;
 
     sample.first = tmp_catalog.begin()->second->sample_id;
 
@@ -1179,11 +1288,15 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
 int 
 initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog) 
 {
+    bool compressed;
+
     //
     // Parse the input files.
     //
-    if (!load_loci(catalog_path, catalog, false, false))
+    if (!load_loci(catalog_path, catalog, false, compressed))
         return 0;
+
+    in_file_type = compressed == true ? gzsql : sql;
 
     //
     // Iterate over the catalog entires and convert the stack components

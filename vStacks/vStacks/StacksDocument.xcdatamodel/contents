@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model userDefinedModelVersionIdentifier="" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="3401" systemVersion="13B42" minimumToolsVersion="Automatic" macOSVersion="Automatic" iOSVersion="Automatic">
+<model userDefinedModelVersionIdentifier="1.1" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="5064" systemVersion="13C1021" minimumToolsVersion="Automatic" macOSVersion="Automatic" iOSVersion="Automatic">
     <entity name="Datum" representedClassName="DatumMO" syncable="YES">
         <attribute name="alleleData" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="datumData" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="depthData" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="haplotypeData" optional="YES" attributeType="Transformable" syncable="YES"/>
+        <attribute name="metadata" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sampleId" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
         <attribute name="snpData" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="stackData" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="tagId" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
-        <relationship name="locus" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Locus" inverseName="datums" inverseEntity="Locus" syncable="YES"/>
-        <relationship name="sample" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Sample" inverseName="datums" inverseEntity="Sample" syncable="YES"/>
+    </entity>
+    <entity name="GenericHash" representedClassName="GenericHashMO" syncable="YES">
+        <attribute name="dataValue" optional="YES" attributeType="Transformable" syncable="YES"/>
+        <attribute name="key" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="stringValue" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="type" optional="YES" attributeType="String" syncable="YES"/>
     </entity>
     <entity name="Locus" representedClassName="LocusMO" syncable="YES">
         <attribute name="alleleData" optional="YES" attributeType="Transformable" syncable="YES"/>
@@ -21,36 +26,39 @@
         <attribute name="length" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <attribute name="locusId" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
         <attribute name="marker" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="metadata" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="parentCount" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <attribute name="progenyCount" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <attribute name="ratio" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="snpData" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="strand" optional="YES" attributeType="String" defaultValueString="+" syncable="YES"/>
         <attribute name="type" optional="YES" attributeType="String" syncable="YES"/>
-        <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="locus" inverseEntity="Datum" syncable="YES"/>
     </entity>
     <entity name="Population" representedClassName="PopulationMO" syncable="YES">
+        <attribute name="metadata" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="populationId" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
         <relationship name="samples" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Sample" inverseName="population" inverseEntity="Sample" syncable="YES"/>
     </entity>
     <entity name="Sample" representedClassName="SampleMO" syncable="YES">
+        <attribute name="metadata" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sampleId" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
-        <relationship name="datums" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Datum" inverseName="sample" inverseEntity="Datum" syncable="YES"/>
         <relationship name="population" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Population" inverseName="samples" inverseEntity="Population" syncable="YES"/>
     </entity>
     <entity name="StackEntryDatum" representedClassName="StackEntryDatumMO" syncable="YES">
+        <attribute name="metadata" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="sampleId" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
         <attribute name="stackData" optional="YES" attributeType="Transformable" syncable="YES"/>
         <attribute name="tagId" attributeType="Integer 32" defaultValueString="0" indexed="YES" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Datum" positionX="0" positionY="0" width="0" height="0"/>
-        <element name="Locus" positionX="0" positionY="0" width="0" height="0"/>
-        <element name="Population" positionX="0" positionY="0" width="0" height="0"/>
-        <element name="Sample" positionX="0" positionY="0" width="0" height="0"/>
-        <element name="StackEntryDatum" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Datum" positionX="-90" positionY="171" width="128" height="193"/>
+        <element name="Locus" positionX="153" positionY="108" width="128" height="253"/>
+        <element name="Population" positionX="0" positionY="0" width="128" height="105"/>
+        <element name="Sample" positionX="-252" positionY="9" width="128" height="103"/>
+        <element name="StackEntryDatum" positionX="295" positionY="0" width="128" height="120"/>
+        <element name="GenericHash" positionX="-263" positionY="207" width="128" height="105"/>
     </elements>
 </model>

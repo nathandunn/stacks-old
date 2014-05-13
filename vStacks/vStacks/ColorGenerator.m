@@ -3,7 +3,7 @@
 //  StacksGui3
 //
 //  Created by Nathan Dunn on 10/22/13.
-//  Copyright (c) 2013 Nathan Dunn. All rights reserved.
+//  Copyright (c) 2014 University of Oregon. All rights reserved.
 //
 #define SRGB (CGFloat [4]){184.0/256.0, 184.0/256.0, 184.0/256.0, 1.0}
 
@@ -46,6 +46,34 @@
             return [self colorWithHexString:@"bf1e25"];
         case 9:
             return [self colorWithHexString:@"4cb8ff"];
+        default:
+            NSLog(@"should never be hear");
+            return nil;
+    }
+}
+
+- (NSString *)generateColorStringForOrder:(NSUInteger)order {
+    switch (order % 10) {
+        case 0:
+            return @"008000";
+        case 1:
+            return @"c00000";
+        case 2:
+            return @"ffc600";
+        case 3:
+            return @"29356c";
+        case 4:
+            return @"860000";
+        case 5:
+            return @"dc6200";
+        case 6:
+            return @"4b398e";
+        case 7:
+            return @"008f56";
+        case 8:
+            return @"bf1e25";
+        case 9:
+            return @"4cb8ff";
         default:
             NSLog(@"should never be hear");
             return nil;

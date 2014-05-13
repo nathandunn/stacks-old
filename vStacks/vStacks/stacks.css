@@ -1,20 +1,6 @@
 /*
- Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
-
- This file is part of Stacks.
-
- Stacks is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- Stacks is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
+// Copyright (c) 2014 University of Oregon
+// Created by Julian Catchen <jcatchen@uoregon.edu>
 */
 
 body {
@@ -247,28 +233,28 @@ table.radtag td.primary {
     padding-left: 3em;
     font-size: smaller;
     color: #32773f;
-    width: 15%;
+    width: 5%;
 }
 
 table.radtag td.secondary {
     padding-left: 3em;
     font-size: smaller; 
     color: #870214;
-    width: 15%;
+    width: 5%;
 }
 
 table.radtag td.tertiary { 
     padding-left: 3em;
     font-size: smaller;
     color: #3d5aff;
-    width: 15%;
+    width: 5%;
 }
 
 table.radtag td.id { 
     font-family: monospace;
     text-align: right;
     padding-right: 4px;
-    width: 20%;
+    width: 10%;
 }
 
 table.radtag td.tag { 
@@ -564,5 +550,82 @@ span.snp:hover {
 
 span.snp_sel {
     font-weight: bold;
-    text-decoration: underline;
+    text-decoration: underline;/erro
+}
+
+div.selected-datum{
+    background-color: lightskyblue !important;
+    cursor: move;
+    /*-moz-border-radius: 10px;*/
+    border-radius: 5px;
+}
+
+div.datum{
+
+    float: left;
+    padding: 5px;
+    margin: 5px;
+    text-align: center;
+    border-radius: 5px;
+    /*border: 1px;*/
+    /*border-style: solid;*/
+    background-color: #eeeeee;
+}
+
+div.datum:hover{
+    background-color: lightblue;
+    color: darkblue;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+div.big-error{
+    color: red;
+    font-size: large;
+}
+
+div.none{
+    color: lightskyblue;
+    font-size: large;
+}
+
+div.datum-name{
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    white-space: pre;
+    font-size: smaller;
+    /*color: #aaaaaa;*/
+    color: #888888;
+}
+
+div.datum-depth{
+    font-family: monospace;
+    font-size: 14;
+    display: inline-block;
+    min-width: 150px;
+    max-width: 150px;
+    word-wrap: break-word;
+}
+
+div.datum-pop{
+    /*font-family: monospace;*/
+    /*font-size: 14;*/
+    display: table;
+    width: 98%;
+}
+
+div.population-header{
+    margin-top: 10px;
+    margin-left: 5px;
+    margin-right: 5px;
+    padding: 3px;
+    color: #000000;
+    text-align: center;
+    background-color: #DFEFF0;
+    font-weight: bold;
+    border-radius: 5px;
+
+    width: 100%;
+    display: table-caption;
 }
