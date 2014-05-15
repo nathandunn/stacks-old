@@ -91,24 +91,64 @@ skip_ () {
 #       $test_data_path - This variable contains the directory which is the
 #                         parent directory of $io_path.
 ok_ () {
+    local OPTIND
+    bad_flag=false
+    inline_path=''
+
+    while getopts ":i:" opt; do
+        case "${opt}" in
+            i)
+                inline_path="${OPTARG}"
+                ;;
+            *)
+                bad_flag=true
+                ;;
+        esac
+    done
+    shift $((OPTIND-1))
+
     tap_desc="$1"
     io_path="$2"
     cmd="$3"
-    
-    in_path="$test_data_path/$io_path/in"
+
     eout_path="$test_data_path/$io_path/eout"
+    in_path="$test_data_path/$io_path/in"
+    
+    # If -i '%in', then fixup inline_path.
+    if [ "$inline_path" = '%in' ] ; then 
+        inline_path="$in_path"
+    fi
 
     # Check args
-    if [ -z "$tap_desc" ] || [ -z "$io_path" ] || [ -z "$cmd" ] ; then
-        # TODO - replace with 'bail out'
+    if [ "$bad_flag" = true ] ; then 
+        # User passed a bad flag to ok_()
+        echo not ok "$count$tap_desc - ERROR: Bad flag sent to $FUNCNAME."
+        failed=`expr $failed + 1`
+    elif [ "$inline_path" ] && [ ! -d "$inline_path" ] ; then
+        # inline_path is not a directory
+        echo not ok "$count$tap_desc - ERROR: $inline_path not a directory in $FUNCNAME."
+        failed=`expr $failed + 1`
+    elif [ -z "$tap_desc" ] || [ -z "$io_path" ] || [ -z "$cmd" ] ; then
+        # These crucial variables had better be set.
         echo not ok "$count$tap_desc - ERROR: Bad call of $FUNCNAME."
         failed=`expr $failed + 1`
     else
-        # Setup
+
+        # Setup 
+        if [ -n "$inline_path" ] ; then 
+            # Tool puts output in input directory (i.e. inline).
+            # Copy $inline_path contents to the temp outdir and update $in_path.
+            cp -a $inline_path $out_path
+            in_path="$out_path"
+        else
+            # Normal operation.
+            mkdir $out_path
+            in_path="$test_data_path/$io_path/in"
+        fi
+
         if [ -n "$tap_desc" ] ; then
             tap_desc=" - $tap_desc"
         fi
-        mkdir $out_path
 
         # Fix up command
         cmd=$(_interpolate_command "$cmd" $in_path $out_path)
@@ -144,3 +184,4 @@ ok_ () {
         rm -rf $out_path
     fi
 }
+
