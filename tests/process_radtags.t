@@ -8,6 +8,7 @@ source $test_path/setup.sh
 # Setup
 barcodes=$test_data_path/frequent_data/Barcodes.txt
 freq_in=$test_data_path/frequent_data/in.fastq.gz 
+freq_in2=$test_data_path/frequent_data/in.fastq
 
 plan 11
 
@@ -26,7 +27,7 @@ ok_ 'input gzfastq' \
 
 ok_ 'input fastq' \
     001_input_fastq \
-    "process_radtags -i fastq -p %in -o %out -b $barcodes -E phred33 -e sbfI"
+    "process_radtags -i fastq -f $freq_in2 -o %out -b $barcodes -E phred33 -e sbfI"
 
 diag 'FIXME: Input files for this test are NOT actaully phred64 encoded! This is just an example test...'
 
