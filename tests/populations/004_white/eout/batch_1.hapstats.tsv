@@ -1,0 +1,10 @@
+# ms	ms1,ms2,ms3
+# rb	rb1,rb2,rb3
+# stl	stl1,stl2,stl3
+# Batch ID 	Locus ID	Chr	BP	Pop ID	N	Haplotype Cnt	Gene Diversity	Smoothed Gene Diversity	Smoothed Gene Diversity P-value	Haplotype Diversity	Smoothed Haplotype Diversity	Smoothed Haplotype Diversity P-value	Haplotypes
+1	4	groupIX	4145694	ms	6	1	0.0000	0.0000	0.0000	0.0000	0.0000	0.0000	A:6
+1	5	groupIX	4186999	ms	6	1	0.0000	0.0000	0.0000	0.0000	0.0000	0.0000	G:6
+1	4	groupIX	4145694	rb	6	2	0.5333	0.0000	0.0000	0.5333	0.0000	0.0000	A:2;G:4
+1	5	groupIX	4186999	rb	6	2	0.5333	0.0000	0.0000	0.5333	0.0000	0.0000	C:4;G:2
+1	4	groupIX	4145694	stl	6	1	0.0000	0.0000	0.0000	0.0000	0.0000	0.0000	G:6
+1	5	groupIX	4186999	stl	6	1	0.0000	0.0000	0.0000	0.0000	0.0000	0.0000	G:6
