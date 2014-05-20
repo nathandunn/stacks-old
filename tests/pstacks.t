@@ -5,8 +5,10 @@ test_path=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)
 test_data_path="$test_path/"$(basename "${BASH_SOURCE[0]}" | sed -e 's@\.t$@@')
 source $test_path/setup.sh
 freq_in=$test_data_path/frequent_input/in.bam
+freq_in2=$test_data_path/frequent_input/in2.bam
+freq_in3=$test_data_path/frequent_input/in.sam
 
-plan 8
+plan 12
 
 ok_ 'input bam' \
     000_inbam \
@@ -14,7 +16,7 @@ ok_ 'input bam' \
 
 ok_ 'input sam' \
     001_insam \
-    "pstacks -t sam -f %in/in.sam -o %out"
+    "pstacks -t sam -f $freq_in3 -o %out"
 
 skip_ 'input bowtie - need data input file type' \
     002_inbowtie \
@@ -40,16 +42,20 @@ ok_ 'R^2 significance level of 0.001 for calling homozygote/heterozygote' \
     007_alpha0.001 \
     "pstacks -t bam -f %in/in.bam -o %out --alpha 0.001"
 
-#ok_ '' \
-#    008 \
-#    "pstacks -t bam -f %in/in.bam -o %out"
+ok_ 'For bounded model, specify upper bound' \
+    008_bound_high \
+    "pstacks -t bam -f $freq_in2 -o %out --model_type bounded --bound_high 0.5"
 
-#ok_ '' \
-#    009 \
-#    "pstacks -t bam -f %in/in.bam -o %out"
+ok_ 'For bounded model, specify lower bound' \
+    009_bound_low \
+    "pstacks -t bam -f $freq_in2 -o %out --model_type bounded --bound_low 0.2"
 
-#ok_ '' \
-#    010 \
-#    "pstacks -t bam -f %in/in.bam -o %out"
+ok_ 'For bounded model, specify upper and lower bounds' \
+    010_bounded \
+    "pstacks -t bam -f $freq_in2 -o %out --model_type bounded --bound_high 0.5 --bound_low 0.2"
+
+ok_ 'For fixed model, specify barcode error frequency' \
+    011_fixed \
+    "pstacks -t bam -f %in/in.bam -o %out --model_type fixed --bc_err_freq 0.39"
 
 finish
