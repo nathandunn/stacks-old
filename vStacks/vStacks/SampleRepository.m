@@ -27,9 +27,6 @@
 }
 
 - (SampleMO *)getSampleForName:(NSString *)name andContext:(NSManagedObjectContext *)moc andError:(NSError *)error {
-//    if (error == nil) {
-//        error = [[NSError alloc] init];
-//    }
     NSEntityDescription *entityDescription = [NSEntityDescription
             entityForName:@"Sample" inManagedObjectContext:moc];
     NSFetchRequest *request = [[NSFetchRequest alloc] init];

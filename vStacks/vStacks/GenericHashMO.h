@@ -12,9 +12,9 @@
 
 @interface GenericHashMO : NSManagedObject
 
-@property (nonatomic, retain) NSData * dataValue;
-@property (nonatomic, retain) NSString * key;
-@property (nonatomic, retain) NSString * stringValue;
-@property (nonatomic, retain) NSString * type;
+@property(nonatomic, retain) NSData *dataValue;
+@property(nonatomic, retain) NSString *key;
+@property(nonatomic, retain) NSString *stringValue;
+@property(nonatomic, retain) NSString *type;
 
 @end

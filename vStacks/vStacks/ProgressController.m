@@ -10,14 +10,6 @@
 #import "StacksConverter.h"
 #import "StacksAppDelegate.h"
 
-//@interface ProgressController (){
-//
-//}
-//
-//@end
-
-//@synthesize  progressPanel;
-
 
 @implementation ProgressController
 
@@ -38,15 +30,6 @@
 }
 
 
-//- (id)initWithWindow:(NSWindow *)window
-//{
-//    self = [super initWithWindow:window];
-//    if (self) {
-//        // Initialization code here.
-//    }
-//
-//    return self;
-//}
 
 - (void)windowDidLoad
 {
