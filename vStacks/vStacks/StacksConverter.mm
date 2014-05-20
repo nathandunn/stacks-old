@@ -57,9 +57,7 @@ NSString *calculateType(NSString *file);
 */
 
 // lookups
-//@synthesize sampleLookupDictionary;
 @synthesize stopProcess;
-//@synthesize locusSnpMap;
 @synthesize numberFormatter;
 
 
@@ -69,7 +67,6 @@ NSString *calculateType(NSString *file);
 - (id)init {
     self = [super init];
     if (self) {
-//        sampleLookupDictionary = [NSMutableDictionary dictionary];
         stopProcess = false;
         numberFormatter = [[NSNumberFormatter alloc] init];
         numberFormatter.numberStyle = NSNumberFormatterNoStyle;
@@ -113,19 +110,11 @@ NSString *calculateType(NSString *file);
 - (NSManagedObjectContext *)getContextForPath:(NSString *)path andName:(NSString *)name andDocument:(StacksDocument *)document {
     
     NSMutableDictionary *pragmaOptions = [NSMutableDictionary dictionary];
-//    [pragmaOptions setObject:@"NORMAL" forKey:@"locking_mode"];
     [pragmaOptions setObject:@"EXCLUSIVE" forKey:@"locking_mode"];
-//    [pragmaOptions setObject:@"NORMAL" forKey:@"synchronous"];
     [pragmaOptions setObject:@"OFF" forKey:@"synchronous"];
-//    [pragmaOptions setObject:[NSNumber numberWithInt:4096] forKey:@"page_size"];
-//    [pragmaOptions setObject:[NSNumber numberWithInt:5000] forKey:@"cache_size"];
-//    [pragmaOptions setObject:[NSNumber numberWithInt:10000] forKey:@"cache_size"];
     [pragmaOptions setObject:[NSNumber numberWithInt:400000] forKey:@"cache_size"];
-//    [pragmaOptions setObject:@"WAL" forKey:@"journal_mode"];
-//    [pragmaOptions setObject:@"DELETE" forKey:@"journal_mode"];
     [pragmaOptions setObject:@"MEMORY" forKey:@"journal_mode"];
     [pragmaOptions setObject:@"MEMORY" forKey:@"temp_store"];
-//    [pragmaOptions setObject:@"memory" forKey:@"temp_store"];
     [pragmaOptions setObject:@"OFF" forKey:@"count_changes"];
     [pragmaOptions setObject:@"NONE" forKey:@"auto_vacuum"];
 
@@ -136,29 +125,7 @@ NSString *calculateType(NSString *file);
                              ,pragmaOptions,NSSQLitePragmasOption
                              , nil];
     
-    //    PRAGMA main.page_size = 4096;
-    //    PRAGMA main.cache_size=10000;
-    //    PRAGMA main.locking_mode=EXCLUSIVE;
-    //    PRAGMA main.synchronous=NORMAL;
-    //    PRAGMA main.journal_mode=WAL;
-    
-    
-    //    PRAGMA main.cache_size=5000;
-    
-    //    NSDictionary *pragmaOptions = @{ @"synchronous": @"NORMAL" };
-    //    NSDictionary *pragmaOptions = @{ @"cache_size": @"10000" };
-    //    NSDictionary *pragmaOptions = @{ @"locking_mode": @"EXCLUSIVE" };
-    //    NSDictionary *pragmaOptions = [NSDictionary dictionaryWithObjectsAndKeys:[ @"journal_mode": @"WAL"]
-    //                                     ,[@"locking_mode": @"EXCLUSIVE"]
-    //                                     , [@"page_size":@"4096"]
-    //                                     ,[@"cache_size": @"5000"]
-    //                                     ,[@"synchronous": [@"NORMAL" ]
-    //                                     ];
-
-
-
     NSURL *storeUrl;
-//    NSLog(@"input %@ %@",path,name);
     NSLog(@"extends %@ %i", name.pathExtension, [name.pathExtension isEqualToString:@"stacks"]);
     if ([name.pathExtension isEqualToString:@"stacks"]) {
         storeUrl = [NSURL fileURLWithPath:path];
@@ -177,10 +144,8 @@ NSString *calculateType(NSString *file);
         [[NSFileManager defaultManager] removeItemAtPath:storeUrl.path error:nil];
         if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeUrl options:options error:&error]) {
             NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
-            //abort();
         }
     }
-
 
     NSManagedObjectContext *context = [[NSManagedObjectContext alloc] init];
     [context setPersistentStoreCoordinator:persistentStoreCoordinator];
@@ -189,7 +154,6 @@ NSString *calculateType(NSString *file);
 
     NSLog(@"Save path %@", path);
 
-
     return context;
 }
 
@@ -197,7 +161,6 @@ NSString *calculateType(NSString *file);
 - (NSMutableDictionary *)loadPopulation:(NSString *)popmapFile {
     NSMutableDictionary *populationLookup = [NSMutableDictionary dictionary];
 
-//    NSString *popmapFile = [path stringByAppendingString:@"popmap"];
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL exists = [fileManager fileExistsAtPath:popmapFile];
 
@@ -235,7 +198,6 @@ NSString *calculateType(NSString *file);
     while (file = [dirEnum nextObject]) {
 
         if ([file hasSuffix:@".tags.tsv"]) {
-//            NSLog(@"HAS SUFFIX name %@", file);
             NSUInteger length = [file length] - 9;
             NSString *fileName = [file substringToIndex:length];
             files.push_back(make_pair(i, [fileName UTF8String]));
@@ -294,11 +256,8 @@ NSString *calculateType(NSString *file);
         progressWindow.actionMessage.stringValue = @"Begin import";
         bar.doubleValue = 0;
         [bar display];
-//        [bar incrementBy:1];
     }
-//    NSString *path = stacksDocument.path;
     NSString *importPath1 = stacksDocument.importPath;
-    // returns batch_1, batch_2, etc. whatever exists
     NSString *batchName = [self checkFile:importPath1];
     if (batchName == nil) {
         NSAlert *alert = [[NSAlert alloc] init];
@@ -322,7 +281,6 @@ NSString *calculateType(NSString *file);
 
     load_loci([catalogFile UTF8String], catalog, false);
     progressWindow.actionMessage.stringValue = @"Loading loci";
-//    [bar incrementBy:2];
     gettimeofday(&time2, NULL);
     NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
 
@@ -335,7 +293,6 @@ NSString *calculateType(NSString *file);
 
     progressWindow.actionMessage.stringValue = @"Building file list";
     vector<pair<int, string>> files = [self buildFileList:importPath1];
-//    [bar incrementBy:2];
     NSLog(@"number of files %ld", files.size());
 
 
@@ -352,12 +309,10 @@ NSString *calculateType(NSString *file);
                 vector<CatMatch *> m;
                 NSString *sampleString = [NSString stringWithUTF8String:files[i].second.c_str()];
                 NSString *matchString = [importPath1 stringByAppendingFormat:@"/%@", sampleString];
-//        NSLog(@"loading match file %@ for sample name %@", matchString, sampleString);
                 if (([sampleString rangeOfString:@"catalog"]).location == NSNotFound) {
                     @autoreleasepool {
                         NSMutableDictionary *matchDictionary = [self loadMatchesDictionary:[matchString stringByAppendingString:@".matches.tsv"]];
                         [[GenericHashRepository sharedInstance] store:stacksDocument.managedObjectContext key:sampleString dictionary:matchDictionary type:@"MatchDictionaryForSample"];
-//                        [sampleLookupDictionary setObject:matchDictionary forKey:sampleString];
                     }
                 }
 
@@ -396,9 +351,6 @@ NSString *calculateType(NSString *file);
     NSLog(@"output populations after samples %ld", stacksDocument.populations.count);
     for (PopulationMO *populationMo in stacksDocument.populations) {
         NSLog(@"samples %ld per population %@", populationMo.samples.count, populationMo.name);
-//        for(SampleMO* sampleMO in populationMo.samples){
-//            NSLog(@"sample %@ ",sampleMO.name);
-//        }
     }
 
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
@@ -437,8 +389,6 @@ NSString *calculateType(NSString *file);
             // TODO: double-check that this is correct . . .
             locusMO.length = [NSNumber numberWithInt:catalogIterator->second->depth];
             locusMO.type = stacksDocument.type;
-
-//        NSLog(@"chromosme %@",[NSString stringWithUTF8String:catalogIterator->second->loc.chr]);
 
             locusMO.chromosome = [NSString stringWithUTF8String:catalogIterator->second->loc.chr];
             unsigned int intValue = (unsigned int) catalogIterator->second->loc.bp;
@@ -483,7 +433,6 @@ NSString *calculateType(NSString *file);
                     NSDictionary *alleleDictionary = [NSDictionary dictionaryWithObjectsAndKeys:
                             [NSNumber numberWithInt:column], @"depth"
                             , [NSString stringWithUTF8String:allele.c_str()], @"allele"
-//                    ,[NSNumber numberWithFloat:snp->rank_1],@"ratio"
                             , nil ];
                     [alleleArray addObject:alleleDictionary];
 
@@ -593,7 +542,6 @@ NSString *calculateType(NSString *file);
 
                 if (iterCount % saveAfterSamples == 0) {
                     NSError *innerError = nil ;
-//                    NSLog(@"saving samples");
                     [stacksDocument.managedObjectContext save:&innerError];
                     if (innerError != nil) {
                         NSLog(@"error doing inner save: %@", innerError);
@@ -605,7 +553,6 @@ NSString *calculateType(NSString *file);
 
 
         NSError *innerError = nil ;
-        // NSLog(@"final datum save ");
         [stacksDocument.managedObjectContext save:&innerError];
         if (innerError != nil) {
             NSLog(@"error doing inner save: %@", innerError);
@@ -633,7 +580,6 @@ NSString *calculateType(NSString *file);
 
     NSError *innerError = nil ;
     stacksDocument.loci = loci;
-//    [loci removeAllObjects];
     loci = nil ;
     CHECK_STOP
     progressWindow.actionMessage.stringValue = @"Saving doc";
@@ -658,7 +604,6 @@ NSString *calculateType(NSString *file);
 
 
     gettimeofday(&time1, NULL);
-    // TODO: I don't think this does anything hear
     CHECK_STOP
     progressWindow.actionMessage.stringValue = @"Reading populations";
     [self readPopulations:stacksDocument];
@@ -740,12 +685,7 @@ NSString *calculateType(NSString *file);
     for (NSString *filePath in onlySnps) {
         CHECK_STOP
         @autoreleasepool {
-//            if ([filePath hasSuffix:@".snps.tsv"] && ![filePath hasPrefix:@"batch"]) {
             [self loadSnpFileForDatum:document fromFile:filePath];
-//            }
-//            else {
-//            NSLog(@"not loading tag file %@", filePath);
-//            }
             progressWindow.actionMessage.stringValue = [NSString stringWithFormat:@"Loading SNPs for sample %ld/%ld", count, onlySnps.count];
         }
         ++count;
@@ -772,21 +712,14 @@ NSString *calculateType(NSString *file);
         @autoreleasepool {
             [self loadAlleleFileForDatum:document fromFile:filePath];
         }
-//        }
-//        else {
-////            NSLog(@"not loading alleles file %@", filePath);
-//        }
     }
 }
 
 - (void)loadAlleleFileForDatum:(StacksDocument *)document fromFile:(NSString *)alleleFileName {
-//    NSLog(@"Loading allele file %@", alleleFileName);
 
     NSUInteger fileNameLength = alleleFileName.length;
     NSString *sampleName = [alleleFileName substringToIndex:fileNameLength - 12];
-//    NSLog(@"sampleName %@", sampleName);
     // sampleName . . . from lsat index of "/" . . . to just before ".tags.tsv"
-
     NSManagedObjectContext *moc = document.managedObjectContext;
     SampleMO *sampleMO = [[SampleRepository sharedInstance] getSampleForName:sampleName andContext:document.managedObjectContext andError:nil];
 
@@ -807,17 +740,13 @@ NSString *calculateType(NSString *file);
     }
 
     NSString *line;
-//    NSUInteger row = 1;
     gettimeofday(&time1, NULL);
     NSInteger locusId = -1;
     NSInteger newLocusId;
     DatumMO *datumMO = nil ;
-//    NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
     NSDictionary *otherLookupDictionary = [[GenericHashRepository sharedInstance] getDictionary:document.managedObjectContext forKey:sampleName];
-//    char allele;
     int depth;
     float ratio;
-//    LocusMO *locusMO = nil ;
 
     NSArray *columns;
     NSDictionary *datumLociMap = [[DatumRepository sharedInstance] getDatums:document.managedObjectContext forSample:sampleMO.sampleId];
@@ -833,20 +762,16 @@ NSString *calculateType(NSString *file);
 
             @autoreleasepool {
                 NSString *internalIndex = (NSString *) [columns objectAtIndex:2];
-//                NSString *retrievedObject = (NSString *) [lookupDictionary objectForKey:internalIndex];
                 NSString *retrievedObject = (NSString *) [otherLookupDictionary objectForKey:internalIndex];
                 newLocusId = [retrievedObject integerValue];
 
 
-//            allele = [[columns objectAtIndex:3] charValue];
-//            allele = [numberFormatter numberFromString:[columns objectAtIndex:3]];
                 ratio = [[columns objectAtIndex:4] floatValue];
                 depth = [[columns objectAtIndex:5] intValue];
 
 
                 if (locusId != newLocusId) {
                     locusId = newLocusId;
-//                datumMO = [[DatumRepository sharedInstance] getDatum:moc locusId:locusId andSampleId:sampleMO.sampleId.integerValue];
 
                     datumMO = [datumLociMap objectForKey:[NSString stringWithFormat:@"%ld", locusId]];
                 }
@@ -879,7 +804,6 @@ NSString *calculateType(NSString *file);
 
     NSUInteger fileNameLength = snpFileName.length;
     NSString *sampleName = [snpFileName substringToIndex:fileNameLength - 9];
-//    NSMutableDictionary *lookupDictionary = [sampleLookupDictionary objectForKey:sampleName];
     NSDictionary *otherLookupDictionary = [[GenericHashRepository sharedInstance] getDictionary:document.managedObjectContext forKey:sampleName];
 
     NSManagedObjectContext *moc = document.managedObjectContext;
