@@ -102,6 +102,7 @@ int     parse_command_line(int, char**);
 int     build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &);
 int     load_marker_list(string, set<int> &);
 int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<int, int> > &);
+int     log_haplotype_cnts(map<int, CSLocus *> &, ofstream &);
 bool    order_unordered_loci(map<int, CSLocus *> &);
 int     tabulate_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int     create_genotype_map(CSLocus *, PopMap<CSLocus> *);

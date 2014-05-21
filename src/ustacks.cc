@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -175,8 +175,9 @@ int main (int argc, char* argv[]) {
 
     count_raw_reads(unique, remainders, merged);
 
-    cerr << "Writing results\n";
+    cerr << "Writing loci, SNPs, and alleles to '" << out_path << "'...\n";
     write_results(merged, unique, remainders);
+    cerr << "done.\n";
 
     return 0;
 }
@@ -426,8 +427,8 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
 
     	    for (col = 0; col < length; col++) {
     		nuc['A'] = 0; 
-    		nuc['C'] = 0;
     		nuc['G'] = 0;
+    		nuc['C'] = 0;
     		nuc['T'] = 0;
 
     		for (row = 0; row < height; row++) {
@@ -1473,6 +1474,12 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 	float total = 0;
 	tag_1 = i->second;
 
+	//
+	// Calculate the log likelihood of this merged stack.
+	//
+	tag_1->gen_matrix(u, r);
+	tag_1->calc_likelihood();
+
 	// First write the consensus sequence
 	sstr << "0"              << "\t" 
 	     << sql_id           << "\t" 
@@ -1486,7 +1493,8 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 	     << tag_1->con         << "\t" 
 	     << tag_1->deleveraged << "\t" 
 	     << tag_1->blacklisted << "\t"
-	     << tag_1->lumberjackstack << "\n";
+	     << tag_1->lumberjackstack << "\t"
+	     << tag_1->lnl << "\n";
 
 	//
 	// Write a sequence recording the output of the SNP model for each nucleotide.
@@ -1501,14 +1509,20 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 	     << "model\t" << "\t"
 	     << "\t";
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-	    if ((*s)->type == snp_type_het)
-		sstr << "E";
-	    else if ((*s)->type == snp_type_hom)
-		sstr << "O";
-	    else
-		sstr << "U";
+	    switch((*s)->type) {
+	    case snp_type_het:
+		tags << "E";
+		break;
+	    case snp_type_hom:
+		tags << "O";
+		break;
+	    default:
+		tags << "U";
+		break;
+	    }
 	}
 	sstr << "\t" 
+	     << "\t"
 	     << "\t"
 	     << "\t"
 	     << "\n";
@@ -1516,7 +1530,9 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 	if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
 	sstr.str("");
 
-	// Now write out the components of each unique tag merged into this one.
+	//
+	// Now write out the components of each unique tag merged into this locus.
+	//
 	id = 0;
 	for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++) {
 	    tag_2  = u[*k];
@@ -1534,7 +1550,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 		     << id << "\t" 
 		     << seq_ids[tag_2->map[j]] << "\t" 
 		     << tag_2->seq->seq(buf) 
-		     << "\t\t\t\n";
+		     << "\t\t\t\t\n";
 
 		if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
 		sstr.str("");
@@ -1562,20 +1578,37 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 		     << "\t" 
 		     << seq_ids[rem->map[j]] << "\t" 
 		     << rem->seq->seq(buf) 
-		     << "\t\t\t\n";
+		     << "\t\t\t\t\n";
 
 	    if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
 	    sstr.str("");
 	}
 
 	//
-	// Write out any SNPs detected in this unique tag.
+	// Write out the model calls for each nucleotide in this locus.
 	//
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-	    if ((*s)->type == snp_type_het)
-		sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" 
-		     << (*s)->col << "\t" << (*s)->lratio << "\t" 
-		     << (*s)->rank_1 << "\t" << (*s)->rank_2 << "\t\t\n";
+	    sstr << "0"          << "\t" 
+		 << sql_id       << "\t" 
+		 << tag_1->id    << "\t" 
+		 << (*s)->col    << "\t";
+
+	    switch((*s)->type) {
+	    case snp_type_het:
+		sstr << "E\t";
+		break;
+	    case snp_type_hom:
+		sstr << "O\t";
+		break;
+	    default:
+		sstr << "U\t";
+		break;
+	    }
+
+	    sstr << std::fixed   << std::setprecision(2)
+		 << (*s)->lratio << "\t" 
+		 << (*s)->rank_1 << "\t" 
+		 << (*s)->rank_2 << "\t\t\n";
 	}
 
 	if (gzip) gzputs(gz_snps, sstr.str().c_str()); else snps << sstr.str();
@@ -1586,7 +1619,12 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 	// the percentage of tags a particular allele occupies.
 	//
 	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
-	    sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t" << (*t).first << "\t" << (((*t).second/total) * 100) << "\t" << (*t).second << "\n";
+	    sstr << "0"         << "\t" 
+		 << sql_id      << "\t" 
+		 << tag_1->id   << "\t" 
+		 << (*t).first  << "\t" 
+		 << (((*t).second/total) * 100) << "\t" 
+		 << (*t).second << "\n";
 	}
 	if (gzip) gzputs(gz_alle, sstr.str().c_str()); else alle << sstr.str();
 	sstr.str("");

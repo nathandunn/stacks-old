@@ -73,7 +73,7 @@ int main (int argc, char* argv[]) {
 	string sample_id = (*in_file).substr(pos_1 + 1, (pos_2 - pos_1 - 1));
 
 	bool compressed = false;
-	load_loci(*in_file, sample, false, compressed);
+	load_loci(*in_file, sample, false, false, compressed);
 
         //
         // Give each locus a unique ID among all samples
@@ -455,10 +455,6 @@ int call_consensus(map<int, HLocus *> &loci, set<int> &merge_list,
     }
 
     return 0;
-}
-
-bool compare_pair(pair<char, int> a, pair<char, int> b) {
-    return (a.second > b.second);
 }
 
 int call_alleles(vector<char *> &reads, vector<SNP *> &snps, vector<string> &alleles) {
