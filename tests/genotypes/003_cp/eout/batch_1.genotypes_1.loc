@@ -1,0 +1,13 @@
+name = batch_1.genotypes_1
+popt = CP
+nloc = 3
+nind = 3
+
+1	<nnxnp>	np	np	np
+4	<nnxnp>	np	nn	nn
+5	<hkxhk>	hh	hk	kk
+
+individual names:
+progeny_001
+progeny_002
+progeny_003
