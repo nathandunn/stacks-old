@@ -282,7 +282,7 @@ int main (int argc, char* argv[]) {
 
 	if (kernel_smoothed && loci_ordered) {
 	    cerr << "  Generating kernel-smoothed population statistics...\n";
-	    // kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
+	    kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
 	}
     }
 

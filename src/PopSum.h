@@ -574,7 +574,7 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
 template<class LocusT>
 PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) 
 {
-    LocSum  *s_1  = this->pop(locus, pop_1);
+    LocSum  *s_1  = this->pop(locus, pop_1);  /////// SLOW!
     LocSum  *s_2  = this->pop(locus, pop_2);
     PopPair *pair = new PopPair();
 
