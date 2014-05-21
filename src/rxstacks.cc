@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
