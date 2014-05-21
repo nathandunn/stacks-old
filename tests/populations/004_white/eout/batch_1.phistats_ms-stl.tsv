@@ -1,0 +1,4 @@
+# Population ms	ms1,ms2,ms3
+# Population stl	stl1,stl2,stl3
+# Batch ID 	Locus ID	Pop 1 ID	Pop 2 ID	Chr	BP	phi_st	Smoothed Phi_st	Smoothed Phi_st P-value	Fst'	Smoothed Fst'	Smoothed Fst' P-value	D_est	Smoothed D_est	Smoothed D_est P-value
+1	4	ms	stl	groupIX	4145694	1.0000	0.0000	0.0000	1.0000	0.0000	0.0000	1.0000	0.0000	0.0000
