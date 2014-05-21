@@ -49,6 +49,7 @@ class MergedStack {
     vector<pair<int, int> > dist; // Vector describing the distance between this stack and other stacks.
     vector<int>          remtags; // Remainder tag IDs that have been merged into this Stack
     DNASeq              **matrix; // Two-dimensional array for iterating over the combined stack (stacks and remainders).
+    DNANSeq            **pmatrix; // Two-dimensional array for iterating over the combined stack aligned to a reference..
 
     int cohort_id; // Group ID of all stacks that were originally part of the same subgraph
     double    lnl; // Log likelihood of this stack
@@ -69,13 +70,15 @@ class MergedStack {
 
     MergedStack();
     ~MergedStack();
-    int      add_consensus(const char *);
-    int      add_consensus(DNASeq *);
-    int      add_consensus(DNANSeq *);
-    int      add_dist(const int id, const int dist);
-    DNASeq **gen_matrix(map<int, Stack *> &, map<int, Rem *> &);
-    double   calc_likelihood();
-    string   write_cmb();
+    int       add_consensus(const char *);
+    int       add_consensus(DNASeq *);
+    int       add_consensus(DNANSeq *);
+    int       add_dist(const int id, const int dist);
+    DNASeq  **gen_matrix(map<int, Stack *> &, map<int, Rem *> &);
+    DNANSeq **gen_matrix(map<int, PStack *> &);
+    double    calc_likelihood();
+    double    calc_likelihood_pstacks();
+    string    write_cmb();
 };
 
 #endif // __MSTACK_H__
