@@ -31,11 +31,6 @@
 
 }
 
-//- (BOOL)validateUserInterfaceItem:(id < NSValidatedUserInterfaceItem >)anItem{
-//    NSLog(@"should be avlidating something");
-//    return YES;
-//}
-
 - (BOOL) hasOpenDocument{
     id currentDocument = [[StacksDocumentController sharedDocumentController] currentDocument];
     NSLog(@"Valid Document %i",currentDocument!=nil) ;

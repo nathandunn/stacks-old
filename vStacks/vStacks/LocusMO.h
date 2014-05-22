@@ -9,7 +9,6 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-//@class LocusAlleleMO, LocusSnpMO, DepthMO;
 @class ColorGenerator;
 
 @interface LocusMO : NSManagedObject
@@ -27,41 +26,16 @@
 @property (nonatomic, copy) NSString * ratio;
 @property (nonatomic, copy) NSData *metaData;
 
-//@property (nonatomic, copy) NSSet *alleles;
-
-//@property (nonatomic, copy) NSSet *datums;
-//@property (nonatomic, copy) NSSet *snps;
-
 @property (nonatomic, copy) NSData *alleleData;
-//@property (nonatomic, copy) NSString *snpData;
 @property (nonatomic, copy) NSData *snpData;
 
 // not a managed part, populated by datum rendering . . .
-//@property (atomic, retain) NSDictionary *haplotypeOrder;
 @property (atomic, retain) ColorGenerator *colorGenerator;
 
 
 
-//- (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype;
-//
-//- (NSUInteger)lookupDepthOrder:(DepthMO *)mo;
 @end
 
 @interface LocusMO (CoreDataGeneratedAccessors)
-
-//- (void)addAllelesObject:(LocusAlleleMO *)value;
-//- (void)removeAllelesObject:(LocusAlleleMO *)value;
-//- (void)addAlleles:(NSSet *)values;
-//- (void)removeAlleles:(NSSet *)values;
-
-//- (void)addDatumsObject:(DatumMO *)value;
-//- (void)removeDatumsObject:(DatumMO *)value;
-//- (void)addDatums:(NSSet *)values;
-//- (void)removeDatums:(NSSet *)values;
-
-//- (void)addSnpsObject:(LocusSnpMO *)value;
-//- (void)removeSnpsObject:(LocusSnpMO *)value;
-//- (void)addSnps:(NSSet *)values;
-//- (void)removeSnps:(NSSet *)values;
 
 @end

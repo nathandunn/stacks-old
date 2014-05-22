@@ -15,16 +15,11 @@
 
 @property (nonatomic, copy) NSString * name;
 @property (nonatomic, copy) NSNumber * sampleId;
-//@property (nonatomic, copy) NSSet *datums;
 @property (nonatomic, copy) NSData *metaData;
 @property (nonatomic, retain) PopulationMO *population;
 @end
 
 @interface SampleMO (CoreDataGeneratedAccessors)
 
-//- (void)addDatumsObject:(DatumMO *)value;
-//- (void)removeDatumsObject:(DatumMO *)value;
-//- (void)addDatums:(NSSet *)values;
-//- (void)removeDatums:(NSSet *)values;
 
 @end

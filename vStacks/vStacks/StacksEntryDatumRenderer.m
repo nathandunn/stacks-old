@@ -19,11 +19,6 @@
 - (id)init {
     self = [super init];
     if (self) {
-//        sequences = [NSMutableArray array];
-//        sequenceIds = [NSMutableArray array];
-//        blocks = [NSMutableArray array];
-//        relationships = [NSMutableArray array];
-//        entryIds = [NSMutableArray array];
         snpLocusLookup = [NSMutableDictionary dictionary];
         snpDatumLookup = [NSMutableDictionary dictionary];
 
@@ -52,7 +47,6 @@
     if (snpDatumData != nil) {
         NSDictionary *snpJson = [NSJSONSerialization JSONObjectWithData:snpDatumData options:kNilOptions error:&error];
         for (NSDictionary *snp in snpJson) {
-//            [snpDatumLookup setObject:snp forKey:[numberFormatter numberFromString:[snp valueForKey:@"column"]]];
             [snpDatumLookup setObject:snp forKey:[snp valueForKey:@"column"]];
         }
     }
@@ -68,7 +62,6 @@
     NSString *model = [[jsonData objectForKey:@"model"] objectForKey:@"sequence"];
 
 
-//    [returnHTML appendString:[self renderHeader]];
     [returnHTML appendString:[self renderReference:consensus]];
     [returnHTML appendString:[self renderConsensus:consensus]];
     [returnHTML appendString:[self renderModel:model]];
@@ -114,8 +107,6 @@
     NSMutableString *consensusString = [NSMutableString stringWithString:consensus];
 
 
-
-    // TODO: sort by NSDictionary
     NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:nil ascending:NO selector:@selector(compare:)];
     for (NSNumber *snpKey in [[snpLocusLookup allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
         NSUInteger column = snpKey.unsignedIntegerValue;
@@ -146,11 +137,7 @@
 - (NSMutableString *)renderSequences:(NSDictionary *)sequenceDictionary {
 //    NSLog(@"sequences %ld entryIds %ld relatinships %ld sequenceIds %ld",sequences.count,entryIds.count,relationships.count,sequenceIds.count) ;
 
-//    for(id key in [sequenceDictionary allKeys]){
-//        NSLog(@"key %@",key);
-//    }
     NSString *consensus = [[sequenceDictionary objectForKey:@"consensus"] objectForKey:@"sequence"];
-//    NSString *model = [[sequenceDictionary objectForKey:@"model"] objectForKey:@"sequence"];
 
     NSUInteger numSequences = sequenceDictionary.count - 2;
 
@@ -161,11 +148,6 @@
 
         NSString *key = [NSNumber numberWithInt:i+1].stringValue;
         NSDictionary *sequenceObject = [sequenceDictionary objectForKey:key];
-//        if(sequenceObject==nil){
-//            for(id aKey in [sequenceDictionary allKeys]){
-//                NSLog(@"aKey: %@ not %@",aKey,key);
-//            }
-//        }
         NSString *block = [sequenceObject objectForKey:@"block"];
 
         // handle BLOCKS
@@ -175,7 +157,7 @@
         else {
             blockStyle = @" style='background-color: #dddddd;' ";
         }
-//        NSString *sequenceString = [sequences objectAtIndex:i];
+
         NSString *sequenceString = [sequenceObject objectForKey:@"sequence"];
 
         NSMutableString *formattedSequenceString = [NSMutableString stringWithString:sequenceString];
@@ -205,7 +187,6 @@
         }
 
 
-
         // handle errors
         if ([consensus isNotEqualTo:sequenceString]) {
             for (int i = 0; i < sequenceString.length && i < consensus.length; i++) {
@@ -219,7 +200,6 @@
 
         // apply for the formats!!
         for (NSNumber *formatKey in [[formatDictionary allKeys] sortedArrayUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]]) {
-//            NSUInteger column = [[NSNumber numberWithInteger:formatKey.integerValue] unsignedIntegerValue];
             NSUInteger column = [formatKey unsignedIntegerValue];
             NSString *value = [formatDictionary objectForKey:formatKey];
 
@@ -239,9 +219,7 @@
 
 
         [returnString appendFormat:@"<tr><td class='num'>%@</td><td class='%@'>%@</td><td class='id'>%@</td><td class='tag' %@>%@</td></tr>"
-//                , [entryIds objectAtIndex:i]
                 , key
-//                , [relationships objectAtIndex:i]
                 , [sequenceObject objectForKey:@"relationship"]
                 , [sequenceObject objectForKey:@"relationship"]
                 , [sequenceObject objectForKey:@"sequenceId"]

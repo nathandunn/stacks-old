@@ -13,7 +13,6 @@
 #import "DatumRepository.h"
 #import "PopulationRepository.h"
 #import "LocusRepository.h"
-//#import "PopulationArrayController.h"
 #import "DatumArrayController.h"
 #import "GZIP.h"
 #import "StackEntryDatumMO.h"
@@ -22,8 +21,6 @@
 #import "SampleRepository.h"
 #import "SampleMO.h"
 #import "SplashWindowController.h"
-//#import "StacksConverter.h"
-//#import "StacksDocumentController.h"
 #import <WebKit/WebKit.h>
 
 @interface StacksDocument ()
@@ -32,10 +29,7 @@
 @property NSInteger previousSelectedItem;
 
 @property(weak) IBOutlet NSTableView *locusTableView;
-//@property(weak) IBOutlet NSTableView *stacksTableView;
-//@property(weak) IBOutlet NSCollectionView *datumCollectionView;
 @property(weak) IBOutlet DatumArrayController *datumController;
-//@property(weak) IBOutlet NSTextField *filteredLoci;
 @property(weak) IBOutlet NSTextField *totalLoci;
 @property(weak) IBOutlet NSPopUpButton *populationSelector;
 @property(weak) IBOutlet NSButton *editPopulationButton;
@@ -47,16 +41,12 @@
 @property(weak) IBOutlet WebView *datumWebView;
 
 
-
 @end
 
 @implementation StacksDocument
 
-SplashWindowController *splashWindowController ;
+SplashWindowController *splashWindowController;
 
-// TODO: remove these in favor of NSSet loci
-//@synthesize locusViews;
-//@synthesize filteredLoci;
 @synthesize loci;
 @synthesize populations;
 
@@ -89,20 +79,12 @@ SplashWindowController *splashWindowController ;
 @synthesize path;
 @synthesize oldPopulationTitle;
 @synthesize datumPath;
-//@synthesize populationController;
-//@synthesize loadProgress;
-//@synthesize progressPanel;
 
 
 
 - (id)init {
     self = [super init];
     if (self) {
-        // Add your subclass-specific initialization here.
-//        datumRepository = [[DatumRepository alloc] init];
-//        [LocusRepository sharedInstance] = [[LocusRepository alloc] init];
-//        populationRepository = [[PopulationRepository alloc] init];
-
         numberFormatter = [[NSNumberFormatter alloc] init];
         numberFormatter.numberStyle = NSNumberFormatterNoStyle;
 
@@ -125,7 +107,6 @@ SplashWindowController *splashWindowController ;
     [super windowControllerWillLoadNib:windowController];
     NSLog(@"will load ");
 //    [splashWindowController showWindow:self];
-////    [splashWindowController activ
 //    [splashWindowController.window setLevel:NSScreenSaverWindowLevel + 1];
 //    [splashWindowController.window  orderFront:nil];
 }
@@ -145,7 +126,7 @@ SplashWindowController *splashWindowController ;
     NSString *newString = [NSString stringWithFormat:@"%ld", lociCount];
     [totalLoci setStringValue:newString];
 
-    editingPopulation = false ;
+    editingPopulation = false;
 
     double maxLocationVariable = [[LocusRepository sharedInstance] getMaxLocation:self.managedObjectContext] / 1000000;
     maxLocusTextField.stringValue = [NSString stringWithFormat:@"%1.2f", maxLocationVariable];
@@ -153,9 +134,6 @@ SplashWindowController *splashWindowController ;
     [maxSnpPopupButton selectItemAtIndex:[self getSnpFilterValues].count - 1];
     [maxSamplesPopupButton selectItemAtIndex:[self getSampleFilterValues].count - 1];
 
-
-//    [filteredLoci setFormatter:numberFormatter];
-//    [[filteredLoci cell] setFormatter:numberFormatter];
 
     [self updateStacksView];
 //    [splashWindowController close];
@@ -207,7 +185,6 @@ SplashWindowController *splashWindowController ;
 //        }
 
 
-//        PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
         PopulationMO *populationMO = [[PopulationRepository sharedInstance] getPopulation:self.managedObjectContext name:oldPopulationTitle];
 //        NSLog(@"popMO: %@", populationMO);
         if (populationMO != nil && ![populationNameField.stringValue isEqualToString:oldPopulationTitle]) {
@@ -264,12 +241,12 @@ SplashWindowController *splashWindowController ;
             self.selectedDatum = [self.selectedDatums objectAtIndex:0];
         }
         else {
-            self.selectedDatum = nil ;
+            self.selectedDatum = nil;
         }
     }
     else {
-        self.selectedDatums = nil ;
-        self.selectedDatum = nil ;
+        self.selectedDatums = nil;
+        self.selectedDatum = nil;
     }
     [self updateDatumView];
     [self updateStacksView];
@@ -307,7 +284,7 @@ SplashWindowController *splashWindowController ;
             }
         }
     }
-            // if no population!
+        // if no population!
     else {
         [returnHTML appendFormat:@"<div class='datum-pop'><div class='population-header'>Population - Unspecified</div>"];
         for (DatumMO *datum in self.selectedDatums.reverseObjectEnumerator) {
@@ -326,8 +303,8 @@ SplashWindowController *splashWindowController ;
     NSMutableString *returnHTML = [NSMutableString string];
     NSString *nameString = [datum renderNameHtml];
     NSMutableArray *alleles = [NSMutableArray array];
-    if(self.selectedLocus.alleleData!=nil){
-        for(NSDictionary *allele in [NSJSONSerialization JSONObjectWithData:self.selectedLocus.alleleData options:kNilOptions error:nil]){
+    if (self.selectedLocus.alleleData != nil) {
+        for (NSDictionary *allele in [NSJSONSerialization JSONObjectWithData:self.selectedLocus.alleleData options:kNilOptions error:nil]) {
             [alleles addObject:[allele objectForKey:@"allele"]];
         }
     }
@@ -338,8 +315,8 @@ SplashWindowController *splashWindowController ;
     NSString *depthString = [datum renderDepthHtml:hapReorder];
     NSString *datumIndex = [NSString stringWithFormat:@"%i:%@", datum.tagId, datum.sampleId];
     NSString *selectedClass = ([datum isEqualTo:self.selectedDatum]) ? @" selected-datum" : @"";
-    [returnHTML appendFormat:@"<div id='%@' class='population%ld datum%@'>", datumIndex,self.selectedPopulation.populationId.longValue, selectedClass];
-    [returnHTML appendFormat:@"<a name='%@'></a>",datumIndex];
+    [returnHTML appendFormat:@"<div id='%@' class='population%ld datum%@'>", datumIndex, self.selectedPopulation.populationId.longValue, selectedClass];
+    [returnHTML appendFormat:@"<a name='%@'></a>", datumIndex];
     [returnHTML appendFormat:@"<a href='#%@'>%@</a><br/>", datumIndex, nameString];
     [returnHTML appendFormat:@"<a href='#%@'>%@</a><br/>", datumIndex, haploytpeString];
     [returnHTML appendFormat:@"<a href='#%@'>%@</a><br/>", datumIndex, depthString];
@@ -350,22 +327,22 @@ SplashWindowController *splashWindowController ;
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
         request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener {
 //    NSLog(@"handling URL!!! %@", [request URL] );
-    NSString* lastPathComponent = [[request URL] fragment];
+    NSString *lastPathComponent = [[request URL] fragment];
 //    NSLog(@"last path componets!!! %@", lastPathComponent);
 
-    [listener use ];
-    NSArray *pathComponents = [lastPathComponent componentsSeparatedByString:@":"] ;
+    [listener use];
+    NSArray *pathComponents = [lastPathComponent componentsSeparatedByString:@":"];
     if (pathComponents.count != 2) {
 //        NSLog(@"path path for URL %@", request.URL);
         return;
     }
-    
+
 
 //    if([lastPathComponent characterAtIndex:0]=='#'){
 //        return ;
 //    }
 
-    self.datumPath = lastPathComponent ;
+    self.datumPath = lastPathComponent;
     NSUInteger locusId = [numberFormatter numberFromString:[pathComponents objectAtIndex:0]].unsignedIntegerValue;
     NSUInteger sampleId = [numberFormatter numberFromString:[pathComponents objectAtIndex:1]].unsignedIntegerValue;
     DatumMO *datumMO = [[DatumRepository sharedInstance] getDatum:self.managedObjectContext locusId:locusId andSampleId:sampleId];
@@ -373,33 +350,21 @@ SplashWindowController *splashWindowController ;
         self.selectedDatum = datumMO;
         [self updateStacksView];
         [self updateDatumView];
-//        [datumWebView stringByEvaluatingJavaScriptFromString: @"window.location.hash='#%@'"];
-//    [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"window.location.hash='%@'",lastPathComponent]];
-//        [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"addClass('%@','selected-datum');",[[NSBundle mainBundle] bundleURL],[[request URL] lastPathComponent]]];
     }
 
-//    [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"window.location='%@#%@'",[[NSBundle mainBundle] bundleURL],[[request URL] lastPathComponent]]];
-
-//    [listener use];
-//    NSString *host = [[request URL] host];
-//    if ([host hasSuffix:@"company.com"])
-//        [listener ignore];
-//    else
-//        [listener use];
 }
 
-- (void)webView:(WebView *)sender didFinishLoadForFrame:(WebFrame *)frame{
+- (void)webView:(WebView *)sender didFinishLoadForFrame:(WebFrame *)frame {
 
 //    NSLog(@"finished loading main frame %@",self.datumPath);
-    NSArray *pathComponents = [self.datumPath componentsSeparatedByString:@":"] ;
-    if(pathComponents.count!=2){
-        return ;
+    NSArray *pathComponents = [self.datumPath componentsSeparatedByString:@":"];
+    if (pathComponents.count != 2) {
+        return;
     }
-//    pathComponents = [[pathComponents objectAtIndex:1] componentsSeparatedByString:@":"];
 
 //    NSLog(@"finished loading! %@",last);
 
-    [datumWebView stringByEvaluatingJavaScriptFromString: [NSString stringWithFormat:@"window.location.hash='#%@'",self.datumPath]];
+    [datumWebView stringByEvaluatingJavaScriptFromString:[NSString stringWithFormat:@"window.location.hash='#%@'", self.datumPath]];
 }
 
 
@@ -434,28 +399,8 @@ SplashWindowController *splashWindowController ;
 
 - (NSArray *)generateLociLocations {
     NSArray *locusArray = [[LocusRepository sharedInstance] getLociLocations:self.managedObjectContext];
-//    NSLog(@"size of array %ld",locusArray.count);
-
-//    if(lociLocations==nil){
-//        NSMutableSet* set = [[NSMutableSet alloc] init];
-//        for(LocusMO *locus in locusArray){
-//            [set addObject:locus.chromosome];
-//        }
-
-//        lociLocations = [[NSSet alloc] initWithSet:set];
-//        lociLocations = set ;
-//    }
-
-//    return lociLocations;
-//    return set ;
 
     return locusArray;
-
-//    NSMutableArray *bots = [[NSMutableArray alloc] init];
-//    [bots addObject:@"dogs"];
-//    [bots addObject:@"cats"];
-//
-//    return bots ;
 }
 
 - (NSUInteger)getMaxLocation {
@@ -464,7 +409,6 @@ SplashWindowController *splashWindowController ;
 
 - (BOOL)noLociLocations {
     NSUInteger locusCount = [[LocusRepository sharedInstance] getLociWithChromsomes:self.managedObjectContext].count;
-//    NSLog(@"NO LOCI LOCATIONS count %ld",locusCount);
     return locusCount == 0;
 }
 

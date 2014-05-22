@@ -10,11 +10,6 @@
 
 @implementation StacksDocumentController
 
-//- (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
-//    NSLog(@"item value %@",anItem);
-//    return [super validateUserInterfaceItem:anItem];
-//}
-
 - (id)openDocumentWithContentsOfURL:(NSURL *)url display:(BOOL)displayDocument error:(NSError **)outError {
     return [super openDocumentWithContentsOfURL:url display:displayDocument error:outError];
 }

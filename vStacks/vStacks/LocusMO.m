@@ -54,19 +54,6 @@
     return count;
 }
 
-//- (NSUInteger)countProgeny {
-//    NSUInteger count = 0;
-////    NSLog(@"number of datums!! %ld",self.datums.count);
-//    for (DatumMO *datumMO in self.datums) {
-//        NSString *sampleName = datumMO.sample.name;
-////        NSLog(@"sample name %@",sampleName);
-//        if ([sampleName rangeOfString:@"male"].location == NSNotFound) {
-////            NSLog(@"not found!!") ;
-//            ++count;
-//        }
-//    }
-//    return count;
-//}
 
 - (NSUInteger)countProgeny {
     NSUInteger count = 0;
@@ -128,8 +115,6 @@
     paragraph.alignment = NSRightTextAlignment;
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:
             [NSColor blackColor], NSForegroundColorAttributeName,
-//            [NSColor whiteColor], NSBackgroundColorAttributeName,
-//            [NSFont fontWithName:@"Courier" size:12.0], NSFontAttributeName,
             [NSFont fontWithName:@"Helvetica" size:10.0], NSFontAttributeName,
             paragraph, NSParagraphStyleAttributeName,
             nil];
@@ -182,32 +167,6 @@
     return string;
 }
 
-//- (NSUInteger)lookupHaplotypeOrder:(NSString *)haplotype {
-//    if (haplotypeOrder == nil) {
-//        haplotypeOrder = [[NSMutableDictionary alloc] init];
-//        [haplotypeOrder setValue:[NSNumber numberWithInt:0] forKey:haplotype];
-//        return 0;
-//    }
-//
-//    NSNumber *returnType = [haplotypeOrder objectForKey:haplotype];
-//    if (returnType == nil) {
-//        NSUInteger maxValue = 0;
-//        for (NSNumber *aValue in haplotypeOrder.allValues) {
-//            if ([aValue unsignedIntegerValue] > maxValue) {
-//                maxValue = [aValue unsignedIntegerValue];
-//            }
-//        }
-//        ++maxValue;
-//        [haplotypeOrder setValue:[NSNumber numberWithInteger:maxValue] forKey:haplotype];
-//        // actually we get he max value here first .
-//
-//        return maxValue;
-//    }
-//    else {
-//        return [returnType unsignedIntegerValue];
-//    }
-//
-//}
 
 - (ColorGenerator *)getColorGenerator {
     if (colorGenerator == nil) {

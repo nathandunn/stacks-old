@@ -38,40 +38,9 @@
     return self;
 }
 
-//- (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
-////    NSLog(@"validating UI item in App Controller %@",anItem) ;
-//    return [super validateUserInterfaceItem:anItem];
-//}
-
-//- (BOOL)validateMenuItem:(NSMenuItem *)item {
-//    NSLog(@"validating in App Controller menu item %@",item) ;
-////    return [super validateUserInterfaceItem:item];
-//    if(item.tag==77){
-//        NSLog(@"should be returning true!");
-//        return YES;
-//    }
-//    else{
-//        return [super validateMenuItem:item];
-//    }
-//}
-
 - (IBAction)importDocument:(id)sender {
 
     NSLog(@"Importing Document");
-
-//    NSDate *now = [NSDate date];
-//    // get year and month
-//    NSInteger year = [[now dateWithCalendarFormat:nil timeZone:nil] yearOfCommonEra];
-//    NSInteger month = [[now dateWithCalendarFormat:nil timeZone:nil] monthOfYear];
-//    NSLog(@"year Y%ld M%ld", year, month);
-//    if (year > 2014 && month > 6) {
-//        NSAlert *alert = [[NSAlert alloc] init];
-//        [alert setMessageText:@"Trial License Expired"];
-//        [alert addButtonWithTitle:@"OK"];
-//
-//        [alert runModal];
-//        return;
-//    }
 
 
     NSOpenPanel *importPanel = [NSOpenPanel openPanel];
@@ -82,8 +51,6 @@
 
     [importPanel setFloatingPanel:YES];
 
-
-//    [importPanel setTreatsFilePackagesAsDirectories:NO];
     NSSize minSize;
     minSize.height = 600;
     minSize.width = 500;
@@ -110,22 +77,7 @@
         for (id file in files) {
             NSLog(@"file %@", file);
         }
-//        [fileManager dir
 
-
-        // now we open the save panel for our stacks file.
-//        NSSavePanel *savePanel = [NSSavePanel savePanel];
-//        savePanel.nameFieldStringValue = [importPathName stringByAppendingString:@".stacks"];
-
-//        NSInteger saveResult = [savePanel runModal];
-//        if (saveResult != NSOKButton) {
-//            NSLog(@"Cancelled import");
-//            return;
-//        }
-
-//        NSLog(@"directory URL: %@ %@ %@", savePanel.directoryURL.path, savePanel.directoryURL.pathExtension, savePanel.directoryURL.parameterString);
-//        NSLog(@"save URL: %@", savePanel.nameFieldStringValue);
-//        NSString *fileName = savePanel.nameFieldStringValue;
         NSString *fileName = [importPathName stringByAppendingString:@".stacks"];
         NSString *extension = [fileName pathExtension];
         if ([extension isNotEqualTo:@"stacks"]) {

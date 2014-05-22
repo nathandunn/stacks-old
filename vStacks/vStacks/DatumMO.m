@@ -7,16 +7,6 @@
 //
 
 #import "DatumMO.h"
-//#import "ConsensusStackEntryMO.h"
-//#import "DatumAlleleMO.h"
-//#import "DatumSnpMO.h"
-//#import "DepthMO.h"
-//#import "HaplotypeMO.h"
-//#import "LocusMO.h"
-//#import "ModelStackEntryMO.h"
-//#import "ReferenceStackEntryMO.h"
-//#import "SampleMO.h"
-//#import "StackEntryMO.h"
 #import "ColorGenerator.h"
 
 
@@ -25,27 +15,15 @@
 @dynamic name;
 @dynamic sampleId;
 
-//@dynamic alleles;
 @dynamic alleleData;
-//@dynamic consensus;
-//@dynamic depths;
 @dynamic depthData;
-//@dynamic haplotypes;
 @dynamic haplotypeData;
-//@dynamic locus;
-//@dynamic model;
-//@dynamic reference;
-//@dynamic sample;
-//@dynamic snps;
 @dynamic snpData;
-//@dynamic stackEntries;
 @dynamic stackData;
 @dynamic metaData;
 
 @synthesize colorGenerator;
 
-//@dynamic tagId;
-//@dynamic primitiveTagId;
 
 
 - (void)fetch {
@@ -62,25 +40,11 @@
 
 
 - (int)tagId {
-//    [self willAccessValueForKey:@"tagId"];
-//    int value = self.primitiveTagId ;
-//    [self didAccessValueForKey:@"tagId"];
-//    return value ;
-//    
     if (!_fetched){
       [self fetch];
     }
     
     return _tagId;
-//    [self willAccessValueForKey:@"length"];
-//    NSNumber *tmpValue = [self primitiveLength];
-//    [self didAccessValueForKey:@"length"];
-//    return (tmpValue!=nil) ? [tmpValue doubleValue] : 0.0; // Or a suitable representation for nil.
-    
-//    if ([self isFault]){
-//        [self fetch];
-//    }
-//    return self.primitiveTagId;
 }
 
 - (void)setTagId:(int)value {
@@ -109,8 +73,6 @@
     NSRange selectedRange = NSMakeRange(0, [[string string] length]);
     [string addAttributes:[NSDictionary dictionaryWithObject:mutParaStyle
                                                       forKey:NSParagraphStyleAttributeName] range:selectedRange];
-//    NSDictionary *fontAttributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont fontWithName:@"Courier" size:14], NSFontAttributeName, nil];
-//    [string addAttributes:fontAttributes range:selectedRange];
 
     return string;
 }
@@ -299,7 +261,6 @@
     NSDictionary *haplotypeJson = [NSJSONSerialization JSONObjectWithData:self.haplotypeData options:kNilOptions error:&error];
     for (NSDictionary *haplotype in haplotypeJson) {
         NSString *haplotypeString = [NSString stringWithFormat:@"%@", [haplotype valueForKey:@"haplotype"]];
-//        NSUInteger oldOrder = [[haplotype valueForKey:@"order"] unsignedIntegerValue];
         NSString* oldOrder = [haplotype valueForKey:@"order"] ;
         NSUInteger index =0 ;
         for (NSString *item in alleleArray) {
@@ -308,7 +269,6 @@
             }
             index++;
         }
-//        NSString *colorString = [self generateColorStringForOrder:order];
     }
 
     return haplotypeOrder;
