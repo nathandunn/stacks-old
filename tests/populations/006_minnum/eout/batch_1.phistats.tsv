@@ -1,0 +1,7 @@
+# Population ms	ms1,ms2,ms3
+# Population rb	rb1,rb2,rb3
+# Population stl	stl1,stl2,stl3
+# Group 1	1,2,3
+# Batch ID 	Locus ID	Chr	BP	phi_st	Smoothed Phi_st	Smoothed Phi_st P-value	Phi_ct	Smoothed Phi_ct	Smoothed Phi_ct P-value	Phi_sc	Smoothed Phi_sc	Smoothed Phi_sc P-value	Fst'	Smoothed Fst'	Smoothed Fst' P-value	D_est	Smoothed D_est	Smoothed D_est P-value
+1	3	groupIII	12384986	0.7000	0.0000	0.0000	0.0000	0.0000	0.0000	0.0000	0.0000	0.0000	0.5833	0.0000	0.0000	0.5833	0.0000	0.0000
+1	4	groupIX	4145694	0.7333	0.0000	0.0000	0.0000	0.0000	0.0000	0.0000	0.0000	0.0000	0.5946	0.0000	0.0000	0.5946	0.0000	0.0000
