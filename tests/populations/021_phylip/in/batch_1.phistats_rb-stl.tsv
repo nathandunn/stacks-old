@@ -1,7 +1,0 @@
-# Population rb	rb1,rb2,rb3
-# Population stl	stl1,stl2,stl3
-# Batch ID 	Locus ID	Pop 1 ID	Pop 2 ID	Chr	BP	phi_st	Smoothed Phi_st	Smoothed Phi_st P-value	Fst'	Smoothed Fst'	Smoothed Fst' P-value	D_est	Smoothed D_est	Smoothed D_est P-value
-1	2	rb	stl	groupIII	10432369	1.0000	0.0000	0.0000	1.0000	0.0000	0.0000	1.0000	0.0000	0.0000
-1	3	rb	stl	groupIII	12384986	0.4000	0.0000	0.0000	0.2857	0.0000	0.0000	0.2857	0.0000	0.0000
-1	4	rb	stl	groupIX	4145694	0.2000	0.0000	0.0000	0.0909	0.0000	0.0000	0.0909	0.0000	0.0000
-1	5	rb	stl	groupIX	4186999	0.6000	0.0000	0.0000	0.5455	0.0000	0.0000	0.5455	0.0000	0.0000
