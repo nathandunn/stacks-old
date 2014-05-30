@@ -1,0 +1,4 @@
+# Catalog ID	Marker	Cnt	Seg Dist	progeny_001	progeny_002	progeny_003
+1	aa/bb	5	1	-	ab	ab
+4	aa/ab	5	1	ab	aa	aa
+5	ab/ab	5	1	-	ab	bb
