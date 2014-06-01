@@ -116,7 +116,7 @@ Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, v
 	for (int k = 0; k < len; k++) {
 	    if (lsum_1->nucs[k].num_indv > 0 &&
 		lsum_2->nucs[k].num_indv > 0)
-		bps.insert(lsum_1->nucs[k].bp);
+		bps.insert(lsum_1->nucs[k].bp); // slow
 	}
     }
 
@@ -128,7 +128,7 @@ Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, v
     set<int>::iterator it;
     int i = 0;
     for (it = bps.begin(); it != bps.end(); it++) {
-	sites_key[*it] = i;
+	sites_key[*it] = i; // slow
 	i++;
     }
 

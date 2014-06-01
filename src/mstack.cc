@@ -136,9 +136,41 @@ DNASeq **MergedStack::gen_matrix(map<int, Stack *> &unique, map<int, Rem *> &rem
     return this->matrix;
 }
 
-double MergedStack::calc_likelihood() {
+DNANSeq **
+MergedStack::gen_matrix(map<int, PStack *> &unique) 
+{
+    PStack *tag;
+    //
+    // Create a two-dimensional array, each row containing one read. For
+    // each unique tag that has been merged together, add the sequence for
+    // that tag into our array as many times as it originally occurred. 
+    //
+    // We do not allocate memory for the second dimension of the array, we simply
+    // reuse the existing char arrays in the unique and rem maps
+    //
+    uint cnt = this->count;
+    if (this->pmatrix != NULL)
+        delete [] this->matrix;
+    this->pmatrix = new DNANSeq * [cnt];
 
-    if (this->matrix == NULL)
+    vector<int>::iterator j;
+    int i = 0;
+    for (j = this->utags.begin(); j != this->utags.end(); j++) {
+        tag = unique[*j];
+
+        for (uint k = 0; k < tag->count; k++) {
+            this->pmatrix[i] = tag->seq;
+            i++;
+        }
+    }
+
+    return this->pmatrix;
+}
+
+double 
+MergedStack::calc_likelihood() 
+{
+    if (this->matrix == NULL || this->snps.size() == 0)
         return 0;
 
     //
@@ -155,8 +187,8 @@ double MergedStack::calc_likelihood() {
 
     for (col = 0; col < length; col++) {
         nuc['A'] = 0; 
-        nuc['C'] = 0;
         nuc['G'] = 0;
+        nuc['C'] = 0;
         nuc['T'] = 0;
 
         //
@@ -177,33 +209,87 @@ double MergedStack::calc_likelihood() {
                 max = n;
         }
 
-        if (max->second == tot) {
-            //
-            // For nucleotide positions with no polymorphism (i.e. only one allele at the locus in 
-            // this permutation, or alleles are identical at the nucleotide position), the lnL for 
-            // an individual is just the output of homozygous_likelihood()
-            //
-            this->lnl += homozygous_likelihood(col, nuc);
+	//
+	// For nucleotide positions with potential polymorphism (i.e. two or more alleles at 
+	// the locus that differ at that position), first find the ML genotype (call_multinomial_snp). 
+	// If it returns 'het' calculate the heterozygous_likelihood(), otherwise calculate homozygous
+	// likelihood.
+	//
+	snp_type res = this->snps[col]->type;
 
-        } else {
-            //
-            // For nucleotide positions with potential polymorphism (i.e. two or more alleles at 
-            // the locus that differ at that position), first find the ML genotype (call_multinomial_snp). 
-            // If it returns 'het' calculate the heterozygous_likelihood(), otherwise calculate homozygous
-            // likelihood.
-            //
-            snp_type res = call_multinomial_snp(this, col, nuc, false);
+	if (res == snp_type_het) 
+	    this->lnl += heterozygous_likelihood(col, nuc);
+	else if (res == snp_type_hom)
+	    this->lnl += homozygous_likelihood(col, nuc);
+	else {
+	    double homlnl = homozygous_likelihood(col, nuc);
+	    double hetlnl = heterozygous_likelihood(col, nuc);
+	    this->lnl += hetlnl > homlnl ? hetlnl : homlnl;
+	}
+    }
 
-            if (res == snp_type_het) 
-                this->lnl += heterozygous_likelihood(col, nuc);
-            else if (res == snp_type_hom)
-                this->lnl += homozygous_likelihood(col, nuc);
-            else {
-                double homlnl = homozygous_likelihood(col, nuc);
-                double hetlnl = heterozygous_likelihood(col, nuc);
-                this->lnl += hetlnl > homlnl ? hetlnl : homlnl;
-            }
+    return this->lnl;
+}
+
+double 
+MergedStack::calc_likelihood_pstacks() 
+{
+    if (this->pmatrix == NULL || this->snps.size() == 0)
+        return 0;
+
+    //
+    // Iterate over each column of the array and call the consensus base.
+    //
+    int row, col, tot;
+    int length = this->pmatrix[0]->size();
+    int height = this->count;
+    map<char, int> nuc;
+    map<char, int>::iterator max, n;
+    DNANSeq *d;
+
+    this->lnl = 0;
+
+    for (col = 0; col < length; col++) {
+        nuc['A'] = 0; 
+        nuc['G'] = 0;
+        nuc['C'] = 0;
+        nuc['T'] = 0;
+
+        //
+        // Count the nucleotide type at each position in the column.
+        //
+        for (row = 0; row < height; row++) {
+	    d = this->pmatrix[row];
+            nuc[(*d)[col]]++;
+	}
+        //
+        // Find the base with a plurality of occurances and call it.
+        //
+        max = nuc.end();
+        tot = 0;
+        for (n = nuc.begin(); n != nuc.end(); n++) {
+            tot += n->second;
+            if (max == nuc.end() || n->second > max->second)
+                max = n;
         }
+
+	//
+	// For nucleotide positions with potential polymorphism (i.e. two or more alleles at 
+	// the locus that differ at that position), first find the ML genotype (call_multinomial_snp). 
+	// If it returns 'het' calculate the heterozygous_likelihood(), otherwise calculate homozygous
+	// likelihood.
+	//
+	snp_type res = this->snps[col]->type;
+
+	if (res == snp_type_het) 
+	    this->lnl += heterozygous_likelihood(col, nuc);
+	else if (res == snp_type_hom)
+	    this->lnl += homozygous_likelihood(col, nuc);
+	else {
+	    double homlnl = homozygous_likelihood(col, nuc);
+	    double hetlnl = heterozygous_likelihood(col, nuc);
+	    this->lnl += hetlnl > homlnl ? hetlnl : homlnl;
+	}
     }
 
     return this->lnl;

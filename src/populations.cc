@@ -72,6 +72,7 @@ bool      kernel_smoothed   = false;
 bool      linkage_stats     = false;
 bool      loci_ordered      = false;
 bool      log_fst_comp      = false;
+bool      verbose           = false;
 int       min_stack_depth   = 0;
 double    minor_allele_freq = 0;
 double    p_value_cutoff    = 0.05;
@@ -175,7 +176,7 @@ int main (int argc, char* argv[]) {
     bool compressed = false;
     int  res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false, compressed)) == 0) {
+    if ((res = load_loci(catalog_file.str(), catalog, false, false, compressed)) == 0) {
     	cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
      	return 0;
     }
@@ -222,7 +223,13 @@ int main (int argc, char* argv[]) {
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
 
+    log_fh << "# Distribution of population loci.\n";
+    log_haplotype_cnts(catalog, log_fh);
+
     apply_locus_constraints(catalog, pmap, pop_indexes);
+
+    log_fh << "# Distribution of population loci after applying locus constraints.\n";
+    log_haplotype_cnts(catalog, log_fh);
 
     cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
     map<int, CSLocus *>::iterator it;
@@ -278,11 +285,11 @@ int main (int argc, char* argv[]) {
     	end_index   = pit->second.second;
     	pop_id      = pit->first;
     	cerr << "Generating nucleotide-level summary statistics for population '" << pop_key[pop_id] << "'\n";
-    	psum->add_population(catalog, pmap, pop_id, start_index, end_index, log_fh);
+    	psum->add_population(catalog, pmap, pop_id, start_index, end_index, verbose, log_fh);
 
 	if (kernel_smoothed && loci_ordered) {
 	    cerr << "  Generating kernel-smoothed population statistics...\n";
-	    // kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
+	    kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
 	}
     }
 
@@ -540,7 +547,59 @@ order_unordered_loci(map<int, CSLocus *> &catalog)
     return false;
 }
 
-int tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
+int
+log_haplotype_cnts(map<int, CSLocus *> &catalog, ofstream &log_fh)
+{
+    map<int, CSLocus *>::iterator it;
+    map<int, int> valid, absent, confounded;
+
+    CSLocus *loc;
+    int missing;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+
+	if (valid.count(loc->hcnt) == 0)
+	    valid[loc->hcnt] = 1;
+	else
+	    valid[loc->hcnt]++;
+
+	if (confounded.count(loc->confounded_cnt) == 0)
+	    confounded[loc->confounded_cnt] = 1;
+	else
+	    confounded[loc->confounded_cnt]++;
+
+	missing = loc->cnt - loc->hcnt;
+
+	if (absent.count(missing) == 0)
+	    absent[missing] = 1;
+	else
+	    absent[missing]++;
+    }
+
+    map<int, int>::iterator cnt_it;
+
+    log_fh << "# Distribution of valid loci matched to catalog locus.\n"
+	   << "# Valid samples at locus\tCount\n";
+    for (cnt_it = valid.begin(); cnt_it != valid.end(); cnt_it++)
+	log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "# Distribution of confounded loci at catalog locus.\n"
+	   << "# Confounded samples at locus\tCount\n";
+    for (cnt_it = confounded.begin(); cnt_it != confounded.end(); cnt_it++)
+	log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    log_fh << "# Distribution of missing loci at catalog loci.\n"
+	   << "# Absent samples at locus\tCount\n";
+    for (cnt_it = absent.begin(); cnt_it != absent.end(); cnt_it++)
+	log_fh << cnt_it->first << "\t" << cnt_it->second << "\n";
+
+    return 0;
+}
+
+int 
+tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) 
+{
     map<int, CSLocus *>::iterator it;
     vector<char *>::iterator hit;
     Datum  **d;
@@ -567,7 +626,9 @@ int tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     return 0;
 }
 
-int create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap) {
+int 
+create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap) 
+{
     //
     // Create a genotype map. For any set of haplotypes, this routine will
     // assign each haplotype to a genotype, e.g. given the haplotypes 

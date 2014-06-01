@@ -39,6 +39,7 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
+#include <iomanip> // std::setprecision
 
 #include <unordered_map>
 using std::unordered_map;
@@ -80,7 +81,7 @@ int  populate_merged_tags(map<int, PStack *> &, map<int, MergedStack *> &);
 int  call_consensus(map<int, MergedStack *> &, map<int, PStack *> &, bool);
 int  call_alleles(MergedStack *, vector<DNANSeq *> &);
 int  count_raw_reads(map<int, PStack *> &, map<int, MergedStack *> &);
-int  write_sql(map<int, MergedStack *> &, map<int, PStack *> &);
+int  write_results(map<int, MergedStack *> &, map<int, PStack *> &);
 
 //
 // Debugging
