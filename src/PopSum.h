@@ -253,7 +253,7 @@ public:
     ~PopSum();
 
     int initialize(PopMap<LocusT> *);
-    int add_population(map<int, LocusT *> &, PopMap<LocusT> *, uint, uint, uint, ofstream &);
+    int add_population(map<int, LocusT *> &, PopMap<LocusT> *, uint, uint, uint, bool, ofstream &);
     int tally(map<int, LocusT *> &);
 
     int loci_cnt() { return this->num_loci; }
@@ -320,9 +320,10 @@ int PopSum<LocusT>::initialize(PopMap<LocusT> *pmap) {
 
 template<class LocusT>
 int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
-				   PopMap<LocusT> *pmap, 
-				   uint population_id,
-				   uint start_index, uint end_index, ofstream &log_fh) {
+			       PopMap<LocusT> *pmap, 
+			       uint population_id,
+			       uint start_index, uint end_index, 
+			       bool verbose, ofstream &log_fh) {
     LocusT  *loc;
     Datum  **d;
     LocSum **s;
@@ -363,13 +364,14 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 		s[pop_index]->nucs[loc->snps[k]->col].incompatible_site = true;
 
 		incompatible_loci++;
-		log_fh << "within_population\t"
-		       << "incompatible_locus\t"
-		       << loc->id << "\t"
-		       << loc->loc.chr << "\t"
-		       << loc->sort_bp(loc->snps[k]->col) << "\t"
-		       << loc->snps[k]->col << "\t" 
-		       << population_id << "\n";
+		if (verbose)
+		    log_fh << "within_population\t"
+			   << "incompatible_locus\t"
+			   << loc->id << "\t"
+			   << loc->loc.chr << "\t"
+			   << loc->sort_bp(loc->snps[k]->col) << "\t"
+			   << loc->snps[k]->col << "\t" 
+			   << population_id << "\n";
 	    }
 
 	    snp_cols.insert(loc->snps[k]->col);
@@ -387,6 +389,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
     }
 
     cerr << "Population '" << pop_key[population_id] << "' contained " << incompatible_loci << " incompatible loci.\n";
+    log_fh <<  "Population " << population_id << " contained " << incompatible_loci << " incompatible loci.\n";
 
     return 0;
 }
@@ -574,7 +577,7 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
 template<class LocusT>
 PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) 
 {
-    LocSum  *s_1  = this->pop(locus, pop_1);
+    LocSum  *s_1  = this->pop(locus, pop_1);  /////// SLOW!
     LocSum  *s_2  = this->pop(locus, pop_2);
     PopPair *pair = new PopPair();
 

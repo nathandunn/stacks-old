@@ -58,11 +58,16 @@ int main (int argc, char* argv[]) {
     bool compressed = false;
     int  res;
 
+    if (search_type == sequence) 
+ 	cerr << "Searching for matches by sequence identity...\n";
+    else if (search_type == genomic_loc)
+	cerr << "Searching for matches by genomic location...\n";
+
     if (catalog) {
         sample_1_file += ".catalog";
-	res = load_loci(sample_1_file, sample_1, false, compressed);
+	res = load_loci(sample_1_file, sample_1, false, false, compressed);
     } else {
-	res = load_loci(sample_1_file, sample_1, false, compressed);
+	res = load_loci(sample_1_file, sample_1, false, false, compressed);
     }
 
     if (res == 0) {
@@ -70,7 +75,7 @@ int main (int argc, char* argv[]) {
 	return 0;
     }
 
-    res = load_loci(sample_2_file, sample_2, false, compressed);
+    res = load_loci(sample_2_file, sample_2, false, false, compressed);
 
     if (res == 0) {
 	cerr << "Unable to parse '" << sample_2_file << "'\n";
@@ -729,6 +734,7 @@ int write_matches(map<int, QLocus *> &sample) {
 	}
     }
 
+    QLocus *qloc;
     string       type;
     uint         match_depth;
     stringstream sstr;
@@ -736,23 +742,25 @@ int write_matches(map<int, QLocus *> &sample) {
     cerr << "Outputing to file " << out_file << "\n";
 
     for (i = sample.begin(); i != sample.end(); i++) {
+	qloc = i->second;
 
-	for (uint j = 0; j < i->second->matches.size(); j++) {
+	for (uint j = 0; j < qloc->matches.size(); j++) {
 	    if (verify_haplotypes == false && search_type == genomic_loc)
-		match_depth = i->second->depth;
+		match_depth = qloc->depth;
 	    else
 		match_depth = 
-		    i->second->alleles.count(i->second->matches[j]->cat_type) > 0 ? 
-		    i->second->alleles[i->second->matches[j]->cat_type] : i->second->depth;
+		    qloc->alleles.count(qloc->matches[j]->cat_type) > 0 ? 
+		    qloc->alleles[qloc->matches[j]->cat_type] : qloc->depth;
 
 	    sstr << 
-		"0"           << "\t" <<
-		batch_id      << "\t" <<
-		i->second->matches[j]->cat_id   << "\t" <<
-		samp_id       << "\t" <<
-		i->second->id << "\t" << 
-		i->second->matches[j]->cat_type << "\t" <<
-		match_depth   << "\n";
+		"0"            << "\t" <<
+		batch_id       << "\t" <<
+		qloc->matches[j]->cat_id   << "\t" <<
+		samp_id        << "\t" <<
+		qloc->id  << "\t" << 
+		qloc->matches[j]->cat_type << "\t" <<
+		match_depth    << "\t" <<
+		qloc->lnl << "\n";
 	}
 
 	if (in_file_type == gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
