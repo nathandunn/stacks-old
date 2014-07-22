@@ -1750,7 +1750,7 @@ translate_genotypes(map<string, string> &types, map<string, map<string, string> 
 	    d[i]->trans_gtype = new char[m.length() + 1];
 
 	    //
-	    // If the genotype was corrected, output it in uppercase letteres.
+	    // If the genotype was corrected, output it in uppercase letters.
 	    //
 	    if (d[i]->corrected) {
 		for (uint k = 0; k < m.length(); k++)

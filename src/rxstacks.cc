@@ -178,7 +178,7 @@ int main (int argc, char* argv[]) {
 
 	cerr << "Loading stacks from sample " << file << " [" << i+1 << " of " << catalog_matches.size() << "]...\n";
 
-	//// if (sample_id != 160 && sample_id != 147) continue;
+	if (sample_id != 149) continue;
 
 	map<int, Locus *> stacks;
 	int res;
@@ -242,9 +242,11 @@ int main (int argc, char* argv[]) {
 		catalog_id = matches[j].first;
 		tag_id     = matches[j].second;
 
-		//// if (tag_id == 8334) {
-		////     cerr << "Hit the tag.\n";
-		//// }
+		if (tag_id == 16711) {
+		    cerr << "Hit the tag.\n";
+		}
+
+		//// if (catalog_id != 3080) continue;
 
 		if (catalog.count(catalog_id) == 0) continue;
 
@@ -269,11 +271,11 @@ int main (int argc, char* argv[]) {
 		    lnl_cnt++;
 		}
 
-		prune_nucleotides(cloc, loc, log_fh,
+		prune_nucleotides(cloc, loc, d, log_fh,
 				  nuc_cnt,
 				  unk_hom_cnt, unk_het_cnt, 
 				  hom_unk_cnt, het_unk_cnt, 
-				  hom_het_cnt, het_hom_cnt);
+ 				  hom_het_cnt, het_hom_cnt);
 
 		//
 		// Prune haplotypes from this locus.
@@ -488,10 +490,6 @@ prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &prune
     //
     // Prune out excess haplotypes.
     //
-    map<string, int>::iterator it;
-    uint   j, k, cat_snp, cat_idx, loc_snp, loc_idx;
-    string hap;
-
     for (uint i = 2; i < haplotypes.size(); i++) {
 	//
 	// Make sure that those haplotypes we want to discard occur at a frequency lower
@@ -501,69 +499,108 @@ prune_locus_haplotypes(CSLocus *cloc, Datum *d, Locus *loc, unsigned long &prune
 	    (max_haplotype_cnt > 0 && haplotypes[i].second > max_haplotype_cnt))
 	    continue;
 
-	cat_snp =  0;
-	cat_idx = -1;
-	loc_snp =  0;
-	loc_idx = -1;
-	k   = -1;
-	j   = -1;
-	hap = "";
+	cout << "removing haplotype step 1\t" << cloc->id << "\t" << loc->id << "\t" << loc->sample_id << "\t" << haplotypes[i].first << "\n";
+	remove_haplotype(cloc, loc, haplotypes[i].first, pruned_hap_cnt);
+	haplotypes.erase(haplotypes.begin() + i);
+    }
 
-	do {
-	    j++;
-	    loc_idx++;
-	    //
-	    // Advance to a het in the sample locus.
-	    //
-	    while (j < loc->snps.size() && loc->snps[j]->type != snp_type_het) j++;
-	    if (j >= loc->snps.size()) break;
-	    loc_snp = loc->snps[j]->col;
+    //
+    // If there are more than two haplotypes remaining and the second, third, etc 
+    // haplotype exist only in this individual, prune them out.
+    //
 
-	    do {
-		k++;
-		cat_idx++;
-		//
-		// Advance to the het in the catalog locus that corresponds to the sample locus.
-		//
-		while (k < cloc->snps.size() && cloc->snps[k]->type != snp_type_het) k++;
-		if (k >= cloc->snps.size()) break;
-		cat_snp = cloc->snps[k]->col;
+    if (haplotypes.size() > 2) {
+	int    stop_pos  = haplotypes.size() - 1;
+	int    start_pos = stop_pos;
+	double score     = haplotypes[stop_pos].second;
+	while (start_pos > 1) {
+	    if (cloc->hap_cnts[haplotypes[start_pos].first] == 1 &&
+		haplotypes[start_pos].second == score)
+		start_pos--;
+	    else
+		break;
+	}
 
-	    } while (cat_snp < loc_snp);
-
-	    //
-	    // Extract out the nucleotide from the catalog haplotype that matches the sample 
-	    // haplotype. For example, catalog haplotype may be 'ACGTG' while sample haplotype 
-	    // is 'CT'.
-	    //
-	    if (j < loc->snps.size() && k < cloc->snps.size() && cat_snp == loc_snp) {
-		hap += haplotypes[i].first.at(cat_idx);
-	    } else {
-		cerr << "Error processing catalog locus " << cloc->id << "\n";
-		return -1;
+	if (start_pos < stop_pos)
+	    for (int i = start_pos; i <= stop_pos; i++) { 
+		cout << "removing haplotype step 2\t" << cloc->id << "\t" << loc->id << "\t" << loc->sample_id << "\t" << haplotypes[i].first << "\n";
+		remove_haplotype(cloc, loc, haplotypes[i].first, pruned_hap_cnt);
 	    }
-
-	} while (j < loc->snps.size());
-
-	//
-	// Remove the haplotype.
-	//
-	it = loc->alleles.find(hap);
-
-	if (it != loc->alleles.end()) {
-	    loc->alleles.erase(it);
-	    pruned_hap_cnt++;
-	} 
-	// else {
-	//     cerr << "Error erasing haplotype '" << hap << "' in catalog locus " << cloc->id << ", sample locus " << loc->id << "\n";
-	// }
     }
 
     return 0;
 }
 
 int
-prune_nucleotides(CSLocus *cloc, Locus *loc, ofstream &log_fh, unsigned long int &nuc_cnt, 
+remove_haplotype(CSLocus *cloc, Locus *loc, string haplotype, unsigned long &pruned_hap_cnt)
+{
+    map<string, int>::iterator it;
+
+    int    cat_snp =  0;
+    int    cat_idx = -1;
+    int    loc_snp =  0;
+    int    loc_idx = -1;
+    int    k       = -1;
+    int    j       = -1;
+    string hap = "";
+
+    do {
+	j++;
+	loc_idx++;
+	//
+	// Advance to a het in the sample locus.
+	//
+	while (j < (int) loc->snps.size() && loc->snps[j]->type != snp_type_het) j++;
+	if (j >= (int) loc->snps.size()) break;
+	loc_snp = loc->snps[j]->col;
+
+	do {
+	    k++;
+	    cat_idx++;
+	    //
+	    // Advance to the het in the catalog locus that corresponds to the sample locus.
+	    //
+	    while (k < (int) cloc->snps.size() && cloc->snps[k]->type != snp_type_het) k++;
+	    if (k >= (int) cloc->snps.size()) break;
+	    cat_snp = cloc->snps[k]->col;
+
+	} while (cat_snp < loc_snp);
+
+	//
+	// Extract out the nucleotide from the catalog haplotype that matches the sample 
+	// haplotype. For example, catalog haplotype may be 'ACGTG' while sample haplotype 
+	// is 'CT'.
+	//
+	if (j < (int) loc->snps.size() && k < (int) cloc->snps.size() && cat_snp == loc_snp) {
+	    hap += haplotype.at(cat_idx);
+	} else {
+	    cerr << "Error processing catalog locus " << cloc->id << "\n";
+	    return -1;
+	}
+
+    } while (j < (int) loc->snps.size());
+
+    //
+    // Remove the haplotype.
+    //
+    it = loc->alleles.find(hap);
+
+    if (it != loc->alleles.end()) {
+	loc->alleles.erase(it);
+	pruned_hap_cnt++;
+    } 
+
+    //
+    // Decrement the count for this haplotype in the catalog locus.
+    //
+    if (cloc->hap_cnts.count(haplotype) > 0)
+	cloc->hap_cnts[haplotype]--;
+
+    return 0;
+}
+
+int
+prune_nucleotides(CSLocus *cloc, Locus *loc, Datum *d, ofstream &log_fh, unsigned long int &nuc_cnt, 
 		  unsigned long int &unk_hom_cnt, unsigned long int &unk_het_cnt, 
 		  unsigned long int &hom_unk_cnt, unsigned long int &het_unk_cnt, 
 		  unsigned long int &hom_het_cnt, unsigned long int &het_hom_cnt)
@@ -655,6 +692,12 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, ofstream &log_fh, unsigned long int
 		break;
 	    }
 
+    //
+    // Update the matched haplotypes in the Datum object, so the haplotype pruner can 
+    // operate on newly generated, spurious haplotypes.
+    //
+    generate_matched_haplotypes(cloc, loc, d);
+
     return 0;
 }
 
@@ -718,6 +761,88 @@ call_alleles(Locus *loc, set<int> &rows)
 
 	if (snp_cnt > 0 && allele.length() == snp_cnt)
 	    loc->alleles[allele]++;
+    }
+
+    return 0;
+}
+
+int 
+generate_matched_haplotypes(CSLocus *cloc, Locus *loc, Datum *d) 
+{
+    //
+    // Free the existing matched haplotypes.
+    //
+    for (uint i = 0; i < d->obshap.size(); i++)
+	delete [] d->obshap[i];
+    d->obshap.clear();
+    d->depth.clear();
+
+    //
+    // Construct a set of haplotypes from the locus relative to the catalog locus.
+    // (The locus already has a set of haplotypes, however, they don't necessarily 
+    //  account for all the SNPs in the catalog, so we will augment them with sequence
+    //  from the consensus.)
+    //
+    vector<pair<string, SNP *> >   merged_snps;
+    map<int, pair<string, SNP *> > columns;
+    map<int, pair<string, SNP *> >::iterator c;
+    vector<pair<string, SNP *> >::iterator   k;
+
+    for (uint i = 0; i < cloc->snps.size(); i++) {
+	if (cloc->snps[i]->type != snp_type_het)
+	    continue;
+	columns[cloc->snps[i]->col] = make_pair("catalog", cloc->snps[i]);
+    }
+
+    for (uint i = 0; i < loc->snps.size();  i++) {
+	if (loc->snps[i]->type != snp_type_het)
+	    continue;
+
+	//
+	// Is this column already represented in the catalog?
+	//
+	if (columns.count(loc->snps[i]->col))
+	    columns[loc->snps[i]->col] = make_pair("both", loc->snps[i]);
+	else
+	    columns[loc->snps[i]->col] = make_pair("query", loc->snps[i]);
+    }
+
+    for (c = columns.begin(); c != columns.end(); c++) 
+	merged_snps.push_back((*c).second);
+
+    //
+    // Sort the SNPs by column
+    //
+    sort(merged_snps.begin(), merged_snps.end(), compare_pair_snp);
+
+    map<string, int>::iterator b;
+    string old_allele, new_allele;
+    int    pos;
+
+    for (b = loc->alleles.begin(); b != loc->alleles.end(); b++) {
+	old_allele = b->first;
+	new_allele = "";
+	pos        = 0;
+
+	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+	    //
+	    // If the SNPs from the catalog haplotype beyond the length of the query, add Ns
+	    //
+	    if (k->first == "catalog") {
+		new_allele += (k->second->col > loc->len - 1) ? 'N' : loc->con[k->second->col];
+	    } else {
+		new_allele += old_allele[pos];
+		pos++;
+	    }
+	}
+
+	char *h = new char[new_allele.length() + 1];
+	strcpy(h, new_allele.c_str());
+	d->obshap.push_back(h);
+	d->depth.push_back(b->second);
+
+	// loc->alleles[new_allele] = b->second;
+	// cerr << "Adding haplotype: " << new_allele << " [" << b->first << "]\n";
     }
 
     return 0;

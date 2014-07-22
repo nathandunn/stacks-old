@@ -71,13 +71,15 @@ int     build_file_list(vector<pair<int, string> > &);
 int     init_log(int, char **, ofstream &);
 int     sum_haplotype_counts(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int     prune_locus_haplotypes(CSLocus *, Datum *, Locus *, unsigned long int &);
+int     remove_haplotype(CSLocus *, Locus *, string, unsigned long &);
 int     measure_error(CSLocus *, Locus *, Datum *, ofstream &);
 int     calc_lnl_means(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int     prune_nucleotides(CSLocus *, Locus *, ofstream &, unsigned long int &,
+int     prune_nucleotides(CSLocus *, Locus *, Datum *, ofstream &, unsigned long int &,
 			  unsigned long int &, unsigned long int &, unsigned long int &,
 			  unsigned long int &, unsigned long int &, unsigned long int &);
 int     invoke_model(Locus *, int, map<char, int> &);
 int     call_alleles(Locus *, set<int> &); 
+int     generate_matched_haplotypes(CSLocus *, Locus *, Datum *);
 int     fill_catalog_snps(map<int, CSLocus *> &);
 int     log_model_calls(Locus *, ofstream &,
 			unsigned long int &, unsigned long int &, unsigned long int &,
