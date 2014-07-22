@@ -78,6 +78,8 @@ const char *claI[]    = {"CGAT",              // AT/CGAT, ClaI
                          "ATCG"};
 const char *nheI[]    = {"CTAGC",              // G/CTAGC, NheI
                          "GCTAG"};
+const char *speI[]    = {"CTAGT",              // A/CTAGT, SpeI
+                         "ACTAG"};
 
 void 
 initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, map<string, int> &renz_len) {
@@ -106,6 +108,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz["taqI"]    = taqI;    // T/CGA, TaqI
     renz["claI"]    = claI;    // AT/CGAT, ClaI
     renz["nheI"]    = nheI;    // G/CTAGC, NheI
+    renz["speI"]    = speI;    // A/CTAGT, SpeI
 
     renz_cnt["sbfI"]    = 1;
     renz_cnt["pstI"]    = 1;
@@ -131,6 +134,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["taqI"]    = 1;
     renz_cnt["claI"]    = 1;
     renz_cnt["nheI"]    = 1;
+    renz_cnt["speI"]    = 1;
 
     renz_len["sbfI"]    = 6;
     renz_len["pstI"]    = 5;
@@ -156,6 +160,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["taqI"]    = 3;
     renz_len["claI"]    = 4;
     renz_len["nheI"]    = 5;
+    renz_len["speI"]    = 5;
 }
 
 #endif // __RENZ_H__

@@ -223,13 +223,13 @@ create table markers (
        id         int unsigned not null primary key auto_increment,
        batch_id   int unsigned not null,
        catalog_id int unsigned not null,
-       type       enum('aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/a-', '-a/ab', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab', 'ab/c-', '-c/ab'),
+       type       enum('aa/bb', 'aa/b-', '-a/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/a-', '-a/ab', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab', 'ab/c-', '-c/ab'),
        progeny    int unsigned not null default 0,
        max_pct    float,
        ratio      varchar(512),
        chisq_pval float,
        geno_map   text,
-       uncor_type enum('aa/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/a-', '-a/ab', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab', 'ab/c-', '-c/ab')
+       uncor_type enum('aa/bb', 'aa/b-', '-a/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/a-', '-a/ab', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab', 'ab/c-', '-c/ab')
 );
 
 create table sequence (

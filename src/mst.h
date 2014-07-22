@@ -51,7 +51,8 @@ class Edge {
 
 class Node {
 public:
-    uint id;
+    uint           id;
+    string         label;
     vector<Edge *> edges;
 
     Node *parent;
@@ -80,18 +81,22 @@ public:
 
 class MinSpanTree {
     map<int, Node *> nodes;
+    map<string, int> node_key;
+    uint             id_cnt;
 
  public:
-    MinSpanTree()  { }
+    MinSpanTree()  { id_cnt = 0; }
     ~MinSpanTree() {
         for (uint i = 0; i < this->nodes.size(); i++)
             delete this->nodes[i];
     }
 
     Node  *add_node(int id);
+    Node  *add_node(string label);
     int    build_tree();
     int    node_count();
     Node  *node(int id);
+    Node  *node(string label);
     Node  *head();
     bool   connected(int *, int);
     string vis(bool);
