@@ -242,9 +242,9 @@ int main (int argc, char* argv[]) {
 		catalog_id = matches[j].first;
 		tag_id     = matches[j].second;
 
-		if (tag_id == 16711) {
-		    cerr << "Hit the tag.\n";
-		}
+		// if (tag_id == 16711) {
+		//     cerr << "Hit the tag.\n";
+		// }
 
 		//// if (catalog_id != 3080) continue;
 
