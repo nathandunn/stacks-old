@@ -43,6 +43,7 @@ sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/constants.h \
 rxstacks_SOURCES = src/rxstacks.h src/rxstacks.cc src/constants.h \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
+	src/mst.h src/mst.cc \
 	src/models.h src/models.cc \
 	src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/sql_utilities.h

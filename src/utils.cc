@@ -181,3 +181,7 @@ bool compare_pair_snp(pair<string, SNP *> a, pair<string, SNP *> b) {
 bool compare_pair_haplotype(pair<string, double> a, pair<string, double> b) {
     return (a.second > b.second);
 }
+
+bool compare_pair_haplotype_rev(pair<string, double> a, pair<string, double> b) {
+    return (a.second < b.second);
+}
