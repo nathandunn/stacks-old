@@ -1,0 +1,4 @@
+# SQL ID	Batch ID	Catalog Locus ID	Marker Type	Total Genotypes	Max	Genotype Freqs	Segregation Distortion	Genotype Map	Uncorrected Marker
+0	1	1	aa/bb	3	66.67	ab:2(66.7%);bb:1(33.3%)	1	A:a;G:b	aa/bb
+0	1	4	aa/ab	3	66.67	aa:2(66.7%);ab:1(33.3%)	1	C:a;T:b	aa/ab
+0	1	5	ab/ab	3	33.33	aa:1(33.3%);ab:1(33.3%);bb:1(33.3%)	1	G:a;T:b	ab/ab
