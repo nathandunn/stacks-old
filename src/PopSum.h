@@ -38,7 +38,7 @@ using std::make_pair;
 #include "stacks.h"
 
 extern bool   log_fst_comp;
-extern int    progeny_limit;
+extern double sample_limit;
 extern double minor_allele_freq;
 extern map<int, string> pop_key;
 const  uint   PopStatSize = 5;
@@ -910,7 +910,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     }
     //cerr << "  Num Individuals: " << num_indv << "; Obs Hets: " << obs_het << "; Obs P: " << obs_p << "; Obs Q: " << obs_q << "\n";
 
-    if (num_indv == 0 || num_indv < progeny_limit) return 0;
+    if (num_indv == 0 || num_indv < sample_limit) return 0;
 
     //
     // Calculate total number of alleles

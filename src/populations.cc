@@ -40,9 +40,8 @@ string    bl_file;
 string    wl_file;
 string    bs_wl_file;
 string    enz;
-double    sigma             = 150000;
-double    sample_limit      = 0;
-int       progeny_limit     = 0;
+double    sigma             = 150000.0;
+double    sample_limit      = 0.0;
 int       population_limit  = 1;
 bool      bootstrap         = false;
 bool      bootstrap_fst     = false;
@@ -74,7 +73,7 @@ bool      loci_ordered      = false;
 bool      log_fst_comp      = false;
 bool      verbose           = false;
 int       min_stack_depth   = 0;
-double    minor_allele_freq = 0;
+double    minor_allele_freq = 0.0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
 
@@ -449,7 +448,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 	}
 
 	//
-	// Check that the counts for each population are over progeny_limit. If not, zero out 
+	// Check that the counts for each population are over sample_limit. If not, zero out 
 	// the members of that population.
 	//
 	for (uint i = 0; i < pop_cnt; i++) {
@@ -6493,12 +6492,12 @@ int parse_command_line(int argc, char* argv[]) {
 	}
     }
 
-    if (progeny_limit > 0) {
-	if (progeny_limit > 1)
-	    progeny_limit = progeny_limit / 100;
+    if (sample_limit > 0) {
+	if (sample_limit > 1)
+	    sample_limit = sample_limit / 100;
 
-	if (progeny_limit > 1.0) {
-	    cerr << "Unable to parse the progeny limit frequency\n";
+	if (sample_limit > 1.0) {
+	    cerr << "Unable to parse the sample limit frequency\n";
 	    help();
 	}
     }
