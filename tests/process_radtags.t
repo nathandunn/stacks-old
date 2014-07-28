@@ -8,8 +8,9 @@ source $test_path/setup.sh
 # Setup
 barcodes=$test_data_path/frequent_data/Barcodes.txt
 freq_in=$test_data_path/frequent_data/in.fastq.gz 
+freq_in2=$test_data_path/frequent_data/in.fastq
 
-plan 11
+plan 15
 
 # # Example libtap tests.  Uncomment to run.
 # ok "This test will pass" true
@@ -26,7 +27,7 @@ ok_ 'input gzfastq' \
 
 ok_ 'input fastq' \
     001_input_fastq \
-    "process_radtags -i fastq -p %in -o %out -b $barcodes -E phred33 -e sbfI"
+    "process_radtags -i fastq -f $freq_in2 -o %out -b $barcodes -E phred33 -e sbfI"
 
 diag 'FIXME: Input files for this test are NOT actaully phred64 encoded! This is just an example test...'
 
@@ -65,6 +66,22 @@ ok_ 'set window length' \
 ok_ 'minimum window score' \
     010_minscore \
     "process_radtags -i gzfastq -f $freq_in -o %out -b $barcodes -E phred33 -e sbfI -q -s 15"
+
+ok_ 'merge output' \
+    011_merge \
+    "process_radtags -i gzfastq -f %in/in.fastq.gz -o %out -E phred33 -e sbfI --merge"
+
+ok_ 'Remove sequences marked by Illumina as failing chastity/purity filter' \
+    012_filt_ill \
+    "process_radtags -i gzfastq -f %in/in.fastq.gz -o %out -E phred33 -e sbfI -b $barcodes --filter_illumina"
+
+ok_ 'Disable checking for RAD site' \
+    013_disrc \
+    "process_radtags -i gzfastq -f %in/in.fastq.gz -o %out -E phred33 -e sbfI -b $barcodes --disable_rad_check"
+
+ok_ 'Provide distance between barcodes for rescue' \
+    014_bcdist \
+    "process_radtags -i gzfastq -f %in/in.fastq.gz -o %out -E phred33 -e sbfI -b $barcodes --barcode_dist 1 -r"
 
 # I'm not sure yet what finish() does.
 finish
