@@ -797,8 +797,8 @@ remove_haplotype(CSLocus *cloc, Locus *loc, string haplotype,
 	log_fh << cloc->id       << "\t"
 	       << loc->sample_id << "\t" 
 	       << loc->id        << "\t"
-	       << haplotype      << "\t"
 	       << hap            << "\t"
+	       << haplotype      << "\t"
 	       << "\t"
 	       << "\t"
 	       << alg_type       << "\n";
@@ -1516,7 +1516,7 @@ init_log(int argc, char **argv, ofstream &log_fh, ofstream &log_snp_fh, ofstream
 		   << "Orig Value\t" 
 		   << "Corr Value\n";
 	log_hap_fh << sstr.str() << "\n"
-		   << "Catalog Locus\t" 
+		   << "# Catalog Locus\t" 
 		   << "Sample\t" 
 		   << "Sample Locus\t"
 		   << "Sample Haplotype\t" 
@@ -1650,11 +1650,13 @@ parse_command_line(int argc, char* argv[])
 	help();
     }
 
+    if (out_path.length() == 0) {
+	cerr << "No output path specified, files in '" << in_path << "' will be overwritten.\n";
+	out_path = in_path;
+    }
+
     if (in_path.at(in_path.length() - 1) != '/') 
 	in_path += "/";
-
-    if (out_path.length() == 0) 
-	out_path = in_path;
 
     if (out_path.at(out_path.length() - 1) != '/') 
 	out_path += "/";

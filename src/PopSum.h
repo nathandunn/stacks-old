@@ -767,13 +767,14 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
     s->nucs[pos].alleles  = 2 * num_indv;
 
     if (num_indv > 0) {
-	s->nucs[pos].p        = 1.0;
-	s->nucs[pos].p_nuc    = p_nuc;
-	s->nucs[pos].obs_hom  = 1.0;
-	s->nucs[pos].obs_het  = 0.0;
-	s->nucs[pos].exp_hom  = 1.0;
-	s->nucs[pos].exp_het  = 0.0;
-	s->nucs[pos].pi       = 0.0;
+	s->nucs[pos].p        =  1.0;
+	s->nucs[pos].p_nuc    =  p_nuc;
+	s->nucs[pos].obs_hom  =  1.0;
+	s->nucs[pos].obs_het  =  0.0;
+	s->nucs[pos].exp_hom  =  1.0;
+	s->nucs[pos].exp_het  =  0.0;
+	s->nucs[pos].stat[0]  =  0.0; // pi
+	s->nucs[pos].stat[1]  = -7.0; // fis
     }
 
     return 0;
@@ -990,7 +991,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     // Calculate F_is, the inbreeding coefficient of an individual (I) relative to the subpopulation (S):
     //   Fis = (exp_het - obs_het) / exp_het
     //
-    double fis = s->nucs[pos].pi == 0 ? 0 : (s->nucs[pos].pi - obs_het) / s->nucs[pos].pi;
+    double fis = s->nucs[pos].pi == 0 ? -7 : (s->nucs[pos].pi - obs_het) / s->nucs[pos].pi;
 
     s->nucs[pos].stat[1] = fis;
 

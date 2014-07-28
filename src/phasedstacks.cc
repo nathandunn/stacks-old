@@ -44,6 +44,9 @@ double    chi_sq_limit     = 3.84;
 double    minor_freq_lim   = 0.1;
 double    min_inform_pairs = 0.90;
 uint      max_pair_dist    = 1000000;
+uint      bucket_dist      = 5000;
+double    dprime_threshold = false;
+double    dprime_threshold_level = 0.0;
 
 set<int> whitelist, blacklist;
 
@@ -78,7 +81,10 @@ int main (int argc, char* argv[]) {
 	cerr << "fastPhase";
 	break;
     }
-    cerr << " input files.\n";
+    cerr << " input files.\n"
+	 << "Size of buckets for binning D' values at a particular distance: " << bucket_dist / 1000 << "kb.\n";
+    if (dprime_threshold)
+	cerr << "D' Threshold set at " << dprime_threshold_level << ". D' values above this limit will be set to 1.0, values below will be set to 0.0.\n";
 
     //
     // Parse the population map.
@@ -136,6 +142,11 @@ int main (int argc, char* argv[]) {
     map<int, int> fgt_block_lens, fgt_snp_cnts;
     map<int, int> dp_block_lens, dp_snp_cnts;
 
+    //
+    // Vectors to store D' measures of SNPs at bucketed distances.
+    //
+    vector<double> dprime_buckets, dprime_bucket_cnts;
+
     for (uint i = 0; i < files.size(); i++) {
 
 	// if (files[i].second != "batch_1.groupV.phase") continue;
@@ -190,12 +201,22 @@ int main (int argc, char* argv[]) {
 	// Generate haplotype blocks using the four gamete test.
 	//
 	four_gamete_test(in_path + files[i].second, pop_map, psum, fgt_block_lens, fgt_snp_cnts);
-	
+
+	//
+	// Bucket the D' measures by distance between SNPs.
+	//
+	bucket_dprime(dprime_buckets, dprime_bucket_cnts, psum);
+
 	//
 	// Free the Samples objects
 	//
 	delete psum;
     }
+
+    //
+    // Write average D' values bucketed according to their distance in the genome.
+    //
+    write_buckets(in_path, dprime_buckets, dprime_bucket_cnts);
 
     //
     // Write the FGT bucketed distances.
@@ -230,6 +251,93 @@ int main (int argc, char* argv[]) {
 	log_fh << buck_it->first << "\t" << buck_it->second << "\n";
 
     log_fh.close();
+
+    return 0;
+}
+
+int
+bucket_dprime(vector<double> &dprime_buckets, vector<double> &dprime_bucket_cnts, PhasedSummary *psum)
+{
+    uint bucket, dist, max_bucket;
+    uint max_dist = 0;
+
+    //
+    // Check that we have enough buckets in our vectors. Find the maximum distance between
+    // SNPs on this chromosome and add buckets as necessary.
+    //
+    for (uint i = 0; i < psum->size; i++) {
+	for (uint j = i+1; j < psum->size; j++) {
+
+	    if (psum->nucs[i].freq < minor_freq_lim || 
+		psum->nucs[j].freq < minor_freq_lim)
+		continue;
+
+	    if (write_zeros == false && psum->dprime[i][j].chisq_p == false)
+	     	continue;
+
+	    dist     = psum->nucs[j].bp - psum->nucs[i].bp;
+	    max_dist = dist > max_dist ? dist : max_dist;
+	}
+    }
+    max_bucket = max_dist / bucket_dist;
+    if (dprime_buckets.size() < max_bucket) {
+	uint cnt = max_bucket + 1 - dprime_buckets.size();
+	for (uint i = 0; i < cnt; i++) {
+	    dprime_buckets.push_back(0.0);
+	    dprime_bucket_cnts.push_back(0.0);
+	}
+    }
+
+    //
+    // Populate buckets
+    //
+    for (uint i = 0; i < psum->size; i++) {
+	for (uint j = i+1; j < psum->size; j++) {
+
+	    if (psum->nucs[i].freq < minor_freq_lim || 
+		psum->nucs[j].freq < minor_freq_lim)
+		continue;
+
+	    if (write_zeros == false && psum->dprime[i][j].chisq_p == false)
+	     	continue;
+
+	    bucket = ((psum->nucs[j].bp - psum->nucs[i].bp) / bucket_dist);
+	    
+	    dprime_buckets[bucket] += (psum->dprime[i][j].chisq_p ? psum->dprime[i][j].dprime : 0.0);
+	    dprime_bucket_cnts[bucket]++;
+	}
+    }
+
+    return 0;
+}
+
+int
+write_buckets(string path, vector<double> &dprime_buckets, vector<double> &dprime_bucket_cnts)
+{
+    //
+    // Write the bucketed D' data for plotting.
+    //
+    stringstream file; 
+    file << path << "Dprime_dist_buckets" << bucket_dist/1000 << "kb.tsv";
+
+    cerr << "Writing bucketed D' data to '" << file.str() << "'...";
+
+    ofstream fh(file.str().c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening D' file '" << file.str() << "'\n";
+	exit(1);
+    }
+
+    fh << "# Distance (Kb)\tD' Average\n";
+
+    for (uint i = 0; i < dprime_buckets.size(); i++)
+	fh << (i * bucket_dist) << "\t"
+	   << std::setprecision(3) << (dprime_buckets[i] / dprime_bucket_cnts[i]) << "\n";
+
+    fh.close();
+
+    cerr << "done\n";
 
     return 0;
 }
@@ -944,6 +1052,8 @@ write_dprime(string path, PhasedSummary *psum)
 
     fh << "# Basepair 1\tBasepair 2\tD'\tCorrected D'\tVariance\tCI Low\tCI High\n";
 
+    double dprime = 0.0;
+
     for (uint i = 0; i < psum->size; i++) {
 	for (uint j = i+1; j < psum->size; j++) {
 
@@ -951,13 +1061,18 @@ write_dprime(string path, PhasedSummary *psum)
 		psum->nucs[j].freq < minor_freq_lim)
 		continue;
 
-	    if (write_zeros == false && psum->dprime[i][j].chisq_p == false)
+	    dprime = psum->dprime[i][j].dprime;
+
+	    if (dprime_threshold) 
+		dprime = dprime >= dprime_threshold_level ? 1.0 : 0.0;
+
+	    if (write_zeros == false && (dprime == 0.0 || psum->dprime[i][j].chisq_p == false))
 	     	continue;
 
 	    fh << psum->nucs[i].bp << "\t" 
 	       << psum->nucs[j].bp << "\t"
-	       << std::setprecision(3) << psum->dprime[i][j].dprime << "\t"
-	       << std::setprecision(3) << (psum->dprime[i][j].chisq_p ? psum->dprime[i][j].dprime : 0.0) << "\t"
+	       << std::setprecision(3) << dprime << "\t"
+	       << std::setprecision(3) << (psum->dprime[i][j].chisq_p ? dprime : 0.0) << "\t"
 	       << psum->dprime[i][j].var << "\t"
 	       << psum->dprime[i][j].ci_low  << "\t"
 	       << psum->dprime[i][j].ci_high << "\n";
@@ -1277,7 +1392,7 @@ parse_beagle(map<int, CSLocus *> &catalog, string path)
     //
     // Open the Beagle file for reading
     //
-    filepath = path + ".unphased.bgl.phased.gz";
+    filepath = path + ".phased.gz";
     gz_fh = gzopen(filepath.c_str(), "rb");
     if (!gz_fh) {
 	cerr << "Failed to open gzipped file '" << filepath << "': " << strerror(errno) << ".\n";
@@ -1436,7 +1551,7 @@ parse_beagle_haplotypes(map<int, CSLocus *> &catalog, string path)
     //
     // Open the Beagle file for reading
     //
-    filepath = path + ".phased.bgl.phased.gz";
+    filepath = path + ".phased.gz";
     gz_fh = gzopen(filepath.c_str(), "rb");
     if (!gz_fh) {
 	cerr << "Failed to open gzipped file '" << filepath << "': " << strerror(errno) << ".\n";
@@ -1673,7 +1788,7 @@ build_file_list(vector<pair<int, string> > &files)
 
     switch(in_file_type) {
     case beagle:
-	pattern = haplotypes ? ".phased.bgl.phased.gz" : ".unphased.bgl.phased.gz";
+	pattern = ".phased.gz";
 	break;
     case fastphase:
     default:
@@ -1717,15 +1832,17 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"cat_path",    required_argument, NULL, 'S'},
 	    {"pop_map",     required_argument, NULL, 'M'},
 	    {"batch_id",    required_argument, NULL, 'b'},
+	    {"dprime_bin_size",   required_argument, NULL, 'B'},
 	    {"minor_allele_freq", required_argument, NULL, 'a'},
 	    {"min_inform_pairs",  required_argument, NULL, 'm'},
+	    {"dprime_threshold",  required_argument, NULL, 'T'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvZHAb:M:t:P:S:p:a:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvZHAb:M:t:P:S:p:a:B:T:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1775,6 +1892,13 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'Z':
 	    write_zeros = false;
+	    break;
+	case 'B':
+	    bucket_dist = atoi(optarg);
+	    break;
+	case 'T':
+	    dprime_threshold = true;
+	    dprime_threshold_level = atof(optarg);
 	    break;
         case 'v':
             version();
@@ -1832,7 +1956,9 @@ void help() {
 	      << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n"
-	      << "  --haplotypes: data were phased as RAD locus haplotypes.\n\n"
+	      << "  --haplotypes: data were phased as RAD locus haplotypes.\n"
+	      << "  --dprime_bin_size: size of buckets for binning SNPs at a particular distance to calculate the mean D' value.\n"
+	      << "  --dprime_threshold <val>: if D' values fall above <val>, set the D' to 1, otherwise set D' to 0.\n\n"
 	      << "  Filtering options:\n"
 	      << "  --skip_zeros: do not include D' values of zero in the D' output.\n"
 	      << "  --minor_allele_freq: specify a minimum minor allele frequency required to process a nucleotide site (0 < a < 0.5).\n"
