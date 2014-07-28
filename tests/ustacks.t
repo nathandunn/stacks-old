@@ -6,6 +6,9 @@ test_data_path="$test_path/"$(basename "${BASH_SOURCE[0]}" | sed -e 's@\.t$@@')
 source $test_path/setup.sh
 freq_in=$test_data_path/frequent_inputs/in.fastq.gz
 freq_in2=$test_data_path/frequent_inputs/in2.fastq.gz
+freq_in3=$test_data_path/frequent_inputs/in.fasta
+freq_in4=$test_data_path/frequent_inputs/in.fasta.gz
+freq_in5=$test_data_path/frequent_inputs/in.fastq
 
 plan 21
 
@@ -13,19 +16,19 @@ ref_map
 
 ok_ 'input gzipped fastq' \
     000_ingzfastq \
-    "ustacks -t gzfastq -f $freq_in -o %out"
+    "ustacks -t gzfastq -f $freq_in -o %out" \
 
 ok_ 'input fastq' \
     001_infastq \
-    "ustacks -t fastq -f %in/in.fastq -o %out"
+    "ustacks -t fastq -f $freq_in5 -o %out"
 
 ok_ 'input fasta' \
     002_infasta  \
-    "ustacks -t fasta -f %in/in.fasta -o %out"
+    "ustacks -t fasta -f $freq_in3 -o %out"
 
 ok_ 'inpus gzipped fasta' \
     003_ingzfasta \
-    "ustacks -t gzfasta -f %in/in.fasta.gz -o %out"
+    "ustacks -t gzfasta -f $freq_in4 -o %out"
 
 ok_ 'set sample ID=1 (AKA MySQL column 2)' \
     004_sqlid \
@@ -57,7 +60,8 @@ ok_ 'remove highly repetative (likely error) reads' \
 
 ok_ 'enable deleveraging algorithm' \
     011_deleverage \
-    "ustacks -t gzfastq -f %in/in.fastq.gz -o %out -d"
+    "ustacks -t gzfastq -f %in/in.fastq.gz -o %out -d" \
+    zip_test
 
 ok_ 'specify max number of stacks at a de novo locus' \
     012_maxlocus \
@@ -93,5 +97,6 @@ ok_ 'For bounded model, specify upper and lower bounds' \
 
 ok_ 'For fixed model, specify barcode error frequency rate' \
     020_fixed \
-    "ustacks -t gzfastq -f $freq_in2 -o %out --model_type fixed --bc_err_freq 0.61"
+    "ustacks -t gzfastq -f %in/in.fastq.gz -o %out --model_type fixed --bc_err_freq 0.98"
 
+finish
