@@ -1,9 +1,13 @@
-	Added SpeI restriction enzyme to process_radtags
-	
-
-Stacks 1.20.Beta2 - Jan 10, 2013
----------------------------------
+Stacks 1.20 - Jul 29, 2014
+--------------------------
 	Synced corrections module branch with main Stacks branch.
+	Feature: Implemented new haplotype trimming algorithm for rxstacks.
+	Feature: new script, convert_stacks.pl, to convert previous Stacks files to new format.
+	Feature: Modified VCF output to include likelihood values from heterozygous and homozygous
+	SNP model calls.
+	Feature: Added SpeI restriction enzyme to process_radtags.
+	Feature: Modified Beagle output formats in populations program to be population-specific and
+	not to include monomorphic nucleotide positions.
 
 Stacks 1.19 - Apr 23, 2014
 --------------------------

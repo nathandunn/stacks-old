@@ -3899,6 +3899,7 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
     map<int, SNPRes *>::iterator sit;
     CSLocus *loc;
     Datum   *datum;
+    SNP     *snp;
 
     for (uint i = 0; i < sample_ids.size(); i++) {
 	map<int, SNPRes *> snpres;
@@ -3909,9 +3910,20 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
     	    datum = pmap->datum(loc->id, sample_ids[i]);
 
     	    if (datum != NULL && snpres.count(datum->id)) {
-		for (uint j = 0; j < snpres[datum->id]->snps.size(); j++)
-		    datum->snps.push_back(snpres[datum->id]->snps[j]);
-		snpres[datum->id]->snps.clear();
+		//
+		// Deep copy the SNP objects.
+		//
+		for (uint j = 0; j < snpres[datum->id]->snps.size(); j++) {
+		    snp         = new SNP;
+		    snp->col    = snpres[datum->id]->snps[j]->col;
+		    snp->lratio = snpres[datum->id]->snps[j]->lratio;
+		    snp->rank_1 = snpres[datum->id]->snps[j]->rank_1;
+		    snp->rank_2 = snpres[datum->id]->snps[j]->rank_2;
+		    snp->rank_3 = snpres[datum->id]->snps[j]->rank_3;
+		    snp->rank_4 = snpres[datum->id]->snps[j]->rank_4;
+
+		    datum->snps.push_back(snp);
+		}
     	    }
     	}
 
@@ -4055,18 +4067,21 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 		    if (p_allele == 0 && q_allele == 0) {
 			// More than two potential alleles.
 			fh << "./.:" << d[j]->tot_depth << ":.,.,.";
-		    } else if (p_allele == 0) {
-			gt_1 = q_allele == t->nucs[col].p_allele ? 0 : 1;
-			fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
-		    } else if (q_allele == 0) {
-			gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
-			fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":.,.,.";
 		    } else {
-			gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
-			gt_2 = q_allele == t->nucs[col].p_allele ? 0 : 1;
-			fh << gt_1 << "/" << gt_2 << ":" << d[j]->tot_depth;
+
+			if (p_allele == 0) {
+			    gt_1 = q_allele == t->nucs[col].p_allele ? 0 : 1;
+			    fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth;
+			} else if (q_allele == 0) {
+			    gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
+			    fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth;
+			} else {
+			    gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
+			    gt_2 = q_allele == t->nucs[col].p_allele ? 0 : 1;
+			    fh << gt_1 << "/" << gt_2 << ":" << d[j]->tot_depth;
+			}
 			//
-			// Find the heterozygous SNP call for this column and output it.
+			// Find the likelihood for this model call and output it.
 			//
 			int  snp_index = -1;
 			uint k;
