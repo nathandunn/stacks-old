@@ -595,13 +595,27 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
 
 	snp         = new SNP;
 	snp->col    = atoi(parts[3].c_str());
-	snp->lratio = atof(parts[4].c_str());
-	snp->rank_1 = parts[5].at(0);
-	snp->rank_2 = parts[6].at(0);
 
-	if (parts.size() == 9) {
-	    snp->rank_3 = parts[7].length() == 0 ? 0 : parts[7].at(0);
-	    snp->rank_4 = parts[8].length() == 0 ? 0 : parts[8].at(0);
+	if (parts[4] == "O")
+	    snp->type = snp_type_hom;
+	else if (parts[4] == "E")
+	    snp->type = snp_type_het;
+	else
+	    snp->type = snp_type_unk;
+
+	snp->lratio = atof(parts[5].c_str());
+	snp->rank_1 = parts[6].at(0);
+	snp->rank_2 = parts[7].at(0) == '-' ? 0 : parts[7].at(0);
+
+	if (parts.size() == 10) {
+	    if (parts[8].length() == 0 || parts[8].at(0) == '-')
+		snp->rank_3 = 0;
+	    else 
+		snp->rank_3 = parts[8].at(0);
+	    if (parts[9].length() == 0 || parts[9].at(0) == '-')
+		snp->rank_4 = 0;
+	    else 
+		snp->rank_4 = parts[9].at(0);
 	}
 
         if (snpres.count(id) == 0) {
