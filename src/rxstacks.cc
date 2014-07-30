@@ -265,7 +265,7 @@ int main (int argc, char* argv[]) {
 
 		if (d == NULL) continue;
 
-		if (filter_lnl && cloc->lnl > lnl_limit) {
+		if (filter_lnl && cloc->lnl < lnl_limit) {
 		    loc->blacklisted = true;
 		    lnl_cnt++;
 		    continue;
@@ -427,7 +427,7 @@ calc_lnl_means(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 	// If the mean log likelihood for this catalog locus is below the threshold, count it as
 	// its constituent components will be filtered as encountered later.
 	//
-	if (filter_lnl && cloc->lnl > lnl_limit)
+	if (filter_lnl && cloc->lnl < lnl_limit)
 	    tot++;
 
 	if (lnl_dist)
