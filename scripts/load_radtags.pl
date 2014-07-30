@@ -334,8 +334,8 @@ sub import_sql_file {
 
     my (@results, $ignore);
 
-    if (!-x $file) {
-	print STDERR "File $file does not exist.\n";
+    if (!-e $file) {
+	print STDERR "File '$file' does not exist.\n";
 	return;
     }
 
@@ -355,8 +355,8 @@ sub import_gzsql_file {
 
     my (@results, $ignore);
 
-    if (!-x $file) {
-	print STDERR "File $file does not exist.\n";
+    if (!-e $file) {
+	print STDERR "File '$file' does not exist.\n";
 	return;
     }
 

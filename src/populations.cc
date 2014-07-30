@@ -450,7 +450,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 	    //
 	    if (d[i] != NULL && 
 		filter_lnl   && 
-		d[i]->lnl > lnl_limit) {
+		d[i]->lnl < lnl_limit) {
 		below_lnl_thresh++;
 		delete d[i];
 		d[i] = NULL;
@@ -6583,7 +6583,7 @@ void help() {
 	      << "    a: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < a < 0.5).\n"
 	      << "    f: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'.\n"
 	      << "    --p_value_cutoff [num]: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n"
-	      << "    --lnl_lim [num]: filter loci with log likelihood values worse than this threshold.\n\n"
+	      << "    --lnl_lim [num]: filter loci with log likelihood values below this threshold.\n\n"
 	      << "  Fstats:\n"
 	      << "    --fstats: enable SNP and haplotype-based F statistics.\n"
 	      << "  Kernel-smoothing algorithm:\n" 

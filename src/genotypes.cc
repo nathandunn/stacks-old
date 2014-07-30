@@ -299,7 +299,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 	    //
 	    if (d[i] != NULL && 
 		filter_lnl   && 
-		d[i]->lnl > lnl_limit) {
+		d[i]->lnl < lnl_limit) {
 		below_lnl_thresh++;
 		delete d[i];
 		d[i] = NULL;
@@ -2910,7 +2910,7 @@ void help() {
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n"
 	      << "  Filtering options:\n"
-	      << "    --lnl_lim [num]: filter loci with log likelihood values worse than this threshold.\n"
+	      << "    --lnl_lim [num]: filter loci with log likelihood values below this threshold.\n"
 	      << "  Automated corrections options:\n"
 	      << "    --min_hom_seqs: minimum number of reads required at a stack to call a homozygous genotype (default 5).\n"
 	      << "    --min_het_seqs: below this minor allele frequency a stack is called a homozygote, above it (but below --max_het_seqs) it is called unknown (default 0.05).\n"
