@@ -52,7 +52,6 @@ bool      bootstrap_div     = false;
 bs_type   bootstrap_type    = bs_exact;
 int       bootstrap_reps    = 100;
 bool      bootstrap_wl      = false;
-bool      corrections       = false;
 bool      write_single_snp  = false;
 bool      expand_id         = false;
 bool      sql_out           = false;
@@ -69,10 +68,11 @@ bool      plink_out         = false;
 bool      phylip_out        = false;
 bool      phylip_var        = false;
 bool      kernel_smoothed   = false;
-bool      linkage_stats     = false;
 bool      loci_ordered      = false;
 bool      log_fst_comp      = false;
 bool      verbose           = false;
+bool      filter_lnl        = false;
+double    lnl_limit         = 0.0;
 int       min_stack_depth   = 0;
 double    minor_allele_freq = 0.0;
 double    p_value_cutoff    = 0.05;
@@ -108,6 +108,7 @@ int main (int argc, char* argv[]) {
 	<< "Percent samples limit per population: " << sample_limit << "\n"
 	<< "Locus Population limit: " << population_limit << "\n"
 	<< "Minimum stack depth: " << min_stack_depth << "\n"
+	<< "Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
 	<< "Minor allele frequency cutoff: " << minor_allele_freq << "\n"
 	<< "Applying Fst correction: ";
     switch(fst_correction) {
@@ -423,25 +424,39 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
     bool   pro_limit = false;
     bool   pop_limit = false;
     int    pops      = 0;
-    int    below_stack_dep = 0;
+    int    below_stack_dep  = 0;
+    uint   below_lnl_thresh = 0;
     set<int> blacklist;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 	d   = pmap->locus(loc->id);
 
-	//
-	// Check that each sample is over the minimum stack depth for this locus.
-	//
-	if (min_stack_depth > 0) 
-	    for (int i = 0; i < pmap->sample_cnt(); i++) {
-		if (d[i] != NULL && d[i]->tot_depth < min_stack_depth) {
-		    below_stack_dep++;
-		    delete d[i];
-		    d[i] = NULL;
-		    loc->hcnt--;
-		}
+	for (int i = 0; i < pmap->sample_cnt(); i++) {
+	    //
+	    // Check that each sample is over the minimum stack depth for this locus.
+	    //
+	    if (d[i] != NULL && 
+		min_stack_depth > 0 && 
+		d[i]->tot_depth < min_stack_depth) {
+		below_stack_dep++;
+		delete d[i];
+		d[i] = NULL;
+		loc->hcnt--;
 	    }
+
+	    //
+	    // Check that each sample is over the log likelihood threshold.
+	    //
+	    if (d[i] != NULL && 
+		filter_lnl   && 
+		d[i]->lnl > lnl_limit) {
+		below_lnl_thresh++;
+		delete d[i];
+		d[i] = NULL;
+		loc->hcnt--;
+	    }
+	}
 
 	//
 	// Tally up the count of samples in this population.
@@ -499,6 +514,8 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
     //
     if (min_stack_depth > 0) 
 	cerr << "Removed " << below_stack_dep << " samples from loci that are below the minimum stack depth of " << min_stack_depth << "x\n";
+    if (filter_lnl)
+	cerr << "Removed " << below_lnl_thresh << " samples from loci that are below the log likelihood threshold of " << lnl_limit << "\n";
     cerr << "Removing " << blacklist.size() << " loci that did not pass sample/population constraints...";
     set<int> whitelist;
     reduce_catalog(catalog, whitelist, blacklist);
@@ -607,10 +624,14 @@ tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     vector<char *>::iterator hit;
     Datum  **d;
     CSLocus *loc;
+    double   mean, cnt;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 	d   = pmap->locus(loc->id);
+
+	mean = 0.0;
+	cnt  = 0.0;
 
 	for (int i = 0; i < pmap->sample_cnt(); i++) {
 	    if (d[i] == NULL) 
@@ -618,12 +639,17 @@ tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 
 	    if (d[i]->obshap.size() > 1)
 		loc->marker = "heterozygous";
+
+	    mean += d[i]->lnl;
+	    cnt++;
 	}
 
 	if (loc->marker.length() > 0) {
      	    create_genotype_map(loc, pmap);
 	    call_population_genotypes(loc, pmap);
 	}
+
+	loc->lnl = mean / cnt;
     }
 
     return 0;
@@ -3770,6 +3796,18 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     fh.precision(fieldw);
     fh.setf(std::ios::fixed);
 
+    fh << "# SQL ID"            << "\t" 
+       << "Batch ID"            << "\t" 
+       << "Catalog Locus ID"    << "\t" 
+       << "\t"
+       << "Total Genotypes"     << "\t"
+       << "Max"                 << "\t"
+       << "Genotype Freqs"      << "\t"
+       << "F"                   << "\t"
+       << "Mean Log Likelihood" << "\t"
+       << "Genotype Map"        << "\t"
+       << "\n";
+
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
     stringstream gtype_map;
@@ -3800,7 +3838,9 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 	   << max      << "\t"
 	   << freq     << "\t"
 	   << loc->f   << "\t"
-           << gtype_map.str() <<"\n";
+	   << loc->lnl << "\t"
+           << gtype_map.str() << "\t"
+	   << "\n";
     }
 
     fh.close();
@@ -6253,7 +6293,6 @@ int parse_command_line(int argc, char* argv[]) {
 	static struct option long_options[] = {
 	    {"help",          no_argument,       NULL, 'h'},
             {"version",       no_argument,       NULL, 'v'},
-            {"corr",          no_argument,       NULL, 'c'},
             {"sql",           no_argument,       NULL, 's'},
             {"vcf",           no_argument,       NULL, 'V'},
             {"fasta",         no_argument,       NULL, 'F'},
@@ -6291,6 +6330,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"bootstrap_pifis",   no_argument,       NULL, '5'},
 	    {"min_populations",   required_argument, NULL, 'p'},
 	    {"minor_allele_freq", required_argument, NULL, 'a'},
+	    {"lnl_lim",           required_argument, NULL, 'c'},
 	    {"fst_correction",    required_argument, NULL, 'f'},
 	    {"p_value_cutoff",    required_argument, NULL, 'u'},
 	    {0, 0, 0, 0}
@@ -6299,7 +6339,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlkKSACLHEYFVG123456gvcsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlkKSACLHEYFVG123456gvsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:c:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -6378,7 +6418,8 @@ int parse_command_line(int argc, char* argv[]) {
 	    bootstrap_wl = true;
 	    break;
 	case 'c':
-	    corrections = true;
+	    lnl_limit  = is_double(optarg);
+	    filter_lnl = true;
 	    break;
 	case 'i':
 	    expand_id = true;
@@ -6541,7 +6582,8 @@ void help() {
 	      << "    m: specify a minimum stack depth required for individuals at a locus.\n"
 	      << "    a: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < a < 0.5).\n"
 	      << "    f: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'.\n"
-	      << "    --p_value_cutoff [num]: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n\n"
+	      << "    --p_value_cutoff [num]: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n"
+	      << "    --lnl_lim [num]: filter loci with log likelihood values worse than this threshold.\n\n"
 	      << "  Fstats:\n"
 	      << "    --fstats: enable SNP and haplotype-based F statistics.\n"
 	      << "  Kernel-smoothing algorithm:\n" 

@@ -132,7 +132,7 @@ dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.p
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
 	scripts/index_radtags.pl scripts/load_radtags.pl scripts/stacks_export_notify.pl
 
-dist_noinst_SCRIPTS = autogen.sh scripts/extract_interpop_chars.pl
+dist_noinst_SCRIPTS = autogen.sh scripts/extract_interpop_chars.pl scripts/convert_stacks.pl
 
 nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sql/tag_index.sql sql/chr_index.sql \
 	php/CatalogClass.php php/annotate_marker.php php/constants.php.dist php/index.php php/tags.php \
@@ -146,7 +146,6 @@ nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sq
 
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(abs_top_srcdir)/tests/tap-driver.sh
 
-#TESTS = tests/process_radtags.t tests/kmer_filter.t tests/ustacks.t tests/pstacks.t tests/ref_map.t
 TESTS = tests/process_radtags.t tests/kmer_filter.t tests/ustacks.t tests/pstacks.t
 
 EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README ChangeLog $(TESTS)

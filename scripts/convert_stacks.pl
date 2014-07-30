@@ -75,7 +75,7 @@ foreach $file (@files) {
     convert_matches_file($in_path, $out_path, $file);
 
     #
-    # Just copy the unchanged *.alleles.tsv, *.matches.tsv files.
+    # Just copy the unchanged *.alleles.tsv files.
     #
     if ($gzipped == true) {
  	`cp $in_path/${file}.alleles.tsv.gz $out_path/.`;
