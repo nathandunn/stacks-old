@@ -2,11 +2,10 @@ Stacks 1.20 - Jul 29, 2014
 --------------------------
 	Synced corrections module branch with main Stacks branch.
 	Feature: Implemented new haplotype trimming algorithm for rxstacks.
-	Bugfix: log likelihood filter in rxstacks was not operating correctly.
 	Feature: new script, convert_stacks.pl, to convert previous Stacks files to new format.
 	Feature: Modified VCF output to include likelihood values from heterozygous and homozygous
 	SNP model calls.
-	Feature: added log likelihood filter to genotypes and populations programs.
+	Feature: added log likelihood filter to genotypes and populations programs and to web interface.
 	Feature: Added SpeI restriction enzyme to process_radtags.
 	Feature: Modified Beagle output formats in populations program to be population-specific and
 	not to include monomorphic nucleotide positions.
