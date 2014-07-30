@@ -84,67 +84,6 @@ if ($batch) {
 
 my ($file, $f, $i, $cnt, $type, $pop_id);
 
-$i = 1;
-$cnt = scalar(@files);
-
-foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
-    print STDERR "Processing sample $i of $cnt\n";
-
-    #
-    # Pull out the sample ID and insert it into the database
-    #
-    $sample_id = $sample_ids{$file};
-    if ($stacks_type eq "map") {
-	$type = (grep(/^$sample_id$/, @parent_ids) > 0) ? 'parent' : 'progeny';
-    } else {
-	$type = "sample";
-    }
-
-    $pop_id = shift(@pop_ids);
-
-    if (!$dry_run) {
-	@results = `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id"`;
-    }
-    print STDERR 
-	"mysql --defaults-file=$cnf $db ",
-	"-e \"INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id\"\n", 
-	@results;
-
-    $f = $in_path . "/$file" . ".tags.tsv";
-    if (-e $f) {
-	import_sql_file($f, "unique_tags", 0) if ($ignore_tags == 0);
-    } elsif (-e $f . ".gz") {
-	$f = $in_path . "/$file" . ".tags.tsv.gz";
-	import_gzsql_file($f, "unique_tags", 0) if ($ignore_tags == 0);
-    }
-
-    $f = $in_path . "/$file" . ".snps.tsv";
-    if (-e $f) {
-	import_sql_file($f, "snps", 0);
-    } elsif (-e $f . ".gz") {
-	$f = $in_path . "/$file" . ".snps.tsv.gz";
-	import_gzsql_file($f, "snps", 0);
-    }
-
-    $f = $in_path . "/$file" . ".alleles.tsv";
-    if (-e $f) {
-	import_sql_file($f, "alleles", 0);
-    } elsif (-e $f . ".gz") {
-	$f = $in_path . "/$file" . ".alleles.tsv.gz";
-	import_gzsql_file($f, "alleles", 0);
-    }
-
-    $f = $in_path . "/$file" . ".matches.tsv";
-    if (-e $f) {
-	import_sql_file($f, "matches", 0);
-    } elsif (-e $f . ".gz") {
-	$f = $in_path . "/$file" . ".matches.tsv.gz";
-	import_gzsql_file($f, "matches", 0);
-    }
-
-    $i++;
-}
-
 #
 # Import the catalog
 #
@@ -202,6 +141,73 @@ if ($stacks_type eq "map") {
 	    import_sql_file($f, "fst", 1);
 	}
     }
+}
+
+$i = 1;
+$cnt = scalar(@files);
+
+foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
+    print STDERR "Processing sample $i of $cnt\n";
+
+    $f = $in_path . "/$file" . ".matches.tsv";
+    if (-e $f) {
+	import_sql_file($f, "matches", 0);
+    } elsif (-e $f . ".gz") {
+	$f = $in_path . "/$file" . ".matches.tsv.gz";
+	import_gzsql_file($f, "matches", 0);
+    }
+    $i++;
+}
+
+$i = 1;
+foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
+    print STDERR "Processing sample $i of $cnt\n";
+
+    #
+    # Pull out the sample ID and insert it into the database
+    #
+    $sample_id = $sample_ids{$file};
+    if ($stacks_type eq "map") {
+	$type = (grep(/^$sample_id$/, @parent_ids) > 0) ? 'parent' : 'progeny';
+    } else {
+	$type = "sample";
+    }
+
+    $pop_id = shift(@pop_ids);
+
+    if (!$dry_run) {
+	@results = `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id"`;
+    }
+    print STDERR 
+	"mysql --defaults-file=$cnf $db ",
+	"-e \"INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id\"\n", 
+	@results;
+
+    $f = $in_path . "/$file" . ".tags.tsv";
+    if (-e $f) {
+	import_sql_file($f, "unique_tags", 0) if ($ignore_tags == 0);
+    } elsif (-e $f . ".gz") {
+	$f = $in_path . "/$file" . ".tags.tsv.gz";
+	import_gzsql_file($f, "unique_tags", 0) if ($ignore_tags == 0);
+    }
+
+    $f = $in_path . "/$file" . ".snps.tsv";
+    if (-e $f) {
+	import_sql_file($f, "snps", 0);
+    } elsif (-e $f . ".gz") {
+	$f = $in_path . "/$file" . ".snps.tsv.gz";
+	import_gzsql_file($f, "snps", 0);
+    }
+
+    $f = $in_path . "/$file" . ".alleles.tsv";
+    if (-e $f) {
+	import_sql_file($f, "alleles", 0);
+    } elsif (-e $f . ".gz") {
+	$f = $in_path . "/$file" . ".alleles.tsv.gz";
+	import_gzsql_file($f, "alleles", 0);
+    }
+
+    $i++;
 }
 
 print STDERR "\nDon't forget to index your Stacks database -- run index_radtags.pl\n\n";
@@ -328,6 +334,11 @@ sub import_sql_file {
 
     my (@results, $ignore);
 
+    if (!-x $file) {
+	print STDERR "File $file does not exist.\n";
+	return;
+    }
+
     $ignore = " IGNORE $skip_lines LINES" if ($skip_lines > 0);
 
     if (!$dry_run) {
@@ -343,6 +354,11 @@ sub import_gzsql_file {
     my ($file, $table, $skip_lines) = @_;
 
     my (@results, $ignore);
+
+    if (!-x $file) {
+	print STDERR "File $file does not exist.\n";
+	return;
+    }
 
     $ignore = "IGNORE $skip_lines LINES" if ($skip_lines > 0);
 
