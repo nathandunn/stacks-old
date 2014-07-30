@@ -3815,20 +3815,21 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 
-	if (loc->marker.length() == 0) continue;
-
 	string freq  = "";
 	double max   = 0.0;
 	int    total = 0;
-	tally_haplotype_freq(loc, pmap, total, max, freq);
-
-	//
-	// Record the haplotype to genotype map.
-	//
-	map<string, string>::iterator j;
 	gtype_map.str("");
-	for (j = loc->gmap.begin(); j != loc->gmap.end(); j++)
-	    gtype_map << j->first << ":" << j->second << ";";
+
+	if (loc->marker.length() > 0) {
+	    tally_haplotype_freq(loc, pmap, total, max, freq);
+
+	    //
+	    // Record the haplotype to genotype map.
+	    //
+	    map<string, string>::iterator j;
+	    for (j = loc->gmap.begin(); j != loc->gmap.end(); j++)
+		gtype_map << j->first << ":" << j->second << ";";
+	}
 
 	fh << 0 << "\t" 
 	   << batch_id << "\t" 
