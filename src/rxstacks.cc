@@ -265,7 +265,7 @@ int main (int argc, char* argv[]) {
 
 		if (d == NULL) continue;
 
-		if (filter_lnl && cloc->lnl < lnl_limit) {
+		if (filter_lnl && cloc->lnl > lnl_limit) {
 		    loc->blacklisted = true;
 		    lnl_cnt++;
 		    continue;
@@ -310,7 +310,6 @@ int main (int argc, char* argv[]) {
 	     << "Blacklisted: " << conf_loci_cnt      << " confounded loci.\n";
 
 	log_fh << file           << "\t"
-	       << conf_loci_cnt  << "\t"
 	       << nuc_cnt        << "\t"
 	       << total          << "\t"
 	       << unk_hom_cnt    << "\t"
@@ -320,6 +319,7 @@ int main (int argc, char* argv[]) {
 	       << hom_het_cnt    << "\t"
 	       << het_hom_cnt    << "\t"
 	       << blacklist_cnt  << "\t"
+	       << conf_loci_cnt  << "\t"
 	       << lnl_cnt        << "\t"
 	       << pruned_hap_cnt << "\t"
 	       << pruned_mst_hap_cnt << "\n";
@@ -378,9 +378,9 @@ calc_lnl_means(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     map<int, CSLocus *>::iterator it;
     CSLocus *cloc;
     Datum  **d;
-    uint     cnt, mid;
+    uint     cnt, mid, tot;
     double   median, mean;
-    vector<double> lnls, means;
+    vector<double> lnls;
     ofstream log_fh;
 
     if (lnl_dist) {
@@ -396,12 +396,14 @@ calc_lnl_means(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 	log_fh << "# Catalog Locus\tMean\tMedian\n";
     }
 
+    tot = 0;
+
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	cloc = it->second;
 
 	d    = pmap->locus(cloc->id);
 	cnt  = pmap->sample_cnt();
-	mean     = 0.0;
+	mean = 0.0;
 	lnls.clear();
 
 	for (uint i = 0; i < cnt; i++) {
@@ -421,7 +423,12 @@ calc_lnl_means(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 
 	cloc->lnl = mean;
 
-	means.push_back(mean);
+	//
+	// If the mean log likelihood for this catalog locus is below the threshold, count it as
+	// its constituent components will be filtered as encountered later.
+	//
+	if (filter_lnl && cloc->lnl > lnl_limit)
+	    tot++;
 
 	if (lnl_dist)
 	    log_fh << cloc->id << "\t" 
@@ -431,6 +438,11 @@ calc_lnl_means(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 
     if (lnl_dist)
 	log_fh.close();
+
+    //
+    // Print number of catalog loci that are confounded and will be removed.
+    //
+    cerr << tot << " catalog loci will be removed from the analysis due to log likelihoods below the threshold.\n";
 
     return 0;
 }
@@ -1496,7 +1508,6 @@ init_log(int argc, char **argv, ofstream &log_fh, ofstream &log_snp_fh, ofstream
 
     log_fh << sstr.str() << "\n" 
 	   << "# Sample\t"
-	   << "Confounded loci\t"
 	   << "Total nucs\t"
 	   << "Total nucs converted\t"
 	   << "Unk to Hom\t"
@@ -1505,6 +1516,8 @@ init_log(int argc, char **argv, ofstream &log_fh, ofstream &log_snp_fh, ofstream
 	   << "Het to Unk\t"
 	   << "Hom to Het\t"
 	   << "Het to Hom\t"
+	   << "Confounded loci\t"
+	   << "Lnl Filtered loci\t"
 	   << "Pruned Haplotypes\t"
 	   << "MST-Pruned Haplotypes\n";
 

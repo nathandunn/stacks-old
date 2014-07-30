@@ -228,6 +228,7 @@ create table markers (
        max_pct    float,
        ratio      varchar(512),
        chisq_pval float,
+       lnl        float,
        geno_map   text,
        uncor_type enum('aa/bb', 'aa/b-', '-a/bb', 'ab/--', '--/ab', 'aa/ab', 'ab/aa', 'ab/a-', '-a/ab', 'ab/ab', 'ab/ac', 'ab/cd', 'ab/cc', 'cc/ab', 'ab/c-', '-c/ab')
 );

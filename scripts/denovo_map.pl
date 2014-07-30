@@ -358,7 +358,7 @@ if ($data_type eq "map") {
     }
 
     $file = "$out_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($log_fh, $file, "markers", 0);
+    import_sql_file($log_fh, $file, "markers", 1);
 
     $file = "$out_path/batch_" . $batch_id . ".sumstats.tsv";
     import_sql_file($log_fh, $file, "sumstats", $pop_cnt+1);

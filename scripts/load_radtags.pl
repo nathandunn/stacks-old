@@ -186,7 +186,7 @@ if ($stacks_type eq "map") {
 
 } elsif ($stacks_type eq "population") {
     $f = "$in_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($f, "markers", 0);
+    import_sql_file($f, "markers", 1);
 
     $f = "$in_path/batch_" . $batch_id . ".sumstats.tsv";
     import_sql_file($f, "sumstats", scalar(keys %pops) + 1);

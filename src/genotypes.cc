@@ -45,6 +45,8 @@ bool      man_corrections  = false;
 bool      corrections      = false;
 bool      expand_id        = false;
 bool      sql_out          = false;
+bool      filter_lnl       = false;
+double    lnl_limit        = 0.0;
 double    chisq_pval_limit = 0.05;
 int       min_stack_depth  = 0;
 int       min_hom_seqs     = 5;
@@ -155,14 +157,30 @@ int main (int argc, char* argv[]) {
     calculate_f(catalog, pmap, parent_ids);
 
     //
-    // Create genotypes maps
+    // Create genotypes maps, calculate mean log likelihood for each locus.
     //
     map<int, CSLocus *>::iterator it;
+    Datum  **d;
+    CSLocus *loc;
+    double   mean, cnt;
     for (it = catalog.begin(); it != catalog.end(); it++) {
-	if (it->second->marker.length() > 0) {
-	    create_genotype_map(it->second, pmap, parent_ids);
-	    call_population_genotypes(it->second, pmap, global_dictionary);
+	loc = it->second;
+	d   = pmap->locus(loc->id);
+
+	if (loc->marker.length() > 0) {
+	    create_genotype_map(loc, pmap, parent_ids);
+	    call_population_genotypes(loc, pmap, global_dictionary);
 	}
+
+	mean = 0.0;
+	cnt  = 0.0;
+	for (int i = 0; i < pmap->sample_cnt(); i++) {
+	    if (d[i] == NULL) 
+		continue;
+	    mean += d[i]->lnl;
+	    cnt++;
+	}
+	loc->lnl = mean / cnt;
     }
 
     //
@@ -254,7 +272,8 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 {
     CSLocus *loc;
     Datum  **d;
-    int below_stack_dep = 0;
+    uint below_stack_dep  = 0;
+    uint below_lnl_thresh = 0;
 
     if (min_stack_depth == 0) return 0;
 
@@ -264,19 +283,34 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 	loc = it->second;
 	d   = pmap->locus(loc->id);
 
-	//
-	// Check that each sample is over the minimum stack depth for this locus.
-	//
 	for (int i = 0; i < pmap->sample_cnt(); i++) {
-	    if (d[i] != NULL && d[i]->tot_depth < min_stack_depth) {
+	    //
+	    // Check that each sample is over the minimum stack depth for this locus.
+	    //
+	    if (d[i] != NULL && 
+		d[i]->tot_depth < min_stack_depth) {
 		below_stack_dep++;
+		delete d[i];
+		d[i] = NULL;
+	    }
+
+	    //
+	    // Check that each sample is over the log likelihood threshold.
+	    //
+	    if (d[i] != NULL && 
+		filter_lnl   && 
+		d[i]->lnl > lnl_limit) {
+		below_lnl_thresh++;
 		delete d[i];
 		d[i] = NULL;
 	    }
 	}
     }
 
-    cerr << "Removed " << below_stack_dep << " samples from loci that are below the minimum stack depth of " << min_stack_depth << "x\n";
+    if (min_stack_depth > 0) 
+	cerr << "Removed " << below_stack_dep << " samples from loci that are below the minimum stack depth of " << min_stack_depth << "x\n";
+    if (filter_lnl)
+	cerr << "Removed " << below_lnl_thresh << " samples from loci that are below the log likelihood threshold of " << lnl_limit << "\n";
 
     return 0;
 }
@@ -1845,6 +1879,7 @@ int write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &par
        << "Max"              << "\t"
        << "Genotype Freqs"   << "\t"
        << "Segregation Distortion" << "\t"
+       << "Mean Log Likelihood"    << "\t"
        << "Genotype Map"           << "\t"
        << "Uncorrected Marker"     << "\n";
 
@@ -1882,6 +1917,7 @@ int write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<int> &par
 	   << max_str     << "\t"
 	   << freq        << "\t"
 	   << loc->chisq  << "\t"
+	   << loc->lnl    << "\t"
            << map         << "\t"
 	   << (loc->uncor_marker.length() == 0 ? loc->marker : loc->uncor_marker) << "\n";
     }
@@ -2707,13 +2743,14 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"whitelist",     required_argument, NULL, 'W'},
 	    {"blacklist",     required_argument, NULL, 'B'},
 	    {"man_corr",      required_argument, NULL, 'C'},
+	    {"lnl_lim",       required_argument, NULL, 'L'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:e:H:N:X:W:B:C:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvcsib:p:t:o:r:P:m:e:H:N:X:W:B:C:L:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -2762,6 +2799,10 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'c':
 	    corrections = true;
+	    break;
+	case 'L':
+	    lnl_limit  = is_double(optarg);
+	    filter_lnl = true;
 	    break;
 	case 'i':
 	    expand_id = true;
@@ -2867,7 +2908,9 @@ void help() {
 	      << "  W: specify a file containign Whitelisted markers to include in the export.\n"
 	      << "  e: restriction enzyme, required if generating 'genomic' output.\n"
 	      << "  v: print program version." << "\n"
-	      << "  h: display this help messsage." << "\n\n"
+	      << "  h: display this help messsage." << "\n"
+	      << "  Filtering options:\n"
+	      << "    --lnl_lim [num]: filter loci with log likelihood values worse than this threshold.\n"
 	      << "  Automated corrections options:\n"
 	      << "    --min_hom_seqs: minimum number of reads required at a stack to call a homozygous genotype (default 5).\n"
 	      << "    --min_het_seqs: below this minor allele frequency a stack is called a homozygote, above it (but below --max_het_seqs) it is called unknown (default 0.05).\n"
