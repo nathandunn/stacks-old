@@ -1,6 +1,12 @@
 Stacks 1.20 - Jul 29, 2014
 --------------------------
 	Synced corrections module branch with main Stacks branch.
+	***
+	The internal formats of the *.tags.tsv, *.snps.tsv, and *.matches.tsv files have changed 
+	and therefore version 1.20 programs cannot be used on earlier genereated data sets. However,
+	the convert_stacks.pl script is included in this release to convert an older data set into
+	the new formats.
+	***
 	Feature: Implemented new haplotype trimming algorithm for rxstacks.
 	Feature: new script, convert_stacks.pl, to convert previous Stacks files to new format.
 	Feature: Modified VCF output to include likelihood values from heterozygous and homozygous
