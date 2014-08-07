@@ -65,6 +65,7 @@ bool      fastphase_out     = false;
 bool      beagle_out        = false;
 bool      beagle_phased_out = false;
 bool      plink_out         = false;
+bool      hzar_out          = false;
 bool      phylip_out        = false;
 bool      phylip_var        = false;
 bool      kernel_smoothed   = false;
@@ -351,6 +352,9 @@ int main (int argc, char* argv[]) {
 
     if (plink_out)
 	write_plink(catalog, pmap, psum, pop_indexes, samples);
+
+    if (hzar_out)
+	write_hzar(catalog, pmap, psum, pop_indexes, samples);
 
     if (phylip_out)
 	write_phylip(catalog, pmap, psum, pop_indexes, samples);
@@ -2551,7 +2555,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 			exp_het_mean_all[j]  += s[j]->nucs[i].exp_het;
 			exp_hom_mean_all[j]  += s[j]->nucs[i].exp_hom;
 			pi_mean_all[j]       += s[j]->nucs[i].stat[0];
-			fis_mean_all[j]      += s[j]->nucs[i].stat[1];
+			fis_mean_all[j]      += s[j]->nucs[i].stat[1] != -7.0 ? s[j]->nucs[i].stat[1] : 0.0;
 		    }
 		}
 	    }
@@ -2664,7 +2668,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 			    fh << "-";
 
 			fh << "\t" << (int) s[j]->nucs[i].num_indv << "\t"
-			   << s[j]->nucs[i].p         << "\t"
+			   << std::setprecision(8)    << s[j]->nucs[i].p << "\t"
 			   << s[j]->nucs[i].obs_het   << "\t"
 			   << s[j]->nucs[i].obs_hom   << "\t"
 			   << s[j]->nucs[i].exp_het   << "\t"
@@ -4498,6 +4502,123 @@ write_structure(map<int, CSLocus *> &catalog,
 }
 
 int 
+write_hzar(map<int, CSLocus *> &catalog, 
+	   PopMap<CSLocus> *pmap, 
+	   PopSum<CSLocus> *psum, 
+	   map<int, pair<int, int> > &pop_indexes, 
+	   map<int, string> &samples) 
+{
+    //
+    // Write a Hybrid Zone Analysis using R (HZAR) file as defined here: 
+    //    http://cran.r-project.org/web/packages/hzar/hzar.pdf
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".hzar.csv";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing population data to HZAR file '" << file << "'...";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening HZAR file '" << file << "'\n";
+    	exit(1);
+    }
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    //
+    // Output the header.
+    //
+    fh << "# Stacks v" << VERSION << "; " << " HZAR v0.2-5; " << date << "\n"
+       << "Population" << "," << "Distance";
+
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
+    LocSum  **s;
+    LocTally *t;
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    	for (uint pos = 0; pos < it->second.size(); pos++) {
+    	    loc = it->second[pos];
+    	    s   = psum->locus(loc->id);
+	    t   = psum->locus_tally(loc->id);
+
+    	    for (uint i = 0; i < loc->snps.size(); i++) {
+    		uint col = loc->snps[i]->col;
+		if (t->nucs[col].allele_cnt == 2) {
+		    fh << "," << loc->id << "_" << col << ".A"
+		       << "," << loc->id << "_" << col << ".B"
+		       << "," << loc->id << "_" << col << ".N";
+
+		    if (write_single_snp) 
+			break;
+		}
+	    }
+	}
+    }
+    fh << "\n";
+
+    map<int, pair<int, int> >::iterator pit;
+    int start_index, end_index, pop_id, p;
+
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	p           = psum->pop_index(pit->first);
+	pop_id      = pit->first;
+	start_index = pit->second.first;
+	end_index   = pit->second.second;
+
+	fh << pop_key[pop_id];
+
+	for (int j = start_index; j <= end_index; j++) {
+
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		for (uint pos = 0; pos < it->second.size(); pos++) {
+		    loc = it->second[pos];
+
+		    s = psum->locus(loc->id);
+		    t = psum->locus_tally(loc->id);
+
+		    for (uint i = 0; i < loc->snps.size(); i++) {
+			uint col = loc->snps[i]->col;
+
+			// 
+			// If this site is fixed in all populations or has too many alleles don't output it.
+			//
+			if (t->nucs[col].allele_cnt != 2) 
+			    continue;
+
+			if (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc)
+			    fh << "," << s[p]->nucs[col].p << "," << 1 - s[p]->nucs[col].p << ",";
+			else
+			    fh << "," << 1 - s[p]->nucs[col].p << "," << s[p]->nucs[col].p << ",";
+
+			fh << s[p]->nucs[col].num_indv * 2;
+
+			if (write_single_snp) break;
+		    }
+		}
+    	    }
+    	}
+	fh << "\n";
+    }
+
+    fh.close();
+
+    cerr << "done.\n";
+
+    return 0;
+}
+
+int 
 write_fastphase(map<int, CSLocus *> &catalog, 
 		PopMap<CSLocus> *pmap, 
 		PopSum<CSLocus> *psum, 
@@ -6307,6 +6428,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"genepop",       no_argument,       NULL, 'G'},
 	    {"phylip",        no_argument,       NULL, 'Y'},
 	    {"phylip_var",    no_argument,       NULL, 'L'},
+	    {"hzar",          no_argument,       NULL, 'Z'},
 	    {"window_size",   required_argument, NULL, 'w'},
 	    {"num_threads",   required_argument, NULL, 't'},
 	    {"batch_id",      required_argument, NULL, 'b'},
@@ -6340,7 +6462,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlkKSACLHEYFVG123456gvsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:c:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlkKSACLHEYZFVG123456gvsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:c:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -6457,6 +6579,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'K':
 	    plink_out = true;
+	    break;
+	case 'Z':
+	    hzar_out = true;
 	    break;
 	case 'Y':
 	    phylip_out = true;
@@ -6609,6 +6734,7 @@ void help() {
 	      << "    --beagle: output genotypes in Beagle format.\n"
 	      << "    --beagle_phased: output haplotypes in Beagle format.\n"
 	      << "    --plink: output genotypes in PLINK format.\n"
+	      << "    --hzar: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
 	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
 	      << "      --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
 	      << "    --write_single_snp: write only the first SNP per locus in Genepop and Structure outputs.\n\n"
