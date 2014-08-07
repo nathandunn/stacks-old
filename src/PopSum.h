@@ -1196,6 +1196,8 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
 
     pair->fet_p = tail_1 + tail_2;
 
+    if (pair->fet_p > 1.0) pair->fet_p = 1.0;
+
     //
     // Calculate the odds ratio. To account for possible cases were one allele frequency is
     // zero, we will increment all allele frequencies by one.

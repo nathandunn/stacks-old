@@ -1,3 +1,8 @@
+Stacks 1.21
+--------------------------
+	Bugfix: "All positions" Fis measure in batch_X.sumstats_summary.tsv file too negative due to 
+	internal logic error.
+
 Stacks 1.20 - Jul 29, 2014
 --------------------------
 	Synced corrections module branch with main Stacks branch.
