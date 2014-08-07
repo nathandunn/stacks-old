@@ -1,5 +1,6 @@
 Stacks 1.21
 --------------------------
+	Feature: Added HZAR, Hybrid Zone Analysis in R output to populations program.
 	Bugfix: "All positions" Fis measure in batch_X.sumstats_summary.tsv file too negative due to 
 	internal logic error.
 
