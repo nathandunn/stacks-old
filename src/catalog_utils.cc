@@ -53,3 +53,50 @@ reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blac
     return i;
 }
 
+int 
+reduce_catalog(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, set<int> &blacklist) 
+{
+    map<int, CSLocus *> list;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
+
+    if (whitelist.size() == 0 && blacklist.size() == 0) 
+	return 0;
+ 
+    int i = 0;
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+
+	if (whitelist.size() > 0 && whitelist.count(loc->id) == 0) continue;
+	if (blacklist.count(loc->id)) continue;
+
+	list[it->first] = it->second;
+	i++;
+    }
+
+    catalog = list;
+
+    //
+    // Now we want to prune out SNP objects that are not in the whitelist.
+    //
+    vector<SNP *> tmp;
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+
+	if (whitelist[loc->id].size() == 0)
+	    continue;
+
+	tmp.clear();
+	for (uint i = 0; i < loc->snps.size(); i++) {
+	    if (whitelist[loc->id].count(loc->snps[i]->col) > 0)
+		tmp.push_back(loc->snps[i]);
+	    else
+		delete loc->snps[i];
+	}
+	loc->snps.clear();
+	for (uint i = 0; i < tmp.size(); i++)
+	    loc->snps.push_back(tmp[i]);
+    }
+
+    return i;
+}
