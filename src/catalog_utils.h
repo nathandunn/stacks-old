@@ -31,5 +31,6 @@ using std::set;
 #include "locus.h"
 
 int reduce_catalog(map<int, CSLocus *> &, set<int> &, set<int> &);
+int reduce_catalog(map<int, CSLocus *> &, map<int, set<int> > &, set<int> &);
 
 #endif // __CATALOG_UTILS_H__

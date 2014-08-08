@@ -83,7 +83,8 @@ map<int, string>          pop_key, grp_key;
 map<int, pair<int, int> > pop_indexes;
 map<int, vector<int> >    grp_members;
 
-set<int> whitelist, blacklist, bootstraplist;
+set<int> blacklist, bootstraplist;
+map<int, set<int> > whitelist;
 
 //
 // Hold information about restriction enzymes
@@ -144,7 +145,7 @@ int main (int argc, char* argv[]) {
 	exit(1);
 
     if (wl_file.length() > 0) {
-	load_marker_list(wl_file, whitelist);
+	load_marker_column_list(wl_file, whitelist);
 	cerr << "Loaded " << whitelist.size() << " whitelisted markers.\n";
     }
     if (bl_file.length() > 0) {
@@ -2668,8 +2669,8 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 			    fh << "-";
 
 			fh << "\t" << (int) s[j]->nucs[i].num_indv << "\t"
-			   << std::setprecision(8)    << s[j]->nucs[i].p << "\t"
-			   << s[j]->nucs[i].obs_het   << "\t"
+			   << std::setprecision(8)      << s[j]->nucs[i].p << "\t"
+			   << std::setprecision(fieldw) << s[j]->nucs[i].obs_het << "\t"
 			   << s[j]->nucs[i].obs_hom   << "\t"
 			   << s[j]->nucs[i].exp_het   << "\t"
 			   << s[j]->nucs[i].exp_hom   << "\t"
@@ -6144,17 +6145,93 @@ int load_marker_list(string path, set<int> &list) {
     }
 
     int   marker;
-    char *e;
+    char *p, *e;
 
     while (fh.good()) {
 	fh.getline(line, id_len);
 
 	if (strlen(line) == 0) continue;
 
+	//
+	// Skip commented lines.
+	//
+	for (p = line; isspace(*p) && *p != '\0'; p++);
+	if (*p == '#') continue;
+
 	marker = (int) strtol(line, &e, 10);
 
 	if (*e == '\0')
 	    list.insert(marker);
+    }
+
+    fh.close();
+
+    if (list.size() == 0) {
+ 	cerr << "Unable to load any markers from '" << path << "'\n";
+	exit(1);
+    }
+
+    return 0;
+}
+
+int load_marker_column_list(string path, map<int, set<int> > &list) {
+    char     line[id_len];
+    ifstream fh(path.c_str(), ifstream::in);
+
+    if (fh.fail()) {
+        cerr << "Error opening white/black list file '" << path << "'\n";
+	exit(1);
+    }
+
+    vector<string> parts;
+    uint  marker, col;
+    char *p, *e;
+
+    uint line_num = 1;
+    while (fh.good()) {
+	fh.getline(line, id_len);
+
+	if (strlen(line) == 0) continue;
+
+	//
+	// Skip commented lines.
+	//
+	for (p = line; isspace(*p) && *p != '\0'; p++);
+	if (*p == '#') continue;
+
+	//
+	// Parse the whitelist, we expect:
+	// <marker>[<tab><snp column>]
+	//
+	parse_tsv(line, parts);
+
+	if (parts.size() > 2) {
+	    cerr << "Too many columns in whitelist " << path << "' at line " << line_num << "\n";
+	    exit(1);
+
+	} else if (parts.size() == 2) {
+	    marker = (int) strtol(parts[0].c_str(), &e, 10);
+	    if (*e != '\0') {
+		cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+		exit(1);
+	    }
+	    col = (int) strtol(parts[1].c_str(), &e, 10);
+	    if (*e != '\0') {
+		cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
+		exit(1);
+	    }
+	    list[marker].insert(col);
+
+	} else {
+	    marker = (int) strtol(parts[0].c_str(), &e, 10);
+	    if (*e != '\0') {
+		cerr << "Unable to parse whitelist, '" << path << "' at line " << line << "\n";
+		exit(1);
+	    }
+	    list.insert(make_pair(marker, std::set<int>()));
+	}
+
+	line_num++;
     }
 
     fh.close();
