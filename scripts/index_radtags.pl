@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
 #
@@ -83,7 +83,7 @@ sub gen_cat_index {
     my ($fh, $catalog_file) = tempfile("catalog_index_XXXXXXXX", UNLINK => 1, TMPDIR => 1);
 
     my ($row, $tag, $count, $par_cnt, $pro_cnt, $allele_cnt, $marker, $uncor_marker, $valid_pro, 
-        $chisq_pval, $ratio, $ests, $pe_radtags, $blast_hits, $geno_cnt, $ref_type, $ref_id, $bp);
+        $chisq_pval, $lnl, $ratio, $ests, $pe_radtags, $blast_hits, $geno_cnt, $ref_type, $ref_id, $bp);
 
     my (%snps, %markers, %genotypes, %seqs, %hits, %parents, %progeny, %alleles, %chrs, %radome);
 
@@ -223,12 +223,14 @@ sub gen_cat_index {
 	    $chisq_pval   = $tag->{'chisq_pval'};
 	    $valid_pro    = $tag->{'valid_pro'};
 	    $ratio        = $tag->{'ratio'};
+	    $lnl          = $tag->{'lnl'};
 	} else {
 	    $marker       = "";
 	    $uncor_marker = "";
 	    $valid_pro    = 0;
 	    $chisq_pval   = 1.0;
 	    $ratio        = "";
+	    $lnl          = 0.0;
 	}
 
 	#
@@ -253,6 +255,7 @@ sub gen_cat_index {
 	    $uncor_marker, "\t",
 	    $valid_pro, "\t",
 	    $chisq_pval, "\t",
+	    $lnl, "\t",
 	    $ratio, "\t",
             $ests, "\t",
             $pe_radtags, "\t",
@@ -350,6 +353,7 @@ sub fetch_markers {
 	$tag->{'chisq_pval'}   = $row->{'chisq_pval'};
 	$tag->{'valid_pro'}    = $row->{'progeny'};
 	$tag->{'ratio'}        = $row->{'ratio'};
+	$tag->{'lnl'}          = $row->{'lnl'};
 
 	if (!defined($markers->{$row->{'batch_id'}})) {
 	    $markers->{$row->{'batch_id'}} = {};
@@ -616,7 +620,7 @@ sub prepare_sql_handles {
     $sth->{'cat_geno'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-	"SELECT batch_id, catalog_id, type, uncor_type, progeny, chisq_pval, ratio FROM markers";
+	"SELECT batch_id, catalog_id, type, uncor_type, progeny, chisq_pval, ratio, lnl FROM markers";
     $sth->{'marker'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 

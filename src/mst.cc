@@ -50,7 +50,28 @@ Node *MinSpanTree::add_node(int id) {
     return n;
 }
 
+Node *MinSpanTree::add_node(string label) {
+    //
+    // Obtain an ID for this node.
+    //
+    uint id = this->id_cnt;
+
+    Node *n = new Node(id);
+    n->label = label;
+
+    this->nodes[id]       = n;
+    this->node_key[label] = id;
+    this->id_cnt++;
+
+    return n;
+}
+
 Node *MinSpanTree::node(int id) {
+    return this->nodes[id];
+}
+
+Node *MinSpanTree::node(string label) {
+    uint id = this->node_key[label];
     return this->nodes[id];
 }
 
@@ -204,7 +225,11 @@ string MinSpanTree::vis(bool overlay) {
         visited.insert(n->id);
 
         for (uint i = 0; i < n->min_adj_list.size(); i++) {
-            data << "  " << n->id << "--" << n->min_adj_list[i]->id << "\n";
+            data << "  "; 
+	    n->label.length() > 0 ? data << n->label : data << n->id;
+	    data << "--";
+	    n->min_adj_list[i]->label.length() > 0 ? (data << n->min_adj_list[i]->label) : (data << n->min_adj_list[i]->id);
+	    data << "\n";
             if (visited.count(n->min_adj_list[i]->id) == 0)
                 q.push(n->min_adj_list[i]);
         }
@@ -234,8 +259,11 @@ string MinSpanTree::vis(bool overlay) {
 	    scaled_d = scaled_d < 0.75 ? 0.75 : scaled_d;
 	    sprintf(label, "%.1f", d);
 
-	    data << n->id << " -- " << n->edges[j]->child->id << " [len=" << scaled_d << ", label=" << label << "];\n";
-	}
+	    n->label.length() > 0 ? (data << n->label) : (data << n->id);
+  	    data << " -- ";
+	    n->edges[j]->child->label.length() > 0 ? (data << n->edges[j]->child->label) : (data << n->edges[j]->child->id);
+	    data << " [len=" << scaled_d << ", label=" << label << "];\n";
+        }
     }
 
     data << "}\n";

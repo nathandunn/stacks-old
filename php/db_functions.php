@@ -26,6 +26,7 @@ function db_connect($database) {
                  'username' => $db_user,
                  'password' => $db_pass,
                  'hostspec' => $db_host,
+		 'port'     => 3306
                  );
     $options = array();
 

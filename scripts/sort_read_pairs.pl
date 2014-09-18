@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
 #

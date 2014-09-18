@@ -1,6 +1,6 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 #
-# Copyright 2010-2012, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 #
 # This file is part of Stacks.
 #
@@ -41,6 +41,7 @@ my $map_type  = "gen";
 my $all_depth = 0;
 my $allele_depth_lim = 1;
 my $locus_depth_lim  = 0;
+my $locus_lnl_lim    = 0.0;
 my $man_cor   = 0;
 my $db        = "";
 
@@ -52,7 +53,7 @@ my $translate_genotypes = {'dh'  => \&trans_dh_map,
 
 my @valid_filters = ("cata", "alle_l", "alle_u", "snps_l", "snps_u", "pare_l", "pare_u",
 		     "prog",  "vprog", "mark", "est",  "pe", "blast", "gcnt",
-		     "chisq_l", "chisq_u", "ref", "loc");
+		     "chisq_l", "chisq_u", "lnl_l", "lnl_u", "ref", "loc");
 
 parse_command_line();
 
@@ -150,7 +151,8 @@ sub populate {
 		 {'file'   => $gen_row->{'file'},
 		  'allele' => $gen_row->{'allele'},
 		  'tag_id' => $gen_row->{'tag_id'},
-		  'depth'  => $gen_row->{'depth'}});
+		  'depth'  => $gen_row->{'depth'},
+		  'lnl'    => $gen_row->{'lnl'}});
 
 	    #
 	    # Check if this particular sample was deleveraged
@@ -272,6 +274,10 @@ sub prepare_filter_parameters {
             push(@{$params}, $filters->{'pare_l'});
             push(@{$params}, $filters->{'pare_u'});
 
+        } elsif ($filter eq "lnl") {
+            push(@{$params}, $filters->{'lnl_l'});
+            push(@{$params}, $filters->{'lnl_u'});
+
         } elsif ($filter eq "chisq") {
             push(@{$params}, $filters->{'chisq_l'});
             push(@{$params}, $filters->{'chisq_u'});
@@ -327,6 +333,7 @@ sub apply_query_filters {
 	 "pare"  => "(parents >= ? AND parents <= ?)",
          "prog"  => "(progeny >= ?)",
          "vprog" => "(valid_progeny >= ?)",
+	 "lnl"   => "(lnl <= ? AND lnl >= ?)",
          "mark"  => "(marker LIKE ?)", 
          "est"   => "(ests > ?)",
          "pe"    => "(pe_radtags > ?)",
@@ -436,6 +443,11 @@ sub write_observed_haplotypes {
 	    if ($tot_depth < $locus_depth_lim) {
                 $str .= "\t";
                 next;
+	    }
+
+	    if ($types->[0]->{'lnl'} < $locus_lnl_lim) {
+		$str .= "\t";
+		next;
 	    }
 
             foreach $type (@{$types}) {
@@ -860,7 +872,7 @@ sub prepare_sql_handles {
     $sth->{'snp'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-        "SELECT catalog_id, samples.id as id, samples.sample_id, samples.type, file, tag_id, allele, depth " . 
+        "SELECT catalog_id, samples.id as id, samples.sample_id, samples.type, file, tag_id, allele, depth, lnl " . 
         "FROM matches " . 
         "JOIN samples ON (matches.sample_id=samples.id) " . 
         "WHERE matches.batch_id=? AND matches.depth>?";
@@ -890,7 +902,7 @@ sub prepare_sql_handles {
     $query = 
         "SELECT catalog_index.tag_id as tag_id, catalog_index.chr, catalog_index.bp, " .
 	"snps, alleles, parents, progeny, valid_progeny, " . 
-        "seq, marker, ratio, ests, pe_radtags, blast_hits, geno_cnt, external_id " .
+        "seq, marker, chisq_pval, lnl, ratio, ests, pe_radtags, blast_hits, geno_cnt, external_id " .
         "FROM catalog_index " .
         "JOIN catalog_tags ON (catalog_index.cat_id=catalog_tags.id) " . 
         "LEFT JOIN catalog_annotations ON " . 
@@ -1025,10 +1037,13 @@ sub usage {
     version();
 
     my $filt;
+    my $i = 1;
     foreach my $f (@valid_filters) {
 	$filt .= $f . ", ";
+	$filt .= "\n        " if ($i % 10 == 0);
+	$i++;
     }
-    $filt = substr($filt, 0, -2);
+    $filt = substr($filt, 0, -11);
 
     print STDERR 
         "export_sql.pl -D db -b batch_id -a type -f file -o tsv|xls [-m type -c] [-F filter=value ...] [-L lim] [-d] [-h]\n", 
@@ -1043,7 +1058,8 @@ sub usage {
 	"    m: map type. If genotypes are to be exported, specify the map type.\n",
 	"    c: include manual corrections if exporting genotypes.\n",
         "    F: one or more filters in the format name=value.\n",
-	"       Supported filters: $filt\n",
+	"       Supported filters: \n",
+	"        $filt\n",
         "    h: display this help message.\n\n";
     exit(0);
 }

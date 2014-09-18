@@ -101,6 +101,7 @@ void    version( void );
 int     parse_command_line(int, char**);
 int     build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &);
 int     load_marker_list(string, set<int> &);
+int     load_marker_column_list(string, map<int, set<int> > &);
 int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<int, int> > &);
 int     log_haplotype_cnts(map<int, CSLocus *> &, ofstream &);
 bool    order_unordered_loci(map<int, CSLocus *> &);
@@ -148,6 +149,7 @@ int  write_fastphase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *
 int  write_beagle(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_beagle_phased(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_plink(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
+int  write_hzar(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  tally_observed_haplotypes(vector<char *> &, int, char &, char &);
 int  tally_ref_alleles(LocSum **, int, int, char &, char &);

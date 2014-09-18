@@ -5,14 +5,15 @@ etc.) Stacks is an independent pipeline and can be run without any additional
 external software. To visualize Stacks' data, however, Stacks provides a web-based 
 interface which depends on several other pieces of software. 
 
-     Note: Apple OS X does not distribute the OpenMP library (or
-     distributes a non-standard version in the case of OS X Server) which
-     Stacks relies on for parallel processing. Stacks can still be built
-     and run on this system, however, you will have to disable building
+     Note: Apple OS X does not use the GNU Compiler Collection, which is 
+     standard on Linux-based systems. Instead, Apple distributes CLANG, 
+     which is a nice compiler but does not yet support the OpenMP library
+     which Stacks relies on for parallel processing. Stacks can still be built
+     and run on an Apple system, however, you will have to disable building
      with OpenMP (supply the --disable-openmp flag to configure) and use
-     non-parallelized code. If desired, this problem can be fixed in several
-     ways including installing an updated version of the GCC compiler, say
-     using MacPorts (http://www.macports.org/).
+     non-parallelized code. If you want to install a parallelized version of
+     Stacks, you can install GCC by hand, or using a package system such as 
+     Homebrew (http://brew.sh/) or MacPorts (http://www.macports.org/).
 
 To visualize data, Stacks uses a web-based interface (written in PHP) that interacts 
 with a MySQL database server. MySQL provides various functions to store, sort, and 

@@ -1511,13 +1511,13 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
 	    switch((*s)->type) {
 	    case snp_type_het:
-		tags << "E";
+		sstr << "E";
 		break;
 	    case snp_type_hom:
-		tags << "O";
+		sstr << "O";
 		break;
 	    default:
-		tags << "U";
+		sstr << "U";
 		break;
 	    }
 	}

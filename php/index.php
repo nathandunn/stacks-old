@@ -27,11 +27,11 @@ else
     write_database($database);
 
 function write_database_list($database) {
-    global $db_user, $db_pass, $root_path, $img_path, $mysql_bin;
+    global $db_user, $db_pass, $db_host, $root_path, $img_path, $mysql_bin;
 
     $databases = array();
 
-    exec("$mysql_bin --user=$db_user --password=$db_pass -N -B -e \"SHOW DATABASES LIKE '%_radtags'\"", $databases);
+    exec("$mysql_bin --user=$db_user --password=$db_pass -h $db_host -N -B -e \"SHOW DATABASES LIKE '%_radtags'\"", $databases);
 
     $page_title = "Stacks Databases";
     write_header($page_title);
