@@ -65,8 +65,8 @@ int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads) {
 
         parse_tsv(line, parts);
 
-        if (parts.size() != num_tags_fields) {
-            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+        if (parts.size() != num_tags_fields && parts.size() != num_tags_fields+1) {
+            cerr << "Error parsing tags from loci " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
 
@@ -309,8 +309,9 @@ int load_catalog_matches(string sample, vector<CatMatch *> &matches) {
 
         parse_tsv(line, parts);
 
-        if (parts.size() != num_matches_fields) {
-            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+        // handling both sizes
+        if (parts.size() != num_matches_fields && parts.size() != num_matches_fields+1) {
+            cerr << "Error parsing matches " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
 
@@ -370,7 +371,7 @@ int load_model_results(string sample, map<int, ModRes *> &modres) {
         parse_tsv(line, parts);
 
         if (parts.size() != num_tags_fields) {
-            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+            cerr << "Error parsing tags " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
 
@@ -430,7 +431,7 @@ int load_snp_calls(string sample, map<int, SNPRes *> &snpres) {
         parse_tsv(line, parts);
 
         if (parts.size() != num_snps_fields && parts.size() != num_snps_fields - 2) {
-            cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+            cerr << "Error parsing snps " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
 

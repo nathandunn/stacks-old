@@ -1038,8 +1038,8 @@ NSString *calculateType(NSString *file);
                         if (fh.good() && strlen(line) > 0) {
                             parse_tsv(line, parts);
 
-                            if (parts.size() != num_tags_fields) {
-                                cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+                            if (parts.size() != num_tags_fields && parts.size() != num_tags_fields+1) {
+                                cerr << "Error parsing tags " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
                                 NSLog(@"error Parings %ld -> %ld", line_num, parts.size());
                                 return;
                             }
