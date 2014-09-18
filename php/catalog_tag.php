@@ -55,7 +55,7 @@ $marker_types = array('ab/--' => array('aa', 'bb', 'ab', '--'),
 // Prepare some SQL queries
 //
 $query = 
-    "SELECT samples.id, samples.sample_id, samples.type, file, tag_id, allele, depth, pop_id " . 
+    "SELECT samples.id, samples.sample_id, samples.type, file, tag_id, allele, depth, lnl, pop_id " . 
     "FROM matches " . 
     "JOIN samples ON (matches.sample_id=samples.id) " . 
     "WHERE matches.batch_id=? AND catalog_id=? ORDER BY samples.id";
@@ -241,6 +241,7 @@ while ($row = $result->fetchRow()) {
                'allele' => $row['allele'], 
                'tag_id' => $row['tag_id'],
 	       'depth'  => $row['depth'],
+	       'lnl'    => $row['lnl'],
 	       'pop_id' => $row['pop_id']);
     if (!isset($htypes[$row['pop_id']]))
         $htypes[$row['pop_id']] = array();
@@ -283,6 +284,8 @@ echo <<< EOQ
     <a onclick="document.getElementById('hap_cb').click()">Haplotypes</a>
     <input type="checkbox" id="dep_cb" onclick="toggle_genotypes($tag_id, 'locus_gtypes', 'dep')" /> 
     <a onclick="document.getElementById('dep_cb').click()">Allele Depths</a>
+    <input type="checkbox" id="lnl_cb" onclick="toggle_genotypes($tag_id, 'locus_gtypes', 'lnl')" /> 
+    <a onclick="document.getElementById('lnl_cb').click()">LnLs</a>
     $gtype_str
   </td>
 </tr>
@@ -360,7 +363,10 @@ foreach ($htypes as $pop_id => $population) {
 	}
 
 	print
-	  "<div class=\"haplotype\" id=\"hap_{$i}\">$hap_str</div><div id=\"dep_{$i}\" style=\"display: none;\">$dep_str</div>$gen_str" .
+	  "<div class=\"haplotype\" id=\"hap_{$i}\">$hap_str</div>" . 
+          "<div id=\"dep_{$i}\" style=\"display: none;\">$dep_str</div>" . 
+          "<div class=\"lnl\" id=\"lnl_{$i}\" style=\"display: none;\">$m[lnl]</div>" . 
+          "$gen_str" .
 	  "</td>\n";
 
 	if ($i % $num_cols == 0)

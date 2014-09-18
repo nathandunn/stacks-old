@@ -63,25 +63,31 @@ using std::set;
 #include "utils.h"
 #include "sql_utilities.h"
 #include "models.h"
+#include "mst.h"
 
-void    help( void );
-void    version( void );
-int     parse_command_line(int, char**);
-int     build_file_list(vector<pair<int, string> > &);
-int     init_log(int, char **, ofstream &);
-int     sum_haplotype_counts(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int     prune_locus_haplotypes(CSLocus *, Datum *, Locus *, unsigned long int &);
-int     measure_error(CSLocus *, Locus *, Datum *, ofstream &);
-int     calc_lnl_means(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int     prune_nucleotides(CSLocus *, Locus *, ofstream &, unsigned long int &,
-			  unsigned long int &, unsigned long int &, unsigned long int &,
-			  unsigned long int &, unsigned long int &, unsigned long int &);
-int     invoke_model(Locus *, int, map<char, int> &);
-int     call_alleles(Locus *, set<int> &); 
-int     fill_catalog_snps(map<int, CSLocus *> &);
-int     log_model_calls(Locus *, ofstream &,
-			unsigned long int &, unsigned long int &, unsigned long int &,
-			unsigned long int &, unsigned long int &, unsigned long int &);
-int     write_results(string, map<int, Locus *> &);
+void   help( void );
+void   version( void );
+int    parse_command_line(int, char**);
+int    build_file_list(vector<pair<int, string> > &);
+int    init_log(int, char **, ofstream &, ofstream &, ofstream &);
+int    sum_haplotype_counts(map<int, CSLocus *> &, PopMap<CSLocus> *);
+int    prune_mst_haplotypes(CSLocus *, Datum *, Locus *, unsigned long int &, ofstream &);
+int    prune_locus_haplotypes(CSLocus *, Datum *, Locus *, unsigned long int &, ofstream &);
+string convert_catalog_haplotype_to_sample(string, CSLocus *, Locus *);
+int    remove_haplotype(CSLocus *, Locus *, string, unsigned long &, ofstream &, string);
+int    dist(string, string);
+int    measure_error(CSLocus *, Locus *, Datum *, ofstream &);
+int    calc_lnl_means(map<int, CSLocus *> &, PopMap<CSLocus> *);
+int    prune_nucleotides(CSLocus *, Locus *, Datum *, ofstream &, unsigned long int &,
+			 unsigned long int &, unsigned long int &, unsigned long int &,
+			 unsigned long int &, unsigned long int &, unsigned long int &);
+int    invoke_model(Locus *, int, map<char, int> &);
+int    call_alleles(Locus *, set<int> &); 
+int    generate_matched_haplotypes(CSLocus *, Locus *, Datum *);
+int    fill_catalog_snps(map<int, CSLocus *> &);
+int    log_model_calls(Locus *, ofstream &,
+		       unsigned long int &, unsigned long int &, unsigned long int &,
+		       unsigned long int &, unsigned long int &, unsigned long int &);
+int    write_results(string, map<int, Locus *> &);
 
 #endif // __RXSTACKS_H__

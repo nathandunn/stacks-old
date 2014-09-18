@@ -472,6 +472,11 @@ div.haplotype {
     word-wrap: break-word;
 }
 
+div.lnl {
+    font-size: 10pt;
+    font-family: monospace;
+}
+
 div.snps {
     text-align: left;
     width: 49.5%;

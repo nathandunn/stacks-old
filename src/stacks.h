@@ -223,6 +223,7 @@ public:
     ~SNPRes() { 
 	for (uint i = 0; i < this->snps.size(); i++)
 	    delete this->snps[i];
+	this->snps.clear();
     }
 };
 

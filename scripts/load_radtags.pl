@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
 #
@@ -84,9 +84,82 @@ if ($batch) {
 
 my ($file, $f, $i, $cnt, $type, $pop_id);
 
+#
+# Import the catalog
+#
+if ($catalog) {
+    foreach $file (@catalog) {
+
+	$f = $in_path . "/$file" . ".catalog.tags.tsv";
+	if (-e $f) {
+	    import_sql_file($f, "catalog_tags", 0);
+	} elsif (-e $f . ".gz") {
+	    $f = $in_path . "/$file" . ".catalog.tags.tsv.gz";
+	    import_gzsql_file($f, "catalog_tags", 0);
+	}
+
+        $f = $in_path . "/$file" . ".catalog.snps.tsv";
+	if (-e $f) {
+	    import_sql_file($f, "catalog_snps", 0);
+	} elsif (-e $f . ".gz") {
+	    $f = $in_path . "/$file" . ".catalog.snps.tsv.gz";
+	    import_gzsql_file($f, "catalog_snps", 0);
+	}
+
+        $f = $in_path . "/$file" . ".catalog.alleles.tsv";
+	if (-e $f) {
+	    import_sql_file($f, "catalog_alleles", 0);
+	} elsif (-e $f . ".gz") {
+	    $f = $in_path . "/$file" . ".catalog.alleles.tsv.gz";
+	    import_gzsql_file($f, "catalog_alleles", 0);
+	}
+    }
+}
+
+if ($stacks_type eq "map") {
+    $f = "$in_path/batch_" . $batch_id . ".markers.tsv";
+    import_sql_file($f, "markers", 1);
+
+    $f = "$in_path/batch_" . $batch_id . ".genotypes_1.txt";
+    import_sql_file($f, "catalog_genotypes", 1);
+
+} elsif ($stacks_type eq "population") {
+    $f = "$in_path/batch_" . $batch_id . ".markers.tsv";
+    import_sql_file($f, "markers", 1);
+
+    $f = "$in_path/batch_" . $batch_id . ".sumstats.tsv";
+    import_sql_file($f, "sumstats", scalar(keys %pops) + 1);
+
+    #
+    # Import the Fst files.
+    #
+    my (@keys, $m, $n);
+    @keys = sort keys %pops;
+    for ($m = 0; $m < scalar(@keys); $m++) {
+	for ($n = $m+1; $n < scalar(@keys); $n++) {
+	    $f = "$in_path/batch_" . $batch_id . ".fst_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
+	    import_sql_file($f, "fst", 1);
+	}
+    }
+}
+
 $i = 1;
 $cnt = scalar(@files);
 
+foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
+    print STDERR "Processing sample $i of $cnt\n";
+
+    $f = $in_path . "/$file" . ".matches.tsv";
+    if (-e $f) {
+	import_sql_file($f, "matches", 0);
+    } elsif (-e $f . ".gz") {
+	$f = $in_path . "/$file" . ".matches.tsv.gz";
+	import_gzsql_file($f, "matches", 0);
+    }
+    $i++;
+}
+
+$i = 1;
 foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
     print STDERR "Processing sample $i of $cnt\n";
 
@@ -134,74 +207,7 @@ foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
 	import_gzsql_file($f, "alleles", 0);
     }
 
-    $f = $in_path . "/$file" . ".matches.tsv";
-    if (-e $f) {
-	import_sql_file($f, "matches", 0);
-    } elsif (-e $f . ".gz") {
-	$f = $in_path . "/$file" . ".matches.tsv.gz";
-	import_gzsql_file($f, "matches", 0);
-    }
-
     $i++;
-}
-
-#
-# Import the catalog
-#
-if ($catalog) {
-    foreach $file (@catalog) {
-
-	$f = $in_path . "/$file" . ".catalog.tags.tsv";
-	if (-e $f) {
-	    import_sql_file($f, "catalog_tags", 0);
-	} elsif (-e $f . ".gz") {
-	    $f = $in_path . "/$file" . ".catalog.tags.tsv.gz";
-	    import_gzsql_file($f, "catalog_tags", 0);
-	}
-
-        $f = $in_path . "/$file" . ".catalog.snps.tsv";
-	if (-e $f) {
-	    import_sql_file($f, "catalog_snps", 0);
-	} elsif (-e $f . ".gz") {
-	    $f = $in_path . "/$file" . ".catalog.snps.tsv.gz";
-	    import_gzsql_file($f, "catalog_snps", 0);
-	}
-
-        $f = $in_path . "/$file" . ".catalog.alleles.tsv";
-	if (-e $f) {
-	    import_sql_file($f, "catalog_alleles", 0);
-	} elsif (-e $f . ".gz") {
-	    $f = $in_path . "/$file" . ".catalog.alleles.tsv.gz";
-	    import_gzsql_file($f, "catalog_alleles", 0);
-	}
-    }
-}
-
-if ($stacks_type eq "map") {
-    $f = "$in_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($f, "markers", 1);
-
-    $f = "$in_path/batch_" . $batch_id . ".genotypes_1.txt";
-    import_sql_file($f, "catalog_genotypes", 1);
-
-} elsif ($stacks_type eq "population") {
-    $f = "$in_path/batch_" . $batch_id . ".markers.tsv";
-    import_sql_file($f, "markers", 0);
-
-    $f = "$in_path/batch_" . $batch_id . ".sumstats.tsv";
-    import_sql_file($f, "sumstats", scalar(keys %pops) + 1);
-
-    #
-    # Import the Fst files.
-    #
-    my (@keys, $m, $n);
-    @keys = sort keys %pops;
-    for ($m = 0; $m < scalar(@keys); $m++) {
-	for ($n = $m+1; $n < scalar(@keys); $n++) {
-	    $f = "$in_path/batch_" . $batch_id . ".fst_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
-	    import_sql_file($f, "fst", 1);
-	}
-    }
 }
 
 print STDERR "\nDon't forget to index your Stacks database -- run index_radtags.pl\n\n";
@@ -328,6 +334,11 @@ sub import_sql_file {
 
     my (@results, $ignore);
 
+    if (!-e $file) {
+	print STDERR "File '$file' does not exist.\n";
+	return;
+    }
+
     $ignore = " IGNORE $skip_lines LINES" if ($skip_lines > 0);
 
     if (!$dry_run) {
@@ -343,6 +354,11 @@ sub import_gzsql_file {
     my ($file, $table, $skip_lines) = @_;
 
     my (@results, $ignore);
+
+    if (!-e $file) {
+	print STDERR "File '$file' does not exist.\n";
+	return;
+    }
 
     $ignore = "IGNORE $skip_lines LINES" if ($skip_lines > 0);
 

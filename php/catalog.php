@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -270,7 +270,7 @@ check_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT catalog_index.tag_id as tag_id, alleles, parents, progeny, valid_progeny, " . 
-    "seq, marker, uncor_marker, chisq_pval, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt, " .
+    "seq, marker, uncor_marker, chisq_pval, lnl, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt, " .
     "catalog_index.chr, catalog_index.bp, catalog_tags.strand, catalog_index.type, gene, ext_id, ex_start, ex_end, ex_index " .
     "FROM catalog_index " .
     "JOIN catalog_tags ON (catalog_index.cat_id=catalog_tags.id) " . 
@@ -367,10 +367,13 @@ EOQ;
 	    ", Gene: <acronym title=\"Exon $row[ex_index]: " . number_format($row['ex_start']) . "-" . number_format($row['ex_end']) . "bp\">" . $gene . "</acronym>\n";
       }
       print
-	"</div></td>\n";
+	", LnL: $row[lnl]</div></td>\n";
 
     } else {
-      print "<td class=\"seq\"><div class=\"seq\">$s</div></td>\n";
+      print 
+	"<td class=\"seq\"><div class=\"seq\">$s</div>\n" .
+	"<div class=\"gloc\">LnL: $row[lnl]</div>\n" .
+	"</td>\n";
     }
 
     if ($batch['type'] == "map") {
@@ -975,6 +978,7 @@ function write_pop_filter($cols) {
 		     "snps"  => array(),
 		     "pare"  => array(),
 		     "gcnt"  => array(),
+		     "lnl"   => array(),
 		     "loc"   => array(),
 		     "ref"   => array(),
                      "est"   => array(),
@@ -991,6 +995,8 @@ function write_pop_filter($cols) {
     $fch  = isset($display['filter_chr'])     ? $display['filter_chr']    : "";
     $fsb  = isset($display['filter_sbp'])     ? $display['filter_sbp']    : 0;
     $feb  = isset($display['filter_ebp'])     ? $display['filter_ebp']    : $max_chr_len;
+    $flnl = isset($display['filter_lnl_l'])   ? $display['filter_lnl_l']  : 0;
+    $flnu = isset($display['filter_lnl_u'])   ? $display['filter_lnl_u']  : -500;
 
     $r = range(1, 9);
     $r = array_merge($r, range(10, 100, 5));
@@ -1008,6 +1014,13 @@ function write_pop_filter($cols) {
     $sbp_ctl   = generate_element_select("filter_sbp",   range(0, $max_chr_len), $fsb, "");
     $ebp_ctl   = generate_element_select("filter_ebp",   range(0, $max_chr_len), $feb, "");
     $ref_ctl   = generate_element_select("filter_ref",   array("exon", "intron", "genomic"), $ref, "");
+    $r = range(0, 9);
+    $r = array_merge($r, range(10, 100, 5));
+    $r = array_merge($r, range(200, 500, 100));
+    for ($i = 0; $i < count($r); $i++)
+      $r[$i] = $r[$i] * -1;
+    $lnl_l_ctl = generate_element_select("filter_lnl_l",  $r,  $flnl, "");
+    $lnl_u_ctl = generate_element_select("filter_lnl_u",  $r,  $flnu, "");
 
     if (isset($display['filter_type'])) {
 
@@ -1136,8 +1149,14 @@ $pare_l_ctl $pare_u_ctl
   </td>
   </tr>
   <tr>
-    <td>&nbsp;</td>
-    <td>&nbsp;</td>
+<td {$filters['lnl']['tr']}>
+      <input type="checkbox" name="filter_type[]" value="lnl" onchange="rebuild_display_select()" {$filters['lnl']['sel']} /> 
+      <a onclick="toggle_cb('filter_results', 'lnl')">
+      <acronym title="The mean log likelihood of each catalog locus.">LnL</acronym>:</a>
+  </td>
+  <td {$filters['lnl']['tr']}>
+$lnl_l_ctl $lnl_u_ctl
+  </td>
   </tr>
   <tr>
     <td>&nbsp;</td>
@@ -1240,6 +1259,10 @@ function process_filter(&$display_params) {
 	    $display_params['filter_pare_l'] = $_GET['filter_pare_l'];
 	    $display_params['filter_pare_u'] = $_GET['filter_pare_u'];
 
+	} else if ($filter == "lnl") {
+	    $display_params['filter_lnl_l'] = $_GET['filter_lnl_l'];
+	    $display_params['filter_lnl_u'] = $_GET['filter_lnl_u'];
+
 	} else if ($filter == "prog") {
 	    $display_params['filter_prog'] = $_GET['filter_prog'];
 
@@ -1289,6 +1312,10 @@ function prepare_filter_parameters($display_params, &$param) {
 	} else if ($filter == "pare") {
 	    array_push($param, $display_params['filter_pare_l']);
 	    array_push($param, $display_params['filter_pare_u']);
+
+	} else if ($filter == "lnl") {
+	    array_push($param, $display_params['filter_lnl_l']);
+	    array_push($param, $display_params['filter_lnl_u']);
 
 	} else if ($filter == "prog") {
 	    array_push($param, $display_params['filter_prog']);
@@ -1343,6 +1370,7 @@ function apply_query_filters($display_params) {
 	      "pare"  => "(parents >= ? AND parents <= ?)",
 	      "prog"  => "(progeny >= ?)",
 	      "vprog" => "(valid_progeny >= ?)",
+	      "lnl"   => "(lnl <= ? AND lnl >= ?)",
 	      "mark"  => "(marker LIKE ?)", 
               "est"   => "(ests > ?)",
               "pe"    => "(pe_radtags > ?)",

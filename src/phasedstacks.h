@@ -235,5 +235,7 @@ int   four_gamete_test(string, map<string, int> &, PhasedSummary *, map<int, int
 int   dprime_blocks(string, map<string, int> &, PhasedSummary *, map<int, int> &, map<int, int> &);
 bool  check_adjacent_blocks(PhasedSummary *, HBlock *);
 int   enumerate_haplotypes(ofstream &, map<string, int> &, PhasedSummary *, uint, uint);
+int   bucket_dprime(vector<double> &, vector<double> &, PhasedSummary *);
+int   write_buckets(string, vector<double> &, vector<double> &);
 
 #endif // __PHASEDSTACKS_H__
