@@ -226,6 +226,11 @@ int main (int argc, char* argv[]) {
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
 
+    //
+    // Implement the white list, part 2, filter SNPs
+    //
+    reduce_catalog_snps(catalog, whitelist, pmap);
+
     log_fh << "# Distribution of population loci.\n";
     log_haplotype_cnts(catalog, log_fh);
 
@@ -4577,37 +4582,34 @@ write_hzar(map<int, CSLocus *> &catalog,
 	start_index = pit->second.first;
 	end_index   = pit->second.second;
 
-	fh << pop_key[pop_id];
+	fh << pop_key[pop_id] << ",";
 
-	for (int j = start_index; j <= end_index; j++) {
+	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	    for (uint pos = 0; pos < it->second.size(); pos++) {
+		loc = it->second[pos];
 
-	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-		for (uint pos = 0; pos < it->second.size(); pos++) {
-		    loc = it->second[pos];
+		s = psum->locus(loc->id);
+		t = psum->locus_tally(loc->id);
 
-		    s = psum->locus(loc->id);
-		    t = psum->locus_tally(loc->id);
+		for (uint i = 0; i < loc->snps.size(); i++) {
+		    uint col = loc->snps[i]->col;
 
-		    for (uint i = 0; i < loc->snps.size(); i++) {
-			uint col = loc->snps[i]->col;
+		    // 
+		    // If this site is fixed in all populations or has too many alleles don't output it.
+		    //
+		    if (t->nucs[col].allele_cnt != 2) 
+			continue;
 
-			// 
-			// If this site is fixed in all populations or has too many alleles don't output it.
-			//
-			if (t->nucs[col].allele_cnt != 2) 
-			    continue;
+		    if (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc)
+			fh << "," << s[p]->nucs[col].p << "," << 1 - s[p]->nucs[col].p << ",";
+		    else
+			fh << "," << 1 - s[p]->nucs[col].p << "," << s[p]->nucs[col].p << ",";
 
-			if (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc)
-			    fh << "," << s[p]->nucs[col].p << "," << 1 - s[p]->nucs[col].p << ",";
-			else
-			    fh << "," << 1 - s[p]->nucs[col].p << "," << s[p]->nucs[col].p << ",";
+		    fh << s[p]->nucs[col].num_indv * 2;
 
-			fh << s[p]->nucs[col].num_indv * 2;
-
-			if (write_single_snp) break;
-		    }
+		    if (write_single_snp) break;
 		}
-    	    }
+	    }
     	}
 	fh << "\n";
     }

@@ -76,10 +76,24 @@ reduce_catalog(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, set
 
     catalog = list;
 
+    return i;
+}
+
+int 
+reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, PopMap<CSLocus> *pmap) 
+{
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
+    Datum  **d;
+
+    if (whitelist.size() == 0) 
+	return 0;
+ 
     //
-    // Now we want to prune out SNP objects that are not in the whitelist.
+    // We want to prune out SNP objects that are not in the whitelist.
     //
     vector<SNP *> tmp;
+    vector<uint>  cols;
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 
@@ -87,16 +101,35 @@ reduce_catalog(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, set
 	    continue;
 
 	tmp.clear();
+	cols.clear();
+
 	for (uint i = 0; i < loc->snps.size(); i++) {
-	    if (whitelist[loc->id].count(loc->snps[i]->col) > 0)
+	    if (whitelist[loc->id].count(loc->snps[i]->col) > 0) {
 		tmp.push_back(loc->snps[i]);
-	    else
+		cols.push_back(i);
+	    } else {
 		delete loc->snps[i];
+	    }
 	}
 	loc->snps.clear();
 	for (uint i = 0; i < tmp.size(); i++)
 	    loc->snps.push_back(tmp[i]);
+
+	//
+	// Now we need to adjust the matched haplotypes to sync to 
+	// the SNPs left in the catalog.
+	//
+	d = pmap->locus(loc->id);
+	for (int i = 0; i < pmap->sample_cnt(); i++) {
+	    if (d[i] == NULL) continue;
+
+	    for (uint j = 0; j < d[i]->obshap.size(); j++) {
+		for (uint k = 0; k < cols.size(); k++)
+		    d[i]->obshap[j][k] = d[i]->obshap[j][cols[k]];
+		d[i]->obshap[j][cols.size()] = '\0';
+	    }
+	}
     }
 
-    return i;
+    return 0;
 }
