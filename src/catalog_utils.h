@@ -29,8 +29,10 @@ using std::set;
 #include "constants.h"
 #include "stacks.h"
 #include "locus.h"
+#include "PopMap.h"
 
 int reduce_catalog(map<int, CSLocus *> &, set<int> &, set<int> &);
 int reduce_catalog(map<int, CSLocus *> &, map<int, set<int> > &, set<int> &);
+int reduce_catalog_snps(map<int, CSLocus *> &, map<int, set<int> > &, PopMap<CSLocus> *);
 
 #endif // __CATALOG_UTILS_H__
