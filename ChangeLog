@@ -1,16 +1,18 @@
 Stacks 1.21
 --------------------------
+	Feature: Added the XbaI, BstYI, and XhoI restriction enzymes.
  	Feature: Added ability to specify column position in whitelist along with locus ID in
 	populations program. This allows for specific SNPs within specific loci to be processed.
 	Feature: Added HZAR, Hybrid Zone Analysis in R output to populations program.
 	Bugfix: "All positions" Fis measure in batch_X.sumstats_summary.tsv file too negative due
 	to internal logic error.
+	Bugfix: updated queries in index_radtags.pl to account for new 'type' variable in SNPs tables.
 
 Stacks 1.20 - Jul 29, 2014
 --------------------------
 	Synced corrections module branch with main Stacks branch.
 	***
-	The internal formats of the *.tags.tsv, *.snps.tsv, and *.matches.tsv files have changed 
+	The internal formats of the *.tags.tsv, *.snps.tsv, and *.matches.tsv files have changed
 	and therefore version 1.20 programs cannot be used on earlier generated data sets. However,
 	the convert_stacks.pl script is included in this release to convert an older data set into
 	the new formats.

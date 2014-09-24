@@ -94,6 +94,8 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
     //
     vector<SNP *> tmp;
     vector<uint>  cols;
+    set<string>   obshaps;
+    set<string>::iterator sit;
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 
@@ -119,6 +121,9 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
 	// Now we need to adjust the matched haplotypes to sync to 
 	// the SNPs left in the catalog.
 	//
+	// Reducing the lengths of the haplotypes  may create 
+	// redundant (shorter) haplotypes, we need to remove these.
+	//
 	d = pmap->locus(loc->id);
 	for (int i = 0; i < pmap->sample_cnt(); i++) {
 	    if (d[i] == NULL) continue;
@@ -127,7 +132,19 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
 		for (uint k = 0; k < cols.size(); k++)
 		    d[i]->obshap[j][k] = d[i]->obshap[j][cols[k]];
 		d[i]->obshap[j][cols.size()] = '\0';
+		obshaps.insert(d[i]->obshap[j]);
 	    }
+	    uint j = 0;
+	    for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
+		strcpy(d[i]->obshap[j], (*sit).c_str());
+		j++;
+	    }
+	    while (j < d[i]->obshap.size()) {
+		delete [] d[i]->obshap[j];
+		j++;
+	    }
+	    d[i]->obshap.resize(obshaps.size());
+	    obshaps.clear();
 	}
     }
 
