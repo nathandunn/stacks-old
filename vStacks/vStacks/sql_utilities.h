@@ -162,6 +162,9 @@ int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads) {
     }
 
     line_num = 0;
+
+    // if new_version than 1, to offset columns, otherwise 0
+    int new_version = 0 ;
     while (fh.good()) {
         read_line(fh, &line, &size);
 
@@ -170,25 +173,34 @@ int load_loci(string sample, map<int, LocusT *> &loci, bool store_reads) {
 
         parse_tsv(line, parts);
 
-        if (parts.size() != num_snps_fields && parts.size() != num_snps_fields - 2) {
+        // handle the "other size
+        if (parts.size() != num_snps_fields && parts.size() != num_snps_fields - 2 && parts.size() != num_snps_fields+1 && parts.size() != num_snps_fields - 1) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
 
         id = atoi(parts[2].c_str());
 
-        if (blacklisted.count(id))
+        if (blacklisted.count(id) || parts[4].c_str()[0]=='O' || parts[4].c_str()[0]=='U')
             continue;
 
         snp = new SNP;
         snp->col = atoi(parts[3].c_str());
-        snp->lratio = atof(parts[4].c_str());
-        snp->rank_1 = parts[5].at(0);
-        snp->rank_2 = parts[6].at(0);
 
-        if (parts.size() == 9) {
-            snp->rank_3 = parts[7].length() == 0 ? 0 : parts[7].at(0);
-            snp->rank_4 = parts[8].length() == 0 ? 0 : parts[8].at(0);
+        if( parts[4].c_str()[0]=='E'){
+            new_version = 1 ;
+        }
+        else{
+            new_version = 0 ;
+        }
+
+        snp->lratio = atof(parts[4+new_version].c_str());
+        snp->rank_1 = parts[5+new_version].at(0);
+        snp->rank_2 = parts[6+new_version].at(0);
+
+        if (parts.size() == 9+new_version) {
+            snp->rank_3 = parts[7+new_version].length() == 0 ? 0 : parts[7+new_version].at(0);
+            snp->rank_4 = parts[8+new_version].length() == 0 ? 0 : parts[8+new_version].at(0);
         }
 
         if (loci.count(id) > 0) {

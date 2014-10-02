@@ -839,12 +839,16 @@ NSString *calculateType(NSString *file);
 
     NSMutableArray *snpArray;
 
+    // if newVersion is true, this will be 1 and be used to handle the offset.
+    NSUInteger  newVersion = 0 ;
+    id testObject = nil ;
+
     for (line in fileData) {
         @autoreleasepool {
 
             NSArray *columns = [line componentsSeparatedByString:@"\t"];
 
-            if (columns.count > 6) {
+            if (columns.count > 6 && ![[columns objectAtIndex:4] isEqual:@"O"] &&![[columns objectAtIndex:4] isEqual:@"U"] ) {
 
                 // if the StackMO is found
 
@@ -855,7 +859,15 @@ NSString *calculateType(NSString *file);
                 newLocusId = [retrievedObject integerValue];
 
                 column = [[columns objectAtIndex:3] integerValue];
-                lratio = [[columns objectAtIndex:4] floatValue];
+
+                if([[columns objectAtIndex:4] isEqual:@"E"]){
+                    newVersion = 1 ;
+                }
+                else{
+                    newVersion = 0 ;
+                }
+
+                lratio = [[columns objectAtIndex:4+newVersion] floatValue];
 
 
                 if (locusId != newLocusId) {
@@ -870,10 +882,10 @@ NSString *calculateType(NSString *file);
                     NSDictionary *snpDictionary = [NSDictionary dictionaryWithObjectsAndKeys:
                             [NSNumber numberWithInteger:column], @"column"
                             , [NSNumber numberWithFloat:lratio], @"lratio"
-                            , [numberFormatter numberFromString:[columns objectAtIndex:5]], @"rank1"
-                            , [numberFormatter numberFromString:[columns objectAtIndex:6]], @"rank2"
-                            , [numberFormatter numberFromString:[columns objectAtIndex:7]], @"rank3"
-                            , [numberFormatter numberFromString:[columns objectAtIndex:8]], @"rank4"
+                            , [numberFormatter numberFromString:[columns objectAtIndex:5+newVersion]], @"rank1"
+                            , [numberFormatter numberFromString:[columns objectAtIndex:6+newVersion]], @"rank2"
+                            , [numberFormatter numberFromString:[columns objectAtIndex:7+newVersion]], @"rank3"
+                            , [numberFormatter numberFromString:[columns objectAtIndex:8+newVersion]], @"rank4"
                             , nil ];
 
                     if (datumMO.snpData == nil) {
