@@ -1715,14 +1715,17 @@ fixed_locus(map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_
 		continue;
 
 	    } else if (d[i]->obshap.size() == 1) {
-		loc_haplotypes.insert(d[i]->obshap[0]);
-		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-
+		if (!uncalled_haplotype(d[i]->obshap[0])) {
+		    loc_haplotypes.insert(d[i]->obshap[0]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		}
 	    } else {
 		for (uint j = 0; j < d[i]->obshap.size(); j++) {
-		    loc_haplotypes.insert(d[i]->obshap[j]);
-		    pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		    if (!uncalled_haplotype(d[i]->obshap[0])) {
+		        loc_haplotypes.insert(d[i]->obshap[j]);
+			pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		    }
 		}
 	    }
 	}
@@ -1752,6 +1755,15 @@ fixed_locus(map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_
     return false;
 }
 
+inline bool
+uncalled_haplotype(const char *haplotype)
+{
+    for (const char *p = haplotype; *p != '\0'; p++)
+	if (*p == 'N' || *p == 'n')
+	    return true;
+    return false;
+}
+
 LocStat *
 haplotype_diversity(int start, int end, Datum **d)
 {
@@ -1774,13 +1786,16 @@ haplotype_diversity(int start, int end, Datum **d)
 	    continue;
 
 	} else if (d[i]->obshap.size() == 1) {
-	    n += 2;
-	    hap_freq[d[i]->obshap[0]] += 2;
-
+	    if(!uncalled_haplotype(d[i]->obshap[0])) {
+		n += 2;
+		hap_freq[d[i]->obshap[0]] += 2;
+	    }
 	} else {
 	    for (uint j = 0; j < d[i]->obshap.size(); j++) {
-		n++;
-		hap_freq[d[i]->obshap[j]]++;
+		if(!uncalled_haplotype(d[i]->obshap[0])) {
+		    n++;
+		    hap_freq[d[i]->obshap[j]]++;
+		}
 	    }
 	}
     }
@@ -1899,17 +1914,20 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
 		continue;
 
 	    } else if (d[i]->obshap.size() == 1) {
-		loc_hap_index[d[i]->obshap[0]]++;
-		loc_haplotypes.push_back(d[i]->obshap[0]);
-		loc_haplotypes.push_back(d[i]->obshap[0]);
-		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-
+		if(!uncalled_haplotype(d[i]->obshap[0])) {
+		    loc_hap_index[d[i]->obshap[0]]++;
+		    loc_haplotypes.push_back(d[i]->obshap[0]);
+		    loc_haplotypes.push_back(d[i]->obshap[0]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		}
 	    } else {
 		for (uint j = 0; j < d[i]->obshap.size(); j++) {
-		    loc_hap_index[d[i]->obshap[j]]++;
-		    loc_haplotypes.push_back(d[i]->obshap[j]);
-		    pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		    if(!uncalled_haplotype(d[i]->obshap[0])) {
+			loc_hap_index[d[i]->obshap[j]]++;
+			loc_haplotypes.push_back(d[i]->obshap[j]);
+			pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		    }
 		}
 	    }
 	}
