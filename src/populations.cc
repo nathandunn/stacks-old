@@ -53,6 +53,7 @@ bs_type   bootstrap_type    = bs_exact;
 int       bootstrap_reps    = 100;
 bool      bootstrap_wl      = false;
 bool      write_single_snp  = false;
+bool      write_random_snp  = false;
 bool      expand_id         = false;
 bool      sql_out           = false;
 bool      vcf_out           = false;
@@ -185,6 +186,14 @@ int main (int argc, char* argv[]) {
     }
 
     //
+    // Create an artificial whitelist if the user requested only the first SNP per locus.
+    //
+    if (write_single_snp)
+	implement_single_snp_whitelist(catalog, whitelist);
+    else if (write_random_snp)
+	implement_random_snp_whitelist(catalog, whitelist);
+
+    //
     // Implement the black/white list
     //
     reduce_catalog(catalog, whitelist, blacklist);
@@ -225,6 +234,11 @@ int main (int argc, char* argv[]) {
     cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
+
+    //
+    // Implement the white list, part 2, filter SNPs
+    //
+    reduce_catalog_snps(catalog, whitelist, pmap);
 
     log_fh << "# Distribution of population loci.\n";
     log_haplotype_cnts(catalog, log_fh);
@@ -1337,7 +1351,7 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
 	end = git->second.size();
 	fh << "# Group " << grp_key[git->first] << "\t";
 	for (int k = 0; k < end; k++) {
-	    fh << git->second[k];
+	    fh << pop_key[git->second[k]];
 	    if (k < end - 1) fh << ",";
 	}
 	fh << "\n";
@@ -1346,7 +1360,8 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
     fh << "# Batch ID " << "\t"
        << "Locus ID"    << "\t"
        << "Chr"         << "\t"
-       << "BP"          << "\t";
+       << "BP"          << "\t"
+       << "PopCnt"      << "\t";
     if (log_fst_comp)
 	fh << "SSD(WP)"     << "\t"
 	   << "SSD(AP/WG)"  << "\t"
@@ -1390,7 +1405,8 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
 	    fh << batch_id            << "\t"
 	       << hapstats[k]->loc_id << "\t"
 	       << chr                 << "\t"
-	       << hapstats[k]->bp     << "\t";
+	       << hapstats[k]->bp     << "\t"
+	       << hapstats[k]->popcnt << "\t";
 	    if (log_fst_comp)
 		fh << hapstats[k]->comp[0]  << "\t"
 		   << hapstats[k]->comp[1]  << "\t"
@@ -1699,20 +1715,23 @@ fixed_locus(map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_
 		continue;
 
 	    } else if (d[i]->obshap.size() == 1) {
-		loc_haplotypes.insert(d[i]->obshap[0]);
-		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-
+		if (!uncalled_haplotype(d[i]->obshap[0])) {
+		    loc_haplotypes.insert(d[i]->obshap[0]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		}
 	    } else {
 		for (uint j = 0; j < d[i]->obshap.size(); j++) {
-		    loc_haplotypes.insert(d[i]->obshap[j]);
-		    pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		    if (!uncalled_haplotype(d[i]->obshap[0])) {
+		        loc_haplotypes.insert(d[i]->obshap[j]);
+			pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		    }
 		}
 	    }
 	}
     }
 
-    int valid_pops = 0;
+    uint valid_pops = 0;
 
     for (int p = 0; p < pop_cnt; p++) {
 	pop_id = pop_ids[p];
@@ -1733,6 +1752,15 @@ fixed_locus(map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_
     if (loc_haplotypes.size() == 1)
 	return true;
 
+    return false;
+}
+
+inline bool
+uncalled_haplotype(const char *haplotype)
+{
+    for (const char *p = haplotype; *p != '\0'; p++)
+	if (*p == 'N' || *p == 'n')
+	    return true;
     return false;
 }
 
@@ -1758,13 +1786,16 @@ haplotype_diversity(int start, int end, Datum **d)
 	    continue;
 
 	} else if (d[i]->obshap.size() == 1) {
-	    n += 2;
-	    hap_freq[d[i]->obshap[0]] += 2;
-
+	    if(!uncalled_haplotype(d[i]->obshap[0])) {
+		n += 2;
+		hap_freq[d[i]->obshap[0]] += 2;
+	    }
 	} else {
 	    for (uint j = 0; j < d[i]->obshap.size(); j++) {
-		n++;
-		hap_freq[d[i]->obshap[j]]++;
+		if(!uncalled_haplotype(d[i]->obshap[0])) {
+		    n++;
+		    hap_freq[d[i]->obshap[j]]++;
+		}
 	    }
 	}
     }
@@ -1883,20 +1914,33 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
 		continue;
 
 	    } else if (d[i]->obshap.size() == 1) {
-		loc_hap_index[d[i]->obshap[0]]++;
-		loc_haplotypes.push_back(d[i]->obshap[0]);
-		loc_haplotypes.push_back(d[i]->obshap[0]);
-		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-		pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
-
+		if(!uncalled_haplotype(d[i]->obshap[0])) {
+		    loc_hap_index[d[i]->obshap[0]]++;
+		    loc_haplotypes.push_back(d[i]->obshap[0]);
+		    loc_haplotypes.push_back(d[i]->obshap[0]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		    pop_haplotypes[pop_id].push_back(d[i]->obshap[0]);
+		}
 	    } else {
 		for (uint j = 0; j < d[i]->obshap.size(); j++) {
-		    loc_hap_index[d[i]->obshap[j]]++;
-		    loc_haplotypes.push_back(d[i]->obshap[j]);
-		    pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		    if(!uncalled_haplotype(d[i]->obshap[0])) {
+			loc_hap_index[d[i]->obshap[j]]++;
+			loc_haplotypes.push_back(d[i]->obshap[j]);
+			pop_haplotypes[pop_id].push_back(d[i]->obshap[j]);
+		    }
 		}
 	    }
 	}
+    }
+
+    //
+    // What is the total number of populations that had valid haplotypes.
+    //
+    double valid_pop_cnt = 0.0;
+    for (int p = 0; p < pop_cnt; p++) {
+	pop_id = pop_ids[p];
+	if (pop_haplotypes[pop_id].size() > 0)
+	    valid_pop_cnt++;
     }
 
     //
@@ -1998,7 +2042,7 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
 	}
 	s_g += a;
     }
-    n = (tot_cnt - s_g) / (double) (pop_cnt - num_grps);
+    n = (tot_cnt - s_g) / (double) (valid_pop_cnt - num_grps);
 
     // cerr << "  n: "<< n << "\n";
 
@@ -2037,8 +2081,8 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     // Calculate the mean square deviations, equal to SSD divided by degrees of freedom.
     //
     double msd_ag    = num_grps > 1 ? ssd_ag / (double) (num_grps - 1) : 0.0;
-    double msd_ap_wg = ssd_ap_wg / ((double) (pop_cnt - num_grps));
-    double msd_wp    = ssd_wp    / ((double) (loc_haplotypes.size() - pop_cnt));
+    double msd_ap_wg = ssd_ap_wg / ((double) (valid_pop_cnt - num_grps));
+    double msd_wp    = ssd_wp    / ((double) (loc_haplotypes.size() - valid_pop_cnt));
     double msd_total = ssd_total / ((double) (loc_haplotypes.size() - 1));
 
     double sigma_c     = msd_wp;
@@ -2081,8 +2125,8 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     //
     // Calculate the mean square deviations, equal to SSD divided by degrees of freedom.
     //
-    msd_ap_wg   = ssd_ap_wg / ((double) (pop_cnt - num_grps));
-    msd_wp      = ssd_wp    / ((double) (loc_haplotypes.size() - pop_cnt));
+    msd_ap_wg   = ssd_ap_wg / ((double) (valid_pop_cnt - num_grps));
+    msd_wp      = ssd_wp    / ((double) (loc_haplotypes.size() - valid_pop_cnt));
     sigma_c     = msd_wp;
     sigma_b     = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
     sigma_total = sigma_b + sigma_c;
@@ -2101,7 +2145,7 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     //
     // Recalculate the mean square deviations, given maximum divergence between populations.
     //
-    msd_ap_wg = ssd_ap_wg / ((double) (pop_cnt - num_grps));
+    msd_ap_wg = ssd_ap_wg / ((double) (valid_pop_cnt - num_grps));
     sigma_b   = n > 0 ? (msd_ap_wg - sigma_c) / n : 0.0;
 
     double fst_max = sigma_total > 0.0 ? sigma_b / sigma_total : 0.0;
@@ -2112,6 +2156,7 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     //
     h = new HapStat;
     h->alleles = tot_cnt;
+    h->popcnt  = valid_pop_cnt;
 
     if (log_fst_comp) {
 	h->comp = new double[15];
@@ -2199,7 +2244,9 @@ amova_ssd_wp(vector<int> &grps, map<int, vector<int> > &grp_members,
 		    // 	 << hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]] << "\n";
 		}
 	    }
-	    ssd_wp += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
+
+	    if (pop_haplotypes[pop_id].size() > 0)
+		ssd_wp += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
 	}
     }
     // cerr << "  ssd_wp: "<< ssd_wp << "\n";
@@ -2261,7 +2308,9 @@ amova_ssd_ap_wg(vector<int> &grps, map<int, vector<int> > &grp_members,
 		    ssd += hdists_1[loc_hap_index[pop_haplotypes[pop_id][j]]][loc_hap_index[pop_haplotypes[pop_id][k]]];
 		}
 	    }
-	    ssd_2 += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
+
+	    if (pop_haplotypes[pop_id].size() > 0)
+		ssd_2 += (1.0 / (double) (2*pop_haplotypes[pop_id].size())) * ssd;
 	}
 
 	ssd_ap_wg += ssd_1 - ssd_2;
@@ -4027,11 +4076,8 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 
     	    for (uint i = 0; i < loc->snps.size(); i++) {
     		col = loc->snps[i]->col;
-		if (t->nucs[col].allele_cnt == 2) {
+		if (t->nucs[col].allele_cnt == 2)
 		    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
-		    if (write_single_snp) 
-			break;
-		}
 	    }
 	}
 	sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
@@ -4222,8 +4268,6 @@ write_genepop(map<int, CSLocus *> &catalog,
 
 	    fh << loc->id << "_" << col;
 	    if (i <  cnt - 1) fh << ",";
-	    //if (i == cnt - 1 && j < loc->snps.size() - 1) fh << ",";
-	    if (write_single_snp) break;
 	}
 	i++;
     }
@@ -4296,7 +4340,6 @@ write_genepop(map<int, CSLocus *> &catalog,
 			    fh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
 			}
 		    }
-		    if (write_single_snp) break;
 		}
 	    }
 	    fh << "\n";
@@ -4364,13 +4407,8 @@ write_structure(map<int, CSLocus *> &catalog,
 
     	    for (uint i = 0; i < loc->snps.size(); i++) {
     		uint col = loc->snps[i]->col;
-		if (t->nucs[col].allele_cnt == 2) {
-		    fh << "\t" << loc->id;
-		    if (write_single_snp) 
-			break;
-		    else 
-			fh << "_" << col;
-		}
+		if (t->nucs[col].allele_cnt == 2)
+		    fh << "\t" << loc->id << "_" << col;
 	    }
 	}
     }
@@ -4445,7 +4483,6 @@ write_structure(map<int, CSLocus *> &catalog,
 			    else
 				fh << "\t" << nuc_map[p_allele];
 			}
-			if (write_single_snp) break;
 		    }
 		}
     	    }
@@ -4487,7 +4524,6 @@ write_structure(map<int, CSLocus *> &catalog,
 			    else
 				fh << "\t" << nuc_map[q_allele];
 			}
-			if (write_single_snp) break;
 		    }
 		}
     	    }
@@ -4559,9 +4595,6 @@ write_hzar(map<int, CSLocus *> &catalog,
 		    fh << "," << loc->id << "_" << col << ".A"
 		       << "," << loc->id << "_" << col << ".B"
 		       << "," << loc->id << "_" << col << ".N";
-
-		    if (write_single_snp) 
-			break;
 		}
 	    }
 	}
@@ -4577,37 +4610,32 @@ write_hzar(map<int, CSLocus *> &catalog,
 	start_index = pit->second.first;
 	end_index   = pit->second.second;
 
-	fh << pop_key[pop_id];
+	fh << pop_key[pop_id] << ",";
 
-	for (int j = start_index; j <= end_index; j++) {
+	for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	    for (uint pos = 0; pos < it->second.size(); pos++) {
+		loc = it->second[pos];
 
-	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-		for (uint pos = 0; pos < it->second.size(); pos++) {
-		    loc = it->second[pos];
+		s = psum->locus(loc->id);
+		t = psum->locus_tally(loc->id);
 
-		    s = psum->locus(loc->id);
-		    t = psum->locus_tally(loc->id);
+		for (uint i = 0; i < loc->snps.size(); i++) {
+		    uint col = loc->snps[i]->col;
 
-		    for (uint i = 0; i < loc->snps.size(); i++) {
-			uint col = loc->snps[i]->col;
+		    // 
+		    // If this site is fixed in all populations or has too many alleles don't output it.
+		    //
+		    if (t->nucs[col].allele_cnt != 2) 
+			continue;
 
-			// 
-			// If this site is fixed in all populations or has too many alleles don't output it.
-			//
-			if (t->nucs[col].allele_cnt != 2) 
-			    continue;
+		    if (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc)
+			fh << "," << s[p]->nucs[col].p << "," << 1 - s[p]->nucs[col].p << ",";
+		    else
+			fh << "," << 1 - s[p]->nucs[col].p << "," << s[p]->nucs[col].p << ",";
 
-			if (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc)
-			    fh << "," << s[p]->nucs[col].p << "," << 1 - s[p]->nucs[col].p << ",";
-			else
-			    fh << "," << 1 - s[p]->nucs[col].p << "," << s[p]->nucs[col].p << ",";
-
-			fh << s[p]->nucs[col].num_indv * 2;
-
-			if (write_single_snp) break;
-		    }
+		    fh << s[p]->nucs[col].num_indv * 2;
 		}
-    	    }
+	    }
     	}
 	fh << "\n";
     }
@@ -4663,11 +4691,8 @@ write_fastphase(map<int, CSLocus *> &catalog,
 
     	    for (uint i = 0; i < loc->snps.size(); i++) {
     		col = loc->snps[i]->col;
-		if (t->nucs[col].allele_cnt == 2) {
+		if (t->nucs[col].allele_cnt == 2)
 		    total_sites++;
-		    if (write_single_snp) 
-			break;
-		}
 	    }
 	}
 
@@ -4687,11 +4712,8 @@ write_fastphase(map<int, CSLocus *> &catalog,
 
     	    for (uint i = 0; i < loc->snps.size(); i++) {
     		col = loc->snps[i]->col;
-		if (t->nucs[col].allele_cnt == 2) {
+		if (t->nucs[col].allele_cnt == 2)
 		    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
-		    if (write_single_snp) 
-			break;
-		}
 	    }
 	}
 	sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
@@ -5185,15 +5207,11 @@ write_plink(map<int, CSLocus *> &catalog,
 
     	    for (uint i = 0; i < loc->snps.size(); i++) {
     		uint col = loc->snps[i]->col;
-		if (t->nucs[col].allele_cnt == 2) {
+		if (t->nucs[col].allele_cnt == 2)
 		    fh << chr << "\t"
-		       << loc->id;
-		    if (!write_single_snp) 
-			fh << "_" << col;
-		    fh << "\t0\t" << loc->sort_bp(col) << "\n";
-		    if (write_single_snp)
-			break;
-		}
+		       << loc->id << "_" << col << "\t"
+		       << "0\t" 
+		       << loc->sort_bp(col) << "\n";
 	    }
 	}
     }
@@ -5287,8 +5305,6 @@ write_plink(map<int, CSLocus *> &catalog,
 			    else
 				fh << "\t" << p_allele << "\t" << q_allele;
 			}
-
-			if (write_single_snp) break;
 		    }
 		}
 	    }
@@ -5349,11 +5365,8 @@ write_beagle(map<int, CSLocus *> &catalog,
 
 	    for (uint i = 0; i < loc->snps.size(); i++) {
 		col = loc->snps[i]->col;
-		if (t->nucs[col].allele_cnt == 2) {
+		if (t->nucs[col].allele_cnt == 2)
 		    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
-		    if (write_single_snp) 
-			break;
-		}
 	    }
 	}
 	sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
@@ -5441,16 +5454,12 @@ write_beagle(map<int, CSLocus *> &catalog,
 		//
 		// Output this locus to the markers file.
 		//
-		mfh << loc->id;
-		if (!write_single_snp) 
-		    mfh << "_" << col;
-		mfh << "\t" << loc->sort_bp(col) << "\t" 
-		    << t->nucs[col].p_allele     << "\t" 
-		    << t->nucs[col].q_allele     << "\n";
+		mfh << loc->id << "_" << col << "\t" 
+		    << loc->sort_bp(col)     << "\t" 
+		    << t->nucs[col].p_allele << "\t" 
+		    << t->nucs[col].q_allele << "\n";
 
-		fh << "M" << "\t" << loc->id;
-		if (!write_single_snp)
-		    fh << "_" << col;
+		fh << "M" << "\t" << loc->id << "_" << col;
 
 		for (int j = start_index; j <= end_index; j++) {
 		    //
@@ -5511,7 +5520,6 @@ write_beagle(map<int, CSLocus *> &catalog,
 		    }
 		}
 		fh << "\n";
-		if (write_single_snp) break;
 	    }
 
 	    fh.close();
@@ -6517,6 +6525,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"whitelist",     required_argument, NULL, 'W'},
 	    {"blacklist",     required_argument, NULL, 'B'},
 	    {"write_single_snp",  no_argument,       NULL, 'I'},
+	    {"write_random_snp",  no_argument,       NULL, 'j'},
             {"kernel_smoothed",   no_argument,       NULL, 'k'},
             {"fstats",            no_argument,       NULL, '6'},
             {"log_fst_comp",      no_argument,       NULL, 'l'},
@@ -6539,7 +6548,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlkKSACLHEYZFVG123456gvsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:c:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hlkKSACLHEYZFVG123456ijgvsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:c:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -6626,6 +6635,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'I':
 	    write_single_snp = true;
+	    break;
+	case 'j':
+	    write_random_snp = true;
 	    break;
 	case 's':
 	    sql_out = true;
@@ -6757,6 +6769,11 @@ int parse_command_line(int argc, char* argv[]) {
 	}
     }
 
+    if (write_single_snp && write_random_snp) {
+	cerr << "Please specify either '--write_single_snp' or '--write_random_snp', not both.\n";
+	help();
+    }
+
     return 0;
 }
 
@@ -6786,7 +6803,9 @@ void help() {
 	      << "    a: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < a < 0.5).\n"
 	      << "    f: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'.\n"
 	      << "    --p_value_cutoff [num]: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n"
-	      << "    --lnl_lim [num]: filter loci with log likelihood values below this threshold.\n\n"
+	      << "    --lnl_lim [num]: filter loci with log likelihood values below this threshold.\n"
+	      << "    --write_single_snp: restrict data analysis to only the first SNP per locus.\n"
+	      << "    --write_random_snp: restrict data analysis to one random SNP per locus.\n\n"
 	      << "  Fstats:\n"
 	      << "    --fstats: enable SNP and haplotype-based F statistics.\n"
 	      << "  Kernel-smoothing algorithm:\n" 
@@ -6813,8 +6832,7 @@ void help() {
 	      << "    --plink: output genotypes in PLINK format.\n"
 	      << "    --hzar: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
 	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
-	      << "      --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
-	      << "    --write_single_snp: write only the first SNP per locus in Genepop and Structure outputs.\n\n"
+	      << "      --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n\n"
 	      << "  Debugging:\n"
 	      << "    --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n";
     // << "    --bootstrap_type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"

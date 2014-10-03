@@ -71,7 +71,7 @@ $query =
     "SELECT col, rank_2 FROM snps " . 
     "JOIN samples ON (snps.sample_id=samples.id) " . 
     "JOIN batches ON (samples.batch_id=batches.id) " . 
-    "WHERE batch_id=? AND snps.sample_id=? AND tag_id=? ORDER BY col";
+    "WHERE snps.type='E' AND batch_id=? AND snps.sample_id=? AND tag_id=? ORDER BY col";
 $db['snp_sth'] = $db['dbh']->prepare($query);
 check_db_error($db['snp_sth'], __FILE__, __LINE__);
 

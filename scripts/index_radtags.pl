@@ -598,7 +598,7 @@ sub prepare_sql_handles {
     $query = 
 	"SELECT tag_id FROM snps " . 
 	"JOIN samples ON (snps.sample_id=samples.id) " . 
-	"WHERE samples.id=?";
+	"WHERE snps.type='E' AND samples.id=?";
     $sth->{'snps'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
@@ -612,7 +612,7 @@ sub prepare_sql_handles {
     $sth->{'cat_tags'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
-	"SELECT batch_id, tag_id FROM catalog_snps";
+	"SELECT batch_id, tag_id FROM catalog_snps WHERE type='E'";
     $sth->{'cat_snps'} = $sth->{'dbh'}->prepare($query) or die($sth->{'dbh'}->errstr());
 
     $query = 
