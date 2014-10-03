@@ -79,6 +79,7 @@ class HapStat: public PopStat {
     // PopStat[4]: D_est
 public:
     double *comp;
+    uint    popcnt;
 
     HapStat(): PopStat() {
 	comp = NULL;
@@ -752,10 +753,9 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
 	if (d[i]->model[pos] == 'E') {
 	    cerr << "Warning: heterozygous model call at fixed nucleotide position: " 
 		 << "locus " << locus->id << " individual " << d[i]->id << "; position: " << pos << "\n";
-	} else if (d[i]->model[pos] == 'O') {
-	    num_indv++;
-	    p_nuc = locus->con[pos];
 	}
+	num_indv++;
+	p_nuc = locus->con[pos];
     }
     //
     // Record the results in the PopSum object.
