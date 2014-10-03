@@ -79,6 +79,7 @@ class HapStat: public PopStat {
     // PopStat[4]: D_est
 public:
     double *comp;
+    uint    popcnt;
 
     HapStat(): PopStat() {
 	comp = NULL;

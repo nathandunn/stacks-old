@@ -4,6 +4,9 @@ Stacks 1.21
  	Feature: Added ability to specify column position in whitelist along with locus ID in
 	populations program. This allows for specific SNPs within specific loci to be processed.
 	Feature: Added HZAR, Hybrid Zone Analysis in R output to populations program.
+	Bugfix: In Phi_st/ct/sc calculations of populations program, total population count was
+	not adjusted downward when one of the populations dropped out of the analysis at a
+	particular locus.
 	Bugfix: "All positions" Fis measure in batch_X.sumstats_summary.tsv file too negative due
 	to internal logic error.
 	Bugfix: updated queries in index_radtags.pl to account for new 'type' variable in SNPs tables.
