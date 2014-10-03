@@ -54,6 +54,63 @@ reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blac
 }
 
 int 
+implement_single_snp_whitelist(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist) 
+{
+    map<int, set<int> >::iterator wl_it;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
+
+    if (whitelist.size() > 0) {
+	for (wl_it = whitelist.begin(); wl_it != whitelist.end(); wl_it++) {
+	    loc = catalog[wl_it->first];
+
+	    if (loc->snps.size() > 0) 
+		wl_it->second.insert(loc->snps[0]->col);
+	}
+    } else {
+	for (it = catalog.begin(); it != catalog.end(); it++) {
+	    loc = it->second;
+
+	    if (loc->snps.size() > 0) 
+		whitelist[loc->id].insert(loc->snps[0]->col);
+	}
+    }
+
+    return 0;
+}
+
+int 
+implement_random_snp_whitelist(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist) 
+{
+    map<int, set<int> >::iterator wl_it;
+    map<int, CSLocus *>::iterator it;
+    CSLocus *loc;
+    uint index;
+
+    if (whitelist.size() > 0) {
+	for (wl_it = whitelist.begin(); wl_it != whitelist.end(); wl_it++) {
+	    loc = catalog[wl_it->first];
+
+	    if (loc->snps.size() > 0) {
+		index = rand() % loc->snps.size();
+		wl_it->second.insert(loc->snps[index]->col);
+	    }
+	}
+    } else {
+	for (it = catalog.begin(); it != catalog.end(); it++) {
+	    loc = it->second;
+
+	    if (loc->snps.size() > 0) {
+		index = rand() % loc->snps.size();
+		whitelist[loc->id].insert(loc->snps[index]->col);
+	    }
+	}
+    }
+
+    return 0;
+}
+
+int 
 reduce_catalog(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, set<int> &blacklist) 
 {
     map<int, CSLocus *> list;
