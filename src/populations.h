@@ -122,6 +122,7 @@ int      kernel_smoothed_hapstats(vector<CSLocus *> &, PopSum<CSLocus> *, int, d
 int      calculate_haplotype_divergence(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int      calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 bool     fixed_locus(map<int, pair<int, int> > &, Datum **, vector<int> &);
+bool     uncalled_haplotype(const char *);
 
 int      nuc_substitution_dist(map<string, int> &, double **);
 int      nuc_substitution_identity(map<string, int> &, double **);

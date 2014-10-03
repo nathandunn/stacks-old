@@ -1,12 +1,19 @@
-Stacks 1.21
+Stacks 1.21 - Oct 02, 2014
 --------------------------
 	Feature: Added the XbaI, BstYI, and XhoI restriction enzymes.
  	Feature: Added ability to specify column position in whitelist along with locus ID in
 	populations program. This allows for specific SNPs within specific loci to be processed.
+	Feature: In populations program, changed implementation of --write_single_snp to create
+	an internal whitelist from the first SNP in each catalog locus. Added a new command
+	line option, --write_random_snp to select a single, random SNP per RAD locus using the
+	same internal mechanism.
 	Feature: Added HZAR, Hybrid Zone Analysis in R output to populations program.
+	Bugfix: Added code in populations program to handle cases where a haplotype contains one
+	or more uncalled bases (Ns). These haplotypes are now excluded from haplotype-based
+	statistical calculations.
 	Bugfix: In Phi_st/ct/sc calculations of populations program, total population count was
 	not adjusted downward when one of the populations dropped out of the analysis at a
-	particular locus.
+	particular locus in the all-populations, haplotype-based AMOVA calculation (batch_X.phistats.tsv).
 	Bugfix: "All positions" Fis measure in batch_X.sumstats_summary.tsv file too negative due
 	to internal logic error.
 	Bugfix: updated queries in index_radtags.pl to account for new 'type' variable in SNPs tables.
