@@ -1,3 +1,15 @@
+Stacks 1.22
+--------------------------
+	Bugfix: Tightened up parsing of FASTQ ID field to prevent a buffer overrun (and subsequent
+	segfault) in FASTQ headers that look like the Illumina format but are malformed.
+	Bugfix: Fixed GenePop output of populations program as last locus on second line was missing
+	commas if more than one SNP was present at that locus.
+	Bugfix: -R option to retain unused reads was not being recognized by ustacks.
+	Bugfix: changed populations to record program run parameters and execution time to log file.
+	Bugfix: corrected Makefile.am to include Sparsehash compile flags for process_radtags.
+	Bugfix: corrected load_radtags.pl so as not to try and load the population ID as a
+	number to the samples table (and instead as a string).
+
 Stacks 1.21 - Oct 02, 2014
 --------------------------
 	Feature: Added the XbaI, BstYI, and XhoI restriction enzymes.
