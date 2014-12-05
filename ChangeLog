@@ -1,5 +1,6 @@
 Stacks 1.22
 --------------------------
+	Feature: Added SacI and BgIII restriction enzymes.
 	Bugfix: Tightened up parsing of FASTQ ID field to prevent a buffer overrun (and subsequent
 	segfault) in FASTQ headers that look like the Illumina format but are malformed.
 	Bugfix: Fixed GenePop output of populations program as last locus on second line was missing
