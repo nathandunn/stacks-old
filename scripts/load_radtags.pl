@@ -176,11 +176,11 @@ foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
     $pop_id = shift(@pop_ids);
 
     if (!$dry_run) {
-	@results = `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id"`;
+	@results = `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id='$pop_id'"`;
     }
     print STDERR 
 	"mysql --defaults-file=$cnf $db ",
-	"-e \"INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id\"\n", 
+	"-e \"INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id='$pop_id'\"\n", 
 	@results;
 
     $f = $in_path . "/$file" . ".tags.tsv";

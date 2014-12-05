@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -275,10 +275,18 @@ int process_paired_reads(string in_path_1,
     pos  = in_file_1.find_last_of(".");
     path = out_path + in_file_1.substr(0, pos) + ".fil" + in_file_1.substr(pos);
     ofstream *ofh_1 = new ofstream(path.c_str(), ifstream::out);
+    if (ofh_1->fail()) {
+	cerr << "Error opening filtered output file '" << path << "'\n";
+	exit(1);
+    }
 
     pos  = in_file_2.find_last_of(".");
     path = out_path + in_file_2.substr(0, pos) + ".fil" + in_file_2.substr(pos);
     ofstream *ofh_2  = new ofstream(path.c_str(), ifstream::out);
+    if (ofh_2->fail()) {
+	cerr << "Error opening filtered paired output file '" << path << "'\n";
+	exit(1);
+    }
 
     pos  = in_file_2.find_last_of(".");
     //
@@ -289,6 +297,10 @@ int process_paired_reads(string in_path_1,
     path  = out_path + in_file_2.substr(0, pos) + ".rem.fil";
     path += out_file_type == fastq ? ".fq" : ".fa";
     ofstream *rem_fh = new ofstream(path.c_str(), ifstream::out);
+    if (rem_fh->fail()) {
+	cerr << "Error opening filtered remainder output file '" << path << "'\n";
+	exit(1);
+    }
 
     //
     // Open a file for recording discarded reads
@@ -458,6 +470,11 @@ int process_reads(string in_path,
     path = out_path + in_file.substr(0, pos) + ".fil" + in_file.substr(pos);
     ofstream *out_fh = new ofstream(path.c_str(), ifstream::out);    
 
+    if (out_fh->fail()) {
+	cerr << "Error opening output file '" << path << "'\n";
+	exit(1);
+    }
+
     //
     // Open a file for recording discarded reads
     //
@@ -612,9 +629,19 @@ normalize_paired_reads(string in_path_1,
 	path_1 = out_path + in_file_1.substr(0, pos) + ".fil.norm" + in_file_1.substr(pos);
 	ofh_1  = new ofstream(path_1.c_str(), ifstream::out);
 
+	if (ofh_1->fail()) {
+	    cerr << "Error opening normalized output file '" << path_1 << "'\n";
+	    exit(1);
+	}
+
 	pos    = in_file_2.find_last_of(".");
 	path_2 = out_path + in_file_2.substr(0, pos) + ".fil.norm" + in_file_2.substr(pos);
 	ofh_2  = new ofstream(path_2.c_str(), ifstream::out);
+
+	if (ofh_2->fail()) {
+	    cerr << "Error opening normalized paired output file '" << path_2 << "'\n";
+	    exit(1);
+	}
 
 	if (in_file_2.substr(pos - 2, 2) == ".2") 
 	    pos -= 2;
@@ -622,20 +649,40 @@ normalize_paired_reads(string in_path_1,
 	path_2 += out_file_type == fastq ? ".fq" : ".fa";
 	rem_fh  = new ofstream(path_2.c_str(), ifstream::out);
 
+	if (rem_fh->fail()) {
+	    cerr << "Error opening normalized remainder output file '" << path_2 << "'\n";
+	    exit(1);
+	}
+
     } else {
 	pos    = in_file_1.find_last_of(".");
 	path_1 = out_path + in_file_1.substr(0, pos) + ".norm" + in_file_1.substr(pos);
 	ofh_1  = new ofstream(path_1.c_str(), ifstream::out);
 
+	if (ofh_1->fail()) {
+	    cerr << "Error opening normalized output file '" << path_1 << "'\n";
+	    exit(1);
+	}
+
 	pos    = in_file_2.find_last_of(".");
 	path_2 = out_path + in_file_2.substr(0, pos) + ".norm" + in_file_2.substr(pos);
 	ofh_2  = new ofstream(path_2.c_str(), ifstream::out);
+
+	if (ofh_2->fail()) {
+	    cerr << "Error opening normalized paired output file '" << path_2 << "'\n";
+	    exit(1);
+	}
 
 	if (in_file_2.substr(pos - 2, 2) == ".2") 
 	    pos -= 2;
 	path_2  = out_path + in_file_2.substr(0, pos) + ".norm.rem";
 	path_2 += out_file_type == fastq ? ".fq" : ".fa";
 	rem_fh  = new ofstream(path_2.c_str(), ifstream::out);
+
+	if (rem_fh->fail()) {
+	    cerr << "Error opening normalized remainder output file '" << path_2 << "'\n";
+	    exit(1);
+	}
     }
 
     //
@@ -814,6 +861,11 @@ normalize_reads(string in_path,
     // }
     path = out_path + in_file.substr(0, pos) + ".norm" + in_file.substr(pos);
     ofstream *out_fh = new ofstream(path.c_str(), ifstream::out);    
+
+    if (out_fh->fail()) {
+	cerr << "Error opening normalized output file '" << path << "'\n";
+	exit(1);
+    }
 
     //
     // Open a file for recording discarded reads
@@ -1737,6 +1789,15 @@ int parse_command_line(int argc, char* argv[]) {
     if (min_k_pct < 0.0 || min_k_pct > 1.0) {
 	cerr << "Percentage to consider a kmer rare must be between 0 and 1.0.\n";
 	help();
+    }
+
+    //
+    // Check that the output path exists.
+    //
+    struct stat info;
+    if (stat(out_path.c_str(), &info) != 0) {
+	cerr << "Unable to locate the specified output path, '" << out_path << "'\n";
+	exit(1);
     }
 
     return 0;

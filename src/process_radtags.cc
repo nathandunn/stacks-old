@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -63,9 +63,9 @@ int      bc_size_1    = 0;
 int      bc_size_2    = 0;
 int      barcode_dist = 2;
 double   win_size     = 0.15;
-int      score_limit  = 10;
-int      len_limit    = 0;
-int      num_threads  = 1;
+uint     score_limit  = 10;
+uint     len_limit    = 0;
+uint     num_threads  = 1;
 
 //
 // How to shift FASTQ-encoded quality scores from ASCII down to raw scores

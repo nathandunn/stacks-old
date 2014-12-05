@@ -63,6 +63,7 @@ using std::set;
 #include "PopMap.h"
 #include "PopSum.h"
 #include "utils.h"
+#include "log_utils.h"
 #include "catalog_utils.h"
 #include "sql_utilities.h"
 #include "genotype_dictionaries.h"

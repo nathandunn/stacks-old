@@ -138,9 +138,11 @@ parse_input_record(Seq *s, Read *r)
 	// @<instrument>:<run number>:<flowcell ID>:<lane>:<tile>:<x-pos>:<y-pos> <read>:<is filtered>:<control number>:<index sequence>
 	//
 	for (p = s->id, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	strcpy(r->machine, p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    strcpy(r->machine, p);
+	    *q = ':';
+	}
 
 	// Run number.
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
@@ -151,34 +153,46 @@ parse_input_record(Seq *s, Read *r)
 	//*q = '\0';
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->lane = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->lane = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	if (q < stop) {
 	*q = '\0';
 	r->tile = atoi(p);
 	*q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->x = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->x = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ' ' && q < stop; q++);
-	*q = '\0';
-	r->y = atoi(p);
-	*q = ' ';
+	if (q < stop) {
+	    *q = '\0';
+	    r->y = atoi(p);
+	    *q = ' ';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	// r->read = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    // r->read = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->filter = *p == 'Y' ? true : false;
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->filter = *p == 'Y' ? true : false;
+	    *q = ':';
+	}
 
 	// Control Number.
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
@@ -187,7 +201,10 @@ parse_input_record(Seq *s, Read *r)
 	//
 	// Index barcode
 	//
-	for (p = q+1, q = p; q < stop; q++);
+	if (q < stop)
+	    for (p = q+1, q = p; q < stop; q++);
+	else
+	    p = q;
 
 	if (*p != '\0' && r->read == 1) {
 	    switch (barcode_type) {
@@ -220,34 +237,46 @@ parse_input_record(Seq *s, Read *r)
 	r->fastq_type = illv1_fastq;
 
 	for (p = s->id, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	strcpy(r->machine, p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    strcpy(r->machine, p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->lane = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->lane = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->tile = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->tile = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->x = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->x = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != '#' && q < stop; q++);
-	*q = '\0';
-	r->y = atoi(p);
-	*q = '#';
+	if (q < stop) {
+	    *q = '\0';
+	    r->y = atoi(p);
+	    *q = '#';
+	}
 
 	for (p = q+1, q = p; *q != '/' && q < stop; q++);
-	*q = '\0';
-	r->index = atoi(p);
-	*q = '/';
+	if (q < stop) {
+	    *q = '\0';
+	    r->index = atoi(p);
+	    *q = '/';
+	}
 
 	for (p = q+1, q = p; *q != '\0' && q < stop; q++);
 	// r->read = atoi(p);

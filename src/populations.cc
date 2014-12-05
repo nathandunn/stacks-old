@@ -165,12 +165,11 @@ int main (int argc, char* argv[]) {
     log << "batch_" << batch_id << ".populations.log";
     string log_path = in_path + log.str();
     ofstream log_fh(log_path.c_str(), ofstream::out);
-
     if (log_fh.fail()) {
         cerr << "Error opening log file '" << log_path << "'\n";
 	exit(1);
     }
-
+    init_log(log_fh, argc, argv);
 
     //
     // Load the catalog
@@ -4267,7 +4266,7 @@ write_genepop(map<int, CSLocus *> &catalog,
 		continue;
 
 	    fh << loc->id << "_" << col;
-	    if (i <  cnt - 1) fh << ",";
+	    if (i <  cnt - 1 || (i == cnt - 1 && j < loc->snps.size() - 1)) fh << ",";
 	}
 	i++;
     }

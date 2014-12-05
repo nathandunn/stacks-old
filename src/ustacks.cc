@@ -2037,7 +2037,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hHvdrgA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hHvdrgRA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:T:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)

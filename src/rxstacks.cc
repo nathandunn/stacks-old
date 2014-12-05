@@ -1728,7 +1728,7 @@ void help() {
 	      << "    --conf_filter: filter confounded loci.\n"
 	      << "    --conf_lim <limit>: between 0.0 and 1.0 (default 0.75), proportion of loci in population that must be confounded relative to the catalog locus.\n"
 	      << "    --prune_haplo: prune out non-biological haplotypes unlikely to occur in the population.\n"
-	      << "    --max_haplo_cnt <limit>: only consider haplotypes for pruning if they occur in fewer than max_haplo_cnt samples.\n"
+	      << "    --max_haplo <limit>: only consider haplotypes for pruning if they occur in fewer than max_haplo_cnt samples.\n"
 	      << "  Model options:\n" 
 	      << "    --model_type <type>: either 'snp' (default), 'bounded', or 'fixed'\n"
 	      << "    For the SNP or Bounded SNP model:\n"
