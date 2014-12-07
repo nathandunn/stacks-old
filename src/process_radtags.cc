@@ -34,7 +34,7 @@
 // Global variables to hold command-line options.
 //
 file_type in_file_type  = unknown;
-file_type out_file_type = fastq;
+file_type out_file_type = unknown;
 string in_file;
 string in_file_p1;
 string in_file_p2;
@@ -92,6 +92,12 @@ int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
+    //
+    // If input files are gzipped, output gziped files, unless the user chooses an output type.
+    //
+    if (out_file_type == unknown)
+	out_file_type = in_file_type == gzfastq ? gzfastq : fastq;
+
     cerr << "Using Phred+" << qual_offset << " encoding for quality scores.\n";
     if (truncate_seq > 0)
 	cerr << "Reads will be truncated to " << truncate_seq << "bp\n";
@@ -115,13 +121,17 @@ int main (int argc, char* argv[]) {
     vector<BarcodePair>                  barcodes;
     set<string>                          se_bc, pe_bc;
     map<BarcodePair, ofstream *>         pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs;
+    map<BarcodePair, gzFile *>           pair_1_gzfhs, pair_2_gzfhs, rem_1_gzfhs, rem_2_gzfhs;
     map<string, map<string, long> >      counters;
     map<BarcodePair, map<string, long> > barcode_log;
 
     build_file_list(files);
     load_barcodes(barcode_file, barcodes, se_bc, pe_bc, bc_size_1, bc_size_2);
 
-    open_files(files, barcodes, pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs, counters);
+    if (out_file_type == gzfastq || out_file_type == gzfasta)
+	open_files(files, barcodes, pair_1_gzfhs, pair_2_gzfhs, rem_1_gzfhs, rem_2_gzfhs, counters);
+    else
+	open_files(files, barcodes, pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs, counters);
 
     for (uint i = 0; i < files.size(); i++) {
 	cerr << "Processing file " << i+1 << " of " << files.size() << " [" << files[i].first.c_str() << "]\n";
@@ -135,16 +145,29 @@ int main (int argc, char* argv[]) {
 	counters[files[i].first]["retained"]     = 0;
 	counters[files[i].first]["recovered"]    = 0;
 
-	if (paired)
-	    process_paired_reads(files[i].first, files[i].second, 
-				 se_bc, pe_bc,
-				 pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs,
-				 counters[files[i].first], barcode_log);
-	else
-	    process_reads(files[i].first, 
-			  se_bc, pe_bc,
-	    		  pair_1_fhs, 
-	    		  counters[files[i].first], barcode_log);
+	if (paired) {
+	    if (out_file_type == gzfastq || out_file_type == gzfasta)
+	    	process_paired_reads(files[i].first, files[i].second, 
+	    			     se_bc, pe_bc,
+	    			     pair_1_gzfhs, pair_2_gzfhs, rem_1_gzfhs, rem_2_gzfhs,
+	    			     counters[files[i].first], barcode_log);
+	    else
+		process_paired_reads(files[i].first, files[i].second, 
+				     se_bc, pe_bc,
+				     pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs,
+				     counters[files[i].first], barcode_log);
+	} else {
+	    if (out_file_type == gzfastq || out_file_type == gzfasta)
+	    	process_reads(files[i].first, 
+	    		      se_bc, pe_bc,
+	    		      pair_1_gzfhs, 
+	    		      counters[files[i].first], barcode_log);
+	    else
+		process_reads(files[i].first, 
+			      se_bc, pe_bc,
+			      pair_1_fhs, 
+			      counters[files[i].first], barcode_log);
+	}
 
 	cerr <<	"  " 
 	     << counters[files[i].first]["total"] << " total reads; ";
@@ -161,11 +184,20 @@ int main (int argc, char* argv[]) {
     }
 
     cerr << "Closing files, flushing buffers...\n";
-    close_file_handles(pair_1_fhs);
-    if (paired) {
-	close_file_handles(rem_1_fhs);
-	close_file_handles(rem_2_fhs);
-	close_file_handles(pair_2_fhs);
+    if (out_file_type == gzfastq || out_file_type == gzfasta) {
+	close_file_handles(pair_1_gzfhs);
+	if (paired) {
+	    close_file_handles(rem_1_gzfhs);
+	    close_file_handles(rem_2_gzfhs);
+	    close_file_handles(pair_2_gzfhs);
+	}
+    } else {
+	close_file_handles(pair_1_fhs);
+	if (paired) {
+	    close_file_handles(rem_1_fhs);
+	    close_file_handles(rem_2_fhs);
+	    close_file_handles(pair_2_fhs);
+	}
     }
 
     print_results(argc, argv, barcodes, counters, barcode_log);
@@ -173,15 +205,17 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int process_paired_reads(string prefix_1, 
-			 string prefix_2,
-			 set<string> &se_bc, set<string> &pe_bc,
-			 map<BarcodePair, ofstream *> &pair_1_fhs, 
-			 map<BarcodePair, ofstream *> &pair_2_fhs, 
-			 map<BarcodePair, ofstream *> &rem_1_fhs,
-			 map<BarcodePair, ofstream *> &rem_2_fhs,
-			 map<string, long> &counter, 
-			 map<BarcodePair, map<string, long> > &barcode_log) {
+template <typename fhType>
+int 
+process_paired_reads(string prefix_1, 
+		     string prefix_2,
+		     set<string> &se_bc, set<string> &pe_bc,
+		     map<BarcodePair, fhType *> &pair_1_fhs, 
+		     map<BarcodePair, fhType *> &pair_2_fhs, 
+		     map<BarcodePair, fhType *> &rem_1_fhs,
+		     map<BarcodePair, fhType *> &rem_2_fhs,
+		     map<string, long> &counter, 
+		     map<BarcodePair, map<string, long> > &barcode_log) {
     Input *fh_1, *fh_2;
     Read  *r_1, *r_2;
     ofstream *discard_fh_1, *discard_fh_2;
@@ -297,10 +331,10 @@ int process_paired_reads(string prefix_1,
 	    process_singlet(r_2, renz_2, pe_offset, true,  barcode_log[bc], counter);
 
 	if (r_1->retain && r_2->retain) {
-	    out_file_type == fastq ?
+	    (out_file_type == fastq || out_file_type == gzfastq) ?
 		write_fastq(pair_1_fhs[bc], r_1, overhang) :
  		write_fasta(pair_1_fhs[bc], r_1, overhang);
-            out_file_type == fastq ?
+            (out_file_type == fastq || out_file_type == gzfastq) ?
                 write_fastq(pair_2_fhs[bc], r_2, overhang) :
                 write_fasta(pair_2_fhs[bc], r_2, overhang);
 
@@ -308,24 +342,24 @@ int process_paired_reads(string prefix_1,
 	    //
 	    // Write to the remainder file.
 	    //
-	    out_file_type == fastq ? 
+	    (out_file_type == fastq || out_file_type == gzfastq) ? 
 		write_fastq(rem_1_fhs[bc], r_1, overhang) : 
 		write_fasta(rem_1_fhs[bc], r_1, overhang);
 	} else if (!r_1->retain && r_2->retain) {
 	    //
 	    // Write to the remainder file.
 	    //
-	    out_file_type == fastq ? 
+	    (out_file_type == fastq || out_file_type == gzfastq) ? 
 		write_fastq(rem_2_fhs[bc], r_2, overhang) : 
 		write_fasta(rem_2_fhs[bc], r_2, overhang);
 	}
 
 	if (discards && !r_1->retain)
-	    out_file_type == fastq ? 
+	    (out_file_type == fastq || out_file_type == gzfastq) ? 
 		write_fastq(discard_fh_1, s_1) : 
 		write_fasta(discard_fh_1, s_1);
 	if (discards && !r_2->retain)
-	    out_file_type == fastq ? 
+	    (out_file_type == fastq || out_file_type == gzfastq) ? 
 		write_fastq(discard_fh_2, s_2) : 
 		write_fasta(discard_fh_2, s_2);
 
@@ -350,11 +384,13 @@ int process_paired_reads(string prefix_1,
     return 0;
 }
 
-int process_reads(string prefix, 
-		  set<string> &se_bc, set<string> &pe_bc,
-		  map<BarcodePair, ofstream *> &pair_1_fhs, 
-		  map<string, long> &counter, 
-		  map<BarcodePair, map<string, long> > &barcode_log) {
+template <typename fhType>
+int 
+process_reads(string prefix, 
+	      set<string> &se_bc, set<string> &pe_bc,
+	      map<BarcodePair, fhType *> &pair_1_fhs, 
+	      map<string, long> &counter, 
+	      map<BarcodePair, map<string, long> > &barcode_log) {
     Input *fh;
     Read  *r;
     ofstream *discard_fh;
@@ -440,7 +476,7 @@ int process_reads(string prefix,
 	    process_singlet(r, renz_1, se_offset, false, barcode_log[bc], counter);
 
 	 if (r->retain)
-	     out_file_type == fastq ? 
+	     (out_file_type == fastq || out_file_type == gzfastq) ? 
 		 write_fastq(pair_1_fhs[bc], r, overhang) : 
  		 write_fasta(pair_1_fhs[bc], r, overhang);
 
@@ -696,11 +732,23 @@ print_results(int argc, char **argv,
     if (bc_size_1 == 0) return 0;
 
     //
+    // Where barcode filenames specified?
+    //
+    bool bc_names = false;
+    for (uint i = 0; i < barcodes.size(); i++)
+	if (barcodes[i].name_exists()) {
+	    bc_names = true;
+	    break;
+	}
+
+    //
     // Print out barcode information.
     //
     log << "\n"
-	<< "Barcode\t" 
-	<< "Total\t"
+	<< "Barcode\t";
+    if (bc_names)
+	log << "Filename\t";
+    log << "Total\t"
 	<< "No RadTag\t"
 	<< "Low Quality\t"
 	<< "Retained\n";
@@ -710,11 +758,14 @@ print_results(int argc, char **argv,
     for (uint i = 0; i < barcodes.size(); i++) {
 	barcode_list.insert(barcodes[i]);
 
+	log << barcodes[i] << "\t";
+	if (bc_names)
+	    log << barcodes[i].name << "\t";
+
         if (barcode_log.count(barcodes[i]) == 0)
-            log << barcodes[i] << "\t" << "0\t" << "0\t" << "0\t" << "0\n";
+            log << "0\t" << "0\t" << "0\t" << "0\n";
         else
-	    log << barcodes[i] << "\t"
-                << barcode_log[barcodes[i]]["total"]    << "\t"
+	    log << barcode_log[barcodes[i]]["total"]    << "\t"
 		<< barcode_log[barcodes[i]]["noradtag"] << "\t"
 		<< barcode_log[barcodes[i]]["low_qual"] << "\t"
                 << barcode_log[barcodes[i]]["retained"] << "\n";
@@ -817,10 +868,14 @@ int parse_command_line(int argc, char* argv[]) {
                 in_file_type = fastq;
 	    break;
      	case 'y':
-            if (strcasecmp(optarg, "fasta") == 0)
+	    if (strcasecmp(optarg, "fastq") == 0)
+                out_file_type = fastq;
+	    else if (strcasecmp(optarg, "gzfastq") == 0)
+                out_file_type = gzfastq;
+	    else if (strcasecmp(optarg, "fasta") == 0)
                 out_file_type = fasta;
-	    else 
-		out_file_type = fastq;
+	    else if (strcasecmp(optarg, "gzfasta") == 0)
+                out_file_type = gzfasta;
 	    break;
      	case 'E':
             if (strcasecmp(optarg, "phred64") == 0)
@@ -1032,12 +1087,12 @@ void help() {
               << "process_radtags [-f in_file | -p in_dir [-P] | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim] [-h]\n"
 	      << "  f: path to the input file if processing single-end sequences.\n"
 	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, 'fastq', or 'gzfastq' for gzipped Fastq (default 'fastq').\n"
+	      << "  y: output type, either 'fastq', 'gzfastq', 'fasta', or 'gzfasta' (default is to match the input file type).\n"
 	      << "  p: path to a directory of files.\n"
 	      << "  P: files contained within directory specified by '-p' are paired.\n"
 	      << "  1: first input file in a set of paired-end sequences.\n"
 	      << "  2: second input file in a set of paired-end sequences.\n"
 	      << "  o: path to output the processed files.\n"
-	      << "  y: output type, either 'fastq' or 'fasta' (default fastq).\n"
 	      << "  b: path to a file containing barcodes for this run.\n"
 	      << "  c: clean data, remove any read with an uncalled base.\n"
 	      << "  q: discard reads with low quality scores.\n"
@@ -1077,7 +1132,7 @@ void help() {
 	it++;
     }
 
-    std::cerr << ".\n\n" 
+    std::cerr << "\n" 
 	      << "  Adapter options:\n"
 	      << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the single-end read for filtering.\n"
 	      << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
@@ -1088,7 +1143,8 @@ void help() {
 	      << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
 	      << "    --disable_rad_check: disable checking if the RAD site is intact.\n"
 	      << "    --len_limit <limit>: specify a minimum sequence length (useful if your data has already been trimmed).\n"
-	      << "    --barcode_dist: provide the distace between barcodes to allow for barcode rescue (default 2)\n";
+	      << "    --barcode_dist: provide the nucleotide distance between barcodes. This allows for barcode rescue if \n"
+	      << "                    there are less than distance-1 sequencing errors in the barcode (default 2).\n";
 
     exit(0);
 }

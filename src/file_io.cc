@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2012-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -25,18 +25,17 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-// $Id: file_io.cc 2146 2011-08-02 22:11:50Z catchen $
-//
 
 #include "file_io.h"
 
-int open_files(vector<pair<string, string> > &files,
-	       vector<BarcodePair> &barcodes, 
-	       map<BarcodePair, ofstream *> &pair_1_fhs, 
-	       map<BarcodePair, ofstream *> &pair_2_fhs, 
-	       map<BarcodePair, ofstream *> &rem_1_fhs, 
-	       map<BarcodePair, ofstream *> &rem_2_fhs, 
-	       map<string, map<string, long> > &counters) {
+int 
+open_files(vector<pair<string, string> > &files,
+	   vector<BarcodePair> &barcodes, 
+	   map<BarcodePair, ofstream *> &pair_1_fhs, 
+	   map<BarcodePair, ofstream *> &pair_2_fhs, 
+	   map<BarcodePair, ofstream *> &rem_1_fhs, 
+	   map<BarcodePair, ofstream *> &rem_2_fhs, 
+	   map<string, map<string, long> > &counters) {
     string path, suffix_1, suffix_2, filepath;
 
     if (paired && interleave == false) {
@@ -50,7 +49,7 @@ int open_files(vector<pair<string, string> > &files,
 	suffix_1 += ".fa";
 	suffix_2 += ".fa";
     }
-
+    
     int         pos;
     ofstream   *fh;
     BarcodePair bc;
@@ -226,10 +225,14 @@ int open_files(vector<pair<string, string> > &files,
 	return 0;
     }
 
+    string filename;
+
     for (uint i = 0; i < barcodes.size(); i++) {
 
+	filename = barcodes[i].name_exists() ? barcodes[i].name : "sample_" + barcodes[i].str();
+
         if (interleave == true) {
-	    path = out_path + "sample_" + barcodes[i].str() + suffix_1;
+	    path = out_path + filename + suffix_1;
 	    fh = new ofstream(path.c_str());
             pair_1_fhs[barcodes[i]] = fh;
  
@@ -239,7 +242,7 @@ int open_files(vector<pair<string, string> > &files,
 	    }
 
         } else {
-	    path = out_path + "sample_" + barcodes[i].str() + suffix_1;
+	    path = out_path + filename + suffix_1;
 	    fh = new ofstream(path.c_str(), ifstream::out);
             pair_1_fhs[barcodes[i]] = fh;
 
@@ -249,7 +252,7 @@ int open_files(vector<pair<string, string> > &files,
 	    }
 
             if (paired) {
-		path = out_path + "sample_" + barcodes[i].str() + suffix_2;
+		path = out_path + filename + suffix_2;
 		fh = new ofstream(path.c_str(), ifstream::out);
                 pair_2_fhs[barcodes[i]] = fh;
 
@@ -258,7 +261,7 @@ int open_files(vector<pair<string, string> > &files,
 		    exit(1);
 		}
 
-		path = out_path + "sample_" + barcodes[i].str() + ".rem" + suffix_1;
+		path = out_path + filename + ".rem" + suffix_1;
 		fh = new ofstream(path.c_str(), ifstream::out);
                 rem_1_fhs[barcodes[i]] = fh;
 
@@ -267,7 +270,7 @@ int open_files(vector<pair<string, string> > &files,
 		    exit(1);
 		}
 
-		path = out_path + "sample_" + barcodes[i].str() + ".rem" + suffix_2;
+		path = out_path + filename + ".rem" + suffix_2;
 		fh = new ofstream(path.c_str(), ifstream::out);
                 rem_2_fhs[barcodes[i]] = fh;
 
@@ -275,6 +278,263 @@ int open_files(vector<pair<string, string> > &files,
 		    cerr << "Error opening remainder output file '" << path << "'\n";
 		    exit(1);
 		}
+            }
+        }
+    }
+
+    return 0;
+}
+
+int 
+open_files(vector<pair<string, string> > &files,
+	   vector<BarcodePair> &barcodes, 
+	   map<BarcodePair, gzFile *> &pair_1_fhs, 
+	   map<BarcodePair, gzFile *> &pair_2_fhs, 
+	   map<BarcodePair, gzFile *> &rem_1_fhs, 
+	   map<BarcodePair, gzFile *> &rem_2_fhs, 
+	   map<string, map<string, long> > &counters) {
+    string path, suffix_1, suffix_2, filepath;
+
+    if (paired && interleave == false) {
+	suffix_1 = ".1";
+	suffix_2 = ".2";
+    }
+    if (out_file_type == gzfastq) {
+	suffix_1 += ".fq.gz";
+	suffix_2 += ".fq.gz";
+    } else {
+	suffix_1 += ".fa.gz";
+	suffix_2 += ".fa.gz";
+    }
+    
+    int         pos;
+    gzFile     *fh;
+    BarcodePair bc;
+    //
+    // If the size of the barcodes vector is 0, then no barcodes
+    // were submitted. In this case, we want to open output files
+    // of the same name as input files, but in out_path.
+    //
+    if (barcodes.size() == 0 && merge == false) {
+
+	struct stat sb_1, sb_2;
+
+	for (uint i = 0; i < files.size(); i++) {
+
+	    bc.se = files[i].first;
+	    if (paired)
+		bc.pe = files[i].second;
+
+	    path = out_path + files[i].first;
+
+	    if (stat((in_path_1 + files[i].first).c_str(), &sb_1) == -1) {
+		cerr << "Unable to stat input file " << in_path_1 + files[i].first << "\n";
+		exit(1);
+	    }
+	    if (stat(path.c_str(), &sb_2) == 0 &&
+		sb_2.st_dev == sb_1.st_dev     &&
+		sb_2.st_ino == sb_1.st_ino) {
+		cerr << "Input and output files ('" << path << "') are the same and will cause the input " 
+		     << "file to be overwritten. Please specify a separate output directory using '-o'.\n";
+		help();
+	    }
+
+	    fh  = new gzFile;
+	    *fh = gzopen(path.c_str(), "wb");
+            pair_1_fhs[bc] = fh;
+
+	    if (!(*fh)) {
+		cerr << "Error opening output file '" << path << "'\n";
+		exit(1);
+	    }
+
+            if (paired) {
+		path = out_path + files[i].second;
+
+		if (stat((in_path_2 + files[i].second).c_str(), &sb_1) == -1) {
+		    cerr << "Unable to stat input file " << in_path_2 + files[i].second << "\n";
+		    exit(1);
+		}
+		if (stat(path.c_str(), &sb_2) == 0 &&
+		    sb_2.st_dev == sb_1.st_dev     &&
+		    sb_2.st_ino == sb_1.st_ino) {
+		    cerr << "Input and output file names ('" << path << "') are the same and will cause the input " 
+			 << "file to be overwritten. Please specify a separate output directory using '-o'.\n";
+		    help();
+		}
+
+		fh  = new gzFile;
+		*fh = gzopen(path.c_str(), "wb");
+		pair_2_fhs[bc] = fh;
+
+		if (!(*fh)) {
+		    cerr << "Error opening output file '" << path << "'\n";
+		    exit(1);
+		}
+
+		filepath = files[i].first;
+		pos      = filepath.find_last_of(".");
+		if (filepath.substr(pos) == ".gz") {
+		    filepath = filepath.substr(0, pos);
+		    pos      = filepath.find_last_of(".");
+		}
+		path = out_path + filepath.substr(0, pos) + ".rem" + filepath.substr(pos) + ".gz";
+
+		fh  = new gzFile;
+		*fh = gzopen(path.c_str(), "wb");
+                rem_1_fhs[bc] = fh;
+
+ 		if (!*(fh)) {
+		    cerr << "Error opening remainder output file '" << path << "'\n";
+		    exit(1);
+		}
+
+		filepath = files[i].second;		
+		pos      = filepath.find_last_of(".");
+		if (filepath.substr(pos) == ".gz") {
+		    filepath = filepath.substr(0, pos);
+		    pos      = filepath.find_last_of(".");
+		}
+		path = out_path + filepath.substr(0, pos) + ".rem" + filepath.substr(pos) + ".gz";
+
+		fh  = new gzFile;
+		*fh = gzopen(path.c_str(), "wb");
+		rem_2_fhs[bc] = fh;
+
+		if (!(*fh)) {
+		    cerr << "Error opening remainder output file '" << path << "'\n";
+		    exit(1);
+		}
+            }
+	}
+
+	return 0;
+    } else if (barcodes.size() == 0 && merge == true) {
+
+    	path = out_path + "sample_unbarcoded" + suffix_1;
+	fh   = new gzFile;
+	*fh  = gzopen(path.c_str(), "wb");
+
+	if (!(*fh)) {
+    	    cerr << "Error opening output file '" << path << "'\n";
+    	    exit(1);
+    	}
+
+    	for (uint i = 0; i < files.size(); i++) {
+    	    bc.se = files[i].first;
+    	    if (paired)
+    		bc.pe = files[i].second;
+    	    pair_1_fhs[bc] = fh;
+    	}
+
+    	if (paired) {
+    	    path = out_path + "sample_unbarcoded" + suffix_2;
+	    fh   = new gzFile;
+	    *fh  = gzopen(path.c_str(), "wb");
+
+	    if (!(*fh)) {
+    		cerr << "Error opening output file '" << path << "'\n";
+    		exit(1);
+    	    }
+
+    	    for (uint i = 0; i < files.size(); i++) {
+    		bc.se = files[i].first;
+    		bc.pe = files[i].second;
+    		pair_2_fhs[bc] = fh;
+    	    }
+
+    	    path = out_path + "sample_unbarcoded.rem" + suffix_1;
+	    fh   = new gzFile;
+	    *fh  = gzopen(path.c_str(), "wb");
+
+	    if (!(*fh)) {
+    		cerr << "Error opening remainder output file '" << path << "'\n";
+    		exit(1);
+    	    }
+
+    	    for (uint i = 0; i < files.size(); i++) {
+    		bc.se = files[i].first;
+    		bc.pe = files[i].second;
+    		rem_1_fhs[bc] = fh;
+    	    }
+
+    	    path = out_path + "sample_unbarcoded.rem" + suffix_2;
+	    fh   = new gzFile;
+	    *fh  = gzopen(path.c_str(), "wb");
+
+	    if (!(*fh)) {
+    		cerr << "Error opening remainder output file '" << path << "'\n";
+    		exit(1);
+    	    }
+
+    	    for (uint i = 0; i < files.size(); i++) {
+    		bc.se = files[i].first;
+    		bc.pe = files[i].second;
+    		rem_2_fhs[bc] = fh;
+    	    }
+    	}
+
+    	return 0;
+    }
+
+    string filename;
+
+    for (uint i = 0; i < barcodes.size(); i++) {
+
+	filename = barcodes[i].name_exists() ? barcodes[i].name : "sample_" + barcodes[i].str();
+
+        if (interleave == true) {
+    	    path = out_path + filename + suffix_1;
+	    fh   = new gzFile;
+	    *fh  = gzopen(path.c_str(), "wb");
+            pair_1_fhs[barcodes[i]] = fh;
+ 
+    	    if (!(*pair_1_fhs[barcodes[i]])) {
+    		cerr << "Error opening output file '" << path << "'\n";
+    		exit(1);
+    	    }
+
+        } else {
+    	    path = out_path + filename + suffix_1;
+	    fh   = new gzFile;
+	    *fh  = gzopen(path.c_str(), "wb");
+            pair_1_fhs[barcodes[i]] = fh;
+
+    	    if (!(*pair_1_fhs[barcodes[i]])) {
+    		cerr << "Error opening output file '" << path << "'\n";
+    		exit(1);
+    	    }
+
+            if (paired) {
+    		path = out_path + filename + suffix_2;
+		fh   = new gzFile;
+		*fh  = gzopen(path.c_str(), "wb");
+                pair_2_fhs[barcodes[i]] = fh;
+
+    		if (!(*pair_2_fhs[barcodes[i]])) {
+    		    cerr << "Error opening output file '" << path << "'\n";
+    		    exit(1);
+    		}
+
+    		path = out_path + filename + ".rem" + suffix_1;
+		fh   = new gzFile;
+		*fh  = gzopen(path.c_str(), "wb");
+                rem_1_fhs[barcodes[i]] = fh;
+
+    		if (!(*rem_1_fhs[barcodes[i]])) {
+    		    cerr << "Error opening remainder output file '" << path << "'\n";
+    		    exit(1);
+    		}
+
+    		path = out_path + filename + ".rem" + suffix_2;
+		fh   = new gzFile;
+		*fh  = gzopen(path.c_str(), "wb");
+                rem_2_fhs[barcodes[i]] = fh;
+
+    		if (!(*rem_2_fhs[barcodes[i]])) {
+    		    cerr << "Error opening remainder output file '" << path << "'\n";
+    		    exit(1);
+    		}
             }
         }
     }
@@ -291,6 +551,25 @@ close_file_handles(map<BarcodePair, ofstream *> &fhs)
 
     for (i = fhs.begin(); i != fhs.end(); i++) {
 	i->second->close();
+	ptrs.insert(i->second);
+    }
+
+    for (j = ptrs.begin(); j != ptrs.end(); j++) {
+	delete *j;
+    }
+
+    return 0;
+}
+
+int 
+close_file_handles(map<BarcodePair, gzFile *> &fhs)
+{
+    map<BarcodePair, gzFile *>::iterator i;
+    set<gzFile *> ptrs;
+    set<gzFile *>::iterator j;
+
+    for (i = fhs.begin(); i != fhs.end(); i++) {
+	gzclose(*(i->second));
 	ptrs.insert(i->second);
     }
 
@@ -347,11 +626,14 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
 	exit(1);
     }
 
-    char *p, *q, *r;
+    char *p, *q, *r, *s;
+
+    uint line_num = 0;
 
     while (fh.good()) {
 	memset(line, 0, id_len);
 	fh.getline(line, id_len);
+	line_num++;
 
 	if (strlen(line) == 0) continue;
 
@@ -384,51 +666,82 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
 		*q = '\0';
 		break;
 	    default:
-		cerr << "Invalid barcode: '" << line << "'\n";
+		cerr << "Invalid barcode on line " << line_num << ": '" << p << "'\n";
 		exit(1);
 	    }
 	    if (*q != '\0') q++;
 	}
 
 	//
-	// Identify the second barcode and check that it's legitimate.
+	// If a second barcode was specified on the command line, identify it and check that it's legitimate.
+	//
+	r = NULL;
+	if (barcode_type == inline_inline || 
+	    barcode_type == inline_index  || 
+	    barcode_type == index_inline  ||
+	    barcode_type == index_index) {
+
+	    if (q - p < id_len)
+		q++;
+	    r = q;
+	    while (*q != '\0') {
+		switch (*q) {
+		case 'A':
+		case 'C':
+		case 'G':
+		case 'T':
+		    break;
+		case 'a':
+		    *q = 'A';
+		    break;
+		case 'c':
+		    *q = 'C';
+		    break;
+		case 'g':
+		    *q = 'G';
+		    break;
+		case 't':
+		    *q = 'T';
+		    break;
+		case '\r':
+		case '\t':
+		    *q = '\0';
+		    break;
+		default:
+		    cerr << "Invalid barcode on line " << line_num << ": '" << r << "'\n";
+		    exit(1);
+		}
+		if (*q != '\0') q++;
+	    }
+	}
+
+	//
+	// Check for the existence of a file name to associate with this barcode set.
 	//
 	if (q - p < id_len)
 	    q++;
-	r = q;
+	s = q;
 	while (*q != '\0') {
-	    switch (*q) {
-	    case 'A':
-	    case 'C':
-	    case 'G':
-	    case 'T':
-		break;
-	    case 'a':
-		*q = 'A';
-		break;
-	    case 'c':
-		*q = 'C';
-		break;
-	    case 'g':
-		*q = 'G';
-		break;
-	    case 't':
-		*q = 'T';
-		break;
-	    case '\r':
-	    case '\t':
-		*q = '\0';
-		break;
-	    default:
-		cerr << "Invalid barcode: '" << line << "'\n";
-		exit(1);
+	    if (!isalnum(*q)) {
+		switch (*q) {
+		case '-':
+		case '_':
+		    break;
+		case '\r':
+		case '\t':
+		    *q = '\0';
+		    break;
+		default:
+		    cerr << "Invalid filename on line " << line_num << ": '" << s << "' (filenames can consist of letters, numbers, '-' and '_').\n";
+		    exit(1);
+		}
 	    }
 	    if (*q != '\0') q++;
 	}
 
-	barcodes.push_back(BarcodePair(p, r));
-	if (strlen(p) > 0) se_bc.insert(string(p));
-	if (strlen(r) > 0) pe_bc.insert(string(r));
+	barcodes.push_back(BarcodePair(p, r, s));
+	if (p != NULL && strlen(p) > 0) se_bc.insert(string(p));
+	if (r != NULL && strlen(r) > 0) pe_bc.insert(string(r));
     }
 
     fh.close();

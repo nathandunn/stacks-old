@@ -30,6 +30,8 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
+#include <zlib.h>
+#include <errno.h>
 
 #include "input.h"
 #include "clean.h"
@@ -40,5 +42,12 @@ int  write_fastq(ofstream *, Seq *, string);
 int  write_fasta(ofstream *, Read *, bool);
 int  write_fasta(ofstream *, Seq *);
 int  write_fasta(ofstream *, Seq *, string);
+
+int  write_fastq(gzFile *, Read *, bool);
+int  write_fastq(gzFile *, Seq *);
+int  write_fastq(gzFile *, Seq *, string);
+int  write_fasta(gzFile *, Read *, bool);
+int  write_fasta(gzFile *, Seq *);
+int  write_fasta(gzFile *, Seq *, string);
 
 #endif // __WRITE_H__

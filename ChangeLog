@@ -1,5 +1,10 @@
 Stacks 1.22
 --------------------------
+	Feature: a filename can now be specified in the barcodes file for process_radtags and
+	process_shortreads. When a filename is specified, process_radtags will write data to
+	this filename instead of a filename made up of the barcode.
+	Feature: process_radtags and process_shortreads will now output gzipped files if
+	provided gzipped inputs or if requested using the '-y' option.
 	Feature: Added SacI and BgIII restriction enzymes.
 	Bugfix: Tightened up parsing of FASTQ ID field to prevent a buffer overrun (and subsequent
 	segfault) in FASTQ headers that look like the Illumina format but are malformed.

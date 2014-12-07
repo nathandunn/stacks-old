@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -24,8 +24,6 @@
 // Julian Catchen
 // jcatchen@uoregon.edu
 // University of Oregon
-//
-// $Id: clean.cc 2146 2011-08-02 22:11:50Z catchen $
 //
 
 #include "clean.h"
@@ -310,12 +308,12 @@ parse_input_record(Seq *s, Read *r)
 	    case inline_null:
 	    case inline_inline:
 	    case inline_index:
-		strncpy(r->inline_bc, r->seq, bc_size_1);
-		r->inline_bc[bc_size_1] = '\0';
+		strncpy(r->inline_bc, r->seq, max_bc_size_1);
+		r->inline_bc[max_bc_size_1] = '\0';
 		break;
 	    case index_inline:
-		strncpy(r->inline_bc, r->seq, bc_size_2);
-		r->inline_bc[bc_size_2] = '\0';
+		strncpy(r->inline_bc, r->seq, max_bc_size_2);
+		r->inline_bc[max_bc_size_2] = '\0';
 		break;
 	    default:
 		break;
@@ -323,8 +321,8 @@ parse_input_record(Seq *s, Read *r)
     } else if (r->read == 2 &&
 	       (barcode_type == inline_inline ||
 		barcode_type == index_inline)) {
-	strncpy(r->inline_bc, r->seq, bc_size_2);
-	r->inline_bc[bc_size_2] = '\0';
+	strncpy(r->inline_bc, r->seq, max_bc_size_2);
+	r->inline_bc[max_bc_size_2] = '\0';
     }
 
     r->retain = 1;
@@ -492,94 +490,6 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
     } while (j <= href->stop_pos);
 
     return 1;
-}
-
-//
-// Function to process barcodes
-//
-int 
-process_barcode(Read *href_1, Read *href_2, BarcodePair &bc, 
-		map<BarcodePair, ofstream *> &fhs,
-		set<string> &se_bc, set<string> &pe_bc, 
-		map<BarcodePair, map<string, long> > &barcode_log, map<string, long> &counter) 
-{
-    if (barcode_type == null_null)
-	return 0;
-
-    //
-    // Log the barcodes we receive.
-    //
-    if (barcode_log.count(bc) == 0) {
-	barcode_log[bc]["noradtag"] = 0;
-	barcode_log[bc]["total"]    = 0;
-	barcode_log[bc]["low_qual"] = 0;
-	barcode_log[bc]["retained"] = 0;
-    }
-    barcode_log[bc]["total"] += paired ? 2 : 1;
-
-    bool se_correct = false;
-    bool pe_correct = false;
-
-    //
-    // Is this a legitimate barcode?
-    //
-    if (fhs.count(bc) == 0) {
-	BarcodePair old_barcode = bc;
-
-    	//
-    	// Try to correct the barcode.
-    	//
-	if (paired) {
-	    if (se_bc.count(bc.se) == 0)
-		se_correct = correct_barcode(se_bc, href_1, single_end);
-	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
-		pe_correct = correct_barcode(pe_bc, href_2, paired_end);
-
-	    if (se_correct)
-		bc.se = string(href_1->se_bc);
-	    if (pe_bc.size() > 0 && pe_correct)
-		bc.pe = string(href_2->pe_bc);
- 
-	    //
-	    // After correcting the individual barcodes, check if the combination is valid.
-	    //
-	    if (fhs.count(bc) == 0) {
-		counter["ambiguous"] += 2;
-		href_1->retain = 0;
-		href_2->retain = 0;
-	    }
-
-	} else {
-	    if (se_bc.count(bc.se) == 0)
-		se_correct = correct_barcode(se_bc, href_1, single_end);
-	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
-		pe_correct = correct_barcode(pe_bc, href_1, paired_end);
-
-	    if (se_correct)
-		bc.se = string(href_1->se_bc);
-	    if (pe_bc.size() > 0 && pe_correct)
-		bc.pe = string(href_1->pe_bc);
-
-	    if (fhs.count(bc) == 0) {
-		counter["ambiguous"]++;
-		href_1->retain = 0;
-	    }
-	}
-
-	if (href_1->retain && (se_correct || pe_correct)) {
-	    counter["recovered"] += paired ? 2 : 1;
-	    barcode_log[old_barcode]["total"] -= paired ? 2 : 1;
-	    if (barcode_log.count(bc) == 0) {
-		barcode_log[bc]["total"]    = 0;
-		barcode_log[bc]["retained"] = 0;
-		barcode_log[bc]["low_qual"] = 0;
-		barcode_log[bc]["noradtag"] = 0;
-	    }
-	    barcode_log[bc]["total"] += paired ? 2 : 1;
-	}
-    }
-
-    return 0;
 }
 
 bool 
