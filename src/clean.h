@@ -46,7 +46,9 @@ enum barcodet {null_null,
 	       inline_index,  index_inline};
 enum seqt {single_end, paired_end};
 
-extern int      bc_size_1, bc_size_2;
+typedef unordered_map<string, vector<int>, std::hash<string> > AdapterHash;
+
+extern int      max_bc_size_1, max_bc_size_2;
 extern barcodet barcode_type;
 extern uint     truncate_seq;
 extern double   win_size;
@@ -56,8 +58,9 @@ extern int      barcode_dist;
 
 class BarcodePair {
 public:
-    string se;    // Single-end barcode
-    string pe;    // Paired-end barcode
+    string se;    // Single-end barcode.
+    string pe;    // Paired-end barcode.
+    string name;  // Filename to open for this barcode combination.
 
     BarcodePair()
     {
@@ -69,15 +72,20 @@ public:
 	this->se = string(p);
 	this->pe = "";
     }
-    BarcodePair(char *p, char *q)
+    BarcodePair(char *p, char *q, char *n)
     {
-	this->se = string(p);
-	this->pe = string(q);
+	if (p != NULL)
+	    this->se = string(p);
+	if (q != NULL)
+	    this->pe = string(q);
+	if (n != NULL)
+	    this->name = string(n);
     }
-    BarcodePair(string se, string pe)
+    BarcodePair(string se, string pe, string name)
     {
 	this->se = se;
 	this->pe = pe;
+	this->name = name;
     }
     BarcodePair(string se)
     {
@@ -110,6 +118,12 @@ public:
 	    return string(this->se + "-" + this->pe);
 	else
 	    return this->se;
+    }
+    bool name_exists()
+    {
+	if (this->name.length() > 0)
+	    return true;
+	return false;
     }
     friend bool operator<(const BarcodePair &lhs, const BarcodePair &rhs)
     {
@@ -323,18 +337,12 @@ public:
 	}*/
 };
 
-typedef unordered_map<string, vector<int>, std::hash<string> > AdapterHash;
-
 int  parse_illumina_v1(const char *);
 int  parse_illumina_v2(const char *);
 int  parse_input_record(Seq *, Read *);
 int  rev_complement(char *, int, bool);
 int  reverse_qual(char *, int, bool);
 
-int  process_barcode(Read *, Read *, BarcodePair &, 
-		     map<BarcodePair, ofstream *> &,
-		     set<string> &, set<string> &, 
-		     map<BarcodePair, map<string, long> > &, map<string, long> &); 
 bool correct_barcode(set<string> &, Read *, seqt);
 
 int  filter_adapter_seq(Read *, char *, int, AdapterHash &, int, int, int);
@@ -342,5 +350,93 @@ int  init_adapter_seq(int, char *, int &, AdapterHash &);
 
 int  check_quality_scores(Read *, int, int, int, int);
 
+//
+// Templated function to process barcodes.
+//
+template<typename fhType>
+int 
+process_barcode(Read *href_1, Read *href_2, BarcodePair &bc, 
+		map<BarcodePair, fhType *> &fhs,
+		set<string> &se_bc, set<string> &pe_bc, 
+		map<BarcodePair, map<string, long> > &barcode_log, map<string, long> &counter) 
+{
+    if (barcode_type == null_null)
+	return 0;
+
+    //
+    // Log the barcodes we receive.
+    //
+    if (barcode_log.count(bc) == 0) {
+	barcode_log[bc]["noradtag"] = 0;
+	barcode_log[bc]["total"]    = 0;
+	barcode_log[bc]["low_qual"] = 0;
+	barcode_log[bc]["retained"] = 0;
+    }
+    barcode_log[bc]["total"] += paired ? 2 : 1;
+
+    bool se_correct = false;
+    bool pe_correct = false;
+
+    //
+    // Is this a legitimate barcode?
+    //
+    if (fhs.count(bc) == 0) {
+	BarcodePair old_barcode = bc;
+
+    	//
+    	// Try to correct the barcode.
+    	//
+	if (paired) {
+	    if (se_bc.count(bc.se) == 0)
+		se_correct = correct_barcode(se_bc, href_1, single_end);
+	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
+		pe_correct = correct_barcode(pe_bc, href_2, paired_end);
+
+	    if (se_correct)
+		bc.se = string(href_1->se_bc);
+	    if (pe_bc.size() > 0 && pe_correct)
+		bc.pe = string(href_2->pe_bc);
+ 
+	    //
+	    // After correcting the individual barcodes, check if the combination is valid.
+	    //
+	    if (fhs.count(bc) == 0) {
+		counter["ambiguous"] += 2;
+		href_1->retain = 0;
+		href_2->retain = 0;
+	    }
+
+	} else {
+	    if (se_bc.count(bc.se) == 0)
+		se_correct = correct_barcode(se_bc, href_1, single_end);
+	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
+		pe_correct = correct_barcode(pe_bc, href_1, paired_end);
+
+	    if (se_correct)
+		bc.se = string(href_1->se_bc);
+	    if (pe_bc.size() > 0 && pe_correct)
+		bc.pe = string(href_1->pe_bc);
+
+	    if (fhs.count(bc) == 0) {
+		counter["ambiguous"]++;
+		href_1->retain = 0;
+	    }
+	}
+
+	if (href_1->retain && (se_correct || pe_correct)) {
+	    counter["recovered"] += paired ? 2 : 1;
+	    barcode_log[old_barcode]["total"] -= paired ? 2 : 1;
+	    if (barcode_log.count(bc) == 0) {
+		barcode_log[bc]["total"]    = 0;
+		barcode_log[bc]["retained"] = 0;
+		barcode_log[bc]["low_qual"] = 0;
+		barcode_log[bc]["noradtag"] = 0;
+	    }
+	    barcode_log[bc]["total"] += paired ? 2 : 1;
+	}
+    }
+
+    return 0;
+}
 
 #endif // __CLEAN_H__
