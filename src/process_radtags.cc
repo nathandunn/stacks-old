@@ -58,20 +58,26 @@ bool     discards        = false;
 bool     overhang        = false;
 bool     filter_illumina = false;
 bool     check_radtag    = true;
-uint     truncate_seq = 0;
-int      bc_size_1    = 0;
-int      bc_size_2    = 0;
-int      barcode_dist = 2;
-double   win_size     = 0.15;
-uint     score_limit  = 10;
-uint     len_limit    = 0;
-uint     num_threads  = 1;
+uint     truncate_seq    = 0;
+int      barcode_dist    = 2;
+double   win_size        = 0.15;
+uint     score_limit     = 10;
+uint     len_limit       = 0;
+uint     num_threads     = 1;
 
 //
 // How to shift FASTQ-encoded quality scores from ASCII down to raw scores
 //     score = encoded letter - 64; Illumina version 1.3 - 1.5
 //     score = encoded letter - 33; Sanger / Illumina version 1.6+
 int qual_offset  = 33;
+
+//
+// Handle variable-size barcodes.
+//
+uint min_bc_size_1 = 0;
+uint max_bc_size_1 = 0;
+uint min_bc_size_2 = 0;
+uint max_bc_size_2 = 0;
 
 //
 // Kmer data for adapter filtering.
@@ -126,7 +132,7 @@ int main (int argc, char* argv[]) {
     map<BarcodePair, map<string, long> > barcode_log;
 
     build_file_list(files);
-    load_barcodes(barcode_file, barcodes, se_bc, pe_bc, bc_size_1, bc_size_2);
+    load_barcodes(barcode_file, barcodes, se_bc, pe_bc, min_bc_size_1, max_bc_size_1, min_bc_size_2, max_bc_size_2);
 
     if (out_file_type == gzfastq || out_file_type == gzfasta)
 	open_files(files, barcodes, pair_1_gzfhs, pair_2_gzfhs, rem_1_gzfhs, rem_2_gzfhs, counters);
@@ -216,8 +222,8 @@ process_paired_reads(string prefix_1,
 		     map<BarcodePair, fhType *> &rem_2_fhs,
 		     map<string, long> &counter, 
 		     map<BarcodePair, map<string, long> > &barcode_log) {
-    Input *fh_1, *fh_2;
-    Read  *r_1, *r_2;
+    Input    *fh_1, *fh_2;
+    Read     *r_1, *r_2;
     ofstream *discard_fh_1, *discard_fh_2;
 
     string path_1 = in_path_1 + prefix_1;
@@ -269,23 +275,8 @@ process_paired_reads(string prefix_1,
 	exit(1);
     }
 
-    // 
-    // If there is an inline barcode on either of the reads, we will need to set an 
-    // offset to know the start of true sequence for checking quality.
-    //
-    int se_offset = 0;
-    int pe_offset = 0;
-
-    if (barcode_type == inline_null ||
-	barcode_type == inline_inline ||
-	barcode_type == inline_index)
-	se_offset = bc_size_1;
-    if (barcode_type == inline_inline || 
-	barcode_type == index_inline)
-	pe_offset = bc_size_2;
-
-    int buf_len = truncate_seq > 0 ? se_offset + truncate_seq : strlen(s_1->seq);
-    r_1 = new Read(buf_len, 1, se_offset, win_size);
+    r_1 = new Read(strlen(s_1->seq), 1, min_bc_size_1, win_size);
+    r_2 = new Read(strlen(s_2->seq), 2, min_bc_size_2, win_size);
 
     //
     // Set len_limit so that if we encounter reads already shorter than truncate_seq limit
@@ -294,17 +285,11 @@ process_paired_reads(string prefix_1,
     if (truncate_seq > 0)
 	len_limit = truncate_seq;
 
-    //
-    // Compute the parameters for the second read.
-    //
-    buf_len = truncate_seq > 0 ? pe_offset + truncate_seq : strlen(s_2->seq);
-    r_2     = new Read(buf_len, 2, pe_offset, win_size);
-
     BarcodePair bc;
     //
     // If no barcodes were specified, set the barcode object to be the input file names.
     //
-    if (bc_size_1 == 0)
+    if (max_bc_size_1 == 0)
 	bc.set(prefix_1, prefix_2);
 	
     long i = 1;
@@ -325,10 +310,24 @@ process_paired_reads(string prefix_1,
 
 	process_barcode(r_1, r_2, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
 
+	//
+	// Adjust the size of the read to accommodate truncating the sequence and variable 
+	// barcode lengths. With standard Illumina data we want to output constant length
+	// reads even as the barcode size may change. Other technologies, like IonTorrent
+	// need to be truncated uniformly.
+	//
+	if (truncate_seq > 0) {
+	    r_1->set_len(truncate_seq + r_1->inline_bc_len);
+	    r_2->set_len(truncate_seq + r_2->inline_bc_len);
+	} else {
+	    r_1->set_len(r_1->len - (max_bc_size_1 - r_1->inline_bc_len));
+	    r_2->set_len(r_2->len - (max_bc_size_2 - r_2->inline_bc_len));
+	}
+
 	if (r_1->retain) 
-	    process_singlet(r_1, renz_1, se_offset, false, barcode_log[bc], counter);
+	    process_singlet(r_1, renz_1, false, barcode_log[bc], counter);
 	if (r_2->retain) 
-	    process_singlet(r_2, renz_2, pe_offset, true,  barcode_log[bc], counter);
+	    process_singlet(r_2, renz_2, true,  barcode_log[bc], counter);
 
 	if (r_1->retain && r_2->retain) {
 	    (out_file_type == fastq || out_file_type == gzfastq) ?
@@ -428,9 +427,6 @@ process_reads(string prefix,
     	exit(1);
     }
 
-    int buf_len   = truncate_seq > 0 ? bc_size_1 + truncate_seq : strlen(s->seq);
-    int se_offset = 0;
-
     //
     // Set len_limit so that if we encounter reads already shorter than truncate_seq limit
     // they will be discarded.
@@ -438,20 +434,14 @@ process_reads(string prefix,
     if (truncate_seq > 0)
 	len_limit = truncate_seq;
 
-    if (barcode_type == inline_null ||
-	barcode_type == inline_index)
-	se_offset = bc_size_1;
-    else if (barcode_type == index_inline)
-	se_offset = bc_size_2;
-
-    r = new Read(buf_len, 1, se_offset, win_size);
+    r = new Read(strlen(s->seq), 1, min_bc_size_1, win_size);
 
     BarcodePair bc;
     //
     // If no barcodes were specified, set the barcode object to be the input file name so
     // that reads are written to an output file of the same name as the input file.
     //
-    if (bc_size_1 == 0)
+    if (max_bc_size_1 == 0)
 	bc.set(prefix);
 
     //cerr << "Length: " << r->len << "; Window length: " << r->win_len << "; Stop position: " << r->stop_pos << "\n";
@@ -472,8 +462,19 @@ process_reads(string prefix,
 
 	process_barcode(r, NULL, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
 
+	//
+	// Adjust the size of the read to accommodate truncating the sequence and variable 
+	// barcode lengths. With standard Illumina data we want to output constant length
+	// reads even as the barcode size may change. Other technologies, like IonTorrent
+	// need to be truncated uniformly.
+	//
+	if (truncate_seq > 0) 
+	    r->set_len(truncate_seq + r->inline_bc_len);
+	else
+	    r->set_len(r->len - (max_bc_size_1 - r->inline_bc_len));
+
 	if (r->retain) 
-	    process_singlet(r, renz_1, se_offset, false, barcode_log[bc], counter);
+	    process_singlet(r, renz_1, false, barcode_log[bc], counter);
 
 	 if (r->retain)
 	     (out_file_type == fastq || out_file_type == gzfastq) ? 
@@ -505,7 +506,7 @@ process_reads(string prefix,
 inline
 int 
 process_singlet(Read *href, 
-		string res_enz, int offset, bool paired_end,
+		string res_enz, bool paired_end,
 		map<string, long> &bc_log, map<string, long> &counter) 
 {
     char *p;
@@ -519,7 +520,7 @@ process_singlet(Read *href,
     //
     // If this read is already shorter than our length limit, discard it.
     //
-    if (len_limit > 0 && (href->len - offset) < len_limit) {
+    if (len_limit > 0 && (href->len - href->inline_bc_len) < len_limit) {
     	counter["low_quality"]++;
 	if (barcode_type != null_null)
 	    bc_log["low_qual"]++;
@@ -534,7 +535,7 @@ process_singlet(Read *href,
 	bool rad_cor = false;
 
 	for (int i = 0; i < renz_cnt[res_enz]; i++) {
-	    p = href->seq + offset;
+	    p = href->seq + href->inline_bc_len;
 
 	    if (strncmp(p, renz[res_enz][i], renz_len[res_enz]) == 0)
 		rad_cor = true;
@@ -543,7 +544,7 @@ process_singlet(Read *href,
 	    //
 	    // Try to correct the RAD-Tag.
 	    //
-	    if (!correct_radtag(href, offset, res_enz, counter)) {
+	    if (!correct_radtag(href, res_enz, counter)) {
 	        if (barcode_type != null_null) bc_log["noradtag"]++;
 	        counter["noradtag"]++;
 	        href->retain = 0;
@@ -556,7 +557,7 @@ process_singlet(Read *href,
     // Drop this sequence if it has any uncalled nucleotides.
     //
     if (clean) {
-	for (char *p = href->seq + offset; *p != '\0'; p++)
+	for (char *p = href->seq + href->inline_bc_len; *p != '\0'; p++)
 	    if (*p == '.' || *p == 'N') {
 		counter["low_quality"]++;
 		href->retain = 0;
@@ -570,7 +571,7 @@ process_singlet(Read *href,
     // Drop this sequence if it has low quality scores.
     //
     if (quality && 
-	check_quality_scores(href, qual_offset, score_limit, len_limit, offset) <= 0) {
+	check_quality_scores(href, qual_offset, score_limit, len_limit, href->inline_bc_len) <= 0) {
     	counter["low_quality"]++;
 	if (barcode_type != null_null)
 	    bc_log["low_qual"]++;
@@ -605,7 +606,7 @@ process_singlet(Read *href,
 }
 
 int 
-correct_radtag(Read *href, int offset, string res_enz, map<string, long> &counter) 
+correct_radtag(Read *href, string res_enz, map<string, long> &counter) 
 {
     if (recover == false)
 	return 0;
@@ -616,13 +617,13 @@ correct_radtag(Read *href, int offset, string res_enz, map<string, long> &counte
 
     for (int i = 0; i < renz_cnt[res_enz]; i++) {
 	
-        d = dist(renz[res_enz][i], href->seq + offset);
+        d = dist(renz[res_enz][i], href->seq + href->inline_bc_len);
 
         if (d <= 1) {
             //
             // Correct the read.
             //
-	    strncpy(href->seq + offset, renz[res_enz][i], renz_len[res_enz]);
+	    strncpy(href->seq + href->inline_bc_len, renz[res_enz][i], renz_len[res_enz]);
             counter["recovered"]++;
 
             return 1;
@@ -729,7 +730,7 @@ print_results(int argc, char **argv,
 	<< "Ambiguous RAD-Tag\t"    << c["noradtag"]    << "\n"
 	<< "Retained Reads\t"       << c["retained"]    << "\n";
 
-    if (bc_size_1 == 0) return 0;
+    if (max_bc_size_1 == 0) return 0;
 
     //
     // Where barcode filenames specified?
@@ -1126,7 +1127,7 @@ void help() {
 	else if (i == cnt - 1)
 	    std::cerr << ", or ";
 
-	if (i % 6 == 0)
+	if (i % 8 == 0)
 	    std::cerr << "\n      ";
 
 	it++;
