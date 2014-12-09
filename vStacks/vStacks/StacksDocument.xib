@@ -8,7 +8,6 @@
         <customObject id="-2" userLabel="File's Owner" customClass="StacksDocument">
             <connections>
                 <outlet property="datumController" destination="100221" id="100237"/>
-                <outlet property="datumWebView" destination="J7s-WS-16N" id="f8f-1Z-Jmo"/>
                 <outlet property="editPopulationButton" destination="sfi-Rd-oH1" id="Gob-x2-9kp"/>
                 <outlet property="filteredLoci" destination="100452" id="XLA-wg-0dM"/>
                 <outlet property="locusTableView" destination="100152" id="100231"/>
@@ -17,6 +16,7 @@
                 <outlet property="maxSnpPopupButton" destination="9V1-Wf-eD6" id="3tj-lQ-Xl9"/>
                 <outlet property="populationNameField" destination="Xqz-ZQ-4mF" id="ESW-TJ-AC1"/>
                 <outlet property="populationSelector" destination="100506" id="vdt-Y0-AGp"/>
+                <outlet property="datumWebView" destination="cJo-cB-wla" id="UMC-dG-hq6"/>
                 <outlet property="stacksWebView" destination="p93-W0-mV8" id="NGU-qb-eZS"/>
                 <outlet property="totalLoci" destination="P29-1k-fQd" id="dNB-x0-4hp"/>
                 <outlet property="window" destination="5" id="18"/>
@@ -299,7 +299,7 @@
                             <button verticalHuggingPriority="750" id="sfi-Rd-oH1">
                                 <rect key="frame" x="165" y="84" width="46" height="19"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <buttonCell key="cell" type="roundRect" title="Edit" bezelStyle="roundedRect" image="D7942CC0-10E9-4352-A857-649270A9C02A" imagePosition="overlaps" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="QX3-jb-L4D">
+                                <buttonCell key="cell" type="roundRect" title="Edit" bezelStyle="roundedRect" image="CB0F0DED-8FC8-4793-9E38-32727A0852D1" imagePosition="overlaps" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="QX3-jb-L4D">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="cellTitle"/>
                                 </buttonCell>
@@ -441,22 +441,29 @@
                         <rect key="frame" x="329" y="0.0" width="1071" height="500"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <webView id="J7s-WS-16N">
+                            <customView id="kRF-fF-KX2">
+                                <rect key="frame" x="0.0" y="0.0" width="1071" height="207"/>
                                 <autoresizingMask key="autoresizingMask"/>
-                                <webPreferences key="preferences" defaultFontSize="12" defaultFixedFontSize="12">
-                                    <nil key="identifier"/>
-                                </webPreferences>
-                                <connections>
-                                    <outlet property="frameLoadDelegate" destination="-2" id="Ws5-2z-VSQ"/>
-                                    <outlet property="policyDelegate" destination="-2" id="rs6-w6-5MH"/>
-                                </connections>
-                            </webView>
+                                <subviews>
+                                    <webView id="cJo-cB-wla">
+                                        <rect key="frame" x="0.0" y="0.0" width="1072" height="200"/>
+                                        <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxX="YES" heightSizable="YES"/>
+                                        <webPreferences key="preferences" defaultFontSize="12" defaultFixedFontSize="12">
+                                            <nil key="identifier"/>
+                                        </webPreferences>
+                                        <connections>
+                                            <outlet property="frameLoadDelegate" destination="-2" id="Ucp-EK-fhE"/>
+                                            <outlet property="policyDelegate" destination="-2" id="37G-pR-ug3"/>
+                                        </connections>
+                                    </webView>
+                                </subviews>
+                            </customView>
                             <customView id="l4K-c0-vtz">
-                                <rect key="frame" x="0.0" y="10" width="1071" height="490"/>
+                                <rect key="frame" x="0.0" y="217" width="1071" height="283"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <subviews>
                                     <webView id="p93-W0-mV8">
-                                        <rect key="frame" x="0.0" y="0.0" width="1072" height="491"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="1072" height="284"/>
                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxX="YES" heightSizable="YES"/>
                                         <webPreferences key="preferences" defaultFontSize="12" defaultFixedFontSize="12">
                                             <nil key="identifier"/>
@@ -526,7 +533,7 @@
             <connections>
                 <binding destination="-2" name="managedObjectContext" keyPath="managedObjectContext" id="100199"/>
                 <outlet property="content" destination="-2" id="100201"/>
-                <outlet property="lociField" destination="100296" id="Ee2-us-Ayc"/>
+                <outlet property="lociField" destination="100296" id="myR-ER-o9I"/>
             </connections>
         </arrayController>
         <arrayController mode="entity" entityName="Population" usesLazyFetching="YES" automaticallyPreparesContent="YES" automaticallyRearrangesObjects="YES" id="100206" userLabel="PopulationController" customClass="PopulationArrayController">
@@ -548,7 +555,7 @@
         </arrayController>
     </objects>
     <resources>
-        <image name="D7942CC0-10E9-4352-A857-649270A9C02A" width="1" height="1">
+        <image name="CB0F0DED-8FC8-4793-9E38-32727A0852D1" width="1" height="1">
             <mutableData key="keyedArchiveRepresentation">
 YnBsaXN0MDDUAQIDBAUGPj9YJHZlcnNpb25YJG9iamVjdHNZJGFyY2hpdmVyVCR0b3ASAAGGoK4HCBMU
 GR4fIyQsLzI4O1UkbnVsbNUJCgsMDQ4PEBESVk5TU2l6ZVYkY2xhc3NcTlNJbWFnZUZsYWdzVk5TUmVw
