@@ -209,12 +209,12 @@ parse_input_record(Seq *s, Read *r)
 	    case index_null:
 	    case index_index:
 	    case index_inline:
-		strncpy(r->index_bc, p,  bc_size_1);
-		r->index_bc[bc_size_1] = '\0';
+		strncpy(r->index_bc, p,  max_bc_size_1);
+		r->index_bc[max_bc_size_1] = '\0';
 		break;
 	    case inline_index:
-		strncpy(r->index_bc, p,  bc_size_2);
-		r->index_bc[bc_size_2] = '\0';
+		strncpy(r->index_bc, p,  max_bc_size_2);
+		r->index_bc[max_bc_size_2] = '\0';
 		break;
 	    default:
 		break;
@@ -223,8 +223,8 @@ parse_input_record(Seq *s, Read *r)
 	    switch (barcode_type) { 
 	    case index_index:
 	    case inline_index:
-		strncpy(r->index_bc, p,  bc_size_2);
-		r->index_bc[bc_size_2] = '\0';
+		strncpy(r->index_bc, p,  max_bc_size_2);
+		r->index_bc[max_bc_size_2] = '\0';
 		break;
 	    default:
 		break;
@@ -291,17 +291,14 @@ parse_input_record(Seq *s, Read *r)
     //
     // Resize the sequence/phred buffers if necessary.
     //
-    if (truncate_seq == 0 && len > r->size - 1)
+    if (len > r->size - 1)
 	r->resize(len + 1);
-    else if (truncate_seq > 0 && len >= (truncate_seq + r->inline_bc_len))
-	r->set_len(truncate_seq + r->inline_bc_len);
-    else
-	r->set_len(len);
 
-    strncpy(r->seq,   s->seq,  r->len); 
-    r->seq[r->len]   = '\0';
-    strncpy(r->phred, s->qual, r->len);
-    r->phred[r->len] = '\0';
+    strncpy(r->seq,   s->seq,  r->size - 1); 
+    r->seq[r->size]   = '\0';
+    strncpy(r->phred, s->qual, r->size - 1);
+    r->phred[r->size] = '\0';
+    r->len = len;
 
     if (r->read == 1) {
 	    switch (barcode_type) {
@@ -503,10 +500,12 @@ correct_barcode(set<string> &bcs, Read *href, seqt type)
     // are off by two nucleotides in sequence space, than we can correct barcodes that have a single
     // sequencing error. 
     // 
-    // If the barcode sequence is off by no more than barcodes_dist-1 nucleotides, correct it.
+    // If the barcode sequence is off by no more than barcodes_dist-1 nucleotides, correct it. We will
+    // search the whole possible space of barcodes if more than one length of barcode was specified.
     //
     const char *p; char *q;
-    int d, close;
+    char   bc[id_len];
+    int    d, close;
     string b;
     set<string>::iterator it;
 
@@ -515,8 +514,14 @@ correct_barcode(set<string> &bcs, Read *href, seqt type)
 
     for (it = bcs.begin(); it != bcs.end(); it++) {
 
+	//
+	// Copy the proper subset of the barcode to match the length of the barcode in the bcs set.
+	//
+	strncpy(bc, type == single_end ? href->se_bc : href->pe_bc, it->length());
+	bc[it->length()] = '\0';
+
 	d = 0; 
-	for (p = it->c_str(), q = type == single_end ? href->se_bc : href->pe_bc; *p != '\0'; p++, q++)
+	for (p = it->c_str(), q = bc; *p != '\0'; p++, q++)
 	    if (*p != *q) d++;
 
 	if (d <= num_errs) {
@@ -530,10 +535,17 @@ correct_barcode(set<string> &bcs, Read *href, seqt type)
 	//
 	// Correct the barcode.
 	//
-	if (type == single_end)
+	if (type == single_end) {
 	    strcpy(href->se_bc, b.c_str());
-	else 
+	    if (barcode_type == inline_index ||
+		barcode_type == inline_inline)
+		href->inline_bc_len = b.length();
+	} else {
 	    strcpy(href->pe_bc, b.c_str());
+	    if (barcode_type == index_inline ||
+		barcode_type == inline_inline)
+		href->inline_bc_len = b.length();
+	}
 
 	return true;
     }

@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -74,7 +74,7 @@ int  process_paired_reads(string, string,
 			  map<BarcodePair, fhType *> &,
 			  map<string, long> &, map<BarcodePair, map<string, long> > &);
 int  process_singlet(Read *, 
-		     int, bool,
+		     bool,
 		     map<string, long> &, map<string, long> &);
 
 int  dist(const char *, char *);

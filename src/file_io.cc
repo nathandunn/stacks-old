@@ -583,7 +583,8 @@ close_file_handles(map<BarcodePair, gzFile *> &fhs)
 int 
 load_barcodes(string barcode_file, vector<BarcodePair> &barcodes, 
 	      set<string> &se_bc, set<string> &pe_bc,
-	      int &se_len, int &pe_len) 
+	      uint &min_se_len, uint &max_se_len, 
+	      uint &min_pe_len, uint &max_pe_len) 
 {
     switch(barcode_type) {
     case null_null:
@@ -767,30 +768,27 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
     }
 
     //
-    // Determine the barcode length for the single-end barcodes
+    // Determine the minimum and maximum barcode lengths for the single-end barcodes.
     //
-    int prev;
-    prev = barcodes[0].se.length();
-    for (uint i = 0; i < barcodes.size(); i++) {
-        se_len = barcodes[i].se.length();
-
-        if (prev != se_len) {
-            cerr << "Single-end barcodes must all be the same length. Place different barcode lengths in separate runs.\n";
-            help();
-        }
+    min_se_len = barcodes[0].se.length();
+    max_se_len = min_se_len;
+    for (uint i = 1; i < barcodes.size(); i++) {
+        if (barcodes[i].se.length() < min_se_len)
+	    min_se_len = barcodes[i].se.length();
+	else if (barcodes[i].se.length() > max_se_len)
+	    max_se_len = barcodes[i].se.length();
     }
 
     //
-    // Determine the barcode length for the paired-end barcodes
+    // Determine the minimum and maximum barcode lengths for the paired-end barcodes.
     //
-    prev = barcodes[0].pe.length();
+    min_pe_len = barcodes[0].pe.length();
+    max_pe_len = min_pe_len;
     for (uint i = 0; i < barcodes.size(); i++) {
-        pe_len = barcodes[i].pe.length();
-
-        if (prev != pe_len) {
-            cerr << "Paired-end barcodes must all be the same length. Place different barcode lengths in separate runs.\n";
-            help();
-        }
+        if (barcodes[i].pe.length() < min_pe_len)
+	    min_pe_len = barcodes[i].pe.length();
+	else if (barcodes[i].pe.length() > max_pe_len)
+	    max_pe_len = barcodes[i].pe.length();
     }
 
     //
@@ -815,10 +813,21 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
 
     cerr << "Loaded " << barcodes.size() << " barcodes ";
 
-    if (pe_bc.size() > 0) 
-	cerr << "(" << se_len << "bp / " << pe_len << "bp).\n";
-    else
-	cerr << "(" << se_len << "bp).\n";
+    if (pe_bc.size() > 0) {
+	if (min_se_len != max_se_len)
+	    cerr << "(" << min_se_len << "-" << max_se_len << "bp / ";
+	else
+	    cerr << "(" << max_se_len << "bp / ";
+	if (min_pe_len != max_pe_len) 
+	    cerr << min_pe_len << "-" << max_pe_len << "bp).\n";
+	else
+	    cerr << max_pe_len << "bp).\n";
+    } else {
+	if (min_se_len != max_se_len)
+	    cerr << "(" << min_se_len << "-" << max_se_len << "bp).\n";
+	else
+	    cerr << "(" << max_se_len << "bp).\n";
+    }
 
     return 0;
 }

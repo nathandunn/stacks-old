@@ -1,5 +1,8 @@
-Stacks 1.22
+Stacks 1.22 - Dec 08, 2014
 --------------------------
+	Feature: process_radtags and process_shortreads now support variable barcode lengths. In
+	process_radtags sequences will automatically be trimmed to keep stacks a uniform length
+	with the variable barcode lengths.
 	Feature: a filename can now be specified in the barcodes file for process_radtags and
 	process_shortreads. When a filename is specified, process_radtags will write data to
 	this filename instead of a filename made up of the barcode.

@@ -48,7 +48,7 @@ enum seqt {single_end, paired_end};
 
 typedef unordered_map<string, vector<int>, std::hash<string> > AdapterHash;
 
-extern int      max_bc_size_1, max_bc_size_2;
+extern uint     min_bc_size_1, max_bc_size_1, min_bc_size_2, max_bc_size_2;
 extern barcodet barcode_type;
 extern uint     truncate_seq;
 extern double   win_size;
@@ -150,28 +150,28 @@ public:
 
 class Read {
 public:
-    fastqt  fastq_type;
-    char   *inline_bc;
-    char   *index_bc;
-    char   *se_bc;
-    char   *pe_bc;
-    char   *machine;
-    int     lane;
-    int     tile;
-    int     x;
-    int     y;
-    int     index;
-    int     read;
-    char   *seq;
-    char   *phred;
-    int    *int_scores;
-    bool    filter;
-    int     inline_bc_len;
-    int     retain;
-    unsigned int size;
-    unsigned int len;
-    double  win_len;
-    double  stop_pos;
+    fastqt fastq_type;
+    char  *inline_bc;
+    char  *index_bc;
+    char  *se_bc;
+    char  *pe_bc;
+    char  *machine;
+    int    lane;
+    int    tile;
+    int    x;
+    int    y;
+    int    index;
+    int    read;
+    char  *seq;
+    char  *phred;
+    int   *int_scores;
+    bool   filter;
+    int    inline_bc_len;
+    int    retain;
+    uint   size;
+    uint   len;
+    double win_len;
+    double stop_pos;
 
     Read(uint buf_len, int read, int barcode_size, double win_size) {
 	this->inline_bc     = new char[id_len  + 1];
@@ -261,6 +261,12 @@ public:
     int set_len(uint buf_len) {
 	if (buf_len == this->len)
 	    return 0;
+
+	if (buf_len > this->size - 1)
+	    buf_len = this->size - 1;
+
+	this->seq[buf_len]   = '\0';
+	this->phred[buf_len] = '\0';
 
 	//
 	// Set the parameters for checking read quality later in processing.
@@ -364,6 +370,45 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 	return 0;
 
     //
+    // Is this a legitimate barcode? The barcode passed into this function is the maximally long
+    // barcode. If we fail to find a match at maximum length, step down to minimum length and
+    // continue to search for a match.
+    //
+    char *p;
+    char  bc_1[id_len];
+    char  bc_2[id_len];
+    strcpy(bc_1, bc.se.c_str());
+    strcpy(bc_2, bc.pe.c_str());
+
+    bool valid_se_bc = false;
+    bool valid_pe_bc = false;
+
+    p = bc_1 + max_bc_size_1; // Point p at the end of string NULL.
+    for (uint i = max_bc_size_1; i >= min_bc_size_1; i--)
+	if (se_bc.count(bc_1) > 0) {
+	    valid_se_bc = true;
+	    break;
+	} else {
+	    p--;
+	    *p = '\0';
+	}
+    if (pe_bc.size() > 0) {
+	p = bc_2 + max_bc_size_2; // Point p at the end of string NULL.
+	for (uint i = max_bc_size_2; i >= min_bc_size_2; i--)
+	    if (pe_bc.count(bc_2) > 0) {
+		valid_pe_bc = true;
+		break;
+	    } else {
+		p--;
+		*p = '\0';
+	    }
+    }
+    if (valid_se_bc == true && valid_pe_bc == true)
+	bc.set(bc_1, bc_2);
+    else if (valid_se_bc == true)
+	bc.set(bc_1);
+
+    //
     // Log the barcodes we receive.
     //
     if (barcode_log.count(bc) == 0) {
@@ -374,66 +419,83 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
     }
     barcode_log[bc]["total"] += paired ? 2 : 1;
 
+    //
+    // If we have a perfectly matching barcode, set the barcode and length in the right places and return.
+    //
+    if (pe_bc.size() > 0 && valid_se_bc == true && valid_pe_bc == true) {
+	if (fhs.count(bc) > 0) {
+	    strcpy(href_1->se_bc, bc_1);
+	    strcpy(href_2->pe_bc, bc_2);
+
+	    if (barcode_type == inline_index ||
+		barcode_type == inline_inline)
+		href_1->inline_bc_len = strlen(bc_1);
+	    if (barcode_type == index_inline ||
+		barcode_type == inline_inline)
+		href_2->inline_bc_len = strlen(bc_2);
+	    return 0;
+	}
+
+    } else if (valid_se_bc == true) {
+	strcpy(href_1->se_bc, bc_1);
+	href_1->inline_bc_len = strlen(bc_1);
+	return 0;
+    }
+
+    //
+    // Try to correct the barcode.
+    //
+    BarcodePair old_barcode = bc;
     bool se_correct = false;
     bool pe_correct = false;
 
-    //
-    // Is this a legitimate barcode?
-    //
-    if (fhs.count(bc) == 0) {
-	BarcodePair old_barcode = bc;
+    if (paired) {
+	if (se_bc.count(bc.se) == 0)
+	    se_correct = correct_barcode(se_bc, href_1, single_end);
+	if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
+	    pe_correct = correct_barcode(pe_bc, href_2, paired_end);
 
-    	//
-    	// Try to correct the barcode.
-    	//
-	if (paired) {
-	    if (se_bc.count(bc.se) == 0)
-		se_correct = correct_barcode(se_bc, href_1, single_end);
-	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
-		pe_correct = correct_barcode(pe_bc, href_2, paired_end);
-
-	    if (se_correct)
-		bc.se = string(href_1->se_bc);
-	    if (pe_bc.size() > 0 && pe_correct)
-		bc.pe = string(href_2->pe_bc);
+	if (se_correct)
+	    bc.se = string(href_1->se_bc);
+	if (pe_bc.size() > 0 && pe_correct)
+	    bc.pe = string(href_2->pe_bc);
  
-	    //
-	    // After correcting the individual barcodes, check if the combination is valid.
-	    //
-	    if (fhs.count(bc) == 0) {
-		counter["ambiguous"] += 2;
-		href_1->retain = 0;
-		href_2->retain = 0;
-	    }
-
-	} else {
-	    if (se_bc.count(bc.se) == 0)
-		se_correct = correct_barcode(se_bc, href_1, single_end);
-	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
-		pe_correct = correct_barcode(pe_bc, href_1, paired_end);
-
-	    if (se_correct)
-		bc.se = string(href_1->se_bc);
-	    if (pe_bc.size() > 0 && pe_correct)
-		bc.pe = string(href_1->pe_bc);
-
-	    if (fhs.count(bc) == 0) {
-		counter["ambiguous"]++;
-		href_1->retain = 0;
-	    }
+	//
+	// After correcting the individual barcodes, check if the combination is valid.
+	//
+	if (fhs.count(bc) == 0) {
+	    counter["ambiguous"] += 2;
+	    href_1->retain = 0;
+	    href_2->retain = 0;
 	}
 
-	if (href_1->retain && (se_correct || pe_correct)) {
-	    counter["recovered"] += paired ? 2 : 1;
-	    barcode_log[old_barcode]["total"] -= paired ? 2 : 1;
-	    if (barcode_log.count(bc) == 0) {
-		barcode_log[bc]["total"]    = 0;
-		barcode_log[bc]["retained"] = 0;
-		barcode_log[bc]["low_qual"] = 0;
-		barcode_log[bc]["noradtag"] = 0;
-	    }
-	    barcode_log[bc]["total"] += paired ? 2 : 1;
+    } else {
+	if (se_bc.count(bc.se) == 0)
+	    se_correct = correct_barcode(se_bc, href_1, single_end);
+	if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
+	    pe_correct = correct_barcode(pe_bc, href_1, paired_end);
+
+	if (se_correct)
+	    bc.se = string(href_1->se_bc);
+	if (pe_bc.size() > 0 && pe_correct)
+	    bc.pe = string(href_1->pe_bc);
+
+	if (fhs.count(bc) == 0) {
+	    counter["ambiguous"]++;
+	    href_1->retain = 0;
 	}
+    }
+
+    if (href_1->retain && (se_correct || pe_correct)) {
+	counter["recovered"] += paired ? 2 : 1;
+	barcode_log[old_barcode]["total"] -= paired ? 2 : 1;
+	if (barcode_log.count(bc) == 0) {
+	    barcode_log[bc]["total"]    = 0;
+	    barcode_log[bc]["retained"] = 0;
+	    barcode_log[bc]["low_qual"] = 0;
+	    barcode_log[bc]["noradtag"] = 0;
+	}
+	barcode_log[bc]["total"] += paired ? 2 : 1;
     }
 
     return 0;

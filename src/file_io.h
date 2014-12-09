@@ -75,7 +75,7 @@ void help( void );
 int  build_file_list(vector<pair<string, string> > &);
 int  load_barcodes(string, vector<BarcodePair> &, 
 		   set<string> &, set<string> &, 
-		   int &, int &);
+		   uint &, uint &, uint &, uint &);
 int  open_files(vector<pair<string, string> > &,
 		vector<BarcodePair> &, 
 		map<BarcodePair, ofstream *> &, 
