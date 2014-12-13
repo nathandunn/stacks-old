@@ -406,7 +406,9 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
     if (valid_se_bc == true && valid_pe_bc == true)
 	bc.set(bc_1, bc_2);
     else if (valid_se_bc == true)
-	bc.set(bc_1);
+	bc.se = bc_1;
+    else if (valid_pe_bc == true)
+	bc.pe = bc_2;
 
     //
     // Log the barcodes we receive.
@@ -420,7 +422,7 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
     barcode_log[bc]["total"] += paired ? 2 : 1;
 
     //
-    // If we have a perfectly matching barcode, set the barcode and length in the right places and return.
+    // If we have a perfectly matching barcode, set the barcode and length in the right places.
     //
     if (pe_bc.size() > 0 && valid_se_bc == true && valid_pe_bc == true) {
 	if (fhs.count(bc) > 0) {
@@ -439,7 +441,10 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
     } else if (valid_se_bc == true) {
 	strcpy(href_1->se_bc, bc_1);
 	href_1->inline_bc_len = strlen(bc_1);
-	return 0;
+
+    } else if (valid_pe_bc == true) {
+	strcpy(href_2->pe_bc, bc_2);
+	href_2->inline_bc_len = strlen(bc_2);
     }
 
     //
