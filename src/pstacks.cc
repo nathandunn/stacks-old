@@ -647,7 +647,7 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
 // are identified by their chromosome and basepair location.
 //
 int load_radtags(string in_file, HashMap &radtags) {
-    Input *fh;
+    Input *fh = NULL;
     Seq *c;
 
     if (in_file_type == bowtie)
