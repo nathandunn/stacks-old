@@ -1848,7 +1848,7 @@ int dump_merged_tags(map<int, MergedStack *> &m) {
 }
 
 int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radtags_keys) {
-    Input *fh;
+    Input *fh = NULL;
     DNASeq *d;
 
     if (in_file_type == fasta)
@@ -1921,7 +1921,7 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radta
 int
 load_seq_ids(vector<char *> &seq_ids)
 {
-    Input *fh;
+    Input *fh = NULL;
 
     if (in_file_type == fasta)
         fh = new Fasta(in_file.c_str());

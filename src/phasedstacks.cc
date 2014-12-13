@@ -151,7 +151,7 @@ int main (int argc, char* argv[]) {
 
 	// if (files[i].second != "batch_1.groupV.phase") continue;
 
-	PhasedSummary *psum;
+	PhasedSummary *psum = NULL;
 
 	if (in_file_type == fastphase) {
 	    if ((psum = parse_fastphase(in_path + files[i].second)) == NULL) {
@@ -794,7 +794,7 @@ enumerate_haplotypes(ofstream &fh, map<string, int> &pop_map, PhasedSummary *psu
     //
     // Write the haplotypes.
     //
-    float tot;
+    float tot = 0.0;
 
     fh << haplotypes.size() << "\t";
     for (it = haplotypes.begin(); it != haplotypes.end(); it++) {
