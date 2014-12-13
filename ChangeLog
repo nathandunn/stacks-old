@@ -1,3 +1,8 @@
+Stacks 1.23 - Dec 12, 2014
+--------------------------
+	Bugfix: Fixed a segfault bug in process_radtags where the process_barcode function returned 
+	prematurely when one barcode was correct and one was incorrect in paired cases.
+
 Stacks 1.22 - Dec 08, 2014
 --------------------------
 	Feature: process_radtags and process_shortreads now support variable barcode lengths. In
