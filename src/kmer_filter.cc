@@ -1084,7 +1084,7 @@ process_file_kmers(string path, SeqKmerHash &kmer_map, vector<char *> &kmer_map_
     char          *hash_key;
     bool           exists;
     int            j;
-    Input         *fh;
+    Input         *fh = NULL;
 
     if (in_file_type == fastq)
         fh = new Fastq(path.c_str());

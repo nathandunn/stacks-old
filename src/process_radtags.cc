@@ -1064,7 +1064,7 @@ int parse_command_line(int argc, char* argv[]) {
 	help();
     }
 
-    if (score_limit < 0 || score_limit > 40) {
+    if (score_limit > 40) {
 	cerr << "Score limit must be between 0 and 40.\n";
 	help();
     }
