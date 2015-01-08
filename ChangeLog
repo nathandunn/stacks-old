@@ -1,6 +1,11 @@
+Stacks 1.24 - Jan 07, 2015
+--------------------------
+	Bugfix: fixed segmentation fault in process_radtags/process_shortreads when resizing sequence
+	and phred internal buffer sizes.
+
 Stacks 1.23 - Dec 12, 2014
 --------------------------
-	Bugfix: Fixed a segfault bug in process_radtags where the process_barcode function returned 
+	Bugfix: Fixed a segfault bug in process_radtags where the process_barcode function returned
 	prematurely when one barcode was correct and one was incorrect in paired cases.
 	Bugfix: fixed compiler warnings when building with CLANG.
 
