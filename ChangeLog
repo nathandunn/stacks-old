@@ -1,5 +1,6 @@
 Stacks 1.24 - Jan 07, 2015
 --------------------------
+	Feature: added restriction enzyme ecoRV.
 	Bugfix: fixed segmentation fault in process_radtags/process_shortreads when resizing sequence
 	and phred internal buffer sizes.
 
