@@ -190,7 +190,8 @@ public:
 	this->x             = 0;
 	this->y             = 0;
 	this->index         = 0;
-
+	this->len           = 0;
+	
 	this->inline_bc[0] = '\0';
 	this->index_bc[0]  = '\0';
 	this->machine[0]   = '\0';
