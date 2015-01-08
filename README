@@ -144,11 +144,15 @@ them:
 
 Alias /stacks "/usr/local/share/stacks/php"
 
-A sensible way to do this is to create the file stacks.conf in either the
+A sensible way to do this is to create the file stacks.conf with the above lines.
+
+If you are using Apache 2.3 or earlier:
+---------------------------------------
+Place the stacks.conf file in either
 
 /etc/apache2/conf.d/ or /etc/httpd/conf.d/
 
-directory (depending on your Linux distro). Place the above lines in this file and 
+directory (depending on your Linux distro) and 
 restart the apache server:
 
 # vi /etc/apache2/conf.d/stacks.conf
@@ -156,6 +160,24 @@ restart the apache server:
 
 (See the Apache configuration for more information on what these do:
 http://httpd.apache.org/docs/2.0/mod/core.html#directory)
+
+If you are using Apache 2.4 or later:
+---------------------------------------
+Place the stacks.conf file in
+
+/etc/apache2/conf-available
+
+directory and then create a symlink to it in the
+
+/etc/apache2/conf-enabled
+
+directory. Then restart Apache. Like so:
+
+# vi /etc/apache2/conf-available/stacks.conf
+# ln -s /etc/apache2/conf-available/stacks.conf /etc/apache2/conf-enabled/stacks.conf
+# apachectl restart
+
+4. Provide access to the MySQL database from the web interface
 
 Edit the PHP configuration file (constants.php.dist) to allow it access to the 
 MySQL database. Change the file to include the proper database
@@ -169,7 +191,7 @@ You may find it advantageous to create a specific MySQL user with limited
 permissions - SELECT, UPDATE, and DELETE to allow users to interact
 with the database through the web interface.
 
-4. Enable web-based exporting from the MySQL database.
+5. Enable web-based exporting from the MySQL database.
 
 Edit the stacks_export_notify.pl script to specify the email and SMTP
 server to use in notification messages.

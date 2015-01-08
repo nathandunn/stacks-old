@@ -295,9 +295,9 @@ parse_input_record(Seq *s, Read *r)
 	r->resize(len + 1);
 
     strncpy(r->seq,   s->seq,  r->size - 1); 
-    r->seq[r->size]   = '\0';
     strncpy(r->phred, s->qual, r->size - 1);
-    r->phred[r->size] = '\0';
+    r->seq[r->size - 1]   = '\0';
+    r->phred[r->size - 1] = '\0';
     r->len = len;
 
     if (r->read == 1) {
