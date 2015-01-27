@@ -35,6 +35,7 @@ using std::set;
 using std::pair;
 using std::make_pair;
 #include<iostream>
+using std::ofstream;
 using std::cerr;
 #include<sstream>
 using std::stringstream;

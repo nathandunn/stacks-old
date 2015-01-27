@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2012-2015, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -54,6 +54,7 @@ int       bootstrap_reps    = 100;
 bool      bootstrap_wl      = false;
 bool      write_single_snp  = false;
 bool      write_random_snp  = false;
+bool      merge_sites       = false;
 bool      expand_id         = false;
 bool      sql_out           = false;
 bool      vcf_out           = false;
@@ -93,10 +94,12 @@ map<int, set<int> > whitelist;
 map<string, const char **> renz;
 map<string, int>           renz_cnt;
 map<string, int>           renz_len;
+map<string, int>           renz_olap;
 
 int main (int argc, char* argv[]) {
 
     initialize_renz(renz, renz_cnt, renz_len);
+    initialize_renz_olap(renz_olap);
 
     parse_command_line(argc, argv);
 
@@ -289,6 +292,12 @@ int main (int argc, char* argv[]) {
     	    delete mit->second;
     	modres.clear();
     }
+
+    //
+    // Merge loci that overlap on a common restriction enzyme cut site.
+    //
+    if (merge_sites && loci_ordered)
+	merge_shared_cutsite_loci(catalog, pmap);
 
     uint pop_id, start_index, end_index;
     map<int, pair<int, int> >::iterator pit;
@@ -671,6 +680,85 @@ tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     }
 
     return 0;
+}
+
+int
+merge_shared_cutsite_loci(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+{
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus *cur, *next;
+    Datum  **d_1, **d_2;
+    uint unmergable, tot_loci;
+    uint success = 0;
+    uint failure = 0;
+    uint overlap = 0;
+
+    tot_loci = pmap->loci_cnt();
+    
+    //
+    // Iterate over each chromosome.
+    //
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	//
+	// Iterate over each ordered locus on this chromosome.
+	//
+	//cerr << it->first << "\n";
+	next = it->second[0];
+	for (uint pos = 1; pos < it->second.size(); pos++) {
+	    cur  = next;
+	    next = it->second[pos];
+
+	    //
+	    // Do these two loci overlap?
+	    //   +Must occur on opposite strands
+	    //   +Must overlap according to the length of the cutsite.
+	    //
+	    if (((cur->loc.strand == minus && next->loc.strand == plus) &&
+		 (cur->loc.bp  - next->loc.bp + 1 == renz_olap[enz])) ||
+		((cur->loc.strand == plus  && next->loc.strand == minus) &&
+		 (next->loc.bp - cur->loc.bp  + 1 == renz_olap[enz]))) {
+		overlap++;
+
+		d_1        = pmap->locus(cur->id);
+		d_2        = pmap->locus(next->id);
+		unmergable = 0;
+	
+		//
+		// Check if all members of the population contain these two loci (or are missing both).
+		//
+		for (int i = 0; i < pmap->sample_cnt(); i++) {
+		    if ((d_1[i] != NULL && d_2[i] == NULL) ||
+			(d_1[i] == NULL && d_2[i] != NULL))
+			unmergable++;
+		}
+
+		//
+		// If possible, merge the two loci together.
+		//
+		if (unmergable > 0)
+		    failure++;
+		else if (!merge_and_phase_loci(pmap, cur, next))
+		    failure++;
+		else
+		    success++;
+	    }
+	}
+    }
+
+    cerr << "Of " << tot_loci << " loci, "
+	 << overlap << " share a cutsite; "
+	 << success << " were merged; "
+	 << failure << " failed to merge; "
+	 << pmap->loci_cnt() << " remaining loci.\n";
+    
+    exit(1);
+    return 0;
+}
+
+int
+merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next)
+{
+    return 1;
 }
 
 int 
@@ -6513,6 +6601,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"phylip",        no_argument,       NULL, 'Y'},
 	    {"phylip_var",    no_argument,       NULL, 'L'},
 	    {"hzar",          no_argument,       NULL, 'Z'},
+	    {"merge_sites",   no_argument,       NULL, 'D'},
 	    {"window_size",   required_argument, NULL, 'w'},
 	    {"num_threads",   required_argument, NULL, 't'},
 	    {"batch_id",      required_argument, NULL, 'b'},
@@ -6547,7 +6636,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hlkKSACLHEYZFVG123456ijgvsib:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:c:", long_options, &option_index);
+	c = getopt_long(argc, argv, "ACDEFGHKLSVYZ123456ghjklsvb:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:c:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -6565,6 +6654,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'M':
 	    pmap_path = optarg;
+	    break;
+	case 'D':
+	    merge_sites = true;
 	    break;
 	case 'b':
 	    batch_id = is_integer(optarg);
@@ -6773,6 +6865,11 @@ int parse_command_line(int argc, char* argv[]) {
 	help();
     }
 
+    if (merge_sites == true && enz.length() == 0) {
+	cerr << "You must specify the restriction enzyme associated with this data set to merge overlaping cutsites.\n";
+	help();
+    }
+    
     return 0;
 }
 
@@ -6795,6 +6892,8 @@ void help() {
 	      << "  t: number of threads to run in parallel sections of code.\n"
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n"
+	      << "  Merging and Phasing:\n"
+	      << "    --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n\n"
 	      << "  Data Filtering:\n"
 	      << "    r: minimum percentage of individuals in a population required to process a locus for that population.\n"
 	      << "    p: minimum number of populations a locus must be present in to process a locus.\n"
@@ -6806,7 +6905,7 @@ void help() {
 	      << "    --write_single_snp: restrict data analysis to only the first SNP per locus.\n"
 	      << "    --write_random_snp: restrict data analysis to one random SNP per locus.\n\n"
 	      << "  Fstats:\n"
-	      << "    --fstats: enable SNP and haplotype-based F statistics.\n"
+	      << "    --fstats: enable SNP and haplotype-based F statistics.\n\n"
 	      << "  Kernel-smoothing algorithm:\n" 
 	      << "    k: enable kernel-smoothed Pi, Fis, Fst, Fst', and Phi_st calculations.\n"
 	      << "    --window_size [num]: distance over which to average values (sigma, default 150,000bp; window is 3sigma in length).\n\n"

@@ -106,6 +106,8 @@ int     load_marker_column_list(string, map<int, set<int> > &);
 int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<int, int> > &);
 int     log_haplotype_cnts(map<int, CSLocus *> &, ofstream &);
 bool    order_unordered_loci(map<int, CSLocus *> &);
+int     merge_shared_cutsite_loci(map<int, CSLocus *> &, PopMap<CSLocus> *);
+int     merge_and_phase_loci(PopMap<CSLocus> *, CSLocus *, CSLocus *);
 int     tabulate_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int     create_genotype_map(CSLocus *, PopMap<CSLocus> *);
 int     call_population_genotypes(CSLocus *, PopMap<CSLocus> *);
