@@ -189,4 +189,9 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["ecoRV"]   = 3;
 }
 
+void 
+initialize_renz_olap(map<string, int> &renz_olap) {
+    renz_olap["sbfI"]   = 4;
+}
+
 #endif // __RENZ_H__
