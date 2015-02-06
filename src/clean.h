@@ -181,17 +181,17 @@ public:
 	this->phred         = new char[buf_len + 1];
 	this->int_scores    = new  int[buf_len];
 	this->size          = buf_len + 1;
-	this->inline_bc_len = barcode_size;
 	this->read          = read;
 
 	this->retain        = 1;
+	this->inline_bc_len = 0;
 	this->tile          = 0;
 	this->lane          = 0;
 	this->x             = 0;
 	this->y             = 0;
 	this->index         = 0;
 	this->len           = 0;
-	
+
 	this->inline_bc[0] = '\0';
 	this->index_bc[0]  = '\0';
 	this->machine[0]   = '\0';
@@ -211,10 +211,12 @@ public:
 	    case inline_index:
 		this->se_bc = this->inline_bc;
 		this->pe_bc = this->index_bc;
+		this->inline_bc_len = barcode_size;
 		break;
 	    case inline_null:
 	    case inline_inline:
 		this->se_bc = this->inline_bc;
+		this->inline_bc_len = barcode_size;
 		break;
 	    case index_null:
 	    case index_index:
@@ -228,6 +230,7 @@ public:
 	    case inline_inline:
 	    case index_inline:
 		this->pe_bc = this->inline_bc;
+		this->inline_bc_len = barcode_size;
 		break;
 	    case index_index:
 	    case inline_index:
@@ -441,11 +444,15 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 
     } else if (valid_se_bc == true) {
 	strcpy(href_1->se_bc, bc_1);
-	href_1->inline_bc_len = strlen(bc_1);
+	if (barcode_type == inline_index ||
+	    barcode_type == inline_inline)
+	    href_1->inline_bc_len = strlen(bc_1);
 
     } else if (valid_pe_bc == true) {
 	strcpy(href_2->pe_bc, bc_2);
-	href_2->inline_bc_len = strlen(bc_2);
+	if (barcode_type == index_inline ||
+	    barcode_type == inline_inline)
+	    href_2->inline_bc_len = strlen(bc_2);
     }
 
     //
