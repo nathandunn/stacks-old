@@ -1370,7 +1370,7 @@ function apply_query_filters($display_params) {
 	      "pare"  => "(parents >= ? AND parents <= ?)",
 	      "prog"  => "(progeny >= ?)",
 	      "vprog" => "(valid_progeny >= ?)",
-	      "lnl"   => "(lnl <= ? AND lnl >= ?)",
+	      "lnl"   => "(lnl >= ? AND lnl <= ?)",
 	      "mark"  => "(marker LIKE ?)", 
               "est"   => "(ests > ?)",
               "pe"    => "(pe_radtags > ?)",
