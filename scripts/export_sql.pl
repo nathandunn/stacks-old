@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 #
 # This file is part of Stacks.
 #
@@ -22,7 +22,7 @@
 # Read in a set of filtering paramters, query a Stacks pipeline database based on
 # those filters and write the results into a compact tab-separated values or excel file.
 #
-# Written by Julian Catchen <jcatchen@uoregon.edu>
+# Written by Julian Catchen <jcatchen@illinois.edu>
 #
 
 use strict;
@@ -41,7 +41,7 @@ my $map_type  = "gen";
 my $all_depth = 0;
 my $allele_depth_lim = 1;
 my $locus_depth_lim  = 0;
-my $locus_lnl_lim    = 0.0;
+my $locus_lnl_lim    = -10000.0;
 my $man_cor   = 0;
 my $db        = "";
 
@@ -333,7 +333,7 @@ sub apply_query_filters {
 	 "pare"  => "(parents >= ? AND parents <= ?)",
          "prog"  => "(progeny >= ?)",
          "vprog" => "(valid_progeny >= ?)",
-	 "lnl"   => "(lnl <= ? AND lnl >= ?)",
+	 "lnl"   => "(lnl >= ? AND lnl <= ?)",
          "mark"  => "(marker LIKE ?)", 
          "est"   => "(ests > ?)",
          "pe"    => "(pe_radtags > ?)",
@@ -949,6 +949,7 @@ sub parse_command_line {
         elsif ($_ =~ /^-m$/) { $map_type  = lc(shift @ARGV); }
         elsif ($_ =~ /^-A$/) { $allele_depth_lim = shift @ARGV; }
         elsif ($_ =~ /^-L$/) { $locus_depth_lim  = shift @ARGV; }
+        elsif ($_ =~ /^-I$/) { $locus_lnl_lim    = shift @ARGV; }
         elsif ($_ =~ /^-d$/) { $all_depth++; }
         elsif ($_ =~ /^-c$/) { $man_cor++; }
 	elsif ($_ =~ /^-v$/) { version(); exit(); }
@@ -991,6 +992,12 @@ sub parse_command_line {
 	$filters{'pare'} = 1;
 	$filters{'pare_l'} = 1 if (!defined($filters{'pare_l'}));
 	$filters{'pare_u'} = 1000 if (!defined($filters{'pare_u'}));
+    }
+
+    if (defined($filters{'lnl_l'}) || defined($filters{'lnl_u'})) {
+	$filters{'lnl'} = 1;
+	$filters{'lnl_l'} = -500 if (!defined($filters{'lnl_l'}));
+	$filters{'lnl_u'} =  0   if (!defined($filters{'lnl_u'}));
     }
 
     if ($out_file eq "") {
@@ -1053,13 +1060,16 @@ sub usage {
         "    f: file to output data.\n",
         "    o: type of data to export: 'tsv' or 'xls'.\n",
 	"    d: output depths of alleles instead of the allele values (must use 'haplo' data type).\n",
-	"    A: if exporting observed haplotypes, specify an allele depth limit.\n",
-	"    L: if exporting observed haplotypes, specify a locus depth limit.\n",
 	"    m: map type. If genotypes are to be exported, specify the map type.\n",
 	"    c: include manual corrections if exporting genotypes.\n",
-        "    F: one or more filters in the format name=value.\n",
-	"       Supported filters: \n",
-	"        $filt\n",
+	"  Filters that are applied to select among the catalog loci:\n",
+        "      F: one or more filters in the format name=value.\n",
+	"         Supported filters: \n",
+	"          $filt\n\n",
+	"  Filters to be applied to individual sets of haplotype calls (for those selected catalog loci):\n",
+	"      A: specify an minimum allele depth limit.\n",
+	"      L: specify a minimum locus depth limit.\n",
+	"      I: specify a minimum locus log likelihood limit.\n",
         "    h: display this help message.\n\n";
     exit(0);
 }
