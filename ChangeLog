@@ -1,5 +1,7 @@
 Stacks 1.25
 --------------------------
+	Bugfix: the log likelihood filter was not working properly in export_sql.pl, causing many
+	genotypes to be excluded during export.
 	Bugfix: process_radtags was not looking for the paired-end RAD cutsite in the proper location
 	when dealing with double-digest, inline/index barcoded reads.
 
