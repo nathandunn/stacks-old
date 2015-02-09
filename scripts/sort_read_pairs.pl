@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2011-2015, Julian Catchen <jcatchen@illinois.edu>
 #
 # This file is part of Stacks.
 #
@@ -22,7 +22,7 @@
 # Sort paired-end sequences according to the stacks the non-paired-end 
 # was found in. 
 #
-# By Julian Catchen <jcatchen@uoregon.edu>
+# By Julian Catchen <jcatchen@illinois.edu>
 #
 
 use strict;
@@ -38,6 +38,7 @@ my $in_path        = "";
 my $out_path       = "";
 my $samp_path      = "";
 my $out_type       = "fasta";
+my $in_type        = "fastq";
 my $gzipped        = false;
 
 parse_command_line();
@@ -66,6 +67,19 @@ foreach $file (@files) {
 }
 
 #
+# Determine which catalog loci have more than a single match from each sample and blacklist them.
+#
+print STDERR "Identifying catalog loci that have more than one match from a single sample...";
+my %multiple_matches;
+check_mult_catalog_matches(\%matches, \%multiple_matches);
+print STDERR 
+    "done\n",
+    "  These loci will be excluded when collating paired-end reads;\n",
+    "  A list of them has been recorded: $out_path/sort_read_pairs.log\n",
+    scalar(keys %matches), " total catalog loci; ", scalar(keys %multiple_matches), 
+    " will be excluded, processing ", scalar(keys %matches) - scalar(keys %multiple_matches), " loci.\n";
+
+#
 # Check if files already exist, if so, exit to prevent adding data to existing files.
 #
 my ($cat_id, $path);
@@ -74,7 +88,7 @@ foreach $cat_id (keys %matches) {
     #
     # Check that this catalog ID only has a single match from each sample.
     #
-    next if (check_mult_catalog_matches($matches{$cat_id}) == true);
+    next if (defined($multiple_matches{$cat_id}));
 
     $path  = $out_path . "/" . $cat_id;
     $path .= $out_type eq "fasta" ? ".fa" : ".fq";
@@ -103,11 +117,13 @@ foreach $file (@files) {
     $reads{$file->{'prefix'}} = {};
 
     print STDERR "  Loading sample file...";
-    process_read_pairs($samp_path, $file, \%stacks, $reads{$file->{'prefix'}});
+    $in_type eq "fastq" ?
+	process_fastq_read_pairs($samp_path, $file, \%stacks, $reads{$file->{'prefix'}}) :
+	process_fasta_read_pairs($samp_path, $file, \%stacks, $reads{$file->{'prefix'}});
     print STDERR "done.\n";
 
     print STDERR "  Printing results...";
-    print_results($out_path, \%matches, \%stacks, \%reads);
+    print_results($out_path, \%matches, \%stacks, \%reads, \%multiple_matches);
     print STDERR "done.\n";
 
     #
@@ -184,7 +200,7 @@ sub load_stacks {
     close($in_fh);
 }
 
-sub process_read_pairs {
+sub process_fastq_read_pairs {
     my ($in_path, $in_file, $stacks, $reads) = @_;
 
     my ($file, $in_fh, $line, $seq, $qual, $key, $read_id);
@@ -234,8 +250,51 @@ sub process_read_pairs {
     }
 }
 
+sub process_fasta_read_pairs {
+    my ($in_path, $in_file, $stacks, $reads) = @_;
+
+    my ($file, $in_fh, $line, $seq, $qual, $key, $read_id);
+
+    if ($in_file->{'suffix'} eq ".1") {
+	if ($gzipped == true) {
+	    $file = $in_path . "/" . $in_file->{'prefix'} . ".2.fa.gz";
+	    open($in_fh, "gunzip -c $file |") or die("Unable to open paired-end input file '$file'\n");
+	} else {
+	    $file = $in_path . "/" . $in_file->{'prefix'} . ".2.fa";
+	    open($in_fh, "<$file") or die("Unable to open paired-end input file '$file'\n");
+	}
+    } else {
+	if ($gzipped == true) {
+	    $file = $in_path . "/" . $in_file->{'prefix'} . ".fa_2.gz";
+	    open($in_fh, "gunzip -c $file |") or die("Unable to open paired-end input file '$file'\n");
+	} else {
+	    $file = $in_path . "/" . $in_file->{'prefix'} . ".fa_2";
+	    open($in_fh, "<$file") or die("Unable to open paired-end input file '$file'\n");
+	}
+    }
+
+    while ($line = <$in_fh>) {
+	next if (substr($line, 0, 1) ne ">");
+	chomp $line;
+
+        $read_id = substr($line, 1, -2);
+	$seq     = <$in_fh>;
+	chomp $seq;
+
+        $key = $stacks->{$in_file->{'prefix'}}->{$read_id};
+
+        next if (!defined($key));
+
+        if (!defined($reads->{$key})) {
+            $reads->{$key} = [];
+        }
+
+        push(@{$reads->{$key}}, {'id' => $read_id, 'seq' => $seq, 'qual' => ""});
+    }
+}
+
 sub print_results {
-    my ($out_path, $matches, $stacks, $reads) = @_;
+    my ($out_path, $matches, $stacks, $reads, $multiple_matches) = @_;
 
     my ($path, $cat_id, $sample, $stack_id, $read, $out_fh, $i, @keys, $count, $key, $mult_hits);
 
@@ -246,7 +305,7 @@ sub print_results {
         #
         # Check that this catalog ID only has a single match from each sample.
         #
-        next if (check_mult_catalog_matches($matches->{$cat_id}) == true);
+        next if (defined($multiple_matches->{$cat_id}));
 
         $path  = $out_path . "/" . $cat_id;
 	$path .= $out_type eq "fasta" ? ".fa" : ".fq";
@@ -276,26 +335,44 @@ sub print_results {
 }
 
 sub check_mult_catalog_matches {
-    my ($catalog) = @_;
+    my ($matches, $multiple_matches) = @_;
 
-    my (%samples, @keys, $key, $sample, $stack_id);
+    my ($fh, $key, $sample, $stack_id);
 
-    foreach $key (keys %{$catalog}) {
-        ($sample, $stack_id) = split(/\|/, $key);
-        $samples{$sample}++;
-    }
+    #
+    # Find catalog loci that have more than a single match from one or more samples
+    # and log those loci that will be excluded.
+    #
+    open($fh, ">$out_path/sort_read_pairs.log") or die("Unable to open log file, $!\n");
+    print $fh 
+	"# The catalog loci listed below have more than a single match from one or more individuals, indicating undermerged or repetitive loci.\n",
+	"# CatalogLocus <tab> Sample1:Locus1,Locus2;Sample2:Locus1,Locus2\n";
 
-    my $mult_hits = 0;
-       
-    foreach $key (keys %samples) {
-        $mult_hits++ if ($samples{$key} > 1);
-    }
+    foreach $cat_id (keys %{$matches}) {
+	my %samples;
+
+	foreach $key (keys %{$matches->{$cat_id}}) {
+	    ($sample, $stack_id) = split(/\|/, $key);
+	    push(@{$samples{$sample}}, $stack_id);
+	}
+
+	my $mult_hits = 0;
+	my $str = "";
+
+	foreach $sample (keys %samples) {
+	    if (scalar(@{$samples{$sample}}) > 1) {
+		$mult_hits++;
+		$str .= $sample . ":" . join(",", @{$samples{$sample}}) . "; ";
+	    }
+	}
     
-    if ($mult_hits > 0) {
-        return true;
-    } else {
-        return false;
+	if ($mult_hits > 0) {
+	    print $fh $cat_id, "\t", substr($str, 0, -1), "\n";
+	    $multiple_matches{$cat_id}++;
+	}
     }
+
+    close($fh);
 }
 
 sub count_reads {
@@ -384,6 +461,7 @@ sub parse_command_line {
 	elsif ($_ =~ /^-o$/) { $out_path   = shift @ARGV; }
 	elsif ($_ =~ /^-s$/) { $samp_path  = shift @ARGV; }
 	elsif ($_ =~ /^-t$/) { $out_type   = shift @ARGV; }
+	elsif ($_ =~ /^-i$/) { $in_type    = shift @ARGV; }
 	elsif ($_ =~ /^-W$/) { $white_list = shift @ARGV; }
 	elsif ($_ =~ /^-w$/) { $cat_white_list = shift @ARGV; }
 	elsif ($_ =~ /^-d$/) { $debug++; }
@@ -396,7 +474,27 @@ sub parse_command_line {
     }
 
     if ($out_type ne "fasta" && $out_type ne "fastq") {
-	pritn STDERR "Output type must be either 'fasta' or 'fastq'.\n";
+	print STDERR "Output type must be either 'fasta' or 'fastq'.\n";
+	usage();
+    }
+
+    if ($in_type ne "fasta" && $in_type ne "fastq") {
+	print STDERR "Input type must be either 'fasta' or 'fastq'.\n";
+	usage();
+    }
+
+    if (length($in_path) == 0) {
+	print STDERR "You must specify a path to the Stacks output files.\n";
+	usage();
+    }
+
+    if (length($out_path) == 0) {
+	print STDERR "You must specify a path to write the collated output files.\n";
+	usage();
+    }
+
+    if (length($samp_path) == 0) {
+	print STDERR "You must specify a path to the paired-end reads.\n";
 	usage();
     }
 
@@ -414,9 +512,10 @@ sub usage {
 
     print STDERR <<EOQ; 
 sort_read_pairs.pl -p path -s path -o path [-t type] [-W white_list] [-w white_list] [-d] [-h]
-    p: path to the stacks output files.
+    p: path to the Stacks output files.
     s: path to paired-end sample files.
     o: path to output the collated FASTA files.
+    i: input type, either 'fasta' or 'fastq' (default).
     t: output type, either 'fasta' (default) or 'fastq'.
     W: a white list of files to process in the input path.
     w: a white list of catalog IDs to include.
