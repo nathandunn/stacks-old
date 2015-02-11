@@ -776,6 +776,54 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 int
 merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next)
 {
+    Datum **d_1 = pmap->locus(cur->id);
+    Datum **d_2 = pmap->locus(next->id);
+
+    set<string> phased_haplotypes;
+
+    //
+    // Take a census of the already phased haplotypes. We have phased haplotypes 
+    // if for individual i:
+    //   1. d_1 has a single haplotype and d_2 has a single haplotype
+    //   2. d_1 has a single haplotpye and d_2 has multiple haplotypes
+    //   3. d_1 has multiple haplotpyes and d_2 has a single haplotype
+    //
+    for (int i = 0; i < pmap->sample_cnt(); i++) {
+	if (d_1[i]->obshap.size() > 1 && d_2[i]->obshap.size() > 1)
+	    continue;
+	else
+	    for (uint j = 0; j < d_1[i]->obshap.size(); j++)
+		for (uint k = 0; k < d_2[i]->obshap.size(); k++)
+		    phased_haplotypes.insert(string(d_1[i]->obshap[j]) + string(d_2[i]->obshap[k]));
+    }
+
+    set<string>::iterator it;
+
+    for (it = phased_haplotypes.begin(); it != phased_haplotypes.end(); it++)
+	cerr << *it << "\n";
+
+    //
+    // Now we need to check if we can phase the remaining haplotypes.
+    //
+    for (int i = 0; i < pmap->sample_cnt(); i++) 
+	if (d_1[i]->obshap.size() > 1 && d_2[i]->obshap.size() > 1) {
+	    uint phased_cnt = 0;
+
+	    for (uint j = 0; j < d_1[i]->obshap.size(); j++) {
+		for (uint k = 0; k < d_2[i]->obshap.size(); k++)
+		    if (phased_haplotypes.count(string(d_1[i]->obshap[j]) + string(d_2[i]->obshap[k])))
+			phased_cnt++;
+	    }
+
+	    //
+	    // We were unable to find a single, phased combination.
+	    //
+	    if (phased_cnt != 1) {
+		cerr << "Unable to merge loci " << cur->id << " and " << next->id << "\n";
+		return 0;
+	    }
+	}
+
     return 1;
 }
 

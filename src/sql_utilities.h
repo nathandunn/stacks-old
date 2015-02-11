@@ -437,6 +437,7 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
 
         if (parts.size() != num_matches_fields) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+	    cerr << "LINE: '" << line << "'\n";
             return 0;
         }
 
