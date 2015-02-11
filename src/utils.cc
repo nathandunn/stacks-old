@@ -48,8 +48,11 @@ char reverse(char c) {
     case 'N':
     case 'n':
     case '.':
-	default:
 	return 'N';
+	break;
+    case '-':
+    default:
+	return '-';
 	break;
     }
 
