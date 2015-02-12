@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -31,7 +31,7 @@ uint Locus::sort_bp(uint k) {
     if (this->loc.strand == plus)
 	return this->loc.bp + k;
     else
-	return k == 0 ? this->loc.bp - this->len : this->loc.bp - k;
+	return k == 0 ? this->loc.bp - this->len + 1 : this->loc.bp - k;
 }
 
 int Locus::add_consensus(const char *seq) {

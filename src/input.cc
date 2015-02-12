@@ -102,43 +102,6 @@ Input::~Input() {
     this->fh.close();
 }
 
-char *rev_comp(const char *seq) {
-    int len   = strlen(seq);
-    int j     = 0;
-    char *com = new char[len + 1]; 
-    const char *p;
-   
-    for (p = seq + len - 1; p >= seq; p--) {
-        switch (*p) {
-        case 'A':
-        case 'a':
-            com[j] = 'T';
-            break;
-        case 'C':
-        case 'c':
-            com[j] = 'G';
-            break;
-        case 'G':
-        case 'g':
-            com[j] = 'C';
-            break;
-        case 'T':
-        case 't':
-            com[j] = 'A';
-            break;
-	case 'N':
-	case 'n':
-	case '.':
-	    com[j] = 'N';
-	    break;
-        }
-        j++;
-    }
-    com[len] = '\0';
-
-    return com;
-}
-
 int 
 parse_tsv(const char *line, vector<string> &parts) 
 {

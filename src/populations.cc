@@ -330,10 +330,10 @@ int main (int argc, char* argv[]) {
     	cerr << "Generating nucleotide-level summary statistics for population '" << pop_key[pop_id] << "'\n";
     	psum->add_population(catalog, pmap, pop_id, start_index, end_index, verbose, log_fh);
 
-	if (kernel_smoothed && loci_ordered) {
-	    cerr << "  Generating kernel-smoothed population statistics...\n";
-	    kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
-	}
+    	if (kernel_smoothed && loci_ordered) {
+    	    cerr << "  Generating kernel-smoothed population statistics...\n";
+    	    kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
+    	}
     }
 
     cerr << "Tallying loci across populations...";
@@ -348,16 +348,16 @@ int main (int argc, char* argv[]) {
     calculate_haplotype_stats(files, pop_indexes, catalog, pmap, psum);
 
     if (calc_fstats) {
-	calculate_haplotype_divergence(files, pop_indexes, grp_members, catalog, pmap, psum);
+    	calculate_haplotype_divergence(files, pop_indexes, grp_members, catalog, pmap, psum);
 
-	calculate_haplotype_divergence_pairwise(files, pop_indexes, grp_members, catalog, pmap, psum);
+    	calculate_haplotype_divergence_pairwise(files, pop_indexes, grp_members, catalog, pmap, psum);
     }
 
     //
     // Output a list of heterozygous loci and the associate haplotype frequencies.
     //
     if (sql_out)
-	write_sql(catalog, pmap);
+    	write_sql(catalog, pmap);
 
     //
     // Calculate and output the locus-level summary statistics.
@@ -368,37 +368,37 @@ int main (int argc, char* argv[]) {
     // Output data in requested formats
     //
     if (fasta_out)
-	write_fasta(catalog, pmap, samples, sample_ids);
+    	write_fasta(catalog, pmap, samples, sample_ids);
 
     if (vcf_out)
-	write_vcf(catalog, pmap, psum, samples, sample_ids);
+    	write_vcf(catalog, pmap, psum, samples, sample_ids);
 
     if (genepop_out)
-	write_genepop(catalog, pmap, psum, pop_indexes, samples);
+    	write_genepop(catalog, pmap, psum, pop_indexes, samples);
 
     if (structure_out)
-	write_structure(catalog, pmap, psum, pop_indexes, samples);
+    	write_structure(catalog, pmap, psum, pop_indexes, samples);
 
     if (fastphase_out)
-	write_fastphase(catalog, pmap, psum, pop_indexes, samples);
+    	write_fastphase(catalog, pmap, psum, pop_indexes, samples);
 
     if (phase_out)
-	write_phase(catalog, pmap, psum, pop_indexes, samples);
+    	write_phase(catalog, pmap, psum, pop_indexes, samples);
 
     if (beagle_out)
-	write_beagle(catalog, pmap, psum, pop_indexes, samples);
+    	write_beagle(catalog, pmap, psum, pop_indexes, samples);
 
     if (beagle_phased_out)
-	write_beagle_phased(catalog, pmap, psum, pop_indexes, samples);
+    	write_beagle_phased(catalog, pmap, psum, pop_indexes, samples);
 
     if (plink_out)
-	write_plink(catalog, pmap, psum, pop_indexes, samples);
+    	write_plink(catalog, pmap, psum, pop_indexes, samples);
 
     if (hzar_out)
-	write_hzar(catalog, pmap, psum, pop_indexes, samples);
+    	write_hzar(catalog, pmap, psum, pop_indexes, samples);
 
     if (phylip_out)
-	write_phylip(catalog, pmap, psum, pop_indexes, samples);
+    	write_phylip(catalog, pmap, psum, pop_indexes, samples);
 
     //
     // Output the observed haplotypes.
@@ -409,13 +409,13 @@ int main (int argc, char* argv[]) {
     // Calculate and write Fst.
     //
     if (calc_fstats)
-	write_fst_stats(files, pop_indexes, catalog, pmap, psum, log_fh);
+    	write_fst_stats(files, pop_indexes, catalog, pmap, psum, log_fh);
 
     //
     // Output nucleotide-level genotype calls for each individual.
     //
     if (genomic_out)
-	write_genomic(catalog, pmap);
+    	write_genomic(catalog, pmap);
 
     log_fh.close();
 
@@ -778,7 +778,6 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 	 << failure << " failed to merge; "
 	 << pmap->loci_cnt() << " remaining loci.\n";
     
-    exit(1);
     return 0;
 }
 
@@ -843,11 +842,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
     // Merge the catalog entries together.
     //
     if (!merge_csloci(cur, next, phased_haplotypes))
-	return 0;
-
-    cerr << "\n";
-    for (it = phased_haplotypes.begin(); it != phased_haplotypes.end(); it++)
-	cerr << *it << "\n";
+    	return 0;
 
     //
     // Mark the merged locus for destruction.
@@ -865,7 +860,7 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     //    enumerated on the positive strand. Complement the alleles as well.
     //
     for (uint j = 0; j < sink->snps.size(); j++) {
-	sink->snps[j]->col    = sink->len - sink->snps[j]->col;
+	sink->snps[j]->col    = sink->len - sink->snps[j]->col - 1;
 	sink->snps[j]->rank_1 = reverse(sink->snps[j]->rank_1);
 	sink->snps[j]->rank_2 = reverse(sink->snps[j]->rank_2);
 	sink->snps[j]->rank_3 = reverse(sink->snps[j]->rank_3);
@@ -879,21 +874,36 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
 	src->snps[j]->col = sink->len + src->snps[j]->col - renz_olap[enz];
 
     //
-    // 3. Adjust the genomic location of the sink locus.
+    // 3. Combine SNPs between the two catalog loci: add the SNPs from the sink (formerly on the 
+    //    negative strand) in reverse order, followed by the SNPs from the src.
+    //
+    vector<SNP *> tmpsnp;
+    for (int j = (int) sink->snps.size() - 1; j >= 0; j--)
+	tmpsnp.push_back(sink->snps[j]);
+    for (uint j = 0; j < src->snps.size(); j++)
+	tmpsnp.push_back(src->snps[j]);
+    sink->snps.clear();
+    for (uint j = 0; j < tmpsnp.size(); j++)
+	sink->snps.push_back(tmpsnp[j]);
+
+    //
+    // 4. Adjust the genomic location of the sink locus.
     //
     uint bp = sink->sort_bp();
     sink->loc.bp     = bp;
     sink->loc.strand = plus;
 
     //
-    // 4. Adjust the length of the sequence.
+    // 5. Adjust the length of the sequence.
     //
     sink->len += src->len - renz_olap[enz];
 
     //
-    // 4. Merge the consensus sequence together.
+    // 6. Merge the consensus sequence together.
     //
-    char *new_con;
+    char *new_con = rev_comp(sink->con);
+    delete [] sink->con;
+    sink->con = new_con;
     new_con   = new char[sink->len + 1];
     strcpy(new_con, sink->con);
     delete [] sink->con;
@@ -902,7 +912,7 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     strcpy(new_con, src->con);
 
     //
-    // 5. Record the now phased haplotypes.
+    // 7. Record the now phased haplotypes.
     //
     sink->alleles.clear();
     set<string>::iterator it;
@@ -917,7 +927,6 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 {
     char           tmphap[id_len], *new_hap, *model_calls;
     uint           haplen;
-    string         merged_hap;
     vector<SNP *>  tmpsnp;
     vector<string> tmpobshap;
     vector<int>    tmpobsdep;
@@ -928,7 +937,9 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 	//    enumerated on the positive strand. Complement the alleles as well.
 	//
 	for (uint j = 0; j < sink[i]->snps.size(); j++) {
+	    cerr << "  Adjusting SNP column in sink from " << sink[i]->snps[j]->col << " to ";
 	    sink[i]->snps[j]->col    = sink[i]->len - sink[i]->snps[j]->col;
+	    cerr << sink[i]->snps[j]->col << "\n";
 	    sink[i]->snps[j]->rank_1 = reverse(sink[i]->snps[j]->rank_1);
 	    sink[i]->snps[j]->rank_2 = reverse(sink[i]->snps[j]->rank_2);
 	    sink[i]->snps[j]->rank_3 = reverse(sink[i]->snps[j]->rank_3);
@@ -937,8 +948,11 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 	//
 	// 2. Adjust the SNP coordinates in the src locus to account for the now, longer length.
 	//
-	for (uint j = 0; j < src[i]->snps.size(); j++)
+	for (uint j = 0; j < src[i]->snps.size(); j++) {
+	    cerr << "  Adjusting SNP column in source from " << src[i]->snps[j]->col << " to ";
 	    src[i]->snps[j]->col = sink[i]->len + src[i]->snps[j]->col - renz_olap[enz];
+	    cerr << src[i]->snps[j]->col << "\n";
+	}
 	//
 	// 3. Reverse complement the observed haplotypes in the sink locus.
 	//
@@ -947,7 +961,6 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 	    for (uint k = 0; k < haplen; k++)
 		tmphap[k] = reverse(sink[i]->obshap[j][haplen - k - 1]);
 	    tmphap[haplen] = '\0';
-	    cerr << "Converting '" << sink[i]->obshap[j] << "' to '" << tmphap << "'\n";
 	    strcpy(sink[i]->obshap[j], tmphap);
 	}
 	//
@@ -955,9 +968,8 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 	//    negative strand) in reverse order, followed by the SNPs from the src.
 	//
 	tmpsnp.clear();
-	if (sink[i]->snps.size() > 0)
-	    for (uint j = sink[i]->snps.size() - 1; j >= 0; j--)
-		tmpsnp.push_back(sink[i]->snps[j]);
+	for (int j = (int) sink[i]->snps.size() - 1; j >= 0; j--)
+	    tmpsnp.push_back(sink[i]->snps[j]);
 	for (uint j = 0; j < src[i]->snps.size(); j++)
 	    tmpsnp.push_back(src[i]->snps[j]);
 	sink[i]->snps.clear();
@@ -967,56 +979,67 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 
     //
     // 5. Combine observed haplotypes between the two datums while phasing them.
-    //    5.1 First combine the haplotypes that are already in phase.
+    //    5.1 First combine the haplotypes from samples that are already in phase.
     //
+    vector<int> to_be_phased;
     phased_haplotypes.clear();
     for (int i = 0; i < sample_cnt; i++) {
 	if (sink[i]->obshap.size() > 1 && src[i]->obshap.size() > 1) {
+	    to_be_phased.push_back(i);
 	    continue;
 	} else {
+	    cerr << "Sample " << i << "\n";
 	    tmpobshap.clear();
 	    tmpobsdep.clear();
 	    for (uint j = 0; j < sink[i]->obshap.size(); j++) {
 		for (uint k = 0; k < src[i]->obshap.size(); k++) {
-		    merged_hap = string(sink[i]->obshap[j]) + string(src[i]->obshap[k]);
+		    string merged_hap = string(sink[i]->obshap[j]) + string(src[i]->obshap[k]);
 		    phased_haplotypes.insert(merged_hap);
 		    tmpobshap.push_back(merged_hap);
 		    tmpobsdep.push_back((sink[i]->depth[j] + src[i]->depth[k]) / 2);
+		    cerr << "  5.1; Merging [" << sink[i]->id << "] '" << sink[i]->obshap[j] << "' and [" << src[i]->id << "] '" << src[i]->obshap[k] << "' into '" << merged_hap << "'\n";
 		}
 	    }
 	    sink[i]->depth.clear();
 	    for (uint j = 0; j < sink[i]->obshap.size(); j++)
 		delete [] sink[i]->obshap[j];
+	    sink[i]->obshap.clear();
 	    for (uint j = 0; j < tmpobshap.size(); j++) {
 		new_hap = new char[tmpobshap[j].length() + 1];
 		strcpy(new_hap, tmpobshap[j].c_str());
 		sink[i]->obshap.push_back(new_hap);
+		cerr << "     Inserting '" << new_hap << "'\n";
 		sink[i]->depth.push_back(tmpobsdep[j]);
 	    }
 	}
     }
     //
-    //    5.2 Phase and combine the remaining haplotypes.
+    //    5.2 Phase and combine the haplotypes from the remaining samples.
     //
-    for (int i = 0; i < sample_cnt; i++) {
-	if (sink[i]->obshap.size() > 1 && src[i]->obshap.size() > 1) {
-	    tmpobshap.clear();
-	    tmpobsdep.clear();
-	    for (uint j = 0; j < sink[i]->obshap.size(); j++) {
-		for (uint k = 0; k < src[i]->obshap.size(); k++) {
-		    merged_hap = string(sink[i]->obshap[j]) + string(src[i]->obshap[k]);
-		    if (phased_haplotypes.count(merged_hap)) {
-			tmpobshap.push_back(merged_hap);
-			tmpobsdep.push_back((sink[i]->depth[j] + src[i]->depth[k]) / 2);
-		    }
+    int index;
+    for (uint i = 0; i < to_be_phased.size(); i++) {
+	index = to_be_phased[i];
+	tmpobshap.clear();
+	tmpobsdep.clear();
+	for (uint j = 0; j < sink[index]->obshap.size(); j++) {
+	    for (uint k = 0; k < src[index]->obshap.size(); k++) {
+		string merged_hap = string(sink[index]->obshap[j]) + string(src[index]->obshap[k]);
+		if (phased_haplotypes.count(merged_hap)) {
+		    tmpobshap.push_back(merged_hap);
+		    tmpobsdep.push_back((sink[index]->depth[j] + src[index]->depth[k]) / 2);
+		    cerr << "  5.2; Merging [" << sink[index]->id << "] '" << sink[index]->obshap[j] << "' and [" << src[index]->id << "] '" << src[index]->obshap[k] << "' into '" << merged_hap << "'\n";
 		}
 	    }
-	    for (uint j = 0; j < tmpobshap.size(); j++) {
-		new_hap = new char[tmpobshap[j].length() + 1];
-		strcpy(new_hap, tmpobshap[j].c_str());
-		sink[i]->obshap.push_back(new_hap);
-		sink[i]->depth.push_back(tmpobsdep[j]);
-	    }
+	}
+	sink[index]->depth.clear();
+	for (uint j = 0; j < sink[index]->obshap.size(); j++)
+	    delete [] sink[index]->obshap[j];
+	sink[i]->obshap.clear();
+	for (uint j = 0; j < tmpobshap.size(); j++) {
+	    new_hap = new char[tmpobshap[j].length() + 1];
+	    strcpy(new_hap, tmpobshap[j].c_str());
+	    sink[index]->obshap.push_back(new_hap);
+	    sink[index]->depth.push_back(tmpobsdep[j]);
 	}
     }
     //
@@ -1025,6 +1048,7 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
     for (int i = 0; i < sample_cnt; i++) {
 	sink[i]->len += src[i]->len - renz_olap[enz];
 
+	reverse_string(sink[i]->model);
 	model_calls    = new char[sink[i]->len + 1];
 	strcpy(model_calls, sink[i]->model);
 	delete [] sink[i]->model;
@@ -1035,6 +1059,15 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 	sink[i]->tot_depth = (sink[i]->tot_depth + src[i]->tot_depth) / 2;
 	sink[i]->lnl       = (sink[i]->lnl + src[i]->lnl) / 2.0;
     }
+
+    cerr << "\n\n";
+    for (int i = 0; i < sample_cnt; i++) {
+	cerr << "Sample: " << i << "\n";
+	for (uint j = 0; j < sink[i]->obshap.size(); j++) {
+	    cerr << "  obshap " << j << " '" << sink[i]->obshap[j] << "'\n";
+	}
+    }
+    cerr << "\n\n";
 
     return 1;
 }
@@ -4319,7 +4352,7 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string
 		       << "_Allele_" << k;
 
 		    if (strcmp(loc->loc.chr, "un") != 0)
-			fh << " [" << loc->loc.chr << ", " << loc->loc.bp << ", " << (loc->loc.strand == plus ? "+" : "-") << "]";
+			fh << " [" << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-") << "]";
 		    fh << "\n"
 		       << seq << "\n";
 		}
@@ -4608,7 +4641,7 @@ write_genepop(map<int, CSLocus *> &catalog,
     Datum   **d;
     LocSum  **s;
     LocTally *t;
-    int      len, start_index, end_index, col, pop_id;
+    int      start_index, end_index, col, pop_id;
     char     p_allele, q_allele;
 
     //
@@ -4658,8 +4691,6 @@ write_genepop(map<int, CSLocus *> &catalog,
 	    locus_index = 0;
 	    for (it = catalog.begin(); it != catalog.end(); it++) {
 		loc = it->second;
-
-		len = strlen(loc->con);
 		d   = pmap->locus(loc->id);
 		t   = psum->locus_tally(loc->id);
 
@@ -6132,7 +6163,6 @@ write_phylip(map<int, CSLocus *> &catalog,
 
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
-    Datum   **d;
     LocSum  **s;
     LocTally *t;
 
@@ -6152,7 +6182,6 @@ write_phylip(map<int, CSLocus *> &catalog,
 	    loc = it->second[pos];
 
 	    s = psum->locus(loc->id);
-	    d = pmap->locus(loc->id);
 	    t = psum->locus_tally(loc->id);
 
 	    for (uint i = 0; i < loc->snps.size(); i++) {
