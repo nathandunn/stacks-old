@@ -1,5 +1,10 @@
 Stacks 1.25
 --------------------------
+	Bugfix: The FASTA output from the populations program was reporting the internal value
+	(zero-based index) for the basepair position of each read (the first nucleotide of the
+	cutsite) causing an off-by-one error for all reads and reads on the negative strand had
+	the coordinate for the cutsite end of the read (right-most end) reported instead of the
+	standard left-most end.
 	Bugfix: the log likelihood filter was not working properly in export_sql.pl, causing many
 	genotypes to be excluded during export.
 	Bugfix: process_radtags was not looking for the paired-end RAD cutsite in the proper location

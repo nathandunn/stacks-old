@@ -81,7 +81,6 @@ class Input {
     virtual int  next_seq(Seq &) = 0;
 };
 
-char *rev_comp(const char *);
 int   parse_tsv(const char *, vector<string> &);
 int   parse_ssv(const char *, vector<string> &);
 int   read_line(ifstream &, char **, int *);

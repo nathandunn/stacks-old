@@ -72,6 +72,7 @@ kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h \
 
 clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h \
 	src/kmers.h src/kmers.cc \
+	src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/BustardI.h src/FastqI.h src/FastaI.h \
 	src/gzFastq.h src/gzFasta.h
 
