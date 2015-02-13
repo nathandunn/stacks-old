@@ -788,6 +788,10 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
     Datum **d_2 = pmap->locus(next->id);
 
     set<string> phased_haplotypes;
+    string      merged_hap;
+    int         merge_type;
+
+    cerr << "Processing " << cur->id << " and " << next->id << "\n";
 
     //
     // Take a census of the already phased haplotypes. We have phased haplotypes 
@@ -796,26 +800,55 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
     //   2. d_1 has a single haplotpye and d_2 has multiple haplotypes
     //   3. d_1 has multiple haplotpyes and d_2 has a single haplotype
     //
-    for (int i = 0; i < pmap->sample_cnt(); i++) {
-	if (d_1[i]->obshap.size() > 1 && d_2[i]->obshap.size() > 1)
-	    continue;
-	else
-	    for (uint j = 0; j < d_1[i]->obshap.size(); j++)
-		for (uint k = 0; k < d_2[i]->obshap.size(); k++)
-		    phased_haplotypes.insert(string(d_1[i]->obshap[j]) + string(d_2[i]->obshap[k]));
-    }
+    // If one or both of the loci have no SNPs, then the haplotype is
+    // recorded as "consensus." Check that condition before we start merging.
+    //
+    if (cur->snps.size() > 0 && next->snps.size() > 0)
+	merge_type = 0;
+    else if (cur->snps.size() == 0)
+	merge_type = 1;
+    else if (next->snps.size() == 0)
+	merge_type = 2;
+    else
+	merge_type = 3;
 
-    set<string>::iterator it;
-    for (it = phased_haplotypes.begin(); it != phased_haplotypes.end(); it++)
-	cerr << *it << "\n";
+    for (int i = 0; i < pmap->sample_cnt(); i++) {
+	if (d_1[i] == NULL || d_2[i] == NULL)
+	    continue;
+	else if (d_1[i]->obshap.size() > 1 && d_2[i]->obshap.size() > 1)
+	    continue;
+	else {
+	    for (uint j = 0; j < d_1[i]->obshap.size(); j++) {
+		for (uint k = 0; k < d_2[i]->obshap.size(); k++) {
+		    switch (merge_type) {
+		    case 0:
+			merged_hap = string(d_1[i]->obshap[j]) + string(d_2[i]->obshap[k]);
+			break;
+		    case 1:
+			merged_hap = string(d_2[i]->obshap[j]);
+			break;
+		    case 2:
+			merged_hap = string(d_1[i]->obshap[j]);
+			break;
+		    case 3:
+		    default:
+			merged_hap = "consensus";
+			break;
+		    }
+		    phased_haplotypes.insert(merged_hap);
+		}
+	    }
+	}
+    }
 
     //
     // Now we need to check if we can phase the remaining haplotypes.
     //
     for (int i = 0; i < pmap->sample_cnt(); i++) {
-	if (d_1[i]->obshap.size() > 1 && d_2[i]->obshap.size() > 1) {
+	if (d_1[i] == NULL || d_2[i] == NULL)
+	    continue;
+	else if (d_1[i]->obshap.size() > 1 && d_2[i]->obshap.size() > 1) {
 	    uint phased_cnt = 0;
-
 	    for (uint j = 0; j < d_1[i]->obshap.size(); j++) {
 		for (uint k = 0; k < d_2[i]->obshap.size(); k++)
 		    if (phased_haplotypes.count(string(d_1[i]->obshap[j]) + string(d_2[i]->obshap[k])))
@@ -832,10 +865,14 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 	}
     }
 
+    set<string>::iterator it;
+    for (it = phased_haplotypes.begin(); it != phased_haplotypes.end(); it++)
+	cerr << *it << "\n";
+
     //
     // Okay, merge these two loci together.
     //
-    if (!merge_datums(pmap->sample_cnt(), d_1, d_2, phased_haplotypes))
+    if (!merge_datums(pmap->sample_cnt(), d_1, d_2, phased_haplotypes, merge_type))
 	return 0;
 
     //
@@ -859,6 +896,8 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     // 1. Reverse complement the SNP coordinates in the sink locus so that they are 
     //    enumerated on the positive strand. Complement the alleles as well.
     //
+    cerr << "Merging SNPs in catalog ID " << sink->id << "\n";
+
     for (uint j = 0; j < sink->snps.size(); j++) {
 	sink->snps[j]->col    = sink->len - sink->snps[j]->col - 1;
 	sink->snps[j]->rank_1 = reverse(sink->snps[j]->rank_1);
@@ -919,11 +958,23 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     for (it = phased_haplotypes.begin(); it != phased_haplotypes.end(); it++)
 	sink->alleles[*it] = 0;
 
+    cerr << "CSLocus " << sink->id << ":\n"
+	 << "Chr: " << sink->loc.chr << "; BP: " << sink->sort_bp() << "; strand: " << (sink->loc.strand == plus ? "+" : "-") << "\n"
+	 << "  SNPs:\n";
+    for (uint j = 0; j < sink->snps.size(); j++) 
+	cerr << "    Col: " << sink->snps[j]->col 
+	     << "    Rank 1: " << sink->snps[j]->rank_1
+	     << "    Rank 2: " << sink->snps[j]->rank_2 << "\n";
+    cerr << "  Alleles:\n";
+    map<string, int>::iterator ait;
+    for (ait = sink->alleles.begin(); ait != sink->alleles.end(); ait++) 
+	cerr << "    " << ait->first << "\n";
+
     return 1;
 }
 
 int
-merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_haplotypes)
+merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_haplotypes, int merge_type)
 {
     char           tmphap[id_len], *new_hap, *model_calls;
     uint           haplen;
@@ -932,27 +983,30 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
     vector<int>    tmpobsdep;
 
     for (int i = 0; i < sample_cnt; i++) {
+	cerr << "Trying to process sample " << i << "\n";
+	if (sink[i] == NULL && src[i] == NULL)
+	    continue;
+	else if (sink[i] == NULL || src[i] == NULL)
+	    cerr << "Unexpected condition in merging datums: one datum is NULL while the other is not.\n";
+
 	//
 	// 1. Reverse complement the SNP coordinates in the sink locus so that they are 
 	//    enumerated on the positive strand. Complement the alleles as well.
 	//
 	for (uint j = 0; j < sink[i]->snps.size(); j++) {
-	    cerr << "  Adjusting SNP column in sink from " << sink[i]->snps[j]->col << " to ";
-	    sink[i]->snps[j]->col    = sink[i]->len - sink[i]->snps[j]->col;
-	    cerr << sink[i]->snps[j]->col << "\n";
+	    sink[i]->snps[j]->col    = sink[i]->len - sink[i]->snps[j]->col - 1;
 	    sink[i]->snps[j]->rank_1 = reverse(sink[i]->snps[j]->rank_1);
 	    sink[i]->snps[j]->rank_2 = reverse(sink[i]->snps[j]->rank_2);
 	    sink[i]->snps[j]->rank_3 = reverse(sink[i]->snps[j]->rank_3);
 	    sink[i]->snps[j]->rank_4 = reverse(sink[i]->snps[j]->rank_4);
 	}
+
 	//
 	// 2. Adjust the SNP coordinates in the src locus to account for the now, longer length.
 	//
-	for (uint j = 0; j < src[i]->snps.size(); j++) {
-	    cerr << "  Adjusting SNP column in source from " << src[i]->snps[j]->col << " to ";
+	for (uint j = 0; j < src[i]->snps.size(); j++)
 	    src[i]->snps[j]->col = sink[i]->len + src[i]->snps[j]->col - renz_olap[enz];
-	    cerr << src[i]->snps[j]->col << "\n";
-	}
+
 	//
 	// 3. Reverse complement the observed haplotypes in the sink locus.
 	//
@@ -963,6 +1017,7 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 	    tmphap[haplen] = '\0';
 	    strcpy(sink[i]->obshap[j], tmphap);
 	}
+
 	//
 	// 4. Combine SNPs between the two datums: add the SNPs from the sink (formerly on the 
 	//    negative strand) in reverse order, followed by the SNPs from the src.
@@ -981,23 +1036,39 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
     // 5. Combine observed haplotypes between the two datums while phasing them.
     //    5.1 First combine the haplotypes from samples that are already in phase.
     //
+    string      merged_hap;
     vector<int> to_be_phased;
     phased_haplotypes.clear();
     for (int i = 0; i < sample_cnt; i++) {
+	if (sink[i] == NULL && src[i] == NULL)
+	    continue;
+
 	if (sink[i]->obshap.size() > 1 && src[i]->obshap.size() > 1) {
 	    to_be_phased.push_back(i);
 	    continue;
 	} else {
-	    cerr << "Sample " << i << "\n";
 	    tmpobshap.clear();
 	    tmpobsdep.clear();
 	    for (uint j = 0; j < sink[i]->obshap.size(); j++) {
 		for (uint k = 0; k < src[i]->obshap.size(); k++) {
-		    string merged_hap = string(sink[i]->obshap[j]) + string(src[i]->obshap[k]);
+		    switch (merge_type) {
+		    case 0:
+			merged_hap = string(sink[i]->obshap[j]) + string(src[i]->obshap[k]);
+			break;
+		    case 1:
+			merged_hap = string(src[i]->obshap[j]);
+			break;
+		    case 2:
+			merged_hap = string(sink[i]->obshap[j]);
+			break;
+		    case 3:
+		    default:
+			merged_hap = "consensus";
+			break;
+		    }
 		    phased_haplotypes.insert(merged_hap);
 		    tmpobshap.push_back(merged_hap);
 		    tmpobsdep.push_back((sink[i]->depth[j] + src[i]->depth[k]) / 2);
-		    cerr << "  5.1; Merging [" << sink[i]->id << "] '" << sink[i]->obshap[j] << "' and [" << src[i]->id << "] '" << src[i]->obshap[k] << "' into '" << merged_hap << "'\n";
 		}
 	    }
 	    sink[i]->depth.clear();
@@ -1008,7 +1079,6 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 		new_hap = new char[tmpobshap[j].length() + 1];
 		strcpy(new_hap, tmpobshap[j].c_str());
 		sink[i]->obshap.push_back(new_hap);
-		cerr << "     Inserting '" << new_hap << "'\n";
 		sink[i]->depth.push_back(tmpobsdep[j]);
 	    }
 	}
@@ -1046,6 +1116,9 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
     // 6. Set the length; combine the two depth and lnl measures together; merge model calls.
     //
     for (int i = 0; i < sample_cnt; i++) {
+	if (sink[i] == NULL && src[i] == NULL)
+	    continue;
+
 	sink[i]->len += src[i]->len - renz_olap[enz];
 
 	reverse_string(sink[i]->model);
@@ -1059,15 +1132,6 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 	sink[i]->tot_depth = (sink[i]->tot_depth + src[i]->tot_depth) / 2;
 	sink[i]->lnl       = (sink[i]->lnl + src[i]->lnl) / 2.0;
     }
-
-    cerr << "\n\n";
-    for (int i = 0; i < sample_cnt; i++) {
-	cerr << "Sample: " << i << "\n";
-	for (uint j = 0; j < sink[i]->obshap.size(); j++) {
-	    cerr << "  obshap " << j << " '" << sink[i]->obshap[j] << "'\n";
-	}
-    }
-    cerr << "\n\n";
 
     return 1;
 }
