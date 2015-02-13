@@ -773,9 +773,9 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     reduce_catalog(catalog, emptyset, loci_to_destroy);
 
     cerr << "Of " << tot_loci << " loci, "
-	 << overlap << " share a cutsite; "
-	 << success << " were merged; "
-	 << failure << " failed to merge; "
+	 << overlap << " pairs share a cutsite; "
+	 << success << " pairs were merged; "
+	 << failure << " pairs failed to merge; "
 	 << pmap->loci_cnt() << " remaining loci.\n";
     
     return 0;
@@ -848,17 +848,26 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 	if (d_1[i] == NULL || d_2[i] == NULL)
 	    continue;
 	else if (d_1[i]->obshap.size() > 1 && d_2[i]->obshap.size() > 1) {
+	    //
+	    // We should be able to find a sinlge phasing mapping for each haplotype from d_1 to d_2 
+	    // that includes all the haplotypes in these two loci.
+	    //
+	    uint max_obshap = d_1[i]->obshap.size() > d_2[i]->obshap.size() ? d_1[i]->obshap.size() : d_2[i]->obshap.size();
+	    uint tot_obshap = d_1[i]->obshap.size() + d_2[i]->obshap.size();
+	    set<char *> incorporated_haplotypes;
 	    uint phased_cnt = 0;
 	    for (uint j = 0; j < d_1[i]->obshap.size(); j++) {
-		for (uint k = 0; k < d_2[i]->obshap.size(); k++)
-		    if (phased_haplotypes.count(string(d_1[i]->obshap[j]) + string(d_2[i]->obshap[k])))
+		for (uint k = 0; k < d_2[i]->obshap.size(); k++) {
+		    if (phased_haplotypes.count(string(d_1[i]->obshap[j]) + string(d_2[i]->obshap[k]))) {
+			incorporated_haplotypes.insert(d_1[i]->obshap[j]);
+			incorporated_haplotypes.insert(d_2[i]->obshap[k]);
 			phased_cnt++;
+		    }
+		}
 	    }
 
-	    //
-	    // We were unable to find a single, phased combination.
-	    //
-	    if (phased_cnt != 1) {
+	    if (phased_cnt != max_obshap || 
+		incorporated_haplotypes.size() != tot_obshap) {
 		cerr << "Unable to merge loci " << cur->id << " and " << next->id << "\n";
 		return 0;
 	    }
@@ -872,7 +881,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
     //
     // Okay, merge these two loci together.
     //
-    if (!merge_datums(pmap->sample_cnt(), d_1, d_2, phased_haplotypes, merge_type))
+    if (!merge_datums(pmap->sample_cnt(), cur->len, d_1, d_2, phased_haplotypes, merge_type))
 	return 0;
 
     //
@@ -892,6 +901,12 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 int
 merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
 {
+    //
+    // We assume that we are merging two loci: one on the negative strand, one on the
+    // positive. We will keep the sink cslocus and delete the src cslocus.
+    //   -> The sink cslocus is assumed to be on the negative strand.
+    //
+
     //
     // 1. Reverse complement the SNP coordinates in the sink locus so that they are 
     //    enumerated on the positive strand. Complement the alleles as well.
@@ -959,7 +974,7 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
 	sink->alleles[*it] = 0;
 
     cerr << "CSLocus " << sink->id << ":\n"
-	 << "Chr: " << sink->loc.chr << "; BP: " << sink->sort_bp() << "; strand: " << (sink->loc.strand == plus ? "+" : "-") << "\n"
+	 << "Length: " << sink->len << "; Chr: " << sink->loc.chr << "; BP: " << sink->sort_bp() << "; strand: " << (sink->loc.strand == plus ? "+" : "-") << "\n"
 	 << "  SNPs:\n";
     for (uint j = 0; j < sink->snps.size(); j++) 
 	cerr << "    Col: " << sink->snps[j]->col 
@@ -974,16 +989,24 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
 }
 
 int
-merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_haplotypes, int merge_type)
+merge_datums(int sample_cnt, 
+	     int sink_locus_len,
+	     Datum **sink, Datum **src, 
+	     set<string> &phased_haplotypes, 
+	     int merge_type)
 {
-    char           tmphap[id_len], *new_hap, *model_calls;
-    uint           haplen;
+    char           tmphap[id_len], *new_hap;
+    uint           haplen, model_len, offset;
     vector<SNP *>  tmpsnp;
     vector<string> tmpobshap;
     vector<int>    tmpobsdep;
 
+    //
+    // We assume that we are merging two loci: one on the negative strand, one on the
+    // positive. We will keep the sink datum and delete the src datum.
+    //   -The sink datum is assumed to be on the negative strand.
+    //
     for (int i = 0; i < sample_cnt; i++) {
-	cerr << "Trying to process sample " << i << "\n";
 	if (sink[i] == NULL && src[i] == NULL)
 	    continue;
 	else if (sink[i] == NULL || src[i] == NULL)
@@ -1104,7 +1127,7 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 	sink[index]->depth.clear();
 	for (uint j = 0; j < sink[index]->obshap.size(); j++)
 	    delete [] sink[index]->obshap[j];
-	sink[i]->obshap.clear();
+	sink[index]->obshap.clear();
 	for (uint j = 0; j < tmpobshap.size(); j++) {
 	    new_hap = new char[tmpobshap[j].length() + 1];
 	    strcpy(new_hap, tmpobshap[j].c_str());
@@ -1113,22 +1136,37 @@ merge_datums(int sample_cnt, Datum **sink, Datum **src, set<string> &phased_hapl
 	}
     }
     //
-    // 6. Set the length; combine the two depth and lnl measures together; merge model calls.
+    // 6. Merge model calls; Set the length; combine the two depth and lnl measures together.
     //
+    string model_calls;
+    char  *p;
+
     for (int i = 0; i < sample_cnt; i++) {
 	if (sink[i] == NULL && src[i] == NULL)
 	    continue;
 
-	sink[i]->len += src[i]->len - renz_olap[enz];
-
+	//
+	// Merge the two strings of model calls together.
+	// We need to check if the locus for this individual is shorter than the catalog
+	// locus. If so, we need to expand out the model call array to be the proper length.
+	//
 	reverse_string(sink[i]->model);
-	model_calls    = new char[sink[i]->len + 1];
-	strcpy(model_calls, sink[i]->model);
+	offset = 0;
+	model_calls.clear();
+	if (sink_locus_len > sink[i]->len) {
+	    offset = sink_locus_len - sink[i]->len;
+	    model_calls.assign(offset, 'U');
+	}
+	model_len = offset + sink[i]->len + src[i]->len - renz_olap[enz];
+	model_calls.append(sink[i]->model);
 	delete [] sink[i]->model;
-	sink[i]->model = model_calls;
-	model_calls   += src[i]->len - renz_olap[enz];
-	strcpy(model_calls, src[i]->model);
-
+	sink[i]->model = new char[model_len + 1];
+	strcpy(sink[i]->model, model_calls.c_str());
+	p  = sink[i]->model;
+	p += offset + sink[i]->len - renz_olap[enz];
+	strcpy(p, src[i]->model);
+	
+	sink[i]->len       = model_len;
 	sink[i]->tot_depth = (sink[i]->tot_depth + src[i]->tot_depth) / 2;
 	sink[i]->lnl       = (sink[i]->lnl + src[i]->lnl) / 2.0;
     }
@@ -4397,7 +4435,6 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string
 	    d   = pmap->locus(loc->id);
 
 	    for (int j = 0; j < pmap->sample_cnt(); j++) {
-
 		if (d[j] == NULL) 
 		    continue;
 

@@ -108,7 +108,7 @@ int     log_haplotype_cnts(map<int, CSLocus *> &, ofstream &);
 bool    order_unordered_loci(map<int, CSLocus *> &);
 int     merge_shared_cutsite_loci(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int     merge_and_phase_loci(PopMap<CSLocus> *, CSLocus *, CSLocus *, set<int> &);
-int     merge_datums(int, Datum **, Datum **, set<string> &, int);
+int     merge_datums(int, int, Datum **, Datum **, set<string> &, int);
 int     merge_csloci(CSLocus *, CSLocus *, set<string> &);
 int     tabulate_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int     create_genotype_map(CSLocus *, PopMap<CSLocus> *);
