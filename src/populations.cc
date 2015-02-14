@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2015, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2012-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -23,8 +23,8 @@
 // haplotypes in a population context.
 //
 // Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
+// jcatchen@illinois.edu
+// University of Illinois at Urbana-Champaign
 //
 
 #include "populations.h"
@@ -314,8 +314,9 @@ int main (int argc, char* argv[]) {
     //
     // Merge loci that overlap on a common restriction enzyme cut site.
     //
+    map<int, pair<merget, int> > merge_map;
     if (merge_sites && loci_ordered)
-	merge_shared_cutsite_loci(catalog, pmap);
+	merge_shared_cutsite_loci(catalog, pmap, merge_map);
 
     uint pop_id, start_index, end_index;
     map<int, pair<int, int> >::iterator pit;
@@ -371,7 +372,7 @@ int main (int argc, char* argv[]) {
     	write_fasta(catalog, pmap, samples, sample_ids);
 
     if (vcf_out)
-    	write_vcf(catalog, pmap, psum, samples, sample_ids);
+    	write_vcf(catalog, pmap, psum, samples, sample_ids, merge_map);
 
     if (genepop_out)
     	write_genepop(catalog, pmap, psum, pop_indexes, samples);
@@ -701,7 +702,9 @@ tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 }
 
 int
-merge_shared_cutsite_loci(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+merge_shared_cutsite_loci(map<int, CSLocus *> &catalog, 
+			  PopMap<CSLocus> *pmap, 
+			  map<int, pair<merget, int> > &merge_map)
 {
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus *cur, *next;
@@ -759,8 +762,11 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 		    failure++;
 		else if (!merge_and_phase_loci(pmap, cur, next, loci_to_destroy))
 		    failure++;
-		else
+		else {
 		    success++;
+		    merge_map[cur->id]  = make_pair(merge_sink, next->id);
+		    merge_map[next->id] = make_pair(merge_src, cur->id);
+		}
 	    }
 	}
     }
@@ -973,17 +979,17 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     for (it = phased_haplotypes.begin(); it != phased_haplotypes.end(); it++)
 	sink->alleles[*it] = 0;
 
-    cerr << "CSLocus " << sink->id << ":\n"
-	 << "Length: " << sink->len << "; Chr: " << sink->loc.chr << "; BP: " << sink->sort_bp() << "; strand: " << (sink->loc.strand == plus ? "+" : "-") << "\n"
-	 << "  SNPs:\n";
-    for (uint j = 0; j < sink->snps.size(); j++) 
-	cerr << "    Col: " << sink->snps[j]->col 
-	     << "    Rank 1: " << sink->snps[j]->rank_1
-	     << "    Rank 2: " << sink->snps[j]->rank_2 << "\n";
-    cerr << "  Alleles:\n";
-    map<string, int>::iterator ait;
-    for (ait = sink->alleles.begin(); ait != sink->alleles.end(); ait++) 
-	cerr << "    " << ait->first << "\n";
+    // cerr << "CSLocus " << sink->id << ":\n"
+    // 	 << "Length: " << sink->len << "; Chr: " << sink->loc.chr << "; BP: " << sink->sort_bp() << "; strand: " << (sink->loc.strand == plus ? "+" : "-") << "\n"
+    // 	 << "  SNPs:\n";
+    // for (uint j = 0; j < sink->snps.size(); j++) 
+    // 	cerr << "    Col: " << sink->snps[j]->col 
+    // 	     << "    Rank 1: " << sink->snps[j]->rank_1
+    // 	     << "    Rank 2: " << sink->snps[j]->rank_2 << "\n";
+    // cerr << "  Alleles:\n";
+    // map<string, int>::iterator ait;
+    // for (ait = sink->alleles.begin(); ait != sink->alleles.end(); ait++) 
+    // 	cerr << "    " << ait->first << "\n";
 
     return 1;
 }
@@ -1169,9 +1175,76 @@ merge_datums(int sample_cnt,
 	sink[i]->len       = model_len;
 	sink[i]->tot_depth = (sink[i]->tot_depth + src[i]->tot_depth) / 2;
 	sink[i]->lnl       = (sink[i]->lnl + src[i]->lnl) / 2.0;
+
+	//
+	// Record which datum was merged into this one.
+	//
+	sink[i]->merge_partner = src[i]->id;
     }
 
     return 1;
+}
+
+int
+datum_adjust_snp_positions(map<int, pair<merget, int> > &merge_map, 
+			   CSLocus *loc, Datum *datum, 
+			   map<int, SNPRes *> &snpres)
+{
+    //
+    // We will start with the 'sink' locus, which was originally on the negative strand:
+    //   1. If the locus was shorter than the catalog locus, pad the difference.
+    //   2. Convert to positive strand: Reverse the order, complement the alleles,
+    //      alter the internal column position.
+    //
+    SNP    *snp;
+    SNPRes *snpr     = snpres[datum->id];
+    int     index    = 0;
+    int     stop_pos = renz_olap[enz] - 1;
+
+    //
+    // We know the catalog was padded since we already padded hte model call string
+    // if it was necessary when originally merging.
+    //
+    while (datum->model[index] == 'N') {
+	snp         = new SNP;
+	snp->col    = index;
+	snp->lratio = 0.0;
+	snp->rank_1 = 'N';
+	datum->snps.push_back(snp);
+	index++;
+    }
+
+    for (int j = snpr->snps.size() - 1; j > stop_pos; j--) {
+	snp         = new SNP;
+	snp->col    = index;
+	snp->lratio = snpr->snps[j]->lratio;
+	snp->rank_1 = reverse(snpr->snps[j]->rank_1);
+	snp->rank_2 = reverse(snpr->snps[j]->rank_2);
+	snp->rank_3 = reverse(snpr->snps[j]->rank_3);
+	snp->rank_4 = reverse(snpr->snps[j]->rank_4);
+	datum->snps.push_back(snp);
+	index++;
+    }
+
+    //
+    // Now we fetch the former locus, the 'src', which was originally on the positive strand.
+    // All we have to do is adjust the column position of each SNP.
+    //
+    snpr = snpres[datum->merge_partner];
+
+    for (uint j = 0; j < snpres[datum->id]->snps.size(); j++) {
+	snp         = new SNP;
+	snp->col    = index;
+	snp->lratio = snpr->snps[j]->lratio;
+	snp->rank_1 = snpr->snps[j]->rank_1;
+	snp->rank_2 = snpr->snps[j]->rank_2;
+	snp->rank_3 = snpr->snps[j]->rank_3;
+	snp->rank_4 = snpr->snps[j]->rank_4;
+	datum->snps.push_back(snp);
+	index++;
+    }
+
+    return 0;
 }
 
 int 
@@ -1561,7 +1634,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 		fh << batch_id         << "\t"
 		   << l->loc_id        << "\t"
 		   << it->first        << "\t"
-		   << l->bp            << "\t"
+		   << l->bp + 1        << "\t"
 		   << pop_key[pop_id]  << "\t"
 		   << (int) l->alleles << "\t"
 		   << l->hap_cnt       << "\t"
@@ -3208,7 +3281,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 			fh << batch_id << "\t"
 			   << loc->id << "\t"
 			   << loc->loc.chr << "\t"
-			   << loc->sort_bp(i) << "\t"
+			   << loc->sort_bp(i) + 1 << "\t"
 			   << i << "\t"
 			   << pop_key[psum->rev_pop_index(j)] << "\t"
 			   << s[j]->nucs[i].p_nuc << "\t";
@@ -4467,7 +4540,9 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string
 }
 
 int 
-write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, map<int, string> &samples, vector<int> &sample_ids) 
+write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
+	  map<int, string> &samples, vector<int> &sample_ids,
+	  map<int, pair<merget, int> > &merge_map) 
 {
     //
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
@@ -4493,6 +4568,7 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
     map<int, SNPRes *>::iterator sit;
     CSLocus *loc;
     Datum   *datum;
+    SNPRes  *snpr;
     SNP     *snp;
 
     for (uint i = 0; i < sample_ids.size(); i++) {
@@ -4504,19 +4580,25 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
     	    datum = pmap->datum(loc->id, sample_ids[i]);
 
     	    if (datum != NULL && snpres.count(datum->id)) {
-		//
-		// Deep copy the SNP objects.
-		//
-		for (uint j = 0; j < snpres[datum->id]->snps.size(); j++) {
-		    snp         = new SNP;
-		    snp->col    = snpres[datum->id]->snps[j]->col;
-		    snp->lratio = snpres[datum->id]->snps[j]->lratio;
-		    snp->rank_1 = snpres[datum->id]->snps[j]->rank_1;
-		    snp->rank_2 = snpres[datum->id]->snps[j]->rank_2;
-		    snp->rank_3 = snpres[datum->id]->snps[j]->rank_3;
-		    snp->rank_4 = snpres[datum->id]->snps[j]->rank_4;
 
-		    datum->snps.push_back(snp);
+		if (merge_sites && merge_map.count(loc->id)) { 
+		    datum_adjust_snp_positions(merge_map, loc, datum, snpres);
+		} else {
+		    //
+		    // Deep copy the SNP objects.
+		    //
+		    snpr = snpres[datum->id];
+		    for (uint j = 0; j < snpr->snps.size(); j++) {
+			snp         = new SNP;
+			snp->col    = snpr->snps[j]->col;
+			snp->lratio = snpr->snps[j]->lratio;
+			snp->rank_1 = snpr->snps[j]->rank_1;
+			snp->rank_2 = snpr->snps[j]->rank_2;
+			snp->rank_3 = snpr->snps[j]->rank_3;
+			snp->rank_4 = snpr->snps[j]->rank_4;
+
+			datum->snps.push_back(snp);
+		    }
 		}
     	    }
     	}
