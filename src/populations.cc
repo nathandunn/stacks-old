@@ -316,7 +316,7 @@ int main (int argc, char* argv[]) {
     //
     map<int, pair<merget, int> > merge_map;
     if (merge_sites && loci_ordered)
-	merge_shared_cutsite_loci(catalog, pmap, merge_map);
+	merge_shared_cutsite_loci(catalog, pmap, merge_map, log_fh);
 
     uint pop_id, start_index, end_index;
     map<int, pair<int, int> >::iterator pit;
@@ -704,19 +704,31 @@ tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 int
 merge_shared_cutsite_loci(map<int, CSLocus *> &catalog, 
 			  PopMap<CSLocus> *pmap, 
-			  map<int, pair<merget, int> > &merge_map)
+			  map<int, pair<merget, int> > &merge_map,
+			  ofstream &log_fh)
 {
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus *cur, *next;
     Datum  **d_1, **d_2;
-    uint unmergable, tot_loci;
-    uint success = 0;
-    uint failure = 0;
-    uint overlap = 0;
+    int  res;
+    uint unmergable, tot_loci, tot_samp;
+    uint success       = 0;
+    uint failure       = 0;
+    uint overlap       = 0;
+    uint simple_merge  = 0;
+    uint complex_merge = 0;
+    uint missing_samps = 0;
+    uint phase_fail    = 0;
 
     tot_loci = pmap->loci_cnt();
 
     set<int> loci_to_destroy;
+    map<int, int> missing_samps_dist;
+
+    cerr << "Attempting to merge adjacent loci that share a cutsite...";
+
+    if (verbose)
+	log_fh << "\n#\n# List of locus pairs that share a cutsite that failed to merge because they could not be phased.\n#\n";
     
     //
     // Iterate over each chromosome.
@@ -725,7 +737,6 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
 	//
 	// Iterate over each ordered locus on this chromosome.
 	//
-	//cerr << it->first << "\n";
 	next = it->second[0];
 	for (uint pos = 1; pos < it->second.size(); pos++) {
 	    cur  = next;
@@ -745,11 +756,14 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
 		d_1        = pmap->locus(cur->id);
 		d_2        = pmap->locus(next->id);
 		unmergable = 0;
-	
+		tot_samp   = 0;
+
 		//
 		// Check if all members of the population contain these two loci (or are missing both).
 		//
 		for (int i = 0; i < pmap->sample_cnt(); i++) {
+		    if (d_1[i] != NULL || d_2[i] != NULL)
+			tot_samp++;
 		    if ((d_1[i] != NULL && d_2[i] == NULL) ||
 			(d_1[i] == NULL && d_2[i] != NULL))
 			unmergable++;
@@ -758,12 +772,19 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
 		//
 		// If possible, merge the two loci together.
 		//
-		if (unmergable > 0)
+		if (unmergable > 0) {
+		    int pct = (int) (((double) (tot_samp - unmergable) / (double) tot_samp) * 100);
+		    missing_samps_dist[pct]++;
+		    if (verbose) log_fh << "Missing samples, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; " << pct << "% present (" << 100 - pct << "% missing)\n";
+		    missing_samps++;
 		    failure++;
-		else if (!merge_and_phase_loci(pmap, cur, next, loci_to_destroy))
+		} else if ((res = merge_and_phase_loci(pmap, cur, next, loci_to_destroy)) <= 0) {
+		    if (verbose) log_fh << "Failed to phase, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "\n";
+		    phase_fail++;
 		    failure++;
-		else {
+		} else {
 		    success++;
+		    res == 1 ? simple_merge++ : complex_merge++;
 		    merge_map[cur->id]  = make_pair(merge_sink, next->id);
 		    merge_map[next->id] = make_pair(merge_src, cur->id);
 		}
@@ -778,12 +799,34 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
     pmap->prune(loci_to_destroy);
     reduce_catalog(catalog, emptyset, loci_to_destroy);
 
-    cerr << "Of " << tot_loci << " loci, "
+    cerr << "done.\n"
+	 << "Of " << tot_loci << " loci, "
 	 << overlap << " pairs share a cutsite; "
 	 << success << " pairs were merged; "
 	 << failure << " pairs failed to merge; "
-	 << pmap->loci_cnt() << " remaining loci.\n";
-    
+	 << pmap->loci_cnt() << " remaining loci.\n"
+	 << "  Of those merged, " << simple_merge << " required only a simple merge without phasing; "
+	 << "while " << complex_merge << " required phasing.\n"
+	 << "  Of those that failed to merge, " << missing_samps << " were missing one of the two haplotypes in one or more samples; "
+	 << "while " << phase_fail << " failed to be phased.\n";
+
+    log_fh << "\n#\n# Merging adjacent loci with a shared restriction enzyme cutsite\n#\n"
+	   << "Of " << tot_loci << " loci, "
+	   << overlap << " pairs share a cutsite; "
+	   << success << " pairs were merged; "
+	   << failure << " pairs failed to merge; "
+	   << pmap->loci_cnt() << " remaining loci.\n"
+	   << "  Of those merged, " << simple_merge << " required only a simple merge without phasing; "
+	   << "while " << complex_merge << " required phasing.\n"
+	   << "  Of those that failed to merge, " << missing_samps << " were missing one of the two haplotypes in one or more samples; "
+	   << "while " << phase_fail << " failed to be phased.\n";
+    log_fh << "#\n# Distribution of loci with samples missing one of two loci to be merged\n"
+	   << "# Percent samples with both loci present\tNumber of cases\n";
+    map<int, int>::iterator mit;
+    for (mit = missing_samps_dist.begin(); mit != missing_samps_dist.end(); mit++)
+	log_fh << mit->first << "\t" << mit->second << "\n";
+    log_fh << "\n";
+
     return 0;
 }
 
@@ -796,8 +839,6 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
     set<string> phased_haplotypes;
     string      merged_hap;
     int         merge_type;
-
-    cerr << "Processing " << cur->id << " and " << next->id << "\n";
 
     //
     // Take a census of the already phased haplotypes. We have phased haplotypes 
@@ -848,6 +889,11 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
     }
 
     //
+    // Indicate that these two loci had a simple merge, with no phasing necessary.
+    //
+    int merge_result = 1;
+
+    //
     // Now we need to check if we can phase the remaining haplotypes.
     //
     for (int i = 0; i < pmap->sample_cnt(); i++) {
@@ -874,15 +920,14 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 
 	    if (phased_cnt != max_obshap || 
 		incorporated_haplotypes.size() != tot_obshap) {
-		cerr << "Unable to merge loci " << cur->id << " and " << next->id << "\n";
 		return 0;
 	    }
+	    //
+	    // Indicate that these two loci will also be phased by returning 2 from the function.
+	    //
+	    merge_result++;
 	}
     }
-
-    set<string>::iterator it;
-    for (it = phased_haplotypes.begin(); it != phased_haplotypes.end(); it++)
-	cerr << *it << "\n";
 
     //
     // Okay, merge these two loci together.
@@ -901,7 +946,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
     //
     loci_to_destroy.insert(next->id);
 
-    return 1;
+    return merge_result;
 }
 
 int
@@ -917,8 +962,6 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     // 1. Reverse complement the SNP coordinates in the sink locus so that they are 
     //    enumerated on the positive strand. Complement the alleles as well.
     //
-    cerr << "Merging SNPs in catalog ID " << sink->id << "\n";
-
     for (uint j = 0; j < sink->snps.size(); j++) {
 	sink->snps[j]->col    = sink->len - sink->snps[j]->col - 1;
 	sink->snps[j]->rank_1 = reverse(sink->snps[j]->rank_1);
@@ -1126,7 +1169,6 @@ merge_datums(int sample_cnt,
 		if (phased_haplotypes.count(merged_hap)) {
 		    tmpobshap.push_back(merged_hap);
 		    tmpobsdep.push_back((sink[index]->depth[j] + src[index]->depth[k]) / 2);
-		    cerr << "  5.2; Merging [" << sink[index]->id << "] '" << sink[index]->obshap[j] << "' and [" << src[index]->id << "] '" << src[index]->obshap[k] << "' into '" << merged_hap << "'\n";
 		}
 	    }
 	}
@@ -7077,6 +7119,7 @@ int parse_command_line(int argc, char* argv[]) {
 	static struct option long_options[] = {
 	    {"help",          no_argument,       NULL, 'h'},
             {"version",       no_argument,       NULL, 'v'},
+            {"verbose",       no_argument,       NULL, 'd'},
             {"sql",           no_argument,       NULL, 's'},
             {"vcf",           no_argument,       NULL, 'V'},
             {"fasta",         no_argument,       NULL, 'F'},
@@ -7126,7 +7169,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "ACDEFGHKLSVYZ123456ghjklsvb:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:c:", long_options, &option_index);
+	c = getopt_long(argc, argv, "ACDEFGHKLSVYZ123456dghjklsvb:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:c:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -7135,6 +7178,9 @@ int parse_command_line(int argc, char* argv[]) {
 	switch (c) {
 	case 'h':
 	    help();
+	    break;
+	case 'd':
+	    verbose = true;
 	    break;
 	case 't':
 	    num_threads = atoi(optarg);
@@ -7422,6 +7468,7 @@ void help() {
 	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
 	      << "      --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n\n"
 	      << "  Debugging:\n"
+	      << "    --verbose: turn on additional logging.\n"
 	      << "    --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n";
     // << "    --bootstrap_type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
 
