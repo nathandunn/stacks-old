@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -39,18 +39,19 @@ using std::make_pair;
 
 class Datum {
 public:
-    int            id;           // Stack ID
-    int            len;          // Length of locus
-    int            tot_depth;    // Stack depth
-    vector<int>    depth;        // Stack depth of each matching allele
-    bool           corrected;    // Has this genotype call been corrected
-    char          *model;        // String representing SNP model output for each nucleotide at this locus.
-    char          *gtype;        // Genotype
-    char          *trans_gtype;  // Translated Genotype
-    double         lnl;          // Log likelihood of this locus.
-    vector<char *> obshap;       // Observed Haplotypes
+    int            id;            // Stack ID
+    int            merge_partner; // Stack ID of merged datum, if this datum was merged/phased from two, overlapping datums.
+    int            len;           // Length of locus
+    int            tot_depth;     // Stack depth
+    vector<int>    depth;         // Stack depth of each matching allele
+    bool           corrected;     // Has this genotype call been corrected
+    char          *model;         // String representing SNP model output for each nucleotide at this locus.
+    char          *gtype;         // Genotype
+    char          *trans_gtype;   // Translated Genotype
+    double         lnl;           // Log likelihood of this locus.
+    vector<char *> obshap;        // Observed Haplotypes
     vector<SNP *>  snps;
-    Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; len = 0; }
+    Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; len = 0; lnl = 0.0; merge_partner = 0; }
     ~Datum() {
     	for (uint i = 0; i < this->obshap.size(); i++)
     	    delete [] this->obshap[i];

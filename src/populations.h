@@ -73,6 +73,7 @@ using std::set;
 
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
+enum merget    {merge_sink, merge_src};
 
 const int max_snp_dist = 500;
 
@@ -106,10 +107,11 @@ int     load_marker_column_list(string, map<int, set<int> > &);
 int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<int, int> > &);
 int     log_haplotype_cnts(map<int, CSLocus *> &, ofstream &);
 bool    order_unordered_loci(map<int, CSLocus *> &);
-int     merge_shared_cutsite_loci(map<int, CSLocus *> &, PopMap<CSLocus> *);
+int     merge_shared_cutsite_loci(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<merget, int> > &);
 int     merge_and_phase_loci(PopMap<CSLocus> *, CSLocus *, CSLocus *, set<int> &);
 int     merge_datums(int, int, Datum **, Datum **, set<string> &, int);
 int     merge_csloci(CSLocus *, CSLocus *, set<string> &);
+int     datum_adjust_snp_positions(map<int, pair<merget, int> > &, CSLocus *, Datum *, map<int, SNPRes *> &);
 int     tabulate_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int     create_genotype_map(CSLocus *, PopMap<CSLocus> *);
 int     call_population_genotypes(CSLocus *, PopMap<CSLocus> *);
@@ -147,7 +149,7 @@ int  write_fst_stats(vector<pair<int, string> > &, map<int, pair<int, int> > &, 
 int  write_generic(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, bool);
 int  write_genomic(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int  write_fasta(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, vector<int> &);
-int  write_vcf(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, string> &, vector<int> &);
+int  write_vcf(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, string> &, vector<int> &, map<int, pair<merget, int> > &);
 int  write_genepop(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_structure(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_phase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);

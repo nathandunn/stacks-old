@@ -1,5 +1,7 @@
 Stacks 1.25
 --------------------------
+	Feature: Changed the sumstats/hapstats files to output a one-based genome base pair position
+	so it matches other export formats.
 	Bugfix: The FASTA output from the populations program was reporting the internal value
 	(zero-based index) for the basepair position of each read (the first nucleotide of the
 	cutsite) causing an off-by-one error for all reads and reads on the negative strand had
