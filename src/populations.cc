@@ -77,6 +77,7 @@ bool      verbose           = false;
 bool      filter_lnl        = false;
 double    lnl_limit         = 0.0;
 int       min_stack_depth   = 0;
+double    merge_prune_lim   = 1.0;
 double    minor_allele_freq = 0.0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
@@ -710,6 +711,7 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus *cur, *next;
     Datum  **d_1, **d_2;
+    double   prune_pct;
     int  res;
     uint unmergable, tot_loci, tot_samp;
     uint success       = 0;
@@ -725,8 +727,10 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
     set<int> loci_to_destroy;
     map<int, int> missing_samps_dist;
 
-    cerr << "Attempting to merge adjacent loci that share a cutsite...";
-
+    cerr << "To merge adjacent loci at least " << merge_prune_lim * 100 << "% of samples must have both adjacent loci;"
+	 << " the remaining " << 100 - (merge_prune_lim * 100) << "% of individuals will be pruned.\n"
+	 << "Attempting to merge adjacent loci that share a cutsite...";
+	 
     if (verbose)
 	log_fh << "\n#\n# List of locus pairs that share a cutsite that failed to merge because they could not be phased.\n#\n";
     
@@ -769,11 +773,27 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
 			unmergable++;
 		}
 
+		prune_pct = (double) (tot_samp - unmergable) / (double) tot_samp;
+
+		//
+		// If some of the individuals only have one locus and not the other, prune then out.
+		//
+		if (prune_pct < 1.0 && prune_pct >= merge_prune_lim) {
+		    for (int i = 0; i < pmap->sample_cnt(); i++)
+			if (d_1[i] != NULL && d_2[i] == NULL) {
+			    delete d_1[i];
+			    d_1[i] = NULL;
+			} else if (d_1[i] == NULL && d_2[i] != NULL) {
+			    delete d_2[i];
+			    d_2[i] = NULL;
+			}
+		}
+
 		//
 		// If possible, merge the two loci together.
 		//
-		if (unmergable > 0) {
-		    int pct = (int) (((double) (tot_samp - unmergable) / (double) tot_samp) * 100);
+		if (prune_pct < merge_prune_lim) {
+		    int pct = (int) (prune_pct * 100);
 		    missing_samps_dist[pct]++;
 		    if (verbose) log_fh << "Missing samples, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; " << pct << "% present (" << 100 - pct << "% missing)\n";
 		    missing_samps++;
@@ -7161,6 +7181,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"min_populations",   required_argument, NULL, 'p'},
 	    {"minor_allele_freq", required_argument, NULL, 'a'},
 	    {"lnl_lim",           required_argument, NULL, 'c'},
+	    {"merge_prune_lim",   required_argument, NULL, 'i'},
 	    {"fst_correction",    required_argument, NULL, 'f'},
 	    {"p_value_cutoff",    required_argument, NULL, 'u'},
 	    {0, 0, 0, 0}
@@ -7169,7 +7190,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "ACDEFGHKLSVYZ123456dghjklsvb:p:t:o:r:M:P:m:e:W:B:I:w:a:f:p:u:R:O:Q:c:", long_options, &option_index);
+	c = getopt_long(argc, argv, "ACDEFGHKLSVYZ123456dghjklsva:b:c:e:f:i:m:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -7193,6 +7214,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'D':
 	    merge_sites = true;
+	    break;
+	case 'i':
+	    merge_prune_lim = is_double(optarg);
 	    break;
 	case 'b':
 	    batch_id = is_integer(optarg);
@@ -7256,9 +7280,6 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'c':
 	    lnl_limit  = is_double(optarg);
 	    filter_lnl = true;
-	    break;
-	case 'i':
-	    expand_id = true;
 	    break;
 	case 'I':
 	    write_single_snp = true;
@@ -7376,6 +7397,16 @@ int parse_command_line(int argc, char* argv[]) {
 	help();
     }
 
+    if (merge_prune_lim != 1.0) {
+	if (merge_prune_lim > 1.0)
+	    merge_prune_lim = merge_prune_lim / 100;
+
+	if (merge_prune_lim < 0 || merge_prune_lim > 1.0) {
+	    cerr << "Unable to parse the merge sites pruning limit\n";
+	    help();
+	}
+    }
+
     if (minor_allele_freq > 0) {
 	if (minor_allele_freq > 1)
 	    minor_allele_freq = minor_allele_freq / 100;
@@ -7429,7 +7460,8 @@ void help() {
 	      << "  v: print program version." << "\n"
 	      << "  h: display this help messsage." << "\n\n"
 	      << "  Merging and Phasing:\n"
-	      << "    --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n\n"
+	      << "    --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
+	      << "    --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n\n"
 	      << "  Data Filtering:\n"
 	      << "    r: minimum percentage of individuals in a population required to process a locus for that population.\n"
 	      << "    p: minimum number of populations a locus must be present in to process a locus.\n"
