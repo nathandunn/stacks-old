@@ -1,5 +1,7 @@
-Stacks 1.25
+Stacks 1.25 - Feb 16, 2015
 --------------------------
+	Bugfix: fixed problem with gzipped files where last line of file was not read properly
+	causing the program to output an erroneous error message.
 	Feature: added --fasta_strict option to populations program. Will output full sequence for
 	each individual at each haplotype at each locus, but only for biologically plausible loci.
 	It won't output loci with more than two haplotypes and will output single haplotypes twice,
@@ -17,6 +19,7 @@ Stacks 1.25
 	when dealing with double-digest, inline/index barcoded reads.
 	Feature: added initial, internal support for merging and phasing loci that overlap at a
 	restriction enzyme cut site.
+	Feature: code now prints program version and generation date to all internal Stacks files.
 
 Stacks 1.24 - Jan 07, 2015
 --------------------------

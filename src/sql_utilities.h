@@ -87,12 +87,14 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
 
     uint id;
 
-    line_num = 0;
+    line_num = 1;
     while (fh_status) {
         fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
 
         if (!fh_status && strlen(line) == 0)
 	    continue;
+
+	if (is_comment(line)) continue;
 
 	parse_tsv(line, parts);
 
@@ -214,7 +216,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
     //
     gzip      = false;
     fh_status = 1;
-    line_num  = 0;
+    line_num  = 1;
 
     f = sample + ".snps.tsv";
     fh.open(f.c_str(), ifstream::in);
@@ -241,6 +243,8 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
 
         if (!fh_status && strlen(line) == 0)
 	    continue;
+
+	if (is_comment(line)) continue;
 
 	parse_tsv(line, parts);
 
@@ -305,7 +309,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
     //
     gzip      = false;
     fh_status = 1;
-    line_num  = 0;
+    line_num  = 1;
 
     f = sample + ".alleles.tsv";
     fh.open(f.c_str(), ifstream::in);
@@ -332,6 +336,8 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
 
         if (!fh_status && strlen(line) == 0)
 	    continue;
+
+	if (is_comment(line)) continue;
 
 	parse_tsv(line, parts);
 
@@ -425,7 +431,7 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
     }
     cerr << "  Parsing " << f.c_str() << "\n";
 
-    line_num = 0;
+    line_num = 1;
     while (fh_status) {
         fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
         line_num++;
@@ -433,11 +439,12 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
         if (!fh_status && strlen(line) == 0)
 	    continue;
 
+	if (is_comment(line)) continue;
+
 	parse_tsv(line, parts);
 
         if (parts.size() != num_matches_fields) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
-	    cerr << "LINE: '" << line << "'\n";
             return 0;
         }
 
@@ -479,7 +486,7 @@ int load_model_results(string sample,  map<int, ModRes *> &modres) {
     //
     gzip      = false;
     fh_status = 1;
-    line_num  = 0;
+    line_num  = 1;
 
     f = sample + ".tags.tsv";
     fh.open(f.c_str(), ifstream::in);
@@ -509,6 +516,7 @@ int load_model_results(string sample,  map<int, ModRes *> &modres) {
 
         if (!fh_status && strlen(line) == 0)
 	    continue;
+	if (is_comment(line)) continue;
 
 	parse_tsv(line, parts);
 
@@ -577,12 +585,13 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
     }
     cerr << "  Parsing " << f.c_str() << "\n";
 
-    line_num = 0;
+    line_num = 1;
     while (fh_status) {
         fh_status = (gzip == true) ? read_gzip_line(gz_fh, &line, &size) : read_line(fh, &line, &size);
 
         if (!fh_status && strlen(line) == 0)
 	    continue;
+	if (is_comment(line)) continue;
 
 	parse_tsv(line, parts);
 

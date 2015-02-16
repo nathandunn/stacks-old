@@ -197,7 +197,7 @@ int read_gzip_line(gzFile &fh, char **line, int *size) {
     // Make sure we read the entire line.
     //
     do {
-	gzgets(fh, buf, max_len);
+	if (gzgets(fh, buf, max_len) == NULL) break;
 
         blen = strlen(buf);
 
@@ -221,4 +221,26 @@ int read_gzip_line(gzFile &fh, char **line, int *size) {
 	return 0;
 
     return 1;
+}
+
+bool
+is_comment(const char *line)
+{
+    const char *p = line;
+
+    while (*p != '\0')
+	switch(*p) {
+	case '#':
+	    return true;
+	    break;
+	case ' ':
+	case '\t':
+	    p++;
+	    break;
+	default:
+	    return false;
+	    break;
+	}
+
+    return false;
 }

@@ -213,7 +213,7 @@ int main (int argc, char* argv[]) {
     vector<vector<CatMatch *> > catalog_matches;
     map<int, string>            samples;
     vector<int>                 sample_ids;
-    for (uint i = 0; i < files.size(); i++) {
+    for (int i = 0; i < (int) files.size(); i++) {
 	vector<CatMatch *> m;
 	load_catalog_matches(in_path + files[i].second, m);
 
@@ -472,7 +472,6 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 	pop_cnts[i] = 0;
 
     double pct       = 0.0;
-    bool   pro_limit = false;
     bool   pop_limit = false;
     int    pops      = 0;
     int    below_stack_dep  = 0;
@@ -555,7 +554,6 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 
 	for (uint i = 0; i < pop_cnt; i++)
 	    pop_cnts[i] = 0;
-	pro_limit = false;
 	pop_limit = false;
 	pops      = 0;
     }
@@ -756,9 +754,9 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
 	    //   +Must overlap according to the length of the cutsite.
 	    //
 	    if (((cur->loc.strand == minus && next->loc.strand == plus) &&
-		 (cur->loc.bp  - next->loc.bp + 1 == renz_olap[enz])) ||
+		 ((int) (cur->loc.bp  - next->loc.bp + 1) == renz_olap[enz])) ||
 		((cur->loc.strand == plus  && next->loc.strand == minus) &&
-		 (next->loc.bp - cur->loc.bp  + 1 == renz_olap[enz]))) {
+		 ((int) (next->loc.bp - cur->loc.bp  + 1) == renz_olap[enz]))) {
 		overlap++;
 
 		d_1        = pmap->locus(cur->id);
@@ -1574,7 +1572,6 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 {
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
-    LocSum  **s;
     Datum   **d;
     LocStat  *l;
 
@@ -1605,7 +1602,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
     fh.setf(std::ios::fixed);
 
     map<int, pair<int, int> >::iterator pit;
-    int start, end, pop_id, pop_index;
+    int start, end, pop_id;
 
     //
     // Write the population members.
@@ -1643,7 +1640,6 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 	start     = pit->second.first;
 	end       = pit->second.second;
 	pop_id    = pit->first;
-	pop_index = psum->pop_index(pop_id);
 
     	cerr << "Generating haplotype-level summary statistics for population '" << pop_key[pop_id] << "'\n";
 	map<string, vector<LocStat *> > genome_locstats;
@@ -1659,7 +1655,6 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
 
 	    for (uint pos = 0; pos < it->second.size(); pos++) {
 		loc = it->second[pos];
-		s   = psum->locus(loc->id);
 		d   = pmap->locus(loc->id);
 
 		if (loc->snps.size() == 0) 
