@@ -1223,7 +1223,7 @@ merge_datums(int sample_cnt,
 	model_calls.clear();
 	if (sink_locus_len > sink[i]->len) {
 	    offset = sink_locus_len - sink[i]->len;
-	    model_calls.assign(offset, 'U');
+	    model_calls.assign(offset, 'N');
 	}
 	model_len = offset + sink[i]->len + src[i]->len - renz_olap[enz];
 	model_calls.append(sink[i]->model);
@@ -1272,6 +1272,7 @@ datum_adjust_snp_positions(map<int, pair<merget, int> > &merge_map,
 	snp->col    = index;
 	snp->lratio = 0.0;
 	snp->rank_1 = 'N';
+	snp->type   = snp_type_unk;
 	datum->snps.push_back(snp);
 	index++;
     }
@@ -4828,7 +4829,7 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 			if (snp_index >= 0) {
 			    fh << ":.," << d[j]->snps[k]->lratio << ",.";
 			} else {
-			    cerr << "Warning, unable to locate SNP call for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
+			    cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
 			    fh << ":.,.,.";
 			}
 		    }
