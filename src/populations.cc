@@ -58,6 +58,7 @@ bool      merge_sites       = false;
 bool      expand_id         = false;
 bool      sql_out           = false;
 bool      vcf_out           = false;
+bool      vcf_haplo_out     = false;
 bool      fasta_out         = false;
 bool      fasta_strict_out  = false;
 bool      genepop_out       = false;
@@ -378,6 +379,9 @@ int main (int argc, char* argv[]) {
 
     if (vcf_out)
     	write_vcf(catalog, pmap, psum, samples, sample_ids, merge_map);
+
+    if (vcf_haplo_out)
+    	write_vcf_haplotypes(catalog, pmap, psum, samples, sample_ids);
 
     if (genepop_out)
     	write_genepop(catalog, pmap, psum, pop_indexes, samples);
@@ -2399,6 +2403,35 @@ uncalled_haplotype(const char *haplotype)
     return false;
 }
 
+inline double
+count_haplotypes_at_locus(int start, int end, Datum **d, map<string, double> &hap_cnts)
+{
+    double n = 0.0;
+
+    for (int i = start; i <= end; i++) {
+	if (d[i] == NULL) continue;
+
+	if (d[i]->obshap.size() > 2) { 
+	    continue;
+
+	} else if (d[i]->obshap.size() == 1) {
+	    if(!uncalled_haplotype(d[i]->obshap[0])) {
+		n += 2;
+		hap_cnts[d[i]->obshap[0]] += 2;
+	    }
+	} else {
+	    for (uint j = 0; j < d[i]->obshap.size(); j++) {
+		if(!uncalled_haplotype(d[i]->obshap[0])) {
+		    n++;
+		    hap_cnts[d[i]->obshap[j]]++;
+		}
+	    }
+	}
+    }
+    
+    return n;
+}
+
 LocStat *
 haplotype_diversity(int start, int end, Datum **d)
 {
@@ -2414,26 +2447,7 @@ haplotype_diversity(int start, int end, Datum **d)
     //
     // Tabulate the haplotypes in this population.
     //
-    for (int i = start; i <= end; i++) {
-	if (d[i] == NULL) continue;
-
-	if (d[i]->obshap.size() > 2) { 
-	    continue;
-
-	} else if (d[i]->obshap.size() == 1) {
-	    if(!uncalled_haplotype(d[i]->obshap[0])) {
-		n += 2;
-		hap_freq[d[i]->obshap[0]] += 2;
-	    }
-	} else {
-	    for (uint j = 0; j < d[i]->obshap.size(); j++) {
-		if(!uncalled_haplotype(d[i]->obshap[0])) {
-		    n++;
-		    hap_freq[d[i]->obshap[j]]++;
-		}
-	    }
-	}
-    }
+    n = count_haplotypes_at_locus(start, end, d, hap_freq);
 
     // cerr << "  " << n << " total haplotypes observed.\n";
 
@@ -4091,7 +4105,8 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
     vector<int> poss;
     poss.reserve(max_snp_dist);
     double weighted_fis, weighted_pi, sum_fis, sum_pi, final_weight_fis, final_weight_pi;
-    int    pos, index_1, index_2, index_3, dist, start, end;
+    // int    index_1, index_2;
+    int    pos, index_3, dist, start, end;
     int    half = sites_per_snp / 2;
 
     for (int i = 0; i < max_snp_dist; i++) {
@@ -4099,7 +4114,8 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 
 	cerr << "  Generating NULL distribution for " << i << " SNPs...\n";
 
-        #pragma omp parallel private(poss, pos, index_1, index_2, index_3, dist, sum_fis, sum_pi, weighted_fis, weighted_pi, final_weight_fis, final_weight_pi)
+	// #pragma omp parallel private(poss, pos, index_1, index_2, index_3, dist, sum_fis, sum_pi, weighted_fis, weighted_pi, final_weight_fis, final_weight_pi)
+        #pragma omp parallel private(poss, pos, index_3, dist, sum_fis, sum_pi, weighted_fis, weighted_pi, final_weight_fis, final_weight_pi)
 	{ 
 	    BSample *bs  = new BSample[win_size];
 
@@ -4122,8 +4138,8 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 		// First SNP is always placed at the center of the window.
 		//
 		pos     = win_cntr;
-		index_1 = (int) (fis_samples.size()    * (random() / (RAND_MAX + 1.0)));
-		index_2 = (int) (pi_samples.size()     * (random() / (RAND_MAX + 1.0)));
+		// index_1 = (int) (fis_samples.size()    * (random() / (RAND_MAX + 1.0)));
+		// index_2 = (int) (pi_samples.size()     * (random() / (RAND_MAX + 1.0)));
 		index_3 = (int) (allele_samples.size() * (random() / (RAND_MAX + 1.0)));
 		//
 		// Fill in the area around the SNP with fixed sites.
@@ -4146,8 +4162,8 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 		// 
 		for (int k = 0; k < i - 1; k++) {
 		    pos     = (int) (win_size * (random() / (RAND_MAX + 1.0)));
-		    index_1 = (int) (fis_samples.size()    * (random() / (RAND_MAX + 1.0)));
-		    index_2 = (int) (pi_samples.size()     * (random() / (RAND_MAX + 1.0)));
+		    // index_1 = (int) (fis_samples.size()    * (random() / (RAND_MAX + 1.0)));
+		    // index_2 = (int) (pi_samples.size()     * (random() / (RAND_MAX + 1.0)));
 		    index_3 = (int) (allele_samples.size() * (random() / (RAND_MAX + 1.0)));
 
 		    poss.push_back(pos);
@@ -4247,14 +4263,16 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
     vector<int> poss;
     poss.reserve(max_snp_dist);
     double weighted_fst, sum, final_weight;
-    int    pos, index_1, index_2, dist;
+    //int    index_1;
+    int    pos, index_2, dist;
 
     for (int i = 0; i < max_snp_dist; i++) {
 	if (snp_dist[i] == 0.0) continue;
 
 	cerr << "  Generating NULL distribution for " << i << " SNPs...\n";
 
-        #pragma omp parallel private(poss, pos, index_1, index_2, dist, sum, weighted_fst, final_weight)
+	// #pragma omp parallel private(poss, pos, index_1, index_2, dist, sum, weighted_fst, final_weight)
+        #pragma omp parallel private(poss, pos, index_2, dist, sum, weighted_fst, final_weight)
 	{ 
 	    BSample *bs  = new BSample[win_size];
 
@@ -4277,7 +4295,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 		// First SNP is always placed at the center of the window.
 		//
 		pos     = win_cntr;
-		index_1 = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
+		// index_1 = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
 		index_2 = (int) (allele_samples.size() * (random() / (RAND_MAX + 1.0)));
 		// bs[pos].f       = fst_samples[index_1];
 		bs[pos].alleles = allele_samples[index_2];
@@ -4287,7 +4305,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 		// 
 		for (int k = 0; k < i - 1; k++) {
 		    pos     = (int) (win_size * (random() / (RAND_MAX + 1.0)));
-		    index_1 = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
+		    // index_1 = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
 		    index_2 = (int) (allele_samples.size() * (random() / (RAND_MAX + 1.0)));
 		    // bs[pos].f       = fst_samples[index_1];
 		    // bs[pos].alleles = allele_samples[index_2];
@@ -4931,6 +4949,150 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 	    fh << "\n";
 	}
     }
+    fh.close();
+
+    return 0;
+}
+
+int 
+write_vcf_haplotypes(map<int, CSLocus *> &catalog, 
+		     PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
+		     map<int, string> &samples, vector<int> &sample_ids) 
+{
+    //
+    // Write a VCF file as defined here: http://samtools.github.io/hts-specs/
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".haplotypes.vcf";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing population data haplotypes to VCF file '" << file << "'\n";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening VCF file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%Y%m%d", timeinfo);
+
+    //
+    // Output the header.
+    //
+    fh << "##fileformat=VCFv4.2\n"
+       << "##fileDate=" << date << "\n"
+       << "##source=\"Stacks v" << VERSION << "\"\n"
+       << "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n"
+       << "##INFO=<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">\n"
+       << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
+       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
+       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
+       << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
+
+    for (int i = 0; i < pmap->sample_cnt(); i++)
+	fh << "\t" << samples[pmap->rev_sample_index(i)];
+    fh << "\n";    
+
+    map<string, vector<CSLocus *> >::iterator it;
+    map<string, double>::iterator hit;
+    map<string, double> hap_freq;
+    map<string, int>    hap_index;
+    vector<pair<string, int> > ordered_hap;
+    CSLocus  *loc;
+    Datum   **d;
+    double    num_indv, num_hap;
+    char      allele[id_len];
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    	for (uint pos = 0; pos < it->second.size(); pos++) {
+    	    loc = it->second[pos];
+	    d   = pmap->locus(loc->id);
+
+	    hap_freq.clear();
+	    hap_index.clear();
+	    ordered_hap.clear();
+
+	    num_hap = count_haplotypes_at_locus(0, pmap->sample_cnt() - 1, d, hap_freq);
+
+	    if (num_hap == 0 || hap_freq.size() == 1) 
+		continue;
+
+	    num_indv = num_hap / 2.0;
+
+	    //
+	    // Order the haplotypes according to most frequent. Record the ordered position or each 
+	    // haplotype and convert them from counts to frequencies.
+	    //
+	    for (hit = hap_freq.begin(); hit != hap_freq.end(); hit++) {
+		ordered_hap.push_back(make_pair(hit->first, hit->second));
+		hit->second = hit->second / num_hap;
+	    }
+	    sort(ordered_hap.begin(), ordered_hap.end(), compare_pair_haplotype);
+	    for (uint i = 0; i < ordered_hap.size(); i++)
+		hap_index[ordered_hap[i].first] = i;
+
+	    string alt_str, freq_str;
+	    for (uint i = 1; i < ordered_hap.size(); i++) {
+		alt_str  += ordered_hap[i].first;
+		sprintf(allele, "%0.3f", hap_freq[ordered_hap[i].first]);
+		freq_str += allele;
+		if (i < ordered_hap.size() - 1) {
+		    alt_str  += ",";
+		    freq_str += ",";
+		}
+	    }
+
+	    fh << loc->loc.chr         << "\t" 
+	       << loc->sort_bp() + 1   << "\t" 
+	       << loc->id              << "\t"
+	       << ordered_hap[0].first << "\t"       // REFerence haplotypes
+	       << alt_str        << "\t"             // ALTernate haplotypes
+	       << "."            << "\t"             // QUAL
+	       << "PASS"         << "\t"             // FILTER
+	       << "NS="          << num_indv << ";"  // INFO
+	       << "AF="          << freq_str << "\t" // INFO
+	       << "GT:DP";                           // FORMAT
+
+	    for (int j = 0; j < pmap->sample_cnt(); j++) {
+		fh << "\t";
+
+		if (d[j] == NULL) {
+		    //
+		    // Data does not exist.
+		    //
+		    fh << "./.:0";
+
+		} else if (d[j]->obshap.size() > 2) { 
+		    fh << "./.:" << d[j]->tot_depth;
+
+		} else if (d[j]->obshap.size() == 1) {
+		    if(uncalled_haplotype(d[j]->obshap[0]))
+		        fh << "./.:" << d[j]->tot_depth;
+		    else
+			fh << hap_index[d[j]->obshap[0]] << "/" << hap_index[d[j]->obshap[0]] << ":" << d[j]->tot_depth;
+		} else {
+		    if(!uncalled_haplotype(d[j]->obshap[0]) &&
+		       !uncalled_haplotype(d[j]->obshap[1]))
+		        fh << hap_index[d[j]->obshap[0]] << "/" << hap_index[d[j]->obshap[1]] << ":" << d[j]->tot_depth;
+		    else if (!uncalled_haplotype(d[j]->obshap[0]))
+		        fh << hap_index[d[j]->obshap[0]] << "/" << "." << ":" << d[j]->tot_depth;
+		    else if (!uncalled_haplotype(d[j]->obshap[1]))
+		        fh << "." << "/" << hap_index[d[j]->obshap[1]] << ":" << d[j]->tot_depth;
+	        }
+	    }
+	    fh << "\n";
+	}
+    }
+
     fh.close();
 
     return 0;
@@ -7225,35 +7387,36 @@ int parse_command_line(int argc, char* argv[]) {
      
     while (1) {
 	static struct option long_options[] = {
-	    {"help",          no_argument,       NULL, 'h'},
-            {"version",       no_argument,       NULL, 'v'},
-            {"verbose",       no_argument,       NULL, 'd'},
-            {"sql",           no_argument,       NULL, 's'},
-            {"vcf",           no_argument,       NULL, 'V'},
-            {"fasta",         no_argument,       NULL, 'F'},
-            {"fasta_strict",  no_argument,       NULL, 'J'},
-            {"structure",     no_argument,       NULL, 'S'},
-            {"fastphase",     no_argument,       NULL, 'A'},
-            {"phase",         no_argument,       NULL, 'C'},
-            {"beagle",        no_argument,       NULL, 'E'},
-            {"beagle_phased", no_argument,       NULL, 'H'},
-            {"plink",         no_argument,       NULL, 'K'},
-            {"genomic",       no_argument,       NULL, 'g'},
-	    {"genepop",       no_argument,       NULL, 'G'},
-	    {"phylip",        no_argument,       NULL, 'Y'},
-	    {"phylip_var",    no_argument,       NULL, 'L'},
-	    {"hzar",          no_argument,       NULL, 'Z'},
-	    {"merge_sites",   no_argument,       NULL, 'D'},
-	    {"window_size",   required_argument, NULL, 'w'},
-	    {"num_threads",   required_argument, NULL, 't'},
-	    {"batch_id",      required_argument, NULL, 'b'},
-	    {"in_path",       required_argument, NULL, 'P'},
-	    {"progeny",       required_argument, NULL, 'r'},
-	    {"min_depth",     required_argument, NULL, 'm'},
-	    {"renz",          required_argument, NULL, 'e'},
-	    {"pop_map",       required_argument, NULL, 'M'},
-	    {"whitelist",     required_argument, NULL, 'W'},
-	    {"blacklist",     required_argument, NULL, 'B'},
+	    {"help",           no_argument,       NULL, 'h'},
+            {"version",        no_argument,       NULL, 'v'},
+            {"verbose",        no_argument,       NULL, 'd'},
+            {"sql",            no_argument,       NULL, 's'},
+            {"vcf",            no_argument,       NULL, 'V'},
+            {"vcf_haplotypes", no_argument,       NULL, 'n'},
+            {"fasta",          no_argument,       NULL, 'F'},
+            {"fasta_strict",   no_argument,       NULL, 'J'},
+            {"structure",      no_argument,       NULL, 'S'},
+            {"fastphase",      no_argument,       NULL, 'A'},
+            {"phase",          no_argument,       NULL, 'C'},
+            {"beagle",         no_argument,       NULL, 'E'},
+            {"beagle_phased",  no_argument,       NULL, 'H'},
+            {"plink",          no_argument,       NULL, 'K'},
+            {"genomic",        no_argument,       NULL, 'g'},
+	    {"genepop",        no_argument,       NULL, 'G'},
+	    {"phylip",         no_argument,       NULL, 'Y'},
+	    {"phylip_var",     no_argument,       NULL, 'L'},
+	    {"hzar",           no_argument,       NULL, 'Z'},
+	    {"merge_sites",    no_argument,       NULL, 'D'},
+	    {"window_size",    required_argument, NULL, 'w'},
+	    {"num_threads",    required_argument, NULL, 't'},
+	    {"batch_id",       required_argument, NULL, 'b'},
+	    {"in_path",        required_argument, NULL, 'P'},
+	    {"progeny",        required_argument, NULL, 'r'},
+	    {"min_depth",      required_argument, NULL, 'm'},
+	    {"renz",           required_argument, NULL, 'e'},
+	    {"pop_map",        required_argument, NULL, 'M'},
+	    {"whitelist",      required_argument, NULL, 'W'},
+	    {"blacklist",      required_argument, NULL, 'B'},
 	    {"write_single_snp",  no_argument,       NULL, 'I'},
 	    {"write_random_snp",  no_argument,       NULL, 'j'},
             {"kernel_smoothed",   no_argument,       NULL, 'k'},
@@ -7381,6 +7544,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'V':
 	    vcf_out = true;
+	    break;
+	case 'n':
+	    vcf_haplo_out = true;
 	    break;
 	case 'F':
 	    fasta_out = true;
@@ -7581,7 +7747,8 @@ void help() {
 	      << "    --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file.\n"
 	      << "    --fasta: output full sequence for each unique haplotype, from each sample locus in FASTA format, regardless of plausibility.\n"
 	      << "    --fasta_strict: output full sequence for each haplotype, from each sample locus in FASTA format, only for biologically plausible loci.\n"
-	      << "    --vcf: output results in Variant Call Format (VCF).\n"
+	      << "    --vcf: output SNPs in Variant Call Format (VCF).\n"
+	      << "    --vcf_haplotypes: output haplotypes in Variant Call Format (VCF).\n"
 	      << "    --genepop: output results in GenePop format.\n"
 	      << "    --structure: output results in Structure format.\n"
 	      << "    --phase: output genotypes in PHASE format.\n"

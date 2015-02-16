@@ -128,6 +128,7 @@ int      calculate_haplotype_stats(vector<pair<int, string> > &, map<int, pair<i
 int      kernel_smoothed_hapstats(vector<CSLocus *> &, PopSum<CSLocus> *, int, double *);
 int      calculate_haplotype_divergence(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int      calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+double   count_haplotypes_at_locus(int, int, Datum **, map<string, double> &);
 bool     fixed_locus(map<int, pair<int, int> > &, Datum **, vector<int> &);
 bool     uncalled_haplotype(const char *);
 
@@ -151,6 +152,7 @@ int  write_genomic(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int  write_fasta(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, vector<int> &);
 int  write_strict_fasta(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, vector<int> &);
 int  write_vcf(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, string> &, vector<int> &, map<int, pair<merget, int> > &);
+int  write_vcf_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, string> &, vector<int> &);
 int  write_genepop(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_structure(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_phase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);

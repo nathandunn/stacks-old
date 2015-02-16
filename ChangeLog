@@ -1,13 +1,14 @@
 Stacks 1.25 - Feb 16, 2015
 --------------------------
-	Bugfix: fixed problem with gzipped files where last line of file was not read properly
-	causing the program to output an erroneous error message.
+	Feature: Haplotypes can now be output in VCF format from the populations program.
 	Feature: added --fasta_strict option to populations program. Will output full sequence for
 	each individual at each haplotype at each locus, but only for biologically plausible loci.
 	It won't output loci with more than two haplotypes and will output single haplotypes twice,
 	once per allele.
 	Feature: Changed the sumstats/hapstats files to output a one-based genome base pair position
 	so it matches other export formats.
+	Bugfix: fixed problem with gzipped files where last line of file was not read properly
+	causing the program to output an erroneous error message.
 	Bugfix: The FASTA output from the populations program was reporting the internal value
 	(zero-based index) for the basepair position of each read (the first nucleotide of the
 	cutsite) causing an off-by-one error for all reads and reads on the negative strand had

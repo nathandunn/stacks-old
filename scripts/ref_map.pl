@@ -174,23 +174,23 @@ foreach $sample (@parents, @progeny, @samples) {
 
     if ($gzip == 1) {
 	$file = "$out_path/$pfile" . ".tags.tsv.gz";
-	import_gzsql_file($log_fh, $file, "unique_tags", 0);
+	import_gzsql_file($log_fh, $file, "unique_tags", 1);
 
 	$file = "$out_path/$pfile" . ".snps.tsv.gz";
-	import_gzsql_file($log_fh, $file, "snps", 0);
+	import_gzsql_file($log_fh, $file, "snps", 1);
 
 	$file = "$out_path/$pfile" . ".alleles.tsv.gz";
-	import_gzsql_file($log_fh, $file, "alleles", 0);
+	import_gzsql_file($log_fh, $file, "alleles", 1);
 
     } else {
 	$file = "$out_path/$pfile" . ".tags.tsv";
-	import_sql_file($log_fh, $file, "unique_tags", 0);
+	import_sql_file($log_fh, $file, "unique_tags", 1);
 
 	$file = "$out_path/$pfile" . ".snps.tsv";
-	import_sql_file($log_fh, $file, "snps", 0);
+	import_sql_file($log_fh, $file, "snps", 1);
 
 	$file = "$out_path/$pfile" . ".alleles.tsv";
-	import_sql_file($log_fh, $file, "alleles", 0);
+	import_sql_file($log_fh, $file, "alleles", 1);
     }
     print STDERR "done.\n" if ($sql == 1);
 
@@ -234,23 +234,23 @@ print STDERR "  Importing catalog to MySQL database..." if ($sql == 1);
 
 if ($gzip == 1) {
     $file = "$out_path/$cat_file" . ".catalog.tags.tsv.gz";
-    import_gzsql_file($log_fh, $file, "catalog_tags", 0);
+    import_gzsql_file($log_fh, $file, "catalog_tags", 1);
 
     $file = "$out_path/$cat_file" . ".catalog.snps.tsv.gz";
-    import_gzsql_file($log_fh, $file, "catalog_snps", 0);
+    import_gzsql_file($log_fh, $file, "catalog_snps", 1);
 
     $file = "$out_path/$cat_file" . ".catalog.alleles.tsv.gz";
-    import_gzsql_file($log_fh, $file, "catalog_alleles", 0);
+    import_gzsql_file($log_fh, $file, "catalog_alleles", 1);
 
 } else {
     $file = "$out_path/$cat_file" . ".catalog.tags.tsv";
-    import_sql_file($log_fh, $file, "catalog_tags", 0);
+    import_sql_file($log_fh, $file, "catalog_tags", 1);
 
     $file = "$out_path/$cat_file" . ".catalog.snps.tsv";
-    import_sql_file($log_fh, $file, "catalog_snps", 0);
+    import_sql_file($log_fh, $file, "catalog_snps", 1);
 
     $file = "$out_path/$cat_file" . ".catalog.alleles.tsv";
-    import_sql_file($log_fh, $file, "catalog_alleles", 0);
+    import_sql_file($log_fh, $file, "catalog_alleles", 1);
 }
 print STDERR "done.\n" if ($sql == 1);
 
@@ -284,11 +284,11 @@ foreach $sample (@parents, @progeny, @samples) {
 
     if ($gzip == 1) {
 	$file = "$out_path/" . $pfile . ".matches.tsv.gz";
-	import_gzsql_file($log_fh, $file, "matches", 0);
+	import_gzsql_file($log_fh, $file, "matches", 1);
 
     } else {
 	$file = "$out_path/" . $pfile . ".matches.tsv";
-	import_sql_file($log_fh, $file, "matches", 0);
+	import_sql_file($log_fh, $file, "matches", 1);
     }
     print STDERR "done.\n" if ($sql == 1);
 
