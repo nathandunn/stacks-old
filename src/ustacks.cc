@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -21,11 +21,7 @@
 //
 // ustacks -- build denovo stacks
 //
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
-//
+
 #include "ustacks.h"
 
 //
@@ -1464,6 +1460,29 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 	    cerr << "Error: Unable to open allele file for writing.\n";
 	    exit(1);
 	}
+    }
+
+    //
+    // Record the version of Stacks used and the date generated as a comment in the catalog.
+    //
+    // Obtain the current date.
+    //
+    stringstream log;
+    time_t       rawtime;
+    struct tm   *timeinfo;
+    char         date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
+    log << "# ustacks version " << VERSION << "; generated on " << date << "\n"; 
+    if (gzip) {
+        gzputs(gz_tags, log.str().c_str());
+        gzputs(gz_snps, log.str().c_str());
+        gzputs(gz_alle, log.str().c_str());
+    } else {
+        tags << log.str() << "\n";
+	snps << log.str() << "\n";
+	alle << log.str() << "\n";
     }
 
     int id;

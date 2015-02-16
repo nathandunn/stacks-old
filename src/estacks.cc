@@ -25,8 +25,6 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
-// $Id: estacks.cc 2099 2011-04-30 22:04:37Z catchen $
-//
 
 #include "estacks.h"
 
@@ -267,14 +265,13 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     std::ofstream snps(snp_file.c_str());
     std::ofstream alle(all_file.c_str());
     std::ofstream pile(pil_file.c_str());
-    int tag_id, comp_id, snp_cnt;
+    int tag_id, comp_id;
 
     tag_id = 0;
     for (i = m.begin(); i != m.end(); i++) {
 	tag_1 = i->second;
 
 	// First write the consensus sequence
-	snp_cnt = 0;
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
 
 	    float total = 0;

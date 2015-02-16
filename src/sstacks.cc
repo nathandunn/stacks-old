@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -20,10 +20,6 @@
 
 //
 // sstacks -- search for occurances of stacks in a catalog of stacks.
-//
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
 //
 
 #include "sstacks.h"
@@ -113,10 +109,8 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
     //
     map<int, QLocus *>::iterator i;
     map<int, Locus *>::iterator j;
-    int k, min_tag_len;
+    int  k;
     char id[id_len];
-
-    min_tag_len = strlen(sample_1.begin()->second->con); 
 
     //
     // Build a hash map out of the first sample (usually the catalog)
@@ -733,6 +727,24 @@ int write_matches(map<int, QLocus *> &sample) {
 	    exit(1);
 	}
     }
+
+    //
+    // Record the version of Stacks used and the date generated as a comment in the catalog.
+    //
+    // Obtain the current date.
+    //
+    stringstream log;
+    time_t       rawtime;
+    struct tm   *timeinfo;
+    char         date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
+    log << "# sstacks version " << VERSION << "; generated on " << date << "\n"; 
+    if (in_file_type == gzsql) 
+        gzputs(gz_matches, log.str().c_str());
+    else
+        matches << log.str() << "\n";
 
     QLocus *qloc;
     string       type;

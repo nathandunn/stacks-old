@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -22,8 +22,7 @@
 // cstacks -- Create a catalog of Stacks.
 //
 // Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
+// jcatchen@illinois.edu
 //
 
 #include "cstacks.h"
@@ -600,7 +599,7 @@ int write_catalog(map<int, CLocus *> &catalog) {
     string all_file = prefix.str() + ".catalog.alleles.tsv";
 
     if (gzip) {
-	tag_file += ".gz";
+        tag_file += ".gz";
 	snp_file += ".gz";
 	all_file += ".gz";
     }
@@ -611,7 +610,7 @@ int write_catalog(map<int, CLocus *> &catalog) {
     gzFile   gz_tags, gz_snps, gz_alle;
     ofstream tags, snps, alle;
     if (gzip) {
-	gz_tags = gzopen(tag_file.c_str(), "wb");
+        gz_tags = gzopen(tag_file.c_str(), "wb");
 	if (!gz_tags) {
 	    cerr << "Error: Unable to open gzipped catalog tag file '" << tag_file << "': " << strerror(errno) << ".\n";
 	    exit(1);
@@ -651,6 +650,29 @@ int write_catalog(map<int, CLocus *> &catalog) {
 	    cerr << "Error: Unable to open catalog alleles file for writing.\n";
 	    exit(1);
 	}
+    }
+
+    //
+    // Record the version of Stacks used and the date generated as a comment in the catalog.
+    //
+    // Obtain the current date.
+    //
+    stringstream log;
+    time_t       rawtime;
+    struct tm   *timeinfo;
+    char         date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
+    log << "# cstacks version " << VERSION << "; catalog generated on " << date << "\n"; 
+    if (gzip) {
+        gzputs(gz_tags, log.str().c_str());
+        gzputs(gz_snps, log.str().c_str());
+        gzputs(gz_alle, log.str().c_str());
+    } else {
+        tags << log.str() << "\n";
+	snps << log.str() << "\n";
+	alle << log.str() << "\n";
     }
 
     for (i = catalog.begin(); i != catalog.end(); i++) {

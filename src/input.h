@@ -85,5 +85,6 @@ int   parse_tsv(const char *, vector<string> &);
 int   parse_ssv(const char *, vector<string> &);
 int   read_line(ifstream &, char **, int *);
 int   read_gzip_line(gzFile &, char **, int *);
+bool  is_comment(const char *);
 
 #endif // __INPUT_H__
