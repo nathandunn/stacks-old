@@ -59,6 +59,7 @@ bool      expand_id         = false;
 bool      sql_out           = false;
 bool      vcf_out           = false;
 bool      fasta_out         = false;
+bool      fasta_strict_out  = false;
 bool      genepop_out       = false;
 bool      genomic_out       = false;
 bool      structure_out     = false;
@@ -371,6 +372,9 @@ int main (int argc, char* argv[]) {
     //
     if (fasta_out)
     	write_fasta(catalog, pmap, samples, sample_ids);
+
+    if (fasta_strict_out)
+	write_strict_fasta(catalog, pmap, samples, sample_ids);
 
     if (vcf_out)
     	write_vcf(catalog, pmap, psum, samples, sample_ids, merge_map);
@@ -4586,12 +4590,107 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string
 		    fh << ">CLocus_" << loc->id 
 		       << "_Sample_" << pmap->rev_sample_index(j)
 		       << "_Locus_"  << d[j]->id 
-		       << "_Allele_" << k;
+		       << "_Allele_" << k
+		       << " ["       << samples[pmap->rev_sample_index(j)];
 
 		    if (strcmp(loc->loc.chr, "un") != 0)
-			fh << " [" << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-") << "]";
-		    fh << "\n"
+			fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
+		    fh << "]\n"
 		       << seq << "\n";
+		}
+	    }
+	}
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int 
+write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string> &samples, vector<int> &sample_ids) 
+{
+    //
+    // Write a FASTA file containing each allele from each locus from 
+    // each sample in the population.
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".strict.fa";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing strict population alleles to FASTA file '" << file << "'\n";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening strict FASTA file '" << file << "'\n";
+	exit(1);
+    }
+
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus *loc;
+    Datum  **d;
+    string   seq;
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint pos = 0; pos < it->second.size(); pos++) {
+	    loc = it->second[pos];
+	    seq = loc->con;
+	    d   = pmap->locus(loc->id);
+
+	    for (int j = 0; j < pmap->sample_cnt(); j++) {
+		if (d[j] == NULL) 
+		    continue;
+		if (d[j]->obshap.size() > 2) 
+		    continue;
+
+		if (d[j]->obshap.size() == 1) {
+
+		    for (uint i = 0; i < loc->snps.size(); i++) {
+			uint col = loc->snps[i]->col;
+			if (col < loc->len)
+			    seq.replace(col, 1, d[j]->obshap[0], i, 1);
+		    }
+
+		    fh << ">CLocus_" << loc->id 
+		       << "_Sample_" << pmap->rev_sample_index(j)
+		       << "_Locus_"  << d[j]->id 
+		       << "_Allele_" << 0
+		       << " ["       << samples[pmap->rev_sample_index(j)];
+		    if (strcmp(loc->loc.chr, "un") != 0)
+			fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
+		    fh << "]\n"
+		       << seq << "\n";
+
+		    fh << ">CLocus_" << loc->id 
+		       << "_Sample_" << pmap->rev_sample_index(j)
+		       << "_Locus_"  << d[j]->id 
+		       << "_Allele_" << 1
+		       << " ["       << samples[pmap->rev_sample_index(j)];
+		    if (strcmp(loc->loc.chr, "un") != 0)
+			fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
+		    fh << "]\n"
+		       << seq << "\n";
+
+		} else {
+		    for (uint k = 0; k < d[j]->obshap.size(); k++) {
+			for (uint i = 0; i < loc->snps.size(); i++) {
+			    uint col = loc->snps[i]->col;
+
+			    if (col < loc->len)
+				seq.replace(col, 1, d[j]->obshap[k], i, 1);
+			}
+
+			fh << ">CLocus_" << loc->id 
+			   << "_Sample_" << pmap->rev_sample_index(j)
+			   << "_Locus_"  << d[j]->id 
+			   << "_Allele_" << k
+			   << " ["       << samples[pmap->rev_sample_index(j)];
+			if (strcmp(loc->loc.chr, "un") != 0)
+			    fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
+			fh << "]\n"
+			   << seq << "\n";
+		    }
 		}
 	    }
 	}
@@ -4702,7 +4801,7 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
     Datum   **d;
     LocSum  **s;
     LocTally *t;
-    int       len, gt_1, gt_2;
+    int       gt_1, gt_2;
     double    p_freq, num_indv;
     int       pop_cnt = psum->pop_cnt();
     char      p_allele, q_allele, p_str[32], q_str[32];
@@ -4732,7 +4831,6 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 
 	    s   = psum->locus(loc->id);
 	    t   = psum->locus_tally(loc->id);
-	    len = strlen(loc->con);
 
 	    num_indv = (double) t->nucs[col].num_indv;
 	    p_freq   = 0.0;
@@ -4895,7 +4993,6 @@ write_genepop(map<int, CSLocus *> &catalog,
     //
     uint i   = 0;
     uint cnt = catalog.size();
-    uint locus_index = 0;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
@@ -4934,7 +5031,6 @@ write_genepop(map<int, CSLocus *> &catalog,
 
 	    fh << samples[pmap->rev_sample_index(j)] << ",";
 
-	    locus_index = 0;
 	    for (it = catalog.begin(); it != catalog.end(); it++) {
 		loc = it->second;
 		d   = pmap->locus(loc->id);
@@ -5244,13 +5340,11 @@ write_hzar(map<int, CSLocus *> &catalog,
     fh << "\n";
 
     map<int, pair<int, int> >::iterator pit;
-    int start_index, end_index, pop_id, p;
+    int pop_id, p;
 
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-	p           = psum->pop_index(pit->first);
-	pop_id      = pit->first;
-	start_index = pit->second.first;
-	end_index   = pit->second.second;
+	p      = psum->pop_index(pit->first);
+	pop_id = pit->first;
 
 	fh << pop_key[pop_id] << ",";
 
@@ -6202,7 +6296,6 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
     Datum   **d;
-    LocTally *t;
 
     stringstream pop_name;
     string       file;
@@ -6215,7 +6308,6 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
 	vector<GenPos> ordered_loci;
     	for (uint pos = 0; pos < it->second.size(); pos++) {
     	    loc = it->second[pos];
-	    t   = psum->locus_tally(loc->id);
 
 	    if (loc->snps.size() == 0) continue;
 
@@ -7144,6 +7236,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"sql",           no_argument,       NULL, 's'},
             {"vcf",           no_argument,       NULL, 'V'},
             {"fasta",         no_argument,       NULL, 'F'},
+            {"fasta_strict",  no_argument,       NULL, 'J'},
             {"structure",     no_argument,       NULL, 'S'},
             {"fastphase",     no_argument,       NULL, 'A'},
             {"phase",         no_argument,       NULL, 'C'},
@@ -7191,7 +7284,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "ACDEFGHKLSVYZ123456dghjklsva:b:c:e:f:i:m:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
+	c = getopt_long(argc, argv, "ACDEFGHJKLSVYZ123456dghjklsva:b:c:e:f:i:m:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -7296,6 +7389,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'F':
 	    fasta_out = true;
+	    break;
+	case 'J':
+	    fasta_strict_out = true;
 	    break;
 	case 'G':
 	    genepop_out = true;
@@ -7488,7 +7584,8 @@ void help() {
 	      << "    --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n\n"
 	      << "  File ouput options:\n"
 	      << "    --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file.\n"
-	      << "    --fasta: output full sequence for each allele, from each sample locus in FASTA format.\n"
+	      << "    --fasta: output full sequence for each unique haplotype, from each sample locus in FASTA format, regardless of plausibility.\n"
+	      << "    --fasta_strict: output full sequence for each haplotype, from each sample locus in FASTA format, only for biologically plausible loci.\n"
 	      << "    --vcf: output results in Variant Call Format (VCF).\n"
 	      << "    --genepop: output results in GenePop format.\n"
 	      << "    --structure: output results in Structure format.\n"

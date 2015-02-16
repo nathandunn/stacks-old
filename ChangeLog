@@ -1,5 +1,9 @@
 Stacks 1.25
 --------------------------
+	Feature: added --fasta_strict option to populations program. Will output full sequence for
+	each individual at each haplotype at each locus, but only for biologically plausible loci.
+	It won't output loci with more than two haplotypes and will output single haplotypes twice,
+	once per allele.
 	Feature: Changed the sumstats/hapstats files to output a one-based genome base pair position
 	so it matches other export formats.
 	Bugfix: The FASTA output from the populations program was reporting the internal value
@@ -11,6 +15,8 @@ Stacks 1.25
 	genotypes to be excluded during export.
 	Bugfix: process_radtags was not looking for the paired-end RAD cutsite in the proper location
 	when dealing with double-digest, inline/index barcoded reads.
+	Feature: added initial, internal support for merging and phasing loci that overlap at a
+	restriction enzyme cut site.
 
 Stacks 1.24 - Jan 07, 2015
 --------------------------
