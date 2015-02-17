@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -32,6 +32,8 @@ using std::cerr;
 using std::endl;
 #include <sstream>
 using std::stringstream;
+
+#include "constants.h"
 
 int init_log(ofstream &, int, char **);
 
