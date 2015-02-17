@@ -53,7 +53,8 @@ process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/const
 	src/write.h src/write.cc \
 	src/clean.h src/clean.cc \
 	src/file_io.h src/file_io.cc \
-	src/input.h src/input.cc src/BustardI.h src/FastqI.h src/gzFastq.h src/renz.h
+	src/input.h src/input.cc src/BustardI.h src/BamUnalignedI.h src/FastqI.h src/gzFastq.h \
+	src/renz.h
 
 process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h \
 	src/clean.h src/clean.cc \
@@ -61,7 +62,7 @@ process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc 
 	src/utils.h src/utils.cc src/log_utils.h src/log_utils.cc \
 	src/write.h src/write.cc \
 	src/kmers.h src/kmers.cc \
-	src/input.h src/input.cc src/BustardI.h src/FastqI.h src/gzFastq.h 
+	src/input.h src/input.cc src/BustardI.h src/BamUnalignedI.h src/FastqI.h src/gzFastq.h 
 
 kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h \
 	src/utils.h src/utils.cc \
@@ -114,10 +115,12 @@ sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 sstacks_LDFLAGS   = $(OPENMP_CFLAGS)
 rxstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 rxstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-process_radtags_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+process_radtags_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS) 
 process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
-process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+process_radtags_LDADD    = $(BAM_LIBS)
+process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS) 
 process_shortreads_LDFLAGS  = $(OPENMP_CFLAGS)
+process_shortreads_LDADD    = $(BAM_LIBS)
 kmer_filter_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 kmer_filter_LDFLAGS   = $(OPENMP_CFLAGS)
 genotypes_CXXFLAGS    = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)

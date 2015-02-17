@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2013-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -40,7 +40,7 @@ init_log(ofstream &fh, int argc, char **argv)
 	fh << argv[i]; 
 	if (i < argc - 1) fh << " ";
     }
-    fh << "\n" << argv[0] << " executed " << date << "\n\n";
+    fh << "\n" << argv[0] << " version " << VERSION << " executed " << date << "\n\n";
 
     return 0;
 }

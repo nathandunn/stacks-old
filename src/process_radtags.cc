@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2015, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -22,10 +22,6 @@
 // process_radtags -- clean raw reads using a sliding window approach;
 //   split reads by barcode, check RAD cutsite is intact, correct barcodes/cutsites 
 //   within one basepair, truncate reads on request.
-//
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
 //
 
 #include "process_radtags.h"
@@ -52,7 +48,7 @@ bool     paired          = false;
 bool     clean           = false;
 bool     quality         = false;
 bool     recover         = false;
-bool     interleave      = false;
+bool     interleaved     = false;
 bool     merge           = false;
 bool     discards        = false;
 bool     overhang        = false;
@@ -101,8 +97,12 @@ int main (int argc, char* argv[]) {
     //
     // If input files are gzipped, output gziped files, unless the user chooses an output type.
     //
-    if (out_file_type == unknown)
-	out_file_type = in_file_type == gzfastq ? gzfastq : fastq;
+    if (out_file_type == unknown) {
+	if (in_file_type == gzfastq || in_file_type == bam)
+	    out_file_type = gzfastq;
+	else
+	    out_file_type = fastq;
+    }
 
     cerr << "Using Phred+" << qual_offset << " encoding for quality scores.\n";
     if (truncate_seq > 0)
@@ -229,17 +229,23 @@ process_paired_reads(string prefix_1,
     string path_1 = in_path_1 + prefix_1;
     string path_2 = in_path_2 + prefix_2;
 
-    cerr << "  Reading data from:\n  " << path_1 << " and\n  " << path_2 << "\n";
+    if (interleaved)
+	cerr << "  Reading data from:\n  " << path_1 << "\n";
+    else
+	cerr << "  Reading data from:\n  " << path_1 << " and\n  " << path_2 << "\n";
 
     if (in_file_type == fastq) {
         fh_1 = new Fastq(path_1.c_str());
-	fh_2 = new Fastq(path_2.c_str());
+	fh_2 = interleaved ? fh_1 : new Fastq(path_2.c_str());
     } else if (in_file_type == gzfastq) {
         fh_1 = new GzFastq(path_1.c_str());
-	fh_2 = new GzFastq(path_2.c_str());
+	fh_2 = interleaved ? fh_1 : new GzFastq(path_2.c_str());
+    } else if (in_file_type == bam) {
+        fh_1 = new BamUnAln(path_1.c_str());
+	fh_2 = fh_1;
     } else if (in_file_type == bustard) {
         fh_1 = new Bustard(path_1.c_str());
-        fh_2 = new Bustard(path_2.c_str());
+        fh_2 = interleaved ? fh_1 : new Bustard(path_2.c_str());
     }
 
     //
@@ -375,7 +381,7 @@ process_paired_reads(string prefix_1,
     }
 
     delete fh_1;
-    delete fh_2;
+    if (interleaved == false) delete fh_2;
 
     delete r_1;
     delete r_2;
@@ -400,6 +406,8 @@ process_reads(string prefix,
         fh = new Fastq(path.c_str());
     else if (in_file_type == gzfastq)
         fh = new GzFastq(path.c_str());
+    else if (in_file_type == bam)
+        fh = new BamUnAln(path.c_str());
     else if (in_file_type == bustard)
         fh = new Bustard(path.c_str());
 
@@ -816,6 +824,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"recover",            no_argument, NULL, 'r'},
 	    {"discards",           no_argument, NULL, 'D'},
 	    {"paired",             no_argument, NULL, 'P'},
+	    {"interleaved",        no_argument, NULL, 'I'},
 	    {"merge",              no_argument, NULL, 'm'},
 	    {"disable_rad_check",  no_argument, NULL, 'R'},
 	    {"filter_illumina",    no_argument, NULL, 'F'},
@@ -863,9 +872,11 @@ int parse_command_line(int argc, char* argv[]) {
      	case 'i':
             if (strcasecmp(optarg, "bustard") == 0)
                 in_file_type = bustard;
+	    else if (strcasecmp(optarg, "bam") == 0)
+                in_file_type = bam;
 	    else if (strcasecmp(optarg, "gzfastq") == 0)
                 in_file_type = gzfastq;
-            else
+	    else
                 in_file_type = fastq;
 	    break;
      	case 'y':
@@ -909,6 +920,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'P':
 	    paired = true;
+	    break;
+	case 'I':
+	    interleaved = true;
 	    break;
 	case 'B':
 	    barcode_dist = is_integer(optarg);
@@ -1041,6 +1055,16 @@ int parse_command_line(int argc, char* argv[]) {
     if (in_file_type == unknown)
 	in_file_type = ftype;
 
+    if (in_file_type == bam && paired == true && interleaved == false) {
+	cerr << "You may only specify a BAM input file for paired-end data if the read pairs are interleaved.\n";
+	help();
+    }
+
+    if (in_file_type == bam && (barcode_type != inline_null && barcode_type != null_null)) {
+	cerr << "For BAM input files only inline or unbarcoded data can be processed.\n";
+	help();
+    }
+
     if (barcode_file.length() == 0)
 	cerr << "No barcodes specified, files will not be demultiplexed.\n";
 
@@ -1087,10 +1111,11 @@ void help() {
     std::cerr << "process_radtags " << VERSION << "\n"
               << "process_radtags [-f in_file | -p in_dir [-P] | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim] [-h]\n"
 	      << "  f: path to the input file if processing single-end sequences.\n"
-	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, 'fastq', or 'gzfastq' for gzipped Fastq (default 'fastq').\n"
+	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD format, 'bam', 'fastq' (default), or 'gzfastq' for gzipped FASTQ.\n"
 	      << "  y: output type, either 'fastq', 'gzfastq', 'fasta', or 'gzfasta' (default is to match the input file type).\n"
 	      << "  p: path to a directory of files.\n"
 	      << "  P: files contained within directory specified by '-p' are paired.\n"
+	      << "  I: specify that the paired-end reads are interleaved in single files.\n"
 	      << "  1: first input file in a set of paired-end sequences.\n"
 	      << "  2: second input file in a set of paired-end sequences.\n"
 	      << "  o: path to output the processed files.\n"

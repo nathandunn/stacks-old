@@ -1,6 +1,10 @@
-Stacks 1.25 - Feb 16, 2015
+Stacks 1.25 - Feb 17, 2015
 --------------------------
-	Feature: Haplotypes can now be output in VCF format from the populations program.
+	Feature: added support for unaligned BAM files for process_radtaags and
+	process_shortreads. The two programs can now read paired data that is interleaved in
+	a single file (which is required to support paired-end data in BAM format).
+	Feature: Haplotypes can now be output in VCF format from the populations program using
+	the --vcf_haplotypes option.
 	Feature: added --fasta_strict option to populations program. Will output full sequence for
 	each individual at each haplotype at each locus, but only for biologically plausible loci.
 	It won't output loci with more than two haplotypes and will output single haplotypes twice,

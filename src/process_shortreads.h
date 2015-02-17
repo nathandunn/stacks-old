@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -53,9 +53,10 @@ using std::pair;
 #include "utils.h"
 #include "log_utils.h"
 #include "write.h"
-#include "BustardI.h"   // Reading input files in Tab-separated Bustard format
-#include "FastqI.h"     // Reading input files in FASTQ format
-#include "gzFastq.h"    // Reading gzipped input files in FASTQ format
+#include "BustardI.h"       // Reading input files in Tab-separated Bustard format
+#include "FastqI.h"         // Reading input files in FASTQ format
+#include "gzFastq.h"        // Reading gzipped input files in FASTQ format
+#include "BamUnalignedI.h"  // Reading data from unaligned BAM files
 
 void help( void );
 void version( void );
