@@ -863,6 +863,8 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
     char       *hap_1, *hap_2;
     int         merge_type;
 
+    int sample_cnt        = 0;
+    int phased_sample_cnt = 0;
     //
     // Take a census of the already phased haplotypes. We have phased haplotypes 
     // if for individual i:
@@ -906,9 +908,11 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 			break;
 		    }
 		    phased_haplotypes.insert(merged_hap);
-		    //cerr << "Phasing: '" << d_1[i]->obshap[j] << "' + '" << d_2[i]->obshap[k] << "' => '" << merged_hap << "'\n";
+		    // cerr << "Phasing: '" << d_1[i]->obshap[j] << "' + '" << d_2[i]->obshap[k] << "' => '" << merged_hap << "'\n";
 		}
 	    }
+	    phased_sample_cnt++;
+	    sample_cnt++;
 	}
     }
 
@@ -924,26 +928,27 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 	if (d_1[i] == NULL || d_2[i] == NULL)
 	    continue;
 	else if (d_1[i]->obshap.size() > 1 && d_2[i]->obshap.size() > 1) {
+	    // cerr << "Attempting to phase individual " << i << ": " << d_1[i]->id << " / " << d_2[i]->id << "\n";
+
+	    sample_cnt++;
 	    //
 	    // We should be able to find a sinlge phasing mapping for each haplotype from d_1 to d_2 
 	    // that includes all the haplotypes in these two loci.
 	    //
-	    uint tot_obshap = d_1[i]->obshap.size() + d_2[i]->obshap.size();
 	    vector<pair<char *, char *> > seen_phased;
+	    uint tot_obshap = d_1[i]->obshap.size() + d_2[i]->obshap.size();
 	    uint phased_cnt = 0;
 	    for (uint j = 0; j < d_1[i]->obshap.size(); j++) {
 		for (uint k = 0; k < d_2[i]->obshap.size(); k++) {
-		    //cerr << "[" << d_1[i]->id << "] " << d_1[i]->obshap[j] << " => " << "[" << d_2[i]->id << "] " << d_2[i]->obshap[k] << "\n";
+		    // cerr << "  " << d_1[i]->obshap[j] << " + " << d_2[i]->obshap[k];
 		    //
 		    // Record each pair of haplotypes that has been seen phased previously.
 		    //
-		    if (phased_haplotypes.count(string(d_1[i]->obshap[j]) + string(d_2[i]->obshap[k])))
+		    if (phased_haplotypes.count(string(d_1[i]->obshap[j]) + string(d_2[i]->obshap[k]))) {
 			seen_phased.push_back(make_pair(d_1[i]->obshap[j], d_2[i]->obshap[k]));
-
-			// phased_cnt++;
-		    // } else {
-		    // 	cerr << "  Unable to find mapping for: '" << d_1[i]->obshap[j] << "' + '" << d_2[i]->obshap[k] << "'\n";
-		    // }
+			// cerr << " => " << d_1[i]->obshap[j] << d_2[i]->obshap[k];
+		    }
+		    // cerr << "\n";
 		}
 	    }
 	    //
@@ -966,27 +971,27 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 		}
 	    }
 
-	    // //
-	    // // If one pair of haplotypes is mapped, but the other is not, assume the second pair or
-	    // // haplotypes must be phased by process of elimination.
-	    // //
-	    // if (incorporated_haplotypes.size() == 2) {
-	    // 	hap_1 = incorporated_haplotypes.count(d_1[i]->obshap[1]) > 0 ?
-	    // 	    d_1[i]->obshap[0] : d_1[i]->obshap[1];
-	    // 	hap_2 = incorporated_haplotypes.count(d_2[i]->obshap[1]) > 0 ?
-	    // 	    d_2[i]->obshap[0] : d_2[i]->obshap[1];
-	    // 	phased_haplotypes.insert(string(hap_1) + string(hap_2));
-	    // 	incorporated_haplotypes.insert(hap_1);
-	    // 	incorporated_haplotypes.insert(hap_2);
-	    // 	cerr << "Phasing: '" << hap_1 << "' + '" << hap_2 << "' => '" << string(hap_1) + string(hap_2) << "'\n";
-	    // }
+	    //
+	    // If one pair of haplotypes is mapped, but the other is not, assume the second pair or
+	    // haplotypes must be phased by process of elimination.
+	    //
+	    if (phased_cnt == 0 && seen_phased.size() == 1) {
+	    	hap_1 = seen_phased[0].first  == d_1[i]->obshap[1] ?
+	    	    d_1[i]->obshap[0] : d_1[i]->obshap[1];
+	    	hap_2 = seen_phased[0].second == d_2[i]->obshap[1] ?
+	    	    d_2[i]->obshap[0] : d_2[i]->obshap[1];
+	    	phased_haplotypes.insert(string(hap_1) + string(hap_2));
+		phased_cnt++;
+	    	// cerr << "  Phasing: '" << hap_1 << "' + '" << hap_2 << "' => '" << string(hap_1) + string(hap_2) << "'\n";
+	    }
 
 	    if (phased_cnt != 1) {
-		return 0;
-		//cerr << "  Locus NOT phased in individual " << i << "; phased count: " << phased_cnt << "\n";
-	    } //else {
-		//cerr << "  Locus phased in individual " << i << "; phased count: " << phased_cnt << "\n";
-	    //}
+		if (!verbose) return 0;
+		if (verbose) cerr << "  Locus NOT phased in individual " << i << "; phased count: " << phased_cnt << "\n";
+	    } else {
+		phased_sample_cnt++;
+		if (verbose) cerr << "  Locus phased in individual " << i << "; phased count: " << phased_cnt << "\n";
+	    }
 
 	    //
 	    // Indicate that these two loci will also be phased by returning >1 from the function.
@@ -995,7 +1000,10 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 	}
     }
 
-    //return 0;
+    if (verbose) {
+	if (phased_sample_cnt != sample_cnt)
+	    return 0;
+    }
 
     //
     // Okay, merge these two loci together.
@@ -1231,15 +1239,32 @@ merge_datums(int sample_cnt,
 	index = to_be_phased[i];
 	tmpobshap.clear();
 	tmpobsdep.clear();
+
+	vector<pair<char *, char *> > seen_phased;
+	uint tot_obshap = sink[index]->obshap.size() + src[index]->obshap.size();
+
 	for (uint j = 0; j < sink[index]->obshap.size(); j++) {
 	    for (uint k = 0; k < src[index]->obshap.size(); k++) {
-		string merged_hap = string(sink[index]->obshap[j]) + string(src[index]->obshap[k]);
-		if (phased_haplotypes.count(merged_hap)) {
-		    tmpobshap.push_back(merged_hap);
-		    tmpobsdep.push_back((sink[index]->depth[j] + src[index]->depth[k]) / 2);
+		if (phased_haplotypes.count(string(sink[index]->obshap[j]) + string(src[index]->obshap[k])))
+		    seen_phased.push_back(make_pair(sink[index]->obshap[j], src[index]->obshap[k]));
+	    }
+	}
+
+	for (uint j = 0; j < seen_phased.size(); j++) {
+	    for (uint k = j; k < seen_phased.size(); k++) {
+		set<char *> incorporated_haplotypes;
+		incorporated_haplotypes.insert(seen_phased[j].first);
+		incorporated_haplotypes.insert(seen_phased[j].second);
+		incorporated_haplotypes.insert(seen_phased[k].first);
+		incorporated_haplotypes.insert(seen_phased[k].second);
+		if (incorporated_haplotypes.size() == tot_obshap) {
+		    tmpobshap.push_back(string(seen_phased[j].first) + string(seen_phased[j].second));
+		    tmpobshap.push_back(string(seen_phased[k].first) + string(seen_phased[k].second));
+		    //tmpobsdep.push_back((sink[index]->depth[j] + src[index]->depth[k]) / 2);
 		}
 	    }
 	}
+
 	sink[index]->depth.clear();
 	for (uint j = 0; j < sink[index]->obshap.size(); j++)
 	    delete [] sink[index]->obshap[j];
@@ -1248,9 +1273,10 @@ merge_datums(int sample_cnt,
 	    new_hap = new char[tmpobshap[j].length() + 1];
 	    strcpy(new_hap, tmpobshap[j].c_str());
 	    sink[index]->obshap.push_back(new_hap);
-	    sink[index]->depth.push_back(tmpobsdep[j]);
+	    // sink[index]->depth.push_back(tmpobsdep[j]);
 	}
     }
+
     //
     // 6. Merge model calls; Set the length; combine the two depth and lnl measures together.
     //
