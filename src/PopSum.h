@@ -188,6 +188,7 @@ public:
     unsigned short int allele_cnt;
     char   p_allele;
     char   q_allele;
+    double p_freq;
     bool   fixed;
     int    priv_allele;
 
@@ -197,6 +198,7 @@ public:
 	allele_cnt  = 0;
 	p_allele    = 0;
 	q_allele    = 0;
+	p_freq      = 0.0;
 	priv_allele = -1;
 	fixed       = true;
     }
@@ -417,6 +419,12 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 	//     uint col = loc->snps[i]->col;
 	for (int col = 0; col < len; col++) {
 
+	    this->tally_ref_alleles(s, col, 
+				    ltally->nucs[col].allele_cnt, 
+				    ltally->nucs[col].p_allele, 
+				    ltally->nucs[col].q_allele,
+				    p_cnt, q_cnt);
+
 	    for (int j = 0; j < this->num_pops; j++) {
 		//
 		// Sum the number of individuals examined at this locus across populations.
@@ -428,11 +436,29 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 		    ltally->nucs[col].fixed = false;
 	    }
 
-	    this->tally_ref_alleles(s, col, 
-				    ltally->nucs[col].allele_cnt, 
-				    ltally->nucs[col].p_allele, 
-				    ltally->nucs[col].q_allele,
-				    p_cnt, q_cnt);
+	    for (int j = 0; j < this->num_pops; j++) {
+		//
+		// Sum the most frequent allele across populations.
+		//
+		if (s[j]->nucs[col].p_nuc == ltally->nucs[col].p_allele)
+		    ltally->nucs[col].p_freq += 
+			s[j]->nucs[col].p * (s[j]->nucs[col].num_indv / (double) ltally->nucs[col].num_indv);
+		else 
+		    ltally->nucs[col].p_freq += 
+			(1 - s[j]->nucs[col].p) * (s[j]->nucs[col].num_indv / (double) ltally->nucs[col].num_indv);
+	    }
+
+	    //
+	    // We want to report the most frequent allele as the P allele. Reorder the alleles 
+	    // if necessary.
+	    //
+	    if (ltally->nucs[col].p_freq < 0.5) {
+		char a = ltally->nucs[col].p_allele;
+		ltally->nucs[col].p_allele = ltally->nucs[col].q_allele;
+		ltally->nucs[col].q_allele = a;
+		ltally->nucs[col].p_freq   = 1 - ltally->nucs[col].p_freq;
+	    }
+
 	    //
 	    // Check if this is a private allele. Either the site is variable and
 	    // the allele exists in one population, or the site is fixed and one
@@ -936,26 +962,26 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
 
     //cerr << "  P allele frequency: " << allele_p << "; Q allele frequency: " << allele_q << "\n";
 
-    //
-    // If the minor allele frequency is below the cutoff, set it to zero.
-    //
-    if (minor_allele_freq > 0) {
-	if (allele_p < allele_q) {
-	    if (allele_p < minor_allele_freq) {
-		s->nucs[pos].pi            = 0.0;
-		s->nucs[pos].fixed         = true;
-		s->nucs[pos].filtered_site = true;
-		return 0;
-	    }
-	} else {
-	    if (allele_q < minor_allele_freq) {
-		s->nucs[pos].pi            = 0.0;
-		s->nucs[pos].fixed         = true;
-		s->nucs[pos].filtered_site = true;
-		return 0;
-	    }
-	}
-    }
+    // //
+    // // If the minor allele frequency is below the cutoff, set it to zero.
+    // //
+    // if (minor_allele_freq > 0) {
+    // 	if (allele_p < allele_q) {
+    // 	    if (allele_p < minor_allele_freq) {
+    // 		s->nucs[pos].pi            = 0.0;
+    // 		s->nucs[pos].fixed         = true;
+    // 		s->nucs[pos].filtered_site = true;
+    // 		return 0;
+    // 	    }
+    // 	} else {
+    // 	    if (allele_q < minor_allele_freq) {
+    // 		s->nucs[pos].pi            = 0.0;
+    // 		s->nucs[pos].fixed         = true;
+    // 		s->nucs[pos].filtered_site = true;
+    // 		return 0;
+    // 	    }
+    // 	}
+    // }
 
     //
     // Calculate expected genotype frequencies.

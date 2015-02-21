@@ -76,6 +76,7 @@ bool      filter_lnl        = false;
 double    lnl_limit         = 0.0;
 int       min_stack_depth   = 0;
 double    merge_prune_lim   = 1.0;
+double    merge_minor_freq  = 0.0;
 double    minor_allele_freq = 0.0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
@@ -187,12 +188,9 @@ int main (int argc, char* argv[]) {
     }
 
     //
-    // Create an artificial whitelist if the user requested only the first SNP per locus.
+    // Check the whitelist.
     //
-    if (write_single_snp)
-	implement_single_snp_whitelist(catalog, whitelist);
-    else if (write_random_snp)
-	implement_random_snp_whitelist(catalog, whitelist);
+    check_whitelist_integrity(catalog, whitelist);
 
     //
     // Implement the black/white list
@@ -254,11 +252,6 @@ int main (int argc, char* argv[]) {
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
 
-    //
-    // Implement the white list, part 2, filter SNPs
-    //
-    reduce_catalog_snps(catalog, whitelist, pmap);
-
     log_fh << "# Distribution of population loci.\n";
     log_haplotype_cnts(catalog, log_fh);
 
@@ -310,13 +303,6 @@ int main (int argc, char* argv[]) {
     	modres.clear();
     }
 
-    //
-    // Merge loci that overlap on a common restriction enzyme cut site.
-    //
-    map<int, pair<merget, int> > merge_map;
-    if (merge_sites && loci_ordered)
-	merge_shared_cutsite_loci(catalog, pmap, merge_map, log_fh);
-
     uint pop_id, start_index, end_index;
     map<int, pair<int, int> >::iterator pit;
 
@@ -329,16 +315,64 @@ int main (int argc, char* argv[]) {
     	pop_id      = pit->first;
     	cerr << "Generating nucleotide-level summary statistics for population '" << pop_key[pop_id] << "'\n";
     	psum->add_population(catalog, pmap, pop_id, start_index, end_index, verbose, log_fh);
-
-    	if (kernel_smoothed && loci_ordered) {
-    	    cerr << "  Generating kernel-smoothed population statistics...\n";
-    	    kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
-    	}
     }
 
     cerr << "Tallying loci across populations...";
     psum->tally(catalog);
     cerr << "done.\n";
+
+    //
+    // We have removed loci that were below the -r and -p thresholds. Now we need to
+    // identify individual SNPs that are below the -r threshold or the minor allele
+    // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
+    //
+    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist);
+    cerr << "Pruned " << pruned_snps << " SNPs due to filter constraints.\n";
+
+    //
+    // Create an artificial whitelist if the user requested only the first SNP per locus.
+    //
+    if (write_single_snp)
+	implement_single_snp_whitelist(catalog, whitelist);
+    else if (write_random_snp)
+	implement_random_snp_whitelist(catalog, whitelist);
+
+    //
+    // Remove the accumulated SNPs 
+    //
+    reduce_catalog_snps(catalog, whitelist, pmap);
+
+    //
+    // Merge loci that overlap on a common restriction enzyme cut site.
+    //
+    map<int, pair<merget, int> > merge_map;
+    if (merge_sites && loci_ordered)
+	merge_shared_cutsite_loci(catalog, pmap, psum, merge_map, log_fh);
+
+    //
+    // Regenerate summary statistics after pruning SNPs and  merging loci.
+    //
+    delete psum;
+    psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
+    psum->initialize(pmap);
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	start_index = pit->second.first;
+	end_index   = pit->second.second;
+	pop_id      = pit->first;
+	cerr << "Regenerating nucleotide-level summary statistics for population '" << pop_key[pop_id] << "'\n";
+	psum->add_population(catalog, pmap, pop_id, start_index, end_index, verbose, log_fh);
+    }
+    cerr << "Re-tallying loci across populations...";
+    psum->tally(catalog);
+    cerr << "done.\n";
+
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	pop_id = pit->first;
+	if (kernel_smoothed && loci_ordered) {
+	    cerr << "  Generating kernel-smoothed population statistics...\n";
+	    kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
+	}
+    }
 
     //
     // Idenitfy polymorphic loci, tabulate haplotypes present.
@@ -582,6 +616,70 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
     return 0;
 }
 
+int
+prune_polymorphic_sites(map<int, CSLocus *> &catalog, 
+			PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
+			map<int, set<int> > &whitelist)
+{
+    map<int, set<int> > new_wl;
+    CSLocus  *loc;
+    LocTally *t;
+    int       size, pruned = 0;
+    //
+    // If the whitelist is populated, use it as a guide for what loci to consider.
+    // 
+    // Construct a new whitelist along the way, that is a subset of the existing list.
+    //
+    if (whitelist.size() > 0) {
+	map<int, set<int> >::iterator it;
+
+	for (it = whitelist.begin(); it != whitelist.end(); it++) {
+	    loc = catalog[it->first];
+	    t   = psum->locus_tally(loc->id);
+
+	    //
+	    // Check that each SNP in this locus is above the sample_limit and that 
+	    // each SNP is above the minor allele frequency. If so, add it back to
+	    // the whiteliest.
+	    //
+	    size = it->second.size();
+	    for (uint i = 0; i < loc->snps.size(); i++) {
+		if (size > 0 && it->second.count(loc->snps[i]->col) == 0)
+		    continue;
+
+		if (t->nucs[loc->snps[i]->col].p_freq < (1 - minor_allele_freq) &&
+		    ((double) t->nucs[loc->snps[i]->col].num_indv / (double) pmap->sample_cnt()) >= sample_limit)
+		    new_wl[loc->id].insert(loc->snps[i]->col);
+		else
+		    pruned++;
+	    }
+	}
+
+    } else {
+	//
+	// Otherwise, just iterate over the catalog.
+	//
+	map<int, CSLocus *>::iterator it;
+	for (it = catalog.begin(); it != catalog.end(); it++) {
+	    loc = it->second;
+	    t   = psum->locus_tally(loc->id);
+
+	    for (uint i = 0; i < loc->snps.size(); i++) {
+		if (t->nucs[loc->snps[i]->col].p_freq < (1 - minor_allele_freq) &&
+		    ((double) t->nucs[loc->snps[i]->col].num_indv / (double) pmap->sample_cnt()) >= sample_limit)
+		    new_wl[loc->id].insert(loc->snps[i]->col);
+		else
+		    pruned++;
+	    }
+	}
+
+    }
+
+    whitelist = new_wl;
+
+    return pruned;
+}
+
 bool 
 order_unordered_loci(map<int, CSLocus *> &catalog) 
 {
@@ -706,7 +804,7 @@ tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 
 int
 merge_shared_cutsite_loci(map<int, CSLocus *> &catalog, 
-			  PopMap<CSLocus> *pmap, 
+			  PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum,
 			  map<int, pair<merget, int> > &merge_map,
 			  ofstream &log_fh)
 {
@@ -731,11 +829,14 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
 
     cerr << "To merge adjacent loci at least " << merge_prune_lim * 100 << "% of samples must have both adjacent loci;"
 	 << " the remaining " << 100 - (merge_prune_lim * 100) << "% of individuals will be pruned.\n"
+	 << "  For phasing, only SNPs with a minor allele frequency above " << merge_minor_freq << " will be included.\n"
 	 << "Attempting to merge adjacent loci that share a cutsite...";
 	 
-    if (verbose)
+    if (verbose) {
+	cerr << "\n";
 	log_fh << "\n#\n# List of locus pairs that share a cutsite that failed to merge because they could not be phased.\n#\n";
-    
+    }
+
     //
     // Iterate over each chromosome.
     //
@@ -860,7 +961,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 
     set<string> phased_haplotypes;
     string      merged_hap;
-    char       *hap_1, *hap_2;
+    char       *h_1, *h_2;
     int         merge_type;
 
     int sample_cnt        = 0;
@@ -897,7 +998,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 			merged_hap = string(d_1[i]->obshap[j]) + string(d_2[i]->obshap[k]);
 			break;
 		    case 1:
-			merged_hap = string(d_2[i]->obshap[j]);
+			merged_hap = string(d_2[i]->obshap[k]);
 			break;
 		    case 2:
 			merged_hap = string(d_1[i]->obshap[j]);
@@ -976,17 +1077,18 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 	    // haplotypes must be phased by process of elimination.
 	    //
 	    if (phased_cnt == 0 && seen_phased.size() == 1) {
-	    	hap_1 = seen_phased[0].first  == d_1[i]->obshap[1] ?
+	    	h_1 = seen_phased[0].first  == d_1[i]->obshap[1] ?
 	    	    d_1[i]->obshap[0] : d_1[i]->obshap[1];
-	    	hap_2 = seen_phased[0].second == d_2[i]->obshap[1] ?
+	    	h_2 = seen_phased[0].second == d_2[i]->obshap[1] ?
 	    	    d_2[i]->obshap[0] : d_2[i]->obshap[1];
-	    	phased_haplotypes.insert(string(hap_1) + string(hap_2));
-		phased_cnt++;
+	    	phased_haplotypes.insert(string(h_1) + string(h_2));
+	    	phased_cnt++;
 	    	// cerr << "  Phasing: '" << hap_1 << "' + '" << hap_2 << "' => '" << string(hap_1) + string(hap_2) << "'\n";
 	    }
 
 	    if (phased_cnt != 1) {
-		if (!verbose) return 0;
+		if (!verbose)
+		    return 0;
 		if (verbose) cerr << "  Locus NOT phased in individual " << i << "; phased count: " << phased_cnt << "\n";
 	    } else {
 		phased_sample_cnt++;
@@ -7502,6 +7604,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"minor_allele_freq", required_argument, NULL, 'a'},
 	    {"lnl_lim",           required_argument, NULL, 'c'},
 	    {"merge_prune_lim",   required_argument, NULL, 'i'},
+	    {"merge_minor_freq",  required_argument, NULL, 'q'},
 	    {"fst_correction",    required_argument, NULL, 'f'},
 	    {"p_value_cutoff",    required_argument, NULL, 'u'},
 	    {0, 0, 0, 0}
@@ -7510,7 +7613,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "ACDEFGHJKLSVYZ123456dghjklsva:b:c:e:f:i:m:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
+	c = getopt_long(argc, argv, "ACDEFGHJKLSVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -7537,6 +7640,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'i':
 	    merge_prune_lim = is_double(optarg);
+	    break;
+	case 'q':
+	    merge_minor_freq = is_double(optarg);
 	    break;
 	case 'b':
 	    batch_id = is_integer(optarg);
@@ -7743,6 +7849,16 @@ int parse_command_line(int argc, char* argv[]) {
 	}
     }
 
+    if (merge_minor_freq > 0) {
+	if (merge_minor_freq > 1)
+	    merge_minor_freq = merge_minor_freq / 100;
+
+	if (merge_minor_freq > 0.5) {
+	    cerr << "Unable to parse the minor allele frequency\n";
+	    help();
+	}
+    }
+
     if (sample_limit > 0) {
 	if (sample_limit > 1)
 	    sample_limit = sample_limit / 100;
@@ -7787,7 +7903,8 @@ void help() {
 	      << "  h: display this help messsage." << "\n\n"
 	      << "  Merging and Phasing:\n"
 	      << "    --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
-	      << "    --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n\n"
+	      << "    --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n"
+	      << "    --merge_minor_freq: when phasing adjacent loci, only use SNPs above this minor allele frequency.\n\n"
 	      << "  Data Filtering:\n"
 	      << "    r: minimum percentage of individuals in a population required to process a locus for that population.\n"
 	      << "    p: minimum number of populations a locus must be present in to process a locus.\n"
