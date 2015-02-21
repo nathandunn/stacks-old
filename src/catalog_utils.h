@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -31,6 +31,7 @@ using std::set;
 #include "locus.h"
 #include "PopMap.h"
 
+int check_whitelist_integrity(map<int, CSLocus *> &, map<int, set<int> > &);
 int reduce_catalog(map<int, CSLocus *> &, set<int> &, set<int> &);
 int reduce_catalog(map<int, CSLocus *> &, map<int, set<int> > &, set<int> &);
 int reduce_catalog_snps(map<int, CSLocus *> &, map<int, set<int> > &, PopMap<CSLocus> *);

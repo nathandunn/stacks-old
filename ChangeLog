@@ -1,3 +1,8 @@
+Stacks 1.26
+--------------------------
+	Feature: added code to check for the existence of the loci and SNPs provided in a
+	whitelist.
+
 Stacks 1.25 - Feb 17, 2015
 --------------------------
 	Feature: added support for unaligned BAM files for process_radtaags and
