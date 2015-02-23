@@ -50,6 +50,8 @@ const char *ecoT22I[] = {"TGCAT",             // A/TGCAT, EcoT22I
 			 "ATGCA"};
 const char *hindIII[] = {"AGCTT",             // A/AGCTT, HindIII
 			 "TCGAA"};
+const char *kpnI[]    = {"GTACC",             // C/CATGG, KpnI
+			 "GGTAC"};
 const char *mluCI[]   = {"AATT",              // AATT, MluCI
 			 "AATT"};
 const char *mseI[]    = {"TAA",               // T/TAA, MseI
@@ -123,6 +125,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz["sacI"]    = sacI;    // GAGCT/C, SacI
     renz["bgIII"]   = bgIII;   // A/GATCT, BgIII
     renz["ecoRV"]   = ecoRV;   // GAT/ATC, EcoRV
+    renz["kpnI"]    = kpnI;    // C/CATGG, KpnI
 
     renz_cnt["sbfI"]    = 1;
     renz_cnt["pstI"]    = 1;
@@ -155,6 +158,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["sacI"]    = 1;
     renz_cnt["bgIII"]   = 1;
     renz_cnt["ecoRV"]   = 1;
+    renz_cnt["kpnI"]    = 1;
 
     renz_len["sbfI"]    = 6;
     renz_len["pstI"]    = 5;
@@ -187,6 +191,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["sacI"]    = 5;
     renz_len["bgIII"]   = 5;
     renz_len["ecoRV"]   = 3;
+    renz_len["kpnI"]    = 5;
 }
 
 void 

@@ -1,5 +1,6 @@
 Stacks 1.26
 --------------------------
+	Feature: added restriction enzyme kpnI.
 	Feature: added code to check for the existence of the loci and SNPs provided in a
 	whitelist.
 

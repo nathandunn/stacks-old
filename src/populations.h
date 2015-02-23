@@ -74,6 +74,7 @@ using std::set;
 enum corr_type {p_value, bonferroni_win, bonferroni_gen, no_correction};
 enum bs_type   {bs_exact, bs_approx, bs_none};
 enum merget    {merge_sink, merge_src};
+enum phaset    {merge_failure, simple_merge, complex_phase, nomapping_fail, multimapping_fail, multiple_fails};
 
 const int max_snp_dist = 500;
 
@@ -109,7 +110,7 @@ int     prune_polymorphic_sites(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum
 int     log_haplotype_cnts(map<int, CSLocus *> &, ofstream &);
 bool    order_unordered_loci(map<int, CSLocus *> &);
 int     merge_shared_cutsite_loci(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<merget, int> > &, ofstream &);
-int     merge_and_phase_loci(PopMap<CSLocus> *, CSLocus *, CSLocus *, set<int> &);
+phaset  merge_and_phase_loci(PopMap<CSLocus> *, CSLocus *, CSLocus *, set<int> &, ofstream &);
 int     merge_datums(int, int, Datum **, Datum **, set<string> &, int);
 int     merge_csloci(CSLocus *, CSLocus *, set<string> &);
 int     datum_adjust_snp_positions(map<int, pair<merget, int> > &, CSLocus *, Datum *, map<int, SNPRes *> &);

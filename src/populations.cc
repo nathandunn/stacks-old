@@ -812,15 +812,17 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
     CSLocus *cur, *next;
     Datum  **d_1, **d_2;
     double   prune_pct;
-    int  res;
     uint unmergable, tot_loci, tot_samp;
-    uint success       = 0;
-    uint failure       = 0;
-    uint overlap       = 0;
-    uint simple_merge  = 0;
-    uint complex_merge = 0;
-    uint missing_samps = 0;
-    uint phase_fail    = 0;
+    uint success           = 0;
+    uint failure           = 0;
+    uint overlap           = 0;
+    uint simple_merge_cnt  = 0;
+    uint complex_merge_cnt = 0;
+    uint missing_samps_cnt = 0;
+    uint phase_fail_cnt    = 0;
+    uint nomapping_cnt     = 0;
+    uint multimapping_cnt  = 0;
+    uint multifails_cnt    = 0;
 
     tot_loci = pmap->loci_cnt();
 
@@ -829,13 +831,10 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
 
     cerr << "To merge adjacent loci at least " << merge_prune_lim * 100 << "% of samples must have both adjacent loci;"
 	 << " the remaining " << 100 - (merge_prune_lim * 100) << "% of individuals will be pruned.\n"
-	 << "  For phasing, only SNPs with a minor allele frequency above " << merge_minor_freq << " will be included.\n"
 	 << "Attempting to merge adjacent loci that share a cutsite...";
 	 
-    if (verbose) {
-	cerr << "\n";
+    if (verbose)
 	log_fh << "\n#\n# List of locus pairs that share a cutsite that failed to merge because they could not be phased.\n#\n";
-    }
 
     //
     // Iterate over each chromosome.
@@ -898,18 +897,55 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
 		if (prune_pct < merge_prune_lim) {
 		    int pct = (int) (prune_pct * 100);
 		    missing_samps_dist[pct]++;
-		    if (verbose) log_fh << "Missing samples, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; " << pct << "% present (" << 100 - pct << "% missing)\n";
-		    missing_samps++;
+		    if (verbose) log_fh << "Missing samples, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; " 
+					<< pct << "% present (" << 100 - pct << "% missing)\n";
+		    missing_samps_cnt++;
 		    failure++;
-		} else if ((res = merge_and_phase_loci(pmap, cur, next, loci_to_destroy)) <= 0) {
-		    if (verbose) log_fh << "Failed to phase, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "\n";
-		    phase_fail++;
+		    continue;
+		} 
+
+		phaset res = merge_and_phase_loci(pmap, cur, next, loci_to_destroy, log_fh);
+		switch(res) {
+		case multiple_fails:
+		    if (verbose) log_fh << "Failed to phase, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; " 
+					<< "multiple failures\n";
+		    multifails_cnt++;
+		    phase_fail_cnt++;
 		    failure++;
-		} else {
+		    break;
+		case multimapping_fail:
+		    if (verbose) log_fh << "Failed to phase, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; " 
+					<< "multimapping in one or more individuals\n";
+		    multimapping_cnt++;
+		    phase_fail_cnt++;
+		    failure++;
+		    break;
+		case nomapping_fail:
+		    if (verbose) log_fh << "Failed to phase, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; " 
+					<< "no mapping in one or more individuals\n";
+		    nomapping_cnt++;
+		    phase_fail_cnt++;
+		    failure++;
+		    break;
+		case complex_phase:
+		    if (verbose) log_fh << "Phased Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; "
+					<< "a complex phasing operation.\n";
+		    complex_merge_cnt++;
 		    success++;
-		    res == 1 ? simple_merge++ : complex_merge++;
 		    merge_map[cur->id]  = make_pair(merge_sink, next->id);
 		    merge_map[next->id] = make_pair(merge_src, cur->id);
+		    break;
+		case simple_merge:
+		    if (verbose) log_fh << "Phased Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; "
+					<< "a simple merge operation.\n";
+		    simple_merge_cnt++;
+		    success++;
+		    merge_map[cur->id]  = make_pair(merge_sink, next->id);
+		    merge_map[next->id] = make_pair(merge_src, cur->id);
+		    break;
+		default:
+		    cerr << "Warning: Merge failure.\n";
+		    break;
 		}
 	    }
 	}
@@ -928,10 +964,12 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
 	 << success << " pairs were merged; "
 	 << failure << " pairs failed to merge; "
 	 << pmap->loci_cnt() << " remaining loci.\n"
-	 << "  Of those merged, " << simple_merge << " required only a simple merge without phasing; "
-	 << "while " << complex_merge << " required phasing.\n"
-	 << "  Of those that failed to merge, " << missing_samps << " were missing one of the two haplotypes in one or more samples; "
-	 << "while " << phase_fail << " failed to be phased.\n";
+	 << "  Of those merged, " << simple_merge_cnt << " required only a simple merge without phasing; "
+	 << "while " << complex_merge_cnt << " required phasing.\n"
+	 << "  Of those that failed to merge, " << missing_samps_cnt << " were missing one of the two haplotypes in one or more samples; "
+	 << "while " << phase_fail_cnt << " failed to be phased.\n" 
+	 << "    Of those that failed to phase, " << nomapping_cnt << " failed due to a lack of haplotype mappings; " 
+	 << multimapping_cnt << " failed due to multiple haplotype mappings; " << multifails_cnt << " failed due to both.\n";
 
     log_fh << "\n#\n# Merging adjacent loci with a shared restriction enzyme cutsite\n#\n"
 	   << "Of " << tot_loci << " loci, "
@@ -939,10 +977,12 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
 	   << success << " pairs were merged; "
 	   << failure << " pairs failed to merge; "
 	   << pmap->loci_cnt() << " remaining loci.\n"
-	   << "  Of those merged, " << simple_merge << " required only a simple merge without phasing; "
-	   << "while " << complex_merge << " required phasing.\n"
-	   << "  Of those that failed to merge, " << missing_samps << " were missing one of the two haplotypes in one or more samples; "
-	   << "while " << phase_fail << " failed to be phased.\n";
+	   << "  Of those merged, " << simple_merge_cnt << " required only a simple merge without phasing; "
+	   << "while " << complex_merge_cnt << " required phasing.\n"
+	   << "  Of those that failed to merge, " << missing_samps_cnt << " were missing one of the two haplotypes in one or more samples; "
+	   << "while " << phase_fail_cnt << " failed to be phased.\n" 
+	   << "    Of those that failed to phase, " << nomapping_cnt << " failed due to a lack of haplotype mappings; " 
+	   << multimapping_cnt << " failed due to multiple haplotype mappings; " << multifails_cnt << " failed due to both.\n";
     log_fh << "#\n# Distribution of loci with samples missing one of two loci to be merged\n"
 	   << "# Percent samples with both loci present\tNumber of cases\n";
     map<int, int>::iterator mit;
@@ -953,16 +993,21 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int> &loci_to_destroy)
+phaset
+merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, 
+		     set<int> &loci_to_destroy,
+		     ofstream &log_fh)
 {
     Datum **d_1 = pmap->locus(cur->id);
     Datum **d_2 = pmap->locus(next->id);
 
+    set<int>    phased_results;
     set<string> phased_haplotypes;
     string      merged_hap;
     char       *h_1, *h_2;
     int         merge_type;
+
+    if (verbose) log_fh << "Attempting to phase source locus " << cur->id << " with sink locus " << next->id << "\n";
 
     int sample_cnt        = 0;
     int phased_sample_cnt = 0;
@@ -1020,7 +1065,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
     //
     // Indicate that these two loci had a simple merge, with no phasing necessary.
     //
-    int merge_result = 1;
+    phased_results.insert(simple_merge);
 
     //
     // Now we need to check if we can phase the remaining haplotypes.
@@ -1086,45 +1131,53 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, set<int
 	    	// cerr << "  Phasing: '" << hap_1 << "' + '" << hap_2 << "' => '" << string(hap_1) + string(hap_2) << "'\n";
 	    }
 
-	    if (phased_cnt != 1) {
-		if (!verbose)
-		    return 0;
-		if (verbose) cerr << "  Locus NOT phased in individual " << i << "; phased count: " << phased_cnt << "\n";
-	    } else {
+	    if (phased_cnt == 0) {
+		phased_results.insert(nomapping_fail);
+		if (verbose) log_fh << "    Locus NOT phased in individual " << i << "; loci " << d_1[i]->id << " / " << d_2[i]->id << " no mapping found.\n";
+	    } else if (phased_cnt == 1) {
 		phased_sample_cnt++;
-		if (verbose) cerr << "  Locus phased in individual " << i << "; phased count: " << phased_cnt << "\n";
+		phased_results.insert(complex_phase);
+	    } else {
+		phased_results.insert(multimapping_fail);
+		if (verbose) log_fh << "    Locus NOT phased in individual " << i << "; loci " << d_1[i]->id << " / " << d_2[i]->id << " multiple mappings found.\n";
 	    }
-
-	    //
-	    // Indicate that these two loci will also be phased by returning >1 from the function.
-	    //
-	    merge_result++;
 	}
     }
 
-    if (verbose) {
-	if (phased_sample_cnt != sample_cnt)
-	    return 0;
+    if (phased_sample_cnt != sample_cnt) {
+	if (phased_results.count(nomapping_fail) > 0 && 
+	    phased_results.count(multimapping_fail) > 0)
+	    return multiple_fails;
+	else if (phased_results.count(nomapping_fail) > 0)
+	    return nomapping_fail;
+	else if (phased_results.count(multimapping_fail) > 0)
+	    return multimapping_fail;
+	else {
+	    cerr << "WE SHOULD NOT GET HERE\n";
+	    return merge_failure;
+	}
     }
 
     //
     // Okay, merge these two loci together.
     //
     if (!merge_datums(pmap->sample_cnt(), cur->len, d_1, d_2, phased_haplotypes, merge_type))
-	return 0;
+	return merge_failure;
 
     //
     // Merge the catalog entries together.
     //
     if (!merge_csloci(cur, next, phased_haplotypes))
-    	return 0;
+    	return merge_failure;
 
     //
     // Mark the merged locus for destruction.
     //
     loci_to_destroy.insert(next->id);
 
-    return merge_result;
+    if (phased_results.count(complex_phase) > 0)
+	return complex_phase;
+    return simple_merge;
 }
 
 int
@@ -7904,7 +7957,6 @@ void help() {
 	      << "  Merging and Phasing:\n"
 	      << "    --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
 	      << "    --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n"
-	      << "    --merge_minor_freq: when phasing adjacent loci, only use SNPs above this minor allele frequency.\n\n"
 	      << "  Data Filtering:\n"
 	      << "    r: minimum percentage of individuals in a population required to process a locus for that population.\n"
 	      << "    p: minimum number of populations a locus must be present in to process a locus.\n"
