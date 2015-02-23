@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 #
 # This file is part of Stacks.
 #
@@ -25,8 +25,6 @@
 #
 # For the database interactions to work, the 'mysql' program is expected to be
 # on the path and sufficient permissions set to access the specified database.
-#
-# By Julian Catchen <jcatchen@uoregon.edu>
 #
 
 use strict;
@@ -248,6 +246,7 @@ if ($dry_run == 0) {
     open($pipe_fh, "$cmd |");
     while (<$pipe_fh>) {
 	print $log_fh $_;
+	if ($_ =~ /failed/i) { print STDERR "Catalog construction failed.\n"; exit(1); }
     }
     close($pipe_fh);
 }
