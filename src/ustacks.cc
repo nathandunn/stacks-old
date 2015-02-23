@@ -1480,9 +1480,9 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         gzputs(gz_snps, log.str().c_str());
         gzputs(gz_alle, log.str().c_str());
     } else {
-        tags << log.str() << "\n";
-	snps << log.str() << "\n";
-	alle << log.str() << "\n";
+        tags << log.str();
+	snps << log.str();
+	alle << log.str();
     }
 
     int id;

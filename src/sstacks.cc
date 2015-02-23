@@ -744,7 +744,7 @@ int write_matches(map<int, QLocus *> &sample) {
     if (in_file_type == gzsql) 
         gzputs(gz_matches, log.str().c_str());
     else
-        matches << log.str() << "\n";
+        matches << log.str();
 
     QLocus *qloc;
     string       type;

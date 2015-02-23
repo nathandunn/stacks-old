@@ -226,6 +226,7 @@ if ($dry_run == 0) {
     open($pipe_fh, "$cmd |");
     while (<$pipe_fh>) {
 	print $log_fh $_;
+	if ($_ =~ /failed/i) { print STDERR "Catalog construction failed.\n"; exit(1); }
     }
     close($pipe_fh);
 }

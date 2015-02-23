@@ -1,5 +1,18 @@
-Stacks 1.26
+Stacks 1.26 - Feb 23, 2015
 --------------------------
+	Bugfix: if you are running non-compressed data, then version 1.25 broke the parsing code.
+	If your data were zipped (or a BAM file) when it went through pstacks/ustacks, then
+	there was no bug.
+	Feature: refactored the filtering code in the populations program to add a second
+	filtering step. In previous versions the -r (sample limit) and -p (population limit)
+	were applied on the basis of the entire RAD locus. This could lead to situations
+	where a RAD locus remained in the data set while one or more of the individual SNPs
+	on that locus were missing data and were below the -r or -p limits. Now, the filters
+	are applied to individual SNPs after the filters are applied to the RAD loci. This
+	greatly affects the -r (sample limit) filter with more SNPs being pruned out, as well
+	as the -a (minor allele frequency filter) such that all SNPs below the MAF are
+	pruned fully from the data set and will not appear in any statistical results or
+	downstream exports.
 	Feature: added restriction enzyme kpnI.
 	Feature: added code to check for the existence of the loci and SNPs provided in a
 	whitelist.
