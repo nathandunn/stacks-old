@@ -38,7 +38,6 @@ using std::make_pair;
 #include "stacks.h"
 
 extern bool   log_fst_comp;
-extern double sample_limit;
 extern double minor_allele_freq;
 extern map<int, string> pop_key;
 const  uint   PopStatSize = 5;
@@ -250,6 +249,7 @@ class PopSum {
     map<int, int> pop_order;    // PopulationID => ArrayIndex; map defining at what position in 
                                 // the second dimension of the LocSum array each population is stored.
     map<int, int> rev_pop_order;
+    map<int, int> pop_sizes;    // The maximum size of each separate population.
 
 public:
     PopSum(int, int);
@@ -264,6 +264,7 @@ public:
     int pop_cnt()  { return this->num_pops; }
     int pop_index(int index)     { return this->pop_order[index]; }
     int rev_pop_index(int index) { return this->rev_pop_order[index]; }
+    int pop_size(int pop_id)     { return this->pop_sizes[pop_id]; }
 
     LocSum  **locus(int);
     LocSum   *pop(int, int);
@@ -335,12 +336,23 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
     set<int> snp_cols;
 
     int incompatible_loci = 0;
+
+    if (verbose)
+	log_fh << "\n#\n# Recording sites that have incompatible loci -- loci with too many alleles present.\n"
+	       << "#\n"
+	       << "# Level\tAction\tLocus ID\tChr\tBP\tColumn\tPopID\n#\n";
+
     //
     // Determine the index for this population
     //
     uint pop_index = this->pop_order.size() == 0 ? 0 : this->pop_order.size();
     this->pop_order[population_id] = pop_index;
     this->rev_pop_order[pop_index] = population_id;
+
+    //
+    // Record the maximal size of this population.
+    //
+    this->pop_sizes[population_id] = end_index - start_index + 1;
 
     for (int i = 0; i < this->num_loci; i++) {
 	locus_id = pmap->rev_locus_index(i);
@@ -354,6 +366,20 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	s[pop_index] = new LocSum(len);
 
 	//
+	// Check if this locus has already been filtered and is NULL in all individuals.
+	//
+	bool filtered = true;
+	for (uint k = start_index; k <= end_index; k++) {
+	    if (d[k] != NULL) filtered = false;
+	}
+	if (filtered == true) {
+	    for (uint k = 0; k < len; k++) {
+		s[pop_index]->nucs[k].filtered_site = true;
+	    }
+	    continue;
+	}
+
+	//
 	// The catalog records which nucleotides are heterozygous. For these nucleotides we will
 	// calculate observed genotype frequencies, allele frequencies, and expected genotype frequencies.
 	//
@@ -361,7 +387,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	    res = this->tally_heterozygous_pos(loc, d, s[pop_index], 
 					       loc->snps[k]->col, k, start_index, end_index);
 	    //
-	    // Site is incompatible, log it.
+	    // If site is incompatible (too many alleles present), log it.
 	    //
 	    if (res < 0) {
 		s[pop_index]->nucs[loc->snps[k]->col].incompatible_site = true;
@@ -391,8 +417,8 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	snp_cols.clear();
     }
 
-    cerr << "Population '" << pop_key[population_id] << "' contained " << incompatible_loci << " incompatible loci.\n";
-    log_fh <<  "Population " << population_id << " contained " << incompatible_loci << " incompatible loci.\n";
+    cerr << "Population '" << pop_key[population_id] << "' contained " << incompatible_loci << " incompatible loci -- more than two alleles present.\n";
+    log_fh <<  "Population " << population_id << " contained " << incompatible_loci << " incompatible loci -- more than two alleles present.\n";
 
     return 0;
 }
@@ -937,7 +963,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     }
     //cerr << "  Num Individuals: " << num_indv << "; Obs Hets: " << obs_het << "; Obs P: " << obs_p << "; Obs Q: " << obs_q << "\n";
 
-    if (num_indv == 0 || num_indv < sample_limit) return 0;
+    if (num_indv == 0) return 0;
 
     //
     // Calculate total number of alleles

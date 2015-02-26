@@ -444,7 +444,8 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 
     } else if (valid_se_bc == true) {
 	strcpy(href_1->se_bc, bc_1);
-	if (barcode_type == inline_index ||
+	if (barcode_type == inline_null ||
+	    barcode_type == inline_index ||
 	    barcode_type == inline_inline)
 	    href_1->inline_bc_len = strlen(bc_1);
 

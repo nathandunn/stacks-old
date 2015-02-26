@@ -537,7 +537,8 @@ correct_barcode(set<string> &bcs, Read *href, seqt type)
 	//
 	if (type == single_end) {
 	    strcpy(href->se_bc, b.c_str());
-	    if (barcode_type == inline_index ||
+	    if (barcode_type == inline_null ||
+		barcode_type == inline_index ||
 		barcode_type == inline_inline)
 		href->inline_bc_len = b.length();
 	} else {
