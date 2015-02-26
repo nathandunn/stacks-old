@@ -1,3 +1,8 @@
+Stacks 1.27
+--------------------------
+	Bugfix: barcode length (href->inline_bc_len) was not being correctly set for single-end,
+	inline line barcodes of variable length.
+
 Stacks 1.26 - Feb 23, 2015
 --------------------------
 	Bugfix: if you are running non-compressed data, then version 1.25 broke the parsing code.

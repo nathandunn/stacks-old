@@ -326,7 +326,7 @@ int main (int argc, char* argv[]) {
     // identify individual SNPs that are below the -r threshold or the minor allele
     // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
     //
-    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist);
+    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, log_fh);
     cerr << "Pruned " << pruned_snps << " SNPs due to filter constraints.\n";
 
     //
@@ -619,12 +619,19 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 int
 prune_polymorphic_sites(map<int, CSLocus *> &catalog, 
 			PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
-			map<int, set<int> > &whitelist)
+			map<int, set<int> > &whitelist, ofstream &log_fh)
 {
     map<int, set<int> > new_wl;
     CSLocus  *loc;
     LocTally *t;
-    int       size, pruned = 0;
+    LocSum  **s;
+    bool      sample_prune, maf_prune;
+    int       pop_id, size, pruned = 0;
+
+    if (verbose)
+	log_fh << "\n#\n# List of pruned nucleotide sites\n#\n"
+	       << "# Action\tLocus ID\tChr\tBP\tColumn\tReason\n";
+
     //
     // If the whitelist is populated, use it as a guide for what loci to consider.
     // 
@@ -636,6 +643,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 	for (it = whitelist.begin(); it != whitelist.end(); it++) {
 	    loc = catalog[it->first];
 	    t   = psum->locus_tally(loc->id);
+	    s   = psum->locus(loc->id);
 
 	    //
 	    // Check that each SNP in this locus is above the sample_limit and that 
@@ -647,11 +655,42 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 		if (size > 0 && it->second.count(loc->snps[i]->col) == 0)
 		    continue;
 
-		if (t->nucs[loc->snps[i]->col].p_freq < (1 - minor_allele_freq) &&
-		    ((double) t->nucs[loc->snps[i]->col].num_indv / (double) pmap->sample_cnt()) >= sample_limit)
+		sample_prune = false;
+		maf_prune    = false;
+		for (int j = 0; j < psum->pop_cnt(); j++) {
+		    pop_id = psum->rev_pop_index(j);
+
+		    //
+		    // If a population was already filtered in the previous locus-based filtering
+		    // step, don't count the lack of samples here again.
+		    //
+		    if (s[j]->nucs[loc->snps[i]->col].filtered_site)
+			continue;
+
+		    if (s[j]->nucs[loc->snps[i]->col].num_indv == 0 ||
+			(double) s[j]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(pop_id) < sample_limit)
+			sample_prune = true;
+		}
+
+		//
+		// Test for minor allele frequency.
+		//
+		if (t->nucs[loc->snps[i]->col].allele_cnt > 1 &&
+		    (1 - t->nucs[loc->snps[i]->col].p_freq) < minor_allele_freq)
+		    maf_prune = true;
+
+		if (maf_prune == false && sample_prune == false) {
 		    new_wl[loc->id].insert(loc->snps[i]->col);
-		else
+		} else {
 		    pruned++;
+		    if (verbose) {
+			log_fh << "pruned_polymorphic_site\t"
+			       << loc->id << "\t"
+			       << loc->loc.chr << "\t"
+			       << loc->sort_bp(loc->snps[i]->col) << "\t"
+			       << loc->snps[i]->col << "\t" << (sample_prune == true ? "sample_limit" : "maf_limit") << "\n";
+		    }
+		}
 	    }
 	}
 
@@ -663,16 +702,49 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 	for (it = catalog.begin(); it != catalog.end(); it++) {
 	    loc = it->second;
 	    t   = psum->locus_tally(loc->id);
+	    s   = psum->locus(loc->id);
 
 	    for (uint i = 0; i < loc->snps.size(); i++) {
-		if (t->nucs[loc->snps[i]->col].p_freq < (1 - minor_allele_freq) &&
-		    ((double) t->nucs[loc->snps[i]->col].num_indv / (double) pmap->sample_cnt()) >= sample_limit)
+
+		sample_prune = false;
+		maf_prune    = false;
+		for (int j = 0; j < psum->pop_cnt(); j++) {
+		    pop_id = psum->rev_pop_index(j);
+
+		    //
+		    // If a population was already filtered in the previous locus-based filtering
+		    // step, don't count the lack of samples here again.
+		    //
+		    if (s[j]->nucs[loc->snps[i]->col].filtered_site)
+			continue;
+
+		    if (s[j]->nucs[loc->snps[i]->col].num_indv == 0 ||
+			(double) s[j]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(pop_id) < sample_limit)
+			sample_prune = true;
+		}
+
+		//
+		// Test for minor allele frequency.
+		//
+		if (t->nucs[loc->snps[i]->col].allele_cnt > 1 &&
+		    (1 - t->nucs[loc->snps[i]->col].p_freq) < minor_allele_freq)
+		    maf_prune = true;
+
+		if (maf_prune == false && sample_prune == false) {
 		    new_wl[loc->id].insert(loc->snps[i]->col);
-		else
+
+		} else {
 		    pruned++;
+		    if (verbose) {
+			log_fh << "pruned_polymorphic_site\t"
+			       << loc->id << "\t"
+			       << loc->loc.chr << "\t"
+			       << loc->sort_bp(loc->snps[i]->col) << "\t"
+			       << loc->snps[i]->col << "\t" << (sample_prune == true ? "sample_limit" : "maf_limit") << "\n";
+		    }
+		}
 	    }
 	}
-
     }
 
     whitelist = new_wl;
@@ -4802,13 +4874,14 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus *loc;
     Datum  **d;
-    string   seq;
+    char    *seq;
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	for (uint pos = 0; pos < it->second.size(); pos++) {
 	    loc = it->second[pos];
-	    seq = loc->con;
 	    d   = pmap->locus(loc->id);
+	    seq = new char[loc->len + 1];
+	    strcpy(seq, loc->con);
 
 	    for (int j = 0; j < pmap->sample_cnt(); j++) {
 		if (d[j] == NULL) 
@@ -4818,9 +4891,7 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string
 
 		    for (uint i = 0; i < loc->snps.size(); i++) {
 			uint col = loc->snps[i]->col;
-
-			if (col < loc->len)
-			    seq.replace(col, 1, d[j]->obshap[k], i, 1);
+			seq[col] = col < loc->len ? d[j]->obshap[k][i] : loc->con[col];
 		    }
 
 		    fh << ">CLocus_" << loc->id 
@@ -4835,6 +4906,7 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string
 		       << seq << "\n";
 		}
 	    }
+	    delete [] seq;
 	}
     }
 
@@ -4866,13 +4938,14 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int,
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus *loc;
     Datum  **d;
-    string   seq;
+    char    *seq;
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	for (uint pos = 0; pos < it->second.size(); pos++) {
 	    loc = it->second[pos];
-	    seq = loc->con;
 	    d   = pmap->locus(loc->id);
+	    seq = new char[loc->len + 1];
+	    strcpy(seq, loc->con);
 
 	    for (int j = 0; j < pmap->sample_cnt(); j++) {
 		if (d[j] == NULL) 
@@ -4884,8 +4957,7 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int,
 
 		    for (uint i = 0; i < loc->snps.size(); i++) {
 			uint col = loc->snps[i]->col;
-			if (col < loc->len)
-			    seq.replace(col, 1, d[j]->obshap[0], i, 1);
+			seq[col] = col < loc->len ? d[j]->obshap[0][i] : loc->con[col];
 		    }
 
 		    fh << ">CLocus_" << loc->id 
@@ -4912,9 +4984,7 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int,
 		    for (uint k = 0; k < d[j]->obshap.size(); k++) {
 			for (uint i = 0; i < loc->snps.size(); i++) {
 			    uint col = loc->snps[i]->col;
-
-			    if (col < loc->len)
-				seq.replace(col, 1, d[j]->obshap[k], i, 1);
+			    seq[col] = col < loc->len ? d[j]->obshap[k][i] : loc->con[col];
 			}
 
 			fh << ">CLocus_" << loc->id 
@@ -4929,6 +4999,8 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int,
 		    }
 		}
 	    }
+
+	    delete [] seq;
 	}
     }
 
