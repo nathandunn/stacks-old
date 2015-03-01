@@ -27,13 +27,13 @@
 //
 // Global variables to hold command-line options.
 //
-file_type in_file_type;
-string    in_file;
-file_type out_file_type;
-string    out_path;
-int       sql_id        = 0;
-int       min_stack_cov = 1;
-int       num_threads   = 1;
+FileT  in_file_type;
+string in_file;
+FileT  out_file_type;
+string out_path;
+int    sql_id        = 0;
+int    min_stack_cov = 1;
+int    num_threads   = 1;
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -313,7 +313,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     PStack      *tag_2;
     stringstream sstr;
 
-    bool gzip = (in_file_type == bam) ? true : false;
+    bool gzip = (in_file_type == FileT::bam) ? true : false;
 
     //
     // Parse the input file name to create the output files
@@ -669,13 +669,13 @@ int load_radtags(string in_file, HashMap &radtags) {
     Input *fh = NULL;
     Seq *c;
 
-    if (in_file_type == bowtie)
+    if (in_file_type == FileT::bowtie)
         fh = new Bowtie(in_file.c_str());
-    else if (in_file_type == sam)
+    else if (in_file_type == FileT::sam)
         fh = new Sam(in_file.c_str());
-    else if (in_file_type == bam)
+    else if (in_file_type == FileT::bam)
         fh = new Bam(in_file.c_str());
-    else if (in_file_type == tsv)
+    else if (in_file_type == FileT::tsv)
         fh = new Tsv(in_file.c_str());
 
     cerr << "Parsing " << in_file.c_str() << "\n";
@@ -793,21 +793,21 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 't':
             if (strcmp(optarg, "bowtie") == 0)
-                in_file_type = bowtie;
+                in_file_type = FileT::bowtie;
             else if (strcmp(optarg, "sam") == 0)
-                in_file_type = sam;
+                in_file_type = FileT::sam;
             else if (strcmp(optarg, "bam") == 0)
-                in_file_type = bam;
+                in_file_type = FileT::bam;
             else if (strcmp(optarg, "tsv") == 0)
-                in_file_type = tsv;
+                in_file_type = FileT::tsv;
             else
-                in_file_type = unknown;
+                in_file_type = FileT::unknown;
 	    break;
      	case 'y':
             if (strcmp(optarg, "sam") == 0)
-                out_file_type = sam;
+                out_file_type = FileT::sam;
             else
-                out_file_type = sql;
+                out_file_type = FileT::sql;
 	    break;
      	case 'f':
 	    in_file = optarg;
@@ -885,7 +885,7 @@ int parse_command_line(int argc, char* argv[]) {
 	model_type = bounded;
     }
 
-    if (in_file.length() == 0 || in_file_type == unknown) {
+    if (in_file.length() == 0 || in_file_type == FileT::unknown) {
 	cerr << "You must specify an input file of a supported type.\n";
 	help();
     }

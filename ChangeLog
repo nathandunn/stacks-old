@@ -1,5 +1,14 @@
-Stacks 1.27
+Stacks 1.28
 --------------------------
+	Bugfix: the process_shortreads program was outputting FASTA even when FASTQ was
+	requested due to not handling gzipped outputs properly.
+	Bugfix: fixed segfault in populations that could occur when using a whitelist that
+	contained loci that were being filtered out due to -p/-r constraints.
+
+Stacks 1.27 - Feb 25, 2015
+--------------------------
+	Bugfix: the minor allele frequency filter and the proceny limit filter were not working
+	properly in all cases with the other filters.
 	Bugfix: barcode length (href->inline_bc_len) was not being correctly set for single-end,
 	inline line barcodes of variable length.
 

@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -21,18 +21,14 @@
 //
 // kmer_filter -- 
 //
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
 
 #include "kmer_filter.h"
 
 //
 // Global variables to hold command-line options.
 //
-file_type in_file_type  = unknown;
-file_type out_file_type = fastq;
+FileT  in_file_type  = FileT::unknown;
+FileT  out_file_type = FileT::fastq;
 vector<string> in_files;
 vector<string> in_pair_files;
 string in_path;
@@ -187,7 +183,7 @@ int main (int argc, char* argv[]) {
 		if (file.substr(pos - 2, 2) == ".1")
 		    pos -= 2;
 		file  = file.substr(0, pos) + ".rem.fil";
-		file += out_file_type == fastq ? ".fq" : ".fa";
+		file += out_file_type == FileT::fastq ? ".fq" : ".fa";
 		cerr << "Adding remainder file generated in previous step to queue, '" << file << "\n";
 		files.push_back(make_pair(pair_files[i].first, file));
 	    }
@@ -252,19 +248,19 @@ int process_paired_reads(string in_path_1,
     string path_1 = in_path_1 + in_file_1;
     string path_2 = in_path_2 + in_file_2;
 
-    if (in_file_type == fastq) {
+    if (in_file_type == FileT::fastq) {
         fh_1 = new Fastq(path_1);
         fh_2 = new Fastq(path_2);
-    } else if (in_file_type == fasta) {
+    } else if (in_file_type == FileT::fasta) {
         fh_1 = new Fasta(path_1);
         fh_2 = new Fasta(path_2);
-    } else if (in_file_type == gzfasta) {
+    } else if (in_file_type == FileT::gzfasta) {
         fh_1 = new GzFasta(path_1 + ".gz");
         fh_2 = new GzFasta(path_2 + ".gz");
-    } else if (in_file_type == gzfastq) {
+    } else if (in_file_type == FileT::gzfastq) {
         fh_1 = new GzFastq(path_1 + ".gz");
         fh_2 = new GzFastq(path_2 + ".gz");
-    } else if (in_file_type == bustard) {
+    } else if (in_file_type == FileT::bustard) {
         fh_1 = new Bustard(path_1);
         fh_2 = new Bustard(path_2);
     }
@@ -295,7 +291,7 @@ int process_paired_reads(string in_path_1,
     if (in_file_2.substr(pos - 2, 2) == ".2")
 	pos -= 2;
     path  = out_path + in_file_2.substr(0, pos) + ".rem.fil";
-    path += out_file_type == fastq ? ".fq" : ".fa";
+    path += out_file_type == FileT::fastq ? ".fq" : ".fa";
     ofstream *rem_fh = new ofstream(path.c_str(), ifstream::out);
     if (rem_fh->fail()) {
 	cerr << "Error opening filtered remainder output file '" << path << "'\n";
@@ -391,29 +387,29 @@ int process_paired_reads(string in_path_1,
 
 	if (retain_1 && retain_2) {
 	    counter["retained"] += 2;
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 	 	write_fastq(ofh_1, s_1) : write_fasta(ofh_1, s_1);
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 	 	write_fastq(ofh_2, s_2) : write_fasta(ofh_2, s_2);
 	}
 
 	if (retain_1 && !retain_2) {
 	    counter["retained"]++;
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 	 	write_fastq(rem_fh, s_1) : write_fasta(rem_fh, s_1);
 	}
 
 	if (!retain_1 && retain_2) {
 	    counter["retained"]++;
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 	 	write_fastq(rem_fh, s_2) : write_fasta(rem_fh, s_2);
 	}
 
 	if (discards && !retain_1)
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 		write_fastq(discard_fh_1, s_1, msg_1.str()) : write_fasta(discard_fh_1, s_1, msg_1.str());
 	if (discards && !retain_2)
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 		write_fastq(discard_fh_2, s_2, msg_2.str()) : write_fasta(discard_fh_2, s_2, msg_2.str());
 
 	delete s_1;
@@ -452,15 +448,15 @@ int process_reads(string in_path,
 
     string path = in_path + in_file;
 
-    if (in_file_type == fastq)
+    if (in_file_type == FileT::fastq)
         fh = new Fastq(path);
-    else if (in_file_type == fasta)
+    else if (in_file_type == FileT::fasta)
         fh = new Fasta(path);
-    else if (in_file_type == gzfastq)
+    else if (in_file_type == FileT::gzfastq)
         fh = new GzFastq(path + ".gz");
-    else if (in_file_type == gzfasta)
+    else if (in_file_type == FileT::gzfasta)
         fh = new GzFasta(path + ".gz");
-    else if (in_file_type == bustard)
+    else if (in_file_type == FileT::bustard)
         fh = new Bustard(path);
 
     //
@@ -532,12 +528,12 @@ int process_reads(string in_path,
 
 	if (retain) {
 	    counter["retained"]++;
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 	 	write_fastq(out_fh, s) : write_fasta(out_fh, s);
 	}
 
 	if (discards && !retain)
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 		write_fastq(discard_fh, s, msg.str()) : write_fasta(discard_fh, s, msg.str());
 
 	delete s;
@@ -583,16 +579,16 @@ normalize_paired_reads(string in_path_1,
 	pos    = in_file_2.find_last_of(".");
 	path_2 = out_path + in_file_2.substr(0, pos) + ".fil" + in_file_2.substr(pos);
 
-	if (in_file_type == fastq) {
+	if (in_file_type == FileT::fastq) {
 	    fh_1 = new Fastq(path_1);
 	    fh_2 = new Fastq(path_2);
-	} else if (in_file_type == gzfastq) {
+	} else if (in_file_type == FileT::gzfastq) {
 	    fh_1 = new Fastq(path_1);
 	    fh_2 = new Fastq(path_2);
-	} else if (in_file_type == fasta) {
+	} else if (in_file_type == FileT::fasta) {
 	    fh_1 = new Fasta(path_1);
 	    fh_2 = new Fasta(path_2);
-	} else if (in_file_type == gzfasta) {
+	} else if (in_file_type == FileT::gzfasta) {
 	    fh_1 = new Fasta(path_1);
 	    fh_2 = new Fasta(path_2);
 	}
@@ -603,19 +599,19 @@ normalize_paired_reads(string in_path_1,
 	path_1 = in_path_1 + in_file_1;
 	path_2 = in_path_2 + in_file_2;
 
-	if (in_file_type == fastq) {
+	if (in_file_type == FileT::fastq) {
 	    fh_1 = new Fastq(path_1);
 	    fh_2 = new Fastq(path_2);
-	} else if (in_file_type == gzfastq) {
+	} else if (in_file_type == FileT::gzfastq) {
 	    fh_1 = new GzFastq(path_1 + ".gz");
 	    fh_2 = new GzFastq(path_2 + ".gz");
-	} else if (in_file_type == fasta) {
+	} else if (in_file_type == FileT::fasta) {
 	    fh_1 = new Fasta(path_1);
 	    fh_2 = new Fasta(path_2);
-	} else if (in_file_type == gzfasta) {
+	} else if (in_file_type == FileT::gzfasta) {
 	    fh_1 = new GzFasta(path_1 + ".gz");
 	    fh_2 = new GzFasta(path_2 + ".gz");
-	} else if (in_file_type == bustard) {
+	} else if (in_file_type == FileT::bustard) {
 	    fh_1 = new Bustard(path_1);
 	    fh_2 = new Bustard(path_2);
 	}
@@ -646,7 +642,7 @@ normalize_paired_reads(string in_path_1,
 	if (in_file_2.substr(pos - 2, 2) == ".2") 
 	    pos -= 2;
 	path_2  = out_path + in_file_2.substr(0, pos) + ".fil.norm.rem";
-	path_2 += out_file_type == fastq ? ".fq" : ".fa";
+	path_2 += out_file_type == FileT::fastq ? ".fq" : ".fa";
 	rem_fh  = new ofstream(path_2.c_str(), ifstream::out);
 
 	if (rem_fh->fail()) {
@@ -676,7 +672,7 @@ normalize_paired_reads(string in_path_1,
 	if (in_file_2.substr(pos - 2, 2) == ".2") 
 	    pos -= 2;
 	path_2  = out_path + in_file_2.substr(0, pos) + ".norm.rem";
-	path_2 += out_file_type == fastq ? ".fq" : ".fa";
+	path_2 += out_file_type == FileT::fastq ? ".fq" : ".fa";
 	rem_fh  = new ofstream(path_2.c_str(), ifstream::out);
 
 	if (rem_fh->fail()) {
@@ -752,9 +748,9 @@ normalize_paired_reads(string in_path_1,
 
 	if (retain_1 && retain_2) {
 	    counter["retained"] += 2;
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 	 	write_fastq(ofh_1, s_1) : write_fasta(ofh_1, s_1);
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 	 	write_fastq(ofh_2, s_2) : write_fasta(ofh_2, s_2);
 	} else {
 	    counter["overep"] +=2;
@@ -763,22 +759,22 @@ normalize_paired_reads(string in_path_1,
 	if (retain_1 && !retain_2) {
 	    counter["retained"]++;
 	    counter["overep"]++;
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 	 	write_fastq(rem_fh, s_1) : write_fasta(rem_fh, s_1);
 	}
 
 	if (!retain_1 && retain_2) {
 	    counter["retained"]++;
 	    counter["overep"]++;
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 	 	write_fastq(rem_fh, s_2) : write_fasta(rem_fh, s_2);
 	}
 
 	if (discards && !retain_1)
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 		write_fastq(discard_fh_1, s_1) : write_fasta(discard_fh_1, s_1);
 	if (discards && !retain_2)
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 		write_fastq(discard_fh_2, s_2) : write_fasta(discard_fh_2, s_2);
 
 	delete s_1;
@@ -825,29 +821,29 @@ normalize_reads(string in_path,
 	else
 	    path = out_path + in_file.substr(0, pos) + ".fil" + in_file.substr(pos);
 
-	if (in_file_type == fastq)
+	if (in_file_type == FileT::fastq)
 	    fh = new Fastq(path);
-	else if (in_file_type == gzfastq)
+	else if (in_file_type == FileT::gzfastq)
 	    fh = new Fastq(path);
-	else if (in_file_type == fasta)
+	else if (in_file_type == FileT::fasta)
 	    fh = new Fasta(path);
-	else if (in_file_type == gzfasta)
+	else if (in_file_type == FileT::gzfasta)
 	    fh = new Fasta(path);
-	else if (in_file_type == bustard)
+	else if (in_file_type == FileT::bustard)
 	    fh = new Bustard(path);
 
     } else {
 	path = in_path + in_file;
 
-	if (in_file_type == fastq)
+	if (in_file_type == FileT::fastq)
 	    fh = new Fastq(path);
-	else if (in_file_type == gzfastq)
+	else if (in_file_type == FileT::gzfastq)
 	    fh = new GzFastq(path + ".gz");
-	else if (in_file_type == fasta)
+	else if (in_file_type == FileT::fasta)
 	    fh = new Fasta(path);
-	else if (in_file_type == gzfasta)
+	else if (in_file_type == FileT::gzfasta)
 	    fh = new GzFasta(path + ".gz");
-	else if (in_file_type == bustard)
+	else if (in_file_type == FileT::bustard)
 	    fh = new Bustard(path);
     }
 
@@ -912,14 +908,14 @@ normalize_reads(string in_path,
 
 	if (retain) {
 	    counter["retained"]++;
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 	 	write_fastq(out_fh, s) : write_fasta(out_fh, s);
 	} else {
 	    counter["overep"]++;
 	}
 
 	if (discards && !retain)
-	    out_file_type == fastq ? 
+	    out_file_type == FileT::fastq ? 
 		write_fastq(discard_fh, s) : write_fasta(discard_fh, s);
 
 	delete s;
@@ -1086,15 +1082,15 @@ process_file_kmers(string path, SeqKmerHash &kmer_map, vector<char *> &kmer_map_
     int            j;
     Input         *fh = NULL;
 
-    if (in_file_type == fastq)
+    if (in_file_type == FileT::fastq)
         fh = new Fastq(path.c_str());
-    else if (in_file_type == gzfastq)
+    else if (in_file_type == FileT::gzfastq)
         fh = new GzFastq(path.c_str());
-    else if (in_file_type == fasta)
+    else if (in_file_type == FileT::fasta)
         fh = new Fasta(path.c_str());
-    else if (in_file_type == gzfasta)
+    else if (in_file_type == FileT::gzfasta)
         fh = new GzFasta(path.c_str());
-    else if (in_file_type == bustard)
+    else if (in_file_type == FileT::bustard)
         fh = new Bustard(path.c_str());
 
     //
@@ -1582,7 +1578,7 @@ int build_file_list(vector<string> &in_files, vector<pair<string, string> > &fil
 	    // If the file is gzip'ed, remove the '.gz' suffix. 
 	    //
 	    pos  = file.find_last_of(".");
-	    if ((in_file_type == gzfastq || in_file_type == gzfasta) && 
+	    if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
 		file.substr(pos) == ".gz") {
 		file = file.substr(0, pos);
 		pos  = file.find_last_of(".");
@@ -1592,9 +1588,9 @@ int build_file_list(vector<string> &in_files, vector<pair<string, string> > &fil
 	    // Check that the remaining file name has the right suffix.
 	    //
 	    suffix = file.substr(pos + 1);
-	    if (in_file_type == fastq && (suffix.substr(0, 2) == "fq" || suffix.substr(0, 5) == "fastq"))
+	    if (in_file_type == FileT::fastq && (suffix.substr(0, 2) == "fq" || suffix.substr(0, 5) == "fastq"))
 		files.push_back(make_pair(in_path, file));
-	    else if (in_file_type == fasta && (suffix.substr(0, 2) == "fa" || suffix.substr(0, 5) == "fasta"))
+	    else if (in_file_type == FileT::fasta && (suffix.substr(0, 2) == "fa" || suffix.substr(0, 5) == "fasta"))
 		files.push_back(make_pair(in_path, file));
 	}
 
@@ -1612,7 +1608,7 @@ int build_file_list(vector<string> &in_files, vector<pair<string, string> > &fil
 	    //
  	    file = in_files[i];
 	    pos  = file.find_last_of(".");
-	    if ((in_file_type == gzfastq || in_file_type == gzfasta) && 
+	    if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
 		file.substr(pos) == ".gz") {
 		file = file.substr(0, pos);
 		pos  = file.find_last_of(".");
@@ -1671,19 +1667,19 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 'i':
              if (strcasecmp(optarg, "fasta") == 0)
-                in_file_type = fasta;
+                in_file_type = FileT::fasta;
 	     else if (strcasecmp(optarg, "gzfasta") == 0)
-		 in_file_type = gzfasta;
+		 in_file_type = FileT::gzfasta;
 	     else if (strcasecmp(optarg, "gzfastq") == 0)
-		 in_file_type = gzfastq;
+		 in_file_type = FileT::gzfastq;
 	     else
-		 in_file_type = fastq;
+		 in_file_type = FileT::fastq;
 	    break;
      	case 'y':
             if (strcasecmp(optarg, "fasta") == 0)
-                out_file_type = fasta;
+                out_file_type = FileT::fasta;
 	    else 
-		out_file_type = fastq;
+		out_file_type = FileT::fastq;
 	    break;
      	case 'f':
 	    in_files.push_back(optarg);
@@ -1778,8 +1774,8 @@ int parse_command_line(int argc, char* argv[]) {
     if (out_path.at(out_path.length() - 1) != '/') 
 	out_path += "/";
 
-    if (in_file_type == unknown)
-	in_file_type = fastq;
+    if (in_file_type == FileT::unknown)
+	in_file_type = FileT::fastq;
 
     if (read_k_freq && write_k_freq) {
 	cerr << "You may either read a set of kmer frequencies, or write kmer frequencies, not both.\n";

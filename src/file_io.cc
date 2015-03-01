@@ -42,7 +42,7 @@ open_files(vector<pair<string, string> > &files,
 	suffix_1 = ".1";
 	suffix_2 = ".2";
     }
-    if (out_file_type == fastq) {
+    if (out_file_type == FileT::fastq) {
 	suffix_1 += ".fq";
 	suffix_2 += ".fq";
     } else {
@@ -307,7 +307,7 @@ open_files(vector<pair<string, string> > &files,
 	suffix_1 = ".1";
 	suffix_2 = ".2";
     }
-    if (out_file_type == gzfastq) {
+    if (out_file_type == FileT::gzfastq) {
 	suffix_1 += ".fq.gz";
 	suffix_2 += ".fq.gz";
     } else {

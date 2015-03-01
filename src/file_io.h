@@ -54,8 +54,8 @@ using std::endl;
 //
 // Command line options defined in process_radtags and process_shortreads.
 //
-extern file_type in_file_type;
-extern file_type out_file_type;
+extern FileT     in_file_type;
+extern FileT     out_file_type;
 extern barcodet  barcode_type;
 extern bool      paired;
 extern bool      interleaved;
