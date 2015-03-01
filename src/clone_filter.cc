@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -23,25 +23,21 @@
 // pair of sequences in the data set. These reads are assumed to be the product of 
 // PCR amplification.
 //
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
 
 #include "clone_filter.h"
 
 //
 // Global variables to hold command-line options.
 //
-file_type in_file_type  = unknown;
-file_type out_file_type = fastq;
-bool      discards      = false;
-string    in_path_1;
-string    in_path_2;
-string    out_path;
-int       barcode_size = 0;
-int       truncate_seq = 0;
-bool      ill_barcode;
+FileT  in_file_type  = FileT::unknown;
+FileT  out_file_type = FileT::fastq;
+bool   discards      = false;
+string in_path_1;
+string in_path_2;
+string out_path;
+int    barcode_size = 0;
+int    truncate_seq = 0;
+bool   ill_barcode;
 
 int main (int argc, char* argv[]) {
 
@@ -53,19 +49,19 @@ int main (int argc, char* argv[]) {
 	 << in_path_1 << " and\n  " 
 	 << in_path_2 << "\n";
 
-    if (in_file_type == fastq) {
+    if (in_file_type == FileT::fastq) {
         fh_1 = new Fastq(in_path_1.c_str());
 	fh_2 = new Fastq(in_path_2.c_str());
-    } else if (in_file_type == fasta) {
+    } else if (in_file_type == FileT::fasta) {
         fh_1 = new Fasta(in_path_1.c_str());
         fh_2 = new Fasta(in_path_2.c_str());
-    } else if (in_file_type == gzfastq) {
+    } else if (in_file_type == FileT::gzfastq) {
         fh_1 = new GzFastq(in_path_1.c_str());
 	fh_2 = new GzFastq(in_path_2.c_str());
-    } else if (in_file_type == gzfasta) {
+    } else if (in_file_type == FileT::gzfasta) {
         fh_1 = new GzFasta(in_path_1.c_str());
         fh_2 = new GzFasta(in_path_2.c_str());
-    } else if (in_file_type == bustard) {
+    } else if (in_file_type == FileT::bustard) {
         fh_1 = new Bustard(in_path_1.c_str());
         fh_2 = new Bustard(in_path_2.c_str());
     }
@@ -78,7 +74,7 @@ int main (int argc, char* argv[]) {
     int    pos_1 = in_path_1.find_last_of("/");
     int    pos_2 = in_path_1.find_last_of(".");
     string path  = out_path + in_path_1.substr(pos_1 + 1, pos_2 - pos_1 - 1) + ".fil";
-    path += out_file_type == fastq ? ".fq_1" : ".fa_1";
+    path += out_file_type == FileT::fastq ? ".fq_1" : ".fa_1";
     ofh_1 = new ofstream(path.c_str(), ifstream::out);
     if (ofh_1->fail()) {
 	cerr << "Error opening output file '" << path << "'\n";
@@ -93,7 +89,7 @@ int main (int argc, char* argv[]) {
     //
     if (discards) {
 	path  = out_path + in_path_1.substr(pos_1 + 1, pos_2 - pos_1 - 1) + ".discards";
-	path += out_file_type == fastq ? ".fq_1" : ".fa_1";
+	path += out_file_type == FileT::fastq ? ".fq_1" : ".fa_1";
 	discard_fh_1 = new ofstream(path.c_str(), ifstream::out);
 
 	if (discard_fh_1->fail()) {
@@ -105,7 +101,7 @@ int main (int argc, char* argv[]) {
     pos_1 = in_path_2.find_last_of("/");
     pos_2 = in_path_2.find_last_of(".");
     path  = out_path + in_path_2.substr(pos_1 + 1, pos_2 - pos_1 - 1) + ".fil";
-    path += out_file_type == fastq ? ".fq_2" : ".fa_2";
+    path += out_file_type == FileT::fastq ? ".fq_2" : ".fa_2";
     ofh_2 = new ofstream(path.c_str(), ifstream::out);
     if (ofh_2->fail()) {
 	cerr << "Error opening output file '" << path << "'\n";
@@ -115,7 +111,7 @@ int main (int argc, char* argv[]) {
 
     if (discards) {
 	path  = out_path + in_path_2.substr(pos_1 + 1, pos_2 - pos_1 - 1) + ".discards";
-	path += out_file_type == fastq ? ".fq_2" : ".fa_2";
+	path += out_file_type == FileT::fastq ? ".fq_2" : ".fa_2";
 	discard_fh_2 = new ofstream(path.c_str(), ifstream::out);
 
 	if (discard_fh_1->fail()) {
@@ -161,9 +157,9 @@ int main (int argc, char* argv[]) {
 	    clone_map_keys.push_back(hash_key);
 	}
 
-	if (out_file_type == fastq)
+	if (out_file_type == FileT::fastq)
 	    clone_map[hash_key][s_2->seq].push_back(Pair(s_1->id, s_2->id, s_1->qual, s_2->qual));
-	else if (out_file_type == fasta)
+	else if (out_file_type == FileT::fasta)
 	    clone_map[hash_key][s_2->seq].push_back(Pair(s_1->id, s_2->id));
 
 	delete s_1;
@@ -188,13 +184,13 @@ int main (int argc, char* argv[]) {
 
 	for (map_it = hash_it->second.begin(); map_it != hash_it->second.end(); map_it++) {
 
-	    if (out_file_type == fasta) {
+	    if (out_file_type == FileT::fasta) {
 		*ofh_1 << ">" << map_it->second[0].p1_id << "\n"
 		       << hash_it->first << "\n";
 		*ofh_2 << ">" << map_it->second[0].p2_id << "\n"
 		       << map_it->first << "\n";
 
-	    } else if (out_file_type == fastq) {
+	    } else if (out_file_type == FileT::fastq) {
 		*ofh_1 << "@" << map_it->second[0].p1_id << "\n"
 		       << hash_it->first << "\n"
 		       << "+\n"
@@ -222,13 +218,13 @@ int main (int argc, char* argv[]) {
 	    if (discards)
 		for (uint i = 1; i < map_it->second.size(); i++) {
 
-		    if (out_file_type == fasta) {
+		    if (out_file_type == FileT::fasta) {
 			*discard_fh_1 << ">" << map_it->second[i].p1_id << "\n"
 				      << hash_it->first << "\n";
 			*discard_fh_2 << ">" << map_it->second[i].p2_id << "\n"
 				      << map_it->first << "\n";
 
-		    } else if (out_file_type == fastq) {
+		    } else if (out_file_type == FileT::fastq) {
 			*discard_fh_1 << "@" << map_it->second[i].p1_id << "\n"
 				      << hash_it->first << "\n"
 				      << "+\n"
@@ -330,21 +326,21 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 'i':
             if (strcasecmp(optarg, "bustard") == 0)
-                in_file_type = bustard;
+                in_file_type = FileT::bustard;
 	    else if (strcasecmp(optarg, "fasta") == 0)
-                in_file_type = fasta;
+                in_file_type = FileT::fasta;
 	     else if (strcasecmp(optarg, "gzfasta") == 0)
-		 in_file_type = gzfasta;
+		 in_file_type = FileT::gzfasta;
 	     else if (strcasecmp(optarg, "gzfastq") == 0)
-		 in_file_type = gzfastq;
+		 in_file_type = FileT::gzfastq;
 	     else
-		 in_file_type = fastq;
+		 in_file_type = FileT::fastq;
 	    break;
      	case 'y':
             if (strcasecmp(optarg, "fasta") == 0)
-                out_file_type = fasta;
+                out_file_type = FileT::fasta;
 	    else 
-		out_file_type = fastq;
+		out_file_type = FileT::fastq;
 	    break;
 	case 'D':
 	    discards = true;
@@ -384,8 +380,8 @@ int parse_command_line(int argc, char* argv[]) {
     if (out_path.at(out_path.length() - 1) != '/') 
 	out_path += "/";
 
-    if (in_file_type == unknown)
-	in_file_type = fastq;
+    if (in_file_type == FileT::unknown)
+	in_file_type = FileT::fastq;
 
     return 0;
 }

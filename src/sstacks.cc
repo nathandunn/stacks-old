@@ -25,18 +25,18 @@
 #include "sstacks.h"
 
 // Global variables to hold command-line options.
-string    sample_1_file;
-string    sample_2_file;
-string    out_path;
-file_type in_file_type = sql;
-int       num_threads  = 1;
-int       batch_id     = 0;
-int       samp_id      = 0; 
-int       catalog      = 0;
-bool      verify_haplotypes       = true;
-bool      impute_haplotypes       = true;
-bool      require_uniq_haplotypes = false;
-searcht   search_type             = sequence;
+string  sample_1_file;
+string  sample_2_file;
+string  out_path;
+FileT   in_file_type = FileT::sql;
+int     num_threads  = 1;
+int     batch_id     = 0;
+int     samp_id      = 0; 
+int     catalog      = 0;
+bool    verify_haplotypes       = true;
+bool    impute_haplotypes       = true;
+bool    require_uniq_haplotypes = false;
+searcht search_type             = sequence;
 
 int main (int argc, char* argv[]) {
 
@@ -78,7 +78,7 @@ int main (int argc, char* argv[]) {
 	return 0;
     }
 
-    in_file_type = compressed == true ? gzsql : sql;
+    in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
 
     //
     // Assign the ID for this sample data.
@@ -703,7 +703,7 @@ int write_matches(map<int, QLocus *> &sample) {
     size_t pos_1    = sample_2_file.find_last_of("/");
     string out_file = out_path + sample_2_file.substr(pos_1 + 1)  + ".matches.tsv";
 
-    if (in_file_type == gzsql)
+    if (in_file_type == FileT::gzsql)
 	out_file += ".gz";
 
     //
@@ -711,7 +711,7 @@ int write_matches(map<int, QLocus *> &sample) {
     //
     gzFile   gz_matches;
     ofstream matches;
-    if (in_file_type == gzsql) {
+    if (in_file_type == FileT::gzsql) {
 	gz_matches = gzopen(out_file.c_str(), "wb");
 	if (!gz_matches) {
 	    cerr << "Error: Unable to open gzipped matches file '" << out_file << "': " << strerror(errno) << ".\n";
@@ -741,7 +741,7 @@ int write_matches(map<int, QLocus *> &sample) {
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%F %T", timeinfo);
     log << "# sstacks version " << VERSION << "; generated on " << date << "\n"; 
-    if (in_file_type == gzsql) 
+    if (in_file_type == FileT::gzsql) 
         gzputs(gz_matches, log.str().c_str());
     else
         matches << log.str();
@@ -775,11 +775,11 @@ int write_matches(map<int, QLocus *> &sample) {
 		qloc->lnl << "\n";
 	}
 
-	if (in_file_type == gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
+	if (in_file_type == FileT::gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
 	sstr.str("");
     }
 
-        if (in_file_type == gzsql)
+        if (in_file_type == FileT::gzsql)
 	    gzclose(gz_matches);
 	else
 	    matches.close();

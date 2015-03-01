@@ -51,11 +51,11 @@ const int libz_buffer_size = 1048576;
 //
 // Supported file types
 //
-enum file_type {unknown, 
-		sql,     gzsql, 
-		fasta,   gzfasta, 
-		fastq,   gzfastq, 
-		bowtie,  sam, bam, tsv, 
-		bustard, phase, fastphase, beagle};
+enum class FileT {unknown, 
+	sql,     gzsql, 
+	fasta,   gzfasta, 
+	fastq,   gzfastq, 
+	bowtie,  sam, bam, tsv, 
+	bustard, phase, fastphase, beagle};
 
 #endif

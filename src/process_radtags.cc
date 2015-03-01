@@ -29,8 +29,8 @@
 //
 // Global variables to hold command-line options.
 //
-file_type in_file_type  = unknown;
-file_type out_file_type = unknown;
+FileT  in_file_type  = FileT::unknown;
+FileT  out_file_type = FileT::unknown;
 string in_file;
 string in_file_p1;
 string in_file_p2;
@@ -97,11 +97,11 @@ int main (int argc, char* argv[]) {
     //
     // If input files are gzipped, output gziped files, unless the user chooses an output type.
     //
-    if (out_file_type == unknown) {
-	if (in_file_type == gzfastq || in_file_type == bam)
-	    out_file_type = gzfastq;
+    if (out_file_type == FileT::unknown) {
+	if (in_file_type == FileT::gzfastq || in_file_type == FileT::bam)
+	    out_file_type = FileT::gzfastq;
 	else
-	    out_file_type = fastq;
+	    out_file_type = FileT::fastq;
     }
 
     cerr << "Using Phred+" << qual_offset << " encoding for quality scores.\n";
@@ -134,7 +134,7 @@ int main (int argc, char* argv[]) {
     build_file_list(files);
     load_barcodes(barcode_file, barcodes, se_bc, pe_bc, min_bc_size_1, max_bc_size_1, min_bc_size_2, max_bc_size_2);
 
-    if (out_file_type == gzfastq || out_file_type == gzfasta)
+    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta)
 	open_files(files, barcodes, pair_1_gzfhs, pair_2_gzfhs, rem_1_gzfhs, rem_2_gzfhs, counters);
     else
 	open_files(files, barcodes, pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs, counters);
@@ -152,7 +152,7 @@ int main (int argc, char* argv[]) {
 	counters[files[i].first]["recovered"]    = 0;
 
 	if (paired) {
-	    if (out_file_type == gzfastq || out_file_type == gzfasta)
+	    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta)
 	    	process_paired_reads(files[i].first, files[i].second, 
 	    			     se_bc, pe_bc,
 	    			     pair_1_gzfhs, pair_2_gzfhs, rem_1_gzfhs, rem_2_gzfhs,
@@ -163,7 +163,7 @@ int main (int argc, char* argv[]) {
 				     pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs,
 				     counters[files[i].first], barcode_log);
 	} else {
-	    if (out_file_type == gzfastq || out_file_type == gzfasta)
+	    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta)
 	    	process_reads(files[i].first, 
 	    		      se_bc, pe_bc,
 	    		      pair_1_gzfhs, 
@@ -190,7 +190,7 @@ int main (int argc, char* argv[]) {
     }
 
     cerr << "Closing files, flushing buffers...\n";
-    if (out_file_type == gzfastq || out_file_type == gzfasta) {
+    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta) {
 	close_file_handles(pair_1_gzfhs);
 	if (paired) {
 	    close_file_handles(rem_1_gzfhs);
@@ -234,16 +234,16 @@ process_paired_reads(string prefix_1,
     else
 	cerr << "  Reading data from:\n  " << path_1 << " and\n  " << path_2 << "\n";
 
-    if (in_file_type == fastq) {
+    if (in_file_type == FileT::fastq) {
         fh_1 = new Fastq(path_1.c_str());
 	fh_2 = interleaved ? fh_1 : new Fastq(path_2.c_str());
-    } else if (in_file_type == gzfastq) {
+    } else if (in_file_type == FileT::gzfastq) {
         fh_1 = new GzFastq(path_1.c_str());
 	fh_2 = interleaved ? fh_1 : new GzFastq(path_2.c_str());
-    } else if (in_file_type == bam) {
+    } else if (in_file_type == FileT::bam) {
         fh_1 = new BamUnAln(path_1.c_str());
 	fh_2 = fh_1;
-    } else if (in_file_type == bustard) {
+    } else if (in_file_type == FileT::bustard) {
         fh_1 = new Bustard(path_1.c_str());
         fh_2 = interleaved ? fh_1 : new Bustard(path_2.c_str());
     }
@@ -336,10 +336,10 @@ process_paired_reads(string prefix_1,
 	    process_singlet(r_2, renz_2, true,  barcode_log[bc], counter);
 
 	if (r_1->retain && r_2->retain) {
-	    (out_file_type == fastq || out_file_type == gzfastq) ?
+	    (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
 		write_fastq(pair_1_fhs[bc], r_1, overhang) :
  		write_fasta(pair_1_fhs[bc], r_1, overhang);
-            (out_file_type == fastq || out_file_type == gzfastq) ?
+            (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
                 write_fastq(pair_2_fhs[bc], r_2, overhang) :
                 write_fasta(pair_2_fhs[bc], r_2, overhang);
 
@@ -347,24 +347,24 @@ process_paired_reads(string prefix_1,
 	    //
 	    // Write to the remainder file.
 	    //
-	    (out_file_type == fastq || out_file_type == gzfastq) ? 
+	    (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
 		write_fastq(rem_1_fhs[bc], r_1, overhang) : 
 		write_fasta(rem_1_fhs[bc], r_1, overhang);
 	} else if (!r_1->retain && r_2->retain) {
 	    //
 	    // Write to the remainder file.
 	    //
-	    (out_file_type == fastq || out_file_type == gzfastq) ? 
+	    (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
 		write_fastq(rem_2_fhs[bc], r_2, overhang) : 
 		write_fasta(rem_2_fhs[bc], r_2, overhang);
 	}
 
 	if (discards && !r_1->retain)
-	    (out_file_type == fastq || out_file_type == gzfastq) ? 
+	    (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
 		write_fastq(discard_fh_1, s_1) : 
 		write_fasta(discard_fh_1, s_1);
 	if (discards && !r_2->retain)
-	    (out_file_type == fastq || out_file_type == gzfastq) ? 
+	    (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
 		write_fastq(discard_fh_2, s_2) : 
 		write_fasta(discard_fh_2, s_2);
 
@@ -402,13 +402,13 @@ process_reads(string prefix,
 
     string path = in_path_1 + prefix;
 
-    if (in_file_type == fastq)
+    if (in_file_type == FileT::fastq)
         fh = new Fastq(path.c_str());
-    else if (in_file_type == gzfastq)
+    else if (in_file_type == FileT::gzfastq)
         fh = new GzFastq(path.c_str());
-    else if (in_file_type == bam)
+    else if (in_file_type == FileT::bam)
         fh = new BamUnAln(path.c_str());
-    else if (in_file_type == bustard)
+    else if (in_file_type == FileT::bustard)
         fh = new Bustard(path.c_str());
 
     //
@@ -485,12 +485,12 @@ process_reads(string prefix,
 	    process_singlet(r, renz_1, false, barcode_log[bc], counter);
 
 	 if (r->retain)
-	     (out_file_type == fastq || out_file_type == gzfastq) ? 
+	     (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
 		 write_fastq(pair_1_fhs[bc], r, overhang) : 
  		 write_fasta(pair_1_fhs[bc], r, overhang);
 
 	 if (discards && !r->retain)
-	     out_file_type == fastq ? 
+	     out_file_type == FileT::fastq ? 
 		 write_fastq(discard_fh, s) : 
 		 write_fasta(discard_fh, s);
 
@@ -812,7 +812,7 @@ int  compare_barcodes(pair<BarcodePair, int> a, pair<BarcodePair, int> b) {
 }
 
 int parse_command_line(int argc, char* argv[]) {
-    file_type ftype;
+    FileT ftype;
     int c;
      
     while (1) {
@@ -871,23 +871,23 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 'i':
             if (strcasecmp(optarg, "bustard") == 0)
-                in_file_type = bustard;
+                in_file_type = FileT::bustard;
 	    else if (strcasecmp(optarg, "bam") == 0)
-                in_file_type = bam;
+                in_file_type = FileT::bam;
 	    else if (strcasecmp(optarg, "gzfastq") == 0)
-                in_file_type = gzfastq;
+                in_file_type = FileT::gzfastq;
 	    else
-                in_file_type = fastq;
+                in_file_type = FileT::fastq;
 	    break;
      	case 'y':
 	    if (strcasecmp(optarg, "fastq") == 0)
-                out_file_type = fastq;
+                out_file_type = FileT::fastq;
 	    else if (strcasecmp(optarg, "gzfastq") == 0)
-                out_file_type = gzfastq;
+                out_file_type = FileT::gzfastq;
 	    else if (strcasecmp(optarg, "fasta") == 0)
-                out_file_type = fasta;
+                out_file_type = FileT::fasta;
 	    else if (strcasecmp(optarg, "gzfasta") == 0)
-                out_file_type = gzfasta;
+                out_file_type = FileT::gzfasta;
 	    break;
      	case 'E':
             if (strcasecmp(optarg, "phred64") == 0)
@@ -901,22 +901,22 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 'f':
 	    in_file = optarg;
-	    ftype   = fastq;
+	    ftype   = FileT::fastq;
 	    break;
 	case 'p':
 	    in_path_1 = optarg;
 	    in_path_2 = in_path_1;
-	    ftype     = fastq;
+	    ftype     = FileT::fastq;
 	    break;
 	case '1':
 	    paired     = true;
 	    in_file_p1 = optarg;
-	    ftype      = fastq;
+	    ftype      = FileT::fastq;
 	    break;
 	case '2':
 	    paired     = true;
 	    in_file_p2 = optarg;
-	    ftype      = fastq;
+	    ftype      = FileT::fastq;
 	    break;
 	case 'P':
 	    paired = true;
@@ -1052,15 +1052,15 @@ int parse_command_line(int argc, char* argv[]) {
     if (out_path.at(out_path.length() - 1) != '/') 
 	out_path += "/";
 
-    if (in_file_type == unknown)
+    if (in_file_type == FileT::unknown)
 	in_file_type = ftype;
 
-    if (in_file_type == bam && paired == true && interleaved == false) {
+    if (in_file_type == FileT::bam && paired == true && interleaved == false) {
 	cerr << "You may only specify a BAM input file for paired-end data if the read pairs are interleaved.\n";
 	help();
     }
 
-    if (in_file_type == bam && (barcode_type != inline_null && barcode_type != null_null)) {
+    if (in_file_type == FileT::bam && (barcode_type != inline_null && barcode_type != null_null)) {
 	cerr << "For BAM input files only inline or unbarcoded data can be processed.\n";
 	help();
     }

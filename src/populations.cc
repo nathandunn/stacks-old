@@ -641,6 +641,12 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 	map<int, set<int> >::iterator it;
 
 	for (it = whitelist.begin(); it != whitelist.end(); it++) {
+	    //
+	    // A locus on the whitelist may have already been filtered out.
+	    //
+	    if (catalog.count(it->first) == 0)
+		continue;
+
 	    loc = catalog[it->first];
 	    t   = psum->locus_tally(loc->id);
 	    s   = psum->locus(loc->id);

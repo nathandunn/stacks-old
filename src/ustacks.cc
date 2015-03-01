@@ -27,7 +27,7 @@
 //
 // Global variables to hold command-line options.
 //
-file_type in_file_type;
+FileT     in_file_type;
 string    in_file;
 string    out_path;
 int       num_threads       = 1;
@@ -1385,7 +1385,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     Rem          *rem;
     stringstream  sstr;
 
-    bool gzip = (in_file_type == gzfastq || in_file_type == gzfasta) ? true : false;
+    bool gzip = (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) ? true : false;
 
     //
     // Read in the set of sequencing IDs so they can be included in the output.
@@ -1870,13 +1870,13 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radta
     Input *fh = NULL;
     DNASeq *d;
 
-    if (in_file_type == fasta)
+    if (in_file_type == FileT::fasta)
         fh = new Fasta(in_file.c_str());
-    else if (in_file_type == fastq)
+    else if (in_file_type == FileT::fastq)
         fh = new Fastq(in_file.c_str());
-    else if (in_file_type == gzfasta)
+    else if (in_file_type == FileT::gzfasta)
         fh = new GzFasta(in_file.c_str());
-    else if (in_file_type == gzfastq)
+    else if (in_file_type == FileT::gzfastq)
         fh = new GzFastq(in_file.c_str());
 
     cerr << "Parsing " << in_file.c_str() << "\n";
@@ -1942,13 +1942,13 @@ load_seq_ids(vector<char *> &seq_ids)
 {
     Input *fh = NULL;
 
-    if (in_file_type == fasta)
+    if (in_file_type == FileT::fasta)
         fh = new Fasta(in_file.c_str());
-    else if (in_file_type == fastq)
+    else if (in_file_type == FileT::fastq)
         fh = new Fastq(in_file.c_str());
-    else if (in_file_type == gzfasta)
+    else if (in_file_type == FileT::gzfasta)
         fh = new GzFasta(in_file.c_str());
-    else if (in_file_type == gzfastq)
+    else if (in_file_type == FileT::gzfastq)
         fh = new GzFastq(in_file.c_str());
 
     cerr << "  Refetching sequencing IDs from " << in_file.c_str() << "... ";    
@@ -2068,17 +2068,17 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 't':
             if (strcmp(optarg, "tsv") == 0)
-                in_file_type = tsv;
+                in_file_type = FileT::tsv;
             else if (strcmp(optarg, "fasta") == 0)
-                in_file_type = fasta;
+                in_file_type = FileT::fasta;
             else if (strcmp(optarg, "fastq") == 0)
-                in_file_type = fastq;
+                in_file_type = FileT::fastq;
 	    else if (strcasecmp(optarg, "gzfasta") == 0)
-                in_file_type = gzfasta;
+                in_file_type = FileT::gzfasta;
 	    else if (strcasecmp(optarg, "gzfastq") == 0)
-                in_file_type = gzfastq;
+                in_file_type = FileT::gzfastq;
             else
-                in_file_type = unknown;
+                in_file_type = FileT::unknown;
 	    break;
      	case 'f':
 	    in_file = optarg;
@@ -2189,7 +2189,7 @@ int parse_command_line(int argc, char* argv[]) {
 	model_type = bounded;
     }
 
-    if (in_file.length() == 0 || in_file_type == unknown) {
+    if (in_file.length() == 0 || in_file_type == FileT::unknown) {
 	cerr << "You must specify an input file of a supported type.\n";
 	help();
     }

@@ -145,12 +145,12 @@ check_whitelist_integrity(map<int, CSLocus *> &catalog, map<int, set<int> > &whi
     set<int>::iterator sit;
     map<int, set<int> > new_wl;
 
-    cerr << "Checking the integrity of the whitelist...\n";
+    cerr << "Checking the integrity of the whitelist...";
 
     for (it = whitelist.begin(); it != whitelist.end(); it++) {
 	if (catalog.count(it->first) == 0) {
 	    rm_loci++;
-	    cerr << "  Removing locus " << it->first << " from whitelist as it does not exist in the catalog.\n";
+	    cerr << "\n  Removing locus " << it->first << " from whitelist as it does not exist in the catalog.";
 	} else {
 	    loc = catalog[it->first];
 
@@ -168,12 +168,14 @@ check_whitelist_integrity(map<int, CSLocus *> &catalog, map<int, set<int> > &whi
 		    new_wl[it->first].insert(*sit);
 		} else {
 		    rm_snps++;
-		    cerr << "  Removing SNP at column " << *sit << " in locus " << it->first << " from whitelist as it does not exist in the catalog.\n";
+		    cerr << "\n  Removing SNP at column " << *sit << " in locus " << it->first << " from whitelist as it does not exist in the catalog.";
 		}
 	}
     }
 
     whitelist = new_wl;
+
+    if (rm_loci > 0 || rm_snps > 0) cerr << "\n";
 
     cerr << "done.\n"
 	 << "Removed " << rm_loci << " loci and " << rm_snps << " SNPs from the whitelist that were not found in the catalog.\n";

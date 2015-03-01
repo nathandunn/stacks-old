@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2013-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -22,27 +22,23 @@
 // rxstacks -- make model call corrections and haplotype corrections
 // across a population of samples.
 //
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
 
 #include "rxstacks.h"
 
 // Global variables to hold command-line options.
-int       num_threads = 1;
-int       batch_id    = 0;
-string    in_path;
-string    out_path;
-file_type in_file_type      = sql;
-double    confounded_limit  = 0.75;
-bool      filter_confounded = false;
-bool      prune_haplotypes  = false;
-int       max_haplotype_cnt = 0;
-bool      lnl_dist          = false;
-bool      filter_lnl        = false;
-double    lnl_limit         = 0.0;
-bool      verbose           = false;
+int    num_threads = 1;
+int    batch_id    = 0;
+string in_path;
+string out_path;
+FileT  in_file_type      = FileT::sql;
+double confounded_limit  = 0.75;
+bool   filter_confounded = false;
+bool   prune_haplotypes  = false;
+int    max_haplotype_cnt = 0;
+bool   lnl_dist          = false;
+bool   filter_lnl        = false;
+double lnl_limit         = 0.0;
+bool   verbose           = false;
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -116,7 +112,7 @@ int main (int argc, char* argv[]) {
      	return 0;
     }
 
-    in_file_type = compressed == true ? gzsql : sql;
+    in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
 
     //
     // Let's fill in the SNP model calls to include both hets and homozygotes to 
@@ -1171,7 +1167,7 @@ write_results(string file, map<int, Locus *> &m)
     Locus                      *tag_1;
     stringstream                sstr; 
 
-    bool gzip = (in_file_type == gzsql) ? true : false;
+    bool gzip = (in_file_type == FileT::gzsql) ? true : false;
 
     //
     // Parse the input file name to create the output files

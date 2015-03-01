@@ -21,24 +21,21 @@
 //
 // cstacks -- Create a catalog of Stacks.
 //
-// Julian Catchen
-// jcatchen@illinois.edu
-//
 
 #include "cstacks.h"
 
 // Global variables to hold command-line options.
 queue<pair<int, string> > samples;
-string    out_path;
-string    catalog_path;
-file_type in_file_type    = sql;
-int       batch_id        = 0;
-int       ctag_dist       = 0;
-searcht   search_type     = sequence;
-int       num_threads     = 1;
-bool      mult_matches    = false;
-bool      report_mmatches = false;
-bool      require_uniq_haplotypes = false;
+string  out_path;
+string  catalog_path;
+FileT   in_file_type    = FileT::sql;
+int     batch_id        = 0;
+int     ctag_dist       = 0;
+searcht search_type     = sequence;
+int     num_threads     = 1;
+bool    mult_matches    = false;
+bool    report_mmatches = false;
+bool    require_uniq_haplotypes = false;
 
 int main (int argc, char* argv[]) {
 
@@ -586,7 +583,7 @@ int write_catalog(map<int, CLocus *> &catalog) {
     CLocus  *tag;
     set<int> matches;
 
-    bool gzip = (in_file_type == gzsql) ? true : false;
+    bool gzip = (in_file_type == FileT::gzsql) ? true : false;
 
     //
     // Parse the input file names to create the output file
@@ -1295,7 +1292,7 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
     if (!load_loci(sample.second, tmp_catalog, false, false, compressed))
         return 0;
 
-    in_file_type = compressed == true ? gzsql : sql;
+    in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
 
     sample.first = tmp_catalog.begin()->second->sample_id;
 
@@ -1328,7 +1325,7 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     if (!load_loci(catalog_path, catalog, false, false, compressed))
         return 0;
 
-    in_file_type = compressed == true ? gzsql : sql;
+    in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
 
     //
     // Iterate over the catalog entires and convert the stack components
