@@ -656,7 +656,7 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
 
     char *p, *q, *r, *s;
 
-    uint line_num = 0;
+    uint cols, line_num = 0;
 
     while (fh.good()) {
 	memset(line, 0, id_len);
@@ -664,6 +664,21 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
 	line_num++;
 
 	if (strlen(line) == 0) continue;
+
+	//
+	// Check that the proper number of columns exist.
+	//
+	cols = 1;
+	for (p = line; *p != '\0'; p++) if (*p == '\t') cols++;
+
+	if (cols > 1 && 
+	    (barcode_type == inline_null || barcode_type == index_null)) {
+	    cerr << "Too many columns specified in '" << barcode_file << "' for single-end barcodes on line " << line_num << ".\n";
+	    exit(1);
+	} else if (cols > 3) {
+	    cerr << "Too many columns specified in '" << barcode_file << "' on line " << line_num << ".\n";
+	    exit(1);
+	}
 
 	//
 	// Identify the first barcode and check that it's legitimate.

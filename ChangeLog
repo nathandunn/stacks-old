@@ -1,5 +1,10 @@
 Stacks 1.28
 --------------------------
+	Feature: added a second barcode distance to process_radtags/process_shortreads.
+	This allows you to specify two distances for recovering barcodes if you are using
+	combinatorial barcodes (e.g. a 12bp barcode inline on the single-end read plus a
+	6bp index). I have changed the meaning of the parameter from "distance between
+	barcodes" to "number of allowed mismatches when correcting barcodes.
 	Bugfix: the process_shortreads program was outputting FASTA even when FASTQ was
 	requested due to not handling gzipped outputs properly.
 	Bugfix: fixed segfault in populations that could occur when using a whitelist that
