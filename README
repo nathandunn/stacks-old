@@ -44,9 +44,14 @@ be useful:
  piece of software.)
 
 Finally, the performance of Stacks can be improved by installing two external libraries.
-First, to enable reading of BAM files, install Samtools. Second, to lower memory usage
-install Google's SparseHash class. These optional packages must be installed and enabled
-prior to building Stacks.
+First, to enable reading of BAM files, install Samtools. 
+
+    Note: Stacks is not yet compatible with newer Samtools versions that use HTSlib. For
+    now, you must use Samtools version 0.1.19, which was the last non-HTSlib version:
+       http://sourceforge.net/projects/samtools/files/samtools/0.1.19/
+
+Second, to lower memory usage install Google's SparseHash class. These optional packages 
+must be installed and enabled prior to building Stacks.
 
   1. http://samtools.sourceforge.net/.
   2. http://code.google.com/p/sparsehash/

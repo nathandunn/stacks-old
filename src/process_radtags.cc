@@ -55,7 +55,8 @@ bool     overhang        = false;
 bool     filter_illumina = false;
 bool     check_radtag    = true;
 uint     truncate_seq    = 0;
-int      barcode_dist    = 2;
+int      barcode_dist_1  = 1;
+int      barcode_dist_2  = -1;
 double   win_size        = 0.15;
 uint     score_limit     = 10;
 uint     len_limit       = 0;
@@ -133,6 +134,12 @@ int main (int argc, char* argv[]) {
 
     build_file_list(files);
     load_barcodes(barcode_file, barcodes, se_bc, pe_bc, min_bc_size_1, max_bc_size_1, min_bc_size_2, max_bc_size_2);
+    if (recover && barcode_type != null_null) {
+	if (barcode_type == index_null || barcode_type == inline_null)
+	    cerr << "Will attempt to recover barcodes with at most " << barcode_dist_1 << " mismatches.\n";
+	else
+	    cerr << "Will attempt to recover barcodes with at most " << barcode_dist_1 << " / " << barcode_dist_2 << " mismatches.\n";
+    }
 
     if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta)
 	open_files(files, barcodes, pair_1_gzfhs, pair_2_gzfhs, rem_1_gzfhs, rem_2_gzfhs, counters);
@@ -476,10 +483,12 @@ process_reads(string prefix,
 	// reads even as the barcode size may change. Other technologies, like IonTorrent
 	// need to be truncated uniformly.
 	//
-	if (truncate_seq > 0) 
-	    r->set_len(truncate_seq + r->inline_bc_len);
-	else
+	if (truncate_seq > 0) {
+	    if (truncate_seq + r->inline_bc_len <= r->len) 
+		r->set_len(truncate_seq + r->inline_bc_len);
+	} else {
 	    r->set_len(r->len - (max_bc_size_1 - r->inline_bc_len));
+	}
 
 	if (r->retain) 
 	    process_singlet(r, renz_1, false, barcode_log[bc], counter);
@@ -817,49 +826,50 @@ int parse_command_line(int argc, char* argv[]) {
      
     while (1) {
 	static struct option long_options[] = {
-	    {"help",               no_argument, NULL, 'h'},
-            {"version",            no_argument, NULL, 'v'},
-            {"quality",            no_argument, NULL, 'q'},
-            {"clean",              no_argument, NULL, 'c'},
-            {"recover",            no_argument, NULL, 'r'},
-	    {"discards",           no_argument, NULL, 'D'},
-	    {"paired",             no_argument, NULL, 'P'},
-	    {"interleaved",        no_argument, NULL, 'I'},
-	    {"merge",              no_argument, NULL, 'm'},
-	    {"disable_rad_check",  no_argument, NULL, 'R'},
-	    {"filter_illumina",    no_argument, NULL, 'F'},
-	    {"index_null",         no_argument, NULL, 'u'},
-	    {"inline_null",        no_argument, NULL, 'V'},
-	    {"index_index",        no_argument, NULL, 'W'},
-	    {"inline_inline",      no_argument, NULL, 'x'},
-	    {"index_inline",       no_argument, NULL, 'Y'},
-	    {"inline_index",       no_argument, NULL, 'Z'},
-	    {"barcode_dist", required_argument, NULL, 'B'},
-	    {"infile_type",  required_argument, NULL, 'i'},
-	    {"outfile_type", required_argument, NULL, 'y'},
-	    {"file",         required_argument, NULL, 'f'},
-	    {"file_p1",      required_argument, NULL, '1'},
-	    {"file_p2",      required_argument, NULL, '2'},
-	    {"path",         required_argument, NULL, 'p'},
-	    {"outpath",      required_argument, NULL, 'o'},
-	    {"truncate",     required_argument, NULL, 't'},
-	    {"renz_1",       required_argument, NULL, 'e'},
-	    {"renz_2",       required_argument, NULL, 'z'},
-	    {"barcodes",     required_argument, NULL, 'b'},
-	    {"window_size",  required_argument, NULL, 'w'},
-	    {"score_limit",  required_argument, NULL, 's'},
-	    {"encoding",     required_argument, NULL, 'E'},
-	    {"len_limit",    required_argument, NULL, 'L'},
-	    {"adapter_1",    required_argument, NULL, 'A'},
-	    {"adapter_2",    required_argument, NULL, 'G'},
-	    {"adapter_mm",   required_argument, NULL, 'T'},
+	    {"help",                 no_argument, NULL, 'h'},
+            {"version",              no_argument, NULL, 'v'},
+            {"quality",              no_argument, NULL, 'q'},
+            {"clean",                no_argument, NULL, 'c'},
+            {"recover",              no_argument, NULL, 'r'},
+	    {"discards",             no_argument, NULL, 'D'},
+	    {"paired",               no_argument, NULL, 'P'},
+	    {"interleaved",          no_argument, NULL, 'I'},
+	    {"merge",                no_argument, NULL, 'm'},
+	    {"disable_rad_check",    no_argument, NULL, 'R'},
+	    {"filter_illumina",      no_argument, NULL, 'F'},
+	    {"index_null",           no_argument, NULL, 'u'},
+	    {"inline_null",          no_argument, NULL, 'V'},
+	    {"index_index",          no_argument, NULL, 'W'},
+	    {"inline_inline",        no_argument, NULL, 'x'},
+	    {"index_inline",         no_argument, NULL, 'Y'},
+	    {"inline_index",         no_argument, NULL, 'Z'},
+	    {"barcode_dist_1", required_argument, NULL, 'B'},
+	    {"barcode_dist_2", required_argument, NULL, 'C'},
+	    {"infile_type",    required_argument, NULL, 'i'},
+	    {"outfile_type",   required_argument, NULL, 'y'},
+	    {"file",           required_argument, NULL, 'f'},
+	    {"file_p1",        required_argument, NULL, '1'},
+	    {"file_p2",        required_argument, NULL, '2'},
+	    {"path",           required_argument, NULL, 'p'},
+	    {"outpath",        required_argument, NULL, 'o'},
+	    {"truncate",       required_argument, NULL, 't'},
+	    {"renz_1",         required_argument, NULL, 'e'},
+	    {"renz_2",         required_argument, NULL, 'z'},
+	    {"barcodes",       required_argument, NULL, 'b'},
+	    {"window_size",    required_argument, NULL, 'w'},
+	    {"score_limit",    required_argument, NULL, 's'},
+	    {"encoding",       required_argument, NULL, 'E'},
+	    {"len_limit",      required_argument, NULL, 'L'},
+	    {"adapter_1",      required_argument, NULL, 'A'},
+	    {"adapter_2",      required_argument, NULL, 'G'},
+	    {"adapter_mm",     required_argument, NULL, 'T'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "uVWxYZhvRFIcqrDPmB:i:y:f:o:t:e:z:b:1:2:p:s:w:E:L:A:G:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "uVWxYZhvRFIcqrDPmB:C:i:y:f:o:t:e:z:b:1:2:p:s:w:E:L:A:G:T:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -925,7 +935,10 @@ int parse_command_line(int argc, char* argv[]) {
 	    interleaved = true;
 	    break;
 	case 'B':
-	    barcode_dist = is_integer(optarg);
+	    barcode_dist_1 = is_integer(optarg);
+	    break;
+	case 'C':
+	    barcode_dist_2 = is_integer(optarg);
 	    break;
 	case 'o':
 	    out_path = optarg;
@@ -1098,6 +1111,11 @@ int parse_command_line(int argc, char* argv[]) {
 	help();
     }
 
+    if (recover && barcode_type != null_null) {
+	if (barcode_type != index_null && barcode_type != inline_null && barcode_dist_2 < 0)
+	    barcode_dist_2 = barcode_dist_1;
+    }
+
     return 0;
 }
 
@@ -1169,8 +1187,8 @@ void help() {
 	      << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
 	      << "    --disable_rad_check: disable checking if the RAD site is intact.\n"
 	      << "    --len_limit <limit>: specify a minimum sequence length (useful if your data has already been trimmed).\n"
-	      << "    --barcode_dist: provide the nucleotide distance between barcodes. This allows for barcode rescue if \n"
-	      << "                    there are less than distance-1 sequencing errors in the barcode (default 2).\n";
+	      << "    --barcode_dist_1: the number of allowed mismatches when rescuing single-end barcodes (default 1).\n" 
+	      << "    --barcode_dist_2: the number of allowed mismatches when rescuing paired-end barcodes (defaults to --barcode_dist_1).\n";
 
     exit(0);
 }

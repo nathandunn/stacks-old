@@ -49,12 +49,12 @@ enum seqt {single_end, paired_end};
 typedef unordered_map<string, vector<int>, std::hash<string> > AdapterHash;
 
 extern uint     min_bc_size_1, max_bc_size_1, min_bc_size_2, max_bc_size_2;
+extern int      barcode_dist_1, barcode_dist_2;
 extern barcodet barcode_type;
 extern uint     truncate_seq;
 extern double   win_size;
 extern bool     paired;
 extern bool     recover;
-extern int      barcode_dist;
 
 class BarcodePair {
 public:
@@ -353,7 +353,7 @@ int  parse_input_record(Seq *, Read *);
 int  rev_complement(char *, int, bool);
 int  reverse_qual(char *, int, bool);
 
-bool correct_barcode(set<string> &, Read *, seqt);
+bool correct_barcode(set<string> &, Read *, seqt, int);
 
 int  filter_adapter_seq(Read *, char *, int, AdapterHash &, int, int, int);
 int  init_adapter_seq(int, char *, int &, AdapterHash &);
@@ -465,9 +465,9 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 
     if (paired) {
 	if (se_bc.count(bc.se) == 0)
-	    se_correct = correct_barcode(se_bc, href_1, single_end);
+	    se_correct = correct_barcode(se_bc, href_1, single_end, barcode_dist_1);
 	if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
-	    pe_correct = correct_barcode(pe_bc, href_2, paired_end);
+	    pe_correct = correct_barcode(pe_bc, href_2, paired_end, barcode_dist_2);
 
 	if (se_correct)
 	    bc.se = string(href_1->se_bc);
@@ -485,9 +485,9 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 
     } else {
 	if (se_bc.count(bc.se) == 0)
-	    se_correct = correct_barcode(se_bc, href_1, single_end);
+	    se_correct = correct_barcode(se_bc, href_1, single_end, barcode_dist_1);
 	if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
-	    pe_correct = correct_barcode(pe_bc, href_1, paired_end);
+	    pe_correct = correct_barcode(pe_bc, href_1, paired_end, barcode_dist_2);
 
 	if (se_correct)
 	    bc.se = string(href_1->se_bc);

@@ -490,7 +490,7 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
 }
 
 bool 
-correct_barcode(set<string> &bcs, Read *href, seqt type) 
+correct_barcode(set<string> &bcs, Read *href, seqt type, int num_errs) 
 {
     if (recover == false)
 	return false;
@@ -509,7 +509,6 @@ correct_barcode(set<string> &bcs, Read *href, seqt type)
     string b;
     set<string>::iterator it;
 
-    int num_errs = barcode_dist - 1;
     close = 0;
 
     for (it = bcs.begin(); it != bcs.end(); it++) {

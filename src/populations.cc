@@ -326,7 +326,8 @@ int main (int argc, char* argv[]) {
     // identify individual SNPs that are below the -r threshold or the minor allele
     // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
     //
-    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, log_fh);
+    blacklist.clear();
+    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, blacklist, log_fh);
     cerr << "Pruned " << pruned_snps << " SNPs due to filter constraints.\n";
 
     //
@@ -340,7 +341,12 @@ int main (int argc, char* argv[]) {
     //
     // Remove the accumulated SNPs 
     //
+    cerr << "Removing " << blacklist.size() << " additional loci for which all SNPs were filtered...";
+    set<int> empty_list;
+    reduce_catalog(catalog, empty_list, blacklist);
     reduce_catalog_snps(catalog, whitelist, pmap);
+    int retained = pmap->prune(blacklist);
+    cerr << " retained " << retained << " loci.\n";
 
     //
     // Merge loci that overlap on a common restriction enzyme cut site.
@@ -619,7 +625,8 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 int
 prune_polymorphic_sites(map<int, CSLocus *> &catalog, 
 			PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
-			map<int, set<int> > &whitelist, ofstream &log_fh)
+			map<int, set<int> > &whitelist, set<int> &blacklist,
+			ofstream &log_fh)
 {
     map<int, set<int> > new_wl;
     CSLocus  *loc;
@@ -698,6 +705,19 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 		    }
 		}
 	    }
+
+	    //
+	    // If no SNPs were retained for this locus, then mark it to be removed entirely.
+	    //
+	    if (new_wl.count(loc->id) == 0) {
+		if (verbose)
+		    log_fh << "removed_locus\t"
+			   << loc->id << "\t"
+			   << loc->loc.chr << "\t"
+			   << loc->sort_bp() << "\t"
+			   << 0 << "\tno_snps_remaining\n";
+		blacklist.insert(loc->id);
+	    }
 	}
 
     } else {
@@ -749,6 +769,19 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 			       << loc->snps[i]->col << "\t" << (sample_prune == true ? "sample_limit" : "maf_limit") << "\n";
 		    }
 		}
+	    }
+
+	    //
+	    // If no SNPs were retained for this locus, then mark it to be removed entirely.
+	    //
+	    if (new_wl.count(loc->id) == 0) {
+		if (verbose)
+		    log_fh << "removed_locus\t"
+			   << loc->id << "\t"
+			   << loc->loc.chr << "\t"
+			   << loc->sort_bp() << "\t"
+			   << 0 << "\tno_snps_remaining\n";
+		blacklist.insert(loc->id);
 	    }
 	}
     }
