@@ -318,11 +318,15 @@ process_paired_reads(string prefix_1,
 	// need to be truncated uniformly.
 	//
 	if (truncate_seq > 0) {
-	    r_1->set_len(truncate_seq + r_1->inline_bc_len);
-	    r_2->set_len(truncate_seq + r_2->inline_bc_len);
+ 	    if (truncate_seq + r_1->inline_bc_len <= r_1->len) 
+		r_1->set_len(truncate_seq + r_1->inline_bc_len);
+ 	    if (truncate_seq + r_2->inline_bc_len <= r_2->len) 
+		r_2->set_len(truncate_seq + r_2->inline_bc_len);
 	} else {
-	    r_1->set_len(r_1->len - (max_bc_size_1 - r_1->inline_bc_len));
-	    r_2->set_len(r_2->len - (max_bc_size_2 - r_2->inline_bc_len));
+	    if (barcode_type == inline_null || barcode_type == inline_inline ||	barcode_type == inline_index)
+		r_1->set_len(r_1->len - (max_bc_size_1 - r_1->inline_bc_len));
+	    if (barcode_type == inline_index ||	barcode_type == index_index)
+		r_2->set_len(r_2->len - (max_bc_size_2 - r_2->inline_bc_len));
 	}
 
 	if (r_1->retain)
@@ -467,10 +471,13 @@ process_reads(string prefix,
 	// reads even as the barcode size may change. Other technologies, like IonTorrent
 	// need to be truncated uniformly.
 	//
-	if (truncate_seq > 0) 
-	    r->set_len(truncate_seq + r->inline_bc_len);
-	else
-	    r->set_len(r->len - (max_bc_size_1 - r->inline_bc_len));
+	if (truncate_seq > 0) {
+	    if (truncate_seq + r->inline_bc_len <= r->len) 
+		r->set_len(truncate_seq + r->inline_bc_len);
+	} else {
+	    if (barcode_type == inline_null || barcode_type == inline_inline ||	barcode_type == inline_index)
+		r->set_len(r->len - (max_bc_size_1 - r->inline_bc_len));
+	}
 
 	if (r->retain)
 	    process_singlet(r, false, barcode_log[bc], counter);
@@ -1012,7 +1019,7 @@ int parse_command_line(int argc, char* argv[]) {
 	help();
     }
 
-    if (in_file_type == FileT::bam && (barcode_type != inline_null && barcode_type != null_null)) {
+    if (in_file_type == FileT::bam && (barcode_type != inline_null && barcode_type != inline_inline && barcode_type != null_null)) {
 	cerr << "For BAM input files only inline or unbarcoded data can be processed.\n";
 	help();
     }
