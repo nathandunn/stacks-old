@@ -287,64 +287,6 @@ public:
 
 	return 0;
     }
-    /*    char *barcode() {
-	switch (this->read) {
-	case 1:
-	    switch (barcode_type) {
-	    case index_null:
-		return this->index_bc;
-		break;
-	    case inline_null:
-		return this->inline_bc;
-	    }
-	    break;
-	case 2:
-	    switch (barcode_type) {
-	    case inline_index:
-		return this->index_bc;
-		break;
-	    case index_inline:
-		return this->inline_bc;
-	    }
-	    break;
-	}
-	return NULL;
-    }
-    char *barcode(char *bc) {
-	switch (this->read) {
-	case 1:
-	    switch (barcode_type) {
-	    case index_null:
-	    case index_index:
-		strncpy(this->index_bc, bc,  bc_size_1);
-		this->index_bc[bc_size_1] = '\0';
-		return this->index_bc;
-		break;
-	    case inline_null:
-	    case inline_inline:
-		strncpy(this->inline_bc, bc,  bc_size_1);
-		this->inline_bc[bc_size_1] = '\0';
-		return this->inline_bc;
-	    }
-	    break;
-	case 2:
-	    switch (barcode_type) {
-	    case inline_index:
-	    case index_index:
-		strncpy(this->index_bc, bc,  bc_size_2);
-		this->index_bc[bc_size_2] = '\0';
-		return this->index_bc;
-		break;
-	    case index_inline:
-	    case inline_inline:
-		strncpy(this->inline_bc, bc, bc_size_2);
-		this->inline_bc[bc_size_2] = '\0';
-		return this->inline_bc;
-	    }
-	    break;
-	}
-	return NULL;
-	}*/
 };
 
 int  parse_illumina_v1(const char *);

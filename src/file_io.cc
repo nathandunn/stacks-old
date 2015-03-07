@@ -671,12 +671,12 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
 	cols = 1;
 	for (p = line; *p != '\0'; p++) if (*p == '\t') cols++;
 
-	if (cols > 1 && 
+	if (cols > 2 && 
 	    (barcode_type == inline_null || barcode_type == index_null)) {
-	    cerr << "Too many columns specified in '" << barcode_file << "' for single-end barcodes on line " << line_num << ".\n";
+	    cerr << "Too many columns (" << cols << ") specified in '" << barcode_file << "' for single-end barcodes on line " << line_num << ".\n";
 	    exit(1);
 	} else if (cols > 3) {
-	    cerr << "Too many columns specified in '" << barcode_file << "' on line " << line_num << ".\n";
+	    cerr << "Too many columns (" << cols << ") specified in '" << barcode_file << "' on line " << line_num << ".\n";
 	    exit(1);
 	}
 
