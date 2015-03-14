@@ -115,6 +115,8 @@ int main (int argc, char* argv[]) {
 
     count_raw_reads(unique, merged);
 
+    calc_coverage_distribution(unique, merged);
+
     cerr << "Writing loci, SNPs, alleles to '" << out_path << "...'\n";
     write_results(merged, unique);
 
@@ -282,6 +284,58 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
     }
 
     return 0;
+}
+
+double calc_coverage_distribution(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
+    map<int, MergedStack *>::iterator it;
+    vector<int>::iterator             k;
+    PStack *tag;
+    double  depth = 0.0;
+    double  total = 0.0;
+    double  sum   = 0.0;
+    double  mean  = 0.0;
+    double  max   = 0.0;
+    double  stdev = 0.0;
+
+    for (it = merged.begin(); it != merged.end(); it++) {
+	depth = 0.0;
+	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
+	    tag    = unique[*k];
+	    depth += tag->count;
+	}
+
+	if (depth < min_stack_cov)
+	    continue;
+	if (depth > max) 
+	    max = depth;
+
+	sum += depth;
+	total++;
+    }
+
+    mean = sum / total;
+
+    //
+    // Calculate the standard deviation
+    //
+    for (it = merged.begin(); it != merged.end(); it++) {
+	depth = 0.0;
+	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
+	    tag    = unique[*k];
+	    depth += tag->count;
+	}
+
+	if (depth < min_stack_cov)
+	    continue;
+
+	sum += pow((depth - mean), 2);
+    }
+
+    stdev = sqrt(sum / (total - 1));
+
+    cerr << "  Mean coverage depth is " << mean << "; Std Dev: " << stdev << "; Max: " << max << "\n";
+
+    return mean;
 }
 
 int count_raw_reads(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {

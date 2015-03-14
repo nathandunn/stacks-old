@@ -22,8 +22,6 @@
 # Read in a set of filtering paramters, query a Stacks pipeline database based on
 # those filters and write the results into a compact tab-separated values or excel file.
 #
-# Written by Julian Catchen <jcatchen@illinois.edu>
-#
 
 use strict;
 use DBI;
@@ -446,8 +444,8 @@ sub write_observed_haplotypes {
 	    }
 
 	    if ($types->[0]->{'lnl'} < $locus_lnl_lim) {
-		$str .= "\t";
-		next;
+	    	$str .= "\t";
+	    	next;
 	    }
 
             foreach $type (@{$types}) {

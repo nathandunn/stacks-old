@@ -1333,7 +1333,7 @@ double calc_merged_coverage_distribution(map<int, Stack *> &unique, map<int, Mer
 
     cerr << "  Mean merged coverage depth is " << mean << "; Std Dev: " << stdev << "; Max: " << max << "\n";
 
-    return m;
+    return mean;
 }
 
 int count_raw_reads(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged) {
