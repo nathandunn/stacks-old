@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([Stacks], [1.28])
+AC_INIT([Stacks], [1.29])
 AC_CONFIG_AUX_DIR([config])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign parallel-tests subdir-objects])
 AC_CONFIG_SRCDIR([src/ustacks.cc])
