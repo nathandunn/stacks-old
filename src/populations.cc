@@ -406,6 +406,11 @@ int main (int argc, char* argv[]) {
     calculate_summary_stats(files, pop_indexes, catalog, pmap, psum);
 
     //
+    // Output the observed haplotypes.
+    //
+    write_generic(catalog, pmap, samples, false);
+
+    //
     // Output data in requested formats
     //
     if (fasta_out)
@@ -413,14 +418,6 @@ int main (int argc, char* argv[]) {
 
     if (fasta_strict_out)
 	write_strict_fasta(catalog, pmap, samples, sample_ids);
-
-    if (vcf_out && ordered_export)
-    	write_vcf_ordered(catalog, pmap, psum, samples, sample_ids, merge_map, log_fh);
-    else if (vcf_out)
-    	write_vcf(catalog, pmap, psum, samples, sample_ids, merge_map);
-
-    if (vcf_haplo_out)
-    	write_vcf_haplotypes(catalog, pmap, psum, samples, sample_ids);
 
     if (genepop_out && ordered_export)
     	write_genepop_ordered(catalog, pmap, psum, pop_indexes, samples, log_fh);
@@ -453,10 +450,13 @@ int main (int argc, char* argv[]) {
     if (phylip_out)
     	write_phylip(catalog, pmap, psum, pop_indexes, samples);
 
-    //
-    // Output the observed haplotypes.
-    //
-    write_generic(catalog, pmap, samples, false);
+    if (vcf_haplo_out)
+    	write_vcf_haplotypes(catalog, pmap, psum, samples, sample_ids);
+
+    if (vcf_out && ordered_export)
+    	write_vcf_ordered(catalog, pmap, psum, samples, sample_ids, merge_map, log_fh);
+    else if (vcf_out)
+    	write_vcf(catalog, pmap, psum, samples, sample_ids, merge_map);
 
     //
     // Calculate and write Fst.
@@ -674,6 +674,8 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 	    for (uint i = 0; i < loc->snps.size(); i++) {
 		if (size > 0 && it->second.count(loc->snps[i]->col) == 0)
 		    continue;
+		if (t->nucs[loc->snps[i]->col].fixed == true)
+		    continue;
 
 		sample_prune = false;
 		maf_prune    = false;
@@ -738,6 +740,9 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 	    s   = psum->locus(loc->id);
 
 	    for (uint i = 0; i < loc->snps.size(); i++) {
+
+		if (t->nucs[loc->snps[i]->col].fixed == true)
+		    continue;
 
 		sample_prune = false;
 		maf_prune    = false;
@@ -5662,16 +5667,26 @@ write_genepop(map<int, CSLocus *> &catalog,
     char     p_allele, q_allele;
 
     //
-    // Output all the loci on the second line, comma-separated.
+    // Determine how many loci will be output, then output all the loci on the second line, comma-separated.
     //
-    uint i   = 0;
-    uint cnt = catalog.size();
-
+    uint cnt = 0;
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 	for (uint j = 0; j < loc->snps.size(); j++) {
 	    col = loc->snps[j]->col;
-	    s   = psum->locus(loc->id);
+	    t   = psum->locus_tally(loc->id);
+
+	    if (t->nucs[col].allele_cnt != 2) 
+		continue;
+	    cnt++;
+	}
+    }
+
+    uint i = 0;
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	loc = it->second;
+	for (uint j = 0; j < loc->snps.size(); j++) {
+	    col = loc->snps[j]->col;
 	    t   = psum->locus_tally(loc->id);
 
 	    // 
@@ -5679,11 +5694,10 @@ write_genepop(map<int, CSLocus *> &catalog,
 	    //
 	    if (t->nucs[col].allele_cnt != 2) 
 		continue;
-
+	    i++;
 	    fh << loc->id << "_" << col;
-	    if (i <  cnt - 1 || (i == cnt - 1 && j < loc->snps.size() - 1)) fh << ",";
+	    if (i <  cnt) fh << ",";
 	}
-	i++;
     }
     fh << "\n";
 
@@ -5707,6 +5721,7 @@ write_genepop(map<int, CSLocus *> &catalog,
 	    for (it = catalog.begin(); it != catalog.end(); it++) {
 		loc = it->second;
 		d   = pmap->locus(loc->id);
+		s   = psum->locus(loc->id);
 		t   = psum->locus_tally(loc->id);
 
 		for (i = 0; i < loc->snps.size(); i++) {
@@ -5818,13 +5833,17 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
     //
     // Output all the loci on the second line, comma-separated.
     //
+    int chrs = pmap->ordered_loci.size();
+    int cnt  = 0;
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	vector<NucTally *> &sites = genome_sites[it->first];
 	ord->order(sites, it->second);
+	cnt++;
 
-	if (sites.size() > 0) fh << sites[0]->loc_id << "_" << sites[0]->col;
-    	for (uint pos = 1; pos < sites.size(); pos++)
-	    fh << "," << sites[pos]->loc_id << "_" << sites[pos]->col;
+    	for (uint pos = 0; pos < sites.size(); pos++) {
+	    fh << sites[pos]->loc_id << "_" << sites[pos]->col;
+	    if (cnt < chrs || pos < sites.size() - 1) fh << ",";
+	}
     }
     fh << "\n";
 
@@ -5958,7 +5977,6 @@ write_structure(map<int, CSLocus *> &catalog,
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
     	for (uint pos = 0; pos < it->second.size(); pos++) {
     	    loc = it->second[pos];
-    	    s   = psum->locus(loc->id);
 	    t   = psum->locus_tally(loc->id);
 
     	    for (uint i = 0; i < loc->snps.size(); i++) {
