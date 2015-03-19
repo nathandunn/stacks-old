@@ -94,9 +94,13 @@ implement_single_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *ps
 
 	for (it = catalog.begin(); it != catalog.end(); it++) {
 	    loc = it->second;
+	    t   = psum->locus_tally(loc->id);
 
-	    if (loc->snps.size() > 0) 
-		new_wl[loc->id].insert(loc->snps[0]->col);
+	    for (uint i = 0; i < loc->snps.size(); i++)
+		if (t->nucs[loc->snps[i]->col].fixed == false) {
+		    new_wl[loc->id].insert(loc->snps[i]->col);
+		    break;
+		}
 	}
     }
 
