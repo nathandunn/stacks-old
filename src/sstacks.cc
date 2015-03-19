@@ -204,6 +204,9 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
     // have the same number and types of SNPs.
     //
 
+    if (s2_tag->id == 6295) 
+	cerr << "HERE\n";
+
     //
     // 1. First, if there are no SNPs present in either the query or catalog, just
     //    check that the strings match.
