@@ -30,12 +30,13 @@ using std::set;
 #include "stacks.h"
 #include "locus.h"
 #include "PopMap.h"
+#include "PopSum.h"
 
 int check_whitelist_integrity(map<int, CSLocus *> &, map<int, set<int> > &);
 int reduce_catalog(map<int, CSLocus *> &, set<int> &, set<int> &);
 int reduce_catalog(map<int, CSLocus *> &, map<int, set<int> > &, set<int> &);
 int reduce_catalog_snps(map<int, CSLocus *> &, map<int, set<int> > &, PopMap<CSLocus> *);
-int implement_single_snp_whitelist(map<int, CSLocus *> &, map<int, set<int> > &);
-int implement_random_snp_whitelist(map<int, CSLocus *> &, map<int, set<int> > &);
+int implement_single_snp_whitelist(map<int, CSLocus *> &, PopSum<CSLocus> *, map<int, set<int> > &);
+int implement_random_snp_whitelist(map<int, CSLocus *> &, PopSum<CSLocus> *, map<int, set<int> > &);
 
 #endif // __CATALOG_UTILS_H__

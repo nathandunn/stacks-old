@@ -68,6 +68,7 @@ bool      plink_out         = false;
 bool      hzar_out          = false;
 bool      phylip_out        = false;
 bool      phylip_var        = false;
+bool      ordered_export    = false;
 bool      kernel_smoothed   = false;
 bool      loci_ordered      = false;
 bool      log_fst_comp      = false;
@@ -252,6 +253,17 @@ int main (int argc, char* argv[]) {
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
     pmap->populate(sample_ids, catalog, catalog_matches);
 
+    //
+    // Tabulate haplotypes present and in what combinations.
+    //
+    tabulate_haplotypes(catalog, pmap);
+
+    //
+    // Output a list of heterozygous loci and the associate haplotype frequencies.
+    //
+    if (sql_out)
+    	write_sql(catalog, pmap);
+
     log_fh << "# Distribution of population loci.\n";
     log_haplotype_cnts(catalog, log_fh);
 
@@ -334,9 +346,9 @@ int main (int argc, char* argv[]) {
     // Create an artificial whitelist if the user requested only the first SNP per locus.
     //
     if (write_single_snp)
-	implement_single_snp_whitelist(catalog, whitelist);
+	implement_single_snp_whitelist(catalog, psum, whitelist);
     else if (write_random_snp)
-	implement_random_snp_whitelist(catalog, whitelist);
+	implement_random_snp_whitelist(catalog, psum, whitelist);
 
     //
     // Remove the accumulated SNPs 
@@ -380,11 +392,6 @@ int main (int argc, char* argv[]) {
 	}
     }
 
-    //
-    // Idenitfy polymorphic loci, tabulate haplotypes present.
-    //
-    tabulate_haplotypes(catalog, pmap);
-
     calculate_haplotype_stats(files, pop_indexes, catalog, pmap, psum);
 
     if (calc_fstats) {
@@ -392,12 +399,6 @@ int main (int argc, char* argv[]) {
 
     	calculate_haplotype_divergence_pairwise(files, pop_indexes, grp_members, catalog, pmap, psum);
     }
-
-    //
-    // Output a list of heterozygous loci and the associate haplotype frequencies.
-    //
-    if (sql_out)
-    	write_sql(catalog, pmap);
 
     //
     // Calculate and output the locus-level summary statistics.
@@ -413,16 +414,22 @@ int main (int argc, char* argv[]) {
     if (fasta_strict_out)
 	write_strict_fasta(catalog, pmap, samples, sample_ids);
 
-    if (vcf_out)
+    if (vcf_out && ordered_export)
+    	write_vcf_ordered(catalog, pmap, psum, samples, sample_ids, merge_map, log_fh);
+    else if (vcf_out)
     	write_vcf(catalog, pmap, psum, samples, sample_ids, merge_map);
 
     if (vcf_haplo_out)
     	write_vcf_haplotypes(catalog, pmap, psum, samples, sample_ids);
 
-    if (genepop_out)
+    if (genepop_out && ordered_export)
+    	write_genepop_ordered(catalog, pmap, psum, pop_indexes, samples, log_fh);
+    else if (genepop_out)
     	write_genepop(catalog, pmap, psum, pop_indexes, samples);
 
-    if (structure_out)
+    if (structure_out && ordered_export)
+    	write_structure_ordered(catalog, pmap, psum, pop_indexes, samples, log_fh);
+    else if (structure_out) 
     	write_structure(catalog, pmap, psum, pop_indexes, samples);
 
     if (fastphase_out)
@@ -5049,9 +5056,10 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int,
 }
 
 int 
-write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
-	  map<int, string> &samples, vector<int> &sample_ids,
-	  map<int, pair<merget, int> > &merge_map) 
+write_vcf_ordered(map<int, CSLocus *> &catalog, 
+		  PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
+		  map<int, string> &samples, vector<int> &sample_ids,
+		  map<int, pair<merget, int> > &merge_map, ofstream &log_fh) 
 {
     //
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
@@ -5059,8 +5067,6 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
     stringstream pop_name;
     pop_name << "batch_" << batch_id << ".vcf";
     string file = in_path + pop_name.str();
-
-    cerr << "Writing population data to VCF file '" << file << "'\n";
 
     ofstream fh(file.c_str(), ofstream::out);
 
@@ -5072,49 +5078,13 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
     //
     // Load SNP data so that model likelihoods can be output to VCF file.
     //
-    cerr << "Loading SNP data for " << samples.size() << " samples.\n";
-    map<int, CSLocus *>::iterator cit;
-    map<int, SNPRes *>::iterator sit;
-    CSLocus *loc;
-    Datum   *datum;
-    SNPRes  *snpr;
-    SNP     *snp;
+    cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
 
-    for (uint i = 0; i < sample_ids.size(); i++) {
-	map<int, SNPRes *> snpres;
-	load_snp_calls(in_path + samples[sample_ids[i]], snpres);
+    populate_snp_calls(catalog, pmap, samples, sample_ids, merge_map);
 
-    	for (cit = catalog.begin(); cit != catalog.end(); cit++) {
-    	    loc = cit->second;
-    	    datum = pmap->datum(loc->id, sample_ids[i]);
+    cerr << "Writing population data to VCF file '" << file << "'\n";
 
-    	    if (datum != NULL && snpres.count(datum->id)) {
-
-		if (merge_sites && merge_map.count(loc->id)) { 
-		    datum_adjust_snp_positions(merge_map, loc, datum, snpres);
-		} else {
-		    //
-		    // Deep copy the SNP objects.
-		    //
-		    snpr = snpres[datum->id];
-		    for (uint j = 0; j < snpr->snps.size(); j++) {
-			snp         = new SNP;
-			snp->col    = snpr->snps[j]->col;
-			snp->lratio = snpr->snps[j]->lratio;
-			snp->rank_1 = snpr->snps[j]->rank_1;
-			snp->rank_2 = snpr->snps[j]->rank_2;
-			snp->rank_3 = snpr->snps[j]->rank_3;
-			snp->rank_4 = snpr->snps[j]->rank_4;
-
-			datum->snps.push_back(snp);
-		    }
-		}
-    	    }
-    	}
-
-	for (sit = snpres.begin(); sit != snpres.end(); sit++)
-	    delete sit->second;
-    }
+    log_fh << "\n#\n# Generating SNP-based VCF export.\n#\n";
 
     //
     // Obtain the current date.
@@ -5145,12 +5115,184 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
     fh << "\n";    
 
     map<string, vector<CSLocus *> >::iterator it;
+    CSLocus *loc;
+    Datum  **d;
+    int      gt_1, gt_2;
+    char     p_allele, q_allele, p_str[32], q_str[32];
+    uint16_t col;
+    int      snp_index;
+
+    //
+    // We need to order the SNPs taking into account overlapping loci.
+    //
+    OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	vector<NucTally *> sites;
+	ord->order(sites, it->second);
+
+     	for (uint pos = 0; pos < sites.size(); pos++) {
+	    if (catalog.count(sites[pos]->loc_id) == 0) {
+		cerr << "Unable to find locus id " << sites[pos]->loc_id << "\n";
+		continue;
+	    }
+    	    loc = catalog[sites[pos]->loc_id];
+	    col = sites[pos]->col;
+
+	    sprintf(p_str, "%0.3f", sites[pos]->p_freq);
+	    sprintf(q_str, "%0.3f", 1 - sites[pos]->p_freq);
+
+	    //
+	    // If on the negative strand, complement the alleles.
+	    //
+	    p_allele = loc->loc.strand == minus ? reverse(sites[pos]->p_allele) : sites[pos]->p_allele;
+	    q_allele = loc->loc.strand == minus ? reverse(sites[pos]->q_allele) : sites[pos]->q_allele;
+
+	    fh << loc->loc.chr << "\t" 
+	       << loc->sort_bp(col) + 1 << "\t" 
+	       << loc->id    << "\t"
+	       << p_allele   << "\t"            // REFerence allele
+	       << q_allele   << "\t"            // ALTernate allele
+	       << "."        << "\t"            // QUAL
+	       << "PASS"     << "\t"            // FILTER
+	       << "NS="      << sites[pos]->num_indv << ";"   // INFO
+	       << "AF="      << p_str << "," << q_str << "\t" // INFO
+	       << "GT:DP:GL";                   // FORMAT
+
+	    snp_index = loc->snp_index(col);
+	    if (snp_index < 0) {
+		cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
+		fh << "\n";
+		continue;
+	    }
+
+	    d = pmap->locus(loc->id);
+
+	    for (int j = 0; j < pmap->sample_cnt(); j++) {
+		fh << "\t";
+
+		if (d[j] == NULL) {
+		    //
+		    // Data does not exist.
+		    //
+		    fh << "./.:0:.,.,.";
+		} else if (d[j]->model[col] == 'U') {
+		    //
+		    // Data exists, but the model call was uncertain.
+		    //
+		    fh << "./.:" << d[j]->tot_depth << ":.,.,.";
+		} else {
+		    //
+		    // Tally up the nucleotide calls.
+		    //
+		    tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
+
+		    if (p_allele == 0 && q_allele == 0) {
+			// More than two potential alleles.
+			fh << "./.:" << d[j]->tot_depth << ":.,.,.";
+		    } else {
+
+			if (p_allele == 0) {
+			    gt_1 = q_allele == sites[pos]->p_allele ? 0 : 1;
+			    fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth;
+			} else if (q_allele == 0) {
+			    gt_1 = p_allele == sites[pos]->p_allele ? 0 : 1;
+			    fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth;
+			} else {
+			    gt_1 = p_allele == sites[pos]->p_allele ? 0 : 1;
+			    gt_2 = q_allele == sites[pos]->p_allele ? 0 : 1;
+			    fh << gt_1 << "/" << gt_2 << ":" << d[j]->tot_depth;
+			}
+			// //
+			// // Find the likelihood for this model call and output it.
+			// //
+			// snp_index = -1;
+			// for (uint k = 0; k < d[j]->snps.size(); k++)
+			//     if (d[j]->snps[k]->col == col) {
+			// 	snp_index = k;
+			// 	break;
+			//     }
+			if (col < d[j]->snps.size()) {
+			    fh << ":.," << d[j]->snps[col]->lratio << ",.";
+			} else {
+			    cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
+			    fh << ":.,.,.";
+			}
+		    }
+		}
+	    }
+	    fh << "\n";
+	}
+    }
+    fh.close();
+
+    return 0;
+}
+
+int 
+write_vcf(map<int, CSLocus *> &catalog, 
+	  PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
+	  map<int, string> &samples, vector<int> &sample_ids,
+	  map<int, pair<merget, int> > &merge_map) 
+{
+    //
+    // Write a VCF file as defined here: http://www.1000genomes.org/node/101
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".vcf";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing population data to VCF file '" << file << "'\n";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening VCF file '" << file << "'\n";
+	exit(1);
+    }
+
+    cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
+    //
+    // Load SNP data so that model likelihoods can be output to VCF file.
+    //
+    populate_snp_calls(catalog, pmap, samples, sample_ids, merge_map);
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%Y%m%d", timeinfo);
+
+    cerr << "Writing population data to VCF file '" << file << "'\n";
+
+    //
+    // Output the header.
+    //
+    fh << "##fileformat=VCFv4.0\n"
+       << "##fileDate=" << date << "\n"
+       << "##source=\"Stacks v" << VERSION << "\"\n"
+       << "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n"
+       << "##INFO=<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">\n"
+       << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
+       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
+       << "##FORMAT=<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">\n"
+       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
+       << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
+
+    for (int i = 0; i < pmap->sample_cnt(); i++)
+	fh << "\t" << samples[pmap->rev_sample_index(i)];
+    fh << "\n";    
+
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus *loc;
     Datum   **d;
-    LocSum  **s;
     LocTally *t;
     int       gt_1, gt_2;
     double    p_freq, num_indv;
-    int       pop_cnt = psum->pop_cnt();
     char      p_allele, q_allele, p_str[32], q_str[32];
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
@@ -5175,21 +5317,10 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 	for (uint pos = 0; pos < ordered_loci.size(); pos++) {
     	    loc = catalog[ordered_loci[pos].id];
 	    col = loc->snps[ordered_loci[pos].snp_index]->col;
-
-	    s   = psum->locus(loc->id);
 	    t   = psum->locus_tally(loc->id);
 
 	    num_indv = (double) t->nucs[col].num_indv;
-	    p_freq   = 0.0;
-	    for (int j = 0; j < pop_cnt; j++) {
-		//
-		// Sum the most frequent allele across populations.
-		//
-		if (s[j]->nucs[col].p_nuc == t->nucs[col].p_allele)
-		    p_freq += s[j]->nucs[col].p * (s[j]->nucs[col].num_indv / num_indv);
-		else 
-		    p_freq += (1 - s[j]->nucs[col].p) * (s[j]->nucs[col].num_indv / num_indv);
-	    }
+	    p_freq   = t->nucs[col].p_freq;
 
 	    //
 	    // We want to report the most frequent allele as the P allele. Reorder the alleles 
@@ -5284,6 +5415,57 @@ write_vcf(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *
 	}
     }
     fh.close();
+
+    return 0;
+}
+
+int
+populate_snp_calls(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap,
+		   map<int, string> &samples, vector<int> &sample_ids,
+		   map<int, pair<merget, int> > &merge_map)
+{
+    map<int, CSLocus *>::iterator cit;
+    map<int, SNPRes *>::iterator sit;
+    CSLocus *loc;
+    Datum   *datum;
+    SNPRes  *snpr;
+    SNP     *snp;
+
+    for (uint i = 0; i < sample_ids.size(); i++) {
+	map<int, SNPRes *> snpres;
+	load_snp_calls(in_path + samples[sample_ids[i]], snpres);
+
+    	for (cit = catalog.begin(); cit != catalog.end(); cit++) {
+    	    loc = cit->second;
+    	    datum = pmap->datum(loc->id, sample_ids[i]);
+
+    	    if (datum != NULL && snpres.count(datum->id)) {
+
+		if (merge_sites && merge_map.count(loc->id)) { 
+		    datum_adjust_snp_positions(merge_map, loc, datum, snpres);
+		} else {
+		    //
+		    // Deep copy the SNP objects.
+		    //
+		    snpr = snpres[datum->id];
+		    for (uint j = 0; j < snpr->snps.size(); j++) {
+			snp         = new SNP;
+			snp->col    = snpr->snps[j]->col;
+			snp->lratio = snpr->snps[j]->lratio;
+			snp->rank_1 = snpr->snps[j]->rank_1;
+			snp->rank_2 = snpr->snps[j]->rank_2;
+			snp->rank_3 = snpr->snps[j]->rank_3;
+			snp->rank_4 = snpr->snps[j]->rank_4;
+
+			datum->snps.push_back(snp);
+		    }
+		}
+    	    }
+    	}
+
+	for (sit = snpres.begin(); sit != snpres.end(); sit++)
+	    delete sit->second;
+    }
 
     return 0;
 }
@@ -5581,6 +5763,151 @@ write_genepop(map<int, CSLocus *> &catalog,
 }
 
 int 
+write_genepop_ordered(map<int, CSLocus *> &catalog, 
+		      PopMap<CSLocus> *pmap, 
+		      PopSum<CSLocus> *psum, 
+		      map<int, pair<int, int> > &pop_indexes, 
+		      map<int, string> &samples, ofstream &log_fh) 
+{
+    //
+    // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".genepop";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing population data to GenePop file '" << file << "'\n";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening GenePop file '" << file << "'\n";
+	exit(1);
+    }
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    //
+    // Output the header line.
+    //
+    fh << "Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
+
+    map<string, vector<NucTally *> > genome_sites;
+    map<int, pair<int, int> >::iterator pit;
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
+    Datum   **d;
+    LocSum  **s;
+    int      start_index, end_index, pop_id;
+    uint     col, snp_index;
+    char     p_allele, q_allele;
+
+    //
+    // We need to order the SNPs to take into account overlapping loci.
+    //
+    OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
+
+    //
+    // Output all the loci on the second line, comma-separated.
+    //
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	vector<NucTally *> &sites = genome_sites[it->first];
+	ord->order(sites, it->second);
+
+	if (sites.size() > 0) fh << sites[0]->loc_id << "_" << sites[0]->col;
+    	for (uint pos = 1; pos < sites.size(); pos++)
+	    fh << "," << sites[pos]->loc_id << "_" << sites[pos]->col;
+    }
+    fh << "\n";
+
+    map<char, string> nuc_map;
+    nuc_map['A'] = "01";
+    nuc_map['C'] = "02";
+    nuc_map['G'] = "03";
+    nuc_map['T'] = "04";
+
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	pop_id      = psum->pop_index(pit->first);
+	start_index = pit->second.first;
+	end_index   = pit->second.second;
+
+	fh << "pop\n";
+
+	for (int j = start_index; j <= end_index; j++) {
+
+	    fh << samples[pmap->rev_sample_index(j)] << ",";
+
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		vector<NucTally *> &sites = genome_sites[it->first];
+
+		for (uint pos = 0; pos < sites.size(); pos++) {
+		    loc = catalog[sites[pos]->loc_id];
+		    s   = psum->locus(loc->id);
+		    d   = pmap->locus(loc->id);
+		    col = sites[pos]->col;
+
+		    if (s[pop_id]->nucs[col].incompatible_site ||
+			s[pop_id]->nucs[col].filtered_site) {
+			//
+			// This site contains more than two alleles in this population or was filtered
+			// due to a minor allele frequency that is too low.
+			//
+			fh << "\t0000";
+		    } else if (d[j] == NULL) {
+			//
+			// Data does not exist.
+			//
+			fh << "\t0000";
+		    } else if (d[j]->model[col] == 'U') {
+			//
+			// Data exists, but the model call was uncertain.
+			//
+			fh << "\t0000";
+		    } else {
+			snp_index = loc->snp_index(col);
+			if (snp_index < 0) {
+			    cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
+			    fh << "\n";
+			    continue;
+			}
+			//
+			// Tally up the nucleotide calls.
+			//
+			tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
+
+			if (p_allele == 0 && q_allele == 0) {
+			    // More than two potential alleles.
+			    fh << "\t0000";
+			} else if (p_allele == 0) {
+			    fh << "\t" << nuc_map[q_allele] << nuc_map[q_allele];
+
+			} else if (q_allele == 0) {
+			    fh << "\t" << nuc_map[p_allele] << nuc_map[p_allele];
+
+			} else {
+			    fh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
+			}
+		    }
+		}
+	    }
+	    fh << "\n";
+	}
+    }
+
+    fh.close();
+
+    return 0;
+}
+
+int 
 write_structure(map<int, CSLocus *> &catalog, 
 		PopMap<CSLocus> *pmap, 
 		PopSum<CSLocus> *psum, 
@@ -5758,6 +6085,190 @@ write_structure(map<int, CSLocus *> &catalog,
     	    }
 	    fh << "\n";
     	}
+    }
+
+    fh.close();
+
+    cerr << "done.\n";
+
+    return 0;
+}
+
+int 
+write_structure_ordered(map<int, CSLocus *> &catalog, 
+			PopMap<CSLocus> *pmap, 
+			PopSum<CSLocus> *psum, 
+			map<int, pair<int, int> > &pop_indexes, 
+			map<int, string> &samples, ofstream &log_fh) 
+{
+    //
+    // Write a Structure file as defined here: http://pritch.bsd.uchicago.edu/structure.html
+    //
+    // To avoid linked SNPs (which Structure can't handle), we will only output the first
+    // SNP from each variable locus.
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".structure.tsv";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing population data to Structure file '" << file << "'...";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening Structure file '" << file << "'\n";
+    	exit(1);
+    }
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    //
+    // Output the header.
+    //
+    fh << "# Stacks v" << VERSION << "; " << " Structure v2.3; " << date << "\n"
+       << "\t";
+
+    map<string, vector<NucTally *> > genome_sites;
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
+    Datum   **d;
+    LocSum  **s;
+
+    //
+    // We need to order the SNPs to take into account overlapping loci.
+    //
+    OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
+
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	vector<NucTally *> &sites = genome_sites[it->first];
+	ord->order(sites, it->second);
+
+    	for (uint pos = 0; pos < sites.size(); pos++)
+	    fh << "\t" << sites[pos]->loc_id << "_" << sites[pos]->col;
+    }
+    fh << "\n";
+
+    map<char, string> nuc_map;
+    nuc_map['A'] = "1";
+    nuc_map['C'] = "2";
+    nuc_map['G'] = "3";
+    nuc_map['T'] = "4";
+
+    map<int, pair<int, int> >::iterator pit;
+    int       start_index, end_index, pop_id, p;
+    char      p_allele, q_allele;
+    uint      col, snp_index;
+
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	p           = psum->pop_index(pit->first);
+	pop_id      = pit->first;
+	start_index = pit->second.first;
+	end_index   = pit->second.second;
+
+	for (int j = start_index; j <= end_index; j++) {
+	    //
+	    // Output all the loci for this sample, printing only the p allele
+	    //
+	    fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
+
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		vector<NucTally *> &sites = genome_sites[it->first];
+
+		for (uint pos = 0; pos < sites.size(); pos++) {
+		    loc = catalog[sites[pos]->loc_id];
+		    s   = psum->locus(loc->id);
+		    d   = pmap->locus(loc->id);
+		    col = sites[pos]->col;
+
+		    if (s[p]->nucs[col].incompatible_site ||
+			s[p]->nucs[col].filtered_site) {
+			//
+			// This site contains more than two alleles in this population or was filtered
+			// due to a minor allele frequency that is too low.
+			//
+			fh << "\t" << "0";
+		    } else if (d[j] == NULL) {
+			//
+			// Data does not exist.
+			//
+			fh << "\t" << "0";
+		    } else if (d[j]->model[col] == 'U') {
+			//
+			// Data exists, but the model call was uncertain.
+			//
+			fh << "\t" << "0";
+		    } else {
+			snp_index = loc->snp_index(col);
+			if (snp_index < 0) {
+			    cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
+			    fh << "\n";
+			    continue;
+			}
+			//
+			// Tally up the nucleotide calls.
+			//
+			tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
+
+			if (p_allele == 0 && q_allele == 0)
+			    fh << "\t" << "0";
+			else if (p_allele == 0)
+			    fh << "\t" << nuc_map[q_allele];
+			else
+			    fh << "\t" << nuc_map[p_allele];
+		    }
+		}
+	    }
+	    fh << "\n";
+
+	    //
+	    // Output all the loci for this sample again, now for the q allele
+	    //
+	    fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
+
+	    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+		vector<NucTally *> &sites = genome_sites[it->first];
+
+		for (uint pos = 0; pos < sites.size(); pos++) {
+		    loc = catalog[sites[pos]->loc_id];
+		    s   = psum->locus(loc->id);
+		    d   = pmap->locus(loc->id);
+		    col = sites[pos]->col;
+
+		    if (s[p]->nucs[col].incompatible_site ||
+			s[p]->nucs[col].filtered_site) {
+			fh << "\t" << "0";
+		    } else if (d[j] == NULL) {
+			fh << "\t" << "0";
+		    } else if (d[j]->model[col] == 'U') {
+			fh << "\t" << "0";
+		    } else {
+			snp_index = loc->snp_index(col);
+			if (snp_index < 0) {
+			    cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
+			    fh << "\n";
+			    continue;
+			}
+			tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
+
+			if (p_allele == 0 && q_allele == 0)
+			    fh << "\t" << "0";
+			else if (q_allele == 0)
+			    fh << "\t" << nuc_map[p_allele];
+			else
+			    fh << "\t" << nuc_map[q_allele];
+		    }
+		}
+	    }
+	    fh << "\n";
+	}
     }
 
     fh.close();
@@ -7753,6 +8264,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"blacklist",      required_argument, NULL, 'B'},
 	    {"write_single_snp",  no_argument,       NULL, 'I'},
 	    {"write_random_snp",  no_argument,       NULL, 'j'},
+	    {"ordered_export",    no_argument,       NULL, 'N'},
             {"kernel_smoothed",   no_argument,       NULL, 'k'},
             {"fstats",            no_argument,       NULL, '6'},
             {"log_fst_comp",      no_argument,       NULL, 'l'},
@@ -7777,7 +8289,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "ACDEFGHJKLSVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
+	c = getopt_long(argc, argv, "ACDEFGHJKLNSVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -7876,6 +8388,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'j':
 	    write_random_snp = true;
+	    break;
+	case 'N':
+	    ordered_export = true;
 	    break;
 	case 's':
 	    sql_out = true;
@@ -8092,6 +8607,7 @@ void help() {
 	      << "    --bootstrap_reps [num]: number of bootstrap resamplings to calculate (default 100).\n"
 	      << "    --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n\n"
 	      << "  File ouput options:\n"
+	      << "    --ordered_export: if data is reference aligned, exports will be ordered; only a single representative of each overlapping site.\n"
 	      << "    --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file.\n"
 	      << "    --fasta: output full sequence for each unique haplotype, from each sample locus in FASTA format, regardless of plausibility.\n"
 	      << "    --fasta_strict: output full sequence for each haplotype, from each sample locus in FASTA format, only for biologically plausible loci.\n"

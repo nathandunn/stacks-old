@@ -1,3 +1,6 @@
+	Bugfix: fixed small problems with --write_single_snp/--write_random_snp in the
+	populations program. Some polymorphic loci were erroneously being omitted.
+
 Stacks 1.28 - Mar 06, 2015
 --------------------------
 	Feature: added a second barcode distance to process_radtags/process_shortreads.

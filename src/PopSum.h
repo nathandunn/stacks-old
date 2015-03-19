@@ -34,6 +34,7 @@ using std::set;
 #include <utility>
 using std::pair;
 using std::make_pair;
+#include <cstdint>
 
 #include "stacks.h"
 
@@ -182,16 +183,22 @@ public:
 
 class NucTally {
 public:
-    uint   num_indv;
-    unsigned short int pop_cnt;
-    unsigned short int allele_cnt;
-    char   p_allele;
-    char   q_allele;
-    double p_freq;
-    bool   fixed;
-    int    priv_allele;
+    int      loc_id;
+    int      bp;
+    uint16_t col;
+    uint16_t num_indv;
+    uint16_t pop_cnt;
+    uint16_t allele_cnt;
+    char     p_allele;
+    char     q_allele;
+    double   p_freq;
+    bool     fixed;
+    int      priv_allele;
 
     NucTally() { 
+	loc_id      = 0;
+	bp          = 0;
+	col         = 0;
 	num_indv    = 0;
 	pop_cnt     = 0;
 	allele_cnt  = 0;
@@ -429,8 +436,8 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
     LocusT   *loc;
     LocSum  **s;
     LocTally *ltally;
-    int       locus_id, len, variable_pop;
-    unsigned short int p_cnt, q_cnt;
+    int       locus_id, variable_pop;
+    uint16_t  p_cnt, q_cnt, len, col;
 
     for (int n = 0; n < this->num_loci; n++) {
 	locus_id = this->rev_locus_index(n);
@@ -443,7 +450,11 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 
 	// for (uint i = 0; i < loc->snps.size(); i++) {
 	//     uint col = loc->snps[i]->col;
-	for (int col = 0; col < len; col++) {
+	for (col = 0; col < len; col++) {
+
+	    ltally->nucs[col].col       = col;
+	    ltally->nucs[col].bp        = loc->sort_bp(col);
+	    ltally->nucs[col].loc_id    = locus_id;
 
 	    this->tally_ref_alleles(s, col, 
 				    ltally->nucs[col].allele_cnt, 

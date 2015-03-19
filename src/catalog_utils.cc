@@ -54,26 +54,40 @@ reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blac
 }
 
 int 
-implement_single_snp_whitelist(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist) 
+implement_single_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *psum, map<int, set<int> > &whitelist) 
 {
     map<int, set<int> > new_wl;
-    CSLocus *loc;
+    CSLocus  *loc;
+    LocTally *t;
 
     if (whitelist.size() > 0) {
 	map<int, set<int> >::iterator it;
 
 	for (it = whitelist.begin(); it != whitelist.end(); it++) {
 	    loc = catalog[it->first];
-
-	    if (it->second.size() == 0)
-		new_wl[loc->id].insert(loc->snps[0]->col);
-	    else
+	    t   = psum->locus_tally(loc->id);
+	    
+	    //
+	    // If no specific SNPs are specified in the whitelist all SNPs are included, choose the first variant.
+	    //
+	    if (it->second.size() == 0) {
+		for (uint i = 0; i < loc->snps.size(); i++)
+		    if (t->nucs[loc->snps[i]->col].fixed == false) {
+			new_wl[loc->id].insert(loc->snps[i]->col);
+			break;
+		    }
+	    } else {
+		//
+		// Otherwise, choose the first SNP that is already in the whitelist.
+		//
 		for (uint i = 0; i < loc->snps.size(); i++) {
-		    if (it->second.count(loc->snps[i]->col) == 0)
+		    if (it->second.count(loc->snps[i]->col) == 0 ||
+			t->nucs[loc->snps[i]->col].fixed == true)
 			continue;	
 		    new_wl[loc->id].insert(loc->snps[i]->col);
 		    break;
 		}
+	    }
 	}
     } else {
 	map<int, CSLocus *>::iterator it;
@@ -92,7 +106,7 @@ implement_single_snp_whitelist(map<int, CSLocus *> &catalog, map<int, set<int> >
 }
 
 int 
-implement_random_snp_whitelist(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist) 
+implement_random_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *psum, map<int, set<int> > &whitelist) 
 {
     map<int, set<int> > new_wl;
     CSLocus *loc;

@@ -83,6 +83,7 @@ public:
     ~PopMap();
 
     int populate(vector<int> &, map<int, LocusT*> &, vector<vector<CatMatch *> > &);
+    int order_loci(map<int, LocusT*> &);
     int prune(set<int> &);
 
     int loci_cnt() { return this->num_loci; }
@@ -142,17 +143,13 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	this->locus_order[it->first] = i;
 	this->rev_locus_order[i]     = it->first;
-
-	if (strlen(it->second->loc.chr) > 0)
-	    this->ordered_loci[it->second->loc.chr].push_back(it->second);
 	i++;
     }
+
     //
     // Sort the catalog loci on each chromosome according to base pair.
     //
-    typename map<string, vector<LocusT*> >::iterator cit;
-    for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++)
-	sort(cit->second.begin(), cit->second.end(), bp_compare);
+    this->order_loci(catalog);
 
     //
     // Populate the datum array
@@ -219,6 +216,28 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 }
 
 template<class LocusT>
+int PopMap<LocusT>::order_loci(map<int, LocusT*> &catalog) 
+{
+    this->ordered_loci.clear();
+
+    typename std::map<int, LocusT*>::iterator it;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	if (strlen(it->second->loc.chr) > 0)
+	    this->ordered_loci[it->second->loc.chr].push_back(it->second);
+    }
+
+    //
+    // Sort the catalog loci on each chromosome according to base pair.
+    //
+    typename map<string, vector<LocusT*> >::iterator cit;
+    for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++)
+	sort(cit->second.begin(), cit->second.end(), bp_compare);
+
+    return 0;
+}
+
+template<class LocusT>
 int PopMap<LocusT>::prune(set<int> &remove_ids) {
     uint new_size = this->num_loci - remove_ids.size();
     uint loc_id;
@@ -277,7 +296,6 @@ int PopMap<LocusT>::prune(set<int> &remove_ids) {
 
     for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++)
 	sort(cit->second.begin(), cit->second.end(), bp_compare);
-
 
     return new_size;
 }

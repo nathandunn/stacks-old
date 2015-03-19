@@ -92,6 +92,7 @@ class Locus {
             delete [] reads[i];
     }
     uint sort_bp(uint k = 0);
+    int snp_index(uint);
     int add_consensus(const char *);
     virtual int populate_alleles();
 };
