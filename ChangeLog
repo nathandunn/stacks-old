@@ -1,3 +1,13 @@
+	Feature: added the --ordered_export option to the populations program. For the VCF,
+	GenePop, and Structure exports, if this option is specified, only one copy of each
+	SNP is exported in the case where one nucleotide position is covered by more than one
+	RAD locus. Most useful for ddRAD data.
+	Feature:
+	Bugfix: PHASE output was broken in the populations program. SNP pruning/filtering
+	code did not update the catalog copies of the alleles after pruning which are needed
+	by the PHASE output code.
+	Bugfix: removed extra tab from ID line for Structure export.
+	Bugfix: fixed issue in genepop output that may have overfiltered some loci.
 	Bugfix: fixed small problems with --write_single_snp/--write_random_snp in the
 	populations program. Some polymorphic loci were erroneously being omitted.
 

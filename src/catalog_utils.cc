@@ -240,11 +240,11 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
     //
     // We want to prune out SNP objects that are not in the whitelist.
     //
-    int           pos;
-    vector<SNP *> tmp;
-    vector<uint>  cols;
-    set<string>   obshaps;
-    set<string>::iterator sit;
+    int              pos;
+    vector<SNP *>    tmp;
+    vector<uint>     cols;
+    map<string, int> obshaps;
+    map<string, int>::iterator sit;
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	loc = it->second;
 
@@ -280,6 +280,29 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
 	for (uint i = 0; i < tmp.size(); i++)
 	    loc->snps.push_back(tmp[i]);
 
+	map<string, int>::iterator it;
+	char allele_old[id_len], allele_new[id_len];
+	//
+	// We need to adjust the catalog's list of haplotypes/alleles
+	// for this locus to account for the pruned SNPs.
+	//
+	for (it = loc->alleles.begin(); it != loc->alleles.end(); it++) {
+	    strncpy(allele_old, it->first.c_str(), id_len - 2);
+	    allele_old[id_len - 1] = '\0';
+
+	    for (uint k = 0; k < cols.size(); k++)
+		allele_new[k] = allele_old[cols[k]];
+	    allele_new[cols.size()] = '\0';
+	    obshaps[string(allele_new)] += it->second;
+	}
+	loc->alleles.clear();
+	for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
+	    loc->alleles[sit->first] = sit->second;
+	}
+	obshaps.clear();
+
+	loc->populate_alleles();
+
 	//
 	// Now we need to adjust the matched haplotypes to sync to 
 	// the SNPs left in the catalog.
@@ -294,11 +317,12 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
 		for (uint k = 0; k < cols.size(); k++)
 		    d[i]->obshap[j][k] = d[i]->obshap[j][cols[k]];
 		d[i]->obshap[j][cols.size()] = '\0';
-		obshaps.insert(d[i]->obshap[j]);
+		obshaps[d[i]->obshap[j]] += d[i]->depth[j];
 	    }
 	    uint j = 0;
 	    for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
-		strcpy(d[i]->obshap[j], (*sit).c_str());
+		strcpy(d[i]->obshap[j], sit->first.c_str());
+		d[i]->depth[j] = sit->second;
 		j++;
 	    }
 	    while (j < d[i]->obshap.size()) {
@@ -306,6 +330,7 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
 		j++;
 	    }
 	    d[i]->obshap.resize(obshaps.size());
+	    d[i]->depth.resize(obshaps.size());
 	    obshaps.clear();
 	}
     }
