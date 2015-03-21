@@ -105,7 +105,7 @@ int     parse_command_line(int, char**);
 int     build_file_list(vector<pair<int, string> > &, map<int, pair<int, int> > &, map<int, vector<int> > &);
 int     load_marker_list(string, set<int> &);
 int     load_marker_column_list(string, map<int, set<int> > &);
-int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<int, int> > &);
+int     apply_locus_constraints(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<int, int> > &, ofstream &);
 int     prune_polymorphic_sites(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, set<int> > &, set<int> &, ofstream &);
 int     log_haplotype_cnts(map<int, CSLocus *> &, ofstream &);
 bool    order_unordered_loci(map<int, CSLocus *> &);

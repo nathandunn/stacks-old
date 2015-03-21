@@ -267,7 +267,7 @@ int main (int argc, char* argv[]) {
     log_fh << "# Distribution of population loci.\n";
     log_haplotype_cnts(catalog, log_fh);
 
-    apply_locus_constraints(catalog, pmap, pop_indexes);
+    apply_locus_constraints(catalog, pmap, pop_indexes, log_fh);
 
     log_fh << "# Distribution of population loci after applying locus constraints.\n";
     log_haplotype_cnts(catalog, log_fh);
@@ -340,7 +340,7 @@ int main (int argc, char* argv[]) {
     //
     blacklist.clear();
     int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, blacklist, log_fh);
-    cerr << "Pruned " << pruned_snps << " SNPs due to filter constraints.\n";
+    cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints (too many alleles at a site, too few samples at a site, MAF too low).\n";
 
     //
     // Create an artificial whitelist if the user requested only the first SNP per locus.
@@ -353,7 +353,7 @@ int main (int argc, char* argv[]) {
     //
     // Remove the accumulated SNPs 
     //
-    cerr << "Removing " << blacklist.size() << " additional loci for which all SNPs were filtered...";
+    cerr << "Removing " << blacklist.size() << " additional loci for which all variant sites were filtered...";
     set<int> empty_list;
     reduce_catalog(catalog, empty_list, blacklist);
     reduce_catalog_snps(catalog, whitelist, pmap);
@@ -478,13 +478,18 @@ int main (int argc, char* argv[]) {
 int
 apply_locus_constraints(map<int, CSLocus *> &catalog, 
 			PopMap<CSLocus> *pmap, 
-			map<int, pair<int, int> > &pop_indexes)
+			map<int, pair<int, int> > &pop_indexes, 
+			ofstream &log_fh)
 {
     uint pop_id, start_index, end_index;
     CSLocus *loc;
     Datum  **d;
 
     if (sample_limit == 0 && population_limit == 0 && min_stack_depth == 0) return 0;
+
+    if (verbose)
+	log_fh << "\n#\n# List of loci removed by first filtering stage of sample and population constraints\n#\n"
+	       << "# Action\tLocus ID\tChr\tBP\tColumn\tReason\n";
 
     map<int, CSLocus *>::iterator it;
     map<int, pair<int, int> >::iterator pit;
@@ -596,8 +601,16 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 	    pop_limit = true;
 	}
 
-	if (pop_limit)
+	if (pop_limit) {
 	    blacklist.insert(loc->id);
+
+	    if (verbose)
+		log_fh << "removed_locus\t"
+		       << loc->id << "\t"
+		       << loc->loc.chr << "\t"
+		       << loc->sort_bp() << "\t"
+		       << 0 << "\tfailed_population_limit\n";
+	}
 
 	for (uint i = 0; i < pop_cnt; i++)
 	    pop_cnts[i] = 0;
@@ -639,7 +652,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
     CSLocus  *loc;
     LocTally *t;
     LocSum  **s;
-    bool      sample_prune, maf_prune;
+    bool      sample_prune, maf_prune, inc_prune;
     int       pop_id, size, pruned = 0;
 
     if (verbose)
@@ -674,22 +687,16 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 	    for (uint i = 0; i < loc->snps.size(); i++) {
 		if (size > 0 && it->second.count(loc->snps[i]->col) == 0)
 		    continue;
-		if (t->nucs[loc->snps[i]->col].fixed == true)
-		    continue;
 
 		sample_prune = false;
 		maf_prune    = false;
+		inc_prune    = false;
 		for (int j = 0; j < psum->pop_cnt(); j++) {
 		    pop_id = psum->rev_pop_index(j);
 
-		    //
-		    // If a population was already filtered in the previous locus-based filtering
-		    // step, don't count the lack of samples here again.
-		    //
-		    if (s[j]->nucs[loc->snps[i]->col].filtered_site)
-			continue;
-
-		    if (s[j]->nucs[loc->snps[i]->col].num_indv == 0 ||
+		    if (s[j]->nucs[loc->snps[i]->col].incompatible_site)
+			inc_prune = true;
+		    else if (s[j]->nucs[loc->snps[i]->col].num_indv == 0 ||
 			(double) s[j]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(pop_id) < sample_limit)
 			sample_prune = true;
 		}
@@ -701,7 +708,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 		    (1 - t->nucs[loc->snps[i]->col].p_freq) < minor_allele_freq)
 		    maf_prune = true;
 
-		if (maf_prune == false && sample_prune == false) {
+		if (maf_prune == false && sample_prune == false && inc_prune == false) {
 		    new_wl[loc->id].insert(loc->snps[i]->col);
 		} else {
 		    pruned++;
@@ -710,7 +717,15 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 			       << loc->id << "\t"
 			       << loc->loc.chr << "\t"
 			       << loc->sort_bp(loc->snps[i]->col) << "\t"
-			       << loc->snps[i]->col << "\t" << (sample_prune == true ? "sample_limit" : "maf_limit") << "\n";
+			       << loc->snps[i]->col << "\t"; 
+			if (inc_prune)
+			    log_fh << "incompatible_site\n";
+			else if (sample_prune)
+			    log_fh << "sample_limit\n";
+			else if (maf_prune)
+			    log_fh << "maf_limit\n";
+			else
+			    log_fh << "unknown_reason\n";
 		    }
 		}
 	    }
@@ -736,27 +751,29 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 	map<int, CSLocus *>::iterator it;
 	for (it = catalog.begin(); it != catalog.end(); it++) {
 	    loc = it->second;
-	    t   = psum->locus_tally(loc->id);
-	    s   = psum->locus(loc->id);
+
+	    //
+	    // If this locus is fixed, don't try to filter it out.
+	    //
+	    if (loc->snps.size() == 0) {
+		new_wl.insert(make_pair(loc->id, std::set<int>()));
+		continue;
+	    }
+
+	    t = psum->locus_tally(loc->id);
+	    s = psum->locus(loc->id);
 
 	    for (uint i = 0; i < loc->snps.size(); i++) {
 
-		if (t->nucs[loc->snps[i]->col].fixed == true)
-		    continue;
-
 		sample_prune = false;
 		maf_prune    = false;
+		inc_prune    = false;
 		for (int j = 0; j < psum->pop_cnt(); j++) {
 		    pop_id = psum->rev_pop_index(j);
 
-		    //
-		    // If a population was already filtered in the previous locus-based filtering
-		    // step, don't count the lack of samples here again.
-		    //
-		    if (s[j]->nucs[loc->snps[i]->col].filtered_site)
-			continue;
-
-		    if (s[j]->nucs[loc->snps[i]->col].num_indv == 0 ||
+		    if (s[j]->nucs[loc->snps[i]->col].incompatible_site)
+			inc_prune = true;
+		    else if (s[j]->nucs[loc->snps[i]->col].num_indv == 0 ||
 			(double) s[j]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(pop_id) < sample_limit)
 			sample_prune = true;
 		}
@@ -768,7 +785,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 		    (1 - t->nucs[loc->snps[i]->col].p_freq) < minor_allele_freq)
 		    maf_prune = true;
 
-		if (maf_prune == false && sample_prune == false) {
+		if (maf_prune == false && sample_prune == false && inc_prune == false) {
 		    new_wl[loc->id].insert(loc->snps[i]->col);
 
 		} else {
@@ -778,7 +795,15 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 			       << loc->id << "\t"
 			       << loc->loc.chr << "\t"
 			       << loc->sort_bp(loc->snps[i]->col) << "\t"
-			       << loc->snps[i]->col << "\t" << (sample_prune == true ? "sample_limit" : "maf_limit") << "\n";
+			       << loc->snps[i]->col << "\t";
+			if (inc_prune)
+			    log_fh << "incompatible_site\n";
+			else if (sample_prune)
+			    log_fh << "sample_limit\n";
+			else if (maf_prune)
+			    log_fh << "maf_limit\n";
+			else
+			    log_fh << "unknown_reason\n";
 		    }
 		}
 	    }
@@ -5243,8 +5268,6 @@ write_vcf(map<int, CSLocus *> &catalog,
     pop_name << "batch_" << batch_id << ".vcf";
     string file = in_path + pop_name.str();
 
-    cerr << "Writing population data to VCF file '" << file << "'\n";
-
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
@@ -5477,19 +5500,49 @@ populate_snp_calls(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap,
 int
 find_datum_allele_depths(Datum *d, int snp_index, char p_allele, char q_allele, int &dp_1, int &dp_2)
 {
+    bool single_read = false;
     dp_1 = 0;
     dp_2 = 0;
 
     if (p_allele == 0 || q_allele == 0) {
-	if (d->depth[0] % 2 == 0) {
-	    dp_1 = d->depth[0] / 2;
-	    dp_2 = dp_1;
+
+	//
+	// There is a single observed haplotype for this locus, e.g. GA.
+	//
+	if (d->obshap.size() == 1) {
+	    if (d->depth[0] == 1) {
+		dp_1 = d->depth[0];
+		dp_2 = 0;
+		single_read = true;
+	    } else if (d->depth[0] % 2 == 0) {
+		dp_1 = d->depth[0] / 2;
+		dp_2 = dp_1;
+	    } else {
+		dp_1 = d->depth[0] / 2;
+		dp_2 = d->depth[0] / 2 + 1;
+	    }
 	} else {
-	    dp_1 = d->depth[0] / 2;
-	    dp_2 = d->depth[0] / 2 + 1;
+	    //
+	    // This SNP position is homozygous, but the locus is heterozygous, so there is more
+	    // than one observed haplotype, e.g. GA / TA.
+	    //
+	    if (p_allele != 0) {
+		for (uint i = 0; i < d->obshap.size(); i++)
+		    if (d->obshap[i][snp_index] == p_allele) {
+			if (dp_1 == 0) dp_1 = d->depth[i]; else dp_2 = d->depth[i];
+		    }
+	    } else  {
+		for (uint i = 0; i < d->obshap.size(); i++)
+		    if (d->obshap[i][snp_index] == q_allele) {
+			if (dp_1 == 0) dp_1 = d->depth[i]; else dp_2 = d->depth[i];
+		    }
+	    }
 	}
 
     } else {
+	//
+	// This SNP position is heterozygous.
+	//
 	for (uint i = 0; i < d->obshap.size(); i++) {
 	    if (d->obshap[i][snp_index] == p_allele)
 		dp_1 = d->depth[i];
@@ -5498,7 +5551,7 @@ find_datum_allele_depths(Datum *d, int snp_index, char p_allele, char q_allele, 
 	}
     }
 
-    if (dp_1 == 0 || dp_2 == 0)
+    if (single_read == false && (dp_1 == 0 || dp_2 == 0))
 	cerr << "Warning: Unable to find allele depths for datum " << d->id << "\n";
 
     return 0;
