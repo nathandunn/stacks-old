@@ -92,26 +92,26 @@ if ($catalog) {
 
 	$f = $in_path . "/$file" . ".catalog.tags.tsv";
 	if (-e $f) {
-	    import_sql_file($f, "catalog_tags", 0);
+	    import_sql_file($f, "catalog_tags", 1);
 	} elsif (-e $f . ".gz") {
 	    $f = $in_path . "/$file" . ".catalog.tags.tsv.gz";
-	    import_gzsql_file($f, "catalog_tags", 0);
+	    import_gzsql_file($f, "catalog_tags", 1);
 	}
 
         $f = $in_path . "/$file" . ".catalog.snps.tsv";
 	if (-e $f) {
-	    import_sql_file($f, "catalog_snps", 0);
+	    import_sql_file($f, "catalog_snps", 1);
 	} elsif (-e $f . ".gz") {
 	    $f = $in_path . "/$file" . ".catalog.snps.tsv.gz";
-	    import_gzsql_file($f, "catalog_snps", 0);
+	    import_gzsql_file($f, "catalog_snps", 1);
 	}
 
         $f = $in_path . "/$file" . ".catalog.alleles.tsv";
 	if (-e $f) {
-	    import_sql_file($f, "catalog_alleles", 0);
+	    import_sql_file($f, "catalog_alleles", 1);
 	} elsif (-e $f . ".gz") {
 	    $f = $in_path . "/$file" . ".catalog.alleles.tsv.gz";
-	    import_gzsql_file($f, "catalog_alleles", 0);
+	    import_gzsql_file($f, "catalog_alleles", 1);
 	}
     }
 }
@@ -151,10 +151,10 @@ foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
 
     $f = $in_path . "/$file" . ".matches.tsv";
     if (-e $f) {
-	import_sql_file($f, "matches", 0);
+	import_sql_file($f, "matches", 1);
     } elsif (-e $f . ".gz") {
 	$f = $in_path . "/$file" . ".matches.tsv.gz";
-	import_gzsql_file($f, "matches", 0);
+	import_gzsql_file($f, "matches", 1);
     }
     $i++;
 }
@@ -185,26 +185,26 @@ foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
 
     $f = $in_path . "/$file" . ".tags.tsv";
     if (-e $f) {
-	import_sql_file($f, "unique_tags", 0) if ($ignore_tags == 0);
+	import_sql_file($f, "unique_tags", 1) if ($ignore_tags == 0);
     } elsif (-e $f . ".gz") {
 	$f = $in_path . "/$file" . ".tags.tsv.gz";
-	import_gzsql_file($f, "unique_tags", 0) if ($ignore_tags == 0);
+	import_gzsql_file($f, "unique_tags", 1) if ($ignore_tags == 0);
     }
 
     $f = $in_path . "/$file" . ".snps.tsv";
     if (-e $f) {
-	import_sql_file($f, "snps", 0);
+	import_sql_file($f, "snps", 1);
     } elsif (-e $f . ".gz") {
 	$f = $in_path . "/$file" . ".snps.tsv.gz";
-	import_gzsql_file($f, "snps", 0);
+	import_gzsql_file($f, "snps", 1);
     }
 
     $f = $in_path . "/$file" . ".alleles.tsv";
     if (-e $f) {
-	import_sql_file($f, "alleles", 0);
+	import_sql_file($f, "alleles", 1);
     } elsif (-e $f . ".gz") {
 	$f = $in_path . "/$file" . ".alleles.tsv.gz";
-	import_gzsql_file($f, "alleles", 0);
+	import_gzsql_file($f, "alleles", 1);
     }
 
     $i++;
