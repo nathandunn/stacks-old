@@ -35,6 +35,7 @@ using std::set;
 using std::pair;
 using std::make_pair;
 #include <cstdint>
+#include <math.h>
 
 #include "stacks.h"
 
