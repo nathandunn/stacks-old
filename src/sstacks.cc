@@ -204,9 +204,6 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
     // have the same number and types of SNPs.
     //
 
-    if (s2_tag->id == 6295) 
-	cerr << "HERE\n";
-
     //
     // 1. First, if there are no SNPs present in either the query or catalog, just
     //    check that the strings match.
@@ -424,7 +421,9 @@ int impute_haplotype(string query_haplotype,
     return 0;
 }
 
-int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_haplotypes) {
+int 
+generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_haplotypes)
+{
     //
     // Construct a set of haplotypes from the query locus relative to the catalog locus.
     // (The query locus already has a set of haplotypes, however, they don't necessarily 
@@ -461,6 +460,7 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
     //
     sort(merged_snps.begin(), merged_snps.end(), compare_pair_snp);
 
+    map<string, int> converted_alleles;
     map<string, int>::iterator b;
     string old_allele, new_allele;
     int    pos;
@@ -482,7 +482,7 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
 	    }
 	}
 	query_haplotypes.insert(new_allele);
-	s2_tag->alleles[new_allele] = b->second;
+	converted_alleles[new_allele] = b->second;
 
 	// cerr << "Adding haplotype: " << new_allele << " [" << b->first << "]\n";
     }
@@ -494,12 +494,18 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
 	}
 	query_haplotypes.insert(new_allele);
 	// cerr << "Adding haplotype 2: " << new_allele << "\n";
+    } else {
+	s2_tag->alleles.clear();
+	for (b = converted_alleles.begin(); b != converted_alleles.end(); b++)
+	    s2_tag->alleles[b->first] = b->second;
     }
 
     return 0;
 }
 
-int find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample_2) {
+int 
+find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample_2)
+{
     map<int, QLocus *>::iterator i;
     uint min_tag_len;
 
