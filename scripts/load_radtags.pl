@@ -308,11 +308,12 @@ sub extract_sample_ids {
 	$f = $in_path . "/$file" . ".tags.tsv";
 
 	if (-e $f) {
-	    @results = `head -n 1 $f`;
+	    @results = `head -n 2 $f | tail -n 1`;
 
 	} elsif (-e $f . ".gz") {
 	    $f = $in_path . "/$file" . ".tags.tsv.gz";
-	    @results = `gunzip -c $f | head -n 1`;
+	    @results = `gunzip -c $f | head -n 2 | tail -n 1`;
+
 	} else {
 	    die("Unable to find file $f\n");
 	}

@@ -1,3 +1,8 @@
+Stacks 1.30
+--------------------------
+	Bugfix: sstacks could generate extra matching haplotpyes in a very small number of
+	cases.
+
 Stacks 1.29 - Mar 21, 2015
 --------------------------
 	Feature: added the --ordered_export option to the populations program. For the VCF,

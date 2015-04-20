@@ -80,7 +80,7 @@ create table catalog_tags (
        relationship enum('consensus', 'primary', 'secondary', 'tertiary'),
        sub_id	    int unsigned not null,
        merge_type   tinytext,
-       seq 	    tinytext,
+       seq 	    text,
        INDEX        batch_id_index (batch_id),
        INDEX        tag_id_index (tag_id)
 );
@@ -168,7 +168,7 @@ create table unique_tags (
        relationship enum('consensus', 'model', 'primary', 'secondary'),
        sub_id	    int unsigned not null,
        seq_id	    varchar(32),
-       seq 	    tinytext,
+       seq 	    text,
        deleveraged  bool default false,
        blacklisted  bool default false,
        removed      bool default false,
