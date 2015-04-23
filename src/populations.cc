@@ -5222,7 +5222,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
 			// More than two potential alleles.
 			fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
 		    } else {
-			find_datum_allele_depths(d[j], snp_index, p_allele, q_allele, dp_1, dp_2);
+			find_datum_allele_depths(d[j], snp_index, sites[pos]->p_allele, sites[pos]->q_allele, p_allele+q_allele, dp_1, dp_2);
 
 			if (p_allele == 0) {
 			    gt_1 = q_allele == sites[pos]->p_allele ? 0 : 1;
@@ -5413,7 +5413,7 @@ write_vcf(map<int, CSLocus *> &catalog,
 			// More than two potential alleles.
 			fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
 		    } else {
-			find_datum_allele_depths(d[j], snp_index, p_allele, q_allele, dp_1, dp_2);
+			find_datum_allele_depths(d[j], snp_index, t->nucs[col].p_allele, t->nucs[col].q_allele, p_allele+q_allele, dp_1, dp_2);
 
 			if (p_allele == 0) {
 			    gt_1 = q_allele == t->nucs[col].p_allele ? 0 : 1;
@@ -5498,44 +5498,35 @@ populate_snp_calls(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap,
 }
 
 int
-find_datum_allele_depths(Datum *d, int snp_index, char p_allele, char q_allele, int &dp_1, int &dp_2)
+find_datum_allele_depths(Datum *d, int snp_index, char p_allele, char q_allele, int allele_cnt, int &dp_1, int &dp_2)
 {
-    bool single_read = false;
     dp_1 = 0;
     dp_2 = 0;
 
-    if (p_allele == 0 || q_allele == 0) {
+    if (allele_cnt == 1) {
 
 	//
 	// There is a single observed haplotype for this locus, e.g. GA.
 	//
 	if (d->obshap.size() == 1) {
-	    if (d->depth[0] == 1) {
+	    if (d->obshap[0][snp_index] == p_allele) {
 		dp_1 = d->depth[0];
 		dp_2 = 0;
-		single_read = true;
-	    } else if (d->depth[0] % 2 == 0) {
-		dp_1 = d->depth[0] / 2;
-		dp_2 = dp_1;
 	    } else {
-		dp_1 = d->depth[0] / 2;
-		dp_2 = d->depth[0] / 2 + 1;
+		dp_1 = 0;
+		dp_2 = d->depth[0];
 	    }
 	} else {
 	    //
 	    // This SNP position is homozygous, but the locus is heterozygous, so there is more
 	    // than one observed haplotype, e.g. GA / TA.
 	    //
-	    if (p_allele != 0) {
-		for (uint i = 0; i < d->obshap.size(); i++)
-		    if (d->obshap[i][snp_index] == p_allele) {
-			if (dp_1 == 0) dp_1 = d->depth[i]; else dp_2 = d->depth[i];
-		    }
+	    if (d->obshap[0][snp_index] == p_allele) {
+		dp_1 = d->tot_depth;
+		dp_2 = 0;
 	    } else  {
-		for (uint i = 0; i < d->obshap.size(); i++)
-		    if (d->obshap[i][snp_index] == q_allele) {
-			if (dp_1 == 0) dp_1 = d->depth[i]; else dp_2 = d->depth[i];
-		    }
+		dp_1 = 0;
+		dp_2 = d->tot_depth;
 	    }
 	}
 
@@ -5551,7 +5542,7 @@ find_datum_allele_depths(Datum *d, int snp_index, char p_allele, char q_allele, 
 	}
     }
 
-    if (single_read == false && (dp_1 == 0 || dp_2 == 0))
+    if (dp_1 == 0 && dp_2 == 0)
 	cerr << "Warning: Unable to find allele depths for datum " << d->id << "\n";
 
     return 0;

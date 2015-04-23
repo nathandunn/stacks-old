@@ -157,7 +157,7 @@ int  write_vcf(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<
 int  write_vcf_ordered(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, string> &, vector<int> &, map<int, pair<merget, int> > &, ofstream &);
 int  write_vcf_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, string> &, vector<int> &);
 int  populate_snp_calls(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, vector<int> &, map<int, pair<merget, int> > &);
-int  find_datum_allele_depths(Datum *, int, char, char, int &, int &);
+int  find_datum_allele_depths(Datum *, int, char, char, int, int &, int &);
 int  write_genepop(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);
 int  write_genepop_ordered(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &, ofstream &);
 int  write_structure(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<int, int> > &, map<int, string> &);

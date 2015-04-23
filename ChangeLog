@@ -1,5 +1,6 @@
 Stacks 1.30
 --------------------------
+	Feature: added DdeI, RsaI, AluI restriction enzymes to process_radtags.
 	Bugfix: sstacks could generate extra matching haplotpyes in a very small number of
 	cases.
 
