@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -127,6 +127,11 @@ $page_title = "RAD-Tag Catalog Viewer";
 write_header($page_title, $batch);
 
 echo <<< EOQ
+<script type="text/javascript"
+        src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script type="text/javascript"
+        src="$root_path/population_view.js"></script>
+
 <h3 class="info_head" style="margin-left: 1em;">
   <a href="$root_path/index.php?db=$database">
   Batch #$batch[id] <span class="s">[$batch[date]; $batch[desc]]</span></a>
@@ -295,22 +300,26 @@ while ($row = $result->fetchRow()) {
 	array_push($snps, array('col' => $snp_row['col'], 'rank' => $snp_row['rank_2']));
     }
 
-    $url = "$root_path/catalog_tag.php?db=$database&batch_id=$batch_id&type=$batch[type]&tag_id=$row[tag_id]";
+    $url = "$root_path/pop_view.php?db=$database&batch_id=$batch_id&type=$batch[type]&tag_id=$row[tag_id]";
     $annotation = strlen($row['external_id']) > 0 ? $row['external_id'] : "annotate";
 
     echo <<< EOQ
 <tr>
   <td class="catlink">
+<div onclick="ajax_locus_population_view('$row[tag_id]', '$img_path', '$url');">
 <img id="{$row['tag_id']}_img" src="$img_path/caret-u.png" />
-<a onclick="toggle_aln_tr('$row[tag_id]', '$img_path', '$url');">$row[tag_id]</a><br />
+<a>$row[tag_id]</a>
+</div>
 
-<a class="annotation" id="{$row['tag_id']}_ann" onclick="toggle_annotation($row[tag_id])">$annotation</a>
-<div id="{$row['tag_id']}_div" style="display: none; font-size: small;">
-<form id="{$row['tag_id']}_frm">
-<input type="hidden" name="url" value="$root_path/annotate_marker.php?db=$database&batch_id=$batch_id&tag_id=$row[tag_id]" />
-<input type="input" size=15 name="ext_id" value="" />
-<a onclick="annotate_marker('$row[tag_id]')">save</a>|<a onclick="toggle_annotation('$row[tag_id]')">cancel</a>
-</form>
+<div class="ann_parent">
+  <a class="annotation" id="{$row['tag_id']}_ann" onclick="toggle_annotation($row[tag_id])">$annotation</a>
+  <div id="{$row['tag_id']}_div" style="display: none; font-size: small;">
+    <form id="{$row['tag_id']}_frm">
+      <input type="hidden" name="url" value="$root_path/annotate_marker.php?db=$database&batch_id=$batch_id&tag_id=$row[tag_id]" />
+      <input type="input" size=15 name="ext_id" value="" />
+      <a onclick="annotate_marker('$row[tag_id]')">save</a>|<a onclick="toggle_annotation('$row[tag_id]')">cancel</a>
+    </form>
+  </div>
 </div>
   </td>
 
@@ -321,7 +330,7 @@ EOQ;
     else
 	print "  <td>Yes <span class=\"s\">[" . count($snps) . "nuc]</span></td>\n";
 
-    $s = print_snps($row['seq'], $row['seq'], $snps, true);
+    $s = print_snps($row['tag_id'], $row['seq'], $row['seq'], $snps, true);
 
     $ratio = explode(";", $row['ratio']);
     $ratio_parsed = "";
@@ -331,14 +340,17 @@ EOQ;
 
       preg_match("/([a-z]+):(\d+)\((\d+\.?\d*%)\)/", $r, $matches);
 
-      $color = $colors[$i % $color_size];
+      for ($j = 0; $j < strlen($matches[1]); $j++) {
+	  $color = $color_map[$matches[1][$j]];
+	  $ratio_parsed .= "<span style=\"color: $color; font-weight: bold\">" . $matches[1][$j] . "</span>";
+      }
 
-      $ratio_parsed .= "<span style=\"color: $color;\">$matches[1]: $matches[2]";
+      $ratio_parsed .= ": $matches[2]";
 
       if ($matches[3] > 0)
 	$ratio_parsed .= " ($matches[3])";
 
-      $ratio_parsed .= "</span><br />";
+      $ratio_parsed .= "<br />";
       $i++;
     }
 
@@ -423,11 +435,7 @@ echo <<< EOQ
 </tr>
 <tr id="{$row['tag_id']}" style="display: none">
   <td colspan="$num_cols">
-    <iframe id="{$row['tag_id']}_iframe" 
-            frameborder="0" 
-            scrolling="auto" 
-            onload="this.style.height = (this.contentWindow.document.body.offsetHeight+25) + 'px';"
-            src=""></iframe>
+    <div id="{$row['tag_id']}_popview_div" class="popview"></div>
   </td>
 </tr>
 <tr id="{$row['tag_id']}_blast" style="display: none">
