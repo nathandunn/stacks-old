@@ -27,7 +27,7 @@ function write_header($page_title) {
 <head>
   <meta charset="utf-8">
   <title>$site_title: $page_title</title>
-  <link rel="stylesheet" type="text/css" href="$root_path/stacks_jsontest.css" />
+  <link rel="stylesheet" type="text/css" href="$root_path/stacks.css" />
   <script type="text/javascript" src="$root_path/stacks.js"></script>
   <script type="text/javascript" src="$root_path/annotate.js"></script>
   <script type="text/javascript" src="$root_path/export.js"></script>
