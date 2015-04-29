@@ -297,6 +297,7 @@ div.seq_frame {
 table.catalog {
     width: 100%; 
     text-align: center;
+    border-collapse: collapse;
 }
 
 table.catalog th {
@@ -305,6 +306,7 @@ table.catalog th {
 
 table.catalog td {
     vertical-align: top;
+    border: 0;
 }
 
 span.rank_1 {

@@ -362,17 +362,42 @@ if ($data_type eq "map") {
     $file = "$out_path/batch_" . $batch_id . ".sumstats.tsv";
     import_sql_file($log_fh, $file, "sumstats", $pop_cnt+1);
 
+    $file = "$out_path/batch_" . $batch_id . ".hapstats.tsv";
+    import_sql_file($log_fh, $file, "hapstats", $pop_cnt+1);
+
     #
     # Import the Fst files.
     #
+    my $fst_cnt = 0;
     my (@keys, $m, $n);
     @keys = sort keys %pops;
     for ($m = 0; $m < scalar(@keys); $m++) {
-	for ($n = $m+1; $n < scalar(@keys); $n++) {
+	for ($n = 0; $n < scalar(@keys); $n++) {
 	    $file = "$out_path/batch_" . $batch_id . ".fst_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
-	    import_sql_file($log_fh, $file, "fst", 1);
+
+	    if (-e $file) {
+		import_sql_file($log_fh, $file, "fst", 1);
+		$fst_cnt++;
+	    }
 	}
     }
+    print STDERR "Imported $fst_cnt Fst file(s).\n";
+
+    #
+    # Import the Phi_st files.
+    #
+    $fst_cnt = 0;
+    for ($m = 0; $m < scalar(@keys); $m++) {
+	for ($n = 0; $n < scalar(@keys); $n++) {
+	    $file = "$out_path/batch_" . $batch_id . ".phistats_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
+
+	    if (-e $file) {
+		import_sql_file($log_fh, $file, "phist", 3);
+		$fst_cnt++;
+	    }
+	}
+    }
+    print STDERR "Imported $fst_cnt Haplotype Fst file(s).\n";
 }
 
 if ($sql) {

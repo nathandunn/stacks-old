@@ -52,6 +52,11 @@ $root_path   = "/stacks";
 $img_path    = "/stacks/images";
 
 //
+// Length to wrap sequences at.
+// 
+$display_len = 80;
+
+//
 // Colors for printing alleles/haplotypes
 //
 $colors = array("#008000",
@@ -67,8 +72,62 @@ $colors = array("#008000",
 $color_size = count($colors);
 
 //
-// Length to wrap sequences at.
-// 
-$display_len = 80;
+// Color map version 2; for printing alleles/haplotypes.
+//
+$color_map = array(
+    'a' => "#0074D9", // Blue
+    'b' => "#FF4136", // Red 
+    'c' => "#008000", // Dark Green
+    'd' => "#FF851B", // Orange 
+    'e' => "#001f3f", // Navy
+    'f' => "#85144b", // Maroon 
+    'g' => "#F012BE", // Fuchsia 
+    'h' => "#39CCCC", // Teal 
+    'i' => "#3D9970", // Olive 
+    'j' => "#01FF70", // Lime 
+    'k' => "#FFDC00", // Yellow 
+    'l' => "#B10DC9", // Purple 
+    'm' => "#111111", // Black 
+    'n' => "#7FDBFF", // Aqua 
+    'o' => "#AAAAAA", // Gray 
+    'p' => "#DDDDDD", // Silver 
+    'q' => "#2ECC40", // Green 
+    'r' => "#c00000",
+    's' => "#ffc600",
+    't' => "#29356c",
+    'u' => "#860000",
+    'v' => "#dc6200",
+    'w' => "#4b398e",
+    'x' => "#008f56",
+    'y' => "#bf1e25",
+    'z' => "#4cb8ff",
+    'A' => "#26081C",
+    'B' => "#C44900",
+    'C' => "#036016",
+    'D' => "#936426",
+    'E' => "#E87EA1",
+    'F' => "#692E38",
+    'G' => "#19423F",
+    'H' => "#625F64",
+    'I' => "#432534",
+    'J' => "#323845",
+    'K' => "#758E4F",
+    'L' => "#B287A3",
+    'M' => "#C0F8D1",
+    'N' => "#03440C",
+    'O' => "#8EDCE6",
+    'P' => "#D5DCF9",
+    'Q' => "#A7B0CA",
+    'R' => "#0CBABA",
+    'S' => "#725E54",
+    'T' => "#EE2677",
+    'U' => "#84A98C",
+    'V' => "#FCCA46",
+    'W' => "#A1C181",
+    'X' => "#443627",
+    'Y' => "#FE7F2D",
+    'Z' => "#2EBE62"
+);
+$color_map_size = count($color_map);
 
 ?>
