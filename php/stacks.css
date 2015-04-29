@@ -1,5 +1,5 @@
 /*
- Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+ Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 
  This file is part of Stacks.
 
@@ -44,11 +44,6 @@ strong {
 acronym {
     border-bottom: 1px dotted;
     cursor: help;
-}
-
-iframe { 
-    width: 100%;
-    height: 500px;
 }
 
 .s {
@@ -294,25 +289,22 @@ div.seq_frame {
     height: 35em;
 }
 
-table.catalog {
-    width: 100%; 
-    text-align: center;
-    border-collapse: collapse;
-}
-
-table.catalog th {
-    background-color: #eeeeee;
-}
-
-table.catalog td {
-    vertical-align: top;
-    border: 0;
-}
-
 span.rank_1 {
     background-color: #ccddd4;
     color: #a93535;
     font-weight: bold;
+}
+
+.rank_1_hi 
+{ 
+  display: inline-block;
+  border: 2px solid #a93535;
+  background-color: #eeeeee;
+  color: #29356c; 
+  font-size: 18pt;
+  font-weight: bold;
+  padding: 5px;
+  line-height: 40%;
 }
 
 span.rank_2 {
@@ -337,6 +329,7 @@ div.footer {
 
 td.catlink {
     font-size: small;
+    position: relative;
 }
 
 td.catlink,div.catlink a:hover {
@@ -374,15 +367,16 @@ table.genotypes td {
     padding: 3px;
     border: thin solid #aaaaaa;
     text-align: center;
-    width: 10%;
+    max-width: 10%;
     word-wrap: break-word;
+    vertical-align: top;
 }
 
 table.genotypes td a:hover {
     cursor: pointer;
 }
 
-table.genotypes span.title {
+table.genotypes div.title {
     white-space: pre;
     font-size: smaller;
     color: #aaaaaa;
@@ -407,6 +401,14 @@ div.pop_annotation:hover {
 span.corrected {
     font-weight: bold;
     color: #870214;
+}
+
+div.ann_parent 
+{
+  position: absolute;
+  float: left;
+  width: 100%;
+  bottom: 0.75em;
 }
 
 a.annotation {
@@ -461,10 +463,25 @@ div.gloc {
     clear: both;
 }
 
+div.popview
+{
+  position: relative;
+}
+
+div.comp_view
+{ 
+    float: left;
+    margin-left: 1em;
+}
+
+div.matches
+{
+  overflow: scroll;
+}
+
 div.haplotype_def {
     margin-left: auto;
     margin-right: auto;
-    text-align: left;
     max-width: 150px;
     word-wrap: break-word;
 }
@@ -474,32 +491,139 @@ div.haplotype {
     word-wrap: break-word;
 }
 
-div.lnl {
+div.lnl 
+{
     font-size: 10pt;
     font-family: monospace;
 }
 
-div.snps {
+table.snps, table.alleles 
+{
+  border-collapse: collapse;
+  min-width: 225px;
+}
+
+table.snps
+{ 
+  margin-top: 2em;
+}
+
+table.alleles
+{
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+
+table.snps th, table.alleles th {
+    height: 1.5em;
     text-align: left;
-    width: 49.5%;
-    float: left;
-}
-
-div.snps span.snp, 
-div.snps span.snp_sel {
-    margin-left: 10%;
-}
-
-div.alleles {
-    width: 49.5%;
-    float: right;
-}
-
-div.alleles h3, div.snps h3 {
-    background-color: #eeeeee;
     font-size: 12pt;
+    font-weight: normal;
+    padding-left: 10px;
+    background-color: #eeeeee;
+    border: thin solid #aaaaaa;
+}
+
+table.snps tr.subhead th,
+table.alleles tr.subhead th 
+{
+  background-color: #ffffff;
+  font-size: x-small;
+  text-decoration: underline;
+  text-align: center;
+  padding-bottom: 0px;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+table.snps tr:nth-child(3) td, 
+table.alleles tr:nth-child(3) td 
+{
+  border-top: 0;
+}
+
+table.snps tr:nth-child(2n+4) td, 
+table.alleles tr:nth-child(2n+4) td 
+{
+  background-color: #efefef;
+}
+
+table.snps td, table.alleles td 
+{
     padding: 3px;
+    border: thin solid #aaaaaa;
     text-align: center;
+}
+
+table.snps tr:first-child th,
+table.alleles tr:first-child th
+{ 
+  border-top: 0;
+}
+table.snps tr:last-child td,
+table.alleles tr:last-child td 
+{ 
+  border-bottom: 0;
+}
+table.snps tr th:first-child,
+table.alleles tr th:first-child
+{ 
+  border-left: 0;
+}
+table.snps tr td:first-child,
+table.alleles tr td:first-child
+{ 
+  border-left: 0;
+  font-size: x-small;
+  text-align: left;
+  color: #aaaaaa;
+  vertical-align: bottom;
+}
+
+table.alleles tr td:last-child,
+table.alleles tr th:last-child 
+{
+  text-align: left;
+  border-right: 0;
+}
+
+table.snps tr td:last-child,
+table.snps tr th:last-child
+{
+  border-right: 0;
+}
+
+table.alleles tr:hover td,
+table.snps tr:hover td
+{
+  background-color: #aaa;
+  color: #fff;
+}
+
+table.alleles tr:hover td
+{
+  cursor: pointer;
+}
+
+div.close_x 
+{
+  float: right;
+  font-weight: bold;
+}
+
+div.close_x:hover 
+{
+  cursor: pointer;
+}
+
+.haphi 
+{ 
+  display: inline-block;
+  border: 3px solid #ef6c00;
+  padding: 7px;
+  line-height: 35%;
+  border-radius: 5px;
 }
 
 div.sumstats {
@@ -508,7 +632,7 @@ div.sumstats {
 }
 
 table.sumstats, table.fst {
-    width: 100%;
+    min-width: 250px;
     border-collapse: collapse;
     font-size: 10pt;
     margin-bottom: 2em;
@@ -532,6 +656,12 @@ table.fst td.key {
     border-top: 0px;
     background-color: #eeeeee;
     padding: 2px;
+    word-wrap: break-word;
+}
+
+table.fst td.fst span:hover
+{
+  cursor: help;
 }
 
 table.fst td.diagonal {
@@ -572,4 +702,52 @@ span.snp:hover {
 span.snp_sel {
     font-weight: bold;
     text-decoration: underline;
+}
+
+div.viewstat
+{
+  width: 80%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 0.75em;
+  border: 2px solid #29356c;
+  border-radius: 5px;
+  background-color: #eeeeee;
+  color: #29356c; 
+  font-size: 11pt;
+  padding: 3px;
+  font-variant: small-caps;
+}
+
+div.viewstat:hover
+{
+  color: #a93535;
+  border: 2px solid #a93535;
+  background-color: #ffffff;
+  cursor: pointer;
+}
+
+div.popup_stat
+{
+  position: absolute;
+  background-color: #dddddd;
+  border: 2px solid #aaaaaa;
+  opacity: 0.9;
+  padding: 10px;
+  border-radius: 5px;
+  overflow: scroll;
+  box-shadow: 5px 5px 7px #888888;
+}
+
+div.popup_stat_close
+{
+  float: right;
+  vertical-align: top;
+  color: #a93535;
+}
+
+div.popup_stat_close:hover
+{
+  color: #29356c;
+  cursor: pointer;
 }

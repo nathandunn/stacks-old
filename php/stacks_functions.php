@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -27,7 +27,7 @@ function write_header($page_title) {
 <head>
   <meta charset="utf-8">
   <title>$site_title: $page_title</title>
-  <link rel="stylesheet" type="text/css" href="$root_path/stacks.css" />
+  <link rel="stylesheet" type="text/css" href="$root_path/stacks_jsontest.css" />
   <script type="text/javascript" src="$root_path/stacks.js"></script>
   <script type="text/javascript" src="$root_path/annotate.js"></script>
   <script type="text/javascript" src="$root_path/export.js"></script>
@@ -124,7 +124,7 @@ function print_scale($max_len) {
     return $str;
 }
 
-function print_snps($consensus, $seq, $snps, $wrap) {
+function print_snps($tag_id, $consensus, $seq, $snps, $wrap) {
     global $display_len;
 
     $str     = "";
@@ -141,11 +141,11 @@ function print_snps($consensus, $seq, $snps, $wrap) {
 	$s    = substr($seq, $end, 1);
 
 	if ($con == $s)
-	    $str .= "<span class=\"rank_1\">$s</span>";
+	    $str .= "<span id=\"${tag_id}_$snp[col]\" class=\"rank_1\">$s</span>";
 	else if ($s == "N")
 	    $str .= "$s";
 	else
-	    $str .= "<span class=\"rank_2\">$s</span>";
+	    $str .= "<span id=\"${tag_id}_$snp[col]\" class=\"rank_2\">$s</span>";
 
 	$start = $end + 1;
     }
