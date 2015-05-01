@@ -154,9 +154,26 @@ function ajax_locus_phist_view(id, url)
     }
 }
 
+function ajax_locus_stack_view(id, url) 
+{
+    var div_obj = document.getElementById(id + "_stacks_div");
+
+    if (div_obj.style.display == "none") {
+	//
+	// Make the AJAX query for JSON encoded data for this locus.
+	//
+	$.ajax({
+	    dataType: "json",
+	    url: url,
+	    success: build_stack_view
+	});
+    }
+}
+
 function build_population_view(json, status, jqXHR)
 {
     var html = 
+	"<div id=\"" + json.id + "_stacks_div\" class=\"stack_view\" style=\"display: none\"></div>\n" +
         "<div class=\"comp_view\">\n";
 
     var snps = write_snps_table(json);
@@ -373,13 +390,16 @@ function write_population_table(json, color_map) {
 
 	    for (var j = 0; j < sample.obshap.length; j++) {
 		hap_index++;
-		var c = colors[color_map[sample.obshap[j].allele]];
+		var c   = colors[color_map[sample.obshap[j].allele]];
+		var url = 
+		    json.path + "/stack_view.php" + 
+		    "?db="       + json.db + 
+		    "&batch_id=" + json.batch_id + 
+		    "&samples="  + sample.sample_id + 
+		    "&tags="     + sample.obshap[j].tag_id +
+		    "&tag_id="   + json.id;
 		var a =
-		    "<a target=\"blank\" href=\"" + json.path + "/tag.php" + 
-		    "?db="        + json.db + 
-		    "&batch_id="  + json.batch_id + 
-		    "&sample_id=" + sample.sample_id + 
-		    "&tag_id="    + sample.obshap[j].tag_id + "\" " + 
+		    "<a onclick=\"ajax_locus_stack_view('" + json.id + "', '" + url + "')\" " + 
 		    "title=\"#" + sample.obshap[j].tag_id + "\" style=\"color: " + c + ";\">";
 		hap_strs.push("<span id=\"haphi_" + sample.obshap[j].allele + "_" + hap_index + "\">" + a + sample.obshap[j].allele + "</a></span>");
 		dep_strs.push("<span id=\"dephi_" + sample.obshap[j].allele + "_" + hap_index + "\">" + a + sample.obshap[j].depth  + "</a></span>");
@@ -604,6 +624,7 @@ function build_sumstats_view(json, status, jqXHR)
     unhighlight_snp_row(json.id);
     close_hapstat_view(json.id);
     close_phist_view(json.id);
+    close_stack_view(json.id);
 
     //
     // Display the Sumstats div.
@@ -677,6 +698,7 @@ function build_hapstats_view(json, status, jqXHR)
     unhighlight_snp_row(json.id);
     close_sumstat_view(json.id);
     close_phist_view(json.id);
+    close_stack_view(json.id);
 
     //
     // Display the Hapstats div.
@@ -820,6 +842,7 @@ function build_fst_view(json, status, jqXHR)
     close_sumstat_view(json.id);
     close_hapstat_view(json.id);
     close_phist_view(json.id);
+    close_stack_view(json.id);
 
     //
     // Display the Fst div.
@@ -944,6 +967,7 @@ function build_phist_view(json, status, jqXHR)
     close_sumstat_view(json.id);
     close_hapstat_view(json.id);
     unhighlight_snp_row(json.id);
+    close_stack_view(json.id);
 
     //
     // Display the Fst div.
@@ -1075,4 +1099,99 @@ function change_highlighted_snp_row(cat_id, col) {
 	unhighlight_snp_row(event.data.cat_id);
 	event.stopPropagation();
     });
+}
+
+function build_stack_view(json, status, jqXHR)
+{
+    var html = 
+	"<div id=\"" + json.id + "_stacks_div_close\" class=\"popup_stat_close\" onclick=\"close_stack_view('" + json.id + "')\" title=\"Close window\">x</div>\n";
+
+    for (var i = 0; i < json.stacks.length; i++) {
+	html +=
+	    "<table class=\"stack\">\n" +
+	    "<tr>\n" +
+	    "  <th colspan=\"4\">" + json.stacks[i].sample_name + " <span style=\"font-size: smaller\">[#" + json.stacks[i].sample_id + "]</span>; Stack " + json.stacks[i].tag_id + "</th>\n" +
+	    "</tr>\n" +
+            "<tr>\n" +
+	    "  <td class=\"num\">&nbsp;</td>\n" +
+	    "  <td class=\"con\">&nbsp;</td>\n" +
+	    "  <td class=\"id\">&nbsp;</td>\n" +
+	    "  <td class=\"tag\">" + json.stacks[i].scale + "</td>\n" +
+	    "</tr>\n" +
+	    "<tr>\n" +
+	    "  <td class=\"num\">&nbsp;</td>\n" +
+	    "  <td class=\"con\">consensus</td>\n" +
+	    "  <td class=\"id\"></td>\n" +
+	    "  <td class=\"tag\">" + json.stacks[i].consensus + "</td>\n" +
+	    "</tr>\n" +
+	    "<tr>\n" +
+	    "  <td class=\"num\">&nbsp;</td>\n" +
+	    "  <td class=\"con\">model</td>\n" +
+	    "  <td class=\"id\"></td>\n" +
+	    "  <td class=\"tag\">" + json.stacks[i].model + "</td>\n" +
+	    "</tr>\n";
+
+	//
+	// Print out the primary stack components.
+	//
+	seq_cnt = 1;
+	for (var j = 0; j < json.stacks[i].primary.length; j++) {
+	    var bg = (j + 1) % 2 == 1 ? "style=\"background-color: #dddddd;\"" : "";
+	    for (var k = 0; k < json.stacks[i].primary[j].ids.length; k++) {
+		html +=
+	            "<tr>\n" +
+		    "  <td class=\"num\">" + seq_cnt + ".</td>\n" +
+		    "  <td class=\"primary\">primary</td>\n" +
+		    "  <td class=\"id\">" + json.stacks[i].primary[j].ids[k] + "</td>\n" +
+		    "  <td class=\"tag\" " + bg + ">" + json.stacks[i].primary[j].seq + "</td>\n" +
+		    "</tr>\n";
+		seq_cnt++;
+	    }
+	}
+
+	//
+	// Print out the secondary stack components.
+	//
+	for (var j = 0; j < json.stacks[i].secondary.length; j++) {
+	    html +=
+	        "<tr>\n" +
+		"  <td class=\"num\">" + seq_cnt + ".</td>\n" +
+		"  <td class=\"secondary\">secondary</td>\n" +
+		"  <td class=\"id\">"  + json.stacks[i].secondary.id  + "</td>\n" +
+		"  <td class=\"tag\">" + json.stacks[i].secondary.seq + "</td>\n" +
+		"</tr>\n";
+	    seq_cnt++;
+	}
+
+	html += "</table>\n";
+    }
+
+    $("#" + json.id + "_stacks_div").html(html);
+
+    //
+    // Set a maximum height/width for the containing div.
+    //
+    var parent_div = "#" + json.id + "_popview_div";
+    var p = $(parent_div).position();
+    var h = $(parent_div).height();
+    var div_h = Math.round(h * 0.96);
+    $("#" + json.id + "_stacks_div").css("max-height", div_h);
+
+    //
+    // Make sure the Fst, Phist, and Sumstat divs are closed.
+    //
+    unhighlight_snp_row(json.id);
+    close_sumstat_view(json.id);
+    close_hapstat_view(json.id);
+    close_phist_view(json.id);
+
+    //
+    // Display the Stacks div.
+    //
+    $("#" + json.id + "_stacks_div").css("display", "");
+}
+
+function close_stack_view(id)
+{
+    $("#" + id + "_stacks_div").css("display", "none");
 }
