@@ -142,8 +142,9 @@ nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sq
 	php/CatalogClass.php php/annotate_marker.php php/constants.php.dist php/index.php php/tags.php \
 	php/Locus.php php/catalog.php php/correct_genotypes.php php/correct_genotype.php php/export_batch.php php/last_modified.php  \
 	php/version.php php/catalog_genotypes.php php/db_functions.php php/header.php php/samples.php \
-	php/stacks_functions.php php/view_sequence.php php/catalog_tag.php php/sequence_blast.php php/tag.php \
-	php/ajax.js php/annotate.js php/stacks.js php/export.js php/stacks.css \
+	php/stacks_functions.php php/view_sequence.php php/sequence_blast.php \
+	php/tag_view.php php/sumstat_view.php php/hapstat_view.php  php/fst_view.php php/phist_view.php php/stack_view.php \
+	php/population_view.js php/ajax.js php/annotate.js php/stacks.js php/export.js php/stacks.css \
 	php/images/caret-d.png php/images/caret-u.png php/images/excel_icon.png php/images/l-arrow-disabled.png \
 	php/images/l-arrow.png php/images/r-arrow-disabled.png php/images/r-arrow.png php/images/stacks_bg.png \
 	php/images/stacks_logo_rev_small.png

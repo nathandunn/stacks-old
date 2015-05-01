@@ -479,6 +479,20 @@ div.matches
   overflow: scroll;
 }
 
+div.stack_view
+{
+  overflow: scroll;
+  position: absolute;
+  width: 98%;
+  background-color: #333;
+  border: 2px solid #ccc;
+  opacity: 0.95;
+  padding: 10px;
+  border-radius: 5px;
+  overflow: scroll;
+  box-shadow: 5px 5px 7px #888888;
+}
+
 div.haplotype_def {
     margin-left: auto;
     margin-right: auto;
@@ -732,7 +746,7 @@ div.popup_stat
   position: absolute;
   background-color: #dddddd;
   border: 2px solid #aaaaaa;
-  opacity: 0.9;
+  opacity: 0.95;
   padding: 10px;
   border-radius: 5px;
   overflow: scroll;
@@ -750,4 +764,79 @@ div.popup_stat_close:hover
 {
   color: #29356c;
   cursor: pointer;
+}
+
+div.stack_view div.popup_stat_close:hover
+{
+  color: #ffffff;
+}
+
+table.stack 
+{
+  background-color: #ffffff;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 2em;
+}
+
+table.stack tr:last-child td
+{
+  padding-bottom: 5px;
+}
+
+table.stack th 
+{
+    height: 1.5em;
+    text-align: left;
+    font-size: 12pt;
+    font-weight: normal;
+    padding-left: 10px;
+    background-color: #eeeeee;
+    border: thin solid #aaaaaa;
+}
+
+table.stack td
+{
+  border: 0;
+  padding: 0px;
+  font-size: smaller;
+}
+
+table.stack td.num
+{
+  padding-left: 10px;
+  text-align: right;
+  font-size: x-small;
+  padding-right: 5px;
+  border-left: thin solid #aaaaaa;
+}
+
+table.stack td.primary 
+{
+    color: #32773f;
+}
+
+table.stack td.secondary 
+{
+    color: #870214;
+}
+
+table.stack td.id 
+{
+  font-family: monospace;
+  text-align: right;
+  padding-right: 4px;
+  font-size: 8pt;
+}
+
+table.stack td.tag 
+{ 
+  font-family: monospace;
+  text-align: left;
+  border-left: thin solid black;
+  padding-left: 4px;
+  font-size: 10pt;
+  padding-right: 10px;
+  border-right: thin solid #aaaaaa;
 }
