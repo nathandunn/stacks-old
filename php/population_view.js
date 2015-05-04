@@ -172,9 +172,16 @@ function ajax_locus_stack_view(id, url)
 
 function build_population_view(json, status, jqXHR)
 {
+    var url = 
+	json.path + "/stack_view.php" + 
+	"?db="       + json.db + 
+	"&batch_id=" + json.batch_id + 
+	"&tag_id="   + json.id;
+
     var html = 
 	"<div id=\"" + json.id + "_stacks_div\" class=\"stack_view\" style=\"display: none\"></div>\n" +
-        "<div class=\"comp_view\">\n";
+        "<div class=\"comp_view\">\n" +
+	"<div id=\"" + json.id + "_viewstat_stacks\" class=\"viewstat top_viewstat\" style=\"display: none\" onclick=\"build_stack_list('" + json.id + "', '" + url + "')\">View Stacks</div>\n";
 
     var snps = write_snps_table(json);
 
@@ -330,6 +337,7 @@ function write_population_table(json, color_map) {
     var html = "";
 
     html +=
+        "<input type=text id=\"" + json.id + "_selected\" value=\"0\" style=\"display: none;\" />" + 
         "<table id=\"locus_gtypes_" + json.id + "\" class=\"genotypes\">\n" +
 	"<tr>\n" +
 	"  <td colspan=\"10\" class=\"gtype_toggle\" style=\"text-align: right;\">\n" +
@@ -379,11 +387,14 @@ function write_population_table(json, color_map) {
 	for (var i = 0; i < json.populations[pop_id].length; i++) {
             col_index++;
 
-	    var sample = json.populations[pop_id][i];
+	    var sample  = json.populations[pop_id][i];
+	    var uniq_id = sample.sample_id + "|" + sample.obshap[0].tag_id;
 
 	    html += 
-	        "  <td>" +
-		"<div class=\"title\">" + sample['sample'].replace("_", " ") + "</div>\n";
+	        "  <td id=\"" + uniq_id + "_td\">" +
+		"<div class=\"title\" onclick=\"enqueue_sample('" + json.id + "', '" + uniq_id + "')\">" + 
+		"<input type=\"checkbox\" name=\"stack_view\" id=\"" + uniq_id + "\" />" +
+		sample['sample'].replace("_", " ") + "</div>\n";
 
 	    var hap_strs = [];
 	    var dep_strs = [];
@@ -451,6 +462,51 @@ function write_population_table(json, color_map) {
     html += "</tr>\n";
 
     return html;
+}
+
+function enqueue_sample(cat_id, id)
+{
+    var cb  = document.getElementById(id); 
+    var td  = document.getElementById(id + "_td"); 
+    var sel = document.getElementById(cat_id + "_selected"); 
+
+    var checks = Number(sel.value);
+
+    if (cb.checked == false) {
+	cb.checked = true;
+	td.style.backgroundColor = "#ffffa8";
+	checks++;
+
+    } else {
+	cb.checked = false;
+	td.style.backgroundColor = "#ffffff";
+	checks--;
+    }
+
+    if (checks > 0)
+	$("#" + cat_id + "_viewstat_stacks").css("display", "");
+    else
+	$("#" + cat_id + "_viewstat_stacks").css("display", "none");
+
+    sel.value = checks;
+}
+
+function build_stack_list(id, url)
+{
+    var samples = new Array();
+    var tags    = new Array();
+
+    $('input[type=checkbox]').each(function () {
+	if (this.name == "stack_view" && this.checked) {
+	    var parts = this.id.split("|");
+	    samples.push(parts[0]);
+	    tags.push(parts[1]);
+	}
+   });
+
+    url += "&samples=" + samples.join(",") + "&tags=" + tags.join(",");
+
+    ajax_locus_stack_view(id, url);
 }
 
 function print_population_name(pop_id, json) {
@@ -627,6 +683,14 @@ function build_sumstats_view(json, status, jqXHR)
     close_stack_view(json.id);
 
     //
+    // Bind the escape key to close this popup.
+    //
+    $(document).keyup(function(event){
+	if(event.keyCode === 27)
+            close_sumstat_view(json.id);
+    });
+
+    //
     // Display the Sumstats div.
     //
     $("#" + json.id + "_sumstat_div").css("display", "");
@@ -699,6 +763,14 @@ function build_hapstats_view(json, status, jqXHR)
     close_sumstat_view(json.id);
     close_phist_view(json.id);
     close_stack_view(json.id);
+
+    //
+    // Bind the escape key to close this popup.
+    //
+    $(document).keyup(function(event){
+	if(event.keyCode === 27)
+            close_hapstat_view(json.id);
+    });
 
     //
     // Display the Hapstats div.
@@ -845,6 +917,14 @@ function build_fst_view(json, status, jqXHR)
     close_stack_view(json.id);
 
     //
+    // Bind the escape key to close this popup.
+    //
+    $(document).keyup(function(event){
+	if(event.keyCode === 27)
+	    unhighlight_snp_row(json.id);
+    });
+
+    //
     // Display the Fst div.
     //
     $("#" + json.id + "_fst_div").css("display", "");
@@ -968,6 +1048,14 @@ function build_phist_view(json, status, jqXHR)
     close_hapstat_view(json.id);
     unhighlight_snp_row(json.id);
     close_stack_view(json.id);
+
+    //
+    // Bind the escape key to close this popup.
+    //
+    $(document).keyup(function(event){
+	if(event.keyCode === 27)
+            close_phist_view(json.id);
+    });
 
     //
     // Display the Fst div.
@@ -1184,6 +1272,14 @@ function build_stack_view(json, status, jqXHR)
     close_sumstat_view(json.id);
     close_hapstat_view(json.id);
     close_phist_view(json.id);
+
+    //
+    // Bind the escape key to close this popup.
+    //
+    $(document).keyup(function(event){
+	if(event.keyCode === 27)
+            close_stack_view(json.id);
+    });
 
     //
     // Display the Stacks div.
