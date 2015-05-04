@@ -382,6 +382,17 @@ table.genotypes div.title {
     color: #aaaaaa;
 }
 
+table.genotypes div.title:hover
+{
+  cursor: pointer;
+  color: #a93535;
+}
+
+table.genotypes td div.title input
+{
+  display:none;
+}
+
 table.genotypes td.pop_id {
     height: 1.5em;
     text-align: left;
@@ -727,7 +738,7 @@ div.viewstat
   border: 2px solid #29356c;
   border-radius: 5px;
   background-color: #eeeeee;
-  color: #29356c; 
+  color: #29356c;
   font-size: 11pt;
   padding: 3px;
   font-variant: small-caps;
@@ -739,6 +750,12 @@ div.viewstat:hover
   border: 2px solid #a93535;
   background-color: #ffffff;
   cursor: pointer;
+}
+
+div.top_viewstat
+{
+  margin-top: 1.5em;
+  margin-bottom: -1em;
 }
 
 div.popup_stat
