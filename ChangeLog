@@ -1,5 +1,14 @@
 Stacks 1.30
 --------------------------
+	Bugfix: corrected the allele depth output in the VCF export to follow defacto
+	standards used by other programs.
+	Bugfix: in some cases loci were sneaking past the --write_single_snp directive in
+	in populations (due to interactions with pruning out SNPs that fail the MAF filter).
+	Feature: Updated the Stacks web interface. The web app is now almost 100% dynamic
+	(parts of the page are draws on demand instead of fetching new, full pages from
+	the server) using local javascript to draw the population view of genotypes, summary
+	statistics, and the view of raw stacks. The web app uses asynchronous AJAX queries
+	that trade data encoded in JSON to fetch the necessary data for dynamic display.
 	Feature: added DdeI, RsaI, AluI restriction enzymes to process_radtags.
 	Bugfix: sstacks could generate extra matching haplotpyes in a very small number of
 	cases.

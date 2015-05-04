@@ -343,7 +343,7 @@ int main (int argc, char* argv[]) {
     cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints (too many alleles at a site, too few samples at a site, MAF too low).\n";
 
     //
-    // Create an artificial whitelist if the user requested only the first SNP per locus.
+    // Create an artificial whitelist if the user requested only the first or a random SNP per locus.
     //
     if (write_single_snp)
 	implement_single_snp_whitelist(catalog, psum, whitelist);
@@ -685,7 +685,17 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 	    //
 	    size = it->second.size();
 	    for (uint i = 0; i < loc->snps.size(); i++) {
+
+		//
+		// If it is not already in the whitelist, ignore it.
+		//
 		if (size > 0 && it->second.count(loc->snps[i]->col) == 0)
+		    continue;
+
+		//
+		// If the site is fixed, ignore it.
+		//
+		if (t->nucs[loc->snps[i]->col].fixed == true)
 		    continue;
 
 		sample_prune = false;
@@ -764,6 +774,12 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 	    s = psum->locus(loc->id);
 
 	    for (uint i = 0; i < loc->snps.size(); i++) {
+
+		//
+		// If the site is fixed, ignore it.
+		//
+		if (t->nucs[loc->snps[i]->col].fixed == true)
+		    continue;
 
 		sample_prune = false;
 		maf_prune    = false;
