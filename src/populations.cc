@@ -79,6 +79,7 @@ int       min_stack_depth   = 0;
 double    merge_prune_lim   = 1.0;
 double    merge_minor_freq  = 0.0;
 double    minor_allele_freq = 0.0;
+double    max_obs_het       = 0.0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
 
@@ -652,7 +653,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
     CSLocus  *loc;
     LocTally *t;
     LocSum  **s;
-    bool      sample_prune, maf_prune, inc_prune;
+    bool      sample_prune, maf_prune, het_prune, inc_prune;
     int       pop_id, size, pruned = 0;
 
     if (verbose)
@@ -700,6 +701,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 
 		sample_prune = false;
 		maf_prune    = false;
+		het_prune    = false;
 		inc_prune    = false;
 		for (int j = 0; j < psum->pop_cnt(); j++) {
 		    pop_id = psum->rev_pop_index(j);
@@ -711,14 +713,22 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 			sample_prune = true;
 		}
 
-		//
-		// Test for minor allele frequency.
-		//
-		if (t->nucs[loc->snps[i]->col].allele_cnt > 1 &&
-		    (1 - t->nucs[loc->snps[i]->col].p_freq) < minor_allele_freq)
-		    maf_prune = true;
+		if (t->nucs[loc->snps[i]->col].allele_cnt > 1) {
 
-		if (maf_prune == false && sample_prune == false && inc_prune == false) {
+		    //
+		    // Test for minor allele frequency.
+		    //
+		    if ((1 - t->nucs[loc->snps[i]->col].p_freq) < minor_allele_freq)
+			maf_prune = true;
+
+		    //
+		    // Test for observed heterozygosity.
+		    //
+		    // if (t->nucs[loc->snps[i]->col].obs_het > max_obs_het)
+		    // 	het_prune = true;
+		}
+
+		if (maf_prune == false && het_prune && sample_prune == false && inc_prune == false) {
 		    new_wl[loc->id].insert(loc->snps[i]->col);
 		} else {
 		    pruned++;
@@ -734,6 +744,8 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 			    log_fh << "sample_limit\n";
 			else if (maf_prune)
 			    log_fh << "maf_limit\n";
+			else if (het_prune)
+			    log_fh << "obshet_limit\n";
 			else
 			    log_fh << "unknown_reason\n";
 		    }
@@ -3616,7 +3628,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 			exp_het_mean[j]  += s[j]->nucs[i].exp_het;
 			exp_hom_mean[j]  += s[j]->nucs[i].exp_hom;
 			pi_mean[j]       += s[j]->nucs[i].stat[0];
-			fis_mean[j]      += s[j]->nucs[i].stat[1];
+			fis_mean[j]      += s[j]->nucs[i].stat[1] != -7.0 ? s[j]->nucs[i].stat[1] : 0.0;
 
 			n_all[j]++;
 			num_indv_mean_all[j] += s[j]->nucs[i].num_indv;
@@ -3626,7 +3638,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 			exp_het_mean_all[j]  += s[j]->nucs[i].exp_het;
 			exp_hom_mean_all[j]  += s[j]->nucs[i].exp_hom;
 			pi_mean_all[j]       += s[j]->nucs[i].stat[0];
-			fis_mean_all[j]      += s[j]->nucs[i].stat[1];
+			fis_mean_all[j]      += s[j]->nucs[i].stat[1] != -7.0 ? s[j]->nucs[i].stat[1] : 0.0;
 		    }
 
 		} else if (t->nucs[i].allele_cnt == 1) {
