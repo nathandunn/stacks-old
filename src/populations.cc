@@ -3699,6 +3699,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
     fh.precision(fieldw);
     fh.setf(std::ios::fixed);
 
+    double p_freq;
     int start, end;
     //
     // Write the population members.
@@ -3764,15 +3765,28 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 			   << loc->loc.chr << "\t"
 			   << loc->sort_bp(i) + 1 << "\t"
 			   << i << "\t"
-			   << pop_key[psum->rev_pop_index(j)] << "\t"
-			   << s[j]->nucs[i].p_nuc << "\t";
+			   << pop_key[psum->rev_pop_index(j)] << "\t";
 
-			(s[j]->nucs[i].q_nuc != 0) ?
-			    fh << s[j]->nucs[i].q_nuc :
-			    fh << "-";
+			//
+			// Output the p and q alleles in the same order in each population.
+			//
+			if (t->nucs[i].p_allele == s[j]->nucs[i].p_nuc) {
+			    if (s[j]->nucs[i].q_nuc == 0)
+				fh << s[j]->nucs[i].p_nuc << "\t" << "-";
+			    else
+				fh << s[j]->nucs[i].p_nuc << "\t" << s[j]->nucs[i].q_nuc;
+			    p_freq = s[j]->nucs[i].p;
+
+			} else {
+			    if (s[j]->nucs[i].q_nuc == 0)
+				fh << "-\t" << s[j]->nucs[i].p_nuc;
+			    else
+				fh << s[j]->nucs[i].q_nuc << "\t" << s[j]->nucs[i].p_nuc;
+			    p_freq = 1 - s[j]->nucs[i].p;
+			}
 
 			fh << "\t" << (int) s[j]->nucs[i].num_indv << "\t"
-			   << std::setprecision(8)      << s[j]->nucs[i].p << "\t"
+			   << std::setprecision(8)      << p_freq << "\t"
 			   << std::setprecision(fieldw) << s[j]->nucs[i].obs_het << "\t"
 			   << s[j]->nucs[i].obs_hom   << "\t"
 			   << s[j]->nucs[i].exp_het   << "\t"
@@ -5351,7 +5365,7 @@ write_vcf(map<int, CSLocus *> &catalog,
     Datum   **d;
     LocTally *t;
     int       gt_1, gt_2, dp_1, dp_2;
-    double    p_freq, num_indv;
+    double    num_indv;
     char      p_allele, q_allele, p_str[32], q_str[32];
     int       snp_index;
 
@@ -5380,23 +5394,9 @@ write_vcf(map<int, CSLocus *> &catalog,
 	    t   = psum->locus_tally(loc->id);
 
 	    num_indv = (double) t->nucs[col].num_indv;
-	    p_freq   = t->nucs[col].p_freq;
 
-	    //
-	    // We want to report the most frequent allele as the P allele. Reorder the alleles 
-	    // if necessary.
-	    //
-	    if (p_freq < 0.5) {
-		char a = t->nucs[col].p_allele;
-		t->nucs[col].p_allele = t->nucs[col].q_allele;
-		t->nucs[col].q_allele = a;
-
-		sprintf(q_str, "%0.3f", p_freq);
-		sprintf(p_str, "%0.3f", 1 - p_freq);
-	    } else {
-		sprintf(p_str, "%0.3f", p_freq);
-		sprintf(q_str, "%0.3f", 1 - p_freq);
-	    }
+	    sprintf(p_str, "%0.3f", t->nucs[col].p_freq);
+	    sprintf(q_str, "%0.3f", 1 - t->nucs[col].p_freq);
 
 	    //
 	    // If on the negative strand, complement the alleles.
