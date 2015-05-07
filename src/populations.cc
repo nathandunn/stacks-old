@@ -77,9 +77,8 @@ bool      filter_lnl        = false;
 double    lnl_limit         = 0.0;
 int       min_stack_depth   = 0;
 double    merge_prune_lim   = 1.0;
-double    merge_minor_freq  = 0.0;
 double    minor_allele_freq = 0.0;
-double    max_obs_het       = 0.0;
+double    max_obs_het       = 1.0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
 
@@ -118,6 +117,7 @@ int main (int argc, char* argv[]) {
 	<< "Minimum stack depth: " << min_stack_depth << "\n"
 	<< "Log liklihood filtering: " << (filter_lnl == true ? "on"  : "off") << "; threshold: " << lnl_limit << "\n"
 	<< "Minor allele frequency cutoff: " << minor_allele_freq << "\n"
+	<< "Maximum observed heterozygosity cutoff: " << max_obs_het << "\n"
 	<< "Applying Fst correction: ";
     switch(fst_correction) {
     case p_value:
@@ -341,7 +341,7 @@ int main (int argc, char* argv[]) {
     //
     blacklist.clear();
     int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, blacklist, log_fh);
-    cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints (too many alleles at a site, too few samples at a site, MAF too low).\n";
+    cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints (too many alleles or too few samples at a site, MAF too low, or heterozygosity too high).\n";
 
     //
     // Create an artificial whitelist if the user requested only the first or a random SNP per locus.
@@ -714,21 +714,19 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 		}
 
 		if (t->nucs[loc->snps[i]->col].allele_cnt > 1) {
-
 		    //
 		    // Test for minor allele frequency.
 		    //
 		    if ((1 - t->nucs[loc->snps[i]->col].p_freq) < minor_allele_freq)
 			maf_prune = true;
-
 		    //
 		    // Test for observed heterozygosity.
 		    //
-		    // if (t->nucs[loc->snps[i]->col].obs_het > max_obs_het)
-		    // 	het_prune = true;
+		    if (t->nucs[loc->snps[i]->col].obs_het > max_obs_het)
+		    	het_prune = true;
 		}
 
-		if (maf_prune == false && het_prune && sample_prune == false && inc_prune == false) {
+		if (maf_prune == false && het_prune == false && sample_prune == false && inc_prune == false) {
 		    new_wl[loc->id].insert(loc->snps[i]->col);
 		} else {
 		    pruned++;
@@ -795,6 +793,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 
 		sample_prune = false;
 		maf_prune    = false;
+		het_prune    = false;
 		inc_prune    = false;
 		for (int j = 0; j < psum->pop_cnt(); j++) {
 		    pop_id = psum->rev_pop_index(j);
@@ -806,16 +805,21 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 			sample_prune = true;
 		}
 
-		//
-		// Test for minor allele frequency.
-		//
-		if (t->nucs[loc->snps[i]->col].allele_cnt > 1 &&
-		    (1 - t->nucs[loc->snps[i]->col].p_freq) < minor_allele_freq)
-		    maf_prune = true;
+		if (t->nucs[loc->snps[i]->col].allele_cnt > 1) {
+		    //
+		    // Test for minor allele frequency.
+		    //
+		    if ((1 - t->nucs[loc->snps[i]->col].p_freq) < minor_allele_freq)
+			maf_prune = true;
+		    //
+		    // Test for observed heterozygosity.
+		    //
+		    if (t->nucs[loc->snps[i]->col].obs_het > max_obs_het)
+		    	het_prune = true;
+		}
 
-		if (maf_prune == false && sample_prune == false && inc_prune == false) {
+		if (maf_prune == false && het_prune == false && sample_prune == false && inc_prune == false) {
 		    new_wl[loc->id].insert(loc->snps[i]->col);
-
 		} else {
 		    pruned++;
 		    if (verbose) {
@@ -830,6 +834,8 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 			    log_fh << "sample_limit\n";
 			else if (maf_prune)
 			    log_fh << "maf_limit\n";
+			else if (het_prune)
+			    log_fh << "obshet_limit\n";
 			else
 			    log_fh << "unknown_reason\n";
 		    }
@@ -8394,10 +8400,10 @@ int parse_command_line(int argc, char* argv[]) {
             {"bootstrap_div",     no_argument,       NULL, '4'},
             {"bootstrap_pifis",   no_argument,       NULL, '5'},
 	    {"min_populations",   required_argument, NULL, 'p'},
-	    {"minor_allele_freq", required_argument, NULL, 'a'},
+	    {"min_maf",           required_argument, NULL, 'a'},
+	    {"max_obs_het",       required_argument, NULL, 'q'},
 	    {"lnl_lim",           required_argument, NULL, 'c'},
 	    {"merge_prune_lim",   required_argument, NULL, 'i'},
-	    {"merge_minor_freq",  required_argument, NULL, 'q'},
 	    {"fst_correction",    required_argument, NULL, 'f'},
 	    {"p_value_cutoff",    required_argument, NULL, 'u'},
 	    {0, 0, 0, 0}
@@ -8406,7 +8412,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "ACDEFGHJKLNSVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
+	c = getopt_long(argc, argv, "ACDEFGHJKLNSVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -8435,7 +8441,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    merge_prune_lim = is_double(optarg);
 	    break;
 	case 'q':
-	    merge_minor_freq = is_double(optarg);
+	    max_obs_het = is_double(optarg);
 	    break;
 	case 'b':
 	    batch_id = is_integer(optarg);
@@ -8630,7 +8636,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    merge_prune_lim = merge_prune_lim / 100;
 
 	if (merge_prune_lim < 0 || merge_prune_lim > 1.0) {
-	    cerr << "Unable to parse the merge sites pruning limit\n";
+	    cerr << "Unable to parse the merge sites pruning limit.\n";
 	    help();
 	}
     }
@@ -8640,17 +8646,17 @@ int parse_command_line(int argc, char* argv[]) {
 	    minor_allele_freq = minor_allele_freq / 100;
 
 	if (minor_allele_freq > 0.5) {
-	    cerr << "Unable to parse the minor allele frequency\n";
+	    cerr << "Unable to parse the minor allele frequency.\n";
 	    help();
 	}
     }
 
-    if (merge_minor_freq > 0) {
-	if (merge_minor_freq > 1)
-	    merge_minor_freq = merge_minor_freq / 100;
+    if (max_obs_het != 1.0) {
+	if (max_obs_het > 1)
+	    max_obs_het = max_obs_het / 100;
 
-	if (merge_minor_freq > 0.5) {
-	    cerr << "Unable to parse the minor allele frequency\n";
+	if (max_obs_het < 0 || max_obs_het > 1.0) {
+	    cerr << "Unable to parse the maximum observed heterozygosity.\n";
 	    help();
 	}
     }
@@ -8704,8 +8710,9 @@ void help() {
 	      << "    r: minimum percentage of individuals in a population required to process a locus for that population.\n"
 	      << "    p: minimum number of populations a locus must be present in to process a locus.\n"
 	      << "    m: specify a minimum stack depth required for individuals at a locus.\n"
-	      << "    a: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < a < 0.5).\n"
 	      << "    f: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'.\n"
+	      << "    --min_maf: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < min_maf < 0.5).\n"
+	      << "    --max_obs_het: specify a maximum observed heterozygosity required to process a nucleotide site at a locus.\n"
 	      << "    --p_value_cutoff [num]: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n"
 	      << "    --lnl_lim [num]: filter loci with log likelihood values below this threshold.\n"
 	      << "    --write_single_snp: restrict data analysis to only the first SNP per locus.\n"

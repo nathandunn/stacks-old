@@ -1,5 +1,8 @@
-Stacks 1.30
+Stacks 1.30 - May 07, 2015
 --------------------------
+	Feature: added an maximum observed heterozygosity filter to populations program.
+	Bugfix: Fis values in batch_X.sumstats_summary.tsv were incorrect (although raw
+	values in batch_X.sumstats.tsv were correct).
 	Bugfix: corrected the allele depth output in the VCF export to follow defacto
 	standards used by other programs.
 	Bugfix: in some cases loci were sneaking past the --write_single_snp directive in

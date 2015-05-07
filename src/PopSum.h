@@ -193,6 +193,7 @@ public:
     char     p_allele;
     char     q_allele;
     double   p_freq;
+    double   obs_het;
     bool     fixed;
     int      priv_allele;
 
@@ -206,6 +207,7 @@ public:
 	p_allele    = 0;
 	q_allele    = 0;
 	p_freq      = 0.0;
+	obs_het     = 0.0;
 	priv_allele = -1;
 	fixed       = true;
     }
@@ -484,6 +486,11 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 		else 
 		    ltally->nucs[col].p_freq += 
 			(1 - s[j]->nucs[col].p) * (s[j]->nucs[col].num_indv / (double) ltally->nucs[col].num_indv);
+		//
+		// Sum observed heterozygosity across populations.
+		//
+		ltally->nucs[col].obs_het += 
+		    s[j]->nucs[col].obs_het * (s[j]->nucs[col].num_indv / (double) ltally->nucs[col].num_indv);
 	    }
 
 	    //
