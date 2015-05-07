@@ -1,5 +1,13 @@
 Stacks 1.30 - May 07, 2015
 --------------------------
+	Feature: sstacks can now accept multiple sample files at a time, saving run
+	time by only processing the catalog once.
+	Feature: changed batch_X.sumstats.tsv file so the P/Q alleles are always
+	presented in the same order in each local population (according to the
+	overall frequency of the allele across all populations). This will sync results
+	with the VCF exports but will sometimes cause the frequency of p in the local
+	population to be less than 0.5 (up until now the frequency of p has always
+	represented the most frequenct allele in the local population).
 	Feature: added an maximum observed heterozygosity filter to populations program.
 	Bugfix: Fis values in batch_X.sumstats_summary.tsv were incorrect (although raw
 	values in batch_X.sumstats.tsv were correct).
