@@ -1245,8 +1245,8 @@ function build_stack_view(json, status, jqXHR)
 	        "<tr>\n" +
 		"  <td class=\"num\">" + seq_cnt + ".</td>\n" +
 		"  <td class=\"secondary\">secondary</td>\n" +
-		"  <td class=\"id\">"  + json.stacks[i].secondary.id  + "</td>\n" +
-		"  <td class=\"tag\">" + json.stacks[i].secondary.seq + "</td>\n" +
+		"  <td class=\"id\">"  + json.stacks[i].secondary[j].id  + "</td>\n" +
+		"  <td class=\"tag\">" + json.stacks[i].secondary[j].seq + "</td>\n" +
 		"</tr>\n";
 	    seq_cnt++;
 	}
