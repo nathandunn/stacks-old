@@ -1,3 +1,15 @@
+Stacks 1.31
+--------------------------
+	Bugfix: single-end reads, with paired barcodes (inline/index) were not being handled
+	properly, resulting in a segfault.
+	Bugfix: process_radtags was allowing a barcode type to be specified without any
+	specifying a barcode file, which caused a segfault.
+	Feature: exposed kmer length setting in ustacks and cstacks. This allows the kmer
+	length used for sequence matching to be set manually. While this can result in some
+	missed matches (there is a trade off between kmer length and sequence length when
+	searching for matches between the two) it also allows the algorithm to run at faster
+	speeds.
+
 Stacks 1.30 - May 07, 2015
 --------------------------
 	Feature: sstacks can now accept multiple sample files at a time, saving run

@@ -1,3 +1,5 @@
+SET default_storage_engine=MYISAM;
+
 create table batches (
        id           int unsigned not null primary key auto_increment,
        date         DATE not null,

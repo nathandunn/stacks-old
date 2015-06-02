@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -20,12 +20,6 @@
 
 //
 // kmers.cc -- routines to generate and hash K-mers
-//
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
-// $Id$
 //
 #include "kmers.h"
 
@@ -58,10 +52,6 @@ int determine_kmer_length(int read_len, int dist) {
 
     kmer_len -= 2;
 
-    cerr << 
-        "  Distance allowed between stacks: " << dist << "\n" <<
-        "  Using a k-mer length of " << kmer_len << "\n";
-
     return kmer_len;
 }
 
@@ -72,14 +62,18 @@ int calc_min_kmer_matches(int kmer_len, int dist, int read_len, bool exit_err) {
 
     min_matches = read_len - span;
 
-    cerr << "  Miniumum number of k-mers to define a match: " << min_matches << "\n";
-
-    if (exit_err && min_matches <= 0) {
+    if (min_matches <= 0) {
         cerr << 
-            "Combination of k-mer length (" << kmer_len << ") and edit distance (" << dist << ") allows for " <<
+            "Warning: combination of k-mer length (" << kmer_len << ") and edit distance (" << dist << ") allows for " <<
             "sequences to be missed by the matching algorithm.\n";
-        exit(1);
     }
+
+    if (min_matches <= 0 && exit_err)
+        exit(1);
+    else if (min_matches <= 0)
+	min_matches = 1;
+
+    cerr << "  Minimum number of k-mers to define a match: " << min_matches << "\n";
 
     return min_matches;
 }

@@ -31,6 +31,8 @@ string  catalog_path;
 FileT   in_file_type    = FileT::sql;
 int     batch_id        = 0;
 int     ctag_dist       = 0;
+bool    set_kmer_len    = true;
+int     kmer_len        = 0;
 searcht search_type     = sequence;
 int     num_threads     = 1;
 bool    mult_matches    = false;
@@ -390,15 +392,17 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     // determine the optimal length for k-mers.
     //
     int con_len   = strlen(sample[keys[0]]->con);
-    int kmer_len  = determine_kmer_length(con_len, ctag_dist);
+    if (set_kmer_len) kmer_len = determine_kmer_length(con_len, ctag_dist);
     int num_kmers = con_len - kmer_len + 1;
 
-    cerr << "  Number of kmers per sequence: " << num_kmers << "\n";
+    cerr << "  Distance allowed between stacks: " << ctag_dist << "\n"
+	 << "  Using a k-mer length of " << kmer_len << "\n"
+	 << "  Number of kmers per sequence: " << num_kmers << "\n";
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
-    int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len, true);
+    int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len, set_kmer_len ? true : false);
 
     populate_kmer_hash(catalog, kmer_map, kmer_map_keys, kmer_len);
 
@@ -1378,6 +1382,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"report_mmatches",    no_argument, NULL, 'R'},
 	    {"batch_id",     required_argument, NULL, 'b'},
 	    {"ctag_dist",    required_argument, NULL, 'n'},
+	    {"k_len",        required_argument, NULL, 'k'},
 	    {"catalog",      required_argument, NULL, 'c'},
 	    {"sample",       required_argument, NULL, 's'},
 	    {"outpath",      required_argument, NULL, 'o'},
@@ -1388,7 +1393,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgvuRmo:s:c:b:p:n:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgvuRmo:s:c:b:p:n:k:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1406,7 +1411,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    }
 	    break;
 	case 'n':
-	    ctag_dist = atoi(optarg);
+	    ctag_dist = is_integer(optarg);
+	    break;
+	case 'k':
+	    set_kmer_len = false;
+	    kmer_len     = is_integer(optarg);
 	    break;
 	case 'm':
 	    mult_matches = true;
@@ -1434,7 +1443,7 @@ int parse_command_line(int argc, char* argv[]) {
             version();
             break;
 	case 'p':
-	    num_threads = atoi(optarg);
+	    num_threads = is_integer(optarg);
 	    break;
 	case '?':
 	    // getopt_long already printed an error message.
@@ -1446,8 +1455,13 @@ int parse_command_line(int argc, char* argv[]) {
 	}
     }
 
+    if (set_kmer_len == false && (kmer_len < 5 || kmer_len > 31)) {
+        cerr << "Kmer length must be between 5 and 31bp.\n";
+        help();
+    }
+
     if (samples.size() == 0) {
-	cerr << "You must specify at least one sample file.\n";
+        cerr << "You must specify at least one sample file.\n";
 	help();
     }
 
@@ -1480,6 +1494,7 @@ void help() {
 	      << "  Catalog editing:\n"
 	      << "    --catalog <path>: provide the path to an existing catalog. cstacks will add data to this existing catalog.\n\n"
 	      << "  Advanced options:\n" 
+	      << "     --k_len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
 	      << "    --report_mmatches: report query loci that match more than one catalog locus.\n";
 
     exit(0);
