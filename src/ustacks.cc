@@ -206,12 +206,14 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
     if (set_kmer_len) kmer_len = determine_kmer_length(con_len, max_rem_dist);
     int num_kmers = con_len - kmer_len + 1;
 
-    cerr << "  Number of kmers per sequence: " << num_kmers << "\n";
+    cerr << "  Distance allowed between stacks: " << max_rem_dist << "\n"
+	 << "  Using a k-mer length of " << kmer_len << "\n"
+	 << "  Number of kmers per sequence: " << num_kmers << "\n";
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
-    int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, true);
+    int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, set_kmer_len ? true : false);
 
     KmerHashMap    kmer_map;
     vector<char *> kmer_map_keys;
@@ -1042,12 +1044,14 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
         kmer_len = determine_kmer_length(con_len, utag_dist);
     int num_kmers = con_len - kmer_len + 1;
 
-    cerr << "  Number of kmers per sequence: " << num_kmers << "\n";
+    cerr << "  Distance allowed between stacks: " << utag_dist << "\n"
+	 << "  Using a k-mer length of " << kmer_len << "\n"
+	 << "  Number of kmers per sequence: " << num_kmers << "\n";
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
-    int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len, true);
+    int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len, set_kmer_len ? true : false);
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
  
@@ -2036,6 +2040,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"max_dist",     required_argument, NULL, 'M'},
 	    {"max_sec_dist", required_argument, NULL, 'N'},
 	    {"max_locus_stacks", required_argument, NULL, 'K'},
+	    {"k_len",        required_argument, NULL, 'k'},
 	    {"num_threads",  required_argument, NULL, 'p'},
 	    {"deleverage",   no_argument,       NULL, 'd'},
 	    {"remove_rep",   no_argument,       NULL, 'r'},
@@ -2056,7 +2061,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hHvdrgRA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hHvdrgRA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:k:T:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -2094,13 +2099,13 @@ int parse_command_line(int argc, char* argv[]) {
 	    }
 	    break;
 	case 'm':
-	    min_merge_cov = atoi(optarg);
+	    min_merge_cov = is_integer(optarg);
 	    break;
 	case 'M':
-	    max_utag_dist = atoi(optarg);
+	    max_utag_dist = is_integer(optarg);
 	    break;
 	case 'N':
-	    max_rem_dist = atoi(optarg);
+	    max_rem_dist = is_integer(optarg);
 	    break;
 	case 'd':
 	    deleverage_stacks++;
@@ -2109,7 +2114,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    remove_rep_stacks++;
 	    break;
 	case 'K':
-	    max_subgraph = atoi(optarg);
+	    max_subgraph = is_integer(optarg);
+	    break;
+	case 'k':
+	    set_kmer_len = false;
+	    kmer_len     = is_integer(optarg);
 	    break;
 	case 'R':
 	    retain_rem_reads = true;
@@ -2153,7 +2162,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    call_sec_hapl = false;
 	    break;
 	case 'p':
-	    num_threads = atoi(optarg);
+	    num_threads = is_integer(optarg);
 	    break;
         case 'v':
             version();
@@ -2168,6 +2177,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    help();
 	    abort();
 	}
+    }
+
+    if (set_kmer_len == false && (kmer_len < 5 || kmer_len > 31)) {
+        cerr << "Kmer length must be between 5 and 31bp.\n";
+        help();
     }
 
     if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
@@ -2232,6 +2246,7 @@ void help() {
 	      << "    r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm." << "\n"
 	      << "    d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
 	      << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
+	      << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
 	      << "  Model options:\n" 
 	      << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
 	      << "    For the SNP or Bounded SNP model:\n"

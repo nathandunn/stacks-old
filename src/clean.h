@@ -372,8 +372,13 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
     //
     if (pe_bc.size() > 0 && valid_se_bc == true && valid_pe_bc == true) {
 	if (fhs.count(bc) > 0) {
-	    strcpy(href_1->se_bc, bc_1);
-	    strcpy(href_2->pe_bc, bc_2);
+	    if (paired) {
+		strcpy(href_1->se_bc, bc_1);
+		strcpy(href_2->pe_bc, bc_2);
+	    } else {
+		strcpy(href_1->se_bc, bc_1);
+		strcpy(href_1->pe_bc, bc_2);
+	    }
 
 	    if (barcode_type == inline_index ||
 		barcode_type == inline_inline)

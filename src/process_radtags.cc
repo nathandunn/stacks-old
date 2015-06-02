@@ -1083,6 +1083,11 @@ int parse_command_line(int argc, char* argv[]) {
 	help();
     }
 
+    if (barcode_file.length() == 0 && barcode_type != null_null) {
+	cerr << "You specified a barcode type without providing a file containing barcodes.\n";
+	help();
+    }
+
     if (barcode_file.length() == 0)
 	cerr << "No barcodes specified, files will not be demultiplexed.\n";
 
