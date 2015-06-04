@@ -1,7 +1,21 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright (c) 2014 University of Oregon
-// Created by Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+//
+// This file is part of Stacks.
+//
+// Stacks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Stacks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #ifndef __MST_H__
@@ -37,7 +51,8 @@ class Edge {
 
 class Node {
 public:
-    uint id;
+    uint           id;
+    string         label;
     vector<Edge *> edges;
 
     Node *parent;
@@ -66,18 +81,22 @@ public:
 
 class MinSpanTree {
     map<int, Node *> nodes;
+    map<string, int> node_key;
+    uint             id_cnt;
 
  public:
-    MinSpanTree()  { }
+    MinSpanTree()  { id_cnt = 0; }
     ~MinSpanTree() {
         for (uint i = 0; i < this->nodes.size(); i++)
             delete this->nodes[i];
     }
 
     Node  *add_node(int id);
+    Node  *add_node(string label);
     int    build_tree();
     int    node_count();
     Node  *node(int id);
+    Node  *node(string label);
     Node  *head();
     bool   connected(int *, int);
     string vis(bool);

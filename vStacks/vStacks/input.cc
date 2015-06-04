@@ -1,7 +1,21 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright (c) 2014 University of Oregon
-// Created by Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+//
+// This file is part of Stacks.
+//
+// Stacks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Stacks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 //
@@ -201,5 +215,47 @@ int read_line(ifstream &fh, char **line, int *size) {
         }
     } while (fh.fail() && !fh.bad() && !fh.eof());
 
-    return 0;
+    if (fh.eof() || fh.bad())
+	return 0;
+
+    return 1;
+}
+
+int read_gzip_line(gzFile &fh, char **line, int *size) {
+    char  buf[max_len];
+    int   blen, llen;
+    bool  eol;
+
+    memset(*line, 0, *size);
+    llen = 0;
+    eol  = false;
+
+    //
+    // Make sure we read the entire line.
+    //
+    do {
+	gzgets(fh, buf, max_len);
+
+        blen = strlen(buf);
+
+	if (blen > 0 && buf[blen - 1] == '\n') {
+	    eol = true;
+	    buf[blen - 1] = '\0';
+	}
+
+        if (blen + llen <= (*size) - 1) {
+            strcat(*line, buf);
+            llen += blen;
+        } else {
+            *size *= 2;
+            llen  += blen;
+            *line  = (char *) realloc(*line, *size);
+            strcat(*line, buf);
+        }
+    } while (!gzeof(fh) && !eol);
+
+    if (gzeof(fh))
+	return 0;
+
+    return 1;
 }

@@ -1,7 +1,21 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright (c) 2014 University of Oregon
-// Created by Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2012, Julian Catchen <jcatchen@uoregon.edu>
+//
+// This file is part of Stacks.
+//
+// Stacks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Stacks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #ifndef __POPSUM_H__
@@ -23,79 +37,124 @@ using std::make_pair;
 
 #include "stacks.h"
 
-extern int    progeny_limit;
+extern bool   log_fst_comp;
+extern double sample_limit;
 extern double minor_allele_freq;
+extern map<int, string> pop_key;
+const  uint   PopStatSize = 5;
 
-class PopPair {
+class PopStat {
 public:
     int    loc_id;
     int    bp;
-    int    col;
-    double alleles; // Number of alleles sampled at this location.
-    double pi;
-    double fst;
-    double fet_p;      // Fisher's Exact Test p-value.
-    double fet_or;     // Fisher's exact test odds ratio.
-    double or_se;      // Fisher's exact test odds ratio standard error.
-    double lod;        // base 10 logarithm of odds score.
-    double ci_low;     // Fisher's exact test lower confidence interval.
-    double ci_high;    // Fisher's exact test higher confidence interval.
-    double cfst;       // Corrected Fst (by p-value or Bonferroni p-value).
-    double wfst;       // Weigted Fst (kernel-smoothed)
-    double wfst_pval;  // p-value of weighted Fst from bootstrapping.
-    double amova_fst;  // AMOVA Fst method, from Weir, Genetic Data Analysis II .
-    double camova_fst; // Corrected AMOVA Fst value.
-    double wamova_fst; // Kernel-smoothed AMOVA Fst value.
-    int    snp_cnt;    // Number of SNPs in kernel-smoothed window centered on this SNP.
+    bool   fixed;
+    double alleles;    // Number of alleles sampled at this location.
+    uint   snp_cnt;    // Number of SNPs in kernel-smoothed window centered on this SNP.
+    double stat[PopStatSize];
+    double smoothed[PopStatSize];
+    double bs[PopStatSize];
 
-    PopPair() { 
-	loc_id     = 0;
-	bp         = 0;
-	col        = 0;
-	alleles    = 0.0;
-	pi         = 0.0;
-	fst        = 0.0;
-	cfst       = 0.0;
-	wfst       = 0.0;
-	fet_p      = 0.0;
-	fet_or     = 0.0;
-	lod        = 0.0;
-	ci_low     = 0.0;
-	ci_high    = 0.0;
-	wfst_pval  = 0.0;
-	amova_fst  = 0.0;
-	camova_fst = 0.0;
-	wamova_fst = 0.0;
-	snp_cnt    = 0;
+    PopStat() {
+	this->loc_id  = 0;
+	this->bp      = 0;
+	this->fixed   = false;
+	this->alleles = 0.0;
+	this->snp_cnt = 0;
+
+	for (uint i = 0; i < PopStatSize; i++) {
+	    this->stat[i]     = 0.0;
+	    this->smoothed[i] = 0.0;
+	    this->bs[i]       = 0.0;
+	}
+     }
+    virtual ~PopStat() {
     }
 };
 
-class SumStat {
+class HapStat: public PopStat {
+    // PopStat[0]: Phi_st
+    // PopStat[1]: Phi_ct
+    // PopStat[2]: Phi_sc
+    // PopStat[3]: Fst'
+    // PopStat[4]: D_est
 public:
-    int    loc_id;
-    int    bp;
-    bool   incompatible_site;
-    bool   filtered_site;
-    double num_indv;
-    char   p_nuc;
-    char   q_nuc;
-    double p;
-    double obs_het;
-    double obs_hom;
-    double exp_het;
-    double exp_hom;
-    double H;
-    double pi;
-    double wPi;
-    double wPi_pval;
-    double Fis;
-    double wFis;
-    double wFis_pval;
-    int    snp_cnt;   // Number of SNPs in kernel-smoothed window centered on this SNP.
+    double *comp;
+    uint    popcnt;
 
-    SumStat() {
-	loc_id    = 0;
-	bp        = 0;
+    HapStat(): PopStat() {
+	comp = NULL;
+    }
+    ~HapStat() {
+	if (this->comp != NULL)
+	    delete [] comp;
+    }
+};
+
+class LocStat: public PopStat {
+    // PopStat[0]: gene diversity
+    // PopStat[1]: haplotype diversity (Pi)
+public:
+    uint     hap_cnt; // Number of unique haplotypes at this locus. 
+    string   hap_str; // Human-readable string of haplotype counts.
+
+    LocStat(): PopStat() { 
+	this->hap_cnt = 0;
+    }
+    ~LocStat() {};
+};
+
+class PopPair: public PopStat {
+    // PopStat[0]: corrected Fst, (by p-value or Bonferroni p-value).
+    // PopStat[1]: corrected AMOVA Fst
+public:
+    int     col;
+    double  pi;
+    double  fst;
+    double  fet_p;      // Fisher's Exact Test p-value.
+    double  fet_or;     // Fisher's exact test odds ratio.
+    double  or_se;      // Fisher's exact test odds ratio standard error.
+    double  lod;        // base 10 logarithm of odds score.
+    double  ci_low;     // Fisher's exact test lower confidence interval.
+    double  ci_high;    // Fisher's exact test higher confidence interval.
+    double  amova_fst;  // AMOVA Fst method, from Weir, Genetic Data Analysis II .
+    double *comp;
+
+    PopPair() { 
+	col       = 0;
+	pi        = 0.0;
+	fst       = 0.0;
+	fet_p     = 0.0;
+	fet_or    = 0.0;
+	or_se     = 0.0;
+	lod       = 0.0;
+	ci_low    = 0.0;
+	ci_high   = 0.0;
+	amova_fst = 0.0;
+	comp      = NULL;
+    }
+    ~PopPair() {
+	if (this->comp != NULL)
+	    delete [] comp;
+    }
+};
+
+class SumStat: public PopStat {
+    // PopStat[0]: pi
+    // PopStat[1]: fis
+public:
+    bool    incompatible_site;
+    bool    filtered_site;
+    double  num_indv;
+    char    p_nuc;
+    char    q_nuc;
+    double  p;
+    double  obs_het;
+    double  obs_hom;
+    double  exp_het;
+    double  exp_hom;
+    double &pi;
+
+    SumStat(): PopStat(), pi(this->stat[0]) {
 	num_indv  = 0.0;
 	p         = 0.0;
 	p_nuc     = 0;
@@ -104,13 +163,6 @@ public:
 	obs_hom   = 0.0;
 	exp_het   = 0.0;
 	exp_hom   = 0.0;
-	H         = 0.0;
-	pi        = 0.0;
-	wPi       = 0.0;
-	wPi_pval  = 0.0;
-	Fis       = 0.0;
-	wFis      = 0.0;
-	wFis_pval = 0.0;
 	snp_cnt   = 0;
 	incompatible_site = false;
 	filtered_site     = false;
@@ -119,10 +171,9 @@ public:
 
 class LocSum {
 public:
-    SumStat *nucs; // Array containing summary statistics for 
-                   // each nucleotide position at this locus.
-
-    LocSum(int len)  { 
+    SumStat *nucs;    // Array containing summary statistics for 
+                      // each nucleotide position at this locus.
+    LocSum(int len) {
 	this->nucs = new SumStat[len]; 
     }
     ~LocSum() {
@@ -203,7 +254,7 @@ public:
     ~PopSum();
 
     int initialize(PopMap<LocusT> *);
-    int add_population(map<int, LocusT *> &, PopMap<LocusT> *, uint, uint, uint, ofstream &);
+    int add_population(map<int, LocusT *> &, PopMap<LocusT> *, uint, uint, uint, bool, ofstream &);
     int tally(map<int, LocusT *> &);
 
     int loci_cnt() { return this->num_loci; }
@@ -215,7 +266,7 @@ public:
     LocSum  **locus(int);
     LocSum   *pop(int, int);
     LocTally *locus_tally(int);
-    PopPair  *Fst(int, int, int, int, ofstream *);
+    PopPair  *Fst(int, int, int, int);
     int       fishers_exact_test(PopPair *, double, double, double, double);
 
 private:
@@ -270,9 +321,10 @@ int PopSum<LocusT>::initialize(PopMap<LocusT> *pmap) {
 
 template<class LocusT>
 int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
-				   PopMap<LocusT> *pmap, 
-				   uint population_id,
-				   uint start_index, uint end_index, ofstream &log_fh) {
+			       PopMap<LocusT> *pmap, 
+			       uint population_id,
+			       uint start_index, uint end_index, 
+			       bool verbose, ofstream &log_fh) {
     LocusT  *loc;
     Datum  **d;
     LocSum **s;
@@ -313,13 +365,14 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 		s[pop_index]->nucs[loc->snps[k]->col].incompatible_site = true;
 
 		incompatible_loci++;
-		log_fh << "within_population\t"
-		       << "incompatible_locus\t"
-		       << loc->id << "\t"
-		       << loc->loc.chr << "\t"
-		       << loc->sort_bp(loc->snps[k]->col) << "\t"
-		       << loc->snps[k]->col << "\t" 
-		       << population_id << "\n";
+		if (verbose)
+		    log_fh << "within_population\t"
+			   << "incompatible_locus\t"
+			   << loc->id << "\t"
+			   << loc->loc.chr << "\t"
+			   << loc->sort_bp(loc->snps[k]->col) << "\t"
+			   << loc->snps[k]->col << "\t" 
+			   << population_id << "\n";
 	    }
 
 	    snp_cols.insert(loc->snps[k]->col);
@@ -336,7 +389,8 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	snp_cols.clear();
     }
 
-    cerr << "Population " << population_id << " contained " << incompatible_loci << " incompatible loci.\n";
+    cerr << "Population '" << pop_key[population_id] << "' contained " << incompatible_loci << " incompatible loci.\n";
+    log_fh <<  "Population " << population_id << " contained " << incompatible_loci << " incompatible loci.\n";
 
     return 0;
 }
@@ -522,15 +576,14 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
 }
 
 template<class LocusT>
-PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos, ofstream *log_fh) 
+PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) 
 {
-    LocSum  *s_1  = this->pop(locus, pop_1);
+    LocSum  *s_1  = this->pop(locus, pop_1);  /////// SLOW!
     LocSum  *s_2  = this->pop(locus, pop_2);
     PopPair *pair = new PopPair();
 
     //
-    // If this locus only appears in one population, or it does not have sufficient 
-    // samples in the population, do not calculate Fst.
+    // If this locus only appears in one population do not calculate Fst.
     //
     if (s_1->nucs[pos].num_indv == 0 || s_2->nucs[pos].num_indv == 0) 
 	return pair;
@@ -604,21 +657,6 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos, ofstream 
 
     double Fst = 1 - (num / den);
 
-    if (log_fh != NULL)
-	*log_fh << n_1 << "\t"
-		<< n_2 << "\t"
-		<< tot_alleles << "\t"
-		<< p_1 << "\t"
-		<< q_1 << "\t"
-		<< p_2 << "\t"
-		<< q_2 << "\t"
-		<< pi_1 << "\t"
-		<< pi_2 << "\t"
-		<< pi_all << "\t"
-		<< bcoeff_1 << "\t"
-		<< bcoeff_2 << "\t"
-		<< Fst << "\t\t";
-
     pair->alleles = tot_alleles;
     pair->fst     = Fst;
     pair->pi      = pi_all;
@@ -663,14 +701,27 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos, ofstream 
 	/ 
 	(p_avg_cor * (1 - p_avg_cor));
 
-    if (log_fh != NULL)
-	*log_fh << p_1_freq << "\t"
-		<< q_1_freq << "\t"
-		<< p_2_freq << "\t"
-		<< q_2_freq << "\t"
-		<< p_avg_cor << "\t"
-		<< n_avg_cor << "\t"
-		<< pair->amova_fst << "\n";
+    if (log_fst_comp) {
+	pair->comp     = new double[18];
+	pair->comp[0]  = n_1;
+	pair->comp[1]  = n_2;
+	pair->comp[2]  = tot_alleles;
+	pair->comp[3]  = p_1;
+	pair->comp[4]  = q_1;
+	pair->comp[5]  = p_2;
+	pair->comp[6]  = q_2;
+	pair->comp[7]  = pi_1;
+	pair->comp[8]  = pi_2;
+	pair->comp[9]  = pi_all;
+	pair->comp[10] = bcoeff_1;
+	pair->comp[11] = bcoeff_2;
+	pair->comp[12] = p_1_freq;
+	pair->comp[13] = q_1_freq;
+	pair->comp[14] = p_2_freq;
+	pair->comp[15] = q_2_freq;
+	pair->comp[16] = p_avg_cor;
+	pair->comp[17] = n_avg_cor;
+    }
 
     // //
     // // Calculate Fst using a pure parametric method (assumes allele counts are real, not 
@@ -702,26 +753,28 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
 	if (d[i]->model[pos] == 'E') {
 	    cerr << "Warning: heterozygous model call at fixed nucleotide position: " 
 		 << "locus " << locus->id << " individual " << d[i]->id << "; position: " << pos << "\n";
-	} else if (d[i]->model[pos] == 'O') {
-	    num_indv++;
-	    p_nuc = locus->con[pos];
 	}
+	num_indv++;
+	p_nuc = locus->con[pos];
     }
     //
     // Record the results in the PopSum object.
     //
     s->nucs[pos].loc_id   = locus->id;
     s->nucs[pos].bp       = locus->sort_bp(pos);
+    s->nucs[pos].fixed    = true;
     s->nucs[pos].num_indv = num_indv;
+    s->nucs[pos].alleles  = 2 * num_indv;
 
     if (num_indv > 0) {
-	s->nucs[pos].p        = 1.0;
-	s->nucs[pos].p_nuc    = p_nuc;
-	s->nucs[pos].obs_hom  = 1.0;
-	s->nucs[pos].obs_het  = 0.0;
-	s->nucs[pos].exp_hom  = 1.0;
-	s->nucs[pos].exp_het  = 0.0;
-	s->nucs[pos].pi       = 0.0;
+	s->nucs[pos].p        =  1.0;
+	s->nucs[pos].p_nuc    =  p_nuc;
+	s->nucs[pos].obs_hom  =  1.0;
+	s->nucs[pos].obs_het  =  0.0;
+	s->nucs[pos].exp_hom  =  1.0;
+	s->nucs[pos].exp_het  =  0.0;
+	s->nucs[pos].stat[0]  =  0.0; // pi
+	s->nucs[pos].stat[1]  = -7.0; // fis
     }
 
     return 0;
@@ -858,7 +911,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     }
     //cerr << "  Num Individuals: " << num_indv << "; Obs Hets: " << obs_het << "; Obs P: " << obs_p << "; Obs Q: " << obs_q << "\n";
 
-    if (num_indv == 0 || num_indv < progeny_limit) return 0;
+    if (num_indv == 0 || num_indv < sample_limit) return 0;
 
     //
     // Calculate total number of alleles
@@ -870,7 +923,10 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     //
     // Calculate Pi, equivalent to expected heterozygosity (exp_het)
     //
-    s->nucs[pos].pi = this->pi(tot_alleles, allele_p, allele_q);
+    s->nucs[pos].stat[0] = this->pi(tot_alleles, allele_p, allele_q);
+
+    if (s->nucs[pos].stat[0] == 0.0)
+	s->nucs[pos].fixed = true;
 
     //
     // Convert to allele frequencies
@@ -886,13 +942,15 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     if (minor_allele_freq > 0) {
 	if (allele_p < allele_q) {
 	    if (allele_p < minor_allele_freq) {
-		s->nucs[pos].pi = 0;
+		s->nucs[pos].pi            = 0.0;
+		s->nucs[pos].fixed         = true;
 		s->nucs[pos].filtered_site = true;
 		return 0;
 	    }
 	} else {
 	    if (allele_q < minor_allele_freq) {
-		s->nucs[pos].pi = 0;
+		s->nucs[pos].pi            = 0.0;
+		s->nucs[pos].fixed         = true;
 		s->nucs[pos].filtered_site = true;
 		return 0;
 	    }
@@ -920,6 +978,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     s->nucs[pos].loc_id   = locus->id;
     s->nucs[pos].bp       = locus->sort_bp(pos);
     s->nucs[pos].num_indv = num_indv;
+    s->nucs[pos].alleles  = tot_alleles;
     s->nucs[pos].p        = allele_p > allele_q ? allele_p : allele_q;
     s->nucs[pos].p_nuc    = allele_p > allele_q ? p_allele : q_allele;
     s->nucs[pos].q_nuc    = allele_p > allele_q ? q_allele : p_allele;
@@ -932,7 +991,9 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     // Calculate F_is, the inbreeding coefficient of an individual (I) relative to the subpopulation (S):
     //   Fis = (exp_het - obs_het) / exp_het
     //
-    s->nucs[pos].Fis = s->nucs[pos].pi == 0 ? 0 : (s->nucs[pos].pi - obs_het) / s->nucs[pos].pi;
+    double fis = s->nucs[pos].pi == 0 ? -7 : (s->nucs[pos].pi - obs_het) / s->nucs[pos].pi;
+
+    s->nucs[pos].stat[1] = fis;
 
     return 0;
 }
@@ -1134,6 +1195,8 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
     }
 
     pair->fet_p = tail_1 + tail_2;
+
+    if (pair->fet_p > 1.0) pair->fet_p = 1.0;
 
     //
     // Calculate the odds ratio. To account for possible cases were one allele frequency is

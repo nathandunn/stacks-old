@@ -1,7 +1,21 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright (c) 2014 University of Oregon
-// Created by Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013, Julian Catchen <jcatchen@uoregon.edu>
+//
+// This file is part of Stacks.
+//
+// Stacks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Stacks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #ifndef __GZFASTA_H__
@@ -24,6 +38,9 @@ class GzFasta: public Input {
 	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
             exit(EXIT_FAILURE);
 	}
+	#if ZLIB_VERNUM >= 0x1240
+	gzbuffer(this->gz_fh, libz_buffer_size);
+	#endif
     };
     GzFasta(string path) : Input() { 
 	this->gz_fh = gzopen(path.c_str(), "rb");
@@ -31,6 +48,9 @@ class GzFasta: public Input {
 	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
             exit(EXIT_FAILURE);
 	}
+	#if ZLIB_VERNUM >= 0x1240
+	gzbuffer(this->gz_fh, libz_buffer_size);
+	#endif
     };
     ~GzFasta() {
 	gzclose(this->gz_fh);
