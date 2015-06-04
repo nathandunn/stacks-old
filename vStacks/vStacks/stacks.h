@@ -1,7 +1,21 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright (c) 2014 University of Oregon
-// Created by Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+//
+// This file is part of Stacks.
+//
+// Stacks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Stacks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #ifndef __STACKS_H__
@@ -113,9 +127,9 @@ class PStack {
 	for (unsigned int i = 0; i < this->map.size(); i++) 
 	    delete [] this->map[i]; 
     }
-    int add_id(const char *);
-    int add_seq(const char *);
-    int add_seq(DNANSeq *);
+    int  add_id(const char *);
+    int  add_seq(const char *);
+    int  add_seq(DNANSeq *);
 };
 
 class Stack {
@@ -157,12 +171,13 @@ class Rem {
 
 class CatMatch {
 public:
-    int   batch_id;
-    int   cat_id;
-    int   sample_id;
-    int   tag_id;
-    int   depth;
-    char *haplotype;
+    int    batch_id;
+    int    cat_id;
+    int    sample_id;
+    int    tag_id;
+    int    depth;
+    double lnl;
+    char  *haplotype;
 
     CatMatch() { 
 	batch_id  = 0; 
@@ -170,6 +185,7 @@ public:
 	sample_id = 0; 
 	tag_id    = 0; 
 	depth     = 0; 
+	lnl       = 0.0;
 	haplotype = NULL; 
     }
     ~CatMatch() { 
@@ -207,6 +223,7 @@ public:
     ~SNPRes() { 
 	for (uint i = 0; i < this->snps.size(); i++)
 	    delete this->snps[i];
+	this->snps.clear();
     }
 };
 

@@ -1,7 +1,21 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright (c) 2014 University of Oregon
-// Created by Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+//
+// This file is part of Stacks.
+//
+// Stacks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Stacks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 #ifndef __POPMAP_H__
@@ -33,6 +47,7 @@ public:
     char          *model;        // String representing SNP model output for each nucleotide at this locus.
     char          *gtype;        // Genotype
     char          *trans_gtype;  // Translated Genotype
+    double         lnl;          // Log likelihood of this locus.
     vector<char *> obshap;       // Observed Haplotypes
     vector<SNP *>  snps;
     Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; len = 0; }
@@ -167,9 +182,11 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 		    d->obshap.push_back(h);
 		    d->depth.push_back(matches[i][j]->depth);
 		    d->tot_depth += matches[i][j]->depth;
+		    d->lnl        = matches[i][j]->lnl;
 		    this->data[locus][sample] = d;
 
 		    catalog[matches[i][j]->cat_id]->hcnt++;
+		    catalog[matches[i][j]->cat_id]->cnt++;
 		}
 	    } else {
 		// cerr << "  Adding haplotype to existing datum: sample: " << matches[i][j]->sample_id << ". tag: " << matches[i][j]->tag_id << "\n";
@@ -183,12 +200,15 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 		    this->data[locus][sample]->obshap.push_back(h);
 		    this->data[locus][sample]->depth.push_back(matches[i][j]->depth);
 		    this->data[locus][sample]->tot_depth += matches[i][j]->depth;
+		    this->data[locus][sample]->lnl        = matches[i][j]->lnl;
+
 		} else {
 		    //cerr << "    Deleting sample, multiple tag matches\n";
 		    delete this->data[locus][sample];
 		    this->data[locus][sample] = NULL;
 		    this->blacklist.insert(make_pair(matches[i][j]->sample_id, matches[i][j]->cat_id));
 		    catalog[matches[i][j]->cat_id]->hcnt--;
+		    catalog[matches[i][j]->cat_id]->confounded_cnt++;
 		}
 	    }
 	}
