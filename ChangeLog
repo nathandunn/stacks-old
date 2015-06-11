@@ -1,5 +1,7 @@
 Stacks 1.31
 --------------------------
+	Bugfix: changed default for cstacks -n parameter to 1 (at the request of 
+	Josie Paris <J.R.Paris@exeter.ac.uk>).
 	Bugfix: single-end reads, with paired barcodes (inline/index) were not being handled
 	properly, resulting in a segfault.
 	Bugfix: process_radtags was allowing a barcode type to be specified without any
