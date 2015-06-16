@@ -341,8 +341,11 @@ int main (int argc, char* argv[]) {
     //
     blacklist.clear();
     int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, blacklist, log_fh);
-    cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints (too many alleles or too few samples at a site, MAF too low, or heterozygosity too high).\n";
+    cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints.\n";
 
+    if (!verbose)
+	cerr << "  (enable the --verbose flag to record the reason why each site was filtered in the batch_X.populations.log file.)\n";
+    
     //
     // Create an artificial whitelist if the user requested only the first or a random SNP per locus.
     //

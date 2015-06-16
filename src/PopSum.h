@@ -465,15 +465,18 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 				    ltally->nucs[col].q_allele,
 				    p_cnt, q_cnt);
 
+	    //
+	    // Is this site variable?
+	    //
+	    if (ltally->nucs[col].allele_cnt > 1)
+		ltally->nucs[col].fixed = false;
+	    
 	    for (int j = 0; j < this->num_pops; j++) {
 		//
 		// Sum the number of individuals examined at this locus across populations.
 		//
 		ltally->nucs[col].num_indv += s[j]->nucs[col].num_indv;
 		ltally->nucs[col].pop_cnt  += s[j]->nucs[col].num_indv > 0 ? 1 : 0;
-
-		if (s[j]->nucs[col].pi != 0)
-		    ltally->nucs[col].fixed = false;
 	    }
 
 	    for (int j = 0; j < this->num_pops; j++) {
