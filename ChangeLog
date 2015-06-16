@@ -1,8 +1,14 @@
-Stacks 1.31
---------------------------
+Stacks 1.31 - June 16, 2015
+---------------------------
+	Bugfix: site-level filtering in the populations program was not working correctly
+	when dealing with sites that were fixed within populations but variable among
+	populations. The code in the PopSum::tally() function was not correctly identifying
+	sites as not fixed in these cases.
+	Bugfix: --write_random_snp was causing a segfault in the populations program in
+	some cases.
 	Bugfix: single-end reads, with paired barcodes (inline/index) were not being handled
 	properly, resulting in a segfault.
-	Bugfix: process_radtags was allowing a barcode type to be specified without any
+	Bugfix: process_radtags was allowing a non-null barcode type to be specified without
 	specifying a barcode file, which caused a segfault.
 	Feature: exposed kmer length setting in ustacks and cstacks. This allows the kmer
 	length used for sequence matching to be set manually. While this can result in some
