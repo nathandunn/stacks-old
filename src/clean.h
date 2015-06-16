@@ -397,7 +397,11 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
 	    href_1->inline_bc_len = strlen(bc_1);
 
     } else if (valid_pe_bc == true) {
-	strcpy(href_2->pe_bc, bc_2);
+	if (paired)
+	    strcpy(href_2->pe_bc, bc_2);
+	else
+	    strcpy(href_1->pe_bc, bc_2);
+
 	if (barcode_type == index_inline ||
 	    barcode_type == inline_inline)
 	    href_2->inline_bc_len = strlen(bc_2);

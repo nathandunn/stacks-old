@@ -633,7 +633,7 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
 	if (paired)
 	    cerr << "Searching for single-end, inlined and paired-end, indexed barcodes.\n";
 	else
-	    cerr << "Searching for sigle-end inlined and indexed barcodes.\n";
+	    cerr << "Searching for single-end inlined and indexed barcodes.\n";
 	break;
     case index_inline:
 	if (paired)
