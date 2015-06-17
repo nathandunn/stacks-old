@@ -23,6 +23,7 @@ function write_header($page_title) {
     global $root_path, $img_path;
 
     echo <<< EOQ
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -38,7 +39,7 @@ function write_header($page_title) {
 <div id="header">
 <h1><a href="$root_path/"><img src="$img_path/stacks_logo_rev_small.png" /></a></h1>
 <p>
-  <a href="http://creskolab.uoregon.edu/stacks/">version 
+  <a href="http://catchenlab.life.illinois.edu/stacks/">version 
 
 EOQ;
 

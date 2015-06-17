@@ -30,7 +30,7 @@ string  out_path;
 string  catalog_path;
 FileT   in_file_type    = FileT::sql;
 int     batch_id        = 0;
-int     ctag_dist       = 0;
+int     ctag_dist       = 1;
 bool    set_kmer_len    = true;
 int     kmer_len        = 0;
 searcht search_type     = sequence;
@@ -1488,7 +1488,7 @@ void help() {
 	      << "  o: output path to write results." << "\n"
               << "  g: base catalog matching on genomic location, not sequence identity." << "\n"
 	      << "  m: include tags in the catalog that match to more than one entry (default false)." << "\n"
-              << "  n: number of mismatches allowed between sample tags when generating the catalog (default 0)." << "\n"
+              << "  n: number of mismatches allowed between sample tags when generating the catalog (default 1)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  h: display this help messsage." << "\n\n"
 	      << "  Catalog editing:\n"

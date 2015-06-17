@@ -699,7 +699,7 @@ ref_map.pl -p path -r path [-s path] -o path [-n mismatches] [-m min_cov] [-T nu
     s: path to a Bowtie/SAM/BAM file containing an individual sample from a population.
     o: path to write pipeline output files.
     A: if processing a genetic map, specify the cross type, 'CP', 'F2', 'BC1', 'DH', or 'GEN'.
-    n: specify the number of mismatches allowed between loci when building the catalog (default 0).
+    n: specify the number of mismatches allowed between loci when building the catalog (default 1).
     T: specify the number of threads to execute.
     m: specify the minimum depth of coverage to report a stack in pstacks (default 1).
     O: if analyzing one or more populations, specify a pOpulation map
