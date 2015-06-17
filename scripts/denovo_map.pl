@@ -745,7 +745,7 @@ denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches
     P: specify a minimum number of identical, raw reads required to create a stack in 'progeny' individuals.
     M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
     N: specify the number of mismatches allowed when aligning secondary reads to primary stacks (default M+2).
-    n: specify the number of mismatches allowed between loci when building the catalog (default 0).
+    n: specify the number of mismatches allowed between loci when building the catalog (default 1).
     t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
     H: disable calling haplotypes from secondary reads.
 

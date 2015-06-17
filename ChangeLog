@@ -15,6 +15,8 @@ Stacks 1.31 - June 16, 2015
 	missed matches (there is a trade off between kmer length and sequence length when
 	searching for matches between the two) it also allows the algorithm to run at faster
 	speeds.
+	Feature: changed the default setting for the -n option of cstacks (number of fixed
+	differences allowed between loci) to 1.
 
 Stacks 1.30 - May 07, 2015
 --------------------------

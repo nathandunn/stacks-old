@@ -304,7 +304,7 @@ while ($row = $result->fetchRow()) {
     $annotation = strlen($row['external_id']) > 0 ? $row['external_id'] : "annotate";
 
     echo <<< EOQ
-<tr>
+<tr class="catrow">
   <td class="catlink">
 <div onclick="ajax_locus_population_view('$row[tag_id]', '$img_path', '$url');">
 <img id="{$row['tag_id']}_img" src="$img_path/caret-u.png" />
