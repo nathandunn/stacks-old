@@ -158,6 +158,8 @@ function ajax_locus_stack_view(id, url)
 {
     var div_obj = document.getElementById(id + "_stacks_div");
 
+    $("html, body").css("cursor", "wait");
+
     if (div_obj.style.display == "none") {
 	//
 	// Make the AJAX query for JSON encoded data for this locus.
@@ -1266,6 +1268,8 @@ function build_stack_view(json, status, jqXHR)
     h = h > w ? w : h;
     var div_h = Math.round(h * 0.96);
     $("#" + json.id + "_stacks_div").css("max-height", div_h);
+
+    $("html, body").css("cursor", "auto");
 
     //
     // Display the Stacks div.
