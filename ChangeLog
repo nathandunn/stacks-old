@@ -1,5 +1,6 @@
-Stacks 1.31 - June 16, 2015
+Stacks 1.31 - June 17, 2015
 ---------------------------
+	Bugfix: made some tweaks to improve layout in the web interface.
 	Bugfix: site-level filtering in the populations program was not working correctly
 	when dealing with sites that were fixed within populations but variable among
 	populations. The code in the PopSum::tally() function was not correctly identifying
