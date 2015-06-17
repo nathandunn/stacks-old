@@ -327,6 +327,10 @@ div.footer {
     clear: both;
 }
 
+tr.catrow {
+    height: 5em;
+}
+
 td.catlink {
     font-size: small;
     position: relative;
@@ -476,7 +480,7 @@ div.gloc {
 
 div.popview
 {
-  position: relative;
+    position: relative;
 }
 
 div.comp_view

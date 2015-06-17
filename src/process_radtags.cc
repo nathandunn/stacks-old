@@ -105,6 +105,10 @@ int main (int argc, char* argv[]) {
 	    out_file_type = FileT::fastq;
     }
 
+    if (paired)
+	cerr << "Processing paired-end data.\n";
+    else
+	cerr << "Processing single-end data.\n";
     cerr << "Using Phred+" << qual_offset << " encoding for quality scores.\n";
     if (truncate_seq > 0)
 	cerr << "Reads will be truncated to " << truncate_seq << "bp\n";

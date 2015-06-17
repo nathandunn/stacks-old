@@ -158,6 +158,8 @@ function ajax_locus_stack_view(id, url)
 {
     var div_obj = document.getElementById(id + "_stacks_div");
 
+    $("html, body").css("cursor", "wait");
+
     if (div_obj.style.display == "none") {
 	//
 	// Make the AJAX query for JSON encoded data for this locus.
@@ -1261,9 +1263,18 @@ function build_stack_view(json, status, jqXHR)
     //
     var parent_div = "#" + json.id + "_popview_div";
     var p = $(parent_div).position();
-    var h = $(parent_div).height();
+    var h = $(parent_div).parent().height();
+    var w = $(window).height();
+    h = h > w ? w : h;
     var div_h = Math.round(h * 0.96);
     $("#" + json.id + "_stacks_div").css("max-height", div_h);
+
+    $("html, body").css("cursor", "auto");
+
+    //
+    // Display the Stacks div.
+    //
+    $("#" + json.id + "_stacks_div").css("display", "");
 
     //
     // Make sure the Fst, Phist, and Sumstat divs are closed.
@@ -1280,11 +1291,6 @@ function build_stack_view(json, status, jqXHR)
 	if(event.keyCode === 27)
             close_stack_view(json.id);
     });
-
-    //
-    // Display the Stacks div.
-    //
-    $("#" + json.id + "_stacks_div").css("display", "");
 }
 
 function close_stack_view(id)
