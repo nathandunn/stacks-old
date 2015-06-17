@@ -1,17 +1,30 @@
-Stacks 1.31
---------------------------
-	Bugfix: changed default for cstacks -n parameter to 1 (at the request of 
+Stacks 1.31 - June 17, 2015
+---------------------------
+	Bugfix: site-level filtering in the populations program was not working correctly
+	when dealing with sites that were fixed within populations but variable among
+	populations. The code in the PopSum::tally() function was not correctly identifying
+	sites as not fixed in these cases causing them to be incorrectly filtered out.
+	Bugfix: --write_random_snp was causing a segfault in the populations program in
+	some cases.
+	Feature: changed the default setting for the -n option of cstacks (number of fixed
+	differences allowed between loci) to 1 (at the request of 
 	Josie Paris <J.R.Paris@exeter.ac.uk>).
-	Bugfix: single-end reads, with paired barcodes (inline/index) were not being handled
+	Bugfix: made some tweaks to improve layout in the web interface.
+ 	Bugfix: single-end reads, with paired barcodes (inline/index) were not being handled
 	properly, resulting in a segfault.
-	Bugfix: process_radtags was allowing a barcode type to be specified without any
+	Bugfix: process_radtags was allowing a non-null barcode type to be specified without
 	specifying a barcode file, which caused a segfault.
 	Feature: exposed kmer length setting in ustacks and cstacks. This allows the kmer
 	length used for sequence matching to be set manually. While this can result in some
 	missed matches (there is a trade off between kmer length and sequence length when
 	searching for matches between the two) it also allows the algorithm to run at faster
 	speeds.
-
+	Feature: Changed default database engine type to be excplicitly MyISAM. Previously
+	Stacks just used the default which at one time was MyISAM but has recently changed in
+	many systems to be INNODB. Using MyISAM should provide much faster imports of data
+	and ultimately use less disk space (as the space is reclaimed when databases are 
+	deleted).
+	
 Stacks 1.30 - May 07, 2015
 --------------------------
 	Feature: sstacks can now accept multiple sample files at a time, saving run

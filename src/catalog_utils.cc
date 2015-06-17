@@ -122,6 +122,8 @@ implement_random_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *ps
 	for (it = whitelist.begin(); it != whitelist.end(); it++) {
 	    loc = catalog[it->first];
 
+	    if (loc->snps.size() == 0) continue;
+	    
 	    if (it->second.size() == 0) {
 		index = rand() % loc->snps.size();
 		new_wl[loc->id].insert(loc->snps[index]->col);
