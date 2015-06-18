@@ -7658,8 +7658,16 @@ write_phylip(map<int, CSLocus *> &catalog,
 		    // We are looking for loci that are fixed within each population, but are 
 		    // variable between one or more populations.
 		    //
-		    if (t->nucs[col].fixed == false || t->nucs[col].allele_cnt == 1 || t->nucs[col].pop_cnt < 2)
+		    if (t->nucs[col].fixed == true || t->nucs[col].allele_cnt != 2 || t->nucs[col].pop_cnt < 2)
 			continue;
+
+		    bool fixed_within = true;
+		    for (int j = 0; j < pop_cnt; j++)
+			if (s[j]->nucs[col].fixed == false) {
+			    fixed_within = false;
+			    break;
+			}
+		    if (fixed_within == false) continue;
 
 		    log_fh << index << "\t" << loc->id << "\t" << col << "\t";
 
@@ -7668,10 +7676,10 @@ write_phylip(map<int, CSLocus *> &catalog,
 
 			if (s[j]->nucs[col].num_indv > 0) {
 			    interspecific_nucs[pop_id] += s[j]->nucs[col].p_nuc;
-			    log_fh << pop_id << ":" << s[j]->nucs[col].p_nuc << ",";
+			    log_fh << pop_key[pop_id] << ":" << s[j]->nucs[col].p_nuc << ",";
 			} else {
 			    interspecific_nucs[pop_id] += 'N';
-			    log_fh << pop_id << ":N" << ",";
+			    log_fh << pop_key[pop_id] << ":N" << ",";
 			}
 		    }
 		    log_fh << "\n";
@@ -7760,7 +7768,7 @@ write_phylip(map<int, CSLocus *> &catalog,
 			    break;
 			}
 			interspecific_nucs[pop_id] += nuc;
-			log_fh << pop_id << ":" << nuc << ",";
+			log_fh << pop_key[pop_id] << ":" << nuc << ",";
 
 		    }
 		    log_fh << "\n";
