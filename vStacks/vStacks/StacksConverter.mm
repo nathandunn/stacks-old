@@ -279,7 +279,11 @@ NSString *calculateType(NSString *file);
     gettimeofday(&time1, NULL);
 
 
-    load_loci([catalogFile UTF8String], catalog, false);
+    bool compressed = false ;
+
+//    load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_all_model_calls, bool &compressed)
+
+    load_loci([catalogFile UTF8String], catalog, false,false,compressed);
     progressWindow.actionMessage.stringValue = @"Loading loci";
     gettimeofday(&time2, NULL);
     NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
