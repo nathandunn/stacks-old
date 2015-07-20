@@ -1050,14 +1050,18 @@ NSString *calculateType(NSString *file);
                     while (fh.good()) {
 
                         read_line(fh, &line, &size);
+//                        if( (sizeof line)>0 && line[0]=='#'){
+//                            cerr << "Ignoring comment: " << line << endl ;
+//                        }
+
 
                         if (fh.good() && strlen(line) > 0) {
                             parse_tsv(line, parts);
 
                             if (parts.size() != num_tags_fields && parts.size() != num_tags_fields+1) {
-                                cerr << "Error parsing tags " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
-                                NSLog(@"error Parings %ld -> %ld", line_num, parts.size());
-                                return;
+                                    cerr << "Error parsing tags " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+                                    NSLog(@"error Parings %ld -> %ld", line_num, parts.size());
+                                    return;
                             }
 
                             @autoreleasepool {
