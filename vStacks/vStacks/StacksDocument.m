@@ -35,6 +35,7 @@
 @property(weak) IBOutlet NSButton *editPopulationButton;
 @property(weak) IBOutlet NSTextField *populationNameField;
 @property(weak) IBOutlet NSTextField *maxLocusTextField;
+@property(weak) IBOutlet NSTextField *filteredLoci;
 @property(weak) IBOutlet NSPopUpButton *maxSnpPopupButton;
 @property(weak) IBOutlet NSPopUpButton *maxSamplesPopupButton;
 @property(weak) IBOutlet WebView *stacksWebView;
