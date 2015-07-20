@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -39,18 +39,19 @@ using std::make_pair;
 
 class Datum {
 public:
-    int            id;           // Stack ID
-    int            len;          // Length of locus
-    int            tot_depth;    // Stack depth
-    vector<int>    depth;        // Stack depth of each matching allele
-    bool           corrected;    // Has this genotype call been corrected
-    char          *model;        // String representing SNP model output for each nucleotide at this locus.
-    char          *gtype;        // Genotype
-    char          *trans_gtype;  // Translated Genotype
-    double         lnl;          // Log likelihood of this locus.
-    vector<char *> obshap;       // Observed Haplotypes
+    int            id;            // Stack ID
+    int            merge_partner; // Stack ID of merged datum, if this datum was merged/phased from two, overlapping datums.
+    int            len;           // Length of locus
+    int            tot_depth;     // Stack depth
+    vector<int>    depth;         // Stack depth of each matching allele
+    bool           corrected;     // Has this genotype call been corrected
+    char          *model;         // String representing SNP model output for each nucleotide at this locus.
+    char          *gtype;         // Genotype
+    char          *trans_gtype;   // Translated Genotype
+    double         lnl;           // Log likelihood of this locus.
+    vector<char *> obshap;        // Observed Haplotypes
     vector<SNP *>  snps;
-    Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; len = 0; }
+    Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; len = 0; lnl = 0.0; merge_partner = 0; }
     ~Datum() {
     	for (uint i = 0; i < this->obshap.size(); i++)
     	    delete [] this->obshap[i];
@@ -82,6 +83,7 @@ public:
     ~PopMap();
 
     int populate(vector<int> &, map<int, LocusT*> &, vector<vector<CatMatch *> > &);
+    int order_loci(map<int, LocusT*> &);
     int prune(set<int> &);
 
     int loci_cnt() { return this->num_loci; }
@@ -141,17 +143,13 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
     for (it = catalog.begin(); it != catalog.end(); it++) {
 	this->locus_order[it->first] = i;
 	this->rev_locus_order[i]     = it->first;
-
-	if (strlen(it->second->loc.chr) > 0)
-	    this->ordered_loci[it->second->loc.chr].push_back(it->second);
 	i++;
     }
+
     //
     // Sort the catalog loci on each chromosome according to base pair.
     //
-    typename map<string, vector<LocusT*> >::iterator cit;
-    for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++)
-	sort(cit->second.begin(), cit->second.end(), bp_compare);
+    this->order_loci(catalog);
 
     //
     // Populate the datum array
@@ -218,6 +216,28 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 }
 
 template<class LocusT>
+int PopMap<LocusT>::order_loci(map<int, LocusT*> &catalog) 
+{
+    this->ordered_loci.clear();
+
+    typename std::map<int, LocusT*>::iterator it;
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+	if (strlen(it->second->loc.chr) > 0)
+	    this->ordered_loci[it->second->loc.chr].push_back(it->second);
+    }
+
+    //
+    // Sort the catalog loci on each chromosome according to base pair.
+    //
+    typename map<string, vector<LocusT*> >::iterator cit;
+    for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++)
+	sort(cit->second.begin(), cit->second.end(), bp_compare);
+
+    return 0;
+}
+
+template<class LocusT>
 int PopMap<LocusT>::prune(set<int> &remove_ids) {
     uint new_size = this->num_loci - remove_ids.size();
     uint loc_id;
@@ -276,7 +296,6 @@ int PopMap<LocusT>::prune(set<int> &remove_ids) {
 
     for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++)
 	sort(cit->second.begin(), cit->second.end(), bp_compare);
-
 
     return new_size;
 }

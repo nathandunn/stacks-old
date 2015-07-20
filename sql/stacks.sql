@@ -1,3 +1,5 @@
+SET default_storage_engine=MYISAM;
+
 create table batches (
        id           int unsigned not null primary key auto_increment,
        date         DATE not null,
@@ -28,7 +30,7 @@ create table sumstats (
        chr	  varchar(32),
        bp	  int unsigned default 0,
        col	  int unsigned default 0,
-       pop_id	  int unsigned default 0,
+       pop_id	  varchar(32),
        p_nuc      char,
        q_nuc      char,
        n	  int unsigned default 0,
@@ -49,25 +51,68 @@ create table sumstats (
 );
 
 create table fst (
-       batch_id	  int unsigned not null,
-       tag_id	  int unsigned not null,
-       pop_id_1	  int unsigned default 0,
-       pop_id_2	  int unsigned default 0,
-       chr	  varchar(32),
-       bp	  int unsigned default 0,
-       col	  int unsigned default 0,
-       pi_o	  double,
-       fst	  double,
-       fishers_p  double,
-       odds_ratio double,
-       ci_low	  double,
-       ci_high	  double,
-       lod	  double,
-       fst_c	  double,
-       fst_s	  double,
-       fis_s_pval double,
-       INDEX      batch_id_index (batch_id),
-       INDEX      tag_id_index (tag_id)
+       batch_id	   int unsigned not null,
+       tag_id	   int unsigned not null,
+       pop_id_1	   varchar(32),
+       pop_id_2	   varchar(32),
+       chr	   varchar(32),
+       bp	   int unsigned default 0,
+       col	   int unsigned default 0,
+       pi_o	   double,
+       fst	   double,
+       fishers_p   double,
+       odds_ratio  double,
+       ci_low	   double,
+       ci_high	   double,
+       lod	   double,
+       fst_c	   double,
+       fst_s	   double,
+       amova_fst   double, 
+       amova_fst_c double,
+       amova_fst_s double,
+       amova_fst_s_pval double,
+       snp_cnt     int unsigned default 0,
+       INDEX       batch_id_index (batch_id),
+       INDEX       tag_id_index (tag_id)
+);
+
+create table hapstats (
+       batch_id	     int unsigned not null,
+       tag_id	     int unsigned not null,
+       chr	     varchar(32),
+       bp	     int unsigned default 0,
+       pop_id	     varchar(32),
+       n	     int unsigned default 0,
+       hapcnt	     double,
+       gene_div	     double,
+       gene_div_s    double,
+       gene_div_pval double,
+       hap_div	     double,
+       hap_div_s     double,
+       hap_div_pval  double,
+       haplotypes    tinytext,
+       INDEX         batch_id_index (batch_id),
+       INDEX         tag_id_index (tag_id)
+);
+
+create table phist (
+       batch_id	   int unsigned not null,
+       tag_id	   int unsigned not null,
+       pop_id_1	   varchar(32),
+       pop_id_2	   varchar(32),
+       chr	   varchar(32),
+       bp	   int unsigned default 0,
+       phist	   double,
+       phist_s     double,
+       phist_pval  double,
+       fpst	   double,
+       fpst_s      double,
+       fpst_pval   double,
+       dest	   double,
+       dest_s      double,
+       dest_pval   double,
+       INDEX       batch_id_index (batch_id),
+       INDEX       tag_id_index (tag_id)
 );
 
 create table catalog_tags (
@@ -80,7 +125,7 @@ create table catalog_tags (
        relationship enum('consensus', 'primary', 'secondary', 'tertiary'),
        sub_id	    int unsigned not null,
        merge_type   tinytext,
-       seq 	    tinytext,
+       seq 	    text,
        INDEX        batch_id_index (batch_id),
        INDEX        tag_id_index (tag_id)
 );
@@ -168,7 +213,7 @@ create table unique_tags (
        relationship enum('consensus', 'model', 'primary', 'secondary'),
        sub_id	    int unsigned not null,
        seq_id	    varchar(32),
-       seq 	    tinytext,
+       seq 	    text,
        deleveraged  bool default false,
        blacklisted  bool default false,
        removed      bool default false,

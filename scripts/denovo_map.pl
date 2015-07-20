@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 #
 # This file is part of Stacks.
 #
@@ -25,8 +25,6 @@
 #
 # For the database interactions to work, the 'mysql' program is expected to be
 # on the path and sufficient permissions set to access the specified database.
-#
-# By Julian Catchen <jcatchen@uoregon.edu>
 #
 
 use strict;
@@ -192,23 +190,23 @@ foreach $sample (@parents, @progeny, @samples) {
 
     if ($gzip == 1) {
 	$file = "$out_path/$pfile" . ".tags.tsv.gz";
-	import_gzsql_file($log_fh, $file, "unique_tags", 0);
+	import_gzsql_file($log_fh, $file, "unique_tags", 1);
 
 	$file = "$out_path/$pfile" . ".snps.tsv.gz";
-	import_gzsql_file($log_fh, $file, "snps", 0);
+	import_gzsql_file($log_fh, $file, "snps", 1);
 
 	$file = "$out_path/$pfile" . ".alleles.tsv.gz";
-	import_gzsql_file($log_fh, $file, "alleles", 0);
+	import_gzsql_file($log_fh, $file, "alleles", 1);
 
     } else {
 	$file = "$out_path/$pfile" . ".tags.tsv";
-	import_sql_file($log_fh, $file, "unique_tags", 0);
+	import_sql_file($log_fh, $file, "unique_tags", 1);
 
 	$file = "$out_path/$pfile" . ".snps.tsv";
-	import_sql_file($log_fh, $file, "snps", 0);
+	import_sql_file($log_fh, $file, "snps", 1);
 
 	$file = "$out_path/$pfile" . ".alleles.tsv";
-	import_sql_file($log_fh, $file, "alleles", 0);
+	import_sql_file($log_fh, $file, "alleles", 1);
     }
     print STDERR "done.\n" if ($sql == 1);
 
@@ -248,6 +246,7 @@ if ($dry_run == 0) {
     open($pipe_fh, "$cmd |");
     while (<$pipe_fh>) {
 	print $log_fh $_;
+	if ($_ =~ /failed/i) { print STDERR "Catalog construction failed.\n"; exit(1); }
     }
     close($pipe_fh);
 }
@@ -256,23 +255,23 @@ print STDERR "  Importing catalog to MySQL database..." if ($sql == 1);
 
 if ($gzip == 1) {
     $file = "$out_path/$cat_file" . ".catalog.tags.tsv.gz";
-    import_gzsql_file($log_fh, $file, "catalog_tags", 0);
+    import_gzsql_file($log_fh, $file, "catalog_tags", 1);
 
     $file = "$out_path/$cat_file" . ".catalog.snps.tsv.gz";
-    import_gzsql_file($log_fh, $file, "catalog_snps", 0);
+    import_gzsql_file($log_fh, $file, "catalog_snps", 1);
 
     $file = "$out_path/$cat_file" . ".catalog.alleles.tsv.gz";
-    import_gzsql_file($log_fh, $file, "catalog_alleles", 0);
+    import_gzsql_file($log_fh, $file, "catalog_alleles", 1);
 
 } else {
     $file = "$out_path/$cat_file" . ".catalog.tags.tsv";
-    import_sql_file($log_fh, $file, "catalog_tags", 0);
+    import_sql_file($log_fh, $file, "catalog_tags", 1);
 
     $file = "$out_path/$cat_file" . ".catalog.snps.tsv";
-    import_sql_file($log_fh, $file, "catalog_snps", 0);
+    import_sql_file($log_fh, $file, "catalog_snps", 1);
 
     $file = "$out_path/$cat_file" . ".catalog.alleles.tsv";
-    import_sql_file($log_fh, $file, "catalog_alleles", 0);
+    import_sql_file($log_fh, $file, "catalog_alleles", 1);
 }
 print STDERR "done.\n" if ($sql == 1);
 
@@ -308,11 +307,11 @@ foreach $sample (@parents, @progeny, @samples) {
 
     if ($gzip == 1) {
 	$file = "$out_path/" . $pfile . ".matches.tsv.gz";
-	import_gzsql_file($log_fh, $file, "matches", 0);
+	import_gzsql_file($log_fh, $file, "matches", 1);
 
     } else {
 	$file = "$out_path/" . $pfile . ".matches.tsv";
-	import_sql_file($log_fh, $file, "matches", 0);
+	import_sql_file($log_fh, $file, "matches", 1);
     }
     print STDERR "done.\n" if ($sql == 1);
 
@@ -363,17 +362,42 @@ if ($data_type eq "map") {
     $file = "$out_path/batch_" . $batch_id . ".sumstats.tsv";
     import_sql_file($log_fh, $file, "sumstats", $pop_cnt+1);
 
+    $file = "$out_path/batch_" . $batch_id . ".hapstats.tsv";
+    import_sql_file($log_fh, $file, "hapstats", $pop_cnt+1);
+
     #
     # Import the Fst files.
     #
+    my $fst_cnt = 0;
     my (@keys, $m, $n);
     @keys = sort keys %pops;
     for ($m = 0; $m < scalar(@keys); $m++) {
-	for ($n = $m+1; $n < scalar(@keys); $n++) {
+	for ($n = 0; $n < scalar(@keys); $n++) {
 	    $file = "$out_path/batch_" . $batch_id . ".fst_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
-	    import_sql_file($log_fh, $file, "fst", 1);
+
+	    if (-e $file) {
+		import_sql_file($log_fh, $file, "fst", 1);
+		$fst_cnt++;
+	    }
 	}
     }
+    print STDERR "Imported $fst_cnt Fst file(s).\n";
+
+    #
+    # Import the Phi_st files.
+    #
+    $fst_cnt = 0;
+    for ($m = 0; $m < scalar(@keys); $m++) {
+	for ($n = 0; $n < scalar(@keys); $n++) {
+	    $file = "$out_path/batch_" . $batch_id . ".phistats_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
+
+	    if (-e $file) {
+		import_sql_file($log_fh, $file, "phist", 3);
+		$fst_cnt++;
+	    }
+	}
+    }
+    print STDERR "Imported $fst_cnt Haplotype Fst file(s).\n";
 }
 
 if ($sql) {
@@ -721,7 +745,7 @@ denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches
     P: specify a minimum number of identical, raw reads required to create a stack in 'progeny' individuals.
     M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
     N: specify the number of mismatches allowed when aligning secondary reads to primary stacks (default M+2).
-    n: specify the number of mismatches allowed between loci when building the catalog (default 0).
+    n: specify the number of mismatches allowed between loci when building the catalog (default 1).
     t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
     H: disable calling haplotypes from secondary reads.
 

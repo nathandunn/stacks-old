@@ -34,11 +34,12 @@ using std::set;
 #include <utility>
 using std::pair;
 using std::make_pair;
+#include <cstdint>
+#include <math.h>
 
 #include "stacks.h"
 
 extern bool   log_fst_comp;
-extern double sample_limit;
 extern double minor_allele_freq;
 extern map<int, string> pop_key;
 const  uint   PopStatSize = 5;
@@ -183,20 +184,30 @@ public:
 
 class NucTally {
 public:
-    uint   num_indv;
-    unsigned short int pop_cnt;
-    unsigned short int allele_cnt;
-    char   p_allele;
-    char   q_allele;
-    bool   fixed;
-    int    priv_allele;
+    int      loc_id;
+    int      bp;
+    uint16_t col;
+    uint16_t num_indv;
+    uint16_t pop_cnt;
+    uint16_t allele_cnt;
+    char     p_allele;
+    char     q_allele;
+    double   p_freq;
+    double   obs_het;
+    bool     fixed;
+    int      priv_allele;
 
     NucTally() { 
+	loc_id      = 0;
+	bp          = 0;
+	col         = 0;
 	num_indv    = 0;
 	pop_cnt     = 0;
 	allele_cnt  = 0;
 	p_allele    = 0;
 	q_allele    = 0;
+	p_freq      = 0.0;
+	obs_het     = 0.0;
 	priv_allele = -1;
 	fixed       = true;
     }
@@ -248,6 +259,7 @@ class PopSum {
     map<int, int> pop_order;    // PopulationID => ArrayIndex; map defining at what position in 
                                 // the second dimension of the LocSum array each population is stored.
     map<int, int> rev_pop_order;
+    map<int, int> pop_sizes;    // The maximum size of each separate population.
 
 public:
     PopSum(int, int);
@@ -262,6 +274,7 @@ public:
     int pop_cnt()  { return this->num_pops; }
     int pop_index(int index)     { return this->pop_order[index]; }
     int rev_pop_index(int index) { return this->rev_pop_order[index]; }
+    int pop_size(int pop_id)     { return this->pop_sizes[pop_id]; }
 
     LocSum  **locus(int);
     LocSum   *pop(int, int);
@@ -333,12 +346,23 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
     set<int> snp_cols;
 
     int incompatible_loci = 0;
+
+    if (verbose)
+	log_fh << "\n#\n# Recording sites that have incompatible loci -- loci with too many alleles present.\n"
+	       << "#\n"
+	       << "# Level\tAction\tLocus ID\tChr\tBP\tColumn\tPopID\n#\n";
+
     //
     // Determine the index for this population
     //
     uint pop_index = this->pop_order.size() == 0 ? 0 : this->pop_order.size();
     this->pop_order[population_id] = pop_index;
     this->rev_pop_order[pop_index] = population_id;
+
+    //
+    // Record the maximal size of this population.
+    //
+    this->pop_sizes[population_id] = end_index - start_index + 1;
 
     for (int i = 0; i < this->num_loci; i++) {
 	locus_id = pmap->rev_locus_index(i);
@@ -352,6 +376,20 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	s[pop_index] = new LocSum(len);
 
 	//
+	// Check if this locus has already been filtered and is NULL in all individuals.
+	//
+	bool filtered = true;
+	for (uint k = start_index; k <= end_index; k++) {
+	    if (d[k] != NULL) filtered = false;
+	}
+	if (filtered == true) {
+	    for (uint k = 0; k < len; k++) {
+		s[pop_index]->nucs[k].filtered_site = true;
+	    }
+	    continue;
+	}
+
+	//
 	// The catalog records which nucleotides are heterozygous. For these nucleotides we will
 	// calculate observed genotype frequencies, allele frequencies, and expected genotype frequencies.
 	//
@@ -359,7 +397,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	    res = this->tally_heterozygous_pos(loc, d, s[pop_index], 
 					       loc->snps[k]->col, k, start_index, end_index);
 	    //
-	    // Site is incompatible, log it.
+	    // If site is incompatible (too many alleles present), log it.
 	    //
 	    if (res < 0) {
 		s[pop_index]->nucs[loc->snps[k]->col].incompatible_site = true;
@@ -389,8 +427,8 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 	snp_cols.clear();
     }
 
-    cerr << "Population '" << pop_key[population_id] << "' contained " << incompatible_loci << " incompatible loci.\n";
-    log_fh <<  "Population " << population_id << " contained " << incompatible_loci << " incompatible loci.\n";
+    cerr << "Population '" << pop_key[population_id] << "' contained " << incompatible_loci << " incompatible loci -- more than two alleles present.\n";
+    log_fh <<  "Population " << population_id << " contained " << incompatible_loci << " incompatible loci -- more than two alleles present.\n";
 
     return 0;
 }
@@ -401,8 +439,8 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
     LocusT   *loc;
     LocSum  **s;
     LocTally *ltally;
-    int       locus_id, len, variable_pop;
-    unsigned short int p_cnt, q_cnt;
+    int       locus_id, variable_pop;
+    uint16_t  p_cnt, q_cnt, len, col;
 
     for (int n = 0; n < this->num_loci; n++) {
 	locus_id = this->rev_locus_index(n);
@@ -415,24 +453,60 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 
 	// for (uint i = 0; i < loc->snps.size(); i++) {
 	//     uint col = loc->snps[i]->col;
-	for (int col = 0; col < len; col++) {
+	for (col = 0; col < len; col++) {
 
-	    for (int j = 0; j < this->num_pops; j++) {
-		//
-		// Sum the number of individuals examined at this locus across populations.
-		//
-		ltally->nucs[col].num_indv += s[j]->nucs[col].num_indv;
-		ltally->nucs[col].pop_cnt  += s[j]->nucs[col].num_indv > 0 ? 1 : 0;
-
-		if (s[j]->nucs[col].pi != 0)
-		    ltally->nucs[col].fixed = false;
-	    }
+	    ltally->nucs[col].col       = col;
+	    ltally->nucs[col].bp        = loc->sort_bp(col);
+	    ltally->nucs[col].loc_id    = locus_id;
 
 	    this->tally_ref_alleles(s, col, 
 				    ltally->nucs[col].allele_cnt, 
 				    ltally->nucs[col].p_allele, 
 				    ltally->nucs[col].q_allele,
 				    p_cnt, q_cnt);
+
+	    //
+	    // Is this site variable?
+	    //
+	    if (ltally->nucs[col].allele_cnt > 1)
+		ltally->nucs[col].fixed = false;
+	    
+	    for (int j = 0; j < this->num_pops; j++) {
+		//
+		// Sum the number of individuals examined at this locus across populations.
+		//
+		ltally->nucs[col].num_indv += s[j]->nucs[col].num_indv;
+		ltally->nucs[col].pop_cnt  += s[j]->nucs[col].num_indv > 0 ? 1 : 0;
+	    }
+
+	    for (int j = 0; j < this->num_pops; j++) {
+		//
+		// Sum the most frequent allele across populations.
+		//
+		if (s[j]->nucs[col].p_nuc == ltally->nucs[col].p_allele)
+		    ltally->nucs[col].p_freq += 
+			s[j]->nucs[col].p * (s[j]->nucs[col].num_indv / (double) ltally->nucs[col].num_indv);
+		else 
+		    ltally->nucs[col].p_freq += 
+			(1 - s[j]->nucs[col].p) * (s[j]->nucs[col].num_indv / (double) ltally->nucs[col].num_indv);
+		//
+		// Sum observed heterozygosity across populations.
+		//
+		ltally->nucs[col].obs_het += 
+		    s[j]->nucs[col].obs_het * (s[j]->nucs[col].num_indv / (double) ltally->nucs[col].num_indv);
+	    }
+
+	    //
+	    // We want to report the most frequent allele as the P allele. Reorder the alleles 
+	    // if necessary.
+	    //
+	    if (ltally->nucs[col].p_freq < 0.5) {
+		char a = ltally->nucs[col].p_allele;
+		ltally->nucs[col].p_allele = ltally->nucs[col].q_allele;
+		ltally->nucs[col].q_allele = a;
+		ltally->nucs[col].p_freq   = 1 - ltally->nucs[col].p_freq;
+	    }
+
 	    //
 	    // Check if this is a private allele. Either the site is variable and
 	    // the allele exists in one population, or the site is fixed and one
@@ -911,7 +985,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     }
     //cerr << "  Num Individuals: " << num_indv << "; Obs Hets: " << obs_het << "; Obs P: " << obs_p << "; Obs Q: " << obs_q << "\n";
 
-    if (num_indv == 0 || num_indv < sample_limit) return 0;
+    if (num_indv == 0) return 0;
 
     //
     // Calculate total number of alleles
@@ -936,26 +1010,26 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
 
     //cerr << "  P allele frequency: " << allele_p << "; Q allele frequency: " << allele_q << "\n";
 
-    //
-    // If the minor allele frequency is below the cutoff, set it to zero.
-    //
-    if (minor_allele_freq > 0) {
-	if (allele_p < allele_q) {
-	    if (allele_p < minor_allele_freq) {
-		s->nucs[pos].pi            = 0.0;
-		s->nucs[pos].fixed         = true;
-		s->nucs[pos].filtered_site = true;
-		return 0;
-	    }
-	} else {
-	    if (allele_q < minor_allele_freq) {
-		s->nucs[pos].pi            = 0.0;
-		s->nucs[pos].fixed         = true;
-		s->nucs[pos].filtered_site = true;
-		return 0;
-	    }
-	}
-    }
+    // //
+    // // If the minor allele frequency is below the cutoff, set it to zero.
+    // //
+    // if (minor_allele_freq > 0) {
+    // 	if (allele_p < allele_q) {
+    // 	    if (allele_p < minor_allele_freq) {
+    // 		s->nucs[pos].pi            = 0.0;
+    // 		s->nucs[pos].fixed         = true;
+    // 		s->nucs[pos].filtered_site = true;
+    // 		return 0;
+    // 	    }
+    // 	} else {
+    // 	    if (allele_q < minor_allele_freq) {
+    // 		s->nucs[pos].pi            = 0.0;
+    // 		s->nucs[pos].fixed         = true;
+    // 		s->nucs[pos].filtered_site = true;
+    // 		return 0;
+    // 	    }
+    // 	}
+    // }
 
     //
     // Calculate expected genotype frequencies.

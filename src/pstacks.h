@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -72,16 +72,17 @@ typedef sparse_hash_map<const char *, vector<Seq *>, hash_charptr, eqstr> HashMa
 typedef unordered_map<const char *, vector<Seq *>, hash_charptr, eqstr> HashMap;
 #endif
 
-void help( void );
-void version( void );
-int  parse_command_line(int, char**);
-int  load_radtags(string, HashMap &);
-int  reduce_radtags(HashMap &, map<int, PStack *> &);
-int  populate_merged_tags(map<int, PStack *> &, map<int, MergedStack *> &);
-int  call_consensus(map<int, MergedStack *> &, map<int, PStack *> &, bool);
-int  call_alleles(MergedStack *, vector<DNANSeq *> &);
-int  count_raw_reads(map<int, PStack *> &, map<int, MergedStack *> &);
-int  write_results(map<int, MergedStack *> &, map<int, PStack *> &);
+void   help( void );
+void   version( void );
+int    parse_command_line(int, char**);
+int    load_radtags(string, HashMap &);
+int    reduce_radtags(HashMap &, map<int, PStack *> &);
+int    populate_merged_tags(map<int, PStack *> &, map<int, MergedStack *> &);
+int    call_consensus(map<int, MergedStack *> &, map<int, PStack *> &, bool);
+int    call_alleles(MergedStack *, vector<DNANSeq *> &);
+int    count_raw_reads(map<int, PStack *> &, map<int, MergedStack *> &);
+double calc_coverage_distribution(map<int, PStack *> &, map<int, MergedStack *> &);
+int    write_results(map<int, MergedStack *> &, map<int, PStack *> &);
 
 //
 // Debugging

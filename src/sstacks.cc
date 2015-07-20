@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -21,30 +21,28 @@
 //
 // sstacks -- search for occurances of stacks in a catalog of stacks.
 //
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
 
 #include "sstacks.h"
 
 // Global variables to hold command-line options.
-string    sample_1_file;
-string    sample_2_file;
-string    out_path;
-file_type in_file_type = sql;
-int       num_threads  = 1;
-int       batch_id     = 0;
-int       samp_id      = 0; 
-int       catalog      = 0;
-bool      verify_haplotypes       = true;
-bool      impute_haplotypes       = true;
-bool      require_uniq_haplotypes = false;
-searcht   search_type             = sequence;
+queue<string> samples;
+string  catalog_path;
+string  out_path;
+FileT   in_file_type = FileT::sql;
+int     num_threads  = 1;
+int     batch_id     = 0;
+int     samp_id      = 0; 
+int     catalog      = 0;
+bool    verify_haplotypes       = true;
+bool    impute_haplotypes       = true;
+bool    require_uniq_haplotypes = false;
+searcht search_type             = sequence;
 
 int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
+
+    uint sample_cnt = samples.size();
 
     //
     // Set the number of OpenMP parallel threads to execute.
@@ -53,8 +51,7 @@ int main (int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
     #endif
 
-    map<int, Locus *>  sample_1;
-    map<int, QLocus *> sample_2;
+    map<int, Locus *>  catalog;
     bool compressed = false;
     int  res;
 
@@ -63,45 +60,54 @@ int main (int argc, char* argv[]) {
     else if (search_type == genomic_loc)
 	cerr << "Searching for matches by genomic location...\n";
 
-    if (catalog) {
-        sample_1_file += ".catalog";
-	res = load_loci(sample_1_file, sample_1, false, false, compressed);
-    } else {
-	res = load_loci(sample_1_file, sample_1, false, false, compressed);
-    }
+    catalog_path += ".catalog";
+    res = load_loci(catalog_path, catalog, false, false, compressed);
 
     if (res == 0) {
-	cerr << "Unable to parse '" << sample_1_file << "'\n";
+	cerr << "Unable to parse catalog, '" << catalog_path << "'\n";
 	return 0;
     }
 
-    res = load_loci(sample_2_file, sample_2, false, false, compressed);
+    string sample_path;
+    int    i = 1;
 
-    if (res == 0) {
-	cerr << "Unable to parse '" << sample_2_file << "'\n";
-	return 0;
+    while (!samples.empty()) {
+        map<int, QLocus *> sample;
+
+	sample_path = samples.front();
+	samples.pop();
+
+	cerr << "Processing sample '" << sample_path << "' [" << i << " of " << sample_cnt << "]\n";
+
+	res = load_loci(sample_path, sample, false, false, compressed);
+
+	if (res == 0) {
+	    cerr << "Unable to parse '" << sample_path << "'\n";
+	    return 0;
+	}
+
+	in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
+
+	//
+	// Assign the ID for this sample data.
+	//
+	samp_id = sample.begin()->second->sample_id;
+
+	//dump_loci(catalog);
+	//dump_loci(sample);
+
+	if (search_type == sequence) {
+	    cerr << "Searching for sequence matches...\n";
+	    find_matches_by_sequence(catalog, sample);
+
+	} else if (search_type == genomic_loc) {
+	    cerr << "Searching for matches by genomic location...\n";
+	    find_matches_by_genomic_loc(catalog, sample);
+	}
+
+	write_matches(sample_path, sample);
+	i++;
     }
-
-    in_file_type = compressed == true ? gzsql : sql;
-
-    //
-    // Assign the ID for this sample data.
-    //
-    samp_id = sample_2.begin()->second->sample_id;
-
-    //dump_loci(sample_1);
-    //dump_loci(sample_2);
-
-    if (search_type == sequence) {
- 	cerr << "Searching for sequence matches...\n";
-	find_matches_by_sequence(sample_1, sample_2);
-
-    } else if (search_type == genomic_loc) {
-	cerr << "Searching for matches by genomic location...\n";
-	find_matches_by_genomic_loc(sample_1, sample_2);
-    }
-
-    write_matches(sample_2);
 
     return 0;
 }
@@ -113,10 +119,8 @@ int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> 
     //
     map<int, QLocus *>::iterator i;
     map<int, Locus *>::iterator j;
-    int k, min_tag_len;
+    int  k;
     char id[id_len];
-
-    min_tag_len = strlen(sample_1.begin()->second->con); 
 
     //
     // Build a hash map out of the first sample (usually the catalog)
@@ -427,7 +431,9 @@ int impute_haplotype(string query_haplotype,
     return 0;
 }
 
-int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_haplotypes) {
+int 
+generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_haplotypes)
+{
     //
     // Construct a set of haplotypes from the query locus relative to the catalog locus.
     // (The query locus already has a set of haplotypes, however, they don't necessarily 
@@ -464,6 +470,7 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
     //
     sort(merged_snps.begin(), merged_snps.end(), compare_pair_snp);
 
+    map<string, int> converted_alleles;
     map<string, int>::iterator b;
     string old_allele, new_allele;
     int    pos;
@@ -485,7 +492,7 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
 	    }
 	}
 	query_haplotypes.insert(new_allele);
-	s2_tag->alleles[new_allele] = b->second;
+	converted_alleles[new_allele] = b->second;
 
 	// cerr << "Adding haplotype: " << new_allele << " [" << b->first << "]\n";
     }
@@ -497,12 +504,18 @@ int generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_
 	}
 	query_haplotypes.insert(new_allele);
 	// cerr << "Adding haplotype 2: " << new_allele << "\n";
+    } else {
+	s2_tag->alleles.clear();
+	for (b = converted_alleles.begin(); b != converted_alleles.end(); b++)
+	    s2_tag->alleles[b->first] = b->second;
     }
 
     return 0;
 }
 
-int find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample_2) {
+int 
+find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample_2)
+{
     map<int, QLocus *>::iterator i;
     uint min_tag_len;
 
@@ -700,16 +713,18 @@ int populate_hash(map<int, Locus *> &sample, HashMap &hash_map, int min_tag_len)
     return 0;
 }
 
-int write_matches(map<int, QLocus *> &sample) {
+int 
+write_matches(string sample_path, map<int, QLocus *> &sample) 
+{
     map<int, QLocus *>::iterator i;
 
     //
     // Parse the input file names to create the output file
     //
-    size_t pos_1    = sample_2_file.find_last_of("/");
-    string out_file = out_path + sample_2_file.substr(pos_1 + 1)  + ".matches.tsv";
+    size_t pos_1    = sample_path.find_last_of("/");
+    string out_file = out_path + sample_path.substr(pos_1 + 1)  + ".matches.tsv";
 
-    if (in_file_type == gzsql)
+    if (in_file_type == FileT::gzsql)
 	out_file += ".gz";
 
     //
@@ -717,7 +732,7 @@ int write_matches(map<int, QLocus *> &sample) {
     //
     gzFile   gz_matches;
     ofstream matches;
-    if (in_file_type == gzsql) {
+    if (in_file_type == FileT::gzsql) {
 	gz_matches = gzopen(out_file.c_str(), "wb");
 	if (!gz_matches) {
 	    cerr << "Error: Unable to open gzipped matches file '" << out_file << "': " << strerror(errno) << ".\n";
@@ -733,6 +748,24 @@ int write_matches(map<int, QLocus *> &sample) {
 	    exit(1);
 	}
     }
+
+    //
+    // Record the version of Stacks used and the date generated as a comment in the catalog.
+    //
+    // Obtain the current date.
+    //
+    stringstream log;
+    time_t       rawtime;
+    struct tm   *timeinfo;
+    char         date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
+    log << "# sstacks version " << VERSION << "; generated on " << date << "\n"; 
+    if (in_file_type == FileT::gzsql) 
+        gzputs(gz_matches, log.str().c_str());
+    else
+        matches << log.str();
 
     QLocus *qloc;
     string       type;
@@ -763,11 +796,11 @@ int write_matches(map<int, QLocus *> &sample) {
 		qloc->lnl << "\n";
 	}
 
-	if (in_file_type == gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
+	if (in_file_type == FileT::gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
 	sstr.str("");
     }
 
-        if (in_file_type == gzsql)
+        if (in_file_type == FileT::gzsql)
 	    gzclose(gz_matches);
 	else
 	    matches.close();
@@ -776,7 +809,8 @@ int write_matches(map<int, QLocus *> &sample) {
 }
 
 int parse_command_line(int argc, char* argv[]) {
-    int c;
+	string sample_file;
+	int c;
      
     while (1) {
 	static struct option long_options[] = {
@@ -787,7 +821,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"uniq_haplotypes",   no_argument, NULL, 'u'},
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"batch_id",    required_argument, NULL, 'b'},
-	    {"sample_1",    required_argument, NULL, 'r'},
+	    {"catalog",     required_argument, NULL, 'c'},
 	    {"sample_2",    required_argument, NULL, 's'},
 	    {"outpath",     required_argument, NULL, 'o'},
 	    {0, 0, 0, 0}
@@ -796,7 +830,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgxuvr:s:c:o:b:p:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgxuvs:c:o:b:p:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -816,12 +850,9 @@ int parse_command_line(int argc, char* argv[]) {
 		help();
 	    }
 	    break;
-	case 'r':
-	    sample_1_file = optarg;
-	    catalog = 0;
-	    break;
 	case 's':
-	    sample_2_file = optarg;
+	    sample_file = optarg;
+	    samples.push(sample_file);
 	    break;
 	case 'g':
 	    search_type = genomic_loc;
@@ -830,8 +861,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    out_path = optarg;
 	    break;
 	case 'c': 
-	    sample_1_file = optarg;
-	    catalog++;
+	    catalog_path = optarg;
 	    break;
 	case 'x': 
 	    verify_haplotypes = false;
@@ -852,13 +882,13 @@ int parse_command_line(int argc, char* argv[]) {
 	}
     }
 
-    if (sample_1_file.length() == 0) {
-	cerr << "You must specify two sample files.\n";
+    if (catalog_path.length() == 0) {
+	cerr << "You must specify the prefix path to the catalog.\n";
 	help();
     }
 
-    if (sample_2_file.length() == 0) {
-	cerr << "You must specify two sample files.\n";
+    if (samples.size() == 0) {
+	cerr << "You must specify at least one sample file.\n";
 	help();
     }
 
@@ -879,11 +909,10 @@ void version() {
 
 void help() {
     std::cerr << "sstacks " << VERSION << "\n"
-              << "sstacks -b batch_id -c catalog_file -s sample_file [-r sample_file] [-o path] [-p num_threads] [-g] [-x] [-v] [-h]" << "\n"
+              << "sstacks -b batch_id -c catalog_file -s sample_file [-s sample_file_2 ...] [-o path] [-p num_threads] [-g] [-x] [-v] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  b: MySQL ID of this batch." << "\n"
 	      << "  c: TSV file from which to load the catalog loci." << "\n"
-	      << "  r: Load the TSV file of a single sample instead of a catalog." << "\n"
 	      << "  s: filename prefix from which to load sample loci." << "\n"
 	      << "  o: output path to write results." << "\n"
               << "  g: base matching on genomic location, not sequence identity." << "\n"

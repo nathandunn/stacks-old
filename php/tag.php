@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -287,7 +287,7 @@ print
     "  <td class=\"tag\">" . $s . "</td>\n" .
     "</tr>\n";
 
-$s = print_snps($con_seq, $con_seq, $snps, false);
+$s = print_snps($display['tag_id'], $con_seq, $con_seq, $snps, false);
 print
     "<tr>\n" .
     "  <td class=\"num\">&nbsp;</td>\n" .

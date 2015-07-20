@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -21,23 +21,19 @@
 //
 // pstacks -- search an existing set of stacks for polymorphisms
 //
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
 
 #include "pstacks.h"
 
 //
 // Global variables to hold command-line options.
 //
-file_type in_file_type;
-string    in_file;
-file_type out_file_type;
-string    out_path;
-int       sql_id        = 0;
-int       min_stack_cov = 1;
-int       num_threads   = 1;
+FileT  in_file_type;
+string in_file;
+FileT  out_file_type;
+string out_path;
+int    sql_id        = 0;
+int    min_stack_cov = 1;
+int    num_threads   = 1;
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -118,6 +114,8 @@ int main (int argc, char* argv[]) {
     cerr << "done.\n";
 
     count_raw_reads(unique, merged);
+
+    calc_coverage_distribution(unique, merged);
 
     cerr << "Writing loci, SNPs, alleles to '" << out_path << "...'\n";
     write_results(merged, unique);
@@ -288,6 +286,58 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
     return 0;
 }
 
+double calc_coverage_distribution(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
+    map<int, MergedStack *>::iterator it;
+    vector<int>::iterator             k;
+    PStack *tag;
+    double  depth = 0.0;
+    double  total = 0.0;
+    double  sum   = 0.0;
+    double  mean  = 0.0;
+    double  max   = 0.0;
+    double  stdev = 0.0;
+
+    for (it = merged.begin(); it != merged.end(); it++) {
+	depth = 0.0;
+	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
+	    tag    = unique[*k];
+	    depth += tag->count;
+	}
+
+	if (depth < min_stack_cov)
+	    continue;
+	if (depth > max) 
+	    max = depth;
+
+	sum += depth;
+	total++;
+    }
+
+    mean = sum / total;
+
+    //
+    // Calculate the standard deviation
+    //
+    for (it = merged.begin(); it != merged.end(); it++) {
+	depth = 0.0;
+	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
+	    tag    = unique[*k];
+	    depth += tag->count;
+	}
+
+	if (depth < min_stack_cov)
+	    continue;
+
+	sum += pow((depth - mean), 2);
+    }
+
+    stdev = sqrt(sum / (total - 1));
+
+    cerr << "  Mean coverage depth is " << mean << "; Std Dev: " << stdev << "; Max: " << max << "\n";
+
+    return mean;
+}
+
 int count_raw_reads(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
     map<int, MergedStack *>::iterator it;
     vector<int>::iterator k;
@@ -317,7 +367,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     PStack      *tag_2;
     stringstream sstr;
 
-    bool gzip = (in_file_type == bam) ? true : false;
+    bool gzip = (in_file_type == FileT::bam) ? true : false;
 
     //
     // Parse the input file name to create the output files
@@ -380,6 +430,29 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	    cerr << "Error: Unable to open allele file for writing.\n";
 	    exit(1);
 	}
+    }
+
+    //
+    // Record the version of Stacks used and the date generated as a comment in the catalog.
+    //
+    // Obtain the current date.
+    //
+    stringstream log;
+    time_t       rawtime;
+    struct tm   *timeinfo;
+    char         date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
+    log << "# pstacks version " << VERSION << "; generated on " << date << "\n"; 
+    if (gzip) {
+        gzputs(gz_tags, log.str().c_str());
+        gzputs(gz_snps, log.str().c_str());
+        gzputs(gz_alle, log.str().c_str());
+    } else {
+        tags << log.str();
+	snps << log.str();
+	alle << log.str();
     }
 
     int id;
@@ -647,16 +720,16 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
 // are identified by their chromosome and basepair location.
 //
 int load_radtags(string in_file, HashMap &radtags) {
-    Input *fh;
+    Input *fh = NULL;
     Seq *c;
 
-    if (in_file_type == bowtie)
+    if (in_file_type == FileT::bowtie)
         fh = new Bowtie(in_file.c_str());
-    else if (in_file_type == sam)
+    else if (in_file_type == FileT::sam)
         fh = new Sam(in_file.c_str());
-    else if (in_file_type == bam)
+    else if (in_file_type == FileT::bam)
         fh = new Bam(in_file.c_str());
-    else if (in_file_type == tsv)
+    else if (in_file_type == FileT::tsv)
         fh = new Tsv(in_file.c_str());
 
     cerr << "Parsing " << in_file.c_str() << "\n";
@@ -774,21 +847,21 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 't':
             if (strcmp(optarg, "bowtie") == 0)
-                in_file_type = bowtie;
+                in_file_type = FileT::bowtie;
             else if (strcmp(optarg, "sam") == 0)
-                in_file_type = sam;
+                in_file_type = FileT::sam;
             else if (strcmp(optarg, "bam") == 0)
-                in_file_type = bam;
+                in_file_type = FileT::bam;
             else if (strcmp(optarg, "tsv") == 0)
-                in_file_type = tsv;
+                in_file_type = FileT::tsv;
             else
-                in_file_type = unknown;
+                in_file_type = FileT::unknown;
 	    break;
      	case 'y':
             if (strcmp(optarg, "sam") == 0)
-                out_file_type = sam;
+                out_file_type = FileT::sam;
             else
-                out_file_type = sql;
+                out_file_type = FileT::sql;
 	    break;
      	case 'f':
 	    in_file = optarg;
@@ -866,7 +939,7 @@ int parse_command_line(int argc, char* argv[]) {
 	model_type = bounded;
     }
 
-    if (in_file.length() == 0 || in_file_type == unknown) {
+    if (in_file.length() == 0 || in_file_type == FileT::unknown) {
 	cerr << "You must specify an input file of a supported type.\n";
 	help();
     }

@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -54,28 +54,31 @@ using std::pair;
 #include "write.h"
 #include "utils.h"
 #include "log_utils.h"
-#include "BustardI.h"   // Reading input files in Tab-separated Bustard format
-#include "FastqI.h"     // Reading input files in FASTQ format
-#include "gzFastq.h"    // Reading gzipped input files in FASTQ format
+#include "BustardI.h"      // Reading input files in Tab-separated Bustard format
+#include "FastqI.h"        // Reading input files in FASTQ format
+#include "gzFastq.h"       // Reading gzipped input files in FASTQ format
+#include "BamUnalignedI.h" // Reading data from unaligned BAM files
 
 void help( void );
 void version( void );
 int  parse_command_line(int, char **);
+template<typename fhType>
 int  process_reads(string, 
 		   set<string> &, set<string> &,
-		   map<BarcodePair, ofstream *> &, 
+		   map<BarcodePair, fhType *> &, 
 		   map<string, long> &, map<BarcodePair, map<string, long> > &);
+template<typename fhType>
 int  process_paired_reads(string, string, 
 			  set<string> &, set<string> &,
-			  map<BarcodePair, ofstream *> &, 
-			  map<BarcodePair, ofstream *> &, 
-			  map<BarcodePair, ofstream *> &, 
-			  map<BarcodePair, ofstream *> &,
+			  map<BarcodePair, fhType *> &, 
+			  map<BarcodePair, fhType *> &, 
+			  map<BarcodePair, fhType *> &, 
+			  map<BarcodePair, fhType *> &,
 			  map<string, long> &, map<BarcodePair, map<string, long> > &);
 int  process_singlet(Read *, 
-		     string, int, bool,
+		     string, bool,
 		     map<string, long> &, map<string, long> &);
-int  correct_radtag(Read *, int, string, map<string, long> &);
+int  correct_radtag(Read *, string, map<string, long> &);
 int  check_quality_scores(Read *, bool);
 int  dist(const char *, char *);
 int  print_results(int, char **, vector<BarcodePair> &, map<string, map<string, long> > &, map<BarcodePair, map<string, long> > &);

@@ -3,4 +3,4 @@ user=dbuser
 password=dbpass
 host=localhost
 port=3306
-
+local-infile=1

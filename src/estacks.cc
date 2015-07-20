@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -21,26 +21,19 @@
 //
 // estacks -- search an existing set of stacks for polymorphisms
 //
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
-// $Id: estacks.cc 2099 2011-04-30 22:04:37Z catchen $
-//
 
 #include "estacks.h"
 
 //
 // Global variables to hold command-line options.
 //
-file_type in_file_type;
-string    in_file;
-file_type out_file_type;
-string    out_path;
-bool      record_hom    = false;
-int       sql_id        = 0;
-int       min_stack_cov = 1;
-int       num_threads   = 1;
+FileT  in_file_type;
+string in_file;
+string out_path;
+bool   record_hom    = false;
+int    sql_id        = 0;
+int    min_stack_cov = 1;
+int    num_threads   = 1;
 
 //
 // For use with the multinomial model to call fixed nucleotides.
@@ -267,14 +260,13 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     std::ofstream snps(snp_file.c_str());
     std::ofstream alle(all_file.c_str());
     std::ofstream pile(pil_file.c_str());
-    int tag_id, comp_id, snp_cnt;
+    int tag_id, comp_id;
 
     tag_id = 0;
     for (i = m.begin(); i != m.end(); i++) {
 	tag_1 = i->second;
 
 	// First write the consensus sequence
-	snp_cnt = 0;
 	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
 
 	    float total = 0;
@@ -491,14 +483,14 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
 // are identified by their chromosome and basepair location.
 //
 int load_radtags(string in_file, HashMap &radtags) {
-    Input *fh;
+    Input *fh = NULL;
     Seq *c;
 
-    if (in_file_type == bowtie)
+    if (in_file_type == FileT::bowtie)
         fh = new Bowtie(in_file.c_str());
-    else if (in_file_type == sam)
+    else if (in_file_type == FileT::sam)
         fh = new Sam(in_file.c_str());
-    else if (in_file_type == tsv)
+    else if (in_file_type == FileT::tsv)
         fh = new Tsv(in_file.c_str());
 
     cerr << "Parsing " << in_file.c_str() << "\n";
@@ -613,13 +605,13 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 't':
             if (strcmp(optarg, "bowtie") == 0)
-                in_file_type = bowtie;
+                in_file_type = FileT::bowtie;
             else if (strcmp(optarg, "sam") == 0)
-                in_file_type = sam;
+                in_file_type = FileT::sam;
             else if (strcmp(optarg, "tsv") == 0)
-                in_file_type = tsv;
+                in_file_type = FileT::tsv;
             else
-                in_file_type = unknown;
+                in_file_type = FileT::unknown;
 	    break;
      	case 'f':
 	    in_file = optarg;
@@ -657,7 +649,7 @@ int parse_command_line(int argc, char* argv[]) {
 	}
     }
 
-    if (in_file.length() == 0 || in_file_type == unknown) {
+    if (in_file.length() == 0 || in_file_type == FileT::unknown) {
 	cerr << "You must specify an input file of a supported type.\n";
 	help();
     }

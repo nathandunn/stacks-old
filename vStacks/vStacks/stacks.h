@@ -35,6 +35,7 @@ using std::set;
 using std::pair;
 using std::make_pair;
 #include<iostream>
+using std::ofstream;
 using std::cerr;
 #include<sstream>
 using std::stringstream;
@@ -110,11 +111,11 @@ class SNP {
 class PStack {
  public:
     uint     id;
-    uint     count;       // Number of identical reads forming this stack
-    DNANSeq *seq;         // Sequence read
-    uint     len;         // Read length
+    uint     count;      // Number of identical reads forming this stack
+    DNANSeq *seq;        // Sequence read
+    uint     len;        // Read length
     vector<char *> map;  // List of sequence read IDs merged into this stack
-    PhyLoc   loc;         // Physical genome location of this stack.
+    PhyLoc   loc;        // Physical genome location of this stack.
 
     PStack()  { 
 	id     = 0; 
@@ -136,7 +137,7 @@ class Stack {
  public:
     uint         id;
     DNASeq     *seq;  // Sequence read
-    vector<uint> map;  // List of sequence read IDs merged into this stack
+    vector<uint> map; // List of sequence read IDs merged into this stack
 
     Stack()  {
 	id  = 0;

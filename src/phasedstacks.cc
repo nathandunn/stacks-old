@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -21,32 +21,28 @@
 //
 // phasedstacks -- analyse phased data, descended from a Stacks analysis.
 //
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
 
 #include "phasedstacks.h"
 
 // Global variables to hold command-line options.
-file_type in_file_type = unknown;
-int       num_threads  = 1;
-int       batch_id     = 0;
-string    cat_path;
-string    in_path;
-string    out_path;
-string    out_file;
-string    pmap_path;
-bool      haplotypes       = false;
-bool      write_zeros      = true;
-double    p_value_cutoff   = 0.05;
-double    chi_sq_limit     = 3.84;
-double    minor_freq_lim   = 0.1;
-double    min_inform_pairs = 0.90;
-uint      max_pair_dist    = 1000000;
-uint      bucket_dist      = 5000;
-double    dprime_threshold = false;
-double    dprime_threshold_level = 0.0;
+FileT  in_file_type = FileT::unknown;
+int    num_threads  = 1;
+int    batch_id     = 0;
+string cat_path;
+string in_path;
+string out_path;
+string out_file;
+string pmap_path;
+bool   haplotypes       = false;
+bool   write_zeros      = true;
+double p_value_cutoff   = 0.05;
+double chi_sq_limit     = 3.84;
+double minor_freq_lim   = 0.1;
+double min_inform_pairs = 0.90;
+uint   max_pair_dist    = 1000000;
+uint   bucket_dist      = 5000;
+double dprime_threshold = false;
+double dprime_threshold_level = 0.0;
 
 set<int> whitelist, blacklist;
 
@@ -70,13 +66,13 @@ int main (int argc, char* argv[]) {
     cerr << "Minor allele frequency cutoff: " << minor_freq_lim << "\n"
 	 << "Looking for ";
     switch(in_file_type) {
-    case beagle:
+    case FileT::beagle:
 	cerr << "Beagle";
 	break;
-    case phase:
+    case FileT::phase:
 	cerr << "PHASE";
 	break;
-    case fastphase:
+    case FileT::fastphase:
     default:
 	cerr << "fastPhase";
 	break;
@@ -151,19 +147,19 @@ int main (int argc, char* argv[]) {
 
 	// if (files[i].second != "batch_1.groupV.phase") continue;
 
-	PhasedSummary *psum;
+	PhasedSummary *psum = NULL;
 
-	if (in_file_type == fastphase) {
+	if (in_file_type == FileT::fastphase) {
 	    if ((psum = parse_fastphase(in_path + files[i].second)) == NULL) {
 		cerr << "Unable to parse fastPhase input files.\n";
 		exit(1);
 	    }
-	} else if (in_file_type == beagle && haplotypes) {
+	} else if (in_file_type == FileT::beagle && haplotypes) {
 	    if ((psum = parse_beagle_haplotypes(catalog, in_path + files[i].second)) == NULL) {
 		cerr << "Unable to parse Beagle input files.\n";
 		exit(1);
 	    }
-	} else if (in_file_type == beagle) {
+	} else if (in_file_type == FileT::beagle) {
 	    if ((psum = parse_beagle(catalog, in_path + files[i].second)) == NULL) {
 		cerr << "Unable to parse Beagle input files.\n";
 		exit(1);
@@ -794,7 +790,7 @@ enumerate_haplotypes(ofstream &fh, map<string, int> &pop_map, PhasedSummary *psu
     //
     // Write the haplotypes.
     //
-    float tot;
+    float tot = 0.0;
 
     fh << haplotypes.size() << "\t";
     for (it = haplotypes.begin(); it != haplotypes.end(); it++) {
@@ -1787,10 +1783,10 @@ build_file_list(vector<pair<int, string> > &files)
     }
 
     switch(in_file_type) {
-    case beagle:
+    case FileT::beagle:
 	pattern = ".phased.gz";
 	break;
-    case fastphase:
+    case FileT::fastphase:
     default:
 	pattern = "_hapguess_switch.out";
 	break;
@@ -1876,13 +1872,13 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 't':
             if (strcasecmp(optarg, "phase") == 0)
-                in_file_type = phase;
+                in_file_type = FileT::phase;
             else if (strcasecmp(optarg, "fastphase") == 0)
-                in_file_type = fastphase;
+                in_file_type = FileT::fastphase;
             else if (strcasecmp(optarg, "beagle") == 0)
-                in_file_type = beagle;
+                in_file_type = FileT::beagle;
             else
-                in_file_type = unknown;
+                in_file_type = FileT::unknown;
 	    break;
 	case 'M':
 	    pmap_path = optarg;

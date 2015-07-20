@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -21,25 +21,23 @@
 //
 // cstacks -- Create a catalog of Stacks.
 //
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
 
 #include "cstacks.h"
 
 // Global variables to hold command-line options.
 queue<pair<int, string> > samples;
-string    out_path;
-string    catalog_path;
-file_type in_file_type    = sql;
-int       batch_id        = 0;
-int       ctag_dist       = 0;
-searcht   search_type     = sequence;
-int       num_threads     = 1;
-bool      mult_matches    = false;
-bool      report_mmatches = false;
-bool      require_uniq_haplotypes = false;
+string  out_path;
+string  catalog_path;
+FileT   in_file_type    = FileT::sql;
+int     batch_id        = 0;
+int     ctag_dist       = 1;
+bool    set_kmer_len    = true;
+int     kmer_len        = 0;
+searcht search_type     = sequence;
+int     num_threads     = 1;
+bool    mult_matches    = false;
+bool    report_mmatches = false;
+bool    require_uniq_haplotypes = false;
 
 int main (int argc, char* argv[]) {
 
@@ -394,15 +392,17 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     // determine the optimal length for k-mers.
     //
     int con_len   = strlen(sample[keys[0]]->con);
-    int kmer_len  = determine_kmer_length(con_len, ctag_dist);
+    if (set_kmer_len) kmer_len = determine_kmer_length(con_len, ctag_dist);
     int num_kmers = con_len - kmer_len + 1;
 
-    cerr << "  Number of kmers per sequence: " << num_kmers << "\n";
+    cerr << "  Distance allowed between stacks: " << ctag_dist << "\n"
+	 << "  Using a k-mer length of " << kmer_len << "\n"
+	 << "  Number of kmers per sequence: " << num_kmers << "\n";
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
-    int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len, true);
+    int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len, set_kmer_len ? true : false);
 
     populate_kmer_hash(catalog, kmer_map, kmer_map_keys, kmer_len);
 
@@ -587,7 +587,7 @@ int write_catalog(map<int, CLocus *> &catalog) {
     CLocus  *tag;
     set<int> matches;
 
-    bool gzip = (in_file_type == gzsql) ? true : false;
+    bool gzip = (in_file_type == FileT::gzsql) ? true : false;
 
     //
     // Parse the input file names to create the output file
@@ -600,7 +600,7 @@ int write_catalog(map<int, CLocus *> &catalog) {
     string all_file = prefix.str() + ".catalog.alleles.tsv";
 
     if (gzip) {
-	tag_file += ".gz";
+        tag_file += ".gz";
 	snp_file += ".gz";
 	all_file += ".gz";
     }
@@ -611,7 +611,7 @@ int write_catalog(map<int, CLocus *> &catalog) {
     gzFile   gz_tags, gz_snps, gz_alle;
     ofstream tags, snps, alle;
     if (gzip) {
-	gz_tags = gzopen(tag_file.c_str(), "wb");
+        gz_tags = gzopen(tag_file.c_str(), "wb");
 	if (!gz_tags) {
 	    cerr << "Error: Unable to open gzipped catalog tag file '" << tag_file << "': " << strerror(errno) << ".\n";
 	    exit(1);
@@ -651,6 +651,29 @@ int write_catalog(map<int, CLocus *> &catalog) {
 	    cerr << "Error: Unable to open catalog alleles file for writing.\n";
 	    exit(1);
 	}
+    }
+
+    //
+    // Record the version of Stacks used and the date generated as a comment in the catalog.
+    //
+    // Obtain the current date.
+    //
+    stringstream log;
+    time_t       rawtime;
+    struct tm   *timeinfo;
+    char         date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
+    log << "# cstacks version " << VERSION << "; catalog generated on " << date << "\n"; 
+    if (gzip) {
+        gzputs(gz_tags, log.str().c_str());
+        gzputs(gz_snps, log.str().c_str());
+        gzputs(gz_alle, log.str().c_str());
+    } else {
+        tags << log.str();
+	snps << log.str();
+	alle << log.str();
     }
 
     for (i = catalog.begin(); i != catalog.end(); i++) {
@@ -1273,7 +1296,7 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
     if (!load_loci(sample.second, tmp_catalog, false, false, compressed))
         return 0;
 
-    in_file_type = compressed == true ? gzsql : sql;
+    in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
 
     sample.first = tmp_catalog.begin()->second->sample_id;
 
@@ -1306,7 +1329,7 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     if (!load_loci(catalog_path, catalog, false, false, compressed))
         return 0;
 
-    in_file_type = compressed == true ? gzsql : sql;
+    in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
 
     //
     // Iterate over the catalog entires and convert the stack components
@@ -1359,6 +1382,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"report_mmatches",    no_argument, NULL, 'R'},
 	    {"batch_id",     required_argument, NULL, 'b'},
 	    {"ctag_dist",    required_argument, NULL, 'n'},
+	    {"k_len",        required_argument, NULL, 'k'},
 	    {"catalog",      required_argument, NULL, 'c'},
 	    {"sample",       required_argument, NULL, 's'},
 	    {"outpath",      required_argument, NULL, 'o'},
@@ -1369,7 +1393,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgvuRmo:s:c:b:p:n:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgvuRmo:s:c:b:p:n:k:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1387,7 +1411,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    }
 	    break;
 	case 'n':
-	    ctag_dist = atoi(optarg);
+	    ctag_dist = is_integer(optarg);
+	    break;
+	case 'k':
+	    set_kmer_len = false;
+	    kmer_len     = is_integer(optarg);
 	    break;
 	case 'm':
 	    mult_matches = true;
@@ -1415,7 +1443,7 @@ int parse_command_line(int argc, char* argv[]) {
             version();
             break;
 	case 'p':
-	    num_threads = atoi(optarg);
+	    num_threads = is_integer(optarg);
 	    break;
 	case '?':
 	    // getopt_long already printed an error message.
@@ -1427,8 +1455,13 @@ int parse_command_line(int argc, char* argv[]) {
 	}
     }
 
+    if (set_kmer_len == false && (kmer_len < 5 || kmer_len > 31)) {
+        cerr << "Kmer length must be between 5 and 31bp.\n";
+        help();
+    }
+
     if (samples.size() == 0) {
-	cerr << "You must specify at least one sample file.\n";
+        cerr << "You must specify at least one sample file.\n";
 	help();
     }
 
@@ -1455,12 +1488,13 @@ void help() {
 	      << "  o: output path to write results." << "\n"
               << "  g: base catalog matching on genomic location, not sequence identity." << "\n"
 	      << "  m: include tags in the catalog that match to more than one entry (default false)." << "\n"
-              << "  n: number of mismatches allowed between sample tags when generating the catalog (default 0)." << "\n"
+              << "  n: number of mismatches allowed between sample tags when generating the catalog (default 1)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  h: display this help messsage." << "\n\n"
 	      << "  Catalog editing:\n"
 	      << "    --catalog <path>: provide the path to an existing catalog. cstacks will add data to this existing catalog.\n\n"
 	      << "  Advanced options:\n" 
+	      << "     --k_len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
 	      << "    --report_mmatches: report query loci that match more than one catalog locus.\n";
 
     exit(0);
