@@ -48,15 +48,78 @@ char reverse(char c) {
     case 'N':
     case 'n':
     case '.':
-	default:
 	return 'N';
+	break;
+    case '-':
+    default:
+	return '-';
 	break;
     }
 
     return 'N';
 }
 
-int is_integer(const char *str) {
+char *
+rev_comp(const char *seq) 
+{
+    int len   = strlen(seq);
+    int j     = 0;
+    char *com = new char[len + 1]; 
+    const char *p;
+   
+    for (p = seq + len - 1; p >= seq; p--) {
+        switch (*p) {
+        case 'A':
+        case 'a':
+            com[j] = 'T';
+            break;
+        case 'C':
+        case 'c':
+            com[j] = 'G';
+            break;
+        case 'G':
+        case 'g':
+            com[j] = 'C';
+            break;
+        case 'T':
+        case 't':
+            com[j] = 'A';
+            break;
+	case 'N':
+	case 'n':
+	case '.':
+	    com[j] = 'N';
+	    break;
+        }
+        j++;
+    }
+    com[len] = '\0';
+
+    return com;
+}
+
+void
+reverse_string(char *seq) 
+{
+    int len = strlen(seq);
+    char *p = seq;
+    char *q = seq + len - 1;
+    char  tmp;
+
+    while (q > p) {
+	tmp = *q;
+	*q  = *p;
+	*p  = tmp;
+	q--;
+	p++;
+    }
+
+    return;
+}
+
+int 
+is_integer(const char *str) 
+{
     //
     // Adapted from the strtol manpage.
     //
@@ -80,7 +143,9 @@ int is_integer(const char *str) {
     return (int) val;
 }
 
-double is_double(const char *str) {
+double 
+is_double(const char *str) 
+{
     //
     // Adapted from the strtol manpage.
     //
@@ -104,7 +169,9 @@ double is_double(const char *str) {
     return val;
 }
 
-double factorial(double n) {
+double 
+factorial(double n) 
+{
     double fact = 1;
 
     for (double i = n; i > 1; i--)
@@ -113,7 +180,9 @@ double factorial(double n) {
     return fact;
 }
 
-double reduced_factorial(double n, double d) {
+double 
+reduced_factorial(double n, double d) 
+{
     double f = n - d;
 
     if (f < 0) 
@@ -133,7 +202,9 @@ double reduced_factorial(double n, double d) {
     return f;
 }
 
-double log_factorial(double n) {
+double 
+log_factorial(double n) 
+{
     double fact = 0;
 
     for (double i = n; i > 1; i--)
@@ -142,7 +213,9 @@ double log_factorial(double n) {
     return fact;
 }
 
-double reduced_log_factorial(double n, double d) {
+double 
+reduced_log_factorial(double n, double d) 
+{
     double f = n - d;
 
     if (f < 0) 

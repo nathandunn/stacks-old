@@ -52,6 +52,8 @@ using std::vector;
 using std::map;
 #include <set>
 using std::set;
+#include <queue>
+using std::queue;
 
 #include <unordered_map>
 using std::unordered_map;
@@ -84,6 +86,6 @@ int  verify_genomic_loc_match(Locus *, QLocus *, set<string> &, unsigned long &)
 int  generate_query_haplotypes(Locus *, QLocus *, set<string> &);
 int  impute_haplotype(string, vector<pair<allele_type, string> > &, string &);
 bool compare_dist(pair<int, int>, pair<int, int>);
-int  write_matches(map<int, QLocus *> &);
+int  write_matches(string, map<int, QLocus *> &);
 
 #endif // __SSTACKS_H__

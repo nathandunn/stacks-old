@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <getopt.h> // Process command-line options
 #include <dirent.h> // Open/Read contents of a directory
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <string.h>
 #include <math.h>
 #include <algorithm>

@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2013, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2014, Julian Catchen <jcatchen@uoregon.edu>
 //
 // This file is part of Stacks.
 //
@@ -24,8 +24,6 @@
 // Julian Catchen
 // jcatchen@uoregon.edu
 // University of Oregon
-//
-// $Id: clean.cc 2146 2011-08-02 22:11:50Z catchen $
 //
 
 #include "clean.h"
@@ -138,9 +136,11 @@ parse_input_record(Seq *s, Read *r)
 	// @<instrument>:<run number>:<flowcell ID>:<lane>:<tile>:<x-pos>:<y-pos> <read>:<is filtered>:<control number>:<index sequence>
 	//
 	for (p = s->id, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	strcpy(r->machine, p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    strcpy(r->machine, p);
+	    *q = ':';
+	}
 
 	// Run number.
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
@@ -151,34 +151,46 @@ parse_input_record(Seq *s, Read *r)
 	//*q = '\0';
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->lane = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->lane = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
+	if (q < stop) {
 	*q = '\0';
 	r->tile = atoi(p);
 	*q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->x = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->x = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ' ' && q < stop; q++);
-	*q = '\0';
-	r->y = atoi(p);
-	*q = ' ';
+	if (q < stop) {
+	    *q = '\0';
+	    r->y = atoi(p);
+	    *q = ' ';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	// r->read = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    // r->read = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->filter = *p == 'Y' ? true : false;
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->filter = *p == 'Y' ? true : false;
+	    *q = ':';
+	}
 
 	// Control Number.
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
@@ -187,19 +199,22 @@ parse_input_record(Seq *s, Read *r)
 	//
 	// Index barcode
 	//
-	for (p = q+1, q = p; q < stop; q++);
+	if (q < stop)
+	    for (p = q+1, q = p; q < stop; q++);
+	else
+	    p = q;
 
 	if (*p != '\0' && r->read == 1) {
 	    switch (barcode_type) {
 	    case index_null:
 	    case index_index:
 	    case index_inline:
-		strncpy(r->index_bc, p,  bc_size_1);
-		r->index_bc[bc_size_1] = '\0';
+		strncpy(r->index_bc, p,  max_bc_size_1);
+		r->index_bc[max_bc_size_1] = '\0';
 		break;
 	    case inline_index:
-		strncpy(r->index_bc, p,  bc_size_2);
-		r->index_bc[bc_size_2] = '\0';
+		strncpy(r->index_bc, p,  max_bc_size_2);
+		r->index_bc[max_bc_size_2] = '\0';
 		break;
 	    default:
 		break;
@@ -208,8 +223,8 @@ parse_input_record(Seq *s, Read *r)
 	    switch (barcode_type) { 
 	    case index_index:
 	    case inline_index:
-		strncpy(r->index_bc, p,  bc_size_2);
-		r->index_bc[bc_size_2] = '\0';
+		strncpy(r->index_bc, p,  max_bc_size_2);
+		r->index_bc[max_bc_size_2] = '\0';
 		break;
 	    default:
 		break;
@@ -220,34 +235,46 @@ parse_input_record(Seq *s, Read *r)
 	r->fastq_type = illv1_fastq;
 
 	for (p = s->id, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	strcpy(r->machine, p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    strcpy(r->machine, p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->lane = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->lane = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->tile = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->tile = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != ':' && q < stop; q++);
-	*q = '\0';
-	r->x = atoi(p);
-	*q = ':';
+	if (q < stop) {
+	    *q = '\0';
+	    r->x = atoi(p);
+	    *q = ':';
+	}
 
 	for (p = q+1, q = p; *q != '#' && q < stop; q++);
-	*q = '\0';
-	r->y = atoi(p);
-	*q = '#';
+	if (q < stop) {
+	    *q = '\0';
+	    r->y = atoi(p);
+	    *q = '#';
+	}
 
 	for (p = q+1, q = p; *q != '/' && q < stop; q++);
-	*q = '\0';
-	r->index = atoi(p);
-	*q = '/';
+	if (q < stop) {
+	    *q = '\0';
+	    r->index = atoi(p);
+	    *q = '/';
+	}
 
 	for (p = q+1, q = p; *q != '\0' && q < stop; q++);
 	// r->read = atoi(p);
@@ -264,29 +291,26 @@ parse_input_record(Seq *s, Read *r)
     //
     // Resize the sequence/phred buffers if necessary.
     //
-    if (truncate_seq == 0 && len > r->size - 1)
+    if (len > r->size - 1)
 	r->resize(len + 1);
-    else if (truncate_seq > 0 && len >= (truncate_seq + r->inline_bc_len))
-	r->set_len(truncate_seq + r->inline_bc_len);
-    else
-	r->set_len(len);
 
-    strncpy(r->seq,   s->seq,  r->len); 
-    r->seq[r->len]   = '\0';
-    strncpy(r->phred, s->qual, r->len);
-    r->phred[r->len] = '\0';
+    strncpy(r->seq,   s->seq,  r->size - 1); 
+    strncpy(r->phred, s->qual, r->size - 1);
+    r->seq[r->size - 1]   = '\0';
+    r->phred[r->size - 1] = '\0';
+    r->len = len;
 
     if (r->read == 1) {
 	    switch (barcode_type) {
 	    case inline_null:
 	    case inline_inline:
 	    case inline_index:
-		strncpy(r->inline_bc, r->seq, bc_size_1);
-		r->inline_bc[bc_size_1] = '\0';
+		strncpy(r->inline_bc, r->seq, max_bc_size_1);
+		r->inline_bc[max_bc_size_1] = '\0';
 		break;
 	    case index_inline:
-		strncpy(r->inline_bc, r->seq, bc_size_2);
-		r->inline_bc[bc_size_2] = '\0';
+		strncpy(r->inline_bc, r->seq, max_bc_size_2);
+		r->inline_bc[max_bc_size_2] = '\0';
 		break;
 	    default:
 		break;
@@ -294,8 +318,8 @@ parse_input_record(Seq *s, Read *r)
     } else if (r->read == 2 &&
 	       (barcode_type == inline_inline ||
 		barcode_type == index_inline)) {
-	strncpy(r->inline_bc, r->seq, bc_size_2);
-	r->inline_bc[bc_size_2] = '\0';
+	strncpy(r->inline_bc, r->seq, max_bc_size_2);
+	r->inline_bc[max_bc_size_2] = '\0';
     }
 
     r->retain = 1;
@@ -465,96 +489,8 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
     return 1;
 }
 
-//
-// Function to process barcodes
-//
-int 
-process_barcode(Read *href_1, Read *href_2, BarcodePair &bc, 
-		map<BarcodePair, ofstream *> &fhs,
-		set<string> &se_bc, set<string> &pe_bc, 
-		map<BarcodePair, map<string, long> > &barcode_log, map<string, long> &counter) 
-{
-    if (barcode_type == null_null)
-	return 0;
-
-    //
-    // Log the barcodes we receive.
-    //
-    if (barcode_log.count(bc) == 0) {
-	barcode_log[bc]["noradtag"] = 0;
-	barcode_log[bc]["total"]    = 0;
-	barcode_log[bc]["low_qual"] = 0;
-	barcode_log[bc]["retained"] = 0;
-    }
-    barcode_log[bc]["total"] += paired ? 2 : 1;
-
-    bool se_correct = false;
-    bool pe_correct = false;
-
-    //
-    // Is this a legitimate barcode?
-    //
-    if (fhs.count(bc) == 0) {
-	BarcodePair old_barcode = bc;
-
-    	//
-    	// Try to correct the barcode.
-    	//
-	if (paired) {
-	    if (se_bc.count(bc.se) == 0)
-		se_correct = correct_barcode(se_bc, href_1, single_end);
-	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
-		pe_correct = correct_barcode(pe_bc, href_2, paired_end);
-
-	    if (se_correct)
-		bc.se = string(href_1->se_bc);
-	    if (pe_bc.size() > 0 && pe_correct)
-		bc.pe = string(href_2->pe_bc);
- 
-	    //
-	    // After correcting the individual barcodes, check if the combination is valid.
-	    //
-	    if (fhs.count(bc) == 0) {
-		counter["ambiguous"] += 2;
-		href_1->retain = 0;
-		href_2->retain = 0;
-	    }
-
-	} else {
-	    if (se_bc.count(bc.se) == 0)
-		se_correct = correct_barcode(se_bc, href_1, single_end);
-	    if (pe_bc.size() > 0 && pe_bc.count(bc.pe) == 0)
-		pe_correct = correct_barcode(pe_bc, href_1, paired_end);
-
-	    if (se_correct)
-		bc.se = string(href_1->se_bc);
-	    if (pe_bc.size() > 0 && pe_correct)
-		bc.pe = string(href_1->pe_bc);
-
-	    if (fhs.count(bc) == 0) {
-		counter["ambiguous"]++;
-		href_1->retain = 0;
-	    }
-	}
-
-	if (href_1->retain && (se_correct || pe_correct)) {
-	    counter["recovered"] += paired ? 2 : 1;
-	    barcode_log[old_barcode]["total"] -= paired ? 2 : 1;
-	    if (barcode_log.count(bc) == 0) {
-		barcode_log[bc]["total"]    = 0;
-		barcode_log[bc]["retained"] = 0;
-		barcode_log[bc]["low_qual"] = 0;
-		barcode_log[bc]["noradtag"] = 0;
-	    }
-	    barcode_log[bc]["total"] += paired ? 2 : 1;
-	}
-    }
-
-    return 0;
-}
-
 bool 
-correct_barcode(set<string> &bcs, Read *href, seqt type) 
+correct_barcode(set<string> &bcs, Read *href, seqt type, int num_errs) 
 {
     if (recover == false)
 	return false;
@@ -564,20 +500,27 @@ correct_barcode(set<string> &bcs, Read *href, seqt type)
     // are off by two nucleotides in sequence space, than we can correct barcodes that have a single
     // sequencing error. 
     // 
-    // If the barcode sequence is off by no more than barcodes_dist-1 nucleotides, correct it.
+    // If the barcode sequence is off by no more than barcodes_dist-1 nucleotides, correct it. We will
+    // search the whole possible space of barcodes if more than one length of barcode was specified.
     //
     const char *p; char *q;
-    int d, close;
+    char   bc[id_len];
+    int    d, close;
     string b;
     set<string>::iterator it;
 
-    int num_errs = barcode_dist - 1;
     close = 0;
 
     for (it = bcs.begin(); it != bcs.end(); it++) {
 
+	//
+	// Copy the proper subset of the barcode to match the length of the barcode in the bcs set.
+	//
+	strncpy(bc, type == single_end ? href->se_bc : href->pe_bc, it->length());
+	bc[it->length()] = '\0';
+
 	d = 0; 
-	for (p = it->c_str(), q = type == single_end ? href->se_bc : href->pe_bc; *p != '\0'; p++, q++)
+	for (p = it->c_str(), q = bc; *p != '\0'; p++, q++)
 	    if (*p != *q) d++;
 
 	if (d <= num_errs) {
@@ -591,10 +534,18 @@ correct_barcode(set<string> &bcs, Read *href, seqt type)
 	//
 	// Correct the barcode.
 	//
-	if (type == single_end)
+	if (type == single_end) {
 	    strcpy(href->se_bc, b.c_str());
-	else 
+	    if (barcode_type == inline_null ||
+		barcode_type == inline_index ||
+		barcode_type == inline_inline)
+		href->inline_bc_len = b.length();
+	} else {
 	    strcpy(href->pe_bc, b.c_str());
+	    if (barcode_type == index_inline ||
+		barcode_type == inline_inline)
+		href->inline_bc_len = b.length();
+	}
 
 	return true;
     }

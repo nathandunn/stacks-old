@@ -698,9 +698,9 @@ sub usage {
     print << "EOQ";
 index_radtags.pl -D db [-c] [-t] [-s path] [-d] [-h]
   D: radtag database to examine.
-  s: path to SQL definition files for catalog/tag index tables.
   c: generate a catalog index.
   t: generate a unique tags index.
+  s: path to SQL definition files for catalog/tag index tables (if not in default, installed location).
   h: display this help message.
   d: turn on debug output.
 

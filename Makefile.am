@@ -53,7 +53,8 @@ process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/const
 	src/write.h src/write.cc \
 	src/clean.h src/clean.cc \
 	src/file_io.h src/file_io.cc \
-	src/input.h src/input.cc src/BustardI.h src/FastqI.h src/gzFastq.h src/renz.h
+	src/input.h src/input.cc src/BustardI.h src/BamUnalignedI.h src/FastqI.h src/gzFastq.h \
+	src/renz.h
 
 process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h \
 	src/clean.h src/clean.cc \
@@ -61,7 +62,7 @@ process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc 
 	src/utils.h src/utils.cc src/log_utils.h src/log_utils.cc \
 	src/write.h src/write.cc \
 	src/kmers.h src/kmers.cc \
-	src/input.h src/input.cc src/BustardI.h src/FastqI.h src/gzFastq.h 
+	src/input.h src/input.cc src/BustardI.h src/BamUnalignedI.h src/FastqI.h src/gzFastq.h 
 
 kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h \
 	src/utils.h src/utils.cc \
@@ -72,6 +73,7 @@ kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h \
 
 clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h \
 	src/kmers.h src/kmers.cc \
+	src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/BustardI.h src/FastqI.h src/FastaI.h \
 	src/gzFastq.h src/gzFasta.h
 
@@ -113,10 +115,12 @@ sstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 sstacks_LDFLAGS   = $(OPENMP_CFLAGS)
 rxstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 rxstacks_LDFLAGS  = $(OPENMP_CFLAGS)
-process_radtags_CXXFLAGS = $(OPENMP_CFLAGS)
+process_radtags_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS) 
 process_radtags_LDFLAGS  = $(OPENMP_CFLAGS)
-process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+process_radtags_LDADD    = $(BAM_LIBS)
+process_shortreads_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS) 
 process_shortreads_LDFLAGS  = $(OPENMP_CFLAGS)
+process_shortreads_LDADD    = $(BAM_LIBS)
 kmer_filter_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 kmer_filter_LDFLAGS   = $(OPENMP_CFLAGS)
 genotypes_CXXFLAGS    = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
@@ -138,8 +142,9 @@ nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sq
 	php/CatalogClass.php php/annotate_marker.php php/constants.php.dist php/index.php php/tags.php \
 	php/Locus.php php/catalog.php php/correct_genotypes.php php/correct_genotype.php php/export_batch.php php/last_modified.php  \
 	php/version.php php/catalog_genotypes.php php/db_functions.php php/header.php php/samples.php \
-	php/stacks_functions.php php/view_sequence.php php/catalog_tag.php php/sequence_blast.php php/tag.php \
-	php/ajax.js php/annotate.js php/stacks.js php/export.js php/stacks.css \
+	php/stacks_functions.php php/view_sequence.php php/sequence_blast.php \
+	php/pop_view.php php/sumstat_view.php php/hapstat_view.php php/fst_view.php php/phist_view.php php/stack_view.php \
+	php/population_view.js php/ajax.js php/annotate.js php/stacks.js php/export.js php/stacks.css \
 	php/images/caret-d.png php/images/caret-u.png php/images/excel_icon.png php/images/l-arrow-disabled.png \
 	php/images/l-arrow.png php/images/r-arrow-disabled.png php/images/r-arrow.png php/images/stacks_bg.png \
 	php/images/stacks_logo_rev_small.png

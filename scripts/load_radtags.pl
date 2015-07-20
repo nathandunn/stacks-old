@@ -92,26 +92,26 @@ if ($catalog) {
 
 	$f = $in_path . "/$file" . ".catalog.tags.tsv";
 	if (-e $f) {
-	    import_sql_file($f, "catalog_tags", 0);
+	    import_sql_file($f, "catalog_tags", 1);
 	} elsif (-e $f . ".gz") {
 	    $f = $in_path . "/$file" . ".catalog.tags.tsv.gz";
-	    import_gzsql_file($f, "catalog_tags", 0);
+	    import_gzsql_file($f, "catalog_tags", 1);
 	}
 
         $f = $in_path . "/$file" . ".catalog.snps.tsv";
 	if (-e $f) {
-	    import_sql_file($f, "catalog_snps", 0);
+	    import_sql_file($f, "catalog_snps", 1);
 	} elsif (-e $f . ".gz") {
 	    $f = $in_path . "/$file" . ".catalog.snps.tsv.gz";
-	    import_gzsql_file($f, "catalog_snps", 0);
+	    import_gzsql_file($f, "catalog_snps", 1);
 	}
 
         $f = $in_path . "/$file" . ".catalog.alleles.tsv";
 	if (-e $f) {
-	    import_sql_file($f, "catalog_alleles", 0);
+	    import_sql_file($f, "catalog_alleles", 1);
 	} elsif (-e $f . ".gz") {
 	    $f = $in_path . "/$file" . ".catalog.alleles.tsv.gz";
-	    import_gzsql_file($f, "catalog_alleles", 0);
+	    import_gzsql_file($f, "catalog_alleles", 1);
 	}
     }
 }
@@ -130,17 +130,42 @@ if ($stacks_type eq "map") {
     $f = "$in_path/batch_" . $batch_id . ".sumstats.tsv";
     import_sql_file($f, "sumstats", scalar(keys %pops) + 1);
 
+    $f = "$in_path/batch_" . $batch_id . ".hapstats.tsv";
+    import_sql_file($f, "hapstats", scalar(keys %pops) + 1);
+
     #
     # Import the Fst files.
     #
+    my $fst_cnt = 0;
     my (@keys, $m, $n);
     @keys = sort keys %pops;
     for ($m = 0; $m < scalar(@keys); $m++) {
-	for ($n = $m+1; $n < scalar(@keys); $n++) {
+	for ($n = 0; $n < scalar(@keys); $n++) {
 	    $f = "$in_path/batch_" . $batch_id . ".fst_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
-	    import_sql_file($f, "fst", 1);
+
+	    if (-e $file) {
+		import_sql_file($f, "fst", 1);
+		$fst_cnt++;
+	    }
 	}
     }
+    print STDERR "Imported $fst_cnt SNP Fst file(s).\n";
+
+    #
+    # Import the Phi_st files.
+    #
+    $fst_cnt = 0;
+    for ($m = 0; $m < scalar(@keys); $m++) {
+	for ($n = 0; $n < scalar(@keys); $n++) {
+	    $f = "$in_path/batch_" . $batch_id . ".phistats_" . $keys[$m] . "-" . $keys[$n] . ".tsv";
+
+	    if (-e $file) {
+		import_sql_file($f, "phist", 3);
+		$fst_cnt++;
+	    }
+	}
+    }
+    print STDERR "Imported $fst_cnt Haplotype Fst file(s).\n";
 }
 
 $i = 1;
@@ -151,10 +176,10 @@ foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
 
     $f = $in_path . "/$file" . ".matches.tsv";
     if (-e $f) {
-	import_sql_file($f, "matches", 0);
+	import_sql_file($f, "matches", 1);
     } elsif (-e $f . ".gz") {
 	$f = $in_path . "/$file" . ".matches.tsv.gz";
-	import_gzsql_file($f, "matches", 0);
+	import_gzsql_file($f, "matches", 1);
     }
     $i++;
 }
@@ -176,35 +201,35 @@ foreach $file (sort {$sample_ids{$a} <=> $sample_ids{$b}} @files) {
     $pop_id = shift(@pop_ids);
 
     if (!$dry_run) {
-	@results = `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id"`;
+	@results = `mysql --defaults-file=$cnf $db -e "INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id='$pop_id'"`;
     }
     print STDERR 
 	"mysql --defaults-file=$cnf $db ",
-	"-e \"INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id=$pop_id\"\n", 
+	"-e \"INSERT INTO samples SET id=$sample_id, sample_id=$sample_id, batch_id=$batch_id, type='$type', file='$file', pop_id='$pop_id'\"\n", 
 	@results;
 
     $f = $in_path . "/$file" . ".tags.tsv";
     if (-e $f) {
-	import_sql_file($f, "unique_tags", 0) if ($ignore_tags == 0);
+	import_sql_file($f, "unique_tags", 1) if ($ignore_tags == 0);
     } elsif (-e $f . ".gz") {
 	$f = $in_path . "/$file" . ".tags.tsv.gz";
-	import_gzsql_file($f, "unique_tags", 0) if ($ignore_tags == 0);
+	import_gzsql_file($f, "unique_tags", 1) if ($ignore_tags == 0);
     }
 
     $f = $in_path . "/$file" . ".snps.tsv";
     if (-e $f) {
-	import_sql_file($f, "snps", 0);
+	import_sql_file($f, "snps", 1);
     } elsif (-e $f . ".gz") {
 	$f = $in_path . "/$file" . ".snps.tsv.gz";
-	import_gzsql_file($f, "snps", 0);
+	import_gzsql_file($f, "snps", 1);
     }
 
     $f = $in_path . "/$file" . ".alleles.tsv";
     if (-e $f) {
-	import_sql_file($f, "alleles", 0);
+	import_sql_file($f, "alleles", 1);
     } elsif (-e $f . ".gz") {
 	$f = $in_path . "/$file" . ".alleles.tsv.gz";
-	import_gzsql_file($f, "alleles", 0);
+	import_gzsql_file($f, "alleles", 1);
     }
 
     $i++;
@@ -308,11 +333,12 @@ sub extract_sample_ids {
 	$f = $in_path . "/$file" . ".tags.tsv";
 
 	if (-e $f) {
-	    @results = `head -n 1 $f`;
+	    @results = `head -n 2 $f | tail -n 1`;
 
 	} elsif (-e $f . ".gz") {
 	    $f = $in_path . "/$file" . ".tags.tsv.gz";
-	    @results = `gunzip -c $f | head -n 1`;
+	    @results = `gunzip -c $f | head -n 2 | tail -n 1`;
+
 	} else {
 	    die("Unable to find file $f\n");
 	}

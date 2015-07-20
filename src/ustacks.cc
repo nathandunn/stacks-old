@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -21,17 +21,13 @@
 //
 // ustacks -- build denovo stacks
 //
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
-//
+
 #include "ustacks.h"
 
 //
 // Global variables to hold command-line options.
 //
-file_type in_file_type;
+FileT     in_file_type;
 string    in_file;
 string    out_path;
 int       num_threads       = 1;
@@ -210,12 +206,14 @@ int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
     if (set_kmer_len) kmer_len = determine_kmer_length(con_len, max_rem_dist);
     int num_kmers = con_len - kmer_len + 1;
 
-    cerr << "  Number of kmers per sequence: " << num_kmers << "\n";
+    cerr << "  Distance allowed between stacks: " << max_rem_dist << "\n"
+	 << "  Using a k-mer length of " << kmer_len << "\n"
+	 << "  Number of kmers per sequence: " << num_kmers << "\n";
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
-    int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, true);
+    int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, set_kmer_len ? true : false);
 
     KmerHashMap    kmer_map;
     vector<char *> kmer_map_keys;
@@ -1046,12 +1044,14 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
         kmer_len = determine_kmer_length(con_len, utag_dist);
     int num_kmers = con_len - kmer_len + 1;
 
-    cerr << "  Number of kmers per sequence: " << num_kmers << "\n";
+    cerr << "  Distance allowed between stacks: " << utag_dist << "\n"
+	 << "  Using a k-mer length of " << kmer_len << "\n"
+	 << "  Number of kmers per sequence: " << num_kmers << "\n";
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
-    int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len, true);
+    int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len, set_kmer_len ? true : false);
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
  
@@ -1337,7 +1337,7 @@ double calc_merged_coverage_distribution(map<int, Stack *> &unique, map<int, Mer
 
     cerr << "  Mean merged coverage depth is " << mean << "; Std Dev: " << stdev << "; Max: " << max << "\n";
 
-    return m;
+    return mean;
 }
 
 int count_raw_reads(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged) {
@@ -1389,7 +1389,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     Rem          *rem;
     stringstream  sstr;
 
-    bool gzip = (in_file_type == gzfastq || in_file_type == gzfasta) ? true : false;
+    bool gzip = (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) ? true : false;
 
     //
     // Read in the set of sequencing IDs so they can be included in the output.
@@ -1464,6 +1464,29 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
 	    cerr << "Error: Unable to open allele file for writing.\n";
 	    exit(1);
 	}
+    }
+
+    //
+    // Record the version of Stacks used and the date generated as a comment in the catalog.
+    //
+    // Obtain the current date.
+    //
+    stringstream log;
+    time_t       rawtime;
+    struct tm   *timeinfo;
+    char         date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
+    log << "# ustacks version " << VERSION << "; generated on " << date << "\n"; 
+    if (gzip) {
+        gzputs(gz_tags, log.str().c_str());
+        gzputs(gz_snps, log.str().c_str());
+        gzputs(gz_alle, log.str().c_str());
+    } else {
+        tags << log.str();
+	snps << log.str();
+	alle << log.str();
     }
 
     int id;
@@ -1848,16 +1871,16 @@ int dump_merged_tags(map<int, MergedStack *> &m) {
 }
 
 int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radtags_keys) {
-    Input *fh;
+    Input *fh = NULL;
     DNASeq *d;
 
-    if (in_file_type == fasta)
+    if (in_file_type == FileT::fasta)
         fh = new Fasta(in_file.c_str());
-    else if (in_file_type == fastq)
+    else if (in_file_type == FileT::fastq)
         fh = new Fastq(in_file.c_str());
-    else if (in_file_type == gzfasta)
+    else if (in_file_type == FileT::gzfasta)
         fh = new GzFasta(in_file.c_str());
-    else if (in_file_type == gzfastq)
+    else if (in_file_type == FileT::gzfastq)
         fh = new GzFastq(in_file.c_str());
 
     cerr << "Parsing " << in_file.c_str() << "\n";
@@ -1921,15 +1944,15 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radta
 int
 load_seq_ids(vector<char *> &seq_ids)
 {
-    Input *fh;
+    Input *fh = NULL;
 
-    if (in_file_type == fasta)
+    if (in_file_type == FileT::fasta)
         fh = new Fasta(in_file.c_str());
-    else if (in_file_type == fastq)
+    else if (in_file_type == FileT::fastq)
         fh = new Fastq(in_file.c_str());
-    else if (in_file_type == gzfasta)
+    else if (in_file_type == FileT::gzfasta)
         fh = new GzFasta(in_file.c_str());
-    else if (in_file_type == gzfastq)
+    else if (in_file_type == FileT::gzfastq)
         fh = new GzFastq(in_file.c_str());
 
     cerr << "  Refetching sequencing IDs from " << in_file.c_str() << "... ";    
@@ -2017,6 +2040,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"max_dist",     required_argument, NULL, 'M'},
 	    {"max_sec_dist", required_argument, NULL, 'N'},
 	    {"max_locus_stacks", required_argument, NULL, 'K'},
+	    {"k_len",        required_argument, NULL, 'k'},
 	    {"num_threads",  required_argument, NULL, 'p'},
 	    {"deleverage",   no_argument,       NULL, 'd'},
 	    {"remove_rep",   no_argument,       NULL, 'r'},
@@ -2037,7 +2061,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hHvdrgA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hHvdrgRA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:k:T:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -2049,17 +2073,17 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 't':
             if (strcmp(optarg, "tsv") == 0)
-                in_file_type = tsv;
+                in_file_type = FileT::tsv;
             else if (strcmp(optarg, "fasta") == 0)
-                in_file_type = fasta;
+                in_file_type = FileT::fasta;
             else if (strcmp(optarg, "fastq") == 0)
-                in_file_type = fastq;
+                in_file_type = FileT::fastq;
 	    else if (strcasecmp(optarg, "gzfasta") == 0)
-                in_file_type = gzfasta;
+                in_file_type = FileT::gzfasta;
 	    else if (strcasecmp(optarg, "gzfastq") == 0)
-                in_file_type = gzfastq;
+                in_file_type = FileT::gzfastq;
             else
-                in_file_type = unknown;
+                in_file_type = FileT::unknown;
 	    break;
      	case 'f':
 	    in_file = optarg;
@@ -2075,13 +2099,13 @@ int parse_command_line(int argc, char* argv[]) {
 	    }
 	    break;
 	case 'm':
-	    min_merge_cov = atoi(optarg);
+	    min_merge_cov = is_integer(optarg);
 	    break;
 	case 'M':
-	    max_utag_dist = atoi(optarg);
+	    max_utag_dist = is_integer(optarg);
 	    break;
 	case 'N':
-	    max_rem_dist = atoi(optarg);
+	    max_rem_dist = is_integer(optarg);
 	    break;
 	case 'd':
 	    deleverage_stacks++;
@@ -2090,7 +2114,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    remove_rep_stacks++;
 	    break;
 	case 'K':
-	    max_subgraph = atoi(optarg);
+	    max_subgraph = is_integer(optarg);
+	    break;
+	case 'k':
+	    set_kmer_len = false;
+	    kmer_len     = is_integer(optarg);
 	    break;
 	case 'R':
 	    retain_rem_reads = true;
@@ -2134,7 +2162,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    call_sec_hapl = false;
 	    break;
 	case 'p':
-	    num_threads = atoi(optarg);
+	    num_threads = is_integer(optarg);
 	    break;
         case 'v':
             version();
@@ -2149,6 +2177,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    help();
 	    abort();
 	}
+    }
+
+    if (set_kmer_len == false && (kmer_len < 5 || kmer_len > 31)) {
+        cerr << "Kmer length must be between 5 and 31bp.\n";
+        help();
     }
 
     if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
@@ -2170,7 +2203,7 @@ int parse_command_line(int argc, char* argv[]) {
 	model_type = bounded;
     }
 
-    if (in_file.length() == 0 || in_file_type == unknown) {
+    if (in_file.length() == 0 || in_file_type == FileT::unknown) {
 	cerr << "You must specify an input file of a supported type.\n";
 	help();
     }
@@ -2213,6 +2246,7 @@ void help() {
 	      << "    r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm." << "\n"
 	      << "    d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
 	      << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
+	      << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
 	      << "  Model options:\n" 
 	      << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
 	      << "    For the SNP or Bounded SNP model:\n"

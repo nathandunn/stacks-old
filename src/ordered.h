@@ -50,10 +50,50 @@ public:
     Ordered()  { }
     virtual ~Ordered() { }
 
+    int init_sites(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &);
     int init_sites(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &, int);
     int init_sites(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &, int, int);
     int init_haplotypes(vector<StatT *> &, map<uint, uint> &, vector<CSLocus *> &);
 };
+
+template<class StatT>
+int 
+Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci)
+{
+    CSLocus   *loc;
+    LocTally  *ltally;
+    int        len;
+    set<int>   bps;
+
+    //
+    // We need to create an array to store all the SNPs for exporting. We must
+    // account for positions in the genome that are covered by more than one RAD tag.
+    //
+    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
+	loc    = sorted_loci[pos];
+	len    = strlen(loc->con);
+	ltally = this->psum->locus_tally(loc->id);
+
+	for (int k = 0; k < len; k++) {
+	    if (ltally->nucs[k].allele_cnt == 2)
+		bps.insert(ltally->nucs[k].bp);
+	}
+    }
+
+    sites.resize(bps.size(), NULL);
+
+    //
+    // Create a key describing where in the sites array to find each basepair coordinate.
+    //
+    set<int>::iterator it;
+    int i = 0;
+    for (it = bps.begin(); it != bps.end(); it++) {
+	sites_key[*it] = i;
+	i++;
+    }
+
+    return 0;
+}
 
 template<class StatT>
 int 
@@ -321,6 +361,66 @@ OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, i
 				<< k << "\t" 
 				<< pop_id << "\t"
 				<< "conflicts with locus " << sites[sites_key[lsum->nucs[k].bp]]->loc_id << "\n";
+	    }
+	}
+    }
+
+    return 0;
+};
+
+template<class StatT>
+class OLocTally: public Ordered<StatT> {
+public:
+    OLocTally(PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>() { 
+	this->log_fh = &log_fh;
+	this->psum   = psum;
+    }
+
+    int order(vector<StatT *> &, vector<CSLocus *> &);
+};
+
+template<class StatT>
+int 
+OLocTally<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci) 
+{
+    this->incompatible_loci = 0;
+    this->multiple_loci     = 0;
+
+    map<uint, uint> sites_key;
+
+    this->init_sites(sites, sites_key, sorted_loci);
+
+    CSLocus   *loc;
+    LocTally  *ltally;
+    int        len;
+
+    //
+    // Assign nucleotides to their proper, ordered location in the genome, 
+    // checking that a site hasn't already been covered by another RAD locus.
+    //
+    for (uint pos = 0; pos < sorted_loci.size(); pos++) {
+	loc    = sorted_loci[pos];
+	len    = strlen(loc->con);
+	ltally = this->psum->locus_tally(loc->id);
+
+	for (int k = 0; k < len; k++) {
+	    if (ltally->nucs[k].allele_cnt != 2) continue;
+
+	    if (sites_key.count(ltally->nucs[k].bp) == 0) {
+		cerr << "Error: locus " << ltally->nucs[k].loc_id << " at " << ltally->nucs[k].bp << "bp is not defined in the sites map.\n";
+
+	    } else if (sites[sites_key[ltally->nucs[k].bp]] == NULL) {
+		sites[sites_key[ltally->nucs[k].bp]] = &(ltally->nucs[k]);
+
+	    } else {
+		this->multiple_loci++;
+		*(this->log_fh) << "within_population\t"
+				<< "multiple_locus\t"
+				<< loc->id << "\t"
+				<< loc->loc.chr << "\t"
+				<< ltally->nucs[k].bp << "\t"
+				<< k << "\t" 
+				<< "conflicts with locus " << sites[sites_key[ltally->nucs[k].bp]]->loc_id << "\n";
 	    }
 	}
     }

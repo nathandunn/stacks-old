@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -23,12 +23,10 @@ function write_header($page_title) {
     global $root_path, $img_path;
 
     echo <<< EOQ
-<?xml version="1.0" encoding="iso-8859-1"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-
+<!DOCTYPE html>
+<html>
 <head>
+  <meta charset="utf-8">
   <title>$site_title: $page_title</title>
   <link rel="stylesheet" type="text/css" href="$root_path/stacks.css" />
   <script type="text/javascript" src="$root_path/stacks.js"></script>
@@ -41,7 +39,7 @@ function write_header($page_title) {
 <div id="header">
 <h1><a href="$root_path/"><img src="$img_path/stacks_logo_rev_small.png" /></a></h1>
 <p>
-  <a href="http://creskolab.uoregon.edu/stacks/">version 
+  <a href="http://catchenlab.life.illinois.edu/stacks/">version 
 
 EOQ;
 
@@ -127,7 +125,7 @@ function print_scale($max_len) {
     return $str;
 }
 
-function print_snps($consensus, $seq, $snps, $wrap) {
+function print_snps($tag_id, $consensus, $seq, $snps, $wrap) {
     global $display_len;
 
     $str     = "";
@@ -144,11 +142,11 @@ function print_snps($consensus, $seq, $snps, $wrap) {
 	$s    = substr($seq, $end, 1);
 
 	if ($con == $s)
-	    $str .= "<span class=\"rank_1\">$s</span>";
+	    $str .= "<span id=\"${tag_id}_$snp[col]\" class=\"rank_1\">$s</span>";
 	else if ($s == "N")
 	    $str .= "$s";
 	else
-	    $str .= "<span class=\"rank_2\">$s</span>";
+	    $str .= "<span id=\"${tag_id}_$snp[col]\" class=\"rank_2\">$s</span>";
 
 	$start = $end + 1;
     }

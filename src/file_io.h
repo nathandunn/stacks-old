@@ -44,6 +44,8 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
+#include <zlib.h>
+#include <errno.h>
 
 #include "constants.h"
 #include "clean.h"
@@ -52,10 +54,11 @@ using std::endl;
 //
 // Command line options defined in process_radtags and process_shortreads.
 //
-extern file_type in_file_type;
-extern file_type out_file_type;
+extern FileT     in_file_type;
+extern FileT     out_file_type;
+extern barcodet  barcode_type;
 extern bool      paired;
-extern bool      interleave;
+extern bool      interleaved;
 extern bool      merge;
 extern string    out_path;
 extern string    in_file;
@@ -72,7 +75,7 @@ void help( void );
 int  build_file_list(vector<pair<string, string> > &);
 int  load_barcodes(string, vector<BarcodePair> &, 
 		   set<string> &, set<string> &, 
-		   int &, int &);
+		   uint &, uint &, uint &, uint &);
 int  open_files(vector<pair<string, string> > &,
 		vector<BarcodePair> &, 
 		map<BarcodePair, ofstream *> &, 
@@ -80,6 +83,14 @@ int  open_files(vector<pair<string, string> > &,
 		map<BarcodePair, ofstream *> &,
 		map<BarcodePair, ofstream *> &,
 		map<string, map<string, long> > &);
+int  open_files(vector<pair<string, string> > &,
+		vector<BarcodePair> &, 
+		map<BarcodePair, gzFile *> &, 
+		map<BarcodePair, gzFile *> &, 
+		map<BarcodePair, gzFile *> &,
+		map<BarcodePair, gzFile *> &,
+		map<string, map<string, long> > &);
 int  close_file_handles(map<BarcodePair, ofstream *> &);
-
+int  close_file_handles(map<BarcodePair, gzFile *> &);
+ 
 #endif // __FILE_IO_H__

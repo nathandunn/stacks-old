@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -35,6 +35,8 @@ using std::make_pair;
 #include "stacks.h"
 
 char   reverse(char);
+char  *rev_comp(const char *);
+void   reverse_string(char *);
 int    is_integer(const char *);
 double is_double(const char *);
 
