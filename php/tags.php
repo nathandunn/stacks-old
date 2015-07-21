@@ -180,7 +180,7 @@ while ($row = $result->fetchRow()) {
     else
 	print "  <td>Yes <span class=\"s\">[" . count($snps) . "nuc]</span></td>\n";
 
-    $s = print_snps($row['seq'], $row['seq'], $snps, true);
+    $s = print_snps($row['tag_id'], $row['seq'], $row['seq'], $snps, true);
 
     print
       "  <td class=\"seq\"><div class=\"seq\">" . $s . "</div></td>\n";
