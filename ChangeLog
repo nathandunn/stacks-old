@@ -1,3 +1,8 @@
+Stacks 1.32 - June 18, 2015
+---------------------------
+	Bugfix: Updated the Phylip output to reflect the changed meaning of 'fixed' as
+	determined in the PopSum::tally() function.
+
 Stacks 1.31 - June 17, 2015
 ---------------------------
 	Bugfix: site-level filtering in the populations program was not working correctly
