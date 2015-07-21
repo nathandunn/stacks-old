@@ -1055,7 +1055,7 @@ NSString *calculateType(NSString *file);
 //                        }
 
 
-                        if (fh.good() && strlen(line) > 0) {
+                        if (fh.good() && strlen(line) > 0 && line[0]!='#') {
                             parse_tsv(line, parts);
 
                             if (parts.size() != num_tags_fields && parts.size() != num_tags_fields+1) {
