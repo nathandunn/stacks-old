@@ -279,7 +279,11 @@ NSString *calculateType(NSString *file);
     gettimeofday(&time1, NULL);
 
 
-    load_loci([catalogFile UTF8String], catalog, false);
+    bool compressed = false ;
+
+//    load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_all_model_calls, bool &compressed)
+
+    load_loci([catalogFile UTF8String], catalog, false,false,compressed);
     progressWindow.actionMessage.stringValue = @"Loading loci";
     gettimeofday(&time2, NULL);
     NSLog(@"load_loci %ld", (time2.tv_sec - time1.tv_sec));
@@ -1046,14 +1050,18 @@ NSString *calculateType(NSString *file);
                     while (fh.good()) {
 
                         read_line(fh, &line, &size);
+//                        if( (sizeof line)>0 && line[0]=='#'){
+//                            cerr << "Ignoring comment: " << line << endl ;
+//                        }
 
-                        if (fh.good() && strlen(line) > 0) {
+
+                        if (fh.good() && strlen(line) > 0 && line[0]!='#') {
                             parse_tsv(line, parts);
 
                             if (parts.size() != num_tags_fields && parts.size() != num_tags_fields+1) {
-                                cerr << "Error parsing tags " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
-                                NSLog(@"error Parings %ld -> %ld", line_num, parts.size());
-                                return;
+                                    cerr << "Error parsing tags " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
+                                    NSLog(@"error Parings %ld -> %ld", line_num, parts.size());
+                                    return;
                             }
 
                             @autoreleasepool {

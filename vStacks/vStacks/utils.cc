@@ -1,7 +1,21 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright (c) 2014 University of Oregon
-// Created by Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+//
+// This file is part of Stacks.
+//
+// Stacks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Stacks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 //
@@ -36,12 +50,76 @@ char reverse(char c) {
     case '.':
 	return 'N';
 	break;
+    case '-':
+    default:
+	return '-';
+	break;
     }
 
     return 'N';
 }
 
-int is_integer(const char *str) {
+char *
+rev_comp(const char *seq) 
+{
+    int len   = strlen(seq);
+    int j     = 0;
+    char *com = new char[len + 1]; 
+    const char *p;
+   
+    for (p = seq + len - 1; p >= seq; p--) {
+        switch (*p) {
+        case 'A':
+        case 'a':
+            com[j] = 'T';
+            break;
+        case 'C':
+        case 'c':
+            com[j] = 'G';
+            break;
+        case 'G':
+        case 'g':
+            com[j] = 'C';
+            break;
+        case 'T':
+        case 't':
+            com[j] = 'A';
+            break;
+	case 'N':
+	case 'n':
+	case '.':
+	    com[j] = 'N';
+	    break;
+        }
+        j++;
+    }
+    com[len] = '\0';
+
+    return com;
+}
+
+void
+reverse_string(char *seq) 
+{
+    int len = strlen(seq);
+    char *p = seq;
+    char *q = seq + len - 1;
+    char  tmp;
+
+    while (q > p) {
+	tmp = *q;
+	*q  = *p;
+	*p  = tmp;
+	q--;
+	p++;
+    }
+
+    return;
+}
+
+int 
+is_integer(const char *str) 
+{
     //
     // Adapted from the strtol manpage.
     //
@@ -65,7 +143,9 @@ int is_integer(const char *str) {
     return (int) val;
 }
 
-double is_double(const char *str) {
+double 
+is_double(const char *str) 
+{
     //
     // Adapted from the strtol manpage.
     //
@@ -89,7 +169,9 @@ double is_double(const char *str) {
     return val;
 }
 
-double factorial(double n) {
+double 
+factorial(double n) 
+{
     double fact = 1;
 
     for (double i = n; i > 1; i--)
@@ -98,7 +180,9 @@ double factorial(double n) {
     return fact;
 }
 
-double reduced_factorial(double n, double d) {
+double 
+reduced_factorial(double n, double d) 
+{
     double f = n - d;
 
     if (f < 0) 
@@ -118,7 +202,9 @@ double reduced_factorial(double n, double d) {
     return f;
 }
 
-double log_factorial(double n) {
+double 
+log_factorial(double n) 
+{
     double fact = 0;
 
     for (double i = n; i > 1; i--)
@@ -127,7 +213,9 @@ double log_factorial(double n) {
     return fact;
 }
 
-double reduced_log_factorial(double n, double d) {
+double 
+reduced_log_factorial(double n, double d) 
+{
     double f = n - d;
 
     if (f < 0) 
@@ -161,4 +249,12 @@ bool compare_ints(int a, int b) {
 
 bool compare_pair_snp(pair<string, SNP *> a, pair<string, SNP *> b) {
     return (a.second->col < b.second->col);
+}
+
+bool compare_pair_haplotype(pair<string, double> a, pair<string, double> b) {
+    return (a.second > b.second);
+}
+
+bool compare_pair_haplotype_rev(pair<string, double> a, pair<string, double> b) {
+    return (a.second < b.second);
 }
