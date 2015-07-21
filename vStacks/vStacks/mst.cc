@@ -1,7 +1,21 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright (c) 2014 University of Oregon
-// Created by Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+//
+// This file is part of Stacks.
+//
+// Stacks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Stacks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 //
@@ -36,7 +50,28 @@ Node *MinSpanTree::add_node(int id) {
     return n;
 }
 
+Node *MinSpanTree::add_node(string label) {
+    //
+    // Obtain an ID for this node.
+    //
+    uint id = this->id_cnt;
+
+    Node *n = new Node(id);
+    n->label = label;
+
+    this->nodes[id]       = n;
+    this->node_key[label] = id;
+    this->id_cnt++;
+
+    return n;
+}
+
 Node *MinSpanTree::node(int id) {
+    return this->nodes[id];
+}
+
+Node *MinSpanTree::node(string label) {
+    uint id = this->node_key[label];
     return this->nodes[id];
 }
 
@@ -190,7 +225,11 @@ string MinSpanTree::vis(bool overlay) {
         visited.insert(n->id);
 
         for (uint i = 0; i < n->min_adj_list.size(); i++) {
-            data << "  " << n->id << "--" << n->min_adj_list[i]->id << "\n";
+            data << "  "; 
+	    n->label.length() > 0 ? data << n->label : data << n->id;
+	    data << "--";
+	    n->min_adj_list[i]->label.length() > 0 ? (data << n->min_adj_list[i]->label) : (data << n->min_adj_list[i]->id);
+	    data << "\n";
             if (visited.count(n->min_adj_list[i]->id) == 0)
                 q.push(n->min_adj_list[i]);
         }
@@ -220,8 +259,11 @@ string MinSpanTree::vis(bool overlay) {
 	    scaled_d = scaled_d < 0.75 ? 0.75 : scaled_d;
 	    sprintf(label, "%.1f", d);
 
-	    data << n->id << " -- " << n->edges[j]->child->id << " [len=" << scaled_d << ", label=" << label << "];\n";
-	}
+	    n->label.length() > 0 ? (data << n->label) : (data << n->id);
+  	    data << " -- ";
+	    n->edges[j]->child->label.length() > 0 ? (data << n->edges[j]->child->label) : (data << n->edges[j]->child->id);
+	    data << " [len=" << scaled_d << ", label=" << label << "];\n";
+        }
     }
 
     data << "}\n";

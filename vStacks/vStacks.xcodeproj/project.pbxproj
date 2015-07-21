@@ -60,6 +60,7 @@
 		63D539B1A6C10C80338A325A /* PopulationService.m in Sources */ = {isa = PBXBuildFile; fileRef = 63D53C680185B4D1179C406B /* PopulationService.m */; };
 		6B0183DD18B6D14E00CEEF1D /* SplashWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B0183DB18B6D14E00CEEF1D /* SplashWindowController.m */; };
 		6B0183DE18B6D14E00CEEF1D /* SplashWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6B0183DC18B6D14E00CEEF1D /* SplashWindowController.xib */; };
+		6BB87ECD1A366074000BC34B /* ProvideFeedbackMenuItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BB87ECC1A366074000BC34B /* ProvideFeedbackMenuItem.m */; };
 		6BCC7EE518B6C041007BB3A7 /* DNANSeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ECC18B6C041007BB3A7 /* DNANSeq.cc */; };
 		6BCC7EE618B6C041007BB3A7 /* DNASeq.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ECE18B6C041007BB3A7 /* DNASeq.cc */; };
 		6BCC7EE718B6C041007BB3A7 /* input.cc in Sources */ = {isa = PBXBuildFile; fileRef = 6BCC7ED518B6C041007BB3A7 /* input.cc */; };
@@ -174,7 +175,6 @@
 		14370619187B89490007BDE5 /* test.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = test.css; sourceTree = "<group>"; };
 		1437061E187CAEFC0007BDE5 /* GZIP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GZIP.h; sourceTree = "<group>"; };
 		1437061F187CAEFC0007BDE5 /* GZIP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GZIP.m; sourceTree = "<group>"; };
-		14EB651F19103792005B288D /* vStacks.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = vStacks.entitlements; sourceTree = "<group>"; };
 		63D539ADFBD4D66EF302C92C /* GenericHashRepository.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenericHashRepository.m; sourceTree = "<group>"; };
 		63D53C680185B4D1179C406B /* PopulationService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PopulationService.m; sourceTree = "<group>"; };
 		63D53D340A41B723EB1C381F /* GenericHashRepository.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenericHashRepository.h; sourceTree = "<group>"; };
@@ -183,6 +183,8 @@
 		6B0183DA18B6D14E00CEEF1D /* SplashWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SplashWindowController.h; sourceTree = "<group>"; };
 		6B0183DB18B6D14E00CEEF1D /* SplashWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SplashWindowController.m; sourceTree = "<group>"; };
 		6B0183DC18B6D14E00CEEF1D /* SplashWindowController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = SplashWindowController.xib; sourceTree = "<group>"; };
+		6BB87ECB1A366074000BC34B /* ProvideFeedbackMenuItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProvideFeedbackMenuItem.h; sourceTree = "<group>"; };
+		6BB87ECC1A366074000BC34B /* ProvideFeedbackMenuItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ProvideFeedbackMenuItem.m; sourceTree = "<group>"; };
 		6BCC7EC918B6C041007BB3A7 /* BowtieI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BowtieI.h; sourceTree = "<group>"; };
 		6BCC7ECA18B6C041007BB3A7 /* BustardI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BustardI.h; sourceTree = "<group>"; };
 		6BCC7ECB18B6C041007BB3A7 /* constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = constants.h; sourceTree = "<group>"; };
@@ -286,15 +288,12 @@
 		14370524187B87690007BDE5 /* vStacks */ = {
 			isa = PBXGroup;
 			children = (
-				14EB651F19103792005B288D /* vStacks.entitlements */,
 				14370566187B88560007BDE5 /* stacks */,
 				1437055D187B88000007BDE5 /* www */,
 				1437055E187B88060007BDE5 /* Service */,
 				1437055F187B880E0007BDE5 /* Model */,
 				14370560187B88140007BDE5 /* GUI */,
 				14370525187B87690007BDE5 /* Supporting Files */,
-				14370558187B87DF0007BDE5 /* StackEntryRenderer.m */,
-				14370559187B87DF0007BDE5 /* StackEntryRenderer.h */,
 				1437053C187B876A0007BDE5 /* Images.xcassets */,
 			);
 			path = vStacks;
@@ -393,6 +392,10 @@
 		14370560187B88140007BDE5 /* GUI */ = {
 			isa = PBXGroup;
 			children = (
+				6BB87ECB1A366074000BC34B /* ProvideFeedbackMenuItem.h */,
+				6BB87ECC1A366074000BC34B /* ProvideFeedbackMenuItem.m */,
+				14370558187B87DF0007BDE5 /* StackEntryRenderer.m */,
+				14370559187B87DF0007BDE5 /* StackEntryRenderer.h */,
 				14370567187B88C70007BDE5 /* ColorGenerator.h */,
 				14370568187B88C70007BDE5 /* ColorGenerator.m */,
 				14370569187B88C70007BDE5 /* StacksDocument.xib */,
@@ -657,6 +660,7 @@
 				1437059E187B88C70007BDE5 /* ProgressController.m in Sources */,
 				14370595187B88C70007BDE5 /* LocusArrayController.m in Sources */,
 				143705D0187B88D80007BDE5 /* PopulationMO.m in Sources */,
+				6BB87ECD1A366074000BC34B /* ProvideFeedbackMenuItem.m in Sources */,
 				6BDE5F7618E3618C00B23E9D /* GenericHashMO.m in Sources */,
 				14370593187B88C70007BDE5 /* GenotypeEntry.m in Sources */,
 				6BD8C87018A2DB05000C3A16 /* jquery-1.11.0.min.js in Sources */,
@@ -744,6 +748,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				New_Setting = "";
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 			};
@@ -776,6 +781,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				New_Setting = "";
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -784,9 +790,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = vStacks/vStacks.entitlements;
-				CODE_SIGN_IDENTITY = "Mac Developer";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -808,9 +814,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = vStacks/vStacks.entitlements;
-				CODE_SIGN_IDENTITY = "Mac Developer";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
