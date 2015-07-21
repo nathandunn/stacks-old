@@ -390,7 +390,7 @@
 }
 
 - (void)provideFeedback:(id)sender {
-    NSString *recipients = @"mailto:jcatchen@uoregon.edu?cc=ndunn@me.com&subject=vStacks Feedback 0.8.3";
+    NSString *recipients = @"mailto:jcatchen@uoregon.edu?cc=ndunn@me.com&subject=vStacks Feedback 0.8.4";
     NSString *body = @"&body=Feedback for vStacks";
     NSString *email = [NSString stringWithFormat:@"%@%@", recipients, body];
 
