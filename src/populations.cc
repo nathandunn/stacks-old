@@ -340,7 +340,7 @@ int main (int argc, char* argv[]) {
     // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
     //
     blacklist.clear();
-    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, blacklist, log_fh);
+    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, pop_indexes, whitelist, blacklist, log_fh);
     cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints.\n";
 
     if (!verbose)
@@ -648,17 +648,22 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 
 int
 prune_polymorphic_sites(map<int, CSLocus *> &catalog, 
-			PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
+			PopMap<CSLocus> *pmap,
+			PopSum<CSLocus> *psum,
+			map<int, pair<int, int> > &pop_indexes, 
 			map<int, set<int> > &whitelist, set<int> &blacklist,
 			ofstream &log_fh)
 {
     map<int, set<int> > new_wl;
+    vector<int> pop_prune_list;
     CSLocus  *loc;
     LocTally *t;
     LocSum  **s;
+    Datum   **d;
     bool      sample_prune, maf_prune, het_prune, inc_prune;
-    int       pop_id, size, pruned = 0;
-
+    int       size, pruned = 0;
+    uint      pop_id, start_index, end_index;
+    
     if (verbose)
 	log_fh << "\n#\n# List of pruned nucleotide sites\n#\n"
 	       << "# Action\tLocus ID\tChr\tBP\tColumn\tReason\n";
@@ -706,16 +711,43 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 		maf_prune    = false;
 		het_prune    = false;
 		inc_prune    = false;
+		pop_prune_list.clear();
+		
 		for (int j = 0; j < psum->pop_cnt(); j++) {
 		    pop_id = psum->rev_pop_index(j);
 
 		    if (s[j]->nucs[loc->snps[i]->col].incompatible_site)
 			inc_prune = true;
+
 		    else if (s[j]->nucs[loc->snps[i]->col].num_indv == 0 ||
-			(double) s[j]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(pop_id) < sample_limit)
-			sample_prune = true;
+			     (double) s[j]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(pop_id) < sample_limit)
+			pop_prune_list.push_back(pop_id);
 		}
 
+		//
+		// Check how many populations have to be pruned out due to sample limit. If less than
+		// population limit, prune them; if more than population limit, mark locus for deletion.
+		//
+		if ((psum->pop_cnt() - pop_prune_list.size()) < (uint) population_limit) {
+		    sample_prune = true;
+		} else {
+		    for (uint j = 0; j < pop_prune_list.size(); j++) {
+			if (s[psum->pop_index(pop_prune_list[j])]->nucs[loc->snps[i]->col].num_indv == 0) continue;
+
+		    	start_index = pop_indexes[pop_prune_list[j]].first;
+		    	end_index   = pop_indexes[pop_prune_list[j]].second;
+		    	d           = pmap->locus(loc->id);
+
+			for (uint k = start_index; k <= end_index; k++) {
+			    if (d[k] == NULL || loc->snps[i]->col >= (uint) d[k]->len) 
+				continue;
+			    if (d[k]->model != NULL) {
+				d[k]->model[loc->snps[i]->col] = 'U';
+			    }
+			}
+		    }
+		}
+		
 		if (t->nucs[loc->snps[i]->col].allele_cnt > 1) {
 		    //
 		    // Test for minor allele frequency.
@@ -798,16 +830,42 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 		maf_prune    = false;
 		het_prune    = false;
 		inc_prune    = false;
+		pop_prune_list.clear();
+		
 		for (int j = 0; j < psum->pop_cnt(); j++) {
 		    pop_id = psum->rev_pop_index(j);
 
 		    if (s[j]->nucs[loc->snps[i]->col].incompatible_site)
 			inc_prune = true;
 		    else if (s[j]->nucs[loc->snps[i]->col].num_indv == 0 ||
-			(double) s[j]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(pop_id) < sample_limit)
-			sample_prune = true;
+			     (double) s[j]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(pop_id) < sample_limit)
+			pop_prune_list.push_back(pop_id);
 		}
 
+		//
+		// Check how many populations have to be pruned out due to sample limit. If less than
+		// population limit, prune them; if more than population limit, mark locus for deletion.
+		//
+		if ((psum->pop_cnt() - pop_prune_list.size()) < (uint) population_limit) {
+		    sample_prune = true;
+		} else {
+		    for (uint j = 0; j < pop_prune_list.size(); j++) {
+			if (s[psum->pop_index(pop_prune_list[j])]->nucs[loc->snps[i]->col].num_indv == 0) continue;
+			
+		    	start_index = pop_indexes[pop_prune_list[j]].first;
+		    	end_index   = pop_indexes[pop_prune_list[j]].second;
+		    	d           = pmap->locus(loc->id);
+
+			for (uint k = start_index; k <= end_index; k++) {
+			    if (d[k] == NULL || loc->snps[i]->col >= (uint) d[k]->len) 
+				continue;
+			    if (d[k]->model != NULL) {
+				d[k]->model[loc->snps[i]->col] = 'U';
+			    }
+			}
+		    }
+		}
+		
 		if (t->nucs[loc->snps[i]->col].allele_cnt > 1) {
 		    //
 		    // Test for minor allele frequency.
