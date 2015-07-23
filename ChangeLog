@@ -1,3 +1,9 @@
+Stacks 1.33 - July 22, 2015
+---------------------------
+	Bugfix: Corrected the second-stage filtering of the populations program to properly
+	respect the -p flag.
+	Bugfix: Corrected the display of individual samples in the web interface (tags.php file).
+
 Stacks 1.32 - June 18, 2015
 ---------------------------
 	Bugfix: Updated the Phylip output to reflect the changed meaning of 'fixed' as
@@ -29,7 +35,7 @@ Stacks 1.31 - June 17, 2015
 	many systems to be INNODB. Using MyISAM should provide much faster imports of data
 	and ultimately use less disk space (as the space is reclaimed when databases are 
 	deleted).
-	
+
 Stacks 1.30 - May 07, 2015
 --------------------------
 	Feature: sstacks can now accept multiple sample files at a time, saving run
