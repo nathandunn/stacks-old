@@ -3812,7 +3812,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 	    for (int i = 0; i < len; i++) {
 
 		// 
-		// If this site is fixed in all populations, DON'T output it. If it is variable
+		// If this site is fixed in all populations, DON'T output it. If it is variable,
 		// or fixed within populations but variable among, DO output it.
 		//
 		if (t->nucs[i].allele_cnt == 2) {
@@ -7705,7 +7705,7 @@ write_phylip(map<int, CSLocus *> &catalog,
 	for (uint pos = 0; pos < it->second.size(); pos++) {
 	    loc = it->second[pos];
 
-	    s = psum->locus(loc->id);
+ 	    s = psum->locus(loc->id);
 	    t = psum->locus_tally(loc->id);
 
 	    for (uint i = 0; i < loc->snps.size(); i++) {
@@ -7720,11 +7720,14 @@ write_phylip(map<int, CSLocus *> &catalog,
 			continue;
 
 		    bool fixed_within = true;
-		    for (int j = 0; j < pop_cnt; j++)
+		    for (int j = 0; j < pop_cnt; j++) {
+			if (s[j]->nucs[col].num_indv == 0)
+			    continue;
 			if (s[j]->nucs[col].fixed == false) {
 			    fixed_within = false;
 			    break;
 			}
+		    }
 		    if (fixed_within == false) continue;
 
 		    log_fh << index << "\t" << loc->id << "\t" << col << "\t";
