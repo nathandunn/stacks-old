@@ -505,6 +505,9 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 		ltally->nucs[col].p_allele = ltally->nucs[col].q_allele;
 		ltally->nucs[col].q_allele = a;
 		ltally->nucs[col].p_freq   = 1 - ltally->nucs[col].p_freq;
+		uint b = p_cnt;
+		p_cnt = q_cnt;
+		q_cnt = b;
 	    }
 
 	    //
