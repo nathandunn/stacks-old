@@ -115,10 +115,10 @@ function print_scale($max_len) {
       
         $str .= $i % 10;
 
-	if (($i + 1) % 10 == 0) {
-	  $c++;
-	  $str .= "</span><span class=\"". $class[$c % 2] . "\">";
-	}
+        if (($i + 1) % 10 == 0) {
+            $c++;
+            $str .= "</span><span class=\"". $class[$c % 2] . "\">";
+        }
     }
     $str .= "</span>";
 
@@ -133,33 +133,33 @@ function print_snps($tag_id, $consensus, $seq, $snps, $wrap) {
     $snp_cnt = count($snps);
 
     while (count($snps)) {
-	$snp = array_shift($snps);
-	$con = substr($consensus, $snp['col'], 1);
-	$end = $snp['col'];
+        $snp = array_shift($snps);
+        $con = substr($consensus, $snp['col'], 1);
+        $end = $snp['col'];
 
-	$s    = substr($seq, $start, $end - $start);
-	$str .= $s;
-	$s    = substr($seq, $end, 1);
+        $s    = substr($seq, $start, $end - $start);
+        $str .= $s;
+        $s    = substr($seq, $end, 1);
 
-	if ($con == $s)
-	    $str .= "<span id=\"${tag_id}_$snp[col]\" class=\"rank_1\">$s</span>";
-	else if ($s == "N")
-	    $str .= "$s";
-	else
-	    $str .= "<span id=\"${tag_id}_$snp[col]\" class=\"rank_2\">$s</span>";
+        if ($con == $s)
+            $str .= "<span id=\"${tag_id}_$snp[col]\" class=\"rank_1\">$s</span>";
+        else if ($s == "N")
+            $str .= "$s";
+        else
+            $str .= "<span id=\"${tag_id}_$snp[col]\" class=\"rank_2\">$s</span>";
 
-	$start = $end + 1;
+        $start = $end + 1;
     }
 
     if ($snp_cnt > 0) {
-      $s    = substr($seq, $start);
-      $str .= $s;
+        $s    = substr($seq, $start);
+        $str .= $s;
     } else {
-      $str  = $consensus;
+        $str  = $consensus;
     }
 
     if ($wrap == false || strlen($consensus) <= $display_len) 
-      return $str;
+        return $str;
 
     //
     // Add line breaks to the sequence
@@ -169,17 +169,17 @@ function print_snps($tag_id, $consensus, $seq, $snps, $wrap) {
     $pos = 0;
     $len = strlen($str);
     while ($len > $display_len) {
-      for ($pos = 0, $nuc = 0; $pos < $display_len && $nuc < $len; $nuc++, $pos++) {
-	if ($str[$nuc] == '<') {
-	  do { $nuc++; } while ($str[$nuc] != '>');
-	  $pos--;
-	}
-      }	
-      $s  .= substr($str, 0, $nuc) . "<br />\n";
-      $str = substr($str, $nuc);
-      $pos = 0;
-      $nuc = 0;
-      $len = strlen($str);
+        for ($pos = 0, $nuc = 0; $pos < $display_len && $nuc < $len; $nuc++, $pos++) {
+            if ($str[$nuc] == '<') {
+                do { $nuc++; } while ($str[$nuc] != '>');
+                $pos--;
+            }
+        }	
+        $s  .= substr($str, 0, $nuc) . "<br />\n";
+        $str = substr($str, $nuc);
+        $pos = 0;
+        $nuc = 0;
+        $len = strlen($str);
     }
     $s .= $str;
 
@@ -192,24 +192,24 @@ function print_snps_errs($consensus, $sequence, $snps, $cat_snps) {
     $seq = str_split($sequence);
 
     for ($i = 0; $i < count($con); $i++) {
-	// Is a SNP defined in this column?
-	if (isset($snps[$i])) {
-	    if ($con[$i] == $seq[$i])
-		$str .= "<span class=\"rank_1\">$seq[$i]</span>";
-	    else if ($seq[$i] == "N")
-  	        $str .= "$seq[$i]";
-	    else
-		$str .= "<span class=\"rank_2\">$seq[$i]</span>";
+        // Is a SNP defined in this column?
+        if (isset($snps[$i])) {
+            if ($con[$i] == $seq[$i])
+                $str .= "<span class=\"rank_1\">$seq[$i]</span>";
+            else if ($seq[$i] == "N")
+                $str .= "$seq[$i]";
+            else
+                $str .= "<span class=\"rank_2\">$seq[$i]</span>";
 
-	} else if (isset($cat_snps[$i])) {
-		$str .= "<span class=\"cat_snp\">$seq[$i]</span>";
-	} else {
-	    // Does this nucleotide equal the consensus nucleotide at position $i?
-	    if ($con[$i] == $seq[$i] || $seq[$i] == "N")
-		$str .= $seq[$i];
-	    else
-		$str .= "<span class=\"err\">$seq[$i]</span>";
-	}
+        } else if (isset($cat_snps[$i])) {
+            $str .= "<span class=\"cat_snp\">$seq[$i]</span>";
+        } else {
+            // Does this nucleotide equal the consensus nucleotide at position $i?
+            if ($con[$i] == $seq[$i] || $seq[$i] == "N")
+                $str .= $seq[$i];
+            else
+                $str .= "<span class=\"err\">$seq[$i]</span>";
+        }
     }
 
     return $str;
