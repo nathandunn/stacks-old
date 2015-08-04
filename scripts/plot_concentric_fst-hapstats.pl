@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright 2013, Julian Catchen <jcatchen@uoregon.edu>
+# Copyright 2015, Julian Catchen <jcatchen@illinois.edu>
 #
 # This file is part of Stacks.
 #
@@ -64,9 +64,21 @@ my %ochrs = ('gac' => ['groupI', 'groupII', 'groupIII', 'groupIV', 'groupV', 'gr
 		       '12', '13', '14', '15', '16', '17', '18', '19', 'X', 'Y']);
 
 my %cols = (
-    'fst'   => 18,
-    'phist' => 22,
-    'fstp'  => 25
+    'fst'     => 18,
+    'phist'   => 22,
+    'fstp'    => 25,
+    'hapdiv'  =>  8,
+    'hapdiff' =>  8,
+    'hapavg'  =>   8    
+    );
+
+my %color_types = (
+    'fst'     => "green",
+    'phist'   => "green",
+    'fstp'    => "green",
+    'hapdiv'  => "purple",
+    'hapavg'  => "purple",
+    'hapdiff' => "blue"
     );
 
 #
@@ -74,7 +86,7 @@ my %cols = (
 #
 my $font = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf";
 
-my (@chrs, @fst_files, @file_types, %img, %fst);
+my (@chrs, @fst_files, @file_types, %img, %fst, %avg);
 
 $img{'type'}      = "pdf";
 $img{'width'}     = 800/px;
@@ -83,17 +95,19 @@ $img{'font_size'} = 16;
 
 parse_command_line(\%img);
 
-populate_fst(\@fst_files, \@file_types, \%fst);
+print STDERR "Populating statistical measures for each input file...";
+populate_fst(\@fst_files, \@file_types, \%fst, \%avg);
+print STDERR "done.\n";
 
 if ($img{'type'} eq "gd") {
     generate_png(\@chrs, \%fst, \%img);
 
 } else {
-    generate_pdf(\@fst_files, \@file_types, \@chrs, \%fst, \%img);
+    generate_pdf(\@fst_files, \@file_types, \@chrs, \%fst, \%avg, \%img);
 }
 
 sub populate_fst {
-    my ($fst_files, $file_types, $fst) = @_;
+    my ($fst_files, $file_types, $fst, $means) = @_;
 
     my ($fh, $line, @parts, $file, $ftype);
 
@@ -103,8 +117,10 @@ sub populate_fst {
 
 	open($fh, "<$file") or die("Unable to open fst file '$file' ($!)\n");
 
+	my @mean;
+	
 	$fst->{$file} = {};
-
+	
 	while ($line = <$fh>) {
 	    chomp $line;
 
@@ -112,20 +128,45 @@ sub populate_fst {
 
 	    @parts = split(/\t/, $line);
 
-	    next if (!defined($orgs{$org}->{$parts[4]}));
+	    if ($ftype eq "hapdiv" || $ftype eq "hapavg") {
+		next if (!defined($orgs{$org}->{$parts[2]}));
+	    } else {
+		next if (!defined($orgs{$org}->{$parts[4]}));
+	    }
 
-	    push(@{$fst->{$file}->{$parts[4]}->{'bp'}},  $parts[5]);
-	    push(@{$fst->{$file}->{$parts[4]}->{'fst'}}, $parts[$cols{$ftype}]);
+	    if ($ftype eq "hapdiff") {
+		push(@{$fst->{$file}->{$parts[4]}->{'bp'}},  $parts[5]);
+		if ($parts[0] eq "oc") {
+		    push(@{$fst->{$file}->{$parts[4]}->{'fst'}}, -1 * $parts[$cols{$ftype}]);
+		} else {
+		    push(@{$fst->{$file}->{$parts[4]}->{'fst'}}, $parts[$cols{$ftype}]);
+		}
+	    } elsif ($ftype eq "hapdiv" || $ftype eq "hapavg") {
+		push(@{$fst->{$file}->{$parts[2]}->{'bp'}},  $parts[3]);
+		push(@{$fst->{$file}->{$parts[2]}->{'fst'}}, $parts[$cols{$ftype}]);
+	    } else {
+		push(@{$fst->{$file}->{$parts[4]}->{'bp'}},  $parts[5]);
+		push(@{$fst->{$file}->{$parts[4]}->{'fst'}}, $parts[$cols{$ftype}]);
+	    }
+
+	    push(@mean, $parts[$cols{$ftype}]);
 	}
 
 	close($fh);
+
+	$means->{$file} = avg(\@mean);
+	# if ($ftype eq "hapdiv") {
+	#     print STDERR "Haplotype diversity average for '$file': ", $means->{$file}, "\n";
+	# } else {
+	#     print STDERR "Fst average for '$file': ", $means->{$file}, "\n";
+	# }
     }
 }
 
 sub generate_pdf {
-    my ($files, $file_types, $chrs, $fst, $img) = @_;
+    my ($files, $file_types, $chrs, $fst, $avg, $img) = @_;
 
-    my (%colors, $chr, $key);
+    my (%colors, $chr, $key, $type);
 
     allocate_pdf_colors(\%colors);
 
@@ -168,7 +209,7 @@ sub generate_pdf {
     #
     # Determine the number of concentric circles to draw, and radial spacing for each.
     #
-    my $num_circles = scalar(@fst_files); 
+    my $num_circles = scalar(@{$files}); 
     my $radius_dist = ($img->{'max_radius'} - $img->{'min_radius'}) / ($num_circles - 1);
 
     #
@@ -177,9 +218,11 @@ sub generate_pdf {
     draw_scale_pdf($img, \%colors, \@chrs);
 
     #
-    # Draw key for Fst coloration.
+    # Draw keys.
     #
-    draw_key_pdf($img, \%colors);
+    draw_hapdiff_key_pdf($img, \%colors);
+    draw_hapdiv_key_pdf($img, \%colors);
+    draw_hapavg_key_pdf($img, \%colors);
 
     #
     # Draw the individual chromosomes as arcs along a circle
@@ -189,12 +232,18 @@ sub generate_pdf {
     my $fst_key;
 
     my $i = 1;
-    for $key (@{$files}) {
+    for (my $j = 0; $j < $num_circles; $j++) {
+	print STDERR "Processing sample $files->[$j]...\n";
+	$key  = $files->[$j];
+	$type = $file_types->[$j];
+
 	$labels = $i == $num_circles ? true : false;
+
+	$color_type = $color_types{$type};
 
 	foreach $chr (@chrs) {
 	    draw_chromosome_arc_pdf($img, \%colors, $chr, $radius, $labels);
-	    draw_fst_pdf($img, $fst->{$key}, $chr, $radius);
+	    draw_fst_pdf($img, $fst->{$key}, $avg->{$key}, $chr, $radius, $type);
 	}
 
 	$radius += $radius_dist;
@@ -204,58 +253,11 @@ sub generate_pdf {
     $img{'pdf'}->save();
 }
 
-# sub draw_fst_pdf {
-#     my ($img, $fsts, $chr, $radius) = @_;
-
-#     my ($fst_cnt, $line, $bp, $fst, $start_point, $end_point, $x1, $y1, $x2, $y2, $c, $chr_len, $tics, $r, $g, $b, $color);
-
-#     my $min_rad = $radius - 6;
-#     my $max_rad = $radius + 6;
-
-#     $c       = $img->{'chrs'}->{$chr};
-#     $chr_len = $orgs{$org}->{$chr};
-#     $fst_cnt = scalar(@{$fsts->{$chr}->{'bp'}});
-
-#     foreach my $i (0..$fst_cnt - 1) {
-# 	$bp  = $fsts->{$chr}->{'bp'}->[$i];
-# 	$fst = $fsts->{$chr}->{'fst'}->[$i];
-
-# 	($r, $g, $b) = hsv2rgb(scale_color($fst), 0.99, 0.99);
-# 	$color       = color2hex($r, $g, $b);
-
-# 	# print STDERR "Fst: $fst has color: $color\n";
-
-# 	#
-# 	# Scale the starting point for proper placement on the chromosome arc
-# 	#
-# 	$start_point = ($bp / $chr_len) * ($c->{'end_deg'} - $c->{'start_deg'} + 1);
-# 	$start_point = $c->{'start_deg'} + $start_point;
-
-# 	#
-# 	# Convert the point to an x,y coordinate
-# 	#
-# 	$x1 = $min_rad * cos(deg2rad($start_point)) + $img->{'center_x'};
-# 	$y1 = $min_rad * sin(deg2rad($start_point)) + $img->{'center_y'};
-
-# 	$x2 = $max_rad * cos(deg2rad($start_point)) + $img->{'center_x'};
-# 	$y2 = $max_rad * sin(deg2rad($start_point)) + $img->{'center_y'};
-
-# 	$line = $img->{'pdf_page'}->gfx();
-
-# 	$line->strokecolor($color);
-# 	$line->linewidth(1/pt);
-
-# 	$line->move($x1, $y1);
-# 	$line->line($x2, $y2);
-# 	$line->stroke();
-#     }
-# }
-
 sub draw_fst_pdf {
-    my ($img, $fsts, $chr, $radius) = @_;
+    my ($img, $fsts, $hdivavg, $chr, $radius, $file_type) = @_;
 
-    my ($arc, $start_deg, $end_deg, $r, $g, $b, $color, $aref, $fst);
-
+    my ($arc, $start_deg, $end_deg, $r, $g, $b, $color, $aref, $fst, $color_val);
+   
     #
     # Determine the number of degrees occupied by this chromosome.
     #
@@ -272,13 +274,45 @@ sub draw_fst_pdf {
     $start_deg = $c->{'start_deg'};
     foreach $aref (@buckets) {
 	$end_deg = $start_deg + 1/$bucket_size;
-	$fst = avg($aref);
 
-	if ($color_type eq "green") {
-	    ($r, $g, $b) = hsv2rgb(scale_color($fst), 1.0, 0.85);
-	} elsif ($color_type eq "purple") {
-	    ($r, $g, $b) = hsv2rgb(scale_color($fst), 1.0, 1.0);
+	if ($file_type eq "hapavg") {
+	    #
+	    # Convert the haplotype diversity numbers to the difference from the average value.
+	    #
+	    my @diffavg;
+	    foreach my $hdiv (@{$aref}) {
+		push(@diffavg, ($hdiv - $hdivavg));
+		# print STDERR "Avg: ", $hdivavg, "; HDiv: ", $hdiv, "; DiffAvg: ", $hdiv - $hdivavg, "\n";
+	    }
+	    $fst = avg(\@diffavg);
+	} else {
+	    $fst = avg($aref);
 	}
+
+	if ($file_type eq "hapdiff") {
+	    # Blue/Brown
+	    if ($fst >= 0) {
+		($r, $g, $b) = hsv2rgb(0.61, scale_hapdiff_color($fst), 0.95);
+	    } else {
+		($r, $g, $b) = hsv2rgb(0.083, scale_hapdiff_color($fst), 1.0);
+	    }
+	} elsif ($file_type eq "hapavg") {
+	    # Blue/Red, unscaled
+	    if ($fst >= 0) {
+		($r, $g, $b) = hsv2rgb(0.61, scale_hapavg_color($fst), 0.95);
+	    } else {
+		($r, $g, $b) = hsv2rgb(0, scale_hapavg_color($fst), 1.0);
+	    }
+	} elsif ($file_type eq "hapdiv") {
+	    # Purple
+	    # ($r, $g, $b) = hsv2rgb(0.791,scale_hapdiv_color($fst), 1.0);
+	    ($r, $g, $b) = hsv2rgb(scale_hapdiv_color($fst), 1.0, 0.85);
+	    
+	} else {
+	    # Red/Green
+	    ($r, $g, $b) = hsv2rgb(scale_color($fst), 1.0, 0.85);
+	}
+	
 	$color = color2hex($r, $g, $b);
 
 	$arc = $img->{'pdf_page'}->gfx();
@@ -347,7 +381,7 @@ sub bucket_fst_values {
     $lim = shift @blimits;
     $i   = 0;
     foreach $aref (@sorted_fst) {
-	while ($aref->[0] > $lim) {
+	while (defined($lim) && $aref->[0] > $lim) {
 	    $i++;
 	    $lim = shift @blimits;
 	}
@@ -364,9 +398,9 @@ sub draw_key_pdf {
 
     my $key = $img->{'pdf_page'}->gfx();
 
-    $x1 = $img->{'width'}  - 50;
-    $y1 = $img->{'height'} - 225;
-    $x2 = $img->{'width'}  - 25;
+    $x1 = $img->{'width'}  - 40;
+    $y1 = $img->{'height'} - 175;
+    $x2 = $img->{'width'}  - 15;
     $y2 = $img->{'height'} - 25;
 
     $key->rectxy($x1, $y1, $x2, $y2);
@@ -375,7 +409,7 @@ sub draw_key_pdf {
     $key->stroke();
     $y = $y1;
 
-    for ($i = 0; $i <= 1; $i += .005) {
+    for ($i = 0; $i <= 1; $i += .00667) {
 	if ($color_type eq "green") {
 	    ($r, $g, $b) = hsv2rgb(scale_color($i), 1.0, 0.85);
 	} elsif ($color_type eq "purple") {
@@ -417,6 +451,217 @@ sub draw_key_pdf {
     $label->text($text);
 
     $text = "0.5";
+    $text_width  = $label->advancewidth($text);
+    $label->translate($x1 - $text_width - 3, int(($y1 + $y2) / 2 + 0.5) - int($text_height / 2 + 0.5));
+    $label->text($text);
+
+    $text = "1.0";
+    $text_width  = $label->advancewidth($text);
+    $label->translate($x1 - $text_width - 3, $y2 - int($text_height / 2 + 0.5));
+    $label->text($text);
+}
+
+sub draw_hapdiff_key_pdf {
+    my ($img, $colors) = @_;
+
+    my ($x1, $y, $y1, $x2, $y2, $i, $r, $g, $b, $color);
+
+    my $key = $img->{'pdf_page'}->gfx();
+
+    $x1 = $img->{'width'}  - 40;
+    $y1 = $img->{'height'} - 175;
+    $x2 = $img->{'width'}  - 15;
+    $y2 = $img->{'height'} - 25;
+
+    $key->rectxy($x1, $y1, $x2, $y2);
+    $key->strokecolor($colors->{'black'});
+    $key->linewidth(2/pt);
+    $key->stroke();
+    $y = $y1;
+
+    for ($i = -1; $i <= 1; $i += .0133) {
+	if ($i >= 0) {
+    	    ($r, $g, $b) = hsv2rgb(0.61, scale_hapdiff_color($i), 0.95);
+    	} else {
+    	    ($r, $g, $b) = hsv2rgb(0.083, scale_hapdiff_color($i), 1.0);
+	}
+	$color = color2hex($r, $g, $b);
+	
+	$key->strokecolor($color);
+	$key->linewidth(1/pt);
+
+	$key->move($x1, $y);
+	$key->line($x2, $y);
+	$key->stroke();
+
+	$y++;
+    }
+
+    #
+    # Draw the key title and scale bars
+    #
+    my $label = $img->{'pdf_page'}->text();
+    $label->font($img->{'pdf_font'}, $img->{'font_size'} - 2);
+    $label->fillcolor($colors->{'black'});
+
+    # Get the size of the text we want to write
+    my $text = "Diff";
+    my $text_width  = $label->advancewidth($text);
+    my $text_height = $img->{'font_size'} - 2;
+
+    $label->translate(int(($x1 + $x2) / 2 + 0.5) - int($text_width / 2 + 0.5), $y2 + 5);
+    $label->text($text);
+
+    $label->font($img->{'pdf_font'}, $img->{'font_size'} - 6);
+    $text_height = $img->{'font_size'} - 6;
+
+    $text = "-1.0";
+    $text_width  = $label->advancewidth($text);
+    $label->translate($x1 - $text_width - 3, $y1 - int($text_height / 2 + 0.5));
+    $label->text($text);
+
+    $text = "0";
+    $text_width  = $label->advancewidth($text);
+    $label->translate($x1 - $text_width - 3, int(($y1 + $y2) / 2 + 0.5) - int($text_height / 2 + 0.5));
+    $label->text($text);
+
+    $text = "1.0";
+    $text_width  = $label->advancewidth($text);
+    $label->translate($x1 - $text_width - 3, $y2 - int($text_height / 2 + 0.5));
+    $label->text($text);
+}
+
+sub draw_hapdiv_key_pdf {
+    my ($img, $colors) = @_;
+
+    my ($x1, $y, $y1, $x2, $y2, $i, $r, $g, $b, $color);
+
+    my $key = $img->{'pdf_page'}->gfx();
+
+    $x1 = $img->{'width'}  - 85;
+    $y1 = $img->{'height'} - 175;
+    $x2 = $img->{'width'}  - 60;
+    $y2 = $img->{'height'} - 25;
+
+    $key->rectxy($x1, $y1, $x2, $y2);
+    $key->strokecolor($colors->{'black'});
+    $key->linewidth(2/pt);
+    $key->stroke();
+    $y = $y1;
+
+    for ($i = 0; $i <= 1; $i += .00667) {
+	#($r, $g, $b) = hsv2rgb(0.791, scale_hapdiv_color($i), 1.0);
+	($r, $g, $b) = hsv2rgb(scale_hapdiv_color($i), 1.0, 0.85);
+
+    	$color = color2hex($r, $g, $b);
+
+    	$key->strokecolor($color);
+    	$key->linewidth(1/pt);
+
+    	$key->move($x1, $y);
+    	$key->line($x2, $y);
+    	$key->stroke();
+
+    	$y++;
+    }
+
+    #
+    # Draw the key title and scale bars
+    #
+    my $label = $img->{'pdf_page'}->text();
+    $label->font($img->{'pdf_font'}, $img->{'font_size'} - 2);
+    $label->fillcolor($colors->{'black'});
+
+    # Get the size of the text we want to write
+    my $text = "Div";
+    my $text_width  = $label->advancewidth($text);
+    my $text_height = $img->{'font_size'} - 2;
+
+    $label->translate(int(($x1 + $x2) / 2 + 0.5) - int($text_width / 2 + 0.5), $y2 + 5);
+    $label->text($text);
+
+    $label->font($img->{'pdf_font'}, $img->{'font_size'} - 6);
+    $text_height = $img->{'font_size'} - 6;
+
+    $text = "0";
+    $text_width  = $label->advancewidth($text);
+    $label->translate($x1 - $text_width - 3, $y1 - int($text_height / 2 + 0.5));
+    $label->text($text);
+
+    $text = "0.5";
+    $text_width  = $label->advancewidth($text);
+    $label->translate($x1 - $text_width - 3, int(($y1 + $y2) / 2 + 0.5) - int($text_height / 2 + 0.5));
+    $label->text($text);
+
+    $text = "1.0";
+    $text_width  = $label->advancewidth($text);
+    $label->translate($x1 - $text_width - 3, $y2 - int($text_height / 2 + 0.5));
+    $label->text($text);
+}
+
+sub draw_hapavg_key_pdf {
+    my ($img, $colors) = @_;
+
+    my ($x1, $y, $y1, $x2, $y2, $i, $r, $g, $b, $color);
+
+    my $key = $img->{'pdf_page'}->gfx();
+
+    $x1 = $img->{'width'}  - 130;
+    $y1 = $img->{'height'} - 175;
+    $x2 = $img->{'width'}  - 105;
+    $y2 = $img->{'height'} - 25;
+
+    $key->rectxy($x1, $y1, $x2, $y2);
+    $key->strokecolor($colors->{'black'});
+    $key->linewidth(2/pt);
+    $key->stroke();
+    $y = $y1;
+
+    for ($i = -1; $i <= 1; $i += .0133) {
+	if ($i >= 0) {
+	    ($r, $g, $b) = hsv2rgb(0.61, scale_hapavg_color($i), 0.95);
+	} else {
+	    ($r, $g, $b) = hsv2rgb(0, scale_hapavg_color($i), 1.0);
+	}
+
+    	$color = color2hex($r, $g, $b);
+
+    	# print "I: $i; scaled: ", scale_hapdiff_color($i), "\n";
+
+    	$key->strokecolor($color);
+    	$key->linewidth(1/pt);
+
+    	$key->move($x1, $y);
+    	$key->line($x2, $y);
+    	$key->stroke();
+
+    	$y++;
+    }
+
+    #
+    # Draw the key title and scale bars
+    #
+    my $label = $img->{'pdf_page'}->text();
+    $label->font($img->{'pdf_font'}, $img->{'font_size'} - 2);
+    $label->fillcolor($colors->{'black'});
+
+    # Get the size of the text we want to write
+    my $text = "Avg";
+    my $text_width  = $label->advancewidth($text);
+    my $text_height = $img->{'font_size'} - 2;
+
+    $label->translate(int(($x1 + $x2) / 2 + 0.5) - int($text_width / 2 + 0.5), $y2 + 5);
+    $label->text($text);
+
+    $label->font($img->{'pdf_font'}, $img->{'font_size'} - 6);
+    $text_height = $img->{'font_size'} - 6;
+
+    $text = "-1.0";
+    $text_width  = $label->advancewidth($text);
+    $label->translate($x1 - $text_width - 3, $y1 - int($text_height / 2 + 0.5));
+    $label->text($text);
+
+    $text = "0.0";
     $text_width  = $label->advancewidth($text);
     $label->translate($x1 - $text_width - 3, int(($y1 + $y2) / 2 + 0.5) - int($text_height / 2 + 0.5));
     $label->text($text);
@@ -618,6 +863,8 @@ sub draw_filenames_pdf {
 	    $file = "Fst'; " . $file;
 	} elsif ($ftype eq "phist") {
 	    $file = "Phi_st; " . $file;
+	} elsif ($ftype eq "hapdiv") {
+	    $file = "HapDiv; " . $file;
 	}
 
 	$label->translate(5, $y);
@@ -818,11 +1065,11 @@ sub draw_chromosome_arc {
 sub avg {
     my ($aref) = @_;
 
-    return 0 if (scalar(@{$aref}) == 0);
+    return 0.0 if (scalar(@{$aref}) == 0);
 
     my $i;
-    my $cnt = 0;
-    my $tot = 0;
+    my $cnt = 0.0;
+    my $tot = 0.0;
     foreach $i (@{$aref}) {
 	$cnt++;
 	$tot += $i;
@@ -865,6 +1112,44 @@ sub scale_color {
 
 	return $min_color + $color;
     }
+}
+
+sub scale_hapdiff_color {
+    my ($val) = @_;
+
+    return 0 if ($val == 0);
+
+    my $color = log(1 + (abs($val) * 9))/log(10);
+
+    return $color;
+}
+
+sub scale_hapavg_color {
+    my ($val) = @_;
+
+    return 0 if ($val == 0);
+
+    my $color = log(1 + (abs($val) * 9))/log(10);
+    #my $color = abs($val);
+
+    return $color;
+}
+
+sub scale_hapdiv_color {
+    my ($val) = @_;
+
+    my $min_range = 1;
+    my $max_range = 10;
+
+    my $min_color = 0.5;
+    my $max_color = 0.85;
+
+    return $max_color if ($val == 0);
+
+    #$val = ($max_range - $min_range) * $val + 1;
+    #my $color = (log($val)/log(10)) * ($max_color - $min_color);
+    my $color = $val * ($max_color - $min_color);
+    return $min_color + $color;
 }
 
 sub hsv2rgb {
@@ -953,9 +1238,12 @@ sub parse_command_line {
 	elsif ($_ =~ /^-C$/)  { $color_type = shift @ARGV; }
 	elsif ($_ =~ /^-m$/)  { $min_radius = shift @ARGV; }
 	elsif ($_ =~ /^-M$/)  { $max_radius = shift @ARGV; }
-	elsif ($_ =~ /^-f$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'fst');   }
-	elsif ($_ =~ /^-F$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'fstp');  }
-	elsif ($_ =~ /^-P$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'phist'); }
+	elsif ($_ =~ /^-f$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'fst');    }
+	elsif ($_ =~ /^-F$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'fstp');   }
+	elsif ($_ =~ /^-P$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'phist');  }
+	elsif ($_ =~ /^-H$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'hapdiv'); }
+	elsif ($_ =~ /^-D$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'hapdiff'); }
+	elsif ($_ =~ /^-A$/)  { push(@fst_files, shift @ARGV); push(@file_types, 'hapavg'); }
 	elsif ($_ =~ /^-t$/)  { $img->{'type'}  = shift @ARGV; }
 	elsif ($_ =~ /^-s$/)  { $img->{'width'} = shift @ARGV; }
 	elsif ($_ =~ /^-h$/)  { usage(); }
@@ -1015,6 +1303,9 @@ sub usage {
 plot_concentric_fst.pl -o path -f fst_path [-f fst_path...] [-c chr1,chr2] [-O org] [-C color] [-m min_radius] [-M max_radius] [-h]
   o:  write output to this file.
   f:  Stacks Fst file.
+  H:  Stacks haplotype statistics file, 'hapstats', will plot raw haplotype diversity.
+  A:  Stacks haplotype statistics file, 'hapstats', will plot difference from haplotype diversity average.
+  D:  Stacks haplotype statistics difference file, 'hapstats_diff', will plot difference between two haplotype diversities.
   c:  comma-seperated list of chromosomes to plot.
   O:  organism to plot, either 'gac' or 'mmu'.
   t:  image type, either 'gd' or 'pdf'.
