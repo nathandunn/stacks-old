@@ -67,9 +67,9 @@ my %cols = (
     'fst'     => 18,
     'phist'   => 22,
     'fstp'    => 25,
-    'hapdiv'  =>  8,
-    'hapdiff' =>  8,
-    'hapavg'  =>   8    
+    'hapdiv'  => 11,
+    'hapavg'  => 11,
+    'hapdiff' =>  8
     );
 
 my %color_types = (
@@ -109,18 +109,19 @@ if ($img{'type'} eq "gd") {
 sub populate_fst {
     my ($fst_files, $file_types, $fst, $means) = @_;
 
-    my ($fh, $line, @parts, $file, $ftype);
+    my ($fh, $line, @parts, $file, $ftype, $path);
 
     for (my $i = 0; $i < scalar(@{$fst_files}); $i++) {
 	$file  = $fst_files->[$i];
 	$ftype = $file_types->[$i];
 
-	open($fh, "<$file") or die("Unable to open fst file '$file' ($!)\n");
+	$path = substr($file, 3);
+	open($fh, "<$path") or die("Unable to open fst file '$path' ($!)\n");
 
 	my @mean;
 	
 	$fst->{$file} = {};
-	
+
 	while ($line = <$fh>) {
 	    chomp $line;
 
@@ -229,17 +230,16 @@ sub generate_pdf {
     #
     my $radius = $img->{'min_radius'};
     my $labels = false;
-    my $fst_key;
 
     my $i = 1;
     for (my $j = 0; $j < $num_circles; $j++) {
-	print STDERR "Processing sample $files->[$j]...\n";
+	print STDERR "Processing sample $files->[$j], type: $file_types[$j]...\n";
 	$key  = $files->[$j];
 	$type = $file_types->[$j];
 
 	$labels = $i == $num_circles ? true : false;
 
-	$color_type = $color_types{$type};
+	# $color_type = $color_types{$type};
 
 	foreach $chr (@chrs) {
 	    draw_chromosome_arc_pdf($img, \%colors, $chr, $radius, $labels);
@@ -275,6 +275,7 @@ sub draw_fst_pdf {
     foreach $aref (@buckets) {
 	$end_deg = $start_deg + 1/$bucket_size;
 
+	$fst = 0;
 	if ($file_type eq "hapavg") {
 	    #
 	    # Convert the haplotype diversity numbers to the difference from the average value.
@@ -865,6 +866,10 @@ sub draw_filenames_pdf {
 	    $file = "Phi_st; " . $file;
 	} elsif ($ftype eq "hapdiv") {
 	    $file = "HapDiv; " . $file;
+	} elsif ($ftype eq "hapavg") {
+	    $file = "HapAvg; " . $file;
+	} elsif ($ftype eq "hapdif") {
+	    $file = "HapDif; " . $file;
 	}
 
 	$label->translate(5, $y);
@@ -1078,6 +1083,20 @@ sub avg {
     return $tot / $cnt;
 }
 
+sub max {
+    my ($aref) = @_;
+
+    return 0.0 if (scalar(@{$aref}) == 0);
+
+    my $i;
+    my $cnt = 0.0;
+    foreach $i (@{$aref}) {
+	$cnt = $i if ($i > $cnt);
+    }
+
+    return $cnt;
+}
+
 sub deg2rad { 
     return PI * $_[0] / 180;
 }
@@ -1129,10 +1148,17 @@ sub scale_hapavg_color {
 
     return 0 if ($val == 0);
 
-    my $color = log(1 + (abs($val) * 9))/log(10);
-    #my $color = abs($val);
+    #
+    # Set maximum value for haplotype diversity to 0.6. Any haplotype diversity difference 
+    # values higher than that will be set to 0.6. Then scale the value to cover the full
+    # min_color/max_color range.
+    #
+    $val = abs($val);
+    $val = 0.5 if ($val > 0.5);
+    $val = 0 if ($val < 0.05);
+    $val = $val * (10/5);
 
-    return $color;
+    return $val;
 }
 
 sub scale_hapdiv_color {
@@ -1146,9 +1172,18 @@ sub scale_hapdiv_color {
 
     return $max_color if ($val == 0);
 
+    #
+    # Set maximum value for haplotype diversity to 0.6. Any haplotype diversity values
+    # higher than that will be set to 0.6. Then scale the value to cover the full
+    # min_color/max_color range.
+    #
+    $val = 0.7 if ($val > 0.7);
+    $val = $val * (10/7);
+    my $color = $val * ($max_color - $min_color);
+    
     #$val = ($max_range - $min_range) * $val + 1;
     #my $color = (log($val)/log(10)) * ($max_color - $min_color);
-    my $color = $val * ($max_color - $min_color);
+    
     return $min_color + $color;
 }
 
@@ -1295,6 +1330,13 @@ sub parse_command_line {
 	}
     } else {
 	@chrs = @{$ochrs{$org}};
+    }
+
+    #
+    # Input files have to have unique names to be placed in the hash later.
+    #
+    for (my $i = 0; $i < scalar(@fst_files); $i++) {
+	$fst_files[$i] = ($i + 1) . ". " . $fst_files[$i];
     }
 }
 
