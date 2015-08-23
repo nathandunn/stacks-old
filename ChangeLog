@@ -1,3 +1,9 @@
+Stacks 1.35
+---------------------------
+	Bugfix: added code to process_radtags/process_shortreads to handle cases when data writes
+	fail due to a filled disk or other error conditions.
+	Bugfix: kmer_filter was not handling gzipped FASTQ files properly when filtering rare kmers.
+
 Stacks 1.34 - July 26, 2015
 ---------------------------
 	Bugfix: fixed phylip output to again include nucleotides from subsets of the full set
