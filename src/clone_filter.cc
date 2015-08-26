@@ -84,7 +84,7 @@ int main (int argc, char* argv[]) {
 	cerr << "Processing single-end data.\n";
 
     map<string, long> counters;
-    counters["tot_reads"] = 0;
+    counters["total"] = 0;
     counters["red_reads"] = 0;
     counters["dis_reads"] = 0;
 
@@ -144,8 +144,8 @@ int main (int argc, char* argv[]) {
 	cout << bins[i] << "\t" << clone_dist[bins[i]] << "\n";
 
     char buf[32];
-    sprintf(buf, "%0.2f%%", ((double) (counters["tot_reads"] - counters["red_reads"]) / (double) counters["tot_reads"]) * 100);
-    cerr << counters["tot_reads"] << " pairs of reads input. "
+    sprintf(buf, "%0.2f%%", ((double) (counters["total"] - counters["red_reads"]) / (double) counters["total"]) * 100);
+    cerr << counters["total"] << " pairs of reads input. "
 	 << counters["red_reads"] << " pairs of reads output, discarded "
 	 << counters["dis_reads"] << " pairs of reads, " << buf << " clone reads.\n";
 
@@ -205,7 +205,7 @@ process_paired_reads_by_sequence(string prefix_1, string prefix_2, map<string, l
     do {
         if (i % 10000 == 0) cerr << "Processing short read " << i << "       \r";
 
-	counters["tot_reads"]++;
+	counters["total"]++;
 
 	exists = clone_map.count(s_1->seq) == 0 ? false : true;
 
@@ -605,6 +605,8 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	}
 
 	if (clone == false) {
+	    counters["red_reads"]++;
+
 	    if (out_file_type == FileT::fastq) {
 		result_1 = write_fastq(&out_fh_1, s_1, offset_1);
 		result_2 = write_fastq(&out_fh_2, s_2, offset_2);
@@ -625,6 +627,8 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	    	break;
 	    }
 	} else if (clone == true && discards) {
+	    counters["dis_reads"]++;
+
 	    if (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) {
 		result_1 = write_fastq(&discard_fh_1, s_1, offset_1);
 		result_2 = write_fastq(&discard_fh_2, s_2, offset_2);
