@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2013-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -52,7 +52,7 @@ write_fasta(ofstream *fh, Read *href, bool overhang) {
 
     if (fh->fail()) return -1;
 
-    return 0;
+    return 1;
 }
 
 int 
@@ -92,7 +92,7 @@ write_fasta(ofstream *fh, Seq *href) {
 
     if (fh->fail()) return -1;
 
-    return 0;
+    return 1;
 }
 
 int 
@@ -140,7 +140,7 @@ write_fastq(ofstream *fh, Read *href, bool overhang) {
 
     if (fh->fail()) return -1;
 	
-    return 0;
+    return 1;
 }
 
 int 
@@ -179,6 +179,58 @@ write_fastq(gzFile *fh, Read *href, bool overhang) {
 }
 
 int 
+write_fastq(ofstream *fh, Seq *href, int offset) {
+    *fh <<
+	"@" << href->id     << "\n" <<
+	href->seq + offset  << "\n" <<
+	"+\n" <<
+	href->qual + offset << "\n";
+
+    if (fh->fail()) return -1;
+
+    return 1;
+}
+
+int 
+write_fastq(gzFile *fh, Seq *href, int offset) {
+    stringstream sstr;
+    sstr <<
+	"@" << href->id     << "\n" <<
+	href->seq + offset  << "\n" <<
+	"+\n" <<
+	href->qual + offset << "\n";
+
+    int res = gzputs(*fh, sstr.str().c_str());
+
+    return res;
+}
+
+int 
+write_fasta(ofstream *fh, Seq *href, int offset) {
+    *fh <<
+	">" << 
+	href->id << "\n" <<
+	href->seq + offset << "\n";
+
+    if (fh->fail()) return -1;
+	
+    return 1;
+}
+
+int 
+write_fasta(gzFile *fh, Seq *href, int offset) {
+    stringstream sstr;
+    sstr <<
+	">" << 
+	href->id << "\n" <<
+	href->seq + offset << "\n";
+
+    int res = gzputs(*fh, sstr.str().c_str());
+
+    return res;
+}
+
+int 
 write_fastq(ofstream *fh, Seq *href) {
     *fh <<
 	"@" << href->id << "\n" <<
@@ -188,7 +240,7 @@ write_fastq(ofstream *fh, Seq *href) {
 
     if (fh->fail()) return -1;
 
-    return 0;
+    return 1;
 }
 
 int 
@@ -215,7 +267,7 @@ write_fastq(ofstream *fh, Seq *href, string msg) {
 
     if (fh->fail()) return -1;
 	
-    return 0;
+    return 1;
 }
 
 int 
@@ -241,7 +293,7 @@ write_fasta(ofstream *fh, Seq *href, string msg) {
 
     if (fh->fail()) return -1;
 	
-    return 0;
+    return 1;
 }
 
 int 
