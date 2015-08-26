@@ -665,15 +665,196 @@ process_paired_reads(string prefix_1, string prefix_2, OligoHash &oligo_map, map
 }
 
 int 
-process_reads(string prefix, OligoHash &oligo_map, map<string, long> &counters)
+process_reads(string prefix_1, OligoHash &oligo_map, map<string, long> &counters)
 {
-    Input *fh;
-    Read  *r;
-    ofstream *discard_fh;
-
+    Input   *fh_1;
+    Read    *r_1;
+    ofstream out_fh_1, discard_fh_1;
+    gzFile   out_gzfh_1;
+    
     int return_val = 1;
 
-    string path = in_path_1 + prefix;
+    //
+    // Open the input file.
+    //
+    string path_1 = in_path_1 + prefix_1;
+
+    cerr << "  Reading data from:\n  " << path_1 << "\n";
+
+    if (in_file_type == FileT::fastq) 
+        fh_1 = new Fastq(path_1);
+    else if (in_file_type == FileT::gzfastq) 
+        fh_1 = new GzFastq(path_1.c_str());
+    else if (in_file_type == FileT::fasta) 
+        fh_1 = new Fasta(path_1);
+    else if (in_file_type == FileT::gzfasta) 
+        fh_1 = new GzFasta(path_1);
+    else if (in_file_type == FileT::bam) 
+        fh_1 = new BamUnAln(path_1);
+    else if (in_file_type == FileT::bustard) 
+        fh_1 = new Bustard(path_1);
+
+    //
+    // Open the output files.
+    //
+    string suffix_1;
+    
+    if (out_file_type == FileT::gzfastq)
+	suffix_1 = ".fq.gz";
+    else if (out_file_type == FileT::fastq)
+	suffix_1 = ".fq";
+    else if (out_file_type == FileT::gzfasta)
+	suffix_1 = ".fa.gz";
+    else if (out_file_type == FileT::fasta)
+	suffix_1 = ".fa";
+
+    string file_1 = prefix_1;
+    int    pos    = file_1.find_last_of(".");
+    if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
+	file_1.substr(pos) == ".gz") {
+	file_1 = file_1.substr(0, pos);
+	pos    = file_1.find_last_of(".");
+    }
+    path_1 = out_path + file_1 + suffix_1;
+    if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
+	out_gzfh_1 = gzopen(path_1.c_str(), "wb");
+	if (!(out_gzfh_1)) {
+	    cerr << "Error opening output file '" << path_1 << "'\n";
+	    return -1;
+	}
+    } else {	    
+	out_fh_1.open(path_1.c_str(), ifstream::out);
+	if (out_fh_1.fail()) {
+	    cerr << "Error opening output file '" << path_1 << "'\n";
+	    return -1;
+	}
+    }
+
+    //
+    // Open files for recording discarded reads.
+    //
+    if (discards) {
+	path_1 = out_path + file_1 + ".discards" + suffix_1;
+	discard_fh_1.open(path_1.c_str(), ifstream::out);
+
+	if (discard_fh_1.fail()) {
+	    cerr << "Error opening discard output file '" << path_1 << "'\n";
+	    return -1;
+	}
+    }
+
+    //
+    // Determine how much sequence we need to trim to remove the oligo seqeunce before printing.
+    //
+    int offset_1;
+    if (barcode_type == inline_null)
+	offset_1 = oligo_len_1;
+    else if (barcode_type == index_null)
+	offset_1 = oligo_len_1;
+    else if (barcode_type == inline_inline)
+	offset_1 = oligo_len_1;
+    else if (barcode_type == index_index)
+	offset_1 = 0;
+    else if (barcode_type == inline_index)
+	offset_1 = oligo_len_1;
+    else if (barcode_type == index_inline)
+	offset_1 = 0;
+		
+    //
+    // Read in the first record, initializing the Seq object s. Then 
+    // initialize the Read object r, then loop, using the same objects.
+    //
+    Seq *s_1 = fh_1->next_seq();
+    if (s_1 == NULL) {
+    	cerr << "Attempting to read first pair of input records, unable to allocate " 
+	     << "Seq object (Was the correct input type specified?).\n";
+	exit(1);
+    }
+
+    r_1 = new Read(strlen(s_1->seq), 1, min_bc_size_1, win_size);
+
+    long   i        = 1;
+    int    result_1 = 1;
+    bool   clone    = false;
+    string key, oligo_1;
+
+    do {
+        if (i % 10000 == 0) cerr << "  Processing RAD-Tag " << i << "       \r";
+
+	parse_input_record(s_1, r_1);
+	counters["total"]++;
+
+	result_1 = 1;
+	clone    = false;
+
+	//
+	// Fetch the randomized oligo sequence from the proper position in the reads.
+	//
+	if (barcode_type == inline_null)
+	    oligo_1 = r_1->inline_bc;
+	else if (barcode_type == index_null)
+	    oligo_1 = r_1->index_bc;
+
+	//
+	// Have we seen this combination of oligos before for this read?
+	//
+	key = string(s_1->seq + offset_1);
+
+	if (oligo_map.count(key) == 0)
+	    oligo_map[key] = map<string, uint16_t>();
+
+	if (oligo_map[key].count(oligo_1) == 0) {
+	    oligo_map[key][oligo_1] = 1;
+	    clone = false;
+	} else {
+	    oligo_map[key][oligo_1]++;
+	    clone = true;
+	}
+
+	if (clone == false) {
+	    if (out_file_type == FileT::fastq)
+		result_1 = write_fastq(&out_fh_1, s_1, offset_1);
+	    else if (out_file_type == FileT::gzfastq)
+		result_1 = write_fastq(&out_gzfh_1, s_1, offset_1);
+	    else if (out_file_type == FileT::fasta)
+		result_1 = write_fasta(&out_fh_1, s_1, offset_1);
+	    else if (out_file_type == FileT::gzfasta)
+		result_1 = write_fasta(&out_gzfh_1, s_1, offset_1);
+
+	    if (!result_1) {
+	    	cerr << "Error writing to output file for '" << file_1 << "'\n";
+	    	return_val = -1;
+	    	break;
+	    }
+	} else if (clone == true && discards) {
+	    if (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq)
+		result_1 = write_fastq(&discard_fh_1, s_1, offset_1);
+	    else if (out_file_type == FileT::fasta || out_file_type == FileT::gzfasta)
+		result_1 = write_fasta(&discard_fh_1, s_1, offset_1);
+
+	    if (!result_1) {
+		cerr << "Error writing to discard file for '" << file_1 << "'\n";
+		return_val = -1;
+		break;
+	    }
+	}
+
+	delete s_1;
+
+	i++;
+    } while ((s_1 = fh_1->next_seq()) != NULL);
+
+    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta)
+	gzclose(out_gzfh_1);
+    else
+	out_fh_1.close();
+    
+    if (discards)
+	discard_fh_1.close();
+
+    delete fh_1;
+
+    delete r_1;
 
     return return_val;
 }
