@@ -105,10 +105,10 @@ int main (int argc, char* argv[]) {
 	    if (barcode_type == null_null)
 		result = process_paired_reads_by_sequence(files[i].first, files[i].second, counters, clone_map, clone_map_keys);
 	    else
-		result = process_paired_reads(files[i].first, files[i].second, oligo_map, counters);
+		result = process_paired_reads(files[i].first, files[i].second, counters, oligo_map);
 
 	} else {
-	    result = process_reads(files[i].first, oligo_map, counters);
+	    result = process_reads(files[i].first, counters, oligo_map);
 	}
 
 	if (!result) {
@@ -117,8 +117,13 @@ int main (int argc, char* argv[]) {
 	}
     }
 
-    if (barcode_type == null_null)
+    if (barcode_type == null_null) {
 	write_clonereduced_sequence(files[0].first, files[0].second, clone_map, clone_dist, counters);
+    } else {
+	for (OligoHash::iterator i = oligo_map.begin(); i != oligo_map.end(); i++)
+	    for (map<string, uint16_t>::iterator j = i->second.begin(); j != i->second.end(); j++)
+		clone_dist[j->second]++;
+    }
 
     cerr << "Freeing hash key memory...";
     free_hash(clone_map_keys);
@@ -373,7 +378,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
     return 0;
 }
 int 
-process_paired_reads(string prefix_1, string prefix_2, OligoHash &oligo_map, map<string, long> &counters)
+process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counters, OligoHash &oligo_map)
 {
     Input    *fh_1, *fh_2;
     Read     *r_1,  *r_2;
@@ -665,7 +670,7 @@ process_paired_reads(string prefix_1, string prefix_2, OligoHash &oligo_map, map
 }
 
 int 
-process_reads(string prefix_1, OligoHash &oligo_map, map<string, long> &counters)
+process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map)
 {
     Input   *fh_1;
     Read    *r_1;

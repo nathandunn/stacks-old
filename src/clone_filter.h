@@ -94,8 +94,8 @@ typedef unordered_map<char *, map<string, vector<Pair> >, hash_charptr, eqstr> C
 typedef unordered_map<string, map<string, uint16_t> > OligoHash;
 #endif
 
-int  process_paired_reads(string, string, OligoHash &, map<string, long> &);
-int  process_reads(string, OligoHash &, map<string, long> &);
+int  process_paired_reads(string, string, map<string, long> &, OligoHash &);
+int  process_reads(string, map<string, long> &, OligoHash &);
 int  process_paired_reads_by_sequence(string, string, map<string, long> &, CloneHash &, vector<char *> &);
 int  write_clonereduced_sequence(string, string, CloneHash &, map<int, int> &, map<string, long> &);
 
