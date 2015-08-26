@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -62,8 +62,10 @@ using google::sparse_hash_map;
 #include "FastaI.h"     // Reading input files in FASTA format
 #include "gzFasta.h"    // Reading gzipped input files in FASTA format
 #include "gzFastq.h"    // Reading gzipped input files in FASTQ format
-
-typedef unsigned int uint;
+#include "BamUnalignedI.h"
+#include "clean.h"
+#include "file_io.h"
+#include "write.h"
 
 class Pair { 
 public:
@@ -86,12 +88,18 @@ public:
 
 #ifdef HAVE_SPARSEHASH
 typedef sparse_hash_map<char *, map<string, vector<Pair> >, hash_charptr, eqstr> CloneHash;
+typedef sparse_hash_map<string, map<string, uint16_t> > OligoHash;
 #else
 typedef unordered_map<char *, map<string, vector<Pair> >, hash_charptr, eqstr> CloneHash;
-
+typedef unordered_map<string, map<string, uint16_t> > OligoHash;
 #endif
 
-int free_clone_hash(CloneHash &, vector<char *> &);
+int  process_paired_reads(string, string, OligoHash &, map<string, long> &);
+int  process_reads(string, OligoHash &, map<string, long> &);
+int  process_paired_reads_by_sequence(string, string, map<string, long> &, CloneHash &, vector<char *> &);
+int  write_clonereduced_sequence(string, string, CloneHash &, map<int, int> &, map<string, long> &);
+
+int  free_hash(vector<char *> &);
 
 void help( void );
 void version( void );
