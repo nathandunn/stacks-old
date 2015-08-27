@@ -242,62 +242,104 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
 			    CloneHash &clone_map, map<int, int> &clone_dist,
 			    map<string, long> &counters)
 {
-    //
-    // Open output files.
-    //
-    ofstream *ofh_1, *ofh_2, *discard_fh_1, *discard_fh_2;
+    ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
+    gzFile    out_gzfh_1, out_gzfh_2;
+    
+    int return_val = 1;
 
-    int    pos_1 = prefix_1.find_last_of("/");
-    int    pos_2 = prefix_1.find_last_of(".");
-    string path  = out_path + prefix_1.substr(pos_1 + 1, pos_2 - pos_1 - 1) + ".fil";
-    path += out_file_type == FileT::fastq ? ".1.fq" : ".1.fa";
-    ofh_1 = new ofstream(path.c_str(), ifstream::out);
-    if (ofh_1->fail()) {
-	cerr << "Error opening output file '" << path << "'\n";
-	exit(1);
+    //
+    // Open the input files.
+    //
+    string path_1;
+    string path_2;
+
+    //
+    // Open the output files.
+    //
+    string suffix_1, suffix_2;
+    
+    if (out_file_type == FileT::gzfastq) {
+	suffix_1 = ".1.fq.gz";
+	suffix_2 = ".2.fq.gz";
+    } else if (out_file_type == FileT::fastq) {
+	suffix_1 = ".1.fq";
+	suffix_2 = ".2.fq";
+    } else if (out_file_type == FileT::gzfasta) {
+	suffix_1 = ".1.fa.gz";
+	suffix_2 = ".2.fa.gz";
+    } else if (out_file_type == FileT::fasta) {
+	suffix_1 = ".1.fa";
+	suffix_2 = ".2.fa";
     }
 
-    cerr << "Writing data to:\n  " 
-	 << path << " and\n  ";
-
-    //
-    // Open a file for recording discarded reads
-    //
-    if (discards) {
-	path  = out_path + prefix_1.substr(pos_1 + 1, pos_2 - pos_1 - 1) + ".discards";
-	path += out_file_type == FileT::fastq ? ".1.fq" : ".1.fa";
-	discard_fh_1 = new ofstream(path.c_str(), ifstream::out);
-
-	if (discard_fh_1->fail()) {
-	    cerr << "Error opening discard output file '" << path << "'\n";
-	    exit(1);
+    string file_1 = prefix_1;
+    int    pos    = file_1.find_last_of(".");
+    if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
+	file_1.substr(pos) == ".gz") {
+	file_1 = file_1.substr(0, pos);
+	pos    = file_1.find_last_of(".");
+    }
+    path_1 = out_path + file_1 + suffix_1;
+    if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
+	out_gzfh_1 = gzopen(path_1.c_str(), "wb");
+	if (!(out_gzfh_1)) {
+	    cerr << "Error opening output file '" << path_1 << "'\n";
+	    return -1;
+	}
+    } else {	    
+	out_fh_1.open(path_1.c_str(), ifstream::out);
+	if (out_fh_1.fail()) {
+	    cerr << "Error opening output file '" << path_1 << "'\n";
+	    return -1;
 	}
     }
 
-    pos_1 = prefix_2.find_last_of("/");
-    pos_2 = prefix_2.find_last_of(".");
-    path  = out_path + prefix_2.substr(pos_1 + 1, pos_2 - pos_1 - 1) + ".fil";
-    path += out_file_type == FileT::fastq ? ".2.fq" : ".2.fa";
-    ofh_2 = new ofstream(path.c_str(), ifstream::out);
-    if (ofh_2->fail()) {
-	cerr << "Error opening output file '" << path << "'\n";
-	exit(1);
+    string file_2 = prefix_2;
+    pos = file_2.find_last_of(".");
+    if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
+	file_2.substr(pos) == ".gz") {
+	file_2 = file_2.substr(0, pos);
+	pos    = file_2.find_last_of(".");
     }
-    cerr << path << "\n";
+    path_2 = out_path + file_2 + suffix_2;
+    if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
+	out_gzfh_2 = gzopen(path_2.c_str(), "wb");
+	if (!(out_gzfh_2)) {
+	    cerr << "Error opening output file '" << path_2 << "'\n";
+	    return -1;
+	}
+    } else {	    
+	out_fh_2.open(path_2.c_str(), ifstream::out);
+	if (out_fh_2.fail()) {
+	    cerr << "Error opening output file '" << path_2 << "'\n";
+	    return -1;
+	}
+    }
 
+    //
+    // Open files for recording discarded reads.
+    //
     if (discards) {
-	path  = out_path + prefix_2.substr(pos_1 + 1, pos_2 - pos_1 - 1) + ".discards";
-	path += out_file_type == FileT::fastq ? ".2.fq" : ".2.fa";
-	discard_fh_2 = new ofstream(path.c_str(), ifstream::out);
+	path_1 = out_path + file_1 + ".discards" + suffix_1;
+	discard_fh_1.open(path_1.c_str(), ifstream::out);
 
-	if (discard_fh_1->fail()) {
-	    cerr << "Error opening discard output file '" << path << "'\n";
-	    exit(1);
+	if (discard_fh_1.fail()) {
+	    cerr << "Error opening discard output file '" << path_1 << "'\n";
+	    return -1;
+	}
+
+	path_2 = out_path + file_2 + ".discards" + suffix_2;
+	discard_fh_2.open(path_2.c_str(), ifstream::out);
+
+	if (discard_fh_2.fail()) {
+	    cerr << "Error opening discard output file '" << path_2 << "'\n";
+	    return -1;
 	}
     }
 
     CloneHash::iterator hash_it;
     map<string, vector<Pair> >::iterator map_it;
+    stringstream sstr;
 
     cerr << "Writing filtered data...";
 
@@ -305,33 +347,54 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
 
 	for (map_it = hash_it->second.begin(); map_it != hash_it->second.end(); map_it++) {
 
-	    if (out_file_type == FileT::fasta) {
-		*ofh_1 << ">" << map_it->second[0].p1_id << "\n"
-		       << hash_it->first << "\n";
-		*ofh_2 << ">" << map_it->second[0].p2_id << "\n"
-		       << map_it->first << "\n";
+	    if (out_file_type == FileT::gzfastq) {
+		sstr.str();
+		sstr << "@" << map_it->second[0].p1_id << "\n"
+		     << hash_it->first << "\n"
+		     << "+\n"
+		     << map_it->second[0].p1_qual << "\n";
+		gzputs(out_gzfh_1, sstr.str().c_str());
+		sstr.str();
+		sstr << "@" << map_it->second[0].p2_id << "\n"
+		     << map_it->first << "\n"
+		     << "+\n"
+		     << map_it->second[0].p2_qual << "\n";
+		gzputs(out_gzfh_2, sstr.str().c_str());
 
 	    } else if (out_file_type == FileT::fastq) {
-		*ofh_1 << "@" << map_it->second[0].p1_id << "\n"
-		       << hash_it->first << "\n"
-		       << "+\n"
-		       << map_it->second[0].p1_qual << "\n";
-		*ofh_2 << "@" << map_it->second[0].p2_id << "\n"
-		       << map_it->first << "\n"
-		       << "+\n"
-		       << map_it->second[0].p2_qual << "\n";
+		out_fh_1 << "@" << map_it->second[0].p1_id << "\n"
+			 << hash_it->first << "\n"
+			 << "+\n"
+			 << map_it->second[0].p1_qual << "\n";
+		out_fh_2 << "@" << map_it->second[0].p2_id << "\n"
+			 << map_it->first << "\n"
+			 << "+\n"
+			 << map_it->second[0].p2_qual << "\n";
+		
+	    } else if (out_file_type == FileT::gzfasta) {
+		sstr.str();
+		sstr <<
+		    ">" << 
+		    map_it->second[0].p1_id << "\n" <<
+		    hash_it->first << "\n";
+		gzputs(out_gzfh_1, sstr.str().c_str());
+		sstr.str();
+		sstr <<
+		    ">" << 
+		    map_it->second[0].p2_id << "\n" <<
+		    map_it->first << "\n";
+		gzputs(out_gzfh_2, sstr.str().c_str());
+		
+	    } else if (out_file_type == FileT::fasta) {
+		out_fh_1 << ">" << map_it->second[0].p1_id << "\n"
+			 << hash_it->first << "\n";
+		out_fh_2 << ">" << map_it->second[0].p2_id << "\n"
+			 << map_it->first << "\n";
+
 	    }
 
 	    counters["dis_reads"] += map_it->second.size() - 1;
 	    clone_dist[map_it->second.size()]++;
-
-	    // if (map_it->second.size() > 700) {
-	    // 	cerr << "Count: " << map_it->second.size() << "\n";
-	    // 	cerr << ">" << map_it->second[0].p1_id << "\n"
-	    // 	     << hash_it->first << "\n"
-	    // 	     << ">" << map_it->second[0].p2_id << "\n"
-	    // 	     << map_it->first << "\n";
-	    // }
 
 	    //
 	    // Write cloned read pairs that we are discarding
@@ -340,20 +403,20 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
 		for (uint i = 1; i < map_it->second.size(); i++) {
 
 		    if (out_file_type == FileT::fasta) {
-			*discard_fh_1 << ">" << map_it->second[i].p1_id << "\n"
-				      << hash_it->first << "\n";
-			*discard_fh_2 << ">" << map_it->second[i].p2_id << "\n"
+			discard_fh_1 << ">" << map_it->second[i].p1_id << "\n"
+				     << hash_it->first << "\n";
+			discard_fh_2 << ">" << map_it->second[i].p2_id << "\n"
 				      << map_it->first << "\n";
 
 		    } else if (out_file_type == FileT::fastq) {
-			*discard_fh_1 << "@" << map_it->second[i].p1_id << "\n"
-				      << hash_it->first << "\n"
-				      << "+\n"
-				      << map_it->second[i].p1_qual << "\n";
-			*discard_fh_2 << "@" << map_it->second[i].p2_id << "\n"
-				      << map_it->first << "\n"
-				      << "+\n"
-				      << map_it->second[i].p2_qual << "\n";
+			discard_fh_1 << "@" << map_it->second[i].p1_id << "\n"
+				     << hash_it->first << "\n"
+				     << "+\n"
+				     << map_it->second[i].p1_qual << "\n";
+			discard_fh_2 << "@" << map_it->second[i].p2_id << "\n"
+				     << map_it->first << "\n"
+				     << "+\n"
+				     << map_it->second[i].p2_qual << "\n";
 		    }
 		}
 
@@ -363,19 +426,15 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
 
     cerr << "done.\n";
 
-    ofh_1->close();
-    ofh_2->close();
-    delete ofh_1;
-    delete ofh_2;
+    out_fh_1.close();
+    out_fh_2.close();
 
     if (discards) {
-	discard_fh_1->close();
-	discard_fh_2->close();
-	delete discard_fh_1;
-	delete discard_fh_2;
+	discard_fh_1.close();
+	discard_fh_2.close();
     }
 
-    return 0;
+    return return_val;
 }
 int 
 process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counters, OligoHash &oligo_map)
@@ -821,6 +880,8 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
 	}
 
 	if (clone == false) {
+	    counters["red_reads"]++;
+
 	    if (out_file_type == FileT::fastq)
 		result_1 = write_fastq(&out_fh_1, s_1, offset_1);
 	    else if (out_file_type == FileT::gzfastq)
@@ -836,6 +897,8 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
 	    	break;
 	    }
 	} else if (clone == true && discards) {
+	    counters["dis_reads"]++;
+
 	    if (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq)
 		result_1 = write_fastq(&discard_fh_1, s_1, offset_1);
 	    else if (out_file_type == FileT::fasta || out_file_type == FileT::gzfasta)
@@ -1040,6 +1103,11 @@ int parse_command_line(int argc, char* argv[]) {
     if (in_file_type == FileT::unknown)
 	in_file_type = ftype;
 
+    if (paired == false && barcode_type == null_null) {
+	cerr << "You must specify paired-end data if you do not have oligo sequences to differentiate cloned reads.\n";
+	help();
+    }
+    
     return 0;
 }
 
@@ -1064,6 +1132,7 @@ void help() {
 	      << "  h: display this help messsage.\n"
 	      << "  --oligo_len_1 len: length of the single-end oligo sequence in data set.\n"
 	      << "  --oligo_len_2 len: length of the paired-end oligo sequence in data set.\n\n"
+	      << "  --maintain_oligo: .\n\n"
 	      << "  Oligo sequence options:\n"
 	      << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
 	      << "    --index_null:    barcode is provded in FASTQ header, occurs only on single-end read.\n"

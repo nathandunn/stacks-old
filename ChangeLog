@@ -1,5 +1,7 @@
 Stacks 1.35
 ---------------------------
+	Feature: refactored clone_filter to handle random oligo sequences used as inline/indexed
+	barcodes to identify and discard PCR duplicates.x
 	Bugfix: added code to process_radtags/process_shortreads to handle cases when data writes
 	fail due to a filled disk or other error conditions.
 	Bugfix: kmer_filter was not handling gzipped FASTQ files properly when filtering rare kmers.
