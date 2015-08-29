@@ -41,6 +41,7 @@ bool     discards      = false;
 bool     interleaved   = false;
 bool     merge         = false;
 bool     paired        = false;
+bool     retain_oligo  = false;
 barcodet barcode_type  = null_null;
 int      oligo_len_1   = 0;
 int      oligo_len_2   = 0;
@@ -497,13 +498,13 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     }
 
     string file_1 = prefix_1;
-    int    pos    = file_1.find_last_of(".");
+    int    pos_1  = file_1.find_last_of(".");
     if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
-	file_1.substr(pos) == ".gz") {
-	file_1 = file_1.substr(0, pos);
-	pos    = file_1.find_last_of(".");
+	file_1.substr(pos_1) == ".gz") {
+	file_1 = file_1.substr(0, pos_1);
+	pos_1  = file_1.find_last_of(".");
     }
-    path_1 = out_path + file_1 + suffix_1;
+    path_1 = out_path + file_1.substr(0, pos_1) + suffix_1;
     if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
 	out_gzfh_1 = gzopen(path_1.c_str(), "wb");
 	if (!(out_gzfh_1)) {
@@ -519,13 +520,13 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     }
 
     string file_2 = prefix_2;
-    pos = file_2.find_last_of(".");
+    int    pos_2  = file_2.find_last_of(".");
     if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
-	file_2.substr(pos) == ".gz") {
-	file_2 = file_2.substr(0, pos);
-	pos    = file_2.find_last_of(".");
+	file_2.substr(pos_2) == ".gz") {
+	file_2 = file_2.substr(0, pos_2);
+	pos_2  = file_2.find_last_of(".");
     }
-    path_2 = out_path + file_2 + suffix_2;
+    path_2 = out_path + file_2.substr(0, pos_2) + suffix_2;
     if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
 	out_gzfh_2 = gzopen(path_2.c_str(), "wb");
 	if (!(out_gzfh_2)) {
@@ -544,7 +545,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     // Open files for recording discarded reads.
     //
     if (discards) {
-	path_1 = out_path + file_1 + ".discards" + suffix_1;
+	path_1 = out_path + file_1.substr(0, pos_1) + ".discards" + suffix_1;
 	discard_fh_1.open(path_1.c_str(), ifstream::out);
 
 	if (discard_fh_1.fail()) {
@@ -552,7 +553,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	    return -1;
 	}
 
-	path_2 = out_path + file_2 + ".discards" + suffix_2;
+	path_2 = out_path + file_2.substr(0, pos_2) + ".discards" + suffix_2;
 	discard_fh_2.open(path_2.c_str(), ifstream::out);
 
 	if (discard_fh_2.fail()) {
@@ -667,17 +668,17 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	    counters["red_reads"]++;
 
 	    if (out_file_type == FileT::fastq) {
-		result_1 = write_fastq(&out_fh_1, s_1, offset_1);
-		result_2 = write_fastq(&out_fh_2, s_2, offset_2);
+		result_1 = write_fastq(&out_fh_1, s_1, retain_oligo ? 0 : offset_1);
+		result_2 = write_fastq(&out_fh_2, s_2, retain_oligo ? 0 : offset_2);
 	    } else if (out_file_type == FileT::gzfastq) {
-		result_1 = write_fastq(&out_gzfh_1, s_1, offset_1);
-		result_2 = write_fastq(&out_gzfh_2, s_2, offset_2);
+		result_1 = write_fastq(&out_gzfh_1, s_1, retain_oligo ? 0 : offset_1);
+		result_2 = write_fastq(&out_gzfh_2, s_2, retain_oligo ? 0 : offset_2);
 	    } else if (out_file_type == FileT::fasta) {
-		result_1 = write_fasta(&out_fh_1, s_1, offset_1);
-		result_2 = write_fasta(&out_fh_2, s_2, offset_2);
+		result_1 = write_fasta(&out_fh_1, s_1, retain_oligo ? 0 : offset_1);
+		result_2 = write_fasta(&out_fh_2, s_2, retain_oligo ? 0 : offset_2);
 	    } else if (out_file_type == FileT::gzfasta) {
-		result_1 = write_fasta(&out_gzfh_1, s_1, offset_1);
-		result_2 = write_fasta(&out_gzfh_2, s_2, offset_2);
+		result_1 = write_fasta(&out_gzfh_1, s_1, retain_oligo ? 0 : offset_1);
+		result_2 = write_fasta(&out_gzfh_2, s_2, retain_oligo ? 0 : offset_2);
 	    }
 
 	    if (!result_1 || !result_2) {
@@ -689,11 +690,11 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	    counters["dis_reads"]++;
 
 	    if (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) {
-		result_1 = write_fastq(&discard_fh_1, s_1, offset_1);
-		result_2 = write_fastq(&discard_fh_2, s_2, offset_2);
+		result_1 = write_fastq(&discard_fh_1, s_1);
+		result_2 = write_fastq(&discard_fh_2, s_2);
 	    } else if (out_file_type == FileT::fasta || out_file_type == FileT::gzfasta) {
-		result_1 = write_fasta(&discard_fh_1, s_1, offset_1);
-		result_2 = write_fasta(&discard_fh_2, s_2, offset_2);
+		result_1 = write_fasta(&discard_fh_1, s_1);
+		result_2 = write_fasta(&discard_fh_2, s_2);
 	    }
 
 	    if (!result_1 || !result_2) {
@@ -783,7 +784,7 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
 	file_1 = file_1.substr(0, pos);
 	pos    = file_1.find_last_of(".");
     }
-    path_1 = out_path + file_1 + suffix_1;
+    path_1 = out_path + file_1.substr(0, pos) + suffix_1;
     if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
 	out_gzfh_1 = gzopen(path_1.c_str(), "wb");
 	if (!(out_gzfh_1)) {
@@ -883,13 +884,13 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
 	    counters["red_reads"]++;
 
 	    if (out_file_type == FileT::fastq)
-		result_1 = write_fastq(&out_fh_1, s_1, offset_1);
+		result_1 = write_fastq(&out_fh_1, s_1, retain_oligo ? 0 : offset_1);
 	    else if (out_file_type == FileT::gzfastq)
-		result_1 = write_fastq(&out_gzfh_1, s_1, offset_1);
+		result_1 = write_fastq(&out_gzfh_1, s_1, retain_oligo ? 0 : offset_1);
 	    else if (out_file_type == FileT::fasta)
-		result_1 = write_fasta(&out_fh_1, s_1, offset_1);
+		result_1 = write_fasta(&out_fh_1, s_1, retain_oligo ? 0 : offset_1);
 	    else if (out_file_type == FileT::gzfasta)
-		result_1 = write_fasta(&out_gzfh_1, s_1, offset_1);
+		result_1 = write_fasta(&out_gzfh_1, s_1, retain_oligo ? 0 : offset_1);
 
 	    if (!result_1) {
 	    	cerr << "Error writing to output file for '" << file_1 << "'\n";
@@ -900,9 +901,9 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
 	    counters["dis_reads"]++;
 
 	    if (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq)
-		result_1 = write_fastq(&discard_fh_1, s_1, offset_1);
+		result_1 = write_fastq(&discard_fh_1, s_1);
 	    else if (out_file_type == FileT::fasta || out_file_type == FileT::gzfasta)
-		result_1 = write_fasta(&discard_fh_1, s_1, offset_1);
+		result_1 = write_fasta(&discard_fh_1, s_1);
 
 	    if (!result_1) {
 		cerr << "Error writing to discard file for '" << file_1 << "'\n";
@@ -967,13 +968,14 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"outpath",       required_argument, NULL, 'o'},
 	    {"oligo_len_1",   required_argument, NULL, 'O'},
 	    {"oligo_len_2",   required_argument, NULL, 'L'},
+	    {"retain_oligo",  required_argument, NULL, 'R'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvDPuVWxYZi:y:f:p:1:2:o:O:L:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvDPuVWxYZi:y:f:p:1:2:o:O:L:R:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -1052,6 +1054,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'L':
 	    oligo_len_2 = is_integer(optarg);
+	    break;
+	case 'R':
+	    retain_oligo = true;
 	    break;
         case 'v':
             version();
@@ -1132,7 +1137,7 @@ void help() {
 	      << "  h: display this help messsage.\n"
 	      << "  --oligo_len_1 len: length of the single-end oligo sequence in data set.\n"
 	      << "  --oligo_len_2 len: length of the paired-end oligo sequence in data set.\n\n"
-	      << "  --maintain_oligo: .\n\n"
+	      << "  --retain_oligo: do not trim off the random oligo sequence (if oligo is inline).\n\n"
 	      << "  Oligo sequence options:\n"
 	      << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
 	      << "    --index_null:    barcode is provded in FASTQ header, occurs only on single-end read.\n"

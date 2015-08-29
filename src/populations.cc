@@ -6060,11 +6060,6 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
 			fh << "\t0000";
 		    } else {
 			snp_index = loc->snp_index(col);
-			if (snp_index < 0) {
-			    cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
-			    fh << "\n";
-			    continue;
-			}
 			//
 			// Tally up the nucleotide calls.
 			//
@@ -6391,11 +6386,6 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
 			fh << "\t" << "0";
 		    } else {
 			snp_index = loc->snp_index(col);
-			if (snp_index < 0) {
-			    cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
-			    fh << "\n";
-			    continue;
-			}
 			//
 			// Tally up the nucleotide calls.
 			//
@@ -6435,11 +6425,6 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
 			fh << "\t" << "0";
 		    } else {
 			snp_index = loc->snp_index(col);
-			if (snp_index < 0) {
-			    cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
-			    fh << "\n";
-			    continue;
-			}
 			tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
 
 			if (p_allele == 0 && q_allele == 0)
@@ -7851,7 +7836,7 @@ write_phylip(map<int, CSLocus *> &catalog,
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
 	pop_id = pit->first;
 
-	sprintf(id_str, "%d", pop_id);
+	sprintf(id_str, "%s", pop_key[pop_id].c_str());
 	len = strlen(id_str);
 	for (uint j = len; j < 10; j++)
 	    id_str[j] = ' ';
