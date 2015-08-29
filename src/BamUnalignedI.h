@@ -47,6 +47,13 @@ class BamUnAln: public Input {
 
 	this->parse_header();
     };
+    BamUnAln(string path) : Input() {
+	this->path   = path;
+	this->bam_fh = bam_open(path.c_str(), "r");
+	this->aln    = bam_init1();
+
+	this->parse_header();
+    };
     ~BamUnAln() {
 	bam_close(this->bam_fh);
 	bam_destroy1(this->aln);
