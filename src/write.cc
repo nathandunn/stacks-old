@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2013-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -50,7 +50,9 @@ write_fasta(ofstream *fh, Read *href, bool overhang) {
     	    "_" << href->read << "\n" <<
     	    href->seq + offset << "\n";
 
-    return 0;
+    if (fh->fail()) return -1;
+
+    return 1;
 }
 
 int 
@@ -76,9 +78,9 @@ write_fasta(gzFile *fh, Read *href, bool overhang) {
     	    "_" << href->read << "\n" <<
     	    href->seq + offset << "\n";
 
-    gzputs(*fh, sstr.str().c_str());
+    int res = gzputs(*fh, sstr.str().c_str());
 
-    return 0;
+    return res;
 }
 
 int 
@@ -88,7 +90,9 @@ write_fasta(ofstream *fh, Seq *href) {
 	href->id  << "\n" <<
 	href->seq << "\n";
 
-    return 0;
+    if (fh->fail()) return -1;
+
+    return 1;
 }
 
 int 
@@ -100,9 +104,9 @@ write_fasta(gzFile *fh, Seq *href) {
 	href->id  << "\n" <<
 	href->seq << "\n";
 
-    gzputs(*fh, sstr.str().c_str());
+    int res = gzputs(*fh, sstr.str().c_str());
 
-    return 0;
+    return res;
 }
 
 int 
@@ -134,7 +138,9 @@ write_fastq(ofstream *fh, Read *href, bool overhang) {
     	    "+\n" <<
     	    href->phred + offset << "\n";
 
-    return 0;
+    if (fh->fail()) return -1;
+	
+    return 1;
 }
 
 int 
@@ -167,9 +173,61 @@ write_fastq(gzFile *fh, Read *href, bool overhang) {
     	    "+\n" <<
     	    href->phred + offset << "\n";
 
-    gzputs(*fh, sstr.str().c_str());
+    int res = gzputs(*fh, sstr.str().c_str());
 
-    return 0;
+    return res;
+}
+
+int 
+write_fastq(ofstream *fh, Seq *href, int offset) {
+    *fh <<
+	"@" << href->id     << "\n" <<
+	href->seq + offset  << "\n" <<
+	"+\n" <<
+	href->qual + offset << "\n";
+
+    if (fh->fail()) return -1;
+
+    return 1;
+}
+
+int 
+write_fastq(gzFile *fh, Seq *href, int offset) {
+    stringstream sstr;
+    sstr <<
+	"@" << href->id     << "\n" <<
+	href->seq + offset  << "\n" <<
+	"+\n" <<
+	href->qual + offset << "\n";
+
+    int res = gzputs(*fh, sstr.str().c_str());
+
+    return res;
+}
+
+int 
+write_fasta(ofstream *fh, Seq *href, int offset) {
+    *fh <<
+	">" << 
+	href->id << "\n" <<
+	href->seq + offset << "\n";
+
+    if (fh->fail()) return -1;
+	
+    return 1;
+}
+
+int 
+write_fasta(gzFile *fh, Seq *href, int offset) {
+    stringstream sstr;
+    sstr <<
+	">" << 
+	href->id << "\n" <<
+	href->seq + offset << "\n";
+
+    int res = gzputs(*fh, sstr.str().c_str());
+
+    return res;
 }
 
 int 
@@ -180,7 +238,9 @@ write_fastq(ofstream *fh, Seq *href) {
 	"+\n" <<
 	href->qual << "\n";
 
-    return 0;
+    if (fh->fail()) return -1;
+
+    return 1;
 }
 
 int 
@@ -192,9 +252,9 @@ write_fastq(gzFile *fh, Seq *href) {
 	"+\n" <<
 	href->qual << "\n";
 
-    gzputs(*fh, sstr.str().c_str());
+    int res = gzputs(*fh, sstr.str().c_str());
 
-    return 0;
+    return res;
 }
 
 int 
@@ -205,7 +265,9 @@ write_fastq(ofstream *fh, Seq *href, string msg) {
 	"+\n" <<
 	href->qual << "\n";
 
-    return 0;
+    if (fh->fail()) return -1;
+	
+    return 1;
 }
 
 int 
@@ -217,9 +279,9 @@ write_fastq(gzFile *fh, Seq *href, string msg) {
 	"+\n" <<
 	href->qual << "\n";
 
-    gzputs(*fh, sstr.str().c_str());
+    int res = gzputs(*fh, sstr.str().c_str());
 
-    return 0;
+    return res;
 }
 
 int 
@@ -229,7 +291,9 @@ write_fasta(ofstream *fh, Seq *href, string msg) {
 	href->id  << "|" << msg << "\n" <<
 	href->seq << "\n";
 
-    return 0;
+    if (fh->fail()) return -1;
+	
+    return 1;
 }
 
 int 
@@ -240,7 +304,7 @@ write_fasta(gzFile *fh, Seq *href, string msg) {
 	href->id  << "|" << msg << "\n" <<
 	href->seq << "\n";
 
-    gzputs(*fh, sstr.str().c_str());
+    int res = gzputs(*fh, sstr.str().c_str());
 
-    return 0;
+    return res;
 }

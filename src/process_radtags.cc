@@ -150,6 +150,8 @@ int main (int argc, char* argv[]) {
     else
 	open_files(files, barcodes, pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs, counters);
 
+    int result = 1;
+
     for (uint i = 0; i < files.size(); i++) {
 	cerr << "Processing file " << i+1 << " of " << files.size() << " [" << files[i].first.c_str() << "]\n";
 
@@ -164,26 +166,26 @@ int main (int argc, char* argv[]) {
 
 	if (paired) {
 	    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta)
-	    	process_paired_reads(files[i].first, files[i].second, 
-	    			     se_bc, pe_bc,
-	    			     pair_1_gzfhs, pair_2_gzfhs, rem_1_gzfhs, rem_2_gzfhs,
-	    			     counters[files[i].first], barcode_log);
+	    	result = process_paired_reads(files[i].first, files[i].second, 
+					      se_bc, pe_bc,
+					      pair_1_gzfhs, pair_2_gzfhs, rem_1_gzfhs, rem_2_gzfhs,
+					      counters[files[i].first], barcode_log);
 	    else
-		process_paired_reads(files[i].first, files[i].second, 
-				     se_bc, pe_bc,
-				     pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs,
-				     counters[files[i].first], barcode_log);
+		result = process_paired_reads(files[i].first, files[i].second, 
+					      se_bc, pe_bc,
+					      pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs,
+					      counters[files[i].first], barcode_log);
 	} else {
 	    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta)
-	    	process_reads(files[i].first, 
-	    		      se_bc, pe_bc,
-	    		      pair_1_gzfhs, 
-	    		      counters[files[i].first], barcode_log);
+	    	result = process_reads(files[i].first, 
+				       se_bc, pe_bc,
+				       pair_1_gzfhs, 
+				       counters[files[i].first], barcode_log);
 	    else
-		process_reads(files[i].first, 
-			      se_bc, pe_bc,
-			      pair_1_fhs, 
-			      counters[files[i].first], barcode_log);
+		result = process_reads(files[i].first, 
+				       se_bc, pe_bc,
+				       pair_1_fhs, 
+				       counters[files[i].first], barcode_log);
 	}
 
 	cerr <<	"  " 
@@ -198,6 +200,11 @@ int main (int argc, char* argv[]) {
 	if (filter_adapter)
 	    cerr << "    "
 		 << counters[files[i].first]["adapter"] << " reads with adapter sequence.\n";
+
+	if (!result) {
+	    cerr << "Error processing reads.\n";
+	    break;
+	}
     }
 
     cerr << "Closing files, flushing buffers...\n";
@@ -237,6 +244,8 @@ process_paired_reads(string prefix_1,
     Read     *r_1, *r_2;
     ofstream *discard_fh_1, *discard_fh_2;
 
+    int return_val = 0;
+    
     string path_1 = in_path_1 + prefix_1;
     string path_2 = in_path_2 + prefix_2;
 
@@ -350,11 +359,14 @@ process_paired_reads(string prefix_1,
 	if (r_2->retain) 
 	    process_singlet(r_2, renz_2, true,  barcode_log[bc], counter);
 
+	int result_1 = 1;
+	int result_2 = 1;
+
 	if (r_1->retain && r_2->retain) {
-	    (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+	    result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
 		write_fastq(pair_1_fhs[bc], r_1, overhang) :
  		write_fasta(pair_1_fhs[bc], r_1, overhang);
-            (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+            result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
                 write_fastq(pair_2_fhs[bc], r_2, overhang) :
                 write_fasta(pair_2_fhs[bc], r_2, overhang);
 
@@ -362,26 +374,38 @@ process_paired_reads(string prefix_1,
 	    //
 	    // Write to the remainder file.
 	    //
-	    (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
+	    result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
 		write_fastq(rem_1_fhs[bc], r_1, overhang) : 
 		write_fasta(rem_1_fhs[bc], r_1, overhang);
 	} else if (!r_1->retain && r_2->retain) {
 	    //
 	    // Write to the remainder file.
 	    //
-	    (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
+	    result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
 		write_fastq(rem_2_fhs[bc], r_2, overhang) : 
 		write_fasta(rem_2_fhs[bc], r_2, overhang);
 	}
 
+	if (!result_1 || !result_2) {
+	    cerr << "Error writing to output file for '" << bc.str() << "'\n";
+	    return_val = -1;
+	    break;
+	}
+		
 	if (discards && !r_1->retain)
-	    (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
+	    result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
 		write_fastq(discard_fh_1, s_1) : 
 		write_fasta(discard_fh_1, s_1);
 	if (discards && !r_2->retain)
-	    (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
+	    result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
 		write_fastq(discard_fh_2, s_2) : 
 		write_fasta(discard_fh_2, s_2);
+
+	if (!result_1 || !result_2) {
+	    cerr << "Error writing to discard file for '" << bc.str() << "'\n";
+	    return_val = -1;
+	    break;
+	}
 
 	delete s_1;
 	delete s_2;
@@ -401,7 +425,7 @@ process_paired_reads(string prefix_1,
     delete r_1;
     delete r_2;
 
-    return 0;
+    return return_val;
 }
 
 template <typename fhType>
@@ -414,6 +438,8 @@ process_reads(string prefix,
     Input *fh;
     Read  *r;
     ofstream *discard_fh;
+
+    int return_val = 0;
 
     string path = in_path_1 + prefix;
 
@@ -502,17 +528,31 @@ process_reads(string prefix,
 	if (r->retain) 
 	    process_singlet(r, renz_1, false, barcode_log[bc], counter);
 
-	 if (r->retain)
-	     (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-		 write_fastq(pair_1_fhs[bc], r, overhang) : 
- 		 write_fasta(pair_1_fhs[bc], r, overhang);
+	int result = 1;
 
-	 if (discards && !r->retain)
-	     out_file_type == FileT::fastq ? 
-		 write_fastq(discard_fh, s) : 
-		 write_fasta(discard_fh, s);
+	if (r->retain)
+	    result = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
+		write_fastq(pair_1_fhs[bc], r, overhang) : 
+		write_fasta(pair_1_fhs[bc], r, overhang);
 
-	 delete s;
+	if (!result) {
+	    cerr << "Error writing to output file for '" << bc.str() << "'\n";
+	    return_val = -1;
+	    break;
+	}
+		
+	if (discards && !r->retain)
+	    result = out_file_type == FileT::fastq ? 
+		write_fastq(discard_fh, s) : 
+		write_fasta(discard_fh, s);
+
+	if (!result) {
+	    cerr << "Error writing to discard file for '" << bc.str() << "'\n";
+	    return_val = -1;
+	    break;
+	}
+		
+	delete s;
 
 	i++;
     } while ((s = fh->next_seq()) != NULL);
@@ -526,7 +566,7 @@ process_reads(string prefix,
 
     delete r;
 
-    return 0;
+    return return_val;
 }
 
 inline

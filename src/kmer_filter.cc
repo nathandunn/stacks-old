@@ -1083,13 +1083,13 @@ process_file_kmers(string path, SeqKmerHash &kmer_map, vector<char *> &kmer_map_
     Input         *fh = NULL;
 
     if (in_file_type == FileT::fastq)
-        fh = new Fastq(path.c_str());
+        fh = new Fastq(path);
     else if (in_file_type == FileT::gzfastq)
-        fh = new GzFastq(path.c_str());
+        fh = new GzFastq(path + ".gz");
     else if (in_file_type == FileT::fasta)
-        fh = new Fasta(path.c_str());
+        fh = new Fasta(path);
     else if (in_file_type == FileT::gzfasta)
-        fh = new GzFasta(path.c_str());
+        fh = new GzFasta(path + ".gz");
     else if (in_file_type == FileT::bustard)
         fh = new Bustard(path.c_str());
 
@@ -1199,7 +1199,7 @@ calc_kmer_median(SeqKmerHash &kmers, double &kmer_med, double &kmer_mad)
     residuals.reserve(num_kmers);
 
     for (int j = 0; j < num_kmers; j++)
-    	residuals.push_back(abs(freqs[j] - kmer_med));
+    	residuals.push_back(abs(freqs[j] - (int) kmer_med));
     sort(residuals.begin(), residuals.end());
 
     kmer_mad = num_kmers % 2 == 0 ? 

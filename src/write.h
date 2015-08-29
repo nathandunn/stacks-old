@@ -38,16 +38,20 @@ using std::endl;
 
 int  write_fastq(ofstream *, Read *, bool);
 int  write_fastq(ofstream *, Seq *);
+int  write_fastq(ofstream *, Seq *, int);
 int  write_fastq(ofstream *, Seq *, string);
 int  write_fasta(ofstream *, Read *, bool);
 int  write_fasta(ofstream *, Seq *);
+int  write_fasta(ofstream *, Seq *, int);
 int  write_fasta(ofstream *, Seq *, string);
 
 int  write_fastq(gzFile *, Read *, bool);
 int  write_fastq(gzFile *, Seq *);
+int  write_fastq(gzFile *, Seq *, int);
 int  write_fastq(gzFile *, Seq *, string);
 int  write_fasta(gzFile *, Read *, bool);
 int  write_fasta(gzFile *, Seq *);
+int  write_fasta(gzFile *, Seq *, int);
 int  write_fasta(gzFile *, Seq *, string);
 
 #endif // __WRITE_H__
