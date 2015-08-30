@@ -1,5 +1,7 @@
 Stacks 1.35
 ---------------------------
+	Feature: Added --phylip_var_all to the populations program. This option outputs the full
+	sequence from each variable locus, encoding polymorphisms using IUPAC notation.
 	Feature: Added the AgeI restriction enzyme.
 	Feature: refactored clone_filter to handle random oligo sequences used as inline/indexed
 	barcodes to identify and discard PCR duplicates.
