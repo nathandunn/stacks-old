@@ -132,7 +132,8 @@ populations_LDFLAGS   = $(OPENMP_CFLAGS)
 phasedstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 phasedstacks_LDFLAGS  = $(OPENMP_CFLAGS)
 clone_filter_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
-clone_filter_LDFLAGS  = $(OPENMP_CFLAGS) $(BAM_LIBS)
+clone_filter_LDFLAGS  = $(OPENMP_CFLAGS)
+clone_filter_LDADD    = $(BAM_LIBS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl \
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \

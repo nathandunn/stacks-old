@@ -68,6 +68,7 @@ bool      plink_out         = false;
 bool      hzar_out          = false;
 bool      phylip_out        = false;
 bool      phylip_var        = false;
+bool      phylip_var_all    = false;
 bool      ordered_export    = false;
 bool      kernel_smoothed   = false;
 bool      loci_ordered      = false;
@@ -451,8 +452,11 @@ int main (int argc, char* argv[]) {
     if (hzar_out)
     	write_hzar(catalog, pmap, psum, pop_indexes, samples);
 
-    if (phylip_out)
+    if (phylip_out || phylip_var)
     	write_phylip(catalog, pmap, psum, pop_indexes, samples);
+
+    if (phylip_var_all)
+    	write_fullseq_phylip(catalog, pmap, psum, pop_indexes, samples);
 
     if (vcf_haplo_out)
     	write_vcf_haplotypes(catalog, pmap, psum, samples, sample_ids);
@@ -7869,6 +7873,247 @@ write_phylip(map<int, CSLocus *> &catalog,
 }
 
 int 
+write_fullseq_phylip(map<int, CSLocus *> &catalog, 
+		     PopMap<CSLocus> *pmap, 
+		     PopSum<CSLocus> *psum, 
+		     map<int, pair<int, int> > &pop_indexes, 
+		     map<int, string> &samples) 
+{
+    //
+    // We want to write all variable loci in Phylip interleaved format. Polymorphic positions
+    // will be encoded using IUPAC notation.
+    //
+    // We will write those loci to a Phylip file as defined here: 
+    //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".fullseq.phylip";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing full sequence population data to Phylip file '" << file << "'; ";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening Phylip file '" << file << "'\n";
+    	exit(1);
+    }
+
+    pop_name << ".log";
+    file = in_path + pop_name.str();
+
+    cerr << "logging nucleotide positions to '" << file << "'...";
+
+    ofstream log_fh(file.c_str(), ofstream::out);
+
+    if (log_fh.fail()) {
+        cerr << "Error opening Phylip Log file '" << file << "'\n";
+    	exit(1);
+    }
+
+    log_fh << "# Locus ID\tLine Number\n";
+
+    map<string, vector<CSLocus *> >::iterator it;
+    CSLocus  *loc;
+    LocSum  **s;
+    LocTally *t;
+
+    map<int, pair<int, int> >::iterator pit;
+    int  pop_cnt = psum->pop_cnt();
+    int  pop_id;
+    char nuc;
+
+    bool include;
+    char id_str[id_len];
+    uint len = 0;
+
+    //
+    // Determine the length of sequence we will output.
+    //
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint pos = 0; pos < it->second.size(); pos++) {
+	    loc = it->second[pos];
+
+ 	    t = psum->locus_tally(loc->id);
+
+	    include = true;
+	    for (uint i = 0; i < loc->snps.size(); i++) {
+		uint col = loc->snps[i]->col;
+
+		if (t->nucs[col].allele_cnt != 2)
+		    include = false;
+	    }
+
+	    if (include)
+		len += strlen(loc->con);
+	}
+    }
+
+    map<int, string> outstrs;
+    
+    fh << pop_indexes.size() << "    " << len << "\n";
+
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+	pop_id = pit->first;
+
+	outstrs[pop_id] = "";
+	sprintf(id_str, "%s", pop_key[pop_id].c_str());
+	len = strlen(id_str);
+	for (uint j = len; j < 10; j++)
+	    id_str[j] = ' ';
+	id_str[9] = '\0'; 
+
+	outstrs[pop_id] += string(id_str) + " ";
+    }
+
+    char *seq;
+    int   line = 1;
+    
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint pos = 0; pos < it->second.size(); pos++) {
+	    loc = it->second[pos];
+
+ 	    s = psum->locus(loc->id);
+	    t = psum->locus_tally(loc->id);
+
+	    include = true;
+	    for (uint i = 0; i < loc->snps.size(); i++) {
+		uint col = loc->snps[i]->col;
+
+		if (t->nucs[col].allele_cnt != 2)
+		    include = false;
+	    }
+
+	    if (!include)
+		continue;
+
+	    seq = new char[loc->len + 1];
+	    strcpy(seq, loc->con);
+
+	    for (int j = 0; j < pop_cnt; j++) {
+		pop_id = psum->rev_pop_index(j);
+
+		for (uint i = 0; i < loc->snps.size(); i++) {
+		    uint col = loc->snps[i]->col;
+
+		    //
+		    // Encode SNPs that are variable within a population using IUPAC notation:
+		    //     http://en.wikipedia.org/wiki/Nucleic_acid_notation#IUPAC_notation
+		    //
+		    switch(s[j]->nucs[col].p_nuc) {
+		    case 0:
+			nuc = 'N';
+			break;
+		    case 'A':
+			switch(s[j]->nucs[col].q_nuc) {
+			case 'C':
+			    nuc = 'M';
+			    break;
+			case 'G':
+			    nuc = 'R';
+			    break;
+			case 'T':
+			    nuc = 'W';
+			    break;
+			case 0:
+			    nuc = 'A';
+			    break;
+			}
+			break;
+		    case 'C':
+			switch(s[j]->nucs[col].q_nuc) {
+			case 'A':
+			    nuc = 'M';
+			    break;
+			case 'G':
+			    nuc = 'S';
+			    break;
+			case 'T':
+			    nuc = 'Y';
+			    break;
+			case 0:
+			    nuc = 'C';
+			    break;
+			}
+			break;
+		    case 'G':
+			switch(s[j]->nucs[col].q_nuc) {
+			case 'A':
+			    nuc = 'R';
+			    break;
+			case 'C':
+			    nuc = 'S';
+			    break;
+			case 'T':
+			    nuc = 'K';
+			    break;
+			case 0:
+			    nuc = 'G';
+			    break;
+			}
+			break;
+		    case 'T':
+			switch(s[j]->nucs[col].q_nuc) {
+			case 'A':
+			    nuc = 'W';
+			    break;
+			case 'C':
+			    nuc = 'Y';
+			    break;
+			case 'G':
+			    nuc = 'K';
+			    break;
+			case 0:
+			    nuc = 'T';
+			    break;
+			}
+			break;
+		    }
+
+		    seq[col] = nuc;
+		}
+		
+		outstrs[pop_id] += string(seq);
+	    }
+	    delete [] seq;
+
+	    log_fh << loc->id << "\t" << line << "\n";
+	    
+	    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+		pop_id = pit->first;
+		fh << outstrs[pop_id] << "\n";
+		outstrs[pop_id] = "";
+		line++;
+	    }
+	    fh << "\n";
+	    line++;
+	}
+    }
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    //
+    // Output the header.
+    //
+    fh << "# Stacks v" << VERSION << "; " << " Phylip interleaved; " << date << "\n";
+
+    fh.close();
+    log_fh.close();
+
+    cerr << "done.\n";
+
+    return 0;
+}
+
+int 
 tally_ref_alleles(LocSum **s, int pop_cnt, int snp_index, char &p_allele, char &q_allele) 
 {
     int  nucs[4] = {0};
@@ -8430,6 +8675,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"genepop",        no_argument,       NULL, 'G'},
 	    {"phylip",         no_argument,       NULL, 'Y'},
 	    {"phylip_var",     no_argument,       NULL, 'L'},
+	    {"phylip_var_all", no_argument,       NULL, 'T'},
 	    {"hzar",           no_argument,       NULL, 'Z'},
 	    {"merge_sites",    no_argument,       NULL, 'D'},
 	    {"window_size",    required_argument, NULL, 'w'},
@@ -8469,7 +8715,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "ACDEFGHJKLNSVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
+	c = getopt_long(argc, argv, "ACDEFGHJKLNSTVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -8616,6 +8862,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'L':
 	    phylip_var = true;
+	    break;
+	case 'T':
+	    phylip_var_all = true;
 	    break;
 	case 'g':
 	    genomic_out = true;
@@ -8803,7 +9052,8 @@ void help() {
 	      << "    --plink: output genotypes in PLINK format.\n"
 	      << "    --hzar: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
 	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
-	      << "      --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n\n"
+	      << "    --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
+	      << "    --phylip_var_all: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n\n"
 	      << "  Debugging:\n"
 	      << "    --verbose: turn on additional logging.\n"
 	      << "    --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n";
