@@ -8229,7 +8229,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
 	    fh << "\n";
 	    line++;
 
-	    par_fh << "DNA, p" << cnt << "=" << index << "-" << index + loc->len << "\n";
+	    par_fh << "DNA, p" << cnt << "=" << index << "-" << index + loc->len - 1 << "\n";
 	    index += loc->len;
 	    cnt++;
 	}

@@ -1,5 +1,7 @@
 Stacks 1.35
 ---------------------------
+	Feature: Added --treemix to the populations program, allowing SNPs to be output in
+	TreeMix format.
 	Feature: Added --phylip_var_all to the populations program. This option outputs the full
 	sequence from each variable locus, encoding polymorphisms using IUPAC notation.
 	Feature: Added the AgeI restriction enzyme.
