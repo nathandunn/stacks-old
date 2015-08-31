@@ -66,6 +66,7 @@ bool      beagle_out        = false;
 bool      beagle_phased_out = false;
 bool      plink_out         = false;
 bool      hzar_out          = false;
+bool      treemix_out       = false;
 bool      phylip_out        = false;
 bool      phylip_var        = false;
 bool      phylip_var_all    = false;
@@ -452,6 +453,9 @@ int main (int argc, char* argv[]) {
     if (hzar_out)
     	write_hzar(catalog, pmap, psum, pop_indexes, samples);
 
+    if (treemix_out)
+    	write_treemix(catalog, pmap, psum, pop_indexes, samples);
+    
     if (phylip_out || phylip_var)
     	write_phylip(catalog, pmap, psum, pop_indexes, samples);
 
@@ -6559,6 +6563,125 @@ write_hzar(map<int, CSLocus *> &catalog,
 }
 
 int 
+write_treemix(map<int, CSLocus *> &catalog, 
+	      PopMap<CSLocus> *pmap, 
+	      PopSum<CSLocus> *psum, 
+	      map<int, pair<int, int> > &pop_indexes, 
+	      map<int, string> &samples) 
+{
+    //
+    // Write a TreeMix file (Pickrell and Pritchard, 2012 PLoS Genetics)
+    //    https://bitbucket.org/nygcresearch/treemix/wiki/Home
+    //
+    stringstream pop_name;
+    pop_name << "batch_" << batch_id << ".treemix";
+    string file = in_path + pop_name.str();
+
+    cerr << "Writing population data to TreeMix file '" << file << "'; ";
+
+    ofstream fh(file.c_str(), ofstream::out);
+
+    if (fh.fail()) {
+        cerr << "Error opening TreeMix file '" << file << "'\n";
+    	exit(1);
+    }
+
+    pop_name << ".log";
+    file = in_path + pop_name.str();
+
+    cerr << "logging nucleotide positions to '" << file << "'...";
+
+    ofstream log_fh(file.c_str(), ofstream::out);
+
+    if (log_fh.fail()) {
+        cerr << "Error opening Phylip Log file '" << file << "'\n";
+    	exit(1);
+    }
+
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    log_fh << "# Stacks v" << VERSION << "; " << " TreeMix v1.1; " << date << "\n"
+	   << "# Line\tLocus ID\tColumn\n";
+
+    //
+    // Output the header.
+    //
+    fh << "# Stacks v" << VERSION << "; " << " TreeMix v1.1; " << date << "\n";
+
+    map<string, vector<CSLocus *> >::iterator it;
+    map<int, pair<int, int> >::iterator pit;
+    CSLocus  *loc;
+    LocSum  **s;
+    LocTally *t;
+    int       p;
+
+    //
+    // Output a space-separated list of the populations on the first line.
+    //
+    stringstream sstr;
+    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
+	sstr << pop_key[pit->first] << " ";
+    
+    fh << sstr.str().substr(0, sstr.str().length() - 1) << "\n";
+
+    double p_freq, p_cnt, q_cnt, allele_cnt;
+    long int line = 1;
+    
+    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+	for (uint pos = 0; pos < it->second.size(); pos++) {
+	    loc = it->second[pos];
+
+	    s = psum->locus(loc->id);
+	    t = psum->locus_tally(loc->id);
+		
+	    for (uint i = 0; i < loc->snps.size(); i++) {
+		uint col = loc->snps[i]->col;
+
+		sstr.str("");
+
+		for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
+		    p = psum->pop_index(pit->first);
+
+		    // 
+		    // If this site is fixed in all populations or has too many alleles don't output it.
+		    //
+		    if (t->nucs[col].allele_cnt != 2) 
+			continue;
+
+		    p_freq = (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc) ? 
+			s[p]->nucs[col].p :
+			1 - s[p]->nucs[col].p;
+		    
+		    allele_cnt = s[p]->nucs[col].num_indv * 2;
+		    p_cnt      = round(allele_cnt * p_freq);
+		    q_cnt      = allele_cnt - p_cnt;
+		    sstr << (int) p_cnt << "," << (int) q_cnt << " ";
+		}
+
+		fh << sstr.str().substr(0, sstr.str().length() - 1) << "\n";
+		log_fh << line << "\t" << loc->id << "\t" << col << "\n";
+		line++;
+	    }
+    	}
+    }
+
+    fh.close();
+    log_fh.close();
+    
+    cerr << "done.\n";
+
+    return 0;
+}
+
+int 
 write_fastphase(map<int, CSLocus *> &catalog, 
 		PopMap<CSLocus> *pmap, 
 		PopSum<CSLocus> *psum, 
@@ -7899,7 +8022,23 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     	exit(1);
     }
 
-    pop_name << ".log";
+    //
+    // We will also write a file that allows us to specify each RAD locus as a separate partition
+    // for use in phylogenetics programs.
+    //
+    pop_name.str("");
+    pop_name << "batch_" << batch_id << ".fullseq.partitions.phylip";
+    file = in_path + pop_name.str();
+
+    ofstream par_fh(file.c_str(), ofstream::out);
+
+    if (par_fh.fail()) {
+        cerr << "Error opening Phylip partitions file '" << file << "'\n";
+    	exit(1);
+    }
+
+    pop_name.str("");
+    pop_name << "fullseq.phylip.log";
     file = in_path + pop_name.str();
 
     cerr << "logging nucleotide positions to '" << file << "'...";
@@ -7967,7 +8106,9 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     }
 
     char *seq;
-    int   line = 1;
+    int   line  = 1;
+    int   index = 1;
+    int   cnt   = 1;
     
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 	for (uint pos = 0; pos < it->second.size(); pos++) {
@@ -8087,6 +8228,10 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
 	    }
 	    fh << "\n";
 	    line++;
+
+	    par_fh << "DNA, p" << cnt << "=" << index << "-" << index + loc->len << "\n";
+	    index += loc->len;
+	    cnt++;
 	}
     }
 
@@ -8106,6 +8251,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     fh << "# Stacks v" << VERSION << "; " << " Phylip interleaved; " << date << "\n";
 
     fh.close();
+    par_fh.close();
     log_fh.close();
 
     cerr << "done.\n";
@@ -8677,6 +8823,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"phylip_var",     no_argument,       NULL, 'L'},
 	    {"phylip_var_all", no_argument,       NULL, 'T'},
 	    {"hzar",           no_argument,       NULL, 'Z'},
+	    {"treemix",        no_argument,       NULL, 'U'},
 	    {"merge_sites",    no_argument,       NULL, 'D'},
 	    {"window_size",    required_argument, NULL, 'w'},
 	    {"num_threads",    required_argument, NULL, 't'},
@@ -8715,7 +8862,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "ACDEFGHJKLNSTVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
+	c = getopt_long(argc, argv, "ACDEFGHJKLNSTUVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -8866,6 +9013,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'T':
 	    phylip_var_all = true;
 	    break;
+	case 'U':
+	    treemix_out = true;
+	    break;
 	case 'g':
 	    genomic_out = true;
 	    break;
@@ -8910,6 +9060,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    help();
 	    break;
 	default:
+	    cerr << "Unknown command line option: '" << (char) c << "'\n";
 	    help();
 	    abort();
 	}
@@ -9053,7 +9204,8 @@ void help() {
 	      << "    --hzar: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
 	      << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
 	      << "    --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
-	      << "    --phylip_var_all: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n\n"
+	      << "    --phylip_var_all: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
+	      << "    --treemix: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n\n"
 	      << "  Debugging:\n"
 	      << "    --verbose: turn on additional logging.\n"
 	      << "    --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n";
