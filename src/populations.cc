@@ -6666,6 +6666,9 @@ write_treemix(map<int, CSLocus *> &catalog,
 		    sstr << (int) p_cnt << "," << (int) q_cnt << " ";
 		}
 
+		if (sstr.str().length() == 0)
+		    continue;
+		
 		fh << sstr.str().substr(0, sstr.str().length() - 1) << "\n";
 		log_fh << line << "\t" << loc->id << "\t" << col << "\n";
 		line++;
