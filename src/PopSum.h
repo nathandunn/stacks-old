@@ -410,7 +410,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 			   << loc->loc.chr << "\t"
 			   << loc->sort_bp(loc->snps[k]->col) << "\t"
 			   << loc->snps[k]->col << "\t" 
-			   << population_id << "\n";
+			   << pop_key[population_id] << "\n";
 	    }
 
 	    snp_cols.insert(loc->snps[k]->col);

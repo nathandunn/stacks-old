@@ -146,6 +146,7 @@ BamUnAln::next_seq()
 class BamUnAln: public Input {
  public:
     BamUnAln(const char *path) : Input() { cerr << "BAM support was not enabled when Stacks was compiled.\n"; };
+    BamUnAln(string path) : Input() { cerr << "BAM support was not enabled when Stacks was compiled.\n"; };
     ~BamUnAln() {};
     Seq *next_seq()      { return NULL; };
     int  next_seq(Seq &) { return 0; };
