@@ -6543,6 +6543,13 @@ write_hzar(map<int, CSLocus *> &catalog,
 		    if (t->nucs[col].allele_cnt != 2) 
 			continue;
 
+		    if (s[p]->nucs[col].num_indv == 0 ||
+			s[p]->nucs[col].incompatible_site ||
+			s[p]->nucs[col].filtered_site) {
+			fh << ",0,0,0";
+			continue;
+		    }
+		    
 		    if (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc)
 			fh << "," << s[p]->nucs[col].p << "," << 1 - s[p]->nucs[col].p << ",";
 		    else
@@ -6609,7 +6616,7 @@ write_treemix(map<int, CSLocus *> &catalog,
     strftime(date, 32, "%B %d, %Y", timeinfo);
 
     log_fh << "# Stacks v" << VERSION << "; " << " TreeMix v1.1; " << date << "\n"
-	   << "# Line\tLocus ID\tColumn\n";
+	   << "# Line\tLocus ID\tColumn\tChr\tBasepair\n";
 
     //
     // Output the header.
@@ -6647,15 +6654,22 @@ write_treemix(map<int, CSLocus *> &catalog,
 
 		sstr.str("");
 
+		// 
+		// If this site is fixed in all populations or has too many alleles don't output it.
+		//
+		if (t->nucs[col].allele_cnt != 2) 
+		    continue;
+
 		for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
 		    p = psum->pop_index(pit->first);
 
-		    // 
-		    // If this site is fixed in all populations or has too many alleles don't output it.
-		    //
-		    if (t->nucs[col].allele_cnt != 2) 
+		    if (s[p]->nucs[col].num_indv == 0 ||
+			s[p]->nucs[col].incompatible_site ||
+			s[p]->nucs[col].filtered_site) {
+			sstr << "0,0 ";
 			continue;
-
+		    }
+		    
 		    p_freq = (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc) ? 
 			s[p]->nucs[col].p :
 			1 - s[p]->nucs[col].p;
@@ -6668,9 +6682,9 @@ write_treemix(map<int, CSLocus *> &catalog,
 
 		if (sstr.str().length() == 0)
 		    continue;
-		
+
 		fh << sstr.str().substr(0, sstr.str().length() - 1) << "\n";
-		log_fh << line << "\t" << loc->id << "\t" << col << "\n";
+		log_fh << line << "\t" << loc->id << "\t" << col << "\t" << loc->loc.chr << "\t" << loc->sort_bp(col) + 1 << "\n";
 		line++;
 	    }
     	}
@@ -7798,7 +7812,18 @@ write_phylip(map<int, CSLocus *> &catalog,
     	exit(1);
     }
 
-    log_fh << "# Seq Pos\tLocus ID\tColumn\tPopulation\n";
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    log_fh << "# Stacks v" << VERSION << "; " << " Phylip sequential; " << date << "\n"
+	   << "# Seq Pos\tLocus ID\tColumn\tPopulation\n";
 
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
@@ -7976,16 +8001,6 @@ write_phylip(map<int, CSLocus *> &catalog,
     }
 
     //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    //
     // Output the header.
     //
     fh << "# Stacks v" << VERSION << "; " << " Phylip sequential; " << date << "\n";
@@ -8041,7 +8056,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     }
 
     pop_name.str("");
-    pop_name << "fullseq.phylip.log";
+    pop_name << "batch_" << batch_id << "fullseq.phylip.log";
     file = in_path + pop_name.str();
 
     cerr << "logging nucleotide positions to '" << file << "'...";
@@ -8053,7 +8068,20 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     	exit(1);
     }
 
-    log_fh << "# Locus ID\tLine Number\n";
+        //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%B %d, %Y", timeinfo);
+
+    log_fh << "# Stacks v" << VERSION << "; " << " Phylip interleaved; " << date << "\n"
+	   << "# Locus ID\tLine Number";
+    if (loci_ordered) log_fh << "\tChr\tBasepair";
+    log_fh << "\n";
 
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
@@ -8221,7 +8249,9 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
 	    }
 	    delete [] seq;
 
-	    log_fh << loc->id << "\t" << line << "\n";
+	    log_fh << line << "\t" << loc->id;
+	    if (loci_ordered) log_fh << "\t" << loc->loc.chr << "\t" << loc->sort_bp() + 1;
+	    log_fh << "\n";
 	    
 	    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
 		pop_id = pit->first;
@@ -8237,16 +8267,6 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
 	    cnt++;
 	}
     }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
 
     //
     // Output the header.
