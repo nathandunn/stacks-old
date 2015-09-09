@@ -30,7 +30,7 @@
 // Global variables to hold command-line options.
 //
 FileT    in_file_type  = FileT::unknown;
-FileT    out_file_type = FileT::fastq;
+FileT    out_file_type = FileT::unknown;
 string   in_file;
 string   in_file_p1;
 string   in_file_p2;
@@ -84,6 +84,36 @@ int main (int argc, char* argv[]) {
     else
 	cerr << "Processing single-end data.\n";
 
+    switch(barcode_type) {
+    case null_null:
+	cerr << "No oligo sequence specified, will use single and paired-end reads to determine clones.\n";
+	break;
+    case null_index:
+	cerr << "Searching for index oligo (i7 Illumina read).\n";
+	break;
+    case index_null:
+	cerr << "Searching for index oligo (i5 Illumina read).\n";
+	break;
+    case inline_null:
+	cerr << "Searching for inline oligo on single-end read.\n";
+	break;
+    case index_index:
+	cerr << "Searching for index oligos (i5 and i7 Illumina reads).\n";
+	break;
+    case inline_inline:
+	cerr << "Searching for inline oligos on single and paired-end read.\n";
+	break;
+    case inline_index:
+	cerr << "Searching for inline oligo on single-end read and index oligo (i5 or i7 Illumina read).\n";
+	break;
+    case index_inline:
+	if (paired)
+	    cerr << "Searching for inline oligo on paired-end read and index oligo (i5 or i7 Illumina read).\n";
+	else
+	    cerr << "Searching for inline oligo on single-end read and index oligo (i5 or i7 Illumina read).\n";
+	break;
+    }
+	
     map<string, long> counters;
     counters["total"] = 0;
     counters["red_reads"] = 0;
@@ -443,7 +473,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     Input    *fh_1, *fh_2;
     Read     *r_1,  *r_2;
     ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
-    gzFile    out_gzfh_1, out_gzfh_2;
+    gzFile    out_gzfh_1, out_gzfh_2, discard_gzfh_1, discard_gzfh_2;
     
     int return_val = 1;
 
@@ -458,24 +488,32 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     else
 	cerr << "  Reading data from:\n  " << path_1 << " and\n  " << path_2 << "\n";
 
-    if (in_file_type == FileT::fastq) {
+    switch (in_file_type) {
+    case FileT::fastq:
         fh_1 = new Fastq(path_1);
 	fh_2 = interleaved ? fh_1 : new Fastq(path_2);
-    } else if (in_file_type == FileT::gzfastq) {
+	break;
+    case FileT::gzfastq:
         fh_1 = new GzFastq(path_1.c_str());
 	fh_2 = interleaved ? fh_1 : new GzFastq(path_2);
-    } else if (in_file_type == FileT::fasta) {
+	break;
+    case FileT::fasta:
         fh_1 = new Fasta(path_1);
 	fh_2 = interleaved ? fh_1 : new Fasta(path_2);
-    } else if (in_file_type == FileT::gzfasta) {
+	break;
+    case FileT::gzfasta:
         fh_1 = new GzFasta(path_1);
 	fh_2 = interleaved ? fh_1 : new GzFasta(path_2);
-    } else if (in_file_type == FileT::bam) {
+	break;
+    case FileT::bam:
         fh_1 = new BamUnAln(path_1);
 	fh_2 = fh_1;
-    } else if (in_file_type == FileT::bustard) {
+	break;
+    case FileT::bustard:
         fh_1 = new Bustard(path_1);
         fh_2 = interleaved ? fh_1 : new Bustard(path_2);
+    default:
+	break;
     }
 
     //
@@ -546,19 +584,35 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     //
     if (discards) {
 	path_1 = out_path + file_1.substr(0, pos_1) + ".discards" + suffix_1;
-	discard_fh_1.open(path_1.c_str(), ifstream::out);
 
-	if (discard_fh_1.fail()) {
-	    cerr << "Error opening discard output file '" << path_1 << "'\n";
-	    return -1;
+	if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
+	    discard_gzfh_1 = gzopen(path_1.c_str(), "wb");
+	    if (!(discard_gzfh_1)) {
+		cerr << "Error opening discard file '" << path_1 << "'\n";
+		return -1;
+	    }
+	} else {	    
+	    discard_fh_1.open(path_1.c_str(), ifstream::out);
+	    if (discard_fh_1.fail()) {
+		cerr << "Error opening discard file '" << path_1 << "'\n";
+		return -1;
+	    }
 	}
 
 	path_2 = out_path + file_2.substr(0, pos_2) + ".discards" + suffix_2;
-	discard_fh_2.open(path_2.c_str(), ifstream::out);
 
-	if (discard_fh_2.fail()) {
-	    cerr << "Error opening discard output file '" << path_2 << "'\n";
-	    return -1;
+	if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
+	    discard_gzfh_2 = gzopen(path_2.c_str(), "wb");
+	    if (!(discard_gzfh_2)) {
+		cerr << "Error opening discard file '" << path_2 << "'\n";
+		return -1;
+	    }
+	} else {	    
+	    discard_fh_2.open(path_2.c_str(), ifstream::out);
+	    if (discard_fh_2.fail()) {
+		cerr << "Error opening discard file '" << path_2 << "'\n";
+		return -1;
+	    }
 	}
     }
 
@@ -566,24 +620,27 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     // Determine how much sequence we need to trim to remove the oligo seqeunce before printing.
     //
     int offset_1, offset_2;
-    if (barcode_type == inline_null) {
+    switch (barcode_type) {
+    case inline_null:
+    case inline_index:
 	offset_1 = oligo_len_1;
 	offset_2 = 0;
-    } else if (barcode_type == index_null) {
-	offset_1 = oligo_len_1;
-	offset_2 = 0;	
-    } else if (barcode_type == inline_inline) {
-	offset_1 = oligo_len_1;
-	offset_2 = oligo_len_2;
-    } else if (barcode_type == index_index) {
+	break;
+    case index_null:
+    case null_index:
+    case index_index:
 	offset_1 = 0;
 	offset_2 = 0;
-    } else if (barcode_type == inline_index) {
+	break;
+    case inline_inline:
 	offset_1 = oligo_len_1;
-	offset_2 = 0;
-    } else if (barcode_type == index_inline) {
+	offset_2 = oligo_len_2;
+	break;
+    case index_inline:
 	offset_1 = 0;
 	offset_2 = oligo_len_2;
+    default:
+	break;
     }
 
 		
@@ -622,25 +679,33 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	//
 	// Fetch the randomized oligo sequence from the proper position in the reads.
 	//
-	if (barcode_type == inline_null) {
+	switch (barcode_type) {
+	case inline_null:
 	    oligo_1 = r_1->inline_bc;
-
-	} else if (barcode_type == index_null) {
+	    break;
+	case index_null:
 	    oligo_1 = r_1->index_bc;
-	    
-	} else if (barcode_type == inline_inline) {
+	    break;
+	case null_index:
+	    oligo_1 = r_2->index_bc;
+	    break;
+        case inline_inline:
 	    oligo_1 = r_1->inline_bc;
 	    oligo_2 = r_2->inline_bc;
-
-	} else if (barcode_type == index_index) {
+	    break;
+	case index_index:
 	    oligo_1 = r_1->index_bc;
 	    oligo_2 = r_2->index_bc;
-	} else if (barcode_type == inline_index) {
+	    break;
+	case inline_index:
 	    oligo_1 = r_1->inline_bc;
 	    oligo_2 = r_2->index_bc;
-	} else if (barcode_type == index_inline) {
+	    break;
+	case index_inline:
 	    oligo_1 = r_1->index_bc;
 	    oligo_2 = r_2->inline_bc;
+	default:
+	    break;
 	}
 
 	//
@@ -667,18 +732,24 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	if (clone == false) {
 	    counters["red_reads"]++;
 
-	    if (out_file_type == FileT::fastq) {
+	    switch (out_file_type) {
+	    case FileT::fastq:
 		result_1 = write_fastq(&out_fh_1, s_1, retain_oligo ? 0 : offset_1);
 		result_2 = write_fastq(&out_fh_2, s_2, retain_oligo ? 0 : offset_2);
-	    } else if (out_file_type == FileT::gzfastq) {
+		break;
+	    case FileT::gzfastq:
 		result_1 = write_fastq(&out_gzfh_1, s_1, retain_oligo ? 0 : offset_1);
 		result_2 = write_fastq(&out_gzfh_2, s_2, retain_oligo ? 0 : offset_2);
-	    } else if (out_file_type == FileT::fasta) {
+		break;
+	    case FileT::fasta:
 		result_1 = write_fasta(&out_fh_1, s_1, retain_oligo ? 0 : offset_1);
 		result_2 = write_fasta(&out_fh_2, s_2, retain_oligo ? 0 : offset_2);
-	    } else if (out_file_type == FileT::gzfasta) {
+		break;
+	    case FileT::gzfasta:
 		result_1 = write_fasta(&out_gzfh_1, s_1, retain_oligo ? 0 : offset_1);
 		result_2 = write_fasta(&out_gzfh_2, s_2, retain_oligo ? 0 : offset_2);
+	    default:
+		break;
 	    }
 
 	    if (!result_1 || !result_2) {
@@ -689,12 +760,24 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	} else if (clone == true && discards) {
 	    counters["dis_reads"]++;
 
-	    if (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) {
-		result_1 = write_fastq(&discard_fh_1, s_1);
-		result_2 = write_fastq(&discard_fh_2, s_2);
-	    } else if (out_file_type == FileT::fasta || out_file_type == FileT::gzfasta) {
-		result_1 = write_fasta(&discard_fh_1, s_1);
-		result_2 = write_fasta(&discard_fh_2, s_2);
+	    switch (out_file_type) {
+	    case FileT::fastq:
+		result_1 = write_fastq(&discard_fh_1,   s_1);
+		result_2 = write_fastq(&discard_fh_2,   s_2);
+		break;
+	    case FileT::gzfastq:
+		result_1 = write_fastq(&discard_gzfh_1, s_1);
+		result_2 = write_fastq(&discard_gzfh_2, s_2);
+		break;
+	    case FileT::fasta:
+		result_1 = write_fasta(&discard_fh_1,   s_1);
+		result_2 = write_fasta(&discard_fh_2,   s_2);
+		break;
+	    case FileT::gzfasta:
+		result_1 = write_fasta(&discard_gzfh_1, s_1);
+		result_2 = write_fasta(&discard_gzfh_2, s_2);
+	    default:
+		break;
 	    }
 
 	    if (!result_1 || !result_2) {
@@ -714,16 +797,19 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta) {
 	gzclose(out_gzfh_1);
 	gzclose(out_gzfh_2);
+	if (discards) {
+	    gzclose(discard_gzfh_1);
+	    gzclose(discard_gzfh_2);
+	}
     } else {
 	out_fh_1.close();
 	out_fh_2.close();
+	if (discards) {
+	    discard_fh_1.close();
+	    discard_fh_2.close();
+	}
     }
     
-    if (discards) {
-	discard_fh_1.close();
-	discard_fh_2.close();
-    }
-
     delete fh_1;
     if (interleaved == false) delete fh_2;
 
@@ -739,7 +825,7 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
     Input   *fh_1;
     Read    *r_1;
     ofstream out_fh_1, discard_fh_1;
-    gzFile   out_gzfh_1;
+    gzFile   out_gzfh_1, discard_gzfh_1;
     
     int return_val = 1;
 
@@ -750,18 +836,27 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
 
     cerr << "  Reading data from:\n  " << path_1 << "\n";
 
-    if (in_file_type == FileT::fastq) 
-        fh_1 = new Fastq(path_1);
-    else if (in_file_type == FileT::gzfastq) 
+    switch(in_file_type) {
+    case FileT::fastq:
+	fh_1 = new Fastq(path_1);
+	break;
+    case FileT::gzfastq:
         fh_1 = new GzFastq(path_1.c_str());
-    else if (in_file_type == FileT::fasta) 
-        fh_1 = new Fasta(path_1);
-    else if (in_file_type == FileT::gzfasta) 
+	break;
+    case FileT::fasta:
+        fh_1 = new Fasta(path_1);	
+	break;
+    case FileT::gzfasta: 
         fh_1 = new GzFasta(path_1);
-    else if (in_file_type == FileT::bam) 
+	break;
+    case FileT::bam:
         fh_1 = new BamUnAln(path_1);
-    else if (in_file_type == FileT::bustard) 
+	break;
+    case FileT::bustard:
         fh_1 = new Bustard(path_1);
+    default:
+	break;
+    }
 
     //
     // Open the output files.
@@ -804,11 +899,19 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
     //
     if (discards) {
 	path_1 = out_path + file_1 + ".discards" + suffix_1;
-	discard_fh_1.open(path_1.c_str(), ifstream::out);
 
-	if (discard_fh_1.fail()) {
-	    cerr << "Error opening discard output file '" << path_1 << "'\n";
-	    return -1;
+	if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
+	    discard_gzfh_1 = gzopen(path_1.c_str(), "wb");
+	    if (!(discard_gzfh_1)) {
+		cerr << "Error opening discard file '" << path_1 << "'\n";
+		return -1;
+	    }
+	} else {	    
+	    discard_fh_1.open(path_1.c_str(), ifstream::out);
+	    if (discard_fh_1.fail()) {
+		cerr << "Error opening discard file '" << path_1 << "'\n";
+		return -1;
+	    }
 	}
     }
 
@@ -816,18 +919,16 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
     // Determine how much sequence we need to trim to remove the oligo seqeunce before printing.
     //
     int offset_1;
-    if (barcode_type == inline_null)
+    switch (barcode_type) {
+    case inline_null:
+    case inline_index:
+    case index_inline:
 	offset_1 = oligo_len_1;
-    else if (barcode_type == index_null)
-	offset_1 = oligo_len_1;
-    else if (barcode_type == inline_inline)
-	offset_1 = oligo_len_1;
-    else if (barcode_type == index_index)
+	break;
+    default:
 	offset_1 = 0;
-    else if (barcode_type == inline_index)
-	offset_1 = oligo_len_1;
-    else if (barcode_type == index_inline)
-	offset_1 = 0;
+	break;
+    }
 		
     //
     // Read in the first record, initializing the Seq object s. Then 
@@ -883,15 +984,22 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
 	if (clone == false) {
 	    counters["red_reads"]++;
 
-	    if (out_file_type == FileT::fastq)
-		result_1 = write_fastq(&out_fh_1, s_1, retain_oligo ? 0 : offset_1);
-	    else if (out_file_type == FileT::gzfastq)
+	    switch (out_file_type) {
+	    case FileT::fastq:
+		result_1 = write_fastq(&out_fh_1,   s_1, retain_oligo ? 0 : offset_1);
+		break;
+	    case FileT::gzfastq:
 		result_1 = write_fastq(&out_gzfh_1, s_1, retain_oligo ? 0 : offset_1);
-	    else if (out_file_type == FileT::fasta)
-		result_1 = write_fasta(&out_fh_1, s_1, retain_oligo ? 0 : offset_1);
-	    else if (out_file_type == FileT::gzfasta)
+		break;
+	    case FileT::fasta:
+		result_1 = write_fasta(&out_fh_1,   s_1, retain_oligo ? 0 : offset_1);
+		break;
+	    case FileT::gzfasta:
 		result_1 = write_fasta(&out_gzfh_1, s_1, retain_oligo ? 0 : offset_1);
-
+	    default:
+		break;
+	    }
+	    
 	    if (!result_1) {
 	    	cerr << "Error writing to output file for '" << file_1 << "'\n";
 	    	return_val = -1;
@@ -900,10 +1008,21 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
 	} else if (clone == true && discards) {
 	    counters["dis_reads"]++;
 
-	    if (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq)
-		result_1 = write_fastq(&discard_fh_1, s_1);
-	    else if (out_file_type == FileT::fasta || out_file_type == FileT::gzfasta)
-		result_1 = write_fasta(&discard_fh_1, s_1);
+	    switch (out_file_type) {
+	    case FileT::fastq:
+		result_1 = write_fastq(&discard_fh_1,   s_1);
+		break;
+	    case FileT::gzfastq:
+		result_1 = write_fastq(&discard_gzfh_1, s_1);
+		break;
+	    case FileT::fasta:
+		result_1 = write_fasta(&discard_fh_1,   s_1);
+		break;
+	    case FileT::gzfasta:
+		result_1 = write_fasta(&discard_gzfh_1, s_1);
+	    default:
+		break;
+	    }
 
 	    if (!result_1) {
 		cerr << "Error writing to discard file for '" << file_1 << "'\n";
@@ -917,14 +1036,14 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
 	i++;
     } while ((s_1 = fh_1->next_seq()) != NULL);
 
-    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta)
+    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta) {
 	gzclose(out_gzfh_1);
-    else
+	if (discards) gzclose(discard_gzfh_1);
+    } else {
 	out_fh_1.close();
+	if (discards) discard_fh_1.close();
+    }
     
-    if (discards)
-	discard_fh_1.close();
-
     delete fh_1;
 
     delete r_1;
@@ -953,6 +1072,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"version",       no_argument,       NULL, 'v'},
 	    {"discards",      no_argument,       NULL, 'D'},
 	    {"paired",        no_argument,       NULL, 'P'},
+	    {"null_index",    no_argument,       NULL, 'U'},
 	    {"index_null",    no_argument,       NULL, 'u'},
 	    {"inline_null",   no_argument,       NULL, 'V'},
 	    {"index_index",   no_argument,       NULL, 'W'},
@@ -975,7 +1095,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvDPuVWxYZi:y:f:p:1:2:o:O:L:R:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hvDPuUVWxYZi:y:f:p:1:2:o:O:L:R:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -1030,6 +1150,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'o':
 	    out_path = optarg;
+	    break;
+	case 'U':
+	    barcode_type = null_index;
 	    break;
 	case 'u':
 	    barcode_type = index_null;
@@ -1112,6 +1235,11 @@ int parse_command_line(int argc, char* argv[]) {
 	cerr << "You must specify paired-end data if you do not have oligo sequences to differentiate cloned reads.\n";
 	help();
     }
+
+    if (barcode_type != null_null && oligo_len_1 == 0 && oligo_len_2 == 0) {
+	cerr << "You must specify the length of the oligo sequences (--oligo_len_1 / --oligo_len_2).\n";
+	help();
+    }
     
     return 0;
 }
@@ -1136,15 +1264,16 @@ void help() {
 	      << "  D: capture discarded reads to a file.\n"
 	      << "  h: display this help messsage.\n"
 	      << "  --oligo_len_1 len: length of the single-end oligo sequence in data set.\n"
-	      << "  --oligo_len_2 len: length of the paired-end oligo sequence in data set.\n\n"
+	      << "  --oligo_len_2 len: length of the paired-end oligo sequence in data set.\n"
 	      << "  --retain_oligo: do not trim off the random oligo sequence (if oligo is inline).\n\n"
 	      << "  Oligo sequence options:\n"
-	      << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
-	      << "    --index_null:    barcode is provded in FASTQ header, occurs only on single-end read.\n"
-	      << "    --inline_inline: barcode is inline with sequence, occurs on single and paired-end read.\n"
-	      << "    --index_index:   barcode is provded in FASTQ header, occurs on single and paired-end read.\n"
-	      << "    --inline_index:  barcode is inline with sequence on single-end read, occurs in FASTQ header for paired-end read.\n"
-	      << "    --index_inline:  barcode occurs in FASTQ header for single-end read, is inline with sequence on paired-end read.\n\n";
+	      << "    --inline_null:   random oligo is inline with sequence, occurs only on single-end read (default).\n"
+	      << "    --null_index:    random oligo is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
+	      << "    --index_null:    random oligo is provded in FASTQ header (Illumina i5 or i7 read).\n"
+	      << "    --inline_inline: random oligo is inline with sequence, occurs on single and paired-end read.\n"
+	      << "    --index_index:   random oligo is provded in FASTQ header (Illumina i5 and i7 read).\n"
+	      << "    --inline_index:  random oligo is inline with sequence on single-end read and second oligo occurs in FASTQ header.\n"
+	      << "    --index_inline:  random oligo occurs in FASTQ header (Illumina i5 or i7 read) and is inline with sequence on single-end read (if single read data) or paired-end read (if paired data).\n\n";
 
     exit(0);
 }

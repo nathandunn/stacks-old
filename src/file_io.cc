@@ -617,6 +617,9 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
     case null_null:
 	cerr << "Barcode type unspecified, assuming unbarcoded data.\n";
 	break;
+    case null_index:
+	cerr << "Searching for single, index barcode.\n";
+	break;
     case index_null:
 	cerr << "Searching for single-end, indexed barcodes.\n";
 	break;
