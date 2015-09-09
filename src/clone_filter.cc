@@ -156,9 +156,11 @@ int main (int argc, char* argv[]) {
 		clone_dist[j->second]++;
     }
 
-    cerr << "Freeing hash key memory...";
-    free_hash(clone_map_keys);
-    cerr << "done.\n";
+    if (clone_map_keys.size() > 0) {
+	cerr << "Freeing hash key memory...";
+	free_hash(clone_map_keys);
+	cerr << "done.\n";
+    }
 
     //
     // Determine and print the distribution of read clones.
