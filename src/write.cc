@@ -308,3 +308,51 @@ write_fasta(gzFile *fh, Seq *href, string msg) {
 
     return res;
 }
+
+int 
+write_fasta(ofstream *fh, Seq *href, Read *r) {
+    *fh	<< ">"
+	<< href->id << "\n"
+	<< r->seq + r->inline_bc_len << "\n";
+
+    if (fh->fail()) return -1;
+	
+    return 1;
+}
+
+int 
+write_fasta(gzFile *fh, Seq *href, Read *r) {
+    stringstream sstr;
+    sstr << ">"
+	 << href->id << "\n"
+	 << r->seq + r->inline_bc_len << "\n";
+
+    int res = gzputs(*fh, sstr.str().c_str());
+
+    return res;
+}
+
+int 
+write_fastq(ofstream *fh, Seq *href, Read *r) {
+    *fh << "@" << href->id << "\n"
+	<< r->seq   + r->inline_bc_len << "\n"
+	<< "+\n"
+	<< r->phred + r->inline_bc_len << "\n";
+
+    if (fh->fail()) return -1;
+
+    return 1;
+}
+
+int 
+write_fastq(gzFile *fh, Seq *href, Read *r) {
+    stringstream sstr;
+    sstr << "@" << href->id << "\n"
+	 << r->seq   + r->inline_bc_len << "\n"
+	 << "+\n"
+	 << r->phred + r->inline_bc_len << "\n";
+
+    int res = gzputs(*fh, sstr.str().c_str());
+
+    return res;
+}

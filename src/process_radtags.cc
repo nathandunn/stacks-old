@@ -43,6 +43,7 @@ string renz_2;
 char  *adapter_1;
 char  *adapter_2;
 barcodet barcode_type    = null_null;
+bool     retain_header   = false;
 bool     filter_adapter  = false;
 bool     paired          = false;
 bool     clean           = false;
@@ -244,7 +245,7 @@ process_paired_reads(string prefix_1,
     Read     *r_1, *r_2;
     ofstream *discard_fh_1, *discard_fh_2;
 
-    int return_val = 0;
+    int return_val = 1;
     
     string path_1 = in_path_1 + prefix_1;
     string path_2 = in_path_2 + prefix_2;
@@ -363,27 +364,46 @@ process_paired_reads(string prefix_1,
 	int result_2 = 1;
 
 	if (r_1->retain && r_2->retain) {
-	    result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
-		write_fastq(pair_1_fhs[bc], r_1, overhang) :
- 		write_fasta(pair_1_fhs[bc], r_1, overhang);
-            result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
-                write_fastq(pair_2_fhs[bc], r_2, overhang) :
-                write_fasta(pair_2_fhs[bc], r_2, overhang);
-
+	    if (retain_header) {
+		result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+		    write_fastq(pair_1_fhs[bc], s_1, r_1) :
+		    write_fasta(pair_1_fhs[bc], s_1, r_1);
+		result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+		    write_fastq(pair_2_fhs[bc], s_2, r_2) :
+		    write_fasta(pair_2_fhs[bc], s_2, r_2);
+	    } else {
+		result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+		    write_fastq(pair_1_fhs[bc], r_1, overhang) :
+		    write_fasta(pair_1_fhs[bc], r_1, overhang);
+		result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+		    write_fastq(pair_2_fhs[bc], r_2, overhang) :
+		    write_fasta(pair_2_fhs[bc], r_2, overhang);
+	    }
 	} else if (r_1->retain && !r_2->retain) {
 	    //
 	    // Write to the remainder file.
 	    //
-	    result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-		write_fastq(rem_1_fhs[bc], r_1, overhang) : 
-		write_fasta(rem_1_fhs[bc], r_1, overhang);
+	    if (retain_header)
+		result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
+		    write_fastq(rem_1_fhs[bc], s_1, r_1) : 
+		    write_fasta(rem_1_fhs[bc], s_1, r_1);
+	    else
+		result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
+		    write_fastq(rem_1_fhs[bc], r_1, overhang) : 
+		    write_fasta(rem_1_fhs[bc], r_1, overhang);
+	    
 	} else if (!r_1->retain && r_2->retain) {
 	    //
 	    // Write to the remainder file.
 	    //
-	    result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-		write_fastq(rem_2_fhs[bc], r_2, overhang) : 
-		write_fasta(rem_2_fhs[bc], r_2, overhang);
+	    if (retain_header)
+		result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
+		    write_fastq(rem_2_fhs[bc], s_2, r_2) : 
+		    write_fasta(rem_2_fhs[bc], s_2, r_2);
+	    else
+		result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
+		    write_fastq(rem_2_fhs[bc], r_2, overhang) : 
+		    write_fasta(rem_2_fhs[bc], r_2, overhang);
 	}
 
 	if (!result_1 || !result_2) {
@@ -439,7 +459,7 @@ process_reads(string prefix,
     Read  *r;
     ofstream *discard_fh;
 
-    int return_val = 0;
+    int return_val = 1;
 
     string path = in_path_1 + prefix;
 
@@ -530,11 +550,17 @@ process_reads(string prefix,
 
 	int result = 1;
 
-	if (r->retain)
-	    result = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-		write_fastq(pair_1_fhs[bc], r, overhang) : 
-		write_fasta(pair_1_fhs[bc], r, overhang);
-
+	if (r->retain) {
+	    if (retain_header)
+		result = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
+		    write_fastq(pair_1_fhs[bc], s, r) : 
+		    write_fasta(pair_1_fhs[bc], s, r);
+	    else
+		result = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
+		    write_fastq(pair_1_fhs[bc], r, overhang) : 
+		    write_fasta(pair_1_fhs[bc], r, overhang);
+	}
+	
 	if (!result) {
 	    cerr << "Error writing to output file for '" << bc.str() << "'\n";
 	    return_val = -1;
@@ -886,6 +912,8 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"merge",                no_argument, NULL, 'm'},
 	    {"disable_rad_check",    no_argument, NULL, 'R'},
 	    {"filter_illumina",      no_argument, NULL, 'F'},
+	    {"retain_header",        no_argument, NULL, 'H'},
+	    {"null_index",           no_argument, NULL, 'U'},
 	    {"index_null",           no_argument, NULL, 'u'},
 	    {"inline_null",          no_argument, NULL, 'V'},
 	    {"index_index",          no_argument, NULL, 'W'},
@@ -918,7 +946,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
 
-	c = getopt_long(argc, argv, "uVWxYZhvRFIcqrDPmB:C:i:y:f:o:t:e:z:b:1:2:p:s:w:E:L:A:G:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "HuUVWxYZhvRFIcqrDPmB:C:i:y:f:o:t:e:z:b:1:2:p:s:w:E:L:A:G:T:", long_options, &option_index);
 
 	// Detect the end of the options.
 	if (c == -1)
@@ -1027,6 +1055,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'F':
 	    filter_illumina = true;
 	    break;
+	case 'U':
+	    barcode_type = null_index;
+	    break;
 	case 'u':
 	    barcode_type = index_null;
 	    break;
@@ -1057,6 +1088,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
      	case 'T':
 	    distance = is_integer(optarg);
+	    break;
+	case 'H':
+	    retain_header = true;
 	    break;
  	case 'L':
 	    len_limit = is_integer(optarg);
@@ -1202,12 +1236,13 @@ void help() {
 	      << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
 	      << "  h: display this help messsage." << "\n\n"
 	      << "  Barcode options:\n"
-	      << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
-	      << "    --index_null:    barcode is provded in FASTQ header, occurs only on single-end read.\n"
+ 	      << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
+	      << "    --index_null:    barcode is provded in FASTQ header (Illumina i5 or i7 read).\n"
+	      << "    --null_index:    barcode is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
 	      << "    --inline_inline: barcode is inline with sequence, occurs on single and paired-end read.\n"
-	      << "    --index_index:   barcode is provded in FASTQ header, occurs on single and paired-end read.\n"
-	      << "    --inline_index:  barcode is inline with sequence on single-end read, occurs in FASTQ header for paired-end read.\n"
-	      << "    --index_inline:  barcode occurs in FASTQ header for single-end read, is inline with sequence on paired-end read.\n\n"
+	      << "    --index_index:   barcode is provded in FASTQ header (Illumina i5 and i7 reads).\n"
+	      << "    --inline_index:  barcode is inline with sequence on single-end read and occurs in FASTQ header (from either i5 or i7 read).\n"
+	      << "    --index_inline:  barcode occurs in FASTQ header (Illumina i5 or i7 read) and is inline with single-end sequence (for single-end data) on paired-end read (for paired-end data).\n\n"
 	      << "  Restriction enzyme options:\n"
 	      << "    -e <enz>, --renz_1 <enz>: provide the restriction enzyme used (cut site occurs on single-end read)\n"
 	      << "    --renz_2 <enz>: if a double digest was used, provide the second restriction enzyme used (cut site occurs on the paired-end read).\n"
@@ -1236,6 +1271,7 @@ void help() {
 	      << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
 	      << "      --adapter_mm <mismatches>: number of mismatches allowed in the adapter sequence.\n\n"
 	      << "  Output options:\n"
+	      << "    --retain_header: retain unmodified FASTQ headers in the output.\n"
 	      << "    --merge: if no barcodes are specified, merge all input files into a single output file.\n\n"
 	      << "  Advanced options:\n"
 	      << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"

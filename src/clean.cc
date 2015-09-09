@@ -107,7 +107,8 @@ int parse_illumina_v2(const char *file) {
 int 
 parse_input_record(Seq *s, Read *r) 
 {
-    char *p, *q;
+    char *p, *q, *z;
+    uint  lim;
     //
     // Count the number of colons to differentiate Illumina version.
     // CASAVA 1.8+ has a FASTQ header like this:
@@ -199,35 +200,56 @@ parse_input_record(Seq *s, Read *r)
 	//
 	// Index barcode
 	//
+	// The index barcode appears identically in both single-end and paired-end reads.
+	// If the barcode type is index_index, the barcode will appear as NNNNNN+NNNNNN
+	// in both reads. If the specified barcode type is null_index we want to read only
+	// the second half of the index, if the type is index_null, we want to read
+	// only the first half, or the full string if there is no '+' character.
+	//
 	if (q < stop)
 	    for (p = q+1, q = p; q < stop; q++);
 	else
 	    p = q;
 
-	if (*p != '\0' && r->read == 1) {
-	    switch (barcode_type) {
-	    case index_null:
-	    case index_index:
-	    case index_inline:
-		strncpy(r->index_bc, p,  max_bc_size_1);
-		r->index_bc[max_bc_size_1] = '\0';
-		break;
-	    case inline_index:
-		strncpy(r->index_bc, p,  max_bc_size_2);
-		r->index_bc[max_bc_size_2] = '\0';
-		break;
-	    default:
-		break;
-	    }
-	} else if (*p != '\0' && r->read == 2) {
-	    switch (barcode_type) { 
-	    case index_index:
-	    case inline_index:
-		strncpy(r->index_bc, p,  max_bc_size_2);
-		r->index_bc[max_bc_size_2] = '\0';
-		break;
-	    default:
-		break;
+	if (*p != '\0') {
+	    //
+	    // Check if there is a '+' character.
+	    //
+	    for (z = p; *z != '+' && *z != '\0'; z++);
+	    
+	    if (r->read == 1) {
+		lim = z - p;
+		
+		switch (barcode_type) {
+		case index_null:
+		case index_index:
+		case index_inline:
+		    lim = lim < max_bc_size_1 ? lim : max_bc_size_1;
+		    strncpy(r->index_bc, p, lim);
+		    r->index_bc[lim] = '\0';
+		    break;
+		case inline_index:
+		    lim = lim < max_bc_size_2 ? lim : max_bc_size_2;
+		    strncpy(r->index_bc, p, lim);
+		    r->index_bc[lim] = '\0';
+		    break;
+		default:
+		    break;
+		}
+	    } else if (r->read == 2) {
+		if (*z == '+')
+		    p = z + 1;
+
+		switch (barcode_type) {
+		case null_index:
+		case index_index:
+		case inline_index:
+		    strncpy(r->index_bc, p,  max_bc_size_2);
+		    r->index_bc[max_bc_size_2] = '\0';
+		    break;
+		default:
+		    break;
+		}
 	    }
 	}
 

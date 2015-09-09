@@ -40,7 +40,7 @@ using std::unordered_map;
 
 enum fastqt   {generic_fastq, illv1_fastq, illv2_fastq};
 
-enum barcodet {null_null,
+enum barcodet {null_null, null_index,
 	       inline_null,   index_null, 
 	       inline_inline, index_index, 
 	       inline_index,  index_inline};
