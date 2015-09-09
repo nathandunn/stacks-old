@@ -1,5 +1,8 @@
-Stacks 1.35
+Stacks 1.35 - Sept 09, 2015
 ---------------------------
+	Feature: Added --retain_header flag to process_radtags/process_shortreads which will keep
+	the unmodified FASTQ header in the output. This allows clone_filter/process_radtags/
+	process_shortreads to be run in different sequences and more than one time.
 	Feature: Added --treemix to the populations program, allowing SNPs to be output in
 	TreeMix format.
 	Feature: Added --phylip_var_all to the populations program. This option outputs the full
