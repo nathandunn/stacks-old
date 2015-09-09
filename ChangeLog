@@ -7,6 +7,9 @@ Stacks 1.35 - Sept 09, 2015
 	TreeMix format.
 	Feature: Added --phylip_var_all to the populations program. This option outputs the full
 	sequence from each variable locus, encoding polymorphisms using IUPAC notation.
+	  -This option will also output a file containing the coordinates of each RAD locus so they
+	  can be input to phylogenetic software (such as RAxML) to partition each RAD locus out
+	  and then build the phylogenetic tree independently for each partitioned locus.
 	Feature: Added the AgeI restriction enzyme.
 	Feature: refactored clone_filter to handle random oligo sequences used as inline/indexed
 	barcodes to identify and discard PCR duplicates.
