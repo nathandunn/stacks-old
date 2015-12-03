@@ -142,7 +142,7 @@ dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.p
 dist_noinst_SCRIPTS = autogen.sh scripts/extract_interpop_chars.pl scripts/convert_stacks.pl
 
 nobase_pkgdata_DATA = sql/mysql.cnf.dist sql/catalog_index.sql sql/stacks.sql sql/tag_index.sql sql/chr_index.sql \
-	php/CatalogClass.php php/annotate_marker.php php/constants.php.dist php/index.php php/tags.php \
+	php/CatalogClass.php php/annotate_marker.php php/constants.php.dist php/index.php php/tags.php php/tag.php \
 	php/Locus.php php/catalog.php php/correct_genotypes.php php/correct_genotype.php php/export_batch.php php/last_modified.php  \
 	php/version.php php/catalog_genotypes.php php/db_functions.php php/header.php php/samples.php \
 	php/stacks_functions.php php/view_sequence.php php/sequence_blast.php \
