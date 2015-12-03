@@ -1,3 +1,7 @@
+Stacks 1.36
+--------------------------
+	Bugfix: fixed memory lead in sstacks when more than one sample file was specified.
+
 Stacks 1.35 - Sept 09, 2015
 ---------------------------
 	Feature: Added --retain_header flag to process_radtags/process_shortreads which will keep

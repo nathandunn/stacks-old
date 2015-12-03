@@ -107,6 +107,13 @@ int main (int argc, char* argv[]) {
 
 	write_matches(sample_path, sample);
 	i++;
+
+        //
+        // Free memory associated with sample
+        //
+        for (map<int, QLocus *>::iterator i = sample.begin(); i != sample.end(); i++)
+            delete i->second;
+        sample.clear();
     }
 
     return 0;
