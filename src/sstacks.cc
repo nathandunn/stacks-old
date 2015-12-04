@@ -534,14 +534,17 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
 	sample_2.begin()->second->len : sample_1.begin()->second->len; 
 
     //
-    // Build a hash map out of the first sample (usually the catalog),
-    // using only the minimum length substring of the longest reads;
+    // Build a hash map out of the catalog, using only the minimum length
+    // substring of the longest reads;
     //
-    HashMap sample_1_map;
-    populate_hash(sample_1, sample_1_map, min_tag_len);
+    HashMap        sample_1_map;
+    vector<char *> sample_1_map_keys;
+    populate_hash(sample_1, sample_1_map, sample_1_map_keys, min_tag_len);
 
+    //
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
+    //
     vector<int> keys;
     for (i = sample_2.begin(); i != sample_2.end(); i++) 
 	keys.push_back(i->first);
@@ -560,7 +563,7 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
     {
         #pragma omp for reduction(+:matches) reduction(+:tot_hap) reduction(+:ver_hap) reduction(+:nomatch) reduction(+:mmatch)
  	for (uint k = 0; k < keys.size(); k++) {
-	    QLocus *query = sample_2[keys[k]];	    
+	    QLocus *query = sample_2[keys[k]];
 
             //
             // Iterate through the haplotypes for this tag in sample_2
@@ -607,6 +610,14 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
 	    }
         }
     }
+
+    //
+    // Free memory associated with the hash.
+    //
+    for (uint i = 0; i < sample_1_map_keys.size(); i++)
+        delete [] sample_1_map_keys[i];
+    sample_1_map_keys.clear();
+    sample_1_map.clear();
 
     cerr << keys.size() << " stacks compared against the catalog containing " << sample_1.size() << " loci.\n" 
 	 << "  " << matches << " matching loci, " << nomatch << " contained no verified haplotypes.\n"
@@ -694,7 +705,9 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
     return verified;
 }
 
-int populate_hash(map<int, Locus *> &sample, HashMap &hash_map, int min_tag_len) {
+int
+populate_hash(map<int, Locus *> &sample, HashMap &hash_map, vector<char *> &hash_map_keys, int min_tag_len)
+{
     map<int, Locus *>::iterator it;
     vector<pair<allele_type, string> >::iterator all_it;
     Locus *tag;
@@ -712,6 +725,7 @@ int populate_hash(map<int, Locus *> &sample, HashMap &hash_map, int min_tag_len)
 	    key[min_tag_len] = '\0';
 
 	    hash_map[key].push_back(make_pair(tag->id, all_it->first));
+            hash_map_keys.push_back(key);
 	}
     }
 
