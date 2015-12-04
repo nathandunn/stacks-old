@@ -150,6 +150,7 @@ int main (int argc, char* argv[]) {
 
     if (barcode_type == null_null) {
 	write_clonereduced_sequence(files[0].first, files[0].second, clone_map, clone_dist, counters);
+
     } else {
 	for (OligoHash::iterator i = oligo_map.begin(); i != oligo_map.end(); i++)
 	    for (map<string, uint16_t>::iterator j = i->second.begin(); j != i->second.end(); j++)
@@ -250,9 +251,11 @@ process_paired_reads_by_sequence(string prefix_1, string prefix_2, map<string, l
 	    clone_map_keys.push_back(hash_key);
 	}
 
-	if (out_file_type == FileT::fastq)
-	    clone_map[hash_key][s_2->seq].push_back(Pair(s_1->id, s_2->id, s_1->qual, s_2->qual));
-	else if (out_file_type == FileT::fasta)
+	if (out_file_type == FileT::fastq ||
+            out_file_type == FileT::gzfastq)
+ 	    clone_map[hash_key][s_2->seq].push_back(Pair(s_1->id, s_2->id, s_1->qual, s_2->qual));
+	else if (out_file_type == FileT::fasta ||
+                 out_file_type == FileT::gzfasta)
 	    clone_map[hash_key][s_2->seq].push_back(Pair(s_1->id, s_2->id));
 
 	delete s_1;
@@ -305,13 +308,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
 	suffix_2 = ".2.fa";
     }
 
-    string file_1 = prefix_1;
-    int    pos    = file_1.find_last_of(".");
-    if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
-	file_1.substr(pos) == ".gz") {
-	file_1 = file_1.substr(0, pos);
-	pos    = file_1.find_last_of(".");
-    }
+    string file_1 = remove_suffix(in_file_type, prefix_1);
     path_1 = out_path + file_1 + suffix_1;
     if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
 	out_gzfh_1 = gzopen(path_1.c_str(), "wb");
@@ -327,13 +324,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
 	}
     }
 
-    string file_2 = prefix_2;
-    pos = file_2.find_last_of(".");
-    if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
-	file_2.substr(pos) == ".gz") {
-	file_2 = file_2.substr(0, pos);
-	pos    = file_2.find_last_of(".");
-    }
+    string file_2 = remove_suffix(in_file_type, prefix_2);
     path_2 = out_path + file_2 + suffix_2;
     if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
 	out_gzfh_2 = gzopen(path_2.c_str(), "wb");
@@ -537,14 +528,8 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	suffix_2 = ".2.fa";
     }
 
-    string file_1 = prefix_1;
-    int    pos_1  = file_1.find_last_of(".");
-    if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
-	file_1.substr(pos_1) == ".gz") {
-	file_1 = file_1.substr(0, pos_1);
-	pos_1  = file_1.find_last_of(".");
-    }
-    path_1 = out_path + file_1.substr(0, pos_1) + suffix_1;
+    string file_1 = remove_suffix(in_file_type, prefix_1);
+    path_1 = out_path + file_1 + suffix_1;
     if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
 	out_gzfh_1 = gzopen(path_1.c_str(), "wb");
 	if (!(out_gzfh_1)) {
@@ -559,14 +544,8 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	}
     }
 
-    string file_2 = prefix_2;
-    int    pos_2  = file_2.find_last_of(".");
-    if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
-	file_2.substr(pos_2) == ".gz") {
-	file_2 = file_2.substr(0, pos_2);
-	pos_2  = file_2.find_last_of(".");
-    }
-    path_2 = out_path + file_2.substr(0, pos_2) + suffix_2;
+    string file_2 = remove_suffix(in_file_type, prefix_2);
+    path_2 = out_path + file_2 + suffix_2;
     if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
 	out_gzfh_2 = gzopen(path_2.c_str(), "wb");
 	if (!(out_gzfh_2)) {
@@ -585,7 +564,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     // Open files for recording discarded reads.
     //
     if (discards) {
-	path_1 = out_path + file_1.substr(0, pos_1) + ".discards" + suffix_1;
+	path_1 = out_path + file_1 + ".discards" + suffix_1;
 
 	if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
 	    discard_gzfh_1 = gzopen(path_1.c_str(), "wb");
@@ -601,7 +580,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	    }
 	}
 
-	path_2 = out_path + file_2.substr(0, pos_2) + ".discards" + suffix_2;
+	path_2 = out_path + file_2 + ".discards" + suffix_2;
 
 	if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
 	    discard_gzfh_2 = gzopen(path_2.c_str(), "wb");
