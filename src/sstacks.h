@@ -78,7 +78,7 @@ typedef unordered_map<const char *, vector<pair<int, allele_type> >, hash_charpt
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
-int  populate_hash(map<int, Locus *> &, HashMap &, int);
+int  populate_hash(map<int, Locus *> &, HashMap &, vector<char *> &, int);
 int  find_matches_by_sequence(map<int, Locus *> &, map<int, QLocus *> &);
 int  find_matches_by_genomic_loc(map<int, Locus *> &, map<int, QLocus *> &);
 int  verify_sequence_match(map<int, Locus *> &, QLocus *, set<int> &, map<string, vector<string> > &, uint, unsigned long &, unsigned long &);
