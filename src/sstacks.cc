@@ -614,10 +614,12 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
     //
     // Free memory associated with the hash.
     //
+    for (HashMap::iterator i = sample_1_map.begin(); i != sample_1_map.end(); i++)
+        i->second.clear();
+    sample_1_map.clear();
     for (uint i = 0; i < sample_1_map_keys.size(); i++)
         delete [] sample_1_map_keys[i];
     sample_1_map_keys.clear();
-    sample_1_map.clear();
 
     cerr << keys.size() << " stacks compared against the catalog containing " << sample_1.size() << " loci.\n" 
 	 << "  " << matches << " matching loci, " << nomatch << " contained no verified haplotypes.\n"
