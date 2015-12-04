@@ -111,8 +111,8 @@ int main (int argc, char* argv[]) {
         //
         // Free memory associated with sample
         //
-        for (map<int, QLocus *>::iterator i = sample.begin(); i != sample.end(); i++)
-            delete i->second;
+        for (map<int, QLocus *>::iterator j = sample.begin(); j != sample.end(); j++)
+            delete j->second;
         sample.clear();
     }
 
