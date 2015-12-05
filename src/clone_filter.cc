@@ -128,10 +128,11 @@ int main (int argc, char* argv[]) {
     map<int, int>  clone_dist;
     vector<char *> clone_map_keys;
 
+    int result = 1;
     for (uint i = 0; i < files.size(); i++) {
 	cerr << "Processing file " << i+1 << " of " << files.size() << " [" << files[i].first.c_str() << "]\n";
 
-	int result = 1;
+	result = 1;
 	if (paired) {
 	    if (barcode_type == null_null)
 		result = process_paired_reads_by_sequence(files[i].first, files[i].second, counters, clone_map, clone_map_keys);
@@ -148,7 +149,7 @@ int main (int argc, char* argv[]) {
 	}
     }
 
-    if (barcode_type == null_null) {
+    if (barcode_type == null_null && result) {
 	write_clonereduced_sequence(files[0].first, files[0].second, clone_map, clone_dist, counters);
 
     } else {
@@ -201,24 +202,34 @@ process_paired_reads_by_sequence(string prefix_1, string prefix_2, map<string, l
 	 << path_1 << " and\n  " 
 	 << path_2 << "\n";
 
-    if (in_file_type == FileT::fastq) {
+    switch (in_file_type) {
+    case FileT::fastq:
         fh_1 = new Fastq(path_1);
-	fh_2 = new Fastq(path_2);
-    } else if (in_file_type == FileT::fasta) {
-        fh_1 = new Fasta(path_1);
-        fh_2 = new Fasta(path_2);
-    } else if (in_file_type == FileT::gzfastq) {
+	fh_2 = interleaved ? fh_1 : new Fastq(path_2);
+	break;
+    case FileT::gzfastq:
         fh_1 = new GzFastq(path_1);
-	fh_2 = new GzFastq(path_2);
-    } else if (in_file_type == FileT::gzfasta) {
+	fh_2 = interleaved ? fh_1 : new GzFastq(path_2);
+	break;
+    case FileT::fasta:
+        fh_1 = new Fasta(path_1);
+	fh_2 = interleaved ? fh_1 : new Fasta(path_2);
+	break;
+    case FileT::gzfasta:
         fh_1 = new GzFasta(path_1);
-        fh_2 = new GzFasta(path_2);
-    } else if (in_file_type == FileT::bustard) {
-        fh_1 = new Bustard(path_1.c_str());
-        fh_2 = new Bustard(path_2.c_str());
-    } else {
-	fh_1 = NULL;
-	fh_2 = NULL;
+	fh_2 = interleaved ? fh_1 : new GzFasta(path_2);
+	break;
+    case FileT::bam:
+        fh_1 = new BamUnAln(path_1);
+	fh_2 = fh_1;
+	break;
+    case FileT::bustard:
+        fh_1 = new Bustard(path_1);
+        fh_2 = interleaved ? fh_1 : new Bustard(path_2);
+    default:
+        fh_1 = NULL;
+        fh_2 = NULL;
+	break;
     }
 
     //
@@ -228,7 +239,7 @@ process_paired_reads_by_sequence(string prefix_1, string prefix_2, map<string, l
     Seq *s_2 = fh_2->next_seq();
     if (s_1 == NULL || s_2 == NULL) {
 	cerr << "Unable to allocate Seq object.\n";
-	return -1;
+	return 0;
     }
 
     long  i = 1;
@@ -279,7 +290,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
 			    map<string, long> &counters)
 {
     ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
-    gzFile    out_gzfh_1, out_gzfh_2;
+    gzFile    out_gzfh_1, out_gzfh_2, discard_gzfh_1, discard_gzfh_2;
     
     int return_val = 1;
 
@@ -310,7 +321,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
 
     string file_1 = remove_suffix(in_file_type, prefix_1);
     path_1 = out_path + file_1 + suffix_1;
-    if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
+    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta) {
 	out_gzfh_1 = gzopen(path_1.c_str(), "wb");
 	if (!(out_gzfh_1)) {
 	    cerr << "Error opening output file '" << path_1 << "'\n";
@@ -326,7 +337,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
 
     string file_2 = remove_suffix(in_file_type, prefix_2);
     path_2 = out_path + file_2 + suffix_2;
-    if (in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) {
+    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta) {
 	out_gzfh_2 = gzopen(path_2.c_str(), "wb");
 	if (!(out_gzfh_2)) {
 	    cerr << "Error opening output file '" << path_2 << "'\n";
@@ -345,119 +356,140 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
     //
     if (discards) {
 	path_1 = out_path + file_1 + ".discards" + suffix_1;
-	discard_fh_1.open(path_1.c_str(), ifstream::out);
-
-	if (discard_fh_1.fail()) {
-	    cerr << "Error opening discard output file '" << path_1 << "'\n";
-	    return -1;
-	}
+        if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta) {
+            discard_gzfh_1 = gzopen(path_1.c_str(), "wb");
+            if (!(discard_gzfh_1)) {
+                cerr << "Error opening output file '" << path_1 << "'\n";
+                return -1;
+            }
+        } else {
+            discard_fh_1.open(path_1.c_str(), ifstream::out);
+            if (discard_fh_1.fail()) {
+                cerr << "Error opening discard output file '" << path_1 << "'\n";
+                return -1;
+            }
+        }
 
 	path_2 = out_path + file_2 + ".discards" + suffix_2;
-	discard_fh_2.open(path_2.c_str(), ifstream::out);
-
-	if (discard_fh_2.fail()) {
-	    cerr << "Error opening discard output file '" << path_2 << "'\n";
-	    return -1;
-	}
+        if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta) {
+            discard_gzfh_2 = gzopen(path_2.c_str(), "wb");
+            if (!(discard_gzfh_2)) {
+                cerr << "Error opening output file '" << path_2 << "'\n";
+                return -1;
+            }
+        } else {
+            discard_fh_2.open(path_2.c_str(), ifstream::out);
+            if (discard_fh_2.fail()) {
+                cerr << "Error opening discard output file '" << path_2 << "'\n";
+                return -1;
+            }
+        }
     }
 
     CloneHash::iterator hash_it;
     map<string, vector<Pair> >::iterator map_it;
-    stringstream sstr;
+    stringstream sstr_1, sstr_2;
 
-    cerr << "Writing filtered data...";
+    cerr << "Writing filtered data...\n";
 
     for (hash_it = clone_map.begin(); hash_it != clone_map.end(); hash_it++) {
 
 	for (map_it = hash_it->second.begin(); map_it != hash_it->second.end(); map_it++) {
+            sstr_1.str("");
+            sstr_2.str("");
 
-	    if (out_file_type == FileT::gzfastq) {
-		sstr.str();
-		sstr << "@" << map_it->second[0].p1_id << "\n"
-		     << hash_it->first << "\n"
-		     << "+\n"
-		     << map_it->second[0].p1_qual << "\n";
-		gzputs(out_gzfh_1, sstr.str().c_str());
-		sstr.str();
-		sstr << "@" << map_it->second[0].p2_id << "\n"
-		     << map_it->first << "\n"
-		     << "+\n"
-		     << map_it->second[0].p2_qual << "\n";
-		gzputs(out_gzfh_2, sstr.str().c_str());
+            if (out_file_type == FileT::gzfastq || out_file_type == FileT::fastq) {
+                sstr_1 << "@" << map_it->second[0].p1_id << "\n"
+                       << hash_it->first << "\n"
+                       << "+\n"
+                       << map_it->second[0].p1_qual << "\n";
+                sstr_2 << "@" << map_it->second[0].p2_id << "\n"
+                       << map_it->first << "\n"
+                       << "+\n"
+                       << map_it->second[0].p2_qual << "\n";
+            } else {
+		sstr_1 << ">" << map_it->second[0].p1_id << "\n"
+                       << hash_it->first << "\n";
+		sstr_2 << ">" << map_it->second[0].p2_id << "\n"
+                       << map_it->first << "\n";
+            }
 
-	    } else if (out_file_type == FileT::fastq) {
-		out_fh_1 << "@" << map_it->second[0].p1_id << "\n"
-			 << hash_it->first << "\n"
-			 << "+\n"
-			 << map_it->second[0].p1_qual << "\n";
-		out_fh_2 << "@" << map_it->second[0].p2_id << "\n"
-			 << map_it->first << "\n"
-			 << "+\n"
-			 << map_it->second[0].p2_qual << "\n";
-		
-	    } else if (out_file_type == FileT::gzfasta) {
-		sstr.str();
-		sstr <<
-		    ">" << 
-		    map_it->second[0].p1_id << "\n" <<
-		    hash_it->first << "\n";
-		gzputs(out_gzfh_1, sstr.str().c_str());
-		sstr.str();
-		sstr <<
-		    ">" << 
-		    map_it->second[0].p2_id << "\n" <<
-		    map_it->first << "\n";
-		gzputs(out_gzfh_2, sstr.str().c_str());
-		
-	    } else if (out_file_type == FileT::fasta) {
-		out_fh_1 << ">" << map_it->second[0].p1_id << "\n"
-			 << hash_it->first << "\n";
-		out_fh_2 << ">" << map_it->second[0].p2_id << "\n"
-			 << map_it->first << "\n";
-
-	    }
-
+            switch(out_file_type) {
+            case FileT::gzfastq:
+            case FileT::gzfasta:
+		gzputs(out_gzfh_1, sstr_1.str().c_str());
+		gzputs(out_gzfh_2, sstr_2.str().c_str());
+                break;
+            case FileT::fastq:
+            case FileT::fasta:
+            default:
+		out_fh_1 << sstr_2.str();
+		out_fh_2 << sstr_2.str();
+            }
+            
 	    counters["dis_reads"] += map_it->second.size() - 1;
 	    clone_dist[map_it->second.size()]++;
 
 	    //
 	    // Write cloned read pairs that we are discarding
 	    //
-	    if (discards)
+	    if (discards) {
 		for (uint i = 1; i < map_it->second.size(); i++) {
+                    sstr_1.str("");
+                    sstr_2.str("");
 
-		    if (out_file_type == FileT::fasta) {
-			discard_fh_1 << ">" << map_it->second[i].p1_id << "\n"
-				     << hash_it->first << "\n";
-			discard_fh_2 << ">" << map_it->second[i].p2_id << "\n"
-				      << map_it->first << "\n";
+                    if (out_file_type == FileT::gzfastq || out_file_type == FileT::fastq) {
+                        sstr_1 << "@" << map_it->second[i].p1_id << "\n"
+                               << hash_it->first << "\n"
+                               << "+\n"
+                               << map_it->second[i].p1_qual << "\n";
+                        sstr_2 << "@" << map_it->second[i].p2_id << "\n"
+                               << map_it->first << "\n"
+                               << "+\n"
+                               << map_it->second[i].p2_qual << "\n";
+                    } else {
+                        sstr_1 << ">" << map_it->second[i].p1_id << "\n"
+                               << hash_it->first << "\n";
+                        sstr_2 << ">" << map_it->second[i].p2_id << "\n"
+                               << map_it->first << "\n";
+                    }
 
-		    } else if (out_file_type == FileT::fastq) {
-			discard_fh_1 << "@" << map_it->second[i].p1_id << "\n"
-				     << hash_it->first << "\n"
-				     << "+\n"
-				     << map_it->second[i].p1_qual << "\n";
-			discard_fh_2 << "@" << map_it->second[i].p2_id << "\n"
-				     << map_it->first << "\n"
-				     << "+\n"
-				     << map_it->second[i].p2_qual << "\n";
-		    }
+                    switch(out_file_type) {
+                    case FileT::gzfastq:
+                    case FileT::gzfasta:
+                        gzputs(discard_gzfh_1, sstr_1.str().c_str());
+                        gzputs(discard_gzfh_2, sstr_2.str().c_str());
+                        break;
+                    case FileT::fastq:
+                    case FileT::fasta:
+                    default:
+                        discard_fh_1 << sstr_2.str();
+                        discard_fh_2 << sstr_2.str();
+                    }
 		}
-
+            }
 	    counters["red_reads"]++;
 	}
     }
 
     cerr << "done.\n";
 
-    out_fh_1.close();
-    out_fh_2.close();
-
-    if (discards) {
-	discard_fh_1.close();
-	discard_fh_2.close();
+    if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta) {
+	gzclose(out_gzfh_1);
+	gzclose(out_gzfh_2);
+	if (discards) {
+	    gzclose(discard_gzfh_1);
+	    gzclose(discard_gzfh_2);
+	}
+    } else {
+	out_fh_1.close();
+	out_fh_2.close();
+        if (discards) {
+            discard_fh_1.close();
+            discard_fh_2.close();
+        }
     }
-
+    
     return return_val;
 }
 int 
@@ -487,7 +519,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
 	fh_2 = interleaved ? fh_1 : new Fastq(path_2);
 	break;
     case FileT::gzfastq:
-        fh_1 = new GzFastq(path_1.c_str());
+        fh_1 = new GzFastq(path_1);
 	fh_2 = interleaved ? fh_1 : new GzFastq(path_2);
 	break;
     case FileT::fasta:
@@ -506,6 +538,8 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
         fh_1 = new Bustard(path_1);
         fh_2 = interleaved ? fh_1 : new Bustard(path_2);
     default:
+        fh_1 = NULL;
+        fh_2 = NULL;
 	break;
     }
 
@@ -1081,7 +1115,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// Detect the end of the options.
 	if (c == -1)
 	    break;
-     
+
 	switch (c) {
 	case 'h':
 	    help();
@@ -1099,10 +1133,14 @@ int parse_command_line(int argc, char* argv[]) {
 		 in_file_type = FileT::fastq;
 	    break;
      	case 'y':
-            if (strcasecmp(optarg, "fasta") == 0)
-                out_file_type = FileT::fasta;
-	    else 
+	    if (strcasecmp(optarg, "fastq") == 0)
 		out_file_type = FileT::fastq;
+            else if (strcasecmp(optarg, "gzfastq") == 0)
+		out_file_type = FileT::gzfastq;
+            else if (strcasecmp(optarg, "fasta") == 0)
+                out_file_type = FileT::fasta;
+            else if (strcasecmp(optarg, "gzfasta") == 0)
+		out_file_type = FileT::gzfasta;
 	    break;
 	case 'D':
 	    discards = true;
@@ -1239,9 +1277,9 @@ void help() {
 	      << "  P: files contained within directory specified by '-p' are paired.\n"
 	      << "  1: first input file in a set of paired-end sequences.\n"
 	      << "  2: second input file in a set of paired-end sequences.\n"
-	      << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, 'fastq', 'fasta', 'gzfasta', or 'gzfastq' (default 'fastq').\n"
+	      << "  i: input file type, either 'bustard', 'fastq', 'fasta', 'gzfasta', or 'gzfastq' (default 'fastq').\n"
 	      << "  o: path to output the processed files.\n"
-	      << "  y: output type, either 'fastq' or 'fasta' (default fastq).\n"
+	      << "  y: output type, either 'fastq', 'fasta', 'gzfasta', or 'gzfastq' (default same as input type).\n"
 	      << "  D: capture discarded reads to a file.\n"
 	      << "  h: display this help messsage.\n"
 	      << "  --oligo_len_1 len: length of the single-end oligo sequence in data set.\n"
