@@ -289,7 +289,7 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
 	// for this locus to account for the pruned SNPs.
 	//
 	for (it = loc->alleles.begin(); it != loc->alleles.end(); it++) {
-	    strncpy(allele_old, it->first.c_str(), id_len - 2);
+	    strncpy(allele_old, it->first.c_str(), id_len - 1);
 	    allele_old[id_len - 1] = '\0';
 
 	    for (uint k = 0; k < cols.size(); k++)
