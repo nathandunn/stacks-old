@@ -26,8 +26,8 @@ using std::map;
 #include <string>
 using std::string;
 
-const char *aciI[]    = {"CGC",               // C/CGC, AciI
-                         "GCG"};
+const char *aciI[]    = {"CGC", "CGG",        // C/CGC, AciI
+                         "GCG", "CCG"};
 const char *ageI[]    = {"CCGGT",             // A/CCGGT, AgeI
                          "ACCGG"};
 const char *aluI[]    = {"CT",                // AG/CT, AluI
@@ -181,7 +181,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["aluI"]    = 1;
     renz_cnt["ageI"]    = 1;
     renz_cnt["rsaI"]    = 1;
-    renz_cnt["aciI"]    = 1;
+    renz_cnt["aciI"]    = 2;
     renz_cnt["bfaI"]    = 1;
         
     renz_len["sbfI"]    = 6;
