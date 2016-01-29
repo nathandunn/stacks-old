@@ -1,6 +1,6 @@
 Stacks 1.36
 --------------------------
-	Feature: Added the BfaI and AciI restriction enzymes to process_radtags.
+	Feature: Added the BfaI, AseI, and AciI restriction enzymes to process_radtags.
 	Bugfix: fixed memory leak in sstacks when more than one sample file was specified.
 	Bugfix: corrected error in clone_filter causing it to fail when processing gzipped data
 	        without a random oligo attached.

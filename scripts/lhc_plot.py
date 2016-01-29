@@ -10,6 +10,7 @@ import cairo
 #
 # Global configuration variables.
 #
+outtype        = "pdf"
 outpath        = ""
 files          = []
 file_types     = []
@@ -77,6 +78,7 @@ def parse_file_type(option, opt, value, parser):
 
 def parse_command_line(img):
     global outpath
+    global outtype
     global files
     global file_types
     global chrs_sorted
@@ -90,6 +92,8 @@ def parse_command_line(img):
     #
     p.add_option("-o", action="store", dest="outfile",
                  help="write output to this file.")
+    p.add_option("-t", "--outtype", action="store", dest="outtype",
+                 help="output type, either 'pdf' or 'svg'.")
     p.add_option("-c", action="store", dest="chr_list",
                  help="comma-seperated list of chromosomes to plot.")
     p.add_option("-m", action="store", type="float", dest="min_rad",
@@ -122,6 +126,8 @@ def parse_command_line(img):
 
     if opts.outfile != None:
         outpath = opts.outfile
+    if opts.outtype != None:
+        outtype = opts.outtype
     if opts.min_rad != None:
         img['min_rad_pct'] = opts.min_rad
     if opts.max_rad != None:
@@ -135,31 +141,36 @@ def parse_command_line(img):
         draw_plotkey = opts.draw_key
         
     if len(outpath) == 0:
-	print >> sys.stderr, "You must specify a path to write files to."
-	p.print_help()
+        print >> sys.stderr, "You must specify a path to write files to."
+        p.print_help()
         sys.exit()
 
     if img['min_rad_pct'] < 0 or img['min_rad_pct'] > 1.0:
-	print >> sys.stderr, "Minimum radius must be between 0 and 1.0."
+        print >> sys.stderr, "Minimum radius must be between 0 and 1.0."
         p.print_help()
         sys.exit()
 
     if img['max_rad_pct'] < 0 or img['max_rad_pct'] > 1.0:
-	print >> sys.stderr, "Maximum radius must be between 0 and 1.0."
-	p.print_help()
+        print >> sys.stderr, "Maximum radius must be between 0 and 1.0."
+        p.print_help()
         sys.exit()
 
+    if outtype != "svg" and outtype != "pdf":
+        print >> sys.stderr, "Output type must be either 'pdf' or 'svg'."
+        p.print_help()
+        sys.exit()
+        
     #
     # Generate a list of chromosomes to plot, either those the user specified, or
     # the full genome.
     #
     if opts.chr_list != None:
-	c = opts.chr_list.split(",")
-	for chr in c:
-	    if chr in chrs:
-		chrs_sorted.append(chr)
+        c = opts.chr_list.split(",")
+        for chr in c:
+            if chr in chrs:
+                chrs_sorted.append(chr)
         if len(chrs_sorted) == 0:
-	    print >> sys.stderr, "Unable to locate the requested chromosomes, '", opts.chr_list, "'"
+            print >> sys.stderr, "Unable to locate the requested chromosomes, '", opts.chr_list, "'"
             p.print_help()
             sys.exit()
     else:
@@ -169,7 +180,7 @@ def parse_command_line(img):
     # Input files have to have unique names to be placed in the hash later.
     #
     for i in range(len(files)):
-	files[i] = str(i + 1) + ". " + files[i]
+        files[i] = str(i + 1) + ". " + files[i]
 
 
 def determine_chromosome_lengths(img, chrs, chrs_sorted):
@@ -180,7 +191,7 @@ def determine_chromosome_lengths(img, chrs, chrs_sorted):
     total_chr_len = 0.0
 
     for chr in chrs_sorted:
-	total_chr_len += chrs[chr]
+        total_chr_len += chrs[chr]
 
     #
     # Determine the total size of the arc (in degrees) after 
@@ -822,8 +833,12 @@ def draw_stat_values(cr, img, stats, mean, chr, radius, file_type):
 	start_deg = end_deg
 	cnt += 1
 
-def generate_pdf(img, chrs, chrs_sorted, files, file_types):
-    ps = cairo.PDFSurface(outpath, img['height'], img['width'])
+def generate_img(img, chrs, chrs_sorted, files, file_types):
+
+    if outtype == "svg":
+        ps = cairo.SVGSurface(outpath, img['height'], img['width'])
+    else:
+        ps = cairo.PDFSurface(outpath, img['height'], img['width'])
     cr = cairo.Context(ps)
 
     #
@@ -905,6 +920,7 @@ def generate_pdf(img, chrs, chrs_sorted, files, file_types):
 	i      += 1
 
     cr.show_page()
+    ps.finish()
 
 def populate_stats(files, file_types, stats, means):
 
@@ -964,4 +980,4 @@ print >> sys.stderr, "Populating statistical measures for each input file..."
 populate_stats(files, file_types, stats, means)
 print >> sys.stderr,  "done."
 
-generate_pdf(img, chrs, chrs_sorted, files, file_types)
+generate_img(img, chrs, chrs_sorted, files, file_types)
