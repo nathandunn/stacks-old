@@ -215,12 +215,13 @@ foreach $sample (@parents, @progeny, @samples) {
     $sample_id++ if ($sql == 0);
 }
 
-my ($rid, $pfile, $parents, $cat_file);
+my ($pfile, $cat_file);
 
 #
 # Generate catalog of RAD-Tags
 #
 print STDERR "Generating catalog...\n";
+my $file_paths = "";
 foreach $sample (@parents, @samples) {
     my ($prefix, $suffix) = ($sample =~ /^(.+)\.(.+)$/);
 
@@ -234,11 +235,11 @@ foreach $sample (@parents, @samples) {
         $pfile = $prefix;
     }
 
-    $parents .= "-s $out_path/$pfile ";
+    $file_paths .= "-s $out_path/$pfile ";
 }
 
 $cat_file = "batch_" . $batch_id;
-$cmd      = $exe_path . "cstacks -b $batch_id -o $out_path $parents " . join(" ", @_cstacks) . " 2>&1";
+$cmd      = $exe_path . "cstacks -b $batch_id -o $out_path $file_paths " . join(" ", @_cstacks) . " 2>&1";
 print STDERR  "  $cmd\n";
 print $log_fh "$cmd\n";
 
@@ -278,8 +279,8 @@ print STDERR "done.\n" if ($sql == 1);
 #
 # Match parents and progeny to the catalog
 #
-$i         = 1;
-$num_files = scalar(@parents) + scalar(@progeny) + scalar(@samples);
+$file_paths = "";
+print STDERR "Matching samples to the catalog...\n";
 
 foreach $sample (@parents, @progeny, @samples) {
 
@@ -295,27 +296,49 @@ foreach $sample (@parents, @progeny, @samples) {
         $pfile = $prefix;
     }
 
-    printf(STDERR "Matching samples to catalog; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
+    $file_paths .= "-s $out_path/$pfile ";
+}
 
-    $cmd = $exe_path . "sstacks -b $batch_id -c $out_path/$cat_file -s $out_path/$pfile -o $out_path " . join(" ", @_sstacks) . " 2>&1";
-    print STDERR  "  $cmd\n";
-    print $log_fh "$cmd\n";
-    @results =    `$cmd` if ($dry_run == 0);
-    print $log_fh @results;
+$cmd = $exe_path . "sstacks -b $batch_id -c $out_path/$cat_file -o $out_path $file_paths " . join(" ", @_sstacks) . " 2>&1";
+print STDERR  "  $cmd\n";
+print $log_fh "$cmd\n";
+@results =    `$cmd` if ($dry_run == 0);
+print $log_fh @results;
 
-    print STDERR "  Loading sstacks output to $db..." if ($sql == 1);
+#
+# Load the sstacks results to the database if requested.
+#
+if ($sql == 1) {
+    $i          = 1;
+    $num_files  = scalar(@parents) + scalar(@progeny) + scalar(@samples);
 
-    if ($gzip == 1) {
-	$file = "$out_path/" . $pfile . ".matches.tsv.gz";
-	import_gzsql_file($log_fh, $file, "matches", 1);
+    foreach $sample (@parents, @progeny, @samples) {
 
-    } else {
-	$file = "$out_path/" . $pfile . ".matches.tsv";
-	import_sql_file($log_fh, $file, "matches", 1);
+	my ($prefix, $suffix) = ($sample =~ /^(.+)\.(.+)$/);
+
+	if ($suffix eq "gz") {
+	    ($prefix, $suffix) = ($prefix =~ /^(.+)\.(.+)$/);
+	}
+
+	if ($prefix =~ /^.*\/.+$/) {
+	    ($pfile) = ($prefix =~ /^.*\/(.+)$/);
+	} else {
+	    $pfile = $prefix;
+	}
+
+	printf(STDERR "Loading sstacks output to $db; file % 3s of % 3s [%s]\n", $i, $num_files, $pfile);
+
+	if ($gzip == 1) {
+	    $file = "$out_path/" . $pfile . ".matches.tsv.gz";
+	    import_gzsql_file($log_fh, $file, "matches", 1);
+
+	} else {
+	    $file = "$out_path/" . $pfile . ".matches.tsv";
+	    import_sql_file($log_fh, $file, "matches", 1);
+	}
+
+	$i++;
     }
-    print STDERR "done.\n" if ($sql == 1);
-
-    $i++;
 }
 
 if ($data_type eq "map") {
