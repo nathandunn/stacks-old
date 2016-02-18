@@ -737,6 +737,7 @@ int load_radtags(string in_file, HashMap &radtags) {
     int i = 1;
     while ((c = fh->next_seq()) != NULL) {
         if (i % 10000 == 0) cerr << "Loading aligned sequence " << i << "       \r";
+	// cerr << "Loading aligned sequence " << i << "       \n";
 
 	radtags[c->seq].push_back(c);
         i++;
