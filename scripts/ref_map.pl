@@ -307,7 +307,6 @@ if ($sql == 1) {
 	    $file = "$out_path/" . $pfile . ".matches.tsv";
 	    import_sql_file($log_fh, $file, "matches", 1);
 	}
-	print STDERR "done.\n" if ($sql == 1);
 
 	$i++;
     }
