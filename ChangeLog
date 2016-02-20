@@ -1,4 +1,4 @@
-Stacks 1.36
+Stacks 1.36 - Feb 18, 2016
 --------------------------
 	Feature: Added the BfaI, BspDI, AseI, and AciI restriction enzymes to process_radtags.
 	Feature: Changed the way denovo_map.pl and ref_map.pl run sstacks. It is now set to run
@@ -7,7 +7,9 @@ Stacks 1.36
 	Bugfix: corrected error in pstacks when handling long reads with complex SAM/BAM alignments.
 	Bugfix: fixed memory leak in sstacks when more than one sample file was specified.
 	Bugfix: corrected error in clone_filter causing it to fail when processing gzipped data
-	        without a random oligo attached.
+	without a random oligo attached.
+	Bugfix: corrected error when reading gzipped FASTA files and the last sequence of the file
+	was improperly doubled in length.
 
 Stacks 1.35 - Sept 09, 2015
 ---------------------------
