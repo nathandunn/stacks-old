@@ -98,7 +98,8 @@ Seq *GzFasta::next_seq() {
 	if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
 	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
-	this->buf += this->line;
+	this->buf    += this->line;
+	this->line[0] = '\0';
 	gzgets(this->gz_fh, this->line, max_len);
     }
 
@@ -108,6 +109,7 @@ Seq *GzFasta::next_seq() {
 	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
 	this->buf += this->line;
+	this->line[0] = '\0';
     }
 
     s->seq = new char[this->buf.length() + 1];
@@ -154,7 +156,8 @@ int GzFasta::next_seq(Seq &s) {
 	if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
 	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
-	this->buf += this->line;
+	this->buf    += this->line;
+	this->line[0] = '\0';
 	gzgets(this->gz_fh, this->line, max_len);
     }
 
@@ -164,6 +167,7 @@ int GzFasta::next_seq(Seq &s) {
 	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
 	this->buf += this->line;
+	this->line[0] = '\0';
     }
 
     strcpy(s.seq, this->buf.c_str());
