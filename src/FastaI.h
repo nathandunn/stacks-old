@@ -71,7 +71,8 @@ Seq *Fasta::next_seq() {
 	len = strlen(this->line);
 	if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
 
-	this->buf += this->line;
+	this->buf    += this->line;
+	this->line[0] = '\0';
 	this->fh.getline(this->line, max_len);
     }
 
@@ -124,7 +125,8 @@ int Fasta::next_seq(Seq &s) {
 	len = strlen(this->line);
 	if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
 
-	this->buf += this->line;
+	this->buf    += this->line;
+	this->line[0] = '\0';
 	this->fh.getline(this->line, max_len);
     }
 
