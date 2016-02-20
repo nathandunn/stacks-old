@@ -1,4 +1,4 @@
-Stacks 1.36
+Stacks 1.36 - Feb 18, 2016
 --------------------------
 	Feature: Added the BfaI, BspDI, AseI, and AciI restriction enzymes to process_radtags.
 	Feature: Changed the way denovo_map.pl and ref_map.pl run sstacks. It is now set to run

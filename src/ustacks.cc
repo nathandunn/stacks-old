@@ -1910,6 +1910,7 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radta
 		corrected++;
 	    }
 
+        cerr << "seql: " << seql << "; prev_seql: " << prev_seql << "\n";
 	if (seql != prev_seql && prev_seql > 0) len_mismatch = true;
 
 	d = new DNASeq(seql, c.seq);
