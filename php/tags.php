@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -40,7 +40,7 @@ $display['filter_type'] = array();
 //
 // Process the filtering parameters
 //
-$param = array($batch_id, $sample_id);
+$param = array();
 process_filter($display);
 prepare_filter_parameters($display, $param);
 
@@ -51,40 +51,43 @@ $query =
     "SELECT batches.id as id, date, description, samples.id as sample_id, file FROM batches " . 
     "JOIN samples ON (batch_id=batches.id) " . 
     "WHERE batches.id=? AND samples.id=?";
-$db['batch_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['batch_sth'], __FILE__, __LINE__);
+if (!($db['batch_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT COUNT(tag_id) as count FROM tag_index " . 
     "WHERE batch_id=? AND sample_id=?";
 $query .= apply_query_filters($display);
-$db['count_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['count_sth'], __FILE__, __LINE__);
+if (!($db['count_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT depth as count FROM tag_index " . 
     "WHERE batch_id=? AND sample_id=? AND tag_id=?";
-$db['depth_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['depth_sth'], __FILE__, __LINE__);
+if (!($db['depth_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT col, rank_2 FROM snps " . 
     "JOIN samples ON (snps.sample_id=samples.id) " . 
     "JOIN batches ON (samples.batch_id=batches.id) " . 
     "WHERE snps.type='E' AND batch_id=? AND snps.sample_id=? AND tag_id=? ORDER BY col";
-$db['snp_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['snp_sth'], __FILE__, __LINE__);
+if (!($db['snp_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 //
 // Pull information about this batch
 //
-$result = $db['batch_sth']->execute(array($batch_id, $sample_id));
-check_db_error($result, __FILE__, __LINE__);
-$row    = $result->fetchRow();
-$batch  = array();
-$batch['id']   = $row['id'];
-$batch['desc'] = $row['description'];
-$batch['date'] = $row['date'];
+if (!$db['batch_sth']->bind_param("ii", $batch_id, $sample_id))
+    write_db_error($db['batch_sth'], __FILE__, __LINE__);
+if (!$db['batch_sth']->execute())
+    write_db_error($db['batch_sth'], __FILE__, __LINE__);
+$res = $db['batch_sth']->get_result();
+$row = $res->fetch_assoc();
+$batch              = array();
+$batch['id']        = $row['id'];
+$batch['desc']      = $row['description'];
+$batch['date']      = $row['date'];
 $batch['sample_id'] = $row['sample_id'];
 $batch['file']      = $row['file'];
 
@@ -120,9 +123,15 @@ EOQ;
 // Figure out how many results there are (including filtering)
 // and write out the proper pagination links
 //
-$result = $db['count_sth']->execute($param);
-check_db_error($result, __FILE__, __LINE__);
-$row = $result->fetchRow();
+array_unshift($param, $db['count_sth']);
+call_user_func_array("mysqli_stmt_bind_param", $param);
+array_shift($param);
+
+if (!$db['count_sth']->execute())
+    write_db_error($db['count_sth'], __FILE__, __LINE__);
+$res = $db['count_sth']->get_result();
+$row = $res->fetch_assoc();
+
 $pagination_count = $row['count'];
 $start_group = 0;
 $end_group   = 0;
@@ -142,9 +151,6 @@ echo <<< EOQ
 
 EOQ;
 
-$db['dbh']->setLimit($display['pp'], $start_group - 1);
-check_db_error($db['dbh'], __FILE__, __LINE__);
-
 $query = 
     "SELECT con_tag_id as id, tag_index.tag_id as tag_id, " . 
     "depth, seq, catalog_id, " . 
@@ -153,20 +159,34 @@ $query =
     "JOIN unique_tags ON (con_tag_id=unique_tags.id) " . 
     "WHERE tag_index.batch_id=? AND tag_index.sample_id=?";
 $query .= apply_query_filters($display);
+$query .= " LIMIT " . ($start_group - 1) . ", " . $display['pp'];
+if (!($db['tag_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
-$db['tag_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['tag_sth'], __FILE__, __LINE__);
-$result = $db['tag_sth']->execute($param);
-check_db_error($result, __FILE__, __LINE__);
+array_unshift($param, $db['tag_sth']);
+call_user_func_array("mysqli_stmt_bind_param", $param);
+array_shift($param);
 
-while ($row = $result->fetchRow()) {
+if (!$db['tag_sth']->execute())
+    write_db_error($db['tag_sth'], __FILE__, __LINE__);
+$res = $db['tag_sth']->get_result();
 
+$tag_id = 0;
+if (!$db['snp_sth']->bind_param("iii", $batch_id, $sample_id, $tag_id))
+    write_db_error($db['snp_sth'], __FILE__, __LINE__);
+
+while ($row = $res->fetch_assoc()) {
+    $tag_id = $row['tag_id'];
+    //
     // Query the database to find how many SNPs were found in this sample.
+    //
     $snps = array();
-    $snp_res = $db['snp_sth']->execute(array($batch_id, $sample_id, $row['tag_id']));
-    check_db_error($snp_res, __FILE__, __LINE__);
-    while ($snp_row = $snp_res->fetchRow()) {
-      array_push($snps, array('col' => $snp_row['col'], 'rank' => $snp_row['rank_2']));
+    if (!$db['snp_sth']->execute())
+	write_db_error($db['snp_sth'], __FILE__, __LINE__);
+    $snp_res = $db['snp_sth']->get_result();
+
+    while ($snp_row = $snp_res->fetch_assoc()) {
+	array_push($snps, array('col' => $snp_row['col'], 'rank' => $snp_row['rank_2']));
     }
 
     print
@@ -187,9 +207,9 @@ while ($row = $result->fetchRow()) {
 
     $row['catalog_id'] > 0 ?
         print 
-	  "  <td><a href=\"$root_path/catalog.php?db=$database&id=$batch_id&filter_type[]=cata&filter_cata=$row[catalog_id]\">$row[catalog_id]</a></td>\n" :
+            "  <td><a href=\"$root_path/catalog.php?db=$database&id=$batch_id&filter_type[]=cata&filter_cata=$row[catalog_id]\">$row[catalog_id]</a></td>\n" :
         print 
-          "  <td><span style=\"color: #888888; font-weight: bold;\">absent</span></td>\n";
+            "  <td><span style=\"color: #888888; font-weight: bold;\">absent</span></td>\n";
     print "</tr>\n";
 }
 
@@ -405,10 +425,10 @@ EOQ;
 	" <span class=\"s\">($num_tags tags)</span>\n" .
 	"</td>\n";
 
-    if ($num_pages > 1) 
-	$page_list = generate_page_list($page, $num_pages, $destination);
-
-    print $page_list;
+    if ($num_pages > 1) {
+        $page_list = generate_page_list($page, $num_pages, $destination);
+        print $page_list;
+    }
 
     $hidden_vars  = generate_hidden_form_vars("pp");
     $per_page_ctl = generate_per_page_select("pp", $display['pp']);
@@ -565,33 +585,51 @@ function process_filter(&$display_params) {
     }
 }
 
-function prepare_filter_parameters($display_params, &$param) {
+function prepare_filter_parameters(&$display_params, &$param) {
     $filters = $display_params['filter_type'];
 
-    if (!isset($filters))
-	return;
+    $param[] = &$display_params['batch_id'];
+    $param[] = &$display_params['sample_id'];
+    $typestr = "ii";
+
+    if (!isset($filters)) {
+	array_unshift($param, $typestr);
+        return;
+    }
 
     foreach ($filters as $filter) {
 
 	if ($filter == "snps") {
-	    array_push($param, $display_params['filter_snps']);
+	    $param[] = &$display_params['filter_snps'];
+	    $typestr .= "i";
 
 	} else if ($filter == "depth") {
-	    array_push($param, $display_params['filter_depth']);
+	    $param[] = &$display_params['filter_depth'];
+	    $typestr .= "i";
+
 	
 	} else if ($filter == "tagid") {
-	    array_push($param, $display_params['filter_tagid']);
+	    $param[] = &$display_params['filter_tagid'];
+	    $typestr .= "i";
+
 
 	} else if ($filter == "delv") {
-	    array_push($param, $display_params['filter_delv']);
+	    $param[] = &$display_params['filter_delv'];
+	    $typestr .= "i";
+
 
 	} else if ($filter == "black") {
-	    array_push($param, $display_params['filter_black']);
+	    $param[] = &$display_params['filter_black'];
+	    $typestr .= "i";
+
 
 	} else if ($filter == "rem") {
-	    array_push($param, $display_params['filter_rem']);
+	    $param[] = &$display_params['filter_rem'];
+	    $typestr .= "i";
 	}
     }
+
+    array_unshift($param, $typestr);
 }
 
 function apply_query_filters($display_params) {

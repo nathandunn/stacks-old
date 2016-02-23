@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -38,7 +38,7 @@ $display['filter_type'] = array();
 //
 // Process the filtering parameters
 //
-$param = array($batch_id);
+$param = array();
 process_filter($display);
 prepare_filter_parameters($display, $param);
 
@@ -48,45 +48,47 @@ prepare_filter_parameters($display, $param);
 $query = 
     "SELECT batches.id as id, date, description, type FROM batches " . 
     "WHERE batches.id=?";
-$db['batch_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['batch_sth'], __FILE__, __LINE__);
+if (!($db['batch_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT COUNT(tag_id) as count FROM catalog_index " . 
     "WHERE batch_id=?";
 $query .= apply_query_filters($display);
-$db['count_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['count_sth'], __FILE__, __LINE__);
+if (!($db['count_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT alleles as count FROM catalog_index " . 
     "WHERE batch_id=? AND tag_id=?";
-$db['allele_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['allele_sth'], __FILE__, __LINE__);
+if (!($db['allele_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT col, rank_2 FROM catalog_snps " . 
     "JOIN batches ON (catalog_snps.batch_id=batches.id) " . 
     "WHERE batch_id=? AND tag_id=? ORDER BY col";
-$db['snp_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['snp_sth'], __FILE__, __LINE__);
+if (!($db['snp_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
   "SELECT chr, max_len FROM chr_index " . 
   "WHERE batch_id=?";
-$db['chrs_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['chrs_sth'], __FILE__, __LINE__);
+if (!($db['chrs_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query =
     "SELECT max(ests) as ests, max(pe_radtags) as pe_radtags, max(blast_hits) as blast_hits " . 
     "FROM catalog_index WHERE batch_id=?";
-$db['seq_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['seq_sth'], __FILE__, __LINE__);
+if (!($db['seq_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
-$result = $db['seq_sth']->execute($batch_id);
-check_db_error($result, __FILE__, __LINE__);
-$row = $result->fetchRow();
-
+if (!$db['seq_sth']->bind_param("i", $batch_id))
+    write_db_error($db['seq_sth'], __FILE__, __LINE__);
+if (!$db['seq_sth']->execute())
+    write_db_error($db['seq_sth'], __FILE__, __LINE__);
+$res = $db['seq_sth']->get_result();
+$row = $res->fetch_assoc();
 
 $cols = array();
 
@@ -99,12 +101,15 @@ else
 
 $query =
     "SELECT count(id) as cnt FROM catalog_genotypes WHERE batch_id=?";
-$db['gcnt_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['gcnt_sth'], __FILE__, __LINE__);
+if (!($db['gcnt_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['gcnt_sth'], __FILE__, __LINE__);
 
-$result = $db['gcnt_sth']->execute($batch_id);
-check_db_error($result, __FILE__, __LINE__);
-$row = $result->fetchRow();
+if (!$db['gcnt_sth']->bind_param("i", $batch_id))
+    write_db_error($db['gcnt_sth'], __FILE__, __LINE__);
+if (!$db['gcnt_sth']->execute())
+    write_db_error($db['gcnt_sth'], __FILE__, __LINE__);
+$res = $db['gcnt_sth']->get_result();
+$row = $res->fetch_assoc();
 
 if ($row['cnt'] > 0)
   $cols['gcnt'] = true;
@@ -114,9 +119,13 @@ else
 //
 // Pull information about this batch
 //
-$result = $db['batch_sth']->execute($batch_id);
-check_db_error($result, __FILE__, __LINE__);
-$row    = $result->fetchRow();
+if (!$db['batch_sth']->bind_param("i", $batch_id))
+    write_db_error($db['batch_sth'], __FILE__, __LINE__);
+if (!$db['batch_sth']->execute())
+    write_db_error($db['batch_sth'], __FILE__, __LINE__);
+$res = $db['batch_sth']->get_result();
+$row = $res->fetch_assoc();
+
 $batch  = array();
 $batch['id']   = $row['id'];
 $batch['desc'] = $row['description'];
@@ -229,9 +238,14 @@ EOQ;
 // Figure out how many results there are (including filtering)
 // and write out the proper pagination links
 //
-$result = $db['count_sth']->execute($param);
-check_db_error($result, __FILE__, __LINE__);
-$row = $result->fetchRow();
+array_unshift($param, $db['count_sth']);
+call_user_func_array("mysqli_stmt_bind_param", $param);
+array_shift($param);
+if (!$db['count_sth']->execute())
+    write_db_error($db['count_sth'], __FILE__, __LINE__);
+$res = $db['count_sth']->get_result();
+$row = $res->fetch_assoc();
+
 $pagination_count = $row['count'];
 $start_group = 0;
 $end_group   = 0;
@@ -270,9 +284,6 @@ if ($cols['seq'] == true)
   print "  <th style=\"width: 10%\">Sequence</th>\n";
 print  "</tr>\n";
 
-$db['dbh']->setLimit($display['pp'], $start_group - 1);
-check_db_error($db['dbh'], __FILE__, __LINE__);
-
 $query = 
     "SELECT catalog_index.tag_id as tag_id, alleles, parents, progeny, valid_progeny, " . 
     "seq, marker, uncor_marker, chisq_pval, lnl, ratio, ests, pe_radtags, blast_hits, external_id, geno_cnt, " .
@@ -283,20 +294,33 @@ $query =
     "LEFT JOIN ref_radome ON (catalog_index.ref_id=ref_radome.id) " .
     "WHERE catalog_index.batch_id=?";
 $query .= apply_query_filters($display);
+$query .= " LIMIT " . ($start_group - 1) . ", " . $display['pp'];
 
-$db['tag_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['tag_sth'], __FILE__, __LINE__);
+if (!($db['tag_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
-$result = $db['tag_sth']->execute($param);
-check_db_error($result, __FILE__, __LINE__);
+array_unshift($param, $db['tag_sth']);
+call_user_func_array("mysqli_stmt_bind_param", $param);
+array_shift($param);
+if (!$db['tag_sth']->execute())
+    write_db_error($db['tag_sth'], __FILE__, __LINE__);
+$res = $db['tag_sth']->get_result();
 
-while ($row = $result->fetchRow()) {
+$tag_id = 0;
+$db['snp_sth']->bind_param("ii", $batch_id, $tag_id);
 
+while ($row = $res->fetch_assoc()) {
+    $tag_id = $row['tag_id'];
+    
+    //
     // Query the database to find how many SNPs were found in this sample.
+    //
     $snps = array();
-    $snp_res = $db['snp_sth']->execute(array($batch_id, $row['tag_id']));
-    check_db_error($snp_res, __FILE__, __LINE__);
-    while ($snp_row = $snp_res->fetchRow()) {
+    if (!$db['snp_sth']->execute())
+	write_db_error($db['snp_sth'], __FILE__, __LINE__);
+    $snp_res = $db['snp_sth']->get_result();
+
+    while ($snp_row = $snp_res->fetch_assoc()) {
 	array_push($snps, array('col' => $snp_row['col'], 'rank' => $snp_row['rank_2']));
     }
 
@@ -1281,7 +1305,7 @@ function process_filter(&$display_params) {
 	    $display_params['filter_cata'] = $_GET['filter_cata'];
 
 	} else if ($filter == "mark") {
-	    $display_params['filter_mark'] = $_GET['filter_mark'];
+	    $display_params['filter_mark'] = ($_GET['filter_mark'] == "Any") ? "%/%" : $_GET['filter_mark'];
 
 	} else if ($filter == "gcnt") {
 	    $display_params['filter_gcnt'] = $_GET['filter_gcnt'];
@@ -1295,77 +1319,82 @@ function process_filter(&$display_params) {
 
 	} else if ($filter == "loc") {
 	    $display_params['filter_chr'] = $_GET['filter_chr'];
-	    $display_params['filter_sbp'] = $_GET['filter_sbp'];
-	    $display_params['filter_ebp'] = $_GET['filter_ebp'];
+	    $display_params['filter_sbp'] = $_GET['filter_sbp'] * 1000000;
+	    $display_params['filter_ebp'] = $_GET['filter_ebp'] * 1000000;
 	}
     }
 }
 
-function prepare_filter_parameters($display_params, &$param) {
+function prepare_filter_parameters(&$display_params, &$param) {
     $filters = $display_params['filter_type'];
 
-    if (!isset($filters))
-	return;
+    $param[] = &$display_params['id'];
+    $typestr = "i";
+
+    if (!isset($filters)) {
+	array_unshift($param, $typestr);
+        return;
+    }
 
     foreach ($filters as $filter) {
 
 	if ($filter == "snps") {
-	    array_push($param, $display_params['filter_snps_l']);
-	    array_push($param, $display_params['filter_snps_u']);
-
+	    $param[] = &$display_params['filter_snps_l'];
+	    $param[] = &$display_params['filter_snps_u'];
+	    $typestr .= "ii";
+	    
 	} else if ($filter == "alle") {
-	    array_push($param, $display_params['filter_alle_l']);
-	    array_push($param, $display_params['filter_alle_u']);
-
+	    $param[] = &$display_params['filter_alle_l'];
+	    $param[] = &$display_params['filter_alle_u'];
+	    $typestr .= "ii";
+	    
 	} else if ($filter == "pare") {
-	    array_push($param, $display_params['filter_pare_l']);
-	    array_push($param, $display_params['filter_pare_u']);
+	    $param[] = &$display_params['filter_pare_l'];
+	    $param[] = &$display_params['filter_pare_u'];
+	    $typestr .= "ii";
 
 	} else if ($filter == "lnl") {
-	    array_push($param, $display_params['filter_lnl_l']);
-	    array_push($param, $display_params['filter_lnl_u']);
+	    $param[] = &$display_params['filter_lnl_l'];
+	    $param[] = &$display_params['filter_lnl_u'];
+	    $typestr .= "ii";
 
 	} else if ($filter == "prog") {
-	    array_push($param, $display_params['filter_prog']);
-	
+	    $param[] = &$display_params['filter_prog'];
+	    $typestr .= "i";	
+
 	} else if ($filter == "vprog") {
-	    array_push($param, $display_params['filter_vprog']);
-	
+	    $param[] = &$display_params['filter_vprog'];
+	    $typestr .= "i";
+
 	} else if ($filter == "cata") {
-	    array_push($param, $display_params['filter_cata']);
-	
-	} else if ($filter == "est") {
-	    array_push($param, 0);
-	
-	} else if ($filter == "pe") {
-	    array_push($param, 0);
-	
-	} else if ($filter == "blast") {
-	    array_push($param, 0);
-	
+	    $param[] = &$display_params['filter_cata'];
+	    $typestr .= "i";
+
 	} else if ($filter == "gcnt") {
-	    array_push($param, $display_params['filter_gcnt']);
-	
+	    $param[] = &$display_params['filter_gcnt'];
+	    $typestr .= "i";
+
 	} else if ($filter == "chisq") {
-	    array_push($param, $display_params['filter_chisq_l']);
-	    array_push($param, $display_params['filter_chisq_u']);
-	
+	    $param[] = &$display_params['filter_chisq_l'];
+	    $param[] = &$display_params['filter_chisq_u'];
+	    $typestr .= "dd";
+
 	} else if ($filter == "ref") {
-	    array_push($param, $display_params['filter_ref']);
-	
+	    $param[] = &$display_params['filter_ref'];
+	    $typestr .= "s";
+
 	} else if ($filter == "loc") {
-	    array_push($param, $display_params['filter_chr']);
-	    array_push($param, $display_params['filter_sbp'] * 1000000);
-	    array_push($param, $display_params['filter_ebp'] * 1000000);
-	
+	    $param[] = &$display_params['filter_chr'];
+	    $param[] = &$display_params['filter_sbp'];
+	    $param[] = &$display_params['filter_ebp'];
+	    $typestr .= "sii";
+
 	} else if ($filter == "mark") {
-	  if ($display_params['filter_mark'] == "Any") 
-	    array_push($param, "%/%");
-	  else 
-	    array_push($param, $display_params['filter_mark']);
-	
+	    $param[] = &$display_params['filter_mark'];
 	}
     }
+
+    array_unshift($param, $typestr);
 }
 
 function apply_query_filters($display_params) {
@@ -1380,9 +1409,9 @@ function apply_query_filters($display_params) {
 	      "vprog" => "(valid_progeny >= ?)",
 	      "lnl"   => "(lnl >= ? AND lnl <= ?)",
 	      "mark"  => "(marker LIKE ?)", 
-              "est"   => "(ests > ?)",
-              "pe"    => "(pe_radtags > ?)",
-              "blast" => "(blast_hits > ?)",
+              "est"   => "(ests > 0)",
+              "pe"    => "(pe_radtags > 0)",
+              "blast" => "(blast_hits > 0)",
 	      "gcnt"  => "(geno_cnt >= ?)",
 	      "chisq" => "(chisq_pval >= ? AND chisq_pval <= ?)",
 	      "ref"   => "(catalog_index.type = ?)",
@@ -1414,14 +1443,17 @@ function fetch_chrs(&$max_len) {
     $max_len = 0;
 
     $chrs = array();
-    $res = $db['chrs_sth']->execute($batch_id);
-    check_db_error($res, __FILE__, __LINE__);
+    if (!$db['chrs_sth']->bind_param("i", $batch_id))
+	write_db_error($db['chrs_sth'], __FILE__, __LINE__);
+    if (!$db['chrs_sth']->execute())
+	write_db_error($db['chrs_sth'], __FILE__, __LINE__);
+    $res = $db['chrs_sth']->get_result();
 
-    while ($row = $res->fetchRow()) {
-      if ($row['max_len'] > $max_len) 
-	$max_len = $row['max_len'];
+    while ($row = $res->fetch_assoc()) {
+	if ($row['max_len'] > $max_len) 
+	    $max_len = $row['max_len'];
 
-      array_push($chrs, $row['chr']);
+	array_push($chrs, $row['chr']);
     }
 
     return $chrs;

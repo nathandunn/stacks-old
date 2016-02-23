@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -78,8 +78,8 @@ function write_database($database) {
     //
     $query = 
         "SELECT id, date, description, type FROM batches";
-    $db['batch_sth'] = $db['dbh']->prepare($query);
-    check_db_error($db['batch_sth'], __FILE__, __LINE__);
+    if (!($db['batch_sth'] = $db['dbh']->prepare($query)))
+	write_db_error($db['batch_sth'], __FILE__, __LINE__);
 
     $page_title = "RAD-Tag Analyses";
     write_header($page_title);
@@ -103,10 +103,11 @@ function write_database($database) {
 
 EOQ;
 
-    $result = $db['batch_sth']->execute();
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['batch_sth']->execute())
+	write_db_error($db['batch_sth'], __FILE__, __LINE__);
+    $res = $db['batch_sth']->get_result();
 
-    while ($row = $result->fetchRow()) {
+    while ($row = $res->fetch_assoc()) {
         print
             "<tr>\n" .
             "  <td class=\"s\"><a href=\"$root_path/catalog.php?db=$database&id=$row[id]\">Catalog</a></td>\n" .

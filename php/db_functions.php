@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -21,32 +21,16 @@
 function db_connect($database) {
     global $db_user, $db_pass, $db_host;
 
-    $dsn = array(
-                 'phptype'  => 'mysql',
-                 'username' => $db_user,
-                 'password' => $db_pass,
-                 'hostspec' => $db_host,
-		 'port'     => 3306
-                 );
-    $options = array();
+    $dbh = new mysqli($db_host, $db_user, $db_pass, $database);
 
-    if (strlen($database) > 0)
-        $dsn['database'] = $database;
-    else
-        $dsn['database'] = false;
-
-    $dbh = MDB2::connect($dsn, $options);
-
-    if (MDB2::isError($dbh)) {
-	die("File: " . __FILE__ . " (line " . __LINE__ . ") " . $dbh->getMessage());
+    if ($dbh->connect_errno) {
+        die("File: " . __FILE__ . " (line " . __LINE__ . ") Failed to connect to MySQL: (" . $dbh->connect_errno . ") " . $dbh->connect_error);
     }
 
-    // Set the database package to always return 
-    // results as an associative array
-    $dbh->setFetchMode(MDB2_FETCHMODE_ASSOC);
-
+    //
     // The $db array will hold the database handle and 
     // common, prepared SQL statements.
+    //
     $db = array();
     $db['dbh']  = $dbh;
     $db['name'] = $database;
@@ -54,17 +38,11 @@ function db_connect($database) {
     return $db;
 }
 
-function check_db_error($sth, $file, $line) {
-
-    if (MDB2::isError($sth)) {
-
-	$error_str = 
-	    "File: $file (line $line)<br />\n " .
-	    "<strong>" . $sth->getMessage() . "</strong><br />\n" .
-	    $sth->getUserInfo() . "<br />\n";
-
-	die($error_str);
-    }
+function write_db_error($sth, $file, $line) {
+    $error_str = 
+        "File: $file (line $line)<br />\n " .
+        $sth->errno . ": <strong>" . $sth->error . "</strong><br />\n";
+    die($error_str);
 }
 
 ?>
