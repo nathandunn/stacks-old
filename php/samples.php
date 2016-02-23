@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -30,33 +30,37 @@ $db = db_connect($database);
 //
 $query = 
     "SELECT id, date, description FROM batches WHERE id=?";
-$db['batch_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['batch_sth'], __FILE__, __LINE__);
+if (!($db['batch_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT id, sample_id, type, file FROM samples " . 
     "WHERE batch_id=? ORDER BY id";
-$db['samp_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['samp_sth'], __FILE__, __LINE__);
+if (!($db['samp_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT COUNT(tag_id) AS count FROM tag_index " . 
     "WHERE batch_id=? AND sample_id=?";
-$db['count_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['count_sth'], __FILE__, __LINE__);
+if (!($db['count_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT snps FROM tag_index " .
     "WHERE batch_id=? AND sample_id=? AND snps>0";
-$db['snp_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['snp_sth'], __FILE__, __LINE__);
+if (!($db['snp_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['snp_sth'], __FILE__, __LINE__);
 
 //
 // Pull information about this batch
 //
-$result = $db['batch_sth']->execute($batch_id);
-check_db_error($result, __FILE__, __LINE__);
-$row    = $result->fetchRow();
+if (!$db['batch_sth']->bind_param("i", $batch_id))
+    write_db_error($db['batch_sth'], __FILE__, __LINE__);
+if (!$db['batch_sth']->execute())
+    write_db_error($db['batch_sth'], __FILE__, __LINE__);
+$res = $db['batch_sth']->get_result();
+$row = $res->fetch_assoc();
+
 $batch  = array();
 $batch['id']   = $row['id'];
 $batch['desc'] = $row['description'];
@@ -88,24 +92,40 @@ echo <<< EOQ
 
 EOQ;
 
-$result = $db['samp_sth']->execute($batch_id);
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['samp_sth']->bind_param("i", $batch_id))
+    write_db_error($db['samp_sth'], __FILE__, __LINE__);
+if (!$db['samp_sth']->execute())
+    write_db_error($db['samp_sth'], __FILE__, __LINE__);
+$res = $db['samp_sth']->get_result();
 
-while ($row = $result->fetchRow()) {
-    $snps = 0;
-    $poly = 0;
+$tag_id = 0;
+if (!$db['count_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['count_sth'], __FILE__, __LINE__);
+if (!$db['snp_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['count_sth'], __FILE__, __LINE__);
 
+while ($row = $res->fetch_assoc()) {
+    $snps   = 0;
+    $poly   = 0;
+    $tag_id = $row['id'];
+    
+    //
     // Query the database to determine how many tags belong to this sample.
-    $count_res = $db['count_sth']->execute(array($batch_id, $row['id']));
-    check_db_error($count_res, __FILE__, __LINE__);
-    $count_row = $count_res->fetchRow();
+    //
+    if (!$db['count_sth']->execute())
+        write_db_error($db['count_sth'], __FILE__, __LINE__);
+    $count_res = $db['count_sth']->get_result();
+    $count_row = $count_res->fetch_assoc();
     $count = $count_row['count'];
 
+    //
     // Query the database to find how many SNPs were found in this sample.
-    $count_res = $db['snp_sth']->execute(array($batch_id, $row['id']));
-    check_db_error($count_res, __FILE__, __LINE__);
+    //
+    if (!$db['snp_sth']->execute())
+        write_db_error($db['snp_sth'], __FILE__, __LINE__);
+    $count_res = $db['snp_sth']->get_result();
 
-    while ($count_row = $count_res->fetchRow()) {
+    while ($count_row = $count_res->fetch_assoc()) {
       $snps += $count_row['snps'];
       $poly += $count_row['snps'] > 0 ? 1 : 0;
     }

@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -17,7 +17,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
-require_once("MDB2.php");
 require_once("constants.php");
 require_once("db_functions.php");
 require_once("stacks_functions.php");

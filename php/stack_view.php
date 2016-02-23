@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -40,27 +40,36 @@ $query =
     "JOIN samples ON (unique_tags.sample_id=samples.id) " . 
     "JOIN batches ON (samples.batch_id=batches.id) " .
     "WHERE batch_id=? AND unique_tags.sample_id=? AND tag_id=?";
-$db['seq_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['seq_sth'], __FILE__, __LINE__);
+if (!($db['seq_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT col, rank_1, rank_2 FROM snps " . 
     "JOIN samples ON (snps.sample_id=samples.id) " . 
     "JOIN batches ON (samples.batch_id=batches.id) " .
     "WHERE batch_id=? AND snps.sample_id=? AND tag_id=? AND snps.type='E' ORDER BY col";
-$db['snp_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['snp_sth'], __FILE__, __LINE__);
+if (!($db['snp_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT col FROM catalog_snps " . 
     "WHERE batch_id=? AND tag_id=?";
-$db['cat_snp_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['cat_snp_sth'], __FILE__, __LINE__);
+if (!($db['cat_snp_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $json_str = 
     "{" .
     "\"id\": \"$cat_id\"," .
     "\"stacks\": [";
+
+$sample_id = 0;
+$tag_id    = 0;
+if (!$db['snp_sth']->bind_param("iii", $batch_id, $sample_id, $tag_id))
+    write_db_error($db['snp_sth'], __FILE__, __LINE__);
+if (!$db['cat_snp_sth']->bind_param("ii", $batch_id, $cat_id))
+    write_db_error($db['cat_snp_sth'], __FILE__, __LINE__);
+if (!$db['seq_sth']->bind_param("iii", $batch_id, $sample_id, $tag_id))
+    write_db_error($db['seq_sth'], __FILE__, __LINE__);
 
 for ($i = 0; $i < count($tags); $i++) {
     $sample_id = $samples[$i];
@@ -69,10 +78,12 @@ for ($i = 0; $i < count($tags); $i++) {
     //
     // Fetch and store the SNPs.
     //
-    $snps   = array();
-    $result = $db['snp_sth']->execute(array($batch_id, $sample_id, $tag_id));
-    check_db_error($result, __FILE__, __LINE__);
-    while ($row = $result->fetchRow()) {
+    $snps = array();
+    if (!$db['snp_sth']->execute())
+        write_db_error($db['snp_sth'], __FILE__, __LINE__);
+    $res = $db['snp_sth']->get_result();
+
+    while ($row = $res->fetch_assoc()) {
         $snps[$row['col']] = array('col' => $row['col'], 'rank_1' => $row['rank_1'], 'rank_2' => $row['rank_2']);
     }
 
@@ -80,9 +91,11 @@ for ($i = 0; $i < count($tags); $i++) {
     // Fetch and store the catalog SNPs.
     //
     $cat_snps = array();
-    $result   = $db['cat_snp_sth']->execute(array($batch_id, $cat_id));
-    check_db_error($result, __FILE__, __LINE__);
-    while ($row = $result->fetchRow()) {
+    if (!$db['snp_sth']->execute())
+        write_db_error($db['snp_sth'], __FILE__, __LINE__);
+    $res = $db['snp_sth']->get_result();
+
+    while ($row = $res->fetch_assoc()) {
         if (!isset($cat_snps[$row['col']]))
             $cat_snps[$row['col']] = 0;
         $cat_snps[$row['col']]++;
@@ -99,10 +112,12 @@ for ($i = 0; $i < count($tags); $i++) {
     $file            = "";
     $stacks          = array();
     $secondary       = array();
-    $result = $db['seq_sth']->execute(array($batch_id, $sample_id, $tag_id));
-    check_db_error($result, __FILE__, __LINE__);
 
-    while ($row = $result->fetchRow()) {
+    if (!$db['seq_sth']->execute())
+        write_db_error($db['seq_sth'], __FILE__, __LINE__);
+    $res = $db['seq_sth']->get_result();
+
+    while ($row = $res->fetch_assoc()) {
     
         if ($row['relationship'] == "consensus") {
             $deleveraged     = $row['deleveraged'];

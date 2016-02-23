@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -46,14 +46,14 @@ $query =
     "FROM batches " . 
     "JOIN samples ON (batch_id=batches.id) " . 
     "WHERE batches.id=? AND samples.id=?";
-$db['batch_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['batch_sth'], __FILE__, __LINE__);
+if (!($db['batch_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT count(id) as depth FROM unique_tags " . 
     "WHERE relationship!='consensus' AND relationship!='model' AND sample_id=? AND tag_id=?";
-$db['depth_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['depth_sth'], __FILE__, __LINE__);
+if (!($db['depth_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT tag_id, sub_id, relationship, seq_id, seq, deleveraged, blacklisted, removed " . 
@@ -61,47 +61,51 @@ $query =
     "JOIN samples ON (unique_tags.sample_id=samples.id) " . 
     "JOIN batches ON (samples.batch_id=batches.id) " .
     "WHERE batch_id=? AND unique_tags.sample_id=? AND tag_id=?";
-$db['seq_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['seq_sth'], __FILE__, __LINE__);
+if (!($db['seq_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT col, rank_1, rank_2 FROM snps " . 
     "JOIN samples ON (snps.sample_id=samples.id) " . 
     "JOIN batches ON (samples.batch_id=batches.id) " .
     "WHERE batch_id=? AND snps.sample_id=? AND tag_id=? AND snps.type='E' ORDER BY col";
-$db['snp_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['snp_sth'], __FILE__, __LINE__);
+if (!($db['snp_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT allele, read_pct FROM alleles " . 
     "WHERE sample_id=? AND tag_id=? ";
-$db['all_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['all_sth'], __FILE__, __LINE__);
+if (!($db['all_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT catalog_id FROM matches " . 
     "WHERE batch_id=? AND sample_id=? AND tag_id=? " .
     "GROUP BY catalog_id";
-$db['cat_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['cat_sth'], __FILE__, __LINE__);
+if (!($db['cat_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT col FROM catalog_snps " . 
     "WHERE batch_id=? AND tag_id=?";
-$db['cat_snp_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['cat_snp_sth'], __FILE__, __LINE__);
+if (!($db['cat_snp_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 //
 // Pull information about this batch
 //
-$result = $db['batch_sth']->execute(array($batch_id, $sample_id));
-check_db_error($result, __FILE__, __LINE__);
-$row    = $result->fetchRow();
-$batch  = array();
-$batch['id']   = $row['id'];
-$batch['desc'] = $row['description'];
-$batch['date'] = $row['date'];
-$batch['file'] = $row['file'];
+if (!$db['batch_sth']->bind_param("ii", $batch_id, $sample_id))
+    write_db_error($db['batch_sth'], __FILE__, __LINE__);
+if (!$db['batch_sth']->execute())
+    write_db_error($db['batch_sth'], __FILE__, __LINE__);
+$res = $db['batch_sth']->get_result();
+$row = $res->fetch_assoc();
+
+$batch                = array();
+$batch['id']          = $row['id'];
+$batch['desc']        = $row['description'];
+$batch['date']        = $row['date'];
+$batch['file']        = $row['file'];
 $batch['sample_id']   = $row['sample_id'];
 $batch['samp_id']     = $row['samp_id'];
 $batch['sample_type'] = $row['type'];
@@ -152,35 +156,45 @@ $seqs = array('consensus' => array(),
 	      'secondary' => array(),
 	      'model'     => array());
 
-$result = $db['seq_sth']->execute(array($batch_id, $sample_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['seq_sth']->bind_param("iii", $batch_id, $sample_id, $tag_id))
+    write_db_error($db['seq_sth'], __FILE__, __LINE__);
+if (!$db['seq_sth']->execute())
+    write_db_error($db['seq_sth'], __FILE__, __LINE__);
+$res = $db['seq_sth']->get_result();
 
-while ($row = $result->fetchRow()) {
-  array_push($seqs[$row['relationship']], array('s' => $row['seq'], 'id' => $row['seq_id'], 'sub_id' => $row['sub_id']));
+while ($row = $res->fetch_assoc()) {
+    array_push($seqs[$row['relationship']], array('s' => $row['seq'], 'id' => $row['seq_id'], 'sub_id' => $row['sub_id']));
 
-  if ($row['relationship'] == "consensus") {
-    $deleveraged     = $row['deleveraged'];
-    $lumberjackstack = $row['removed'];
-    $blacklisted     = $row['blacklisted'];
-  }
+    if ($row['relationship'] == "consensus") {
+	$deleveraged     = $row['deleveraged'];
+	$lumberjackstack = $row['removed'];
+	$blacklisted     = $row['blacklisted'];
+    }
 }
 
-$result = $db['cat_sth']->execute(array($batch_id, $sample_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
-$row = $result->fetchRow();
+if (!$db['cat_sth']->bind_param("iii", $batch_id, $sample_id, $tag_id))
+    write_db_error($db['cat_sth'], __FILE__, __LINE__);
+if (!$db['cat_sth']->execute())
+    write_db_error($db['cat_sth'], __FILE__, __LINE__);
+$res = $db['cat_sth']->get_result();
+$row = $res->fetch_assoc();
+
 if (isset($row['catalog_id'])) 
-  $catalog_id = $row['catalog_id'];
+    $catalog_id = $row['catalog_id'];
 else
-  $catalog_id = -1;
+    $catalog_id = -1;
 
 print "<td style=\"text-align: center; vertical-align: top;\">\n";
 if ($catalog_id >= 0)
   print "  <a href=\"$root_path/catalog.php?db=$database&id=$batch_id&filter_type[]=cata&filter_cata=$catalog_id\">#$catalog_id</a>\n";
 print "</td>\n";
 
-$result = $db['depth_sth']->execute(array($sample_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
-$row = $result->fetchRow();
+if (!$db['depth_sth']->bind_param("ii", $sample_id, $tag_id))
+    write_db_error($db['depth_sth'], __FILE__, __LINE__);
+if (!$db['depth_sth']->execute())
+    write_db_error($db['depth_sth'], __FILE__, __LINE__);
+$res = $db['depth_sth']->get_result();
+$row = $res->fetch_assoc();
 
 echo <<< EOQ
 <td style="text-align: center; vertical-align: top;">
@@ -190,23 +204,30 @@ echo <<< EOQ
 EOQ;
 
 $snps   = array();
-$result = $db['snp_sth']->execute(array($batch_id, $sample_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['snp_sth']->bind_param("iii", $batch_id, $sample_id, $tag_id))
+    write_db_error($db['snp_sth'], __FILE__, __LINE__);
+if (!$db['snp_sth']->execute())
+    write_db_error($db['snp_sth'], __FILE__, __LINE__);
+$res = $db['snp_sth']->get_result();
 
-while ($row = $result->fetchRow()) {
+while ($row = $res->fetch_assoc()) {
   $snps[$row['col']] = array('col' => $row['col'], 'rank_1' => $row['rank_1'], 'rank_2' => $row['rank_2']);
 }
 
 $cat_snps = array();
 if ($catalog_id >= 0) {
-  $result   = $db['cat_snp_sth']->execute(array($batch_id, $catalog_id));
-  check_db_error($result, __FILE__, __LINE__);
 
-  while ($row = $result->fetchRow()) {
-      if (!isset($cat_snps[$row['col']]))
-  	  $cat_snps[$row['col']] = 0;
-      $cat_snps[$row['col']]++;
-  }
+    if (!$db['cat_snp_sth']->bind_param("ii", $batch_id, $catalog_id))
+	write_db_error($db['cat_snp_sth'], __FILE__, __LINE__);
+    if (!$db['cat_snp_sth']->execute())
+	write_db_error($db['cat_snp_sth'], __FILE__, __LINE__);
+    $res = $db['cat_snp_sth']->get_result();
+
+    while ($row = $res->fetch_assoc()) {
+	if (!isset($cat_snps[$row['col']]))
+  	    $cat_snps[$row['col']] = 0;
+	$cat_snps[$row['col']]++;
+    }
 }
 
 print 
@@ -224,8 +245,11 @@ print
 "  </table>\n" .
 "  </td>\n";
 
-$result = $db['all_sth']->execute(array($sample_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['all_sth']->bind_param("ii", $sample_id, $tag_id))
+    write_db_error($db['all_sth'], __FILE__, __LINE__);
+if (!$db['all_sth']->execute())
+    write_db_error($db['all_sth'], __FILE__, __LINE__);
+$res = $db['all_sth']->get_result();
 
 $alleles = array();
 $i       = 0;
@@ -234,7 +258,7 @@ print
 "  <td style=\"vertical-align: top;\">\n" .
 "    <table style=\"margin-left: auto; margin-right: auto; width: 50%;\">\n";
 
-while ($row = $result->fetchRow()) {
+while ($row = $res->fetch_assoc()) {
     $alleles[$row['allele']] = $colors[$i % $color_size];
 
     print 
