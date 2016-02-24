@@ -106,17 +106,14 @@ The Stacks Web Interface
 
 To visualize data, Stacks uses a web-based interface (written in PHP) that interacts 
 with a MySQL database server. MySQL provides various functions to store, sort, and 
-export data from a database. For this to work, you must have a PHP-enabled Apache web 
-server installed as well as the MDB2 Pear module to provide MySQL interaction.
+export data from a database.  
 
 0. Prerequisites
 
-If you want to export data in Microsoft Excel Spreadsheets, you will need the 
-Spreadsheet::WriteExcel Perl module.
-
-Most server installations will provide Apache, MySQL, Perl, and PHP by default. While 
-installing these components is beyond these instructions, here are some links that might
-be useful:
+Most server installations will provide Apache, MySQL, Perl, and PHP by default. If you want
+to export data in Microsoft Excel Spreadsheets, you will need the 
+Spreadsheet::WriteExcel Perl module. While installing these components is beyond these
+instructions, here are some links that might be useful:
 
   1. MySQL Database: http://dev.mysql.com/downloads/mysql/
   2. Spreadsheet Perl Module: http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel-2.40/
@@ -125,7 +122,7 @@ If you are running a version of Linux, the above software can be installed via t
 package manager. If you are using Ubuntu, you can install the following packages:
 
 % sudo apt-get install mysql-server mysql-client
-% sudo apt-get install php5 php5-mysql
+% sudo apt-get install php5 php5-mysqlnd
 % sudo apt-get install libspreadsheet-writeexcel-perl
 
 A similar set of commands can be executed on Debian using apt-get, or on a RedHat derived Linux
