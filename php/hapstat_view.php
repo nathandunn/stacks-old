@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2015-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -39,41 +39,47 @@ $display['batch_id'] = $batch_id;
 $query = 
     "SELECT pop_id, pop_name FROM populations " . 
     "WHERE batch_id=?";
-$db['pop_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['pop_sth'], __FILE__, __LINE__);
+if (!($db['pop_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['pop_sth'], __FILE__, __LINE__);
 
 $query = 
    "SELECT pop_id, bp, n, hapcnt, gene_div, hap_div FROM hapstats " . 
    "WHERE batch_id=? AND tag_id=?";
-$db['stats_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['stats_sth'], __FILE__, __LINE__);
+if (!($db['stats_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['stats_sth'], __FILE__, __LINE__);
 
 //
 // Fetch population names if available.
 //
 $pop_names = array();
 if ($batch_type == "population") {
-    $result = $db['pop_sth']->execute($batch_id);
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['pop_sth']->bind_param("i", $batch_id))
+        write_db_error($db['pop_sth'], __FILE__, __LINE__);
+    if (!$db['pop_sth']->execute())
+        write_db_error($db['pop_sth'], __FILE__, __LINE__);
+    $res = $db['pop_sth']->get_result();
 
-    while ($row = $result->fetchRow())
+    while ($row = $res->fetch_assoc())
         $pop_names[$row['pop_id']] = $row['pop_name'];
 }
 
-$result = $db['stats_sth']->execute(array($batch_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['stats_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['stats_sth'], __FILE__, __LINE__);
+if (!$db['stats_sth']->execute())
+    write_db_error($db['stats_sth'], __FILE__, __LINE__);
+$res = $db['stats_sth']->get_result();
 
 $stats = array();
 
-while ($row = $result->fetchRow()) {
-  $a = array('bp'       => $row['bp'],
-	     'n'        => $row['n'],
-	     'hapcnt'   => $row['hapcnt'],
-	     'gene_div' => $row['gene_div'],
-	     'hap_div'  => $row['hap_div'],
-	     'pop_id'   => $row['pop_id']);
+while ($row = $res->fetch_assoc()) {
+    $a = array('bp'       => $row['bp'],
+               'n'        => $row['n'],
+	           'hapcnt'   => $row['hapcnt'],
+	           'gene_div' => $row['gene_div'],
+	           'hap_div'  => $row['hap_div'],
+	           'pop_id'   => $row['pop_id']);
 
-  $stats[$row['pop_id']] = $a;
+    $stats[$row['pop_id']] = $a;
 }
 
 ksort($stats);
@@ -89,8 +95,8 @@ $json_str =
 $json_str .= "\"hapstats\": [";
 
 foreach ($stats as $pop_id => $stat)
-  if (!isset($pop_names[$pop_id])) 
-    $pop_names[$pop_id] = $pop_id;
+    if (!isset($pop_names[$pop_id])) 
+        $pop_names[$pop_id] = $pop_id;
 
 $rows = 0;
 foreach ($stats as $pop_id => $s) {
@@ -111,7 +117,7 @@ foreach ($stats as $pop_id => $s) {
 }
 
 if ($rows > 0) 
-  $json_str  = substr($json_str, 0, -1);
+    $json_str  = substr($json_str, 0, -1);
 $json_str .= 
   "]}";
 

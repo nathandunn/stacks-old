@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2015-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -41,56 +41,56 @@ $query =
     "FROM matches " . 
     "JOIN samples ON (matches.sample_id=samples.id) " . 
     "WHERE matches.batch_id=? AND catalog_id=? ORDER BY samples.id";
-$db['mat_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['mat_sth'], __FILE__, __LINE__);
+if (!($db['mat_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['mat_sth'], __FILE__, __LINE__);
 
 $query = 
     "SELECT col, rank_1, rank_2, rank_3, rank_4 FROM catalog_snps " . 
     "WHERE batch_id=? AND tag_id=? ORDER BY col";
-$db['snp_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['snp_sth'], __FILE__, __LINE__);
+if (!($db['snp_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['snp_sth'], __FILE__, __LINE__);
 
 $query = 
     "SELECT allele FROM catalog_alleles " . 
     "WHERE batch_id=? AND tag_id=? ";
-$db['all_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['all_sth'], __FILE__, __LINE__);
+if (!($db['all_sth'] = $db['dbh']->prepare($query)))
+      write_db_error($db['all_sth'], __FILE__, __LINE__);
 
 $query = 
     "SELECT geno_map FROM markers " . 
     "WHERE batch_id=? AND catalog_id=? ";
-$db['map_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['map_sth'], __FILE__, __LINE__);
+if (!($db['map_sth'] = $db['dbh']->prepare($query)))
+      write_db_error($db['map_sth'], __FILE__, __LINE__);
 
 $query = 
     "SELECT pop_id, pop_name FROM populations " . 
     "WHERE batch_id=?";
-$db['pop_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['pop_sth'], __FILE__, __LINE__);
+if (!($db['pop_sth'] = $db['dbh']->prepare($query)))
+      write_db_error($db['pop_sth'], __FILE__, __LINE__);
 
 $query = 
     "SELECT count(batch_id) as cnt FROM sumstats " . 
     "WHERE batch_id=? AND tag_id=?";
-$db['stats_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['stats_sth'], __FILE__, __LINE__);
+if (!($db['stats_sth'] = $db['dbh']->prepare($query)))
+      write_db_error($db['stats_sth'], __FILE__, __LINE__);
 
 $query = 
     "SELECT count(batch_id) as cnt FROM fst " . 
     "WHERE batch_id=? AND tag_id=?";
-$db['fst_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['fst_sth'], __FILE__, __LINE__);
+if (!($db['fst_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['fst_sth'], __FILE__, __LINE__);
 
 $query = 
     "SELECT count(batch_id) as cnt FROM hapstats " . 
     "WHERE batch_id=? AND tag_id=?";
-$db['hapstats_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['hapstats_sth'], __FILE__, __LINE__);
+if (!($db['hapstats_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['hapstats_sth'], __FILE__, __LINE__);
 
 $query = 
     "SELECT count(batch_id) as cnt FROM phist " . 
     "WHERE batch_id=? AND tag_id=?";
-$db['phist_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['phist_sth'], __FILE__, __LINE__);
+if (!($db['phist_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['phist_sth'], __FILE__, __LINE__);
 
 
 $query = 
@@ -106,8 +106,8 @@ $query =
     "catalog_genotypes.batch_id=catalog_index.batch_id) " .
     "WHERE catalog_genotypes.batch_id=? and catalog_genotypes.catalog_id=? " . 
     "ORDER BY catalog_genotypes.sample_id";
-$db['geno_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['geno_sth'], __FILE__, __LINE__);
+if (!($db['geno_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['geno_sth'], __FILE__, __LINE__);
 
 //
 // Check for the existence of SNP summary statistics or Fst data.
@@ -117,36 +117,48 @@ $snp_fst_vals = 0;
 $hap_sumstats = 0;
 $hap_fst_vals = 0;
 if ($batch_type == "population") {
-    $result = $db['stats_sth']->execute(array($batch_id, $tag_id));
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['stats_sth']->bind_param("ii", $batch_id, $tag_id))
+	write_db_error($db['stats_sth'], __FILE__, __LINE__);
+    if (!$db['stats_sth']->execute())
+	write_db_error($db['stats_sth'], __FILE__, __LINE__);
+    $res = $db['stats_sth']->get_result();
 
-    if ($row = $result->fetchRow()) {
-      if ($row['cnt'] > 0)
-	$snp_sumstats = 1;
+    if ($row = $res->fetch_assoc()) {
+	if ($row['cnt'] > 0)
+	    $snp_sumstats = 1;
     }
 
-    $result = $db['fst_sth']->execute(array($batch_id, $tag_id));
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['fst_sth']->bind_param("ii", $batch_id, $tag_id))
+	write_db_error($db['fst_sth'], __FILE__, __LINE__);
+    if (!$db['fst_sth']->execute())
+	write_db_error($db['fst_sth'], __FILE__, __LINE__);
+    $res = $db['fst_sth']->get_result();
 
-    if ($row = $result->fetchRow()) {
-      if ($row['cnt'] > 0)
-	$snp_fst_vals = 1;
+    if ($row = $res->fetch_assoc()) {
+	if ($row['cnt'] > 0)
+	    $snp_fst_vals = 1;
     }
 
-    $result = $db['hapstats_sth']->execute(array($batch_id, $tag_id));
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['hapstats_sth']->bind_param("ii", $batch_id, $tag_id))
+	write_db_error($db['hapstats_sth'], __FILE__, __LINE__);
+    if (!$db['hapstats_sth']->execute())
+	write_db_error($db['hapstats_sth'], __FILE__, __LINE__);
+    $res = $db['hapstats_sth']->get_result();
 
-    if ($row = $result->fetchRow()) {
-      if ($row['cnt'] > 0)
-	$hap_sumstats = 1;
+    if ($row = $res->fetch_assoc()) {
+	if ($row['cnt'] > 0)
+	    $hap_sumstats = 1;
     }
 
-    $result = $db['phist_sth']->execute(array($batch_id, $tag_id));
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['phist_sth']->bind_param("ii", $batch_id, $tag_id))
+	write_db_error($db['phist_sth'], __FILE__, __LINE__);
+    if (!$db['phist_sth']->execute())
+	write_db_error($db['phist_sth'], __FILE__, __LINE__);
+    $res = $db['phist_sth']->get_result();
 
-    if ($row = $result->fetchRow()) {
-      if ($row['cnt'] > 0)
-	$hap_fst_vals = 1;
+    if ($row = $res->fetch_assoc()) {
+	if ($row['cnt'] > 0)
+	    $hap_fst_vals = 1;
     }
 }
 
@@ -155,15 +167,21 @@ if ($batch_type == "population") {
 //
 $pop_names = array();
 if ($batch_type == "population") {
-    $result = $db['pop_sth']->execute($batch_id);
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['pop_sth']->bind_param("i", $batch_id))
+	write_db_error($db['pop_sth'], __FILE__, __LINE__);
+    if (!$db['pop_sth']->execute())
+	write_db_error($db['pop_sth'], __FILE__, __LINE__);
+    $res = $db['pop_sth']->get_result();
 
-    while ($row = $result->fetchRow())
+    while ($row = $res->fetch_assoc())
         $pop_names[$row['pop_id']] = $row['pop_name'];
 }
 
-$result = $db['snp_sth']->execute(array($batch_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['snp_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['snp_sth'], __FILE__, __LINE__);
+if (!$db['snp_sth']->execute())
+    write_db_error($db['snp_sth'], __FILE__, __LINE__);
+$res = $db['snp_sth']->get_result();
 
 $json_str = 
   "{" .
@@ -179,7 +197,7 @@ $json_str =
 
 $json_str .= "\"snps\": [";
 $rows = 0;
-while ($row = $result->fetchRow()) {
+while ($row = $res->fetch_assoc()) {
     $json_str .= 
       "{" .
       "\"col\": \"$row[col]\"," .
@@ -196,46 +214,52 @@ $json_str .=
   "]," .
   "\"alleles\": [";
 
-$result = $db['map_sth']->execute(array($batch_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['map_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['map_sth'], __FILE__, __LINE__);
+if (!$db['map_sth']->execute())
+    write_db_error($db['map_sth'], __FILE__, __LINE__);
+$res = $db['map_sth']->get_result();
 
-if ($result->numRows() > 0) {
-  $row = $result->fetchRow();
+if ($res->num_rows > 0) {
+    $row = $res->fetch_assoc();
 } else {
-  $row = array();
+    $row = array();
 }
 
 $rows = 0;
 if (isset($row['geno_map'])) {
-  $map = array();
+    $map = array();
 
-  $genos = explode(";", $row['geno_map']);
-  $i     = 0;
-  foreach ($genos as $g) {
-      if (strlen($g) == 0) continue;
-      $m = explode(":", $g);
-      $map[$m[0]] = $m[1];
-      $alleles[$m[0]] = $colors[$i % $color_size];
-      $i++;
-  }
-  asort($map);
-  foreach ($map as $hapl => $geno) {
-      $json_str .= 
+    $genos = explode(";", $row['geno_map']);
+    $i     = 0;
+    foreach ($genos as $g) {
+	if (strlen($g) == 0) continue;
+	$m = explode(":", $g);
+	$map[$m[0]] = $m[1];
+	$alleles[$m[0]] = $colors[$i % $color_size];
+	$i++;
+    }
+    asort($map);
+    foreach ($map as $hapl => $geno) {
+	$json_str .= 
 	"{" .
 	"\"gtype\": \"$geno\"," .
 	"\"htype\": \"$hapl\"" .
 	"},";
-  }
-  $rows++;
+    }
+    $rows++;
 
 } else {
-    $result = $db['all_sth']->execute(array($batch_id, $tag_id));
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['all_sth']->bind_param("ii", $batch_id, $tag_id))
+	write_db_error($db['all_sth'], __FILE__, __LINE__);
+    if (!$db['all_sth']->execute())
+	write_db_error($db['all_sth'], __FILE__, __LINE__);
+    $res = $db['all_sth']->get_result();
 
     $gtypes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     $i = 0;
-    while ($row = $result->fetchRow()) {
+    while ($row = $res->fetch_assoc()) {
         $json_str .= 
 	  "{" .
 	  "\"gtype\": \"" . $gtypes[$i % 52]  . "\"," .
@@ -257,10 +281,13 @@ $gtypes = array();
 //
 // Fetch and record Observed Haplotypes
 //
-$result = $db['mat_sth']->execute(array($batch_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['mat_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['mat_sth'], __FILE__, __LINE__);
+if (!$db['mat_sth']->execute())
+    write_db_error($db['mat_sth'], __FILE__, __LINE__);
+$res = $db['mat_sth']->get_result();
 
-while ($row = $result->fetchRow()) {
+while ($row = $res->fetch_assoc()) {
     $a = array('id'     => $row['id'],
                'file'   => $row['file'], 
                'allele' => $row['allele'], 
@@ -280,10 +307,13 @@ while ($row = $result->fetchRow()) {
 //
 // Fetch and record Genotypes
 //
-$result = $db['geno_sth']->execute(array($batch_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['geno_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['geno_sth'], __FILE__, __LINE__);
+if (!$db['geno_sth']->execute())
+    write_db_error($db['geno_sth'], __FILE__, __LINE__);
+$res = $db['geno_sth']->get_result();
 
-while ($row = $result->fetchRow()) {
+while ($row = $res->fetch_assoc()) {
     $gtypes[$row['file']] = array('id'        => $row['sample_id'],
 				  'file'      => $row['file'],
 				  'genotype'  => $row['genotype'],

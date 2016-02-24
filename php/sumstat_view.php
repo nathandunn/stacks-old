@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2015-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -39,54 +39,60 @@ $display['batch_id'] = $batch_id;
 $query = 
     "SELECT pop_id, pop_name FROM populations " . 
     "WHERE batch_id=?";
-$db['pop_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['pop_sth'], __FILE__, __LINE__);
+if (!($db['pop_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['pop_sth'], __FILE__, __LINE__);
 
 $query = 
    "SELECT pop_id, col, bp, p_nuc, q_nuc, n, p, obs_het, obs_hom, exp_het, exp_hom, pi, fis FROM sumstats " . 
    "WHERE batch_id=? AND tag_id=?";
-$db['stats_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['stats_sth'], __FILE__, __LINE__);
+if  (!($db['stats_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['stats_sth'], __FILE__, __LINE__);
 
 //
 // Fetch population names if available.
 //
 $pop_names = array();
 if ($batch_type == "population") {
-    $result = $db['pop_sth']->execute($batch_id);
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['pop_sth']->bind_param("i", $batch_id))
+        write_db_error($db['pop_sth'], __FILE__, __LINE__);
+    if (!$db['pop_sth']->execute())
+        write_db_error($db['pop_sth'], __FILE__, __LINE__);
+    $res = $db['pop_sth']->get_result();
 
-    while ($row = $result->fetchRow())
+    while ($row = $res->fetch_assoc())
         $pop_names[$row['pop_id']] = $row['pop_name'];
 }
 
-$result = $db['stats_sth']->execute(array($batch_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['stats_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['stats_sth'], __FILE__, __LINE__);
+if (!$db['stats_sth']->execute())
+    write_db_error($db['stats_sth'], __FILE__, __LINE__);
+$res = $db['stats_sth']->get_result();
 
 $stats = array();
 $pops  = array();
 
-while ($row = $result->fetchRow()) {
-  $a = array('col'     => $row['col'],
-	     'bp'      => $row['bp'],
-	     'p_nuc'   => $row['p_nuc'],
-	     'q_nuc'   => $row['q_nuc'],
-	     'n'       => $row['n'],
-	     'p'       => $row['p'],
-	     'obs_het' => $row['obs_het'],
-	     'obs_hom' => $row['obs_hom'],
-	     'exp_het' => $row['exp_het'],
-	     'exp_hom' => $row['exp_hom'],
-	     'pi'      => $row['pi'],
-	     'fis'     => $row['fis'],
-	     'pop_id'  => $row['pop_id']);
+while ($row = $res->fetch_assoc()) {
+    $a = array('col'     => $row['col'],
+               'bp'      => $row['bp'],
+               'p_nuc'   => $row['p_nuc'],
+	           'q_nuc'   => $row['q_nuc'],
+	           'n'       => $row['n'],
+	           'p'       => $row['p'],
+	           'obs_het' => $row['obs_het'],
+	           'obs_hom' => $row['obs_hom'],
+	           'exp_het' => $row['exp_het'],
+	           'exp_hom' => $row['exp_hom'],
+	           'pi'      => $row['pi'],
+	           'fis'     => $row['fis'],
+	            'pop_id'  => $row['pop_id']);
 
-  if (!isset($stats[$row['col']]))
-    $stats[$row['col']] = array();
+    if (!isset($stats[$row['col']]))
+        $stats[$row['col']] = array();
 
-  $stats[$row['col']][$row['pop_id']] = $a;
+    $stats[$row['col']][$row['pop_id']] = $a;
 
-  $pops[$row['pop_id']] = $row['pop_id'];
+    $pops[$row['pop_id']] = $row['pop_id'];
 }
 
 ksort($stats);
@@ -111,43 +117,43 @@ $index = count($pop_names) == 0 ? $pops : $pop_names;
 $rows = 0;
 foreach ($stats as $col => $stat) {    
 
-  foreach ($index as $pop_id => $pop_name) {
-    if (!isset($stat[$pop_id])) 
-      continue;
+    foreach ($index as $pop_id => $pop_name) {
+	if (!isset($stat[$pop_id])) 
+            continue;
 
-    $s    = $stat[$pop_id];
-    $p    = $s['p']       < 1 ? sprintf("%.5f", $s['p']) : $s['p'];
-    $ohet = $s['obs_het'] > 0 ? sprintf("%.3f", $s['obs_het']) : $s['obs_het'];
-    $ohom = $s['obs_hom'] < 1 ? sprintf("%.3f", $s['obs_hom']) : $s['obs_hom'];
-    $ehet = $s['exp_het'] > 0 ? sprintf("%.3f", $s['exp_het']) : $s['exp_het'];
-    $ehom = $s['exp_hom'] < 1 ? sprintf("%.3f", $s['exp_hom']) : $s['exp_hom'];
-    $pi   = $s['pi']      > 0 ? sprintf("%.3f", $s['pi']) : $s['pi'];
-    $fis  = $s['fis']    != 0 ? sprintf("%.3f", $s['fis']) : "0";
+	$s    = $stat[$pop_id];
+	$p    = $s['p']       < 1 ? sprintf("%.5f", $s['p']) : $s['p'];
+	$ohet = $s['obs_het'] > 0 ? sprintf("%.3f", $s['obs_het']) : $s['obs_het'];
+	$ohom = $s['obs_hom'] < 1 ? sprintf("%.3f", $s['obs_hom']) : $s['obs_hom'];
+	$ehet = $s['exp_het'] > 0 ? sprintf("%.3f", $s['exp_het']) : $s['exp_het'];
+	$ehom = $s['exp_hom'] < 1 ? sprintf("%.3f", $s['exp_hom']) : $s['exp_hom'];
+	$pi   = $s['pi']      > 0 ? sprintf("%.3f", $s['pi']) : $s['pi'];
+	$fis  = $s['fis']    != 0 ? sprintf("%.3f", $s['fis']) : "0";
 
-    $json_str .=
-      "{" .
-      "\"pop_id\": \"$pop_name\"," .
-      "\"col\": \"$s[col]\"," .
-      "\"bp\": \"$s[bp]\"," .
-      "\"p_allele\": \"$s[p_nuc]\"," .
-      "\"q_allele\": \"$s[q_nuc]\"," .
-      "\"p\": \"$p\"," .
-      "\"n\": \"$s[n]\"," .
-      "\"obshet\": \"$ohet\"," .
-      "\"obshom\": \"$ohom\"," .
-      "\"exphet\": \"$ehet\"," .
-      "\"exphom\": \"$ehom\"," .
-      "\"pi\": \"$pi\"," .
-      "\"fis\": \"$fis\"" .
-      "},";
-    $rows++;
-  }
+	$json_str .=
+	"{" .
+	"\"pop_id\": \"$pop_name\"," .
+	"\"col\": \"$s[col]\"," .
+	"\"bp\": \"$s[bp]\"," .
+	"\"p_allele\": \"$s[p_nuc]\"," .
+	"\"q_allele\": \"$s[q_nuc]\"," .
+	"\"p\": \"$p\"," .
+	"\"n\": \"$s[n]\"," .
+	"\"obshet\": \"$ohet\"," .
+	"\"obshom\": \"$ohom\"," .
+	"\"exphet\": \"$ehet\"," .
+	"\"exphom\": \"$ehom\"," .
+	"\"pi\": \"$pi\"," .
+	"\"fis\": \"$fis\"" .
+	"},";
+	$rows++;
+    }
 }
 
 if ($rows > 0)
-  $json_str  = substr($json_str, 0, -1);
+    $json_str  = substr($json_str, 0, -1);
 $json_str .= 
-  "]}";
+"]}";
 
 echo $json_str;
 
