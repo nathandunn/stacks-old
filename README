@@ -46,8 +46,8 @@ package manager. If you are using Ubuntu, you can install the following packages
 % sudo apt-get install samtools
 % sudo apt-get install libbam-dev
 
-A similar set of commands can be executed on a RedHat derived Linux system using yum,
-or another package manager on other Linux distributions.
+A similar set of commands can be executed on Debian using apt-get, or on a RedHat derived Linux
+system using yum, or another package manager on other Linux distributions.
 
 2. Build the software. Stacks uses the standard autotools install:
 
@@ -118,15 +118,18 @@ Most server installations will provide Apache, MySQL, Perl, and PHP by default. 
 installing these components is beyond these instructions, here are some links that might
 be useful:
 
-  1. MySQL Database: http://www.mysql.com/downloads/mysql/
-  2. Spreadsheet Perl Module: http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel-2.37/
-  3. MDB2 Pear Module: http://pear.php.net/package/MDB2/
-  4. MDB2 MySQL driver: http://pear.php.net/package/MDB2_Driver_mysql/
+  1. MySQL Database: http://dev.mysql.com/downloads/mysql/
+  2. Spreadsheet Perl Module: http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel-2.40/
 
-(PHP modules are  easily installed with the pear tool. Many operating systems already
- have these tools installed - such as OS X and some Linux distributions. Most Linux systems
- will provide all of these tools as packages that can be installed using yum, apt-get, or a
- similar piece of software.)
+If you are running a version of Linux, the above software can be installed via the 
+package manager. If you are using Ubuntu, you can install the following packages:
+
+% sudo apt-get install mysql-server mysql-client
+% sudo apt-get install php5 php5-mysql
+% sudo apt-get install libspreadsheet-writeexcel-perl
+
+A similar set of commands can be executed on Debian using apt-get, or on a RedHat derived Linux
+system using yum, or another package manager on other Linux distributions.
 
 1. Edit the MySQL configuration file, installed in
 /usr/local/share/stacks/sql/mysql.cnf.dist, to enable access to the
