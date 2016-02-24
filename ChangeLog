@@ -1,3 +1,8 @@
+Stacks 1.37
+--------------------------
+	Feature: converted PHP database code from MDB2 to MySQLi. MDB2 is no longer a
+	prerequisite for installing Stacks.
+
 Stacks 1.36 - Feb 18, 2016
 --------------------------
 	Feature: Added the BfaI, BspDI, AseI, and AciI restriction enzymes to process_radtags.
