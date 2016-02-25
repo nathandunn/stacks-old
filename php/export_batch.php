@@ -120,7 +120,7 @@ function process_filter(&$display_params, &$filters) {
             array_push($filters, "cata=" . $_GET['filter_cata']);
 
 	} else if ($filter == "mark") {
-	    $display_params['filter_mark'] = $_GET['filter_mark'];
+	    $display_params['filter_mark'] = ($_GET['filter_mark'] == "Any") ? "%/%" : $_GET['filter_mark'];
             array_push($filters, "mark=" . $_GET['filter_mark']);
 
 	} else if ($filter == "gcnt") {
@@ -134,9 +134,9 @@ function process_filter(&$display_params, &$filters) {
 	} else if ($filter == "loc") {
 	    $display_params['filter_chr'] = $_GET['filter_chr'];
 	    array_push($filters, "chr=" . $_GET['filter_chr']);
-	    $display_params['filter_sbp'] = $_GET['filter_sbp'];
+	    $display_params['filter_sbp'] = $_GET['filter_sbp'] * 1000000;
 	    array_push($filters, "sbp=" . $_GET['filter_sbp']);
-	    $display_params['filter_ebp'] = $_GET['filter_ebp'];
+	    $display_params['filter_ebp'] = $_GET['filter_ebp'] * 1000000;
 	    array_push($filters, "ebp=" . $_GET['filter_ebp']);
 	}
     }

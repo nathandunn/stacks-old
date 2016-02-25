@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -44,22 +44,22 @@ class Catalog {
         $query = 
             "SELECT allele FROM catalog_alleles " . 
             "WHERE batch_id=? AND tag_id=?";
-        $this->db['allele_sth'] = $this->db['dbh']->prepare($query);
-        check_db_error($this->db['allele_sth'], __FILE__, __LINE__);
+        if (!($this->db['allele_sth'] = $this->db['dbh']->prepare($query)))
+            write_db_error($this->db['dbh'], __FILE__, __LINE__);
 
         $query = 
             "SELECT col, rank_1, rank_2 FROM catalog_snps " . 
             "WHERE batch_id=? AND tag_id=? ORDER BY col";
-        $this->db['snp_sth'] = $this->db['dbh']->prepare($query);
-        check_db_error($this->db['snp_sth'], __FILE__, __LINE__);
+        if (!($this->db['snp_sth'] = $this->db['dbh']->prepare($query)))
+            write_db_error($this->db['dbh'], __FILE__, __LINE__);
 
         $query = 
             "SELECT samples.id, samples.sample_id, samples.type, file, tag_id, allele " . 
             "FROM matches " . 
             "JOIN samples ON (matches.sample_id=samples.id) " . 
             "WHERE matches.batch_id=? AND catalog_id=? ORDER BY samples.id";
-        $this->db['mat_sth'] = $this->db['dbh']->prepare($query);
-        check_db_error($this->db['mat_sth'], __FILE__, __LINE__);
+        if (!($this->db['mat_sth'] = $this->db['dbh']->prepare($query)))
+            write_db_error($this->db['dbh'], __FILE__, __LINE__);
 
         $query = 
             "SELECT COUNT(tag_id) as count FROM catalog_index " . 
@@ -84,63 +84,65 @@ class Catalog {
     }
 
     function prepare_filter_parameters() {
-        array_push($this->params, $this->batch);
+        $this->params[] = &$this->batch;
+	$typestr = "i";
 
 	$filters = $this->display['filter_type'];
 
-	if (!isset($filters))
+	if (!isset($filters)) {
+	    array_unshift($param, $typestr);
 	    return;
+	}
 
 	foreach ($filters as $filter) {
 
             if ($filter == "snps") {
-                array_push($this->params, $this->display['filter_snps_l']);
-                array_push($this->params, $this->display['filter_snps_u']);
+                $this->params[] = &$this->display['filter_snps_l'];
+                $this->params[] = &$this->display['filter_snps_u'];
+		$typestr .= "ii";
 
             } else if ($filter == "alle") {
-                array_push($this->params, $this->display['filter_alle_l']);
-                array_push($this->params, $this->display['filter_alle_u']);
+                $this->params[] = &$this->display['filter_alle_l'];
+                $this->params[] = &$this->display['filter_alle_u'];
+		$typestr .= "ii";
 
             } else if ($filter == "pare") {
-                array_push($this->params, $this->display['filter_pare_l']);
-                array_push($this->params, $this->display['filter_pare_u']);
-	
+                $this->params[] = &$this->display['filter_pare_l'];
+                $this->params[] = &$this->display['filter_pare_u'];
+		$typestr .= "ii";
+
             } else if ($filter == "prog") {
-                array_push($this->params, $this->display['filter_prog']);
+                $this->params[] = &$this->display['filter_prog'];
+		$typestr .= "i";
 
             } else if ($filter == "vprog") {
-                array_push($this->params, $this->display['filter_vprog']);
+                $this->params[] = &$this->display['filter_vprog'];
+		$typestr .= "i";
 
             } else if ($filter == "cata") {
-                array_push($this->params, $this->display['filter_cata']);
+                $this->params[] = &$this->display['filter_cata'];
+		$typestr .= "i";
 
             } else if ($filter == "gcnt") {
-	        array_push($this->params, $this->display['filter_gcnt']);
-	
-	    } else if ($filter == "est") {
-                array_push($this->params, 0);
-
-            } else if ($filter == "pe") {
-                array_push($this->params, 0);
-
-            } else if ($filter == "blast") {
-                array_push($this->params, 0);
+	        $this->params[] = &$this->display['filter_gcnt'];
+		$typestr .= "i";
 
             } else if ($filter == "ref") {
-	      array_push($this->params, $this->display['filter_ref']);
-	
+		$this->params[] = &$this->display['filter_ref'];
+		$typestr .= "i";
+
 	    } else if ($filter == "loc") {
-	      array_push($this->params, $this->display['filter_chr']);
-	      array_push($this->params, $this->display['filter_sbp'] * 1000000);
-	      array_push($this->params, $this->display['filter_ebp'] * 1000000);
+		$this->params[] = &$this->display['filter_chr'];
+		$this->params[] = &$this->display['filter_sbp'];
+		$this->params[] = &$this->display['filter_ebp'];
+		$typestr .= "sii";
 	
 	    } else if ($filter == "mark") {
-	        if ($this->display['filter_mark'] == "Any") 
-		    array_push($this->params, "%/%");
-                else 
-                    array_push($this->params, $this->display['filter_mark']);
+		$this->params[] = &$this->display['filter_mark'];
             }
 	}
+
+	array_unshift($this->params, $typestr);
     }
 
     function apply_query_filters() {
@@ -152,9 +154,9 @@ class Catalog {
                   "prog"  => "(progeny >= ?)",
                   "vprog" => "(valid_progeny >= ?)",
                   "mark"  => "(marker LIKE ?)", 
-                  "est"   => "(ests > ?)",
-                  "pe"    => "(pe_radtags > ?)",
-                  "blast" => "(blast_hits > ?)",
+                  "est"   => "(ests > 0)",
+                  "pe"    => "(pe_radtags > 0)",
+                  "blast" => "(blast_hits > 0)",
 		  "gcnt"  => "(geno_cnt >= ?)",
 		  "ref"   => "(catalog_index.type = ?)",
 		  "loc"   => "(catalog_index.chr = ? && catalog_index.bp >= ? && catalog_index.bp <= ?)");
@@ -188,15 +190,19 @@ class Catalog {
 
     function determine_count() {
 
-	$this->db['tag_count_sth'] = $this->db['dbh']->prepare($this->queries['tag_count']);
-	check_db_error($this->db['tag_count_sth'], __FILE__, __LINE__);
+	if (!($this->db['tag_count_sth'] = $this->db['dbh']->prepare($this->queries['tag_count'])))
+	    write_db_error($this->db['dbh'], __FILE__, __LINE__);
 
 	$this->prepare_filter_parameters();
 
-	$result =& $this->db['tag_count_sth']->execute($this->params);
-	check_db_error($result, __FILE__, __LINE__);
-	   
-	$row = $result->fetchRow();
+	array_unshift($this->params, $this->db['tag_count_sth']);
+	call_user_func_array("mysqli_stmt_bind_param", $this->params);
+	array_shift($this->params);
+	if (!$this->db['tag_count_sth']->execute())
+	    write_db_error($this->db['tag_count_sth'], __FILE__, __LINE__);
+	$res = $this->db['tag_count_sth']->get_result();
+
+	$row = $res->fetch_assoc();
 	$this->num_loci = $row['count'];
     }
 
@@ -204,21 +210,24 @@ class Catalog {
 	//
 	// We only want to load genes between $start_gene and $end_gene. 
 	//
-	$this->db['dbh']->setLimit($num_groups, $start_group);
-	check_db_error($this->db['dbh'], __FILE__, __LINE__);
-
-	$this->db['tag_sth'] = $this->db['dbh']->prepare($this->queries['tag']);
-	check_db_error($this->db['tag_sth'], __FILE__, __LINE__);
+	$this->queries['tag'] .= " LIMIT " . $start_group . ", " . $num_groups;
+	
+	if (!($this->db['tag_sth'] = $this->db['dbh']->prepare($this->queries['tag'])))
+	    write_db_error($this->db['tag_sth'], __FILE__, __LINE__);
 
 	$this->prepare_filter_parameters();
 
 	//
 	// Fetch the results and populate the array of groups.
 	//
-	$result = $this->db['tag_sth']->execute($this->params);
-	check_db_error($result, __FILE__, __LINE__);
+	array_unshift($this->params, $this->db['tag_sth']);
+	call_user_func_array("mysqli_stmt_bind_param", $this->params);
+	array_shift($this->params);
+	if (!$this->db['tag_sth']->execute())
+	    write_db_error($this->db['tag_sth'], __FILE__, __LINE__);
+	$res = $this->db['tag_sth']->get_result();
 
-	while ($row = $result->fetchRow()) {
+	while ($row = $res->fetch_assoc()) {
             $locus = new Locus();
             $locus->id         = $row['tag_id'];
             $locus->annotation = $row['external_id'];
@@ -239,16 +248,24 @@ class Catalog {
             //
             // Fetch SNPs and Alleles
             //
-            $snp_res = $this->db['snp_sth']->execute(array($this->batch, $locus->id));
-            check_db_error($snp_res, __FILE__, __LINE__);
-            while ($snp_row = $snp_res->fetchRow()) {
+	    if (!$this->db['snp_sth']->bind_param("ii", $this->batch, $locus->id))
+		write_db_error($db['snp_sth'], __FILE__, __LINE__);
+	    if (!$this->db['snp_sth']->execute())
+		write_db_error($db['snp_sth'], __FILE__, __LINE__);
+	    $snp_res = $this->db['snp_sth']->get_result();
+
+            while ($snp_row = $snp_res->fetch_assoc()) {
                 $locus->snps .= $snp_row['col'] . "," . $snp_row['rank_1'] . ">" . $snp_row['rank_2'] . ";";
             }
             $locus->snps = substr($locus->snps, 0, -1);
 
-            $all_res = $this->db['allele_sth']->execute(array($this->batch, $locus->id));
-            check_db_error($all_res, __FILE__, __LINE__);
-            while ($all_row = $all_res->fetchRow()) {
+	    if (!$this->db['all_sth']->bind_param("ii", $this->batch, $locus->id))
+		write_db_error($db['all_sth'], __FILE__, __LINE__);
+	    if (!$this->db['all_sth']->execute())
+		write_db_error($db['all_sth'], __FILE__, __LINE__);
+	    $all_res = $this->db['all_sth']->get_result();
+
+            while ($all_row = $all_res->fetch_assoc()) {
                 $locus->alleles .= $all_row['allele'] . ";";
             }
             $locus->alleles = substr($locus->alleles, 0, -1);
@@ -256,10 +273,13 @@ class Catalog {
             //
             // Add genotypes
             //
-            $gen_res = $this->db['mat_sth']->execute(array($this->batch, $locus->id));
-            check_db_error($genres, __FILE__, __LINE__);
+	    if (!$this->db['mat_sth']->bind_param("ii", $this->batch, $locus->id))
+		write_db_error($db['mat_sth'], __FILE__, __LINE__);
+	    if (!$this->db['mat_sth']->execute())
+		write_db_error($db['mat_sth'], __FILE__, __LINE__);
+	    $gen_res = $this->db['mat_sth']->get_result();
 
-            while ($gen_row = $gen_res->fetchRow())
+            while ($gen_row = $gen_res->fetch_assoc())
                 $locus->add_genotype($gen_row['id'], $gen_row['file'], $gen_row['allele']);
 
 	    $this->loci[$row['tag_id']] = $locus;

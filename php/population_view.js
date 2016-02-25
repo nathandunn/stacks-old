@@ -74,6 +74,9 @@ function ajax_locus_population_view(id, root_path, url) {
 	tr_obj.style.display = "";
 	caret.src            = root_path + "/caret-d.png"; 
 
+	var div_obj = document.getElementById(id + "_popview_div");
+	div_obj.innerHTML = "<i class=\"fa fa-spinner fa-pulse fa-3x\"></i>";
+
 	//
 	// Make the AJAX query for JSON encoded data for this locus.
 	//

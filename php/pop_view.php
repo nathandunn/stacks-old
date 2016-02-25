@@ -220,14 +220,11 @@ if (!$db['map_sth']->execute())
     write_db_error($db['map_sth'], __FILE__, __LINE__);
 $res = $db['map_sth']->get_result();
 
-if ($res->num_rows > 0) {
+if ($res->num_rows > 0)
     $row = $res->fetch_assoc();
-} else {
-    $row = array();
-}
 
 $rows = 0;
-if (isset($row['geno_map'])) {
+if ($res->num_rows > 0 && strlen($row['geno_map']) > 0) {
     $map = array();
 
     $genos = explode(";", $row['geno_map']);
@@ -271,7 +268,7 @@ if (isset($row['geno_map'])) {
 }
 
 if ($rows > 0)
-  $json_str  = substr($json_str, 0, -1);
+    $json_str  = substr($json_str, 0, -1);
 $json_str .= 
   "]," .
   "\"popkey\": {";
@@ -292,7 +289,7 @@ while ($row = $res->fetch_assoc()) {
                'file'   => $row['file'], 
                'allele' => $row['allele'], 
                'tag_id' => $row['tag_id'],
-	       'depth'  => $row['depth'],
+               'depth'  => $row['depth'],
 	       'lnl'    => $row['lnl'],
 	       'pop_id' => $row['pop_id']);
     if (!isset($htypes[$row['pop_id']]))
