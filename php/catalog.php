@@ -324,7 +324,7 @@ while ($row = $res->fetch_assoc()) {
 	array_push($snps, array('col' => $snp_row['col'], 'rank' => $snp_row['rank_2']));
     }
 
-    $url = "$root_path/pop_view.php?db=$database&batch_id=$batch_id&type=$batch[type]&tag_id=$row[tag_id]";
+    $url = "$root_path/pop_view.php?db=$database&batch_id=$batch_id&type=$batch[type]&tag_id=$tag_id";
     $annotation = strlen($row['external_id']) > 0 ? $row['external_id'] : "annotate";
 
     echo <<< EOQ
@@ -1027,8 +1027,8 @@ function write_pop_filter($cols) {
     $fch  = isset($display['filter_chr'])     ? $display['filter_chr']    : "";
     $fsb  = isset($display['filter_sbp'])     ? $display['filter_sbp']    : 0;
     $feb  = isset($display['filter_ebp'])     ? $display['filter_ebp']    : $max_chr_len;
-    $flnl = isset($display['filter_lnl_l'])   ? $display['filter_lnl_l']  : 0;
-    $flnu = isset($display['filter_lnl_u'])   ? $display['filter_lnl_u']  : -500;
+    $flnl = isset($display['filter_lnl_l'])   ? $display['filter_lnl_l']  : -500;
+    $flnu = isset($display['filter_lnl_u'])   ? $display['filter_lnl_u']  : 0;
 
     $r = range(1, 9);
     $r = array_merge($r, range(10, 100, 5));

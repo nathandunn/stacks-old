@@ -861,3 +861,8 @@ table.stack td.tag
   padding-right: 10px;
   border-right: thin solid #aaaaaa;
 }
+
+i.fa-spinner
+{
+    padding: 0.5em;
+}
