@@ -42,55 +42,55 @@ $query =
     "JOIN samples ON (matches.sample_id=samples.id) " . 
     "WHERE matches.batch_id=? AND catalog_id=? ORDER BY samples.id";
 if (!($db['mat_sth'] = $db['dbh']->prepare($query)))
-    write_db_error($db['mat_sth'], __FILE__, __LINE__);
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT col, rank_1, rank_2, rank_3, rank_4 FROM catalog_snps " . 
     "WHERE batch_id=? AND tag_id=? ORDER BY col";
 if (!($db['snp_sth'] = $db['dbh']->prepare($query)))
-    write_db_error($db['snp_sth'], __FILE__, __LINE__);
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT allele FROM catalog_alleles " . 
     "WHERE batch_id=? AND tag_id=? ";
 if (!($db['all_sth'] = $db['dbh']->prepare($query)))
-      write_db_error($db['all_sth'], __FILE__, __LINE__);
+      write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT geno_map FROM markers " . 
     "WHERE batch_id=? AND catalog_id=? ";
 if (!($db['map_sth'] = $db['dbh']->prepare($query)))
-      write_db_error($db['map_sth'], __FILE__, __LINE__);
+      write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT pop_id, pop_name FROM populations " . 
     "WHERE batch_id=?";
 if (!($db['pop_sth'] = $db['dbh']->prepare($query)))
-      write_db_error($db['pop_sth'], __FILE__, __LINE__);
+      write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT count(batch_id) as cnt FROM sumstats " . 
     "WHERE batch_id=? AND tag_id=?";
 if (!($db['stats_sth'] = $db['dbh']->prepare($query)))
-      write_db_error($db['stats_sth'], __FILE__, __LINE__);
+      write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT count(batch_id) as cnt FROM fst " . 
     "WHERE batch_id=? AND tag_id=?";
 if (!($db['fst_sth'] = $db['dbh']->prepare($query)))
-    write_db_error($db['fst_sth'], __FILE__, __LINE__);
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT count(batch_id) as cnt FROM hapstats " . 
     "WHERE batch_id=? AND tag_id=?";
 if (!($db['hapstats_sth'] = $db['dbh']->prepare($query)))
-    write_db_error($db['hapstats_sth'], __FILE__, __LINE__);
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT count(batch_id) as cnt FROM phist " . 
     "WHERE batch_id=? AND tag_id=?";
 if (!($db['phist_sth'] = $db['dbh']->prepare($query)))
-    write_db_error($db['phist_sth'], __FILE__, __LINE__);
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 
 $query = 
@@ -107,7 +107,7 @@ $query =
     "WHERE catalog_genotypes.batch_id=? and catalog_genotypes.catalog_id=? " . 
     "ORDER BY catalog_genotypes.sample_id";
 if (!($db['geno_sth'] = $db['dbh']->prepare($query)))
-    write_db_error($db['geno_sth'], __FILE__, __LINE__);
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 //
 // Check for the existence of SNP summary statistics or Fst data.

@@ -102,7 +102,7 @@ else
 $query =
     "SELECT count(id) as cnt FROM catalog_genotypes WHERE batch_id=?";
 if (!($db['gcnt_sth'] = $db['dbh']->prepare($query)))
-    write_db_error($db['gcnt_sth'], __FILE__, __LINE__);
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 if (!$db['gcnt_sth']->bind_param("i", $batch_id))
     write_db_error($db['gcnt_sth'], __FILE__, __LINE__);

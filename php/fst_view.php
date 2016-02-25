@@ -39,49 +39,55 @@ $display['batch_id'] = $batch_id;
 $query = 
     "SELECT pop_id, pop_name FROM populations " . 
     "WHERE batch_id=?";
-$db['pop_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['pop_sth'], __FILE__, __LINE__);
+if (!($db['pop_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT col, pop_id_1, pop_id_2, pi_o, amova_fst_c as fst, fishers_p, lod FROM fst " . 
     "WHERE batch_id=? AND tag_id=?";
-$db['fst_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['fst_sth'], __FILE__, __LINE__);
+if (!($db['fst_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 //
 // Fetch population names if available.
 //
 $pop_names = array();
 if ($batch_type == "population") {
-    $result = $db['pop_sth']->execute($batch_id);
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['pop_sth']->bind_param("i", $batch_id))
+	write_db_error($db['pop_sth'], __FILE__, __LINE__);
+    if (!$db['pop_sth']->execute())
+	write_db_error($db['pop_sth'], __FILE__, __LINE__);
+    $res = $db['pop_sth']->get_result();
 
-    while ($row = $result->fetchRow())
+    while ($row = $res->fetch_assoc())
         $pop_names[$row['pop_id']] = $row['pop_name'];
 }
 
-$result = $db['fst_sth']->execute(array($batch_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['fst_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['fst_sth'], __FILE__, __LINE__);
+if (!$db['fst_sth']->execute())
+    write_db_error($db['fst_sth'], __FILE__, __LINE__);
+$res = $db['fst_sth']->get_result();
 
 $stats = array();
 $pops  = array();
 
-while ($row = $result->fetchRow()) {
-  $a = array('col'       => $row['col'],
-	     'pid_1'     => $row['pop_id_1'],
-	     'pid_2'     => $row['pop_id_2'],
-	     'pi_o'      => $row['pi_o'],
-	     'fishers_p' => $row['fishers_p'],
-	     'lod'       => $row['lod'],
-	     'fst'       => $row['fst']);
+while ($row = $res->fetch_assoc()) {
+    $a = array('col'       => $row['col'],
+	       'pid_1'     => $row['pop_id_1'],
+	       'pid_2'     => $row['pop_id_2'],
+	       'pi_o'      => $row['pi_o'],
+	       'fishers_p' => $row['fishers_p'],
+	       'lod'       => $row['lod'],
+	       'fst'       => $row['fst']);
 
-  if (!isset($stats[$row['col']]))
-    $stats[$row['col']] = array();
+    if (!isset($stats[$row['col']]))
+	$stats[$row['col']] = array();
 
-  array_push($stats[$row['col']], $a);
+    array_push($stats[$row['col']], $a);
 
-  $pops[$row['pop_id_1']] = $row['pop_id_1'];
-  $pops[$row['pop_id_2']] = $row['pop_id_2'];
+    $pops[$row['pop_id_1']] = $row['pop_id_1'];
+    $pops[$row['pop_id_2']] = $row['pop_id_2'];
 }
 
 ksort($stats);
@@ -91,8 +97,8 @@ ksort($pops);
 // Assign population IDs for any missing population names.
 //
 foreach ($pops as $pop_id)
-  if (!isset($pop_names[$pop_id])) 
-    $pop_names[$pop_id] = $pop_id;
+    if (!isset($pop_names[$pop_id])) 
+	$pop_names[$pop_id] = $pop_id;
 
 ksort($pop_names);
 
@@ -109,7 +115,7 @@ $json_str .=  "\"popkey\": {";
 // Print the population key.
 //
 foreach ($pop_names as $pop_id => $population) {
-  $json_str .=
+    $json_str .=
     "\"$pop_id\": \"$population\",";
 }
 
@@ -120,33 +126,33 @@ $json_str .=
 
 foreach ($stats as $col => $stat) {
 
-  $json_str .= "\"$col\": [";
+    $json_str .= "\"$col\": [";
 
-  foreach ($stat as $s) {
+    foreach ($stat as $s) {
 
-    $fst = $s['fst']  != 0 ? sprintf("%.3f", $s['fst'])  : "0";
-    $lod = $s['lod']  != 0 ? sprintf("%.3f", $s['lod'])  : "0";
-    $pio = $s['pi_o'] != 0 ? sprintf("%.3f", $s['pi_o']) : "0";
-    $p   = $s['fishers_p'] != 0 ? sprintf("%.3f", $s['fishers_p']) : "0";
+	$fst = $s['fst']  != 0 ? sprintf("%.3f", $s['fst'])  : "0";
+	$lod = $s['lod']  != 0 ? sprintf("%.3f", $s['lod'])  : "0";
+	$pio = $s['pi_o'] != 0 ? sprintf("%.3f", $s['pi_o']) : "0";
+	$p   = $s['fishers_p'] != 0 ? sprintf("%.3f", $s['fishers_p']) : "0";
 
-    $json_str .=
-      "{" .
-      "\"pid_1\": \"$s[pid_1]\"," .
-      "\"pid_2\": \"$s[pid_2]\"," .
-      "\"pi_o\": \"$pio\"," .
-      "\"p\": \"$p\"," .
-      "\"lod\": \"$lod\"," .
-      "\"fst\": \"$fst\"" .
-      "},";
-  }
+	$json_str .=
+	"{" .
+	"\"pid_1\": \"$s[pid_1]\"," .
+	"\"pid_2\": \"$s[pid_2]\"," .
+	"\"pi_o\": \"$pio\"," .
+	"\"p\": \"$p\"," .
+	"\"lod\": \"$lod\"," .
+	"\"fst\": \"$fst\"" .
+	"},";
+    }
   
-  if (count($stat) > 0)
-    $json_str  = substr($json_str, 0, -1);
-  $json_str .= "],";
+    if (count($stat) > 0)
+	$json_str  = substr($json_str, 0, -1);
+    $json_str .= "],";
 }
 
 if (count($stats) > 0) 
-  $json_str  = substr($json_str, 0, -1);
+    $json_str  = substr($json_str, 0, -1);
 $json_str .= 
   "}}";
 

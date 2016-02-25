@@ -40,13 +40,13 @@ $query =
     "SELECT pop_id, pop_name FROM populations " . 
     "WHERE batch_id=?";
 if (!($db['pop_sth'] = $db['dbh']->prepare($query)))
-    write_db_error($db['pop_sth'], __FILE__, __LINE__);
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
    "SELECT pop_id, col, bp, p_nuc, q_nuc, n, p, obs_het, obs_hom, exp_het, exp_hom, pi, fis FROM sumstats " . 
    "WHERE batch_id=? AND tag_id=?";
 if  (!($db['stats_sth'] = $db['dbh']->prepare($query)))
-    write_db_error($db['stats_sth'], __FILE__, __LINE__);
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 //
 // Fetch population names if available.

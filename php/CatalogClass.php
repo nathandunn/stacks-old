@@ -213,7 +213,7 @@ class Catalog {
 	$this->queries['tag'] .= " LIMIT " . $start_group . ", " . $num_groups;
 	
 	if (!($this->db['tag_sth'] = $this->db['dbh']->prepare($this->queries['tag'])))
-	    write_db_error($this->db['tag_sth'], __FILE__, __LINE__);
+	    write_db_error($this->db['dbh'], __FILE__, __LINE__);
 
 	$this->prepare_filter_parameters();
 
