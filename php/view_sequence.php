@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -36,17 +36,20 @@ $display['seq_id'] = $seq_id;
 $query = 
     "SELECT id, catalog_id, seq_id, type, seq FROM sequence " . 
     "WHERE id=?";
-$db['seq_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['seq_sth'], __FILE__, __LINE__);
+if (!($db['seq_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 
 $page_title = "Catalog RAD-Tag Sequence Viewer";
 write_compact_header($page_title);
 
-$result = $db['seq_sth']->execute($seq_id);
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['seq_sth']->bind_param("i", $seq_id))
+    write_db_error($db['seq_sth'], __FILE__, __LINE__);
+if (!$db['seq_sth']->execute())
+    write_db_error($db['seq_sth'], __FILE__, __LINE__);
+$res = $db['seq_sth']->get_result();
 
-$row = $result->fetchRow();
+$row = $res->fetch_assoc();
 
 //
 // Line wrap the sequence to 80 characters

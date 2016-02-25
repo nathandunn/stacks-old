@@ -73,15 +73,15 @@ $stats = array();
 $pops  = array();
 
 while ($row = $res->fetch_assoc()) {
-  $a = array('pid_1'  => $row['pop_id_1'],
-	     'pid_2'  => $row['pop_id_2'],
-	     'phist'  => $row['phist'],
-	     'fpst'   => $row['fpst']);
+    $a = array('pid_1'  => $row['pop_id_1'],
+	       'pid_2'  => $row['pop_id_2'],
+	       'phist'  => $row['phist'],
+	       'fpst'   => $row['fpst']);
 
-  array_push($stats, $a);
+    array_push($stats, $a);
 
-  $pops[$row['pop_id_1']] = $row['pop_id_1'];
-  $pops[$row['pop_id_2']] = $row['pop_id_2'];
+    $pops[$row['pop_id_1']] = $row['pop_id_1'];
+    $pops[$row['pop_id_2']] = $row['pop_id_2'];
 }
 
 ksort($stats);
@@ -109,7 +109,7 @@ $json_str .=  "\"popkey\": {";
 // Print the population key.
 //
 foreach ($pop_names as $pop_id => $population) {
-  $json_str .=
+    $json_str .=
     "\"$pop_id\": \"$population\",";
 }
 
@@ -120,8 +120,8 @@ $json_str .=
 
 foreach ($stats as $s) {
 
-  $phist = $s['phist'] != 0 ? sprintf("%.3f", $s['phist']) : "0";
-  $fpst  = $s['fpst']  != 0 ? sprintf("%.3f", $s['fpst'])  : "0";
+    $phist = $s['phist'] != 0 ? sprintf("%.3f", $s['phist']) : "0";
+    $fpst  = $s['fpst']  != 0 ? sprintf("%.3f", $s['fpst'])  : "0";
 
     $json_str .=
       "{" .
@@ -133,7 +133,7 @@ foreach ($stats as $s) {
 }
 
 if (count($stats) > 0) 
-  $json_str  = substr($json_str, 0, -1);
+    $json_str  = substr($json_str, 0, -1);
 $json_str .= 
   "]}";
 
