@@ -79,7 +79,7 @@ function write_database($database) {
     $query = 
         "SELECT id, date, description, type FROM batches";
     if (!($db['batch_sth'] = $db['dbh']->prepare($query)))
-	write_db_error($db['batch_sth'], __FILE__, __LINE__);
+        write_db_error($db['dbh'], __FILE__, __LINE__);
 
     $page_title = "RAD-Tag Analyses";
     write_header($page_title);

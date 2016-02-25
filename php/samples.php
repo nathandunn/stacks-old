@@ -49,7 +49,7 @@ $query =
     "SELECT snps FROM tag_index " .
     "WHERE batch_id=? AND sample_id=? AND snps>0";
 if (!($db['snp_sth'] = $db['dbh']->prepare($query)))
-    write_db_error($db['snp_sth'], __FILE__, __LINE__);
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 //
 // Pull information about this batch
