@@ -1,4 +1,4 @@
-Stacks 1.37
+Stacks 1.37 - Feb 24, 2016
 --------------------------
 	Feature: converted PHP database code from MDB2 to MySQLi. MDB2 is no longer a
 	prerequisite for installing Stacks.
