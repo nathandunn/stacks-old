@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2015-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //

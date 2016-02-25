@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2012, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2012-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -42,34 +42,37 @@ $query =
     "SELECT id, pop_name " . 
     "FROM populations " . 
     "WHERE batch_id=? and pop_id=?";
-$db['sel_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['sel_sth'], __FILE__, __LINE__);
+if (!($db['sel_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "UPDATE populations SET pop_name=? WHERE id=?";
-$db['upd_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['upd_sth'], __FILE__, __LINE__);
+if (!($db['upd_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "INSERT INTO populations SET batch_id=?, pop_id=?, pop_name=?";
-$db['ins_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['ins_sth'], __FILE__, __LINE__);
+if (!($db['ins_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "DELETE FROM populations WHERE id=?";
-$db['del_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['del_sth'], __FILE__, __LINE__);
+if (!($db['del_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 //
 // Fetch any existing annotation for this marker
 //
-$result = $db['sel_sth']->execute(array($display['batch_id'], $display['pop_id']));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['sel_sth']->bind_param("ii", $display['batch_id'], $display['pop_id']))
+    write_db_error($db['sel_sth'], __FILE__, __LINE__);
+if (!$db['sel_sth']->execute())
+    write_db_error($db['sel_sth'], __FILE__, __LINE__);
+$res = $db['sel_sth']->get_result();
 
 $pop_name = "";
 $sql_id   = 0;
 
-if ($row = $result->fetchRow()) {
+if ($row = $res->fetch_assoc()) {
     $pop_name = $row['pop_name'];
     $sql_id   = $row['id'];
 }
@@ -79,20 +82,26 @@ if ($new_pop_name != $pop_name) {
     // Is this annotation being reset to the original value? If so, delete the corrected record.
     //
     if (strlen($pop_name) > 0 && strlen($new_pop_name) == 0) {
-        $result = $db['del_sth']->execute($sql_id);
-        check_db_error($result, __FILE__, __LINE__);
+        if (!$db['del_sth']->bind_param("i", $sql_id))
+            write_db_error($db['del_sth'], __FILE__, __LINE__);
+        if (!$db['del_sth']->execute())
+            write_db_error($db['del_sth'], __FILE__, __LINE__);
     //
     // Are we changing an existing annotation?
     //
     } else if (strlen($pop_name) > 0 && strlen($new_pop_name) > 0) {
-        $result = $db['upd_sth']->execute(array($new_pop_name, $sql_id));
-        check_db_error($result, __FILE__, __LINE__);
+        if (!$db['upd_sth']->bind_param("si", $new_pop_name, $sql_id))
+            write_db_error($db['upd_sth'], __FILE__, __LINE__);
+        if (!$db['upd_sth']->execute())
+            write_db_error($db['upd_sth'], __FILE__, __LINE__);
     //
     // Otherwise, add a new annotation.
     //
     } else if (strlen($new_pop_name) > 0) {
-        $result = $db['ins_sth']->execute(array($display['batch_id'], $display['pop_id'], $new_pop_name));
-        check_db_error($result, __FILE__, __LINE__);
+        if (!$db['ins_sth']->bind_param("iis", $display['batch_id'], $display['pop_id'], $new_pop_name))
+            write_db_error($db['ins_sth'], __FILE__, __LINE__);
+        if (!$db['ins_sth']->execute())
+            write_db_error($db['ins_sth'], __FILE__, __LINE__);
     }
 }
 

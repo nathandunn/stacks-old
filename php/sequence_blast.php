@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -42,22 +42,25 @@ $display['pp']       = $per_page;
 $query = 
     "SELECT id, catalog_id, seq_id, type FROM sequence " . 
     "WHERE batch_id=? AND catalog_id=?";
-$db['seq_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['seq_sth'], __FILE__, __LINE__);
+if (!($db['seq_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT id, catalog_id, seq_id, algorithm, query_id, query_len, hit_id, hit_len, score, e_value, percent_ident, hsp_rank, " . 
     "aln_len, query_aln_start, query_aln_end, hit_aln_start, hit_aln_end " . 
     "FROM sequence_blast " . 
     "WHERE batch_id=? AND catalog_id=?";
-$db['blast_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['blast_sth'], __FILE__, __LINE__);
+if (!($db['blast_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $page_title = "Catalog RAD-Tag Sequence/BLAST Hits Viewer";
 write_compact_header($page_title);
 
-$result = $db['seq_sth']->execute(array($batch_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['seq_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['seq_sth'], __FILE__, __LINE__);
+if (!$db['seq_sth']->execute())
+    write_db_error($db['seq_sth'], __FILE__, __LINE__);
+$res = $db['seq_sth']->get_result();
 
 $seqs = array();
 
@@ -69,7 +72,7 @@ $a = array('id'         => -1,
            'type'       => "se_radtag");
 array_push($seqs, $a);
 
-while ($row = $result->fetchRow()) {
+while ($row = $res->fetch_assoc()) {
     $a = array('id'         => $row['id'],
                'catalog_id' => $row['catalog_id'],
                'seq_id'     => $row['seq_id'],
@@ -78,12 +81,15 @@ while ($row = $result->fetchRow()) {
     array_push($seqs, $a);
 }
 
-$result = $db['blast_sth']->execute(array($batch_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['blast_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['blast_sth'], __FILE__, __LINE__);
+if (!$db['blast_sth']->execute())
+    write_db_error($db['blast_sth'], __FILE__, __LINE__);
+$res = $db['blast_sth']->get_result();
 
 $hits = array();
 
-while ($row = $result->fetchRow()) {
+while ($row = $res->fetch_assoc()) {
     $a = array('sql_id'    => $row['id'],
                'query_id'  => $row['query_id'],
                'hit_id'    => $row['hit_id'],
