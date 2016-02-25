@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -65,8 +65,8 @@ $marker_types = array('ab/--' => array('aa', 'bb', '-'),
 //
 $query = 
     "SELECT count(samples.id) as count FROM samples WHERE batch_id=?";
-$db['samp_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['samp_sth'], __FILE__, __LINE__);
+if (!($db['samp_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT marker, catalog_genotypes.sample_id, file, " . 
@@ -81,8 +81,8 @@ $query =
     "catalog_genotypes.batch_id=catalog_index.batch_id) " .
     "WHERE catalog_genotypes.batch_id=? and catalog_genotypes.catalog_id=? " . 
     "ORDER BY catalog_genotypes.sample_id";
-$db['geno_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['geno_sth'], __FILE__, __LINE__);
+if (!($db['geno_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $page_title = "Catalog Genotype Viewer";
 write_compact_header($page_title);
@@ -91,18 +91,25 @@ write_compact_header($page_title);
 // Get number of samples so we can determine how many rows to display 
 // in the genotype table.
 //
-$result = $db['samp_sth']->execute($batch_id);
-check_db_error($result, __FILE__, __LINE__);
-$row = $result->fetchRow();
+if (!$db['samp_sth']->bind_param("i", $batch_id))
+    write_db_error($db['samp_sth'], __FILE__, __LINE__);
+if (!$db['samp_sth']->execute())
+    write_db_error($db['samp_sth'], __FILE__, __LINE__);
+$res = $db['samp_sth']->get_result();
+$row = $res->fetch_assoc();
+
 $num_samples = $row['count'];
 $num_cols    = 10;
 $num_rows    = ceil($num_samples / $num_cols);
 $gtypes      = array();
 
-$result = $db['geno_sth']->execute(array($batch_id, $tag_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['geno_sth']->bind_param("ii", $batch_id, $tag_id))
+    write_db_error($db['geno_sth'], __FILE__, __LINE__);
+if (!$db['geno_sth']->execute())
+    write_db_error($db['geno_sth'], __FILE__, __LINE__);
+$res = $db['geno_sth']->get_result();
 
-if ($result->numRows() == 0) {
+if ($res->num_rows == 0) {
     print 
         "<h4 style=\"margin-left: auto; margin-right: auto; text-align: center;\">" . 
         "This marker has no genotypes, probably because this tag does not have enough mappable progeny.</h4>\n";
@@ -110,7 +117,7 @@ if ($result->numRows() == 0) {
     return;
 }
 
-while ($row = $result->fetchRow()) {
+while ($row = $res->fetch_assoc()) {
     $gtypes[$row['sample_id']] = array('file'      => $row['file'], 
                                        'genotype'  => $row['genotype'], 
                                        'corrected' => $row['corrected'],

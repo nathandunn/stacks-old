@@ -1,6 +1,6 @@
 <?php
 //
-// Copyright 2011, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -33,18 +33,18 @@ $db = db_connect($database);
 //
 $query = 
     "UPDATE genotype_corrections SET genotype=? WHERE id=?";
-$db['upd_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['upd_sth'], __FILE__, __LINE__);
+if (!($db['upd_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "INSERT INTO genotype_corrections SET batch_id=?, catalog_id=?, sample_id=?, genotype=?";
-$db['ins_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['ins_sth'], __FILE__, __LINE__);
+if (!($db['ins_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "DELETE FROM genotype_corrections WHERE id=?";
-$db['del_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['del_sth'], __FILE__, __LINE__);
+if (!($db['del_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['dbh'], __FILE__, __LINE__);
 
 $query = 
     "SELECT catalog_genotypes.id as id, catalog_genotypes.sample_id, catalog_genotypes.genotype, " . 
@@ -57,16 +57,19 @@ $query =
     "WHERE catalog_genotypes.batch_id=? AND " . 
     "catalog_genotypes.catalog_id=? AND " .
     "catalog_genotypes.sample_id=?";
-$db['geno_sth'] = $db['dbh']->prepare($query);
-check_db_error($db['geno_sth'], __FILE__, __LINE__);
+if (!($db['geno_sth'] = $db['dbh']->prepare($query)))
+    write_db_error($db['geno_sth'], __FILE__, __LINE__);
 
 //
 // Fetch the existing genotypes from the database
 //
-$result = $db['geno_sth']->execute(array($batch_id, $tag_id, $sample_id));
-check_db_error($result, __FILE__, __LINE__);
+if (!$db['geno_sth']->bind_param("iii", $batch_id, $tag_id, $sample_id))
+    write_db_error($db['geno_sth'], __FILE__, __LINE__);
+if (!$db['geno_sth']->execute())
+    write_db_error($db['geno_sth'], __FILE__, __LINE__);
+$res = $db['geno_sth']->get_result();
 
-if ($row = $result->fetchRow()) {
+if ($row = $res->fetch_assoc()) {
     $sample = array('id'           => $row['id'], 
 		    'genotype'     => strtolower($row['genotype']),
 		    'corrected'    => $row['correction'],
@@ -78,8 +81,10 @@ if ($row = $result->fetchRow()) {
 $corrected = "false";
 
 if ($gtype == "clr") {
-    $result = $db['del_sth']->execute($sample['corrected_id']);
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['del_sth']->bind_param("i", $sample['corrected_id']))
+        write_db_error($db['del_sth'], __FILE__, __LINE__);
+    if (!$db['del_sth']->execute())
+        write_db_error($db['del_sth'], __FILE__, __LINE__);
 
     $corrected = "false";
     $gtype = $sample['genotype'];
@@ -88,8 +93,10 @@ if ($gtype == "clr") {
 //
 } else if ($gtype == $sample['genotype'] && 
     strlen($sample['corrected_id']) > 0) {
-    $result = $db['del_sth']->execute($sample['corrected_id']);
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['del_sth']->bind_param("i", $sample['corrected_id']))
+        write_db_error($db['del_sth'], __FILE__, __LINE__);
+    if (!$db['del_sth']->execute())
+        write_db_error($db['del_sth'], __FILE__, __LINE__);
 
     $corrected = "false";
 //
@@ -97,16 +104,20 @@ if ($gtype == "clr") {
 //
 } else if ($gtype != $sample['genotype'] && 
 	   strlen($sample['corrected_id']) > 0) {
-    $result = $db['upd_sth']->execute(array(strtoupper($gtype), $sample['corrected_id']));
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['upd_sth']->bind_param("si", strtoupper($gtype), $sample['corrected_id']))
+        write_db_error($db['upd_sth'], __FILE__, __LINE__);
+    if (!$db['upd_sth']->execute())
+        write_db_error($db['upd_sth'], __FILE__, __LINE__);
 
     $corrected = "true";
 //
 // Otherwise, add a new correction.
 //
 } else if ($gtype != $sample['genotype']) {
-    $result = $db['ins_sth']->execute(array($batch_id, $tag_id, $sample_id, strtoupper($gtype)));
-    check_db_error($result, __FILE__, __LINE__);
+    if (!$db['ins_sth']->bind_param("iiis", $batch_id, $tag_id, $sample_id, strtoupper($gtype)))
+        write_db_error($db['ins_sth'], __FILE__, __LINE__);
+    if (!$db['ins_sth']->execute())
+        write_db_error($db['ins_sth'], __FILE__, __LINE__);
 
     $corrected = "true";
 }
