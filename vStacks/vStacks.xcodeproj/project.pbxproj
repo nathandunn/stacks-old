@@ -801,12 +801,11 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"vStacks/**",
-					/Users/ndunn/hg/stacks/vStacks/vStacks,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				PRODUCT_BUNDLE_IDENTIFIER = edu.uillinois.animalbiology.vstacks;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "c4d59141-77d0-4bd0-85b7-0f3843007841";
+				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -826,12 +825,11 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"vStacks/**",
-					/Users/ndunn/hg/stacks/vStacks/vStacks,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				PRODUCT_BUNDLE_IDENTIFIER = edu.uillinois.animalbiology.vstacks;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "c4d59141-77d0-4bd0-85b7-0f3843007841";
+				PROVISIONING_PROFILE = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
