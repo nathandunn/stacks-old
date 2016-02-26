@@ -119,7 +119,12 @@ class Catalog {
                 $this->params[] = &$this->display['filter_vprog'];
 		$typestr .= "i";
 
-            } else if ($filter == "cata") {
+            } else if ($filter == "lnl") {
+		$this->params[] = &$this->display['filter_lnl_l'];
+		$this->params[] = &$this->display['filter_lnl_u'];
+		$typestr .= "ii";
+
+	    } else if ($filter == "cata") {
                 $this->params[] = &$this->display['filter_cata'];
 		$typestr .= "i";
 
@@ -153,6 +158,7 @@ class Catalog {
 		  "pare"  => "(parents >= ? AND parents <= ?)",
                   "prog"  => "(progeny >= ?)",
                   "vprog" => "(valid_progeny >= ?)",
+		  "lnl"   => "(lnl >= ? AND lnl <= ?)",
                   "mark"  => "(marker LIKE ?)", 
                   "est"   => "(ests > 0)",
                   "pe"    => "(pe_radtags > 0)",

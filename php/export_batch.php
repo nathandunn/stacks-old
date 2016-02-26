@@ -115,6 +115,12 @@ function process_filter(&$display_params, &$filters) {
 	    $display_params['filter_vprog'] = $_GET['filter_vprog'];
             array_push($filters, "vprog=" . $_GET['filter_vprog']);
 
+	} else if ($filter == "lnl") {
+	    $display_params['filter_lnl_l'] = $_GET['filter_lnl_l'];
+	    array_push($filters, "lnl_l=" . $_GET['filter_lnl_l']);
+	    $display_params['filter_lnl_u'] = $_GET['filter_lnl_u'];
+	    array_push($filters, "lnl_u=" . $_GET['filter_lnl_l']);
+
 	} else if ($filter == "cata") {
 	    $display_params['filter_cata'] = $_GET['filter_cata'];
             array_push($filters, "cata=" . $_GET['filter_cata']);
