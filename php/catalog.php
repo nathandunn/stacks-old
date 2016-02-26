@@ -626,11 +626,11 @@ function write_pagination($num_tags, &$start_gene, &$end_gene, $destination) {
     $num_pages = floor($num_tags / $per_page);
     $num_pages += $num_tags % $per_page >= 1 ? 1 : 0;
 
-    if ($page > $num_pages) {
+    if ($num_pages > 0 && $page > $num_pages) {
 	$page = $num_pages;
 	$cur_page = $num_pages;
     }
-
+    
     // Determine the start and end gene numbers
     $start_gene = 1 + (($page - 1) * $per_page);
     $end_gene   = 
