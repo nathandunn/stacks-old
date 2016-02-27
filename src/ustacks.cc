@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -1910,7 +1910,6 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radta
 		corrected++;
 	    }
 
-        cerr << "seql: " << seql << "; prev_seql: " << prev_seql << "\n";
 	if (seql != prev_seql && prev_seql > 0) len_mismatch = true;
 
 	d = new DNASeq(seql, c.seq);
