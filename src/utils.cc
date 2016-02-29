@@ -243,6 +243,10 @@ bool compare_pair_intdouble(pair<int, double> a, pair<int, double> b) {
     return (a.second < b.second);
 }
 
+bool compare_pair_stringint(pair<string, int> a, pair<string, int> b) {
+    return (a.second < b.second);
+}
+
 bool compare_ints(int a, int b) {
     return (a > b);
 }

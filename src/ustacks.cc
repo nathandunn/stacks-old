@@ -47,6 +47,7 @@ int       max_rem_dist      = -1;
 double    cov_mean          = 0.0;
 double    cov_stdev         = 0.0;
 double    cov_scale         = 1;
+double    min_match_len     = 0.35;
 int       deleverage_trigger;
 int       removal_trigger;
 //
@@ -166,7 +167,17 @@ int main (int argc, char* argv[]) {
     cerr << "Merging remainder radtags\n";
     merge_remainders(merged, remainders);
 
+    //
     // Call the consensus sequence again, now that remainder tags have been merged.
+    //
+    call_consensus(merged, unique, remainders, false);
+
+    cerr << "Searching for gaps between merged stacks...\n";
+    search_for_gaps(merged, min_match_len);
+    
+    //
+    // Now that gaps have been identified, call final consensus and invoke SNP model.
+    //
     call_consensus(merged, unique, remainders, true);
 
     count_raw_reads(unique, remainders, merged);
@@ -178,7 +189,447 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem) {
+int
+search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
+{
+    //
+    // Calculate the distance (number of mismatches) between each pair
+    // of Radtags. We expect all radtags to be the same length;
+    //
+    KmerHashMap    kmer_map;
+    vector<char *> kmer_map_keys;
+    MergedStack   *tag_1, *tag_2;
+    map<int, MergedStack *>::iterator it;
+
+    // OpenMP can't parallelize random access iterators, so we convert
+    // our map to a vector of integer keys.
+    vector<int> keys;
+    for (it = merged.begin(); it != merged.end(); it++) 
+	keys.push_back(it->first);
+
+    //
+    // Calculate the number of k-mers we will generate. If kmer_len == 0,
+    // determine the optimal length for k-mers.
+    //
+    int con_len   = strlen(merged[keys[0]]->con);
+    int kmer_len  = floor(con_len * min_match_len);
+    int num_kmers = con_len - kmer_len + 1;
+
+    cerr << "  Using a k-mer length of " << kmer_len << "\n"
+	 << "  Number of kmers per sequence: " << num_kmers << "\n";
+
+    populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
+ 
+    #pragma omp parallel private(tag_1, tag_2)
+    {
+	double    **matrix = NULL;
+	AlignPath **path   = NULL;
+	init_alignment(con_len, &matrix, &path);
+	
+        #pragma omp for schedule(dynamic) 
+        for (uint i = 0; i < keys.size(); i++) {
+            tag_1 = merged[keys[i]];
+
+            // Don't compute distances for masked tags
+            if (tag_1->masked) continue;
+
+            vector<char *> query_kmers;
+            generate_kmers(tag_1->con, kmer_len, num_kmers, query_kmers);
+
+            map<int, int> hits;
+            int d;
+            //
+            // Lookup the occurances of each k-mer in the kmer_map
+            //
+            for (int j = 0; j < num_kmers; j++) {
+                for (uint k = 0; k < kmer_map[query_kmers[j]].size(); k++)
+                    hits[kmer_map[query_kmers[j]][k]]++;
+            }
+
+            //
+            // Free the k-mers we generated for this query
+            //
+            for (int j = 0; j < num_kmers; j++)
+                delete [] query_kmers[j];
+
+            //
+            // Iterate through the list of hits. For each hit that has more than min_hits
+            // check its full length to verify a match.
+            //
+            map<int, int>::iterator hit_it;
+            for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
+                tag_2 = merged[hit_it->first];
+
+		if (hit_it->second < 2) continue;
+
+                // Don't compute distances for masked tags
+                if (tag_2->masked) continue;
+
+                // Don't compare tag_1 against itself.
+                if (tag_1 == tag_2) continue;
+
+                d = align(tag_1, tag_2, matrix, path);
+                // cerr << "    Distance: " << d << "\n";
+
+    		tag_1->add_dist(tag_2->id, d);
+            }
+        }
+
+ 	free_alignment(con_len, matrix, path);
+    }
+
+    free_kmer_hash(kmer_map, kmer_map_keys);
+
+    return 0;
+}
+
+int
+init_alignment(int len, double ***matrix, AlignPath ***path)
+{
+    int m = len + 1;
+    int n = len + 1;
+
+    *matrix = new double * [m];
+    for (uint i = 0; i < m; i++)
+	(*matrix)[i] = new double [n];
+
+    *path = new AlignPath * [m];
+    for (uint i = 0; i < m; i++)
+	(*path)[i] = new AlignPath [n];
+
+    return 0;
+}
+
+int
+free_alignment(int m, double **matrix, AlignPath **path)
+{
+    for (uint i = 0; i < m; i++) {
+	delete [] matrix[i];
+	delete [] path[i];
+    }
+    delete [] matrix;
+    delete [] path;
+
+    return 0;
+}
+
+int
+align(MergedStack *tag_1, MergedStack *tag_2, double **matrix, AlignPath **path)
+{
+    //         j---->
+    //        [0][1][2][3]...[n-1]
+    //       +--------------------
+    // i [0] | [i][j]
+    // | [1] |
+    // | [2] |
+    // v [3] |
+    //   ... |
+    // [m-1] |
+    // 
+    int m = tag_1->len + 1;
+    int n = tag_2->len + 1;
+    
+    //
+    // Initialize the first column and row of the dynamic programming
+    // matrix and the path array.
+    //
+    path[0][0].diag = false;
+    path[0][0].up   = false;
+    path[0][0].left = false;
+    matrix[0][0]    = 0.0;
+    for (uint i = 1; i < m; i++) {
+	matrix[i][0]    = path[i - 1][0].up ? matrix[i - 1][0] + gapext_score : matrix[i - 1][0] + gapopen_score;
+	path[i][0].diag = false;
+	path[i][0].up   = true;
+	path[i][0].left = false;
+    }
+    for (uint j = 1; j < n; j++) {
+	matrix[0][j]    = path[0][j - 1].left ? matrix[0][j - 1] + gapext_score : matrix[0][j - 1] + gapopen_score;
+	path[0][j].diag = false;
+	path[0][j].up   = false;
+	path[0][j].left = true;
+    }
+
+    double score_down, score_diag, score_right;
+    map<double, int> scores;
+
+    for (uint i = 1; i < m; i++) {
+	for (uint j = 1; j < n; j++) {
+            // Calculate the score:
+	    //   1) If we were to move down from the above cell.
+	    score_down   = matrix[i - 1][j];
+	    // score_down  += (path[i - 1][j].count() == 1 && path[i - 1][j].up == true) ?  gapext_score : gapopen_score;
+	    score_down  += path[i - 1][j].up ?  gapext_score : gapopen_score;
+	    //   2) If we were to move diagonally from the above and left cell.
+	    score_diag   = matrix[i - 1][j - 1] + (tag_1->con[i - 1] == tag_2->con[j - 1] ? match_score : mismatch_score);
+	    //   3) If we were to move over from the cell left of us.
+	    score_right  = matrix[i][j - 1];
+	    // score_right += (path[i][j - 1].count() == 1 && path[i][j - 1].left == true) ? gapext_score : gapopen_score;
+	    score_right += path[i][j - 1].left ? gapext_score : gapopen_score;
+
+	    scores.clear();
+	    scores[score_diag]++;
+	    scores[score_down]++;
+	    scores[score_right]++;
+	    
+	    if (scores.rbegin()->second == 1) {
+		//
+		// One path is best.
+		//
+		if (score_diag > score_down && score_diag > score_right) {
+		    matrix[i][j]    = score_diag;
+		    path[i][j].diag = true;
+		    path[i][j].up   = false;
+		    path[i][j].left = false;
+		} else if (score_down > score_diag && score_down > score_right) {
+		    matrix[i][j]    = score_down;
+		    path[i][j].diag = false;
+		    path[i][j].up   = true;
+		    path[i][j].left = false;
+		} else {
+		    matrix[i][j]    = score_right;
+		    path[i][j].diag = false;
+		    path[i][j].up   = false;
+		    path[i][j].left = true;
+		}
+	    } else if (scores.rbegin()->second == 2) {
+		//
+		// Two of the paths are equivalent.
+		//
+		if (score_diag > score_down && score_right > score_down) {
+		    matrix[i][j]    = score_diag;
+		    path[i][j].diag = true;
+		    path[i][j].up   = false;
+		    path[i][j].left = true;
+		} else if (score_diag > score_right && score_down > score_right) {
+		    matrix[i][j]    = score_diag;
+		    path[i][j].diag = true;
+		    path[i][j].up   = true;
+		    path[i][j].left = false;
+		} else {
+		    matrix[i][j]    = score_down;
+ 		    path[i][j].diag = false;
+		    path[i][j].up   = true;
+		    path[i][j].left = true;
+		}
+	    } else {
+		//
+		// All paths equivalent.
+		//
+		matrix[i][j]    = score_diag;
+		path[i][j].diag = true;
+		path[i][j].up   = true;
+		path[i][j].left = true;
+	    }
+	}
+    }
+
+    dump_alignment(tag_1, tag_2, matrix, path);
+
+    string cigar;
+    trace_alignment(tag_1, tag_2, path, cigar);
+    
+    return 0;
+}
+
+int
+trace_alignment(MergedStack *tag_1, MergedStack *tag_2, AlignPath **path, string &cigar)
+{
+    //         j---->
+    //        [0][1][2][3]...[n-1]
+    //       +--------------------
+    // i [0] | [i][j]
+    // | [1] |
+    // | [2] |
+    // v [3] |
+    //   ... |
+    // [m-1] |
+    // 
+    int    m = tag_1->len + 1;
+    int    n = tag_2->len + 1;
+    int    i, j, cnt, len, gaps;
+    string cigar_1, cigar_2;
+    char   buf_1[id_len], buf_2[id_len];
+
+    vector<pair<string, int> > alns;
+    bool more_paths = true;
+    
+    do {
+	more_paths = false;
+
+	i = m - 1;
+	j = n - 1;
+
+	string aln_1, aln_2;
+
+	while (i > 0 || j > 0) {
+	    cnt  = path[i][j].count();
+
+	    if (cnt > 1) more_paths = true;
+
+	    if (path[i][j].diag) {
+		aln_1 += tag_1->con[i - 1];
+		aln_2 += tag_2->con[j - 1];
+		if (cnt > 1) path[i][j].diag = false;
+		i--;
+		j--;
+	    } else if (path[i][j].up) {
+		aln_1 += tag_1->con[i - 1];
+		aln_2 += "-";
+		if (cnt > 1) path[i][j].up = false;
+		i--;
+	    } else if (path[i][j].left) {
+		aln_1 += "-";
+		aln_2 += tag_2->con[j - 1];
+		if (cnt > 1) path[i][j].left = false;
+		j--;
+	    }
+	}
+
+	reverse(aln_1.begin(), aln_1.end());
+	reverse(aln_2.begin(), aln_2.end());
+
+	//
+	// Convert to CIGAR strings.
+	//
+	cigar_1 = "";
+	cigar_2 = "";
+	len     = aln_1.length();
+	gaps    = 0;
+	i       = 0;
+	while (i < len) {
+	    if (aln_1[i] != '-' && aln_2[i] != '-') {
+		cnt = 0;
+		do {
+		    cnt++;
+		    i++;
+		} while (i < len && aln_1[i] != '-' && aln_2[i] != '-');
+		sprintf(buf_1, "%dM", cnt);
+		sprintf(buf_2, "%dM", cnt);
+
+	    } else if (aln_1[i] == '-') {
+		cnt = 0;
+		do {
+		    cnt++;
+		    i++;
+		} while (i < len && aln_1[i] == '-');
+		sprintf(buf_1, "%dD", cnt);
+		sprintf(buf_2, "%dI", cnt);
+		gaps++;
+
+	    } else {
+		cnt = 0;
+		do {
+		    cnt++;
+		    i++;
+		} while (i < len && aln_2[i] == '-');
+		sprintf(buf_1, "%dI", cnt);
+		sprintf(buf_2, "%dD", cnt);
+		gaps++;
+	    }
+
+	    cigar_1 += buf_1;
+	    cigar_2 += buf_2;
+	}
+
+	alns.push_back(make_pair(cigar_1, gaps));
+	cerr << aln_1 << " [" << cigar_1 << ", gaps: " << gaps << "]\n"
+	     << aln_2 << " [" << cigar_2 << ", gaps: " << gaps << "]\n";
+
+    } while (more_paths);
+
+    if (alns.size() == 1) {
+	cigar = alns[0].first;
+	cerr << "Final alignment: " << cigar << "; gaps: " << alns[0].second << "\n";
+	return 1;
+    } else {
+	sort(alns.begin(), alns.end(), compare_pair_stringint);
+	if (alns[0].second < alns[1].second) {
+	    cigar = alns[0].first;
+	    cerr << "Final alignment: " << cigar << "; gaps: " << alns[0].second << "\n";
+	    return 1;
+	}
+    }
+
+    return 0;
+}
+
+int
+dump_alignment(MergedStack *tag_1, MergedStack *tag_2, double **matrix, AlignPath **path)
+{
+    //         j---->
+    //        [0][1][2][3]...[n-1]
+    //       +--------------------
+    // i [0] | [i][j]
+    // | [1] |
+    // | [2] |
+    // v [3] |
+    //   ... |
+    // [m-1] |
+    // 
+    int m = tag_1->len + 1;
+    int n = tag_2->len + 1;
+
+    //
+    // Output the score matrix.
+    //
+    cout << "         ";
+    for (uint j = 0; j < tag_2->len; j++)
+	cout << "   " << tag_2->con[j] << "  |";
+    cout << "\n";
+
+    cout << "  ";
+    for (uint j = 0; j < n; j++)
+	printf("% 6.1f|", matrix[0][j]);
+    cout << "\n";
+
+    for (uint i = 1; i < m; i++) {
+	cout << tag_1->con[i - 1] << " ";
+	for (uint j = 0; j < n; j++)
+	    printf("% 6.1f|", matrix[i][j]);
+	cout << "\n";
+    }
+
+    cout << "\n";
+
+    //
+    // Output the path matrix.
+    //
+    cout << "       ";
+    for (uint j = 0; j < tag_2->len; j++)
+	cout << "  " << tag_2->con[j] << " |";
+    cout << "\n";
+
+    cout << "  ";
+    for (uint j = 0; j < n; j++) {
+	cout << " ";
+	path[0][j].diag ? cout << "d" : cout << " ";
+	path[0][j].up   ? cout << "u" : cout << " ";
+	path[0][j].left ? cout << "l" : cout << " ";
+	cout << "|";
+    }
+    cout << "\n";
+
+    for (uint i = 1; i < m; i++) {
+	cout << tag_1->con[i - 1] << " ";
+	for (uint j = 0; j < n; j++) {
+	    cout << " ";
+	    path[i][j].diag ? cout << "d" : cout << " ";
+	    path[i][j].up   ? cout << "u" : cout << " ";
+	    path[i][j].left ? cout << "l" : cout << " ";
+	    cout << "|";
+	}
+	cout << "\n";
+    }
+
+    cout << "\n";
+    
+    return 0;
+}
+
+int
+merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
+{
     map<int, Rem *>::iterator it;
     int j, k;
 
