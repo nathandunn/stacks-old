@@ -79,10 +79,6 @@ using google::sparse_hash_map;
 #include "gzFasta.h"    // Reading gzipped input files in FASTA format
 #include "gzFastq.h"    // Reading gzipped input files in FASTQ format
 
-typedef unsigned int uint;
-
-const int barcode_size = 5;
-
 class HVal {
  public:
     vector<int> ids;
@@ -93,6 +89,33 @@ class HVal {
     int add_id(int id) {
     	this->ids.push_back(id);
 	return 0;
+    }
+};
+
+const int    barcode_size   = 5;
+const double gapopen_score  = -10;
+const double gapext_score   = -0.5;
+const double mismatch_score = -4;
+const double match_score    =  5;
+
+class AlignPath {
+public:
+    bool diag;
+    bool left;
+    bool up;
+
+    AlignPath() {
+	diag = false;
+	left = false;
+	up   = false;
+    }
+    int count() {
+	int cnt;
+	cnt  = this->up   ? 1 : 0;
+	cnt += this->left ? 1 : 0;
+	cnt += this->diag ? 1 : 0;
+
+	return cnt;
     }
 };
 
@@ -120,6 +143,16 @@ int  write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem 
 // Match MergedStacks using a k-mer hashing algorithm
 //
 int  calc_kmer_distance(map<int, MergedStack *> &, int);
+int  search_for_gaps(map<int, MergedStack *> &, double);
+
+//
+// Needleman-Wunsch Alignment
+//
+int init_alignment(int, double ***, AlignPath ***);
+int free_alignment(int, double **, AlignPath **);
+int align(MergedStack *, MergedStack *, double **, AlignPath **);
+int trace_alignment(MergedStack *, MergedStack *, AlignPath **, string &);
+int dump_alignment(MergedStack *, MergedStack *, double **, AlignPath **);
 
 //
 // Calculate depth of coverage statistics for stacks
