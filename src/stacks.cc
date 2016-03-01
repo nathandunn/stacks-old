@@ -35,13 +35,13 @@ Rem::Rem() {
     this->utilized   = false;
 }
 
-Rem::Rem(int id, uint seq_id, DNASeq *seq) { 
+Rem::Rem(int id, uint seq_id, DNANSeq *seq) { 
     this->id       = id;
     this->utilized = false;
 
     this->map.push_back(seq_id);
 
-    this->seq = new DNASeq(seq->size, seq->s);
+    this->seq = new DNANSeq(seq->size(), seq->s);
 }
 
 int Rem::add_id(uint id) {
@@ -50,11 +50,11 @@ int Rem::add_id(uint id) {
     return 0;
 }
 
-int Rem::add_seq(const DNASeq *seq) {
+int Rem::add_seq(const DNANSeq *seq) {
     if (this->seq != NULL)
 	delete this->seq;
 
-    this->seq = new DNASeq(seq->size, seq->s);
+    this->seq = new DNANSeq(seq->size(), seq->s);
 
     return 0;
 }
@@ -63,7 +63,7 @@ int Rem::add_seq(const char *seq) {
     if (this->seq != NULL)
 	delete this->seq;
 
-    this->seq = new DNASeq(strlen(seq), seq);
+    this->seq = new DNANSeq(strlen(seq), seq);
 
     return 0;
 }
@@ -105,16 +105,16 @@ int Stack::add_seq(const char *seq) {
     if (this->seq != NULL)
 	delete this->seq;
 
-    this->seq = new DNASeq(strlen(seq), seq);
+    this->seq = new DNANSeq(strlen(seq), seq);
 
     return 0;
 }
 
-int Stack::add_seq(const DNASeq *seq) {
+int Stack::add_seq(const DNANSeq *seq) {
     if (this->seq != NULL)
 	delete this->seq;
 
-    this->seq = new DNASeq(seq->size, seq->s);
+    this->seq = new DNANSeq(seq->size(), seq->s);
 
     return 0;
 }

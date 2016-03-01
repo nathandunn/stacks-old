@@ -100,7 +100,9 @@ int MergedStack::add_dist(const int id, const int dist) {
     return 0;
 }
 
-DNASeq **MergedStack::gen_matrix(map<int, Stack *> &unique, map<int, Rem *> &rem) {
+DNANSeq **
+MergedStack::gen_matrix(map<int, Stack *> &unique, map<int, Rem *> &rem)
+{
     Stack *tag;
 
     //
@@ -114,7 +116,7 @@ DNASeq **MergedStack::gen_matrix(map<int, Stack *> &unique, map<int, Rem *> &rem
     uint cnt = this->count + this->remtags.size();
     if (this->matrix != NULL)
         delete [] this->matrix;
-    this->matrix = new DNASeq * [cnt];
+    this->matrix = new DNANSeq * [cnt];
 
     vector<int>::iterator j;
     int i = 0;
@@ -177,11 +179,11 @@ MergedStack::calc_likelihood()
     // Iterate over each column of the array and call the consensus base.
     //
     int row, col, tot;
-    int length = this->matrix[0]->size;
+    int length = this->matrix[0]->size();
     int height = this->count + this->remtags.size();
     map<char, int> nuc;
     map<char, int>::iterator max, n;
-    DNASeq *d;
+    DNANSeq *d;
 
     this->lnl = 0;
 

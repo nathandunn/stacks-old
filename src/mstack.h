@@ -47,7 +47,7 @@ class MergedStack {
     int                       count; // Number of merged stacks
     vector<int>               utags; // Stack IDs that have been merged into this MergedStack
     vector<int>             remtags; // Remainder tag IDs that have been merged into this Stack
-    DNASeq                 **matrix; // Two-dimensional array for iterating over the combined stack (stacks and remainders).
+    DNANSeq                **matrix; // Two-dimensional array for iterating over the combined stack (stacks and remainders).
     DNANSeq               **pmatrix; // Two-dimensional array for iterating over the combined stack aligned to a reference.
     vector<pair<int, int> >    dist; // Vector describing the distance between this stack and other stacks.
     vector<pair<int, string> > alns; // Vector describing gapped alignments between this stack and other stacks.
@@ -76,7 +76,7 @@ class MergedStack {
     int       add_consensus(DNASeq *);
     int       add_consensus(DNANSeq *);
     int       add_dist(const int id, const int dist);
-    DNASeq  **gen_matrix(map<int, Stack *> &, map<int, Rem *> &);
+    DNANSeq **gen_matrix(map<int, Stack *> &, map<int, Rem *> &);
     DNANSeq **gen_matrix(map<int, PStack *> &);
     double    calc_likelihood();
     double    calc_likelihood_pstacks();

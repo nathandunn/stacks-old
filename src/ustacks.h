@@ -120,22 +120,22 @@ public:
 };
 
 #ifdef HAVE_SPARSEHASH
-typedef sparse_hash_map<DNASeq *, HVal, hash_dnaseq, dnaseq_eqstr> DNASeqHashMap;
+typedef sparse_hash_map<DNANSeq *, HVal, hash_dnanseq, dnanseq_eqstr> DNASeqHashMap;
 #else
-typedef unordered_map<DNASeq *, HVal, hash_dnaseq, dnaseq_eqstr> DNASeqHashMap;
+typedef unordered_map<DNANSeq *, HVal, hash_dnanseq, dnanseq_eqstr> DNASeqHashMap;
 #endif
 
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
-int  load_radtags(string, DNASeqHashMap &, vector<DNASeq *> &);
+int  load_radtags(string, DNASeqHashMap &, vector<DNANSeq *> &);
 int  load_seq_ids(vector<char *> &);
 int  reduce_radtags(DNASeqHashMap &, map<int, Stack *> &, map<int, Rem *> &);
-int  free_radtags_hash(DNASeqHashMap &, vector<DNASeq *> &);
+int  free_radtags_hash(DNASeqHashMap &, vector<DNANSeq *> &);
 int  populate_merged_tags(map<int, Stack *> &, map<int, MergedStack *> &);
 int  merge_stacks(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, set<int> &, int);
 int  call_consensus(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &, bool);
-int  call_alleles(MergedStack *, vector<DNASeq *> &, vector<read_type> &);
+int  call_alleles(MergedStack *, vector<DNANSeq *> &, vector<read_type> &);
 int  merge_remainders(map<int, MergedStack *> &, map<int, Rem *> &);
 int  write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem *> &);
 

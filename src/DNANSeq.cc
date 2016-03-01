@@ -151,7 +151,7 @@ char DNANSeq::operator[](int pos) {
     return base;
 }
 
-int DNANSeq::size() {
+int DNANSeq::size() const {
     return this->bits / bits_per_nuc;
 }
 

@@ -136,7 +136,7 @@ class PStack {
 class Stack {
  public:
     uint         id;
-    DNASeq     *seq;  // Sequence read
+    DNANSeq    *seq;  // Sequence read
     vector<uint> map; // List of sequence read IDs merged into this stack
 
     Stack()  {
@@ -149,25 +149,25 @@ class Stack {
     uint count() { return this->map.size(); }
     int  add_id(uint);
     int  add_seq(const char *);
-    int  add_seq(const DNASeq *);
+    int  add_seq(const DNANSeq *);
 };
 
 class Rem {
  public:
     uint          id;
     vector<uint> map; // List of sequence read IDs merged into this stack
-    DNASeq      *seq; // Sequence read
+    DNANSeq     *seq; // Sequence read
     bool    utilized;
 
     Rem();
-    Rem(int, uint, DNASeq *);
+    Rem(int, uint, DNANSeq *);
     ~Rem() { 
 	delete this->seq;
     }
     uint count() { return this->map.size(); }
     int  add_id(uint);
     int  add_seq(const char *);
-    int  add_seq(const DNASeq *);
+    int  add_seq(const DNANSeq *);
 };
 
 class CatMatch {
