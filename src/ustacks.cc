@@ -120,7 +120,7 @@ int main (int argc, char* argv[]) {
     #endif
 
     DNASeqHashMap     radtags;
-    vector<DNASeq *>  radtags_keys;
+    vector<DNANSeq *> radtags_keys;
     map<int, Rem *>   remainders;
     set<int>          merge_map;
     map<int, Stack *> unique;
@@ -146,6 +146,8 @@ int main (int argc, char* argv[]) {
 
     populate_merged_tags(unique, merged);
 
+    cerr << merged.size() << " initial stacks (putative alleles) were populated; " << remainders.size() << " stacks were set aside as secondary reads.\n";
+    
     if (remove_rep_stacks) {
     	cerr << "Calculating distance for removing repetitive stacks.\n";
     	calc_kmer_distance(merged, 1);
@@ -792,7 +794,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     	for (j = 0; j < (int) keys.size(); j++) {
     	    it = rem.find(keys[j]);
     	    Rem  *r   = it->second;
-	    char *buf = new char[r->seq->size + 1];
+	    char *buf = new char[r->seq->size() + 1];
 
             //
             // Generate the k-mers for this remainder sequence
@@ -879,11 +881,11 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     return 0;
 }
 
-int call_alleles(MergedStack *mtag, vector<DNASeq *> &reads, vector<read_type> &read_types) {
+int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads, vector<read_type> &read_types) {
     int     row;
     int     height = reads.size();
     string  allele;
-    DNASeq *d;
+    DNANSeq *d;
     char    base;
     vector<SNP *>::iterator snp;
 
@@ -949,7 +951,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
     	    // that tag into our array as many times as it originally occurred. 
     	    //
     	    vector<int>::iterator j;
-    	    vector<DNASeq *>  reads;
+    	    vector<DNANSeq *>  reads;
     	    vector<read_type> read_types;
 
     	    for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
@@ -975,12 +977,12 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
     	    // Iterate over each column of the array and call the consensus base.
     	    //
     	    int row, col;
-    	    int length = reads[0]->size;
+    	    int length = reads[0]->size();
     	    int height = reads.size();
     	    string con;
     	    map<char, int> nuc;
     	    map<char, int>::iterator max, n;
-            DNASeq *d;
+            DNANSeq *d;
 
     	    for (col = 0; col < length; col++) {
     		nuc['A'] = 0; 
@@ -1788,7 +1790,7 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     Rem   *r;
     Stack *u;
     int   global_id = 1;
-
+    
     for (it = radtags.begin(); it != radtags.end(); it++) {
     	if (it->second.count() < min_merge_cov) {
     	    //
@@ -1834,7 +1836,7 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
 }
 
 int
-free_radtags_hash(DNASeqHashMap &radtags, vector<DNASeq *> &radtags_keys)
+free_radtags_hash(DNASeqHashMap &radtags, vector<DNANSeq *> &radtags_keys)
 {
     for (uint i = 0; i < radtags_keys.size(); i++)
 	delete radtags_keys[i];
@@ -2466,9 +2468,9 @@ int dump_merged_tags(map<int, MergedStack *> &m) {
     return 0;
 }
 
-int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radtags_keys) {
+int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNANSeq *> &radtags_keys) {
     Input *fh = NULL;
-    DNASeq *d;
+    DNANSeq *d;
 
     if (in_file_type == FileT::fasta)
         fh = new Fasta(in_file.c_str());
@@ -2508,7 +2510,7 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNASeq *> &radta
 
 	if (seql != prev_seql && prev_seql > 0) len_mismatch = true;
 
-	d = new DNASeq(seql, c.seq);
+	d = new DNANSeq(seql, c.seq);
 
 	pair<DNASeqHashMap::iterator, bool> r;
 

@@ -40,7 +40,7 @@ const unsigned short int byte_size    = 8;
 //
 // DNA Sequence Storage Class
 //
-// Two-bit compression, four bases per byte of storage:
+// Three-bit compression, 2.667 bases per byte of storage:
 //    A == 000
 //    C == 001
 //    G == 010
@@ -64,7 +64,7 @@ public:
     ~DNANSeq();
 
     char  operator[](int);
-    int   size();
+    int   size() const;
     char *seq(char *);
     char *seq();
     char *subseq(char *, int, int);

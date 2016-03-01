@@ -218,6 +218,7 @@
 		6BD8C86F18A2DB05000C3A16 /* jquery-1.11.0.min.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = "jquery-1.11.0.min.js"; sourceTree = "<group>"; };
 		6BDE5F7418E3618C00B23E9D /* GenericHashMO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenericHashMO.h; sourceTree = "<group>"; };
 		6BDE5F7518E3618C00B23E9D /* GenericHashMO.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GenericHashMO.m; sourceTree = "<group>"; };
+		7487355B1C7FBF45009E1DA4 /* vStacks.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = vStacks.entitlements; sourceTree = "<group>"; };
 		D793CBB9D5EB558052FC2E35 /* StacksEntryDatumRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StacksEntryDatumRenderer.h; sourceTree = "<group>"; };
 		D793CE87A0282D76171B5705 /* StacksEntryDatumRenderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StacksEntryDatumRenderer.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -288,6 +289,7 @@
 		14370524187B87690007BDE5 /* vStacks */ = {
 			isa = PBXGroup;
 			children = (
+				7487355B1C7FBF45009E1DA4 /* vStacks.entitlements */,
 				14370566187B88560007BDE5 /* stacks */,
 				1437055D187B88000007BDE5 /* www */,
 				1437055E187B88060007BDE5 /* Service */,
@@ -790,7 +792,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_ENTITLEMENTS = vStacks/vStacks.entitlements;
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -814,7 +816,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_ENTITLEMENTS = vStacks/vStacks.entitlements;
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
