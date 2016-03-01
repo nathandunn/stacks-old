@@ -44,12 +44,13 @@ class MergedStack {
     //
     // Stack component parts
     //
-    int                    count; // Number of merged stacks
-    vector<int>            utags; // Stack IDs that have been merged into this MergedStack
-    vector<pair<int, int> > dist; // Vector describing the distance between this stack and other stacks.
-    vector<int>          remtags; // Remainder tag IDs that have been merged into this Stack
-    DNASeq              **matrix; // Two-dimensional array for iterating over the combined stack (stacks and remainders).
-    DNANSeq            **pmatrix; // Two-dimensional array for iterating over the combined stack aligned to a reference..
+    int                       count; // Number of merged stacks
+    vector<int>               utags; // Stack IDs that have been merged into this MergedStack
+    vector<int>             remtags; // Remainder tag IDs that have been merged into this Stack
+    DNASeq                 **matrix; // Two-dimensional array for iterating over the combined stack (stacks and remainders).
+    DNANSeq               **pmatrix; // Two-dimensional array for iterating over the combined stack aligned to a reference.
+    vector<pair<int, int> >    dist; // Vector describing the distance between this stack and other stacks.
+    vector<pair<int, string> > alns; // Vector describing gapped alignments between this stack and other stacks.
 
     int cohort_id; // Group ID of all stacks that were originally part of the same subgraph
     double    lnl; // Log likelihood of this stack
@@ -66,6 +67,7 @@ class MergedStack {
     bool deleveraged;
     bool masked;
     bool blacklisted;
+    bool gappedlumberjack;
     bool lumberjackstack;
 
     MergedStack();
