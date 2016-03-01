@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -144,14 +144,14 @@ int  write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem 
 //
 int  calc_kmer_distance(map<int, MergedStack *> &, int);
 int  search_for_gaps(map<int, MergedStack *> &, double);
-
+int  merge_gapped_alns(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &);
 //
 // Needleman-Wunsch Alignment
 //
 int init_alignment(int, double ***, AlignPath ***);
 int free_alignment(int, double **, AlignPath **);
 int align(MergedStack *, MergedStack *, double **, AlignPath **);
-int trace_alignment(MergedStack *, MergedStack *, AlignPath **, string &);
+int trace_alignment(MergedStack *, MergedStack *, AlignPath **);
 int dump_alignment(MergedStack *, MergedStack *, double **, AlignPath **);
 
 //
@@ -178,6 +178,7 @@ int  dump_stack_graph(string, map<int, Stack *> &, map<int, MergedStack *> &, ve
 //
 // Utilities
 //
+MergedStack *merge_tags(MergedStack *, MergedStack *, int);
 MergedStack *merge_tags(map<int, MergedStack *> &, set<int> &, int);
 MergedStack *merge_tags(map<int, MergedStack *> &, int *, int, int);
 long double factorial(int);

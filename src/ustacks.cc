@@ -47,6 +47,7 @@ int       max_rem_dist      = -1;
 double    cov_mean          = 0.0;
 double    cov_stdev         = 0.0;
 double    cov_scale         = 1;
+bool      gapped_alignments = false;
 double    min_match_len     = 0.35;
 int       deleverage_trigger;
 int       removal_trigger;
@@ -167,16 +168,17 @@ int main (int argc, char* argv[]) {
     cerr << "Merging remainder radtags\n";
     merge_remainders(merged, remainders);
 
-    //
-    // Call the consensus sequence again, now that remainder tags have been merged.
-    //
-    call_consensus(merged, unique, remainders, false);
+    if (gapped_alignments) {
+	call_consensus(merged, unique, remainders, false);
 
-    cerr << "Searching for gaps between merged stacks...\n";
-    search_for_gaps(merged, min_match_len);
+	cerr << "Searching for gaps between merged stacks...\n";
+	search_for_gaps(merged, min_match_len);
+
+	merge_gapped_alns(unique, remainders, merged);
+    }
     
     //
-    // Now that gaps have been identified, call final consensus and invoke SNP model.
+    // Call the final consensus sequence and invoke the SNP model.
     //
     call_consensus(merged, unique, remainders, true);
 
@@ -185,6 +187,115 @@ int main (int argc, char* argv[]) {
     cerr << "Writing loci, SNPs, and alleles to '" << out_path << "'...\n";
     write_results(merged, unique, remainders);
     cerr << "done.\n";
+
+    return 0;
+}
+
+int
+merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged)
+{
+    map<int, MergedStack *> new_merged;
+    map<int, MergedStack *>::iterator it;
+    MergedStack *tag_1, *tag_2, *merged_tag;
+
+    int  id        = 1;
+    uint merge_cnt = 0;
+    uint blist_cnt = 0;
+
+    set<int> processed;
+    string   cigar_1, cigar_2;
+
+    for (it = merged.begin(); it != merged.end(); it++) {
+	tag_1 = it->second;
+
+	if (processed.count(it->first))
+	    continue;
+	
+	//
+	// No gapped alignments for this stack, or this stack has already been set aside.
+	//
+	if (tag_1->masked || tag_1->alns.size() == 0) {
+	    new_merged[id] = tag_1;
+	    id++;
+	    continue;
+	}
+
+	//
+	// Found too many gapped alignments.
+	//
+	if (tag_1->alns.size() > 1) {
+
+	    for (uint i = 0; i < tag_1->alns.size(); i++) {
+		tag_2 = merged[tag_1->alns[i].first];
+		tag_2->masked           = true;
+		tag_2->gappedlumberjack = true;
+		tag_2->blacklisted      = true;
+		blist_cnt++;
+	    }
+	    tag_1->masked           = true;
+	    tag_1->gappedlumberjack = true;
+	    tag_1->blacklisted      = true;
+	    blist_cnt++;
+	    new_merged[id] = tag_1;
+	    id++;
+	    continue;
+	}
+
+	//
+	// Found a gapped alignment. Make sure the alignments are the same.
+	//
+	tag_2   = merged[tag_1->alns[0].first];
+	cigar_1 = tag_1->alns[0].second;
+	cigar_2 = tag_2->alns[0].second;
+
+	for (uint i = 0; i < cigar_1.length(); i++) {
+	    if (cigar_1[i] == 'I')
+		cigar_1[i] = 'D';
+	    else if (cigar_1[i] == 'D')
+		cigar_1[i] = 'I';
+	}
+	
+	if (cigar_1 == cigar_2) {
+	    //
+	    // Merge the tags.
+	    //
+	    merged_tag     = merge_tags(tag_1, tag_2, id);
+	    new_merged[id] = merged_tag;
+	    id++;
+	    delete tag_1;
+	    delete tag_2;
+	    merge_cnt++;
+	} else {
+	    //
+	    // Blacklist them.
+	    //
+	    tag_1->masked           = true;
+	    tag_1->gappedlumberjack = true;
+	    tag_1->blacklisted      = true;
+	    blist_cnt++;
+	    new_merged[id]          = tag_1;
+	    id++;
+	    tag_2->masked           = true;
+	    tag_2->gappedlumberjack = true;
+	    tag_2->blacklisted      = true;
+	    blist_cnt++;
+	    new_merged[id]          = tag_2;
+	    id++;
+	}
+
+	processed.insert(tag_1->id);
+	processed.insert(tag_2->id);
+    }
+
+    uint new_cnt = new_merged.size();
+    uint old_cnt = merged.size();
+
+    merged.clear();
+    merged = new_merged;
+
+    cerr << "  " << old_cnt << " stacks merged into " << new_cnt 
+	 << " stacks; merged " << merge_cnt 
+	 << " gapped alignments; removed " << blist_cnt << " stacks.\n";
 
     return 0;
 }
@@ -237,7 +348,6 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
             generate_kmers(tag_1->con, kmer_len, num_kmers, query_kmers);
 
             map<int, int> hits;
-            int d;
             //
             // Lookup the occurances of each k-mer in the kmer_map
             //
@@ -268,10 +378,7 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
                 // Don't compare tag_1 against itself.
                 if (tag_1 == tag_2) continue;
 
-                d = align(tag_1, tag_2, matrix, path);
-                // cerr << "    Distance: " << d << "\n";
-
-    		tag_1->add_dist(tag_2->id, d);
+                align(tag_1, tag_2, matrix, path);
             }
         }
 
@@ -424,16 +531,15 @@ align(MergedStack *tag_1, MergedStack *tag_2, double **matrix, AlignPath **path)
 	}
     }
 
-    dump_alignment(tag_1, tag_2, matrix, path);
+    // dump_alignment(tag_1, tag_2, matrix, path);
 
-    string cigar;
-    trace_alignment(tag_1, tag_2, path, cigar);
+    trace_alignment(tag_1, tag_2, path);
     
     return 0;
 }
 
 int
-trace_alignment(MergedStack *tag_1, MergedStack *tag_2, AlignPath **path, string &cigar)
+trace_alignment(MergedStack *tag_1, MergedStack *tag_2, AlignPath **path)
 {
     //         j---->
     //        [0][1][2][3]...[n-1]
@@ -448,8 +554,8 @@ trace_alignment(MergedStack *tag_1, MergedStack *tag_2, AlignPath **path, string
     int    m = tag_1->len + 1;
     int    n = tag_2->len + 1;
     int    i, j, cnt, len, gaps;
-    string cigar_1, cigar_2;
-    char   buf_1[id_len], buf_2[id_len];
+    string cigar;
+    char   buf[id_len];
 
     vector<pair<string, int> > alns;
     bool more_paths = true;
@@ -492,11 +598,10 @@ trace_alignment(MergedStack *tag_1, MergedStack *tag_2, AlignPath **path, string
 	//
 	// Convert to CIGAR strings.
 	//
-	cigar_1 = "";
-	cigar_2 = "";
-	len     = aln_1.length();
-	gaps    = 0;
-	i       = 0;
+	cigar = "";
+	len   = aln_1.length();
+	gaps  = 0;
+	i     = 0;
 	while (i < len) {
 	    if (aln_1[i] != '-' && aln_2[i] != '-') {
 		cnt = 0;
@@ -504,8 +609,7 @@ trace_alignment(MergedStack *tag_1, MergedStack *tag_2, AlignPath **path, string
 		    cnt++;
 		    i++;
 		} while (i < len && aln_1[i] != '-' && aln_2[i] != '-');
-		sprintf(buf_1, "%dM", cnt);
-		sprintf(buf_2, "%dM", cnt);
+		sprintf(buf, "%dM", cnt);
 
 	    } else if (aln_1[i] == '-') {
 		cnt = 0;
@@ -513,8 +617,7 @@ trace_alignment(MergedStack *tag_1, MergedStack *tag_2, AlignPath **path, string
 		    cnt++;
 		    i++;
 		} while (i < len && aln_1[i] == '-');
-		sprintf(buf_1, "%dD", cnt);
-		sprintf(buf_2, "%dI", cnt);
+		sprintf(buf, "%dD", cnt);
 		gaps++;
 
 	    } else {
@@ -523,32 +626,37 @@ trace_alignment(MergedStack *tag_1, MergedStack *tag_2, AlignPath **path, string
 		    cnt++;
 		    i++;
 		} while (i < len && aln_2[i] == '-');
-		sprintf(buf_1, "%dI", cnt);
-		sprintf(buf_2, "%dD", cnt);
+		sprintf(buf, "%dI", cnt);
 		gaps++;
 	    }
 
-	    cigar_1 += buf_1;
-	    cigar_2 += buf_2;
+	    cigar += buf;
 	}
 
-	alns.push_back(make_pair(cigar_1, gaps));
-	cerr << aln_1 << " [" << cigar_1 << ", gaps: " << gaps << "]\n"
-	     << aln_2 << " [" << cigar_2 << ", gaps: " << gaps << "]\n";
+	alns.push_back(make_pair(cigar, gaps));
+	// cerr << aln_1 << " [" << cigar << ", gaps: " << gaps << "]\n"
+	//      << aln_2 << "\n";
 
     } while (more_paths);
 
+    cigar = "";
+
     if (alns.size() == 1) {
 	cigar = alns[0].first;
-	cerr << "Final alignment: " << cigar << "; gaps: " << alns[0].second << "\n";
-	return 1;
+	// cerr << "Final alignment: " << cigar << "; gaps: " << alns[0].second << "\n";
+
     } else {
 	sort(alns.begin(), alns.end(), compare_pair_stringint);
 	if (alns[0].second < alns[1].second) {
 	    cigar = alns[0].first;
-	    cerr << "Final alignment: " << cigar << "; gaps: " << alns[0].second << "\n";
-	    return 1;
+	    // cerr << "Final alignment: " << cigar << "; gaps: " << alns[0].second << "\n";
 	}
+    }
+
+    if (cigar.length() > 0) {
+	tag_1->alns.push_back(make_pair(tag_2->id, cigar));
+
+	return 1;
     }
 
     return 0;
@@ -937,7 +1045,9 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
     return 0;
 }
 
-int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &merged) {
+int
+populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &merged)
+{
     map<int, Stack *>::iterator i;
     map<int, MergedStack *>::iterator it_new, it_old;
     Stack       *utag;
@@ -965,7 +1075,9 @@ int populate_merged_tags(map<int, Stack *> &unique, map<int, MergedStack *> &mer
     return 0;
 }
 
-int merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged, set<int> &merge_map, int round) {
+int
+merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged, set<int> &merge_map, int round)
+{
     map<int, MergedStack *> new_merged;
     map<int, MergedStack *>::iterator it, it_old, it_new;
     MergedStack *tag_1, *tag_2;
@@ -1147,6 +1259,39 @@ int merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merge
 	 << " stacks; removed " << blist_cnt << " stacks.\n";
 
     return 0;
+}
+
+MergedStack *
+merge_tags(MergedStack *tag_1, MergedStack *tag_2, int id)
+{
+    MergedStack *new_tag;
+
+    new_tag     = new MergedStack;
+    new_tag->id = id;
+
+    tag_1->deleveraged      = tag_2->deleveraged      ? true : tag_1->deleveraged;
+    tag_1->masked           = tag_2->masked           ? true : tag_1->masked;
+    tag_1->blacklisted      = tag_2->blacklisted      ? true : tag_1->blacklisted;
+    tag_1->gappedlumberjack = tag_2->gappedlumberjack ? true : tag_1->gappedlumberjack;
+    tag_1->lumberjackstack  = tag_2->lumberjackstack  ? true : tag_1->lumberjackstack;
+
+    for (uint i = 0; i < tag_1->utags.size(); i++)
+	new_tag->utags.push_back(tag_1->utags[i]);
+
+    for (uint i = 0; i < tag_1->remtags.size(); i++)
+	new_tag->remtags.push_back(tag_1->remtags[i]);
+
+    new_tag->count += tag_1->count;
+
+    for (uint i = 0; i < tag_2->utags.size(); i++)
+	new_tag->utags.push_back(tag_2->utags[i]);
+
+    for (uint i = 0; i < tag_2->remtags.size(); i++)
+	new_tag->remtags.push_back(tag_2->remtags[i]);
+
+    new_tag->count += tag_2->count;
+
+    return new_tag;
 }
 
 MergedStack *merge_tags(map<int, MergedStack *> &merged, set<int> &merge_list, int id) {
@@ -2481,38 +2626,39 @@ int parse_command_line(int argc, char* argv[]) {
      
     while (1) {
 	static struct option long_options[] = {
-	    {"help",         no_argument,       NULL, 'h'},
-            {"version",      no_argument,       NULL, 'v'},
-	    {"infile_type",  required_argument, NULL, 't'},
-	    {"file",         required_argument, NULL, 'f'},
-	    {"outpath",      required_argument, NULL, 'o'},
-	    {"id",           required_argument, NULL, 'i'},
-	    {"min_cov",      required_argument, NULL, 'm'},
-	    {"max_dist",     required_argument, NULL, 'M'},
-	    {"max_sec_dist", required_argument, NULL, 'N'},
+	    {"help",             no_argument,       NULL, 'h'},
+            {"version",          no_argument,       NULL, 'v'},
+	    {"infile_type",      required_argument, NULL, 't'},
+	    {"file",             required_argument, NULL, 'f'},
+	    {"outpath",          required_argument, NULL, 'o'},
+	    {"id",               required_argument, NULL, 'i'},
+	    {"min_cov",          required_argument, NULL, 'm'},
+	    {"max_dist",         required_argument, NULL, 'M'},
+	    {"max_sec_dist",     required_argument, NULL, 'N'},
 	    {"max_locus_stacks", required_argument, NULL, 'K'},
-	    {"k_len",        required_argument, NULL, 'k'},
-	    {"num_threads",  required_argument, NULL, 'p'},
-	    {"deleverage",   no_argument,       NULL, 'd'},
-	    {"remove_rep",   no_argument,       NULL, 'r'},
-	    {"retain_rem",   no_argument,       NULL, 'R'},
-	    {"graph",        no_argument,       NULL, 'g'},
-	    {"exp_cov",      no_argument,       NULL, 'E'},
-	    {"cov_stdev",    no_argument,       NULL, 's'},
-	    {"cov_scale",    no_argument,       NULL, 'S'},
-	    {"sec_hapl",     no_argument,       NULL, 'H'},
-	    {"model_type",   required_argument, NULL, 'T'},
-	    {"bc_err_freq",  required_argument, NULL, 'e'},
-	    {"bound_low",    required_argument, NULL, 'L'},
-	    {"bound_high",   required_argument, NULL, 'U'},
-	    {"alpha",        required_argument, NULL, 'A'},
+	    {"k_len",            required_argument, NULL, 'k'},
+	    {"num_threads",      required_argument, NULL, 'p'},
+	    {"deleverage",       no_argument,       NULL, 'd'},
+	    {"remove_rep",       no_argument,       NULL, 'r'},
+	    {"retain_rem",       no_argument,       NULL, 'R'},
+	    {"graph",            no_argument,       NULL, 'g'},
+	    {"exp_cov",          no_argument,       NULL, 'E'},
+	    {"cov_stdev",        no_argument,       NULL, 's'},
+	    {"cov_scale",        no_argument,       NULL, 'S'},
+	    {"sec_hapl",         no_argument,       NULL, 'H'},
+	    {"gapped",           no_argument,       NULL, 'G'},
+	    {"model_type",       required_argument, NULL, 'T'},
+	    {"bc_err_freq",      required_argument, NULL, 'e'},
+	    {"bound_low",        required_argument, NULL, 'L'},
+	    {"bound_high",       required_argument, NULL, 'U'},
+	    {"alpha",            required_argument, NULL, 'A'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hHvdrgRA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:k:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "GhHvdrgRA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:k:T:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -2576,6 +2722,9 @@ int parse_command_line(int argc, char* argv[]) {
 	    break;
 	case 'g':
 	    dump_graph++;
+	    break;
+	case 'G':
+	    gapped_alignments = true;
 	    break;
 	case 'E':
 	    cov_mean = atof(optarg);
@@ -2697,7 +2846,8 @@ void help() {
 	      << "    r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm." << "\n"
 	      << "    d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
 	      << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
-	      << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
+	      << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n"
+	      << "    --gapped: preform gapped alignments between stacks.\n\n"
 	      << "  Model options:\n" 
 	      << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
 	      << "    For the SNP or Bounded SNP model:\n"
