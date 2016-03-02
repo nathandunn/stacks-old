@@ -478,7 +478,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	// Calculate the log likelihood of this merged stack.
 	//
 	tag_1->gen_matrix(u);
-	tag_1->calc_likelihood_pstacks();
+	tag_1->calc_likelihood();
 
 	wrote++;
 

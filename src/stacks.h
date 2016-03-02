@@ -108,6 +108,17 @@ class SNP {
     }
 };
 
+class Gap {
+public:
+    uint start;
+    uint end;
+
+    Gap(uint s, uint e) {
+	start = s;
+	end   = e;
+    }
+};
+
 class PStack {
  public:
     uint     id;
