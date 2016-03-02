@@ -151,9 +151,9 @@ MergedStack::gen_matrix(map<int, PStack *> &unique)
     // reuse the existing char arrays in the unique and rem maps
     //
     uint cnt = this->count;
-    if (this->pmatrix != NULL)
+    if (this->matrix != NULL)
         delete [] this->matrix;
-    this->pmatrix = new DNANSeq * [cnt];
+    this->matrix = new DNANSeq * [cnt];
 
     vector<int>::iterator j;
     int i = 0;
@@ -161,12 +161,12 @@ MergedStack::gen_matrix(map<int, PStack *> &unique)
         tag = unique[*j];
 
         for (uint k = 0; k < tag->count; k++) {
-            this->pmatrix[i] = tag->seq;
+            this->matrix[i] = tag->seq;
             i++;
         }
     }
 
-    return this->pmatrix;
+    return this->matrix;
 }
 
 double 
@@ -198,70 +198,6 @@ MergedStack::calc_likelihood()
         //
         for (row = 0; row < height; row++) {
 	    d = this->matrix[row];
-            nuc[(*d)[col]]++;
-	}
-        //
-        // Find the base with a plurality of occurances and call it.
-        //
-        max = nuc.end();
-        tot = 0;
-        for (n = nuc.begin(); n != nuc.end(); n++) {
-            tot += n->second;
-            if (max == nuc.end() || n->second > max->second)
-                max = n;
-        }
-
-	//
-	// For nucleotide positions with potential polymorphism (i.e. two or more alleles at 
-	// the locus that differ at that position), first find the ML genotype (call_multinomial_snp). 
-	// If it returns 'het' calculate the heterozygous_likelihood(), otherwise calculate homozygous
-	// likelihood.
-	//
-	snp_type res = this->snps[col]->type;
-
-	if (res == snp_type_het) 
-	    this->lnl += heterozygous_likelihood(col, nuc);
-	else if (res == snp_type_hom)
-	    this->lnl += homozygous_likelihood(col, nuc);
-	else {
-	    double homlnl = homozygous_likelihood(col, nuc);
-	    double hetlnl = heterozygous_likelihood(col, nuc);
-	    this->lnl += hetlnl > homlnl ? hetlnl : homlnl;
-	}
-    }
-
-    return this->lnl;
-}
-
-double 
-MergedStack::calc_likelihood_pstacks() 
-{
-    if (this->pmatrix == NULL || this->snps.size() == 0)
-        return 0;
-
-    //
-    // Iterate over each column of the array and call the consensus base.
-    //
-    int row, col, tot;
-    int length = this->pmatrix[0]->size();
-    int height = this->count;
-    map<char, int> nuc;
-    map<char, int>::iterator max, n;
-    DNANSeq *d;
-
-    this->lnl = 0;
-
-    for (col = 0; col < length; col++) {
-        nuc['A'] = 0; 
-        nuc['G'] = 0;
-        nuc['C'] = 0;
-        nuc['T'] = 0;
-
-        //
-        // Count the nucleotide type at each position in the column.
-        //
-        for (row = 0; row < height; row++) {
-	    d = this->pmatrix[row];
             nuc[(*d)[col]]++;
 	}
         //

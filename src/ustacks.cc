@@ -147,7 +147,7 @@ int main (int argc, char* argv[]) {
     populate_merged_tags(unique, merged);
 
     cerr << merged.size() << " initial stacks (putative alleles) were populated; " << remainders.size() << " stacks were set aside as secondary reads.\n";
-    
+
     if (remove_rep_stacks) {
     	cerr << "Calculating distance for removing repetitive stacks.\n";
     	calc_kmer_distance(merged, 1);
@@ -261,7 +261,20 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 	    //
 	    // Merge the tags.
 	    //
-	    merged_tag     = merge_tags(tag_1, tag_2, id);
+	    merged_tag = merge_tags(tag_1, tag_2, id);
+
+	    //
+	    // Record the gaps.
+	    //
+	    vector<pair<char, uint> > cigar;
+	    parse_cigar(cigar_1.c_str(), cigar);
+	    uint pos = 0;
+	    for (uint j = 0; j < cigar.size(); j++) {
+		if (cigar[j].first == 'I' || cigar[j].first == 'D')
+		    merged_tag->gaps.push_back(Gap(pos, pos + cigar[j].second));
+		pos += cigar[j].second;
+	    }
+
 	    new_merged[id] = merged_tag;
 	    id++;
 	    delete tag_1;
@@ -298,6 +311,32 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
     cerr << "  " << old_cnt << " stacks merged into " << new_cnt 
 	 << " stacks; merged " << merge_cnt 
 	 << " gapped alignments; removed " << blist_cnt << " stacks.\n";
+
+    return 0;
+}
+
+int 
+parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar)
+{
+    char buf[id_len];
+    int  dist;
+    const char *p, *q;
+
+    p = cigar_str;
+
+    while (*p != '\0') {
+	q = p + 1;
+
+	while (*q != '\0' && isdigit(*q))
+	    q++;
+	strncpy(buf, p, q - p);
+	buf[q-p] = '\0';
+	dist = atoi(buf);
+
+	cigar.push_back(make_pair(*q, dist));
+
+	p = q + 1;
+    }
 
     return 0;
 }
@@ -1352,7 +1391,9 @@ MergedStack *merge_tags(map<int, MergedStack *> &merged, int *merge_list, int me
     return tag_1;
 }
 
-int remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &merged) {
+int
+remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &merged)
+{
     //
     // If enabled, check the depth of coverage of each unique tag, and remove 
     // from consideration any tags with depths greater than removal_trigger. These tags
@@ -1369,19 +1410,25 @@ int remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> 
 
     //
     // First, iterate through the stacks and populate a list of tags that will be removed
-    // (those above the removal_trigger and those 1 nucleotide away). If we don't construct
-    // this list first, we will inadvertantly merge short stacks that end up being a
-    // single nucleotide away from one of the lumberjack stacks found later in the process.
+    // (those above the removal_trigger and those 1 nucleotide away). Sort the list of
+    // stacks so that we process them from largest depth to shortest so the same stacks
+    // are always merged/removed..
     //
-
+    vector<pair<int, int> > ordered_tags;
+    for (i = merged.begin(); i != merged.end(); i++) {
+	if (i->second->count > removal_trigger)
+	    ordered_tags.push_back(make_pair(i->second->id, i->second->count));
+    }
+    sort(ordered_tags.begin(), ordered_tags.end(), compare_pair_intint);
+    
     int id = 0;
 
     //
     // Merge all stacks that are over the removal trigger with their nearest neighbors and
     // mask them so they are not further processed by the program.
     //
-    for (i = merged.begin(); i != merged.end(); i++) {
-	tag_1 = i->second;
+    for (uint j = 0; j < ordered_tags.size(); j++) {
+	tag_1 = merged[ordered_tags[j].first];
 
 	//
 	// Don't process a tag that has already been merged.
@@ -1389,31 +1436,29 @@ int remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> 
         if (already_merged.count(tag_1->id) > 0)
 	    continue;
 
-	if (tag_1->count > removal_trigger) {
-            set<int> unique_merge_list;
-            unique_merge_list.insert(tag_1->id);
-	    already_merged.insert(tag_1->id);
+	set<int> unique_merge_list;
+	unique_merge_list.insert(tag_1->id);
+	already_merged.insert(tag_1->id);
 
-	    for (k = tag_1->dist.begin(); k != tag_1->dist.end(); k++) {
-                if (already_merged.count(k->first) == 0) {
-                    already_merged.insert(k->first);
-                    unique_merge_list.insert(k->first);
-                }
+	for (k = tag_1->dist.begin(); k != tag_1->dist.end(); k++) {
+	    if (already_merged.count(k->first) == 0) {
+		already_merged.insert(k->first);
+		unique_merge_list.insert(k->first);
 	    }
-
-	    tag_1->lumberjackstack = true;
-	    tag_1->masked          = true;
-	    tag_1->blacklisted     = true;
-
-            //
-            // Merge these tags together into a new MergedStack object.
-            //
-            tag_2 = merge_tags(merged, unique_merge_list, id);
-            tag_2->add_consensus(tag_1->con);
-
-            new_merged.insert(make_pair(id, tag_2));
-            id++;
 	}
+
+	tag_1->lumberjackstack = true;
+	tag_1->masked          = true;
+	tag_1->blacklisted     = true;
+
+	//
+	// Merge these tags together into a new MergedStack object.
+	//
+	tag_2 = merge_tags(merged, unique_merge_list, id);
+	tag_2->add_consensus(tag_1->con);
+
+	new_merged.insert(make_pair(id, tag_2));
+	id++;
     }
 
     //

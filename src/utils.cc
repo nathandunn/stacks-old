@@ -239,6 +239,10 @@ bool compare_pair(pair<char, int> a, pair<char, int> b) {
     return (a.second > b.second);
 }
 
+bool compare_pair_intint(pair<int, int> a, pair<int, int> b) {
+    return (a.second > b.second);
+}
+
 bool compare_pair_intdouble(pair<int, double> a, pair<int, double> b) {
     return (a.second < b.second);
 }

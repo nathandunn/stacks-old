@@ -48,7 +48,6 @@ class MergedStack {
     vector<int>               utags; // Stack IDs that have been merged into this MergedStack
     vector<int>             remtags; // Remainder tag IDs that have been merged into this Stack
     DNANSeq                **matrix; // Two-dimensional array for iterating over the combined stack (stacks and remainders).
-    DNANSeq               **pmatrix; // Two-dimensional array for iterating over the combined stack aligned to a reference.
     vector<pair<int, int> >    dist; // Vector describing the distance between this stack and other stacks.
     vector<pair<int, string> > alns; // Vector describing gapped alignments between this stack and other stacks.
 
@@ -61,6 +60,8 @@ class MergedStack {
     PhyLoc               loc; // Physical genome location of this Stack.
     vector<SNP *>       snps; // Single Nucleotide Polymorphisms found in this Stack
     map<string, int> alleles; // Set of alleles defined by the SNPs found in this Stack
+    vector<Gap>         gaps;
+
     //
     // Flags
     //
@@ -79,7 +80,6 @@ class MergedStack {
     DNANSeq **gen_matrix(map<int, Stack *> &, map<int, Rem *> &);
     DNANSeq **gen_matrix(map<int, PStack *> &);
     double    calc_likelihood();
-    double    calc_likelihood_pstacks();
     string    write_cmb();
 };
 
