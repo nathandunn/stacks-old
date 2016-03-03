@@ -92,6 +92,8 @@ class HVal {
     }
 };
 
+enum dynprog {dynp_down, dynp_right, dynp_diag};
+
 const int    barcode_size   = 5;
 const double gapopen_score  = -10;
 const double gapext_score   = -0.5;
@@ -146,6 +148,8 @@ int  calc_kmer_distance(map<int, MergedStack *> &, int);
 int  search_for_gaps(map<int, MergedStack *> &, double);
 int  merge_gapped_alns(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &);
 int  parse_cigar(const char *, vector<pair<char, uint> > &);
+int  edit_gapped_seqs(map<int, Stack *> &, map<int, Rem *> &, MergedStack *, vector<pair<char, uint> > &);
+int  edit_gaps(vector<pair<char, uint> > &, char *);
 
 //
 // Needleman-Wunsch Alignment
@@ -153,6 +157,7 @@ int  parse_cigar(const char *, vector<pair<char, uint> > &);
 int init_alignment(int, double ***, AlignPath ***);
 int free_alignment(int, double **, AlignPath **);
 int align(MergedStack *, MergedStack *, double **, AlignPath **);
+inline int swap(double *, dynprog *, int, int);
 int trace_alignment(MergedStack *, MergedStack *, AlignPath **);
 int dump_alignment(MergedStack *, MergedStack *, double **, AlignPath **);
 

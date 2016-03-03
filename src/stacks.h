@@ -121,12 +121,12 @@ public:
 
 class PStack {
  public:
-    uint     id;
-    uint     count;      // Number of identical reads forming this stack
-    DNANSeq *seq;        // Sequence read
-    uint     len;        // Read length
-    vector<char *> map;  // List of sequence read IDs merged into this stack
-    PhyLoc   loc;        // Physical genome location of this stack.
+    uint            id;
+    uint         count; // Number of identical reads forming this stack
+    DNANSeq       *seq; // Sequence read
+    uint           len; // Read length
+    vector<char *> map; // List of sequence read IDs merged into this stack
+    PhyLoc         loc; // Physical genome location of this stack.
 
     PStack()  { 
 	id     = 0; 
@@ -147,7 +147,7 @@ class PStack {
 class Stack {
  public:
     uint         id;
-    DNANSeq    *seq;  // Sequence read
+    DNANSeq     *seq; // Sequence read
     vector<uint> map; // List of sequence read IDs merged into this stack
 
     Stack()  {
@@ -155,7 +155,7 @@ class Stack {
 	seq = NULL;
     }
     ~Stack() { 
-	delete this->seq; 
+	delete this->seq;
     }
     uint count() { return this->map.size(); }
     int  add_id(uint);
