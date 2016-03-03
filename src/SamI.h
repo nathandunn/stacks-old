@@ -195,13 +195,16 @@ Sam::find_start_bp_pos(int aln_bp, vector<pair<char, uint> > &cigar)
 int 
 Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 {
-    char buf[id_len];
-    uint size = cigar.size();
-    char op;
-    uint dist, bp, len, buf_len, j, k, stop;
+    char *buf;
+    uint  size = cigar.size();
+    char  op;
+    uint  dist, bp, len, buf_len, buf_size, j, k, stop;
 
     len = strlen(seq);
     bp  = 0;
+
+    buf      = new char[len + 1];
+    buf_size = len + 1;
 
     for (uint i = 0; i < size; i++)  {
 	op   = cigar[i].first;
@@ -222,8 +225,10 @@ Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 	    // Pad the read with sufficent Ns to match the deletion, shifting the existing
 	    // sequence down. Trim the final length to keep the read length consistent.
 	    //
-	    strncpy(buf, seq + bp, id_len - 1);
-	    buf[id_len - 1] = '\0';
+	    k = bp >= len ? len : bp;
+	    
+	    strncpy(buf, seq + k, buf_size - 1);
+	    buf[buf_size - 1] = '\0';
 	    buf_len         = strlen(buf);
 
 	    stop = bp + dist;
@@ -246,10 +251,12 @@ Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 	    // An insertion has occurred in the read relative to the reference genome. Delete the
 	    // inserted bases and pad the end of the read with Ns.
 	    //
-	    k = bp + dist;
-	    strncpy(buf, seq + k, id_len - 1);
-	    buf[id_len - 1] = '\0';
-	    buf_len         = strlen(buf);
+	    if (bp >= len) break;
+	    
+	    k = bp + dist > len ? len : bp + dist;
+	    strncpy(buf, seq + k, buf_size - 1);
+	    buf[buf_size - 1] = '\0';
+	    buf_len           = strlen(buf);
 
 	    j = bp;
 	    k = 0;
@@ -269,8 +276,12 @@ Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 	case 'M':
 	    bp += dist;
 	    break;
+	default:
+	    break;
 	}
     }
+
+    delete [] buf;
 
     return 0;
 }
