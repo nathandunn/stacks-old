@@ -27,30 +27,31 @@
 //
 // Global variables to hold command-line options.
 //
-FileT     in_file_type;
-string    in_file;
-string    out_path;
-int       num_threads       = 1;
-int       sql_id            = 0;
-bool      call_sec_hapl     = true;
-bool      set_kmer_len      = true;
-int       kmer_len          = 0;
-int       max_kmer_len      = 19;
-int       min_merge_cov     = 3;
-uint      max_subgraph      = 3;
-int       dump_graph        = 0;
-int       retain_rem_reads  = false;
-int       deleverage_stacks = 0;
-int       remove_rep_stacks = 0;
-int       max_utag_dist     = 2;
-int       max_rem_dist      = -1;
-double    cov_mean          = 0.0;
-double    cov_stdev         = 0.0;
-double    cov_scale         = 1;
-bool      gapped_alignments = false;
-double    min_match_len     = 0.35;
-int       deleverage_trigger;
-int       removal_trigger;
+FileT   in_file_type;
+string  in_file;
+string  out_path;
+int     num_threads       = 1;
+int     sql_id            = 0;
+bool    call_sec_hapl     = true;
+bool    set_kmer_len      = true;
+int     kmer_len          = 0;
+int     max_kmer_len      = 19;
+int     min_merge_cov     = 3;
+uint    max_subgraph      = 3;
+int     dump_graph        = 0;
+int     retain_rem_reads  = false;
+int     deleverage_stacks = 0;
+int     remove_rep_stacks = 0;
+int     max_utag_dist     = 2;
+int     max_rem_dist      = -1;
+double  cov_mean          = 0.0;
+double  cov_stdev         = 0.0;
+double  cov_scale         = 1;
+bool    gapped_alignments = false;
+double  min_match_len     = 0.80;
+double  max_gaps          = 2;
+int     deleverage_trigger;
+int     removal_trigger;
 //
 // For use with the multinomial model to call fixed nucleotides.
 //
@@ -91,7 +92,8 @@ int main (int argc, char* argv[]) {
 	cerr << "Bounded; lower epsilon bound: " << bound_low << "; upper bound: " << bound_high << "\n";
 	break;
     }
-    cerr << "Alpha significance level for model: " << alpha << "\n";
+    cerr << "Alpha significance level for model: " << alpha << "\n"
+	 << "Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n";
 
     //
     // Set limits to call het or homozygote according to chi-square distribution with one 
@@ -146,7 +148,7 @@ int main (int argc, char* argv[]) {
 
     populate_merged_tags(unique, merged);
 
-    cerr << merged.size() << " initial stacks (putative alleles) were populated; " << remainders.size() << " stacks were set aside as secondary reads.\n";
+    cerr << merged.size() << " initial stacks were populated; " << remainders.size() << " stacks were set aside as secondary reads.\n";
 
     if (remove_rep_stacks) {
     	cerr << "Calculating distance for removing repetitive stacks.\n";
@@ -182,6 +184,7 @@ int main (int argc, char* argv[]) {
     //
     // Call the final consensus sequence and invoke the SNP model.
     //
+    cerr << "Calling final consensus sequences, invoking SNP-calling model...\n";
     call_consensus(merged, unique, remainders, true);
 
     count_raw_reads(unique, remainders, merged);
@@ -202,60 +205,24 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 
     int  id        = 1;
     uint merge_cnt = 0;
-    uint blist_cnt = 0;
 
     set<int> processed;
     string   cigar_1, cigar_2;
 
     for (it = merged.begin(); it != merged.end(); it++) {
-	tag_1 = it->second;
-
 	if (processed.count(it->first))
 	    continue;
 
+	tag_1 = it->second;
 	//
 	// No gapped alignments for this stack, or this stack has already been set aside.
 	//
-	if (tag_1->masked || tag_1->alns.size() == 0) {
-            tag_1->id = id;
-	    new_merged[id] = tag_1;
-	    id++;
+	if (tag_1->masked || tag_1->alns.size() != 1)
 	    continue;
-	}
-
-	//
-	// Found too many gapped alignments.
-	//
-	if (tag_1->alns.size() > 1) {
-
-	    for (uint i = 0; i < tag_1->alns.size(); i++) {
-                if (merged.count(tag_1->alns[i].first) == 0) {
-                    cerr << "TRYING to access nonexistant tag\n\n";
-                }
-		tag_2 = merged[tag_1->alns[i].first];
-		tag_2->masked           = true;
-		tag_2->gappedlumberjack = true;
-		tag_2->blacklisted      = true;
-		blist_cnt++;
-	    }
-	    tag_1->masked           = true;
-	    tag_1->gappedlumberjack = true;
-	    tag_1->blacklisted      = true;
-	    blist_cnt++;
-            
-            tag_1->id = id;
-	    new_merged[id] = tag_1;
-            
-	    id++;
-	    continue;
-	}
 
 	//
 	// Found a gapped alignment. Make sure the alignments are the same.
 	//
-        if (merged.count(tag_1->alns[0].first) == 0) {
-            cerr << "Trying to merge " << tag_1->id << " and can't find tag_2 ID " << tag_1->alns[0].first << "\n\n";
-        }
 	tag_2   = merged[tag_1->alns[0].first];
 	cigar_1 = tag_1->alns[0].second;
 	cigar_2 = tag_2->alns.size() > 0 ? tag_2->alns[0].second : "";
@@ -266,17 +233,51 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 	    else if (cigar_1[i] == 'D')
 		cigar_1[i] = 'I';
 	}
-	
+
 	if (cigar_1 == cigar_2) {
             //
             // Edit the sequences to accommodate any added gaps.
             //
             vector<pair<char, uint> > cigar;
-            cerr << "CIGAR to parse: " << tag_1->alns[0].second << "\n";
+            // cerr << "CIGAR to parse: " << tag_1->alns[0].second << "\n";
 	    parse_cigar(tag_1->alns[0].second.c_str(), cigar);
+
+	    uint   gap_cnt = 0;
+	    double aln_len = 0;
+	    char   op;
+	    for (uint j = 0; j < cigar.size(); j++) {
+		op = cigar[j].first;
+		switch (op) {
+		case 'I':
+		case 'D':
+		    gap_cnt++;
+		    break;
+		case 'M':
+		    aln_len += cigar[j].second;
+		    break;
+		}
+	    }
+
+	    //
+	    // If no gaps were inserted, check that the alignment still contains fewer than 
+	    // max_utag_dist mismatches.
+	    //
+	    if (cigar.size() == 1 && cigar[0].first == 'M' && dist(tag_1, tag_2) > max_utag_dist)
+		continue;
+	    //
+	    // If the alignment has too many gaps, skip it.
+	    //
+	    if (gap_cnt > (max_gaps + 1))
+		continue;
+	    //
+	    // If the alignment doesn't span enough of the two sequences, skip it.
+	    //
+	    if ((aln_len / (double) tag_1->len) < min_match_len)
+		continue;
+
             edit_gapped_seqs(unique, rem, tag_1, cigar);
 
-            cerr << "CIGAR to parse: " << tag_2->alns[0].second << "\n";
+            // cerr << "CIGAR to parse: " << tag_2->alns[0].second << "\n";
             cigar.clear();
             parse_cigar(tag_2->alns[0].second.c_str(), cigar);
             edit_gapped_seqs(unique, rem, tag_2, cigar);
@@ -297,37 +298,23 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 	    }
 
 	    new_merged[id] = merged_tag;
+	    id++;
 
             processed.insert(tag_1->id);
             processed.insert(tag_2->id);
 
-	    id++;
-	    //delete tag_1;
-	    //delete tag_2;
+	    delete tag_1;
+	    delete tag_2;
 	    merge_cnt++;
-	} else {
-	    //
-	    // Blacklist them.
-	    //
-            processed.insert(tag_1->id);
-            processed.insert(tag_2->id);
-
-	    tag_1->masked           = true;
-	    tag_1->gappedlumberjack = true;
-	    tag_1->blacklisted      = true;
-	    blist_cnt++;
-            tag_1->id               = id;
-	    new_merged[id]          = tag_1;
-	    id++;
-            
-	    tag_2->masked           = true;
-	    tag_2->gappedlumberjack = true;
-	    tag_2->blacklisted      = true;
-	    blist_cnt++;
-            tag_2->id               = id;
-	    new_merged[id]          = tag_2;
-	    id++;
 	}
+    }
+
+    for (it = merged.begin(); it != merged.end(); it++) {
+	if (processed.count(it->first))
+	    continue;
+	tag_1 = it->second;
+	new_merged[id] = tag_1;
+	id++;
     }
 
     uint new_cnt = new_merged.size();
@@ -338,7 +325,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 
     cerr << "  " << old_cnt << " stacks merged into " << new_cnt 
 	 << " stacks; merged " << merge_cnt 
-	 << " gapped alignments; removed " << blist_cnt << " stacks.\n";
+	 << " gapped alignments.\n";
 
     return 0;
 }
@@ -495,11 +482,17 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
     // determine the optimal length for k-mers.
     //
     int con_len   = strlen(merged[keys[0]]->con);
-    int kmer_len  = floor(con_len * min_match_len);
+    int kmer_len  = 19;
     int num_kmers = con_len - kmer_len + 1;
 
+    //
+    // Calculate the minimum number of matching k-mers required for a possible sequence match.
+    //
+    int min_hits = (round((double) con_len * min_match_len) - (kmer_len * max_gaps)) - kmer_len + 1;
+
     cerr << "  Using a k-mer length of " << kmer_len << "\n"
-	 << "  Number of kmers per sequence: " << num_kmers << "\n";
+	 << "  Number of kmers per sequence: " << num_kmers << "\n"
+	 << "  Minimum number of k-mers to define a match: " << min_hits << "\n";
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
  
@@ -541,7 +534,7 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
             map<int, int>::iterator hit_it;
             for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
 
-		if (hit_it->second < 15) continue;
+		if (hit_it->second < min_hits) continue;
 
                 tag_2 = merged[hit_it->first];
 
@@ -867,6 +860,7 @@ trace_alignment(MergedStack *tag_1, MergedStack *tag_2, AlignPath **path)
 	}
 
 	alns.push_back(make_pair(cigar, gaps));
+	
 	// cerr << aln_1 << " [" << cigar << ", gaps: " << gaps << "]\n"
 	//      << aln_2 << "\n";
 
@@ -1112,7 +1106,9 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     return 0;
 }
 
-int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads, vector<read_type> &read_types) {
+int
+call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads, vector<read_type> &read_types)
+{
     int     row;
     int     height = reads.size();
     string  allele;
@@ -1155,7 +1151,9 @@ int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads, vector<read_type> 
     return 0;
 }
 
-int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<int, Rem *> &rem, bool invoke_model) {
+int
+call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<int, Rem *> &rem, bool invoke_model)
+{
     //
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -1175,10 +1173,6 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
         #pragma omp for schedule(dynamic) 
     	for (i = 0; i < (int) keys.size(); i++) {
     	    mtag = merged[keys[i]];
-
-            if (merged.count(keys[i]) == 0) {
-                cerr << "HERE!!!\n";
-            }
             
     	    //
     	    // Create a two-dimensional array, each row containing one read. For
@@ -1211,9 +1205,6 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
     	    //
     	    // Iterate over each column of the array and call the consensus base.
     	    //
-            if (reads.size() == 0) {
-                cerr << "HERE\n";
-            }
     	    int row, col;
     	    int length = reads[0]->size();
     	    int height = reads.size();
@@ -1222,8 +1213,27 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, m
     	    map<char, int>::iterator max, n;
             DNANSeq *d;
 
+	    uint cur_gap = mtag->gaps.size() > 0 ? 0 : 1;
+
     	    for (col = 0; col < length; col++) {
-    		nuc['A'] = 0; 
+		//
+		// Don't invoke the model within gaps.
+		//
+		if (cur_gap < mtag->gaps.size() && col == mtag->gaps[cur_gap].start) {
+		    do {
+			con += 'N';
+			SNP *snp  = new SNP;
+			snp->type = snp_type_unk;
+			snp->col  = col;
+			mtag->snps.push_back(snp);
+			col++;
+		    } while (col < mtag->gaps[cur_gap].end && col < length);
+		    col--;
+		    cur_gap++;
+		    continue;
+		}
+
+		nuc['A'] = 0; 
     		nuc['G'] = 0;
     		nuc['C'] = 0;
     		nuc['T'] = 0;
@@ -2893,6 +2903,8 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"cov_scale",        no_argument,       NULL, 'S'},
 	    {"sec_hapl",         no_argument,       NULL, 'H'},
 	    {"gapped",           no_argument,       NULL, 'G'},
+	    {"max_gaps",         required_argument, NULL, 'X'},
+	    {"min_aln_len",      required_argument, NULL, 'x'},
 	    {"model_type",       required_argument, NULL, 'T'},
 	    {"bc_err_freq",      required_argument, NULL, 'e'},
 	    {"bound_low",        required_argument, NULL, 'L'},
@@ -2900,11 +2912,11 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"alpha",            required_argument, NULL, 'A'},
 	    {0, 0, 0, 0}
 	};
-	
+
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "GhHvdrgRA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:k:T:", long_options, &option_index);
+	c = getopt_long(argc, argv, "GhHvdrgRA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:k:T:X:x:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -2972,14 +2984,20 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'G':
 	    gapped_alignments = true;
 	    break;
+	case 'X':
+	    max_gaps = is_integer(optarg);
+	    break;
+	case 'x':
+	    min_match_len = is_double(optarg);
+	    break;
 	case 'E':
-	    cov_mean = atof(optarg);
+	    cov_mean = is_double(optarg);
 	    break;
 	case 's':
-	    cov_stdev = atof(optarg);
+	    cov_stdev = is_double(optarg);
 	    break;
 	case 'S':
-	    cov_scale = atof(optarg);
+	    cov_scale = is_double(optarg);
 	    break;
      	case 'T':
             if (strcmp(optarg, "snp") == 0) {
@@ -2993,16 +3011,16 @@ int parse_command_line(int argc, char* argv[]) {
                 help();
             }
 	case 'e':
-	    barcode_err_freq = atof(optarg);
+	    barcode_err_freq = is_double(optarg);
 	    break;
 	case 'L':
-	    bound_low  = atof(optarg);
+	    bound_low  = is_double(optarg);
 	    break;
 	case 'U':
-	    bound_high = atof(optarg);
+	    bound_high = is_double(optarg);
 	    break;
 	case 'A':
-	    alpha = atof(optarg);
+	    alpha = is_double(optarg);
 	    break;
 	case 'H':
 	    call_sec_hapl = false;
@@ -3079,21 +3097,24 @@ void help() {
               << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-m min_cov] [-M max_dist] [-p num_threads] [-R] [-H] [-h]" << "\n"
 	      << "  t: input file Type. Supported types: fasta, fastq, gzfasta, or gzfastq.\n"
               << "  f: input file path.\n"
-	      << "  o: output path to write results." << "\n"
-	      << "  i: SQL ID to insert into the output to identify this sample." << "\n"
-	      << "  m: Minimum depth of coverage required to create a stack (default 3)." << "\n"
-	      << "  M: Maximum distance (in nucleotides) allowed between stacks (default 2)." << "\n"
+	      << "  o: output path to write results.\n"
+	      << "  i: SQL ID to insert into the output to identify this sample.\n"
+	      << "  m: Minimum depth of coverage required to create a stack (default 3).\n"
+	      << "  M: Maximum distance (in nucleotides) allowed between stacks (default 2).\n"
 	      << "  N: Maximum distance allowed to align secondary reads to primary stacks (default: M + 2).\n"
 	      << "  R: retain unused reads.\n"
 	      << "  H: disable calling haplotypes from secondary reads.\n"
               << "  p: enable parallel execution with num_threads threads.\n"
 	      << "  h: display this help messsage.\n\n"
 	      << "  Stack assembly options:\n"
-	      << "    r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm." << "\n"
-	      << "    d: enable the Deleveraging algorithm, used for resolving over merged tags." << "\n"
+	      << "    r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm.\n"
+	      << "    d: enable the Deleveraging algorithm, used for resolving over merged tags.\n"
 	      << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
-	      << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n"
-	      << "    --gapped: preform gapped alignments between stacks.\n\n"
+	      << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
+	      << "  Gapped assembly options:\n"
+	      << "    --gapped: preform gapped alignments between stacks.\n"
+	      << "    --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
+	      << "    --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n\n"
 	      << "  Model options:\n" 
 	      << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
 	      << "    For the SNP or Bounded SNP model:\n"
