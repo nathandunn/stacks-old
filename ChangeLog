@@ -1,5 +1,8 @@
 Stacks 1.38
 --------------------------
+	Feature: added Needleman–Wunsch algorithm to ustacks to provide for gapped
+	alignments. Includes --max_gaps and --min_aln_len parameters to contain crazy
+	alignments.
 	Bugfix: corrected PHP files for exporting to include LnL filter.
 
 Stacks 1.37 - Feb 24, 2016
