@@ -223,15 +223,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 	//
 	// Found a gapped alignment. Make sure the alignments are the same.
 	//
-	if (merged.count(tag_1->alns[0].first) == 0) {
-	    cerr << "Something has gone wrong, unable to find tag " << tag_1->alns[0].first << "\n";
-	    continue;
-	}
 	tag_2   = merged[tag_1->alns[0].first];
-	if (merged.count(tag_2->alns[0].first) == 0) {
-	    cerr << "Something has gone wrong, unable to find matching tag " << tag_2->alns[0].first << "\n";
-	    continue;
-	}
 	cigar_1 = tag_1->alns[0].second;
 	cigar_2 = tag_2->alns.size() != 1 ? "" : tag_2->alns[0].second;
 
@@ -310,11 +302,6 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
             processed.insert(tag_1->id);
             processed.insert(tag_2->id);
 
-	    // merged[tag_1->id] = NULL;
-	    // merged[tag_2->id] = NULL;
-
-	    // delete tag_1;
-	    // delete tag_2;
 	    merge_cnt++;
 	}
     }
