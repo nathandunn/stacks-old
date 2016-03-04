@@ -210,7 +210,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
     string   cigar_1, cigar_2;
 
     for (it = merged.begin(); it != merged.end(); it++) {
-	if (processed.count(it->first))
+	if (processed.count(it->first) > 0)
 	    continue;
 
 	tag_1 = it->second;
@@ -223,9 +223,17 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 	//
 	// Found a gapped alignment. Make sure the alignments are the same.
 	//
+	if (merged.count(tag_1->alns[0].first) == 0) {
+	    cerr << "Something has gone wrong, unable to find tag " << tag_1->alns[0].first << "\n";
+	    continue;
+	}
 	tag_2   = merged[tag_1->alns[0].first];
+	if (merged.count(tag_2->alns[0].first) == 0) {
+	    cerr << "Something has gone wrong, unable to find matching tag " << tag_2->alns[0].first << "\n";
+	    continue;
+	}
 	cigar_1 = tag_1->alns[0].second;
-	cigar_2 = tag_2->alns.size() > 0 ? tag_2->alns[0].second : "";
+	cigar_2 = tag_2->alns.size() != 1 ? "" : tag_2->alns[0].second;
 
 	for (uint i = 0; i < cigar_1.length(); i++) {
 	    if (cigar_1[i] == 'I')
@@ -285,7 +293,9 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 	    //
 	    // Merge the tags.
 	    //
-	    merged_tag = merge_tags(tag_1, tag_2, id);
+	    merged_tag     = merge_tags(tag_1, tag_2, id);
+	    new_merged[id] = merged_tag;
+	    id++;
 
 	    //
 	    // Record the gaps.
@@ -297,30 +307,39 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 		pos += cigar[j].second;
 	    }
 
-	    new_merged[id] = merged_tag;
-	    id++;
-
             processed.insert(tag_1->id);
             processed.insert(tag_2->id);
 
-	    delete tag_1;
-	    delete tag_2;
+	    // merged[tag_1->id] = NULL;
+	    // merged[tag_2->id] = NULL;
+
+	    // delete tag_1;
+	    // delete tag_2;
 	    merge_cnt++;
 	}
     }
 
+    set<int> merge_set;
     for (it = merged.begin(); it != merged.end(); it++) {
 	if (processed.count(it->first))
 	    continue;
-	tag_1 = it->second;
-	new_merged[id] = tag_1;
+	tag_1          = it->second;
+	merge_set.insert(tag_1->id);
+	tag_2          = merge_tags(merged, merge_set, id);
+	new_merged[id] = tag_2;
+	merge_set.clear();
 	id++;
     }
 
     uint new_cnt = new_merged.size();
     uint old_cnt = merged.size();
 
-    merged.clear();
+    //
+    // Free the memory from the old map of merged tags.
+    //
+    for (it = merged.begin(); it != merged.end(); it++)
+	delete it->second;
+
     merged = new_merged;
 
     cerr << "  " << old_cnt << " stacks merged into " << new_cnt 
@@ -559,8 +578,8 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
 int
 init_alignment(int len, double ***matrix, AlignPath ***path)
 {
-    int m = len + 1;
-    int n = len + 1;
+    uint m = len + 1;
+    uint n = len + 1;
 
     *matrix = new double * [m];
     for (uint i = 0; i < m; i++)
@@ -576,7 +595,7 @@ init_alignment(int len, double ***matrix, AlignPath ***path)
 int
 free_alignment(int m, double **matrix, AlignPath **path)
 {
-    for (uint i = 0; i < m; i++) {
+    for (int i = 0; i < m; i++) {
 	delete [] matrix[i];
 	delete [] path[i];
     }
@@ -599,8 +618,8 @@ align(MergedStack *tag_1, MergedStack *tag_2, double **matrix, AlignPath **path)
     //   ... |
     // [m-1] |
     // 
-    int m = tag_1->len + 1;
-    int n = tag_2->len + 1;
+    uint m = tag_1->len + 1;
+    uint n = tag_2->len + 1;
     
     //
     // Initialize the first column and row of the dynamic programming
@@ -902,8 +921,8 @@ dump_alignment(MergedStack *tag_1, MergedStack *tag_2, double **matrix, AlignPat
     //   ... |
     // [m-1] |
     // 
-    int m = tag_1->len + 1;
-    int n = tag_2->len + 1;
+    uint m = tag_1->len + 1;
+    uint n = tag_2->len + 1;
 
     //
     // Output the score matrix.
@@ -1205,9 +1224,9 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
     	    //
     	    // Iterate over each column of the array and call the consensus base.
     	    //
-    	    int row, col;
-    	    int length = reads[0]->size();
-    	    int height = reads.size();
+    	    uint row, col;
+    	    uint length = reads[0]->size();
+    	    uint height = reads.size();
     	    string con;
     	    map<char, int> nuc;
     	    map<char, int>::iterator max, n;
