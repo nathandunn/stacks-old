@@ -70,20 +70,20 @@ class Locus {
     vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
 
     Locus()  { 
-	id              = 0; 
-	sample_id       = 0; 
-	depth           = 0; 
-	model           = NULL;
-	con             = NULL; 
-	len             = 0;
-	lnl             = 0.0;
-	blacklisted     = false;
+        id              = 0; 
+        sample_id       = 0; 
+        depth           = 0; 
+        model           = NULL;
+        con             = NULL; 
+        len             = 0;
+        lnl             = 0.0;
+        blacklisted     = false;
         deleveraged     = false;
-	lumberjackstack = false;
+        lumberjackstack = false;
     }
     virtual ~Locus() { 
         delete [] con; 
-	delete [] model;
+        delete [] model;
         for (uint i = 0; i < snps.size(); i++)
             delete snps[i];
         for (uint i = 0; i < comp.size(); i++)
@@ -130,13 +130,13 @@ class CLocus : public Locus {
 class CSLocus : public Locus {
 public:
     CSLocus() : Locus() { 
-	this->f          = 0.0; 
-	this->cnt  = 0; 
-	this->hcnt       = 0; 
-	this->gcnt       = 0; 
-	this->trans_gcnt = 0; 
-	this->chisq      = 1.0;
-	this->confounded_cnt = 0;
+        this->f          = 0.0; 
+        this->cnt  = 0; 
+        this->hcnt       = 0; 
+        this->gcnt       = 0; 
+        this->trans_gcnt = 0; 
+        this->chisq      = 1.0;
+        this->confounded_cnt = 0;
     };
     string annotation;
     string marker;

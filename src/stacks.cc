@@ -52,7 +52,7 @@ int Rem::add_id(uint id) {
 
 int Rem::add_seq(const DNANSeq *seq) {
     if (this->seq != NULL)
-	delete this->seq;
+        delete this->seq;
 
     this->seq = new DNANSeq(seq->size(), seq->s);
 
@@ -61,7 +61,7 @@ int Rem::add_seq(const DNANSeq *seq) {
 
 int Rem::add_seq(const char *seq) {
     if (this->seq != NULL)
-	delete this->seq;
+        delete this->seq;
 
     this->seq = new DNANSeq(strlen(seq), seq);
 
@@ -78,7 +78,7 @@ int PStack::add_id(const char *id) {
 
 int PStack::add_seq(const char *seq) {
     if (this->seq != NULL)
-	delete this->seq;
+        delete this->seq;
 
     this->len = strlen(seq);
     this->seq = new DNANSeq(this->len, seq);
@@ -88,7 +88,7 @@ int PStack::add_seq(const char *seq) {
 
 int PStack::add_seq(DNANSeq *seq) {
     if (this->seq != NULL)
-	delete this->seq;
+        delete this->seq;
 
     this->seq = new DNANSeq(seq->size(), seq->s);
 
@@ -103,7 +103,7 @@ int Stack::add_id(uint id) {
 
 int Stack::add_seq(const char *seq) {
     if (this->seq != NULL)
-	delete this->seq;
+        delete this->seq;
 
     this->seq = new DNANSeq(strlen(seq), seq);
 
@@ -112,7 +112,7 @@ int Stack::add_seq(const char *seq) {
 
 int Stack::add_seq(const DNANSeq *seq) {
     if (this->seq != NULL)
-	delete this->seq;
+        delete this->seq;
 
     this->seq = new DNANSeq(seq->size(), seq->s);
 

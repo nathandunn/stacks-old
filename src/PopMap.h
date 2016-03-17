@@ -53,13 +53,13 @@ public:
     vector<SNP *>  snps;
     Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; len = 0; lnl = 0.0; merge_partner = 0; }
     ~Datum() {
-    	for (uint i = 0; i < this->obshap.size(); i++)
-    	    delete [] this->obshap[i];
-    	for (uint i = 0; i < this->snps.size(); i++)
-	    delete this->snps[i];
-    	delete [] this->gtype;
-	delete [] this->trans_gtype;
-	delete [] this->model;
+        for (uint i = 0; i < this->obshap.size(); i++)
+            delete [] this->obshap[i];
+        for (uint i = 0; i < this->snps.size(); i++)
+            delete this->snps[i];
+        delete [] this->gtype;
+        delete [] this->trans_gtype;
+        delete [] this->model;
     }
 };
 
@@ -102,10 +102,10 @@ PopMap<LocusT>::PopMap(int num_samples, int num_loci) {
     this->data = new Datum **[num_loci];
 
     for (int i = 0; i < num_loci; i++) {
-	this->data[i] = new Datum *[num_samples];
+        this->data[i] = new Datum *[num_samples];
 
-	for (int j = 0; j < num_samples; j++)
-	    this->data[i][j] = NULL;
+        for (int j = 0; j < num_samples; j++)
+            this->data[i][j] = NULL;
     }
 
     this->num_samples = num_samples;
@@ -115,23 +115,23 @@ PopMap<LocusT>::PopMap(int num_samples, int num_loci) {
 template<class LocusT>
 PopMap<LocusT>::~PopMap() {
     for (int i = 0; i < this->num_loci; i++) {
-	for (int j = 0; j < this->num_samples; j++)
-	    delete this->data[i][j];
-	delete [] this->data[i];
+        for (int j = 0; j < this->num_samples; j++)
+            delete this->data[i][j];
+        delete [] this->data[i];
     }
     delete [] this->data;
 }
 
 template<class LocusT>
 int PopMap<LocusT>::populate(vector<int> &sample_ids,
-			     map<int, LocusT*> &catalog,
-			     vector<vector<CatMatch *> > &matches) {
+                             map<int, LocusT*> &catalog,
+                             vector<vector<CatMatch *> > &matches) {
     //
     // Record the array position of each sample that we will load.
     //
     for (uint i = 0; i < sample_ids.size(); i++) {
-	this->sample_order[sample_ids[i]] = i;
-	this->rev_sample_order[i]         = sample_ids[i];
+        this->sample_order[sample_ids[i]] = i;
+        this->rev_sample_order[i]         = sample_ids[i];
     }
 
     //
@@ -141,9 +141,9 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
     typename std::map<int, LocusT*>::iterator it;
     uint i = 0;
     for (it = catalog.begin(); it != catalog.end(); it++) {
-	this->locus_order[it->first] = i;
-	this->rev_locus_order[i]     = it->first;
-	i++;
+        this->locus_order[it->first] = i;
+        this->rev_locus_order[i]     = it->first;
+        i++;
     }
 
     //
@@ -158,58 +158,58 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
     int    locus, sample;
 
     for (i = 0; i < matches.size(); i++) {
-	for (uint j = 0; j < matches[i].size(); j++) {
-	    sample = this->sample_order[matches[i][j]->sample_id];
+        for (uint j = 0; j < matches[i].size(); j++) {
+            sample = this->sample_order[matches[i][j]->sample_id];
 
-	    if (this->locus_order.count(matches[i][j]->cat_id) == 0)
-		continue;
+            if (this->locus_order.count(matches[i][j]->cat_id) == 0)
+                continue;
 
-	    locus  = this->locus_order[matches[i][j]->cat_id];
+            locus  = this->locus_order[matches[i][j]->cat_id];
 
-	    // cerr << "Translating sample id: " << matches[i][j]->sample_id << " to index " << sample << "\n";
-	    // cerr << "Translating locus id: " << matches[i][j]->cat_id << " to index " << locus << "\n";
+            // cerr << "Translating sample id: " << matches[i][j]->sample_id << " to index " << sample << "\n";
+            // cerr << "Translating locus id: " << matches[i][j]->cat_id << " to index " << locus << "\n";
 
-	    if (this->data[locus][sample] == NULL) {
+            if (this->data[locus][sample] == NULL) {
 
-		if (this->blacklist.count(make_pair(matches[i][j]->sample_id, matches[i][j]->cat_id)) == 0) {
-		    // cerr << "Creating new datum for tag ID: " << matches[i][j]->tag_id << "\n";
-		    d = new Datum;
-		    d->id = matches[i][j]->tag_id;
-		    char *h = new char[strlen(matches[i][j]->haplotype) + 1];
-		    strcpy(h, matches[i][j]->haplotype);
-		    d->obshap.push_back(h);
-		    d->depth.push_back(matches[i][j]->depth);
-		    d->tot_depth += matches[i][j]->depth;
-		    d->lnl        = matches[i][j]->lnl;
-		    this->data[locus][sample] = d;
+                if (this->blacklist.count(make_pair(matches[i][j]->sample_id, matches[i][j]->cat_id)) == 0) {
+                    // cerr << "Creating new datum for tag ID: " << matches[i][j]->tag_id << "\n";
+                    d = new Datum;
+                    d->id = matches[i][j]->tag_id;
+                    char *h = new char[strlen(matches[i][j]->haplotype) + 1];
+                    strcpy(h, matches[i][j]->haplotype);
+                    d->obshap.push_back(h);
+                    d->depth.push_back(matches[i][j]->depth);
+                    d->tot_depth += matches[i][j]->depth;
+                    d->lnl        = matches[i][j]->lnl;
+                    this->data[locus][sample] = d;
 
-		    catalog[matches[i][j]->cat_id]->hcnt++;
-		    catalog[matches[i][j]->cat_id]->cnt++;
-		}
-	    } else {
-		// cerr << "  Adding haplotype to existing datum: sample: " << matches[i][j]->sample_id << ". tag: " << matches[i][j]->tag_id << "\n";
-		//
-		// Check that the IDs of the two matches are the same. If not, then two tags 
-		// match this locus and the locus is invalid, set back to NULL.
-		//
-		if (matches[i][j]->tag_id == this->data[locus][sample]->id) {
-		    char *h = new char[strlen(matches[i][j]->haplotype) + 1];
-		    strcpy(h, matches[i][j]->haplotype);
-		    this->data[locus][sample]->obshap.push_back(h);
-		    this->data[locus][sample]->depth.push_back(matches[i][j]->depth);
-		    this->data[locus][sample]->tot_depth += matches[i][j]->depth;
-		    this->data[locus][sample]->lnl        = matches[i][j]->lnl;
+                    catalog[matches[i][j]->cat_id]->hcnt++;
+                    catalog[matches[i][j]->cat_id]->cnt++;
+                }
+            } else {
+                // cerr << "  Adding haplotype to existing datum: sample: " << matches[i][j]->sample_id << ". tag: " << matches[i][j]->tag_id << "\n";
+                //
+                // Check that the IDs of the two matches are the same. If not, then two tags 
+                // match this locus and the locus is invalid, set back to NULL.
+                //
+                if (matches[i][j]->tag_id == this->data[locus][sample]->id) {
+                    char *h = new char[strlen(matches[i][j]->haplotype) + 1];
+                    strcpy(h, matches[i][j]->haplotype);
+                    this->data[locus][sample]->obshap.push_back(h);
+                    this->data[locus][sample]->depth.push_back(matches[i][j]->depth);
+                    this->data[locus][sample]->tot_depth += matches[i][j]->depth;
+                    this->data[locus][sample]->lnl        = matches[i][j]->lnl;
 
-		} else {
-		    //cerr << "    Deleting sample, multiple tag matches\n";
-		    delete this->data[locus][sample];
-		    this->data[locus][sample] = NULL;
-		    this->blacklist.insert(make_pair(matches[i][j]->sample_id, matches[i][j]->cat_id));
-		    catalog[matches[i][j]->cat_id]->hcnt--;
-		    catalog[matches[i][j]->cat_id]->confounded_cnt++;
-		}
-	    }
-	}
+                } else {
+                    //cerr << "    Deleting sample, multiple tag matches\n";
+                    delete this->data[locus][sample];
+                    this->data[locus][sample] = NULL;
+                    this->blacklist.insert(make_pair(matches[i][j]->sample_id, matches[i][j]->cat_id));
+                    catalog[matches[i][j]->cat_id]->hcnt--;
+                    catalog[matches[i][j]->cat_id]->confounded_cnt++;
+                }
+            }
+        }
     }
 
     return 0;
@@ -223,8 +223,8 @@ int PopMap<LocusT>::order_loci(map<int, LocusT*> &catalog)
     typename std::map<int, LocusT*>::iterator it;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
-	if (strlen(it->second->loc.chr) > 0)
-	    this->ordered_loci[it->second->loc.chr].push_back(it->second);
+        if (strlen(it->second->loc.chr) > 0)
+            this->ordered_loci[it->second->loc.chr].push_back(it->second);
     }
 
     //
@@ -232,7 +232,7 @@ int PopMap<LocusT>::order_loci(map<int, LocusT*> &catalog)
     //
     typename map<string, vector<LocusT*> >::iterator cit;
     for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++)
-	sort(cit->second.begin(), cit->second.end(), bp_compare);
+        sort(cit->second.begin(), cit->second.end(), bp_compare);
 
     return 0;
 }
@@ -248,25 +248,25 @@ int PopMap<LocusT>::prune(set<int> &remove_ids) {
     int j = 0;
     for (int i = 0; i < this->num_loci; i++) {
 
-	loc_id = this->rev_locus_order[i];
+        loc_id = this->rev_locus_order[i];
 
-	//
-	// Keep this locus.
-	//
-	if (remove_ids.count(loc_id) == 0) {
-	    d[j] = this->data[i];
-	    new_loc_order[loc_id] = j;
-	    new_rev_loc_order[j] = loc_id;
-	    j++;
+        //
+        // Keep this locus.
+        //
+        if (remove_ids.count(loc_id) == 0) {
+            d[j] = this->data[i];
+            new_loc_order[loc_id] = j;
+            new_rev_loc_order[j] = loc_id;
+            j++;
 
-	} else {
-	    //
-	    // Remove this locus.
-	    //
-	    for (int k = 0; k < this->num_samples; k++)
-		delete this->data[i][k];
-	    delete [] this->data[i];
-	}
+        } else {
+            //
+            // Remove this locus.
+            //
+            for (int k = 0; k < this->num_samples; k++)
+                delete this->data[i][k];
+            delete [] this->data[i];
+        }
     }
 
     delete [] this->data;
@@ -285,17 +285,17 @@ int PopMap<LocusT>::prune(set<int> &remove_ids) {
     typename map<string, vector<LocusT*> >::iterator cit;
 
     for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++) {
-	for (uint k = 0; k < cit->second.size(); k++) {
-	    if (remove_ids.count(cit->second[k]->id) == 0)
-		new_ordered_loci[cit->first].push_back(cit->second[k]);
-	}
+        for (uint k = 0; k < cit->second.size(); k++) {
+            if (remove_ids.count(cit->second[k]->id) == 0)
+                new_ordered_loci[cit->first].push_back(cit->second[k]);
+        }
     }
 
     this->ordered_loci.clear();
     this->ordered_loci = new_ordered_loci;
 
     for (cit = this->ordered_loci.begin(); cit != this->ordered_loci.end(); cit++)
-	sort(cit->second.begin(), cit->second.end(), bp_compare);
+        sort(cit->second.begin(), cit->second.end(), bp_compare);
 
     return new_size;
 }
@@ -313,9 +313,9 @@ Datum  *PopMap<LocusT>::datum(int locus, int sample) {
 template<class LocusT>
 bool PopMap<LocusT>::blacklisted(int locus, int sample) {
     if (this->blacklist.count(make_pair(sample, locus)) > 0)
-	return true;
+        return true;
     else
-	return false;
+        return false;
 }
 
 #endif // __POPMAP_H__
