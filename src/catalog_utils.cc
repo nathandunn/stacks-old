@@ -35,17 +35,17 @@ reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blac
     CSLocus *loc;
 
     if (whitelist.size() == 0 && blacklist.size() == 0) 
-	return 0;
+        return 0;
  
     int i = 0;
     for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
+        loc = it->second;
 
-	if (whitelist.size() > 0 && whitelist.count(loc->id) == 0) continue;
-	if (blacklist.count(loc->id)) continue;
+        if (whitelist.size() > 0 && whitelist.count(loc->id) == 0) continue;
+        if (blacklist.count(loc->id)) continue;
 
-	list[it->first] = it->second;
-	i++;
+        list[it->first] = it->second;
+        i++;
     }
 
     catalog = list;
@@ -61,47 +61,47 @@ implement_single_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *ps
     LocTally *t;
 
     if (whitelist.size() > 0) {
-	map<int, set<int> >::iterator it;
+        map<int, set<int> >::iterator it;
 
-	for (it = whitelist.begin(); it != whitelist.end(); it++) {
-	    loc = catalog[it->first];
-	    t   = psum->locus_tally(loc->id);
-	    
-	    //
-	    // If no specific SNPs are specified in the whitelist all SNPs are included, choose the first variant.
-	    //
-	    if (it->second.size() == 0) {
-		for (uint i = 0; i < loc->snps.size(); i++)
-		    if (t->nucs[loc->snps[i]->col].fixed == false) {
-			new_wl[loc->id].insert(loc->snps[i]->col);
-			break;
-		    }
-	    } else {
-		//
-		// Otherwise, choose the first SNP that is already in the whitelist.
-		//
-		for (uint i = 0; i < loc->snps.size(); i++) {
-		    if (it->second.count(loc->snps[i]->col) == 0 ||
-			t->nucs[loc->snps[i]->col].fixed == true)
-			continue;	
-		    new_wl[loc->id].insert(loc->snps[i]->col);
-		    break;
-		}
-	    }
-	}
+        for (it = whitelist.begin(); it != whitelist.end(); it++) {
+            loc = catalog[it->first];
+            t   = psum->locus_tally(loc->id);
+            
+            //
+            // If no specific SNPs are specified in the whitelist all SNPs are included, choose the first variant.
+            //
+            if (it->second.size() == 0) {
+                for (uint i = 0; i < loc->snps.size(); i++)
+                    if (t->nucs[loc->snps[i]->col].fixed == false) {
+                        new_wl[loc->id].insert(loc->snps[i]->col);
+                        break;
+                    }
+            } else {
+                //
+                // Otherwise, choose the first SNP that is already in the whitelist.
+                //
+                for (uint i = 0; i < loc->snps.size(); i++) {
+                    if (it->second.count(loc->snps[i]->col) == 0 ||
+                        t->nucs[loc->snps[i]->col].fixed == true)
+                        continue;       
+                    new_wl[loc->id].insert(loc->snps[i]->col);
+                    break;
+                }
+            }
+        }
     } else {
-	map<int, CSLocus *>::iterator it;
+        map<int, CSLocus *>::iterator it;
 
-	for (it = catalog.begin(); it != catalog.end(); it++) {
-	    loc = it->second;
-	    t   = psum->locus_tally(loc->id);
+        for (it = catalog.begin(); it != catalog.end(); it++) {
+            loc = it->second;
+            t   = psum->locus_tally(loc->id);
 
-	    for (uint i = 0; i < loc->snps.size(); i++)
-		if (t->nucs[loc->snps[i]->col].fixed == false) {
-		    new_wl[loc->id].insert(loc->snps[i]->col);
-		    break;
-		}
-	}
+            for (uint i = 0; i < loc->snps.size(); i++)
+                if (t->nucs[loc->snps[i]->col].fixed == false) {
+                    new_wl[loc->id].insert(loc->snps[i]->col);
+                    break;
+                }
+        }
     }
 
     whitelist = new_wl;
@@ -117,34 +117,34 @@ implement_random_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *ps
     uint index;
 
     if (whitelist.size() > 0) {
-	map<int, set<int> >::iterator it;
+        map<int, set<int> >::iterator it;
 
-	for (it = whitelist.begin(); it != whitelist.end(); it++) {
-	    loc = catalog[it->first];
+        for (it = whitelist.begin(); it != whitelist.end(); it++) {
+            loc = catalog[it->first];
 
-	    if (loc->snps.size() == 0) continue;
-	    
-	    if (it->second.size() == 0) {
-		index = rand() % loc->snps.size();
-		new_wl[loc->id].insert(loc->snps[index]->col);
-	    } else {
-		do {
-		    index = rand() % loc->snps.size();
-		} while (it->second.count(loc->snps[index]->col) == 0);
-		new_wl[loc->id].insert(loc->snps[index]->col);
-	    }
-	}
+            if (loc->snps.size() == 0) continue;
+            
+            if (it->second.size() == 0) {
+                index = rand() % loc->snps.size();
+                new_wl[loc->id].insert(loc->snps[index]->col);
+            } else {
+                do {
+                    index = rand() % loc->snps.size();
+                } while (it->second.count(loc->snps[index]->col) == 0);
+                new_wl[loc->id].insert(loc->snps[index]->col);
+            }
+        }
     } else {
-	map<int, CSLocus *>::iterator it;
+        map<int, CSLocus *>::iterator it;
 
-	for (it = catalog.begin(); it != catalog.end(); it++) {
-	    loc = it->second;
+        for (it = catalog.begin(); it != catalog.end(); it++) {
+            loc = it->second;
 
-	    if (loc->snps.size() > 0) {
-		index = rand() % loc->snps.size();
-		new_wl[loc->id].insert(loc->snps[index]->col);
-	    }
-	}
+            if (loc->snps.size() > 0) {
+                index = rand() % loc->snps.size();
+                new_wl[loc->id].insert(loc->snps[index]->col);
+            }
+        }
     }
 
     whitelist = new_wl;
@@ -168,29 +168,29 @@ check_whitelist_integrity(map<int, CSLocus *> &catalog, map<int, set<int> > &whi
     cerr << "Checking the integrity of the whitelist...";
 
     for (it = whitelist.begin(); it != whitelist.end(); it++) {
-	if (catalog.count(it->first) == 0) {
-	    rm_loci++;
-	    cerr << "\n  Removing locus " << it->first << " from whitelist as it does not exist in the catalog.";
-	} else {
-	    loc = catalog[it->first];
+        if (catalog.count(it->first) == 0) {
+            rm_loci++;
+            cerr << "\n  Removing locus " << it->first << " from whitelist as it does not exist in the catalog.";
+        } else {
+            loc = catalog[it->first];
 
-	    if (it->second.size() == 0) {
-		new_wl.insert(make_pair(it->first, std::set<int>()));
-		continue;
-	    }
+            if (it->second.size() == 0) {
+                new_wl.insert(make_pair(it->first, std::set<int>()));
+                continue;
+            }
 
-	    set<int> cat_snps;
-	    for (uint i = 0; i < loc->snps.size(); i++)
-		cat_snps.insert(loc->snps[i]->col);
+            set<int> cat_snps;
+            for (uint i = 0; i < loc->snps.size(); i++)
+                cat_snps.insert(loc->snps[i]->col);
 
-	    for (sit = it->second.begin(); sit != it->second.end(); sit++)
-		if (cat_snps.count(*sit)) {
-		    new_wl[it->first].insert(*sit);
-		} else {
-		    rm_snps++;
-		    cerr << "\n  Removing SNP at column " << *sit << " in locus " << it->first << " from whitelist as it does not exist in the catalog.";
-		}
-	}
+            for (sit = it->second.begin(); sit != it->second.end(); sit++)
+                if (cat_snps.count(*sit)) {
+                    new_wl[it->first].insert(*sit);
+                } else {
+                    rm_snps++;
+                    cerr << "\n  Removing SNP at column " << *sit << " in locus " << it->first << " from whitelist as it does not exist in the catalog.";
+                }
+        }
     }
 
     whitelist = new_wl;
@@ -198,7 +198,7 @@ check_whitelist_integrity(map<int, CSLocus *> &catalog, map<int, set<int> > &whi
     if (rm_loci > 0 || rm_snps > 0) cerr << "\n";
 
     cerr << "done.\n"
-	 << "Removed " << rm_loci << " loci and " << rm_snps << " SNPs from the whitelist that were not found in the catalog.\n";
+         << "Removed " << rm_loci << " loci and " << rm_snps << " SNPs from the whitelist that were not found in the catalog.\n";
 
     return 0;
 }
@@ -211,17 +211,17 @@ reduce_catalog(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, set
     CSLocus *loc;
 
     if (whitelist.size() == 0 && blacklist.size() == 0) 
-	return 0;
+        return 0;
  
     int i = 0;
     for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
+        loc = it->second;
 
-	if (whitelist.size() > 0 && whitelist.count(loc->id) == 0) continue;
-	if (blacklist.count(loc->id)) continue;
+        if (whitelist.size() > 0 && whitelist.count(loc->id) == 0) continue;
+        if (blacklist.count(loc->id)) continue;
 
-	list[it->first] = it->second;
-	i++;
+        list[it->first] = it->second;
+        i++;
     }
 
     catalog = list;
@@ -237,7 +237,7 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
     Datum  **d;
 
     if (whitelist.size() == 0) 
-	return 0;
+        return 0;
  
     //
     // We want to prune out SNP objects that are not in the whitelist.
@@ -248,93 +248,93 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
     map<string, int> obshaps;
     map<string, int>::iterator sit;
     for (it = catalog.begin(); it != catalog.end(); it++) {
-	loc = it->second;
+        loc = it->second;
 
-	if (whitelist[loc->id].size() == 0)
-	    continue;
+        if (whitelist[loc->id].size() == 0)
+            continue;
 
-	tmp.clear();
-	cols.clear();
+        tmp.clear();
+        cols.clear();
 
-	d = pmap->locus(loc->id);
+        d = pmap->locus(loc->id);
 
-	for (uint i = 0; i < loc->snps.size(); i++) {
-	    if (whitelist[loc->id].count(loc->snps[i]->col) > 0) {
-		tmp.push_back(loc->snps[i]);
-		cols.push_back(i);
-	    } else {
-		//
-		// Change the model calls in the samples to no longer contain this SNP.
-		//
-		pos = loc->snps[i]->col;
-		for (int j = 0; j < pmap->sample_cnt(); j++) {
-		    if (d[j] == NULL || pos >= d[j]->len) 
-			continue;
-		    if (d[j]->model != NULL) {
-			d[j]->model[pos] = 'U';
-		    }
-		}
+        for (uint i = 0; i < loc->snps.size(); i++) {
+            if (whitelist[loc->id].count(loc->snps[i]->col) > 0) {
+                tmp.push_back(loc->snps[i]);
+                cols.push_back(i);
+            } else {
+                //
+                // Change the model calls in the samples to no longer contain this SNP.
+                //
+                pos = loc->snps[i]->col;
+                for (int j = 0; j < pmap->sample_cnt(); j++) {
+                    if (d[j] == NULL || pos >= d[j]->len) 
+                        continue;
+                    if (d[j]->model != NULL) {
+                        d[j]->model[pos] = 'U';
+                    }
+                }
 
-		delete loc->snps[i];
-	    }
-	}
-	loc->snps.clear();
-	for (uint i = 0; i < tmp.size(); i++)
-	    loc->snps.push_back(tmp[i]);
+                delete loc->snps[i];
+            }
+        }
+        loc->snps.clear();
+        for (uint i = 0; i < tmp.size(); i++)
+            loc->snps.push_back(tmp[i]);
 
-	map<string, int>::iterator it;
-	char allele_old[id_len], allele_new[id_len];
-	//
-	// We need to adjust the catalog's list of haplotypes/alleles
-	// for this locus to account for the pruned SNPs.
-	//
-	for (it = loc->alleles.begin(); it != loc->alleles.end(); it++) {
-	    strncpy(allele_old, it->first.c_str(), id_len - 1);
-	    allele_old[id_len - 1] = '\0';
+        map<string, int>::iterator it;
+        char allele_old[id_len], allele_new[id_len];
+        //
+        // We need to adjust the catalog's list of haplotypes/alleles
+        // for this locus to account for the pruned SNPs.
+        //
+        for (it = loc->alleles.begin(); it != loc->alleles.end(); it++) {
+            strncpy(allele_old, it->first.c_str(), id_len - 1);
+            allele_old[id_len - 1] = '\0';
 
-	    for (uint k = 0; k < cols.size(); k++)
-		allele_new[k] = allele_old[cols[k]];
-	    allele_new[cols.size()] = '\0';
-	    obshaps[string(allele_new)] += it->second;
-	}
-	loc->alleles.clear();
-	for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
-	    loc->alleles[sit->first] = sit->second;
-	}
-	obshaps.clear();
+            for (uint k = 0; k < cols.size(); k++)
+                allele_new[k] = allele_old[cols[k]];
+            allele_new[cols.size()] = '\0';
+            obshaps[string(allele_new)] += it->second;
+        }
+        loc->alleles.clear();
+        for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
+            loc->alleles[sit->first] = sit->second;
+        }
+        obshaps.clear();
 
-	loc->populate_alleles();
+        loc->populate_alleles();
 
-	//
-	// Now we need to adjust the matched haplotypes to sync to 
-	// the SNPs left in the catalog.
-	//
-	// Reducing the lengths of the haplotypes  may create 
-	// redundant (shorter) haplotypes, we need to remove these.
-	//
-	for (int i = 0; i < pmap->sample_cnt(); i++) {
-	    if (d[i] == NULL) continue;
+        //
+        // Now we need to adjust the matched haplotypes to sync to 
+        // the SNPs left in the catalog.
+        //
+        // Reducing the lengths of the haplotypes  may create 
+        // redundant (shorter) haplotypes, we need to remove these.
+        //
+        for (int i = 0; i < pmap->sample_cnt(); i++) {
+            if (d[i] == NULL) continue;
 
-	    for (uint j = 0; j < d[i]->obshap.size(); j++) {
-		for (uint k = 0; k < cols.size(); k++)
-		    d[i]->obshap[j][k] = d[i]->obshap[j][cols[k]];
-		d[i]->obshap[j][cols.size()] = '\0';
-		obshaps[d[i]->obshap[j]] += d[i]->depth[j];
-	    }
-	    uint j = 0;
-	    for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
-		strcpy(d[i]->obshap[j], sit->first.c_str());
-		d[i]->depth[j] = sit->second;
-		j++;
-	    }
-	    while (j < d[i]->obshap.size()) {
-		delete [] d[i]->obshap[j];
-		j++;
-	    }
-	    d[i]->obshap.resize(obshaps.size());
-	    d[i]->depth.resize(obshaps.size());
-	    obshaps.clear();
-	}
+            for (uint j = 0; j < d[i]->obshap.size(); j++) {
+                for (uint k = 0; k < cols.size(); k++)
+                    d[i]->obshap[j][k] = d[i]->obshap[j][cols[k]];
+                d[i]->obshap[j][cols.size()] = '\0';
+                obshaps[d[i]->obshap[j]] += d[i]->depth[j];
+            }
+            uint j = 0;
+            for (sit = obshaps.begin(); sit != obshaps.end(); sit++) {
+                strcpy(d[i]->obshap[j], sit->first.c_str());
+                d[i]->depth[j] = sit->second;
+                j++;
+            }
+            while (j < d[i]->obshap.size()) {
+                delete [] d[i]->obshap[j];
+                j++;
+            }
+            d[i]->obshap.resize(obshaps.size());
+            d[i]->depth.resize(obshaps.size());
+            obshaps.clear();
+        }
     }
 
     return 0;

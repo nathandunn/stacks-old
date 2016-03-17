@@ -27,17 +27,17 @@ uint
 Locus::sort_bp(uint k) 
 {
     if (this->loc.strand == plus)
-	return this->loc.bp + k;
+        return this->loc.bp + k;
     else
-	return (k == 0 ? this->loc.bp - this->len + 1 : this->loc.bp - k);
+        return (k == 0 ? this->loc.bp - this->len + 1 : this->loc.bp - k);
 }
 
 int 
 Locus::snp_index(uint col) 
 {
     for (uint i = 0; i < this->snps.size(); i++)
-	if (this->snps[i]->col == col)
-	    return i;
+        if (this->snps[i]->col == col)
+            return i;
     return -1;
 }
 
@@ -45,7 +45,7 @@ int
 Locus::add_consensus(const char *seq) 
 {
     if (this->con != NULL)
-	delete [] this->con;
+        delete [] this->con;
 
     this->len = strlen(seq);
     this->con = new char[this->len + 1];
@@ -66,27 +66,27 @@ Locus::populate_alleles()
     // Is this effective?
     //
     for (uint n = 0; n < this->strings.size(); n++) {
-	this->strings[n].first.clear();
-	this->strings[n].second.clear();
+        this->strings[n].first.clear();
+        this->strings[n].second.clear();
     }
     this->strings.clear();
 
     if (this->snps.size() == 0) {
-	this->strings.push_back(make_pair("consensus", this->con));
-	return 0;
+        this->strings.push_back(make_pair("consensus", this->con));
+        return 0;
     }
 
     for (j = this->alleles.begin(); j != this->alleles.end(); j++) {
-	s = this->con;
-	k = 0;
+        s = this->con;
+        k = 0;
 
-	for (i = this->snps.begin(); i != this->snps.end(); i++) {
-	    if ((*i)->col < this->len)
-		s.replace((*i)->col, 1, 1, j->first[k]);
-	    k++;
-	}
+        for (i = this->snps.begin(); i != this->snps.end(); i++) {
+            if ((*i)->col < this->len)
+                s.replace((*i)->col, 1, 1, j->first[k]);
+            k++;
+        }
 
-	this->strings.push_back(make_pair(j->first, s));
+        this->strings.push_back(make_pair(j->first, s));
     }
 
     return 0;
