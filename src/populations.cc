@@ -29,6 +29,7 @@
 int       num_threads =  1;
 int       batch_id    = -1;
 string    in_path;
+string    vcf_in_path;
 string    out_path;
 string    out_file;
 string    pmap_path;
@@ -8823,7 +8824,9 @@ bool compare_genpos(GenPos a, GenPos b) {
 
 int parse_command_line(int argc, char* argv[]) {
     int c;
-     
+
+#define OPT_VCF_IN 1000
+
     while (1) {
         static struct option long_options[] = {
             {"help",           no_argument,       NULL, 'h'},
@@ -8852,6 +8855,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"num_threads",    required_argument, NULL, 't'},
             {"batch_id",       required_argument, NULL, 'b'},
             {"in_path",        required_argument, NULL, 'P'},
+            {"vcf_in",         required_argument, NULL, OPT_VCF_IN},
             {"progeny",        required_argument, NULL, 'r'},
             {"min_depth",      required_argument, NULL, 'm'},
             {"renz",           required_argument, NULL, 'e'},
@@ -8903,6 +8907,9 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'P':
             in_path = optarg;
+            break;
+        case OPT_VCF_IN:
+            vcf_in_path = optarg;
             break;
         case 'M':
             pmap_path = optarg;
@@ -9089,13 +9096,19 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
-    if (in_path.length() == 0) {
-        cerr << "You must specify a path to the directory containing Stacks output files.\n";
+    if (in_path.length() == 0 && vcf_in_path.length() == 0) {
+        cerr << "You must specify a path to the directory containing Stacks output files, or a VCF input file.\n";
+        help();
+    } else if (in_path.length() != 0 && vcf_in_path.length() != 0) {
+        cerr << "Error: Malformed arguments: --in_path and --in_vcf_path are incompatible.\n";
         help();
     }
 
-    if (in_path.at(in_path.length() - 1) != '/') 
-        in_path += "/";
+    if (in_path.length() > 0) {
+        if (in_path.at(in_path.length() - 1) != '/') {
+            in_path += "/";
+        }
+    }
 
     if (pmap_path.length() == 0) {
         cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
@@ -9175,14 +9188,16 @@ void help() {
               << "populations -b batch_id -P path -M path [-r min] [-m min] [-B blacklist] [-W whitelist] [-s] [-e renz] [-t threads] [-v] [-h]" << "\n"
               << "  b: Batch ID to examine when exporting from the catalog.\n"
               << "  P: path to the Stacks output files.\n"
+              << "  --vcf_in: path to an input VCF file.\n"
               << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
               << "  s: output a file to import results into an SQL database.\n"
               << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
               << "  W: specify a file containing Whitelisted markers to include in the export.\n"
               << "  e: restriction enzyme, required if generating 'genomic' output.\n"
               << "  t: number of threads to run in parallel sections of code.\n"
-              << "  v: print program version." << "\n"
-              << "  h: display this help messsage." << "\n\n"
+              << "  v: print program version.\n"
+              << "  h: display this help messsage.\n"
+              << "\n"
               << "  Merging and Phasing:\n"
               << "    --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
               << "    --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n"
