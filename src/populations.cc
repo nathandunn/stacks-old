@@ -102,9 +102,15 @@ map<string, int>           renz_olap;
 
 int main (int argc, char* argv[]) {
 
+    //
+    // Initialize the globals that need it.
+    //
     initialize_renz(renz, renz_cnt, renz_len);
     initialize_renz_olap(renz_olap);
 
+    //
+    // Parse the command line.
+    //
     parse_command_line(argc, argv);
 
     cerr
@@ -149,10 +155,17 @@ int main (int argc, char* argv[]) {
     //
     srandom(time(NULL));
 
+    //
+    // Read the population map,
+    // and set variables "sample_ids", "pop_key", "grp_key", "files", "pop_indexes" and "grp_members".
+    //
     vector<pair<int, string> > files;
     if (!build_file_list(files, pop_indexes, grp_members))
         exit(1);
 
+    //
+    // Read the whitelist, the blacklist, and the bootstrap-whitelist.
+    //
     if (wl_file.length() > 0) {
         load_marker_column_list(wl_file, whitelist);
         cerr << "Loaded " << whitelist.size() << " whitelisted markers.\n";
@@ -193,13 +206,9 @@ int main (int argc, char* argv[]) {
     }
 
     //
-    // Check the whitelist.
+    // Check the whitelist and implement the black/white lists.
     //
     check_whitelist_integrity(catalog, whitelist);
-
-    //
-    // Implement the black/white list
-    //
     reduce_catalog(catalog, whitelist, blacklist);
 
     //
