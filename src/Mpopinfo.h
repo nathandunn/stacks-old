@@ -1,8 +1,8 @@
 /*
  * todo Ask @Julian, are you OK with the [variable] notation for comments ?
  */
-#ifndef METAPOPULATION_DESCRIPTION_H
-#define METAPOPULATION_DESCRIPTION_H
+#ifndef MPOPD_H
+#define MPOPD_H
 
 #include <string>
 #include <vector>
@@ -14,10 +14,12 @@ using std::vector;
 using std::string;
 using std::map;
 
-class Metapopulation_description;
-typedef Metapopulation_description Metapop_d;
-
-class Metapopulation_description {
+/*
+ * Mpopinfo
+ * Class for reprensenting a metapopulation : its individuals/samples,
+ * populations, and groups of populations.
+ */
+class Mpopinfo {
 public:
     typedef size_t sample_index; // For indexes in [samples_].
     typedef size_t pop_index;
@@ -50,13 +52,22 @@ private:
     map<string,group_index> group_indexes_; // same, for groups
 
 public:
-    void load(const string& path); // Loads a popmap file
+    /*
+     * Generate a description of the population according to the input :
+     * -- If a popmap file was provided, load its contents.
+     * -- Otherwise, browse the directory.
+     */
+    void init(const string& dir_path, const string& popmap_relpath = string()); //todo implement it.
+
+    // Add an sstacks id to a sample
     void set_sample_id(const sample_index i, const size_t id) {samples_.at(i).id = id;}
 
+    // Access to the information
     const vector<Sample>& samples() const {return samples_;}
     const vector<Pop>& pops() const {return pops_;}
     const vector<Group>& groups() const {return groups_;}
 
+    // Obtain the indexes corresponding to a particular id or name.
     size_t get_sample_index(const string& name) const {return sample_indexes_by_name_.at(name);}
     size_t get_sample_index(const size_t& id) const {return sample_indexes_by_id_.at(id);}
     size_t get_pop_index(const string& name) const {return pop_indexes_.at(name);}
@@ -75,6 +86,4 @@ public:
     }
 };
 
-void Metapopulation_description::load(const string& path) {} // todo
-
-#endif // METAPOPULATION_DESCRIPTION_H
+#endif // MPOPD_H
