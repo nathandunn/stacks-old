@@ -21,6 +21,8 @@
 #ifndef __VCFI_H__
 #define __VCFI_H__
 
+#include "config.h"
+
 #include <fstream>
 #include <exception>
 #include <utility>
@@ -28,15 +30,18 @@
 #include <vector>
 #include <set>
 
-#include "config.h"
-
 #ifdef HAVE_LIBZ
 #include <zlib.h>
 #endif
 
-#include "constants.h"
+using std::size_t;
+using std::pair;
+using std::vector;
+using std::string;
+using std::set;
+using std::ifstream;
 
-using namespace std;
+#include "constants.h"
 
 namespace Vcf {
     const size_t base_fields_no = 8; // CHROM POS ID REF ALT QUAL FILTER INFO [FORMAT SAMPLE ...]]
@@ -53,11 +58,12 @@ namespace Vcf {
 
     enum Record_type {
         null,
-        expl, // explicit : marker with explicitly written alleles (e.g. SNPs, small indels or entirely defined haplotypes)
-        symbolic,
-        breakend
+        expl, // record with explicitly written alleles, e.g. SNPs, small indels or entirely defined haplotypes.
+        symbolic, // e.g. ALT is "<DUP:TANDEM>".
+        breakend // e.g. ALT is "G]17:198982]".
     };
 
+    // Constants for the parser.
     const size_t line_buf_size = 4096;
     const set<string> common_format_fields ({"GT","AD","DP","GL"});
 }
@@ -66,8 +72,7 @@ class Vcf_abstractparser;
 
 /*
  * Vcf_basicrecord
- *
- * Fast datastructure to store VCF records
+ * Datastructure to store VCF records
  */
 class Vcf_basicrecord {
 public:
@@ -83,19 +88,20 @@ public:
     vector<string> format_;
     vector<vector<string> > samples_;
 
-    Vcf_basicrecord() : chrom_(), pos_(-1), id_(), ref_(), type_(Vcf::null),  alt_(), qual_(), filter_(), info_(), format_(), samples_() {}
+    Vcf_basicrecord()
+    : chrom_(), pos_(-1), id_(), ref_(), type_(Vcf::null),  alt_(), qual_(), filter_(), info_(), format_(), samples_()
+    {}
 
     void clear();
 };
 
 /*
  * Vcf_header
- *
  * Stores the contents of a VCF header.
  */
 class Vcf_header {
 //public:
-    //struct Vcf_info {};
+    //struct Vcf_info {}; // Not implemented yet.
     //struct Vcf_format {};
 
 protected:
@@ -109,6 +115,7 @@ protected:
     //map<string, map<string, string> > info_keys_;
     //map<string, map<string, string> > format_keys_;
     vector<string> samples_;
+
 public:
     Vcf_header() : version_(), date_(), source_(), reference_(), samples_() {}
 
@@ -157,22 +164,29 @@ protected:
     size_t line_number_;
     char line_[Vcf::line_buf_size];
     bool eol_; // Set by check_eol(). True if the buffer reaches the end of the currently parsed line.
+    bool eof_; // Set by getline(). True if EOF was reached.
     vector<char*> tabs_; // Vector of pointers to {first_tab, second_tab, ..., \0 } in line_
     vector<char*> bounds_; // vector of pointers to {leading_tab, first_sep, second_sep, ..., (trailing \t or \0) } in line_
     vector<bool> kept_format_fields_; // Keeps track of which FORMAT subfields were kept for this record.
 
-    void read_header(); // Called by the constructors of the non-abstract derived classes (Vcf_parser and Vcf_gzparser).
+    // Parses the header.
+    // Called by the open method of the non-abstract derived classes (Vcf_parser and Vcf_gzparser).
+    // Throws an exception if the header is malformed.
+    void read_header();
 
     virtual void getline(char* ptr, size_t n) =0;
-    virtual bool eof() const =0;
     virtual void check_eol() =0; // n.b. The implementation in gzparser relies on tabs_ to access the end of the string in line_.
     void read_while_not_eol(); // Read while eol_ is false.
 
     void add_sample(Vcf_basicrecord& record, char* tab1, char* tab2); // Basically 'record.samples_.push_back(parsed_value)'.
 
 public:
-    Vcf_abstractparser(const string& path); // Initialize the VCF parser for the given file, i.e. open the file and read the header.
+    Vcf_abstractparser();
     virtual ~Vcf_abstractparser() {}
+
+    // Opens the VCF file and reads the header.
+    // Returns 0 if successful, 1 if the file could not be opened.
+    virtual int open(const string& path) =0;
 
     // Getters.
     const string& path() const {return path_;};
@@ -183,51 +197,39 @@ public:
     // Setters.
     void format_fields_to_keep(const set<string>& fields) {format_fields_to_keep_ = fields;}
 
-    // Read a record. Returns 0 on EOF, 1 otherwise.
-    int next_record(Vcf_basicrecord& record);
+    // Reads a record. Returns false on EOF, true otherwise.
+    bool next_record(Vcf_basicrecord& record);
 };
 
 /*
  * Vcf_parser
- *
  * Implements Vcf_abstractparser for plain text files.
  */
 class Vcf_parser : public Vcf_abstractparser {
     ifstream file_;
-    void getline(char* ptr, size_t n) {file_.getline(ptr, n);}
-    bool eof() const {return file_.eof();}
+    void getline(char* ptr, size_t n) {file_.getline(ptr, n); eof_ = file_.eof();}
     void check_eol() {eol_ = ! file_.fail(); file_.clear();}
 public:
-    Vcf_parser(const string& path);
+    int open(const string& path);
 };
 
+#ifdef HAVE_LIBZ
 /*
  * Vcf_gzparser
- *
  * Implements Vcf_abstractparser for gzipped files.
  */
-#ifdef HAVE_LIBZ
 class Vcf_gzparser : public Vcf_abstractparser {
     gzFile file_;
-    void getline(char* ptr, size_t n) {gzgets(file_, ptr, n);}
-    bool eof() const {return gzeof(file_);}
+    void getline(char* ptr, size_t n) {gzgets(file_, ptr, n); eof_ = gzeof(file_);}
     void check_eol();
 
-    Vcf_gzparser(Vcf_gzparser& p) = delete;
+    Vcf_gzparser(Vcf_gzparser& p) = delete; // No copy constructor.
     Vcf_gzparser& operator=(Vcf_gzparser& p) = delete;
 public:
-    Vcf_gzparser(const string& path);
-    ~Vcf_gzparser() {gzclose(file_);}
-};
-#else
-class Vcf_gzparser : public Vcf_abstractparser {
-public:
-    Vcf_gzparser(const string& path) : Vcf_abstractparser(path) {cerr << "Trying to read a gzipped file, but Gzip support was not enabled when Stacks was compiled." << endl; throw exception();}
+    Vcf_gzparser() : file_(NULL) {}
+    ~Vcf_gzparser() {if(file_) gzclose(file_);}
 
-    // Dummy definitions for the pure virtual methods.
-    void getline(char* ptr, size_t n) {}
-    bool eof() const {return true;}
-    void check_eol() {}
+    int open(const string& path);
 };
 #endif // HAVE_LIBZ
 

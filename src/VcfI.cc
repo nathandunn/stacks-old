@@ -6,6 +6,8 @@
 
 #include "VcfI.h"
 
+using namespace std;
+
 inline void get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep) {
     bounds.clear();
     bounds.push_back(tab1);
@@ -37,16 +39,16 @@ inline void Vcf_basicrecord::clear() {
     samples_.clear();
 }
 
-Vcf_abstractparser::Vcf_abstractparser(const string& path)
-: path_(path), header_(), line_number_(0), header_lines_(0), eol_(true), tabs_(), bounds_(), kept_format_fields_() {
+Vcf_abstractparser::Vcf_abstractparser()
+: line_number_(0), header_lines_(0), eol_(true), eof_(false) {
     memset(line_, '\0', Vcf::line_buf_size);
 }
 
-void Vcf_abstractparser::read_header(){
+void Vcf_abstractparser::read_header() {
     while(true) {
         getline(line_, Vcf::line_buf_size);
         ++line_number_;
-        if(eof())
+        if(eof_)
             malformed_header(path_, line_number_);
         if (line_[0] != '#')
             malformed_header(path_, line_number_);
@@ -134,7 +136,7 @@ void Vcf_abstractparser::read_header(){
             strcpy(line_+1, *(tabs_.end()-2)+1);
 
             getline(line_+last_field_len, Vcf::line_buf_size-last_field_len);
-            if(eof()) {
+            if(eof_) {
                 cerr << "Error: VCF file " << path_ << " does not end with a newline." << endl;
                 throw exception();
             }
@@ -171,7 +173,7 @@ void Vcf_abstractparser::read_header(){
 inline void Vcf_abstractparser::read_while_not_eol() {
     while(!eol_) {
         getline(line_, Vcf::line_buf_size);
-        if(eof()) {
+        if(eof_) {
             cerr << "Error: VCF file " << path_ << " does not end with a newline." << endl;
             throw exception();
         }
@@ -181,7 +183,7 @@ inline void Vcf_abstractparser::read_while_not_eol() {
     }
 }
 
-inline void Vcf_abstractparser::add_sample(Vcf_basicrecord& record, char* tab1, char* tab2){
+inline void Vcf_abstractparser::add_sample(Vcf_basicrecord& record, char* tab1, char* tab2) {
     if(tab2 == tab1+1)
         cerr << "Warning: malformed VCF record line (empty SAMPLE field should be marked by a dot)."
              << " Line " << line_number_ << " in file " << path_
@@ -207,28 +209,30 @@ inline void Vcf_abstractparser::add_sample(Vcf_basicrecord& record, char* tab1, 
     }
 }
 
-Vcf_parser::Vcf_parser(const string& path)
-: Vcf_abstractparser(path), file_(path.c_str()) {
-    if(!file_.good()) {
-        cerr << "Failed to open file " << path << " for reading." << endl;
-        throw exception();
-    }
+int Vcf_parser::open(const string& path) {
     file_.exceptions(ifstream::badbit);
+
+    file_.open(path);
+    if(!file_.good()) {
+        return 1;
+    }
+
     read_header();
+    return 0;
 }
 
 #ifdef HAVE_LIBZ
-Vcf_gzparser::Vcf_gzparser(const string& path)
-: Vcf_abstractparser(path), file_(gzopen(path.c_str(), "rb")) {
+int Vcf_gzparser::open(const string& path) {
+    file_ = gzopen(path.c_str(), "rb");
     if(!file_) {
-        cerr << "Failed to open file " << path << " for reading." << endl;
-        throw exception();
+        return 1;
     }
 #if ZLIB_VERNUM >= 0x1240
     gzbuffer(file_, libz_buffer_size);
 #endif
 
     read_header();
+    return 0;
 }
 
 inline void Vcf_gzparser::check_eol() {
@@ -242,11 +246,11 @@ inline void Vcf_gzparser::check_eol() {
 }
 #endif
 
-int Vcf_abstractparser::next_record(Vcf_basicrecord& record) {
+bool Vcf_abstractparser::next_record(Vcf_basicrecord& record) {
     getline(line_, Vcf::line_buf_size);
     ++line_number_;
-    if(eof())
-        return 0;
+    if(eof_)
+        return false;
 
     record.clear();
 
@@ -278,7 +282,7 @@ int Vcf_abstractparser::next_record(Vcf_basicrecord& record) {
     } else {
         if(header_.samples().empty() || tabs_.size() < Vcf::base_fields_no + 2) {
             read_while_not_eol();
-            return 1;
+            return true;
         }
     }
 
@@ -335,12 +339,12 @@ int Vcf_abstractparser::next_record(Vcf_basicrecord& record) {
     if(*(tabs_[Vcf::alt-1]+1) == '<') {
         record.type_ = Vcf::symbolic;
         read_while_not_eol();
-        return 1; // Do not parse records describing symbolic alleles.
+        return true; // Do not parse records describing symbolic alleles.
     }
     if (strchr(tabs_[Vcf::alt-1]+1, '[') || strchr(tabs_[Vcf::alt-1]+1, ']')) {
         record.type_ = Vcf::breakend;
         read_while_not_eol();
-        return 1; // Do not parse records describing breakend alleles.
+        return true; // Do not parse records describing breakend alleles.
     }
     record.type_ = Vcf::expl;
     if(*(tabs_[Vcf::alt-1]+1) != '.') {
@@ -414,7 +418,7 @@ int Vcf_abstractparser::next_record(Vcf_basicrecord& record) {
             strcpy(line_+1, *(tabs_.end()-2)+1);
 
             getline(line_+lastfieldlen, Vcf::line_buf_size-lastfieldlen);
-            if(eof()) {
+            if(eof_) {
                 cerr << "Error: VCF file " << path_ << " does not end with a newline." << endl;
                 throw exception();
             }
@@ -448,5 +452,5 @@ int Vcf_abstractparser::next_record(Vcf_basicrecord& record) {
         }
     }
 
-    return 1;
+    return true;
 }
