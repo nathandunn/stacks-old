@@ -94,7 +94,8 @@ populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/PopMap.h src/PopSum.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h \
-	src/bootstrap.h src/ordered.h src/smoothing.h src/smoothing_utils.h
+	src/bootstrap.h src/ordered.h src/smoothing.h src/smoothing_utils.h \
+	src/VcfI.h src/VcfI.cc
 
 phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h \
 	src/locus.h src/locus.cc \
