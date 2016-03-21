@@ -24,6 +24,7 @@
 //
 
 #include "populations.h"
+#include "VcfI.h"
 
 // Global variables to hold command-line options.
 int       num_threads =  1;
@@ -195,14 +196,153 @@ int main (int argc, char* argv[]) {
     //
     // Load the catalog
     //
-    stringstream catalog_file;
     map<int, CSLocus *> catalog;
-    bool compressed = false;
-    int  res;
-    catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false, false, compressed)) == 0) {
-        cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
-        return 0;
+
+    // There will be several distinct if(vcf) blocks below, so a couple
+    // objects are needed in the main scope.
+    Vcf_header vcf_header;
+    vector<Vcf_basicrecord>* vcf_records = new vector<Vcf_basicrecord>();
+
+    // Load the catalog from Stacks files.
+    if (!in_path.empty()) {
+        stringstream catalog_file;
+        bool compressed = false;
+        catalog_file << in_path << "batch_" << batch_id << ".catalog";
+        int res = load_loci(catalog_file.str(), catalog, false, false, compressed);
+        if (res == 0) {
+            cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
+            return 0;
+        }
+    }
+    // Or load it from a VCF file.
+    else if (!vcf_in_path.empty()) {
+
+        // Open the file
+        Vcf_abstractparser* parser = NULL;
+        parser = new Vcf_parser();
+        int res = parser->open(vcf_in_path);
+        if (res == 0) {
+        } else if (res == 1) {
+            delete parser;
+#ifdef HAVE_LIBZ
+            // Try gzip
+            parser = new Vcf_gzparser();
+            res = parser->open(vcf_in_path);
+            if (res == 0) {
+                // OK.
+            } else if (res == 1)
+#else
+            if (true)
+#endif
+                {
+                cerr << "Error: Unable to open VCF file '" << vcf_in_path << "'\n";
+                return 0;
+            }
+        }
+
+        // Read the records
+        // We only keep records that correspond to SNPs
+        vcf_records->push_back(Vcf_basicrecord());
+        Vcf_basicrecord* rec = &vcf_records->back();
+        while (parser->next_record(*rec)) {
+            if (rec->type_ != Vcf::expl)
+                continue;
+            if (rec->ref_.length() > 1)
+                continue;
+            for (vector<string>::const_iterator allele = rec->alt_.begin(); allele != rec->alt_.end(); ++allele)
+                if (allele->length() > 1)
+                    continue;
+            vcf_records->push_back(Vcf_basicrecord());
+            rec = &vcf_records->back();
+        }
+        vcf_records->pop_back();
+
+        /*
+         * Create the catalog based on VCF SNP records.
+         *
+         * We observe the following rules to create the catalog loci :
+         * [sample_id] (batch number) Always set to 0.
+         * [id] VCF records do not intrinsically have locus ids; we use the SNP records indexes.
+         * [len] Always set to 1.
+         * [con] We use the reference nucleotide as the consensus.
+         * [loc] Use the chromosome and position given by each record (n.b. the
+         *       VCF format requires these field), and strand "plus".
+         * [snps] Use the ref+alt alleles.
+         *     [col] Always set to 0 (first nucleotide in the consensus).
+         *     [type] "snp_type_het" if the alt field is not empty, otherwise "snp_type_hom".
+         *     [lratio] Always set to 0.
+         *     [rank_1] The ref allele.
+         *     [rank_2], [rank_3], [rank_4] The alt allele(s).
+         * [alleles] Use the ref+alt alleles.
+         * [strings] We fill this by calling Locus::populate_alleles().
+         * [cnt] Set to the approriate value when filling the PopMap.
+         * [hcnt] (Same as above.)
+         * [confounded_cnt] (Same as above.)
+         * [gmap] This is filled by tabulate_haplotypes() (in "populations.cc").
+         * [gcnt] (Same as above.)
+         * [marker] (Same as above.)
+         *
+         * When no depth information is available, the [depth] and the depths
+         * of the [alleles] are set to 0. (n.b. the parsing of depth information in
+         * VCF is not implemented as of Mar 21, 2016.)
+         *
+         * When no likelihood information is available, [lnl] is set to 0. (n.b.
+         * the parsing of likelihood information in VCF is not implemented as of
+         * Mar 21, 2016.)
+         *
+         * The following members are left unset, on the premise that
+         * "populations" do not use them :
+         * model, blacklisted, deleveraged, lumberjack, components, reads, comp_cnt,
+         * comp_type, annotation, uncor_marker, hap_cnts, f, trans_gcnt, chisq.
+         */
+        for (size_t i = 0; i < vcf_records->size(); ++i) {
+            const Vcf_basicrecord& rec = (*vcf_records)[i];
+            CSLocus* loc = catalog.insert(make_pair(i, new CSLocus())).first->second;
+            loc->sample_id = 0;
+            loc->id = i;
+            loc->len = 1;
+            loc->con = new char[2];
+            strcpy(loc->con, rec.ref_.c_str());
+            loc->loc.set(rec.chrom_.c_str(), (uint)rec.pos_, plus);
+            loc->snps.push_back(new SNP());
+            SNP& snp = *loc->snps.back();
+            snp.col = 0;
+            snp.rank_1 = rec.ref_.at(0);
+            snp.type = rec.alt_.size() > 0 ? snp_type_het : snp_type_hom;
+            if (rec.alt_.size() >= 1) {
+                snp.rank_2 = rec.alt_[0].at(0);
+                if (rec.alt_.size() >= 2) {
+                    snp.rank_3 = rec.alt_[1].at(0);
+                    if (rec.alt_.size() >=3) {
+                        snp.rank_4 = rec.alt_[2].at(0);
+                        if (rec.alt_.size() > 3) {
+                            cerr << "Warning: Skipping malformed VCF SNP record "
+                                 << rec.chrom_ << ":" << rec.pos_
+                                 << " (too many alleles ?!"
+                                 << " REF: \"" << rec.ref_ << "\", ALT: \"";
+                            cerr << rec.alt_[0];
+                            for (size_t i=0; i<rec.alt_.size(); ++i) {
+                                cerr << "," << rec.alt_[i];
+                            }
+                            cerr << "\").\n";
+                            delete loc->snps.back();
+                            delete loc->con;
+                            delete loc;
+                            catalog.erase(i);
+                            continue;
+                        }
+                    }
+                }
+            }
+            loc->alleles.insert(make_pair(rec.ref_, 0));
+            for (vector<string>::const_iterator allele = rec.alt_.begin(); allele != rec.alt_.end(); ++allele)
+                loc->alleles.insert(make_pair(*allele, 0));
+            loc->populate_alleles();
+            loc->depth = 0;
+            loc->lnl = 0;
+        }
+        vcf_header = parser->header();
+        delete parser;
     }
 
     //
