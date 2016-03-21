@@ -7,10 +7,15 @@
 #include <string>
 #include <vector>
 #include <map>
-using namespace std;
+
+using std::size_t;
+using std::pair;
+using std::vector;
+using std::string;
+using std::map;
 
 class Metapopulation_description;
-typedef Metapopulation_description Mpopdesc;
+typedef Metapopulation_description Metapop_d;
 
 class Metapopulation_description {
 public:
@@ -20,7 +25,8 @@ public:
 
     struct Sample {
         pop_index pop;
-        string name;
+        string prefix;
+        size_t id; // Sample ids, as present in the matches files.
     };
     struct Pop {
         group_index group;
@@ -38,21 +44,35 @@ private:
     vector<Pop> pops_;
     vector<Group> groups_;
 
-    map<string,sample_index> sample_indexes_; // Links a name with an index in [samples_].
-    map<string,pop_index> pop_indexes_;
-    map<string,group_index> group_indexes_;
+    map<size_t,sample_index> sample_indexes_by_id_; // Links an id with an index in [samples_].
+    map<string,sample_index> sample_indexes_by_name_; // Links a name with an index in [samples_].
+    map<string,pop_index> pop_indexes_; // same, for populations
+    map<string,group_index> group_indexes_; // same, for groups
 
 public:
     void load(const string& path); // Loads a popmap file
+    void set_sample_id(const sample_index i, const size_t id) {samples_.at(i).id = id;}
 
     const vector<Sample>& samples() const {return samples_;}
     const vector<Pop>& pops() const {return pops_;}
     const vector<Group>& groups() const {return groups_;}
 
-    size_t get_sample_index(const string& name) const {return sample_indexes_.at(name);}
+    size_t get_sample_index(const string& name) const {return sample_indexes_by_name_.at(name);}
+    size_t get_sample_index(const size_t& id) const {return sample_indexes_by_id_.at(id);}
     size_t get_pop_index(const string& name) const {return pop_indexes_.at(name);}
     size_t get_group_index(const string& name) const {return group_indexes_.at(name);}
 
+    namespace backcompat {
+    void fill_files(vector<pair<int, string> >&) const; // vector of (pop_index, prefix) pairs
+    void fill_samples(map<int, string>&) const; // map of sample_id : sample_name
+    void fill_sample_ids(vector<int>&) const; // vector of sample_id's.
+    void fill_pop_key(map<int, string>&) const; // map of pop_index : pop_name
+                                                // n.b. pop_indexes start at 1
+    void fill_pop_indexes(map<int, pair<int, int> >&) const; // map of pop_index : (sample_index, sample_index)
+    void fill_grp_key(map<int, string>&) const; // map of group_index : group_name
+                                                // n.b. group indexes start at 1
+    void fill_grp_members(map<int, vector<int> >) const; // map of group_index : pop_indexes
+    }
 };
 
 void Metapopulation_description::load(const string& path) {} // todo
