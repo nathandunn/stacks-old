@@ -164,14 +164,15 @@ int dump_alignment(MergedStack *, MergedStack *, double **, AlignPath **);
 //
 // Calculate depth of coverage statistics for stacks
 //
-int    calc_coverage_distribution(map<int, Stack *> &, double &, double &);
-double calc_merged_coverage_distribution(map<int, Stack *> &, map<int, MergedStack *> &);
-int    count_raw_reads(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &);
+int calc_coverage_distribution(map<int, Stack *> &, double &, double &, double &);
+int calc_coverage_distribution(map<int, Stack *> &, map<int, MergedStack *> &, double &, double &, double &);
+int calc_coverage_distribution(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, double &, double &, double &);
+int count_raw_reads(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &);
 
 //
 // Dealing with lumberjack (huge) stacks
 //
-int  calc_triggers(double, double, int &, int &);
+int  calc_triggers(double, double, double, int &, int &);
 int  remove_repetitive_stacks(map<int, Stack *> &, map<int, MergedStack *> &);
 int  deleverage(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, set<int> &, int, vector<MergedStack *> &);
 

@@ -395,15 +395,13 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     if (set_kmer_len) kmer_len = determine_kmer_length(con_len, ctag_dist);
     int num_kmers = con_len - kmer_len + 1;
 
-    cerr << "  Distance allowed between stacks: " << ctag_dist << "\n"
-	 << "  Using a k-mer length of " << kmer_len << "\n"
-	 << "  Number of kmers per sequence: " << num_kmers << "\n";
-
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
     int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len, set_kmer_len ? true : false);
 
+    cerr << "  Distance allowed between stacks: " << ctag_dist << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+        
     populate_kmer_hash(catalog, kmer_map, kmer_map_keys, kmer_len);
 
     cerr << "  " << catalog.size() << " loci in the catalog, " << kmer_map.size() << " kmers in the catalog hash.\n";
