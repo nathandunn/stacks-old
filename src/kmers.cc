@@ -71,7 +71,7 @@ int calc_min_kmer_matches(int kmer_len, int dist, int read_len, bool exit_err) {
     if (min_matches <= 0 && exit_err)
         exit(1);
     else if (min_matches <= 0)
-	min_matches = 1;
+        min_matches = 1;
 
     cerr << "  Minimum number of k-mers to define a match: " << min_matches << "\n";
 
@@ -173,16 +173,16 @@ int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, v
 
         // Hash the kmers
         for (int j = 0; j < num_kmers; j++) {
-	    exists = kmer_map.count(kmers[j]) == 0 ? false : true;
+            exists = kmer_map.count(kmers[j]) == 0 ? false : true;
 
             kmer_map[kmers[j]].push_back(tag->id);
 
-	    if (exists)
-		delete [] kmers[j];
-	    else
-		kmer_map_keys.push_back(kmers[j]);
-	}
-	kmers.clear();
+            if (exists)
+                delete [] kmers[j];
+            else
+                kmer_map_keys.push_back(kmers[j]);
+        }
+        kmers.clear();
     }
 
     //dump_kmer_map(kmer_map);
@@ -217,15 +217,15 @@ int populate_kmer_hash(map<int, Locus *> &catalog, CatKmerHashMap &kmer_map, vec
             generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
             for (int j = 0; j < num_kmers; j++) {
-		hash_key = kmers[j];
+                hash_key = kmers[j];
                 exists   = kmer_map.count(hash_key) == 0 ? false : true;
 
                 kmer_map[hash_key].push_back(make_pair(allele->first, tag->id));
 
                 if (exists)
-		    delete [] kmers[j];
+                    delete [] kmers[j];
                 else
-		    kmer_map_keys.push_back(hash_key);
+                    kmer_map_keys.push_back(hash_key);
             }
             kmers.clear();
         }
@@ -245,7 +245,7 @@ free_kmer_hash(CatKmerHashMap &kmer_map, vector<char *> &kmer_map_keys)
     kmer_map.clear();
 
     for (uint i = 0; i < kmer_map_keys.size(); i++) {
-	delete [] kmer_map_keys[i];
+        delete [] kmer_map_keys[i];
     }
     kmer_map_keys.clear();
 
@@ -261,7 +261,7 @@ free_kmer_hash(KmerHashMap &kmer_map, vector<char *> &kmer_map_keys)
     kmer_map.clear();
 
     for (uint i = 0; i < kmer_map_keys.size(); i++) {
-	delete [] kmer_map_keys[i];
+        delete [] kmer_map_keys[i];
     }
     kmer_map_keys.clear();
 
@@ -288,9 +288,9 @@ int dist(const char *tag_1, Locus *tag_2, allele_type allele) {
     // Count the number of characters that are different
     // between the two sequences.
     while (p < p_end && q < q_end) {
-	dist += (*p == *q) ? 0 : 1;
-	p++; 
-	q++;
+        dist += (*p == *q) ? 0 : 1;
+        p++; 
+        q++;
     }
 
     return dist;
@@ -315,9 +315,9 @@ int dist(Locus *tag_1, Locus *tag_2) {
     // between the two sequences.
     //
     while (p < p_end && q < q_end) {
-	dist += (*p == *q) ? 0 : 1;
-	p++;
-	q++;
+        dist += (*p == *q) ? 0 : 1;
+        p++;
+        q++;
     }
 
     return dist;
@@ -346,9 +346,9 @@ int dist(MergedStack *tag_1, MergedStack *tag_2) {
     // between the two sequences.
     //
     while (p < p_end && q < q_end) {
-	dist += (*p == *q) ? 0 : 1;
-	p++; 
-	q++;
+        dist += (*p == *q) ? 0 : 1;
+        p++; 
+        q++;
     }
 
     return dist;
@@ -378,9 +378,9 @@ int dist(MergedStack *tag_1, char *seq) {
     // between the two sequences.
     //
     while (p < p_end && q < q_end) {
-	dist += (*p == *q) ? 0 : 1;
-	p++; 
-	q++;
+        dist += (*p == *q) ? 0 : 1;
+        p++; 
+        q++;
     }
 
     return dist;
