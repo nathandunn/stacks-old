@@ -86,9 +86,12 @@ double    max_obs_het       = 1.0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
 
-map<int, string>          pop_key, grp_key;
-map<int, pair<int, int> > pop_indexes;
-map<int, vector<int> >    grp_members;
+vector<pair<int, string> > files;
+vector<int>                sample_ids;
+map<int, string>           samples;
+map<int, string>           pop_key, grp_key;
+map<int, pair<int, int> >  pop_indexes;
+map<int, vector<int> >     grp_members;
 
 set<int> blacklist, bootstraplist;
 map<int, set<int> > whitelist;
@@ -160,7 +163,6 @@ int main (int argc, char* argv[]) {
     // Read the population map,
     // and set variables "sample_ids", "pop_key", "grp_key", "files", "pop_indexes" and "grp_members".
     //
-    vector<pair<int, string> > files;
     if (!build_file_list(files, pop_indexes, grp_members))
         exit(1);
 
@@ -357,12 +359,14 @@ int main (int argc, char* argv[]) {
     loci_ordered = order_unordered_loci(catalog);
 
     //
-    // Load matches to the catalog
+    // Create the population map
     //
+    cerr << "Populating observed haplotypes for " << files.size() << " samples, " << catalog.size() << " loci.\n";
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(files.size(), catalog.size());
+
+    // Load matches to the catalog
     vector<vector<CatMatch *> > catalog_matches;
-    map<int, string>            samples;
-    vector<int>                 sample_ids;
-    for (int i = 0; i < (int) files.size(); i++) {
+    for (uint i = 0; i < files.size(); i++) {
         vector<CatMatch *> m;
         load_catalog_matches(in_path + files[i].second, m);
 
@@ -386,25 +390,28 @@ int main (int argc, char* argv[]) {
                     break;
                 }
 
+            cerr << "Error: [files] is not going to be the right size.\n" << std::flush; //todo
+            throw std::exception();
             continue;
         }
-
-        catalog_matches.push_back(m);
-        if (samples.count(m[0]->sample_id) == 0) {
-            samples[m[0]->sample_id] = files[i].second;
-            sample_ids.push_back(m[0]->sample_id);
-        } else {
+        if (samples.count(m[0]->sample_id) != 0) {
             cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
             exit(0);
         }
+
+        catalog_matches.push_back(m);
+        samples[m[0]->sample_id] = files[i].second;
+        sample_ids.push_back(m[0]->sample_id);
     }
 
-    //
-    // Create the population map
-    // 
-    cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
+    // Load the matches into the population map
     pmap->populate(sample_ids, catalog, catalog_matches);
+
+    // Clear the memory
+    for(vector<vector<CatMatch *> >::iterator sample = catalog_matches.begin(); sample != catalog_matches.end(); ++sample)
+        for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
+            delete *match;
+    catalog_matches.clear();
 
     //
     // Tabulate haplotypes present and in what combinations.
