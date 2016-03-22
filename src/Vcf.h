@@ -18,8 +18,8 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __VCFI_H__
-#define __VCFI_H__
+#ifndef __VCF_H__
+#define __VCF_H__
 
 #include "config.h"
 
@@ -29,6 +29,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
 
 #ifdef HAVE_LIBZ
 #include <zlib.h>
@@ -39,6 +40,7 @@ using std::pair;
 using std::vector;
 using std::string;
 using std::set;
+using std::map;
 using std::ifstream;
 
 #include "constants.h"
@@ -68,14 +70,14 @@ namespace Vcf {
     const set<string> common_format_fields ({"GT","AD","DP","GL"});
 }
 
-class Vcf_abstractparser;
+class VcfAbstractParser;
 
 /*
- * Vcf_basicrecord
+ * VcfRecord
  * Datastructure to store VCF records
  */
-class Vcf_basicrecord {
-public:
+struct VcfRecord {
+
     string chrom_; // required
     size_t pos_; // required
     string id_;
@@ -88,18 +90,26 @@ public:
     vector<string> format_;
     vector<vector<string> > samples_;
 
-    Vcf_basicrecord()
+    VcfRecord()
     : chrom_(), pos_(-1), id_(), ref_(), type_(Vcf::null),  alt_(), qual_(), filter_(), info_(), format_(), samples_()
     {}
 
-    void clear();
+private:
+    //map<string,size_t> format_subfields_indexes_; //todo
+
+public:
+    void clear(); // Clears all the members.
+
+    // Methods for further parsing
+    //pair<size_t, size_t> parse_genotype(size_t sample_index) const; // Returns (first allele, second allele)
+    //const string& allele(size_t index) const {if (index == 0) return ref_; else return alt_.at(index-1);}
 };
 
 /*
- * Vcf_header
+ * VcfHeader
  * Stores the contents of a VCF header.
  */
-class Vcf_header {
+class VcfHeader {
 //public:
     //struct Vcf_info {}; // Not implemented yet.
     //struct Vcf_format {};
@@ -117,7 +127,7 @@ protected:
     vector<string> samples_;
 
 public:
-    Vcf_header() : version_(), date_(), source_(), reference_(), samples_() {}
+    VcfHeader() : version_(), date_(), source_(), reference_(), samples_() {}
 
     //getters
     const string& version() const {return version_;}
@@ -136,10 +146,10 @@ public:
 };
 
 /*
- * Vcf_abstractparser
+ * VcfAbstractParser
  *
  * Main class for parsing VCF. The derived non-abstract classes
- * Vcf_parser and Vcf_gzparser only add the file_ attribute and
+ * VcfParser and VcfGzParser only add the file_ attribute and
  * implement the getline(), eof() and check_eol() methods.
  *
  * At present, the parser does not handle :
@@ -153,10 +163,10 @@ public:
  *    'symbolic' or 'breakend', with only the fields CHROM, POS,
  *    ID and REF filled in.
  */
-class Vcf_abstractparser {
+class VcfAbstractParser {
 protected:
     const string path_;
-    Vcf_header header_;
+    VcfHeader header_;
     size_t header_lines_; // Number of header lines there were (set by the constructor).
 
     set<string> format_fields_to_keep_; // If set, the parser will return records with only these fields included.
@@ -170,7 +180,7 @@ protected:
     vector<bool> kept_format_fields_; // Keeps track of which FORMAT subfields were kept for this record.
 
     // Parses the header.
-    // Called by the open method of the non-abstract derived classes (Vcf_parser and Vcf_gzparser).
+    // Called by the open method of the non-abstract derived classes (VcfParser and VcfGzParser).
     // Throws an exception if the header is malformed.
     void read_header();
 
@@ -178,11 +188,11 @@ protected:
     virtual void check_eol() =0; // n.b. The implementation in gzparser relies on tabs_ to access the end of the string in line_.
     void read_while_not_eol(); // Read while eol_ is false.
 
-    void add_sample(Vcf_basicrecord& record, char* tab1, char* tab2); // Basically 'record.samples_.push_back(parsed_value)'.
+    void add_sample(VcfRecord& record, char* tab1, char* tab2); // Basically 'record.samples_.push_back(parsed_value)'.
 
 public:
-    Vcf_abstractparser();
-    virtual ~Vcf_abstractparser() {}
+    VcfAbstractParser();
+    virtual ~VcfAbstractParser() {}
 
     // Opens the VCF file and reads the header.
     // Returns 0 if successful, 1 if the file could not be opened.
@@ -190,7 +200,7 @@ public:
 
     // Getters.
     const string& path() const {return path_;};
-    const Vcf_header& header() const {return header_;};
+    const VcfHeader& header() const {return header_;};
     size_t header_lines() const {return header_lines_;}
     size_t line_number() const {return line_number_;}
 
@@ -198,14 +208,14 @@ public:
     void format_fields_to_keep(const set<string>& fields) {format_fields_to_keep_ = fields;}
 
     // Reads a record. Returns false on EOF, true otherwise.
-    bool next_record(Vcf_basicrecord& record);
+    bool next_record(VcfRecord& record);
 };
 
 /*
- * Vcf_parser
- * Implements Vcf_abstractparser for plain text files.
+ * VcfParser
+ * Implements VcfAbstractParser for plain text files.
  */
-class Vcf_parser : public Vcf_abstractparser {
+class VcfParser : public VcfAbstractParser {
     ifstream file_;
     void getline(char* ptr, size_t n) {file_.getline(ptr, n); eof_ = file_.eof();}
     void check_eol() {eol_ = ! file_.fail(); file_.clear();}
@@ -215,22 +225,22 @@ public:
 
 #ifdef HAVE_LIBZ
 /*
- * Vcf_gzparser
- * Implements Vcf_abstractparser for gzipped files.
+ * VcfGzParser
+ * Implements VcfAbstractParser for gzipped files.
  */
-class Vcf_gzparser : public Vcf_abstractparser {
+class VcfGzParser : public VcfAbstractParser {
     gzFile file_;
     void getline(char* ptr, size_t n) {gzgets(file_, ptr, n); eof_ = gzeof(file_);}
     void check_eol();
 
-    Vcf_gzparser(Vcf_gzparser& p) = delete; // No copy constructor.
-    Vcf_gzparser& operator=(Vcf_gzparser& p) = delete;
+    VcfGzParser(VcfGzParser& p) = delete; // No copy constructor.
+    VcfGzParser& operator=(VcfGzParser& p) = delete;
 public:
-    Vcf_gzparser() : file_(NULL) {}
-    ~Vcf_gzparser() {if(file_) gzclose(file_);}
+    VcfGzParser() : file_(NULL) {}
+    ~VcfGzParser() {if(file_) gzclose(file_);}
 
     int open(const string& path);
 };
 #endif // HAVE_LIBZ
 
-#endif // __VCFI_H__
+#endif // __VCF_H__
