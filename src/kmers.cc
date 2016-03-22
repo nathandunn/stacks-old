@@ -73,8 +73,6 @@ int calc_min_kmer_matches(int kmer_len, int dist, int read_len, bool exit_err) {
     else if (min_matches <= 0)
         min_matches = 1;
 
-    cerr << "  Minimum number of k-mers to define a match: " << min_matches << "\n";
-
     return min_matches;
 }
 

@@ -44,9 +44,6 @@ int     deleverage_stacks = 0;
 int     remove_rep_stacks = 0;
 int     max_utag_dist     = 2;
 int     max_rem_dist      = -1;
-double  cov_mean          = 0.0;
-double  cov_stdev         = 0.0;
-double  cov_scale         = 1;
 bool    gapped_alignments = false;
 double  min_match_len     = 0.80;
 double  max_gaps          = 2;
@@ -74,13 +71,14 @@ int main (int argc, char* argv[]) {
     //
     if (max_rem_dist == -1) max_rem_dist = max_utag_dist + 2;
 
-    cerr << "Min depth of coverage to create a stack: " << min_merge_cov << "\n"
-         << "Max distance allowed between stacks: " << max_utag_dist << "\n"
-         << "Max distance allowed to align secondary reads: " << max_rem_dist << "\n"
-         << "Max number of stacks allowed per de novo locus: " << max_subgraph << "\n"
-         << "Deleveraging algorithm: " << (deleverage_stacks ? "enabled" : "disabled") << "\n"
-         << "Removal algorithm: " << (remove_rep_stacks ? "enabled" : "disabled") << "\n"
-         << "Model type: "; 
+    cerr << "ustacks paramters selected:\n"
+         << "  Min depth of coverage to create a stack: " << min_merge_cov << "\n"
+         << "  Max distance allowed between stacks: " << max_utag_dist << "\n"
+         << "  Max distance allowed to align secondary reads: " << max_rem_dist << "\n"
+         << "  Max number of stacks allowed per de novo locus: " << max_subgraph << "\n"
+         << "  Deleveraging algorithm: " << (deleverage_stacks ? "enabled" : "disabled") << "\n"
+         << "  Removal algorithm: " << (remove_rep_stacks ? "enabled" : "disabled") << "\n"
+         << "  Model type: "; 
     switch (model_type) {
     case snp:
         cerr << "SNP\n";
@@ -92,8 +90,8 @@ int main (int argc, char* argv[]) {
         cerr << "Bounded; lower epsilon bound: " << bound_low << "; upper bound: " << bound_high << "\n";
         break;
     }
-    cerr << "Alpha significance level for model: " << alpha << "\n"
-         << "Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n";
+    cerr << "  Alpha significance level for model: " << alpha << "\n"
+         << "  Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n";
 
     //
     // Set limits to call het or homozygote according to chi-square distribution with one 
@@ -135,12 +133,12 @@ int main (int argc, char* argv[]) {
 
     // dump_unique_tags(unique);
 
-    if (cov_mean == 0 || cov_stdev == 0)
-        calc_coverage_distribution(unique, cov_mean, cov_stdev);
+    double cov_mean, cov_stdev, cov_max;
+    
+    calc_coverage_distribution(unique, cov_mean, cov_stdev, cov_max);
+    cerr << "Initial coverage mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
-    cerr << "Coverage mean: " << cov_mean << "; stdev: " << cov_stdev << "\n";
-
-    calc_triggers(cov_mean, cov_stdev, deleverage_trigger, removal_trigger);
+    calc_triggers(cov_mean, cov_stdev, 1, deleverage_trigger, removal_trigger);
 
     cerr << "Deleveraging trigger: " << deleverage_trigger << "; Removal trigger: " << removal_trigger << "\n";
 
@@ -157,6 +155,9 @@ int main (int argc, char* argv[]) {
         remove_repetitive_stacks(unique, merged);
     }
 
+    calc_coverage_distribution(unique, merged, cov_mean, cov_stdev, cov_max);
+    cerr << "Post-Repeat Removal, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
+
     cerr << "Calculating distance between stacks...\n";
     calc_kmer_distance(merged, max_utag_dist);
 
@@ -165,12 +166,16 @@ int main (int argc, char* argv[]) {
 
     call_consensus(merged, unique, remainders, false);
 
-    calc_merged_coverage_distribution(unique, merged);
+    calc_coverage_distribution(unique, merged, cov_mean, cov_stdev, cov_max);
+    cerr << "After merging, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
     //dump_merged_tags(merged);
 
     cerr << "Merging remainder radtags\n";
     merge_remainders(merged, remainders);
+
+    calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
+    cerr << "After remainders merged, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
     if (gapped_alignments) {
         call_consensus(merged, unique, remainders, false);
@@ -179,6 +184,9 @@ int main (int argc, char* argv[]) {
         search_for_gaps(merged, min_match_len);
 
         merge_gapped_alns(unique, remainders, merged);
+
+        calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
+        cerr << "After gapped alignments, coverage depth mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
     }
     
     //
@@ -496,9 +504,7 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
     //
     int min_hits = (round((double) con_len * min_match_len) - (kmer_len * max_gaps)) - kmer_len + 1;
 
-    cerr << "  Using a k-mer length of " << kmer_len << "\n"
-         << "  Number of kmers per sequence: " << num_kmers << "\n"
-         << "  Minimum number of k-mers to define a match: " << min_hits << "\n";
+    cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
  
@@ -998,15 +1004,13 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     if (set_kmer_len) kmer_len = determine_kmer_length(con_len, max_rem_dist);
     int num_kmers = con_len - kmer_len + 1;
 
-    cerr << "  Distance allowed between stacks: " << max_rem_dist << "\n"
-         << "  Using a k-mer length of " << kmer_len << "\n"
-         << "  Number of kmers per sequence: " << num_kmers << "\n";
-
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
     int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, set_kmer_len ? true : false);
 
+    cerr << "  Distance allowed between stacks: " << max_rem_dist << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+    
     KmerHashMap    kmer_map;
     vector<char *> kmer_map_keys;
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
@@ -1635,7 +1639,8 @@ remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &mer
             ordered_tags.push_back(make_pair(i->second->id, i->second->count));
     }
     sort(ordered_tags.begin(), ordered_tags.end(), compare_pair_intint);
-    
+
+    pair<set<int>::iterator,bool> ret;
     int id = 0;
 
     //
@@ -1651,26 +1656,43 @@ remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &mer
         if (already_merged.count(tag_1->id) > 0)
             continue;
 
-        set<int> unique_merge_list;
-        unique_merge_list.insert(tag_1->id);
+        //
+        // Construct a list of MergedStacks that are either:
+        //   within a distance of 1 nucleotide of this tag, or
+        //   are they themselves above the lumberjack stacks limit.
+        //
+        queue<int> merge_queue;
+        set<int>   merge_list;
+        merge_queue.push(tag_1->id);
+        merge_list.insert(tag_1->id);
         already_merged.insert(tag_1->id);
 
-        for (k = tag_1->dist.begin(); k != tag_1->dist.end(); k++) {
-            if (already_merged.count(k->first) == 0) {
-                already_merged.insert(k->first);
-                unique_merge_list.insert(k->first);
+        while (!merge_queue.empty()) {
+            tag_2 = merged[merge_queue.front()];
+            merge_queue.pop();
+
+            if (tag_2->count < removal_trigger)
+                continue;
+
+            for (k = tag_2->dist.begin(); k != tag_2->dist.end(); k++) {
+                ret = already_merged.insert(k->first);
+
+                if (ret.second == true) {
+                    merge_queue.push(k->first);
+                    merge_list.insert(k->first);
+                }
             }
         }
-
-        tag_1->lumberjackstack = true;
-        tag_1->masked          = true;
-        tag_1->blacklisted     = true;
-
+        
         //
         // Merge these tags together into a new MergedStack object.
         //
-        tag_2 = merge_tags(merged, unique_merge_list, id);
+        tag_2 = merge_tags(merged, merge_list, id);
         tag_2->add_consensus(tag_1->con);
+
+        tag_2->lumberjackstack = true;
+        tag_2->masked          = true;
+        tag_2->blacklisted     = true;
 
         new_merged.insert(make_pair(id, tag_2));
         id++;
@@ -1685,10 +1707,10 @@ remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &mer
         if (already_merged.count(tag_1->id) > 0)
             continue;
 
-        set<int> unique_merge_list;
-        unique_merge_list.insert(tag_1->id);
+        set<int> merge_list;
+        merge_list.insert(tag_1->id);
 
-        tag_2 = merge_tags(merged, unique_merge_list, id);
+        tag_2 = merge_tags(merged, merge_list, id);
         tag_2->add_consensus(tag_1->con);
 
         new_merged.insert(make_pair(id, tag_2));
@@ -1902,12 +1924,12 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
         kmer_len = determine_kmer_length(con_len, utag_dist);
     int num_kmers = con_len - kmer_len + 1;
 
-    cerr << "  Distance allowed between stacks: " << utag_dist << "; searching with a k-mer length of " << kmer_len << "\n";
-
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
     //
     int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len, set_kmer_len ? true : false);
+
+    cerr << "  Distance allowed between stacks: " << utag_dist << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
  
@@ -2104,14 +2126,20 @@ free_radtags_hash(DNASeqHashMap &radtags, vector<DNANSeq *> &radtags_keys)
     return 0;
 }
 
-int calc_coverage_distribution(map<int, Stack *> &unique, double &mean, double &stdev) {
+int
+calc_coverage_distribution(map<int, Stack *> &unique,
+                           double &mean, double &stdev, double &max)
+{
     map<int, Stack *>::iterator i;
     double m     = 0.0;
     double s     = 0.0;
     double sum   = 0.0;
-    uint   max   = 0;
     uint   cnt   = 0;
     double total = 0.0;
+
+    mean  = 0.0;
+    max   = 0.0;
+    stdev = 0.0;
 
     map<int, int> depth_dist;
     map<int, int>::iterator j;
@@ -2127,7 +2155,7 @@ int calc_coverage_distribution(map<int, Stack *> &unique, double &mean, double &
             max = cnt;
     }
 
-    mean = round(m / total);
+    mean = m / total;
 
     //
     // Calculate the standard deviation
@@ -2142,29 +2170,30 @@ int calc_coverage_distribution(map<int, Stack *> &unique, double &mean, double &
 
     stdev = sqrt(sum / (total - 1));
 
-    cerr << "  Mean coverage depth is " << mean << "; Std Dev: " << stdev << " Max: " << max << "\n";
-
-    //
-    // Output the distribution of stack depths
-    //
-    //for (j = depth_dist.begin(); j != depth_dist.end(); j++)
-    //    cerr << j->first << "\t" << j->second << "\n";
-
     return 0;
 }
 
-double calc_merged_coverage_distribution(map<int, Stack *> &unique, map<int, MergedStack *> &merged) {
+int
+calc_coverage_distribution(map<int, Stack *> &unique,
+                           map<int, MergedStack *> &merged,
+                           double &mean, double &stdev, double &max)
+{
     map<int, MergedStack *>::iterator it;
-    vector<int>::iterator            k;
+    vector<int>::iterator             k;
     Stack *tag;
-    double m     = 0.0;
-    double s     = 0.0;
-    double sum   = 0.0;
-    double mean  = 0.0;
-    double max   = 0.0;
-    double stdev = 0.0;
+    double m   = 0.0;
+    double s   = 0.0;
+    double sum = 0.0;
+    double cnt = 0.0;
+
+    mean  = 0.0;
+    max   = 0.0;
+    stdev = 0.0;
 
     for (it = merged.begin(); it != merged.end(); it++) {
+        if (it->second->blacklisted) continue;
+
+        cnt++;
         m = 0.0;
         for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
             tag  = unique[*k];
@@ -2175,7 +2204,7 @@ double calc_merged_coverage_distribution(map<int, Stack *> &unique, map<int, Mer
         sum += m;
     }
 
-    mean = sum / (double) merged.size();
+    mean = sum / cnt;
 
     //
     // Calculate the standard deviation
@@ -2189,11 +2218,65 @@ double calc_merged_coverage_distribution(map<int, Stack *> &unique, map<int, Mer
         sum += pow((s - mean), 2);
     }
 
-    stdev = sqrt(sum / (merged.size() - 1));
+    stdev = sqrt(sum / (cnt - 1));
 
-    cerr << "  Mean merged coverage depth is " << mean << "; Std Dev: " << stdev << "; Max: " << max << "\n";
+    return 0;
+}
 
-    return mean;
+int
+calc_coverage_distribution(map<int, Stack *> &unique,
+                           map<int, Rem *> &rem, 
+                           map<int, MergedStack *> &merged,
+                           double &mean, double &stdev, double &max)
+{
+    map<int, MergedStack *>::iterator it;
+    vector<int>::iterator             k;
+    Stack *tag;
+    double m    = 0.0;
+    double s    = 0.0;
+    double sum  = 0.0;
+    double cnt  = 0.0;
+    
+    mean  = 0.0;
+    max   = 0.0;
+    stdev = 0.0;
+
+    for (it = merged.begin(); it != merged.end(); it++) {
+        if (it->second->blacklisted) continue;
+
+        cnt++;
+        m = 0.0;
+        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
+            tag  = unique[*k];
+            m   += tag->count();
+        }
+        for (uint j = 0; j < it->second->remtags.size(); j++)
+            m += rem[it->second->remtags[j]]->count();
+
+        if (m > max) max = m;
+
+        sum += m;
+    }
+
+    mean = sum / cnt;
+
+    //
+    // Calculate the standard deviation
+    //
+    for (it = merged.begin(); it != merged.end(); it++) {
+        s = 0.0;
+        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
+            tag  = unique[*k];
+            s   += tag->count();
+        }
+        for (uint j = 0; j < it->second->remtags.size(); j++)
+            s += rem[it->second->remtags[j]]->count();
+        sum += pow((s - mean), 2);
+    }
+
+    stdev = sqrt(sum / (cnt - 1));
+
+    return 0;
 }
 
 int count_raw_reads(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged) {
@@ -2831,7 +2914,12 @@ load_seq_ids(vector<char *> &seq_ids)
     return 0;
 }
 
-int calc_triggers(double cov_mean, double cov_stdev, int &deleverage_trigger, int &removal_trigger) {
+int
+calc_triggers(double cov_mean,
+              double cov_stdev,
+              double cov_scale,
+              int &deleverage_trigger, int &removal_trigger)
+{
 
     deleverage_trigger = (int) round(cov_mean + cov_stdev * cov_scale);
     removal_trigger    = (int) round(cov_mean + (cov_stdev * 2) * cov_scale);
@@ -2902,9 +2990,6 @@ int parse_command_line(int argc, char* argv[]) {
             {"remove_rep",       no_argument,       NULL, 'r'},
             {"retain_rem",       no_argument,       NULL, 'R'},
             {"graph",            no_argument,       NULL, 'g'},
-            {"exp_cov",          no_argument,       NULL, 'E'},
-            {"cov_stdev",        no_argument,       NULL, 's'},
-            {"cov_scale",        no_argument,       NULL, 'S'},
             {"sec_hapl",         no_argument,       NULL, 'H'},
             {"gapped",           no_argument,       NULL, 'G'},
             {"max_gaps",         required_argument, NULL, 'X'},
@@ -2920,7 +3005,7 @@ int parse_command_line(int argc, char* argv[]) {
         // getopt_long stores the option index here.
         int option_index = 0;
      
-        c = getopt_long(argc, argv, "GhHvdrgRA:L:U:f:o:i:m:e:E:s:S:p:t:M:N:K:k:T:X:x:", long_options, &option_index);
+        c = getopt_long(argc, argv, "GhHvdrgRA:L:U:f:o:i:m:e:p:t:M:N:K:k:T:X:x:", long_options, &option_index);
      
         // Detect the end of the options.
         if (c == -1)
@@ -2993,15 +3078,6 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'x':
             min_match_len = is_double(optarg);
-            break;
-        case 'E':
-            cov_mean = is_double(optarg);
-            break;
-        case 's':
-            cov_stdev = is_double(optarg);
-            break;
-        case 'S':
-            cov_scale = is_double(optarg);
             break;
         case 'T':
             if (strcmp(optarg, "snp") == 0) {
