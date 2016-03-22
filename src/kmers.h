@@ -56,19 +56,19 @@ using google::sparse_hash_map;
 struct hash_charptr {
     size_t operator()(const char *__s) const
     {
-	size_t __result = static_cast<size_t>(14695981039346656037ULL);
-	unsigned int __len = strlen(__s);
-	for (unsigned int i = 0; i < __len; i++) {
-	    __result ^= static_cast<size_t>(__s[i]);
-	    __result *= static_cast<size_t>(1099511628211ULL);
-	}
+        size_t __result = static_cast<size_t>(14695981039346656037ULL);
+        unsigned int __len = strlen(__s);
+        for (unsigned int i = 0; i < __len; i++) {
+            __result ^= static_cast<size_t>(__s[i]);
+            __result *= static_cast<size_t>(1099511628211ULL);
+        }
 
-	return __result;
+        return __result;
     }
 };
 struct eqstr {
     bool operator()(const char* s1, const char* s2) const {
-	return strcmp(s1, s2) == 0;
+        return strcmp(s1, s2) == 0;
     }
 };
 

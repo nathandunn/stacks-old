@@ -1902,9 +1902,7 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
         kmer_len = determine_kmer_length(con_len, utag_dist);
     int num_kmers = con_len - kmer_len + 1;
 
-    cerr << "  Distance allowed between stacks: " << utag_dist << "\n"
-         << "  Using a k-mer length of " << kmer_len << "\n"
-         << "  Number of kmers per sequence: " << num_kmers << "\n";
+    cerr << "  Distance allowed between stacks: " << utag_dist << "; searching with a k-mer length of " << kmer_len << "\n";
 
     //
     // Calculate the minimum number of matching k-mers required for a possible sequence match.
