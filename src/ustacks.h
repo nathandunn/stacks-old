@@ -84,11 +84,11 @@ class HVal {
     vector<int> ids;
 
     int count() {
-	return this->ids.size();
+        return this->ids.size();
     }
     int add_id(int id) {
-    	this->ids.push_back(id);
-	return 0;
+        this->ids.push_back(id);
+        return 0;
     }
 };
 
@@ -107,17 +107,17 @@ public:
     bool up;
 
     AlignPath() {
-	diag = false;
-	left = false;
-	up   = false;
+        diag = false;
+        left = false;
+        up   = false;
     }
     int count() {
-	int cnt;
-	cnt  = this->up   ? 1 : 0;
-	cnt += this->left ? 1 : 0;
-	cnt += this->diag ? 1 : 0;
+        int cnt;
+        cnt  = this->up   ? 1 : 0;
+        cnt += this->left ? 1 : 0;
+        cnt += this->diag ? 1 : 0;
 
-	return cnt;
+        return cnt;
     }
 };
 
