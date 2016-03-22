@@ -265,9 +265,9 @@ public:
     PopSum(int, int);
     ~PopSum();
 
-    int initialize(PopMap<LocusT> *);
-    int add_population(map<int, LocusT *> &, PopMap<LocusT> *, uint, uint, uint, bool, ofstream &);
-    int tally(map<int, LocusT *> &);
+    int initialize(const PopMap<LocusT> *);
+    int add_population(const map<int, LocusT *> &, const PopMap<LocusT> *, uint, uint, uint, bool, ofstream &);
+    int tally(const map<int, LocusT *> &);
 
     int loci_cnt() { return this->num_loci; }
     int rev_locus_index(int index) { return this->rev_locus_order[index]; }
@@ -283,10 +283,10 @@ public:
     int       fishers_exact_test(PopPair *, double, double, double, double);
 
 private:
-    int    tally_heterozygous_pos(LocusT *, Datum **, LocSum *, int, int, uint, uint);
-    int    tally_fixed_pos(LocusT *, Datum **, LocSum *, int, uint, uint);
+    int    tally_heterozygous_pos(const LocusT *, Datum const *const *, LocSum *, int, int, uint, uint);
+    int    tally_fixed_pos(const LocusT *, Datum const *const *, LocSum *, int, uint, uint);
     int    tally_ref_alleles(LocSum **, int, short unsigned int &, char &, char &, short unsigned int &, short unsigned int &); 
-    int    tally_observed_haplotypes(vector<char *> &, int);
+    int    tally_observed_haplotypes(const vector<char *> &, int);
     double pi(double, double, double);
     double binomial_coeff(double, double);
 };
@@ -320,7 +320,7 @@ PopSum<LocusT>::~PopSum() {
 }
 
 template<class LocusT>
-int PopSum<LocusT>::initialize(PopMap<LocusT> *pmap) {
+int PopSum<LocusT>::initialize(const PopMap<LocusT> *pmap) {
     int locus_id;
 
     for (int i = 0; i < this->num_loci; i++) {
@@ -333,13 +333,13 @@ int PopSum<LocusT>::initialize(PopMap<LocusT> *pmap) {
 }
 
 template<class LocusT>
-int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
-                               PopMap<LocusT> *pmap, 
+int PopSum<LocusT>::add_population(const map<int, LocusT *> &catalog,
+                               const PopMap<LocusT> *pmap, 
                                uint population_id,
                                uint start_index, uint end_index, 
                                bool verbose, ofstream &log_fh) {
-    LocusT  *loc;
-    Datum  **d;
+    const LocusT  *loc;
+    Datum const *const *d;
     LocSum **s;
     uint locus_id, len;
     int res;
@@ -368,7 +368,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
         locus_id = pmap->rev_locus_index(i);
         d   = pmap->locus(locus_id);
         s   = this->locus(locus_id);
-        loc = catalog[locus_id];
+        loc = catalog.at(locus_id);
         //
         // Create an array of SumStat objects
         //
@@ -434,9 +434,9 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 }
 
 template<class LocusT>
-int PopSum<LocusT>::tally(map<int, LocusT *> &catalog) 
+int PopSum<LocusT>::tally(const map<int, LocusT *> &catalog) 
 {
-    LocusT   *loc;
+    const LocusT *loc;
     LocSum  **s;
     LocTally *ltally;
     int       locus_id, variable_pop;
@@ -444,7 +444,7 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 
     for (int n = 0; n < this->num_loci; n++) {
         locus_id = this->rev_locus_index(n);
-        loc      = catalog[locus_id];
+        loc      = catalog.at(locus_id);
         s        = this->locus(locus_id);
         len      = strlen(loc->con);
 
@@ -816,7 +816,7 @@ PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos)
 }
 
 template<class LocusT>
-int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos, uint start, uint end) 
+int PopSum<LocusT>::tally_fixed_pos(const LocusT *locus, Datum const *const *d, LocSum *s, int pos, uint start, uint end) 
 {
     double num_indv = 0.0;
     char   p_nuc = 0;
@@ -858,8 +858,8 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
 }
 
 template<class LocusT>
-int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s, 
-                                           int pos, int snp_index, uint start, uint end) 
+int PopSum<LocusT>::tally_heterozygous_pos(const LocusT *locus, Datum const *const *d, LocSum *s, 
+                                           int pos, int snp_index, uint start, uint end)
 {
     //
     // Tally up the genotype frequencies.
@@ -1076,7 +1076,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
 }
 
 template<class LocusT>
-int PopSum<LocusT>::tally_observed_haplotypes(vector<char *> &obshap, int snp_index) 
+int PopSum<LocusT>::tally_observed_haplotypes(const vector<char *> &obshap, int snp_index) 
 {
     int  nucs[4] = {0};
     char nuc;

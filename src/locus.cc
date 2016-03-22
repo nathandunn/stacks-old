@@ -24,7 +24,7 @@
 #include "locus.h"
 
 uint 
-Locus::sort_bp(uint k) 
+Locus::sort_bp(uint k) const
 {
     if (this->loc.strand == plus)
         return this->loc.bp + k;
@@ -33,7 +33,7 @@ Locus::sort_bp(uint k)
 }
 
 int 
-Locus::snp_index(uint col) 
+Locus::snp_index(uint col) const 
 {
     for (uint i = 0; i < this->snps.size(); i++)
         if (this->snps[i]->col == col)
