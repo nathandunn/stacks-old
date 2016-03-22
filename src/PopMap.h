@@ -83,16 +83,17 @@ public:
     ~PopMap();
 
     int populate(vector<int> &, map<int, LocusT*> &, vector<vector<CatMatch *> > &);
-    int order_loci(map<int, LocusT*> &);
+    int order_loci(const map<int, LocusT*> &);
     int prune(set<int> &);
 
     int loci_cnt() { return this->num_loci; }
-    int rev_locus_index(int index) { if (this->rev_locus_order.count(index) == 0) return -1; return this->rev_locus_order[index]; }
+    int rev_locus_index(int index) const { if (this->rev_locus_order.count(index) == 0) return -1; return this->rev_locus_order.at(index); }
     int sample_cnt() { return this->num_samples; }
     int sample_index(int index) { if (this->sample_order.count(index) == 0) return -1; return this->sample_order[index]; }
     int rev_sample_index(int index) { if (this->rev_sample_order.count(index) == 0) return -1; return this->rev_sample_order[index]; }
 
-    Datum **locus(int);
+    Datum **locus(int locus_id) {return data[locus_order.at(locus_id)];}
+    Datum const *const *locus(int locus_id) const {return data[locus_order.at(locus_id)];}
     Datum  *datum(int, int);
     bool    blacklisted(int, int);
 };
@@ -124,7 +125,8 @@ PopMap<LocusT>::~PopMap() {
 
 template<class LocusT>
 int PopMap<LocusT>::populate(vector<int> &sample_ids,
-                             map<int, LocusT*> &catalog,
+                             map<int, LocusT*> &catalog, // LocusT must actually be CSLocus,
+                                                         // and its members cnt, hcnt, and confounded_cnt are modified 
                              vector<vector<CatMatch *> > &matches) {
     //
     // Record the array position of each sample that we will load.
@@ -216,11 +218,11 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 }
 
 template<class LocusT>
-int PopMap<LocusT>::order_loci(map<int, LocusT*> &catalog) 
+int PopMap<LocusT>::order_loci(const map<int, LocusT*> &catalog) 
 {
     this->ordered_loci.clear();
 
-    typename std::map<int, LocusT*>::iterator it;
+    typename std::map<int, LocusT*>::const_iterator it;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
         if (strlen(it->second->loc.chr) > 0)
@@ -298,11 +300,6 @@ int PopMap<LocusT>::prune(set<int> &remove_ids) {
         sort(cit->second.begin(), cit->second.end(), bp_compare);
 
     return new_size;
-}
-
-template<class LocusT>
-Datum **PopMap<LocusT>::locus(int locus) {
-    return this->data[this->locus_order[locus]];
 }
 
 template<class LocusT>
