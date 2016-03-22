@@ -26,7 +26,7 @@
 #include <algorithm>
 
 #include "populations.h"
-#include "VcfI.h"
+#include "Vcf.h"
 
 using std::find;
 
@@ -206,8 +206,8 @@ int main (int argc, char* argv[]) {
 
     // There will be several distinct if(vcf) blocks below, so a couple
     // objects are needed in the main scope.
-    Vcf_header* vcf_header = NULL;
-    vector<Vcf_basicrecord>* vcf_records = NULL;
+    VcfHeader* vcf_header = NULL;
+    vector<VcfRecord>* vcf_records = NULL;
 
     // Load the catalog from Stacks files.
     if (!in_path.empty()) {
@@ -222,22 +222,22 @@ int main (int argc, char* argv[]) {
     }
     // Or load it from a VCF file.
     else if (!vcf_in_path.empty()) {
-        //todo class Vcf_versatileparser : public Vcf_abstractparser { Vcf_abstractparser* parser_; ... }
-        //todo (maybe not?) vector<Vcf_basicrecord> Vcf_abstractparser::load_snp_records(size_t& skipped = 0);
+        //todo class Vcf_versatileparser : public VcfAbstractParser { VcfAbstractParser* parser_; ... }
+        //todo (maybe not?) vector<VcfRecord> VcfAbstractParser::load_snp_records(size_t& skipped = 0);
 
-        vcf_header = new Vcf_header();
-        vcf_records = new vector<Vcf_basicrecord>();
+        vcf_header = new VcfHeader();
+        vcf_records = new vector<VcfRecord>();
 
         // Open the file
-        Vcf_abstractparser* parser = NULL;
-        parser = new Vcf_parser();
+        VcfAbstractParser* parser = NULL;
+        parser = new VcfParser();
         int res = parser->open(vcf_in_path);
         if (res == 0) {
         } else if (res == 1) {
             delete parser;
 #ifdef HAVE_LIBZ
             // Try gzip
-            parser = new Vcf_gzparser();
+            parser = new VcfGzParser();
             res = parser->open(vcf_in_path);
             if (res == 0) {
                 // OK.
@@ -254,8 +254,8 @@ int main (int argc, char* argv[]) {
         // Read the records
         // We only keep records that correspond to SNPs
         size_t skipped = 0;
-        vcf_records->push_back(Vcf_basicrecord());
-        Vcf_basicrecord* rec = &vcf_records->back();
+        vcf_records->push_back(VcfRecord());
+        VcfRecord* rec = &vcf_records->back();
         while (parser->next_record(*rec)) {
             bool skip = false;
             if (rec->type_ != Vcf::expl) {
@@ -274,14 +274,14 @@ int main (int argc, char* argv[]) {
                 ++skipped;
                 continue;
             }
-            vcf_records->push_back(Vcf_basicrecord());
+            vcf_records->push_back(VcfRecord());
             rec = &vcf_records->back();
         }
         //todo cerr << "skipped "
         vcf_records->pop_back();
 
         /*
-         * todo catalog_utils.h: map<int, CSLocus*> create_catalog(const vector<Vcf_basicrecord>& vcf_records);
+         * todo catalog_utils.h: map<int, CSLocus*> create_catalog(const vector<VcfRecord>& vcf_records);
          * Create a catalog based on VCF SNP records.
          *
          * We observe the following rules to create the catalog loci :
@@ -320,7 +320,7 @@ int main (int argc, char* argv[]) {
          * comp_type, annotation, uncor_marker, hap_cnts, f, trans_gcnt, chisq.
          */
         for (size_t i = 0; i < vcf_records->size(); ++i) {
-            const Vcf_basicrecord& rec = (*vcf_records)[i];
+            const VcfRecord& rec = (*vcf_records)[i];
             CSLocus* loc = catalog.insert(make_pair(i, new CSLocus())).first->second;
             loc->sample_id = 0;
             loc->id = i;
@@ -440,7 +440,7 @@ int main (int argc, char* argv[]) {
     // ...or using VCF records
     else if (!vcf_in_path.empty()) {
 
-        //todo void PopMap::populate(const map<int, CSLocus*>& catalog, const vector<Vcf_basicrecord>& vcf_records);
+        //todo void PopMap::populate(const map<int, CSLocus*>& catalog, const vector<VcfRecord>& vcf_records);
         //todo void PopMap::add_metapop_info(const Mpopinfo& mpopinfo);
 
         //todo initialize [sample_order], [rev_sample_order]
@@ -449,7 +449,7 @@ int main (int argc, char* argv[]) {
 
         for (map<int, CSLocus*>::const_iterator loc_it = catalog.begin(); loc_it != catalog.end(); ++loc_it) {
             const CSLocus& loc = *loc_it->second;
-            const Vcf_basicrecord& rec = vcf_records->at(loc.id);
+            const VcfRecord& rec = vcf_records->at(loc.id);
 
             /*
              * Populate the PopMap based on VCF SNP records. The ids of the loci
@@ -488,7 +488,7 @@ int main (int argc, char* argv[]) {
                 d->id = loc.id;
                 d->len = loc.len;
                 /*
-                 *todo retrieve the genotype... Should this be done by Vcf_abstractparser or by Vcf_basicrecord ?
+                 *todo retrieve the genotype... Should this be done by VcfAbstractParser or by VcfRecord ?
                  * Then:
                  * if (no genotype)
                  *     model = "U"
