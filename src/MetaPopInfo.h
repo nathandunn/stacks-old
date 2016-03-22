@@ -1,8 +1,8 @@
 /*
  * todo Ask @Julian, are you OK with the [variable] notation for comments ?
  */
-#ifndef MPOPD_H
-#define MPOPD_H
+#ifndef METAPOPINFO_H
+#define METAPOPINFO_H
 
 #include <string>
 #include <vector>
@@ -15,11 +15,11 @@ using std::string;
 using std::map;
 
 /*
- * Mpopinfo
+ * MetaPopInfo
  * Class for reprensenting a metapopulation : its individuals/samples,
  * populations, and groups of populations.
  */
-class Mpopinfo {
+class MetaPopInfo {
 public:
     typedef size_t sample_index; // For indexes in [samples_].
     typedef size_t pop_index;
@@ -86,4 +86,4 @@ public:
     }
 };
 
-#endif // MPOPD_H
+#endif // METAPOPINFO_H
