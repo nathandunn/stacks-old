@@ -23,8 +23,12 @@
 // haplotypes in a population context.
 //
 
+#include <algorithm>
+
 #include "populations.h"
 #include "VcfI.h"
+
+using std::find;
 
 // Global variables to hold command-line options.
 int       num_threads =  1;
@@ -202,8 +206,8 @@ int main (int argc, char* argv[]) {
 
     // There will be several distinct if(vcf) blocks below, so a couple
     // objects are needed in the main scope.
-    Vcf_header vcf_header;
-    vector<Vcf_basicrecord>* vcf_records = new vector<Vcf_basicrecord>();
+    Vcf_header* vcf_header = NULL;
+    vector<Vcf_basicrecord>* vcf_records = NULL;
 
     // Load the catalog from Stacks files.
     if (!in_path.empty()) {
@@ -218,6 +222,11 @@ int main (int argc, char* argv[]) {
     }
     // Or load it from a VCF file.
     else if (!vcf_in_path.empty()) {
+        //todo class Vcf_versatileparser : public Vcf_abstractparser { Vcf_abstractparser* parser_; ... }
+        //todo (maybe not?) vector<Vcf_basicrecord> Vcf_abstractparser::load_snp_records(size_t& skipped = 0);
+
+        vcf_header = new Vcf_header();
+        vcf_records = new vector<Vcf_basicrecord>();
 
         // Open the file
         Vcf_abstractparser* parser = NULL;
@@ -237,30 +246,43 @@ int main (int argc, char* argv[]) {
             if (true)
 #endif
                 {
-                cerr << "Error: Unable to open VCF file '" << vcf_in_path << "'\n";
+                cerr << "Error: Unable to open VCF file '" << vcf_in_path << "'.\n";
                 return 0;
             }
         }
 
         // Read the records
         // We only keep records that correspond to SNPs
+        size_t skipped = 0;
         vcf_records->push_back(Vcf_basicrecord());
         Vcf_basicrecord* rec = &vcf_records->back();
         while (parser->next_record(*rec)) {
-            if (rec->type_ != Vcf::expl)
+            bool skip = false;
+            if (rec->type_ != Vcf::expl) {
+                skip = true;
+            } else if (rec->ref_.length() > 1) {
+                skip = true;
+            } else {
+                for (vector<string>::const_iterator allele = rec->alt_.begin(); allele != rec->alt_.end(); ++allele) {
+                    if (allele->length() > 1) {
+                        skip = true;
+                        break;
+                    }
+                }
+            }
+            if(skip) {
+                ++skipped;
                 continue;
-            if (rec->ref_.length() > 1)
-                continue;
-            for (vector<string>::const_iterator allele = rec->alt_.begin(); allele != rec->alt_.end(); ++allele)
-                if (allele->length() > 1)
-                    continue;
+            }
             vcf_records->push_back(Vcf_basicrecord());
             rec = &vcf_records->back();
         }
+        //todo cerr << "skipped "
         vcf_records->pop_back();
 
         /*
-         * Create the catalog based on VCF SNP records.
+         * todo catalog_utils.h: map<int, CSLocus*> create_catalog(const vector<Vcf_basicrecord>& vcf_records);
+         * Create a catalog based on VCF SNP records.
          *
          * We observe the following rules to create the catalog loci :
          * [sample_id] (batch number) Always set to 0.
@@ -293,7 +315,7 @@ int main (int argc, char* argv[]) {
          * Mar 21, 2016.)
          *
          * The following members are left unset, on the premise that
-         * "populations" do not use them :
+         * "populations" does not use them :
          * model, blacklisted, deleveraged, lumberjack, components, reads, comp_cnt,
          * comp_type, annotation, uncor_marker, hap_cnts, f, trans_gcnt, chisq.
          */
@@ -343,7 +365,7 @@ int main (int argc, char* argv[]) {
             loc->depth = 0;
             loc->lnl = 0;
         }
-        vcf_header = parser->header();
+        *vcf_header = parser->header();
         delete parser;
     }
 
@@ -359,59 +381,133 @@ int main (int argc, char* argv[]) {
     loci_ordered = order_unordered_loci(catalog);
 
     //
-    // Create the population map
+    // Create and populate the population map
     //
     cerr << "Populating observed haplotypes for " << files.size() << " samples, " << catalog.size() << " loci.\n";
     PopMap<CSLocus> *pmap = new PopMap<CSLocus>(files.size(), catalog.size());
 
-    // Load matches to the catalog
-    vector<vector<CatMatch *> > catalog_matches;
-    for (uint i = 0; i < files.size(); i++) {
-        vector<CatMatch *> m;
-        load_catalog_matches(in_path + files[i].second, m);
+    // Either from Stacks matches files...
+    if (!in_path.empty()) {
+        // Load matches to the catalog
+        vector<vector<CatMatch *> > catalog_matches;
+        for (uint i = 0; i < files.size(); i++) {
+            vector<CatMatch *> m;
+            load_catalog_matches(in_path + files[i].second, m);
 
-        if (m.size() == 0) {
-            cerr << "Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from population analysis.\n";
-            //
-            // This case is generated by an existing, but empty file.
-            // Remove this sample from the population index which was built from 
-            // existing files, but we couldn't yet check for empty files.
-            //
-            map<int, pair<int, int> >::iterator pit;
-            for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
-                if (i >= pit->second.first && i <= pit->second.second) {
-                    pit->second.second--;
-                    pit++;
-                    while (pit != pop_indexes.end()) {
-                        pit->second.first--;
+            if (m.size() == 0) {
+                cerr << "Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from population analysis.\n";
+                //
+                // This case is generated by an existing, but empty file.
+                // Remove this sample from the population index which was built from
+                // existing files, but we couldn't yet check for empty files.
+                //
+                map<int, pair<int, int> >::iterator pit;
+                for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
+                    if (i >= pit->second.first && i <= pit->second.second) {
                         pit->second.second--;
                         pit++;
+                        while (pit != pop_indexes.end()) {
+                            pit->second.first--;
+                            pit->second.second--;
+                            pit++;
+                        }
+                        break;
                     }
-                    break;
-                }
 
-            cerr << "Error: [files] is not going to be the right size.\n" << std::flush; //todo
-            throw std::exception();
-            continue;
-        }
-        if (samples.count(m[0]->sample_id) != 0) {
-            cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
-            exit(0);
+                cerr << "Error: [files] is not going to be the right size.\n" << std::flush; //todo
+                throw std::exception();
+                continue;
+            }
+            if (samples.count(m[0]->sample_id) != 0) {
+                cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
+                exit(0);
+            }
+
+            catalog_matches.push_back(m);
+            samples[m[0]->sample_id] = files[i].second;
+            sample_ids.push_back(m[0]->sample_id);
         }
 
-        catalog_matches.push_back(m);
-        samples[m[0]->sample_id] = files[i].second;
-        sample_ids.push_back(m[0]->sample_id);
+        // Load the matches into the population map
+        pmap->populate(sample_ids, catalog, catalog_matches);
+
+        // Free the memory
+        for(vector<vector<CatMatch *> >::iterator sample = catalog_matches.begin(); sample != catalog_matches.end(); ++sample)
+            for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
+                delete *match;
+        catalog_matches.clear();
     }
+    // ...or using VCF records
+    else if (!vcf_in_path.empty()) {
 
-    // Load the matches into the population map
-    pmap->populate(sample_ids, catalog, catalog_matches);
+        //todo void PopMap::populate(const map<int, CSLocus*>& catalog, const vector<Vcf_basicrecord>& vcf_records);
+        //todo void PopMap::add_metapop_info(const Mpopinfo& mpopinfo);
 
-    // Clear the memory
-    for(vector<vector<CatMatch *> >::iterator sample = catalog_matches.begin(); sample != catalog_matches.end(); ++sample)
-        for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
-            delete *match;
-    catalog_matches.clear();
+        //todo initialize [sample_order], [rev_sample_order]
+        //todo initalize [locus_order], [rev_locus_order]
+        //todo PopMap::order_loci() ??
+
+        for (map<int, CSLocus*>::const_iterator loc_it = catalog.begin(); loc_it != catalog.end(); ++loc_it) {
+            const CSLocus& loc = *loc_it->second;
+            const Vcf_basicrecord& rec = vcf_records->at(loc.id);
+
+            /*
+             * Populate the PopMap based on VCF SNP records. The ids of the loci
+             * in the catalog must be the indexes of the SNP records.
+             *
+             * We observe the following rules to create the Datums :
+             * [id] is the locus id.
+             * [len] is the locus length (expected to be one, for a SNP)
+             * [model] "E" or "O" according to the SAMPLE/GT field, or
+             *     "U" if the GT field is absent.
+             * [obshap] the nucleotide(s) observed for this SNP for this individual
+             *     todo Does [obshap] have to be ordered?
+             *
+             * When no depth information is available, [tot_depth] and the [depths]
+             * of all alleles are set to 0.
+             * (n.b. the parsing of depth information in VCF is not implemented as
+             * of Mar 21, 2016.)
+             *
+             * When no likelihood information is available, [lnl] is set to 0.
+             * (n.b. the parsing of depth information in VCF is not implemented as
+             * of Mar 21, 2016.)
+             *
+             * The following members are left unset, on the premise that
+             * "populations" does not use them :
+             * corrected, genotype, trans_genotype
+             *
+             * [merge_partner] does not need to be set now
+             * [snps] is only used by [write_vcf()] and [write_vcf_strict()], which
+             *     first call [populate_snp_calls()] then use the SNP data in the
+             *     datum. todo See how we can handle this.
+             */
+
+            for (size_t sample = 0; sample < files.size(); ++sample) {
+                //data[loc_index][sample] = new Datum(); //todo Make this block of code a PopMap member
+                Datum* d; //= data[loc_index][sample];
+                d->id = loc.id;
+                d->len = loc.len;
+                /*
+                 *todo retrieve the genotype... Should this be done by Vcf_abstractparser or by Vcf_basicrecord ?
+                 * Then:
+                 * if (no genotype)
+                 *     model = "U"
+                 * if (homozygote)
+                 *     model = "O"
+                 *     obshap.push_back()
+                 *     depths = {0}
+                 * if (heterozygote)
+                 *     model = "E"
+                 *     obshap.bush_back()
+                 *     obshap.push_back()
+                 *     depths = {0,0}
+                 */
+
+                d->tot_depth = 0;
+                d->lnl = 0;
+            }
+        }
+    }
 
     //
     // Tabulate haplotypes present and in what combinations.
