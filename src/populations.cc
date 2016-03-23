@@ -408,18 +408,17 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    calculate_haplotype_stats(files, pop_indexes, catalog, pmap, psum);
+    calculate_haplotype_stats(pop_indexes, catalog, pmap, psum);
 
     if (calc_fstats) {
-        calculate_haplotype_divergence(files, pop_indexes, grp_members, catalog, pmap, psum);
-
-        calculate_haplotype_divergence_pairwise(files, pop_indexes, grp_members, catalog, pmap, psum);
+        calculate_haplotype_divergence(pop_indexes, grp_members, catalog, pmap, psum);
+        calculate_haplotype_divergence_pairwise(pop_indexes, grp_members, catalog, pmap, psum);
     }
 
     //
     // Calculate and output the locus-level summary statistics.
     //
-    calculate_summary_stats(files, pop_indexes, catalog, pmap, psum);
+    calculate_summary_stats(pop_indexes, catalog, pmap, psum);
 
     //
     // Output the observed haplotypes.
@@ -2055,7 +2054,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 }
 
 int 
-calculate_haplotype_stats(vector<pair<int, string> > &files, const map<int, pair<int, int> > &pop_indexes,
+calculate_haplotype_stats(const map<int, pair<int, int> > &pop_indexes,
                           map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
     map<string, vector<CSLocus *> >::iterator it;
@@ -2100,7 +2099,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, const map<int, pair
         end   = pit->second.second;
         fh << "# " << pop_key[pit->first] << "\t";
         for (int i = start; i <= end; i++) {
-            fh << files[i].second;
+            fh << samples.at(pmap->rev_sample_index(i));
             if (i < end) fh << ",";
         }
         fh << "\n";
@@ -2313,8 +2312,7 @@ nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
 }
 
 int 
-calculate_haplotype_divergence(vector<pair<int, string> > &files, 
-                               const map<int, pair<int, int> > &pop_indexes,
+calculate_haplotype_divergence(const map<int, pair<int, int> > &pop_indexes,
                                map<int, vector<int> > &master_grp_members,
                                map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
@@ -2461,7 +2459,7 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
         end   = pit->second.second;
         fh << "# Population " << pop_key[pit->first] << "\t";
         for (int k = start; k <= end; k++) {
-            fh << files[k].second;
+            fh << samples.at(pmap->rev_sample_index(k));
             if (k < end) fh << ",";
         }
         fh << "\n";
@@ -2574,8 +2572,7 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
 }
 
 int 
-calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files, 
-                                        const map<int, pair<int, int> > &pop_indexes,
+calculate_haplotype_divergence_pairwise(const map<int, pair<int, int> > &pop_indexes,
                                         map<int, vector<int> > &master_grp_members,
                                         map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
@@ -2722,7 +2719,7 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
                 end   = pop_indexes.at(subpop_ids[k]).second;
                 fh << "# Population " << pop_key[subpop_ids[k]] << "\t";
                 for (int n = start; n <= end; n++) {
-                    fh << files[n].second;
+                    fh << samples.at(pmap->rev_sample_index(n));
                     if (n < end) fh << ",";
                 }
                 fh << "\n";
@@ -3584,7 +3581,7 @@ haplotype_d_est(const map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum 
 }
 
 int 
-calculate_summary_stats(vector<pair<int, string> > &files, const map<int, pair<int, int> > &pop_indexes,
+calculate_summary_stats(const map<int, pair<int, int> > &pop_indexes,
                         map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
     map<string, vector<CSLocus *> >::iterator it;
@@ -3789,7 +3786,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, const map<int, pair<i
         end   = pit->second.second;
         fh << "# " << pit->first << "\t";
         for (int i = start; i <= end; i++) {
-            fh << files[i].second;
+            fh << samples.at(pmap->rev_sample_index(i));
             if (i < end) fh << ",";
         }
         fh << "\n";
