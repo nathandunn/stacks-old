@@ -455,15 +455,15 @@ sub initialize_database {
         # Check that the database doesn't already exist.
         #
         if ($dry_run == false) {
-            @results = `mysql --defaults-file=$cnf -N -B -e "SHOW DATABSES LIKE '$db'"`;
+            @results = `mysql --defaults-file=$cnf -N -B -e "SHOW DATABASES LIKE '$db'"`;
             if (scalar(@results) > 0 && $overw_db == false) {
                 die("Unable to create database '$db', it already exists.\n");
             }
         }
 
         if ($overw_db == true) {
-            `mysql --defaults-file=$cnf -N -B -e "DROP DATABASE IF EXISTS '$db'"` if ($dry_run == false);
-            print $log_fh "mysql --defaults-file=$cnf -N -B -e \"DROP DATABASE IF EXISTS '$db'\"\n";
+            `mysql --defaults-file=$cnf -N -B -e "DROP DATABASE IF EXISTS $db"` if ($dry_run == false);
+            print $log_fh "mysql --defaults-file=$cnf -N -B -e \"DROP DATABASE IF EXISTS $db\"\n";
         }
         
         `mysql --defaults-file=$cnf -e "CREATE DATABASE $db"` if ($dry_run == false);
