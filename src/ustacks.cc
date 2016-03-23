@@ -186,7 +186,7 @@ int main (int argc, char* argv[]) {
         merge_gapped_alns(unique, remainders, merged);
 
         calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
-        cerr << "After gapped alignments, coverage depth mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
+        cerr << "After gapped alignments, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
     }
     
     //
@@ -1232,9 +1232,11 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                 if (cur_gap < mtag->gaps.size() && col == mtag->gaps[cur_gap].start) {
                     do {
                         con += 'N';
-                        SNP *snp  = new SNP;
-                        snp->type = snp_type_unk;
-                        snp->col  = col;
+                        SNP *snp    = new SNP;
+                        snp->type   = snp_type_unk;
+                        snp->col    = col;
+			snp->rank_1 = '-';
+			snp->rank_2 = '-';
                         mtag->snps.push_back(snp);
                         col++;
                     } while (col < mtag->gaps[cur_gap].end && col < length);
