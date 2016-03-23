@@ -125,11 +125,11 @@ int     kernel_smoothed_popstats(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSu
 int     bootstrap_popstats_approximate_dist(vector<double> &, vector<double> &, vector<int>  &, double *, int *, int, map<int, vector<double> > &, map<int, vector<double> > &);
 double  bootstrap_approximate_pval(int, double, map<int, vector<double> > &);
 
-int      calculate_summary_stats(vector<pair<int, string> > &, const map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int      calculate_haplotype_stats(vector<pair<int, string> > &, const map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int      calculate_summary_stats(const map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int      calculate_haplotype_stats(const map<int, pair<int, int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int      kernel_smoothed_hapstats(vector<CSLocus *> &, PopSum<CSLocus> *, int, double *);
-int      calculate_haplotype_divergence(vector<pair<int, string> > &, const map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int      calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &, const map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int      calculate_haplotype_divergence(const map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+int      calculate_haplotype_divergence_pairwise(const map<int, pair<int, int> > &, map<int, vector<int> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 double   count_haplotypes_at_locus(int, int, Datum **, map<string, double> &);
 bool     fixed_locus(const map<int, pair<int, int> > &, Datum **, vector<int> &);
 bool     uncalled_haplotype(const char *);
