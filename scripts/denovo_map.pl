@@ -122,6 +122,7 @@ if ($sql == 1) {
 }
 
 my $gzip = 0;
+my @depths_of_cov;
 
 foreach $sample (@parents, @progeny, @samples) {
     my ($ftype, $pfile) = "";
@@ -176,14 +177,25 @@ foreach $sample (@parents, @progeny, @samples) {
 
     $map{$pfile} = $sample_id;
 
-    if ($type eq "parent" || $type eq "sample") {
-	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $minc " . join(" ", @_ustacks) . " 2>&1";
+    if ($type eq "sample") {
+	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id -r $minc "  . join(" ", @_ustacks) . " --gapped 2>&1";
+    } elsif ($type eq "parent") {
+	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id -r $minc "  . join(" ", @_ustacks) . " 2>&1";
     } elsif ($type eq "progeny") {
-	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id $minrc " . join(" ", @_ustacks) . " 2>&1";
+	$cmd = $exe_path . "ustacks -t $ftype -f $sample -o $out_path -i $sample_id -r $minrc " . join(" ", @_ustacks) . " 2>&1";
     }
     print STDERR  "  $cmd\n";
     print $log_fh "$cmd\n";
-    @results = `$cmd` if ($dry_run == 0);
+    if ($dry_run == 0) {
+	@results = `$cmd`;
+
+	#
+	# Pull the depth of coverage from ustacks.
+	#
+	my @lines   = grep(/^After gapped alignments, coverage depth Mean/, @results);
+	my ($depth) = ($lines[0] =~ /^After gapped alignments, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
+	push(@depths_of_cov, [$pfile, $depth]);
+    }
     write_results(\@results, $log_fh);
 
     print STDERR "  Loading ustacks output to $db..." if ($sql == 1);
@@ -214,6 +226,8 @@ foreach $sample (@parents, @progeny, @samples) {
 
     $sample_id++ if ($sql == 0);
 }
+
+write_depths_of_cov(\@depths_of_cov, $log_fh);
 
 my ($pfile, $cat_file);
 
@@ -564,6 +578,20 @@ sub write_results {
     }
 }
 
+sub write_depths_of_cov {
+    my ($depths, $log_fh) = @_;
+
+    print STDERR "\nDepths of Coverage for Processed Samples:\n";
+    print $log_fh "\nDepths of Coverage for Processed Samples:\n";
+
+    foreach $a (@{$depths}) {
+	print STDERR  $a->[0], ": ", $a->[1], "x\n";
+	print $log_fh $a->[0], ": ", $a->[1], "x\n";
+    }
+    print STDERR "\n";
+    print $log_fh "\n";
+}
+
 sub import_sql_file {
     my ($log_fh, $file, $table, $skip_lines) = @_;
 
@@ -646,7 +674,7 @@ sub parse_command_line {
 	    }
 
 	} elsif ($_ =~ /^-t$/) { 
-	    push(@_ustacks, "-d -r"); 
+	    push(@_ustacks, "-d "); 
 
 	} elsif ($_ =~ /^-T$/) {
 	    $arg = shift @ARGV;
