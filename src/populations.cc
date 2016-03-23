@@ -329,7 +329,7 @@ int main (int argc, char* argv[]) {
     }
 
     uint pop_id, start_index, end_index;
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
 
     PopSum<CSLocus> *psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
     psum->initialize(pmap);
@@ -500,7 +500,7 @@ int main (int argc, char* argv[]) {
 int
 apply_locus_constraints(map<int, CSLocus *> &catalog, 
                         PopMap<CSLocus> *pmap, 
-                        map<int, pair<int, int> > &pop_indexes, 
+                        const map<int, pair<int, int> > &pop_indexes,
                         ofstream &log_fh)
 {
     uint pop_id, start_index, end_index;
@@ -514,7 +514,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
                << "# Action\tLocus ID\tChr\tBP\tColumn\tReason\n";
 
     map<int, CSLocus *>::iterator it;
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
 
     uint pop_cnt   = pop_indexes.size();
     int *pop_order = new int [pop_cnt];
@@ -599,8 +599,8 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 
             if (pop_cnts[i] > 0 && pct < sample_limit) {
                 //cerr << "Removing population " << pop_order[i] << " at locus: " << loc->id << "; below sample limit: " << pct << "\n";
-                start_index = pop_indexes[pop_order[i]].first;
-                end_index   = pop_indexes[pop_order[i]].second;
+                start_index = pop_indexes.at(pop_order[i]).first;
+                end_index   = pop_indexes.at(pop_order[i]).second;
 
                 for (uint j  = start_index; j <= end_index; j++) {
                     if (d[j] != NULL) {
@@ -668,7 +668,7 @@ int
 prune_polymorphic_sites(map<int, CSLocus *> &catalog, 
                         PopMap<CSLocus> *pmap,
                         PopSum<CSLocus> *psum,
-                        map<int, pair<int, int> > &pop_indexes, 
+                        const map<int, pair<int, int> > &pop_indexes,
                         map<int, set<int> > &whitelist, set<int> &blacklist,
                         ofstream &log_fh)
 {
@@ -752,8 +752,8 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                     for (uint j = 0; j < pop_prune_list.size(); j++) {
                         if (s[psum->pop_index(pop_prune_list[j])]->nucs[loc->snps[i]->col].num_indv == 0) continue;
 
-                        start_index = pop_indexes[pop_prune_list[j]].first;
-                        end_index   = pop_indexes[pop_prune_list[j]].second;
+                        start_index = pop_indexes.at(pop_prune_list[j]).first;
+                        end_index   = pop_indexes.at(pop_prune_list[j]).second;
                         d           = pmap->locus(loc->id);
 
                         for (uint k = start_index; k <= end_index; k++) {
@@ -870,8 +870,8 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                     for (uint j = 0; j < pop_prune_list.size(); j++) {
                         if (s[psum->pop_index(pop_prune_list[j])]->nucs[loc->snps[i]->col].num_indv == 0) continue;
                         
-                        start_index = pop_indexes[pop_prune_list[j]].first;
-                        end_index   = pop_indexes[pop_prune_list[j]].second;
+                        start_index = pop_indexes.at(pop_prune_list[j]).first;
+                        end_index   = pop_indexes.at(pop_prune_list[j]).second;
                         d           = pmap->locus(loc->id);
 
                         for (uint k = start_index; k <= end_index; k++) {
@@ -2055,7 +2055,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 }
 
 int 
-calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
+calculate_haplotype_stats(vector<pair<int, string> > &files, const map<int, pair<int, int> > &pop_indexes,
                           map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
     map<string, vector<CSLocus *> >::iterator it;
@@ -2089,7 +2089,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
     fh.precision(fieldw);
     fh.setf(std::ios::fixed);
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     int start, end, pop_id;
 
     //
@@ -2314,7 +2314,7 @@ nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
 
 int 
 calculate_haplotype_divergence(vector<pair<int, string> > &files, 
-                               map<int, pair<int, int> > &pop_indexes, 
+                               const map<int, pair<int, int> > &pop_indexes,
                                map<int, vector<int> > &master_grp_members,
                                map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
@@ -2339,7 +2339,7 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
     //
     vector<int> pop_ids;
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
         pop_ids.push_back(pit->first);
 
@@ -2470,7 +2470,7 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
     //
     // Write the group members.
     //
-    for (git = grp_members.begin(); git != grp_members.end(); git++) {
+    for (git = master_grp_members.begin(); git != master_grp_members.end(); git++) {
         end = git->second.size();
         fh << "# Group " << grp_key[git->first] << "\t";
         for (int k = 0; k < end; k++) {
@@ -2575,7 +2575,7 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
 
 int 
 calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files, 
-                                        map<int, pair<int, int> > &pop_indexes, 
+                                        const map<int, pair<int, int> > &pop_indexes,
                                         map<int, vector<int> > &master_grp_members,
                                         map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
@@ -2595,7 +2595,7 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
         for (uint i = 0; i < git->second.size(); i++)
             pop_grp_key[git->second[i]] = 1;
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     vector<int> pop_ids;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
         pop_ids.push_back(pit->first);
@@ -2718,8 +2718,8 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
             //
             int start, end;
             for (uint k = 0; k < subpop_ids.size(); k++) {
-                start = pop_indexes[subpop_ids[k]].first;
-                end   = pop_indexes[subpop_ids[k]].second;
+                start = pop_indexes.at(subpop_ids[k]).first;
+                end   = pop_indexes.at(subpop_ids[k]).second;
                 fh << "# Population " << pop_key[subpop_ids[k]] << "\t";
                 for (int n = start; n <= end; n++) {
                     fh << files[n].second;
@@ -2819,7 +2819,7 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
 }
 
 bool
-fixed_locus(map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_ids)
+fixed_locus(const map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_ids)
 {
     set<string>               loc_haplotypes;
     map<int, vector<string> > pop_haplotypes;
@@ -2827,8 +2827,8 @@ fixed_locus(map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_
     int pop_cnt = pop_ids.size();
 
     for (int p = 0; p < pop_cnt; p++) {
-        start  = pop_indexes[pop_ids[p]].first;
-        end    = pop_indexes[pop_ids[p]].second;
+        start  = pop_indexes.at(pop_ids[p]).first;
+        end    = pop_indexes.at(pop_ids[p]).second;
         pop_id = pop_ids[p];
 
         for (int i = start; i <= end; i++) {
@@ -3016,7 +3016,7 @@ haplotype_diversity(int start, int end, Datum **d)
 }
 
 HapStat *
-haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_indexes, 
+haplotype_amova(map<int, int> &pop_grp_key, const map<int, pair<int, int> > &pop_indexes,
                 Datum **d, LocSum **s, vector<int> &pop_ids)
 {
     map<string, int>          loc_hap_index;
@@ -3026,7 +3026,7 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     vector<int>               grps;
 
     map<string, int>::iterator hit, hit_2;
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     int start, end, pop_id, pop_id_1;
 
     HapStat  *h;
@@ -3036,8 +3036,8 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     // Tabulate the occurences of haplotypes at this locus.
     //
     for (int p = 0; p < pop_cnt; p++) {
-        start  = pop_indexes[pop_ids[p]].first;
-        end    = pop_indexes[pop_ids[p]].second;
+        start  = pop_indexes.at(pop_ids[p]).first;
+        end    = pop_indexes.at(pop_ids[p]).second;
         pop_id = pop_ids[p];
 
         for (int i = start; i <= end; i++) {
@@ -3502,7 +3502,7 @@ amova_ssd_ag(vector<int> &grps, map<int, vector<int> > &grp_members,
 }
 
 double
-haplotype_d_est(map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum **s, vector<int> &pop_ids)
+haplotype_d_est(const map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum **s, vector<int> &pop_ids)
 {
     //
     // Calculate D_est, fixation index, as described by 
@@ -3525,8 +3525,8 @@ haplotype_d_est(map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum **s, v
     // Tabulate the occurences of haplotypes at this locus.
     //
     for (uint p = 0; p < pop_cnt; p++) {
-        start  = pop_indexes[pop_ids[p]].first;
-        end    = pop_indexes[pop_ids[p]].second;
+        start  = pop_indexes.at(pop_ids[p]).first;
+        end    = pop_indexes.at(pop_ids[p]).second;
         pop_id = pop_ids[p];
 
         for (int i = start; i <= end; i++) {
@@ -3584,7 +3584,7 @@ haplotype_d_est(map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum **s, v
 }
 
 int 
-calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
+calculate_summary_stats(vector<pair<int, string> > &files, const map<int, pair<int, int> > &pop_indexes,
                         map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
 {
     map<string, vector<CSLocus *> >::iterator it;
@@ -3783,7 +3783,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
     //
     // Write the population members.
     //
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
         start = pit->second.first;
         end   = pit->second.second;
@@ -4132,7 +4132,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 }
 
 int 
-write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
+write_fst_stats(vector<pair<int, string> > &files, const map<int, pair<int, int> > &pop_indexes,
                 map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, ofstream &log_fh) 
 {
     //
@@ -4141,7 +4141,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     //
     vector<double> means;
     vector<int>    pops;
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
         pops.push_back(pit->first);
 
@@ -5809,7 +5809,7 @@ int
 write_genepop(map<int, CSLocus *> &catalog, 
               PopMap<CSLocus> *pmap, 
               PopSum<CSLocus> *psum, 
-              map<int, pair<int, int> > &pop_indexes, 
+              const map<int, pair<int, int> > &pop_indexes,
               map<int, string> &samples) 
 {
     //
@@ -5843,7 +5843,7 @@ write_genepop(map<int, CSLocus *> &catalog,
     //
     fh << "Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     map<int, CSLocus *>::iterator it;
     CSLocus  *loc;
     Datum   **d;
@@ -5967,7 +5967,7 @@ int
 write_genepop_ordered(map<int, CSLocus *> &catalog, 
                       PopMap<CSLocus> *pmap, 
                       PopSum<CSLocus> *psum, 
-                      map<int, pair<int, int> > &pop_indexes, 
+                      const map<int, pair<int, int> > &pop_indexes,
                       map<int, string> &samples, ofstream &log_fh) 
 {
     //
@@ -6002,7 +6002,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
     fh << "Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
 
     map<string, vector<NucTally *> > genome_sites;
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
     Datum   **d;
@@ -6111,7 +6111,7 @@ int
 write_structure(map<int, CSLocus *> &catalog, 
                 PopMap<CSLocus> *pmap, 
                 PopSum<CSLocus> *psum, 
-                map<int, pair<int, int> > &pop_indexes, 
+                const map<int, pair<int, int> > &pop_indexes,
                 map<int, string> &samples) 
 {
     //
@@ -6174,7 +6174,7 @@ write_structure(map<int, CSLocus *> &catalog,
     nuc_map['G'] = "3";
     nuc_map['T'] = "4";
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     int       start_index, end_index, pop_id, p;
     char      p_allele, q_allele;
 
@@ -6296,7 +6296,7 @@ int
 write_structure_ordered(map<int, CSLocus *> &catalog, 
                         PopMap<CSLocus> *pmap, 
                         PopSum<CSLocus> *psum, 
-                        map<int, pair<int, int> > &pop_indexes, 
+                        const map<int, pair<int, int> > &pop_indexes,
                         map<int, string> &samples, ofstream &log_fh) 
 {
     //
@@ -6359,7 +6359,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
     nuc_map['G'] = "3";
     nuc_map['T'] = "4";
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     int       start_index, end_index, pop_id, p;
     char      p_allele, q_allele;
     uint      col, snp_index;
@@ -6469,7 +6469,7 @@ int
 write_hzar(map<int, CSLocus *> &catalog, 
            PopMap<CSLocus> *pmap, 
            PopSum<CSLocus> *psum, 
-           map<int, pair<int, int> > &pop_indexes, 
+           const map<int, pair<int, int> > &pop_indexes,
            map<int, string> &samples) 
 {
     //
@@ -6528,7 +6528,7 @@ write_hzar(map<int, CSLocus *> &catalog,
     }
     fh << "\n";
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     int pop_id, p;
 
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
@@ -6583,7 +6583,7 @@ int
 write_treemix(map<int, CSLocus *> &catalog, 
               PopMap<CSLocus> *pmap, 
               PopSum<CSLocus> *psum, 
-              map<int, pair<int, int> > &pop_indexes, 
+              const map<int, pair<int, int> > &pop_indexes,
               map<int, string> &samples) 
 {
     //
@@ -6634,7 +6634,7 @@ write_treemix(map<int, CSLocus *> &catalog,
     fh << "# Stacks v" << VERSION << "; " << " TreeMix v1.1; " << date << "\n";
 
     map<string, vector<CSLocus *> >::iterator it;
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     CSLocus  *loc;
     LocSum  **s;
     LocTally *t;
@@ -6712,7 +6712,7 @@ int
 write_fastphase(map<int, CSLocus *> &catalog, 
                 PopMap<CSLocus> *pmap, 
                 PopSum<CSLocus> *psum, 
-                map<int, pair<int, int> > &pop_indexes, 
+                const map<int, pair<int, int> > &pop_indexes,
                 map<int, string> &samples) 
 {
     //
@@ -6802,7 +6802,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
         // on two lines.
         //
 
-        map<int, pair<int, int> >::iterator pit;
+        map<int, pair<int, int> >::const_iterator pit;
         int          start_index, end_index, pop_id;
         char         p_allele, q_allele;
         stringstream gtypes;
@@ -6922,7 +6922,7 @@ int
 write_phase(map<int, CSLocus *> &catalog, 
             PopMap<CSLocus> *pmap, 
             PopSum<CSLocus> *psum, 
-            map<int, pair<int, int> > &pop_indexes, 
+            const map<int, pair<int, int> > &pop_indexes,
             map<int, string> &samples) 
 {
     //
@@ -7026,7 +7026,7 @@ write_phase(map<int, CSLocus *> &catalog,
         // on two lines.
         //
 
-        map<int, pair<int, int> >::iterator pit;
+        map<int, pair<int, int> >::const_iterator pit;
         string       gtypes_str;
         bool         found;
         int          start_index, end_index, pop_id;
@@ -7212,7 +7212,7 @@ int
 write_plink(map<int, CSLocus *> &catalog, 
             PopMap<CSLocus> *pmap, 
             PopSum<CSLocus> *psum, 
-            map<int, pair<int, int> > &pop_indexes, 
+            const map<int, pair<int, int> > &pop_indexes,
             map<int, string> &samples) 
 {
     //
@@ -7294,7 +7294,7 @@ write_plink(map<int, CSLocus *> &catalog,
 
     fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     int  start_index, end_index, pop_id;
     char p_allele, q_allele;
 
@@ -7384,7 +7384,7 @@ int
 write_beagle(map<int, CSLocus *> &catalog, 
             PopMap<CSLocus> *pmap, 
             PopSum<CSLocus> *psum, 
-            map<int, pair<int, int> > &pop_indexes, 
+            const map<int, pair<int, int> > &pop_indexes,
             map<int, string> &samples) 
 {
     //
@@ -7435,7 +7435,7 @@ write_beagle(map<int, CSLocus *> &catalog,
         //
         // Now output the genotypes in a separate file for each population.
         //
-        map<int, pair<int, int> >::iterator pit;
+        map<int, pair<int, int> >::const_iterator pit;
         int  start_index, end_index, pop_id;
 
         for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
@@ -7597,7 +7597,7 @@ int
 write_beagle_phased(map<int, CSLocus *> &catalog, 
                     PopMap<CSLocus> *pmap, 
                     PopSum<CSLocus> *psum, 
-                    map<int, pair<int, int> > &pop_indexes, 
+                    const map<int, pair<int, int> > &pop_indexes,
                     map<int, string> &samples) 
 {
     //
@@ -7663,7 +7663,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
         //
         // Now output the genotypes in a separate file for each population.
         //
-        map<int, pair<int, int> >::iterator pit;
+        map<int, pair<int, int> >::const_iterator pit;
         int  start_index, end_index, pop_id;
 
         for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
@@ -7788,7 +7788,7 @@ int
 write_phylip(map<int, CSLocus *> &catalog, 
              PopMap<CSLocus> *pmap, 
              PopSum<CSLocus> *psum, 
-             map<int, pair<int, int> > &pop_indexes, 
+             const map<int, pair<int, int> > &pop_indexes,
              map<int, string> &samples) 
 {
     //
@@ -7840,7 +7840,7 @@ write_phylip(map<int, CSLocus *> &catalog,
     LocSum  **s;
     LocTally *t;
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     int  pop_cnt = psum->pop_cnt();
     int  pop_id;
     char nuc;
@@ -8027,7 +8027,7 @@ int
 write_fullseq_phylip(map<int, CSLocus *> &catalog, 
                      PopMap<CSLocus> *pmap, 
                      PopSum<CSLocus> *psum, 
-                     map<int, pair<int, int> > &pop_indexes, 
+                     const map<int, pair<int, int> > &pop_indexes,
                      map<int, string> &samples) 
 {
     //
@@ -8098,7 +8098,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     LocSum  **s;
     LocTally *t;
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     int  pop_cnt = psum->pop_cnt();
     int  pop_id;
     char nuc;
@@ -8779,7 +8779,7 @@ build_file_list(vector<pair<int, string> > &files,
         population_limit = pop_indexes.size();
     }
 
-    map<int, pair<int, int> >::iterator it;
+    map<int, pair<int, int> >::const_iterator it;
     for (it = pop_indexes.begin(); it != pop_indexes.end(); it++) {
         start = it->second.first;
         end   = it->second.second;
