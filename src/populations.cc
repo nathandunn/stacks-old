@@ -85,9 +85,12 @@ double    max_obs_het       = 1.0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
 
-map<int, string>          pop_key, grp_key;
-map<int, pair<int, int> > pop_indexes;
-map<int, vector<int> >    grp_members;
+vector<pair<int, string> > files;
+vector<int>                sample_ids;
+map<int, string>           samples;
+map<int, string>           pop_key, grp_key;
+map<int, pair<int, int> >  pop_indexes;
+map<int, vector<int> >     grp_members;
 
 set<int> blacklist, bootstraplist;
 map<int, set<int> > whitelist;
@@ -159,7 +162,6 @@ int main (int argc, char* argv[]) {
     // Read the population map,
     // and set variables "sample_ids", "pop_key", "grp_key", "files", "pop_indexes" and "grp_members".
     //
-    vector<pair<int, string> > files;
     if (!build_file_list(files, pop_indexes, grp_members))
         exit(1);
 
@@ -220,8 +222,6 @@ int main (int argc, char* argv[]) {
     // Load matches to the catalog
     //
     vector<vector<CatMatch *> > catalog_matches;
-    map<int, string>            samples;
-    vector<int>                 sample_ids;
     for (int i = 0; i < (int) files.size(); i++) {
         vector<CatMatch *> m;
         load_catalog_matches(in_path + files[i].second, m);
