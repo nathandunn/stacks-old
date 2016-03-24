@@ -366,17 +366,13 @@ sub initialize_samples {
         }
 
         foreach $sample (@parents) {
-            $sample->{'type'}   = "parent";
-            $sample->{'pop_id'} = "1";
-            $sample->{'grp_id'} = "1";
+            $sample->{'type'} = "parent";
         }
         foreach $sample (@progeny) {
-            $sample->{'type'}   = "progeny";
-            $sample->{'pop_id'} = "1";
-            $sample->{'grp_id'} = "1";
+            $sample->{'type'} = "progeny";
         }
         foreach $sample (@samples) {
-            $sample->{'type'}   = "sample";
+            $sample->{'type'} = "sample";
         }
     }
 
@@ -406,6 +402,14 @@ sub initialize_samples {
             if (!defined($sample_hash{$sample})) {
                 die("Unable to find a file corresponding to the population map entry '" . $sample . "' in the population map, '$popmap_path'.\n");
             }
+        }
+
+    } else {
+        foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
+            $sample->{'pop_id'} = "1";
+            $sample->{'grp_id'} = "1";
+            $pop_ids->{$sample->{'file'}} = $sample->{'pop_id'};
+            $grp_ids->{$sample->{'file'}} = $sample->{'grp_id'};
         }
     }
 
