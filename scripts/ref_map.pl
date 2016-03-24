@@ -148,8 +148,8 @@ sub execute_stacks {
             #
             # Pull the depth of coverage from pstacks.
             #
-            my @lines   = grep(/^After gapped alignments, coverage depth Mean/, @results);
-            my ($depth) = ($lines[0] =~ /^After gapped alignments, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
+            my @lines   = grep(/Mean coverage depth is/, @results);
+            my ($depth) = ($lines[0] =~ /^  Mean coverage depth is (\d+\.?\d*); Std Dev: .+; Max: .+$/);
             push(@depths_of_cov, [$sample->{'file'}, $depth]);
         }
         write_results(\@results, $log_fh);
@@ -442,14 +442,14 @@ sub initialize_database {
         # Check that the database doesn't already exist.
         #
         if ($dry_run == false) {
-            @results = `mysql --defaults-file=$cnf -N -B -e "SHOW DATABSES LIKE '$db'"`;
+            @results = `mysql --defaults-file=$cnf -N -B -e "SHOW DATABASES LIKE '$db'"`;
             if (scalar(@results) > 0 && $overw_db == false) {
                 die("Unable to create database '$db', it already exists.\n");
             }
         }
 
         if ($overw_db == true) {
-            `mysql --defaults-file=$cnf -N -B -e "DROP DATABASE IF EXISTS '$db'"` if ($dry_run == false);
+            `mysql --defaults-file=$cnf -N -B -e "DROP DATABASE IF EXISTS $db"` if ($dry_run == false);
             print $log_fh "mysql --defaults-file=$cnf -N -B -e \"DROP DATABASE IF EXISTS '$db'\"\n";
         }
 
