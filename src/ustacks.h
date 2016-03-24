@@ -150,6 +150,7 @@ int  merge_gapped_alns(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedSt
 int  parse_cigar(const char *, vector<pair<char, uint> > &);
 int  edit_gapped_seqs(map<int, Stack *> &, map<int, Rem *> &, MergedStack *, vector<pair<char, uint> > &);
 int  edit_gaps(vector<pair<char, uint> > &, char *);
+int  dist(MergedStack *, MergedStack *, vector<pair<char, uint> > &);
 
 //
 // Needleman-Wunsch Alignment
