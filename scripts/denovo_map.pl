@@ -699,9 +699,9 @@ sub import_sql_file {
 
     $ignore = "IGNORE $skip_lines LINES" if ($skip_lines > 0);
 
-    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore"` if ($sql == 1 && $dry_run == 0);
+    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore"` if ($sql == true && $dry_run == false);
 
-    if ($sql == 1) {
+    if ($sql == true) {
 	print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$file' INTO TABLE $table $ignore\"\n", @results;
     }
 }
@@ -718,7 +718,7 @@ sub import_gzsql_file {
     #
     my $tmpdir     = File::Spec->tmpdir();
     my $named_pipe = mktemp($tmpdir . "/denovo_map_XXXXXX");
-    if ($sql == 1 && $dry_run == 0) {
+    if ($sql == true && $dry_run == false) {
 	mkfifo($named_pipe, 0700) || die("Unable to create named pipe for loading gzipped data: $named_pipe, $!");
 	print $log_fh "Streaming $file into named pipe $named_pipe.\n";
     }
@@ -726,18 +726,18 @@ sub import_gzsql_file {
     #
     # Dump our gzipped data onto the named pipe.
     #
-    system("gunzip -c $file > $named_pipe &") if ($sql == 1 && $dry_run == 0);
+    system("gunzip -c $file > $named_pipe &") if ($sql == true && $dry_run == false);
 
-    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore"` if ($sql == 1 && $dry_run == 0);
+    @results = `mysql --defaults-file=$cnf $db -e "LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore"` if ($sql == true && $dry_run == false);
 
-    if ($sql == 1) {
+    if ($sql == true) {
 	print $log_fh "mysql --defaults-file=$cnf $db -e \"LOAD DATA LOCAL INFILE '$named_pipe' INTO TABLE $table $ignore\"\n", @results;
     }
 
     #
     # Remove the pipe.
     #
-    unlink($named_pipe) if ($sql == 1 && $dry_run == 0);
+    unlink($named_pipe) if ($sql == true && $dry_run == false);
 }
 
 sub parse_command_line {
