@@ -162,7 +162,7 @@ int main (int argc, char* argv[]) {
     // Read the population map,
     // and set variables "sample_ids", "pop_key", "grp_key", "files", "pop_indexes" and "grp_members".
     //
-    if (!build_file_list(files, pop_indexes, grp_members))
+    if (!build_file_list())
         exit(1);
 
     //
@@ -280,7 +280,7 @@ int main (int argc, char* argv[]) {
     log_fh << "# Distribution of population loci.\n";
     log_haplotype_cnts(catalog, log_fh);
 
-    apply_locus_constraints(catalog, pmap, pop_indexes, log_fh);
+    apply_locus_constraints(catalog, pmap, log_fh);
 
     log_fh << "# Distribution of population loci after applying locus constraints.\n";
     log_haplotype_cnts(catalog, log_fh);
@@ -352,7 +352,7 @@ int main (int argc, char* argv[]) {
     // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
     //
     blacklist.clear();
-    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, pop_indexes, whitelist, blacklist, log_fh);
+    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, blacklist, log_fh);
     cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints.\n";
 
     if (!verbose)
@@ -408,82 +408,82 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    calculate_haplotype_stats(pop_indexes, catalog, pmap, psum);
+    calculate_haplotype_stats(catalog, pmap, psum);
 
     if (calc_fstats) {
-        calculate_haplotype_divergence(pop_indexes, grp_members, catalog, pmap, psum);
-        calculate_haplotype_divergence_pairwise(pop_indexes, grp_members, catalog, pmap, psum);
+        calculate_haplotype_divergence(catalog, pmap, psum);
+        calculate_haplotype_divergence_pairwise(catalog, pmap, psum);
     }
 
     //
     // Calculate and output the locus-level summary statistics.
     //
-    calculate_summary_stats(pop_indexes, catalog, pmap, psum);
+    calculate_summary_stats(catalog, pmap, psum);
 
     //
     // Output the observed haplotypes.
     //
-    write_generic(catalog, pmap, samples, false);
+    write_generic(catalog, pmap, false);
 
     //
     // Output data in requested formats
     //
     if (fasta_out)
-        write_fasta(catalog, pmap, samples, sample_ids);
+        write_fasta(catalog, pmap);
 
     if (fasta_strict_out)
-        write_strict_fasta(catalog, pmap, samples, sample_ids);
+        write_strict_fasta(catalog, pmap);
 
     if (genepop_out && ordered_export)
-        write_genepop_ordered(catalog, pmap, psum, pop_indexes, samples, log_fh);
+        write_genepop_ordered(catalog, pmap, psum, log_fh);
     else if (genepop_out)
-        write_genepop(catalog, pmap, psum, pop_indexes, samples);
+        write_genepop(catalog, pmap, psum);
 
     if (structure_out && ordered_export)
-        write_structure_ordered(catalog, pmap, psum, pop_indexes, samples, log_fh);
+        write_structure_ordered(catalog, pmap, psum, log_fh);
     else if (structure_out) 
-        write_structure(catalog, pmap, psum, pop_indexes, samples);
+        write_structure(catalog, pmap, psum);
 
     if (fastphase_out)
-        write_fastphase(catalog, pmap, psum, pop_indexes, samples);
+        write_fastphase(catalog, pmap, psum);
 
     if (phase_out)
-        write_phase(catalog, pmap, psum, pop_indexes, samples);
+        write_phase(catalog, pmap, psum);
 
     if (beagle_out)
-        write_beagle(catalog, pmap, psum, pop_indexes, samples);
+        write_beagle(catalog, pmap, psum);
 
     if (beagle_phased_out)
-        write_beagle_phased(catalog, pmap, psum, pop_indexes, samples);
+        write_beagle_phased(catalog, pmap, psum);
 
     if (plink_out)
-        write_plink(catalog, pmap, psum, pop_indexes, samples);
+        write_plink(catalog, pmap, psum);
 
     if (hzar_out)
-        write_hzar(catalog, pmap, psum, pop_indexes, samples);
+        write_hzar(catalog, pmap, psum);
 
     if (treemix_out)
-        write_treemix(catalog, pmap, psum, pop_indexes, samples);
+        write_treemix(catalog, pmap, psum);
     
     if (phylip_out || phylip_var)
-        write_phylip(catalog, pmap, psum, pop_indexes, samples);
+        write_phylip(catalog, pmap, psum);
 
     if (phylip_var_all)
-        write_fullseq_phylip(catalog, pmap, psum, pop_indexes, samples);
+        write_fullseq_phylip(catalog, pmap, psum);
 
     if (vcf_haplo_out)
-        write_vcf_haplotypes(catalog, pmap, psum, samples, sample_ids);
+        write_vcf_haplotypes(catalog, pmap, psum);
 
     if (vcf_out && ordered_export)
-        write_vcf_ordered(catalog, pmap, psum, samples, sample_ids, merge_map, log_fh);
+        write_vcf_ordered(catalog, pmap, psum, merge_map, log_fh);
     else if (vcf_out)
-        write_vcf(catalog, pmap, psum, samples, sample_ids, merge_map);
+        write_vcf(catalog, pmap, psum, merge_map);
 
     //
     // Calculate and write Fst.
     //
     if (calc_fstats)
-        write_fst_stats(files, pop_indexes, catalog, pmap, psum, log_fh);
+        write_fst_stats(catalog, pmap, psum, log_fh);
 
     //
     // Output nucleotide-level genotype calls for each individual.
@@ -499,7 +499,6 @@ int main (int argc, char* argv[]) {
 int
 apply_locus_constraints(map<int, CSLocus *> &catalog, 
                         PopMap<CSLocus> *pmap, 
-                        const map<int, pair<int, int> > &pop_indexes,
                         ofstream &log_fh)
 {
     uint pop_id, start_index, end_index;
@@ -667,7 +666,6 @@ int
 prune_polymorphic_sites(map<int, CSLocus *> &catalog, 
                         PopMap<CSLocus> *pmap,
                         PopSum<CSLocus> *psum,
-                        const map<int, pair<int, int> > &pop_indexes,
                         map<int, set<int> > &whitelist, set<int> &blacklist,
                         ofstream &log_fh)
 {
@@ -2054,8 +2052,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 }
 
 int 
-calculate_haplotype_stats(const map<int, pair<int, int> > &pop_indexes,
-                          map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
@@ -2312,9 +2309,7 @@ nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
 }
 
 int 
-calculate_haplotype_divergence(const map<int, pair<int, int> > &pop_indexes,
-                               map<int, vector<int> > &master_grp_members,
-                               map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
 
@@ -2328,7 +2323,7 @@ calculate_haplotype_divergence(const map<int, pair<int, int> > &pop_indexes,
     //
     map<int, vector<int> >::iterator git;
     map<int, int> pop_grp_key;
-    for (git = master_grp_members.begin(); git != master_grp_members.end(); git++)
+    for (git = grp_members.begin(); git != grp_members.end(); git++)
         for (uint i = 0; i < git->second.size(); i++)
             pop_grp_key[git->second[i]] = git->first;
 
@@ -2387,16 +2382,16 @@ calculate_haplotype_divergence(const map<int, pair<int, int> > &pop_indexes,
                 // If this locus only appears in one population or there is only a single haplotype,
                 // do not calculate haplotype F stats.
                 //
-                if (fixed_locus(pop_indexes, d, pop_ids))
+                if (fixed_locus(d, pop_ids))
                     continue;
 
                 cnt++;
                 // cerr << "Processing locus " << loc->id << "\n";
 
-                h = haplotype_amova(pop_grp_key, pop_indexes, d, s, pop_ids);
+                h = haplotype_amova(pop_grp_key, d, s, pop_ids);
 
                 if (h != NULL) {
-                    h->stat[4] = haplotype_d_est(pop_indexes, d, s, pop_ids);
+                    h->stat[4] = haplotype_d_est(d, s, pop_ids);
 
                     h->loc_id = loc->id;
                     h->bp     = loc->sort_bp();
@@ -2468,7 +2463,7 @@ calculate_haplotype_divergence(const map<int, pair<int, int> > &pop_indexes,
     //
     // Write the group members.
     //
-    for (git = master_grp_members.begin(); git != master_grp_members.end(); git++) {
+    for (git = grp_members.begin(); git != grp_members.end(); git++) {
         end = git->second.size();
         fh << "# Group " << grp_key[git->first] << "\t";
         for (int k = 0; k < end; k++) {
@@ -2572,9 +2567,7 @@ calculate_haplotype_divergence(const map<int, pair<int, int> > &pop_indexes,
 }
 
 int 
-calculate_haplotype_divergence_pairwise(const map<int, pair<int, int> > &pop_indexes,
-                                        map<int, vector<int> > &master_grp_members,
-                                        map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
 
@@ -2588,7 +2581,7 @@ calculate_haplotype_divergence_pairwise(const map<int, pair<int, int> > &pop_ind
     //
     map<int, vector<int> >::iterator git;
     map<int, int> pop_grp_key;
-    for (git = master_grp_members.begin(); git != master_grp_members.end(); git++)
+    for (git = grp_members.begin(); git != grp_members.end(); git++)
         for (uint i = 0; i < git->second.size(); i++)
             pop_grp_key[git->second[i]] = 1;
 
@@ -2652,16 +2645,16 @@ calculate_haplotype_divergence_pairwise(const map<int, pair<int, int> > &pop_ind
                         // If this locus only appears in one population or there is only a single haplotype,
                         // do not calculate haplotype F stats.
                         //
-                        if (fixed_locus(pop_indexes, d, subpop_ids))
+                        if (fixed_locus(d, subpop_ids))
                             continue;
 
                         cnt++;
                         // cerr << "Processing locus " << loc->id << "\n";
 
-                        h = haplotype_amova(pop_grp_key, pop_indexes, d, s, subpop_ids);
+                        h = haplotype_amova(pop_grp_key, d, s, subpop_ids);
 
                         if (h != NULL) {
-                            h->stat[4] = haplotype_d_est(pop_indexes, d, s, subpop_ids);
+                            h->stat[4] = haplotype_d_est(d, s, subpop_ids);
 
                             h->loc_id = loc->id;
                             h->bp     = loc->sort_bp();
@@ -2816,7 +2809,7 @@ calculate_haplotype_divergence_pairwise(const map<int, pair<int, int> > &pop_ind
 }
 
 bool
-fixed_locus(const map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_ids)
+fixed_locus(Datum **d, vector<int> &pop_ids)
 {
     set<string>               loc_haplotypes;
     map<int, vector<string> > pop_haplotypes;
@@ -3013,8 +3006,7 @@ haplotype_diversity(int start, int end, Datum **d)
 }
 
 HapStat *
-haplotype_amova(map<int, int> &pop_grp_key, const map<int, pair<int, int> > &pop_indexes,
-                Datum **d, LocSum **s, vector<int> &pop_ids)
+haplotype_amova(map<int, int> &pop_grp_key, Datum **d, LocSum **s, vector<int> &pop_ids)
 {
     map<string, int>          loc_hap_index;
     vector<string>            loc_haplotypes;
@@ -3499,7 +3491,7 @@ amova_ssd_ag(vector<int> &grps, map<int, vector<int> > &grp_members,
 }
 
 double
-haplotype_d_est(const map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum **s, vector<int> &pop_ids)
+haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
 {
     //
     // Calculate D_est, fixation index, as described by 
@@ -3581,8 +3573,7 @@ haplotype_d_est(const map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum 
 }
 
 int 
-calculate_summary_stats(const map<int, pair<int, int> > &pop_indexes,
-                        map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
@@ -4129,8 +4120,7 @@ calculate_summary_stats(const map<int, pair<int, int> > &pop_indexes,
 }
 
 int 
-write_fst_stats(vector<pair<int, string> > &files, const map<int, pair<int, int> > &pop_indexes,
-                map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, ofstream &log_fh) 
+write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, ofstream &log_fh)
 {
     //
     // We want to iterate over each pair of populations and calculate Fst at each 
@@ -4882,8 +4872,7 @@ bootstrap_approximate_pval(int snp_cnt, double stat, map<int, vector<double> > &
 }
 
 int
-write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, 
-              map<int, string> &samples, bool write_gtypes)
+write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gtypes)
 {
     stringstream pop_name;
     pop_name << "batch_" << batch_id;
@@ -5052,7 +5041,7 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 }
 
 int 
-write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string> &samples, vector<int> &sample_ids) 
+write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
     //
     // Write a FASTA file containing each allele from each locus from 
@@ -5116,7 +5105,7 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string
 }
 
 int 
-write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string> &samples, vector<int> &sample_ids) 
+write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
     //
     // Write a FASTA file containing each allele from each locus from 
@@ -5212,7 +5201,6 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int,
 int 
 write_vcf_ordered(map<int, CSLocus *> &catalog, 
                   PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
-                  map<int, string> &samples, vector<int> &sample_ids,
                   map<int, pair<merget, int> > &merge_map, ofstream &log_fh) 
 {
     //
@@ -5234,7 +5222,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     //
     cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
 
-    populate_snp_calls(catalog, pmap, samples, sample_ids, merge_map);
+    populate_snp_calls(catalog, pmap, merge_map);
 
     cerr << "Writing population data to VCF file '" << file << "'\n";
 
@@ -5382,7 +5370,6 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
 int 
 write_vcf(map<int, CSLocus *> &catalog, 
           PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
-          map<int, string> &samples, vector<int> &sample_ids,
           map<int, pair<merget, int> > &merge_map) 
 {
     //
@@ -5403,7 +5390,7 @@ write_vcf(map<int, CSLocus *> &catalog,
     //
     // Load SNP data so that model likelihoods can be output to VCF file.
     //
-    populate_snp_calls(catalog, pmap, samples, sample_ids, merge_map);
+    populate_snp_calls(catalog, pmap, merge_map);
 
     //
     // Obtain the current date.
@@ -5557,8 +5544,8 @@ write_vcf(map<int, CSLocus *> &catalog,
 }
 
 int
-populate_snp_calls(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap,
-                   map<int, string> &samples, vector<int> &sample_ids,
+populate_snp_calls(map<int, CSLocus *> &catalog,
+                   PopMap<CSLocus> *pmap,
                    map<int, pair<merget, int> > &merge_map)
 {
     map<int, CSLocus *>::iterator cit;
@@ -5659,9 +5646,9 @@ find_datum_allele_depths(Datum *d, int snp_index, char p_allele, char q_allele, 
 }
 
 int 
-write_vcf_haplotypes(map<int, CSLocus *> &catalog, 
-                     PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
-                     map<int, string> &samples, vector<int> &sample_ids) 
+write_vcf_haplotypes(map<int, CSLocus *> &catalog,
+                     PopMap<CSLocus> *pmap,
+                     PopSum<CSLocus> *psum)
 {
     //
     // Write a VCF file as defined here: http://samtools.github.io/hts-specs/
@@ -5803,11 +5790,9 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
 }
 
 int 
-write_genepop(map<int, CSLocus *> &catalog, 
-              PopMap<CSLocus> *pmap, 
-              PopSum<CSLocus> *psum, 
-              const map<int, pair<int, int> > &pop_indexes,
-              map<int, string> &samples) 
+write_genepop(map<int, CSLocus *> &catalog,
+              PopMap<CSLocus> *pmap,
+              PopSum<CSLocus> *psum)
 {
     //
     // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
@@ -5961,11 +5946,10 @@ write_genepop(map<int, CSLocus *> &catalog,
 }
 
 int 
-write_genepop_ordered(map<int, CSLocus *> &catalog, 
-                      PopMap<CSLocus> *pmap, 
-                      PopSum<CSLocus> *psum, 
-                      const map<int, pair<int, int> > &pop_indexes,
-                      map<int, string> &samples, ofstream &log_fh) 
+write_genepop_ordered(map<int, CSLocus *> &catalog,
+                      PopMap<CSLocus> *pmap,
+                      PopSum<CSLocus> *psum,
+                      ofstream &log_fh)
 {
     //
     // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
@@ -6107,9 +6091,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
 int 
 write_structure(map<int, CSLocus *> &catalog, 
                 PopMap<CSLocus> *pmap, 
-                PopSum<CSLocus> *psum, 
-                const map<int, pair<int, int> > &pop_indexes,
-                map<int, string> &samples) 
+                PopSum<CSLocus> *psum)
 {
     //
     // Write a Structure file as defined here: http://pritch.bsd.uchicago.edu/structure.html
@@ -6293,8 +6275,7 @@ int
 write_structure_ordered(map<int, CSLocus *> &catalog, 
                         PopMap<CSLocus> *pmap, 
                         PopSum<CSLocus> *psum, 
-                        const map<int, pair<int, int> > &pop_indexes,
-                        map<int, string> &samples, ofstream &log_fh) 
+                        ofstream &log_fh)
 {
     //
     // Write a Structure file as defined here: http://pritch.bsd.uchicago.edu/structure.html
@@ -6465,9 +6446,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
 int 
 write_hzar(map<int, CSLocus *> &catalog, 
            PopMap<CSLocus> *pmap, 
-           PopSum<CSLocus> *psum, 
-           const map<int, pair<int, int> > &pop_indexes,
-           map<int, string> &samples) 
+           PopSum<CSLocus> *psum)
 {
     //
     // Write a Hybrid Zone Analysis using R (HZAR) file as defined here: 
@@ -6579,9 +6558,7 @@ write_hzar(map<int, CSLocus *> &catalog,
 int 
 write_treemix(map<int, CSLocus *> &catalog, 
               PopMap<CSLocus> *pmap, 
-              PopSum<CSLocus> *psum, 
-              const map<int, pair<int, int> > &pop_indexes,
-              map<int, string> &samples) 
+              PopSum<CSLocus> *psum)
 {
     //
     // Write a TreeMix file (Pickrell and Pritchard, 2012 PLoS Genetics)
@@ -6708,9 +6685,7 @@ write_treemix(map<int, CSLocus *> &catalog,
 int 
 write_fastphase(map<int, CSLocus *> &catalog, 
                 PopMap<CSLocus> *pmap, 
-                PopSum<CSLocus> *psum, 
-                const map<int, pair<int, int> > &pop_indexes,
-                map<int, string> &samples) 
+                PopSum<CSLocus> *psum)
 {
     //
     // Write a fastPHASE file as defined here: http://stephenslab.uchicago.edu/software.html
@@ -6918,9 +6893,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
 int 
 write_phase(map<int, CSLocus *> &catalog, 
             PopMap<CSLocus> *pmap, 
-            PopSum<CSLocus> *psum, 
-            const map<int, pair<int, int> > &pop_indexes,
-            map<int, string> &samples) 
+            PopSum<CSLocus> *psum)
 {
     //
     // Write a PHASE file as defined here: http://stephenslab.uchicago.edu/software.html
@@ -7208,9 +7181,7 @@ write_phase(map<int, CSLocus *> &catalog,
 int 
 write_plink(map<int, CSLocus *> &catalog, 
             PopMap<CSLocus> *pmap, 
-            PopSum<CSLocus> *psum, 
-            const map<int, pair<int, int> > &pop_indexes,
-            map<int, string> &samples) 
+            PopSum<CSLocus> *psum)
 {
     //
     // Write a PLINK file as defined here: http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml
@@ -7380,9 +7351,7 @@ write_plink(map<int, CSLocus *> &catalog,
 int 
 write_beagle(map<int, CSLocus *> &catalog, 
             PopMap<CSLocus> *pmap, 
-            PopSum<CSLocus> *psum, 
-            const map<int, pair<int, int> > &pop_indexes,
-            map<int, string> &samples) 
+            PopSum<CSLocus> *psum)
 {
     //
     // Write a Beagle file as defined here: http://faculty.washington.edu/browning/beagle/beagle.html
@@ -7593,9 +7562,7 @@ write_beagle(map<int, CSLocus *> &catalog,
 int 
 write_beagle_phased(map<int, CSLocus *> &catalog, 
                     PopMap<CSLocus> *pmap, 
-                    PopSum<CSLocus> *psum, 
-                    const map<int, pair<int, int> > &pop_indexes,
-                    map<int, string> &samples) 
+                    PopSum<CSLocus> *psum)
 {
     //
     // Write a Beagle file as a set of haplotpyes as defined here: 
@@ -7784,9 +7751,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
 int 
 write_phylip(map<int, CSLocus *> &catalog, 
              PopMap<CSLocus> *pmap, 
-             PopSum<CSLocus> *psum, 
-             const map<int, pair<int, int> > &pop_indexes,
-             map<int, string> &samples) 
+             PopSum<CSLocus> *psum)
 {
     //
     // We want to find loci where each locus is fixed within a population but variable between populations.
@@ -8023,9 +7988,7 @@ write_phylip(map<int, CSLocus *> &catalog,
 int 
 write_fullseq_phylip(map<int, CSLocus *> &catalog, 
                      PopMap<CSLocus> *pmap, 
-                     PopSum<CSLocus> *psum, 
-                     const map<int, pair<int, int> > &pop_indexes,
-                     map<int, string> &samples) 
+                     PopSum<CSLocus> *psum)
 {
     //
     // We want to write all variable loci in Phylip interleaved format. Polymorphic positions
@@ -8588,9 +8551,7 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
 }
 
 int 
-build_file_list(vector<pair<int, string> > &files, 
-                map<int, pair<int, int> > &pop_indexes, 
-                map<int, vector<int> > &grp_members) 
+build_file_list()
 {
     char             line[max_len];
     vector<string>   parts;
