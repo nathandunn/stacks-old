@@ -133,11 +133,11 @@ sub execute_stacks {
         $path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
         
         if ($sample->{'type'} eq "sample") {
-            $cmd = $exe_path . "pstacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id -r $minc "  . join(" ", @_pstacks) . " --gapped 2>&1";
+            $cmd = $exe_path . "pstacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minc "  . join(" ", @_pstacks) . " 2>&1";
         } elsif ($sample->{'type'} eq "parent") {
-            $cmd = $exe_path . "pstacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id -r $minc "  . join(" ", @_pstacks) . " 2>&1";
+            $cmd = $exe_path . "pstacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minc "  . join(" ", @_pstacks) . " 2>&1";
         } elsif ($sample->{'type'} eq "progeny") {
-            $cmd = $exe_path . "pstacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id -r $minrc " . join(" ", @_pstacks) . " 2>&1";
+            $cmd = $exe_path . "pstacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id $minrc " . join(" ", @_pstacks) . " 2>&1";
         }
         print STDERR  "  $cmd\n";
         print $log_fh "$cmd\n";
