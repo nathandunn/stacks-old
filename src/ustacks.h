@@ -84,11 +84,11 @@ class HVal {
     vector<int> ids;
 
     int count() {
-	return this->ids.size();
+        return this->ids.size();
     }
     int add_id(int id) {
-    	this->ids.push_back(id);
-	return 0;
+        this->ids.push_back(id);
+        return 0;
     }
 };
 
@@ -107,17 +107,17 @@ public:
     bool up;
 
     AlignPath() {
-	diag = false;
-	left = false;
-	up   = false;
+        diag = false;
+        left = false;
+        up   = false;
     }
     int count() {
-	int cnt;
-	cnt  = this->up   ? 1 : 0;
-	cnt += this->left ? 1 : 0;
-	cnt += this->diag ? 1 : 0;
+        int cnt;
+        cnt  = this->up   ? 1 : 0;
+        cnt += this->left ? 1 : 0;
+        cnt += this->diag ? 1 : 0;
 
-	return cnt;
+        return cnt;
     }
 };
 
@@ -150,6 +150,7 @@ int  merge_gapped_alns(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedSt
 int  parse_cigar(const char *, vector<pair<char, uint> > &);
 int  edit_gapped_seqs(map<int, Stack *> &, map<int, Rem *> &, MergedStack *, vector<pair<char, uint> > &);
 int  edit_gaps(vector<pair<char, uint> > &, char *);
+int  dist(MergedStack *, MergedStack *, vector<pair<char, uint> > &);
 
 //
 // Needleman-Wunsch Alignment
@@ -164,14 +165,15 @@ int dump_alignment(MergedStack *, MergedStack *, double **, AlignPath **);
 //
 // Calculate depth of coverage statistics for stacks
 //
-int    calc_coverage_distribution(map<int, Stack *> &, double &, double &);
-double calc_merged_coverage_distribution(map<int, Stack *> &, map<int, MergedStack *> &);
-int    count_raw_reads(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &);
+int calc_coverage_distribution(map<int, Stack *> &, double &, double &, double &);
+int calc_coverage_distribution(map<int, Stack *> &, map<int, MergedStack *> &, double &, double &, double &);
+int calc_coverage_distribution(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, double &, double &, double &);
+int count_raw_reads(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &);
 
 //
 // Dealing with lumberjack (huge) stacks
 //
-int  calc_triggers(double, double, int &, int &);
+int  calc_triggers(double, double, double, int &, int &);
 int  remove_repetitive_stacks(map<int, Stack *> &, map<int, MergedStack *> &);
 int  deleverage(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, set<int> &, int, vector<MergedStack *> &);
 

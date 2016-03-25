@@ -95,7 +95,7 @@ populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/PopMap.h src/PopSum.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h \
 	src/bootstrap.h src/ordered.h src/smoothing.h src/smoothing_utils.h \
-	src/Vcf.h src/Vcf.cc
+	src/MetaPopInfo.h src/MetaPopInfo.cc src/Vcf.h src/Vcf.cc
 
 phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h \
 	src/locus.h src/locus.cc \
