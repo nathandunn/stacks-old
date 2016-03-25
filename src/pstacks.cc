@@ -32,7 +32,7 @@ string in_file;
 FileT  out_file_type;
 string out_path;
 int    sql_id        = 0;
-int    min_stack_cov = 1;
+int    min_stack_cov = 3;
 int    num_threads   = 1;
 
 //

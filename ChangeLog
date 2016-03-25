@@ -1,5 +1,8 @@
 Stacks 1.38
 --------------------------
+	Feature: complete refactoring of denovo_map.pl and ref_map.pl. Separated computation from
+	SQL loading. Added auto creation/deletion of database. Enabled samples to be read from population
+	map instead of specifying them on the command line.
 	Feature: added Needleman–Wunsch algorithm to ustacks to provide for gapped
 	alignments. Includes --max_gaps and --min_aln_len parameters to contain crazy
 	alignments.
