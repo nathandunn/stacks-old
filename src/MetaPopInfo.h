@@ -1,6 +1,3 @@
-/*
- * todo Ask @Julian, are you OK with the [variable] notation for comments ?
- */
 #ifndef METAPOPINFO_H
 #define METAPOPINFO_H
 
@@ -21,69 +18,89 @@ using std::map;
  */
 class MetaPopInfo {
 public:
-    typedef size_t sample_index; // For indexes in [samples_].
-    typedef size_t pop_index;
-    typedef size_t group_index;
-
     struct Sample {
-        pop_index pop;
-        string prefix;
-        size_t id; // Sample ids, as present in the matches files.
+        string name;
+        size_t pop;
+        size_t id; // optional, deprecated
+
+        Sample(const string& name) : name(name), pop(-1), id(-1) {}
+        inline bool operator<(const Sample& other);
     };
     struct Pop {
-        group_index group;
-        sample_index first_sample;
-        sample_index last_sample;
         string name;
+        size_t first_sample;
+        size_t last_sample;
+        size_t group;
+
+        Pop(const string& name) : name(name), group(-1), first_sample(-1), last_sample(-1) {}
+        static const string default_name;
     };
     struct Group {
-        vector<pop_index> pops;
         string name;
+        vector<size_t> pops;
+
+        Group(const string& name) : name(name) {}
+        static const string default_name;
     };
 
 private:
-    vector<Sample> samples_; //n.b. Samples must be grouped by population.
+    vector<Sample> samples_; //n.b. Samples are sorted primarily by population index, and secondarily by name.
     vector<Pop> pops_;
     vector<Group> groups_;
 
-    map<size_t,sample_index> sample_indexes_by_id_; // Links an id with an index in [samples_].
-    map<string,sample_index> sample_indexes_by_name_; // Links a name with an index in [samples_].
-    map<string,pop_index> pop_indexes_; // same, for populations
-    map<string,group_index> group_indexes_; // same, for groups
+    map<string,size_t> sample_indexes_; // Links a name with an index in [samples_].
+    map<string,size_t> pop_indexes_;
+    map<string,size_t> group_indexes_;
+    void reset_sample_map(); // Resets [sample_indexes_].
+    void reset_pop_map();
+    void reset_group_map();
 
 public:
-    /*
-     * Generate a description of the population according to the input :
-     * -- If a popmap file was provided, load its contents.
-     * -- Otherwise, browse the directory.
-     */
-    void init(const string& dir_path, const string& popmap_relpath = string()); //todo implement it.
+    // Create the representation :
+    // -- from a population map file. For consistency with the existing
+    //    code, the existence of the "DIR/SAMPLENAME.matches.tsv(.gz)"
+    //    files is checked if a [dir_path] argument is given.
+    // -- or by browsing the directory for "*.tags.tsv(.gz)" files.
+    bool init_popmap(const string& popmap_path, const string& dir_path = string());
+    bool init_directory(const string& dir_path);
 
-    // Add an sstacks id to a sample
-    void set_sample_id(const sample_index i, const size_t id) {samples_.at(i).id = id;}
+    // Removes samples from the metapopulation.
+    // As samples, populations or groups are removed, the indexes of
+    // the remaining ones change, but the order in which they appear
+    // is preserved.
+    void purge_samples(const vector<size_t>& samples);
 
-    // Access to the information
+    // Retrieve information.
     const vector<Sample>& samples() const {return samples_;}
     const vector<Pop>& pops() const {return pops_;}
     const vector<Group>& groups() const {return groups_;}
 
-    // Obtain the indexes corresponding to a particular id or name.
-    size_t get_sample_index(const string& name) const {return sample_indexes_by_name_.at(name);}
-    size_t get_sample_index(const size_t& id) const {return sample_indexes_by_id_.at(id);}
+    size_t get_sample_index(const string& name) const {return sample_indexes_.at(name);}
     size_t get_pop_index(const string& name) const {return pop_indexes_.at(name);}
     size_t get_group_index(const string& name) const {return group_indexes_.at(name);}
 
-    namespace backcompat {
-    void fill_files(vector<pair<int, string> >&) const; // vector of (pop_index, prefix) pairs
-    void fill_samples(map<int, string>&) const; // map of sample_id : sample_name
-    void fill_sample_ids(vector<int>&) const; // vector of sample_id's.
-    void fill_pop_key(map<int, string>&) const; // map of pop_index : pop_name
-                                                // n.b. pop_indexes start at 1
-    void fill_pop_indexes(map<int, pair<int, int> >&) const; // map of pop_index : (sample_index, sample_index)
-    void fill_grp_key(map<int, string>&) const; // map of group_index : group_name
-                                                // n.b. group indexes start at 1
-    void fill_grp_members(map<int, vector<int> >) const; // map of group_index : pop_indexes
-    }
+private:
+    map<size_t,size_t> sample_indexes_by_id_; // Links a sample id with an index in [samples_].
+
+public:
+    /*
+     * Methods for backwards compatibility
+     */
+
+    // Sets the ID of a sample.
+    void set_sample_id(size_t index, size_t id) {samples_.at(index).id = id; sample_indexes_by_id_[id] = index;}
+    size_t get_sample_index(const size_t& id) const {return sample_indexes_by_id_.at(id);}
+
+    // Resets the (sample_id : index) map. It is the caller's responsibility that the ids are unique.
+    void reset_sample_id_map();
+
+    void fill_files(vector<pair<int, string> >&) const;
+    void fill_sample_ids(vector<int>&) const;
+    void fill_samples(map<int, string>&) const;
+    void fill_pop_key(map<int, string>&) const;
+    void fill_pop_indexes(map<int, pair<int, int> >&) const;
+    void fill_grp_key(map<int, string>&) const;
+    void fill_grp_members(map<int, vector<int> >&) const;
 };
 
 #endif // METAPOPINFO_H

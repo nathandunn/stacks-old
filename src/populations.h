@@ -118,11 +118,11 @@ int     tabulate_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int     create_genotype_map(CSLocus *, PopMap<CSLocus> *);
 int     call_population_genotypes(CSLocus *, PopMap<CSLocus> *);
 int     tally_haplotype_freq(CSLocus *, PopMap<CSLocus> *, int &, double &, string &);
-int     translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &);
+int     translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &); // This function doesn't exist (March 24, 2016)
 int     correct_fst_bonferroni_win(vector<PopPair *> &);
-int     bootstrap_fst_approximate_dist(vector<double> &, vector<int>  &, double *, int *, map<int, vector<double> > &); // not used as of March 23, 2016
+int     bootstrap_fst_approximate_dist(vector<double> &, vector<int>  &, double *, int *, map<int, vector<double> > &); // not used (March 23, 2016)
 int     kernel_smoothed_popstats(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, int, ofstream &);
-int     bootstrap_popstats_approximate_dist(vector<double> &, vector<double> &, vector<int>  &, double *, int *, int, map<int, vector<double> > &, map<int, vector<double> > &); // not used as of March 23, 2016
+int     bootstrap_popstats_approximate_dist(vector<double> &, vector<double> &, vector<int>  &, double *, int *, int, map<int, vector<double> > &, map<int, vector<double> > &); // not used (March 23, 2016)
 double  bootstrap_approximate_pval(int, double, map<int, vector<double> > &);
 
 int      calculate_summary_stats(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
