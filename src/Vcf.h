@@ -35,6 +35,8 @@
 #include <zlib.h>
 #endif
 
+#include "constants.h"
+
 using std::size_t;
 using std::pair;
 using std::vector;
@@ -42,8 +44,6 @@ using std::string;
 using std::set;
 using std::map;
 using std::ifstream;
-
-#include "constants.h"
 
 namespace Vcf {
     const size_t base_fields_no = 8; // CHROM POS ID REF ALT QUAL FILTER INFO [FORMAT SAMPLE ...]]
@@ -58,7 +58,8 @@ namespace Vcf {
     const size_t format = 8;
     const size_t first_sample = 9;
 
-    enum Record_type {
+    // enum for record types
+    enum class RType {
         null,
         expl, // record with explicitly written alleles, e.g. SNPs, small indels or entirely defined haplotypes.
         symbolic, // e.g. ALT is "<DUP:TANDEM>".
@@ -78,20 +79,20 @@ class VcfAbstractParser;
  */
 struct VcfRecord {
 
-    string chrom_; // required
-    size_t pos_; // required
-    string id_;
-    string ref_; //required, case insensitive
-    Vcf::Record_type type_;
-    vector<string> alt_; // case insensitive
-    string qual_;
-    vector<string> filter_;
-    vector<pair<string, string> > info_;
-    vector<string> format_;
-    vector<vector<string> > samples_;
+    string chrom; // required
+    size_t pos; // required
+    string id;
+    string ref; //required, case insensitive
+    Vcf::RType type;
+    vector<string> alt; // case insensitive
+    string qual;
+    vector<string> filter;
+    vector<pair<string, string> > info;
+    vector<string> format;
+    vector<vector<string> > samples;
 
     VcfRecord()
-    : chrom_(), pos_(-1), id_(), ref_(), type_(Vcf::null),  alt_(), qual_(), filter_(), info_(), format_(), samples_()
+    : chrom(), pos(-1), id(), ref(), type(Vcf::RType::null),  alt(), qual(), filter(), info(), format(), samples()
     {}
 
 private:

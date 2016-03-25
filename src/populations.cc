@@ -258,12 +258,12 @@ int main (int argc, char* argv[]) {
         VcfRecord* rec = &vcf_records->back();
         while (parser->next_record(*rec)) {
             bool skip = false;
-            if (rec->type_ != Vcf::expl) {
+            if (rec->type != Vcf::RType::expl) {
                 skip = true;
-            } else if (rec->ref_.length() > 1) {
+            } else if (rec->ref.length() > 1) {
                 skip = true;
             } else {
-                for (vector<string>::const_iterator allele = rec->alt_.begin(); allele != rec->alt_.end(); ++allele) {
+                for (vector<string>::const_iterator allele = rec->alt.begin(); allele != rec->alt.end(); ++allele) {
                     if (allele->length() > 1) {
                         skip = true;
                         break;
@@ -326,27 +326,27 @@ int main (int argc, char* argv[]) {
             loc->id = i;
             loc->len = 1;
             loc->con = new char[2];
-            strcpy(loc->con, rec.ref_.c_str());
-            loc->loc.set(rec.chrom_.c_str(), (uint)rec.pos_, plus);
+            strcpy(loc->con, rec.ref.c_str());
+            loc->loc.set(rec.chrom.c_str(), (uint)rec.pos, plus);
             loc->snps.push_back(new SNP());
             SNP& snp = *loc->snps.back();
             snp.col = 0;
-            snp.rank_1 = rec.ref_.at(0);
-            snp.type = rec.alt_.size() > 0 ? snp_type_het : snp_type_hom;
-            if (rec.alt_.size() >= 1) {
-                snp.rank_2 = rec.alt_[0].at(0);
-                if (rec.alt_.size() >= 2) {
-                    snp.rank_3 = rec.alt_[1].at(0);
-                    if (rec.alt_.size() >=3) {
-                        snp.rank_4 = rec.alt_[2].at(0);
-                        if (rec.alt_.size() > 3) {
+            snp.rank_1 = rec.ref.at(0);
+            snp.type = rec.alt.size() > 0 ? snp_type_het : snp_type_hom;
+            if (rec.alt.size() >= 1) {
+                snp.rank_2 = rec.alt[0].at(0);
+                if (rec.alt.size() >= 2) {
+                    snp.rank_3 = rec.alt[1].at(0);
+                    if (rec.alt.size() >=3) {
+                        snp.rank_4 = rec.alt[2].at(0);
+                        if (rec.alt.size() > 3) {
                             cerr << "Warning: Skipping malformed VCF SNP record "
-                                 << rec.chrom_ << ":" << rec.pos_
+                                 << rec.chrom << ":" << rec.pos
                                  << " (too many alleles ?!"
-                                 << " REF: \"" << rec.ref_ << "\", ALT: \"";
-                            cerr << rec.alt_[0];
-                            for (size_t i=0; i<rec.alt_.size(); ++i) {
-                                cerr << "," << rec.alt_[i];
+                                 << " REF: \"" << rec.ref << "\", ALT: \"";
+                            cerr << rec.alt[0];
+                            for (size_t i=0; i<rec.alt.size(); ++i) {
+                                cerr << "," << rec.alt[i];
                             }
                             cerr << "\").\n";
                             delete loc->snps.back();
@@ -358,8 +358,8 @@ int main (int argc, char* argv[]) {
                     }
                 }
             }
-            loc->alleles.insert(make_pair(rec.ref_, 0));
-            for (vector<string>::const_iterator allele = rec.alt_.begin(); allele != rec.alt_.end(); ++allele)
+            loc->alleles.insert(make_pair(rec.ref, 0));
+            for (vector<string>::const_iterator allele = rec.alt.begin(); allele != rec.alt.end(); ++allele)
                 loc->alleles.insert(make_pair(*allele, 0));
             loc->populate_alleles();
             loc->depth = 0;
