@@ -142,12 +142,11 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
                 pops_[pop_index].group = grp_index;
                 groups_[grp_index].pops.push_back(pop_index);
             } else if (pops_[pop_index].group != grp_index) {
-                cerr << "Error: Malformed population map file '"
-                     << pmap_path << "' : population '"
+                cerr << "Warning: In population map file '"
+                     << pmap_path << "': population '"
                      << pops_[pop_index].name << "' belongs to two groups, '"
                      << groups_[pops_[pop_index].group].name << "' and '"
-                     << groups_[grp_index].name << "'.\n";
-                throw exception();
+                     << groups_[grp_index].name << "'. Ignoring the latter one.\n";
             }
         }
     }
