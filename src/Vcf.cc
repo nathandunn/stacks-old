@@ -1,14 +1,11 @@
-#include <iostream>
-#include <cstring>
-#include <cstdlib>
-#include <exception>
 #include <algorithm>
 
 #include "Vcf.h"
 
 using namespace std;
 
-inline void get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep) {
+inline
+void get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep) {
     bounds.clear();
     bounds.push_back(tab1);
     do {
@@ -23,20 +20,6 @@ void malformed_header(const string& path, const size_t line_no) {
          << " Line " << line_no << " in file " << path
          << endl;
     throw exception();
-}
-
-inline void VcfRecord::clear() {
-    pos = -1;
-    chrom.clear();
-    id.clear();
-    ref.clear();
-    type = Vcf::null;
-    alt.clear();
-    qual.clear();
-    filter.clear();
-    info.clear();
-    format.clear();
-    samples.clear();
 }
 
 VcfAbstractParser::VcfAbstractParser()
@@ -170,7 +153,8 @@ void VcfAbstractParser::read_header() {
     return;
 }
 
-inline void VcfAbstractParser::read_while_not_eol() {
+inline
+void VcfAbstractParser::read_while_not_eol() {
     while(!eol_) {
         getline(line_, Vcf::line_buf_size);
         if(eof_) {
@@ -183,7 +167,8 @@ inline void VcfAbstractParser::read_while_not_eol() {
     }
 }
 
-inline void VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2) {
+inline
+void VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2) {
     if(tab2 == tab1+1)
         cerr << "Warning: malformed VCF record line (empty SAMPLE field should be marked by a dot)."
              << " Line " << line_number_ << " in file " << path_
@@ -209,33 +194,34 @@ inline void VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* t
     }
 }
 
-int VcfParser::open(const string& path) {
+bool VcfParser::open(const string& path) {
     file_.exceptions(ifstream::badbit);
 
     file_.open(path);
-    if(!file_.good()) {
-        return 1;
+    if(file_.fail()) {
+        return false;
     }
 
     read_header();
-    return 0;
+    return true;
 }
 
 #ifdef HAVE_LIBZ
-int VcfGzParser::open(const string& path) {
+bool VcfGzParser::open(const string& path) {
     file_ = gzopen(path.c_str(), "rb");
     if(!file_) {
-        return 1;
+        return false;
     }
 #if ZLIB_VERNUM >= 0x1240
     gzbuffer(file_, libz_buffer_size);
 #endif
 
     read_header();
-    return 0;
+    return true;
 }
 
-inline void VcfGzParser::check_eol() {
+inline
+void VcfGzParser::check_eol() {
     if(*(tabs_.back()-1) == '\n') { // n.b. safe; gzgets never returns a null string
         eol_ = true;
         tabs_.back() = tabs_.back()-1;
@@ -245,6 +231,62 @@ inline void VcfGzParser::check_eol() {
     }
 }
 #endif
+
+VcfAbstractParser* Vcf::adaptive_open(const string& path) {
+    VcfAbstractParser* parser = NULL;
+
+    parser = new VcfParser();
+    if (not parser->open(path)) {
+        // Opening failed
+        delete parser;
+        parser = NULL;
+#ifdef HAVE_LIBZ
+        // Try gzip
+        parser = new VcfGzParser();
+        if (not parser->open(path)) {
+            delete parser;
+            parser = NULL;
+        }
+#endif
+    }
+
+    return parser;
+}
+
+vector<VcfRecord> VcfAbstractParser::read_snp_records(size_t* n_skipped) {
+    vector<VcfRecord> records;
+    if(n_skipped)
+        *n_skipped = 0;
+
+    records.push_back(VcfRecord());
+    VcfRecord* rec = &records.back();
+    while (next_record(*rec)) {
+        bool skip = false;
+        if (rec->type != Vcf::RType::expl) {
+            skip = true;
+            if (rec->type == Vcf::RType::null) {
+                cerr << "Warning: In file '" << path_ << "': skipping very long VCF line "
+                     << line_number_ << ".\n";
+            }
+        } else {
+            for (vector<string>::const_iterator allele = rec->alleles.begin(); allele != rec->alleles.end(); ++allele) {
+                if (allele->length() > 1) {
+                    skip = true;
+                    break;
+                }
+            }
+        }
+        if(skip && n_skipped) {
+            ++n_skipped;
+            continue;
+        }
+        records.push_back(VcfRecord());
+        rec = &records.back();
+    }
+    records.pop_back();
+
+    return records;
+}
 
 bool VcfAbstractParser::next_record(VcfRecord& record) {
     getline(line_, Vcf::line_buf_size);
@@ -329,7 +371,7 @@ bool VcfAbstractParser::next_record(VcfRecord& record) {
              << endl;
         throw exception();
     }
-    record.ref.assign(tabs_[Vcf::ref-1]+1, tabs_[Vcf::ref]);
+    record.alleles.push_back(string(tabs_[Vcf::ref-1]+1, tabs_[Vcf::ref]));
 
     //alt
     if(tabs_[Vcf::alt-1]+1 == tabs_[Vcf::alt])
@@ -350,7 +392,7 @@ bool VcfAbstractParser::next_record(VcfRecord& record) {
     if(*(tabs_[Vcf::alt-1]+1) != '.') {
         get_bounds(bounds_, tabs_[Vcf::alt-1], tabs_[Vcf::alt], ',');
         for(size_t i = 0; i < bounds_.size()-1; ++i )
-            record.alt.push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
+            record.alleles.push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
     }
 
     //qual
@@ -406,6 +448,8 @@ bool VcfAbstractParser::next_record(VcfRecord& record) {
                 kept_format_fields_.push_back(false);
             }
         }
+        if(record.format[0] == "GT")
+            record.no_gt = false;
 
         //samples
         for(size_t s = Vcf::base_fields_no; s < tabs_.size()-2; ++s)
