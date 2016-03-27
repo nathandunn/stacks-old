@@ -257,7 +257,7 @@ int main (int argc, char* argv[]) {
     VcfHeader* vcf_header = NULL;
 
     // Load the catalog from Stacks files.
-    if (!in_path.empty()) {
+    if (not in_path.empty()) {
         stringstream catalog_file;
         bool compressed = false;
         catalog_file << in_path << "batch_" << batch_id << ".catalog";
@@ -268,150 +268,28 @@ int main (int argc, char* argv[]) {
         }
     }
     // Or load it from a VCF file.
-    else if (!vcf_in_path.empty()) {
-        //todo class Vcf_versatileparser : public VcfAbstractParser { VcfAbstractParser* parser_; ... }
-        //todo (maybe not?) vector<VcfRecord> VcfAbstractParser::load_snp_records(size_t& skipped = 0);
+    else if (not vcf_in_path.empty()) {
 
         vcf_header = new VcfHeader();
         vcf_records = new vector<VcfRecord>();
 
         // Open the file
-        VcfAbstractParser* parser = NULL;
-        parser = new VcfParser();
-        int res = parser->open(vcf_in_path);
-        if (res == 0) {
-        } else if (res == 1) {
-            delete parser;
-#ifdef HAVE_LIBZ
-            // Try gzip
-            parser = new VcfGzParser();
-            res = parser->open(vcf_in_path);
-            if (res == 0) {
-                // OK.
-            } else if (res == 1)
-#else
-            if (true)
-#endif
-                {
-                cerr << "Error: Unable to open VCF file '" << vcf_in_path << "'.\n";
-                return 0;
-            }
+        VcfAbstractParser* parser = Vcf::adaptive_open(vcf_in_path);
+        if (parser == NULL) {
+            cerr << "Error: Unable to open VCF file '" << vcf_in_path << "'.\n";
+            return 0;
         }
 
-        // Read the records
-        // We only keep records that correspond to SNPs
+        // Read the SNP records
         size_t skipped = 0;
-        vcf_records->push_back(VcfRecord());
-        VcfRecord* rec = &vcf_records->back();
-        while (parser->next_record(*rec)) {
-            bool skip = false;
-            if (rec->type != Vcf::RType::expl) {
-                skip = true;
-            } else if (rec->ref.length() > 1) {
-                skip = true;
-            } else {
-                for (vector<string>::const_iterator allele = rec->alt.begin(); allele != rec->alt.end(); ++allele) {
-                    if (allele->length() > 1) {
-                        skip = true;
-                        break;
-                    }
-                }
-            }
-            if(skip) {
-                ++skipped;
-                continue;
-            }
-            vcf_records->push_back(VcfRecord());
-            rec = &vcf_records->back();
-        }
-        //todo cerr << "skipped "
-        vcf_records->pop_back();
+        *vcf_records = parser->read_snp_records(&skipped);
 
-        /*
-         * todo catalog_utils.h: map<int, CSLocus*> create_catalog(const vector<VcfRecord>& vcf_records);
-         * Create a catalog based on VCF SNP records.
-         *
-         * We observe the following rules to create the catalog loci :
-         * [sample_id] (batch number) Always set to 0.
-         * [id] VCF records do not intrinsically have locus ids; we use the SNP records indexes.
-         * [len] Always set to 1.
-         * [con] We use the reference nucleotide as the consensus.
-         * [loc] Use the chromosome and position given by each record (n.b. the
-         *       VCF format requires these field), and strand "plus".
-         * [snps] Use the ref+alt alleles.
-         *     [col] Always set to 0 (first nucleotide in the consensus).
-         *     [type] "snp_type_het" if the alt field is not empty, otherwise "snp_type_hom".
-         *     [lratio] Always set to 0.
-         *     [rank_1] The ref allele.
-         *     [rank_2], [rank_3], [rank_4] The alt allele(s).
-         * [alleles] Use the ref+alt alleles.
-         * [strings] We fill this by calling Locus::populate_alleles().
-         * [cnt] Set to the approriate value when filling the PopMap.
-         * [hcnt] (Same as above.)
-         * [confounded_cnt] (Same as above.)
-         * [gmap] This is filled by tabulate_haplotypes() (in "populations.cc").
-         * [gcnt] (Same as above.)
-         * [marker] (Same as above.)
-         *
-         * When no depth information is available, the [depth] and the depths
-         * of the [alleles] are set to 0. (n.b. the parsing of depth information in
-         * VCF is not implemented as of Mar 21, 2016.)
-         *
-         * When no likelihood information is available, [lnl] is set to 0. (n.b.
-         * the parsing of likelihood information in VCF is not implemented as of
-         * Mar 21, 2016.)
-         *
-         * The following members are left unset, on the premise that
-         * "populations" does not use them :
-         * model, blacklisted, deleveraged, lumberjack, components, reads, comp_cnt,
-         * comp_type, annotation, uncor_marker, hap_cnts, f, trans_gcnt, chisq.
-         */
-        for (size_t i = 0; i < vcf_records->size(); ++i) {
-            const VcfRecord& rec = (*vcf_records)[i];
-            CSLocus* loc = catalog.insert(make_pair(i, new CSLocus())).first->second;
-            loc->sample_id = 0;
-            loc->id = i;
-            loc->len = 1;
-            loc->con = new char[2];
-            strcpy(loc->con, rec.ref.c_str());
-            loc->loc.set(rec.chrom.c_str(), (uint)rec.pos, plus);
-            loc->snps.push_back(new SNP());
-            SNP& snp = *loc->snps.back();
-            snp.col = 0;
-            snp.rank_1 = rec.ref.at(0);
-            snp.type = rec.alt.size() > 0 ? snp_type_het : snp_type_hom;
-            if (rec.alt.size() >= 1) {
-                snp.rank_2 = rec.alt[0].at(0);
-                if (rec.alt.size() >= 2) {
-                    snp.rank_3 = rec.alt[1].at(0);
-                    if (rec.alt.size() >=3) {
-                        snp.rank_4 = rec.alt[2].at(0);
-                        if (rec.alt.size() > 3) {
-                            cerr << "Warning: Skipping malformed VCF SNP record "
-                                 << rec.chrom << ":" << rec.pos
-                                 << " (too many alleles ?!"
-                                 << " REF: \"" << rec.ref << "\", ALT: \"";
-                            cerr << rec.alt[0];
-                            for (size_t i=0; i<rec.alt.size(); ++i) {
-                                cerr << "," << rec.alt[i];
-                            }
-                            cerr << "\").\n";
-                            delete loc->snps.back();
-                            delete loc->con;
-                            delete loc;
-                            catalog.erase(i);
-                            continue;
-                        }
-                    }
-                }
-            }
-            loc->alleles.insert(make_pair(rec.ref, 0));
-            for (vector<string>::const_iterator allele = rec.alt.begin(); allele != rec.alt.end(); ++allele)
-                loc->alleles.insert(make_pair(*allele, 0));
-            loc->populate_alleles();
-            loc->depth = 0;
-            loc->lnl = 0;
-        }
+        cerr << "Found " << vcf_records->size() << " SNP records (skipped "
+             << skipped << " other records) in file '" << vcf_in_path
+             << "'.\n";
+
+        catalog = create_catalog(*vcf_records);
+
         *vcf_header = parser->header();
         delete parser;
     }
@@ -428,12 +306,12 @@ int main (int argc, char* argv[]) {
     loci_ordered = order_unordered_loci(catalog);
 
     //
-    // Create and populate the population map
+    // Create the PopMap
     //
 
-    // If populating from matches files : check that they all exist
-    if (!in_path.empty()) {
-        // Load matches to the catalog
+    // If populating from matches files : load the files now,
+    // and check that they are all well formed.
+    if (not in_path.empty()) {
         vector<size_t> samples_to_remove;
         set<size_t> known_samples;
         for (size_t i = 0; i < mpopi.samples().size(); ++i) {
@@ -461,7 +339,14 @@ int main (int argc, char* argv[]) {
         }
         known_samples.clear(); // freeing mem
         mpopi.purge_samples(samples_to_remove);
+    } else if (not vcf_in_path.empty()) {
+        // We still could need sample IDs. Create arbitrary ones.
+        for (size_t i = 0; i < mpopi.samples().size(); ++i)
+            mpopi.set_sample_id(i, i+1); //id=i+1
     }
+
+    cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi.samples().size(), catalog.size());
 
     // Set the former sample/population globals to their expected values.
     mpopi.fill_files(files);
@@ -472,12 +357,12 @@ int main (int argc, char* argv[]) {
     mpopi.fill_grp_key(grp_key);
     mpopi.fill_grp_members(grp_members);
 
-    // Populate the PopMap :
-    cerr << "Populating observed haplotypes for " << files.size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(files.size(), catalog.size());
+    //
+    // Populate the PopMap
+    //
 
     // Using SStacks matches files...
-    if (!in_path.empty()) {
+    if (not in_path.empty()) {
         pmap->populate(sample_ids, catalog, catalog_matches);
 
         // Free memory
@@ -487,75 +372,10 @@ int main (int argc, char* argv[]) {
         catalog_matches.clear();
     }
     // ...or using VCF records.
-    else if (!vcf_in_path.empty()) {
-
-        //todo void PopMap::populate(const map<int, CSLocus*>& catalog, const vector<VcfRecord>& vcf_records);
-        //todo void PopMap::add_metapop_info(const Mpopinfo& mpopinfo);
-
-        //todo initialize [sample_order], [rev_sample_order]
-        //todo initalize [locus_order], [rev_locus_order]
-        //todo PopMap::order_loci() ??
-
-        for (map<int, CSLocus*>::const_iterator loc_it = catalog.begin(); loc_it != catalog.end(); ++loc_it) {
-            const CSLocus& loc = *loc_it->second;
-            const VcfRecord& rec = vcf_records->at(loc.id);
-
-            /*
-             * Populate the PopMap based on VCF SNP records. The ids of the loci
-             * in the catalog must be the indexes of the SNP records.
-             *
-             * We observe the following rules to create the Datums :
-             * [id] is the locus id.
-             * [len] is the locus length (expected to be one, for a SNP)
-             * [model] "E" or "O" according to the SAMPLE/GT field, or
-             *     "U" if the GT field is absent.
-             * [obshap] the nucleotide(s) observed for this SNP for this individual
-             *     todo Does [obshap] have to be ordered?
-             *
-             * When no depth information is available, [tot_depth] and the [depths]
-             * of all alleles are set to 0.
-             * (n.b. the parsing of depth information in VCF is not implemented as
-             * of Mar 21, 2016.)
-             *
-             * When no likelihood information is available, [lnl] is set to 0.
-             * (n.b. the parsing of depth information in VCF is not implemented as
-             * of Mar 21, 2016.)
-             *
-             * The following members are left unset, on the premise that
-             * "populations" does not use them :
-             * corrected, genotype, trans_genotype
-             *
-             * [merge_partner] does not need to be set now
-             * [snps] is only used by [write_vcf()] and [write_vcf_strict()], which
-             *     first call [populate_snp_calls()] then use the SNP data in the
-             *     datum. todo See how we can handle this.
-             */
-
-            for (size_t sample = 0; sample < files.size(); ++sample) {
-                //data[loc_index][sample] = new Datum(); //todo Make this block of code a PopMap member
-                Datum* d; //= data[loc_index][sample];
-                d->id = loc.id;
-                d->len = loc.len;
-                /*
-                 *todo retrieve the genotype... Should this be done by VcfAbstractParser or by VcfRecord ?
-                 * Then:
-                 * if (no genotype)
-                 *     model = "U"
-                 * if (homozygote)
-                 *     model = "O"
-                 *     obshap.push_back()
-                 *     depths = {0}
-                 * if (heterozygote)
-                 *     model = "E"
-                 *     obshap.bush_back()
-                 *     obshap.push_back()
-                 *     depths = {0,0}
-                 */
-
-                d->tot_depth = 0;
-                d->lnl = 0;
-            }
-        }
+    else if (not vcf_in_path.empty()) {
+        pmap->populate(mpopi, catalog, *vcf_records);
+        delete vcf_records;
+        delete vcf_header;
     }
 
     //

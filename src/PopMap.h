@@ -37,6 +37,9 @@ using std::set;
 using std::pair;
 using std::make_pair;
 
+#include "MetaPopInfo.h"
+#include "Vcf.h"
+
 class Datum {
 public:
     int            id;            // Stack ID
@@ -51,7 +54,7 @@ public:
     double         lnl;           // Log likelihood of this locus.
     vector<char *> obshap;        // Observed Haplotypes
     vector<SNP *>  snps;
-    Datum()  { corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; len = 0; lnl = 0.0; merge_partner = 0; }
+    Datum()  { id = -1; corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; len = 0; lnl = 0.0; merge_partner = 0; }
     ~Datum() {
         for (uint i = 0; i < this->obshap.size(); i++)
             delete [] this->obshap[i];
@@ -76,14 +79,30 @@ class PopMap {
                                 // the second dimension of the datum array each sample is stored.
     map<int, int> rev_sample_order;
 
+    // Sets [sample_order] and [rev_sample_order]. The array indexes
+    // will be the same as those of [mpopi.samples_].
+    void add_metapop_info(const MetaPopInfo& mpopi);
+
 public:
     map<string, vector<LocusT *> > ordered_loci; // Loci ordered by genomic position
 
     PopMap(int, int);
     ~PopMap();
 
-    int populate(vector<int> &, map<int, LocusT*> &, vector<vector<CatMatch *> > &);
-    int order_loci(map<int, LocusT*> &);
+    // Populates the PopMap based on sstack matches files.
+    // The catalog is modified (LocusT must be CSLocus, and
+    // members [cnt, hcnt, confounded_cnt] are modified).
+    int populate(const vector<int>& sample_ids, map<int, LocusT*>& catalog, const vector<vector<CatMatch *> >& matches);
+
+    // Populates the PopMap based on VCF records.
+    // The catalog is modified (LocusT must be CSLocus, and
+    // members [cnt, hcnt] are modified).
+    // N.B. The IDs of the loci in the catalog MUST be the same
+    // as the indexes in the records vector.
+    int populate(const MetaPopInfo& mpopi, map<int, CSLocus*>& catalog, const vector<VcfRecord>& records); //todo LocusT
+
+
+    int order_loci(const map<int, LocusT*> &);
     int prune(set<int> &);
 
     int loci_cnt() { return this->num_loci; }
@@ -96,6 +115,14 @@ public:
     Datum  *datum(int, int);
     bool    blacklisted(int, int);
 };
+
+template<class LocusT>
+void PopMap<LocusT>::add_metapop_info(const MetaPopInfo& mpopi) {
+    for(size_t i = 0; i < mpopi.samples().size(); ++i) {
+        sample_order[mpopi.samples()[i].id] = i;
+        rev_sample_order[i] = mpopi.samples()[i].id;
+    }
+}
 
 template<class LocusT>
 PopMap<LocusT>::PopMap(int num_samples, int num_loci) {
@@ -123,9 +150,9 @@ PopMap<LocusT>::~PopMap() {
 }
 
 template<class LocusT>
-int PopMap<LocusT>::populate(vector<int> &sample_ids,
+int PopMap<LocusT>::populate(const vector<int> &sample_ids,
                              map<int, LocusT*> &catalog,
-                             vector<vector<CatMatch *> > &matches) {
+                             const vector<vector<CatMatch *> > &matches) {
     //
     // Record the array position of each sample that we will load.
     //
@@ -138,7 +165,7 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
     // Create an index showing what position each catalog locus is stored at in the datum 
     // array. Create a second index allowing ordering of Loci by genomic position.
     //
-    typename std::map<int, LocusT*>::iterator it;
+    typename std::map<int, LocusT*>::const_iterator it;
     uint i = 0;
     for (it = catalog.begin(); it != catalog.end(); it++) {
         this->locus_order[it->first] = i;
@@ -216,11 +243,100 @@ int PopMap<LocusT>::populate(vector<int> &sample_ids,
 }
 
 template<class LocusT>
-int PopMap<LocusT>::order_loci(map<int, LocusT*> &catalog) 
+int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
+             map<int, CSLocus*>& catalog, //todo
+             const vector<VcfRecord>& records) {
+
+    // Initialize [sample_order], [rev_sample_order].
+    add_metapop_info(mpopi);
+
+    // Initalize [locus_order], [rev_locus_order].
+    for (size_t i = 0; i < records.size(); ++i) {
+        locus_order[i] = i; // n.b. assumes locus ID == record index.
+        rev_locus_order[i] = i;
+    }
+
+    // Initialize [ordered_loci].
+    order_loci(catalog);
+
+    /*
+     * Fill the PopMap.
+     *
+     * We observe the following rules to create the Datums :
+     * [id] is the locus id.
+     * [len] is the locus length (expected to be one, for a SNP)
+     * [model] "E" or "O" according to the SAMPLE/GT field, or
+     *     "U" if the GT field is absent.
+     * [obshap] the nucleotide(s) observed for this SNP for this individual
+     *     todo Does [obshap] have to be ordered?
+     *
+     * When no depth information is available, [tot_depth] and the [depths]
+     * of all alleles are set to 0.
+     * (n.b. the parsing of depth information in VCF is not implemented as
+     * of Mar 21, 2016.)
+     *
+     * When no likelihood information is available, [lnl] is set to 0.
+     * (n.b. the parsing of depth information in VCF is not implemented as
+     * of Mar 21, 2016.)
+     *
+     * The following members are left unset, on the premise that
+     * "populations" does not use them :
+     * corrected, genotype, trans_genotype
+     *
+     * [merge_partner] is set later by [merge_datums()] (in populations.cc).
+     * [snps] is only used by [write_vcf()] and [write_vcf_strict()], which
+     *     first call [populate_snp_calls()] then use the SNP data in the
+     *     datum. todo See how we can handle this.
+     */
+
+    for (size_t i = 0; i < records.size(); ++i) {
+        const VcfRecord& rec = records[i];
+        const CSLocus& loc = * catalog.at(i); //todo
+
+        for (size_t sample = 0; sample < mpopi.samples().size(); ++sample) {
+            Datum* d = new Datum();
+            data[i][sample] = d;
+            ++catalog.at(i)->cnt;
+            ++catalog.at(i)->hcnt;
+
+            // id, len, tot_depth, lnl
+            d->id = loc.id;
+            d->len = loc.len;
+            d->tot_depth = 0;
+            d->lnl = 0;
+
+            // model, obshap, depth
+            pair<int, int> gt = rec.parse_genotype(sample);
+            d->model = new char[2];
+            if (gt == make_pair<int,int>(-1,-1)) {
+                strcpy(d->model, "U");
+            } else if (gt.first == gt.second) {
+                strcpy(d->model, "O");
+                const string& allele = rec.alleles[gt.first];
+                d->obshap.push_back(new char[allele.size()+1]);
+                strcpy(d->obshap[0], allele.c_str());
+                d->depth.push_back(0);
+            } else {
+                strcpy(d->model, "E");
+                const string& allele1 = rec.allele(gt.first);
+                const string& allele2 = rec.allele(gt.second);
+                d->obshap.push_back(new char[allele1.size()+1]);
+                d->obshap.push_back(new char[allele2.size()+1]);
+                strcpy(d->obshap[0], allele1.c_str());
+                strcpy(d->obshap[1], allele2.c_str());
+                d->depth.push_back(0);
+                d->depth.push_back(0);
+            }
+        }
+    }
+}
+
+template<class LocusT>
+int PopMap<LocusT>::order_loci(const map<int, LocusT*> &catalog)
 {
     this->ordered_loci.clear();
 
-    typename std::map<int, LocusT*>::iterator it;
+    typename std::map<int, LocusT*>::const_iterator it;
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
         if (strlen(it->second->loc.chr) > 0)

@@ -24,8 +24,11 @@
 #include "config.h"
 
 #include <fstream>
+#include <iostream>
 #include <exception>
 #include <utility>
+#include <cstring>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include <set>
@@ -44,34 +47,47 @@ using std::string;
 using std::set;
 using std::map;
 using std::ifstream;
+using std::cerr;
+using std::exception;
+using std::out_of_range;
 
 namespace Vcf {
-    const size_t base_fields_no = 8; // CHROM POS ID REF ALT QUAL FILTER INFO [FORMAT SAMPLE ...]]
-    const size_t chrom = 0;
-    const size_t pos = 1;
-    const size_t id = 2;
-    const size_t ref = 3;
-    const size_t alt = 4;
-    const size_t qual = 5;
-    const size_t filter = 6;
-    const size_t info = 7;
-    const size_t format = 8;
-    const size_t first_sample = 9;
+const size_t base_fields_no = 8; // CHROM POS ID REF ALT QUAL FILTER INFO [FORMAT SAMPLE ...]]
+const size_t chrom = 0;
+const size_t pos = 1;
+const size_t id = 2;
+const size_t ref = 3;
+const size_t alt = 4;
+const size_t qual = 5;
+const size_t filter = 6;
+const size_t info = 7;
+const size_t format = 8;
+const size_t first_sample = 9;
 
-    // enum for record types
-    enum class RType {
-        null,
-        expl, // record with explicitly written alleles, e.g. SNPs, small indels or entirely defined haplotypes.
-        symbolic, // e.g. ALT is "<DUP:TANDEM>".
-        breakend // e.g. ALT is "G]17:198982]".
-    };
+// enum for record types
+enum class RType {
+    null,
+    expl, // record with explicitly written alleles, e.g. SNPs, small indels or entirely defined haplotypes.
+    symbolic, // e.g. ALT is "<DUP:TANDEM>".
+    breakend // e.g. ALT is "G]17:198982]".
+};
 
-    // Constants for the parser.
-    const size_t line_buf_size = 4096;
-    const set<string> common_format_fields ({"GT","AD","DP","GL"});
+// Constants for the parser.
+const size_t line_buf_size = 4096;
+const set<string> common_format_fields ({"GT","AD","DP","GL"});
 }
 
 class VcfAbstractParser;
+
+namespace Vcf {
+
+// Tries to open the given VCF file using VcfParser, then
+// VcfGzParser. Return NULL if both failed.
+// (rem. The pointee is dynamically allocated, should be
+// deleted.)
+VcfAbstractParser* adaptive_open(const string& path);
+
+}
 
 /*
  * VcfRecord
@@ -82,28 +98,26 @@ struct VcfRecord {
     string chrom; // required
     size_t pos; // required
     string id;
-    string ref; //required, case insensitive
-    Vcf::RType type;
-    vector<string> alt; // case insensitive
+    vector<string> alleles; // allele 0 is REF and is required ; case insensitive
     string qual;
     vector<string> filter;
     vector<pair<string, string> > info;
     vector<string> format;
     vector<vector<string> > samples;
 
-    VcfRecord()
-    : chrom(), pos(-1), id(), ref(), type(Vcf::RType::null),  alt(), qual(), filter(), info(), format(), samples()
-    {}
+    Vcf::RType type;
+    bool no_gt; // true if format[0] != "GT". Checked by parse_genotype().
 
-private:
-    //map<string,size_t> format_subfields_indexes_; //todo
+    VcfRecord() : pos(-1), type(Vcf::RType::null), no_gt(true) {}
 
 public:
-    void clear(); // Clears all the members.
+    inline void clear(); // Clears all the members.
 
-    // Methods for further parsing
-    //pair<size_t, size_t> parse_genotype(size_t sample_index) const; // Returns (first allele, second allele)
-    //const string& allele(size_t index) const {if (index == 0) return ref_; else return alt_.at(index-1);}
+    // Returns (first allele, second allele), or (-1,-1) if the record doesn't have a genotype.
+    inline pair<int, int> parse_genotype(size_t sample) const;
+
+    // Returns alleles[i], provided it actually exists. (Otherwise it is easy to write a VCF that causes a segfault.)
+    inline const string& allele(size_t index) const;
 };
 
 /*
@@ -169,7 +183,6 @@ protected:
     const string path_;
     VcfHeader header_;
     size_t header_lines_; // Number of header lines there were (set by the constructor).
-
     set<string> format_fields_to_keep_; // If set, the parser will return records with only these fields included.
 
     size_t line_number_;
@@ -187,17 +200,20 @@ protected:
 
     virtual void getline(char* ptr, size_t n) =0;
     virtual void check_eol() =0; // n.b. The implementation in gzparser relies on tabs_ to access the end of the string in line_.
-    void read_while_not_eol(); // Read while eol_ is false.
+    inline void read_while_not_eol(); // Read while eol_ is false.
 
-    void add_sample(VcfRecord& record, char* tab1, char* tab2); // Basically 'record.samples_.push_back(parsed_value)'.
+    inline void add_sample(VcfRecord& record, char* tab1, char* tab2); // Basically 'record.samples_.push_back(parsed_value)'.
 
 public:
     VcfAbstractParser();
     virtual ~VcfAbstractParser() {}
 
     // Opens the VCF file and reads the header.
-    // Returns 0 if successful, 1 if the file could not be opened.
-    virtual int open(const string& path) =0;
+    // Returns true if successful, false if the file could not be opened.
+    virtual bool open(const string& path) =0;
+
+    // Sets the format fields to be kept.
+    void format_fields_to_keep(const set<string>& fields) {format_fields_to_keep_ = fields;}
 
     // Getters.
     const string& path() const {return path_;};
@@ -205,11 +221,13 @@ public:
     size_t header_lines() const {return header_lines_;}
     size_t line_number() const {return line_number_;}
 
-    // Setters.
-    void format_fields_to_keep(const set<string>& fields) {format_fields_to_keep_ = fields;}
-
     // Reads a record. Returns false on EOF, true otherwise.
     bool next_record(VcfRecord& record);
+
+    // Reads all (remaining) SNP records.
+    // Records the number of records that were skipped in
+    // argument [n_skipped], if provided.
+    vector<VcfRecord> read_snp_records(size_t* n_skipped = NULL);
 };
 
 /*
@@ -221,7 +239,7 @@ class VcfParser : public VcfAbstractParser {
     void getline(char* ptr, size_t n) {file_.getline(ptr, n); eof_ = file_.eof();}
     void check_eol() {eol_ = ! file_.fail(); file_.clear();}
 public:
-    int open(const string& path);
+    bool open(const string& path);
 };
 
 #ifdef HAVE_LIBZ
@@ -232,7 +250,7 @@ public:
 class VcfGzParser : public VcfAbstractParser {
     gzFile file_;
     void getline(char* ptr, size_t n) {gzgets(file_, ptr, n); eof_ = gzeof(file_);}
-    void check_eol();
+    inline void check_eol();
 
     VcfGzParser(VcfGzParser& p) = delete; // No copy constructor.
     VcfGzParser& operator=(VcfGzParser& p) = delete;
@@ -240,8 +258,61 @@ public:
     VcfGzParser() : file_(NULL) {}
     ~VcfGzParser() {if(file_) gzclose(file_);}
 
-    int open(const string& path);
+    bool open(const string& path);
 };
 #endif // HAVE_LIBZ
+
+inline
+void VcfRecord::clear() {
+    pos = -1;
+    chrom.clear();
+    id.clear();
+    alleles.clear();
+    qual.clear();
+    filter.clear();
+    info.clear();
+    format.clear();
+    samples.clear();
+    type = Vcf::RType::null;
+    no_gt = true;
+}
+
+inline
+pair<int, int> VcfRecord::parse_genotype(size_t sample) const {
+    pair<int, int> genotype;
+
+    if (no_gt) {
+        genotype = {-1,-1};
+        return genotype;
+    }
+
+    const char* first = samples[sample][0].c_str();
+    const char* sep = strchr(first, '/');
+    if (sep == NULL)
+        sep = strchr(first, '|');
+
+    if (sep == NULL // no separator
+            || sep == first // first field is empty
+            || *(sep+1) == '\0') { // second field is empty
+        cerr << "Error: Malformed VCF genotype field '" << first
+             << "', at marker '" << chrom << ":" << pos
+             << "'.\n";
+        throw exception();
+    }
+    genotype = {atoi(first), atoi(sep+1)};
+    return genotype;
+}
+
+inline
+const string& VcfRecord::allele(size_t index) const {
+    try {
+        return alleles.at(index);
+    } catch (out_of_range& e) {
+        cerr << "Error: Malformed VCF genotype for marker '"
+             << chrom << ":" << pos
+             << "' (allele index does not exist).\n";
+        throw e;
+    }
+}
 
 #endif // __VCF_H__
