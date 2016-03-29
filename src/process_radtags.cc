@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2011-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -351,7 +351,7 @@ process_paired_reads(string prefix_1,
 	} else {
 	    if (barcode_type == inline_null || barcode_type == inline_inline ||	barcode_type == inline_index)
 		r_1->set_len(r_1->len - (max_bc_size_1 - r_1->inline_bc_len));
-	    if (barcode_type == inline_index ||	barcode_type == index_index)
+	    if (barcode_type == index_inline ||	barcode_type == inline_inline)
 		r_2->set_len(r_2->len - (max_bc_size_2 - r_2->inline_bc_len));
 	}
 
