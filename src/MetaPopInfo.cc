@@ -14,14 +14,7 @@ using std::cerr;
 using std::exception;
 
 const string MetaPopInfo::Pop::default_name = "defaultpop";
-const string MetaPopInfo::Group::default_name = "defaultgroup";
-
-bool MetaPopInfo::Sample::operator<(const Sample& other) {
-    if (pop == other.pop)
-        return name < other.name;
-    else
-        return pop < other.pop;
-}
+const string MetaPopInfo::Group::default_name = "defaultgrp";
 
 void MetaPopInfo::reset_sample_map() {
     sample_indexes_.clear();
@@ -44,15 +37,14 @@ void MetaPopInfo::reset_group_map() {
 bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
 
     ifstream fh(pmap_path.c_str(), ifstream::in);
-    if (fh.fail()) {
-        cerr << "Error: failed to open population map file '" << pmap_path << "'.\n";
-        throw exception();
-    }
+    if (fh.fail())
+        return false;
 
     size_t p = 0; // pop index counter
     size_t g = 0; // group index counter
 
     char line[max_len];
+    memset(line, '\0', max_len);
     vector<string> parts;
     while (fh.getline(line, max_len)) {
         size_t len = strlen(line);
@@ -116,7 +108,7 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
         size_t pop_index = pop_ins.first->second;
 
         samples_.back().pop = pop_index; // Set the sample's population index.
-        if (not pop_ins.second) {
+        if (pop_ins.second) {
             // Unknown pop
             pops_.push_back(Pop(parts[1]));
             ++p;
@@ -130,7 +122,7 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
             pair<map<string,size_t>::iterator, bool> grp_ins = group_indexes_.insert( {parts[2], g} );
             size_t grp_index = grp_ins.first->second;
 
-            if (not grp_ins.second) {
+            if (grp_ins.second) {
                 // Unknown group
                 groups_.push_back(Group(parts[2]));
                 ++g;
@@ -197,6 +189,7 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
         if (samples_[s].pop != curr_pop) {
             pops_[curr_pop].last_sample = s-1;
             ++curr_pop;
+            pops_[curr_pop].first_sample = s;
         }
     }
     pops_[curr_pop].last_sample = samples_.size()-1;
@@ -300,6 +293,12 @@ void MetaPopInfo::purge_samples(const vector<size_t>& rm_samples) {
             remove_if(groups_.begin(), groups_.end(),
                     [](Group& g) {return g.pops.empty();}),
             groups_.end());
+
+    // Update the support members.
+    reset_sample_map();
+    reset_pop_map();
+    reset_group_map();
+    reset_sample_id_map();
 }
 
 void MetaPopInfo::reset_sample_id_map() {
@@ -311,7 +310,7 @@ void MetaPopInfo::reset_sample_id_map() {
 void MetaPopInfo::fill_files(vector<pair<int, string> >& files) const {
     files.clear();
     for (vector<Sample>::const_iterator sample = samples_.begin(); sample != samples_.end(); ++sample)
-        files.push_back( {sample->pop, sample->name} );
+        files.push_back( {sample->pop+1, sample->name} ); // i+1
 }
 
 void MetaPopInfo::fill_sample_ids(vector<int>& sample_ids) const {

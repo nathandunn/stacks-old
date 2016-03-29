@@ -172,7 +172,7 @@ int main (int argc, char* argv[]) {
     //
     if (not pmap_path.empty()) {
         cerr << "Parsing population map.\n";
-        mpopi.init_popmap(in_path + pmap_path);
+        mpopi.init_popmap(pmap_path);
     } else {
         cerr << "No population map specified, building file list.\n";
         mpopi.init_directory(in_path);
@@ -186,9 +186,19 @@ int main (int argc, char* argv[]) {
             cerr << "Error: Failed to find sample files in directory \"" << in_path << "\".\n";
         exit(0);
     }
-    cerr << "Found " << mpopi.samples().size() << " input sample file(s).\n";
+    cerr << "Found " << mpopi.samples().size() << " input file(s).\n";
 
-    cerr << "Found " << mpopi.pops().size() << " population(s) :";
+    //cerr << "Found " << mpopi.pops().size() << " population(s) :\n";
+    mpopi.pops().size() == 1 ?
+        cerr << "  " << mpopi.pops().size() << " population found\n" :
+        cerr << "  " << mpopi.pops().size() << " populations found\n";
+    if (population_limit > mpopi.pops().size()) {
+        cerr //<< "Notice: "
+             << "Population limit (" << population_limit << ")"
+             << " larger than number of popualtions present, adjusting parameter to "
+             << mpopi.pops().size() << "\n";
+        population_limit = mpopi.pops().size();
+    }
     for (vector<Pop>::const_iterator p = mpopi.pops().begin(); p != mpopi.pops().end(); p++) {
         cerr << "    " << p->name << ": ";
         for (size_t s = p->first_sample; s < p->last_sample; ++s) {
@@ -197,7 +207,10 @@ int main (int argc, char* argv[]) {
         cerr << mpopi.samples()[p->last_sample].name << "\n";
     }
 
-    cerr << "Found " << mpopi.groups().size() << " group(s) of populations :\n";
+    //cerr << "Found " << mpopi.groups().size() << " group(s) of populations :\n";
+    mpopi.groups().size() == 1 ?
+        cerr << "  " << mpopi.groups().size() << " group of populations found\n" :
+        cerr << "  " << mpopi.groups().size() << " groups of populations found\n";
     for (vector<Group>::const_iterator g = mpopi.groups().begin(); g != mpopi.groups().end(); g++) {
         cerr << "    " << g->name << ": ";
         for (vector<size_t>::const_iterator p = g->pops.begin(); p != g->pops.end() -1; ++p) {
@@ -206,14 +219,6 @@ int main (int argc, char* argv[]) {
         }
         cerr << mpopi.pops()[g->pops.back()].name << "\n";
     }
-
-    if (population_limit > mpopi.pops().size()) {
-        cerr << "Notice: Population limit (" << population_limit << ")"
-             << " larger than number of popualtions present, adjusting parameter to "
-             << mpopi.pops().size() << "\n";
-        population_limit = mpopi.pops().size();
-    }
-
 
     //
     // Read the whitelist, the blacklist, and the bootstrap-whitelist.
@@ -247,6 +252,7 @@ int main (int argc, char* argv[]) {
     //
     // Load the catalog
     //
+    //cerr << "Parsing the catalog files...\n";
     stringstream catalog_file;
     map<int, CSLocus *> catalog;
     bool compressed = false;
@@ -271,6 +277,7 @@ int main (int argc, char* argv[]) {
     //
     // Load matches to the catalog
     //
+    //cerr << "Parsing the matches files...\n";
     vector<vector<CatMatch *> > catalog_matches;
     vector<size_t> samples_to_remove;
     set<size_t> known_samples;
