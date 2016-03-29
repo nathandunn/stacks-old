@@ -99,7 +99,7 @@ public:
     // members [cnt, hcnt] are modified).
     // N.B. The IDs of the loci in the catalog MUST be the same
     // as the indexes in the records vector.
-    int populate(const MetaPopInfo& mpopi, map<int, CSLocus*>& catalog, const vector<VcfRecord>& records); //todo LocusT
+    int populate(const MetaPopInfo& mpopi, map<int, LocusT*>& catalog, const vector<VcfRecord>& records);
 
 
     int order_loci(const map<int, LocusT*> &);
@@ -244,7 +244,7 @@ int PopMap<LocusT>::populate(const vector<int> &sample_ids,
 
 template<class LocusT>
 int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
-             map<int, CSLocus*>& catalog, //todo
+             map<int, LocusT*>& catalog,
              const vector<VcfRecord>& records) {
 
     // Initialize [sample_order], [rev_sample_order].
@@ -291,7 +291,7 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
 
     for (size_t i = 0; i < records.size(); ++i) {
         const VcfRecord& rec = records[i];
-        const CSLocus& loc = * catalog.at(i); //todo
+        const LocusT& loc = * catalog.at(i);
 
         for (size_t sample = 0; sample < mpopi.samples().size(); ++sample) {
             Datum* d = new Datum();
