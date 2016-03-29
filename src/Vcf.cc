@@ -277,7 +277,7 @@ vector<VcfRecord> VcfAbstractParser::read_snp_records(size_t* n_skipped) {
             }
         }
         if(skip && n_skipped) {
-            ++n_skipped;
+            ++*n_skipped;
             continue;
         }
         records.push_back(VcfRecord());

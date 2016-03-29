@@ -312,7 +312,7 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
                 strcpy(d->model, "U");
             } else if (gt.first == gt.second) {
                 strcpy(d->model, "O");
-                const string& allele = rec.alleles[gt.first];
+                const string& allele = rec.allele(gt.first);
                 d->obshap.push_back(new char[allele.size()+1]);
                 strcpy(d->obshap[0], allele.c_str());
                 d->depth.push_back(0);
