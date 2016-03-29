@@ -6,6 +6,8 @@ Stacks 1.38
 	Feature: added Needleman–Wunsch algorithm to ustacks to provide for gapped
 	alignments. Includes --max_gaps and --min_aln_len parameters to contain crazy
 	alignments.
+	Bugfix: corrected bug in process_radtags when using inline barcodes on paired-end reads. The paired-
+	end reads were not being truncated uniformly.
 	Bugfix: corrected bug in populations where if enough empty files were fed into the program
 	it could place files in the wrong population or segfault.
 	Bugfix: corrected PHP files for exporting to include LnL filter.
