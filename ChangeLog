@@ -11,6 +11,7 @@ Stacks 1.38
 	Bugfix: corrected bug in populations where if enough empty files were fed into the program
 	it could place files in the wrong population or segfault.
 	Bugfix: corrected PHP files for exporting to include LnL filter.
+	Bugfix: corrected mappable markers filter in web interface.
 
 Stacks 1.37 - Feb 24, 2016
 --------------------------
