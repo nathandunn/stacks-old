@@ -24,7 +24,7 @@ public:
         size_t id; // optional, deprecated
 
         Sample(const string& name) : name(name), pop(-1), id(-1) {}
-        inline bool operator<(const Sample& other);
+        inline bool operator<(const Sample& other) const;
     };
     struct Pop {
         string name;
@@ -102,5 +102,12 @@ public:
     void fill_grp_key(map<int, string>&) const;
     void fill_grp_members(map<int, vector<int> >&) const;
 };
+
+bool MetaPopInfo::Sample::operator<(const Sample& other) const {
+    if (pop == other.pop)
+        return name < other.name;
+    else
+        return pop < other.pop;
+}
 
 #endif // METAPOPINFO_H
