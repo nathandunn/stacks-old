@@ -14,14 +14,7 @@ using std::cerr;
 using std::exception;
 
 const string MetaPopInfo::Pop::default_name = "defaultpop";
-const string MetaPopInfo::Group::default_name = "defaultgroup";
-
-bool MetaPopInfo::Sample::operator<(const Sample& other) {
-    if (pop == other.pop)
-        return name < other.name;
-    else
-        return pop < other.pop;
-}
+const string MetaPopInfo::Group::default_name = "defaultgrp";
 
 void MetaPopInfo::reset_sample_map() {
     sample_indexes_.clear();
@@ -44,15 +37,14 @@ void MetaPopInfo::reset_group_map() {
 bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
 
     ifstream fh(pmap_path.c_str(), ifstream::in);
-    if (fh.fail()) {
-        cerr << "Error: failed to open population map file '" << pmap_path << "'.\n";
-        throw exception();
-    }
+    if (fh.fail())
+        return false;
 
     size_t p = 0; // pop index counter
     size_t g = 0; // group index counter
 
     char line[max_len];
+    memset(line, '\0', max_len);
     vector<string> parts;
     while (fh.getline(line, max_len)) {
         size_t len = strlen(line);
@@ -116,7 +108,7 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
         size_t pop_index = pop_ins.first->second;
 
         samples_.back().pop = pop_index; // Set the sample's population index.
-        if (not pop_ins.second) {
+        if (pop_ins.second) {
             // Unknown pop
             pops_.push_back(Pop(parts[1]));
             ++p;
@@ -130,7 +122,7 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
             pair<map<string,size_t>::iterator, bool> grp_ins = group_indexes_.insert( {parts[2], g} );
             size_t grp_index = grp_ins.first->second;
 
-            if (not grp_ins.second) {
+            if (grp_ins.second) {
                 // Unknown group
                 groups_.push_back(Group(parts[2]));
                 ++g;
@@ -197,6 +189,7 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
         if (samples_[s].pop != curr_pop) {
             pops_[curr_pop].last_sample = s-1;
             ++curr_pop;
+            pops_[curr_pop].first_sample = s;
         }
     }
     pops_[curr_pop].last_sample = samples_.size()-1;
@@ -300,6 +293,12 @@ void MetaPopInfo::purge_samples(const vector<size_t>& rm_samples) {
             remove_if(groups_.begin(), groups_.end(),
                     [](Group& g) {return g.pops.empty();}),
             groups_.end());
+
+    // Update the support members.
+    reset_sample_map();
+    reset_pop_map();
+    reset_group_map();
+    reset_sample_id_map();
 }
 
 void MetaPopInfo::reset_sample_id_map() {
@@ -329,26 +328,26 @@ void MetaPopInfo::fill_samples(map<int, string>& samples) const {
 void MetaPopInfo::fill_pop_key(map<int, string>& pop_key) const {
     pop_key.clear();
     for (size_t i = 0; i < pops_.size(); ++i)
-        pop_key.insert( {i+1, pops_[i].name} ); // i+1 (ids are indexes shifted by 1)
+        pop_key.insert( {i, pops_[i].name} );
 }
 
 void MetaPopInfo::fill_pop_indexes(map<int, pair<int, int> >& pop_indexes) const {
     pop_indexes.clear();
     for (size_t i = 0; i < pops_.size(); ++i)
-        pop_indexes.insert( {i+1, {pops_[i].first_sample, pops_[i].last_sample}} ); // i+1 (ids are indexes shifted by 1)
+        pop_indexes.insert( {i, {pops_[i].first_sample, pops_[i].last_sample}} );
 }
 
 void MetaPopInfo::fill_grp_key(map<int, string>& grp_key) const {
     grp_key.clear();
     for (size_t i = 0; i < groups_.size(); ++i)
-        grp_key.insert({i+1, groups_[i].name}); // i+1 (ids are indexes shifted by 1)
+        grp_key.insert({i, groups_[i].name});
 }
 
 void MetaPopInfo::fill_grp_members(map<int, vector<int> >& grp_members) const {
     grp_members.clear();
     for (size_t i = 0; i < groups_.size(); ++i) {
-        vector<int>& pop_ids = grp_members.insert( {i+1, vector<int>()} ).first->second; // i+1 (ids are indexes shifted by 1)
+        vector<int>& pop_ids = grp_members.insert( {i, vector<int>()} ).first->second;
         for(vector<size_t>::const_iterator p = groups_[i].pops.begin(); p != groups_[i].pops.end(); ++p)
-            pop_ids.push_back(*p+1); // p+1 (ids are indexes shifted by 1)
+            pop_ids.push_back(*p);
     }
 }

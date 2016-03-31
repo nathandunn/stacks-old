@@ -258,6 +258,8 @@ class PopSum {
     map<int, int> rev_locus_order;
     map<int, int> pop_order;    // PopulationID => ArrayIndex; map defining at what position in 
                                 // the second dimension of the LocSum array each population is stored.
+                                // Theses indexes are SPECIFIC to the PopSum object : the first
+                                // population added has index 0.
     map<int, int> rev_pop_order;
     map<int, int> pop_sizes;    // The maximum size of each separate population.
 
@@ -272,7 +274,7 @@ public:
     int loci_cnt() { return this->num_loci; }
     int rev_locus_index(int index) { return this->rev_locus_order[index]; }
     int pop_cnt()  { return this->num_pops; }
-    int pop_index(int index)     { return this->pop_order[index]; }
+    int pop_index(int id)     { return this->pop_order[id]; }
     int rev_pop_index(int index) { return this->rev_pop_order[index]; }
     int pop_size(int pop_id)     { return this->pop_sizes[pop_id]; }
 
@@ -355,9 +357,9 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
     //
     // Determine the index for this population
     //
-    uint pop_index = this->pop_order.size() == 0 ? 0 : this->pop_order.size();
-    this->pop_order[population_id] = pop_index;
-    this->rev_pop_order[pop_index] = population_id;
+    uint pop_psum_index = pop_order.size();
+    this->pop_order[population_id] = pop_psum_index;
+    this->rev_pop_order[pop_psum_index] = population_id;
 
     //
     // Record the maximal size of this population.
@@ -373,7 +375,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
         // Create an array of SumStat objects
         //
         len = strlen(loc->con);
-        s[pop_index] = new LocSum(len);
+        s[pop_psum_index] = new LocSum(len);
 
         //
         // Check if this locus has already been filtered and is NULL in all individuals.
@@ -384,7 +386,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
         }
         if (filtered == true) {
             for (uint k = 0; k < len; k++) {
-                s[pop_index]->nucs[k].filtered_site = true;
+                s[pop_psum_index]->nucs[k].filtered_site = true;
             }
             continue;
         }
@@ -394,13 +396,13 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
         // calculate observed genotype frequencies, allele frequencies, and expected genotype frequencies.
         //
         for (uint k = 0; k < loc->snps.size(); k++) {
-            res = this->tally_heterozygous_pos(loc, d, s[pop_index], 
+            res = this->tally_heterozygous_pos(loc, d, s[pop_psum_index],
                                                loc->snps[k]->col, k, start_index, end_index);
             //
             // If site is incompatible (too many alleles present), log it.
             //
             if (res < 0) {
-                s[pop_index]->nucs[loc->snps[k]->col].incompatible_site = true;
+                s[pop_psum_index]->nucs[loc->snps[k]->col].incompatible_site = true;
 
                 incompatible_loci++;
                 if (verbose)
@@ -420,7 +422,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
         //
         for (uint k = 0; k < len; k++) {
             if (snp_cols.count(k)) continue;
-            this->tally_fixed_pos(loc, d, s[pop_index], 
+            this->tally_fixed_pos(loc, d, s[pop_psum_index],
                                   k, start_index, end_index);
         }
 
