@@ -558,7 +558,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
                         PopMap<CSLocus> *pmap, 
                         ofstream &log_fh)
 {
-    uint pop_id, start_index, end_index;
+    uint pop_sthg, start_index, end_index;
     CSLocus *loc;
     Datum  **d;
 
@@ -583,18 +583,18 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
     // The total number of samples in each population.
     int *pop_tot   = new int [pop_cnt];
 
-    pop_id = 0;
+    pop_sthg = 0;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
         start_index = pit->second.first;
         end_index   = pit->second.second;
-        pop_tot[pop_id]  = 0;
+        pop_tot[pop_sthg]  = 0;
 
         for (uint i = start_index; i <= end_index; i++) {
-            samples[i] = pop_id;
-            pop_tot[pop_id]++;
+            samples[i] = pop_sthg;
+            pop_tot[pop_sthg]++;
         }
-        pop_order[pop_id] = pit->first;
-        pop_id++;
+        pop_order[pop_sthg] = pit->first;
+        pop_sthg++;
     }
 
     for (uint i = 0; i < pop_cnt; i++)
@@ -2379,7 +2379,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     // Create a list of all the groups we have.
     //
     map<int, vector<int> >::iterator git;
-    map<int, int> pop_grp_key;
+    map<int, int> pop_grp_key; // map of (pop_id, group_id)
     for (git = grp_members.begin(); git != grp_members.end(); git++)
         for (uint i = 0; i < git->second.size(); i++)
             pop_grp_key[git->second[i]] = git->first;
@@ -2521,11 +2521,11 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     // Write the group members.
     //
     for (git = grp_members.begin(); git != grp_members.end(); git++) {
-        end = git->second.size();
         fh << "# Group " << grp_key[git->first] << "\t";
-        for (int k = 0; k < end; k++) {
+        for (int k = 0; k < git->second.size(); k++) {
             fh << pop_key[git->second[k]];
-            if (k < end - 1) fh << ",";
+            if (k < git->second.size() - 1)
+                fh << ",";
         }
         fh << "\n";
     }
@@ -2637,7 +2637,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
     // Assign all individuals to one group for the pairwise calculations.
     //
     map<int, vector<int> >::iterator git;
-    map<int, int> pop_grp_key;
+    map<int, int> pop_grp_key; // map of (pop_id, group_id)
     for (git = grp_members.begin(); git != grp_members.end(); git++)
         for (uint i = 0; i < git->second.size(); i++)
             pop_grp_key[git->second[i]] = 1;
@@ -3832,7 +3832,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
         start = pit->second.first;
         end   = pit->second.second;
-        fh << "# " << pit->first << "\t";
+        fh << "# " << pop_key.at(pit->first) << "\t";
         for (int i = start; i <= end; i++) {
             fh << samples.at(pmap->rev_sample_index(i));
             if (i < end) fh << ",";
@@ -5888,7 +5888,7 @@ write_genepop(map<int, CSLocus *> &catalog,
     Datum   **d;
     LocSum  **s;
     LocTally *t;
-    int      start_index, end_index, col, pop_id;
+    int      start_index, end_index, col, pop_psum_index;
     char     p_allele, q_allele;
 
     //
@@ -5933,7 +5933,7 @@ write_genepop(map<int, CSLocus *> &catalog,
     nuc_map['T'] = "04";
 
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        pop_id      = psum->pop_index(pit->first);
+        pop_psum_index   = psum->pop_index(pit->first);
         start_index = pit->second.first;
         end_index   = pit->second.second;
 
@@ -5955,8 +5955,8 @@ write_genepop(map<int, CSLocus *> &catalog,
                     if (t->nucs[col].allele_cnt != 2)
                         continue;
 
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
+                    if (s[pop_psum_index]->nucs[col].incompatible_site ||
+                        s[pop_psum_index]->nucs[col].filtered_site) {
                         //
                         // This site contains more than two alleles in this population or was filtered
                         // due to a minor allele frequency that is too low.
@@ -6045,7 +6045,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
     CSLocus  *loc;
     Datum   **d;
     LocSum  **s;
-    int      start_index, end_index, pop_id;
+    int      start_index, end_index, pop_psum_index;
     uint     col, snp_index;
     char     p_allele, q_allele;
 
@@ -6078,7 +6078,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
     nuc_map['T'] = "04";
 
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        pop_id      = psum->pop_index(pit->first);
+        pop_psum_index      = psum->pop_index(pit->first);
         start_index = pit->second.first;
         end_index   = pit->second.second;
 
@@ -6097,8 +6097,8 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
                     d   = pmap->locus(loc->id);
                     col = sites[pos]->col;
 
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
+                    if (s[pop_psum_index]->nucs[col].incompatible_site ||
+                        s[pop_psum_index]->nucs[col].filtered_site) {
                         //
                         // This site contains more than two alleles in this population or was filtered
                         // due to a minor allele frequency that is too low.
@@ -6224,7 +6224,7 @@ write_structure(map<int, CSLocus *> &catalog,
             //
             // Output all the loci for this sample, printing only the p allele
             //
-            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
+            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_key.at(pop_id);
 
             for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
                 for (uint pos = 0; pos < it->second.size(); pos++) {
@@ -6281,7 +6281,7 @@ write_structure(map<int, CSLocus *> &catalog,
             //
             // Output all the loci for this sample again, now for the q allele
             //
-            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
+            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_key.at(pop_id);
 
             for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
                 for (uint pos = 0; pos < it->second.size(); pos++) {
@@ -6409,7 +6409,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
             //
             // Output all the loci for this sample, printing only the p allele
             //
-            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
+            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_key.at(pop_id);
 
             for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
                 vector<NucTally *> &sites = genome_sites[it->first];
@@ -6458,7 +6458,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
             //
             // Output all the loci for this sample again, now for the q allele
             //
-            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
+            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_key.at(pop_id);
 
             for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
                 vector<NucTally *> &sites = genome_sites[it->first];
@@ -6565,10 +6565,9 @@ write_hzar(map<int, CSLocus *> &catalog,
     int pop_id, p;
 
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        p      = psum->pop_index(pit->first);
-        pop_id = pit->first;
+        p      = psum->pop_index(pit->first); // [p] is a "pop_psum_index"
 
-        fh << pop_key[pop_id] << ",";
+        fh << pop_key[pit->first] << ",";
 
         for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
             for (uint pos = 0; pos < it->second.size(); pos++) {
@@ -6702,7 +6701,7 @@ write_treemix(map<int, CSLocus *> &catalog,
                     continue;
 
                 for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-                    p = psum->pop_index(pit->first);
+                    p = psum->pop_index(pit->first); // [p] is a "pop_psum_index"
 
                     if (s[p]->nucs[col].num_indv == 0 ||
                         s[p]->nucs[col].incompatible_site ||
@@ -6832,12 +6831,12 @@ write_fastphase(map<int, CSLocus *> &catalog,
         //
 
         map<int, pair<int, int> >::const_iterator pit;
-        int          start_index, end_index, pop_id;
+        int          start_index, end_index, pop_psum_index;
         char         p_allele, q_allele;
         stringstream gtypes;
 
         for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-            pop_id      = psum->pop_index(pit->first);
+            pop_psum_index = psum->pop_index(pit->first);
             start_index = pit->second.first;
             end_index   = pit->second.second;
 
@@ -6862,8 +6861,8 @@ write_fastphase(map<int, CSLocus *> &catalog,
                     if (t->nucs[col].allele_cnt != 2)
                         continue;
 
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
+                    if (s[pop_psum_index]->nucs[col].incompatible_site ||
+                        s[pop_psum_index]->nucs[col].filtered_site) {
                         //
                         // This site contains more than two alleles in this population or was filtered
                         // due to a minor allele frequency that is too low.
@@ -6913,8 +6912,8 @@ write_fastphase(map<int, CSLocus *> &catalog,
                     if (t->nucs[col].allele_cnt != 2)
                         continue;
 
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
+                    if (s[pop_psum_index]->nucs[col].incompatible_site ||
+                        s[pop_psum_index]->nucs[col].filtered_site) {
                         gtypes << "? ";
 
                     } else if (d[j] == NULL) {
@@ -7320,14 +7319,14 @@ write_plink(map<int, CSLocus *> &catalog,
     fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
 
     map<int, pair<int, int> >::const_iterator pit;
-    int  start_index, end_index, pop_id;
+    int  start_index, end_index, pop_psum_index;
     char p_allele, q_allele;
 
     //
     //  marker, output the genotypes for each sample in two successive columns.
     //
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        pop_id      = psum->pop_index(pit->first);
+        pop_psum_index = psum->pop_index(pit->first);
         start_index = pit->second.first;
         end_index   = pit->second.second;
 
@@ -7359,8 +7358,8 @@ write_plink(map<int, CSLocus *> &catalog,
                         //
                         // Output the p and q alleles
                         //
-                        if (s[pop_id]->nucs[col].incompatible_site ||
-                            s[pop_id]->nucs[col].filtered_site) {
+                        if (s[pop_psum_index]->nucs[col].incompatible_site ||
+                            s[pop_psum_index]->nucs[col].filtered_site) {
                             //
                             // This site contains more than two alleles in this population or was filtered
                             // due to a minor allele frequency that is too low.
@@ -7459,10 +7458,10 @@ write_beagle(map<int, CSLocus *> &catalog,
         // Now output the genotypes in a separate file for each population.
         //
         map<int, pair<int, int> >::const_iterator pit;
-        int  start_index, end_index, pop_id;
+        int  start_index, end_index, pop_psum_index;
 
         for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-            pop_id      = psum->pop_index(pit->first);
+            pop_psum_index      = psum->pop_index(pit->first);
             start_index = pit->second.first;
             end_index   = pit->second.second;
 
@@ -7509,7 +7508,7 @@ write_beagle(map<int, CSLocus *> &catalog,
             //
             fh << "S\tid";
             for (int j = start_index; j <= end_index; j++)
-                fh << "\t" << pit->first << "\t" << pit->first;
+                fh << "\t" << pop_key.at(pit->first) << "\t" << pop_key.at(pit->first);
             fh << "\n";
 
             //
@@ -7532,7 +7531,7 @@ write_beagle(map<int, CSLocus *> &catalog,
                 //
                 // If this site is monomorphic in this population don't output it.
                 //
-                if (s[pop_id]->nucs[col].pi == 0.0)
+                if (s[pop_psum_index]->nucs[col].pi == 0.0)
                     continue;
 
                 //
@@ -7549,8 +7548,8 @@ write_beagle(map<int, CSLocus *> &catalog,
                     //
                     // Output the p allele
                     //
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
+                    if (s[pop_psum_index]->nucs[col].incompatible_site ||
+                        s[pop_psum_index]->nucs[col].filtered_site) {
                         //
                         // This site contains more than two alleles in this population or was filtered
                         // due to a minor allele frequency that is too low.
@@ -7584,8 +7583,8 @@ write_beagle(map<int, CSLocus *> &catalog,
                     //
                     // Now output the q allele
                     //
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
+                    if (s[pop_psum_index]->nucs[col].incompatible_site ||
+                        s[pop_psum_index]->nucs[col].filtered_site) {
                         fh << "\t" << "?";
 
                     } else if (d[j] == NULL) {
@@ -7685,10 +7684,10 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
         // Now output the genotypes in a separate file for each population.
         //
         map<int, pair<int, int> >::const_iterator pit;
-        int  start_index, end_index, pop_id;
+        int  start_index, end_index, pop_psum_index;
 
         for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-            pop_id      = psum->pop_index(pit->first);
+            pop_psum_index = psum->pop_index(pit->first);
             start_index = pit->second.first;
             end_index   = pit->second.second;
 
@@ -7734,7 +7733,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
             //
             fh << "S\tid";
             for (int j = start_index; j <= end_index; j++)
-                fh << "\t" << pop_id << "\t" << pop_id;
+                fh << "\t" << pop_key.at(pit->first) << "\t" << pop_key.at(pit->first);
             fh << "\n";
 
             for (uint pos = 0; pos < ordered_loci.size(); pos++) {
