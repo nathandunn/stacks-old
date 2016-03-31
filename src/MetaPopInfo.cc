@@ -310,7 +310,7 @@ void MetaPopInfo::reset_sample_id_map() {
 void MetaPopInfo::fill_files(vector<pair<int, string> >& files) const {
     files.clear();
     for (vector<Sample>::const_iterator sample = samples_.begin(); sample != samples_.end(); ++sample)
-        files.push_back( {sample->pop+1, sample->name} ); // i+1
+        files.push_back( {sample->pop, sample->name} );
 }
 
 void MetaPopInfo::fill_sample_ids(vector<int>& sample_ids) const {
@@ -328,26 +328,26 @@ void MetaPopInfo::fill_samples(map<int, string>& samples) const {
 void MetaPopInfo::fill_pop_key(map<int, string>& pop_key) const {
     pop_key.clear();
     for (size_t i = 0; i < pops_.size(); ++i)
-        pop_key.insert( {i+1, pops_[i].name} ); // i+1 (ids are indexes shifted by 1)
+        pop_key.insert( {i, pops_[i].name} );
 }
 
 void MetaPopInfo::fill_pop_indexes(map<int, pair<int, int> >& pop_indexes) const {
     pop_indexes.clear();
     for (size_t i = 0; i < pops_.size(); ++i)
-        pop_indexes.insert( {i+1, {pops_[i].first_sample, pops_[i].last_sample}} ); // i+1 (ids are indexes shifted by 1)
+        pop_indexes.insert( {i, {pops_[i].first_sample, pops_[i].last_sample}} );
 }
 
 void MetaPopInfo::fill_grp_key(map<int, string>& grp_key) const {
     grp_key.clear();
     for (size_t i = 0; i < groups_.size(); ++i)
-        grp_key.insert({i+1, groups_[i].name}); // i+1 (ids are indexes shifted by 1)
+        grp_key.insert({i, groups_[i].name});
 }
 
 void MetaPopInfo::fill_grp_members(map<int, vector<int> >& grp_members) const {
     grp_members.clear();
     for (size_t i = 0; i < groups_.size(); ++i) {
-        vector<int>& pop_ids = grp_members.insert( {i+1, vector<int>()} ).first->second; // i+1 (ids are indexes shifted by 1)
+        vector<int>& pop_ids = grp_members.insert( {i, vector<int>()} ).first->second;
         for(vector<size_t>::const_iterator p = groups_[i].pops.begin(); p != groups_[i].pops.end(); ++p)
-            pop_ids.push_back(*p+1); // p+1 (ids are indexes shifted by 1)
+            pop_ids.push_back(*p);
     }
 }
