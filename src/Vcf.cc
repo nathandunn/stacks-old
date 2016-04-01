@@ -4,8 +4,9 @@
 
 using namespace std;
 
-inline
-void get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep) {
+inline void
+get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep)
+{
     bounds.clear();
     bounds.push_back(tab1);
     do {
@@ -15,7 +16,9 @@ void get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep) {
     bounds.push_back(tab2);
 }
 
-void malformed_header(const string& path, const size_t line_no) {
+void
+malformed_header(const string& path, const size_t line_no)
+{
     cerr << "Error: Malformed VCF header."
          << " Line " << line_no << " in file " << path
          << endl;
@@ -23,11 +26,15 @@ void malformed_header(const string& path, const size_t line_no) {
 }
 
 VcfAbstractParser::VcfAbstractParser()
-: line_number_(0), header_lines_(0), eol_(true), eof_(false) {
+: path_(), header_(), header_lines_(0), format_fields_to_keep_(), line_number_(0),
+  eol_(true), eof_(false), tabs_(), bounds_(), kept_format_fields_()
+{
     memset(line_, '\0', Vcf::line_buf_size);
 }
 
-void VcfAbstractParser::read_header() {
+void
+VcfAbstractParser::read_header()
+{
     while(true) {
         getline(line_, Vcf::line_buf_size);
         ++line_number_;
@@ -153,8 +160,9 @@ void VcfAbstractParser::read_header() {
     return;
 }
 
-inline
-void VcfAbstractParser::read_while_not_eol() {
+inline void
+VcfAbstractParser::read_while_not_eol()
+{
     while(!eol_) {
         getline(line_, Vcf::line_buf_size);
         if(eof_) {
@@ -167,8 +175,9 @@ void VcfAbstractParser::read_while_not_eol() {
     }
 }
 
-inline
-void VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2) {
+inline void
+VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2)
+{
     if(tab2 == tab1+1)
         cerr << "Warning: malformed VCF record line (empty SAMPLE field should be marked by a dot)."
              << " Line " << line_number_ << " in file " << path_
@@ -194,7 +203,9 @@ void VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2) {
     }
 }
 
-bool VcfParser::open(const string& path) {
+bool
+VcfParser::open(const string& path)
+{
     file_.exceptions(ifstream::badbit);
 
     file_.open(path);
@@ -207,7 +218,9 @@ bool VcfParser::open(const string& path) {
 }
 
 #ifdef HAVE_LIBZ
-bool VcfGzParser::open(const string& path) {
+bool
+VcfGzParser::open(const string& path)
+{
     file_ = gzopen(path.c_str(), "rb");
     if(!file_) {
         return false;
@@ -220,8 +233,9 @@ bool VcfGzParser::open(const string& path) {
     return true;
 }
 
-inline
-void VcfGzParser::check_eol() {
+inline void
+VcfGzParser::check_eol()
+{
     if(*(tabs_.back()-1) == '\n') { // n.b. safe; gzgets never returns a null string
         eol_ = true;
         tabs_.back() = tabs_.back()-1;
@@ -232,7 +246,9 @@ void VcfGzParser::check_eol() {
 }
 #endif
 
-VcfAbstractParser* Vcf::adaptive_open(const string& path) {
+VcfAbstractParser*
+Vcf::adaptive_open(const string& path)
+{
     VcfAbstractParser* parser = NULL;
 
     parser = new VcfParser();
@@ -253,7 +269,9 @@ VcfAbstractParser* Vcf::adaptive_open(const string& path) {
     return parser;
 }
 
-vector<VcfRecord> VcfAbstractParser::read_snp_records(size_t* n_skipped) {
+vector<VcfRecord>
+VcfAbstractParser::read_snp_records(size_t* n_skipped)
+{
     vector<VcfRecord> records;
     if(n_skipped)
         *n_skipped = 0;
@@ -288,7 +306,9 @@ vector<VcfRecord> VcfAbstractParser::read_snp_records(size_t* n_skipped) {
     return records;
 }
 
-bool VcfAbstractParser::next_record(VcfRecord& record) {
+bool
+VcfAbstractParser::next_record(VcfRecord& record)
+{
     getline(line_, Vcf::line_buf_size);
     ++line_number_;
     if(eof_)

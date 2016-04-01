@@ -108,7 +108,10 @@ struct VcfRecord {
     Vcf::RType type;
     bool no_gt; // true if format[0] != "GT". Checked by parse_genotype().
 
-    VcfRecord() : pos(-1), type(Vcf::RType::null), no_gt(true) {}
+    VcfRecord()
+    : chrom(), pos(-1), id(), alleles(), qual(), filter(), info(), format(),
+      samples(), type(Vcf::RType::null), no_gt(true)
+    {}
 
 public:
     inline void clear(); // Clears all the members.

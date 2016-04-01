@@ -251,9 +251,14 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
     add_metapop_info(mpopi);
 
     // Initalize [locus_order], [rev_locus_order].
-    for (size_t i = 0; i < records.size(); ++i) {
-        locus_order[i] = i; // n.b. assumes locus ID == record index.
-        rev_locus_order[i] = i;
+    size_t loc_index = 0;
+    for (typename map<int, LocusT*>::iterator
+            l = catalog.begin();
+            l != catalog.end();
+            ++l) {
+        locus_order[l->first] = loc_index;
+        rev_locus_order[loc_index] = l->first;
+        ++loc_index;
     }
 
     // Initialize [ordered_loci].
@@ -289,19 +294,23 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
      *     datum. todo See how we can handle this.
      */
 
-    for (size_t i = 0; i < records.size(); ++i) {
-        const VcfRecord& rec = records[i];
-        const LocusT& loc = * catalog.at(i);
+    loc_index = 0;
+    for (typename map<int, LocusT*>::iterator
+            l = catalog.begin();
+            l != catalog.end();
+            ++l) {
+        LocusT* loc = l->second;
+        const VcfRecord& rec = records[loc->id]; // n.b. assumes locus ID == record index.
 
         for (size_t sample = 0; sample < mpopi.samples().size(); ++sample) {
             Datum* d = new Datum();
-            data[i][sample] = d;
-            ++catalog.at(i)->cnt;
-            ++catalog.at(i)->hcnt;
+            data[loc_index][sample] = d;
+            ++loc->cnt;
+            ++loc->hcnt;
 
             // id, len, tot_depth, lnl
-            d->id = loc.id;
-            d->len = loc.len;
+            d->id = loc->id;
+            d->len = loc->len;
             d->tot_depth = 0;
             d->lnl = 0;
 
@@ -328,7 +337,10 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
                 d->depth.push_back(0);
             }
         }
+        ++loc_index;
     }
+
+    return 0;
 }
 
 template<class LocusT>
