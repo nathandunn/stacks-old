@@ -35,7 +35,7 @@ typedef MetaPopInfo::Pop Pop;
 typedef MetaPopInfo::Group Group;
 
 // Global variables to hold command-line options.
-Input_mode input_mode = Input_mode::stacks;
+InputMode input_mode = InputMode::stacks;
 int       num_threads =  1;
 string    pmap_path;
 string    out_path;
@@ -198,7 +198,7 @@ int main (int argc, char* argv[]) {
     mpopi.pops().size() == 1 ?
         cerr << "  " << mpopi.pops().size() << " population found\n" :
         cerr << "  " << mpopi.pops().size() << " populations found\n";
-    if (population_limit > mpopi.pops().size()) {
+    if (size_t(population_limit) > mpopi.pops().size()) {
         cerr //<< "Notice: "
              << "Population limit (" << population_limit << ")"
              << " larger than number of popualtions present, adjusting parameter to "
@@ -264,9 +264,8 @@ int main (int argc, char* argv[]) {
     // objects are needed in the main scope.
     vector<vector<CatMatch *> > catalog_matches;
     vector<VcfRecord>* vcf_records = NULL;
-    VcfHeader* vcf_header = NULL;
 
-    if (input_mode == Input_mode::stacks) {
+    if (input_mode == InputMode::stacks) {
         // Load the catalog from Stacks files.
         stringstream catalog_file;
         bool compressed = false;
@@ -276,10 +275,9 @@ int main (int argc, char* argv[]) {
             cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
             return 0;
         }
-    } else if (input_mode == Input_mode::vcf) {
+    } else if (input_mode == InputMode::vcf) {
         // Load the catalog from a VCF file.
 
-        vcf_header = new VcfHeader();
         vcf_records = new vector<VcfRecord>();
 
         // Open the file
@@ -298,8 +296,6 @@ int main (int argc, char* argv[]) {
              << "'.\n";
 
         catalog = create_catalog(*vcf_records);
-
-        *vcf_header = parser->header();
         delete parser;
     }
 
@@ -321,7 +317,7 @@ int main (int argc, char* argv[]) {
     //
 
     //cerr << "Parsing the matches files...\n";
-    if (input_mode == Input_mode::stacks) {
+    if (input_mode == InputMode::stacks) {
         // If populating from matches files : load the files now,
         // and check that they are all well formed.
         vector<size_t> samples_to_remove;
@@ -351,7 +347,7 @@ int main (int argc, char* argv[]) {
         }
         known_samples.clear(); // freeing mem
         mpopi.purge_samples(samples_to_remove);
-    } else if (input_mode == Input_mode::vcf) {
+    } else if (input_mode == InputMode::vcf) {
         // We still could need sample IDs. Create arbitrary ones.
         for (size_t i = 0; i < mpopi.samples().size(); ++i)
             mpopi.set_sample_id(i, i+1); //id=i+1
@@ -373,7 +369,7 @@ int main (int argc, char* argv[]) {
     // Populate the PopMap
     //
 
-    if (input_mode == Input_mode::stacks) {
+    if (input_mode == InputMode::stacks) {
         // Using SStacks matches files...
         pmap->populate(sample_ids, catalog, catalog_matches);
 
@@ -381,11 +377,11 @@ int main (int argc, char* argv[]) {
             for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
                 delete *match; // free memory
         catalog_matches.clear();
-    } else if (input_mode == Input_mode::vcf) {
+    } else if (input_mode == InputMode::vcf) {
         // ...or using VCF records.
         pmap->populate(mpopi, catalog, *vcf_records);
         delete vcf_records;
-        delete vcf_header;
+        vcf_records = NULL;
     }
 
     //
@@ -413,7 +409,7 @@ int main (int argc, char* argv[]) {
     Datum   *d;
     CSLocus *loc;
 
-    if (input_mode == Input_mode::stacks) {
+    if (input_mode == InputMode::stacks) {
         //
         // Load the output from the SNP calling model (hOm/hEt/Unk) for
         // each individual at each locus.
@@ -2577,7 +2573,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     //
     for (git = grp_members.begin(); git != grp_members.end(); git++) {
         fh << "# Group " << grp_key[git->first] << "\t";
-        for (int k = 0; k < git->second.size(); k++) {
+        for (size_t k = 0; k < git->second.size(); k++) {
             fh << pop_key[git->second[k]];
             if (k < git->second.size() - 1)
                 fh << ",";
@@ -6539,7 +6535,7 @@ write_hzar(map<int, CSLocus *> &catalog,
     fh << "\n";
 
     map<int, pair<int, int> >::const_iterator pit;
-    int pop_id, p;
+    int p;
 
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
         p      = psum->pop_index(pit->first); // [p] is a "pop_psum_index"
@@ -7631,10 +7627,9 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
         // Now output the genotypes in a separate file for each population.
         //
         map<int, pair<int, int> >::const_iterator pit;
-        int  start_index, end_index, pop_psum_index;
+        int  start_index, end_index;
 
         for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-            pop_psum_index = psum->pop_index(pit->first);
             start_index = pit->second.first;
             end_index   = pit->second.second;
 
@@ -8035,7 +8030,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     map<int, pair<int, int> >::const_iterator pit;
     int  pop_cnt = psum->pop_cnt();
     int  pop_id;
-    char nuc;
+    char nuc = '\0';
 
     bool include;
     char id_str[id_len];
@@ -8628,9 +8623,9 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case O_INPUT_MODE:
             if (strcasecmp(optarg, "stacks") == 0) {
-                input_mode = Input_mode::stacks;
+                input_mode = InputMode::stacks;
             } else if (strcasecmp(optarg, "vcf") == 0) {
-                input_mode = Input_mode::vcf;
+                input_mode = InputMode::vcf;
             } else {
                 cerr << "Error: Malformed arguments. Unrecognized input mode '"
                      << optarg << "'.\n";
@@ -8861,7 +8856,7 @@ int parse_command_line(int argc, char* argv[]) {
     // Check argument constrains.
     //
 
-    if (input_mode == Input_mode::stacks) {
+    if (input_mode == InputMode::stacks) {
         // Stacks mode
 
         if (in_path.empty()) {
@@ -8882,7 +8877,7 @@ int parse_command_line(int argc, char* argv[]) {
 
         out_prefix = string("batch_") + to_string(batch_id);
 
-    } else if (input_mode == Input_mode::vcf) {
+    } else if (input_mode == InputMode::vcf) {
         // VCF mode
 
         if (in_vcf_path.empty()) {
