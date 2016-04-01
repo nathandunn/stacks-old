@@ -28,18 +28,20 @@
 
 #include "populations.h"
 
+using std::to_string;
+
 typedef MetaPopInfo::Sample Sample;
 typedef MetaPopInfo::Pop Pop;
 typedef MetaPopInfo::Group Group;
 
 // Global variables to hold command-line options.
+Input_mode input_mode = Input_mode::stacks;
 int       num_threads =  1;
-int       batch_id    = -1;
-string    in_path;
-string    vcf_in_path;
-string    out_path;
-string    out_file;
 string    pmap_path;
+string    out_path;
+string    in_path;
+int       batch_id    = -1;
+string    in_vcf_path;
 string    bl_file;
 string    wl_file;
 string    bs_wl_file;
@@ -92,13 +94,15 @@ double    max_obs_het       = 1.0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
 
+string    out_prefix;
+
 MetaPopInfo mpopi; // Information and reference indexes for samples, populations and groups.
-                         // Replaces the following globals :
+                   // Replaces the following globals :
 vector<pair<int, string> > files;            // Vector of (pop_index, prefix) pairs. (The indexes in the vector are out of sync after the load-matches loop.)
 vector<int>                sample_ids;       // vector of sample_id's.
 map<int, string>           samples;          // Map of (sample_id : sample_name).
 map<int, string>           pop_key, grp_key; // maps of (pop_id : pop_name) and (group_id : group_name).
-                                                 // n.b. IDs are created when the popmap is loaded, starting at 1 and incrementing
+                                                 // n.b. IDs are --were-- created when the popmap is loaded, starting at 1 and incrementing
 map<int, pair<int, int> >  pop_indexes;      // map of (pop_id : (sample_index, sample_index))
 map<int, vector<int> >     grp_members;      // map of (group_id : pop_id's)
 
@@ -241,9 +245,7 @@ int main (int argc, char* argv[]) {
     //
     // Open the log file.
     //
-    stringstream log;
-    log << "batch_" << batch_id << ".populations.log";
-    string log_path = in_path + log.str();
+    string log_path = out_path + out_prefix + ".populations.log";
     ofstream log_fh(log_path.c_str(), ofstream::out);
     if (log_fh.fail()) {
         cerr << "Error opening log file '" << log_path << "'\n";
@@ -264,7 +266,7 @@ int main (int argc, char* argv[]) {
     vector<VcfRecord>* vcf_records = NULL;
     VcfHeader* vcf_header = NULL;
 
-    if (not in_path.empty()) {
+    if (input_mode == Input_mode::stacks) {
         // Load the catalog from Stacks files.
         stringstream catalog_file;
         bool compressed = false;
@@ -274,16 +276,16 @@ int main (int argc, char* argv[]) {
             cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
             return 0;
         }
-    } else if (not vcf_in_path.empty()) {
+    } else if (input_mode == Input_mode::vcf) {
         // Load the catalog from a VCF file.
 
         vcf_header = new VcfHeader();
         vcf_records = new vector<VcfRecord>();
 
         // Open the file
-        VcfAbstractParser* parser = Vcf::adaptive_open(vcf_in_path);
+        VcfAbstractParser* parser = Vcf::adaptive_open(in_vcf_path);
         if (parser == NULL) {
-            cerr << "Error: Unable to open VCF file '" << vcf_in_path << "'.\n";
+            cerr << "Error: Unable to open VCF file '" << in_vcf_path << "'.\n";
             return 0;
         }
 
@@ -292,7 +294,7 @@ int main (int argc, char* argv[]) {
         *vcf_records = parser->read_snp_records(&skipped);
 
         cerr << "Found " << vcf_records->size() << " SNP records (skipped "
-             << skipped << " other records) in file '" << vcf_in_path
+             << skipped << " other records) in file '" << in_vcf_path
              << "'.\n";
 
         catalog = create_catalog(*vcf_records);
@@ -319,7 +321,7 @@ int main (int argc, char* argv[]) {
     //
 
     //cerr << "Parsing the matches files...\n";
-    if (not in_path.empty()) {
+    if (input_mode == Input_mode::stacks) {
         // If populating from matches files : load the files now,
         // and check that they are all well formed.
         vector<size_t> samples_to_remove;
@@ -349,7 +351,7 @@ int main (int argc, char* argv[]) {
         }
         known_samples.clear(); // freeing mem
         mpopi.purge_samples(samples_to_remove);
-    } else if (not vcf_in_path.empty()) {
+    } else if (input_mode == Input_mode::vcf) {
         // We still could need sample IDs. Create arbitrary ones.
         for (size_t i = 0; i < mpopi.samples().size(); ++i)
             mpopi.set_sample_id(i, i+1); //id=i+1
@@ -371,18 +373,16 @@ int main (int argc, char* argv[]) {
     // Populate the PopMap
     //
 
-    // Using SStacks matches files...
-    if (not in_path.empty()) {
+    if (input_mode == Input_mode::stacks) {
+        // Using SStacks matches files...
         pmap->populate(sample_ids, catalog, catalog_matches);
 
-        // Free memory
         for(vector<vector<CatMatch *> >::iterator sample = catalog_matches.begin(); sample != catalog_matches.end(); ++sample)
             for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
-                delete *match;
+                delete *match; // free memory
         catalog_matches.clear();
-    }
-    // ...or using VCF records.
-    else if (not vcf_in_path.empty()) {
+    } else if (input_mode == Input_mode::vcf) {
+        // ...or using VCF records.
         pmap->populate(mpopi, catalog, *vcf_records);
         delete vcf_records;
         delete vcf_header;
@@ -413,41 +413,42 @@ int main (int argc, char* argv[]) {
     Datum   *d;
     CSLocus *loc;
 
-    //
-    // Load the output from the SNP calling model for each individual at each locus. This
-    // model output string looks like this:
-    //   OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOEOOOOOOEOOOOOOOOOOOOOOOOOOOOOOOOOOOOOUOOOOUOOOOOO
-    // and records model calls for each nucleotide: O (hOmozygous), E (hEterozygous), U (Unknown)
-    //
-    for (uint i = 0; i < sample_ids.size(); i++) {
-        map<int, ModRes *> modres;
-        load_model_results(in_path + samples[sample_ids[i]], modres);
+    if (input_mode == Input_mode::stacks) {
+        //
+        // Load the output from the SNP calling model (hOm/hEt/Unk) for
+        // each individual at each locus.
+        //
 
-        if (modres.size() == 0) {
-            cerr << "    Warning: unable to find any model results in file '" << samples[sample_ids[i]] << "', excluding this sample from population analysis.\n";
-            continue;
-        }
+        for (uint i = 0; i < sample_ids.size(); i++) {
+            map<int, ModRes *> modres;
+            load_model_results(in_path + samples[sample_ids[i]], modres);
 
-        for (it = catalog.begin(); it != catalog.end(); it++) {
-            loc = it->second;
-            d = pmap->datum(loc->id, sample_ids[i]);
-
-            if (d != NULL) {
-                if (modres.count(d->id) == 0) {
-                    cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id 
-                         << ", sample ID " << sample_ids[i] << ", sample locus " << d->id 
-                         << "; likely IDs were mismatched when running pipeline.\n";
-                    exit(0);
-                }
-                d->len   = strlen(modres[d->id]->model);
-                d->model = new char[d->len + 1];
-                strcpy(d->model, modres[d->id]->model);
+            if (modres.size() == 0) {
+                cerr << "    Warning: unable to find any model results in file '" << samples[sample_ids[i]] << "', excluding this sample from population analysis.\n";
+                continue;
             }
-        }
 
-        for (mit = modres.begin(); mit != modres.end(); mit++)
-            delete mit->second;
-        modres.clear();
+            for (it = catalog.begin(); it != catalog.end(); it++) {
+                loc = it->second;
+                d = pmap->datum(loc->id, sample_ids[i]);
+
+                if (d != NULL) {
+                    if (modres.count(d->id) == 0) {
+                        cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id
+                             << ", sample ID " << sample_ids[i] << ", sample locus " << d->id
+                             << "; likely IDs were mismatched when running pipeline.\n";
+                        exit(0);
+                    }
+                    d->len   = strlen(modres[d->id]->model);
+                    d->model = new char[d->len + 1];
+                    strcpy(d->model, modres[d->id]->model);
+                }
+            }
+
+            for (mit = modres.begin(); mit != modres.end(); mit++)
+                delete mit->second;
+            modres.clear();
+        }
     }
 
     uint pop_id, start_index, end_index;
@@ -2062,11 +2063,7 @@ int tally_haplotype_freq(CSLocus *locus, PopMap<CSLocus> *pmap,
 }
 
 int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".genomic.tsv";
-
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".genomic.tsv";
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
@@ -2195,10 +2192,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
     //
     // Open output file and print header.
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".hapstats" << ".tsv";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".hapstats.tsv";
     ofstream fh(file.c_str(), ofstream::out);
     if (fh.fail()) {
         cerr << "Error opening haplotype stats file '" << file << "'\n";
@@ -2554,11 +2548,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
 
     cerr << "Writing haplotype F statistics... ";
 
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".phistats" << ".tsv";
-
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".phistats.tsv";
     ofstream fh(file.c_str(), ofstream::out);
     if (fh.fail()) {
         cerr << "Error opening haplotype Phi_st file '" << file << "'\n";
@@ -2812,11 +2802,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
 
             cerr << "Writing haplotype F statistics... ";
 
-            stringstream pop_name;
-            pop_name << "batch_" << batch_id << ".phistats_" << pop_key[pop_ids[i]] << "-" << pop_key[pop_ids[j]] << ".tsv";
-
-            string file = in_path + pop_name.str();
-
+            string file = out_path + out_prefix + ".phistats" + pop_key[pop_ids[i]] + "-" + pop_key[pop_ids[j]] + ".tsv";
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
                 cerr << "Error opening haplotype Phi_st file '" << file << "'\n";
@@ -3875,11 +3861,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
         fis_mean_all[j]      = fis_mean_all[j]      / n_all[j];
     }
 
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".sumstats" << ".tsv";
-
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".sumstats.tsv";
     ofstream fh(file.c_str(), ofstream::out);
     if (fh.fail()) {
         cerr << "Error opening sumstats file '" << file << "'\n";
@@ -4052,11 +4034,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
 
     fh.close();
 
-    pop_name.str("");
-    pop_name << "batch_" << batch_id << ".sumstats_summary" << ".tsv";
-
-    file = in_path + pop_name.str();
-
+    file = out_path + out_prefix + ".sumstats_summary.tsv";
     fh.open(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
@@ -4274,10 +4252,7 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
             double sum = 0.0;
             double cnt = 0.0;
 
-            stringstream pop_name;
-            pop_name << "batch_" << batch_id << ".fst_" << pop_key[pop_1] << "-" << pop_key[pop_2] << ".tsv";
-
-            string   file = in_path + pop_name.str();
+            string file = out_path + out_prefix + ".fst_" + pop_key[pop_1] + "-" + pop_key[pop_2] + ".tsv";
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
                 cerr << "Error opening Fst output file '" << file << "'\n";
@@ -4506,10 +4481,7 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
     //
     // Write out the mean Fst measure of each pair of populations.
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".fst_summary.tsv";
-
-    string file = in_path + pop_name.str();
+    string file = out_path + out_prefix + ".fst_summary.tsv";
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
@@ -4996,15 +4968,7 @@ bootstrap_approximate_pval(int snp_cnt, double stat, map<int, vector<double> > &
 int
 write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gtypes)
 {
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id;
-    if (write_gtypes)
-        pop_name << ".genotypes.tsv";
-    else
-        pop_name << ".haplotypes.tsv";
-
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + (write_gtypes ? ".genotypes.tsv" : ".haplotypes.tsv");
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
@@ -5095,12 +5059,8 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
 int
 write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".markers.tsv";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".markers.tsv";
     cerr << "Writing SQL markers file to '" << file << "'\n";
-
     ofstream fh(file.c_str(), ofstream::out);
     if (fh.fail()) {
         cerr << "Error opening markers SQL file '" << file << "'\n";
@@ -5169,14 +5129,9 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     // Write a FASTA file containing each allele from each locus from
     // each sample in the population.
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".fa";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".fa";
     cerr << "Writing population alleles to FASTA file '" << file << "'\n";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening FASTA file '" << file << "'\n";
         exit(1);
@@ -5233,14 +5188,9 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     // Write a FASTA file containing each allele from each locus from
     // each sample in the population.
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".strict.fa";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".strict.fa";
     cerr << "Writing strict population alleles to FASTA file '" << file << "'\n";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening strict FASTA file '" << file << "'\n";
         exit(1);
@@ -5328,12 +5278,8 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     //
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".vcf";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".vcf";
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
         exit(1);
@@ -5497,12 +5443,8 @@ write_vcf(map<int, CSLocus *> &catalog,
     //
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".vcf";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".vcf";
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
         exit(1);
@@ -5775,14 +5717,9 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     //
     // Write a VCF file as defined here: http://samtools.github.io/hts-specs/
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".haplotypes.vcf";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".haplotypes.vcf";
     cerr << "Writing population data haplotypes to VCF file '" << file << "'\n";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
         exit(1);
@@ -5919,14 +5856,9 @@ write_genepop(map<int, CSLocus *> &catalog,
     //
     // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".genepop";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".genepop";
     cerr << "Writing population data to GenePop file '" << file << "'\n";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening GenePop file '" << file << "'\n";
         exit(1);
@@ -6076,14 +6008,9 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
     //
     // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".genepop";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".genepop";
     cerr << "Writing population data to GenePop file '" << file << "'\n";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening GenePop file '" << file << "'\n";
         exit(1);
@@ -6221,14 +6148,9 @@ write_structure(map<int, CSLocus *> &catalog,
     // To avoid linked SNPs (which Structure can't handle), we will only output the first
     // SNP from each variable locus.
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".structure.tsv";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".structure.tsv";
     cerr << "Writing population data to Structure file '" << file << "'...";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening Structure file '" << file << "'\n";
         exit(1);
@@ -6405,14 +6327,9 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
     // To avoid linked SNPs (which Structure can't handle), we will only output the first
     // SNP from each variable locus.
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".structure.tsv";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".structure.tsv";
     cerr << "Writing population data to Structure file '" << file << "'...";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening Structure file '" << file << "'\n";
         exit(1);
@@ -6574,14 +6491,9 @@ write_hzar(map<int, CSLocus *> &catalog,
     // Write a Hybrid Zone Analysis using R (HZAR) file as defined here:
     //    http://cran.r-project.org/web/packages/hzar/hzar.pdf
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".hzar.csv";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".hzar.csv";
     cerr << "Writing population data to HZAR file '" << file << "'...";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening HZAR file '" << file << "'\n";
         exit(1);
@@ -6685,26 +6597,17 @@ write_treemix(map<int, CSLocus *> &catalog,
     // Write a TreeMix file (Pickrell and Pritchard, 2012 PLoS Genetics)
     //    https://bitbucket.org/nygcresearch/treemix/wiki/Home
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".treemix";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".treemix";
     cerr << "Writing population data to TreeMix file '" << file << "'; ";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening TreeMix file '" << file << "'\n";
         exit(1);
     }
 
-    pop_name << ".log";
-    file = in_path + pop_name.str();
-
+    file += ".log";
     cerr << "logging nucleotide positions to '" << file << "'...";
-
     ofstream log_fh(file.c_str(), ofstream::out);
-
     if (log_fh.fail()) {
         cerr << "Error opening Phylip Log file '" << file << "'\n";
         exit(1);
@@ -6823,10 +6726,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 
-        stringstream pop_name;
-        pop_name << "batch_" << batch_id << "." << it->first << ".fastphase.inp";
-        string file = in_path + pop_name.str();
-
+        string file = out_path + out_prefix + "." + it->first + ".fastphase.inp";
         ofstream fh(file.c_str(), ofstream::out);
 
         if (fh.fail()) {
@@ -7033,12 +6933,8 @@ write_phase(map<int, CSLocus *> &catalog,
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 
-        stringstream pop_name;
-        pop_name << "batch_" << batch_id << "." << it->first << ".phase.inp";
-        string file = in_path + pop_name.str();
-
+        string file = out_path + out_prefix + "." + it->first + ".phase.inp";
         ofstream fh(file.c_str(), ofstream::out);
-
         if (fh.fail()) {
             cerr << "Error opening PHASE file '" << file << "'\n";
             exit(1);
@@ -7332,12 +7228,8 @@ write_plink(map<int, CSLocus *> &catalog,
     // First, write a markers file containing each marker, the chromosome it falls on,
     // an empty centiMorgan field, and finally its genomic position in basepairs.
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".plink.map";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".plink.map";
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening PLINK markers file '" << file << "'\n";
         exit(1);
@@ -7370,12 +7262,8 @@ write_plink(map<int, CSLocus *> &catalog,
     //
     // Now output the genotypes in a separate file.
     //
-    pop_name.str("");
-    pop_name << "batch_" << batch_id << ".plink.ped";
-    file = in_path + pop_name.str();
-
+    file = out_path + out_prefix + ".plink.ped";
     fh.open(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening PLINK markers file '" << file << "'\n";
         exit(1);
@@ -7534,10 +7422,7 @@ write_beagle(map<int, CSLocus *> &catalog,
             // Open a markers file containing each marker, its genomic position in basepairs
             // and the two alternative alleles at this position.
             //
-            pop_name.str("");
-            pop_name << "batch_" << batch_id << "." << pop_key[pit->first] << "-" << it->first << ".unphased.bgl.markers";
-            file = in_path + pop_name.str();
-
+            file = out_path + out_prefix + "." + pop_key[pit->first] + "-" + it->first + ".unphased.bgl.markers";
             ofstream mfh(file.c_str(), ofstream::out);
             if (mfh.fail()) {
                 cerr << "Error opening Beagle markers file '" << file << "'\n";
@@ -7548,10 +7433,7 @@ write_beagle(map<int, CSLocus *> &catalog,
             //
             // Open the genotypes file.
             //
-            pop_name.str("");
-            pop_name << "batch_" << batch_id << "." << pop_key[pit->first] << "-" << it->first << ".unphased.bgl";
-            file = in_path + pop_name.str();
-
+            file = out_path + out_prefix + "." + pop_key[pit->first] + "-" + it->first + ".unphased.bgl";
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
                 cerr << "Error opening Beagle genotypes file '" << file << "'\n";
@@ -7760,10 +7642,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
             // Open a file for writing the markers: their genomic position in basepairs
             // and the two alternative alleles at this position.
             //
-            pop_name.str("");
-            pop_name << "batch_" << batch_id << "." << pop_key[pit->first] << "-" << it->first << ".phased.bgl.markers";
-            file = in_path + pop_name.str();
-
+            file = out_path + out_prefix + "." + pop_key[pit->first] + "-" + it->first + ".phased.bgl.markers";
             ofstream mfh(file.c_str(), ofstream::out);
             if (mfh.fail()) {
                 cerr << "Error opening Beagle markers file '" << file << "'\n";
@@ -7774,10 +7653,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
             //
             // Now output the haplotypes in a separate file.
             //
-            pop_name.str("");
-            pop_name << "batch_" << batch_id << "." << pop_key[pit->first] << "-" << it->first << ".phased.bgl";
-            file = in_path + pop_name.str();
-
+            file = out_path + out_prefix + "." + pop_key[pit->first] + "-" + it->first + ".phased.bgl";
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
                 cerr << "Error opening Beagle markers file '" << file << "'\n";
@@ -7880,26 +7756,17 @@ write_phylip(map<int, CSLocus *> &catalog,
     // We will write those loci to a Phylip file as defined here:
     //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".phylip";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".phylip";
     cerr << "Writing population data to Phylip file '" << file << "'; ";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening Phylip file '" << file << "'\n";
         exit(1);
     }
 
-    pop_name << ".log";
-    file = in_path + pop_name.str();
-
+    file += ".log";
     cerr << "logging nucleotide positions to '" << file << "'...";
-
     ofstream log_fh(file.c_str(), ofstream::out);
-
     if (log_fh.fail()) {
         cerr << "Error opening Phylip Log file '" << file << "'\n";
         exit(1);
@@ -8118,14 +7985,9 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     // We will write those loci to a Phylip file as defined here:
     //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".fullseq.phylip";
-    string file = in_path + pop_name.str();
-
+    string file = out_path + out_prefix + ".fullseq.phylip";
     cerr << "Writing full sequence population data to Phylip file '" << file << "'; ";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening Phylip file '" << file << "'\n";
         exit(1);
@@ -8135,31 +7997,22 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     // We will also write a file that allows us to specify each RAD locus as a separate partition
     // for use in phylogenetics programs.
     //
-    pop_name.str("");
-    pop_name << "batch_" << batch_id << ".fullseq.partitions.phylip";
-    file = in_path + pop_name.str();
-
+    file = out_path + out_prefix + ".fullseq.partitions.phylip";
     ofstream par_fh(file.c_str(), ofstream::out);
-
     if (par_fh.fail()) {
         cerr << "Error opening Phylip partitions file '" << file << "'\n";
         exit(1);
     }
 
-    pop_name.str("");
-    pop_name << "batch_" << batch_id << "fullseq.phylip.log";
-    file = in_path + pop_name.str();
-
+    file = out_path + out_prefix + "fullseq.phylip.log";
     cerr << "logging nucleotide positions to '" << file << "'...";
-
     ofstream log_fh(file.c_str(), ofstream::out);
-
     if (log_fh.fail()) {
         cerr << "Error opening Phylip Log file '" << file << "'\n";
         exit(1);
     }
 
-        //
+    //
     // Obtain the current date.
     //
     time_t     rawtime;
@@ -8680,9 +8533,10 @@ bool compare_genpos(GenPos a, GenPos b) {
 }
 
 int parse_command_line(int argc, char* argv[]) {
-    int c;
-
-#define OPT_VCF_IN 1000
+#define O_INPUT_MODE       1000
+#define O_OUT_PATH         1001
+#define O_IN_PATH          'P'
+#define O_IN_VCF           1002
 
     while (1) {
         static struct option long_options[] = {
@@ -8711,8 +8565,10 @@ int parse_command_line(int argc, char* argv[]) {
             {"window_size",    required_argument, NULL, 'w'},
             {"num_threads",    required_argument, NULL, 't'},
             {"batch_id",       required_argument, NULL, 'b'},
-            {"in_path",        required_argument, NULL, 'P'},
-            {"vcf_in",         required_argument, NULL, OPT_VCF_IN},
+            {"in_path",        required_argument, NULL, O_IN_PATH},
+            {"out_path",       required_argument, NULL, O_OUT_PATH},
+            {"input_mode",     required_argument, NULL, O_INPUT_MODE},
+            {"in_vcf",         required_argument, NULL, O_IN_VCF},
             {"progeny",        required_argument, NULL, 'r'},
             {"min_depth",      required_argument, NULL, 'm'},
             {"renz",           required_argument, NULL, 'e'},
@@ -8742,16 +8598,14 @@ int parse_command_line(int argc, char* argv[]) {
             {"p_value_cutoff",    required_argument, NULL, 'u'},
             {0, 0, 0, 0}
         };
-        
+
         // getopt_long stores the option index here.
-        int option_index = 0;
-     
-        c = getopt_long(argc, argv, "ACDEFGHJKLNSTUVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
             break;
-     
+
         switch (c) {
         case 'h':
             help();
@@ -8762,11 +8616,29 @@ int parse_command_line(int argc, char* argv[]) {
         case 't':
             num_threads = atoi(optarg);
             break;
-        case 'P':
+        case O_IN_PATH:
             in_path = optarg;
+            if (!in_path.empty() && in_path.back() != '/')
+                in_path += "/";
             break;
-        case OPT_VCF_IN:
-            vcf_in_path = optarg;
+        case O_OUT_PATH:
+            out_path = optarg;
+            if (!out_path.empty() && out_path.back() != '/')
+                out_path += "/";
+            break;
+        case O_INPUT_MODE:
+            if (strcasecmp(optarg, "stacks") == 0) {
+                input_mode = Input_mode::stacks;
+            } else if (strcasecmp(optarg, "vcf") == 0) {
+                input_mode = Input_mode::vcf;
+            } else {
+                cerr << "Error: Malformed arguments. Unrecognized input mode '"
+                     << optarg << "'.\n";
+                help();
+            }
+            break;
+        case O_IN_VCF:
+            in_vcf_path = optarg;
             break;
         case 'M':
             pmap_path = optarg;
@@ -8776,9 +8648,23 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'i':
             merge_prune_lim = is_double(optarg);
+            if (merge_prune_lim > 1.0)
+                merge_prune_lim = merge_prune_lim / 100;
+
+            if (merge_prune_lim < 0 || merge_prune_lim > 1.0) {
+                cerr << "Unable to parse the merge sites pruning limit.\n";
+                help();
+            }
             break;
         case 'q':
             max_obs_het = is_double(optarg);
+            if (max_obs_het > 1)
+                max_obs_het = max_obs_het / 100;
+
+            if (max_obs_het < 0 || max_obs_het > 1.0) {
+                cerr << "Unable to parse the maximum observed heterozygosity.\n";
+                help();
+            }
             break;
         case 'b':
             batch_id = is_integer(optarg);
@@ -8789,6 +8675,13 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'r':
             sample_limit = atof(optarg);
+            if (sample_limit > 1)
+                sample_limit = sample_limit / 100;
+
+            if (sample_limit > 1.0) {
+                cerr << "Unable to parse the sample limit frequency\n";
+                help();
+            }
             break;
         case 'p':
             population_limit = atoi(optarg);
@@ -8917,6 +8810,13 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'a':
             minor_allele_freq = atof(optarg);
+            if (minor_allele_freq > 1)
+                minor_allele_freq = minor_allele_freq / 100;
+
+            if (minor_allele_freq < 0 || minor_allele_freq > 0.5) {
+                cerr << "Unable to parse the minor allele frequency.\n";
+                help();
+            }
             break;
         case 'f':
             if (strcasecmp(optarg, "p_value") == 0)
@@ -8935,6 +8835,10 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'e':
             enz = optarg;
+            if (renz.count(enz) == 0) {
+                cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
+                help();
+            }
             break;
         case 'w':
             sigma = atof(optarg);
@@ -8957,81 +8861,58 @@ int parse_command_line(int argc, char* argv[]) {
     // Check argument constrains.
     //
 
-    // [--in_path] and [--vcf_in_path]
-    if (not in_path.empty() && not vcf_in_path.empty()) {
-        // One of the two must be specified.
-        cerr << "You must specify a path to the directory containing Stacks output files, or a VCF input file.\n";
-        help();
-    } else if (not vcf_in_path.empty() && not in_path.empty()) {
-        // It is only possible to use one or the other at a time.
-        cerr << "Error: Malformed arguments: --in_path and --in_vcf_path are incompatible.\n";
-        help();
-    } else if (not vcf_in_path.empty() && pmap_path.empty()) {
-        // --vcf_in_path must be used together with [--pop_map/-M].
-        cerr << "Error: Malformed arguments: --in_vcf_path requires a population map (-M).\n";
-        help();
-    }
+    if (input_mode == Input_mode::stacks) {
+        // Stacks mode
 
-    if (in_path.length() > 0) {
-        if (in_path.at(in_path.length() - 1) != '/') {
-            in_path += "/";
-        }
-    }
-
-    if (pmap_path.length() == 0) {
-        cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
-    }
-
-    if (batch_id < 0) {
-        cerr << "You must specify a batch ID.\n";
-        help();
-    }
-
-    if (enz.length() > 0 && renz.count(enz) == 0) {
-        cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
-        help();
-    }
-
-    if (merge_prune_lim != 1.0) {
-        if (merge_prune_lim > 1.0)
-            merge_prune_lim = merge_prune_lim / 100;
-
-        if (merge_prune_lim < 0 || merge_prune_lim > 1.0) {
-            cerr << "Unable to parse the merge sites pruning limit.\n";
+        if (in_path.empty()) {
+            cerr << "You must specify a path to the directory containing Stacks output files.\n";
             help();
         }
-    }
 
-    if (minor_allele_freq > 0) {
-        if (minor_allele_freq > 1)
-            minor_allele_freq = minor_allele_freq / 100;
+        if (pmap_path.empty())
+            cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
 
-        if (minor_allele_freq > 0.5) {
-            cerr << "Unable to parse the minor allele frequency.\n";
+        if (batch_id < 0) {
+            cerr << "You must specify a batch ID.\n";
             help();
         }
-    }
 
-    if (max_obs_het != 1.0) {
-        if (max_obs_het > 1)
-            max_obs_het = max_obs_het / 100;
+        if (out_path.empty())
+            out_path = in_path;
 
-        if (max_obs_het < 0 || max_obs_het > 1.0) {
-            cerr << "Unable to parse the maximum observed heterozygosity.\n";
+        out_prefix = string("batch_") + to_string(batch_id);
+
+    } else if (input_mode == Input_mode::vcf) {
+        // VCF mode
+
+        if (in_vcf_path.empty()) {
+            cerr << "You must specify a path to a VCF input file.\n";
             help();
         }
-    }
 
-    if (sample_limit > 0) {
-        if (sample_limit > 1)
-            sample_limit = sample_limit / 100;
-
-        if (sample_limit > 1.0) {
-            cerr << "Unable to parse the sample limit frequency\n";
+        if (pmap_path.empty()) {
+            cerr << "Error: Malformed arguments: input mode \"vcf\" requires a population map (-M).\n";
             help();
         }
+
+        if (out_path.empty()) {
+            cerr << "Error: Malformed arguments: input mode \"vcf\" requires an output directory (--out_path).\n";
+            help();
+        }
+
+        // Set [out_prefix].
+        string fname = in_vcf_path;
+        if (in_vcf_path.find_last_of('/') != string::npos && in_vcf_path.back() != '/')
+            fname = in_vcf_path.substr(in_vcf_path.find_last_of('/')+1);
+        size_t trim = 0;
+        if (fname.length() > 4 && fname.substr(fname.length()-4) == ".vcf")
+            trim = 4;
+        else if (fname.length() > 7 && fname.substr(fname.length()-7) == ".vcf.gz")
+            trim = 7;
+        out_prefix = fname.substr(0, fname.length()-trim);
     }
 
+    // Other
     if (write_single_snp && write_random_snp) {
         cerr << "Please specify either '--write_single_snp' or '--write_random_snp', not both.\n";
         help();
@@ -9041,7 +8922,7 @@ int parse_command_line(int argc, char* argv[]) {
         cerr << "You must specify the restriction enzyme associated with this data set to merge overlaping cutsites.\n";
         help();
     }
-    
+
     return 0;
 }
 
@@ -9054,17 +8935,23 @@ void version() {
 void help() {
     std::cerr << "populations " << VERSION << "\n"
               << "populations -b batch_id -P path -M path [-r min] [-m min] [-B blacklist] [-W whitelist] [-s] [-e renz] [-t threads] [-v] [-h]" << "\n"
-              << "  b: Batch ID to examine when exporting from the catalog.\n"
-              << "  P: path to the Stacks output files.\n"
-              << "  --vcf_in: path to an input VCF file.\n"
+              << "  h: display this help messsage.\n"
+              << "  v: print program version.\n"
+              << "  t: number of threads to run in parallel sections of code.\n"
+              << "  --input: one of \"stacks\" (default) or \"vcf\".\n"
               << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
-              << "  s: output a file to import results into an SQL database.\n"
               << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
               << "  W: specify a file containing Whitelisted markers to include in the export.\n"
-              << "  e: restriction enzyme, required if generating 'genomic' output.\n"
-              << "  t: number of threads to run in parallel sections of code.\n"
-              << "  v: print program version.\n"
-              << "  h: display this help messsage.\n"
+              << "  --out_path: path to a directory where to white the output files. In stacks mode, defaults to the input directory.\n"
+              << "\n"
+              << "  Stacks mode:\n"
+              << "    b: Batch ID to examine when exporting from the catalog.\n"
+              << "    P: path to the directory containing the Stacks files. (--in_path)\n"
+              << "    s: output a file to import results into an SQL database.\n"
+              << "    e: restriction enzyme, required if generating 'genomic' output.\n"
+              << "\n"
+              << "  VCF mode:\n"
+              << "    --in_vcf: path to an input VCF file.\n"
               << "\n"
               << "  Merging and Phasing:\n"
               << "    --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
