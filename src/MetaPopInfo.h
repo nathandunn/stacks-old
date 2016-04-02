@@ -23,7 +23,7 @@ public:
         size_t pop;
         size_t id; // optional, deprecated
 
-        Sample(const string& name) : name(name), pop(-1), id(-1) {}
+        Sample(const string& n) : name(n), pop(-1), id(-1) {}
         inline bool operator<(const Sample& other) const;
     };
     struct Pop {
@@ -32,14 +32,14 @@ public:
         size_t last_sample;
         size_t group;
 
-        Pop(const string& name) : name(name), group(-1), first_sample(-1), last_sample(-1) {}
+        Pop(const string& n) : name(n), first_sample(-1), last_sample(-1), group(-1) {}
         static const string default_name;
     };
     struct Group {
         string name;
         vector<size_t> pops;
 
-        Group(const string& name) : name(name) {}
+        Group(const string& n) : name(n), pops() {}
         static const string default_name;
     };
 
@@ -55,19 +55,24 @@ private:
     void reset_pop_map();
     void reset_group_map();
 
+    map<size_t,size_t> sample_indexes_by_id_; // Links a sample ID with an index in [samples_].
+    void reset_sample_id_map();
+
 public:
     // Create the representation :
     // -- from a population map file. For consistency with the existing
     //    code, the existence of the "DIR/SAMPLENAME.matches.tsv(.gz)"
     //    files is checked if a [dir_path] argument is given.
+    // -- from just a vector of sample names.
     // -- or by browsing the directory for "*.tags.tsv(.gz)" files.
     bool init_popmap(const string& popmap_path, const string& dir_path = string());
+    bool init_names(const vector<string>& sample_names);
     bool init_directory(const string& dir_path);
 
-    // Removes samples from the metapopulation.
-    // As samples, populations or groups are removed, the indexes of
-    // the remaining ones change, but the order in which they appear
-    // is preserved.
+    // Remove samples from the metapopulation.
+    // (As samples, populations or groups are removed, the indexes of
+    // the remaining ones change, and the order in which they appear
+    // is preserved.)
     void purge_samples(const vector<size_t>& samples);
 
     // Retrieve information.
@@ -79,21 +84,15 @@ public:
     size_t get_pop_index(const string& name) const {return pop_indexes_.at(name);}
     size_t get_group_index(const string& name) const {return group_indexes_.at(name);}
 
-private:
-    map<size_t,size_t> sample_indexes_by_id_; // Links a sample id with an index in [samples_].
-
-public:
     /*
      * Methods for backwards compatibility
      */
 
-    // Sets the ID of a sample.
+    // Sample IDs. (IDs unicity is not enforced.)
     void set_sample_id(size_t index, size_t id) {samples_.at(index).id = id; sample_indexes_by_id_[id] = index;}
     size_t get_sample_index(const size_t& id) const {return sample_indexes_by_id_.at(id);}
 
-    // Resets the (sample_id : index) map. It is the caller's responsibility that the ids are unique.
-    void reset_sample_id_map();
-
+    // Fill former globals.
     void fill_files(vector<pair<int, string> >&) const;
     void fill_sample_ids(vector<int>&) const;
     void fill_samples(map<int, string>&) const;
