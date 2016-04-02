@@ -192,7 +192,7 @@ int main (int argc, char* argv[]) {
     mpopi.pops().size() == 1 ?
         cerr << "  " << mpopi.pops().size() << " population found\n" :
         cerr << "  " << mpopi.pops().size() << " populations found\n";
-    if (population_limit > mpopi.pops().size()) {
+    if (size_t(population_limit) > mpopi.pops().size()) {
         cerr //<< "Notice: "
              << "Population limit (" << population_limit << ")"
              << " larger than number of popualtions present, adjusting parameter to "
@@ -2522,7 +2522,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     //
     for (git = grp_members.begin(); git != grp_members.end(); git++) {
         fh << "# Group " << grp_key[git->first] << "\t";
-        for (int k = 0; k < git->second.size(); k++) {
+        for (size_t k = 0; k < git->second.size(); k++) {
             fh << pop_key[git->second[k]];
             if (k < git->second.size() - 1)
                 fh << ",";
