@@ -294,6 +294,52 @@ int dist(const char *tag_1, Locus *tag_2, allele_type allele) {
     return dist;
 }
 
+int
+dist(const char *tag_1, const char *tag_2, vector<pair<char, uint> > &cigar)
+{
+    uint  size = cigar.size();
+    char  op;
+    uint  dist, len, pos_1, pos_2, stop;
+    int   mismatches = 0;
+
+    len   = strlen(tag_1);
+    pos_1 = 0;
+    pos_2 = 0;
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+            //
+            // A deletion has occured in tag_1 relative to tag_2.
+            //
+            pos_2 += dist;
+            break;
+        case 'I':
+            //
+            // An insertion has occured in tag_1 relative to tag_2.
+            //
+            pos_1 += dist;
+            break;
+        case 'M':
+            stop = pos_1 + dist;
+            while (pos_1 < stop && pos_1 < len && pos_2 < len) {
+                if (tag_1[pos_1] != tag_2[pos_2])
+                    mismatches++;
+                pos_1++;
+                pos_2++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    return mismatches;
+}
+
 int dist(Locus *tag_1, Locus *tag_2) {
     int   dist  = 0;
     char *p     = tag_1->con;

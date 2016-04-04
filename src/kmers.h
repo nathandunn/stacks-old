@@ -93,6 +93,7 @@ int  generate_permutations(map<int, char **> &, int);
 //
 // Utilities
 //
+int dist(const char *, const char *, vector<pair<char, uint> > &);
 int dist(const char *, Locus *, allele_type);
 int dist(Locus *, Locus *);
 int dist(MergedStack *, MergedStack *);

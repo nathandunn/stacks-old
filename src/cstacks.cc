@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -28,15 +28,15 @@
 queue<pair<int, string> > samples;
 string  out_path;
 string  catalog_path;
-FileT   in_file_type    = FileT::sql;
-int     batch_id        = 0;
-int     ctag_dist       = 1;
-bool    set_kmer_len    = true;
-int     kmer_len        = 0;
-searcht search_type     = sequence;
-int     num_threads     = 1;
-bool    mult_matches    = false;
-bool    report_mmatches = false;
+FileT   in_file_type      = FileT::sql;
+int     batch_id          = 0;
+int     ctag_dist         = 1;
+bool    set_kmer_len      = true;
+int     kmer_len          = 0;
+searcht search_type       = sequence;
+int     num_threads       = 1;
+bool    mult_matches      = false;
+bool    report_mmatches   = false;
 bool    require_uniq_haplotypes = false;
 bool    gapped_alignments = false;
 double  min_match_len     = 0.80;
@@ -512,6 +512,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
     CatKmerHashMap kmer_map;
     vector<char *> kmer_map_keys;
     map<int, QLocus *>::iterator it;
+    vector<pair<char, uint> > cigar;
     QLocus *tag_1;
     CLocus *tag_2;
 
@@ -542,11 +543,15 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
  
     #pragma omp parallel private(tag_1, tag_2, allele)
     {
-	GappedAln *aln = new GappedAln(con_len);
-        
         #pragma omp for schedule(dynamic) 
         for (uint i = 0; i < keys.size(); i++) {
             tag_1 = sample[keys[i]];
+
+            //
+            // If we already matched this locus to the catalog without using gapped alignments, skip it now.
+            //
+            if (tag_1->matches.size() > 0)
+                continue;
 
             for (vector<pair<allele_type, string> >::iterator allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
 
@@ -555,6 +560,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 
 		map<int, vector<allele_type> > hits;
                 vector<pair<allele_type, int> >::iterator map_it;
+                int d;
 		//
 		// Lookup the occurances of each k-mer in the kmer_map
 		//
@@ -594,14 +600,22 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 
 			tag_2 = catalog[hit_it->first];
 
-			if (aln->align(tag_1->con, tag_2->con))
-			    tag_1->add_match(tag_2->id, cnt_it->first, allele->first, 0, aln->cigar);
+                        GappedAln *aln = new GappedAln(tag_1->len, tag_2->len);
+
+			if (aln->align(tag_1->con, tag_2->con)) {
+                            cigar.clear();
+                            aln->parse_cigar(cigar);
+                            d = dist(tag_1->con, tag_2->con, cigar);
+
+                            if (d <= ctag_dist)
+                                tag_1->add_match(tag_2->id, cnt_it->first, allele->first, d, aln->cigar);
+                        }
+                        
+                        delete aln;
 		    }
 		}
             }
         }
-
-	delete aln;
     }
 
     free_kmer_hash(kmer_map, kmer_map_keys);
