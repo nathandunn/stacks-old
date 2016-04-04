@@ -62,11 +62,13 @@ class GappedAln {
     string cigar;
     
     GappedAln(int);
+    GappedAln(int, int);
     ~GappedAln();
 
     int align(string, string);
     inline int swap(double *, dynprog *, int, int);
     int trace_alignment(string, string);
+    int parse_cigar(vector<pair<char, uint> > &);
     int dump_alignment(string, string);
 };
 
@@ -75,6 +77,20 @@ GappedAln::GappedAln(int len)
 {
     this->_m = len + 1;
     this->_n = len + 1;
+
+    this->matrix = new double * [this->_m];
+    for (uint i = 0; i < this->_m; i++)
+        this->matrix[i] = new double [this->_n];
+
+    this->path = new AlignPath * [this->_m];
+    for (uint i = 0; i < this->_m; i++)
+        this->path[i] = new AlignPath [this->_n];
+}
+
+GappedAln::GappedAln(int len_1, int len_2)
+{
+    this->_m = len_1 + 1;
+    this->_n = len_2 + 1;
 
     this->matrix = new double * [this->_m];
     for (uint i = 0; i < this->_m; i++)
@@ -389,6 +405,32 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
     if (cigar.length() > 0) {
 	this->cigar = cigar;
         return 1;
+    }
+
+    return 0;
+}
+
+int 
+GappedAln::parse_cigar(vector<pair<char, uint> > &cigar)
+{
+    char buf[id_len];
+    int  dist;
+    const char *p, *q;
+
+    p = this->cigar.c_str();
+
+    while (*p != '\0') {
+        q = p + 1;
+
+        while (*q != '\0' && isdigit(*q))
+            q++;
+        strncpy(buf, p, q - p);
+        buf[q-p] = '\0';
+        dist = atoi(buf);
+
+        cigar.push_back(make_pair(*q, dist));
+
+        p = q + 1;
     }
 
     return 0;

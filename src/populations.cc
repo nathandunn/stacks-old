@@ -3002,7 +3002,7 @@ haplotype_diversity(int start, int end, Datum **d)
 
     for (k = 0; k < hap_index.size(); k++)
         delete hdists[k];
-    delete hdists;
+    delete [] hdists;
 
     return lstat;
 }
