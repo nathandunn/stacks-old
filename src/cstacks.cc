@@ -38,6 +38,9 @@ int     num_threads     = 1;
 bool    mult_matches    = false;
 bool    report_mmatches = false;
 bool    require_uniq_haplotypes = false;
+bool    gapped_alignments = false;
+double  min_match_len     = 0.80;
+double  max_gaps          = 2;
 
 int main (int argc, char* argv[]) {
 
@@ -114,7 +117,11 @@ int main (int argc, char* argv[]) {
         if (search_type == sequence) {
             cerr << "Searching for sequence matches...\n";
             find_kmer_matches_by_sequence(catalog, sample, ctag_dist);
-        } else if (search_type == genomic_loc) {
+
+	    if (gapped_alignments)
+		search_for_gaps(catalog, sample, ctag_dist);
+
+	} else if (search_type == genomic_loc) {
             cerr << "Searching for matches by genomic location...\n";
             find_matches_by_genomic_loc(cat_index, sample);
         }
@@ -400,12 +407,14 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     //
     int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len, set_kmer_len ? true : false);
 
-    cerr << "  Distance allowed between stacks: " << ctag_dist << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+    cerr << "  Distance allowed between stacks: " << ctag_dist
+	 << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
+	 << min_hits << " k-mer hits required.\n";
         
     populate_kmer_hash(catalog, kmer_map, kmer_map_keys, kmer_len);
 
     cerr << "  " << catalog.size() << " loci in the catalog, " << kmer_map.size() << " kmers in the catalog hash.\n";
- 
+
     #pragma omp parallel private(i, j, tag_1, tag_2, allele)
     { 
         #pragma omp for
@@ -487,6 +496,112 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
             // Sort the vector of distances.
             sort(tag_1->matches.begin(), tag_1->matches.end(), compare_matches);
         }
+    }
+
+    free_kmer_hash(kmer_map, kmer_map_keys);
+
+    return 0;
+}
+
+int
+search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double min_match_len)
+{
+    //
+    // Search for loci that can be merged with a gapped alignment.
+    //
+    CatKmerHashMap kmer_map;
+    vector<char *> kmer_map_keys;
+    map<int, QLocus *>::iterator it;
+    QLocus *tag_1;
+    CLocus *tag_2;
+
+    //
+    // OpenMP can't parallelize random access iterators, so we convert
+    // our map to a vector of integer keys.
+    //
+    vector<int> keys;
+    for (it = sample.begin(); it != sample.end(); it++) 
+	keys.push_back(it->first);
+
+    //
+    // Calculate the number of k-mers we will generate. If kmer_len == 0,
+    // determine the optimal length for k-mers.
+    //
+    int con_len   = strlen(sample[keys[0]]->con);
+    int kmer_len  = 19;
+    int num_kmers = con_len - kmer_len + 1;
+
+    //
+    // Calculate the minimum number of matching k-mers required for a possible sequence match.
+    //
+    int min_hits = (round((double) con_len * min_match_len) - (kmer_len * max_gaps)) - kmer_len + 1;
+
+    cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+
+    populate_kmer_hash(catalog, kmer_map, kmer_map_keys, kmer_len);
+ 
+    #pragma omp parallel private(tag_1, tag_2, allele)
+    {
+	GappedAln *aln = new GappedAln(con_len);
+        
+        #pragma omp for schedule(dynamic) 
+        for (uint i = 0; i < keys.size(); i++) {
+            tag_1 = sample[keys[i]];
+
+            for (vector<pair<allele_type, string> >::iterator allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
+
+		vector<char *> kmers;
+		generate_kmers(tag_1->con, kmer_len, num_kmers, kmers);
+
+		map<int, vector<allele_type> > hits;
+                vector<pair<allele_type, int> >::iterator map_it;
+		//
+		// Lookup the occurances of each k-mer in the kmer_map
+		//
+                for (uint j = 0; j < num_kmers; j++) {
+                    if (kmer_map.count(kmers[j]) > 0)
+                        for (map_it  = kmer_map[kmers[j]].begin();
+                             map_it != kmer_map[kmers[j]].end();
+                             map_it++)
+                            hits[map_it->second].push_back(map_it->first);
+                }
+
+		//
+		// Free the k-mers we generated for this query
+		//
+		for (uint j = 0; j < num_kmers; j++)
+		    delete [] kmers[j];
+		kmers.clear();
+
+		//
+		// Iterate through the list of hits. For each hit that has more than min_hits
+		// check its full length to verify a match.
+		//
+		map<int, vector<allele_type> >::iterator hit_it;
+		vector<allele_type>::iterator            all_it;
+
+		for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
+
+		    map<allele_type, int>           allele_cnts;
+                    map<allele_type, int>::iterator cnt_it;
+
+                    for (all_it = hit_it->second.begin(); all_it != hit_it->second.end(); all_it++)
+                        allele_cnts[*all_it]++;
+
+                    for (cnt_it = allele_cnts.begin(); cnt_it != allele_cnts.end(); cnt_it++) {
+
+			if (cnt_it->second < min_hits) continue;
+
+			tag_2 = catalog[hit_it->first];
+
+			if (aln->align(tag_1->con, tag_2->con))
+			    tag_1->add_match(tag_2->id, cnt_it->first, allele->first, 0, aln->cigar);
+		    }
+		}
+            }
+        }
+
+	delete aln;
     }
 
     free_kmer_hash(kmer_map, kmer_map_keys);
@@ -1372,26 +1487,29 @@ int parse_command_line(int argc, char* argv[]) {
 
     while (1) {
 	static struct option long_options[] = {
-	    {"help",               no_argument, NULL, 'h'},
-            {"version",            no_argument, NULL, 'v'},
-	    {"mmatches",           no_argument, NULL, 'm'},
-	    {"genomic_loc",        no_argument, NULL, 'g'},
-	    {"uniq_haplotypes",    no_argument, NULL, 'u'},
-	    {"report_mmatches",    no_argument, NULL, 'R'},
-	    {"batch_id",     required_argument, NULL, 'b'},
-	    {"ctag_dist",    required_argument, NULL, 'n'},
-	    {"k_len",        required_argument, NULL, 'k'},
-	    {"catalog",      required_argument, NULL, 'c'},
-	    {"sample",       required_argument, NULL, 's'},
-	    {"outpath",      required_argument, NULL, 'o'},
-	    {"num_threads",  required_argument, NULL, 'p'},
+	    {"help",            no_argument, NULL, 'h'},
+            {"version",         no_argument, NULL, 'v'},
+	    {"mmatches",        no_argument, NULL, 'm'},
+	    {"genomic_loc",     no_argument, NULL, 'g'},
+	    {"uniq_haplotypes", no_argument, NULL, 'u'},
+	    {"report_mmatches", no_argument, NULL, 'R'},
+            {"gapped",          no_argument, NULL, 'G'},
+            {"max_gaps",        required_argument, NULL, 'X'},
+            {"min_aln_len",     required_argument, NULL, 'x'},
+	    {"batch_id",        required_argument, NULL, 'b'},
+	    {"ctag_dist",       required_argument, NULL, 'n'},
+	    {"k_len",           required_argument, NULL, 'k'},
+	    {"catalog",         required_argument, NULL, 'c'},
+	    {"sample",          required_argument, NULL, 's'},
+	    {"outpath",         required_argument, NULL, 'o'},
+	    {"num_threads",     required_argument, NULL, 'p'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgvuRmo:s:c:b:p:n:k:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgvuRmGX:x:o:s:c:b:p:n:k:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1437,6 +1555,15 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'u':
 	    require_uniq_haplotypes = true;
 	    break;
+	case 'G':
+            gapped_alignments = true;
+            break;
+        case 'X':
+            max_gaps = is_integer(optarg);
+            break;
+        case 'x':
+            min_match_len = is_double(optarg);
+            break;
         case 'v':
             version();
             break;
@@ -1491,6 +1618,10 @@ void help() {
 	      << "  h: display this help messsage." << "\n\n"
 	      << "  Catalog editing:\n"
 	      << "    --catalog <path>: provide the path to an existing catalog. cstacks will add data to this existing catalog.\n\n"
+	      << "  Gapped assembly options:\n"
+              << "    --gapped: preform gapped alignments between stacks.\n"
+              << "    --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
+              << "    --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n\n"
 	      << "  Advanced options:\n" 
 	      << "     --k_len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
 	      << "    --report_mmatches: report query loci that match more than one catalog locus.\n";

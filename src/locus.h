@@ -40,6 +40,7 @@ typedef struct match {
     uint        cat_id;
     allele_type cat_type;
     allele_type query_type;
+    string      cigar;
     uint        dist;
 } Match;
 
@@ -107,6 +108,7 @@ class QLocus : public Locus {
     QLocus(): Locus() {}
     ~QLocus();
 
+    int add_match(int, allele_type, allele_type, int, string);
     int add_match(int, allele_type, allele_type, int);
     int add_match(int, allele_type);
 };

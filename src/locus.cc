@@ -122,6 +122,22 @@ QLocus::add_match(int catalog_id, allele_type cat_type, allele_type query_type, 
 }
 
 int 
+QLocus::add_match(int catalog_id, allele_type cat_type, allele_type query_type, int distance, string cigar) 
+{
+    Match *m = new Match;
+
+    m->cat_id     = catalog_id;
+    m->cat_type   = cat_type;
+    m->query_type = query_type;
+    m->dist       = distance;
+    m->cigar      = cigar;
+    
+    this->matches.push_back(m);
+
+    return 0;
+}
+
+int 
 QLocus::add_match(int catalog_id, allele_type cat_type) 
 {
     Match *m = new Match;
