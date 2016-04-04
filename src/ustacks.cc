@@ -601,7 +601,8 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
                 // Don't compare tag_1 against itself.
                 if (tag_1 == tag_2) continue;
 
-                aln->align(tag_1, tag_2);
+                if (aln->align(tag_1->con, tag_2->con))
+		    tag_1->alns.push_back(make_pair(tag_2->id, aln->cigar));
             }
         }
 
