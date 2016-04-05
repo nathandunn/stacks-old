@@ -507,4 +507,101 @@ GappedAln::dump_alignment(string tag_1, string tag_2)
     return 0;
 }
 
+string
+invert_cigar(string cigar)
+{
+    for (uint i = 0; i < cigar.length(); i++) {
+        if (cigar[i] == 'I')
+            cigar[i] = 'D';
+        else if (cigar[i] == 'D')
+            cigar[i] = 'I';
+    }
+
+    return cigar;
+}
+
+int 
+parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar)
+{
+    char buf[id_len];
+    int  dist;
+    const char *p, *q;
+
+    cigar.clear();
+
+    p = cigar_str;
+
+    while (*p != '\0') {
+        q = p + 1;
+
+        while (*q != '\0' && isdigit(*q))
+            q++;
+        strncpy(buf, p, q - p);
+        buf[q-p] = '\0';
+        dist = atoi(buf);
+
+        cigar.push_back(make_pair(*q, dist));
+
+        p = q + 1;
+    }
+
+    return 0;
+}
+
+string
+apply_cigar_to_seq(const char *seq, vector<pair<char, uint> > &cigar)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, len, stop;
+    string edited_seq;
+
+    //
+    // Calculate the overall sequence length.
+    //
+    uint seqlen = 0;
+    for (uint i = 0; i < size; i++)
+        seqlen += cigar[i].second;
+
+    len = strlen(seq);
+    bp  = 0;
+
+    edited_seq.reserve(seqlen);
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'S':
+            stop = bp + dist;
+            while (bp < stop) {
+                edited_seq.push_back('N');
+                bp++;
+            }
+            break;
+        case 'D':
+            stop = bp + dist;
+            stop = stop > len ? len : stop;
+            while (bp < stop) {
+                edited_seq.push_back('N');
+                bp++;
+            }
+            break;
+        case 'I':
+        case 'M':
+            stop = bp + dist;
+            while (bp < stop) {
+                edited_seq.push_back(seq[bp]);
+                bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    return edited_seq;
+}
+
 #endif // __GAPPEDALN_H__
