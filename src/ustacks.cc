@@ -46,7 +46,7 @@ int     max_utag_dist     = 2;
 int     max_rem_dist      = -1;
 bool    gapped_alignments = false;
 double  min_match_len     = 0.80;
-double  max_gaps          = 2;
+double  max_gaps          = 2.0;
 int     deleverage_trigger;
 int     removal_trigger;
 //
@@ -232,15 +232,8 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
         // Found a gapped alignment. Make sure the alignments are the same.
         //
         tag_2   = merged[tag_1->alns[0].first];
-        cigar_1 = tag_1->alns[0].second;
+        cigar_1 = invert_cigar(tag_1->alns[0].second);
         cigar_2 = tag_2->alns.size() != 1 ? "" : tag_2->alns[0].second;
-
-        for (uint i = 0; i < cigar_1.length(); i++) {
-            if (cigar_1[i] == 'I')
-                cigar_1[i] = 'D';
-            else if (cigar_1[i] == 'D')
-                cigar_1[i] = 'I';
-        }
 
         if (cigar_1 == cigar_2) {
             //
@@ -375,32 +368,6 @@ edit_gapped_seqs(map<int, Stack *> &unique, map<int, Rem *> &rem, MergedStack *t
     }
 
     delete [] buf;
-
-    return 0;
-}
-
-int 
-parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar)
-{
-    char buf[id_len];
-    int  dist;
-    const char *p, *q;
-
-    p = cigar_str;
-
-    while (*p != '\0') {
-        q = p + 1;
-
-        while (*q != '\0' && isdigit(*q))
-            q++;
-        strncpy(buf, p, q - p);
-        buf[q-p] = '\0';
-        dist = atoi(buf);
-
-        cigar.push_back(make_pair(*q, dist));
-
-        p = q + 1;
-    }
 
     return 0;
 }
@@ -3076,7 +3043,7 @@ int parse_command_line(int argc, char* argv[]) {
             gapped_alignments = true;
             break;
         case 'X':
-            max_gaps = is_integer(optarg);
+            max_gaps = is_double(optarg);
             break;
         case 'x':
             min_match_len = is_double(optarg);

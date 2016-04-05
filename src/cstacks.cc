@@ -40,7 +40,7 @@ bool    report_mmatches   = false;
 bool    require_uniq_haplotypes = false;
 bool    gapped_alignments = false;
 double  min_match_len     = 0.80;
-double  max_gaps          = 2;
+double  max_gaps          = 2.0;
 
 int main (int argc, char* argv[]) {
 
@@ -118,8 +118,10 @@ int main (int argc, char* argv[]) {
             cerr << "Searching for sequence matches...\n";
             find_kmer_matches_by_sequence(catalog, sample, ctag_dist);
 
-	    if (gapped_alignments)
+	    if (gapped_alignments) {
+                cerr << "Searching for gapped alignments...\n";
 		search_for_gaps(catalog, sample, ctag_dist);
+            }
 
 	} else if (search_type == genomic_loc) {
             cerr << "Searching for matches by genomic location...\n";
@@ -232,10 +234,11 @@ int
 merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int, string> &sample_file, int ctag_dist, uint &mmatches) 
 {
     map<int, QLocus *>::iterator i;
-    vector<Match *>::iterator mat_it;
     CLocus *ctag;
     QLocus *qtag;
-
+    string  cseq, qseq, cigar_str;
+    vector<pair<char, uint> > cigar;
+    
     for (i = sample.begin(); i != sample.end(); i++) {
 	qtag = i->second;
 
@@ -254,12 +257,11 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         // for a locus.
         //
 	map<int, uint> local_matches;
-	map<int, uint>::iterator j;
-	for (mat_it = qtag->matches.begin(); mat_it != qtag->matches.end(); mat_it++) {
-            if (local_matches.count((*mat_it)->cat_id) == 0)
-                local_matches[(*mat_it)->cat_id] = (*mat_it)->dist;
-            else if ((*mat_it)->dist < local_matches[(*mat_it)->cat_id])
-                local_matches[(*mat_it)->cat_id] = (*mat_it)->dist;
+	for (uint k = 0; k < qtag->matches.size(); k++) {
+            if (local_matches.count(qtag->matches[k]->cat_id) == 0)
+                local_matches[qtag->matches[k]->cat_id] = qtag->matches[k]->dist;
+            else if (qtag->matches[k]->dist < local_matches[qtag->matches[k]->cat_id])
+                local_matches[qtag->matches[k]->cat_id] = qtag->matches[k]->dist;
         }
 
         uint min_dist    =  1000;
@@ -268,10 +270,10 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         //
         // Find the minimum distance and then check how many matches have that distance.
         //
-        for (j = local_matches.begin(); j != local_matches.end(); j++)
+        for (map<int, uint>::iterator j = local_matches.begin(); j != local_matches.end(); j++)
             min_dist = j->second < min_dist ? j->second : min_dist;
 
-        for (j = local_matches.begin(); j != local_matches.end(); j++)
+        for (map<int, uint>::iterator j = local_matches.begin(); j != local_matches.end(); j++)
             if (j->second == min_dist) {
                 num_matches++;
                 min_cat_id = j->first;
@@ -286,7 +288,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 		cerr << 
 		    "  Warning: sample " << sample_file.second << ", tag " << qtag->id << 
 		    ", matches more than one tag in the catalog and was excluded: ";
-		for (j = local_matches.begin(); j != local_matches.end(); j++)
+		for (map<int, uint>::iterator j = local_matches.begin(); j != local_matches.end(); j++)
 		    cerr << j->first << " ";
 		cerr << "\n";
 	    }
@@ -301,6 +303,44 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 
         if (ctag == NULL) 
             cerr << "  Unable to locate catalog tag " << min_cat_id << "\n";
+
+        cigar_str = "";
+        
+        for (uint k = 0; k < qtag->matches.size(); k++)
+            if (qtag->matches[k]->cat_id == min_cat_id) {
+                cigar_str = qtag->matches[k]->cigar;
+                break;
+            }
+
+        bool gapped_aln = false;
+        if (cigar_str.length() > 0)
+            gapped_aln = true;
+
+        //
+        // If the match was a gapped alignment, adjust the lengths of the consensus sequences.
+        //
+        
+        if (gapped_aln) {
+            parse_cigar(cigar_str.c_str(), cigar);
+            qseq      = apply_cigar_to_seq(qtag->con, cigar);
+            cerr << "QSEQ: " << qseq << "\n";
+            cigar_str = invert_cigar(cigar_str);
+            parse_cigar(cigar_str.c_str(), cigar);
+            cseq      = apply_cigar_to_seq(ctag->con, cigar);
+            cerr << "CSEQ: " << cseq << "\n";
+            
+            //
+            // Add any new sequence information into the catalog consensus.
+            //
+            for (uint k = 0; k < cseq.length(); k++)
+                if (qseq[k] != 'N' && cseq[k] == 'N')
+                    cseq[k] = qseq[k];
+
+            //
+            // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
+            //
+
+        }
 
         //
         // If mismatches are allowed between query and catalog tags, identify the 
@@ -1573,7 +1613,7 @@ int parse_command_line(int argc, char* argv[]) {
             gapped_alignments = true;
             break;
         case 'X':
-            max_gaps = is_integer(optarg);
+            max_gaps = is_double(optarg);
             break;
         case 'x':
             min_match_len = is_double(optarg);
