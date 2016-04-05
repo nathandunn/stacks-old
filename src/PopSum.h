@@ -430,7 +430,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
     }
 
     cerr << "Population '" << pop_key[population_id] << "' contained " << incompatible_loci << " incompatible loci -- more than two alleles present.\n";
-    log_fh <<  "Population " << population_id << " contained " << incompatible_loci << " incompatible loci -- more than two alleles present.\n";
+    log_fh <<  "Population " << pop_key[population_id] << " contained " << incompatible_loci << " incompatible loci -- more than two alleles present.\n";
 
     return 0;
 }

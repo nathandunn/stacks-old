@@ -36,11 +36,11 @@ typedef MetaPopInfo::Group Group;
 
 // Global variables to hold command-line options.
 InputMode input_mode = InputMode::stacks;
-int       num_threads =  1;
+int       num_threads = 1;
 string    pmap_path;
-string    out_path;
+string    out_path; //todo Directory [out_path] should be created, if necessary.
 string    in_path;
-int       batch_id    = -1;
+int       batch_id = -1;
 string    in_vcf_path;
 string    bl_file;
 string    wl_file;
@@ -178,13 +178,13 @@ int main (int argc, char* argv[]) {
 
     if (not pmap_path.empty()) {
         cerr << "Parsing population map.\n";
-        mpopi.init_popmap(pmap_path);
+        mpopi.init_popmap(pmap_path); //todo [mpopi] initialization -- move this to just before the matches loop
     } else {
         cerr << "No population map specified, building file list.\n";
-        mpopi.init_directory(in_path);
+        mpopi.init_directory(in_path); //todo [mpopi] initialization -- move this to within the matches loop
     }
 
-    // Perform checks and write some infos to the output.
+    // Perform checks and write some infos to the output. //todo [mpopi] initialization -- move these to just after the matches loop (rem. "Found->Working on").
     if (mpopi.samples().size() == 0) {
         if (not pmap_path.empty())
             cerr << "Error: Failed to open or parse population map file \"" << pmap_path << "\".\n";
@@ -194,7 +194,7 @@ int main (int argc, char* argv[]) {
     }
     cerr << "Found " << mpopi.samples().size() << " input file(s).\n";
 
-    //cerr << "Found " << mpopi.pops().size() << " population(s) :\n";
+    //cerr << "Found " << mpopi.pops().size() << " population(s) :\n"; // todo Polish what is output to stderr.
     mpopi.pops().size() == 1 ?
         cerr << "  " << mpopi.pops().size() << " population found\n" :
         cerr << "  " << mpopi.pops().size() << " populations found\n";
@@ -316,10 +316,10 @@ int main (int argc, char* argv[]) {
     // Create the PopMap
     //
 
-    //cerr << "Parsing the matches files...\n";
     if (input_mode == InputMode::stacks) {
         // If populating from matches files : load the files now,
         // and check that they are all well formed.
+        //cerr << "Parsing the matches files...\n";
         vector<size_t> samples_to_remove;
         set<size_t> known_samples;
         for (size_t i = 0; i < mpopi.samples().size(); ++i) {
@@ -351,6 +351,8 @@ int main (int argc, char* argv[]) {
         // We still could need sample IDs. Create arbitrary ones.
         for (size_t i = 0; i < mpopi.samples().size(); ++i)
             mpopi.set_sample_id(i, i+1); //id=i+1
+
+        // todo [mpopi] initialization -- Allow for a mismatch between the samples in [mpopi] and [vcf_records]
     }
 
     cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
@@ -450,6 +452,10 @@ int main (int argc, char* argv[]) {
     uint pop_id, start_index, end_index;
     map<int, pair<int, int> >::const_iterator pit;
 
+    //
+    // Create the PopSum object and compute the summary statistics.
+    //
+
     PopSum<CSLocus> *psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
     psum->initialize(pmap);
 
@@ -505,6 +511,64 @@ int main (int argc, char* argv[]) {
     //
     // Regenerate summary statistics after pruning SNPs and  merging loci.
     //
+
+    // todo { DEBUG -- We have the final pmap.
+    // todo Add option [--dbg_flags], glob [set<string> dbg_flags;].
+    cerr << "=====NICO> catalog.size()=" << catalog.size()
+         << " / pmap->loci_cnt()=" << pmap->loci_cnt()
+         << "\n";
+    size_t n_snps = 0;
+    for (map<int, CSLocus*>::const_iterator l=catalog.begin(); l!=catalog.end(); ++l)
+        n_snps += l->second->snps.size();
+    cerr << "=====NICO> Total number of SNPs: " << n_snps << "\n";
+
+    cerr << "=====NICO> Indivs per loci:";
+    for (map<int, CSLocus*>::const_iterator l=catalog.begin(); l!=catalog.end(); ++l) {
+        cerr << " " << l->second->id
+             << "|" << l->second->snps.size();
+        Datum** data = pmap->locus(l->second->id);
+        size_t m = 0;
+        for (vector<Pop>::const_iterator p=mpopi.pops().begin(); p!=mpopi.pops().end(); ++p) {
+            size_t n = 0;
+            for (size_t s=p->first_sample; s<=p->last_sample; ++s) {
+                if (data[s]!=NULL) {
+                    n+=1;
+                }
+            }
+            cerr << "|" << n;
+            m+=n;
+        }
+        cerr << "|" << m;
+    }
+    cerr << "\n";
+
+    cerr << "=====NICO> Will now delete all Datums where the SNP genotype is absent or 'U'...";
+    // n.b. In this configuration we only have one SNP per locus so we don't have
+    // to worry about what U's imply regarding haplotypes.
+    size_t n_deleted = 0;
+    size_t n_loci = pmap->loci_cnt();
+    size_t n_samples = pmap->sample_cnt();
+    for (size_t l=0; l<n_loci; ++l) {
+        const CSLocus* loc = catalog.at(pmap->rev_locus_index(l));
+        if (loc->snps.size() != 1)
+            throw exception();
+        size_t col = loc->snps.at(0)->col;
+        Datum** datums = pmap->locus(loc->id);
+        for (size_t s=0; s<n_samples; ++s) {
+            if (datums[s] == NULL)
+                continue;
+            if (size_t(datums[s]->len) <= col || datums[s]->model[col] == 'U') {
+                delete datums[s];
+                datums[s] = NULL;
+                --loc->cnt;
+                --loc->hcnt;
+                ++n_deleted;
+            }
+        }
+    }
+    cerr << "=====NICO> Deleted " << n_deleted << " datums.\n";
+    // todo }
+
     delete psum;
     psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
     psum->initialize(pmap);
@@ -612,6 +676,7 @@ int main (int argc, char* argv[]) {
 
     log_fh.close();
 
+    //cerr << "'Populations' is done.\n";
     return 0;
 }
 
@@ -2420,7 +2485,7 @@ nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
     return 0;
 }
 
-int 
+int
 calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
@@ -2798,7 +2863,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
 
             cerr << "Writing haplotype F statistics... ";
 
-            string file = out_path + out_prefix + ".phistats" + pop_key[pop_ids[i]] + "-" + pop_key[pop_ids[j]] + ".tsv";
+            string file = out_path + out_prefix + ".phistats_" + pop_key[pop_ids[i]] + "-" + pop_key[pop_ids[j]] + ".tsv";
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
                 cerr << "Error opening haplotype Phi_st file '" << file << "'\n";
@@ -5032,7 +5097,7 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
 
             if (d[i] == NULL)
                 fh << "-";
-            else
+            else {
                 if (write_gtypes) {
                     fh << d[i]->gtype;
                 } else {
@@ -5042,6 +5107,7 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
                     obshap = obshap.substr(0, obshap.length()-1);
                     fh << obshap;
                 }
+            }
         }
 
         fh << "\n";
@@ -5529,7 +5595,7 @@ write_vcf(map<int, CSLocus *> &catalog,
 
             fh << loc->loc.chr << "\t"
                << loc->sort_bp(col) + 1 << "\t"
-               << loc->id << "\t"
+               << loc->id << "\t" //todo write_vcf (&ordered) should be "LOC+/-column"
                << p_allele << "\t"              // REFerence allele
                << q_allele << "\t"              // ALTernate allele
                << "."        << "\t"            // QUAL
@@ -5550,7 +5616,7 @@ write_vcf(map<int, CSLocus *> &catalog,
             for (int j = 0; j < pmap->sample_cnt(); j++) {
                 fh << "\t";
 
-                if (d[j] == NULL) {
+                if (d[j] == NULL || col >= uint(d[j]->len)) {
                     //
                     // Data does not exist.
                     //
@@ -5585,6 +5651,7 @@ write_vcf(map<int, CSLocus *> &catalog,
                         }
                         //
                         // Output the likelihood measure for this model call.
+                        // todo write_vcf (&ordered) This should be "L(0/0),L(0/1),L(1/1)" & negative
                         //
                         if (snp_index >= 0) {
                             fh << ":.," << d[j]->snps[snp_index]->lratio << ",.";
@@ -8933,11 +9000,11 @@ void help() {
               << "  h: display this help messsage.\n"
               << "  v: print program version.\n"
               << "  t: number of threads to run in parallel sections of code.\n"
-              << "  --input: one of \"stacks\" (default) or \"vcf\".\n"
+              << "  --input_path: one of \"stacks\" (default) or \"vcf\".\n"
               << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
               << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
               << "  W: specify a file containing Whitelisted markers to include in the export.\n"
-              << "  --out_path: path to a directory where to white the output files. In stacks mode, defaults to the input directory.\n"
+              << "  --out_path: path to a directory where to white the output files. In stacks mode, defaults to the input directory (-P).\n"
               << "\n"
               << "  Stacks mode:\n"
               << "    b: Batch ID to examine when exporting from the catalog.\n"
