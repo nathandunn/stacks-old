@@ -101,7 +101,6 @@ public:
     // as the indexes in the records vector.
     int populate(const MetaPopInfo& mpopi, map<int, LocusT*>& catalog, const vector<VcfRecord>& records);
 
-
     int order_loci(const map<int, LocusT*> &);
     int prune(set<int> &);
 
@@ -273,7 +272,7 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
      * [model] "E" or "O" according to the SAMPLE/GT field, or
      *     "U" if the GT field is absent.
      * [obshap] the nucleotide(s) observed for this SNP for this individual
-     *     todo Does [obshap] have to be ordered?
+     *     todo Does [Datum::obshap] have to be ordered?
      *
      * When no depth information is available, [tot_depth] and the [depths]
      * of all alleles are set to 0.
@@ -291,7 +290,8 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
      * [merge_partner] is set later by [merge_datums()] (in populations.cc).
      * [snps] is only used by [write_vcf()] and [write_vcf_strict()], which
      *     first call [populate_snp_calls()] then use the SNP data in the
-     *     datum. todo See how we can handle this.
+     *     datum.
+     *     todo write_vcf (&ordered) use "snps files", see how we can handle this.
      */
 
     loc_index = 0;
@@ -302,9 +302,13 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
         LocusT* loc = l->second;
         const VcfRecord& rec = records[loc->id]; // n.b. assumes locus ID == record index.
 
-        for (size_t sample = 0; sample < mpopi.samples().size(); ++sample) {
+        for (size_t s = 0; s < mpopi.samples().size(); ++s) {
+            pair<int, int> gt = rec.parse_genotype(s);
+            if (gt == pair<int,int>(-1,-1))
+                continue;
+
             Datum* d = new Datum();
-            data[loc_index][sample] = d;
+            data[loc_index][s] = d;
             ++loc->cnt;
             ++loc->hcnt;
 
@@ -315,11 +319,8 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
             d->lnl = 0;
 
             // model, obshap, depth
-            pair<int, int> gt = rec.parse_genotype(sample);
             d->model = new char[2];
-            if (gt == make_pair<int,int>(-1,-1)) {
-                strcpy(d->model, "U");
-            } else if (gt.first == gt.second) {
+            if (gt.first == gt.second) {
                 strcpy(d->model, "O");
                 const string& allele = rec.allele(gt.first);
                 d->obshap.push_back(new char[allele.size()+1]);
@@ -378,19 +379,15 @@ int PopMap<LocusT>::prune(set<int> &remove_ids) {
 
         loc_id = this->rev_locus_order[i];
 
-        //
-        // Keep this locus.
-        //
         if (remove_ids.count(loc_id) == 0) {
+            // Keep this locus.
             d[j] = this->data[i];
             new_loc_order[loc_id] = j;
             new_rev_loc_order[j] = loc_id;
             j++;
 
         } else {
-            //
             // Remove this locus.
-            //
             for (int k = 0; k < this->num_samples; k++)
                 delete this->data[i][k];
             delete [] this->data[i];

@@ -374,7 +374,7 @@ VcfAbstractParser::next_record(VcfRecord& record)
              << endl;
         throw exception();
     }
-    record.pos = strtol(tabs_[Vcf::pos-1]+1, NULL, 10);
+    record.pos = strtol(tabs_[Vcf::pos-1]+1, NULL, 10) -1 ; // VCF is 1-based
 
     //id
     if(tabs_[Vcf::id-1]+1 == tabs_[Vcf::id])
@@ -468,7 +468,8 @@ VcfAbstractParser::next_record(VcfRecord& record)
                 kept_format_fields_.push_back(false);
             }
         }
-        if(record.format[0] == "GT")
+        if(record.format[Vcf::gt_subfield_index] == "GT")
+            // There are genotypes for this record.
             record.no_gt = false;
 
         //samples

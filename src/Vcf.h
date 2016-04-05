@@ -26,6 +26,7 @@
 #include <fstream>
 #include <iostream>
 #include <exception>
+#include <stdexcept>
 #include <utility>
 #include <cstring>
 #include <cstdlib>
@@ -51,6 +52,8 @@ using std::cerr;
 using std::exception;
 using std::out_of_range;
 
+class VcfAbstractParser;
+
 namespace Vcf {
 const size_t base_fields_no = 8; // CHROM POS ID REF ALT QUAL FILTER INFO [FORMAT SAMPLE ...]]
 const size_t chrom = 0;
@@ -64,6 +67,8 @@ const size_t info = 7;
 const size_t format = 8;
 const size_t first_sample = 9;
 
+const size_t gt_subfield_index = 0;
+
 // enum for record types
 enum class RType {
     null,
@@ -75,11 +80,6 @@ enum class RType {
 // Constants for the parser.
 const size_t line_buf_size = 4096;
 const set<string> common_format_fields ({"GT","AD","DP","GL"});
-}
-
-class VcfAbstractParser;
-
-namespace Vcf {
 
 // Tries to open the given VCF file using VcfParser, then
 // VcfGzParser. Return NULL if both failed.
@@ -106,18 +106,18 @@ struct VcfRecord {
     vector<vector<string> > samples;
 
     Vcf::RType type;
-    bool no_gt; // true if format[0] != "GT". Checked by parse_genotype().
+    bool no_gt; // format[Vcf::gt_subfield_index] != "GT". Trusted by parse_genotype().
 
     VcfRecord()
     : chrom(), pos(-1), id(), alleles(), qual(), filter(), info(), format(),
       samples(), type(Vcf::RType::null), no_gt(true)
     {}
 
-public:
     inline void clear(); // Clears all the members.
 
     // Returns (first allele, second allele), or (-1,-1) if the record doesn't have a genotype.
-    inline pair<int, int> parse_genotype(size_t sample) const;
+    inline pair<int, int> parse_genotype(const vector<string>& sample) const;
+    pair<int, int> parse_genotype(size_t sample_index) const {return parse_genotype(samples[sample_index]);}
 
     // Returns alleles[i], provided it actually exists. (Otherwise it is easy to write a VCF that causes a segfault.)
     inline const string& allele(size_t index) const;
@@ -217,6 +217,7 @@ public:
 
     // Sets the format fields to be kept.
     void format_fields_to_keep(const set<string>& fields) {format_fields_to_keep_ = fields;}
+    // todo Remove/reconsider [VcfAbstractParser::format_fields_to_keep()] & related code.
 
     // Getters.
     const string& path() const {return path_;};
@@ -231,6 +232,7 @@ public:
     // Records the number of records that were skipped in
     // argument [n_skipped], if provided.
     vector<VcfRecord> read_snp_records(size_t* n_skipped = NULL);
+    // todo Remove/reconsider [VcfAbstractParser::read_snp_records()].
 };
 
 /*
@@ -281,15 +283,17 @@ void VcfRecord::clear() {
 }
 
 inline
-pair<int, int> VcfRecord::parse_genotype(size_t sample) const {
+pair<int, int> VcfRecord::parse_genotype(const vector<string>& sample) const {
     pair<int, int> genotype;
 
-    if (no_gt) {
+    if (no_gt
+            || sample[Vcf::gt_subfield_index].empty()
+            || sample[Vcf::gt_subfield_index].front() == '.') {
         genotype = {-1,-1};
         return genotype;
     }
 
-    const char* first = samples[sample][0].c_str();
+    const char* first = sample[0].c_str();
     const char* sep = strchr(first, '/');
     if (sep == NULL)
         sep = strchr(first, '|');
