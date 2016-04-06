@@ -385,7 +385,7 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
 
         alns.push_back(make_pair(cigar, gaps));
         
-        // cerr << aln_1 << " [" << cigar << ", gaps: " << gaps << "]\n"
+	// cerr << aln_1 << " [" << cigar << ", gaps: " << gaps << "]\n"
         //      << aln_2 << "\n";
 
     } while (more_paths);
@@ -553,7 +553,7 @@ apply_cigar_to_seq(const char *seq, vector<pair<char, uint> > &cigar)
 {
     uint   size = cigar.size();
     char   op;
-    uint   dist, bp, len, stop;
+    uint   dist, bp, edited_bp, len, stop;
     string edited_seq;
 
     //
@@ -581,11 +581,10 @@ apply_cigar_to_seq(const char *seq, vector<pair<char, uint> > &cigar)
             }
             break;
         case 'D':
-            stop = bp + dist;
-            stop = stop > len ? len : stop;
-            while (bp < stop) {
+	    edited_bp = 0;
+            while (edited_bp < dist) {
                 edited_seq.push_back('N');
-                bp++;
+		edited_bp++;
             }
             break;
         case 'I':
