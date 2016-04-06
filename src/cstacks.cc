@@ -130,8 +130,14 @@ int main (int argc, char* argv[]) {
 
 	cerr << "Merging matches into catalog...\n";
 	uint mmatches = 0;
-	merge_matches(catalog, sample, s, ctag_dist, mmatches);
-	cerr << "  " << mmatches << " loci matched more than one catalog locus and were excluded.\n";
+        uint gmatches = 0;
+        uint umatches = 0;
+        uint nmatches = 0;
+	merge_matches(catalog, sample, s, ctag_dist, nmatches, umatches, gmatches, mmatches);
+        cerr << "  " << umatches << " loci were matched to a catalog locus.\n"
+             << "  " << gmatches << " loci were matched to a catalog locus using gapped alignments.\n"
+             << "  " << nmatches << " loci were newly added to the catalog.\n"
+             << "  " << mmatches << " loci matched more than one catalog locus and were excluded.\n";
 
         //
         // Regenerate the alleles for the catalog tags after merging the new sample into the catalog.
@@ -230,15 +236,55 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
     return 1;
 }
 
+int
+adjust_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, stop, offset, snp_index;
+
+    bp        = 0;
+    offset    = 0;
+    snp_index = 0;
+    
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+            offset += dist;
+            break;
+        case 'I':
+        case 'M':
+        case 'S':
+            stop = bp + dist;
+            while (bp < stop && snp_index < loc->snps.size()) {
+                if (loc->snps[snp_index]->col == bp) {
+                    loc->snps[snp_index]->col += offset;
+                    snp_index++;
+                }
+                bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }    
+    
+    return 0;
+}
+
 int 
-merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int, string> &sample_file, int ctag_dist, uint &mmatches) 
+merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int, string> &sample_file, int ctag_dist,
+              uint &new_matches, uint &unique_matches, uint &gapped_matches, uint &multiple_matches) 
 {
     map<int, QLocus *>::iterator i;
     CLocus *ctag;
     QLocus *qtag;
     string  cseq, qseq, cigar_str;
     vector<pair<char, uint> > cigar;
-    
+
     for (i = sample.begin(); i != sample.end(); i++) {
 	qtag = i->second;
 
@@ -248,6 +294,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         //
 	if (qtag->matches.size() == 0) {
 	    add_unique_tag(sample_file, catalog, qtag);
+            new_matches++;
 	    continue;
 	}
 
@@ -283,7 +330,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 	// Emit a warning if the query tag matches more than one tag in the catalog.
 	//
 	if (num_matches > 1) {
-	    mmatches++;
+	    multiple_matches++;
 	    if (report_mmatches) {
 		cerr << 
 		    "  Warning: sample " << sample_file.second << ", tag " << qtag->id << 
@@ -318,14 +365,18 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 
         //
         // If the match was a gapped alignment, adjust the lengths of the consensus sequences.
+        // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
         //
         
         if (gapped_aln) {
             parse_cigar(cigar_str.c_str(), cigar);
             qseq      = apply_cigar_to_seq(qtag->con, cigar);
+            adjust_snps_for_gaps(cigar, ctag);
+
             cigar_str = invert_cigar(cigar_str);
             parse_cigar(cigar_str.c_str(), cigar);
             cseq      = apply_cigar_to_seq(ctag->con, cigar);
+            adjust_snps_for_gaps(cigar, qtag);
             
             //
             // Add any new sequence information into the catalog consensus.
@@ -335,10 +386,14 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
                     cseq[k] = qseq[k];
 
             //
-            // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
+            // Adjust the consensus sequences for both loci.
             //
+            ctag->add_consensus(cseq.c_str());
+            qtag->add_consensus(qseq.c_str());
 
-	    ctag->add_consensus(cseq.c_str());
+            gapped_matches++;
+        } else {
+            unique_matches++;
         }
 
         //
