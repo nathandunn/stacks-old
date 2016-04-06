@@ -120,7 +120,7 @@ int main (int argc, char* argv[]) {
 
 	    if (gapped_alignments) {
                 cerr << "Searching for gapped alignments...\n";
-		search_for_gaps(catalog, sample, ctag_dist);
+		search_for_gaps(catalog, sample, min_match_len, ctag_dist);
             }
 
 	} else if (search_type == genomic_loc) {
@@ -323,11 +323,9 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         if (gapped_aln) {
             parse_cigar(cigar_str.c_str(), cigar);
             qseq      = apply_cigar_to_seq(qtag->con, cigar);
-            cerr << "QSEQ: " << qseq << "\n";
             cigar_str = invert_cigar(cigar_str);
             parse_cigar(cigar_str.c_str(), cigar);
             cseq      = apply_cigar_to_seq(ctag->con, cigar);
-            cerr << "CSEQ: " << cseq << "\n";
             
             //
             // Add any new sequence information into the catalog consensus.
@@ -340,6 +338,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
             // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
             //
 
+	    ctag->add_consensus(cseq.c_str());
         }
 
         //
@@ -356,8 +355,8 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 	// Merge the SNPs and alleles from the sample into the catalog tag.
 	//
 	if (!ctag->merge_snps(qtag)) {
-	    cerr << "Error merging " << sample_file.second << ", tag " << qtag->id <<
-		" with catalog tag " << ctag->id << "\n";
+	    cerr << "Error merging " << sample_file.second << ", tag " << qtag->id
+		 << " with catalog tag " << ctag->id << "\n";
 	}
 
 	//
@@ -544,7 +543,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
 }
 
 int
-search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double min_match_len)
+search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double min_match_len, double ctag_dist)
 {
     //
     // Search for loci that can be merged with a gapped alignment.
@@ -640,17 +639,17 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 
 			tag_2 = catalog[hit_it->first];
 
-                        GappedAln *aln = new GappedAln(tag_1->len, tag_2->len);
+                        GappedAln *aln = new GappedAln(tag_2->len, tag_1->len);
 
-			if (aln->align(tag_1->con, tag_2->con)) {
+			if (aln->align(tag_2->con, tag_1->con)) {
                             cigar.clear();
                             aln->parse_cigar(cigar);
-                            d = dist(tag_1->con, tag_2->con, cigar);
+                            d = dist(tag_2->con, tag_1->con, cigar);
 
                             if (d <= ctag_dist)
-                                tag_1->add_match(tag_2->id, cnt_it->first, allele->first, d, aln->cigar);
+                                tag_1->add_match(tag_2->id, cnt_it->first, allele->first, d, invert_cigar(aln->cigar));
                         }
-                        
+
                         delete aln;
 		    }
 		}
