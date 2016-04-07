@@ -382,7 +382,7 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
             if (aln_1[i] != '-' && aln_2[i] != '-') {
                 cnt = 0;
                 do {
-		    if (aln_1[i] == aln_2[2]) ident++;
+		    if (aln_1[i] == aln_2[i]) ident++;
                     cnt++;
                     i++;
                 } while (i < len && aln_1[i] != '-' && aln_2[i] != '-');

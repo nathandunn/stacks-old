@@ -216,6 +216,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 
     set<int> processed;
     string   cigar_1, cigar_2;
+    vector<pair<char, uint> > cigar;
 
     for (it = merged.begin(); it != merged.end(); it++) {
         if (processed.count(it->first) > 0)
@@ -234,7 +235,8 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
             continue;
 
         //
-        // Found a gapped alignment. Make sure the alignments are the same.
+        // Found one or more gapped alignments. Make sure the best alignment for each of the aligned pairs
+        // of tags are, reciprocal to each other..
         //
         tag_2 = merged[tag_1->alns[0].id];
 	sort(tag_2->alns.begin(), tag_2->alns.end(), rank_alignments);
@@ -242,32 +244,14 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 	if (tag_2->alns.size() > 1 && tag_2->alns[0].pct_id == tag_2->alns[1].pct_id)
             continue;
 
+        if (tag_1->id != tag_2->alns[0].id)
+            continue;
+
 	cigar_1 = invert_cigar(tag_1->alns[0].cigar);
         cigar_2 = tag_2->alns[0].cigar;
 
         if (cigar_1 == cigar_2) {
-            //
-            // Edit the sequences to accommodate any added gaps.
-            //
-            vector<pair<char, uint> > cigar;
-            // cerr << "CIGAR to parse: " << tag_1->alns[0].second << "\n";
             parse_cigar(tag_1->alns[0].cigar.c_str(), cigar);
-
-            uint   gap_cnt = 0;
-            double aln_len = 0;
-            char   op;
-            for (uint j = 0; j < cigar.size(); j++) {
-                op = cigar[j].first;
-                switch (op) {
-                case 'I':
-                case 'D':
-                    gap_cnt++;
-                    break;
-                case 'M':
-                    aln_len += cigar[j].second;
-                    break;
-                }
-            }
 
             //
             // Check that the alignment still contains fewer than 
@@ -275,21 +259,24 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
             //
             if (dist(tag_1->con, tag_2->con, cigar) > max_utag_dist)
                 continue;
+
             //
             // If the alignment has too many gaps, skip it.
             //
-            if (gap_cnt > (max_gaps + 1))
+            if (tag_1->alns[0].gap_cnt > (max_gaps + 1))
                 continue;
+
             //
             // If the alignment doesn't span enough of the two sequences, skip it.
             //
-            if ((aln_len / (double) tag_1->len) < min_match_len)
+            if (tag_1->alns[0].pct_id < min_match_len)
                 continue;
 
+            //
+            // Edit the sequences to accommodate any added gaps.
+            //
             edit_gapped_seqs(unique, rem, tag_1, cigar);
 
-            // cerr << "CIGAR to parse: " << tag_2->alns[0].second << "\n";
-            cigar.clear();
             parse_cigar(tag_2->alns[0].cigar.c_str(), cigar);
             edit_gapped_seqs(unique, rem, tag_2, cigar);
 
@@ -501,8 +488,16 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
         for (uint i = 0; i < keys.size(); i++) {
             tag_1 = merged[keys[i]];
 
-            // Don't compute distances for masked tags
+            //
+            // Don't compute distances for masked tags.
+            //
             if (tag_1->masked) continue;
+
+            //
+            // Don't compare tags that are already at or above max_locus_stacks.
+            //
+            if (tag_1->utags.size() >= max_subgraph)
+                continue;
 
             vector<char *> query_kmers;
             generate_kmers(tag_1->con, kmer_len, num_kmers, query_kmers);
@@ -517,7 +512,7 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
             }
 
             //
-            // Free the k-mers we generated for this query
+            // Free the k-mers we generated for this query.
             //
             for (int j = 0; j < num_kmers; j++)
                 delete [] query_kmers[j];
@@ -539,9 +534,15 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
                 // Don't compare tag_1 against itself.
                 if (tag_1 == tag_2) continue;
 
+                //
+                // Don't compare tags that are already at or above max_locus_stacks.
+                //
+                if (tag_2->utags.size() >= max_subgraph)
+                    continue;
+
                 if (aln->align(tag_1->con, tag_2->con)) {
 		    a = aln->result();
-		    tag_1->alns.push_back(Aln(tag_2->id, a.cigar, a.pct_id));
+		    tag_1->alns.push_back(Aln(tag_2->id, a.cigar, a.pct_id, a.gap_cnt));
 		}
             }
         }
@@ -553,412 +554,6 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
 
     return 0;
 }
-
-// int
-// init_alignment(int len, double ***matrix, AlignPath ***path)
-// {
-//     uint m = len + 1;
-//     uint n = len + 1;
-
-//     *matrix = new double * [m];
-//     for (uint i = 0; i < m; i++)
-//         (*matrix)[i] = new double [n];
-
-//     *path = new AlignPath * [m];
-//     for (uint i = 0; i < m; i++)
-//         (*path)[i] = new AlignPath [n];
-
-//     return 0;
-// }
-
-// int
-// free_alignment(int m, double **matrix, AlignPath **path)
-// {
-//     for (int i = 0; i < m; i++) {
-//         delete [] matrix[i];
-//         delete [] path[i];
-//     }
-//     delete [] matrix;
-//     delete [] path;
-
-//     return 0;
-// }
-
-// int
-// align(MergedStack *tag_1, MergedStack *tag_2, double **matrix, AlignPath **path)
-// {
-//     //         j---->
-//     //        [0][1][2][3]...[n-1]
-//     //       +--------------------
-//     // i [0] | [i][j]
-//     // | [1] |
-//     // | [2] |
-//     // v [3] |
-//     //   ... |
-//     // [m-1] |
-//     // 
-//     uint m = tag_1->len + 1;
-//     uint n = tag_2->len + 1;
-    
-//     //
-//     // Initialize the first column and row of the dynamic programming
-//     // matrix and the path array.
-//     //
-//     path[0][0].diag = false;
-//     path[0][0].up   = false;
-//     path[0][0].left = false;
-//     matrix[0][0]    = 0.0;
-//     for (uint i = 1; i < m; i++) {
-//         matrix[i][0]    = path[i - 1][0].up ? matrix[i - 1][0] + gapext_score : matrix[i - 1][0] + gapopen_score;
-//         path[i][0].diag = false;
-//         path[i][0].up   = true;
-//         path[i][0].left = false;
-//     }
-//     for (uint j = 1; j < n; j++) {
-//         matrix[0][j]    = path[0][j - 1].left ? matrix[0][j - 1] + gapext_score : matrix[0][j - 1] + gapopen_score;
-//         path[0][j].diag = false;
-//         path[0][j].up   = false;
-//         path[0][j].left = true;
-//     }
-
-//     double  score_down, score_diag, score_right;
-//     double  scores[3];
-//     dynprog direction[3];
-    
-//     for (uint i = 1; i < m; i++) {
-//         for (uint j = 1; j < n; j++) {
-//             // Calculate the score:
-//             //   1) If we were to move down from the above cell.
-//             score_down   = matrix[i - 1][j];
-//             score_down  += path[i - 1][j].up ?  gapext_score : gapopen_score;
-//             //   2) If we were to move diagonally from the above and left cell.
-//             score_diag   = matrix[i - 1][j - 1] + (tag_1->con[i - 1] == tag_2->con[j - 1] ? match_score : mismatch_score);
-//             //   3) If we were to move over from the cell left of us.
-//             score_right  = matrix[i][j - 1];
-//             score_right += path[i][j - 1].left ? gapext_score : gapopen_score;
-
-//             //
-//             // Sort the scores, highest to lowest.
-//             //
-//             scores[0]    = score_down;
-//             direction[0] = dynp_down;
-//             scores[1]    = score_diag;
-//             direction[1] = dynp_diag;
-//             scores[2]    = score_right;
-//             direction[2] = dynp_right;
-
-//             if (scores[0] < scores[1])
-//                 swap(scores, direction, 0, 1);
-//             if (scores[1] < scores[2])
-//                 swap(scores, direction, 1, 2);
-//             if (scores[0] < scores[1])
-//                 swap(scores, direction, 0, 1);
-
-//             matrix[i][j] = scores[0];
-
-//             if (scores[0] > scores[1]) {
-//                 //
-//                 // One path is best.
-//                 //
-//                 switch (direction[0]) {
-//                 case dynp_diag:
-//                     path[i][j].diag = true;
-//                     path[i][j].up   = false;
-//                     path[i][j].left = false;
-//                     break;
-//                 case dynp_down:
-//                     path[i][j].diag = false;
-//                     path[i][j].up   = true;
-//                     path[i][j].left = false;
-//                     break;
-//                 case dynp_right:
-//                 default:
-//                     path[i][j].diag = false;
-//                     path[i][j].up   = false;
-//                     path[i][j].left = true;
-//                 }
-                
-//             } else if (scores[0] == scores[1]) {
-//                 //
-//                 // Two of the paths are equivalent.
-//                 //
-//                 switch (direction[0]) {
-//                 case dynp_diag:
-//                     path[i][j].diag = true;
-                    
-//                     switch (direction[1]) {
-//                     case dynp_down:
-//                         path[i][j].up   = true;
-//                         path[i][j].left = false;
-//                         break;
-//                     default:
-//                     case dynp_right:
-//                         path[i][j].up   = false;
-//                         path[i][j].left = true;
-//                         break;
-//                     }
-//                     break;
-//                 case dynp_down:
-//                     path[i][j].up = true;
-                    
-//                     switch (direction[1]) {
-//                     case dynp_right:
-//                         path[i][j].diag  = false;
-//                         path[i][j].left = true;
-//                         break;
-//                     default:
-//                     case dynp_diag:
-//                         path[i][j].diag  = true;
-//                         path[i][j].left = false;
-//                         break;
-//                     }
-//                     break;
-//                 default:
-//                 case dynp_right:
-//                     path[i][j].left = true;
-                    
-//                     switch (direction[1]) {
-//                     case dynp_diag:
-//                         path[i][j].diag = true;
-//                         path[i][j].up   = false;
-//                         break;
-//                     default:
-//                     case dynp_down:
-//                         path[i][j].diag = false;
-//                         path[i][j].up   = true;
-//                         break;
-//                     }
-//                     break;
-//                 }
-                
-//             } else {
-//                 //
-//                 // All paths equivalent.
-//                 //
-//                 path[i][j].diag = true;
-//                 path[i][j].up   = true;
-//                 path[i][j].left = true;
-//             }
-//         }
-//     }
-
-//     // dump_alignment(tag_1, tag_2, matrix, path);
-
-//     trace_alignment(tag_1, tag_2, path);
-    
-//     return 0;
-// }
-
-// inline int
-// swap(double *scores, dynprog *direction, int index_1, int index_2)
-// {
-//     double swap        = scores[index_1];
-//     scores[index_1]    = scores[index_2];
-//     scores[index_2]    = swap;
-//     dynprog swapdir    = direction[index_1];
-//     direction[index_1] = direction[index_2];
-//     direction[index_2] = swapdir;
-
-//     return 0;
-// }
-
-// int
-// trace_alignment(MergedStack *tag_1, MergedStack *tag_2, AlignPath **path)
-// {
-//     //         j---->
-//     //        [0][1][2][3]...[n-1]
-//     //       +--------------------
-//     // i [0] | [i][j]
-//     // | [1] |
-//     // | [2] |
-//     // v [3] |
-//     //   ... |
-//     // [m-1] |
-//     // 
-//     int    m = tag_1->len + 1;
-//     int    n = tag_2->len + 1;
-//     int    i, j, cnt, len, gaps;
-//     string cigar;
-//     char   buf[id_len];
-
-//     vector<pair<string, int> > alns;
-//     bool more_paths = true;
-    
-//     do {
-//         more_paths = false;
-
-//         i = m - 1;
-//         j = n - 1;
-
-//         string aln_1, aln_2;
-
-//         while (i > 0 || j > 0) {
-//             cnt  = path[i][j].count();
-
-//             if (cnt > 1) more_paths = true;
-
-//             if (path[i][j].diag) {
-//                 aln_1 += tag_1->con[i - 1];
-//                 aln_2 += tag_2->con[j - 1];
-//                 if (cnt > 1) path[i][j].diag = false;
-//                 i--;
-//                 j--;
-//             } else if (path[i][j].up) {
-//                 aln_1 += tag_1->con[i - 1];
-//                 aln_2 += "-";
-//                 if (cnt > 1) path[i][j].up = false;
-//                 i--;
-//             } else if (path[i][j].left) {
-//                 aln_1 += "-";
-//                 aln_2 += tag_2->con[j - 1];
-//                 if (cnt > 1) path[i][j].left = false;
-//                 j--;
-//             }
-//         }
-
-//         reverse(aln_1.begin(), aln_1.end());
-//         reverse(aln_2.begin(), aln_2.end());
-
-//         //
-//         // Convert to CIGAR strings.
-//         //
-//         cigar = "";
-//         len   = aln_1.length();
-//         gaps  = 0;
-//         i     = 0;
-//         while (i < len) {
-//             if (aln_1[i] != '-' && aln_2[i] != '-') {
-//                 cnt = 0;
-//                 do {
-//                     cnt++;
-//                     i++;
-//                 } while (i < len && aln_1[i] != '-' && aln_2[i] != '-');
-//                 sprintf(buf, "%dM", cnt);
-
-//             } else if (aln_1[i] == '-') {
-//                 cnt = 0;
-//                 do {
-//                     cnt++;
-//                     i++;
-//                 } while (i < len && aln_1[i] == '-');
-//                 sprintf(buf, "%dD", cnt);
-//                 gaps++;
-
-//             } else {
-//                 cnt = 0;
-//                 do {
-//                     cnt++;
-//                     i++;
-//                 } while (i < len && aln_2[i] == '-');
-//                 sprintf(buf, "%dI", cnt);
-//                 gaps++;
-//             }
-
-//             cigar += buf;
-//         }
-
-//         alns.push_back(make_pair(cigar, gaps));
-        
-//         // cerr << aln_1 << " [" << cigar << ", gaps: " << gaps << "]\n"
-//         //      << aln_2 << "\n";
-
-//     } while (more_paths);
-
-//     cigar = "";
-
-//     if (alns.size() == 1) {
-//         cigar = alns[0].first;
-//         // cerr << "Final alignment: " << cigar << "; gaps: " << alns[0].second << "\n";
-
-//     } else {
-//         sort(alns.begin(), alns.end(), compare_pair_stringint);
-//         if (alns[0].second < alns[1].second) {
-//             cigar = alns[0].first;
-//             // cerr << "Final alignment: " << cigar << "; gaps: " << alns[0].second << "\n";
-//         }
-//     }
-
-//     if (cigar.length() > 0) {
-//         tag_1->alns.push_back(make_pair(tag_2->id, cigar));
-
-//         return 1;
-//     }
-
-//     return 0;
-// }
-
-// int
-// dump_alignment(MergedStack *tag_1, MergedStack *tag_2, double **matrix, AlignPath **path)
-// {
-//     //         j---->
-//     //        [0][1][2][3]...[n-1]
-//     //       +--------------------
-//     // i [0] | [i][j]
-//     // | [1] |
-//     // | [2] |
-//     // v [3] |
-//     //   ... |
-//     // [m-1] |
-//     // 
-//     uint m = tag_1->len + 1;
-//     uint n = tag_2->len + 1;
-
-//     //
-//     // Output the score matrix.
-//     //
-//     cout << "         ";
-//     for (uint j = 0; j < tag_2->len; j++)
-//         cout << "   " << tag_2->con[j] << "  |";
-//     cout << "\n";
-
-//     cout << "  ";
-//     for (uint j = 0; j < n; j++)
-//         printf("% 6.1f|", matrix[0][j]);
-//     cout << "\n";
-
-//     for (uint i = 1; i < m; i++) {
-//         cout << tag_1->con[i - 1] << " ";
-//         for (uint j = 0; j < n; j++)
-//             printf("% 6.1f|", matrix[i][j]);
-//         cout << "\n";
-//     }
-
-//     cout << "\n";
-
-//     //
-//     // Output the path matrix.
-//     //
-//     cout << "       ";
-//     for (uint j = 0; j < tag_2->len; j++)
-//         cout << "  " << tag_2->con[j] << " |";
-//     cout << "\n";
-
-//     cout << "  ";
-//     for (uint j = 0; j < n; j++) {
-//         cout << " ";
-//         path[0][j].diag ? cout << "d" : cout << " ";
-//         path[0][j].up   ? cout << "u" : cout << " ";
-//         path[0][j].left ? cout << "l" : cout << " ";
-//         cout << "|";
-//     }
-//     cout << "\n";
-
-//     for (uint i = 1; i < m; i++) {
-//         cout << tag_1->con[i - 1] << " ";
-//         for (uint j = 0; j < n; j++) {
-//             cout << " ";
-//             path[i][j].diag ? cout << "d" : cout << " ";
-//             path[i][j].up   ? cout << "u" : cout << " ";
-//             path[i][j].left ? cout << "l" : cout << " ";
-//             cout << "|";
-//         }
-//         cout << "\n";
-//     }
-
-//     cout << "\n";
-    
-//     return 0;
-// }
 
 int
 merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
