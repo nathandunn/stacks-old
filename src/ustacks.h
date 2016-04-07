@@ -124,7 +124,7 @@ int  merge_gapped_alns(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedSt
 int  edit_gapped_seqs(map<int, Stack *> &, map<int, Rem *> &, MergedStack *, vector<pair<char, uint> > &);
 int  edit_gaps(vector<pair<char, uint> > &, char *);
 int  dist(MergedStack *, MergedStack *, vector<pair<char, uint> > &);
-
+bool rank_alignments(Aln, Aln);
 //
 // Calculate depth of coverage statistics for stacks
 //

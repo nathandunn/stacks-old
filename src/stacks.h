@@ -119,6 +119,18 @@ public:
     }
 };
 
+class Aln {
+public:
+    uint   id;
+    double pct_id;
+    string cigar;
+    Aln(uint id, string cigar, double pct_id) {
+	this->id = id;
+	this->cigar = cigar;
+	this->pct_id = pct_id;
+    }
+};
+
 class PStack {
  public:
     uint            id;

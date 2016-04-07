@@ -702,7 +702,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
                             d = dist(tag_2->con, tag_1->con, cigar);
 
                             if (d <= ctag_dist)
-                                tag_1->add_match(tag_2->id, cnt_it->first, allele->first, d, invert_cigar(aln->cigar));
+                                tag_1->add_match(tag_2->id, cnt_it->first, allele->first, d, invert_cigar(aln->result().cigar));
                         }
 
                         delete aln;
