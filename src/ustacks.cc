@@ -222,18 +222,28 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
             continue;
 
         tag_1 = it->second;
+	sort(tag_1->alns.begin(), tag_1->alns.end(), rank_alignments);
+
         //
-        // No gapped alignments for this stack, or this stack has already been set aside.
+        // No gapped alignments, or no optimal alignment for this stack, or
+	// this stack has already been set aside.
         //
-        if (tag_1->masked || tag_1->alns.size() != 1)
+        if (tag_1->masked || tag_1->alns.size() == 0)
+            continue;
+	if (tag_1->alns.size() > 1 && tag_1->alns[0].pct_id == tag_1->alns[1].pct_id)
             continue;
 
         //
         // Found a gapped alignment. Make sure the alignments are the same.
         //
-        tag_2   = merged[tag_1->alns[0].first];
-        cigar_1 = invert_cigar(tag_1->alns[0].second);
-        cigar_2 = tag_2->alns.size() != 1 ? "" : tag_2->alns[0].second;
+        tag_2 = merged[tag_1->alns[0].id];
+	sort(tag_2->alns.begin(), tag_2->alns.end(), rank_alignments);
+
+	if (tag_2->alns.size() > 1 && tag_2->alns[0].pct_id == tag_2->alns[1].pct_id)
+            continue;
+
+	cigar_1 = invert_cigar(tag_1->alns[0].cigar);
+        cigar_2 = tag_2->alns[0].cigar;
 
         if (cigar_1 == cigar_2) {
             //
@@ -241,7 +251,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
             //
             vector<pair<char, uint> > cigar;
             // cerr << "CIGAR to parse: " << tag_1->alns[0].second << "\n";
-            parse_cigar(tag_1->alns[0].second.c_str(), cigar);
+            parse_cigar(tag_1->alns[0].cigar.c_str(), cigar);
 
             uint   gap_cnt = 0;
             double aln_len = 0;
@@ -280,7 +290,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 
             // cerr << "CIGAR to parse: " << tag_2->alns[0].second << "\n";
             cigar.clear();
-            parse_cigar(tag_2->alns[0].second.c_str(), cigar);
+            parse_cigar(tag_2->alns[0].cigar.c_str(), cigar);
             edit_gapped_seqs(unique, rem, tag_2, cigar);
 
             //
@@ -335,6 +345,12 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
          << " gapped alignments.\n";
 
     return 0;
+}
+
+bool
+rank_alignments(Aln a, Aln b)
+{
+    return a.pct_id > b.pct_id;
 }
 
 int
@@ -479,7 +495,8 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
     #pragma omp parallel private(tag_1, tag_2)
     {
 	GappedAln *aln = new GappedAln(con_len);
-        
+	AlignRes   a;
+
         #pragma omp for schedule(dynamic) 
         for (uint i = 0; i < keys.size(); i++) {
             tag_1 = merged[keys[i]];
@@ -522,8 +539,10 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
                 // Don't compare tag_1 against itself.
                 if (tag_1 == tag_2) continue;
 
-                if (aln->align(tag_1->con, tag_2->con))
-		    tag_1->alns.push_back(make_pair(tag_2->id, aln->cigar));
+                if (aln->align(tag_1->con, tag_2->con)) {
+		    a = aln->result();
+		    tag_1->alns.push_back(Aln(tag_2->id, a.cigar, a.pct_id));
+		}
             }
         }
 

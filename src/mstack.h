@@ -49,7 +49,7 @@ class MergedStack {
     vector<int>             remtags; // Remainder tag IDs that have been merged into this Stack
     DNANSeq                **matrix; // Two-dimensional array for iterating over the combined stack (stacks and remainders).
     vector<pair<int, int> >    dist; // Vector describing the distance between this stack and other stacks.
-    vector<pair<int, string> > alns; // Vector describing gapped alignments between this stack and other stacks.
+    vector<Aln>                alns; // Vector describing gapped alignments between this stack and other stacks.
 
     int cohort_id; // Group ID of all stacks that were originally part of the same subgraph
     double    lnl; // Log likelihood of this stack
