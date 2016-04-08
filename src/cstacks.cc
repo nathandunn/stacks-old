@@ -637,6 +637,8 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
  
     #pragma omp parallel private(tag_1, tag_2, allele)
     {
+	AlignRes aln_res;
+
         #pragma omp for schedule(dynamic) 
         for (uint i = 0; i < keys.size(); i++) {
             tag_1 = sample[keys[i]];
@@ -701,8 +703,21 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
                             aln->parse_cigar(cigar);
                             d = dist(tag_2->con, tag_1->con, cigar);
 
-                            if (d <= ctag_dist)
-                                tag_1->add_match(tag_2->id, cnt_it->first, allele->first, d, invert_cigar(aln->result().cigar));
+			    aln_res = aln->result();
+
+			    //
+			    // If the alignment has too many gaps, skip it.
+			    //
+			    if (aln_res.gap_cnt <= (max_gaps + 1)) {
+				//
+				// If the alignment doesn't span enough of the two sequences, skip it.
+				//
+				if (aln_res.pct_id >= min_match_len) {
+
+				    if (d <= ctag_dist)
+					tag_1->add_match(tag_2->id, cnt_it->first, allele->first, d, invert_cigar(aln_res.cigar));
+				}
+			    }
                         }
 
                         delete aln;
@@ -1536,6 +1551,7 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
 	k++;        
     }
 
+    cerr << "  " << catalog.size() << " loci were newly added to the catalog.\n"
     return 1;
 }
 
