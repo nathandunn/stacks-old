@@ -78,6 +78,7 @@ using google::sparse_hash_map;
 #include "FastqI.h"     // Reading input files in FASTQ format
 #include "gzFasta.h"    // Reading gzipped input files in FASTA format
 #include "gzFastq.h"    // Reading gzipped input files in FASTQ format
+#include "GappedAln.h"
 
 class HVal {
  public:
@@ -92,34 +93,7 @@ class HVal {
     }
 };
 
-enum dynprog {dynp_down, dynp_right, dynp_diag};
-
-const int    barcode_size   = 5;
-const double gapopen_score  = -10;
-const double gapext_score   = -0.5;
-const double mismatch_score = -4;
-const double match_score    =  5;
-
-class AlignPath {
-public:
-    bool diag;
-    bool left;
-    bool up;
-
-    AlignPath() {
-        diag = false;
-        left = false;
-        up   = false;
-    }
-    int count() {
-        int cnt;
-        cnt  = this->up   ? 1 : 0;
-        cnt += this->left ? 1 : 0;
-        cnt += this->diag ? 1 : 0;
-
-        return cnt;
-    }
-};
+const int barcode_size   = 5;
 
 #ifdef HAVE_SPARSEHASH
 typedef sparse_hash_map<DNANSeq *, HVal, hash_dnanseq, dnanseq_eqstr> DNASeqHashMap;
@@ -151,16 +125,6 @@ int  parse_cigar(const char *, vector<pair<char, uint> > &);
 int  edit_gapped_seqs(map<int, Stack *> &, map<int, Rem *> &, MergedStack *, vector<pair<char, uint> > &);
 int  edit_gaps(vector<pair<char, uint> > &, char *);
 int  dist(MergedStack *, MergedStack *, vector<pair<char, uint> > &);
-
-//
-// Needleman-Wunsch Alignment
-//
-int init_alignment(int, double ***, AlignPath ***);
-int free_alignment(int, double **, AlignPath **);
-int align(MergedStack *, MergedStack *, double **, AlignPath **);
-inline int swap(double *, dynprog *, int, int);
-int trace_alignment(MergedStack *, MergedStack *, AlignPath **);
-int dump_alignment(MergedStack *, MergedStack *, double **, AlignPath **);
 
 //
 // Calculate depth of coverage statistics for stacks
