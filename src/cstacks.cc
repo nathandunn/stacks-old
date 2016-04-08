@@ -1551,7 +1551,8 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
 	k++;        
     }
 
-    cerr << "  " << catalog.size() << " loci were newly added to the catalog.\n"
+    cerr << "  " << catalog.size() << " loci were newly added to the catalog.\n";
+
     return 1;
 }
 
