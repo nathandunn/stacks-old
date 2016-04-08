@@ -67,7 +67,7 @@ const size_t info = 7;
 const size_t format = 8;
 const size_t first_sample = 9;
 
-const size_t gt_subfield_index = 0;
+const size_t gt_subfield = 0;
 
 // enum for record types
 enum class RType {
@@ -79,7 +79,6 @@ enum class RType {
 
 // Constants for the parser.
 const size_t line_buf_size = 4096;
-const set<string> common_format_fields ({"GT","AD","DP","GL"});
 
 // Tries to open the given VCF file using VcfParser, then
 // VcfGzParser. Return NULL if both failed.
@@ -186,15 +185,17 @@ protected:
     const string path_;
     VcfHeader header_;
     size_t header_lines_; // Number of header lines there were (set by the constructor).
-    set<string> format_fields_to_keep_; // If set, the parser will return records with only these fields included.
+    set<string> format_fields_to_keep_; // If set, the parser will return records that include these fields only.
+    vector<bool> samples_to_keep_; // If set, the parser will return records that include these samples only.
 
     size_t line_number_;
     char line_[Vcf::line_buf_size];
     bool eol_; // Set by check_eol(). True if the buffer reaches the end of the currently parsed line.
     bool eof_; // Set by getline(). True if EOF was reached.
-    vector<char*> tabs_; // Vector of pointers to {first_tab, second_tab, ..., \0 } in line_
-    vector<char*> bounds_; // vector of pointers to {leading_tab, first_sep, second_sep, ..., (trailing \t or \0) } in line_
+    vector<char*> tabs_; // Vector of pointers to {first_tab, second_tab, ..., \0 } in [line_].
+    vector<char*> bounds_; // Vector of pointers to {leading_tab, first_sep, second_sep, ..., (trailing \t or \0) } in [line_].
     vector<bool> kept_format_fields_; // Keeps track of which FORMAT subfields were kept for this record.
+    size_t sample_index_; // Index of the current (next) sample.
 
     // Parses the header.
     // Called by the open method of the non-abstract derived classes (VcfParser and VcfGzParser).
@@ -202,10 +203,11 @@ protected:
     void read_header();
 
     virtual void getline(char* ptr, size_t n) =0;
-    virtual void check_eol() =0; // n.b. The implementation in gzparser relies on tabs_ to access the end of the string in line_.
-    inline void read_while_not_eol(); // Read while eol_ is false.
+    virtual void check_eol() =0; // rem. The implementation in gzparser relies on [tabs_] to access the end of the string in [line_].
+    inline void read_while_not_eol(); // Reads while [eol_] is false.
 
-    inline void add_sample(VcfRecord& record, char* tab1, char* tab2); // Basically 'record.samples_.push_back(parsed_value)'.
+    // Adds a sample to [record.samples_] if [samples_to_keep_.at(sample_index_)] is true.
+    inline void add_sample(VcfRecord& record, char* tab1, char* tab2);
 
 public:
     VcfAbstractParser();
@@ -215,9 +217,10 @@ public:
     // Returns true if successful, false if the file could not be opened.
     virtual bool open(const string& path) =0;
 
-    // Sets the format fields to be kept.
+    // Sets the format fields to keep.
     void format_fields_to_keep(const set<string>& fields) {format_fields_to_keep_ = fields;}
-    // todo Remove/reconsider [VcfAbstractParser::format_fields_to_keep()] & related code.
+    // Sets the samples to keep.
+    void samples_to_keep(const set<string>& samples);
 
     // Getters.
     const string& path() const {return path_;};
@@ -227,12 +230,6 @@ public:
 
     // Reads a record. Returns false on EOF, true otherwise.
     bool next_record(VcfRecord& record);
-
-    // Reads all (remaining) SNP records.
-    // Records the number of records that were skipped in
-    // argument [n_skipped], if provided.
-    vector<VcfRecord> read_snp_records(size_t* n_skipped = NULL);
-    // todo Remove/reconsider [VcfAbstractParser::read_snp_records()].
 };
 
 /*
@@ -244,6 +241,7 @@ class VcfParser : public VcfAbstractParser {
     void getline(char* ptr, size_t n) {file_.getline(ptr, n); eof_ = file_.eof();}
     void check_eol() {eol_ = ! file_.fail(); file_.clear();}
 public:
+    VcfParser() : file_() {}
     bool open(const string& path);
 };
 
@@ -287,8 +285,8 @@ pair<int, int> VcfRecord::parse_genotype(const vector<string>& sample) const {
     pair<int, int> genotype;
 
     if (no_gt
-            || sample[Vcf::gt_subfield_index].empty()
-            || sample[Vcf::gt_subfield_index].front() == '.') {
+            || sample[Vcf::gt_subfield].empty()
+            || sample[Vcf::gt_subfield].front() == '.') {
         genotype = {-1,-1};
         return genotype;
     }

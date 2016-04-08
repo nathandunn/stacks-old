@@ -23,12 +23,16 @@
 // haplotypes in a population context.
 //
 
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "MetaPopInfo.h"
-#include "Vcf.h"
 
 #include "populations.h"
 
 using std::to_string;
+using std::flush;
 
 typedef MetaPopInfo::Sample Sample;
 typedef MetaPopInfo::Pop Pop;
@@ -38,7 +42,7 @@ typedef MetaPopInfo::Group Group;
 InputMode input_mode = InputMode::stacks;
 int       num_threads = 1;
 string    pmap_path;
-string    out_path; //todo Directory [out_path] should be created, if necessary.
+string    out_path;
 string    in_path;
 int       batch_id = -1;
 string    in_vcf_path;
@@ -93,6 +97,7 @@ double    minor_allele_freq = 0.0;
 double    max_obs_het       = 1.0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
+set<string> debug_flags;
 
 string    out_prefix;
 
@@ -118,12 +123,13 @@ map<string, int>           renz_len;
 map<string, int>           renz_olap;
 
 int main (int argc, char* argv[]) {
-
+try {
     //
     // Initialize the globals that need it.
     //
     initialize_renz(renz, renz_cnt, renz_len);
     initialize_renz_olap(renz_olap);
+    srandom(time(NULL));
 
     //
     // Parse the command line.
@@ -161,165 +167,85 @@ int main (int argc, char* argv[]) {
     }
 
     //
+    // Open and initialize the log file.
+    //
+    struct stat path_stat;
+    if (stat(out_path.c_str(), &path_stat) == 0) {
+        // Path exists, check that it is a directory
+        if (opendir(out_path.c_str()) == NULL) {
+            cerr << "Error: Failed to open '" << out_path << "' as a directory.\n";
+            throw exception();
+        }
+    } else {
+        // Try to create the directory.
+        if (mkdir(out_path.c_str(), ACCESSPERMS) != 0)
+            cerr << "Error: Failed to create directory '" << out_path << "'.\n";
+            throw exception();
+    }
+    string log_path = out_path + out_prefix + ".populations.log";
+    ofstream log_fh(log_path.c_str(), ofstream::out);
+    if (log_fh.fail()) {
+        cerr << "Error opening log file '" << log_path << "'\n";
+        return -1;
+    }
+    init_log(log_fh, argc, argv);
+    log_fh << flush;
+
+    //
     // Set the number of OpenMP parallel threads to execute.
     //
+
     #ifdef _OPENMP
     omp_set_num_threads(num_threads);
     #endif
 
     //
-    // Seed the random number generator
-    //
-    srandom(time(NULL));
-
-    //
-    // Read the population map,
+    // Initialize the catalog and the MetaPopInfo
     //
 
-    if (not pmap_path.empty()) {
-        cerr << "Parsing population map.\n";
-        mpopi.init_popmap(pmap_path); //todo [mpopi] initialization -- move this to just before the matches loop
-    } else {
-        cerr << "No population map specified, building file list.\n";
-        mpopi.init_directory(in_path); //todo [mpopi] initialization -- move this to within the matches loop
-    }
-
-    // Perform checks and write some infos to the output. //todo [mpopi] initialization -- move these to just after the matches loop (rem. "Found->Working on").
-    if (mpopi.samples().size() == 0) {
-        if (not pmap_path.empty())
-            cerr << "Error: Failed to open or parse population map file \"" << pmap_path << "\".\n";
-        else
-            cerr << "Error: Failed to find sample files in directory \"" << in_path << "\".\n";
-        exit(0);
-    }
-    cerr << "Found " << mpopi.samples().size() << " input file(s).\n";
-
-    //cerr << "Found " << mpopi.pops().size() << " population(s) :\n"; // todo Polish what is output to stderr.
-    mpopi.pops().size() == 1 ?
-        cerr << "  " << mpopi.pops().size() << " population found\n" :
-        cerr << "  " << mpopi.pops().size() << " populations found\n";
-    if (size_t(population_limit) > mpopi.pops().size()) {
-        cerr //<< "Notice: "
-             << "Population limit (" << population_limit << ")"
-             << " larger than number of popualtions present, adjusting parameter to "
-             << mpopi.pops().size() << "\n";
-        population_limit = mpopi.pops().size();
-    }
-    for (vector<Pop>::const_iterator p = mpopi.pops().begin(); p != mpopi.pops().end(); p++) {
-        cerr << "    " << p->name << ": ";
-        for (size_t s = p->first_sample; s < p->last_sample; ++s) {
-            cerr << mpopi.samples()[s].name << ", ";
-        }
-        cerr << mpopi.samples()[p->last_sample].name << "\n";
-    }
-
-    //cerr << "Found " << mpopi.groups().size() << " group(s) of populations :\n";
-    mpopi.groups().size() == 1 ?
-        cerr << "  " << mpopi.groups().size() << " group of populations found\n" :
-        cerr << "  " << mpopi.groups().size() << " groups of populations found\n";
-    for (vector<Group>::const_iterator g = mpopi.groups().begin(); g != mpopi.groups().end(); g++) {
-        cerr << "    " << g->name << ": ";
-        for (vector<size_t>::const_iterator p = g->pops.begin(); p != g->pops.end() -1; ++p) {
-            //rem. end()-1 and back() are safe, there's always at least one pop
-            cerr << mpopi.pops()[*p].name << ", ";
-        }
-        cerr << mpopi.pops()[g->pops.back()].name << "\n";
-    }
-
-    //
-    // Read the whitelist, the blacklist, and the bootstrap-whitelist.
-    //
-    if (wl_file.length() > 0) {
-        load_marker_column_list(wl_file, whitelist);
-        cerr << "Loaded " << whitelist.size() << " whitelisted markers.\n";
-    }
-    if (bl_file.length() > 0) {
-        load_marker_list(bl_file, blacklist);
-        cerr << "Loaded " << blacklist.size() << " blacklisted markers.\n";
-    }
-    if (bs_wl_file.length() > 0) {
-        load_marker_list(bs_wl_file, bootstraplist);
-        cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
-    }
-
-    //
-    // Open the log file.
-    //
-    string log_path = out_path + out_prefix + ".populations.log";
-    ofstream log_fh(log_path.c_str(), ofstream::out);
-    if (log_fh.fail()) {
-        cerr << "Error opening log file '" << log_path << "'\n";
-        exit(1);
-    }
-    init_log(log_fh, argc, argv);
-
-    //
-    // Load the catalog
-    //
-
-    //cerr << "Parsing the catalog files...\n";
     map<int, CSLocus *> catalog;
 
-    // There will be several distinct if(matches)/if(vcf) blocks below, so a couple
-    // objects are needed in the main scope.
+    if (not pmap_path.empty()) {
+        cerr << "Parsing population map...\n";
+        mpopi.init_popmap(pmap_path);
+        if (mpopi.samples().empty()) {
+            cerr << "Error: Failed to open or parse population map file \"" << pmap_path << "\".\n";
+            return -1;
+        }
+    }
+
+    // We need some objects in the main scope for each mode.
     vector<vector<CatMatch *> > catalog_matches;
     vector<VcfRecord>* vcf_records = NULL;
 
     if (input_mode == InputMode::stacks) {
-        // Load the catalog from Stacks files.
+
+        //
+        // Stacks mode
+        //
+
+        if (pmap_path.empty()) {
+            cerr << "No population map specified, building file list...\n";
+            mpopi.init_directory(in_path);
+            if (mpopi.samples().empty()) {
+                cerr << "Error: Failed to find sample files in directory \"" << in_path << "\".\n";
+                return -1;
+            }
+        }
+
+        // Load the catalog
+        cerr << "Parsing the catalog files...\n";
         stringstream catalog_file;
         bool compressed = false;
         catalog_file << in_path << "batch_" << batch_id << ".catalog";
         int res = load_loci(catalog_file.str(), catalog, false, false, compressed);
         if (res == 0) {
             cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
-            return 0;
-        }
-    } else if (input_mode == InputMode::vcf) {
-        // Load the catalog from a VCF file.
-
-        vcf_records = new vector<VcfRecord>();
-
-        // Open the file
-        VcfAbstractParser* parser = Vcf::adaptive_open(in_vcf_path);
-        if (parser == NULL) {
-            cerr << "Error: Unable to open VCF file '" << in_vcf_path << "'.\n";
-            return 0;
+            return -1;
         }
 
-        // Read the SNP records
-        size_t skipped = 0;
-        *vcf_records = parser->read_snp_records(&skipped);
-
-        cerr << "Found " << vcf_records->size() << " SNP records (skipped "
-             << skipped << " other records) in file '" << in_vcf_path
-             << "'.\n";
-
-        catalog = create_catalog(*vcf_records);
-        delete parser;
-    }
-
-    //
-    // Check the whitelist and implement the black/white lists.
-    //
-
-    check_whitelist_integrity(catalog, whitelist);
-    reduce_catalog(catalog, whitelist, blacklist);
-
-    //
-    // If the catalog is not reference aligned, assign an arbitrary ordering to catalog loci.
-    //
-
-    loci_ordered = order_unordered_loci(catalog);
-
-    //
-    // Create the PopMap
-    //
-
-    if (input_mode == InputMode::stacks) {
-        // If populating from matches files : load the files now,
-        // and check that they are all well formed.
-        //cerr << "Parsing the matches files...\n";
+        // Load the matches
+        cerr << "Parsing the matches files...\n";
         vector<size_t> samples_to_remove;
         set<size_t> known_samples;
         for (size_t i = 0; i < mpopi.samples().size(); ++i) {
@@ -332,7 +258,7 @@ int main (int argc, char* argv[]) {
                 cerr << "Warning: unable to find any matches in file \""
                      << mpopi.samples().at(i).name << ".matches.tsv(.gz)"
                      <<"\", excluding this sample from population analysis.\n";
-                catalog_matches.pop_back(); // This introduces an index shift between catalog_matches and [i/mpopi],
+                catalog_matches.pop_back(); // This introduces an index shift between catalog_matches and [i]/[mpopi],
                                             // which will be resolved by a call to MetaPopInfo::purge_samples().
                 samples_to_remove.push_back(i);
                 continue;
@@ -345,18 +271,144 @@ int main (int argc, char* argv[]) {
             }
             mpopi.set_sample_id(i, id);
         }
-        known_samples.clear(); // freeing mem
-        mpopi.purge_samples(samples_to_remove);
-    } else if (input_mode == InputMode::vcf) {
-        // We still could need sample IDs. Create arbitrary ones.
-        for (size_t i = 0; i < mpopi.samples().size(); ++i)
-            mpopi.set_sample_id(i, i+1); //id=i+1
 
-        // todo [mpopi] initialization -- Allow for a mismatch between the samples in [mpopi] and [vcf_records]
+        mpopi.purge_samples(samples_to_remove);
+
+        // [mpopi] is definitive.
+
+    } else if (input_mode == InputMode::vcf) {
+
+        //
+        // VCF mode
+        //
+
+        // Open the VCF file
+        cerr << "Opening the VCF file...\n";
+        VcfAbstractParser* parser = Vcf::adaptive_open(in_vcf_path);
+        if (parser == NULL) {
+            cerr << "Error: Unable to open VCF file '" << in_vcf_path << "'.\n";
+            return -1;
+        } else if (parser->header().samples().empty()) {
+            cerr << "Warning: No samples in VCF file '" << in_vcf_path << "'.\n";
+        }
+
+        // Reconsider the MetaPopInfo in light of the VCF header.
+        if (pmap_path.empty()) {
+            cerr << "No population map specified, creating one from the VCF header...\n";
+            mpopi.init_names(parser->header().samples());
+        } else {
+            // Intersect the samples present in the population map and the VCF.
+            set<string> vcf_samples_set (parser->header().samples().begin(), parser->header().samples().end());
+            set<string> samples_to_keep;
+            vector<size_t> samples_to_discard;
+            for (size_t i=0; i<mpopi.samples().size(); ++i) {
+                if (vcf_samples_set.count(mpopi.samples()[i].name) == 1)
+                    samples_to_keep.insert(mpopi.samples()[i].name);
+                else
+                    samples_to_discard.push_back(i);
+            }
+
+            parser->samples_to_keep(samples_to_keep);
+            if (not samples_to_discard.empty()) {
+                cerr << "Notice: some of the samples listed in the population map could not be found in the VCF.\n";
+                mpopi.purge_samples(samples_to_discard);
+            }
+
+            // Create arbitrary sample IDs.
+            for (size_t i = 0; i < mpopi.samples().size(); ++i)
+                mpopi.set_sample_id(i, i+1); //id=i+1
+
+            // [mpopi] is definitive.
+        }
+
+        // Read the SNP records
+        cerr << "Reading the VCF records...\n";
+        vcf_records = new vector<VcfRecord>();
+        size_t n_skipped = 0;
+
+        vcf_records->push_back(VcfRecord());
+        VcfRecord* rec = & vcf_records->back();
+        while (parser->next_record(*rec)) {
+            // Check for a SNP
+            bool skip = false;
+            if (rec->type != Vcf::RType::expl) {
+                skip = true;
+                if (rec->type == Vcf::RType::null) {
+                    cerr << "Warning: In file '" << parser->path() << "': skipping the very long record at line "
+                         << parser->line_number() << ".\n";
+                }
+            } else {
+                for (vector<string>::const_iterator allele = rec->alleles.begin(); allele != rec->alleles.end(); ++allele) {
+                    if (allele->length() > 1) {
+                        skip = true;
+                        break;
+                    }
+                }
+            }
+            if(skip) {
+                ++n_skipped;
+                continue;
+            }
+
+            // Save the SNP
+            vcf_records->push_back(VcfRecord());
+            rec = & vcf_records->back();
+        }
+        vcf_records->pop_back();
+
+        cerr << "Found " << vcf_records->size() << " SNP records (skipped "
+             << n_skipped << " other records) in file '" << in_vcf_path
+             << "'.\n";
+
+        catalog = create_catalog(*vcf_records);
+        delete parser;
     }
 
-    cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi.samples().size(), catalog.size());
+    // Read the blacklist, the whitelist, and the bootstrap-whitelist.
+    if (bl_file.length() > 0) {
+        load_marker_list(bl_file, blacklist);
+        cerr << "Loaded " << blacklist.size() << " blacklisted markers.\n";
+    }
+    if (wl_file.length() > 0) {
+        load_marker_column_list(wl_file, whitelist);
+        cerr << "Loaded " << whitelist.size() << " whitelisted markers.\n";
+        check_whitelist_integrity(catalog, whitelist);
+    }
+    if (bs_wl_file.length() > 0) {
+        load_marker_list(bs_wl_file, bootstraplist);
+        cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
+    }
+
+    // Reduce the catalog accordingly, and retrieve the genomic order of loci.
+    reduce_catalog(catalog, whitelist, blacklist);
+    loci_ordered = order_unordered_loci(catalog);
+
+    // Report information on the MetaPopInfo.
+    cerr << "Working on " << mpopi.samples().size() << " samples.\n";
+    cerr << "Working on " << mpopi.pops().size() << " population(s) :\n";
+    for (vector<Pop>::const_iterator p = mpopi.pops().begin(); p != mpopi.pops().end(); p++) {
+        cerr << "    " << p->name << ": ";
+        for (size_t s = p->first_sample; s < p->last_sample; ++s) {
+            cerr << mpopi.samples()[s].name << ", ";
+        }
+        cerr << mpopi.samples()[p->last_sample].name << "\n";
+    }
+    cerr << "Working on " << mpopi.groups().size() << " group(s) of populations :\n";
+    for (vector<Group>::const_iterator g = mpopi.groups().begin(); g != mpopi.groups().end(); g++) {
+        cerr << "    " << g->name << ": ";
+        for (vector<size_t>::const_iterator p = g->pops.begin(); p != g->pops.end() -1; ++p) {
+            //rem. end()-1 and back() are safe, there's always at least one pop
+            cerr << mpopi.pops()[*p].name << ", ";
+        }
+        cerr << mpopi.pops()[g->pops.back()].name << "\n";
+    }
+
+    if (size_t(population_limit) > mpopi.pops().size()) {
+        cerr << "Notice: Population limit (" << population_limit << ")"
+             << " larger than number of popualtions present, adjusting parameter to "
+             << mpopi.pops().size() << "\n";
+        population_limit = mpopi.pops().size();
+    }
 
     // Set the former sample/population globals to their expected values.
     mpopi.fill_files(files);
@@ -368,16 +420,18 @@ int main (int argc, char* argv[]) {
     mpopi.fill_grp_members(grp_members);
 
     //
-    // Populate the PopMap
+    // Initialize the PopMap
     //
 
+    cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi.samples().size(), catalog.size());
     if (input_mode == InputMode::stacks) {
         // Using SStacks matches files...
         pmap->populate(sample_ids, catalog, catalog_matches);
 
         for(vector<vector<CatMatch *> >::iterator sample = catalog_matches.begin(); sample != catalog_matches.end(); ++sample)
             for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
-                delete *match; // free memory
+                delete *match;
         catalog_matches.clear();
     } else if (input_mode == InputMode::vcf) {
         // ...or using VCF records.
@@ -512,62 +566,63 @@ int main (int argc, char* argv[]) {
     // Regenerate summary statistics after pruning SNPs and  merging loci.
     //
 
-    // todo { DEBUG -- We have the final pmap.
-    // todo Add option [--dbg_flags], glob [set<string> dbg_flags;].
-    cerr << "=====NICO> catalog.size()=" << catalog.size()
-         << " / pmap->loci_cnt()=" << pmap->loci_cnt()
-         << "\n";
-    size_t n_snps = 0;
-    for (map<int, CSLocus*>::const_iterator l=catalog.begin(); l!=catalog.end(); ++l)
-        n_snps += l->second->snps.size();
-    cerr << "=====NICO> Total number of SNPs: " << n_snps << "\n";
+    // xxx DEBUG { "UNKNOWN"
+    if (debug_flags.count("UNKN")) {
+        cerr << "DEBUG> catalog.size()=" << catalog.size()
+             << " / pmap->loci_cnt()=" << pmap->loci_cnt()
+             << "\n";
+        size_t n_snps = 0;
+        for (map<int, CSLocus*>::const_iterator l=catalog.begin(); l!=catalog.end(); ++l)
+            n_snps += l->second->snps.size();
+        cerr << "DEBUG> Total number of SNPs: " << n_snps << "\n";
 
-    cerr << "=====NICO> Indivs per loci:";
-    for (map<int, CSLocus*>::const_iterator l=catalog.begin(); l!=catalog.end(); ++l) {
-        cerr << " " << l->second->id
-             << "|" << l->second->snps.size();
-        Datum** data = pmap->locus(l->second->id);
-        size_t m = 0;
-        for (vector<Pop>::const_iterator p=mpopi.pops().begin(); p!=mpopi.pops().end(); ++p) {
-            size_t n = 0;
-            for (size_t s=p->first_sample; s<=p->last_sample; ++s) {
-                if (data[s]!=NULL) {
-                    n+=1;
+        cerr << "DEBUG> Indivs per loci:";
+        for (map<int, CSLocus*>::const_iterator l=catalog.begin(); l!=catalog.end(); ++l) {
+            cerr << " " << l->second->id
+                 << "|" << l->second->snps.size();
+            Datum** data = pmap->locus(l->second->id);
+            size_t m = 0;
+            for (vector<Pop>::const_iterator p=mpopi.pops().begin(); p!=mpopi.pops().end(); ++p) {
+                size_t n = 0;
+                for (size_t s=p->first_sample; s<=p->last_sample; ++s) {
+                    if (data[s]!=NULL) {
+                        n+=1;
+                    }
+                }
+                cerr << "|" << n;
+                m+=n;
+            }
+            cerr << "|" << m;
+        }
+        cerr << "\n";
+
+        cerr << "DEBUG> Will now delete all 'Datums' where the SNP genotype is absent or 'U'...\n";
+        // n.b. In this configuration we only have one SNP per locus so we don't have
+        // to worry about what U's imply regarding haplotypes.
+        size_t n_deleted = 0;
+        size_t n_loci = pmap->loci_cnt();
+        size_t n_samples = pmap->sample_cnt();
+        for (size_t l=0; l<n_loci; ++l) {
+            CSLocus* loc = catalog.at(pmap->rev_locus_index(l));
+            if (loc->snps.size() != 1)
+                throw exception();
+            size_t col = loc->snps.at(0)->col;
+            Datum** datums = pmap->locus(loc->id);
+            for (size_t s=0; s<n_samples; ++s) {
+                if (datums[s] == NULL)
+                    continue;
+                if (size_t(datums[s]->len) <= col || datums[s]->model[col] == 'U') {
+                    delete datums[s];
+                    datums[s] = NULL;
+                    --loc->cnt;
+                    --loc->hcnt;
+                    ++n_deleted;
                 }
             }
-            cerr << "|" << n;
-            m+=n;
         }
-        cerr << "|" << m;
+        cerr << "DEBUG> Deleted " << n_deleted << " 'Datums'.\n";
     }
-    cerr << "\n";
-
-    cerr << "=====NICO> Will now delete all Datums where the SNP genotype is absent or 'U'...";
-    // n.b. In this configuration we only have one SNP per locus so we don't have
-    // to worry about what U's imply regarding haplotypes.
-    size_t n_deleted = 0;
-    size_t n_loci = pmap->loci_cnt();
-    size_t n_samples = pmap->sample_cnt();
-    for (size_t l=0; l<n_loci; ++l) {
-        const CSLocus* loc = catalog.at(pmap->rev_locus_index(l));
-        if (loc->snps.size() != 1)
-            throw exception();
-        size_t col = loc->snps.at(0)->col;
-        Datum** datums = pmap->locus(loc->id);
-        for (size_t s=0; s<n_samples; ++s) {
-            if (datums[s] == NULL)
-                continue;
-            if (size_t(datums[s]->len) <= col || datums[s]->model[col] == 'U') {
-                delete datums[s];
-                datums[s] = NULL;
-                --loc->cnt;
-                --loc->hcnt;
-                ++n_deleted;
-            }
-        }
-    }
-    cerr << "=====NICO> Deleted " << n_deleted << " datums.\n";
-    // todo }
+    // DEBUG }
 
     delete psum;
     psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
@@ -676,8 +731,13 @@ int main (int argc, char* argv[]) {
 
     log_fh.close();
 
-    //cerr << "'Populations' is done.\n";
+    cerr << "'Populations' is done.\n";
     return 0;
+}
+catch (exception&) {
+    cerr << "An error occured. Terminated.\n";
+    return -1;
+}
 }
 
 int
@@ -5351,12 +5411,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     // Load SNP data so that model likelihoods can be output to VCF file.
     //
     cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
-
     populate_snp_calls(catalog, pmap, merge_map);
-
-    cerr << "Writing population data to VCF file '" << file << "'\n";
-
-    log_fh << "\n#\n# Generating SNP-based VCF export.\n#\n";
 
     //
     // Obtain the current date.
@@ -5367,6 +5422,9 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     time(&rawtime);
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%Y%m%d", timeinfo);
+
+    cerr << "Writing population data to VCF file '" << file << "'\n";
+    log_fh << "\n#\n# Generating SNP-based VCF export.\n#\n";
 
     //
     // Output the header.
@@ -5401,6 +5459,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+
         vector<NucTally *> sites;
         ord->order(sites, it->second);
 
@@ -5421,9 +5480,10 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
             p_allele = loc->loc.strand == minus ? reverse(sites[pos]->p_allele) : sites[pos]->p_allele;
             q_allele = loc->loc.strand == minus ? reverse(sites[pos]->q_allele) : sites[pos]->q_allele;
 
+            string snp_id = to_string(loc->id) + (loc->loc.strand == minus ? "m" : "p") + to_string(col);
             fh << loc->loc.chr << "\t"
                << loc->sort_bp(col) + 1 << "\t"
-               << loc->id    << "\t"
+               << snp_id    << "\t"
                << p_allele   << "\t"            // REFerence allele
                << q_allele   << "\t"            // ALTernate allele
                << "."        << "\t"            // QUAL
@@ -5502,6 +5562,15 @@ write_vcf(map<int, CSLocus *> &catalog,
           PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum,
           map<int, pair<merget, int> > &merge_map)
 {
+    // xxx The three [write_vcf()] functions need attention.
+    // - Their use of the 'snps' Stacks files makes it impossible to write VCF in VCF mode.
+    // - [write_vcf_haplotypes] treats [Datum::obshap] as ordered.
+    // - Genotype log-likelihoods should be negative and "L(0/0),L(0/1),L(1/1)" rather than always ".,L(obs),.".
+    // - Genotypes "1/0" should preferably be written "0/1".
+    // - The code can be moved to files "Vcf.h/cc".
+    // See also my orphan commit 0f3c697993b4.
+    // --Nick.
+
     //
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
     //
@@ -5593,9 +5662,10 @@ write_vcf(map<int, CSLocus *> &catalog,
             p_allele = loc->loc.strand == minus ? reverse(t->nucs[col].p_allele) : t->nucs[col].p_allele;
             q_allele = loc->loc.strand == minus ? reverse(t->nucs[col].q_allele) : t->nucs[col].q_allele;
 
+            string snp_id = to_string(loc->id) + (loc->loc.strand == minus ? "m" : "p") + to_string(col);
             fh << loc->loc.chr << "\t"
                << loc->sort_bp(col) + 1 << "\t"
-               << loc->id << "\t" //todo write_vcf (&ordered) should be "LOC+/-column"
+               << snp_id << "\t" // ID
                << p_allele << "\t"              // REFerence allele
                << q_allele << "\t"              // ALTernate allele
                << "."        << "\t"            // QUAL
@@ -5651,7 +5721,6 @@ write_vcf(map<int, CSLocus *> &catalog,
                         }
                         //
                         // Output the likelihood measure for this model call.
-                        // todo write_vcf (&ordered) This should be "L(0/0),L(0/1),L(1/1)" & negative
                         //
                         if (snp_index >= 0) {
                             fh << ":.," << d[j]->snps[snp_index]->lratio << ",.";
@@ -8599,6 +8668,7 @@ int parse_command_line(int argc, char* argv[]) {
 #define O_OUT_PATH         1001
 #define O_IN_PATH          'P'
 #define O_IN_VCF           1002
+#define O_DEBUG_FLAGS      1003
 
     while (1) {
         static struct option long_options[] = {
@@ -8658,6 +8728,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"merge_prune_lim",   required_argument, NULL, 'i'},
             {"fst_correction",    required_argument, NULL, 'f'},
             {"p_value_cutoff",    required_argument, NULL, 'u'},
+            {"debug_flags",    required_argument, NULL, O_DEBUG_FLAGS},
             {0, 0, 0, 0}
         };
 
@@ -8912,6 +8983,22 @@ int parse_command_line(int argc, char* argv[]) {
             // getopt_long already printed an error message.
             help();
             break;
+        case O_DEBUG_FLAGS:
+        {
+            static const set<string> known_debug_flags = {"UNKN"};
+            stringstream ss (optarg);
+            string s;
+            while (std::getline(ss, s, ',')) {
+                if (known_debug_flags.count(s)) {
+                    debug_flags.insert(s);
+                } else {
+                    cerr << "DEBUG> Error: Unknown error flag '" << s << "'.\n";
+                    throw exception();
+                }
+            }
+            cerr << "DEBUG> Flags '" << optarg << "' were passed.\n";
+            break;
+        }
         default:
             cerr << "Unknown command line option: '" << (char) c << "'\n";
             help();
