@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -36,7 +36,11 @@ int     catalog      = 0;
 bool    verify_haplotypes       = true;
 bool    impute_haplotypes       = true;
 bool    require_uniq_haplotypes = false;
+bool    gapped_alignments       = false;
 searcht search_type             = sequence;
+
+double  min_match_len = 0.80;
+double  max_gaps      = 2.0;
 
 int main (int argc, char* argv[]) {
 
@@ -100,6 +104,11 @@ int main (int argc, char* argv[]) {
 	    cerr << "Searching for sequence matches...\n";
 	    find_matches_by_sequence(catalog, sample);
 
+            if (gapped_alignments) {
+                cerr << "Searching for gapped alignments...\n";
+		search_for_gaps(catalog, sample, min_match_len);
+            }
+
 	} else if (search_type == genomic_loc) {
 	    cerr << "Searching for matches by genomic location...\n";
 	    find_matches_by_genomic_loc(catalog, sample);
@@ -119,7 +128,9 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sample_2) {
+int
+find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sample_2)
+{
     //
     // Calculate the distance (number of mismatches) between each pair
     // of Radtags. We expect all radtags to be the same length;
@@ -708,6 +719,134 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
 }
 
 int
+search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample, double min_match_len)
+{
+    //
+    // Search for loci that can be merged with a gapped alignment.
+    //
+    CatKmerHashMap kmer_map;
+    vector<char *> kmer_map_keys;
+    map<int, QLocus *>::iterator it;
+    vector<pair<char, uint> > cigar;
+    QLocus *query;
+    Locus *tag_2;
+
+    //
+    // OpenMP can't parallelize random access iterators, so we convert
+    // our map to a vector of integer keys.
+    //
+    vector<int> keys;
+    for (it = sample.begin(); it != sample.end(); it++) 
+        keys.push_back(it->first);
+
+    //
+    // Calculate the number of k-mers we will generate. If kmer_len == 0,
+    // determine the optimal length for k-mers.
+    //
+    int con_len   = strlen(sample[keys[0]]->con);
+    int kmer_len  = 19;
+    int num_kmers = con_len - kmer_len + 1;
+
+    //
+    // Calculate the minimum number of matching k-mers required for a possible sequence match.
+    //
+    int min_hits = (round((double) con_len * min_match_len) - (kmer_len * max_gaps)) - kmer_len + 1;
+
+    cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+
+    populate_kmer_hash(catalog, kmer_map, kmer_map_keys, kmer_len);
+ 
+    #pragma omp parallel private(query, tag_2, allele)
+    {
+        AlignRes aln_res;
+
+        #pragma omp for schedule(dynamic) 
+        for (uint i = 0; i < keys.size(); i++) {
+            query = sample[keys[i]];
+
+            //
+            // If we already matched this locus to the catalog without using gapped alignments, skip it now.
+            //
+            if (query->matches.size() > 0)
+                continue;
+
+            for (vector<pair<allele_type, string> >::iterator allele = query->strings.begin(); allele != query->strings.end(); allele++) {
+
+        	vector<char *> kmers;
+        	generate_kmers(query->con, kmer_len, num_kmers, kmers);
+
+        	map<int, vector<allele_type> > hits;
+                vector<pair<allele_type, int> >::iterator map_it;
+        	//
+        	// Lookup the occurances of each k-mer in the kmer_map
+        	//
+                for (uint j = 0; j < num_kmers; j++) {
+                    if (kmer_map.count(kmers[j]) > 0)
+                        for (map_it  = kmer_map[kmers[j]].begin();
+                             map_it != kmer_map[kmers[j]].end();
+                             map_it++)
+                            hits[map_it->second].push_back(map_it->first);
+                }
+
+        	//
+        	// Free the k-mers we generated for this query
+        	//
+        	for (uint j = 0; j < num_kmers; j++)
+        	    delete [] kmers[j];
+        	kmers.clear();
+
+        	//
+        	// Iterate through the list of hits. For each hit that has more than min_hits
+        	// check its full length to verify a match.
+        	//
+        	map<int, vector<allele_type> >::iterator hit_it;
+        	vector<allele_type>::iterator            all_it;
+
+        	for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
+
+        	    map<allele_type, int>           allele_cnts;
+                    map<allele_type, int>::iterator cnt_it;
+
+                    for (all_it = hit_it->second.begin(); all_it != hit_it->second.end(); all_it++)
+                        allele_cnts[*all_it]++;
+
+                    for (cnt_it = allele_cnts.begin(); cnt_it != allele_cnts.end(); cnt_it++) {
+
+        		if (cnt_it->second < min_hits) continue;
+
+        		tag_2 = catalog[hit_it->first];
+
+                        GappedAln *aln = new GappedAln(tag_2->len, query->len);
+
+        		if (aln->align(tag_2->con, query->con)) {
+                            cigar.clear();
+                            aln->parse_cigar(cigar);
+
+        		    aln_res = aln->result();
+
+        		    //
+        		    // If the alignment has too many gaps, skip it.
+                            // If the alignment doesn't span enough of the two sequences, skip it.
+        		    //
+        		    if (aln_res.gap_cnt <= (max_gaps + 1) &&
+        			aln_res.pct_id  >= min_match_len  &&
+                                dist(tag_2->con, query->con, cigar) == 0)
+                                query->add_match(tag_2->id, cnt_it->first, allele->first, 0, invert_cigar(aln_res.cigar));
+                        }
+
+                        delete aln;
+        	    }
+        	}
+            }
+        }
+    }
+
+    free_kmer_hash(kmer_map, kmer_map_keys);
+
+    return 0;
+}
+
+int
 populate_hash(map<int, Locus *> &sample, HashMap &hash_map, vector<char *> &hash_map_keys, int min_tag_len)
 {
     map<int, Locus *>::iterator it;
@@ -816,17 +955,17 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
 		qloc->id  << "\t" << 
 		qloc->matches[j]->cat_type << "\t" <<
 		match_depth    << "\t" <<
-		qloc->lnl << "\n";
+		qloc->lnl << qloc->matches[j]->cigar << "\n";
 	}
 
 	if (in_file_type == FileT::gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
 	sstr.str("");
     }
 
-        if (in_file_type == FileT::gzsql)
-	    gzclose(gz_matches);
-	else
-	    matches.close();
+    if (in_file_type == FileT::gzsql)
+        gzclose(gz_matches);
+    else
+        matches.close();
 
     return 0;
 }
@@ -842,6 +981,7 @@ int parse_command_line(int argc, char* argv[]) {
 	    {"genomic_loc",       no_argument, NULL, 'g'},
 	    {"verify_hap",        no_argument, NULL, 'x'},
 	    {"uniq_haplotypes",   no_argument, NULL, 'u'},
+            {"gapped",            no_argument, NULL, 'G'},
 	    {"num_threads", required_argument, NULL, 'p'},
 	    {"batch_id",    required_argument, NULL, 'b'},
 	    {"catalog",     required_argument, NULL, 'c'},
@@ -853,7 +993,7 @@ int parse_command_line(int argc, char* argv[]) {
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgxuvs:c:o:b:p:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgGxuvs:c:o:b:p:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -892,6 +1032,9 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'u':
 	    require_uniq_haplotypes = true;
 	    break;
+        case 'G':
+            gapped_alignments = true;
+            break;
         case 'v':
             version();
             break;
@@ -941,7 +1084,9 @@ void help() {
               << "  g: base matching on genomic location, not sequence identity." << "\n"
 	      << "  x: don't verify haplotype of matching locus." << "\n"
 	      << "  v: print program version." << "\n"
-	      << "  h: display this help messsage." << "\n\n";
+	      << "  h: display this help messsage." << "\n\n"
+              << "  Gapped assembly options:\n"
+              << "    --gapped: preform gapped alignments between stacks.\n";
 
     exit(0);
 }
