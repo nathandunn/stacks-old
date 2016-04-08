@@ -1391,6 +1391,7 @@ function prepare_filter_parameters(&$display_params, &$param) {
 
 	} else if ($filter == "mark") {
 	    $param[] = &$display_params['filter_mark'];
+            $typestr .= "s";
 	}
     }
 
