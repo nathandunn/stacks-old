@@ -26,8 +26,9 @@ malformed_header(const string& path, const size_t line_no)
 }
 
 VcfAbstractParser::VcfAbstractParser()
-: path_(), header_(), header_lines_(0), format_fields_to_keep_(), line_number_(0),
-  eol_(true), eof_(false), tabs_(), bounds_(), kept_format_fields_()
+: path_(), header_(), header_lines_(0), format_fields_to_keep_(), samples_to_keep_(),
+  line_number_(0), eol_(true), eof_(false), tabs_(), bounds_(), kept_format_fields_(),
+  sample_index_(-1)
 {
     memset(line_, '\0', Vcf::line_buf_size);
 }
@@ -183,24 +184,30 @@ VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2)
              << " Line " << line_number_ << " in file " << path_
              << endl;
 
-    record.samples.push_back(vector<string>());
-    vector<string>& sample = record.samples.back();
-    get_bounds(bounds_, tab1, tab2, ':');
-    if(bounds_.size()-1 > kept_format_fields_.size()) {
-        cerr << "Error: malformed VCF genotype : '" << string(tab1+1, tab2)
-                << "' (at most " << kept_format_fields_.size() << " subfields exepcted)."
-                << " Line " << line_number_ << " in file " << path_
-                << endl;
-        throw exception ();
-    }
-    for(size_t i = 0; i<bounds_.size()-1; ++i)
-        if(kept_format_fields_[i])
-            sample.push_back(string(bounds_[i]+1, bounds_.at(i+1)));
+    if (samples_to_keep_.empty() || samples_to_keep_.at(sample_index_)) {
+        record.samples.push_back(vector<string>());
+        vector<string>& sample = record.samples.back();
+        get_bounds(bounds_, tab1, tab2, ':');
+        if(bounds_.size()-1 > kept_format_fields_.size()) {
+            // n.b. kept_format_fields_.size() is the total number of format fields
+            // for this record, whereas record.format.size() is the number of fields
+            // that were retained.
+            cerr << "Error: malformed VCF genotype : '" << string(tab1+1, tab2)
+                 << "' (at most " << kept_format_fields_.size() << " subfields exepcted)."
+                 << " Line " << line_number_ << " in file " << path_
+                 << endl;
+            throw exception ();
+        }
+        for(size_t i = 0; i<bounds_.size()-1; ++i)
+            if(kept_format_fields_[i])
+                sample.push_back(string(bounds_[i]+1, bounds_.at(i+1)));
 
-    if(sample.size() < record.format.size()) {
-        while(sample.size() < record.format.size())
-            sample.push_back(string()); // We add missing values for the remaining subfields.
+        if(sample.size() < record.format.size()) {
+            while(sample.size() < record.format.size())
+                sample.push_back(string()); // We add missing values for the remaining subfields.
+        }
     }
+    ++sample_index_;
 }
 
 bool
@@ -231,6 +238,16 @@ VcfGzParser::open(const string& path)
 
     read_header();
     return true;
+}
+
+void VcfAbstractParser::samples_to_keep(const set<string>& samples) {
+    samples_to_keep_.clear();
+    samples_to_keep_.reserve(header_.samples().size());
+    for (vector<string>::const_iterator
+            s=header_.samples().begin();
+            s!=header_.samples().end();
+            ++s)
+        samples_to_keep_.push_back(bool(samples.count(*s)));
 }
 
 inline void
@@ -267,43 +284,6 @@ Vcf::adaptive_open(const string& path)
     }
 
     return parser;
-}
-
-vector<VcfRecord>
-VcfAbstractParser::read_snp_records(size_t* n_skipped)
-{
-    vector<VcfRecord> records;
-    if(n_skipped)
-        *n_skipped = 0;
-
-    records.push_back(VcfRecord());
-    VcfRecord* rec = &records.back();
-    while (next_record(*rec)) {
-        bool skip = false;
-        if (rec->type != Vcf::RType::expl) {
-            skip = true;
-            if (rec->type == Vcf::RType::null) {
-                cerr << "Warning: In file '" << path_ << "': skipping very long VCF line "
-                     << line_number_ << ".\n";
-            }
-        } else {
-            for (vector<string>::const_iterator allele = rec->alleles.begin(); allele != rec->alleles.end(); ++allele) {
-                if (allele->length() > 1) {
-                    skip = true;
-                    break;
-                }
-            }
-        }
-        if(skip && n_skipped) {
-            ++*n_skipped;
-            continue;
-        }
-        records.push_back(VcfRecord());
-        rec = &records.back();
-    }
-    records.pop_back();
-
-    return records;
 }
 
 bool
@@ -461,23 +441,25 @@ VcfAbstractParser::next_record(VcfRecord& record)
         kept_format_fields_.clear();
         for(size_t i = 0; i < bounds_.size()-1; ++i ) {
             string format = string(bounds_.at(i)+1, bounds_.at(i+1));
-            if(format_fields_to_keep_.size() == 0 || format_fields_to_keep_.count(format)) {
+            if(format_fields_to_keep_.empty() || format_fields_to_keep_.count(format)) {
                 kept_format_fields_.push_back(true);
                 record.format.push_back(format);
             } else {
                 kept_format_fields_.push_back(false);
             }
         }
-        if(record.format[Vcf::gt_subfield_index] == "GT")
+        if(record.format[Vcf::gt_subfield] == "GT")
             // There are genotypes for this record.
             record.no_gt = false;
 
         //samples
-        for(size_t s = Vcf::base_fields_no; s < tabs_.size()-2; ++s)
+        sample_index_ = 0;
+        for (size_t s = Vcf::base_fields_no; s < tabs_.size()-2; ++s) //n.b. -2
             add_sample(record, tabs_[s], tabs_[s+1]);
 
-        while(!eol_) {
-            // Copy the trucated sample field to the beggining of the buffer and read some more.
+        // If the record line was not read entirely, copy the trucated sample field
+        // to the beggining of the buffer and read some more.
+        while (!eol_) {
             size_t lastfieldlen = tabs_.back() - *(tabs_.end()-2);
             *line_ = '\t';
             strcpy(line_+1, *(tabs_.end()-2)+1);
@@ -506,7 +488,8 @@ VcfAbstractParser::next_record(VcfRecord& record)
                 add_sample(record, tabs_[i], tabs_[i+1]);
             }
         }
-        add_sample(record, *(tabs_.end()-2), tabs_.back()); // last sample
+        //the actual last sample
+        add_sample(record, *(tabs_.end()-2), tabs_.back());
 
         if(record.samples.size() != header_.samples().size()) {
             cerr << "Error: malformed VCF record line ("

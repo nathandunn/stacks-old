@@ -271,8 +271,7 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
      * [len] is the locus length (expected to be one, for a SNP)
      * [model] "E" or "O" according to the SAMPLE/GT field, or
      *     "U" if the GT field is absent.
-     * [obshap] the nucleotide(s) observed for this SNP for this individual
-     *     todo Does [Datum::obshap] have to be ordered?
+     * [obshap] the nucleotide(s) observed for this SNP for this individual.
      *
      * When no depth information is available, [tot_depth] and the [depths]
      * of all alleles are set to 0.

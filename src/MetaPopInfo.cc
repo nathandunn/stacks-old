@@ -5,8 +5,10 @@
 #include <cstring>
 #include <vector>
 
+#include "config.h"
 #include "constants.h"
 #include "input.h"
+
 #include "MetaPopInfo.h"
 
 using std::ifstream;
