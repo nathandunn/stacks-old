@@ -94,7 +94,7 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
             }
 
             if (!exists) {
-                cerr << " Unable to find '" << filename << "(.gz)', excluding this sample from the analysis.\n";
+                cerr << "Warning: Unable to find '" << filename << "(.gz)', excluding this sample from the analysis.\n";
                 samples_.pop_back();
                 continue;
             }
@@ -142,8 +142,13 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
             }
         }
     }
-    if (samples_.size() == 0)
+    if (samples_.empty()) {
+        pops_.clear();
+        groups_.clear();
+        pop_indexes_.clear();
+        group_indexes_.clear();
         return false;
+    }
 
     //
     // Check that all the populations are in a group. Put
@@ -197,12 +202,42 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
     return true;
 }
 
+bool MetaPopInfo::init_names(const vector<string>& sample_names) {
+    if(sample_names.empty())
+        return false;
+
+    // Create the samples
+    for (vector<string>::const_iterator s=sample_names.begin(); s!= sample_names.end(); ++s) {
+        samples_.push_back(Sample(*s));
+        samples_.back().pop = 0;
+    }
+    sort(samples_.begin(), samples_.end());
+
+    // Create a default population
+    pops_.push_back(Pop(Pop::default_name));
+    pops_[0].first_sample = 0;
+    pops_[0].last_sample = samples_.size()-1;
+    pops_[0].group = 0;
+
+    // Create a default group
+    groups_.push_back(Group(Group::default_name));
+    groups_[0].pops.push_back(0);
+
+    // Set the support members.
+    reset_sample_map();
+    reset_pop_map();
+    reset_group_map();
+
+    return true;
+}
+
 bool MetaPopInfo::init_directory(const string& dir_path) {
 
     //
     // Find all sample names.
     //
 
+    vector<string> sample_names;
     DIR* dir = opendir(dir_path.c_str());
     if (dir == NULL) {
         cerr << "Unable to open directory '" << dir_path << "' for reading.\n";
@@ -220,36 +255,15 @@ bool MetaPopInfo::init_directory(const string& dir_path) {
             pos = filename.rfind(".tags.tsv.gz");
 
         if (pos != string::npos)
-            samples_.push_back(Sample(filename.substr(0, pos)));
+            sample_names.push_back(filename.substr(0, pos));
     }
     closedir(dir);
 
-    if (samples_.size() == 0)
-        return false;
-
-    sort(samples_.begin(), samples_.end());
-
     //
-    // Create a default group and a default population.
+    // Initialize the MetaPopInfo
     //
 
-    groups_.push_back(Group(Group::default_name));
-    groups_.back().pops.push_back(0);
-
-    pops_.push_back(Pop(Pop::default_name));
-    pops_.back().first_sample = 0;
-    pops_.back().last_sample = samples_.size()-1;
-    pops_.back().group = 0;
-
-    for (vector<Sample>::iterator s = samples_.begin(); s != samples_.end(); ++s)
-        s->pop = 0;
-
-    // Set the support members.
-    reset_sample_map();
-    reset_pop_map();
-    reset_group_map();
-
-    return true;
+    return init_names(sample_names);
 }
 
 void MetaPopInfo::purge_samples(const vector<size_t>& rm_samples) {
@@ -260,7 +274,7 @@ void MetaPopInfo::purge_samples(const vector<size_t>& rm_samples) {
     }
     samples_.erase(
             remove_if(samples_.begin(), samples_.end(),
-                    [](Sample& s) {return s.name.empty();} ),
+                    [] (Sample& s) {return s.name.empty();} ),
             samples_.end());
 
     // Update the indexes of the populations.
@@ -274,13 +288,13 @@ void MetaPopInfo::purge_samples(const vector<size_t>& rm_samples) {
         }
     }
 
-    auto pop_is_empty = [](Pop& p){return (p.first_sample > p.last_sample);};
+    auto pop_is_empty = [] (Pop& p) {return (p.first_sample > p.last_sample);};
 
     // Remove the empty populations from [groups_].
     for(vector<Group>::iterator group = groups_.begin(); group != groups_.end(); ++group)
         group->pops.erase(
                 remove_if(group->pops.begin(), group->pops.end(),
-                        [this,&pop_is_empty](size_t p){return pop_is_empty(pops_[p]);}),
+                        [this,&pop_is_empty] (size_t p) {return pop_is_empty(pops_[p]);}),
                 group->pops.end());
 
     // Remove the empty populations from [pops_].
@@ -291,7 +305,7 @@ void MetaPopInfo::purge_samples(const vector<size_t>& rm_samples) {
     // Remove empty groups from [groups_].
     groups_.erase(
             remove_if(groups_.begin(), groups_.end(),
-                    [](Group& g) {return g.pops.empty();}),
+                    [] (Group& g) {return g.pops.empty();}),
             groups_.end());
 
     // Update the support members.

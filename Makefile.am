@@ -5,7 +5,7 @@ ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/co
 	src/mstack.h src/mstack.cc src/mst.h src/mst.cc src/cmb.h src/cmb.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/models.h src/models.cc src/utils.h src/utils.cc \
-	src/kmers.h src/kmers.cc \
+	src/kmers.h src/kmers.cc src/GappedAln.h \
 	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
 	src/gzFasta.h src/gzFastq.h
 
