@@ -19,9 +19,7 @@ get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep)
 void
 malformed_header(const string& path, const size_t line_no)
 {
-    cerr << "Error: Malformed VCF header."
-         << " Line " << line_no << " in file " << path
-         << endl;
+    cerr << "Error: Malformed VCF header. Line " << line_no << " in file '" << path << "'.\n";
     throw exception();
 }
 
@@ -267,20 +265,21 @@ VcfAbstractParser*
 Vcf::adaptive_open(const string& path)
 {
     VcfAbstractParser* parser = NULL;
-
-    parser = new VcfParser();
-    if (not parser->open(path)) {
-        // Opening failed
-        delete parser;
-        parser = NULL;
+    if (path.length() >= 3 && path.substr(path.length()-3) == ".gz") {
 #ifdef HAVE_LIBZ
-        // Try gzip
         parser = new VcfGzParser();
         if (not parser->open(path)) {
             delete parser;
             parser = NULL;
         }
 #endif
+    } else {
+        parser = new VcfParser();
+        if (not parser->open(path)) {
+            // Opening failed
+            delete parser;
+            parser = NULL;
+        }
     }
 
     return parser;
