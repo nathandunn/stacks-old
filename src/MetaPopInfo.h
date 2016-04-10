@@ -65,7 +65,7 @@ public:
     //    files is checked if a [dir_path] argument is given.
     // -- from just a vector of sample names.
     // -- or by browsing the directory for "*.tags.tsv(.gz)" files.
-    bool init_popmap(const string& popmap_path, const string& dir_path = string());
+    bool init_popmap(const string& popmap_path);
     bool init_names(const vector<string>& sample_names);
     bool init_directory(const string& dir_path);
 

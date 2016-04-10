@@ -36,7 +36,7 @@ void MetaPopInfo::reset_group_map() {
         group_indexes_.insert( {groups_[i].name, i} );
 }
 
-bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
+bool MetaPopInfo::init_popmap(const string& pmap_path) {
 
     ifstream fh(pmap_path.c_str(), ifstream::in);
     if (fh.fail())
@@ -61,8 +61,11 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
             len -= 1;
         }
 
+        //
         // Parse the contents, we expect:
         // <file name> tab <population string> [tab <group string>]
+        //
+
         parse_tsv(line, parts);
 
         if (parts.size() < 2 || parts.size() > 3) {
@@ -75,32 +78,6 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
         //
 
         samples_.push_back(Sample(parts[0]));
-
-        // If the [dir_path] argument was given :
-        // Check that "DIR/SAMPLENAME.matches.tsv(.gz)" exists.
-        if(not dir_path.empty()) {
-            bool exists = false;
-
-            string filename = dir_path + samples_.back().name + ".matches.tsv";
-            ifstream test_fh (filename);
-            if (test_fh.good()) {
-                exists = true;
-            } else {
-#ifdef HAVE_LIBZ
-                gzFile gz_test_fh = gzopen((filename + "gz").c_str(), "rb");
-                if (gz_test_fh) {
-                    exists = true;
-                }
-                gzclose(gz_test_fh);
-#endif
-            }
-
-            if (!exists) {
-                cerr << "Warning: Unable to find '" << filename << "(.gz)', excluding this sample from the analysis.\n";
-                samples_.pop_back();
-                continue;
-            }
-        }
 
         //
         // Process the population field.
@@ -144,13 +121,9 @@ bool MetaPopInfo::init_popmap(const string& pmap_path, const string& dir_path) {
             }
         }
     }
-    if (samples_.empty()) {
-        pops_.clear();
-        groups_.clear();
-        pop_indexes_.clear();
-        group_indexes_.clear();
+    if (samples_.empty())
+        // Empty population map.
         return false;
-    }
 
     //
     // Check that all the populations are in a group. Put
@@ -286,11 +259,12 @@ void MetaPopInfo::purge_samples(const vector<size_t>& rm_samples) {
                 --p->first_sample;
             if (p->last_sample >= *rm_sample) // n.b. ">=". Thus if the population becomes
                                               // empty, [first_sample] will be past [last_sample].
+                                              // n.b. If removing the first pop, last_sample=size_t(-1).
                 --p->last_sample;
         }
     }
 
-    auto pop_is_empty = [] (Pop& p) {return (p.first_sample > p.last_sample);};
+    auto pop_is_empty = [] (Pop& p) {return (p.first_sample > p.last_sample || p.last_sample == size_t(-1));};
 
     // Remove the empty populations from [groups_].
     for(vector<Group>::iterator group = groups_.begin(); group != groups_.end(); ++group)

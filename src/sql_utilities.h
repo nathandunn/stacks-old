@@ -420,10 +420,9 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
         //
         f = sample + ".matches.tsv.gz";
         gz_fh = gzopen(f.c_str(), "rb");
-        if (!gz_fh) {
-            cerr << " Unable to open '" << sample << "'\n";
+        if (!gz_fh)
             return 0;
-        }
+
         #if ZLIB_VERNUM >= 0x1240
         gzbuffer(gz_fh, libz_buffer_size);
         #endif
