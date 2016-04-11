@@ -283,12 +283,12 @@ int
 populate_kmer_hash(map<int, Locus *> &catalog, KmerHashMap &kmer_map, vector<char *> &kmer_map_keys, map<int, pair<allele_type, int> > &allele_map, int kmer_len)
 {
     map<int, Locus *>::iterator it;
+    KmerHashMap::iterator   map_it;
     vector<pair<allele_type, string> >::iterator allele;
     map<int, pair<allele_type, int> >::iterator  allele_it;
     vector<char *> kmers;
     Locus         *tag;
     char          *hash_key;
-    bool           exists;
 
     //
     // Break each stack down into k-mers and create a hash map of those k-mers
@@ -317,14 +317,16 @@ populate_kmer_hash(map<int, Locus *> &catalog, KmerHashMap &kmer_map, vector<cha
 
             for (int j = 0; j < num_kmers; j++) {
                 hash_key = kmers[j];
-                exists   = kmer_map.count(hash_key) == 0 ? false : true;
 
-                kmer_map[hash_key].push_back(allele_index);
+		map_it = kmer_map.find(hash_key);
 
-                if (exists)
+                if (map_it != kmer_map.end()) {
+		    map_it->second.push_back(allele_index);
                     delete [] kmers[j];
-                else
+		} else {
+		    kmer_map[hash_key].push_back(allele_index);
                     kmer_map_keys.push_back(hash_key);
+		}
             }
             kmers.clear();
 
