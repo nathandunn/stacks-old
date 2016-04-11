@@ -505,12 +505,12 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
 	 << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
 	 << min_hits << " k-mer hits required.\n";
 
-    clock_t time_1, time_2, time_3, time_4;
-    double  per_locus = 0.0;
+    // clock_t time_1, time_2, time_3, time_4;
+    // double  per_locus = 0.0;
 
-    time_1 = clock();
+    // time_1 = clock();
     populate_kmer_hash(catalog, kmer_map, kmer_map_keys, allele_map, kmer_len);
-    time_2 = clock();
+    // time_2 = clock();
     
     cerr << "  " << catalog.size() << " loci in the catalog, " << kmer_map.size() << " kmers in the catalog hash.\n";
 
@@ -531,7 +531,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
         for (uint i = 0; i < keys.size(); i++) {
             tag_1 = sample[keys[i]];
 
-            time_3 = clock();
+            // time_3 = clock();
 
             for (allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
              
@@ -614,8 +614,8 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
             // Sort the vector of distances.
             sort(tag_1->matches.begin(), tag_1->matches.end(), compare_matches);
 
-            time_4 = clock();
-            per_locus += (time_4 - time_3);
+            // time_4 = clock();
+            // per_locus += (time_4 - time_3);
         }
 
         //
@@ -626,8 +626,8 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
         kmers.clear();
     }
 
-    cerr << "Time to kmerize catalog: " << time_2 - time_1 << "\n"
-         << "Average time per locus:  " << per_locus / (double) keys.size() << "\n";
+    // cerr << "Time to kmerize catalog: " << time_2 - time_1 << "\n"
+    //      << "Average time per locus:  " << per_locus / (double) keys.size() << "\n";
     
     free_kmer_hash(kmer_map, kmer_map_keys);
 
@@ -670,12 +670,12 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 
     cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
 
-    clock_t time_1, time_2, time_3, time_4;
-    double  per_locus = 0.0;
+    // clock_t time_1, time_2, time_3, time_4;
+    // double  per_locus = 0.0;
 
-    time_1 = clock();
+    // time_1 = clock();
     populate_kmer_hash(catalog, kmer_map, kmer_map_keys, allele_map, kmer_len);
-    time_2 = clock();
+    // time_2 = clock();
     
     #pragma omp parallel private(tag_1, tag_2)
     {
@@ -703,7 +703,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
             if (tag_1->matches.size() > 0)
                 continue;
 
-            time_3 = clock();
+            // time_3 = clock();
 
             for (vector<pair<allele_type, string> >::iterator allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
 
@@ -816,8 +816,8 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 		}
             }
 
-            time_4 = clock();
-            per_locus += (time_4 - time_3);
+            // time_4 = clock();
+            // per_locus += (time_4 - time_3);
         }
 
         //
@@ -830,8 +830,8 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
         delete aln;
     }
 
-    cerr << "Time to kmerize catalog: " << time_2 - time_1 << "\n"
-         << "Average time per locus:  " << per_locus / (double) keys.size() << "\n";
+    // cerr << "Time to kmerize catalog: " << time_2 - time_1 << "\n"
+    //      << "Average time per locus:  " << per_locus / (double) keys.size() << "\n";
 
     free_kmer_hash(kmer_map, kmer_map_keys);
 
