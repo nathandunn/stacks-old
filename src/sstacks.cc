@@ -820,7 +820,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
         	//
         	// Lookup the occurances of each k-mer in the kmer_map
         	//
-		for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {		    
+		for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
 
 		    h = kmer_map.find(j->c_str());
 
@@ -868,22 +868,23 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 		// Only try to align the sequences with the most kmers in common.
 		//
 		top_hit = ordered_hits[0].second;
-		for (uint i = 1; i < ordered_hits.size(); i++)
-		    if (ordered_hits[i].second < top_hit) {
-			stop = i;
+                stop    = 1;
+		for (uint j = 1; j < ordered_hits.size(); j++)
+		    if (ordered_hits[j].second < top_hit) {
+			stop = j;
 			break;
 		    }
-		
-		for (uint i = 0; i < stop; i++) {
-		    cat_hit = allele_map.at(ordered_hits[i].first);
-		    hit_cnt = ordered_hits[i].second;
+
+		for (uint j = 0; j < stop; j++) {
+		    cat_hit = allele_map.at(ordered_hits[j].first);
+		    hit_cnt = ordered_hits[j].second;
 
 		    tag_2 = catalog[cat_hit.second];
 
 		    cat_seq = "";
-		    for (uint j = 0; j < tag_2->strings.size(); j++)
-			if (tag_2->strings[j].first == cat_hit.first) {
-			    cat_seq = tag_2->strings[j].second;
+		    for (uint k = 0; k < tag_2->strings.size(); k++)
+			if (tag_2->strings[k].first == cat_hit.first) {
+			    cat_seq = tag_2->strings[k].second;
 			    break;
 			}
 

@@ -339,6 +339,66 @@ populate_kmer_hash(map<int, Locus *> &catalog, KmerHashMap &kmer_map, vector<cha
     return 0;
 }
 
+int
+populate_kmer_hash(map<int, CLocus *> &catalog, KmerHashMap &kmer_map, vector<char *> &kmer_map_keys, map<int, pair<allele_type, int> > &allele_map, int kmer_len)
+{
+    map<int, CLocus *>::iterator it;
+    KmerHashMap::iterator   map_it;
+    vector<pair<allele_type, string> >::iterator allele;
+    map<int, pair<allele_type, int> >::iterator  allele_it;
+    vector<char *> kmers;
+    Locus         *tag;
+    char          *hash_key;
+
+    //
+    // Break each stack down into k-mers and create a hash map of those k-mers
+    // recording in which sequences they occur.
+    //
+    int num_kmers;
+    int allele_index = 0;
+
+    allele_it = allele_map.begin();
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+        tag = it->second;
+
+	num_kmers = strlen(tag->con) - kmer_len + 1;
+
+        //
+        // Iterate through the possible Catalog alleles
+        //
+        for (allele = tag->strings.begin(); allele != tag->strings.end(); allele++) {
+            //
+            // Generate and hash the kmers for this allele string
+            //
+            generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
+
+	    allele_it = allele_map.insert(allele_it, make_pair(allele_index, make_pair(allele->first, tag->id)));
+
+            for (int j = 0; j < num_kmers; j++) {
+                hash_key = kmers[j];
+
+		map_it = kmer_map.find(hash_key);
+
+                if (map_it != kmer_map.end()) {
+		    map_it->second.push_back(allele_index);
+                    delete [] kmers[j];
+		} else {
+		    kmer_map[hash_key].push_back(allele_index);
+                    kmer_map_keys.push_back(hash_key);
+		}
+            }
+            kmers.clear();
+
+	    allele_index++;
+        }
+    }
+
+    //dump_kmer_map(kmer_map);
+
+    return 0;
+}
+
 int 
 free_kmer_hash(CatKmerHashMap &kmer_map, vector<char *> &kmer_map_keys) 
 {
