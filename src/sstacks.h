@@ -27,6 +27,7 @@
 #include <omp.h>    // OpenMP library
 #endif
 #include <getopt.h> // Process command-line options
+#include <time.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>

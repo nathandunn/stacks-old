@@ -724,12 +724,10 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample, double m
     //
     // Search for loci that can be merged with a gapped alignment.
     //
-    CatKmerHashMap kmer_map;
-    vector<char *> kmer_map_keys;
     map<int, QLocus *>::iterator it;
     vector<pair<char, uint> > cigar;
     QLocus *query;
-    Locus *tag_2;
+    Locus  *tag_2;
 
     //
     // OpenMP can't parallelize random access iterators, so we convert
@@ -754,12 +752,40 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample, double m
 
     cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
 
-    populate_kmer_hash(catalog, kmer_map, kmer_map_keys, kmer_len);
- 
+    clock_t time_1, time_2, time_3, time_4, time_5;
+
+    time_1 = clock();
+
+    KmerHashMap kmer_map;
+    map<int, pair<allele_type, int> > allele_map;
+    vector<char *> kmer_map_keys;
+    populate_kmer_hash(catalog, kmer_map, kmer_map_keys, allele_map, kmer_len);
+
+    time_2 = clock();
+
+    cerr << "Time to populate kmer hash: " << time_2 - time_1 <<  "\n";
+
+    double gapped_aln = 0.0;
+    double tot_time   = 0.0;
+    double key_lookup_time = 0.0;
+    double align_time = 0.0;
+    
     #pragma omp parallel private(query, tag_2, allele)
     {
-        AlignRes aln_res;
+	KmerHashMap::iterator   h;
+        AlignRes                aln_res;
+	vector<char *>          kmers;
+	set<string>             uniq_kmers;
+	vector<int>             hits;
+	vector<pair<int, int> > ordered_hits;
+	uint                    tot_hits, hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
+	pair<allele_type, int>  cat_hit;
+	string                  cat_seq;
 
+	GappedAln *aln = new GappedAln();
+
+	initialize_kmers(kmer_len, num_kmers, kmers);
+	
         #pragma omp for schedule(dynamic) 
         for (uint i = 0; i < keys.size(); i++) {
             query = sample[keys[i]];
@@ -767,80 +793,230 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample, double m
             //
             // If we already matched this locus to the catalog without using gapped alignments, skip it now.
             //
-            if (query->matches.size() > 0)
+	    // cerr << "Query: " << query->id << "; number of matches: " << query->matches.size() << "\n";
+            if (query->matches.size() > 0) {
+		// cerr << "  Skipping...\n";
                 continue;
+	    }
+	    gapped_aln++;
 
+	    time_1 = clock();
             for (vector<pair<allele_type, string> >::iterator allele = query->strings.begin(); allele != query->strings.end(); allele++) {
+		
+		time_2 = clock();
+        	generate_kmers_lazily(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
-        	vector<char *> kmers;
-        	generate_kmers(query->con, kmer_len, num_kmers, kmers);
+		//
+		// We want to create a list of unique kmers to search with; otherwise, repetitive kmers will
+		// generate, multiple, spurious hits in sequences with multiple copies of the same kmer.
+		//
+		uniq_kmers.clear();
+                for (uint j = 0; j < num_kmers; j++)
+		    uniq_kmers.insert(kmers[j]);
+		time_3 = clock();
 
-        	map<int, vector<allele_type> > hits;
-                vector<pair<allele_type, int> >::iterator map_it;
+		/*-----------------------------------------------------------------------*/
+
+		hits.clear();
+		ordered_hits.clear();
+
         	//
         	// Lookup the occurances of each k-mer in the kmer_map
         	//
-                for (uint j = 0; j < num_kmers; j++) {
-                    if (kmer_map.count(kmers[j]) > 0)
-                        for (map_it  = kmer_map[kmers[j]].begin();
-                             map_it != kmer_map[kmers[j]].end();
-                             map_it++)
-                            hits[map_it->second].push_back(map_it->first);
+		for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {		    
+
+		    h = kmer_map.find(j->c_str());
+
+		    if (h != kmer_map.end())
+			for (uint k = 0; k <  h->second.size(); k++)
+			    hits.push_back(h->second[k]);
                 }
 
+		//
+		// Sort the vector of indexes; provides the number of hits to each allele/locus
+		// and orders them largest to smallest.
+		//
+		sort(hits.begin(), hits.end());
+		
+		time_4 = clock();
+
+		int hits_aligned = 0;
+
+		//
+        	// Iterate through the list of hits and collapse them down by number of kmer hits per allele.
         	//
-        	// Free the k-mers we generated for this query
-        	//
-        	for (uint j = 0; j < num_kmers; j++)
-        	    delete [] kmers[j];
-        	kmers.clear();
+		hits_size = hits.size();
+		tot_hits  = 0;
+		prev_id   = hits[0];
+		index     = 0;
+		
+		do {
+		    hit_cnt   = 0;
+		    allele_id = prev_id;
 
-        	//
-        	// Iterate through the list of hits. For each hit that has more than min_hits
-        	// check its full length to verify a match.
-        	//
-        	map<int, vector<allele_type> >::iterator hit_it;
-        	vector<allele_type>::iterator            all_it;
+		    while (hits[index] == prev_id) {
+			hit_cnt++;
+			index++;
+		    }
 
-        	for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
+		    tot_hits++;
 
-        	    map<allele_type, int>           allele_cnts;
-                    map<allele_type, int>::iterator cnt_it;
+		    if (index < hits_size)
+			prev_id = hits[index];
 
-                    for (all_it = hit_it->second.begin(); all_it != hit_it->second.end(); all_it++)
-                        allele_cnts[*all_it]++;
+		    if (hit_cnt >= min_hits)
+			ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
-                    for (cnt_it = allele_cnts.begin(); cnt_it != allele_cnts.end(); cnt_it++) {
+        	} while (index < hits_size);
 
-        		if (cnt_it->second < min_hits) continue;
+		//
+		// Process the hits from most kmer hits to least kmer hits.
+		//
+		sort(ordered_hits.begin(), ordered_hits.end(), compare_pair_intint);
 
-        		tag_2 = catalog[hit_it->first];
+		//
+		// Only try to align the sequences with the most kmers in common.
+		//
+		top_hit = ordered_hits[0].second;
+		for (uint i = 1; i < ordered_hits.size(); i++)
+		    if (ordered_hits[i].second < top_hit) {
+			stop = i;
+			break;
+		    }
+		
+		for (uint i = 0; i < stop; i++) {
+		    cat_hit = allele_map.at(ordered_hits[i].first);
+		    hit_cnt = ordered_hits[i].second;
 
-                        GappedAln *aln = new GappedAln(tag_2->len, query->len);
+		    hits_aligned++;
+		    tag_2 = catalog[cat_hit.second];
 
-        		if (aln->align(tag_2->con, query->con)) {
-                            cigar.clear();
-                            aln->parse_cigar(cigar);
+		    cat_seq = "";
+		    for (uint j = 0; j < tag_2->strings.size(); j++)
+			if (tag_2->strings[j].first == cat_hit.first) {
+			    cat_seq = tag_2->strings[j].second;
+			    break;
+			}
 
-        		    aln_res = aln->result();
+		    aln->init(tag_2->len, query->len);
 
-        		    //
-        		    // If the alignment has too many gaps, skip it.
-                            // If the alignment doesn't span enough of the two sequences, skip it.
-        		    //
-        		    if (aln_res.gap_cnt <= (max_gaps + 1) &&
-        			aln_res.pct_id  >= min_match_len  &&
-                                dist(tag_2->con, query->con, cigar) == 0)
-                                query->add_match(tag_2->id, cnt_it->first, allele->first, 0, invert_cigar(aln_res.cigar));
-                        }
+		    if (aln->align(cat_seq, allele->second)) {
+			cigar.clear();
+			aln->parse_cigar(cigar);
 
-                        delete aln;
-        	    }
-        	}
+			aln_res = aln->result();
+
+			//
+			// If the alignment has too many gaps, skip it.
+			// If the alignment doesn't span enough of the two sequences, skip it.
+			//
+			if (aln_res.gap_cnt <= (max_gaps + 1) &&
+			    aln_res.pct_id  >= min_match_len  &&
+			    dist(tag_2->con, query->con, cigar) == 0)
+			    query->add_match(tag_2->id, cat_hit.first, allele->first, 0, invert_cigar(aln_res.cigar));
+		    }
+		}
+
+		time_5 = clock();
+
+		/*-----------------------------------------------------------------------*/
+		
+		// map<int, vector<allele_type> > hits;
+        	// //
+        	// // Lookup the occurances of each k-mer in the kmer_map
+        	// //
+                // for (uint j = 0; j < num_kmers; j++) {
+		//     h = kmer_map.find(kmers[j]);
+
+		//     if (h != kmer_map.end())
+		// 	for (map_it = h->second.begin(); map_it != h->second.end(); map_it++)
+                //             hits[map_it->second].push_back(map_it->first);
+
+                //     // if (kmer_map.count(kmers[j]) > 0)
+                //     //     for (map_it  = kmer_map[kmers[j]].begin();
+                //     //          map_it != kmer_map[kmers[j]].end();
+                //     //          map_it++)
+		//     //         hits[map_it->second].push_back(map_it->first);
+                // }
+		
+		// time_4 = clock();
+        	// //
+        	// // Iterate through the list of hits. For each hit that has more than min_hits
+        	// // check its full length to verify a match.
+        	// //
+        	// map<int, vector<allele_type> >::iterator hit_it;
+        	// vector<allele_type>::iterator            all_it;
+		// int hits_aligned = 0;
+		// cerr << "Number of hits: " << hits.size() << "\n";
+        	// for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
+
+        	//     map<allele_type, int>           allele_cnts;
+                //     map<allele_type, int>::iterator cnt_it;
+
+                //     for (all_it = hit_it->second.begin(); all_it != hit_it->second.end(); all_it++)
+                //         allele_cnts[*all_it]++;
+
+                //     for (cnt_it = allele_cnts.begin(); cnt_it != allele_cnts.end(); cnt_it++) {
+		// 	cerr << "    " << hit_it->first << "; allele '" << cnt_it->first << "', hits: " << cnt_it->second << "\n";
+
+        	//     	if (cnt_it->second < min_hits) continue;
+		// 	hits_aligned++;
+        	//     	tag_2 = catalog[hit_it->first];
+
+                //         // GappedAln *aln = new GappedAln(tag_2->len, query->len);
+
+        	// 	// if (aln->align(tag_2->con, query->con)) {
+                //         //     cigar.clear();
+                //         //     aln->parse_cigar(cigar);
+
+        	// 	//     aln_res = aln->result();
+
+        	// 	//     //
+        	// 	//     // If the alignment has too many gaps, skip it.
+                //         //     // If the alignment doesn't span enough of the two sequences, skip it.
+        	// 	//     //
+        	// 	//     if (aln_res.gap_cnt <= (max_gaps + 1) &&
+        	// 	// 	aln_res.pct_id  >= min_match_len  &&
+                //         //         dist(tag_2->con, query->con, cigar) == 0)
+                //         //         query->add_match(tag_2->id, cnt_it->first, allele->first, 0, invert_cigar(aln_res.cigar));
+                //         // }
+
+                //         // delete aln;
+		//     }
+        	// }
+		// time_5 = clock();
+		
+		tot_time += time_5 - time_1;
+		key_lookup_time += time_4 - time_3;
+		align_time += time_5 - time_4;
+		// double ttime  = time_5 - time_1;
+		// double seg_1  = time_3 - time_2;
+		// double seg_2  = time_4 - time_3;
+		// double seg_3  = time_5 - time_4;
+		// cerr << "  Hits aligned: " << hits_aligned << "\n"
+		//      << "  Total time: " << ttime << "\n"
+		//      << "    kmer allocation:    " << seg_1 << "\n"
+		//      << "    kmer lookup:        " << seg_2 << "\n"
+		//      << "    Gapped alignment:   " << seg_3 << "\n\n";
+		
             }
         }
-    }
 
+	//
+	// Free the k-mers we generated for this query and the alignment class.
+	//
+	for (uint j = 0; j < kmers.size(); j++)
+	    delete [] kmers[j];
+	kmers.clear();
+
+	delete aln;
+
+	cerr << "Average time for key lookup: " << key_lookup_time / gapped_aln << "\n"
+	     << "Average time to align: " << align_time / gapped_aln << "\n"
+	     << "Average time per locus: " << tot_time / gapped_aln << "\n";
+    }
+  
+    cerr << "Gapped alignments attempted: " << gapped_aln << "\n";
     free_kmer_hash(kmer_map, kmer_map_keys);
 
     return 0;
@@ -947,15 +1123,15 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
 		    qloc->alleles.count(qloc->matches[j]->cat_type) > 0 ? 
 		    qloc->alleles[qloc->matches[j]->cat_type] : qloc->depth;
 
-	    sstr << 
-		"0"            << "\t" <<
-		batch_id       << "\t" <<
-		qloc->matches[j]->cat_id   << "\t" <<
-		samp_id        << "\t" <<
-		qloc->id  << "\t" << 
-		qloc->matches[j]->cat_type << "\t" <<
-		match_depth    << "\t" <<
-		qloc->lnl << qloc->matches[j]->cigar << "\n";
+	    sstr << "0"            << "\t"
+		 << batch_id       << "\t"
+		 << qloc->matches[j]->cat_id   << "\t"
+		 << samp_id        << "\t"
+		 << qloc->id       << "\t"
+		 << qloc->matches[j]->cat_type << "\t"
+		 << match_depth    << "\t"
+		 << qloc->lnl      << "\t"
+		 << qloc->matches[j]->cigar    << "\n";
 	}
 
 	if (in_file_type == FileT::gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
