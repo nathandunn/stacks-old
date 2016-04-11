@@ -941,7 +941,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 		nomatches++;
 	    else if (loci_hit.size() == 1)
 		matches++;
-	    if (loci_hit.size()  > 1) {
+	    else {
 		query->clear_matches();
 		mmatches++;
 	    }
