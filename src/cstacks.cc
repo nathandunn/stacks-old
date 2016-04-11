@@ -621,7 +621,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
         //
         // Free the allocated k-mers.
         //
-        for (uint j = 0; j < num_kmers; j++)
+        for (uint j = 0; j < kmers.size(); j++)
             delete [] kmers[j];
         kmers.clear();
     }
@@ -690,9 +690,11 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
         vector<pair<char, uint> > cigar;
 	pair<allele_type, int>    cat_hit;
 	string                    cat_seq;
-        
+
         GappedAln *aln = new GappedAln();
-        
+
+        initialize_kmers(kmer_len, num_kmers, kmers);
+
         #pragma omp for schedule(dynamic) 
         for (uint i = 0; i < keys.size(); i++) {
             tag_1 = sample[keys[i]];
@@ -823,7 +825,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
         //
         // Free the k-mers we generated for this query
         //
-        for (uint j = 0; j < num_kmers; j++)
+        for (uint j = 0; j < kmers.size(); j++)
             delete [] kmers[j];
         kmers.clear();
 

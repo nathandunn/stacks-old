@@ -481,9 +481,14 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
  
     #pragma omp parallel private(tag_1, tag_2)
     {
-	GappedAln *aln = new GappedAln(con_len);
-	AlignRes   a;
+        KmerHashMap::iterator h;
+        vector<char *> query_kmers;
+        set<string>    uniq_kmers;
+	GappedAln     *aln = new GappedAln(con_len);
+	AlignRes       a;
 
+        initialize_kmers(kmer_len, num_kmers, query_kmers);
+        
         #pragma omp for schedule(dynamic) 
         for (uint i = 0; i < keys.size(); i++) {
             tag_1 = merged[keys[i]];
@@ -499,23 +504,25 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
             if (tag_1->utags.size() >= max_subgraph)
                 continue;
 
-            vector<char *> query_kmers;
-            generate_kmers(tag_1->con, kmer_len, num_kmers, query_kmers);
+            generate_kmers_lazily(tag_1->con, kmer_len, num_kmers, query_kmers);
 
+            uniq_kmers.clear();
+            for (int j = 0; j < num_kmers; j++)
+                uniq_kmers.insert(query_kmers[j]);
+            
             map<int, int> hits;
             //
             // Lookup the occurances of each k-mer in the kmer_map
             //
-            for (int j = 0; j < num_kmers; j++) {
-                for (uint k = 0; k < kmer_map[query_kmers[j]].size(); k++)
-                    hits[kmer_map[query_kmers[j]][k]]++;
-            }
+            for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
+                h = kmer_map.find(j->c_str());
 
-            //
-            // Free the k-mers we generated for this query.
-            //
-            for (int j = 0; j < num_kmers; j++)
-                delete [] query_kmers[j];
+                if (h != kmer_map.end())
+                    for (uint k = 0; k <  h->second.size(); k++)
+                        hits[h->second[k]]++;
+                // for (uint k = 0; k < kmer_map[].size(); k++)
+                //     hits[ kmer_map[query_kmers[j]][k] ]++;
+            }
 
             //
             // Iterate through the list of hits. For each hit that has more than min_hits
@@ -547,6 +554,13 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
             }
         }
 
+        //
+        // Free the k-mers we generated for this query.
+        //
+        for (int j = 0; j < query_kmers.size(); j++)
+            delete [] query_kmers[j];
+        query_kmers.clear();
+
 	delete aln;
     }
 
@@ -559,7 +573,6 @@ int
 merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
 {
     map<int, Rem *>::iterator it;
-    int j, k;
 
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -604,10 +617,13 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     //it = rem.find(keys[0]);
     //char *buf = new char[it->second->seq->size + 1];
 
-    #pragma omp parallel private(it, k)
-    { 
+    #pragma omp parallel private(it)
+    {
+        KmerHashMap::iterator h;
+        vector<char *> rem_kmers;
+
         #pragma omp for schedule(dynamic) 
-        for (j = 0; j < (int) keys.size(); j++) {
+        for (uint j = 0; j < keys.size(); j++) {
             it = rem.find(keys[j]);
             Rem  *r   = it->second;
             char *buf = new char[r->seq->size() + 1];
@@ -615,21 +631,19 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
             //
             // Generate the k-mers for this remainder sequence
             //
-            vector<char *> rem_kmers;
             buf = r->seq->seq(buf);
-            generate_kmers(buf, kmer_len, num_kmers, rem_kmers);
+            generate_kmers_lazily(buf, kmer_len, num_kmers, rem_kmers);
 
             map<int, int> hits;
-            vector<int>::iterator map_it;
             //
             // Lookup the occurances of each remainder k-mer in the MergedStack k-mer map
             //
-            for (k = 0; k < num_kmers; k++) {
-                if (kmer_map.find(rem_kmers[k]) != kmer_map.end())
-                    for (map_it  = kmer_map[rem_kmers[k]].begin();
-                         map_it != kmer_map[rem_kmers[k]].end();
-                         map_it++)
-                        hits[*map_it]++;
+            for (uint k = 0; k < num_kmers; k++) {
+                h = kmer_map.find(rem_kmers[k]);
+                
+                if (h != kmer_map.end())
+                    for (uint n = 0; n < h->second.size(); n++)
+                        hits[h->second[n]]++;
             }
 
             //
@@ -650,12 +664,6 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
                     dists[hit_it->first] = d;
                 }
             }
-
-            //
-            // Free the k-mers we generated for this remainder read
-            //
-            for (k = 0; k < num_kmers; k++)
-                delete [] rem_kmers[k];
 
             // Check to see if there is a uniquely low distance, if so,
             // merge this remainder tag. If not, discard it, since we
@@ -687,6 +695,12 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
                 }
             }
         }
+
+        //
+        // Free the k-mers we generated for this remainder read
+        //
+        for (uint k = 0; k < rem_kmers.size(); k++)
+            delete [] rem_kmers[k];
     }
 
     free_kmer_hash(kmer_map, kmer_map_keys);
