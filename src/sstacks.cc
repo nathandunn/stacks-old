@@ -767,15 +767,10 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 
     cerr << "  Searching with a k-mer length of " << gapped_kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
 
-    clock_t time_1, time_2, time_3, time_4, time_5;
-
-    double gapped_aln = 0.0;
-    double tot_time   = 0.0;
-    double key_lookup_time = 0.0;
-    double align_time = 0.0;
-    int    matches    = 0;
-    int    mmatches   = 0;
-    int    nomatches  = 0;
+    int gapped_aln = 0;
+    int matches    = 0;
+    int mmatches   = 0;
+    int nomatches  = 0;
 
     #pragma omp parallel private(query, tag_2, allele)
     {
@@ -795,7 +790,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 
 	initialize_kmers(gapped_kmer_len, num_kmers, kmers);
 
-        #pragma omp for schedule(dynamic) reduction(+:matches) reduction(+:nomatches) reduction(+:mmatches)
+        #pragma omp for schedule(dynamic) reduction(+:matches) reduction(+:nomatches) reduction(+:mmatches) reduction(+:gapped_aln)
         for (uint i = 0; i < keys.size(); i++) {
             query = sample[keys[i]];
 
@@ -807,10 +802,8 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 
 	    gapped_aln++;
 
-	    time_1 = clock();
             for (vector<pair<allele_type, string> >::iterator allele = query->strings.begin(); allele != query->strings.end(); allele++) {
 		
-		time_2 = clock();
         	generate_kmers_lazily(allele->second.c_str(), gapped_kmer_len, num_kmers, kmers);
 
 		//
@@ -820,7 +813,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 		uniq_kmers.clear();
                 for (uint j = 0; j < num_kmers; j++)
 		    uniq_kmers.insert(kmers[j]);
-		time_3 = clock();
 
 		hits.clear();
 		ordered_hits.clear();
@@ -842,8 +834,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 		// and orders them largest to smallest.
 		//
 		sort(hits.begin(), hits.end());
-
-		time_4 = clock();
 
 		//
         	// Iterate through the list of hits and collapse them down by number of kmer hits per allele.
@@ -916,23 +906,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 			}
 		    }
 		}
-
-		time_5 = clock();
-		
-		tot_time += time_5 - time_1;
-		key_lookup_time += time_4 - time_3;
-		align_time += time_5 - time_4;
-		// double ttime  = time_5 - time_1;
-		// double seg_1  = time_3 - time_2;
-		// double seg_2  = time_4 - time_3;
-		// double seg_3  = time_5 - time_4;
-		// cerr << "  Hits aligned: " << hits_aligned << "\n"
-		//      << "  Total time: " << ttime << "\n"
-		//      << "    kmer allocation:    " << seg_1 << "\n"
-		//      << "    kmer lookup:        " << seg_2 << "\n"
-		//      << "    Gapped alignment:   " << seg_3 << "\n\n";
-		
-            }
+	    }
 
 	    loci_hit.clear();
 	    for (uint j = 0; j < query->matches.size(); j++)
@@ -955,10 +929,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 	kmers.clear();
 
 	delete aln;
-
-	cerr << "Average time for key lookup: " << key_lookup_time / gapped_aln << "\n"
-	     << "Average time to align: " << align_time / gapped_aln << "\n"
-	     << "Average time per locus: " << tot_time / gapped_aln << "\n";
     }
   
     cerr << "Out of " << keys.size() << " query loci, " << gapped_aln << " gapped alignments attempted.\n"
