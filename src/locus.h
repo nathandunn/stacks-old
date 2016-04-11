@@ -111,6 +111,7 @@ class QLocus : public Locus {
     int add_match(int, allele_type, allele_type, int, string);
     int add_match(int, allele_type, allele_type, int);
     int add_match(int, allele_type);
+    int clear_matches();
 };
 
 //

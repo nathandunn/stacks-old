@@ -151,3 +151,15 @@ QLocus::add_match(int catalog_id, allele_type cat_type)
 
     return 0;
 }
+
+int
+QLocus::clear_matches()
+{
+    vector<Match *>::iterator it;
+
+    for (it = this->matches.begin(); it != this->matches.end(); it++)
+        delete *it;
+    this->matches.clear();
+    
+    return 0;
+}
