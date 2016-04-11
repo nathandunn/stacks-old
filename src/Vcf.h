@@ -72,18 +72,18 @@ const size_t gt_subfield = 0;
 // enum for record types
 enum class RType {
     null,
-    expl, // record with explicitly written alleles, e.g. SNPs, small indels or entirely defined haplotypes.
-    symbolic, // e.g. ALT is "<DUP:TANDEM>".
-    breakend // e.g. ALT is "G]17:198982]".
+    expl,      // Record with explicitly written alleles, e.g. SNPs, small indels or entirely defined haplotypes
+    invariant, // ALT is empty
+    symbolic,  // ALT is e.g. "<DUP:TANDEM>"
+    breakend   // ALT is e.g. "G]17:198982]"
 };
 
 // Constants for the parser.
 const size_t line_buf_size = 4096;
 
-// Tries to open the given VCF file using VcfParser, then
-// VcfGzParser. Return NULL if both failed.
-// (rem. The pointee is dynamically allocated, should be
-// deleted.)
+// Open the given VCF file using VcfParser or VcfGzParser, depending on the
+// suffix of the file. Return NULL if the opening failed.
+// (The pointee is dynamically allocated and should be deleted.)
 VcfAbstractParser* adaptive_open(const string& path);
 
 }
@@ -204,7 +204,7 @@ protected:
 
     virtual void getline(char* ptr, size_t n) =0;
     virtual void check_eol() =0; // rem. The implementation in gzparser relies on [tabs_] to access the end of the string in [line_].
-    inline void read_while_not_eol(); // Reads while [eol_] is false.
+    inline void read_to_eol(); // Reads while [eol_] is false.
 
     // Adds a sample to [record.samples_] if [samples_to_keep_.at(sample_index_)] is true.
     inline void add_sample(VcfRecord& record, char* tab1, char* tab2);
