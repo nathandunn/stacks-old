@@ -772,7 +772,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
     int mmatches   = 0;
     int nomatches  = 0;
 
-    #pragma omp parallel private(query, tag_2, allele)
+    #pragma omp parallel private(query, tag_2)
     {
 	KmerHashMap::iterator        h;
         AlignRes                     aln_res;
@@ -1048,8 +1048,8 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
 		 << qloc->id       << "\t"
 		 << qloc->matches[j]->cat_type << "\t"
 		 << match_depth    << "\t"
-		 << qloc->lnl      << "\t"
-		 << qloc->matches[j]->cigar    << "\n";
+		 << qloc->lnl      << "\n";
+            //   << qloc->matches[j]->cigar    << "\n";
 	}
 
 	if (in_file_type == FileT::gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
