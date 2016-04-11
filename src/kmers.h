@@ -89,6 +89,7 @@ int  generate_kmers_lazily(const char *, uint, uint, vector<char *> &);
 int  populate_kmer_hash(map<int, MergedStack *> &, KmerHashMap &, vector<char *> &, int);
 int  populate_kmer_hash(map<int, Locus *> &, CatKmerHashMap &, vector<char *> &, int);
 int  populate_kmer_hash(map<int, Locus *> &, KmerHashMap &, vector<char *> &, map<int, pair<allele_type, int> > &, int);
+int  populate_kmer_hash(map<int, CLocus *> &, KmerHashMap &, vector<char *> &, map<int, pair<allele_type, int> > &, int);
 
 int  free_kmer_hash(KmerHashMap &, vector<char *> &);
 int  free_kmer_hash(CatKmerHashMap &, vector<char *> &);

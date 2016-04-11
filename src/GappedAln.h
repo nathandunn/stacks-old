@@ -153,16 +153,24 @@ GappedAln::init(int size_1, int size_2)
     // Resize the underlying matrix and path arrays, if necessary.
     //
     if ((size_1 + 1) > this->_m_size || (size_2 + 1) > this->_n_size) {
-	cerr << "Resizing GappedAln from m: " << this->_m_size << ", n: " << this->_n_size << " to m: " << size_1 + 1 << ", n: " << size_2 + 1 << "\n";
 	for (int i = 0; i < this->_m_size; i++) {
 	    delete [] this->matrix[i];
 	    delete [] this->path[i];
 	}
-	delete [] this->matrix;
-	delete [] this->path;
+        if (this->_m_size > 0) {
+            delete [] this->matrix;
+            delete [] this->path;
+        }
 
 	this->_m_size = size_1 + 1;
 	this->_n_size = size_2 + 1;
+        //
+        // Resize the arrays to be 25% larger than the requested size.
+        //
+        int new_size = this->_m_size > this->_n_size ? this->_m_size : this->_n_size;
+        new_size += int((double) new_size * 0.25);
+        this->_m_size = new_size;
+	this->_n_size = new_size;
 
 	this->matrix = new double * [this->_m_size];
 	for (uint i = 0; i < this->_m_size; i++)
@@ -177,7 +185,7 @@ GappedAln::init(int size_1, int size_2)
     // Otherwise, set the dimensions of the matrix and path arrays to be the sequence lengths.
     //
     this->_m = size_1 + 1;
-    this->_n = size_1 + 1;
+    this->_n = size_2 + 1;
 
     return 0;
 }
