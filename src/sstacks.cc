@@ -778,7 +778,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample, double m
 	set<string>             uniq_kmers;
 	vector<int>             hits;
 	vector<pair<int, int> > ordered_hits;
-	uint                    tot_hits, hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
+	uint                    hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
 	pair<allele_type, int>  cat_hit;
 	string                  cat_seq;
 
@@ -815,8 +815,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample, double m
 		    uniq_kmers.insert(kmers[j]);
 		time_3 = clock();
 
-		/*-----------------------------------------------------------------------*/
-
 		hits.clear();
 		ordered_hits.clear();
 
@@ -840,13 +838,10 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample, double m
 		
 		time_4 = clock();
 
-		int hits_aligned = 0;
-
 		//
         	// Iterate through the list of hits and collapse them down by number of kmer hits per allele.
         	//
 		hits_size = hits.size();
-		tot_hits  = 0;
 		prev_id   = hits[0];
 		index     = 0;
 		
@@ -858,8 +853,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample, double m
 			hit_cnt++;
 			index++;
 		    }
-
-		    tot_hits++;
 
 		    if (index < hits_size)
 			prev_id = hits[index];
@@ -888,7 +881,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample, double m
 		    cat_hit = allele_map.at(ordered_hits[i].first);
 		    hit_cnt = ordered_hits[i].second;
 
-		    hits_aligned++;
 		    tag_2 = catalog[cat_hit.second];
 
 		    cat_seq = "";
@@ -918,73 +910,6 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample, double m
 		}
 
 		time_5 = clock();
-
-		/*-----------------------------------------------------------------------*/
-		
-		// map<int, vector<allele_type> > hits;
-        	// //
-        	// // Lookup the occurances of each k-mer in the kmer_map
-        	// //
-                // for (uint j = 0; j < num_kmers; j++) {
-		//     h = kmer_map.find(kmers[j]);
-
-		//     if (h != kmer_map.end())
-		// 	for (map_it = h->second.begin(); map_it != h->second.end(); map_it++)
-                //             hits[map_it->second].push_back(map_it->first);
-
-                //     // if (kmer_map.count(kmers[j]) > 0)
-                //     //     for (map_it  = kmer_map[kmers[j]].begin();
-                //     //          map_it != kmer_map[kmers[j]].end();
-                //     //          map_it++)
-		//     //         hits[map_it->second].push_back(map_it->first);
-                // }
-		
-		// time_4 = clock();
-        	// //
-        	// // Iterate through the list of hits. For each hit that has more than min_hits
-        	// // check its full length to verify a match.
-        	// //
-        	// map<int, vector<allele_type> >::iterator hit_it;
-        	// vector<allele_type>::iterator            all_it;
-		// int hits_aligned = 0;
-		// cerr << "Number of hits: " << hits.size() << "\n";
-        	// for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
-
-        	//     map<allele_type, int>           allele_cnts;
-                //     map<allele_type, int>::iterator cnt_it;
-
-                //     for (all_it = hit_it->second.begin(); all_it != hit_it->second.end(); all_it++)
-                //         allele_cnts[*all_it]++;
-
-                //     for (cnt_it = allele_cnts.begin(); cnt_it != allele_cnts.end(); cnt_it++) {
-		// 	cerr << "    " << hit_it->first << "; allele '" << cnt_it->first << "', hits: " << cnt_it->second << "\n";
-
-        	//     	if (cnt_it->second < min_hits) continue;
-		// 	hits_aligned++;
-        	//     	tag_2 = catalog[hit_it->first];
-
-                //         // GappedAln *aln = new GappedAln(tag_2->len, query->len);
-
-        	// 	// if (aln->align(tag_2->con, query->con)) {
-                //         //     cigar.clear();
-                //         //     aln->parse_cigar(cigar);
-
-        	// 	//     aln_res = aln->result();
-
-        	// 	//     //
-        	// 	//     // If the alignment has too many gaps, skip it.
-                //         //     // If the alignment doesn't span enough of the two sequences, skip it.
-        	// 	//     //
-        	// 	//     if (aln_res.gap_cnt <= (max_gaps + 1) &&
-        	// 	// 	aln_res.pct_id  >= min_match_len  &&
-                //         //         dist(tag_2->con, query->con, cigar) == 0)
-                //         //         query->add_match(tag_2->id, cnt_it->first, allele->first, 0, invert_cigar(aln_res.cigar));
-                //         // }
-
-                //         // delete aln;
-		//     }
-        	// }
-		// time_5 = clock();
 		
 		tot_time += time_5 - time_1;
 		key_lookup_time += time_4 - time_3;
