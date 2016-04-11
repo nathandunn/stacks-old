@@ -76,7 +76,47 @@ int calc_min_kmer_matches(int kmer_len, int dist, int read_len, bool exit_err) {
     return min_matches;
 }
 
-int generate_kmers(const char *seq, int kmer_len, int num_kmers, vector<char *> &kmers) {
+int
+initialize_kmers(int kmer_len, int num_kmers, vector<char *> &kmers)
+{
+    char *kmer;
+
+    for (int i = 0; i < num_kmers; i++) {
+        kmer = new char[kmer_len + 1];
+        kmers.push_back(kmer);
+    }
+
+    return 0;
+}
+
+int
+generate_kmers_lazily(const char *seq, uint kmer_len, uint num_kmers, vector<char *> &kmers)
+{
+    char *kmer;
+    const char *k = seq;
+
+    if (num_kmers > kmers.size()) {
+	int new_kmers = num_kmers - kmers.size();
+
+        for (uint i = 0; i < new_kmers; i++) {
+	    kmer = new char[kmer_len + 1];
+	    kmers.push_back(kmer);
+	}
+    }
+
+    for (uint i = 0; i < num_kmers; i++) {
+	kmer = kmers.at(i);
+        strncpy(kmer, k, kmer_len);
+        kmer[kmer_len] = '\0';
+        k++;
+    }
+
+    return 0;
+}
+
+int
+generate_kmers(const char *seq, int kmer_len, int num_kmers, vector<char *> &kmers)
+{
     char *kmer;
     const char *k = seq;
 
@@ -149,7 +189,9 @@ int generate_permutations(map<int, char **> &pstrings, int width) {
     return 0;
 }
 
-int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, vector<char *> &kmer_map_keys, int kmer_len) {
+int
+populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, vector<char *> &kmer_map_keys, int kmer_len)
+{
     map<int, MergedStack *>::iterator it;
     MergedStack    *tag;
     vector<char *>  kmers;
@@ -188,22 +230,25 @@ int populate_kmer_hash(map<int, MergedStack *> &merged, KmerHashMap &kmer_map, v
     return 0;
 }
 
-int populate_kmer_hash(map<int, Locus *> &catalog, CatKmerHashMap &kmer_map, vector<char *> &kmer_map_keys, int kmer_len) {
+int
+populate_kmer_hash(map<int, Locus *> &catalog, CatKmerHashMap &kmer_map, vector<char *> &kmer_map_keys, int kmer_len)
+{
     map<int, Locus *>::iterator it;
     vector<pair<allele_type, string> >::iterator allele;
     vector<char *> kmers;
     Locus         *tag;
     char          *hash_key;
     bool           exists;
+    int            num_kmers;
 
     //
     // Break each stack down into k-mers and create a hash map of those k-mers
     // recording in which sequences they occur.
     //
-    int num_kmers = strlen(catalog.begin()->second->con) - kmer_len + 1;
-
     for (it = catalog.begin(); it != catalog.end(); it++) {
         tag = it->second;
+
+	num_kmers = strlen(tag->con) - kmer_len + 1;
 
         //
         // Iterate through the possible Catalog alleles
@@ -226,6 +271,64 @@ int populate_kmer_hash(map<int, Locus *> &catalog, CatKmerHashMap &kmer_map, vec
                     kmer_map_keys.push_back(hash_key);
             }
             kmers.clear();
+        }
+    }
+
+    //dump_kmer_map(kmer_map);
+
+    return 0;
+}
+
+int
+populate_kmer_hash(map<int, Locus *> &catalog, KmerHashMap &kmer_map, vector<char *> &kmer_map_keys, map<int, pair<allele_type, int> > &allele_map, int kmer_len)
+{
+    map<int, Locus *>::iterator it;
+    vector<pair<allele_type, string> >::iterator allele;
+    map<int, pair<allele_type, int> >::iterator  allele_it;
+    vector<char *> kmers;
+    Locus         *tag;
+    char          *hash_key;
+    bool           exists;
+
+    //
+    // Break each stack down into k-mers and create a hash map of those k-mers
+    // recording in which sequences they occur.
+    //
+    int num_kmers;
+    int allele_index = 0;
+
+    allele_it = allele_map.begin();
+
+    for (it = catalog.begin(); it != catalog.end(); it++) {
+        tag = it->second;
+
+	num_kmers = strlen(tag->con) - kmer_len + 1;
+
+        //
+        // Iterate through the possible Catalog alleles
+        //
+        for (allele = tag->strings.begin(); allele != tag->strings.end(); allele++) {
+            //
+            // Generate and hash the kmers for this allele string
+            //
+            generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
+
+	    allele_it = allele_map.insert(allele_it, make_pair(allele_index, make_pair(allele->first, tag->id)));
+
+            for (int j = 0; j < num_kmers; j++) {
+                hash_key = kmers[j];
+                exists   = kmer_map.count(hash_key) == 0 ? false : true;
+
+                kmer_map[hash_key].push_back(allele_index);
+
+                if (exists)
+                    delete [] kmers[j];
+                else
+                    kmer_map_keys.push_back(hash_key);
+            }
+            kmers.clear();
+
+	    allele_index++;
         }
     }
 

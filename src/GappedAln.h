@@ -71,43 +71,61 @@ const double match_score    =  5;
 class GappedAln {
     uint        _m;
     uint        _n;
+    uint        _m_size;
+    uint        _n_size;
     double    **matrix;
     AlignPath **path;
     AlignRes    _aln;
 
+    inline int swap(double *, dynprog *, int, int);
+    int        trace_alignment(string, string);
+
  public:    
-    GappedAln(int);
+    GappedAln();
+    GappedAln(int i) : GappedAln(i, i) {};
     GappedAln(int, int);
     ~GappedAln();
 
+    int        init(int, int);
     int        align(string, string);
-    inline int swap(double *, dynprog *, int, int);
-    int        trace_alignment(string, string);
     AlignRes   result();
 
     int parse_cigar(vector<pair<char, uint> > &);
     int dump_alignment(string, string);
 };
 
-
-GappedAln::GappedAln(int len)
+GappedAln::GappedAln()
 {
-    this->_m = len + 1;
-    this->_n = len + 1;
-
-    this->matrix = new double * [this->_m];
-    for (uint i = 0; i < this->_m; i++)
-        this->matrix[i] = new double [this->_n];
-
-    this->path = new AlignPath * [this->_m];
-    for (uint i = 0; i < this->_m; i++)
-        this->path[i] = new AlignPath [this->_n];
+    this->_m      = 0;
+    this->_n      = 0;
+    this->_m_size = this->_m;
+    this->_n_size = this->_n;
+    this->matrix  = NULL;
+    this->path    = NULL;
 }
+
+// GappedAln::GappedAln(int len)
+// {
+//     // this->_m      = len + 1;
+//     // this->_n      = len + 1;
+//     // this->_m_size = this->_m;
+//     // this->_n_size = this->_n;
+    
+//     // this->matrix = new double * [this->_m];
+//     // for (uint i = 0; i < this->_m; i++)
+//     //     this->matrix[i] = new double [this->_n];
+
+//     // this->path = new AlignPath * [this->_m];
+//     // for (uint i = 0; i < this->_m; i++)
+//     //     this->path[i] = new AlignPath [this->_n];
+// }
 
 GappedAln::GappedAln(int len_1, int len_2)
 {
-    this->_m = len_1 + 1;
-    this->_n = len_2 + 1;
+    this->_m      = len_1 + 1;
+    this->_n      = len_2 + 1;
+    this->_m_size = this->_m;
+    this->_n_size = this->_n;
 
     this->matrix = new double * [this->_m];
     for (uint i = 0; i < this->_m; i++)
@@ -126,6 +144,42 @@ GappedAln::~GappedAln()
     }
     delete [] this->matrix;
     delete [] this->path;
+}
+
+int
+GappedAln::init(int size_1, int size_2)
+{
+    //
+    // Resize the underlying matrix and path arrays, if necessary.
+    //
+    if ((size_1 + 1) > this->_m_size || (size_2 + 1) > this->_n_size) {
+	cerr << "Resizing GappedAln from m: " << this->_m_size << ", n: " << this->_n_size << " to m: " << size_1 + 1 << ", n: " << size_2 + 1 << "\n";
+	for (int i = 0; i < this->_m_size; i++) {
+	    delete [] this->matrix[i];
+	    delete [] this->path[i];
+	}
+	delete [] this->matrix;
+	delete [] this->path;
+
+	this->_m_size = size_1 + 1;
+	this->_n_size = size_2 + 1;
+
+	this->matrix = new double * [this->_m_size];
+	for (uint i = 0; i < this->_m_size; i++)
+	    this->matrix[i] = new double [this->_n_size];
+
+	this->path = new AlignPath * [this->_m_size];
+	for (uint i = 0; i < this->_m_size; i++)
+	    this->path[i] = new AlignPath [this->_n_size];
+    }
+
+    //
+    // Otherwise, set the dimensions of the matrix and path arrays to be the sequence lengths.
+    //
+    this->_m = size_1 + 1;
+    this->_n = size_1 + 1;
+
+    return 0;
 }
 
 int
