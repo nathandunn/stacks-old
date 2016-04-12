@@ -740,15 +740,12 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
     //
     // Search for loci that can be merged with a gapped alignment.
     //
-    map<int, QLocus *>::iterator it;
-    vector<pair<char, uint> > cigar;
-    QLocus *query;
-    Locus  *tag_2;
 
     //
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
     //
+    map<int, QLocus *>::iterator it;
     vector<int> keys;
     for (it = sample.begin(); it != sample.end(); it++) 
         keys.push_back(it->first);
@@ -772,8 +769,10 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
     int mmatches   = 0;
     int nomatches  = 0;
 
-    #pragma omp parallel private(query, tag_2)
+    #pragma omp parallel
     {
+        QLocus                      *query;
+        Locus                       *tag_2;
 	KmerHashMap::iterator        h;
         AlignRes                     aln_res;
 	vector<char *>               kmers;
@@ -785,6 +784,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 	string                       cat_seq;
 	map<string, vector<string> > haplo_hits;
 	set<int>                     loci_hit;
+        vector<pair<char, uint> >    cigar;
 
 	GappedAln *aln = new GappedAln();
 
