@@ -522,8 +522,6 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
                 if (h != kmer_map.end())
                     for (uint k = 0; k <  h->second.size(); k++)
                         hits[h->second[k]]++;
-                // for (uint k = 0; k < kmer_map[query_kmers[j]].size(); k++)
-                //     hits[ kmer_map[query_kmers[j]][k] ]++;
             }
 
             //
@@ -1523,12 +1521,19 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
     //
     int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len, set_kmer_len ? true : false);
 
-    cerr << "  Distance allowed between stacks: " << utag_dist << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+    cerr << "  Distance allowed between stacks: " << utag_dist
+	 << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
+	 << min_hits << " k-mer hits required.\n";
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
  
     #pragma omp parallel private(tag_1, tag_2)
     { 
+	KmerHashMap::iterator h;
+	vector<char *>        query_kmers;
+	
+	initialize_kmers(kmer_len, num_kmers, query_kmers);
+
         #pragma omp for schedule(dynamic) 
         for (uint i = 0; i < keys.size(); i++) {
             tag_1 = merged[keys[i]];
@@ -1536,8 +1541,7 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
             // Don't compute distances for masked tags
             if (tag_1->masked) continue;
 
-            vector<char *> query_kmers;
-            generate_kmers(tag_1->con, kmer_len, num_kmers, query_kmers);
+            generate_kmers_lazily(tag_1->con, kmer_len, num_kmers, query_kmers);
 
             map<int, int> hits;
             int d;
@@ -1545,17 +1549,12 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
             // Lookup the occurances of each k-mer in the kmer_map
             //
             for (int j = 0; j < num_kmers; j++) {
-                for (uint k = 0; k < kmer_map[query_kmers[j]].size(); k++)
-                    hits[kmer_map[query_kmers[j]][k]]++;
+                h = kmer_map.find(query_kmers[j]);
+
+                if (h != kmer_map.end())
+                    for (uint k = 0; k <  h->second.size(); k++)
+                        hits[h->second[k]]++;
             }
-
-            //
-            // Free the k-mers we generated for this query
-            //
-            for (int j = 0; j < num_kmers; j++)
-                delete [] query_kmers[j];
-
-            // cerr << "  Tag " << tag_1->id << " hit " << hits.size() << " kmers.\n";
 
             //
             // Iterate through the list of hits. For each hit that has more than min_hits
@@ -1563,11 +1562,8 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
             //
             map<int, int>::iterator hit_it;
             for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
-                // cerr << "  Tag " << hit_it->first << " has " << hit_it->second << " hits (min hits: " << min_hits << ")\n";
 
                 if (hit_it->second < min_hits) continue;
-
-                // cerr << "  Match found, checking full-length match\n";
 
                 tag_2 = merged[hit_it->first];
 
@@ -1578,7 +1574,6 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
                 if (tag_1 == tag_2) continue;
 
                 d = dist(tag_1, tag_2);
-                // cerr << "    Distance: " << d << "\n";
 
                 //
                 // Store the distance between these two sequences if it is
@@ -1592,6 +1587,12 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
             // Sort the vector of distances.
             sort(tag_1->dist.begin(), tag_1->dist.end(), compare_dist);
         }
+
+	//
+	// Free the k-mers we generated for this query
+	//
+	for (int j = 0; j < query_kmers.size(); j++)
+	    delete [] query_kmers[j];
     }
 
     free_kmer_hash(kmer_map, kmer_map_keys);
