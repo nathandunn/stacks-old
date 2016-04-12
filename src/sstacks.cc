@@ -839,6 +839,10 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
         	// Iterate through the list of hits and collapse them down by number of kmer hits per allele.
         	//
 		hits_size = hits.size();
+
+                if (hits_size == 0)
+                    continue;
+
 		prev_id   = hits[0];
 		index     = 0;
 
@@ -858,6 +862,9 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 			ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
         	} while (index < hits_size);
+
+                if (ordered_hits.size() == 0)
+                    continue;
 
 		//
 		// Process the hits from most kmer hits to least kmer hits.
