@@ -954,7 +954,7 @@ order_unordered_loci(map<int, CSLocus *> &catalog)
 
     cerr << "Catalog is not reference aligned, arbitrarily ordering catalog loci.\n";
 
-    uint bp = 1;
+    uint bp = 1; // rem. Genomic positions in Stacks are normally 0-based.
     for (it = catalog.begin(); it != catalog.end(); it++) {
         loc = it->second;
         loc->loc.chr = new char[3];
