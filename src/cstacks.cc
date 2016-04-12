@@ -570,6 +570,10 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
         	// Iterate through the list of hits and collapse them down by number of kmer hits per allele.
         	//
 		hits_size = hits.size();
+
+                if (hits_size == 0)
+                    continue;
+
 		prev_id   = hits[0];
 		index     = 0;
 
