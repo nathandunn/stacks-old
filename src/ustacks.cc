@@ -241,6 +241,8 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
         tag_2 = merged[tag_1->alns[0].id];
 	sort(tag_2->alns.begin(), tag_2->alns.end(), rank_alignments);
 
+	if (tag_2->masked || tag_2->alns.size() == 0)
+            continue;
 	if (tag_2->alns.size() > 1 && tag_2->alns[0].pct_id == tag_2->alns[1].pct_id)
             continue;
 
@@ -520,7 +522,7 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
                 if (h != kmer_map.end())
                     for (uint k = 0; k <  h->second.size(); k++)
                         hits[h->second[k]]++;
-                // for (uint k = 0; k < kmer_map[].size(); k++)
+                // for (uint k = 0; k < kmer_map[query_kmers[j]].size(); k++)
                 //     hits[ kmer_map[query_kmers[j]][k] ]++;
             }
 
@@ -603,30 +605,25 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     //
     int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, set_kmer_len ? true : false);
 
-    cerr << "  Distance allowed between stacks: " << max_rem_dist << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+    cerr << "  Distance allowed between stacks: " << max_rem_dist
+	 << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
+	 << min_hits << " k-mer hits required.\n";
     
     KmerHashMap    kmer_map;
     vector<char *> kmer_map_keys;
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
     int utilized = 0;
 
-    //
-    // Create a character buffer to hold the Rem sequence, this is faster
-    // than repeatedly decoding the DNASeq buffers.
-    // 
-    //it = rem.find(keys[0]);
-    //char *buf = new char[it->second->seq->size + 1];
-
     #pragma omp parallel private(it)
     {
         KmerHashMap::iterator h;
         vector<char *> rem_kmers;
+	char *buf = new char[con_len + 1];
 
         #pragma omp for schedule(dynamic) 
         for (uint j = 0; j < keys.size(); j++) {
             it = rem.find(keys[j]);
-            Rem  *r   = it->second;
-            char *buf = new char[r->seq->size() + 1];
+            Rem  *r = it->second;
 
             //
             // Generate the k-mers for this remainder sequence
@@ -640,7 +637,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
             //
             for (uint k = 0; k < num_kmers; k++) {
                 h = kmer_map.find(rem_kmers[k]);
-                
+
                 if (h != kmer_map.end())
                     for (uint n = 0; n < h->second.size(); n++)
                         hits[h->second[n]]++;
@@ -683,8 +680,6 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
                 }
             }
 
-            delete [] buf;
-
             // Found a merge partner.
             if (min_id >= 0 && count == 1) {
                 r->utilized = true;
@@ -701,6 +696,8 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
         //
         for (uint k = 0; k < rem_kmers.size(); k++)
             delete [] rem_kmers[k];
+
+	delete [] buf;
     }
 
     free_kmer_hash(kmer_map, kmer_map_keys);
