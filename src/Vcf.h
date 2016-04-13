@@ -252,7 +252,7 @@ public:
  */
 class VcfGzParser : public VcfAbstractParser {
     gzFile file_;
-    void getline(char* ptr, size_t n) {gzgets(file_, ptr, n); eof_ = gzeof(file_);}
+    void getline(char* ptr, size_t n) {if (gzgets(file_, ptr, n) == NULL) eof_ = true; else eof_ = false;}
     inline void check_eol();
 
     VcfGzParser(VcfGzParser& p) = delete; // No copy constructor.

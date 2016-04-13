@@ -369,17 +369,20 @@ int main (int argc, char* argv[]) {
         // Read the SNP records
         cerr << "Reading the VCF records...\n";
         vcf_records = new vector<VcfRecord>();
-        vector<size_t> skipped;
+        vector<size_t> skipped_notsnp;
+        vector<size_t> skipped_filter;
 
         vcf_records->push_back(VcfRecord());
         VcfRecord* rec = & vcf_records->back();
         while (parser->next_record(*rec)) {
             // Check for a SNP.
-            if (rec->type != Vcf::RType::expl) {
-                skipped.push_back(parser->line_number());
-                if (rec->type == Vcf::RType::null)
-                    cerr << "Warning: In file '" << parser->path() << "': skipping the very long record at line "
-                         << parser->line_number() << ".\n";
+            if (rec->type == Vcf::RType::null) {
+                cerr << "Warning: In file '" << parser->path() << "': skipping the very long record at line "
+                     << parser->line_number() << ".\n";
+                skipped_notsnp.push_back(parser->line_number());
+                continue;
+            } else if (rec->type != Vcf::RType::expl) {
+                skipped_notsnp.push_back(parser->line_number());
                 continue;
             } else {
                 bool skip = false;
@@ -390,9 +393,15 @@ int main (int argc, char* argv[]) {
                     }
                 }
                 if(skip) {
-                    skipped.push_back(parser->line_number());
+                    skipped_notsnp.push_back(parser->line_number());
                     continue;
                 }
+            }
+
+            // Check for a filtered-out SNP
+            if (not rec->filter.empty() && rec->filter[0] != "PASS") {
+                skipped_filter.push_back(parser->line_number());
+                continue;
             }
 
             // Save the SNP.
@@ -402,10 +411,10 @@ int main (int argc, char* argv[]) {
         vcf_records->pop_back();
 
         cerr << "Found " << vcf_records->size() << " SNP records in file '" << in_vcf_path
-             << "'. (Skipped " << skipped.size() << " other records ; more with --verbose.)\n";
+             << "'. (Skipped " << skipped_filter.size() << " already filtered-out SNPs and " << skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
         if (verbose) {
-            log_fh << "The following VCF record lines were skipped :";
-            for (vector<size_t>::const_iterator l=skipped.begin(); l!=skipped.end(); ++l)
+            log_fh << "The following VCF record lines were determined not to be SNPs and skipped :";
+            for (vector<size_t>::const_iterator l=skipped_notsnp.begin(); l!=skipped_notsnp.end(); ++l)
                 log_fh << " " << *l;
             log_fh << "\n";
         }
@@ -651,13 +660,13 @@ int main (int argc, char* argv[]) {
         }
         cerr << "DEBUG> Deleted " << n_deleted << " 'Datums'.\n";
 
-        cerr << "DEBUG> Deleting loci to remove :"
+        cerr << "DEBUG> Deleting loci to remove :\n"
              << "DEBUG>   loci for which no samples are left...\n"
-             << "DEBUG>   loci which do not have exactly two alleles,\n"
-             << "DEBUG>   SNPs that are present in several loci,\n"
-             << "DEBUG>   SNPs that are not in the same order as their loci,\n";
+             << "DEBUG>   loci which do not declare, or have, exactly two alleles,\n"
+             << "DEBUG>   SNPs that are present in several loci.\n";
 
         set<int> myblacklist;
+        // All NULL.
         for (auto& l : catalog) {
             Datum** data = pmap->locus(l.second->id);
             size_t non_null = 0;
@@ -667,31 +676,40 @@ int main (int argc, char* argv[]) {
             if (non_null == 0)
                 myblacklist.insert(l.second->id);
         }
+        // Not two alleles.
         for (auto& l : catalog) {
-            if (l.second->snps.empty())
+            if (l.second->snps.empty()
+                    || l.second->snps[0]->rank_2 == 0
+                    || l.second->snps[0]->rank_3 != 0) {
                 myblacklist.insert(l.second->id);
-            else if (l.second->snps[0]->rank_3 != 0)
-                myblacklist.insert(l.second->id);
-        }
-        for (auto& chr : pmap->ordered_loci) {
-            if (not chr.second.empty()) {
-                for (vector<CSLocus*>::iterator l=chr.second.begin()+1; l!=chr.second.end(); ++l) {
-                    CSLocus& loc = **l;
-                    CSLocus& prev = **(l-1);
-	            if (loc.snps.empty() || prev.snps.empty())
-        	        continue;
-                    size_t loc_bp = loc.loc.bp;
-                    size_t prev_bp = prev.loc.bp;
-                    size_t loc_snp_bp = loc.sort_bp(loc.snps.at(0)->col);
-                    size_t prev_snp_bp = prev.sort_bp(prev.snps.at(0)->col);
-                    if (loc_snp_bp == prev_snp_bp
-                            or loc_bp == prev_bp
-                            or (prev_bp < loc_bp) != (prev_snp_bp < loc_snp_bp)
-                            ) {
-                        myblacklist.insert(prev.id);
-                    }
+            } else {
+                // Check the actual number of alleles
+                Datum** data = pmap->locus(pmap->rev_locus_index(l.second->id));
+                set<char> seen_alleles;
+                for (size_t i=0; i<size_t(pmap->sample_cnt()); ++i) {
+                    Datum* d = data[i];
+                    if (d != NULL)
+                        for(char* hapl : d->obshap)
+                            seen_alleles.insert(hapl[0]);
                 }
+                if ((int((seen_alleles.count('A') || seen_alleles.count('a')))
+                        + (seen_alleles.count('C') || seen_alleles.count('c'))
+                        + (seen_alleles.count('T') || seen_alleles.count('t'))
+                        + (seen_alleles.count('G') || seen_alleles.count('g')))
+                        != 2)
+                    myblacklist.insert(l.second->id);
             }
+        }
+        // Same SNP in different loci.
+        for (auto& chr : pmap->ordered_loci) {
+            map<size_t,vector<size_t> > seen_bp0; // (bp, [loc_id's])
+            for (CSLocus* loc : chr.second)
+                if (not loc->snps.empty())
+                    seen_bp0[loc->sort_bp(loc->snps[0]->col)].push_back(loc->id);
+            for (auto& bp : seen_bp0)
+                if (bp.second.size() > 1)
+                    for (size_t loc_id : bp.second)
+                        myblacklist.insert(loc_id);
         }
         reduce_catalog(catalog, empty_list, myblacklist);
         pmap->prune(myblacklist);
@@ -9065,7 +9083,7 @@ int parse_command_line(int argc, char* argv[]) {
                     return -1;
                 }
             }
-            cerr << "DEBUG> Flags '" << optarg << "' were passed.\n";
+            cerr << "DEBUG> Debug flag(s) : '" << optarg << "'.\n";
 
             if (debug_flags.count("VCFCOMP") && not write_random_snp) {
                 write_single_snp = true;
