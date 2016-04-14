@@ -309,9 +309,7 @@ int main (int argc, char* argv[]) {
                          << "; likely IDs were mismatched when running pipeline.\n";
                     exit(0);
                 }
-                d->len   = strlen(modres[d->id]->model);
-                d->model = new char[d->len + 1];
-                strcpy(d->model, modres[d->id]->model);
+                d->add_model(modres[d->id]->model);
             }
         }
 

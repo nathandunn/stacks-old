@@ -37,7 +37,7 @@
 const uint num_tags_fields    = 14;
 const uint num_snps_fields    = 10;
 const uint num_alleles_fields =  6;
-const uint num_matches_fields =  8;
+const uint num_matches_fields =  9;
 
 template <class LocusT>
 int 
@@ -409,6 +409,7 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
 
     char *line      = (char *) malloc(sizeof(char) * max_len);
     int   size      = max_len;
+    int   cnt       = 0;
     bool  gzip      = false;
     int   fh_status = 1;
 
@@ -443,7 +444,9 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
 
         parse_tsv(line, parts);
 
-        if (parts.size() != num_matches_fields) {
+        cnt = parts.size();
+
+        if (cnt != num_matches_fields && cnt != num_matches_fields - 1) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
             return 0;
         }
@@ -457,6 +460,12 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
         strcpy(m->haplotype, parts[5].c_str());
         m->depth     = atoi(parts[6].c_str());
         m->lnl       = is_double(parts[7].c_str());
+
+        if (cnt == num_matches_fields && parts[8].length() > 0) {
+            m->cigar = new char[parts[8].length() + 1];
+            strcpy(m->cigar, parts[8].c_str());
+        }
+
         matches.push_back(m);
     }
 

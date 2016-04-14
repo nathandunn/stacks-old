@@ -78,6 +78,7 @@ using google::sparse_hash_map;
 #include "FastqI.h"     // Reading input files in FASTQ format
 #include "gzFasta.h"    // Reading gzipped input files in FASTA format
 #include "gzFastq.h"    // Reading gzipped input files in FASTQ format
+#include "aln_utils.h"
 #include "GappedAln.h"
 
 class HVal {

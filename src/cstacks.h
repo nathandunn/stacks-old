@@ -65,6 +65,7 @@ using std::queue;
 #include "locus.h"
 #include "GappedAln.h"
 #include "sql_utilities.h"
+#include "aln_utils.h"
 #include "utils.h"
 
 void help( void );
