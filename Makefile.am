@@ -5,7 +5,7 @@ ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/co
 	src/mstack.h src/mstack.cc src/mst.h src/mst.cc src/cmb.h src/cmb.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/models.h src/models.cc src/utils.h src/utils.cc \
-	src/kmers.h src/kmers.cc src/GappedAln.h \
+	src/kmers.h src/kmers.cc src/GappedAln.h src/aln_utils.h src/aln_utils.cc \
 	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
 	src/gzFasta.h src/gzFastq.h
 
@@ -24,7 +24,8 @@ estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/co
 
 cstacks_SOURCES = src/cstacks.h src/cstacks.cc src/constants.h \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
-	src/kmers.h src/kmers.cc src/GappedAln.h src/utils.h src/utils.cc \
+	src/kmers.h src/kmers.cc src/utils.h src/utils.cc \
+	src/GappedAln.h src/aln_utils.h src/aln_utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
@@ -37,7 +38,8 @@ hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/constants.h \
 
 sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/constants.h \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
-	src/kmers.h src/kmers.cc src/GappedAln.h \
+	src/kmers.h src/kmers.cc \
+	src/GappedAln.h src/aln_utils.h src/aln_utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
@@ -46,7 +48,7 @@ rxstacks_SOURCES = src/rxstacks.h src/rxstacks.cc src/constants.h \
 	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
 	src/mst.h src/mst.cc \
 	src/models.h src/models.cc \
-	src/utils.h src/utils.cc \
+	src/aln_utils.h src/aln_utils.cc src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/sql_utilities.h
 
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
@@ -85,6 +87,7 @@ genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 	src/log_utils.h src/log_utils.cc \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
+	src/aln_utils.h src/aln_utils.cc \
 	src/PopMap.h src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h
 
@@ -93,7 +96,7 @@ populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/log_utils.h src/log_utils.cc \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
-	src/PopMap.h src/PopSum.h src/genotype_dictionaries.h \
+	src/PopMap.h src/PopSum.h src/aln_utils.h src/aln_utils.cc src/genotype_dictionaries.h \
 	src/input.h src/input.cc src/sql_utilities.h src/renz.h \
 	src/bootstrap.h src/ordered.h src/smoothing.h src/smoothing_utils.h
 

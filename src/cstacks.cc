@@ -283,8 +283,9 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
     CLocus *ctag;
     QLocus *qtag;
     string  cseq, qseq, cigar_str;
+    int     seq_len;
     vector<pair<char, uint> > cigar;
-
+    
     for (i = sample.begin(); i != sample.end(); i++) {
 	qtag = i->second;
 
@@ -352,7 +353,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
             cerr << "  Unable to locate catalog tag " << min_cat_id << "\n";
 
         cigar_str = "";
-        
+
         for (uint k = 0; k < qtag->matches.size(); k++)
             if (qtag->matches[k]->cat_id == min_cat_id) {
                 cigar_str = qtag->matches[k]->cigar;
@@ -367,17 +368,25 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         // If the match was a gapped alignment, adjust the lengths of the consensus sequences.
         // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
         //
-        
         if (gapped_aln) {
-            parse_cigar(cigar_str.c_str(), cigar);
+            seq_len   = parse_cigar(cigar_str.c_str(), cigar);
+
+            if (seq_len < ctag->len) {
+                cerr << "  Warning: Catalog locus " << ctag->id
+                     << "; sequence length has changed since original alignment: "
+                     << seq_len << " <-> " << ctag->len
+                     << "; Trying to merge in sample " << qtag->sample_id << ", locus " << qtag->id << "; skipping alignment.\n";
+                continue;
+            }
+            
             qseq      = apply_cigar_to_seq(qtag->con, cigar);
-            adjust_snps_for_gaps(cigar, ctag);
+            adjust_snps_for_gaps(cigar, qtag);
 
             cigar_str = invert_cigar(cigar_str);
             parse_cigar(cigar_str.c_str(), cigar);
             cseq      = apply_cigar_to_seq(ctag->con, cigar);
-            adjust_snps_for_gaps(cigar, qtag);
-            
+            adjust_snps_for_gaps(cigar, ctag);
+
             //
             // Add any new sequence information into the catalog consensus.
             //
@@ -417,9 +426,9 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 	//
 	// If the catalog consensus tag is shorter than the query tag, replace it.
 	//
-	if (strlen(ctag->con) < strlen(qtag->con)) {
-	    ctag->add_consensus(qtag->con);
-	}
+	// if (strlen(ctag->con) < strlen(qtag->con)) {
+	//     ctag->add_consensus(qtag->con);
+	// }
 
 	ctag->sources.push_back(make_pair(sample_file.first, qtag->id));
     }

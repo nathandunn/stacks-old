@@ -18,46 +18,23 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __CONSTANTS_H__
-#define __CONSTANTS_H__
+#ifndef __ALN_UTILS_H__
+#define __ALN_UTILS_H__
 
-//
-// Pull in the configuration variables from the configure script
-//
-#if HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <utility>
+using std::pair;
+using std::make_pair;
+#include <string>
+using std::string;
+#include <vector>
+using std::vector;
 
-typedef unsigned int uint;
+#include "constants.h"
+#include "utils.h"
 
-//
-//
-//
-const unsigned int fieldw = 4;
+string invert_cigar(string);
+int    parse_cigar(const char *, vector<pair<char, uint> > &);
+string apply_cigar_to_seq(const char *, vector<pair<char, uint> > &);
+int    apply_cigar_to_model_seq(char *, uint, const char *, vector<pair<char, uint> > &);
 
-//
-// Maximum line length for parsing input files.
-//
-const int max_len = 1024;
-
-//
-// Maximum length of idetifiers, such as sequence IDs and chromosome names.
-//
-const int id_len = 255;
-
-//
-// Size to use for internal buffer size for gzipped files being read with libz.
-//
-const int libz_buffer_size = 1048576;
-
-//
-// Supported file types
-//
-enum class FileT {unknown, 
-	sql,     gzsql, 
-	fasta,   gzfasta, 
-	fastq,   gzfastq, 
-	bowtie,  sam, bam, tsv, 
-	bustard, phase, fastphase, beagle};
-
-#endif
+#endif  // __ALN_UTILS_H__

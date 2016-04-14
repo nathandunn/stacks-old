@@ -334,10 +334,10 @@ int PopSum<LocusT>::initialize(PopMap<LocusT> *pmap) {
 
 template<class LocusT>
 int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
-                               PopMap<LocusT> *pmap, 
-                               uint population_id,
-                               uint start_index, uint end_index, 
-                               bool verbose, ofstream &log_fh) {
+                                   PopMap<LocusT> *pmap, 
+                                   uint population_id,
+                                   uint start_index, uint end_index, 
+                                   bool verbose, ofstream &log_fh) {
     LocusT  *loc;
     Datum  **d;
     LocSum **s;
@@ -394,6 +394,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
         // calculate observed genotype frequencies, allele frequencies, and expected genotype frequencies.
         //
         for (uint k = 0; k < loc->snps.size(); k++) {
+            cerr << "Catalog locus: " << loc->id << "; SNP col: " << loc->snps[k]->col << "; length of locus: " << strlen(loc->con) << "\n";
             res = this->tally_heterozygous_pos(loc, d, s[pop_index], 
                                                loc->snps[k]->col, k, start_index, end_index);
             //

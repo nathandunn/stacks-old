@@ -209,6 +209,7 @@ public:
     int    depth;
     double lnl;
     char  *haplotype;
+    char  *cigar;
 
     CatMatch() { 
         batch_id  = 0; 
@@ -217,10 +218,12 @@ public:
         tag_id    = 0; 
         depth     = 0; 
         lnl       = 0.0;
-        haplotype = NULL; 
+        haplotype = NULL;
+        cigar     = NULL;
     }
-    ~CatMatch() { 
-        delete [] haplotype; 
+    ~CatMatch() {
+        delete [] haplotype;
+        delete [] cigar;
     }
 };
 

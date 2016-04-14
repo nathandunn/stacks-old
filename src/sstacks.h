@@ -71,6 +71,7 @@ using google::sparse_hash_map;
 #include "kmers.h"
 #include "sql_utilities.h"
 #include "utils.h"
+#include "aln_utils.h"
 
 #ifdef HAVE_SPARSEHASH
 typedef sparse_hash_map<const char *, vector<pair<int, allele_type> >, hash_charptr, eqstr> HashMap;

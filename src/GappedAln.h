@@ -27,15 +27,18 @@ class AlignRes {
 public:
     string cigar;
     uint   gap_cnt;
+    uint   contiguity;
     double pct_id;
     AlignRes() {
-	this->gap_cnt = 0;
-	this->pct_id  = 0.0;
+	this->gap_cnt    = 0;
+        this->contiguity = 0;
+	this->pct_id     = 0.0;
     }
-    AlignRes(string c, uint g, double p) {
-	this->cigar   = c;
-	this->gap_cnt = g;
-	this->pct_id  = p;
+    AlignRes(string cigar, uint gapcnt, uint contiguity, double pct_id) {
+	this->cigar      = cigar;
+	this->gap_cnt    = gapcnt;
+        this->contiguity = contiguity;
+	this->pct_id     = pct_id;
     }
 };
 
@@ -103,22 +106,6 @@ GappedAln::GappedAln()
     this->matrix  = NULL;
     this->path    = NULL;
 }
-
-// GappedAln::GappedAln(int len)
-// {
-//     // this->_m      = len + 1;
-//     // this->_n      = len + 1;
-//     // this->_m_size = this->_m;
-//     // this->_n_size = this->_n;
-    
-//     // this->matrix = new double * [this->_m];
-//     // for (uint i = 0; i < this->_m; i++)
-//     //     this->matrix[i] = new double [this->_n];
-
-//     // this->path = new AlignPath * [this->_m];
-//     // for (uint i = 0; i < this->_m; i++)
-//     //     this->path[i] = new AlignPath [this->_n];
-// }
 
 GappedAln::GappedAln(int len_1, int len_2)
 {
@@ -370,10 +357,16 @@ GappedAln::swap(double *scores, dynprog *direction, int index_1, int index_2)
 bool
 compare_alignres(AlignRes a, AlignRes b)
 {
-    if (a.gap_cnt == b.gap_cnt)
-	return (a.pct_id > b.pct_id);
-    else
+    if (a.gap_cnt == b.gap_cnt) {
+
+        if (a.pct_id == b.pct_id)
+            return (a.contiguity > b.contiguity);
+        else
+            return (a.pct_id > b.pct_id);
+
+    } else {
 	return (a.gap_cnt < b.gap_cnt);
+    }
 }
 
 int
@@ -389,13 +382,14 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
     //   ... |
     // [m-1] |
     // 
-    int    i, j, cnt, len, gaps;
+    int    i, j, cnt, len, gaps, contiguity;
     double ident;
     string cigar;
     char   buf[id_len];
 
     vector<AlignRes> alns;
     bool more_paths = true;
+    bool seq_break  = false;
     
     do {
         more_paths = false;
@@ -435,11 +429,13 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
         //
         // Convert to CIGAR strings.
         //
-        cigar = "";
-        len   = aln_1.length();
-        gaps  = 0;
-	ident = 0.0;
-        i     = 0;
+        cigar      = "";
+        len        = aln_1.length();
+        gaps       = 0;
+        contiguity = 0;
+        seq_break  = false;
+	ident      = 0.0;
+        i          = 0;
         while (i < len) {
             if (aln_1[i] != '-' && aln_2[i] != '-') {
                 cnt = 0;
@@ -447,6 +443,7 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
 		    if (aln_1[i] == aln_2[i]) ident++;
                     cnt++;
                     i++;
+                    if (seq_break == false) contiguity++;
                 } while (i < len && aln_1[i] != '-' && aln_2[i] != '-');
                 sprintf(buf, "%dM", cnt);
 
@@ -458,6 +455,7 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
                 } while (i < len && aln_1[i] == '-');
                 sprintf(buf, "%dD", cnt);
                 gaps++;
+                seq_break = true;
 
             } else {
                 cnt = 0;
@@ -467,14 +465,15 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
                 } while (i < len && aln_2[i] == '-');
                 sprintf(buf, "%dI", cnt);
                 gaps++;
+                seq_break = true;
             }
 
             cigar += buf;
         }
 
-        alns.push_back(AlignRes(cigar, gaps, (ident / (double) len)));
+        alns.push_back(AlignRes(cigar, gaps, contiguity, (ident / (double) len)));
         
-	// cerr << aln_1 << " [" << cigar << ", gaps: " << gaps << "]\n"
+	// cerr << aln_1 << " [" << cigar << ", contiguity: " << contiguity << ", gaps: " << gaps << "]\n"
         //      << aln_2 << "\n";
 
     } while (more_paths);
@@ -482,7 +481,7 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
 
     sort(alns.begin(), alns.end(), compare_alignres);
     this->_aln = alns[0];
-    // cerr << "Final alignment: " << cigar << "; gaps: " << alns[0].second << "\n";
+    // cerr << "Final alignment: " << this->_aln.cigar << "; contiguity: " << contiguity << "; gaps: " << this->_aln.gap_cnt << "\n";
 
     return 1;
 }
@@ -501,6 +500,8 @@ GappedAln::parse_cigar(vector<pair<char, uint> > &cigar)
     const char *p, *q;
 
     p = this->_aln.cigar.c_str();
+
+    cigar.clear();
 
     while (*p != '\0') {
         q = p + 1;
@@ -589,143 +590,5 @@ GappedAln::dump_alignment(string tag_1, string tag_2)
     
     return 0;
 }
-
-string
-invert_cigar(string cigar)
-{
-    for (uint i = 0; i < cigar.length(); i++) {
-        if (cigar[i] == 'I')
-            cigar[i] = 'D';
-        else if (cigar[i] == 'D')
-            cigar[i] = 'I';
-    }
-
-    return cigar;
-}
-
-int 
-parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar)
-{
-    char buf[id_len];
-    int  dist;
-    const char *p, *q;
-
-    cigar.clear();
-
-    p = cigar_str;
-
-    while (*p != '\0') {
-        q = p + 1;
-
-        while (*q != '\0' && isdigit(*q))
-            q++;
-        strncpy(buf, p, q - p);
-        buf[q-p] = '\0';
-        dist = atoi(buf);
-
-        cigar.push_back(make_pair(*q, dist));
-
-        p = q + 1;
-    }
-
-    return 0;
-}
-
-string
-apply_cigar_to_seq(const char *seq, vector<pair<char, uint> > &cigar)
-{
-    uint   size = cigar.size();
-    char   op;
-    uint   dist, bp, edited_bp, len, stop;
-    string edited_seq;
-
-    //
-    // Calculate the overall sequence length.
-    //
-    uint seqlen = 0;
-    for (uint i = 0; i < size; i++)
-        seqlen += cigar[i].second;
-
-    len = strlen(seq);
-    bp  = 0;
-
-    edited_seq.reserve(seqlen);
-
-    for (uint i = 0; i < size; i++)  {
-        op   = cigar[i].first;
-        dist = cigar[i].second;
-
-        switch(op) {
-        case 'S':
-            stop = bp + dist;
-            while (bp < stop) {
-                edited_seq.push_back('N');
-                bp++;
-            }
-            break;
-        case 'D':
-	    edited_bp = 0;
-            while (edited_bp < dist) {
-                edited_seq.push_back('N');
-		edited_bp++;
-            }
-            break;
-        case 'I':
-        case 'M':
-            stop = bp + dist;
-            while (bp < stop) {
-                edited_seq.push_back(seq[bp]);
-                bp++;
-            }
-            break;
-        default:
-            break;
-        }
-    }
-
-    return edited_seq;
-}
-
-// int
-// rank_alignments(vector<pair<int, string> > &alns)
-// {
-//     sort(alns.begin(), alns.end(), compare_alns);
-    
-//     return 0;
-// }
-
-// int
-// compare_alns(pair<int, string> a, pair<int, string> b)
-// {
-//     char   op;
-//     uint   dist, sum_a, sum_b;
-
-//     vector<pair<char, uint> > cigar;
-
-//     parse_cigar(a.second, cigar);
-
-//     sum_a = 0;
-//     sum_b = 0;
-
-//     for (uint i = 0; i < cigar.size(); i++) {
-// 	op   = cigar[i].first;
-// 	dist = cigar[i].second;
-// 	if (op == 'M')
-// 	    sum_a += dist;
-//     }
-
-//     cigar.clear();
-
-//     parse_cigar(b.second, cigar);
-
-//     for (uint i = 0; i < cigar.size(); i++) {
-// 	op   = cigar[i].first;
-// 	dist = cigar[i].second;
-// 	if (op == 'M')
-// 	    sum_b += dist;
-//     }
-
-//     return (sum_a < sum_b);
-// }
 
 #endif // __GAPPEDALN_H__
