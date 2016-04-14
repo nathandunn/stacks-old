@@ -9104,7 +9104,6 @@ int parse_command_line(int argc, char* argv[]) {
     //
 
     if (input_mode == InputMode::stacks) {
-        // Stacks mode
 
         if (in_path.empty()) {
             cerr << "You must specify a path to the directory containing Stacks output files.\n";
@@ -9125,7 +9124,6 @@ int parse_command_line(int argc, char* argv[]) {
         out_prefix = string("batch_") + to_string(batch_id);
 
     } else if (input_mode == InputMode::vcf) {
-        // VCF mode
 
         if (in_vcf_path.empty()) {
             cerr << "You must specify a path to a VCF input file.\n";
@@ -9133,10 +9131,16 @@ int parse_command_line(int argc, char* argv[]) {
         }
 
         if (out_path.empty()) {
-            cerr << "Error: Malformed arguments: input mode \"vcf\" requires an output directory (--out_path).\n";
+            cerr << "Error: Malformed arguments: input mode 'vcf' requires an output directory (--out_path).\n";
             help();
         }
 
+        if (vcf_out || vcf_haplo_out) {
+            cerr << "Error: Oops, input mode 'vcf' does not support --vcf or --vcf_haplotypes yet.\n";
+            help();
+        }
+
+        // Determine out_prefix
         string fname = in_vcf_path;
         if (in_vcf_path.find_last_of('/') != string::npos && in_vcf_path.back() != '/')
             fname = in_vcf_path.substr(in_vcf_path.find_last_of('/')+1);
