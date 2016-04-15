@@ -394,7 +394,6 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
         // calculate observed genotype frequencies, allele frequencies, and expected genotype frequencies.
         //
         for (uint k = 0; k < loc->snps.size(); k++) {
-            cerr << "Catalog locus: " << loc->id << "; SNP col: " << loc->snps[k]->col << "; length of locus: " << strlen(loc->con) << "\n";
             res = this->tally_heterozygous_pos(loc, d, s[pop_index], 
                                                loc->snps[k]->col, k, start_index, end_index);
             //
@@ -829,6 +828,7 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
         // position as hEterozygous or hOmozygous.
         //
         if (d[i]->model[pos] == 'E') {
+            cerr << "Model: " << d[i]->model << "\n";
             cerr << "Warning: heterozygous model call at fixed nucleotide position: " 
                  << "locus " << locus->id << " individual " << d[i]->id << "; position: " << pos << "\n";
         }

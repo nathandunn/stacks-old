@@ -76,7 +76,6 @@ int  initialize_existing_catalog(string, map<int, CLocus *> &);
 int  update_catalog_index(map<int, CLocus *> &, map<string, int> &);
 int  find_kmer_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &, int);
 int  search_for_gaps(map<int, CLocus *> &, map<int, QLocus *> &, double, double);
-int  adjust_snps_for_gaps(vector<pair<char, uint> > &, Locus *);
 int  find_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &);
 int  find_matches_by_genomic_loc(map<string, int> &, map<int, QLocus *> &);
 int  characterize_mismatch_snps(CLocus *, QLocus *);
