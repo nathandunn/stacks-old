@@ -236,45 +236,6 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
     return 1;
 }
 
-int
-adjust_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
-{
-    uint   size = cigar.size();
-    char   op;
-    uint   dist, bp, stop, offset, snp_index;
-
-    bp        = 0;
-    offset    = 0;
-    snp_index = 0;
-    
-    for (uint i = 0; i < size; i++)  {
-        op   = cigar[i].first;
-        dist = cigar[i].second;
-
-        switch(op) {
-        case 'D':
-            offset += dist;
-            break;
-        case 'I':
-        case 'M':
-        case 'S':
-            stop = bp + dist;
-            while (bp < stop && snp_index < loc->snps.size()) {
-                if (loc->snps[snp_index]->col == bp) {
-                    loc->snps[snp_index]->col += offset;
-                    snp_index++;
-                }
-                bp++;
-            }
-            break;
-        default:
-            break;
-        }
-    }    
-    
-    return 0;
-}
-
 int 
 merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int, string> &sample_file, int ctag_dist,
               uint &new_matches, uint &unique_matches, uint &gapped_matches, uint &multiple_matches) 

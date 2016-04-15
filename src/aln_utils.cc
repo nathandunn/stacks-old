@@ -175,3 +175,42 @@ apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, vector<pair
 
     return 0;
 }
+
+int
+adjust_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, stop, offset, snp_index;
+
+    bp        = 0;
+    offset    = 0;
+    snp_index = 0;
+    
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+            offset += dist;
+            break;
+        case 'I':
+        case 'M':
+        case 'S':
+            stop = bp + dist;
+            while (bp < stop && snp_index < loc->snps.size()) {
+                if (loc->snps[snp_index]->col == bp) {
+                    loc->snps[snp_index]->col += offset;
+                    snp_index++;
+                }
+                bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }    
+    
+    return 0;
+}

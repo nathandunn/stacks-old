@@ -29,6 +29,7 @@ using std::string;
 #include <vector>
 using std::vector;
 
+#include "locus.h"
 #include "constants.h"
 #include "utils.h"
 
@@ -36,5 +37,6 @@ string invert_cigar(string);
 int    parse_cigar(const char *, vector<pair<char, uint> > &);
 string apply_cigar_to_seq(const char *, vector<pair<char, uint> > &);
 int    apply_cigar_to_model_seq(char *, uint, const char *, vector<pair<char, uint> > &);
+int    adjust_snps_for_gaps(vector<pair<char, uint> > &, Locus *);
 
 #endif  // __ALN_UTILS_H__
