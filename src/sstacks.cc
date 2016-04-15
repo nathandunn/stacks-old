@@ -1002,6 +1002,7 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     set<allele_type> query_assigned, cat_assigned;
     AlignRes aln_res;
     string   query_allele, cat_allele;
+    int      query_len;
     uint     verified = 0;
 
     //
@@ -1079,12 +1080,12 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     //
     // 4. Make sure the query has no SNPs unaccounted for in the catalog.
     //
-    int min_tag_len = query->len > cat->len ? query->len : cat->len;
-
     vector<pair<char, uint> > cigar;
-    parse_cigar(invert_cigar(*(cigars.begin())).c_str(), cigar);
+    query_len = parse_cigar(cigars.begin()->c_str(), cigar);
     adjust_snps_for_gaps(cigar, query);
-   
+
+    int min_tag_len = query_len > cat->len ? query_len : cat->len;
+
     vector<SNP *>::iterator i, j;
     bool found;
 
