@@ -244,9 +244,11 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
     CLocus *ctag;
     QLocus *qtag;
     string  cseq, qseq, cigar_str;
-    int     seq_len;
+    int     seq_len, match_index;
     vector<pair<char, uint> > cigar;
-    
+
+    GappedAln *aln = new GappedAln();
+
     for (i = sample.begin(); i != sample.end(); i++) {
 	qtag = i->second;
 
@@ -276,6 +278,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         uint min_dist    =  1000;
         uint num_matches =  0;
         int  min_cat_id  = -1;
+
         //
         // Find the minimum distance and then check how many matches have that distance.
         //
@@ -317,7 +320,8 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 
         for (uint k = 0; k < qtag->matches.size(); k++)
             if (qtag->matches[k]->cat_id == min_cat_id) {
-                cigar_str = qtag->matches[k]->cigar;
+                cigar_str   = qtag->matches[k]->cigar;
+                match_index = k;
                 break;
             }
 
@@ -330,14 +334,30 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
         //
         if (gapped_aln) {
-            seq_len   = parse_cigar(cigar_str.c_str(), cigar);
+            seq_len = parse_cigar(cigar_str.c_str(), cigar);
 
             if (seq_len < ctag->len) {
-                cerr << "  Warning: Catalog locus " << ctag->id
-                     << "; sequence length has changed since original alignment: "
-                     << seq_len << " <-> " << ctag->len
-                     << "; Trying to merge in sample " << qtag->sample_id << ", locus " << qtag->id << "; skipping alignment.\n";
-                continue;
+                string query_allele, query_seq, cat_allele, cat_seq;
+                // cerr << "    Warning: Catalog locus " << ctag->id
+                //      << ", Sample " << qtag->sample_id << ", locus " << qtag->id
+                //      << "; sequence length has changed since original alignment: "
+                //      << seq_len << " <-> " << ctag->len
+                //      << "; re-aligning.\n";
+
+                //
+                // Find the proper query allele to align against the catalog. We can align
+                // against the catalog consensus because the allele strings may have changed.
+                //
+                query_allele = qtag->matches[match_index]->query_type;
+                for (uint k = 0; k < qtag->strings.size(); k++)
+                    if (qtag->strings[k].first == query_allele) {
+                        query_seq = qtag->strings[k].second;
+                        break;
+                    }                
+                aln->init(ctag->len, qtag->len);
+                aln->align(ctag->con, query_seq);
+                cigar_str = invert_cigar(aln->result().cigar);
+                parse_cigar(cigar_str.c_str(), cigar);
             }
             
             qseq      = apply_cigar_to_seq(qtag->con, cigar);

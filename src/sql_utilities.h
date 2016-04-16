@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2014, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -20,10 +20,6 @@
 
 //
 // sql_utilities.h -- template routines to read and write Stacks SQL file formats.
-//
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
 //
 #ifndef __SQL_UTILITIES_H__
 #define __SQL_UTILITIES_H__
@@ -487,33 +483,73 @@ int load_model_results(string sample,  map<int, ModRes *> &modres) {
     char *line      = (char *) malloc(sizeof(char) * max_len);
     int   size      = max_len;
     bool  gzip      = false;
+    bool  open_fail  = false;
     int   fh_status = 1;
 
     // 
-    // First, parse the tag file and pull in the consensus sequence
-    // for each Radtag.
+    // Parse the models file (if it exists), otherwise parse the tag file to
+    // pull in the model calls for each locus.
     //
     gzip      = false;
     fh_status = 1;
     line_num  = 1;
 
-    f = sample + ".tags.tsv";
+    f = sample + ".models.tsv";
     fh.open(f.c_str(), ifstream::in);
-    if (fh.fail()) {
+    if (fh.fail())
+        open_fail = true;
+
+    if (open_fail) {
         //
-        // Test for a gzipped file.
+        // Test for a gzipped MODELs file.
+        //
+        f = sample + ".models.tsv.gz";
+        gz_fh = gzopen(f.c_str(), "rb");
+        if (!gz_fh) {
+            open_fail = true;
+        } else {
+            open_fail = false;
+            #if ZLIB_VERNUM >= 0x1240
+            gzbuffer(gz_fh, libz_buffer_size);
+            #endif
+            gzip = true;
+        }
+    }
+
+    if (open_fail) {
+        //
+        // Test for a TAGs file.
+        //
+        f = sample + ".tags.tsv";
+        fh.open(f.c_str(), ifstream::in);
+        if (fh.fail())
+            open_fail = true;
+        else
+            open_fail = false;
+    }
+
+    if (open_fail) {
+        //
+        // Test for a gzipped TAGs file.
         //
         f = sample + ".tags.tsv.gz";
         gz_fh = gzopen(f.c_str(), "rb");
         if (!gz_fh) {
-            cerr << " Unable to open '" << sample << "'\n";
-            return 0;
+            open_fail = true;
+        } else {
+            open_fail = false;
+            #if ZLIB_VERNUM >= 0x1240
+            gzbuffer(gz_fh, libz_buffer_size);
+            #endif
+            gzip = true;
         }
-        #if ZLIB_VERNUM >= 0x1240
-        gzbuffer(gz_fh, libz_buffer_size);
-        #endif
-        gzip = true;
     }
+
+    if (open_fail) {
+        cerr << " Unable to open '" << sample << "'\n";
+        return 0;
+    }
+
     cerr << "  Parsing " << f.c_str() << "\n";
 
     ModRes *mod;
