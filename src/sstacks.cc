@@ -1106,6 +1106,7 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
 	//
 	if (found == false) {
 	    nosnps++;
+            query->clear_matches();
 	    return false;
 	}
     }
