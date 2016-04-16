@@ -185,9 +185,23 @@ MergedStack::calc_likelihood()
     map<char, int>::iterator max, n;
     DNANSeq *d;
 
+    uint cur_gap = this->gaps.size() > 0 ? 0 : 1;
+
     this->lnl = 0;
 
     for (col = 0; col < length; col++) {
+
+        //
+        // Don't invoke the model within gaps.
+        //
+        if (cur_gap < this->gaps.size() && col == this->gaps[cur_gap].start) {
+            do {
+                col++;
+            } while (col < this->gaps[cur_gap].end && col < length);
+            col--;
+            continue;
+        }
+
         nuc['A'] = 0; 
         nuc['G'] = 0;
         nuc['C'] = 0;

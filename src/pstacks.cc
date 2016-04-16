@@ -377,18 +377,20 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     string tag_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".tags.tsv";
     string snp_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".snps.tsv";
     string all_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".alleles.tsv";
-
+    string mod_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".models.tsv";
+    
     if (gzip) {
 	tag_file += ".gz";
 	snp_file += ".gz";
 	all_file += ".gz";
+        mod_file += ".gz";
     }
 
     //
     // Open the output files for writing.
     //
-    gzFile   gz_tags, gz_snps, gz_alle;
-    ofstream tags, snps, alle;
+    gzFile   gz_tags, gz_snps, gz_alle, gz_mods;
+    ofstream tags, snps, alle, mods;
     if (gzip) {
 	gz_tags = gzopen(tag_file.c_str(), "wb");
 	if (!gz_tags) {
@@ -398,6 +400,14 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         #if ZLIB_VERNUM >= 0x1240
 	gzbuffer(gz_tags, libz_buffer_size);
 	#endif
+        gz_mods = gzopen(mod_file.c_str(), "wb");
+        if (!gz_mods) {
+            cerr << "Error: Unable to open gzipped tag file '" << tag_file << "': " << strerror(errno) << ".\n";
+            exit(1);
+        }
+        #if ZLIB_VERNUM >= 0x1240
+        gzbuffer(gz_mods, libz_buffer_size);
+        #endif
 	gz_snps = gzopen(snp_file.c_str(), "wb");
 	if (!gz_snps) {
 	    cerr << "Error: Unable to open gzipped snps file '" << snp_file << "': " << strerror(errno) << ".\n";
@@ -420,6 +430,11 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	    cerr << "Error: Unable to open tag file for writing.\n";
 	    exit(1);
 	}
+        mods.open(mod_file.c_str());
+        if (mods.fail()) {
+            cerr << "Error: Unable to open tag file for writing.\n";
+            exit(1);
+        }
 	snps.open(snp_file.c_str());
 	if (snps.fail()) {
 	    cerr << "Error: Unable to open SNPs file for writing.\n";
@@ -447,10 +462,12 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     log << "# pstacks version " << VERSION << "; generated on " << date << "\n"; 
     if (gzip) {
         gzputs(gz_tags, log.str().c_str());
+        gzputs(gz_mods, log.str().c_str());
         gzputs(gz_snps, log.str().c_str());
         gzputs(gz_alle, log.str().c_str());
     } else {
         tags << log.str();
+        mods << log.str();
 	snps << log.str();
 	alle << log.str();
     }
@@ -529,6 +546,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	     << "\n";
 	
 	if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
+        if (gzip) gzputs(gz_mods, sstr.str().c_str()); else mods << sstr.str();
 	sstr.str("");
 
 	// Now write out the components of each unique tag merged into this one.
@@ -595,10 +613,12 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 
     if (gzip) {
 	gzclose(gz_tags);
+        gzclose(gz_mods);
 	gzclose(gz_snps);
 	gzclose(gz_alle);
     } else {
 	tags.close();
+        mods.close();
 	snps.close();
 	alle.close();
     }

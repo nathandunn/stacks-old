@@ -258,6 +258,7 @@ create table matches (
        allele	   varchar(256),
        depth       int unsigned not null,
        lnl	   float,
+       cigar       varchar(256),
        INDEX	   batch_id_index (batch_id),
        INDEX	   catalog_id_index (catalog_id),
        INDEX	   sample_id_index (sample_id),
