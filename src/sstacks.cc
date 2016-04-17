@@ -917,8 +917,8 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 		    aln->init(tag_2->len, query->len);
 
                     // cerr << "Attempting to align: cat id " << tag_2->id << " with locus id " << query->id << "\n" 
-                    //      << "Cat seq: " << cat_seq << "\n"
-                    //      << "Allele:  " << allele->second << "\n";
+                    //      << "Cat allele: " << cat_allele   << "; seq: " << cat_seq << "\n"
+                    //      << "Allele:     " << query_allele << "; seq: " << allele->second << "\n";
 
 		    if (aln->align(cat_seq, query_seq)) {
 			aln->parse_cigar(cigar);
@@ -994,95 +994,99 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     int    cat_id = *(loci_hit.begin());
     Locus *cat    = catalog[cat_id];
 
-    //
-    // 2. Assign the allele hits optimally to the different catalog alleles.
-    //
     map<allele_type, map<allele_type, AlignRes> >::iterator query_it;
     map<allele_type, AlignRes>::iterator                    cat_it;
     set<allele_type> query_assigned, cat_assigned;
     AlignRes aln_res;
-    string   query_allele, cat_allele;
+    string   query_allele, cat_allele, converted_query_allele, qseq;
     int      query_len;
     uint     verified = 0;
 
-    //
-    // First, assign hits when there is only a single hit for a query allele.
-    //
-    for (vector<pair<allele_type, string> >::iterator allele = query->strings.begin(); allele != query->strings.end(); allele++) {
-        query_allele = allele->first;
+    // //
+    // // First, assign hits when there is only a single hit for a query allele.
+    // //
+    // for (vector<pair<allele_type, string> >::iterator allele = query->strings.begin(); allele != query->strings.end(); allele++) {
+    //     query_allele = allele->first;
 
-        if (query_assigned.count(query_allele) > 0)
-            continue;
+    //     if (query_assigned.count(query_allele) > 0)
+    //         continue;
                                     
-        query_it = query_hits.find(query_allele);
+    //     query_it = query_hits.find(query_allele);
                 
-        if (query_it == query_hits.end())
-            continue;
+    //     if (query_it == query_hits.end())
+    //         continue;
 
-        if (query_it->second.size() == 1) {
-            cat_it     = query_it->second.begin();
-            cat_allele = cat_it->first;
-            aln_res    = cat_it->second;
+    //     if (query_it->second.size() == 1) {
+    //         cat_it     = query_it->second.begin();
+    //         cat_allele = cat_it->first;
+    //         aln_res    = cat_it->second;
 
-            if (cat_assigned.count(cat_allele) > 0)
-                continue;
+    //         if (cat_assigned.count(cat_allele) > 0)
+    //             continue;
 
-            verified++;
-            query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
-            query_assigned.insert(query_allele);
-            cat_assigned.insert(cat_allele);
-        }
-    }
+    //         verified++;
+    //         query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
+    //         query_assigned.insert(query_allele);
+    //         cat_assigned.insert(cat_allele);
+    //     }
+    // }
+
+    // //
+    // // Second, assign the remaining hits, first come, first assigned.
+    // //
+    // for (vector<pair<allele_type, string> >::iterator allele = query->strings.begin(); allele != query->strings.end(); allele++) {
+    //     query_allele = allele->first;
+
+    //     if (query_assigned.count(query_allele) > 0)
+    //         continue;
+
+    //     query_it = query_hits.find(query_allele);
+
+    //     if (query_it == query_hits.end())
+    //         continue;
+
+    //     map<allele_type, AlignRes> &cat_hits = query_it->second;
+    //     for (cat_it = cat_hits.begin(); cat_it != cat_hits.end(); cat_it++) {
+    //         cat_allele = cat_it->first;
+    //         aln_res    = cat_it->second;
+
+    //         if (cat_assigned.count(cat_allele) > 0)
+    //             continue;
+
+    //         verified++;
+    //         query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
+    //         query_assigned.insert(query_allele);
+    //         cat_assigned.insert(cat_allele);
+    //         break;
+    //     }
+    // }
 
     //
-    // Second, assign the remaining hits, first come, first assigned.
-    //
-    for (vector<pair<allele_type, string> >::iterator allele = query->strings.begin(); allele != query->strings.end(); allele++) {
-        query_allele = allele->first;
-
-        if (query_assigned.count(query_allele) > 0)
-            continue;
-
-        query_it = query_hits.find(query_allele);
-
-        if (query_it == query_hits.end())
-            continue;
-
-        map<allele_type, AlignRes> &cat_hits = query_it->second;
-        for (cat_it = cat_hits.begin(); cat_it != cat_hits.end(); cat_it++) {
-            cat_allele = cat_it->first;
-            aln_res    = cat_it->second;
-
-            if (cat_assigned.count(cat_allele) > 0)
-                continue;
-
-            verified++;
-            query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
-            query_assigned.insert(query_allele);
-            cat_assigned.insert(cat_allele);
-            break;
-        }
-    }
-
-    //
-    // 4. Check if there was a consistent alignment between the alleles to the catalog locus.
+    // 1. Check if there was a consistent alignment between the alleles to the catalog locus.
     //
     set<string> cigars;
-    for (uint j = 0; j < query->matches.size(); j++) {
-        cigars.insert(query->matches[j]->cigar);
+    for (query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
+        map<allele_type, AlignRes> &cat_hits = query_it->second;
+        for (cat_it = cat_hits.begin(); cat_it != cat_hits.end(); cat_it++)
+            cigars.insert(cat_it->second.cigar);
     }
     if (cigars.size() > 1) {
         bad_aln++;
-        query->clear_matches();
         return false;
     }
 
     //
-    // 4. Make sure the query has no SNPs unaccounted for in the catalog.
+    // 2. Make sure the query has no SNPs unaccounted for in the catalog.
     //
     vector<pair<char, uint> > cigar;
-    query_len = parse_cigar(cigars.begin()->c_str(), cigar);
+    query_len = parse_cigar(invert_cigar(*cigars.begin()).c_str(), cigar);
     adjust_snps_for_gaps(cigar, query);
+    qseq = apply_cigar_to_seq(query->con, cigar);
+    query->add_consensus(qseq.c_str());
+
+    // cerr << "New qseq: " << qseq << "\n"
+    //      << "          " << query->con << "\n"
+    //      << "Cigar:    " << cigars.begin()->c_str() << "\n";
 
     int min_tag_len = query_len > cat->len ? query_len : cat->len;
 
@@ -1106,10 +1110,61 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
 	//
 	if (found == false) {
 	    nosnps++;
-            query->clear_matches();
 	    return false;
 	}
     }
+
+    //
+    // 3. Assign the allele hits after verifying there is a match between catalog and query allele..
+    //
+    for (query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
+        query_allele = query_it->first;
+
+        map<allele_type, AlignRes> &cat_hits = query_it->second;
+
+        if (cat_hits.size() == 1 && cat_hits.begin()->first == "consensus") {
+            cat_it = cat_hits.begin();
+
+            cat_allele = cat_it->first;
+            aln_res    = cat_it->second;
+
+            verified++;
+            query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
+            continue;
+        }
+
+        converted_query_allele = generate_query_allele(cat, query, query_allele);
+
+        cat_it = cat_hits.find(converted_query_allele);
+
+        if (cat_it != cat_hits.end()) {
+            cat_allele = cat_it->first;
+            aln_res    = cat_it->second;
+
+            verified++;
+            query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
+
+        } else {
+            //
+            // Check for alleles that have Ns in the query, but not in the catalog, but otherwise match.
+            //
+            uint match_cnt = 0;
+            for (cat_it = cat_hits.begin(); cat_it != cat_hits.end(); cat_it++) {
+                cat_allele = cat_it->first;
+
+                if (match_alleles(cat_allele, converted_query_allele)) {
+                    match_cnt++;
+                    aln_res = cat_it->second;
+                }
+            }
+
+            if (match_cnt == 1) {
+                verified++;
+                query->add_match(cat_id, cat_allele, query_allele, 0, invert_cigar(aln_res.cigar));
+            }
+        }
+    }
+    
 
     if (verified > 0) {
         ver_hits += verified;
@@ -1119,6 +1174,49 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     }
 
     return true;
+}
+
+bool
+match_alleles(allele_type catalog_allele, allele_type query_allele)
+{
+    const char *q    = catalog_allele.c_str();
+    const char *p    = query_allele.c_str();
+    const char *stop = p + query_allele.length();
+
+    while (p < stop) {
+        if (*p != 'N' && *p != *q)
+            return false;
+        p++;
+        q++;
+    }
+    return true;
+}
+
+string
+generate_query_allele(Locus *ctag, Locus *qtag, allele_type allele)
+{
+    string new_allele = "";
+
+    if (qtag->snps.size() == 0) {
+        for (uint i = 0; i < ctag->snps.size(); i++)
+            new_allele += ctag->snps[i]->col > qtag->len - 1 ? 'N' : qtag->con[ctag->snps[i]->col];
+        
+    } else {
+        uint pos   = 0;
+        uint index = 0;
+
+        for (uint i = 0; i < ctag->snps.size(); i++) {
+            if (index < qtag->snps.size() && qtag->snps[index]->col == ctag->snps[i]->col) {
+                new_allele += allele[pos];
+                index++;
+                pos++;
+            } else {
+                new_allele += ctag->snps[i]->col > qtag->len - 1 ? 'N' : qtag->con[ctag->snps[i]->col];
+            }
+        }
+    }
+
+    return new_allele;
 }
 
 int
