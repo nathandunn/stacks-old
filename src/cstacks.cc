@@ -142,8 +142,10 @@ int main (int argc, char* argv[]) {
         //
         // Regenerate the alleles for the catalog tags after merging the new sample into the catalog.
 	//
-        for (cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++)
+        for (cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++) {
             cat_it->second->populate_alleles();
+            cat_it->second->match_cnt = 0;
+        }
 
 	if (search_type == genomic_loc) {
 	    cerr << "  Updating catalog index...\n";
@@ -207,6 +209,7 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
 	if (snp_cols.count(i) == 0 && 
 	    (*c != *q) && (*c != 'N' && *q != 'N')) {
 
+            // cerr << "Adding a new SNP at position " << c - c_beg << ", " << *c << "/" << *q << "\n";
             SNP *s = new SNP;
 	    s->type   = snp_type_het;
             s->col    = c - c_beg;
@@ -244,7 +247,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
     CLocus *ctag;
     QLocus *qtag;
     string  cseq, qseq, cigar_str;
-    int     seq_len, match_index;
+    int     cseq_len, qseq_len, match_index;
     vector<pair<char, uint> > cigar;
 
     GappedAln *aln = new GappedAln();
@@ -334,14 +337,14 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
         //
         if (gapped_aln) {
-            seq_len = parse_cigar(cigar_str.c_str(), cigar);
+            qseq_len = parse_cigar(cigar_str.c_str(), cigar);
 
-            if (seq_len < ctag->len) {
+            if (ctag->match_cnt > 0) {
                 string query_allele, query_seq, cat_allele, cat_seq;
                 // cerr << "    Warning: Catalog locus " << ctag->id
                 //      << ", Sample " << qtag->sample_id << ", locus " << qtag->id
                 //      << "; sequence length has changed since original alignment: "
-                //      << seq_len << " <-> " << ctag->len
+                //      << qseq_len << " <-> " << ctag->len
                 //      << "; re-aligning.\n";
 
                 //
@@ -353,20 +356,27 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
                     if (qtag->strings[k].first == query_allele) {
                         query_seq = qtag->strings[k].second;
                         break;
-                    }                
+                    }
                 aln->init(ctag->len, qtag->len);
                 aln->align(ctag->con, query_seq);
                 cigar_str = invert_cigar(aln->result().cigar);
                 parse_cigar(cigar_str.c_str(), cigar);
             }
-            
+
             qseq      = apply_cigar_to_seq(qtag->con, cigar);
             adjust_snps_for_gaps(cigar, qtag);
 
             cigar_str = invert_cigar(cigar_str);
-            parse_cigar(cigar_str.c_str(), cigar);
+            cseq_len  = parse_cigar(cigar_str.c_str(), cigar);
             cseq      = apply_cigar_to_seq(ctag->con, cigar);
             adjust_snps_for_gaps(cigar, ctag);
+
+            //
+            // If the alignment modified the catalog locus, record it so we can re-align
+            // any other matching sequences from this sample.
+            //
+            if (cseq_len > ctag->len)
+                ctag->match_cnt++;
 
             //
             // Add any new sequence information into the catalog consensus.
@@ -382,8 +392,10 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
             qtag->add_consensus(qseq.c_str());
 
             gapped_matches++;
+
         } else {
             unique_matches++;
+            ctag->match_cnt++;
         }
 
         //
@@ -407,9 +419,9 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 	//
 	// If the catalog consensus tag is shorter than the query tag, replace it.
 	//
-	// if (strlen(ctag->con) < strlen(qtag->con)) {
-	//     ctag->add_consensus(qtag->con);
-	// }
+	if (!gapped_aln && strlen(ctag->con) < strlen(qtag->con)) {
+	    ctag->add_consensus(qtag->con);
+	}
 
 	ctag->sources.push_back(make_pair(sample_file.first, qtag->id));
     }
@@ -801,7 +813,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 			aln->parse_cigar(cigar);
                         aln_res = aln->result();
                         d       = dist(cat_seq.c_str(), allele->second.c_str(), cigar);
-			
+
                         //
                         // If the alignment has too many gaps, skip it.
                         //
@@ -1124,7 +1136,7 @@ int merge_allele(Locus *locus, SNP *snp) {
 	new_allele = "";
 	pos        = 0;
 
-        //cerr << "Allele length: " << allele.size() << "\n";
+        // cerr << "Allele length: " << allele.size() << "\n";
 
 	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
 	    //
@@ -1133,10 +1145,10 @@ int merge_allele(Locus *locus, SNP *snp) {
 	    //
 	    if ((*k).first == "merge") {
 		new_allele += locus->con[(*k).second->col];
-                //cerr << "  Adding char from consensus position " << (*k).second->col << "\n";
+                // cerr << "  Adding char '" << locus->con[k->second->col] << "' from consensus position " << (*k).second->col << "\n";
 	    } else {
 		new_allele += allele[pos];
-                //cerr << "  Adding char from allele position " << pos << "\n";
+                // cerr << "  Adding char '" << allele[pos] << "' from allele position " << pos << "\n";
 		pos++;
 	    }
 	}
@@ -1241,7 +1253,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	    if (k->first == "sample") {
 		new_allele += k->second->col > this->len - 1 ? 'N' : this->con[k->second->col];
 	    } else {
-		new_allele += allele[pos];
+                new_allele += allele[pos];
 		pos++;
 	    }
 	}
@@ -1303,7 +1315,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     // check if we can reduce the alleles as one of the longer allele haplotypes
     // may fully encompass a shorter allele haplotype that has been padded with Ns.
     //
-    if (require_uniq_haplotypes) this->reduce_alleles(merged_alleles);
+    //if (require_uniq_haplotypes) this->reduce_alleles(merged_alleles);
 
     //
     // Update the catalog entry's list of SNPs and alleles

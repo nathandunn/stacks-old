@@ -121,6 +121,11 @@ class QLocus : public Locus {
 class CLocus : public Locus {
  public:
     vector<pair<int, int> > sources;   // Sample/ID pairs for the sources contributing to this catalog entry
+    uint match_cnt;
+
+    CLocus() : Locus() { 
+        this->match_cnt = 0; 
+    };
 
     int merge_snps(QLocus *);
     int reduce_alleles(set<string> &);
