@@ -379,13 +379,6 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
                 ctag->match_cnt++;
 
             //
-            // Add any new sequence information into the catalog consensus.
-            //
-            for (uint k = 0; k < cseq.length(); k++)
-                if (qseq[k] != 'N' && cseq[k] == 'N')
-                    cseq[k] = qseq[k];
-
-            //
             // Adjust the consensus sequences for both loci.
             //
             ctag->add_consensus(cseq.c_str());
@@ -416,10 +409,15 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 		 << " with catalog tag " << ctag->id << "\n";
 	}
 
-	//
-	// If the catalog consensus tag is shorter than the query tag, replace it.
-	//
-	if (!gapped_aln && strlen(ctag->con) < strlen(qtag->con)) {
+        //
+        // Add any new sequence information into the catalog consensus.
+        //
+        if (gapped_aln) {
+            for (uint k = 0; k < ctag->len; k++)
+                if (qtag->con[k] != 'N' && ctag->con[k] == 'N')
+                    ctag->con[k] = qtag->con[k];
+
+        } else if (strlen(ctag->con) < strlen(qtag->con)) {
 	    ctag->add_consensus(qtag->con);
 	}
 
@@ -1235,11 +1233,42 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     sort(merged_snps.begin(), merged_snps.end(), compare_pair_snp);
 
     //
-    // Merge the alleles accounting for any SNPs added from either of the two samples.
+    // If the catalog tag has no defined alleles, create a matching haplotype
+    // from the consensus sequence before merging in the new alleles.
     //
     string allele, new_allele;
     int    pos;
 
+    if (this->alleles.size() == 0) {
+	char c;
+	new_allele = "";
+	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+	    csnp = k->second;
+	    c    = this->con[k->second->col];
+
+	    new_allele += (csnp->col > this->len - 1) ? 'N' : c;
+
+	    if (csnp->col > this->len - 1) continue;
+
+	    if (c != csnp->rank_1 &&
+		c != csnp->rank_2 &&
+		c != csnp->rank_3 &&
+		c != csnp->rank_4) {
+
+		if (csnp->rank_3 == 0)
+		    csnp->rank_3 = c;
+		else 
+		    csnp->rank_4 = c;
+	    }
+	}
+
+	if (new_allele.length() > 0)
+	    merged_alleles.insert(new_allele);
+    }
+
+    //
+    // Merge the alleles accounting for any SNPs added from either of the two samples.
+    //
     for (j = this->alleles.begin(); j != this->alleles.end(); j++) {
 	allele     = j->first;
 	new_allele = "";
@@ -1310,12 +1339,12 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	    merged_alleles.insert(new_allele);
     }
 
-    //
-    // If the newly merged alleles contain Ns due to different sequence lengths,
-    // check if we can reduce the alleles as one of the longer allele haplotypes
-    // may fully encompass a shorter allele haplotype that has been padded with Ns.
-    //
-    //if (require_uniq_haplotypes) this->reduce_alleles(merged_alleles);
+    // //
+    // // If the newly merged alleles contain Ns due to different sequence lengths,
+    // // check if we can reduce the alleles as one of the longer allele haplotypes
+    // // may fully encompass a shorter allele haplotype that has been padded with Ns.
+    // //
+    // if (require_uniq_haplotypes) this->reduce_alleles(merged_alleles);
 
     //
     // Update the catalog entry's list of SNPs and alleles
