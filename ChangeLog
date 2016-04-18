@@ -1,11 +1,20 @@
-Stacks 1.38
---------------------------
+Stacks 1.38 - April 18, 2016
+----------------------------
+	Feature: denovo_map.pl and ref_map.pl now print depth of coverage for each sample. The ustacks
+	program now prints depth of coverage after each algorithm stage to see how each stage improves
+	(or not) the depth of coverage.
 	Feature: complete refactoring of denovo_map.pl and ref_map.pl. Separated computation from
 	SQL loading. Added auto creation/deletion of database. Enabled samples to be read from population
 	map instead of specifying them on the command line.
-	Feature: added Needleman–Wunsch algorithm to ustacks to provide for gapped
+	Feature: added Needleman–Wunsch algorithm to ustacks, cstacks, sstacks to provide for gapped
 	alignments. Includes --max_gaps and --min_aln_len parameters to contain crazy
-	alignments.
+	alignments. sstacks now includes a CIGAR string describing the alignment to the catalog.
+	Feature: optimized ustacks for a 33% decrease in run time.
+	Feature: added new file, sample_X.models.tsv.gz, produced by ustacks and pstacks. Contains a subset
+	of the information in the sample_X.tags.tsv.gz file, allows for data to be loaded much faster in the
+	later stages of the pipeline, greatly speeding up run times.
+	Bugfix: added code to prevent populations from improperly reading SNP positions past the length of
+	a particluar locus (that is shorter than the catalog locus).
 	Bugfix: corrected bug in process_radtags when using inline barcodes on paired-end reads. The paired-
 	end reads were not being truncated uniformly.
 	Bugfix: corrected bug in populations where if enough empty files were fed into the program

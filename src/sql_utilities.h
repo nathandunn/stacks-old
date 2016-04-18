@@ -54,31 +54,72 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
     char *line      = (char *) malloc(sizeof(char) * max_len);
     int   size      = max_len;
     bool  gzip      = false;
+    bool  open_fail = false;
     int   fh_status = 1;
 
     // 
-    // First, parse the tag file and pull in the consensus sequence
-    // for each locus.
+    // First, try to parse the models file to pull in the consensus sequence and model string
+    // for each locus. If the models file is not available or we are requested to store the
+    // reads from each stack, fall back to the tags file.
     //
-    f = sample + ".tags.tsv";
-    fh.open(f.c_str(), ifstream::in);
+    if (!store_reads) {
+        f = sample + ".models.tsv";
+        fh.open(f.c_str(), ifstream::in);
+        if (fh.fail())
+            open_fail = true;
+    }
 
-    if (fh.fail()) {
+    if (!store_reads && open_fail) {
         //
-        // Test for a gzipped file.
+        // Test for a gzipped MODELs file.
+        //
+        f = sample + ".models.tsv.gz";
+        gz_fh = gzopen(f.c_str(), "rb");
+        if (!gz_fh) {
+            open_fail = true;
+        } else {
+            open_fail = false;
+            #if ZLIB_VERNUM >= 0x1240
+            gzbuffer(gz_fh, libz_buffer_size);
+            #endif
+            gzip = true;
+        }
+    }
+
+    if (open_fail) {
+        //
+        // Test for a TAGs file.
+        //
+        f = sample + ".tags.tsv";
+        fh.open(f.c_str(), ifstream::in);
+        if (fh.fail())
+            open_fail = true;
+        else
+            open_fail = false;
+    }
+
+    if (open_fail) {
+        //
+        // Test for a gzipped TAGs file.
         //
         f = sample + ".tags.tsv.gz";
         gz_fh = gzopen(f.c_str(), "rb");
         if (!gz_fh) {
-            cerr << " Unable to open '" << sample << "'\n";
-            return 0;
+            open_fail = true;
+        } else {
+            open_fail = false;
+            #if ZLIB_VERNUM >= 0x1240
+            gzbuffer(gz_fh, libz_buffer_size);
+            #endif
+            gzip = true;
         }
-        #if ZLIB_VERNUM >= 0x1240
-        gzbuffer(gz_fh, libz_buffer_size);
-        #endif
-        gzip       = true;
-        compressed = true;
     }
+
+    if (open_fail) {
+        cerr << " Unable to open '" << sample << "'\n";
+        return 0;
+    }
+
     cerr << "  Parsing " << f.c_str() << "\n";
 
     uint id;
