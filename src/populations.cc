@@ -5319,7 +5319,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
             for (int j = 0; j < pmap->sample_cnt(); j++) {
                 fh << "\t";
 
-                if (d[j] == NULL) {
+                if (d[j] == NULL || col >= d[j]->len) {
                     //
                     // Data does not exist.
                     //
@@ -5496,7 +5496,7 @@ write_vcf(map<int, CSLocus *> &catalog,
             for (int j = 0; j < pmap->sample_cnt(); j++) {
                 fh << "\t";
 
-                if (d[j] == NULL) {
+                if (d[j] == NULL || col >= d[j]->len) {
                     //
                     // Data does not exist.
                     //
@@ -5913,7 +5913,7 @@ write_genepop(map<int, CSLocus *> &catalog,
                         // due to a minor allele frequency that is too low.
                         //
                         fh << "\t0000";
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= d[j]->len) {
                         //
                         // Data does not exist.
                         //
@@ -6056,7 +6056,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
                         // due to a minor allele frequency that is too low.
                         //
                         fh << "\t0000";
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= d[j]->len) {
                         //
                         // Data does not exist.
                         //
@@ -6204,7 +6204,7 @@ write_structure(map<int, CSLocus *> &catalog,
                             // due to a minor allele frequency that is too low.
                             //
                             fh << "\t" << "0";
-                        } else if (d[j] == NULL) {
+                        } else if (d[j] == NULL || col >= d[j]->len) {
                             //
                             // Data does not exist.
                             //
@@ -6254,7 +6254,7 @@ write_structure(map<int, CSLocus *> &catalog,
                         if (s[p]->nucs[col].incompatible_site ||
                             s[p]->nucs[col].filtered_site) {
                             fh << "\t" << "0";
-                        } else if (d[j] == NULL) {
+                        } else if (d[j] == NULL || col >= d[j]->len) {
                             fh << "\t" << "0";
                         } else if (d[j]->model[col] == 'U') {
                             fh << "\t" << "0";
@@ -6382,7 +6382,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
                         // due to a minor allele frequency that is too low.
                         //
                         fh << "\t" << "0";
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= d[j]->len) {
                         //
                         // Data does not exist.
                         //
@@ -6427,7 +6427,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
                     if (s[p]->nucs[col].incompatible_site ||
                         s[p]->nucs[col].filtered_site) {
                         fh << "\t" << "0";
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= d[j]->len) {
                         fh << "\t" << "0";
                     } else if (d[j]->model[col] == 'U') {
                         fh << "\t" << "0";
@@ -6831,7 +6831,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
                         //
                         gtypes << "? ";
 
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= d[j]->len) {
                         //
                         // Data does not exist.
                         //
@@ -6878,7 +6878,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
                         s[pop_id]->nucs[col].filtered_site) {
                         gtypes << "? ";
 
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= d[j]->len) {
                         gtypes << "? ";
 
                     } else if (d[j]->model[col] == 'U') {
@@ -7082,7 +7082,7 @@ write_phase(map<int, CSLocus *> &catalog,
                             //
                             gtypes << "? ";
 
-                        } else if (d[j] == NULL) {
+                        } else if (d[j] == NULL || col >= d[j]->len) {
                             //
                             // Data does not exist.
                             //
@@ -7167,7 +7167,7 @@ write_phase(map<int, CSLocus *> &catalog,
                             s[pop_id]->nucs[col].filtered_site) {
                             gtypes << "? ";
 
-                        } else if (d[j] == NULL) {
+                        } else if (d[j] == NULL || col >= d[j]->len) {
                             gtypes << "? ";
 
                         } else if (d[j]->model[col] == 'U') {
@@ -7331,7 +7331,7 @@ write_plink(map<int, CSLocus *> &catalog,
                             // due to a minor allele frequency that is too low.
                             //
                             fh << "\t" << "0" << "\t" << "0";
-                        } else if (d[j] == NULL) {
+                        } else if (d[j] == NULL || col >= d[j]->len) {
                             //
                             // Data does not exist.
                             //
@@ -7524,7 +7524,7 @@ write_beagle(map<int, CSLocus *> &catalog,
                         //
                         fh << "\t" << "?";
 
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= d[j]->len) {
                         //
                         // Data does not exist.
                         //
@@ -7555,7 +7555,7 @@ write_beagle(map<int, CSLocus *> &catalog,
                         s[pop_id]->nucs[col].filtered_site) {
                         fh << "\t" << "?";
 
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= d[j]->len) {
                         fh << "\t" << "?";
 
                     } else if (d[j]->model[col] == 'U') {
