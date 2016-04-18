@@ -40,6 +40,7 @@ my $dry_run      = false;
 my $sql          = true;
 my $create_db    = false;
 my $overw_db     = false;
+my $gapped_alns  = false;
 my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
 my $mysql_tables = "_PKGDATADIR_" . "sql/stacks.sql";
 my $exe_path     = "_BINDIR_";
@@ -148,8 +149,13 @@ sub execute_stacks {
             #
             # Pull the depth of coverage from ustacks.
             #
-            my @lines   = grep(/^After gapped alignments, coverage depth Mean/, @results);
-            my ($depth) = ($lines[0] =~ /^After gapped alignments, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
+            if ($gapped_alns) {
+                my @lines   = grep(/^After gapped alignments, coverage depth Mean/, @results);
+                my ($depth) = ($lines[0] =~ /^After gapped alignments, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
+            } else {
+                my @lines   = grep(/^After remainders merged, coverage depth Mean/, @results);
+                my ($depth) = ($lines[0] =~ /^After remainders merged, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
+            }
             push(@depths_of_cov, [$sample->{'file'}, $depth]);
         }
         write_results(\@results, $log_fh);
@@ -773,6 +779,7 @@ sub parse_command_line {
 	    push(@_populations, "-M " . $popmap_path); 
 
 	} elsif ($_ =~ /^--gapped$/) {
+            $gapped_alns = true;
 	    push(@_ustacks, "--gapped "); 
 	    push(@_cstacks, "--gapped "); 
 	    push(@_sstacks, "--gapped "); 
