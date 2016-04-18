@@ -149,12 +149,13 @@ sub execute_stacks {
             #
             # Pull the depth of coverage from ustacks.
             #
+            my $depth;
             if ($gapped_alns) {
-                my @lines   = grep(/^After gapped alignments, coverage depth Mean/, @results);
-                my ($depth) = ($lines[0] =~ /^After gapped alignments, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
+                my @lines = grep(/^After gapped alignments, coverage depth Mean/, @results);
+                ($depth)  = ($lines[0] =~ /^After gapped alignments, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
             } else {
-                my @lines   = grep(/^After remainders merged, coverage depth Mean/, @results);
-                my ($depth) = ($lines[0] =~ /^After remainders merged, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
+                my @lines = grep(/^After remainders merged, coverage depth Mean/, @results);
+                ($depth)  = ($lines[0] =~ /^After remainders merged, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
             }
             push(@depths_of_cov, [$sample->{'file'}, $depth]);
         }
