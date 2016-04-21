@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -28,16 +28,19 @@
 queue<pair<int, string> > samples;
 string  out_path;
 string  catalog_path;
-FileT   in_file_type    = FileT::sql;
-int     batch_id        = 0;
-int     ctag_dist       = 1;
-bool    set_kmer_len    = true;
-int     kmer_len        = 0;
-searcht search_type     = sequence;
-int     num_threads     = 1;
-bool    mult_matches    = false;
-bool    report_mmatches = false;
+FileT   in_file_type      = FileT::sql;
+int     batch_id          = 0;
+int     ctag_dist         = 1;
+bool    set_kmer_len      = true;
+int     kmer_len          = 0;
+searcht search_type       = sequence;
+int     num_threads       = 1;
+bool    mult_matches      = false;
+bool    report_mmatches   = false;
 bool    require_uniq_haplotypes = false;
+bool    gapped_alignments = false;
+double  min_match_len     = 0.80;
+double  max_gaps          = 2.0;
 
 int main (int argc, char* argv[]) {
 
@@ -114,21 +117,35 @@ int main (int argc, char* argv[]) {
         if (search_type == sequence) {
             cerr << "Searching for sequence matches...\n";
             find_kmer_matches_by_sequence(catalog, sample, ctag_dist);
-        } else if (search_type == genomic_loc) {
+
+	    if (gapped_alignments) {
+                cerr << "Searching for gapped alignments...\n";
+		search_for_gaps(catalog, sample, min_match_len, ctag_dist);
+            }
+
+	} else if (search_type == genomic_loc) {
             cerr << "Searching for matches by genomic location...\n";
             find_matches_by_genomic_loc(cat_index, sample);
         }
 
 	cerr << "Merging matches into catalog...\n";
 	uint mmatches = 0;
-	merge_matches(catalog, sample, s, ctag_dist, mmatches);
-	cerr << "  " << mmatches << " loci matched more than one catalog locus and were excluded.\n";
+        uint gmatches = 0;
+        uint umatches = 0;
+        uint nmatches = 0;
+	merge_matches(catalog, sample, s, ctag_dist, nmatches, umatches, gmatches, mmatches);
+        cerr << "  " << umatches << " loci were matched to a catalog locus.\n"
+             << "  " << gmatches << " loci were matched to a catalog locus using gapped alignments.\n"
+             << "  " << nmatches << " loci were newly added to the catalog.\n"
+             << "  " << mmatches << " loci matched more than one catalog locus and were excluded.\n";
 
         //
         // Regenerate the alleles for the catalog tags after merging the new sample into the catalog.
 	//
-        for (cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++)
+        for (cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++) {
             cat_it->second->populate_alleles();
+            cat_it->second->match_cnt = 0;
+        }
 
 	if (search_type == genomic_loc) {
 	    cerr << "  Updating catalog index...\n";
@@ -192,6 +209,7 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
 	if (snp_cols.count(i) == 0 && 
 	    (*c != *q) && (*c != 'N' && *q != 'N')) {
 
+            // cerr << "Adding a new SNP at position " << c - c_beg << ", " << *c << "/" << *q << "\n";
             SNP *s = new SNP;
 	    s->type   = snp_type_het;
             s->col    = c - c_beg;
@@ -222,12 +240,17 @@ int characterize_mismatch_snps(CLocus *catalog_tag, QLocus *query_tag) {
 }
 
 int 
-merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int, string> &sample_file, int ctag_dist, uint &mmatches) 
+merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int, string> &sample_file, int ctag_dist,
+              uint &new_matches, uint &unique_matches, uint &gapped_matches, uint &multiple_matches) 
 {
     map<int, QLocus *>::iterator i;
-    vector<Match *>::iterator mat_it;
     CLocus *ctag;
     QLocus *qtag;
+    string  cseq, qseq, cigar_str;
+    int     cseq_len, qseq_len, match_index;
+    vector<pair<char, uint> > cigar;
+
+    GappedAln *aln = new GappedAln();
 
     for (i = sample.begin(); i != sample.end(); i++) {
 	qtag = i->second;
@@ -238,6 +261,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         //
 	if (qtag->matches.size() == 0) {
 	    add_unique_tag(sample_file, catalog, qtag);
+            new_matches++;
 	    continue;
 	}
 
@@ -247,24 +271,24 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         // for a locus.
         //
 	map<int, uint> local_matches;
-	map<int, uint>::iterator j;
-	for (mat_it = qtag->matches.begin(); mat_it != qtag->matches.end(); mat_it++) {
-            if (local_matches.count((*mat_it)->cat_id) == 0)
-                local_matches[(*mat_it)->cat_id] = (*mat_it)->dist;
-            else if ((*mat_it)->dist < local_matches[(*mat_it)->cat_id])
-                local_matches[(*mat_it)->cat_id] = (*mat_it)->dist;
+	for (uint k = 0; k < qtag->matches.size(); k++) {
+            if (local_matches.count(qtag->matches[k]->cat_id) == 0)
+                local_matches[qtag->matches[k]->cat_id] = qtag->matches[k]->dist;
+            else if (qtag->matches[k]->dist < local_matches[qtag->matches[k]->cat_id])
+                local_matches[qtag->matches[k]->cat_id] = qtag->matches[k]->dist;
         }
 
         uint min_dist    =  1000;
         uint num_matches =  0;
         int  min_cat_id  = -1;
+
         //
         // Find the minimum distance and then check how many matches have that distance.
         //
-        for (j = local_matches.begin(); j != local_matches.end(); j++)
+        for (map<int, uint>::iterator j = local_matches.begin(); j != local_matches.end(); j++)
             min_dist = j->second < min_dist ? j->second : min_dist;
 
-        for (j = local_matches.begin(); j != local_matches.end(); j++)
+        for (map<int, uint>::iterator j = local_matches.begin(); j != local_matches.end(); j++)
             if (j->second == min_dist) {
                 num_matches++;
                 min_cat_id = j->first;
@@ -274,12 +298,12 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 	// Emit a warning if the query tag matches more than one tag in the catalog.
 	//
 	if (num_matches > 1) {
-	    mmatches++;
+	    multiple_matches++;
 	    if (report_mmatches) {
 		cerr << 
 		    "  Warning: sample " << sample_file.second << ", tag " << qtag->id << 
 		    ", matches more than one tag in the catalog and was excluded: ";
-		for (j = local_matches.begin(); j != local_matches.end(); j++)
+		for (map<int, uint>::iterator j = local_matches.begin(); j != local_matches.end(); j++)
 		    cerr << j->first << " ";
 		cerr << "\n";
 	    }
@@ -295,6 +319,78 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         if (ctag == NULL) 
             cerr << "  Unable to locate catalog tag " << min_cat_id << "\n";
 
+        cigar_str = "";
+
+        for (uint k = 0; k < qtag->matches.size(); k++)
+            if (qtag->matches[k]->cat_id == min_cat_id) {
+                cigar_str   = qtag->matches[k]->cigar;
+                match_index = k;
+                break;
+            }
+
+        bool gapped_aln = false;
+        if (cigar_str.length() > 0)
+            gapped_aln = true;
+
+        //
+        // If the match was a gapped alignment, adjust the lengths of the consensus sequences.
+        // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
+        //
+        if (gapped_aln) {
+            qseq_len = parse_cigar(cigar_str.c_str(), cigar);
+
+            if (ctag->match_cnt > 0) {
+                string query_allele, query_seq, cat_allele, cat_seq;
+                // cerr << "    Warning: Catalog locus " << ctag->id
+                //      << ", Sample " << qtag->sample_id << ", locus " << qtag->id
+                //      << "; sequence length has changed since original alignment: "
+                //      << qseq_len << " <-> " << ctag->len
+                //      << "; re-aligning.\n";
+
+                //
+                // Find the proper query allele to align against the catalog. We can align
+                // against the catalog consensus because the allele strings may have changed.
+                //
+                query_allele = qtag->matches[match_index]->query_type;
+                for (uint k = 0; k < qtag->strings.size(); k++)
+                    if (qtag->strings[k].first == query_allele) {
+                        query_seq = qtag->strings[k].second;
+                        break;
+                    }
+                aln->init(ctag->len, qtag->len);
+                aln->align(ctag->con, query_seq);
+                cigar_str = invert_cigar(aln->result().cigar);
+                parse_cigar(cigar_str.c_str(), cigar);
+            }
+
+            qseq      = apply_cigar_to_seq(qtag->con, cigar);
+            adjust_snps_for_gaps(cigar, qtag);
+
+            cigar_str = invert_cigar(cigar_str);
+            cseq_len  = parse_cigar(cigar_str.c_str(), cigar);
+            cseq      = apply_cigar_to_seq(ctag->con, cigar);
+            adjust_snps_for_gaps(cigar, ctag);
+
+            //
+            // If the alignment modified the catalog locus, record it so we can re-align
+            // any other matching sequences from this sample.
+            //
+            if (cseq_len > ctag->len)
+                ctag->match_cnt++;
+
+            //
+            // Adjust the consensus sequences for both loci.
+            //
+            ctag->add_consensus(cseq.c_str());
+            qtag->add_consensus(qseq.c_str());
+
+            gapped_matches++;
+
+        } else {
+            unique_matches++;
+            ctag->match_cnt++;
+        }
+
         //
         // If mismatches are allowed between query and catalog tags, identify the 
         // mismatches and convert them into SNP objects to be merged into the catalog tag.
@@ -309,14 +405,19 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 	// Merge the SNPs and alleles from the sample into the catalog tag.
 	//
 	if (!ctag->merge_snps(qtag)) {
-	    cerr << "Error merging " << sample_file.second << ", tag " << qtag->id <<
-		" with catalog tag " << ctag->id << "\n";
+	    cerr << "Error merging " << sample_file.second << ", tag " << qtag->id
+		 << " with catalog tag " << ctag->id << "\n";
 	}
 
-	//
-	// If the catalog consensus tag is shorter than the query tag, replace it.
-	//
-	if (strlen(ctag->con) < strlen(qtag->con)) {
+        //
+        // Add any new sequence information into the catalog consensus.
+        //
+        if (gapped_aln) {
+            for (uint k = 0; k < ctag->len; k++)
+                if (qtag->con[k] != 'N' && ctag->con[k] == 'N')
+                    ctag->con[k] = qtag->con[k];
+
+        } else if (strlen(ctag->con) < strlen(qtag->con)) {
 	    ctag->add_consensus(qtag->con);
 	}
 
@@ -373,13 +474,13 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     // Calculate the distance (number of mismatches) between each pair
     // of Radtags. We expect all radtags to be the same length;
     //
-    CatKmerHashMap kmer_map;
-    vector<char *> kmer_map_keys;
-    map<int, QLocus *>::iterator it;
+    KmerHashMap                       kmer_map;
+    map<int, pair<allele_type, int> > allele_map;
+    vector<char *>                    kmer_map_keys;
+    map<int, QLocus *>::iterator      it;
     vector<pair<allele_type, string> >::iterator allele;
     QLocus *tag_1;
     CLocus *tag_2;
-    int i, j;
 
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -400,94 +501,350 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
     //
     int min_hits = calc_min_kmer_matches(kmer_len, ctag_dist, con_len, set_kmer_len ? true : false);
 
-    cerr << "  Distance allowed between stacks: " << ctag_dist << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
-        
-    populate_kmer_hash(catalog, kmer_map, kmer_map_keys, kmer_len);
+    cerr << "  Distance allowed between stacks: " << ctag_dist
+	 << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
+	 << min_hits << " k-mer hits required.\n";
 
+    // clock_t time_1, time_2, time_3, time_4;
+    // double  per_locus = 0.0;
+
+    // time_1 = clock();
+    populate_kmer_hash(catalog, kmer_map, kmer_map_keys, allele_map, kmer_len);
+    // time_2 = clock();
+    
     cerr << "  " << catalog.size() << " loci in the catalog, " << kmer_map.size() << " kmers in the catalog hash.\n";
- 
-    #pragma omp parallel private(i, j, tag_1, tag_2, allele)
-    { 
+
+    #pragma omp parallel private(tag_1, tag_2, allele)
+    {
+	KmerHashMap::iterator   h;
+        vector<char *>          kmers;
+        set<string>             uniq_kmers;
+	vector<int>             hits;
+        vector<pair<int, int> > ordered_hits;
+	uint                    hit_cnt, index, prev_id, allele_id, hits_size;
+        int                     d;
+	pair<allele_type, int>  cat_hit;
+        
+	initialize_kmers(kmer_len, num_kmers, kmers);
+        
         #pragma omp for
-        for (i = 0; i < (int) keys.size(); i++) {
+        for (uint i = 0; i < keys.size(); i++) {
             tag_1 = sample[keys[i]];
 
+            // time_3 = clock();
+
             for (allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
+             
+                generate_kmers_lazily(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
-                vector<char *> kmers;
-                generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
-
-                map<int, vector<allele_type> > hits;
-                vector<pair<allele_type, int> >::iterator map_it;
-                int d;
                 //
-                // Lookup the occurances of each k-mer in the kmer_map
-                //
-                for (j = 0; j < num_kmers; j++) {
+		// We want to create a list of unique kmers to search with; otherwise, repetitive kmers will
+		// generate, multiple, spurious hits in sequences with multiple copies of the same kmer.
+		//
+		uniq_kmers.clear();
+                for (uint j = 0; j < num_kmers; j++)
+		    uniq_kmers.insert(kmers[j]);
 
-                    if (kmer_map.count(kmers[j]) > 0)
-                        for (map_it  = kmer_map[kmers[j]].begin();
-                             map_it != kmer_map[kmers[j]].end();
-                             map_it++)
-                            hits[map_it->second].push_back(map_it->first);
+		hits.clear();
+		ordered_hits.clear();
+
+        	//
+        	// Lookup the occurances of each k-mer in the kmer_map
+        	//
+		for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
+
+		    h = kmer_map.find(j->c_str());
+
+		    if (h != kmer_map.end())
+			for (uint k = 0; k <  h->second.size(); k++)
+			    hits.push_back(h->second[k]);
                 }
 
-                //
-                // Free the allocated k-mers.
-                //
-                for (j = 0; j < num_kmers; j++)
-                    delete [] kmers[j];
-                kmers.clear();
+		//
+		// Sort the vector of indexes; provides the number of hits to each allele/locus
+		// and orders them largest to smallest.
+		//
+		sort(hits.begin(), hits.end());
 
-                //cerr << "  Tag " << tag_1->id << " hit " << hits.size() << " kmers.\n";
+		//
+        	// Iterate through the list of hits and collapse them down by number of kmer hits per allele.
+        	//
+		hits_size = hits.size();
 
-                map<int, vector<allele_type> >::iterator hit_it;
-                vector<allele_type>::iterator            all_it;
+                if (hits_size == 0)
+                    continue;
 
-                //
-                // Iterate through the list of hits. For each hit, total up the hits to the various alleles.
-                // Any allele that has more than min_hits check its full length to verify a match.
-                //
-                for (hit_it = hits.begin(); hit_it != hits.end(); hit_it++) {
-                    //cerr << "  Tag " << hit_it->first << " has " << hit_it->second << " hits (min hits: " << min_hits << ")\n";
+		prev_id   = hits[0];
+		index     = 0;
 
-                    map<allele_type, int>           allele_cnts;
-                    map<allele_type, int>::iterator cnt_it;
+		do {
+		    hit_cnt   = 0;
+		    allele_id = prev_id;
 
-                    for (all_it = hit_it->second.begin(); all_it != hit_it->second.end(); all_it++)
-                        allele_cnts[*all_it]++;
+		    while (hits[index] == prev_id) {
+			hit_cnt++;
+			index++;
+		    }
 
-                    for (cnt_it = allele_cnts.begin(); cnt_it != allele_cnts.end(); cnt_it++) {
-                        //cerr << "      allele " << cnt_it->first << " has " << cnt_it->second << " hits\n"; 
+		    if (index < hits_size)
+			prev_id = hits[index];
 
-                        if (cnt_it->second < min_hits) continue;
+		    if (hit_cnt >= min_hits)
+			ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
-                        //cerr << "  Match found, checking full-length match\n";
+        	} while (index < hits_size);
 
-                        tag_2 = catalog[hit_it->first];
+		for (uint j = 0; j < ordered_hits.size(); j++) {
+		    cat_hit = allele_map.at(ordered_hits[j].first);
+		    hit_cnt = ordered_hits[j].second;
 
-                        d = dist(allele->second.c_str(), tag_2, cnt_it->first);
+                    tag_2 = catalog[cat_hit.second];
 
-                        if (d < 0)
-                            cerr << 
-                                "Unknown error calculating distance between " << 
-                                tag_1->id << " and " << tag_2->id << "; query allele: " << allele->first << "\n";
+                    d = dist(allele->second.c_str(), tag_2, cat_hit.first);
 
-                        //cerr << "    Distance: " << d << " CTAG_DIST: " << ctag_dist << "\n";
+                    if (d < 0)
+                        cerr << 
+                            "Unknown error calculating distance between " << 
+                            tag_1->id << " and " << tag_2->id << "; query allele: " << allele->first << "\n";
 
-                        //
-                        // Add a match to the query sequence: catalog ID, catalog allele, query allele, distance
-                        //
-                        if (d <= ctag_dist)
-                            tag_1->add_match(tag_2->id, cnt_it->first, allele->first, d);
-                    }
+                    //
+                    // Add a match to the query sequence: catalog ID, catalog allele, query allele, distance
+                    //
+                    if (d <= ctag_dist)
+                        tag_1->add_match(tag_2->id, cat_hit.first, allele->first, d);
                 }
             }
 
             // Sort the vector of distances.
             sort(tag_1->matches.begin(), tag_1->matches.end(), compare_matches);
+
+            // time_4 = clock();
+            // per_locus += (time_4 - time_3);
         }
+
+        //
+        // Free the allocated k-mers.
+        //
+        for (uint j = 0; j < kmers.size(); j++)
+            delete [] kmers[j];
+        kmers.clear();
     }
+
+    // cerr << "Time to kmerize catalog: " << time_2 - time_1 << "\n"
+    //      << "Average time per locus:  " << per_locus / (double) keys.size() << "\n";
+    
+    free_kmer_hash(kmer_map, kmer_map_keys);
+
+    return 0;
+}
+
+int
+search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double min_match_len, double ctag_dist)
+{
+    //
+    // Search for loci that can be merged with a gapped alignment.
+    //
+    KmerHashMap                       kmer_map;
+    map<int, pair<allele_type, int> > allele_map;
+    vector<char *>                    kmer_map_keys;
+    map<int, QLocus *>::iterator      it;
+    QLocus *tag_1;
+    CLocus *tag_2;
+
+    //
+    // OpenMP can't parallelize random access iterators, so we convert
+    // our map to a vector of integer keys.
+    //
+    vector<int> keys;
+    for (it = sample.begin(); it != sample.end(); it++) 
+	keys.push_back(it->first);
+
+    //
+    // Calculate the number of k-mers we will generate. If kmer_len == 0,
+    // determine the optimal length for k-mers.
+    //
+    int con_len   = strlen(sample[keys[0]]->con);
+    int kmer_len  = 19;
+    int num_kmers = con_len - kmer_len + 1;
+
+    //
+    // Calculate the minimum number of matching k-mers required for a possible sequence match.
+    //
+    int min_hits = (round((double) con_len * min_match_len) - (kmer_len * max_gaps)) - kmer_len + 1;
+
+    cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
+
+    // clock_t time_1, time_2, time_3, time_4;
+    // double  per_locus = 0.0;
+
+    // time_1 = clock();
+    populate_kmer_hash(catalog, kmer_map, kmer_map_keys, allele_map, kmer_len);
+    // time_2 = clock();
+    
+    #pragma omp parallel private(tag_1, tag_2)
+    {
+	KmerHashMap::iterator     h;
+	AlignRes                  aln_res;
+        vector<char *>            kmers;
+	set<string>               uniq_kmers;
+	vector<int>               hits;
+	vector<pair<int, int> >   ordered_hits;
+	uint                      hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
+        int                       d;
+        vector<pair<char, uint> > cigar;
+	pair<allele_type, int>    cat_hit;
+	string                    cat_seq;
+
+        GappedAln *aln = new GappedAln();
+
+        initialize_kmers(kmer_len, num_kmers, kmers);
+
+        #pragma omp for schedule(dynamic) 
+        for (uint i = 0; i < keys.size(); i++) {
+            tag_1 = sample[keys[i]];
+
+            //
+            // If we already matched this locus to the catalog without using gapped alignments, skip it now.
+            //
+            if (tag_1->matches.size() > 0)
+                continue;
+
+            // time_3 = clock();
+
+            for (vector<pair<allele_type, string> >::iterator allele = tag_1->strings.begin(); allele != tag_1->strings.end(); allele++) {
+
+		generate_kmers_lazily(allele->second.c_str(), kmer_len, num_kmers, kmers);
+
+                //
+		// We want to create a list of unique kmers to search with; otherwise, repetitive kmers will
+		// generate, multiple, spurious hits in sequences with multiple copies of the same kmer.
+		//
+		uniq_kmers.clear();
+                for (uint j = 0; j < num_kmers; j++)
+		    uniq_kmers.insert(kmers[j]);
+
+                hits.clear();
+		ordered_hits.clear();
+
+                //
+        	// Lookup the occurances of each k-mer in the kmer_map
+        	//
+		for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
+
+		    h = kmer_map.find(j->c_str());
+
+		    if (h != kmer_map.end())
+			for (uint k = 0; k <  h->second.size(); k++)
+			    hits.push_back(h->second[k]);
+                }
+
+		//
+		// Sort the vector of indexes; provides the number of hits to each allele/locus
+		// and orders them largest to smallest.
+		//
+		sort(hits.begin(), hits.end());
+
+		//
+        	// Iterate through the list of hits and collapse them down by number of kmer hits per allele.
+        	//
+		hits_size = hits.size();
+
+                if (hits_size == 0)
+                    continue;
+
+		prev_id   = hits[0];
+		index     = 0;
+
+		do {
+		    hit_cnt   = 0;
+		    allele_id = prev_id;
+
+		    while (hits[index] == prev_id) {
+			hit_cnt++;
+			index++;
+		    }
+
+		    if (index < hits_size)
+			prev_id = hits[index];
+
+		    if (hit_cnt >= min_hits)
+			ordered_hits.push_back(make_pair(allele_id, hit_cnt));
+
+        	} while (index < hits_size);
+
+                if (ordered_hits.size() == 0)
+                    continue;
+                
+		//
+		// Process the hits from most kmer hits to least kmer hits.
+		//
+		sort(ordered_hits.begin(), ordered_hits.end(), compare_pair_intint);
+
+		//
+		// Only try to align the sequences with the most kmers in common.
+		//
+		top_hit = ordered_hits[0].second;
+                stop    = 1;
+		for (uint j = 1; j < ordered_hits.size(); j++)
+		    if (ordered_hits[j].second < top_hit) {
+			stop = j;
+			break;
+		    }
+                
+		for (uint j = 0; j < stop; j++) {
+		    cat_hit = allele_map.at(ordered_hits[j].first);
+		    hit_cnt = ordered_hits[j].second;
+
+		    tag_2 = catalog[cat_hit.second];
+
+		    cat_seq = "";
+		    for (uint k = 0; k < tag_2->strings.size(); k++)
+			if (tag_2->strings[k].first == cat_hit.first) {
+			    cat_seq = tag_2->strings[k].second;
+			    break;
+			}
+
+		    aln->init(tag_2->len, tag_1->len);
+
+		    if (aln->align(cat_seq, allele->second)) {
+			cigar.clear();
+			aln->parse_cigar(cigar);
+                        aln_res = aln->result();
+                        d       = dist(cat_seq.c_str(), allele->second.c_str(), cigar);
+
+                        //
+                        // If the alignment has too many gaps, skip it.
+                        //
+                        if (aln_res.gap_cnt <= (max_gaps + 1)) {
+                            //
+                            // If the alignment doesn't span enough of the two sequences, skip it.
+                            //
+                            if (aln_res.pct_id >= min_match_len) {
+
+                                if (d <= ctag_dist)
+                                    tag_1->add_match(tag_2->id, cat_hit.first, allele->first, d, invert_cigar(aln_res.cigar));
+                            }
+                        }
+		    }
+		}
+            }
+
+            // time_4 = clock();
+            // per_locus += (time_4 - time_3);
+        }
+
+        //
+        // Free the k-mers we generated for this query
+        //
+        for (uint j = 0; j < kmers.size(); j++)
+            delete [] kmers[j];
+        kmers.clear();
+
+        delete aln;
+    }
+
+    // cerr << "Time to kmerize catalog: " << time_2 - time_1 << "\n"
+    //      << "Average time per locus:  " << per_locus / (double) keys.size() << "\n";
 
     free_kmer_hash(kmer_map, kmer_map_keys);
 
@@ -777,7 +1134,7 @@ int merge_allele(Locus *locus, SNP *snp) {
 	new_allele = "";
 	pos        = 0;
 
-        //cerr << "Allele length: " << allele.size() << "\n";
+        // cerr << "Allele length: " << allele.size() << "\n";
 
 	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
 	    //
@@ -786,10 +1143,10 @@ int merge_allele(Locus *locus, SNP *snp) {
 	    //
 	    if ((*k).first == "merge") {
 		new_allele += locus->con[(*k).second->col];
-                //cerr << "  Adding char from consensus position " << (*k).second->col << "\n";
+                // cerr << "  Adding char '" << locus->con[k->second->col] << "' from consensus position " << (*k).second->col << "\n";
 	    } else {
 		new_allele += allele[pos];
-                //cerr << "  Adding char from allele position " << pos << "\n";
+                // cerr << "  Adding char '" << allele[pos] << "' from allele position " << pos << "\n";
 		pos++;
 	    }
 	}
@@ -876,11 +1233,42 @@ int CLocus::merge_snps(QLocus *matched_tag) {
     sort(merged_snps.begin(), merged_snps.end(), compare_pair_snp);
 
     //
-    // Merge the alleles accounting for any SNPs added from either of the two samples.
+    // If the catalog tag has no defined alleles, create a matching haplotype
+    // from the consensus sequence before merging in the new alleles.
     //
     string allele, new_allele;
     int    pos;
 
+    if (this->alleles.size() == 0) {
+	char c;
+	new_allele = "";
+	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+	    csnp = k->second;
+	    c    = this->con[k->second->col];
+
+	    new_allele += (csnp->col > this->len - 1) ? 'N' : c;
+
+	    if (csnp->col > this->len - 1) continue;
+
+	    if (c != csnp->rank_1 &&
+		c != csnp->rank_2 &&
+		c != csnp->rank_3 &&
+		c != csnp->rank_4) {
+
+		if (csnp->rank_3 == 0)
+		    csnp->rank_3 = c;
+		else 
+		    csnp->rank_4 = c;
+	    }
+	}
+
+	if (new_allele.length() > 0)
+	    merged_alleles.insert(new_allele);
+    }
+
+    //
+    // Merge the alleles accounting for any SNPs added from either of the two samples.
+    //
     for (j = this->alleles.begin(); j != this->alleles.end(); j++) {
 	allele     = j->first;
 	new_allele = "";
@@ -894,7 +1282,7 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	    if (k->first == "sample") {
 		new_allele += k->second->col > this->len - 1 ? 'N' : this->con[k->second->col];
 	    } else {
-		new_allele += allele[pos];
+                new_allele += allele[pos];
 		pos++;
 	    }
 	}
@@ -951,12 +1339,12 @@ int CLocus::merge_snps(QLocus *matched_tag) {
 	    merged_alleles.insert(new_allele);
     }
 
-    //
-    // If the newly merged alleles contain Ns due to different sequence lengths,
-    // check if we can reduce the alleles as one of the longer allele haplotypes
-    // may fully encompass a shorter allele haplotype that has been padded with Ns.
-    //
-    if (require_uniq_haplotypes) this->reduce_alleles(merged_alleles);
+    // //
+    // // If the newly merged alleles contain Ns due to different sequence lengths,
+    // // check if we can reduce the alleles as one of the longer allele haplotypes
+    // // may fully encompass a shorter allele haplotype that has been padded with Ns.
+    // //
+    // if (require_uniq_haplotypes) this->reduce_alleles(merged_alleles);
 
     //
     // Update the catalog entry's list of SNPs and alleles
@@ -1313,6 +1701,8 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
 	k++;        
     }
 
+    cerr << "  " << catalog.size() << " loci were newly added to the catalog.\n";
+
     return 1;
 }
 
@@ -1372,26 +1762,29 @@ int parse_command_line(int argc, char* argv[]) {
 
     while (1) {
 	static struct option long_options[] = {
-	    {"help",               no_argument, NULL, 'h'},
-            {"version",            no_argument, NULL, 'v'},
-	    {"mmatches",           no_argument, NULL, 'm'},
-	    {"genomic_loc",        no_argument, NULL, 'g'},
-	    {"uniq_haplotypes",    no_argument, NULL, 'u'},
-	    {"report_mmatches",    no_argument, NULL, 'R'},
-	    {"batch_id",     required_argument, NULL, 'b'},
-	    {"ctag_dist",    required_argument, NULL, 'n'},
-	    {"k_len",        required_argument, NULL, 'k'},
-	    {"catalog",      required_argument, NULL, 'c'},
-	    {"sample",       required_argument, NULL, 's'},
-	    {"outpath",      required_argument, NULL, 'o'},
-	    {"num_threads",  required_argument, NULL, 'p'},
+	    {"help",            no_argument, NULL, 'h'},
+            {"version",         no_argument, NULL, 'v'},
+	    {"mmatches",        no_argument, NULL, 'm'},
+	    {"genomic_loc",     no_argument, NULL, 'g'},
+	    {"uniq_haplotypes", no_argument, NULL, 'u'},
+	    {"report_mmatches", no_argument, NULL, 'R'},
+            {"gapped",          no_argument, NULL, 'G'},
+            {"max_gaps",        required_argument, NULL, 'X'},
+            {"min_aln_len",     required_argument, NULL, 'x'},
+	    {"batch_id",        required_argument, NULL, 'b'},
+	    {"ctag_dist",       required_argument, NULL, 'n'},
+	    {"k_len",           required_argument, NULL, 'k'},
+	    {"catalog",         required_argument, NULL, 'c'},
+	    {"sample",          required_argument, NULL, 's'},
+	    {"outpath",         required_argument, NULL, 'o'},
+	    {"num_threads",     required_argument, NULL, 'p'},
 	    {0, 0, 0, 0}
 	};
 	
 	// getopt_long stores the option index here.
 	int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgvuRmo:s:c:b:p:n:k:", long_options, &option_index);
+	c = getopt_long(argc, argv, "hgvuRmGX:x:o:s:c:b:p:n:k:", long_options, &option_index);
      
 	// Detect the end of the options.
 	if (c == -1)
@@ -1437,6 +1830,15 @@ int parse_command_line(int argc, char* argv[]) {
 	case 'u':
 	    require_uniq_haplotypes = true;
 	    break;
+	case 'G':
+            gapped_alignments = true;
+            break;
+        case 'X':
+            max_gaps = is_double(optarg);
+            break;
+        case 'x':
+            min_match_len = is_double(optarg);
+            break;
         case 'v':
             version();
             break;
@@ -1491,6 +1893,10 @@ void help() {
 	      << "  h: display this help messsage." << "\n\n"
 	      << "  Catalog editing:\n"
 	      << "    --catalog <path>: provide the path to an existing catalog. cstacks will add data to this existing catalog.\n\n"
+	      << "  Gapped assembly options:\n"
+              << "    --gapped: preform gapped alignments between stacks.\n"
+              << "    --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
+              << "    --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n\n"
 	      << "  Advanced options:\n" 
 	      << "     --k_len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
 	      << "    --report_mmatches: report query loci that match more than one catalog locus.\n";

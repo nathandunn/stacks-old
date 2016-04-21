@@ -23,6 +23,25 @@
 
 enum dynprog {dynp_down, dynp_right, dynp_diag};
 
+class AlignRes {
+public:
+    string cigar;
+    uint   gap_cnt;
+    uint   contiguity;
+    double pct_id;
+    AlignRes() {
+	this->gap_cnt    = 0;
+        this->contiguity = 0;
+	this->pct_id     = 0.0;
+    }
+    AlignRes(string cigar, uint gapcnt, uint contiguity, double pct_id) {
+	this->cigar      = cigar;
+	this->gap_cnt    = gapcnt;
+        this->contiguity = contiguity;
+	this->pct_id     = pct_id;
+    }
+};
+
 class AlignPath {
 public:
     bool diag;
@@ -55,24 +74,45 @@ const double match_score    =  5;
 class GappedAln {
     uint        _m;
     uint        _n;
+    uint        _m_size;
+    uint        _n_size;
     double    **matrix;
     AlignPath **path;
+    AlignRes    _aln;
 
- public:
-    GappedAln(int);
+    inline int swap(double *, dynprog *, int, int);
+    int        trace_alignment(string, string);
+
+ public:    
+    GappedAln();
+    GappedAln(int i) : GappedAln(i, i) {};
+    GappedAln(int, int);
     ~GappedAln();
 
-    int align(MergedStack *, MergedStack *);
-    inline int swap(double *, dynprog *, int, int);
-    int trace_alignment(MergedStack *, MergedStack *);
-    int dump_alignment(MergedStack *, MergedStack *);
+    int        init(int, int);
+    int        align(string, string);
+    AlignRes   result();
+
+    int parse_cigar(vector<pair<char, uint> > &);
+    int dump_alignment(string, string);
 };
 
-
-GappedAln::GappedAln(int len)
+GappedAln::GappedAln()
 {
-    this->_m = len + 1;
-    this->_n = len + 1;
+    this->_m      = 0;
+    this->_n      = 0;
+    this->_m_size = this->_m;
+    this->_n_size = this->_n;
+    this->matrix  = NULL;
+    this->path    = NULL;
+}
+
+GappedAln::GappedAln(int len_1, int len_2)
+{
+    this->_m      = len_1 + 1;
+    this->_n      = len_2 + 1;
+    this->_m_size = this->_m;
+    this->_n_size = this->_n;
 
     this->matrix = new double * [this->_m];
     for (uint i = 0; i < this->_m; i++)
@@ -94,7 +134,51 @@ GappedAln::~GappedAln()
 }
 
 int
-GappedAln::align(MergedStack *tag_1, MergedStack *tag_2)
+GappedAln::init(int size_1, int size_2)
+{
+    //
+    // Resize the underlying matrix and path arrays, if necessary.
+    //
+    if ((size_1 + 1) > this->_m_size || (size_2 + 1) > this->_n_size) {
+	for (int i = 0; i < this->_m_size; i++) {
+	    delete [] this->matrix[i];
+	    delete [] this->path[i];
+	}
+        if (this->_m_size > 0) {
+            delete [] this->matrix;
+            delete [] this->path;
+        }
+
+	this->_m_size = size_1 + 1;
+	this->_n_size = size_2 + 1;
+        //
+        // Resize the arrays to be 25% larger than the requested size.
+        //
+        int new_size = this->_m_size > this->_n_size ? this->_m_size : this->_n_size;
+        new_size += int((double) new_size * 0.25);
+        this->_m_size = new_size;
+	this->_n_size = new_size;
+
+	this->matrix = new double * [this->_m_size];
+	for (uint i = 0; i < this->_m_size; i++)
+	    this->matrix[i] = new double [this->_n_size];
+
+	this->path = new AlignPath * [this->_m_size];
+	for (uint i = 0; i < this->_m_size; i++)
+	    this->path[i] = new AlignPath [this->_n_size];
+    }
+
+    //
+    // Otherwise, set the dimensions of the matrix and path arrays to be the sequence lengths.
+    //
+    this->_m = size_1 + 1;
+    this->_n = size_2 + 1;
+
+    return 0;
+}
+
+int
+GappedAln::align(string tag_1, string tag_2)
 {
     //         j---->
     //        [0][1][2][3]...[n-1]
@@ -139,7 +223,7 @@ GappedAln::align(MergedStack *tag_1, MergedStack *tag_2)
             score_down   = this->matrix[i - 1][j];
             score_down  += this->path[i - 1][j].up ?  gapext_score : gapopen_score;
             //   2) If we were to move diagonally from the above and left cell.
-            score_diag   = this->matrix[i - 1][j - 1] + (tag_1->con[i - 1] == tag_2->con[j - 1] ? match_score : mismatch_score);
+            score_diag   = this->matrix[i - 1][j - 1] + (tag_1[i - 1] == tag_2[j - 1] ? match_score : mismatch_score);
             //   3) If we were to move over from the cell left of us.
             score_right  = this->matrix[i][j - 1];
             score_right += this->path[i][j - 1].left ? gapext_score : gapopen_score;
@@ -251,7 +335,8 @@ GappedAln::align(MergedStack *tag_1, MergedStack *tag_2)
 
     // dump_alignment(tag_1, tag_2, matrix, path);
 
-    this->trace_alignment(tag_1, tag_2);
+    if (this->trace_alignment(tag_1, tag_2))
+	return 1;
     
     return 0;
 }
@@ -269,8 +354,23 @@ GappedAln::swap(double *scores, dynprog *direction, int index_1, int index_2)
     return 0;
 }
 
+bool
+compare_alignres(AlignRes a, AlignRes b)
+{
+    if (a.gap_cnt == b.gap_cnt) {
+
+        if (a.pct_id == b.pct_id)
+            return (a.contiguity > b.contiguity);
+        else
+            return (a.pct_id > b.pct_id);
+
+    } else {
+	return (a.gap_cnt < b.gap_cnt);
+    }
+}
+
 int
-GappedAln::trace_alignment(MergedStack *tag_1, MergedStack *tag_2)
+GappedAln::trace_alignment(string tag_1, string tag_2)
 {
     //         j---->
     //        [0][1][2][3]...[n-1]
@@ -282,12 +382,14 @@ GappedAln::trace_alignment(MergedStack *tag_1, MergedStack *tag_2)
     //   ... |
     // [m-1] |
     // 
-    int    i, j, cnt, len, gaps;
+    int    i, j, cnt, len, gaps, contiguity;
+    double ident;
     string cigar;
     char   buf[id_len];
 
-    vector<pair<string, int> > alns;
+    vector<AlignRes> alns;
     bool more_paths = true;
+    bool seq_break  = false;
     
     do {
         more_paths = false;
@@ -303,19 +405,19 @@ GappedAln::trace_alignment(MergedStack *tag_1, MergedStack *tag_2)
             if (cnt > 1) more_paths = true;
 
             if (this->path[i][j].diag) {
-                aln_1 += tag_1->con[i - 1];
-                aln_2 += tag_2->con[j - 1];
+                aln_1 += tag_1[i - 1];
+                aln_2 += tag_2[j - 1];
                 if (cnt > 1) this->path[i][j].diag = false;
                 i--;
                 j--;
             } else if (this->path[i][j].up) {
-                aln_1 += tag_1->con[i - 1];
+                aln_1 += tag_1[i - 1];
                 aln_2 += "-";
                 if (cnt > 1) this->path[i][j].up = false;
                 i--;
             } else if (this->path[i][j].left) {
                 aln_1 += "-";
-                aln_2 += tag_2->con[j - 1];
+                aln_2 += tag_2[j - 1];
                 if (cnt > 1) this->path[i][j].left = false;
                 j--;
             }
@@ -327,16 +429,21 @@ GappedAln::trace_alignment(MergedStack *tag_1, MergedStack *tag_2)
         //
         // Convert to CIGAR strings.
         //
-        cigar = "";
-        len   = aln_1.length();
-        gaps  = 0;
-        i     = 0;
+        cigar      = "";
+        len        = aln_1.length();
+        gaps       = 0;
+        contiguity = 0;
+        seq_break  = false;
+	ident      = 0.0;
+        i          = 0;
         while (i < len) {
             if (aln_1[i] != '-' && aln_2[i] != '-') {
                 cnt = 0;
                 do {
+		    if (aln_1[i] == aln_2[i]) ident++;
                     cnt++;
                     i++;
+                    if (seq_break == false) contiguity++;
                 } while (i < len && aln_1[i] != '-' && aln_2[i] != '-');
                 sprintf(buf, "%dM", cnt);
 
@@ -348,6 +455,7 @@ GappedAln::trace_alignment(MergedStack *tag_1, MergedStack *tag_2)
                 } while (i < len && aln_1[i] == '-');
                 sprintf(buf, "%dD", cnt);
                 gaps++;
+                seq_break = true;
 
             } else {
                 cnt = 0;
@@ -357,43 +465,63 @@ GappedAln::trace_alignment(MergedStack *tag_1, MergedStack *tag_2)
                 } while (i < len && aln_2[i] == '-');
                 sprintf(buf, "%dI", cnt);
                 gaps++;
+                seq_break = true;
             }
 
             cigar += buf;
         }
 
-        alns.push_back(make_pair(cigar, gaps));
+        alns.push_back(AlignRes(cigar, gaps, contiguity, (ident / (double) len)));
         
-        // cerr << aln_1 << " [" << cigar << ", gaps: " << gaps << "]\n"
+	// cerr << aln_1 << " [" << cigar << ", contiguity: " << contiguity << ", gaps: " << gaps << "]\n"
         //      << aln_2 << "\n";
 
     } while (more_paths);
 
-    cigar = "";
 
-    if (alns.size() == 1) {
-        cigar = alns[0].first;
-        // cerr << "Final alignment: " << cigar << "; gaps: " << alns[0].second << "\n";
+    sort(alns.begin(), alns.end(), compare_alignres);
+    this->_aln = alns[0];
+    // cerr << "Final alignment: " << this->_aln.cigar << "; contiguity: " << contiguity << "; gaps: " << this->_aln.gap_cnt << "\n";
 
-    } else {
-        sort(alns.begin(), alns.end(), compare_pair_stringint);
-        if (alns[0].second < alns[1].second) {
-            cigar = alns[0].first;
-            // cerr << "Final alignment: " << cigar << "; gaps: " << alns[0].second << "\n";
-        }
-    }
+    return 1;
+}
 
-    if (cigar.length() > 0) {
-        tag_1->alns.push_back(make_pair(tag_2->id, cigar));
+AlignRes
+GappedAln::result()
+{
+    return this->_aln;
+}
 
-        return 1;
+int 
+GappedAln::parse_cigar(vector<pair<char, uint> > &cigar)
+{
+    char buf[id_len];
+    int  dist;
+    const char *p, *q;
+
+    p = this->_aln.cigar.c_str();
+
+    cigar.clear();
+
+    while (*p != '\0') {
+        q = p + 1;
+
+        while (*q != '\0' && isdigit(*q))
+            q++;
+        strncpy(buf, p, q - p);
+        buf[q-p] = '\0';
+        dist = atoi(buf);
+
+        cigar.push_back(make_pair(*q, dist));
+
+        p = q + 1;
     }
 
     return 0;
 }
 
 int
-GappedAln::dump_alignment(MergedStack *tag_1, MergedStack *tag_2)
+GappedAln::dump_alignment(string tag_1, string tag_2)
 {
     //         j---->
     //        [0][1][2][3]...[n-1]
@@ -410,8 +538,8 @@ GappedAln::dump_alignment(MergedStack *tag_1, MergedStack *tag_2)
     // Output the score matrix.
     //
     cout << "         ";
-    for (uint j = 0; j < tag_2->len; j++)
-        cout << "   " << tag_2->con[j] << "  |";
+    for (uint j = 0; j < this->_n; j++)
+        cout << "   " << tag_2[j] << "  |";
     cout << "\n";
 
     cout << "  ";
@@ -420,7 +548,7 @@ GappedAln::dump_alignment(MergedStack *tag_1, MergedStack *tag_2)
     cout << "\n";
 
     for (uint i = 1; i < this->_m; i++) {
-        cout << tag_1->con[i - 1] << " ";
+        cout << tag_1[i - 1] << " ";
         for (uint j = 0; j < this->_n; j++)
             printf("% 6.1f|", this->matrix[i][j]);
         cout << "\n";
@@ -432,8 +560,8 @@ GappedAln::dump_alignment(MergedStack *tag_1, MergedStack *tag_2)
     // Output the path matrix.
     //
     cout << "       ";
-    for (uint j = 0; j < tag_2->len; j++)
-        cout << "  " << tag_2->con[j] << " |";
+    for (uint j = 0; j < this->_n; j++)
+        cout << "  " << tag_2[j] << " |";
     cout << "\n";
 
     cout << "  ";
@@ -447,7 +575,7 @@ GappedAln::dump_alignment(MergedStack *tag_1, MergedStack *tag_2)
     cout << "\n";
 
     for (uint i = 1; i < this->_m; i++) {
-        cout << tag_1->con[i - 1] << " ";
+        cout << tag_1[i - 1] << " ";
         for (uint j = 0; j < this->_n; j++) {
             cout << " ";
             this->path[i][j].diag ? cout << "d" : cout << " ";

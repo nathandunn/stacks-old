@@ -63,7 +63,9 @@ using std::queue;
 #include "stacks.h"
 #include "kmers.h"
 #include "locus.h"
+#include "GappedAln.h"
 #include "sql_utilities.h"
+#include "aln_utils.h"
 #include "utils.h"
 
 void help( void );
@@ -73,11 +75,12 @@ int  initialize_new_catalog(pair<int, string> &, map<int, CLocus *> &);
 int  initialize_existing_catalog(string, map<int, CLocus *> &);
 int  update_catalog_index(map<int, CLocus *> &, map<string, int> &);
 int  find_kmer_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &, int);
+int  search_for_gaps(map<int, CLocus *> &, map<int, QLocus *> &, double, double);
 int  find_matches_by_sequence(map<int, CLocus *> &, map<int, QLocus *> &);
 int  find_matches_by_genomic_loc(map<string, int> &, map<int, QLocus *> &);
 int  characterize_mismatch_snps(CLocus *, QLocus *);
-int  merge_allele(Locus *locus, SNP *snp);
-int  merge_matches(map<int, CLocus *> &, map<int, QLocus *> &, pair<int, string> &, int, uint &);
+int  merge_allele(Locus *, SNP *);
+int  merge_matches(map<int, CLocus *> &, map<int, QLocus *> &, pair<int, string> &, int, uint &, uint &, uint &, uint &);
 int  add_unique_tag(pair<int, string> &, map<int, CLocus *> &, QLocus *);
 bool compare_dist(pair<int, int>, pair<int, int>);
 
