@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2011-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -37,6 +37,9 @@ using std::set;
 using std::pair;
 using std::make_pair;
 
+#include "stacks.h"
+#include "locus.h"
+#include "aln_utils.h"
 #include "MetaPopInfo.h"
 #include "Vcf.h"
 
@@ -51,10 +54,22 @@ public:
     char          *model;         // String representing SNP model output for each nucleotide at this locus.
     char          *gtype;         // Genotype
     char          *trans_gtype;   // Translated Genotype
+    char          *cigar;         // CIGAR string describing how the datum aligns to the catalog locus.
     double         lnl;           // Log likelihood of this locus.
     vector<char *> obshap;        // Observed Haplotypes
     vector<SNP *>  snps;
-    Datum()  { id = -1; corrected = false; gtype = NULL; trans_gtype = NULL; model = NULL; tot_depth = 0; len = 0; lnl = 0.0; merge_partner = 0; }
+    Datum()  {
+        this->id            = -1;
+        this->corrected     = false;
+        this->gtype         = NULL;
+        this->trans_gtype   = NULL;
+        this->model         = NULL;
+        this->cigar         = NULL;
+        this->tot_depth     = 0;
+        this->len           = 0;
+        this->lnl           = 0.0;
+        this->merge_partner = 0;
+    }
     ~Datum() {
         for (uint i = 0; i < this->obshap.size(); i++)
             delete [] this->obshap[i];
@@ -63,6 +78,25 @@ public:
         delete [] this->gtype;
         delete [] this->trans_gtype;
         delete [] this->model;
+        delete [] this->cigar;
+    }
+    int add_model(const char *model)
+    {
+        if (this->cigar == NULL) {
+            this->len   = strlen(model);
+            this->model = new char[this->len + 1];
+            strcpy(this->model, model);
+
+        } else {
+            vector<pair<char, uint> > c;
+            this->len   = parse_cigar(this->cigar, c);
+            this->model = new char[this->len + 1];
+            apply_cigar_to_model_seq(this->model, this->len, model, c);
+            // cerr << "Cigar: " << this->cigar << "\n"
+            //      << "Old model:    " << model << "\n"
+            //      << "Gapped model: " << this->model << "\n";
+        }
+        return 0;
     }
 };
 
@@ -207,6 +241,12 @@ int PopMap<LocusT>::populate(const vector<int> &sample_ids,
                     d->depth.push_back(matches[i][j]->depth);
                     d->tot_depth += matches[i][j]->depth;
                     d->lnl        = matches[i][j]->lnl;
+
+                    if (matches[i][j]->cigar != NULL) {
+                        d->cigar = new char[strlen(matches[i][j]->cigar) + 1];
+                        strcpy(d->cigar, matches[i][j]->cigar);
+                    }
+
                     this->data[locus][sample] = d;
 
                     catalog[matches[i][j]->cat_id]->hcnt++;
@@ -221,6 +261,12 @@ int PopMap<LocusT>::populate(const vector<int> &sample_ids,
                 if (matches[i][j]->tag_id == this->data[locus][sample]->id) {
                     char *h = new char[strlen(matches[i][j]->haplotype) + 1];
                     strcpy(h, matches[i][j]->haplotype);
+
+                    if (matches[i][j]->cigar != NULL && strcmp(this->data[locus][sample]->cigar, matches[i][j]->cigar) != 0)
+                        cerr << "Warning: disparate CIGAR strings, catalog locus " << matches[i][j]->cat_id
+                             << "; sample ID: " << matches[i][j]->sample_id << "; sample locus ID: " << matches[i][j]->tag_id
+                             << "; datum cigar: " << this->data[locus][sample]->cigar << "; matches cigar: " << matches[i][j]->cigar << "\n";
+                    
                     this->data[locus][sample]->obshap.push_back(h);
                     this->data[locus][sample]->depth.push_back(matches[i][j]->depth);
                     this->data[locus][sample]->tot_depth += matches[i][j]->depth;

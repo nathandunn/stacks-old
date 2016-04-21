@@ -40,6 +40,7 @@ my $dry_run      = false;
 my $sql          = true;
 my $create_db    = false;
 my $overw_db     = false;
+my $gapped_alns  = false;
 my $mysql_config = "_PKGDATADIR_" . "sql/mysql.cnf";
 my $mysql_tables = "_PKGDATADIR_" . "sql/stacks.sql";
 my $exe_path     = "_BINDIR_";
@@ -133,7 +134,7 @@ sub execute_stacks {
         $path = $sample->{'path'} . $sample->{'file'} . "." . $sample->{'suffix'};
         
         if ($sample->{'type'} eq "sample") {
-            $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id -r $minc "  . join(" ", @_ustacks) . " --gapped 2>&1";
+            $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id -r $minc "  . join(" ", @_ustacks) . " 2>&1";
         } elsif ($sample->{'type'} eq "parent") {
             $cmd = $exe_path . "ustacks -t $sample->{'fmt'} -f $path -o $out_path -i $sample_id -r $minc "  . join(" ", @_ustacks) . " 2>&1";
         } elsif ($sample->{'type'} eq "progeny") {
@@ -148,8 +149,14 @@ sub execute_stacks {
             #
             # Pull the depth of coverage from ustacks.
             #
-            my @lines   = grep(/^After gapped alignments, coverage depth Mean/, @results);
-            my ($depth) = ($lines[0] =~ /^After gapped alignments, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
+            my $depth;
+            if ($gapped_alns) {
+                my @lines = grep(/^After gapped alignments, coverage depth Mean/, @results);
+                ($depth)  = ($lines[0] =~ /^After gapped alignments, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
+            } else {
+                my @lines = grep(/^After remainders merged, coverage depth Mean/, @results);
+                ($depth)  = ($lines[0] =~ /^After remainders merged, coverage depth Mean: (\d+\.?\d*); Std Dev: .+; Max: .+$/);
+            }
             push(@depths_of_cov, [$sample->{'file'}, $depth]);
         }
         write_results(\@results, $log_fh);
@@ -772,6 +779,12 @@ sub parse_command_line {
 	    $popmap_path = shift @ARGV;
 	    push(@_populations, "-M " . $popmap_path); 
 
+	} elsif ($_ =~ /^--gapped$/) {
+            $gapped_alns = true;
+	    push(@_ustacks, "--gapped "); 
+	    push(@_cstacks, "--gapped "); 
+	    push(@_sstacks, "--gapped "); 
+
 	} elsif ($_ =~ /^--create_db$/) {
             $create_db = true;
 
@@ -916,12 +929,15 @@ denovo_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches
 
   Stack assembly options:
     m: specify a minimum number of identical, raw reads required to create a stack.
-    P: specify a minimum number of identical, raw reads required to create a stack in 'progeny' individuals.
     M: specify the number of mismatches allowed between loci when processing a single individual (default 2).
-    N: specify the number of mismatches allowed when aligning secondary reads to primary stacks (default M+2).
     n: specify the number of mismatches allowed between loci when building the catalog (default 1).
-    t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
-    H: disable calling haplotypes from secondary reads.
+    --gapped: perform gapped assemblies in ustacks, cstacks, and sstacks (default: off).
+
+    Advanced (rarely used) options:
+      P: specify a minimum number of identical, raw reads required to create a stack in 'progeny' individuals.
+      N: specify the number of mismatches allowed when aligning secondary reads to primary stacks (default M+2).
+      t: remove, or break up, highly repetitive RAD-Tags in the ustacks program.
+      H: disable calling haplotypes from secondary reads.
 
   Database options:
     B: specify a database to load data into.

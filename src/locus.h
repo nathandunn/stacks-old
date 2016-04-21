@@ -40,6 +40,7 @@ typedef struct match {
     uint        cat_id;
     allele_type cat_type;
     allele_type query_type;
+    string      cigar;
     uint        dist;
 } Match;
 
@@ -107,8 +108,10 @@ class QLocus : public Locus {
     QLocus(): Locus() {}
     ~QLocus();
 
+    int add_match(int, allele_type, allele_type, int, string);
     int add_match(int, allele_type, allele_type, int);
     int add_match(int, allele_type);
+    int clear_matches();
 };
 
 //
@@ -118,6 +121,11 @@ class QLocus : public Locus {
 class CLocus : public Locus {
  public:
     vector<pair<int, int> > sources;   // Sample/ID pairs for the sources contributing to this catalog entry
+    uint match_cnt;
+
+    CLocus() : Locus() { 
+        this->match_cnt = 0; 
+    };
 
     int merge_snps(QLocus *);
     int reduce_alleles(set<string> &);

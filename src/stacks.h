@@ -119,6 +119,25 @@ public:
     }
 };
 
+class Aln {
+public:
+    uint   id;
+    uint   gap_cnt;
+    double pct_id;
+    string cigar;
+    Aln() {
+        this->id      = 0;
+	this->pct_id  = 0.0;
+        this->gap_cnt = 0;
+    }
+    Aln(uint id, string cigar, double pct_id, uint gap_cnt) {
+	this->id      = id;
+	this->cigar   = cigar;
+	this->pct_id  = pct_id;
+        this->gap_cnt = gap_cnt;
+    }
+};
+
 class PStack {
  public:
     uint            id;
@@ -190,6 +209,7 @@ public:
     int    depth;
     double lnl;
     char  *haplotype;
+    char  *cigar;
 
     CatMatch() { 
         batch_id  = 0; 
@@ -198,10 +218,12 @@ public:
         tag_id    = 0; 
         depth     = 0; 
         lnl       = 0.0;
-        haplotype = NULL; 
+        haplotype = NULL;
+        cigar     = NULL;
     }
-    ~CatMatch() { 
-        delete [] haplotype; 
+    ~CatMatch() {
+        delete [] haplotype;
+        delete [] cigar;
     }
 };
 

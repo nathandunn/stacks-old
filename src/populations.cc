@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2012-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2012-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -40,12 +40,12 @@ typedef MetaPopInfo::Group Group;
 
 // Global variables to hold command-line options.
 InputMode input_mode = InputMode::stacks;
-int       num_threads = 1;
-string    pmap_path;
-string    out_path;
+int       num_threads =  1;
+int       batch_id    = -1;
 string    in_path;
-int       batch_id = -1;
 string    in_vcf_path;
+string    out_path;
+string    pmap_path;
 string    bl_file;
 string    wl_file;
 string    bs_wl_file;
@@ -556,8 +556,8 @@ int main (int argc, char* argv[]) {
                     d->model = new char[d->len + 1];
                     strcpy(d->model, modres[d->id]->model);
                 }
+                d->add_model(modres[d->id]->model);
             }
-
             for (mit = modres.begin(); mit != modres.end(); mit++)
                 delete mit->second;
             modres.clear();
@@ -2273,6 +2273,7 @@ int tally_haplotype_freq(CSLocus *locus, PopMap<CSLocus> *pmap,
 
 int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     string file = out_path + out_prefix + ".genomic.tsv";
+
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
@@ -2402,6 +2403,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
     // Open output file and print header.
     //
     string file = out_path + out_prefix + ".hapstats.tsv";
+
     ofstream fh(file.c_str(), ofstream::out);
     if (fh.fail()) {
         cerr << "Error opening haplotype stats file '" << file << "'\n";
@@ -2633,7 +2635,7 @@ nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
     return 0;
 }
 
-int
+int 
 calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
@@ -2758,6 +2760,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     cerr << "Writing haplotype F statistics... ";
 
     string file = out_path + out_prefix + ".phistats.tsv";
+
     ofstream fh(file.c_str(), ofstream::out);
     if (fh.fail()) {
         cerr << "Error opening haplotype Phi_st file '" << file << "'\n";
@@ -3012,6 +3015,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
             cerr << "Writing haplotype F statistics... ";
 
             string file = out_path + out_prefix + ".phistats_" + pop_key[pop_ids[i]] + "-" + pop_key[pop_ids[j]] + ".tsv";
+
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
                 cerr << "Error opening haplotype Phi_st file '" << file << "'\n";
@@ -3317,7 +3321,7 @@ haplotype_diversity(int start, int end, Datum **d)
 
     for (k = 0; k < hap_index.size(); k++)
         delete hdists[k];
-    delete hdists;
+    delete [] hdists;
 
     return lstat;
 }
@@ -4071,6 +4075,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
     }
 
     string file = out_path + out_prefix + ".sumstats.tsv";
+
     ofstream fh(file.c_str(), ofstream::out);
     if (fh.fail()) {
         cerr << "Error opening sumstats file '" << file << "'\n";
@@ -4244,6 +4249,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
     fh.close();
 
     file = out_path + out_prefix + ".sumstats_summary.tsv";
+
     fh.open(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
@@ -5178,6 +5184,7 @@ int
 write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gtypes)
 {
     string file = out_path + out_prefix + (write_gtypes ? ".genotypes.tsv" : ".haplotypes.tsv");
+
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
@@ -5206,7 +5213,7 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
 
     for (int i = 0; i < pmap->sample_cnt(); i++) {
         fh << samples[pmap->rev_sample_index(i)];
-        if (i < pmap->sample_cnt() - 1)
+        if (i < pmap->sample_cnt() - 1) 
             fh << "\t";
     }
     fh << "\n";
@@ -5218,7 +5225,7 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
         loc = it->second;
 
         stringstream id;
-        loc->annotation.length() > 0 ?
+        loc->annotation.length() > 0 ? 
             id << loc->id << "|" << loc->annotation : id << loc->id;
 
         fh << id.str();
@@ -5266,11 +5273,13 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
     return 0;
 }
 
-int
-write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
+int 
+write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) 
 {
     string file = out_path + out_prefix + ".markers.tsv";
+
     cerr << "Writing SQL markers file to '" << file << "'\n";
+
     ofstream fh(file.c_str(), ofstream::out);
     if (fh.fail()) {
         cerr << "Error opening markers SQL file '" << file << "'\n";
@@ -5279,9 +5288,9 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     fh.precision(fieldw);
     fh.setf(std::ios::fixed);
 
-    fh << "# SQL ID"            << "\t"
-       << "Batch ID"            << "\t"
-       << "Catalog Locus ID"    << "\t"
+    fh << "# SQL ID"            << "\t" 
+       << "Batch ID"            << "\t" 
+       << "Catalog Locus ID"    << "\t" 
        << "\t"
        << "Total Genotypes"     << "\t"
        << "Max"                 << "\t"
@@ -5314,9 +5323,9 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                 gtype_map << j->first << ":" << j->second << ";";
         }
 
-        fh << 0 << "\t"
-           << batch_id << "\t"
-           << loc->id  << "\t"
+        fh << 0 << "\t" 
+           << batch_id << "\t" 
+           << loc->id  << "\t" 
            << "\t"              // Marker
            << total    << "\t"
            << max      << "\t"
@@ -5332,16 +5341,19 @@ write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     return 0;
 }
 
-int
+int 
 write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
     //
-    // Write a FASTA file containing each allele from each locus from
+    // Write a FASTA file containing each allele from each locus from 
     // each sample in the population.
     //
     string file = out_path + out_prefix + ".fa";
+
     cerr << "Writing population alleles to FASTA file '" << file << "'\n";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening FASTA file '" << file << "'\n";
         exit(1);
@@ -5360,7 +5372,7 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
             strcpy(seq, loc->con);
 
             for (int j = 0; j < pmap->sample_cnt(); j++) {
-                if (d[j] == NULL)
+                if (d[j] == NULL) 
                     continue;
 
                 for (uint k = 0; k < d[j]->obshap.size(); k++) {
@@ -5370,9 +5382,9 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                         seq[col] = col < loc->len ? d[j]->obshap[k][i] : loc->con[col];
                     }
 
-                    fh << ">CLocus_" << loc->id
+                    fh << ">CLocus_" << loc->id 
                        << "_Sample_" << pmap->rev_sample_index(j)
-                       << "_Locus_"  << d[j]->id
+                       << "_Locus_"  << d[j]->id 
                        << "_Allele_" << k
                        << " ["       << samples[pmap->rev_sample_index(j)];
 
@@ -5391,16 +5403,19 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     return 0;
 }
 
-int
+int 
 write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
     //
-    // Write a FASTA file containing each allele from each locus from
+    // Write a FASTA file containing each allele from each locus from 
     // each sample in the population.
     //
     string file = out_path + out_prefix + ".strict.fa";
+
     cerr << "Writing strict population alleles to FASTA file '" << file << "'\n";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening strict FASTA file '" << file << "'\n";
         exit(1);
@@ -5419,9 +5434,9 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
             strcpy(seq, loc->con);
 
             for (int j = 0; j < pmap->sample_cnt(); j++) {
-                if (d[j] == NULL)
+                if (d[j] == NULL) 
                     continue;
-                if (d[j]->obshap.size() > 2)
+                if (d[j]->obshap.size() > 2) 
                     continue;
 
                 if (d[j]->obshap.size() == 1) {
@@ -5431,9 +5446,9 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                         seq[col] = col < loc->len ? d[j]->obshap[0][i] : loc->con[col];
                     }
 
-                    fh << ">CLocus_" << loc->id
+                    fh << ">CLocus_" << loc->id 
                        << "_Sample_" << pmap->rev_sample_index(j)
-                       << "_Locus_"  << d[j]->id
+                       << "_Locus_"  << d[j]->id 
                        << "_Allele_" << 0
                        << " ["       << samples[pmap->rev_sample_index(j)];
                     if (strcmp(loc->loc.chr, "un") != 0)
@@ -5441,9 +5456,9 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                     fh << "]\n"
                        << seq << "\n";
 
-                    fh << ">CLocus_" << loc->id
+                    fh << ">CLocus_" << loc->id 
                        << "_Sample_" << pmap->rev_sample_index(j)
-                       << "_Locus_"  << d[j]->id
+                       << "_Locus_"  << d[j]->id 
                        << "_Allele_" << 1
                        << " ["       << samples[pmap->rev_sample_index(j)];
                     if (strcmp(loc->loc.chr, "un") != 0)
@@ -5458,9 +5473,9 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                             seq[col] = col < loc->len ? d[j]->obshap[k][i] : loc->con[col];
                         }
 
-                        fh << ">CLocus_" << loc->id
+                        fh << ">CLocus_" << loc->id 
                            << "_Sample_" << pmap->rev_sample_index(j)
-                           << "_Locus_"  << d[j]->id
+                           << "_Locus_"  << d[j]->id 
                            << "_Allele_" << k
                            << " ["       << samples[pmap->rev_sample_index(j)];
                         if (strcmp(loc->loc.chr, "un") != 0)
@@ -5480,16 +5495,18 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
     return 0;
 }
 
-int
-write_vcf_ordered(map<int, CSLocus *> &catalog,
-                  PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum,
-                  map<int, pair<merget, int> > &merge_map, ofstream &log_fh)
+int 
+write_vcf_ordered(map<int, CSLocus *> &catalog, 
+                  PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
+                  map<int, pair<merget, int> > &merge_map, ofstream &log_fh) 
 {
     //
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
     //
     string file = out_path + out_prefix + ".vcf";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
         exit(1);
@@ -5499,6 +5516,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     // Load SNP data so that model likelihoods can be output to VCF file.
     //
     cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
+
     populate_snp_calls(catalog, pmap, merge_map);
 
     //
@@ -5513,7 +5531,6 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
 
     cerr << "Writing population data to VCF file '" << file << "'\n";
     log_fh << "\n#\n# Generating SNP-based VCF export.\n#\n";
-
     //
     // Output the header.
     //
@@ -5526,12 +5543,12 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
        << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
        << "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth\">\n"
        << "##FORMAT=<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">\n"
-       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t"
+       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
        << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
 
     for (int i = 0; i < pmap->sample_cnt(); i++)
         fh << "\t" << samples[pmap->rev_sample_index(i)];
-    fh << "\n";
+    fh << "\n";    
 
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus *loc;
@@ -5547,7 +5564,6 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-
         vector<NucTally *> sites;
         ord->order(sites, it->second);
 
@@ -5569,8 +5585,8 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
             q_allele = loc->loc.strand == minus ? reverse(sites[pos]->q_allele) : sites[pos]->q_allele;
 
             string snp_id = to_string(loc->id) + (loc->loc.strand == minus ? "m" : "p") + to_string(col);
-            fh << loc->loc.chr << "\t"
-               << loc->sort_bp(col) + 1 << "\t"
+            fh << loc->loc.chr << "\t" 
+               << loc->sort_bp(col) + 1 << "\t" 
                << snp_id    << "\t"
                << p_allele   << "\t"            // REFerence allele
                << q_allele   << "\t"            // ALTernate allele
@@ -5592,7 +5608,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
             for (int j = 0; j < pmap->sample_cnt(); j++) {
                 fh << "\t";
 
-                if (d[j] == NULL) {
+                if (d[j] == NULL || col >= d[j]->len) {
                     //
                     // Data does not exist.
                     //
@@ -5645,10 +5661,10 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_vcf(map<int, CSLocus *> &catalog,
-          PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum,
-          map<int, pair<merget, int> > &merge_map)
+int 
+write_vcf(map<int, CSLocus *> &catalog, 
+          PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
+          map<int, pair<merget, int> > &merge_map) 
 {
     // xxx The three [write_vcf()] functions need attention.
     // - Their use of the 'snps' Stacks files makes it impossible to write VCF in VCF mode.
@@ -5657,12 +5673,13 @@ write_vcf(map<int, CSLocus *> &catalog,
     // - Genotypes "1/0" should preferably be written "0/1".
     // See also my orphan commit 0f3c697993b4.
     // --Nick.
-
     //
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
     //
     string file = out_path + out_prefix + ".vcf";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
         exit(1);
@@ -5698,12 +5715,12 @@ write_vcf(map<int, CSLocus *> &catalog,
        << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
        << "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth\">\n"
        << "##FORMAT=<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">\n"
-       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t"
+       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
        << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
 
     for (int i = 0; i < pmap->sample_cnt(); i++)
         fh << "\t" << samples[pmap->rev_sample_index(i)];
-    fh << "\n";
+    fh << "\n";    
 
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus *loc;
@@ -5750,8 +5767,8 @@ write_vcf(map<int, CSLocus *> &catalog,
             q_allele = loc->loc.strand == minus ? reverse(t->nucs[col].q_allele) : t->nucs[col].q_allele;
 
             string snp_id = to_string(loc->id) + (loc->loc.strand == minus ? "m" : "p") + to_string(col);
-            fh << loc->loc.chr << "\t"
-               << loc->sort_bp(col) + 1 << "\t"
+            fh << loc->loc.chr << "\t" 
+               << loc->sort_bp(col) + 1 << "\t" 
                << snp_id << "\t" // ID
                << p_allele << "\t"              // REFerence allele
                << q_allele << "\t"              // ALTernate allele
@@ -5848,7 +5865,7 @@ populate_snp_calls(map<int, CSLocus *> &catalog,
 
             if (datum != NULL && snpres.count(datum->id)) {
 
-                if (merge_sites && merge_map.count(loc->id)) {
+                if (merge_sites && merge_map.count(loc->id)) { 
                     datum_adjust_snp_positions(merge_map, loc, datum, snpres);
                 } else {
                     //
@@ -5928,8 +5945,8 @@ find_datum_allele_depths(Datum *d, int snp_index, char p_allele, char q_allele, 
     return 0;
 }
 
-int
-write_vcf_haplotypes(map<int, CSLocus *> &catalog,
+int 
+write_vcf_haplotypes(map<int, CSLocus *> &catalog, 
                      PopMap<CSLocus> *pmap,
                      PopSum<CSLocus> *psum)
 {
@@ -5937,8 +5954,11 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     // Write a VCF file as defined here: http://samtools.github.io/hts-specs/
     //
     string file = out_path + out_prefix + ".haplotypes.vcf";
+
     cerr << "Writing population data haplotypes to VCF file '" << file << "'\n";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
         exit(1);
@@ -5964,12 +5984,12 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
        << "##INFO=<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">\n"
        << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
        << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
-       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t"
+       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
        << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
 
     for (int i = 0; i < pmap->sample_cnt(); i++)
         fh << "\t" << samples[pmap->rev_sample_index(i)];
-    fh << "\n";
+    fh << "\n";    
 
     map<string, vector<CSLocus *> >::iterator it;
     map<string, double>::iterator hit;
@@ -5992,13 +6012,13 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
 
             num_hap = count_haplotypes_at_locus(0, pmap->sample_cnt() - 1, d, hap_freq);
 
-            if (num_hap == 0 || hap_freq.size() == 1)
+            if (num_hap == 0 || hap_freq.size() == 1) 
                 continue;
 
             num_indv = num_hap / 2.0;
 
             //
-            // Order the haplotypes according to most frequent. Record the ordered position or each
+            // Order the haplotypes according to most frequent. Record the ordered position or each 
             // haplotype and convert them from counts to frequencies.
             //
             for (hit = hap_freq.begin(); hit != hap_freq.end(); hit++) {
@@ -6020,8 +6040,8 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
                 }
             }
 
-            fh << loc->loc.chr         << "\t"
-               << loc->sort_bp() + 1   << "\t"
+            fh << loc->loc.chr         << "\t" 
+               << loc->sort_bp() + 1   << "\t" 
                << loc->id              << "\t"
                << ordered_hap[0].first << "\t"       // REFerence haplotypes
                << alt_str        << "\t"             // ALTernate haplotypes
@@ -6040,7 +6060,7 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
                     //
                     fh << "./.:0";
 
-                } else if (d[j]->obshap.size() > 2) {
+                } else if (d[j]->obshap.size() > 2) { 
                     fh << "./.:" << d[j]->tot_depth;
 
                 } else if (d[j]->obshap.size() == 1) {
@@ -6067,17 +6087,20 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_genepop(map<int, CSLocus *> &catalog,
-              PopMap<CSLocus> *pmap,
+int 
+write_genepop(map<int, CSLocus *> &catalog, 
+              PopMap<CSLocus> *pmap, 
               PopSum<CSLocus> *psum)
 {
     //
     // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
     //
     string file = out_path + out_prefix + ".genepop";
+
     cerr << "Writing population data to GenePop file '" << file << "'\n";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening GenePop file '" << file << "'\n";
         exit(1);
@@ -6117,7 +6140,7 @@ write_genepop(map<int, CSLocus *> &catalog,
             col = loc->snps[j]->col;
             t   = psum->locus_tally(loc->id);
 
-            if (t->nucs[col].allele_cnt != 2)
+            if (t->nucs[col].allele_cnt != 2) 
                 continue;
             cnt++;
         }
@@ -6130,10 +6153,10 @@ write_genepop(map<int, CSLocus *> &catalog,
             col = loc->snps[j]->col;
             t   = psum->locus_tally(loc->id);
 
-            //
+            // 
             // If this site is fixed in all populations or has too many alleles don't output it.
             //
-            if (t->nucs[col].allele_cnt != 2)
+            if (t->nucs[col].allele_cnt != 2) 
                 continue;
             i++;
             fh << loc->id << "_" << col;
@@ -6168,7 +6191,7 @@ write_genepop(map<int, CSLocus *> &catalog,
                 for (i = 0; i < loc->snps.size(); i++) {
                     uint col = loc->snps[i]->col;
 
-                    if (t->nucs[col].allele_cnt != 2)
+                    if (t->nucs[col].allele_cnt != 2) 
                         continue;
 
                     if (s[pop_psum_index]->nucs[col].incompatible_site ||
@@ -6178,7 +6201,7 @@ write_genepop(map<int, CSLocus *> &catalog,
                         // due to a minor allele frequency that is too low.
                         //
                         fh << "\t0000";
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                         //
                         // Data does not exist.
                         //
@@ -6218,18 +6241,21 @@ write_genepop(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_genepop_ordered(map<int, CSLocus *> &catalog,
-                      PopMap<CSLocus> *pmap,
-                      PopSum<CSLocus> *psum,
+int 
+write_genepop_ordered(map<int, CSLocus *> &catalog, 
+                      PopMap<CSLocus> *pmap, 
+                      PopSum<CSLocus> *psum, 
                       ofstream &log_fh)
 {
     //
     // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
     //
     string file = out_path + out_prefix + ".genepop";
+
     cerr << "Writing population data to GenePop file '" << file << "'\n";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening GenePop file '" << file << "'\n";
         exit(1);
@@ -6315,7 +6341,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
                         // due to a minor allele frequency that is too low.
                         //
                         fh << "\t0000";
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                         //
                         // Data does not exist.
                         //
@@ -6356,9 +6382,9 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_structure(map<int, CSLocus *> &catalog,
-                PopMap<CSLocus> *pmap,
+int 
+write_structure(map<int, CSLocus *> &catalog, 
+                PopMap<CSLocus> *pmap, 
                 PopSum<CSLocus> *psum)
 {
     //
@@ -6368,8 +6394,11 @@ write_structure(map<int, CSLocus *> &catalog,
     // SNP from each variable locus.
     //
     string file = out_path + out_prefix + ".structure.tsv";
+
     cerr << "Writing population data to Structure file '" << file << "'...";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening Structure file '" << file << "'\n";
         exit(1);
@@ -6443,10 +6472,10 @@ write_structure(map<int, CSLocus *> &catalog,
                     for (uint i = 0; i < loc->snps.size(); i++) {
                         uint col = loc->snps[i]->col;
 
-                        //
+                        // 
                         // If this site is fixed in all populations or has too many alleles don't output it.
                         //
-                        if (t->nucs[col].allele_cnt != 2)
+                        if (t->nucs[col].allele_cnt != 2) 
                             continue;
 
                         if (s[p]->nucs[col].incompatible_site ||
@@ -6456,7 +6485,7 @@ write_structure(map<int, CSLocus *> &catalog,
                             // due to a minor allele frequency that is too low.
                             //
                             fh << "\t" << "0";
-                        } else if (d[j] == NULL) {
+                        } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                             //
                             // Data does not exist.
                             //
@@ -6500,13 +6529,13 @@ write_structure(map<int, CSLocus *> &catalog,
                     for (uint i = 0; i < loc->snps.size(); i++) {
                         uint col = loc->snps[i]->col;
 
-                        if (t->nucs[col].allele_cnt != 2)
+                        if (t->nucs[col].allele_cnt != 2) 
                             continue;
 
                         if (s[p]->nucs[col].incompatible_site ||
                             s[p]->nucs[col].filtered_site) {
                             fh << "\t" << "0";
-                        } else if (d[j] == NULL) {
+                        } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                             fh << "\t" << "0";
                         } else if (d[j]->model[col] == 'U') {
                             fh << "\t" << "0";
@@ -6534,10 +6563,10 @@ write_structure(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_structure_ordered(map<int, CSLocus *> &catalog,
-                        PopMap<CSLocus> *pmap,
-                        PopSum<CSLocus> *psum,
+int 
+write_structure_ordered(map<int, CSLocus *> &catalog, 
+                        PopMap<CSLocus> *pmap, 
+                        PopSum<CSLocus> *psum, 
                         ofstream &log_fh)
 {
     //
@@ -6547,8 +6576,11 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
     // SNP from each variable locus.
     //
     string file = out_path + out_prefix + ".structure.tsv";
+
     cerr << "Writing population data to Structure file '" << file << "'...";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening Structure file '" << file << "'\n";
         exit(1);
@@ -6628,7 +6660,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
                         // due to a minor allele frequency that is too low.
                         //
                         fh << "\t" << "0";
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                         //
                         // Data does not exist.
                         //
@@ -6673,7 +6705,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
                     if (s[p]->nucs[col].incompatible_site ||
                         s[p]->nucs[col].filtered_site) {
                         fh << "\t" << "0";
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                         fh << "\t" << "0";
                     } else if (d[j]->model[col] == 'U') {
                         fh << "\t" << "0";
@@ -6701,18 +6733,21 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_hzar(map<int, CSLocus *> &catalog,
-           PopMap<CSLocus> *pmap,
+int 
+write_hzar(map<int, CSLocus *> &catalog, 
+           PopMap<CSLocus> *pmap, 
            PopSum<CSLocus> *psum)
 {
     //
-    // Write a Hybrid Zone Analysis using R (HZAR) file as defined here:
+    // Write a Hybrid Zone Analysis using R (HZAR) file as defined here: 
     //    http://cran.r-project.org/web/packages/hzar/hzar.pdf
     //
     string file = out_path + out_prefix + ".hzar.csv";
+
     cerr << "Writing population data to HZAR file '" << file << "'...";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening HZAR file '" << file << "'\n";
         exit(1);
@@ -6775,10 +6810,10 @@ write_hzar(map<int, CSLocus *> &catalog,
                 for (uint i = 0; i < loc->snps.size(); i++) {
                     uint col = loc->snps[i]->col;
 
-                    //
+                    // 
                     // If this site is fixed in all populations or has too many alleles don't output it.
                     //
-                    if (t->nucs[col].allele_cnt != 2)
+                    if (t->nucs[col].allele_cnt != 2) 
                         continue;
 
                     if (s[p]->nucs[col].num_indv == 0 ||
@@ -6787,7 +6822,7 @@ write_hzar(map<int, CSLocus *> &catalog,
                         fh << ",0,0,0";
                         continue;
                     }
-
+                    
                     if (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc)
                         fh << "," << s[p]->nucs[col].p << "," << 1 - s[p]->nucs[col].p << ",";
                     else
@@ -6807,9 +6842,9 @@ write_hzar(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_treemix(map<int, CSLocus *> &catalog,
-              PopMap<CSLocus> *pmap,
+int 
+write_treemix(map<int, CSLocus *> &catalog, 
+              PopMap<CSLocus> *pmap, 
               PopSum<CSLocus> *psum)
 {
     //
@@ -6817,16 +6852,22 @@ write_treemix(map<int, CSLocus *> &catalog,
     //    https://bitbucket.org/nygcresearch/treemix/wiki/Home
     //
     string file = out_path + out_prefix + ".treemix";
+
     cerr << "Writing population data to TreeMix file '" << file << "'; ";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening TreeMix file '" << file << "'\n";
         exit(1);
     }
 
     file += ".log";
+
     cerr << "logging nucleotide positions to '" << file << "'...";
+
     ofstream log_fh(file.c_str(), ofstream::out);
+
     if (log_fh.fail()) {
         cerr << "Error opening Phylip Log file '" << file << "'\n";
         exit(1);
@@ -6863,28 +6904,28 @@ write_treemix(map<int, CSLocus *> &catalog,
     stringstream sstr;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
         sstr << pop_key[pit->first] << " ";
-
+    
     fh << sstr.str().substr(0, sstr.str().length() - 1) << "\n";
 
     double p_freq, p_cnt, q_cnt, allele_cnt;
     long int line = 1;
-
+    
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
 
             s = psum->locus(loc->id);
             t = psum->locus_tally(loc->id);
-
+                
             for (uint i = 0; i < loc->snps.size(); i++) {
                 uint col = loc->snps[i]->col;
 
                 sstr.str("");
 
-                //
+                // 
                 // If this site is fixed in all populations or has too many alleles don't output it.
                 //
-                if (t->nucs[col].allele_cnt != 2)
+                if (t->nucs[col].allele_cnt != 2) 
                     continue;
 
                 for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
@@ -6896,11 +6937,11 @@ write_treemix(map<int, CSLocus *> &catalog,
                         sstr << "0,0 ";
                         continue;
                     }
-
-                    p_freq = (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc) ?
+                    
+                    p_freq = (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc) ? 
                         s[p]->nucs[col].p :
                         1 - s[p]->nucs[col].p;
-
+                    
                     allele_cnt = s[p]->nucs[col].num_indv * 2;
                     p_cnt      = round(allele_cnt * p_freq);
                     q_cnt      = allele_cnt - p_cnt;
@@ -6919,15 +6960,15 @@ write_treemix(map<int, CSLocus *> &catalog,
 
     fh.close();
     log_fh.close();
-
+    
     cerr << "done.\n";
 
     return 0;
 }
 
-int
-write_fastphase(map<int, CSLocus *> &catalog,
-                PopMap<CSLocus> *pmap,
+int 
+write_fastphase(map<int, CSLocus *> &catalog, 
+                PopMap<CSLocus> *pmap, 
                 PopSum<CSLocus> *psum)
 {
     //
@@ -6946,6 +6987,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 
         string file = out_path + out_prefix + "." + it->first + ".fastphase.inp";
+
         ofstream fh(file.c_str(), ofstream::out);
 
         if (fh.fail()) {
@@ -7007,7 +7049,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
         //
         string snp_markers, gtypes_str;
         snp_markers.assign(total_sites, 'S');
-        fh << snp_markers << '\n';
+        fh << snp_markers << '\n';          
 
         //
         // Now output each sample name followed by a new line, then all of the genotypes for that sample
@@ -7029,7 +7071,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
                 // Output all the loci for this sample, printing only the p allele
                 //
                 fh << samples[pmap->rev_sample_index(j)] << "\n";
-
+                
                 gtypes.str("");
                 for (uint pos = 0; pos < ordered_loci.size(); pos++) {
                     loc = catalog[ordered_loci[pos].id];
@@ -7039,10 +7081,10 @@ write_fastphase(map<int, CSLocus *> &catalog,
                     d = pmap->locus(loc->id);
                     t = psum->locus_tally(loc->id);
 
-                    //
+                    // 
                     // If this site is fixed in all populations or has too many alleles don't output it.
                     //
-                    if (t->nucs[col].allele_cnt != 2)
+                    if (t->nucs[col].allele_cnt != 2) 
                         continue;
 
                     if (s[pop_psum_index]->nucs[col].incompatible_site ||
@@ -7053,7 +7095,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
                         //
                         gtypes << "? ";
 
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                         //
                         // Data does not exist.
                         //
@@ -7093,14 +7135,14 @@ write_fastphase(map<int, CSLocus *> &catalog,
                     d = pmap->locus(loc->id);
                     t = psum->locus_tally(loc->id);
 
-                    if (t->nucs[col].allele_cnt != 2)
+                    if (t->nucs[col].allele_cnt != 2) 
                         continue;
 
                     if (s[pop_psum_index]->nucs[col].incompatible_site ||
                         s[pop_psum_index]->nucs[col].filtered_site) {
                         gtypes << "? ";
 
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                         gtypes << "? ";
 
                     } else if (d[j]->model[col] == 'U') {
@@ -7130,16 +7172,16 @@ write_fastphase(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_phase(map<int, CSLocus *> &catalog,
-            PopMap<CSLocus> *pmap,
+int 
+write_phase(map<int, CSLocus *> &catalog, 
+            PopMap<CSLocus> *pmap, 
             PopSum<CSLocus> *psum)
 {
     //
     // Write a PHASE file as defined here: http://stephenslab.uchicago.edu/software.html
     //
-    // Data will be written as mixture of multiple allele, linked RAD sites
-    // (SNPs within a single RAD locus are already phased), and bi-allelic SNPs. We
+    // Data will be written as mixture of multiple allele, linked RAD sites 
+    // (SNPs within a single RAD locus are already phased), and bi-allelic SNPs. We 
     // will write one file per chromosome.
     //
     cerr << "Writing population data to PHASE files...";
@@ -7153,7 +7195,9 @@ write_phase(map<int, CSLocus *> &catalog,
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 
         string file = out_path + out_prefix + "." + it->first + ".phase.inp";
+
         ofstream fh(file.c_str(), ofstream::out);
+
         if (fh.fail()) {
             cerr << "Error opening PHASE file '" << file << "'\n";
             exit(1);
@@ -7186,7 +7230,7 @@ write_phase(map<int, CSLocus *> &catalog,
                 d = pmap->locus(loc->id);
                 for (int j = 0; j < pmap->sample_cnt(); j++) {
                     if (d[j] != NULL &&
-                        d[j]->obshap.size() > 0 &&
+                        d[j]->obshap.size() > 0 && 
                         d[j]->obshap.size() <= 2) {
                         //
                         // Data exists, and there are the correct number of haplotypes.
@@ -7249,7 +7293,7 @@ write_phase(map<int, CSLocus *> &catalog,
                 // Output all the loci for this sample, printing only the p allele
                 //
                 fh << samples[pmap->rev_sample_index(j)] << "\n";
-
+                
                 gtypes.str("");
                 for (uint pos = 0; pos < ordered_loci.size(); pos++) {
                     loc = catalog[ordered_loci[pos].id];
@@ -7269,7 +7313,7 @@ write_phase(map<int, CSLocus *> &catalog,
                             gtypes << "-1 ";
                         } else {
                             //
-                            // Data exists, output the first haplotype. We will assume the haplotypes are
+                            // Data exists, output the first haplotype. We will assume the haplotypes are 
                             // numbered by their position in the loc->strings vector.
                             //
                             if (d[j]->obshap.size() > 2)  {
@@ -7283,7 +7327,7 @@ write_phase(map<int, CSLocus *> &catalog,
                                         gtypes << k + 1 << " ";
                                     }
                                 if (found == false)
-                                    cerr << "Unable to find haplotype " << d[j]->obshap[0] << " from individual "
+                                    cerr << "Unable to find haplotype " << d[j]->obshap[0] << " from individual " 
                                          << samples[pmap->rev_sample_index(j)] << "; catalog locus: " << loc->id << "\n";
                             }
                         }
@@ -7298,7 +7342,7 @@ write_phase(map<int, CSLocus *> &catalog,
                             //
                             gtypes << "? ";
 
-                        } else if (d[j] == NULL) {
+                        } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                             //
                             // Data does not exist.
                             //
@@ -7348,7 +7392,7 @@ write_phase(map<int, CSLocus *> &catalog,
                             gtypes << "-1 ";
                         } else {
                             //
-                            // Data exists, output the second haplotype. We will assume the haplotypes are
+                            // Data exists, output the second haplotype. We will assume the haplotypes are 
                             // numbered by their position in the loc->strings vector.
                             //
                             if (d[j]->obshap.size() > 2)  {
@@ -7362,7 +7406,7 @@ write_phase(map<int, CSLocus *> &catalog,
                                         gtypes << k + 1 << " ";
                                     }
                                 if (found == false)
-                                    cerr << "Unable to find haplotype " << d[j]->obshap[1] << " from individual "
+                                    cerr << "Unable to find haplotype " << d[j]->obshap[1] << " from individual " 
                                          << samples[pmap->rev_sample_index(j)] << "; catalog locus: " << loc->id << "\n";
                             } else {
                                 found = false;
@@ -7372,7 +7416,7 @@ write_phase(map<int, CSLocus *> &catalog,
                                         gtypes << k + 1 << " ";
                                     }
                                 if (found == false)
-                                    cerr << "Unable to find haplotype " << d[j]->obshap[0] << " from individual "
+                                    cerr << "Unable to find haplotype " << d[j]->obshap[0] << " from individual " 
                                          << samples[pmap->rev_sample_index(j)] << "; catalog locus: " << loc->id << "\n";
                             }
                         }
@@ -7383,7 +7427,7 @@ write_phase(map<int, CSLocus *> &catalog,
                             s[pop_id]->nucs[col].filtered_site) {
                             gtypes << "? ";
 
-                        } else if (d[j] == NULL) {
+                        } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                             gtypes << "? ";
 
                         } else if (d[j]->model[col] == 'U') {
@@ -7414,9 +7458,9 @@ write_phase(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_plink(map<int, CSLocus *> &catalog,
-            PopMap<CSLocus> *pmap,
+int 
+write_plink(map<int, CSLocus *> &catalog, 
+            PopMap<CSLocus> *pmap, 
             PopSum<CSLocus> *psum)
 {
     //
@@ -7448,7 +7492,9 @@ write_plink(map<int, CSLocus *> &catalog,
     // an empty centiMorgan field, and finally its genomic position in basepairs.
     //
     string file = out_path + out_prefix + ".plink.map";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening PLINK markers file '" << file << "'\n";
         exit(1);
@@ -7471,7 +7517,7 @@ write_plink(map<int, CSLocus *> &catalog,
                 if (t->nucs[col].allele_cnt == 2)
                     fh << chr << "\t"
                        << loc->id << "_" << col << "\t"
-                       << "0\t"
+                       << "0\t" 
                        << loc->sort_bp(col) << "\n";
             }
         }
@@ -7482,7 +7528,9 @@ write_plink(map<int, CSLocus *> &catalog,
     // Now output the genotypes in a separate file.
     //
     file = out_path + out_prefix + ".plink.ped";
+
     fh.open(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening PLINK markers file '" << file << "'\n";
         exit(1);
@@ -7518,14 +7566,14 @@ write_plink(map<int, CSLocus *> &catalog,
                     s = psum->locus(loc->id);
                     d = pmap->locus(loc->id);
                     t = psum->locus_tally(loc->id);
-
+ 
                     for (uint i = 0; i < loc->snps.size(); i++) {
                         uint col = loc->snps[i]->col;
 
-                        //
+                        // 
                         // If this site is fixed in all populations or has too many alleles don't output it.
                         //
-                        if (t->nucs[col].allele_cnt != 2)
+                        if (t->nucs[col].allele_cnt != 2) 
                             continue;
                         //
                         // Output the p and q alleles
@@ -7537,7 +7585,7 @@ write_plink(map<int, CSLocus *> &catalog,
                             // due to a minor allele frequency that is too low.
                             //
                             fh << "\t" << "0" << "\t" << "0";
-                        } else if (d[j] == NULL) {
+                        } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                             //
                             // Data does not exist.
                             //
@@ -7576,9 +7624,9 @@ write_plink(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_beagle(map<int, CSLocus *> &catalog,
-            PopMap<CSLocus> *pmap,
+int 
+write_beagle(map<int, CSLocus *> &catalog, 
+            PopMap<CSLocus> *pmap, 
             PopSum<CSLocus> *psum)
 {
     //
@@ -7642,6 +7690,7 @@ write_beagle(map<int, CSLocus *> &catalog,
             // and the two alternative alleles at this position.
             //
             file = out_path + out_prefix + "." + pop_key[pit->first] + "-" + it->first + ".unphased.bgl.markers";
+
             ofstream mfh(file.c_str(), ofstream::out);
             if (mfh.fail()) {
                 cerr << "Error opening Beagle markers file '" << file << "'\n";
@@ -7653,6 +7702,7 @@ write_beagle(map<int, CSLocus *> &catalog,
             // Open the genotypes file.
             //
             file = out_path + out_prefix + "." + pop_key[pit->first] + "-" + it->first + ".unphased.bgl";
+
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
                 cerr << "Error opening Beagle genotypes file '" << file << "'\n";
@@ -7688,10 +7738,10 @@ write_beagle(map<int, CSLocus *> &catalog,
                 t   = psum->locus_tally(loc->id);
                 col = loc->snps[ordered_loci[pos].snp_index]->col;
 
-                //
+                // 
                 // If this site is fixed in all populations or has too many alleles don't output it.
                 //
-                if (t->nucs[col].allele_cnt != 2)
+                if (t->nucs[col].allele_cnt != 2) 
                     continue;
 
                 //
@@ -7703,9 +7753,9 @@ write_beagle(map<int, CSLocus *> &catalog,
                 //
                 // Output this locus to the markers file.
                 //
-                mfh << loc->id << "_" << col << "\t"
-                    << loc->sort_bp(col)     << "\t"
-                    << t->nucs[col].p_allele << "\t"
+                mfh << loc->id << "_" << col << "\t" 
+                    << loc->sort_bp(col)     << "\t" 
+                    << t->nucs[col].p_allele << "\t" 
                     << t->nucs[col].q_allele << "\n";
 
                 fh << "M" << "\t" << loc->id << "_" << col;
@@ -7722,7 +7772,7 @@ write_beagle(map<int, CSLocus *> &catalog,
                         //
                         fh << "\t" << "?";
 
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                         //
                         // Data does not exist.
                         //
@@ -7753,7 +7803,7 @@ write_beagle(map<int, CSLocus *> &catalog,
                         s[pop_psum_index]->nucs[col].filtered_site) {
                         fh << "\t" << "?";
 
-                    } else if (d[j] == NULL) {
+                    } else if (d[j] == NULL || col >= uint(d[j]->len)) {
                         fh << "\t" << "?";
 
                     } else if (d[j]->model[col] == 'U') {
@@ -7781,13 +7831,13 @@ write_beagle(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_beagle_phased(map<int, CSLocus *> &catalog,
-                    PopMap<CSLocus> *pmap,
+int 
+write_beagle_phased(map<int, CSLocus *> &catalog, 
+                    PopMap<CSLocus> *pmap, 
                     PopSum<CSLocus> *psum)
 {
     //
-    // Write a Beagle file as a set of haplotpyes as defined here:
+    // Write a Beagle file as a set of haplotpyes as defined here: 
     //   http://faculty.washington.edu/browning/beagle/beagle.html
     //
     // We will write one file per chromosome.
@@ -7834,7 +7884,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
             d = pmap->locus(loc->id);
             for (int j = 0; j < pmap->sample_cnt(); j++) {
                 if (d[j] != NULL &&
-                    d[j]->obshap.size() > 0 &&
+                    d[j]->obshap.size() > 0 && 
                     d[j]->obshap.size() <= 2) {
                     //
                     // Data exists, and their are the corrent number of haplotypes.
@@ -7861,6 +7911,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
             // and the two alternative alleles at this position.
             //
             file = out_path + out_prefix + "." + pop_key[pit->first] + "-" + it->first + ".phased.bgl.markers";
+
             ofstream mfh(file.c_str(), ofstream::out);
             if (mfh.fail()) {
                 cerr << "Error opening Beagle markers file '" << file << "'\n";
@@ -7872,6 +7923,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
             // Now output the haplotypes in a separate file.
             //
             file = out_path + out_prefix + "." + pop_key[pit->first] + "-" + it->first + ".phased.bgl";
+
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
                 cerr << "Error opening Beagle markers file '" << file << "'\n";
@@ -7918,7 +7970,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
                 //
                 // Output this locus to the markers file.
                 //
-                mfh << loc->id << "\t"
+                mfh << loc->id << "\t" 
                     << loc->sort_bp();
                 for (uint j = 0; j < loc->strings.size(); j++)
                     mfh << "\t" << loc->strings[j].first;
@@ -7940,7 +7992,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
                         fh << "\t" << "?" << "\t" << "?";
                     } else {
                         //
-                        // Data exists, output the first haplotype. We will assume the haplotypes are
+                        // Data exists, output the first haplotype. We will assume the haplotypes are 
                         // numbered by their position in the loc->strings vector.
                         //
                         if (d[j]->obshap.size() > 2)
@@ -7956,35 +8008,41 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
             fh.close();
             mfh.close();
         }
-    }
+    }   
 
     cerr << "done.\n";
 
     return 0;
 }
 
-int
-write_phylip(map<int, CSLocus *> &catalog,
-             PopMap<CSLocus> *pmap,
+int 
+write_phylip(map<int, CSLocus *> &catalog, 
+             PopMap<CSLocus> *pmap, 
              PopSum<CSLocus> *psum)
 {
     //
     // We want to find loci where each locus is fixed within a population but variable between populations.
     //
-    // We will write those loci to a Phylip file as defined here:
+    // We will write those loci to a Phylip file as defined here: 
     //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
     //
     string file = out_path + out_prefix + ".phylip";
+
     cerr << "Writing population data to Phylip file '" << file << "'; ";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening Phylip file '" << file << "'\n";
         exit(1);
     }
 
     file += ".log";
+
     cerr << "logging nucleotide positions to '" << file << "'...";
+
     ofstream log_fh(file.c_str(), ofstream::out);
+
     if (log_fh.fail()) {
         cerr << "Error opening Phylip Log file '" << file << "'\n";
         exit(1);
@@ -8031,7 +8089,7 @@ write_phylip(map<int, CSLocus *> &catalog,
 
                 if (phylip_var == false) {
                     //
-                    // We are looking for loci that are fixed within each population, but are
+                    // We are looking for loci that are fixed within each population, but are 
                     // variable between one or more populations.
                     //
                     if (t->nucs[col].fixed == true || t->nucs[col].allele_cnt != 2 || t->nucs[col].pop_cnt < 2)
@@ -8173,7 +8231,7 @@ write_phylip(map<int, CSLocus *> &catalog,
         len = strlen(id_str);
         for (uint j = len; j < 10; j++)
             id_str[j] = ' ';
-        id_str[9] = '\0';
+        id_str[9] = '\0'; 
 
         fh << id_str << " " << interspecific_nucs[pop_id] << "\n";
     }
@@ -8191,21 +8249,24 @@ write_phylip(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-write_fullseq_phylip(map<int, CSLocus *> &catalog,
-                     PopMap<CSLocus> *pmap,
+int 
+write_fullseq_phylip(map<int, CSLocus *> &catalog, 
+                     PopMap<CSLocus> *pmap, 
                      PopSum<CSLocus> *psum)
 {
     //
     // We want to write all variable loci in Phylip interleaved format. Polymorphic positions
     // will be encoded using IUPAC notation.
     //
-    // We will write those loci to a Phylip file as defined here:
+    // We will write those loci to a Phylip file as defined here: 
     //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
     //
     string file = out_path + out_prefix + ".fullseq.phylip";
+
     cerr << "Writing full sequence population data to Phylip file '" << file << "'; ";
+
     ofstream fh(file.c_str(), ofstream::out);
+
     if (fh.fail()) {
         cerr << "Error opening Phylip file '" << file << "'\n";
         exit(1);
@@ -8216,15 +8277,20 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     // for use in phylogenetics programs.
     //
     file = out_path + out_prefix + ".fullseq.partitions.phylip";
+
     ofstream par_fh(file.c_str(), ofstream::out);
+
     if (par_fh.fail()) {
         cerr << "Error opening Phylip partitions file '" << file << "'\n";
         exit(1);
     }
 
     file = out_path + out_prefix + "fullseq.phylip.log";
+
     cerr << "logging nucleotide positions to '" << file << "'...";
+
     ofstream log_fh(file.c_str(), ofstream::out);
+
     if (log_fh.fail()) {
         cerr << "Error opening Phylip Log file '" << file << "'\n";
         exit(1);
@@ -8282,7 +8348,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     }
 
     map<int, string> outstrs;
-
+    
     fh << pop_indexes.size() << "    " << len << "\n";
 
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
@@ -8293,7 +8359,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
         len = strlen(id_str);
         for (uint j = len; j < 10; j++)
             id_str[j] = ' ';
-        id_str[9] = '\0';
+        id_str[9] = '\0'; 
 
         outstrs[pop_id] += string(id_str) + " ";
     }
@@ -8302,7 +8368,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     int   line  = 1;
     int   index = 1;
     int   cnt   = 1;
-
+    
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
@@ -8406,7 +8472,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
 
                     seq[col] = nuc;
                 }
-
+                
                 outstrs[pop_id] += string(seq);
             }
             delete [] seq;
@@ -8414,7 +8480,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
             log_fh << line << "\t" << loc->id;
             if (loci_ordered) log_fh << "\t" << loc->loc.chr << "\t" << loc->sort_bp() + 1;
             log_fh << "\n";
-
+            
             for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
                 pop_id = pit->first;
                 fh << outstrs[pop_id] << "\n";
@@ -8742,6 +8808,7 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
     return 0;
 }
 
+
 bool hap_compare(pair<string, int> a, pair<string, int> b) {
     return (a.second > b.second);
 }
@@ -8818,14 +8885,14 @@ int parse_command_line(int argc, char* argv[]) {
             {"debug_flags",    required_argument, NULL, O_DEBUG_FLAGS},
             {0, 0, 0, 0}
         };
-
+        
         // getopt_long stores the option index here.
         int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
             break;
-
+     
         switch (c) {
         case 'h':
             help();
@@ -9139,7 +9206,6 @@ int parse_command_line(int argc, char* argv[]) {
             cerr << "Error: Oops, input mode 'vcf' does not support --vcf or --vcf_haplotypes yet.\n";
             help();
         }
-
         // Determine out_prefix
         string fname = in_vcf_path;
         if (in_vcf_path.find_last_of('/') != string::npos && in_vcf_path.back() != '/')
@@ -9162,7 +9228,7 @@ int parse_command_line(int argc, char* argv[]) {
         cerr << "You must specify the restriction enzyme associated with this data set to merge overlaping cutsites.\n";
         help();
     }
-
+    
     return 0;
 }
 

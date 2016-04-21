@@ -78,6 +78,7 @@ using google::sparse_hash_map;
 #include "FastqI.h"     // Reading input files in FASTQ format
 #include "gzFasta.h"    // Reading gzipped input files in FASTA format
 #include "gzFastq.h"    // Reading gzipped input files in FASTQ format
+#include "aln_utils.h"
 #include "GappedAln.h"
 
 class HVal {
@@ -121,11 +122,10 @@ int  write_results(map<int, MergedStack *> &, map<int, Stack *> &, map<int, Rem 
 int  calc_kmer_distance(map<int, MergedStack *> &, int);
 int  search_for_gaps(map<int, MergedStack *> &, double);
 int  merge_gapped_alns(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &);
-int  parse_cigar(const char *, vector<pair<char, uint> > &);
 int  edit_gapped_seqs(map<int, Stack *> &, map<int, Rem *> &, MergedStack *, vector<pair<char, uint> > &);
 int  edit_gaps(vector<pair<char, uint> > &, char *);
 int  dist(MergedStack *, MergedStack *, vector<pair<char, uint> > &);
-
+bool rank_alignments(Aln, Aln);
 //
 // Calculate depth of coverage statistics for stacks
 //

@@ -336,10 +336,10 @@ int PopSum<LocusT>::initialize(PopMap<LocusT> *pmap) {
 
 template<class LocusT>
 int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
-                               PopMap<LocusT> *pmap, 
-                               uint population_id,
-                               uint start_index, uint end_index, 
-                               bool verbose, ofstream &log_fh) {
+                                   PopMap<LocusT> *pmap, 
+                                   uint population_id,
+                                   uint start_index, uint end_index, 
+                                   bool verbose, ofstream &log_fh) {
     LocusT  *loc;
     Datum  **d;
     LocSum **s;
@@ -830,6 +830,7 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
         // position as hEterozygous or hOmozygous.
         //
         if (d[i]->model[pos] == 'E') {
+            cerr << "Model: " << d[i]->model << "\n";
             cerr << "Warning: heterozygous model call at fixed nucleotide position: " 
                  << "locus " << locus->id << " individual " << d[i]->id << "; position: " << pos << "\n";
         }
