@@ -54,7 +54,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
     char *line      = (char *) malloc(sizeof(char) * max_len);
     int   size      = max_len;
     bool  gzip      = false;
-    bool  open_fail = false;
+    bool  open_fail = true;
     int   fh_status = 1;
 
     // 
@@ -65,8 +65,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
     if (!store_reads) {
         f = sample + ".models.tsv";
         fh.open(f.c_str(), ifstream::in);
-        if (fh.fail())
-            open_fail = true;
+        open_fail = fh.fail() ? true : false;
     }
 
     if (!store_reads && open_fail) {
