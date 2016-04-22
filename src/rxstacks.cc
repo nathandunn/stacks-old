@@ -267,6 +267,13 @@ int main (int argc, char* argv[]) {
 		    continue;
 		}
 
+                //
+                // If this locus was matched to the catalog using a gapped alignment, adjust the SNP positions.
+                //
+                if (d->cigar != NULL) {
+                    ;
+                }
+                
 		prune_nucleotides(cloc, loc, d, log_snp_fh,
 				  nuc_cnt,
 				  unk_hom_cnt, unk_het_cnt, 
@@ -284,6 +291,14 @@ int main (int argc, char* argv[]) {
 		    if (loc->blacklisted)
 			blacklist_cnt++;
 		}
+
+                //
+                // If this locus was matched to the catalog using a gapped alignment, de-adjust the SNP positions
+                // for writing back to disk.
+                //
+                if (d->cigar != NULL) {
+                    ;
+                }
 	    }
         }
 
@@ -845,6 +860,15 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, Datum *d, ofstream &log_fh, unsigne
     nuc_cnt += loc->len;
 
     for (uint i = 0; i < loc->snps.size() && i < cloc->snps.size(); i++) {
+
+        //
+        // Safety checks.
+        //
+        if (loc->snps[i]->col != cloc->snps[i]->col)
+            cerr << "Warning: comparing mismatched SNPs in catalog locus " << cloc->id << " and sample " << loc->sample_id << ", locus " << loc->id << "\n";
+        if (loc->snps[i]->type == snp_type_het && cloc->snps[i]->type == snp_type_hom)
+            cerr << "Warning: sample variable while catalog fixed; catalog locus " << cloc->id << " and sample " << loc->sample_id << ", locus " << loc->id << "\n";
+        
 	//
 	// Either their is an unknown call in locus, or, there is a snp in the catalog and any state in the locus.
 	//
