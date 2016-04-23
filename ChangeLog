@@ -1,3 +1,8 @@
+Stacks 1.39 - April 23, 2016
+----------------------------
+	Bugfix: rxstacks was not adjusting reads/SNPs to account for alignment gaps. There was also an
+	bug in reading the input files.
+
 Stacks 1.38 - April 18, 2016
 ----------------------------
 	Feature: denovo_map.pl and ref_map.pl now print depth of coverage for each sample. The ustacks

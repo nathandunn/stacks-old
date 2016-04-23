@@ -228,6 +228,11 @@ int main (int argc, char* argv[]) {
 	    Datum   *d;
 	    Locus   *loc;
 	    CSLocus *cloc;
+            uint     seq_len;
+            string   seq, model;
+            char    *adj_seq;
+            vector<pair<char, uint> > cigar;
+            vector<char *>            reads;
 
             #pragma omp for schedule(dynamic, 1) reduction(+:nuc_cnt) reduction(+:unk_hom_cnt) reduction(+:unk_het_cnt) \
 		reduction(+:hom_unk_cnt) reduction(+:het_unk_cnt) reduction(+:hom_het_cnt) reduction(+:het_hom_cnt) \
@@ -268,12 +273,26 @@ int main (int argc, char* argv[]) {
 		}
 
                 //
-                // If this locus was matched to the catalog using a gapped alignment, adjust the SNP positions.
+                // If this locus was matched to the catalog using a gapped alignment, adjust the sequence
+                // and SNP positions.
                 //
                 if (d->cigar != NULL) {
-                    ;
+                    seq_len = parse_cigar(d->cigar, cigar);
+                    seq     = apply_cigar_to_seq(loc->con, cigar);
+                    model   = apply_cigar_to_model_seq(loc->model, cigar);
+                    loc->add_consensus(seq.c_str());
+                    loc->add_model(model.c_str());
+                    adjust_and_add_snps_for_gaps(cigar, loc);
+
+                    for (uint k = 0; k < loc->reads.size(); k++) {
+                        reads.push_back(loc->reads[k]);
+
+                        adj_seq = new char[seq_len + 1];
+                        apply_cigar_to_seq(adj_seq, seq_len, loc->reads[k], cigar);
+                        loc->reads[k] = adj_seq;
+                    }
                 }
-                
+
 		prune_nucleotides(cloc, loc, d, log_snp_fh,
 				  nuc_cnt,
 				  unk_hom_cnt, unk_het_cnt, 
@@ -293,11 +312,22 @@ int main (int argc, char* argv[]) {
 		}
 
                 //
-                // If this locus was matched to the catalog using a gapped alignment, de-adjust the SNP positions
-                // for writing back to disk.
+                // If this locus was matched to the catalog using a gapped alignment, de-adjust the sequence
+                // and SNP positions for writing back to disk.
                 //
                 if (d->cigar != NULL) {
-                    ;
+                    seq   = remove_cigar_from_seq(loc->con, cigar);
+                    model = remove_cigar_from_seq(loc->model, cigar);
+                    loc->add_consensus(seq.c_str());
+                    loc->add_model(model.c_str());
+                    remove_snps_from_gaps(cigar, loc);
+
+                    for (uint k = 0; k < loc->reads.size(); k++) {
+                        adj_seq = loc->reads[k];
+                        loc->reads[k] = reads[k];
+                        delete [] adj_seq;
+                    }
+                    reads.clear();
                 }
 	    }
         }
@@ -865,12 +895,14 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, Datum *d, ofstream &log_fh, unsigne
         // Safety checks.
         //
         if (loc->snps[i]->col != cloc->snps[i]->col)
-            cerr << "Warning: comparing mismatched SNPs in catalog locus " << cloc->id << " and sample " << loc->sample_id << ", locus " << loc->id << "\n";
+            cerr << "Warning: comparing mismatched SNPs in catalog locus " << cloc->id
+                 << " and sample " << loc->sample_id << ", locus " << loc->id << "; col: " << loc->snps[i]->col << "\n";
         if (loc->snps[i]->type == snp_type_het && cloc->snps[i]->type == snp_type_hom)
-            cerr << "Warning: sample variable while catalog fixed; catalog locus " << cloc->id << " and sample " << loc->sample_id << ", locus " << loc->id << "\n";
+            cerr << "Warning: sample locus is variable while catalog locus is fixed; catalog locus " << cloc->id
+                 << " and sample " << loc->sample_id << ", locus " << loc->id << "; col: " << loc->snps[i]->col << "\n";
         
 	//
-	// Either their is an unknown call in locus, or, there is a snp in the catalog and any state in the locus.
+	// Either there is an unknown call in locus, or, there is a snp in the catalog and any state in the locus.
 	//
 	if ((loc->snps[i]->type == snp_type_unk) || 
 	    (cloc->snps[i]->type == snp_type_het && loc->snps[i]->type == snp_type_hom)) {
@@ -878,11 +910,13 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, Datum *d, ofstream &log_fh, unsigne
 	    // cerr << "  Looking at SNP call in tag " << loc->id << " at position " << i << "; col: " << loc->snps[i]->col << "\n"
 	    // 	 << "    Catalog column: " << cloc->snps[i]->col << " (" << i << "); Sample column: " << loc->snps[i]->col << " (" << i << ")\n"
 	    // 	 << "    Sample has model call type: " << (loc->snps[i]->type == snp_type_unk ? "Unknown" : "Homozygous") << "; nucleotides: '" 
-	    // 	 << loc->snps[i]->rank_1 << "' and '" << loc->snps[i]->rank_2 << "'\n"
+	    // 	 << loc->snps[i]->rank_1 << "' and '" << loc->snps[i]->rank_2 << "'; model call: " << loc->model[loc->snps[i]->col] << "\n"
 	    // 	 << "    Catalog has model call type: " << (cloc->snps[i]->type == snp_type_het ? "Heterozygous" : "Homozygous") << "; nucleotides: '" 
 	    // 	 << cloc->snps[i]->rank_1 << "' and '" << cloc->snps[i]->rank_2 << "'\n";
 
-	    if (loc->snps[i]->rank_1 == 'N' || cloc->snps[i]->rank_1 == 'N') continue;
+	    if (loc->snps[i]->rank_1 == 'N' || cloc->snps[i]->rank_1 == 'N' ||
+                loc->snps[i]->rank_1 == '-' || cloc->snps[i]->rank_1 == '-')
+                continue;
 
 	    cnucs.insert(cloc->snps[i]->rank_1);
 	    if (cloc->snps[i]->rank_2 != 0) cnucs.insert(cloc->snps[i]->rank_2);
@@ -919,22 +953,21 @@ prune_nucleotides(CSLocus *cloc, Locus *loc, Datum *d, ofstream &log_fh, unsigne
 	    //
 	    invoke_model(loc, i, nucs);
 
-	    if (verbose) {
-		#pragma omp critical
-		log_model_calls(loc, log_fh,
-				unk_hom_cnt, unk_het_cnt, 
-				hom_unk_cnt, het_unk_cnt, 
-				hom_het_cnt, het_hom_cnt);
-	    } else {
-		log_model_calls(loc, log_fh,
-				unk_hom_cnt, unk_het_cnt, 
-				hom_unk_cnt, het_unk_cnt, 
-				hom_het_cnt, het_hom_cnt);
-	    }
+            cnucs.clear();
 	}
+    }
 
-	nucs.clear();
-	cnucs.clear();
+    if (verbose) {
+        #pragma omp critical
+        log_model_calls(loc, log_fh,
+                        unk_hom_cnt, unk_het_cnt, 
+                        hom_unk_cnt, het_unk_cnt, 
+                        hom_het_cnt, het_hom_cnt);
+    } else {
+        log_model_calls(loc, log_fh,
+                        unk_hom_cnt, unk_het_cnt, 
+                        hom_unk_cnt, het_unk_cnt, 
+                        hom_het_cnt, het_hom_cnt);
     }
 
     //
@@ -1319,13 +1352,14 @@ write_results(string file, map<int, Locus *> &m)
 		 << tag_1->sample_id    << "\t" 
 		 << tag_1->id           << "\t\t\t\t";
 
-	    if (tag_1->comp_type[j] == primary)
-		sstr << "primary" << "\t";
-	    else
-		sstr << "secondary" << "\t";
+	    if (tag_1->comp_type[j] == primary) {
+		sstr << "primary" << "\t"
+                     << tag_1->comp_cnt[j]  << "\t";
+            } else {
+		sstr << "secondary" << "\t\t";
+            }
 
-	    sstr << tag_1->comp_cnt[j]  << "\t" 
-		 << tag_1->comp[j]      << "\t" 
+	    sstr << tag_1->comp[j]      << "\t" 
 		 << tag_1->reads[j]     << "\t\t\t\t\n";
 	}
 

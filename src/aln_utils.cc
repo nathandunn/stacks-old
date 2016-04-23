@@ -123,6 +123,113 @@ apply_cigar_to_seq(const char *seq, vector<pair<char, uint> > &cigar)
     return edited_seq;
 }
 
+string
+apply_cigar_to_model_seq(const char *seq, vector<pair<char, uint> > &cigar)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, edited_bp, stop;
+    string edited_seq;
+
+    //
+    // Calculate the overall sequence length.
+    //
+    uint seqlen = 0;
+    for (uint i = 0; i < size; i++)
+        seqlen += cigar[i].second;
+
+    bp  = 0;
+
+    edited_seq.reserve(seqlen);
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'S':
+            stop = bp + dist;
+            while (bp < stop) {
+                edited_seq.push_back('U');
+                bp++;
+            }
+            break;
+        case 'D':
+	    edited_bp = 0;
+            while (edited_bp < dist) {
+                edited_seq.push_back('U');
+		edited_bp++;
+            }
+            break;
+        case 'I':
+        case 'M':
+            stop = bp + dist;
+            while (bp < stop) {
+                edited_seq.push_back(seq[bp]);
+                bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    return edited_seq;
+}
+
+int
+apply_cigar_to_seq(char *seq, uint seq_len, const char *old_seq, vector<pair<char, uint> > &cigar)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, seq_bp, oldseq_len, stop;
+
+    oldseq_len = strlen(old_seq);
+    bp         = 0;
+    seq_bp     = 0;
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'S':
+            stop = seq_bp + dist;
+            stop = stop > seq_len ? seq_len : stop;
+            while (seq_bp < stop) {
+                seq[seq_bp] = 'N';
+                seq_bp++;
+                bp++;
+            }
+            break;
+        case 'D':
+            stop = seq_bp + dist;
+            stop = stop > seq_len ? seq_len : stop;
+            while (seq_bp < stop) {
+                seq[seq_bp] = 'N';
+		seq_bp++;
+            }
+            break;
+        case 'I':
+        case 'M':
+            stop = bp + dist;
+            stop = stop > seq_len ? seq_len : stop;
+            while (bp < stop) {
+                seq[seq_bp] = old_seq[bp];
+                seq_bp++;
+                bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    seq[seq_len] = '\0';
+
+    return 0;
+}
+
 int
 apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, vector<pair<char, uint> > &cigar)
 {
@@ -176,6 +283,53 @@ apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, vector<pair
     return 0;
 }
 
+string
+remove_cigar_from_seq(const char *seq, vector<pair<char, uint> > &cigar)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, edited_bp, stop;
+    string edited_seq;
+
+    //
+    // Calculate the overall sequence length.
+    //
+    uint seqlen = 0;
+    for (uint i = 0; i < size; i++)
+        seqlen += cigar[i].first != 'D' ? cigar[i].second : 0; 
+
+    bp  = 0;
+
+    edited_seq.reserve(seqlen);
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+	    edited_bp = 0;
+            while (edited_bp < dist) {
+                edited_bp++;
+		bp++;
+            }
+            break;
+        case 'I':
+        case 'M':
+            stop = bp + dist;
+            while (bp < stop) {
+                edited_seq.push_back(seq[bp]);
+                bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    return edited_seq;
+}
+
 int
 adjust_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
 {
@@ -212,5 +366,109 @@ adjust_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
         }
     }    
     
+    return 0;
+}
+
+int
+adjust_and_add_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, new_bp, stop, snp_cnt;
+    SNP   *s;
+
+    bp      = 0;
+    new_bp  = 0;
+    snp_cnt = loc->snps.size();
+    
+    vector<SNP *> snps;
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+            stop = new_bp + dist;
+            while (new_bp < stop) {
+                s = new SNP;
+                s->col    = new_bp;
+                s->type   = snp_type_unk;
+                s->rank_1 = 'N';
+                snps.push_back(s);
+                new_bp++;
+            }
+            break;
+        case 'I':
+        case 'M':
+        case 'S':
+            stop = bp + dist > snp_cnt ? snp_cnt : bp + dist;
+            while (bp < stop) {
+                loc->snps[bp]->col = new_bp;
+                snps.push_back(loc->snps[bp]);
+                bp++;
+                new_bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }    
+
+    loc->snps.clear();
+
+    for (uint i = 0; i < snps.size(); i++)
+        loc->snps.push_back(snps[i]);
+
+    return 0;
+}
+
+int
+remove_snps_from_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
+{
+    uint   size = cigar.size();
+    char   op;
+    uint   dist, bp, new_bp, stop, snp_cnt;
+    SNP   *s;
+
+    bp      = 0;
+    new_bp  = 0;
+    snp_cnt = loc->snps.size();
+    
+    vector<SNP *> snps;
+
+    for (uint i = 0; i < size; i++)  {
+        op   = cigar[i].first;
+        dist = cigar[i].second;
+
+        switch(op) {
+        case 'D':
+            stop = bp + dist;
+            while (bp < stop) {
+                delete loc->snps[bp];
+                bp++;
+            }
+            break;
+        case 'I':
+        case 'M':
+        case 'S':
+            stop = bp + dist > snp_cnt ? snp_cnt : bp + dist;
+            while (bp < stop) {
+                loc->snps[bp]->col = new_bp;
+                snps.push_back(loc->snps[bp]);
+                bp++;
+                new_bp++;
+            }
+            break;
+        default:
+            break;
+        }
+    }    
+
+    loc->snps.clear();
+
+    for (uint i = 0; i < snps.size(); i++)
+        loc->snps.push_back(snps[i]);
+
     return 0;
 }
