@@ -36,7 +36,12 @@ using std::vector;
 string invert_cigar(string);
 int    parse_cigar(const char *, vector<pair<char, uint> > &);
 string apply_cigar_to_seq(const char *, vector<pair<char, uint> > &);
+string remove_cigar_from_seq(const char *, vector<pair<char, uint> > &);
+string apply_cigar_to_model_seq(const char *, vector<pair<char, uint> > &);
+int    apply_cigar_to_seq(char *, uint, const char *, vector<pair<char, uint> > &);
 int    apply_cigar_to_model_seq(char *, uint, const char *, vector<pair<char, uint> > &);
 int    adjust_snps_for_gaps(vector<pair<char, uint> > &, Locus *);
+int    adjust_and_add_snps_for_gaps(vector<pair<char, uint> > &, Locus *);
+int    remove_snps_from_gaps(vector<pair<char, uint> > &, Locus *);
 
 #endif  // __ALN_UTILS_H__
