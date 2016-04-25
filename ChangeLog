@@ -2,6 +2,7 @@ Stacks 1.39 - April 23, 2016
 ----------------------------
 	Bugfix: rxstacks was not adjusting reads/SNPs to account for alignment gaps. There was also an
 	bug in reading the input files.
+	Bugfix: denovo_map.pl and ref_map.pl were not processing parents/progent properly.
 
 Stacks 1.38 - April 18, 2016
 ----------------------------
