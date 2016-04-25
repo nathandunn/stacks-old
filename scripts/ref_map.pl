@@ -292,7 +292,7 @@ sub initialize_samples {
 
     my ($local_gzip, $file, $prefix, $suffix, $path, $found, $i);
 
-    if (length(scalar(@{$sample_list})) > 0 && scalar(@{$samples}) == 0) {
+    if (scalar(@{$sample_list}) > 0 && scalar(@{$samples}) == 0) {
         my @suffixes = ("sam", "bam", "map", "bowtie");
         my @fmts     = ("sam", "bam", "map", "bowtie");
 
@@ -365,13 +365,13 @@ sub initialize_samples {
             }
         }
 
-        foreach $sample (@parents) {
+        foreach $sample (@{$parents}) {
             $sample->{'type'} = "parent";
         }
-        foreach $sample (@progeny) {
+        foreach $sample (@{$progeny}) {
             $sample->{'type'} = "progeny";
         }
-        foreach $sample (@samples) {
+        foreach $sample (@{$samples}) {
             $sample->{'type'} = "sample";
         }
     }
