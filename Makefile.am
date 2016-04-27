@@ -141,7 +141,8 @@ clone_filter_LDADD    = $(BAM_LIBS)
 
 dist_bin_SCRIPTS = scripts/denovo_map.pl scripts/ref_map.pl scripts/export_sql.pl \
 	scripts/sort_read_pairs.pl scripts/exec_velvet.pl scripts/load_sequences.pl \
-	scripts/index_radtags.pl scripts/load_radtags.pl scripts/stacks_export_notify.pl
+	scripts/index_radtags.pl scripts/load_radtags.pl scripts/stacks_export_notify.pl \
+	scripts/integrate_alignments.py
 
 dist_noinst_SCRIPTS = autogen.sh scripts/extract_interpop_chars.pl scripts/convert_stacks.pl
 
