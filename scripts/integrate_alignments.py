@@ -85,6 +85,8 @@ def find_stacks_files(path, files):
                 pos = entry.find(".matches.tsv")
             if (pos != -1):
                 files.append(entry[0:pos])
+        print >> sys.stderr, "Found", len(files), "Stacks samples."
+
     except:
         print >> sys.stderr, "Unable to read files from Stacks directory, '", path, "'"
 
@@ -409,10 +411,12 @@ alns  = {}
 find_stacks_files(path, files)
 parse_catalog_alignments(aln_path, alns)
 
+i  = 1
 for file in files:
-    print >> sys.stderr, "Processing file '" +  file + "'"
+    print >> sys.stderr, "Processing file", str(i), "of", len(files), "['" +  file + "']"
     cnt = convert_sample(path, file, out_path, alns)
     print >> sys.stderr, "  Added alignments for", cnt, "loci."
+    i += 1
 
 #
 # Now process the catalog.
