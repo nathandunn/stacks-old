@@ -1,3 +1,10 @@
+Stacks 1.40
+----------------------------
+	Feature: Changed process_radtags and process_shortreads to print FASTQ/FASTA headers using
+	"/1" and "/2" to represent the read number, instead of "_1" and "_2".
+	Bugfix: cstacks was calling errant SNPs in loci with a sample containing one gapped locus and
+	one ungapped locus matching the same catalog locus.
+
 Stacks 1.39 - April 23, 2016
 ----------------------------
 	Bugfix: rxstacks was not adjusting reads/SNPs to account for alignment gaps. There was also an
