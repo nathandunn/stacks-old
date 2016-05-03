@@ -799,7 +799,8 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 
 	initialize_kmers(gapped_kmer_len, num_kmers, kmers);
 
-        #pragma omp for schedule(dynamic) reduction(+:matches) reduction(+:nomatches) reduction(+:mmatches) reduction(+:gapped_aln) reduction(+:ver_hap) reduction(+:tot_hap) reduction(+:bad_aln) reduction(+:no_haps)
+        #pragma omp for schedule(dynamic) reduction(+:matches) reduction(+:nomatches) reduction(+:mmatches) reduction(+:gapped_aln) reduction(+:ver_hap) \
+                                          reduction(+:tot_hap) reduction(+:bad_aln) reduction(+:no_haps)
         for (uint i = 0; i < keys.size(); i++) {
             query = sample[keys[i]];
 
@@ -1051,7 +1052,7 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     }
 
     //
-    // 4. Assign the allele hits after verifying there is a match between catalog and query allele..
+    // 4. Assign the allele hits after verifying there is a match between catalog and query allele.
     //
     for (query_it = query_hits.begin(); query_it != query_hits.end(); query_it++) {
         query_allele = query_it->first;
