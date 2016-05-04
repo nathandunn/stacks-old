@@ -1,7 +1,10 @@
-Stacks 1.40
-----------------------------
+Stacks 1.40 - May 04, 2016
+--------------------------
 	Feature: Changed process_radtags and process_shortreads to print FASTQ/FASTA headers using
 	"/1" and "/2" to represent the read number, instead of "_1" and "_2".
+	Bugfix: fixed a regression where allele depths were not being loaded due to the use of the new
+	*.models.tsv file. This file lacks the raw reads and therefore we can't count the raw stack depth
+	when running sstacks.
 	Bugfix: cstacks was calling errant SNPs in loci with a sample containing one gapped locus and
 	one ungapped locus matching the same catalog locus.
 
