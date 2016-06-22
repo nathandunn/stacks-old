@@ -54,37 +54,36 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
     char *line      = (char *) malloc(sizeof(char) * max_len);
     int   size      = max_len;
     bool  gzip      = false;
-    bool  open_fail = false;
+    bool  open_fail = true;
     int   fh_status = 1;
 
-    // 
-    // First, try to parse the models file to pull in the consensus sequence and model string
-    // for each locus. If the models file is not available or we are requested to store the
-    // reads from each stack, fall back to the tags file.
-    //
-    if (!store_reads) {
-        f = sample + ".models.tsv";
-        fh.open(f.c_str(), ifstream::in);
-        if (fh.fail())
-            open_fail = true;
-    }
+    // // 
+    // // First, try to parse the models file to pull in the consensus sequence and model string
+    // // for each locus. If the models file is not available or we are requested to store the
+    // // reads from each stack, fall back to the tags file.
+    // //
+    // if (!store_reads) {
+    //     f = sample + ".models.tsv";
+    //     fh.open(f.c_str(), ifstream::in);
+    //     open_fail = fh.fail() ? true : false;
+    // }
 
-    if (!store_reads && open_fail) {
-        //
-        // Test for a gzipped MODELs file.
-        //
-        f = sample + ".models.tsv.gz";
-        gz_fh = gzopen(f.c_str(), "rb");
-        if (!gz_fh) {
-            open_fail = true;
-        } else {
-            open_fail = false;
-            #if ZLIB_VERNUM >= 0x1240
-            gzbuffer(gz_fh, libz_buffer_size);
-            #endif
-            gzip = true;
-        }
-    }
+    // if (!store_reads && open_fail) {
+    //     //
+    //     // Test for a gzipped MODELs file.
+    //     //
+    //     f = sample + ".models.tsv.gz";
+    //     gz_fh = gzopen(f.c_str(), "rb");
+    //     if (!gz_fh) {
+    //         open_fail = true;
+    //     } else {
+    //         open_fail = false;
+    //         #if ZLIB_VERNUM >= 0x1240
+    //         gzbuffer(gz_fh, libz_buffer_size);
+    //         #endif
+    //         gzip = true;
+    //     }
+    // }
 
     if (open_fail) {
         //

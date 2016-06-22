@@ -62,6 +62,7 @@ using std::set;
 #include "PopSum.h"
 #include "utils.h"
 #include "sql_utilities.h"
+#include "aln_utils.h"
 #include "models.h"
 #include "mst.h"
 
