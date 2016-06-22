@@ -4143,8 +4143,10 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     OPopPair<PopPair>  *ord = new OPopPair<PopPair>(psum, log_fh);
     KSmooth<PopPair>   *ks;
     Bootstrap<PopPair> *bs;
-    if (kernel_smoothed && loci_ordered)
+    if (kernel_smoothed && loci_ordered) {
+        cerr << "Instantiating the kernel smoothing window, using sigma = " << sigma << " with a sliding window size of " << 6 * sigma << "\n";
         ks  = new KSmooth<PopPair>(2);
+    }
 
     for (uint i = 0; i < pops.size(); i++) {
 
