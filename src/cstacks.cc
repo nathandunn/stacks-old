@@ -48,8 +48,11 @@ int main (int argc, char* argv[]) {
 
     uint sample_cnt = samples.size();
 
-    cerr << "Number of mismatches allowed between stacks: " << ctag_dist << "\n"
-	 << "Loci matched based on " << (search_type == sequence ? "sequence identity" : "genomic location") << ".\n"
+    cerr << "cstacks paramters selected:\n"
+	 << "  Loci matched based on " << (search_type == sequence ? "sequence identity" : "genomic location") << ".\n";
+    if (search_type == sequence)
+        cerr << "  Number of mismatches allowed between stacks: " << ctag_dist << "\n";
+    cerr << "  Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n"
 	 << "Constructing catalog from " << sample_cnt << " samples.\n";
 
     //
@@ -335,7 +338,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         // sample, we must re-align the sequences in case changes have been made to the
         // sequence by the previous matching sequence.
         //
-        if (ctag->match_cnt > 0) {
+        if (gapped_alignments && ctag->match_cnt > 0) {
             string query_allele, query_seq, cat_allele, cat_seq;
             // cerr << "    Warning: Catalog locus " << ctag->id
             //      << ", Sample " << qtag->sample_id << ", locus " << qtag->id
