@@ -1,3 +1,19 @@
+Stacks 1.40 - May 04, 2016
+--------------------------
+	Feature: Changed process_radtags and process_shortreads to print FASTQ/FASTA headers using
+	"/1" and "/2" to represent the read number, instead of "_1" and "_2".
+	Bugfix: fixed a regression where allele depths were not being loaded due to the use of the new
+	*.models.tsv file. This file lacks the raw reads and therefore we can't count the raw stack depth
+	when running sstacks.
+	Bugfix: cstacks was calling errant SNPs in loci with a sample containing one gapped locus and
+	one ungapped locus matching the same catalog locus.
+
+Stacks 1.39 - April 23, 2016
+----------------------------
+	Bugfix: rxstacks was not adjusting reads/SNPs to account for alignment gaps. There was also an
+	bug in reading the input files.
+	Bugfix: denovo_map.pl and ref_map.pl were not processing parents/progeny properly.
+
 Stacks 1.38 - April 18, 2016
 ----------------------------
 	Feature: denovo_map.pl and ref_map.pl now print depth of coverage for each sample. The ustacks

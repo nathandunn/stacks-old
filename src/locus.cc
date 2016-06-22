@@ -55,6 +55,19 @@ Locus::add_consensus(const char *seq)
 }
 
 int 
+Locus::add_model(const char *seq) 
+{
+    if (this->model != NULL)
+        delete [] this->model;
+
+    this->model = new char[this->len + 1];
+    strncpy(this->model, seq, this->len);
+    this->model[this->len] = '\0';
+    
+    return 0;
+}
+
+int 
 Locus::populate_alleles() 
 {
     vector<SNP *>::iterator  i;

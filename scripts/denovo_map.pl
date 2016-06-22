@@ -299,7 +299,7 @@ sub initialize_samples {
 
     my ($local_gzip, $file, $prefix, $suffix, $path, $found, $i);
 
-    if (length(scalar(@{$sample_list})) > 0 && scalar(@{$samples}) == 0) {
+    if (scalar(@{$sample_list}) > 0 && scalar(@{$samples}) == 0) {
         my @suffixes = ("fq",    "fastq", "fq.gz",   "fastq.gz", "fa",    "fasta", "fa.gz",   "fasta.gz");
         my @fmts     = ("fastq", "fastq", "gzfastq", "gzfastq",  "fasta", "fasta", "gzfasta", "gzfasta");
 
@@ -331,10 +331,10 @@ sub initialize_samples {
                 die("Unable to find sample '$sample' in directory '$sample_path' as specified in the population map, '$popmap_path'.\n");
             }
         }
-        
+
     } else {
         #
-        # Process any samples were specified on the command line.
+        # Process any samples that were specified on the command line.
         #
         foreach $sample (@{$parents}, @{$progeny}, @{$samples}) {
             $local_gzip = false;
@@ -346,7 +346,7 @@ sub initialize_samples {
                 $local_gzip = true;
                 ($prefix, $suffix) = ($prefix =~ /^(.+)\.(.+)$/);
             }
-            
+
             $sample->{'suffix'}  = $suffix;
             $sample->{'suffix'} .= ".gz" if ($local_gzip == true);
 
@@ -385,13 +385,13 @@ sub initialize_samples {
             }
         }
 
-        foreach $sample (@parents) {
+        foreach $sample (@{$parents}) {
             $sample->{'type'} = "parent";
         }
-        foreach $sample (@progeny) {
+        foreach $sample (@{$progeny}) {
             $sample->{'type'} = "progeny";
         }
-        foreach $sample (@samples) {
+        foreach $sample (@{$samples}) {
             $sample->{'type'} = "sample";
         }
     }

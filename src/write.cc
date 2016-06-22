@@ -42,12 +42,12 @@ write_fasta(ofstream *fh, Read *href, bool overhang) {
     	    "_" << tile << 
     	    "_" << href->x <<
     	    "_" << href->y <<
-    	    "_" << href->read << "\n" <<
+    	    "/" << href->read << "\n" <<
     	    href->seq + offset << "\n";
     else 
     	*fh <<
     	    ">" << href->machine <<
-    	    "_" << href->read << "\n" <<
+    	    "/" << href->read << "\n" <<
     	    href->seq + offset << "\n";
 
     if (fh->fail()) return -1;
@@ -70,12 +70,12 @@ write_fasta(gzFile *fh, Read *href, bool overhang) {
     	    "_" << tile << 
     	    "_" << href->x <<
     	    "_" << href->y <<
-    	    "_" << href->read << "\n" <<
+    	    "/" << href->read << "\n" <<
     	    href->seq + offset << "\n";
     else 
     	sstr <<
     	    ">" << href->machine <<
-    	    "_" << href->read << "\n" <<
+    	    "/" << href->read << "\n" <<
     	    href->seq + offset << "\n";
 
     int res = gzputs(*fh, sstr.str().c_str());
@@ -126,14 +126,14 @@ write_fastq(ofstream *fh, Read *href, bool overhang) {
     	    "_" << tile << 
     	    "_" << href->x << 
     	    "_" << href->y << 
-    	    "_" << href->read << "\n" <<
+    	    "/" << href->read << "\n" <<
     	    href->seq + offset << "\n" <<
     	    "+\n" <<
     	    href->phred + offset << "\n";
     else
     	*fh <<
     	    "@" << href->machine << 
-    	    "_" << href->read << "\n" <<
+    	    "/" << href->read << "\n" <<
     	    href->seq + offset << "\n" <<
     	    "+\n" <<
     	    href->phred + offset << "\n";
@@ -161,14 +161,14 @@ write_fastq(gzFile *fh, Read *href, bool overhang) {
     	    "_" << tile << 
     	    "_" << href->x << 
     	    "_" << href->y << 
-    	    "_" << href->read << "\n" <<
+    	    "/" << href->read << "\n" <<
     	    href->seq + offset << "\n" <<
     	    "+\n" <<
     	    href->phred + offset << "\n";
     else
     	sstr <<
     	    "@" << href->machine << 
-    	    "_" << href->read << "\n" <<
+    	    "/" << href->read << "\n" <<
     	    href->seq + offset << "\n" <<
     	    "+\n" <<
     	    href->phred + offset << "\n";
