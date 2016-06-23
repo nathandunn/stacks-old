@@ -772,13 +772,14 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
 		switch (*q) {
 		case '-':
 		case '_':
+                case '.':
 		    break;
 		case '\r':
 		case '\t':
 		    *q = '\0';
 		    break;
 		default:
-		    cerr << "Invalid filename on line " << line_num << ": '" << s << "' (filenames can consist of letters, numbers, '-' and '_').\n";
+		    cerr << "Invalid filename on line " << line_num << ": '" << s << "' (filenames can consist of letters, numbers, '.', '-' and '_').\n";
 		    exit(1);
 		}
 	    }

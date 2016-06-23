@@ -1,3 +1,13 @@
+Stacks 1.41 - June 22, 2016
+---------------------------
+	Bugfix: the kernel-smoothing procedure in populations (used for Fst, Pi, heterozygosity etc. smoothing) 
+	was not functioning at sizes larger than the default size. A bug was creating incorrect weights for the
+	smoothing operation when the sliding window size was set to a large value causing the smoothing
+	window to have a maximum size after which increasing the size did not change the smoothing. 
+	Bugfix: cstacks was reporting gapped alignments even when --gapped was not enabled. This affected
+	a small number of (mostly) confounded catalog loci.
+	Feature: Added the Csp6I restriction enzyme.
+
 Stacks 1.40 - May 04, 2016
 --------------------------
 	Feature: Changed process_radtags and process_shortreads to print FASTQ/FASTA headers using
