@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2011-2015, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2011-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -26,6 +26,10 @@ using std::map;
 #include <string>
 using std::string;
 
+//
+// First line of static array contains each enzyme's cut sites. Second 
+// line is the reverse complement of each cut site.
+//
 const char *aciI[]    = {"CGC", "CGG",        // C/CGC, AciI
                          "GCG", "CCG"};
 const char *ageI[]    = {"CCGGT",             // A/CCGGT, AgeI
@@ -50,6 +54,8 @@ const char *bstYI[]   = {"GATCC", "GATCT",    // R/GATCY, BstYI (also known as P
                          "GGATC", "AGATC"};
 const char *claI[]    = {"CGAT",              // AT/CGAT, ClaI
                          "ATCG"};
+const char *csp6I[]   = {"TAC",               // G/TAC, Csp6I
+                         "GTA"};
 const char *ddeI[]    = {"TAAG", "TCAG", "TGAG", "TTAG", // C/TNAG, DdeI
 			 "CTTA", "CTGA", "CTCA", "CTAA"};
 const char *dpnII[]   = {"GATC",              // GATC, DpnII
@@ -150,6 +156,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz["bfaI"]    = bfaI;    // C/TAG, BfaI
     renz["aseI"]    = aseI;    // AT/TAAT, AseI
     renz["bspDI"]   = bspDI;   // AT/CGAT, BspDI
+    renz["csp6I"]   = csp6I;   // G/TAC, Csp6I
     
     renz_cnt["sbfI"]    = 1;
     renz_cnt["pstI"]    = 1;
@@ -191,7 +198,8 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["bfaI"]    = 1;
     renz_cnt["aseI"]    = 1;
     renz_cnt["bspDI"]   = 1;
-
+    renz_cnt["csp6I"]   = 1;
+    
     renz_len["sbfI"]    = 6;
     renz_len["pstI"]    = 5;
     renz_len["notI"]    = 6;
@@ -232,6 +240,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["bfaI"]    = 3;
     renz_len["aseI"]    = 4;
     renz_len["bspDI"]   = 4;
+    renz_len["csp6I"]   = 3;
 }
 
 void 

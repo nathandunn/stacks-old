@@ -60,7 +60,8 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
     // By default, sigma = 150Kb, for computational efficiency, only calculate average out to 3sigma.
     //
     #pragma omp parallel
-    { 
+    {
+        int      limit = 3 * sigma;
 	int      dist;
 	uint     pos_l, pos_u;
 	double   sum, final_weight;

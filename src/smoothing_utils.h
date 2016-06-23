@@ -26,7 +26,6 @@
 using std::vector;
 
 extern double sigma;
-int limit = 3 * sigma;
 
 double *
 calc_weights() 
@@ -38,6 +37,7 @@ calc_weights()
     // genetic statistic at position p to the region average was weighted by the Gaussian function:
     //   exp( (-1 * (p - c)^2) / (2 * sigma^2))
     //
+    int     limit   = 3 * sigma;
     double *weights = new double[limit + 1];
 
     for (int i = 0; i <= limit; i++)
@@ -50,6 +50,7 @@ template<class StatT>
 inline int
 determine_window_limits(vector<StatT *> &sites, uint center_bp, uint &pos_l, uint &pos_u)
 {
+    int limit   = 3 * sigma;
     int limit_l = center_bp - limit > 0 ? center_bp - limit : 0;
     int limit_u = center_bp + limit;
 
