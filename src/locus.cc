@@ -26,7 +26,7 @@
 uint 
 Locus::sort_bp(uint k) 
 {
-    if (this->loc.strand == plus)
+    if (this->loc.strand == strand_plus)
         return this->loc.bp + k;
     else
         return (k == 0 ? this->loc.bp - this->len + 1 : this->loc.bp - k);

@@ -155,7 +155,7 @@ Bam::next_seq()
     string chr = this->chrs[this->aln->core.tid];
 
     Seq *s = new Seq((const char *) bam1_qname(this->aln), seq.c_str(), qual.c_str(),
-		     chr.c_str(), bp, flag ? minus : plus);
+		     chr.c_str(), bp, flag ? strand_minus : strand_plus);
 
     if (cigar.size() > 0)
     	this->edit_gaps(cigar, s->seq);
@@ -202,7 +202,7 @@ Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
 	// If aligned to the negative strand, sequence has been reverse complemented and 
 	// CIGAR string should be interpreted in reverse.
 	//
-	if (orientation == plus)
+	if (orientation == strand_plus)
 	    cigar.push_back(make_pair(c, len));
 	else
 	    cigar.insert(cigar.begin(), make_pair(c, len));
@@ -235,7 +235,7 @@ Bam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool o
 	// If aligned to the negative strand, sequence has been reverse complemented and 
 	// CIGAR string should be interpreted in reverse.
 	//
-	if (orientation == plus)
+	if (orientation == strand_plus)
 	    cigar.push_back(make_pair(*q, dist));
 	else
 	    cigar.insert(cigar.begin(), make_pair(*q, dist));

@@ -351,7 +351,7 @@ map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
         loc->len = 1;
         loc->con = new char[2];
         strcpy(loc->con, rec.alleles[0].c_str());
-        loc->loc.set(rec.chrom.c_str(), (uint)rec.pos, plus);
+        loc->loc.set(rec.chrom.c_str(), (uint)rec.pos, strand_plus);
         loc->snps.push_back(new SNP());
         SNP& snp = *loc->snps.back();
         snp.col = 0;
