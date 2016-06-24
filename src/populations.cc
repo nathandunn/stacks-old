@@ -1443,9 +1443,9 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
             //   +Must occur on opposite strands
             //   +Must overlap according to the length of the cutsite.
             //
-            if (((cur->loc.strand == minus && next->loc.strand == plus) &&
+            if (((cur->loc.strand == strand_minus && next->loc.strand == strand_plus) &&
                  ((int) (cur->loc.bp  - next->loc.bp + 1) == renz_olap[enz])) ||
-                ((cur->loc.strand == plus  && next->loc.strand == minus) &&
+                ((cur->loc.strand == strand_plus  && next->loc.strand == strand_minus) &&
                  ((int) (next->loc.bp - cur->loc.bp  + 1) == renz_olap[enz]))) {
                 overlap++;
 
@@ -1815,7 +1815,7 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     //
     uint bp = sink->sort_bp();
     sink->loc.bp     = bp;
-    sink->loc.strand = plus;
+    sink->loc.strand = strand_plus;
 
     //
     // 5. Adjust the length of the sequence.
@@ -1844,7 +1844,7 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
         sink->alleles[*it] = 0;
 
     // cerr << "CSLocus " << sink->id << ":\n"
-    //   << "Length: " << sink->len << "; Chr: " << sink->loc.chr << "; BP: " << sink->sort_bp() << "; strand: " << (sink->loc.strand == plus ? "+" : "-") << "\n"
+    //   << "Length: " << sink->len << "; Chr: " << sink->loc.chr << "; BP: " << sink->sort_bp() << "; strand: " << (sink->loc.strand == strand_plus ? "+" : "-") << "\n"
     //   << "  SNPs:\n";
     // for (uint j = 0; j < sink->snps.size(); j++) 
     //  cerr << "    Col: " << sink->snps[j]->col 
@@ -5391,7 +5391,7 @@ write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                        << " ["       << samples[pmap->rev_sample_index(j)];
 
                     if (strcmp(loc->loc.chr, "un") != 0)
-                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
+                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
                     fh << "]\n"
                        << seq << "\n";
                 }
@@ -5454,7 +5454,7 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                        << "_Allele_" << 0
                        << " ["       << samples[pmap->rev_sample_index(j)];
                     if (strcmp(loc->loc.chr, "un") != 0)
-                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
+                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
                     fh << "]\n"
                        << seq << "\n";
 
@@ -5464,7 +5464,7 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                        << "_Allele_" << 1
                        << " ["       << samples[pmap->rev_sample_index(j)];
                     if (strcmp(loc->loc.chr, "un") != 0)
-                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
+                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
                     fh << "]\n"
                        << seq << "\n";
 
@@ -5481,7 +5481,7 @@ write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
                            << "_Allele_" << k
                            << " ["       << samples[pmap->rev_sample_index(j)];
                         if (strcmp(loc->loc.chr, "un") != 0)
-                            fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
+                            fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == strand_plus ? "+" : "-");
                         fh << "]\n"
                            << seq << "\n";
                     }
@@ -5583,10 +5583,10 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
             //
             // If on the negative strand, complement the alleles.
             //
-            p_allele = loc->loc.strand == minus ? reverse(sites[pos]->p_allele) : sites[pos]->p_allele;
-            q_allele = loc->loc.strand == minus ? reverse(sites[pos]->q_allele) : sites[pos]->q_allele;
+            p_allele = loc->loc.strand == strand_minus ? reverse(sites[pos]->p_allele) : sites[pos]->p_allele;
+            q_allele = loc->loc.strand == strand_minus ? reverse(sites[pos]->q_allele) : sites[pos]->q_allele;
 
-            string snp_id = to_string(loc->id) + (loc->loc.strand == minus ? "m" : "p") + to_string(col);
+            string snp_id = to_string(loc->id) + (loc->loc.strand == strand_minus ? "m" : "p") + to_string(col);
             fh << loc->loc.chr << "\t" 
                << loc->sort_bp(col) + 1 << "\t" 
                << snp_id    << "\t"
@@ -5765,10 +5765,10 @@ write_vcf(map<int, CSLocus *> &catalog,
             //
             // If on the negative strand, complement the alleles.
             //
-            p_allele = loc->loc.strand == minus ? reverse(t->nucs[col].p_allele) : t->nucs[col].p_allele;
-            q_allele = loc->loc.strand == minus ? reverse(t->nucs[col].q_allele) : t->nucs[col].q_allele;
+            p_allele = loc->loc.strand == strand_minus ? reverse(t->nucs[col].p_allele) : t->nucs[col].p_allele;
+            q_allele = loc->loc.strand == strand_minus ? reverse(t->nucs[col].q_allele) : t->nucs[col].q_allele;
 
-            string snp_id = to_string(loc->id) + (loc->loc.strand == minus ? "m" : "p") + to_string(col);
+            string snp_id = to_string(loc->id) + (loc->loc.strand == strand_minus ? "m" : "p") + to_string(col);
             fh << loc->loc.chr << "\t" 
                << loc->sort_bp(col) + 1 << "\t" 
                << snp_id << "\t" // ID

@@ -50,7 +50,7 @@ int implement_random_snp_whitelist(map<int, CSLocus *> &, PopSum<CSLocus> *, map
  * [len] Always set to 1.
  * [con] We use the reference nucleotide as the consensus.
  * [loc] Use the chromosome and position given by each record (n.b. the
- *       VCF format requires these field), and strand "plus".
+ *       VCF format requires these field), and strand "strand_plus".
  * [snps] Use the ref+alt alleles.
  *     [col] Always set to 0 (first nucleotide in the consensus).
  *     [type] "snp_type_het" if the alt field is not empty, otherwise "snp_type_hom".

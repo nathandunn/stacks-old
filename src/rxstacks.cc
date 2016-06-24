@@ -1300,7 +1300,7 @@ write_results(string file, map<int, Locus *> &m)
 	     << tag_1->id << "\t" 
              << tag_1->loc.chr << "\t"
              << tag_1->loc.bp << "\t"
-             << (tag_1->loc.strand == plus ? "+" : "-") << "\t"
+             << (tag_1->loc.strand == strand_plus ? "+" : "-") << "\t"
 	     << "consensus" << "\t" 
 	     << "\t"
 	     << "\t" 

@@ -221,7 +221,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
         //
         // Parse the physical genome location of this locus.
         //
-        c->loc.set(parts[3].c_str(), atoi(parts[4].c_str()), (parts[5] == "+" ? plus : minus));
+        c->loc.set(parts[3].c_str(), atoi(parts[4].c_str()), (parts[5] == "+" ? strand_plus : strand_minus));
 
         //
         // Parse the components of this stack (either the Illumina ID, or the catalog constituents)

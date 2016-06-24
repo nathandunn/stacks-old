@@ -507,7 +507,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 	     << tag_1->id << "\t" 
              << tag_1->loc.chr << "\t"
              << tag_1->loc.bp << "\t"
-             << (tag_1->loc.strand == plus ? "+" : "-") << "\t"
+             << (tag_1->loc.strand == strand_plus ? "+" : "-") << "\t"
 	     << "consensus\t" << "\t\t" 
 	     << tag_1->con << "\t" 
 	     << tag_1->deleveraged << "\t" 
@@ -646,7 +646,7 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
         snprintf(id, id_len - 1, "%s|%d|%s", 
 		 i->second->loc.chr, 
 		 i->second->loc.bp, 
-		 i->second->loc.strand == plus ? "+" : "-");
+		 i->second->loc.strand == strand_plus ? "+" : "-");
         locations[id].insert(i->second->id);
     }
 
