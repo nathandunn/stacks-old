@@ -79,27 +79,6 @@ enum class InputMode {stacks, vcf};
 
 const int max_snp_dist = 500;
 
-class GenPos {
-public:
-    uint     id;
-    uint     bp;
-    uint     snp_index;
-    loc_type type;
-
-    GenPos(int id, int snp_index, int bp) {
-	this->id        = id;
-	this->snp_index = snp_index;
-	this->bp        = bp;
-	this->type      = snp;
-    }
-    GenPos(int id, int snp_index, int bp, loc_type type) {
-	this->id        = id;
-	this->snp_index = snp_index;
-	this->bp        = bp;
-	this->type      = type;
-    }
-};
-
 void    help( void );
 void    version( void );
 int     parse_command_line(int, char**);
@@ -114,11 +93,9 @@ int     merge_shared_cutsite_loci(map<int, CSLocus *> &, PopMap<CSLocus> *, PopS
 phaset  merge_and_phase_loci(PopMap<CSLocus> *, CSLocus *, CSLocus *, set<int> &, ofstream &);
 int     merge_datums(int, int, Datum **, Datum **, set<string> &, int);
 int     merge_csloci(CSLocus *, CSLocus *, set<string> &);
-int     datum_adjust_snp_positions(map<int, pair<merget, int> > &, CSLocus *, Datum *, map<int, SNPRes *> &);
 int     tabulate_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int     create_genotype_map(CSLocus *, PopMap<CSLocus> *);
 int     call_population_genotypes(CSLocus *, PopMap<CSLocus> *);
-int     tally_haplotype_freq(CSLocus *, PopMap<CSLocus> *, int &, double &, string &);
 int     translate_genotypes(map<string, string> &, map<string, map<string, string> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, string> &, set<int> &); // This function doesn't exist (March 24, 2016)
 int     correct_fst_bonferroni_win(vector<PopPair *> &);
 int     bootstrap_fst_approximate_dist(vector<double> &, vector<int>  &, double *, int *, map<int, vector<double> > &); // not used (March 23, 2016)
@@ -131,9 +108,7 @@ int      calculate_haplotype_stats(map<int, CSLocus *> &, PopMap<CSLocus> *, Pop
 int      kernel_smoothed_hapstats(vector<CSLocus *> &, PopSum<CSLocus> *, int, double *);
 int      calculate_haplotype_divergence(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int      calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-double   count_haplotypes_at_locus(int, int, Datum **, map<string, double> &);
 bool     fixed_locus(Datum **, vector<int> &);
-bool     uncalled_haplotype(const char *);
 
 int      nuc_substitution_dist(map<string, int> &, double **);
 int      nuc_substitution_identity(map<string, int> &, double **);
@@ -147,38 +122,50 @@ double   amova_ssd_ag(vector<int> &, map<int, vector<int> > &, map<string, int> 
 
 double   haplotype_d_est(Datum **, LocSum **, vector<int> &);
 LocStat *haplotype_diversity(int, int, Datum **);
+double   count_haplotypes_at_locus(int, int, Datum**, map<string, double>&);
 
-int  write_sql(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int  write_fst_stats(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, ofstream &);
-int  write_generic(map<int, CSLocus *> &, PopMap<CSLocus> *, bool);
-int  write_genomic(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int  write_fasta(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int  write_strict_fasta(map<int, CSLocus *> &, PopMap<CSLocus> *);
-int  write_vcf(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<merget, int> > &);
-int  write_vcf_ordered(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, map<int, pair<merget, int> > &, ofstream &);
-int  write_vcf_haplotypes(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  populate_snp_calls(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<merget, int> > &);
-int  find_datum_allele_depths(Datum *, int, char, char, int, int &, int &);
-int  write_genepop(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  write_genepop_ordered(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, ofstream &);
-int  write_structure(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  write_structure_ordered(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *, ofstream &);
-int  write_phase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  write_fastphase(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  write_beagle(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  write_beagle_phased(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  write_plink(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  write_hzar(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  write_treemix(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  write_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
-int  write_fullseq_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
+//int  tally_ref_alleles(LocSum **, int, int, char &, char &); //unused; also commented out in the .cc
+//int  load_snp_calls(string,  PopMap<CSLocus> *); //no implementation
 
-int  tally_observed_haplotypes(vector<char *> &, int, char &, char &);
-int  tally_ref_alleles(LocSum **, int, int, char &, char &);
-int  load_snp_calls(string,  PopMap<CSLocus> *);
-
-bool compare_pop_map(pair<int, string>, pair<int, string>);
+//bool compare_pop_map(pair<int, string>, pair<int, string>); //no implementation; the function is in [sql_utilities.h]
 bool hap_compare(pair<string, int>, pair<string, int>);
-bool compare_genpos(GenPos, GenPos);
+
+inline
+bool uncalled_haplotype(const char *haplotype)
+{
+    for (const char *p = haplotype; *p != '\0'; p++)
+        if (*p == 'N' || *p == 'n')
+            return true;
+    return false;
+}
+
+inline
+double count_haplotypes_at_locus(int start, int end, Datum **d, map<string, double> &hap_cnts)
+{
+    double n = 0.0;
+
+    for (int i = start; i <= end; i++) {
+        if (d[i] == NULL) continue;
+
+        if (d[i]->obshap.size() > 2) {
+            continue;
+
+        } else if (d[i]->obshap.size() == 1) {
+            if(!uncalled_haplotype(d[i]->obshap[0])) {
+                n += 2;
+                hap_cnts[d[i]->obshap[0]] += 2;
+            }
+        } else {
+            for (uint j = 0; j < d[i]->obshap.size(); j++) {
+                if(!uncalled_haplotype(d[i]->obshap[0])) {
+                    n++;
+                    hap_cnts[d[i]->obshap[j]]++;
+                }
+            }
+        }
+    }
+
+    return n;
+}
 
 #endif // __POPULATIONS_H__

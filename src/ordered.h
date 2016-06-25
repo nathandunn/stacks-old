@@ -21,6 +21,7 @@
 #ifndef __ORDERED_H__
 #define __ORDERED_H__
 
+#include <iostream>
 #include <fstream>
 using std::ifstream;
 using std::ofstream;

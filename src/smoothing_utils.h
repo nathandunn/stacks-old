@@ -27,6 +27,7 @@ using std::vector;
 
 extern double sigma;
 
+inline
 double *
 calc_weights() 
 {

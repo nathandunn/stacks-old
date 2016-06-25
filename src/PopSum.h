@@ -38,6 +38,8 @@ using std::make_pair;
 #include <math.h>
 
 #include "stacks.h"
+#include "locus.h"
+#include "PopMap.h"
 
 extern bool   log_fst_comp;
 extern double minor_allele_freq;
