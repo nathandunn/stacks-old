@@ -9,7 +9,7 @@
 #include "PopMap.h"
 #include "PopSum.h"
 #include "ordered.h" // for "snp"
-#include "populations.h" // for "merget", "uncalled_haplotype()", "count_haplotypes_at_locus()"
+#include "populations.h" // for "merget", "InputMode", "uncalled_haplotype()", "count_haplotypes_at_locus()"
 
 using std::ofstream;
 using std::pair;
