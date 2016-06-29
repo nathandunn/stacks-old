@@ -86,7 +86,7 @@ const size_t line_buf_size = 4096;
 // (The pointee is dynamically allocated and should be deleted.)
 VcfAbstractParser* adaptive_open(const string& path);
 
-}
+} //namespace Vcf
 
 /*
  * VcfRecord
