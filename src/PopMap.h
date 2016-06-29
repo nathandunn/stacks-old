@@ -336,7 +336,6 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
      * [snps] is only used by [write_vcf()] and [write_vcf_strict()], which
      *     first call [populate_snp_calls()] then use the SNP data in the
      *     datum.
-     *     todo write_vcf (&ordered) use "snps files", see how we can handle this.
      */
 
     loc_index = 0;
@@ -348,7 +347,7 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
         const VcfRecord& rec = records[loc->id]; // n.b. assumes locus ID == record index.
 
         for (size_t s = 0; s < mpopi.samples().size(); ++s) {
-            pair<int, int> gt = rec.parse_genotype(s);
+            pair<int, int> gt = rec.parse_genotype(rec.samples.at(s));
             if (gt == pair<int,int>(-1,-1))
                 continue;
 

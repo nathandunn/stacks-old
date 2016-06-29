@@ -1,19 +1,31 @@
 #include <algorithm>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 #include "Vcf.h"
 
 using namespace std;
 
-inline void
-get_bounds(vector<char*>& bounds, char* tab1, char* tab2, char sep)
-{
-    bounds.clear();
-    bounds.push_back(tab1);
-    do {
-        bounds.push_back(strchr(bounds.back()+1, sep)); // this is last+1 if tab1==tab2
-    } while (bounds.back());
-    bounds.pop_back();
-    bounds.push_back(tab2);
+const map<string, VcfMeta> VcfMeta::predefined = {
+        {"INFO/NS", VcfMeta("INFO","<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">")},
+        {"INFO/AF", VcfMeta("INFO","<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">")},
+        {"FORMAT/GT", VcfMeta("FORMAT","<ID=GT,Number=1,Type=String,Description=\"Genotype\">")},
+        {"FORMAT/DP", VcfMeta("FORMAT","<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">")},
+        {"FORMAT/AD", VcfMeta("FORMAT","<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth\">")},
+        {"FORMAT/GL", VcfMeta("FORMAT","<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">")},
+    };
+
+void VcfHeader::init_meta(const string& fileformat) {
+    add_meta(VcfMeta("fileformat", fileformat));
+
+    time_t t;
+    time(&t);
+    stringstream ss;
+    ss << put_time(localtime(&t), "%Y%m%d");
+    add_meta(VcfMeta("fileDate",ss.str()));
+
+    add_meta(VcfMeta("source", string("\"Stacks v") + VERSION + "\""));
 }
 
 void
@@ -23,9 +35,9 @@ malformed_header(const string& path, const size_t line_no)
     throw exception();
 }
 
-VcfAbstractParser::VcfAbstractParser()
-: path_(), header_(), header_lines_(0), format_fields_to_keep_(), samples_to_keep_(),
-  line_number_(0), eol_(true), eof_(false), tabs_(), bounds_(), kept_format_fields_(),
+VcfAbstractParser::VcfAbstractParser(const string& path)
+: path_(path), header_(), samples_to_keep_(),
+  line_number_(0), eol_(true), eof_(false), tabs_(), bounds_(),
   sample_index_(-1)
 {
     memset(line_, '\0', Vcf::line_buf_size);
@@ -39,6 +51,7 @@ VcfAbstractParser::read_header()
         ++line_number_;
         if(eof_)
             malformed_header(path_, line_number_);
+
         if (line_[0] != '#')
             malformed_header(path_, line_number_);
 
@@ -61,25 +74,7 @@ VcfAbstractParser::read_header()
 
             string key = string(line_+2, equal);
             transform(key.begin(), key.end(), key.begin(), ::toupper);
-            if(key == "VERSION") {
-                header_.version(string(equal+1, end));
-            } else if(key == "FILEDATE") {
-                header_.date(string(equal+1, end));
-            } else if(key == "SOURCE") {
-                header_.source(string(equal+1, end));
-            } else if(key == "REFERENCE") {
-                header_.reference(string(equal+1, end));
-            } else if(key == "CONTIG") {
-                ; // not implemented yet
-            } else if(key == "ALT") {
-                ; // not implemented yet
-            } else if(key == "INFO") {
-                ; // not implemented yet
-            } else if(key == "FORMAT") {
-                ; // not implemented yet
-            } else {
-                ; // not implemented yet ; skip or map<key,string>
-            }
+            header_.add_meta(VcfMeta(key, string(equal+1, end)));
 
             continue;
         }
@@ -153,88 +148,21 @@ VcfAbstractParser::read_header()
             malformed_header(path_, line_number_);
     }
 
-    header_lines_ = line_number_;
     return;
 }
 
-inline void
-VcfAbstractParser::read_to_eol()
-{
-    while(!eol_) {
-        getline(line_, Vcf::line_buf_size);
-        if(eof_) {
-            cerr << "Error: VCF file " << path_ << " does not end with a newline.\n";
-            throw exception();
-        }
-        tabs_.clear();
-        tabs_.push_back(line_+strlen(line_));
-        check_eol();
-    }
-}
-
-inline void
-VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2)
-{
-    if(tab2 == tab1+1)
-        cerr << "Warning: malformed VCF record line (empty SAMPLE field should be marked by a dot)."
-             << " Line " << line_number_ << " in file " << path_ << "'.\n";
-
-    if (samples_to_keep_.empty() || samples_to_keep_.at(sample_index_)) {
-        record.samples.push_back(vector<string>());
-        vector<string>& sample = record.samples.back();
-        get_bounds(bounds_, tab1, tab2, ':');
-        if(bounds_.size()-1 > kept_format_fields_.size()) {
-            // n.b. kept_format_fields_.size() is the total number of format fields
-            // for this record, whereas record.format.size() is the number of fields
-            // that were retained.
-            cerr << "Error: malformed VCF genotype : '" << string(tab1+1, tab2)
-                 << "' (at most " << kept_format_fields_.size() << " subfields exepcted)."
-                 << " Line " << line_number_ << " in file " << path_ << "'.\n";
-            throw exception ();
-        }
-        for(size_t i = 0; i<bounds_.size()-1; ++i)
-            if(kept_format_fields_[i])
-                sample.push_back(string(bounds_[i]+1, bounds_.at(i+1)));
-
-        if(sample.size() < record.format.size()) {
-            while(sample.size() < record.format.size())
-                sample.push_back(string()); // We add missing values for the remaining subfields.
-        }
-    }
-    ++sample_index_;
-}
-
-bool
-VcfParser::open(const string& path)
-{
-    file_.exceptions(ifstream::badbit);
-
-    file_.open(path);
-    if(file_.fail()) {
-        return false;
-    }
-
-    read_header();
-    return true;
-}
-
 #ifdef HAVE_LIBZ
-bool
-VcfGzParser::open(const string& path)
+VcfGzParser::VcfGzParser(const string& path)
+: VcfAbstractParser(path), file_(NULL)
 {
-    file_ = gzopen(path.c_str(), "rb");
-    if(!file_) {
-        return false;
-    }
+    file_ = gzopen(path_.c_str(), "rb");
 #if ZLIB_VERNUM >= 0x1240
     gzbuffer(file_, libz_buffer_size);
 #endif
-
-    read_header();
-    return true;
 }
 
-void VcfAbstractParser::samples_to_keep(const set<string>& samples) {
+void
+VcfAbstractParser::samples_to_keep(const set<string>& samples) {
     samples_to_keep_.clear();
     samples_to_keep_.reserve(header_.samples().size());
     for (vector<string>::const_iterator
@@ -244,34 +172,23 @@ void VcfAbstractParser::samples_to_keep(const set<string>& samples) {
         samples_to_keep_.push_back(bool(samples.count(*s)));
 }
 
-inline void
-VcfGzParser::check_eol()
-{
-    if(*(tabs_.back()-1) == '\n') { // n.b. safe; gzgets never returns a null string
-        eol_ = true;
-        tabs_.back() = tabs_.back()-1;
-        *tabs_.back() = '\0';
-    } else {
-        eol_= false;
-    }
-}
-#endif
+#endif // HAVE_LIBZ
 
 VcfAbstractParser*
 Vcf::adaptive_open(const string& path)
 {
     VcfAbstractParser* parser = NULL;
     if (path.length() >= 4 && path.substr(path.length()-4) == ".vcf") {
-        parser = new VcfParser();
-        if (not parser->open(path)) {
+        parser = new VcfParser(path);
+        if (parser->fail()) {
             // Opening failed
             delete parser;
             parser = NULL;
         }
 #ifdef HAVE_LIBZ
     } else if (path.length() >= 7 && path.substr(path.length()-7) == ".vcf.gz") {
-        parser = new VcfGzParser();
-        if (not parser->open(path)) {
+        parser = new VcfGzParser(path);
+        if (parser->fail()) {
             delete parser;
             parser = NULL;
         }
@@ -431,19 +348,8 @@ VcfAbstractParser::next_record(VcfRecord& record)
                     << " Line " << line_number_ << " in file '" << path_ << "'.\n";
 
         get_bounds(bounds_, tabs_[Vcf::format-1], tabs_[Vcf::format],':');
-        kept_format_fields_.clear();
-        for(size_t i = 0; i < bounds_.size()-1; ++i ) {
-            string format = string(bounds_.at(i)+1, bounds_.at(i+1));
-            if(format_fields_to_keep_.empty() || format_fields_to_keep_.count(format)) {
-                kept_format_fields_.push_back(true);
-                record.format.push_back(format);
-            } else {
-                kept_format_fields_.push_back(false);
-            }
-        }
-        if(record.format[Vcf::gt_subfield] == "GT")
-            // There are genotypes for this record.
-            record.no_gt = false;
+        for(size_t i = 0; i < bounds_.size()-1; ++i )
+            record.format.push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
 
         // SAMPLES
         sample_index_ = 0;
@@ -494,4 +400,97 @@ VcfAbstractParser::next_record(VcfRecord& record)
     }
 
     return true;
+}
+
+void VcfWriter::write_header(const VcfHeader& header) {
+    for(const VcfMeta& m : header.meta())
+        file_ << "##" << m.key() << "=" << m.value() << "\n";
+
+    file_ << Vcf::base_header;
+    if(not header.samples().empty())
+        file_ << "\tFORMAT";
+    for(const string& s : header.samples())
+        file_ << "\t" << s;
+    file_ << "\n";
+}
+
+void VcfWriter::write_record(const VcfRecord& r, const VcfHeader& h) {
+
+    if (r.type != Vcf::RType::expl)
+        // This is not implemented.
+        throw exception();
+
+    file_ << r.chrom
+          << "\t" << r.pos
+          << "\t" << (r.id.empty() ? "." : r.id)
+          << "\t" << r.alleles.at(0);
+
+    //ALT
+    file_ << "\t";
+    if (r.alleles.size() == 1) {
+        file_ << ".";
+    } else {
+        auto allele = r.alleles.begin()+1;
+        file_ << *allele;
+        ++allele;
+        while(allele != r.alleles.end()) {
+            file_ << "," << *allele;
+            ++allele;
+        }
+    }
+
+    file_ << "\t" << (r.qual.empty() ? "." : r.qual);
+
+    //FILTER
+    file_ << "\t";
+    if (r.filter.empty()) {
+        file_ << "\t.";
+    } else {
+        auto filter = r.filter.begin();
+        file_ << *filter;
+        ++filter;
+        while(filter != r.filter.end()) {
+            file_ << ";" << *filter;
+            ++filter;
+        }
+    }
+
+    //INFO
+    file_ << "\t";
+    if (r.info.empty()) {
+        file_ << ".";
+    } else {
+        auto i = r.info.begin();
+        file_ << i->first << "=" << i->second;
+        ++i;
+        while(i != r.info.end()) {
+            file_ << ";" << i->first << "=" << i->second;
+            ++i;
+        }
+    }
+
+    if (not h.samples().empty()) {
+        //FORMAT
+        file_ << "\t";
+        if (r.format.empty()) {
+            file_ << ".";
+        } else {
+            auto f = r.format.begin();
+            file_ << *f;
+            ++f;
+            while(f != r.format.end()) {
+                file_ << ":" << *f;
+                ++f;
+            }
+        }
+
+        //SAMPLES
+        if (r.samples.size() != h.samples().size())
+            throw exception();
+
+        for (const string& s : r.samples)
+            file_ << "\t" << s;
+    }
+
+    file_ << "\n";
 }

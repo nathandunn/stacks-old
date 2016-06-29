@@ -8,6 +8,7 @@
 
 using namespace std;
 
+extern InputMode input_mode;
 extern int batch_id;
 extern string in_path;
 extern string out_path;
@@ -266,11 +267,13 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
         exit(1);
     }
 
-    //
-    // Load SNP data so that model likelihoods can be output to VCF file.
-    //
-    cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
-    populate_snp_calls(catalog, pmap, merge_map);
+    bool gl = false; // Whether to include the GL genotype subfield.
+    if (input_mode == InputMode::stacks) {
+        gl=true;
+        // Load SNP data so that model likelihoods can be output to VCF file.
+        cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
+        populate_snp_calls(catalog, pmap, merge_map);
+    }
 
     //
     // Obtain the current date.
@@ -344,7 +347,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
                << "PASS" << "\t" // FILTER
                << "NS=" << sites[pos]->num_indv
                << ";AF=" << freq_ref << "," << freq_alt << "\t" // INFO
-               << "GT:DP:AD:GL"; // FORMAT
+               << (gl ? "GT:DP:AD:GL" : "GT:DP:AD"); // FORMAT
 
             for (int j = 0; j < pmap->sample_cnt(); j++) {
                 fh << "\t";
@@ -372,18 +375,22 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
 
                         if (allele2 == 0) {
                             // homozygote
-                            if (allele1 == ref)
-                                fh << "0/0:" << d[j]->tot_depth
-                                   << ":" << dp1 << "," << (dp2)
-                                   << ":" << - d[j]->snps[snp_index]->lratio << ",.,.";
-                            else // allele1 == alt
-                                fh << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1
-                                   << ":" << ":.,.," << - d[j]->snps[snp_index]->lratio;
+                            if (allele1 == ref) {
+                                fh << "0/0:" << d[j]->tot_depth << ":" << dp1 << "," << dp2;
+                                if (gl)
+                                    fh << ":" << - d[j]->snps[snp_index]->lratio << ",.,.";
+                            }
+                            else { // allele1 == alt
+                                fh << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1;
+                                if (gl)
+                                    fh << ":" << ":.,.," << - d[j]->snps[snp_index]->lratio;
+                            }
                         } else {
                             // heterozygote
                             fh << "0/1:" << d[j]->tot_depth
-                               << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1)
-                               << ":.," << d[j]->snps[snp_index]->lratio << ",.";
+                               << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1);
+                            if (gl)
+                                fh << ":.," << d[j]->snps[snp_index]->lratio << ",.";
                         }
                     }
                 }
@@ -404,22 +411,28 @@ write_vcf(map<int, CSLocus *> &catalog,
     //
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
     //
+
     string file = out_path + out_prefix + ".vcf";
-    ofstream fh(file.c_str(), ofstream::out);
-    if (fh.fail()) {
+    cerr << "Writing population data to VCF file '" << file << "'\n";
+    VcfWriter writer (out_path + out_prefix + ".tmp.vcf");
+    if (writer.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
-        exit(1);
+        exit(-1);
+    }
+
+    bool gl = false; // Whether to include the GL genotype subfield.
+    if (input_mode == InputMode::stacks) {
+        gl=true;
+        // Load SNP data so that model likelihoods can be output to VCF file.
+        cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
+        populate_snp_calls(catalog, pmap, merge_map);
     }
 
     //
-    // Load SNP data so that model likelihoods can be output to VCF file.
+    // Output the header.
     //
-    cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
-    populate_snp_calls(catalog, pmap, merge_map);
 
-    //
     // Obtain the current date.
-    //
     time_t     rawtime;
     struct tm *timeinfo;
     char       date[32];
@@ -427,26 +440,18 @@ write_vcf(map<int, CSLocus *> &catalog,
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%Y%m%d", timeinfo);
 
-    cerr << "Writing population data to VCF file '" << file << "'\n";
-
-    //
-    // Output the header.
-    //
-    fh << "##fileformat=VCFv4.0\n"
-       << "##fileDate=" << date << "\n"
-       << "##source=\"Stacks v" << VERSION << "\"\n"
-       << "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n"
-       << "##INFO=<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">\n"
-       << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
-       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
-       << "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth\">\n"
-       << "##FORMAT=<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">\n"
-       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t"
-       << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
-
-    for (int i = 0; i < pmap->sample_cnt(); i++)
-        fh << "\t" << samples[pmap->rev_sample_index(i)];
-    fh << "\n";
+    VcfHeader header;
+    header.init_meta();
+    header.add_meta(VcfMeta::predefined.at("INFO/NS"));
+    header.add_meta(VcfMeta::predefined.at("INFO/AF"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/GT"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/DP"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/AD"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/GL"));
+    for(auto& s : samples) {
+        header.add_sample(s.second);
+    }
+    writer.write_header(header);
 
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus *loc;
@@ -478,7 +483,6 @@ write_vcf(map<int, CSLocus *> &catalog,
 
             if (snp_index < 0) {
                 cerr << "Warning: unable to locate SNP call in column " << col << " for locus #" << loc->id << "\n";
-                fh << "ERROR: BAD_SNP_COLUMN\n";
                 continue;
             }
 
@@ -487,58 +491,72 @@ write_vcf(map<int, CSLocus *> &catalog,
             char freq_ref[32], freq_alt[32];
             sprintf(freq_ref, "%0.3f", t->nucs[col].p_freq);
             sprintf(freq_alt, "%0.3f", 1 - t->nucs[col].p_freq);
-            fh << loc->loc.chr << "\t"
-               << loc->sort_bp(col) + 1 << "\t"
-               << to_string(loc->id) + "_" + to_string(col) << "\t" // ID
-               << (loc->loc.strand == strand_plus ? ref : reverse(ref)) << "\t" // REFerence allele
-               << (loc->loc.strand == strand_plus ? alt : reverse(alt)) << "\t" // ALTernate allele
-               << "." << "\t" // QUAL
-               << "PASS" << "\t" // FILTER
-               << "NS=" << t->nucs[col].num_indv // INFO
-               << ";AF="      << freq_ref << "," << freq_alt << "\t" // INFO
-               << "GT:DP:AD:GL"; // FORMAT
+
+            VcfRecord rec;
+            rec.type = Vcf::RType::expl;
+            rec.chrom = loc->loc.chr;
+            rec.pos = loc->sort_bp(col) + 1;
+            rec.id = to_string(loc->id) + "_" + to_string(col);
+            rec.alleles.push_back(string(1, loc->loc.strand == strand_plus ? ref : reverse(ref)));
+            rec.alleles.push_back(string(1, loc->loc.strand == strand_plus ? alt : reverse(alt)));
+            rec.qual = ".";
+            rec.filter.push_back("PASS");
+            rec.info.push_back({"NS",to_string(t->nucs[col].num_indv)});
+            rec.info.push_back({"AF",string(freq_ref) + "," + freq_alt});
+            rec.format.push_back("GT");
+            rec.format.push_back("DP");
+            rec.format.push_back("AD");
+            if (gl)
+                rec.format.push_back("GL");
 
             for (int j = 0; j < pmap->sample_cnt(); j++) {
-                fh << "\t";
+                stringstream sample;
 
                 if (d[j] == NULL || col >= uint(d[j]->len)) {
                     // Data does not exist.
-                    fh << "./.:0:.,.:.,.,.";
+                    sample << "./.:0:.,.:.,.,.";
                 } else if (d[j]->model[col] == 'U') {
                     // Data exists, but the model call was uncertain.
-                    fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
+                    sample << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
                 } else {
                     char allele1, allele2;
                     tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, allele1, allele2);
 
                     if (allele1 == 0) {
                         // More than two alleles in this sample
-                        fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
+                        sample << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
                     } else {
+                        // Write the genotype
+
                         int dp1, dp2;
                         find_datum_allele_depths(d[j], snp_index, allele1, allele2, dp1, dp2);
 
                         if (allele2 == 0) {
                             // homozygote
-                            if (allele1 == ref)
-                                fh << "0/0:" << d[j]->tot_depth << ":" << dp1 << "," << dp2
-                                   << ":" << - d[j]->snps[snp_index]->lratio << ",.,.";
-                            else // allele1 == alt
-                                fh << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1
-                                   << ":" << ":.,.," << - d[j]->snps[snp_index]->lratio;
+                            if (allele1 == ref) {
+                                sample << "0/0:" << d[j]->tot_depth << ":" << dp1 << "," << dp2;
+                                if (gl)
+                                    sample << ":" << - d[j]->snps[snp_index]->lratio << ",.,.";
+                            } else {
+                                sample << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1;
+                                if (gl)
+                                    sample << ":" << ":.,.," << - d[j]->snps[snp_index]->lratio;
+                            }
                         } else {
                             // heterozygote
-                            fh << "0/1:" << d[j]->tot_depth
-                               << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1)
-                               << ":.," << d[j]->snps[snp_index]->lratio << ",.";
+                            sample << "0/1:" << d[j]->tot_depth
+                               << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1);
+                            if (gl) {
+                                sample << ":.," << - d[j]->snps[snp_index]->lratio << ",.";
+                            }
                         }
                     }
                 }
+                rec.samples.push_back(sample.str());
             }
-            fh << "\n";
+            writer.write_record(rec, header);
         }
     }
-    fh.close();
 
     return 0;
 }
