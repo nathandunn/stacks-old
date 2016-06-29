@@ -19,18 +19,13 @@ extern string enz;
 
 extern map<string, int> renz_olap;
 
+//extern MetaPopInfo mpopi;
 //extern vector<pair<int, string> > files;
 extern vector<int> sample_ids;
 extern map<int, string> samples;
 //extern map<int, string> pop_key, grp_key;
 extern map<int, pair<int, int> > pop_indexes;
 //extern map<int, vector<int> > grp_members;
-
-inline
-bool
-compare_genpos(GenPos a, GenPos b) {
-    return (a.bp < b.bp);
-}
 
 int 
 write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) 
@@ -275,7 +270,6 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     // Load SNP data so that model likelihoods can be output to VCF file.
     //
     cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
-
     populate_snp_calls(catalog, pmap, merge_map);
 
     //
@@ -312,14 +306,8 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus *loc;
     Datum  **d;
-    int      gt_1, gt_2, dp_1, dp_2;
-    char     p_allele, q_allele, p_str[32], q_str[32];
-    uint16_t col;
-    int      snp_index;
 
-    //
     // We need to order the SNPs taking into account overlapping loci.
-    //
     OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
@@ -332,82 +320,70 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
                 continue;
             }
             loc = catalog[sites[pos]->loc_id];
-            col = sites[pos]->col;
+            uint16_t col = sites[pos]->col;
+            int snp_index = loc->snp_index(col);
+            d = pmap->locus(loc->id);
 
-            sprintf(p_str, "%0.3f", sites[pos]->p_freq);
-            sprintf(q_str, "%0.3f", 1 - sites[pos]->p_freq);
-
-            //
-            // If on the negative strand, complement the alleles.
-            //
-            p_allele = loc->loc.strand == strand_minus ? reverse(sites[pos]->p_allele) : sites[pos]->p_allele;
-            q_allele = loc->loc.strand == strand_minus ? reverse(sites[pos]->q_allele) : sites[pos]->q_allele;
-
-            string snp_id = to_string(loc->id) + (loc->loc.strand == strand_minus ? "m" : "p") + to_string(col);
-            fh << loc->loc.chr << "\t" 
-               << loc->sort_bp(col) + 1 << "\t" 
-               << snp_id    << "\t"
-               << p_allele   << "\t"            // REFerence allele
-               << q_allele   << "\t"            // ALTernate allele
-               << "."        << "\t"            // QUAL
-               << "PASS"     << "\t"            // FILTER
-               << "NS="      << sites[pos]->num_indv << ";"   // INFO
-               << "AF="      << p_str << "," << q_str << "\t" // INFO
-               << "GT:DP:AD:GL";                // FORMAT
-
-            snp_index = loc->snp_index(col);
             if (snp_index < 0) {
                 cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
-                fh << "\n";
+                fh << "ERROR: BAD_SNP_COLUMN (" << loc->id << ":" << col << ")\n";
                 continue;
             }
 
-            d = pmap->locus(loc->id);
+            const char ref = sites[pos]->p_allele;
+            const char alt = sites[pos]->q_allele;
+            char freq_ref[32], freq_alt[32];
+            sprintf(freq_ref, "%0.3f", sites[pos]->p_freq);
+            sprintf(freq_alt, "%0.3f", 1 - sites[pos]->p_freq);
+            fh << loc->loc.chr << "\t" 
+               << loc->sort_bp(col) + 1 << "\t" 
+               << to_string(loc->id) + "_" + to_string(col) << "\t" // ID
+               << (loc->loc.strand == strand_plus ? ref : reverse(ref)) << "\t" // REFerence allele
+               << (loc->loc.strand == strand_plus ? alt : reverse(alt)) << "\t" // ALTernate allele
+               << "." << "\t" // QUAL
+               << "PASS" << "\t" // FILTER
+               << "NS=" << sites[pos]->num_indv
+               << ";AF=" << freq_ref << "," << freq_alt << "\t" // INFO
+               << "GT:DP:AD:GL"; // FORMAT
 
             for (int j = 0; j < pmap->sample_cnt(); j++) {
                 fh << "\t";
 
                 if (d[j] == NULL || col >= d[j]->len) {
-                    //
                     // Data does not exist.
-                    //
                     fh << "./.:0:.,.:.,.,.";
                 } else if (d[j]->model[col] == 'U') {
-                    //
                     // Data exists, but the model call was uncertain.
-                    //
                     fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
                 } else {
-                    //
-                    // Tally up the nucleotide calls.
-                    //
-                    tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
+                    char allele1, allele2;
+                    tally_observed_haplotypes(d[j]->obshap, snp_index, allele1, allele2);
 
-                    if (p_allele == 0 && q_allele == 0) {
-                        // More than two potential alleles.
+                    if (allele1 == 0) {
+                        // More than two alleles in this sample
                         fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
                     } else {
-                        find_datum_allele_depths(d[j], snp_index, sites[pos]->p_allele, sites[pos]->q_allele, p_allele+q_allele, dp_1, dp_2);
+                        int dp1, dp2;
+                        find_datum_allele_depths(d[j], snp_index, allele1, allele2, dp1, dp2);
 
-                        if (p_allele == 0) {
-                            gt_1 = q_allele == sites[pos]->p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
-                        } else if (q_allele == 0) {
-                            gt_1 = p_allele == sites[pos]->p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
-                        } else {
-                            gt_1 = p_allele == sites[pos]->p_allele ? 0 : 1;
-                            gt_2 = q_allele == sites[pos]->p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_2 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
-                        }
-                        //
-                        // Output the likelihood for this model call.
-                        //
-                        if (col < d[j]->snps.size()) {
-                            fh << ":.," << d[j]->snps[col]->lratio << ",.";
-                        } else {
+                        bool likelihood = col < d[j]->snps.size();
+                        if(!likelihood)
                             cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
-                            fh << ":.,.,.";
+
+                        if (allele2 == 0) {
+                            // homozygote
+                            if (allele1 == ref)
+                                fh << "0/0:" << d[j]->tot_depth
+                                   << ":" << dp1 << "," << (dp2)
+                                   << ":" << - d[j]->snps[snp_index]->lratio << ",.,.";
+                            else // allele1 == alt
+                                fh << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1
+                                   << ":" << ":.,.," << - d[j]->snps[snp_index]->lratio;
+                        } else {
+                            // heterozygote
+                            fh << "0/1:" << d[j]->tot_depth
+                               << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1)
+                               << ":.," << d[j]->snps[snp_index]->lratio << ",.";
                         }
                     }
                 }
@@ -425,29 +401,20 @@ write_vcf(map<int, CSLocus *> &catalog,
           PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
           map<int, pair<merget, int> > &merge_map) 
 {
-    // xxx The three [write_vcf()] functions need attention.
-    // - Their use of the 'snps' Stacks files makes it impossible to write VCF in VCF mode.
-    // - [write_vcf_haplotypes] treats [Datum::obshap] as ordered.
-    // - Genotype log-likelihoods should be negative and "L(0/0),L(0/1),L(1/1)" rather than always ".,L(obs),.".
-    // - Genotypes "1/0" should preferably be written "0/1".
-    // See also my orphan commit 0f3c697993b4.
-    // --Nick.
     //
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
     //
     string file = out_path + out_prefix + ".vcf";
-
     ofstream fh(file.c_str(), ofstream::out);
-
     if (fh.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
         exit(1);
     }
 
-    cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
     //
     // Load SNP data so that model likelihoods can be output to VCF file.
     //
+    cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
     populate_snp_calls(catalog, pmap, merge_map);
 
     //
@@ -474,122 +441,96 @@ write_vcf(map<int, CSLocus *> &catalog,
        << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
        << "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth\">\n"
        << "##FORMAT=<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">\n"
-       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
+       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t"
        << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
 
     for (int i = 0; i < pmap->sample_cnt(); i++)
         fh << "\t" << samples[pmap->rev_sample_index(i)];
-    fh << "\n";    
+    fh << "\n";
 
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus *loc;
     Datum   **d;
     LocTally *t;
-    int       gt_1, gt_2, dp_1, dp_2;
-    double    num_indv;
-    char      p_allele, q_allele, p_str[32], q_str[32];
-    int       snp_index;
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
 
-        //
         // We need to order the SNPs so negative and positive strand SNPs are properly ordered.
-        //
         vector<GenPos> ordered_loci;
-        uint           col;
         for (uint pos = 0; pos < it->second.size(); pos++) {
             loc = it->second[pos];
             t   = psum->locus_tally(loc->id);
 
             for (uint i = 0; i < loc->snps.size(); i++) {
-                col = loc->snps[i]->col;
+                uint16_t col = loc->snps[i]->col;
                 if (t->nucs[col].allele_cnt == 2)
                     ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
             }
         }
-        sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
+        sort(ordered_loci.begin(), ordered_loci.end());
 
         for (uint pos = 0; pos < ordered_loci.size(); pos++) {
             loc = catalog[ordered_loci[pos].id];
-            col = loc->snps[ordered_loci[pos].snp_index]->col;
+            uint16_t col = loc->snps[ordered_loci[pos].snp_index]->col;
+            int snp_index = loc->snp_index(col);
             t   = psum->locus_tally(loc->id);
+            d = pmap->locus(loc->id);
 
-            num_indv = (double) t->nucs[col].num_indv;
-
-            sprintf(p_str, "%0.3f", t->nucs[col].p_freq);
-            sprintf(q_str, "%0.3f", 1 - t->nucs[col].p_freq);
-
-            //
-            // If on the negative strand, complement the alleles.
-            //
-            p_allele = loc->loc.strand == strand_minus ? reverse(t->nucs[col].p_allele) : t->nucs[col].p_allele;
-            q_allele = loc->loc.strand == strand_minus ? reverse(t->nucs[col].q_allele) : t->nucs[col].q_allele;
-
-            string snp_id = to_string(loc->id) + (loc->loc.strand == strand_minus ? "m" : "p") + to_string(col);
-            fh << loc->loc.chr << "\t" 
-               << loc->sort_bp(col) + 1 << "\t" 
-               << snp_id << "\t" // ID
-               << p_allele << "\t"              // REFerence allele
-               << q_allele << "\t"              // ALTernate allele
-               << "."        << "\t"            // QUAL
-               << "PASS"     << "\t"            // FILTER
-               << "NS="      << num_indv << ";" // INFO
-               << "AF="      << p_str << "," << q_str << "\t" // INFO
-               << "GT:DP:AD:GL";                // FORMAT
-
-            snp_index = loc->snp_index(col);
             if (snp_index < 0) {
-                cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
-                fh << "\n";
+                cerr << "Warning: unable to locate SNP call in column " << col << " for locus #" << loc->id << "\n";
+                fh << "ERROR: BAD_SNP_COLUMN\n";
                 continue;
             }
 
-            d = pmap->locus(loc->id);
+            const char ref = t->nucs[col].p_allele;
+            const char alt = t->nucs[col].q_allele;
+            char freq_ref[32], freq_alt[32];
+            sprintf(freq_ref, "%0.3f", t->nucs[col].p_freq);
+            sprintf(freq_alt, "%0.3f", 1 - t->nucs[col].p_freq);
+            fh << loc->loc.chr << "\t"
+               << loc->sort_bp(col) + 1 << "\t"
+               << to_string(loc->id) + "_" + to_string(col) << "\t" // ID
+               << (loc->loc.strand == strand_plus ? ref : reverse(ref)) << "\t" // REFerence allele
+               << (loc->loc.strand == strand_plus ? alt : reverse(alt)) << "\t" // ALTernate allele
+               << "." << "\t" // QUAL
+               << "PASS" << "\t" // FILTER
+               << "NS=" << t->nucs[col].num_indv // INFO
+               << ";AF="      << freq_ref << "," << freq_alt << "\t" // INFO
+               << "GT:DP:AD:GL"; // FORMAT
 
             for (int j = 0; j < pmap->sample_cnt(); j++) {
                 fh << "\t";
 
                 if (d[j] == NULL || col >= uint(d[j]->len)) {
-                    //
                     // Data does not exist.
-                    //
                     fh << "./.:0:.,.:.,.,.";
                 } else if (d[j]->model[col] == 'U') {
-                    //
                     // Data exists, but the model call was uncertain.
-                    //
                     fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
                 } else {
-                    //
-                    // Tally up the nucleotide calls.
-                    //
-                    tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
+                    char allele1, allele2;
+                    tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, allele1, allele2);
 
-                    if (p_allele == 0 && q_allele == 0) {
-                        // More than two potential alleles.
+                    if (allele1 == 0) {
+                        // More than two alleles in this sample
                         fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
                     } else {
-                        find_datum_allele_depths(d[j], snp_index, t->nucs[col].p_allele, t->nucs[col].q_allele, p_allele+q_allele, dp_1, dp_2);
+                        int dp1, dp2;
+                        find_datum_allele_depths(d[j], snp_index, allele1, allele2, dp1, dp2);
 
-                        if (p_allele == 0) {
-                            gt_1 = q_allele == t->nucs[col].p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
-                        } else if (q_allele == 0) {
-                            gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
+                        if (allele2 == 0) {
+                            // homozygote
+                            if (allele1 == ref)
+                                fh << "0/0:" << d[j]->tot_depth << ":" << dp1 << "," << dp2
+                                   << ":" << - d[j]->snps[snp_index]->lratio << ",.,.";
+                            else // allele1 == alt
+                                fh << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1
+                                   << ":" << ":.,.," << - d[j]->snps[snp_index]->lratio;
                         } else {
-                            gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
-                            gt_2 = q_allele == t->nucs[col].p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_2 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
-                        }
-                        //
-                        // Output the likelihood measure for this model call.
-                        //
-                        if (snp_index >= 0) {
-                            fh << ":.," << d[j]->snps[snp_index]->lratio << ",.";
-                        } else {
-                            cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
-                            fh << ":.,.,.";
+                            // heterozygote
+                            fh << "0/1:" << d[j]->tot_depth
+                               << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1)
+                               << ":.," << d[j]->snps[snp_index]->lratio << ",.";
                         }
                     }
                 }
@@ -609,7 +550,9 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
 {
     //
     // Write a VCF file as defined here: http://samtools.github.io/hts-specs/
+    //XXX Datum::obshap *is not* ordered, I think. See Bitbucket. @Nick (June 2016)
     //
+
     string file = out_path + out_prefix + ".haplotypes.vcf";
 
     cerr << "Writing population data haplotypes to VCF file '" << file << "'\n";
@@ -712,35 +655,38 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
                 fh << "\t";
 
                 if (d[j] == NULL) {
-                    //
                     // Data does not exist.
-                    //
                     fh << "./.:0";
-
                 } else if (d[j]->obshap.size() > 2) { 
+                    // More than two alleles in this sample
                     fh << "./.:" << d[j]->tot_depth;
-
                 } else if (d[j]->obshap.size() == 1) {
-                    if(uncalled_haplotype(d[j]->obshap[0]))
-                        fh << "./.:" << d[j]->tot_depth;
+                    // Homozygote.
+                    char* h = d[j]->obshap[0];
+                    int i = uncalled_haplotype(h) ? -1 : hap_index.at(h);
+                    if(i >= 0)
+                        fh << i << "/" << i << ":" << d[j]->tot_depth;
                     else
-                        fh << hap_index[d[j]->obshap[0]] << "/" << hap_index[d[j]->obshap[0]] << ":" << d[j]->tot_depth;
+                        fh << "./.:" << d[j]->tot_depth;
                 } else {
-                    if(!uncalled_haplotype(d[j]->obshap[0]) &&
-                       !uncalled_haplotype(d[j]->obshap[1]))
-                        fh << hap_index[d[j]->obshap[0]] << "/" << hap_index[d[j]->obshap[1]] << ":" << d[j]->tot_depth;
-                    else if (!uncalled_haplotype(d[j]->obshap[0]))
-                        fh << hap_index[d[j]->obshap[0]] << "/" << "." << ":" << d[j]->tot_depth;
-                    else if (!uncalled_haplotype(d[j]->obshap[1]))
-                        fh << "." << "/" << hap_index[d[j]->obshap[1]] << ":" << d[j]->tot_depth;
+                    // Heterozygote.
+                    // rem. Can only some (i.e. not none or all) haplotypes in a Datum be uncalled ? @Nick (June 2016)
+                    char* h1 = d[j]->obshap[0];
+                    char* h2 = d[j]->obshap[1];
+                    int i1 = uncalled_haplotype(h1) ? -1 : hap_index.at(h1);
+                    int i2 = uncalled_haplotype(h2) ? -1 : hap_index.at(h2);
+                    if(i1 >= 0 && i2 >= 0)
+                        fh << (i1 < i2 ? i1 : i2) << "/" << (i1 < i2 ? i2 : i1) << ":" << d[j]->tot_depth;
+                    else if (i1 >= 0)
+                        fh << i1 << "/.:" << d[j]->tot_depth;
+                    else if (i2 >= 0)
+                        fh << i2 << "/.:" << d[j]->tot_depth;
                 }
             }
             fh << "\n";
         }
     }
-
     fh.close();
-
     return 0;
 }
 
@@ -1688,7 +1634,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
                     ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
             }
         }
-        sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
+        sort(ordered_loci.begin(), ordered_loci.end());
 
         //
         // Output the position of each site according to its basepair.
@@ -1903,7 +1849,7 @@ write_phase(map<int, CSLocus *> &catalog,
                     ordered_loci.push_back(GenPos(loc->id, 0, loc->sort_bp(col), snp));
             }
         }
-        sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
+        sort(ordered_loci.begin(), ordered_loci.end());
 
         //
         // Output the total number of SNP sites and the number of individuals.
@@ -2329,7 +2275,7 @@ write_beagle(map<int, CSLocus *> &catalog,
                     ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
             }
         }
-        sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
+        sort(ordered_loci.begin(), ordered_loci.end());
 
         //
         // Now output the genotypes in a separate file for each population.
@@ -2551,7 +2497,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
                 }
             }
         }
-        sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
+        sort(ordered_loci.begin(), ordered_loci.end());
 
         //
         // Now output the genotypes in a separate file for each population.
@@ -3218,53 +3164,24 @@ populate_snp_calls(map<int, CSLocus *> &catalog,
     return 0;
 }
 
+/*
+ * Calculate the SNP-wise allelic depths by adding up the haplotype depths.
+ */
 int
-find_datum_allele_depths(Datum *d, int snp_index, char p_allele, char q_allele, int allele_cnt, int &dp_1, int &dp_2)
+find_datum_allele_depths(Datum *d, int snp_index, char allele1, char allele2, int &dp1, int &dp2)
 {
-    dp_1 = 0;
-    dp_2 = 0;
+    dp1 = 0;
+    dp2 = 0;
 
-    if (allele_cnt == 1) {
-
-        //
-        // There is a single observed haplotype for this locus, e.g. GA.
-        //
-        if (d->obshap.size() == 1) {
-            if (d->obshap[0][snp_index] == p_allele) {
-                dp_1 = d->depth[0];
-                dp_2 = 0;
-            } else {
-                dp_1 = 0;
-                dp_2 = d->depth[0];
-            }
-        } else {
-            //
-            // This SNP position is homozygous, but the locus is heterozygous, so there is more
-            // than one observed haplotype, e.g. GA / TA.
-            //
-            if (d->obshap[0][snp_index] == p_allele) {
-                dp_1 = d->tot_depth;
-                dp_2 = 0;
-            } else  {
-                dp_1 = 0;
-                dp_2 = d->tot_depth;
-            }
-        }
-
-    } else {
-        //
-        // This SNP position is heterozygous.
-        //
-        for (uint i = 0; i < d->obshap.size(); i++) {
-            if (d->obshap[i][snp_index] == p_allele)
-                dp_1 = d->depth[i];
-            else if (d->obshap[i][snp_index] == q_allele)
-                dp_2 = d->depth[i];
-        }
+    for(uint i = 0; i < d->obshap.size(); i++) {
+        char nt = d->obshap[i][snp_index];
+        if(nt == allele1)
+            dp1 += d->depth[i];
+        else if(nt == allele2)
+            dp2 += d->depth[i];
+        else
+            throw std::exception();
     }
-
-    if (dp_1 == 0 && dp_2 == 0)
-        cerr << "Warning: Unable to find allele depths for datum " << d->id << "\n";
 
     return 0;
 }
@@ -3319,6 +3236,8 @@ tally_observed_haplotypes(vector<char *> &obshap, int snp_index, char &p_allele,
 
     //
     // Record which nucleotide is the P allele and which is the Q allele.
+    // (The P allele is the first one alphabetically, and the Q allele the second
+    // one, if any.)
     //
     p_allele = 0;
     q_allele = 0;
@@ -3372,12 +3291,10 @@ int tally_haplotype_freq(CSLocus *locus, PopMap<CSLocus> *pmap,
     total = 0;
     max   = 0;
 
-    //cerr << "Examining marker: " << locus->id << "\n";
-
     for (int i = 0; i < pmap->sample_cnt(); i++) {
-        if (d[i] == NULL) continue;
+        if (d[i] == NULL)
+            continue;
 
-        //cerr << "  Sample: " << i << "; Haplotype: " << d[i]->obshap[0] << "; Genotype: " << d[i]->gtype << "\n";
         if (d[i]->gtype[0] != '-') {
             freq[d[i]->gtype]++;
             total++;

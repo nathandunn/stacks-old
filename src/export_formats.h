@@ -34,6 +34,8 @@ public:
     this->bp        = bp;
     this->type      = type;
     }
+
+    bool operator<(const GenPos& other) const {return bp < other.bp;}
 };
 
 int write_sql(map<int, CSLocus *> &, PopMap<CSLocus> *);
@@ -60,7 +62,7 @@ int write_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 int write_fullseq_phylip(map<int, CSLocus *> &, PopMap<CSLocus> *, PopSum<CSLocus> *);
 
 int populate_snp_calls(map<int, CSLocus *> &, PopMap<CSLocus> *, map<int, pair<merget, int> > &);
-int find_datum_allele_depths(Datum *, int, char, char, int, int &, int &);
+int find_datum_allele_depths(Datum *, int, char, char, int &, int &);
 int tally_observed_haplotypes(vector<char *> &, int, char &, char &);
 int tally_haplotype_freq(CSLocus *, PopMap<CSLocus> *, int &, double &, string &);
 int datum_adjust_snp_positions(map<int, pair<merget, int> > &, CSLocus *, Datum *, map<int, SNPRes *> &);
