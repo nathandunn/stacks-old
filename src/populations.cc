@@ -293,7 +293,7 @@ int main (int argc, char* argv[]) {
                      <<"', excluding this sample from population analysis.\n";
                 samples_to_remove.push_back(i);
                 catalog_matches.pop_back(); // This introduces an index shift between catalog_matches and [i]/[mpopi],
-                                            // which will be resolved by a call to MetaPopInfo::purge_samples().
+                                            // which will be resolved by a call to MetaPopInfo::delete_samples().
                 continue;
             }
 
@@ -306,7 +306,7 @@ int main (int argc, char* argv[]) {
             mpopi.set_sample_id(i, sample_id);
         }
 
-        mpopi.purge_samples(samples_to_remove);
+        mpopi.delete_samples(samples_to_remove);
         if (mpopi.samples().size() == 0) {
             cerr << "Error: Couln't find any matches files.\n";
             return -1;
@@ -354,7 +354,7 @@ int main (int argc, char* argv[]) {
                 for (vector<size_t>::const_iterator s=samples_to_discard.begin(); s!=samples_to_discard.end(); ++s)
                     cerr << " " << mpopi.samples()[*s].name;
                 cerr << "\n";
-                mpopi.purge_samples(samples_to_discard);
+                mpopi.delete_samples(samples_to_discard);
                 if (mpopi.samples().size() == 0) {
                     cerr << "Error: No common samples between the population map and VCF header.\n";
                     return -1;
@@ -554,8 +554,11 @@ int main (int argc, char* argv[]) {
                              << "; likely IDs were mismatched when running pipeline.\n";
                         exit(0);
                     }
-                    d->add_model(modres[d->id]->model);
+                    d->len   = strlen(modres[d->id]->model);
+                    d->model = new char[d->len + 1];
+                    strcpy(d->model, modres[d->id]->model);
                 }
+                d->add_model(modres[d->id]->model);
             }
             for (mit = modres.begin(); mit != modres.end(); mit++)
                 delete mit->second;
@@ -823,7 +826,7 @@ int main (int argc, char* argv[]) {
 
     log_fh.close();
 
-    cerr << "'Populations' is done.\n";
+    cerr << "POPULATIONS is done.\n";
     return 0;
 }
 

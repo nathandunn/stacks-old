@@ -241,7 +241,7 @@ bool MetaPopInfo::init_directory(const string& dir_path) {
     return init_names(sample_names);
 }
 
-void MetaPopInfo::purge_samples(const vector<size_t>& rm_samples) {
+void MetaPopInfo::delete_samples(const vector<size_t>& rm_samples) {
 
     // Remove these samples from [samples_].
     for (vector<size_t>::const_iterator s = rm_samples.begin(); s != rm_samples.end(); ++s) {
