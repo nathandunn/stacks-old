@@ -257,14 +257,16 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
 {
     //
     // Write a VCF file as defined here: http://www.1000genomes.org/node/101
+    // Order SNPs by genomic position (and handle overlapping loci).
     //
+
     string file = out_path + out_prefix + ".vcf";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
+    cerr << "Writing ordered population data to VCF file '" << file << "'\n";
+    log_fh << "\n#\n# Generating SNP-based VCF export.\n#\n";
+    VcfWriter writer (out_path + out_prefix + ".tmp.vcf");
+    if (writer.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
-        exit(1);
+        exit(-1);
     }
 
     bool gl = false; // Whether to include the GL genotype subfield.
@@ -285,35 +287,23 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%Y%m%d", timeinfo);
 
-    cerr << "Writing population data to VCF file '" << file << "'\n";
-    log_fh << "\n#\n# Generating SNP-based VCF export.\n#\n";
-    //
-    // Output the header.
-    //
-    fh << "##fileformat=VCFv4.0\n"
-       << "##fileDate=" << date << "\n"
-       << "##source=\"Stacks v" << VERSION << "\"\n"
-       << "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n"
-       << "##INFO=<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">\n"
-       << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
-       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
-       << "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth\">\n"
-       << "##FORMAT=<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">\n"
-       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
-       << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
-
-    for (int i = 0; i < pmap->sample_cnt(); i++)
-        fh << "\t" << samples[pmap->rev_sample_index(i)];
-    fh << "\n";    
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus *loc;
-    Datum  **d;
+    VcfHeader header;
+    header.init_meta();
+    header.add_meta(VcfMeta::predefined.at("INFO/NS"));
+    header.add_meta(VcfMeta::predefined.at("INFO/AF"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/GT"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/DP"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/AD"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/GL"));
+    for(auto& s : samples) {
+        header.add_sample(s.second);
+    }
+    writer.write_header(header);
 
     // We need to order the SNPs taking into account overlapping loci.
     OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
+    for (auto it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
         vector<NucTally *> sites;
         ord->order(sites, it->second);
 
@@ -322,14 +312,13 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
                 cerr << "Unable to find locus id " << sites[pos]->loc_id << "\n";
                 continue;
             }
-            loc = catalog[sites[pos]->loc_id];
+            CSLocus* loc = catalog[sites[pos]->loc_id];
             uint16_t col = sites[pos]->col;
             int snp_index = loc->snp_index(col);
-            d = pmap->locus(loc->id);
+            Datum** d = pmap->locus(loc->id);
 
             if (snp_index < 0) {
-                cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
-                fh << "ERROR: BAD_SNP_COLUMN (" << loc->id << ":" << col << ")\n";
+                cerr << "Warning: unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
                 continue;
             }
 
@@ -338,34 +327,43 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
             char freq_ref[32], freq_alt[32];
             sprintf(freq_ref, "%0.3f", sites[pos]->p_freq);
             sprintf(freq_alt, "%0.3f", 1 - sites[pos]->p_freq);
-            fh << loc->loc.chr << "\t" 
-               << loc->sort_bp(col) + 1 << "\t" 
-               << to_string(loc->id) + "_" + to_string(col) << "\t" // ID
-               << (loc->loc.strand == strand_plus ? ref : reverse(ref)) << "\t" // REFerence allele
-               << (loc->loc.strand == strand_plus ? alt : reverse(alt)) << "\t" // ALTernate allele
-               << "." << "\t" // QUAL
-               << "PASS" << "\t" // FILTER
-               << "NS=" << sites[pos]->num_indv
-               << ";AF=" << freq_ref << "," << freq_alt << "\t" // INFO
-               << (gl ? "GT:DP:AD:GL" : "GT:DP:AD"); // FORMAT
+
+            VcfRecord rec;
+            rec.type = Vcf::RType::expl;
+            rec.chrom = loc->loc.chr;
+            rec.pos = loc->sort_bp(col) + 1;
+            rec.id = to_string(loc->id) + "_" + to_string(col);
+            rec.alleles.push_back(string(1, loc->loc.strand == strand_plus ? ref : reverse(ref)));
+            rec.alleles.push_back(string(1, loc->loc.strand == strand_plus ? alt : reverse(alt)));
+            rec.qual = ".";
+            rec.filter.push_back("PASS");
+            rec.info.push_back({"NS",to_string(sites[pos]->num_indv)});
+            rec.info.push_back({"AF",string(freq_ref) + "," + freq_alt});
+            rec.format.push_back("GT");
+            rec.format.push_back("DP");
+            rec.format.push_back("AD");
+            if (gl)
+                rec.format.push_back("GL");
 
             for (int j = 0; j < pmap->sample_cnt(); j++) {
-                fh << "\t";
+                stringstream sample;
 
                 if (d[j] == NULL || col >= d[j]->len) {
                     // Data does not exist.
-                    fh << "./.:0:.,.:.,.,.";
+                    sample << "./.:0:.,.:.,.,.";
                 } else if (d[j]->model[col] == 'U') {
                     // Data exists, but the model call was uncertain.
-                    fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
+                    sample << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
                 } else {
                     char allele1, allele2;
                     tally_observed_haplotypes(d[j]->obshap, snp_index, allele1, allele2);
 
                     if (allele1 == 0) {
                         // More than two alleles in this sample
-                        fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
+                        sample << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
                     } else {
+                        // Write the genotype.
+
                         int dp1, dp2;
                         find_datum_allele_depths(d[j], snp_index, allele1, allele2, dp1, dp2);
 
@@ -376,29 +374,28 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
                         if (allele2 == 0) {
                             // homozygote
                             if (allele1 == ref) {
-                                fh << "0/0:" << d[j]->tot_depth << ":" << dp1 << "," << dp2;
+                                sample << "0/0:" << d[j]->tot_depth << ":" << dp1 << "," << dp2;
                                 if (gl)
-                                    fh << ":" << - d[j]->snps[snp_index]->lratio << ",.,.";
-                            }
-                            else { // allele1 == alt
-                                fh << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1;
+                                    sample << ":" << - d[j]->snps[snp_index]->lratio << ",.,.";
+                            } else {
+                                sample << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1;
                                 if (gl)
-                                    fh << ":" << ":.,.," << - d[j]->snps[snp_index]->lratio;
+                                    sample << ":" << ":.,.," << - d[j]->snps[snp_index]->lratio;
                             }
                         } else {
                             // heterozygote
-                            fh << "0/1:" << d[j]->tot_depth
+                            sample << "0/1:" << d[j]->tot_depth
                                << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1);
                             if (gl)
-                                fh << ":.," << d[j]->snps[snp_index]->lratio << ",.";
+                                sample << ":.," << - d[j]->snps[snp_index]->lratio << ",.";
                         }
                     }
                 }
+                rec.samples.push_back(sample.str());
             }
-            fh << "\n";
+            writer.write_record(rec, header);
         }
     }
-    fh.close();
 
     return 0;
 }
@@ -526,7 +523,7 @@ write_vcf(map<int, CSLocus *> &catalog,
                         // More than two alleles in this sample
                         sample << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
                     } else {
-                        // Write the genotype
+                        // Write the genotype.
 
                         int dp1, dp2;
                         find_datum_allele_depths(d[j], snp_index, allele1, allele2, dp1, dp2);
@@ -572,14 +569,11 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     //
 
     string file = out_path + out_prefix + ".haplotypes.vcf";
-
     cerr << "Writing population data haplotypes to VCF file '" << file << "'\n";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
+    VcfWriter writer (out_path + out_prefix + ".tmp.vcf");
+    if (writer.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
-        exit(1);
+        exit(-1);
     }
 
     //
@@ -592,119 +586,106 @@ write_vcf_haplotypes(map<int, CSLocus *> &catalog,
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%Y%m%d", timeinfo);
 
-    //
-    // Output the header.
-    //
-    fh << "##fileformat=VCFv4.2\n"
-       << "##fileDate=" << date << "\n"
-       << "##source=\"Stacks v" << VERSION << "\"\n"
-       << "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n"
-       << "##INFO=<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">\n"
-       << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
-       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
-       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
-       << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
+    VcfHeader header;
+    header.init_meta();
+    header.add_meta(VcfMeta::predefined.at("INFO/NS"));
+    header.add_meta(VcfMeta::predefined.at("INFO/AF"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/GT"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/DP"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/AD"));
+    header.add_meta(VcfMeta::predefined.at("FORMAT/GL"));
+    for(auto& s : samples) {
+        header.add_sample(s.second);
+    }
+    writer.write_header(header);
 
-    for (int i = 0; i < pmap->sample_cnt(); i++)
-        fh << "\t" << samples[pmap->rev_sample_index(i)];
-    fh << "\n";    
-
-    map<string, vector<CSLocus *> >::iterator it;
-    map<string, double>::iterator hit;
-    map<string, double> hap_freq;
-    map<string, int>    hap_index;
-    vector<pair<string, int> > ordered_hap;
     CSLocus  *loc;
     Datum   **d;
-    double    num_indv, num_hap;
     char      allele[id_len];
 
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
+    for (auto chr = pmap->ordered_loci.begin(); chr != pmap->ordered_loci.end(); chr++) {
+        for (uint pos = 0; pos < chr->second.size(); pos++) {
+            loc = chr->second[pos];
             d   = pmap->locus(loc->id);
 
-            hap_freq.clear();
-            hap_index.clear();
-            ordered_hap.clear();
-
-            num_hap = count_haplotypes_at_locus(0, pmap->sample_cnt() - 1, d, hap_freq);
-
-            if (num_hap == 0 || hap_freq.size() == 1) 
+            map<string, double> hap_freq;
+            count_haplotypes_at_locus(0, pmap->sample_cnt() - 1, d, hap_freq);
+            if (hap_freq.size() <= 1)
+                // Monomorphic locus.
+                // XXX What does [hap_freq.size()==1] mean ? @Nick (July 2016)
                 continue;
-
-            num_indv = num_hap / 2.0;
+            for(auto& h : hap_freq)
+                h.second /= hap_freq.size();
 
             //
             // Order the haplotypes according to most frequent. Record the ordered position or each 
             // haplotype and convert them from counts to frequencies.
             //
-            for (hit = hap_freq.begin(); hit != hap_freq.end(); hit++) {
-                ordered_hap.push_back(make_pair(hit->first, hit->second));
-                hit->second = hit->second / num_hap;
-            }
+            vector<pair<string, double> > ordered_hap (hap_freq.begin(), hap_freq.end());
             sort(ordered_hap.begin(), ordered_hap.end(), compare_pair_haplotype);
-            for (uint i = 0; i < ordered_hap.size(); i++)
-                hap_index[ordered_hap[i].first] = i;
 
-            string alt_str, freq_str;
-            for (uint i = 1; i < ordered_hap.size(); i++) {
-                alt_str  += ordered_hap[i].first;
-                sprintf(allele, "%0.3f", hap_freq[ordered_hap[i].first]);
-                freq_str += allele;
-                if (i < ordered_hap.size() - 1) {
-                    alt_str  += ",";
-                    freq_str += ",";
-                }
+            VcfRecord rec;
+            rec.type = Vcf::RType::expl;
+            rec.chrom = loc->loc.chr;
+            rec.pos = loc->sort_bp() + 1;
+            rec.id = to_string(loc->id);
+            for (auto& h : ordered_hap)
+                rec.alleles.push_back(loc->loc.strand == strand_plus ? h.first : string(rev_comp(h.first.c_str())));
+            rec.qual = ".";
+            rec.filter.push_back("PASS");
+
+            rec.info.push_back({"NS",to_string(ordered_hap.size()/2.0)});
+            rec.info.push_back({"AF",string()});
+            string& af=rec.info.back().second;
+            sprintf(allele, "%0.3f", ordered_hap[0].second);
+            af += allele;
+            for (auto h=ordered_hap.begin()+1; h!=ordered_hap.end(); ++h) {
+                sprintf(allele, "%0.3f", h->second);
+                af += string(",") + allele;
             }
 
-            fh << loc->loc.chr         << "\t" 
-               << loc->sort_bp() + 1   << "\t" 
-               << loc->id              << "\t"
-               << ordered_hap[0].first << "\t"       // REFerence haplotypes
-               << alt_str        << "\t"             // ALTernate haplotypes
-               << "."            << "\t"             // QUAL
-               << "PASS"         << "\t"             // FILTER
-               << "NS="          << num_indv << ";"  // INFO
-               << "AF="          << freq_str << "\t" // INFO
-               << "GT:DP";                           // FORMAT
+            rec.format.push_back("GT");
+            rec.format.push_back("DP");
+
+            map<string, int> hap_index;
+            for (size_t i = 0; i < rec.alleles.size(); i++)
+                hap_index[rec.alleles[i]] = i;
 
             for (int j = 0; j < pmap->sample_cnt(); j++) {
-                fh << "\t";
+                stringstream sample;
 
                 if (d[j] == NULL) {
                     // Data does not exist.
-                    fh << "./.:0";
+                    sample << "./.:0";
                 } else if (d[j]->obshap.size() > 2) { 
                     // More than two alleles in this sample
-                    fh << "./.:" << d[j]->tot_depth;
+                    sample << "./.:" << d[j]->tot_depth;
                 } else if (d[j]->obshap.size() == 1) {
                     // Homozygote.
                     char* h = d[j]->obshap[0];
                     int i = uncalled_haplotype(h) ? -1 : hap_index.at(h);
                     if(i >= 0)
-                        fh << i << "/" << i << ":" << d[j]->tot_depth;
+                        sample << i << "/" << i << ":" << d[j]->tot_depth;
                     else
-                        fh << "./.:" << d[j]->tot_depth;
+                        sample << "./.:" << d[j]->tot_depth;
                 } else {
                     // Heterozygote.
-                    // rem. Can only some (i.e. not none or all) haplotypes in a Datum be uncalled ? @Nick (June 2016)
                     char* h1 = d[j]->obshap[0];
                     char* h2 = d[j]->obshap[1];
                     int i1 = uncalled_haplotype(h1) ? -1 : hap_index.at(h1);
                     int i2 = uncalled_haplotype(h2) ? -1 : hap_index.at(h2);
                     if(i1 >= 0 && i2 >= 0)
-                        fh << (i1 < i2 ? i1 : i2) << "/" << (i1 < i2 ? i2 : i1) << ":" << d[j]->tot_depth;
+                        sample << (i1 < i2 ? i1 : i2) << "/" << (i1 < i2 ? i2 : i1) << ":" << d[j]->tot_depth;
                     else if (i1 >= 0)
-                        fh << i1 << "/.:" << d[j]->tot_depth;
+                        sample << i1 << "/.:" << d[j]->tot_depth;
                     else if (i2 >= 0)
-                        fh << i2 << "/.:" << d[j]->tot_depth;
+                        sample << i2 << "/.:" << d[j]->tot_depth;
                 }
+                rec.samples.push_back(sample.str());
             }
-            fh << "\n";
+            writer.write_record(rec, header);
         }
     }
-    fh.close();
     return 0;
 }
 
