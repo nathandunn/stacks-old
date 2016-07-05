@@ -142,20 +142,25 @@ bool uncalled_haplotype(const char *haplotype)
 inline
 double count_haplotypes_at_locus(int start, int end, Datum **d, map<string, double> &hap_cnts)
 {
-    double n = 0.0;
+    double n = 0.0; // n.b. Unless hap_cnts was not empty, this is [hap_cnts.size()].
 
     for (int i = start; i <= end; i++) {
-        if (d[i] == NULL) continue;
-
-        if (d[i]->obshap.size() > 2) {
+        if (d[i] == NULL)
             continue;
 
-        } else if (d[i]->obshap.size() == 1) {
+        const vector<char*>& haps = d[i]->obshap;
+        if (haps.size() > 2) {
+            // Too many haplotypes, ignored.
+            continue;
+
+        } else if (haps.size() == 1) {
+            // Homozygote.
             if(!uncalled_haplotype(d[i]->obshap[0])) {
                 n += 2;
                 hap_cnts[d[i]->obshap[0]] += 2;
             }
         } else {
+            // Heterozygote.
             for (uint j = 0; j < d[i]->obshap.size(); j++) {
                 if(!uncalled_haplotype(d[i]->obshap[0])) {
                     n++;
