@@ -416,7 +416,7 @@ int main (int argc, char* argv[]) {
 
         cerr << "Found " << vcf_records->size() << " SNP records in file '" << in_vcf_path
              << "'. (Skipped " << skipped_filter.size() << " already filtered-out SNPs and " << skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
-        if (verbose) {
+        if (verbose && not skipped_notsnp.empty()) {
             log_fh << "The following VCF record lines were determined not to be SNPs and skipped :";
             for (vector<size_t>::const_iterator l=skipped_notsnp.begin(); l!=skipped_notsnp.end(); ++l)
                 log_fh << " " << *l;

@@ -21,9 +21,9 @@ void VcfHeader::init_meta(const string& fileformat) {
 
     time_t t;
     time(&t);
-    stringstream ss;
-    ss << put_time(localtime(&t), "%Y%m%d");
-    add_meta(VcfMeta("fileDate",ss.str()));
+    char date[9];
+    strftime(date, 9, "%Y%m%d", localtime(&t));
+    add_meta(VcfMeta("fileDate", date));
 
     add_meta(VcfMeta("source", string("\"Stacks v") + VERSION + "\""));
 }
