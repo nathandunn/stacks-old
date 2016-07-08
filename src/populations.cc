@@ -214,6 +214,7 @@ int main (int argc, char* argv[]) {
 
     // We need some objects in the main scope for each mode.
     vector<vector<CatMatch *> > catalog_matches;
+    VcfHeader* vcf_header = NULL;
     vector<VcfRecord>* vcf_records = NULL;
 
     // Read the population map file, if any.
@@ -424,6 +425,7 @@ int main (int argc, char* argv[]) {
         }
 
         catalog = create_catalog(*vcf_records);
+        vcf_header = new VcfHeader(parser->header());
         delete parser;
     }
 
@@ -499,9 +501,11 @@ int main (int argc, char* argv[]) {
         catalog_matches.clear();
     } else if (input_mode == InputMode::vcf) {
         // ...or using VCF records.
-        pmap->populate(mpopi, catalog, *vcf_records);
+        pmap->populate(mpopi, catalog, *vcf_records, *vcf_header);
         delete vcf_records;
+        delete vcf_header;
         vcf_records = NULL;
+        vcf_header = NULL;
     }
 
     //
