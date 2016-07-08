@@ -340,28 +340,21 @@ int main (int argc, char* argv[]) {
             mpopi.init_names(parser->header().samples());
         } else {
             // Intersect the samples present in the population map and the VCF.
-            set<string> vcf_samples_set (parser->header().samples().begin(), parser->header().samples().end());
-            set<string> samples_to_keep;
             vector<size_t> samples_to_discard;
-            for (size_t i=0; i<mpopi.samples().size(); ++i) {
-                if (vcf_samples_set.count(mpopi.samples()[i].name) == 1)
-                    samples_to_keep.insert(mpopi.samples()[i].name);
-                else
+            for (size_t i=0; i<mpopi.samples().size(); ++i)
+                if (not parser->header().sample_indexes().count(mpopi.samples()[i].name))
                     samples_to_discard.push_back(i);
-            }
-
-            parser->samples_to_keep(samples_to_keep);
             if (not samples_to_discard.empty()) {
-                cerr << "Warning: of the samples listed in the population map, "
-                     << samples_to_discard.size() << " could not be found in the VCF :";
-                for (vector<size_t>::const_iterator s=samples_to_discard.begin(); s!=samples_to_discard.end(); ++s)
-                    cerr << " " << mpopi.samples()[*s].name;
-                cerr << "\n";
-                mpopi.delete_samples(samples_to_discard);
-                if (mpopi.samples().size() == 0) {
+                if (samples_to_discard.size() == mpopi.samples().size()) {
                     cerr << "Error: No common samples between the population map and VCF header.\n";
                     return -1;
                 }
+                cerr << "Warning: of the samples listed in the population map, "
+                     << samples_to_discard.size() << " could not be found in the VCF :";
+                for (const size_t& s : samples_to_discard)
+                    cerr << " " << mpopi.samples()[s].name;
+                cerr << "\n";
+                mpopi.delete_samples(samples_to_discard);
             }
 
             // Create arbitrary sample IDs.
@@ -381,26 +374,9 @@ int main (int argc, char* argv[]) {
         VcfRecord* rec = & vcf_records->back();
         while (parser->next_record(*rec)) {
             // Check for a SNP.
-            if (rec->type == Vcf::RType::null) {
-                cerr << "Warning: In file '" << parser->path() << "': skipping the very long record at line "
-                     << parser->line_number() << ".\n";
+            if (not rec->is_snp()) {
                 skipped_notsnp.push_back(parser->line_number());
                 continue;
-            } else if (rec->type != Vcf::RType::expl) {
-                skipped_notsnp.push_back(parser->line_number());
-                continue;
-            } else {
-                bool skip = false;
-                for (vector<string>::const_iterator allele = rec->alleles.begin(); allele != rec->alleles.end(); ++allele) {
-                    if (allele->length() > 1) {
-                        skip = true;
-                        break;
-                    }
-                }
-                if(skip) {
-                    skipped_notsnp.push_back(parser->line_number());
-                    continue;
-                }
             }
 
             // Check for a filtered-out SNP

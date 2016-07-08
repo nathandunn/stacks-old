@@ -348,7 +348,7 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
         const VcfRecord& rec = records[loc->id]; // n.b. assumes locus ID == record index.
 
         for (size_t s = 0; s < mpopi.samples().size(); ++s) {
-            size_t vcf_index = header.get_sample_index(mpopi.samples()[s].name);
+            size_t vcf_index = header.sample_indexes().at(mpopi.samples()[s].name);
             pair<int, int> gt = rec.parse_genotype(rec.samples.at(vcf_index));
             if (gt == pair<int,int>(-1,-1))
                 continue;

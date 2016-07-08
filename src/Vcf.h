@@ -125,6 +125,8 @@ struct VcfRecord {
 
     // Returns alleles[i], provided it actually exists. (Otherwise it is easy to write a VCF that causes a segfault.)
     inline const string& allele(size_t index) const;
+
+    inline bool is_snp() const;
 };
 
 /*
@@ -154,19 +156,19 @@ class VcfHeader {
     vector<string> samples_;
     vector<VcfMeta> meta_;
 
-    map<string, size_t> sample_indexes;
+    map<string, size_t> sample_indexes_;
     // map<string, vector<size_t> > meta_indexes;
 public:
     VcfHeader() : samples_(), meta_() {}
 
     const vector<VcfMeta>& meta() const {return meta_;}
     const vector<string>& samples() const {return samples_;}
-    size_t get_sample_index(const string& s) const {return sample_indexes.at(s);}
+    const map<string, size_t>& sample_indexes() const {return sample_indexes_;}
 
     // Adds the meta lines VERSION, FILEDATE and SOURCE
     void init_meta(const string& fileformat = "VCFv4.2");
     void add_meta(const VcfMeta& m) {meta_.push_back(m);}
-    void add_sample(const string& s) {samples_.push_back(s); sample_indexes.insert({s, samples_.size()-1});}
+    void add_sample(const string& s) {samples_.push_back(s); sample_indexes_.insert({s, samples_.size()-1});}
 
 };
 
@@ -193,7 +195,6 @@ class VcfAbstractParser {
 protected:
     const string path_;
     VcfHeader header_;
-    vector<bool> samples_to_keep_; // If set, the parser will return records that include these samples only.
 
     size_t line_number_;
     char line_[Vcf::line_buf_size];
@@ -227,9 +228,6 @@ public:
 
     // Read a record. Returns false on EOF, true otherwise.
     bool next_record(VcfRecord& record);
-
-    // Set the samples to keep.
-    void samples_to_keep(const set<string>& samples);
 };
 
 /*
@@ -372,6 +370,17 @@ const string& VcfRecord::allele(size_t index) const {
     }
 }
 
+inline
+bool VcfRecord::is_snp() const {
+    if (type != Vcf::RType::expl)
+        return false;
+
+    for (const string& a : alleles)
+        if (a.length() > 1)
+            return false;
+
+    return true;
+}
 
 inline
 void
@@ -396,8 +405,7 @@ VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2)
         cerr << "Warning: malformed VCF record line (empty SAMPLE field should be marked by a dot)."
              << " Line " << line_number_ << " in file " << path_ << "'.\n";
 
-    if (samples_to_keep_.empty() || samples_to_keep_.at(sample_index_))
-        record.samples.push_back(string(tab1+1, tab2));
+    record.samples.push_back(string(tab1+1, tab2));
 
     ++sample_index_;
 }
