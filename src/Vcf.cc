@@ -36,9 +36,7 @@ malformed_header(const string& path, const size_t line_no)
 }
 
 VcfAbstractParser::VcfAbstractParser(const string& path)
-: path_(path), header_(), samples_to_keep_(),
-  line_number_(0), eol_(true), eof_(false), tabs_(), bounds_(),
-  sample_index_(-1)
+: path_(path), header_(), line_number_(0), eol_(true), eof_(false), tabs_(), bounds_(), sample_index_(-1)
 {
     memset(line_, '\0', Vcf::line_buf_size);
 }
@@ -161,17 +159,6 @@ VcfGzParser::VcfGzParser(const string& path)
 #endif
 }
 
-void
-VcfAbstractParser::samples_to_keep(const set<string>& samples) {
-    samples_to_keep_.clear();
-    samples_to_keep_.reserve(header_.samples().size());
-    for (vector<string>::const_iterator
-            s=header_.samples().begin();
-            s!=header_.samples().end();
-            ++s)
-        samples_to_keep_.push_back(bool(samples.count(*s)));
-}
-
 #endif // HAVE_LIBZ
 
 VcfAbstractParser*
@@ -237,6 +224,8 @@ VcfAbstractParser::next_record(VcfRecord& record)
         }
     } else {
         if(header_.samples().empty() || tabs_.size() < Vcf::base_fields_no + 2) {
+            cerr << "Warning: In file '" << path_ << "': skipping the very long record at line "
+                 << line_number_ << ".\n";
             read_to_eol();
             return true;
         }
