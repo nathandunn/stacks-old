@@ -154,19 +154,20 @@ class VcfHeader {
     vector<string> samples_;
     vector<VcfMeta> meta_;
 
-    // map<string, size_t> sample_indexes;
+    map<string, size_t> sample_indexes;
     // map<string, vector<size_t> > meta_indexes;
 public:
     VcfHeader() : samples_(), meta_() {}
 
+    const vector<VcfMeta>& meta() const {return meta_;}
+    const vector<string>& samples() const {return samples_;}
+    size_t get_sample_index(const string& s) const {return sample_indexes.at(s);}
+
     // Adds the meta lines VERSION, FILEDATE and SOURCE
     void init_meta(const string& fileformat = "VCFv4.2");
-
-    void add_sample(const string& s) {samples_.push_back(s);}
-    const vector<string>& samples() const {return samples_;}
-
     void add_meta(const VcfMeta& m) {meta_.push_back(m);}
-    const vector<VcfMeta>& meta() const {return meta_;}
+    void add_sample(const string& s) {samples_.push_back(s); sample_indexes.insert({s, samples_.size()-1});}
+
 };
 
 /*

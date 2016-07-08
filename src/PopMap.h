@@ -133,7 +133,7 @@ public:
     // members [cnt, hcnt] are modified).
     // N.B. The IDs of the loci in the catalog MUST be the same
     // as the indexes in the records vector.
-    int populate(const MetaPopInfo& mpopi, map<int, LocusT*>& catalog, const vector<VcfRecord>& records);
+    int populate(const MetaPopInfo& mpopi, map<int, LocusT*>& catalog, const vector<VcfRecord>& records, const VcfHeader& header);
 
     int order_loci(const map<int, LocusT*> &);
     int prune(set<int> &);
@@ -290,7 +290,8 @@ int PopMap<LocusT>::populate(const vector<int> &sample_ids,
 template<class LocusT>
 int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
              map<int, LocusT*>& catalog,
-             const vector<VcfRecord>& records) {
+             const vector<VcfRecord>& records,
+             const VcfHeader& header) {
 
     // Initialize [sample_order], [rev_sample_order].
     add_metapop_info(mpopi);
@@ -347,7 +348,8 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
         const VcfRecord& rec = records[loc->id]; // n.b. assumes locus ID == record index.
 
         for (size_t s = 0; s < mpopi.samples().size(); ++s) {
-            pair<int, int> gt = rec.parse_genotype(rec.samples.at(s));
+            size_t vcf_index = header.get_sample_index(mpopi.samples()[s].name);
+            pair<int, int> gt = rec.parse_genotype(rec.samples.at(vcf_index));
             if (gt == pair<int,int>(-1,-1))
                 continue;
 
