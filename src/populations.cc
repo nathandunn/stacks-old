@@ -665,7 +665,7 @@ int main (int argc, char* argv[]) {
                 myblacklist.insert(l.second->id);
             } else {
                 // Check the actual number of alleles
-                Datum** data = pmap->locus(pmap->rev_locus_index(l.second->id));
+                Datum** data = pmap->locus(l.second->id);
                 set<char> seen_alleles;
                 for (size_t i=0; i<size_t(pmap->sample_cnt()); ++i) {
                     Datum* d = data[i];
