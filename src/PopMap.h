@@ -21,9 +21,9 @@
 #ifndef __POPMAP_H__
 #define __POPMAP_H__
 
-#include "stacks.h"
-#include "locus.h"
-#include <string.h>
+#include <exception>
+using std::exception;
+#include <cstring>
 #include <string>
 using std::string;
 #include <vector>
@@ -120,7 +120,7 @@ class PopMap {
 public:
     map<string, vector<LocusT *> > ordered_loci; // Loci ordered by genomic position
 
-    PopMap(int, int);
+    PopMap(int n_samples, int n_loci);
     ~PopMap();
 
     // Populates the PopMap based on sstack matches files.
@@ -135,18 +135,21 @@ public:
     // as the indexes in the records vector.
     int populate(const MetaPopInfo& mpopi, map<int, LocusT*>& catalog, const vector<VcfRecord>& records, const VcfHeader& header);
 
-    int order_loci(const map<int, LocusT*> &);
-    int prune(set<int> &);
+    int order_loci(const map<int, LocusT*>& catalog);
+    int prune(set<int>& loc_ids);
 
     int loci_cnt() { return this->num_loci; }
+    int locus_index(int id) {return this->locus_order.at(id);}
     int rev_locus_index(int index) { if (this->rev_locus_order.count(index) == 0) return -1; return this->rev_locus_order[index]; }
+
     int sample_cnt() { return this->num_samples; }
-    int sample_index(int index) { if (this->sample_order.count(index) == 0) return -1; return this->sample_order[index]; }
+    int sample_index(int id) { if (this->sample_order.count(id) == 0) return -1; return this->sample_order[id]; }
     int rev_sample_index(int index) { if (this->rev_sample_order.count(index) == 0) return -1; return this->rev_sample_order[index]; }
 
-    Datum **locus(int);
-    Datum  *datum(int, int);
-    bool    blacklisted(int, int);
+    Datum **locus(int id);
+    Datum  *datum(int loc_id, int sample_id);
+
+    bool    blacklisted(int loc_id, int sample_id);
 };
 
 template<class LocusT>
@@ -472,13 +475,13 @@ int PopMap<LocusT>::prune(set<int> &remove_ids) {
 }
 
 template<class LocusT>
-Datum **PopMap<LocusT>::locus(int locus) {
-    return this->data[this->locus_order[locus]];
+Datum **PopMap<LocusT>::locus(int id) {
+    return this->data[this->locus_order[id]];
 }
 
 template<class LocusT>
-Datum  *PopMap<LocusT>::datum(int locus, int sample) {
-    return this->data[this->locus_order[locus]][this->sample_order[sample]];
+Datum  *PopMap<LocusT>::datum(int loc_id, int sample_id) {
+    return this->data[this->locus_order[loc_id]][this->sample_order[sample_id]];
 }
 
 template<class LocusT>
