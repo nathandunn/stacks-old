@@ -52,6 +52,7 @@ using std::ofstream;
 using std::cerr;
 
 using std::exception;
+using std::out_of_range;
 
 class VcfAbstractParser;
 class VcfHeader;
@@ -119,6 +120,9 @@ struct VcfRecord {
 
     // Clears all the members.
     inline void clear();
+
+    inline size_t index_of_gt_subfield(const string& key) const;
+    inline string parse_gt_subfield(const string& sample, size_t index) const;
 
     // Returns (first allele, second allele), '-1' meaning no data.
     inline pair<int, int> parse_genotype(const string& sample) const;
@@ -310,6 +314,41 @@ void VcfRecord::clear() {
     format.clear();
     samples.clear();
     type = Vcf::RType::null;
+}
+
+inline
+size_t VcfRecord::index_of_gt_subfield(const string& key) const {
+    size_t i = 0;
+    for (const string& f : format) {
+        if (f == key)
+            return i;
+        ++i;
+    }
+
+    throw out_of_range(key);
+}
+
+inline
+string VcfRecord::parse_gt_subfield(const string& sample, size_t index) const {
+    string subf;
+
+    // Skip the first [index] colons.
+    const char* first = sample.c_str();
+    for(size_t i=0; i<index; ++i) {
+        first = strchr(first, ':');
+        if (first == NULL)
+            // The requested field is not explicitly written, return the empty string.
+            return subf;
+        else
+            first += 1;
+    }
+
+    const char* last = strchr(first, ':');
+    if (last == NULL)
+        // Last field.
+        return subf.assign(first);
+    else
+        return subf.assign(first, last);
 }
 
 inline

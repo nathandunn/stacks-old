@@ -128,7 +128,7 @@ public:
     // members [cnt, hcnt, confounded_cnt] are modified).
     int populate(const vector<int>& sample_ids, map<int, LocusT*>& catalog, const vector<vector<CatMatch *> >& matches);
 
-    // Populates the PopMap based on VCF records.
+    // Populates the PopMap based on VCF (SNP) records.
     // The catalog is modified (LocusT must be CSLocus, and
     // members [cnt, hcnt] are modified).
     // N.B. The IDs of the loci in the catalog MUST be the same
@@ -348,23 +348,47 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
             l != catalog.end();
             ++l) {
         LocusT* loc = l->second;
+
         const VcfRecord& rec = records[loc->id]; // n.b. assumes locus ID == record index.
+        int ad_index;
+        try {
+            ad_index = rec.index_of_gt_subfield("AD");
+        } catch (exception& e) {
+            ad_index = -1;
+        }
 
         for (size_t s = 0; s < mpopi.samples().size(); ++s) {
             size_t vcf_index = header.sample_indexes().at(mpopi.samples()[s].name);
-            pair<int, int> gt = rec.parse_genotype(rec.samples.at(vcf_index));
-            if (gt == pair<int,int>(-1,-1))
+            const string& sample = rec.samples.at(vcf_index);
+
+            pair<int, int> gt = rec.parse_genotype(sample);
+            if (gt.first < 0 || gt.second < 0)
                 continue;
+
+            vector<int> ad;
+            if (ad_index != -1) {
+                string ad_str = rec.parse_gt_subfield(sample, ad_index);
+                size_t coma = ad_str.find(',');
+                try {
+                     if (coma == string::npos)
+                         throw exception();
+                     ad.push_back(std::stoi(ad_str.substr(0,coma)));
+                     ad.push_back(std::stoi(ad_str.substr(coma+1)));
+                 } catch (exception& e) {
+                     cerr << "Warning: Badly formatted AD string '" << ad_str
+                          << "' at VCF record '" << rec.chrom << ":" << rec.pos << "'.\n";
+                     ad = {0, 0};
+                 }
+            }
 
             Datum* d = new Datum();
             data[loc_index][s] = d;
             ++loc->cnt;
             ++loc->hcnt;
 
-            // id, len, tot_depth, lnl
+            // id, len, lnl
             d->id = loc->id;
             d->len = loc->len;
-            d->tot_depth = 0;
             d->lnl = 0;
 
             // model, obshap, depth
@@ -374,7 +398,10 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
                 const string& allele = rec.allele(gt.first);
                 d->obshap.push_back(new char[allele.size()+1]);
                 strcpy(d->obshap[0], allele.c_str());
-                d->depth.push_back(0);
+                if (ad_index != -1)
+                    d->depth = { ad[gt.first] };
+                else
+                    d->depth = {0};
             } else {
                 strcpy(d->model, "E");
                 const string& allele1 = rec.allele(gt.first);
@@ -383,9 +410,14 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
                 d->obshap.push_back(new char[allele2.size()+1]);
                 strcpy(d->obshap[0], allele1.c_str());
                 strcpy(d->obshap[1], allele2.c_str());
-                d->depth.push_back(0);
-                d->depth.push_back(0);
+                if (ad_index != -1)
+                    d->depth = {ad[gt.first], ad[gt.second]};
+                else
+                    d->depth = {0, 0};
             }
+
+            // tot_depth
+            d->tot_depth = std::accumulate(d->depth.begin(), d->depth.end(), 0);
         }
         ++loc_index;
     }
