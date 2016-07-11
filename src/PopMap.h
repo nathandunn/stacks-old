@@ -322,6 +322,8 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
      * [model] "E" or "O" according to the SAMPLE/GT field, or
      *     "U" if the GT field is absent.
      * [obshap] the nucleotide(s) observed for this SNP for this individual.
+     *     If one of a sample's VCF alleles is missing ('.') or has an index
+     *     corresponding to the special '*' allele, the Datum* is left to NULL.
      *
      * When no depth information is available, [tot_depth] and the [depths]
      * of all alleles are set to 0.
@@ -362,7 +364,11 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
             const string& sample = rec.samples.at(vcf_index);
 
             pair<int, int> gt = rec.parse_genotype(sample);
-            if (gt.first < 0 || gt.second < 0)
+            if (gt.first < 0
+                    || gt.second < 0
+                    || rec.alleles[gt.first]=="*"
+                    || rec.alleles[gt.second]=="*")
+                // Missing or incomplete genotype.
                 continue;
 
             vector<int> ad;
@@ -374,6 +380,8 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
                          throw exception();
                      ad.push_back(std::stoi(ad_str.substr(0,coma)));
                      ad.push_back(std::stoi(ad_str.substr(coma+1)));
+                     if (ad[0] < 0 || ad[1] < 0)
+                         throw exception();
                  } catch (exception& e) {
                      cerr << "Warning: Badly formatted AD string '" << ad_str
                           << "' at VCF record '" << rec.chrom << ":" << rec.pos << "'.\n";
@@ -395,7 +403,7 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
             d->model = new char[2];
             if (gt.first == gt.second) {
                 strcpy(d->model, "O");
-                const string& allele = rec.allele(gt.first);
+                const string& allele = rec.alleles[gt.first];
                 d->obshap.push_back(new char[allele.size()+1]);
                 strcpy(d->obshap[0], allele.c_str());
                 if (ad_index != -1)
@@ -404,8 +412,8 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
                     d->depth = {0};
             } else {
                 strcpy(d->model, "E");
-                const string& allele1 = rec.allele(gt.first);
-                const string& allele2 = rec.allele(gt.second);
+                const string& allele1 = rec.alleles[gt.first];
+                const string& allele2 = rec.alleles[gt.second];
                 d->obshap.push_back(new char[allele1.size()+1]);
                 d->obshap.push_back(new char[allele2.size()+1]);
                 strcpy(d->obshap[0], allele1.c_str());

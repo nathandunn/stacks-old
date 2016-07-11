@@ -28,13 +28,6 @@ void VcfHeader::init_meta(const string& fileformat) {
     add_meta(VcfMeta("source", string("\"Stacks v") + VERSION + "\""));
 }
 
-void
-malformed_header(const string& path, const size_t line_no)
-{
-    cerr << "Error: Malformed VCF header. Line " << line_no << " in file '" << path << "'.\n";
-    throw exception();
-}
-
 VcfAbstractParser::VcfAbstractParser(const string& path)
 : path_(path), header_(), line_number_(0), eol_(true), eof_(false), tabs_(), bounds_(), sample_index_(-1)
 {
@@ -44,21 +37,33 @@ VcfAbstractParser::VcfAbstractParser(const string& path)
 void
 VcfAbstractParser::read_header()
 {
+    auto malformed = [this] () {
+        cerr << "Error: Malformed header."
+             << " At line " << line_number_ << " in file '" << path_ << "'.\n";
+        throw exception();
+    };
+
     while(true) {
         getline(line_, Vcf::line_buf_size);
         ++line_number_;
         if(eof_)
-            malformed_header(path_, line_number_);
+            malformed();
 
         if (line_[0] != '#')
-            malformed_header(path_, line_number_);
+            malformed();
 
         if(line_[1] == '#') {
             // Meta header line.
 
             char* equal = strchr(line_, '=');
-            if(equal == NULL)
-                malformed_header(path_, line_number_);
+            if(equal == NULL) {
+                // (Notice: Skipping missing '=')
+                tabs_.clear();
+                tabs_.push_back(line_+strlen(line_));
+                check_eol();
+                read_to_eol();
+                continue;
+            }
             char* end = equal + strlen(equal);
 
             // Check the length of the line (discard lines that don't fit in the buffer).
@@ -66,6 +71,7 @@ VcfAbstractParser::read_header()
             tabs_.push_back(end);
             check_eol();
             if(!eol_) {
+                // (Notice: Skipping long line)
                 read_to_eol();
                 continue;
             }
@@ -81,8 +87,8 @@ VcfAbstractParser::read_header()
 
     // Final header line.
 
-    if(strncmp(line_, "#CHROM\t", 7) != 0)
-        malformed_header(path_, line_number_);
+    if(strncmp(line_, Vcf::base_fields.c_str(), Vcf::base_fields.length()) != 0)
+        malformed();
 
     // Get tabs.
     tabs_.clear();
@@ -95,7 +101,7 @@ VcfAbstractParser::read_header()
 
     // Check the number of tabs.
     if(!(tabs_.size() == Vcf::base_fields_no or tabs_.size() >= Vcf::base_fields_no+2))
-        malformed_header(path_, line_number_);
+        malformed();
 
     // Check windows line endings.
     if(*(tabs_.back()-1) == '\r') {
@@ -116,10 +122,8 @@ VcfAbstractParser::read_header()
             strcpy(line_+1, *(tabs_.end()-2)+1);
 
             getline(line_+last_field_len, Vcf::line_buf_size-last_field_len);
-            if(eof_) {
-                cerr << "Error: VCF file " << path_ << " does not end with a newline.\n";
-                throw exception();
-            }
+            if(eof_)
+                malformed();
 
             // Get tabs.
             tabs_.clear();
@@ -140,10 +144,6 @@ VcfAbstractParser::read_header()
                 header_.add_sample(string(tabs_[i]+1, tabs_[i+1]));
         }
         header_.add_sample(string(*(tabs_.end()-2)+1, tabs_.back()));
-
-        if(find(header_.samples().begin(),header_.samples().end(), string()) != header_.samples().end())
-            // empty field
-            malformed_header(path_, line_number_);
     }
 
     return;
@@ -192,9 +192,9 @@ bool
 VcfAbstractParser::next_record(VcfRecord& record)
 {
     getline(line_, Vcf::line_buf_size);
-    ++line_number_;
     if(eof_)
         return false;
+    ++line_number_;
 
     record.clear();
 
@@ -243,46 +243,65 @@ VcfAbstractParser::next_record(VcfRecord& record)
 
     // CHROM
     if(line_ == tabs_[Vcf::chrom]) {
-        cerr << "Error: malformed VCF record line (CHROM field is required)."
+        cerr << "Warning: Skipping malformed VCF record (missing CHROM value)."
                 << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-        throw exception();
+        // Skip this record.
+        // ([record.type] is still [null].)
+        return true;
     }
     record.chrom.assign(line_, tabs_[Vcf::chrom]);
 
     // POS
-    if(tabs_[Vcf::pos-1]+1 == tabs_[Vcf::pos]) {
-        cerr << "Error: malformed VCF record line (POS field is required)."
+    if(tabs_[Vcf::pos-1]+1 == tabs_[Vcf::pos]
+        || *(tabs_[Vcf::pos-1]+1) == '.' ){
+        cerr << "Warning: Skipping malformed VCF record (missing POS value)."
                 << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-        throw exception();
+        // Skip this record.
+        // ([record.type] is still [null].)
+        return true;
     }
-    record.pos = atoi(tabs_[Vcf::pos-1]+1) -1 ; // VCF is 1-based
+    record.pos = stoi(tabs_[Vcf::pos-1]+1) -1 ; // VCF is 1-based
 
     // ID
     if(tabs_[Vcf::id-1]+1 == tabs_[Vcf::id])
-        cerr << "Warning: malformed VCF record line (empty ID field should be marked by a dot)."
+        cerr << "Notice: Empty ID field should be marked by a dot."
                 << " Line " << line_number_ << " in file '" << path_ << "'.\n";
     if(*(tabs_[Vcf::id-1]+1) != '.')
         record.id.assign(tabs_[Vcf::id-1]+1, tabs_[Vcf::id]);
 
     // REF
-    if(tabs_[Vcf::ref-1]+1 == tabs_[Vcf::ref]) {
-        cerr << "Error: malformed VCF record line (REF field is required)."
+    if(tabs_[Vcf::ref-1]+1 == tabs_[Vcf::ref]
+        || *(tabs_[Vcf::ref-1]+1) == '.' ) {
+        cerr << "Warning: malformed VCF record (missing REF value)."
                 << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-        throw exception();
+        // Skip this record.
+        // ([record.type] is still [null].)
+        return true;
     }
     record.alleles.push_back(string(tabs_[Vcf::ref-1]+1, tabs_[Vcf::ref]));
 
     // ALT & determine the type of the record
-    if(*(tabs_[Vcf::alt-1]+1) == '\0') {
-        cerr << "Warning: malformed VCF record line (empty ALT field should be marked by a dot)."
+    if(tabs_[Vcf::alt-1]+1 == tabs_[Vcf::alt]) {
+        cerr << "Warning: Skipping malformed VCF record (expected ALT field to be marked by a dot)."
                 << " Line " << line_number_ << " in file '" << path_ << "'.\n";
-        record.type = Vcf::RType::invariant;
+        // Skip this record.
+        // ([record.type] is still [null].)
+        return true;
     } else if(*(tabs_[Vcf::alt-1]+1) == '.') {
         record.type = Vcf::RType::invariant;
     } else {
         get_bounds(bounds_, tabs_[Vcf::alt-1], tabs_[Vcf::alt], ',');
-        for (size_t i = 0; i < bounds_.size()-1; ++i )
+        for (size_t i = 0; i < bounds_.size()-1; ++i ) {
             record.alleles.push_back(string(bounds_.at(i)+1, bounds_.at(i+1)));
+            if (record.alleles.back().empty()) {
+                record.alleles.pop_back();
+                cerr << "Warning: Skipping malformed VCF record (malformed ALT field)."
+                     << " Line " << line_number_ << " in file '" << path_ << "'.\n";
+                // Skip this record.
+                // ([record.type] is still [null].)
+                return true;
+            }
+        }
 
         if (strchr(tabs_[Vcf::alt-1]+1, '[') || strchr(tabs_[Vcf::alt-1]+1, ']'))
             record.type = Vcf::RType::breakend;
@@ -300,15 +319,15 @@ VcfAbstractParser::next_record(VcfRecord& record)
 
     // QUAL
     if(tabs_[Vcf::qual-1]+1 == tabs_[Vcf::qual])
-        cerr << "Warning: malformed VCF record line (empty QUAL field should be marked by a dot)."
-                << " Line " << line_number_ << " in file '" << path_ << "'.\n";
+        cerr << "Notice: Empty QUAL field should be marked by a dot."
+             << " Line " << line_number_ << " in file '" << path_ << "'.\n";
     if(*(tabs_[Vcf::qual-1]+1) != '.')
         record.qual.assign(tabs_[Vcf::qual-1]+1, tabs_[Vcf::qual]);
 
     // FILTER
     if(tabs_[Vcf::filter-1]+1 == tabs_[Vcf::filter])
-        cerr << "Warning: malformed VCF record line (empty FILTER field should be marked by a dot)."
-                << " Line " << line_number_ << " in file '" << path_ << "'.\n";
+        cerr << "Notice: Empty FILTER field should be marked by a dot."
+             << " Line " << line_number_ << " in file '" << path_ << "'.\n";
     if(*(tabs_[Vcf::filter-1]+1) != '.') {
         get_bounds(bounds_, tabs_[Vcf::filter-1], tabs_[Vcf::filter],';');
         for(size_t i = 0; i < bounds_.size()-1; ++i )
@@ -317,8 +336,8 @@ VcfAbstractParser::next_record(VcfRecord& record)
 
     // INFO
     if(tabs_[Vcf::info-1]+1 == tabs_[Vcf::info])
-        cerr << "Warning: malformed VCF record line (empty INFO field should be marked by a dot)."
-        << " Line " << line_number_ << " in file '" << path_ << "'.\n";
+        cerr << "Notice: Empty INFO field should be marked by a dot."
+             << " Line " << line_number_ << " in file '" << path_ << "'.\n";
     if(*(tabs_[Vcf::info-1]+1) != '.') {
         get_bounds(bounds_, tabs_[Vcf::info-1], tabs_[Vcf::info], ';');
         for(size_t i = 0; i < bounds_.size()-1; ++i ) {
@@ -333,8 +352,8 @@ VcfAbstractParser::next_record(VcfRecord& record)
     // FORMAT
     if (!header_.samples().empty() && *(tabs_[Vcf::format-1]+1) != '.') {
         if(tabs_[Vcf::format-1]+1 == tabs_[Vcf::format])
-            cerr << "Warning: malformed VCF record line (empty FORMAT field should be marked by a dot)."
-                    << " Line " << line_number_ << " in file '" << path_ << "'.\n";
+            cerr << "Notice: Empty FORMAT field should be marked by a dot."
+                 << " Line " << line_number_ << " in file '" << path_ << "'.\n";
 
         get_bounds(bounds_, tabs_[Vcf::format-1], tabs_[Vcf::format],':');
         for(size_t i = 0; i < bounds_.size()-1; ++i )
@@ -354,9 +373,11 @@ VcfAbstractParser::next_record(VcfRecord& record)
 
             getline(line_+lastfieldlen, Vcf::line_buf_size-lastfieldlen);
             if(eof_) {
-                cerr << "Error: VCF file " << path_ << " does not end with a newline." << endl;
-                throw exception();
+                cerr << "Warning: Encountered end of file while reading a record.\n";
+                record.type = Vcf::RType::null;
+                return false;
             }
+
             // Get tabs.
             tabs_.clear();
             tabs_.push_back(line_);
@@ -380,10 +401,10 @@ VcfAbstractParser::next_record(VcfRecord& record)
         add_sample(record, *(tabs_.end()-2), tabs_.back());
 
         if(sample_index_ != header_.samples().size()) {
-            cerr << "Error: malformed VCF record line ("
+            cerr << "Error: malformed VCF record ("
                  << header_.samples().size() << " SAMPLE fields expected, "
                  << sample_index_ <<  " found). File '" << path_ << "', line "
-                 << line_number_ << " :\n" << line_ << "\n";
+                 << line_number_ << ".\n";
             throw exception();
         }
     }

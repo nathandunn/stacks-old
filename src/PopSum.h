@@ -503,6 +503,7 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
             //
             // We want to report the most frequent allele as the P allele. Reorder the alleles 
             // if necessary.
+            // XXX Possibly unstable for p_freq ~ 0.5. @Nick (July 2016)
             //
             if (ltally->nucs[col].p_freq < 0.5) {
                 char a = ltally->nucs[col].p_allele;
