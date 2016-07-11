@@ -57,7 +57,9 @@ int implement_random_snp_whitelist(map<int, CSLocus *> &, PopSum<CSLocus> *, map
  *     [lratio] Always set to 0.
  *     [rank_1] The ref allele.
  *     [rank_2], [rank_3], [rank_4] The alt allele(s).
- * [alleles] Use the ref+alt alleles.
+ * [alleles] Use the ref+alt alleles in the order they appear, skipping
+ *     the special '*' allele ('variant is irrelevant in certain context
+ *     because of an neighboring structural polymorphism') if present.
  * [strings] We fill this by calling Locus::populate_alleles().
  * [cnt] Set to the approriate value when filling the PopMap.
  * [hcnt] (Same as above.)

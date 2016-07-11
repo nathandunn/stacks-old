@@ -68,8 +68,11 @@ bool MetaPopInfo::init_popmap(const string& pmap_path) {
 
         parse_tsv(line, parts);
 
-        if (parts.size() < 2 || parts.size() > 3) {
-            cerr << "Error: Malformed population map. File '" << pmap_path << "', line :\n" << line << "\n";
+        if (parts.size() < 2
+            || parts.size() > 3
+            || parts[0].empty()
+            || parts[1].empty()) {
+            cerr << "Error: Malformed population map -- expected 'SAMPLE\\tPOP[\\tGROUP]'. In file '" << pmap_path << "', line :\n" << line << "\n";
             throw exception();
         }
 
@@ -97,27 +100,28 @@ bool MetaPopInfo::init_popmap(const string& pmap_path) {
         // Process the group field, if any
         //
 
-        if (parts.size() == 3) {
+        if (parts.size() == 3 && ! parts[2].empty()) {
+            // Get the index of this group -- create it if necessary.
             pair<map<string,size_t>::iterator, bool> grp_ins = group_indexes_.insert( {parts[2], g} );
-            size_t grp_index = grp_ins.first->second;
-
             if (grp_ins.second) {
-                // Unknown group
                 groups_.push_back(Group(parts[2]));
                 ++g;
             }
+            size_t grp_index = grp_ins.first->second;
 
-            // If the current pop did not have a group yet, indicate
-            // it. If it had one, check that it is the same.
-            if (pops_[pop_index].group == size_t(-1)) {
+            if (pops_[pop_index].group != size_t(-1)) {
+                // The current pop already has a group, check that it is the same.
+                if (pops_[pop_index].group != grp_index) {
+                    cerr << "Error: In population map file '"
+                         << pmap_path << "': population '"
+                         << pops_[pop_index].name << "' belongs to two groups, '"
+                         << groups_[pops_[pop_index].group].name << "' and '"
+                         << groups_[grp_index].name << "'\n.";
+                    throw exception();
+                }
+            } else {
                 pops_[pop_index].group = grp_index;
                 groups_[grp_index].pops.push_back(pop_index);
-            } else if (pops_[pop_index].group != grp_index) {
-                cerr << "Warning: In population map file '"
-                     << pmap_path << "': population '"
-                     << pops_[pop_index].name << "' belongs to two groups, '"
-                     << groups_[pops_[pop_index].group].name << "' and '"
-                     << groups_[grp_index].name << "'. Ignoring the latter one.\n";
             }
         }
     }

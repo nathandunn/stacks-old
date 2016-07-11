@@ -272,7 +272,8 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
     }
 
     bool gl = false; // Whether to include the GL genotype subfield.
-    if (input_mode == InputMode::stacks) {
+    if (input_mode == InputMode::stacks
+            && !debug_flags.count("VCFCOMP")) {
         gl=true;
         // Load SNP data so that model likelihoods can be output to VCF file.
         cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
@@ -375,8 +376,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
                         int dp1, dp2;
                         find_datum_allele_depths(d[j], snp_index, allele1, allele2, dp1, dp2);
 
-                        bool likelihood = col < d[j]->snps.size();
-                        if(!likelihood)
+                        if(gl && col >= d[j]->snps.size())
                             cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
 
                         if (allele2 == 0) {
@@ -490,7 +490,6 @@ write_vcf(map<int, CSLocus *> &catalog,
             }
             t   = psum->locus_tally(loc->id);
             d = pmap->locus(loc->id);
-
 
             const char ref = t->nucs[col].p_allele;
             const char alt = t->nucs[col].q_allele;

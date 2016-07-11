@@ -226,7 +226,7 @@ int main (int argc, char* argv[]) {
             return -1;
         }
         cerr << "The population map contained " << mpopi.samples().size() << " samples, "
-             << mpopi.pops().size() << " populations, " << mpopi.groups().size() << " groups.\n";
+             << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     }
 
     if (input_mode == InputMode::stacks) {
@@ -392,12 +392,17 @@ int main (int argc, char* argv[]) {
         vcf_records->pop_back();
 
         cerr << "Found " << vcf_records->size() << " SNP records in file '" << in_vcf_path
-             << "'. (Skipped " << skipped_filter.size() << " already filtered-out SNPs and " << skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
+             << "'. (Skipped " << skipped_filter.size() << " already filtered-out SNPs and "
+             << skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
         if (verbose && not skipped_notsnp.empty()) {
             log_fh << "The following VCF record lines were determined not to be SNPs and skipped :";
             for (vector<size_t>::const_iterator l=skipped_notsnp.begin(); l!=skipped_notsnp.end(); ++l)
                 log_fh << " " << *l;
             log_fh << "\n";
+        }
+        if (vcf_records->size() == 0) {
+            cerr << "Error: No records.\n";
+            return -1;
         }
 
         catalog = create_catalog(*vcf_records);
@@ -574,11 +579,8 @@ int main (int argc, char* argv[]) {
     //
     blacklist.clear();
     int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, blacklist, log_fh);
-    cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints.\n";
+    cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints (more with --verbose).\n";
 
-    if (!verbose)
-        cerr << "  (enable the --verbose flag to record the reason why each site was filtered in the batch_X.populations.log file.)\n";
-    
     //
     // Create an artificial whitelist if the user requested only the first or a random SNP per locus.
     //
@@ -608,95 +610,8 @@ int main (int argc, char* argv[]) {
     // Regenerate summary statistics after pruning SNPs and  merging loci.
     //
 
-    // todo DEBUG { "VCFCOMP"
-    if (debug_flags.count("VCFCOMP")) {
-
-        cerr << "DEBUG> Deleting all 'Datums' where the SNP genotype is absent or 'U'...\n";
-        // n.b. In this configuration we only have one SNP per locus so we don't have
-        // to worry about what U's imply regarding haplotypes.
-        size_t n_deleted = 0;
-        size_t n_loci = pmap->loci_cnt();
-        size_t n_samples = pmap->sample_cnt();
-        for (size_t l=0; l<n_loci; ++l) {
-            CSLocus* loc = catalog.at(pmap->rev_locus_index(l));
-            if (loc->snps.empty())
-                continue;
-            if (loc->snps.size() > 1) {
-                cerr << "Error: This requires --write_single_snp.\n";
-                throw exception();
-            }
-            size_t col = loc->snps.at(0)->col;
-            Datum** datums = pmap->locus(loc->id);
-            for (size_t s=0; s<n_samples; ++s) {
-                if (datums[s] == NULL)
-                    continue;
-                if (size_t(datums[s]->len) <= col || datums[s]->model[col] == 'U') {
-                    delete datums[s];
-                    datums[s] = NULL;
-                    --loc->cnt;
-                    --loc->hcnt;
-                    ++n_deleted;
-                }
-            }
-        }
-        cerr << "DEBUG> Deleted " << n_deleted << " 'Datums'.\n";
-
-        cerr << "DEBUG> Deleting loci to remove :\n"
-             << "DEBUG>   loci for which no samples are left...\n"
-             << "DEBUG>   loci which do not declare, or have, exactly two alleles,\n"
-             << "DEBUG>   SNPs that are present in several loci.\n";
-
-        set<int> myblacklist;
-        // All NULL.
-        for (auto& l : catalog) {
-            Datum** data = pmap->locus(l.second->id);
-            size_t non_null = 0;
-            for (size_t i=0; i < size_t(pmap->sample_cnt()); ++i)
-                if (data[i]!=NULL)
-                    ++non_null;
-            if (non_null == 0)
-                myblacklist.insert(l.second->id);
-        }
-        // Not two alleles.
-        for (auto& l : catalog) {
-            if (l.second->snps.empty()
-                    || l.second->snps[0]->rank_2 == 0
-                    || l.second->snps[0]->rank_3 != 0) {
-                myblacklist.insert(l.second->id);
-            } else {
-                // Check the actual number of alleles
-                Datum** data = pmap->locus(l.second->id);
-                set<char> seen_alleles;
-                for (size_t i=0; i<size_t(pmap->sample_cnt()); ++i) {
-                    Datum* d = data[i];
-                    if (d != NULL)
-                        for(char* hapl : d->obshap)
-                            seen_alleles.insert(hapl[0]);
-                }
-                if ((int((seen_alleles.count('A') || seen_alleles.count('a')))
-                        + (seen_alleles.count('C') || seen_alleles.count('c'))
-                        + (seen_alleles.count('T') || seen_alleles.count('t'))
-                        + (seen_alleles.count('G') || seen_alleles.count('g')))
-                        != 2)
-                    myblacklist.insert(l.second->id);
-            }
-        }
-        // Same SNP in different loci.
-        for (auto& chr : pmap->ordered_loci) {
-            map<size_t,vector<size_t> > seen_bp0; // (bp, [loc_id's])
-            for (CSLocus* loc : chr.second)
-                if (not loc->snps.empty())
-                    seen_bp0[loc->sort_bp(loc->snps[0]->col)].push_back(loc->id);
-            for (auto& bp : seen_bp0)
-                if (bp.second.size() > 1)
-                    for (size_t loc_id : bp.second)
-                        myblacklist.insert(loc_id);
-        }
-        reduce_catalog(catalog, empty_list, myblacklist);
-        pmap->prune(myblacklist);
-        cerr << "DEBUG> Now working on " << catalog.size() << " loci (deleted " << myblacklist.size() << " loci).\n";
-    }
-    // DEBUG }
+    if (debug_flags.count("VCFCOMP"))
+        vcfcomp_simplify_pmap(catalog, pmap);
 
     delete psum;
     psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
@@ -807,6 +722,95 @@ int main (int argc, char* argv[]) {
 
     cerr << "POPULATIONS is done.\n";
     return 0;
+}
+
+void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap) {
+
+    cerr << "DEBUG Deleting information from the pmap & catalog so that they resemble what can be retrieved from a VCF.\n";
+    // n.b. In this configuration we only have one SNP per locus so we don't have
+    // to worry about what U's imply regarding haplotypes.
+    size_t n_deleted = 0;
+    size_t n_loci = pmap->loci_cnt();
+    size_t n_samples = pmap->sample_cnt();
+    for (size_t l=0; l<n_loci; ++l) {
+        CSLocus* loc = catalog.at(pmap->rev_locus_index(l));
+        if (loc->snps.empty())
+            continue;
+        if (loc->snps.size() > 1) {
+            cerr << "Error: This requires --write_single_snp.\n";
+            throw exception();
+        }
+        size_t col = loc->snps.at(0)->col;
+        Datum** datums = pmap->locus(loc->id);
+        for (size_t s=0; s<n_samples; ++s) {
+            if (datums[s] == NULL)
+                continue;
+            if (size_t(datums[s]->len) <= col
+                    || datums[s]->model[col] == 'U'
+                    || datums[s]->obshap.empty()
+                    || strcmp(datums[s]->obshap[0], "N") == 0
+                    ) {
+                delete datums[s];
+                datums[s] = NULL;
+                --loc->cnt;
+                --loc->hcnt;
+                ++n_deleted;
+            }
+        }
+    }
+    cerr << "? Deleted " << n_deleted << " 'Datums'.\n";
+
+    set<int> myblacklist;
+    // All NULL.
+    for (auto& l : catalog) {
+        Datum** data = pmap->locus(l.second->id);
+        size_t non_null = 0;
+        for (size_t i=0; i < size_t(pmap->sample_cnt()); ++i)
+            if (data[i]!=NULL)
+                ++non_null;
+        if (non_null == 0)
+            myblacklist.insert(l.second->id);
+    }
+    // Not two alleles.
+    for (auto& l : catalog) {
+        if (l.second->snps.empty()
+                || l.second->snps[0]->rank_2 == 0
+                || l.second->snps[0]->rank_3 != 0
+                || l.second->alleles.size() != 2) {
+            myblacklist.insert(l.second->id);
+        } else {
+            // Check the actual number of alleles
+            Datum** data = pmap->locus(l.second->id);
+            set<char> seen_alleles;
+            for (size_t i=0; i<size_t(pmap->sample_cnt()); ++i) {
+                Datum* d = data[i];
+                if (d != NULL)
+                    for(char* hapl : d->obshap)
+                        seen_alleles.insert(hapl[0]);
+            }
+            if ((int((seen_alleles.count('A') || seen_alleles.count('a')))
+                    + (seen_alleles.count('C') || seen_alleles.count('c'))
+                    + (seen_alleles.count('T') || seen_alleles.count('t'))
+                    + (seen_alleles.count('G') || seen_alleles.count('g')))
+                    != 2)
+                myblacklist.insert(l.second->id);
+        }
+    }
+    // Same SNP in different loci.
+    for (auto& chr : pmap->ordered_loci) {
+        map<size_t,vector<size_t> > seen_bp0; // (bp, [loc_id's])
+        for (CSLocus* loc : chr.second)
+            if (not loc->snps.empty())
+                seen_bp0[loc->sort_bp(loc->snps[0]->col)].push_back(loc->id);
+        for (auto& bp : seen_bp0)
+            if (bp.second.size() > 1)
+                for (size_t loc_id : bp.second)
+                    myblacklist.insert(loc_id);
+    }
+    set<int> empty;
+    reduce_catalog(catalog, empty, myblacklist);
+    pmap->prune(myblacklist);
+    cerr << "? Now working on " << catalog.size() << " loci (deleted " << myblacklist.size() << " loci).\n";
 }
 
 int

@@ -60,6 +60,7 @@ class VcfHeader;
 namespace Vcf {
 
 const size_t base_fields_no = 8; // CHROM POS ID REF ALT QUAL FILTER INFO [FORMAT SAMPLE ...]]
+const string base_fields = "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO";
 const size_t chrom = 0;
 const size_t pos = 1;
 const size_t id = 2;
@@ -127,9 +128,6 @@ struct VcfRecord {
     // Returns (first allele, second allele), '-1' meaning no data.
     inline pair<int, int> parse_genotype(const string& sample) const;
 
-    // Returns alleles[i], provided it actually exists. (Otherwise it is easy to write a VCF that causes a segfault.)
-    inline const string& allele(size_t index) const;
-
     inline bool is_snp() const;
 };
 
@@ -173,7 +171,6 @@ public:
     void init_meta(const string& fileformat = "VCFv4.2");
     void add_meta(const VcfMeta& m) {meta_.push_back(m);}
     void add_sample(const string& s) {samples_.push_back(s); sample_indexes_.insert({s, samples_.size()-1});}
-
 };
 
 /*
@@ -241,7 +238,7 @@ public:
  */
 class VcfParser : public VcfAbstractParser {
     ifstream file_;
-    void getline(char* ptr, size_t n) {file_.getline(ptr, n); eof_ = file_.eof();}
+    inline void getline(char* ptr, size_t n);
     void check_eol() {eol_ = ! file_.fail(); file_.clear();}
 public:
     VcfParser(const string& path) : VcfAbstractParser(path), file_(path) {}
@@ -256,7 +253,7 @@ public:
  */
 class VcfGzParser : public VcfAbstractParser {
     gzFile file_;
-    void getline(char* ptr, size_t n) {if (gzgets(file_, ptr, n) == NULL) eof_ = true; else eof_ = false;}
+    inline void getline(char* ptr, size_t n);
     inline void check_eol();
 
     VcfGzParser(VcfGzParser& p) = delete; // No copy constructor.
@@ -344,11 +341,8 @@ string VcfRecord::parse_gt_subfield(const string& sample, size_t index) const {
     }
 
     const char* last = strchr(first, ':');
-    if (last == NULL)
-        // Last field.
-        return subf.assign(first);
-    else
-        return subf.assign(first, last);
+    subf = last == NULL ? string(first) : string(first, last);
+    return subf;
 }
 
 inline
@@ -387,7 +381,12 @@ pair<int, int> VcfRecord::parse_genotype(const string& sample) const {
     try {
         genotype.first = std::stoi(string(first, slash));
         genotype.second = std::stoi(colon==NULL ? string(slash+1) : string(slash+1, colon));
-    } catch (std::invalid_argument& e) {
+        if (genotype.first < 0
+            || genotype.first >= int(alleles.size())
+            || genotype.second < 0
+            || genotype.second >= int(alleles.size()))
+            throw exception();
+    } catch (exception& e) {
         cerr << "Error: Malformed VCF genotype '" << sample
              << "', at marker '" << chrom << ":" << pos
              << "'.\n";
@@ -395,18 +394,6 @@ pair<int, int> VcfRecord::parse_genotype(const string& sample) const {
     }
 
     return genotype;
-}
-
-inline
-const string& VcfRecord::allele(size_t index) const {
-    try {
-        return alleles.at(index);
-    } catch (std::out_of_range& e) {
-        cerr << "Error: Malformed VCF genotype for marker '"
-             << chrom << ":" << pos
-             << "' (allele index does not exist).\n";
-        throw e;
-    }
 }
 
 inline
@@ -422,23 +409,22 @@ bool VcfRecord::is_snp() const {
 }
 
 inline
-void
-VcfAbstractParser::read_to_eol()
+void VcfAbstractParser::read_to_eol()
 {
     while(!eol_) {
         getline(line_, Vcf::line_buf_size);
         if(eof_) {
-            cerr << "Error: VCF file " << path_ << " does not end with a newline.\n";
-            throw exception();
+            eol_=true;
+        } else {
+            tabs_.clear();
+            tabs_.push_back(line_+strlen(line_));
+            check_eol();
         }
-        tabs_.clear();
-        tabs_.push_back(line_+strlen(line_));
-        check_eol();
     }
 }
 
-inline void
-VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2)
+inline
+void VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2)
 {
     if(tab2 == tab1+1)
         cerr << "Warning: malformed VCF record line (empty SAMPLE field should be marked by a dot)."
@@ -449,10 +435,26 @@ VcfAbstractParser::add_sample(VcfRecord& record, char* tab1, char* tab2)
     ++sample_index_;
 }
 
+inline
+void VcfParser::getline(char* ptr, size_t n) {
+    file_.getline(ptr, n);
+    if(file_.eof()) {
+        eof_=file_.fail();
+        if(!eof_)
+            cerr << "Notice: File '" << path_ << "' does not end with a newline.\n";
+    }
+}
+
 #ifdef HAVE_LIBZ
 inline
+void VcfGzParser::getline(char* buf, size_t n) {
+    if (gzgets(file_, buf, n) == NULL)
+        eof_ = true;
+}
+
+inline
 void VcfGzParser::check_eol() {
-    if(*(tabs_.back()-1) == '\n') { // rem. safe, gzgets never returns a null string
+    if(*(tabs_.back()-1) == '\n') { // rem. safe, gzgets returns NULL on EOF
         eol_ = true;
         tabs_.back() = tabs_.back()-1;
         *tabs_.back() = '\0';

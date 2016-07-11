@@ -130,6 +130,8 @@ double   count_haplotypes_at_locus(int, int, Datum**, map<string, double>&);
 //bool compare_pop_map(pair<int, string>, pair<int, string>); //no implementation; the function is in [sql_utilities.h]
 bool hap_compare(pair<string, int>, pair<string, int>);
 
+void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap);
+
 inline
 bool uncalled_haplotype(const char *haplotype)
 {
