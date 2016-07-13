@@ -327,8 +327,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
 
             const char ref = sites[pos]->p_allele;
             const char alt = sites[pos]->q_allele;
-            char freq_ref[32], freq_alt[32];
-            sprintf(freq_ref, "%0.3f", sites[pos]->p_freq);
+            char freq_alt[32];
             sprintf(freq_alt, "%0.3f", 1 - sites[pos]->p_freq);
 
             VcfRecord rec;
@@ -341,7 +340,7 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
             rec.qual = ".";
             rec.filter.push_back("PASS");
             rec.info.push_back({"NS",to_string(sites[pos]->num_indv)});
-            rec.info.push_back({"AF",string(freq_ref) + "," + freq_alt});
+            rec.info.push_back({"AF",freq_alt});
             rec.format.push_back("GT");
             rec.format.push_back("DP");
             rec.format.push_back("AD");
@@ -493,8 +492,7 @@ write_vcf(map<int, CSLocus *> &catalog,
 
             const char ref = t->nucs[col].p_allele;
             const char alt = t->nucs[col].q_allele;
-            char freq_ref[32], freq_alt[32];
-            sprintf(freq_ref, "%0.3f", t->nucs[col].p_freq);
+            char freq_alt[32];
             sprintf(freq_alt, "%0.3f", 1 - t->nucs[col].p_freq);
 
             VcfRecord rec;
@@ -507,7 +505,7 @@ write_vcf(map<int, CSLocus *> &catalog,
             rec.qual = ".";
             rec.filter.push_back("PASS");
             rec.info.push_back({"NS",to_string(t->nucs[col].num_indv)});
-            rec.info.push_back({"AF",string(freq_ref) + "," + freq_alt});
+            rec.info.push_back({"AF",freq_alt});
             rec.format.push_back("GT");
             rec.format.push_back("DP");
             rec.format.push_back("AD");
