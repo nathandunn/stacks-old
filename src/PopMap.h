@@ -374,18 +374,22 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
             vector<int> ad;
             if (ad_index != -1) {
                 string ad_str = rec.parse_gt_subfield(sample, ad_index);
-                size_t coma = ad_str.find(',');
+                size_t start = 0;
+                size_t coma;
                 try {
-                     if (coma == string::npos)
-                         throw exception();
-                     ad.push_back(std::stoi(ad_str.substr(0,coma)));
-                     ad.push_back(std::stoi(ad_str.substr(coma+1)));
-                     if (ad[0] < 0 || ad[1] < 0)
+                     while ((coma = ad_str.find(',', start)) != string::npos) {
+                         ad.push_back(std::stoi(ad_str.substr(start,coma)));
+                         if (ad.back() < 0)
+                             throw exception();
+                         start=coma+1;
+                     }
+                     ad.push_back(std::stoi(ad_str.substr(start)));
+                     if (ad.size() != rec.alleles.size())
                          throw exception();
                  } catch (exception& e) {
                      cerr << "Warning: Badly formatted AD string '" << ad_str
                           << "' at VCF record '" << rec.chrom << ":" << rec.pos << "'.\n";
-                     ad = {0, 0};
+                     ad = vector<int>(rec.alleles.size(), 0);
                  }
             }
 
