@@ -49,7 +49,7 @@ typedef string allele_type;
 
 enum snp_type    {snp_type_het, snp_type_hom, snp_type_unk};
 enum read_type   {primary, secondary};
-enum strand_type {plus, minus};
+enum strand_type {strand_plus, strand_minus};
 enum searcht     {sequence, genomic_loc};
 
 class PhyLoc {
@@ -69,12 +69,12 @@ public:
     PhyLoc() {
         chr    = NULL;
         bp     = 0;
-        strand = plus;
+        strand = strand_plus;
     }
     PhyLoc(const char *chr, uint bp) {
         this->chr    = new char[strlen(chr)  + 1];
         this->bp     = bp;
-        this->strand = plus;
+        this->strand = strand_plus;
         strcpy(this->chr,  chr);
     }
     PhyLoc(const char *chr, uint bp, strand_type strnd) {

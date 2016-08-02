@@ -67,12 +67,12 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
     strcpy(this->qual, qual);
     this->loc.set(chr, bp, strand);
 
-    sprintf(this->loc_str, "%s|%d|%c", chr, bp, strand == plus ? '+' : '-');
+    sprintf(this->loc_str, "%s|%d|%c", chr, bp, strand == strand_plus ? '+' : '-');
 
     //
     // Reverse complement sequences from the negative strand 
     //
-    if (strand == plus) {
+    if (strand == strand_plus) {
 	this->seq = new char[strlen(seq)  + 1];
 	strcpy(this->seq, seq);
     } else {

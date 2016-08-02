@@ -21,6 +21,7 @@
 #ifndef __ORDERED_H__
 #define __ORDERED_H__
 
+#include <iostream>
 #include <fstream>
 using std::ifstream;
 using std::ofstream;
@@ -265,8 +266,8 @@ OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vecto
 				<< loc->loc.chr << "\t"
 				<< loc->sort_bp(k) << "\t"
 				<< k << "\t" 
-				<< pop_1 << "\t" 
-				<< pop_2 << "\n";
+				<< pop_key[pop_1] << "\t"
+				<< pop_key[pop_2] << "\n";
 		delete pair;
 		continue;
 	    }
@@ -359,7 +360,7 @@ OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, i
 				<< loc->loc.chr << "\t"
 				<< lsum->nucs[k].bp << "\t"
 				<< k << "\t" 
-				<< pop_id << "\t"
+				<< pop_key[pop_id] << "\t"
 				<< "conflicts with locus " << sites[sites_key[lsum->nucs[k].bp]]->loc_id << "\n";
 	    }
 	}

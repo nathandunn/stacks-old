@@ -28,7 +28,7 @@
 #include "catalog_utils.h"
 
 int 
-reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blacklist) 
+reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blacklist)
 {
     map<int, CSLocus *> list;
     map<int, CSLocus *>::iterator it;
@@ -204,7 +204,7 @@ check_whitelist_integrity(map<int, CSLocus *> &catalog, map<int, set<int> > &whi
 }
 
 int 
-reduce_catalog(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, set<int> &blacklist) 
+reduce_catalog(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, set<int> &blacklist)
 {
     map<int, CSLocus *> list;
     map<int, CSLocus *>::iterator it;
@@ -338,4 +338,58 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
     }
 
     return 0;
+}
+
+map<int, CSLocus*> create_catalog(const vector<VcfRecord>& records) {
+    map<int, CSLocus*> catalog;
+
+    for (size_t i = 0; i < records.size(); ++i) {
+        const VcfRecord& rec = records[i];
+
+        CSLocus* loc = catalog.insert(make_pair(i, new CSLocus())).first->second;
+        loc->sample_id = 0;
+        loc->id = i;
+        loc->len = 1;
+        loc->con = new char[2];
+        strcpy(loc->con, rec.alleles[0].c_str());
+        loc->loc.set(rec.chrom.c_str(), (uint)rec.pos, strand_plus);
+        for (const string& a : rec.alleles) {
+            if (a=="*")
+                continue;
+            loc->alleles.insert({a, 0});
+        }
+        loc->depth = 0;
+        loc->lnl = 0;
+
+        loc->snps.push_back(new SNP());
+        SNP& snp = *loc->snps.back();
+        snp.col = 0;
+        vector<char*> snp_alleles = {&snp.rank_1, &snp.rank_2, &snp.rank_3, &snp.rank_4};
+        try {
+            size_t s=0;
+            for (const string& a : rec.alleles) {
+                if (a=="*")
+                    continue;
+                *snp_alleles.at(s) = a.at(0);
+                ++s;
+            }
+        } catch (out_of_range& e) {
+            cerr << "Warning: Skipping malformed VCF SNP record '"
+                 << rec.chrom << ":" << rec.pos << "'."
+                 << " Alleles were:";
+            for (const string& a : rec.alleles)
+                cerr << " '" << a << "';";
+            cerr << ".\n";
+            delete loc->snps[0];
+            delete loc->con;
+            delete loc;
+            catalog.erase(i);
+            continue;
+        }
+        snp.type = *snp_alleles[2] == 0 ? snp_type_hom : snp_type_het;
+
+        loc->populate_alleles();
+    }
+
+    return catalog;
 }

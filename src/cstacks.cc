@@ -176,7 +176,7 @@ int update_catalog_index(map<int, CLocus *> &catalog, map<string, int> &cat_inde
 	snprintf(id, id_len - 1, "%s|%d|%c", 
 		 j->second->loc.chr, 
 		 j->second->loc.bp, 
-		 j->second->loc.strand == plus ? '+' : '-');
+		 j->second->loc.strand == strand_plus ? '+' : '-');
 
 	if (cat_index.count(id) == 0) {
 	    cat_index[id] = j->first;
@@ -935,7 +935,7 @@ int find_matches_by_genomic_loc(map<string, int> &cat_index, map<int, QLocus *> 
 	    snprintf(id, id_len - 1, "%s|%d|%c", 
 		     i->second->loc.chr, 
 		     i->second->loc.bp, 
-		     i->second->loc.strand == plus ? '+' : '-');
+		     i->second->loc.strand == strand_plus ? '+' : '-');
 
 	    if (cat_index.count(id) > 0)
 		i->second->add_match(cat_index[id], "", "", 0);
@@ -1539,7 +1539,7 @@ write_simple_output(CLocus *tag, ofstream &cat_file, ofstream &snp_file, ofstrea
 	tag->id      << "\t" <<
         tag->loc.chr << "\t" <<
         tag->loc.bp  << "\t" <<
-        (tag->loc.strand == plus ? "+" : "-") << "\t" <<
+        (tag->loc.strand == strand_plus ? "+" : "-") << "\t" <<
 	"consensus"  << "\t" <<
 	"0"          << "\t" <<
 	sources      << "\t" <<
@@ -1616,7 +1616,7 @@ write_gzip_output(CLocus *tag, gzFile &cat_file, gzFile &snp_file, gzFile &all_f
 	tag->id      << "\t" <<
         tag->loc.chr << "\t" <<
         tag->loc.bp  << "\t" <<
-        (tag->loc.strand == plus ? "+" : "-") << "\t" <<
+        (tag->loc.strand == strand_plus ? "+" : "-") << "\t" <<
 	"consensus"  << "\t" <<
 	"0"          << "\t" <<
 	sources      << "\t" <<
