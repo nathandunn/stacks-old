@@ -114,7 +114,7 @@ int      nuc_substitution_dist(map<string, int> &, double **);
 int      nuc_substitution_identity(map<string, int> &, double **);
 int      nuc_substitution_identity_max(map<string, int> &, double **);
 
-HapStat *haplotype_amova(map<int, int> &, Datum **, LocSum **, vector<int> &);
+HapStat *haplotype_amova(Datum **, LocSum **, vector<int> &);
 double   amova_ssd_total(vector<string> &, map<string, int> &, double **);
 double   amova_ssd_wp(vector<int> &, map<int, vector<int> > &, map<string, int> &, map<int, vector<string> > &, double **);
 double   amova_ssd_ap_wg(vector<int> &, map<int, vector<int> > &, map<string, int> &, map<int, vector<string> > &, double **, double **);

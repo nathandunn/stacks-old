@@ -103,15 +103,7 @@ set<string> debug_flags;
 
 string    out_prefix;
 
-MetaPopInfo mpopi; // Information and reference indexes for samples, populations and groups.
-                   // Replaces the following globals :
-vector<pair<int, string> > files;            // Vector of (pop_index, prefix) pairs. (The indexes in the vector are out of sync after the load-matches loop.)
-vector<int>                sample_ids;       // vector of sample_id's.
-map<int, string>           samples;          // Map of (sample_id : sample_name).
-map<int, string>           pop_key, grp_key; // maps of (pop_id : pop_name) and (group_id : group_name).
-                                                 // n.b. IDs are --were-- created when the popmap is loaded, starting at 1 and incrementing
-map<int, pair<int, int> >  pop_indexes;      // map of (pop_id : (sample_index, sample_index))
-map<int, vector<int> >     grp_members;      // map of (group_id : pop_id's)
+MetaPopInfo mpopi;
 
 set<int> blacklist, bootstraplist;
 map<int, set<int> > whitelist;
@@ -456,25 +448,16 @@ int main (int argc, char* argv[]) {
         population_limit = mpopi.pops().size();
     }
 
-    // Set the former sample/population globals to their expected values.
-    mpopi.fill_files(files);
-    mpopi.fill_sample_ids(sample_ids);
-    mpopi.fill_samples(samples);
-    mpopi.fill_pop_key(pop_key);
-    mpopi.fill_pop_indexes(pop_indexes);
-    mpopi.fill_grp_key(grp_key);
-    mpopi.fill_grp_members(grp_members);
-
     //
     // Initialize the PopMap
     //
 
     cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi.samples().size(), catalog.size());
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi, catalog.size());
 
     if (input_mode == InputMode::stacks) {
         // Using SStacks matches files...
-        pmap->populate(sample_ids, catalog, catalog_matches);
+        pmap->populate(catalog, catalog_matches);
 
         for(vector<vector<CatMatch *> >::iterator sample = catalog_matches.begin(); sample != catalog_matches.end(); ++sample)
             for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
@@ -482,7 +465,7 @@ int main (int argc, char* argv[]) {
         catalog_matches.clear();
     } else if (input_mode == InputMode::vcf) {
         // ...or using VCF records.
-        pmap->populate(mpopi, catalog, *vcf_records, *vcf_header);
+        pmap->populate(catalog, *vcf_records, *vcf_header);
         delete vcf_records;
         delete vcf_header;
         vcf_records = NULL;
@@ -514,30 +497,30 @@ int main (int argc, char* argv[]) {
         // each individual at each locus.
         //
 
-        cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
+        cerr << "Loading model outputs for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
 
         map<int, CSLocus *>::iterator it;
         map<int, ModRes *>::iterator mit;
         Datum   *d;
         CSLocus *loc;
 
-        for (uint i = 0; i < sample_ids.size(); i++) {
+        for (uint i = 0; i < mpopi.samples().size(); i++) {
             map<int, ModRes *> modres;
-            load_model_results(in_path + samples[sample_ids[i]], modres);
+            load_model_results(in_path + mpopi.samples()[i].name, modres);
 
             if (modres.size() == 0) {
-                cerr << "    Warning: unable to find any model results in file '" << samples[sample_ids[i]] << "', excluding this sample from population analysis.\n";
+                cerr << "    Warning: unable to find any model results in file '" << mpopi.samples()[i].name << ".models.tsv(.gz)', excluding this sample from population analysis.\n";
                 continue;
             }
 
             for (it = catalog.begin(); it != catalog.end(); it++) {
                 loc = it->second;
-                d = pmap->datum(loc->id, sample_ids[i]);
+                d = pmap->datum(loc->id, mpopi.samples()[i].id);
 
                 if (d != NULL) {
                     if (modres.count(d->id) == 0) {
                         cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id
-                             << ", sample ID " << sample_ids[i] << ", sample locus " << d->id
+                             << ", sample ID " << mpopi.samples()[i].id << ", sample locus " << d->id
                              << "; likely IDs were mismatched when running pipeline.\n";
                         exit(0);
                     }
@@ -550,22 +533,14 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    uint pop_id, start_index, end_index;
-    map<int, pair<int, int> >::const_iterator pit;
-
     //
     // Create the PopSum object and compute the summary statistics.
     //
 
-    PopSum<CSLocus> *psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
-    psum->initialize(pmap);
-
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        start_index = pit->second.first;
-        end_index   = pit->second.second;
-        pop_id      = pit->first;
-        cerr << "Generating nucleotide-level summary statistics for population '" << pop_key[pop_id] << "'\n";
-        psum->add_population(catalog, pmap, pop_id, start_index, end_index, verbose, log_fh);
+    PopSum<CSLocus> *psum = new PopSum<CSLocus>(*pmap, mpopi);
+    for (size_t i=0; i<mpopi.pops().size(); ++i) {
+        cerr << "Generating nucleotide-level summary statistics for population '" << mpopi.pops()[i].name << "'\n";
+        psum->add_population(catalog, pmap, i, verbose, log_fh);
     }
 
     cerr << "Tallying loci across populations...";
@@ -614,25 +589,21 @@ int main (int argc, char* argv[]) {
         vcfcomp_simplify_pmap(catalog, pmap);
 
     delete psum;
-    psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
-    psum->initialize(pmap);
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        start_index = pit->second.first;
-        end_index   = pit->second.second;
-        pop_id      = pit->first;
-        cerr << "Regenerating nucleotide-level summary statistics for population '" << pop_key[pop_id] << "'\n";
-        psum->add_population(catalog, pmap, pop_id, start_index, end_index, verbose, log_fh);
+    psum = new PopSum<CSLocus>(*pmap, mpopi);
+    for (size_t i=0; i<mpopi.pops().size(); ++i) {
+        cerr << "Regenerating nucleotide-level summary statistics for population '" << mpopi.pops()[i].name << "'\n";
+        psum->add_population(catalog, pmap, i, verbose, log_fh);
     }
     cerr << "Re-tallying loci across populations...";
     psum->tally(catalog);
     cerr << "done.\n";
 
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        pop_id = pit->first;
+    for (size_t i=0; i<mpopi.pops().size(); ++i) {
+        const Pop& pop = mpopi.pops()[i];
         if (kernel_smoothed) {
             if (loci_ordered) {
-                cerr << "  Generating kernel-smoothed population statistics...\n";
-                kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
+                cerr << "  Generating kernel-smoothed population statistics for population '" << pop.name << "'...\n";
+                kernel_smoothed_popstats(catalog, pmap, psum, i, log_fh);
             } else {
                 cerr << "Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
             }
@@ -822,7 +793,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
                         PopMap<CSLocus> *pmap, 
                         ofstream &log_fh)
 {
-    uint pop_sthg, start_index, end_index;
+    uint pop_sthg;
     CSLocus *loc;
     Datum  **d;
 
@@ -833,9 +804,8 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
                << "# Action\tLocus ID\tChr\tBP\tColumn\tReason\n";
 
     map<int, CSLocus *>::iterator it;
-    map<int, pair<int, int> >::const_iterator pit;
 
-    uint pop_cnt   = pop_indexes.size();
+    uint pop_cnt   = mpopi.pops().size();
     int *pop_order = new int [pop_cnt];
 
     // Which population each sample belongs to.
@@ -848,16 +818,15 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
     int *pop_tot   = new int [pop_cnt];
 
     pop_sthg = 0;
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        start_index = pit->second.first;
-        end_index   = pit->second.second;
+    for (size_t i_pop=0; i_pop<mpopi.pops().size(); ++i_pop) {
+        const Pop& pop = mpopi.pops()[i_pop];
         pop_tot[pop_sthg]  = 0;
 
-        for (uint i = start_index; i <= end_index; i++) {
+        for (uint i = pop.first_sample; i <= pop.last_sample; i++) {
             samples[i] = pop_sthg;
             pop_tot[pop_sthg]++;
         }
-        pop_order[pop_sthg] = pit->first;
+        pop_order[pop_sthg] = i_pop;
         pop_sthg++;
     }
 
@@ -914,14 +883,10 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
         // the members of that population.
         //
         for (uint i = 0; i < pop_cnt; i++) {
-            pct = (double) pop_cnts[i] / (double) pop_tot[i];
-
+            const Pop& pop = mpopi.pops()[pop_order[i]];
             if (pop_cnts[i] > 0 && pct < sample_limit) {
                 //cerr << "Removing population " << pop_order[i] << " at locus: " << loc->id << "; below sample limit: " << pct << "\n";
-                start_index = pop_indexes.at(pop_order[i]).first;
-                end_index   = pop_indexes.at(pop_order[i]).second;
-
-                for (uint j  = start_index; j <= end_index; j++) {
+                for (uint j  = pop.first_sample; j <= pop.last_sample; j++) {
                     if (d[j] != NULL) {
                         delete d[j];
                         d[j] = NULL;
@@ -998,7 +963,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
     Datum   **d;
     bool      sample_prune, maf_prune, het_prune, inc_prune;
     int       size, pruned = 0;
-    uint      pop_id, start_index, end_index;
+    uint      pop_id;
     
     if (verbose)
         log_fh << "\n#\n# List of pruned nucleotide sites\n#\n"
@@ -1049,32 +1014,29 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                 inc_prune    = false;
                 pop_prune_list.clear();
                 
-                for (int j = 0; j < psum->pop_cnt(); j++) {
-                    pop_id = psum->rev_pop_index(j);
-
-                    if (s[j]->nucs[loc->snps[i]->col].incompatible_site)
+                for (size_t p=0; p<mpopi.pops().size(); ++p) {
+                    if (s[p]->nucs[loc->snps[i]->col].incompatible_site)
                         inc_prune = true;
 
-                    else if (s[j]->nucs[loc->snps[i]->col].num_indv == 0 ||
-                             (double) s[j]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(pop_id) < sample_limit)
-                        pop_prune_list.push_back(pop_id);
+                    else if (s[p]->nucs[loc->snps[i]->col].num_indv == 0 ||
+                             (double) s[p]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(p) < sample_limit)
+                        pop_prune_list.push_back(p);
                 }
 
                 //
                 // Check how many populations have to be pruned out due to sample limit. If less than
                 // population limit, prune them; if more than population limit, mark locus for deletion.
                 //
-                if ((psum->pop_cnt() - pop_prune_list.size()) < (uint) population_limit) {
+                if ((mpopi.pops().size() - pop_prune_list.size()) < (uint) population_limit) {
                     sample_prune = true;
                 } else {
-                    for (uint j = 0; j < pop_prune_list.size(); j++) {
-                        if (s[psum->pop_index(pop_prune_list[j])]->nucs[loc->snps[i]->col].num_indv == 0) continue;
+                    for (size_t p : pop_prune_list) {
+                        if (s[p]->nucs[loc->snps[i]->col].num_indv == 0)
+                            continue;
 
-                        start_index = pop_indexes.at(pop_prune_list[j]).first;
-                        end_index   = pop_indexes.at(pop_prune_list[j]).second;
-                        d           = pmap->locus(loc->id);
-
-                        for (uint k = start_index; k <= end_index; k++) {
+                        d = pmap->locus(loc->id);
+                        const Pop& pop = mpopi.pops()[p];
+                        for (uint k = pop.first_sample; k <= pop.last_sample; k++) {
                             if (d[k] == NULL || loc->snps[i]->col >= (uint) d[k]->len) 
                                 continue;
                             if (d[k]->model != NULL) {
@@ -1168,14 +1130,12 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                 inc_prune    = false;
                 pop_prune_list.clear();
                 
-                for (int j = 0; j < psum->pop_cnt(); j++) {
-                    pop_id = psum->rev_pop_index(j);
-
-                    if (s[j]->nucs[loc->snps[i]->col].incompatible_site)
+                for (size_t p = 0; p < mpopi.pops().size(); p++) {
+                    if (s[p]->nucs[loc->snps[i]->col].incompatible_site)
                         inc_prune = true;
-                    else if (s[j]->nucs[loc->snps[i]->col].num_indv == 0 ||
-                             (double) s[j]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(pop_id) < sample_limit)
-                        pop_prune_list.push_back(pop_id);
+                    else if (s[p]->nucs[loc->snps[i]->col].num_indv == 0 ||
+                             (double) s[p]->nucs[loc->snps[i]->col].num_indv / (double) psum->pop_size(p) < sample_limit)
+                        pop_prune_list.push_back(p);
                 }
 
                 //
@@ -1185,14 +1145,13 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                 if ((psum->pop_cnt() - pop_prune_list.size()) < (uint) population_limit) {
                     sample_prune = true;
                 } else {
-                    for (uint j = 0; j < pop_prune_list.size(); j++) {
-                        if (s[psum->pop_index(pop_prune_list[j])]->nucs[loc->snps[i]->col].num_indv == 0) continue;
-                        
-                        start_index = pop_indexes.at(pop_prune_list[j]).first;
-                        end_index   = pop_indexes.at(pop_prune_list[j]).second;
-                        d           = pmap->locus(loc->id);
+                    for (size_t p : pop_prune_list) {
+                        if (s[p]->nucs[loc->snps[i]->col].num_indv == 0)
+                            continue;
 
-                        for (uint k = start_index; k <= end_index; k++) {
+                        d = pmap->locus(loc->id);
+                        const Pop& pop = mpopi.pops()[p];
+                        for (uint k = pop.first_sample; k <= pop.last_sample; k++) {
                             if (d[k] == NULL || loc->snps[i]->col >= (uint) d[k]->len) 
                                 continue;
                             if (d[k]->model != NULL) {
@@ -2298,19 +2257,15 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
     fh.precision(fieldw);
     fh.setf(std::ios::fixed);
 
-    map<int, pair<int, int> >::const_iterator pit;
-    int start, end, pop_id;
-
     //
     // Write the population members.
     //
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        start = pit->second.first;
-        end   = pit->second.second;
-        fh << "# " << pop_key[pit->first] << "\t";
-        for (int i = start; i <= end; i++) {
-            fh << samples.at(pmap->rev_sample_index(i));
-            if (i < end) fh << ",";
+    for (auto& pop : mpopi.pops()) {
+        fh << "# " << pop.name << "\t";
+        for (int i = pop.first_sample; i <= pop.last_sample; i++) {
+            fh << mpopi.samples()[i].name;
+            if (i < pop.last_sample)
+                fh << ",";
         }
         fh << "\n";
     }
@@ -2333,12 +2288,9 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
     //
     // Iterate over the members of each population.
     //
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        start     = pit->second.first;
-        end       = pit->second.second;
-        pop_id    = pit->first;
+    for (auto& pop : mpopi.pops()) {
 
-        cerr << "Generating haplotype-level summary statistics for population '" << pop_key[pop_id] << "'\n";
+        cerr << "Generating haplotype-level summary statistics for population '" << pop.name << "'\n";
         map<string, vector<LocStat *> > genome_locstats;
 
         for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
@@ -2359,7 +2311,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
 
                 // cerr << "Looking at locus " << loc->id << "\n";
 
-                l = haplotype_diversity(start, end, d);
+                l = haplotype_diversity(pop.first_sample, pop.last_sample, d);
 
                 if (l != NULL) {
                     l->loc_id = loc->id;
@@ -2394,7 +2346,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
                    << l->loc_id        << "\t"
                    << it->first        << "\t"
                    << l->bp + 1        << "\t"
-                   << pop_key[pop_id]  << "\t"
+                   << pop.name         << "\t"
                    << (int) l->alleles << "\t"
                    << l->hap_cnt       << "\t"
                    << l->stat[0]       << "\t"
@@ -2532,22 +2484,11 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
         cerr << "Calculating haplotype F statistics across all populations/groups...\n";
 
     //
-    // Create a list of all the groups we have.
-    //
-    map<int, vector<int> >::iterator git;
-    map<int, int> pop_grp_key; // map of (pop_id, group_id)
-    for (git = grp_members.begin(); git != grp_members.end(); git++)
-        for (uint i = 0; i < git->second.size(); i++)
-            pop_grp_key[git->second[i]] = git->first;
-
-    //
     // Create a list of all the populations we have.
     //
     vector<int> pop_ids;
-
-    map<int, pair<int, int> >::const_iterator pit;
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
-        pop_ids.push_back(pit->first);
+    for (size_t i=0; i<mpopi.pops().size(); ++i)
+        pop_ids.push_back(i);
 
     //
     // Instantiate the kernel smoothing object and associated ordering object if requested.
@@ -2601,7 +2542,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
                 cnt++;
                 // cerr << "Processing locus " << loc->id << "\n";
 
-                h = haplotype_amova(pop_grp_key, d, s, pop_ids);
+                h = haplotype_amova(d, s, pop_ids);
 
                 if (h != NULL) {
                     h->stat[4] = haplotype_d_est(d, s, pop_ids);
@@ -2658,14 +2599,12 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     //
     // Write the population members.
     //
-    int start, end;
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        start = pit->second.first;
-        end   = pit->second.second;
-        fh << "# Population " << pop_key[pit->first] << "\t";
-        for (int k = start; k <= end; k++) {
-            fh << samples.at(pmap->rev_sample_index(k));
-            if (k < end) fh << ",";
+    for (auto& pop : mpopi.pops()) {
+        fh << "# Population " << pop.name << "\t";
+        for (int k = pop.first_sample; k <= pop.last_sample; k++) {
+            fh << mpopi.samples()[k].name;
+            if (k < pop.last_sample)
+                fh << ",";
         }
         fh << "\n";
     }
@@ -2673,14 +2612,13 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     //
     // Write the group members.
     //
-    for (git = grp_members.begin(); git != grp_members.end(); git++) {
-        fh << "# Group " << grp_key[git->first] << "\t";
-        for (size_t k = 0; k < git->second.size(); k++) {
-            fh << pop_key[git->second[k]];
-            if (k < git->second.size() - 1)
+    for (auto& group : mpopi.groups()) {
+        fh << "# Group " << group.name << "\t";
+        for (size_t i_pop : group.pops) {
+            fh << mpopi.pops()[i_pop].name;
+            if (i_pop != group.pops.back())
                 fh << ",";
         }
-        fh << "\n";
     }
 
     fh << "# Batch ID " << "\t"
@@ -2789,16 +2727,9 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
     //
     // Assign all individuals to one group for the pairwise calculations.
     //
-    map<int, vector<int> >::iterator git;
-    map<int, int> pop_grp_key; // map of (pop_id, group_id)
-    for (git = grp_members.begin(); git != grp_members.end(); git++)
-        for (uint i = 0; i < git->second.size(); i++)
-            pop_grp_key[git->second[i]] = 1;
-
-    map<int, pair<int, int> >::const_iterator pit;
     vector<int> pop_ids;
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
-        pop_ids.push_back(pit->first);
+    for (size_t i=0; i<mpopi.pops().size(); ++i)
+        pop_ids.push_back(i);
 
     //
     // Instantiate the kernel smoothing object if requested.
@@ -2811,19 +2742,20 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
         ord = new OHaplotypes<HapStat>();
     }
 
-    for (uint i = 0; i < pop_ids.size(); i++) {
-        for (uint j = i + 1; j < pop_ids.size(); j++) {
+    for (uint i = 0; i < mpopi.pops().size(); ++i) {
+        const Pop& pop_i = mpopi.pops()[i];
+        for (uint j = i + 1; j < mpopi.pops().size(); ++j) {
+            const Pop& pop_j = mpopi.pops()[j];
+            vector<int> subpop_ids;
+            subpop_ids.push_back(i);
+            subpop_ids.push_back(j);
 
             if (bootstrap_phist)
                 bs = new Bootstrap<HapStat>(5);
 
             map<string, vector<HapStat *> > genome_hapstats;
-            vector<int> subpop_ids;
 
-            subpop_ids.push_back(pop_ids[i]);
-            subpop_ids.push_back(pop_ids[j]);
-
-            cerr << "  Processing populations '" << pop_key[pop_ids[i]] << "' and '" << pop_key[pop_ids[j]] << "'\n";
+            cerr << "  Processing populations '" << pop_i.name << "' and '" << pop_j.name << "'\n";
 
             uint cnt = 0;
             for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
@@ -2861,7 +2793,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
                         cnt++;
                         // cerr << "Processing locus " << loc->id << "\n";
 
-                        h = haplotype_amova(pop_grp_key, d, s, subpop_ids);
+                        h = haplotype_amova(d, s, subpop_ids);
 
                         if (h != NULL) {
                             h->stat[4] = haplotype_d_est(d, s, subpop_ids);
@@ -2900,7 +2832,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
 
             cerr << "Writing haplotype F statistics... ";
 
-            string file = out_path + out_prefix + ".phistats_" + pop_key[pop_ids[i]] + "-" + pop_key[pop_ids[j]] + ".tsv";
+            string file = out_path + out_prefix + ".phistats_" + pop_i.name + "-" + pop_j.name + ".tsv";
 
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
@@ -2913,14 +2845,13 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
             //
             // Write the population members.
             //
-            int start, end;
             for (uint k = 0; k < subpop_ids.size(); k++) {
-                start = pop_indexes.at(subpop_ids[k]).first;
-                end   = pop_indexes.at(subpop_ids[k]).second;
-                fh << "# Population " << pop_key[subpop_ids[k]] << "\t";
-                for (int n = start; n <= end; n++) {
-                    fh << samples.at(pmap->rev_sample_index(n));
-                    if (n < end) fh << ",";
+                const Pop& pop_k = mpopi.pops()[k]; // (Will be one of [pop_i], [pop_j].)
+                fh << "# Population " << pop_k.name << "\t";
+                for (int n = pop_k.first_sample; n <= pop_k.last_sample; n++) {
+                    fh << mpopi.samples()[n].name;
+                    if (n < pop_k.last_sample)
+                        fh << ",";
                 }
                 fh << "\n";
             }
@@ -2967,8 +2898,8 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
 
                     fh << batch_id            << "\t"
                        << hapstats[k]->loc_id << "\t"
-                       << pop_key[pop_ids[i]] << "\t"
-                       << pop_key[pop_ids[j]] << "\t"
+                       << pop_i.name          << "\t"
+                       << pop_j.name          << "\t"
                        << chr                 << "\t"
                        << hapstats[k]->bp +1  << "\t";
                     if (log_fst_comp)
@@ -3020,15 +2951,10 @@ fixed_locus(Datum **d, vector<int> &pop_ids)
 {
     set<string>               loc_haplotypes;
     map<int, vector<string> > pop_haplotypes;
-    int start, end, pop_id;
-    int pop_cnt = pop_ids.size();
 
-    for (int p = 0; p < pop_cnt; p++) {
-        start  = pop_indexes.at(pop_ids[p]).first;
-        end    = pop_indexes.at(pop_ids[p]).second;
-        pop_id = pop_ids[p];
-
-        for (int i = start; i <= end; i++) {
+    for (int pop_id : pop_ids) {
+        const Pop& pop = mpopi.pops()[pop_id];
+        for (int i = pop.first_sample; i <= pop.last_sample; i++) {
             if (d[i] == NULL) continue;
 
             if (d[i]->obshap.size() > 2) { 
@@ -3053,10 +2979,8 @@ fixed_locus(Datum **d, vector<int> &pop_ids)
 
     uint valid_pops = 0;
 
-    for (int p = 0; p < pop_cnt; p++) {
-        pop_id = pop_ids[p];
-
-        if (pop_haplotypes[pop_id].size() > 0) 
+    for (int pop_id : pop_ids) {
+        if (pop_haplotypes[pop_id].size() > 0)
             valid_pops++;
     }
 
@@ -3175,7 +3099,7 @@ haplotype_diversity(int start, int end, Datum **d)
 }
 
 HapStat *
-haplotype_amova(map<int, int> &pop_grp_key, Datum **d, LocSum **s, vector<int> &pop_ids)
+haplotype_amova(Datum **d, LocSum **s, vector<int> &pop_ids)
 {
     map<string, int>          loc_hap_index;
     vector<string>            loc_haplotypes;
@@ -3184,21 +3108,15 @@ haplotype_amova(map<int, int> &pop_grp_key, Datum **d, LocSum **s, vector<int> &
     vector<int>               grps;
 
     map<string, int>::iterator hit, hit_2;
-    map<int, pair<int, int> >::const_iterator pit;
-    int start, end, pop_id, pop_id_1;
 
     HapStat  *h;
-    int pop_cnt = pop_ids.size();
 
     //
     // Tabulate the occurences of haplotypes at this locus.
     //
-    for (int p = 0; p < pop_cnt; p++) {
-        start  = pop_indexes.at(pop_ids[p]).first;
-        end    = pop_indexes.at(pop_ids[p]).second;
-        pop_id = pop_ids[p];
-
-        for (int i = start; i <= end; i++) {
+    for (int pop_id : pop_ids) {
+        const Pop& pop = mpopi.pops()[pop_id];
+        for (int i = pop.first_sample; i <= pop.last_sample; i++) {
             if (d[i] == NULL) continue;
 
             if (d[i]->obshap.size() > 2) { 
@@ -3228,8 +3146,7 @@ haplotype_amova(map<int, int> &pop_grp_key, Datum **d, LocSum **s, vector<int> &
     // What is the total number of populations that had valid haplotypes.
     //
     double valid_pop_cnt = 0.0;
-    for (int p = 0; p < pop_cnt; p++) {
-        pop_id = pop_ids[p];
+    for (int pop_id : pop_ids) {
         if (pop_haplotypes[pop_id].size() > 0)
             valid_pop_cnt++;
     }
@@ -3239,12 +3156,11 @@ haplotype_amova(map<int, int> &pop_grp_key, Datum **d, LocSum **s, vector<int> &
     // representative present in each group.
     //
     set<int> uniq_grps;
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        pop_id = pit->first;
-
+    for (size_t pop_id=0; pop_id<mpopi.pops().size(); ++pop_id) {
+        const Pop& pop = mpopi.pops()[pop_id];
         if (pop_haplotypes.count(pop_id) > 0) {
-            uniq_grps.insert(pop_grp_key[pop_id]);
-            grp_members[pop_grp_key[pop_id]].push_back(pop_id);
+            uniq_grps.insert(pop.group);
+            grp_members[pop.group].push_back(pop_id);
         }
     }
     set<int>::iterator uit;
@@ -3315,20 +3231,20 @@ haplotype_amova(map<int, int> &pop_grp_key, Datum **d, LocSum **s, vector<int> &
 
     for (uint g = 0; g < num_grps; g++) {
         for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-            pop_id_1 = grp_members[grps[g]][r];
+            int pop_id_1 = grp_members[grps[g]][r];
             tot_cnt += (double) pop_haplotypes[pop_id_1].size();
         }
     }
     for (uint g = 0; g < num_grps; g++) {
         grp_cnt = 0.0;
         for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-            pop_id_1 = grp_members[grps[g]][r];
+            int pop_id_1 = grp_members[grps[g]][r];
             grp_cnt += (double) pop_haplotypes[pop_id_1].size();
         }
 
         a = 0.0;
         for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-            pop_id_1 = grp_members[grps[g]][r];
+            int pop_id_1 = grp_members[grps[g]][r];
             a += (double) (pop_haplotypes[pop_id_1].size() * pop_haplotypes[pop_id_1].size()) / grp_cnt;
         }
         s_g += a;
@@ -3344,7 +3260,7 @@ haplotype_amova(map<int, int> &pop_grp_key, Datum **d, LocSum **s, vector<int> &
         a = 0.0;
         for (uint g = 0; g < num_grps; g++) {
             for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-                pop_id_1 = grp_members[grps[g]][r];
+                int pop_id_1 = grp_members[grps[g]][r];
                 a += ((double) (pop_haplotypes[pop_id_1].size() * pop_haplotypes[pop_id_1].size()) / tot_cnt);
             }
         }
@@ -3358,7 +3274,7 @@ haplotype_amova(map<int, int> &pop_grp_key, Datum **d, LocSum **s, vector<int> &
         for (uint g = 0; g < num_grps; g++) {
             a = 0.0;
             for (uint r = 0; r < grp_members[grps[g]].size(); r++) {
-                pop_id_1 = grp_members[grps[g]][r];
+                int pop_id_1 = grp_members[grps[g]][r];
                 a += pop_haplotypes[pop_id_1].size();
             }
             b += ((a * a) / tot_cnt);
@@ -3675,24 +3591,19 @@ haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
     map<int, double>               pop_totals;
 
     map<string, double>::iterator it;
-    int start, end, pop_id;
 
     uint pop_cnt = pop_ids.size();
 
     //
     // Tabulate the occurences of haplotypes at this locus.
     //
-    for (uint p = 0; p < pop_cnt; p++) {
-        start  = pop_indexes.at(pop_ids[p]).first;
-        end    = pop_indexes.at(pop_ids[p]).second;
-        pop_id = pop_ids[p];
-
-        for (int i = start; i <= end; i++) {
-            if (d[i] == NULL) continue;
-
-            if (d[i]->obshap.size() > 2) { 
+    for (int pop_id : pop_ids) {
+        const Pop& pop = mpopi.pops()[pop_id];
+        for (int i = pop.first_sample; i <= pop.last_sample; i++) {
+            if (d[i] == NULL) {
                 continue;
-
+            } else if (d[i]->obshap.size() > 2) {
+                continue;
             } else if (d[i]->obshap.size() == 1) {
                 loc_haplotypes[d[i]->obshap[0]]         += 2;
                 pop_haplotypes[pop_id][d[i]->obshap[0]] += 2;
@@ -3715,8 +3626,7 @@ haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
 
         double freq_sum_sq = 0.0;
         double freq_sq_sum = 0.0;
-        for (uint p = 0; p < pop_cnt; p++) {
-            pop_id = pop_ids[p];
+        for (int pop_id : pop_ids) {
             freq_sum_sq += (pop_haplotypes[pop_id][it->first] / pop_totals[pop_id]);
             freq_sq_sum += pow((pop_haplotypes[pop_id][it->first] / pop_totals[pop_id]), 2);
         }
@@ -3728,9 +3638,7 @@ haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
     double y = 0.0;
 
     for (it = loc_haplotypes.begin(); it != loc_haplotypes.end(); it++) {
-        for (uint p = 0; p < pop_cnt; p++) {
-            pop_id = pop_ids[p];
-
+        for (int pop_id : pop_ids) {
             y += (pop_haplotypes[pop_id][it->first] * (pop_haplotypes[pop_id][it->first] - 1)) /
                 (pop_totals[pop_id] * (pop_totals[pop_id] - 1));
         }
@@ -3933,18 +3841,15 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
     fh.setf(std::ios::fixed);
 
     double p_freq;
-    int start, end;
     //
     // Write the population members.
     //
-    map<int, pair<int, int> >::const_iterator pit;
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        start = pit->second.first;
-        end   = pit->second.second;
-        fh << "# " << pop_key.at(pit->first) << "\t";
-        for (int i = start; i <= end; i++) {
-            fh << samples.at(pmap->rev_sample_index(i));
-            if (i < end) fh << ",";
+    for (auto& pop : mpopi.pops()) {
+        fh << "# " << pop.name << "\t";
+        for (int i = pop.first_sample; i <= pop.last_sample; i++) {
+            fh << mpopi.samples()[i].name;
+            if (i < pop.last_sample)
+                fh << ",";
         }
         fh << "\n";
     }
@@ -3991,14 +3896,15 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
 
                     for (int j = 0; j < pop_cnt; j++) {
 
-                        if (s[j]->nucs[i].num_indv == 0) continue;
+                        if (s[j]->nucs[i].num_indv == 0)
+                            continue;
 
                         fh << batch_id << "\t"
                            << loc->id << "\t"
                            << loc->loc.chr << "\t"
                            << loc->sort_bp(i) + 1 << "\t"
                            << i << "\t"
-                           << pop_key[psum->rev_pop_index(j)] << "\t";
+                           << mpopi.pops()[j].name << "\t";
 
                         //
                         // Output the p and q alleles in the same order in each population.
@@ -4145,7 +4051,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
     }
 
     for (int j = 0; j < pop_cnt; j++)
-        fh << pop_key[psum->rev_pop_index(j)] << "\t" 
+        fh << mpopi.pops()[j].name << "\t"
            << private_cnt[j]         << "\t"
            << num_indv_mean[j]       << "\t"
            << num_indv_var[j]        << "\t"
@@ -4205,7 +4111,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
        << "StdErr\n";
 
     for (int j = 0; j < pop_cnt; j++) {
-        fh << pop_key[psum->rev_pop_index(j)] << "\t" 
+        fh << mpopi.pops()[j].name << "\t"
            << private_cnt[j]             << "\t"
            << n_all[j]                   << "\t"
            << n[j]                       << "\t"
@@ -4289,13 +4195,10 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
     // We want to iterate over each pair of populations and calculate Fst at each 
     // nucleotide of each locus.
     //
-    vector<double> means;
-    vector<int>    pops;
-    map<int, pair<int, int> >::const_iterator pit;
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
-        pops.push_back(pit->first);
+    if (mpopi.pops().size() == 1)
+        return 0;
 
-    if (pops.size() == 1) return 0;
+    vector<double> means;
 
     //
     // Instantiate the kernel smoothing object if requested.
@@ -4308,16 +4211,15 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
         ks  = new KSmooth<PopPair>(2);
     }
 
-    for (uint i = 0; i < pops.size(); i++) {
-
-        for (uint j = i + 1; j < pops.size(); j++) {
-            int pop_1 = pops[i];
-            int pop_2 = pops[j];
+    for (uint pop_1 = 0; pop_1 < mpopi.pops().size(); pop_1++) {
+        const Pop& pop_1p = mpopi.pops()[pop_1];
+        for (uint pop_2 = pop_1 + 1; pop_2 < mpopi.pops().size(); pop_2++) {
+            const Pop& pop_2p = mpopi.pops()[pop_2];
 
             double sum = 0.0;
             double cnt = 0.0;
 
-            string file = out_path + out_prefix + ".fst_" + pop_key[pop_1] + "-" + pop_key[pop_2] + ".tsv";
+            string file = out_path + out_prefix + ".fst_" + pop_1p.name + "-" + pop_2p.name + ".tsv";
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
                 cerr << "Error opening Fst output file '" << file << "'\n";
@@ -4326,7 +4228,7 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
             fh.precision(fieldw);
             fh.setf(std::ios::fixed);
 
-            cerr << "Calculating Fst for populations '" << pop_key[pop_1] << "' and '" << pop_key[pop_2] << "' and writing it to file, '" << file << "'\n";
+            cerr << "Calculating Fst for populations '" << pop_1p.name << "' and '" << pop_2p.name << "' and writing it to file, '" << file << "'\n";
 
             fh << "# Batch ID" << "\t"
                << "Locus ID"   << "\t"
@@ -4482,8 +4384,8 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
 
                     fh << batch_id          << "\t"
                        << pairs[i]->loc_id  << "\t"
-                       << pop_key[pop_1]    << "\t"
-                       << pop_key[pop_2]    << "\t"
+                       << pop_1p.name       << "\t"
+                       << pop_2p.name       << "\t"
                        << chr               << "\t"
                        << pairs[i]->bp +1   << "\t"
                        << pairs[i]->col     << "\t"
@@ -4531,10 +4433,10 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
                     delete pairs[i];
                 }
             }
-            cerr << "Pop 1: " << pop_key[pop_1] << "; Pop 2: " << pop_key[pop_2] << "; mean Fst: " << (sum / cnt) << "\n";
+            cerr << "Pop 1: " << pop_1p.name << "; Pop 2: " << pop_2p.name << "; mean Fst: " << (sum / cnt) << "\n";
             means.push_back(sum / cnt);
 
-            cerr << "Pooled populations '" << pop_key[pop_1] << "' and '" << pop_key[pop_2] << "' contained: " << ord->incompatible_loci << " incompatible loci; " 
+            cerr << "Pooled populations '" << pop_1p.name << "' and '" << pop_2p.name << "' contained: " << ord->incompatible_loci << " incompatible loci; "
                  << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
             fh.close();
 
@@ -4557,18 +4459,18 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
     //
     // Write out X-axis header.
     //
-    for (uint i = 0; i < pops.size(); i++)
-        fh << "\t" << pop_key[pops[i]];
+    for (auto& pop : mpopi.pops())
+        fh << "\t" << pop.name;
     fh << "\n";
 
     uint n = 0;
-    for (uint i = 0; i < pops.size() - 1; i++) {
-        fh << pop_key[pops[i]];
+    for (uint i = 0; i < mpopi.pops().size() - 1; i++) {
+        fh << mpopi.pops()[i].name;
 
         for (uint k = 0; k <= i; k++)
             fh << "\t";
 
-        for (uint j = i + 1; j < pops.size(); j++) {
+        for (uint j = i + 1; j < mpopi.pops().size(); j++) {
             fh << "\t" << means[n];
             n++;
         }
@@ -4662,7 +4564,7 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
         if (bootstrap_pifis) bs->add_data(sites);
     }
 
-    cerr << "    Population '" << pop_key[pop_id] << "' contained " << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
+    cerr << "    Population '" << mpopi.pops()[pop_id].name << "' contained " << ord->multiple_loci << " nucleotides covered by more than one RAD locus.\n";
 
     for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
         if (bootstrap_pifis)
@@ -5062,7 +4964,7 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
     fh << "Cnt\t";
 
     for (int i = 0; i < pmap->sample_cnt(); i++) {
-        fh << samples[pmap->rev_sample_index(i)];
+        fh << mpopi.samples()[i].name;
         if (i < pmap->sample_cnt() - 1) 
             fh << "\t";
     }

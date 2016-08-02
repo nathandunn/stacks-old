@@ -102,49 +102,42 @@ public:
 
 template<class LocusT=Locus>
 class PopMap {
-    set<pair<int, int> > blacklist;
+    const MetaPopInfo& metapopinfo;
     int      num_loci;
-    int      num_samples;
+    set<pair<int, int> > blacklist;
     Datum ***data;
     map<int, int> locus_order;  // LocusID => ArrayIndex; map catalog IDs to their first dimension 
                                 // position in the Datum array.
     map<int, int> rev_locus_order;
-    map<int, int> sample_order; // SampleID => ArrayIndex; map defining at what position in 
-                                // the second dimension of the datum array each sample is stored.
-    map<int, int> rev_sample_order;
-
-    // Sets [sample_order] and [rev_sample_order]. The array indexes
-    // will be the same as those of [mpopi.samples_].
-    void add_metapop_info(const MetaPopInfo& mpopi);
 
 public:
     map<string, vector<LocusT *> > ordered_loci; // Loci ordered by genomic position
 
-    PopMap(int n_samples, int n_loci);
+    PopMap(const MetaPopInfo& mpopi, int n_loci);
     ~PopMap();
 
     // Populates the PopMap based on sstack matches files.
     // The catalog is modified (LocusT must be CSLocus, and
     // members [cnt, hcnt, confounded_cnt] are modified).
-    int populate(const vector<int>& sample_ids, map<int, LocusT*>& catalog, const vector<vector<CatMatch *> >& matches);
+    int populate(map<int, LocusT*>& catalog, const vector<vector<CatMatch *> >& matches);
 
     // Populates the PopMap based on VCF (SNP) records.
     // The catalog is modified (LocusT must be CSLocus, and
     // members [cnt, hcnt] are modified).
     // N.B. The IDs of the loci in the catalog MUST be the same
     // as the indexes in the records vector.
-    int populate(const MetaPopInfo& mpopi, map<int, LocusT*>& catalog, const vector<VcfRecord>& records, const VcfHeader& header);
+    int populate(map<int, LocusT*>& catalog, const vector<VcfRecord>& records, const VcfHeader& header);
 
     int order_loci(const map<int, LocusT*>& catalog);
     int prune(set<int>& loc_ids);
 
-    int loci_cnt() { return this->num_loci; }
-    int locus_index(int id) {return this->locus_order.at(id);}
-    int rev_locus_index(int index) { if (this->rev_locus_order.count(index) == 0) return -1; return this->rev_locus_order[index]; }
+    int loci_cnt() const { return this->num_loci; }
+    int locus_index(int id) const {return locus_order.at(id);}
+    int rev_locus_index(int index) const {try {return rev_locus_order.at(index);} catch(exception&) {return -1;}}
 
-    int sample_cnt() { return this->num_samples; }
-    int sample_index(int id) { if (this->sample_order.count(id) == 0) return -1; return this->sample_order[id]; }
-    int rev_sample_index(int index) { if (this->rev_sample_order.count(index) == 0) return -1; return this->rev_sample_order[index]; }
+    int sample_cnt() const { return metapopinfo.samples().size(); }
+    int sample_index(int id) const {try {return metapopinfo.get_sample_index(id);} catch (exception&) {return -1;}}
+    int rev_sample_index(int index) const {return metapopinfo.samples().at(index).id;}
 
     Datum **locus(int id);
     Datum  *datum(int loc_id, int sample_id);
@@ -153,32 +146,25 @@ public:
 };
 
 template<class LocusT>
-void PopMap<LocusT>::add_metapop_info(const MetaPopInfo& mpopi) {
-    for(size_t i = 0; i < mpopi.samples().size(); ++i) {
-        sample_order[mpopi.samples()[i].id] = i;
-        rev_sample_order[i] = mpopi.samples()[i].id;
-    }
-}
-
-template<class LocusT>
-PopMap<LocusT>::PopMap(int num_samples, int num_loci) {
+PopMap<LocusT>::PopMap(const MetaPopInfo& mpopi, int num_loci)
+: metapopinfo(mpopi)
+{
     this->data = new Datum **[num_loci];
 
     for (int i = 0; i < num_loci; i++) {
-        this->data[i] = new Datum *[num_samples];
+        this->data[i] = new Datum *[metapopinfo.samples().size()];
 
-        for (int j = 0; j < num_samples; j++)
+        for (size_t j = 0; j < metapopinfo.samples().size(); j++)
             this->data[i][j] = NULL;
     }
 
-    this->num_samples = num_samples;
     this->num_loci    = num_loci;
 }
 
 template<class LocusT>
 PopMap<LocusT>::~PopMap() {
     for (int i = 0; i < this->num_loci; i++) {
-        for (int j = 0; j < this->num_samples; j++)
+        for (int j = 0; j < metapopinfo.samples().size(); j++)
             delete this->data[i][j];
         delete [] this->data[i];
     }
@@ -186,17 +172,8 @@ PopMap<LocusT>::~PopMap() {
 }
 
 template<class LocusT>
-int PopMap<LocusT>::populate(const vector<int> &sample_ids,
-                             map<int, LocusT*> &catalog,
+int PopMap<LocusT>::populate(map<int, LocusT*> &catalog,
                              const vector<vector<CatMatch *> > &matches) {
-    //
-    // Record the array position of each sample that we will load.
-    //
-    for (uint i = 0; i < sample_ids.size(); i++) {
-        this->sample_order[sample_ids[i]] = i;
-        this->rev_sample_order[i]         = sample_ids[i];
-    }
-
     //
     // Create an index showing what position each catalog locus is stored at in the datum 
     // array. Create a second index allowing ordering of Loci by genomic position.
@@ -222,7 +199,7 @@ int PopMap<LocusT>::populate(const vector<int> &sample_ids,
 
     for (i = 0; i < matches.size(); i++) {
         for (uint j = 0; j < matches[i].size(); j++) {
-            sample = this->sample_order[matches[i][j]->sample_id];
+            sample = metapopinfo.get_sample_index(matches[i][j]->sample_id);
 
             if (this->locus_order.count(matches[i][j]->cat_id) == 0)
                 continue;
@@ -291,13 +268,9 @@ int PopMap<LocusT>::populate(const vector<int> &sample_ids,
 }
 
 template<class LocusT>
-int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
-             map<int, LocusT*>& catalog,
+int PopMap<LocusT>::populate(map<int, LocusT*>& catalog,
              const vector<VcfRecord>& records,
              const VcfHeader& header) {
-
-    // Initialize [sample_order], [rev_sample_order].
-    add_metapop_info(mpopi);
 
     // Initalize [locus_order], [rev_locus_order].
     size_t loc_index = 0;
@@ -359,8 +332,8 @@ int PopMap<LocusT>::populate(const MetaPopInfo& mpopi,
             ad_index = -1;
         }
 
-        for (size_t s = 0; s < mpopi.samples().size(); ++s) {
-            size_t vcf_index = header.sample_indexes().at(mpopi.samples()[s].name);
+        for (size_t s = 0; s < metapopinfo.samples().size(); ++s) {
+            size_t vcf_index = header.sample_indexes().at(metapopinfo.samples()[s].name);
             const string& sample = rec.samples.at(vcf_index);
 
             pair<int, int> gt = rec.parse_genotype(sample);
@@ -481,7 +454,7 @@ int PopMap<LocusT>::prune(set<int> &remove_ids) {
 
         } else {
             // Remove this locus.
-            for (int k = 0; k < this->num_samples; k++)
+            for (int k = 0; k < metapopinfo.samples().size(); k++)
                 delete this->data[i][k];
             delete [] this->data[i];
         }
@@ -525,7 +498,7 @@ Datum **PopMap<LocusT>::locus(int id) {
 
 template<class LocusT>
 Datum  *PopMap<LocusT>::datum(int loc_id, int sample_id) {
-    return this->data[this->locus_order[loc_id]][this->sample_order[sample_id]];
+    return this->data[this->locus_order[loc_id]][metapopinfo.get_sample_index(sample_id)];
 }
 
 template<class LocusT>

@@ -35,7 +35,10 @@ using std::map;
 #include <set>
 using std::set;
 
+#include "MetaPopInfo.h"
 #include "PopSum.h"
+
+extern MetaPopInfo mpopi;
 
 enum loc_type {haplotype, snp};
 
@@ -266,8 +269,8 @@ OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vecto
 				<< loc->loc.chr << "\t"
 				<< loc->sort_bp(k) +1 << "\t"
 				<< k << "\t" 
-				<< pop_key[pop_1] << "\t"
-				<< pop_key[pop_2] << "\n";
+				<< mpopi.pops()[pop_1].name << "\t"
+				<< mpopi.pops()[pop_2].name << "\n";
 		delete pair;
 		continue;
 	    }
@@ -295,8 +298,8 @@ OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vecto
 				<< loc->loc.chr << "\t"
 				<< pair->bp +1 << "\t"
 				<< k << "\t" 
-				<< pop_key[pop_1] << "\t" 
-				<< pop_key[pop_2] << "\n";
+				<< mpopi.pops()[pop_1].name << "\t"
+				<< mpopi.pops()[pop_2].name << "\n";
 		delete pair;
 		continue;
 	    }
@@ -360,7 +363,7 @@ OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, i
 				<< loc->loc.chr << "\t"
 				<< lsum->nucs[k].bp +1 << "\t"
 				<< k << "\t" 
-				<< pop_key[pop_id] << "\t"
+				<< mpopi.pops()[pop_id].name << "\t"
 				<< "conflicts with locus " << sites[sites_key[lsum->nucs[k].bp]]->loc_id << "\n";
 	    }
 	}

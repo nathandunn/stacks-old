@@ -40,10 +40,10 @@ using std::make_pair;
 #include "stacks.h"
 #include "locus.h"
 #include "PopMap.h"
+#include "MetaPopInfo.h"
 
 extern bool   log_fst_comp;
 extern double minor_allele_freq;
-extern map<int, string> pop_key;
 const  uint   PopStatSize = 5;
 
 class PopStat {
@@ -86,6 +86,7 @@ public:
 
     HapStat(): PopStat() {
         comp = NULL;
+        popcnt = uint(-1);
     }
     ~HapStat() {
         if (this->comp != NULL)
@@ -251,38 +252,29 @@ public:
 //
 template<class LocusT=Locus>
 class PopSum {
-    int           num_loci;
-    int           num_pops;
+    const PopMap<LocusT>& popmap;
+    const MetaPopInfo& metapopinfo;
     LocSum     ***data;
     LocTally    **loc_tally;
-    map<int, int> locus_order;  // LocusID => ArrayIndex; map catalog IDs to their first dimension 
-                                // position in the LocSum array.
-    map<int, int> rev_locus_order;
-    map<int, int> pop_order;    // PopulationID => ArrayIndex; map defining at what position in 
-                                // the second dimension of the LocSum array each population is stored.
-                                // Theses indexes are SPECIFIC to the PopSum object : the first
-                                // population added has index 0.
-    map<int, int> rev_pop_order;
-    map<int, int> pop_sizes;    // The maximum size of each separate population.
 
 public:
-    PopSum(int, int);
+    PopSum(const PopMap<LocusT>& pmap, const MetaPopInfo& mpopi);
     ~PopSum();
 
     int initialize(PopMap<LocusT> *);
-    int add_population(map<int, LocusT *> &, PopMap<LocusT> *, uint, uint, uint, bool, ofstream &);
+    int add_population(map<int, LocusT *> &, PopMap<LocusT> *, size_t, bool, ofstream &);
     int tally(map<int, LocusT *> &);
 
-    int loci_cnt() { return this->num_loci; }
-    int rev_locus_index(int index) { return this->rev_locus_order[index]; }
-    int pop_cnt()  { return this->num_pops; }
-    int pop_index(int id)     { return this->pop_order[id]; }
-    int rev_pop_index(int index) { return this->rev_pop_order[index]; }
-    int pop_size(int pop_id)     { return this->pop_sizes[pop_id]; }
+    int loci_cnt() const {return popmap.loci_cnt();}
+    int rev_locus_index(int index) const {return popmap.rev_locus_index(index);}
+    int pop_cnt() const {return metapopinfo.pops().size();}
+    int pop_size(size_t pop_index) const {
+        return metapopinfo.pops().at(pop_index).last_sample - metapopinfo.pops().at(pop_index).first_sample + 1;
+    }
 
-    LocSum  **locus(int);
-    LocSum   *pop(int, int);
-    LocTally *locus_tally(int);
+    LocSum  **locus(int locus_id);
+    LocSum   *pop(int locus_id, size_t pop_index);
+    LocTally *locus_tally(int locus_id);
     PopPair  *Fst(int, int, int, int);
     int       fishers_exact_test(PopPair *, double, double, double, double);
 
@@ -296,25 +288,24 @@ private:
 };
 
 template<class LocusT>
-PopSum<LocusT>::PopSum(int num_loci, int num_populations) {
-    this->loc_tally = new LocTally *[num_loci];
-    this->data      = new LocSum  **[num_loci];
+PopSum<LocusT>::PopSum(const PopMap<LocusT>& pmap, const MetaPopInfo& mpopi)
+: popmap(pmap), metapopinfo(mpopi)
+{
+    this->loc_tally = new LocTally*[popmap.loci_cnt()];
+    this->data      = new LocSum**[popmap.loci_cnt()];
 
-    for (int i = 0; i < num_loci; i++) {
-        this->data[i] = new LocSum *[num_populations];
+    for (int i = 0; i < popmap.loci_cnt(); i++) {
+        this->data[i] = new LocSum *[metapopinfo.pops().size()];
 
-        for (int j = 0; j < num_populations; j++)
+        for (int j = 0; j < metapopinfo.pops().size(); j++)
             this->data[i][j] = NULL;
     }
-
-    this->num_pops = num_populations;
-    this->num_loci = num_loci;
 }
 
 template<class LocusT>
 PopSum<LocusT>::~PopSum() {
-    for (int i = 0; i < this->num_loci; i++) {
-        for (int j = 0; j < this->num_pops; j++)
+    for (int i = 0; i < loci_cnt(); i++) {
+        for (int j = 0; j < pop_cnt(); j++)
             delete this->data[i][j];
         delete [] this->data[i];
         delete this->loc_tally[i];
@@ -325,30 +316,21 @@ PopSum<LocusT>::~PopSum() {
 
 template<class LocusT>
 int PopSum<LocusT>::initialize(PopMap<LocusT> *pmap) {
-    int locus_id;
-
-    for (int i = 0; i < this->num_loci; i++) {
-        locus_id = pmap->rev_locus_index(i);
-        this->locus_order[locus_id] = i;
-        this->rev_locus_order[i]    = locus_id;
-    }
-
     return 0;
 }
 
 template<class LocusT>
 int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
-                                   PopMap<LocusT> *pmap, 
-                                   uint population_id,
-                                   uint start_index, uint end_index, 
-                                   bool verbose, ofstream &log_fh) {
+                                   PopMap<LocusT> *pmap,
+                                   size_t pop_index,
+                                   bool verbose,
+                                   ofstream &log_fh) {
     LocusT  *loc;
     Datum  **d;
     LocSum **s;
     uint locus_id, len;
     int res;
     set<int> snp_cols;
-
     int incompatible_loci = 0;
 
     if (verbose)
@@ -356,20 +338,10 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
                << "#\n"
                << "# Level\tAction\tLocus ID\tChr\tBP\tColumn\tPopID\n#\n";
 
-    //
-    // Determine the index for this population
-    //
-    uint pop_psum_index = pop_order.size();
-    this->pop_order[population_id] = pop_psum_index;
-    this->rev_pop_order[pop_psum_index] = population_id;
+    const MetaPopInfo::Pop& pop = metapopinfo.pops().at(pop_index);
 
-    //
-    // Record the maximal size of this population.
-    //
-    this->pop_sizes[population_id] = end_index - start_index + 1;
-
-    for (int i = 0; i < this->num_loci; i++) {
-        locus_id = pmap->rev_locus_index(i);
+    for (int i = 0; i < loci_cnt(); i++) {
+        locus_id = rev_locus_index(i);
         d   = pmap->locus(locus_id);
         s   = this->locus(locus_id);
         loc = catalog[locus_id];
@@ -377,18 +349,19 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
         // Create an array of SumStat objects
         //
         len = strlen(loc->con);
-        s[pop_psum_index] = new LocSum(len);
+        s[pop_index] = new LocSum(len);
 
         //
         // Check if this locus has already been filtered and is NULL in all individuals.
         //
         bool filtered = true;
-        for (uint k = start_index; k <= end_index; k++) {
-            if (d[k] != NULL) filtered = false;
+        for (uint k = pop.first_sample; k <= pop.last_sample; k++) {
+            if (d[k] != NULL)
+                filtered = false;
         }
         if (filtered == true) {
             for (uint k = 0; k < len; k++) {
-                s[pop_psum_index]->nucs[k].filtered_site = true;
+                s[pop_index]->nucs[k].filtered_site = true;
             }
             continue;
         }
@@ -398,13 +371,13 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
         // calculate observed genotype frequencies, allele frequencies, and expected genotype frequencies.
         //
         for (uint k = 0; k < loc->snps.size(); k++) {
-            res = this->tally_heterozygous_pos(loc, d, s[pop_psum_index],
-                                               loc->snps[k]->col, k, start_index, end_index);
+            res = this->tally_heterozygous_pos(loc, d, s[pop_index],
+                                               loc->snps[k]->col, k, pop.first_sample, pop.last_sample);
             //
             // If site is incompatible (too many alleles present), log it.
             //
             if (res < 0) {
-                s[pop_psum_index]->nucs[loc->snps[k]->col].incompatible_site = true;
+                s[pop_index]->nucs[loc->snps[k]->col].incompatible_site = true;
 
                 incompatible_loci++;
                 if (verbose)
@@ -414,7 +387,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
                            << loc->loc.chr << "\t"
                            << loc->sort_bp(loc->snps[k]->col) +1 << "\t"
                            << loc->snps[k]->col << "\t" 
-                           << pop_key[population_id] << "\n";
+                           << pop.name << "\n";
             }
 
             snp_cols.insert(loc->snps[k]->col);
@@ -424,15 +397,15 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
         //
         for (uint k = 0; k < len; k++) {
             if (snp_cols.count(k)) continue;
-            this->tally_fixed_pos(loc, d, s[pop_psum_index],
-                                  k, start_index, end_index);
+            this->tally_fixed_pos(loc, d, s[pop_index],
+                                  k, pop.first_sample, pop.last_sample);
         }
 
         snp_cols.clear();
     }
 
-    cerr << "Population '" << pop_key[population_id] << "' contained " << incompatible_loci << " incompatible loci -- more than two alleles present.\n";
-    log_fh <<  "Population " << pop_key[population_id] << " contained " << incompatible_loci << " incompatible loci -- more than two alleles present.\n";
+    cerr << "Population '" << pop.name << "' contained " << incompatible_loci << " incompatible loci -- more than two alleles present.\n";
+    log_fh <<  "Population " << pop.name << " contained " << incompatible_loci << " incompatible loci -- more than two alleles present.\n";
 
     return 0;
 }
@@ -446,7 +419,7 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
     int       locus_id, variable_pop;
     uint16_t  p_cnt, q_cnt, len, col;
 
-    for (int n = 0; n < this->num_loci; n++) {
+    for (int n = 0; n < loci_cnt(); n++) {
         locus_id = this->rev_locus_index(n);
         loc      = catalog[locus_id];
         s        = this->locus(locus_id);
@@ -475,7 +448,7 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
             if (ltally->nucs[col].allele_cnt > 1)
                 ltally->nucs[col].fixed = false;
             
-            for (int j = 0; j < this->num_pops; j++) {
+            for (int j = 0; j < pop_cnt(); j++) {
                 //
                 // Sum the number of individuals examined at this locus across populations.
                 //
@@ -483,7 +456,7 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
                 ltally->nucs[col].pop_cnt  += s[j]->nucs[col].num_indv > 0 ? 1 : 0;
             }
 
-            for (int j = 0; j < this->num_pops; j++) {
+            for (int j = 0; j < pop_cnt(); j++) {
                 //
                 // Sum the most frequent allele across populations.
                 //
@@ -523,12 +496,12 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
             variable_pop = -1;
 
             if (p_cnt == 1 && q_cnt > 1) {
-                for (int j = 0; j < this->num_pops; j++)
+                for (int j = 0; j < pop_cnt(); j++)
                     if (s[j]->nucs[col].p_nuc == ltally->nucs[col].p_allele ||
                         s[j]->nucs[col].q_nuc == ltally->nucs[col].p_allele)
                         variable_pop = j;
             } else if (p_cnt > 1 && q_cnt == 1) {
-                for (int j = 0; j < this->num_pops; j++)
+                for (int j = 0; j < pop_cnt(); j++)
                     if (s[j]->nucs[col].p_nuc == ltally->nucs[col].q_allele ||
                         s[j]->nucs[col].q_nuc == ltally->nucs[col].q_allele)
                         variable_pop = j;
@@ -553,7 +526,7 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
     q_allele   = 0;
     allele_cnt = 0;
 
-    for (int j = 0; j < this->num_pops; j++) {
+    for (int j = 0; j < pop_cnt(); j++) {
         nuc[0] = 0;
         nuc[1] = 0;
         nuc[0] = s[j]->nucs[snp_index].p_nuc;
@@ -641,7 +614,7 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
     p_cnt = 0;
     q_cnt = 0;
 
-    for (int j = 0; j < this->num_pops; j++) {
+    for (int j = 0; j < pop_cnt(); j++) {
         nuc[0] = 0;
         nuc[1] = 0;
         nuc[0] = s[j]->nucs[snp_index].p_nuc;
@@ -658,10 +631,10 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
 }
 
 template<class LocusT>
-PopPair *PopSum<LocusT>::Fst(int locus, int pop_1, int pop_2, int pos) 
+PopPair *PopSum<LocusT>::Fst(int locus_id, int pop_1, int pop_2, int pos)
 {
-    LocSum  *s_1  = this->pop(locus, pop_1);  /////// SLOW!
-    LocSum  *s_2  = this->pop(locus, pop_2);
+    LocSum  *s_1  = pop(locus_id, pop_1);  /////// SLOW!
+    LocSum  *s_2  = pop(locus_id, pop_2);
     PopPair *pair = new PopPair();
 
     //
@@ -1351,21 +1324,21 @@ double PopSum<LocusT>::binomial_coeff(double n, double k)
 }
 
 template<class LocusT>
-LocSum **PopSum<LocusT>::locus(int locus) 
+LocSum **PopSum<LocusT>::locus(int locus_id)
 {
-    return this->data[this->locus_order[locus]];
+    return this->data[popmap.locus_index(locus_id)];
 }
 
 template<class LocusT>
-LocSum  *PopSum<LocusT>::pop(int locus, int pop_id) 
+LocSum  *PopSum<LocusT>::pop(int locus_id, size_t pop_index)
 {
-    return this->data[this->locus_order[locus]][this->pop_order[pop_id]];
+    return this->data[popmap.locus_index(locus_id)][pop_index];
 }
 
 template<class LocusT>
-LocTally *PopSum<LocusT>::locus_tally(int locus) 
+LocTally *PopSum<LocusT>::locus_tally(int locus_id)
 {
-    return this->loc_tally[this->locus_order[locus]];
+    return this->loc_tally[popmap.locus_index(locus_id)];
 }
 
 #endif // __POPSUM_H__

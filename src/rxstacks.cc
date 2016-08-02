@@ -23,7 +23,11 @@
 // across a population of samples.
 //
 
+#include "MetaPopInfo.h"
+
 #include "rxstacks.h"
+
+typedef MetaPopInfo::Sample Sample;
 
 // Global variables to hold command-line options.
 int    num_threads = 1;
@@ -89,9 +93,12 @@ int main (int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
     #endif
 
-    vector<pair<int, string> > files;
-    if (!build_file_list(files))
-	exit(1);
+    MetaPopInfo mpopi;
+    mpopi.init_directory(in_path);
+    if (mpopi.samples().empty()) {
+        cerr << "Error: Failed to find sample files in directory '" << in_path << "'.\n";
+        return -1;
+    }
 
     //
     // Open and initialize the log files.
@@ -124,33 +131,46 @@ int main (int argc, char* argv[]) {
     // Load matches to the catalog
     //
     vector<vector<CatMatch *> > catalog_matches;
-    map<int, string>            samples;
-    vector<int>                 sample_ids;
-    for (uint i = 0; i < files.size(); i++) {
-	vector<CatMatch *> m;
-	load_catalog_matches(in_path + files[i].second, m);
+    vector<size_t> samples_to_remove;
+    set<size_t> seen_samples;
+    for (size_t i=0; i<mpopi.samples().size(); ++i) {
+        catalog_matches.push_back(vector<CatMatch*>());
+        vector<CatMatch *>& m = catalog_matches.back();
 
-	if (m.size() == 0) {
-	    cerr << "Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from population analysis.\n";
-	    continue;
-	}
+        const Sample& sample = mpopi.samples()[i];
+        load_catalog_matches(in_path + sample.name, m);
 
-	catalog_matches.push_back(m);
-	if (samples.count(m[0]->sample_id) == 0) {
-	    samples[m[0]->sample_id] = files[i].second;
-	    sample_ids.push_back(m[0]->sample_id);
-	} else {
-	    cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
-	    exit(0);
-	}
+        if (m.size() == 0) {
+            cerr << "Warning: Absent or malformed matches file '"
+                 << sample.name << ".matches.tsv(.gz)"
+                 <<"', excluding this sample from population analysis.\n";
+            samples_to_remove.push_back(i);
+            catalog_matches.pop_back(); // n.b. Index shift will be resolved by the call to MetaPopInfo::delete_samples().
+            continue;
+        }
+
+        size_t sample_id = m[0]->sample_id;
+        if (seen_samples.count(sample_id) > 0) {
+            cerr << "Error: sample ID " << sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
+            return -1;
+        }
+        seen_samples.insert(sample_id);
+        mpopi.set_sample_id(i, sample_id);
     }
+    mpopi.delete_samples(samples_to_remove);
+    if (mpopi.samples().size() == 0) {
+        cerr << "Error: Couln't find any matches files.\n";
+        return -1;
+    }
+    // [mpopi] is definitive.
+    cerr << "Working on " << mpopi.samples().size() << " samples.\n";
 
     //
     // Create the population map
     // 
-    cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
-    pmap->populate(sample_ids, catalog, catalog_matches);
+    cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi, catalog.size());
+    pmap->populate(catalog, catalog_matches);
 
     //
     // Sum haplotype counts across the population for each catalog locus.
@@ -162,17 +182,15 @@ int main (int argc, char* argv[]) {
     //
     calc_lnl_means(catalog, pmap);
 
-    int    catalog_id, sample_id, tag_id;
-    string file;
+    int    catalog_id, tag_id;
 
     //
     // Process samples matched to the catalog, one by one.
     //
-    for (uint i = 0; i < catalog_matches.size(); i++) {
-	sample_id = catalog_matches[i][0]->sample_id;
-	file      = samples[sample_id];
+    for (uint i = 0; i < mpopi.samples().size(); i++) {
+        const Sample& sample = mpopi.samples()[i];
 
-	cerr << "Loading stacks from sample " << file << " [" << i+1 << " of " << catalog_matches.size() << "]...\n";
+	cerr << "Loading stacks from sample " << sample.name << " [" << i+1 << " of " << mpopi.samples().size() << "]...\n";
 
 	//////
 	//////
@@ -182,12 +200,12 @@ int main (int argc, char* argv[]) {
 
 	map<int, Locus *> stacks;
 	int res;
-	if ((res = load_loci(in_path + file, stacks, true, true, compressed)) == 0) {
-	    cerr << "Unable to load sample file '" << file << "'\n";
+	if ((res = load_loci(in_path + sample.name, stacks, true, true, compressed)) == 0) {
+	    cerr << "Unable to load sample file '" << sample.name << "'\n";
 	    continue;
 	}
 
-	cerr << "Making corrections to sample " << file << "...";
+	cerr << "Making corrections to sample " << sample.name << "...";
 	
 	set<pair<int, int> >           uniq_matches;
 	set<pair<int, int> >::iterator it;
@@ -262,7 +280,7 @@ int main (int argc, char* argv[]) {
 		    continue;
 		}
 
-		d = pmap->datum(catalog_id, sample_id);
+		d = pmap->datum(catalog_id, sample.id);
 
 		if (d == NULL) continue;
 
@@ -350,7 +368,7 @@ int main (int argc, char* argv[]) {
 	     << "Blacklisted: " << lnl_cnt            << " loci due to log likelihoods below threshold.\n"
 	     << "Blacklisted: " << conf_loci_cnt      << " confounded loci.\n";
 
-	log_fh << file           << "\t"
+	log_fh << sample.name           << "\t"
 	       << nuc_cnt        << "\t"
 	       << total          << "\t"
 	       << unk_hom_cnt    << "\t"
@@ -370,7 +388,7 @@ int main (int argc, char* argv[]) {
 	//
 	// Rewrite stacks, model outputs, and haplotypes.
 	//
-	write_results(file, stacks);
+	write_results(sample.name, stacks);
 
 	//
 	// Free up memory
@@ -1428,50 +1446,6 @@ write_results(string file, map<int, Locus *> &m)
     cerr << "wrote " << wrote << " loci.\n";
 
     return 0;
-}
-
-int build_file_list(vector<pair<int, string> > &files) {
-    vector<string> parts;
-    string f;
-
-    //
-    // Read all the files from the Stacks directory.
-    //
-    uint   pos;
-    string file;
-    struct dirent *direntry;
-
-    DIR *dir = opendir(in_path.c_str());
-
-    if (dir == NULL) {
-	cerr << "Unable to open directory '" << in_path << "' for reading.\n";
-	exit(1);
-    }
-
-    while ((direntry = readdir(dir)) != NULL) {
-	file = direntry->d_name;
-
-	if (file == "." || file == "..")
-	    continue;
-
-	if (file.substr(0, 6) == "batch_")
-	    continue;
-
-	pos = file.rfind(".tags.tsv");
-	if (pos < file.length())
-	    files.push_back(make_pair(1, file.substr(0, pos)));
-    }
-
-    closedir(dir);
-
-    if (files.size() == 0) {
-	cerr << "Unable to locate any input files to process within '" << in_path << "'\n";
-	return 0;
-    }
-
-    cerr << "Found " << files.size() << " input file(s).\n";
-
-    return 1;
 }
 
 int
