@@ -427,7 +427,7 @@ int dump_loci(map<int, LocusT *> &u) {
 
         cerr << "Locus ID:    " << i->second->id << "\n"
              << "  Consensus: " << i->second->con << "\n"
-             << "  Genomic Location: " << i->second->loc.chr << "; " << i->second->loc.bp << "bp\n"
+             << "  Genomic Location: " << i->second->loc.chr << "; " << i->second->loc.bp +1 << "bp\n"
              << "  SNPs:\n";
 
         for (s = i->second->snps.begin(); s != i->second->snps.end(); s++)

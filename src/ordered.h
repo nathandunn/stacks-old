@@ -264,7 +264,7 @@ OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vecto
 				<< "incompatible_locus\t"
 				<< loc->id << "\t"
 				<< loc->loc.chr << "\t"
-				<< loc->sort_bp(k) << "\t"
+				<< loc->sort_bp(k) +1 << "\t"
 				<< k << "\t" 
 				<< pop_key[pop_1] << "\t"
 				<< pop_key[pop_2] << "\n";
@@ -293,7 +293,7 @@ OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vecto
 				<< "multiple_locus\t"
 				<< loc->id << "\t"
 				<< loc->loc.chr << "\t"
-				<< pair->bp << "\t"
+				<< pair->bp +1 << "\t"
 				<< k << "\t" 
 				<< pop_key[pop_1] << "\t" 
 				<< pop_key[pop_2] << "\n";
@@ -347,7 +347,7 @@ OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, i
 	    if (lsum->nucs[k].num_indv == 0) continue;
 
 	    if (sites_key.count(lsum->nucs[k].bp) == 0) {
-		cerr << "Error: locus " << lsum->nucs[k].loc_id << " at " << lsum->nucs[k].bp << "bp is not defined in the sites map.\n";
+		cerr << "Error: locus " << lsum->nucs[k].loc_id << " at " << lsum->nucs[k].bp +1 << "bp is not defined in the sites map.\n";
 
 	    } else if (sites[sites_key[lsum->nucs[k].bp]] == NULL) {
 		sites[sites_key[lsum->nucs[k].bp]] = &(lsum->nucs[k]);
@@ -358,7 +358,7 @@ OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, i
 				<< "multiple_locus\t"
 				<< loc->id << "\t"
 				<< loc->loc.chr << "\t"
-				<< lsum->nucs[k].bp << "\t"
+				<< lsum->nucs[k].bp +1 << "\t"
 				<< k << "\t" 
 				<< pop_key[pop_id] << "\t"
 				<< "conflicts with locus " << sites[sites_key[lsum->nucs[k].bp]]->loc_id << "\n";
@@ -408,7 +408,7 @@ OLocTally<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci)
 	    if (ltally->nucs[k].allele_cnt != 2) continue;
 
 	    if (sites_key.count(ltally->nucs[k].bp) == 0) {
-		cerr << "Error: locus " << ltally->nucs[k].loc_id << " at " << ltally->nucs[k].bp << "bp is not defined in the sites map.\n";
+		cerr << "Error: locus " << ltally->nucs[k].loc_id << " at " << ltally->nucs[k].bp +1 << "bp is not defined in the sites map.\n";
 
 	    } else if (sites[sites_key[ltally->nucs[k].bp]] == NULL) {
 		sites[sites_key[ltally->nucs[k].bp]] = &(ltally->nucs[k]);
@@ -419,7 +419,7 @@ OLocTally<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci)
 				<< "multiple_locus\t"
 				<< loc->id << "\t"
 				<< loc->loc.chr << "\t"
-				<< ltally->nucs[k].bp << "\t"
+				<< ltally->nucs[k].bp +1 << "\t"
 				<< k << "\t" 
 				<< "conflicts with locus " << sites[sites_key[ltally->nucs[k].bp]]->loc_id << "\n";
 	    }
