@@ -23,14 +23,30 @@
 // haplotypes in a population context.
 //
 
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include "MetaPopInfo.h"
+#include "export_formats.h"
+
 #include "populations.h"
 
+using namespace std;
+
+typedef MetaPopInfo::Sample Sample;
+typedef MetaPopInfo::Pop Pop;
+typedef MetaPopInfo::Group Group;
+
+extern int **encoded_gtypes;
+
 // Global variables to hold command-line options.
+InputMode input_mode = InputMode::stacks;
 int       num_threads =  1;
 int       batch_id    = -1;
 string    in_path;
+string    in_vcf_path;
 string    out_path;
-string    out_file;
 string    pmap_path;
 string    bl_file;
 string    wl_file;
@@ -83,10 +99,19 @@ double    minor_allele_freq = 0.0;
 double    max_obs_het       = 1.0;
 double    p_value_cutoff    = 0.05;
 corr_type fst_correction    = no_correction;
+set<string> debug_flags;
 
-map<int, string>          pop_key, grp_key;
-map<int, pair<int, int> > pop_indexes;
-map<int, vector<int> >    grp_members;
+string    out_prefix;
+
+MetaPopInfo mpopi; // Information and reference indexes for samples, populations and groups.
+                   // Replaces the following globals :
+vector<pair<int, string> > files;            // Vector of (pop_index, prefix) pairs. (The indexes in the vector are out of sync after the load-matches loop.)
+vector<int>                sample_ids;       // vector of sample_id's.
+map<int, string>           samples;          // Map of (sample_id : sample_name).
+map<int, string>           pop_key, grp_key; // maps of (pop_id : pop_name) and (group_id : group_name).
+                                                 // n.b. IDs are --were-- created when the popmap is loaded, starting at 1 and incrementing
+map<int, pair<int, int> >  pop_indexes;      // map of (pop_id : (sample_index, sample_index))
+map<int, vector<int> >     grp_members;      // map of (group_id : pop_id's)
 
 set<int> blacklist, bootstraplist;
 map<int, set<int> > whitelist;
@@ -101,9 +126,20 @@ map<string, int>           renz_olap;
 
 int main (int argc, char* argv[]) {
 
+#ifndef HAVE_LIBZ
+    cerr << "Stacks was compiled without zlib, and will refuse to parse compressed files.\n";
+#endif
+
+    //
+    // Initialize the globals that need it.
+    //
     initialize_renz(renz, renz_cnt, renz_len);
     initialize_renz_olap(renz_olap);
+    srandom(time(NULL));
 
+    //
+    // Parse the command line.
+    //
     parse_command_line(argc, argv);
 
     cerr
@@ -137,126 +173,321 @@ int main (int argc, char* argv[]) {
     }
 
     //
+    // Open and initialize the log file.
+    //
+    struct stat path_stat;
+    if (stat(out_path.c_str(), &path_stat) == 0) {
+        // Path exists, check that it is a directory
+        DIR* d = opendir(out_path.c_str());
+        if (d == NULL) {
+            cerr << "Error: Failed to open '" << out_path << "' as a directory.\n";
+            return -1;
+        }
+        closedir(d);
+    } else if (mkdir(out_path.c_str(), ACCESSPERMS) != 0) {
+        // Failed to create the directory.
+        cerr << "Error: Failed to create directory '" << out_path << "'.\n";
+        return -1;
+    }
+    string log_path = out_path + out_prefix + ".populations.log";
+    ofstream log_fh(log_path.c_str(), ofstream::out);
+    if (log_fh.fail()) {
+        cerr << "Error opening log file '" << log_path << "'\n";
+        return -1;
+    }
+    init_log(log_fh, argc, argv);
+    log_fh << flush;
+
+    //
     // Set the number of OpenMP parallel threads to execute.
     //
+
     #ifdef _OPENMP
     omp_set_num_threads(num_threads);
     #endif
 
     //
-    // Seed the random number generator
+    // Initialize the catalog and the MetaPopInfo
     //
-    srandom(time(NULL));
 
-    vector<pair<int, string> > files;
-    if (!build_file_list(files, pop_indexes, grp_members))
-        exit(1);
+    map<int, CSLocus *> catalog;
 
-    if (wl_file.length() > 0) {
-        load_marker_column_list(wl_file, whitelist);
-        cerr << "Loaded " << whitelist.size() << " whitelisted markers.\n";
+    // We need some objects in the main scope for each mode.
+    vector<vector<CatMatch *> > catalog_matches;
+    VcfHeader* vcf_header = NULL;
+    vector<VcfRecord>* vcf_records = NULL;
+
+    // Read the population map file, if any.
+    if (not pmap_path.empty()) {
+        cerr << "Parsing population map...\n";
+        mpopi.init_popmap(pmap_path);
+        if (mpopi.samples().empty()) {
+            cerr << "Error: Failed to open or parse population map file '" << pmap_path << "'.\n";
+            return -1;
+        }
+        cerr << "The population map contained " << mpopi.samples().size() << " samples, "
+             << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     }
+
+    if (input_mode == InputMode::stacks) {
+
+        //
+        // Stacks mode
+        //
+
+        if (pmap_path.empty()) {
+            cerr << "No population map specified, building file list...\n";
+            mpopi.init_directory(in_path);
+            if (mpopi.samples().empty()) {
+                cerr << "Error: Failed to find sample files in directory '" << in_path << "'.\n";
+                return -1;
+            }
+        }
+
+        // Check that at least one sample file exists in the directory.
+        bool dir_good = false;
+        for (vector<Sample>::const_iterator s=mpopi.samples().begin(); s!=mpopi.samples().end(); ++s) {
+            ifstream f;
+            string path = in_path + s->name + ".matches.tsv";
+            f.open(path);
+            if (f.is_open()) {
+                dir_good = true;
+                break;
+            }
+#if HAVE_LIBZ
+            path += ".gz";
+            gzFile g = gzopen(path.c_str(), "rb");
+            if (g != NULL) {
+                dir_good = true;
+                gzclose(g);
+                break;
+            }
+#endif
+        }
+        if (!dir_good) {
+            cerr << "Error: Unable to locate any file in input directory '" << in_path << "'.\n";
+            return -1;
+        }
+
+        // Load the catalog
+        cerr << "Parsing the catalog files...\n";
+        string catalog_prefix = in_path + "batch_" + to_string(batch_id) + ".catalog";
+        bool compressed = false;
+        int res = load_loci(catalog_prefix, catalog, false, false, compressed);
+        if (res == 0) {
+            cerr << "Unable to load the catalog '" << catalog_prefix << "'\n";
+            return -1;
+        }
+
+        // Load the matches
+        cerr << "Parsing the matches files...\n";
+        vector<size_t> samples_to_remove;
+        set<size_t> seen_samples;
+        for (size_t i = 0; i < mpopi.samples().size(); ++i) {
+            catalog_matches.push_back(vector<CatMatch*>());
+            vector<CatMatch *>& m = catalog_matches.back();
+            load_catalog_matches(in_path + mpopi.samples().at(i).name, m);
+
+            if (m.size() == 0) {
+                cerr << "Warning: Absent or malformed matches file '"
+                     << mpopi.samples()[i].name << ".matches.tsv(.gz)"
+                     <<"', excluding this sample from population analysis.\n";
+                samples_to_remove.push_back(i);
+                catalog_matches.pop_back(); // This introduces an index shift between catalog_matches and [i]/[mpopi],
+                                            // which will be resolved by a call to MetaPopInfo::delete_samples().
+                continue;
+            }
+
+            size_t sample_id = m[0]->sample_id;
+            if (seen_samples.count(sample_id) > 0) {
+                cerr << "Error: sample ID " << sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
+                exit(0);
+            }
+            seen_samples.insert(sample_id);
+            mpopi.set_sample_id(i, sample_id);
+        }
+
+        mpopi.delete_samples(samples_to_remove);
+        if (mpopi.samples().size() == 0) {
+            cerr << "Error: Couln't find any matches files.\n";
+            return -1;
+        }
+        // [mpopi] is definitive.
+
+    } else if (input_mode == InputMode::vcf) {
+
+        //
+        // VCF mode
+        //
+
+        // Open the VCF file
+        cerr << "Opening the VCF file...\n";
+        VcfAbstractParser* parser = Vcf::adaptive_open(in_vcf_path);
+        if (parser == NULL) {
+            cerr << "Error: Unable to open VCF file '" << in_vcf_path << "'.\n";
+            return -1;
+        }
+
+        parser->read_header();
+        if (parser->header().samples().empty()) {
+            cerr << "Error: No samples in VCF file '" << in_vcf_path << "'.\n";
+            return -1;
+        }
+
+        // Reconsider the MetaPopInfo in light of the VCF header.
+        if (pmap_path.empty()) {
+            cerr << "No population map specified, creating one from the VCF header...\n";
+            mpopi.init_names(parser->header().samples());
+        } else {
+            // Intersect the samples present in the population map and the VCF.
+            vector<size_t> samples_to_discard;
+            for (size_t i=0; i<mpopi.samples().size(); ++i)
+                if (not parser->header().sample_indexes().count(mpopi.samples()[i].name))
+                    samples_to_discard.push_back(i);
+            if (not samples_to_discard.empty()) {
+                if (samples_to_discard.size() == mpopi.samples().size()) {
+                    cerr << "Error: No common samples between the population map and VCF header.\n";
+                    return -1;
+                }
+                cerr << "Warning: of the samples listed in the population map, "
+                     << samples_to_discard.size() << " could not be found in the VCF :";
+                for (const size_t& s : samples_to_discard)
+                    cerr << " " << mpopi.samples()[s].name;
+                cerr << "\n";
+                mpopi.delete_samples(samples_to_discard);
+            }
+
+            // Create arbitrary sample IDs.
+            for (size_t i = 0; i < mpopi.samples().size(); ++i)
+                mpopi.set_sample_id(i, i+1); //id=i+1
+
+            // [mpopi] is definitive.
+        }
+
+        // Read the SNP records
+        cerr << "Reading the VCF records...\n";
+        vcf_records = new vector<VcfRecord>();
+        vector<size_t> skipped_notsnp;
+        vector<size_t> skipped_filter;
+
+        vcf_records->push_back(VcfRecord());
+        VcfRecord* rec = & vcf_records->back();
+        while (parser->next_record(*rec)) {
+            // Check for a SNP.
+            if (not rec->is_snp()) {
+                skipped_notsnp.push_back(parser->line_number());
+                continue;
+            }
+
+            // Check for a filtered-out SNP
+            if (not rec->filter.empty() && rec->filter[0] != "PASS") {
+                skipped_filter.push_back(parser->line_number());
+                continue;
+            }
+
+            // Save the SNP.
+            vcf_records->push_back(VcfRecord());
+            rec = & vcf_records->back();
+        }
+        vcf_records->pop_back();
+
+        cerr << "Found " << vcf_records->size() << " SNP records in file '" << in_vcf_path
+             << "'. (Skipped " << skipped_filter.size() << " already filtered-out SNPs and "
+             << skipped_notsnp.size() << " non-SNP records ; more with --verbose.)\n";
+        if (verbose && not skipped_notsnp.empty()) {
+            log_fh << "The following VCF record lines were determined not to be SNPs and skipped :";
+            for (vector<size_t>::const_iterator l=skipped_notsnp.begin(); l!=skipped_notsnp.end(); ++l)
+                log_fh << " " << *l;
+            log_fh << "\n";
+        }
+        if (vcf_records->size() == 0) {
+            cerr << "Error: No records.\n";
+            return -1;
+        }
+
+        catalog = create_catalog(*vcf_records);
+        vcf_header = new VcfHeader(parser->header());
+        delete parser;
+    }
+
+    // Read the blacklist, the whitelist, and the bootstrap-whitelist.
     if (bl_file.length() > 0) {
         load_marker_list(bl_file, blacklist);
         cerr << "Loaded " << blacklist.size() << " blacklisted markers.\n";
+    }
+    if (wl_file.length() > 0) {
+        load_marker_column_list(wl_file, whitelist);
+        cerr << "Loaded " << whitelist.size() << " whitelisted markers.\n";
+        check_whitelist_integrity(catalog, whitelist);
     }
     if (bs_wl_file.length() > 0) {
         load_marker_list(bs_wl_file, bootstraplist);
         cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
     }
 
-    //
-    // Open the log file.
-    //
-    stringstream log;
-    log << "batch_" << batch_id << ".populations.log";
-    string log_path = in_path + log.str();
-    ofstream log_fh(log_path.c_str(), ofstream::out);
-    if (log_fh.fail()) {
-        cerr << "Error opening log file '" << log_path << "'\n";
-        exit(1);
-    }
-    init_log(log_fh, argc, argv);
-
-    //
-    // Load the catalog
-    //
-    stringstream catalog_file;
-    map<int, CSLocus *> catalog;
-    bool compressed = false;
-    int  res;
-    catalog_file << in_path << "batch_" << batch_id << ".catalog";
-    if ((res = load_loci(catalog_file.str(), catalog, false, false, compressed)) == 0) {
-        cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
-        return 0;
-    }
-
-    //
-    // Check the whitelist.
-    //
-    check_whitelist_integrity(catalog, whitelist);
-
-    //
-    // Implement the black/white list
-    //
+    // Reduce the catalog accordingly, and retrieve the genomic order of loci.
     reduce_catalog(catalog, whitelist, blacklist);
-
-    //
-    // If the catalog is not reference aligned, assign an arbitrary ordering to catalog loci.
-    //
     loci_ordered = order_unordered_loci(catalog);
 
-    //
-    // Load matches to the catalog
-    //
-    vector<vector<CatMatch *> > catalog_matches;
-    map<int, string>            samples;
-    vector<int>                 sample_ids;
-    uint                        removed_cnt = 0;
-
-    for (int i = 0; i < (int) files.size(); i++) {
-        vector<CatMatch *> m;
-        load_catalog_matches(in_path + files[i].second, m);
-
-        if (m.size() == 0) {
-            cerr << "    Warning: unable to find any matches in file '" << files[i].second << "', excluding this sample from population analysis.\n";
-            //
-            // This case is generated by an existing, but empty file.
-            // Remove this sample from the population index which was built from 
-            // existing files, but we couldn't yet check for empty files.
-            //
-            uint index = i - removed_cnt;
-            for (map<int, pair<int, int> >::iterator pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
-                if ((index >= pit->second.first && index <= pit->second.second)) {
-                    pit->second.second--;
-                    removed_cnt++;
-                    pit++;
-                    while (pit != pop_indexes.end()) {
-                        pit->second.first--;
-                        pit->second.second--;
-                        pit++;
-                    }
-                    break;
-                }
-            continue;
+    // Report information on the MetaPopInfo.
+    cerr << "Working on " << mpopi.samples().size() << " samples.\n";
+    cerr << "Working on " << mpopi.pops().size() << " population(s) :\n";
+    for (vector<Pop>::const_iterator p = mpopi.pops().begin(); p != mpopi.pops().end(); p++) {
+        cerr << "    " << p->name << ": ";
+        for (size_t s = p->first_sample; s < p->last_sample; ++s) {
+            cerr << mpopi.samples()[s].name << ", ";
         }
-
-        catalog_matches.push_back(m);
-        if (samples.count(m[0]->sample_id) == 0) {
-            samples[m[0]->sample_id] = files[i].second;
-            sample_ids.push_back(m[0]->sample_id);
-        } else {
-            cerr << "Fatal error: sample ID " << m[0]->sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
-            exit(0);
+        cerr << mpopi.samples()[p->last_sample].name << "\n";
+    }
+    cerr << "Working on " << mpopi.groups().size() << " group(s) of populations :\n";
+    for (vector<Group>::const_iterator g = mpopi.groups().begin(); g != mpopi.groups().end(); g++) {
+        cerr << "    " << g->name << ": ";
+        for (vector<size_t>::const_iterator p = g->pops.begin(); p != g->pops.end() -1; ++p) {
+            //rem. end()-1 and back() are safe, there's always at least one pop
+            cerr << mpopi.pops()[*p].name << ", ";
         }
+        cerr << mpopi.pops()[g->pops.back()].name << "\n";
     }
 
+    if (size_t(population_limit) > mpopi.pops().size()) {
+        cerr << "Notice: Population limit (" << population_limit << ")"
+             << " larger than number of popualtions present, adjusting parameter to "
+             << mpopi.pops().size() << "\n";
+        population_limit = mpopi.pops().size();
+    }
+
+    // Set the former sample/population globals to their expected values.
+    mpopi.fill_files(files);
+    mpopi.fill_sample_ids(sample_ids);
+    mpopi.fill_samples(samples);
+    mpopi.fill_pop_key(pop_key);
+    mpopi.fill_pop_indexes(pop_indexes);
+    mpopi.fill_grp_key(grp_key);
+    mpopi.fill_grp_members(grp_members);
+
     //
-    // Create the population map
-    // 
-    cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
-    pmap->populate(sample_ids, catalog, catalog_matches);
+    // Initialize the PopMap
+    //
+
+    cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi.samples().size(), catalog.size());
+
+    if (input_mode == InputMode::stacks) {
+        // Using SStacks matches files...
+        pmap->populate(sample_ids, catalog, catalog_matches);
+
+        for(vector<vector<CatMatch *> >::iterator sample = catalog_matches.begin(); sample != catalog_matches.end(); ++sample)
+            for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
+                delete *match;
+        catalog_matches.clear();
+    } else if (input_mode == InputMode::vcf) {
+        // ...or using VCF records.
+        pmap->populate(mpopi, catalog, *vcf_records, *vcf_header);
+        delete vcf_records;
+        delete vcf_header;
+        vcf_records = NULL;
+        vcf_header = NULL;
+    }
 
     //
     // Tabulate haplotypes present and in what combinations.
@@ -272,54 +503,59 @@ int main (int argc, char* argv[]) {
     log_fh << "# Distribution of population loci.\n";
     log_haplotype_cnts(catalog, log_fh);
 
-    apply_locus_constraints(catalog, pmap, pop_indexes, log_fh);
+    apply_locus_constraints(catalog, pmap, log_fh);
 
     log_fh << "# Distribution of population loci after applying locus constraints.\n";
     log_haplotype_cnts(catalog, log_fh);
 
-    cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
-    map<int, CSLocus *>::iterator it;
-    map<int, ModRes *>::iterator mit;
-    Datum   *d;
-    CSLocus *loc;
+    if (input_mode == InputMode::stacks) {
+        //
+        // Load the output from the SNP calling model (hOm/hEt/Unk) for
+        // each individual at each locus.
+        //
 
-    //
-    // Load the output from the SNP calling model for each individual at each locus. This
-    // model output string looks like this:
-    //   OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOEOOOOOOEOOOOOOOOOOOOOOOOOOOOOOOOOOOOOUOOOOUOOOOOO
-    // and records model calls for each nucleotide: O (hOmozygous), E (hEterozygous), U (Unknown)
-    //
-    for (uint i = 0; i < sample_ids.size(); i++) {
-        map<int, ModRes *> modres;
-        load_model_results(in_path + samples[sample_ids[i]], modres);
+        cerr << "Loading model outputs for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
 
-        if (modres.size() == 0) {
-            cerr << "    Warning: unable to find any model results in file '" << samples[sample_ids[i]] << "', excluding this sample from population analysis.\n";
-            continue;
-        }
+        map<int, CSLocus *>::iterator it;
+        map<int, ModRes *>::iterator mit;
+        Datum   *d;
+        CSLocus *loc;
 
-        for (it = catalog.begin(); it != catalog.end(); it++) {
-            loc = it->second;
-            d = pmap->datum(loc->id, sample_ids[i]);
+        for (uint i = 0; i < sample_ids.size(); i++) {
+            map<int, ModRes *> modres;
+            load_model_results(in_path + samples[sample_ids[i]], modres);
 
-            if (d != NULL) {
-                if (modres.count(d->id) == 0) {
-                    cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id 
-                         << ", sample ID " << sample_ids[i] << ", sample locus " << d->id 
-                         << "; likely IDs were mismatched when running pipeline.\n";
-                    exit(0);
-                }
-                d->add_model(modres[d->id]->model);
+            if (modres.size() == 0) {
+                cerr << "    Warning: unable to find any model results in file '" << samples[sample_ids[i]] << "', excluding this sample from population analysis.\n";
+                continue;
             }
-        }
 
-        for (mit = modres.begin(); mit != modres.end(); mit++)
-            delete mit->second;
-        modres.clear();
+            for (it = catalog.begin(); it != catalog.end(); it++) {
+                loc = it->second;
+                d = pmap->datum(loc->id, sample_ids[i]);
+
+                if (d != NULL) {
+                    if (modres.count(d->id) == 0) {
+                        cerr << "Fatal error: Unable to find model data for catalog locus " << loc->id
+                             << ", sample ID " << sample_ids[i] << ", sample locus " << d->id
+                             << "; likely IDs were mismatched when running pipeline.\n";
+                        exit(0);
+                    }
+                    d->add_model(modres[d->id]->model);
+                }
+            }
+            for (mit = modres.begin(); mit != modres.end(); mit++)
+                delete mit->second;
+            modres.clear();
+        }
     }
 
     uint pop_id, start_index, end_index;
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
+
+    //
+    // Create the PopSum object and compute the summary statistics.
+    //
 
     PopSum<CSLocus> *psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
     psum->initialize(pmap);
@@ -342,12 +578,9 @@ int main (int argc, char* argv[]) {
     // frequency threshold (-a). In these cases we will remove the SNP, but keep the locus.
     //
     blacklist.clear();
-    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, pop_indexes, whitelist, blacklist, log_fh);
-    cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints.\n";
+    int pruned_snps = prune_polymorphic_sites(catalog, pmap, psum, whitelist, blacklist, log_fh);
+    cerr << "Pruned " << pruned_snps << " variant sites due to filter constraints (more with --verbose).\n";
 
-    if (!verbose)
-        cerr << "  (enable the --verbose flag to record the reason why each site was filtered in the batch_X.populations.log file.)\n";
-    
     //
     // Create an artificial whitelist if the user requested only the first or a random SNP per locus.
     //
@@ -376,6 +609,10 @@ int main (int argc, char* argv[]) {
     //
     // Regenerate summary statistics after pruning SNPs and  merging loci.
     //
+
+    if (debug_flags.count("VCFCOMP"))
+        vcfcomp_simplify_pmap(catalog, pmap);
+
     delete psum;
     psum = new PopSum<CSLocus>(pmap->loci_cnt(), pop_indexes.size());
     psum->initialize(pmap);
@@ -398,83 +635,82 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    calculate_haplotype_stats(files, pop_indexes, catalog, pmap, psum);
+    calculate_haplotype_stats(catalog, pmap, psum);
 
     if (calc_fstats) {
-        calculate_haplotype_divergence(files, pop_indexes, grp_members, catalog, pmap, psum);
-
-        calculate_haplotype_divergence_pairwise(files, pop_indexes, grp_members, catalog, pmap, psum);
+        calculate_haplotype_divergence(catalog, pmap, psum);
+        calculate_haplotype_divergence_pairwise(catalog, pmap, psum);
     }
 
     //
     // Calculate and output the locus-level summary statistics.
     //
-    calculate_summary_stats(files, pop_indexes, catalog, pmap, psum);
+    calculate_summary_stats(catalog, pmap, psum);
 
     //
     // Output the observed haplotypes.
     //
-    write_generic(catalog, pmap, samples, false);
+    write_generic(catalog, pmap, false);
 
     //
     // Output data in requested formats
     //
     if (fasta_out)
-        write_fasta(catalog, pmap, samples, sample_ids);
+        write_fasta(catalog, pmap);
 
     if (fasta_strict_out)
-        write_strict_fasta(catalog, pmap, samples, sample_ids);
+        write_strict_fasta(catalog, pmap);
 
     if (genepop_out && ordered_export)
-        write_genepop_ordered(catalog, pmap, psum, pop_indexes, samples, log_fh);
+        write_genepop_ordered(catalog, pmap, psum, log_fh);
     else if (genepop_out)
-        write_genepop(catalog, pmap, psum, pop_indexes, samples);
+        write_genepop(catalog, pmap, psum);
 
     if (structure_out && ordered_export)
-        write_structure_ordered(catalog, pmap, psum, pop_indexes, samples, log_fh);
+        write_structure_ordered(catalog, pmap, psum, log_fh);
     else if (structure_out) 
-        write_structure(catalog, pmap, psum, pop_indexes, samples);
+        write_structure(catalog, pmap, psum);
 
     if (fastphase_out)
-        write_fastphase(catalog, pmap, psum, pop_indexes, samples);
+        write_fastphase(catalog, pmap, psum);
 
     if (phase_out)
-        write_phase(catalog, pmap, psum, pop_indexes, samples);
+        write_phase(catalog, pmap, psum);
 
     if (beagle_out)
-        write_beagle(catalog, pmap, psum, pop_indexes, samples);
+        write_beagle(catalog, pmap, psum);
 
     if (beagle_phased_out)
-        write_beagle_phased(catalog, pmap, psum, pop_indexes, samples);
+        write_beagle_phased(catalog, pmap, psum);
 
     if (plink_out)
-        write_plink(catalog, pmap, psum, pop_indexes, samples);
+        write_plink(catalog, pmap, psum);
 
     if (hzar_out)
-        write_hzar(catalog, pmap, psum, pop_indexes, samples);
+        write_hzar(catalog, pmap, psum);
 
     if (treemix_out)
-        write_treemix(catalog, pmap, psum, pop_indexes, samples);
+        write_treemix(catalog, pmap, psum);
     
     if (phylip_out || phylip_var)
-        write_phylip(catalog, pmap, psum, pop_indexes, samples);
+        write_phylip(catalog, pmap, psum);
 
     if (phylip_var_all)
-        write_fullseq_phylip(catalog, pmap, psum, pop_indexes, samples);
+        write_fullseq_phylip(catalog, pmap, psum);
 
     if (vcf_haplo_out)
-        write_vcf_haplotypes(catalog, pmap, psum, samples, sample_ids);
+        write_vcf_haplotypes(catalog, pmap, psum);
 
     if (vcf_out && ordered_export)
-        write_vcf_ordered(catalog, pmap, psum, samples, sample_ids, merge_map, log_fh);
+        write_vcf_ordered(catalog, pmap, psum, merge_map, log_fh);
     else if (vcf_out)
-        write_vcf(catalog, pmap, psum, samples, sample_ids, merge_map);
+        write_vcf(catalog, pmap, psum, merge_map);
 
     //
     // Calculate and write Fst.
     //
     if (calc_fstats)
-        write_fst_stats(files, pop_indexes, catalog, pmap, psum, log_fh);
+        write_fst_stats(catalog, pmap, psum, log_fh);
 
     //
     // Output nucleotide-level genotype calls for each individual.
@@ -484,16 +720,105 @@ int main (int argc, char* argv[]) {
 
     log_fh.close();
 
+    cerr << "POPULATIONS is done.\n";
     return 0;
+}
+
+void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap) {
+
+    cerr << "DEBUG Deleting information from the pmap & catalog so that they resemble what can be retrieved from a VCF.\n";
+    // n.b. In this configuration we only have one SNP per locus so we don't have
+    // to worry about what U's imply regarding haplotypes.
+    size_t n_deleted = 0;
+    size_t n_loci = pmap->loci_cnt();
+    size_t n_samples = pmap->sample_cnt();
+    for (size_t l=0; l<n_loci; ++l) {
+        CSLocus* loc = catalog.at(pmap->rev_locus_index(l));
+        if (loc->snps.empty())
+            continue;
+        if (loc->snps.size() > 1) {
+            cerr << "Error: This requires --write_single_snp.\n";
+            throw exception();
+        }
+        size_t col = loc->snps.at(0)->col;
+        Datum** datums = pmap->locus(loc->id);
+        for (size_t s=0; s<n_samples; ++s) {
+            if (datums[s] == NULL)
+                continue;
+            if (size_t(datums[s]->len) <= col
+                    || datums[s]->model[col] == 'U'
+                    || datums[s]->obshap.empty()
+                    || strcmp(datums[s]->obshap[0], "N") == 0
+                    ) {
+                delete datums[s];
+                datums[s] = NULL;
+                --loc->cnt;
+                --loc->hcnt;
+                ++n_deleted;
+            }
+        }
+    }
+    cerr << "? Deleted " << n_deleted << " 'Datums'.\n";
+
+    set<int> myblacklist;
+    // All NULL.
+    for (auto& l : catalog) {
+        Datum** data = pmap->locus(l.second->id);
+        size_t non_null = 0;
+        for (size_t i=0; i < size_t(pmap->sample_cnt()); ++i)
+            if (data[i]!=NULL)
+                ++non_null;
+        if (non_null == 0)
+            myblacklist.insert(l.second->id);
+    }
+    // Not two alleles.
+    for (auto& l : catalog) {
+        if (l.second->snps.empty()
+                || l.second->snps[0]->rank_2 == 0
+                || l.second->snps[0]->rank_3 != 0
+                || l.second->alleles.size() != 2) {
+            myblacklist.insert(l.second->id);
+        } else {
+            // Check the actual number of alleles
+            Datum** data = pmap->locus(l.second->id);
+            set<char> seen_alleles;
+            for (size_t i=0; i<size_t(pmap->sample_cnt()); ++i) {
+                Datum* d = data[i];
+                if (d != NULL)
+                    for(char* hapl : d->obshap)
+                        seen_alleles.insert(hapl[0]);
+            }
+            if ((int((seen_alleles.count('A') || seen_alleles.count('a')))
+                    + (seen_alleles.count('C') || seen_alleles.count('c'))
+                    + (seen_alleles.count('T') || seen_alleles.count('t'))
+                    + (seen_alleles.count('G') || seen_alleles.count('g')))
+                    != 2)
+                myblacklist.insert(l.second->id);
+        }
+    }
+    // Same SNP in different loci.
+    for (auto& chr : pmap->ordered_loci) {
+        map<size_t,vector<size_t> > seen_bp0; // (bp, [loc_id's])
+        for (CSLocus* loc : chr.second)
+            if (not loc->snps.empty())
+                seen_bp0[loc->sort_bp(loc->snps[0]->col)].push_back(loc->id);
+        for (auto& bp : seen_bp0)
+            if (bp.second.size() > 1)
+                for (size_t loc_id : bp.second)
+                    myblacklist.insert(loc_id);
+    }
+    set<int> empty;
+    reduce_catalog(catalog, empty, myblacklist);
+    pmap->prune(myblacklist);
+    cerr << "? Now working on " << catalog.size() << " loci (deleted " << myblacklist.size() << " loci).\n";
 }
 
 int
 apply_locus_constraints(map<int, CSLocus *> &catalog, 
                         PopMap<CSLocus> *pmap, 
-                        map<int, pair<int, int> > &pop_indexes, 
                         ofstream &log_fh)
 {
-    uint pop_id, start_index, end_index;
+    uint pop_sthg, start_index, end_index;
     CSLocus *loc;
     Datum  **d;
 
@@ -504,7 +829,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
                << "# Action\tLocus ID\tChr\tBP\tColumn\tReason\n";
 
     map<int, CSLocus *>::iterator it;
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
 
     uint pop_cnt   = pop_indexes.size();
     int *pop_order = new int [pop_cnt];
@@ -518,18 +843,18 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
     // The total number of samples in each population.
     int *pop_tot   = new int [pop_cnt];
 
-    pop_id = 0;
+    pop_sthg = 0;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
         start_index = pit->second.first;
         end_index   = pit->second.second;
-        pop_tot[pop_id]  = 0;
+        pop_tot[pop_sthg]  = 0;
 
         for (uint i = start_index; i <= end_index; i++) {
-            samples[i] = pop_id;
-            pop_tot[pop_id]++;
+            samples[i] = pop_sthg;
+            pop_tot[pop_sthg]++;
         }
-        pop_order[pop_id] = pit->first;
-        pop_id++;
+        pop_order[pop_sthg] = pit->first;
+        pop_sthg++;
     }
 
     for (uint i = 0; i < pop_cnt; i++)
@@ -589,8 +914,8 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 
             if (pop_cnts[i] > 0 && pct < sample_limit) {
                 //cerr << "Removing population " << pop_order[i] << " at locus: " << loc->id << "; below sample limit: " << pct << "\n";
-                start_index = pop_indexes[pop_order[i]].first;
-                end_index   = pop_indexes[pop_order[i]].second;
+                start_index = pop_indexes.at(pop_order[i]).first;
+                end_index   = pop_indexes.at(pop_order[i]).second;
 
                 for (uint j  = start_index; j <= end_index; j++) {
                     if (d[j] != NULL) {
@@ -658,7 +983,6 @@ int
 prune_polymorphic_sites(map<int, CSLocus *> &catalog, 
                         PopMap<CSLocus> *pmap,
                         PopSum<CSLocus> *psum,
-                        map<int, pair<int, int> > &pop_indexes, 
                         map<int, set<int> > &whitelist, set<int> &blacklist,
                         ofstream &log_fh)
 {
@@ -742,8 +1066,8 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                     for (uint j = 0; j < pop_prune_list.size(); j++) {
                         if (s[psum->pop_index(pop_prune_list[j])]->nucs[loc->snps[i]->col].num_indv == 0) continue;
 
-                        start_index = pop_indexes[pop_prune_list[j]].first;
-                        end_index   = pop_indexes[pop_prune_list[j]].second;
+                        start_index = pop_indexes.at(pop_prune_list[j]).first;
+                        end_index   = pop_indexes.at(pop_prune_list[j]).second;
                         d           = pmap->locus(loc->id);
 
                         for (uint k = start_index; k <= end_index; k++) {
@@ -860,8 +1184,8 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                     for (uint j = 0; j < pop_prune_list.size(); j++) {
                         if (s[psum->pop_index(pop_prune_list[j])]->nucs[loc->snps[i]->col].num_indv == 0) continue;
                         
-                        start_index = pop_indexes[pop_prune_list[j]].first;
-                        end_index   = pop_indexes[pop_prune_list[j]].second;
+                        start_index = pop_indexes.at(pop_prune_list[j]).first;
+                        end_index   = pop_indexes.at(pop_prune_list[j]).second;
                         d           = pmap->locus(loc->id);
 
                         for (uint k = start_index; k <= end_index; k++) {
@@ -1104,9 +1428,9 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
             //   +Must occur on opposite strands
             //   +Must overlap according to the length of the cutsite.
             //
-            if (((cur->loc.strand == minus && next->loc.strand == plus) &&
+            if (((cur->loc.strand == strand_minus && next->loc.strand == strand_plus) &&
                  ((int) (cur->loc.bp  - next->loc.bp + 1) == renz_olap[enz])) ||
-                ((cur->loc.strand == plus  && next->loc.strand == minus) &&
+                ((cur->loc.strand == strand_plus  && next->loc.strand == strand_minus) &&
                  ((int) (next->loc.bp - cur->loc.bp  + 1) == renz_olap[enz]))) {
                 overlap++;
 
@@ -1476,7 +1800,7 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     //
     uint bp = sink->sort_bp();
     sink->loc.bp     = bp;
-    sink->loc.strand = plus;
+    sink->loc.strand = strand_plus;
 
     //
     // 5. Adjust the length of the sequence.
@@ -1505,7 +1829,7 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
         sink->alleles[*it] = 0;
 
     // cerr << "CSLocus " << sink->id << ":\n"
-    //   << "Length: " << sink->len << "; Chr: " << sink->loc.chr << "; BP: " << sink->sort_bp() << "; strand: " << (sink->loc.strand == plus ? "+" : "-") << "\n"
+    //   << "Length: " << sink->len << "; Chr: " << sink->loc.chr << "; BP: " << sink->sort_bp() << "; strand: " << (sink->loc.strand == strand_plus ? "+" : "-") << "\n"
     //   << "  SNPs:\n";
     // for (uint j = 0; j < sink->snps.size(); j++) 
     //  cerr << "    Col: " << sink->snps[j]->col 
@@ -1727,69 +2051,6 @@ merge_datums(int sample_cnt,
     return 1;
 }
 
-int
-datum_adjust_snp_positions(map<int, pair<merget, int> > &merge_map, 
-                           CSLocus *loc, Datum *datum, 
-                           map<int, SNPRes *> &snpres)
-{
-    //
-    // We will start with the 'sink' locus, which was originally on the negative strand:
-    //   1. If the locus was shorter than the catalog locus, pad the difference.
-    //   2. Convert to positive strand: Reverse the order, complement the alleles,
-    //      alter the internal column position.
-    //
-    SNP    *snp;
-    SNPRes *snpr     = snpres[datum->id];
-    int     index    = 0;
-    int     stop_pos = renz_olap[enz] - 1;
-
-    //
-    // We know the catalog was padded since we already padded hte model call string
-    // if it was necessary when originally merging.
-    //
-    while (datum->model[index] == 'N') {
-        snp         = new SNP;
-        snp->col    = index;
-        snp->lratio = 0.0;
-        snp->rank_1 = 'N';
-        snp->type   = snp_type_unk;
-        datum->snps.push_back(snp);
-        index++;
-    }
-
-    for (int j = snpr->snps.size() - 1; j > stop_pos; j--) {
-        snp         = new SNP;
-        snp->col    = index;
-        snp->lratio = snpr->snps[j]->lratio;
-        snp->rank_1 = reverse(snpr->snps[j]->rank_1);
-        snp->rank_2 = reverse(snpr->snps[j]->rank_2);
-        snp->rank_3 = reverse(snpr->snps[j]->rank_3);
-        snp->rank_4 = reverse(snpr->snps[j]->rank_4);
-        datum->snps.push_back(snp);
-        index++;
-    }
-
-    //
-    // Now we fetch the former locus, the 'src', which was originally on the positive strand.
-    // All we have to do is adjust the column position of each SNP.
-    //
-    snpr = snpres[datum->merge_partner];
-
-    for (uint j = 0; j < snpres[datum->id]->snps.size(); j++) {
-        snp         = new SNP;
-        snp->col    = index;
-        snp->lratio = snpr->snps[j]->lratio;
-        snp->rank_1 = snpr->snps[j]->rank_1;
-        snp->rank_2 = snpr->snps[j]->rank_2;
-        snp->rank_3 = snpr->snps[j]->rank_3;
-        snp->rank_4 = snpr->snps[j]->rank_4;
-        datum->snps.push_back(snp);
-        index++;
-    }
-
-    return 0;
-}
-
 int 
 create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap) 
 {
@@ -1892,51 +2153,8 @@ int call_population_genotypes(CSLocus *locus,
     return 0;
 }
 
-int tally_haplotype_freq(CSLocus *locus, PopMap<CSLocus> *pmap,
-                         int &total, double &max, string &freq_str) {
-
-    map<string, double> freq;
-    Datum **d = pmap->locus(locus->id);
-
-    total = 0;
-    max   = 0;
-
-    //cerr << "Examining marker: " << locus->id << "\n";
-
-    for (int i = 0; i < pmap->sample_cnt(); i++) {
-        if (d[i] == NULL) continue;
-
-        //cerr << "  Sample: " << i << "; Haplotype: " << d[i]->obshap[0] << "; Genotype: " << d[i]->gtype << "\n";
-        if (d[i]->gtype[0] != '-') {
-            freq[d[i]->gtype]++;
-            total++;
-        }
-    }
-
-    if (total == 0)
-        return 0;
-
-    double frac;
-    stringstream s;
-    char   f[id_len];
-    map<string, double>::iterator it;
-    for (it = freq.begin(); it != freq.end(); it++) {
-        frac = (double) it->second / (double) total * 100;
-        if (frac > max) max = frac;
-        sprintf(f, "(%0.1f%%);", frac);
-        s << it->first << ":" << it->second << f;
-    }
-
-    freq_str = s.str();
-
-    return 0;
-}
-
 int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".genomic.tsv";
-
-    string file = in_path + pop_name.str();
+    string file = out_path + out_prefix + ".genomic.tsv";
 
     ofstream fh(file.c_str(), ofstream::out);
 
@@ -2045,8 +2263,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 }
 
 int 
-calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
-                          map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
@@ -2067,9 +2284,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
     //
     // Open output file and print header.
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".hapstats" << ".tsv";
-    string file = in_path + pop_name.str();
+    string file = out_path + out_prefix + ".hapstats.tsv";
 
     ofstream fh(file.c_str(), ofstream::out);
     if (fh.fail()) {
@@ -2079,7 +2294,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
     fh.precision(fieldw);
     fh.setf(std::ios::fixed);
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     int start, end, pop_id;
 
     //
@@ -2090,7 +2305,7 @@ calculate_haplotype_stats(vector<pair<int, string> > &files, map<int, pair<int, 
         end   = pit->second.second;
         fh << "# " << pop_key[pit->first] << "\t";
         for (int i = start; i <= end; i++) {
-            fh << files[i].second;
+            fh << samples.at(pmap->rev_sample_index(i));
             if (i < end) fh << ",";
         }
         fh << "\n";
@@ -2303,10 +2518,7 @@ nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
 }
 
 int 
-calculate_haplotype_divergence(vector<pair<int, string> > &files, 
-                               map<int, pair<int, int> > &pop_indexes, 
-                               map<int, vector<int> > &master_grp_members,
-                               map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
 
@@ -2319,8 +2531,8 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
     // Create a list of all the groups we have.
     //
     map<int, vector<int> >::iterator git;
-    map<int, int> pop_grp_key;
-    for (git = master_grp_members.begin(); git != master_grp_members.end(); git++)
+    map<int, int> pop_grp_key; // map of (pop_id, group_id)
+    for (git = grp_members.begin(); git != grp_members.end(); git++)
         for (uint i = 0; i < git->second.size(); i++)
             pop_grp_key[git->second[i]] = git->first;
 
@@ -2329,7 +2541,7 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
     //
     vector<int> pop_ids;
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
         pop_ids.push_back(pit->first);
 
@@ -2379,16 +2591,16 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
                 // If this locus only appears in one population or there is only a single haplotype,
                 // do not calculate haplotype F stats.
                 //
-                if (fixed_locus(pop_indexes, d, pop_ids))
+                if (fixed_locus(d, pop_ids))
                     continue;
 
                 cnt++;
                 // cerr << "Processing locus " << loc->id << "\n";
 
-                h = haplotype_amova(pop_grp_key, pop_indexes, d, s, pop_ids);
+                h = haplotype_amova(pop_grp_key, d, s, pop_ids);
 
                 if (h != NULL) {
-                    h->stat[4] = haplotype_d_est(pop_indexes, d, s, pop_ids);
+                    h->stat[4] = haplotype_d_est(d, s, pop_ids);
 
                     h->loc_id = loc->id;
                     h->bp     = loc->sort_bp();
@@ -2429,10 +2641,7 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
 
     cerr << "Writing haplotype F statistics... ";
 
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".phistats" << ".tsv";
-
-    string file = in_path + pop_name.str();
+    string file = out_path + out_prefix + ".phistats.tsv";
 
     ofstream fh(file.c_str(), ofstream::out);
     if (fh.fail()) {
@@ -2451,7 +2660,7 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
         end   = pit->second.second;
         fh << "# Population " << pop_key[pit->first] << "\t";
         for (int k = start; k <= end; k++) {
-            fh << files[k].second;
+            fh << samples.at(pmap->rev_sample_index(k));
             if (k < end) fh << ",";
         }
         fh << "\n";
@@ -2461,11 +2670,11 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
     // Write the group members.
     //
     for (git = grp_members.begin(); git != grp_members.end(); git++) {
-        end = git->second.size();
         fh << "# Group " << grp_key[git->first] << "\t";
-        for (int k = 0; k < end; k++) {
+        for (size_t k = 0; k < git->second.size(); k++) {
             fh << pop_key[git->second[k]];
-            if (k < end - 1) fh << ",";
+            if (k < git->second.size() - 1)
+                fh << ",";
         }
         fh << "\n";
     }
@@ -2564,10 +2773,7 @@ calculate_haplotype_divergence(vector<pair<int, string> > &files,
 }
 
 int 
-calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files, 
-                                        map<int, pair<int, int> > &pop_indexes, 
-                                        map<int, vector<int> > &master_grp_members,
-                                        map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
 
@@ -2580,12 +2786,12 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
     // Assign all individuals to one group for the pairwise calculations.
     //
     map<int, vector<int> >::iterator git;
-    map<int, int> pop_grp_key;
-    for (git = master_grp_members.begin(); git != master_grp_members.end(); git++)
+    map<int, int> pop_grp_key; // map of (pop_id, group_id)
+    for (git = grp_members.begin(); git != grp_members.end(); git++)
         for (uint i = 0; i < git->second.size(); i++)
             pop_grp_key[git->second[i]] = 1;
 
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     vector<int> pop_ids;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
         pop_ids.push_back(pit->first);
@@ -2645,16 +2851,16 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
                         // If this locus only appears in one population or there is only a single haplotype,
                         // do not calculate haplotype F stats.
                         //
-                        if (fixed_locus(pop_indexes, d, subpop_ids))
+                        if (fixed_locus(d, subpop_ids))
                             continue;
 
                         cnt++;
                         // cerr << "Processing locus " << loc->id << "\n";
 
-                        h = haplotype_amova(pop_grp_key, pop_indexes, d, s, subpop_ids);
+                        h = haplotype_amova(pop_grp_key, d, s, subpop_ids);
 
                         if (h != NULL) {
-                            h->stat[4] = haplotype_d_est(pop_indexes, d, s, subpop_ids);
+                            h->stat[4] = haplotype_d_est(d, s, subpop_ids);
 
                             h->loc_id = loc->id;
                             h->bp     = loc->sort_bp();
@@ -2690,10 +2896,7 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
 
             cerr << "Writing haplotype F statistics... ";
 
-            stringstream pop_name;
-            pop_name << "batch_" << batch_id << ".phistats_" << pop_key[pop_ids[i]] << "-" << pop_key[pop_ids[j]] << ".tsv";
-
-            string file = in_path + pop_name.str();
+            string file = out_path + out_prefix + ".phistats_" + pop_key[pop_ids[i]] + "-" + pop_key[pop_ids[j]] + ".tsv";
 
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
@@ -2708,11 +2911,11 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
             //
             int start, end;
             for (uint k = 0; k < subpop_ids.size(); k++) {
-                start = pop_indexes[subpop_ids[k]].first;
-                end   = pop_indexes[subpop_ids[k]].second;
+                start = pop_indexes.at(subpop_ids[k]).first;
+                end   = pop_indexes.at(subpop_ids[k]).second;
                 fh << "# Population " << pop_key[subpop_ids[k]] << "\t";
                 for (int n = start; n <= end; n++) {
-                    fh << files[n].second;
+                    fh << samples.at(pmap->rev_sample_index(n));
                     if (n < end) fh << ",";
                 }
                 fh << "\n";
@@ -2809,7 +3012,7 @@ calculate_haplotype_divergence_pairwise(vector<pair<int, string> > &files,
 }
 
 bool
-fixed_locus(map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_ids)
+fixed_locus(Datum **d, vector<int> &pop_ids)
 {
     set<string>               loc_haplotypes;
     map<int, vector<string> > pop_haplotypes;
@@ -2817,8 +3020,8 @@ fixed_locus(map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_
     int pop_cnt = pop_ids.size();
 
     for (int p = 0; p < pop_cnt; p++) {
-        start  = pop_indexes[pop_ids[p]].first;
-        end    = pop_indexes[pop_ids[p]].second;
+        start  = pop_indexes.at(pop_ids[p]).first;
+        end    = pop_indexes.at(pop_ids[p]).second;
         pop_id = pop_ids[p];
 
         for (int i = start; i <= end; i++) {
@@ -2866,44 +3069,6 @@ fixed_locus(map<int, pair<int, int> > &pop_indexes, Datum **d, vector<int> &pop_
         return true;
 
     return false;
-}
-
-inline bool
-uncalled_haplotype(const char *haplotype)
-{
-    for (const char *p = haplotype; *p != '\0'; p++)
-        if (*p == 'N' || *p == 'n')
-            return true;
-    return false;
-}
-
-inline double
-count_haplotypes_at_locus(int start, int end, Datum **d, map<string, double> &hap_cnts)
-{
-    double n = 0.0;
-
-    for (int i = start; i <= end; i++) {
-        if (d[i] == NULL) continue;
-
-        if (d[i]->obshap.size() > 2) { 
-            continue;
-
-        } else if (d[i]->obshap.size() == 1) {
-            if(!uncalled_haplotype(d[i]->obshap[0])) {
-                n += 2;
-                hap_cnts[d[i]->obshap[0]] += 2;
-            }
-        } else {
-            for (uint j = 0; j < d[i]->obshap.size(); j++) {
-                if(!uncalled_haplotype(d[i]->obshap[0])) {
-                    n++;
-                    hap_cnts[d[i]->obshap[j]]++;
-                }
-            }
-        }
-    }
-    
-    return n;
 }
 
 LocStat *
@@ -3006,8 +3171,7 @@ haplotype_diversity(int start, int end, Datum **d)
 }
 
 HapStat *
-haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_indexes, 
-                Datum **d, LocSum **s, vector<int> &pop_ids)
+haplotype_amova(map<int, int> &pop_grp_key, Datum **d, LocSum **s, vector<int> &pop_ids)
 {
     map<string, int>          loc_hap_index;
     vector<string>            loc_haplotypes;
@@ -3016,7 +3180,7 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     vector<int>               grps;
 
     map<string, int>::iterator hit, hit_2;
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     int start, end, pop_id, pop_id_1;
 
     HapStat  *h;
@@ -3026,8 +3190,8 @@ haplotype_amova(map<int, int> &pop_grp_key, map<int, pair<int, int> > &pop_index
     // Tabulate the occurences of haplotypes at this locus.
     //
     for (int p = 0; p < pop_cnt; p++) {
-        start  = pop_indexes[pop_ids[p]].first;
-        end    = pop_indexes[pop_ids[p]].second;
+        start  = pop_indexes.at(pop_ids[p]).first;
+        end    = pop_indexes.at(pop_ids[p]).second;
         pop_id = pop_ids[p];
 
         for (int i = start; i <= end; i++) {
@@ -3492,7 +3656,7 @@ amova_ssd_ag(vector<int> &grps, map<int, vector<int> > &grp_members,
 }
 
 double
-haplotype_d_est(map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum **s, vector<int> &pop_ids)
+haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
 {
     //
     // Calculate D_est, fixation index, as described by 
@@ -3515,8 +3679,8 @@ haplotype_d_est(map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum **s, v
     // Tabulate the occurences of haplotypes at this locus.
     //
     for (uint p = 0; p < pop_cnt; p++) {
-        start  = pop_indexes[pop_ids[p]].first;
-        end    = pop_indexes[pop_ids[p]].second;
+        start  = pop_indexes.at(pop_ids[p]).first;
+        end    = pop_indexes.at(pop_ids[p]).second;
         pop_id = pop_ids[p];
 
         for (int i = start; i <= end; i++) {
@@ -3574,8 +3738,7 @@ haplotype_d_est(map<int, pair<int, int> > &pop_indexes, Datum **d, LocSum **s, v
 }
 
 int 
-calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
-                        map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum) 
+calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
     CSLocus  *loc;
@@ -3755,10 +3918,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
         fis_mean_all[j]      = fis_mean_all[j]      / n_all[j];
     }
 
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".sumstats" << ".tsv";
-
-    string file = in_path + pop_name.str();
+    string file = out_path + out_prefix + ".sumstats.tsv";
 
     ofstream fh(file.c_str(), ofstream::out);
     if (fh.fail()) {
@@ -3773,13 +3933,13 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
     //
     // Write the population members.
     //
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
         start = pit->second.first;
         end   = pit->second.second;
-        fh << "# " << pit->first << "\t";
+        fh << "# " << pop_key.at(pit->first) << "\t";
         for (int i = start; i <= end; i++) {
-            fh << files[i].second;
+            fh << samples.at(pmap->rev_sample_index(i));
             if (i < end) fh << ",";
         }
         fh << "\n";
@@ -3932,10 +4092,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 
     fh.close();
 
-    pop_name.str("");
-    pop_name << "batch_" << batch_id << ".sumstats_summary" << ".tsv";
-
-    file = in_path + pop_name.str();
+    file = out_path + out_prefix + ".sumstats_summary.tsv";
 
     fh.open(file.c_str(), ofstream::out);
 
@@ -4122,8 +4279,7 @@ calculate_summary_stats(vector<pair<int, string> > &files, map<int, pair<int, in
 }
 
 int 
-write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &pop_indexes, 
-                map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, ofstream &log_fh) 
+write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, ofstream &log_fh)
 {
     //
     // We want to iterate over each pair of populations and calculate Fst at each 
@@ -4131,7 +4287,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     //
     vector<double> means;
     vector<int>    pops;
-    map<int, pair<int, int> >::iterator pit;
+    map<int, pair<int, int> >::const_iterator pit;
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
         pops.push_back(pit->first);
 
@@ -4157,10 +4313,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
             double sum = 0.0;
             double cnt = 0.0;
 
-            stringstream pop_name;
-            pop_name << "batch_" << batch_id << ".fst_" << pop_key[pop_1] << "-" << pop_key[pop_2] << ".tsv";
-
-            string   file = in_path + pop_name.str();
+            string file = out_path + out_prefix + ".fst_" + pop_key[pop_1] + "-" + pop_key[pop_2] + ".tsv";
             ofstream fh(file.c_str(), ofstream::out);
             if (fh.fail()) {
                 cerr << "Error opening Fst output file '" << file << "'\n";
@@ -4389,10 +4542,7 @@ write_fst_stats(vector<pair<int, string> > &files, map<int, pair<int, int> > &po
     //
     // Write out the mean Fst measure of each pair of populations.
     //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".fst_summary.tsv";
-
-    string file = in_path + pop_name.str();
+    string file = out_path + out_prefix + ".fst_summary.tsv";
     ofstream fh(file.c_str(), ofstream::out);
 
     if (fh.fail()) {
@@ -4877,17 +5027,9 @@ bootstrap_approximate_pval(int snp_cnt, double stat, map<int, vector<double> > &
 }
 
 int
-write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, 
-              map<int, string> &samples, bool write_gtypes)
+write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gtypes)
 {
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id;
-    if (write_gtypes)
-        pop_name << ".genotypes.tsv";
-    else 
-        pop_name << ".haplotypes.tsv";
-
-    string file = in_path + pop_name.str();
+    string file = out_path + out_prefix + (write_gtypes ? ".genotypes.tsv" : ".haplotypes.tsv");
 
     ofstream fh(file.c_str(), ofstream::out);
 
@@ -4956,7 +5098,7 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap,
 
             if (d[i] == NULL)
                 fh << "-";
-            else
+            else {
                 if (write_gtypes) {
                     fh << d[i]->gtype;
                 } else {
@@ -4966,3509 +5108,13 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap,
                     obshap = obshap.substr(0, obshap.length()-1);
                     fh << obshap;
                 }
+            }
         }
 
         fh << "\n";
     }
 
     fh.close();
-
-    return 0;
-}
-
-int 
-write_sql(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) 
-{
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".markers.tsv";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing SQL markers file to '" << file << "'\n";
-
-    ofstream fh(file.c_str(), ofstream::out);
-    if (fh.fail()) {
-        cerr << "Error opening markers SQL file '" << file << "'\n";
-        exit(1);
-    }
-    fh.precision(fieldw);
-    fh.setf(std::ios::fixed);
-
-    fh << "# SQL ID"            << "\t" 
-       << "Batch ID"            << "\t" 
-       << "Catalog Locus ID"    << "\t" 
-       << "\t"
-       << "Total Genotypes"     << "\t"
-       << "Max"                 << "\t"
-       << "Genotype Freqs"      << "\t"
-       << "F"                   << "\t"
-       << "Mean Log Likelihood" << "\t"
-       << "Genotype Map"        << "\t"
-       << "\n";
-
-    map<int, CSLocus *>::iterator it;
-    CSLocus *loc;
-    stringstream gtype_map;
-
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-
-        string freq  = "";
-        double max   = 0.0;
-        int    total = 0;
-        gtype_map.str("");
-
-        if (loc->marker.length() > 0) {
-            tally_haplotype_freq(loc, pmap, total, max, freq);
-
-            //
-            // Record the haplotype to genotype map.
-            //
-            map<string, string>::iterator j;
-            for (j = loc->gmap.begin(); j != loc->gmap.end(); j++)
-                gtype_map << j->first << ":" << j->second << ";";
-        }
-
-        fh << 0 << "\t" 
-           << batch_id << "\t" 
-           << loc->id  << "\t" 
-           << "\t"              // Marker
-           << total    << "\t"
-           << max      << "\t"
-           << freq     << "\t"
-           << loc->f   << "\t"
-           << loc->lnl << "\t"
-           << gtype_map.str() << "\t"
-           << "\n";
-    }
-
-    fh.close();
-
-    return 0;
-}
-
-int 
-write_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string> &samples, vector<int> &sample_ids) 
-{
-    //
-    // Write a FASTA file containing each allele from each locus from 
-    // each sample in the population.
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".fa";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing population alleles to FASTA file '" << file << "'\n";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening FASTA file '" << file << "'\n";
-        exit(1);
-    }
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus *loc;
-    Datum  **d;
-    char    *seq;
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            d   = pmap->locus(loc->id);
-            seq = new char[loc->len + 1];
-            strcpy(seq, loc->con);
-
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                if (d[j] == NULL) 
-                    continue;
-
-                for (uint k = 0; k < d[j]->obshap.size(); k++) {
-
-                    for (uint i = 0; i < loc->snps.size(); i++) {
-                        uint col = loc->snps[i]->col;
-                        seq[col] = col < loc->len ? d[j]->obshap[k][i] : loc->con[col];
-                    }
-
-                    fh << ">CLocus_" << loc->id 
-                       << "_Sample_" << pmap->rev_sample_index(j)
-                       << "_Locus_"  << d[j]->id 
-                       << "_Allele_" << k
-                       << " ["       << samples[pmap->rev_sample_index(j)];
-
-                    if (strcmp(loc->loc.chr, "un") != 0)
-                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
-                    fh << "]\n"
-                       << seq << "\n";
-                }
-            }
-            delete [] seq;
-        }
-    }
-
-    fh.close();
-
-    return 0;
-}
-
-int 
-write_strict_fasta(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, map<int, string> &samples, vector<int> &sample_ids) 
-{
-    //
-    // Write a FASTA file containing each allele from each locus from 
-    // each sample in the population.
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".strict.fa";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing strict population alleles to FASTA file '" << file << "'\n";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening strict FASTA file '" << file << "'\n";
-        exit(1);
-    }
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus *loc;
-    Datum  **d;
-    char    *seq;
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            d   = pmap->locus(loc->id);
-            seq = new char[loc->len + 1];
-            strcpy(seq, loc->con);
-
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                if (d[j] == NULL) 
-                    continue;
-                if (d[j]->obshap.size() > 2) 
-                    continue;
-
-                if (d[j]->obshap.size() == 1) {
-
-                    for (uint i = 0; i < loc->snps.size(); i++) {
-                        uint col = loc->snps[i]->col;
-                        seq[col] = col < loc->len ? d[j]->obshap[0][i] : loc->con[col];
-                    }
-
-                    fh << ">CLocus_" << loc->id 
-                       << "_Sample_" << pmap->rev_sample_index(j)
-                       << "_Locus_"  << d[j]->id 
-                       << "_Allele_" << 0
-                       << " ["       << samples[pmap->rev_sample_index(j)];
-                    if (strcmp(loc->loc.chr, "un") != 0)
-                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
-                    fh << "]\n"
-                       << seq << "\n";
-
-                    fh << ">CLocus_" << loc->id 
-                       << "_Sample_" << pmap->rev_sample_index(j)
-                       << "_Locus_"  << d[j]->id 
-                       << "_Allele_" << 1
-                       << " ["       << samples[pmap->rev_sample_index(j)];
-                    if (strcmp(loc->loc.chr, "un") != 0)
-                        fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
-                    fh << "]\n"
-                       << seq << "\n";
-
-                } else {
-                    for (uint k = 0; k < d[j]->obshap.size(); k++) {
-                        for (uint i = 0; i < loc->snps.size(); i++) {
-                            uint col = loc->snps[i]->col;
-                            seq[col] = col < loc->len ? d[j]->obshap[k][i] : loc->con[col];
-                        }
-
-                        fh << ">CLocus_" << loc->id 
-                           << "_Sample_" << pmap->rev_sample_index(j)
-                           << "_Locus_"  << d[j]->id 
-                           << "_Allele_" << k
-                           << " ["       << samples[pmap->rev_sample_index(j)];
-                        if (strcmp(loc->loc.chr, "un") != 0)
-                            fh << "; " << loc->loc.chr << ", " << loc->sort_bp() + 1 << ", " << (loc->loc.strand == plus ? "+" : "-");
-                        fh << "]\n"
-                           << seq << "\n";
-                    }
-                }
-            }
-
-            delete [] seq;
-        }
-    }
-
-    fh.close();
-
-    return 0;
-}
-
-int 
-write_vcf_ordered(map<int, CSLocus *> &catalog, 
-                  PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
-                  map<int, string> &samples, vector<int> &sample_ids,
-                  map<int, pair<merget, int> > &merge_map, ofstream &log_fh) 
-{
-    //
-    // Write a VCF file as defined here: http://www.1000genomes.org/node/101
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".vcf";
-    string file = in_path + pop_name.str();
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening VCF file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Load SNP data so that model likelihoods can be output to VCF file.
-    //
-    cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
-
-    populate_snp_calls(catalog, pmap, samples, sample_ids, merge_map);
-
-    cerr << "Writing population data to VCF file '" << file << "'\n";
-
-    log_fh << "\n#\n# Generating SNP-based VCF export.\n#\n";
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%Y%m%d", timeinfo);
-
-    //
-    // Output the header.
-    //
-    fh << "##fileformat=VCFv4.0\n"
-       << "##fileDate=" << date << "\n"
-       << "##source=\"Stacks v" << VERSION << "\"\n"
-       << "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n"
-       << "##INFO=<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">\n"
-       << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
-       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
-       << "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth\">\n"
-       << "##FORMAT=<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">\n"
-       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
-       << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
-
-    for (int i = 0; i < pmap->sample_cnt(); i++)
-        fh << "\t" << samples[pmap->rev_sample_index(i)];
-    fh << "\n";    
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus *loc;
-    Datum  **d;
-    int      gt_1, gt_2, dp_1, dp_2;
-    char     p_allele, q_allele, p_str[32], q_str[32];
-    uint16_t col;
-    int      snp_index;
-
-    //
-    // We need to order the SNPs taking into account overlapping loci.
-    //
-    OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        vector<NucTally *> sites;
-        ord->order(sites, it->second);
-
-        for (uint pos = 0; pos < sites.size(); pos++) {
-            if (catalog.count(sites[pos]->loc_id) == 0) {
-                cerr << "Unable to find locus id " << sites[pos]->loc_id << "\n";
-                continue;
-            }
-            loc = catalog[sites[pos]->loc_id];
-            col = sites[pos]->col;
-
-            sprintf(p_str, "%0.3f", sites[pos]->p_freq);
-            sprintf(q_str, "%0.3f", 1 - sites[pos]->p_freq);
-
-            //
-            // If on the negative strand, complement the alleles.
-            //
-            p_allele = loc->loc.strand == minus ? reverse(sites[pos]->p_allele) : sites[pos]->p_allele;
-            q_allele = loc->loc.strand == minus ? reverse(sites[pos]->q_allele) : sites[pos]->q_allele;
-
-            fh << loc->loc.chr << "\t" 
-               << loc->sort_bp(col) + 1 << "\t" 
-               << loc->id    << "\t"
-               << p_allele   << "\t"            // REFerence allele
-               << q_allele   << "\t"            // ALTernate allele
-               << "."        << "\t"            // QUAL
-               << "PASS"     << "\t"            // FILTER
-               << "NS="      << sites[pos]->num_indv << ";"   // INFO
-               << "AF="      << p_str << "," << q_str << "\t" // INFO
-               << "GT:DP:AD:GL";                // FORMAT
-
-            snp_index = loc->snp_index(col);
-            if (snp_index < 0) {
-                cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
-                fh << "\n";
-                continue;
-            }
-
-            d = pmap->locus(loc->id);
-
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                fh << "\t";
-
-                if (d[j] == NULL || col >= d[j]->len) {
-                    //
-                    // Data does not exist.
-                    //
-                    fh << "./.:0:.,.:.,.,.";
-                } else if (d[j]->model[col] == 'U') {
-                    //
-                    // Data exists, but the model call was uncertain.
-                    //
-                    fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
-                } else {
-                    //
-                    // Tally up the nucleotide calls.
-                    //
-                    tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
-
-                    if (p_allele == 0 && q_allele == 0) {
-                        // More than two potential alleles.
-                        fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
-                    } else {
-                        find_datum_allele_depths(d[j], snp_index, sites[pos]->p_allele, sites[pos]->q_allele, p_allele+q_allele, dp_1, dp_2);
-
-                        if (p_allele == 0) {
-                            gt_1 = q_allele == sites[pos]->p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
-                        } else if (q_allele == 0) {
-                            gt_1 = p_allele == sites[pos]->p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
-                        } else {
-                            gt_1 = p_allele == sites[pos]->p_allele ? 0 : 1;
-                            gt_2 = q_allele == sites[pos]->p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_2 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
-                        }
-                        //
-                        // Output the likelihood for this model call.
-                        //
-                        if (col < d[j]->snps.size()) {
-                            fh << ":.," << d[j]->snps[col]->lratio << ",.";
-                        } else {
-                            cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
-                            fh << ":.,.,.";
-                        }
-                    }
-                }
-            }
-            fh << "\n";
-        }
-    }
-    fh.close();
-
-    return 0;
-}
-
-int 
-write_vcf(map<int, CSLocus *> &catalog, 
-          PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
-          map<int, string> &samples, vector<int> &sample_ids,
-          map<int, pair<merget, int> > &merge_map) 
-{
-    //
-    // Write a VCF file as defined here: http://www.1000genomes.org/node/101
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".vcf";
-    string file = in_path + pop_name.str();
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening VCF file '" << file << "'\n";
-        exit(1);
-    }
-
-    cerr << "In preparation for VCF export, loading SNP data for " << samples.size() << " samples.\n";
-    //
-    // Load SNP data so that model likelihoods can be output to VCF file.
-    //
-    populate_snp_calls(catalog, pmap, samples, sample_ids, merge_map);
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%Y%m%d", timeinfo);
-
-    cerr << "Writing population data to VCF file '" << file << "'\n";
-
-    //
-    // Output the header.
-    //
-    fh << "##fileformat=VCFv4.0\n"
-       << "##fileDate=" << date << "\n"
-       << "##source=\"Stacks v" << VERSION << "\"\n"
-       << "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n"
-       << "##INFO=<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">\n"
-       << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
-       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
-       << "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth\">\n"
-       << "##FORMAT=<ID=GL,Number=.,Type=Float,Description=\"Genotype Likelihood\">\n"
-       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
-       << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
-
-    for (int i = 0; i < pmap->sample_cnt(); i++)
-        fh << "\t" << samples[pmap->rev_sample_index(i)];
-    fh << "\n";    
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus *loc;
-    Datum   **d;
-    LocTally *t;
-    int       gt_1, gt_2, dp_1, dp_2;
-    double    num_indv;
-    char      p_allele, q_allele, p_str[32], q_str[32];
-    int       snp_index;
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-
-        //
-        // We need to order the SNPs so negative and positive strand SNPs are properly ordered.
-        //
-        vector<GenPos> ordered_loci;
-        uint           col;
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            t   = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                col = loc->snps[i]->col;
-                if (t->nucs[col].allele_cnt == 2)
-                    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
-            }
-        }
-        sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
-
-        for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-            loc = catalog[ordered_loci[pos].id];
-            col = loc->snps[ordered_loci[pos].snp_index]->col;
-            t   = psum->locus_tally(loc->id);
-
-            num_indv = (double) t->nucs[col].num_indv;
-
-            sprintf(p_str, "%0.3f", t->nucs[col].p_freq);
-            sprintf(q_str, "%0.3f", 1 - t->nucs[col].p_freq);
-
-            //
-            // If on the negative strand, complement the alleles.
-            //
-            p_allele = loc->loc.strand == minus ? reverse(t->nucs[col].p_allele) : t->nucs[col].p_allele;
-            q_allele = loc->loc.strand == minus ? reverse(t->nucs[col].q_allele) : t->nucs[col].q_allele;
-
-            fh << loc->loc.chr << "\t" 
-               << loc->sort_bp(col) + 1 << "\t" 
-               << loc->id << "\t"
-               << p_allele << "\t"              // REFerence allele
-               << q_allele << "\t"              // ALTernate allele
-               << "."        << "\t"            // QUAL
-               << "PASS"     << "\t"            // FILTER
-               << "NS="      << num_indv << ";" // INFO
-               << "AF="      << p_str << "," << q_str << "\t" // INFO
-               << "GT:DP:AD:GL";                // FORMAT
-
-            snp_index = loc->snp_index(col);
-            if (snp_index < 0) {
-                cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << "\n";
-                fh << "\n";
-                continue;
-            }
-
-            d = pmap->locus(loc->id);
-
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                fh << "\t";
-
-                if (d[j] == NULL || col >= d[j]->len) {
-                    //
-                    // Data does not exist.
-                    //
-                    fh << "./.:0:.,.:.,.,.";
-                } else if (d[j]->model[col] == 'U') {
-                    //
-                    // Data exists, but the model call was uncertain.
-                    //
-                    fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
-                } else {
-                    //
-                    // Tally up the nucleotide calls.
-                    //
-                    tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
-
-                    if (p_allele == 0 && q_allele == 0) {
-                        // More than two potential alleles.
-                        fh << "./.:" << d[j]->tot_depth << ":.,.:.,.,.";
-                    } else {
-                        find_datum_allele_depths(d[j], snp_index, t->nucs[col].p_allele, t->nucs[col].q_allele, p_allele+q_allele, dp_1, dp_2);
-
-                        if (p_allele == 0) {
-                            gt_1 = q_allele == t->nucs[col].p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
-                        } else if (q_allele == 0) {
-                            gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_1 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
-                        } else {
-                            gt_1 = p_allele == t->nucs[col].p_allele ? 0 : 1;
-                            gt_2 = q_allele == t->nucs[col].p_allele ? 0 : 1;
-                            fh << gt_1 << "/" << gt_2 << ":" << d[j]->tot_depth << ":" << dp_1 << "," << dp_2;
-                        }
-                        //
-                        // Output the likelihood measure for this model call.
-                        //
-                        if (snp_index >= 0) {
-                            fh << ":.," << d[j]->snps[snp_index]->lratio << ",.";
-                        } else {
-                            cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
-                            fh << ":.,.,.";
-                        }
-                    }
-                }
-            }
-            fh << "\n";
-        }
-    }
-    fh.close();
-
-    return 0;
-}
-
-int
-populate_snp_calls(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap,
-                   map<int, string> &samples, vector<int> &sample_ids,
-                   map<int, pair<merget, int> > &merge_map)
-{
-    map<int, CSLocus *>::iterator cit;
-    map<int, SNPRes *>::iterator sit;
-    CSLocus *loc;
-    Datum   *datum;
-    SNPRes  *snpr;
-    SNP     *snp;
-
-    for (uint i = 0; i < sample_ids.size(); i++) {
-        map<int, SNPRes *> snpres;
-        load_snp_calls(in_path + samples[sample_ids[i]], snpres);
-
-        for (cit = catalog.begin(); cit != catalog.end(); cit++) {
-            loc = cit->second;
-            datum = pmap->datum(loc->id, sample_ids[i]);
-
-            if (datum != NULL && snpres.count(datum->id)) {
-
-                if (merge_sites && merge_map.count(loc->id)) { 
-                    datum_adjust_snp_positions(merge_map, loc, datum, snpres);
-                } else {
-                    //
-                    // Deep copy the SNP objects.
-                    //
-                    snpr = snpres[datum->id];
-                    for (uint j = 0; j < snpr->snps.size(); j++) {
-                        snp         = new SNP;
-                        snp->col    = snpr->snps[j]->col;
-                        snp->lratio = snpr->snps[j]->lratio;
-                        snp->rank_1 = snpr->snps[j]->rank_1;
-                        snp->rank_2 = snpr->snps[j]->rank_2;
-                        snp->rank_3 = snpr->snps[j]->rank_3;
-                        snp->rank_4 = snpr->snps[j]->rank_4;
-
-                        datum->snps.push_back(snp);
-                    }
-                }
-            }
-        }
-
-        for (sit = snpres.begin(); sit != snpres.end(); sit++)
-            delete sit->second;
-    }
-
-    return 0;
-}
-
-int
-find_datum_allele_depths(Datum *d, int snp_index, char p_allele, char q_allele, int allele_cnt, int &dp_1, int &dp_2)
-{
-    dp_1 = 0;
-    dp_2 = 0;
-
-    if (allele_cnt == 1) {
-
-        //
-        // There is a single observed haplotype for this locus, e.g. GA.
-        //
-        if (d->obshap.size() == 1) {
-            if (d->obshap[0][snp_index] == p_allele) {
-                dp_1 = d->depth[0];
-                dp_2 = 0;
-            } else {
-                dp_1 = 0;
-                dp_2 = d->depth[0];
-            }
-        } else {
-            //
-            // This SNP position is homozygous, but the locus is heterozygous, so there is more
-            // than one observed haplotype, e.g. GA / TA.
-            //
-            if (d->obshap[0][snp_index] == p_allele) {
-                dp_1 = d->tot_depth;
-                dp_2 = 0;
-            } else  {
-                dp_1 = 0;
-                dp_2 = d->tot_depth;
-            }
-        }
-
-    } else {
-        //
-        // This SNP position is heterozygous.
-        //
-        for (uint i = 0; i < d->obshap.size(); i++) {
-            if (d->obshap[i][snp_index] == p_allele)
-                dp_1 = d->depth[i];
-            else if (d->obshap[i][snp_index] == q_allele)
-                dp_2 = d->depth[i];
-        }
-    }
-
-    if (dp_1 == 0 && dp_2 == 0)
-        cerr << "Warning: Unable to find allele depths for datum " << d->id << "\n";
-
-    return 0;
-}
-
-int 
-write_vcf_haplotypes(map<int, CSLocus *> &catalog, 
-                     PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, 
-                     map<int, string> &samples, vector<int> &sample_ids) 
-{
-    //
-    // Write a VCF file as defined here: http://samtools.github.io/hts-specs/
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".haplotypes.vcf";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing population data haplotypes to VCF file '" << file << "'\n";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening VCF file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%Y%m%d", timeinfo);
-
-    //
-    // Output the header.
-    //
-    fh << "##fileformat=VCFv4.2\n"
-       << "##fileDate=" << date << "\n"
-       << "##source=\"Stacks v" << VERSION << "\"\n"
-       << "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n"
-       << "##INFO=<ID=AF,Number=.,Type=Float,Description=\"Allele Frequency\">\n"
-       << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
-       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">\n"
-       << "#CHROM" << "\t" << "POS" << "\t" << "ID" << "\t" << "REF" << "\t" << "ALT" << "\t" 
-       << "QUAL" << "\t" << "FILTER" << "\t" << "INFO" << "\t" << "FORMAT";
-
-    for (int i = 0; i < pmap->sample_cnt(); i++)
-        fh << "\t" << samples[pmap->rev_sample_index(i)];
-    fh << "\n";    
-
-    map<string, vector<CSLocus *> >::iterator it;
-    map<string, double>::iterator hit;
-    map<string, double> hap_freq;
-    map<string, int>    hap_index;
-    vector<pair<string, int> > ordered_hap;
-    CSLocus  *loc;
-    Datum   **d;
-    double    num_indv, num_hap;
-    char      allele[id_len];
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            d   = pmap->locus(loc->id);
-
-            hap_freq.clear();
-            hap_index.clear();
-            ordered_hap.clear();
-
-            num_hap = count_haplotypes_at_locus(0, pmap->sample_cnt() - 1, d, hap_freq);
-
-            if (num_hap == 0 || hap_freq.size() == 1) 
-                continue;
-
-            num_indv = num_hap / 2.0;
-
-            //
-            // Order the haplotypes according to most frequent. Record the ordered position or each 
-            // haplotype and convert them from counts to frequencies.
-            //
-            for (hit = hap_freq.begin(); hit != hap_freq.end(); hit++) {
-                ordered_hap.push_back(make_pair(hit->first, hit->second));
-                hit->second = hit->second / num_hap;
-            }
-            sort(ordered_hap.begin(), ordered_hap.end(), compare_pair_haplotype);
-            for (uint i = 0; i < ordered_hap.size(); i++)
-                hap_index[ordered_hap[i].first] = i;
-
-            string alt_str, freq_str;
-            for (uint i = 1; i < ordered_hap.size(); i++) {
-                alt_str  += ordered_hap[i].first;
-                sprintf(allele, "%0.3f", hap_freq[ordered_hap[i].first]);
-                freq_str += allele;
-                if (i < ordered_hap.size() - 1) {
-                    alt_str  += ",";
-                    freq_str += ",";
-                }
-            }
-
-            fh << loc->loc.chr         << "\t" 
-               << loc->sort_bp() + 1   << "\t" 
-               << loc->id              << "\t"
-               << ordered_hap[0].first << "\t"       // REFerence haplotypes
-               << alt_str        << "\t"             // ALTernate haplotypes
-               << "."            << "\t"             // QUAL
-               << "PASS"         << "\t"             // FILTER
-               << "NS="          << num_indv << ";"  // INFO
-               << "AF="          << freq_str << "\t" // INFO
-               << "GT:DP";                           // FORMAT
-
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                fh << "\t";
-
-                if (d[j] == NULL) {
-                    //
-                    // Data does not exist.
-                    //
-                    fh << "./.:0";
-
-                } else if (d[j]->obshap.size() > 2) { 
-                    fh << "./.:" << d[j]->tot_depth;
-
-                } else if (d[j]->obshap.size() == 1) {
-                    if(uncalled_haplotype(d[j]->obshap[0]))
-                        fh << "./.:" << d[j]->tot_depth;
-                    else
-                        fh << hap_index[d[j]->obshap[0]] << "/" << hap_index[d[j]->obshap[0]] << ":" << d[j]->tot_depth;
-                } else {
-                    if(!uncalled_haplotype(d[j]->obshap[0]) &&
-                       !uncalled_haplotype(d[j]->obshap[1]))
-                        fh << hap_index[d[j]->obshap[0]] << "/" << hap_index[d[j]->obshap[1]] << ":" << d[j]->tot_depth;
-                    else if (!uncalled_haplotype(d[j]->obshap[0]))
-                        fh << hap_index[d[j]->obshap[0]] << "/" << "." << ":" << d[j]->tot_depth;
-                    else if (!uncalled_haplotype(d[j]->obshap[1]))
-                        fh << "." << "/" << hap_index[d[j]->obshap[1]] << ":" << d[j]->tot_depth;
-                }
-            }
-            fh << "\n";
-        }
-    }
-
-    fh.close();
-
-    return 0;
-}
-
-int 
-write_genepop(map<int, CSLocus *> &catalog, 
-              PopMap<CSLocus> *pmap, 
-              PopSum<CSLocus> *psum, 
-              map<int, pair<int, int> > &pop_indexes, 
-              map<int, string> &samples) 
-{
-    //
-    // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".genepop";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing population data to GenePop file '" << file << "'\n";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening GenePop file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    //
-    // Output the header line.
-    //
-    fh << "Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
-
-    map<int, pair<int, int> >::iterator pit;
-    map<int, CSLocus *>::iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-    LocSum  **s;
-    LocTally *t;
-    int      start_index, end_index, col, pop_id;
-    char     p_allele, q_allele;
-
-    //
-    // Determine how many loci will be output, then output all the loci on the second line, comma-separated.
-    //
-    uint cnt = 0;
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-        for (uint j = 0; j < loc->snps.size(); j++) {
-            col = loc->snps[j]->col;
-            t   = psum->locus_tally(loc->id);
-
-            if (t->nucs[col].allele_cnt != 2) 
-                continue;
-            cnt++;
-        }
-    }
-
-    uint i = 0;
-    for (it = catalog.begin(); it != catalog.end(); it++) {
-        loc = it->second;
-        for (uint j = 0; j < loc->snps.size(); j++) {
-            col = loc->snps[j]->col;
-            t   = psum->locus_tally(loc->id);
-
-            // 
-            // If this site is fixed in all populations or has too many alleles don't output it.
-            //
-            if (t->nucs[col].allele_cnt != 2) 
-                continue;
-            i++;
-            fh << loc->id << "_" << col;
-            if (i <  cnt) fh << ",";
-        }
-    }
-    fh << "\n";
-
-    map<char, string> nuc_map;
-    nuc_map['A'] = "01";
-    nuc_map['C'] = "02";
-    nuc_map['G'] = "03";
-    nuc_map['T'] = "04";
-
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        pop_id      = psum->pop_index(pit->first);
-        start_index = pit->second.first;
-        end_index   = pit->second.second;
-
-        fh << "pop\n";
-
-        for (int j = start_index; j <= end_index; j++) {
-
-            fh << samples[pmap->rev_sample_index(j)] << ",";
-
-            for (it = catalog.begin(); it != catalog.end(); it++) {
-                loc = it->second;
-                d   = pmap->locus(loc->id);
-                s   = psum->locus(loc->id);
-                t   = psum->locus_tally(loc->id);
-
-                for (i = 0; i < loc->snps.size(); i++) {
-                    uint col = loc->snps[i]->col;
-
-                    if (t->nucs[col].allele_cnt != 2) 
-                        continue;
-
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
-                        //
-                        // This site contains more than two alleles in this population or was filtered
-                        // due to a minor allele frequency that is too low.
-                        //
-                        fh << "\t0000";
-                    } else if (d[j] == NULL || col >= d[j]->len) {
-                        //
-                        // Data does not exist.
-                        //
-                        fh << "\t0000";
-                    } else if (d[j]->model[col] == 'U') {
-                        //
-                        // Data exists, but the model call was uncertain.
-                        //
-                        fh << "\t0000";
-                    } else {
-                        //
-                        // Tally up the nucleotide calls.
-                        //
-                        tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-                        if (p_allele == 0 && q_allele == 0) {
-                            // More than two potential alleles.
-                            fh << "\t0000";
-                        } else if (p_allele == 0) {
-                            fh << "\t" << nuc_map[q_allele] << nuc_map[q_allele];
-
-                        } else if (q_allele == 0) {
-                            fh << "\t" << nuc_map[p_allele] << nuc_map[p_allele];
-
-                        } else {
-                            fh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
-                        }
-                    }
-                }
-            }
-            fh << "\n";
-        }
-    }
-
-    fh.close();
-
-    return 0;
-}
-
-int 
-write_genepop_ordered(map<int, CSLocus *> &catalog, 
-                      PopMap<CSLocus> *pmap, 
-                      PopSum<CSLocus> *psum, 
-                      map<int, pair<int, int> > &pop_indexes, 
-                      map<int, string> &samples, ofstream &log_fh) 
-{
-    //
-    // Write a GenePop file as defined here: http://kimura.univ-montp2.fr/~rousset/Genepop.htm
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".genepop";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing population data to GenePop file '" << file << "'\n";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening GenePop file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    //
-    // Output the header line.
-    //
-    fh << "Stacks version " << VERSION << "; Genepop version 4.1.3; " << date << "\n";
-
-    map<string, vector<NucTally *> > genome_sites;
-    map<int, pair<int, int> >::iterator pit;
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-    LocSum  **s;
-    int      start_index, end_index, pop_id;
-    uint     col, snp_index;
-    char     p_allele, q_allele;
-
-    //
-    // We need to order the SNPs to take into account overlapping loci.
-    //
-    OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
-
-    //
-    // Output all the loci on the second line, comma-separated.
-    //
-    int chrs = pmap->ordered_loci.size();
-    int cnt  = 0;
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        vector<NucTally *> &sites = genome_sites[it->first];
-        ord->order(sites, it->second);
-        cnt++;
-
-        for (uint pos = 0; pos < sites.size(); pos++) {
-            fh << sites[pos]->loc_id << "_" << sites[pos]->col;
-            if (cnt < chrs || pos < sites.size() - 1) fh << ",";
-        }
-    }
-    fh << "\n";
-
-    map<char, string> nuc_map;
-    nuc_map['A'] = "01";
-    nuc_map['C'] = "02";
-    nuc_map['G'] = "03";
-    nuc_map['T'] = "04";
-
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        pop_id      = psum->pop_index(pit->first);
-        start_index = pit->second.first;
-        end_index   = pit->second.second;
-
-        fh << "pop\n";
-
-        for (int j = start_index; j <= end_index; j++) {
-
-            fh << samples[pmap->rev_sample_index(j)] << ",";
-
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-                vector<NucTally *> &sites = genome_sites[it->first];
-
-                for (uint pos = 0; pos < sites.size(); pos++) {
-                    loc = catalog[sites[pos]->loc_id];
-                    s   = psum->locus(loc->id);
-                    d   = pmap->locus(loc->id);
-                    col = sites[pos]->col;
-
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
-                        //
-                        // This site contains more than two alleles in this population or was filtered
-                        // due to a minor allele frequency that is too low.
-                        //
-                        fh << "\t0000";
-                    } else if (d[j] == NULL || col >= d[j]->len) {
-                        //
-                        // Data does not exist.
-                        //
-                        fh << "\t0000";
-                    } else if (d[j]->model[col] == 'U') {
-                        //
-                        // Data exists, but the model call was uncertain.
-                        //
-                        fh << "\t0000";
-                    } else {
-                        snp_index = loc->snp_index(col);
-                        //
-                        // Tally up the nucleotide calls.
-                        //
-                        tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
-
-                        if (p_allele == 0 && q_allele == 0) {
-                            // More than two potential alleles.
-                            fh << "\t0000";
-                        } else if (p_allele == 0) {
-                            fh << "\t" << nuc_map[q_allele] << nuc_map[q_allele];
-
-                        } else if (q_allele == 0) {
-                            fh << "\t" << nuc_map[p_allele] << nuc_map[p_allele];
-
-                        } else {
-                            fh << "\t" << nuc_map[p_allele] << nuc_map[q_allele];
-                        }
-                    }
-                }
-            }
-            fh << "\n";
-        }
-    }
-
-    fh.close();
-
-    return 0;
-}
-
-int 
-write_structure(map<int, CSLocus *> &catalog, 
-                PopMap<CSLocus> *pmap, 
-                PopSum<CSLocus> *psum, 
-                map<int, pair<int, int> > &pop_indexes, 
-                map<int, string> &samples) 
-{
-    //
-    // Write a Structure file as defined here: http://pritch.bsd.uchicago.edu/structure.html
-    //
-    // To avoid linked SNPs (which Structure can't handle), we will only output the first
-    // SNP from each variable locus.
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".structure.tsv";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing population data to Structure file '" << file << "'...";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening Structure file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    //
-    // Output the header.
-    //
-    fh << "# Stacks v" << VERSION << "; " << " Structure v2.3; " << date << "\n";
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-    LocSum  **s;
-    LocTally *t;
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            t   = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-                if (t->nucs[col].allele_cnt == 2)
-                    fh << "\t" << loc->id << "_" << col;
-            }
-        }
-    }
-    fh << "\n";
-
-    map<char, string> nuc_map;
-    nuc_map['A'] = "1";
-    nuc_map['C'] = "2";
-    nuc_map['G'] = "3";
-    nuc_map['T'] = "4";
-
-    map<int, pair<int, int> >::iterator pit;
-    int       start_index, end_index, pop_id, p;
-    char      p_allele, q_allele;
-
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        p           = psum->pop_index(pit->first);
-        pop_id      = pit->first;
-        start_index = pit->second.first;
-        end_index   = pit->second.second;
-
-        for (int j = start_index; j <= end_index; j++) {
-            //
-            // Output all the loci for this sample, printing only the p allele
-            //
-            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
-
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-                for (uint pos = 0; pos < it->second.size(); pos++) {
-                    loc = it->second[pos];
-
-                    s = psum->locus(loc->id);
-                    d = pmap->locus(loc->id);
-                    t = psum->locus_tally(loc->id);
-
-                    for (uint i = 0; i < loc->snps.size(); i++) {
-                        uint col = loc->snps[i]->col;
-
-                        // 
-                        // If this site is fixed in all populations or has too many alleles don't output it.
-                        //
-                        if (t->nucs[col].allele_cnt != 2) 
-                            continue;
-
-                        if (s[p]->nucs[col].incompatible_site ||
-                            s[p]->nucs[col].filtered_site) {
-                            //
-                            // This site contains more than two alleles in this population or was filtered
-                            // due to a minor allele frequency that is too low.
-                            //
-                            fh << "\t" << "0";
-                        } else if (d[j] == NULL || col >= d[j]->len) {
-                            //
-                            // Data does not exist.
-                            //
-                            fh << "\t" << "0";
-                        } else if (d[j]->model[col] == 'U') {
-                            //
-                            // Data exists, but the model call was uncertain.
-                            //
-                            fh << "\t" << "0";
-                        } else {
-                            //
-                            // Tally up the nucleotide calls.
-                            //
-                            tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-                            if (p_allele == 0 && q_allele == 0)
-                                fh << "\t" << "0";
-                            else if (p_allele == 0)
-                                fh << "\t" << nuc_map[q_allele];
-                            else
-                                fh << "\t" << nuc_map[p_allele];
-                        }
-                    }
-                }
-            }
-            fh << "\n";
-
-            //
-            // Output all the loci for this sample again, now for the q allele
-            //
-            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
-
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-                for (uint pos = 0; pos < it->second.size(); pos++) {
-                    loc = it->second[pos];
-
-                    s = psum->locus(loc->id);
-                    d = pmap->locus(loc->id);
-                    t = psum->locus_tally(loc->id);
-
-                    for (uint i = 0; i < loc->snps.size(); i++) {
-                        uint col = loc->snps[i]->col;
-
-                        if (t->nucs[col].allele_cnt != 2) 
-                            continue;
-
-                        if (s[p]->nucs[col].incompatible_site ||
-                            s[p]->nucs[col].filtered_site) {
-                            fh << "\t" << "0";
-                        } else if (d[j] == NULL || col >= d[j]->len) {
-                            fh << "\t" << "0";
-                        } else if (d[j]->model[col] == 'U') {
-                            fh << "\t" << "0";
-                        } else {
-                            tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-                            if (p_allele == 0 && q_allele == 0)
-                                fh << "\t" << "0";
-                            else if (q_allele == 0)
-                                fh << "\t" << nuc_map[p_allele];
-                            else
-                                fh << "\t" << nuc_map[q_allele];
-                        }
-                    }
-                }
-            }
-            fh << "\n";
-        }
-    }
-
-    fh.close();
-
-    cerr << "done.\n";
-
-    return 0;
-}
-
-int 
-write_structure_ordered(map<int, CSLocus *> &catalog, 
-                        PopMap<CSLocus> *pmap, 
-                        PopSum<CSLocus> *psum, 
-                        map<int, pair<int, int> > &pop_indexes, 
-                        map<int, string> &samples, ofstream &log_fh) 
-{
-    //
-    // Write a Structure file as defined here: http://pritch.bsd.uchicago.edu/structure.html
-    //
-    // To avoid linked SNPs (which Structure can't handle), we will only output the first
-    // SNP from each variable locus.
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".structure.tsv";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing population data to Structure file '" << file << "'...";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening Structure file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    //
-    // Output the header.
-    //
-    fh << "# Stacks v" << VERSION << "; " << " Structure v2.3; " << date << "\n";
-
-    map<string, vector<NucTally *> > genome_sites;
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-    LocSum  **s;
-
-    //
-    // We need to order the SNPs to take into account overlapping loci.
-    //
-    OLocTally<NucTally> *ord = new OLocTally<NucTally>(psum, log_fh);
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        vector<NucTally *> &sites = genome_sites[it->first];
-        ord->order(sites, it->second);
-
-        for (uint pos = 0; pos < sites.size(); pos++)
-            fh << "\t" << sites[pos]->loc_id << "_" << sites[pos]->col;
-    }
-    fh << "\n";
-
-    map<char, string> nuc_map;
-    nuc_map['A'] = "1";
-    nuc_map['C'] = "2";
-    nuc_map['G'] = "3";
-    nuc_map['T'] = "4";
-
-    map<int, pair<int, int> >::iterator pit;
-    int       start_index, end_index, pop_id, p;
-    char      p_allele, q_allele;
-    uint      col, snp_index;
-
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        p           = psum->pop_index(pit->first);
-        pop_id      = pit->first;
-        start_index = pit->second.first;
-        end_index   = pit->second.second;
-
-        for (int j = start_index; j <= end_index; j++) {
-            //
-            // Output all the loci for this sample, printing only the p allele
-            //
-            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
-
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-                vector<NucTally *> &sites = genome_sites[it->first];
-
-                for (uint pos = 0; pos < sites.size(); pos++) {
-                    loc = catalog[sites[pos]->loc_id];
-                    s   = psum->locus(loc->id);
-                    d   = pmap->locus(loc->id);
-                    col = sites[pos]->col;
-
-                    if (s[p]->nucs[col].incompatible_site ||
-                        s[p]->nucs[col].filtered_site) {
-                        //
-                        // This site contains more than two alleles in this population or was filtered
-                        // due to a minor allele frequency that is too low.
-                        //
-                        fh << "\t" << "0";
-                    } else if (d[j] == NULL || col >= d[j]->len) {
-                        //
-                        // Data does not exist.
-                        //
-                        fh << "\t" << "0";
-                    } else if (d[j]->model[col] == 'U') {
-                        //
-                        // Data exists, but the model call was uncertain.
-                        //
-                        fh << "\t" << "0";
-                    } else {
-                        snp_index = loc->snp_index(col);
-                        //
-                        // Tally up the nucleotide calls.
-                        //
-                        tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
-
-                        if (p_allele == 0 && q_allele == 0)
-                            fh << "\t" << "0";
-                        else if (p_allele == 0)
-                            fh << "\t" << nuc_map[q_allele];
-                        else
-                            fh << "\t" << nuc_map[p_allele];
-                    }
-                }
-            }
-            fh << "\n";
-
-            //
-            // Output all the loci for this sample again, now for the q allele
-            //
-            fh << samples[pmap->rev_sample_index(j)] << "\t" << pop_id;
-
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-                vector<NucTally *> &sites = genome_sites[it->first];
-
-                for (uint pos = 0; pos < sites.size(); pos++) {
-                    loc = catalog[sites[pos]->loc_id];
-                    s   = psum->locus(loc->id);
-                    d   = pmap->locus(loc->id);
-                    col = sites[pos]->col;
-
-                    if (s[p]->nucs[col].incompatible_site ||
-                        s[p]->nucs[col].filtered_site) {
-                        fh << "\t" << "0";
-                    } else if (d[j] == NULL || col >= d[j]->len) {
-                        fh << "\t" << "0";
-                    } else if (d[j]->model[col] == 'U') {
-                        fh << "\t" << "0";
-                    } else {
-                        snp_index = loc->snp_index(col);
-                        tally_observed_haplotypes(d[j]->obshap, snp_index, p_allele, q_allele);
-
-                        if (p_allele == 0 && q_allele == 0)
-                            fh << "\t" << "0";
-                        else if (q_allele == 0)
-                            fh << "\t" << nuc_map[p_allele];
-                        else
-                            fh << "\t" << nuc_map[q_allele];
-                    }
-                }
-            }
-            fh << "\n";
-        }
-    }
-
-    fh.close();
-
-    cerr << "done.\n";
-
-    return 0;
-}
-
-int 
-write_hzar(map<int, CSLocus *> &catalog, 
-           PopMap<CSLocus> *pmap, 
-           PopSum<CSLocus> *psum, 
-           map<int, pair<int, int> > &pop_indexes, 
-           map<int, string> &samples) 
-{
-    //
-    // Write a Hybrid Zone Analysis using R (HZAR) file as defined here: 
-    //    http://cran.r-project.org/web/packages/hzar/hzar.pdf
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".hzar.csv";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing population data to HZAR file '" << file << "'...";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening HZAR file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    //
-    // Output the header.
-    //
-    fh << "# Stacks v" << VERSION << "; " << " HZAR v0.2-5; " << date << "\n"
-       << "Population" << "," << "Distance";
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
-    LocSum  **s;
-    LocTally *t;
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            s   = psum->locus(loc->id);
-            t   = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-                if (t->nucs[col].allele_cnt == 2) {
-                    fh << "," << loc->id << "_" << col << ".A"
-                       << "," << loc->id << "_" << col << ".B"
-                       << "," << loc->id << "_" << col << ".N";
-                }
-            }
-        }
-    }
-    fh << "\n";
-
-    map<int, pair<int, int> >::iterator pit;
-    int pop_id, p;
-
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        p      = psum->pop_index(pit->first);
-        pop_id = pit->first;
-
-        fh << pop_key[pop_id] << ",";
-
-        for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-            for (uint pos = 0; pos < it->second.size(); pos++) {
-                loc = it->second[pos];
-
-                s = psum->locus(loc->id);
-                t = psum->locus_tally(loc->id);
-
-                for (uint i = 0; i < loc->snps.size(); i++) {
-                    uint col = loc->snps[i]->col;
-
-                    // 
-                    // If this site is fixed in all populations or has too many alleles don't output it.
-                    //
-                    if (t->nucs[col].allele_cnt != 2) 
-                        continue;
-
-                    if (s[p]->nucs[col].num_indv == 0 ||
-                        s[p]->nucs[col].incompatible_site ||
-                        s[p]->nucs[col].filtered_site) {
-                        fh << ",0,0,0";
-                        continue;
-                    }
-                    
-                    if (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc)
-                        fh << "," << s[p]->nucs[col].p << "," << 1 - s[p]->nucs[col].p << ",";
-                    else
-                        fh << "," << 1 - s[p]->nucs[col].p << "," << s[p]->nucs[col].p << ",";
-
-                    fh << s[p]->nucs[col].num_indv * 2;
-                }
-            }
-        }
-        fh << "\n";
-    }
-
-    fh.close();
-
-    cerr << "done.\n";
-
-    return 0;
-}
-
-int 
-write_treemix(map<int, CSLocus *> &catalog, 
-              PopMap<CSLocus> *pmap, 
-              PopSum<CSLocus> *psum, 
-              map<int, pair<int, int> > &pop_indexes, 
-              map<int, string> &samples) 
-{
-    //
-    // Write a TreeMix file (Pickrell and Pritchard, 2012 PLoS Genetics)
-    //    https://bitbucket.org/nygcresearch/treemix/wiki/Home
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".treemix";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing population data to TreeMix file '" << file << "'; ";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening TreeMix file '" << file << "'\n";
-        exit(1);
-    }
-
-    pop_name << ".log";
-    file = in_path + pop_name.str();
-
-    cerr << "logging nucleotide positions to '" << file << "'...";
-
-    ofstream log_fh(file.c_str(), ofstream::out);
-
-    if (log_fh.fail()) {
-        cerr << "Error opening Phylip Log file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    log_fh << "# Stacks v" << VERSION << "; " << " TreeMix v1.1; " << date << "\n"
-           << "# Line\tLocus ID\tColumn\tChr\tBasepair\n";
-
-    //
-    // Output the header.
-    //
-    fh << "# Stacks v" << VERSION << "; " << " TreeMix v1.1; " << date << "\n";
-
-    map<string, vector<CSLocus *> >::iterator it;
-    map<int, pair<int, int> >::iterator pit;
-    CSLocus  *loc;
-    LocSum  **s;
-    LocTally *t;
-    int       p;
-
-    //
-    // Output a space-separated list of the populations on the first line.
-    //
-    stringstream sstr;
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++)
-        sstr << pop_key[pit->first] << " ";
-    
-    fh << sstr.str().substr(0, sstr.str().length() - 1) << "\n";
-
-    double p_freq, p_cnt, q_cnt, allele_cnt;
-    long int line = 1;
-    
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-
-            s = psum->locus(loc->id);
-            t = psum->locus_tally(loc->id);
-                
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-
-                sstr.str("");
-
-                // 
-                // If this site is fixed in all populations or has too many alleles don't output it.
-                //
-                if (t->nucs[col].allele_cnt != 2) 
-                    continue;
-
-                for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-                    p = psum->pop_index(pit->first);
-
-                    if (s[p]->nucs[col].num_indv == 0 ||
-                        s[p]->nucs[col].incompatible_site ||
-                        s[p]->nucs[col].filtered_site) {
-                        sstr << "0,0 ";
-                        continue;
-                    }
-                    
-                    p_freq = (t->nucs[col].p_allele == s[p]->nucs[col].p_nuc) ? 
-                        s[p]->nucs[col].p :
-                        1 - s[p]->nucs[col].p;
-                    
-                    allele_cnt = s[p]->nucs[col].num_indv * 2;
-                    p_cnt      = round(allele_cnt * p_freq);
-                    q_cnt      = allele_cnt - p_cnt;
-                    sstr << (int) p_cnt << "," << (int) q_cnt << " ";
-                }
-
-                if (sstr.str().length() == 0)
-                    continue;
-
-                fh << sstr.str().substr(0, sstr.str().length() - 1) << "\n";
-                log_fh << line << "\t" << loc->id << "\t" << col << "\t" << loc->loc.chr << "\t" << loc->sort_bp(col) + 1 << "\n";
-                line++;
-            }
-        }
-    }
-
-    fh.close();
-    log_fh.close();
-    
-    cerr << "done.\n";
-
-    return 0;
-}
-
-int 
-write_fastphase(map<int, CSLocus *> &catalog, 
-                PopMap<CSLocus> *pmap, 
-                PopSum<CSLocus> *psum, 
-                map<int, pair<int, int> > &pop_indexes, 
-                map<int, string> &samples) 
-{
-    //
-    // Write a fastPHASE file as defined here: http://stephenslab.uchicago.edu/software.html
-    //
-    // Data will be written as independent, bi-allelic SNPs. We will write one file per chromosome.
-    //
-    cerr << "Writing population data to fastPHASE files...";
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-    LocSum  **s;
-    LocTally *t;
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-
-        stringstream pop_name;
-        pop_name << "batch_" << batch_id << "." << it->first << ".fastphase.inp";
-        string file = in_path + pop_name.str();
-
-        ofstream fh(file.c_str(), ofstream::out);
-
-        if (fh.fail()) {
-            cerr << "Error opening fastPHASE file '" << file << "'\n";
-            exit(1);
-        }
-
-        //
-        // Tally up the number of sites
-        //
-        int  total_sites = 0;
-        uint col;
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            t   = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                col = loc->snps[i]->col;
-                if (t->nucs[col].allele_cnt == 2)
-                    total_sites++;
-            }
-        }
-
-        //
-        // Output the total number of SNP sites and the number of individuals.
-        //
-        fh << samples.size() << "\n"
-           << total_sites    << "\n";
-
-        //
-        // We need to determine an ordering that can take into account overlapping RAD sites.
-        //
-        vector<GenPos> ordered_loci;
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            t   = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                col = loc->snps[i]->col;
-                if (t->nucs[col].allele_cnt == 2)
-                    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
-            }
-        }
-        sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
-
-        //
-        // Output the position of each site according to its basepair.
-        //
-        fh << "P";
-        for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-            loc = catalog[ordered_loci[pos].id];
-            col = loc->snps[ordered_loci[pos].snp_index]->col;
-            fh << " " << ordered_loci[pos].bp;
-        }
-        fh << "\n";
-
-        //
-        // Output a line of 'S' characters, one per site, indicating that these are SNP markers.
-        //
-        string snp_markers, gtypes_str;
-        snp_markers.assign(total_sites, 'S');
-        fh << snp_markers << '\n';          
-
-        //
-        // Now output each sample name followed by a new line, then all of the genotypes for that sample
-        // on two lines.
-        //
-
-        map<int, pair<int, int> >::iterator pit;
-        int          start_index, end_index, pop_id;
-        char         p_allele, q_allele;
-        stringstream gtypes;
-
-        for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-            pop_id      = psum->pop_index(pit->first);
-            start_index = pit->second.first;
-            end_index   = pit->second.second;
-
-            for (int j = start_index; j <= end_index; j++) {
-                //
-                // Output all the loci for this sample, printing only the p allele
-                //
-                fh << samples[pmap->rev_sample_index(j)] << "\n";
-                
-                gtypes.str("");
-                for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-                    loc = catalog[ordered_loci[pos].id];
-                    col = loc->snps[ordered_loci[pos].snp_index]->col;
-
-                    s = psum->locus(loc->id);
-                    d = pmap->locus(loc->id);
-                    t = psum->locus_tally(loc->id);
-
-                    // 
-                    // If this site is fixed in all populations or has too many alleles don't output it.
-                    //
-                    if (t->nucs[col].allele_cnt != 2) 
-                        continue;
-
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
-                        //
-                        // This site contains more than two alleles in this population or was filtered
-                        // due to a minor allele frequency that is too low.
-                        //
-                        gtypes << "? ";
-
-                    } else if (d[j] == NULL || col >= d[j]->len) {
-                        //
-                        // Data does not exist.
-                        //
-                        gtypes << "? ";
-                    } else if (d[j]->model[col] == 'U') {
-                        //
-                        // Data exists, but the model call was uncertain.
-                        //
-                        gtypes << "? ";
-                    } else {
-                        //
-                        // Tally up the nucleotide calls.
-                        //
-                        tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
-
-                        if (p_allele == 0 && q_allele == 0)
-                            gtypes << "? ";
-                        else if (p_allele == 0)
-                            gtypes << q_allele << " ";
-                        else
-                            gtypes << p_allele << " ";
-                    }
-                }
-                gtypes_str = gtypes.str();
-                fh << gtypes_str.substr(0, gtypes_str.length() - 1) << "\n";
-
-                //
-                // Output all the loci for this sample again, now for the q allele
-                //
-                gtypes.str("");
-                for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-                    loc = catalog[ordered_loci[pos].id];
-                    col = loc->snps[ordered_loci[pos].snp_index]->col;
-
-
-                    s = psum->locus(loc->id);
-                    d = pmap->locus(loc->id);
-                    t = psum->locus_tally(loc->id);
-
-                    if (t->nucs[col].allele_cnt != 2) 
-                        continue;
-
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
-                        gtypes << "? ";
-
-                    } else if (d[j] == NULL || col >= d[j]->len) {
-                        gtypes << "? ";
-
-                    } else if (d[j]->model[col] == 'U') {
-                        gtypes << "? ";
-
-                    } else {
-                        tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
-
-                        if (p_allele == 0 && q_allele == 0)
-                            gtypes << "? ";
-                        else if (q_allele == 0)
-                            gtypes << p_allele << " ";
-                        else
-                            gtypes << q_allele << " ";
-                    }
-                }
-                gtypes_str = gtypes.str();
-                fh << gtypes_str.substr(0, gtypes_str.length() - 1) << "\n";
-            }
-        }
-
-        fh.close();
-    }
-
-    cerr << "done.\n";
-
-    return 0;
-}
-
-int 
-write_phase(map<int, CSLocus *> &catalog, 
-            PopMap<CSLocus> *pmap, 
-            PopSum<CSLocus> *psum, 
-            map<int, pair<int, int> > &pop_indexes, 
-            map<int, string> &samples) 
-{
-    //
-    // Write a PHASE file as defined here: http://stephenslab.uchicago.edu/software.html
-    //
-    // Data will be written as mixture of multiple allele, linked RAD sites 
-    // (SNPs within a single RAD locus are already phased), and bi-allelic SNPs. We 
-    // will write one file per chromosome.
-    //
-    cerr << "Writing population data to PHASE files...";
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-    LocSum  **s;
-    LocTally *t;
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-
-        stringstream pop_name;
-        pop_name << "batch_" << batch_id << "." << it->first << ".phase.inp";
-        string file = in_path + pop_name.str();
-
-        ofstream fh(file.c_str(), ofstream::out);
-
-        if (fh.fail()) {
-            cerr << "Error opening PHASE file '" << file << "'\n";
-            exit(1);
-        }
-
-        //
-        // We need to determine an ordering for all legitimate loci/SNPs.
-        //
-        uint           col;
-        vector<GenPos> ordered_loci;
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            t   = psum->locus_tally(loc->id);
-
-            if (loc->snps.size() == 0) continue;
-
-            //
-            // Will we output this locus as a haplotype or as a SNP?
-            //
-            if (loc->snps.size() > 1) {
-                //
-                // Check that there aren't too many haplotypes (PHASE has a max of 50).
-                //
-                if (loc->alleles.size() > 40) continue;
-
-                //
-                // Iterate over the population to determine that this subset of the population
-                // has data at this locus.
-                //
-                d = pmap->locus(loc->id);
-                for (int j = 0; j < pmap->sample_cnt(); j++) {
-                    if (d[j] != NULL &&
-                        d[j]->obshap.size() > 0 && 
-                        d[j]->obshap.size() <= 2) {
-                        //
-                        // Data exists, and there are the correct number of haplotypes.
-                        //
-                        ordered_loci.push_back(GenPos(loc->id, 0, loc->sort_bp(), haplotype));
-                        break;
-                    }
-                }
-            } else {
-                col = loc->snps[0]->col;
-
-                if (t->nucs[col].allele_cnt == 2)
-                    ordered_loci.push_back(GenPos(loc->id, 0, loc->sort_bp(col), snp));
-            }
-        }
-        sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
-
-        //
-        // Output the total number of SNP sites and the number of individuals.
-        //
-        fh << samples.size()      << "\n"
-           << ordered_loci.size() << "\n";
-
-        //
-        // Output the position of each site according to its basepair.
-        //
-        fh << "P";
-        for (uint pos = 0; pos < ordered_loci.size(); pos++)
-            fh << " " << ordered_loci[pos].bp;
-        fh << "\n";
-
-        //
-        // Output a line of 'S' characters for SNP markers, 'M' characters for multiallelic haplotypes.
-        //
-        for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-            if (pos > 0) fh << " ";
-            fh << (ordered_loci[pos].type == snp ? "S" : "M");
-        }
-        fh << "\n";
-
-        //
-        // Now output each sample name followed by a new line, then all of the genotypes for that sample
-        // on two lines.
-        //
-
-        map<int, pair<int, int> >::iterator pit;
-        string       gtypes_str;
-        bool         found;
-        int          start_index, end_index, pop_id;
-        char         p_allele, q_allele;
-        stringstream gtypes;
-
-        for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-            pop_id      = psum->pop_index(pit->first);
-            start_index = pit->second.first;
-            end_index   = pit->second.second;
-
-            for (int j = start_index; j <= end_index; j++) {
-                //
-                // Output all the loci for this sample, printing only the p allele
-                //
-                fh << samples[pmap->rev_sample_index(j)] << "\n";
-                
-                gtypes.str("");
-                for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-                    loc = catalog[ordered_loci[pos].id];
-
-                    s = psum->locus(loc->id);
-                    d = pmap->locus(loc->id);
-                    t = psum->locus_tally(loc->id);
-
-                    //
-                    // Will we output this locus as a haplotype or as a SNP?
-                    //
-                    if (ordered_loci[pos].type == haplotype) {
-                        if (d[j] == NULL) {
-                            //
-                            // Data does not exist.
-                            //
-                            gtypes << "-1 ";
-                        } else {
-                            //
-                            // Data exists, output the first haplotype. We will assume the haplotypes are 
-                            // numbered by their position in the loc->strings vector.
-                            //
-                            if (d[j]->obshap.size() > 2)  {
-                                // cerr << "Warning: too many haplotypes, catalog locus: " << loc->id << "\n";
-                                gtypes << "-1 ";
-                            } else {
-                                found = false;
-                                for (uint k = 0; k < loc->strings.size(); k++)
-                                    if (d[j]->obshap[0] == loc->strings[k].first) {
-                                        found = true;
-                                        gtypes << k + 1 << " ";
-                                    }
-                                if (found == false)
-                                    cerr << "Unable to find haplotype " << d[j]->obshap[0] << " from individual " 
-                                         << samples[pmap->rev_sample_index(j)] << "; catalog locus: " << loc->id << "\n";
-                            }
-                        }
-                    } else {
-                        col = loc->snps[ordered_loci[pos].snp_index]->col;
-
-                        if (s[pop_id]->nucs[col].incompatible_site ||
-                            s[pop_id]->nucs[col].filtered_site) {
-                            //
-                            // This site contains more than two alleles in this population or was filtered
-                            // due to a minor allele frequency that is too low.
-                            //
-                            gtypes << "? ";
-
-                        } else if (d[j] == NULL || col >= d[j]->len) {
-                            //
-                            // Data does not exist.
-                            //
-                            gtypes << "? ";
-                        } else if (d[j]->model[col] == 'U') {
-                            //
-                            // Data exists, but the model call was uncertain.
-                            //
-                            gtypes << "? ";
-                        } else {
-                            //
-                            // Tally up the nucleotide calls.
-                            //
-                            tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
-
-                            if (p_allele == 0 && q_allele == 0)
-                                gtypes << "? ";
-                            else if (p_allele == 0)
-                                gtypes << q_allele << " ";
-                            else
-                                gtypes << p_allele << " ";
-                        }
-                    }
-                }
-                gtypes_str = gtypes.str();
-                fh << gtypes_str.substr(0, gtypes_str.length() - 1) << "\n";
-
-                //
-                // Output all the loci for this sample again, now for the q allele
-                //
-                gtypes.str("");
-                for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-                    loc = catalog[ordered_loci[pos].id];
-
-                    s = psum->locus(loc->id);
-                    d = pmap->locus(loc->id);
-                    t = psum->locus_tally(loc->id);
-
-                    //
-                    // Will we output this locus as a haplotype or as a SNP?
-                    //
-                    if (ordered_loci[pos].type == haplotype) {
-                        if (d[j] == NULL) {
-                            //
-                            // Data does not exist.
-                            //
-                            gtypes << "-1 ";
-                        } else {
-                            //
-                            // Data exists, output the second haplotype. We will assume the haplotypes are 
-                            // numbered by their position in the loc->strings vector.
-                            //
-                            if (d[j]->obshap.size() > 2)  {
-                                // cerr << "Warning: too many haplotypes, catalog locus: " << loc->id << "\n";
-                                gtypes << "-1 ";
-                            } else if (d[j]->obshap.size() > 1)  {
-                                found = false;
-                                for (uint k = 0; k < loc->strings.size(); k++)
-                                    if (d[j]->obshap[1] == loc->strings[k].first) {
-                                        found = true;
-                                        gtypes << k + 1 << " ";
-                                    }
-                                if (found == false)
-                                    cerr << "Unable to find haplotype " << d[j]->obshap[1] << " from individual " 
-                                         << samples[pmap->rev_sample_index(j)] << "; catalog locus: " << loc->id << "\n";
-                            } else {
-                                found = false;
-                                for (uint k = 0; k < loc->strings.size(); k++)
-                                    if (d[j]->obshap[0] == loc->strings[k].first) {
-                                        found = true;
-                                        gtypes << k + 1 << " ";
-                                    }
-                                if (found == false)
-                                    cerr << "Unable to find haplotype " << d[j]->obshap[0] << " from individual " 
-                                         << samples[pmap->rev_sample_index(j)] << "; catalog locus: " << loc->id << "\n";
-                            }
-                        }
-                    } else {
-                        col = loc->snps[ordered_loci[pos].snp_index]->col;
-
-                        if (s[pop_id]->nucs[col].incompatible_site ||
-                            s[pop_id]->nucs[col].filtered_site) {
-                            gtypes << "? ";
-
-                        } else if (d[j] == NULL || col >= d[j]->len) {
-                            gtypes << "? ";
-
-                        } else if (d[j]->model[col] == 'U') {
-                            gtypes << "? ";
-
-                        } else {
-                            tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
-
-                            if (p_allele == 0 && q_allele == 0)
-                                gtypes << "? ";
-                            else if (q_allele == 0)
-                                gtypes << p_allele << " ";
-                            else
-                                gtypes << q_allele << " ";
-                        }
-                    }
-                }
-                gtypes_str = gtypes.str();
-                fh << gtypes_str.substr(0, gtypes_str.length() - 1) << "\n";
-            }
-        }
-
-        fh.close();
-    }
-
-    cerr << "done.\n";
-
-    return 0;
-}
-
-int 
-write_plink(map<int, CSLocus *> &catalog, 
-            PopMap<CSLocus> *pmap, 
-            PopSum<CSLocus> *psum, 
-            map<int, pair<int, int> > &pop_indexes, 
-            map<int, string> &samples) 
-{
-    //
-    // Write a PLINK file as defined here: http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml
-    //
-    // We will write one file per chromosome.
-    //
-    cerr << "Writing population data to PLINK files...";
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-    LocSum  **s;
-    LocTally *t;
-    string    chr;
-
-    //
-    // First, write a markers file containing each marker, the chromosome it falls on,
-    // an empty centiMorgan field, and finally its genomic position in basepairs.
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".plink.map";
-    string file = in_path + pop_name.str();
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening PLINK markers file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Output the header.
-    //
-    fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        chr = it->first;
-
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            t   = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-                if (t->nucs[col].allele_cnt == 2)
-                    fh << chr << "\t"
-                       << loc->id << "_" << col << "\t"
-                       << "0\t" 
-                       << loc->sort_bp(col) << "\n";
-            }
-        }
-    }
-    fh.close();
-
-    //
-    // Now output the genotypes in a separate file.
-    //
-    pop_name.str("");
-    pop_name << "batch_" << batch_id << ".plink.ped";
-    file = in_path + pop_name.str();
-
-    fh.open(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening PLINK markers file '" << file << "'\n";
-        exit(1);
-    }
-
-    fh << "# Stacks v" << VERSION << "; " << " PLINK v1.07; " << date << "\n";
-
-    map<int, pair<int, int> >::iterator pit;
-    int  start_index, end_index, pop_id;
-    char p_allele, q_allele;
-
-    //
-    //  marker, output the genotypes for each sample in two successive columns.
-    //
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        pop_id      = psum->pop_index(pit->first);
-        start_index = pit->second.first;
-        end_index   = pit->second.second;
-
-        for (int j = start_index; j <= end_index; j++) {
-
-            fh << pit->first << "\t"
-               << samples[pmap->rev_sample_index(j)] << "\t"
-               << "0\t"  // Paternal ID
-               << "0\t"  // Maternal ID
-               << "0\t"  // Sex
-               << "0";   // Phenotype
-
-            for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-                for (uint pos = 0; pos < it->second.size(); pos++) {
-                    loc = it->second[pos];
-
-                    s = psum->locus(loc->id);
-                    d = pmap->locus(loc->id);
-                    t = psum->locus_tally(loc->id);
- 
-                    for (uint i = 0; i < loc->snps.size(); i++) {
-                        uint col = loc->snps[i]->col;
-
-                        // 
-                        // If this site is fixed in all populations or has too many alleles don't output it.
-                        //
-                        if (t->nucs[col].allele_cnt != 2) 
-                            continue;
-                        //
-                        // Output the p and q alleles
-                        //
-                        if (s[pop_id]->nucs[col].incompatible_site ||
-                            s[pop_id]->nucs[col].filtered_site) {
-                            //
-                            // This site contains more than two alleles in this population or was filtered
-                            // due to a minor allele frequency that is too low.
-                            //
-                            fh << "\t" << "0" << "\t" << "0";
-                        } else if (d[j] == NULL || col >= d[j]->len) {
-                            //
-                            // Data does not exist.
-                            //
-                            fh << "\t" << "0" << "\t" << "0";
-                        } else if (d[j]->model[col] == 'U') {
-                            //
-                            // Data exists, but the model call was uncertain.
-                            //
-                            fh << "\t" << "0" << "\t" << "0";
-                        } else {
-                            //
-                            // Tally up the nucleotide calls.
-                            //
-                            tally_observed_haplotypes(d[j]->obshap, i, p_allele, q_allele);
-
-                            if (p_allele == 0 && q_allele == 0)
-                                fh << "\t" << "0" << "\t" << "0";
-                            else if (p_allele == 0)
-                                fh << "\t" << q_allele << "\t" << q_allele;
-                            else if (q_allele == 0)
-                                fh << "\t" << p_allele << "\t" << p_allele;
-                            else
-                                fh << "\t" << p_allele << "\t" << q_allele;
-                        }
-                    }
-                }
-            }
-            fh << "\n";
-        }
-    }
-
-    fh.close();
-
-    cerr << "done.\n";
-
-    return 0;
-}
-
-int 
-write_beagle(map<int, CSLocus *> &catalog, 
-            PopMap<CSLocus> *pmap, 
-            PopSum<CSLocus> *psum, 
-            map<int, pair<int, int> > &pop_indexes, 
-            map<int, string> &samples) 
-{
-    //
-    // Write a Beagle file as defined here: http://faculty.washington.edu/browning/beagle/beagle.html
-    //
-    // We will write one file per chromosome, per population.
-    //
-    cerr << "Writing population data to unphased Beagle files...";
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-    LocSum  **s;
-    LocTally *t;
-    uint      col;
-
-    stringstream pop_name;
-    string       file;
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-
-        //
-        // We need to determine an ordering that can take into account overlapping RAD sites.
-        //
-        vector<GenPos> ordered_loci;
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-            t   = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                col = loc->snps[i]->col;
-                if (t->nucs[col].allele_cnt == 2)
-                    ordered_loci.push_back(GenPos(loc->id, i, loc->sort_bp(col)));
-            }
-        }
-        sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
-
-        //
-        // Now output the genotypes in a separate file for each population.
-        //
-        map<int, pair<int, int> >::iterator pit;
-        int  start_index, end_index, pop_id;
-
-        for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-            pop_id      = psum->pop_index(pit->first);
-            start_index = pit->second.first;
-            end_index   = pit->second.second;
-
-            //
-            // Open a markers file containing each marker, its genomic position in basepairs
-            // and the two alternative alleles at this position.
-            //
-            pop_name.str("");
-            pop_name << "batch_" << batch_id << "." << pop_key[pit->first] << "-" << it->first << ".unphased.bgl.markers";
-            file = in_path + pop_name.str();
-
-            ofstream mfh(file.c_str(), ofstream::out);
-            if (mfh.fail()) {
-                cerr << "Error opening Beagle markers file '" << file << "'\n";
-                exit(1);
-            }
-            mfh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
-
-            //
-            // Open the genotypes file.
-            //
-            pop_name.str("");
-            pop_name << "batch_" << batch_id << "." << pop_key[pit->first] << "-" << it->first << ".unphased.bgl";
-            file = in_path + pop_name.str();
-
-            ofstream fh(file.c_str(), ofstream::out);
-            if (fh.fail()) {
-                cerr << "Error opening Beagle genotypes file '" << file << "'\n";
-                exit(1);
-            }
-            fh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
-
-            char p_allele, q_allele;
-            //
-            // Output a list of all the samples in this population.
-            //
-            fh << "I\tid";
-            for (int j = start_index; j <= end_index; j++)
-                fh << "\t" << samples[pmap->rev_sample_index(j)] << "\t" << samples[pmap->rev_sample_index(j)];
-            fh << "\n";
-
-            //
-            // Output population IDs for each sample.
-            //
-            fh << "S\tid";
-            for (int j = start_index; j <= end_index; j++)
-                fh << "\t" << pit->first << "\t" << pit->first;
-            fh << "\n";
-
-            //
-            // For each marker, output the genotypes for each sample in two successive columns.
-            //
-            for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-                loc = catalog[ordered_loci[pos].id];
-
-                s   = psum->locus(loc->id);
-                d   = pmap->locus(loc->id);
-                t   = psum->locus_tally(loc->id);
-                col = loc->snps[ordered_loci[pos].snp_index]->col;
-
-                // 
-                // If this site is fixed in all populations or has too many alleles don't output it.
-                //
-                if (t->nucs[col].allele_cnt != 2) 
-                    continue;
-
-                //
-                // If this site is monomorphic in this population don't output it.
-                //
-                if (s[pop_id]->nucs[col].pi == 0.0)
-                    continue;
-
-                //
-                // Output this locus to the markers file.
-                //
-                mfh << loc->id << "_" << col << "\t" 
-                    << loc->sort_bp(col)     << "\t" 
-                    << t->nucs[col].p_allele << "\t" 
-                    << t->nucs[col].q_allele << "\n";
-
-                fh << "M" << "\t" << loc->id << "_" << col;
-
-                for (int j = start_index; j <= end_index; j++) {
-                    //
-                    // Output the p allele
-                    //
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
-                        //
-                        // This site contains more than two alleles in this population or was filtered
-                        // due to a minor allele frequency that is too low.
-                        //
-                        fh << "\t" << "?";
-
-                    } else if (d[j] == NULL || col >= d[j]->len) {
-                        //
-                        // Data does not exist.
-                        //
-                        fh << "\t" << "?";
-                    } else if (d[j]->model[col] == 'U') {
-                        //
-                        // Data exists, but the model call was uncertain.
-                        //
-                        fh << "\t" << "?";
-                    } else {
-                        //
-                        // Tally up the nucleotide calls.
-                        //
-                        tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, p_allele, q_allele);
-
-                        if (p_allele == 0 && q_allele == 0)
-                            fh << "\t" << "?";
-                        else if (p_allele == 0)
-                            fh << "\t" << q_allele;
-                        else
-                            fh << "\t" << p_allele;
-                    }
-
-                    //
-                    // Now output the q allele
-                    //
-                    if (s[pop_id]->nucs[col].incompatible_site ||
-                        s[pop_id]->nucs[col].filtered_site) {
-                        fh << "\t" << "?";
-
-                    } else if (d[j] == NULL || col >= d[j]->len) {
-                        fh << "\t" << "?";
-
-                    } else if (d[j]->model[col] == 'U') {
-                        fh << "\t" << "?";
-
-                    } else {
-                        if (p_allele == 0 && q_allele == 0)
-                            fh << "\t" << "?";
-                        else if (q_allele == 0)
-                            fh << "\t" << p_allele;
-                        else
-                            fh << "\t" << q_allele;
-                    }
-                }
-                fh << "\n";
-            }
-
-            fh.close();
-            mfh.close();
-        }
-    }
-
-    cerr << "done.\n";
-
-    return 0;
-}
-
-int 
-write_beagle_phased(map<int, CSLocus *> &catalog, 
-                    PopMap<CSLocus> *pmap, 
-                    PopSum<CSLocus> *psum, 
-                    map<int, pair<int, int> > &pop_indexes, 
-                    map<int, string> &samples) 
-{
-    //
-    // Write a Beagle file as a set of haplotpyes as defined here: 
-    //   http://faculty.washington.edu/browning/beagle/beagle.html
-    //
-    // We will write one file per chromosome.
-    //
-    cerr << "Writing population data to phased Beagle files...";
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
-    Datum   **d;
-
-    stringstream pop_name;
-    string       file;
-
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-
-        //
-        // We need to determine an ordering for all legitimate loci/SNPs.
-        //
-        vector<GenPos> ordered_loci;
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-
-            if (loc->snps.size() == 0) continue;
-
-            //
-            // Check that there aren't too many haplotypes (PHASE has a max of 50).
-            //
-            if (loc->alleles.size() > 40) continue;
-
-            //
-            // Iterate over the population to determine that this subset of the population
-            // has data at this locus.
-            //
-            d = pmap->locus(loc->id);
-            for (int j = 0; j < pmap->sample_cnt(); j++) {
-                if (d[j] != NULL &&
-                    d[j]->obshap.size() > 0 && 
-                    d[j]->obshap.size() <= 2) {
-                    //
-                    // Data exists, and their are the corrent number of haplotypes.
-                    //
-                    ordered_loci.push_back(GenPos(loc->id, 0, loc->sort_bp(), haplotype));
-                    break;
-                }
-            }
-        }
-        sort(ordered_loci.begin(), ordered_loci.end(), compare_genpos);
-
-        //
-        // Now output the genotypes in a separate file for each population.
-        //
-        map<int, pair<int, int> >::iterator pit;
-        int  start_index, end_index, pop_id;
-
-        for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-            pop_id      = psum->pop_index(pit->first);
-            start_index = pit->second.first;
-            end_index   = pit->second.second;
-
-            //
-            // Open a file for writing the markers: their genomic position in basepairs
-            // and the two alternative alleles at this position.
-            //
-            pop_name.str("");
-            pop_name << "batch_" << batch_id << "." << pop_key[pit->first] << "-" << it->first << ".phased.bgl.markers";
-            file = in_path + pop_name.str();
-
-            ofstream mfh(file.c_str(), ofstream::out);
-            if (mfh.fail()) {
-                cerr << "Error opening Beagle markers file '" << file << "'\n";
-                exit(1);
-            }
-            mfh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
-
-            //
-            // Now output the haplotypes in a separate file.
-            //
-            pop_name.str("");
-            pop_name << "batch_" << batch_id << "." << pop_key[pit->first] << "-" << it->first << ".phased.bgl";
-            file = in_path + pop_name.str();
-
-            ofstream fh(file.c_str(), ofstream::out);
-            if (fh.fail()) {
-                cerr << "Error opening Beagle markers file '" << file << "'\n";
-                exit(1);
-            }
-            fh << "# Stacks v" << VERSION << "; " << " Beagle v3.3; " << date << "\n";
-
-            //
-            // Output a list of all the samples in the data set.
-            //
-            fh << "I\tid";
-            for (int j = start_index; j <= end_index; j++)
-                fh << "\t" << samples[pmap->rev_sample_index(j)] << "\t" << samples[pmap->rev_sample_index(j)];
-            fh << "\n";
-
-            //
-            // Output population IDs for each sample.
-            //
-            fh << "S\tid";
-            for (int j = start_index; j <= end_index; j++)
-                fh << "\t" << pop_id << "\t" << pop_id;
-            fh << "\n";
-
-            for (uint pos = 0; pos < ordered_loci.size(); pos++) {
-                loc = catalog[ordered_loci[pos].id];
-                d   = pmap->locus(loc->id);
-
-                //
-                // If this locus is monomorphic in this population don't output it.
-                //
-                set<string> haplotypes;
-                for (int j = start_index; j <= end_index; j++) {
-                    if (d[j] == NULL) continue;
-
-                    if (d[j]->obshap.size() == 2) {
-                        haplotypes.insert(d[j]->obshap[0]);
-                        haplotypes.insert(d[j]->obshap[1]);
-                    } else {
-                        haplotypes.insert(d[j]->obshap[0]);
-                    }
-                }
-                if (haplotypes.size() == 1) continue;
-
-                //
-                // Output this locus to the markers file.
-                //
-                mfh << loc->id << "\t" 
-                    << loc->sort_bp();
-                for (uint j = 0; j < loc->strings.size(); j++)
-                    mfh << "\t" << loc->strings[j].first;
-                mfh << "\n";
-
-                //
-                // For each marker, output the genotypes for each sample in two successive columns.
-                //
-                fh << "M" << "\t" << loc->id;
-
-                for (int j = start_index; j <= end_index; j++) {
-                    //
-                    // Output the p and the q haplotype
-                    //
-                    if (d[j] == NULL) {
-                        //
-                        // Data does not exist.
-                        //
-                        fh << "\t" << "?" << "\t" << "?";
-                    } else {
-                        //
-                        // Data exists, output the first haplotype. We will assume the haplotypes are 
-                        // numbered by their position in the loc->strings vector.
-                        //
-                        if (d[j]->obshap.size() > 2)
-                            fh << "\t" << "?" << "\t" << "?";
-                        else if (d[j]->obshap.size() == 2)
-                            fh << "\t" << d[j]->obshap[0] << "\t" << d[j]->obshap[1];
-                        else
-                            fh << "\t" << d[j]->obshap[0] << "\t" << d[j]->obshap[0];
-                    }
-                }
-                fh << "\n";
-            }
-            fh.close();
-            mfh.close();
-        }
-    }   
-
-    cerr << "done.\n";
-
-    return 0;
-}
-
-int 
-write_phylip(map<int, CSLocus *> &catalog, 
-             PopMap<CSLocus> *pmap, 
-             PopSum<CSLocus> *psum, 
-             map<int, pair<int, int> > &pop_indexes, 
-             map<int, string> &samples) 
-{
-    //
-    // We want to find loci where each locus is fixed within a population but variable between populations.
-    //
-    // We will write those loci to a Phylip file as defined here: 
-    //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".phylip";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing population data to Phylip file '" << file << "'; ";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening Phylip file '" << file << "'\n";
-        exit(1);
-    }
-
-    pop_name << ".log";
-    file = in_path + pop_name.str();
-
-    cerr << "logging nucleotide positions to '" << file << "'...";
-
-    ofstream log_fh(file.c_str(), ofstream::out);
-
-    if (log_fh.fail()) {
-        cerr << "Error opening Phylip Log file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    log_fh << "# Stacks v" << VERSION << "; " << " Phylip sequential; " << date << "\n"
-           << "# Seq Pos\tLocus ID\tColumn\tPopulation\n";
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
-    LocSum  **s;
-    LocTally *t;
-
-    map<int, pair<int, int> >::iterator pit;
-    int  pop_cnt = psum->pop_cnt();
-    int  pop_id;
-    char nuc;
-
-    //
-    // A map storing, for each population, the concatenated list of interspecific nucleotides.
-    //
-    map<int, string> interspecific_nucs;
-
-    int index = 0;
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-
-            s = psum->locus(loc->id);
-            t = psum->locus_tally(loc->id);
-
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-
-                if (phylip_var == false) {
-                    //
-                    // We are looking for loci that are fixed within each population, but are 
-                    // variable between one or more populations.
-                    //
-                    if (t->nucs[col].fixed == true || t->nucs[col].allele_cnt != 2 || t->nucs[col].pop_cnt < 2)
-                        continue;
-
-                    bool fixed_within = true;
-                    for (int j = 0; j < pop_cnt; j++) {
-                        if (s[j]->nucs[col].num_indv == 0)
-                            continue;
-                        if (s[j]->nucs[col].fixed == false) {
-                            fixed_within = false;
-                            break;
-                        }
-                    }
-                    if (fixed_within == false) continue;
-
-                    log_fh << index << "\t" << loc->id << "\t" << col << "\t";
-
-                    for (int j = 0; j < pop_cnt; j++) {
-                        pop_id = psum->rev_pop_index(j);
-
-                        if (s[j]->nucs[col].num_indv > 0) {
-                            interspecific_nucs[pop_id] += s[j]->nucs[col].p_nuc;
-                            log_fh << pop_key[pop_id] << ":" << s[j]->nucs[col].p_nuc << ",";
-                        } else {
-                            interspecific_nucs[pop_id] += 'N';
-                            log_fh << pop_key[pop_id] << ":N" << ",";
-                        }
-                    }
-                    log_fh << "\n";
-                    index++;
-
-                } else {
-                    //
-                    // Encode SNPs that are variable within a population as well, using IUPAC notation:
-                    //     http://en.wikipedia.org/wiki/Nucleic_acid_notation#IUPAC_notation
-                    //
-                    if (t->nucs[col].allele_cnt != 2)
-                        continue;
-
-                    log_fh << index << "\t" << loc->id << "\t" << col << "\t";
-
-                    for (int j = 0; j < pop_cnt; j++) {
-                        pop_id = psum->rev_pop_index(j);
-
-                        switch(s[j]->nucs[col].p_nuc) {
-                        case 0:
-                            nuc = 'N';
-                            break;
-                        case 'A':
-                            switch(s[j]->nucs[col].q_nuc) {
-                            case 'C':
-                                nuc = 'M';
-                                break;
-                            case 'G':
-                                nuc = 'R';
-                                break;
-                            case 'T':
-                                nuc = 'W';
-                                break;
-                            case 0:
-                                nuc = 'A';
-                                break;
-                            }
-                            break;
-                        case 'C':
-                            switch(s[j]->nucs[col].q_nuc) {
-                            case 'A':
-                                nuc = 'M';
-                                break;
-                            case 'G':
-                                nuc = 'S';
-                                break;
-                            case 'T':
-                                nuc = 'Y';
-                                break;
-                            case 0:
-                                nuc = 'C';
-                                break;
-                            }
-                            break;
-                        case 'G':
-                            switch(s[j]->nucs[col].q_nuc) {
-                            case 'A':
-                                nuc = 'R';
-                                break;
-                            case 'C':
-                                nuc = 'S';
-                                break;
-                            case 'T':
-                                nuc = 'K';
-                                break;
-                            case 0:
-                                nuc = 'G';
-                                break;
-                            }
-                            break;
-                        case 'T':
-                            switch(s[j]->nucs[col].q_nuc) {
-                            case 'A':
-                                nuc = 'W';
-                                break;
-                            case 'C':
-                                nuc = 'Y';
-                                break;
-                            case 'G':
-                                nuc = 'K';
-                                break;
-                            case 0:
-                                nuc = 'T';
-                                break;
-                            }
-                            break;
-                        }
-                        interspecific_nucs[pop_id] += nuc;
-                        log_fh << pop_key[pop_id] << ":" << nuc << ",";
-
-                    }
-                    log_fh << "\n";
-                    index++;
-                }
-            }
-        }
-    }
-
-    if (interspecific_nucs.size() == 0) {
-        cerr << "  No data is available to write to the Phylip file.\n";
-        return 0;
-    }
-
-    char id_str[id_len];
-    uint len;
-
-    fh << pop_indexes.size() << "    " << interspecific_nucs.begin()->second.length() << "\n";
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        pop_id = pit->first;
-
-        sprintf(id_str, "%s", pop_key[pop_id].c_str());
-        len = strlen(id_str);
-        for (uint j = len; j < 10; j++)
-            id_str[j] = ' ';
-        id_str[9] = '\0'; 
-
-        fh << id_str << " " << interspecific_nucs[pop_id] << "\n";
-    }
-
-    //
-    // Output the header.
-    //
-    fh << "# Stacks v" << VERSION << "; " << " Phylip sequential; " << date << "\n";
-
-    fh.close();
-    log_fh.close();
-
-    cerr << "done.\n";
-
-    return 0;
-}
-
-int 
-write_fullseq_phylip(map<int, CSLocus *> &catalog, 
-                     PopMap<CSLocus> *pmap, 
-                     PopSum<CSLocus> *psum, 
-                     map<int, pair<int, int> > &pop_indexes, 
-                     map<int, string> &samples) 
-{
-    //
-    // We want to write all variable loci in Phylip interleaved format. Polymorphic positions
-    // will be encoded using IUPAC notation.
-    //
-    // We will write those loci to a Phylip file as defined here: 
-    //     http://evolution.genetics.washington.edu/phylip/doc/main.html#inputfiles
-    //
-    stringstream pop_name;
-    pop_name << "batch_" << batch_id << ".fullseq.phylip";
-    string file = in_path + pop_name.str();
-
-    cerr << "Writing full sequence population data to Phylip file '" << file << "'; ";
-
-    ofstream fh(file.c_str(), ofstream::out);
-
-    if (fh.fail()) {
-        cerr << "Error opening Phylip file '" << file << "'\n";
-        exit(1);
-    }
-
-    //
-    // We will also write a file that allows us to specify each RAD locus as a separate partition
-    // for use in phylogenetics programs.
-    //
-    pop_name.str("");
-    pop_name << "batch_" << batch_id << ".fullseq.partitions.phylip";
-    file = in_path + pop_name.str();
-
-    ofstream par_fh(file.c_str(), ofstream::out);
-
-    if (par_fh.fail()) {
-        cerr << "Error opening Phylip partitions file '" << file << "'\n";
-        exit(1);
-    }
-
-    pop_name.str("");
-    pop_name << "batch_" << batch_id << "fullseq.phylip.log";
-    file = in_path + pop_name.str();
-
-    cerr << "logging nucleotide positions to '" << file << "'...";
-
-    ofstream log_fh(file.c_str(), ofstream::out);
-
-    if (log_fh.fail()) {
-        cerr << "Error opening Phylip Log file '" << file << "'\n";
-        exit(1);
-    }
-
-        //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%B %d, %Y", timeinfo);
-
-    log_fh << "# Stacks v" << VERSION << "; " << " Phylip interleaved; " << date << "\n"
-           << "# Locus ID\tLine Number";
-    if (loci_ordered) log_fh << "\tChr\tBasepair";
-    log_fh << "\n";
-
-    map<string, vector<CSLocus *> >::iterator it;
-    CSLocus  *loc;
-    LocSum  **s;
-    LocTally *t;
-
-    map<int, pair<int, int> >::iterator pit;
-    int  pop_cnt = psum->pop_cnt();
-    int  pop_id;
-    char nuc;
-
-    bool include;
-    char id_str[id_len];
-    uint len = 0;
-
-    //
-    // Determine the length of sequence we will output.
-    //
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-
-            t = psum->locus_tally(loc->id);
-
-            include = true;
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-
-                if (t->nucs[col].allele_cnt != 2)
-                    include = false;
-            }
-
-            if (include)
-                len += strlen(loc->con);
-        }
-    }
-
-    map<int, string> outstrs;
-    
-    fh << pop_indexes.size() << "    " << len << "\n";
-
-    for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-        pop_id = pit->first;
-
-        outstrs[pop_id] = "";
-        sprintf(id_str, "%s", pop_key[pop_id].c_str());
-        len = strlen(id_str);
-        for (uint j = len; j < 10; j++)
-            id_str[j] = ' ';
-        id_str[9] = '\0'; 
-
-        outstrs[pop_id] += string(id_str) + " ";
-    }
-
-    char *seq;
-    int   line  = 1;
-    int   index = 1;
-    int   cnt   = 1;
-    
-    for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
-        for (uint pos = 0; pos < it->second.size(); pos++) {
-            loc = it->second[pos];
-
-            s = psum->locus(loc->id);
-            t = psum->locus_tally(loc->id);
-
-            include = true;
-            for (uint i = 0; i < loc->snps.size(); i++) {
-                uint col = loc->snps[i]->col;
-
-                if (t->nucs[col].allele_cnt != 2)
-                    include = false;
-            }
-
-            if (!include)
-                continue;
-
-            seq = new char[loc->len + 1];
-            strcpy(seq, loc->con);
-
-            for (int j = 0; j < pop_cnt; j++) {
-                pop_id = psum->rev_pop_index(j);
-
-                for (uint i = 0; i < loc->snps.size(); i++) {
-                    uint col = loc->snps[i]->col;
-
-                    //
-                    // Encode SNPs that are variable within a population using IUPAC notation:
-                    //     http://en.wikipedia.org/wiki/Nucleic_acid_notation#IUPAC_notation
-                    //
-                    switch(s[j]->nucs[col].p_nuc) {
-                    case 0:
-                        nuc = 'N';
-                        break;
-                    case 'A':
-                        switch(s[j]->nucs[col].q_nuc) {
-                        case 'C':
-                            nuc = 'M';
-                            break;
-                        case 'G':
-                            nuc = 'R';
-                            break;
-                        case 'T':
-                            nuc = 'W';
-                            break;
-                        case 0:
-                            nuc = 'A';
-                            break;
-                        }
-                        break;
-                    case 'C':
-                        switch(s[j]->nucs[col].q_nuc) {
-                        case 'A':
-                            nuc = 'M';
-                            break;
-                        case 'G':
-                            nuc = 'S';
-                            break;
-                        case 'T':
-                            nuc = 'Y';
-                            break;
-                        case 0:
-                            nuc = 'C';
-                            break;
-                        }
-                        break;
-                    case 'G':
-                        switch(s[j]->nucs[col].q_nuc) {
-                        case 'A':
-                            nuc = 'R';
-                            break;
-                        case 'C':
-                            nuc = 'S';
-                            break;
-                        case 'T':
-                            nuc = 'K';
-                            break;
-                        case 0:
-                            nuc = 'G';
-                            break;
-                        }
-                        break;
-                    case 'T':
-                        switch(s[j]->nucs[col].q_nuc) {
-                        case 'A':
-                            nuc = 'W';
-                            break;
-                        case 'C':
-                            nuc = 'Y';
-                            break;
-                        case 'G':
-                            nuc = 'K';
-                            break;
-                        case 0:
-                            nuc = 'T';
-                            break;
-                        }
-                        break;
-                    }
-
-                    seq[col] = nuc;
-                }
-                
-                outstrs[pop_id] += string(seq);
-            }
-            delete [] seq;
-
-            log_fh << line << "\t" << loc->id;
-            if (loci_ordered) log_fh << "\t" << loc->loc.chr << "\t" << loc->sort_bp() + 1;
-            log_fh << "\n";
-            
-            for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
-                pop_id = pit->first;
-                fh << outstrs[pop_id] << "\n";
-                outstrs[pop_id] = "";
-                line++;
-            }
-            fh << "\n";
-            line++;
-
-            par_fh << "DNA, p" << cnt << "=" << index << "-" << index + loc->len - 1 << "\n";
-            index += loc->len;
-            cnt++;
-        }
-    }
-
-    //
-    // Output the header.
-    //
-    fh << "# Stacks v" << VERSION << "; " << " Phylip interleaved; " << date << "\n";
-
-    fh.close();
-    par_fh.close();
-    log_fh.close();
-
-    cerr << "done.\n";
-
-    return 0;
-}
-
-int 
-tally_ref_alleles(LocSum **s, int pop_cnt, int snp_index, char &p_allele, char &q_allele) 
-{
-    int  nucs[4] = {0};
-    char nuc[2];
-
-    for (int j = 0; j < pop_cnt; j++) {
-        nuc[0] = 0;
-        nuc[1] = 0;
-        nuc[0] = s[j]->nucs[snp_index].p_nuc;
-        nuc[1] = s[j]->nucs[snp_index].q_nuc;
-
-        for (uint k = 0; k < 2; k++) 
-            switch(nuc[k]) {
-            case 'A':
-            case 'a':
-                nucs[0]++;
-                break;
-            case 'C':
-            case 'c':
-                nucs[1]++;
-                break;
-            case 'G':
-            case 'g':
-                nucs[2]++;
-                break;
-            case 'T':
-            case 't':
-                nucs[3]++;
-                break;
-            }
-    }
-
-    //
-    // Determine how many alleles are present at this position in this population.
-    // We cannot deal with more than two alternative alleles, if there are more than two
-    // in a single population, print a warning and exclude this nucleotide position.
-    //
-    int i;
-    int allele_cnt = 0;
-    for (i = 0; i < 4; i++)
-        if (nucs[i] > 0) allele_cnt++;
-
-    if (allele_cnt > 2) {
-        p_allele = 0;
-        q_allele = 0;
-        return 0;
-    }
-
-    //
-    // Record which nucleotide is the P allele and which is the Q allele.
-    //
-    p_allele = 0;
-    q_allele = 0;
-
-    i = 0;
-    while (p_allele == 0 && i < 4) {
-        if (nucs[i] > 0) {
-            switch(i) {
-            case 0:
-                p_allele = 'A';
-                break;
-            case 1:
-                p_allele = 'C';
-                break;
-            case 2:
-                p_allele = 'G';
-                break;
-            case 3:
-                p_allele = 'T';
-                break;
-            }
-        }
-        i++;
-    }
-    while (q_allele == 0 && i < 4) {
-        if (nucs[i] > 0) {
-            switch(i) {
-            case 1:
-                q_allele = 'C';
-                break;
-            case 2:
-                q_allele = 'G';
-                break;
-            case 3:
-                q_allele = 'T';
-                break;
-            }
-        }
-        i++;
-    }
-
-    return 1;
-}
-
-int 
-tally_observed_haplotypes(vector<char *> &obshap, int snp_index, char &p_allele, char &q_allele) 
-{
-    int  nucs[4] = {0};
-    char nuc;
-
-    //
-    // Pull each allele for this SNP from the observed haplotype.
-    //
-    for (uint j = 0; j < obshap.size(); j++) {
-        nuc = obshap[j][snp_index];
-
-        switch(nuc) {
-        case 'A':
-        case 'a':
-            nucs[0]++;
-            break;
-        case 'C':
-        case 'c':
-            nucs[1]++;
-            break;
-        case 'G':
-        case 'g':
-            nucs[2]++;
-            break;
-        case 'T':
-        case 't':
-            nucs[3]++;
-            break;
-        }
-    }
-
-    //
-    // Determine how many alleles are present at this position in this population.
-    // We cannot deal with more than two alternative alleles, if there are more than two
-    // in a single population, print a warning and exclude this nucleotide position.
-    //
-    int i;
-    int allele_cnt = 0;
-    for (i = 0; i < 4; i++)
-        if (nucs[i] > 0) allele_cnt++;
-
-    if (allele_cnt > 2) {
-        p_allele = 0;
-        q_allele = 0;
-        return -1;
-    }
-
-    //
-    // Record which nucleotide is the P allele and which is the Q allele.
-    //
-    p_allele = 0;
-    q_allele = 0;
-
-    i = 0;
-    while (p_allele == 0 && i < 4) {
-        if (nucs[i] > 0) {
-            switch(i) {
-            case 0:
-                p_allele = 'A';
-                break;
-            case 1:
-                p_allele = 'C';
-                break;
-            case 2:
-                p_allele = 'G';
-                break;
-            case 3:
-                p_allele = 'T';
-                break;
-            }
-        }
-        i++;
-    }
-    while (q_allele == 0 && i < 4) {
-        if (nucs[i] > 0) {
-            switch(i) {
-            case 1:
-                q_allele = 'C';
-                break;
-            case 2:
-                q_allele = 'G';
-                break;
-            case 3:
-                q_allele = 'T';
-                break;
-            }
-        }
-        i++;
-    }
 
     return 0;
 }
@@ -8582,250 +5228,18 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
     return 0;
 }
 
-int 
-build_file_list(vector<pair<int, string> > &files, 
-                map<int, pair<int, int> > &pop_indexes, 
-                map<int, vector<int> > &grp_members) 
-{
-    char             line[max_len];
-    vector<string>   parts;
-    map<string, int> pop_key_rev, grp_key_rev;
-    set<string>      pop_names, grp_names;
-    string f;
-    uint   len;
-
-    if (pmap_path.length() > 0) {
-        cerr << "Parsing population map.\n";
-
-        ifstream fh(pmap_path.c_str(), ifstream::in);
-
-        if (fh.fail()) {
-            cerr << "Error opening population map '" << pmap_path << "'\n";
-            return 0;
-        }
-
-        uint pop_id = 0;
-        uint grp_id = 0;
-
-        while (fh.good()) {
-            fh.getline(line, max_len);
-
-            len = strlen(line);
-            if (len == 0) continue;
-
-            //
-            // Check that there is no carraige return in the buffer.
-            //
-            if (line[len - 1] == '\r') line[len - 1] = '\0';
-
-            //
-            // Ignore comments
-            //
-            if (line[0] == '#') continue;
-
-            //
-            // Parse the population map, we expect:
-            // <file name><tab><population string>[<tab><group string>]
-            //
-            parse_tsv(line, parts);
-
-            if (parts.size() < 2 || parts.size() > 3) {
-                cerr << "Population map is not formated correctly: expecting two or three, tab separated columns, found " << parts.size() << ".\n";
-                return 0;
-            }
-
-            //
-            // Have we seen this population or group before?
-            //
-            if (pop_names.count(parts[1]) == 0) {
-                pop_names.insert(parts[1]);
-                pop_id++;
-                pop_key[pop_id]       = parts[1];
-                pop_key_rev[parts[1]] = pop_id;
-
-                //
-                // If this is the first time we have seen this population, but not the
-                // first time we have seen this group, add the population to the group list.
-                //
-                if (parts.size() == 3 && grp_key_rev.count(parts[2]) > 0)
-                    grp_members[grp_key_rev[parts[2]]].push_back(pop_id);
-            }
-            if (parts.size() == 3 && grp_names.count(parts[2]) == 0) {
-                grp_names.insert(parts[2]);
-                grp_id++;
-                grp_key[grp_id] = parts[2];
-                grp_key_rev[parts[2]] = grp_id;
-
-                //
-                // Associate the current population with the group.
-                //
-                grp_members[grp_id].push_back(pop_id);
-            }
-
-            //
-            // Test that file exists before adding to list.
-            //
-            ifstream test_fh;
-            gzFile   gz_test_fh;
-
-            f = in_path.c_str() + parts[0] + ".matches.tsv";
-            test_fh.open(f.c_str());
-
-            if (test_fh.fail()) {
-                //
-                // Test for a gzipped file.
-                //
-                f = in_path.c_str() + parts[0] + ".matches.tsv.gz";
-                gz_test_fh = gzopen(f.c_str(), "rb");
-                if (!gz_test_fh) {
-                    cerr << " Unable to find " << f.c_str() << ", excluding it from the analysis.\n";
-                } else {
-                    gzclose(gz_test_fh);
-                    files.push_back(make_pair(pop_key_rev[parts[1]], parts[0]));
-                }
-            } else {
-                test_fh.close();
-                files.push_back(make_pair(pop_key_rev[parts[1]], parts[0]));
-            }
-        }
-
-        fh.close();
-    } else {
-        cerr << "No population map specified, building file list.\n";
-
-        //
-        // If no population map is specified, read all the files from the Stacks directory.
-        //
-        uint   pos;
-        string file;
-        struct dirent *direntry;
-
-        DIR *dir = opendir(in_path.c_str());
-
-        if (dir == NULL) {
-            cerr << "Unable to open directory '" << in_path << "' for reading.\n";
-            exit(1);
-        }
-
-        while ((direntry = readdir(dir)) != NULL) {
-            file = direntry->d_name;
-
-            if (file == "." || file == "..")
-                continue;
-
-            if (file.substr(0, 6) == "batch_")
-                continue;
-
-            pos = file.rfind(".tags.tsv");
-            if (pos < file.length()) {
-                files.push_back(make_pair(1, file.substr(0, pos)));
-            } else {
-                pos = file.rfind(".tags.tsv.gz");
-                if (pos < file.length())
-                    files.push_back(make_pair(1, file.substr(0, pos)));
-            }
-        }
-
-        pop_key[1] = "1";
-
-        closedir(dir);
-    }
-
-    if (files.size() == 0) {
-        cerr << "Unable to locate any input files to process within '" << in_path << "'\n";
-        return 0;
-    }
-
-    //
-    // Sort the files according to population ID.
-    //
-    sort(files.begin(), files.end(), compare_pop_map);
-
-    cerr << "Found " << files.size() << " input file(s).\n";
-
-    //
-    // Determine the start/end index for each population in the files array.
-    //
-    int start  = 0;
-    int end    = 0;
-    int pop_id = files[0].first;
-
-    do {
-        end++;
-        if (pop_id != files[end].first) {
-            pop_indexes[pop_id] = make_pair(start, end - 1);
-            start  = end;
-            pop_id = files[end].first;
-        }
-    } while (end < (int) files.size());
-
-    pop_indexes.size() == 1 ?
-        cerr << "  " << pop_indexes.size() << " population found\n" :
-        cerr << "  " << pop_indexes.size() << " populations found\n";
-
-    if (population_limit > (int) pop_indexes.size()) {
-        cerr << "Population limit (" 
-             << population_limit 
-             << ") larger than number of popualtions present, adjusting parameter to " 
-             << pop_indexes.size() << "\n";
-        population_limit = pop_indexes.size();
-    }
-
-    map<int, pair<int, int> >::iterator it;
-    for (it = pop_indexes.begin(); it != pop_indexes.end(); it++) {
-        start = it->second.first;
-        end   = it->second.second;
-        cerr << "    " << pop_key[it->first] << ": ";
-        for (int i = start; i <= end; i++) {
-            cerr << files[i].second;
-            if (i < end) cerr << ", ";
-        }
-        cerr << "\n";
-    }
-
-    //
-    // If no group membership is specified in the population map, create a default 
-    // group with each population ID as a member.
-    //
-    if (grp_members.size() == 0) {
-        for (it = pop_indexes.begin(); it != pop_indexes.end(); it++)
-            grp_members[1].push_back(it->first);
-        grp_key[1] = "1";
-    }
-
-    grp_members.size() == 1 ?
-        cerr << "  " << grp_members.size() << " group of populations found\n" :
-        cerr << "  " << grp_members.size() << " groups of populations found\n";
-    map<int, vector<int> >::iterator git;
-    for (git = grp_members.begin(); git != grp_members.end(); git++) {
-        cerr << "    " << grp_key[git->first] << ": ";
-        for (uint i = 0; i < git->second.size(); i++) {
-            cerr << pop_key[git->second[i]];
-            if (i < git->second.size() - 1) cerr << ", ";
-        }
-        cerr << "\n";
-    }
-
-    return 1;
-}
-
-bool compare_pop_map(pair<int, string> a, pair<int, string> b) {
-    if (a.first == b.first)
-        return (a.second < b.second);
-    return (a.first < b.first);
-}
 
 bool hap_compare(pair<string, int> a, pair<string, int> b) {
     return (a.second > b.second);
 }
 
-bool compare_genpos(GenPos a, GenPos b) {
-    return (a.bp < b.bp);
-}
-
 int parse_command_line(int argc, char* argv[]) {
-    int c;
-     
+#define O_INPUT_MODE       1000
+#define O_OUT_PATH         1001
+#define O_IN_PATH          'P'
+#define O_IN_VCF           1002
+#define O_DEBUG_FLAGS      1003
+
     while (1) {
         static struct option long_options[] = {
             {"help",           no_argument,       NULL, 'h'},
@@ -8853,7 +5267,10 @@ int parse_command_line(int argc, char* argv[]) {
             {"window_size",    required_argument, NULL, 'w'},
             {"num_threads",    required_argument, NULL, 't'},
             {"batch_id",       required_argument, NULL, 'b'},
-            {"in_path",        required_argument, NULL, 'P'},
+            {"in_path",        required_argument, NULL, O_IN_PATH},
+            {"out_path",       required_argument, NULL, O_OUT_PATH},
+            {"input_mode",     required_argument, NULL, O_INPUT_MODE},
+            {"in_vcf",         required_argument, NULL, O_IN_VCF},
             {"progeny",        required_argument, NULL, 'r'},
             {"min_depth",      required_argument, NULL, 'm'},
             {"renz",           required_argument, NULL, 'e'},
@@ -8881,13 +5298,12 @@ int parse_command_line(int argc, char* argv[]) {
             {"merge_prune_lim",   required_argument, NULL, 'i'},
             {"fst_correction",    required_argument, NULL, 'f'},
             {"p_value_cutoff",    required_argument, NULL, 'u'},
+            {"debug_flags",    required_argument, NULL, O_DEBUG_FLAGS},
             {0, 0, 0, 0}
         };
         
         // getopt_long stores the option index here.
-        int option_index = 0;
-     
-        c = getopt_long(argc, argv, "ACDEFGHJKLNSTUVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
@@ -8903,8 +5319,29 @@ int parse_command_line(int argc, char* argv[]) {
         case 't':
             num_threads = atoi(optarg);
             break;
-        case 'P':
+        case O_IN_PATH:
             in_path = optarg;
+            if (!in_path.empty() && in_path.back() != '/')
+                in_path += "/";
+            break;
+        case O_OUT_PATH:
+            out_path = optarg;
+            if (!out_path.empty() && out_path.back() != '/')
+                out_path += "/";
+            break;
+        case O_INPUT_MODE:
+            if (strcasecmp(optarg, "stacks") == 0) {
+                input_mode = InputMode::stacks;
+            } else if (strcasecmp(optarg, "vcf") == 0) {
+                input_mode = InputMode::vcf;
+            } else {
+                cerr << "Error: Malformed arguments. Unrecognized input mode '"
+                     << optarg << "'.\n";
+                help();
+            }
+            break;
+        case O_IN_VCF:
+            in_vcf_path = optarg;
             break;
         case 'M':
             pmap_path = optarg;
@@ -8914,9 +5351,23 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'i':
             merge_prune_lim = is_double(optarg);
+            if (merge_prune_lim > 1.0)
+                merge_prune_lim = merge_prune_lim / 100;
+
+            if (merge_prune_lim < 0 || merge_prune_lim > 1.0) {
+                cerr << "Unable to parse the merge sites pruning limit.\n";
+                help();
+            }
             break;
         case 'q':
             max_obs_het = is_double(optarg);
+            if (max_obs_het > 1)
+                max_obs_het = max_obs_het / 100;
+
+            if (max_obs_het < 0 || max_obs_het > 1.0) {
+                cerr << "Unable to parse the maximum observed heterozygosity.\n";
+                help();
+            }
             break;
         case 'b':
             batch_id = is_integer(optarg);
@@ -8927,6 +5378,13 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'r':
             sample_limit = atof(optarg);
+            if (sample_limit > 1)
+                sample_limit = sample_limit / 100;
+
+            if (sample_limit > 1.0) {
+                cerr << "Unable to parse the sample limit frequency\n";
+                help();
+            }
             break;
         case 'p':
             population_limit = atoi(optarg);
@@ -9055,6 +5513,13 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'a':
             minor_allele_freq = atof(optarg);
+            if (minor_allele_freq > 1)
+                minor_allele_freq = minor_allele_freq / 100;
+
+            if (minor_allele_freq < 0 || minor_allele_freq > 0.5) {
+                cerr << "Unable to parse the minor allele frequency.\n";
+                help();
+            }
             break;
         case 'f':
             if (strcasecmp(optarg, "p_value") == 0)
@@ -9073,6 +5538,10 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'e':
             enz = optarg;
+            if (renz.count(enz) == 0) {
+                cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
+                help();
+            }
             break;
         case 'w':
             sigma = atof(optarg);
@@ -9084,6 +5553,28 @@ int parse_command_line(int argc, char* argv[]) {
             // getopt_long already printed an error message.
             help();
             break;
+        case O_DEBUG_FLAGS:
+        {
+            static const set<string> known_debug_flags = {"VCFCOMP"};
+            stringstream ss (optarg);
+            string s;
+            while (std::getline(ss, s, ',')) {
+                if (known_debug_flags.count(s)) {
+                    debug_flags.insert(s);
+                } else {
+                    cerr << "DEBUG> Error: Unknown error flag '" << s << "'.\n";
+                    return -1;
+                }
+            }
+            cerr << "DEBUG> Debug flag(s) : '" << optarg << "'.\n";
+
+            if (debug_flags.count("VCFCOMP") && not write_random_snp) {
+                write_single_snp = true;
+                cerr << "DEBUG> Added --write_single_snp.\n";
+            }
+
+            break;
+        }
         default:
             cerr << "Unknown command line option: '" << (char) c << "'\n";
             help();
@@ -9091,68 +5582,55 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
-    if (in_path.length() == 0) {
-        cerr << "You must specify a path to the directory containing Stacks output files.\n";
-        help();
-    }
+    //
+    // Check argument constrains.
+    //
 
-    if (in_path.at(in_path.length() - 1) != '/') 
-        in_path += "/";
+    if (input_mode == InputMode::stacks) {
 
-    if (pmap_path.length() == 0) {
-        cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
-    }
-
-    if (batch_id < 0) {
-        cerr << "You must specify a batch ID.\n";
-        help();
-    }
-
-    if (enz.length() > 0 && renz.count(enz) == 0) {
-        cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
-        help();
-    }
-
-    if (merge_prune_lim != 1.0) {
-        if (merge_prune_lim > 1.0)
-            merge_prune_lim = merge_prune_lim / 100;
-
-        if (merge_prune_lim < 0 || merge_prune_lim > 1.0) {
-            cerr << "Unable to parse the merge sites pruning limit.\n";
+        if (in_path.empty()) {
+            cerr << "You must specify a path to the directory containing Stacks output files.\n";
             help();
         }
-    }
 
-    if (minor_allele_freq > 0) {
-        if (minor_allele_freq > 1)
-            minor_allele_freq = minor_allele_freq / 100;
+        if (pmap_path.empty())
+            cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
 
-        if (minor_allele_freq > 0.5) {
-            cerr << "Unable to parse the minor allele frequency.\n";
+        if (batch_id < 0) {
+            cerr << "You must specify a batch ID.\n";
             help();
         }
-    }
 
-    if (max_obs_het != 1.0) {
-        if (max_obs_het > 1)
-            max_obs_het = max_obs_het / 100;
+        if (out_path.empty())
+            out_path = in_path;
 
-        if (max_obs_het < 0 || max_obs_het > 1.0) {
-            cerr << "Unable to parse the maximum observed heterozygosity.\n";
+        out_prefix = string("batch_") + to_string(batch_id);
+
+    } else if (input_mode == InputMode::vcf) {
+
+        if (in_vcf_path.empty()) {
+            cerr << "You must specify a path to a VCF input file.\n";
             help();
         }
-    }
 
-    if (sample_limit > 0) {
-        if (sample_limit > 1)
-            sample_limit = sample_limit / 100;
-
-        if (sample_limit > 1.0) {
-            cerr << "Unable to parse the sample limit frequency\n";
+        if (out_path.empty()) {
+            cerr << "Error: Malformed arguments: input mode 'vcf' requires an output directory (--out_path).\n";
             help();
         }
+
+        // Determine out_prefix
+        string fname = in_vcf_path;
+        if (in_vcf_path.find_last_of('/') != string::npos && in_vcf_path.back() != '/')
+            fname = in_vcf_path.substr(in_vcf_path.find_last_of('/')+1);
+        size_t trim = 0;
+        if (fname.length() > 4 && fname.substr(fname.length()-4) == ".vcf")
+            trim = 4;
+        else if (fname.length() > 7 && fname.substr(fname.length()-7) == ".vcf.gz")
+            trim = 7;
+        out_prefix = fname.substr(0, fname.length()-trim);
     }
 
+    // Other
     if (write_single_snp && write_random_snp) {
         cerr << "Please specify either '--write_single_snp' or '--write_random_snp', not both.\n";
         help();
@@ -9175,19 +5653,28 @@ void version() {
 void help() {
     std::cerr << "populations " << VERSION << "\n"
               << "populations -b batch_id -P path -M path [-r min] [-m min] [-B blacklist] [-W whitelist] [-s] [-e renz] [-t threads] [-v] [-h]" << "\n"
-              << "  b: Batch ID to examine when exporting from the catalog.\n"
-              << "  P: path to the Stacks output files.\n"
+              << "  h: display this help messsage.\n"
+              << "  v: print program version.\n"
+              << "  t: number of threads to run in parallel sections of code.\n"
+              << "  --input_path: one of \"stacks\" (default) or \"vcf\".\n"
               << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
-              << "  s: output a file to import results into an SQL database.\n"
               << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
               << "  W: specify a file containing Whitelisted markers to include in the export.\n"
-              << "  e: restriction enzyme, required if generating 'genomic' output.\n"
-              << "  t: number of threads to run in parallel sections of code.\n"
-              << "  v: print program version." << "\n"
-              << "  h: display this help messsage." << "\n\n"
+              << "  --out_path: path to a directory where to white the output files. In stacks mode, defaults to the input directory (-P).\n"
+              << "\n"
+              << "  Stacks mode:\n"
+              << "    b: Batch ID to examine when exporting from the catalog.\n"
+              << "    P: path to the directory containing the Stacks files. (--in_path)\n"
+              << "    s: output a file to import results into an SQL database.\n"
+              << "    e: restriction enzyme, required if generating 'genomic' output.\n"
+              << "\n"
+              << "  VCF mode:\n"
+              << "    --in_vcf: path to an input VCF file.\n"
+              << "\n"
               << "  Merging and Phasing:\n"
               << "    --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
               << "    --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n"
+              << "\n"
               << "  Data Filtering:\n"
               << "    r: minimum percentage of individuals in a population required to process a locus for that population.\n"
               << "    p: minimum number of populations a locus must be present in to process a locus.\n"
@@ -9198,12 +5685,15 @@ void help() {
               << "    --p_value_cutoff [num]: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n"
               << "    --lnl_lim [num]: filter loci with log likelihood values below this threshold.\n"
               << "    --write_single_snp: restrict data analysis to only the first SNP per locus.\n"
-              << "    --write_random_snp: restrict data analysis to one random SNP per locus.\n\n"
+              << "    --write_random_snp: restrict data analysis to one random SNP per locus.\n"
+              << "\n"
               << "  Fstats:\n"
-              << "    --fstats: enable SNP and haplotype-based F statistics.\n\n"
+              << "    --fstats: enable SNP and haplotype-based F statistics.\n"
+              << "\n"
               << "  Kernel-smoothing algorithm:\n" 
               << "    k: enable kernel-smoothed Pi, Fis, Fst, Fst', and Phi_st calculations.\n"
-              << "    --window_size [num]: distance over which to average values (sigma, default 150,000bp; window is 3sigma in length).\n\n"
+              << "    --window_size [num]: distance over which to average values (sigma, default 150,000bp; window is 3sigma in length).\n"
+              << "\n"
               << "  Bootstrap Resampling:\n" 
               << "    --bootstrap: turn on boostrap resampling for all smoothed statistics.\n"
               << "    --bootstrap_pifis: turn on boostrap resampling for smoothed SNP-based Pi and Fis calculations.\n"
@@ -9211,7 +5701,8 @@ void help() {
               << "    --bootstrap_div: turn on boostrap resampling for smoothed haplotype diveristy and gene diversity calculations based on haplotypes.\n"
               << "    --bootstrap_phist: turn on boostrap resampling for smoothed Phi_st calculations based on haplotypes.\n"
               << "    --bootstrap_reps [num]: number of bootstrap resamplings to calculate (default 100).\n"
-              << "    --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n\n"
+              << "    --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n"
+              << "\n"
               << "  File ouput options:\n"
               << "    --ordered_export: if data is reference aligned, exports will be ordered; only a single representative of each overlapping site.\n"
               << "    --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file.\n"
@@ -9230,7 +5721,8 @@ void help() {
               << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
               << "    --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
               << "    --phylip_var_all: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
-              << "    --treemix: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n\n"
+              << "    --treemix: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
+              << "\n"
               << "  Debugging:\n"
               << "    --verbose: turn on additional logging.\n"
               << "    --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n";

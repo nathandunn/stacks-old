@@ -106,7 +106,7 @@ Sam::next_seq()
     bp--;
 
     Seq *s = new Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(), // Read ID, Sequence, Quality
-		     parts[2].c_str(), bp, flag ? minus : plus);            // Chr, BasePair, Strand
+		     parts[2].c_str(), bp, flag ? strand_minus : strand_plus);            // Chr, BasePair, Strand
 
     if (cigar.size() > 0)
 	this->edit_gaps(cigar, s->seq);
@@ -138,7 +138,7 @@ Sam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool o
 	// If aligned to the negative strand, sequence has been reverse complemented and 
 	// CIGAR string should be interpreted in reverse.
 	//
-	if (orientation == plus)
+	if (orientation == strand_plus)
 	    cigar.push_back(make_pair(*q, dist));
 	else
 	    cigar.insert(cigar.begin(), make_pair(*q, dist));
