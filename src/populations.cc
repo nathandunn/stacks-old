@@ -629,9 +629,13 @@ int main (int argc, char* argv[]) {
 
     for (pit = pop_indexes.begin(); pit != pop_indexes.end(); pit++) {
         pop_id = pit->first;
-        if (kernel_smoothed && loci_ordered) {
-            cerr << "  Generating kernel-smoothed population statistics...\n";
-            kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
+        if (kernel_smoothed) {
+            if (loci_ordered) {
+                cerr << "  Generating kernel-smoothed population statistics...\n";
+                kernel_smoothed_popstats(catalog, pmap, psum, pop_id, log_fh);
+            } else {
+                cerr << "Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
+            }
         }
     }
 
