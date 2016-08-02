@@ -82,13 +82,13 @@ public:
     size_t get_pop_index(const string& name) const {return pop_indexes_.at(name);}
     size_t get_group_index(const string& name) const {return group_indexes_.at(name);}
 
+    // Work with sample IDs. (IDs unicity is not enforced.)
+    void set_sample_id(size_t index, size_t id) {samples_.at(index).id = id; sample_indexes_by_id_[id] = index;}
+    size_t get_sample_index(const size_t& id) const {return sample_indexes_by_id_.at(id);}
+
     /*
      * Methods for backwards compatibility
      */
-
-    // Sample IDs. (IDs unicity is not enforced.)
-    void set_sample_id(size_t index, size_t id) {samples_.at(index).id = id; sample_indexes_by_id_[id] = index;}
-    size_t get_sample_index(const size_t& id) const {return sample_indexes_by_id_.at(id);}
 
     // Fill former globals.
     void fill_files(vector<pair<int, string> >&) const;

@@ -26,6 +26,8 @@
 // University of Oregon
 //
 
+#include "MetaPopInfo.h"
+
 #include "genotypes.h"
 
 extern int **encoded_gtypes;
@@ -84,8 +86,12 @@ int main (int argc, char* argv[]) {
 
     initialize_dictionaries(global_dictionary);
 
-    vector<string> files;
-    build_file_list(files);
+    MetaPopInfo mpopi;
+    mpopi.init_directory(in_path);
+    if (mpopi.samples().empty()) {
+        cerr << "Error: Failed to find sample files in directory '" << in_path << "'.\n";
+        return -1;
+    }
 
     if (wl_file.length() > 0) {
 	load_marker_list(wl_file, whitelist);
@@ -118,33 +124,58 @@ int main (int argc, char* argv[]) {
     // Load matches to the catalog
     //
     vector<vector<CatMatch *> > catalog_matches;
-    map<int, string>            samples;
-    vector<int>                 sample_ids;
-    for (uint i = 0; i < files.size(); i++) {
-	vector<CatMatch *> m;
-	load_catalog_matches(in_path + files[i], m);
+    vector<size_t> samples_to_remove;
+    set<size_t> seen_samples;
+    for (size_t i=0; i<mpopi.samples().size(); ++i) {
+        catalog_matches.push_back(vector<CatMatch*>());
+        vector<CatMatch *>& m = catalog_matches.back();
 
-	if (m.size() == 0) {
-	    cerr << "Warning: unable to find any matches in file '" << files[i] << "', excluding this sample from genotypes analysis.\n";
-	    continue;
-	}
+        const MetaPopInfo::Sample& sample = mpopi.samples()[i];
+        load_catalog_matches(in_path + sample.name, m);
 
-	catalog_matches.push_back(m);
- 	samples[m[0]->sample_id] = files[i];
-	sample_ids.push_back(m[0]->sample_id);
+        if (m.size() == 0) {
+            cerr << "Warning: Absent or malformed matches file '"
+                 << sample.name << ".matches.tsv(.gz)"
+                 <<"', excluding this sample from population analysis.\n";
+            samples_to_remove.push_back(i);
+            catalog_matches.pop_back(); // n.b. Index shift will be resolved by the call to MetaPopInfo::delete_samples().
+            continue;
+        }
+
+        size_t sample_id = m[0]->sample_id;
+        if (seen_samples.count(sample_id) > 0) {
+            cerr << "Error: sample ID " << sample_id << " occurs twice in this data set, likely the pipeline was run incorrectly.\n";
+            return -1;
+        }
+        seen_samples.insert(sample_id);
+        mpopi.set_sample_id(i, sample_id);
     }
+    mpopi.delete_samples(samples_to_remove);
+    if (mpopi.samples().size() == 0) {
+        cerr << "Error: Couln't find any matches files.\n";
+        return -1;
+    }
+    // [mpopi] is definitive.
+    cerr << "Working on " << mpopi.samples().size() << " samples.\n";
 
+    // Set the deprecated [samples] variable to the value it should have
+    map<int, string> samples; // map of {sample_id, sample_name}
+    mpopi.fill_samples(samples);
+
+    // Retrieve the IDs of the parents
+    vector<int> sample_ids;
+    for (auto& sample : mpopi.samples())
+        sample_ids.push_back(sample.id);
     sort(sample_ids.begin(), sample_ids.end());
-
     set<int> parent_ids;
     identify_parental_ids(catalog, sample_ids, parent_ids);
 
     //
     // Create the population map
     //
-    cerr << "Populating observed haplotypes for " << sample_ids.size() << " samples, " << catalog.size() << " loci.\n";
-    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(sample_ids.size(), catalog.size());
-    pmap->populate(sample_ids, catalog, catalog_matches);
+    cerr << "Populating observed haplotypes for " << mpopi.samples().size() << " samples, " << catalog.size() << " loci.\n";
+    PopMap<CSLocus> *pmap = new PopMap<CSLocus>(mpopi, catalog.size());
+    pmap->populate(catalog, catalog_matches);
 
     apply_locus_constraints(catalog, pmap);
 
@@ -2675,45 +2706,6 @@ int load_marker_list(string path, set<int> &list) {
  	cerr << "Unable to load any markers from '" << path << "'\n";
 	help();
     }
-
-    return 0;
-}
-
-int build_file_list(vector<string> &files) {
-    uint   pos;
-    string file;
-    struct dirent *direntry;
-
-    DIR *dir = opendir(in_path.c_str());
-
-    if (dir == NULL) {
-	cerr << "Unable to open directory '" << in_path << "' for reading.\n";
-	exit(1);
-    }
-
-    while ((direntry = readdir(dir)) != NULL) {
-	file = direntry->d_name;
-
-	if (file == "." || file == "..")
-	    continue;
-
-	if (file.substr(0, 6) == "batch_")
-	    continue;
-
-	pos = file.rfind(".tags.tsv");
-	if (pos < file.length())
-	    files.push_back(file.substr(0, pos));
-    }
-
-    closedir(dir);
-
-    sort(files.begin(), files.end());
-
-    if (files.size() == 0) {
-	cerr << "Unable to locate any input files to process within '" << in_path << "'\n";
-    }
-
-    cerr << "Found " << files.size() << " input file(s).\n";
 
     return 0;
 }

@@ -49,7 +49,8 @@ rxstacks_SOURCES = src/rxstacks.h src/rxstacks.cc src/constants.h \
 	src/mst.h src/mst.cc \
 	src/models.h src/models.cc \
 	src/aln_utils.h src/aln_utils.cc src/utils.h src/utils.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc
+	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc \
+	src/MetaPopInfo.h src/MetaPopInfo.cc
 
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
 	src/utils.h src/utils.cc src/log_utils.h src/log_utils.cc \
@@ -89,7 +90,8 @@ genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/aln_utils.h src/aln_utils.cc \
 	src/PopMap.h src/genotype_dictionaries.h src/genotype_dictionaries.cc\
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc src/renz.h src/renz.cc
+	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc src/renz.h src/renz.cc \
+	src/MetaPopInfo.h src/MetaPopInfo.cc
 
 populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc \
