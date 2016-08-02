@@ -945,7 +945,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
                 log_fh << "removed_locus\t"
                        << loc->id << "\t"
                        << loc->loc.chr << "\t"
-                       << loc->sort_bp() << "\t"
+                       << loc->sort_bp() +1 << "\t"
                        << 0 << "\tfailed_population_limit\n";
         }
 
@@ -1101,7 +1101,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                         log_fh << "pruned_polymorphic_site\t"
                                << loc->id << "\t"
                                << loc->loc.chr << "\t"
-                               << loc->sort_bp(loc->snps[i]->col) << "\t"
+                               << loc->sort_bp(loc->snps[i]->col) +1 << "\t"
                                << loc->snps[i]->col << "\t"; 
                         if (inc_prune)
                             log_fh << "incompatible_site\n";
@@ -1125,7 +1125,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                     log_fh << "removed_locus\t"
                            << loc->id << "\t"
                            << loc->loc.chr << "\t"
-                           << loc->sort_bp() << "\t"
+                           << loc->sort_bp() +1 << "\t"
                            << 0 << "\tno_snps_remaining\n";
                 blacklist.insert(loc->id);
             }
@@ -1219,7 +1219,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                         log_fh << "pruned_polymorphic_site\t"
                                << loc->id << "\t"
                                << loc->loc.chr << "\t"
-                               << loc->sort_bp(loc->snps[i]->col) << "\t"
+                               << loc->sort_bp(loc->snps[i]->col) +1 << "\t"
                                << loc->snps[i]->col << "\t";
                         if (inc_prune)
                             log_fh << "incompatible_site\n";
@@ -1243,7 +1243,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                     log_fh << "removed_locus\t"
                            << loc->id << "\t"
                            << loc->loc.chr << "\t"
-                           << loc->sort_bp() << "\t"
+                           << loc->sort_bp() +1 << "\t"
                            << 0 << "\tno_snps_remaining\n";
                 blacklist.insert(loc->id);
             }
@@ -2221,7 +2221,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 
             uint k = 0;
             for (uint n = start; n < end; n++) {
-                fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->sort_bp(n);
+                fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->sort_bp(n) +1;
 
                 if (snp_locs.count(n) == 0) {
                     for (int j = 0; j < pmap->sample_cnt(); j++) {
@@ -2727,7 +2727,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
             fh << batch_id            << "\t"
                << hapstats[k]->loc_id << "\t"
                << chr                 << "\t"
-               << hapstats[k]->bp     << "\t"
+               << hapstats[k]->bp +1  << "\t"
                << hapstats[k]->popcnt << "\t";
             if (log_fst_comp)
                 fh << hapstats[k]->comp[0]  << "\t"
@@ -2966,7 +2966,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
                        << pop_key[pop_ids[i]] << "\t"
                        << pop_key[pop_ids[j]] << "\t"
                        << chr                 << "\t"
-                       << hapstats[k]->bp     << "\t";
+                       << hapstats[k]->bp +1  << "\t";
                     if (log_fst_comp)
                         fh << hapstats[k]->comp[0]  << "\t"
                            << hapstats[k]->comp[1]  << "\t"
@@ -4481,7 +4481,7 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
                        << pop_key[pop_1]    << "\t"
                        << pop_key[pop_2]    << "\t"
                        << chr               << "\t"
-                       << pairs[i]->bp      << "\t"
+                       << pairs[i]->bp +1   << "\t"
                        << pairs[i]->col     << "\t"
                        << pairs[i]->pi      << "\t"
                        << pairs[i]->fst     << "\t"
@@ -5080,7 +5080,7 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
             if (loc->annotation.length() > 0)
                 id << "\t" << loc->id << "\t" << loc->annotation;
             else if (strlen(loc->loc.chr) > 0)
-                id << "\t" << loc->id << "\t" << loc->loc.chr << "_" << loc->loc.bp;
+                id << "\t" << loc->id << "\t" << loc->loc.chr << "_" << loc->loc.bp +1;
             else
                 id << "\t" << loc->id << "\t";
         }

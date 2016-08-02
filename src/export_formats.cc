@@ -1659,7 +1659,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
         for (uint pos = 0; pos < ordered_loci.size(); pos++) {
             loc = catalog[ordered_loci[pos].id];
             col = loc->snps[ordered_loci[pos].snp_index]->col;
-            fh << " " << ordered_loci[pos].bp;
+            fh << " " << ordered_loci[pos].bp +1;
         }
         fh << "\n";
 
@@ -1878,7 +1878,7 @@ write_phase(map<int, CSLocus *> &catalog,
         //
         fh << "P";
         for (uint pos = 0; pos < ordered_loci.size(); pos++)
-            fh << " " << ordered_loci[pos].bp;
+            fh << " " << ordered_loci[pos].bp +1;
         fh << "\n";
 
         //
@@ -2137,7 +2137,7 @@ write_plink(map<int, CSLocus *> &catalog,
                     fh << chr << "\t"
                        << loc->id << "_" << col << "\t"
                        << "0\t" 
-                       << loc->sort_bp(col) << "\n";
+                       << loc->sort_bp(col) +1 << "\n";
             }
         }
     }
@@ -2373,7 +2373,7 @@ write_beagle(map<int, CSLocus *> &catalog,
                 // Output this locus to the markers file.
                 //
                 mfh << loc->id << "_" << col << "\t" 
-                    << loc->sort_bp(col)     << "\t" 
+                    << loc->sort_bp(col) +1  << "\t"
                     << t->nucs[col].p_allele << "\t" 
                     << t->nucs[col].q_allele << "\n";
 
@@ -2590,7 +2590,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
                 // Output this locus to the markers file.
                 //
                 mfh << loc->id << "\t" 
-                    << loc->sort_bp();
+                    << loc->sort_bp() +1;
                 for (uint j = 0; j < loc->strings.size(); j++)
                     mfh << "\t" << loc->strings[j].first;
                 mfh << "\n";

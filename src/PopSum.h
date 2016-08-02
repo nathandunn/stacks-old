@@ -412,7 +412,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
                            << "incompatible_locus\t"
                            << loc->id << "\t"
                            << loc->loc.chr << "\t"
-                           << loc->sort_bp(loc->snps[k]->col) << "\t"
+                           << loc->sort_bp(loc->snps[k]->col) +1 << "\t"
                            << loc->snps[k]->col << "\t" 
                            << pop_key[population_id] << "\n";
             }

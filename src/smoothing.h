@@ -95,16 +95,16 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
 		    #pragma omp critical
 		    {
 			cerr << "ERROR: current basepair is out of the sliding window.\n"
-			     << "  Calculating sliding window; start position: " << pos_l << ", " << (popstats[pos_l] == NULL ? -1 : popstats[pos_l]->bp) << "bp; end position: " 
-			     << pos_u << ", " << (popstats[pos_u] == NULL ? -1 : popstats[pos_u]->bp) << "bp; center: " 
-			     << pos_c << ", " << popstats[pos_c]->bp << "bp\n"
-			     << "  Current position: " << pos_p << ", " << popstats[pos_p]->bp << "; Dist: " << dist << "\n"
+			     << "  Calculating sliding window; start position: " << pos_l << ", " << (popstats[pos_l] == NULL ? -1 : popstats[pos_l]->bp +1) << "bp; end position: "
+			     << pos_u << ", " << (popstats[pos_u] == NULL ? -1 : popstats[pos_u]->bp +1) << "bp; center: "
+			     << pos_c << ", " << popstats[pos_c]->bp +1 << "bp\n"
+			     << "  Current position: " << pos_p << ", " << popstats[pos_p]->bp +1 << "; Dist: " << dist << "\n"
 			     << "  Window positions:\n";
 
 			for (uint j = pos_l; j < pos_u; j++) {
 			    p = popstats[j];
 			    if (p == NULL) continue;
-			    cerr << "    Position: " << j << "; " << p->bp << "bp\n";
+			    cerr << "    Position: " << j << "; " << p->bp +1 << "bp\n";
 			}
 			//exit(0);
 		    }
