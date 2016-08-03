@@ -125,7 +125,7 @@ GappedAln::GappedAln(int len_1, int len_2)
 
 GappedAln::~GappedAln()
 {
-    for (int i = 0; i < this->_m; i++) {
+    for (uint i = 0; i < this->_m; i++) {
         delete [] this->matrix[i];
         delete [] this->path[i];
     }
@@ -139,8 +139,8 @@ GappedAln::init(int size_1, int size_2)
     //
     // Resize the underlying matrix and path arrays, if necessary.
     //
-    if ((size_1 + 1) > this->_m_size || (size_2 + 1) > this->_n_size) {
-	for (int i = 0; i < this->_m_size; i++) {
+    if ((size_1 + 1) > (int)_m_size || (size_2 + 1) > (int)_n_size) {
+	for (uint i = 0; i < this->_m_size; i++) {
 	    delete [] this->matrix[i];
 	    delete [] this->path[i];
 	}

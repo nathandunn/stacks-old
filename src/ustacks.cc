@@ -246,7 +246,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 	if (tag_2->alns.size() > 1 && tag_2->alns[0].pct_id == tag_2->alns[1].pct_id)
             continue;
 
-        if (tag_1->id != tag_2->alns[0].id)
+        if (tag_1->id != (int)tag_2->alns[0].id)
             continue;
 
 	cigar_1 = invert_cigar(tag_1->alns[0].cigar);
@@ -557,7 +557,7 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
         //
         // Free the k-mers we generated for this query.
         //
-        for (int j = 0; j < query_kmers.size(); j++)
+        for (uint j = 0; j < query_kmers.size(); j++)
             delete [] query_kmers[j];
         query_kmers.clear();
 
@@ -633,7 +633,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
             //
             // Lookup the occurances of each remainder k-mer in the MergedStack k-mer map
             //
-            for (uint k = 0; k < num_kmers; k++) {
+            for (int k = 0; k < num_kmers; k++) {
                 h = kmer_map.find(rem_kmers[k]);
 
                 if (h != kmer_map.end())
@@ -1591,7 +1591,7 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
 	//
 	// Free the k-mers we generated for this query
 	//
-	for (int j = 0; j < query_kmers.size(); j++)
+	for (uint j = 0; j < query_kmers.size(); j++)
 	    delete [] query_kmers[j];
     }
 
