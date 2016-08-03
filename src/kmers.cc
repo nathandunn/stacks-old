@@ -98,7 +98,7 @@ generate_kmers_lazily(const char *seq, uint kmer_len, uint num_kmers, vector<cha
     if (num_kmers > kmers.size()) {
 	int new_kmers = num_kmers - kmers.size();
 
-        for (uint i = 0; i < new_kmers; i++) {
+        for (int i = 0; i < new_kmers; i++) {
 	    kmer = new char[kmer_len + 1];
 	    kmers.push_back(kmer);
 	}

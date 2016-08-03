@@ -962,8 +962,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
     Datum   **d;
     bool      sample_prune, maf_prune, het_prune, inc_prune;
     int       size, pruned = 0;
-    uint      pop_id;
-    
+
     if (verbose)
         log_fh << "\n#\n# List of pruned nucleotide sites\n#\n"
                << "# Action\tLocus ID\tChr\tBP\tColumn\tReason\n";
@@ -2261,7 +2260,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
     //
     for (auto& pop : mpopi.pops()) {
         fh << "# " << pop.name << "\t";
-        for (int i = pop.first_sample; i <= pop.last_sample; i++) {
+        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
             fh << mpopi.samples()[i].name;
             if (i < pop.last_sample)
                 fh << ",";
@@ -2600,7 +2599,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     //
     for (auto& pop : mpopi.pops()) {
         fh << "# Population " << pop.name << "\t";
-        for (int k = pop.first_sample; k <= pop.last_sample; k++) {
+        for (size_t k = pop.first_sample; k <= pop.last_sample; k++) {
             fh << mpopi.samples()[k].name;
             if (k < pop.last_sample)
                 fh << ",";
@@ -2847,7 +2846,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
             for (uint k = 0; k < subpop_ids.size(); k++) {
                 const Pop& pop_k = mpopi.pops()[k]; // (Will be one of [pop_i], [pop_j].)
                 fh << "# Population " << pop_k.name << "\t";
-                for (int n = pop_k.first_sample; n <= pop_k.last_sample; n++) {
+                for (size_t n = pop_k.first_sample; n <= pop_k.last_sample; n++) {
                     fh << mpopi.samples()[n].name;
                     if (n < pop_k.last_sample)
                         fh << ",";
@@ -2953,7 +2952,7 @@ fixed_locus(Datum **d, vector<int> &pop_ids)
 
     for (int pop_id : pop_ids) {
         const Pop& pop = mpopi.pops()[pop_id];
-        for (int i = pop.first_sample; i <= pop.last_sample; i++) {
+        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
             if (d[i] == NULL) continue;
 
             if (d[i]->obshap.size() > 2) { 
@@ -3115,7 +3114,7 @@ haplotype_amova(Datum **d, LocSum **s, vector<int> &pop_ids)
     //
     for (int pop_id : pop_ids) {
         const Pop& pop = mpopi.pops()[pop_id];
-        for (int i = pop.first_sample; i <= pop.last_sample; i++) {
+        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
             if (d[i] == NULL) continue;
 
             if (d[i]->obshap.size() > 2) { 
@@ -3598,7 +3597,7 @@ haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
     //
     for (int pop_id : pop_ids) {
         const Pop& pop = mpopi.pops()[pop_id];
-        for (int i = pop.first_sample; i <= pop.last_sample; i++) {
+        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
             if (d[i] == NULL) {
                 continue;
             } else if (d[i]->obshap.size() > 2) {
@@ -3845,7 +3844,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
     //
     for (auto& pop : mpopi.pops()) {
         fh << "# " << pop.name << "\t";
-        for (int i = pop.first_sample; i <= pop.last_sample; i++) {
+        for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
             fh << mpopi.samples()[i].name;
             if (i < pop.last_sample)
                 fh << ",";

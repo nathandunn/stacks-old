@@ -252,7 +252,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
     CLocus *ctag;
     QLocus *qtag;
     string  cseq, qseq, cigar_str;
-    int     cseq_len, qseq_len, match_index;
+    int     cseq_len, match_index;
     vector<pair<char, uint> > cigar;
 
     GappedAln *aln = new GappedAln();
@@ -327,7 +327,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         cigar_str = "";
 
         for (uint k = 0; k < qtag->matches.size(); k++)
-            if (qtag->matches[k]->cat_id == min_cat_id) {
+            if ((int)qtag->matches[k]->cat_id == min_cat_id) {
                 cigar_str   = qtag->matches[k]->cigar;
                 match_index = k;
                 break;
@@ -370,7 +370,6 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
         //
         if (gapped_aln) {
-            qseq_len  = parse_cigar(cigar_str.c_str(), cigar);
             qseq      = apply_cigar_to_seq(qtag->con, cigar);
             adjust_snps_for_gaps(cigar, qtag);
 
@@ -383,7 +382,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
             // If the alignment modified the catalog locus, record it so we can re-align
             // any other matching sequences from this sample.
             //
-            if (cseq_len > ctag->len)
+            if ((uint)cseq_len > ctag->len)
                 ctag->match_cnt++;
 
             //
@@ -550,7 +549,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
 		// generate, multiple, spurious hits in sequences with multiple copies of the same kmer.
 		//
 		uniq_kmers.clear();
-                for (uint j = 0; j < num_kmers; j++)
+                for (int j = 0; j < num_kmers; j++)
 		    uniq_kmers.insert(kmers[j]);
 
 		hits.clear();
@@ -589,7 +588,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
 		    hit_cnt   = 0;
 		    allele_id = prev_id;
 
-		    while (hits[index] == prev_id) {
+		    while ((uint)hits[index] == prev_id) {
 			hit_cnt++;
 			index++;
 		    }
@@ -597,7 +596,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
 		    if (index < hits_size)
 			prev_id = hits[index];
 
-		    if (hit_cnt >= min_hits)
+		    if (hit_cnt >= (uint)min_hits)
 			ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
         	} while (index < hits_size);
@@ -728,7 +727,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 		// generate, multiple, spurious hits in sequences with multiple copies of the same kmer.
 		//
 		uniq_kmers.clear();
-                for (uint j = 0; j < num_kmers; j++)
+                for (int j = 0; j < num_kmers; j++)
 		    uniq_kmers.insert(kmers[j]);
 
                 hits.clear();
@@ -767,7 +766,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 		    hit_cnt   = 0;
 		    allele_id = prev_id;
 
-		    while (hits[index] == prev_id) {
+		    while ((uint)hits[index] == prev_id) {
 			hit_cnt++;
 			index++;
 		    }
@@ -775,7 +774,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 		    if (index < hits_size)
 			prev_id = hits[index];
 
-		    if (hit_cnt >= min_hits)
+		    if (hit_cnt >= (uint)min_hits)
 			ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
         	} while (index < hits_size);
@@ -794,7 +793,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
 		top_hit = ordered_hits[0].second;
                 stop    = 1;
 		for (uint j = 1; j < ordered_hits.size(); j++)
-		    if (ordered_hits[j].second < top_hit) {
+		    if ((uint)ordered_hits[j].second < top_hit) {
 			stop = j;
 			break;
 		    }

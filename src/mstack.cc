@@ -194,10 +194,10 @@ MergedStack::calc_likelihood()
         //
         // Don't invoke the model within gaps.
         //
-        if (cur_gap < this->gaps.size() && col == this->gaps[cur_gap].start) {
+        if (cur_gap < gaps.size() && col == (int)gaps[cur_gap].start) {
             do {
                 col++;
-            } while (col < this->gaps[cur_gap].end && col < length);
+            } while (col < (int)gaps[cur_gap].end && col < length);
             col--;
             continue;
         }
