@@ -598,15 +598,14 @@ int main (int argc, char* argv[]) {
     psum->tally(catalog);
     cerr << "done.\n";
 
-    for (size_t i=0; i<mpopi.pops().size(); ++i) {
-        const Pop& pop = mpopi.pops()[i];
-        if (kernel_smoothed) {
-            if (loci_ordered) {
-                cerr << "  Generating kernel-smoothed population statistics for population '" << pop.name << "'...\n";
+    if (kernel_smoothed) {
+        if (loci_ordered) {
+            for (size_t i=0; i<mpopi.pops().size(); ++i) {
+                cerr << "  Generating kernel-smoothed population statistics for population '" << mpopi.pops()[i].name << "'...\n";
                 kernel_smoothed_popstats(catalog, pmap, psum, i, log_fh);
-            } else {
-                cerr << "Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
             }
+        } else {
+            cerr << "Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
         }
     }
 
