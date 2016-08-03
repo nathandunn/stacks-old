@@ -2635,7 +2635,6 @@ write_phylip(map<int, CSLocus *> &catalog,
     LocTally *t;
 
     int  pop_cnt = psum->pop_cnt();
-    int  pop_id;
     char nuc;
 
     //
@@ -2795,7 +2794,7 @@ write_phylip(map<int, CSLocus *> &catalog,
             id_str[j] = ' ';
         id_str[9] = '\0';
 
-        fh << id_str << " " << interspecific_nucs[pop_id] << "\n";
+        fh << id_str << " " << interspecific_nucs[i_pop] << "\n";
     }
 
     //
