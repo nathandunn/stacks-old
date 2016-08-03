@@ -2619,6 +2619,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
             if (i_pop != group.pops.back())
                 fh << ",";
         }
+        fh << "\n";
     }
 
     fh << "# Batch ID " << "\t"
@@ -2845,8 +2846,8 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
             //
             // Write the population members.
             //
-            for (uint k = 0; k < subpop_ids.size(); k++) {
-                const Pop& pop_k = mpopi.pops()[k]; // (Will be one of [pop_i], [pop_j].)
+            for (int k : subpop_ids) {
+                const Pop& pop_k = mpopi.pops()[k]; // This is [pop_i], then [pop_j].
                 fh << "# Population " << pop_k.name << "\t";
                 for (int n = pop_k.first_sample; n <= pop_k.last_sample; n++) {
                     fh << mpopi.samples()[n].name;
