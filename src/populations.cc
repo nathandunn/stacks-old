@@ -5139,11 +5139,14 @@ bool hap_compare(pair<string, int> a, pair<string, int> b) {
 }
 
 int parse_command_line(int argc, char* argv[]) {
-#define O_INPUT_MODE       1000
-#define O_OUT_PATH         1001
 #define O_IN_PATH          'P'
-#define O_IN_VCF           1002
-#define O_DEBUG_FLAGS      1003
+#define O_OUT_PATH         'O'
+#define O_IN_VCF           'V'
+#define O_DEBUG_FLAGS      1001
+#define O_BOOTSTRAP_TYPE   1002
+#define O_ORDERED_EXPORT   1003
+#define O_BOOTSTRAP_REPS   'N'
+#define O_VCF              1004
 
     while (1) {
         static struct option long_options[] = {
@@ -5151,7 +5154,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"version",        no_argument,       NULL, 'v'},
             {"verbose",        no_argument,       NULL, 'd'},
             {"sql",            no_argument,       NULL, 's'},
-            {"vcf",            no_argument,       NULL, 'V'},
+            {"vcf",            no_argument,       NULL, O_VCF},
             {"vcf_haplotypes", no_argument,       NULL, 'n'},
             {"fasta",          no_argument,       NULL, 'F'},
             {"fasta_strict",   no_argument,       NULL, 'J'},
@@ -5170,26 +5173,25 @@ int parse_command_line(int argc, char* argv[]) {
             {"treemix",        no_argument,       NULL, 'U'},
             {"merge_sites",    no_argument,       NULL, 'D'},
             {"window_size",    required_argument, NULL, 'w'},
-            {"num_threads",    required_argument, NULL, 't'},
+            {"threads",    required_argument, NULL, 't'},
             {"batch_id",       required_argument, NULL, 'b'},
             {"in_path",        required_argument, NULL, O_IN_PATH},
             {"out_path",       required_argument, NULL, O_OUT_PATH},
-            {"input_mode",     required_argument, NULL, O_INPUT_MODE},
             {"in_vcf",         required_argument, NULL, O_IN_VCF},
             {"progeny",        required_argument, NULL, 'r'},
             {"min_depth",      required_argument, NULL, 'm'},
             {"renz",           required_argument, NULL, 'e'},
-            {"pop_map",        required_argument, NULL, 'M'},
+            {"popmap",         required_argument, NULL, 'M'},
             {"whitelist",      required_argument, NULL, 'W'},
             {"blacklist",      required_argument, NULL, 'B'},
             {"write_single_snp",  no_argument,       NULL, 'I'},
             {"write_random_snp",  no_argument,       NULL, 'j'},
-            {"ordered_export",    no_argument,       NULL, 'N'},
+            {"ordered_export",    no_argument,       NULL, O_ORDERED_EXPORT},
             {"kernel_smoothed",   no_argument,       NULL, 'k'},
             {"fstats",            no_argument,       NULL, '6'},
             {"log_fst_comp",      no_argument,       NULL, 'l'},
-            {"bootstrap_type",    required_argument, NULL, 'O'},
-            {"bootstrap_reps",    required_argument, NULL, 'R'},
+            {"bootstrap_type",    required_argument, NULL, O_BOOTSTRAP_TYPE},
+            {"bootstrap_reps",    required_argument, NULL, O_BOOTSTRAP_REPS},
             {"bootstrap_wl",      required_argument, NULL, 'Q'},
             {"bootstrap",         no_argument,       NULL, '1'},
             {"bootstrap_fst",     no_argument,       NULL, '2'},
@@ -5233,17 +5235,6 @@ int parse_command_line(int argc, char* argv[]) {
             out_path = optarg;
             if (!out_path.empty() && out_path.back() != '/')
                 out_path += "/";
-            break;
-        case O_INPUT_MODE:
-            if (strcasecmp(optarg, "stacks") == 0) {
-                input_mode = InputMode::stacks;
-            } else if (strcasecmp(optarg, "vcf") == 0) {
-                input_mode = InputMode::vcf;
-            } else {
-                cerr << "Error: Malformed arguments. Unrecognized input mode '"
-                     << optarg << "'.\n";
-                help();
-            }
             break;
         case O_IN_VCF:
             in_vcf_path = optarg;
@@ -5323,7 +5314,7 @@ int parse_command_line(int argc, char* argv[]) {
         case '5':
             bootstrap_pifis = true;
             break;
-        case 'O':
+        case O_BOOTSTRAP_TYPE:
             if (strcasecmp(optarg, "exact") == 0)
                 bootstrap_type = bs_exact;
             else if (strcasecmp(optarg, "approx") == 0)
@@ -5333,7 +5324,7 @@ int parse_command_line(int argc, char* argv[]) {
                 help();
             }
             break;
-        case 'R':
+        case O_BOOTSTRAP_REPS:
             bootstrap_reps = atoi(optarg);
             break;
         case 'Q':
@@ -5350,13 +5341,13 @@ int parse_command_line(int argc, char* argv[]) {
         case 'j':
             write_random_snp = true;
             break;
-        case 'N':
+        case O_ORDERED_EXPORT:
             ordered_export = true;
             break;
         case 's':
             sql_out = true;
             break;
-        case 'V':
+        case O_VCF:
             vcf_out = true;
             break;
         case 'n':
@@ -5453,6 +5444,7 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'v':
             version();
+            exit(0);
             break;
         case '?':
             // getopt_long already printed an error message.
@@ -5491,12 +5483,19 @@ int parse_command_line(int argc, char* argv[]) {
     // Check argument constrains.
     //
 
-    if (input_mode == InputMode::stacks) {
+    if (not in_path.empty() && not in_vcf_path.empty()) {
+        cerr << "Error: Please specify either '-P' or '--in_vcf', not both.\n";
+        help();
+    } else if (not in_path.empty()) {
+        input_mode = InputMode::stacks;
+    } else if (not in_vcf_path.empty()) {
+        input_mode = InputMode::vcf;
+    } else {
+        cerr << "Error: One of '--in_path' or '--in_vcf' is required.\n";
+        help();
+    }
 
-        if (in_path.empty()) {
-            cerr << "You must specify a path to the directory containing Stacks output files.\n";
-            help();
-        }
+    if (input_mode == InputMode::stacks) {
 
         if (pmap_path.empty())
             cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
@@ -5512,11 +5511,6 @@ int parse_command_line(int argc, char* argv[]) {
         out_prefix = string("batch_") + to_string(batch_id);
 
     } else if (input_mode == InputMode::vcf) {
-
-        if (in_vcf_path.empty()) {
-            cerr << "You must specify a path to a VCF input file.\n";
-            help();
-        }
 
         if (out_path.empty()) {
             cerr << "Error: Malformed arguments: input mode 'vcf' requires an output directory (--out_path).\n";
@@ -5550,88 +5544,82 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "populations " << VERSION << "\n\n";
-
-    exit(0);
+    cerr << "populations " << VERSION << "\n";
 }
 
 void help() {
-    std::cerr << "populations " << VERSION << "\n"
-              << "populations -b batch_id -P path -M path [-r min] [-m min] [-B blacklist] [-W whitelist] [-s] [-e renz] [-t threads] [-v] [-h]" << "\n"
-              << "  h: display this help messsage.\n"
-              << "  v: print program version.\n"
-              << "  t: number of threads to run in parallel sections of code.\n"
-              << "  --input_path: one of \"stacks\" (default) or \"vcf\".\n"
-              << "  M: path to the population map, a tab separated file describing which individuals belong in which population.\n"
-              << "  B: specify a file containing Blacklisted markers to be excluded from the export.\n"
-              << "  W: specify a file containing Whitelisted markers to include in the export.\n"
-              << "  --out_path: path to a directory where to white the output files. In stacks mode, defaults to the input directory (-P).\n"
+    cerr << "Usage:\n"
+              << "populations -P dir -b batch_id [-O dir] [-M popmap] (filters) [--fstats] [-k [--window_size=150000] [--bootstrap [-N 100]]] (output formats)\n"
+              << "populations -V vcf -O dir [-M popmap] (filters) [--fstats] [-k [--window_size=150000] [--bootstrap [-N 100]]] (output formats)\n"
               << "\n"
-              << "  Stacks mode:\n"
-              << "    b: Batch ID to examine when exporting from the catalog.\n"
-              << "    P: path to the directory containing the Stacks files. (--in_path)\n"
-              << "    s: output a file to import results into an SQL database.\n"
-              << "    e: restriction enzyme, required if generating 'genomic' output.\n"
+              << "  -P,--in_path: path to the directory containing the Stacks files.\n"
+              << "  -b,--batch_id: Batch ID to examine when exporting from the catalog (required by -P).\n"
+              << "  -V,--in_vcf: path to an input VCF file.\n"
+              << "  -O,--out_path: path to a directory where to white the output files. (Required by -V; otherwise defaults to value of -P.)\n"
+              << "  -M,--popmap: path to a population map. (Format is 'SAMPLE1\tPOP1\\n...'.)\n"
+              << "  -t,--threads: number of threads to run in parallel sections of code.\n"
+              << "  -s,--sql_out: output a file to import results into an SQL database.\n"
               << "\n"
-              << "  VCF mode:\n"
-              << "    --in_vcf: path to an input VCF file.\n"
+              << "Data Filtering:\n"
+              << "  -p [int]: minimum number of populations a locus must be present in to process a locus.\n"
+              << "  -r [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
+              << "  --min_maf [float]: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < min_maf < 0.5).\n"
+              << "  --max_obs_het [float]: specify a maximum observed heterozygosity required to process a nucleotide site at a locus.\n"
+              << ("  -m [int]: specify a minimum stack depth required for individuals at a locus.\n")
+              << ("  --lnl_lim [float]: filter loci with log likelihood values below this threshold.\n")
+              << "  --write_single_snp: restrict data analysis to only the first SNP per locus.\n"
+              << "  --write_random_snp: restrict data analysis to one random SNP per locus.\n"
+              << "  -B: path to a file containing Blacklisted markers to be excluded from the export.\n"
+              << "  -W: path to a file containing Whitelisted markers to include in the export.\n"
               << "\n"
-              << "  Merging and Phasing:\n"
-              << "    --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
-              << "    --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n"
+              << "Merging and Phasing:\n"
+              << "  -e,--renz: restriction enzyme name.\n"
+              << "  --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
+              << ("  --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n")
               << "\n"
-              << "  Data Filtering:\n"
-              << "    r: minimum percentage of individuals in a population required to process a locus for that population.\n"
-              << "    p: minimum number of populations a locus must be present in to process a locus.\n"
-              << "    m: specify a minimum stack depth required for individuals at a locus.\n"
-              << "    f: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'.\n"
-              << "    --min_maf: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < min_maf < 0.5).\n"
-              << "    --max_obs_het: specify a maximum observed heterozygosity required to process a nucleotide site at a locus.\n"
-              << "    --p_value_cutoff [num]: required p-value to keep an Fst measurement (0.05 by default). Also used as base for Bonferroni correction.\n"
-              << "    --lnl_lim [num]: filter loci with log likelihood values below this threshold.\n"
-              << "    --write_single_snp: restrict data analysis to only the first SNP per locus.\n"
-              << "    --write_random_snp: restrict data analysis to one random SNP per locus.\n"
+              << "Fstats:\n"
+              << "  --fstats: enable SNP and haplotype-based F statistics.\n"
+              << ("  --fst_correction: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'. Default: off.\n")
+              << ("  --p_value_cutoff [float]: maximum p-value to keep an Fst measurement. Default: 0.05. (Also used as base for Bonferroni correction.)\n")
               << "\n"
-              << "  Fstats:\n"
-              << "    --fstats: enable SNP and haplotype-based F statistics.\n"
+              << "Kernel-smoothing algorithm:\n"
+              << "  -k,--kernel_smoothed: enable kernel-smoothed Pi, Fis, Fst, Fst', and Phi_st calculations.\n"
+              << "  --sigma [int]: standard deviation of the kernel smoothing weight distribution. Default 150kb.\n"
+              << "  --bootstrap: turn on boostrap resampling for all smoothed statistics.\n"
+              << "  -N,--bootstrap_reps [int]: number of bootstrap resamplings to calculate (default 100).\n"
+              << ("  --bootstrap_pifis: turn on boostrap resampling for smoothed SNP-based Pi and Fis calculations.\n")
+              << ("  --bootstrap_fst: turn on boostrap resampling for smoothed Fst calculations based on pairwise population comparison of SNPs.\n")
+              << ("  --bootstrap_div: turn on boostrap resampling for smoothed haplotype diveristy and gene diversity calculations based on haplotypes.\n")
+              << ("  --bootstrap_phist: turn on boostrap resampling for smoothed Phi_st calculations based on haplotypes.\n")
+              << ("  --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n")
               << "\n"
-              << "  Kernel-smoothing algorithm:\n" 
-              << "    k: enable kernel-smoothed Pi, Fis, Fst, Fst', and Phi_st calculations.\n"
-              << "    --window_size [num]: distance over which to average values (sigma, default 150,000bp; window is 3sigma in length).\n"
+              << "File output options:\n"
+              << "  --ordered_export: if data is reference aligned, exports will be ordered; only a single representative of each overlapping site.\n"
+              << "  --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file (requires --renz).\n"
+              << "  --fasta: output full sequence for each unique haplotype, from each sample locus in FASTA format, regardless of plausibility.\n"
+              << ("  --fasta_strict: output full sequence for each haplotype, from each sample locus in FASTA format, only for biologically plausible loci.\n")
+              << "  --vcf: output SNPs in Variant Call Format (VCF).\n"
+              << "  --vcf_haplotypes: output haplotypes in Variant Call Format (VCF).\n"
+              << "  --genepop: output results in GenePop format.\n"
+              << "  --structure: output results in Structure format.\n"
+              << "  --phase: output genotypes in PHASE format.\n"
+              << "  --fastphase: output genotypes in fastPHASE format.\n"
+              << "  --beagle: output genotypes in Beagle format.\n"
+              << ("  --beagle_phased: output haplotypes in Beagle format.\n")
+              << "  --plink: output genotypes in PLINK format.\n"
+              << "  --hzar: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
+              << "  --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
+              << ("  --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n")
+              << ("  --phylip_var_all: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n")
+              << "  --treemix: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
               << "\n"
-              << "  Bootstrap Resampling:\n" 
-              << "    --bootstrap: turn on boostrap resampling for all smoothed statistics.\n"
-              << "    --bootstrap_pifis: turn on boostrap resampling for smoothed SNP-based Pi and Fis calculations.\n"
-              << "    --bootstrap_fst: turn on boostrap resampling for smoothed Fst calculations based on pairwise population comparison of SNPs.\n"
-              << "    --bootstrap_div: turn on boostrap resampling for smoothed haplotype diveristy and gene diversity calculations based on haplotypes.\n"
-              << "    --bootstrap_phist: turn on boostrap resampling for smoothed Phi_st calculations based on haplotypes.\n"
-              << "    --bootstrap_reps [num]: number of bootstrap resamplings to calculate (default 100).\n"
-              << "    --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n"
-              << "\n"
-              << "  File ouput options:\n"
-              << "    --ordered_export: if data is reference aligned, exports will be ordered; only a single representative of each overlapping site.\n"
-              << "    --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file.\n"
-              << "    --fasta: output full sequence for each unique haplotype, from each sample locus in FASTA format, regardless of plausibility.\n"
-              << "    --fasta_strict: output full sequence for each haplotype, from each sample locus in FASTA format, only for biologically plausible loci.\n"
-              << "    --vcf: output SNPs in Variant Call Format (VCF).\n"
-              << "    --vcf_haplotypes: output haplotypes in Variant Call Format (VCF).\n"
-              << "    --genepop: output results in GenePop format.\n"
-              << "    --structure: output results in Structure format.\n"
-              << "    --phase: output genotypes in PHASE format.\n"
-              << "    --fastphase: output genotypes in fastPHASE format.\n"
-              << "    --beagle: output genotypes in Beagle format.\n"
-              << "    --beagle_phased: output haplotypes in Beagle format.\n"
-              << "    --plink: output genotypes in PLINK format.\n"
-              << "    --hzar: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
-              << "    --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
-              << "    --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
-              << "    --phylip_var_all: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
-              << "    --treemix: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
-              << "\n"
-              << "  Debugging:\n"
-              << "    --verbose: turn on additional logging.\n"
-              << "    --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n";
-    // << "    --bootstrap_type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
+              << "Additional options:\n"
+              << "  -h,--help: display this help messsage.\n"
+              << "  -v,--version: print program version.\n"
+              << "  --verbose: turn on additional logging.\n"
+              << ("  --log_fst_comp: log components of Fst/Phi_st calculations to a file.\n");
+
+              // << "    --bootstrap_type [exact|approx]: enable bootstrap resampling for population statistics (reference genome required).\n"
 
     exit(0);
 }
