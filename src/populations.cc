@@ -41,7 +41,7 @@ typedef MetaPopInfo::Group Group;
 extern int **encoded_gtypes;
 
 // Global variables to hold command-line options.
-InputMode input_mode = InputMode::stacks;
+InputMode input_mode  = InputMode::stacks;
 int       num_threads =  1;
 int       batch_id    = -1;
 string    in_path;
@@ -222,11 +222,9 @@ int main (int argc, char* argv[]) {
     }
 
     if (input_mode == InputMode::stacks) {
-
         //
         // Stacks mode
         //
-
         if (pmap_path.empty()) {
             cerr << "No population map specified, building file list...\n";
             mpopi.init_directory(in_path);
@@ -261,7 +259,9 @@ int main (int argc, char* argv[]) {
             return -1;
         }
 
+        //
         // Load the catalog
+        //
         cerr << "Parsing the catalog files...\n";
         string catalog_prefix = in_path + "batch_" + to_string(batch_id) + ".catalog";
         bool compressed = false;
@@ -271,7 +271,9 @@ int main (int argc, char* argv[]) {
             return -1;
         }
 
+        //
         // Load the matches
+        //
         cerr << "Parsing the matches files...\n";
         vector<size_t> samples_to_remove;
         set<size_t> seen_samples;

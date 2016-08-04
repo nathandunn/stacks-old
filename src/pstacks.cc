@@ -52,17 +52,17 @@ int main (int argc, char* argv[]) {
     parse_command_line(argc, argv);
 
     cerr << "Min depth of coverage to report a stack: " << min_stack_cov << "\n"
-	 << "Model type: ";
+         << "Model type: ";
     switch (model_type) {
     case snp:
-	cerr << "SNP\n";
-	break;
+        cerr << "SNP\n";
+        break;
     case fixed: 
-	cerr << "Fixed\n";
-	break;
+        cerr << "Fixed\n";
+        break;
     case bounded:
-	cerr << "Bounded; lower epsilon bound: " << bound_low << "; upper bound: " << bound_high << "\n";
-	break;
+        cerr << "Bounded; lower epsilon bound: " << bound_low << "; upper bound: " << bound_high << "\n";
+        break;
     }
     cerr << "Alpha significance level for model: " << alpha << "\n";
 
@@ -72,17 +72,17 @@ int main (int argc, char* argv[]) {
     //   http://en.wikipedia.org/wiki/Chi-squared_distribution#Table_of_.CF.872_value_vs_p-value
     //
     if (alpha == 0.1) {
-	heterozygote_limit = -2.71;
-	homozygote_limit   =  2.71;
+        heterozygote_limit = -2.71;
+        homozygote_limit   =  2.71;
     } else if (alpha == 0.05) {
-	heterozygote_limit = -3.84;
-	homozygote_limit   =  3.84;
+        heterozygote_limit = -3.84;
+        homozygote_limit   =  3.84;
     } else if (alpha == 0.01) {
-	heterozygote_limit = -6.64;
-	homozygote_limit   =  6.64;
+        heterozygote_limit = -6.64;
+        homozygote_limit   =  6.64;
     } else if (alpha == 0.001) {
-	heterozygote_limit = -10.83;
-	homozygote_limit   =  10.83;
+        heterozygote_limit = -10.83;
+        homozygote_limit   =  10.83;
     }
 
     //
@@ -132,30 +132,30 @@ int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {
     DNANSeq *d;
 
     for (row = 0; row < height; row++) {
-	allele.clear();
+        allele.clear();
 
-	uint snp_cnt = 0;
+        uint snp_cnt = 0;
 
-	for (snp = mtag->snps.begin(); snp != mtag->snps.end(); snp++) {
-	    if ((*snp)->type != snp_type_het) continue;
+        for (snp = mtag->snps.begin(); snp != mtag->snps.end(); snp++) {
+            if ((*snp)->type != snp_type_het) continue;
 
-	    snp_cnt++;
+            snp_cnt++;
 
             d    = reads[row];
-	    base = (*d)[(*snp)->col];
+            base = (*d)[(*snp)->col];
 
-	    //
-	    // Check to make sure the nucleotide at the location of this SNP is
-	    // of one of the two possible states the multinomial model called.
-	    //
-	    if (base == (*snp)->rank_1 || base == (*snp)->rank_2) 
-		allele += base;
-	    else
-		break;
-	}
+            //
+            // Check to make sure the nucleotide at the location of this SNP is
+            // of one of the two possible states the multinomial model called.
+            //
+            if (base == (*snp)->rank_1 || base == (*snp)->rank_2) 
+                allele += base;
+            else
+                break;
+        }
 
-	if (snp_cnt > 0 && allele.length() == snp_cnt)
-	    mtag->alleles[allele]++;
+        if (snp_cnt > 0 && allele.length() == snp_cnt)
+            mtag->alleles[allele]++;
     }
 
     return 0;
@@ -169,90 +169,90 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
     map<int, MergedStack *>::iterator it;
     vector<int> keys;
     for (it = merged.begin(); it != merged.end(); it++) 
-	keys.push_back(it->first);
+        keys.push_back(it->first);
 
     int i;
     #pragma omp parallel private(i)
     { 
         #pragma omp for schedule(dynamic) 
-	for (i = 0; i < (int) keys.size(); i++) {
-	    MergedStack *mtag;
-	    PStack *utag;
+        for (i = 0; i < (int) keys.size(); i++) {
+            MergedStack *mtag;
+            PStack *utag;
 
-	    mtag = merged[keys[i]];
+            mtag = merged[keys[i]];
 
-	    //
-	    // Create a two-dimensional array, each row containing one read. For
-	    // each unique tag that has been merged together, add the sequence for
-	    // that tag into our array as many times as it originally occurred. 
-	    //
-	    vector<int>::iterator j;
-	    vector<DNANSeq *> reads;
+            //
+            // Create a two-dimensional array, each row containing one read. For
+            // each unique tag that has been merged together, add the sequence for
+            // that tag into our array as many times as it originally occurred. 
+            //
+            vector<int>::iterator j;
+            vector<DNANSeq *> reads;
 
-	    for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
-		utag = unique[*j];
+            for (j = mtag->utags.begin(); j != mtag->utags.end(); j++) {
+                utag = unique[*j];
 
-		for (uint k = 0; k < utag->count; k++) {
-		    reads.push_back(utag->seq);
-		}
-	    }
+                for (uint k = 0; k < utag->count; k++) {
+                    reads.push_back(utag->seq);
+                }
+            }
 
-	    //
-	    // Iterate over each column of the array and call the consensus base.
-	    //
-	    int row, col;
-	    int length = reads[0]->size();
-	    int height = reads.size();
-	    string con;
-	    map<char, int> nuc;
-	    map<char, int>::iterator max, n;
-	    DNANSeq *d;
+            //
+            // Iterate over each column of the array and call the consensus base.
+            //
+            int row, col;
+            int length = reads[0]->size();
+            int height = reads.size();
+            string con;
+            map<char, int> nuc;
+            map<char, int>::iterator max, n;
+            DNANSeq *d;
 
-	    for (col = 0; col < length; col++) {
-		nuc['A'] = 0;
-		nuc['C'] = 0;
-		nuc['G'] = 0;
-		nuc['T'] = 0;
-		nuc['N'] = 0;
+            for (col = 0; col < length; col++) {
+                nuc['A'] = 0;
+                nuc['C'] = 0;
+                nuc['G'] = 0;
+                nuc['T'] = 0;
+                nuc['N'] = 0;
 
-		for (row = 0; row < height; row++) {
-    		    d = reads[row];
-		    if (nuc.count((*d)[col]))
-			nuc[(*d)[col]]++;
-		}
+                for (row = 0; row < height; row++) {
+                    d = reads[row];
+                    if (nuc.count((*d)[col]))
+                        nuc[(*d)[col]]++;
+                }
 
-		//
-		// Find the base with a plurality of occurances and call it.
-		//
-		max = nuc.end();
+                //
+                // Find the base with a plurality of occurances and call it.
+                //
+                max = nuc.end();
 
-		for (n = nuc.begin(); n != nuc.end(); n++) {
-		    if (n->first == 'N') 
-			continue;
-		    if (max == nuc.end() || n->second > max->second)
-			max = n;
-		}
-		con += max->second == 0 ? 'N' : max->first;
+                for (n = nuc.begin(); n != nuc.end(); n++) {
+                    if (n->first == 'N') 
+                        continue;
+                    if (max == nuc.end() || n->second > max->second)
+                        max = n;
+                }
+                con += max->second == 0 ? 'N' : max->first;
 
-		//
-		// Search this column for the presence of a SNP
-		//
-		if (invoke_model)
-		    switch(model_type) {
-		    case snp:
+                //
+                // Search this column for the presence of a SNP
+                //
+                if (invoke_model)
+                    switch(model_type) {
+                    case snp:
                         call_multinomial_snp(mtag, col, nuc, true);
-			break;
-		    case bounded:
-			call_bounded_multinomial_snp(mtag, col, nuc, true);
-			break;
-		    case fixed:
+                        break;
+                    case bounded:
+                        call_bounded_multinomial_snp(mtag, col, nuc, true);
+                        break;
+                    case fixed:
                         call_multinomial_fixed(mtag, col, nuc);
-			break;
-		    }
-	    }
+                        break;
+                    }
+            }
 
-	    if (invoke_model) {
-		call_alleles(mtag, reads);
+            if (invoke_model) {
+                call_alleles(mtag, reads);
 
                 if (model_type == fixed) {
                     //
@@ -260,27 +260,27 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
                     //
                     vector<SNP *>::iterator s;
                     for (s = mtag->snps.begin(); s != mtag->snps.end(); s++) {
-			if ((*s)->type == snp_type_unk)
-			    con.replace((*s)->col, 1, "N");
+                        if ((*s)->type == snp_type_unk)
+                            con.replace((*s)->col, 1, "N");
                     }
                 }
             }
 
-	    mtag->add_consensus(con.c_str());
+            mtag->add_consensus(con.c_str());
 
-	    //
-	    // If SNPs were called at this locus but no alleles could be determined,
-	    // blacklist this tag. This can occur if there are two many uncalled bases
-	    // in the locus (Ns), such that haplotypes can't be consistently read
-	    // due to the presence of the Ns in the reads.
-	    //
- 	    if (mtag->alleles.empty())
-		for (uint j = 0; j < mtag->snps.size(); j++)
-		    if (mtag->snps[j]->type == snp_type_het) {
-			mtag->blacklisted = 1;
-			break;
-		    }
-	}
+            //
+            // If SNPs were called at this locus but no alleles could be determined,
+            // blacklist this tag. This can occur if there are two many uncalled bases
+            // in the locus (Ns), such that haplotypes can't be consistently read
+            // due to the presence of the Ns in the reads.
+            //
+            if (mtag->alleles.empty())
+                for (uint j = 0; j < mtag->snps.size(); j++)
+                    if (mtag->snps[j]->type == snp_type_het) {
+                        mtag->blacklisted = 1;
+                        break;
+                    }
+        }
     }
 
     return 0;
@@ -298,19 +298,19 @@ double calc_coverage_distribution(map<int, PStack *> &unique, map<int, MergedSta
     double  stdev = 0.0;
 
     for (it = merged.begin(); it != merged.end(); it++) {
-	depth = 0.0;
-	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-	    tag    = unique[*k];
-	    depth += tag->count;
-	}
+        depth = 0.0;
+        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
+            tag    = unique[*k];
+            depth += tag->count;
+        }
 
-	if (depth < min_stack_cov)
-	    continue;
-	if (depth > max) 
-	    max = depth;
+        if (depth < min_stack_cov)
+            continue;
+        if (depth > max) 
+            max = depth;
 
-	sum += depth;
-	total++;
+        sum += depth;
+        total++;
     }
 
     mean = sum / total;
@@ -319,16 +319,16 @@ double calc_coverage_distribution(map<int, PStack *> &unique, map<int, MergedSta
     // Calculate the standard deviation
     //
     for (it = merged.begin(); it != merged.end(); it++) {
-	depth = 0.0;
-	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-	    tag    = unique[*k];
-	    depth += tag->count;
-	}
+        depth = 0.0;
+        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
+            tag    = unique[*k];
+            depth += tag->count;
+        }
 
-	if (depth < min_stack_cov)
-	    continue;
+        if (depth < min_stack_cov)
+            continue;
 
-	sum += pow((depth - mean), 2);
+        sum += pow((depth - mean), 2);
     }
 
     stdev = sqrt(sum / (total - 1));
@@ -345,10 +345,10 @@ int count_raw_reads(map<int, PStack *> &unique, map<int, MergedStack *> &merged)
     long int m = 0;
 
     for (it = merged.begin(); it != merged.end(); it++) {
-	for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-	    tag  = unique[*k];
-	    m   += tag->count;
-	}
+        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
+            tag  = unique[*k];
+            m   += tag->count;
+        }
         m += it->second->remtags.size();
     }
 
@@ -380,9 +380,9 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     string mod_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".models.tsv";
     
     if (gzip) {
-	tag_file += ".gz";
-	snp_file += ".gz";
-	all_file += ".gz";
+        tag_file += ".gz";
+        snp_file += ".gz";
+        all_file += ".gz";
         mod_file += ".gz";
     }
 
@@ -392,14 +392,14 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     gzFile   gz_tags, gz_snps, gz_alle, gz_mods;
     ofstream tags, snps, alle, mods;
     if (gzip) {
-	gz_tags = gzopen(tag_file.c_str(), "wb");
-	if (!gz_tags) {
-	    cerr << "Error: Unable to open gzipped tag file '" << tag_file << "': " << strerror(errno) << ".\n";
-	    exit(1);
-	}
+        gz_tags = gzopen(tag_file.c_str(), "wb");
+        if (!gz_tags) {
+            cerr << "Error: Unable to open gzipped tag file '" << tag_file << "': " << strerror(errno) << ".\n";
+            exit(1);
+        }
         #if ZLIB_VERNUM >= 0x1240
-	gzbuffer(gz_tags, libz_buffer_size);
-	#endif
+        gzbuffer(gz_tags, libz_buffer_size);
+        #endif
         gz_mods = gzopen(mod_file.c_str(), "wb");
         if (!gz_mods) {
             cerr << "Error: Unable to open gzipped tag file '" << tag_file << "': " << strerror(errno) << ".\n";
@@ -408,43 +408,43 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         #if ZLIB_VERNUM >= 0x1240
         gzbuffer(gz_mods, libz_buffer_size);
         #endif
-	gz_snps = gzopen(snp_file.c_str(), "wb");
-	if (!gz_snps) {
-	    cerr << "Error: Unable to open gzipped snps file '" << snp_file << "': " << strerror(errno) << ".\n";
-	    exit(1);
-	}
+        gz_snps = gzopen(snp_file.c_str(), "wb");
+        if (!gz_snps) {
+            cerr << "Error: Unable to open gzipped snps file '" << snp_file << "': " << strerror(errno) << ".\n";
+            exit(1);
+        }
         #if ZLIB_VERNUM >= 0x1240
-	gzbuffer(gz_snps, libz_buffer_size);
-	#endif
-	gz_alle = gzopen(all_file.c_str(), "wb");
-	if (!gz_alle) {
-	    cerr << "Error: Unable to open gzipped alleles file '" << all_file << "': " << strerror(errno) << ".\n";
-	    exit(1);
-	}
+        gzbuffer(gz_snps, libz_buffer_size);
+        #endif
+        gz_alle = gzopen(all_file.c_str(), "wb");
+        if (!gz_alle) {
+            cerr << "Error: Unable to open gzipped alleles file '" << all_file << "': " << strerror(errno) << ".\n";
+            exit(1);
+        }
         #if ZLIB_VERNUM >= 0x1240
-	gzbuffer(gz_alle, libz_buffer_size);
-	#endif
+        gzbuffer(gz_alle, libz_buffer_size);
+        #endif
     } else {
-	tags.open(tag_file.c_str());
-	if (tags.fail()) {
-	    cerr << "Error: Unable to open tag file for writing.\n";
-	    exit(1);
-	}
+        tags.open(tag_file.c_str());
+        if (tags.fail()) {
+            cerr << "Error: Unable to open tag file for writing.\n";
+            exit(1);
+        }
         mods.open(mod_file.c_str());
         if (mods.fail()) {
             cerr << "Error: Unable to open tag file for writing.\n";
             exit(1);
         }
-	snps.open(snp_file.c_str());
-	if (snps.fail()) {
-	    cerr << "Error: Unable to open SNPs file for writing.\n";
-	    exit(1);
-	}
-	alle.open(all_file.c_str());
-	if (alle.fail()) {
-	    cerr << "Error: Unable to open allele file for writing.\n";
-	    exit(1);
-	}
+        snps.open(snp_file.c_str());
+        if (snps.fail()) {
+            cerr << "Error: Unable to open SNPs file for writing.\n";
+            exit(1);
+        }
+        alle.open(all_file.c_str());
+        if (alle.fail()) {
+            cerr << "Error: Unable to open allele file for writing.\n";
+            exit(1);
+        }
     }
 
     //
@@ -468,8 +468,8 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     } else {
         tags << log.str();
         mods << log.str();
-	snps << log.str();
-	alle << log.str();
+        snps << log.str();
+        alle << log.str();
     }
 
     int id;
@@ -480,147 +480,147 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     int   blacklisted = 0;
 
     for (i = m.begin(); i != m.end(); i++) {
-	tag_1 = i->second;
+        tag_1 = i->second;
 
-	float total = 0;
-	for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++)
- 	    total += u[*k]->count;
+        float total = 0;
+        for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++)
+            total += u[*k]->count;
 
-	if (total < min_stack_cov) {
-	    excluded++;
-	    continue;
-	}
+        if (total < min_stack_cov) {
+            excluded++;
+            continue;
+        }
 
-	//
-	// Calculate the log likelihood of this merged stack.
-	//
-	tag_1->gen_matrix(u);
-	tag_1->calc_likelihood();
+        //
+        // Calculate the log likelihood of this merged stack.
+        //
+        tag_1->gen_matrix(u);
+        tag_1->calc_likelihood();
 
-	wrote++;
+        wrote++;
 
-	if (tag_1->blacklisted) blacklisted++;
+        if (tag_1->blacklisted) blacklisted++;
 
-	// First write the consensus sequence
-	sstr << "0" << "\t" 
-	     << sql_id << "\t" 
-	     << tag_1->id << "\t" 
+        // First write the consensus sequence
+        sstr << "0" << "\t" 
+             << sql_id << "\t" 
+             << tag_1->id << "\t" 
              << tag_1->loc.chr << "\t"
              << tag_1->loc.bp << "\t"
              << (tag_1->loc.strand == strand_plus ? "+" : "-") << "\t"
-	     << "consensus\t" << "\t\t" 
-	     << tag_1->con << "\t" 
-	     << tag_1->deleveraged << "\t" 
-	     << tag_1->blacklisted << "\t"
-	     << tag_1->lumberjackstack << "\t"
-	     << tag_1->lnl << "\n";
+             << "consensus\t" << "\t\t" 
+             << tag_1->con << "\t" 
+             << tag_1->deleveraged << "\t" 
+             << tag_1->blacklisted << "\t"
+             << tag_1->lumberjackstack << "\t"
+             << tag_1->lnl << "\n";
 
-	//
-	// Write a sequence recording the output of the SNP model for each nucleotide.
-	//
-	sstr << "0" << "\t" 
-	     << sql_id << "\t" 
-	     << tag_1->id << "\t" 
+        //
+        // Write a sequence recording the output of the SNP model for each nucleotide.
+        //
+        sstr << "0" << "\t" 
+             << sql_id << "\t" 
+             << tag_1->id << "\t" 
              << "\t"
              << "\t"
              << "\t"
-	     << "model\t" << "\t"
-	     << "\t";
-	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-	    switch((*s)->type) {
-	    case snp_type_het:
-		sstr << "E";
-		break;
-	    case snp_type_hom:
-		sstr << "O";
-		break;
-	    default:
-		sstr << "U";
-		break;
-	    }
-	}
-	sstr << "\t"
-	     << "\t"
-	     << "\t"
-	     << "\t"
-	     << "\n";
-	
-	if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
+             << "model\t" << "\t"
+             << "\t";
+        for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
+            switch((*s)->type) {
+            case snp_type_het:
+                sstr << "E";
+                break;
+            case snp_type_hom:
+                sstr << "O";
+                break;
+            default:
+                sstr << "U";
+                break;
+            }
+        }
+        sstr << "\t"
+             << "\t"
+             << "\t"
+             << "\t"
+             << "\n";
+        
+        if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
         if (gzip) gzputs(gz_mods, sstr.str().c_str()); else mods << sstr.str();
-	sstr.str("");
+        sstr.str("");
 
-	// Now write out the components of each unique tag merged into this one.
-	id = 0;
-	for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++) {
-	    tag_2  = u[*k];
-	    buf = tag_2->seq->seq();
+        // Now write out the components of each unique tag merged into this one.
+        id = 0;
+        for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++) {
+            tag_2  = u[*k];
+            buf = tag_2->seq->seq();
 
-	    for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-		sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\t\n";
-		if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
-		sstr.str("");
-	    }
-	    id++;
-	    delete [] buf;
-	}
+            for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
+                sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\t\n";
+                if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
+                sstr.str("");
+            }
+            id++;
+            delete [] buf;
+        }
 
-	//
-	// Write out the model calls for each nucleotide in this locus.
-	//
-	for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-	    sstr << "0"          << "\t" 
-		 << sql_id       << "\t" 
-		 << tag_1->id    << "\t" 
-		 << (*s)->col    << "\t";
+        //
+        // Write out the model calls for each nucleotide in this locus.
+        //
+        for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
+            sstr << "0"          << "\t" 
+                 << sql_id       << "\t" 
+                 << tag_1->id    << "\t" 
+                 << (*s)->col    << "\t";
 
-	    switch((*s)->type) {
-	    case snp_type_het:
-		sstr << "E\t";
-		break;
-	    case snp_type_hom:
-		sstr << "O\t";
-		break;
-	    default:
-		sstr << "U\t";
-		break;
-	    }
+            switch((*s)->type) {
+            case snp_type_het:
+                sstr << "E\t";
+                break;
+            case snp_type_hom:
+                sstr << "O\t";
+                break;
+            default:
+                sstr << "U\t";
+                break;
+            }
 
-	    sstr << std::fixed   << std::setprecision(2)
-		 << (*s)->lratio << "\t" 
-		 << (*s)->rank_1 << "\t" 
-		 << (*s)->rank_2 << "\t\t\n";
-	}
+            sstr << std::fixed   << std::setprecision(2)
+                 << (*s)->lratio << "\t" 
+                 << (*s)->rank_1 << "\t" 
+                 << (*s)->rank_2 << "\t\t\n";
+        }
 
-	if (gzip) gzputs(gz_snps, sstr.str().c_str()); else snps << sstr.str();
-	sstr.str("");
+        if (gzip) gzputs(gz_snps, sstr.str().c_str()); else snps << sstr.str();
+        sstr.str("");
 
-	// Write the expressed alleles seen for the recorded SNPs and
-	// the percentage of tags a particular allele occupies.
-	//
+        // Write the expressed alleles seen for the recorded SNPs and
+        // the percentage of tags a particular allele occupies.
+        //
         char pct[id_len];
-	for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
+        for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
             sprintf(pct, "%.2f", ((t->second/total) * 100));
-	    sstr << "0"       << "\t" 
-		 << sql_id    << "\t" 
-		 << tag_1->id << "\t" 
-		 << t->first  << "\t" 
-		 << pct       << "\t" 
-		 << t->second << "\n";
-	}
-	if (gzip) gzputs(gz_alle, sstr.str().c_str()); else alle << sstr.str();
-	sstr.str("");
+            sstr << "0"       << "\t" 
+                 << sql_id    << "\t" 
+                 << tag_1->id << "\t" 
+                 << t->first  << "\t" 
+                 << pct       << "\t" 
+                 << t->second << "\n";
+        }
+        if (gzip) gzputs(gz_alle, sstr.str().c_str()); else alle << sstr.str();
+        sstr.str("");
     }
 
     if (gzip) {
-	gzclose(gz_tags);
+        gzclose(gz_tags);
         gzclose(gz_mods);
-	gzclose(gz_snps);
-	gzclose(gz_alle);
+        gzclose(gz_snps);
+        gzclose(gz_alle);
     } else {
-	tags.close();
+        tags.close();
         mods.close();
-	snps.close();
-	alle.close();
+        snps.close();
+        alle.close();
     }
 
     cerr << "  Wrote " << wrote << " loci, excluded " << excluded << " loci due to insuffient depth of coverage; blacklisted " << blacklisted << " loci.\n";
@@ -644,23 +644,23 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
     //
     for (i = unique.begin(); i != unique.end(); i++) {
         snprintf(id, id_len - 1, "%s|%d|%s", 
-		 i->second->loc.chr, 
-		 i->second->loc.bp, 
-		 i->second->loc.strand == strand_plus ? "+" : "-");
+                 i->second->loc.chr, 
+                 i->second->loc.bp, 
+                 i->second->loc.strand == strand_plus ? "+" : "-");
         locations[id].insert(i->second->id);
     }
 
     it_old = merged.begin();
 
     for (k = locations.begin(); k != locations.end(); k++) {
-	m = new MergedStack;
-	m->id = global_id;
+        m = new MergedStack;
+        m->id = global_id;
 
         // 
         // Record the consensus and physical location for this stack.
         //
         s = k->second.begin();
-	m->add_consensus(unique[*s]->seq);
+        m->add_consensus(unique[*s]->seq);
         m->loc.set(unique[*s]->loc.chr, unique[*s]->loc.bp, unique[*s]->loc.strand);
 
         //
@@ -672,13 +672,13 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
             m->utags.push_back(u->id);
         }
 
-	//
-	// Insert the new MergedStack giving a hint as to which position
-	// to insert it at.
-	//
-	it_new = merged.insert(it_old, pair<int, MergedStack *>(global_id, m));
-	it_old = it_new;
-	global_id++;
+        //
+        // Insert the new MergedStack giving a hint as to which position
+        // to insert it at.
+        //
+        it_new = merged.insert(it_old, pair<int, MergedStack *>(global_id, m));
+        it_old = it_new;
+        global_id++;
     }
 
     cerr << "  Merged " << unique.size() << " unique Stacks into " << merged.size() << " loci.\n";
@@ -757,9 +757,9 @@ int load_radtags(string in_file, HashMap &radtags) {
     int i = 1;
     while ((c = fh->next_seq()) != NULL) {
         if (i % 10000 == 0) cerr << "Loading aligned sequence " << i << "       \r";
-	// cerr << "Loading aligned sequence " << i << "       \n";
+        // cerr << "Loading aligned sequence " << i << "       \n";
 
-	radtags[c->seq].push_back(c);
+        radtags[c->seq].push_back(c);
         i++;
     }
 
@@ -788,14 +788,14 @@ int dump_stacks(map<int, PStack *> &u) {
 
     for (it = u.begin(); it != u.end(); it++) {
 
-	cerr << "Stack ID: " << (*it).second->id << "\n"
-	     << "  Seq:    " << (*it).second->seq->seq() << "\n"
-	     << "  IDs:    "; 
+        cerr << "Stack ID: " << (*it).second->id << "\n"
+             << "  Seq:    " << (*it).second->seq->seq() << "\n"
+             << "  IDs:    "; 
 
-	for (fit = (*it).second->map.begin(); fit != (*it).second->map.end(); fit++)
-	    cerr << *fit << " ";
+        for (fit = (*it).second->map.begin(); fit != (*it).second->map.end(); fit++)
+            cerr << *fit << " ";
 
-	cerr << "\n\n";
+        cerr << "\n\n";
     }
 
     return 0;
@@ -808,24 +808,24 @@ int dump_merged_stacks(map<int, MergedStack *> &m) {
 
     for (it = m.begin(); it != m.end(); it++) {
 
-	cerr << "MergedStack ID: " << it->second->id << "\n"
-	     << "  Consensus:  ";
-	if (it->second->con != NULL)
-	    cerr << it->second->con << "\n";
-	else 
-	    cerr << "\n";
-	cerr << "  IDs:        "; 
+        cerr << "MergedStack ID: " << it->second->id << "\n"
+             << "  Consensus:  ";
+        if (it->second->con != NULL)
+            cerr << it->second->con << "\n";
+        else 
+            cerr << "\n";
+        cerr << "  IDs:        "; 
 
-	for (fit = it->second->utags.begin(); fit != it->second->utags.end(); fit++)
-	    cerr << (*fit) << " ";
+        for (fit = it->second->utags.begin(); fit != it->second->utags.end(); fit++)
+            cerr << (*fit) << " ";
 
-	cerr << "\n"
-	     << "  Distances: ";
+        cerr << "\n"
+             << "  Distances: ";
 
-	for (pit = it->second->dist.begin(); pit != it->second->dist.end(); pit++)
-	    cerr << (*pit).first << ": " << (*pit).second << ", ";
+        for (pit = it->second->dist.begin(); pit != it->second->dist.end(); pit++)
+            cerr << (*pit).first << ": " << (*pit).second << ", ";
 
-	cerr << "\n\n";
+        cerr << "\n\n";
     }
 
     return 0;
@@ -835,38 +835,38 @@ int parse_command_line(int argc, char* argv[]) {
     int c;
 
     while (1) {
-	static struct option long_options[] = {
-	    {"help",         no_argument,       NULL, 'h'},
+        static struct option long_options[] = {
+            {"help",         no_argument,       NULL, 'h'},
             {"version",      no_argument,       NULL, 'v'},
-	    {"infile_type",  required_argument, NULL, 't'},
-	    {"outfile_type", required_argument, NULL, 'y'},
-	    {"file",         required_argument, NULL, 'f'},
-	    {"outpath",      required_argument, NULL, 'o'},
-	    {"id",           required_argument, NULL, 'i'},
-	    {"min_cov",      required_argument, NULL, 'm'},
-	    {"num_threads",  required_argument, NULL, 'p'},
-	    {"bc_err_freq",  required_argument, NULL, 'e'},
-	    {"model_type",   required_argument, NULL, 'T'},
-	    {"bound_low",    required_argument, NULL, 'L'},
-	    {"bound_high",   required_argument, NULL, 'U'},
-	    {"alpha",        required_argument, NULL, 'A'},
-	    {0, 0, 0, 0}
-	};
+            {"infile_type",  required_argument, NULL, 't'},
+            {"outfile_type", required_argument, NULL, 'y'},
+            {"file",         required_argument, NULL, 'f'},
+            {"outpath",      required_argument, NULL, 'o'},
+            {"id",           required_argument, NULL, 'i'},
+            {"min_cov",      required_argument, NULL, 'm'},
+            {"num_threads",  required_argument, NULL, 'p'},
+            {"bc_err_freq",  required_argument, NULL, 'e'},
+            {"model_type",   required_argument, NULL, 'T'},
+            {"bound_low",    required_argument, NULL, 'L'},
+            {"bound_high",   required_argument, NULL, 'U'},
+            {"alpha",        required_argument, NULL, 'A'},
+            {0, 0, 0, 0}
+        };
 
-	// getopt_long stores the option index here.
-	int option_index = 0;
+        // getopt_long stores the option index here.
+        int option_index = 0;
 
-	c = getopt_long(argc, argv, "hvOT:A:L:U:f:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
+        c = getopt_long(argc, argv, "hvOT:A:L:U:f:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
 
-	// Detect the end of the options.
-	if (c == -1)
-	    break;
+        // Detect the end of the options.
+        if (c == -1)
+            break;
 
-	switch (c) {
-	case 'h':
-	    help();
-	    break;
-     	case 't':
+        switch (c) {
+        case 'h':
+            help();
+            break;
+        case 't':
             if (strcmp(optarg, "bowtie") == 0)
                 in_file_type = FileT::bowtie;
             else if (strcmp(optarg, "sam") == 0)
@@ -877,33 +877,33 @@ int parse_command_line(int argc, char* argv[]) {
                 in_file_type = FileT::tsv;
             else
                 in_file_type = FileT::unknown;
-	    break;
-     	case 'y':
+            break;
+        case 'y':
             if (strcmp(optarg, "sam") == 0)
                 out_file_type = FileT::sam;
             else
                 out_file_type = FileT::sql;
-	    break;
-     	case 'f':
-	    in_file = optarg;
-	    break;
-	case 'o':
-	    out_path = optarg;
-	    break;
-	case 'i':
-	    sql_id = is_integer(optarg);
-	    if (sql_id < 0) {
-		cerr << "SQL ID (-i) must be an integer, e.g. 1, 2, 3\n";
-		help();
-	    }
-	    break;
-	case 'm':
-	    min_stack_cov = atoi(optarg);
-	    break;
-	case 'e':
-	    barcode_err_freq = atof(optarg);
-	    break;
-     	case 'T':
+            break;
+        case 'f':
+            in_file = optarg;
+            break;
+        case 'o':
+            out_path = optarg;
+            break;
+        case 'i':
+            sql_id = is_integer(optarg);
+            if (sql_id < 0) {
+                cerr << "SQL ID (-i) must be an integer, e.g. 1, 2, 3\n";
+                help();
+            }
+            break;
+        case 'm':
+            min_stack_cov = atoi(optarg);
+            break;
+        case 'e':
+            barcode_err_freq = atof(optarg);
+            break;
+        case 'T':
             if (strcmp(optarg, "snp") == 0) {
                 model_type = snp;
             } else if (strcmp(optarg, "fixed") == 0) {
@@ -914,66 +914,66 @@ int parse_command_line(int argc, char* argv[]) {
                 cerr << "Unknown model type specified '" << optarg << "'\n";
                 help();
             }
-	case 'L':
-	    bound_low  = atof(optarg);
-	    break;
-	case 'U':
-	    bound_high = atof(optarg);
-	    break;
-	case 'A':
-	    alpha = atof(optarg);
-	    break;
-	case 'p':
-	    num_threads = atoi(optarg);
-	    break;
+        case 'L':
+            bound_low  = atof(optarg);
+            break;
+        case 'U':
+            bound_high = atof(optarg);
+            break;
+        case 'A':
+            alpha = atof(optarg);
+            break;
+        case 'p':
+            num_threads = atoi(optarg);
+            break;
         case 'v':
             version();
             break;
-	case '?':
-	    // getopt_long already printed an error message.
-	    help();
-	    break;
+        case '?':
+            // getopt_long already printed an error message.
+            help();
+            break;
      
-	default:
-	    cerr << "Unknown command line option '" << (char) c << "'\n";
-	    help();
-	    abort();
-	}
+        default:
+            cerr << "Unknown command line option '" << (char) c << "'\n";
+            help();
+            abort();
+        }
     }
 
     if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
-	cerr << "SNP model alpha significance level must be either 0.1, 0.05, 0.01, or 0.001.\n";
-	help();
+        cerr << "SNP model alpha significance level must be either 0.1, 0.05, 0.01, or 0.001.\n";
+        help();
     }
 
     if (bound_low != 0 && (bound_low < 0 || bound_low >= 1.0)) {
-	cerr << "SNP model lower bound must be between 0.0 and 1.0.\n";
-	help();
+        cerr << "SNP model lower bound must be between 0.0 and 1.0.\n";
+        help();
     }
 
     if (bound_high != 1 && (bound_high <= 0 || bound_high > 1.0)) {
-	cerr << "SNP model upper bound must be between 0.0 and 1.0.\n";
-	help();
+        cerr << "SNP model upper bound must be between 0.0 and 1.0.\n";
+        help();
     }
 
     if (bound_low > 0 || bound_high < 1.0) {
-	model_type = bounded;
+        model_type = bounded;
     }
 
     if (in_file.length() == 0 || in_file_type == FileT::unknown) {
-	cerr << "You must specify an input file of a supported type.\n";
-	help();
+        cerr << "You must specify an input file of a supported type.\n";
+        help();
     }
 
     if (out_path.length() == 0) 
-	out_path = ".";
+        out_path = ".";
 
     if (out_path.at(out_path.length() - 1) != '/') 
-	out_path += "/";
+        out_path += "/";
 
     if (model_type == fixed && barcode_err_freq == 0) {
-	cerr << "You must specify the barcode error frequency.\n";
-	help();
+        cerr << "You must specify the barcode error frequency.\n";
+        help();
     }
 
     return 0;
@@ -988,22 +988,22 @@ void version() {
 void help() {
     std::cerr << "pstacks " << VERSION << "\n"
               << "pstacks -t file_type -f file_path [-o path] [-i id] [-m min_cov] [-p num_threads] [-h]" << "\n"
-	      << "  t: input file Type. Supported types: bowtie, sam, or bam.\n"
+              << "  t: input file Type. Supported types: bowtie, sam, or bam.\n"
               << "  f: input file path.\n"
-	      << "  o: output path to write results.\n"
-	      << "  i: SQL ID to insert into the output to identify this sample.\n"
-	      << "  m: minimum depth of coverage to report a stack (default 1).\n"
+              << "  o: output path to write results.\n"
+              << "  i: SQL ID to insert into the output to identify this sample.\n"
+              << "  m: minimum depth of coverage to report a stack (default 1).\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-	      << "  h: display this help messsage.\n"
-	      << "  Model options:\n" 
-	      << "    --model_type <type>: either 'snp' (default), 'bounded', or 'fixed'\n"
-	      << "    For the SNP or Bounded SNP model:\n"
-	      << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
-	      << "    For the Bounded SNP model:\n"
-	      << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
-	      << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
-	      << "    For the Fixed model:\n"
-	      << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n";
+              << "  h: display this help messsage.\n"
+              << "  Model options:\n" 
+              << "    --model_type <type>: either 'snp' (default), 'bounded', or 'fixed'\n"
+              << "    For the SNP or Bounded SNP model:\n"
+              << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
+              << "    For the Bounded SNP model:\n"
+              << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
+              << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
+              << "    For the Fixed model:\n"
+              << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n";
 
     exit(0);
 }
