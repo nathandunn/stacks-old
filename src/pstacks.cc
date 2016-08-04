@@ -732,6 +732,8 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
         }
     }
 
+    cerr << "  " << radtags.size() << " unique stacks were aligned to " << unique.size() << " genomic locations.\n";
+    
     return 0;
 }
 
