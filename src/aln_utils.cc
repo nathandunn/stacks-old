@@ -182,9 +182,8 @@ apply_cigar_to_seq(char *seq, uint seq_len, const char *old_seq, vector<pair<cha
 {
     uint   size = cigar.size();
     char   op;
-    uint   dist, bp, seq_bp, oldseq_len, stop;
+    uint   dist, bp, seq_bp, stop;
 
-    oldseq_len = strlen(old_seq);
     bp         = 0;
     seq_bp     = 0;
 
@@ -235,9 +234,8 @@ apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, vector<pair
 {
     uint   size = cigar.size();
     char   op;
-    uint   dist, model_bp, seq_bp, model_len, stop;
+    uint   dist, model_bp, seq_bp, stop;
 
-    model_len = strlen(model);
     model_bp  = 0;
     seq_bp    = 0;
 
@@ -429,7 +427,6 @@ remove_snps_from_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
     uint   size = cigar.size();
     char   op;
     uint   dist, bp, new_bp, stop, snp_cnt;
-    SNP   *s;
 
     bp      = 0;
     new_bp  = 0;

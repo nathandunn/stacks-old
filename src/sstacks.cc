@@ -830,7 +830,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 		// generate, multiple, spurious hits in sequences with multiple copies of the same kmer.
 		//
 		uniq_kmers.clear();
-                for (uint j = 0; j < num_kmers; j++)
+                for (int j = 0; j < num_kmers; j++)
 		    uniq_kmers.insert(kmers[j]);
 
 		hits.clear();
@@ -869,7 +869,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 		    hit_cnt   = 0;
 		    allele_id = prev_id;
 
-		    while (hits[index] == prev_id) {
+		    while ((uint)hits[index] == prev_id) {
 			hit_cnt++;
 			index++;
 		    }
@@ -877,7 +877,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 		    if (index < hits_size)
 			prev_id = hits[index];
 
-		    if (hit_cnt >= min_hits)
+		    if (hit_cnt >= (uint)min_hits)
 			ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
         	} while (index < hits_size);
@@ -896,7 +896,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
 		top_hit = ordered_hits[0].second;
                 stop    = 1;
 		for (uint j = 1; j < ordered_hits.size(); j++)
-		    if (ordered_hits[j].second < top_hit) {
+		    if ((uint)ordered_hits[j].second < top_hit) {
 			stop = j;
 			break;
 		    }
@@ -1025,7 +1025,7 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     qseq = apply_cigar_to_seq(query->con, cigar);
     query->add_consensus(qseq.c_str());
 
-    int min_tag_len = query_len > cat->len ? query_len : cat->len;
+    int min_tag_len = (uint)query_len > cat->len ? query_len : cat->len;
 
     vector<SNP *>::iterator i, j;
     bool found;
@@ -1035,7 +1035,7 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
 	//
 	// SNP occurs in a column that is beyond the length of the catalog
 	//
-	if ((*i)->col > min_tag_len - 1)
+	if ((int)(*i)->col > min_tag_len - 1)
 	    continue;
 
 	for (j = cat->snps.begin(); j != cat->snps.end(); j++) {

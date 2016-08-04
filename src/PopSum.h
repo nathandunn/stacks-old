@@ -297,7 +297,7 @@ PopSum<LocusT>::PopSum(const PopMap<LocusT>& pmap, const MetaPopInfo& mpopi)
     for (int i = 0; i < popmap.loci_cnt(); i++) {
         this->data[i] = new LocSum *[metapopinfo.pops().size()];
 
-        for (int j = 0; j < metapopinfo.pops().size(); j++)
+        for (size_t j = 0; j < metapopinfo.pops().size(); j++)
             this->data[i][j] = NULL;
     }
 }

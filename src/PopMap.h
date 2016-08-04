@@ -454,7 +454,7 @@ int PopMap<LocusT>::prune(set<int> &remove_ids) {
 
         } else {
             // Remove this locus.
-            for (int k = 0; k < metapopinfo.samples().size(); k++)
+            for (size_t k = 0; k < metapopinfo.samples().size(); k++)
                 delete this->data[i][k];
             delete [] this->data[i];
         }
