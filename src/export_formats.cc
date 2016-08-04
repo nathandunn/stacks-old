@@ -787,7 +787,7 @@ write_genepop(map<int, CSLocus *> &catalog,
 
         fh << "pop\n";
 
-        for (int j = pop.first_sample; j <= pop.last_sample; j++) {
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
 
             fh << mpopi.samples()[j].name << ",";
 
@@ -925,7 +925,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
         const MetaPopInfo::Pop& pop = mpopi.pops()[p];
 
         fh << "pop\n";
-        for (int j = pop.first_sample; j <= pop.last_sample; j++) {
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
 
             fh << mpopi.samples()[j].name << ",";
 
@@ -1054,7 +1054,7 @@ write_structure(map<int, CSLocus *> &catalog,
     for (size_t p=0; p<mpopi.pops().size(); ++p) {
         const MetaPopInfo::Pop& pop = mpopi.pops()[p];
 
-        for (int j = pop.first_sample; j <= pop.last_sample; j++) {
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
             //
             // Output all the loci for this sample, printing only the p allele
             //
@@ -1232,7 +1232,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
     for (size_t p=0; p<mpopi.pops().size(); ++p) {
         const MetaPopInfo::Pop& pop = mpopi.pops()[p];
 
-        for (int j = pop.first_sample; j <= pop.last_sample; j++) {
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
             //
             // Output all the loci for this sample, printing only the p allele
             //
@@ -1650,12 +1650,12 @@ write_fastphase(map<int, CSLocus *> &catalog,
         for (size_t p=0; p<mpopi.pops().size(); ++p) {
             const MetaPopInfo::Pop& pop = mpopi.pops()[p];
 
-            for (int j = pop.first_sample; j <= pop.last_sample; j++) {
+            for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
                 //
                 // Output all the loci for this sample, printing only the p allele
                 //
                 fh << mpopi.samples()[j].name << "\n";
-                
+
                 gtypes.str("");
                 for (uint pos = 0; pos < ordered_loci.size(); pos++) {
                     loc = catalog[ordered_loci[pos].id];
@@ -1868,7 +1868,7 @@ write_phase(map<int, CSLocus *> &catalog,
         for (size_t p=0; p<mpopi.pops().size(); ++p) {
             const MetaPopInfo::Pop& pop = mpopi.pops()[p];
 
-            for (int j = pop.first_sample; j <= pop.last_sample; j++) {
+            for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
                 //
                 // Output all the loci for this sample, printing only the p allele
                 //
@@ -2126,7 +2126,7 @@ write_plink(map<int, CSLocus *> &catalog,
     for (size_t p=0; p<mpopi.pops().size(); ++p) {
         const MetaPopInfo::Pop& pop = mpopi.pops()[p];
 
-        for (int j = pop.first_sample; j <= pop.last_sample; j++) {
+        for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
 
             fh << pop.name << "\t"
                << mpopi.samples()[j].name << "\t"
@@ -2286,7 +2286,7 @@ write_beagle(map<int, CSLocus *> &catalog,
             // Output a list of all the samples in this population.
             //
             fh << "I\tid";
-            for (int j = pop.first_sample; j <= pop.last_sample; j++)
+            for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
                 fh << "\t" << mpopi.samples()[j].name << "\t" << mpopi.samples()[j].name;
             fh << "\n";
 
@@ -2294,7 +2294,7 @@ write_beagle(map<int, CSLocus *> &catalog,
             // Output population IDs for each sample.
             //
             fh << "S\tid";
-            for (int j = pop.first_sample; j <= pop.last_sample; j++)
+            for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
                 fh << "\t" << pop.name << "\t" << pop.name;
             fh << "\n";
 
@@ -2331,7 +2331,7 @@ write_beagle(map<int, CSLocus *> &catalog,
 
                 fh << "M" << "\t" << loc->id << "_" << col;
 
-                for (int j = pop.first_sample; j <= pop.last_sample; j++) {
+                for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
                     //
                     // Output the p allele
                     //
@@ -2503,7 +2503,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
             // Output a list of all the samples in the data set.
             //
             fh << "I\tid";
-            for (int j = pop.first_sample; j <= pop.last_sample; j++)
+            for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
                 fh << "\t" << mpopi.samples()[j].name << "\t" << mpopi.samples()[j].name;
             fh << "\n";
 
@@ -2511,7 +2511,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
             // Output population IDs for each sample.
             //
             fh << "S\tid";
-            for (int j = pop.first_sample; j <= pop.last_sample; j++)
+            for (size_t j = pop.first_sample; j <= pop.last_sample; j++)
                 fh << "\t" << pop.name << "\t" << pop.name;
             fh << "\n";
 
@@ -2523,7 +2523,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
                 // If this locus is monomorphic in this population don't output it.
                 //
                 set<string> haplotypes;
-                for (int j = pop.first_sample; j <= pop.last_sample; j++) {
+                for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
                     if (d[j] == NULL) continue;
 
                     if (d[j]->obshap.size() == 2) {
@@ -2549,7 +2549,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
                 //
                 fh << "M" << "\t" << loc->id;
 
-                for (int j = pop.first_sample; j <= pop.last_sample; j++) {
+                for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
                     //
                     // Output the p and the q haplotype
                     //
@@ -2674,7 +2674,7 @@ write_phylip(map<int, CSLocus *> &catalog,
 
                     log_fh << index << "\t" << loc->id << "\t" << col << "\t";
 
-                    for (size_t p=0; p<pop_cnt; p++) {
+                    for (int p=0; p<pop_cnt; p++) {
                         if (s[p]->nucs[col].num_indv > 0) {
                             interspecific_nucs[p] += s[p]->nucs[col].p_nuc;
                             log_fh << mpopi.pops()[p].name << ":" << s[p]->nucs[col].p_nuc << ",";
@@ -2696,7 +2696,7 @@ write_phylip(map<int, CSLocus *> &catalog,
 
                     log_fh << index << "\t" << loc->id << "\t" << col << "\t";
 
-                    for (size_t j=0; j<pop_cnt; j++) {
+                    for (int j=0; j<pop_cnt; j++) {
 
                         switch(s[j]->nucs[col].p_nuc) {
                         case 0:
@@ -3033,9 +3033,8 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
             log_fh << line << "\t" << loc->id;
             if (loci_ordered) log_fh << "\t" << loc->loc.chr << "\t" << loc->sort_bp() + 1;
             log_fh << "\n";
-            
+
             for (size_t i_pop=0; i_pop<mpopi.pops().size(); ++i_pop) {
-                const MetaPopInfo::Pop& pop = mpopi.pops()[i_pop];
                 fh << outstrs[i_pop] << "\n";
                 outstrs[i_pop] = "";
                 line++;
