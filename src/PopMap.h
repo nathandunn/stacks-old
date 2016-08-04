@@ -32,6 +32,8 @@ using std::vector;
 using std::map;
 #include <set>
 using std::set;
+#include <numeric>
+using std::accumulate;
 #include <algorithm>
 #include <utility>
 using std::pair;
