@@ -1,3 +1,8 @@
+Stacks 1.42 -
+---------------------------
+	Feature: upgraded to the latest release of HTSLib (1.3.1) for reading BAM files. Embedded the library
+	in the Stacks distribution to remove previous libbam dependency.
+
 Stacks 1.41 - June 22, 2016
 ---------------------------
 	Bugfix: the kernel-smoothing procedure in populations (used for Fst, Pi, heterozygosity etc. smoothing) 

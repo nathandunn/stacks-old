@@ -167,6 +167,8 @@ TESTS = tests/process_radtags.t tests/kmer_filter.t tests/ustacks.t tests/pstack
 
 EXTRA_DIST = $(nobase_pkgdata_DATA) LICENSE INSTALL README ChangeLog $(TESTS)
 
+SUBDIRS = htslib .
+
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 
 debug:
