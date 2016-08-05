@@ -206,8 +206,8 @@ int main (int argc, char* argv[]) {
 
     // We need some objects in the main scope for each mode.
     vector<vector<CatMatch *> > catalog_matches;
-    VcfHeader* vcf_header = NULL;
-    vector<VcfRecord>* vcf_records = NULL;
+    VcfHeader                  *vcf_header  = NULL;
+    vector<VcfRecord>          *vcf_records = NULL;
 
     // Read the population map file, if any.
     if (not pmap_path.empty()) {
@@ -404,7 +404,9 @@ int main (int argc, char* argv[]) {
         delete parser;
     }
 
+    //
     // Read the blacklist, the whitelist, and the bootstrap-whitelist.
+    //
     if (bl_file.length() > 0) {
         load_marker_list(bl_file, blacklist);
         cerr << "Loaded " << blacklist.size() << " blacklisted markers.\n";
@@ -419,7 +421,9 @@ int main (int argc, char* argv[]) {
         cerr << "Loaded " << bootstraplist.size() << " markers to include when bootstrapping.\n";
     }
 
+    //
     // Reduce the catalog accordingly, and retrieve the genomic order of loci.
+    //
     reduce_catalog(catalog, whitelist, blacklist);
     loci_ordered = order_unordered_loci(catalog);
 
@@ -465,6 +469,7 @@ int main (int argc, char* argv[]) {
             for(vector<CatMatch*>::iterator match = sample->begin(); match != sample->end(); ++match)
                 delete *match;
         catalog_matches.clear();
+
     } else if (input_mode == InputMode::vcf) {
         // ...or using VCF records.
         pmap->populate(catalog, *vcf_records, *vcf_header);
@@ -696,7 +701,7 @@ int main (int argc, char* argv[]) {
 
     log_fh.close();
 
-    cerr << "POPULATIONS is done.\n";
+    cerr << "Populations is done.\n";
     return 0;
 }
 
@@ -885,6 +890,9 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
         //
         for (uint i = 0; i < pop_cnt; i++) {
             const Pop& pop = mpopi.pops()[pop_order[i]];
+
+            pct = (double) pop_cnts[i] / (double) pop_tot[i];
+            
             if (pop_cnts[i] > 0 && pct < sample_limit) {
                 //cerr << "Removing population " << pop_order[i] << " at locus: " << loc->id << "; below sample limit: " << pct << "\n";
                 for (uint j  = pop.first_sample; j <= pop.last_sample; j++) {
