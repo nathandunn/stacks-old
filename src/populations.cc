@@ -262,7 +262,7 @@ int main (int argc, char* argv[]) {
         //
         // Load the catalog
         //
-        cerr << "Parsing the catalog...\n";
+        cerr << "Reading the catalog...\n";
         string catalog_prefix = in_path + "batch_" + to_string(batch_id) + ".catalog";
         bool   compressed     = false;
         int    res = load_loci(catalog_prefix, catalog, false, false, compressed);
@@ -274,7 +274,7 @@ int main (int argc, char* argv[]) {
         //
         // Load the matches
         //
-        cerr << "Parsing matches to the catalog...\n";
+        cerr << "Reading matches to the catalog...\n";
         vector<size_t> samples_to_remove;
         set<size_t>    seen_samples;
         for (size_t i = 0; i < mpopi.samples().size(); ++i) {
