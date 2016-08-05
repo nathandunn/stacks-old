@@ -9,28 +9,25 @@ AC_CONFIG_SRCDIR([src/ustacks.cc])
 AC_CONFIG_HEADERS([config.h])
 m4_pattern_allow([AC_OPENMP])
 
-# Get BAM library and include locations if requested
+#
+# Get BAM, aka HTSLib library and include locations if requested
+#
 AC_ARG_ENABLE([bam],
-    AS_HELP_STRING([--enable-bam], [Enable Samtools' use of BAM files (requires BAM library to be installed).]))
+    AS_HELP_STRING([--enable-bam], [Enable use of BAM files through HTSLib.]))
 
 AS_IF([test "x$enable_bam" = "xyes"], [
 AC_DEFINE([HAVE_BAM], [1], [Enable compilation with Samtools BAM library])
-AC_ARG_WITH([bam-include-path],
-  [AS_HELP_STRING([--with-bam-include-path],
-    [location of Samtools BAM headers, defaults to /usr/include/bam])],
-  [BAM_CFLAGS="-I$withval"],
-  [BAM_CFLAGS='-I/usr/include/bam'])
-AC_SUBST([BAM_CFLAGS])
 
-AC_ARG_WITH([bam-lib-path],
-  [AS_HELP_STRING([--with-bam-lib-path], [location of Samtools BAM library])],
-  [BAM_LIBS="$withval/libbam.a"],
-  [BAM_LIBS='/usr/lib/libbam.a'])
+BAM_CFLAGS='-I./htslib/htslib'
+AC_SUBST([BAM_CFLAGS])
+BAM_LIBS='./htslib/libhts.a'
 AC_SUBST([BAM_LIBS])
 
 ])
 
+#
 # Enable use of Google Sparsehash and get include location if requested.
+#
 AC_ARG_ENABLE([sparsehash],
     AS_HELP_STRING([--enable-sparsehash], [Enable the use of Google Sparsehash (must be installed).]))
 

@@ -29,11 +29,12 @@
 #ifdef HAVE_BAM
 
 #include "input.h"
-#include "bam.h"
+#include "sam.h"
 
 class BamUnAln: public Input {
-    bamFile  bam_fh;
-    bam1_t  *aln;
+    htsFile   *bam_fh;
+    bam_hdr_t *bamh;
+    bam1_t    *aln;
 
     map<uint, string> chrs;
 
@@ -42,20 +43,21 @@ class BamUnAln: public Input {
  public:
     BamUnAln(const char *path) : Input() {
 	this->path   = string(path);
-	this->bam_fh = bam_open(path, "r");
+	this->bam_fh = hts_open(path, "r");
 	this->aln    = bam_init1();
 
 	this->parse_header();
     };
     BamUnAln(string path) : Input() {
 	this->path   = path;
-	this->bam_fh = bam_open(path.c_str(), "r");
+	this->bam_fh = hts_open(path.c_str(), "r");
 	this->aln    = bam_init1();
 
 	this->parse_header();
     };
     ~BamUnAln() {
-	bam_close(this->bam_fh);
+	hts_close(this->bam_fh);
+        bam_hdr_destroy(this->bamh);
 	bam_destroy1(this->aln);
     };
     Seq *next_seq();
@@ -65,17 +67,15 @@ class BamUnAln: public Input {
 int
 BamUnAln::parse_header()
 {
-    bam_header_t *bamh = bam_header_init();
-    bamh = bam_header_read(this->bam_fh);
+    this->bamh = bam_hdr_init();
+    this->bamh = sam_hdr_read(this->bam_fh);
 
-    for (uint j = 0; j < (uint) bamh->n_targets; j++) {
+    for (uint j = 0; j < (uint) this->bamh->n_targets; j++) {
 	//
 	// Record the mapping from integer ID to chromosome name that we will see in BAM records.
 	//
-	this->chrs[j] = string(bamh->target_name[j]);
+	this->chrs[j] = string(this->bamh->target_name[j]);
     }
-
-    bam_header_destroy(bamh);
 
     return 0;
 }
@@ -88,7 +88,7 @@ BamUnAln::next_seq()
     //
     // Read a record from the file and place it in a Seq object.
     //
-    bytes_read = bam_read1(this->bam_fh, this->aln);
+    bytes_read = sam_read1(this->bam_fh, this->bamh, this->aln);
 
     if (bytes_read <= 0)
 	return NULL;
@@ -98,8 +98,11 @@ BamUnAln::next_seq()
     //
     string  seq;
     uint8_t j;
+
+    seq.reserve(this->aln->core.l_qseq);
+    
     for (int i = 0; i < this->aln->core.l_qseq; i++) {
-	j = bam1_seqi(bam1_seq(this->aln), i);
+	j = bam_seqi(bam_get_seq(this->aln), i);
 	switch(j) {
 	case 1:
 	    seq += 'A';
@@ -123,7 +126,7 @@ BamUnAln::next_seq()
     // Fetch the quality score.
     //
     string   qual;
-    uint8_t *q = bam1_qual(this->aln);
+    uint8_t *q = bam_get_qual(this->aln);
     for (int i = 0; i < this->aln->core.l_qseq; i++) {
 	qual += char(int(q[i]) + 33);
     }
@@ -134,7 +137,7 @@ BamUnAln::next_seq()
     // Attempt to parse the query name for this read.
     //
 
-    Seq *s = new Seq((const char *) bam1_qname(this->aln), seq.c_str(), qual.c_str());
+    Seq *s = new Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str());
 
     return s;
 }

@@ -29,11 +29,12 @@
 #ifdef HAVE_BAM
 
 #include "input.h"
-#include "bam.h"
+#include "sam.h"
 
 class Bam: public Input {
-    bamFile  bam_fh;
-    bam1_t  *aln;
+    htsFile   *bam_fh;
+    bam_hdr_t *bamh;
+    bam1_t    *aln;
 
     map<uint, string> chrs;
 
@@ -47,13 +48,14 @@ class Bam: public Input {
  public:
     Bam(const char *path) : Input() {
 	this->path   = string(path);
-	this->bam_fh = bam_open(path, "r");
+	this->bam_fh = hts_open(path, "r");
 	this->aln    = bam_init1();
 
 	this->parse_header();
     };
     ~Bam() {
-	bam_close(this->bam_fh);
+	hts_close(this->bam_fh);
+        bam_hdr_destroy(this->bamh);
 	bam_destroy1(this->aln);
     };
     Seq *next_seq();
@@ -63,17 +65,15 @@ class Bam: public Input {
 int
 Bam::parse_header()
 {
-    bam_header_t *bamh = bam_header_init();
-    bamh = bam_header_read(this->bam_fh);
+    this->bamh = bam_hdr_init();
+    this->bamh = sam_hdr_read(this->bam_fh);
 
-    for (uint j = 0; j < (uint) bamh->n_targets; j++) {
+    for (uint j = 0; j < (uint) this->bamh->n_targets; j++) {
 	//
 	// Record the mapping from integer ID to chromosome name that we will see in BAM records.
 	//
-	this->chrs[j] = string(bamh->target_name[j]);
+	this->chrs[j] = string(this->bamh->target_name[j]);
     }
-
-    bam_header_destroy(bamh);
 
     return 0;
 }
@@ -88,7 +88,7 @@ Bam::next_seq()
     // Read a record from the file, skipping unmapped reads,  and place it in a Seq object.
     //
     do {
-	bytes_read = bam_read1(this->bam_fh, this->aln);
+	bytes_read = sam_read1(this->bam_fh, this->bamh, this->aln);
 
         if (bytes_read <= 0)
             return NULL;
@@ -122,8 +122,11 @@ Bam::next_seq()
     //
     string  seq;
     uint8_t j;
+
+    seq.reserve(this->aln->core.l_qseq);
+    
     for (int i = 0; i < this->aln->core.l_qseq; i++) {
-	j = bam1_seqi(bam1_seq(this->aln), i);
+	j = bam_seqi(bam_get_seq(this->aln), i);
 	switch(j) {
 	case 1:
 	    seq += 'A';
@@ -147,14 +150,14 @@ Bam::next_seq()
     // Fetch the quality score.
     //
     string   qual;
-    uint8_t *q = bam1_qual(this->aln);
+    uint8_t *q = bam_get_qual(this->aln);
     for (int i = 0; i < this->aln->core.l_qseq; i++) {
 	qual += char(int(q[i]) + 33);
     }
 
     string chr = this->chrs[this->aln->core.tid];
 
-    Seq *s = new Seq((const char *) bam1_qname(this->aln), seq.c_str(), qual.c_str(),
+    Seq *s = new Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str(),
 		     chr.c_str(), bp, flag ? strand_minus : strand_plus);
 
     if (cigar.size() > 0)
@@ -168,7 +171,7 @@ Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
 {
     int  op, len;
     char c;
-    uint32_t *cgr = bam1_cigar(this->aln);
+    uint32_t *cgr = bam_get_cigar(this->aln);
 
     for (int k = 0; k < this->aln->core.n_cigar; k++) {
 	op  = cgr[k] &  BAM_CIGAR_MASK;
