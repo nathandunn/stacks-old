@@ -423,7 +423,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
             case FileT::fastq:
             case FileT::fasta:
             default:
-		out_fh_1 << sstr_2.str();
+		out_fh_1 << sstr_1.str();
 		out_fh_2 << sstr_2.str();
             }
             
