@@ -262,10 +262,10 @@ int main (int argc, char* argv[]) {
         //
         // Load the catalog
         //
-        cerr << "Parsing the catalog files...\n";
+        cerr << "Parsing the catalog...\n";
         string catalog_prefix = in_path + "batch_" + to_string(batch_id) + ".catalog";
-        bool compressed = false;
-        int res = load_loci(catalog_prefix, catalog, false, false, compressed);
+        bool   compressed     = false;
+        int    res = load_loci(catalog_prefix, catalog, false, false, compressed);
         if (res == 0) {
             cerr << "Unable to load the catalog '" << catalog_prefix << "'\n";
             return -1;
@@ -274,9 +274,9 @@ int main (int argc, char* argv[]) {
         //
         // Load the matches
         //
-        cerr << "Parsing the matches files...\n";
+        cerr << "Parsing matches to the catalog...\n";
         vector<size_t> samples_to_remove;
-        set<size_t> seen_samples;
+        set<size_t>    seen_samples;
         for (size_t i = 0; i < mpopi.samples().size(); ++i) {
             catalog_matches.push_back(vector<CatMatch*>());
             vector<CatMatch *>& m = catalog_matches.back();
