@@ -1,10 +1,11 @@
+syntax:glob
+
 Makefile
 Makefile.in
 aclocal.m4
 autom4te.cache/*
 clone_filter
 config.h
-config.h.in~
 config.log
 config.status
 config/*
@@ -12,6 +13,8 @@ configure
 src/.deps/*
 src/.dirstamp
 src/*.o
+htslib/*.o
+htslib/cram/*.o
 stamp-h1
 
 cstacks
@@ -27,3 +30,4 @@ pstacks
 rxstacks
 sstacks
 ustacks
+htslib/libhts.a
