@@ -5546,11 +5546,12 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    cerr << "populations " << VERSION << "\n";
+    cerr << "populations " << VERSION << "\n\n";
 }
 
 void help() {
-    cerr << "Usage:\n"
+    cerr << "populations " << VERSION << "\n"
+         << "Usage:\n"
               << "populations -P dir -b batch_id [-O dir] [-M popmap] (filters) [--fstats] [-k [--window_size=150000] [--bootstrap [-N 100]]] (output formats)\n"
               << "populations -V vcf -O dir [-M popmap] (filters) [--fstats] [-k [--window_size=150000] [--bootstrap [-N 100]]] (output formats)\n"
               << "\n"
@@ -5567,8 +5568,8 @@ void help() {
               << "  -r [float]: minimum percentage of individuals in a population required to process a locus for that population.\n"
               << "  --min_maf [float]: specify a minimum minor allele frequency required to process a nucleotide site at a locus (0 < min_maf < 0.5).\n"
               << "  --max_obs_het [float]: specify a maximum observed heterozygosity required to process a nucleotide site at a locus.\n"
-              << ("  -m [int]: specify a minimum stack depth required for individuals at a locus.\n")
-              << ("  --lnl_lim [float]: filter loci with log likelihood values below this threshold.\n")
+              << "  -m [int]: specify a minimum stack depth required for individuals at a locus.\n"
+              << "  --lnl_lim [float]: filter loci with log likelihood values below this threshold.\n"
               << "  --write_single_snp: restrict data analysis to only the first SNP per locus.\n"
               << "  --write_random_snp: restrict data analysis to one random SNP per locus.\n"
               << "  -B: path to a file containing Blacklisted markers to be excluded from the export.\n"
@@ -5577,29 +5578,29 @@ void help() {
               << "Merging and Phasing:\n"
               << "  -e,--renz: restriction enzyme name.\n"
               << "  --merge_sites: merge loci that were produced from the same restriction enzyme cutsite (requires reference-aligned data).\n"
-              << ("  --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n")
+              << "  --merge_prune_lim: when merging adjacent loci, if at least X% samples posses both loci prune the remaining samples out of the analysis.\n"
               << "\n"
               << "Fstats:\n"
               << "  --fstats: enable SNP and haplotype-based F statistics.\n"
-              << ("  --fst_correction: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'. Default: off.\n")
-              << ("  --p_value_cutoff [float]: maximum p-value to keep an Fst measurement. Default: 0.05. (Also used as base for Bonferroni correction.)\n")
+              << "  --fst_correction: specify a correction to be applied to Fst values: 'p_value', 'bonferroni_win', or 'bonferroni_gen'. Default: off.\n"
+              << "  --p_value_cutoff [float]: maximum p-value to keep an Fst measurement. Default: 0.05. (Also used as base for Bonferroni correction.)\n"
               << "\n"
               << "Kernel-smoothing algorithm:\n"
               << "  -k,--kernel_smoothed: enable kernel-smoothed Pi, Fis, Fst, Fst', and Phi_st calculations.\n"
               << "  --sigma [int]: standard deviation of the kernel smoothing weight distribution. Default 150kb.\n"
               << "  --bootstrap: turn on boostrap resampling for all smoothed statistics.\n"
               << "  -N,--bootstrap_reps [int]: number of bootstrap resamplings to calculate (default 100).\n"
-              << ("  --bootstrap_pifis: turn on boostrap resampling for smoothed SNP-based Pi and Fis calculations.\n")
-              << ("  --bootstrap_fst: turn on boostrap resampling for smoothed Fst calculations based on pairwise population comparison of SNPs.\n")
-              << ("  --bootstrap_div: turn on boostrap resampling for smoothed haplotype diveristy and gene diversity calculations based on haplotypes.\n")
-              << ("  --bootstrap_phist: turn on boostrap resampling for smoothed Phi_st calculations based on haplotypes.\n")
-              << ("  --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n")
+              << "  --bootstrap_pifis: turn on boostrap resampling for smoothed SNP-based Pi and Fis calculations.\n"
+              << "  --bootstrap_fst: turn on boostrap resampling for smoothed Fst calculations based on pairwise population comparison of SNPs.\n"
+              << "  --bootstrap_div: turn on boostrap resampling for smoothed haplotype diveristy and gene diversity calculations based on haplotypes.\n"
+              << "  --bootstrap_phist: turn on boostrap resampling for smoothed Phi_st calculations based on haplotypes.\n"
+              << "  --bootstrap_wl [path]: only bootstrap loci contained in this whitelist.\n"
               << "\n"
               << "File output options:\n"
               << "  --ordered_export: if data is reference aligned, exports will be ordered; only a single representative of each overlapping site.\n"
               << "  --genomic: output each nucleotide position (fixed or polymorphic) in all population members to a file (requires --renz).\n"
               << "  --fasta: output full sequence for each unique haplotype, from each sample locus in FASTA format, regardless of plausibility.\n"
-              << ("  --fasta_strict: output full sequence for each haplotype, from each sample locus in FASTA format, only for biologically plausible loci.\n")
+              << "  --fasta_strict: output full sequence for each haplotype, from each sample locus in FASTA format, only for biologically plausible loci.\n"
               << "  --vcf: output SNPs in Variant Call Format (VCF).\n"
               << "  --vcf_haplotypes: output haplotypes in Variant Call Format (VCF).\n"
               << "  --genepop: output results in GenePop format.\n"
@@ -5607,12 +5608,12 @@ void help() {
               << "  --phase: output genotypes in PHASE format.\n"
               << "  --fastphase: output genotypes in fastPHASE format.\n"
               << "  --beagle: output genotypes in Beagle format.\n"
-              << ("  --beagle_phased: output haplotypes in Beagle format.\n")
+              << "  --beagle_phased: output haplotypes in Beagle format.\n"
               << "  --plink: output genotypes in PLINK format.\n"
               << "  --hzar: output genotypes in Hybrid Zone Analysis using R (HZAR) format.\n"
               << "  --phylip: output nucleotides that are fixed-within, and variant among populations in Phylip format for phylogenetic tree construction.\n"
-              << ("  --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n")
-              << ("  --phylip_var_all: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n")
+              << "  --phylip_var: include variable sites in the phylip output encoded using IUPAC notation.\n"
+              << "  --phylip_var_all: include all sequence as well as variable sites in the phylip output encoded using IUPAC notation.\n"
               << "  --treemix: output SNPs in a format useable for the TreeMix program (Pickrell and Pritchard).\n"
               << "\n"
               << "Additional options:\n"
