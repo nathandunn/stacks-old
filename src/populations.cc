@@ -425,7 +425,7 @@ int main (int argc, char* argv[]) {
 
     // Report information on the MetaPopInfo.
     cerr << "Working on " << mpopi.samples().size() << " samples.\n";
-    cerr << "Working on " << mpopi.pops().size() << " population(s) :\n";
+    cerr << "Working on " << mpopi.pops().size() << " population(s):\n";
     for (vector<Pop>::const_iterator p = mpopi.pops().begin(); p != mpopi.pops().end(); p++) {
         cerr << "    " << p->name << ": ";
         for (size_t s = p->first_sample; s < p->last_sample; ++s) {
@@ -433,7 +433,7 @@ int main (int argc, char* argv[]) {
         }
         cerr << mpopi.samples()[p->last_sample].name << "\n";
     }
-    cerr << "Working on " << mpopi.groups().size() << " group(s) of populations :\n";
+    cerr << "Working on " << mpopi.groups().size() << " group(s) of populations:\n";
     for (vector<Group>::const_iterator g = mpopi.groups().begin(); g != mpopi.groups().end(); g++) {
         cerr << "    " << g->name << ": ";
         for (vector<size_t>::const_iterator p = g->pops.begin(); p != g->pops.end() -1; ++p) {
