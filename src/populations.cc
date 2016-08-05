@@ -5149,14 +5149,6 @@ bool hap_compare(pair<string, int> a, pair<string, int> b) {
 }
 
 int parse_command_line(int argc, char* argv[]) {
-#define O_IN_PATH          'P'
-#define O_OUT_PATH         'O'
-#define O_IN_VCF           'V'
-#define O_DEBUG_FLAGS      1001
-#define O_BOOTSTRAP_TYPE   1002
-#define O_ORDERED_EXPORT   1003
-#define O_BOOTSTRAP_REPS   'N'
-#define O_VCF              1004
 
     while (1) {
         static struct option long_options[] = {
@@ -5164,7 +5156,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"version",        no_argument,       NULL, 'v'},
             {"verbose",        no_argument,       NULL, 'd'},
             {"sql",            no_argument,       NULL, 's'},
-            {"vcf",            no_argument,       NULL, O_VCF},
+            {"vcf",            no_argument,       NULL, 1004},
             {"vcf_haplotypes", no_argument,       NULL, 'n'},
             {"fasta",          no_argument,       NULL, 'F'},
             {"fasta_strict",   no_argument,       NULL, 'J'},
@@ -5185,9 +5177,9 @@ int parse_command_line(int argc, char* argv[]) {
             {"window_size",    required_argument, NULL, 'w'},
             {"threads",    required_argument, NULL, 't'},
             {"batch_id",       required_argument, NULL, 'b'},
-            {"in_path",        required_argument, NULL, O_IN_PATH},
-            {"out_path",       required_argument, NULL, O_OUT_PATH},
-            {"in_vcf",         required_argument, NULL, O_IN_VCF},
+            {"in_path",        required_argument, NULL, 'P'},
+            {"out_path",       required_argument, NULL, 'O'},
+            {"in_vcf",         required_argument, NULL, 'V'},
             {"progeny",        required_argument, NULL, 'r'},
             {"min_depth",      required_argument, NULL, 'm'},
             {"renz",           required_argument, NULL, 'e'},
@@ -5196,12 +5188,12 @@ int parse_command_line(int argc, char* argv[]) {
             {"blacklist",      required_argument, NULL, 'B'},
             {"write_single_snp",  no_argument,       NULL, 'I'},
             {"write_random_snp",  no_argument,       NULL, 'j'},
-            {"ordered_export",    no_argument,       NULL, O_ORDERED_EXPORT},
+            {"ordered_export",    no_argument,       NULL, 1002},
             {"kernel_smoothed",   no_argument,       NULL, 'k'},
             {"fstats",            no_argument,       NULL, '6'},
             {"log_fst_comp",      no_argument,       NULL, 'l'},
-            {"bootstrap_type",    required_argument, NULL, O_BOOTSTRAP_TYPE},
-            {"bootstrap_reps",    required_argument, NULL, O_BOOTSTRAP_REPS},
+            {"bootstrap_type",    required_argument, NULL, 1001},
+            {"bootstrap_reps",    required_argument, NULL, 1003},
             {"bootstrap_wl",      required_argument, NULL, 'Q'},
             {"bootstrap",         no_argument,       NULL, '1'},
             {"bootstrap_fst",     no_argument,       NULL, '2'},
@@ -5215,7 +5207,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"merge_prune_lim",   required_argument, NULL, 'i'},
             {"fst_correction",    required_argument, NULL, 'f'},
             {"p_value_cutoff",    required_argument, NULL, 'u'},
-            {"debug_flags",    required_argument, NULL, O_DEBUG_FLAGS},
+            {"debug_flags",    required_argument, NULL, 1000},
             {0, 0, 0, 0}
         };
         
@@ -5236,17 +5228,17 @@ int parse_command_line(int argc, char* argv[]) {
         case 't':
             num_threads = atoi(optarg);
             break;
-        case O_IN_PATH:
+        case 'P':
             in_path = optarg;
             if (!in_path.empty() && in_path.back() != '/')
                 in_path += "/";
             break;
-        case O_OUT_PATH:
+        case 'O':
             out_path = optarg;
             if (!out_path.empty() && out_path.back() != '/')
                 out_path += "/";
             break;
-        case O_IN_VCF:
+        case 'V':
             in_vcf_path = optarg;
             break;
         case 'M':
@@ -5324,7 +5316,7 @@ int parse_command_line(int argc, char* argv[]) {
         case '5':
             bootstrap_pifis = true;
             break;
-        case O_BOOTSTRAP_TYPE:
+        case 1001:
             if (strcasecmp(optarg, "exact") == 0)
                 bootstrap_type = bs_exact;
             else if (strcasecmp(optarg, "approx") == 0)
@@ -5334,7 +5326,7 @@ int parse_command_line(int argc, char* argv[]) {
                 help();
             }
             break;
-        case O_BOOTSTRAP_REPS:
+        case 1003:
             bootstrap_reps = atoi(optarg);
             break;
         case 'Q':
@@ -5351,13 +5343,13 @@ int parse_command_line(int argc, char* argv[]) {
         case 'j':
             write_random_snp = true;
             break;
-        case O_ORDERED_EXPORT:
+        case 1002:
             ordered_export = true;
             break;
         case 's':
             sql_out = true;
             break;
-        case O_VCF:
+        case 1004:
             vcf_out = true;
             break;
         case 'n':
@@ -5460,7 +5452,7 @@ int parse_command_line(int argc, char* argv[]) {
             // getopt_long already printed an error message.
             help();
             break;
-        case O_DEBUG_FLAGS:
+        case 1000:
         {
             static const set<string> known_debug_flags = {"VCFCOMP"};
             stringstream ss (optarg);
