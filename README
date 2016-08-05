@@ -25,16 +25,7 @@ cpan tool.
 
 1. Install optional components:
 
-The performance of Stacks can be improved by installing two, optional external libraries.
-First, to enable reading of BAM files, install Samtools: 
-
-    http://samtools.sourceforge.net/.
-
-    Note: Stacks is not yet compatible with newer Samtools versions that use HTSlib. For
-    now, you must use Samtools version 0.1.19, which was the last non-HTSlib version:
-       http://sourceforge.net/projects/samtools/files/samtools/0.1.19/
-
-Second, to lower memory usage install Google's SparseHash class.
+If you would like to lower memory usage install Google's SparseHash class.
 
     http://code.google.com/p/sparsehash/
 
@@ -43,16 +34,14 @@ package manager. If you are using Ubuntu, you can install the following packages
 
 % sudo apt-get install libdbd-mysql-perl
 % sudo apt-get install libsparsehash-dev
-% sudo apt-get install samtools
-% sudo apt-get install libbam-dev
 
 A similar set of commands can be executed on Debian using apt-get, or on a RedHat derived Linux
 system using yum, or another package manager on other Linux distributions.
 
 2. Build the software. Stacks uses the standard autotools install:
 
-% tar xfvz stacks_x.xx.tar.gz
-% cd stacks_x.xx
+% tar xfvz stacks-x.xx.tar.gz
+% cd stacks-x.xx
 % ./configure
 
 You can change the root of the install location (/usr/local/ on most
@@ -61,21 +50,9 @@ the configure script.
 
 % ./configure --prefix=/home/smith/local
 
-You can enable Sparsehash and BAM by adding the following options:
+You can enable Sparsehash by adding the following options:
 
-% ./configure --enable-sparsehash --enable-bam
-
-You probably need to specify the BAM library location:
-
-% ./configure --enable-bam \
-              --with-bam-include-path=/usr/local/include/bam \
-              --with-bam-lib-path=/usr/local/lib
-
-Or, if you installed with Ubuntu packages:
-
-% ./configure --enable-bam \
-              --with-bam-include-path=/usr/include/samtools \
-              --with-bam-lib-path=/usr/lib
+% ./configure --enable-sparsehash
 
 % make
 

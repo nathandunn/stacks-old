@@ -13,9 +13,9 @@ m4_pattern_allow([AC_OPENMP])
 # Get BAM, aka HTSLib library and include locations if requested
 #
 AC_ARG_ENABLE([bam],
-    AS_HELP_STRING([--enable-bam], [Enable use of BAM files through HTSLib.]))
+    AS_HELP_STRING([--disable-bam], [Disable use of BAM files through HTSLib.]))
 
-AS_IF([test "x$enable_bam" = "xyes"], [
+AS_IF([test "x$enable_bam" != "xno"], [
 AC_DEFINE([HAVE_BAM], [1], [Enable compilation with Samtools BAM library])
 
 BAM_CFLAGS='-I./htslib/htslib'
