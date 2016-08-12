@@ -776,9 +776,6 @@ sub parse_command_line {
 		usage();
 	    }
 
-	} elsif ($_ =~ /^-t$/) { 
-	    push(@_pstacks, "-d "); 
-
 	} elsif ($_ =~ /^-T$/) {
 	    $arg = shift @ARGV;
 	    push(@_pstacks, "-p " . $arg); 
@@ -872,7 +869,7 @@ sub usage {
     version();
 
     print STDERR <<EOQ; 
-ref_map.pl -p path -r path [-s path] -o path [-t] [-m min_cov] [-M mismatches] [-T num_threads] [-A type] [-O popmap] [-B db -b batch_id -D "desc"] [-S -i num] [-e path] [-d] [-h]
+ref_map.pl -p path -r path [-s path] -o path [-m min_cov] [-T num_threads] [-A type] [-O popmap] [-B db -b batch_id -D "desc"] [-S -i num] [-e path] [-d] [-h]
     b: batch ID representing this dataset (an integer, e.g. 1, 2, 3).
     o: path to write pipeline output files.
     O: if analyzing one or more populations, specify a pOpulation map.
