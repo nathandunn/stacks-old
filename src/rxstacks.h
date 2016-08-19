@@ -80,15 +80,15 @@ int    dist(string, string);
 int    measure_error(CSLocus *, Locus *, Datum *, ofstream &);
 int    calc_lnl_means(map<int, CSLocus *> &, PopMap<CSLocus> *);
 int    prune_nucleotides(CSLocus *, Locus *, Datum *, ofstream &, unsigned long int &,
-			 unsigned long int &, unsigned long int &, unsigned long int &,
-			 unsigned long int &, unsigned long int &, unsigned long int &);
+                         unsigned long int &, unsigned long int &, unsigned long int &,
+                         unsigned long int &, unsigned long int &, unsigned long int &);
 int    invoke_model(Locus *, int, map<char, int> &);
 int    call_alleles(Locus *, set<int> &); 
 int    generate_matched_haplotypes(CSLocus *, Locus *, Datum *);
 int    fill_catalog_snps(map<int, CSLocus *> &);
 int    log_model_calls(Locus *, ofstream &,
-		       unsigned long int &, unsigned long int &, unsigned long int &,
-		       unsigned long int &, unsigned long int &, unsigned long int &);
+                       unsigned long int &, unsigned long int &, unsigned long int &,
+                       unsigned long int &, unsigned long int &, unsigned long int &);
 int    write_results(string, map<int, Locus *> &);
 
 #endif // __RXSTACKS_H__
