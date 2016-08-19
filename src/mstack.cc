@@ -57,7 +57,7 @@ MergedStack::~MergedStack() {
 
 int MergedStack::add_consensus(const char *seq) {
     if (this->con != NULL)
-	delete [] this->con;
+        delete [] this->con;
 
     this->len = strlen(seq);
     this->con = new char[len + 1];
@@ -69,7 +69,7 @@ int MergedStack::add_consensus(const char *seq) {
 
 int MergedStack::add_consensus(DNASeq *seq) {
     if (this->con != NULL)
-	delete [] this->con;
+        delete [] this->con;
 
     this->len = seq->size;
     this->con = new char[this->len + 1];
@@ -80,7 +80,7 @@ int MergedStack::add_consensus(DNASeq *seq) {
 
 int MergedStack::add_consensus(DNANSeq *seq) {
     if (this->con != NULL)
-	delete [] this->con;
+        delete [] this->con;
 
     this->len = seq->size();
     this->con = new char[this->len + 1];
@@ -211,9 +211,9 @@ MergedStack::calc_likelihood()
         // Count the nucleotide type at each position in the column.
         //
         for (row = 0; row < height; row++) {
-	    d = this->matrix[row];
+            d = this->matrix[row];
             nuc[(*d)[col]]++;
-	}
+        }
         //
         // Find the base with a plurality of occurances and call it.
         //
@@ -225,23 +225,23 @@ MergedStack::calc_likelihood()
                 max = n;
         }
 
-	//
-	// For nucleotide positions with potential polymorphism (i.e. two or more alleles at 
-	// the locus that differ at that position), first find the ML genotype (call_multinomial_snp). 
-	// If it returns 'het' calculate the heterozygous_likelihood(), otherwise calculate homozygous
-	// likelihood.
-	//
-	snp_type res = this->snps[col]->type;
+        //
+        // For nucleotide positions with potential polymorphism (i.e. two or more alleles at 
+        // the locus that differ at that position), first find the ML genotype (call_multinomial_snp). 
+        // If it returns 'het' calculate the heterozygous_likelihood(), otherwise calculate homozygous
+        // likelihood.
+        //
+        snp_type res = this->snps[col]->type;
 
-	if (res == snp_type_het) 
-	    this->lnl += heterozygous_likelihood(col, nuc);
-	else if (res == snp_type_hom)
-	    this->lnl += homozygous_likelihood(col, nuc);
-	else {
-	    double homlnl = homozygous_likelihood(col, nuc);
-	    double hetlnl = heterozygous_likelihood(col, nuc);
-	    this->lnl += hetlnl > homlnl ? hetlnl : homlnl;
-	}
+        if (res == snp_type_het) 
+            this->lnl += heterozygous_likelihood(col, nuc);
+        else if (res == snp_type_hom)
+            this->lnl += homozygous_likelihood(col, nuc);
+        else {
+            double homlnl = homozygous_likelihood(col, nuc);
+            double hetlnl = heterozygous_likelihood(col, nuc);
+            this->lnl += hetlnl > homlnl ? hetlnl : homlnl;
+        }
     }
 
     return this->lnl;

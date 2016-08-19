@@ -31,29 +31,29 @@ char reverse(char c) {
     switch (c) {
     case 'A':
     case 'a':
-	return 'T';
-	break;
+        return 'T';
+        break;
     case 'C':
     case 'c':
-	return 'G';
-	break;
+        return 'G';
+        break;
     case 'G':
     case 'g':
-	return 'C';
-	break;
+        return 'C';
+        break;
     case 'T':
     case 't':
-	return 'A';
-	break;
+        return 'A';
+        break;
     case 'N':
     case 'n':
     case '.':
-	return 'N';
-	break;
+        return 'N';
+        break;
     case '-':
     default:
-	return '-';
-	break;
+        return '-';
+        break;
     }
 
     return 'N';
@@ -85,11 +85,11 @@ rev_comp(const char *seq)
         case 't':
             com[j] = 'A';
             break;
-	case 'N':
-	case 'n':
-	case '.':
-	    com[j] = 'N';
-	    break;
+        case 'N':
+        case 'n':
+        case '.':
+            com[j] = 'N';
+            break;
         }
         j++;
     }
@@ -107,11 +107,11 @@ reverse_string(char *seq)
     char  tmp;
 
     while (q > p) {
-	tmp = *q;
-	*q  = *p;
-	*p  = tmp;
-	q--;
-	p++;
+        tmp = *q;
+        *q  = *p;
+        *p  = tmp;
+        q--;
+        p++;
     }
 
     return;
@@ -133,12 +133,12 @@ is_integer(const char *str)
     // Check for various possible errors
     //
     if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
-	|| (errno != 0 && val == 0)) {
-	return -1;
+        || (errno != 0 && val == 0)) {
+        return -1;
     }
 
     if (endptr == str || *endptr != '\0')
-	return -1;
+        return -1;
 
     return (int) val;
 }
@@ -159,12 +159,12 @@ is_double(const char *str)
     // Check for various possible errors
     //
     if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
-	|| (errno != 0 && val == 0)) {
-	return -1;
+        || (errno != 0 && val == 0)) {
+        return -1;
     }
 
     if (endptr == str || *endptr != '\0')
-	return -1;
+        return -1;
 
     return val;
 }

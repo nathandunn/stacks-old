@@ -96,16 +96,16 @@ generate_kmers_lazily(const char *seq, uint kmer_len, uint num_kmers, vector<cha
     const char *k = seq;
 
     if (num_kmers > kmers.size()) {
-	int new_kmers = num_kmers - kmers.size();
+        int new_kmers = num_kmers - kmers.size();
 
         for (int i = 0; i < new_kmers; i++) {
-	    kmer = new char[kmer_len + 1];
-	    kmers.push_back(kmer);
-	}
+            kmer = new char[kmer_len + 1];
+            kmers.push_back(kmer);
+        }
     }
 
     for (uint i = 0; i < num_kmers; i++) {
-	kmer = kmers.at(i);
+        kmer = kmers.at(i);
         strncpy(kmer, k, kmer_len);
         kmer[kmer_len] = '\0';
         k++;
@@ -248,7 +248,7 @@ populate_kmer_hash(map<int, Locus *> &catalog, CatKmerHashMap &kmer_map, vector<
     for (it = catalog.begin(); it != catalog.end(); it++) {
         tag = it->second;
 
-	num_kmers = strlen(tag->con) - kmer_len + 1;
+        num_kmers = strlen(tag->con) - kmer_len + 1;
 
         //
         // Iterate through the possible Catalog alleles
@@ -302,7 +302,7 @@ populate_kmer_hash(map<int, Locus *> &catalog, KmerHashMap &kmer_map, vector<cha
     for (it = catalog.begin(); it != catalog.end(); it++) {
         tag = it->second;
 
-	num_kmers = strlen(tag->con) - kmer_len + 1;
+        num_kmers = strlen(tag->con) - kmer_len + 1;
 
         //
         // Iterate through the possible Catalog alleles
@@ -313,24 +313,24 @@ populate_kmer_hash(map<int, Locus *> &catalog, KmerHashMap &kmer_map, vector<cha
             //
             generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
-	    allele_it = allele_map.insert(allele_it, make_pair(allele_index, make_pair(allele->first, tag->id)));
+            allele_it = allele_map.insert(allele_it, make_pair(allele_index, make_pair(allele->first, tag->id)));
 
             for (int j = 0; j < num_kmers; j++) {
                 hash_key = kmers[j];
 
-		map_it = kmer_map.find(hash_key);
+                map_it = kmer_map.find(hash_key);
 
                 if (map_it != kmer_map.end()) {
-		    map_it->second.push_back(allele_index);
+                    map_it->second.push_back(allele_index);
                     delete [] kmers[j];
-		} else {
-		    kmer_map[hash_key].push_back(allele_index);
+                } else {
+                    kmer_map[hash_key].push_back(allele_index);
                     kmer_map_keys.push_back(hash_key);
-		}
+                }
             }
             kmers.clear();
 
-	    allele_index++;
+            allele_index++;
         }
     }
 
@@ -362,7 +362,7 @@ populate_kmer_hash(map<int, CLocus *> &catalog, KmerHashMap &kmer_map, vector<ch
     for (it = catalog.begin(); it != catalog.end(); it++) {
         tag = it->second;
 
-	num_kmers = strlen(tag->con) - kmer_len + 1;
+        num_kmers = strlen(tag->con) - kmer_len + 1;
 
         //
         // Iterate through the possible Catalog alleles
@@ -373,24 +373,24 @@ populate_kmer_hash(map<int, CLocus *> &catalog, KmerHashMap &kmer_map, vector<ch
             //
             generate_kmers(allele->second.c_str(), kmer_len, num_kmers, kmers);
 
-	    allele_it = allele_map.insert(allele_it, make_pair(allele_index, make_pair(allele->first, tag->id)));
+            allele_it = allele_map.insert(allele_it, make_pair(allele_index, make_pair(allele->first, tag->id)));
 
             for (int j = 0; j < num_kmers; j++) {
                 hash_key = kmers[j];
 
-		map_it = kmer_map.find(hash_key);
+                map_it = kmer_map.find(hash_key);
 
                 if (map_it != kmer_map.end()) {
-		    map_it->second.push_back(allele_index);
+                    map_it->second.push_back(allele_index);
                     delete [] kmers[j];
-		} else {
-		    kmer_map[hash_key].push_back(allele_index);
+                } else {
+                    kmer_map[hash_key].push_back(allele_index);
                     kmer_map_keys.push_back(hash_key);
-		}
+                }
             }
             kmers.clear();
 
-	    allele_index++;
+            allele_index++;
         }
     }
 

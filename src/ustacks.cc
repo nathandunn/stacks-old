@@ -223,15 +223,15 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
             continue;
 
         tag_1 = it->second;
-	sort(tag_1->alns.begin(), tag_1->alns.end(), rank_alignments);
+        sort(tag_1->alns.begin(), tag_1->alns.end(), rank_alignments);
 
         //
         // No gapped alignments, or no optimal alignment for this stack, or
-	// this stack has already been set aside.
+        // this stack has already been set aside.
         //
         if (tag_1->masked || tag_1->alns.size() == 0)
             continue;
-	if (tag_1->alns.size() > 1 && tag_1->alns[0].pct_id == tag_1->alns[1].pct_id)
+        if (tag_1->alns.size() > 1 && tag_1->alns[0].pct_id == tag_1->alns[1].pct_id)
             continue;
 
         //
@@ -239,17 +239,17 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
         // of tags are, reciprocal to each other..
         //
         tag_2 = merged[tag_1->alns[0].id];
-	sort(tag_2->alns.begin(), tag_2->alns.end(), rank_alignments);
+        sort(tag_2->alns.begin(), tag_2->alns.end(), rank_alignments);
 
-	if (tag_2->masked || tag_2->alns.size() == 0)
+        if (tag_2->masked || tag_2->alns.size() == 0)
             continue;
-	if (tag_2->alns.size() > 1 && tag_2->alns[0].pct_id == tag_2->alns[1].pct_id)
+        if (tag_2->alns.size() > 1 && tag_2->alns[0].pct_id == tag_2->alns[1].pct_id)
             continue;
 
         if (tag_1->id != (int)tag_2->alns[0].id)
             continue;
 
-	cigar_1 = invert_cigar(tag_1->alns[0].cigar);
+        cigar_1 = invert_cigar(tag_1->alns[0].cigar);
         cigar_2 = tag_2->alns[0].cigar;
 
         if (cigar_1 == cigar_2) {
@@ -486,8 +486,8 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
         KmerHashMap::iterator h;
         vector<char *> query_kmers;
         set<string>    uniq_kmers;
-	GappedAln     *aln = new GappedAln(con_len);
-	AlignRes       a;
+        GappedAln     *aln = new GappedAln(con_len);
+        AlignRes       a;
 
         initialize_kmers(kmer_len, num_kmers, query_kmers);
         
@@ -548,9 +548,9 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
                     continue;
 
                 if (aln->align(tag_1->con, tag_2->con)) {
-		    a = aln->result();
-		    tag_1->alns.push_back(Aln(tag_2->id, a.cigar, a.pct_id, a.gap_cnt));
-		}
+                    a = aln->result();
+                    tag_1->alns.push_back(Aln(tag_2->id, a.cigar, a.pct_id, a.gap_cnt));
+                }
             }
         }
 
@@ -561,7 +561,7 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
             delete [] query_kmers[j];
         query_kmers.clear();
 
-	delete aln;
+        delete aln;
     }
 
     free_kmer_hash(kmer_map, kmer_map_keys);
@@ -604,8 +604,8 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     int min_hits = calc_min_kmer_matches(kmer_len, max_rem_dist, con_len, set_kmer_len ? true : false);
 
     cerr << "  Distance allowed between stacks: " << max_rem_dist
-	 << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
-	 << min_hits << " k-mer hits required.\n";
+         << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
+         << min_hits << " k-mer hits required.\n";
     
     KmerHashMap    kmer_map;
     vector<char *> kmer_map_keys;
@@ -616,7 +616,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     {
         KmerHashMap::iterator h;
         vector<char *> rem_kmers;
-	char *buf = new char[con_len + 1];
+        char *buf = new char[con_len + 1];
 
         #pragma omp for schedule(dynamic) 
         for (uint j = 0; j < keys.size(); j++) {
@@ -695,7 +695,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
         for (uint k = 0; k < rem_kmers.size(); k++)
             delete [] rem_kmers[k];
 
-	delete [] buf;
+        delete [] buf;
     }
 
     free_kmer_hash(kmer_map, kmer_map_keys);
@@ -825,8 +825,8 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                         SNP *snp    = new SNP;
                         snp->type   = snp_type_unk;
                         snp->col    = col;
-			snp->rank_1 = '-';
-			snp->rank_2 = '-';
+                        snp->rank_1 = '-';
+                        snp->rank_2 = '-';
                         mtag->snps.push_back(snp);
                         col++;
                     } while (col < mtag->gaps[cur_gap].end && col < length);
@@ -1522,17 +1522,17 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
     int min_hits = calc_min_kmer_matches(kmer_len, utag_dist, con_len, set_kmer_len ? true : false);
 
     cerr << "  Distance allowed between stacks: " << utag_dist
-	 << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
-	 << min_hits << " k-mer hits required.\n";
+         << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
+         << min_hits << " k-mer hits required.\n";
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
  
     #pragma omp parallel private(tag_1, tag_2)
     { 
-	KmerHashMap::iterator h;
-	vector<char *>        query_kmers;
-	
-	initialize_kmers(kmer_len, num_kmers, query_kmers);
+        KmerHashMap::iterator h;
+        vector<char *>        query_kmers;
+        
+        initialize_kmers(kmer_len, num_kmers, query_kmers);
 
         #pragma omp for schedule(dynamic) 
         for (uint i = 0; i < keys.size(); i++) {
@@ -1588,11 +1588,11 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
             sort(tag_1->dist.begin(), tag_1->dist.end(), compare_dist);
         }
 
-	//
-	// Free the k-mers we generated for this query
-	//
-	for (uint j = 0; j < query_kmers.size(); j++)
-	    delete [] query_kmers[j];
+        //
+        // Free the k-mers we generated for this query
+        //
+        for (uint j = 0; j < query_kmers.size(); j++)
+            delete [] query_kmers[j];
     }
 
     free_kmer_hash(kmer_map, kmer_map_keys);

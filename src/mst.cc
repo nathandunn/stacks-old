@@ -226,10 +226,10 @@ string MinSpanTree::vis(bool overlay) {
 
         for (uint i = 0; i < n->min_adj_list.size(); i++) {
             data << "  "; 
-	    n->label.length() > 0 ? data << n->label : data << n->id;
-	    data << "--";
-	    n->min_adj_list[i]->label.length() > 0 ? (data << n->min_adj_list[i]->label) : (data << n->min_adj_list[i]->id);
-	    data << "\n";
+            n->label.length() > 0 ? data << n->label : data << n->id;
+            data << "--";
+            n->min_adj_list[i]->label.length() > 0 ? (data << n->min_adj_list[i]->label) : (data << n->min_adj_list[i]->id);
+            data << "\n";
             if (visited.count(n->min_adj_list[i]->id) == 0)
                 q.push(n->min_adj_list[i]);
         }
@@ -244,7 +244,7 @@ string MinSpanTree::vis(bool overlay) {
     for (i = this->nodes.begin(); i != this->nodes.end(); i++) {
         n = i->second;
         for (j = 0; j < n->edges.size(); j++)
-	    scale = n->edges[j]->dist > scale ? n->edges[j]->dist : scale;
+            scale = n->edges[j]->dist > scale ? n->edges[j]->dist : scale;
     }
     scale = scale / scale_factor;
 
@@ -256,13 +256,13 @@ string MinSpanTree::vis(bool overlay) {
         for (j = 0; j < n->edges.size(); j++) {
             d        = n->edges[j]->dist;
             scaled_d = d / scale;
-	    scaled_d = scaled_d < 0.75 ? 0.75 : scaled_d;
-	    sprintf(label, "%.1f", d);
+            scaled_d = scaled_d < 0.75 ? 0.75 : scaled_d;
+            sprintf(label, "%.1f", d);
 
-	    n->label.length() > 0 ? (data << n->label) : (data << n->id);
-  	    data << " -- ";
-	    n->edges[j]->child->label.length() > 0 ? (data << n->edges[j]->child->label) : (data << n->edges[j]->child->id);
-	    data << " [len=" << scaled_d << ", label=" << label << "];\n";
+            n->label.length() > 0 ? (data << n->label) : (data << n->id);
+            data << " -- ";
+            n->edges[j]->child->label.length() > 0 ? (data << n->edges[j]->child->label) : (data << n->edges[j]->child->id);
+            data << " [len=" << scaled_d << ", label=" << label << "];\n";
         }
     }
 
