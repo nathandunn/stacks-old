@@ -62,13 +62,13 @@ bool compare_pair_haplotype_rev(pair<string, double>, pair<string, double>);
 //
 struct int_increasing {
     bool operator() (const int& lhs, const int& rhs) const {
-	return lhs < rhs;
+        return lhs < rhs;
     }
 };
 
 struct int_decreasing {
     bool operator() (const int& lhs, const int& rhs) const {
-	return lhs > rhs;
+        return lhs > rhs;
     }
 };
 

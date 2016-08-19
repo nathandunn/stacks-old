@@ -30,15 +30,15 @@ public:
     uint   contiguity;
     double pct_id;
     AlignRes() {
-	this->gap_cnt    = 0;
+        this->gap_cnt    = 0;
         this->contiguity = 0;
-	this->pct_id     = 0.0;
+        this->pct_id     = 0.0;
     }
     AlignRes(string cigar, uint gapcnt, uint contiguity, double pct_id) {
-	this->cigar      = cigar;
-	this->gap_cnt    = gapcnt;
+        this->cigar      = cigar;
+        this->gap_cnt    = gapcnt;
         this->contiguity = contiguity;
-	this->pct_id     = pct_id;
+        this->pct_id     = pct_id;
     }
 };
 
@@ -140,32 +140,32 @@ GappedAln::init(int size_1, int size_2)
     // Resize the underlying matrix and path arrays, if necessary.
     //
     if ((size_1 + 1) > (int)_m_size || (size_2 + 1) > (int)_n_size) {
-	for (uint i = 0; i < this->_m_size; i++) {
-	    delete [] this->matrix[i];
-	    delete [] this->path[i];
-	}
+        for (uint i = 0; i < this->_m_size; i++) {
+            delete [] this->matrix[i];
+            delete [] this->path[i];
+        }
         if (this->_m_size > 0) {
             delete [] this->matrix;
             delete [] this->path;
         }
 
-	this->_m_size = size_1 + 1;
-	this->_n_size = size_2 + 1;
+        this->_m_size = size_1 + 1;
+        this->_n_size = size_2 + 1;
         //
         // Resize the arrays to be 25% larger than the requested size.
         //
         int new_size = this->_m_size > this->_n_size ? this->_m_size : this->_n_size;
         new_size += int((double) new_size * 0.25);
         this->_m_size = new_size;
-	this->_n_size = new_size;
+        this->_n_size = new_size;
 
-	this->matrix = new double * [this->_m_size];
-	for (uint i = 0; i < this->_m_size; i++)
-	    this->matrix[i] = new double [this->_n_size];
+        this->matrix = new double * [this->_m_size];
+        for (uint i = 0; i < this->_m_size; i++)
+            this->matrix[i] = new double [this->_n_size];
 
-	this->path = new AlignPath * [this->_m_size];
-	for (uint i = 0; i < this->_m_size; i++)
-	    this->path[i] = new AlignPath [this->_n_size];
+        this->path = new AlignPath * [this->_m_size];
+        for (uint i = 0; i < this->_m_size; i++)
+            this->path[i] = new AlignPath [this->_n_size];
     }
 
     //
@@ -336,7 +336,7 @@ GappedAln::align(string tag_1, string tag_2)
     // dump_alignment(tag_1, tag_2, matrix, path);
 
     if (this->trace_alignment(tag_1, tag_2))
-	return 1;
+        return 1;
     
     return 0;
 }
@@ -365,7 +365,7 @@ compare_alignres(AlignRes a, AlignRes b)
             return (a.pct_id > b.pct_id);
 
     } else {
-	return (a.gap_cnt < b.gap_cnt);
+        return (a.gap_cnt < b.gap_cnt);
     }
 }
 
@@ -434,13 +434,13 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
         gaps       = 0;
         contiguity = 0;
         seq_break  = false;
-	ident      = 0.0;
+        ident      = 0.0;
         i          = 0;
         while (i < len) {
             if (aln_1[i] != '-' && aln_2[i] != '-') {
                 cnt = 0;
                 do {
-		    if (aln_1[i] == aln_2[i]) ident++;
+                    if (aln_1[i] == aln_2[i]) ident++;
                     cnt++;
                     i++;
                     if (seq_break == false) contiguity++;
@@ -473,7 +473,7 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
 
         alns.push_back(AlignRes(cigar, gaps, contiguity, (ident / (double) len)));
         
-	// cerr << aln_1 << " [" << cigar << ", contiguity: " << contiguity << ", gaps: " << gaps << "]\n"
+        // cerr << aln_1 << " [" << cigar << ", contiguity: " << contiguity << ", gaps: " << gaps << "]\n"
         //      << aln_2 << "\n";
 
     } while (more_paths);

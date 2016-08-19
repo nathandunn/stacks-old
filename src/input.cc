@@ -73,10 +73,10 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
     // Reverse complement sequences from the negative strand 
     //
     if (strand == strand_plus) {
-	this->seq = new char[strlen(seq)  + 1];
-	strcpy(this->seq, seq);
+        this->seq = new char[strlen(seq)  + 1];
+        strcpy(this->seq, seq);
     } else {
-	this->seq = rev_comp(seq);
+        this->seq = rev_comp(seq);
     }
 }
 
@@ -112,14 +112,14 @@ parse_tsv(const char *line, vector<string> &parts)
     p = line;
 
     do {
-	for (q = p; *q != '\t' && *q != '\0'; q++);
-	if (q - p == 0) 
-	    part = "";
-	else
-	    part.assign(p, (q - p));
-	parts.push_back(part);
+        for (q = p; *q != '\t' && *q != '\0'; q++);
+        if (q - p == 0) 
+            part = "";
+        else
+            part.assign(p, (q - p));
+        parts.push_back(part);
 
-	p = q + 1;
+        p = q + 1;
     } while (*q != '\0');
 
     //for (size_t i = 0; i < parts.size(); i++)
@@ -139,14 +139,14 @@ parse_ssv(const char *line, vector<string> &parts)
     p = line;
 
     do {
-	for (q = p; *q != ' ' && *q != '\0'; q++);
-	if (q - p == 0) 
-	    part = "";
-	else
-	    part.assign(p, (q - p));
-	parts.push_back(string(part));
+        for (q = p; *q != ' ' && *q != '\0'; q++);
+        if (q - p == 0) 
+            part = "";
+        else
+            part.assign(p, (q - p));
+        parts.push_back(string(part));
 
-	p = q + 1;
+        p = q + 1;
     } while (*q != '\0');
 
     return 0;
@@ -163,8 +163,8 @@ int read_line(ifstream &fh, char **line, int *size) {
     // Make sure we read the entire line.
     //
     do {
-	fh.clear();
-	fh.getline(buf, max_len);
+        fh.clear();
+        fh.getline(buf, max_len);
 
         blen = strlen(buf);
         if (blen + llen <= (*size) - 1) {
@@ -179,7 +179,7 @@ int read_line(ifstream &fh, char **line, int *size) {
     } while (fh.fail() && !fh.bad() && !fh.eof());
 
     if (fh.eof() || fh.bad())
-	return 0;
+        return 0;
 
     return 1;
 }
@@ -197,14 +197,14 @@ int read_gzip_line(gzFile &fh, char **line, int *size) {
     // Make sure we read the entire line.
     //
     do {
-	if (gzgets(fh, buf, max_len) == NULL) break;
+        if (gzgets(fh, buf, max_len) == NULL) break;
 
         blen = strlen(buf);
 
-	if (blen > 0 && buf[blen - 1] == '\n') {
-	    eol = true;
-	    buf[blen - 1] = '\0';
-	}
+        if (blen > 0 && buf[blen - 1] == '\n') {
+            eol = true;
+            buf[blen - 1] = '\0';
+        }
 
         if (blen + llen <= (*size) - 1) {
             strcat(*line, buf);
@@ -218,7 +218,7 @@ int read_gzip_line(gzFile &fh, char **line, int *size) {
     } while (!gzeof(fh) && !eol);
 
     if (gzeof(fh))
-	return 0;
+        return 0;
 
     return 1;
 }
@@ -229,18 +229,18 @@ is_comment(const char *line)
     const char *p = line;
 
     while (*p != '\0')
-	switch(*p) {
-	case '#':
-	    return true;
-	    break;
-	case ' ':
-	case '\t':
-	    p++;
-	    break;
-	default:
-	    return false;
-	    break;
-	}
+        switch(*p) {
+        case '#':
+            return true;
+            break;
+        case ' ':
+        case '\t':
+            p++;
+            break;
+        default:
+            return false;
+            break;
+        }
 
     return false;
 }

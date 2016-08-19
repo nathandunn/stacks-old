@@ -50,7 +50,7 @@ DNANSeq::DNANSeq(int size, unsigned char *seq) {
 
     this->s = new unsigned char[bytes];
     for (unsigned int i = 0; i < bytes; i++)
-	this->s[i] = seq[i];
+        this->s[i] = seq[i];
 }
 
 DNANSeq::DNANSeq(int size, const char *seq) {
@@ -64,44 +64,44 @@ DNANSeq::DNANSeq(int size, const char *seq) {
     int bit = 0;
 
     for (int i = 0; i < size; i++) {
-	switch (seq[i]) {
-	case 'A':
-	case 'a':
-	    // A == 000
-	    bit += 3;
-	    break;
-	case 'C':
-	case 'c':
-	    // C == 001
-	    bit += 2;
-	    BITSET(this->s, bit);
-	    bit++;
-	    break;
-	case 'G':
-	case 'g':
-	    // G == 010
-	    bit++;
-	    BITSET(this->s, bit);
-	    bit++;
-	    bit++;
-	    break;
-	case 'T':
-	case 't':
-	    // T == 011
-	    bit++;
-	    BITSET(this->s, bit);
-	    bit++;
-	    BITSET(this->s, bit);
-	    bit++;
-	    break;
-	case 'N':
-	case 'n':
-	case '.':
-	    // N == 100
-	    BITSET(this->s, bit);
-	    bit += 3;
-	    break;
-	}
+        switch (seq[i]) {
+        case 'A':
+        case 'a':
+            // A == 000
+            bit += 3;
+            break;
+        case 'C':
+        case 'c':
+            // C == 001
+            bit += 2;
+            BITSET(this->s, bit);
+            bit++;
+            break;
+        case 'G':
+        case 'g':
+            // G == 010
+            bit++;
+            BITSET(this->s, bit);
+            bit++;
+            bit++;
+            break;
+        case 'T':
+        case 't':
+            // T == 011
+            bit++;
+            BITSET(this->s, bit);
+            bit++;
+            BITSET(this->s, bit);
+            bit++;
+            break;
+        case 'N':
+        case 'n':
+        case '.':
+            // N == 100
+            BITSET(this->s, bit);
+            bit += 3;
+            break;
+        }
     }
 }
 
@@ -121,30 +121,30 @@ char DNANSeq::operator[](int pos) {
     base = 'X';
 
     for (int i = bits_per_nuc - 1; i >= 0; i--) {
-	if (BITTEST(this->s, bit))
-	    c |= 1 << i;
-	bit++;
+        if (BITTEST(this->s, bit))
+            c |= 1 << i;
+        bit++;
     }
 
     switch (c) {
     case 0:
-	base = 'A';
-	break;
+        base = 'A';
+        break;
     case 1:
-	base = 'C';
-	break;
+        base = 'C';
+        break;
     case 2:
-	base = 'G';
-	break;
+        base = 'G';
+        break;
     case 3:
-	base = 'T';
-	break;
+        base = 'T';
+        break;
     case 4:
-	base = 'N';
-	break;
+        base = 'N';
+        break;
     default:
-	cerr << "Unknown character " << (int) c << "\n";
-	break;
+        cerr << "Unknown character " << (int) c << "\n";
+        break;
     }
     //cerr << "  Decoding character " << pos << ", '" << base << "'\n";
 
@@ -159,7 +159,7 @@ char *DNANSeq::subseq(char *seq, int start, int end) {
     int i;
 
     for (i = start; i <= end; i++)
-	seq[i - start] = this->operator[](i);
+        seq[i - start] = this->operator[](i);
 
     seq[i - start] = '\0';
 
@@ -171,7 +171,7 @@ char *DNANSeq::seq(char *seq) {
     int end = this->bits / bits_per_nuc;
 
     for (i = 0; i < end; i++)
-	seq[i] = this->operator[](i);
+        seq[i] = this->operator[](i);
 
     seq[i] = '\0';
 
@@ -184,7 +184,7 @@ char *DNANSeq::seq() {
     char *seq = new char[size + 1];
 
     for (i = 0; i < size; i++)
-	seq[i] = this->operator[](i);
+        seq[i] = this->operator[](i);
 
     seq[i] = '\0';
 

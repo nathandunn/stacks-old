@@ -61,16 +61,16 @@ int main (int argc, char* argv[]) {
     int  res;
 
     if (search_type == sequence) 
- 	cerr << "Searching for matches by sequence identity...\n";
+        cerr << "Searching for matches by sequence identity...\n";
     else if (search_type == genomic_loc)
-	cerr << "Searching for matches by genomic location...\n";
+        cerr << "Searching for matches by genomic location...\n";
 
     catalog_path += ".catalog";
     res = load_loci(catalog_path, catalog, false, false, compressed);
 
     if (res == 0) {
-	cerr << "Unable to parse catalog, '" << catalog_path << "'\n";
-	return 0;
+        cerr << "Unable to parse catalog, '" << catalog_path << "'\n";
+        return 0;
     }
 
     KmerHashMap kmer_map;
@@ -78,9 +78,9 @@ int main (int argc, char* argv[]) {
     vector<char *> kmer_map_keys;
 
     if (gapped_alignments) {
-	cerr << "Populating kmer dictionary for gapped alignments...";
-	populate_kmer_hash(catalog, kmer_map, kmer_map_keys, allele_map, gapped_kmer_len);
-	cerr << "done.\n";
+        cerr << "Populating kmer dictionary for gapped alignments...";
+        populate_kmer_hash(catalog, kmer_map, kmer_map_keys, allele_map, gapped_kmer_len);
+        cerr << "done.\n";
     }
 
     string sample_path;
@@ -89,44 +89,44 @@ int main (int argc, char* argv[]) {
     while (!samples.empty()) {
         map<int, QLocus *> sample;
 
-	sample_path = samples.front();
-	samples.pop();
+        sample_path = samples.front();
+        samples.pop();
 
-	cerr << "Processing sample '" << sample_path << "' [" << i << " of " << sample_cnt << "]\n";
+        cerr << "Processing sample '" << sample_path << "' [" << i << " of " << sample_cnt << "]\n";
 
-	res = load_loci(sample_path, sample, false, false, compressed);
+        res = load_loci(sample_path, sample, false, false, compressed);
 
-	if (res == 0) {
-	    cerr << "Unable to parse '" << sample_path << "'\n";
-	    return 0;
-	}
+        if (res == 0) {
+            cerr << "Unable to parse '" << sample_path << "'\n";
+            return 0;
+        }
 
-	in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
+        in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
 
-	//
-	// Assign the ID for this sample data.
-	//
-	samp_id = sample.begin()->second->sample_id;
+        //
+        // Assign the ID for this sample data.
+        //
+        samp_id = sample.begin()->second->sample_id;
 
-	//dump_loci(catalog);
-	//dump_loci(sample);
+        //dump_loci(catalog);
+        //dump_loci(sample);
 
-	if (search_type == sequence) {
-	    cerr << "Searching for sequence matches...\n";
-	    find_matches_by_sequence(catalog, sample);
+        if (search_type == sequence) {
+            cerr << "Searching for sequence matches...\n";
+            find_matches_by_sequence(catalog, sample);
 
             if (gapped_alignments) {
                 cerr << "Searching for gapped alignments...\n";
-		search_for_gaps(catalog, sample, kmer_map, allele_map, min_match_len);
+                search_for_gaps(catalog, sample, kmer_map, allele_map, min_match_len);
             }
 
-	} else if (search_type == genomic_loc) {
-	    cerr << "Searching for matches by genomic location...\n";
-	    find_matches_by_genomic_loc(catalog, sample);
-	}
+        } else if (search_type == genomic_loc) {
+            cerr << "Searching for matches by genomic location...\n";
+            find_matches_by_genomic_loc(catalog, sample);
+        }
 
-	write_matches(sample_path, sample);
-	i++;
+        write_matches(sample_path, sample);
+        i++;
 
         //
         // Free memory associated with sample
@@ -137,7 +137,7 @@ int main (int argc, char* argv[]) {
     }
 
     if (gapped_alignments)
-	free_kmer_hash(kmer_map, kmer_map_keys);
+        free_kmer_hash(kmer_map, kmer_map_keys);
 
     return 0;
 }
@@ -165,9 +165,9 @@ find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sam
     map<string, set<int> > locations;
     for (j = sample_1.begin(); j != sample_1.end(); j++) {
         snprintf(id, id_len - 1, "%s|%d|%c", 
-		 j->second->loc.chr, 
-		 j->second->loc.bp, 
-		 j->second->loc.strand == strand_plus ? '+' : '-');
+                 j->second->loc.chr, 
+                 j->second->loc.bp, 
+                 j->second->loc.strand == strand_plus ? '+' : '-');
         locations[id].insert(j->second->id);
     }
 
@@ -177,7 +177,7 @@ find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sam
     // our map to a vector of integer keys.
     vector<int> keys;
     for (i = sample_2.begin(); i != sample_2.end(); i++) 
-	keys.push_back(i->first);
+        keys.push_back(i->first);
 
     //
     // Initialize some counters
@@ -190,49 +190,49 @@ find_matches_by_genomic_loc(map<int, Locus *> &sample_1, map<int, QLocus *> &sam
 
     #pragma omp parallel private(i, j, k, id)
     {
-	unsigned long verified;
+        unsigned long verified;
         #pragma omp for reduction(+:matches) reduction(+:tot_hap) reduction(+:ver_hap) reduction(+:nomatch) reduction(+:nosnps)
-	for (k = 0; k < (int) keys.size(); k++) {
+        for (k = 0; k < (int) keys.size(); k++) {
 
-	    i = sample_2.find(keys[k]);
-	    snprintf(id, id_len - 1, "%s|%d|%c", 
-		     i->second->loc.chr, 
-		     i->second->loc.bp, 
-		     i->second->loc.strand == strand_plus ? '+' : '-');
+            i = sample_2.find(keys[k]);
+            snprintf(id, id_len - 1, "%s|%d|%c", 
+                     i->second->loc.chr, 
+                     i->second->loc.bp, 
+                     i->second->loc.strand == strand_plus ? '+' : '-');
 
-	    if (locations.count(id) > 0) {
-		Locus *tag;
-	        set<int>::iterator loc_it;
-		vector<pair<allele_type, string> >::iterator q;
+            if (locations.count(id) > 0) {
+                Locus *tag;
+                set<int>::iterator loc_it;
+                vector<pair<allele_type, string> >::iterator q;
 
-		matches++;
+                matches++;
 
-		for (loc_it = locations[id].begin(); loc_it != locations[id].end(); loc_it++) {
-		    tag = sample_1[*loc_it];
+                for (loc_it = locations[id].begin(); loc_it != locations[id].end(); loc_it++) {
+                    tag = sample_1[*loc_it];
 
-		    //
-		    // Generate haplotypes for query tag relative to the catalog tag.
-		    //
-		    set<string> query_haplotypes;
-		    generate_query_haplotypes(tag, i->second, query_haplotypes);
-		    tot_hap += query_haplotypes.size() > 0 ? query_haplotypes.size() : 1;
+                    //
+                    // Generate haplotypes for query tag relative to the catalog tag.
+                    //
+                    set<string> query_haplotypes;
+                    generate_query_haplotypes(tag, i->second, query_haplotypes);
+                    tot_hap += query_haplotypes.size() > 0 ? query_haplotypes.size() : 1;
 
-		    if (verify_haplotypes) {
-			verified = verify_genomic_loc_match(tag, i->second, query_haplotypes, nosnps);
-			ver_hap += verified;
-			if (verified == 0) nomatch++;
-		    } else {
-			i->second->add_match(tag->id, tag->strings.begin()->first);
-		    }
-		}
-	    }
-	}
+                    if (verify_haplotypes) {
+                        verified = verify_genomic_loc_match(tag, i->second, query_haplotypes, nosnps);
+                        ver_hap += verified;
+                        if (verified == 0) nomatch++;
+                    } else {
+                        i->second->add_match(tag->id, tag->strings.begin()->first);
+                    }
+                }
+            }
+        }
     }
 
     cerr << keys.size() << " stacks matched against the catalog containing " << sample_1.size() << " loci.\n" 
-	 << "  " << matches << " matching loci, " << nomatch << " contained no verified haplotypes.\n"
-	 << "  " << nosnps  << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
-	 << "  " << tot_hap << " total haplotypes examined from matching loci, " << ver_hap << " verified.\n";
+         << "  " << matches << " matching loci, " << nomatch << " contained no verified haplotypes.\n"
+         << "  " << nosnps  << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
+         << "  " << tot_hap << " total haplotypes examined from matching loci, " << ver_hap << " verified.\n";
 
     return 0;
 }
@@ -253,10 +253,10 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
     uint min_len = s1_tag->len > s2_tag->len ? s2_tag->len : s1_tag->len;
 
     if (s1_tag->snps.size() == 0 && 
-	s2_tag->snps.size() == 0 && 
-	strncmp(s1_tag->con, s2_tag->con, min_len) == 0) {
-	s2_tag->add_match(s1_tag->id, "consensus");
-	return 1;
+        s2_tag->snps.size() == 0 && 
+        strncmp(s1_tag->con, s2_tag->con, min_len) == 0) {
+        s2_tag->add_match(s1_tag->id, "consensus");
+        return 1;
     }
 
     //
@@ -265,24 +265,24 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
     //
     bool found;
     for (j = s2_tag->snps.begin(); j != s2_tag->snps.end(); j++) {
-	found = false;
-	//
-	// SNP occurs in a column that is beyond the length of the catalog
-	//
-	if ((*j)->col > min_len - 1)
-	    continue;
+        found = false;
+        //
+        // SNP occurs in a column that is beyond the length of the catalog
+        //
+        if ((*j)->col > min_len - 1)
+            continue;
 
-	for (i = s1_tag->snps.begin(); i != s1_tag->snps.end(); i++) {
-	    if ((*i)->col == (*j)->col)
-		found = true;
-	}
-	//
-	// Query locus posses a SNP not present in the catalog.
-	//
-	if (found == false) {
-	    nosnps++;
-	    return 0;
-	}
+        for (i = s1_tag->snps.begin(); i != s1_tag->snps.end(); i++) {
+            if ((*i)->col == (*j)->col)
+                found = true;
+        }
+        //
+        // Query locus posses a SNP not present in the catalog.
+        //
+        if (found == false) {
+            nosnps++;
+            return 0;
+        }
     }
 
     //
@@ -296,53 +296,53 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
     uint matches = 0;
     for (a = query_haplotypes.begin(); a != query_haplotypes.end(); a++) {
 
-	if (impute_haplotypes) {
-	    int res = impute_haplotype(*a, s1_tag->strings, cat_haplotype);
+        if (impute_haplotypes) {
+            int res = impute_haplotype(*a, s1_tag->strings, cat_haplotype);
 
-	    if (res > 0) {
-		//
-		// If the matching haplotype was imputed, record the depths of the query alleles
-		// under the new, imputed alleles.
-		//
-		if (s2_tag->alleles.count(cat_haplotype) == 0) {
-		    if (s2_tag->alleles.count(*a) > 0)
-			s2_tag->alleles[cat_haplotype] = s2_tag->alleles[*a];
-		    else
-			s2_tag->alleles[cat_haplotype] = s2_tag->depth;
-		}
-		//cerr << s2_tag->id << "; Adding cat haplotype: " << cat_haplotype << " based on depth of " << *a << ", " << s2_tag->alleles[cat_haplotype] << "\n";
-		s2_tag->add_match(s1_tag->id, cat_haplotype);
-		matches++;
-	    } else if (res < 0) {
-		cerr << "  Failure imputing haplotype for catalog locus: " << s1_tag->id << " and query tag: " << s2_tag->id << "\n";
-	    }
-	} else {
-	    for (c = s1_tag->strings.begin(); c != s1_tag->strings.end(); c++)
-		if (*a == c->first) {
-		    //cerr << "  Adding match between " << s1_tag->id << " and " << c->first << "\n";
-		    s2_tag->add_match(s1_tag->id, c->first);
-		    matches++;
-		}
-	}
+            if (res > 0) {
+                //
+                // If the matching haplotype was imputed, record the depths of the query alleles
+                // under the new, imputed alleles.
+                //
+                if (s2_tag->alleles.count(cat_haplotype) == 0) {
+                    if (s2_tag->alleles.count(*a) > 0)
+                        s2_tag->alleles[cat_haplotype] = s2_tag->alleles[*a];
+                    else
+                        s2_tag->alleles[cat_haplotype] = s2_tag->depth;
+                }
+                //cerr << s2_tag->id << "; Adding cat haplotype: " << cat_haplotype << " based on depth of " << *a << ", " << s2_tag->alleles[cat_haplotype] << "\n";
+                s2_tag->add_match(s1_tag->id, cat_haplotype);
+                matches++;
+            } else if (res < 0) {
+                cerr << "  Failure imputing haplotype for catalog locus: " << s1_tag->id << " and query tag: " << s2_tag->id << "\n";
+            }
+        } else {
+            for (c = s1_tag->strings.begin(); c != s1_tag->strings.end(); c++)
+                if (*a == c->first) {
+                    //cerr << "  Adding match between " << s1_tag->id << " and " << c->first << "\n";
+                    s2_tag->add_match(s1_tag->id, c->first);
+                    matches++;
+                }
+        }
     }
 
     return matches;
 }
 
 // int impute_haplotype(string query_haplotype, 
-// 		     vector<pair<allele_type, string> > &cat_haplotypes, 
-// 		     string &match) {
+//                   vector<pair<allele_type, string> > &cat_haplotypes, 
+//                   string &match) {
 
 //     uint max_len = query_haplotype.length() > cat_haplotypes[0].first.length() ?
-// 	query_haplotype.length() : 
-// 	cat_haplotypes[0].first.length();
+//      query_haplotype.length() : 
+//      cat_haplotypes[0].first.length();
 
 //     //cerr << "Query len: " << query_haplotype.length() << "; Max length: " << max_len << "\n";
 
 //     vector<string> cur, next;
 
 //     for (uint i = 0; i < cat_haplotypes.size(); i++)
-// 	cur.push_back(cat_haplotypes[i].first);
+//      cur.push_back(cat_haplotypes[i].first);
 //     match = "";
 
 //     //
@@ -353,16 +353,16 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
 //     uint j = 0;
 //     while (cur.size() > 1 && j < max_len) {
 
-// 	for (uint i = 0; i < cur.size(); i++) {
-// 	    //cerr << "Comparing query[" << j << "]: '" << query_haplotype[j] << "' to catalog '" << cur[i][j] << "'\n"; 
-// 	    if (query_haplotype[j] == cur[i][j]) {
-// 		//cerr << "  Keeping this haplotype.\n";
-// 		next.push_back(cur[i]);
-// 	    }
-// 	}
-// 	cur = next;
-// 	next.clear();
-// 	j++;
+//      for (uint i = 0; i < cur.size(); i++) {
+//          //cerr << "Comparing query[" << j << "]: '" << query_haplotype[j] << "' to catalog '" << cur[i][j] << "'\n"; 
+//          if (query_haplotype[j] == cur[i][j]) {
+//              //cerr << "  Keeping this haplotype.\n";
+//              next.push_back(cur[i]);
+//          }
+//      }
+//      cur = next;
+//      next.clear();
+//      j++;
 //     }
 
 //     //
@@ -370,9 +370,9 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
 //     // and its not simply an erroneously called haplotype.
 //     //
 //     if (cur.size() == 1 && 
-// 	strncmp(cur[0].c_str(), query_haplotype.c_str(), max_len) == 0) {
-// 	match = cur[0];
-// 	return 1;
+//      strncmp(cur[0].c_str(), query_haplotype.c_str(), max_len) == 0) {
+//      match = cur[0];
+//      return 1;
 //     }
 
 //     //
@@ -383,18 +383,18 @@ int verify_genomic_loc_match(Locus *s1_tag, QLocus *s2_tag, set<string> &query_h
 // }
 
 int impute_haplotype(string query_haplotype, 
-		     vector<pair<allele_type, string> > &cat_haplotypes, 
-		     string &match) {
+                     vector<pair<allele_type, string> > &cat_haplotypes, 
+                     string &match) {
 
     if (cat_haplotypes.size() == 0) {
-	cerr << "Warning: malformed catalog tag: missing haplotype information.\n";
-	return -1;
+        cerr << "Warning: malformed catalog tag: missing haplotype information.\n";
+        return -1;
     }
 
     //cerr << "Examining " << query_haplotype << "\n";
     uint max_len = query_haplotype.length() > cat_haplotypes[0].first.length() ?
-	query_haplotype.length() : 
-	cat_haplotypes[0].first.length();
+        query_haplotype.length() : 
+        cat_haplotypes[0].first.length();
 
     //cerr << "Query len: " << query_haplotype.length() << "; Max length: " << max_len << "\n";
 
@@ -402,7 +402,7 @@ int impute_haplotype(string query_haplotype,
     uint match_cnt, no_n_cnt;
 
     for (uint i = 0; i < cat_haplotypes.size(); i++)
-	cur.push_back(cat_haplotypes[i].first);
+        cur.push_back(cat_haplotypes[i].first);
     match = "";
 
     //
@@ -413,21 +413,21 @@ int impute_haplotype(string query_haplotype,
     uint j = 0;
     while (cur.size() > 1 && j < max_len) {
 
-	for (uint i = 0; i < cur.size(); i++) {
-	    //cerr << "Comparing query[" << j << "]: '" << query_haplotype << "' to catalog '" << cur[i] << "'\n"; 
-	    if (require_uniq_haplotypes && (query_haplotype[j] == cur[i][j] || query_haplotype[j] == 'N')) {
-		//cerr << "  Keeping this haplotype.\n";
-		next.push_back(cur[i]);
-	    } else if (query_haplotype[j] == cur[i][j]) {
-		//cerr << "  Keeping this haplotype.\n";
-		next.push_back(cur[i]);
-	    } //else {
-		//cerr << "  Discarding this haplotype.\n";
-	    //}
-	}
-	cur = next;
-	next.clear();
-	j++;
+        for (uint i = 0; i < cur.size(); i++) {
+            //cerr << "Comparing query[" << j << "]: '" << query_haplotype << "' to catalog '" << cur[i] << "'\n"; 
+            if (require_uniq_haplotypes && (query_haplotype[j] == cur[i][j] || query_haplotype[j] == 'N')) {
+                //cerr << "  Keeping this haplotype.\n";
+                next.push_back(cur[i]);
+            } else if (query_haplotype[j] == cur[i][j]) {
+                //cerr << "  Keeping this haplotype.\n";
+                next.push_back(cur[i]);
+            } //else {
+                //cerr << "  Discarding this haplotype.\n";
+            //}
+        }
+        cur = next;
+        next.clear();
+        j++;
     }
 
     //
@@ -437,23 +437,23 @@ int impute_haplotype(string query_haplotype,
     no_n_cnt  = 0;
     match_cnt = 0;
     if (cur.size() == 1) {
-	if (require_uniq_haplotypes) {
-	    for (uint k = 0; k < max_len; k++)
-		if (query_haplotype[k] != 'N') no_n_cnt++;
-	    for (uint k = 0; k < max_len; k++)
-		if (cur[0][k] == query_haplotype[k]) match_cnt++;
+        if (require_uniq_haplotypes) {
+            for (uint k = 0; k < max_len; k++)
+                if (query_haplotype[k] != 'N') no_n_cnt++;
+            for (uint k = 0; k < max_len; k++)
+                if (cur[0][k] == query_haplotype[k]) match_cnt++;
 
-	    if (match_cnt == no_n_cnt) {
-		//cerr << "Keeping " << query_haplotype << "\n";
-		match = cur[0];
-		return 1;
-	    }
-	} else {
-	    if (strncmp(cur[0].c_str(), query_haplotype.c_str(), max_len) == 0) {
-		match = cur[0];
-		return 1;
-	    }
-	}
+            if (match_cnt == no_n_cnt) {
+                //cerr << "Keeping " << query_haplotype << "\n";
+                match = cur[0];
+                return 1;
+            }
+        } else {
+            if (strncmp(cur[0].c_str(), query_haplotype.c_str(), max_len) == 0) {
+                match = cur[0];
+                return 1;
+            }
+        }
     }
 
     //
@@ -473,7 +473,7 @@ generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_hapl
     //  from the consensus.)
     //
     if (s1_tag->snps.size() == 0 && s2_tag->snps.size() == 0)
-	return 0;
+        return 0;
 
     vector<pair<string, SNP *> >   merged_snps;
     map<int, pair<string, SNP *> > columns;
@@ -482,20 +482,20 @@ generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_hapl
     vector<SNP *>::iterator i;
 
     for (i = s1_tag->snps.begin(); i != s1_tag->snps.end(); i++)
-	columns[(*i)->col] = make_pair("catalog", *i);
+        columns[(*i)->col] = make_pair("catalog", *i);
 
     for (i = s2_tag->snps.begin(); i != s2_tag->snps.end(); i++) {
-	//
-	// Is this column already represented in the catalog?
-	//
-	if (columns.count((*i)->col))
-	    columns[(*i)->col] = make_pair("both", *i);
-	else
-	    columns[(*i)->col] = make_pair("query", *i);
+        //
+        // Is this column already represented in the catalog?
+        //
+        if (columns.count((*i)->col))
+            columns[(*i)->col] = make_pair("both", *i);
+        else
+            columns[(*i)->col] = make_pair("query", *i);
     }
 
     for (c = columns.begin(); c != columns.end(); c++) 
-	merged_snps.push_back((*c).second);
+        merged_snps.push_back((*c).second);
 
     //
     // Sort the SNPs by column
@@ -508,38 +508,38 @@ generate_query_haplotypes(Locus *s1_tag, QLocus *s2_tag, set<string> &query_hapl
     int    pos;
 
     for (b = s2_tag->alleles.begin(); b != s2_tag->alleles.end(); b++) {
-	old_allele = b->first;
-	new_allele = "";
-	pos        = 0;
+        old_allele = b->first;
+        new_allele = "";
+        pos        = 0;
 
-	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
-	    //
-	    // If the SNPs from the catalog haplotype beyond the length of the query, add Ns
-	    //
-	    if (k->first == "catalog") {
-		new_allele += (k->second->col > s2_tag->len - 1) ? 'N' : s2_tag->con[k->second->col];
-	    } else {
-		new_allele += old_allele[pos];
-		pos++;
-	    }
-	}
-	query_haplotypes.insert(new_allele);
-	converted_alleles[new_allele] = b->second;
+        for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+            //
+            // If the SNPs from the catalog haplotype beyond the length of the query, add Ns
+            //
+            if (k->first == "catalog") {
+                new_allele += (k->second->col > s2_tag->len - 1) ? 'N' : s2_tag->con[k->second->col];
+            } else {
+                new_allele += old_allele[pos];
+                pos++;
+            }
+        }
+        query_haplotypes.insert(new_allele);
+        converted_alleles[new_allele] = b->second;
 
-	// cerr << "Adding haplotype: " << new_allele << " [" << b->first << "]\n";
+        // cerr << "Adding haplotype: " << new_allele << " [" << b->first << "]\n";
     }
 
     if (s2_tag->alleles.size() == 0) {
-	new_allele = "";
-	for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
-	    new_allele += (k->second->col > s2_tag->len - 1) ? 'N' : s2_tag->con[k->second->col];
-	}
-	query_haplotypes.insert(new_allele);
-	// cerr << "Adding haplotype 2: " << new_allele << "\n";
+        new_allele = "";
+        for (k = merged_snps.begin(); k != merged_snps.end(); k++) {
+            new_allele += (k->second->col > s2_tag->len - 1) ? 'N' : s2_tag->con[k->second->col];
+        }
+        query_haplotypes.insert(new_allele);
+        // cerr << "Adding haplotype 2: " << new_allele << "\n";
     } else {
-	s2_tag->alleles.clear();
-	for (b = converted_alleles.begin(); b != converted_alleles.end(); b++)
-	    s2_tag->alleles[b->first] = b->second;
+        s2_tag->alleles.clear();
+        for (b = converted_alleles.begin(); b != converted_alleles.end(); b++)
+            s2_tag->alleles[b->first] = b->second;
     }
 
     return 0;
@@ -555,8 +555,8 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
     // We don't assume all radtags will be the same length.
     //
     min_tag_len = 
-	sample_1.begin()->second->len > sample_2.begin()->second->len ?
-	sample_2.begin()->second->len : sample_1.begin()->second->len; 
+        sample_1.begin()->second->len > sample_2.begin()->second->len ?
+        sample_2.begin()->second->len : sample_1.begin()->second->len; 
 
     //
     // Build a hash map out of the catalog, using only the minimum length
@@ -572,7 +572,7 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
     //
     vector<int> keys;
     for (i = sample_2.begin(); i != sample_2.end(); i++) 
-	keys.push_back(i->first);
+        keys.push_back(i->first);
 
     //
     // Initialize some counters
@@ -588,8 +588,8 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
     #pragma omp parallel
     {
         #pragma omp for reduction(+:matches) reduction(+:tot_hap) reduction(+:ver_hap) reduction(+:nomatch) reduction(+:mmatch)
- 	for (uint k = 0; k < keys.size(); k++) {
-	    QLocus *query = sample_2[keys[k]];
+        for (uint k = 0; k < keys.size(); k++) {
+            QLocus *query = sample_2[keys[k]];
 
             //
             // Iterate through the haplotypes for this tag in sample_2
@@ -597,8 +597,8 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
             HashMap::iterator hit;
             vector<pair<allele_type, string> >::iterator q;  // Query records allele_type/search string pairs
             vector<pair<int, allele_type> >::iterator c;     // Hash map records id/allele_type pairs
-	    map<string, vector<string> > haplo_hits;
-	    set<int> loci_hit;
+            map<string, vector<string> > haplo_hits;
+            set<int> loci_hit;
 
             for (q = query->strings.begin(); q != query->strings.end(); q++) {
                 // cerr << "  Looking for haplotype: " << q->first << " with sequence " << q->second.substr(0, min_tag_len) << "\n";
@@ -606,37 +606,37 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
                 hit = sample_1_map.find(q->second.substr(0, min_tag_len).c_str());
 
                 if (hit != sample_1_map.end()) {
-		    tot_hap++;
+                    tot_hap++;
                     // cerr << "    Found a match for " << hit->first << "\n";
 
                     for (c = hit->second.begin(); c != hit->second.end(); c++) {
-			//
-			// Record the catalog loci hit by the haplotypes of this query locus.
-			//
-			loci_hit.insert(c->first);
+                        //
+                        // Record the catalog loci hit by the haplotypes of this query locus.
+                        //
+                        loci_hit.insert(c->first);
 
-			//
-			// Record the haplotypes hit between the query and catalog loci.
-			//
-			haplo_hits[q->first].push_back(c->second);
+                        //
+                        // Record the haplotypes hit between the query and catalog loci.
+                        //
+                        haplo_hits[q->first].push_back(c->second);
 
-			if (verify_haplotypes == false)
-			    query->add_match(c->first, c->second);
-		    }
+                        if (verify_haplotypes == false)
+                            query->add_match(c->first, c->second);
+                    }
                 }
             }
 
             if (loci_hit.size() == 0)
                 nomatch++;
-	    else if (loci_hit.size() > 0)
+            else if (loci_hit.size() > 0)
                 matches++;
 
-	    if (verify_haplotypes && loci_hit.size() > 0) {
-		uint verified = verify_sequence_match(sample_1, query, loci_hit, haplo_hits, 
-						      min_tag_len, mmatch, nosnps);
-		ver_hap += verified;
-		if (verified == 0) no_haps++;
-	    }
+            if (verify_haplotypes && loci_hit.size() > 0) {
+                uint verified = verify_sequence_match(sample_1, query, loci_hit, haplo_hits, 
+                                                      min_tag_len, mmatch, nosnps);
+                ver_hap += verified;
+                if (verified == 0) no_haps++;
+            }
         }
     }
 
@@ -651,17 +651,17 @@ find_matches_by_sequence(map<int, Locus *> &sample_1, map<int, QLocus *> &sample
     sample_1_map_keys.clear();
 
     cerr << keys.size() << " stacks compared against the catalog containing " << sample_1.size() << " loci.\n" 
-	 << "  " << matches << " matching loci, " << no_haps << " contained no verified haplotypes.\n"
-	 << "  " << mmatch  << " loci matched more than one catalog locus and were excluded.\n"
-	 << "  " << nosnps  << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
-	 << "  " << tot_hap << " total haplotypes examined from matching loci, " << ver_hap << " verified.\n";
+         << "  " << matches << " matching loci, " << no_haps << " contained no verified haplotypes.\n"
+         << "  " << mmatch  << " loci matched more than one catalog locus and were excluded.\n"
+         << "  " << nosnps  << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
+         << "  " << tot_hap << " total haplotypes examined from matching loci, " << ver_hap << " verified.\n";
 
     return 0;
 }
 
 int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query, 
-			  set<int> &loci_hit, map<string, vector<string> > &haplo_hits, 
-			  uint min_tag_len, unsigned long &mmatch, unsigned long &nosnps) {
+                          set<int> &loci_hit, map<string, vector<string> > &haplo_hits, 
+                          uint min_tag_len, unsigned long &mmatch, unsigned long &nosnps) {
     //
     // 1. Check that this query locus matches just a single catalog locus.
     //
@@ -679,24 +679,24 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
     bool found;
 
     for (i = query->snps.begin(); i != query->snps.end(); i++) {
-	found = false;
-	//
-	// SNP occurs in a column that is beyond the length of the catalog
-	//
-	if ((*i)->col > min_tag_len - 1)
-	    continue;
+        found = false;
+        //
+        // SNP occurs in a column that is beyond the length of the catalog
+        //
+        if ((*i)->col > min_tag_len - 1)
+            continue;
 
-	for (j = cat->snps.begin(); j != cat->snps.end(); j++) {
-	    if ((*i)->col == (*j)->col)
-		found = true;
-	}
-	//
-	// Query locus posses a SNP not present in the catalog.
-	//
-	if (found == false) {
-	    nosnps++;
-	    return 0;
-	}
+        for (j = cat->snps.begin(); j != cat->snps.end(); j++) {
+            if ((*i)->col == (*j)->col)
+                found = true;
+        }
+        //
+        // Query locus posses a SNP not present in the catalog.
+        //
+        if (found == false) {
+            nosnps++;
+            return 0;
+        }
     }
 
     //
@@ -708,38 +708,38 @@ int verify_sequence_match(map<int, Locus *> &sample_1, QLocus *query,
     map<string, int> cat_hap, query_hap;
 
     for (it = haplo_hits.begin(); it != haplo_hits.end(); it++) {
-	query_hap[it->first] = it->second.size();
-	for (uint j = 0; j < it->second.size(); j++)
-	    cat_hap[it->second[j]]++;
+        query_hap[it->first] = it->second.size();
+        for (uint j = 0; j < it->second.size(); j++)
+            cat_hap[it->second[j]]++;
     }
 
     uint verified = 0;
     for (it = haplo_hits.begin(); it != haplo_hits.end(); it++)
-	for (uint j = 0; j < it->second.size(); j++) {
-	    if (cat_hap[it->second[j]] == 1 &&
-		query_hap[it->first] == 1) {
-		verified++;
-		query->add_match(cat->id, it->second[j]);
-		//
-		// If the matching haplotype was imputed, record the depths of the query alleles
-		// under the new, imputed alleles.
-		//
-		if (query->alleles.count(it->second[j]) == 0) {
-		    if (query->alleles.count(it->first) > 0)
-			query->alleles[it->second[j]] = query->alleles[it->first];
-		    else
-			query->alleles[it->second[j]] = query->depth;
-		}
-	    }
-	}
+        for (uint j = 0; j < it->second.size(); j++) {
+            if (cat_hap[it->second[j]] == 1 &&
+                query_hap[it->first] == 1) {
+                verified++;
+                query->add_match(cat->id, it->second[j]);
+                //
+                // If the matching haplotype was imputed, record the depths of the query alleles
+                // under the new, imputed alleles.
+                //
+                if (query->alleles.count(it->second[j]) == 0) {
+                    if (query->alleles.count(it->first) > 0)
+                        query->alleles[it->second[j]] = query->alleles[it->first];
+                    else
+                        query->alleles[it->second[j]] = query->depth;
+                }
+            }
+        }
 
     return verified;
 }
 
 int
 search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
-		KmerHashMap &kmer_map, map<int, pair<allele_type, int> > &allele_map,
-		double min_match_len)
+                KmerHashMap &kmer_map, map<int, pair<allele_type, int> > &allele_map,
+                double min_match_len)
 {
     //
     // Search for loci that can be merged with a gapped alignment.
@@ -782,22 +782,22 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
     {
         QLocus                      *query;
         Locus                       *tag_2;
-	KmerHashMap::iterator        h;
+        KmerHashMap::iterator        h;
         AlignRes                     aln_res;
-	vector<char *>               kmers;
-	set<string>                  uniq_kmers;
-	vector<int>                  hits;
-	vector<pair<int, int> >      ordered_hits;
-	uint                         hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
-	pair<allele_type, int>       cat_hit;
-	string                       query_allele, query_seq, cat_allele, cat_seq;
-	map<string, vector<string> > haplo_hits;
-	set<int>                     loci_hit;
+        vector<char *>               kmers;
+        set<string>                  uniq_kmers;
+        vector<int>                  hits;
+        vector<pair<int, int> >      ordered_hits;
+        uint                         hit_cnt, index, prev_id, allele_id, hits_size, stop, top_hit;
+        pair<allele_type, int>       cat_hit;
+        string                       query_allele, query_seq, cat_allele, cat_seq;
+        map<string, vector<string> > haplo_hits;
+        set<int>                     loci_hit;
         vector<pair<char, uint> >    cigar;
 
-	GappedAln *aln = new GappedAln();
+        GappedAln *aln = new GappedAln();
 
-	initialize_kmers(gapped_kmer_len, num_kmers, kmers);
+        initialize_kmers(gapped_kmer_len, num_kmers, kmers);
 
         #pragma omp for schedule(dynamic) reduction(+:matches) reduction(+:nomatches) reduction(+:mmatches) reduction(+:gapped_aln) reduction(+:ver_hap) \
                                           reduction(+:tot_hap) reduction(+:bad_aln) reduction(+:no_haps)
@@ -810,7 +810,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
             if (query->matches.size() > 0)
                 continue;
 
-	    gapped_aln++;
+            gapped_aln++;
 
             map<allele_type, map<allele_type, AlignRes> > query_hits;
 
@@ -823,108 +823,108 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                 query_seq    = allele->second;
                 tot_hap++;
 
-        	generate_kmers_lazily(allele->second.c_str(), gapped_kmer_len, num_kmers, kmers);
+                generate_kmers_lazily(allele->second.c_str(), gapped_kmer_len, num_kmers, kmers);
 
-		//
-		// We want to create a list of unique kmers to search with; otherwise, repetitive kmers will
-		// generate, multiple, spurious hits in sequences with multiple copies of the same kmer.
-		//
-		uniq_kmers.clear();
+                //
+                // We want to create a list of unique kmers to search with; otherwise, repetitive kmers will
+                // generate, multiple, spurious hits in sequences with multiple copies of the same kmer.
+                //
+                uniq_kmers.clear();
                 for (int j = 0; j < num_kmers; j++)
-		    uniq_kmers.insert(kmers[j]);
+                    uniq_kmers.insert(kmers[j]);
 
-		hits.clear();
-		ordered_hits.clear();
+                hits.clear();
+                ordered_hits.clear();
 
-        	//
-        	// Lookup the occurances of each k-mer in the kmer_map
-        	//
-		for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
+                //
+                // Lookup the occurances of each k-mer in the kmer_map
+                //
+                for (set<string>::iterator j = uniq_kmers.begin(); j != uniq_kmers.end(); j++) {
 
-		    h = kmer_map.find(j->c_str());
+                    h = kmer_map.find(j->c_str());
 
-		    if (h != kmer_map.end())
-			for (uint k = 0; k <  h->second.size(); k++)
-			    hits.push_back(h->second[k]);
+                    if (h != kmer_map.end())
+                        for (uint k = 0; k <  h->second.size(); k++)
+                            hits.push_back(h->second[k]);
                 }
 
-		//
-		// Sort the vector of indexes; provides the number of hits to each allele/locus
-		// and orders them largest to smallest.
-		//
-		sort(hits.begin(), hits.end());
+                //
+                // Sort the vector of indexes; provides the number of hits to each allele/locus
+                // and orders them largest to smallest.
+                //
+                sort(hits.begin(), hits.end());
 
-		//
-        	// Iterate through the list of hits and collapse them down by number of kmer hits per allele.
-        	//
-		hits_size = hits.size();
+                //
+                // Iterate through the list of hits and collapse them down by number of kmer hits per allele.
+                //
+                hits_size = hits.size();
 
                 if (hits_size == 0)
                     continue;
 
-		prev_id   = hits[0];
-		index     = 0;
+                prev_id   = hits[0];
+                index     = 0;
 
-		do {
-		    hit_cnt   = 0;
-		    allele_id = prev_id;
+                do {
+                    hit_cnt   = 0;
+                    allele_id = prev_id;
 
-		    while ((uint)hits[index] == prev_id) {
-			hit_cnt++;
-			index++;
-		    }
+                    while ((uint)hits[index] == prev_id) {
+                        hit_cnt++;
+                        index++;
+                    }
 
-		    if (index < hits_size)
-			prev_id = hits[index];
+                    if (index < hits_size)
+                        prev_id = hits[index];
 
-		    if (hit_cnt >= (uint)min_hits)
-			ordered_hits.push_back(make_pair(allele_id, hit_cnt));
+                    if (hit_cnt >= (uint)min_hits)
+                        ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
-        	} while (index < hits_size);
+                } while (index < hits_size);
 
                 if (ordered_hits.size() == 0)
                     continue;
 
-		//
-		// Process the hits from most kmer hits to least kmer hits.
-		//
-		sort(ordered_hits.begin(), ordered_hits.end(), compare_pair_intint);
+                //
+                // Process the hits from most kmer hits to least kmer hits.
+                //
+                sort(ordered_hits.begin(), ordered_hits.end(), compare_pair_intint);
 
-		//
-		// Only try to align the sequences with the most kmers in common.
-		//
-		top_hit = ordered_hits[0].second;
+                //
+                // Only try to align the sequences with the most kmers in common.
+                //
+                top_hit = ordered_hits[0].second;
                 stop    = 1;
-		for (uint j = 1; j < ordered_hits.size(); j++)
-		    if ((uint)ordered_hits[j].second < top_hit) {
-			stop = j;
-			break;
-		    }
+                for (uint j = 1; j < ordered_hits.size(); j++)
+                    if ((uint)ordered_hits[j].second < top_hit) {
+                        stop = j;
+                        break;
+                    }
 
-		for (uint j = 0; j < stop; j++) {
-		    cat_hit = allele_map.at(ordered_hits[j].first);
-		    hit_cnt = ordered_hits[j].second;
+                for (uint j = 0; j < stop; j++) {
+                    cat_hit = allele_map.at(ordered_hits[j].first);
+                    hit_cnt = ordered_hits[j].second;
 
-		    tag_2 = catalog[cat_hit.second];
+                    tag_2 = catalog[cat_hit.second];
 
                     cat_allele = cat_hit.first;
-		    cat_seq    = "";
-		    for (uint k = 0; k < tag_2->strings.size(); k++)
-			if (tag_2->strings[k].first == cat_hit.first) {
-			    cat_seq = tag_2->strings[k].second;
-			    break;
-			}
+                    cat_seq    = "";
+                    for (uint k = 0; k < tag_2->strings.size(); k++)
+                        if (tag_2->strings[k].first == cat_hit.first) {
+                            cat_seq = tag_2->strings[k].second;
+                            break;
+                        }
 
-		    aln->init(tag_2->len, query->len);
+                    aln->init(tag_2->len, query->len);
 
                     // cerr << "Attempting to align: cat id " << tag_2->id << " with locus id " << query->id << "\n" 
                     //      << "Cat allele: " << cat_allele   << "; seq: " << cat_seq << "\n"
                     //      << "Allele:     " << query_allele << "; seq: " << allele->second << "\n";
 
-		    if (aln->align(cat_seq, query_seq)) {
-			aln->parse_cigar(cigar);
+                    if (aln->align(cat_seq, query_seq)) {
+                        aln->parse_cigar(cigar);
 
-			aln_res = aln->result();
+                        aln_res = aln->result();
 
                         //
                         // At this point in the analysis, all possible alleles we want to detect must already
@@ -935,20 +935,20 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                         if (aln_res.cigar.find('D') != string::npos)
                             continue;
 
-			//
-			// If the alignment has too many gaps, skip it.
-			// If the alignment doesn't span enough of the two sequences, skip it.
-			//
-			if (aln_res.gap_cnt <= (max_gaps + 1) &&
-			    aln_res.pct_id  >= min_match_len  &&
-			    dist(cat_seq.c_str(), query_seq.c_str(), cigar) == 0) {
+                        //
+                        // If the alignment has too many gaps, skip it.
+                        // If the alignment doesn't span enough of the two sequences, skip it.
+                        //
+                        if (aln_res.gap_cnt <= (max_gaps + 1) &&
+                            aln_res.pct_id  >= min_match_len  &&
+                            dist(cat_seq.c_str(), query_seq.c_str(), cigar) == 0) {
                             // cerr << "Adding match: " << aln_res.cigar << "\n";
                             loci_hit.insert(tag_2->id);
                             query_hits[query_allele][cat_allele] = aln_res;
-			}
-		    }
-		}
-	    }
+                        }
+                    }
+                }
+            }
 
             if (verify_gapped_match(catalog, query, loci_hit, query_hits, mmatches, nosnps, no_haps, bad_aln, ver_hap))
                 matches++;
@@ -956,20 +956,20 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                 nomatches++;
         }
 
-	//
-	// Free the k-mers we generated for this query and the alignment class.
-	//
-	for (uint j = 0; j < kmers.size(); j++)
-	    delete [] kmers[j];
-	kmers.clear();
+        //
+        // Free the k-mers we generated for this query and the alignment class.
+        //
+        for (uint j = 0; j < kmers.size(); j++)
+            delete [] kmers[j];
+        kmers.clear();
 
-	delete aln;
+        delete aln;
     }
 
     cerr << "Out of " << keys.size() << " query loci, " << gapped_aln << " gapped alignments attempted.\n"
-	 << "  "   << matches   << " loci matched one catalog locus; " << tot_hap << " total haplotypes examined, " << ver_hap << " verified.\n"
-	 << "  "   << nomatches << " loci matched no catalog locus;\n"
-	 << "    " << mmatches  << " loci matched more than one catalog locus and were excluded.\n"
+         << "  "   << matches   << " loci matched one catalog locus; " << tot_hap << " total haplotypes examined, " << ver_hap << " verified.\n"
+         << "  "   << nomatches << " loci matched no catalog locus;\n"
+         << "    " << mmatches  << " loci matched more than one catalog locus and were excluded.\n"
          << "    " << nosnps    << " loci contained SNPs unaccounted for in the catalog and were excluded.\n"
          << "    " << no_haps   << " loci had no verified haplotypes.\n"
          << "    " << bad_aln   << " loci had inconsistent alignments to a catalog locus and were excluded.\n";
@@ -1031,24 +1031,24 @@ verify_gapped_match(map<int, Locus *> &catalog, QLocus *query,
     bool found;
 
     for (i = query->snps.begin(); i != query->snps.end(); i++) {
-	found = false;
-	//
-	// SNP occurs in a column that is beyond the length of the catalog
-	//
-	if ((int)(*i)->col > min_tag_len - 1)
-	    continue;
+        found = false;
+        //
+        // SNP occurs in a column that is beyond the length of the catalog
+        //
+        if ((int)(*i)->col > min_tag_len - 1)
+            continue;
 
-	for (j = cat->snps.begin(); j != cat->snps.end(); j++) {
-	    if ((*i)->col == (*j)->col)
-		found = true;
-	}
-	//
-	// Query locus posses a SNP not present in the catalog.
-	//
-	if (found == false) {
-	    nosnps++;
-	    return false;
-	}
+        for (j = cat->snps.begin(); j != cat->snps.end(); j++) {
+            if ((*i)->col == (*j)->col)
+                found = true;
+        }
+        //
+        // Query locus posses a SNP not present in the catalog.
+        //
+        if (found == false) {
+            nosnps++;
+            return false;
+        }
     }
 
     //
@@ -1171,13 +1171,13 @@ populate_hash(map<int, Locus *> &sample, HashMap &hash_map, vector<char *> &hash
         tag = it->second;
 
         for (all_it = tag->strings.begin(); all_it != tag->strings.end(); all_it++) {
-	    key = new char[min_tag_len + 1];
-	    strncpy(key, all_it->second.c_str(), min_tag_len);
-	    key[min_tag_len] = '\0';
+            key = new char[min_tag_len + 1];
+            strncpy(key, all_it->second.c_str(), min_tag_len);
+            key[min_tag_len] = '\0';
 
-	    hash_map[key].push_back(make_pair(tag->id, all_it->first));
+            hash_map[key].push_back(make_pair(tag->id, all_it->first));
             hash_map_keys.push_back(key);
-	}
+        }
     }
 
     //dump_kmer_map(kmer_map);
@@ -1197,7 +1197,7 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
     string out_file = out_path + sample_path.substr(pos_1 + 1)  + ".matches.tsv";
 
     if (in_file_type == FileT::gzsql)
-	out_file += ".gz";
+        out_file += ".gz";
 
     //
     // Open the output files for writing.
@@ -1205,20 +1205,20 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
     gzFile   gz_matches;
     ofstream matches;
     if (in_file_type == FileT::gzsql) {
-	gz_matches = gzopen(out_file.c_str(), "wb");
-	if (!gz_matches) {
-	    cerr << "Error: Unable to open gzipped matches file '" << out_file << "': " << strerror(errno) << ".\n";
-	    exit(1);
-	}
+        gz_matches = gzopen(out_file.c_str(), "wb");
+        if (!gz_matches) {
+            cerr << "Error: Unable to open gzipped matches file '" << out_file << "': " << strerror(errno) << ".\n";
+            exit(1);
+        }
         #if ZLIB_VERNUM >= 0x1240
-	gzbuffer(gz_matches, libz_buffer_size);
-	#endif
+        gzbuffer(gz_matches, libz_buffer_size);
+        #endif
     } else {
-	matches.open(out_file.c_str());
-	if (matches.fail()) {
-	    cerr << "Error: Unable to open matches file for writing.\n";
-	    exit(1);
-	}
+        matches.open(out_file.c_str());
+        if (matches.fail()) {
+            cerr << "Error: Unable to open matches file for writing.\n";
+            exit(1);
+        }
     }
 
     //
@@ -1247,29 +1247,29 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
     cerr << "Outputing to file " << out_file << "\n";
 
     for (i = sample.begin(); i != sample.end(); i++) {
-	qloc = i->second;
+        qloc = i->second;
 
-	for (uint j = 0; j < qloc->matches.size(); j++) {
-	    if (verify_haplotypes == false && search_type == genomic_loc)
-		match_depth = qloc->depth;
-	    else
-		match_depth = 
-		    qloc->alleles.count(qloc->matches[j]->cat_type) > 0 ? 
-		    qloc->alleles[qloc->matches[j]->cat_type] : qloc->depth;
+        for (uint j = 0; j < qloc->matches.size(); j++) {
+            if (verify_haplotypes == false && search_type == genomic_loc)
+                match_depth = qloc->depth;
+            else
+                match_depth = 
+                    qloc->alleles.count(qloc->matches[j]->cat_type) > 0 ? 
+                    qloc->alleles[qloc->matches[j]->cat_type] : qloc->depth;
 
-	    sstr << "0"         << "\t"
-		 << batch_id    << "\t"
-		 << qloc->matches[j]->cat_id   << "\t"
-		 << samp_id     << "\t"
-		 << qloc->id    << "\t"
-		 << qloc->matches[j]->cat_type << "\t"
-		 << match_depth << "\t"
-		 << qloc->lnl   << "\t"
+            sstr << "0"         << "\t"
+                 << batch_id    << "\t"
+                 << qloc->matches[j]->cat_id   << "\t"
+                 << samp_id     << "\t"
+                 << qloc->id    << "\t"
+                 << qloc->matches[j]->cat_type << "\t"
+                 << match_depth << "\t"
+                 << qloc->lnl   << "\t"
                  << qloc->matches[j]->cigar    << "\n";
-	}
+        }
 
-	if (in_file_type == FileT::gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
-	sstr.str("");
+        if (in_file_type == FileT::gzsql) gzputs(gz_matches, sstr.str().c_str()); else matches << sstr.str();
+        sstr.str("");
     }
 
     if (in_file_type == FileT::gzsql)
@@ -1281,98 +1281,98 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
 }
 
 int parse_command_line(int argc, char* argv[]) {
-	string sample_file;
-	int c;
+        string sample_file;
+        int c;
      
     while (1) {
-	static struct option long_options[] = {
-	    {"help",              no_argument, NULL, 'h'},
+        static struct option long_options[] = {
+            {"help",              no_argument, NULL, 'h'},
             {"version",           no_argument, NULL, 'v'},
-	    {"genomic_loc",       no_argument, NULL, 'g'},
-	    {"verify_hap",        no_argument, NULL, 'x'},
-	    {"uniq_haplotypes",   no_argument, NULL, 'u'},
+            {"genomic_loc",       no_argument, NULL, 'g'},
+            {"verify_hap",        no_argument, NULL, 'x'},
+            {"uniq_haplotypes",   no_argument, NULL, 'u'},
             {"gapped",            no_argument, NULL, 'G'},
-	    {"num_threads", required_argument, NULL, 'p'},
-	    {"batch_id",    required_argument, NULL, 'b'},
-	    {"catalog",     required_argument, NULL, 'c'},
-	    {"sample_2",    required_argument, NULL, 's'},
-	    {"outpath",     required_argument, NULL, 'o'},
-	    {0, 0, 0, 0}
-	};
-	
-	// getopt_long stores the option index here.
-	int option_index = 0;
+            {"num_threads", required_argument, NULL, 'p'},
+            {"batch_id",    required_argument, NULL, 'b'},
+            {"catalog",     required_argument, NULL, 'c'},
+            {"sample_2",    required_argument, NULL, 's'},
+            {"outpath",     required_argument, NULL, 'o'},
+            {0, 0, 0, 0}
+        };
+        
+        // getopt_long stores the option index here.
+        int option_index = 0;
      
-	c = getopt_long(argc, argv, "hgGxuvs:c:o:b:p:", long_options, &option_index);
+        c = getopt_long(argc, argv, "hgGxuvs:c:o:b:p:", long_options, &option_index);
      
-	// Detect the end of the options.
-	if (c == -1)
-	    break;
+        // Detect the end of the options.
+        if (c == -1)
+            break;
      
-	switch (c) {
-	case 'h':
-	    help();
-	    break;
-	case 'p':
-	    num_threads = atoi(optarg);
-	    break;
-	case 'b':
-	    batch_id = is_integer(optarg);
-	    if (batch_id < 0) {
-		cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
-		help();
-	    }
-	    break;
-	case 's':
-	    sample_file = optarg;
-	    samples.push(sample_file);
-	    break;
-	case 'g':
-	    search_type = genomic_loc;
-	    break;
-     	case 'o':
-	    out_path = optarg;
-	    break;
-	case 'c': 
-	    catalog_path = optarg;
-	    break;
-	case 'x': 
-	    verify_haplotypes = false;
-	    break;
-	case 'u':
-	    require_uniq_haplotypes = true;
-	    break;
+        switch (c) {
+        case 'h':
+            help();
+            break;
+        case 'p':
+            num_threads = atoi(optarg);
+            break;
+        case 'b':
+            batch_id = is_integer(optarg);
+            if (batch_id < 0) {
+                cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
+                help();
+            }
+            break;
+        case 's':
+            sample_file = optarg;
+            samples.push(sample_file);
+            break;
+        case 'g':
+            search_type = genomic_loc;
+            break;
+        case 'o':
+            out_path = optarg;
+            break;
+        case 'c': 
+            catalog_path = optarg;
+            break;
+        case 'x': 
+            verify_haplotypes = false;
+            break;
+        case 'u':
+            require_uniq_haplotypes = true;
+            break;
         case 'G':
             gapped_alignments = true;
             break;
         case 'v':
             version();
             break;
-	case '?':
-	    // getopt_long already printed an error message.
-	    help();
-	    break;
-	default:
-	    help();
-	    abort();
-	}
+        case '?':
+            // getopt_long already printed an error message.
+            help();
+            break;
+        default:
+            help();
+            abort();
+        }
     }
 
     if (catalog_path.length() == 0) {
-	cerr << "You must specify the prefix path to the catalog.\n";
-	help();
+        cerr << "You must specify the prefix path to the catalog.\n";
+        help();
     }
 
     if (samples.size() == 0) {
-	cerr << "You must specify at least one sample file.\n";
-	help();
+        cerr << "You must specify at least one sample file.\n";
+        help();
     }
 
     if (out_path.length() == 0) 
-	out_path = ".";
+        out_path = ".";
 
     if (out_path.at(out_path.length() - 1) != '/') 
-	out_path += "/";
+        out_path += "/";
 
     return 0;
 }
@@ -1387,14 +1387,14 @@ void help() {
     std::cerr << "sstacks " << VERSION << "\n"
               << "sstacks -b batch_id -c catalog_file -s sample_file [-s sample_file_2 ...] [-o path] [-p num_threads] [-g] [-x] [-v] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-	      << "  b: MySQL ID of this batch." << "\n"
-	      << "  c: TSV file from which to load the catalog loci." << "\n"
-	      << "  s: filename prefix from which to load sample loci." << "\n"
-	      << "  o: output path to write results." << "\n"
+              << "  b: MySQL ID of this batch." << "\n"
+              << "  c: TSV file from which to load the catalog loci." << "\n"
+              << "  s: filename prefix from which to load sample loci." << "\n"
+              << "  o: output path to write results." << "\n"
               << "  g: base matching on genomic location, not sequence identity." << "\n"
-	      << "  x: don't verify haplotype of matching locus." << "\n"
-	      << "  v: print program version." << "\n"
-	      << "  h: display this help messsage." << "\n\n"
+              << "  x: don't verify haplotype of matching locus." << "\n"
+              << "  v: print program version." << "\n"
+              << "  h: display this help messsage." << "\n\n"
               << "  Gapped assembly options:\n"
               << "    --gapped: preform gapped alignments between stacks.\n";
 

@@ -101,10 +101,10 @@ apply_cigar_to_seq(const char *seq, vector<pair<char, uint> > &cigar)
             }
             break;
         case 'D':
-	    edited_bp = 0;
+            edited_bp = 0;
             while (edited_bp < dist) {
                 edited_seq.push_back('N');
-		edited_bp++;
+                edited_bp++;
             }
             break;
         case 'I':
@@ -155,10 +155,10 @@ apply_cigar_to_model_seq(const char *seq, vector<pair<char, uint> > &cigar)
             }
             break;
         case 'D':
-	    edited_bp = 0;
+            edited_bp = 0;
             while (edited_bp < dist) {
                 edited_seq.push_back('U');
-		edited_bp++;
+                edited_bp++;
             }
             break;
         case 'I':
@@ -206,7 +206,7 @@ apply_cigar_to_seq(char *seq, uint seq_len, const char *old_seq, vector<pair<cha
             stop = stop > seq_len ? seq_len : stop;
             while (seq_bp < stop) {
                 seq[seq_bp] = 'N';
-		seq_bp++;
+                seq_bp++;
             }
             break;
         case 'I':
@@ -258,7 +258,7 @@ apply_cigar_to_model_seq(char *seq, uint seq_len, const char *model, vector<pair
             stop = stop > seq_len ? seq_len : stop;
             while (seq_bp < stop) {
                 seq[seq_bp] = 'U';
-		seq_bp++;
+                seq_bp++;
             }
             break;
         case 'I':
@@ -306,10 +306,10 @@ remove_cigar_from_seq(const char *seq, vector<pair<char, uint> > &cigar)
 
         switch(op) {
         case 'D':
-	    edited_bp = 0;
+            edited_bp = 0;
             while (edited_bp < dist) {
                 edited_bp++;
-		bp++;
+                bp++;
             }
             break;
         case 'I':

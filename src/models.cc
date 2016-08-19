@@ -37,10 +37,10 @@ call_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_s
 
     int total = 0;
     for (i = n.begin(); i != n.end(); i++) {
-	if (i->first != 'N') {
-	    total += i->second;
-	    nuc.push_back(make_pair(i->first, i->second));
-	}
+        if (i->first != 'N') {
+            total += i->second;
+            nuc.push_back(make_pair(i->first, i->second));
+        }
     }
 
     sort(nuc.begin(), nuc.end(), compare_pair);
@@ -49,17 +49,17 @@ call_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_s
     // If this column was simply uncalled Ns, return.
     //
     if (nuc[0].second == 0) {
-	if (record_snps) {
-	    SNP *snp = new SNP;
-	    snp->type   = snp_type_unk;
-	    snp->col    = col;
-	    snp->lratio = 0;
-	    snp->rank_1 = 'N';
-	    snp->rank_2 = '-';
+        if (record_snps) {
+            SNP *snp = new SNP;
+            snp->type   = snp_type_unk;
+            snp->col    = col;
+            snp->lratio = 0;
+            snp->rank_1 = 'N';
+            snp->rank_2 = '-';
 
-	    tag->snps.push_back(snp);
-	}
-	return snp_type_unk;
+            tag->snps.push_back(snp);
+        }
+        return snp_type_unk;
     }
 
     //
@@ -80,66 +80,66 @@ call_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_s
     l_ratio = (nuc_1 * log(nuc_1 / total));
 
     if (total - nuc_1 > 0)
-    	l_ratio += ((total - nuc_1) * log((total - nuc_1) / (3 * total)));
+        l_ratio += ((total - nuc_1) * log((total - nuc_1) / (3 * total)));
 
     if (nuc_1 + nuc_2 > 0)
-	l_ratio -= ((nuc_1 + nuc_2) * log((nuc_1 + nuc_2) / (2 * total)));
+        l_ratio -= ((nuc_1 + nuc_2) * log((nuc_1 + nuc_2) / (2 * total)));
 
     if (nuc_3 + nuc_4 > 0)
-	l_ratio -= ((nuc_3 + nuc_4) * log((nuc_3 + nuc_4) / (2 * total)));
+        l_ratio -= ((nuc_3 + nuc_4) * log((nuc_3 + nuc_4) / (2 * total)));
 
     l_ratio *= 2;
 
     snp_type res;
 
     if (l_ratio <= heterozygote_limit) {
-	//
+        //
         // This locus is a heterozygote.
-	//
-	if (record_snps) {
-	    SNP *snp = new SNP;
-	    snp->type   = snp_type_het;
-	    snp->col    = col;
-	    snp->lratio = l_ratio;
-	    snp->rank_1 = nuc[0].first;
-	    snp->rank_2 = nuc[1].first;
+        //
+        if (record_snps) {
+            SNP *snp = new SNP;
+            snp->type   = snp_type_het;
+            snp->col    = col;
+            snp->lratio = l_ratio;
+            snp->rank_1 = nuc[0].first;
+            snp->rank_2 = nuc[1].first;
 
-	    tag->snps.push_back(snp);
-	}
-	res = snp_type_het;
+            tag->snps.push_back(snp);
+        }
+        res = snp_type_het;
 
     } else if (l_ratio >= homozygote_limit) {
-	//
+        //
         // This locus is a homozygote.
-	//
-	if (record_snps) {
-	    SNP *snp = new SNP;
-	    snp->type   = snp_type_hom;
-	    snp->col    = col;
-	    snp->lratio = l_ratio;
-	    snp->rank_1 = nuc[0].first;
-	    snp->rank_2 = '-';
+        //
+        if (record_snps) {
+            SNP *snp = new SNP;
+            snp->type   = snp_type_hom;
+            snp->col    = col;
+            snp->lratio = l_ratio;
+            snp->rank_1 = nuc[0].first;
+            snp->rank_2 = '-';
 
-	    tag->snps.push_back(snp);
-	}
-	res = snp_type_hom;
+            tag->snps.push_back(snp);
+        }
+        res = snp_type_hom;
 
     } else {
-	//
+        //
         // Unknown whether this is a heterozygote or homozygote.
-	//
-	if (record_snps) {
-	    SNP *snp = new SNP;
-	    snp->type   = snp_type_unk;
-	    snp->col    = col;
-	    snp->lratio = l_ratio;
-	    snp->rank_1 = nuc[0].first;
-	    snp->rank_2 = nuc[1].second > 0 ? nuc[1].first : '-';
+        //
+        if (record_snps) {
+            SNP *snp = new SNP;
+            snp->type   = snp_type_unk;
+            snp->col    = col;
+            snp->lratio = l_ratio;
+            snp->rank_1 = nuc[0].first;
+            snp->rank_2 = nuc[1].second > 0 ? nuc[1].first : '-';
 
-	    tag->snps.push_back(snp);
-	}
+            tag->snps.push_back(snp);
+        }
 
-	res = snp_type_unk;
+        res = snp_type_unk;
     }
 
     return res;
@@ -153,10 +153,10 @@ call_multinomial_snp(Locus *tag, int col, map<char, int> &n)
 
     int total = 0;
     for (i = n.begin(); i != n.end(); i++) {
-	if (i->first != 'N') {
-	    total += i->second;
-	    nuc.push_back(make_pair(i->first, i->second));
-	}
+        if (i->first != 'N') {
+            total += i->second;
+            nuc.push_back(make_pair(i->first, i->second));
+        }
     }
 
     sort(nuc.begin(), nuc.end(), compare_pair);
@@ -165,13 +165,13 @@ call_multinomial_snp(Locus *tag, int col, map<char, int> &n)
     // If this column was simply uncalled Ns, return.
     //
     if (nuc[0].second == 0) {
-	tag->snps[col]->type   = snp_type_unk;
-	tag->snps[col]->col    = col;
-	tag->snps[col]->lratio = 0;
-	tag->snps[col]->rank_1 = 'N';
-	tag->snps[col]->rank_2 = '-';
+        tag->snps[col]->type   = snp_type_unk;
+        tag->snps[col]->col    = col;
+        tag->snps[col]->lratio = 0;
+        tag->snps[col]->rank_1 = 'N';
+        tag->snps[col]->rank_2 = '-';
 
-	return snp_type_unk;
+        return snp_type_unk;
     }
 
     //
@@ -192,53 +192,53 @@ call_multinomial_snp(Locus *tag, int col, map<char, int> &n)
     l_ratio = (nuc_1 * log(nuc_1 / total));
 
     if (total - nuc_1 > 0)
-    	l_ratio += ((total - nuc_1) * log((total - nuc_1) / (3 * total)));
+        l_ratio += ((total - nuc_1) * log((total - nuc_1) / (3 * total)));
 
     if (nuc_1 + nuc_2 > 0)
-	l_ratio -= ((nuc_1 + nuc_2) * log((nuc_1 + nuc_2) / (2 * total)));
+        l_ratio -= ((nuc_1 + nuc_2) * log((nuc_1 + nuc_2) / (2 * total)));
 
     if (nuc_3 + nuc_4 > 0)
-	l_ratio -= ((nuc_3 + nuc_4) * log((nuc_3 + nuc_4) / (2 * total)));
+        l_ratio -= ((nuc_3 + nuc_4) * log((nuc_3 + nuc_4) / (2 * total)));
 
     l_ratio *= 2;
 
     snp_type res;
 
     if (l_ratio <= heterozygote_limit) {
-	//
+        //
         // This locus is a heterozygote.
-	//
-	tag->snps[col]->type   = snp_type_het;
-	tag->snps[col]->col    = col;
-	tag->snps[col]->lratio = l_ratio;
-	tag->snps[col]->rank_1 = nuc[0].first;
-	tag->snps[col]->rank_2 = nuc[1].first;
+        //
+        tag->snps[col]->type   = snp_type_het;
+        tag->snps[col]->col    = col;
+        tag->snps[col]->lratio = l_ratio;
+        tag->snps[col]->rank_1 = nuc[0].first;
+        tag->snps[col]->rank_2 = nuc[1].first;
 
-	res = snp_type_het;
+        res = snp_type_het;
 
     } else if (l_ratio >= homozygote_limit) {
-	//
+        //
         // This locus is a homozygote.
-	//
-	tag->snps[col]->type   = snp_type_hom;
-	tag->snps[col]->col    = col;
-	tag->snps[col]->lratio = l_ratio;
-	tag->snps[col]->rank_1 = nuc[0].first;
-	tag->snps[col]->rank_2 = '-';
+        //
+        tag->snps[col]->type   = snp_type_hom;
+        tag->snps[col]->col    = col;
+        tag->snps[col]->lratio = l_ratio;
+        tag->snps[col]->rank_1 = nuc[0].first;
+        tag->snps[col]->rank_2 = '-';
 
-	res = snp_type_hom;
+        res = snp_type_hom;
 
     } else {
-	//
+        //
         // Unknown whether this is a heterozygote or homozygote.
-	//
-	tag->snps[col]->type   = snp_type_unk;
-	tag->snps[col]->col    = col;
-	tag->snps[col]->lratio = l_ratio;
-	tag->snps[col]->rank_1 = nuc[0].first;
-	tag->snps[col]->rank_2 = nuc[1].second > 0 ? nuc[1].first : '-';
+        //
+        tag->snps[col]->type   = snp_type_unk;
+        tag->snps[col]->col    = col;
+        tag->snps[col]->lratio = l_ratio;
+        tag->snps[col]->rank_1 = nuc[0].first;
+        tag->snps[col]->rank_2 = nuc[1].second > 0 ? nuc[1].first : '-';
 
-	res = snp_type_unk;
+        res = snp_type_unk;
     }
 
     return res;
@@ -252,10 +252,10 @@ call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool 
 
     double total = 0.0;
     for (i = n.begin(); i != n.end(); i++) {
-	if (i->first != 'N') {
-	    total += i->second;
-	    nuc.push_back(make_pair(i->first, i->second));
-	}
+        if (i->first != 'N') {
+            total += i->second;
+            nuc.push_back(make_pair(i->first, i->second));
+        }
     }
 
     sort(nuc.begin(), nuc.end(), compare_pair);
@@ -264,17 +264,17 @@ call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool 
     // If this column was simply uncalled Ns, return.
     //
     if (nuc[0].second == 0) {
-	if (record_snps) {
-	    SNP *snp = new SNP;
-	    snp->type   = snp_type_unk;
-	    snp->col    = col;
-	    snp->lratio = 0;
-	    snp->rank_1 = 'N';
-	    snp->rank_2 = '-';
+        if (record_snps) {
+            SNP *snp = new SNP;
+            snp->type   = snp_type_unk;
+            snp->col    = col;
+            snp->lratio = 0;
+            snp->rank_1 = 'N';
+            snp->rank_2 = '-';
 
-	    tag->snps.push_back(snp);
-	}
-	return snp_type_unk;
+            tag->snps.push_back(snp);
+        }
+        return snp_type_unk;
     }
 
     double nuc_1   = nuc[0].second;
@@ -298,14 +298,14 @@ call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool 
     // Check if the error rate is above or below the specified bound.
     //
     if (epsilon_hom < bound_low)
-	epsilon_hom = bound_low;
+        epsilon_hom = bound_low;
     else if (epsilon_hom > bound_high)
-	epsilon_hom = bound_high;
+        epsilon_hom = bound_high;
 
     if (epsilon_het < bound_low)
-	epsilon_het = bound_low;
+        epsilon_het = bound_low;
     else if (epsilon_het > bound_high)
-	epsilon_het = bound_high;
+        epsilon_het = bound_high;
 
     //
     // Calculate the log likelihood for the homozygous and heterozygous genotypes.
@@ -322,61 +322,61 @@ call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool 
     double l_ratio  = 2 * (ln_L_hom - ln_L_het);
 
     // cerr << "  Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Nuc_3: " << nuc_3 << " Nuc_4: " << nuc_4 
-    // 	 << " epsilon homozygote: " << epsilon_hom 
-    // 	 << " epsilon heterozygote: " << epsilon_het
-    // 	 << " Log likelihood hom: " << ln_L_hom 
-    // 	 << " Log likelihood het: " << ln_L_het 
-    // 	 << " Likelihood ratio: " << l_ratio << "\n";
+    //   << " epsilon homozygote: " << epsilon_hom 
+    //   << " epsilon heterozygote: " << epsilon_het
+    //   << " Log likelihood hom: " << ln_L_hom 
+    //   << " Log likelihood het: " << ln_L_het 
+    //   << " Likelihood ratio: " << l_ratio << "\n";
 
     snp_type res;
 
     if (l_ratio <= heterozygote_limit) {
-	//
+        //
         // This locus is a heterozygote.
-	//
-	if (record_snps) {
-	    SNP *snp = new SNP;
-	    snp->type   = snp_type_het;
-	    snp->col    = col;
-	    snp->lratio = l_ratio;
-	    snp->rank_1 = nuc[0].first;
-	    snp->rank_2 = nuc[1].first;
+        //
+        if (record_snps) {
+            SNP *snp = new SNP;
+            snp->type   = snp_type_het;
+            snp->col    = col;
+            snp->lratio = l_ratio;
+            snp->rank_1 = nuc[0].first;
+            snp->rank_2 = nuc[1].first;
 
-	    tag->snps.push_back(snp);
-	}
-	res = snp_type_het;
+            tag->snps.push_back(snp);
+        }
+        res = snp_type_het;
 
     } else if (l_ratio >= homozygote_limit) {
-	//
+        //
         // This locus is a homozygote.
-	//
-	if (record_snps) {
-	    SNP *snp = new SNP;
-	    snp->type   = snp_type_hom;
-	    snp->col    = col;
-	    snp->lratio = l_ratio;
-	    snp->rank_1 = nuc[0].first;
-	    snp->rank_2 = '-';
+        //
+        if (record_snps) {
+            SNP *snp = new SNP;
+            snp->type   = snp_type_hom;
+            snp->col    = col;
+            snp->lratio = l_ratio;
+            snp->rank_1 = nuc[0].first;
+            snp->rank_2 = '-';
 
-	    tag->snps.push_back(snp);
-	}
-	res = snp_type_hom;
+            tag->snps.push_back(snp);
+        }
+        res = snp_type_hom;
 
     } else {
-	//
+        //
         // Unknown whether this is a heterozygote or homozygote.
-	//
-	if (record_snps) {
-	    SNP *snp = new SNP;
-	    snp->type   = snp_type_unk;
-	    snp->col    = col;
-	    snp->lratio = l_ratio;
-	    snp->rank_1 = nuc[0].first;
-	    snp->rank_2 = nuc[1].first;
+        //
+        if (record_snps) {
+            SNP *snp = new SNP;
+            snp->type   = snp_type_unk;
+            snp->col    = col;
+            snp->lratio = l_ratio;
+            snp->rank_1 = nuc[0].first;
+            snp->rank_2 = nuc[1].first;
 
-	    tag->snps.push_back(snp);
-	}
-	res = snp_type_unk;
+            tag->snps.push_back(snp);
+        }
+        res = snp_type_unk;
     }
 
     return res;
@@ -390,10 +390,10 @@ call_bounded_multinomial_snp(Locus *tag, int col, map<char, int> &n)
 
     double total = 0.0;
     for (i = n.begin(); i != n.end(); i++) {
-	if (i->first != 'N') {
-	    total += i->second;
-	    nuc.push_back(make_pair(i->first, i->second));
-	}
+        if (i->first != 'N') {
+            total += i->second;
+            nuc.push_back(make_pair(i->first, i->second));
+        }
     }
 
     sort(nuc.begin(), nuc.end(), compare_pair);
@@ -402,13 +402,13 @@ call_bounded_multinomial_snp(Locus *tag, int col, map<char, int> &n)
     // If this column was simply uncalled Ns, return.
     //
     if (nuc[0].second == 0) {
-	tag->snps[col]->type   = snp_type_unk;
-	tag->snps[col]->col    = col;
-	tag->snps[col]->lratio = 0;
-	tag->snps[col]->rank_1 = 'N';
-	tag->snps[col]->rank_2 = '-';
+        tag->snps[col]->type   = snp_type_unk;
+        tag->snps[col]->col    = col;
+        tag->snps[col]->lratio = 0;
+        tag->snps[col]->rank_1 = 'N';
+        tag->snps[col]->rank_2 = '-';
 
-	return snp_type_unk;
+        return snp_type_unk;
     }
 
     double nuc_1   = nuc[0].second;
@@ -432,14 +432,14 @@ call_bounded_multinomial_snp(Locus *tag, int col, map<char, int> &n)
     // Check if the error rate is above or below the specified bound.
     //
     if (epsilon_hom < bound_low)
-	epsilon_hom = bound_low;
+        epsilon_hom = bound_low;
     else if (epsilon_hom > bound_high)
-	epsilon_hom = bound_high;
+        epsilon_hom = bound_high;
 
     if (epsilon_het < bound_low)
-	epsilon_het = bound_low;
+        epsilon_het = bound_low;
     else if (epsilon_het > bound_high)
-	epsilon_het = bound_high;
+        epsilon_het = bound_high;
 
     //
     // Calculate the log likelihood for the homozygous and heterozygous genotypes.
@@ -456,49 +456,49 @@ call_bounded_multinomial_snp(Locus *tag, int col, map<char, int> &n)
     double l_ratio  = 2 * (ln_L_hom - ln_L_het);
 
     // cerr << "  Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Nuc_3: " << nuc_3 << " Nuc_4: " << nuc_4 
-    // 	 << " epsilon homozygote: " << epsilon_hom 
-    // 	 << " epsilon heterozygote: " << epsilon_het
-    // 	 << " Log likelihood hom: " << ln_L_hom 
-    // 	 << " Log likelihood het: " << ln_L_het 
-    // 	 << " Likelihood ratio: " << l_ratio << "\n";
+    //   << " epsilon homozygote: " << epsilon_hom 
+    //   << " epsilon heterozygote: " << epsilon_het
+    //   << " Log likelihood hom: " << ln_L_hom 
+    //   << " Log likelihood het: " << ln_L_het 
+    //   << " Likelihood ratio: " << l_ratio << "\n";
 
     snp_type res;
 
     if (l_ratio <= heterozygote_limit) {
-	//
+        //
         // This locus is a heterozygote.
-	//
-	tag->snps[col]->type   = snp_type_het;
-	tag->snps[col]->col    = col;
-	tag->snps[col]->lratio = l_ratio;
-	tag->snps[col]->rank_1 = nuc[0].first;
-	tag->snps[col]->rank_2 = nuc[1].first;
+        //
+        tag->snps[col]->type   = snp_type_het;
+        tag->snps[col]->col    = col;
+        tag->snps[col]->lratio = l_ratio;
+        tag->snps[col]->rank_1 = nuc[0].first;
+        tag->snps[col]->rank_2 = nuc[1].first;
 
-	res = snp_type_het;
+        res = snp_type_het;
 
     } else if (l_ratio >= homozygote_limit) {
-	//
+        //
         // This locus is a homozygote.
-	//
-	tag->snps[col]->type   = snp_type_hom;
-	tag->snps[col]->col    = col;
-	tag->snps[col]->lratio = l_ratio;
-	tag->snps[col]->rank_1 = nuc[0].first;
-	tag->snps[col]->rank_2 = '-';
+        //
+        tag->snps[col]->type   = snp_type_hom;
+        tag->snps[col]->col    = col;
+        tag->snps[col]->lratio = l_ratio;
+        tag->snps[col]->rank_1 = nuc[0].first;
+        tag->snps[col]->rank_2 = '-';
 
-	res = snp_type_hom;
+        res = snp_type_hom;
 
     } else {
-	//
+        //
         // Unknown whether this is a heterozygote or homozygote.
-	//
-	tag->snps[col]->type   = snp_type_unk;
-	tag->snps[col]->col    = col;
-	tag->snps[col]->lratio = l_ratio;
-	tag->snps[col]->rank_1 = nuc[0].first;
-	tag->snps[col]->rank_2 = nuc[1].first;
+        //
+        tag->snps[col]->type   = snp_type_unk;
+        tag->snps[col]->col    = col;
+        tag->snps[col]->lratio = l_ratio;
+        tag->snps[col]->rank_1 = nuc[0].first;
+        tag->snps[col]->rank_2 = nuc[1].first;
 
-	res = snp_type_unk;
+        res = snp_type_unk;
     }
 
     return res;
@@ -514,24 +514,24 @@ call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n)
 
     int total = 0;
     for (i = n.begin(); i != n.end(); i++) {
-	if (i->first != 'N') {
-	    total += i->second;
-	    nuc.push_back(make_pair(i->first, i->second));
-	}
+        if (i->first != 'N') {
+            total += i->second;
+            nuc.push_back(make_pair(i->first, i->second));
+        }
     }
 
     sort(nuc.begin(), nuc.end(), compare_pair);
 
     if (nuc[0].second == 0) {
-	SNP *snp = new SNP;
-	snp->type   = snp_type_unk;
-	snp->col    = col;
-	snp->lratio = 0;
-	snp->rank_1 = 'N';
-	snp->rank_2 = '-';
+        SNP *snp = new SNP;
+        snp->type   = snp_type_unk;
+        snp->col    = col;
+        snp->lratio = 0;
+        snp->rank_1 = 'N';
+        snp->rank_2 = '-';
 
-	tag->snps.push_back(snp);
-	return snp_type_unk;
+        tag->snps.push_back(snp);
+        return snp_type_unk;
     }
 
     //
@@ -557,39 +557,39 @@ call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n)
     n_ratio = nuc_1 / (nuc_1 + nuc_2);
 
     l_ratio  = 
-	nuc_1 * log( ((4 * nuc_1 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) / 
-		     ((4 * p_freq * (nuc_1 + nuc_2) * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) );
+        nuc_1 * log( ((4 * nuc_1 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) / 
+                     ((4 * p_freq * (nuc_1 + nuc_2) * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) );
 
     l_ratio += 
-	nuc_2 * log( ((4 * nuc_2 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) / 
-		     ((4 * (1 - p_freq) * (nuc_1 + nuc_2) * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) );
+        nuc_2 * log( ((4 * nuc_2 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) / 
+                     ((4 * (1 - p_freq) * (nuc_1 + nuc_2) * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) );
 
     //cerr << "Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Likelihood ratio: " << l_ratio << "\n";
 
     if (n_ratio < p_freq || l_ratio < nucleotide_fixed_limit) {
-	//
-	// This position is likely a SNP, record it's homozygosity as 'unknown'.
-	//
-	SNP *snp = new SNP;
-	snp->type   = snp_type_unk;
-	snp->col    = col;
-	snp->lratio = l_ratio;
-	snp->rank_1 = nuc[0].first;
-	snp->rank_2 = nuc[1].first;
+        //
+        // This position is likely a SNP, record it's homozygosity as 'unknown'.
+        //
+        SNP *snp = new SNP;
+        snp->type   = snp_type_unk;
+        snp->col    = col;
+        snp->lratio = l_ratio;
+        snp->rank_1 = nuc[0].first;
+        snp->rank_2 = nuc[1].first;
 
-	tag->snps.push_back(snp);
+        tag->snps.push_back(snp);
     } else {
-	//
-	// Otherwise, this position is homozygous.
-	//
-	SNP *snp = new SNP;
-	snp->type   = snp_type_hom;
-	snp->col    = col;
-	snp->lratio = l_ratio;
-	snp->rank_1 = nuc[0].first;
-	snp->rank_2 = nuc[1].first;
+        //
+        // Otherwise, this position is homozygous.
+        //
+        SNP *snp = new SNP;
+        snp->type   = snp_type_hom;
+        snp->col    = col;
+        snp->lratio = l_ratio;
+        snp->rank_1 = nuc[0].first;
+        snp->rank_2 = nuc[1].first;
 
-	tag->snps.push_back(snp);
+        tag->snps.push_back(snp);
     }
 
     return 0;
@@ -608,8 +608,8 @@ heterozygous_likelihood(int col, map<char, int> &nuc)
 
     double n = 0;
     for (i = nuc.begin(); i != nuc.end(); i++) {
-	n += i->second;
-	cnts.push_back(make_pair(i->first, i->second));
+        n += i->second;
+        cnts.push_back(make_pair(i->first, i->second));
     }
 
     sort(cnts.begin(), cnts.end(), compare_pair);
@@ -646,8 +646,8 @@ homozygous_likelihood(int col, map<char, int> &nuc)
 
     double n = 0;
     for (i = nuc.begin(); i != nuc.end(); i++) {
-	n += i->second;
-	cnts.push_back(make_pair(i->first, i->second));
+        n += i->second;
+        cnts.push_back(make_pair(i->first, i->second));
     }
 
     sort(cnts.begin(), cnts.end(), compare_pair);

@@ -58,10 +58,10 @@ class Seq {
     Seq(const char *, const char *, const char *);
     Seq(const char *, const char *, const char *, const char *, uint, strand_type);
     ~Seq( void ) { 
-	delete[] id; 
-	delete[] seq; 
-	delete[] qual; 
-	delete[] loc_str; 
+        delete[] id; 
+        delete[] seq; 
+        delete[] qual; 
+        delete[] loc_str; 
     }
 };
 
