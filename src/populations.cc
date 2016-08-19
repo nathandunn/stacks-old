@@ -5043,24 +5043,39 @@ int load_marker_list(string path, set<int> &list) {
         exit(1);
     }
 
-    int   marker;
-    char *p, *e;
-
-    while (fh.good()) {
-        fh.getline(line, id_len);
-
-        if (strlen(line) == 0) continue;
+    size_t line_num = 0;
+    while (fh.getline(line, id_len)) {
+        ++line_num;
 
         //
-        // Skip commented lines.
+        // Skip blank & commented lines ; correct windows-style line ends.
         //
-        for (p = line; isspace(*p) && *p != '\0'; p++);
-        if (*p == '#') continue;
+        size_t len = strlen(line);
+        if (len == 0) {
+            continue;
+        } else if (line[len-1] == '\r') {
+            line[len-1] = '\0';
+            --len;
+            if (len == 0)
+                continue;
+        }
+        char* p = line;
+        while (isspace(*p) && *p != '\0')
+            ++p;
+        if (*p == '#')
+            continue;
 
-        marker = (int) strtol(line, &e, 10);
-
-        if (*e == '\0')
+        //
+        // Parse the blacklist
+        //
+        char* e;
+        int marker = (int) strtol(line, &e, 10);
+        if (*e == '\0') {
             list.insert(marker);
+        } else {
+            cerr << "Error: Unable to parse blacklist '" << path << "' at line " << line_num << ".\n";
+            throw exception();
+        }
     }
 
     fh.close();
@@ -5083,20 +5098,29 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
     }
 
     vector<string> parts;
-    uint  marker, col;
-    char *p, *e;
+    uint col;
+    char *e;
 
     uint line_num = 1;
-    while (fh.good()) {
-        fh.getline(line, id_len);
-
-        if (strlen(line) == 0) continue;
+    while (fh.getline(line, id_len)) {
 
         //
-        // Skip commented lines.
+        // Skip blank & commented lines ; correct windows-style line ends.
         //
-        for (p = line; isspace(*p) && *p != '\0'; p++);
-        if (*p == '#') continue;
+        size_t len = strlen(line);
+        if (len == 0) {
+            continue;
+        } else if (line[len-1] == '\r') {
+            line[len-1] = '\0';
+            --len;
+            if (len == 0)
+                continue;
+        }
+        char* p = line;
+        while (isspace(*p) && *p != '\0')
+            ++p;
+        if (*p == '#')
+            continue;
 
         //
         // Parse the whitelist, we expect:
@@ -5109,7 +5133,7 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
             exit(1);
 
         } else if (parts.size() == 2) {
-            marker = (int) strtol(parts[0].c_str(), &e, 10);
+            int marker = (int) strtol(parts[0].c_str(), &e, 10);
             if (*e != '\0') {
                 cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
@@ -5122,9 +5146,9 @@ int load_marker_column_list(string path, map<int, set<int> > &list) {
             list[marker].insert(col);
 
         } else {
-            marker = (int) strtol(parts[0].c_str(), &e, 10);
+            int marker = (int) strtol(parts[0].c_str(), &e, 10);
             if (*e != '\0') {
-                cerr << "Unable to parse whitelist, '" << path << "' at line " << line << "\n";
+                cerr << "Unable to parse whitelist, '" << path << "' at line " << line_num << "\n";
                 exit(1);
             }
             list.insert(make_pair(marker, std::set<int>()));
