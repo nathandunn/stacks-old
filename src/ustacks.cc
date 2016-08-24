@@ -119,22 +119,21 @@ int main (int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
     #endif
 
-    DNASeqHashMap     radtags;
-    vector<DNANSeq *> radtags_keys;
+    DNASeqHashMap*    radtags = new DNASeqHashMap();
     map<int, Rem *>   remainders;
     set<int>          merge_map;
     map<int, Stack *> unique;
 
-    load_radtags(in_file, radtags, radtags_keys);
+    load_radtags(in_file, *radtags);
 
-    reduce_radtags(radtags, unique, remainders);
+    reduce_radtags(*radtags, unique, remainders);
 
-    free_radtags_hash(radtags, radtags_keys);
+    delete radtags;
 
     // dump_unique_tags(unique);
 
     double cov_mean, cov_stdev, cov_max;
-    
+
     calc_coverage_distribution(unique, cov_mean, cov_stdev, cov_max);
     cerr << "Initial coverage mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
@@ -1675,7 +1674,7 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
             //
             r     = new Rem;
             r->id = global_id;
-            r->add_seq(it->first);
+            r->add_seq(&it->first);
 
             for (uint i = 0; i < it->second.ids.size(); i++)
                 r->add_id(it->second.ids[i]);
@@ -1691,7 +1690,7 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
             //
             u     = new Stack;
             u->id = global_id;
-            u->add_seq(it->first);
+            u->add_seq(&it->first);
 
             // Copy the original Fastq IDs from which this unique radtag was built.
             for (uint i = 0; i < it->second.ids.size(); i++)
@@ -1706,17 +1705,6 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
         cerr << "Error: Unable to form any stacks, data appear to be unique.\n";
         exit(1);
     }
-
-    return 0;
-}
-
-int
-free_radtags_hash(DNASeqHashMap &radtags, vector<DNANSeq *> &radtags_keys)
-{
-    for (uint i = 0; i < radtags_keys.size(); i++)
-        delete radtags_keys[i];
-
-    radtags.clear();
 
     return 0;
 }
@@ -2424,9 +2412,8 @@ int dump_merged_tags(map<int, MergedStack *> &m) {
     return 0;
 }
 
-int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNANSeq *> &radtags_keys) {
+int load_radtags(string in_file, DNASeqHashMap &radtags) {
     Input *fh = NULL;
-    DNANSeq *d;
 
     if (in_file_type == FileT::fasta)
         fh = new Fasta(in_file.c_str());
@@ -2449,8 +2436,10 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNANSeq *> &radt
     c.seq  = new char[max_len];
     c.qual = new char[max_len];
 
+    cerr << "Loading RAD-Tags...";
     while ((fh->next_seq(c)) != 0) {
-        if (i % 10000 == 0) cerr << "  Loading RAD-Tag " << i << "       \r";
+        if (i % 1000000 == 0)
+            cerr << i/1000000 << "M...";
 
         prev_seql = seql;
         seql      = 0;
@@ -2464,17 +2453,14 @@ int load_radtags(string in_file, DNASeqHashMap &radtags, vector<DNANSeq *> &radt
                 corrected++;
             }
 
-        if (seql != prev_seql && prev_seql > 0) len_mismatch = true;
+        if (seql != prev_seql && prev_seql > 0)
+            len_mismatch = true;
 
-        d = new DNANSeq(seql, c.seq);
-
-        pair<DNASeqHashMap::iterator, bool> r;
-
-        r = radtags.insert(make_pair(d, HVal()));
-        (*r.first).second.add_id(i);
-        radtags_keys.push_back(d);
+        DNASeqHashMap::iterator element = radtags.insert({DNANSeq(seql, c.seq), HVal()}).first;
+        element->second.add_id(i);
         i++;
     }
+    cerr << "done\n";
     cerr << "Loaded " << i << " RAD-Tags; inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n";
 
     if (i == 0) {

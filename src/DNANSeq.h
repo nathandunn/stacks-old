@@ -61,6 +61,8 @@ public:
     DNANSeq(int);
     DNANSeq(int, const char *);
     DNANSeq(int, unsigned char *);
+    DNANSeq(const DNANSeq&);
+    DNANSeq& operator= (const DNANSeq& other) =delete;
     ~DNANSeq();
 
     char  operator[](int);
@@ -68,6 +70,14 @@ public:
     char *seq(char *);
     char *seq();
     char *subseq(char *, int, int);
+
+    bool operator== (const DNANSeq& other) const {
+        unsigned int bytes = BITNSLOTS(bits);
+        for (unsigned int i = 0; i < bytes; i++)
+            if (s[i] != other.s[i])
+                return false;
+        return true;
+    }
 };
 
 #include <iostream>
@@ -77,6 +87,23 @@ using std::stringstream;
 using std::cin;
 using std::cout;
 using std::cerr;
+
+// Specialization for std::hash
+// Based on GCC
+namespace std {
+template<>
+struct hash<DNANSeq> {
+    size_t operator()(const DNANSeq& seq) const {
+        size_t __result = static_cast<size_t>(14695981039346656037ULL);
+        unsigned short int __bytes  = BITNSLOTS(seq.bits);
+        for (unsigned short int i = 0; i < __bytes; i++) {
+            __result ^= static_cast<size_t>(seq.s[i]);
+            __result *= static_cast<size_t>(1099511628211ULL);
+        }
+        return __result;
+    }
+};
+}
 
 // namespace __gnu_cxx {
 //     template<>
@@ -93,27 +120,14 @@ using std::cerr;
 //     };
 // }
 
-struct hash_dnanseq {
-    size_t operator()(DNANSeq *__s) const
-    {
-        size_t __result = static_cast<size_t>(14695981039346656037ULL);
-        unsigned short int __bytes  = BITNSLOTS(__s->bits);
-        for (unsigned short int i = 0; i < __bytes; i++) {
-            __result ^= static_cast<size_t>(__s->s[i]);
-            __result *= static_cast<size_t>(1099511628211ULL);
-        }
-
-        return __result;
-    }
+/* struct hash_dnanseq {
+    // Deprecated
+    size_t operator()(const DNANSeq* seq) const {return std::hash<DNANSeq>{}(*seq);}
 };
 
 struct dnanseq_eqstr {
-    bool operator()(DNANSeq *s1, DNANSeq *s2) const {
-        unsigned int bytes = BITNSLOTS(s1->bits);
-        for (unsigned int i = 0; i < bytes; i++)
-            if (s1->s[i] != s2->s[i]) return false;
-        return true;
-    }
-};
+    // Deprecated
+    bool operator()(const DNANSeq *s1, const DNANSeq *s2) const {return *s1 == *s2;}
+}; */
 
 #endif // __DNANSeq_H__

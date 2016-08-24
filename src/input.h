@@ -53,15 +53,21 @@ class Seq {
     char  *loc_str;
     PhyLoc loc;
 
-    Seq( void );
+    Seq();
+    Seq(const Seq& other);
+    Seq& operator= (const Seq& other) = delete;
     Seq(const char *, const char *);
     Seq(const char *, const char *, const char *);
     Seq(const char *, const char *, const char *, const char *, uint, strand_type);
-    ~Seq( void ) { 
-        delete[] id; 
-        delete[] seq; 
-        delete[] qual; 
-        delete[] loc_str; 
+    ~Seq( void ) {
+        if (id != NULL)
+            delete[] id;
+        if (seq != NULL)
+            delete[] seq;
+        if (qual != NULL)
+            delete[] qual;
+        if (loc_str != NULL)
+            delete[] loc_str;
     }
 };
 

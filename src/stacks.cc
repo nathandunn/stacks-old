@@ -86,7 +86,7 @@ int PStack::add_seq(const char *seq) {
     return 0;
 }
 
-int PStack::add_seq(DNANSeq *seq) {
+int PStack::add_seq(const DNANSeq *seq) {
     if (this->seq != NULL)
         delete this->seq;
 

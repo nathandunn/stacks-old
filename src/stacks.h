@@ -71,6 +71,12 @@ public:
         bp     = 0;
         strand = strand_plus;
     }
+    PhyLoc(const PhyLoc& other)
+        : bp(other.bp), strand(other.strand) {
+        chr = new char[strlen(other.chr)+1];
+        strcpy(chr, other.chr);
+    }
+    PhyLoc& operator=(const PhyLoc& other) =delete;
     PhyLoc(const char *chr, uint bp) {
         this->chr    = new char[strlen(chr)  + 1];
         this->bp     = bp;
@@ -84,7 +90,8 @@ public:
         strcpy(this->chr,  chr);
     }
     ~PhyLoc() {
-        delete [] chr;
+        if (chr != NULL)
+            delete [] chr;
     }
 };
 
@@ -160,7 +167,7 @@ class PStack {
     }
     int  add_id(const char *);
     int  add_seq(const char *);
-    int  add_seq(DNANSeq *);
+    int  add_seq(const DNANSeq *);
 };
 
 class Stack {

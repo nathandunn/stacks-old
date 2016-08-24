@@ -92,13 +92,15 @@ int main (int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
     #endif
 
-    HashMap            radtags;
+    HashMap*           radtags = new HashMap();
     set<int>           merge_map;
     map<int, PStack *> unique;
 
-    load_radtags(in_file, radtags);
+    load_radtags(in_file, *radtags);
 
-    reduce_radtags(radtags, unique);
+    reduce_radtags(*radtags, unique);
+
+    delete radtags;
 
     //dump_stacks(unique);
 
@@ -694,7 +696,7 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
 int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
     HashMap::iterator it;
     vector<Seq *>::iterator sit;
-    
+
     PStack *u;
     int    global_id = 1;
 
@@ -715,7 +717,7 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
             u        = new PStack;
             u->id    = global_id;
             u->count = lit->second;
-            u->add_seq(it->first);
+            u->add_seq(&it->first);
 
             //
             // Record the physical location of this stack.
@@ -743,7 +745,7 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
 //
 int load_radtags(string in_file, HashMap &radtags) {
     Input *fh = NULL;
-    Seq *c;
+    Seq c;
 
     if (in_file_type == FileT::bowtie)
         fh = new Bowtie(in_file.c_str());
@@ -757,15 +759,19 @@ int load_radtags(string in_file, HashMap &radtags) {
     cerr << "Parsing " << in_file.c_str() << "\n";
 
     int i = 1;
-    while ((c = fh->next_seq()) != NULL) {
-        if (i % 10000 == 0) cerr << "Loading aligned sequence " << i << "       \r";
-        // cerr << "Loading aligned sequence " << i << "       \n";
+    cerr << "Loading aligned sequences...";
+    while ((fh->next_seq(c)) != 0) {
+        if (i % 1000000 == 0)
+            cerr << i/1000000 << "M...";
 
-        radtags[c->seq].push_back(c);
+        HashMap::iterator element = radtags.insert({DNANSeq(strlen(c.seq), c.seq), vector<Seq*>()}).first;
+        element->second.push_back(new Seq(c));
+
         i++;
     }
+    cerr << "done\n";
 
-    if (i == 0) {
+    if (i == 1) {
         cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
         exit(1);
     }
