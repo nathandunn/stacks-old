@@ -37,6 +37,34 @@ Seq::Seq() {
     this->loc_str  = NULL;
 }
 
+Seq::Seq(const Seq& other)
+    : loc(other.loc) {
+    if (other.id != NULL) {
+        id = new char[strlen(other.id)+1];
+        strcpy(id, other.id);
+    } else {
+        id = NULL;
+    }
+    if (other.seq != NULL) {
+        seq = new char[strlen(other.seq)+1];
+        strcpy(seq, other.seq);
+    } else {
+        seq = NULL;
+    }
+    if (other.qual != NULL) {
+        qual = new char[strlen(other.qual)+1];
+        strcpy(qual, other.qual);
+    } else {
+        qual = NULL;
+    }
+    if (other.loc_str != NULL) {
+        loc_str = new char[strlen(other.id)+1];
+        strcpy(loc_str, other.loc_str);
+    } else {
+        loc_str = NULL;
+    }
+}
+
 Seq::Seq(const char *id, const char *seq) { 
     this->id       = new char[strlen(id)   + 1];
     this->seq      = new char[strlen(seq)  + 1];

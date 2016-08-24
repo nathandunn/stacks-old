@@ -97,15 +97,15 @@ class HVal {
 const int barcode_size   = 5;
 
 #ifdef HAVE_SPARSEHASH
-typedef sparse_hash_map<DNANSeq *, HVal, hash_dnanseq, dnanseq_eqstr> DNASeqHashMap;
+typedef sparse_hash_map<DNANSeq, HVal> DNASeqHashMap;
 #else
-typedef unordered_map<DNANSeq *, HVal, hash_dnanseq, dnanseq_eqstr> DNASeqHashMap;
+typedef unordered_map<DNANSeq, HVal> DNASeqHashMap;
 #endif
 
 void help( void );
 void version( void );
 int  parse_command_line(int, char**);
-int  load_radtags(string, DNASeqHashMap &, vector<DNANSeq *> &);
+int  load_radtags(string, DNASeqHashMap &);
 int  load_seq_ids(vector<char *> &);
 int  reduce_radtags(DNASeqHashMap &, map<int, Stack *> &, map<int, Rem *> &);
 int  free_radtags_hash(DNASeqHashMap &, vector<DNANSeq *> &);
