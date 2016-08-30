@@ -50,7 +50,7 @@ Seq *Bowtie::next_seq() {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good()) {
-	return NULL;
+        return NULL;
     }
 
     parse_tsv(this->line, parts);
@@ -65,7 +65,7 @@ Seq *Bowtie::next_seq() {
     int bp = strand == strand_plus ? atoi(parts[3].c_str()) : atoi(parts[3].c_str()) + parts[4].length();
 
     Seq *s = new Seq(parts[0].c_str(), parts[4].c_str(), parts[5].c_str(), 
-		     parts[2].c_str(), bp, strand);
+                     parts[2].c_str(), bp, strand);
 
     return s;
 }
