@@ -49,7 +49,7 @@ Seq *Tsv::next_seq() {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good()) {
-	return NULL;
+        return NULL;
     }
 
     parse_tsv(this->line, parts);
