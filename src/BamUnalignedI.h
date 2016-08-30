@@ -42,23 +42,23 @@ class BamUnAln: public Input {
 
  public:
     BamUnAln(const char *path) : Input() {
-	this->path   = string(path);
-	this->bam_fh = hts_open(path, "r");
-	this->aln    = bam_init1();
+        this->path   = string(path);
+        this->bam_fh = hts_open(path, "r");
+        this->aln    = bam_init1();
 
-	this->parse_header();
+        this->parse_header();
     };
     BamUnAln(string path) : Input() {
-	this->path   = path;
-	this->bam_fh = hts_open(path.c_str(), "r");
-	this->aln    = bam_init1();
+        this->path   = path;
+        this->bam_fh = hts_open(path.c_str(), "r");
+        this->aln    = bam_init1();
 
-	this->parse_header();
+        this->parse_header();
     };
     ~BamUnAln() {
-	hts_close(this->bam_fh);
+        hts_close(this->bam_fh);
         bam_hdr_destroy(this->bamh);
-	bam_destroy1(this->aln);
+        bam_destroy1(this->aln);
     };
     Seq *next_seq();
     int  next_seq(Seq &) { return 0; };
@@ -71,10 +71,10 @@ BamUnAln::parse_header()
     this->bamh = sam_hdr_read(this->bam_fh);
 
     for (uint j = 0; j < (uint) this->bamh->n_targets; j++) {
-	//
-	// Record the mapping from integer ID to chromosome name that we will see in BAM records.
-	//
-	this->chrs[j] = string(this->bamh->target_name[j]);
+        //
+        // Record the mapping from integer ID to chromosome name that we will see in BAM records.
+        //
+        this->chrs[j] = string(this->bamh->target_name[j]);
     }
 
     return 0;
@@ -91,7 +91,7 @@ BamUnAln::next_seq()
     bytes_read = sam_read1(this->bam_fh, this->bamh, this->aln);
 
     if (bytes_read <= 0)
-	return NULL;
+        return NULL;
 
     //
     // Fetch the sequence.
@@ -102,24 +102,24 @@ BamUnAln::next_seq()
     seq.reserve(this->aln->core.l_qseq);
     
     for (int i = 0; i < this->aln->core.l_qseq; i++) {
-	j = bam_seqi(bam_get_seq(this->aln), i);
-	switch(j) {
-	case 1:
-	    seq += 'A';
-	    break;
-	case 2:
-	    seq += 'C';
-	    break;
-	case 4:
-	    seq += 'G';
-	    break;
-	case 8:
-	    seq += 'T';
-	    break;
-	case 15:
-	    seq += 'N';
-	    break;
-	}
+        j = bam_seqi(bam_get_seq(this->aln), i);
+        switch(j) {
+        case 1:
+            seq += 'A';
+            break;
+        case 2:
+            seq += 'C';
+            break;
+        case 4:
+            seq += 'G';
+            break;
+        case 8:
+            seq += 'T';
+            break;
+        case 15:
+            seq += 'N';
+            break;
+        }
     }
 
     //
@@ -128,7 +128,7 @@ BamUnAln::next_seq()
     string   qual;
     uint8_t *q = bam_get_qual(this->aln);
     for (int i = 0; i < this->aln->core.l_qseq; i++) {
-	qual += char(int(q[i]) + 33);
+        qual += char(int(q[i]) + 33);
     }
 
     string chr = this->chrs[this->aln->core.tid];
