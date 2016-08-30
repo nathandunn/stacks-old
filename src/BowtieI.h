@@ -38,10 +38,19 @@ class Bowtie: public Input {
     Bowtie(const char *path) : Input(path) {};
     ~Bowtie() {};
     Seq *next_seq();
-    int  next_seq(Seq &) { return 0; };
+    int  next_seq(Seq &);
 };
 
 Seq *Bowtie::next_seq() {
+    Seq* s = new Seq();
+    if(next_seq(*s) != 1) {
+        delete s;
+        s = NULL;
+    }
+    return s;
+}
+
+int Bowtie::next_seq(Seq& s) {
     vector<string> parts;
 
     //
@@ -50,7 +59,7 @@ Seq *Bowtie::next_seq() {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good()) {
-        return NULL;
+        return 0;
     }
 
     parse_tsv(this->line, parts);
@@ -64,10 +73,10 @@ Seq *Bowtie::next_seq() {
     //
     int bp = strand == strand_plus ? atoi(parts[3].c_str()) : atoi(parts[3].c_str()) + parts[4].length();
 
-    Seq *s = new Seq(parts[0].c_str(), parts[4].c_str(), parts[5].c_str(), 
+    s = Seq(parts[0].c_str(), parts[4].c_str(), parts[5].c_str(),
                      parts[2].c_str(), bp, strand);
 
-    return s;
+    return 1;
 }
 
 #endif // __BOWTIEI_H__
