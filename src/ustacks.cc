@@ -78,12 +78,12 @@ int main (int argc, char* argv[]) {
          << "  Max number of stacks allowed per de novo locus: " << max_subgraph << "\n"
          << "  Deleveraging algorithm: " << (deleverage_stacks ? "enabled" : "disabled") << "\n"
          << "  Removal algorithm: " << (remove_rep_stacks ? "enabled" : "disabled") << "\n"
-         << "  Model type: "; 
+         << "  Model type: ";
     switch (model_type) {
     case snp:
         cerr << "SNP\n";
         break;
-    case fixed: 
+    case fixed:
         cerr << "Fixed\n";
         break;
     case bounded:
@@ -94,7 +94,7 @@ int main (int argc, char* argv[]) {
          << "  Gapped alignments: " << (gapped_alignments ? "enabled" : "disabled") << "\n";
 
     //
-    // Set limits to call het or homozygote according to chi-square distribution with one 
+    // Set limits to call het or homozygote according to chi-square distribution with one
     // degree of freedom:
     //   http://en.wikipedia.org/wiki/Chi-squared_distribution#Table_of_.CF.872_value_vs_p-value
     //
@@ -187,7 +187,7 @@ int main (int argc, char* argv[]) {
         calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
         cerr << "After gapped alignments, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
     }
-    
+
     //
     // Call the final consensus sequence and invoke the SNP model.
     //
@@ -255,7 +255,7 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
             parse_cigar(tag_1->alns[0].cigar.c_str(), cigar);
 
             //
-            // Check that the alignment still contains fewer than 
+            // Check that the alignment still contains fewer than
             // max_utag_dist mismatches.
             //
             if (dist(tag_1->con, tag_2->con, cigar) > max_utag_dist)
@@ -328,8 +328,8 @@ merge_gapped_alns(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Merg
 
     merged = new_merged;
 
-    cerr << "  " << old_cnt << " stacks merged into " << new_cnt 
-         << " stacks; merged " << merge_cnt 
+    cerr << "  " << old_cnt << " stacks merged into " << new_cnt
+         << " stacks; merged " << merge_cnt
          << " gapped alignments.\n";
 
     return 0;
@@ -376,7 +376,7 @@ edit_gapped_seqs(map<int, Stack *> &unique, map<int, Rem *> &rem, MergedStack *t
     return 0;
 }
 
-int 
+int
 edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 {
     char *buf;
@@ -410,7 +410,7 @@ edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
             // sequence down. Trim the final length to keep the read length consistent.
             //
             k = bp >= len ? len : bp;
-            
+
             strncpy(buf, seq + k, buf_size - 1);
             buf[buf_size - 1] = '\0';
             buf_len         = strlen(buf);
@@ -460,7 +460,7 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
     // our map to a vector of integer keys.
     //
     vector<int> keys;
-    for (it = merged.begin(); it != merged.end(); it++) 
+    for (it = merged.begin(); it != merged.end(); it++)
         keys.push_back(it->first);
 
     //
@@ -479,7 +479,7 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
     cerr << "  Searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); " << min_hits << " k-mer hits required.\n";
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
- 
+
     #pragma omp parallel private(tag_1, tag_2)
     {
         KmerHashMap::iterator h;
@@ -489,8 +489,8 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
         AlignRes       a;
 
         initialize_kmers(kmer_len, num_kmers, query_kmers);
-        
-        #pragma omp for schedule(dynamic) 
+
+        #pragma omp for schedule(dynamic)
         for (uint i = 0; i < keys.size(); i++) {
             tag_1 = merged[keys[i]];
 
@@ -510,7 +510,7 @@ search_for_gaps(map<int, MergedStack *> &merged, double min_match_len)
             uniq_kmers.clear();
             for (int j = 0; j < num_kmers; j++)
                 uniq_kmers.insert(query_kmers[j]);
-            
+
             map<int, int> hits;
             //
             // Lookup the occurances of each k-mer in the kmer_map
@@ -605,7 +605,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
     cerr << "  Distance allowed between stacks: " << max_rem_dist
          << "; searching with a k-mer length of " << kmer_len << " (" << num_kmers << " k-mers per read); "
          << min_hits << " k-mer hits required.\n";
-    
+
     KmerHashMap    kmer_map;
     vector<char *> kmer_map_keys;
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
@@ -617,7 +617,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
         vector<char *> rem_kmers;
         char *buf = new char[con_len + 1];
 
-        #pragma omp for schedule(dynamic) 
+        #pragma omp for schedule(dynamic)
         for (uint j = 0; j < keys.size(); j++) {
             it = rem.find(keys[j]);
             Rem  *r = it->second;
@@ -737,7 +737,7 @@ call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads, vector<read_type> &rea
             // Check to make sure the nucleotide at the location of this SNP is
             // of one of the two possible states the multinomial model called.
             //
-            if (base == (*snp)->rank_1 || base == (*snp)->rank_2) 
+            if (base == (*snp)->rank_1 || base == (*snp)->rank_2)
                 allele += base;
             else
                 break;
@@ -759,24 +759,24 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
     //
     map<int, MergedStack *>::iterator it;
     vector<int> keys;
-    for (it = merged.begin(); it != merged.end(); it++) 
+    for (it = merged.begin(); it != merged.end(); it++)
         keys.push_back(it->first);
 
     int i;
     #pragma omp parallel private(i)
-    { 
+    {
         MergedStack *mtag;
         Stack       *utag;
         Rem         *r;
 
-        #pragma omp for schedule(dynamic) 
+        #pragma omp for schedule(dynamic)
         for (i = 0; i < (int) keys.size(); i++) {
             mtag = merged[keys[i]];
-            
+
             //
             // Create a two-dimensional array, each row containing one read. For
             // each unique tag that has been merged together, add the sequence for
-            // that tag into our array as many times as it originally occurred. 
+            // that tag into our array as many times as it originally occurred.
             //
             vector<int>::iterator j;
             vector<DNANSeq *>  reads;
@@ -791,7 +791,7 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                 }
             }
 
-            // For each remainder tag that has been merged into this Stack, add the sequence. 
+            // For each remainder tag that has been merged into this Stack, add the sequence.
             for (j = mtag->remtags.begin(); j != mtag->remtags.end(); j++) {
                 r = rem[*j];
 
@@ -834,7 +834,7 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                     continue;
                 }
 
-                nuc['A'] = 0; 
+                nuc['A'] = 0;
                 nuc['G'] = 0;
                 nuc['C'] = 0;
                 nuc['T'] = 0;
@@ -860,7 +860,7 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                 //
                 // Search this column for the presence of a SNP
                 //
-                if (invoke_model) 
+                if (invoke_model)
                     switch(model_type) {
                     case snp:
                         call_multinomial_snp(mtag, col, nuc, true);
@@ -1105,8 +1105,8 @@ merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedSta
 
     merged = new_merged;
 
-    cerr << "  " << old_cnt << " stacks merged into " << new_cnt 
-         << " stacks; deleveraged " << delev_cnt 
+    cerr << "  " << old_cnt << " stacks merged into " << new_cnt
+         << " stacks; deleveraged " << delev_cnt
          << " stacks; removed " << blist_cnt << " stacks.\n";
 
     return 0;
@@ -1205,9 +1205,9 @@ int
 remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &merged)
 {
     //
-    // If enabled, check the depth of coverage of each unique tag, and remove 
+    // If enabled, check the depth of coverage of each unique tag, and remove
     // from consideration any tags with depths greater than removal_trigger. These tags
-    // are likely to be multiple repetitive sites that have been merged together. 
+    // are likely to be multiple repetitive sites that have been merged together.
     // Because large stacks of unique tags are likely to also generate many one-off
     // sequencing error reads, remove all seqeunces that are a distance of one from
     // the RAD-Tag with high depth of coverage.
@@ -1274,7 +1274,7 @@ remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &mer
                 }
             }
         }
-        
+
         //
         // Merge these tags together into a new MergedStack object.
         //
@@ -1324,11 +1324,11 @@ remove_repetitive_stacks(map<int, Stack *> &unique, map<int, MergedStack *> &mer
     return 0;
 }
 
-int deleverage(map<int, Stack *> &unique, 
+int deleverage(map<int, Stack *> &unique,
                map<int, Rem *> &rem,
-               map<int, MergedStack *> &merged, 
-               set<int> &merge_list, 
-               int cohort_id, 
+               map<int, MergedStack *> &merged,
+               set<int> &merge_list,
+               int cohort_id,
                vector<MergedStack *> &deleveraged_tags) {
     set<int>::iterator it;
     vector<pair<int, int> >::iterator j;
@@ -1419,7 +1419,7 @@ int deleverage(map<int, Stack *> &unique,
     }
 
     //
-    // This set is sorted by definition. Check if there is more than a single 
+    // This set is sorted by definition. Check if there is more than a single
     // distance separating stacks.
     //
     if (dists.size() == 1) {
@@ -1503,7 +1503,7 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
     vector<int> keys;
-    for (it = merged.begin(); it != merged.end(); it++) 
+    for (it = merged.begin(); it != merged.end(); it++)
         keys.push_back(it->first);
 
     //
@@ -1525,15 +1525,15 @@ int calc_kmer_distance(map<int, MergedStack *> &merged, int utag_dist) {
          << min_hits << " k-mer hits required.\n";
 
     populate_kmer_hash(merged, kmer_map, kmer_map_keys, kmer_len);
- 
+
     #pragma omp parallel private(tag_1, tag_2)
-    { 
+    {
         KmerHashMap::iterator h;
         vector<char *>        query_kmers;
-        
+
         initialize_kmers(kmer_len, num_kmers, query_kmers);
 
-        #pragma omp for schedule(dynamic) 
+        #pragma omp for schedule(dynamic)
         for (uint i = 0; i < keys.size(); i++) {
             tag_1 = merged[keys[i]];
 
@@ -1611,12 +1611,12 @@ int calc_distance(map<int, MergedStack *> &merged, int utag_dist) {
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
     vector<int> keys;
-    for (it = merged.begin(); it != merged.end(); it++) 
+    for (it = merged.begin(); it != merged.end(); it++)
         keys.push_back(it->first);
 
     #pragma omp parallel private(i, j, tag_1, tag_2)
-    { 
-        #pragma omp for schedule(dynamic) 
+    {
+        #pragma omp for schedule(dynamic)
         for (i = 0; i < (int) keys.size(); i++) {
 
             tag_1 = merged[keys[i]];
@@ -1664,7 +1664,7 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     Rem   *r;
     Stack *u;
     int   global_id = 1;
-    
+
     for (it = radtags.begin(); it != radtags.end(); it++) {
         if (it->second.count() < min_merge_cov) {
             //
@@ -1808,7 +1808,7 @@ calc_coverage_distribution(map<int, Stack *> &unique,
 
 int
 calc_coverage_distribution(map<int, Stack *> &unique,
-                           map<int, Rem *> &rem, 
+                           map<int, Rem *> &rem,
                            map<int, MergedStack *> &merged,
                            double &mean, double &stdev, double &max)
 {
@@ -1819,7 +1819,7 @@ calc_coverage_distribution(map<int, Stack *> &unique,
     double s    = 0.0;
     double sum  = 0.0;
     double cnt  = 0.0;
-    
+
     mean  = 0.0;
     max   = 0.0;
     stdev = 0.0;
@@ -1899,8 +1899,8 @@ int count_raw_reads(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, Me
     return 0;
 }
 
-int 
-write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> &r) 
+int
+write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> &r)
 {
     map<int, MergedStack *>::iterator i;
     vector<int>::iterator      k;
@@ -1934,7 +1934,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     string snp_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".snps.tsv";
     string all_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".alleles.tsv";
     string mod_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".models.tsv";
-    
+
     if (gzip) {
         tag_file += ".gz";
         snp_file += ".gz";
@@ -2015,7 +2015,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     time(&rawtime);
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%F %T", timeinfo);
-    log << "# ustacks version " << VERSION << "; generated on " << date << "\n"; 
+    log << "# ustacks version " << VERSION << "; generated on " << date << "\n";
     if (gzip) {
         gzputs(gz_tags, log.str().c_str());
         gzputs(gz_mods, log.str().c_str());
@@ -2043,17 +2043,17 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         tag_1->calc_likelihood();
 
         // First write the consensus sequence
-        sstr << "0"              << "\t" 
-             << sql_id           << "\t" 
+        sstr << "0"              << "\t"
+             << sql_id           << "\t"
              << tag_1->id        << "\t"
             //<< tag_1->cohort_id << "\t"
              << ""               << "\t" // chr
              << 0                << "\t" // bp
              << "+"              << "\t" // strand
-             << "consensus\t"    << "\t" 
-             << "\t" 
-             << tag_1->con         << "\t" 
-             << tag_1->deleveraged << "\t" 
+             << "consensus\t"    << "\t"
+             << "\t"
+             << tag_1->con         << "\t"
+             << tag_1->deleveraged << "\t"
              << tag_1->blacklisted << "\t"
              << tag_1->lumberjackstack << "\t"
              << tag_1->lnl << "\n";
@@ -2061,9 +2061,9 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         //
         // Write a sequence recording the output of the SNP model for each nucleotide.
         //
-        sstr << "0" << "\t" 
-             << sql_id << "\t" 
-             << tag_1->id << "\t" 
+        sstr << "0" << "\t"
+             << sql_id << "\t"
+             << tag_1->id << "\t"
             //<< "\t" // cohort_id
              << "\t"  // chr
              << "\t"  // bp
@@ -2083,7 +2083,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
                 break;
             }
         }
-        sstr << "\t" 
+        sstr << "\t"
              << "\t"
              << "\t"
              << "\t"
@@ -2109,10 +2109,10 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
                      << "\t" // chr
                      << "\t" // bp
                      << "\t" // strand
-                     << "primary\t" 
-                     << id << "\t" 
-                     << seq_ids[tag_2->map[j]] << "\t" 
-                     << tag_2->seq->seq(buf) 
+                     << "primary\t"
+                     << id << "\t"
+                     << seq_ids[tag_2->map[j]] << "\t"
+                     << tag_2->seq->seq(buf)
                      << "\t\t\t\t\n";
 
                 if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
@@ -2130,17 +2130,17 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
             total += rem->map.size();
 
             for (uint j = 0; j < rem->map.size(); j++)
-                sstr << "0"       << "\t" 
-                     << sql_id    << "\t" 
+                sstr << "0"       << "\t"
+                     << sql_id    << "\t"
                      << tag_1->id << "\t"
                     //<< "\t" // cohort_id
                      << "\t" // chr
                      << "\t" // bp
                      << "\t" // strand
                      << "secondary\t"
-                     << "\t" 
-                     << seq_ids[rem->map[j]] << "\t" 
-                     << rem->seq->seq(buf) 
+                     << "\t"
+                     << seq_ids[rem->map[j]] << "\t"
+                     << rem->seq->seq(buf)
                      << "\t\t\t\t\n";
 
             if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
@@ -2151,9 +2151,9 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         // Write out the model calls for each nucleotide in this locus.
         //
         for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-            sstr << "0"          << "\t" 
-                 << sql_id       << "\t" 
-                 << tag_1->id    << "\t" 
+            sstr << "0"          << "\t"
+                 << sql_id       << "\t"
+                 << tag_1->id    << "\t"
                  << (*s)->col    << "\t";
 
             switch((*s)->type) {
@@ -2169,8 +2169,8 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
             }
 
             sstr << std::fixed   << std::setprecision(2)
-                 << (*s)->lratio << "\t" 
-                 << (*s)->rank_1 << "\t" 
+                 << (*s)->lratio << "\t"
+                 << (*s)->rank_1 << "\t"
                  << (*s)->rank_2 << "\t\t\n";
         }
 
@@ -2182,11 +2182,11 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         // the percentage of tags a particular allele occupies.
         //
         for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
-            sstr << "0"         << "\t" 
-                 << sql_id      << "\t" 
-                 << tag_1->id   << "\t" 
-                 << (*t).first  << "\t" 
-                 << (((*t).second/total) * 100) << "\t" 
+            sstr << "0"         << "\t"
+                 << sql_id      << "\t"
+                 << tag_1->id   << "\t"
+                 << (*t).first  << "\t"
+                 << (((*t).second/total) * 100) << "\t"
                  << (*t).second << "\n";
         }
         if (gzip) gzputs(gz_alle, sstr.str().c_str()); else alle << sstr.str();
@@ -2255,11 +2255,11 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
     return 0;
 }
 
-int dump_stack_graph(string data_file, 
-                     map<int, Stack *> &unique, 
-                     map<int, MergedStack *> &merged, 
-                     vector<int> &keys, 
-                     map<int, map<int, double> > &dist_map, 
+int dump_stack_graph(string data_file,
+                     map<int, Stack *> &unique,
+                     map<int, MergedStack *> &merged,
+                     vector<int> &keys,
+                     map<int, map<int, double> > &dist_map,
                      map<int, set<int> > &cluster_map) {
     uint s, t;
     double d, scale, scaled_d;
@@ -2289,9 +2289,9 @@ int dump_stack_graph(string data_file,
          << "edge [fontsize=8.0 fontname=\"Arial\" color=\"#aaaaaa\"];\n";
 
     colors.push_back("red");
-    colors.push_back("blue"); 
-    colors.push_back("green"); 
-    colors.push_back("brown"); 
+    colors.push_back("blue");
+    colors.push_back("green");
+    colors.push_back("brown");
     colors.push_back("purple");
 
     map<int, set<int> >::iterator c;
@@ -2369,7 +2369,7 @@ int dump_unique_tags(map<int, Stack *> &u) {
 
         cerr << "UniqueTag UID: " << (*it).second->id << "\n"
              << "  Seq:       "   << c << "\n"
-             << "  IDs:       "; 
+             << "  IDs:       ";
 
         for (uint j = 0; j < it->second->map.size(); j++)
             cerr << it->second->map[j] << " ";
@@ -2393,9 +2393,9 @@ int dump_merged_tags(map<int, MergedStack *> &m) {
              << "  Consensus:  ";
         if (it->second->con != NULL)
             cerr << it->second->con << "\n";
-        else 
+        else
             cerr << "\n";
-        cerr << "  IDs:        "; 
+        cerr << "  IDs:        ";
 
         for (fit = it->second->utags.begin(); fit != it->second->utags.end(); fit++)
             cerr << (*fit) << " ";
@@ -2492,7 +2492,7 @@ load_seq_ids(vector<char *> &seq_ids)
     else if (in_file_type == FileT::gzfastq)
         fh = new GzFastq(in_file.c_str());
 
-    cerr << "  Refetching sequencing IDs from " << in_file.c_str() << "... ";    
+    cerr << "  Refetching sequencing IDs from " << in_file.c_str() << "... ";
 
     char *id;
     Seq c;
@@ -2527,7 +2527,7 @@ calc_triggers(double cov_mean,
 //     //
 //     // Calculate the deleverage trigger. Assume RAD-Tags are selected from
 //     // the sample for sequencing randomly, forming a poisson distribution
-//     // representing the depths of coverage of RAD-Tags in the sample. Calculate 
+//     // representing the depths of coverage of RAD-Tags in the sample. Calculate
 //     // the trigger value that is larger than the depth of coverage of 99.9999% of stacks.
 //     //
 //     long double lambda = cov_mean;
@@ -2569,7 +2569,7 @@ long double factorial(int i) {
 
 int parse_command_line(int argc, char* argv[]) {
     int c;
-     
+
     while (1) {
         static struct option long_options[] = {
             {"help",             no_argument,       NULL, 'h'},
@@ -2602,13 +2602,13 @@ int parse_command_line(int argc, char* argv[]) {
 
         // getopt_long stores the option index here.
         int option_index = 0;
-     
+
         c = getopt_long(argc, argv, "GhHvdrgRA:L:U:f:o:i:m:e:p:t:M:N:K:k:T:X:x:", long_options, &option_index);
-     
+
         // Detect the end of the options.
         if (c == -1)
             break;
-     
+
         switch (c) {
         case 'h':
             help();
@@ -2713,7 +2713,7 @@ int parse_command_line(int argc, char* argv[]) {
             // getopt_long already printed an error message.
             help();
             break;
-     
+
         default:
             cerr << "Unknown command line option '" << (char) c << "'\n";
             help();
@@ -2750,10 +2750,10 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
-    if (out_path.length() == 0) 
+    if (out_path.length() == 0)
         out_path = ".";
 
-    if (out_path.at(out_path.length() - 1) != '/') 
+    if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
     if (model_type == fixed && barcode_err_freq == 0) {
@@ -2793,7 +2793,7 @@ void help() {
               << "    --gapped: preform gapped alignments between stacks.\n"
               << "    --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
               << "    --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n\n"
-              << "  Model options:\n" 
+              << "  Model options:\n"
               << "    --model_type: either 'snp' (default), 'bounded', or 'fixed'\n"
               << "    For the SNP or Bounded SNP model:\n"
               << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"

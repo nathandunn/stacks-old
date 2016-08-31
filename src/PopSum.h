@@ -98,10 +98,10 @@ class LocStat: public PopStat {
     // PopStat[0]: gene diversity
     // PopStat[1]: haplotype diversity (Pi)
 public:
-    uint     hap_cnt; // Number of unique haplotypes at this locus. 
+    uint     hap_cnt; // Number of unique haplotypes at this locus.
     string   hap_str; // Human-readable string of haplotype counts.
 
-    LocStat(): PopStat() { 
+    LocStat(): PopStat() {
         this->hap_cnt = 0;
     }
     ~LocStat() {};
@@ -123,7 +123,7 @@ public:
     double  amova_fst;  // AMOVA Fst method, from Weir, Genetic Data Analysis II .
     double *comp;
 
-    PopPair() { 
+    PopPair() {
         col       = 0;
         pi        = 0.0;
         fst       = 0.0;
@@ -175,10 +175,10 @@ public:
 
 class LocSum {
 public:
-    SumStat *nucs;    // Array containing summary statistics for 
+    SumStat *nucs;    // Array containing summary statistics for
                       // each nucleotide position at this locus.
     LocSum(int len) {
-        this->nucs = new SumStat[len]; 
+        this->nucs = new SumStat[len];
     }
     ~LocSum() {
         delete [] this->nucs;
@@ -200,7 +200,7 @@ public:
     bool     fixed;
     int      priv_allele;
 
-    NucTally() { 
+    NucTally() {
         loc_id      = 0;
         bp          = 0;
         col         = 0;
@@ -220,8 +220,8 @@ class LocTally {
 public:
     NucTally *nucs;
 
-    LocTally(int len)  { 
-        this->nucs = new NucTally[len]; 
+    LocTally(int len)  {
+        this->nucs = new NucTally[len];
     }
     ~LocTally() {
         delete [] this->nucs;
@@ -229,7 +229,7 @@ public:
 };
 
 //
-// Population Summary class contains a two dimensional array storing the 
+// Population Summary class contains a two dimensional array storing the
 // summary statistics for each locus in each of a set of populations:
 //
 //           Pop1        Pop2        Pop3
@@ -281,7 +281,7 @@ public:
 private:
     int    tally_heterozygous_pos(LocusT *, Datum **, LocSum *, int, int, uint, uint);
     int    tally_fixed_pos(LocusT *, Datum **, LocSum *, int, uint, uint);
-    int    tally_ref_alleles(LocSum **, int, short unsigned int &, char &, char &, short unsigned int &, short unsigned int &); 
+    int    tally_ref_alleles(LocSum **, int, short unsigned int &, char &, char &, short unsigned int &, short unsigned int &);
     int    tally_observed_haplotypes(vector<char *> &, int);
     double pi(double, double, double);
     double binomial_coeff(double, double);
@@ -386,7 +386,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
                            << loc->id << "\t"
                            << loc->loc.chr << "\t"
                            << loc->sort_bp(loc->snps[k]->col) +1 << "\t"
-                           << loc->snps[k]->col << "\t" 
+                           << loc->snps[k]->col << "\t"
                            << pop.name << "\n";
             }
 
@@ -411,7 +411,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
 }
 
 template<class LocusT>
-int PopSum<LocusT>::tally(map<int, LocusT *> &catalog) 
+int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 {
     LocusT   *loc;
     LocSum  **s;
@@ -436,9 +436,9 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
             ltally->nucs[col].bp        = loc->sort_bp(col);
             ltally->nucs[col].loc_id    = locus_id;
 
-            this->tally_ref_alleles(s, col, 
-                                    ltally->nucs[col].allele_cnt, 
-                                    ltally->nucs[col].p_allele, 
+            this->tally_ref_alleles(s, col,
+                                    ltally->nucs[col].allele_cnt,
+                                    ltally->nucs[col].p_allele,
                                     ltally->nucs[col].q_allele,
                                     p_cnt, q_cnt);
 
@@ -447,7 +447,7 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
             //
             if (ltally->nucs[col].allele_cnt > 1)
                 ltally->nucs[col].fixed = false;
-            
+
             for (int j = 0; j < pop_cnt(); j++) {
                 //
                 // Sum the number of individuals examined at this locus across populations.
@@ -461,20 +461,20 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
                 // Sum the most frequent allele across populations.
                 //
                 if (s[j]->nucs[col].p_nuc == ltally->nucs[col].p_allele)
-                    ltally->nucs[col].p_freq += 
+                    ltally->nucs[col].p_freq +=
                         s[j]->nucs[col].p * (s[j]->nucs[col].num_indv / (double) ltally->nucs[col].num_indv);
-                else 
-                    ltally->nucs[col].p_freq += 
+                else
+                    ltally->nucs[col].p_freq +=
                         (1 - s[j]->nucs[col].p) * (s[j]->nucs[col].num_indv / (double) ltally->nucs[col].num_indv);
                 //
                 // Sum observed heterozygosity across populations.
                 //
-                ltally->nucs[col].obs_het += 
+                ltally->nucs[col].obs_het +=
                     s[j]->nucs[col].obs_het * (s[j]->nucs[col].num_indv / (double) ltally->nucs[col].num_indv);
             }
 
             //
-            // We want to report the most frequent allele as the P allele. Reorder the alleles 
+            // We want to report the most frequent allele as the P allele. Reorder the alleles
             // if necessary.
             // XXX Possibly unstable for p_freq ~ 0.5. @Nick (July 2016)
             //
@@ -514,10 +514,10 @@ int PopSum<LocusT>::tally(map<int, LocusT *> &catalog)
 }
 
 template<class LocusT>
-int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index, 
-                                      short unsigned int &allele_cnt, 
-                                      char &p_allele, char &q_allele, 
-                                      short unsigned int &p_cnt, short unsigned int &q_cnt) 
+int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
+                                      short unsigned int &allele_cnt,
+                                      char &p_allele, char &q_allele,
+                                      short unsigned int &p_cnt, short unsigned int &q_cnt)
 {
     int  nucs[4] = {0};
     char nuc[2];
@@ -532,7 +532,7 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
         nuc[0] = s[j]->nucs[snp_index].p_nuc;
         nuc[1] = s[j]->nucs[snp_index].q_nuc;
 
-        for (uint k = 0; k < 2; k++) 
+        for (uint k = 0; k < 2; k++)
             switch(nuc[k]) {
             case 'A':
             case 'a':
@@ -610,7 +610,7 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
 
     //
     // Tabulate the number of populations the p_allele and the q_allele occur in.
-    // 
+    //
     p_cnt = 0;
     q_cnt = 0;
 
@@ -620,7 +620,7 @@ int PopSum<LocusT>::tally_ref_alleles(LocSum **s, int snp_index,
         nuc[0] = s[j]->nucs[snp_index].p_nuc;
         nuc[1] = s[j]->nucs[snp_index].q_nuc;
 
-        for (uint k = 0; k < 2; k++) 
+        for (uint k = 0; k < 2; k++)
             if (nuc[k] != 0 && nuc[k] == p_allele)
                 p_cnt++;
             else if (nuc[k] != 0 && nuc[k] == q_allele)
@@ -640,7 +640,7 @@ PopPair *PopSum<LocusT>::Fst(int locus_id, int pop_1, int pop_2, int pos)
     //
     // If this locus only appears in one population do not calculate Fst.
     //
-    if (s_1->nucs[pos].num_indv == 0 || s_2->nucs[pos].num_indv == 0) 
+    if (s_1->nucs[pos].num_indv == 0 || s_2->nucs[pos].num_indv == 0)
         return pair;
 
     //
@@ -670,7 +670,7 @@ PopPair *PopSum<LocusT>::Fst(int locus_id, int pop_1, int pop_2, int pos)
     nucs[2] = s_2->nucs[pos].p_nuc;
     nucs[3] = s_2->nucs[pos].q_nuc;
 
-    for (int i = 0; i < 4; i++) 
+    for (int i = 0; i < 4; i++)
         switch(nucs[i]) {
         case 'A':
             ncnt[0]++;
@@ -696,8 +696,8 @@ PopPair *PopSum<LocusT>::Fst(int locus_id, int pop_1, int pop_2, int pos)
     double tot_alleles = n_1 + n_2;
     double p_1 = round(n_1 * s_1->nucs[pos].p);
     double q_1 = n_1 - p_1;
-    double p_2 = 
-        s_1->nucs[pos].p_nuc == s_2->nucs[pos].p_nuc ? 
+    double p_2 =
+        s_1->nucs[pos].p_nuc == s_2->nucs[pos].p_nuc ?
         s_2->nucs[pos].p : (1 - s_2->nucs[pos].p);
     p_2 = round(n_2 * p_2);
     double q_2 = n_2 - p_2;
@@ -719,9 +719,9 @@ PopPair *PopSum<LocusT>::Fst(int locus_id, int pop_1, int pop_2, int pos)
     this->fishers_exact_test(pair, p_1, q_1, p_2, q_2);
 
     // cerr << "Locus: " << locus << ", pos: " << pos << "\n"
-    //   << "    p_1.nuc: " << s_1->nucs[pos].p_nuc << "; q_1.nuc: " << s_1->nucs[pos].q_nuc 
+    //   << "    p_1.nuc: " << s_1->nucs[pos].p_nuc << "; q_1.nuc: " << s_1->nucs[pos].q_nuc
     //   << "; p_2.nuc: " << s_2->nucs[pos].p_nuc << "; q_2.nuc: " << s_2->nucs[pos].q_nuc << "\n"
-    //   << "    Total alleles: " << tot_alleles << "; " << " s_1.p: " << s_1->nucs[pos].p 
+    //   << "    Total alleles: " << tot_alleles << "; " << " s_1.p: " << s_1->nucs[pos].p
     //   << "; s_2.p: " << s_2->nucs[pos].p << "\n"
     //   << "    p_1: " << p_1 << "; q_1: " << q_1 << " p_2: " << p_2 << "; q_2: " << q_2 << "\n"
     //   << "    Pi1: " << pi_1 << "; Pi2: " << pi_2 << "; PiAll: " << pi_all << "\n"
@@ -736,24 +736,24 @@ PopPair *PopSum<LocusT>::Fst(int locus_id, int pop_1, int pop_2, int pos)
     //
     double p_1_freq = s_1->nucs[pos].p;
     double q_1_freq = 1 - p_1_freq;
-    double p_2_freq = 
-        s_1->nucs[pos].p_nuc == s_2->nucs[pos].p_nuc ? 
+    double p_2_freq =
+        s_1->nucs[pos].p_nuc == s_2->nucs[pos].p_nuc ?
         s_2->nucs[pos].p : (1 - s_2->nucs[pos].p);
     double q_2_freq = 1 - p_2_freq;
 
-    double p_avg_cor = 
-        ( (s_1->nucs[pos].num_indv * p_1_freq) + (s_2->nucs[pos].num_indv * p_2_freq) ) / 
+    double p_avg_cor =
+        ( (s_1->nucs[pos].num_indv * p_1_freq) + (s_2->nucs[pos].num_indv * p_2_freq) ) /
         ( s_1->nucs[pos].num_indv + s_2->nucs[pos].num_indv );
     double n_avg_cor = 2 * ((s_1->nucs[pos].num_indv / 2) + (s_2->nucs[pos].num_indv / 2));
 
     pair->amova_fst =
         (
-         (s_1->nucs[pos].num_indv * pow((p_1_freq - p_avg_cor), 2) + 
+         (s_1->nucs[pos].num_indv * pow((p_1_freq - p_avg_cor), 2) +
           s_2->nucs[pos].num_indv * pow((p_2_freq - p_avg_cor), 2))
-         / 
-         n_avg_cor 
+         /
+         n_avg_cor
          )
-        / 
+        /
         (p_avg_cor * (1 - p_avg_cor));
 
     if (log_fst_comp) {
@@ -779,8 +779,8 @@ PopPair *PopSum<LocusT>::Fst(int locus_id, int pop_1, int pop_2, int pos)
     }
 
     // //
-    // // Calculate Fst using a pure parametric method (assumes allele counts are real, not 
-    // // samples). Jakobsson, Edge, and Rosenberg. "The Relationship Between Fst and the 
+    // // Calculate Fst using a pure parametric method (assumes allele counts are real, not
+    // // samples). Jakobsson, Edge, and Rosenberg. "The Relationship Between Fst and the
     // // Frequency of the Most Frequent Allele." Genetics 193:515-528. Equation 4.
     // //
     // double sigma_1 = p_1_freq + q_1_freq;
@@ -794,7 +794,7 @@ PopPair *PopSum<LocusT>::Fst(int locus_id, int pop_1, int pop_2, int pos)
 }
 
 template<class LocusT>
-int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos, uint start, uint end) 
+int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos, uint start, uint end)
 {
     double num_indv = 0.0;
     char   p_nuc = 0;
@@ -802,12 +802,12 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
     for (uint i = start; i <= end; i++) {
         if (d[i] == NULL || pos >= d[i]->len) continue;
         //
-        // Before counting this individual, make sure the model definitively called this 
+        // Before counting this individual, make sure the model definitively called this
         // position as hEterozygous or hOmozygous.
         //
         if (d[i]->model[pos] == 'E') {
             cerr << "Model: " << d[i]->model << "\n";
-            cerr << "Warning: heterozygous model call at fixed nucleotide position: " 
+            cerr << "Warning: heterozygous model call at fixed nucleotide position: "
                  << "locus " << locus->id << " individual " << d[i]->id << "; position: " << pos << "\n";
         }
         num_indv++;
@@ -837,8 +837,8 @@ int PopSum<LocusT>::tally_fixed_pos(LocusT *locus, Datum **d, LocSum *s, int pos
 }
 
 template<class LocusT>
-int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s, 
-                                           int pos, int snp_index, uint start, uint end) 
+int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
+                                           int pos, int snp_index, uint start, uint end)
 {
     //
     // Tally up the genotype frequencies.
@@ -949,7 +949,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
     for (i = start; i <= end; i++) {
         if (d[i] == NULL || pos >= d[i]->len) continue;
         //
-        // Before counting this individual, make sure the model definitively called this 
+        // Before counting this individual, make sure the model definitively called this
         // position as hEterozygous or hOmozygous.
         //
         if (d[i]->model[pos] == 'E' || d[i]->model[pos] == 'O')
@@ -1055,7 +1055,7 @@ int PopSum<LocusT>::tally_heterozygous_pos(LocusT *locus, Datum **d, LocSum *s,
 }
 
 template<class LocusT>
-int PopSum<LocusT>::tally_observed_haplotypes(vector<char *> &obshap, int snp_index) 
+int PopSum<LocusT>::tally_observed_haplotypes(vector<char *> &obshap, int snp_index)
 {
     int  nucs[4] = {0};
     char nuc;
@@ -1096,7 +1096,7 @@ int PopSum<LocusT>::tally_observed_haplotypes(vector<char *> &obshap, int snp_in
 template<class LocusT>
 int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, double p_2, double q_2)
 {
-    //                            | Allele1 | Allele2 | 
+    //                            | Allele1 | Allele2 |
     // Fisher's Exact Test:  -----+---------+---------+
     //                       Pop1 |   p_1   |   q_1   |
     //                       Pop2 |   p_2   |   q_2   |
@@ -1129,7 +1129,7 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
     // sprintf(p2_str, "% 3.0f", p_2);
     // sprintf(q2_str, "% 3.0f", q_2);
     //
-    // cerr 
+    // cerr
     //  << "     | Allele1 | Allele2 | " << "\n"
     //  << "-----+---------+---------+" << "\n"
     //  << "Pop1 |   " << p1_str << "   |   " << q1_str << "   |" << "\n"
@@ -1146,7 +1146,7 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
     double den    = this->binomial_coeff(n, c_1);
 
     //
-    // If (p_1*q_2 - p_2*q_1) < 0 decrease cells p_1 and q_2 by one and add one to p_2 and q_1. 
+    // If (p_1*q_2 - p_2*q_1) < 0 decrease cells p_1 and q_2 by one and add one to p_2 and q_1.
     // Compute p and repeat until one or more cells equal 0.
     //
     if (d_1 - d_2 < 0) {
@@ -1162,7 +1162,7 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
 
     } else {
         //
-        // Else, if (p_1*q_2 - p_2*q_1) > 0 decrease cells p_2 and q_1 by one and add one to p_1 and q_2. 
+        // Else, if (p_1*q_2 - p_2*q_1) > 0 decrease cells p_2 and q_1 by one and add one to p_1 and q_2.
         // Compute p and repeat until one or more cells equal 0.
         //
         do {
@@ -1184,7 +1184,7 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
     p = 0;
 
     //
-    // If (p_1*q_2 - p_2*q_1) < 0, set to zero the smaller of the two frequencies, adjusting the other values 
+    // If (p_1*q_2 - p_2*q_1) < 0, set to zero the smaller of the two frequencies, adjusting the other values
     // to keep the marginals the same.
     //
     if (d_1 - d_2 < 0) {
@@ -1214,7 +1214,7 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
     }
 
     //
-    // If (p_1*q_2 - p_2*q_1) < 0 decrease cells p_1 and q_2 by one and add one to p_2 and q_1. 
+    // If (p_1*q_2 - p_2*q_1) < 0 decrease cells p_1 and q_2 by one and add one to p_2 and q_1.
     // Compute p and repeat until tail_2 > tail_1.
     //
     if (d_1 - d_2 < 0) {
@@ -1233,7 +1233,7 @@ int PopSum<LocusT>::fishers_exact_test(PopPair *pair, double p_1, double q_1, do
 
     } else {
         //
-        // Else, if (p_1*q_2 - p_2*q_1) > 0 decrease cells p_2 and q_1 by one and add one to p_1 and q_2. 
+        // Else, if (p_1*q_2 - p_2*q_1) > 0 decrease cells p_2 and q_1 by one and add one to p_1 and q_2.
         // Compute p and repeat until one or more cells equal 0.
         //
         do {
@@ -1296,8 +1296,8 @@ double PopSum<LocusT>::pi(double tot_alleles, double p, double q)
     // Calculate Pi, equivalent to expected heterozygosity:
     //  pi = 1 - Sum_i( (n_i choose 2) ) / (n choose 2)
     //
-    double pi = 
-        this->binomial_coeff(p, 2) + 
+    double pi =
+        this->binomial_coeff(p, 2) +
         this->binomial_coeff(q, 2);
     pi = pi / binomial_coeff(tot_alleles, 2);
     pi = 1 - pi;
@@ -1311,7 +1311,7 @@ double PopSum<LocusT>::binomial_coeff(double n, double k)
     if (n < k) return 0.0;
     //
     // Compute the binomial coefficient using the method of:
-    // Y. Manolopoulos, "Binomial coefficient computation: recursion or iteration?", 
+    // Y. Manolopoulos, "Binomial coefficient computation: recursion or iteration?",
     // ACM SIGCSE Bulletin, 34(4):65-67, 2002.
     //
     double r = 1.0;

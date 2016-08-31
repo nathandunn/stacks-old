@@ -37,7 +37,7 @@ init_log(ofstream &fh, int argc, char **argv)
     // Write the command line that was executed.
     //
     for (int i = 0; i < argc; i++) {
-        fh << argv[i]; 
+        fh << argv[i];
         if (i < argc - 1) fh << " ";
     }
     fh << "\n" << argv[0] << " version " << VERSION << " executed " << date << "\n\n";

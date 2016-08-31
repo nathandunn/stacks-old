@@ -30,7 +30,7 @@
 #include "cmb.h"
 
 //
-// A cache to store combinations generated as (N choose k) 
+// A cache to store combinations generated as (N choose k)
 // for all set sizes encountered
 //
 map<int, map<int, int **> > _cmbs;
@@ -69,7 +69,7 @@ CombSet::CombSet(int n, int k, MinSpanTree *tree) {
     //
     // Add the initial combination: the empty set
     //
-    if (_cmbs.count(this->num_elements) == 0 && 
+    if (_cmbs.count(this->num_elements) == 0 &&
         _cmbs[this->num_elements].count(0) == 0) {
         //cerr << "    N: " << this->num_elements << "; K: 0; Total elements: 0\n";
         comb       = new int * [2];
@@ -83,7 +83,7 @@ CombSet::CombSet(int n, int k, MinSpanTree *tree) {
         //
         // Check if this set of combinations is already cached.
         //
-        if (_cmbs.count(this->num_elements) > 0 && 
+        if (_cmbs.count(this->num_elements) > 0 &&
             _cmbs[this->num_elements].count(set_size) > 0) {
             set_size--;
             continue;
@@ -302,7 +302,7 @@ int **CombSet::generate_combinations(int n, int k, int total) {
     for (int i = 0; i < k; i++)
         comb[comb_num][i] = i;
     comb_num++;
-    
+
     //
     // Generate each successive combination
     //
@@ -319,7 +319,7 @@ int **CombSet::generate_combinations(int n, int k, int total) {
 int CombSet::next_combination(int *comb, int n, int k) {
     int i;
 
-    // 
+    //
     // The zero'th position has been incremented to its maximal value,
     // it's not possible to further increment values in the set.
     //
@@ -333,7 +333,7 @@ int CombSet::next_combination(int *comb, int n, int k) {
     comb[i]++;
 
     //
-    // Check if the last position has reached its maximal possible value, 
+    // Check if the last position has reached its maximal possible value,
     // if so, move back one position, and increment it.
     //
     while ((i > 0) && (comb[i] >= n - k + 1 + i)) {
@@ -353,7 +353,7 @@ int CombSet::next_combination(int *comb, int n, int k) {
 long int CombSet::num_combinations(int n, int k) {
     //
     // Compute the binomial coefficient using the method of:
-    // Y. Manolopoulos, "Binomial coefficient computation: recursion or iteration?", 
+    // Y. Manolopoulos, "Binomial coefficient computation: recursion or iteration?",
     // ACM SIGCSE Bulletin, 34(4):65-67, 2002.
     //
     long int r = 1;
@@ -383,7 +383,7 @@ Cmb **CombSet::next(int map[]) {
 //         index = e[i];
 //         // sets vector index number
 //         k = this->compound_set[index].first;
-//         // combination number 
+//         // combination number
 //         n = this->compound_set[index].second;
 
 //         c[i] = new Cmb;
@@ -391,8 +391,8 @@ Cmb **CombSet::next(int map[]) {
 //         c[i]->elem = new int[this->size[k]];
 
 //         for (j = 0; j < this->size[k]; j++)
-//             c[i]->elem[j] = (map == NULL) ? 
-//                 this->sets[k][n][j] : 
+//             c[i]->elem[j] = (map == NULL) ?
+//                 this->sets[k][n][j] :
 //                 map[this->sets[k][n][j]];
 //     }
 

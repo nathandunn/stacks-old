@@ -31,7 +31,7 @@ class GzFastq: public Input {
     gzFile gz_fh;
 
 public:
-    GzFastq(string path) : Input() { 
+    GzFastq(string path) : Input() {
         this->gz_fh = gzopen(path.c_str(), "rb");
         if (!this->gz_fh) {
             cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
@@ -41,7 +41,7 @@ public:
         gzbuffer(this->gz_fh, libz_buffer_size);
         #endif
     };
-    GzFastq(const char *path) : Input() { 
+    GzFastq(const char *path) : Input() {
         this->gz_fh = gzopen(path, "rb");
         if (!this->gz_fh) {
             cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
@@ -134,7 +134,7 @@ Seq *GzFastq::next_seq() {
 
     //
     // Clear the line buffer so it is set up for the next record. If a '@'
-    // appears in the quality scores read, it will break parsing next time 
+    // appears in the quality scores read, it will break parsing next time
     // it is called.
     //
     this->line[0] = '\0';
@@ -215,7 +215,7 @@ int GzFastq::next_seq(Seq &s) {
 
     //
     // Clear the line buffer so it is set up for the next record. If a '@'
-    // appears in the quality scores read, it will break parsing next time 
+    // appears in the quality scores read, it will break parsing next time
     // it is called.
     //
     this->line[0] = '\0';

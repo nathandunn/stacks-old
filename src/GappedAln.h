@@ -83,7 +83,7 @@ class GappedAln {
     inline int swap(double *, dynprog *, int, int);
     int        trace_alignment(string, string);
 
- public:    
+ public:
     GappedAln();
     GappedAln(int i) : GappedAln(i, i) {};
     GappedAln(int, int);
@@ -189,7 +189,7 @@ GappedAln::align(string tag_1, string tag_2)
     // v [3] |
     //   ... |
     // [m-1] |
-    // 
+    //
 
     //
     // Initialize the first column and row of the dynamic programming
@@ -215,7 +215,7 @@ GappedAln::align(string tag_1, string tag_2)
     double  score_down, score_diag, score_right;
     double  scores[3];
     dynprog direction[3];
-    
+
     for (uint i = 1; i < this->_m; i++) {
         for (uint j = 1; j < this->_n; j++) {
             // Calculate the score:
@@ -268,7 +268,7 @@ GappedAln::align(string tag_1, string tag_2)
                     this->path[i][j].up   = false;
                     this->path[i][j].left = true;
                 }
-                
+
             } else if (scores[0] == scores[1]) {
                 //
                 // Two of the paths are equivalent.
@@ -276,7 +276,7 @@ GappedAln::align(string tag_1, string tag_2)
                 switch (direction[0]) {
                 case dynp_diag:
                     this->path[i][j].diag = true;
-                    
+
                     switch (direction[1]) {
                     case dynp_down:
                         this->path[i][j].up   = true;
@@ -291,7 +291,7 @@ GappedAln::align(string tag_1, string tag_2)
                     break;
                 case dynp_down:
                     this->path[i][j].up = true;
-                    
+
                     switch (direction[1]) {
                     case dynp_right:
                         this->path[i][j].diag  = false;
@@ -307,7 +307,7 @@ GappedAln::align(string tag_1, string tag_2)
                 default:
                 case dynp_right:
                     this->path[i][j].left = true;
-                    
+
                     switch (direction[1]) {
                     case dynp_diag:
                         this->path[i][j].diag = true;
@@ -321,7 +321,7 @@ GappedAln::align(string tag_1, string tag_2)
                     }
                     break;
                 }
-                
+
             } else {
                 //
                 // All paths equivalent.
@@ -337,7 +337,7 @@ GappedAln::align(string tag_1, string tag_2)
 
     if (this->trace_alignment(tag_1, tag_2))
         return 1;
-    
+
     return 0;
 }
 
@@ -381,7 +381,7 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
     // v [3] |
     //   ... |
     // [m-1] |
-    // 
+    //
     int    i, j, cnt, len, gaps, contiguity;
     double ident;
     string cigar;
@@ -390,7 +390,7 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
     vector<AlignRes> alns;
     bool more_paths = true;
     bool seq_break  = false;
-    
+
     do {
         more_paths = false;
 
@@ -472,7 +472,7 @@ GappedAln::trace_alignment(string tag_1, string tag_2)
         }
 
         alns.push_back(AlignRes(cigar, gaps, contiguity, (ident / (double) len)));
-        
+
         // cerr << aln_1 << " [" << cigar << ", contiguity: " << contiguity << ", gaps: " << gaps << "]\n"
         //      << aln_2 << "\n";
 
@@ -492,7 +492,7 @@ GappedAln::result()
     return this->_aln;
 }
 
-int 
+int
 GappedAln::parse_cigar(vector<pair<char, uint> > &cigar)
 {
     char buf[id_len];
@@ -532,7 +532,7 @@ GappedAln::dump_alignment(string tag_1, string tag_2)
     // v [3] |
     //   ... |
     // [m-1] |
-    // 
+    //
 
     //
     // Output the score matrix.
@@ -587,7 +587,7 @@ GappedAln::dump_alignment(string tag_1, string tag_2)
     }
 
     cout << "\n";
-    
+
     return 0;
 }
 

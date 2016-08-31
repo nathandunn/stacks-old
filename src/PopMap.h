@@ -108,7 +108,7 @@ class PopMap {
     int      num_loci;
     set<pair<int, int> > blacklist;
     Datum ***data;
-    map<int, int> locus_order;  // LocusID => ArrayIndex; map catalog IDs to their first dimension 
+    map<int, int> locus_order;  // LocusID => ArrayIndex; map catalog IDs to their first dimension
                                 // position in the Datum array.
     map<int, int> rev_locus_order;
 
@@ -177,7 +177,7 @@ template<class LocusT>
 int PopMap<LocusT>::populate(map<int, LocusT*> &catalog,
                              const vector<vector<CatMatch *> > &matches) {
     //
-    // Create an index showing what position each catalog locus is stored at in the datum 
+    // Create an index showing what position each catalog locus is stored at in the datum
     // array. Create a second index allowing ordering of Loci by genomic position.
     //
     typename std::map<int, LocusT*>::const_iterator it;
@@ -237,7 +237,7 @@ int PopMap<LocusT>::populate(map<int, LocusT*> &catalog,
             } else {
                 // cerr << "  Adding haplotype to existing datum: sample: " << matches[i][j]->sample_id << ". tag: " << matches[i][j]->tag_id << "\n";
                 //
-                // Check that the IDs of the two matches are the same. If not, then two tags 
+                // Check that the IDs of the two matches are the same. If not, then two tags
                 // match this locus and the locus is invalid, set back to NULL.
                 //
                 if (matches[i][j]->tag_id == this->data[locus][sample]->id) {
@@ -248,7 +248,7 @@ int PopMap<LocusT>::populate(map<int, LocusT*> &catalog,
                         cerr << "Warning: disparate CIGAR strings, catalog locus " << matches[i][j]->cat_id
                              << "; sample ID: " << matches[i][j]->sample_id << "; sample locus ID: " << matches[i][j]->tag_id
                              << "; datum cigar: " << this->data[locus][sample]->cigar << "; matches cigar: " << matches[i][j]->cigar << "\n";
-                    
+
                     this->data[locus][sample]->obshap.push_back(h);
                     this->data[locus][sample]->depth.push_back(matches[i][j]->depth);
                     this->data[locus][sample]->tot_depth += matches[i][j]->depth;

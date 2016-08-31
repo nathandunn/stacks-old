@@ -21,7 +21,7 @@
 #ifndef __USTACKS_H__
 #define __USTACKS_H__
 
-#include "constants.h" 
+#include "constants.h"
 
 #ifdef _OPENMP
 #include <omp.h>    // OpenMP library

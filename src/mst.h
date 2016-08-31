@@ -65,8 +65,8 @@ public:
     vector<Node *> min_adj_list;
 
     Node(uint id) {
-        this->id       = id; 
-        this->parent   = NULL; 
+        this->id       = id;
+        this->parent   = NULL;
         this->update   = true;
         this->min_dist = 1000000;
     }

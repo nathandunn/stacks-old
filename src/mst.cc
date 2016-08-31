@@ -163,7 +163,7 @@ int MinSpanTree::build_tree() {
         }
 
         //
-        // Iterate through all of the edges of n and update the 
+        // Iterate through all of the edges of n and update the
         // minimum distance to the proper nodes.
         //
         Edge *e;
@@ -225,7 +225,7 @@ string MinSpanTree::vis(bool overlay) {
         visited.insert(n->id);
 
         for (uint i = 0; i < n->min_adj_list.size(); i++) {
-            data << "  "; 
+            data << "  ";
             n->label.length() > 0 ? data << n->label : data << n->id;
             data << "--";
             n->min_adj_list[i]->label.length() > 0 ? (data << n->min_adj_list[i]->label) : (data << n->min_adj_list[i]->id);
