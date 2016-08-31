@@ -63,20 +63,20 @@ void version( void );
 int  parse_command_line(int, char **);
 template<typename fhType>
 int  process_reads(string, 
-		   set<string> &, set<string> &,
-		   map<BarcodePair, fhType *> &, 
-		   map<string, long> &, map<BarcodePair, map<string, long> > &);
+                   set<string> &, set<string> &,
+                   map<BarcodePair, fhType *> &,
+                   map<string, long> &, map<BarcodePair, map<string, long> > &);
 template<typename fhType>
 int  process_paired_reads(string, string, 
-			  set<string> &, set<string> &,
-			  map<BarcodePair, fhType *> &, 
-			  map<BarcodePair, fhType *> &, 
-			  map<BarcodePair, fhType *> &, 
-			  map<BarcodePair, fhType *> &,
-			  map<string, long> &, map<BarcodePair, map<string, long> > &);
+                          set<string> &, set<string> &,
+                          map<BarcodePair, fhType *> &,
+                          map<BarcodePair, fhType *> &,
+                          map<BarcodePair, fhType *> &,
+                          map<BarcodePair, fhType *> &,
+                          map<string, long> &, map<BarcodePair, map<string, long> > &);
 int  process_singlet(Read *, 
-		     bool,
-		     map<string, long> &, map<string, long> &);
+                     bool,
+                     map<string, long> &, map<string, long> &);
 
 int  dist(const char *, char *);
 int  print_results(int, char **, vector<BarcodePair> &, map<string, map<string, long> > &, map<BarcodePair, map<string, long> > &);
