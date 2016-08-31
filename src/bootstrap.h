@@ -43,11 +43,11 @@ public:
     double stat[PopStatSize];
 
     BSample() {
-	this->bp      = 0;
-	this->alleles = 0;
-	this->fixed   = false;
-	for (uint i = 0; i < PopStatSize; i++)
-	    this->stat[i] = 0.0;
+        this->bp      = 0;
+        this->alleles = 0;
+        this->fixed   = false;
+        for (uint i = 0; i < PopStatSize; i++)
+            this->stat[i] = 0.0;
 
     }
 };
@@ -60,12 +60,12 @@ class Bootstrap {
 
 public:
     Bootstrap(uint size)  { 
-	this->num_stats = size;
-	this->weights   = calc_weights();
-	this->stats.resize(size, vector<double>());
+        this->num_stats = size;
+        this->weights   = calc_weights();
+        this->stats.resize(size, vector<double>());
     }
     ~Bootstrap() { 
-	delete [] this->weights;
+        delete [] this->weights;
     }
 
     int    add_data(vector<StatT *> &);
@@ -79,9 +79,9 @@ int
 Bootstrap<StatT>::add_data(vector<StatT *> &sites)
 {
     for (uint i = 0; i < sites.size(); i++) {
-	if (sites[i] != NULL && sites[i]->fixed == false)
-	    for (uint j = 0; j < this->num_stats; j++)
-		this->stats[j].push_back(sites[i]->stat[j]);
+        if (sites[i] != NULL && sites[i]->fixed == false)
+            for (uint j = 0; j < this->num_stats; j++)
+                this->stats[j].push_back(sites[i]->stat[j]);
     }
 
     return 0;
@@ -93,93 +93,93 @@ Bootstrap<StatT>::execute(vector<StatT *> &sites)
 {
     #pragma omp parallel
     { 
-	PopStat *c;
-	double final_weight, sum, weighted_stat[PopStatSize];
-	int  dist, index;
-	uint pos_l = 0;
-	uint pos_u = 0;
+        PopStat *c;
+        double final_weight, sum, weighted_stat[PopStatSize];
+        int  dist, index;
+        uint pos_l = 0;
+        uint pos_u = 0;
 
         //#pragma omp for schedule(dynamic, 1)  
-	for (uint pos_c = 0; pos_c < sites.size(); pos_c++) {
-	    c = sites[pos_c];
+        for (uint pos_c = 0; pos_c < sites.size(); pos_c++) {
+            c = sites[pos_c];
 
-	    if (c == NULL)
-		continue;
+            if (c == NULL)
+                continue;
 
-	    if (bootstrap_wl && bootstraplist.count(c->loc_id) == 0)
-		continue;
+            if (bootstrap_wl && bootstraplist.count(c->loc_id) == 0)
+                continue;
 
-	    // cerr << "Bootstrapping " << c->loc_id << "; pos_c: " << pos_c << "; bp: " << c->bp << "\n";
+            // cerr << "Bootstrapping " << c->loc_id << "; pos_c: " << pos_c << "; bp: " << c->bp << "\n";
 
-	    determine_window_limits(sites, c->bp, pos_l, pos_u);
+            determine_window_limits(sites, c->bp, pos_l, pos_u);
 
-	    int size = 0;
-	    for (uint i = pos_l; i < pos_u;  i++)
-		if (sites[i] != NULL) size++;
+            int size = 0;
+            for (uint i = pos_l; i < pos_u;  i++)
+                if (sites[i] != NULL) size++;
 
-	    //
-	    // Allocate an array of bootstrap resampling objects.
-	    //
-	    BSample *bs = new BSample[size];
+            //
+            // Allocate an array of bootstrap resampling objects.
+            //
+            BSample *bs = new BSample[size];
 
-	    //
-	    // Populate the BSample objects.
-	    //
-	    int j = 0;
-	    for (uint i = pos_l; i < pos_u;  i++) {
-		if (sites[i] == NULL) continue;
-		bs[j].bp      = sites[i]->bp;
-		bs[j].alleles = sites[i]->alleles;
-		j++;
-	    }
+            //
+            // Populate the BSample objects.
+            //
+            int j = 0;
+            for (uint i = pos_l; i < pos_u;  i++) {
+                if (sites[i] == NULL) continue;
+                bs[j].bp      = sites[i]->bp;
+                bs[j].alleles = sites[i]->alleles;
+                j++;
+            }
 
-	    vector<vector<double> > resampled_stats(this->num_stats, vector<double>());
-	    for (uint i = 0; i < this->num_stats; i++)
-		resampled_stats[i].reserve(bootstrap_reps);
+            vector<vector<double> > resampled_stats(this->num_stats, vector<double>());
+            for (uint i = 0; i < this->num_stats; i++)
+                resampled_stats[i].reserve(bootstrap_reps);
 
-	    //
-	    // Bootstrap this bitch.
-	    //
-	    for (int i = 0; i < bootstrap_reps; i++) {
-		// if (i % 100 == 0) cerr << "      Bootsrap rep " << i << "\n";
+            //
+            // Bootstrap this bitch.
+            //
+            for (int i = 0; i < bootstrap_reps; i++) {
+                // if (i % 100 == 0) cerr << "      Bootsrap rep " << i << "\n";
 
-		for (uint k = 0; k < this->num_stats; k++)
-		    weighted_stat[k] = 0.0;
-		sum = 0.0;
+                for (uint k = 0; k < this->num_stats; k++)
+                    weighted_stat[k] = 0.0;
+                sum = 0.0;
 
-		for (j = 0; j < size; j++) {
-		    //
-		    // Distance from center of window.
-		    //
-		    dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
-		    //
-		    // Resample for this round of bootstrapping.
-		    //
-		    index = (int) (this->stats[0].size() * (random() / (RAND_MAX + 1.0)));
-		    for (uint k = 0; k < this->num_stats; k++)
-			bs[j].stat[k] = this->stats[k][index];
+                for (j = 0; j < size; j++) {
+                    //
+                    // Distance from center of window.
+                    //
+                    dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
+                    //
+                    // Resample for this round of bootstrapping.
+                    //
+                    index = (int) (this->stats[0].size() * (random() / (RAND_MAX + 1.0)));
+                    for (uint k = 0; k < this->num_stats; k++)
+                        bs[j].stat[k] = this->stats[k][index];
 
-		    final_weight = (bs[j].alleles - 1) * this->weights[dist];
-		    for (uint k = 0; k < this->num_stats; k++)
-			weighted_stat[k] += bs[j].stat[k] * final_weight;
-		    sum += final_weight;
-		}
+                    final_weight = (bs[j].alleles - 1) * this->weights[dist];
+                    for (uint k = 0; k < this->num_stats; k++)
+                        weighted_stat[k] += bs[j].stat[k] * final_weight;
+                    sum += final_weight;
+                }
 
-		// cerr << "    New weighted Fst value: " << weighted_fst / sum << "\n";
-		for (uint k = 0; k < this->num_stats; k++)
-		    resampled_stats[k].push_back(weighted_stat[k] / sum);
-	    }
+                // cerr << "    New weighted Fst value: " << weighted_fst / sum << "\n";
+                for (uint k = 0; k < this->num_stats; k++)
+                    resampled_stats[k].push_back(weighted_stat[k] / sum);
+            }
 
-	    //
-	    // Cacluate the p-value for this window based on the empirical Fst distribution.
-	    //
-	    for (uint k = 0; k < this->num_stats; k++) {
-		sort(resampled_stats[k].begin(), resampled_stats[k].end());
-		c->bs[k] = this->pval(c->smoothed[k], resampled_stats[k]);
-	    }
+            //
+            // Cacluate the p-value for this window based on the empirical Fst distribution.
+            //
+            for (uint k = 0; k < this->num_stats; k++) {
+                sort(resampled_stats[k].begin(), resampled_stats[k].end());
+                c->bs[k] = this->pval(c->smoothed[k], resampled_stats[k]);
+            }
 
-	    delete [] bs;
-	}
+            delete [] bs;
+        }
     }
 
     return 0;
@@ -191,118 +191,118 @@ Bootstrap<StatT>::execute_mixed(vector<StatT *> &sites)
 {
     #pragma omp parallel
     { 
-	PopStat *c;
-	double final_weight, sum, weighted_stat[PopStatSize];
-	int  dist, index;
-	uint pos_l = 0;
-	uint pos_u = 0;
+        PopStat *c;
+        double final_weight, sum, weighted_stat[PopStatSize];
+        int  dist, index;
+        uint pos_l = 0;
+        uint pos_u = 0;
 
         //#pragma omp for schedule(dynamic, 1)  
-	for (uint pos_c = 0; pos_c < sites.size(); pos_c++) {
-	    c = sites[pos_c];
+        for (uint pos_c = 0; pos_c < sites.size(); pos_c++) {
+            c = sites[pos_c];
 
-	    if (c == NULL || c->fixed == true)
-		continue;
+            if (c == NULL || c->fixed == true)
+                continue;
 
-	    if (bootstrap_wl && bootstraplist.count(c->loc_id) == 0)
-		continue;
+            if (bootstrap_wl && bootstraplist.count(c->loc_id) == 0)
+                continue;
 
-	    // cerr << "Bootstrapping " << c->loc_id << "; pos_c: " << pos_c << "; bp: " << c->bp << "\n";
+            // cerr << "Bootstrapping " << c->loc_id << "; pos_c: " << pos_c << "; bp: " << c->bp << "\n";
 
-	    determine_window_limits(sites, c->bp, pos_l, pos_u);
+            determine_window_limits(sites, c->bp, pos_l, pos_u);
 
-	    int size = 0;
-	    for (uint i = pos_l; i < pos_u;  i++)
-		if (sites[i] != NULL) size++;
+            int size = 0;
+            for (uint i = pos_l; i < pos_u;  i++)
+                if (sites[i] != NULL) size++;
 
-	    //
-	    // Allocate an array of bootstrap resampling objects.
-	    //
-	    BSample *bs = new BSample[size];
+            //
+            // Allocate an array of bootstrap resampling objects.
+            //
+            BSample *bs = new BSample[size];
 
-	    //
-	    // Populate the BSample objects.
-	    //
-	    int j = 0;
-	    for (uint i = pos_l; i < pos_u;  i++) {
-		if (sites[i] == NULL) 
-		    continue;
-		bs[j].bp      = sites[i]->bp;
-		bs[j].alleles = sites[i]->alleles;
-		bs[j].fixed   = sites[i]->fixed;
-		for (uint k = 0; k < this->num_stats; k++)
-		    bs[j].stat[k] = sites[i]->stat[k];
-		j++;
-	    }
+            //
+            // Populate the BSample objects.
+            //
+            int j = 0;
+            for (uint i = pos_l; i < pos_u;  i++) {
+                if (sites[i] == NULL) 
+                    continue;
+                bs[j].bp      = sites[i]->bp;
+                bs[j].alleles = sites[i]->alleles;
+                bs[j].fixed   = sites[i]->fixed;
+                for (uint k = 0; k < this->num_stats; k++)
+                    bs[j].stat[k] = sites[i]->stat[k];
+                j++;
+            }
 
-	    //
-	    // Precompute the fraction of the window that will not change during resampling.
-	    //
-	    double partial_weighted_stat[this->num_stats];
-	    double partial_sum = 0.0;
-	    memset(partial_weighted_stat, 0, this->num_stats);
+            //
+            // Precompute the fraction of the window that will not change during resampling.
+            //
+            double partial_weighted_stat[this->num_stats];
+            double partial_sum = 0.0;
+            memset(partial_weighted_stat, 0, this->num_stats);
 
-	    for (j = 0; j < size; j++) {
-		if (bs[j].fixed == false) continue;
+            for (j = 0; j < size; j++) {
+                if (bs[j].fixed == false) continue;
 
-		dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
+                dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
 
-		final_weight  = (bs[j].alleles - 1.0) * this->weights[dist];
-		partial_sum  += final_weight;
-		for (uint k = 0; k < this->num_stats; k++)
-		    partial_weighted_stat[k] += bs[j].stat[k] * final_weight;
-	    }
+                final_weight  = (bs[j].alleles - 1.0) * this->weights[dist];
+                partial_sum  += final_weight;
+                for (uint k = 0; k < this->num_stats; k++)
+                    partial_weighted_stat[k] += bs[j].stat[k] * final_weight;
+            }
 
-	    vector<vector<double> > resampled_stats(this->num_stats, vector<double>());
-	    for (uint i = 0; i < this->num_stats; i++)
-		resampled_stats[i].reserve(bootstrap_reps);
+            vector<vector<double> > resampled_stats(this->num_stats, vector<double>());
+            for (uint i = 0; i < this->num_stats; i++)
+                resampled_stats[i].reserve(bootstrap_reps);
 
-	    // cerr << "Window starts at " << bs[0].bp << "; centered on " << c->bp << "\n";
+            // cerr << "Window starts at " << bs[0].bp << "; centered on " << c->bp << "\n";
 
-	    //
-	    // Bootstrap this bitch.
-	    //
-	    for (int i = 0; i < bootstrap_reps; i++) {
-		// if (i % 100 == 0) cerr << "      Bootsrap rep " << i << "\n";
+            //
+            // Bootstrap this bitch.
+            //
+            for (int i = 0; i < bootstrap_reps; i++) {
+                // if (i % 100 == 0) cerr << "      Bootsrap rep " << i << "\n";
 
-		for (uint k = 0; k < this->num_stats; k++)
-		    weighted_stat[k] = partial_weighted_stat[k];
-		sum = partial_sum;
+                for (uint k = 0; k < this->num_stats; k++)
+                    weighted_stat[k] = partial_weighted_stat[k];
+                sum = partial_sum;
 
-		for (j = 0; j < size; j++) {
-		    if (bs[j].fixed == true) continue;
+                for (j = 0; j < size; j++) {
+                    if (bs[j].fixed == true) continue;
 
-		    dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
+                    dist = bs[j].bp > c->bp ? bs[j].bp - c->bp : c->bp - bs[j].bp;
 
-		    //
-		    // Resample for this round of bootstrapping.
-		    //
-		    index = (int) (this->stats[0].size() * (random() / (RAND_MAX + 1.0)));
-		    for (uint k = 0; k < this->num_stats; k++)
-			bs[j].stat[k] = this->stats[k][index];
+                    //
+                    // Resample for this round of bootstrapping.
+                    //
+                    index = (int) (this->stats[0].size() * (random() / (RAND_MAX + 1.0)));
+                    for (uint k = 0; k < this->num_stats; k++)
+                        bs[j].stat[k] = this->stats[k][index];
 
 
-		    final_weight = (bs[j].alleles - 1) * this->weights[dist];
-		    for (uint k = 0; k < this->num_stats; k++)
-			weighted_stat[k] += bs[j].stat[k] * final_weight;
-		    sum += final_weight;
-		}
+                    final_weight = (bs[j].alleles - 1) * this->weights[dist];
+                    for (uint k = 0; k < this->num_stats; k++)
+                        weighted_stat[k] += bs[j].stat[k] * final_weight;
+                    sum += final_weight;
+                }
 
-		// cerr << "    New weighted value: " << (weighted_stat[0] / sum) << "\n";
-		for (uint k = 0; k < this->num_stats; k++)
-		    resampled_stats[k].push_back(weighted_stat[k] / sum);
-	    }
+                // cerr << "    New weighted value: " << (weighted_stat[0] / sum) << "\n";
+                for (uint k = 0; k < this->num_stats; k++)
+                    resampled_stats[k].push_back(weighted_stat[k] / sum);
+            }
 
-	    //
-	    // Cacluate the p-value for this window based on the empirical Fst distribution.
-	    //
-	    for (uint k = 0; k < this->num_stats; k++) {
-		sort(resampled_stats[k].begin(), resampled_stats[k].end());
-		c->bs[k] = this->pval(c->smoothed[k], resampled_stats[k]);
-	    }
+            //
+            // Cacluate the p-value for this window based on the empirical Fst distribution.
+            //
+            for (uint k = 0; k < this->num_stats; k++) {
+                sort(resampled_stats[k].begin(), resampled_stats[k].end());
+                c->bs[k] = this->pval(c->smoothed[k], resampled_stats[k]);
+            }
 
-	    delete [] bs;
-	}
+            delete [] bs;
+        }
     }
 
     return 0;
@@ -318,21 +318,21 @@ Bootstrap<StatT>::pval(double stat, vector<double> &dist)
     up = upper_bound(dist.begin(), dist.end(), stat);
 
     if (up == dist.begin())
-	pos = 1;
+        pos = 1;
     else if (up == dist.end())
-	pos = dist.size();
+        pos = dist.size();
     else 
-	pos = up - dist.begin() + 1;
+        pos = up - dist.begin() + 1;
 
     double res = 1.0 - (pos / (double) dist.size());
 
     // cerr << "Generated Smoothed Fst Distribution:\n";
     // for (uint n = 0; n < dist.size(); n++)
-    // 	cerr << "  n: " << n << "; Fst: " << dist[n] << "\n";
+    //         cerr << "  n: " << n << "; Fst: " << dist[n] << "\n";
 
     // cerr << "Comparing Fst value: " << stat 
-    // 	 << " at position " << (up - dist.begin()) << " out of " 
-    // 	 << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
+    //          << " at position " << (up - dist.begin()) << " out of " 
+    //          << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
 
     return res;
 }

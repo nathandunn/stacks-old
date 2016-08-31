@@ -33,27 +33,27 @@ class GzFasta: public Input {
 
  public:
     GzFasta(const char *path) : Input() { 
-	this->gz_fh = gzopen(path, "rb");
-	if (!this->gz_fh) {
-	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
+        this->gz_fh = gzopen(path, "rb");
+        if (!this->gz_fh) {
+            cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
             exit(EXIT_FAILURE);
-	}
-	#if ZLIB_VERNUM >= 0x1240
-	gzbuffer(this->gz_fh, libz_buffer_size);
-	#endif
+        }
+        #if ZLIB_VERNUM >= 0x1240
+        gzbuffer(this->gz_fh, libz_buffer_size);
+        #endif
     };
     GzFasta(string path) : Input() { 
-	this->gz_fh = gzopen(path.c_str(), "rb");
-	if (!this->gz_fh) {
-	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
+        this->gz_fh = gzopen(path.c_str(), "rb");
+        if (!this->gz_fh) {
+            cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
             exit(EXIT_FAILURE);
-	}
-	#if ZLIB_VERNUM >= 0x1240
-	gzbuffer(this->gz_fh, libz_buffer_size);
-	#endif
+        }
+        #if ZLIB_VERNUM >= 0x1240
+        gzbuffer(this->gz_fh, libz_buffer_size);
+        #endif
     };
     ~GzFasta() {
-	gzclose(this->gz_fh);
+        gzclose(this->gz_fh);
     };
     Seq *next_seq();
     int  next_seq(Seq &);
@@ -66,11 +66,11 @@ Seq *GzFasta::next_seq() {
     // record.
     //
     while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
-	gzgets(this->gz_fh, this->line, max_len);
+        gzgets(this->gz_fh, this->line, max_len);
     }
 
     if (gzeof(this->gz_fh)) {
-	return NULL;
+        return NULL;
     }
 
     //
@@ -94,22 +94,22 @@ Seq *GzFasta::next_seq() {
     gzgets(this->gz_fh, this->line, max_len);
 
     while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
-	len = strlen(this->line);
-	if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+        len = strlen(this->line);
+        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
-	this->buf    += this->line;
-	this->line[0] = '\0';
-	gzgets(this->gz_fh, this->line, max_len);
+        this->buf    += this->line;
+        this->line[0] = '\0';
+        gzgets(this->gz_fh, this->line, max_len);
     }
 
     if (gzeof(this->gz_fh)) {
-	len = strlen(this->line);
-	if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+        len = strlen(this->line);
+        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
-	this->buf += this->line;
-	this->line[0] = '\0';
+        this->buf += this->line;
+        this->line[0] = '\0';
     }
 
     s->seq = new char[this->buf.length() + 1];
@@ -126,11 +126,11 @@ int GzFasta::next_seq(Seq &s) {
     // record.
     //
     while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
-	gzgets(this->gz_fh, this->line, max_len);
+        gzgets(this->gz_fh, this->line, max_len);
     }
 
     if (gzeof(this->gz_fh)) {
-	return 0;
+        return 0;
     }
 
     //
@@ -152,22 +152,22 @@ int GzFasta::next_seq(Seq &s) {
     gzgets(this->gz_fh, this->line, max_len);
 
     while (this->line[0] != '>' && !gzeof(this->gz_fh)) {
-	len = strlen(this->line);
-	if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+        len = strlen(this->line);
+        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
-	this->buf    += this->line;
-	this->line[0] = '\0';
-	gzgets(this->gz_fh, this->line, max_len);
+        this->buf    += this->line;
+        this->line[0] = '\0';
+        gzgets(this->gz_fh, this->line, max_len);
     }
 
     if (gzeof(this->gz_fh)) {
-	len = strlen(this->line);
-	if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
-	if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
+        len = strlen(this->line);
+        if (len > 0 && this->line[len - 1] == '\n') this->line[len - 1] = '\0';
+        if (len > 0 && this->line[len - 2] == '\r') this->line[len - 2] = '\0';
 
-	this->buf += this->line;
-	this->line[0] = '\0';
+        this->buf += this->line;
+        this->line[0] = '\0';
     }
 
     strcpy(s.seq, this->buf.c_str());

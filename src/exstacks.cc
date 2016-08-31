@@ -106,19 +106,19 @@ int write_simple_output(Locus *tag) {
 
     cout << 
         "  Locus: " << 
-	tag->id    << ", chr: " << tag->loc.chr << " " << tag->loc.bp << "bp; " <<
-	tag->con    << "\n";
+        tag->id    << ", chr: " << tag->loc.chr << " " << tag->loc.bp << "bp; " <<
+        tag->con    << "\n";
 
     //
     // Output the SNPs associated with the catalog tag
     //
     i = 1;
     for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
-	cout << "    SNP " << i << ": " << 
-	    "col: "    << (*snp_it)->col    << " " << 
-	    "lratio: " << (*snp_it)->lratio << " " << 
-	    "rank_1: " << (*snp_it)->rank_1 << " " << 
-	    "rank_2: " << (*snp_it)->rank_2 << "\n";
+        cout << "    SNP " << i << ": " << 
+            "col: "    << (*snp_it)->col    << " " << 
+            "lratio: " << (*snp_it)->lratio << " " << 
+            "rank_1: " << (*snp_it)->rank_1 << " " << 
+            "rank_2: " << (*snp_it)->rank_2 << "\n";
         i++;
     }
 
@@ -127,8 +127,8 @@ int write_simple_output(Locus *tag) {
     //
     i = 1;
     for (all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++) {
-	cout << "    Allele " << i << ": " << 
-	    all_it->first << "\n";
+        cout << "    Allele " << i << ": " << 
+            all_it->first << "\n";
         i++;
     }
 
@@ -140,61 +140,61 @@ int parse_command_line(int argc, char* argv[]) {
     string sstr;
 
     while (1) {
-	static struct option long_options[] = {
-	    {"help",         no_argument,       NULL, 'h'},
+        static struct option long_options[] = {
+            {"help",         no_argument,       NULL, 'h'},
             {"version",      no_argument,       NULL, 'v'},
-	    {"sample",       required_argument, NULL, 's'},
-	    {"outpath",      required_argument, NULL, 'o'},
-	    {"num_threads",  required_argument, NULL, 'p'},
-	    {0, 0, 0, 0}
-	};
-	
-	// getopt_long stores the option index here.
-	int option_index = 0;
+            {"sample",       required_argument, NULL, 's'},
+            {"outpath",      required_argument, NULL, 'o'},
+            {"num_threads",  required_argument, NULL, 'p'},
+            {0, 0, 0, 0}
+        };
+        
+        // getopt_long stores the option index here.
+        int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvo:s:p:", long_options, &option_index);
+        c = getopt_long(argc, argv, "hvo:s:p:", long_options, &option_index);
      
-	// Detect the end of the options.
-	if (c == -1)
-	    break;
+        // Detect the end of the options.
+        if (c == -1)
+            break;
      
-	switch (c) {
-	case 'h':
-	    help();
-	    break;
-	case 's':
-	    sstr = optarg;
-	    samples.push(sstr);
-	    break;
-     	case 'o':
-	    out_path = optarg;
-	    break;
+        switch (c) {
+        case 'h':
+            help();
+            break;
+        case 's':
+            sstr = optarg;
+            samples.push(sstr);
+            break;
+             case 'o':
+            out_path = optarg;
+            break;
         case 'v':
             version();
             break;
-	case 'p':
-	    num_threads = atoi(optarg);
-	    break;
-	case '?':
-	    // getopt_long already printed an error message.
-	    help();
-	    break;
-	default:
-	    help();
-	    abort();
-	}
+        case 'p':
+            num_threads = atoi(optarg);
+            break;
+        case '?':
+            // getopt_long already printed an error message.
+            help();
+            break;
+        default:
+            help();
+            abort();
+        }
     }
 
     if (samples.size() == 0) {
-	cerr << "You must specify at least one sample file.\n";
-	help();
+        cerr << "You must specify at least one sample file.\n";
+        help();
     }
 
     if (out_path.length() == 0) 
-	out_path = ".";
+        out_path = ".";
 
     if (out_path.at(out_path.length() - 1) != '/') 
-	out_path += "/";
+        out_path += "/";
 
     return 0;
 }
@@ -209,10 +209,10 @@ void help() {
     std::cerr << "exstacks " << stacks_version << "\n"
               << "exstacks -s sample_file [-o path] [-p num_threads] [-h]" << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-	      << "  s: TSV file from which to load radtags." << "\n"
-	      << "  o: output path to write results." << "\n"
-	      << "  m: include tags in the catalog that match to more than one entry." << "\n"
-	      << "  h: display this help messsage." << "\n\n";
+              << "  s: TSV file from which to load radtags." << "\n"
+              << "  o: output path to write results." << "\n"
+              << "  m: include tags in the catalog that match to more than one entry." << "\n"
+              << "  h: display this help messsage." << "\n\n";
 
     exit(0);
 }

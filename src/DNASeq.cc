@@ -52,7 +52,7 @@ DNASeq::DNASeq(int size, unsigned char *seq) {
 
     this->s = new unsigned char[bytes];
     for (unsigned int i = 0; i < bytes; i++)
-	this->s[i] = seq[i];
+        this->s[i] = seq[i];
 }
 
 DNASeq::DNASeq(int size, const char *seq) {
@@ -69,41 +69,41 @@ DNASeq::DNASeq(int size, const char *seq) {
     int index = 0;
 
     for (int i = 0; i < this->size; i++) {
-	//cerr << "Encoding character " << i << ", '" << seq[i] << "'\n";
+        //cerr << "Encoding character " << i << ", '" << seq[i] << "'\n";
 
-	if (i > 0 && i % bases_per_byte == 0) index++;
+        if (i > 0 && i % bases_per_byte == 0) index++;
 
-	//cerr << "  encoding '" << seq[i] << "' into byte " << index << ".\n";
+        //cerr << "  encoding '" << seq[i] << "' into byte " << index << ".\n";
 
-	this->s[index] <<= 2;
+        this->s[index] <<= 2;
 
-	switch (seq[i]) {
-	case 'A':
-	case 'a':
-	    // A == 00
-	    break;
-	case 'C':
-	case 'c':
-	    // C == 01
-	    this->s[index] |= 0x1;
-	    break;
-	case 'G':
-	case 'g':
-	    // G == 10
-	    this->s[index] |= 0x2;
-	    break;
-	case 'T':
-	case 't':
-	    // T == 11
-	    this->s[index] |= 0x3;
-	    break;
-	}
+        switch (seq[i]) {
+        case 'A':
+        case 'a':
+            // A == 00
+            break;
+        case 'C':
+        case 'c':
+            // C == 01
+            this->s[index] |= 0x1;
+            break;
+        case 'G':
+        case 'g':
+            // G == 10
+            this->s[index] |= 0x2;
+            break;
+        case 'T':
+        case 't':
+            // T == 11
+            this->s[index] |= 0x3;
+            break;
+        }
 
-	//cerr << "    s[" << index << "," << i % bases_per_byte << "] == " << (int)this->s[index] << "\n";
+        //cerr << "    s[" << index << "," << i % bases_per_byte << "] == " << (int)this->s[index] << "\n";
     }
 
     if (rem > 0)
-	this->s[index] <<= (bases_per_byte - rem) * 2;
+        this->s[index] <<= (bases_per_byte - rem) * 2;
 }
 
 DNASeq::~DNASeq() {
@@ -123,35 +123,35 @@ char DNASeq::operator[](int pos) {
 
     switch (rem) {
     case 0:
-	c = this->s[index] & 0xC0; // 11000000
-	c >>= 6;
-	break;
+        c = this->s[index] & 0xC0; // 11000000
+        c >>= 6;
+        break;
     case 1:
-	c = this->s[index] & 0x30; // 00110000
-	c >>= 4;
-	break;
+        c = this->s[index] & 0x30; // 00110000
+        c >>= 4;
+        break;
     case 2:
-	c = this->s[index] & 0xC;  // 00001100
-	c >>= 2;
-	break;
+        c = this->s[index] & 0xC;  // 00001100
+        c >>= 2;
+        break;
     case 3:
-	c = this->s[index] & 0x3;  // 00000011
-	break;
+        c = this->s[index] & 0x3;  // 00000011
+        break;
     }
 
     switch (c) {
     case 0:
-	base = 'A';
-	break;
+        base = 'A';
+        break;
     case 1:
-	base = 'C';
-	break;
+        base = 'C';
+        break;
     case 2:
-	base = 'G';
-	break;
+        base = 'G';
+        break;
     case 3:
-	base = 'T';
-	break;
+        base = 'T';
+        break;
     }
     //cerr << "  Decoding character " << pos << ", '" << base << "'\n";
 
@@ -167,44 +167,44 @@ char *DNASeq::subseq(char *seq, int start, int end) {
     rem    = i % bases_per_byte;
 
     for (; i <= end; i++) {
-	rem = i % bases_per_byte;
+        rem = i % bases_per_byte;
 
-	if (i > 0 && rem == 0) index++;
-	//cerr << "s[" << index << "," << rem << "] == " << (int)this->s[index] << "\n";
+        if (i > 0 && rem == 0) index++;
+        //cerr << "s[" << index << "," << rem << "] == " << (int)this->s[index] << "\n";
 
-	switch (rem) {
-	case 0:
-	    c = this->s[index] & 0xC0; // 11000000
-	    c >>= 6;
-	    break;
-	case 1:
-	    c = this->s[index] & 0x30; // 00110000
-	    c >>= 4;
-	    break;
-	case 2:
-	    c = this->s[index] & 0xC;  // 00001100
-	    c >>= 2;
-	    break;
-	case 3:
-	    c = this->s[index] & 0x3;  // 00000011
-	    break;
-	}
+        switch (rem) {
+        case 0:
+            c = this->s[index] & 0xC0; // 11000000
+            c >>= 6;
+            break;
+        case 1:
+            c = this->s[index] & 0x30; // 00110000
+            c >>= 4;
+            break;
+        case 2:
+            c = this->s[index] & 0xC;  // 00001100
+            c >>= 2;
+            break;
+        case 3:
+            c = this->s[index] & 0x3;  // 00000011
+            break;
+        }
 
-	switch (c) {
-	case 0:
-	    seq[i - start] = 'A';
-	    break;
-	case 1:
-	    seq[i - start] = 'C';
-	    break;
-	case 2:
-	    seq[i - start] = 'G';
-	    break;
-	case 3:
-	    seq[i - start] = 'T';
-	    break;
-	}
-	//cerr << "  Decoding character " << i << ", '" << seq[i - start] << "'\n";
+        switch (c) {
+        case 0:
+            seq[i - start] = 'A';
+            break;
+        case 1:
+            seq[i - start] = 'C';
+            break;
+        case 2:
+            seq[i - start] = 'G';
+            break;
+        case 3:
+            seq[i - start] = 'T';
+            break;
+        }
+        //cerr << "  Decoding character " << i << ", '" << seq[i - start] << "'\n";
     }
 
     seq[i - start] = '\0';
@@ -218,43 +218,43 @@ char *DNASeq::seq(char *seq) {
     int index = 0;
 
     for (i = 0; i < this->size; i++) {
-	if (i > 0 && i % bases_per_byte == 0) index++;
+        if (i > 0 && i % bases_per_byte == 0) index++;
 
-	//cerr << "s[" << index << "," << i % bases_per_byte << "] == " << (int)this->s[index] << "\n";
+        //cerr << "s[" << index << "," << i % bases_per_byte << "] == " << (int)this->s[index] << "\n";
 
-	switch (i % bases_per_byte) {
-	case 0:
-	    c = this->s[index] & 0xC0; // 11000000
-	    c >>= 6;
-	    break;
-	case 1:
-	    c = this->s[index] & 0x30; // 00110000
-	    c >>= 4;
-	    break;
-	case 2:
-	    c = this->s[index] & 0xC;  // 00001100
-	    c >>= 2;
-	    break;
-	case 3:
-	    c = this->s[index] & 0x3;  // 00000011
-	    break;
-	}
+        switch (i % bases_per_byte) {
+        case 0:
+            c = this->s[index] & 0xC0; // 11000000
+            c >>= 6;
+            break;
+        case 1:
+            c = this->s[index] & 0x30; // 00110000
+            c >>= 4;
+            break;
+        case 2:
+            c = this->s[index] & 0xC;  // 00001100
+            c >>= 2;
+            break;
+        case 3:
+            c = this->s[index] & 0x3;  // 00000011
+            break;
+        }
 
-	switch (c) {
-	case 0:
-	    seq[i] = 'A';
-	    break;
-	case 1:
-	    seq[i] = 'C';
-	    break;
-	case 2:
-	    seq[i] = 'G';
-	    break;
-	case 3:
-	    seq[i] = 'T';
-	    break;
-	}
-	//cerr << "  Decoding character " << i << ", '" << seq[i] << "'\n";
+        switch (c) {
+        case 0:
+            seq[i] = 'A';
+            break;
+        case 1:
+            seq[i] = 'C';
+            break;
+        case 2:
+            seq[i] = 'G';
+            break;
+        case 3:
+            seq[i] = 'T';
+            break;
+        }
+        //cerr << "  Decoding character " << i << ", '" << seq[i] << "'\n";
     }
 
     seq[i] = '\0';
@@ -270,43 +270,43 @@ char *DNASeq::seq() {
     char *seq = new char[this->size + 1];
 
     for (i = 0; i < this->size; i++) {
-	if (i > 0 && i % bases_per_byte == 0) index++;
+        if (i > 0 && i % bases_per_byte == 0) index++;
 
-	//cerr << "s[" << index << "," << i % bases_per_byte << "] == " << (int)this->s[index] << "\n";
+        //cerr << "s[" << index << "," << i % bases_per_byte << "] == " << (int)this->s[index] << "\n";
 
-	switch (i % bases_per_byte) {
-	case 0:
-	    c = this->s[index] & 0xC0; // 11000000
-	    c >>= 6;
-	    break;
-	case 1:
-	    c = this->s[index] & 0x30; // 00110000
-	    c >>= 4;
-	    break;
-	case 2:
-	    c = this->s[index] & 0xC;  // 00001100
-	    c >>= 2;
-	    break;
-	case 3:
-	    c = this->s[index] & 0x3;  // 00000011
-	    break;
-	}
+        switch (i % bases_per_byte) {
+        case 0:
+            c = this->s[index] & 0xC0; // 11000000
+            c >>= 6;
+            break;
+        case 1:
+            c = this->s[index] & 0x30; // 00110000
+            c >>= 4;
+            break;
+        case 2:
+            c = this->s[index] & 0xC;  // 00001100
+            c >>= 2;
+            break;
+        case 3:
+            c = this->s[index] & 0x3;  // 00000011
+            break;
+        }
 
-	switch (c) {
-	case 0:
-	    seq[i] = 'A';
-	    break;
-	case 1:
-	    seq[i] = 'C';
-	    break;
-	case 2:
-	    seq[i] = 'G';
-	    break;
-	case 3:
-	    seq[i] = 'T';
-	    break;
-	}
-	//cerr << "  Decoding character " << i << ", '" << seq[i] << "'\n";
+        switch (c) {
+        case 0:
+            seq[i] = 'A';
+            break;
+        case 1:
+            seq[i] = 'C';
+            break;
+        case 2:
+            seq[i] = 'G';
+            break;
+        case 3:
+            seq[i] = 'T';
+            break;
+        }
+        //cerr << "  Decoding character " << i << ", '" << seq[i] << "'\n";
     }
 
     seq[i] = '\0';
