@@ -61,7 +61,7 @@ class BamUnAln: public Input {
         bam_destroy1(this->aln);
     };
     Seq *next_seq();
-    int  next_seq(Seq &) { return 0; };
+    int  next_seq(Seq &);
 };
 
 int

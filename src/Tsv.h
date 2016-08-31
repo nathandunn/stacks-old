@@ -37,28 +37,34 @@ class Tsv: public Input {
     Tsv(const char *path) : Input(path) {};
     ~Tsv() {};
     Seq *next_seq();
-    int  next_seq(Seq &) { return 0; }
+    int  next_seq(Seq &);
 };
 
 Seq *Tsv::next_seq() {
+    Seq* s = new Seq();
+    if(next_seq(*s) != 1) {
+        delete s;
+        s = NULL;
+    }
+    return s;
+}
+
+int Tsv::next_seq(Seq& s) {
     vector<string> parts;
 
-    //
-    // Read a record from the file and place it in a Seq object
-    //
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good()) {
-        return NULL;
+        return 0;
     }
 
     parse_tsv(this->line, parts);
 
     string id = parts[0] + "_" + parts[1];
 
-    Seq *s = new Seq(id.c_str(), parts[2].c_str(), parts[3].c_str(), parts[0].c_str(), atoi(parts[1].c_str()), strand_plus);
+    s = Seq(id.c_str(), parts[2].c_str(), parts[3].c_str(), parts[0].c_str(), atoi(parts[1].c_str()), strand_plus);
 
-    return s;
+    return 1;
 }
 
 #endif // __TSV_H__

@@ -39,15 +39,22 @@ class Sam: public Input {
     int edit_gaps(vector<pair<char, uint> > &, char *);
 
  public:
-    Sam(const char *path) : Input(path) {};
-    ~Sam() {};
+    Sam(const char *path) : Input(path) {}
+    ~Sam() {}
     Seq *next_seq();
-    int  next_seq(Seq &) { return 0; };
+    int  next_seq(Seq& s);
 };
 
-Seq *
-Sam::next_seq() 
-{
+Seq* Sam::next_seq() {
+    Seq* s = new Seq();
+    if(next_seq(*s) != 1) {
+        delete s;
+        s = NULL;
+    }
+    return s;
+}
+
+int Sam::next_seq(Seq& s) {
     vector<string> parts;
     int  flag;
     uint len;
@@ -60,7 +67,7 @@ Sam::next_seq()
         this->fh.getline(this->line, max_len);
 
         if (!this->fh.good())
-            return NULL;
+            return 0;
 
         len = strlen(this->line);
         if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
@@ -105,13 +112,13 @@ Sam::next_seq()
     //
     bp--;
 
-    Seq *s = new Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(), // Read ID, Sequence, Quality
-                     parts[2].c_str(), bp, flag ? strand_minus : strand_plus);            // Chr, BasePair, Strand
+    s = Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(),             // Read ID, Sequence, Quality
+                     parts[2].c_str(), bp, flag ? strand_minus : strand_plus); // Chr, BasePair, Strand
 
     if (cigar.size() > 0)
-        this->edit_gaps(cigar, s->seq);
+        this->edit_gaps(cigar, s.seq);
 
-    return s;
+    return 1;
 }
 
 int 

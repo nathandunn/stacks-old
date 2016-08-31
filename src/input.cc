@@ -108,6 +108,28 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
     }
 }
 
+void swap(Seq& s1, Seq& s2) {
+    char* ptr;
+
+    ptr = s1.id;
+    s1.id = s2.id;
+    s2.id = ptr;
+
+    ptr = s1.seq;
+    s1.seq = s2.seq;
+    s2.seq = ptr;
+
+    ptr = s1.qual;
+    s1.qual = s2.qual;
+    s2.qual = ptr;
+
+    ptr = s1.loc_str;
+    s1.loc_str = s2.loc_str;
+    s2.loc_str = ptr;
+
+    swap(s1.loc, s2.loc);
+}
+
 Input::Input() {
     memset(this->line, '\0', max_len);
 }
