@@ -37,18 +37,18 @@ write_fasta(ofstream *fh, Read *href, bool overhang) {
     offset += overhang ? 1 : 0;
 
     if (href->fastq_type != generic_fastq)
-            *fh <<
-                ">" << href->lane <<
-                "_" << tile << 
-                "_" << href->x <<
-                "_" << href->y <<
-                "/" << href->read << "\n" <<
-                href->seq + offset << "\n";
+        *fh <<
+            ">" << href->lane <<
+            "_" << tile << 
+            "_" << href->x <<
+            "_" << href->y <<
+            "/" << href->read << "\n" <<
+            href->seq + offset << "\n";
     else 
-            *fh <<
-                ">" << href->machine <<
-                "/" << href->read << "\n" <<
-                href->seq + offset << "\n";
+        *fh <<
+            ">" << href->machine <<
+            "/" << href->read << "\n" <<
+            href->seq + offset << "\n";
 
     if (fh->fail()) return -1;
 
@@ -65,18 +65,18 @@ write_fasta(gzFile *fh, Read *href, bool overhang) {
     offset += overhang ? 1 : 0;
 
     if (href->fastq_type != generic_fastq)
-            sstr <<
-                ">" << href->lane <<
-                "_" << tile << 
-                "_" << href->x <<
-                "_" << href->y <<
-                "/" << href->read << "\n" <<
-                href->seq + offset << "\n";
+        sstr <<
+            ">" << href->lane <<
+            "_" << tile << 
+            "_" << href->x <<
+            "_" << href->y <<
+            "/" << href->read << "\n" <<
+            href->seq + offset << "\n";
     else 
-            sstr <<
-                ">" << href->machine <<
-                "/" << href->read << "\n" <<
-                href->seq + offset << "\n";
+        sstr <<
+            ">" << href->machine <<
+            "/" << href->read << "\n" <<
+            href->seq + offset << "\n";
 
     int res = gzputs(*fh, sstr.str().c_str());
 
@@ -121,22 +121,22 @@ write_fastq(ofstream *fh, Read *href, bool overhang) {
     offset += overhang ? 1 : 0;
 
     if (href->fastq_type != generic_fastq)
-            *fh <<
-                "@" << href->lane << 
-                "_" << tile << 
-                "_" << href->x << 
-                "_" << href->y << 
-                "/" << href->read << "\n" <<
-                href->seq + offset << "\n" <<
-                "+\n" <<
-                href->phred + offset << "\n";
+        *fh <<
+            "@" << href->lane << 
+            "_" << tile << 
+            "_" << href->x << 
+            "_" << href->y << 
+            "/" << href->read << "\n" <<
+            href->seq + offset << "\n" <<
+            "+\n" <<
+            href->phred + offset << "\n";
     else
-            *fh <<
-                "@" << href->machine << 
-                "/" << href->read << "\n" <<
-                href->seq + offset << "\n" <<
-                "+\n" <<
-                href->phred + offset << "\n";
+        *fh <<
+            "@" << href->machine << 
+            "/" << href->read << "\n" <<
+            href->seq + offset << "\n" <<
+            "+\n" <<
+            href->phred + offset << "\n";
 
     if (fh->fail()) return -1;
         
@@ -156,22 +156,22 @@ write_fastq(gzFile *fh, Read *href, bool overhang) {
     offset += overhang ? 1 : 0;
 
     if (href->fastq_type != generic_fastq)
-            sstr <<
-                "@" << href->lane << 
-                "_" << tile << 
-                "_" << href->x << 
-                "_" << href->y << 
-                "/" << href->read << "\n" <<
-                href->seq + offset << "\n" <<
-                "+\n" <<
-                href->phred + offset << "\n";
+        sstr <<
+            "@" << href->lane << 
+            "_" << tile << 
+            "_" << href->x << 
+            "_" << href->y << 
+            "/" << href->read << "\n" <<
+            href->seq + offset << "\n" <<
+            "+\n" <<
+            href->phred + offset << "\n";
     else
-            sstr <<
-                "@" << href->machine << 
-                "/" << href->read << "\n" <<
-                href->seq + offset << "\n" <<
-                "+\n" <<
-                href->phred + offset << "\n";
+        sstr <<
+            "@" << href->machine << 
+            "/" << href->read << "\n" <<
+            href->seq + offset << "\n" <<
+            "+\n" <<
+            href->phred + offset << "\n";
 
     int res = gzputs(*fh, sstr.str().c_str());
 

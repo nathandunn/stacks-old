@@ -341,7 +341,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 
         float total = 0;
         for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++)
-             total += u[*k]->count;
+            total += u[*k]->count;
 
         if (total < min_stack_cov) continue;
 
@@ -603,7 +603,7 @@ int parse_command_line(int argc, char* argv[]) {
         case 'h':
             help();
             break;
-             case 't':
+        case 't':
             if (strcmp(optarg, "bowtie") == 0)
                 in_file_type = FileT::bowtie;
             else if (strcmp(optarg, "sam") == 0)
@@ -613,7 +613,7 @@ int parse_command_line(int argc, char* argv[]) {
             else
                 in_file_type = FileT::unknown;
             break;
-             case 'f':
+        case 'f':
             in_file = optarg;
             break;
         case 'o':

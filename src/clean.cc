@@ -458,7 +458,7 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
     // Populate the sliding window.
     //
     for (j = offset; j < href->win_len + offset; j++)
-            working_sum += href->int_scores[j];
+        working_sum += href->int_scores[j];
 
     // cerr << "Populating the sliding window using position " << offset << " to " << href->win_len + offset - 1 << "; initial working sum: " << working_sum << "\n";
 
@@ -472,7 +472,7 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
     // cerr << "Setting pointers; P: " << (href->int_scores + offset) - href->int_scores << "; Q: " << p + (int) href->win_len - p << "; J: " << j << "\n";
 
     do {
-            mean = working_sum / href->win_len;
+        mean = working_sum / href->win_len;
 
         // cerr << "J: " << j << "; Window contents: ";
         // for (int *r = p; r < q; r++)
@@ -480,7 +480,7 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
         // cerr << "\n";
         // cerr << "    Mean: " << mean << "\n";
 
-            if (mean < score_limit) {
+        if (mean < score_limit) {
 
             if (j < len_limit) {
                 return 0;
@@ -490,22 +490,22 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
                 href->phred[j] = '\0';
                 return -1;
             }
-            }
+        }
 
         //
-            // Advance the window:
-            //   Add the score from the front edge of the window, subtract the score
-            //   from the back edge of the window.
-            //
-            working_sum -= (double) *p;
-            working_sum += (double) *q;
+        // Advance the window:
+        //   Add the score from the front edge of the window, subtract the score
+        //   from the back edge of the window.
+        //
+        working_sum -= (double) *p;
+        working_sum += (double) *q;
 
         // cerr << "  Removing value of p: " << *p << " (position: " << p - (href->int_scores) << ")\n";
         // cerr << "  Adding value of q: " << *q << " (position: " << q - (href->int_scores) << ")\n";
 
-            p++;
-            q++;
-            j++;
+        p++;
+        q++;
+        j++;
     } while (j <= href->stop_pos);
 
     return 1;

@@ -161,7 +161,7 @@ Bam::next_seq()
                      chr.c_str(), bp, flag ? strand_minus : strand_plus);
 
     if (cigar.size() > 0)
-            this->edit_gaps(cigar, s->seq);
+        this->edit_gaps(cigar, s->seq);
 
     return s;
 }

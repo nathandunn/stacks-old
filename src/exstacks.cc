@@ -166,7 +166,7 @@ int parse_command_line(int argc, char* argv[]) {
             sstr = optarg;
             samples.push(sstr);
             break;
-             case 'o':
+        case 'o':
             out_path = optarg;
             break;
         case 'v':
