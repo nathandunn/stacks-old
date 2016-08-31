@@ -59,7 +59,7 @@ class Bam: public Input {
         bam_destroy1(this->aln);
     };
     Seq *next_seq();
-    int  next_seq(Seq &) { return 0; };
+    int  next_seq(Seq&);
 };
 
 int
@@ -81,6 +81,17 @@ Bam::parse_header()
 Seq *
 Bam::next_seq() 
 {
+    Seq* s = new Seq();
+    if(next_seq(*s) != 1) {
+        delete s;
+        s = NULL;
+    }
+    return s;
+}
+
+int
+Bam::next_seq(Seq& s)
+{
     int bytes_read = 0;
     int flag       = 0;
 
@@ -91,7 +102,7 @@ Bam::next_seq()
         bytes_read = sam_read1(this->bam_fh, this->bamh, this->aln);
 
         if (bytes_read <= 0)
-            return NULL;
+            return 0;
 
         flag = ((this->aln->core.flag & BAM_FUNMAP) != 0);
 
@@ -157,13 +168,13 @@ Bam::next_seq()
 
     string chr = this->chrs[this->aln->core.tid];
 
-    Seq *s = new Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str(),
+    s = Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str(),
                      chr.c_str(), bp, flag ? strand_minus : strand_plus);
 
     if (cigar.size() > 0)
-        this->edit_gaps(cigar, s->seq);
+        this->edit_gaps(cigar, s.seq);
 
-    return s;
+    return 1;
 }
 
 int 
