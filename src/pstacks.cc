@@ -93,13 +93,15 @@ int main (int argc, char* argv[]) {
     #endif
 
     HashMap*           radtags = new HashMap();
-    set<int>           merge_map;
     map<int, PStack *> unique;
 
     load_radtags(in_file, *radtags);
 
     reduce_radtags(*radtags, unique);
 
+    for (auto& stack : *radtags)
+        for (Seq* read : stack.second)
+            delete read;
     delete radtags;
 
     //dump_stacks(unique);
@@ -758,27 +760,35 @@ int load_radtags(string in_file, HashMap &radtags) {
 
     cerr << "Parsing " << in_file.c_str() << "\n";
 
-    int i = 1;
+    int i = 0;
     cerr << "Loading aligned sequences...";
     while ((fh->next_seq(c)) != 0) {
-        if (i % 1000000 == 0)
+        if (i % 1000000 == 0 && i>0)
             cerr << i/1000000 << "M...";
 
         HashMap::iterator element = radtags.insert({DNANSeq(strlen(c.seq), c.seq), vector<Seq*>()}).first;
         element->second.push_back(new Seq(c));
+        Seq& the_seq = *element->second.back();
+        if (the_seq.seq != NULL) {
+            delete[] the_seq.seq;
+            the_seq.seq = NULL;
+        }
+        if (the_seq.qual != NULL) {
+            delete[] the_seq.qual;
+            the_seq.qual = NULL;
+        }
 
         i++;
     }
     cerr << "done\n";
 
-    if (i == 1) {
+    if (i == 0) {
         cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
-        exit(1);
+        exit(-1);
     }
 
-    cerr << "  " <<
-        "Analyzed " << i - 1 << " sequence reads; " <<
-        "Identified " << radtags.size() << " unique stacks from those reads.\n";
+    cerr << "Loaded " << i << " sequence reads; " <<
+        "identified " << radtags.size() << " unique stacks from those reads.\n";
 
     //
     // Close the file and delete the Input object.

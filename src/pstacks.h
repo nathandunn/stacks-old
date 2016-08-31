@@ -52,6 +52,7 @@ using std::set;
 #include <utility>
 using std::pair;
 
+#include "config.h"
 #include "constants.h" 
 #include "stacks.h"     // Major data structures for holding stacks
 #include "mstack.h"

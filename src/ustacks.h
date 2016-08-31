@@ -67,6 +67,7 @@ using std::set;
 using google::sparse_hash_map;
 #endif
 
+#include "config.h"
 #include "kmers.h"
 #include "utils.h"
 #include "DNASeq.h"     // Class for storing two-bit compressed DNA sequences

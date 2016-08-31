@@ -2438,7 +2438,7 @@ int load_radtags(string in_file, DNASeqHashMap &radtags) {
 
     cerr << "Loading RAD-Tags...";
     while ((fh->next_seq(c)) != 0) {
-        if (i % 1000000 == 0)
+        if (i % 1000000 == 0 && i>0)
             cerr << i/1000000 << "M...";
 
         prev_seql = seql;
@@ -2461,21 +2461,18 @@ int load_radtags(string in_file, DNASeqHashMap &radtags) {
         i++;
     }
     cerr << "done\n";
-    cerr << "Loaded " << i << " RAD-Tags; inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n";
 
     if (i == 0) {
         cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
         exit(1);
     }
-
-    cerr << "  " << corrected << " reads contained uncalled nucleotides that were modified.\n";
-
     if (len_mismatch)
-        cerr << "  Warning: different sequence lengths detected, this will interfere with Stacks algorithms.\n";
+        cerr << "Warning: different sequence lengths detected, this will interfere with Stacks algorithms.\n";
 
-    //
-    // Close the file and delete the Input object.
-    //
+    cerr << "Loaded " << i << " RAD-Tags.\n"
+            "  Inserted " << radtags.size() << " elements into the RAD-Tags hash map.\n"
+            "  " << corrected << " reads contained uncalled nucleotides that were modified.\n";
+
     delete fh;
 
     return 0;
