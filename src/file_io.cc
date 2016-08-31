@@ -28,13 +28,13 @@
 
 #include "file_io.h"
 
-int 
+int
 open_files(vector<pair<string, string> > &files,
-           vector<BarcodePair> &barcodes, 
-           map<BarcodePair, ofstream *> &pair_1_fhs, 
-           map<BarcodePair, ofstream *> &pair_2_fhs, 
-           map<BarcodePair, ofstream *> &rem_1_fhs, 
-           map<BarcodePair, ofstream *> &rem_2_fhs, 
+           vector<BarcodePair> &barcodes,
+           map<BarcodePair, ofstream *> &pair_1_fhs,
+           map<BarcodePair, ofstream *> &pair_2_fhs,
+           map<BarcodePair, ofstream *> &rem_1_fhs,
+           map<BarcodePair, ofstream *> &rem_2_fhs,
            map<string, map<string, long> > &counters) {
     string path, suffix_1, suffix_2, filepath, file;
 
@@ -49,7 +49,7 @@ open_files(vector<pair<string, string> > &files,
         suffix_1 += ".fa";
         suffix_2 += ".fa";
     }
-    
+
     uint        pos;
     ofstream   *fh;
     BarcodePair bc;
@@ -91,7 +91,7 @@ open_files(vector<pair<string, string> > &files,
             if (stat(path.c_str(), &sb_2) == 0 &&
                 sb_2.st_dev == sb_1.st_dev     &&
                 sb_2.st_ino == sb_1.st_ino) {
-                cerr << "Input and output files ('" << path << "') are the same and will cause the input " 
+                cerr << "Input and output files ('" << path << "') are the same and will cause the input "
                      << "file to be overwritten. Please specify a separate output directory using '-o'.\n";
                 help();
             }
@@ -126,7 +126,7 @@ open_files(vector<pair<string, string> > &files,
                 if (stat(path.c_str(), &sb_2) == 0 &&
                     sb_2.st_dev == sb_1.st_dev     &&
                     sb_2.st_ino == sb_1.st_ino) {
-                    cerr << "Input and output file names ('" << path << "') are the same and will cause the input " 
+                    cerr << "Input and output file names ('" << path << "') are the same and will cause the input "
                          << "file to be overwritten. Please specify a separate output directory using '-o'.\n";
                     help();
                 }
@@ -293,13 +293,13 @@ open_files(vector<pair<string, string> > &files,
     return 0;
 }
 
-int 
+int
 open_files(vector<pair<string, string> > &files,
-           vector<BarcodePair> &barcodes, 
-           map<BarcodePair, gzFile *> &pair_1_fhs, 
-           map<BarcodePair, gzFile *> &pair_2_fhs, 
-           map<BarcodePair, gzFile *> &rem_1_fhs, 
-           map<BarcodePair, gzFile *> &rem_2_fhs, 
+           vector<BarcodePair> &barcodes,
+           map<BarcodePair, gzFile *> &pair_1_fhs,
+           map<BarcodePair, gzFile *> &pair_2_fhs,
+           map<BarcodePair, gzFile *> &rem_1_fhs,
+           map<BarcodePair, gzFile *> &rem_2_fhs,
            map<string, map<string, long> > &counters) {
     string path, suffix_1, suffix_2, filepath, file;
 
@@ -314,7 +314,7 @@ open_files(vector<pair<string, string> > &files,
         suffix_1 += ".fa.gz";
         suffix_2 += ".fa.gz";
     }
-    
+
     uint        pos;
     gzFile     *fh;
     BarcodePair bc;
@@ -356,7 +356,7 @@ open_files(vector<pair<string, string> > &files,
             if (stat(path.c_str(), &sb_2) == 0 &&
                 sb_2.st_dev == sb_1.st_dev     &&
                 sb_2.st_ino == sb_1.st_ino) {
-                cerr << "Input and output files ('" << path << "') are the same and will cause the input " 
+                cerr << "Input and output files ('" << path << "') are the same and will cause the input "
                      << "file to be overwritten. Please specify a separate output directory using '-o'.\n";
                 help();
             }
@@ -392,7 +392,7 @@ open_files(vector<pair<string, string> > &files,
                 if (stat(path.c_str(), &sb_2) == 0 &&
                     sb_2.st_dev == sb_1.st_dev     &&
                     sb_2.st_ino == sb_1.st_ino) {
-                    cerr << "Input and output file names ('" << path << "') are the same and will cause the input " 
+                    cerr << "Input and output file names ('" << path << "') are the same and will cause the input "
                          << "file to be overwritten. Please specify a separate output directory using '-o'.\n";
                     help();
                 }
@@ -569,8 +569,8 @@ open_files(vector<pair<string, string> > &files,
     return 0;
 }
 
-int 
-close_file_handles(map<BarcodePair, ofstream *> &fhs) 
+int
+close_file_handles(map<BarcodePair, ofstream *> &fhs)
 {
     map<BarcodePair, ofstream*>::iterator i;
     set<ofstream*> ptrs;
@@ -588,7 +588,7 @@ close_file_handles(map<BarcodePair, ofstream *> &fhs)
     return 0;
 }
 
-int 
+int
 close_file_handles(map<BarcodePair, gzFile *> &fhs)
 {
     map<BarcodePair, gzFile *>::iterator i;
@@ -607,11 +607,11 @@ close_file_handles(map<BarcodePair, gzFile *> &fhs)
     return 0;
 }
 
-int 
-load_barcodes(string barcode_file, vector<BarcodePair> &barcodes, 
+int
+load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
               set<string> &se_bc, set<string> &pe_bc,
-              uint &min_se_len, uint &max_se_len, 
-              uint &min_pe_len, uint &max_pe_len) 
+              uint &min_se_len, uint &max_se_len,
+              uint &min_pe_len, uint &max_pe_len)
 {
     switch(barcode_type) {
     case null_null:
@@ -674,7 +674,7 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
         cols = 1;
         for (p = line; *p != '\0'; p++) if (*p == '\t') cols++;
 
-        if (cols > 2 && 
+        if (cols > 2 &&
             (barcode_type == inline_null || barcode_type == index_null)) {
             cerr << "Too many columns (" << cols << ") specified in '" << barcode_file << "' for single-end barcodes on line " << line_num << ".\n";
             exit(1);
@@ -722,8 +722,8 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
         // If a second barcode was specified on the command line, identify it and check that it's legitimate.
         //
         r = NULL;
-        if (barcode_type == inline_inline || 
-            barcode_type == inline_index  || 
+        if (barcode_type == inline_inline ||
+            barcode_type == inline_index  ||
             barcode_type == index_inline  ||
             barcode_type == index_index) {
 
@@ -838,7 +838,7 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
     }
 
     //
-    // If paired barcodes were supplied check that a paired barcode type was 
+    // If paired barcodes were supplied check that a paired barcode type was
     // specified and vice versa.
     //
     if (se_bc.size() > 0 && pe_bc.size() > 0) {
@@ -864,7 +864,7 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
             cerr << "(" << min_se_len << "-" << max_se_len << "bp / ";
         else
             cerr << "(" << max_se_len << "bp / ";
-        if (min_pe_len != max_pe_len) 
+        if (min_pe_len != max_pe_len)
             cerr << min_pe_len << "-" << max_pe_len << "bp).\n";
         else
             cerr << max_pe_len << "bp).\n";
@@ -878,8 +878,8 @@ load_barcodes(string barcode_file, vector<BarcodePair> &barcodes,
     return 0;
 }
 
-int 
-build_file_list(vector<pair<string, string> > &files) 
+int
+build_file_list(vector<pair<string, string> > &files)
 {
     //
     // Scan a directory for a list of files.
@@ -920,7 +920,7 @@ build_file_list(vector<pair<string, string> > &files)
                 strncmp(q, ".bam",   end - q) != 0)
                 continue;
 
-            // 
+            //
             // If paired-end specified, parse file names to sort out which is which.
             //
             if (paired && interleaved == false) {
@@ -963,12 +963,12 @@ build_file_list(vector<pair<string, string> > &files)
         }
     }
 
-    cerr << "Found " << files.size(); 
+    cerr << "Found " << files.size();
     if (paired && interleaved)
         cerr << " interleaved, paired input file(s).\n";
     else if (paired)
         cerr << " paired input file(s).\n";
-    else 
+    else
         cerr << " input file(s).\n";
 
     return 0;
@@ -978,12 +978,12 @@ string
 remove_suffix(FileT type, string file)
 {
     int pos = file.find_last_of(".");
-    
+
     if ((type == FileT::gzfastq || type == FileT::gzfasta) && file.substr(pos) == ".gz")
         file = file.substr(0, pos);
 
     pos = file.find_last_of(".");
-    
+
     if (type == FileT::gzfastq || type == FileT::fastq) {
 
         if (file.substr(pos) == ".fastq" || file.substr(pos) == ".fq")

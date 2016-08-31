@@ -21,7 +21,7 @@
 #ifndef __KMER_FILTER_H__
 #define __KMER_FILTER_H__
 
-#include "constants.h" 
+#include "constants.h"
 
 #include <stdlib.h>
 #include <getopt.h> // Process command-line options

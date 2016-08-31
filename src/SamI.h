@@ -60,7 +60,7 @@ int Sam::next_seq(Seq& s) {
     uint len;
 
     //
-    // Read a record from the file and place it in a Seq object, skipping header 
+    // Read a record from the file and place it in a Seq object, skipping header
     // definitions and unaligned sequences.
     //
     do {
@@ -75,7 +75,7 @@ int Sam::next_seq(Seq& s) {
         parse_tsv(this->line, parts);
 
         //
-        // According to SAM spec FLAGs are the second field, 
+        // According to SAM spec FLAGs are the second field,
         // if FLAG bit 0x4 is set, sequence is not mapped.
         //
         flag = atoi(parts[1].c_str());
@@ -85,7 +85,7 @@ int Sam::next_seq(Seq& s) {
     } while (parts[0][0] == '@' || flag == 1);
 
     //
-    // Check which strand this is aligned to: 
+    // Check which strand this is aligned to:
     //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
     //
     flag = atoi(parts[1].c_str());
@@ -102,8 +102,8 @@ int Sam::next_seq(Seq& s) {
     vector<pair<char, uint> > cigar;
     this->parse_cigar(parts[5].c_str(), cigar, flag);
 
-    int bp = flag ? 
-        this->find_start_bp_neg(atoi(parts[3].c_str()), cigar) : 
+    int bp = flag ?
+        this->find_start_bp_neg(atoi(parts[3].c_str()), cigar) :
         this->find_start_bp_pos(atoi(parts[3].c_str()), cigar);
 
     //
@@ -121,7 +121,7 @@ int Sam::next_seq(Seq& s) {
     return 1;
 }
 
-int 
+int
 Sam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool orientation)
 {
     char buf[id_len];
@@ -142,7 +142,7 @@ Sam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool o
         dist = atoi(buf);
 
         //
-        // If aligned to the negative strand, sequence has been reverse complemented and 
+        // If aligned to the negative strand, sequence has been reverse complemented and
         // CIGAR string should be interpreted in reverse.
         //
         if (orientation == strand_plus)
@@ -156,7 +156,7 @@ Sam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool o
     return 0;
 }
 
-int 
+int
 Sam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
 {
     uint size = cigar.size();
@@ -184,7 +184,7 @@ Sam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
     return aln_bp - 1;
 }
 
-int 
+int
 Sam::find_start_bp_pos(int aln_bp, vector<pair<char, uint> > &cigar)
 {
     char op;
@@ -199,7 +199,7 @@ Sam::find_start_bp_pos(int aln_bp, vector<pair<char, uint> > &cigar)
     return aln_bp;
 }
 
-int 
+int
 Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 {
     char *buf;
@@ -233,7 +233,7 @@ Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
             // sequence down. Trim the final length to keep the read length consistent.
             //
             k = bp >= len ? len : bp;
-            
+
             strncpy(buf, seq + k, buf_size - 1);
             buf[buf_size - 1] = '\0';
             buf_len         = strlen(buf);
@@ -259,7 +259,7 @@ Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
             // inserted bases and pad the end of the read with Ns.
             //
             if (bp >= len) break;
-            
+
             k = bp + dist > len ? len : bp + dist;
             strncpy(buf, seq + k, buf_size - 1);
             buf[buf_size - 1] = '\0';

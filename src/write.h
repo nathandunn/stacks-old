@@ -46,7 +46,7 @@ int  write_fasta(ofstream *, Seq *, int);
 int  write_fasta(ofstream *, Seq *, string);
 int  write_fastq(ofstream *, Seq *, Read *);
 int  write_fasta(ofstream *, Seq *, Read *);
-    
+
 int  write_fastq(gzFile *, Read *, bool);
 int  write_fastq(gzFile *, Seq *);
 int  write_fastq(gzFile *, Seq *, int);

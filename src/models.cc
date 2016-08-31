@@ -29,8 +29,8 @@
 //
 #include "models.h"
 
-snp_type 
-call_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_snps) 
+snp_type
+call_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_snps)
 {
     vector<pair<char, int> > nuc;
     map<char, int>::iterator i;
@@ -145,8 +145,8 @@ call_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_s
     return res;
 }
 
-snp_type 
-call_multinomial_snp(Locus *tag, int col, map<char, int> &n) 
+snp_type
+call_multinomial_snp(Locus *tag, int col, map<char, int> &n)
 {
     vector<pair<char, int> > nuc;
     map<char, int>::iterator i;
@@ -244,8 +244,8 @@ call_multinomial_snp(Locus *tag, int col, map<char, int> &n)
     return res;
 }
 
-snp_type 
-call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_snps) 
+snp_type
+call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool record_snps)
 {
     vector<pair<char, int> > nuc;
     map<char, int>::iterator i;
@@ -316,16 +316,16 @@ call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool 
     double ln_L_het = (nuc_1 + nuc_2) * log(0.5 - (epsilon_het / 4.0));
     ln_L_het += epsilon_het > 0 ? ((nuc_3 + nuc_4) * log(epsilon_het / 4.0)) : 0;
 
-    // 
+    //
     // Calculate the likelihood ratio.
     //
     double l_ratio  = 2 * (ln_L_hom - ln_L_het);
 
-    // cerr << "  Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Nuc_3: " << nuc_3 << " Nuc_4: " << nuc_4 
-    //   << " epsilon homozygote: " << epsilon_hom 
+    // cerr << "  Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Nuc_3: " << nuc_3 << " Nuc_4: " << nuc_4
+    //   << " epsilon homozygote: " << epsilon_hom
     //   << " epsilon heterozygote: " << epsilon_het
-    //   << " Log likelihood hom: " << ln_L_hom 
-    //   << " Log likelihood het: " << ln_L_het 
+    //   << " Log likelihood hom: " << ln_L_hom
+    //   << " Log likelihood het: " << ln_L_het
     //   << " Likelihood ratio: " << l_ratio << "\n";
 
     snp_type res;
@@ -382,8 +382,8 @@ call_bounded_multinomial_snp(MergedStack *tag, int col, map<char, int> &n, bool 
     return res;
 }
 
-snp_type 
-call_bounded_multinomial_snp(Locus *tag, int col, map<char, int> &n) 
+snp_type
+call_bounded_multinomial_snp(Locus *tag, int col, map<char, int> &n)
 {
     vector<pair<char, int> > nuc;
     map<char, int>::iterator i;
@@ -450,16 +450,16 @@ call_bounded_multinomial_snp(Locus *tag, int col, map<char, int> &n)
     double ln_L_het = (nuc_1 + nuc_2) * log(0.5 - (epsilon_het / 4.0));
     ln_L_het += epsilon_het > 0 ? ((nuc_3 + nuc_4) * log(epsilon_het / 4.0)) : 0;
 
-    // 
+    //
     // Calculate the likelihood ratio.
     //
     double l_ratio  = 2 * (ln_L_hom - ln_L_het);
 
-    // cerr << "  Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Nuc_3: " << nuc_3 << " Nuc_4: " << nuc_4 
-    //   << " epsilon homozygote: " << epsilon_hom 
+    // cerr << "  Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Nuc_3: " << nuc_3 << " Nuc_4: " << nuc_4
+    //   << " epsilon homozygote: " << epsilon_hom
     //   << " epsilon heterozygote: " << epsilon_het
-    //   << " Log likelihood hom: " << ln_L_hom 
-    //   << " Log likelihood het: " << ln_L_het 
+    //   << " Log likelihood hom: " << ln_L_hom
+    //   << " Log likelihood het: " << ln_L_het
     //   << " Likelihood ratio: " << l_ratio << "\n";
 
     snp_type res;
@@ -504,8 +504,8 @@ call_bounded_multinomial_snp(Locus *tag, int col, map<char, int> &n)
     return res;
 }
 
-int 
-call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n) 
+int
+call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n)
 {
     const double nucleotide_fixed_limit = 1.92;
 
@@ -556,12 +556,12 @@ call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n)
 
     n_ratio = nuc_1 / (nuc_1 + nuc_2);
 
-    l_ratio  = 
-        nuc_1 * log( ((4 * nuc_1 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) / 
+    l_ratio  =
+        nuc_1 * log( ((4 * nuc_1 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) /
                      ((4 * p_freq * (nuc_1 + nuc_2) * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) );
 
-    l_ratio += 
-        nuc_2 * log( ((4 * nuc_2 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) / 
+    l_ratio +=
+        nuc_2 * log( ((4 * nuc_2 * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) /
                      ((4 * (1 - p_freq) * (nuc_1 + nuc_2) * (1 - epsilon)) + ((nuc_1 + nuc_2) * epsilon)) );
 
     //cerr << "Nuc_1: " << nuc_1 << " Nuc_2: " << nuc_2 << " Likelihood ratio: " << l_ratio << "\n";
@@ -596,12 +596,12 @@ call_multinomial_fixed (MergedStack *tag, int col, map<char, int> &n)
 }
 
 //
-// ln L(1/2) = ln(n! / n_1!n_2!n_3!n_4!) + 
-//               (n_1 + n_2) * ln(n_1 + n_2 / 2n) + 
+// ln L(1/2) = ln(n! / n_1!n_2!n_3!n_4!) +
+//               (n_1 + n_2) * ln(n_1 + n_2 / 2n) +
 //               (n_3 + n_4) * ln(n_3 + n_4 / 2n)
 //
-double 
-heterozygous_likelihood(int col, map<char, int> &nuc) 
+double
+heterozygous_likelihood(int col, map<char, int> &nuc)
 {
     vector<pair<char, int> > cnts;
     map<char, int>::iterator i;
@@ -619,27 +619,27 @@ heterozygous_likelihood(int col, map<char, int> &nuc)
     double n_3 = cnts[2].second;
     double n_4 = cnts[3].second;
 
-    double term_1 = 
-        reduced_log_factorial(n, n_1) - 
+    double term_1 =
+        reduced_log_factorial(n, n_1) -
         (log_factorial(n_2) + log_factorial(n_3) + log_factorial(n_4));
 
     double term_3 = (n_3 + n_4 > 0) ? log((n_3 + n_4) / (2 * n)) : 0;
 
-    double lnl = 
-        term_1 + 
-        ((n_1 + n_2) * log((n_1 + n_2) / (2 * n))) + 
+    double lnl =
+        term_1 +
+        ((n_1 + n_2) * log((n_1 + n_2) / (2 * n))) +
         ((n_3 + n_4) * term_3);
 
     return lnl;
 }
 
 //
-// ln L(1/1) = ln(n! / n_1!n_2!n_3!n_4!) + 
-//               n_1 * ln(n_1 / n) + 
+// ln L(1/1) = ln(n! / n_1!n_2!n_3!n_4!) +
+//               n_1 * ln(n_1 / n) +
 //               (n - n_1) * ln(n - n_1 / 3n)
 //
-double 
-homozygous_likelihood(int col, map<char, int> &nuc) 
+double
+homozygous_likelihood(int col, map<char, int> &nuc)
 {
     vector<pair<char, int> > cnts;
     map<char, int>::iterator i;
@@ -657,15 +657,15 @@ homozygous_likelihood(int col, map<char, int> &nuc)
     double n_3 = cnts[2].second;
     double n_4 = cnts[3].second;
 
-    double term_1 = 
+    double term_1 =
         reduced_log_factorial(n, n_1) -
         (log_factorial(n_2) + log_factorial(n_3) + log_factorial(n_4));
 
     double term_3 = n - n_1 > 0 ? log((n - n_1) / (3 * n)) : 0;
 
-    double lnl = 
-        term_1 + 
-        (n_1 * log(n_1 / n)) + 
+    double lnl =
+        term_1 +
+        (n_1 * log(n_1 / n)) +
         ((n - n_1) * term_3);
 
     return lnl;

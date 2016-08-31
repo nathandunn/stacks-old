@@ -32,7 +32,7 @@ class GzFasta: public Input {
     string buf;
 
  public:
-    GzFasta(const char *path) : Input() { 
+    GzFasta(const char *path) : Input() {
         this->gz_fh = gzopen(path, "rb");
         if (!this->gz_fh) {
             cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
@@ -42,7 +42,7 @@ class GzFasta: public Input {
         gzbuffer(this->gz_fh, libz_buffer_size);
         #endif
     };
-    GzFasta(string path) : Input() { 
+    GzFasta(string path) : Input() {
         this->gz_fh = gzopen(path.c_str(), "rb");
         if (!this->gz_fh) {
             cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";

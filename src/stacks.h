@@ -59,7 +59,7 @@ public:
     strand_type strand;
 
     void set(const char *chr, uint bp, strand_type strand) {
-        if (this->chr != NULL) 
+        if (this->chr != NULL)
             delete [] this->chr;
         this->chr    = new char[strlen(chr)  + 1];
         this->bp     = bp;
@@ -169,16 +169,16 @@ class PStack {
     vector<char *> map; // List of sequence read IDs merged into this stack
     PhyLoc         loc; // Physical genome location of this stack.
 
-    PStack()  { 
-        id     = 0; 
-        count  = 0; 
-        seq    = NULL; 
-        len    = 0; 
+    PStack()  {
+        id     = 0;
+        count  = 0;
+        seq    = NULL;
+        len    = 0;
     }
-    ~PStack() { 
-        delete this->seq; 
-        for (unsigned int i = 0; i < this->map.size(); i++) 
-            delete [] this->map[i]; 
+    ~PStack() {
+        delete this->seq;
+        for (unsigned int i = 0; i < this->map.size(); i++)
+            delete [] this->map[i];
     }
     int  add_id(const char *);
     int  add_seq(const char *);
@@ -195,7 +195,7 @@ class Stack {
         id  = 0;
         seq = NULL;
     }
-    ~Stack() { 
+    ~Stack() {
         delete this->seq;
     }
     uint count() { return this->map.size(); }
@@ -213,7 +213,7 @@ class Rem {
 
     Rem();
     Rem(int, uint, DNANSeq *);
-    ~Rem() { 
+    ~Rem() {
         delete this->seq;
     }
     uint count() { return this->map.size(); }
@@ -233,12 +233,12 @@ public:
     char  *haplotype;
     char  *cigar;
 
-    CatMatch() { 
-        batch_id  = 0; 
-        cat_id    = 0; 
-        sample_id = 0; 
-        tag_id    = 0; 
-        depth     = 0; 
+    CatMatch() {
+        batch_id  = 0;
+        cat_id    = 0;
+        sample_id = 0;
+        tag_id    = 0;
+        depth     = 0;
         lnl       = 0.0;
         haplotype = NULL;
         cigar     = NULL;
@@ -255,14 +255,14 @@ public:
     int   tag_id;
     char *model;
 
-    ModRes(int samp_id, int tag_id, const char *model) { 
-        this->sample_id = samp_id; 
+    ModRes(int samp_id, int tag_id, const char *model) {
+        this->sample_id = samp_id;
         this->tag_id    = tag_id;
         this->model     = new char[strlen(model) + 1];
         strcpy(this->model, model);
     }
-    ~ModRes() { 
-        delete [] this->model; 
+    ~ModRes() {
+        delete [] this->model;
     }
 };
 
@@ -272,11 +272,11 @@ public:
     int   tag_id;
     vector<SNP *> snps;
 
-    SNPRes(int samp_id, int tag_id) { 
-        this->sample_id = samp_id; 
+    SNPRes(int samp_id, int tag_id) {
+        this->sample_id = samp_id;
         this->tag_id    = tag_id;
     }
-    ~SNPRes() { 
+    ~SNPRes() {
         for (uint i = 0; i < this->snps.size(); i++)
             delete this->snps[i];
         this->snps.clear();

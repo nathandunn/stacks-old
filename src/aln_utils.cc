@@ -37,7 +37,7 @@ invert_cigar(string cigar)
     return cigar;
 }
 
-int 
+int
 parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar)
 {
     char buf[id_len];
@@ -294,7 +294,7 @@ remove_cigar_from_seq(const char *seq, vector<pair<char, uint> > &cigar)
     //
     uint seqlen = 0;
     for (uint i = 0; i < size; i++)
-        seqlen += cigar[i].first != 'D' ? cigar[i].second : 0; 
+        seqlen += cigar[i].first != 'D' ? cigar[i].second : 0;
 
     bp  = 0;
 
@@ -338,7 +338,7 @@ adjust_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
     bp        = 0;
     offset    = 0;
     snp_index = 0;
-    
+
     for (uint i = 0; i < size; i++)  {
         op   = cigar[i].first;
         dist = cigar[i].second;
@@ -362,8 +362,8 @@ adjust_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
         default:
             break;
         }
-    }    
-    
+    }
+
     return 0;
 }
 
@@ -378,7 +378,7 @@ adjust_and_add_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
     bp      = 0;
     new_bp  = 0;
     snp_cnt = loc->snps.size();
-    
+
     vector<SNP *> snps;
 
     for (uint i = 0; i < size; i++)  {
@@ -411,7 +411,7 @@ adjust_and_add_snps_for_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
         default:
             break;
         }
-    }    
+    }
 
     loc->snps.clear();
 
@@ -431,7 +431,7 @@ remove_snps_from_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
     bp      = 0;
     new_bp  = 0;
     snp_cnt = loc->snps.size();
-    
+
     vector<SNP *> snps;
 
     for (uint i = 0; i < size; i++)  {
@@ -460,7 +460,7 @@ remove_snps_from_gaps(vector<pair<char, uint> > &cigar, Locus *loc)
         default:
             break;
         }
-    }    
+    }
 
     loc->snps.clear();
 

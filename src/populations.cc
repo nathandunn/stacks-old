@@ -19,7 +19,7 @@
 //
 
 //
-// populations -- generate population genetic statistics and output 
+// populations -- generate population genetic statistics and output
 // haplotypes in a population context.
 //
 
@@ -572,7 +572,7 @@ int main (int argc, char* argv[]) {
         implement_random_snp_whitelist(catalog, psum, whitelist);
 
     //
-    // Remove the accumulated SNPs 
+    // Remove the accumulated SNPs
     //
     cerr << "Removing " << blacklist.size() << " additional loci for which all variant sites were filtered...";
     set<int> empty_list;
@@ -649,7 +649,7 @@ int main (int argc, char* argv[]) {
 
     if (structure_out && ordered_export)
         write_structure_ordered(catalog, pmap, psum, log_fh);
-    else if (structure_out) 
+    else if (structure_out)
         write_structure(catalog, pmap, psum);
 
     if (fastphase_out)
@@ -672,7 +672,7 @@ int main (int argc, char* argv[]) {
 
     if (treemix_out)
         write_treemix(catalog, pmap, psum);
-    
+
     if (phylip_out || phylip_var)
         write_phylip(catalog, pmap, psum);
 
@@ -795,8 +795,8 @@ void vcfcomp_simplify_pmap (map<int, CSLocus*>& catalog, PopMap<CSLocus>* pmap) 
 }
 
 int
-apply_locus_constraints(map<int, CSLocus *> &catalog, 
-                        PopMap<CSLocus> *pmap, 
+apply_locus_constraints(map<int, CSLocus *> &catalog,
+                        PopMap<CSLocus> *pmap,
                         ofstream &log_fh)
 {
     uint pop_sthg;
@@ -854,8 +854,8 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
             //
             // Check that each sample is over the minimum stack depth for this locus.
             //
-            if (d[i] != NULL && 
-                min_stack_depth > 0 && 
+            if (d[i] != NULL &&
+                min_stack_depth > 0 &&
                 d[i]->tot_depth < min_stack_depth) {
                 below_stack_dep++;
                 delete d[i];
@@ -866,8 +866,8 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
             //
             // Check that each sample is over the log likelihood threshold.
             //
-            if (d[i] != NULL && 
-                filter_lnl   && 
+            if (d[i] != NULL &&
+                filter_lnl   &&
                 d[i]->lnl < lnl_limit) {
                 below_lnl_thresh++;
                 delete d[i];
@@ -885,14 +885,14 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
         }
 
         //
-        // Check that the counts for each population are over sample_limit. If not, zero out 
+        // Check that the counts for each population are over sample_limit. If not, zero out
         // the members of that population.
         //
         for (uint i = 0; i < pop_cnt; i++) {
             const Pop& pop = mpopi.pops()[pop_order[i]];
 
             pct = (double) pop_cnts[i] / (double) pop_tot[i];
-            
+
             if (pop_cnts[i] > 0 && pct < sample_limit) {
                 //cerr << "Removing population " << pop_order[i] << " at locus: " << loc->id << "; below sample limit: " << pct << "\n";
                 for (uint j  = pop.first_sample; j <= pop.last_sample; j++) {
@@ -936,7 +936,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
     //
     // Remove loci
     //
-    if (min_stack_depth > 0) 
+    if (min_stack_depth > 0)
         cerr << "Removed " << below_stack_dep << " samples from loci that are below the minimum stack depth of " << min_stack_depth << "x\n";
     if (filter_lnl)
         cerr << "Removed " << below_lnl_thresh << " samples from loci that are below the log likelihood threshold of " << lnl_limit << "\n";
@@ -958,7 +958,7 @@ apply_locus_constraints(map<int, CSLocus *> &catalog,
 }
 
 int
-prune_polymorphic_sites(map<int, CSLocus *> &catalog, 
+prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                         PopMap<CSLocus> *pmap,
                         PopSum<CSLocus> *psum,
                         map<int, set<int> > &whitelist, set<int> &blacklist,
@@ -979,7 +979,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
 
     //
     // If the whitelist is populated, use it as a guide for what loci to consider.
-    // 
+    //
     // Construct a new whitelist along the way, that is a subset of the existing list.
     //
     if (whitelist.size() > 0) {
@@ -997,7 +997,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
             s   = psum->locus(loc->id);
 
             //
-            // Check that each SNP in this locus is above the sample_limit and that 
+            // Check that each SNP in this locus is above the sample_limit and that
             // each SNP is above the minor allele frequency. If so, add it back to
             // the whiteliest.
             //
@@ -1021,7 +1021,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                 het_prune    = false;
                 inc_prune    = false;
                 pop_prune_list.clear();
-                
+
                 for (size_t p=0; p<mpopi.pops().size(); ++p) {
                     if (s[p]->nucs[loc->snps[i]->col].incompatible_site)
                         inc_prune = true;
@@ -1045,7 +1045,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                         d = pmap->locus(loc->id);
                         const Pop& pop = mpopi.pops()[p];
                         for (uint k = pop.first_sample; k <= pop.last_sample; k++) {
-                            if (d[k] == NULL || loc->snps[i]->col >= (uint) d[k]->len) 
+                            if (d[k] == NULL || loc->snps[i]->col >= (uint) d[k]->len)
                                 continue;
                             if (d[k]->model != NULL) {
                                 d[k]->model[loc->snps[i]->col] = 'U';
@@ -1053,7 +1053,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                         }
                     }
                 }
-                
+
                 if (t->nucs[loc->snps[i]->col].allele_cnt > 1) {
                     //
                     // Test for minor allele frequency.
@@ -1076,7 +1076,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                                << loc->id << "\t"
                                << loc->loc.chr << "\t"
                                << loc->sort_bp(loc->snps[i]->col) +1 << "\t"
-                               << loc->snps[i]->col << "\t"; 
+                               << loc->snps[i]->col << "\t";
                         if (inc_prune)
                             log_fh << "incompatible_site\n";
                         else if (sample_prune)
@@ -1137,7 +1137,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                 het_prune    = false;
                 inc_prune    = false;
                 pop_prune_list.clear();
-                
+
                 for (size_t p = 0; p < mpopi.pops().size(); p++) {
                     if (s[p]->nucs[loc->snps[i]->col].incompatible_site)
                         inc_prune = true;
@@ -1160,7 +1160,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                         d = pmap->locus(loc->id);
                         const Pop& pop = mpopi.pops()[p];
                         for (uint k = pop.first_sample; k <= pop.last_sample; k++) {
-                            if (d[k] == NULL || loc->snps[i]->col >= (uint) d[k]->len) 
+                            if (d[k] == NULL || loc->snps[i]->col >= (uint) d[k]->len)
                                 continue;
                             if (d[k]->model != NULL) {
                                 d[k]->model[loc->snps[i]->col] = 'U';
@@ -1168,7 +1168,7 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
                         }
                     }
                 }
-                
+
                 if (t->nucs[loc->snps[i]->col].allele_cnt > 1) {
                     //
                     // Test for minor allele frequency.
@@ -1226,8 +1226,8 @@ prune_polymorphic_sites(map<int, CSLocus *> &catalog,
     return pruned;
 }
 
-bool 
-order_unordered_loci(map<int, CSLocus *> &catalog) 
+bool
+order_unordered_loci(map<int, CSLocus *> &catalog)
 {
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
@@ -1235,7 +1235,7 @@ order_unordered_loci(map<int, CSLocus *> &catalog)
 
     for (it = catalog.begin(); it != catalog.end(); it++) {
         loc = it->second;
-        if (strlen(loc->loc.chr) > 0) 
+        if (strlen(loc->loc.chr) > 0)
             chrs.insert(loc->loc.chr);
     }
 
@@ -1310,8 +1310,8 @@ log_haplotype_cnts(map<int, CSLocus *> &catalog, ofstream &log_fh)
     return 0;
 }
 
-int 
-tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) 
+int
+tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 {
     map<int, CSLocus *>::iterator it;
     vector<char *>::iterator hit;
@@ -1327,7 +1327,7 @@ tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
         cnt  = 0.0;
 
         for (int i = 0; i < pmap->sample_cnt(); i++) {
-            if (d[i] == NULL) 
+            if (d[i] == NULL)
                 continue;
 
             if (d[i]->obshap.size() > 1)
@@ -1349,7 +1349,7 @@ tabulate_haplotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
 }
 
 int
-merge_shared_cutsite_loci(map<int, CSLocus *> &catalog, 
+merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
                           PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum,
                           map<int, pair<merget, int> > &merge_map,
                           ofstream &log_fh)
@@ -1378,7 +1378,7 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
     cerr << "To merge adjacent loci at least " << merge_prune_lim * 100 << "% of samples must have both adjacent loci;"
          << " the remaining " << 100 - (merge_prune_lim * 100) << "% of individuals will be pruned.\n"
          << "Attempting to merge adjacent loci that share a cutsite...";
-         
+
     if (verbose)
         log_fh << "\n#\n# List of locus pairs that share a cutsite that failed to merge because they could not be phased.\n#\n";
 
@@ -1443,31 +1443,31 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
                 if (prune_pct < merge_prune_lim) {
                     int pct = (int) (prune_pct * 100);
                     missing_samps_dist[pct]++;
-                    if (verbose) log_fh << "Missing samples, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; " 
+                    if (verbose) log_fh << "Missing samples, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; "
                                         << pct << "% present (" << 100 - pct << "% missing)\n";
                     missing_samps_cnt++;
                     failure++;
                     continue;
-                } 
+                }
 
                 phaset res = merge_and_phase_loci(pmap, cur, next, loci_to_destroy, log_fh);
                 switch(res) {
                 case multiple_fails:
-                    if (verbose) log_fh << "Failed to phase, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; " 
+                    if (verbose) log_fh << "Failed to phase, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; "
                                         << "multiple failures\n";
                     multifails_cnt++;
                     phase_fail_cnt++;
                     failure++;
                     break;
                 case multimapping_fail:
-                    if (verbose) log_fh << "Failed to phase, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; " 
+                    if (verbose) log_fh << "Failed to phase, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; "
                                         << "multimapping in one or more individuals\n";
                     multimapping_cnt++;
                     phase_fail_cnt++;
                     failure++;
                     break;
                 case nomapping_fail:
-                    if (verbose) log_fh << "Failed to phase, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; " 
+                    if (verbose) log_fh << "Failed to phase, Sink Locus: " << cur->id << "; Source Locus: " << next->id << "; "
                                         << "no mapping in one or more individuals\n";
                     nomapping_cnt++;
                     phase_fail_cnt++;
@@ -1513,8 +1513,8 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
          << "  Of those merged, " << simple_merge_cnt << " required only a simple merge without phasing; "
          << "while " << complex_merge_cnt << " required phasing.\n"
          << "  Of those that failed to merge, " << missing_samps_cnt << " were missing one of the two haplotypes in one or more samples; "
-         << "while " << phase_fail_cnt << " failed to be phased.\n" 
-         << "    Of those that failed to phase, " << nomapping_cnt << " failed due to a lack of haplotype mappings; " 
+         << "while " << phase_fail_cnt << " failed to be phased.\n"
+         << "    Of those that failed to phase, " << nomapping_cnt << " failed due to a lack of haplotype mappings; "
          << multimapping_cnt << " failed due to multiple haplotype mappings; " << multifails_cnt << " failed due to both.\n";
 
     log_fh << "\n#\n# Merging adjacent loci with a shared restriction enzyme cutsite\n#\n"
@@ -1526,8 +1526,8 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
            << "  Of those merged, " << simple_merge_cnt << " required only a simple merge without phasing; "
            << "while " << complex_merge_cnt << " required phasing.\n"
            << "  Of those that failed to merge, " << missing_samps_cnt << " were missing one of the two haplotypes in one or more samples; "
-           << "while " << phase_fail_cnt << " failed to be phased.\n" 
-           << "    Of those that failed to phase, " << nomapping_cnt << " failed due to a lack of haplotype mappings; " 
+           << "while " << phase_fail_cnt << " failed to be phased.\n"
+           << "    Of those that failed to phase, " << nomapping_cnt << " failed due to a lack of haplotype mappings; "
            << multimapping_cnt << " failed due to multiple haplotype mappings; " << multifails_cnt << " failed due to both.\n";
     log_fh << "#\n# Distribution of loci with samples missing one of two loci to be merged\n"
            << "# Percent samples with both loci present\tNumber of cases\n";
@@ -1540,7 +1540,7 @@ merge_shared_cutsite_loci(map<int, CSLocus *> &catalog,
 }
 
 phaset
-merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next, 
+merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next,
                      set<int> &loci_to_destroy,
                      ofstream &log_fh)
 {
@@ -1558,7 +1558,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next,
     int sample_cnt        = 0;
     int phased_sample_cnt = 0;
     //
-    // Take a census of the already phased haplotypes. We have phased haplotypes 
+    // Take a census of the already phased haplotypes. We have phased haplotypes
     // if for individual i:
     //   1. d_1 has a single haplotype and d_2 has a single haplotype
     //   2. d_1 has a single haplotpye and d_2 has multiple haplotypes
@@ -1624,7 +1624,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next,
 
             sample_cnt++;
             //
-            // We should be able to find a sinlge phasing mapping for each haplotype from d_1 to d_2 
+            // We should be able to find a sinlge phasing mapping for each haplotype from d_1 to d_2
             // that includes all the haplotypes in these two loci.
             //
             vector<pair<char *, char *> > seen_phased;
@@ -1691,7 +1691,7 @@ merge_and_phase_loci(PopMap<CSLocus> *pmap, CSLocus *cur, CSLocus *next,
     }
 
     if (phased_sample_cnt != sample_cnt) {
-        if (phased_results.count(nomapping_fail) > 0 && 
+        if (phased_results.count(nomapping_fail) > 0 &&
             phased_results.count(multimapping_fail) > 0)
             return multiple_fails;
         else if (phased_results.count(nomapping_fail) > 0)
@@ -1736,7 +1736,7 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     //
 
     //
-    // 1. Reverse complement the SNP coordinates in the sink locus so that they are 
+    // 1. Reverse complement the SNP coordinates in the sink locus so that they are
     //    enumerated on the positive strand. Complement the alleles as well.
     //
     for (uint j = 0; j < sink->snps.size(); j++) {
@@ -1754,7 +1754,7 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
         src->snps[j]->col = sink->len + src->snps[j]->col - renz_olap[enz];
 
     //
-    // 3. Combine SNPs between the two catalog loci: add the SNPs from the sink (formerly on the 
+    // 3. Combine SNPs between the two catalog loci: add the SNPs from the sink (formerly on the
     //    negative strand) in reverse order, followed by the SNPs from the src.
     //
     vector<SNP *> tmpsnp;
@@ -1802,23 +1802,23 @@ merge_csloci(CSLocus *sink, CSLocus *src, set<string> &phased_haplotypes)
     // cerr << "CSLocus " << sink->id << ":\n"
     //   << "Length: " << sink->len << "; Chr: " << sink->loc.chr << "; BP: " << sink->sort_bp() << "; strand: " << (sink->loc.strand == strand_plus ? "+" : "-") << "\n"
     //   << "  SNPs:\n";
-    // for (uint j = 0; j < sink->snps.size(); j++) 
-    //  cerr << "    Col: " << sink->snps[j]->col 
+    // for (uint j = 0; j < sink->snps.size(); j++)
+    //  cerr << "    Col: " << sink->snps[j]->col
     //       << "    Rank 1: " << sink->snps[j]->rank_1
     //       << "    Rank 2: " << sink->snps[j]->rank_2 << "\n";
     // cerr << "  Alleles:\n";
     // map<string, int>::iterator ait;
-    // for (ait = sink->alleles.begin(); ait != sink->alleles.end(); ait++) 
+    // for (ait = sink->alleles.begin(); ait != sink->alleles.end(); ait++)
     //  cerr << "    " << ait->first << "\n";
 
     return 1;
 }
 
 int
-merge_datums(int sample_cnt, 
+merge_datums(int sample_cnt,
              int sink_locus_len,
-             Datum **sink, Datum **src, 
-             set<string> &phased_haplotypes, 
+             Datum **sink, Datum **src,
+             set<string> &phased_haplotypes,
              int merge_type)
 {
     char           tmphap[id_len], *new_hap;
@@ -1839,7 +1839,7 @@ merge_datums(int sample_cnt,
             cerr << "Unexpected condition in merging datums: one datum is NULL while the other is not.\n";
 
         //
-        // 1. Reverse complement the SNP coordinates in the sink locus so that they are 
+        // 1. Reverse complement the SNP coordinates in the sink locus so that they are
         //    enumerated on the positive strand. Complement the alleles as well.
         //
         for (uint j = 0; j < sink[i]->snps.size(); j++) {
@@ -1868,7 +1868,7 @@ merge_datums(int sample_cnt,
         }
 
         //
-        // 4. Combine SNPs between the two datums: add the SNPs from the sink (formerly on the 
+        // 4. Combine SNPs between the two datums: add the SNPs from the sink (formerly on the
         //    negative strand) in reverse order, followed by the SNPs from the src.
         //
         tmpsnp.clear();
@@ -2008,7 +2008,7 @@ merge_datums(int sample_cnt,
         p  = sink[i]->model;
         p += offset + sink[i]->len - renz_olap[enz];
         strcpy(p, src[i]->model);
-        
+
         sink[i]->len       = model_len;
         sink[i]->tot_depth = (sink[i]->tot_depth + src[i]->tot_depth) / 2;
         sink[i]->lnl       = (sink[i]->lnl + src[i]->lnl) / 2.0;
@@ -2022,14 +2022,14 @@ merge_datums(int sample_cnt,
     return 1;
 }
 
-int 
-create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap) 
+int
+create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap)
 {
     //
     // Create a genotype map. For any set of haplotypes, this routine will
-    // assign each haplotype to a genotype, e.g. given the haplotypes 
-    // 'AC' and 'GT' in the population, this routine will assign 'AC' == 'a' 
-    // and 'GT' == 'b'. If an individual is homozygous for 'AC', they will be 
+    // assign each haplotype to a genotype, e.g. given the haplotypes
+    // 'AC' and 'GT' in the population, this routine will assign 'AC' == 'a'
+    // and 'GT' == 'b'. If an individual is homozygous for 'AC', they will be
     // assigned an 'aa' genotype.
     //
     //cerr << "Creating genotype map for catalog ID " << locus->id  << ", marker: " << locus->marker << ".\n";
@@ -2057,7 +2057,7 @@ create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap)
     //
     if (haplotypes.size() > 26) return 0;
 
-    // 
+    //
     // Sort the haplotypes map by value
     //
     for (k = haplotypes.begin(); k != haplotypes.end(); k++)
@@ -2072,7 +2072,7 @@ create_genotype_map(CSLocus *locus, PopMap<CSLocus> *pmap)
     return 0;
 }
 
-int call_population_genotypes(CSLocus *locus, 
+int call_population_genotypes(CSLocus *locus,
                               PopMap<CSLocus> *pmap) {
     //
     // Fetch the array of observed haplotypes from the population
@@ -2080,7 +2080,7 @@ int call_population_genotypes(CSLocus *locus,
     Datum **d = pmap->locus(locus->id);
 
     for (int i = 0; i < pmap->sample_cnt(); i++) {
-        if (d[i] == NULL) 
+        if (d[i] == NULL)
             continue;
 
         vector<string> gtypes;
@@ -2109,7 +2109,7 @@ int call_population_genotypes(CSLocus *locus,
             //cerr << "  Adding genotype to string: " << gtypes[j] << "; " << gtype << "\n";
         }
 
-        string m = gtype.length() == 1 ? 
+        string m = gtype.length() == 1 ?
             gtype + gtype : gtype;
 
         d[i]->gtype = new char[m.length() + 1];
@@ -2177,7 +2177,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
             uint start = 0;
             uint end   = loc->len;
             //
-            // Check for the existence of the restriction enzyme cut site, mask off 
+            // Check for the existence of the restriction enzyme cut site, mask off
             // its output.
             //
             for (uint n = 0; n < rcnt; n++)
@@ -2205,7 +2205,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
 
                         if (d[j] == NULL)
                             fh << "0";
-                        else 
+                        else
                             switch (d[j]->obshap.size()) {
                             case 1:
                                 a = encode_gtype(d[j]->obshap[0][k]);
@@ -2233,7 +2233,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
     return 0;
 }
 
-int 
+int
 calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
@@ -2314,7 +2314,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
                 loc = it->second[pos];
                 d   = pmap->locus(loc->id);
 
-                if (loc->snps.size() == 0) 
+                if (loc->snps.size() == 0)
                     continue;
 
                 // cerr << "Looking at locus " << loc->id << "\n";
@@ -2333,7 +2333,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
                 ks->smooth(locstats);
             }
 
-            if (bootstrap_div) 
+            if (bootstrap_div)
                 bs->add_data(locstats);
         }
 
@@ -2366,11 +2366,11 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
                    << l->hap_str       << "\n";
             }
 
-            for (uint k = 0; k < locstats.size(); k++) 
+            for (uint k = 0; k < locstats.size(); k++)
                 delete locstats[k];
         }
 
-        if (bootstrap_div) 
+        if (bootstrap_div)
             delete bs;
     }
 
@@ -2385,7 +2385,7 @@ calculate_haplotype_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, P
 }
 
 int
-nuc_substitution_dist(map<string, int> &hap_index, double **hdists) 
+nuc_substitution_dist(map<string, int> &hap_index, double **hdists)
 {
     vector<string> haplotypes;
     map<string, int>::iterator it;
@@ -2434,7 +2434,7 @@ nuc_substitution_dist(map<string, int> &hap_index, double **hdists)
 }
 
 int
-nuc_substitution_identity(map<string, int> &hap_index, double **hdists) 
+nuc_substitution_identity(map<string, int> &hap_index, double **hdists)
 {
     vector<string> haplotypes;
     map<string, int>::iterator it;
@@ -2462,7 +2462,7 @@ nuc_substitution_identity(map<string, int> &hap_index, double **hdists)
 }
 
 int
-nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists) 
+nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
 {
     vector<string> haplotypes;
     map<string, int>::iterator it;
@@ -2481,7 +2481,7 @@ nuc_substitution_identity_max(map<string, int> &hap_index, double **hdists)
     return 0;
 }
 
-int 
+int
 calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
@@ -2525,7 +2525,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
         ord->order(hapstats, hapstats_key, it->second);
 
         #pragma omp parallel
-        { 
+        {
             CSLocus  *loc;
             LocSum  **s;
             Datum   **d;
@@ -2640,14 +2640,14 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
            << "SSD(AP/WG)"  << "\t"
            << "SSD(AG)"     << "\t"
            << "SSD(TOTAL)"  << "\t"
-           << "MSD(WP)"     << "\t" 
-           << "MSD(AP/WG)"  << "\t" 
+           << "MSD(WP)"     << "\t"
+           << "MSD(AP/WG)"  << "\t"
            << "MSD(AG)"     << "\t"
            << "MSD(TOTAL)"  << "\t"
            << "n"           << "\t"
            << "n'"          << "\t"
            << "n''"         << "\t"
-           << "Sigma2_a"    << "\t" 
+           << "Sigma2_a"    << "\t"
            << "Sigma2_b"    << "\t"
            << "Sigma2_c"    << "\t"
            << "Sigma_Total" << "\t";
@@ -2685,14 +2685,14 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
                    << hapstats[k]->comp[1]  << "\t"
                    << hapstats[k]->comp[2]  << "\t"
                    << hapstats[k]->comp[3]  << "\t"
-                   << hapstats[k]->comp[4]  << "\t" 
-                   << hapstats[k]->comp[5]  << "\t" 
+                   << hapstats[k]->comp[4]  << "\t"
+                   << hapstats[k]->comp[5]  << "\t"
                    << hapstats[k]->comp[6]  << "\t"
                    << hapstats[k]->comp[7]  << "\t"
                    << hapstats[k]->comp[8]  << "\t"
                    << hapstats[k]->comp[9]  << "\t"
                    << hapstats[k]->comp[10] << "\t"
-                   << hapstats[k]->comp[11] << "\t" 
+                   << hapstats[k]->comp[11] << "\t"
                    << hapstats[k]->comp[12] << "\t"
                    << hapstats[k]->comp[13] << "\t"
                    << hapstats[k]->comp[14] << "\t";
@@ -2723,7 +2723,7 @@ calculate_haplotype_divergence(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pm
     return 0;
 }
 
-int 
+int
 calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
@@ -2777,7 +2777,7 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
                 ord->order(hapstats, hapstats_key, it->second);
 
                 #pragma omp parallel
-                { 
+                {
                     CSLocus  *loc;
                     LocSum  **s;
                     Datum   **d;
@@ -2876,14 +2876,14 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
                    << "SSD(AP/WG)"  << "\t"
                    << "SSD(AG)"     << "\t"
                    << "SSD(TOTAL)"  << "\t"
-                   << "MSD(WP)"     << "\t" 
-                   << "MSD(AP/WG)"  << "\t" 
+                   << "MSD(WP)"     << "\t"
+                   << "MSD(AP/WG)"  << "\t"
                    << "MSD(AG)"     << "\t"
                    << "MSD(TOTAL)"  << "\t"
                    << "n"           << "\t"
                    << "n'"          << "\t"
                    << "n''"         << "\t"
-                   << "Sigma2_a"    << "\t" 
+                   << "Sigma2_a"    << "\t"
                    << "Sigma2_b"    << "\t"
                    << "Sigma2_c"    << "\t"
                    << "Sigma_Total" << "\t";
@@ -2916,14 +2916,14 @@ calculate_haplotype_divergence_pairwise(map<int, CSLocus *> &catalog, PopMap<CSL
                            << hapstats[k]->comp[1]  << "\t"
                            << hapstats[k]->comp[2]  << "\t"
                            << hapstats[k]->comp[3]  << "\t"
-                           << hapstats[k]->comp[4]  << "\t" 
-                           << hapstats[k]->comp[5]  << "\t" 
+                           << hapstats[k]->comp[4]  << "\t"
+                           << hapstats[k]->comp[5]  << "\t"
                            << hapstats[k]->comp[6]  << "\t"
                            << hapstats[k]->comp[7]  << "\t"
                            << hapstats[k]->comp[8]  << "\t"
                            << hapstats[k]->comp[9]  << "\t"
                            << hapstats[k]->comp[10] << "\t"
-                           << hapstats[k]->comp[11] << "\t" 
+                           << hapstats[k]->comp[11] << "\t"
                            << hapstats[k]->comp[12] << "\t"
                            << hapstats[k]->comp[13] << "\t"
                            << hapstats[k]->comp[14] << "\t";
@@ -2966,7 +2966,7 @@ fixed_locus(Datum **d, vector<int> &pop_ids)
         for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
             if (d[i] == NULL) continue;
 
-            if (d[i]->obshap.size() > 2) { 
+            if (d[i]->obshap.size() > 2) {
                 continue;
 
             } else if (d[i]->obshap.size() == 1) {
@@ -2996,7 +2996,7 @@ fixed_locus(Datum **d, vector<int> &pop_ids)
     //
     // Check that more than one population has data for this locus.
     //
-    if (valid_pops <= 1) 
+    if (valid_pops <= 1)
         return true;
 
     //
@@ -3030,7 +3030,7 @@ haplotype_diversity(int start, int end, Datum **d)
     //
     // If this haplotype is fixed, don't calculate any statistics.
     //
-    if (n == 0) 
+    if (n == 0)
         return NULL;
 
     lstat = new LocStat;
@@ -3077,16 +3077,16 @@ haplotype_diversity(int start, int end, Datum **d)
     //
     for (uint i = 0; i < haplotypes.size(); i++) {
         for (uint j = 0; j < haplotypes.size(); j++) {
-            hapl_diversity += 
-                hap_freq[haplotypes[i]] * 
-                hap_freq[haplotypes[j]] * 
+            hapl_diversity +=
+                hap_freq[haplotypes[i]] *
+                hap_freq[haplotypes[j]] *
                 hdists[hap_index[haplotypes[i]]][hap_index[haplotypes[j]]];
         }
     }
     hapl_diversity = (n / (n-1)) * hapl_diversity;
 
     //
-    // Calculate gene diversity. 
+    // Calculate gene diversity.
     //
     for (uint i = 0; i < haplotypes.size(); i++) {
         gene_diversity += hap_freq[haplotypes[i]] * hap_freq[haplotypes[i]];
@@ -3128,7 +3128,7 @@ haplotype_amova(Datum **d, LocSum **s, vector<int> &pop_ids)
         for (size_t i = pop.first_sample; i <= pop.last_sample; i++) {
             if (d[i] == NULL) continue;
 
-            if (d[i]->obshap.size() > 2) { 
+            if (d[i]->obshap.size() > 2) {
                 continue;
 
             } else if (d[i]->obshap.size() == 1) {
@@ -3217,7 +3217,7 @@ haplotype_amova(Datum **d, LocSum **s, vector<int> &pop_ids)
     nuc_substitution_dist(loc_hap_index, hdists);
 
     //
-    // Calculate the sum of squared distances in each subset: total, within populations, across populations 
+    // Calculate the sum of squared distances in each subset: total, within populations, across populations
     // and withing groups, and across groups.
     //
     double ssd_total = amova_ssd_total(loc_haplotypes, loc_hap_index, hdists);
@@ -3309,7 +3309,7 @@ haplotype_amova(Datum **d, LocSum **s, vector<int> &pop_ids)
         sigma_a = (msd_ag - sigma_c - (n_1 * sigma_b)) / n_2;
 
     // Arlequin seems to sum the variance components instead of independently calculating sigma_total: MSD(total) = SSD(total)/degrees.of.freedom
-    double sigma_total = sigma_a + sigma_b + sigma_c; // msd_total; 
+    double sigma_total = sigma_a + sigma_b + sigma_c; // msd_total;
 
     double phi_st = 0.0;
     double phi_ct = 0.0;
@@ -3419,10 +3419,10 @@ amova_ssd_total(vector<string> &loc_haplotypes, map<string, int> &loc_hap_index,
     for (uint j = 0; j < loc_haplotypes.size(); j++) {
         for (uint k = 0; k < loc_haplotypes.size(); k++) {
             ssd_total += hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]];
-            // cerr << j << "\t" 
-            //   << k << "\t" 
-            //   << loc_haplotypes[j] << "\t" 
-            //   << loc_haplotypes[k] << "\t" 
+            // cerr << j << "\t"
+            //   << k << "\t"
+            //   << loc_haplotypes[j] << "\t"
+            //   << loc_haplotypes[k] << "\t"
             //   << hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]] << "\n";
         }
     }
@@ -3433,8 +3433,8 @@ amova_ssd_total(vector<string> &loc_haplotypes, map<string, int> &loc_hap_index,
 }
 
 double
-amova_ssd_wp(vector<int> &grps, map<int, vector<int> > &grp_members, 
-             map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes, 
+amova_ssd_wp(vector<int> &grps, map<int, vector<int> > &grp_members,
+             map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes,
              double **hdists)
 {
     //
@@ -3454,9 +3454,9 @@ amova_ssd_wp(vector<int> &grps, map<int, vector<int> > &grp_members,
                     ssd += hdists[loc_hap_index[pop_haplotypes[pop_id][j]]][loc_hap_index[pop_haplotypes[pop_id][k]]];
                     // cerr << pop_id << "\t"
                     //   << j << "\t"
-                    //   << k << "\t" 
-                    //   << loc_haplotypes[j] << "\t" 
-                    //   << loc_haplotypes[k] << "\t" 
+                    //   << k << "\t"
+                    //   << loc_haplotypes[j] << "\t"
+                    //   << loc_haplotypes[k] << "\t"
                     //   << hdists[loc_hap_index[loc_haplotypes[j]]][loc_hap_index[loc_haplotypes[k]]] << "\n";
                 }
             }
@@ -3471,8 +3471,8 @@ amova_ssd_wp(vector<int> &grps, map<int, vector<int> > &grp_members,
 }
 
 double
-amova_ssd_ap_wg(vector<int> &grps, map<int, vector<int> > &grp_members, 
-                map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes, 
+amova_ssd_ap_wg(vector<int> &grps, map<int, vector<int> > &grp_members,
+                map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes,
                 double **hdists_1, double **hdists_2)
 {
     //
@@ -3537,8 +3537,8 @@ amova_ssd_ap_wg(vector<int> &grps, map<int, vector<int> > &grp_members,
 }
 
 double
-amova_ssd_ag(vector<int> &grps, map<int, vector<int> > &grp_members, 
-             map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes, 
+amova_ssd_ag(vector<int> &grps, map<int, vector<int> > &grp_members,
+             map<string, int> &loc_hap_index, map<int, vector<string> > &pop_haplotypes,
              double **hdists, double ssd_total)
 {
     //
@@ -3588,7 +3588,7 @@ double
 haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
 {
     //
-    // Calculate D_est, fixation index, as described by 
+    // Calculate D_est, fixation index, as described by
     //   Bird, et al., 2011, Detecting and measuring genetic differentiation
     //     +-Equation 11
     // and
@@ -3658,7 +3658,7 @@ haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
     return d_est;
 }
 
-int 
+int
 calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
     map<string, vector<CSLocus *> >::iterator it;
@@ -3897,7 +3897,7 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
 
             for (int i = 0; i < len; i++) {
 
-                // 
+                //
                 // If this site is fixed in all populations, DON'T output it. If it is variable,
                 // or fixed within populations but variable among, DO output it.
                 //
@@ -4197,11 +4197,11 @@ calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Pop
     return 0;
 }
 
-int 
+int
 write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, ofstream &log_fh)
 {
     //
-    // We want to iterate over each pair of populations and calculate Fst at each 
+    // We want to iterate over each pair of populations and calculate Fst at each
     // nucleotide of each locus.
     //
     if (mpopi.pops().size() == 1)
@@ -4362,7 +4362,7 @@ write_fst_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLo
             // If bootstrap resampling method is approximate, generate our single, empirical distribution.
             //
             map<int, vector<double> > approx_fst_dist;
-            // if (bootstrap_fst && bootstrap_type == bs_approx) 
+            // if (bootstrap_fst && bootstrap_type == bs_approx)
             //  bootstrap_fst_approximate_dist(fst_samples, allele_depth_samples, weights, snp_dist, approx_fst_dist);
 
             for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
@@ -4517,12 +4517,12 @@ correct_fst_bonferroni_win(vector<PopPair *> &pairs)
             if (pairs[pos_l] == NULL) {
                 pos_l++;
             } else {
-                if (pairs[pos_l]->bp < limit_l) 
+                if (pairs[pos_l]->bp < limit_l)
                     pos_l++;
                 else
                     break;
             }
-        }    
+        }
         while (pos_u < pairs.size()) {
             if (pairs[pos_u] == NULL) {
                 pos_u++;
@@ -4547,8 +4547,8 @@ correct_fst_bonferroni_win(vector<PopPair *> &pairs)
     return 0;
 }
 
-int 
-kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, int pop_id, ofstream &log_fh) 
+int
+kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum, int pop_id, ofstream &log_fh)
 {
     // int snp_dist[max_snp_dist] = {0};
     // int sites_per_snp = 0;
@@ -4603,8 +4603,8 @@ kernel_smoothed_popstats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, Po
 
 //      // cerr << "Sites per snp: " << sites_per_snp << "\n";
 
-//      bootstrap_popstats_approximate_dist(fis_samples, pi_samples, allele_depth_samples, 
-//                                          weights, snp_dist, sites_per_snp, 
+//      bootstrap_popstats_approximate_dist(fis_samples, pi_samples, allele_depth_samples,
+//                                          weights, snp_dist, sites_per_snp,
 //                                          approx_fis_dist, approx_pi_dist);
 
 //      for (it = pmap->ordered_loci.begin(); it != pmap->ordered_loci.end(); it++) {
@@ -4671,7 +4671,7 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 
         // #pragma omp parallel private(poss, pos, index_1, index_2, index_3, dist, sum_fis, sum_pi, weighted_fis, weighted_pi, final_weight_fis, final_weight_pi)
         #pragma omp parallel private(poss, pos, index_3, dist, sum_fis, sum_pi, weighted_fis, weighted_pi, final_weight_fis, final_weight_pi)
-        { 
+        {
             BSample *bs  = new BSample[win_size];
 
             //
@@ -4714,7 +4714,7 @@ bootstrap_popstats_approximate_dist(vector<double> &fis_samples,
 
                 //
                 // Randomly select the positions and values for each SNP to populate the window
-                // 
+                //
                 for (int k = 0; k < i - 1; k++) {
                     pos     = (int) (win_size * (random() / (RAND_MAX + 1.0)));
                     // index_1 = (int) (fis_samples.size()    * (random() / (RAND_MAX + 1.0)));
@@ -4828,7 +4828,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 
         // #pragma omp parallel private(poss, pos, index_1, index_2, dist, sum, weighted_fst, final_weight)
         #pragma omp parallel private(poss, pos, index_2, dist, sum, weighted_fst, final_weight)
-        { 
+        {
             BSample *bs  = new BSample[win_size];
 
             //
@@ -4857,7 +4857,7 @@ bootstrap_fst_approximate_dist(vector<double> &fst_samples,
 
                 //
                 // Randomly select the positions and values for each SNP to populate the window
-                // 
+                //
                 for (int k = 0; k < i - 1; k++) {
                     pos     = (int) (win_size * (random() / (RAND_MAX + 1.0)));
                     // index_1 = (int) (fst_samples.size() * (random() / (RAND_MAX + 1.0)));
@@ -4925,7 +4925,7 @@ bootstrap_approximate_pval(int snp_cnt, double stat, map<int, vector<double> > &
         pos = 1;
     else if (up == dist.end())
         pos = dist.size();
-    else 
+    else
         pos = up - dist.begin() + 1;
 
     double res = 1.0 - (pos / (double) dist.size());
@@ -4934,8 +4934,8 @@ bootstrap_approximate_pval(int snp_cnt, double stat, map<int, vector<double> > &
     // for (uint n = 0; n < dist.size(); n++)
     //  cerr << "  n: " << n << "; Fst: " << dist[n] << "\n";
 
-    // cerr << "Comparing Fst value: " << stat 
-    //   << " at position " << (up - dist.begin()) << " out of " 
+    // cerr << "Comparing Fst value: " << stat
+    //   << " at position " << (up - dist.begin()) << " out of "
     //   << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
 
     return res;
@@ -4974,7 +4974,7 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
 
     for (int i = 0; i < pmap->sample_cnt(); i++) {
         fh << mpopi.samples()[i].name;
-        if (i < pmap->sample_cnt() - 1) 
+        if (i < pmap->sample_cnt() - 1)
             fh << "\t";
     }
     fh << "\n";
@@ -4986,7 +4986,7 @@ write_generic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, bool write_gt
         loc = it->second;
 
         stringstream id;
-        loc->annotation.length() > 0 ? 
+        loc->annotation.length() > 0 ?
             id << loc->id << "|" << loc->annotation : id << loc->id;
 
         fh << id.str();
@@ -5234,14 +5234,14 @@ int parse_command_line(int argc, char* argv[]) {
             {"debug_flags",    required_argument, NULL, 1000},
             {0, 0, 0, 0}
         };
-        
+
         // getopt_long stores the option index here.
         int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
             break;
-     
+
         switch (c) {
         case 'h':
             help();
@@ -5565,7 +5565,7 @@ int parse_command_line(int argc, char* argv[]) {
         cerr << "You must specify the restriction enzyme associated with this data set to merge overlaping cutsites.\n";
         help();
     }
-    
+
     return 0;
 }
 

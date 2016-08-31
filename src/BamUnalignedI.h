@@ -81,7 +81,7 @@ BamUnAln::parse_header()
 }
 
 Seq *
-BamUnAln::next_seq() 
+BamUnAln::next_seq()
 {
     Seq* s = new Seq();
     if(next_seq(*s) != 1) {
@@ -111,7 +111,7 @@ BamUnAln::next_seq(Seq& s)
     uint8_t j;
 
     seq.reserve(this->aln->core.l_qseq);
-    
+
     for (int i = 0; i < this->aln->core.l_qseq; i++) {
         j = bam_seqi(bam_get_seq(this->aln), i);
         switch(j) {

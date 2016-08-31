@@ -52,7 +52,7 @@ using std::unordered_map;
 using google::sparse_hash_map;
 #endif
 
-#include "constants.h" 
+#include "constants.h"
 #include "stacks.h"     // Major data structures for holding stacks
 #include "kmers.h"
 #include "mstack.h"

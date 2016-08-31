@@ -233,7 +233,7 @@ int main (int argc, char* argv[]) {
     //
     // Write the D' haplotype block bucketed distances.
     //
-    log_fh << "\n\n" 
+    log_fh << "\n\n"
            << "# Distribution of D' haplotype block lengths.\n";
     for (buck_it = dp_block_lens.begin(); buck_it != dp_block_lens.end(); buck_it++)
         log_fh << buck_it->first << "\t" << buck_it->second << "\n";
@@ -264,7 +264,7 @@ bucket_dprime(vector<double> &dprime_buckets, vector<double> &dprime_bucket_cnts
     for (uint i = 0; i < psum->size; i++) {
         for (uint j = i+1; j < psum->size; j++) {
 
-            if (psum->nucs[i].freq < minor_freq_lim || 
+            if (psum->nucs[i].freq < minor_freq_lim ||
                 psum->nucs[j].freq < minor_freq_lim)
                 continue;
 
@@ -290,7 +290,7 @@ bucket_dprime(vector<double> &dprime_buckets, vector<double> &dprime_bucket_cnts
     for (uint i = 0; i < psum->size; i++) {
         for (uint j = i+1; j < psum->size; j++) {
 
-            if (psum->nucs[i].freq < minor_freq_lim || 
+            if (psum->nucs[i].freq < minor_freq_lim ||
                 psum->nucs[j].freq < minor_freq_lim)
                 continue;
 
@@ -298,7 +298,7 @@ bucket_dprime(vector<double> &dprime_buckets, vector<double> &dprime_bucket_cnts
                 continue;
 
             bucket = ((psum->nucs[j].bp - psum->nucs[i].bp) / bucket_dist);
-            
+
             dprime_buckets[bucket] += (psum->dprime[i][j].chisq_p ? psum->dprime[i][j].dprime : 0.0);
             dprime_bucket_cnts[bucket]++;
         }
@@ -313,7 +313,7 @@ write_buckets(string path, vector<double> &dprime_buckets, vector<double> &dprim
     //
     // Write the bucketed D' data for plotting.
     //
-    stringstream file; 
+    stringstream file;
     file << path << "Dprime_dist_buckets" << bucket_dist/1000 << "kb.tsv";
 
     cerr << "Writing bucketed D' data to '" << file.str() << "'...";
@@ -400,7 +400,7 @@ four_gamete_test(string path, map<string, int> &pop_map, PhasedSummary *psum, ma
             end = j - 1;
 
         fh << id << "\t"
-           << psum->nucs[start].bp << "\t" 
+           << psum->nucs[start].bp << "\t"
            << psum->nucs[end].bp << "\t"
            << psum->nucs[end].bp - psum->nucs[start].bp + 1 << "\t"
            << cnt << "\t";
@@ -494,8 +494,8 @@ dprime_blocks(string path, map<string, int> &pop_map, PhasedSummary *psum, map<i
             //
             // Does this pair of markers show a strong measure of LD?
             //
-            if (psum->dprime[i][j].ci_high > 0.98 && 
-                psum->dprime[i][j].ci_low  > 0.7 && 
+            if (psum->dprime[i][j].ci_high > 0.98 &&
+                psum->dprime[i][j].ci_low  > 0.7 &&
                 dist <= max_pair_dist) {
                 psum->dprime[i][j].type = strong_ld;
 
@@ -523,10 +523,10 @@ dprime_blocks(string path, map<string, int> &pop_map, PhasedSummary *psum, map<i
     //      cerr << "         " << it->second[i] << " dist: " << (psum->nucs[it->second[i]].bp - psum->nucs[it->first].bp + 1) << "bp\n";
     // }
 
-    cerr << "    Total pairs examined: " << tot_pairs 
-         << "; Strong LD pairs: " << ld_pairs.size() 
-         << "; Recombination pairs: " << recomb_pairs 
-         << "; Informative markers: " << std::setprecision(3) 
+    cerr << "    Total pairs examined: " << tot_pairs
+         << "; Strong LD pairs: " << ld_pairs.size()
+         << "; Recombination pairs: " << recomb_pairs
+         << "; Informative markers: " << std::setprecision(3)
          << ((double) (ld_pairs.size() + recomb_pairs) / (double) tot_pairs) * 100 << "%\n";
 
     //
@@ -576,7 +576,7 @@ dprime_blocks(string path, map<string, int> &pop_map, PhasedSummary *psum, map<i
         end   = *(cur->loci.rbegin());
 
         fh << id << "\t"
-           << psum->nucs[start].bp << "\t" 
+           << psum->nucs[start].bp << "\t"
            << psum->nucs[end].bp << "\t"
            << psum->nucs[end].bp - psum->nucs[start].bp + 1 << "\t"
            << cur->loci.size() << "\t";
@@ -658,8 +658,8 @@ check_adjacent_blocks(PhasedSummary *psum, HBlock *block)
         }
     }
 
-    // cerr << "Comparing range " << start << " to " << end 
-    //   << "; total pairs: " << tot << "; strong LD: " << strong_ld 
+    // cerr << "Comparing range " << start << " to " << end
+    //   << "; total pairs: " << tot << "; strong LD: " << strong_ld
     //   << "; proportion: " << std::setprecision(3) << strong_ld / tot << "\n";
 
     if (strong_ld / tot >= min_inform_pairs)
@@ -716,7 +716,7 @@ dPrimeBlocks::initialize(set<int> &loci)
         //     cur->loci.push_back(*it);
         //     prev_it = it;
         //     it++;
-        // } while (it != loci.end() && 
+        // } while (it != loci.end() &&
         //       (*prev_it) + 1 == *it);
 
         next->next = cur;
@@ -802,7 +802,7 @@ enumerate_haplotypes(ofstream &fh, map<string, int> &pop_map, PhasedSummary *psu
 
         if (it != haplotypes.begin())
             fh << ",";
-        fh << it->first << "|" 
+        fh << it->first << "|"
            << std::setprecision(3) << tot / ((float) psum->sample_cnt * 2.0);
     }
     fh << "\t";
@@ -827,7 +827,7 @@ enumerate_haplotypes(ofstream &fh, map<string, int> &pop_map, PhasedSummary *psu
     for (it = haplotypes.begin(); it != haplotypes.end(); it++) {
         pops_str << "\t";
         for (pit = pops.begin(); pit != pops.end(); pit++)
-            pops_str << (it->second)[*pit] << "|" 
+            pops_str << (it->second)[*pit] << "|"
                      << std::setprecision(3)
                      << (float) (it->second)[*pit] / (float) (pop_cnts[*pit] * 2.0) << ",";
         fh << pops_str.str().substr(0, pops_str.str().length()-1);
@@ -909,7 +909,7 @@ calc_dprime(PhasedSummary *psum)
 
                 //
                 // Using the four-gamete test, check whether recombination has occurred
-                // between these two loci. 
+                // between these two loci.
                 //  Four-gamete test: if no recombination has occurred between any two loci (SNPs) there will
                 //  be three haplotypes present, if recombination has occurred there will be four haplotypes.
                 //
@@ -1053,19 +1053,19 @@ write_dprime(string path, PhasedSummary *psum)
     for (uint i = 0; i < psum->size; i++) {
         for (uint j = i+1; j < psum->size; j++) {
 
-            if (psum->nucs[i].freq < minor_freq_lim || 
+            if (psum->nucs[i].freq < minor_freq_lim ||
                 psum->nucs[j].freq < minor_freq_lim)
                 continue;
 
             dprime = psum->dprime[i][j].dprime;
 
-            if (dprime_threshold) 
+            if (dprime_threshold)
                 dprime = dprime >= dprime_threshold_level ? 1.0 : 0.0;
 
             if (write_zeros == false && (dprime == 0.0 || psum->dprime[i][j].chisq_p == false))
                 continue;
 
-            fh << psum->nucs[i].bp << "\t" 
+            fh << psum->nucs[i].bp << "\t"
                << psum->nucs[j].bp << "\t"
                << std::setprecision(3) << dprime << "\t"
                << std::setprecision(3) << (psum->dprime[i][j].chisq_p ? dprime : 0.0) << "\t"
@@ -1169,10 +1169,10 @@ summarize_phased_genotypes(PhasedSummary *psum)
 }
 
 //
-// Code to parse fastPhase format. 
+// Code to parse fastPhase format.
 //
-PhasedSummary * 
-parse_fastphase(string path) 
+PhasedSummary *
+parse_fastphase(string path)
 {
     ifstream    fh;
     char        line[max_len];
@@ -1246,7 +1246,7 @@ parse_fastphase(string path)
     }
     for (p += 2, q = p; p < end; p++, q++) {
         while (*q != ' ' && q < end) {
-            q++; 
+            q++;
         }
         strncpy(bp, p, q - p);
         bp[q - p] = '\0';
@@ -1369,10 +1369,10 @@ parse_fastphase(string path)
 }
 
 //
-// Code to parse Beagle format. 
+// Code to parse Beagle format.
 //
-PhasedSummary * 
-parse_beagle(map<int, CSLocus *> &catalog, string path) 
+PhasedSummary *
+parse_beagle(map<int, CSLocus *> &catalog, string path)
 {
     gzFile      gz_fh;
     char        *line;
@@ -1528,10 +1528,10 @@ parse_beagle(map<int, CSLocus *> &catalog, string path)
 }
 
 //
-// Code to parse Beagle format. 
+// Code to parse Beagle format.
 //
-PhasedSummary * 
-parse_beagle_haplotypes(map<int, CSLocus *> &catalog, string path) 
+PhasedSummary *
+parse_beagle_haplotypes(map<int, CSLocus *> &catalog, string path)
 {
     gzFile      gz_fh;
     char        *line;
@@ -1604,7 +1604,7 @@ parse_beagle_haplotypes(map<int, CSLocus *> &catalog, string path)
             //
             parse_ssv(buf.c_str(), parts);
             num_genotypes += parts[2].length();
-            
+
         } else if (buf[0] == 'I') {
             //
             // Count the number of samples.
@@ -1701,7 +1701,7 @@ parse_population_map(string popmap_path, map<string, int> &pop_map, map<int, int
     vector<string> parts;
     uint   len;
 
-    if (pmap_path.length() == 0) 
+    if (pmap_path.length() == 0)
         return 0;
 
     cerr << "Parsing population map.\n";
@@ -1762,7 +1762,7 @@ parse_population_map(string popmap_path, map<string, int> &pop_map, map<int, int
     return 0;
 }
 
-int 
+int
 build_file_list(vector<pair<int, string> > &files)
 {
     vector<string> parts;
@@ -1815,7 +1815,7 @@ build_file_list(vector<pair<int, string> > &files)
 
 int parse_command_line(int argc, char* argv[]) {
     int c;
-     
+
     while (1) {
         static struct option long_options[] = {
             {"help",        no_argument,       NULL, 'h'},
@@ -1834,16 +1834,16 @@ int parse_command_line(int argc, char* argv[]) {
             {"dprime_threshold",  required_argument, NULL, 'T'},
             {0, 0, 0, 0}
         };
-        
+
         // getopt_long stores the option index here.
         int option_index = 0;
 
         c = getopt_long(argc, argv, "hvZHAb:M:t:P:S:p:a:B:T:", long_options, &option_index);
-     
+
         // Detect the end of the options.
         if (c == -1)
             break;
-     
+
         switch (c) {
         case 'h':
             help();
@@ -1914,7 +1914,7 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
-    if (in_path.at(in_path.length() - 1) != '/') 
+    if (in_path.at(in_path.length() - 1) != '/')
         in_path += "/";
 
     if (minor_freq_lim > 0) {
