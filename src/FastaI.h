@@ -41,11 +41,11 @@ Seq *Fasta::next_seq() {
     // record.
     //
     while (this->line[0] != '>' && this->fh.good() ) {
-	this->fh.getline(this->line, max_len);
+        this->fh.getline(this->line, max_len);
     }
 
     if (!this->fh.good()) {
-	return NULL;
+        return NULL;
     }
 
     //
@@ -68,19 +68,19 @@ Seq *Fasta::next_seq() {
     this->fh.getline(this->line, max_len);
 
     while (this->line[0] != '>' && this->fh.good()) {
-	len = strlen(this->line);
-	if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+        len = strlen(this->line);
+        if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
 
-	this->buf    += this->line;
-	this->line[0] = '\0';
-	this->fh.getline(this->line, max_len);
+        this->buf    += this->line;
+        this->line[0] = '\0';
+        this->fh.getline(this->line, max_len);
     }
 
     if (this->fh.eof()) {
-	len = strlen(this->line);
-	if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+        len = strlen(this->line);
+        if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
 
-	this->buf += this->line;
+        this->buf += this->line;
     }
 
     s->seq = new char[this->buf.length() + 1];
@@ -97,11 +97,11 @@ int Fasta::next_seq(Seq &s) {
     // record.
     //
     while (this->line[0] != '>' && this->fh.good() ) {
-	this->fh.getline(this->line, max_len);
+        this->fh.getline(this->line, max_len);
     }
 
     if (!this->fh.good()) {
-	return 0;
+        return 0;
     }
 
     //
@@ -122,19 +122,19 @@ int Fasta::next_seq(Seq &s) {
     this->fh.getline(this->line, max_len);
 
     while (this->line[0] != '>' && this->fh.good()) {
-	len = strlen(this->line);
-	if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+        len = strlen(this->line);
+        if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
 
-	this->buf    += this->line;
-	this->line[0] = '\0';
-	this->fh.getline(this->line, max_len);
+        this->buf    += this->line;
+        this->line[0] = '\0';
+        this->fh.getline(this->line, max_len);
     }
 
     if (this->fh.eof()) {
-	len = strlen(this->line);
-	if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
+        len = strlen(this->line);
+        if (len > 0 && this->line[len - 1] == '\r') this->line[len - 1] = '\0';
 
-	this->buf += this->line;
+        this->buf += this->line;
     }
 
     strcpy(s.seq, this->buf.c_str());

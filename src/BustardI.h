@@ -51,15 +51,15 @@ Seq *Bustard::next_seq() {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good()) {
-	return NULL;
+        return NULL;
     }
 
     parse_tsv(this->line, parts);
 
     if (parts.size() != num_bustd_fields) {
-	cerr << "Error parsing '" << this->path.c_str() << "' found " << parts.size() << " fields, but expecting " << num_bustd_fields << "). "
-	     << "Perhaps you should specify the input file type (-i)?\n";
-	return NULL;
+        cerr << "Error parsing '" << this->path.c_str() << "' found " << parts.size() << " fields, but expecting " << num_bustd_fields << "). "
+             << "Perhaps you should specify the input file type (-i)?\n";
+        return NULL;
     }
 
     Seq *s = new Seq;
@@ -70,13 +70,13 @@ Seq *Bustard::next_seq() {
 
     s->id = new char[id_len];
     sprintf(s->id, "@%s:%s:%s:%s:%s#%s/%s",
-	    parts[0].c_str(),
-	    parts[2].c_str(),
-	    parts[3].c_str(),
-	    parts[4].c_str(),
-	    parts[5].c_str(),
-	    parts[6].c_str(),
-	    parts[7].c_str());
+            parts[0].c_str(),
+            parts[2].c_str(),
+            parts[3].c_str(),
+            parts[4].c_str(),
+            parts[5].c_str(),
+            parts[6].c_str(),
+            parts[7].c_str());
 
     return s;
 }
@@ -90,7 +90,7 @@ int Bustard::next_seq(Seq &s) {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good()) {
-	return 0;
+        return 0;
     }
 
     parse_tsv(this->line, parts);
@@ -99,13 +99,13 @@ int Bustard::next_seq(Seq &s) {
     strcpy(s.qual, parts[3].c_str());
 
     sprintf(s.id, "@%s:%s:%s:%s:%s#%s/%s",
-	    parts[0].c_str(),
-	    parts[1].c_str(),
-	    parts[2].c_str(),
-	    parts[3].c_str(),
-	    parts[4].c_str(),
-	    parts[5].c_str(),
-	    parts[6].c_str());
+            parts[0].c_str(),
+            parts[1].c_str(),
+            parts[2].c_str(),
+            parts[3].c_str(),
+            parts[4].c_str(),
+            parts[5].c_str(),
+            parts[6].c_str());
 
     return 1;
 }

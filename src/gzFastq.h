@@ -32,27 +32,27 @@ class GzFastq: public Input {
 
 public:
     GzFastq(string path) : Input() { 
-	this->gz_fh = gzopen(path.c_str(), "rb");
-	if (!this->gz_fh) {
-	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
-	    exit(EXIT_FAILURE);
-	}
-	#if ZLIB_VERNUM >= 0x1240
-	gzbuffer(this->gz_fh, libz_buffer_size);
-	#endif
+        this->gz_fh = gzopen(path.c_str(), "rb");
+        if (!this->gz_fh) {
+            cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
+            exit(EXIT_FAILURE);
+        }
+        #if ZLIB_VERNUM >= 0x1240
+        gzbuffer(this->gz_fh, libz_buffer_size);
+        #endif
     };
     GzFastq(const char *path) : Input() { 
-	this->gz_fh = gzopen(path, "rb");
-	if (!this->gz_fh) {
-	    cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
-	    exit(EXIT_FAILURE);
-	}
-	#if ZLIB_VERNUM >= 0x1240
-	gzbuffer(this->gz_fh, libz_buffer_size);
-	#endif
+        this->gz_fh = gzopen(path, "rb");
+        if (!this->gz_fh) {
+            cerr << "Failed to open gzipped file '" << path << "': " << strerror(errno) << ".\n";
+            exit(EXIT_FAILURE);
+        }
+        #if ZLIB_VERNUM >= 0x1240
+        gzbuffer(this->gz_fh, libz_buffer_size);
+        #endif
     };
     ~GzFastq() {
-	gzclose(this->gz_fh);
+        gzclose(this->gz_fh);
     };
     Seq *next_seq();
     int  next_seq(Seq &s);
@@ -68,11 +68,11 @@ Seq *GzFastq::next_seq() {
     //
     this->line[0] = '\0';
     do {
-	res = gzgets(this->gz_fh, this->line, max_len);
+        res = gzgets(this->gz_fh, this->line, max_len);
     } while (this->line[0] != '@' && res != NULL);
 
     if (res == NULL) {
-	return NULL;
+        return NULL;
     }
 
     //
@@ -95,7 +95,7 @@ Seq *GzFastq::next_seq() {
     gzgets(this->gz_fh, this->line, max_len);
 
     if (gzeof(this->gz_fh)) {
-	return NULL;
+        return NULL;
     }
 
     len = strlen(this->line);
@@ -112,7 +112,7 @@ Seq *GzFastq::next_seq() {
     res = gzgets(this->gz_fh, this->line, max_len);
 
     if (this->line[0] != '+' || res == NULL) {
-	return NULL;
+        return NULL;
     }
 
     //
@@ -122,7 +122,7 @@ Seq *GzFastq::next_seq() {
     res = gzgets(this->gz_fh, this->line, max_len);
 
     if (res == NULL && strlen(this->line) == 0) {
-	return NULL;
+        return NULL;
     }
 
     len = strlen(this->line);
@@ -152,11 +152,11 @@ int GzFastq::next_seq(Seq &s) {
     //
     this->line[0] = '\0';
     do {
-	res = gzgets(this->gz_fh, this->line, max_len);
+        res = gzgets(this->gz_fh, this->line, max_len);
     } while (this->line[0] != '@' && res != NULL);
 
     if (res == NULL) {
-	return 0;
+        return 0;
     }
 
     //
@@ -178,7 +178,7 @@ int GzFastq::next_seq(Seq &s) {
     res = gzgets(this->gz_fh, this->line, max_len);
 
     if (res == NULL) {
-	return 0;
+        return 0;
     }
 
     len = strlen(this->line);
@@ -194,7 +194,7 @@ int GzFastq::next_seq(Seq &s) {
     res = gzgets(this->gz_fh, this->line, max_len);
 
     if (this->line[0] != '+' || res == NULL) {
-	return 0;
+        return 0;
     }
 
     //
@@ -204,7 +204,7 @@ int GzFastq::next_seq(Seq &s) {
     res = gzgets(this->gz_fh, this->line, max_len);
 
     if (res == NULL && strlen(this->line) == 0) {
-	return 0;
+        return 0;
     }
 
     len = strlen(this->line);

@@ -68,12 +68,12 @@ int main (int argc, char* argv[]) {
         map<int, HLocus *> sample;
         map<int, HLocus *>::iterator it;
 
-	size_t pos_1     = (*in_file).find_last_of("/");
-	size_t pos_2     = (*in_file).find_last_of(".");
-	string sample_id = (*in_file).substr(pos_1 + 1, (pos_2 - pos_1 - 1));
+        size_t pos_1     = (*in_file).find_last_of("/");
+        size_t pos_2     = (*in_file).find_last_of(".");
+        string sample_id = (*in_file).substr(pos_1 + 1, (pos_2 - pos_1 - 1));
 
-	bool compressed = false;
-	load_loci(*in_file, sample, false, false, compressed);
+        bool compressed = false;
+        load_loci(*in_file, sample, false, false, compressed);
 
         //
         // Give each locus a unique ID among all samples
@@ -147,7 +147,7 @@ int calc_kmer_distance(map<int, HLocus *> &loci, int stack_dist) {
     //
     vector<int> keys;
     for (it = loci.begin(); it != loci.end(); it++) 
-	keys.push_back(it->first);
+        keys.push_back(it->first);
 
     #pragma omp parallel private(i, j, tag_1, tag_2, allele)
     { 
@@ -312,37 +312,37 @@ int calc_distance(map<int, HLocus *> &loci, int utag_dist) {
     #pragma omp parallel private(i, j, tag_1, tag_2)
     { 
         #pragma omp for schedule(dynamic) 
-	for (i = 0; i < (int) keys.size(); i++) {
+        for (i = 0; i < (int) keys.size(); i++) {
 
-	    tag_1 = loci[keys[i]];
+            tag_1 = loci[keys[i]];
 
-	    int d;
+            int d;
 
-	    for (j = 0; j < (int) keys.size(); j++) {
-		tag_2 = loci[keys[j]];
+            for (j = 0; j < (int) keys.size(); j++) {
+                tag_2 = loci[keys[j]];
 
-		// Don't compare tag_1 against itself.
-		if (tag_1 == tag_2)
-		    continue;
+                // Don't compare tag_1 against itself.
+                if (tag_1 == tag_2)
+                    continue;
 
-		d = dist(tag_1, tag_2);
+                d = dist(tag_1, tag_2);
 
-		//
-		// Store the distance between these two sequences if it is
-		// below the maximum distance.
-		//
-		if (d == utag_dist) {
+                //
+                // Store the distance between these two sequences if it is
+                // below the maximum distance.
+                //
+                if (d == utag_dist) {
                     if (tag_1->depth < stack_depth_min ||
                         tag_2->depth < stack_depth_min)
                         continue;
 
-		    tag_1->add_match(tag_2->uniq_id, d);
-		}
-	    }
+                    tag_1->add_match(tag_2->uniq_id, d);
+                }
+            }
 
-	    // Sort the vector of distances.
-	    sort(tag_1->matches.begin(), tag_1->matches.end(), compare_mdist);
-	}
+            // Sort the vector of distances.
+            sort(tag_1->matches.begin(), tag_1->matches.end(), compare_mdist);
+        }
     }
 
     return 0;
@@ -358,9 +358,9 @@ int dist(HLocus *tag_1, HLocus *tag_2) {
     // between the two sequences. Don't count wildcard 'N'
     // nucleotides.
     while (p < end) {
-	dist += ((*p == *q) || (*q == 'N' || *p == 'N')) ? 0 : 1;
-	p++;
-	q++;
+        dist += ((*p == *q) || (*q == 'N' || *p == 'N')) ? 0 : 1;
+        p++;
+        q++;
     }
 
     return dist;
@@ -465,19 +465,19 @@ int call_alleles(vector<char *> &reads, vector<SNP *> &snps, vector<string> &all
     vector<SNP *>::iterator snp;
 
     if (snps.size() == 0)
-	return 1;
+        return 1;
 
     for (row = 0; row < height; row++) {
-	allele.clear();
+        allele.clear();
 
-	for (snp = snps.begin(); snp != snps.end(); snp++) {
-	    base    = reads[row];
-	    base    = base + (*snp)->col;    
+        for (snp = snps.begin(); snp != snps.end(); snp++) {
+            base    = reads[row];
+            base    = base + (*snp)->col;    
             allele += *base;
-	}
+        }
 
-	if (allele.size() == snps.size())
-	    alleles.push_back(allele);
+        if (allele.size() == snps.size())
+            alleles.push_back(allele);
         else
             return 0;
     }
@@ -515,19 +515,19 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
     int id = 1;
 
     for (i = samples.begin(); i != samples.end(); i++) {
-	tag_1 = i->second;
+        tag_1 = i->second;
 
-	//
-	// This tag may already have been merged by an earlier operation.
-	//
-	if (write_map.find(tag_1->uniq_id) != write_map.end())
-	    continue;
+        //
+        // This tag may already have been merged by an earlier operation.
+        //
+        if (write_map.find(tag_1->uniq_id) != write_map.end())
+            continue;
 
-	set<int> unique_merge_list;
+        set<int> unique_merge_list;
         set<string> unique_alleles;
-	set<int>::iterator it;
+        set<int>::iterator it;
 
-	trace_stack_graph(tag_1, samples, unique_merge_list);
+        trace_stack_graph(tag_1, samples, unique_merge_list);
 
         //
         // Call the consensus for this locus and identify SNPs and associated alleles.
@@ -562,7 +562,7 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
         vector<SNP *>::iterator  s; 
         set<string>::iterator    u;
 
-	for (s = snps.begin(); s != snps.end(); s++)
+        for (s = snps.begin(); s != snps.end(); s++)
             snp_file << 
                 "0"          << "\t" <<
                 batch_id     << "\t" <<
@@ -572,7 +572,7 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
                 (*s)->rank_1 << "\t" << 
                 (*s)->rank_2 << "\n";
 
-	for (uint a = 0; a < alleles.size(); a++)
+        for (uint a = 0; a < alleles.size(); a++)
             unique_alleles.insert(alleles[a]);
 
         for (u = unique_alleles.begin(); u != unique_alleles.end(); u++)
@@ -589,11 +589,11 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
         int sub_id = 0;
         int a      = 0;
 
-	for (it = unique_merge_list.begin(); it != unique_merge_list.end(); it++) {
-	    tag_2 = samples[(*it)];
+        for (it = unique_merge_list.begin(); it != unique_merge_list.end(); it++) {
+            tag_2 = samples[(*it)];
 
-	    // Record the nodes that have been merged in this round.
-	    write_map.insert(tag_2->uniq_id);
+            // Record the nodes that have been merged in this round.
+            write_map.insert(tag_2->uniq_id);
 
             //
             // For each tag we are outputting, output the depth of coverage for each
@@ -613,7 +613,7 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
             //
             // Output the consensus sequenes for all homologous loci.
             //
-	    tag_file <<
+            tag_file <<
                 "0"              << "\t" << 
                 batch_id         << "\t" <<
                 id               << "\t" <<
@@ -621,7 +621,7 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
                 tag_2->loc.bp    << "\t" <<
                 "primary"        << "\t" <<
                 sub_id           << "\t" <<
-		tag_2->sample_id << "_"  <<  tag_2->id << "\t" <<
+                tag_2->sample_id << "_"  <<  tag_2->id << "\t" <<
                 tag_2->con       << "\t" << 
                 ""               << "\t" <<  // These flags are unused in hstacks, but important in ustacks
                 ""               << "\t" <<
@@ -630,18 +630,18 @@ int write_homologous_loci(map<int, HLocus *> &samples) {
             allele = (alleles.size() == 0) ? "consensus" : alleles[a];
 
             mat_file <<
-		"0"              << "\t" <<
-		batch_id         << "\t" <<
-		id               << "\t" <<
-		tag_2->sample_id << "\t" <<
-		tag_2->uniq_id   << "\t" << 
-		allele           << "\n";
+                "0"              << "\t" <<
+                batch_id         << "\t" <<
+                id               << "\t" <<
+                tag_2->sample_id << "\t" <<
+                tag_2->uniq_id   << "\t" << 
+                allele           << "\n";
 
             sub_id++;
             a++;
-	}
+        }
 
-	id++;
+        id++;
     }
 
     tag_file.close();
@@ -665,20 +665,20 @@ int trace_stack_graph(HLocus *tag_1, map<int, HLocus *> &loci, set<int> &unique_
     merge_list.push(tag_1->uniq_id);
 
     while (!merge_list.empty()) {
-	tag_2 = loci[merge_list.front()];
-	merge_list.pop();
+        tag_2 = loci[merge_list.front()];
+        merge_list.pop();
 
-	for (k = tag_2->matches.begin(); k != tag_2->matches.end(); k++) {
-	    ret = unique_merge_list.insert((*k)->cat_id);
+        for (k = tag_2->matches.begin(); k != tag_2->matches.end(); k++) {
+            ret = unique_merge_list.insert((*k)->cat_id);
 
-	    //
-	    // If this Tag has not already been added to the merge list (i.e. we were able
-	    // to insert it in to our unique_merge_list, which is a set), add it for consideration
-	    // later in the loop.
-	    //
-	    if (ret.second == true)
-		merge_list.push((*k)->cat_id);
-	}
+            //
+            // If this Tag has not already been added to the merge list (i.e. we were able
+            // to insert it in to our unique_merge_list, which is a set), add it for consideration
+            // later in the loop.
+            //
+            if (ret.second == true)
+                merge_list.push((*k)->cat_id);
+        }
     }
 
     return 0;
@@ -696,14 +696,14 @@ int build_file_list(string in_path, vector<string> &sql_files) {
     }
 
     while ((dirp = readdir(dp)) != NULL) {
-	d     = string(dirp->d_name);
+        d     = string(dirp->d_name);
 
-	if (d.find("tags.tsv") != string::npos &&
+        if (d.find("tags.tsv") != string::npos &&
             d.find("batch") == string::npos) {
             size_t pos = d.find(".tags.tsv");            
             d = in_path + d.substr(0, pos); 
-	    sql_files.push_back(d);
-	}
+            sql_files.push_back(d);
+        }
     }
 
     closedir(dp);
@@ -826,79 +826,79 @@ int parse_command_line(int argc, char* argv[]) {
     int c;
      
     while (1) {
-	static struct option long_options[] = {
-	    {"help",        no_argument,       NULL, 'h'},
+        static struct option long_options[] = {
+            {"help",        no_argument,       NULL, 'h'},
             {"version",     no_argument,       NULL, 'v'},
-	    {"stack_dist",  required_argument, NULL, 'n'},
-	    {"depth_min",   required_argument, NULL, 'm'},
-	    {"inpath",      required_argument, NULL, 'p'},
-	    {"outpath",     required_argument, NULL, 'o'},
-	    {"n_limit",     required_argument, NULL, 'N'},
-	    {"batch_id",    required_argument, NULL, 'b'},
-	    {0, 0, 0, 0}
-	};
-	
-	// getopt_long stores the option index here.
-	int option_index = 0;
+            {"stack_dist",  required_argument, NULL, 'n'},
+            {"depth_min",   required_argument, NULL, 'm'},
+            {"inpath",      required_argument, NULL, 'p'},
+            {"outpath",     required_argument, NULL, 'o'},
+            {"n_limit",     required_argument, NULL, 'N'},
+            {"batch_id",    required_argument, NULL, 'b'},
+            {0, 0, 0, 0}
+        };
+        
+        // getopt_long stores the option index here.
+        int option_index = 0;
      
-	c = getopt_long(argc, argv, "hvi:p:o:b:e:m:n:N:", long_options, &option_index);
+        c = getopt_long(argc, argv, "hvi:p:o:b:e:m:n:N:", long_options, &option_index);
      
-	// Detect the end of the options.
-	if (c == -1)
-	    break;
+        // Detect the end of the options.
+        if (c == -1)
+            break;
      
-	switch (c) {
-	case 'h':
-	    help();
-	    break;
-     	case 'v':
-	    version();
-	    break;
-	case 'i':
-	    in_path = optarg;
-	    break;
-	case 'o':
-	    out_path = optarg;
-	    break;
-	case 'b':
-	    batch_id = atoi(optarg);
-	    break;
-	case 'N':
-	    n_limit = atoi(optarg);
-	    break;
-	case 'm':
-	    stack_depth_min = atoi(optarg);
-	    break;
-	case 'n':
-	    stack_dist = atoi(optarg);
-	    break;
-	case 'p':
-	    num_threads = atoi(optarg);
-	    break;
-	case '?':
-	    // getopt_long already printed an error message.
-	    help();
-	    break;
-	default:
-	    cerr << "Unknown command line option '" << (char) c << "'\n";
-	    help();
-	    abort();
-	}
+        switch (c) {
+        case 'h':
+            help();
+            break;
+             case 'v':
+            version();
+            break;
+        case 'i':
+            in_path = optarg;
+            break;
+        case 'o':
+            out_path = optarg;
+            break;
+        case 'b':
+            batch_id = atoi(optarg);
+            break;
+        case 'N':
+            n_limit = atoi(optarg);
+            break;
+        case 'm':
+            stack_depth_min = atoi(optarg);
+            break;
+        case 'n':
+            stack_dist = atoi(optarg);
+            break;
+        case 'p':
+            num_threads = atoi(optarg);
+            break;
+        case '?':
+            // getopt_long already printed an error message.
+            help();
+            break;
+        default:
+            cerr << "Unknown command line option '" << (char) c << "'\n";
+            help();
+            abort();
+        }
     }
 
     if (in_path.length() == 0) {
-	cerr << "You must specify a path to a set of input files.\n";
-	help();
+        cerr << "You must specify a path to a set of input files.\n";
+        help();
     }
 
     if (in_path.at(in_path.length() - 1) != '/') 
-	in_path += "/";
+        in_path += "/";
 
     if (out_path.length() == 0) 
-	out_path = ".";
+        out_path = ".";
 
     if (out_path.at(out_path.length() - 1) != '/') 
-	out_path += "/";
+        out_path += "/";
 
     return 0;
 }
@@ -912,14 +912,14 @@ void version() {
 void help() {
     std::cerr << "hstacks " << VERSION << "\n"
               << "hstacks -i path [-o path] [-b batch_id] [-n mismatches] [-m min] [-p min_threads] [-N limit] [-h]" << "\n"
-	      << "  i: path to the set of SQL files from which to load loci." << "\n"
-	      << "  o: output path to write results." << "\n"
-	      << "  b: SQL Batch ID to insert into the output to identify a group of samples." << "\n"
+              << "  i: path to the set of SQL files from which to load loci." << "\n"
+              << "  o: output path to write results." << "\n"
+              << "  b: SQL Batch ID to insert into the output to identify a group of samples." << "\n"
               << "  m: minimum stack depth required for a locus to be included in the search." << "\n"
               << "  n: number of mismatches to allow between stacks." << "\n"
               << "  N: number of 'N' characters to allow in a stack (default: 4)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-	      << "  h: display this help messsage." << "\n\n";
+              << "  h: display this help messsage." << "\n\n";
 
     exit(0);
 }

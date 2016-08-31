@@ -42,7 +42,7 @@ calc_weights()
     double *weights = new double[limit + 1];
 
     for (int i = 0; i <= limit; i++)
-	weights[i] = exp((-1 * pow(i, 2)) / (2 * pow(sigma, 2)));
+        weights[i] = exp((-1 * pow(i, 2)) / (2 * pow(sigma, 2)));
 
     return weights;
 }
@@ -56,24 +56,24 @@ determine_window_limits(vector<StatT *> &sites, uint center_bp, uint &pos_l, uin
     int limit_u = center_bp + limit;
 
     while (pos_l < sites.size()) {
-	if (sites[pos_l] == NULL) {
-	    pos_l++;
-	} else {
-	    if (sites[pos_l]->bp < limit_l) 
-		pos_l++;
-	    else
-		break;
-	}
+        if (sites[pos_l] == NULL) {
+            pos_l++;
+        } else {
+            if (sites[pos_l]->bp < limit_l) 
+                pos_l++;
+            else
+                break;
+        }
     }
     while (pos_u < sites.size()) {
-	if (sites[pos_u] == NULL) {
-	    pos_u++;
-	} else {
-	    if (sites[pos_u]->bp < limit_u)
-		pos_u++;
-	    else
-		break;
-	}
+        if (sites[pos_u] == NULL) {
+            pos_u++;
+        } else {
+            if (sites[pos_u]->bp < limit_u)
+                pos_u++;
+            else
+                break;
+        }
     }
     return 0;
 }
