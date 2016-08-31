@@ -288,7 +288,7 @@ process_paired_reads(string prefix_1,
     Seq *s_1 = fh_1->next_seq();
     Seq *s_2 = fh_2->next_seq();
     if (s_1 == NULL || s_2 == NULL) {
-            cerr << "Attempting to read first pair of input records, unable to allocate " 
+        cerr << "Attempting to read first pair of input records, unable to allocate " 
              << "Seq object (Was the correct input type specified?).\n";
         exit(1);
     }
@@ -328,9 +328,9 @@ process_paired_reads(string prefix_1,
         // need to be truncated uniformly.
         //
         if (truncate_seq > 0) {
-             if (truncate_seq + r_1->inline_bc_len <= r_1->len) 
+            if (truncate_seq + r_1->inline_bc_len <= r_1->len) 
                 r_1->set_len(truncate_seq + r_1->inline_bc_len);
-             if (truncate_seq + r_2->inline_bc_len <= r_2->len) 
+            if (truncate_seq + r_2->inline_bc_len <= r_2->len) 
                 r_2->set_len(truncate_seq + r_2->inline_bc_len);
         } else {
             if (barcode_type == inline_null || barcode_type == inline_inline ||        barcode_type == inline_index)
@@ -344,7 +344,7 @@ process_paired_reads(string prefix_1,
         if (r_2->retain)
             process_singlet(r_2, true,  barcode_log[bc], counter);
 
-         if (matepair) {
+        if (matepair) {
             rev_complement(r_1->seq, r_1->inline_bc_len, overhang);
             reverse_qual(r_1->phred, r_1->inline_bc_len, overhang);
         }
@@ -352,7 +352,7 @@ process_paired_reads(string prefix_1,
         int result_1 = 1;
         int result_2 = 1;
 
-          if (r_1->retain && r_2->retain) {
+        if (r_1->retain && r_2->retain) {
             if (retain_header) {
                 result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
                     write_fastq(pair_1_fhs[bc], s_1, r_1) :
@@ -477,9 +477,9 @@ process_reads(string prefix,
     //
     Seq *s = fh->next_seq();
     if (s == NULL) {
-            cerr << "Attempting to read first input record, unable to allocate " 
+        cerr << "Attempting to read first input record, unable to allocate " 
              << "Seq object (Was the correct input type specified?).\n";
-            exit(1);
+        exit(1);
     }
 
     r = new Read(strlen(s->seq), 1, min_bc_size_1, win_size);
@@ -805,15 +805,15 @@ print_results(int argc, char **argv,
     map<BarcodePair, map<string, long> >::iterator bit;
     vector<pair<BarcodePair, int> > bcs;
     for (bit = barcode_log.begin(); bit != barcode_log.end(); bit++)
-            bcs.push_back(make_pair(bit->first, bit->second["total"]));
+        bcs.push_back(make_pair(bit->first, bit->second["total"]));
     sort(bcs.begin(), bcs.end(), compare_barcodes);
 
     for (uint i = 0; i < bcs.size(); i++) {
-            if (barcode_list.count(bcs[i].first)) continue;
-            if (bcs[i].second == 0) continue;
+        if (barcode_list.count(bcs[i].first)) continue;
+        if (bcs[i].second == 0) continue;
 
-            log << bcs[i].first << "\t"
-                << bcs[i].second << "\n";
+        log << bcs[i].first << "\t"
+            << bcs[i].second << "\n";
     }
 
     log.close();
@@ -886,7 +886,7 @@ int parse_command_line(int argc, char* argv[]) {
         case 'h':
             help();
             break;
-             case 'i':
+        case 'i':
             if (strcasecmp(optarg, "bustard") == 0)
                 in_file_type = FileT::bustard;
             else if (strcasecmp(optarg, "bam") == 0)
@@ -896,7 +896,7 @@ int parse_command_line(int argc, char* argv[]) {
             else
                 in_file_type = FileT::fastq;
             break;
-             case 'y':
+        case 'y':
             if (strcasecmp(optarg, "fastq") == 0)
                 out_file_type = FileT::fastq;
             else if (strcasecmp(optarg, "gzfastq") == 0)
@@ -906,13 +906,13 @@ int parse_command_line(int argc, char* argv[]) {
             else if (strcasecmp(optarg, "gzfasta") == 0)
                 out_file_type = FileT::gzfasta;
             break;
-             case 'E':
+        case 'E':
             if (strcasecmp(optarg, "phred64") == 0)
                 qual_offset = 64;
             else if (strcasecmp(optarg, "phred33") == 0)
                 qual_offset = 33;
             break;
-             case 'f':
+        case 'f':
             in_file = optarg;
             ftype   = FileT::fastq;
             break;
@@ -1005,23 +1005,23 @@ int parse_command_line(int argc, char* argv[]) {
         case 'Z':
             barcode_type = inline_index;
             break;
-             case 'A':
+        case 'A':
             adapter_1 = new char[strlen(optarg) + 1];
             strcpy(adapter_1, optarg);
             filter_adapter = true;
             break;
-             case 'G':
+        case 'G':
             adapter_2 = new char[strlen(optarg) + 1];
             strcpy(adapter_2, optarg);
             filter_adapter = true;
             break;
-             case 'T':
+        case 'T':
             distance = is_integer(optarg);
             break;
-         case 'L':
+        case 'L':
             len_limit = is_integer(optarg);
             break;
-         case 'w':
+        case 'w':
             win_size = is_double(optarg);
             break;
         case 's':
@@ -1144,7 +1144,7 @@ void help() {
               << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
               << "  h: display this help messsage.\n\n"
               << "  Barcode options:\n"
-               << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
+              << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
               << "    --index_null:    barcode is provded in FASTQ header (Illumina i5 or i7 read).\n"
               << "    --null_index:    barcode is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
               << "    --inline_inline: barcode is inline with sequence, occurs on single and paired-end read.\n"

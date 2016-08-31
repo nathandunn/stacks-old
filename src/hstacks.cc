@@ -851,7 +851,7 @@ int parse_command_line(int argc, char* argv[]) {
         case 'h':
             help();
             break;
-             case 'v':
+        case 'v':
             version();
             break;
         case 'i':

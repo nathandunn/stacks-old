@@ -327,8 +327,8 @@ int process_paired_reads(string in_path_1,
     Seq *s_1 = fh_1->next_seq();
     Seq *s_2 = fh_2->next_seq();
     if (s_1 == NULL || s_2 == NULL) {
-            cerr << "Unable to allocate Seq object.\n";
-            exit(1);
+        cerr << "Unable to allocate Seq object.\n";
+        exit(1);
     }
 
     int   rare_k, abundant_k, num_kmers, max_kmer_lim;
@@ -491,8 +491,8 @@ int process_reads(string in_path,
     //
     Seq *s = fh->next_seq();
     if (s == NULL) {
-            cerr << "Unable to allocate Seq object.\n";
-            exit(1);
+        cerr << "Unable to allocate Seq object.\n";
+        exit(1);
     }
  
     int   rare_k, abundant_k, num_kmers, max_kmer_lim;
@@ -717,8 +717,8 @@ normalize_paired_reads(string in_path_1,
     Seq *s_1 = fh_1->next_seq();
     Seq *s_2 = fh_2->next_seq();
     if (s_1 == NULL || s_2 == NULL) {
-            cerr << "Unable to allocate Seq object.\n";
-            exit(1);
+        cerr << "Unable to allocate Seq object.\n";
+        exit(1);
     }
 
     int   num_kmers;
@@ -739,7 +739,7 @@ normalize_paired_reads(string in_path_1,
         //
         retain_1 = normalize_kmer_lookup(kmers, s_1->seq, kmer, num_kmers, kmer_keys);
 
-         num_kmers = strlen(s_2->seq) - kmer_len + 1;
+        num_kmers = strlen(s_2->seq) - kmer_len + 1;
 
         //
         // Drop the second sequence if it has too many rare or abundant kmers.
@@ -885,8 +885,8 @@ normalize_reads(string in_path,
     //
     Seq *s = fh->next_seq();
     if (s == NULL) {
-            cerr << "Unable to allocate Seq object.\n";
-            exit(1);
+        cerr << "Unable to allocate Seq object.\n";
+        exit(1);
     }
  
     int   num_kmers;
@@ -1098,8 +1098,8 @@ process_file_kmers(string path, SeqKmerHash &kmer_map, vector<char *> &kmer_map_
     //
     Seq *s = fh->next_seq();
     if (s == NULL) {
-            cerr << "Unable to allocate Seq object.\n";
-            exit(1);
+        cerr << "Unable to allocate Seq object.\n";
+        exit(1);
     }
 
     int   num_kmers;
@@ -1199,12 +1199,12 @@ calc_kmer_median(SeqKmerHash &kmers, double &kmer_med, double &kmer_mad)
     residuals.reserve(num_kmers);
 
     for (int j = 0; j < num_kmers; j++)
-            residuals.push_back(abs(freqs[j] - (int) kmer_med));
+        residuals.push_back(abs(freqs[j] - (int) kmer_med));
     sort(residuals.begin(), residuals.end());
 
     kmer_mad = num_kmers % 2 == 0 ? 
-            (double) (residuals[num_kmers / 2 - 1] + residuals[num_kmers / 2]) / 2.0 : 
-            (double) residuals[num_kmers / 2 - 1];
+        (double) (residuals[num_kmers / 2 - 1] + residuals[num_kmers / 2]) / 2.0 : 
+        (double) residuals[num_kmers / 2 - 1];
 
     return 0;
 }
@@ -1261,19 +1261,19 @@ normalize_kmer_lookup(SeqKmerHash &kmer_map,
     kmer[kmer_len] = '\0';
 
     for (int j = 0; j < num_kmers; j++) {
-            strncpy(kmer, read + j, kmer_len);
+        strncpy(kmer, read + j, kmer_len);
 
-            exists = kmer_map.count(kmer) == 0 ? false : true;
+        exists = kmer_map.count(kmer) == 0 ? false : true;
 
-            if (exists) {
-                hash_key = kmer;
-            } else {
-                hash_key = new char [kmer_len + 1];
-                strcpy(hash_key, kmer);
-                kmer_keys.push_back(hash_key);
-            }
+        if (exists) {
+            hash_key = kmer;
+        } else {
+            hash_key = new char [kmer_len + 1];
+            strcpy(hash_key, kmer);
+            kmer_keys.push_back(hash_key);
+        }
 
-            kmer_map[hash_key]++;
+        kmer_map[hash_key]++;
     }
 
     return retain;
@@ -1533,8 +1533,8 @@ int print_results(map<string, map<string, long> > &counters) {
     for (it = counters.begin(); it != counters.end(); it++) {
         c["total"]       += it->second["total"];
         c["retained"]    += it->second["retained"];
-         c["rare_k"]      += it->second["rare_k"];
-         c["abundant_k"]  += it->second["abundant_k"];
+        c["rare_k"]      += it->second["rare_k"];
+        c["abundant_k"]  += it->second["abundant_k"];
     }
 
     cerr << 
@@ -1606,7 +1606,7 @@ int build_file_list(vector<string> &in_files, vector<pair<string, string> > &fil
             //    Break off file path and store path and file name.
             //    Check if this is a gzip'ed file and if so, remove 'gz' suffix.
             //
-             file = in_files[i];
+            file = in_files[i];
             pos  = file.find_last_of(".");
             if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
                 file.substr(pos) == ".gz") {
@@ -1665,7 +1665,7 @@ int parse_command_line(int argc, char* argv[]) {
         case 'h':
             help();
             break;
-             case 'i':
+        case 'i':
              if (strcasecmp(optarg, "fasta") == 0)
                 in_file_type = FileT::fasta;
              else if (strcasecmp(optarg, "gzfasta") == 0)
@@ -1675,13 +1675,13 @@ int parse_command_line(int argc, char* argv[]) {
              else
                  in_file_type = FileT::fastq;
             break;
-             case 'y':
+        case 'y':
             if (strcasecmp(optarg, "fasta") == 0)
                 out_file_type = FileT::fasta;
             else 
                 out_file_type = FileT::fastq;
             break;
-             case 'f':
+        case 'f':
             in_files.push_back(optarg);
             break;
         case '1':

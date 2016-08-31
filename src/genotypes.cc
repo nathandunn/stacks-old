@@ -111,8 +111,8 @@ int main (int argc, char* argv[]) {
     int res;
     catalog_file << in_path << "batch_" << batch_id << ".catalog";
     if ((res = load_loci(catalog_file.str(), catalog, false, false, compressed)) == 0) {
-            cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
-             return 0;
+        cerr << "Unable to load the catalog '" << catalog_file.str() << "'\n";
+        return 0;
     }
 
     //
@@ -228,7 +228,7 @@ int main (int argc, char* argv[]) {
     switch(map_type) {
     case cp:
         correct_cp_markers_missing_alleles(parent_ids, catalog, pmap);
-            break;
+        break;
     case dh:
     case bc1:
     case f2:
@@ -266,17 +266,17 @@ int main (int argc, char* argv[]) {
     //
     switch(map_type) {
     case dh:
-            export_dh_map(catalog, pmap, parent_ids, samples);
-            break;
+        export_dh_map(catalog, pmap, parent_ids, samples);
+        break;
     case cp:
-            export_cp_map(catalog, pmap, parent_ids, samples);
-            break;
+        export_cp_map(catalog, pmap, parent_ids, samples);
+        break;
     case bc1:
-            export_bc1_map(catalog, pmap, parent_ids, samples);
-            break;
+        export_bc1_map(catalog, pmap, parent_ids, samples);
+        break;
     case f2:
-            export_f2_map(catalog, pmap, parent_ids, samples);
-            break;
+        export_f2_map(catalog, pmap, parent_ids, samples);
+        break;
     case gen:
         export_gen_map(catalog, pmap, parent_ids, samples);
         break;
@@ -709,12 +709,12 @@ int call_population_genotypes(CSLocus *locus,
 
     impossible:
         sort(gtypes.begin(), gtypes.end());
-         for (uint j = 0; j < gtypes.size(); j++) {
+        for (uint j = 0; j < gtypes.size(); j++) {
             gtype += gtypes[j];
             //cerr << "  Adding genotype to string: " << gtypes[j] << "; " << gtype << "\n";
         }
 
-         string m = dictionary[locus->marker].count(gtype) ? 
+        string m = dictionary[locus->marker].count(gtype) ? 
             dictionary[locus->marker][gtype] : 
             "--";
 
@@ -1043,10 +1043,10 @@ int check_uncalled_snps(CSLocus *clocus, Locus *stack, Datum *d) {
                            clocus->snps[i]->col, clocus->snps[i]->rank_1, clocus->snps[i]->rank_2, 
                            homozygous);
 
-         if (homozygous == "unknown")
-             status = "true";
+        if (homozygous == "unknown")
+            status = "true";
         else if (homozygous == "false")
-             verified_snps.push_back(clocus->snps[i]);
+            verified_snps.push_back(clocus->snps[i]);
      }
 
     if (status == "true") {
@@ -1173,7 +1173,7 @@ int check_homozygosity(vector<char *> &reads, int col, char rank_1, char rank_2,
     //
     if (sorted_nuc[2].second > 0 && sorted_nuc[1].second <= sorted_nuc[2].second) {
         homozygous = "unknown";
-            return 0;
+        return 0;
     }
 
     // cerr << "Sorted_nuc[0], '" << sorted_nuc[0].first << "', count: " << sorted_nuc[0].second 
@@ -1582,16 +1582,16 @@ calc_segregation_distortion(map<string, map<string, double> > &seg_ratios, map<i
     switch(map_type) {
     case dh:
         load_dh_dictionary(types, dictionary);
-            break;
+        break;
     case cp:
         load_cp_dictionary(types, dictionary);
-            break;
+        break;
     case bc1:
         load_mm_bc_dictionary(types, dictionary);
-            break;
+        break;
     case f2:
         load_mm_f2_dictionary(types, dictionary);
-            break;
+        break;
     case gen:
     case none:
     case unk:
@@ -1686,11 +1686,11 @@ chisq_test(map<string, map<string, double> > &seg_ratios, map<string, int> &cnts
     map<string, double>::iterator sit;
 
     for (sit = seg_ratios[marker].begin(); sit != seg_ratios[marker].end(); sit++) {
-            obs = cnts.count(sit->first) == 0 ? 0 : cnts[sit->first];
-            exp = sit->second * n;
+        obs = cnts.count(sit->first) == 0 ? 0 : cnts[sit->first];
+        exp = sit->second * n;
         // cerr << "      category: " << sit->first << "; obs: " << obs << "; exp: " << exp << "\n";
 
-            chisq += ((obs - exp) * (obs - exp)) / exp;
+        chisq += ((obs - exp) * (obs - exp)) / exp;
     }
     // cerr << "    df: " << df << "; Chisq value: " << chisq << "; pvalue: " << chisq_pvalue(df, chisq) << "\n";
 
@@ -1724,16 +1724,16 @@ map_specific_genotypes(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, set<
     switch(map_type) {
     case dh:
         load_dh_dictionary(types, dictionary);
-            break;
+        break;
     case cp:
         load_cp_dictionary(types, dictionary);
-            break;
+        break;
     case bc1:
         load_bc_dictionary(types, dictionary);
-            break;
+        break;
     case f2:
         load_f2_dictionary(types, dictionary);
-            break;
+        break;
     case gen:
     case none:
     case unk:
@@ -2080,7 +2080,7 @@ int write_genomic(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap) {
             for (uint n = start; n < end; n++) {
                 fh << loc->id << "\t" << loc->loc.chr << "\t" << loc->loc.bp + n;
 
-                 if (snp_locs.count(n) == 0) {
+                if (snp_locs.count(n) == 0) {
                     for (int j = 0; j < pmap->sample_cnt(); j++) {
                         a = encode_gtype(loc->con[n]);
                         fh << "\t" << encoded_gtypes[a][a];
@@ -2703,7 +2703,7 @@ int load_marker_list(string path, set<int> &list) {
     fh.close();
 
     if (list.size() == 0) {
-         cerr << "Unable to load any markers from '" << path << "'\n";
+        cerr << "Unable to load any markers from '" << path << "'\n";
         help();
     }
 
