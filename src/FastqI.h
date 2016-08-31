@@ -40,11 +40,11 @@ Seq *Fastq::next_seq() {
     // record.
     //
     while (this->line[0] != '@' && this->fh.good() ) {
-	this->fh.getline(this->line, max_len);
+        this->fh.getline(this->line, max_len);
     }
 
     if (!this->fh.good()) {
-	return NULL;
+        return NULL;
     }
 
     //
@@ -66,7 +66,7 @@ Seq *Fastq::next_seq() {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good()) {
-	return NULL;
+        return NULL;
     }
 
     len = strlen(this->line);
@@ -81,7 +81,7 @@ Seq *Fastq::next_seq() {
     this->fh.getline(this->line, max_len);
 
     if (this->line[0] != '+' || !this->fh.good()) {
-	return NULL;
+        return NULL;
     }
 
     //
@@ -90,7 +90,7 @@ Seq *Fastq::next_seq() {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good() && !this->fh.eof()) {
-	return NULL;
+        return NULL;
     }
 
     len = strlen(this->line);
@@ -116,11 +116,11 @@ int Fastq::next_seq(Seq &s) {
     // record.
     //
     while (this->line[0] != '@' && this->fh.good() ) {
-	this->fh.getline(this->line, max_len);
+        this->fh.getline(this->line, max_len);
     }
 
     if (!this->fh.good()) {
-	return 0;
+        return 0;
     }
 
     //
@@ -140,7 +140,7 @@ int Fastq::next_seq(Seq &s) {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good()) {
-	return 0;
+        return 0;
     }
 
     len = strlen(this->line);
@@ -154,7 +154,7 @@ int Fastq::next_seq(Seq &s) {
     this->fh.getline(this->line, max_len);
 
     if (this->line[0] != '+' || !this->fh.good()) {
-	return 0;
+        return 0;
     }
 
     //
@@ -163,7 +163,7 @@ int Fastq::next_seq(Seq &s) {
     this->fh.getline(this->line, max_len);
 
     if (!this->fh.good() && !this->fh.eof()) {
-	return 0;
+        return 0;
     }
 
     len = strlen(this->line);

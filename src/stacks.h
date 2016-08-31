@@ -134,13 +134,13 @@ public:
     string cigar;
     Aln() {
         this->id      = 0;
-	this->pct_id  = 0.0;
+        this->pct_id  = 0.0;
         this->gap_cnt = 0;
     }
     Aln(uint id, string cigar, double pct_id, uint gap_cnt) {
-	this->id      = id;
-	this->cigar   = cigar;
-	this->pct_id  = pct_id;
+        this->id      = id;
+        this->cigar   = cigar;
+        this->pct_id  = pct_id;
         this->gap_cnt = gap_cnt;
     }
 };

@@ -81,23 +81,23 @@ using std::cerr;
 struct hash_dnaseq {
     size_t operator()(DNASeq *__s) const
     {
-	size_t __result = static_cast<size_t>(14695981039346656037ULL);
-	unsigned short int   __bytes  = (__s->size / bases_per_byte) + (__s->size % bases_per_byte > 0 ? 1 : 0);
-	for (unsigned short int i = 0; i < __bytes; i++) {
-	    __result ^= static_cast<size_t>(__s->s[i]);
-	    __result *= static_cast<size_t>(1099511628211ULL);
-	}
+        size_t __result = static_cast<size_t>(14695981039346656037ULL);
+        unsigned short int   __bytes  = (__s->size / bases_per_byte) + (__s->size % bases_per_byte > 0 ? 1 : 0);
+        for (unsigned short int i = 0; i < __bytes; i++) {
+            __result ^= static_cast<size_t>(__s->s[i]);
+            __result *= static_cast<size_t>(1099511628211ULL);
+        }
 
-	return __result;
+        return __result;
     }
 };
 
 struct dnaseq_eqstr {
     bool operator()(DNASeq *s1, DNASeq *s2) const {
-	unsigned int bytes = (s1->size / bases_per_byte) + (s1->size % bases_per_byte > 0 ? 1 : 0);
-	for (unsigned int i = 0; i < bytes; i++)
-	    if (s1->s[i] != s2->s[i]) return false;
-	return true;
+        unsigned int bytes = (s1->size / bases_per_byte) + (s1->size % bases_per_byte > 0 ? 1 : 0);
+        for (unsigned int i = 0; i < bytes; i++)
+            if (s1->s[i] != s2->s[i]) return false;
+        return true;
     }
 };
 
