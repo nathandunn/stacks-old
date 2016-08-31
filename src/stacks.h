@@ -76,7 +76,6 @@ public:
         chr = new char[strlen(other.chr)+1];
         strcpy(chr, other.chr);
     }
-    PhyLoc& operator=(const PhyLoc& other) =delete;
     PhyLoc(const char *chr, uint bp) {
         this->chr    = new char[strlen(chr)  + 1];
         this->bp     = bp;
@@ -93,6 +92,22 @@ public:
         if (chr != NULL)
             delete [] chr;
     }
+
+    friend void swap(PhyLoc& p, PhyLoc& q) {
+        char* chr = p.chr;
+        p.chr = q.chr;
+        q.chr = chr;
+
+        const uint bp = p.bp;
+        p.bp = q.bp;
+        q.bp = bp;
+
+        const strand_type strand = p.strand;
+        p.strand = q.strand;
+        q.strand = strand;
+    }
+    PhyLoc& operator=(PhyLoc&& other) {std::swap(*this, other); return *this;}
+    PhyLoc& operator=(const PhyLoc& other) =delete;
 };
 
 class SNP {
