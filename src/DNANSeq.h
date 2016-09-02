@@ -90,6 +90,7 @@ using std::cerr;
 
 // Specialization for std::hash
 // Based on GCC
+inline
 namespace std {
 template<>
 struct hash<DNANSeq> {
