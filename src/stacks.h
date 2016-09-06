@@ -107,7 +107,7 @@ public:
         q.strand = strand;
     }
     PhyLoc& operator=(PhyLoc&& other) {std::swap(*this, other); return *this;}
-    PhyLoc& operator=(const PhyLoc& other) =delete;
+    PhyLoc& operator=(const PhyLoc& other) {PhyLoc cp (other); swap(*this, cp); return *this;}
 };
 
 class SNP {
