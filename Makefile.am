@@ -9,8 +9,8 @@ ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/co
 	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
 	src/gzFasta.h src/gzFastq.h
 
-pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/constants.h \
-	src/mstack.h src/mstack.cc \
+pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/pstacks_base.h src/pstacks_base.cc \
+	src/stacks.h src/stacks.cc src/constants.h src/mstack.h src/mstack.cc \
 	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
 	src/models.h src/models.cc src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
@@ -110,8 +110,8 @@ phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h \
 	src/log_utils.h src/log_utils.cc \
 	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc 
 
-pstacks_pe_SOURCES = src/pstacks_pe.cc src/stacks.h src/stacks.cc src/constants.h \
-	src/mstack.h src/mstack.cc \
+pstacks_pe_SOURCES = src/pstacks_pe.cc src/stacks.h src/pstacks_base.h src/pstacks_base.cc \
+	src/stacks.cc src/constants.h src/mstack.h src/mstack.cc \
 	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
 	src/models.h src/models.cc src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \

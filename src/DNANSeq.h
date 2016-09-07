@@ -60,6 +60,7 @@ public:
 
     DNANSeq(int);
     DNANSeq(int, const char *);
+    DNANSeq(const char* s) : DNANSeq(strlen(s), s) {}
     DNANSeq(int, unsigned char *);
     DNANSeq(const DNANSeq&);
     DNANSeq& operator= (const DNANSeq& other) =delete;
@@ -88,7 +89,7 @@ using std::cin;
 using std::cout;
 using std::cerr;
 
-// Specialization for std::hash
+// Specializations for std::hash
 // Based on GCC
 namespace std {
 template<>
@@ -102,6 +103,11 @@ struct hash<DNANSeq> {
         }
         return __result;
     }
+};
+
+template<>
+struct hash<const DNANSeq*> {
+    size_t operator()(const DNANSeq* seq) const {return hash<DNANSeq>()(*seq);}
 };
 }
 

@@ -71,6 +71,18 @@ class Seq {
     friend void swap(Seq&, Seq&);
     Seq& operator=(Seq&& other) {swap(*this, other); return *this;}
     Seq& operator=(const Seq& other) = delete;
+
+    // drop_seq(): Voids the `seq` and `qual` members.
+    void drop_seq() {
+        if (seq != NULL) {
+            delete[] seq;
+            seq = NULL;
+        }
+        if (qual != NULL) {
+            delete[] qual;
+            qual = NULL;
+        }
+    }
 };
 
 //

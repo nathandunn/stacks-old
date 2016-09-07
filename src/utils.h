@@ -34,12 +34,6 @@ using std::make_pair;
 
 #include "stacks.h"
 
-const char nt_A = 'A';
-const char nt_C = 'C';
-const char nt_G = 'G';
-const char nt_T = 'T';
-const char nt_N = 'N';
-
 char   reverse(char);
 char  *rev_comp(const char *);
 void   reverse_string(char *);
@@ -77,83 +71,5 @@ struct int_decreasing {
         return lhs > rhs;
     }
 };
-
-/* NtCounts
- * ========== */
-class NtCounts {
-public:
-    NtCounts() : ar_{0,0,0,0,0} {}
-
-    void add(char c);
-    uint count(char nt) const;
-    uint coverage() const {return nA() + nC() + nG() + nT();}
-    char consensus() const;
-
-    uint nA() const {return ar_[0];}
-    uint nC() const {return ar_[1];}
-    uint nG() const {return ar_[2];}
-    uint nT() const {return ar_[3];}
-    uint nN() const {return ar_[4];}
-
-    const uint* array() const {return ar_;}
-
-protected:
-    uint ar_[5];
-
-    uint& nA() {return ar_[0];}
-    uint& nC() {return ar_[1];}
-    uint& nG() {return ar_[2];}
-    uint& nT() {return ar_[3];}
-    uint& nN() {return ar_[4];}
-};
-
-inline
-void NtCounts::add(char c) {
-    if (c == nt_A)
-        ++nA();
-    else if (c == nt_C)
-        ++nC();
-    else if (c == nt_G)
-        ++nG();
-    else if (c == nt_T)
-        ++nT();
-    else if (c == nt_N)
-        ++nN();
-    else
-        throw std::exception();
-}
-
-inline
-uint NtCounts::count(char c) const {
-    if (c == nt_A)
-        return nA();
-    else if (c == nt_C)
-        return nC();
-    else if (c == nt_G)
-        return nG();
-    else if (c == nt_T)
-        return nT();
-    else if (c == nt_N)
-        return nN();
-    throw std::exception();
-}
-
-inline
-char NtCounts::consensus() const {
-    char c = nt_A;
-    uint n = nA();
-    if (n < nC()) {
-        c = nt_C;
-        n = nC();
-    }
-    if (n < nG()) {
-        c = nt_G;
-        n = nG();
-    }
-    if (n < nT()) {
-        c = nt_T;
-    }
-    return c;
-}
 
 #endif // __UTILS_H__
