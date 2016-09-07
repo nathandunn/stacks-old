@@ -53,47 +53,102 @@ string paired_alns_path;
 /* CLocReadSet
  * =========== */
 struct ReadsByCLoc {
+public:
+    size_t n_used_reads;
+
+    // Read the input file, saving the reads that belong to one of the catalog loci.
+    ReadsByCLoc(Input* pe_reads_f,
+                size_t n_cloci,
+                const unordered_map<string, size_t> read_name_to_cloc);
+
+    // Obtain maps of MergedStack's and PStack's.
+    void convert_to_pmstacks(const vector<int>& cloc_to_cloc_id,
+                             map<int, PStack*>& pstacks,
+                             map<int, MergedStack*>& mstacks
+                             );
+
+    /*void clear() {
+        readsets.clear();
+        for (auto seq_ptr : unique_seqs)
+            delete seq_ptr;
+        unique_seqs.clear();
+    }*/
+
+private:
+    // CLocReadSet
+    // Reads are grouped by sequence, for each locus.
     typedef map<const DNANSeq*, vector<Seq> > CLocReadSet;
 
     unordered_set<const DNANSeq*> unique_seqs;
     vector<CLocReadSet> readsets;
 
-    size_t n_used_reads;
-
-    // Read the input file, saving the reads that belong to one of the catalog loci.
-    ReadsByCLoc(
-            Input* pe_reads_f,
-            size_t n_cloci,
-            const unordered_map<string, size_t> read_name_to_cloc
-            )
-            : unique_seqs()
-            , readsets(n_cloci)
-            , n_used_reads(0) {
-        Seq seq;
-        while(pe_reads_f->next_seq(seq)) {
-            auto cloc_it = read_name_to_cloc.find(seq.id);
-            if (cloc_it != read_name_to_cloc.end()) {
-                ++n_used_reads;
-                add_seq_to_cloc(cloc_it->second, seq);
-            }
-        }
-    }
-
-    // add_seq_to_cloc(): Adds a read to the given clocus.
+    // Add a read to the given clocus.
     void add_seq_to_cloc(size_t cloc, const Seq& seq) {
         const DNANSeq* seq_ptr = *unique_seqs.insert(new DNANSeq(seq.seq)).first;
         vector<Seq>& stack = readsets.at(cloc)[seq_ptr]; // First call creates the element.
         stack.push_back(seq);
         stack.back().drop_seq();
     }
-
-    void clear() {
-        readsets.clear();
-        for (auto seq_ptr : unique_seqs)
-            delete seq_ptr;
-        unique_seqs.clear();
-    }
 };
+
+ReadsByCLoc::ReadsByCLoc(
+        Input* pe_reads_f,
+        size_t n_cloci,
+        const unordered_map<string, size_t> read_name_to_cloc
+        )
+: n_used_reads(0)
+, unique_seqs()
+, readsets(n_cloci)
+{
+    Seq seq;
+    while(pe_reads_f->next_seq(seq)) {
+        auto cloc_it = read_name_to_cloc.find(seq.id);
+        if (cloc_it != read_name_to_cloc.end()) {
+            ++n_used_reads;
+            add_seq_to_cloc(cloc_it->second, seq);
+        }
+    }
+}
+
+void ReadsByCLoc::convert_to_pmstacks(
+        const vector<int>& cloc_to_cloc_id,
+        map<int, PStack*>& pstacks,
+        map<int, MergedStack*>& mstacks
+        ) {
+    int pstack_id = 0;
+    for (size_t cloc=0; cloc<readsets.size(); ++cloc) {
+        const CLocReadSet& readset = readsets[cloc];
+
+        /*
+         * First, obtain the raw PStacks of this locus.
+         * The PStacks share their sequence and location.
+         */
+        vector<PStack*> cloc_pstacks;
+        for (auto& identical_reads : readset) {
+            map<PhyLoc, vector<const Seq*> > seqs_by_loc;
+            for (const Seq& s : identical_reads.second)
+                seqs_by_loc[s.loc].push_back(&s);
+            for (auto& loc : seqs_by_loc) {
+                cloc_pstacks.push_back(new PStack());
+                PStack* p = cloc_pstacks.back();
+                p->loc = loc.first;
+                p->add_seq(identical_reads.first);
+                p->count = loc.second.size();
+                for (const Seq* s : loc.second)
+                    p->add_id(s->id);
+                p->id = pstack_id;
+                ++pstack_id;
+            }
+        }
+
+        // Create a new MergedStack
+        int cloc_id = cloc_to_cloc_id[cloc];
+        MergedStack& m = *mstacks.insert({cloc_id, new MergedStack()}).first->second;
+        m.id = cloc_id;
+
+
+    }
+}
 
 /* Function declarations.
  * ========== */
@@ -135,6 +190,7 @@ int main(int argc, char** argv) {
         pe_reads_f = new Bam(paired_alns_path.c_str());
     const ReadsByCLoc reads_by_cloc (pe_reads_f, cloc_to_cloc_id.size(), read_name_to_cloc);
     delete pe_reads_f;
+    read_name_to_cloc.clear();
     cerr << "Used " << reads_by_cloc.n_used_reads << " aligned paired-end reads.\n";
 
     //todo {
