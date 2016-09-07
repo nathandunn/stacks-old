@@ -106,8 +106,7 @@ public:
         p.strand = q.strand;
         q.strand = strand;
     }
-    PhyLoc& operator=(PhyLoc&& other) {swap(*this, other); return *this;}
-    PhyLoc& operator=(const PhyLoc& other) =delete;
+    PhyLoc& operator=(const PhyLoc& other) {PhyLoc cp (other); swap(*this, cp); return *this;}
 
     bool operator==(const PhyLoc& other) const {
         if (bp == other.bp
