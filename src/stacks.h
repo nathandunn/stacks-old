@@ -59,7 +59,7 @@ public:
     strand_type strand;
 
     void set(const char *chr, uint bp, strand_type strand) {
-        if (this->chr != NULL) 
+        if (this->chr != NULL)
             delete [] this->chr;
         this->chr    = new char[strlen(chr)  + 1];
         this->bp     = bp;
@@ -76,7 +76,6 @@ public:
         chr = new char[strlen(other.chr)+1];
         strcpy(chr, other.chr);
     }
-    PhyLoc& operator=(const PhyLoc& other) =delete;
     PhyLoc(const char *chr, uint bp) {
         this->chr    = new char[strlen(chr)  + 1];
         this->bp     = bp;
@@ -92,6 +91,43 @@ public:
     ~PhyLoc() {
         if (chr != NULL)
             delete [] chr;
+    }
+
+    friend void swap(PhyLoc& p, PhyLoc& q) {
+        char* chr = p.chr;
+        p.chr = q.chr;
+        q.chr = chr;
+
+        const uint bp = p.bp;
+        p.bp = q.bp;
+        q.bp = bp;
+
+        const strand_type strand = p.strand;
+        p.strand = q.strand;
+        q.strand = strand;
+    }
+    PhyLoc& operator=(PhyLoc&& other) {swap(*this, other); return *this;}
+    PhyLoc& operator=(const PhyLoc& other) =delete;
+
+    bool operator==(const PhyLoc& other) const {
+        if (bp == other.bp
+                && strand == other.strand
+                && strcmp(chr, other.chr) == 0)
+            return true;
+        else
+            return false;
+    }
+
+    bool operator<(const PhyLoc& other) const {
+        const int chrcmp = strcmp(chr, other.chr);
+        if (chrcmp != 0)
+            // Alphanumeric.
+            return chrcmp < 0;
+        else if (bp != other.bp)
+            return bp < other.bp;
+        else
+            // Minus strand first.
+            return strand == strand_minus && other.strand == strand_plus;
     }
 };
 
@@ -154,16 +190,16 @@ class PStack {
     vector<char *> map; // List of sequence read IDs merged into this stack
     PhyLoc         loc; // Physical genome location of this stack.
 
-    PStack()  { 
-        id     = 0; 
-        count  = 0; 
-        seq    = NULL; 
-        len    = 0; 
+    PStack()  {
+        id     = 0;
+        count  = 0;
+        seq    = NULL;
+        len    = 0;
     }
-    ~PStack() { 
-        delete this->seq; 
-        for (unsigned int i = 0; i < this->map.size(); i++) 
-            delete [] this->map[i]; 
+    ~PStack() {
+        delete this->seq;
+        for (unsigned int i = 0; i < this->map.size(); i++)
+            delete [] this->map[i];
     }
     int  add_id(const char *);
     int  add_seq(const char *);
@@ -180,7 +216,7 @@ class Stack {
         id  = 0;
         seq = NULL;
     }
-    ~Stack() { 
+    ~Stack() {
         delete this->seq;
     }
     uint count() { return this->map.size(); }
@@ -198,7 +234,7 @@ class Rem {
 
     Rem();
     Rem(int, uint, DNANSeq *);
-    ~Rem() { 
+    ~Rem() {
         delete this->seq;
     }
     uint count() { return this->map.size(); }
@@ -218,12 +254,12 @@ public:
     char  *haplotype;
     char  *cigar;
 
-    CatMatch() { 
-        batch_id  = 0; 
-        cat_id    = 0; 
-        sample_id = 0; 
-        tag_id    = 0; 
-        depth     = 0; 
+    CatMatch() {
+        batch_id  = 0;
+        cat_id    = 0;
+        sample_id = 0;
+        tag_id    = 0;
+        depth     = 0;
         lnl       = 0.0;
         haplotype = NULL;
         cigar     = NULL;
@@ -240,14 +276,14 @@ public:
     int   tag_id;
     char *model;
 
-    ModRes(int samp_id, int tag_id, const char *model) { 
-        this->sample_id = samp_id; 
+    ModRes(int samp_id, int tag_id, const char *model) {
+        this->sample_id = samp_id;
         this->tag_id    = tag_id;
         this->model     = new char[strlen(model) + 1];
         strcpy(this->model, model);
     }
-    ~ModRes() { 
-        delete [] this->model; 
+    ~ModRes() {
+        delete [] this->model;
     }
 };
 
@@ -257,11 +293,11 @@ public:
     int   tag_id;
     vector<SNP *> snps;
 
-    SNPRes(int samp_id, int tag_id) { 
-        this->sample_id = samp_id; 
+    SNPRes(int samp_id, int tag_id) {
+        this->sample_id = samp_id;
         this->tag_id    = tag_id;
     }
-    ~SNPRes() { 
+    ~SNPRes() {
         for (uint i = 0; i < this->snps.size(); i++)
             delete this->snps[i];
         this->snps.clear();

@@ -61,7 +61,7 @@ public:
 };
 
 template<class StatT>
-int 
+int
 Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci)
 {
     CSLocus   *loc;
@@ -100,7 +100,7 @@ Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, v
 }
 
 template<class StatT>
-int 
+int
 Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci, int pop_id)
 {
     CSLocus *loc;
@@ -139,7 +139,7 @@ Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, v
 }
 
 template<class StatT>
-int 
+int
 Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci, int pop_id_1, int pop_id_2)
 {
     CSLocus *loc;
@@ -180,8 +180,8 @@ Ordered<StatT>::init_sites(vector<StatT *> &sites, map<uint, uint> &sites_key, v
 }
 
 template<class StatT>
-int 
-Ordered<StatT>::init_haplotypes(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci) 
+int
+Ordered<StatT>::init_haplotypes(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci)
 {
     CSLocus *loc;
     int      bp;
@@ -218,8 +218,8 @@ public:
 };
 
 template<class StatT>
-int 
-OHaplotypes<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci) 
+int
+OHaplotypes<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci)
 {
     this->init_haplotypes(sites, sites_key, sorted_loci);
 
@@ -229,7 +229,7 @@ OHaplotypes<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, ve
 template<class StatT>
 class OPopPair: public Ordered<StatT> {
 public:
-    OPopPair(PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>() { 
+    OPopPair(PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>() {
         this->log_fh = &log_fh;
         this->psum   = psum;
     }
@@ -238,8 +238,8 @@ public:
 };
 
 template<class StatT>
-int 
-OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci, int pop_1, int pop_2) 
+int
+OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vector<CSLocus *> &sorted_loci, int pop_1, int pop_2)
 {
     CSLocus *loc;
     StatT   *pair;
@@ -268,7 +268,7 @@ OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vecto
                                 << loc->id << "\t"
                                 << loc->loc.chr << "\t"
                                 << loc->sort_bp(k) +1 << "\t"
-                                << k << "\t" 
+                                << k << "\t"
                                 << mpopi.pops()[pop_1].name << "\t"
                                 << mpopi.pops()[pop_2].name << "\n";
                 delete pair;
@@ -297,7 +297,7 @@ OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vecto
                                 << loc->id << "\t"
                                 << loc->loc.chr << "\t"
                                 << pair->bp +1 << "\t"
-                                << k << "\t" 
+                                << k << "\t"
                                 << mpopi.pops()[pop_1].name << "\t"
                                 << mpopi.pops()[pop_2].name << "\n";
                 delete pair;
@@ -314,7 +314,7 @@ OPopPair<StatT>::order(vector<StatT *> &sites, map<uint, uint> &sites_key, vecto
 template<class StatT>
 class OSumStat: public Ordered<StatT> {
 public:
-    OSumStat(PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>() { 
+    OSumStat(PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>() {
         this->log_fh = &log_fh;
         this->psum   = psum;
     }
@@ -323,8 +323,8 @@ public:
 };
 
 template<class StatT>
-int 
-OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, int pop_id) 
+int
+OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, int pop_id)
 {
     this->incompatible_loci = 0;
     this->multiple_loci     = 0;
@@ -338,7 +338,7 @@ OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, i
     int      len;
 
     //
-    // Assign nucleotides to their proper, ordered location in the genome, 
+    // Assign nucleotides to their proper, ordered location in the genome,
     // checking that a site hasn't already been covered by another RAD locus.
     //
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
@@ -362,7 +362,7 @@ OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, i
                                 << loc->id << "\t"
                                 << loc->loc.chr << "\t"
                                 << lsum->nucs[k].bp +1 << "\t"
-                                << k << "\t" 
+                                << k << "\t"
                                 << mpopi.pops()[pop_id].name << "\t"
                                 << "conflicts with locus " << sites[sites_key[lsum->nucs[k].bp]]->loc_id << "\n";
             }
@@ -375,7 +375,7 @@ OSumStat<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci, i
 template<class StatT>
 class OLocTally: public Ordered<StatT> {
 public:
-    OLocTally(PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>() { 
+    OLocTally(PopSum<CSLocus> *psum, ofstream &log_fh): Ordered<StatT>() {
         this->log_fh = &log_fh;
         this->psum   = psum;
     }
@@ -384,8 +384,8 @@ public:
 };
 
 template<class StatT>
-int 
-OLocTally<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci) 
+int
+OLocTally<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci)
 {
     this->incompatible_loci = 0;
     this->multiple_loci     = 0;
@@ -399,7 +399,7 @@ OLocTally<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci)
     int        len;
 
     //
-    // Assign nucleotides to their proper, ordered location in the genome, 
+    // Assign nucleotides to their proper, ordered location in the genome,
     // checking that a site hasn't already been covered by another RAD locus.
     //
     for (uint pos = 0; pos < sorted_loci.size(); pos++) {
@@ -423,7 +423,7 @@ OLocTally<StatT>::order(vector<StatT *> &sites, vector<CSLocus *> &sorted_loci)
                                 << loc->id << "\t"
                                 << loc->loc.chr << "\t"
                                 << ltally->nucs[k].bp +1 << "\t"
-                                << k << "\t" 
+                                << k << "\t"
                                 << "conflicts with locus " << sites[sites_key[ltally->nucs[k].bp]]->loc_id << "\n";
             }
         }

@@ -41,8 +41,8 @@ using std::unordered_map;
 enum fastqt   {generic_fastq, illv1_fastq, illv2_fastq};
 
 enum barcodet {null_null, null_index,
-               inline_null,   index_null, 
-               inline_inline, index_index, 
+               inline_null,   index_null,
+               inline_inline, index_index,
                inline_index,  index_inline};
 enum seqt {single_end, paired_end};
 
@@ -112,7 +112,7 @@ public:
         this->se = p;
         this->pe = "";
     }
-    string str() 
+    string str()
     {
         if (this->pe.length() > 0)
             return string(this->se + "-" + this->pe);
@@ -279,7 +279,7 @@ public:
         this->len      = buf_len - this->inline_bc_len;
         this->win_len  = round((double) this->len * win_size);
 
-        if (this->win_len < 1) 
+        if (this->win_len < 1)
             this->win_len = 1;
 
         this->len     += this->inline_bc_len;
@@ -306,11 +306,11 @@ int  check_quality_scores(Read *, int, int, int, int);
 // Templated function to process barcodes.
 //
 template<typename fhType>
-int 
-process_barcode(Read *href_1, Read *href_2, BarcodePair &bc, 
+int
+process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
                 map<BarcodePair, fhType *> &fhs,
-                set<string> &se_bc, set<string> &pe_bc, 
-                map<BarcodePair, map<string, long> > &barcode_log, map<string, long> &counter) 
+                set<string> &se_bc, set<string> &pe_bc,
+                map<BarcodePair, map<string, long> > &barcode_log, map<string, long> &counter)
 {
     if (barcode_type == null_null)
         return 0;
@@ -424,7 +424,7 @@ process_barcode(Read *href_1, Read *href_2, BarcodePair &bc,
             bc.se = string(href_1->se_bc);
         if (pe_bc.size() > 0 && pe_correct)
             bc.pe = string(href_2->pe_bc);
- 
+
         //
         // After correcting the individual barcodes, check if the combination is valid.
         //

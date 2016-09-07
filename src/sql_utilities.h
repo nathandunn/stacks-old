@@ -40,8 +40,8 @@ int load_model_results(string sample,  map<int, ModRes *> &modres);
 int load_snp_calls(string sample,  map<int, SNPRes *> &snpres);
 
 template <class LocusT>
-int 
-load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_all_model_calls, bool &compressed) 
+int
+load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_all_model_calls, bool &compressed)
 {
     LocusT        *c;
     SNP           *snp;
@@ -61,7 +61,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
     bool  open_fail = true;
     int   fh_status = 1;
 
-    // // 
+    // //
     // // First, try to parse the models file to pull in the consensus sequence and model string
     // // for each locus. If the models file is not available or we are requested to store the
     // // reads from each stack, fall back to the tags file.
@@ -149,7 +149,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
             if (blacklisted.count(id)) continue;
 
             //
-            // Make sure this locus has already been defined (consensus sequence SHOULD always 
+            // Make sure this locus has already been defined (consensus sequence SHOULD always
             // be specified first in the file for a particular locus).
             //
             if (loci.count(id) > 0) {
@@ -198,7 +198,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
         }
 
         //
-        // Do not include blacklisted tags in the catalog. They are tags that are composed 
+        // Do not include blacklisted tags in the catalog. They are tags that are composed
         // of noise and/or repetitive sequence.
         //
         if (parts[11] == "1") {
@@ -251,7 +251,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
     else
         fh.close();
 
-    // 
+    //
     // Next, parse the SNP file and load model calls.
     //
     gzip      = false;
@@ -301,7 +301,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
         //
         // Only load heterozygous model calls.
         //
-        if (load_all_model_calls == false && parts[4] != "E") 
+        if (load_all_model_calls == false && parts[4] != "E")
             continue;
 
         snp         = new SNP;
@@ -310,7 +310,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
         snp->rank_1 = parts[6].at(0);
         snp->rank_2 = parts[7].at(0) == '-' ? 0 : parts[7].at(0);
 
-        if (parts[4] == "E") 
+        if (parts[4] == "E")
             snp->type = snp_type_het;
         else if (parts[4] == "O")
             snp->type = snp_type_hom;
@@ -320,7 +320,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
         if (parts.size() == 10) {
             if (parts[8].length() == 0 || parts[8].at(0) == '-')
                 snp->rank_3 = 0;
-            else 
+            else
                 snp->rank_3 = parts[8].at(0);
 
             if (parts[9].length() == 0 || parts[9].at(0) == '-')
@@ -344,7 +344,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
     else
         fh.close();
 
-    // 
+    //
     // Finally, parse the Alleles file
     //
     gzip      = false;

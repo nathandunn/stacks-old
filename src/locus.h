@@ -70,20 +70,20 @@ class Locus {
     map<string, int>     alleles;   // Map of the allelic configuration of SNPs in this stack along with the count of each
     vector<pair<allele_type, string> > strings; // Strings for matching (representing the various allele combinations)
 
-    Locus()  { 
-        id              = 0; 
-        sample_id       = 0; 
-        depth           = 0; 
+    Locus()  {
+        id              = 0;
+        sample_id       = 0;
+        depth           = 0;
         model           = NULL;
-        con             = NULL; 
+        con             = NULL;
         len             = 0;
         lnl             = 0.0;
         blacklisted     = false;
         deleveraged     = false;
         lumberjackstack = false;
     }
-    virtual ~Locus() { 
-        delete [] con; 
+    virtual ~Locus() {
+        delete [] con;
         delete [] model;
         for (uint i = 0; i < snps.size(); i++)
             delete snps[i];
@@ -124,8 +124,8 @@ class CLocus : public Locus {
     vector<pair<int, int> > sources;   // Sample/ID pairs for the sources contributing to this catalog entry
     uint match_cnt;
 
-    CLocus() : Locus() { 
-        this->match_cnt = 0; 
+    CLocus() : Locus() {
+        this->match_cnt = 0;
     };
 
     int merge_snps(QLocus *);
@@ -133,17 +133,17 @@ class CLocus : public Locus {
 };
 
 //
-// Catalog Summary Locus Class; used in genotypes and populations, records a catalog 
-// locus with summary information derived from individuals in the population. 
+// Catalog Summary Locus Class; used in genotypes and populations, records a catalog
+// locus with summary information derived from individuals in the population.
 //
 class CSLocus : public Locus {
 public:
-    CSLocus() : Locus() { 
-        this->f          = 0.0; 
-        this->cnt  = 0; 
-        this->hcnt       = 0; 
-        this->gcnt       = 0; 
-        this->trans_gcnt = 0; 
+    CSLocus() : Locus() {
+        this->f          = 0.0;
+        this->cnt  = 0;
+        this->hcnt       = 0;
+        this->gcnt       = 0;
+        this->trans_gcnt = 0;
         this->chisq      = 1.0;
         this->confounded_cnt = 0;
     };
@@ -153,12 +153,12 @@ public:
     map<string, int> hap_cnts;    // Counts of each observed haplotype for this locus in the population.
     double f;                     // Inbreeder's coefficient
     map<string, string> gmap;     // Observed haplotype to genotype map for this locus.
-    int confounded_cnt;           // Number of samples/progeny containing confounded loci (more than one 
+    int confounded_cnt;           // Number of samples/progeny containing confounded loci (more than one
                                   //   locus from an individual sample matches this catalog locus).
     int hcnt;                     // Number of samples/progeny containing a haplotype for this locus.
     int cnt;                      // Number of samples/progeny containing data for this locus.
     int gcnt;                     // Number of progeny containing a valid genotype.
-    int trans_gcnt;               // Number of progeny containing a valid 
+    int trans_gcnt;               // Number of progeny containing a valid
                                   //   genotype, translated for a particular map type.
     double chisq;             // Chi squared p-value testing the null hypothesis of no segregation distortion.
 };

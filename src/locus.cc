@@ -23,8 +23,8 @@
 //
 #include "locus.h"
 
-uint 
-Locus::sort_bp(uint k) 
+uint
+Locus::sort_bp(uint k)
 {
     if (this->loc.strand == strand_plus)
         return this->loc.bp + k;
@@ -32,8 +32,8 @@ Locus::sort_bp(uint k)
         return (k == 0 ? this->loc.bp - this->len + 1 : this->loc.bp - k);
 }
 
-int 
-Locus::snp_index(uint col) 
+int
+Locus::snp_index(uint col)
 {
     for (uint i = 0; i < this->snps.size(); i++)
         if (this->snps[i]->col == col)
@@ -41,8 +41,8 @@ Locus::snp_index(uint col)
     return -1;
 }
 
-int 
-Locus::add_consensus(const char *seq) 
+int
+Locus::add_consensus(const char *seq)
 {
     if (this->con != NULL)
         delete [] this->con;
@@ -54,8 +54,8 @@ Locus::add_consensus(const char *seq)
     return 0;
 }
 
-int 
-Locus::add_model(const char *seq) 
+int
+Locus::add_model(const char *seq)
 {
     if (this->model != NULL)
         delete [] this->model;
@@ -63,12 +63,12 @@ Locus::add_model(const char *seq)
     this->model = new char[this->len + 1];
     strncpy(this->model, seq, this->len);
     this->model[this->len] = '\0';
-    
+
     return 0;
 }
 
-int 
-Locus::populate_alleles() 
+int
+Locus::populate_alleles()
 {
     vector<SNP *>::iterator  i;
     map<string, int>::iterator j;
@@ -105,13 +105,13 @@ Locus::populate_alleles()
     return 0;
 }
 
-bool 
-bp_compare(Locus *a, Locus *b) 
+bool
+bp_compare(Locus *a, Locus *b)
 {
     return (a->sort_bp() < b->sort_bp());
 }
 
-QLocus::~QLocus() 
+QLocus::~QLocus()
 {
     vector<Match *>::iterator it;
 
@@ -119,8 +119,8 @@ QLocus::~QLocus()
         delete *it;
 }
 
-int 
-QLocus::add_match(int catalog_id, allele_type cat_type, allele_type query_type, int distance) 
+int
+QLocus::add_match(int catalog_id, allele_type cat_type, allele_type query_type, int distance)
 {
     Match *m = new Match;
 
@@ -134,8 +134,8 @@ QLocus::add_match(int catalog_id, allele_type cat_type, allele_type query_type, 
     return 0;
 }
 
-int 
-QLocus::add_match(int catalog_id, allele_type cat_type, allele_type query_type, int distance, string cigar) 
+int
+QLocus::add_match(int catalog_id, allele_type cat_type, allele_type query_type, int distance, string cigar)
 {
     Match *m = new Match;
 
@@ -144,14 +144,14 @@ QLocus::add_match(int catalog_id, allele_type cat_type, allele_type query_type, 
     m->query_type = query_type;
     m->dist       = distance;
     m->cigar      = cigar;
-    
+
     this->matches.push_back(m);
 
     return 0;
 }
 
-int 
-QLocus::add_match(int catalog_id, allele_type cat_type) 
+int
+QLocus::add_match(int catalog_id, allele_type cat_type)
 {
     Match *m = new Match;
 
@@ -173,6 +173,6 @@ QLocus::clear_matches()
     for (it = this->matches.begin(); it != this->matches.end(); it++)
         delete *it;
     this->matches.clear();
-    
+
     return 0;
 }

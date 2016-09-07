@@ -35,7 +35,7 @@ int parse_illumina_v1(const char *file) {
     // Parse a file name that looks like: s_7_1_0001_qseq.txt ... s_7_1_0120_qseq.txt
     // but exclude the paired-end files:  s_7_2_0001_qseq.txt ... s_7_2_0120_qseq.txt
     //
-    if (file[0] != 's') 
+    if (file[0] != 's')
         return 0;
 
     int underscore_cnt = 0;
@@ -96,7 +96,7 @@ int parse_illumina_v2(const char *file) {
             //
             // Return the position of the paired-end number, so the other file name can be generated.
             //
-            return (p + 2 - file); 
+            return (p + 2 - file);
         }
         p++;
     }
@@ -104,8 +104,8 @@ int parse_illumina_v2(const char *file) {
     return 0;
 }
 
-int 
-parse_input_record(Seq *s, Read *r) 
+int
+parse_input_record(Seq *s, Read *r)
 {
     char *p, *q, *z;
     uint  lim;
@@ -216,10 +216,10 @@ parse_input_record(Seq *s, Read *r)
             // Check if there is a '+' character.
             //
             for (z = p; *z != '+' && *z != '\0'; z++);
-            
+
             if (r->read == 1) {
                 lim = z - p;
-                
+
                 switch (barcode_type) {
                 case index_null:
                 case index_index:
@@ -316,7 +316,7 @@ parse_input_record(Seq *s, Read *r)
     if (len > r->size - 1)
         r->resize(len + 1);
 
-    strncpy(r->seq,   s->seq,  r->size - 1); 
+    strncpy(r->seq,   s->seq,  r->size - 1);
     strncpy(r->phred, s->qual, r->size - 1);
     r->seq[r->size - 1]   = '\0';
     r->phred[r->size - 1] = '\0';
@@ -349,8 +349,8 @@ parse_input_record(Seq *s, Read *r)
     return 0;
 }
 
-int 
-rev_complement(char *seq, int offset, bool overhang) 
+int
+rev_complement(char *seq, int offset, bool overhang)
 {
     char *p, *q;
 
@@ -359,8 +359,8 @@ rev_complement(char *seq, int offset, bool overhang)
 
     int len   = strlen(q);
     int j     = 0;
-    char *com = new char[len + 1]; 
-   
+    char *com = new char[len + 1];
+
     for (p = q + len - 1; p >= q; p--) {
         switch (*p) {
         case 'A':
@@ -392,8 +392,8 @@ rev_complement(char *seq, int offset, bool overhang)
     return 0;
 }
 
-int 
-reverse_qual(char *qual, int offset, bool overhang) 
+int
+reverse_qual(char *qual, int offset, bool overhang)
 {
     char *p, *q;
 
@@ -402,8 +402,8 @@ reverse_qual(char *qual, int offset, bool overhang)
 
     int len   = strlen(q);
     int j     = 0;
-    char *com = new char[len + 1]; 
-   
+    char *com = new char[len + 1];
+
     for (p = q + len - 1; p >= q; p--) {
         com[j] = *p;
         j++;
@@ -421,8 +421,8 @@ reverse_qual(char *qual, int offset, bool overhang)
 //
 // Functions for quality filtering based on phred scores.
 //
-int 
-check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit, int offset) 
+int
+check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit, int offset)
 {
     //
     // Phred quality scores are discussed here:
@@ -511,8 +511,8 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
     return 1;
 }
 
-bool 
-correct_barcode(set<string> &bcs, Read *href, seqt type, int num_errs) 
+bool
+correct_barcode(set<string> &bcs, Read *href, seqt type, int num_errs)
 {
     if (recover == false)
         return false;
@@ -520,8 +520,8 @@ correct_barcode(set<string> &bcs, Read *href, seqt type, int num_errs)
     //
     // The barcode_dist variable specifies how far apart in sequence space barcodes are. If barcodes
     // are off by two nucleotides in sequence space, than we can correct barcodes that have a single
-    // sequencing error. 
-    // 
+    // sequencing error.
+    //
     // If the barcode sequence is off by no more than barcodes_dist-1 nucleotides, correct it. We will
     // search the whole possible space of barcodes if more than one length of barcode was specified.
     //
@@ -541,7 +541,7 @@ correct_barcode(set<string> &bcs, Read *href, seqt type, int num_errs)
         strncpy(bc, type == single_end ? href->se_bc : href->pe_bc, it->length());
         bc[it->length()] = '\0';
 
-        d = 0; 
+        d = 0;
         for (p = it->c_str(), q = bc; *p != '\0'; p++, q++)
             if (*p != *q) d++;
 
@@ -595,9 +595,9 @@ init_adapter_seq(int kmer_size, char *adapter, int &adp_len, AdapterHash &kmers)
     return 0;
 }
 
-int 
+int
 filter_adapter_seq(Read *href, char *adapter, int adp_len, AdapterHash &adp_kmers,
-                   int kmer_size, int distance, int len_limit) 
+                   int kmer_size, int distance, int len_limit)
 {
     vector<pair<int, int> > hits;
     int   num_kmers = href->len - kmer_size + 1;
@@ -620,7 +620,7 @@ filter_adapter_seq(Read *href, char *adapter, int adp_len, AdapterHash &adp_kmer
     }
 
     //
-    // Scan backwards from the position of the k-mer and then scan forwards 
+    // Scan backwards from the position of the k-mer and then scan forwards
     // counting the number of mismatches.
     //
     int mismatches, i, j, start_pos;
@@ -653,7 +653,7 @@ filter_adapter_seq(Read *href, char *adapter, int adp_len, AdapterHash &adp_kmer
             j++;
         }
 
-        // cerr << "Starting position: " << start_pos << "; Query end (i): " << i << "; adapter end (j): " << j 
+        // cerr << "Starting position: " << start_pos << "; Query end (i): " << i << "; adapter end (j): " << j
         //      << "; number of mismatches: " << mismatches << "; Seq Len: " << href->len << "; SeqSeq Len: " << strlen(href->seq) << "\n";
 
         if (mismatches <= distance && (i == (int) href->len || j == adp_len)) {

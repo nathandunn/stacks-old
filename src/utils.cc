@@ -60,13 +60,13 @@ char reverse(char c) {
 }
 
 char *
-rev_comp(const char *seq) 
+rev_comp(const char *seq)
 {
     int len   = strlen(seq);
     int j     = 0;
-    char *com = new char[len + 1]; 
+    char *com = new char[len + 1];
     const char *p;
-   
+
     for (p = seq + len - 1; p >= seq; p--) {
         switch (*p) {
         case 'A':
@@ -99,7 +99,7 @@ rev_comp(const char *seq)
 }
 
 void
-reverse_string(char *seq) 
+reverse_string(char *seq)
 {
     int len = strlen(seq);
     char *p = seq;
@@ -117,8 +117,8 @@ reverse_string(char *seq)
     return;
 }
 
-int 
-is_integer(const char *str) 
+int
+is_integer(const char *str)
 {
     //
     // Adapted from the strtol manpage.
@@ -143,8 +143,8 @@ is_integer(const char *str)
     return (int) val;
 }
 
-double 
-is_double(const char *str) 
+double
+is_double(const char *str)
 {
     //
     // Adapted from the strtol manpage.
@@ -169,8 +169,8 @@ is_double(const char *str)
     return val;
 }
 
-double 
-factorial(double n) 
+double
+factorial(double n)
 {
     double fact = 1;
 
@@ -180,14 +180,14 @@ factorial(double n)
     return fact;
 }
 
-double 
-reduced_factorial(double n, double d) 
+double
+reduced_factorial(double n, double d)
 {
     double f = n - d;
 
-    if (f < 0) 
+    if (f < 0)
         return 0;
-    else if (f == 0) 
+    else if (f == 0)
         return 1;
     else if (f == 1)
         return n;
@@ -202,8 +202,8 @@ reduced_factorial(double n, double d)
     return f;
 }
 
-double 
-log_factorial(double n) 
+double
+log_factorial(double n)
 {
     double fact = 0;
 
@@ -213,14 +213,14 @@ log_factorial(double n)
     return fact;
 }
 
-double 
-reduced_log_factorial(double n, double d) 
+double
+reduced_log_factorial(double n, double d)
 {
     double f = n - d;
 
-    if (f < 0) 
+    if (f < 0)
         return 0;
-    else if (f == 0) 
+    else if (f == 0)
         return 0;
     else if (f == 1)
         return log(n);

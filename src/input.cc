@@ -30,7 +30,7 @@
 
 #include "input.h"
 
-Seq::Seq() { 
+Seq::Seq() {
     this->id       = NULL;
     this->seq      = NULL;
     this->qual     = NULL;
@@ -65,28 +65,28 @@ Seq::Seq(const Seq& other)
     }
 }
 
-Seq::Seq(const char *id, const char *seq) { 
+Seq::Seq(const char *id, const char *seq) {
     this->id       = new char[strlen(id)   + 1];
     this->seq      = new char[strlen(seq)  + 1];
     this->qual     = NULL;
     this->loc_str  = NULL;
 
-    strcpy(this->id,   id); 
+    strcpy(this->id,   id);
     strcpy(this->seq,  seq);
 }
 
-Seq::Seq(const char *id, const char *seq, const char *qual)  { 
+Seq::Seq(const char *id, const char *seq, const char *qual)  {
     this->id       = new char[strlen(id)   + 1];
     this->seq      = new char[strlen(seq)  + 1];
     this->qual     = new char[strlen(qual) + 1];
     this->loc_str  = NULL;
 
-    strcpy(this->id,   id); 
-    strcpy(this->seq,  seq); 
-    strcpy(this->qual, qual); 
+    strcpy(this->id,   id);
+    strcpy(this->seq,  seq);
+    strcpy(this->qual, qual);
 }
 
-Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand)  { 
+Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand)  {
     this->id      = new char[strlen(id)   + 1];
     this->qual    = new char[strlen(qual) + 1];
     this->loc_str = new char[strlen(chr)  + 15];
@@ -98,7 +98,7 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
     sprintf(this->loc_str, "%s|%d|%c", chr, bp, strand == strand_plus ? '+' : '-');
 
     //
-    // Reverse complement sequences from the negative strand 
+    // Reverse complement sequences from the negative strand
     //
     if (strand == strand_plus) {
         this->seq = new char[strlen(seq)  + 1];
@@ -106,6 +106,28 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
     } else {
         this->seq = rev_comp(seq);
     }
+}
+
+void swap(Seq& s1, Seq& s2) {
+    char* ptr;
+
+    ptr = s1.id;
+    s1.id = s2.id;
+    s2.id = ptr;
+
+    ptr = s1.seq;
+    s1.seq = s2.seq;
+    s2.seq = ptr;
+
+    ptr = s1.qual;
+    s1.qual = s2.qual;
+    s2.qual = ptr;
+
+    ptr = s1.loc_str;
+    s1.loc_str = s2.loc_str;
+    s2.loc_str = ptr;
+
+    swap(s1.loc, s2.loc);
 }
 
 Input::Input() {
@@ -121,7 +143,7 @@ Input::Input(const char *path) {
     //
     this->fh.open(path, ifstream::in);
 
-    if (this->fh.fail()) 
+    if (this->fh.fail())
         cerr << "Error opening input file '" << path << "'\n";
 }
 
@@ -130,8 +152,8 @@ Input::~Input() {
     this->fh.close();
 }
 
-int 
-parse_tsv(const char *line, vector<string> &parts) 
+int
+parse_tsv(const char *line, vector<string> &parts)
 {
     const char  *p, *q;
     string part;
@@ -141,7 +163,7 @@ parse_tsv(const char *line, vector<string> &parts)
 
     do {
         for (q = p; *q != '\t' && *q != '\0'; q++);
-        if (q - p == 0) 
+        if (q - p == 0)
             part = "";
         else
             part.assign(p, (q - p));
@@ -157,8 +179,8 @@ parse_tsv(const char *line, vector<string> &parts)
     return 0;
 }
 
-int 
-parse_ssv(const char *line, vector<string> &parts) 
+int
+parse_ssv(const char *line, vector<string> &parts)
 {
     const char  *p, *q;
     string part;
@@ -168,7 +190,7 @@ parse_ssv(const char *line, vector<string> &parts)
 
     do {
         for (q = p; *q != ' ' && *q != '\0'; q++);
-        if (q - p == 0) 
+        if (q - p == 0)
             part = "";
         else
             part.assign(p, (q - p));

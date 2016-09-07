@@ -21,7 +21,7 @@
 #ifndef __USTACKS_H__
 #define __USTACKS_H__
 
-#include "constants.h" 
+#include "constants.h"
 
 #ifdef _OPENMP
 #include <omp.h>    // OpenMP library
@@ -67,6 +67,7 @@ using std::set;
 using google::sparse_hash_map;
 #endif
 
+#include "config.h"
 #include "kmers.h"
 #include "utils.h"
 #include "DNASeq.h"     // Class for storing two-bit compressed DNA sequences

@@ -101,7 +101,7 @@ Seq *Fastq::next_seq() {
 
     //
     // Clear the line buffer so it is set up for the next record. If a '@'
-    // appears in the quality scores read, it will break parsing next time 
+    // appears in the quality scores read, it will break parsing next time
     // it is called.
     //
     this->line[0] = '\0';
@@ -173,7 +173,7 @@ int Fastq::next_seq(Seq &s) {
 
     //
     // Clear the line buffer so it is set up for the next record. If a '@'
-    // appears in the quality scores read, it will break parsing next time 
+    // appears in the quality scores read, it will break parsing next time
     // it is called.
     //
     this->line[0] = '\0';

@@ -20,7 +20,7 @@
 
 //
 // clone_filter -- find duplicate read pairs and reduce them to one representative
-// pair of sequences in the data set. These reads are assumed to be the product of 
+// pair of sequences in the data set. These reads are assumed to be the product of
 // PCR amplification.
 //
 
@@ -113,7 +113,7 @@ int main (int argc, char* argv[]) {
             cerr << "Searching for inline oligo on single-end read and index oligo (i5 or i7 Illumina read).\n";
         break;
     }
-        
+
     map<string, long> counters;
     counters["total"] = 0;
     counters["red_reads"] = 0;
@@ -187,19 +187,19 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int 
+int
 process_paired_reads_by_sequence(string prefix_1, string prefix_2, map<string, long> &counters,
                                  CloneHash &clone_map, vector<char *> &clone_map_keys)
 {
     Input *fh_1, *fh_2;
 
     int return_val = 1;
-    
+
     string path_1 = in_path_1 + prefix_1;
     string path_2 = in_path_2 + prefix_2;
 
-    cerr << "Reading data from:\n  " 
-         << path_1 << " and\n  " 
+    cerr << "Reading data from:\n  "
+         << path_1 << " and\n  "
          << path_2 << "\n";
 
     switch (in_file_type) {
@@ -273,7 +273,7 @@ process_paired_reads_by_sequence(string prefix_1, string prefix_2, map<string, l
         delete s_2;
 
         i++;
-    } while ((s_1 = fh_1->next_seq()) != NULL && 
+    } while ((s_1 = fh_1->next_seq()) != NULL &&
              (s_2 = fh_2->next_seq()) != NULL);
 
     cerr << "\n";
@@ -291,7 +291,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
 {
     ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
     gzFile    out_gzfh_1, out_gzfh_2, discard_gzfh_1, discard_gzfh_2;
-    
+
     int return_val = 1;
 
     //
@@ -304,7 +304,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
     // Open the output files.
     //
     string suffix_1, suffix_2;
-    
+
     if (out_file_type == FileT::gzfastq) {
         suffix_1 = ".1.fq.gz";
         suffix_2 = ".2.fq.gz";
@@ -327,7 +327,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
             cerr << "Error opening output file '" << path_1 << "'\n";
             return -1;
         }
-    } else {        
+    } else {
         out_fh_1.open(path_1.c_str(), ifstream::out);
         if (out_fh_1.fail()) {
             cerr << "Error opening output file '" << path_1 << "'\n";
@@ -343,7 +343,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
             cerr << "Error opening output file '" << path_2 << "'\n";
             return -1;
         }
-    } else {        
+    } else {
         out_fh_2.open(path_2.c_str(), ifstream::out);
         if (out_fh_2.fail()) {
             cerr << "Error opening output file '" << path_2 << "'\n";
@@ -426,7 +426,7 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
                 out_fh_1 << sstr_1.str();
                 out_fh_2 << sstr_2.str();
             }
-            
+
             counters["dis_reads"] += map_it->second.size() - 1;
             clone_dist[map_it->second.size()]++;
 
@@ -489,17 +489,17 @@ write_clonereduced_sequence(string prefix_1, string prefix_2,
             discard_fh_2.close();
         }
     }
-    
+
     return return_val;
 }
-int 
+int
 process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counters, OligoHash &oligo_map)
 {
     Input    *fh_1, *fh_2;
     Read     *r_1,  *r_2;
     ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
     gzFile    out_gzfh_1, out_gzfh_2, discard_gzfh_1, discard_gzfh_2;
-    
+
     int return_val = 1;
 
     //
@@ -547,7 +547,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     // Open the output files.
     //
     string suffix_1, suffix_2;
-    
+
     if (out_file_type == FileT::gzfastq) {
         suffix_1 = ".1.fq.gz";
         suffix_2 = ".2.fq.gz";
@@ -570,7 +570,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
             cerr << "Error opening output file '" << path_1 << "'\n";
             return -1;
         }
-    } else {        
+    } else {
         out_fh_1.open(path_1.c_str(), ifstream::out);
         if (out_fh_1.fail()) {
             cerr << "Error opening output file '" << path_1 << "'\n";
@@ -586,7 +586,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
             cerr << "Error opening output file '" << path_2 << "'\n";
             return -1;
         }
-    } else {        
+    } else {
         out_fh_2.open(path_2.c_str(), ifstream::out);
         if (out_fh_2.fail()) {
             cerr << "Error opening output file '" << path_2 << "'\n";
@@ -606,7 +606,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
                 cerr << "Error opening discard file '" << path_1 << "'\n";
                 return -1;
             }
-        } else {            
+        } else {
             discard_fh_1.open(path_1.c_str(), ifstream::out);
             if (discard_fh_1.fail()) {
                 cerr << "Error opening discard file '" << path_1 << "'\n";
@@ -622,7 +622,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
                 cerr << "Error opening discard file '" << path_2 << "'\n";
                 return -1;
             }
-        } else {            
+        } else {
             discard_fh_2.open(path_2.c_str(), ifstream::out);
             if (discard_fh_2.fail()) {
                 cerr << "Error opening discard file '" << path_2 << "'\n";
@@ -658,15 +658,15 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
         break;
     }
 
-                
+
     //
-    // Read in the first record, initializing the Seq object s. Then 
+    // Read in the first record, initializing the Seq object s. Then
     // initialize the Read object r, then loop, using the same objects.
     //
     Seq *s_1 = fh_1->next_seq();
     Seq *s_2 = fh_2->next_seq();
     if (s_1 == NULL || s_2 == NULL) {
-        cerr << "Attempting to read first pair of input records, unable to allocate " 
+        cerr << "Attempting to read first pair of input records, unable to allocate "
              << "Seq object (Was the correct input type specified?).\n";
         exit(1);
     }
@@ -801,12 +801,12 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
                 break;
             }
         }
-        
+
         delete s_1;
         delete s_2;
 
         i++;
-    } while ((s_1 = fh_1->next_seq()) != NULL && 
+    } while ((s_1 = fh_1->next_seq()) != NULL &&
              (s_2 = fh_2->next_seq()) != NULL);
 
     if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta) {
@@ -824,7 +824,7 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
             discard_fh_2.close();
         }
     }
-    
+
     delete fh_1;
     if (interleaved == false) delete fh_2;
 
@@ -834,14 +834,14 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
     return return_val;
 }
 
-int 
+int
 process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map)
 {
     Input   *fh_1;
     Read    *r_1;
     ofstream out_fh_1, discard_fh_1;
     gzFile   out_gzfh_1, discard_gzfh_1;
-    
+
     int return_val = 1;
 
     //
@@ -859,9 +859,9 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
         fh_1 = new GzFastq(path_1.c_str());
         break;
     case FileT::fasta:
-        fh_1 = new Fasta(path_1);       
+        fh_1 = new Fasta(path_1);
         break;
-    case FileT::gzfasta: 
+    case FileT::gzfasta:
         fh_1 = new GzFasta(path_1);
         break;
     case FileT::bam:
@@ -877,7 +877,7 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
     // Open the output files.
     //
     string suffix_1;
-    
+
     if (out_file_type == FileT::gzfastq)
         suffix_1 = ".fq.gz";
     else if (out_file_type == FileT::fastq)
@@ -889,7 +889,7 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
 
     string file_1 = prefix_1;
     int    pos    = file_1.find_last_of(".");
-    if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
+    if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) &&
         file_1.substr(pos) == ".gz") {
         file_1 = file_1.substr(0, pos);
         pos    = file_1.find_last_of(".");
@@ -901,7 +901,7 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
             cerr << "Error opening output file '" << path_1 << "'\n";
             return -1;
         }
-    } else {        
+    } else {
         out_fh_1.open(path_1.c_str(), ifstream::out);
         if (out_fh_1.fail()) {
             cerr << "Error opening output file '" << path_1 << "'\n";
@@ -921,7 +921,7 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
                 cerr << "Error opening discard file '" << path_1 << "'\n";
                 return -1;
             }
-        } else {            
+        } else {
             discard_fh_1.open(path_1.c_str(), ifstream::out);
             if (discard_fh_1.fail()) {
                 cerr << "Error opening discard file '" << path_1 << "'\n";
@@ -944,14 +944,14 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
         offset_1 = 0;
         break;
     }
-                
+
     //
-    // Read in the first record, initializing the Seq object s. Then 
+    // Read in the first record, initializing the Seq object s. Then
     // initialize the Read object r, then loop, using the same objects.
     //
     Seq *s_1 = fh_1->next_seq();
     if (s_1 == NULL) {
-        cerr << "Attempting to read first pair of input records, unable to allocate " 
+        cerr << "Attempting to read first pair of input records, unable to allocate "
              << "Seq object (Was the correct input type specified?).\n";
         exit(1);
     }
@@ -1014,7 +1014,7 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
             default:
                 break;
             }
-            
+
             if (!result_1) {
                 cerr << "Error writing to output file for '" << file_1 << "'\n";
                 return_val = -1;
@@ -1058,7 +1058,7 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
         out_fh_1.close();
         if (discards) discard_fh_1.close();
     }
-    
+
     delete fh_1;
 
     delete r_1;
@@ -1066,8 +1066,8 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
     return return_val;
 }
 
-int 
-free_hash(vector<char *> &keys) 
+int
+free_hash(vector<char *> &keys)
 {
     for (uint i = 0; i < keys.size(); i++) {
         delete [] keys[i];
@@ -1106,7 +1106,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"retain_oligo",  required_argument, NULL, 'R'},
             {0, 0, 0, 0}
         };
-        
+
         // getopt_long stores the option index here.
         int option_index = 0;
 
@@ -1207,7 +1207,7 @@ int parse_command_line(int argc, char* argv[]) {
             // getopt_long already printed an error message.
             help();
             break;
-     
+
         default:
             cerr << "Unknown command line option '" << (char) c << "'\n";
             help();
@@ -1235,16 +1235,16 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
-    if (in_path_1.length() > 0 && in_path_1.at(in_path_1.length() - 1) != '/') 
+    if (in_path_1.length() > 0 && in_path_1.at(in_path_1.length() - 1) != '/')
         in_path_1 += "/";
 
-    if (in_path_2.length() > 0 && in_path_2.at(in_path_2.length() - 1) != '/') 
+    if (in_path_2.length() > 0 && in_path_2.at(in_path_2.length() - 1) != '/')
         in_path_2 += "/";
 
-    if (out_path.length() == 0) 
+    if (out_path.length() == 0)
         out_path = ".";
 
-    if (out_path.at(out_path.length() - 1) != '/') 
+    if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
     if (in_file_type == FileT::unknown)
@@ -1259,7 +1259,7 @@ int parse_command_line(int argc, char* argv[]) {
         cerr << "You must specify the length of the oligo sequences (--oligo_len_1 / --oligo_len_2).\n";
         help();
     }
-    
+
     return 0;
 }
 

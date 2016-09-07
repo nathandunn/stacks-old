@@ -57,7 +57,7 @@ int main (int argc, char* argv[]) {
     case snp:
         cerr << "SNP\n";
         break;
-    case fixed: 
+    case fixed:
         cerr << "Fixed\n";
         break;
     case bounded:
@@ -67,7 +67,7 @@ int main (int argc, char* argv[]) {
     cerr << "Alpha significance level for model: " << alpha << "\n";
 
     //
-    // Set limits to call het or homozygote according to chi-square distribution with one 
+    // Set limits to call het or homozygote according to chi-square distribution with one
     // degree of freedom:
     //   http://en.wikipedia.org/wiki/Chi-squared_distribution#Table_of_.CF.872_value_vs_p-value
     //
@@ -93,13 +93,15 @@ int main (int argc, char* argv[]) {
     #endif
 
     HashMap*           radtags = new HashMap();
-    set<int>           merge_map;
     map<int, PStack *> unique;
 
     load_radtags(in_file, *radtags);
 
     reduce_radtags(*radtags, unique);
 
+    for (auto& stack : *radtags)
+        for (Seq* read : stack.second)
+            delete read;
     delete radtags;
 
     //dump_stacks(unique);
@@ -150,7 +152,7 @@ int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {
             // Check to make sure the nucleotide at the location of this SNP is
             // of one of the two possible states the multinomial model called.
             //
-            if (base == (*snp)->rank_1 || base == (*snp)->rank_2) 
+            if (base == (*snp)->rank_1 || base == (*snp)->rank_2)
                 allele += base;
             else
                 break;
@@ -170,13 +172,13 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
     //
     map<int, MergedStack *>::iterator it;
     vector<int> keys;
-    for (it = merged.begin(); it != merged.end(); it++) 
+    for (it = merged.begin(); it != merged.end(); it++)
         keys.push_back(it->first);
 
     int i;
     #pragma omp parallel private(i)
-    { 
-        #pragma omp for schedule(dynamic) 
+    {
+        #pragma omp for schedule(dynamic)
         for (i = 0; i < (int) keys.size(); i++) {
             MergedStack *mtag;
             PStack *utag;
@@ -186,7 +188,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
             //
             // Create a two-dimensional array, each row containing one read. For
             // each unique tag that has been merged together, add the sequence for
-            // that tag into our array as many times as it originally occurred. 
+            // that tag into our array as many times as it originally occurred.
             //
             vector<int>::iterator j;
             vector<DNANSeq *> reads;
@@ -229,7 +231,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
                 max = nuc.end();
 
                 for (n = nuc.begin(); n != nuc.end(); n++) {
-                    if (n->first == 'N') 
+                    if (n->first == 'N')
                         continue;
                     if (max == nuc.end() || n->second > max->second)
                         max = n;
@@ -308,7 +310,7 @@ double calc_coverage_distribution(map<int, PStack *> &unique, map<int, MergedSta
 
         if (depth < min_stack_cov)
             continue;
-        if (depth > max) 
+        if (depth > max)
             max = depth;
 
         sum += depth;
@@ -380,7 +382,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     string snp_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".snps.tsv";
     string all_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".alleles.tsv";
     string mod_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".models.tsv";
-    
+
     if (gzip) {
         tag_file += ".gz";
         snp_file += ".gz";
@@ -461,7 +463,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     time(&rawtime);
     timeinfo = localtime(&rawtime);
     strftime(date, 32, "%F %T", timeinfo);
-    log << "# pstacks version " << VERSION << "; generated on " << date << "\n"; 
+    log << "# pstacks version " << VERSION << "; generated on " << date << "\n";
     if (gzip) {
         gzputs(gz_tags, log.str().c_str());
         gzputs(gz_mods, log.str().c_str());
@@ -504,15 +506,15 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         if (tag_1->blacklisted) blacklisted++;
 
         // First write the consensus sequence
-        sstr << "0" << "\t" 
-             << sql_id << "\t" 
-             << tag_1->id << "\t" 
+        sstr << "0" << "\t"
+             << sql_id << "\t"
+             << tag_1->id << "\t"
              << tag_1->loc.chr << "\t"
              << tag_1->loc.bp << "\t"
              << (tag_1->loc.strand == strand_plus ? "+" : "-") << "\t"
-             << "consensus\t" << "\t\t" 
-             << tag_1->con << "\t" 
-             << tag_1->deleveraged << "\t" 
+             << "consensus\t" << "\t\t"
+             << tag_1->con << "\t"
+             << tag_1->deleveraged << "\t"
              << tag_1->blacklisted << "\t"
              << tag_1->lumberjackstack << "\t"
              << tag_1->lnl << "\n";
@@ -520,9 +522,9 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         //
         // Write a sequence recording the output of the SNP model for each nucleotide.
         //
-        sstr << "0" << "\t" 
-             << sql_id << "\t" 
-             << tag_1->id << "\t" 
+        sstr << "0" << "\t"
+             << sql_id << "\t"
+             << tag_1->id << "\t"
              << "\t"
              << "\t"
              << "\t"
@@ -546,7 +548,7 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
              << "\t"
              << "\t"
              << "\n";
-        
+
         if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
         if (gzip) gzputs(gz_mods, sstr.str().c_str()); else mods << sstr.str();
         sstr.str("");
@@ -570,9 +572,9 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         // Write out the model calls for each nucleotide in this locus.
         //
         for (s = tag_1->snps.begin(); s != tag_1->snps.end(); s++) {
-            sstr << "0"          << "\t" 
-                 << sql_id       << "\t" 
-                 << tag_1->id    << "\t" 
+            sstr << "0"          << "\t"
+                 << sql_id       << "\t"
+                 << tag_1->id    << "\t"
                  << (*s)->col    << "\t";
 
             switch((*s)->type) {
@@ -588,8 +590,8 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
             }
 
             sstr << std::fixed   << std::setprecision(2)
-                 << (*s)->lratio << "\t" 
-                 << (*s)->rank_1 << "\t" 
+                 << (*s)->lratio << "\t"
+                 << (*s)->rank_1 << "\t"
                  << (*s)->rank_2 << "\t\t\n";
         }
 
@@ -602,11 +604,11 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         char pct[id_len];
         for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
             sprintf(pct, "%.2f", ((t->second/total) * 100));
-            sstr << "0"       << "\t" 
-                 << sql_id    << "\t" 
-                 << tag_1->id << "\t" 
-                 << t->first  << "\t" 
-                 << pct       << "\t" 
+            sstr << "0"       << "\t"
+                 << sql_id    << "\t"
+                 << tag_1->id << "\t"
+                 << t->first  << "\t"
+                 << pct       << "\t"
                  << t->second << "\n";
         }
         if (gzip) gzputs(gz_alle, sstr.str().c_str()); else alle << sstr.str();
@@ -645,9 +647,9 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
     // Create a map of each unique Stack that has been aligned to the same genomic location.
     //
     for (i = unique.begin(); i != unique.end(); i++) {
-        snprintf(id, id_len - 1, "%s|%d|%s", 
-                 i->second->loc.chr, 
-                 i->second->loc.bp, 
+        snprintf(id, id_len - 1, "%s|%d|%s",
+                 i->second->loc.chr,
+                 i->second->loc.bp,
                  i->second->loc.strand == strand_plus ? "+" : "-");
         locations[id].insert(i->second->id);
     }
@@ -658,7 +660,7 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
         m = new MergedStack;
         m->id = global_id;
 
-        // 
+        //
         // Record the consensus and physical location for this stack.
         //
         s = k->second.begin();
@@ -735,7 +737,7 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
     }
 
     cerr << "  " << radtags.size() << " unique stacks were aligned to " << unique.size() << " genomic locations.\n";
-    
+
     return 0;
 }
 
@@ -758,27 +760,35 @@ int load_radtags(string in_file, HashMap &radtags) {
 
     cerr << "Parsing " << in_file.c_str() << "\n";
 
-    int i = 1;
+    int i = 0;
     cerr << "Loading aligned sequences...";
     while ((fh->next_seq(c)) != 0) {
-        if (i % 1000000 == 0)
+        if (i % 1000000 == 0 && i>0)
             cerr << i/1000000 << "M...";
 
         HashMap::iterator element = radtags.insert({DNANSeq(strlen(c.seq), c.seq), vector<Seq*>()}).first;
         element->second.push_back(new Seq(c));
+        Seq& the_seq = *element->second.back();
+        if (the_seq.seq != NULL) {
+            delete[] the_seq.seq;
+            the_seq.seq = NULL;
+        }
+        if (the_seq.qual != NULL) {
+            delete[] the_seq.qual;
+            the_seq.qual = NULL;
+        }
 
         i++;
     }
     cerr << "done\n";
 
-    if (i == 1) {
+    if (i == 0) {
         cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
-        exit(1);
+        exit(-1);
     }
 
-    cerr << "  " <<
-        "Analyzed " << i - 1 << " sequence reads; " <<
-        "Identified " << radtags.size() << " unique stacks from those reads.\n";
+    cerr << "Loaded " << i << " sequence reads; " <<
+        "identified " << radtags.size() << " unique stacks from those reads.\n";
 
     //
     // Close the file and delete the Input object.
@@ -798,7 +808,7 @@ int dump_stacks(map<int, PStack *> &u) {
 
         cerr << "Stack ID: " << (*it).second->id << "\n"
              << "  Seq:    " << (*it).second->seq->seq() << "\n"
-             << "  IDs:    "; 
+             << "  IDs:    ";
 
         for (fit = (*it).second->map.begin(); fit != (*it).second->map.end(); fit++)
             cerr << *fit << " ";
@@ -820,9 +830,9 @@ int dump_merged_stacks(map<int, MergedStack *> &m) {
              << "  Consensus:  ";
         if (it->second->con != NULL)
             cerr << it->second->con << "\n";
-        else 
+        else
             cerr << "\n";
-        cerr << "  IDs:        "; 
+        cerr << "  IDs:        ";
 
         for (fit = it->second->utags.begin(); fit != it->second->utags.end(); fit++)
             cerr << (*fit) << " ";
@@ -941,7 +951,7 @@ int parse_command_line(int argc, char* argv[]) {
             // getopt_long already printed an error message.
             help();
             break;
-     
+
         default:
             cerr << "Unknown command line option '" << (char) c << "'\n";
             help();
@@ -973,10 +983,10 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
-    if (out_path.length() == 0) 
+    if (out_path.length() == 0)
         out_path = ".";
 
-    if (out_path.at(out_path.length() - 1) != '/') 
+    if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
     if (model_type == fixed && barcode_err_freq == 0) {
@@ -1003,7 +1013,7 @@ void help() {
               << "  m: minimum depth of coverage to report a stack (default 1).\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  h: display this help messsage.\n"
-              << "  Model options:\n" 
+              << "  Model options:\n"
               << "    --model_type <type>: either 'snp' (default), 'bounded', or 'fixed'\n"
               << "    For the SNP or Bounded SNP model:\n"
               << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"

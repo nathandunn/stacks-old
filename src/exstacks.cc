@@ -97,15 +97,15 @@ int main (int argc, char* argv[]) {
 bool compare_loci(Locus *a, Locus *b) {
     return (a->loc.bp < b->loc.bp);
 }
- 
+
 int write_simple_output(Locus *tag) {
     vector<SNP *>::iterator           snp_it;
     map<string, int>::iterator        all_it;
     vector<pair<int, int> >::iterator src_it;
     int i;
 
-    cout << 
-        "  Locus: " << 
+    cout <<
+        "  Locus: " <<
         tag->id    << ", chr: " << tag->loc.chr << " " << tag->loc.bp << "bp; " <<
         tag->con    << "\n";
 
@@ -114,10 +114,10 @@ int write_simple_output(Locus *tag) {
     //
     i = 1;
     for (snp_it = tag->snps.begin(); snp_it != tag->snps.end(); snp_it++) {
-        cout << "    SNP " << i << ": " << 
-            "col: "    << (*snp_it)->col    << " " << 
-            "lratio: " << (*snp_it)->lratio << " " << 
-            "rank_1: " << (*snp_it)->rank_1 << " " << 
+        cout << "    SNP " << i << ": " <<
+            "col: "    << (*snp_it)->col    << " " <<
+            "lratio: " << (*snp_it)->lratio << " " <<
+            "rank_1: " << (*snp_it)->rank_1 << " " <<
             "rank_2: " << (*snp_it)->rank_2 << "\n";
         i++;
     }
@@ -127,7 +127,7 @@ int write_simple_output(Locus *tag) {
     //
     i = 1;
     for (all_it = tag->alleles.begin(); all_it != tag->alleles.end(); all_it++) {
-        cout << "    Allele " << i << ": " << 
+        cout << "    Allele " << i << ": " <<
             all_it->first << "\n";
         i++;
     }
@@ -148,16 +148,16 @@ int parse_command_line(int argc, char* argv[]) {
             {"num_threads",  required_argument, NULL, 'p'},
             {0, 0, 0, 0}
         };
-        
+
         // getopt_long stores the option index here.
         int option_index = 0;
-     
+
         c = getopt_long(argc, argv, "hvo:s:p:", long_options, &option_index);
-     
+
         // Detect the end of the options.
         if (c == -1)
             break;
-     
+
         switch (c) {
         case 'h':
             help();
@@ -190,10 +190,10 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
-    if (out_path.length() == 0) 
+    if (out_path.length() == 0)
         out_path = ".";
 
-    if (out_path.at(out_path.length() - 1) != '/') 
+    if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
     return 0;

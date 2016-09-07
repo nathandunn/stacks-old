@@ -31,7 +31,7 @@
 #include "mstack.h"
 #include "models.h"
 
-MergedStack::MergedStack()  { 
+MergedStack::MergedStack()  {
     this->id         = 0;
     this->count      = 0;
     this->len        = 0;
@@ -46,7 +46,7 @@ MergedStack::MergedStack()  {
     this->lumberjackstack = false;
 }
 
-MergedStack::~MergedStack() { 
+MergedStack::~MergedStack() {
     delete [] this->con;
 
     for (uint i = 0; i < snps.size(); i++)
@@ -108,7 +108,7 @@ MergedStack::gen_matrix(map<int, Stack *> &unique, map<int, Rem *> &rem)
     //
     // Create a two-dimensional array, each row containing one read. For
     // each unique tag that has been merged together, add the sequence for
-    // that tag into our array as many times as it originally occurred. 
+    // that tag into our array as many times as it originally occurred.
     //
     // We do not allocate memory for the second dimension of the array, we simply
     // reuse the existing char arrays in the unique and rem maps
@@ -129,7 +129,7 @@ MergedStack::gen_matrix(map<int, Stack *> &unique, map<int, Rem *> &rem)
         }
     }
 
-    // For each remainder tag that has been merged into this Stack, add the sequence. 
+    // For each remainder tag that has been merged into this Stack, add the sequence.
     for (j = this->remtags.begin(); j != this->remtags.end(); j++) {
         this->matrix[i] = rem[*j]->seq;
         i++;
@@ -139,13 +139,13 @@ MergedStack::gen_matrix(map<int, Stack *> &unique, map<int, Rem *> &rem)
 }
 
 DNANSeq **
-MergedStack::gen_matrix(map<int, PStack *> &unique) 
+MergedStack::gen_matrix(map<int, PStack *> &unique)
 {
     PStack *tag;
     //
     // Create a two-dimensional array, each row containing one read. For
     // each unique tag that has been merged together, add the sequence for
-    // that tag into our array as many times as it originally occurred. 
+    // that tag into our array as many times as it originally occurred.
     //
     // We do not allocate memory for the second dimension of the array, we simply
     // reuse the existing char arrays in the unique and rem maps
@@ -169,8 +169,8 @@ MergedStack::gen_matrix(map<int, PStack *> &unique)
     return this->matrix;
 }
 
-double 
-MergedStack::calc_likelihood() 
+double
+MergedStack::calc_likelihood()
 {
     if (this->matrix == NULL || this->snps.size() == 0)
         return 0;
@@ -202,7 +202,7 @@ MergedStack::calc_likelihood()
             continue;
         }
 
-        nuc['A'] = 0; 
+        nuc['A'] = 0;
         nuc['G'] = 0;
         nuc['C'] = 0;
         nuc['T'] = 0;
@@ -226,14 +226,14 @@ MergedStack::calc_likelihood()
         }
 
         //
-        // For nucleotide positions with potential polymorphism (i.e. two or more alleles at 
-        // the locus that differ at that position), first find the ML genotype (call_multinomial_snp). 
+        // For nucleotide positions with potential polymorphism (i.e. two or more alleles at
+        // the locus that differ at that position), first find the ML genotype (call_multinomial_snp).
         // If it returns 'het' calculate the heterozygous_likelihood(), otherwise calculate homozygous
         // likelihood.
         //
         snp_type res = this->snps[col]->type;
 
-        if (res == snp_type_het) 
+        if (res == snp_type_het)
             this->lnl += heterozygous_likelihood(col, nuc);
         else if (res == snp_type_hom)
             this->lnl += homozygous_likelihood(col, nuc);
