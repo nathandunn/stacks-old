@@ -29,13 +29,13 @@
 //
 #include "stacks.h"
 
-Rem::Rem() { 
+Rem::Rem() {
     this->id         = 0;
-    this->seq        = NULL; 
+    this->seq        = NULL;
     this->utilized   = false;
 }
 
-Rem::Rem(int id, uint seq_id, DNANSeq *seq) { 
+Rem::Rem(int id, uint seq_id, DNANSeq *seq) {
     this->id       = id;
     this->utilized = false;
 

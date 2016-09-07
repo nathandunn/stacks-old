@@ -61,7 +61,7 @@ class BamUnAln: public Input {
         bam_destroy1(this->aln);
     };
     Seq *next_seq();
-    int  next_seq(Seq &) { return 0; };
+    int  next_seq(Seq &);
 };
 
 int
@@ -81,7 +81,18 @@ BamUnAln::parse_header()
 }
 
 Seq *
-BamUnAln::next_seq() 
+BamUnAln::next_seq()
+{
+    Seq* s = new Seq();
+    if(next_seq(*s) != 1) {
+        delete s;
+        s = NULL;
+    }
+    return s;
+}
+
+int
+BamUnAln::next_seq(Seq& s)
 {
     int bytes_read = 0;
 
@@ -91,7 +102,7 @@ BamUnAln::next_seq()
     bytes_read = sam_read1(this->bam_fh, this->bamh, this->aln);
 
     if (bytes_read <= 0)
-        return NULL;
+        return 0;
 
     //
     // Fetch the sequence.
@@ -100,7 +111,7 @@ BamUnAln::next_seq()
     uint8_t j;
 
     seq.reserve(this->aln->core.l_qseq);
-    
+
     for (int i = 0; i < this->aln->core.l_qseq; i++) {
         j = bam_seqi(bam_get_seq(this->aln), i);
         switch(j) {
@@ -137,9 +148,9 @@ BamUnAln::next_seq()
     // Attempt to parse the query name for this read.
     //
 
-    Seq *s = new Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str());
+    s = Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str());
 
-    return s;
+    return 1;
 }
 
 #else  // If HAVE_BAM is undefined and BAM library is not present.

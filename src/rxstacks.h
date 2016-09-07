@@ -83,7 +83,7 @@ int    prune_nucleotides(CSLocus *, Locus *, Datum *, ofstream &, unsigned long 
                          unsigned long int &, unsigned long int &, unsigned long int &,
                          unsigned long int &, unsigned long int &, unsigned long int &);
 int    invoke_model(Locus *, int, map<char, int> &);
-int    call_alleles(Locus *, set<int> &); 
+int    call_alleles(Locus *, set<int> &);
 int    generate_matched_haplotypes(CSLocus *, Locus *, Datum *);
 int    fill_catalog_snps(map<int, CSLocus *> &);
 int    log_model_calls(Locus *, ofstream &,

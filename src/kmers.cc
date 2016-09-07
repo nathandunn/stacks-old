@@ -29,7 +29,7 @@ int determine_kmer_length(int read_len, int dist) {
     //
     // If distance allowed between sequences is 0, then k-mer length equals read length.
     //
-    if (dist == 0) 
+    if (dist == 0)
         return read_len;
 
     //
@@ -63,7 +63,7 @@ int calc_min_kmer_matches(int kmer_len, int dist, int read_len, bool exit_err) {
     min_matches = read_len - span;
 
     if (min_matches <= 0) {
-        cerr << 
+        cerr <<
             "Warning: combination of k-mer length (" << kmer_len << ") and edit distance (" << dist << ") allows for " <<
             "sequences to be missed by the matching algorithm.\n";
     }
@@ -134,7 +134,7 @@ generate_kmers(const char *seq, int kmer_len, int num_kmers, vector<char *> &kme
 int generate_permutations(map<int, char **> &pstrings, int width) {
     int   i, j, rem, div, num;
     char *p;
-    // 
+    //
     // Given a k-mer that allows wildcards -- 'N' characters, we need to generate all
     // possible k-mers. To do so, we will generate a range of numbers that we convert to
     // base 4, assuming that 0 = 'A', 1 = 'C', 2 = 'G', 3 = 'T'.
@@ -150,7 +150,7 @@ int generate_permutations(map<int, char **> &pstrings, int width) {
         strings[i] = new char[width + 1];
 
     for (i = 0; i < range; i++) {
-        for (j = 0; j < width; j++) 
+        for (j = 0; j < width; j++)
             strings[i][j] = 'A';
         strings[i][width] = '\0';
     }
@@ -399,8 +399,8 @@ populate_kmer_hash(map<int, CLocus *> &catalog, KmerHashMap &kmer_map, vector<ch
     return 0;
 }
 
-int 
-free_kmer_hash(CatKmerHashMap &kmer_map, vector<char *> &kmer_map_keys) 
+int
+free_kmer_hash(CatKmerHashMap &kmer_map, vector<char *> &kmer_map_keys)
 {
     for (uint i = 0; i < kmer_map_keys.size(); i++) {
         kmer_map[kmer_map_keys[i]].clear();
@@ -415,8 +415,8 @@ free_kmer_hash(CatKmerHashMap &kmer_map, vector<char *> &kmer_map_keys)
     return 0;
 }
 
-int 
-free_kmer_hash(KmerHashMap &kmer_map, vector<char *> &kmer_map_keys) 
+int
+free_kmer_hash(KmerHashMap &kmer_map, vector<char *> &kmer_map_keys)
 {
     for (uint i = 0; i < kmer_map_keys.size(); i++) {
         kmer_map[kmer_map_keys[i]].clear();
@@ -442,7 +442,7 @@ int dist(const char *tag_1, Locus *tag_2, allele_type allele) {
     vector<pair<allele_type, string> >::iterator it;
 
     for (it = tag_2->strings.begin(); it != tag_2->strings.end(); it++)
-        if (it->first == allele) 
+        if (it->first == allele)
             q = it->second.c_str();
     if (q == NULL) return -1;
 
@@ -452,7 +452,7 @@ int dist(const char *tag_1, Locus *tag_2, allele_type allele) {
     // between the two sequences.
     while (p < p_end && q < q_end) {
         dist += (*p == *q) ? 0 : 1;
-        p++; 
+        p++;
         q++;
     }
 
@@ -556,7 +556,7 @@ int dist(MergedStack *tag_1, MergedStack *tag_2) {
     //
     while (p < p_end && q < q_end) {
         dist += (*p == *q) ? 0 : 1;
-        p++; 
+        p++;
         q++;
     }
 
@@ -588,7 +588,7 @@ int dist(MergedStack *tag_1, char *seq) {
     //
     while (p < p_end && q < q_end) {
         dist += (*p == *q) ? 0 : 1;
-        p++; 
+        p++;
         q++;
     }
 
@@ -608,7 +608,7 @@ int dump_kmer_map(KmerHashMap &kmer_map) {
     int i = 1;
     for (kit = kmer_map.begin(); kit != kmer_map.end(); kit++) {
         cerr << "Key #" << i << " " << kit->first << ": ";
-        for (vit = (kit->second).begin(); vit != (kit->second).end(); vit++) 
+        for (vit = (kit->second).begin(); vit != (kit->second).end(); vit++)
             cerr << " " << *vit;
         cerr << "\n";
         i++;

@@ -73,20 +73,20 @@ extern string    in_path_2;
 void help( void );
 
 int    build_file_list(vector<pair<string, string> > &);
-int    load_barcodes(string, vector<BarcodePair> &, 
-                     set<string> &, set<string> &, 
+int    load_barcodes(string, vector<BarcodePair> &,
+                     set<string> &, set<string> &,
                      uint &, uint &, uint &, uint &);
 int    open_files(vector<pair<string, string> > &,
-                  vector<BarcodePair> &, 
-                  map<BarcodePair, ofstream *> &, 
-                  map<BarcodePair, ofstream *> &, 
+                  vector<BarcodePair> &,
+                  map<BarcodePair, ofstream *> &,
+                  map<BarcodePair, ofstream *> &,
                   map<BarcodePair, ofstream *> &,
                   map<BarcodePair, ofstream *> &,
                   map<string, map<string, long> > &);
 int    open_files(vector<pair<string, string> > &,
-                  vector<BarcodePair> &, 
-                  map<BarcodePair, gzFile *> &, 
-                  map<BarcodePair, gzFile *> &, 
+                  vector<BarcodePair> &,
+                  map<BarcodePair, gzFile *> &,
+                  map<BarcodePair, gzFile *> &,
                   map<BarcodePair, gzFile *> &,
                   map<BarcodePair, gzFile *> &,
                   map<string, map<string, long> > &);

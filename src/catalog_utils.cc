@@ -27,16 +27,16 @@
 //
 #include "catalog_utils.h"
 
-int 
+int
 reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blacklist)
 {
     map<int, CSLocus *> list;
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
 
-    if (whitelist.size() == 0 && blacklist.size() == 0) 
+    if (whitelist.size() == 0 && blacklist.size() == 0)
         return 0;
- 
+
     int i = 0;
     for (it = catalog.begin(); it != catalog.end(); it++) {
         loc = it->second;
@@ -53,8 +53,8 @@ reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blac
     return i;
 }
 
-int 
-implement_single_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *psum, map<int, set<int> > &whitelist) 
+int
+implement_single_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *psum, map<int, set<int> > &whitelist)
 {
     map<int, set<int> > new_wl;
     CSLocus  *loc;
@@ -66,7 +66,7 @@ implement_single_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *ps
         for (it = whitelist.begin(); it != whitelist.end(); it++) {
             loc = catalog[it->first];
             t   = psum->locus_tally(loc->id);
-            
+
             //
             // If no specific SNPs are specified in the whitelist all SNPs are included, choose the first variant.
             //
@@ -83,7 +83,7 @@ implement_single_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *ps
                 for (uint i = 0; i < loc->snps.size(); i++) {
                     if (it->second.count(loc->snps[i]->col) == 0 ||
                         t->nucs[loc->snps[i]->col].fixed == true)
-                        continue;       
+                        continue;
                     new_wl[loc->id].insert(loc->snps[i]->col);
                     break;
                 }
@@ -109,8 +109,8 @@ implement_single_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *ps
     return 0;
 }
 
-int 
-implement_random_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *psum, map<int, set<int> > &whitelist) 
+int
+implement_random_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *psum, map<int, set<int> > &whitelist)
 {
     map<int, set<int> > new_wl;
     CSLocus *loc;
@@ -123,7 +123,7 @@ implement_random_snp_whitelist(map<int, CSLocus *> &catalog, PopSum<CSLocus> *ps
             loc = catalog[it->first];
 
             if (loc->snps.size() == 0) continue;
-            
+
             if (it->second.size() == 0) {
                 index = rand() % loc->snps.size();
                 new_wl[loc->id].insert(loc->snps[index]->col);
@@ -203,16 +203,16 @@ check_whitelist_integrity(map<int, CSLocus *> &catalog, map<int, set<int> > &whi
     return 0;
 }
 
-int 
+int
 reduce_catalog(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, set<int> &blacklist)
 {
     map<int, CSLocus *> list;
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
 
-    if (whitelist.size() == 0 && blacklist.size() == 0) 
+    if (whitelist.size() == 0 && blacklist.size() == 0)
         return 0;
- 
+
     int i = 0;
     for (it = catalog.begin(); it != catalog.end(); it++) {
         loc = it->second;
@@ -229,16 +229,16 @@ reduce_catalog(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, set
     return i;
 }
 
-int 
-reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, PopMap<CSLocus> *pmap) 
+int
+reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist, PopMap<CSLocus> *pmap)
 {
     map<int, CSLocus *>::iterator it;
     CSLocus *loc;
     Datum  **d;
 
-    if (whitelist.size() == 0) 
+    if (whitelist.size() == 0)
         return 0;
- 
+
     //
     // We want to prune out SNP objects that are not in the whitelist.
     //
@@ -268,7 +268,7 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
                 //
                 pos = loc->snps[i]->col;
                 for (int j = 0; j < pmap->sample_cnt(); j++) {
-                    if (d[j] == NULL || pos >= d[j]->len) 
+                    if (d[j] == NULL || pos >= d[j]->len)
                         continue;
                     if (d[j]->model != NULL) {
                         d[j]->model[pos] = 'U';
@@ -306,10 +306,10 @@ reduce_catalog_snps(map<int, CSLocus *> &catalog, map<int, set<int> > &whitelist
         loc->populate_alleles();
 
         //
-        // Now we need to adjust the matched haplotypes to sync to 
+        // Now we need to adjust the matched haplotypes to sync to
         // the SNPs left in the catalog.
         //
-        // Reducing the lengths of the haplotypes  may create 
+        // Reducing the lengths of the haplotypes  may create
         // redundant (shorter) haplotypes, we need to remove these.
         //
         for (int i = 0; i < pmap->sample_cnt(); i++) {

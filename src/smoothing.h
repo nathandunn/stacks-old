@@ -30,12 +30,12 @@ class KSmooth {
     double *weights; // Weight matrix to apply while smoothing.
 
 public:
-    KSmooth(int size)  { 
+    KSmooth(int size)  {
         this->size    = size;
         this->weights = calc_weights();
 
     }
-    ~KSmooth() { 
+    ~KSmooth() {
         delete [] this->weights;
     }
 
@@ -47,13 +47,13 @@ int
 KSmooth<StatT>::smooth(vector<StatT *> &popstats)
 {
     //
-    // To generate smooth genome-wide distributions of Fst, we calculate a kernel-smoothing 
+    // To generate smooth genome-wide distributions of Fst, we calculate a kernel-smoothing
     // moving average of Fst values along each ordered chromosome.
     //
-    // For each genomic region centered on a nucleotide position c, the contribution of the population 
+    // For each genomic region centered on a nucleotide position c, the contribution of the population
     // genetic statistic at position p to the region average was weighted by the Gaussian function:
     //   exp( (-1 * (p - c)^2) / (2 * sigma^2))
-    // 
+    //
     // In addition, we weight each position according to (n_k - 1), where n_k is the number of alleles
     // sampled at that location.
     //
@@ -119,12 +119,12 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
                 sum += final_weight;
 
                 // if (c->loc_id == 9314) {
-                //     cerr << "    id: " << p->loc_id 
-                //          << "; dist: " << dist 
-                //          << "; weight: " << weights[dist] 
-                //          << "; final_weight: " << final_weight 
-                //          << "; fst': " << p->stat[3] 
-                //          << "; sum: " << sum 
+                //     cerr << "    id: " << p->loc_id
+                //          << "; dist: " << dist
+                //          << "; weight: " << weights[dist]
+                //          << "; final_weight: " << final_weight
+                //          << "; fst': " << p->stat[3]
+                //          << "; sum: " << sum
                 //          << "; smoothed: " << c->smoothed[3] << "\n";
                 // }
             }

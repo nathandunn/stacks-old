@@ -107,7 +107,7 @@ int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {
             // Check to make sure the nucleotide at the location of this SNP is
             // of one of the two possible states the multinomial model called.
             //
-            if (base == (*snp)->rank_1 || base == (*snp)->rank_2) 
+            if (base == (*snp)->rank_1 || base == (*snp)->rank_2)
                 allele += base;
             else
                 haplotype = false;
@@ -127,13 +127,13 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
     //
     map<int, MergedStack *>::iterator it;
     vector<int> keys;
-    for (it = merged.begin(); it != merged.end(); it++) 
+    for (it = merged.begin(); it != merged.end(); it++)
         keys.push_back(it->first);
 
     int i;
     #pragma omp parallel private(i)
-    { 
-        #pragma omp for schedule(dynamic) 
+    {
+        #pragma omp for schedule(dynamic)
         for (i = 0; i < (int) keys.size(); i++) {
             MergedStack *mtag;
             PStack *utag;
@@ -143,7 +143,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
             //
             // Create a two-dimensional array, each row containing one read. For
             // each unique tag that has been merged together, add the sequence for
-            // that tag into our array as many times as it originally occurred. 
+            // that tag into our array as many times as it originally occurred.
             //
             vector<int>::iterator j;
             vector<DNANSeq *> reads;
@@ -190,8 +190,8 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
                 con += max->second == 0 ? 'N' : max->first;
 
                 // Search this column for the presence of a SNP
-                if (invoke_model) 
-                    model_type == snp ? 
+                if (invoke_model)
+                    model_type == snp ?
                         call_multinomial_snp(mtag, col, nuc, record_hom) :
                         call_multinomial_fixed(mtag, col, nuc);
             }
@@ -277,14 +277,14 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
 
             if (total < min_stack_cov) continue;
 
-            tags << "0" << "\t" 
-                 << sql_id << "\t" 
-                 << tag_id << "\t" 
+            tags << "0" << "\t"
+                 << sql_id << "\t"
+                 << tag_id << "\t"
                  << tag_1->loc.chr << "\t"
                  << tag_1->loc.bp + (*s)->col << "\t"
-                 << "consensus\t" << "\t\t" 
-                 << tag_1->con[(*s)->col] << "\t" 
-                 << tag_1->deleveraged << "\t" 
+                 << "consensus\t" << "\t\t"
+                 << tag_1->con[(*s)->col] << "\t"
+                 << tag_1->deleveraged << "\t"
                  << tag_1->blacklisted << "\t"
                  << tag_1->lumberjackstack << "\n";
 
@@ -296,23 +296,23 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
                 //if (tag_2->seq[(*s)->col] == 'N') continue;
 
                 for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-                    tags << "0" << "\t" 
-                         << sql_id << "\t" 
-                         << tag_id << "\t\t\t" 
-                         << "primary\t" 
-                         << comp_id << "\t" 
-                         << *j << "\t" 
+                    tags << "0" << "\t"
+                         << sql_id << "\t"
+                         << tag_id << "\t\t\t"
+                         << "primary\t"
+                         << comp_id << "\t"
+                         << *j << "\t"
                          << (*tag_2->seq)[(*s)->col] << "\t\t\t\n";
                 }
                 comp_id++;
             }
 
-            snps << "0" << "\t" 
-                 << sql_id << "\t" 
-                 << tag_id << "\t" 
-                 << 0 << "\t" 
-                 << (*s)->lratio << "\t" 
-                 << (*s)->rank_1 << "\t" 
+            snps << "0" << "\t"
+                 << sql_id << "\t"
+                 << tag_id << "\t"
+                 << 0 << "\t"
+                 << (*s)->lratio << "\t"
+                 << (*s)->rank_1 << "\t"
                  << (*s)->rank_2 << "\n";
 
             // Write the expressed alleles seen for the recorded SNPs and
@@ -320,7 +320,7 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
             map<char, int> allele;
             for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++) {
                 if ((*u[*k]->seq)[(*s)->col] != (*s)->rank_1 &&
-                    (*u[*k]->seq)[(*s)->col] != (*s)->rank_2) 
+                    (*u[*k]->seq)[(*s)->col] != (*s)->rank_2)
                     continue;
                 allele[(*u[*k]->seq)[(*s)->col]] += u[*k]->count;
             }
@@ -346,12 +346,12 @@ int write_sql(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         if (total < min_stack_cov) continue;
 
         // First write the consensus sequence
-        pile << "0" << "\t" 
-             << sql_id << "\t" 
-             << tag_1->id << "\t" 
+        pile << "0" << "\t"
+             << sql_id << "\t"
+             << tag_1->id << "\t"
              << tag_1->loc.chr << "\t"
              << tag_1->loc.bp << "\t"
-             << "consensus\t" << "\t\t" 
+             << "consensus\t" << "\t\t"
              << tag_1->con << "\n";
 
         // Now write out the components of each unique tag merged into this one.
@@ -399,7 +399,7 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
         m = new MergedStack;
         m->id = global_id;
 
-        // 
+        //
         // Record the consensus and physical location for this stack.
         //
         s = k->second.begin();
@@ -437,7 +437,7 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
 int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
     HashMap::iterator it;
     vector<Seq *>::iterator sit;
-    
+
     PStack *u;
     int     global_id = 1;
 
@@ -530,7 +530,7 @@ int dump_stacks(map<int, PStack *> &u) {
 
         cerr << "Stack ID: " << (*it).second->id << "\n"
              << "  Seq:    " << (*it).second->seq << "\n"
-             << "  IDs:    "; 
+             << "  IDs:    ";
 
         for (fit = (*it).second->map.begin(); fit != (*it).second->map.end(); fit++)
             cerr << *fit << " ";
@@ -552,9 +552,9 @@ int dump_merged_stacks(map<int, MergedStack *> &m) {
              << "  Consensus:  ";
         if (it->second->con != NULL)
             cerr << it->second->con << "\n";
-        else 
+        else
             cerr << "\n";
-        cerr << "  IDs:        "; 
+        cerr << "  IDs:        ";
 
         for (fit = it->second->utags.begin(); fit != it->second->utags.end(); fit++)
             cerr << (*fit) << " ";
@@ -573,7 +573,7 @@ int dump_merged_stacks(map<int, MergedStack *> &m) {
 
 int parse_command_line(int argc, char* argv[]) {
     int c;
-     
+
     while (1) {
         static struct option long_options[] = {
             {"help",         no_argument,       NULL, 'h'},
@@ -589,16 +589,16 @@ int parse_command_line(int argc, char* argv[]) {
             {"bc_err_freq",  required_argument, NULL, 'e'},
             {0, 0, 0, 0}
         };
-        
+
         // getopt_long stores the option index here.
         int option_index = 0;
 
         c = getopt_long(argc, argv, "hvOf:o:i:e:p:m:s:f:t:", long_options, &option_index);
-     
+
         // Detect the end of the options.
         if (c == -1)
             break;
-     
+
         switch (c) {
         case 'h':
             help();
@@ -641,7 +641,7 @@ int parse_command_line(int argc, char* argv[]) {
             // getopt_long already printed an error message.
             help();
             break;
-     
+
         default:
             cerr << "Unknown command line option '" << (char) c << "'\n";
             help();
@@ -654,10 +654,10 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
-    if (out_path.length() == 0) 
+    if (out_path.length() == 0)
         out_path = ".";
 
-    if (out_path.at(out_path.length() - 1) != '/') 
+    if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
     if (model_type == fixed && barcode_err_freq == 0) {

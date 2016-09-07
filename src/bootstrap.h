@@ -59,12 +59,12 @@ class Bootstrap {
     uint                    num_stats;
 
 public:
-    Bootstrap(uint size)  { 
+    Bootstrap(uint size)  {
         this->num_stats = size;
         this->weights   = calc_weights();
         this->stats.resize(size, vector<double>());
     }
-    ~Bootstrap() { 
+    ~Bootstrap() {
         delete [] this->weights;
     }
 
@@ -92,14 +92,14 @@ int
 Bootstrap<StatT>::execute(vector<StatT *> &sites)
 {
     #pragma omp parallel
-    { 
+    {
         PopStat *c;
         double final_weight, sum, weighted_stat[PopStatSize];
         int  dist, index;
         uint pos_l = 0;
         uint pos_u = 0;
 
-        //#pragma omp for schedule(dynamic, 1)  
+        //#pragma omp for schedule(dynamic, 1)
         for (uint pos_c = 0; pos_c < sites.size(); pos_c++) {
             c = sites[pos_c];
 
@@ -190,14 +190,14 @@ int
 Bootstrap<StatT>::execute_mixed(vector<StatT *> &sites)
 {
     #pragma omp parallel
-    { 
+    {
         PopStat *c;
         double final_weight, sum, weighted_stat[PopStatSize];
         int  dist, index;
         uint pos_l = 0;
         uint pos_u = 0;
 
-        //#pragma omp for schedule(dynamic, 1)  
+        //#pragma omp for schedule(dynamic, 1)
         for (uint pos_c = 0; pos_c < sites.size(); pos_c++) {
             c = sites[pos_c];
 
@@ -225,7 +225,7 @@ Bootstrap<StatT>::execute_mixed(vector<StatT *> &sites)
             //
             int j = 0;
             for (uint i = pos_l; i < pos_u;  i++) {
-                if (sites[i] == NULL) 
+                if (sites[i] == NULL)
                     continue;
                 bs[j].bp      = sites[i]->bp;
                 bs[j].alleles = sites[i]->alleles;
@@ -321,7 +321,7 @@ Bootstrap<StatT>::pval(double stat, vector<double> &dist)
         pos = 1;
     else if (up == dist.end())
         pos = dist.size();
-    else 
+    else
         pos = up - dist.begin() + 1;
 
     double res = 1.0 - (pos / (double) dist.size());
@@ -330,8 +330,8 @@ Bootstrap<StatT>::pval(double stat, vector<double> &dist)
     // for (uint n = 0; n < dist.size(); n++)
     //         cerr << "  n: " << n << "; Fst: " << dist[n] << "\n";
 
-    // cerr << "Comparing Fst value: " << stat 
-    //          << " at position " << (up - dist.begin()) << " out of " 
+    // cerr << "Comparing Fst value: " << stat
+    //          << " at position " << (up - dist.begin()) << " out of "
     //          << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
 
     return res;

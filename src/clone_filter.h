@@ -21,7 +21,7 @@
 #ifndef __CLONE_FILTER_H__
 #define __CLONE_FILTER_H__
 
-#include "constants.h" 
+#include "constants.h"
 
 #include <stdlib.h>
 #include <getopt.h> // Process command-line options
@@ -67,7 +67,7 @@ using google::sparse_hash_map;
 #include "file_io.h"
 #include "write.h"
 
-class Pair { 
+class Pair {
 public:
     string p1_id;
     string p2_id;

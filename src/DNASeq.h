@@ -33,7 +33,7 @@
 // #endif
 
 //
-// We expect (and C++ defines) an unsigned char as 8 bits, so we 
+// We expect (and C++ defines) an unsigned char as 8 bits, so we
 // should be able to store 4 nucleotide bases per byte of memory.
 //
 const unsigned short int bases_per_byte = CHAR_BIT / 2;

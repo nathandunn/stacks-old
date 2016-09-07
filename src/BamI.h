@@ -59,7 +59,7 @@ class Bam: public Input {
         bam_destroy1(this->aln);
     };
     Seq *next_seq();
-    int  next_seq(Seq &) { return 0; };
+    int  next_seq(Seq&);
 };
 
 int
@@ -79,7 +79,18 @@ Bam::parse_header()
 }
 
 Seq *
-Bam::next_seq() 
+Bam::next_seq()
+{
+    Seq* s = new Seq();
+    if(next_seq(*s) != 1) {
+        delete s;
+        s = NULL;
+    }
+    return s;
+}
+
+int
+Bam::next_seq(Seq& s)
 {
     int bytes_read = 0;
     int flag       = 0;
@@ -91,14 +102,14 @@ Bam::next_seq()
         bytes_read = sam_read1(this->bam_fh, this->bamh, this->aln);
 
         if (bytes_read <= 0)
-            return NULL;
+            return 0;
 
         flag = ((this->aln->core.flag & BAM_FUNMAP) != 0);
 
     } while (flag == 1);
 
     //
-    // Check which strand this is aligned to: 
+    // Check which strand this is aligned to:
     //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
     //
     flag = ((this->aln->core.flag & BAM_FREVERSE) != 0);
@@ -113,8 +124,8 @@ Bam::next_seq()
     vector<pair<char, uint> > cigar;
     this->parse_bam_cigar(cigar, flag);
 
-    uint bp = flag ? 
-        this->find_start_bp_neg(this->aln->core.pos, cigar) : 
+    uint bp = flag ?
+        this->find_start_bp_neg(this->aln->core.pos, cigar) :
         this->find_start_bp_pos(this->aln->core.pos, cigar);
 
     //
@@ -124,7 +135,7 @@ Bam::next_seq()
     uint8_t j;
 
     seq.reserve(this->aln->core.l_qseq);
-    
+
     for (int i = 0; i < this->aln->core.l_qseq; i++) {
         j = bam_seqi(bam_get_seq(this->aln), i);
         switch(j) {
@@ -157,16 +168,16 @@ Bam::next_seq()
 
     string chr = this->chrs[this->aln->core.tid];
 
-    Seq *s = new Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str(),
+    s = Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str(),
                      chr.c_str(), bp, flag ? strand_minus : strand_plus);
 
     if (cigar.size() > 0)
-        this->edit_gaps(cigar, s->seq);
+        this->edit_gaps(cigar, s.seq);
 
-    return s;
+    return 1;
 }
 
-int 
+int
 Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
 {
     int  op, len;
@@ -202,7 +213,7 @@ Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
         }
 
         //
-        // If aligned to the negative strand, sequence has been reverse complemented and 
+        // If aligned to the negative strand, sequence has been reverse complemented and
         // CIGAR string should be interpreted in reverse.
         //
         if (orientation == strand_plus)
@@ -214,7 +225,7 @@ Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
     return 0;
 }
 
-int 
+int
 Bam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool orientation)
 {
     char buf[id_len];
@@ -235,7 +246,7 @@ Bam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool o
         dist = atoi(buf);
 
         //
-        // If aligned to the negative strand, sequence has been reverse complemented and 
+        // If aligned to the negative strand, sequence has been reverse complemented and
         // CIGAR string should be interpreted in reverse.
         //
         if (orientation == strand_plus)
@@ -249,7 +260,7 @@ Bam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool o
     return 0;
 }
 
-int 
+int
 Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
 {
     uint size = cigar.size();
@@ -277,7 +288,7 @@ Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
     return aln_bp - 1;
 }
 
-int 
+int
 Bam::find_start_bp_pos(int aln_bp, vector<pair<char, uint> > &cigar)
 {
     char op;
@@ -292,7 +303,7 @@ Bam::find_start_bp_pos(int aln_bp, vector<pair<char, uint> > &cigar)
     return aln_bp;
 }
 
-int 
+int
 Bam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 {
     char *buf;
@@ -326,7 +337,7 @@ Bam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
             // sequence down. Trim the final length to keep the read length consistent.
             //
             k = bp >= len ? len : bp;
-            
+
             strncpy(buf, seq + k, buf_size - 1);
             buf[buf_size - 1] = '\0';
             buf_len         = strlen(buf);
@@ -352,7 +363,7 @@ Bam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
             // inserted bases and pad the end of the read with Ns.
             //
             if (bp >= len) break;
-            
+
             k = bp + dist > len ? len : bp + dist;
             strncpy(buf, seq + k, buf_size - 1);
             buf[buf_size - 1] = '\0';

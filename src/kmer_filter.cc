@@ -19,7 +19,7 @@
 //
 
 //
-// kmer_filter -- 
+// kmer_filter --
 //
 
 #include "kmer_filter.h"
@@ -60,7 +60,7 @@ int main (int argc, char* argv[]) {
 
     if (min_lim == 0)
         min_lim = (int) round((double) kmer_len * 0.80);
-    
+
     cerr << "Using a kmer size of " << kmer_len << "\n";
     if (filter_rare_k) {
         cerr << "Filtering out reads by identifying rare kmers: On.\n"
@@ -74,12 +74,12 @@ int main (int argc, char* argv[]) {
              << "  Kmer is considered abundant when it occurs " << max_k_freq << " or more times.\n";
         if (max_lim == 0)
             cerr << "  A read is dropped when it contains " << max_k_pct * 100 << "% or more abundant kmers.\n";
-        else 
+        else
             cerr << "  A read is dropped when it contains " << max_lim << " or more abundant kmers.\n";
     } else
         cerr << "Filtering out reads by identifying abundant kmers: Off.\n";
 
-    if (normalize) 
+    if (normalize)
         cerr << "Normalizing read depth: On.\n"
              << "  Read depth limit: " << normalize_lim << "x\n";
     else
@@ -99,7 +99,7 @@ int main (int argc, char* argv[]) {
     if (filter_rare_k || filter_abundant_k || kmer_distr || write_k_freq) {
         cerr << "Generating kmer distribution...\n";
 
-        if (read_k_freq) 
+        if (read_k_freq)
             read_kmer_freq(k_freq_path, kmers, kmers_keys);
         else
             populate_kmers(pair_files, files, kmers, kmers_keys);
@@ -110,7 +110,7 @@ int main (int argc, char* argv[]) {
 
         if (kmer_distr) {
             generate_kmer_dist(kmers);
-            if (write_k_freq == false) 
+            if (write_k_freq == false)
                 exit(0);
         }
 
@@ -130,9 +130,9 @@ int main (int argc, char* argv[]) {
             counters[pair_files[i].second]["abundant_k"] = 0;
 
             process_paired_reads(pair_files[i].first,
-                                 pair_files[i].second, 
+                                 pair_files[i].second,
                                  pair_files[i+1].first,
-                                 pair_files[i+1].second, 
+                                 pair_files[i+1].second,
                                  kmers,
                                  counters[pair_files[i].second]);
 
@@ -152,7 +152,7 @@ int main (int argc, char* argv[]) {
             counters[files[i].second]["abundant_k"] = 0;
 
             process_reads(files[i].first,
-                          files[i].second, 
+                          files[i].second,
                           kmers,
                           counters[files[i].second]);
 
@@ -190,7 +190,7 @@ int main (int argc, char* argv[]) {
         }
 
         for (uint i = 0; i < pair_files.size(); i += 2) {
-            cerr << "Processing paired files " << i+1 << " of " << (pair_files.size() / 2) 
+            cerr << "Processing paired files " << i+1 << " of " << (pair_files.size() / 2)
                  << " [" << pair_files[i].second << " / " << pair_files[i+1].second << "]\n";
 
             counters[pair_files[i].second]["total"]    = 0;
@@ -222,7 +222,7 @@ int main (int argc, char* argv[]) {
                             kmers, kmers_keys,
                             counters[files[i].second]);
 
-            cerr << "  " 
+            cerr << "  "
                  << counters[files[i].second]["total"] << " total reads; "
                  << "-" << counters[files[i].second]["overep"] << " over-represented reads; "
                  << counters[files[i].second]["retained"] << " retained reads.\n";
@@ -234,9 +234,9 @@ int main (int argc, char* argv[]) {
     return 0;
 }
 
-int process_paired_reads(string in_path_1, 
+int process_paired_reads(string in_path_1,
                          string in_file_1,
-                         string in_path_2, 
+                         string in_path_2,
                          string in_file_2,
                          SeqKmerHash &kmers,
                          map<string, long> &counter) {
@@ -321,7 +321,7 @@ int process_paired_reads(string in_path_1,
     }
 
     //
-    // Read in the first record, initializing the Seq object s. Then 
+    // Read in the first record, initializing the Seq object s. Then
     // initialize the Read object r, then loop, using the same objects.
     //
     Seq *s_1 = fh_1->next_seq();
@@ -387,29 +387,29 @@ int process_paired_reads(string in_path_1,
 
         if (retain_1 && retain_2) {
             counter["retained"] += 2;
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                  write_fastq(ofh_1, s_1) : write_fasta(ofh_1, s_1);
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                  write_fastq(ofh_2, s_2) : write_fasta(ofh_2, s_2);
         }
 
         if (retain_1 && !retain_2) {
             counter["retained"]++;
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                  write_fastq(rem_fh, s_1) : write_fasta(rem_fh, s_1);
         }
 
         if (!retain_1 && retain_2) {
             counter["retained"]++;
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                  write_fastq(rem_fh, s_2) : write_fasta(rem_fh, s_2);
         }
 
         if (discards && !retain_1)
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                 write_fastq(discard_fh_1, s_1, msg_1.str()) : write_fasta(discard_fh_1, s_1, msg_1.str());
         if (discards && !retain_2)
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                 write_fastq(discard_fh_2, s_2, msg_2.str()) : write_fasta(discard_fh_2, s_2, msg_2.str());
 
         delete s_1;
@@ -438,7 +438,7 @@ int process_paired_reads(string in_path_1,
     return 0;
 }
 
-int process_reads(string in_path, 
+int process_reads(string in_path,
                   string in_file,
                   SeqKmerHash &kmers,
                   map<string, long> &counter) {
@@ -464,7 +464,7 @@ int process_reads(string in_path,
     //
     pos  = in_file.find_last_of(".");
     path = out_path + in_file.substr(0, pos) + ".fil" + in_file.substr(pos);
-    ofstream *out_fh = new ofstream(path.c_str(), ifstream::out);    
+    ofstream *out_fh = new ofstream(path.c_str(), ifstream::out);
 
     if (out_fh->fail()) {
         cerr << "Error opening output file '" << path << "'\n";
@@ -486,7 +486,7 @@ int process_reads(string in_path,
     }
 
     //
-    // Read in the first record, initializing the Seq object s. Then 
+    // Read in the first record, initializing the Seq object s. Then
     // initialize the Read object r, then loop, using the same objects.
     //
     Seq *s = fh->next_seq();
@@ -494,7 +494,7 @@ int process_reads(string in_path,
         cerr << "Unable to allocate Seq object.\n";
         exit(1);
     }
- 
+
     int   rare_k, abundant_k, num_kmers, max_kmer_lim;
     bool  retain;
     char *kmer  = new char[kmer_len + 1];
@@ -504,7 +504,7 @@ int process_reads(string in_path,
         if (i % 10000 == 0) cerr << "  Processing short read " << i << "       \r";
         counter["total"]++;
         stringstream msg;
-        
+
         //
         // Drop this sequence if it has too many rare or abundant kmers.
         //
@@ -528,12 +528,12 @@ int process_reads(string in_path,
 
         if (retain) {
             counter["retained"]++;
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                  write_fastq(out_fh, s) : write_fasta(out_fh, s);
         }
 
         if (discards && !retain)
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                 write_fastq(discard_fh, s, msg.str()) : write_fasta(discard_fh, s, msg.str());
 
         delete s;
@@ -554,10 +554,10 @@ int process_reads(string in_path,
     return 0;
 }
 
-int 
-normalize_paired_reads(string in_path_1, 
+int
+normalize_paired_reads(string in_path_1,
                        string in_file_1,
-                       string in_path_2, 
+                       string in_path_2,
                        string in_file_2,
                        SeqKmerHash &kmers, vector<char *> &kmer_keys,
                        map<string, long> &counter)
@@ -639,7 +639,7 @@ normalize_paired_reads(string in_path_1,
             exit(1);
         }
 
-        if (in_file_2.substr(pos - 2, 2) == ".2") 
+        if (in_file_2.substr(pos - 2, 2) == ".2")
             pos -= 2;
         path_2  = out_path + in_file_2.substr(0, pos) + ".fil.norm.rem";
         path_2 += out_file_type == FileT::fastq ? ".fq" : ".fa";
@@ -669,7 +669,7 @@ normalize_paired_reads(string in_path_1,
             exit(1);
         }
 
-        if (in_file_2.substr(pos - 2, 2) == ".2") 
+        if (in_file_2.substr(pos - 2, 2) == ".2")
             pos -= 2;
         path_2  = out_path + in_file_2.substr(0, pos) + ".norm.rem";
         path_2 += out_file_type == FileT::fastq ? ".fq" : ".fa";
@@ -711,7 +711,7 @@ normalize_paired_reads(string in_path_1,
     }
 
     //
-    // Read in the first record, initializing the Seq object s. Then 
+    // Read in the first record, initializing the Seq object s. Then
     // initialize the Read object r, then loop, using the same objects.
     //
     Seq *s_1 = fh_1->next_seq();
@@ -748,9 +748,9 @@ normalize_paired_reads(string in_path_1,
 
         if (retain_1 && retain_2) {
             counter["retained"] += 2;
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                  write_fastq(ofh_1, s_1) : write_fasta(ofh_1, s_1);
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                  write_fastq(ofh_2, s_2) : write_fasta(ofh_2, s_2);
         } else {
             counter["overep"] +=2;
@@ -759,22 +759,22 @@ normalize_paired_reads(string in_path_1,
         if (retain_1 && !retain_2) {
             counter["retained"]++;
             counter["overep"]++;
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                  write_fastq(rem_fh, s_1) : write_fasta(rem_fh, s_1);
         }
 
         if (!retain_1 && retain_2) {
             counter["retained"]++;
             counter["overep"]++;
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                  write_fastq(rem_fh, s_2) : write_fasta(rem_fh, s_2);
         }
 
         if (discards && !retain_1)
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                 write_fastq(discard_fh_1, s_1) : write_fasta(discard_fh_1, s_1);
         if (discards && !retain_2)
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                 write_fastq(discard_fh_2, s_2) : write_fasta(discard_fh_2, s_2);
 
         delete s_1;
@@ -803,8 +803,8 @@ normalize_paired_reads(string in_path_1,
     return 0;
 }
 
-int 
-normalize_reads(string in_path, 
+int
+normalize_reads(string in_path,
                 string in_file,
                 SeqKmerHash &kmers, vector<char *> &kmer_keys,
                 map<string, long> &counter)
@@ -856,7 +856,7 @@ normalize_reads(string in_path,
     //         path = out_path + in_file.substr(0, pos) + ".norm" + in_file.substr(pos);
     // }
     path = out_path + in_file.substr(0, pos) + ".norm" + in_file.substr(pos);
-    ofstream *out_fh = new ofstream(path.c_str(), ifstream::out);    
+    ofstream *out_fh = new ofstream(path.c_str(), ifstream::out);
 
     if (out_fh->fail()) {
         cerr << "Error opening normalized output file '" << path << "'\n";
@@ -880,7 +880,7 @@ normalize_reads(string in_path,
     }
 
     //
-    // Read in the first record, initializing the Seq object s. Then 
+    // Read in the first record, initializing the Seq object s. Then
     // initialize the Read object r, then loop, using the same objects.
     //
     Seq *s = fh->next_seq();
@@ -888,7 +888,7 @@ normalize_reads(string in_path,
         cerr << "Unable to allocate Seq object.\n";
         exit(1);
     }
- 
+
     int   num_kmers;
     bool  retain;
     char *kmer  = new char[kmer_len + 1];
@@ -897,7 +897,7 @@ normalize_reads(string in_path,
     do {
         if (i % 10000 == 0) cerr << "  Processing short read " << i << "       \r";
         counter["total"]++;
-        
+
         //
         // Drop this sequence if it has too many rare or abundant kmers.
         //
@@ -908,14 +908,14 @@ normalize_reads(string in_path,
 
         if (retain) {
             counter["retained"]++;
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                  write_fastq(out_fh, s) : write_fasta(out_fh, s);
         } else {
             counter["overep"]++;
         }
 
         if (discards && !retain)
-            out_file_type == FileT::fastq ? 
+            out_file_type == FileT::fastq ?
                 write_fastq(discard_fh, s) : write_fasta(discard_fh, s);
 
         delete s;
@@ -936,9 +936,9 @@ normalize_reads(string in_path,
     return 0;
 }
 
-int 
-populate_kmers(vector<pair<string, string> > &pair_files, 
-               vector<pair<string, string> > &files, 
+int
+populate_kmers(vector<pair<string, string> > &pair_files,
+               vector<pair<string, string> > &files,
                SeqKmerHash &kmers,
                vector<char *> &kmers_keys)
 {
@@ -965,8 +965,8 @@ populate_kmers(vector<pair<string, string> > &pair_files,
     return 0;
 }
 
-int  
-read_kmer_freq(string in_path, SeqKmerHash &kmer_map, vector<char *> &kmer_map_keys) 
+int
+read_kmer_freq(string in_path, SeqKmerHash &kmer_map, vector<char *> &kmer_map_keys)
 {
     cerr << "Reading kmer frequencies from '" << in_path.c_str() << "'...\n";
 
@@ -1147,7 +1147,7 @@ process_file_kmers(string path, SeqKmerHash &kmer_map, vector<char *> &kmer_map_
     return 0;
 }
 
-int 
+int
 generate_kmer_dist(SeqKmerHash &kmer_map)
 {
     SeqKmerHash::iterator i;
@@ -1189,8 +1189,8 @@ calc_kmer_median(SeqKmerHash &kmers, double &kmer_med, double &kmer_mad)
 
     sort(freqs.begin(), freqs.end());
 
-    kmer_med = num_kmers % 2 == 0 ? 
-        (double) (freqs[num_kmers / 2 - 1] + freqs[num_kmers / 2]) / 2.0 : 
+    kmer_med = num_kmers % 2 == 0 ?
+        (double) (freqs[num_kmers / 2 - 1] + freqs[num_kmers / 2]) / 2.0 :
         (double) freqs[num_kmers / 2 - 1];
 
     //
@@ -1202,23 +1202,23 @@ calc_kmer_median(SeqKmerHash &kmers, double &kmer_med, double &kmer_mad)
         residuals.push_back(abs(freqs[j] - (int) kmer_med));
     sort(residuals.begin(), residuals.end());
 
-    kmer_mad = num_kmers % 2 == 0 ? 
-        (double) (residuals[num_kmers / 2 - 1] + residuals[num_kmers / 2]) / 2.0 : 
+    kmer_mad = num_kmers % 2 == 0 ?
+        (double) (residuals[num_kmers / 2 - 1] + residuals[num_kmers / 2]) / 2.0 :
         (double) residuals[num_kmers / 2 - 1];
 
     return 0;
 }
 
-int 
+int
 kmer_map_cmp(pair<char *, long> a, pair<char *, long> b)
 {
     return (a.second < b.second);
 }
 
-inline bool 
-normalize_kmer_lookup(SeqKmerHash &kmer_map, 
-                      char *read, char *kmer, 
-                      int num_kmers, 
+inline bool
+normalize_kmer_lookup(SeqKmerHash &kmer_map,
+                      char *read, char *kmer,
+                      int num_kmers,
                       vector<char *> &kmer_keys)
 {
     kmer[kmer_len] = '\0';
@@ -1245,8 +1245,8 @@ normalize_kmer_lookup(SeqKmerHash &kmer_map,
     // Calculate the median kmer frequency along the read.
     //
     sort(sorted_cnts.begin(), sorted_cnts.end());
-    double median = num_kmers % 2 == 0 ? 
-        (double) (sorted_cnts[num_kmers / 2 - 1] + sorted_cnts[num_kmers / 2]) / 2.0 : 
+    double median = num_kmers % 2 == 0 ?
+        (double) (sorted_cnts[num_kmers / 2 - 1] + sorted_cnts[num_kmers / 2]) / 2.0 :
         (double) sorted_cnts[num_kmers / 2 - 1];
     // cout << "# median: " << median << "\n";
 
@@ -1279,10 +1279,10 @@ normalize_kmer_lookup(SeqKmerHash &kmer_map,
     return retain;
 }
 
-inline int 
-kmer_lookup(SeqKmerHash &kmer_map, 
-            char *read, char *kmer, 
-            int num_kmers, 
+inline int
+kmer_lookup(SeqKmerHash &kmer_map,
+            char *read, char *kmer,
+            int num_kmers,
             int &rare_k, int &abundant_k)
 {
     //
@@ -1315,8 +1315,8 @@ kmer_lookup(SeqKmerHash &kmer_map,
     // Calculate the median kmer frequency along the read.
     //
     sort(sorted_cnts.begin(), sorted_cnts.end());
-    double median = num_kmers % 2 == 0 ? 
-        (double) (sorted_cnts[num_kmers / 2 - 1] + sorted_cnts[num_kmers / 2]) / 2.0 : 
+    double median = num_kmers % 2 == 0 ?
+        (double) (sorted_cnts[num_kmers / 2 - 1] + sorted_cnts[num_kmers / 2]) / 2.0 :
         (double) sorted_cnts[num_kmers / 2 - 1];
     // cout << "# median: " << median << "\n";
 
@@ -1324,13 +1324,13 @@ kmer_lookup(SeqKmerHash &kmer_map,
     // cout << "# kmer cov bound: " << bound << "\n";
 
     //
-    // Look for runs of rare kmers. 
+    // Look for runs of rare kmers.
     //
-    // We will slide a window across the read, f represents the front of the window, b 
-    // represents the back. Each  time a kmer is below the bound we will increment run_cnt, 
-    // which represents the number of kmers in the window below the bound. If 2/3 of the 
+    // We will slide a window across the read, f represents the front of the window, b
+    // represents the back. Each  time a kmer is below the bound we will increment run_cnt,
+    // which represents the number of kmers in the window below the bound. If 2/3 of the
     // kmers in the window go below the bound, assume a sequencing error has occurred.
-    // 
+    //
     int run_cnt = 0;
     int b = 0;
     for (int f = 0; f < num_kmers; f++) {
@@ -1354,10 +1354,10 @@ kmer_lookup(SeqKmerHash &kmer_map,
     return 0;
 }
 
-// inline int 
-// kmer_lookup(SeqKmerHash &kmer_map, 
-//             char *read, char *kmer, 
-//             int num_kmers, 
+// inline int
+// kmer_lookup(SeqKmerHash &kmer_map,
+//             char *read, char *kmer,
+//             int num_kmers,
 //             int &rare_k, int &abundant_k, bool &complex)
 // {
 //     //
@@ -1416,16 +1416,16 @@ kmer_lookup(SeqKmerHash &kmer_map,
 
 
 //     //
-//     // Look for runs of kmers at various orders of magnitude. 
+//     // Look for runs of kmers at various orders of magnitude.
 //     //
-//     // We will slide a window across the read, f represents the front of the window, b 
-//     // represents the back. Each  time a kmer is below the bound we will increment run_cnt, 
-//     // which represents the number of kmers in the window below the bound. If 2/3 of the 
+//     // We will slide a window across the read, f represents the front of the window, b
+//     // represents the back. Each  time a kmer is below the bound we will increment run_cnt,
+//     // which represents the number of kmers in the window below the bound. If 2/3 of the
 //     // kmers in the window go below the bound, assume a sequencing error has occurred.
 
 //     // Run counters:
 //     //   1      10      100      1k     10k    100k
-//     // runs[0] runs[1] runs[2] runs[3] runs[4] runs[5] 
+//     // runs[0] runs[1] runs[2] runs[3] runs[4] runs[5]
 //     int runs[6] = {0};
 //     int prev_cnt, run_cnt, tot_trans;
 //     int f = 0;
@@ -1437,10 +1437,10 @@ kmer_lookup(SeqKmerHash &kmer_map,
 //         prev_cnt  = cnts[f];
 //         f++;
 
-//         while (f < num_kmers && cnts[f] == prev_cnt) { 
+//         while (f < num_kmers && cnts[f] == prev_cnt) {
 //             // cout << "# window front: " << f << "; run_cnt: " << run_cnt << "; prev_cnt: " << prev_cnt << "\n";
-//             f++; 
-//             run_cnt++; 
+//             f++;
+//             run_cnt++;
 //         }
 
 //         if (run_cnt >= rare_k_lim) {
@@ -1484,7 +1484,7 @@ kmer_lookup(SeqKmerHash &kmer_map,
 //     return 0;
 // }
 
-int 
+int
 free_kmer_hash(SeqKmerHash &kmer_map, vector<char *> &kmer_map_keys)
 {
     for (uint i = 0; i < kmer_map_keys.size(); i++) {
@@ -1537,7 +1537,7 @@ int print_results(map<string, map<string, long> > &counters) {
         c["abundant_k"]  += it->second["abundant_k"];
     }
 
-    cerr << 
+    cerr <<
         c["total"] << " total sequences;\n"
          << "  " << c["rare_k"]      << " rare k-mer reads;\n"
          << "  " << c["abundant_k"]  << " abundant k-mer reads;\n"
@@ -1575,10 +1575,10 @@ int build_file_list(vector<string> &in_files, vector<pair<string, string> > &fil
                 continue;
 
             //
-            // If the file is gzip'ed, remove the '.gz' suffix. 
+            // If the file is gzip'ed, remove the '.gz' suffix.
             //
             pos  = file.find_last_of(".");
-            if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
+            if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) &&
                 file.substr(pos) == ".gz") {
                 file = file.substr(0, pos);
                 pos  = file.find_last_of(".");
@@ -1608,7 +1608,7 @@ int build_file_list(vector<string> &in_files, vector<pair<string, string> > &fil
             //
             file = in_files[i];
             pos  = file.find_last_of(".");
-            if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) && 
+            if ((in_file_type == FileT::gzfastq || in_file_type == FileT::gzfasta) &&
                 file.substr(pos) == ".gz") {
                 file = file.substr(0, pos);
                 pos  = file.find_last_of(".");
@@ -1625,7 +1625,7 @@ int build_file_list(vector<string> &in_files, vector<pair<string, string> > &fil
 int parse_command_line(int argc, char* argv[]) {
     string pair_1, pair_2;
     int c;
-     
+
     while (1) {
         static struct option long_options[] = {
             {"help",         no_argument,       NULL, 'h'},
@@ -1651,7 +1651,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"write_k_freq", required_argument, NULL, 'w'},
             {0, 0, 0, 0}
         };
-        
+
         // getopt_long stores the option index here.
         int option_index = 0;
 
@@ -1660,7 +1660,7 @@ int parse_command_line(int argc, char* argv[]) {
         // Detect the end of the options.
         if (c == -1)
             break;
-     
+
         switch (c) {
         case 'h':
             help();
@@ -1678,7 +1678,7 @@ int parse_command_line(int argc, char* argv[]) {
         case 'y':
             if (strcasecmp(optarg, "fasta") == 0)
                 out_file_type = FileT::fasta;
-            else 
+            else
                 out_file_type = FileT::fastq;
             break;
         case 'f':
@@ -1747,7 +1747,7 @@ int parse_command_line(int argc, char* argv[]) {
             // getopt_long already printed an error message.
             help();
             break;
-     
+
         default:
             cerr << "Unknown command line option '" << (char) c << "'\n";
             help();
@@ -1765,13 +1765,13 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
-    if (in_path.length() > 0 && in_path.at(in_path.length() - 1) != '/') 
+    if (in_path.length() > 0 && in_path.at(in_path.length() - 1) != '/')
         in_path += "/";
 
-    if (out_path.length() == 0) 
+    if (out_path.length() == 0)
         out_path = ".";
 
-    if (out_path.at(out_path.length() - 1) != '/') 
+    if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
     if (in_file_type == FileT::unknown)

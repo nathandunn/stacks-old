@@ -20,7 +20,7 @@
 
 //
 // process_radtags -- clean raw reads using a sliding window approach;
-//   split reads by barcode, check RAD cutsite is intact, correct barcodes/cutsites 
+//   split reads by barcode, check RAD cutsite is intact, correct barcodes/cutsites
 //   within one basepair, truncate reads on request.
 //
 
@@ -167,29 +167,29 @@ int main (int argc, char* argv[]) {
 
         if (paired) {
             if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta)
-                    result = process_paired_reads(files[i].first, files[i].second, 
+                    result = process_paired_reads(files[i].first, files[i].second,
                                               se_bc, pe_bc,
                                               pair_1_gzfhs, pair_2_gzfhs, rem_1_gzfhs, rem_2_gzfhs,
                                               counters[files[i].first], barcode_log);
             else
-                result = process_paired_reads(files[i].first, files[i].second, 
+                result = process_paired_reads(files[i].first, files[i].second,
                                               se_bc, pe_bc,
                                               pair_1_fhs, pair_2_fhs, rem_1_fhs, rem_2_fhs,
                                               counters[files[i].first], barcode_log);
         } else {
             if (out_file_type == FileT::gzfastq || out_file_type == FileT::gzfasta)
-                    result = process_reads(files[i].first, 
+                    result = process_reads(files[i].first,
                                        se_bc, pe_bc,
-                                       pair_1_gzfhs, 
+                                       pair_1_gzfhs,
                                        counters[files[i].first], barcode_log);
             else
-                result = process_reads(files[i].first, 
+                result = process_reads(files[i].first,
                                        se_bc, pe_bc,
-                                       pair_1_fhs, 
+                                       pair_1_fhs,
                                        counters[files[i].first], barcode_log);
         }
 
-        cerr <<        "  " 
+        cerr <<        "  "
              << counters[files[i].first]["total"] << " total reads; ";
         if (filter_illumina)
             cerr << "-" << counters[files[i].first]["ill_filtered"] << " failed Illumina reads; ";
@@ -231,22 +231,22 @@ int main (int argc, char* argv[]) {
 }
 
 template <typename fhType>
-int 
-process_paired_reads(string prefix_1, 
+int
+process_paired_reads(string prefix_1,
                      string prefix_2,
                      set<string> &se_bc, set<string> &pe_bc,
-                     map<BarcodePair, fhType *> &pair_1_fhs, 
-                     map<BarcodePair, fhType *> &pair_2_fhs, 
+                     map<BarcodePair, fhType *> &pair_1_fhs,
+                     map<BarcodePair, fhType *> &pair_2_fhs,
                      map<BarcodePair, fhType *> &rem_1_fhs,
                      map<BarcodePair, fhType *> &rem_2_fhs,
-                     map<string, long> &counter, 
+                     map<string, long> &counter,
                      map<BarcodePair, map<string, long> > &barcode_log) {
     Input    *fh_1, *fh_2;
     Read     *r_1, *r_2;
     ofstream *discard_fh_1, *discard_fh_2;
 
     int return_val = 1;
-    
+
     string path_1 = in_path_1 + prefix_1;
     string path_2 = in_path_2 + prefix_2;
 
@@ -291,13 +291,13 @@ process_paired_reads(string prefix_1,
     }
 
     //
-    // Read in the first record, initializing the Seq object s. Then 
+    // Read in the first record, initializing the Seq object s. Then
     // initialize the Read object r, then loop, using the same objects.
     //
     Seq *s_1 = fh_1->next_seq();
     Seq *s_2 = fh_2->next_seq();
     if (s_1 == NULL || s_2 == NULL) {
-        cerr << "Attempting to read first pair of input records, unable to allocate " 
+        cerr << "Attempting to read first pair of input records, unable to allocate "
              << "Seq object (Was the correct input type specified?).\n";
         exit(1);
     }
@@ -318,7 +318,7 @@ process_paired_reads(string prefix_1,
     //
     if (max_bc_size_1 == 0)
         bc.set(prefix_1, prefix_2);
-        
+
     long i = 1;
 
     do {
@@ -338,15 +338,15 @@ process_paired_reads(string prefix_1,
         process_barcode(r_1, r_2, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
 
         //
-        // Adjust the size of the read to accommodate truncating the sequence and variable 
+        // Adjust the size of the read to accommodate truncating the sequence and variable
         // barcode lengths. With standard Illumina data we want to output constant length
         // reads even as the barcode size may change. Other technologies, like IonTorrent
         // need to be truncated uniformly.
         //
         if (truncate_seq > 0) {
-            if (truncate_seq + r_1->inline_bc_len <= r_1->len) 
+            if (truncate_seq + r_1->inline_bc_len <= r_1->len)
                 r_1->set_len(truncate_seq + r_1->inline_bc_len);
-            if (truncate_seq + r_2->inline_bc_len <= r_2->len) 
+            if (truncate_seq + r_2->inline_bc_len <= r_2->len)
                 r_2->set_len(truncate_seq + r_2->inline_bc_len);
         } else {
             if (barcode_type == inline_null || barcode_type == inline_inline ||        barcode_type == inline_index)
@@ -355,9 +355,9 @@ process_paired_reads(string prefix_1,
                 r_2->set_len(r_2->len - (max_bc_size_2 - r_2->inline_bc_len));
         }
 
-        if (r_1->retain) 
+        if (r_1->retain)
             process_singlet(r_1, renz_1, false, barcode_log[bc], counter);
-        if (r_2->retain) 
+        if (r_2->retain)
             process_singlet(r_2, renz_2, true,  barcode_log[bc], counter);
 
         int result_1 = 1;
@@ -384,25 +384,25 @@ process_paired_reads(string prefix_1,
             // Write to the remainder file.
             //
             if (retain_header)
-                result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-                    write_fastq(rem_1_fhs[bc], s_1, r_1) : 
+                result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+                    write_fastq(rem_1_fhs[bc], s_1, r_1) :
                     write_fasta(rem_1_fhs[bc], s_1, r_1);
             else
-                result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-                    write_fastq(rem_1_fhs[bc], r_1, overhang) : 
+                result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+                    write_fastq(rem_1_fhs[bc], r_1, overhang) :
                     write_fasta(rem_1_fhs[bc], r_1, overhang);
-            
+
         } else if (!r_1->retain && r_2->retain) {
             //
             // Write to the remainder file.
             //
             if (retain_header)
-                result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-                    write_fastq(rem_2_fhs[bc], s_2, r_2) : 
+                result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+                    write_fastq(rem_2_fhs[bc], s_2, r_2) :
                     write_fasta(rem_2_fhs[bc], s_2, r_2);
             else
-                result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-                    write_fastq(rem_2_fhs[bc], r_2, overhang) : 
+                result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+                    write_fastq(rem_2_fhs[bc], r_2, overhang) :
                     write_fasta(rem_2_fhs[bc], r_2, overhang);
         }
 
@@ -411,14 +411,14 @@ process_paired_reads(string prefix_1,
             return_val = -1;
             break;
         }
-                
+
         if (discards && !r_1->retain)
-            result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-                write_fastq(discard_fh_1, s_1) : 
+            result_1 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+                write_fastq(discard_fh_1, s_1) :
                 write_fasta(discard_fh_1, s_1);
         if (discards && !r_2->retain)
-            result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-                write_fastq(discard_fh_2, s_2) : 
+            result_2 = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+                write_fastq(discard_fh_2, s_2) :
                 write_fasta(discard_fh_2, s_2);
 
         if (!result_1 || !result_2) {
@@ -431,7 +431,7 @@ process_paired_reads(string prefix_1,
         delete s_2;
 
         i++;
-    } while ((s_1 = fh_1->next_seq()) != NULL && 
+    } while ((s_1 = fh_1->next_seq()) != NULL &&
              (s_2 = fh_2->next_seq()) != NULL);
 
     if (discards) {
@@ -449,11 +449,11 @@ process_paired_reads(string prefix_1,
 }
 
 template <typename fhType>
-int 
-process_reads(string prefix, 
+int
+process_reads(string prefix,
               set<string> &se_bc, set<string> &pe_bc,
-              map<BarcodePair, fhType *> &pair_1_fhs, 
-              map<string, long> &counter, 
+              map<BarcodePair, fhType *> &pair_1_fhs,
+              map<string, long> &counter,
               map<BarcodePair, map<string, long> > &barcode_log) {
     Input *fh;
     Read  *r;
@@ -486,12 +486,12 @@ process_reads(string prefix,
     }
 
     //
-    // Read in the first record, initializing the Seq object s. Then 
+    // Read in the first record, initializing the Seq object s. Then
     // initialize the Read object r, then loop, using the same objects.
     //
     Seq *s = fh->next_seq();
     if (s == NULL) {
-        cerr << "Attempting to read first input record, unable to allocate " 
+        cerr << "Attempting to read first input record, unable to allocate "
              << "Seq object (Was the correct input type specified?).\n";
         exit(1);
     }
@@ -532,44 +532,44 @@ process_reads(string prefix,
         process_barcode(r, NULL, bc, pair_1_fhs, se_bc, pe_bc, barcode_log, counter);
 
         //
-        // Adjust the size of the read to accommodate truncating the sequence and variable 
+        // Adjust the size of the read to accommodate truncating the sequence and variable
         // barcode lengths. With standard Illumina data we want to output constant length
         // reads even as the barcode size may change. Other technologies, like IonTorrent
         // need to be truncated uniformly.
         //
         if (truncate_seq > 0) {
-            if (truncate_seq + r->inline_bc_len <= r->len) 
+            if (truncate_seq + r->inline_bc_len <= r->len)
                 r->set_len(truncate_seq + r->inline_bc_len);
         } else {
             if (barcode_type == inline_null || barcode_type == inline_inline ||        barcode_type == inline_index)
                 r->set_len(r->len - (max_bc_size_1 - r->inline_bc_len));
         }
 
-        if (r->retain) 
+        if (r->retain)
             process_singlet(r, renz_1, false, barcode_log[bc], counter);
 
         int result = 1;
 
         if (r->retain) {
             if (retain_header)
-                result = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-                    write_fastq(pair_1_fhs[bc], s, r) : 
+                result = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+                    write_fastq(pair_1_fhs[bc], s, r) :
                     write_fasta(pair_1_fhs[bc], s, r);
             else
-                result = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ? 
-                    write_fastq(pair_1_fhs[bc], r, overhang) : 
+                result = (out_file_type == FileT::fastq || out_file_type == FileT::gzfastq) ?
+                    write_fastq(pair_1_fhs[bc], r, overhang) :
                     write_fasta(pair_1_fhs[bc], r, overhang);
         }
-        
+
         if (!result) {
             cerr << "Error writing to output file for '" << bc.str() << "'\n";
             return_val = -1;
             break;
         }
-                
+
         if (discards && !r->retain)
-            result = out_file_type == FileT::fastq ? 
-                write_fastq(discard_fh, s) : 
+            result = out_file_type == FileT::fastq ?
+                write_fastq(discard_fh, s) :
                 write_fasta(discard_fh, s);
 
         if (!result) {
@@ -577,7 +577,7 @@ process_reads(string prefix,
             return_val = -1;
             break;
         }
-                
+
         delete s;
 
         i++;
@@ -596,10 +596,10 @@ process_reads(string prefix,
 }
 
 inline
-int 
-process_singlet(Read *href, 
+int
+process_singlet(Read *href,
                 string res_enz, bool paired_end,
-                map<string, long> &bc_log, map<string, long> &counter) 
+                map<string, long> &bc_log, map<string, long> &counter)
 {
     char *p;
 
@@ -653,7 +653,7 @@ process_singlet(Read *href,
             if (*p == '.' || *p == 'N') {
                 counter["low_quality"]++;
                 href->retain = 0;
-                if (barcode_type != null_null) 
+                if (barcode_type != null_null)
                     bc_log["low_qual"]++;
                 return 0;
             }
@@ -662,7 +662,7 @@ process_singlet(Read *href,
     //
     // Drop this sequence if it has low quality scores.
     //
-    if (quality && 
+    if (quality &&
         check_quality_scores(href, qual_offset, score_limit, len_limit, href->inline_bc_len) <= 0) {
         counter["low_quality"]++;
         if (barcode_type != null_null)
@@ -697,8 +697,8 @@ process_singlet(Read *href,
     return 0;
 }
 
-int 
-correct_radtag(Read *href, string res_enz, map<string, long> &counter) 
+int
+correct_radtag(Read *href, string res_enz, map<string, long> &counter)
 {
     if (recover == false)
         return 0;
@@ -708,7 +708,7 @@ correct_radtag(Read *href, string res_enz, map<string, long> &counter)
     int d = 0;
 
     for (int i = 0; i < renz_cnt[res_enz]; i++) {
-        
+
         d = dist(renz[res_enz][i], href->seq + href->inline_bc_len);
 
         if (d <= 1) {
@@ -727,7 +727,7 @@ correct_radtag(Read *href, string res_enz, map<string, long> &counter)
 
 int dist(const char *res_enz, char *seq) {
     const char *p; char *q;
-    
+
     int dist = 0;
 
     for (p = res_enz, q = seq; *p != '\0'; p++, q++)
@@ -736,11 +736,11 @@ int dist(const char *res_enz, char *seq) {
     return dist;
 }
 
-int 
-print_results(int argc, char **argv, 
-              vector<BarcodePair> &barcodes, 
-              map<string, map<string, long> > &counters, 
-              map<BarcodePair, map<string, long> > &barcode_log) 
+int
+print_results(int argc, char **argv,
+              vector<BarcodePair> &barcodes,
+              map<string, map<string, long> > &counters,
+              map<BarcodePair, map<string, long> > &barcode_log)
 {
     map<string, map<string, long> >::iterator it;
 
@@ -798,7 +798,7 @@ print_results(int argc, char **argv,
         c["adapter"]      += it->second["adapter"];
         c["ambiguous"]    += it->second["ambiguous"];
         c["noradtag"]     += it->second["noradtag"];
-        c["retained"]     += it->second["retained"]; 
+        c["retained"]     += it->second["retained"];
     }
 
     cerr << c["total"] << " total sequences;\n";
@@ -811,7 +811,7 @@ print_results(int argc, char **argv,
          << "  " << c["noradtag"]    << " ambiguous RAD-Tag drops;\n"
          << c["retained"] << " retained reads.\n";
 
-    log        << "\n" 
+    log        << "\n"
          << "Total Sequences\t"      << c["total"]       << "\n";
     if (filter_illumina)
         log << "Failed Illumina filtered reads\t" << c["ill_filtered"] << "\n";
@@ -898,7 +898,7 @@ int  compare_barcodes(pair<BarcodePair, int> a, pair<BarcodePair, int> b) {
 int parse_command_line(int argc, char* argv[]) {
     FileT ftype;
     int c;
-     
+
     while (1) {
         static struct option long_options[] = {
             {"help",                 no_argument, NULL, 'h'},
@@ -942,7 +942,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"adapter_mm",     required_argument, NULL, 'T'},
             {0, 0, 0, 0}
         };
-        
+
         // getopt_long stores the option index here.
         int option_index = 0;
 
@@ -951,7 +951,7 @@ int parse_command_line(int argc, char* argv[]) {
         // Detect the end of the options.
         if (c == -1)
             break;
-     
+
         switch (c) {
         case 'h':
             help();
@@ -1108,7 +1108,7 @@ int parse_command_line(int argc, char* argv[]) {
             // getopt_long already printed an error message.
             help();
             break;
-     
+
         default:
             cerr << "Unknown command line option '" << (char) c << "'\n";
             help();
@@ -1136,16 +1136,16 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
-    if (in_path_1.length() > 0 && in_path_1.at(in_path_1.length() - 1) != '/') 
+    if (in_path_1.length() > 0 && in_path_1.at(in_path_1.length() - 1) != '/')
         in_path_1 += "/";
 
-    if (in_path_2.length() > 0 && in_path_2.at(in_path_2.length() - 1) != '/') 
+    if (in_path_2.length() > 0 && in_path_2.at(in_path_2.length() - 1) != '/')
         in_path_2 += "/";
 
-    if (out_path.length() == 0) 
+    if (out_path.length() == 0)
         out_path = ".";
 
-    if (out_path.at(out_path.length() - 1) != '/') 
+    if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
     if (in_file_type == FileT::unknown)
@@ -1254,7 +1254,7 @@ void help() {
     it = renz_cnt.begin();
     for (uint i = 1; i <= cnt; i++) {
         std::cerr << "'" << it->first << "'";
-        if (i < cnt - 1) 
+        if (i < cnt - 1)
             std::cerr << ", ";
         else if (i == cnt - 1)
             std::cerr << ", or ";
@@ -1265,7 +1265,7 @@ void help() {
         it++;
     }
 
-    std::cerr << "\n" 
+    std::cerr << "\n"
               << "  Adapter options:\n"
               << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the single-end read for filtering.\n"
               << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
@@ -1277,7 +1277,7 @@ void help() {
               << "    --filter_illumina: discard reads that have been marked by Illumina's chastity/purity filter as failing.\n"
               << "    --disable_rad_check: disable checking if the RAD site is intact.\n"
               << "    --len_limit <limit>: specify a minimum sequence length (useful if your data has already been trimmed).\n"
-              << "    --barcode_dist_1: the number of allowed mismatches when rescuing single-end barcodes (default 1).\n" 
+              << "    --barcode_dist_1: the number of allowed mismatches when rescuing single-end barcodes (default 1).\n"
               << "    --barcode_dist_2: the number of allowed mismatches when rescuing paired-end barcodes (defaults to --barcode_dist_1).\n";
 
     exit(0);

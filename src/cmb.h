@@ -55,11 +55,11 @@ typedef struct cmb {
 
 class CombSet {
     //
-    // Given these two variables, we will select N choose K combinations. 
+    // Given these two variables, we will select N choose K combinations.
     // This combination will be stored in sets, and we will then decrement K by 1
     // and continue to generate sets.
     //
-    // Once we have generated all the combinations of a particular size, K, we 
+    // Once we have generated all the combinations of a particular size, K, we
     // will partition the minimum spanning tree by dropping combinations of edges
     // from the graph. The selection of edges to drop is provided by the combinations
     // generated first. Finally, each set of disconnected subgraphs makes for one

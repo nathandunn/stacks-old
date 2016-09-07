@@ -55,7 +55,6 @@ class Seq {
 
     Seq();
     Seq(const Seq& other);
-    Seq& operator= (const Seq& other) = delete;
     Seq(const char *, const char *);
     Seq(const char *, const char *, const char *);
     Seq(const char *, const char *, const char *, const char *, uint, strand_type);
@@ -69,6 +68,9 @@ class Seq {
         if (loc_str != NULL)
             delete[] loc_str;
     }
+    friend void swap(Seq&, Seq&);
+    Seq& operator=(Seq&& other) {swap(*this, other); return *this;}
+    Seq& operator=(const Seq& other) = delete;
 };
 
 //

@@ -29,12 +29,12 @@ extern double sigma;
 
 inline
 double *
-calc_weights() 
+calc_weights()
 {
     //
     // Calculate weights for window smoothing operations.
     //
-    // For each genomic region centered on a nucleotide position c, the contribution of the population 
+    // For each genomic region centered on a nucleotide position c, the contribution of the population
     // genetic statistic at position p to the region average was weighted by the Gaussian function:
     //   exp( (-1 * (p - c)^2) / (2 * sigma^2))
     //
@@ -59,7 +59,7 @@ determine_window_limits(vector<StatT *> &sites, uint center_bp, uint &pos_l, uin
         if (sites[pos_l] == NULL) {
             pos_l++;
         } else {
-            if (sites[pos_l]->bp < limit_l) 
+            if (sites[pos_l]->bp < limit_l)
                 pos_l++;
             else
                 break;

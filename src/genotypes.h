@@ -98,7 +98,7 @@ int    check_homozygosity(vector<char *> &, int, char, char, string &);
 int    manual_corrections(string, PopMap<CSLocus> *);
 
 int    correct_cp_markers_missing_alleles(set<int> &, map<int, CSLocus *> &, PopMap<CSLocus> *);
-int    calc_segregation_distortion(map<string, map<string, double> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &); 
+int    calc_segregation_distortion(map<string, map<string, double> > &, map<int, CSLocus *> &, PopMap<CSLocus> *, set<int> &);
 double tally_generic_gtypes(int, PopMap<CSLocus> *, set<int> &, map<string, int> &);
 double tally_translated_gtypes(int, PopMap<CSLocus> *, set<int> &, map<string, string> &, map<string, int> &);
 double chisq_test(map<string, map<string, double> > &, map<string, int> &, string, double);

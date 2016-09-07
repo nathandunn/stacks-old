@@ -47,7 +47,7 @@ using std::set;
 #include <utility>
 using std::pair;
 
-#include "constants.h" 
+#include "constants.h"
 #include "clean.h"
 #include "file_io.h"
 #include "utils.h"
@@ -62,19 +62,19 @@ void help( void );
 void version( void );
 int  parse_command_line(int, char **);
 template<typename fhType>
-int  process_reads(string, 
+int  process_reads(string,
                    set<string> &, set<string> &,
                    map<BarcodePair, fhType *> &,
                    map<string, long> &, map<BarcodePair, map<string, long> > &);
 template<typename fhType>
-int  process_paired_reads(string, string, 
+int  process_paired_reads(string, string,
                           set<string> &, set<string> &,
                           map<BarcodePair, fhType *> &,
                           map<BarcodePair, fhType *> &,
                           map<BarcodePair, fhType *> &,
                           map<BarcodePair, fhType *> &,
                           map<string, long> &, map<BarcodePair, map<string, long> > &);
-int  process_singlet(Read *, 
+int  process_singlet(Read *,
                      bool,
                      map<string, long> &, map<string, long> &);
 
