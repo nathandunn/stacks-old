@@ -1,3 +1,5 @@
+#include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -10,9 +12,14 @@
 
 #include "pstacks_base.h"
 
+using std::ofstream;
+using std::stringstream;
 using std::set;
 using std::map;
 using std::vector;
+
+extern string prefix_path;
+extern int sql_id;
 
 int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, bool invoke_model) {
     //
@@ -177,7 +184,10 @@ int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {
     return 0;
 }
 
-int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
+int write_results(map<int, MergedStack *> &m,
+                  map<int, PStack *> &u,
+                  bool gzip
+                  ) {
     map<int, MergedStack *>::iterator i;
     vector<char *>::iterator   j;
     vector<int>::iterator      k;
@@ -187,18 +197,13 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     PStack      *tag_2;
     stringstream sstr;
 
-    bool gzip = (in_file_type == FileT::bam) ? true : false;
-
     //
-    // Parse the input file name to create the output files
+    // Determine the names of the output files
     //
-    size_t pos_1 = in_file.find_last_of("/");
-    size_t pos_2 = in_file.find_last_of(".");
-    string tag_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".tags.tsv";
-    string snp_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".snps.tsv";
-    string all_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".alleles.tsv";
-    string mod_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".models.tsv";
-
+    string tag_file = prefix_path + ".tags.tsv";
+    string snp_file = prefix_path + ".snps.tsv";
+    string all_file = prefix_path + ".alleles.tsv";
+    string mod_file = prefix_path + ".models.tsv";
     if (gzip) {
         tag_file += ".gz";
         snp_file += ".gz";

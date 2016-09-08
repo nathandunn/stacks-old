@@ -30,7 +30,7 @@
 //
 FileT  in_file_type;
 string in_file;
-string out_path;
+string prefix_path;
 int    sql_id        = 0;
 int    min_stack_cov = 3;
 int    num_threads   = 1;
@@ -121,8 +121,9 @@ int main (int argc, char* argv[]) {
 
     calc_coverage_distribution(unique, merged);
 
-    cerr << "Writing loci, SNPs, alleles to '" << out_path << "...'\n";
-    write_results(merged, unique);
+    cerr << "Writing loci, SNPs, alleles to '" << prefix_path << ".*'\n";
+    const bool gzip = in_file_type == FileT::bam;
+    write_results(merged, unique, gzip);
 
     return 0;
 }
@@ -408,8 +409,10 @@ int dump_merged_stacks(map<int, MergedStack *> &m) {
 }
 
 int parse_command_line(int argc, char* argv[]) {
-    int c;
 
+    string out_path;
+
+    int c;
     while (1) {
         static struct option long_options[] = {
             {"help",         no_argument,       NULL, 'h'},
@@ -546,16 +549,19 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
-    if (out_path.length() == 0)
-        out_path = ".";
-
-    if (out_path.at(out_path.length() - 1) != '/')
-        out_path += "/";
-
     if (model_type == fixed && barcode_err_freq == 0) {
         cerr << "You must specify the barcode error frequency.\n";
         help();
     }
+
+    // Set `prefix_path`.
+    if (out_path.length() == 0)
+        out_path = ".";
+    if (out_path.at(out_path.length() - 1) != '/')
+        out_path += "/";
+    string s = in_file.rfind('/') == string::npos ? in_file : in_file.substr(in_file.rfind('/') + 1);
+    s = s.substr(0, s.rfind('.'));
+    prefix_path = out_path + s;
 
     return 0;
 }
