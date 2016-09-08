@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -301,20 +302,10 @@ int write_results(map<int, MergedStack *> &m,
 
     char *buf; // = new char[m.begin()->second->len + 1];
     int   wrote       = 0;
-    int   excluded    = 0;
     int   blacklisted = 0;
 
     for (i = m.begin(); i != m.end(); i++) {
         tag_1 = i->second;
-
-        float total = 0;
-        for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++)
-            total += u[*k]->count;
-
-        if (total < min_stack_cov) {
-            excluded++;
-            continue;
-        }
 
         //
         // Calculate the log likelihood of this merged stack.
@@ -422,9 +413,12 @@ int write_results(map<int, MergedStack *> &m,
         // Write the expressed alleles seen for the recorded SNPs and
         // the percentage of tags a particular allele occupies.
         //
+        uint total = 0;
+        for (int stack : tag_1->utags)
+            total += u.at(stack)->count;
         char pct[id_len];
         for (t = tag_1->alleles.begin(); t != tag_1->alleles.end(); t++) {
-            sprintf(pct, "%.2f", ((t->second/total) * 100));
+            sprintf(pct, "%.2f", (((double)t->second/total) * 100));
             sstr << "0"       << "\t"
                  << sql_id    << "\t"
                  << tag_1->id << "\t"
@@ -448,7 +442,7 @@ int write_results(map<int, MergedStack *> &m,
         alle.close();
     }
 
-    cerr << "  Wrote " << wrote << " loci, excluded " << excluded << " loci due to insuffient depth of coverage; blacklisted " << blacklisted << " loci.\n";
+    cerr << "  Wrote " << wrote << " loci (of which " << blacklisted << " are blacklisted).\n";
 
     return 0;
 }
