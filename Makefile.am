@@ -53,7 +53,7 @@ rxstacks_SOURCES = src/rxstacks.h src/rxstacks.cc src/constants.h \
 	src/MetaPopInfo.h src/MetaPopInfo.cc
 
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
-	src/utils.h src/utils.cc src/log_utils.h src/log_utils.cc \
+	src/utils.h src/utils.cc src/log_utils.h \
 	src/write.h src/write.cc \
 	src/clean.h src/clean.cc \
 	src/file_io.h src/file_io.cc \
@@ -63,7 +63,7 @@ process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/const
 process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h \
 	src/clean.h src/clean.cc \
 	src/file_io.h src/file_io.cc \
-	src/utils.h src/utils.cc src/log_utils.h src/log_utils.cc \
+	src/utils.h src/utils.cc src/log_utils.h \
 	src/write.h src/write.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/BustardI.h src/BamUnalignedI.h src/FastqI.h src/gzFastq.h 
@@ -85,7 +85,7 @@ clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h \
 
 genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc \
-	src/log_utils.h src/log_utils.cc \
+	src/log_utils.h \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/aln_utils.h src/aln_utils.cc \
@@ -95,7 +95,7 @@ genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 
 populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc \
-	src/log_utils.h src/log_utils.cc \
+	src/log_utils.h \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/PopMap.h src/PopSum.h src/aln_utils.h src/aln_utils.cc src/genotype_dictionaries.h src/genotype_dictionaries.cc \
@@ -107,7 +107,7 @@ populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h \
 	src/locus.h src/locus.cc \
 	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc \
-	src/log_utils.h src/log_utils.cc \
+	src/log_utils.h \
 	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc 
 
 ustacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
