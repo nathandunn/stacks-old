@@ -1,6 +1,7 @@
 #include "models.h"
 #include "pstacks_base.h"
 
+using std::set;
 using std::map;
 using std::vector;
 
