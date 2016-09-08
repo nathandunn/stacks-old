@@ -106,8 +106,28 @@ public:
         p.strand = q.strand;
         q.strand = strand;
     }
-    PhyLoc& operator=(PhyLoc&& other) {std::swap(*this, other); return *this;}
-    PhyLoc& operator=(const PhyLoc& other) =delete;
+    PhyLoc& operator=(const PhyLoc& other) {PhyLoc cp (other); swap(*this, cp); return *this;}
+
+    bool operator==(const PhyLoc& other) const {
+        if (bp == other.bp
+                && strand == other.strand
+                && strcmp(chr, other.chr) == 0)
+            return true;
+        else
+            return false;
+    }
+
+    bool operator<(const PhyLoc& other) const {
+        const int chrcmp = strcmp(chr, other.chr);
+        if (chrcmp != 0)
+            // Alphanumeric.
+            return chrcmp < 0;
+        else if (bp != other.bp)
+            return bp < other.bp;
+        else
+            // Minus strand first.
+            return strand == strand_minus && other.strand == strand_plus;
+    }
 };
 
 class SNP {
@@ -183,6 +203,9 @@ class PStack {
     int  add_id(const char *);
     int  add_seq(const char *);
     int  add_seq(const DNANSeq *);
+
+    // extend(): Extends the PStack to the desired span.
+    void extend(const PhyLoc& phyloc, uint length);
 };
 
 class Stack {

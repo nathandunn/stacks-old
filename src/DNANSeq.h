@@ -21,8 +21,8 @@
 #ifndef __DNANSeq_H__
 #define __DNANSeq_H__
 
-#include <string.h>
-#include <limits.h>
+#include <cstring>
+#include <climits>
 
 #define BITMASK(b)     (1 << ((b) % CHAR_BIT))
 #define BITSLOT(b)     ((b) / CHAR_BIT)
@@ -30,12 +30,6 @@
 #define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
 #define BITTEST(a, b)  ((a)[BITSLOT(b)] & BITMASK(b))
 #define BITNSLOTS(nb)  ((nb + CHAR_BIT - 1) / CHAR_BIT)
-
-//
-// We expect (and C++ defines) an unsigned char as 8 bits.
-//
-const unsigned short int bits_per_nuc = 3;
-const unsigned short int byte_size    = 8;
 
 //
 // DNA Sequence Storage Class
@@ -60,6 +54,7 @@ public:
 
     DNANSeq(int);
     DNANSeq(int, const char *);
+    DNANSeq(const char* s) : DNANSeq(strlen(s), s) {}
     DNANSeq(int, unsigned char *);
     DNANSeq(const DNANSeq&);
     DNANSeq& operator= (const DNANSeq& other) =delete;
@@ -71,6 +66,8 @@ public:
     char *seq();
     char *subseq(char *, int, int);
 
+    void extend(int before, int after);
+
     bool operator== (const DNANSeq& other) const {
         unsigned int bytes = BITNSLOTS(bits);
         for (unsigned int i = 0; i < bytes; i++)
@@ -78,6 +75,7 @@ public:
                 return false;
         return true;
     }
+
 };
 
 #include <iostream>
@@ -88,7 +86,7 @@ using std::cin;
 using std::cout;
 using std::cerr;
 
-// Specialization for std::hash
+// Specializations for std::hash
 // Based on GCC
 namespace std {
 template<>
@@ -102,6 +100,11 @@ struct hash<DNANSeq> {
         }
         return __result;
     }
+};
+
+template<>
+struct hash<const DNANSeq*> {
+    size_t operator()(const DNANSeq* seq) const {return hash<DNANSeq>()(*seq);}
 };
 }
 

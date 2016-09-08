@@ -27,6 +27,9 @@
 //
 // $Id$
 //
+#include <cassert>
+#include "constants.h"
+
 #include "stacks.h"
 
 Rem::Rem() {
@@ -93,6 +96,31 @@ int PStack::add_seq(const DNANSeq *seq) {
     this->seq = new DNANSeq(seq->size(), seq->s);
 
     return 0;
+}
+
+void PStack::extend(const PhyLoc& phyloc, uint length) {
+    if (this->seq == NULL)
+        return;
+
+    assert(strcmp(phyloc.chr, loc.chr) == 0
+           && phyloc.strand == loc.strand);
+
+    if (loc.strand == strand_plus) {
+        assert(loc.bp >= phyloc.bp
+               && loc.bp + len <= phyloc.bp + length);
+        seq->extend(
+                loc.bp - phyloc.bp,
+                phyloc.bp + length - loc.bp - len);
+    } else {
+        assert(loc.bp <= phyloc.bp
+               && loc.bp - len >= phyloc.bp - length);
+        seq->extend(
+                phyloc.bp - loc.bp,
+                loc.bp + len - phyloc.bp - length);
+    }
+
+    loc = phyloc;
+    len = length;
 }
 
 int Stack::add_id(uint id) {
