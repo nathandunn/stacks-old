@@ -78,9 +78,9 @@ void   version( void );
 int    parse_command_line(int, char**);
 int    load_radtags(string, HashMap &);
 int    reduce_radtags(HashMap &, map<int, PStack *> &);
+int    populate_merged_tags(std::map<int, PStack *>& unique, std::map<int, MergedStack *>& merged);
 int    count_raw_reads(map<int, PStack *> &, map<int, MergedStack *> &);
 double calc_coverage_distribution(map<int, PStack *> &, map<int, MergedStack *> &);
-int    write_results(map<int, MergedStack *> &, map<int, PStack *> &);
 
 //
 // Debugging
