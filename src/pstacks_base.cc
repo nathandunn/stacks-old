@@ -187,7 +187,8 @@ int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {
 
 int write_results(map<int, MergedStack *> &m,
                   map<int, PStack *> &u,
-                  bool gzip
+                  bool gzip,
+                  bool paired_end
                   ) {
     map<int, MergedStack *>::iterator i;
     vector<char *>::iterator   j;
@@ -201,16 +202,12 @@ int write_results(map<int, MergedStack *> &m,
     //
     // Determine the names of the output files
     //
-    string tag_file = prefix_path + ".tags.tsv";
-    string snp_file = prefix_path + ".snps.tsv";
-    string all_file = prefix_path + ".alleles.tsv";
-    string mod_file = prefix_path + ".models.tsv";
-    if (gzip) {
-        tag_file += ".gz";
-        snp_file += ".gz";
-        all_file += ".gz";
-        mod_file += ".gz";
-    }
+    string gz = (gzip ? ".gz" : "");
+    string pe = (paired_end ? "_pe" : "");
+    string tag_file = prefix_path + ".tags" + pe + ".tsv" + gz;
+    string snp_file = prefix_path + ".snps" + pe + ".tsv" + gz;
+    string all_file = prefix_path + ".alleles" + pe + ".tsv" + gz;
+    string mod_file = prefix_path + ".models" + pe + ".tsv" + gz;
 
     //
     // Open the output files for writing.

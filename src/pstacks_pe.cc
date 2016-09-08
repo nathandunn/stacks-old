@@ -285,7 +285,7 @@ try {
      */
     call_consensus(loci, stacks, true);
 
-    write_results(loci, stacks, is_input_gzipped);
+    write_results(loci, stacks, is_input_gzipped, true);
 
     return 0;
 
