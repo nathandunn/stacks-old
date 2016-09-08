@@ -24,18 +24,34 @@
 #include <time.h>
 #include <iostream>
 #include <fstream>
-using std::ifstream;
-using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
 #include <sstream>
-using std::stringstream;
 
+#include "config.h"
 #include "constants.h"
 
-int init_log(ofstream &, int, char **);
+inline
+int init_log(std::ostream &fh, int argc, char **argv) {
+    //
+    // Obtain the current date.
+    //
+    time_t     rawtime;
+    struct tm *timeinfo;
+    char       date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
+
+    //
+    // Write the command line that was executed.
+    //
+    for (int i = 0; i < argc; i++) {
+        fh << argv[i];
+        if (i < argc - 1) fh << " ";
+    }
+    fh << "\n" << argv[0] << " version " << VERSION << " executed " << date << "\n\n";
+
+    return 0;
+}
 
 // TeeBuf
 // ==========
