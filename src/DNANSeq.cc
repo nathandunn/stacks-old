@@ -30,6 +30,12 @@
 
 #include "DNANSeq.h"
 
+//
+// We expect (and C++ defines) an unsigned char as 8 bits.
+//
+const unsigned short int bits_per_nuc = 3;
+const unsigned short int byte_size    = 8;
+
 DNANSeq::DNANSeq(int size) {
     int bytes;
 
@@ -195,4 +201,36 @@ char *DNANSeq::seq() {
     seq[i] = '\0';
 
     return seq;
+}
+
+void DNANSeq::extend(int before, int after) {
+    int old_bits = bits;
+    unsigned char* old_s = s;
+
+    bits = bits + (before + after) * bits_per_nuc;
+    s = new unsigned char[BITNSLOTS(bits)];
+    memset(s, 0, BITNSLOTS(bits));
+
+    int bit = 0;
+
+    // Prepend N's
+    for (int i = 0; i < before; ++i) {
+        BITSET(s, bit);
+        bit += 3;
+    }
+
+    // Copy the old sequence.
+    for (int old_bit=0; old_bit < old_bits; ++old_bit) {
+        if (BITTEST(old_s, old_bit))
+            BITSET(s, bit);
+        ++bit;
+    }
+
+    // Append N's.
+    for (int i = 0; i < after; ++i) {
+        BITSET(s, bit);
+        bit += 3;
+    }
+
+    delete old_s;
 }

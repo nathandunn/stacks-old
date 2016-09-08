@@ -168,6 +168,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
                     loci[id]->depth++;
 
                     if (store_reads) {
+                        //xxx Make store_reads an in to control the loading of names/sequences
                         char *read = new char[parts[9].length() + 1];
                         strcpy(read, parts[9].c_str());
                         loci[id]->reads.push_back(read);
