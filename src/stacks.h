@@ -203,6 +203,9 @@ class PStack {
     int  add_id(const char *);
     int  add_seq(const char *);
     int  add_seq(const DNANSeq *);
+
+    // extend(): Extends the PStack to the desired span.
+    void extend(const PhyLoc& phyloc, uint length);
 };
 
 class Stack {

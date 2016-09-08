@@ -28,6 +28,11 @@
 #include "config.h"
 #endif
 
+// Define assert's NDEBUG
+#ifndef DEBUG
+#define NDEBUG
+#endif
+
 typedef unsigned int uint;
 
 //

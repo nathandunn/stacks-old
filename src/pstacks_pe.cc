@@ -5,6 +5,7 @@
 #include <map>
 #include <unordered_set>
 #include <unordered_map>
+#include <cassert>
 
 #include "input.h"
 #include "BamI.h"
@@ -59,24 +60,16 @@ public:
     // Read the input file, saving the reads that belong to one of the catalog loci.
     ReadsByCLoc(Input* pe_reads_f,
                 size_t n_cloci,
-                const unordered_map<string, size_t> read_name_to_cloc);
+                const unordered_map<string, size_t>& read_name_to_cloc);
 
-    // Obtain maps of MergedStack's and PStack's.
+    // Obtain the MergedStack's and PStack's.
     void convert_to_pmstacks(const vector<int>& cloc_to_cloc_id,
                              map<int, PStack*>& pstacks,
                              map<int, MergedStack*>& mstacks
                              );
 
-    /*void clear() {
-        readsets.clear();
-        for (auto seq_ptr : unique_seqs)
-            delete seq_ptr;
-        unique_seqs.clear();
-    }*/
-
 private:
-    // CLocReadSet
-    // Reads are grouped by sequence, for each locus.
+    // For each locus, we group reads by sequence.
     typedef map<const DNANSeq*, vector<Seq> > CLocReadSet;
 
     unordered_set<const DNANSeq*> unique_seqs;
@@ -94,7 +87,7 @@ private:
 ReadsByCLoc::ReadsByCLoc(
         Input* pe_reads_f,
         size_t n_cloci,
-        const unordered_map<string, size_t> read_name_to_cloc
+        const unordered_map<string, size_t>& read_name_to_cloc
         )
 : n_used_reads(0)
 , unique_seqs()
@@ -116,48 +109,131 @@ void ReadsByCLoc::convert_to_pmstacks(
         map<int, MergedStack*>& mstacks
         ) {
     int pstack_id = 0;
-    for (size_t cloc=0; cloc<readsets.size(); ++cloc) {
-        const CLocReadSet& readset = readsets[cloc];
 
-        /*
-         * First, obtain the raw PStacks of this locus.
-         * The PStacks share their sequence and location.
-         */
+    for (size_t cloc=0; cloc<readsets.size(); ++cloc) {
+
+        //
+        // First, obtain the raw PStacks of this c-locus.
+        // The PStacks share their sequence and location.
+        //
         vector<PStack*> cloc_pstacks;
-        for (auto& identical_reads : readset) {
-            map<PhyLoc, vector<const Seq*> > seqs_by_loc;
-            for (const Seq& s : identical_reads.second)
-                seqs_by_loc[s.loc].push_back(&s);
-            for (auto& loc : seqs_by_loc) {
-                cloc_pstacks.push_back(new PStack());
-                PStack* p = cloc_pstacks.back();
-                p->loc = loc.first;
-                p->add_seq(identical_reads.first);
-                p->count = loc.second.size();
-                for (const Seq* s : loc.second)
-                    p->add_id(s->id);
-                p->id = pstack_id;
-                ++pstack_id;
+        for (auto& identical_reads : readsets[cloc]) {
+            map<PhyLoc, PStack*> cloc_pstacks_by_loc;
+
+            for (const Seq& s : identical_reads.second) {
+                PStack*& p = cloc_pstacks_by_loc.insert({s.loc, NULL}).first->second; // n.b. ref to pointer
+                if (p == NULL) {
+                    // This element was just created; this is a novel (location, seq) combination.
+                    p = new PStack();
+                    p->id = pstack_id;
+                    ++pstack_id;
+                    p->loc = s.loc;
+                    p->add_seq(identical_reads.first);
+
+                    cloc_pstacks.push_back(p);
+                }
+                ++p->count;
+                p->add_id(s.id);
             }
         }
 
-        // Create a new MergedStack
-        int cloc_id = cloc_to_cloc_id[cloc];
-        MergedStack& m = *mstacks.insert({cloc_id, new MergedStack()}).first->second;
-        m.id = cloc_id;
+        //
+        // Determine the positions spanned by the PStacks.
+        //
+        assert(!cloc_pstacks.empty()); // The sample has "matches".
+        const PStack* first_pstack = *cloc_pstacks.begin();
+        PhyLoc loc = first_pstack->loc;
+        size_t len = first_pstack->len;
+        set<const PStack*> non_olap; //xxx For now, ignore non-overlapping pstacks.
+        for (const PStack* p : cloc_pstacks) {
+            // Check that the PStack is on the same chromosome and strand.
+            if (strcmp(p->loc.chr, loc.chr) != 0
+                    || p->loc.strand != loc.strand) {
+                non_olap.insert(p);
+                continue;
+            }
 
+            if (loc.strand == strand_plus) {
+                // Check that the PStack overlaps.
+                if (p->loc.bp > loc.bp + len - 1 || p->loc.bp + p->len - 1 < loc.bp) {
+                    non_olap.insert(p);
+                    continue;
+                }
+                if (loc.bp > p->loc.bp) {
+                    // Extend left.
+                    len += p->loc.bp - loc.bp;
+                    loc.bp = p->loc.bp;
+                }
+                if (loc.bp + len < p->loc.bp + p->len) {
+                    // Extend right.
+                    len += p->loc.bp + p->len - loc.bp + len;
+                }
+            } else {
+                // loc.strand == strand_minus
 
-    }
+                // Check that the PStack overlaps.
+                if (p->loc.bp - p->len + 1 > loc.bp || p->loc.bp < loc.bp - len + 1) {
+                    non_olap.insert(p);
+                    continue;
+                }
+                if (p->loc.bp - p->len > p->loc.bp - p->len) {
+                    // Extend left.
+                    len += p->loc.bp - p->len - p->loc.bp - p->len;
+                }
+                if (loc.bp < p->loc.bp) {
+                    // Extend right.
+                    len += p->loc.bp - loc.bp;
+                    loc.bp = p->loc.bp;
+                }
+            }
+        }
+
+        //
+        // Extend the PStacks so that they all have the same location and length.
+        //
+        for (PStack* p : cloc_pstacks) {
+            if (non_olap.count(p))
+                continue;
+            p->extend(loc, len);
+        }
+
+        //
+        // Create the MergedStack of the clocus
+        //
+        MergedStack* m = new MergedStack();
+        m->id = cloc_to_cloc_id[cloc];
+        m->add_consensus(first_pstack->seq);
+        assert(m->len == len);
+        m->loc = loc;
+        for (const PStack* p : cloc_pstacks) {
+            if (non_olap.count(p))
+                continue;
+            m->count += p->count;
+            m->utags.push_back(p->id);
+        }
+
+        //
+        // Insert the MergedStack and the PStack's of the c-locus in
+        // in the global objects.
+        //
+        mstacks.insert({m->id, m});
+        for (PStack* p : cloc_pstacks) {
+            if (non_olap.count(p))
+                continue;
+            pstacks.insert({p->id, p});
+        }
+
+    } // for(c-locus)
+
+    return;
 }
 
-/* Function declarations.
- * ========== */
-
-// link_reads_to_cloci()
-// ----------
-// Parse the matches and tags (and fastq) files to link the paired reads to catalog loci.
-// Uses globals `prefix_path`, `first_reads_path` and `second_reads_path`.
-// Returns the number of reads in the fastq file.
+/* link_reads_to_cloci()
+ * ==========
+ * Parses the matches and tags (and fastq) files to link the paired reads to catalog loci.
+ * Uses globals `prefix_path`, `first_reads_path` and `second_reads_path`.
+ * Returns the number of reads in the fastq file.
+ */
 void link_reads_to_cloci(unordered_map<string, size_t>& read_name_to_cloc, vector<int>& cloc_to_cloc_id);
 
 /* main()
@@ -181,34 +257,29 @@ int main(int argc, char** argv) {
     link_reads_to_cloci(read_name_to_cloc, cloc_to_cloc_id);
 
     /*
-     * Loading the paired-ends.
+     * Load the paired-ends.
      * ----------
      */
     cerr << "Loading the paired-end sequences...\n";
     Input* pe_reads_f;
     if (in_file_type == FileT::bam)
         pe_reads_f = new Bam(paired_alns_path.c_str());
-    const ReadsByCLoc reads_by_cloc (pe_reads_f, cloc_to_cloc_id.size(), read_name_to_cloc);
+    ReadsByCLoc reads_by_cloc (pe_reads_f, cloc_to_cloc_id.size(), read_name_to_cloc);
     delete pe_reads_f;
     read_name_to_cloc.clear();
     cerr << "Used " << reads_by_cloc.n_used_reads << " aligned paired-end reads.\n";
 
-    //todo {
-    /*cerr << "Calculating the average coverage...\n";
-    double avgcov = 0;
-    for (const auto& c : contigs) {
-        double c_avgcov = 0;
-        for (const auto& col : c.cols)
-            c_avgcov += col.coverage();
-        c_avgcov /= c.cols.size();
-        avgcov += c_avgcov;
-    }
-    avgcov /= contigs.size();
-    cerr << "Average coverage is " << avgcov << "\n";*/
-    //todo }
-
-    // Convert the contigs to locus objects.
+    /*
+     * Convert the data to PStack's and MStack's.
+     */
     map<int, MergedStack*> loci;
+    map<int, PStack*> stacks;
+    reads_by_cloc.convert_to_pmstacks(cloc_to_cloc_id, stacks, loci);
+
+    /*
+     * Call SNPs and alleles.
+     */
+    call_consensus(loci, stacks, true);
 
     return 0;
 }

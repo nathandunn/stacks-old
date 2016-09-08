@@ -21,8 +21,8 @@
 #ifndef __DNANSeq_H__
 #define __DNANSeq_H__
 
-#include <string.h>
-#include <limits.h>
+#include <cstring>
+#include <climits>
 
 #define BITMASK(b)     (1 << ((b) % CHAR_BIT))
 #define BITSLOT(b)     ((b) / CHAR_BIT)
@@ -30,12 +30,6 @@
 #define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
 #define BITTEST(a, b)  ((a)[BITSLOT(b)] & BITMASK(b))
 #define BITNSLOTS(nb)  ((nb + CHAR_BIT - 1) / CHAR_BIT)
-
-//
-// We expect (and C++ defines) an unsigned char as 8 bits.
-//
-const unsigned short int bits_per_nuc = 3;
-const unsigned short int byte_size    = 8;
 
 //
 // DNA Sequence Storage Class
@@ -72,6 +66,8 @@ public:
     char *seq();
     char *subseq(char *, int, int);
 
+    void extend(int before, int after);
+
     bool operator== (const DNANSeq& other) const {
         unsigned int bytes = BITNSLOTS(bits);
         for (unsigned int i = 0; i < bytes; i++)
@@ -79,6 +75,7 @@ public:
                 return false;
         return true;
     }
+
 };
 
 #include <iostream>
