@@ -32,7 +32,7 @@ FileT  in_file_type;
 string in_file;
 string prefix_path;
 int    sql_id        = 0;
-int    min_stack_cov = 3;
+uint   min_stack_cov = 3;
 int    num_threads   = 1;
 
 //
@@ -112,6 +112,12 @@ int main (int argc, char* argv[]) {
 
     //dump_merged_stacks(merged);
 
+    size_t merged_size_old = merged.size();
+    prune_low_coverage_loci(merged, unique);
+    cerr << "Excluded " << merged_size_old - merged.size()
+         << " loci due to insuffient depth of coverage; now working with "
+         << merged.size() << " loci.\n";
+
     // Call the consensus sequence again, now that remainder tags have been merged.
     cerr << "Identifying polymorphic sites and calling consensus sequences...";
     call_consensus(merged, unique, true);
@@ -121,7 +127,7 @@ int main (int argc, char* argv[]) {
 
     calc_coverage_distribution(unique, merged);
 
-    cerr << "Writing loci, SNPs, alleles to '" << prefix_path << ".*'\n";
+    cerr << "Writing loci, SNPs, alleles to '" << prefix_path << ".*'...\n";
     const bool gzip = in_file_type == FileT::bam;
     write_results(merged, unique, gzip);
 
@@ -146,8 +152,6 @@ double calc_coverage_distribution(map<int, PStack *> &unique, map<int, MergedSta
             depth += tag->count;
         }
 
-        if (depth < min_stack_cov)
-            continue;
         if (depth > max)
             max = depth;
 
@@ -166,9 +170,6 @@ double calc_coverage_distribution(map<int, PStack *> &unique, map<int, MergedSta
             tag    = unique[*k];
             depth += tag->count;
         }
-
-        if (depth < min_stack_cov)
-            continue;
 
         sum += pow((depth - mean), 2);
     }
@@ -197,6 +198,23 @@ int count_raw_reads(map<int, PStack *> &unique, map<int, MergedStack *> &merged)
     cerr << "  Number of utilized reads " << m << "\n";
 
     return 0;
+}
+
+void prune_low_coverage_loci(map<int, MergedStack *>& merged, const map<int, PStack *>& unique) {
+    for(auto m_it = merged.begin(); m_it != merged.end();) {
+        uint tot_depth = 0;
+        for (int u : m_it->second->utags)
+            tot_depth += unique.at(u)->count;
+
+        if (tot_depth < min_stack_cov) {
+            auto m_it_copy = m_it;
+            ++m_it;
+            delete m_it_copy->second;
+            merged.erase(m_it_copy);
+        } else {
+            ++m_it;
+        }
+    }
 }
 
 int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
