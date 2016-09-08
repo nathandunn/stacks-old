@@ -30,7 +30,6 @@
 //
 FileT  in_file_type;
 string in_file;
-FileT  out_file_type;
 string out_path;
 int    sql_id        = 0;
 int    min_stack_cov = 3;
@@ -416,7 +415,6 @@ int parse_command_line(int argc, char* argv[]) {
             {"help",         no_argument,       NULL, 'h'},
             {"version",      no_argument,       NULL, 'v'},
             {"infile_type",  required_argument, NULL, 't'},
-            {"outfile_type", required_argument, NULL, 'y'},
             {"file",         required_argument, NULL, 'f'},
             {"outpath",      required_argument, NULL, 'o'},
             {"id",           required_argument, NULL, 'i'},
@@ -454,12 +452,6 @@ int parse_command_line(int argc, char* argv[]) {
                 in_file_type = FileT::tsv;
             else
                 in_file_type = FileT::unknown;
-            break;
-        case 'y':
-            if (strcmp(optarg, "sam") == 0)
-                out_file_type = FileT::sam;
-            else
-                out_file_type = FileT::sql;
             break;
         case 'f':
             in_file = optarg;
@@ -538,9 +530,20 @@ int parse_command_line(int argc, char* argv[]) {
         model_type = bounded;
     }
 
-    if (in_file.length() == 0 || in_file_type == FileT::unknown) {
-        cerr << "You must specify an input file of a supported type.\n";
+    if (in_file.length() == 0) {
+        cerr << "You must specify an input file.\n";
         help();
+    }
+
+    if (in_file_type == FileT::unknown) {
+        if (in_file.length() >= 4 && in_file.substr(in_file.length() - 4) == ".bam") {
+            in_file_type = FileT::bam;
+        } else if (in_file.length() >= 4 && in_file.substr(in_file.length() - 4) == ".sam") {
+            in_file_type = FileT::sam;
+        } else {
+            cerr << "Unable to guess the type of the input file, please specify it.\n";
+            help();
+        }
     }
 
     if (out_path.length() == 0)
@@ -566,7 +569,7 @@ void version() {
 void help() {
     std::cerr << "pstacks " << VERSION << "\n"
               << "pstacks -t file_type -f file_path [-o path] [-i id] [-m min_cov] [-p num_threads] [-h]" << "\n"
-              << "  t: input file Type. Supported types: bowtie, sam, or bam.\n"
+              << "  t: input file type (optional). Supported types: bowtie, sam, or bam.\n"
               << "  f: input file path.\n"
               << "  o: output path to write results.\n"
               << "  i: SQL ID to insert into the output to identify this sample.\n"
