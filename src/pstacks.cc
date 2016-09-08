@@ -129,7 +129,7 @@ int main (int argc, char* argv[]) {
 
     cerr << "Writing loci, SNPs, alleles to '" << prefix_path << ".*'...\n";
     const bool gzip = in_file_type == FileT::bam;
-    write_results(merged, unique, gzip);
+    write_results(merged, unique, gzip, false);
 
     return 0;
 }
