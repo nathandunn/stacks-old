@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <cassert>
 
+#include "constants.h"
 #include "input.h"
 #include "BamI.h"
 #include "sql_utilities.h"
@@ -47,8 +48,6 @@ double homozygote_limit   =  3.84;
 
 int batch_id;
 string prefix_path;
-string first_reads_path;
-string paired_reads_path;
 string paired_alns_path;
 
 /* CLocReadSet
@@ -242,9 +241,7 @@ int main(int argc, char** argv) {
 
     // Fix options
     prefix_path = "./s13_an_01";
-    first_reads_path = "./s13_an_01.1.fq";
-    paired_reads_path = "./s13_an_01.2.fq";
-    paired_alns_path = "./s13_an_01.2.bam";
+    paired_alns_path = "/projects/catchenlab/rochette/sbk/scan/samples/s13_an_01.bam";
     in_file_type = FileT::bam;
 
     /*
@@ -341,6 +338,12 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
 
     //xxx For now, we work with the first reads only...
     swap(pread_name_to_cloc, fread_name_to_cloc);
+
+    //xxx Save list of reads.
+    /*ofstream readnames_f ("readnames");
+    for (auto& r : pread_name_to_cloc)
+        readnames_f << r.first << "\n";
+    */
 
     // Attempt to guess the format of the read names;
     // otherwise read the fastq file indexes to link the first & paired names.
