@@ -11,7 +11,7 @@ public:
     // streambufs.
     TeeBuf(std::streambuf* sb1, std::streambuf* sb2)
         : sb1(sb1) , sb2(sb2)
-    	{}
+        {}
 
 private:
     std::streambuf* sb1;
@@ -36,36 +36,36 @@ private:
     }
 };
 
-/* TeeOStream
- * ==========
- * From http://wordaligned.org/articles/cpp-streambufs */
-class TeeOStream : public std::ostream {
-public:
-    // Construct an ostream which tees output to the supplied
-    // ostreams.
-    TeeOStream(std::ostream& o1, std::ostream& o2)
-        : std::ostream(&buf), buf(o1.rdbuf(), o2.rdbuf())
-        {}
-
-private:
-    TeeBuf buf;
-};
-
-/* Logger
+/* LogAlterator
  * ========== */
-struct Logger {
-    std::ofstream l;
-    std::ostream& o;
-    std::ostream& e;
+struct LogAlterator {
+    std::ofstream logfile;
+    std::ostream true_cout;
+    std::ostream true_cerr;
+    TeeBuf lo;
+    TeeBuf le;
 
-    TeeOStream lo;
-    TeeOStream le;
+    // Constructor
+    // ----------
+    // Construct the log fstream;
+    // Keep track of the streambufs of cout and cerr;
+    // Construst the teeing streambufs and let cout and cerr use them.
+    LogAlterator(std::ofstream&& logf)
+            : logfile(std::move(logf))
+            , true_cout(std::cout.rdbuf())
+            , true_cerr(std::cerr.rdbuf())
+            , lo(std::cout.rdbuf(), logfile.rdbuf())
+            , le(std::cerr.rdbuf(), logfile.rdbuf())
+            {
+        std::cout.rdbuf(&lo);
+        std::cerr.rdbuf(&le);
+    }
 
-    Logger(std::ofstream&& logf)
-        : l(std::move(logf))
-        , o(std::cout)
-        , e(std::cerr)
-        , lo(l, o)
-        , le(l, e)
-        {}
+    // Destructor
+    // ---------
+    // Restore cout and cerr.
+    ~LogAlterator() {
+        std::cout.rdbuf(true_cout.rdbuf());
+        std::cerr.rdbuf(true_cerr.rdbuf());
+    }
 };
