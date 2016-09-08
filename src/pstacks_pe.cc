@@ -230,17 +230,21 @@ void ReadsByCLoc::convert_to_pmstacks(
 /* link_reads_to_cloci()
  * ==========
  * Parses the matches and tags (and fastq) files to link the paired reads to catalog loci.
+ * Also, sets `gzipped_input` to the appropriate value.
  * Uses globals `prefix_path`, `first_reads_path` and `second_reads_path`.
- * Returns the number of reads in the fastq file.
  */
-void link_reads_to_cloci(unordered_map<string, size_t>& read_name_to_cloc, vector<int>& cloc_to_cloc_id);
+void link_reads_to_cloci(unordered_map<string, size_t>& read_name_to_cloc, vector<int>& cloc_to_cloc_id, bool& gzipped_input);
 
 /* main()
  * ========== */
 int main(int argc, char** argv) {
+#ifndef DEBUG
+try {
+#endif
 
     // Fix options
     prefix_path = "./s13_an_01";
+    sql_id        = 1;
     paired_alns_path = "/projects/catchenlab/rochette/sbk/scan/samples/s13_an_01.bam";
     in_file_type = FileT::bam;
 
@@ -251,7 +255,10 @@ int main(int argc, char** argv) {
     cerr << "Reading read-to-locus information from the matches and tags files...\n";
     vector<int> cloc_to_cloc_id;
     unordered_map<string, size_t> read_name_to_cloc; // [(read index, cloc index)]
-    link_reads_to_cloci(read_name_to_cloc, cloc_to_cloc_id);
+    bool is_input_gzipped;
+    link_reads_to_cloci(read_name_to_cloc, cloc_to_cloc_id, is_input_gzipped);
+    cerr << "Found " << read_name_to_cloc.size() << " paired-end reads spanning "
+           << cloc_to_cloc_id.size() << " catalog loci.\n";
 
     /*
      * Load the paired-ends.
@@ -278,10 +285,19 @@ int main(int argc, char** argv) {
      */
     call_consensus(loci, stacks, true);
 
+    write_results(loci, stacks, is_input_gzipped);
+
     return 0;
+
+#ifndef DEBUG
+} catch (exception& e) {
+    cerr << "Aborted.\n";
+    return -1;
+}
+#endif
 }
 
-void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vector<int>& cloc_to_cloc_id) {
+void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vector<int>& cloc_to_cloc_id, bool& is_input_gzipped) {
 
     // Load the matches.
     // Look for sample & catalog loci in a bijective relationship.
@@ -319,8 +335,7 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
     unordered_map<string, size_t> fread_name_to_cloc;
 
     map<int, Locus*> sloci;
-    bool tmp;
-    if(load_loci(prefix_path, sloci, true, false, tmp) != 1) {
+    if(load_loci(prefix_path, sloci, true, false, is_input_gzipped) != 1) {
         cerr << "Error: could not find stacks files '" << prefix_path << ".*' (tags, snps and/or alleles).\n";
         throw exception();
     }
@@ -348,4 +363,5 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
     // Attempt to guess the format of the read names;
     // otherwise read the fastq file indexes to link the first & paired names.
     // ...
+
 }
