@@ -144,7 +144,7 @@ void ReadsByCLoc::convert_to_pmstacks(
         assert(!cloc_pstacks.empty()); // The sample has "matches".
         const PStack* first_pstack = *cloc_pstacks.begin();
         PhyLoc loc = first_pstack->loc;
-        size_t len = first_pstack->len;
+        size_t len = first_pstack->seq->size();
         set<const PStack*> non_olap; //xxx For now, ignore non-overlapping pstacks.
         for (const PStack* p : cloc_pstacks) {
             // Check that the PStack is on the same chromosome and strand.
@@ -156,7 +156,7 @@ void ReadsByCLoc::convert_to_pmstacks(
 
             if (loc.strand == strand_plus) {
                 // Check that the PStack overlaps.
-                if (p->loc.bp > loc.bp + len - 1 || p->loc.bp + p->len - 1 < loc.bp) {
+                if (p->loc.bp > loc.bp + len - 1 || p->loc.bp +p->seq->size() - 1 < loc.bp) {
                     non_olap.insert(p);
                     continue;
                 }
@@ -165,21 +165,21 @@ void ReadsByCLoc::convert_to_pmstacks(
                     len += p->loc.bp - loc.bp;
                     loc.bp = p->loc.bp;
                 }
-                if (loc.bp + len < p->loc.bp + p->len) {
+                if (loc.bp + len < p->loc.bp +p->seq->size()) {
                     // Extend right.
-                    len += p->loc.bp + p->len - loc.bp + len;
+                    len += p->loc.bp +p->seq->size() - loc.bp + len;
                 }
             } else {
                 // loc.strand == strand_minus
 
                 // Check that the PStack overlaps.
-                if (p->loc.bp - p->len + 1 > loc.bp || p->loc.bp < loc.bp - len + 1) {
+                if (p->loc.bp -p->seq->size() + 1 > loc.bp || p->loc.bp < loc.bp - len + 1) {
                     non_olap.insert(p);
                     continue;
                 }
-                if (p->loc.bp - p->len > p->loc.bp - p->len) {
+                if (p->loc.bp -p->seq->size() > p->loc.bp -p->seq->size()) {
                     // Extend left.
-                    len += p->loc.bp - p->len - p->loc.bp - p->len;
+                    len += p->loc.bp -p->seq->size() - p->loc.bp -p->seq->size();
                 }
                 if (loc.bp < p->loc.bp) {
                     // Extend right.
