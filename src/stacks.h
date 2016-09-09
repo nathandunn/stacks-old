@@ -185,7 +185,6 @@ class PStack {
     uint            id;
     uint         count; // Number of identical reads forming this stack
     DNANSeq       *seq; // Sequence read
-    uint           len; // Read length
     vector<char *> map; // List of sequence read IDs merged into this stack
     PhyLoc         loc; // Physical genome location of this stack.
 
@@ -193,7 +192,6 @@ class PStack {
         id     = 0;
         count  = 0;
         seq    = NULL;
-        len    = 0;
     }
     ~PStack() {
         delete this->seq;
