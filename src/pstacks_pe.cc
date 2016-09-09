@@ -7,6 +7,10 @@
 #include <unordered_map>
 #include <cassert>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include "constants.h"
 #include "log_utils.h"
 #include "input.h"
@@ -253,6 +257,10 @@ try {
 
     string log_path = prefix_path + ".pstacks_pe.log";
     log_alt = new LogAlterator(ofstream(log_path));
+
+#ifdef _OPENMP
+    omp_set_num_threads(num_threads);
+#endif
 
     /*
      * Parse the matches, tags and fastq files to assign catalog loci to the reads.
