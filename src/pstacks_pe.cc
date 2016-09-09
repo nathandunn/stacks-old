@@ -8,6 +8,7 @@
 #include <cassert>
 
 #include "constants.h"
+#include "log_utils.h"
 #include "input.h"
 #include "BamI.h"
 #include "sql_utilities.h"
@@ -49,6 +50,7 @@ double homozygote_limit   =  3.84;
 int batch_id;
 string prefix_path;
 string paired_alns_path;
+LogAlterator* log_alt = NULL;
 
 /* CLocReadSet
  * =========== */
@@ -245,8 +247,12 @@ try {
     // Fix options
     prefix_path = "./s13_an_01";
     sql_id        = 1;
-    paired_alns_path = "/projects/catchenlab/rochette/sbk/scan/samples/s13_an_01.bam";
+    //paired_alns_path = "/projects/catchenlab/rochette/sbk/scan/samples/s13_an_01.bam";
+    paired_alns_path = "/home/rochette/src/stacks/n_tmp/20160908.1sample_red/s13_an_01.bijective.bam";
     in_file_type = FileT::bam;
+
+    string log_path = prefix_path + ".pstacks_pe.log";
+    log_alt = new LogAlterator(ofstream(log_path));
 
     /*
      * Parse the matches, tags and fastq files to assign catalog loci to the reads.
@@ -271,14 +277,16 @@ try {
     ReadsByCLoc reads_by_cloc (pe_reads_f, cloc_to_cloc_id.size(), read_name_to_cloc);
     delete pe_reads_f;
     read_name_to_cloc.clear();
-    cerr << "Used " << reads_by_cloc.n_used_reads << " aligned paired-end reads.\n";
+    cerr << "Used " << reads_by_cloc.n_used_reads << " aligned paired-end reads.\n"; //xxx "used"
 
     /*
      * Convert the data to PStack's and MStack's.
      */
+    cerr << "Assembling the paired-end sequences...\n";
     map<int, MergedStack*> loci;
     map<int, PStack*> stacks;
     reads_by_cloc.convert_to_pmstacks(cloc_to_cloc_id, stacks, loci);
+    cerr << "Created " << loci.size() << " loci, made of " << stacks.size() << " stacks.\n";
 
     /*
      * Call SNPs and alleles.
@@ -290,8 +298,8 @@ try {
     return 0;
 
 #ifndef DEBUG
-} catch (exception& e) {
-    cerr << "Aborted.\n";
+} catch (const exception& e) {
+    cerr << "Terminated after an error occurred (" << e.what() << ").\n";
     return -1;
 }
 #endif
