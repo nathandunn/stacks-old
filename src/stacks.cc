@@ -83,8 +83,7 @@ int PStack::add_seq(const char *seq) {
     if (this->seq != NULL)
         delete this->seq;
 
-    this->len = strlen(seq);
-    this->seq = new DNANSeq(this->len, seq);
+    this->seq = new DNANSeq(strlen(seq), seq);
 
     return 0;
 }
@@ -107,20 +106,19 @@ void PStack::extend(const PhyLoc& phyloc, uint length) {
 
     if (loc.strand == strand_plus) {
         assert(loc.bp >= phyloc.bp
-               && loc.bp + len <= phyloc.bp + length);
+               && loc.bp + seq->size() <= phyloc.bp + length);
         seq->extend(
                 loc.bp - phyloc.bp,
-                phyloc.bp + length - loc.bp - len);
+                phyloc.bp + length - loc.bp - seq->size());
     } else {
         assert(loc.bp <= phyloc.bp
-               && loc.bp - len >= phyloc.bp - length);
+               && loc.bp - seq->size() >= phyloc.bp - length);
         seq->extend(
                 phyloc.bp - loc.bp,
-                loc.bp + len - phyloc.bp - length);
+                loc.bp + seq->size() - phyloc.bp - length);
     }
 
     loc = phyloc;
-    len = length;
 }
 
 int Stack::add_id(uint id) {
