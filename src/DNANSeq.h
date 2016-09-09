@@ -106,6 +106,12 @@ template<>
 struct hash<const DNANSeq*> {
     size_t operator()(const DNANSeq* seq) const {return hash<DNANSeq>()(*seq);}
 };
+
+// For pointer types it is also necessary to specialize `equal_to`.
+template<>
+struct equal_to<const DNANSeq*> {
+    size_t operator()(const DNANSeq* s1, const DNANSeq* s2) const {return *s1 == *s2;}
+};
 }
 
 // namespace __gnu_cxx {
