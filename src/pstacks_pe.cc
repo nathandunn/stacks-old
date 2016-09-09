@@ -347,28 +347,35 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
     matches.clear();
 
     // Read the tags file.
-    // Link the first reads to cloci.
-    unordered_map<string, size_t> fread_name_to_cloc;
-
     map<int, Locus*> sloci;
     if(load_loci(prefix_path, sloci, true, false, is_input_gzipped) != 1) {
         cerr << "Error: could not find stacks files '" << prefix_path << ".*' (tags, snps and/or alleles).\n";
         throw exception();
     }
 
+    // For each first read, guess the name of the paired-end
+    // read (names are expected to end in '/1' or '_1'),
+    // and link them to cloci.
     for (const auto& element : sloci) {
         const Locus& sloc = *element.second;
         for (const char* fread_name : sloc.comp) {
-            fread_name_to_cloc.insert({string(fread_name), sloc_id_to_cloc.at(sloc.id)});
+            string pread_name (fread_name);
+            if (pread_name.length() < 2
+                    || (pread_name.substr(pread_name.length()-2) != "/1"
+                            && pread_name.substr(pread_name.length()-2) != "_1")
+                    ) {
+                cerr << "Error: Unrecognized read name format; expected '"
+                     << pread_name << "' to end with '/1' or '_1'.\n";
+                throw exception();
+            }
+            //pread_name.at(pread_name.length()-1) = '2';
+            pread_name_to_cloc.insert({pread_name, sloc_id_to_cloc.at(sloc.id)});
         }
     }
+
+    // Delete what `load_loci()` allocated.
     for (const auto& element : sloci)
         delete element.second;
-    sloci.clear();
-    sloc_id_to_cloc.clear();
-
-    //xxx For now, we work with the first reads only...
-    swap(pread_name_to_cloc, fread_name_to_cloc);
 
     //xxx Save list of reads.
     /*ofstream readnames_f ("readnames");
