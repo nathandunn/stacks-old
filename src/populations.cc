@@ -265,7 +265,7 @@ int main (int argc, char* argv[]) {
         cerr << "Reading the catalog...\n";
         string catalog_prefix = in_path + "batch_" + to_string(batch_id) + ".catalog";
         bool   compressed     = false;
-        int    res = load_loci(catalog_prefix, catalog, false, false, compressed);
+        int    res = load_loci(catalog_prefix, catalog, 0, false, compressed);
         if (res == 0) {
             cerr << "Unable to load the catalog '" << catalog_prefix << "'\n";
             return -1;

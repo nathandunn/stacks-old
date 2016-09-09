@@ -66,7 +66,7 @@ int main (int argc, char* argv[]) {
         cerr << "Searching for matches by genomic location...\n";
 
     catalog_path += ".catalog";
-    res = load_loci(catalog_path, catalog, false, false, compressed);
+    res = load_loci(catalog_path, catalog, 0, false, compressed);
 
     if (res == 0) {
         cerr << "Unable to parse catalog, '" << catalog_path << "'\n";
@@ -94,7 +94,7 @@ int main (int argc, char* argv[]) {
 
         cerr << "Processing sample '" << sample_path << "' [" << i << " of " << sample_cnt << "]\n";
 
-        res = load_loci(sample_path, sample, false, false, compressed);
+        res = load_loci(sample_path, sample, 0, false, compressed);
 
         if (res == 0) {
             cerr << "Unable to parse '" << sample_path << "'\n";
