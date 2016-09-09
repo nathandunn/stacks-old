@@ -348,7 +348,7 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
 
     // Read the tags file.
     map<int, Locus*> sloci;
-    if(load_loci(prefix_path, sloci, true, false, is_input_gzipped) != 1) {
+    if(load_loci(prefix_path, sloci, 1, false, is_input_gzipped) != 1) {
         cerr << "Error: could not find stacks files '" << prefix_path << ".*' (tags, snps and/or alleles).\n";
         throw exception();
     }
