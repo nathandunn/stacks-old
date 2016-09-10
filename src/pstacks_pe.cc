@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <cassert>
 
+#include <getopt.h>
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -25,16 +26,13 @@
 
 using namespace std;
 
-// From pstacks {
-const int barcode_size = 5;
-
+//
+// Argument globs.
+//
+string prefix_path;
+string paired_alns_path;
 FileT  in_file_type;
-//string in_file;
-//FileT  out_file_type;
-//string out_path;
-int    sql_id        = 0;
-int    min_stack_cov = 3;
-int    num_threads   = 1;
+int    num_threads        = 1;
 
 modelt model_type         = snp;
 double alpha              = 0.05;
@@ -44,17 +42,22 @@ double p_freq             = 0.5;
 double barcode_err_freq   = 0.0;
 double heterozygote_limit = -3.84;
 double homozygote_limit   =  3.84;
-// end pstacks }
 
-/*
- * pstacks_pe
- * **********
+LogAlterator* lg = NULL;
+
+const int barcode_size    = 5;
+int    sql_id             = 0;
+
+
+void parse_command_line(int argc, char* argv[]);
+
+/* link_reads_to_cloci()
+ * ==========
+ * Parses the matches and tags (and fastq) files to link the paired reads to catalog loci.
+ * Also, sets `gzipped_input` to the appropriate value.
+ * Uses globals `prefix_path`, `first_reads_path` and `second_reads_path`.
  */
-
-int batch_id;
-string prefix_path;
-string paired_alns_path;
-LogAlterator* log_alt = NULL;
+void link_reads_to_cloci(unordered_map<string, size_t>& read_name_to_cloc, vector<int>& cloc_to_cloc_id, bool& gzipped_input);
 
 /* CLocReadSet
  * =========== */
@@ -233,31 +236,23 @@ void ReadsByCLoc::convert_to_pmstacks(
     return;
 }
 
-/* link_reads_to_cloci()
- * ==========
- * Parses the matches and tags (and fastq) files to link the paired reads to catalog loci.
- * Also, sets `gzipped_input` to the appropriate value.
- * Uses globals `prefix_path`, `first_reads_path` and `second_reads_path`.
- */
-void link_reads_to_cloci(unordered_map<string, size_t>& read_name_to_cloc, vector<int>& cloc_to_cloc_id, bool& gzipped_input);
-
 /* main()
  * ========== */
-int main(int argc, char** argv) {
+int main(int argc, char* argv[]) {
 #ifndef DEBUG
 try {
 #endif
 
-    // Fix options
-    prefix_path = "./s13_an_01";
-    sql_id        = 1;
-    //paired_alns_path = "/projects/catchenlab/rochette/sbk/scan/samples/s13_an_01.bam";
-    paired_alns_path = "/home/rochette/src/stacks/n_tmp/20160908.1sample_red/s13_an_01.bijective.bam";
-    in_file_type = FileT::bam;
+    // Parse arguments
+    parse_command_line(argc, argv);
 
-    string log_path = prefix_path + ".pstacks_pe.log";
-    log_alt = new LogAlterator(ofstream(log_path));
+    // Open the log
+    string lg_path = prefix_path + ".pstacks_pe.log";
+    cerr << "Logging to '" << lg_path << "'.\n";
+    lg = new LogAlterator(ofstream(lg_path));
+    init_log(lg->l, argc, argv);
 
+    // Initialize OpenMP.
 #ifdef _OPENMP
     omp_set_num_threads(num_threads);
 #endif
@@ -387,4 +382,171 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
     // otherwise read the fastq file indexes to link the first & paired names.
     // ...
 
+}
+
+const string help_string = string() +
+        "pstacks_pe " + VERSION  + "\n"
+        "pstacks_pe -s sample_prefix -f paired_reads_file [-t type] [-p n_threads] [--model type [...]]\n"
+        "\n"
+        "  -s,--prefix: prefix path for the sample.\n"
+        "  -f,--paired_reads: path to the paired reads alignments.\n"
+        "  -t,--filetype: alignment file type. Supported types: bowtie, sam, or bam. (Default: guess)\n"
+        "  -p,--num_threads: number of threads to use for parallel execution. (Default: 1)\n"
+        "\n"
+        "Model:\n"
+        "  --model: Model for calling SNPs. One of 'snp', 'bounded', or 'fixed'. (Default: snp)\n"
+        "  For the SNP and Bounded SNP models:\n"
+        "    --alpha: required confidence levels for SNP calls. One of 0.1, 0.05 (default), 0.01, or 0.001.\n"
+        "  For the Bounded SNP model:\n"
+        "    --bound_low <float>: lower bound for epsilon, the error rate. Between 0 and 1 (default 0).\n"
+        "    --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
+        "  For the Fixed model:\n"
+        "    --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n"
+        ;
+
+void bad_args() {
+    cerr << help_string;
+    exit(-1);
+}
+
+void parse_command_line(int argc, char* argv[]) {
+
+    sql_id = 1;
+
+    prefix_path = "./s13_an_01";
+    //paired_alns_path = "/projects/catchenlab/rochette/sbk/scan/samples/s13_an_01.bam";
+    paired_alns_path = "/home/rochette/src/stacks/n_tmp/20160908.1sample_red/s13_an_01.bijective.bam";
+    in_file_type = FileT::bam;
+
+    static const option long_options[] = {
+        {"help",         no_argument,       NULL, 'h'},
+        {"version",      no_argument,       NULL,  1000},
+        {"prefix",       required_argument, NULL, 's'},
+        {"paired_reads", required_argument, NULL, 'f'},
+        {"filetype",     required_argument, NULL, 't'},
+        {"num_threads",  required_argument, NULL, 'p'},
+        {"model",        required_argument, NULL,  1001},
+        {"alpha",        required_argument, NULL,  1002},
+        {"bound_low",    required_argument, NULL,  1003},
+        {"bound_high",   required_argument, NULL,  1004},
+        {"bc_err_freq",  required_argument, NULL,  1005},
+        {"bc_err_freq",  required_argument, NULL,  1005},
+        {0, 0, 0, 0}
+    };
+
+    int c;
+    int long_options_i;
+    while (true) {
+
+        c = getopt_long(argc, argv, "hvs:f:t:p:", long_options, &long_options_i);
+
+        // Detect the end of the options.
+        if (c == -1)
+            break;
+
+        switch (c) {
+        case 'h':
+            cout << help_string;
+            exit(0);
+            break;
+        case 1000: //version
+            cout << "pstacks_pe " << VERSION << "\n";
+            exit(0);
+            break;
+        case 's':
+            prefix_path = optarg;
+            break;
+        case 'f':
+            paired_alns_path = optarg;
+            break;
+        case 't':
+            if (strcmp(optarg, "bowtie") == 0)
+                in_file_type = FileT::bowtie;
+            else if (strcmp(optarg, "sam") == 0)
+                in_file_type = FileT::sam;
+            else if (strcmp(optarg, "bam") == 0)
+                in_file_type = FileT::bam;
+            else if (strcmp(optarg, "tsv") == 0)
+                in_file_type = FileT::tsv;
+            else
+                in_file_type = FileT::unknown;
+            break;
+        case 'p':
+            num_threads = atoi(optarg);
+            break;
+        case 1001: //model
+            if (strcmp(optarg, "snp") == 0) {
+                model_type = snp;
+            } else if (strcmp(optarg, "fixed") == 0) {
+                model_type = ::fixed;
+            } else if (strcmp(optarg, "bounded") == 0) {
+                model_type = bounded;
+            } else {
+                cerr << "Error: Unknown model type '" << optarg << "'.\n";
+                bad_args();
+            }
+            break;
+        case 1002: //alpha
+            alpha = atof(optarg);
+            if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
+                cerr << "SNP model alpha significance level must be either 0.1, 0.05, 0.01, or 0.001.\n";
+                bad_args();
+            }
+            break;
+        case 1003: //bound_low
+            bound_low  = atof(optarg);
+            if (bound_low < 0. || bound_low > 1.) {
+                cerr << "SNP model lower bound must be between 0.0 and 1.0.\n";
+                bad_args();
+            }
+            break;
+        case 1004: //bound_high
+            bound_high = atof(optarg);
+            if (bound_high < 0. || bound_high > 1.) {
+                cerr << "SNP model upper bound must be between 0.0 and 1.0.\n";
+                bad_args();
+            }
+            break;
+        case 1005: //bc_err_freq
+            barcode_err_freq = atof(optarg);
+            break;
+        case '?':
+            bad_args();
+            break;
+        default:
+            cerr << "Option '--" << long_options[long_options_i].name << "' is deprecated.\n";
+            bad_args();
+            break;
+        }
+    }
+
+    //
+    // Check command consistency.
+    //
+
+    if (prefix_path.empty()) {
+        cerr << "You must specify the prefix path of the sample (-s).\n";
+        bad_args();
+    }
+
+    if (paired_alns_path.empty()) {
+        cerr << "You must specify the path to the paired reads alignments.\n";
+        bad_args();
+    }
+
+    if (in_file_type == FileT::unknown) {
+        if (paired_alns_path.length() >= 4 && paired_alns_path.substr(paired_alns_path.length() - 4) == ".bam") {
+            in_file_type = FileT::bam;
+        } else if (paired_alns_path.length() >= 4 && paired_alns_path.substr(paired_alns_path.length() - 4) == ".sam") {
+            in_file_type = FileT::sam;
+        } else {
+            cerr << "Unable to guess the type of the input file, please specify it.\n";
+            bad_args();
+        }
+    }
+
+    if (model_type == ::fixed && barcode_err_freq == 0) {
+        cerr << "You must specify the barcode error frequency.\n";
+        bad_args();
+    }
 }
