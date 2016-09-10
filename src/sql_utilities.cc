@@ -2,7 +2,7 @@
 
 using namespace std;
 
-int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
+void load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
     CatMatch      *m;
     string         f;
     vector<string> parts;
@@ -25,7 +25,7 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
         f = sample + ".matches.tsv.gz";
         gz_fh = gzopen(f.c_str(), "rb");
         if (!gz_fh)
-            return 0;
+            return;
 
         #if ZLIB_VERNUM >= 0x1240
         gzbuffer(gz_fh, libz_buffer_size);
@@ -50,7 +50,7 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
 
         if (cnt != num_matches_fields && cnt != num_matches_fields - 1) {
             cerr << "Error parsing " << f.c_str() << " at line: " << line_num << ". (" << parts.size() << " fields).\n";
-            return 0;
+            throw exception();
         }
 
         m = new CatMatch;
@@ -76,7 +76,7 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches) {
     else
         fh.close();
 
-    return 0;
+    return;
 }
 
 int load_model_results(string sample,  map<int, ModRes *> &modres) {

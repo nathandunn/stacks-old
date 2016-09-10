@@ -317,6 +317,12 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
 
     vector<CatMatch*> matches;
     load_catalog_matches(prefix_path, matches);
+    if (matches.empty()) {
+        cerr << "Error: Unable to load matches from '"
+             << prefix_path + ".matches.tsv(.gz)'.\n";
+        throw exception();
+    }
+    sql_id = matches[0]->sample_id;
 
     unordered_map<int, set<int> > cloc_id_to_sloc_ids;
     unordered_map<int, set<int> > sloc_id_to_cloc_ids;
