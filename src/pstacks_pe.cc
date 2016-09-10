@@ -418,13 +418,6 @@ void bad_args() {
 
 void parse_command_line(int argc, char* argv[]) {
 
-    sql_id = 1;
-
-    prefix_path = "./s13_an_01";
-    //paired_alns_path = "/projects/catchenlab/rochette/sbk/scan/samples/s13_an_01.bam";
-    paired_alns_path = "/home/rochette/src/stacks/n_tmp/20160908.1sample_red/s13_an_01.bijective.bam";
-    in_file_type = FileT::bam;
-
     static const option long_options[] = {
         {"help",         no_argument,       NULL, 'h'},
         {"version",      no_argument,       NULL,  1000},
