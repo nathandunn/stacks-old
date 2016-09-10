@@ -13,14 +13,7 @@
 
 #include "pstacks_base.h"
 
-using std::ofstream;
-using std::stringstream;
-using std::set;
-using std::map;
-using std::vector;
-
-extern string prefix_path;
-extern int sql_id;
+using namespace std;
 
 int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, bool invoke_model) {
     //
@@ -106,7 +99,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
                     case bounded:
                         call_bounded_multinomial_snp(mtag, col, nuc, true);
                         break;
-                    case fixed:
+                    case ::fixed:
                         call_multinomial_fixed(mtag, col, nuc);
                         break;
                     }
@@ -115,7 +108,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
             if (invoke_model) {
                 call_alleles(mtag, reads);
 
-                if (model_type == fixed) {
+                if (model_type == ::fixed) {
                     //
                     // Mask nucleotides that are not fixed.
                     //
