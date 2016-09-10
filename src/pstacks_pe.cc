@@ -22,7 +22,6 @@
 #include "models.h"
 
 #include "pstacks_base.h"
-//#include "pstacks_pe.h"
 
 using namespace std;
 
@@ -43,11 +42,12 @@ double barcode_err_freq   = 0.0;
 double heterozygote_limit = -3.84;
 double homozygote_limit   =  3.84;
 
+//
+// Extra globs.
+//
 LogAlterator* lg = NULL;
-
 const int barcode_size    = 5;
-int    sql_id             = 0;
-
+int    sql_id             = -1;
 
 void parse_command_line(int argc, char* argv[]);
 
@@ -91,150 +91,6 @@ private:
         stack.back().drop_seq();
     }
 };
-
-ReadsByCLoc::ReadsByCLoc(
-        Input* pe_reads_f,
-        size_t n_cloci,
-        const unordered_map<string, size_t>& read_name_to_cloc
-        )
-: n_used_reads(0)
-, unique_seqs()
-, readsets(n_cloci)
-{
-    Seq seq;
-    while(pe_reads_f->next_seq(seq)) {
-        auto cloc_it = read_name_to_cloc.find(seq.id);
-        if (cloc_it != read_name_to_cloc.end()) {
-            ++n_used_reads;
-            add_seq_to_cloc(cloc_it->second, seq);
-        }
-    }
-}
-
-void ReadsByCLoc::convert_to_pmstacks(
-        const vector<int>& cloc_to_cloc_id,
-        map<int, PStack*>& pstacks,
-        map<int, MergedStack*>& mstacks
-        ) {
-    int pstack_id = 0;
-
-    for (size_t cloc=0; cloc<readsets.size(); ++cloc) {
-
-        //
-        // First, obtain the raw PStacks of this c-locus.
-        // The PStacks share their sequence and location.
-        //
-        vector<PStack*> cloc_pstacks;
-        for (auto& identical_reads : readsets[cloc]) {
-            map<PhyLoc, PStack*> cloc_pstacks_by_loc;
-
-            for (const Seq& s : identical_reads.second) {
-                PStack*& p = cloc_pstacks_by_loc.insert({s.loc, NULL}).first->second; // n.b. ref to pointer
-                if (p == NULL) {
-                    // This element was just created; this is a novel (location, seq) combination.
-                    p = new PStack();
-                    p->id = pstack_id;
-                    ++pstack_id;
-                    p->loc = s.loc;
-                    p->add_seq(identical_reads.first);
-
-                    cloc_pstacks.push_back(p);
-                }
-                ++p->count;
-                p->add_id(s.id);
-            }
-        }
-
-        //
-        // Determine the positions spanned by the PStacks.
-        //
-        assert(!cloc_pstacks.empty()); // The sample has "matches".
-        const PStack* first_pstack = *cloc_pstacks.begin();
-        PhyLoc loc = first_pstack->loc;
-        size_t len = first_pstack->seq->size();
-        set<const PStack*> non_olap; //xxx For now, ignore non-overlapping pstacks.
-        for (const PStack* p : cloc_pstacks) {
-            // Check that the PStack is on the same chromosome and strand.
-            if (strcmp(p->loc.chr, loc.chr) != 0
-                    || p->loc.strand != loc.strand) {
-                non_olap.insert(p);
-                continue;
-            }
-
-            if (loc.strand == strand_plus) {
-                // Check that the PStack overlaps.
-                if (p->loc.bp > loc.bp + len - 1 || p->loc.bp +p->seq->size() - 1 < loc.bp) {
-                    non_olap.insert(p);
-                    continue;
-                }
-                if (loc.bp > p->loc.bp) {
-                    // Extend left.
-                    len += p->loc.bp - loc.bp;
-                    loc.bp = p->loc.bp;
-                }
-                if (loc.bp + len < p->loc.bp +p->seq->size()) {
-                    // Extend right.
-                    len += p->loc.bp +p->seq->size() - loc.bp + len;
-                }
-            } else {
-                // loc.strand == strand_minus
-
-                // Check that the PStack overlaps.
-                if (p->loc.bp -p->seq->size() + 1 > loc.bp || p->loc.bp < loc.bp - len + 1) {
-                    non_olap.insert(p);
-                    continue;
-                }
-                if (p->loc.bp -p->seq->size() > p->loc.bp -p->seq->size()) {
-                    // Extend left.
-                    len += p->loc.bp -p->seq->size() - p->loc.bp -p->seq->size();
-                }
-                if (loc.bp < p->loc.bp) {
-                    // Extend right.
-                    len += p->loc.bp - loc.bp;
-                    loc.bp = p->loc.bp;
-                }
-            }
-        }
-
-        //
-        // Extend the PStacks so that they all have the same location and length.
-        //
-        for (PStack* p : cloc_pstacks) {
-            if (non_olap.count(p))
-                continue;
-            p->extend(loc, len);
-        }
-
-        //
-        // Create the MergedStack of the clocus
-        //
-        MergedStack* m = new MergedStack();
-        m->id = cloc_to_cloc_id[cloc];
-        m->add_consensus(first_pstack->seq);
-        assert(m->len == len);
-        m->loc = loc;
-        for (const PStack* p : cloc_pstacks) {
-            if (non_olap.count(p))
-                continue;
-            m->count += p->count;
-            m->utags.push_back(p->id);
-        }
-
-        //
-        // Insert the MergedStack and the PStack's of the c-locus in
-        // in the global objects.
-        //
-        mstacks.insert({m->id, m});
-        for (PStack* p : cloc_pstacks) {
-            if (non_olap.count(p))
-                continue;
-            pstacks.insert({p->id, p});
-        }
-
-    } // for(c-locus)
-
-    return;
-}
 
 /* main()
  * ========== */
@@ -388,6 +244,151 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
     // otherwise read the fastq file indexes to link the first & paired names.
     // ...
 
+}
+
+
+ReadsByCLoc::ReadsByCLoc(
+        Input* pe_reads_f,
+        size_t n_cloci,
+        const unordered_map<string, size_t>& read_name_to_cloc
+        )
+: n_used_reads(0)
+, unique_seqs()
+, readsets(n_cloci)
+{
+    Seq seq;
+    while(pe_reads_f->next_seq(seq)) {
+        auto cloc_it = read_name_to_cloc.find(seq.id);
+        if (cloc_it != read_name_to_cloc.end()) {
+            ++n_used_reads;
+            add_seq_to_cloc(cloc_it->second, seq);
+        }
+    }
+}
+
+void ReadsByCLoc::convert_to_pmstacks(
+        const vector<int>& cloc_to_cloc_id,
+        map<int, PStack*>& pstacks,
+        map<int, MergedStack*>& mstacks
+        ) {
+    int pstack_id = 0;
+
+    for (size_t cloc=0; cloc<readsets.size(); ++cloc) {
+
+        //
+        // First, obtain the raw PStacks of this c-locus.
+        // The PStacks share their sequence and location.
+        //
+        vector<PStack*> cloc_pstacks;
+        for (auto& identical_reads : readsets[cloc]) {
+            map<PhyLoc, PStack*> cloc_pstacks_by_loc;
+
+            for (const Seq& s : identical_reads.second) {
+                PStack*& p = cloc_pstacks_by_loc.insert({s.loc, NULL}).first->second; // n.b. ref to pointer
+                if (p == NULL) {
+                    // This element was just created; this is a novel (location, seq) combination.
+                    p = new PStack();
+                    p->id = pstack_id;
+                    ++pstack_id;
+                    p->loc = s.loc;
+                    p->add_seq(identical_reads.first);
+
+                    cloc_pstacks.push_back(p);
+                }
+                ++p->count;
+                p->add_id(s.id);
+            }
+        }
+
+        //
+        // Determine the positions spanned by the PStacks.
+        //
+        assert(!cloc_pstacks.empty()); // The sample has "matches".
+        const PStack* first_pstack = *cloc_pstacks.begin();
+        PhyLoc loc = first_pstack->loc;
+        size_t len = first_pstack->seq->size();
+        set<const PStack*> non_olap; //xxx For now, ignore non-overlapping pstacks.
+        for (const PStack* p : cloc_pstacks) {
+            // Check that the PStack is on the same chromosome and strand.
+            if (strcmp(p->loc.chr, loc.chr) != 0
+                    || p->loc.strand != loc.strand) {
+                non_olap.insert(p);
+                continue;
+            }
+
+            if (loc.strand == strand_plus) {
+                // Check that the PStack overlaps.
+                if (p->loc.bp > loc.bp + len - 1 || p->loc.bp +p->seq->size() - 1 < loc.bp) {
+                    non_olap.insert(p);
+                    continue;
+                }
+                if (loc.bp > p->loc.bp) {
+                    // Extend left.
+                    len += p->loc.bp - loc.bp;
+                    loc.bp = p->loc.bp;
+                }
+                if (loc.bp + len < p->loc.bp +p->seq->size()) {
+                    // Extend right.
+                    len += p->loc.bp +p->seq->size() - loc.bp + len;
+                }
+            } else {
+                // loc.strand == strand_minus
+
+                // Check that the PStack overlaps.
+                if (p->loc.bp -p->seq->size() + 1 > loc.bp || p->loc.bp < loc.bp - len + 1) {
+                    non_olap.insert(p);
+                    continue;
+                }
+                if (p->loc.bp -p->seq->size() > p->loc.bp -p->seq->size()) {
+                    // Extend left.
+                    len += p->loc.bp -p->seq->size() - p->loc.bp -p->seq->size();
+                }
+                if (loc.bp < p->loc.bp) {
+                    // Extend right.
+                    len += p->loc.bp - loc.bp;
+                    loc.bp = p->loc.bp;
+                }
+            }
+        }
+
+        //
+        // Extend the PStacks so that they all have the same location and length.
+        //
+        for (PStack* p : cloc_pstacks) {
+            if (non_olap.count(p))
+                continue;
+            p->extend(loc, len);
+        }
+
+        //
+        // Create the MergedStack of the clocus
+        //
+        MergedStack* m = new MergedStack();
+        m->id = cloc_to_cloc_id[cloc];
+        m->add_consensus(first_pstack->seq);
+        assert(m->len == len);
+        m->loc = loc;
+        for (const PStack* p : cloc_pstacks) {
+            if (non_olap.count(p))
+                continue;
+            m->count += p->count;
+            m->utags.push_back(p->id);
+        }
+
+        //
+        // Insert the MergedStack and the PStack's of the c-locus in
+        // in the global objects.
+        //
+        mstacks.insert({m->id, m});
+        for (PStack* p : cloc_pstacks) {
+            if (non_olap.count(p))
+                continue;
+            pstacks.insert({p->id, p});
+        }
+
+    } // for(c-locus)
+
+    return;
 }
 
 const string help_string = string() +
