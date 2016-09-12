@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <string>
 #include <map>
@@ -48,6 +49,9 @@ double homozygote_limit   =  3.84;
 LogAlterator* lg = NULL;
 const int barcode_size    = 5;
 int    sql_id             = -1;
+
+set<string> debug_flags;
+#define DEBUG_FREADS "FREADS"
 
 void parse_command_line(int argc, char* argv[]);
 
@@ -217,6 +221,9 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
         const Locus& sloc = *element.second;
         for (const char* fread_name : sloc.comp) {
             string pread_name (fread_name);
+#ifdef DEBUG
+            if(!debug_flags.count(DEBUG_FREADS)) {
+#endif
             if (pread_name.length() < 2
                     || (pread_name.substr(pread_name.length()-2) != "/1"
                             && pread_name.substr(pread_name.length()-2) != "_1")
@@ -225,7 +232,10 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
                      << pread_name << "' to end with '/1' or '_1'.\n";
                 throw exception();
             }
-            //pread_name.at(pread_name.length()-1) = '2';
+            pread_name.at(pread_name.length()-1) = '2';
+#ifdef DEBUG
+            }
+#endif
             pread_name_to_cloc.insert({pread_name, sloc_id_to_cloc.at(sloc.id)});
         }
     }
@@ -431,6 +441,7 @@ void parse_command_line(int argc, char* argv[]) {
         {"bound_high",   required_argument, NULL,  1004},
         {"bc_err_freq",  required_argument, NULL,  1005},
         {"bc_err_freq",  required_argument, NULL,  1005},
+        {"debug_flags",  required_argument, NULL,  999},
         {0, 0, 0, 0}
     };
 
@@ -510,6 +521,22 @@ void parse_command_line(int argc, char* argv[]) {
         case 1005: //bc_err_freq
             barcode_err_freq = atof(optarg);
             break;
+        case 999: //debug_flags
+        {
+            static const set<string> known_debug_flags = {DEBUG_FREADS};
+            std::stringstream ss (optarg);
+            std::string s;
+            while (std::getline(ss, s, ',')) {
+                if (known_debug_flags.count(s)) {
+                    debug_flags.insert(s);
+                } else {
+                    cerr << "? Error: Unknown error flag '" << s << "'.\n";
+                    bad_args();
+                }
+            }
+            cerr << "? Debug flag(s) : '" << optarg << "'.\n";
+            break;
+        }
         case '?':
             bad_args();
             break;
