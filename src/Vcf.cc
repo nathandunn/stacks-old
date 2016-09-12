@@ -181,7 +181,7 @@ Vcf::adaptive_open(const string& path)
         }
 #endif
     } else {
-        cerr << "Error: File '" << path << "' : expected '.vcf(.gz)' suffix.";
+        cerr << "Error: File '" << path << "' : expected '.vcf(.gz)' suffix.\n";
         throw exception();
     }
 
