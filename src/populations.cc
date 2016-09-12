@@ -5236,7 +5236,7 @@ int parse_command_line(int argc, char* argv[]) {
         };
 
         // getopt_long stores the option index here.
-        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUV:YZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
+        int c = getopt_long(argc, argv, "ACDEFGHJKLNSTUVYZ123456dghjklnsva:b:c:e:f:i:m:o:p:q:r:t:u:w:B:I:M:O:P:R:Q:W:", long_options, NULL);
 
         // Detect the end of the options.
         if (c == -1)
