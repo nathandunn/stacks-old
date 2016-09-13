@@ -25,16 +25,16 @@
 #include "pstacks_base.h"
 
 #ifdef DEBUG
-#define IF_DEBUG_TRY \
+#define IF_NDEBUG_TRY
+#define IF_NDEBUG_CATCH_ALL_EXCEPTIONS
+#else
+#define IF_NDEBUG_TRY \
     try {
-#define IF_DEBUG_CATCH_ALL_EXCEPTIONS \
+#define IF_NDEBUG_CATCH_ALL_EXCEPTIONS \
     } catch (const std::exception& e) { \
         std::cerr << "Terminated after an error occurred (" << e.what() << ").\n"; \
         return -1; \
     }
-#else
-#define IF_DEBUG_TRY
-#define IF_DEBUG_CATCH_ALL_EXCEPTIONS
 #endif
 
 using namespace std;
@@ -117,7 +117,7 @@ private:
 /* main()
  * ========== */
 int main(int argc, char* argv[]) {
-    IF_DEBUG_TRY
+    IF_NDEBUG_TRY
 
     // Parse arguments
     parse_command_line(argc, argv);
@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
     cout << "pstacks_pe is done.\n";
     return 0;
 
-    IF_DEBUG_CATCH_ALL_EXCEPTIONS
+    IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vector<int>& cloc_to_cloc_id, bool& is_input_gzipped) {
