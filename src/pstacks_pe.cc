@@ -24,6 +24,19 @@
 
 #include "pstacks_base.h"
 
+#ifdef DEBUG
+#define IF_DEBUG_TRY \
+    try {
+#define IF_DEBUG_CATCH_ALL_EXCEPTIONS \
+    } catch (const std::exception& e) { \
+        std::cerr << "Terminated after an error occurred (" << e.what() << ").\n"; \
+        return -1; \
+    }
+#else
+#define IF_DEBUG_TRY
+#define IF_DEBUG_CATCH_ALL_EXCEPTIONS
+#endif
+
 using namespace std;
 
 //
@@ -101,9 +114,7 @@ private:
 /* main()
  * ========== */
 int main(int argc, char* argv[]) {
-#ifndef DEBUG
-try {
-#endif
+    IF_DEBUG_TRY
 
     // Parse arguments
     parse_command_line(argc, argv);
@@ -164,12 +175,7 @@ try {
 
     return 0;
 
-#ifndef DEBUG
-} catch (const exception& e) {
-    cerr << "Terminated after an error occurred (" << e.what() << ").\n";
-    return -1;
-}
-#endif
+    IF_DEBUG_CATCH_ALL_EXCEPTIONS
 }
 
 void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vector<int>& cloc_to_cloc_id, bool& is_input_gzipped) {
@@ -225,7 +231,7 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
         const Locus& sloc = *element.second;
         for (const char* fread_name : sloc.comp) {
             string pread_name (fread_name);
-#ifdef DEBUG
+#ifdef DEBUG //xxx
             if(!debug_flags.count(DEBUG_FREADS)) {
 #endif
             if (pread_name.length() < 2
