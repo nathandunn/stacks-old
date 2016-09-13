@@ -46,6 +46,7 @@ string prefix_path;
 string paired_alns_path;
 FileT  in_file_type = FileT::unknown;
 int    num_threads        = 1;
+bool quiet = false;
 
 modelt model_type         = snp;
 double alpha              = 0.05;
@@ -65,7 +66,8 @@ const int barcode_size    = 5;
 double p_freq             = 0.5; // const
 
 set<string> debug_flags;
-#define DEBUG_FREADS "FREADS"
+#define DEBUG_FWREADS "FWREADS"
+#define DEBUG_READNAMES "READNAMES"
 
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& fh);
@@ -122,10 +124,12 @@ int main(int argc, char* argv[]) {
 
     // Open the log
     string lg_path = prefix_path + ".pstacks_pe.log";
-    cerr << "Logging to '" << lg_path << "'.\n";
-    lg = new LogAlterator(ofstream(lg_path));
+    if(!quiet)
+        cout << "Logging to '" << lg_path << "'.\n";
+    lg = new LogAlterator(ofstream(lg_path), quiet);
     init_log(lg->l, argc, argv);
     report_options(cout);
+    cout << endl;
 
     // Initialize stuff.
     set_model_thresholds(alpha);
@@ -137,35 +141,35 @@ int main(int argc, char* argv[]) {
      * Parse the matches, tags and fastq files to assign catalog loci to the reads.
      * ----------
      */
-    cerr << "Reading read-to-locus information from the matches and tags files...\n";
+    cout << "Reading read-to-locus information from the matches and tags files...\n";
     vector<int> cloc_to_cloc_id;
     unordered_map<string, size_t> read_name_to_cloc; // [(read index, cloc index)]
     bool is_input_gzipped;
     link_reads_to_cloci(read_name_to_cloc, cloc_to_cloc_id, is_input_gzipped);
-    cerr << "Found " << read_name_to_cloc.size() << " paired-end reads spanning "
-           << cloc_to_cloc_id.size() << " catalog loci.\n";
+    cout << "This sample covers " << cloc_to_cloc_id.size()
+         << " catalog loci with " << read_name_to_cloc.size() << " reads.\n";
 
     /*
      * Load the paired-ends.
      * ----------
      */
-    cerr << "Loading the paired-end sequences...\n";
+    cout << "Loading the paired-end sequences...\n";
     Input* pe_reads_f;
     if (in_file_type == FileT::bam)
         pe_reads_f = new Bam(paired_alns_path.c_str());
     ReadsByCLoc reads_by_cloc (pe_reads_f, cloc_to_cloc_id.size(), read_name_to_cloc);
     delete pe_reads_f;
     read_name_to_cloc.clear();
-    cerr << "Used " << reads_by_cloc.n_used_reads << " aligned paired-end reads.\n"; //xxx "used"
+    cout << "Found " << reads_by_cloc.n_used_reads << " aligned paired-end reads.\n";
 
     /*
      * Convert the data to PStack's and MStack's.
      */
-    cerr << "Assembling the paired-end sequences...\n";
+    cout << "Stacking the paired-end sequences...\n";
     map<int, MergedStack*> loci;
     map<int, PStack*> stacks;
     reads_by_cloc.convert_to_pmstacks(cloc_to_cloc_id, stacks, loci);
-    cerr << "Created " << loci.size() << " loci, made of " << stacks.size() << " stacks.\n";
+    cout << "Created " << loci.size() << " loci, made of " << stacks.size() << " stacks.\n";
 
     /*
      * Call SNPs and alleles.
@@ -174,6 +178,7 @@ int main(int argc, char* argv[]) {
 
     write_results(loci, stacks, is_input_gzipped, true);
 
+    cout << "pstacks_pe is done.\n";
     return 0;
 
     IF_DEBUG_CATCH_ALL_EXCEPTIONS
@@ -228,25 +233,22 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
     // For each first read, guess the name of the paired-end
     // read (names are expected to end in '/1' or '_1'),
     // and link them to cloci.
+    const bool process_names = debug_flags.count(DEBUG_FWREADS) ? false : true;
     for (const auto& element : sloci) {
         const Locus& sloc = *element.second;
         for (const char* fread_name : sloc.comp) {
             string pread_name (fread_name);
-#ifdef DEBUG //xxx
-            if(!debug_flags.count(DEBUG_FREADS)) {
-#endif
-            if (pread_name.length() < 2
-                    || (pread_name.substr(pread_name.length()-2) != "/1"
-                            && pread_name.substr(pread_name.length()-2) != "_1")
-                    ) {
-                cerr << "Error: Unrecognized read name format; expected '"
-                     << pread_name << "' to end with '/1' or '_1'.\n";
-                throw exception();
+            if (process_names) {
+                if (pread_name.length() < 2
+                        || (pread_name.substr(pread_name.length()-2) != "/1"
+                                && pread_name.substr(pread_name.length()-2) != "_1")
+                        ){
+                    cerr << "Error: Unrecognized read name format; expected '"
+                         << pread_name << "' to end with '/1' or '_1'.\n";
+                    throw exception();
+                }
+                pread_name.at(pread_name.length()-1) = '2';
             }
-            pread_name.at(pread_name.length()-1) = '2';
-#ifdef DEBUG
-            }
-#endif
             pread_name_to_cloc.insert({pread_name, sloc_id_to_cloc.at(sloc.id)});
         }
     }
@@ -255,16 +257,12 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
     for (const auto& element : sloci)
         delete element.second;
 
-    //xxx Save list of reads.
-    /*ofstream readnames_f ("readnames");
-    for (auto& r : pread_name_to_cloc)
-        readnames_f << r.first << "\n";
-    */
-
-    // Attempt to guess the format of the read names;
-    // otherwise read the fastq file indexes to link the first & paired names.
-    // ...
-
+    if (debug_flags.count(DEBUG_READNAMES)) {
+        // Save the list of reads.
+        ofstream readnames_f ("readnames");
+        for (auto& r : pread_name_to_cloc)
+            readnames_f << r.first << "\n";
+    }
 }
 
 
@@ -434,6 +432,8 @@ const string help_string = string() +
         "    --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
         "  For the Fixed model:\n"
         "    --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n"
+        "\n"
+        "Misc.: -q,--quiet; -h,--help; --version.\n"
         ;
 
 void bad_args() {
@@ -446,10 +446,11 @@ void parse_command_line(int argc, char* argv[]) {
     static const option long_options[] = {
         {"help",         no_argument,       NULL, 'h'},
         {"version",      no_argument,       NULL,  1000},
+        {"quiet",        no_argument, NULL, 'q'},
+        {"num_threads",  required_argument, NULL, 'p'},
         {"prefix",       required_argument, NULL, 's'},
         {"paired_reads", required_argument, NULL, 'f'},
         {"filetype",     required_argument, NULL, 't'},
-        {"num_threads",  required_argument, NULL, 'p'},
         {"model",        required_argument, NULL,  1001},
         {"alpha",        required_argument, NULL,  1002},
         {"bound_low",    required_argument, NULL,  1003},
@@ -464,7 +465,7 @@ void parse_command_line(int argc, char* argv[]) {
     int long_options_i;
     while (true) {
 
-        c = getopt_long(argc, argv, "hvs:f:t:p:", long_options, &long_options_i);
+        c = getopt_long(argc, argv, "hvs:f:t:p:q", long_options, &long_options_i);
 
         // Detect the end of the options.
         if (c == -1)
@@ -478,6 +479,12 @@ void parse_command_line(int argc, char* argv[]) {
         case 1000: //version
             cout << "pstacks_pe " << VERSION << "\n";
             exit(0);
+            break;
+        case 'q':
+            quiet = true;
+            break;
+        case 'p':
+            num_threads = atoi(optarg);
             break;
         case 's':
             prefix_path = optarg;
@@ -496,9 +503,6 @@ void parse_command_line(int argc, char* argv[]) {
                 in_file_type = FileT::tsv;
             else
                 in_file_type = FileT::unknown;
-            break;
-        case 'p':
-            num_threads = atoi(optarg);
             break;
         case 1001: //model
             if (strcmp(optarg, "snp") == 0) {
@@ -538,7 +542,7 @@ void parse_command_line(int argc, char* argv[]) {
             break;
         case 999: //debug_flags
         {
-            static const set<string> known_debug_flags = {DEBUG_FREADS};
+            static const set<string> known_debug_flags = {DEBUG_FWREADS, DEBUG_READNAMES};
             stringstream ss (optarg);
             string s;
             while (getline(ss, s, ',')) {
@@ -549,7 +553,6 @@ void parse_command_line(int argc, char* argv[]) {
                     bad_args();
                 }
             }
-            cerr << "? Debug flag(s) : '" << optarg << "'.\n";
             break;
         }
         case '?':
@@ -594,23 +597,30 @@ void parse_command_line(int argc, char* argv[]) {
 }
 
 void report_options(ostream& os) {
-    os << "Working with options:\n";
+    os << "Configuration for this run:\n";
     os << "  Sample prefix: '" << prefix_path << "'\n";
-    os << "  Paired-end reads alignments: '" << paired_alns_path << "'"
-          ", (type: " << to_string(in_file_type) << ")\n";
+    os << "  Paired-end reads alignments: '" << paired_alns_path << "'\n";
+    os << "  Paired-end reads alignment type: " << to_string(in_file_type) << "\n";
     os << "  Number of threads: " << num_threads << "\n";
 
     // Model.
     if (model_type == snp) {
         os << "  Model: snp\n"
-           << "    alpha: " << alpha << "\n";
+           << "  Model alpha: " << alpha << "\n";
     } else if (model_type == bounded) {
         os << "  Model: snp\n"
-           << "    alpha: " << alpha << "\n"
-           << "    lower bound: " << bound_low << "\n"
-           << "    higher bound: " << bound_high << "\n";
+           << "  Model alpha: " << alpha << "\n"
+           << "  Model lower bound: " << bound_low << "\n"
+           << "  Model higher bound: " << bound_high << "\n";
     } else if (model_type == ::fixed) {
         os << "  Model: fixed\n"
-           << "    Barcode err prob: " << barcode_err_freq << "\n";
+           << "  Model barcode err. prob.: " << barcode_err_freq << "\n";
+    }
+
+    if (!debug_flags.empty()) {
+        os << "  DEBUG FLAGS:";
+        for (const string& flag : debug_flags)
+            os << " " << flag;
+        os << "\n";
     }
 }
