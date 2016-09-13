@@ -106,8 +106,28 @@ public:
         p.strand = q.strand;
         q.strand = strand;
     }
-    PhyLoc& operator=(PhyLoc&& other) {std::swap(*this, other); return *this;}
-    PhyLoc& operator=(const PhyLoc& other) =delete;
+    PhyLoc& operator=(const PhyLoc& other) {PhyLoc cp (other); swap(*this, cp); return *this;}
+
+    bool operator==(const PhyLoc& other) const {
+        if (bp == other.bp
+                && strand == other.strand
+                && strcmp(chr, other.chr) == 0)
+            return true;
+        else
+            return false;
+    }
+
+    bool operator<(const PhyLoc& other) const {
+        const int chrcmp = strcmp(chr, other.chr);
+        if (chrcmp != 0)
+            // Alphanumeric.
+            return chrcmp < 0;
+        else if (bp != other.bp)
+            return bp < other.bp;
+        else
+            // Minus strand first.
+            return strand == strand_minus && other.strand == strand_plus;
+    }
 };
 
 class SNP {
@@ -165,7 +185,6 @@ class PStack {
     uint            id;
     uint         count; // Number of identical reads forming this stack
     DNANSeq       *seq; // Sequence read
-    uint           len; // Read length
     vector<char *> map; // List of sequence read IDs merged into this stack
     PhyLoc         loc; // Physical genome location of this stack.
 
@@ -173,7 +192,6 @@ class PStack {
         id     = 0;
         count  = 0;
         seq    = NULL;
-        len    = 0;
     }
     ~PStack() {
         delete this->seq;
@@ -183,6 +201,9 @@ class PStack {
     int  add_id(const char *);
     int  add_seq(const char *);
     int  add_seq(const DNANSeq *);
+
+    // extend(): Extends the PStack to the desired span.
+    void extend(const PhyLoc& phyloc, uint length);
 };
 
 class Stack {
@@ -225,9 +246,9 @@ class Rem {
 class CatMatch {
 public:
     int    batch_id;
-    int    cat_id;
-    int    sample_id;
-    int    tag_id;
+    int    cat_id; // c-locus ID
+    int    sample_id; // sample ID
+    int    tag_id; // s-locus ID
     int    depth;
     double lnl;
     char  *haplotype;
