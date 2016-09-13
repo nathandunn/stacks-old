@@ -54,7 +54,6 @@ enum modelt {fixed, snp, bounded};
 // For use with the multinomial model to call fixed nucleotides.
 //
 extern const int barcode_size;
-extern modelt model_type;
 extern double p_freq;
 extern double barcode_err_freq;
 extern double bound_low;
@@ -69,5 +68,25 @@ snp_type call_multinomial_snp(Locus *, int, map<char, int> &);
 int      call_multinomial_fixed(MergedStack *, int, map<char, int> &);
 double   heterozygous_likelihood(int, map<char, int> &);
 double   homozygous_likelihood(int, map<char, int> &);
+
+inline
+void set_model_thresholds(double alpha) {
+    if (alpha == 0.1) {
+        heterozygote_limit = -2.71;
+        homozygote_limit   =  2.71;
+    } else if (alpha == 0.05) {
+        heterozygote_limit = -3.84;
+        homozygote_limit   =  3.84;
+    } else if (alpha == 0.01) {
+        heterozygote_limit = -6.64;
+        homozygote_limit   =  6.64;
+    } else if (alpha == 0.001) {
+        heterozygote_limit = -10.83;
+        homozygote_limit   =  10.83;
+    } else {
+        cerr << "Error: Unsupported alpha value '" << alpha << "'.\n";
+        throw std::exception();
+    }
+}
 
 #endif // __MODELS_H__
