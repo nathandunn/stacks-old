@@ -31,29 +31,31 @@ using namespace std;
 //
 string prefix_path;
 string paired_alns_path;
-FileT  in_file_type;
+FileT  in_file_type = FileT::unknown;
 int    num_threads        = 1;
 
 modelt model_type         = snp;
 double alpha              = 0.05;
 double bound_low          = 0.0;
 double bound_high         = 1.0;
-double p_freq             = 0.5;
 double barcode_err_freq   = 0.0;
-double heterozygote_limit = -3.84;
-double homozygote_limit   =  3.84;
 
 //
 // Extra globs.
 //
 LogAlterator* lg = NULL;
-const int barcode_size    = 5;
 int    sql_id             = -1;
+double heterozygote_limit;
+double homozygote_limit;
+
+const int barcode_size    = 5;
+double p_freq             = 0.5; // const
 
 set<string> debug_flags;
 #define DEBUG_FREADS "FREADS"
 
 void parse_command_line(int argc, char* argv[]);
+void report_options(ostream& fh);
 
 /* link_reads_to_cloci()
  * ==========
@@ -111,8 +113,10 @@ try {
     cerr << "Logging to '" << lg_path << "'.\n";
     lg = new LogAlterator(ofstream(lg_path));
     init_log(lg->l, argc, argv);
+    report_options(cout);
 
-    // Initialize OpenMP.
+    // Initialize stuff.
+    set_model_thresholds(alpha);
 #ifdef _OPENMP
     omp_set_num_threads(num_threads);
 #endif
@@ -524,9 +528,9 @@ void parse_command_line(int argc, char* argv[]) {
         case 999: //debug_flags
         {
             static const set<string> known_debug_flags = {DEBUG_FREADS};
-            std::stringstream ss (optarg);
-            std::string s;
-            while (std::getline(ss, s, ',')) {
+            stringstream ss (optarg);
+            string s;
+            while (getline(ss, s, ',')) {
                 if (known_debug_flags.count(s)) {
                     debug_flags.insert(s);
                 } else {
@@ -575,5 +579,27 @@ void parse_command_line(int argc, char* argv[]) {
     if (model_type == ::fixed && barcode_err_freq == 0) {
         cerr << "You must specify the barcode error frequency.\n";
         bad_args();
+    }
+}
+
+void report_options(ostream& os) {
+    os << "Working with options:\n";
+    os << "  Sample prefix: '" << prefix_path << "'\n";
+    os << "  Paired-end reads alignments: '" << paired_alns_path << "'"
+          ", (type: " << to_string(in_file_type) << ")\n";
+    os << "  Number of threads: " << num_threads << "\n";
+
+    // Model.
+    if (model_type == snp) {
+        os << "  Model: snp\n"
+           << "    alpha: " << alpha << "\n";
+    } else if (model_type == bounded) {
+        os << "  Model: snp\n"
+           << "    alpha: " << alpha << "\n"
+           << "    lower bound: " << bound_low << "\n"
+           << "    higher bound: " << bound_high << "\n";
+    } else if (model_type == ::fixed) {
+        os << "  Model: fixed\n"
+           << "    Barcode err prob: " << barcode_err_freq << "\n";
     }
 }
