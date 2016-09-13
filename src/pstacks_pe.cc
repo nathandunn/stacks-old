@@ -90,6 +90,7 @@ public:
                 const unordered_map<string, size_t>& read_name_to_cloc);
 
     // Obtain the MergedStack's and PStack's.
+    // (This progressively clears the CLocReadSet's.)
     void convert_to_pmstacks(const vector<int>& cloc_to_cloc_id,
                              map<int, PStack*>& pstacks,
                              map<int, MergedStack*>& mstacks
@@ -103,11 +104,11 @@ private:
     vector<CLocReadSet> readsets;
 
     // Add a read to the given clocus.
-    void add_seq_to_cloc(size_t cloc, const Seq& seq) {
+    void add_seq_to_cloc(size_t cloc, Seq& seq) {
         const DNANSeq* seq_ptr = *unique_seqs.insert(new DNANSeq(seq.seq)).first;
         vector<Seq>& stack = readsets.at(cloc)[seq_ptr]; // First call creates the element.
+        seq.delete_seq(); // Now stored in `unique_seqs`.
         stack.push_back(seq);
-        stack.back().drop_seq();
     }
 };
 
@@ -406,7 +407,11 @@ void ReadsByCLoc::convert_to_pmstacks(
             pstacks.insert({p->id, p});
         }
 
-    } // for(c-locus)
+        //
+        // Clear the processed CLocReadSet.
+        //
+        readsets[cloc].clear();
+    }
 
     return;
 }

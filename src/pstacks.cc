@@ -352,9 +352,8 @@ int load_radtags(string in_file, HashMap &radtags) {
             cerr << i/1000000 << "M...";
 
         HashMap::iterator element = radtags.insert({DNANSeq(strlen(c.seq), c.seq), vector<Seq*>()}).first;
+        c.delete_seq();
         element->second.push_back(new Seq(c));
-        Seq& the_seq = *element->second.back();
-        the_seq.drop_seq();
         i++;
     }
     cerr << "done\n";

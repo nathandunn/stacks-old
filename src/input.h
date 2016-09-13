@@ -72,8 +72,8 @@ class Seq {
     Seq& operator=(Seq&& other) {swap(*this, other); return *this;}
     Seq& operator=(const Seq& other) = delete;
 
-    // drop_seq(): Voids the `seq` and `qual` members.
-    void drop_seq() {
+    // delete_seq(): Voids the `seq` and `qual` members.
+    void delete_seq() {
         if (seq != NULL) {
             delete[] seq;
             seq = NULL;
