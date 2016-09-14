@@ -24,6 +24,8 @@
 //   within one basepair, truncate reads on request.
 //
 
+#include <iomanip>
+
 #include "process_radtags.h"
 
 //
@@ -321,8 +323,10 @@ process_paired_reads(string prefix_1,
 
     long i = 1;
 
+    cerr << "  Processing RAD-Tags...";
     do {
-        if (i % 10000 == 0) cerr << "  Processing RAD-Tag " << i << "       \r";
+        if (i % 1000000 == 0)
+            cerr << i/1000000 << "M...";
 
         parse_input_record(s_1, r_1);
         parse_input_record(s_2, r_2);
@@ -433,6 +437,7 @@ process_paired_reads(string prefix_1,
         i++;
     } while ((s_1 = fh_1->next_seq()) != NULL &&
              (s_2 = fh_2->next_seq()) != NULL);
+    cerr << "\n";
 
     if (discards) {
         delete discard_fh_1;
@@ -516,8 +521,11 @@ process_reads(string prefix,
     //cerr << "Length: " << r->len << "; Window length: " << r->win_len << "; Stop position: " << r->stop_pos << "\n";
 
     long i = 1;
+    cerr << "  Processing RAD-Tags...";
     do {
-        if (i % 10000 == 0) cerr << "  Processing RAD-Tag " << i << "       \r";
+        if (i % 1000000 == 0)
+            cerr << i/1000000 << "M...";
+
         counter["total"]++;
 
         parse_input_record(s, r);
@@ -582,6 +590,7 @@ process_reads(string prefix,
 
         i++;
     } while ((s = fh->next_seq()) != NULL);
+    cerr << "\n";
 
     if (discards) delete discard_fh;
 
@@ -801,15 +810,25 @@ print_results(int argc, char **argv,
         c["retained"]     += it->second["retained"];
     }
 
-    cerr << c["total"] << " total sequences;\n";
+    std::ostream cerr_bis (cerr.rdbuf());
+    cerr_bis << std::fixed << std::setprecision(1);
+
+    auto print_nreads = [&cerr_bis,&c] (long n, const string& legend) {
+        size_t nspaces = std::to_string(c["total"]).length() - std::to_string(n).length();
+        cerr_bis << string(nspaces, ' ')
+             << n << " " << legend
+             << " (" << (double) n / c["total"] * 100 << "%)\n";
+    };
+
+    cerr_bis << c["total"] << " total sequences\n";
     if (filter_illumina)
-        cerr << "  " << c["ill_filtered"] << " failed Illumina filtered reads;\n";
+        print_nreads(c["ill_filtered"], "failed Illumina filtered reads");
     if (filter_adapter)
-        cerr << "  " << c["adapter"] << " reads contained adapter sequence;\n";
-    cerr << "  " << c["ambiguous"]   << " ambiguous barcode drops;\n"
-         << "  " << c["low_quality"] << " low quality read drops;\n"
-         << "  " << c["noradtag"]    << " ambiguous RAD-Tag drops;\n"
-         << c["retained"] << " retained reads.\n";
+        print_nreads(c["adapter"], "reads contained adapter sequence");
+    print_nreads(c["ambiguous"], "ambiguous barcode drops");
+    print_nreads(c["low_quality"], "low quality read drops");
+    print_nreads(c["noradtag"], "ambiguous RAD-Tag drops");
+    print_nreads(c["retained"], "retained reads");
 
     log        << "\n"
          << "Total Sequences\t"      << c["total"]       << "\n";
