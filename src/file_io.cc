@@ -917,7 +917,8 @@ build_file_list(vector<pair<string, string> > &files)
                 strncmp(q, ".fa",    end - q) != 0 &&
                 strncmp(q, ".fastq", end - q) != 0 &&
                 strncmp(q, ".fasta", end - q) != 0 &&
-                strncmp(q, ".bam",   end - q) != 0)
+                strncmp(q, ".bam",   end - q) != 0 &&
+                (file.length()<9 || file.substr(file.length()-9) != "_qseq.txt"))
                 continue;
 
             //
