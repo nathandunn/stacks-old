@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
     string lg_path = prefix_path + ".pstacks_pe.log";
     if(!quiet)
         cout << "Logging to '" << lg_path << "'.\n";
-    lg = new LogAlterator(ofstream(lg_path), quiet);
+    lg = new LogAlterator(lg_path, quiet);
     init_log(lg->l, argc, argv);
     report_options(cout);
     cout << endl;

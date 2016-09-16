@@ -102,19 +102,21 @@ struct LogAlterator {
     // Construct the log fstream;
     // Keep track of the streambufs of cout and cerr;
     // Construst the teeing streambufs and let cout and cerr use them.
-    LogAlterator(std::ofstream&& logf, bool quiet = false)
-            : l(std::move(logf))
+    LogAlterator(const std::string& log_path, bool quiet = false)
+            : l(log_path)
             , o(std::cout.rdbuf())
             , e(std::cerr.rdbuf())
             , lo_buf(std::cout.rdbuf(), l.rdbuf())
             , le_buf(std::cerr.rdbuf(), l.rdbuf())
             {
-        std::cerr.rdbuf(&le_buf);
-        if (quiet)
-            // Use the fstream buffer only, and not the stdout.
+        if (quiet) {
+            // Use the fstream buffer only, and not at all stdout and stderr.
             std::cout.rdbuf(l.rdbuf());
-        else
+            std::cerr.rdbuf(l.rdbuf());
+        } else {
             std::cout.rdbuf(&lo_buf);
+            std::cerr.rdbuf(&le_buf);
+        }
     }
 
     // Destructor
