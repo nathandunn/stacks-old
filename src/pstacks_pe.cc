@@ -141,35 +141,35 @@ int main(int argc, char* argv[]) {
      * Parse the matches, tags and fastq files to assign catalog loci to the reads.
      * ----------
      */
-    cout << "Reading read-to-locus information from the matches and tags files...\n";
+    cout << "Reading read-to-locus information from the matches and tags files..." << endl;
     vector<int> cloc_to_cloc_id;
     unordered_map<string, size_t> read_name_to_cloc; // [(read index, cloc index)]
     bool is_input_gzipped;
     link_reads_to_cloci(read_name_to_cloc, cloc_to_cloc_id, is_input_gzipped);
     cout << "This sample covers " << cloc_to_cloc_id.size()
-         << " catalog loci with " << read_name_to_cloc.size() << " reads.\n";
+         << " catalog loci with " << read_name_to_cloc.size() << " reads." << endl;
 
     /*
      * Load the paired-ends.
      * ----------
      */
-    cout << "Loading the paired-end sequences...\n";
+    cout << "Loading the paired-end sequences..." << endl;
     Input* pe_reads_f;
     if (in_file_type == FileT::bam)
         pe_reads_f = new Bam(paired_alns_path.c_str());
     ReadsByCLoc reads_by_cloc (pe_reads_f, cloc_to_cloc_id.size(), read_name_to_cloc);
     delete pe_reads_f;
     read_name_to_cloc.clear();
-    cout << "Found " << reads_by_cloc.n_used_reads << " aligned paired-end reads.\n";
+    cout << "Found " << reads_by_cloc.n_used_reads << " aligned paired-end reads." << endl;
 
     /*
      * Convert the data to PStack's and MStack's.
      */
-    cout << "Stacking the paired-end sequences...\n";
+    cout << "Stacking the paired-end sequences..." << endl;
     map<int, MergedStack*> loci;
     map<int, PStack*> stacks;
     reads_by_cloc.convert_to_pmstacks(cloc_to_cloc_id, stacks, loci);
-    cout << "Created " << loci.size() << " loci, made of " << stacks.size() << " stacks.\n";
+    cout << "Created " << loci.size() << " loci, made of " << stacks.size() << " stacks." << endl;
 
     /*
      * Call SNPs and alleles.
@@ -178,7 +178,7 @@ int main(int argc, char* argv[]) {
 
     write_results(loci, stacks, is_input_gzipped, true);
 
-    cout << "pstacks_pe is done.\n";
+    cout << "pstacks_pe is done." << endl;
     return 0;
 
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
