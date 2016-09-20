@@ -432,7 +432,7 @@ int write_results(map<int, MergedStack *> &m,
         alle.close();
     }
 
-    cerr << "  Wrote " << wrote << " loci (of which " << blacklisted << " are blacklisted).\n";
+    cerr << "  Wrote " << wrote << " loci (of which " << blacklisted << " are blacklisted)." << endl;
 
     return 0;
 }
