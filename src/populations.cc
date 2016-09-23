@@ -38,7 +38,7 @@ typedef MetaPopInfo::Sample Sample;
 typedef MetaPopInfo::Pop Pop;
 typedef MetaPopInfo::Group Group;
 
-extern int **encoded_gtypes;
+extern int encoded_gtypes[4][4];
 
 // Global variables to hold command-line options.
 InputMode input_mode  = InputMode::stacks;
