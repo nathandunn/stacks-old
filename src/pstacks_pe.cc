@@ -157,9 +157,17 @@ int main(int argc, char* argv[]) {
     Input* pe_reads_f;
     if (in_file_type == FileT::bam)
         pe_reads_f = new Bam(paired_alns_path.c_str());
+    if (pe_reads_f == NULL) {
+        cerr << "Error: Failed to open file '" << paired_alns_path << "'." << endl;
+        throw exception();
+    }
     ReadsByCLoc reads_by_cloc (pe_reads_f, cloc_to_cloc_id.size(), read_name_to_cloc);
     delete pe_reads_f;
     read_name_to_cloc.clear();
+    if (reads_by_cloc.n_used_reads == 0) {
+        cerr << "Error: Failed to find any matching paired-end reads in '" << paired_alns_path << "'." << endl;
+        throw exception();
+    }
     cout << "Found " << reads_by_cloc.n_used_reads << " aligned paired-end reads." << endl;
 
     /*
