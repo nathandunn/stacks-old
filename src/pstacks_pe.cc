@@ -345,7 +345,7 @@ void ReadsByCLoc::convert_to_pmstacks(
         //
         const PStack* first_pstack = *cloc_pstacks.begin();
         PhyLoc loc = first_pstack->loc;
-        size_t len = first_pstack->seq->size();
+        uint len = first_pstack->seq->size();
         set<const PStack*> non_olap; //xxx For now, ignore non-overlapping pstacks.
         for (const PStack* p : cloc_pstacks) {
             // Check that the PStack is on the same chromosome and strand.
@@ -363,24 +363,26 @@ void ReadsByCLoc::convert_to_pmstacks(
                 }
                 if (loc.bp > p->loc.bp) {
                     // Extend left.
-                    len += p->loc.bp - loc.bp;
+                    len += loc.bp - p->loc.bp;
                     loc.bp = p->loc.bp;
                 }
                 if (loc.bp + len < p->loc.bp +p->seq->size()) {
                     // Extend right.
-                    len += p->loc.bp +p->seq->size() - loc.bp + len;
+                    len += p->loc.bp + p->seq->size() - (loc.bp + len);
                 }
             } else {
                 // loc.strand == strand_minus
+
+                assert(p->loc.bp + 1 >= uint(p->seq->size())); // Alignments shouldn't start before the beginning of chromosomes.
 
                 // Check that the PStack overlaps.
                 if (p->loc.bp -p->seq->size() + 1 > loc.bp || p->loc.bp < loc.bp - len + 1) {
                     non_olap.insert(p);
                     continue;
                 }
-                if (p->loc.bp -p->seq->size() > p->loc.bp -p->seq->size()) {
+                if (loc.bp - len > p->loc.bp - p->seq->size()) {
                     // Extend left.
-                    len += p->loc.bp -p->seq->size() - p->loc.bp -p->seq->size();
+                    len += loc.bp - len - (p->loc.bp - p->seq->size());
                 }
                 if (loc.bp < p->loc.bp) {
                     // Extend right.

@@ -115,7 +115,7 @@ void PStack::extend(const PhyLoc& phyloc, uint length) {
                && loc.bp - seq->size() >= phyloc.bp - length);
         seq->extend(
                 phyloc.bp - loc.bp,
-                loc.bp + seq->size() - phyloc.bp - length);
+                loc.bp - seq->size() - (phyloc.bp - length));
     }
 
     loc = phyloc;
