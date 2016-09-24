@@ -303,6 +303,19 @@ void ReadsByCLoc::convert_to_pmstacks(
     for (size_t cloc=0; cloc<readsets.size(); ++cloc) {
 
         //
+        // Check that there are paired-end reads for this c-locus.
+        //
+        // This is not necessarily the case if forward and paired reads were
+        // aligned independently -- i.e. the forward read may have been kept
+        // while the paired-end read was discarded.
+        //
+        // Loci without any paired-end reads just do not have entries in the
+        // `tags_pe` file.
+        //
+        if (readsets[cloc].empty())
+            continue;
+
+        //
         // First, obtain the raw PStacks of this c-locus.
         // The PStacks share their sequence and location.
         //
@@ -330,7 +343,6 @@ void ReadsByCLoc::convert_to_pmstacks(
         //
         // Determine the positions spanned by the PStacks.
         //
-        assert(!cloc_pstacks.empty()); // The sample has "matches".
         const PStack* first_pstack = *cloc_pstacks.begin();
         PhyLoc loc = first_pstack->loc;
         size_t len = first_pstack->seq->size();
