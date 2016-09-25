@@ -72,13 +72,25 @@ set<string> debug_flags;
 void parse_command_line(int argc, char* argv[]);
 void report_options(ostream& fh);
 
+// retrieve_bijective_sloci()
+// ==========
+// Parse the matches file for the given sample prefix, and return the ids of
+// the sample loci that are in a bijective relationship with the catalog.
+unordered_set<int> retrieve_bijective_sloci();
+
+// convert_fw_read_name_to_paired()
+// ==========
+// Given a forward read name, guess the paired-end read name. The forward read
+// name is expected to end in '/1' or '_1'.
+void convert_fw_read_name_to_paired(string& read_name);
+
 /* link_reads_to_cloci()
  * ==========
  * Parses the matches and tags (and fastq) files to link the paired reads to catalog loci.
  * Also, sets `gzipped_input` to the appropriate value.
  * Uses globals `prefix_path`, `first_reads_path` and `second_reads_path`.
  */
-void link_reads_to_cloci(unordered_map<string, size_t>& read_name_to_cloc, vector<int>& cloc_to_cloc_id, bool& gzipped_input);
+void link_reads_to_loci(unordered_map<string, size_t>& read_name_to_loc, vector<int>& sloc_ids, bool& gzipped_input);
 
 /* CLocReadSet
  * =========== */
@@ -93,7 +105,7 @@ public:
 
     // Obtain the MergedStack's and PStack's.
     // (This progressively clears the CLocReadSet's.)
-    void convert_to_pmstacks(const vector<int>& cloc_to_cloc_id,
+    void convert_to_pmstacks(const vector<int>& sloc_to_sloc_id,
                              map<int, PStack*>& pstacks,
                              map<int, MergedStack*>& mstacks
                              );
@@ -142,12 +154,12 @@ int main(int argc, char* argv[]) {
      * ----------
      */
     cout << "Reading read-to-locus information from the matches and tags files..." << endl;
-    vector<int> cloc_to_cloc_id;
-    unordered_map<string, size_t> read_name_to_cloc; // [(read index, cloc index)]
+    vector<int> sloc_ids;
+    unordered_map<string, size_t> read_name_to_loc; // [(read index, cloc index)]
     bool is_input_gzipped;
-    link_reads_to_cloci(read_name_to_cloc, cloc_to_cloc_id, is_input_gzipped);
-    cout << "This sample covers " << cloc_to_cloc_id.size()
-         << " catalog loci with " << read_name_to_cloc.size() << " reads." << endl;
+    link_reads_to_loci(read_name_to_loc, sloc_ids, is_input_gzipped);
+    cout << "This sample covers " << sloc_ids.size()
+         << " catalog loci with " << read_name_to_loc.size() << " reads." << endl;
 
     /*
      * Load the paired-ends.
@@ -161,9 +173,9 @@ int main(int argc, char* argv[]) {
         cerr << "Error: Failed to open file '" << paired_alns_path << "'." << endl;
         throw exception();
     }
-    ReadsByCLoc reads_by_cloc (pe_reads_f, cloc_to_cloc_id.size(), read_name_to_cloc);
+    ReadsByCLoc reads_by_cloc (pe_reads_f, sloc_ids.size(), read_name_to_loc);
     delete pe_reads_f;
-    read_name_to_cloc.clear();
+    read_name_to_loc.clear();
     if (reads_by_cloc.n_used_reads == 0) {
         cerr << "Error: Failed to find any matching paired-end reads in '" << paired_alns_path << "'." << endl;
         throw exception();
@@ -176,7 +188,7 @@ int main(int argc, char* argv[]) {
     cout << "Stacking the paired-end sequences..." << endl;
     map<int, MergedStack*> loci;
     map<int, PStack*> stacks;
-    reads_by_cloc.convert_to_pmstacks(cloc_to_cloc_id, stacks, loci);
+    reads_by_cloc.convert_to_pmstacks(sloc_ids, stacks, loci);
     cout << "Created " << loci.size() << " loci, made of " << stacks.size() << " stacks." << endl;
 
     /*
@@ -192,12 +204,8 @@ int main(int argc, char* argv[]) {
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
 }
 
-void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vector<int>& cloc_to_cloc_id, bool& is_input_gzipped) {
-
-    // Load the matches.
-    // Look for sample & catalog loci in a bijective relationship.
-    // Assign indexes to cloci.
-    unordered_map<int, size_t> sloc_id_to_cloc;
+unordered_set<int> retrieve_bijective_sloci() {
+    unordered_set<int> bij_sloci;
 
     vector<CatMatch*> matches;
     load_catalog_matches(prefix_path, matches);
@@ -214,61 +222,77 @@ void link_reads_to_cloci(unordered_map<string, size_t>& pread_name_to_cloc, vect
         cloc_id_to_sloc_ids[m->cat_id].insert(m->tag_id);
         sloc_id_to_cloc_ids[m->tag_id].insert(m->cat_id);
     }
-    for (const auto& sloc : sloc_id_to_cloc_ids) {
-        if (sloc.second.size() == 1) {
-            const int cloc_id = *sloc.second.begin();
-            if (cloc_id_to_sloc_ids.at(*sloc.second.begin()).size() == 1) {
-                // Bijective, keep it.
-                sloc_id_to_cloc.insert({sloc.first, cloc_to_cloc_id.size()});
-                cloc_to_cloc_id.push_back(cloc_id);
-            }
-        }
-    }
+    for (const auto& sloc : sloc_id_to_cloc_ids)
+        if (sloc.second.size() == 1
+                && cloc_id_to_sloc_ids.at(*sloc.second.begin()).size() == 1
+                )
+            // Bijective, keep it.
+            bij_sloci.insert(sloc.first);
 
-    cloc_id_to_sloc_ids.clear();
-    sloc_id_to_cloc_ids.clear();
     for (const CatMatch* m : matches)
         delete m;
-    matches.clear();
 
-    // Read the tags file.
+    return bij_sloci;
+}
+
+void convert_fw_read_name_to_paired(string& read_name) {
+
+    // Check the format.
+    if (read_name.length() < 2
+            || (read_name.substr(read_name.length()-2) != "/1"
+                    && read_name.substr(read_name.length()-2) != "_1")
+            ){
+        cerr << "Error: Unrecognized read name format; expected '"
+             << read_name << "' to end with '/1' or '_1'.\n";
+        throw exception();
+    }
+
+    // Change the 1 into a 2.
+    read_name.back() = '2';
+}
+
+void link_reads_to_loci(
+        unordered_map<string, size_t>& pread_name_to_loc,
+        vector<int>& sloc_ids,
+        bool& is_input_gzipped
+        ) {
+
+    // We only work with on the sloci that are in a bijective relationship with
+    // the catalog.
+    unordered_set<int> bijective_sloci = retrieve_bijective_sloci();
+
+    // Parse the sloci in the tags file; guess the names of the associated
+    // paired-end reads.
     map<int, Locus*> sloci;
     if(load_loci(prefix_path, sloci, 1, false, is_input_gzipped) != 1) {
         cerr << "Error: could not find stacks files '" << prefix_path << ".*' (tags, snps and/or alleles).\n";
         throw exception();
     }
 
-    // For each first read, guess the name of the paired-end
-    // read (names are expected to end in '/1' or '_1'),
-    // and link them to cloci.
     const bool process_names = debug_flags.count(DEBUG_FWREADS) ? false : true;
     for (const auto& element : sloci) {
         const Locus& sloc = *element.second;
+        if (not bijective_sloci.count(sloc.id))
+            continue;
+
+        sloc_ids.push_back(sloc.id);
+
+        // For each first read,
         for (const char* fread_name : sloc.comp) {
             string pread_name (fread_name);
-            if (process_names) {
-                if (pread_name.length() < 2
-                        || (pread_name.substr(pread_name.length()-2) != "/1"
-                                && pread_name.substr(pread_name.length()-2) != "_1")
-                        ){
-                    cerr << "Error: Unrecognized read name format; expected '"
-                         << pread_name << "' to end with '/1' or '_1'.\n";
-                    throw exception();
-                }
-                pread_name.at(pread_name.length()-1) = '2';
-            }
-            pread_name_to_cloc.insert({pread_name, sloc_id_to_cloc.at(sloc.id)});
+            if (process_names)
+                convert_fw_read_name_to_paired(pread_name);
+            pread_name_to_loc.insert( {pread_name, sloc_ids.size()-1} );
         }
     }
 
-    // Delete what `load_loci()` allocated.
     for (const auto& element : sloci)
         delete element.second;
 
+    // If required, save the list of reads.
     if (debug_flags.count(DEBUG_READNAMES)) {
-        // Save the list of reads.
         ofstream readnames_f ("readnames");
-        for (auto& r : pread_name_to_cloc)
+        for (auto& r : pread_name_to_loc)
             readnames_f << r.first << "\n";
     }
 }
@@ -294,13 +318,13 @@ ReadsByCLoc::ReadsByCLoc(
 }
 
 void ReadsByCLoc::convert_to_pmstacks(
-        const vector<int>& cloc_to_cloc_id,
+        const vector<int>& sloc_to_sloc_id,
         map<int, PStack*>& pstacks,
         map<int, MergedStack*>& mstacks
         ) {
     int pstack_id = 0;
 
-    for (size_t cloc=0; cloc<readsets.size(); ++cloc) {
+    for (size_t sloc=0; sloc<readsets.size(); ++sloc) {
 
         //
         // Check that there are paired-end reads for this c-locus.
@@ -312,7 +336,7 @@ void ReadsByCLoc::convert_to_pmstacks(
         // Loci without any paired-end reads just do not have entries in the
         // `tags_pe` file.
         //
-        if (readsets[cloc].empty())
+        if (readsets[sloc].empty())
             continue;
 
         //
@@ -320,7 +344,7 @@ void ReadsByCLoc::convert_to_pmstacks(
         // The PStacks share their sequence and location.
         //
         vector<PStack*> cloc_pstacks;
-        for (auto& identical_reads : readsets[cloc]) {
+        for (auto& identical_reads : readsets[sloc]) {
             map<PhyLoc, PStack*> cloc_pstacks_by_loc;
 
             for (const Seq& s : identical_reads.second) {
@@ -405,7 +429,7 @@ void ReadsByCLoc::convert_to_pmstacks(
         // Create the MergedStack of the clocus
         //
         MergedStack* m = new MergedStack();
-        m->id = cloc_to_cloc_id[cloc];
+        m->id = sloc_to_sloc_id[sloc];
         m->add_consensus(first_pstack->seq);
         assert(m->len == len);
         m->loc = loc;
@@ -430,7 +454,7 @@ void ReadsByCLoc::convert_to_pmstacks(
         //
         // Clear the processed CLocReadSet.
         //
-        readsets[cloc].clear();
+        readsets[sloc].clear();
     }
 
     return;
