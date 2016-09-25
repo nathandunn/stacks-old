@@ -119,8 +119,12 @@ private:
 
     // Add a read to the given clocus.
     void add_seq_to_cloc(size_t cloc, Seq& seq) {
-        const DNANSeq* seq_ptr = *unique_seqs.insert(new DNANSeq(seq.seq)).first;
-        vector<Seq>& stack = readsets.at(cloc)[seq_ptr]; // First call creates the element.
+        const DNANSeq* key = new DNANSeq(seq.seq);
+        auto insertion = unique_seqs.insert(key);
+        if (!insertion.second)
+            delete key;
+        key = *insertion.first;
+        vector<Seq>& stack = readsets.at(cloc)[key]; // First call constructs the vector<Seq>.
         seq.delete_seq(); // Now stored in `unique_seqs`.
         stack.push_back(seq);
     }
