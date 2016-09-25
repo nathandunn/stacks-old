@@ -24,6 +24,8 @@
 
 #include "pstacks_base.h"
 
+#include "pstacks_pe.h"
+
 #ifdef DEBUG
 #define IF_NDEBUG_TRY
 #define IF_NDEBUG_CATCH_ALL_EXCEPTIONS
@@ -68,67 +70,6 @@ double p_freq             = 0.5; // const
 set<string> debug_flags;
 #define DEBUG_FWREADS "FWREADS"
 #define DEBUG_READNAMES "READNAMES"
-
-void parse_command_line(int argc, char* argv[]);
-void report_options(ostream& fh);
-
-// retrieve_bijective_sloci()
-// ==========
-// Parse the matches file for the given sample prefix, and return the ids of
-// the sample loci that are in a bijective relationship with the catalog.
-unordered_set<int> retrieve_bijective_sloci();
-
-// convert_fw_read_name_to_paired()
-// ==========
-// Given a forward read name, guess the paired-end read name. The forward read
-// name is expected to end in '/1' or '_1'.
-void convert_fw_read_name_to_paired(string& read_name);
-
-/* link_reads_to_cloci()
- * ==========
- * Parses the matches and tags (and fastq) files to link the paired reads to catalog loci.
- * Also, sets `gzipped_input` to the appropriate value.
- * Uses globals `prefix_path`, `first_reads_path` and `second_reads_path`.
- */
-void link_reads_to_loci(unordered_map<string, size_t>& read_name_to_loc, vector<int>& sloc_ids, bool& gzipped_input);
-
-/* CLocReadSet
- * =========== */
-struct ReadsByCLoc {
-public:
-    size_t n_used_reads;
-
-    // Read the input file, saving the reads that belong to one of the catalog loci.
-    ReadsByCLoc(Input* pe_reads_f,
-                size_t n_cloci,
-                const unordered_map<string, size_t>& read_name_to_cloc);
-
-    // Obtain the MergedStack's and PStack's.
-    // (This progressively clears the CLocReadSet's.)
-    void convert_to_pmstacks(const vector<int>& sloc_to_sloc_id,
-                             map<int, PStack*>& pstacks,
-                             map<int, MergedStack*>& mstacks
-                             );
-
-private:
-    // For each locus, we group reads by sequence.
-    typedef map<const DNANSeq*, vector<Seq> > CLocReadSet;
-
-    unordered_set<const DNANSeq*> unique_seqs;
-    vector<CLocReadSet> readsets;
-
-    // Add a read to the given clocus.
-    void add_seq_to_cloc(size_t cloc, Seq& seq) {
-        const DNANSeq* key = new DNANSeq(seq.seq);
-        auto insertion = unique_seqs.insert(key);
-        if (!insertion.second)
-            delete key;
-        key = *insertion.first;
-        vector<Seq>& stack = readsets.at(cloc)[key]; // First call constructs the vector<Seq>.
-        seq.delete_seq(); // Now stored in `unique_seqs`.
-        stack.push_back(seq);
-    }
-};
 
 /* main()
  * ========== */
