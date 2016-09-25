@@ -431,6 +431,8 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         ctag->sources.push_back(make_pair(sample_file.first, qtag->id));
     }
 
+    delete aln;
+
     return 0;
 }
 
@@ -588,7 +590,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
                     hit_cnt   = 0;
                     allele_id = prev_id;
 
-                    while ((uint)hits[index] == prev_id) {
+                    while (index < hits_size && (uint)hits[index] == prev_id) {
                         hit_cnt++;
                         index++;
                     }
