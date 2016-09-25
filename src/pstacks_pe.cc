@@ -94,22 +94,25 @@ int main(int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
 #endif
 
-    /*
-     * Parse the matches, tags and fastq files to assign catalog loci to the reads.
-     * ----------
-     */
-    cout << "Reading read-to-locus information from the matches and tags files..." << endl;
+    // Parse the matches file.
+    // ----------
+    // We only work with on the sloci that are in a bijective relationship with
+    // the catalog.
+    cout << "Loading matches to the catalog..." << endl;
+    unordered_set<int> bij_sloci = retrieve_bijective_sloci();
+
+     // Parse the tags files; sort the reads per locus.
+     // ----------
+    cout << "Reading read-to-locus information from the tags file..." << endl;
+    unordered_map<string, size_t> read_name_to_loc; // map of (read name, loc index)
     vector<int> sloc_ids;
-    unordered_map<string, size_t> read_name_to_loc; // [(read index, cloc index)]
     bool is_input_gzipped;
-    link_reads_to_loci(read_name_to_loc, sloc_ids, is_input_gzipped);
+    link_reads_to_loci(bij_sloci, read_name_to_loc, sloc_ids, is_input_gzipped);
     cout << "This sample covers " << sloc_ids.size()
          << " catalog loci with " << read_name_to_loc.size() << " reads." << endl;
 
-    /*
-     * Load the paired-ends.
-     * ----------
-     */
+    // Load the paired-ends.
+    // ----------
     cout << "Loading the paired-end sequences..." << endl;
     Input* pe_reads_f;
     if (in_file_type == FileT::bam)
@@ -127,20 +130,20 @@ int main(int argc, char* argv[]) {
     }
     cout << "Found " << reads_by_cloc.n_used_reads << " aligned paired-end reads." << endl;
 
-    /*
-     * Convert the data to PStack's and MStack's.
-     */
+    // Convert the data to PStack's and MStack's.
+    // ----------
     cout << "Stacking the paired-end sequences..." << endl;
     map<int, MergedStack*> loci;
     map<int, PStack*> stacks;
     reads_by_cloc.convert_to_pmstacks(sloc_ids, stacks, loci);
     cout << "Created " << loci.size() << " loci, made of " << stacks.size() << " stacks." << endl;
 
-    /*
-     * Call SNPs and alleles.
-     */
+    // Call SNPs and alleles.
+    // ----------
+    cout << "Calling SNPs..." << endl;
     call_consensus(loci, stacks, true);
 
+    cout << "Writing results..." << endl;
     write_results(loci, stacks, is_input_gzipped, true);
 
     cout << "pstacks_pe is done." << endl;
@@ -197,14 +200,11 @@ void convert_fw_read_name_to_paired(string& read_name) {
 }
 
 void link_reads_to_loci(
+        const unordered_set<int>& bij_sloci,
         unordered_map<string, size_t>& pread_name_to_loc,
         vector<int>& sloc_ids,
         bool& is_input_gzipped
         ) {
-
-    // We only work with on the sloci that are in a bijective relationship with
-    // the catalog.
-    unordered_set<int> bijective_sloci = retrieve_bijective_sloci();
 
     // Parse the sloci in the tags file; guess the names of the associated
     // paired-end reads.
@@ -217,7 +217,7 @@ void link_reads_to_loci(
     const bool process_names = debug_flags.count(DEBUG_FWREADS) ? false : true;
     for (const auto& element : sloci) {
         const Locus& sloc = *element.second;
-        if (not bijective_sloci.count(sloc.id))
+        if (not bij_sloci.count(sloc.id))
             continue;
 
         sloc_ids.push_back(sloc.id);
