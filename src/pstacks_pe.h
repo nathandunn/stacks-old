@@ -26,6 +26,7 @@ void convert_fw_read_name_to_paired(std::string& read_name);
 // Also, sets `gzipped_input` to the appropriate value.
 // Uses globals `prefix_path` and `paired_alns_path`.
 void link_reads_to_loci(
+        const std::unordered_set<int>& bij_sloci,
         std::unordered_map<std::string, size_t>& read_name_to_loc,
         std::vector<int>& sloc_ids,
         bool& gzipped_input
