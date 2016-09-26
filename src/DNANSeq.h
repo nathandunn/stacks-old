@@ -24,6 +24,8 @@
 #include <cstring>
 #include <climits>
 
+#include <functional>
+
 #define BITMASK(b)     (1 << ((b) % CHAR_BIT))
 #define BITSLOT(b)     ((b) / CHAR_BIT)
 #define BITSET(a, b)   ((a)[BITSLOT(b)] |= BITMASK(b))
@@ -68,23 +70,37 @@ public:
 
     void extend(int before, int after);
 
-    bool operator== (const DNANSeq& other) const {
-        unsigned int bytes = BITNSLOTS(bits);
-        for (unsigned int i = 0; i < bytes; i++)
-            if (s[i] != other.s[i])
-                return false;
-        return true;
-    }
-
+    bool operator== (const DNANSeq& other) const;
+    bool operator<(const DNANSeq& other) const;
 };
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
-using std::stringstream;
-using std::cin;
-using std::cout;
-using std::cerr;
+inline
+bool DNANSeq::operator== (const DNANSeq& other) const {
+    unsigned int bytes = BITNSLOTS(bits);
+    for (unsigned int i = 0; i < bytes; i++)
+        if (s[i] != other.s[i])
+            return false;
+    return true;
+}
+
+inline
+bool DNANSeq::operator<(const DNANSeq& other) const {
+    const int n_bytes = BITNSLOTS(bits);
+    const int other_n_bytes = BITNSLOTS(other.bits);
+
+    // Shorter sequences are "less".
+    if (n_bytes != other_n_bytes)
+        return n_bytes < other_n_bytes ? true : false;
+
+    // Compare each byte.
+    // n.b. Unused bits are consistently 0 as the constructors call memset().
+    for(int i = 0; i < n_bytes; ++i)
+        if (s[i] != other.s[i])
+            return s[i] < other.s[i] ? true : false;
+
+    // Equal.
+    return false;
+}
 
 // Specializations for std::hash
 // Based on GCC

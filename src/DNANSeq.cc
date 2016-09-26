@@ -28,8 +28,11 @@
 // $Id: DNANSeq.cc 2133 2011-06-07 04:07:41Z catchen $
 //
 
+#include <iostream>
+
 #include "DNANSeq.h"
 
+using namespace std;
 //
 // We expect (and C++ defines) an unsigned char as 8 bits.
 //
@@ -204,10 +207,13 @@ char *DNANSeq::seq() {
 }
 
 void DNANSeq::extend(int before, int after) {
+    if (before == 0 && after == 0)
+        return;
+
     int old_bits = bits;
     unsigned char* old_s = s;
 
-    bits = bits + (before + after) * bits_per_nuc;
+    bits += (before + after) * bits_per_nuc;
     s = new unsigned char[BITNSLOTS(bits)];
     memset(s, 0, BITNSLOTS(bits));
 
@@ -232,5 +238,5 @@ void DNANSeq::extend(int before, int after) {
         bit += 3;
     }
 
-    delete old_s;
+    delete[] old_s;
 }

@@ -108,43 +108,56 @@ int main(int argc, char* argv[]) {
     vector<int> sloc_ids;
     bool is_input_gzipped;
     link_reads_to_loci(bij_sloci, read_name_to_loc, sloc_ids, is_input_gzipped);
-    cout << "This sample covers " << sloc_ids.size()
+    const size_t n_loci = sloc_ids.size();
+    cout << "This sample covers " << n_loci
          << " catalog loci with " << read_name_to_loc.size() << " reads." << endl;
 
-    // Load the paired-ends.
+    // Load the paired-ends into PStacks.
     // ----------
     cout << "Loading the paired-end sequences..." << endl;
-    Input* pe_reads_f;
-    if (in_file_type == FileT::bam)
-        pe_reads_f = new Bam(paired_alns_path.c_str());
-    if (pe_reads_f == NULL) {
-        cerr << "Error: Failed to open file '" << paired_alns_path << "'." << endl;
-        throw exception();
-    }
-    ReadsByCLoc reads_by_cloc (pe_reads_f, sloc_ids.size(), read_name_to_loc);
-    delete pe_reads_f;
-    read_name_to_loc.clear();
-    if (reads_by_cloc.n_used_reads == 0) {
-        cerr << "Error: Failed to find any matching paired-end reads in '" << paired_alns_path << "'." << endl;
-        throw exception();
-    }
-    cout << "Found " << reads_by_cloc.n_used_reads << " aligned paired-end reads." << endl;
+    vector<vector<PStack> > stacks_per_loc = load_aligned_reads(n_loci, read_name_to_loc);
 
-    // Convert the data to PStack's and MStack's.
+    // Merge PStacks into MergedStacks
     // ----------
-    cout << "Stacking the paired-end sequences..." << endl;
-    map<int, MergedStack*> loci;
-    map<int, PStack*> stacks;
-    reads_by_cloc.convert_to_pmstacks(sloc_ids, stacks, loci);
-    cout << "Created " << loci.size() << " loci, made of " << stacks.size() << " stacks." << endl;
+    // We check that there are paired-end reads for each locus.
+    //
+    // This is not necessarily the case if forward and paired reads were
+    // aligned independently : the forward read may have been kept
+    // while the paired-end read was discarded. Loci without any paired-end
+    // reads just do not have entries in the `tags_pe.tsv` file.
+    cout << "Merging stacks..." << endl;
+
+    vector<MergedStack> pe_loci;
+    pe_loci.reserve(n_loci);
+    for (size_t i=0; i<n_loci; ++i) {
+        vector<PStack>& stacks = stacks_per_loc[i];
+        pe_loci.push_back(stacks.empty() ? MergedStack() : merge_pstacks(stacks, sloc_ids[i]));
+    }
 
     // Call SNPs and alleles.
     // ----------
     cout << "Calling SNPs..." << endl;
-    call_consensus(loci, stacks, true);
 
+    // Create the maps to pass to `call_consensus` and `write_results`.
+    map<int, MergedStack*> loci_map;
+    map<int, PStack*> stacks_map;
+    for (size_t i=0; i<n_loci; ++i) {
+        MergedStack& loc = pe_loci[i];
+        if(loc.utags.empty())
+            continue;
+        loci_map.insert({loc.id, &loc});
+
+        for (PStack& stack : stacks_per_loc[i])
+            stacks_map.insert({stack.id, &stack});
+    }
+
+    // Call the variants.
+    call_consensus(loci_map, stacks_map, true);
+
+    // Write results.
+    // ----------
     cout << "Writing results..." << endl;
-    write_results(loci, stacks, is_input_gzipped, true);
+    write_results(loci_map, stacks_map, is_input_gzipped, true);
 
     cout << "pstacks_pe is done." << endl;
     return 0;
@@ -242,167 +255,142 @@ void link_reads_to_loci(
     }
 }
 
+vector<vector<PStack> > load_aligned_reads(
+        size_t n_loci,
+        const std::unordered_map<std::string, size_t>& read_name_to_loc
+        ) {
+    vector<vector<PStack> > stacks_per_loc;
 
-ReadsByCLoc::ReadsByCLoc(
-        Input* pe_reads_f,
-        size_t n_cloci,
-        const unordered_map<string, size_t>& read_name_to_cloc
-        )
-: n_used_reads(0)
-, unique_seqs()
-, readsets(n_cloci)
-{
+    // Open the alignment file.
+    Input* pe_reads_f;
+    if (in_file_type == FileT::bam)
+        pe_reads_f = new Bam(paired_alns_path.c_str());
+    else
+        throw exception(); //todo
+    if (pe_reads_f == NULL) {
+        cerr << "Error: Failed to open file '" << paired_alns_path << "'." << endl;
+        throw exception();
+    }
+
+    // Read and stack the alignments, per locus.
+    vector<set<PStack> > stack_sets_per_loc (n_loci);
+    size_t n_used_reads = 0;
+    size_t next_stack_id = 0;
     Seq seq;
     while(pe_reads_f->next_seq(seq)) {
-        auto cloc_it = read_name_to_cloc.find(seq.id);
-        if (cloc_it != read_name_to_cloc.end()) {
+        auto it = read_name_to_loc.find(seq.id);
+        if (it != read_name_to_loc.end()) {
             ++n_used_reads;
-            add_seq_to_cloc(cloc_it->second, seq);
+            set<PStack>& loc = stack_sets_per_loc[it->second];
+
+            PStack key;
+            key.loc = seq.loc;
+            key.add_seq(seq.seq);
+
+            auto ins = loc.insert(move(key));
+            set<PStack>::iterator stack = ins.first;
+            if (ins.second) {
+                PStack::set_id_of(stack, next_stack_id);
+                ++next_stack_id;
+            }
+            PStack::add_read_to(stack, seq.id);
         }
     }
+    if (n_used_reads == 0) {
+        cerr << "Error: Failed to find any matching paired-end reads in '" << paired_alns_path << "'." << endl;
+        throw exception();
+    }
+
+    // Get the PStacks out of their set.
+    stacks_per_loc.reserve(n_loci);
+    for (set<PStack>& loc : stack_sets_per_loc) {
+        stacks_per_loc.push_back(vector<PStack>(loc.begin(), loc.end())); // But see set::extract in c++17
+        loc.clear();
+    }
+
+    cout << "Found " << n_used_reads << " aligned paired-end reads, created " << next_stack_id << " stacks." << endl;
+    return stacks_per_loc;
 }
 
-void ReadsByCLoc::convert_to_pmstacks(
-        const vector<int>& sloc_to_sloc_id,
-        map<int, PStack*>& pstacks,
-        map<int, MergedStack*>& mstacks
-        ) {
-    int pstack_id = 0;
+MergedStack merge_pstacks(vector<PStack>& pstacks, int loc_id) {
+    MergedStack locus;
+    locus.id = loc_id;
 
-    for (size_t sloc=0; sloc<readsets.size(); ++sloc) {
+    // Determine the positions spanned by the PStacks.
+    // ----------
+    assert(!pstacks.empty());
+    PhyLoc loc = pstacks.begin()->loc;
+    uint len = pstacks.begin()->seq->size();
+    set<const PStack*> non_olap; //xxx For now, ignore non-overlapping pstacks.
+    for (const PStack& p : pstacks) {
 
-        //
-        // Check that there are paired-end reads for this c-locus.
-        //
-        // This is not necessarily the case if forward and paired reads were
-        // aligned independently -- i.e. the forward read may have been kept
-        // while the paired-end read was discarded.
-        //
-        // Loci without any paired-end reads just do not have entries in the
-        // `tags_pe` file.
-        //
-        if (readsets[sloc].empty())
+        // Check that the PStack is on the same chromosome and strand.
+        if (strcmp(p.loc.chr, loc.chr) != 0
+                || p.loc.strand != loc.strand) {
+            non_olap.insert(&p);
             continue;
-
-        //
-        // First, obtain the raw PStacks of this c-locus.
-        // The PStacks share their sequence and location.
-        //
-        vector<PStack*> cloc_pstacks;
-        for (auto& identical_reads : readsets[sloc]) {
-            map<PhyLoc, PStack*> cloc_pstacks_by_loc;
-
-            for (const Seq& s : identical_reads.second) {
-                PStack*& p = cloc_pstacks_by_loc.insert({s.loc, NULL}).first->second; // n.b. ref to pointer
-                if (p == NULL) {
-                    // This element was just created; this is a novel (location, seq) combination.
-                    p = new PStack();
-                    p->id = pstack_id;
-                    ++pstack_id;
-                    p->loc = s.loc;
-                    p->add_seq(identical_reads.first);
-
-                    cloc_pstacks.push_back(p);
-                }
-                ++p->count;
-                p->add_id(s.id);
-            }
         }
 
-        //
-        // Determine the positions spanned by the PStacks.
-        //
-        const PStack* first_pstack = *cloc_pstacks.begin();
-        PhyLoc loc = first_pstack->loc;
-        uint len = first_pstack->seq->size();
-        set<const PStack*> non_olap; //xxx For now, ignore non-overlapping pstacks.
-        for (const PStack* p : cloc_pstacks) {
-            // Check that the PStack is on the same chromosome and strand.
-            if (strcmp(p->loc.chr, loc.chr) != 0
-                    || p->loc.strand != loc.strand) {
-                non_olap.insert(p);
+        if (loc.strand == strand_plus) {
+            // Check that the PStack overlaps.
+            if (p.loc.bp > loc.bp + len - 1 || p.loc.bp +p.seq->size() - 1 < loc.bp) {
+                non_olap.insert(&p);
                 continue;
             }
+            if (loc.bp > p.loc.bp) {
+                // Extend left.
+                len += loc.bp - p.loc.bp;
+                loc.bp = p.loc.bp;
+            }
+            if (loc.bp + len < p.loc.bp +p.seq->size()) {
+                // Extend right.
+                len += p.loc.bp + p.seq->size() - (loc.bp + len);
+            }
+        } else {
+            // loc.strand == strand_minus
 
-            if (loc.strand == strand_plus) {
-                // Check that the PStack overlaps.
-                if (p->loc.bp > loc.bp + len - 1 || p->loc.bp +p->seq->size() - 1 < loc.bp) {
-                    non_olap.insert(p);
-                    continue;
-                }
-                if (loc.bp > p->loc.bp) {
-                    // Extend left.
-                    len += loc.bp - p->loc.bp;
-                    loc.bp = p->loc.bp;
-                }
-                if (loc.bp + len < p->loc.bp +p->seq->size()) {
-                    // Extend right.
-                    len += p->loc.bp + p->seq->size() - (loc.bp + len);
-                }
-            } else {
-                // loc.strand == strand_minus
+            assert(p.loc.bp + 1 >= uint(p.seq->size())); // Alignments shouldn't start before the beginning of chromosomes.
 
-                assert(p->loc.bp + 1 >= uint(p->seq->size())); // Alignments shouldn't start before the beginning of chromosomes.
-
-                // Check that the PStack overlaps.
-                if (p->loc.bp -p->seq->size() + 1 > loc.bp || p->loc.bp < loc.bp - len + 1) {
-                    non_olap.insert(p);
-                    continue;
-                }
-                if (loc.bp - len > p->loc.bp - p->seq->size()) {
-                    // Extend left.
-                    len += loc.bp - len - (p->loc.bp - p->seq->size());
-                }
-                if (loc.bp < p->loc.bp) {
-                    // Extend right.
-                    len += p->loc.bp - loc.bp;
-                    loc.bp = p->loc.bp;
-                }
+            // Check that the PStack overlaps.
+            if (p.loc.bp - p.seq->size() + 1 > loc.bp || p.loc.bp < loc.bp - len + 1) {
+                non_olap.insert(&p);
+                continue;
+            }
+            if (loc.bp < p.loc.bp) {
+                // Extend right.
+                len += p.loc.bp - loc.bp;
+                loc.bp = p.loc.bp;
+            }
+            const int loc_last = int(loc.bp) - int(len) + 1;
+            const int stack_last = int(p.loc.bp) - int(p.seq->size()) + 1;
+            if (loc_last > stack_last) {
+                // Extend left.
+                len += loc_last - stack_last;
             }
         }
-
-        //
-        // Extend the PStacks so that they all have the same location and length.
-        //
-        for (PStack* p : cloc_pstacks) {
-            if (non_olap.count(p))
-                continue;
-            p->extend(loc, len);
-        }
-
-        //
-        // Create the MergedStack of the clocus
-        //
-        MergedStack* m = new MergedStack();
-        m->id = sloc_to_sloc_id[sloc];
-        m->add_consensus(first_pstack->seq);
-        assert(m->len == len);
-        m->loc = loc;
-        for (const PStack* p : cloc_pstacks) {
-            if (non_olap.count(p))
-                continue;
-            m->count += p->count;
-            m->utags.push_back(p->id);
-        }
-
-        //
-        // Insert the MergedStack and the PStack's of the c-locus in
-        // in the global objects.
-        //
-        mstacks.insert({m->id, m});
-        for (PStack* p : cloc_pstacks) {
-            if (non_olap.count(p))
-                continue;
-            pstacks.insert({p->id, p});
-        }
-
-        //
-        // Clear the processed CLocReadSet.
-        //
-        readsets[sloc].clear();
     }
 
-    return;
+    // Extend the stacks so that they all have the same length (and starting location).
+    // ----------
+    for (PStack& p : pstacks) {
+        if (non_olap.count(&p))
+            continue;
+        p.extend(loc, len);
+        assert(uint(p.seq->size()) == len);
+    }
+
+    // Build the MergedStack.
+    // ----------
+    locus.add_consensus(pstacks.begin()->seq);
+    locus.loc = loc;
+    for (const PStack& p : pstacks) {
+        if (non_olap.count(&p))
+            continue;
+        locus.count += p.count;
+        locus.utags.push_back(p.id);
+    }
+
+    return locus;
 }
 
 const string help_string = string() +

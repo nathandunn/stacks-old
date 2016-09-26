@@ -43,16 +43,19 @@ MergedStack::MergedStack()  {
     this->deleveraged     = false;
     this->masked          = false;
     this->blacklisted     = false;
+    this->gappedlumberjack = false;
     this->lumberjackstack = false;
 }
 
 MergedStack::~MergedStack() {
-    delete [] this->con;
+    if (con != NULL)
+        delete[] con;
+
+    if (matrix != NULL)
+        delete[] matrix;
 
     for (uint i = 0; i < snps.size(); i++)
-        delete this->snps[i];
-
-    delete [] this->matrix;
+        delete snps[i];
 }
 
 int MergedStack::add_consensus(const char *seq) {

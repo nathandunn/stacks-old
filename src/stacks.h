@@ -72,9 +72,11 @@ public:
         strand = strand_plus;
     }
     PhyLoc(const PhyLoc& other)
-        : bp(other.bp), strand(other.strand) {
-        chr = new char[strlen(other.chr)+1];
-        strcpy(chr, other.chr);
+        : chr(NULL), bp(other.bp), strand(other.strand) {
+        if (other.chr != NULL) {
+            chr = new char[strlen(other.chr)+1];
+            strcpy(chr, other.chr);
+        }
     }
     PhyLoc(const char *chr, uint bp) {
         this->chr    = new char[strlen(chr)  + 1];
@@ -198,12 +200,32 @@ class PStack {
         for (unsigned int i = 0; i < this->map.size(); i++)
             delete [] this->map[i];
     }
+
+    PStack(const PStack& other);
+    PStack& operator= (const PStack& other) = delete;
+
     int  add_id(const char *);
     int  add_seq(const char *);
     int  add_seq(const DNANSeq *);
+    void add_read(const char* read_name) {
+        char* copy = new char[strlen(read_name)+1];
+        strcpy(copy, read_name);
+        map.push_back(copy);
+        ++count;
+    }
 
     // extend(): Extends the PStack to the desired span.
-    void extend(const PhyLoc& phyloc, uint length);
+    void extend(const PhyLoc& phyloc, int length);
+
+    bool operator< (const PStack& other) const;
+
+    static void set_id_of(set<PStack>::iterator pstack, int id) {
+        const_cast<PStack&>(*pstack).id = id;
+    }
+    static void add_read_to(set<PStack>::iterator pstack, const char* read_name) {
+        const_cast<PStack&>(*pstack).add_read(read_name);
+    }
+
 };
 
 class Stack {
@@ -303,5 +325,32 @@ public:
         this->snps.clear();
     }
 };
+
+inline
+PStack::PStack(const PStack& other)
+        : id(other.id)
+        , count (other.count)
+        , seq (new DNANSeq(*other.seq))
+        , map ()
+        , loc (other.loc)
+        {
+    map.reserve(other.map.size());
+    for (const char* readname : other.map) {
+        char* copy = new char[strlen(readname)+1];
+        strcpy(copy, readname);
+        map.push_back(copy);
+    }
+}
+
+inline
+bool PStack::operator< (const PStack& other) const {
+    if (loc < other.loc)
+        return true;
+    else if (other.loc < loc)
+        return false;
+    else
+        // Same genomic loci, compare sequences.
+        return *seq < *other.seq;
+}
 
 #endif // __STACKS_H__

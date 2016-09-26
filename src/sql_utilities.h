@@ -61,7 +61,7 @@ load_loci(const string& sample,  map<int, LocusT *> &loci, int store_reads, bool
     ifstream       fh;
     gzFile         gz_fh;
 
-    char *line      = (char *) malloc(sizeof(char) * max_len);
+    char *line      = new char[max_len];
     int   size      = max_len;
     bool  gzip      = false;
     bool  open_fail = true;
