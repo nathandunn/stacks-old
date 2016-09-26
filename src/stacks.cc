@@ -97,7 +97,7 @@ int PStack::add_seq(const DNANSeq *seq) {
     return 0;
 }
 
-void PStack::extend(const PhyLoc& phyloc, uint length) {
+void PStack::extend(const PhyLoc& phyloc, int length) {
     if (this->seq == NULL)
         return;
 
@@ -111,11 +111,13 @@ void PStack::extend(const PhyLoc& phyloc, uint length) {
                 loc.bp - phyloc.bp,
                 phyloc.bp + length - loc.bp - seq->size());
     } else {
+        const int this_last = int(loc.bp) - int(seq->size()) + 1;
+        const int target_last = int(phyloc.bp) - int(length) + 1;
         assert(loc.bp <= phyloc.bp
-               && loc.bp - seq->size() >= phyloc.bp - length);
+               && this_last >= target_last);
         seq->extend(
                 phyloc.bp - loc.bp,
-                loc.bp - seq->size() - (phyloc.bp - length));
+                this_last - target_last);
     }
 
     loc = phyloc;
