@@ -172,7 +172,7 @@ class PStack {
 
     ~PStack() {
         if (seq!=NULL)
-            delete[] seq;
+            delete seq;
         for (unsigned int i = 0; i < this->map.size(); i++)
             delete [] this->map[i];
     }
