@@ -58,14 +58,6 @@ public:
     uint        bp;
     strand_type strand;
 
-    void set(const char *chr, uint bp, strand_type strand) {
-        if (this->chr != NULL)
-            delete [] this->chr;
-        this->chr    = new char[strlen(chr)  + 1];
-        this->bp     = bp;
-        this->strand = strand;
-        strcpy(this->chr,  chr);
-    }
     PhyLoc() {
         chr    = NULL;
         bp     = 0;
@@ -78,6 +70,7 @@ public:
             strcpy(chr, other.chr);
         }
     }
+    PhyLoc& operator=(const PhyLoc& other) {PhyLoc cp (other); swap(*this, cp); return *this;}
     PhyLoc(const char *chr, uint bp) {
         this->chr    = new char[strlen(chr)  + 1];
         this->bp     = bp;
@@ -90,46 +83,24 @@ public:
         this->strand = strnd;
         strcpy(this->chr,  chr);
     }
+
     ~PhyLoc() {
         if (chr != NULL)
             delete [] chr;
     }
 
-    friend void swap(PhyLoc& p, PhyLoc& q) {
-        char* chr = p.chr;
-        p.chr = q.chr;
-        q.chr = chr;
-
-        const uint bp = p.bp;
-        p.bp = q.bp;
-        q.bp = bp;
-
-        const strand_type strand = p.strand;
-        p.strand = q.strand;
-        q.strand = strand;
-    }
-    PhyLoc& operator=(const PhyLoc& other) {PhyLoc cp (other); swap(*this, cp); return *this;}
-
-    bool operator==(const PhyLoc& other) const {
-        if (bp == other.bp
-                && strand == other.strand
-                && strcmp(chr, other.chr) == 0)
-            return true;
-        else
-            return false;
+    void set(const char *ochr, uint obp, strand_type ostrand) {
+        if (chr != NULL)
+            delete[] chr;
+        chr    = new char[strlen(ochr)+1];
+        strcpy(chr,  ochr);
+        bp     = obp;
+        strand = ostrand;
     }
 
-    bool operator<(const PhyLoc& other) const {
-        const int chrcmp = strcmp(chr, other.chr);
-        if (chrcmp != 0)
-            // Alphanumeric.
-            return chrcmp < 0;
-        else if (bp != other.bp)
-            return bp < other.bp;
-        else
-            // Minus strand first.
-            return strand == strand_minus && other.strand == strand_plus;
-    }
+    friend void swap(PhyLoc& p, PhyLoc& q);
+    bool operator==(const PhyLoc& other) const;
+    bool operator<(const PhyLoc& other) const;
 };
 
 class SNP {
@@ -195,14 +166,16 @@ class PStack {
         count  = 0;
         seq    = NULL;
     }
+    PStack(const PStack& other);
+    PStack& operator= (PStack&& other);
+    PStack& operator= (const PStack& other) = delete;
+
     ~PStack() {
-        delete this->seq;
+        if (seq!=NULL)
+            delete[] seq;
         for (unsigned int i = 0; i < this->map.size(); i++)
             delete [] this->map[i];
     }
-
-    PStack(const PStack& other);
-    PStack& operator= (const PStack& other) = delete;
 
     int  add_id(const char *);
     int  add_seq(const char *);
@@ -326,6 +299,50 @@ public:
     }
 };
 
+//
+// Inline definitions
+// ----------
+//
+
+inline
+void swap(PhyLoc& p, PhyLoc& q) {
+    char* chr = p.chr;
+    p.chr = q.chr;
+    q.chr = chr;
+
+    const uint bp = p.bp;
+    p.bp = q.bp;
+    q.bp = bp;
+
+    const strand_type strand = p.strand;
+    p.strand = q.strand;
+    q.strand = strand;
+}
+
+inline
+bool PhyLoc::operator==(const PhyLoc& other) const {
+    if (bp == other.bp
+            && strand == other.strand
+            && strcmp(chr, other.chr) == 0)
+        return true;
+    else
+        return false;
+}
+
+inline
+bool PhyLoc::operator<(const PhyLoc& other) const {
+    const int chrcmp = strcmp(chr, other.chr);
+    if (chrcmp != 0)
+        // Alphanumeric.
+        return chrcmp < 0;
+    else if (bp != other.bp)
+        return bp < other.bp;
+    else
+        // Minus strand first.
+        return strand == strand_minus && other.strand == strand_plus;
+}
+
+
 inline
 PStack::PStack(const PStack& other)
         : id(other.id)
@@ -340,6 +357,17 @@ PStack::PStack(const PStack& other)
         strcpy(copy, readname);
         map.push_back(copy);
     }
+}
+
+inline
+PStack& PStack::operator= (PStack&& other) {
+    id = other.id;
+    count = other.count;
+    seq = other.seq;
+    other.seq = NULL;
+    swap(map, other.map);
+    swap(loc, other.loc);
+    return *this;
 }
 
 inline

@@ -3,6 +3,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <list>
 #include <map>
 #include <unordered_set>
 #include <unordered_map>
@@ -70,9 +71,10 @@ double p_freq             = 0.5; // const
 set<string> debug_flags;
 #define DEBUG_FWREADS "FWREADS"
 #define DEBUG_READNAMES "READNAMES"
+const set<string> known_debug_flags {DEBUG_FWREADS, DEBUG_READNAMES};
 
-/* main()
- * ========== */
+// main()
+// ==========
 int main(int argc, char* argv[]) {
     IF_NDEBUG_TRY
 
@@ -116,6 +118,7 @@ int main(int argc, char* argv[]) {
     // ----------
     cout << "Loading the paired-end sequences..." << endl;
     vector<vector<PStack> > stacks_per_loc = load_aligned_reads(n_loci, read_name_to_loc);
+    read_name_to_loc.clear();
 
     // Merge PStacks into MergedStacks
     // ----------
@@ -314,80 +317,66 @@ vector<vector<PStack> > load_aligned_reads(
 
 MergedStack merge_pstacks(vector<PStack>& pstacks, int loc_id) {
     MergedStack locus;
+    assert(!pstacks.empty());
     locus.id = loc_id;
 
     // Determine the positions spanned by the PStacks.
     // ----------
-    assert(!pstacks.empty());
-    PhyLoc loc = pstacks.begin()->loc;
-    uint len = pstacks.begin()->seq->size();
-    set<const PStack*> non_olap; //xxx For now, ignore non-overlapping pstacks.
+    list<Contig> contigs;
     for (const PStack& p : pstacks) {
+        auto c = contigs.begin();
+        for (; c!=contigs.end(); ++c)
+            if (c->add(p))
+                break;
+        if (c == contigs.end())
+            // This PStack doesn't overlap any of the existing contigs.
+            contigs.push_back(Contig(p));
+    }
 
-        // Check that the PStack is on the same chromosome and strand.
-        if (strcmp(p.loc.chr, loc.chr) != 0
-                || p.loc.strand != loc.strand) {
-            non_olap.insert(&p);
-            continue;
-        }
-
-        if (loc.strand == strand_plus) {
-            // Check that the PStack overlaps.
-            if (p.loc.bp > loc.bp + len - 1 || p.loc.bp +p.seq->size() - 1 < loc.bp) {
-                non_olap.insert(&p);
-                continue;
+    // Some contigs may have secondarily become overlapping, merge them.
+    for (auto c=contigs.begin(); c!=contigs.end(); ++c) {
+        auto other = c;
+        ++other;
+        while (other != contigs.end()) {
+            if (c->add(*other)) {
+                contigs.erase(other);
+                other=c; // start from ctg again
             }
-            if (loc.bp > p.loc.bp) {
-                // Extend left.
-                len += loc.bp - p.loc.bp;
-                loc.bp = p.loc.bp;
-            }
-            if (loc.bp + len < p.loc.bp +p.seq->size()) {
-                // Extend right.
-                len += p.loc.bp + p.seq->size() - (loc.bp + len);
-            }
-        } else {
-            // loc.strand == strand_minus
-
-            assert(p.loc.bp + 1 >= uint(p.seq->size())); // Alignments shouldn't start before the beginning of chromosomes.
-
-            // Check that the PStack overlaps.
-            if (p.loc.bp - p.seq->size() + 1 > loc.bp || p.loc.bp < loc.bp - len + 1) {
-                non_olap.insert(&p);
-                continue;
-            }
-            if (loc.bp < p.loc.bp) {
-                // Extend right.
-                len += p.loc.bp - loc.bp;
-                loc.bp = p.loc.bp;
-            }
-            const int loc_last = int(loc.bp) - int(len) + 1;
-            const int stack_last = int(p.loc.bp) - int(p.seq->size()) + 1;
-            if (loc_last > stack_last) {
-                // Extend left.
-                len += loc_last - stack_last;
-            }
+            ++other;
         }
     }
 
-    // Extend the stacks so that they all have the same length (and starting location).
+    // Find the contig with the most reads.
     // ----------
-    for (PStack& p : pstacks) {
-        if (non_olap.count(&p))
-            continue;
-        p.extend(loc, len);
-        assert(uint(p.seq->size()) == len);
+    const Contig* best_c = NULL;
+    size_t best_n_reads = 0;
+    for(Contig& c : contigs) {
+        if (c.count() > best_n_reads) {
+            best_c = &c;
+            best_n_reads = best_c->count();
+        }
     }
 
     // Build the MergedStack.
     // ----------
-    locus.add_consensus(pstacks.begin()->seq);
-    locus.loc = loc;
-    for (const PStack& p : pstacks) {
-        if (non_olap.count(&p))
-            continue;
-        locus.count += p.count;
-        locus.utags.push_back(p.id);
+    for (const PStack* s : best_c->stacks)
+        locus.utags.push_back(s->id);
+    locus.count = best_n_reads;
+    locus.add_consensus(string('N', best_c->len).c_str());
+
+    // Destroy the PStacks that we couldn't use.
+    // ----------
+    pstacks.erase(remove_if(
+            pstacks.begin(),
+            pstacks.end(),
+            [&best_c] (PStack& s) {return ! best_c->stacks.count(&s);}
+            ), pstacks.end());
+
+    // Extend the stacks so that they all have the same length (and starting location).
+    // ----------
+    for (PStack& p : pstacks) {
+        assert(best_c->stacks.count(&p)); //todo
+        p.extend(best_c->loc, best_c->len);
     }
 
     return locus;
@@ -521,7 +510,6 @@ void parse_command_line(int argc, char* argv[]) {
             break;
         case 999: //debug_flags
         {
-            static const set<string> known_debug_flags = {DEBUG_FWREADS, DEBUG_READNAMES};
             stringstream ss (optarg);
             string s;
             while (getline(ss, s, ',')) {

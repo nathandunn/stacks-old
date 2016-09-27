@@ -124,7 +124,7 @@ DNANSeq::~DNANSeq() {
     delete [] this->s;
 }
 
-char DNANSeq::operator[](int pos) {
+char DNANSeq::operator[](int pos) const {
     unsigned char c, base;
     int bit;
 
@@ -170,7 +170,7 @@ int DNANSeq::size() const {
     return this->bits / bits_per_nuc;
 }
 
-char *DNANSeq::subseq(char *seq, int start, int end) {
+char *DNANSeq::subseq(char *seq, int start, int end) const {
     int i;
 
     for (i = start; i <= end; i++)
@@ -181,29 +181,17 @@ char *DNANSeq::subseq(char *seq, int start, int end) {
     return seq;
 }
 
-char *DNANSeq::seq(char *seq) {
-    int i;
-    int end = this->bits / bits_per_nuc;
-
-    for (i = 0; i < end; i++)
-        seq[i] = this->operator[](i);
-
-    seq[i] = '\0';
-
-    return seq;
+char *DNANSeq::seq(char *s) const {
+    for (int i = 0; i < size(); i++)
+        s[i] = operator[](i);
+    s[size()] = '\0';
+    return s;
 }
 
-char *DNANSeq::seq() {
-    int i;
-    int  size = this->bits / bits_per_nuc;
-    char *seq = new char[size + 1];
-
-    for (i = 0; i < size; i++)
-        seq[i] = this->operator[](i);
-
-    seq[i] = '\0';
-
-    return seq;
+char *DNANSeq::seq() const {
+    char *s = new char[size() + 1];
+    seq(s);
+    return s;
 }
 
 void DNANSeq::extend(int before, int after) {

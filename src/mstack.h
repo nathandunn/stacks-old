@@ -80,7 +80,7 @@ class MergedStack {
 
     int       add_consensus(const char *);
     int       add_consensus(DNASeq *);
-    int       add_consensus(DNANSeq *);
+    int       add_consensus(const DNANSeq *);
     int       add_dist(const int id, const int dist);
     DNANSeq **gen_matrix(map<int, Stack *> &, map<int, Rem *> &);
     DNANSeq **gen_matrix(map<int, PStack *> &);
