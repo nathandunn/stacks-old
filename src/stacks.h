@@ -98,6 +98,7 @@ public:
         strand = ostrand;
     }
 
+    void clear() {if(chr!=NULL) {delete[] chr; chr=NULL;} bp=0; strand=strand_plus;}
     friend void swap(PhyLoc& p, PhyLoc& q);
     bool operator==(const PhyLoc& other) const;
     bool operator<(const PhyLoc& other) const;
@@ -190,6 +191,7 @@ class PStack {
     // extend(): Extends the PStack to the desired span.
     void extend(const PhyLoc& phyloc, int length);
 
+    void clear();
     bool operator< (const PStack& other) const;
 
     static void set_id_of(set<PStack>::iterator pstack, int id) {
@@ -368,6 +370,18 @@ PStack& PStack::operator= (PStack&& other) {
     swap(map, other.map);
     swap(loc, other.loc);
     return *this;
+}
+
+inline
+void PStack::clear() {
+    id = 0;
+    count = 0;
+    if(seq!=NULL) {
+        delete seq;
+        seq = NULL;
+    }
+    map.clear();
+    loc.clear();
 }
 
 inline
