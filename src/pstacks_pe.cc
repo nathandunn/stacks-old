@@ -364,20 +364,22 @@ MergedStack merge_pstacks(vector<PStack>& pstacks, int loc_id) {
     locus.count = best_n_reads;
     locus.add_consensus(string('N', best_c->len).c_str());
 
-    // Destroy the PStacks that we couldn't use.
-    // ----------
-    pstacks.erase(remove_if(
-            pstacks.begin(),
-            pstacks.end(),
-            [&best_c] (PStack& s) {return ! best_c->stacks.count(&s);}
-            ), pstacks.end());
-
-    // Extend the stacks so that they all have the same length (and starting location).
+    // Extend the stacks so that they all have the same span, and destroy the
+    // PStacks that we couldn't use.
     // ----------
     for (PStack& p : pstacks) {
-        assert(best_c->stacks.count(&p)); //todo
-        p.extend(best_c->loc, best_c->len);
+        if (best_c->stacks.count(&p))
+            p.extend(best_c->loc, best_c->len);
+        else
+            p.clear();
     }
+    pstacks.erase(remove_if( // note: The `Contig::stack`s are invalidated.
+            pstacks.begin(),
+            pstacks.end(),
+            [] (PStack& s) {return s.seq == NULL;}
+            ), pstacks.end());
+
+    assert(pstacks.size() == best_c->stacks.size());
 
     return locus;
 }
