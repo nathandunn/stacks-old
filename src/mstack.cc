@@ -81,7 +81,7 @@ int MergedStack::add_consensus(DNASeq *seq) {
     return 0;
 }
 
-int MergedStack::add_consensus(DNANSeq *seq) {
+int MergedStack::add_consensus(const DNANSeq *seq) {
     if (this->con != NULL)
         delete [] this->con;
 

@@ -62,11 +62,11 @@ public:
     DNANSeq& operator= (const DNANSeq& other) =delete;
     ~DNANSeq();
 
-    char  operator[](int);
+    char  operator[](int) const;
     int   size() const;
-    char *seq(char *);
-    char *seq();
-    char *subseq(char *, int, int);
+    char *seq(char *) const;
+    char *seq() const;
+    char *subseq(char *, int, int) const;
 
     void extend(int before, int after);
 
