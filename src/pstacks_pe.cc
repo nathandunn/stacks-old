@@ -7,7 +7,6 @@
 #include <map>
 #include <unordered_set>
 #include <unordered_map>
-#include <cassert>
 
 #include <getopt.h>
 #ifdef _OPENMP
@@ -137,6 +136,17 @@ int main(int argc, char* argv[]) {
         pe_loci.push_back(stacks.empty() ? MergedStack() : merge_pstacks(stacks, sloc_ids[i]));
     }
 
+    // Report results.
+    size_t n_pe_loci = 0;
+    size_t n_stacks = 0;
+    for (const MergedStack& l : pe_loci) {
+        if (l.utags.empty())
+            continue;
+        ++n_pe_loci;
+        n_stacks+=l.utags.size();
+    }
+    cout << "Created " << n_pe_loci << " paired loci with " << n_stacks << " stacks." << endl;
+
     // Call SNPs and alleles.
     // ----------
     cout << "Calling SNPs..." << endl;
@@ -153,6 +163,7 @@ int main(int argc, char* argv[]) {
         for (PStack& stack : stacks_per_loc[i])
             stacks_map.insert({stack.id, &stack});
     }
+    assert(loci_map.size() == n_pe_loci);
 
     // Call the variants.
     call_consensus(loci_map, stacks_map, true);
