@@ -370,10 +370,11 @@ MergedStack merge_pstacks(vector<PStack>& pstacks, int loc_id) {
 
     // Build the MergedStack.
     // ----------
+    locus.loc = best_c->loc;
+    locus.add_consensus(string('N', best_c->len).c_str());
     for (const PStack* s : best_c->stacks)
         locus.utags.push_back(s->id);
     locus.count = best_n_reads;
-    locus.add_consensus(string('N', best_c->len).c_str());
 
     // Extend the stacks so that they all have the same span, and destroy the
     // PStacks that we couldn't use.
