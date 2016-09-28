@@ -15,15 +15,16 @@
 
 #include "constants.h"
 #include "log_utils.h"
-#include "input.h"
-#include "BamI.h"
-#include "sql_utilities.h"
-
 #include "stacks.h"
 #include "models.h"
+#include "input.h"
+#include "BamI.h"
+#include "SamI.h"
+#include "BowtieI.h"
+#include "Tsv.h"
+#include "sql_utilities.h"
 
 #include "pstacks_base.h"
-
 #include "pstacks_pe.h"
 
 #ifdef DEBUG
@@ -278,12 +279,14 @@ vector<vector<PStack> > load_aligned_reads(
     Input* pe_reads_f;
     if (in_file_type == FileT::bam)
         pe_reads_f = new Bam(paired_alns_path.c_str());
+    else if (in_file_type == FileT::sam)
+        pe_reads_f = new Sam(paired_alns_path.c_str());
+    else if (in_file_type == FileT::bowtie)
+        pe_reads_f = new Bowtie(paired_alns_path.c_str());
+    else if (in_file_type == FileT::tsv)
+        pe_reads_f = new Tsv(paired_alns_path.c_str());
     else
-        throw exception(); //todo
-    if (pe_reads_f == NULL) {
-        cerr << "Error: Failed to open file '" << paired_alns_path << "'." << endl;
-        throw exception();
-    }
+        assert(NEVER);
 
     // Read and stack the alignments, per locus.
     vector<set<PStack> > stack_sets_per_loc (fwloci_info.size());
@@ -485,8 +488,10 @@ void parse_command_line(int argc, char* argv[]) {
                 in_file_type = FileT::bam;
             else if (strcmp(optarg, "tsv") == 0)
                 in_file_type = FileT::tsv;
-            else
-                in_file_type = FileT::unknown;
+            else {
+                cerr << "Error: Unknown file type '" << optarg << "'.\n";
+                bad_args();
+            }
             break;
         case 1001: //model
             if (strcmp(optarg, "snp") == 0) {

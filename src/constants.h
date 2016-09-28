@@ -35,6 +35,7 @@
 #ifndef DEBUG
 #define NDEBUG
 #endif
+#define NEVER false
 
 typedef unsigned int uint;
 
@@ -100,7 +101,7 @@ std::string to_string(const FileT& ft) {
         return "fastphase";
     if (ft == FileT::beagle)
         return "beagle";
-    assert(false);
+    assert(NEVER);
     return "?!";
 }
 
