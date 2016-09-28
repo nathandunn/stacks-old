@@ -106,17 +106,17 @@ int main(int argc, char* argv[]) {
      // ----------
     cout << "Reading read-to-locus information from the tags file..." << endl;
     unordered_map<string, size_t> read_name_to_loc; // map of (read name, loc index)
-    vector<int> sloc_ids;
+    vector<FwLocInfo> fwloci_info;
     bool is_input_gzipped;
-    link_reads_to_loci(bij_sloci, read_name_to_loc, sloc_ids, is_input_gzipped);
-    const size_t n_loci = sloc_ids.size();
+    link_reads_to_loci(bij_sloci, read_name_to_loc, fwloci_info, is_input_gzipped);
+    const size_t n_loci = fwloci_info.size();
     cout << "This sample covers " << n_loci
          << " catalog loci with " << read_name_to_loc.size() << " reads." << endl;
 
     // Load the paired-ends into PStacks.
     // ----------
     cout << "Loading the paired-end sequences..." << endl;
-    vector<vector<PStack> > stacks_per_loc = load_aligned_reads(n_loci, read_name_to_loc);
+    vector<vector<PStack> > stacks_per_loc = load_aligned_reads(fwloci_info, read_name_to_loc);
     read_name_to_loc.clear();
 
     // Merge PStacks into MergedStacks
@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
     pe_loci.reserve(n_loci);
     for (size_t i=0; i<n_loci; ++i) {
         vector<PStack>& stacks = stacks_per_loc[i];
-        pe_loci.push_back(stacks.empty() ? MergedStack() : merge_pstacks(stacks, sloc_ids[i]));
+        pe_loci.push_back(stacks.empty() ? MergedStack() : merge_pstacks(stacks, fwloci_info[i].id));
     }
 
     // Report results.
@@ -163,7 +163,6 @@ int main(int argc, char* argv[]) {
         for (PStack& stack : stacks_per_loc[i])
             stacks_map.insert({stack.id, &stack});
     }
-    assert(loci_map.size() == n_pe_loci);
 
     // Call the variants.
     call_consensus(loci_map, stacks_map, true);
@@ -229,7 +228,7 @@ void convert_fw_read_name_to_paired(string& read_name) {
 void link_reads_to_loci(
         const unordered_set<int>& bij_sloci,
         unordered_map<string, size_t>& pread_name_to_loc,
-        vector<int>& sloc_ids,
+        vector<FwLocInfo>& sloci_info,
         bool& is_input_gzipped
         ) {
 
@@ -247,14 +246,14 @@ void link_reads_to_loci(
         if (not bij_sloci.count(sloc.id))
             continue;
 
-        sloc_ids.push_back(sloc.id);
+        sloci_info.push_back(FwLocInfo(sloc.id, sloc.loc));
 
         // For each first read,
         for (const char* fread_name : sloc.comp) {
             string pread_name (fread_name);
             if (process_names)
                 convert_fw_read_name_to_paired(pread_name);
-            pread_name_to_loc.insert( {pread_name, sloc_ids.size()-1} );
+            pread_name_to_loc.insert( {pread_name, sloci_info.size()-1} );
         }
     }
 
@@ -270,7 +269,7 @@ void link_reads_to_loci(
 }
 
 vector<vector<PStack> > load_aligned_reads(
-        size_t n_loci,
+        const vector<FwLocInfo>& fwloci_info,
         const std::unordered_map<std::string, size_t>& read_name_to_loc
         ) {
     vector<vector<PStack> > stacks_per_loc;
@@ -287,28 +286,31 @@ vector<vector<PStack> > load_aligned_reads(
     }
 
     // Read and stack the alignments, per locus.
-    vector<set<PStack> > stack_sets_per_loc (n_loci);
+    vector<set<PStack> > stack_sets_per_loc (fwloci_info.size());
     size_t n_used_reads = 0;
     size_t next_stack_id = 0;
     Seq seq;
     while(pe_reads_f->next_seq(seq)) {
         auto it = read_name_to_loc.find(seq.id);
-        if (it != read_name_to_loc.end()) {
-            ++n_used_reads;
-            set<PStack>& loc = stack_sets_per_loc[it->second];
+        if (it == read_name_to_loc.end())
+            continue;
+        if (! fwloci_info[it->second].is_upstream_of(seq))
+            continue;
 
-            PStack key;
-            key.loc = seq.loc;
-            key.add_seq(seq.seq);
+        ++n_used_reads;
+        set<PStack>& loc = stack_sets_per_loc[it->second];
 
-            auto ins = loc.insert(move(key));
-            set<PStack>::iterator stack = ins.first;
-            if (ins.second) {
-                PStack::set_id_of(stack, next_stack_id);
-                ++next_stack_id;
-            }
-            PStack::add_read_to(stack, seq.id);
+        PStack key;
+        key.loc = seq.loc;
+        key.add_seq(seq.seq);
+
+        auto ins = loc.insert(move(key));
+        set<PStack>::iterator stack = ins.first;
+        if (ins.second) {
+            PStack::set_id_of(stack, next_stack_id);
+            ++next_stack_id;
         }
+        PStack::add_read_to(stack, seq.id);
     }
     if (n_used_reads == 0) {
         cerr << "Error: Failed to find any matching paired-end reads in '" << paired_alns_path << "'." << endl;
@@ -316,7 +318,7 @@ vector<vector<PStack> > load_aligned_reads(
     }
 
     // Get the PStacks out of their set.
-    stacks_per_loc.reserve(n_loci);
+    stacks_per_loc.reserve(fwloci_info.size());
     for (set<PStack>& loc : stack_sets_per_loc) {
         stacks_per_loc.push_back(vector<PStack>(loc.begin(), loc.end())); // But see set::extract in c++17
         loc.clear();

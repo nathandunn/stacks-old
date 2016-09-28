@@ -9,6 +9,18 @@
 void parse_command_line(int argc, char* argv[]);
 void report_options(std::ostream& fh);
 
+// FwLocInfo
+// ----------
+// Keeps track of the IDs and genomic positions of the forward loci.
+struct FwLocInfo {
+    int id;
+    PhyLoc loc;
+
+    FwLocInfo(int i, const PhyLoc& l) : id(i), loc(l) {}
+
+    bool is_upstream_of(const Seq& s) const;
+};
+
 // Contig
 // ----------
 // Keeps track of the positions spanned by a set of PStacks.
@@ -50,7 +62,7 @@ void convert_fw_read_name_to_paired(std::string& read_name);
 void link_reads_to_loci(
         const std::unordered_set<int>& bij_sloci,
         std::unordered_map<std::string, size_t>& read_name_to_loc,
-        std::vector<int>& sloc_ids,
+        std::vector<FwLocInfo>& sloc_ids,
         bool& gzipped_input
         );
 
@@ -58,8 +70,8 @@ void link_reads_to_loci(
 // ----------
 // Collapses reads into PStacks according to their sequence and PhyLoc.
 // Uses glob `paired_alns_path`.
-vector<vector<PStack> > load_aligned_reads(
-        size_t n_loci,
+std::vector<std::vector<PStack> > load_aligned_reads(
+        const std::vector<FwLocInfo>& fwloci_info,
         const std::unordered_map<std::string, size_t>& read_name_to_loc
         );
 
@@ -73,6 +85,24 @@ MergedStack merge_pstacks(std::vector<PStack>& pstacks, int loc_id);
 // Inline definitions.
 // ----------
 //
+
+inline
+bool FwLocInfo::is_upstream_of(const Seq& s) const {
+    static const int max_allowed_distance = 5000;
+
+    if (strcmp(loc.chr, s.loc.chr) != 0)
+        return false;
+
+    // note: It is unneeded to check for the read's strand.
+
+    if (loc.strand == strand_plus)
+        return s.loc.bp >= loc.bp
+                && s.loc.bp < loc.bp + max_allowed_distance;
+    else
+        return s.loc.bp <= loc.bp
+                && int(s.loc.bp) > int(loc.bp) - max_allowed_distance;
+}
+
 
 inline
 bool Contig::overlaps(const PhyLoc& oloc, int olen) const {
