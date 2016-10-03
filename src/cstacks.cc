@@ -598,7 +598,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
                     hit_cnt   = 0;
                     allele_id = prev_id;
 
-                    while (index < hits_size && (uint)hits[index] == prev_id) {
+                    while (index < hits_size && (uint) hits[index] == prev_id) {
                         hit_cnt++;
                         index++;
                     }
@@ -606,7 +606,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
                     if (index < hits_size)
                         prev_id = hits[index];
 
-                    if (hit_cnt >= (uint)min_hits)
+                    if (hit_cnt >= (uint) min_hits)
                         ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
                 } while (index < hits_size);
