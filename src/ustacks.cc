@@ -1958,7 +1958,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         #endif
         gz_mods = gzopen(mod_file.c_str(), "wb");
         if (!gz_mods) {
-            cerr << "Error: Unable to open gzipped tag file '" << tag_file << "': " << strerror(errno) << ".\n";
+            cerr << "Error: Unable to open gzipped model file '" << mod_file << "': " << strerror(errno) << ".\n";
             exit(1);
         }
         #if ZLIB_VERNUM >= 0x1240
@@ -1988,7 +1988,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         }
         mods.open(mod_file.c_str());
         if (mods.fail()) {
-            cerr << "Error: Unable to open tag file for writing.\n";
+            cerr << "Error: Unable to open model file for writing.\n";
             exit(1);
         }
         snps.open(snp_file.c_str());
