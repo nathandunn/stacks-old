@@ -1,5 +1,7 @@
 Stacks 1.43
 --------------------------
+	Feature: updated test to check if compiler can handle c++11 standard.
+	Bugfix: rxstacks was not generating model files.
 	Bugfix: corrected an uncaught exception in cstacks when processing gapped alignments. In some cases when a
 	multiple alignment had to be recomputed the initial CIGAR string was not parsed properly leading to the
 	catalog and query sequences coming out of sync in their length (which could throw the exception).
