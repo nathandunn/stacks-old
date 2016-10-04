@@ -129,6 +129,13 @@ Bam::next_seq(Seq& s)
         this->find_start_bp_pos(this->aln->core.pos, cigar);
 
     //
+    // Check if this is the primary or secondary alignment.
+    //
+    alnt aln_type;
+    flag = ((this->aln->core.flag & BAM_FSECONDARY) != 0);
+    aln_type = flag ? sec_aln : pri_aln;
+
+    //
     // Fetch the sequence.
     //
     string  seq;
@@ -168,8 +175,22 @@ Bam::next_seq(Seq& s)
 
     string chr = this->chrs[this->aln->core.tid];
 
+    //
+    // Calculate the percentage of the sequence that was aligned to the reference.
+    //
+    double len = 0.0;
+    for (uint i = 0; i < cigar.size(); i++)
+        switch (cigar[i].first) {
+        case 'M':
+        case 'I':
+        case '=':
+            len += cigar[i].second;
+        }
+    double pct_aln = len / double(seq.length());
+
     s = Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str(),
-                     chr.c_str(), bp, flag ? strand_minus : strand_plus);
+            chr.c_str(), bp, flag ? strand_minus : strand_plus, 
+            aln_type, pct_aln);
 
     if (cigar.size() > 0)
         this->edit_gaps(cigar, s.seq);

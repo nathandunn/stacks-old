@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -21,12 +21,6 @@
 //
 // input.cc -- routines to read various formats of data into the XXX data structure.
 //
-// Julian Catchen
-// jcatchen@uoregon.edu
-// University of Oregon
-//
-// $Id$
-//
 
 #include "input.h"
 
@@ -35,6 +29,8 @@ Seq::Seq() {
     this->seq      = NULL;
     this->qual     = NULL;
     this->loc_str  = NULL;
+    this->aln_type = pri_aln;
+    this->pct_aln  = 1.0;
 }
 
 Seq::Seq(const Seq& other)
@@ -73,6 +69,9 @@ Seq::Seq(const char *id, const char *seq) {
 
     strcpy(this->id,   id);
     strcpy(this->seq,  seq);
+
+    this->aln_type = pri_aln;
+    this->pct_aln  = 1.0;
 }
 
 Seq::Seq(const char *id, const char *seq, const char *qual)  {
@@ -84,6 +83,9 @@ Seq::Seq(const char *id, const char *seq, const char *qual)  {
     strcpy(this->id,   id);
     strcpy(this->seq,  seq);
     strcpy(this->qual, qual);
+
+    this->aln_type = pri_aln;
+    this->pct_aln  = 1.0;
 }
 
 Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand)  {
@@ -106,6 +108,34 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
     } else {
         this->seq = rev_comp(seq);
     }
+
+    this->aln_type = pri_aln;
+    this->pct_aln  = 1.0;
+}
+
+Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand, alnt aln_type, double pct_aln)  {
+    this->id      = new char[strlen(id)   + 1];
+    this->qual    = new char[strlen(qual) + 1];
+    this->loc_str = new char[strlen(chr)  + 15];
+
+    strcpy(this->id,   id);
+    strcpy(this->qual, qual);
+    this->loc.set(chr, bp, strand);
+
+    sprintf(this->loc_str, "%s|%d|%c", chr, bp, strand == strand_plus ? '+' : '-');
+
+    //
+    // Reverse complement sequences from the negative strand
+    //
+    if (strand == strand_plus) {
+        this->seq = new char[strlen(seq)  + 1];
+        strcpy(this->seq, seq);
+    } else {
+        this->seq = rev_comp(seq);
+    }
+
+    this->aln_type = aln_type;
+    this->pct_aln  = pct_aln;
 }
 
 void swap(Seq& s1, Seq& s2) {
