@@ -1,5 +1,7 @@
 Stacks 1.43
 --------------------------
+	Feature: added alignment controls to pstacks, allowing the program to discard secondary alignments
+	and to discard alignments where a significant portion of the read was not aligned (soft-masked).
 	Bugfix: corrected a very small memory leak in the gapped alignment code, as revealed by Valgrind.
 	Feature: updated test to check if compiler can handle c++11 standard.
 	Bugfix: rxstacks was not generating model files.
