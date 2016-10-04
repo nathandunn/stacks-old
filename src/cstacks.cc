@@ -157,13 +157,20 @@ int main (int argc, char* argv[]) {
         i++;
 
         for (query_it = sample.begin(); query_it != sample.end(); query_it++)
-            delete (*query_it).second;
+            delete query_it->second;
         sample.clear();
     }
 
     cerr << "Writing catalog to '" << out_path << "...";
     write_catalog(catalog);
     cerr << " done.\n";
+
+    //
+    // Free memory associated with the catalog.
+    //
+    for (cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++)
+        delete cat_it->second;
+    catalog.clear();
 
     return 0;
 }
@@ -776,7 +783,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
                     hit_cnt   = 0;
                     allele_id = prev_id;
 
-                    while ((uint)hits[index] == prev_id) {
+                    while (index < hits_size && (uint) hits[index] == prev_id) {
                         hit_cnt++;
                         index++;
                     }
@@ -784,7 +791,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
                     if (index < hits_size)
                         prev_id = hits[index];
 
-                    if (hit_cnt >= (uint)min_hits)
+                    if (hit_cnt >= (uint) min_hits)
                         ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
                 } while (index < hits_size);

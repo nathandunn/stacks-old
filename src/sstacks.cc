@@ -129,7 +129,7 @@ int main (int argc, char* argv[]) {
         i++;
 
         //
-        // Free memory associated with sample
+        // Free memory associated with the sample.
         //
         for (map<int, QLocus *>::iterator j = sample.begin(); j != sample.end(); j++)
             delete j->second;
@@ -138,6 +138,13 @@ int main (int argc, char* argv[]) {
 
     if (gapped_alignments)
         free_kmer_hash(kmer_map, kmer_map_keys);
+
+    //
+    // Free memory associated with the catalog.
+    //
+    for (map<int, Locus *>::iterator j = catalog.begin(); j != catalog.end(); j++)
+        delete j->second;
+    catalog.clear();
 
     return 0;
 }
