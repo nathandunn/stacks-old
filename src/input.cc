@@ -54,7 +54,7 @@ Seq::Seq(const Seq& other)
         qual = NULL;
     }
     if (other.loc_str != NULL) {
-        loc_str = new char[strlen(other.id)+1];
+        loc_str = new char[strlen(other.loc_str)+1];
         strcpy(loc_str, other.loc_str);
     } else {
         loc_str = NULL;
