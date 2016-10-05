@@ -43,17 +43,9 @@
 //    T == 011
 //    N == 100
 //
+
 class DNANSeq {
 public:
-    //
-    // The number of bits required to store string of DNA string
-    //
-    unsigned short int bits;
-    //
-    // Array of bytes to store DNA sequence.
-    //
-    unsigned char *s;
-
     DNANSeq(int);
     DNANSeq(int, const char *);
     DNANSeq(const char* s) : DNANSeq(strlen(s), s) {}
@@ -72,6 +64,21 @@ public:
 
     bool operator== (const DNANSeq& other) const;
     bool operator<(const DNANSeq& other) const;
+    friend class std::hash<DNANSeq>;
+
+private:
+
+    const static unsigned short int bits_per_nuc = 3;
+
+    //
+    // The number of bits required to store string of DNA string
+    //
+    unsigned short int bits;
+    //
+    // Array of bytes to store DNA sequence.
+    //
+    unsigned char *s;
+
 };
 
 inline
