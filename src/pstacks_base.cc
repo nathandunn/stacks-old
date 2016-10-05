@@ -359,15 +359,12 @@ int write_results(map<int, MergedStack *> &m,
         id = 0;
         for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++) {
             tag_2  = u[*k];
-            buf = tag_2->seq->seq();
-
             for (j = tag_2->map.begin(); j != tag_2->map.end(); j++) {
-                sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << buf << "\t\t\t\t\n";
+                sstr << "0" << "\t" << sql_id << "\t" << tag_1->id << "\t\t\t\t" << "primary\t" << id << "\t" << *j << "\t" << tag_2->seq->seq() << "\t\t\t\t\n";
                 if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
                 sstr.str("");
             }
             id++;
-            delete [] buf;
         }
 
         //

@@ -23,6 +23,7 @@
 
 #include <cstring>
 #include <climits>
+#include <string>
 
 #include <functional>
 
@@ -46,19 +47,16 @@
 
 class DNANSeq {
 public:
-    DNANSeq(int);
     DNANSeq(int, const char *);
     DNANSeq(const char* s) : DNANSeq(strlen(s), s) {}
-    DNANSeq(int, unsigned char *);
     DNANSeq(const DNANSeq&);
     DNANSeq& operator= (const DNANSeq& other) =delete;
     ~DNANSeq();
 
     char  operator[](int) const;
     int   size() const;
-    char *seq(char *) const;
-    char *seq() const;
-    char *subseq(char *, int, int) const;
+    void seq(char *) const;
+    std::string seq() const;
 
     void extend(int before, int after);
 
