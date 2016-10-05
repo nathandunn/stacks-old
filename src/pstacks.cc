@@ -771,6 +771,8 @@ int load_radtags(string in_file, HashMap &radtags) {
         if (i % 1000000 == 0 && i>0)
             cerr << i/1000000 << "M...";
 
+        i++;
+
 	switch (c.aln_type) {
 	case sec_aln:
             secondary++;
@@ -802,8 +804,6 @@ int load_radtags(string in_file, HashMap &radtags) {
             delete[] the_seq.qual;
             the_seq.qual = NULL;
         }
-
-        i++;
     }
     cerr << "done\n";
 
