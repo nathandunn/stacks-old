@@ -31,37 +31,37 @@
 //
 class DNANSeq {
 public:
-    DNANSeq(int len, const char* str);
+    DNANSeq(uint len, const char* str);
     DNANSeq(const char* str) : DNANSeq(strlen(str), str) {}
     DNANSeq(const DNANSeq& other);
     DNANSeq& operator=(const DNANSeq&) =delete;
     ~DNANSeq() {delete[] s;}
 
-    char operator[](int pos) const;
-    int size() const {return bits / bits_per_nuc;}
+    char operator[](uint pos) const;
+    uint size() const {return bits / bits_per_nuc;}
     void seq(char* buf) const;
     std::string seq() const;
 
-    void extend(int n_before, int n_after);
+    void extend(uint n_before, uint n_after);
 
     bool operator==(const DNANSeq& other) const;
     bool operator<(const DNANSeq& other) const;
     friend class std::hash<DNANSeq>;
 
 private:
-    int nbytes() const {return (bits+8-1)/8;}
+    uint nbytes() const {return (bits+8-1)/8;}
 
     //
     // The number of bits over which the sequence is stored.
     //
-    unsigned short int bits;
+    uint bits;
     //
     // The array of bits. Padding bits, if any, are 0.
     //
     unsigned char *s;
 
-    static unsigned char testbit(const unsigned char* s_, int index) { return s_[index/8] & (1 << index%8); }
-    static void setbit(unsigned char* s_, int index) { s_[index/8] |= (1 << index%8); }
+    static unsigned char testbit(const unsigned char* s_, uint index) { return s_[index/8] & (1 << index%8); }
+    static void setbit(unsigned char* s_, uint index) { s_[index/8] |= (1 << index%8); }
 
     // Three-bit compression (2.67 bases/byte)
     //    A == 000
@@ -69,7 +69,7 @@ private:
     //    G == 010
     //    T == 011
     //    N == 100
-    const static unsigned short int bits_per_nuc = 3;
+    const static uint bits_per_nuc = 3;
 };
 
 inline
@@ -94,7 +94,7 @@ template<>
 struct hash<DNANSeq> {
     size_t operator()(const DNANSeq& seq) const {
         size_t __result = static_cast<size_t>(14695981039346656037ULL);
-        for (unsigned short int i = 0; i < seq.nbytes(); i++) {
+        for (uint i = 0; i < seq.nbytes(); i++) {
             __result ^= static_cast<size_t>(seq.s[i]);
             __result *= static_cast<size_t>(1099511628211ULL);
         }
