@@ -34,17 +34,17 @@
 
 using namespace std;
 
-DNANSeq::DNANSeq(int len, const char* str) {
+DNANSeq::DNANSeq(uint len, const char* str) {
 
     this->bits = len * bits_per_nuc;
-    int bytes  = nbytes();
+    uint bytes  = nbytes();
     this->s    = new unsigned char[bytes];
 
     memset(this->s, 0, bytes);
 
-    int bit = 0;
+    uint bit = 0;
 
-    for (int i = 0; i < len; i++) {
+    for (uint i = 0; i < len; i++) {
         switch (str[i]) {
         case 'A':
         case 'a':
@@ -91,9 +91,9 @@ DNANSeq::DNANSeq(const DNANSeq& other) : bits(other.bits) {
     memcpy(s, other.s, nbytes());
 }
 
-char DNANSeq::operator[](int pos) const {
+char DNANSeq::operator[](uint pos) const {
     unsigned char c, base;
-    int bit;
+    uint bit;
 
     if (pos > ((this->bits / bits_per_nuc) - 1)) return '\0';
 
@@ -102,7 +102,7 @@ char DNANSeq::operator[](int pos) const {
     c    = 0;
     base = 'X';
 
-    for (int i = bits_per_nuc - 1; i >= 0; i--) {
+    for (uint i = bits_per_nuc - 1; i >= 0; i--) {
         if (testbit(s, bit))
             c |= 1 << i;
         bit++;
@@ -134,7 +134,7 @@ char DNANSeq::operator[](int pos) const {
 }
 
 void DNANSeq::seq(char* buf) const {
-    for (int i = 0; i < size(); i++)
+    for (uint i = 0; i < size(); i++)
         buf[i] = (*this)[i];
     buf[size()] = '\0';
 }
@@ -142,39 +142,39 @@ void DNANSeq::seq(char* buf) const {
 string DNANSeq::seq() const {
     string str;
     str.reserve(size());
-    for (int i = 0; i < size(); i++)
+    for (uint i = 0; i < size(); i++)
         str.push_back((*this)[i]);
     return str;
 }
 
-void DNANSeq::extend(int n_before, int n_after) {
+void DNANSeq::extend(uint n_before, uint n_after) {
     if (n_before == 0 && n_after == 0)
         return;
 
-    int old_bits = bits;
+    uint old_bits = bits;
     unsigned char* old_s = s;
 
     bits += (n_before + n_after) * bits_per_nuc;
     s = new unsigned char[nbytes()];
     memset(s, 0, nbytes());
 
-    int bit = 0;
+    uint bit = 0;
 
     // Prepend N's
-    for (int i = 0; i < n_before; ++i) {
+    for (uint i = 0; i < n_before; ++i) {
         setbit(s, bit);
         bit += 3;
     }
 
     // Copy the old sequence.
-    for (int old_bit=0; old_bit < old_bits; ++old_bit) {
+    for (uint old_bit=0; old_bit < old_bits; ++old_bit) {
         if (testbit(old_s, old_bit))
             setbit(s, bit);
         ++bit;
     }
 
     // Append N's.
-    for (int i = 0; i < n_after; ++i) {
+    for (uint i = 0; i < n_after; ++i) {
         setbit(s, bit);
         bit += 3;
     }
