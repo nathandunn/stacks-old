@@ -34,29 +34,6 @@
 
 using namespace std;
 
-DNANSeq::DNANSeq(int size) {
-    int bytes;
-
-    this->bits = size * bits_per_nuc;
-
-    bytes = BITNSLOTS(this->bits);
-
-    this->s = new unsigned char[bytes];
-    memset(this->s, 0, bytes);
-}
-
-DNANSeq::DNANSeq(int size, unsigned char *seq) {
-    unsigned int bytes;
-
-    this->bits = size * bits_per_nuc;
-
-    bytes = BITNSLOTS(this->bits);
-
-    this->s = new unsigned char[bytes];
-    for (unsigned int i = 0; i < bytes; i++)
-        this->s[i] = seq[i];
-}
-
 DNANSeq::DNANSeq(int size, const char *seq) {
 
     this->bits = size * bits_per_nuc;
@@ -165,28 +142,18 @@ int DNANSeq::size() const {
     return this->bits / bits_per_nuc;
 }
 
-char *DNANSeq::subseq(char *seq, int start, int end) const {
-    int i;
-
-    for (i = start; i <= end; i++)
-        seq[i - start] = this->operator[](i);
-
-    seq[i - start] = '\0';
-
-    return seq;
-}
-
-char *DNANSeq::seq(char *s) const {
+void DNANSeq::seq(char* str) const {
     for (int i = 0; i < size(); i++)
-        s[i] = operator[](i);
-    s[size()] = '\0';
-    return s;
+        str[i] = (*this)[i];
+    str[size()] = '\0';
 }
 
-char *DNANSeq::seq() const {
-    char *s = new char[size() + 1];
-    seq(s);
-    return s;
+string DNANSeq::seq() const {
+    string str;
+    str.reserve(size());
+    for (int i = 0; i < size(); i++)
+        str.push_back((*this)[i]);
+    return str;
 }
 
 void DNANSeq::extend(int before, int after) {

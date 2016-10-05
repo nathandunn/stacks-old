@@ -87,7 +87,7 @@ int MergedStack::add_consensus(const DNANSeq *seq) {
 
     this->len = seq->size();
     this->con = new char[this->len + 1];
-    this->con = seq->seq(this->con);
+    seq->seq(this->con);
 
     return 0;
 }
