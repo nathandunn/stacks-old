@@ -33,11 +33,6 @@
 #include "DNANSeq.h"
 
 using namespace std;
-//
-// We expect (and C++ defines) an unsigned char as 8 bits.
-//
-const unsigned short int bits_per_nuc = 3;
-const unsigned short int byte_size    = 8;
 
 DNANSeq::DNANSeq(int size) {
     int bytes;
