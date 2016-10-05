@@ -34,9 +34,9 @@
 
 using namespace std;
 
-DNANSeq::DNANSeq(int size, const char *seq) {
+DNANSeq::DNANSeq(int len, const char* str) {
 
-    this->bits = size * bits_per_nuc;
+    this->bits = len * bits_per_nuc;
     int bytes  = BITNSLOTS(this->bits);
     this->s    = new unsigned char[bytes];
 
@@ -44,8 +44,8 @@ DNANSeq::DNANSeq(int size, const char *seq) {
 
     int bit = 0;
 
-    for (int i = 0; i < size; i++) {
-        switch (seq[i]) {
+    for (int i = 0; i < len; i++) {
+        switch (str[i]) {
         case 'A':
         case 'a':
             // A == 000
@@ -92,10 +92,6 @@ DNANSeq::DNANSeq(const DNANSeq& other) : bits(other.bits) {
     memcpy(s, other.s, n_bytes);
 }
 
-DNANSeq::~DNANSeq() {
-    delete [] this->s;
-}
-
 char DNANSeq::operator[](int pos) const {
     unsigned char c, base;
     int bit;
@@ -138,14 +134,10 @@ char DNANSeq::operator[](int pos) const {
     return base;
 }
 
-int DNANSeq::size() const {
-    return this->bits / bits_per_nuc;
-}
-
-void DNANSeq::seq(char* str) const {
+void DNANSeq::seq(char* buf) const {
     for (int i = 0; i < size(); i++)
-        str[i] = (*this)[i];
-    str[size()] = '\0';
+        buf[i] = (*this)[i];
+    buf[size()] = '\0';
 }
 
 string DNANSeq::seq() const {
@@ -156,21 +148,21 @@ string DNANSeq::seq() const {
     return str;
 }
 
-void DNANSeq::extend(int before, int after) {
-    if (before == 0 && after == 0)
+void DNANSeq::extend(int n_before, int n_after) {
+    if (n_before == 0 && n_after == 0)
         return;
 
     int old_bits = bits;
     unsigned char* old_s = s;
 
-    bits += (before + after) * bits_per_nuc;
+    bits += (n_before + n_after) * bits_per_nuc;
     s = new unsigned char[BITNSLOTS(bits)];
     memset(s, 0, BITNSLOTS(bits));
 
     int bit = 0;
 
     // Prepend N's
-    for (int i = 0; i < before; ++i) {
+    for (int i = 0; i < n_before; ++i) {
         BITSET(s, bit);
         bit += 3;
     }
@@ -183,7 +175,7 @@ void DNANSeq::extend(int before, int after) {
     }
 
     // Append N's.
-    for (int i = 0; i < after; ++i) {
+    for (int i = 0; i < n_after; ++i) {
         BITSET(s, bit);
         bit += 3;
     }

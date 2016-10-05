@@ -47,20 +47,20 @@
 
 class DNANSeq {
 public:
-    DNANSeq(int, const char *);
-    DNANSeq(const char* s) : DNANSeq(strlen(s), s) {}
-    DNANSeq(const DNANSeq&);
-    DNANSeq& operator= (const DNANSeq& other) =delete;
-    ~DNANSeq();
+    DNANSeq(int len, const char* str);
+    DNANSeq(const char* str) : DNANSeq(strlen(str), str) {}
+    DNANSeq(const DNANSeq& other);
+    DNANSeq& operator=(const DNANSeq&) =delete;
+    ~DNANSeq() {delete[] s;}
 
-    char  operator[](int) const;
-    int   size() const;
-    void seq(char *) const;
+    char operator[](int pos) const;
+    int size() const {return bits / bits_per_nuc;}
+    void seq(char* buf) const;
     std::string seq() const;
 
-    void extend(int before, int after);
+    void extend(int n_before, int n_after);
 
-    bool operator== (const DNANSeq& other) const;
+    bool operator==(const DNANSeq& other) const;
     bool operator<(const DNANSeq& other) const;
     friend class std::hash<DNANSeq>;
 
