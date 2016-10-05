@@ -37,7 +37,7 @@ using namespace std;
 DNANSeq::DNANSeq(int len, const char* str) {
 
     this->bits = len * bits_per_nuc;
-    int bytes  = BITNSLOTS(this->bits);
+    int bytes  = nbytes();
     this->s    = new unsigned char[bytes];
 
     memset(this->s, 0, bytes);
@@ -55,14 +55,14 @@ DNANSeq::DNANSeq(int len, const char* str) {
         case 'c':
             // C == 001
             bit += 2;
-            BITSET(this->s, bit);
+            setbit(s, bit);
             bit++;
             break;
         case 'G':
         case 'g':
             // G == 010
             bit++;
-            BITSET(this->s, bit);
+            setbit(s, bit);
             bit++;
             bit++;
             break;
@@ -70,16 +70,16 @@ DNANSeq::DNANSeq(int len, const char* str) {
         case 't':
             // T == 011
             bit++;
-            BITSET(this->s, bit);
+            setbit(s, bit);
             bit++;
-            BITSET(this->s, bit);
+            setbit(s, bit);
             bit++;
             break;
         case 'N':
         case 'n':
         case '.':
             // N == 100
-            BITSET(this->s, bit);
+            setbit(s, bit);
             bit += 3;
             break;
         }
@@ -87,9 +87,8 @@ DNANSeq::DNANSeq(int len, const char* str) {
 }
 
 DNANSeq::DNANSeq(const DNANSeq& other) : bits(other.bits) {
-    const int n_bytes = BITNSLOTS(bits);
-    s = new unsigned char[n_bytes];
-    memcpy(s, other.s, n_bytes);
+    s = new unsigned char[nbytes()];
+    memcpy(s, other.s, nbytes());
 }
 
 char DNANSeq::operator[](int pos) const {
@@ -104,7 +103,7 @@ char DNANSeq::operator[](int pos) const {
     base = 'X';
 
     for (int i = bits_per_nuc - 1; i >= 0; i--) {
-        if (BITTEST(this->s, bit))
+        if (testbit(s, bit))
             c |= 1 << i;
         bit++;
     }
@@ -156,27 +155,27 @@ void DNANSeq::extend(int n_before, int n_after) {
     unsigned char* old_s = s;
 
     bits += (n_before + n_after) * bits_per_nuc;
-    s = new unsigned char[BITNSLOTS(bits)];
-    memset(s, 0, BITNSLOTS(bits));
+    s = new unsigned char[nbytes()];
+    memset(s, 0, nbytes());
 
     int bit = 0;
 
     // Prepend N's
     for (int i = 0; i < n_before; ++i) {
-        BITSET(s, bit);
+        setbit(s, bit);
         bit += 3;
     }
 
     // Copy the old sequence.
     for (int old_bit=0; old_bit < old_bits; ++old_bit) {
-        if (BITTEST(old_s, old_bit))
-            BITSET(s, bit);
+        if (testbit(old_s, old_bit))
+            setbit(s, bit);
         ++bit;
     }
 
     // Append N's.
     for (int i = 0; i < n_after; ++i) {
-        BITSET(s, bit);
+        setbit(s, bit);
         bit += 3;
     }
 
