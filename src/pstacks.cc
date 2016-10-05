@@ -763,6 +763,7 @@ int load_radtags(string in_file, HashMap &radtags) {
     cerr << "Parsing " << in_file.c_str() << "\n";
 
     int secondary     = 0;
+    int supplementary = 0;
     int below_req_aln = 0;
     int i = 0;
     cerr << "Loading aligned sequences...";
@@ -770,10 +771,19 @@ int load_radtags(string in_file, HashMap &radtags) {
         if (i % 1000000 == 0 && i>0)
             cerr << i/1000000 << "M...";
 
-        if (c.aln_type == sec_aln) {
+	switch (c.aln_type) {
+	case sec_aln:
             secondary++;
             if (!keep_sec_alns)
                 continue;
+	    break;
+	case sup_aln:
+	    supplementary++;
+	    continue;
+	    break;
+	case pri_aln:
+	default:
+	    break;
         }
 
         if (c.pct_aln < req_pct_aln) {
@@ -809,6 +819,7 @@ int load_radtags(string in_file, HashMap &radtags) {
         cerr << "  Kept " << secondary << " secondarily aligned reads (reads may be present in the data set more than once).\n";
     else
         cerr << "  Discarded " << secondary << " secondarily aligned reads (primary alignments were retained).\n";
+    cerr << "  Discarded " << supplementary << " supplementary aligned (chimeric) reads.\n";
 
     //
     // Close the file and delete the Input object.

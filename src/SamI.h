@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -97,10 +97,19 @@ int Sam::next_seq(Seq& s) {
     //
     // Check if this is the primary or secondary alignment.
     //
-    alnt aln_type;
+    alnt aln_type = pri_aln;
     aflag = flag & 256;
     aflag = aflag >> 8;
-    aln_type = aflag ? sec_aln : pri_aln;
+    if (aflag)
+	aln_type = sec_aln;
+
+    //
+    // Check if this is a supplemenatry (chimeric) alignment (not yet defined in Bam.h).
+    //
+    aflag = flag & 2048;
+    aflag = aflag >> 11;
+    if (aflag)
+	aln_type = sup_aln;
 
     //
     // If the read was aligned on the reverse strand (and is therefore reverse complemented)

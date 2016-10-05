@@ -131,9 +131,16 @@ Bam::next_seq(Seq& s)
     //
     // Check if this is the primary or secondary alignment.
     //
-    alnt aln_type;
+    alnt aln_type = pri_aln;
     flag = ((this->aln->core.flag & BAM_FSECONDARY) != 0);
-    aln_type = flag ? sec_aln : pri_aln;
+    if (flag)
+	aln_type = sec_aln;
+    //
+    // Check if this is a supplemenatry (chimeric) alignment (not yet defined in Bam.h).
+    //
+    flag = ((this->aln->core.flag & 2048) != 0);
+    if (flag)
+	aln_type = sup_aln;
 
     //
     // Fetch the sequence.

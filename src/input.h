@@ -41,7 +41,7 @@ using std::endl;
 #include "utils.h"
 #include "stacks.h"
 
-enum alnt {pri_aln, sec_aln};
+enum alnt {pri_aln, sec_aln, sup_aln};
 
 class Seq {
  public:
