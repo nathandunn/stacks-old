@@ -290,7 +290,6 @@ int write_results(map<int, MergedStack *> &m,
 
     int id;
 
-    char *buf; // = new char[m.begin()->second->len + 1];
     int   wrote       = 0;
     int   blacklisted = 0;
 
