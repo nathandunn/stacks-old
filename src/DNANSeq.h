@@ -22,19 +22,8 @@
 #define __DNANSeq_H__
 
 #include <cstring>
-#include <climits>
 #include <string>
-
 #include <functional>
-
-/*
-#define BITMASK(b)     (1 << ((b) % CHAR_BIT))
-#define BITSLOT(b)     ((b) / CHAR_BIT)
-#define BITSET(a, b)   ((a)[BITSLOT(b)] |= BITMASK(b))
-#define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
-#define BITTEST(a, b)  ((a)[BITSLOT(b)] & BITMASK(b))
-#define BITNSLOTS(nb)  ((nb + CHAR_BIT - 1) / CHAR_BIT)
-*/
 
 //
 // DNANSeq
@@ -109,7 +98,7 @@ bool DNANSeq::operator<(const DNANSeq& other) const {
     return false;
 }
 
-// Specializations for std::hash
+// Specialization for std::hash
 // Based on GCC
 namespace std {
 template<>
@@ -123,42 +112,15 @@ struct hash<DNANSeq> {
         return __result;
     }
 };
-
-template<>
-struct hash<const DNANSeq*> {
-    size_t operator()(const DNANSeq* seq) const {return hash<DNANSeq>()(*seq);}
-};
-
-// For pointer types it is also necessary to specialize `equal_to`.
-template<>
-struct equal_to<const DNANSeq*> {
-    size_t operator()(const DNANSeq* s1, const DNANSeq* s2) const {return *s1 == *s2;}
-};
 }
 
-// namespace __gnu_cxx {
-//     template<>
-//     struct hash<DNANSeq *>
-//     {
-//      size_t
-//      operator()(DNANSeq *__s) const {
-//          unsigned long   __h = 0;
-//          unsigned int  bytes = BITNSLOTS(__s->bits);
-//          for (unsigned int i = 0; i < bytes; i++)
-//              __h = 5 * __h + __s->s[i];
-//          return size_t(__h);
-//      }
-//     };
-// }
-
-/* struct hash_dnanseq {
-    // Deprecated
-    size_t operator()(const DNANSeq* seq) const {return std::hash<DNANSeq>{}(*seq);}
-};
-
-struct dnanseq_eqstr {
-    // Deprecated
-    bool operator()(const DNANSeq *s1, const DNANSeq *s2) const {return *s1 == *s2;}
-}; */
+/*
+#define BITMASK(b)     (1 << ((b) % CHAR_BIT))
+#define BITSLOT(b)     ((b) / CHAR_BIT)
+#define BITSET(a, b)   ((a)[BITSLOT(b)] |= BITMASK(b))
+#define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
+#define BITTEST(a, b)  ((a)[BITSLOT(b)] & BITMASK(b))
+#define BITNSLOTS(nb)  ((nb + CHAR_BIT - 1) / CHAR_BIT)
+*/
 
 #endif // __DNANSeq_H__
