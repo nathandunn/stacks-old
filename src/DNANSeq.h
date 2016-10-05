@@ -27,24 +27,19 @@
 
 #include <functional>
 
+/*
 #define BITMASK(b)     (1 << ((b) % CHAR_BIT))
 #define BITSLOT(b)     ((b) / CHAR_BIT)
 #define BITSET(a, b)   ((a)[BITSLOT(b)] |= BITMASK(b))
 #define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
 #define BITTEST(a, b)  ((a)[BITSLOT(b)] & BITMASK(b))
 #define BITNSLOTS(nb)  ((nb + CHAR_BIT - 1) / CHAR_BIT)
+*/
 
 //
-// DNA Sequence Storage Class
+// DNANSeq
+// Compressed DNA Sequence Class. Handles N's.
 //
-// Three-bit compression, 2.667 bases per byte of storage:
-//    A == 000
-//    C == 001
-//    G == 010
-//    T == 011
-//    N == 100
-//
-
 class DNANSeq {
 public:
     DNANSeq(int len, const char* str);
@@ -65,31 +60,40 @@ public:
     friend class std::hash<DNANSeq>;
 
 private:
-
-    const static unsigned short int bits_per_nuc = 3;
+    int nbytes() const {return (bits+8-1)/8;}
 
     //
-    // The number of bits required to store string of DNA string
+    // The number of bits over which the sequence is stored.
     //
     unsigned short int bits;
     //
-    // Array of bytes to store DNA sequence.
+    // The array of bits. Padding bits, if any, are 0.
     //
     unsigned char *s;
 
+    static unsigned char testbit(const unsigned char* s_, int index) { return s_[index/8] & (1 << index%8); }
+    static void setbit(unsigned char* s_, int index) { s_[index/8] |= (1 << index%8); }
+
+    // Three-bit compression (2.67 bases/byte)
+    //    A == 000
+    //    C == 001
+    //    G == 010
+    //    T == 011
+    //    N == 100
+    const static unsigned short int bits_per_nuc = 3;
 };
 
 inline
 bool DNANSeq::operator== (const DNANSeq& other) const {
     if (bits != other.bits)
         return false;
-    return memcmp(s, other.s, BITNSLOTS(bits)) == 0;
+    return memcmp(s, other.s, nbytes()) == 0;
 }
 
 inline
 bool DNANSeq::operator<(const DNANSeq& other) const {
-    const int n_bytes = BITNSLOTS(bits);
-    const int other_n_bytes = BITNSLOTS(other.bits);
+    const int n_bytes = nbytes();
+    const int other_n_bytes = other.nbytes();
 
     // Shorter sequences are "less".
     if (n_bytes != other_n_bytes)
@@ -112,8 +116,7 @@ template<>
 struct hash<DNANSeq> {
     size_t operator()(const DNANSeq& seq) const {
         size_t __result = static_cast<size_t>(14695981039346656037ULL);
-        unsigned short int __bytes  = BITNSLOTS(seq.bits);
-        for (unsigned short int i = 0; i < __bytes; i++) {
+        for (unsigned short int i = 0; i < seq.nbytes(); i++) {
             __result ^= static_cast<size_t>(seq.s[i]);
             __result *= static_cast<size_t>(1099511628211ULL);
         }
