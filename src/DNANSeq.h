@@ -81,21 +81,10 @@ bool DNANSeq::operator== (const DNANSeq& other) const {
 
 inline
 bool DNANSeq::operator<(const DNANSeq& other) const {
-    const int n_bytes = nbytes();
-    const int other_n_bytes = other.nbytes();
-
-    // Shorter sequences are "less".
-    if (n_bytes != other_n_bytes)
-        return n_bytes < other_n_bytes ? true : false;
-
-    // Compare each byte.
-    // n.b. Unused bits are consistently 0 as the constructors call memset().
-    for(int i = 0; i < n_bytes; ++i)
-        if (s[i] != other.s[i])
-            return s[i] < other.s[i] ? true : false;
-
-    // Equal.
-    return false;
+    if (bits != other.bits)
+        return bits < other.bits;
+    else
+        return memcmp(s, other.s, nbytes()) < 0;
 }
 
 // Specialization for std::hash
