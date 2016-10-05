@@ -76,11 +76,9 @@ public:
 
 inline
 bool DNANSeq::operator== (const DNANSeq& other) const {
-    unsigned int bytes = BITNSLOTS(bits);
-    for (unsigned int i = 0; i < bytes; i++)
-        if (s[i] != other.s[i])
-            return false;
-    return true;
+    if (bits != other.bits)
+        return false;
+    return memcmp(s, other.s, BITNSLOTS(bits)) == 0;
 }
 
 inline
