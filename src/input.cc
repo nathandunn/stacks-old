@@ -59,6 +59,9 @@ Seq::Seq(const Seq& other)
     } else {
         loc_str = NULL;
     }
+
+    pct_aln  = other.pct_aln;
+    aln_type = other.aln_type;
 }
 
 Seq::Seq(const char *id, const char *seq) {
@@ -139,7 +142,9 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
 }
 
 void swap(Seq& s1, Seq& s2) {
-    char* ptr;
+    char  *ptr;
+    alnt   a;
+    double p;
 
     ptr = s1.id;
     s1.id = s2.id;
@@ -156,6 +161,14 @@ void swap(Seq& s1, Seq& s2) {
     ptr = s1.loc_str;
     s1.loc_str = s2.loc_str;
     s2.loc_str = ptr;
+
+    a = s1.aln_type;
+    s1.aln_type = s2.aln_type;
+    s2.aln_type = a;
+
+    p = s1.pct_aln;
+    s1.pct_aln = s2.pct_aln;
+    s2.pct_aln = p;
 
     swap(s1.loc, s2.loc);
 }
