@@ -43,7 +43,6 @@ MergedStack::MergedStack()  {
     this->deleveraged     = false;
     this->masked          = false;
     this->blacklisted     = false;
-    this->gappedlumberjack = false;
     this->lumberjackstack = false;
 }
 

@@ -30,9 +30,11 @@
 //
 FileT  in_file_type;
 string in_file;
+FileT  out_file_type;
+string out_path;
 string prefix_path;
 int    sql_id        = 0;
-uint   min_stack_cov = 3;
+int    min_stack_cov = 3;
 int    num_threads   = 1;
 
 //
@@ -352,8 +354,17 @@ int load_radtags(string in_file, HashMap &radtags) {
             cerr << i/1000000 << "M...";
 
         HashMap::iterator element = radtags.insert({DNANSeq(strlen(c.seq), c.seq), vector<Seq*>()}).first;
-        c.delete_seq();
         element->second.push_back(new Seq(c));
+        Seq& the_seq = *element->second.back();
+        if (the_seq.seq != NULL) {
+            delete[] the_seq.seq;
+            the_seq.seq = NULL;
+        }
+        if (the_seq.qual != NULL) {
+            delete[] the_seq.qual;
+            the_seq.qual = NULL;
+        }
+
         i++;
     }
     cerr << "done\n";
