@@ -93,6 +93,7 @@ int
 Bam::next_seq(Seq& s)
 {
     int bytes_read = 0;
+    int sflag      = 0;
     int flag       = 0;
 
     //
@@ -112,7 +113,7 @@ Bam::next_seq(Seq& s)
     // Check which strand this is aligned to:
     //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
     //
-    flag = ((this->aln->core.flag & BAM_FREVERSE) != 0);
+    sflag = ((this->aln->core.flag & BAM_FREVERSE) != 0);
 
     //
     // If the read was aligned on the reverse strand (and is therefore reverse complemented)
@@ -122,9 +123,9 @@ Bam::next_seq(Seq& s)
     // To accomplish this, we must parse the alignment CIGAR string
     //
     vector<pair<char, uint> > cigar;
-    this->parse_bam_cigar(cigar, flag);
+    this->parse_bam_cigar(cigar, sflag);
 
-    uint bp = flag ?
+    uint bp = sflag ?
         this->find_start_bp_neg(this->aln->core.pos, cigar) :
         this->find_start_bp_pos(this->aln->core.pos, cigar);
 
@@ -196,7 +197,7 @@ Bam::next_seq(Seq& s)
     double pct_aln = len / double(seq.length());
 
     s = Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str(),
-            chr.c_str(), bp, flag ? strand_minus : strand_plus, 
+            chr.c_str(), bp, sflag ? strand_minus : strand_plus, 
             aln_type, pct_aln);
 
     if (cigar.size() > 0)
