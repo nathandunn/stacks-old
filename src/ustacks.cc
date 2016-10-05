@@ -2362,7 +2362,6 @@ int dump_unique_tags(map<int, Stack *> &u) {
     map<int, Stack *>::iterator it;
     vector<pair<int, int> >::iterator pit;
     vector<int>::iterator mit;
-    char *c;
 
     for (it = u.begin(); it != u.end(); it++) {
         cerr << "UniqueTag UID: " << (*it).second->id << "\n"
