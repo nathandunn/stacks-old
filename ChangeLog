@@ -9,6 +9,7 @@ Stacks 1.43 - Oct 05, 2016
 	multiple alignment had to be recomputed the initial CIGAR string was not parsed properly leading to the
 	catalog and query sequences coming out of sync in their length (which could throw the exception).
 	Feature: reduced memory usage in ustacks and pstacks by not retaining all reads from a collapsed locus.
+	Bugfix: corrected -V option for populations, which was causing a crash (although --in_vcf worked).
 
 Stacks 1.42 - Aug 05, 2016
 --------------------------
