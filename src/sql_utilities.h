@@ -27,6 +27,10 @@
 #include "input.h"
 #include "utils.h"
 
+using std::string;
+using std::vector;
+using std::map;
+
 //
 // The expected number of tab-separated fields in our SQL input files.
 //
@@ -35,7 +39,7 @@ const uint num_snps_fields    = 10;
 const uint num_alleles_fields =  6;
 const uint num_matches_fields =  9;
 
-int load_catalog_matches(string sample,  vector<CatMatch *> &matches);
+void load_catalog_matches(string sample,  vector<CatMatch *> &matches);
 int load_model_results(string sample,  map<int, ModRes *> &modres);
 int load_snp_calls(string sample,  map<int, SNPRes *> &snpres);
 
