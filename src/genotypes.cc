@@ -30,7 +30,7 @@
 
 #include "genotypes.h"
 
-extern int **encoded_gtypes;
+extern int encoded_gtypes[4][4];
 
 // Global variables to hold command-line options.
 int       num_threads =  1;

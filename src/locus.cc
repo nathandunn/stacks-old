@@ -75,6 +75,9 @@ Locus::populate_alleles()
     string s;
     int    k;
 
+    if (this->len > strlen(this->con))
+	cerr << "Recorded locus->len: " << this->len << "; consensus length: " << strlen(this->con) << "\n";
+    
     //
     // Is this effective?
     //

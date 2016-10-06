@@ -40,10 +40,11 @@ MergedStack::MergedStack()  {
     this->lnl        = 0.0;
     this->cohort_id  = -1;
 
-    this->deleveraged     = false;
-    this->masked          = false;
-    this->blacklisted     = false;
-    this->lumberjackstack = false;
+    this->deleveraged      = false;
+    this->masked           = false;
+    this->blacklisted      = false;
+    this->lumberjackstack  = false;
+    this->gappedlumberjack = false;
 }
 
 MergedStack::~MergedStack() {

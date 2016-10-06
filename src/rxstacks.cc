@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2013-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2013-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -1250,26 +1250,36 @@ write_results(string file, map<int, Locus *> &m)
     string tag_file = out_path + file + ".tags.tsv";
     string snp_file = out_path + file + ".snps.tsv";
     string all_file = out_path + file + ".alleles.tsv";
-
+    string mod_file = out_path + file + ".models.tsv";
+    
     if (gzip) {
         tag_file += ".gz";
         snp_file += ".gz";
         all_file += ".gz";
+	mod_file += ".gz";
     }
 
     //
     // Open the output files for writing.
     //
-    gzFile   gz_tags, gz_snps, gz_alle;
-    ofstream tags, snps, alle;
+    gzFile   gz_tags, gz_snps, gz_alle, gz_mods;
+    ofstream tags, snps, alle, mods;
     if (gzip) {
         gz_tags = gzopen(tag_file.c_str(), "wb");
         if (!gz_tags) {
-            cerr << "Error: Unable to open gzipped catalog tag file '" << tag_file << "': " << strerror(errno) << ".\n";
+            cerr << "Error: Unable to open gzipped tag tag file '" << tag_file << "': " << strerror(errno) << ".\n";
             exit(1);
         }
         #if ZLIB_VERNUM >= 0x1240
         gzbuffer(gz_tags, libz_buffer_size);
+        #endif
+        gz_mods = gzopen(mod_file.c_str(), "wb");
+        if (!gz_mods) {
+            cerr << "Error: Unable to open gzipped model file '" << mod_file << "': " << strerror(errno) << ".\n";
+            exit(1);
+        }
+        #if ZLIB_VERNUM >= 0x1240
+        gzbuffer(gz_mods, libz_buffer_size);
         #endif
         gz_snps = gzopen(snp_file.c_str(), "wb");
         if (!gz_snps) {
@@ -1290,7 +1300,12 @@ write_results(string file, map<int, Locus *> &m)
     } else {
         tags.open(tag_file.c_str());
         if (tags.fail()) {
-            cerr << "Error: Unable to open catalog tag file for writing.\n";
+            cerr << "Error: Unable to open tag file for writing.\n";
+            exit(1);
+        }
+	mods.open(mod_file.c_str());
+        if (mods.fail()) {
+            cerr << "Error: Unable to open model file for writing.\n";
             exit(1);
         }
         snps.open(snp_file.c_str());
@@ -1303,6 +1318,31 @@ write_results(string file, map<int, Locus *> &m)
             cerr << "Error: Unable to open catalog alleles file for writing.\n";
             exit(1);
         }
+    }
+
+    //
+    // Record the version of Stacks used and the date generated as a comment in the catalog.
+    //
+    // Obtain the current date.
+    //
+    stringstream log;
+    time_t       rawtime;
+    struct tm   *timeinfo;
+    char         date[32];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(date, 32, "%F %T", timeinfo);
+    log << "# rxstacks version " << VERSION << "; generated on " << date << "\n";
+    if (gzip) {
+        gzputs(gz_tags, log.str().c_str());
+        gzputs(gz_mods, log.str().c_str());
+        gzputs(gz_snps, log.str().c_str());
+        gzputs(gz_alle, log.str().c_str());
+    } else {
+        tags << log.str();
+        mods << log.str();
+        snps << log.str();
+        alle << log.str();
     }
 
     int wrote = 0;
@@ -1360,6 +1400,7 @@ write_results(string file, map<int, Locus *> &m)
              << "\n";
 
         if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
+        if (gzip) gzputs(gz_mods, sstr.str().c_str()); else mods << sstr.str();
         sstr.str("");
 
         //
@@ -1435,10 +1476,12 @@ write_results(string file, map<int, Locus *> &m)
 
     if (gzip) {
         gzclose(gz_tags);
+	gzclose(gz_mods);
         gzclose(gz_snps);
         gzclose(gz_alle);
     } else {
         tags.close();
+	mods.close();
         snps.close();
         alle.close();
     }
