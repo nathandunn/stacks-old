@@ -106,7 +106,7 @@ int main (int argc, char* argv[]) {
         s = samples.front();
         samples.pop();
 
-        if (!load_loci(s.second, sample, false, false, compressed)) {
+        if (!load_loci(s.second, sample, 0, false, compressed)) {
             cerr << "Failed to load sample " << i << "\n";
             continue;
         }
@@ -1703,7 +1703,7 @@ initialize_new_catalog(pair<int, string> &sample, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
-    if (!load_loci(sample.second, tmp_catalog, false, false, compressed))
+    if (!load_loci(sample.second, tmp_catalog, 0, false, compressed))
         return 0;
 
     in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
@@ -1738,7 +1738,7 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
     //
     // Parse the input files.
     //
-    if (!load_loci(catalog_path, catalog, false, false, compressed))
+    if (!load_loci(catalog_path, catalog, 0, false, compressed))
         return 0;
 
     in_file_type = compressed == true ? FileT::gzsql : FileT::sql;
