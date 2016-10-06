@@ -188,6 +188,9 @@ class PStack {
         ++count;
     }
 
+    // extend(): Extends the PStack to the desired span.
+    void extend(const PhyLoc& phyloc, int length);
+
     void clear();
     bool operator< (const PStack& other) const;
 
