@@ -72,6 +72,9 @@ public:
     char *subseq(char *, int, int);
 
     bool operator== (const DNANSeq& other) const {
+        if (bits != other.bits)
+            return false;
+
         unsigned int bytes = BITNSLOTS(bits);
         for (unsigned int i = 0; i < bytes; i++)
             if (s[i] != other.s[i])

@@ -1,5 +1,18 @@
+Stacks 1.43 - Oct 05, 2016
+--------------------------
+	Feature: added alignment controls to pstacks, allowing the program to discard secondary alignments
+	and to discard alignments where a significant portion of the read was not aligned (soft-masked).
+	Bugfix: corrected a very small memory leak in the gapped alignment code, found by Valgrind.
+	Feature: updated configure test to check if compiler can handle c++11 standard.
+	Bugfix: rxstacks was not generating model files.
+	Bugfix: corrected an uncaught exception in cstacks when processing gapped alignments. In some cases when a
+	multiple alignment had to be recomputed the initial CIGAR string was not parsed properly leading to the
+	catalog and query sequences coming out of sync in their length (which could throw the exception).
+	Feature: reduced memory usage in ustacks and pstacks by not retaining all reads from a collapsed locus.
+
 Stacks 1.42 - Aug 05, 2016
 --------------------------
+	Feature: Added Csp6I restriction enzyme.
 	Feature: populations program is now able to calculate populations statistics using arbitrary VCF files
 	as input.
 	Feature: Upgraded to the latest release of HTSLib (1.3.1) for reading BAM files. Embedded the library

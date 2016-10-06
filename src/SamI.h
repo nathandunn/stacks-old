@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010, Julian Catchen <jcatchen@uoregon.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -56,7 +56,9 @@ Seq* Sam::next_seq() {
 
 int Sam::next_seq(Seq& s) {
     vector<string> parts;
-    int  flag;
+    int  flag  = 0;
+    int  sflag = 0;
+    int  aflag = 0;
     uint len;
 
     //
@@ -88,9 +90,26 @@ int Sam::next_seq(Seq& s) {
     // Check which strand this is aligned to:
     //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
     //
-    flag = atoi(parts[1].c_str());
-    flag = flag & 16;
-    flag = flag >> 4;
+    flag  = atoi(parts[1].c_str());
+    sflag = flag & 16;
+    sflag = sflag >> 4;
+
+    //
+    // Check if this is the primary or secondary alignment.
+    //
+    alnt aln_type = pri_aln;
+    aflag = flag & 256;
+    aflag = aflag >> 8;
+    if (aflag)
+	aln_type = sec_aln;
+
+    //
+    // Check if this is a supplemenatry (chimeric) alignment (not yet defined in Bam.h).
+    //
+    aflag = flag & 2048;
+    aflag = aflag >> 11;
+    if (aflag)
+	aln_type = sup_aln;
 
     //
     // If the read was aligned on the reverse strand (and is therefore reverse complemented)
@@ -100,9 +119,9 @@ int Sam::next_seq(Seq& s) {
     // To accomplish this, we must parse the alignment CIGAR string
     //
     vector<pair<char, uint> > cigar;
-    this->parse_cigar(parts[5].c_str(), cigar, flag);
+    this->parse_cigar(parts[5].c_str(), cigar, sflag);
 
-    int bp = flag ?
+    int bp = sflag ?
         this->find_start_bp_neg(atoi(parts[3].c_str()), cigar) :
         this->find_start_bp_pos(atoi(parts[3].c_str()), cigar);
 
@@ -112,8 +131,22 @@ int Sam::next_seq(Seq& s) {
     //
     bp--;
 
-    s = Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(),             // Read ID, Sequence, Quality
-                     parts[2].c_str(), bp, flag ? strand_minus : strand_plus); // Chr, BasePair, Strand
+    //
+    // Calculate the percentage of the sequence that was aligned to the reference.
+    //
+    len = 0;
+    for (uint i = 0; i < cigar.size(); i++)
+        switch (cigar[i].first) {
+        case 'M':
+        case 'I':
+        case '=':
+            len += cigar[i].second;
+        }
+    double pct_aln = double(len) / double(parts[9].length());
+
+    s = Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(),     // Read ID, Sequence, Quality
+            parts[2].c_str(), bp, sflag ? strand_minus : strand_plus,  // Chr, BasePair, Strand
+            aln_type, pct_aln);                                        // Alignment type (primary or secondary), percent of read aligned
 
     if (cigar.size() > 0)
         this->edit_gaps(cigar, s.seq);

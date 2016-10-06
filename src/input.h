@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -41,7 +41,7 @@ using std::endl;
 #include "utils.h"
 #include "stacks.h"
 
-typedef unsigned int uint;
+enum alnt {pri_aln, sec_aln, sup_aln};
 
 class Seq {
  public:
@@ -49,7 +49,11 @@ class Seq {
     char *seq;
     char *qual;
 
-    // Location information for a mapped sequence
+    //
+    // Information for an aligned sequence.
+    //
+    alnt   aln_type;
+    double pct_aln;
     char  *loc_str;
     PhyLoc loc;
 
@@ -58,6 +62,7 @@ class Seq {
     Seq(const char *, const char *);
     Seq(const char *, const char *, const char *);
     Seq(const char *, const char *, const char *, const char *, uint, strand_type);
+    Seq(const char *, const char *, const char *, const char *, uint, strand_type, alnt, double);
     ~Seq( void ) {
         if (id != NULL)
             delete[] id;

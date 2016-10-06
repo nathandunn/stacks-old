@@ -413,7 +413,7 @@ load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_
     for (i = loci.begin(); i != loci.end(); i++)
         i->second->populate_alleles();
 
-    delete [] line;
+    free(line);
 
     return 1;
 }

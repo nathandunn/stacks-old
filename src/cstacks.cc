@@ -157,13 +157,20 @@ int main (int argc, char* argv[]) {
         i++;
 
         for (query_it = sample.begin(); query_it != sample.end(); query_it++)
-            delete (*query_it).second;
+            delete query_it->second;
         sample.clear();
     }
 
     cerr << "Writing catalog to '" << out_path << "...";
     write_catalog(catalog);
     cerr << " done.\n";
+
+    //
+    // Free memory associated with the catalog.
+    //
+    for (cat_it = catalog.begin(); cat_it != catalog.end(); cat_it++)
+        delete cat_it->second;
+    catalog.clear();
 
     return 0;
 }
@@ -370,6 +377,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         // Adjust the postition of any SNPs that were shifted down sequence due to a gap.
         //
         if (gapped_aln) {
+	    cseq_len  = parse_cigar(cigar_str.c_str(), cigar);
             qseq      = apply_cigar_to_seq(qtag->con, cigar);
             adjust_snps_for_gaps(cigar, qtag);
 
@@ -377,6 +385,13 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
             cseq_len  = parse_cigar(cigar_str.c_str(), cigar);
             cseq      = apply_cigar_to_seq(ctag->con, cigar);
             adjust_snps_for_gaps(cigar, ctag);
+
+	    if (qseq.length() != cseq.length())
+		cerr << "Sample ID: " << qtag->sample_id << "; Query ID: " << qtag->id << "; catalog ID: " << ctag->id << ";\n"
+		     << "qloc: " << qtag->con << "\n"
+		     << "qseq: " << qseq << "\n"
+		     << "cloc: " << ctag->con << " [" << cigar_str << "]\n"
+		     << "cseq: " << cseq << "\n";
 
             //
             // If the alignment modified the catalog locus, record it so we can re-align
@@ -420,7 +435,7 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
         // Add any new sequence information into the catalog consensus.
         //
         if (gapped_aln) {
-            for (uint k = 0; k < ctag->len; k++)
+            for (uint k = 0; k < ctag->len && k < qtag->len; k++)
                 if (qtag->con[k] != 'N' && ctag->con[k] == 'N')
                     ctag->con[k] = qtag->con[k];
 
@@ -430,6 +445,8 @@ merge_matches(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, pair<int,
 
         ctag->sources.push_back(make_pair(sample_file.first, qtag->id));
     }
+
+    delete aln;
 
     return 0;
 }
@@ -588,7 +605,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
                     hit_cnt   = 0;
                     allele_id = prev_id;
 
-                    while ((uint)hits[index] == prev_id) {
+                    while (index < hits_size && (uint) hits[index] == prev_id) {
                         hit_cnt++;
                         index++;
                     }
@@ -596,7 +613,7 @@ int find_kmer_matches_by_sequence(map<int, CLocus *> &catalog, map<int, QLocus *
                     if (index < hits_size)
                         prev_id = hits[index];
 
-                    if (hit_cnt >= (uint)min_hits)
+                    if (hit_cnt >= (uint) min_hits)
                         ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
                 } while (index < hits_size);
@@ -766,7 +783,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
                     hit_cnt   = 0;
                     allele_id = prev_id;
 
-                    while ((uint)hits[index] == prev_id) {
+                    while (index < hits_size && (uint) hits[index] == prev_id) {
                         hit_cnt++;
                         index++;
                     }
@@ -774,7 +791,7 @@ search_for_gaps(map<int, CLocus *> &catalog, map<int, QLocus *> &sample, double 
                     if (index < hits_size)
                         prev_id = hits[index];
 
-                    if (hit_cnt >= (uint)min_hits)
+                    if (hit_cnt >= (uint) min_hits)
                         ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
                 } while (index < hits_size);
