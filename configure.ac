@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([Stacks], [1.42])
+AC_INIT([Stacks], [1.43])
 AC_CONFIG_AUX_DIR([config])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign parallel-tests subdir-objects])
 AC_CONFIG_SRCDIR([src/ustacks.cc])
@@ -45,7 +45,7 @@ AC_SUBST([SPARSEHASH_CFLAGS])
 # Checks for programs.
 AC_PROG_CXX
 AM_PROG_CC_C_O
-AX_CXX_COMPILE_STDCXX_11(, [mandatory])
+AX_CXX_COMPILE_STDCXX(11,, [mandatory])
 
 # Checks for libraries.
 AC_CHECK_LIB([gomp], [omp_set_num_threads],, [AC_MSG_WARN([Unable to locate OpenMP library, you should probably specify '--disable-openmp'.])])
