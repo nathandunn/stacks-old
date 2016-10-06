@@ -93,6 +93,7 @@ int
 Bam::next_seq(Seq& s)
 {
     int bytes_read = 0;
+    int sflag      = 0;
     int flag       = 0;
 
     //
@@ -112,7 +113,7 @@ Bam::next_seq(Seq& s)
     // Check which strand this is aligned to:
     //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
     //
-    flag = ((this->aln->core.flag & BAM_FREVERSE) != 0);
+    sflag = ((this->aln->core.flag & BAM_FREVERSE) != 0);
 
     //
     // If the read was aligned on the reverse strand (and is therefore reverse complemented)
@@ -122,11 +123,25 @@ Bam::next_seq(Seq& s)
     // To accomplish this, we must parse the alignment CIGAR string
     //
     vector<pair<char, uint> > cigar;
-    this->parse_bam_cigar(cigar, flag);
+    this->parse_bam_cigar(cigar, sflag);
 
-    uint bp = flag ?
+    uint bp = sflag ?
         this->find_start_bp_neg(this->aln->core.pos, cigar) :
         this->find_start_bp_pos(this->aln->core.pos, cigar);
+
+    //
+    // Check if this is the primary or secondary alignment.
+    //
+    alnt aln_type = pri_aln;
+    flag = ((this->aln->core.flag & BAM_FSECONDARY) != 0);
+    if (flag)
+	aln_type = sec_aln;
+    //
+    // Check if this is a supplemenatry (chimeric) alignment (not yet defined in Bam.h).
+    //
+    flag = ((this->aln->core.flag & 2048) != 0);
+    if (flag)
+	aln_type = sup_aln;
 
     //
     // Fetch the sequence.
@@ -168,8 +183,22 @@ Bam::next_seq(Seq& s)
 
     string chr = this->chrs[this->aln->core.tid];
 
+    //
+    // Calculate the percentage of the sequence that was aligned to the reference.
+    //
+    double len = 0.0;
+    for (uint i = 0; i < cigar.size(); i++)
+        switch (cigar[i].first) {
+        case 'M':
+        case 'I':
+        case '=':
+            len += cigar[i].second;
+        }
+    double pct_aln = len / double(seq.length());
+
     s = Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str(),
-                     chr.c_str(), bp, flag ? strand_minus : strand_plus);
+            chr.c_str(), bp, sflag ? strand_minus : strand_plus, 
+            aln_type, pct_aln);
 
     if (cigar.size() > 0)
         this->edit_gaps(cigar, s.seq);

@@ -129,7 +129,7 @@ int main (int argc, char* argv[]) {
         i++;
 
         //
-        // Free memory associated with sample
+        // Free memory associated with the sample.
         //
         for (map<int, QLocus *>::iterator j = sample.begin(); j != sample.end(); j++)
             delete j->second;
@@ -138,6 +138,13 @@ int main (int argc, char* argv[]) {
 
     if (gapped_alignments)
         free_kmer_hash(kmer_map, kmer_map_keys);
+
+    //
+    // Free memory associated with the catalog.
+    //
+    for (map<int, Locus *>::iterator j = catalog.begin(); j != catalog.end(); j++)
+        delete j->second;
+    catalog.clear();
 
     return 0;
 }
@@ -869,7 +876,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                     hit_cnt   = 0;
                     allele_id = prev_id;
 
-                    while ((uint)hits[index] == prev_id) {
+                    while (index < hits_size && (uint) hits[index] == prev_id) {
                         hit_cnt++;
                         index++;
                     }
@@ -877,7 +884,7 @@ search_for_gaps(map<int, Locus *> &catalog, map<int, QLocus *> &sample,
                     if (index < hits_size)
                         prev_id = hits[index];
 
-                    if (hit_cnt >= (uint)min_hits)
+                    if (hit_cnt >= (uint) min_hits)
                         ordered_hits.push_back(make_pair(allele_id, hit_cnt));
 
                 } while (index < hits_size);

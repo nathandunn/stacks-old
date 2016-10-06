@@ -6,6 +6,8 @@ aclocal.m4
 autom4te.cache/*
 clone_filter
 config.h
+config.h.in
+config.h.in~
 config.log
 config.status
 config/*
@@ -13,6 +15,7 @@ configure
 src/.deps/*
 src/.dirstamp
 src/*.o
+htslib/version.h
 htslib/*.o
 htslib/cram/*.o
 stamp-h1

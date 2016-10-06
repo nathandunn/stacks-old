@@ -1,6 +1,6 @@
 // -*-mode:c++; c-style:k&r; c-basic-offset:4;-*-
 //
-// Copyright 2010-2015, Julian Catchen <jcatchen@illinois.edu>
+// Copyright 2010-2016, Julian Catchen <jcatchen@illinois.edu>
 //
 // This file is part of Stacks.
 //
@@ -33,6 +33,8 @@ FileT  out_file_type;
 string out_path;
 int    sql_id        = 0;
 int    min_stack_cov = 3;
+double req_pct_aln   = 0.85;
+bool   keep_sec_alns = false;
 int    num_threads   = 1;
 
 //
@@ -760,11 +762,36 @@ int load_radtags(string in_file, HashMap &radtags) {
 
     cerr << "Parsing " << in_file.c_str() << "\n";
 
+    int secondary     = 0;
+    int supplementary = 0;
+    int below_req_aln = 0;
     int i = 0;
     cerr << "Loading aligned sequences...";
     while ((fh->next_seq(c)) != 0) {
         if (i % 1000000 == 0 && i>0)
             cerr << i/1000000 << "M...";
+
+        i++;
+
+	switch (c.aln_type) {
+	case sec_aln:
+            secondary++;
+            if (!keep_sec_alns)
+                continue;
+	    break;
+	case sup_aln:
+	    supplementary++;
+	    continue;
+	    break;
+	case pri_aln:
+	default:
+	    break;
+        }
+
+        if (c.pct_aln < req_pct_aln) {
+            below_req_aln++;
+            continue;
+        }
 
         HashMap::iterator element = radtags.insert({DNANSeq(strlen(c.seq), c.seq), vector<Seq*>()}).first;
         element->second.push_back(new Seq(c));
@@ -777,8 +804,6 @@ int load_radtags(string in_file, HashMap &radtags) {
             delete[] the_seq.qual;
             the_seq.qual = NULL;
         }
-
-        i++;
     }
     cerr << "done\n";
 
@@ -787,8 +812,14 @@ int load_radtags(string in_file, HashMap &radtags) {
         exit(-1);
     }
 
-    cerr << "Loaded " << i << " sequence reads; " <<
-        "identified " << radtags.size() << " unique stacks from those reads.\n";
+    cerr << "Loaded " << i << " sequence reads; "
+         << "identified " << radtags.size() << " unique stacks from those reads.\n"
+         << "  Discarded " << below_req_aln << " reads where the aligned percentage of the read was too low.\n";
+    if (keep_sec_alns) 
+        cerr << "  Kept " << secondary << " secondarily aligned reads (reads may be present in the data set more than once).\n";
+    else
+        cerr << "  Discarded " << secondary << " secondarily aligned reads (primary alignments were retained).\n";
+    cerr << "  Discarded " << supplementary << " supplementary aligned (chimeric) reads.\n";
 
     //
     // Close the file and delete the Input object.
@@ -862,6 +893,8 @@ int parse_command_line(int argc, char* argv[]) {
             {"outpath",      required_argument, NULL, 'o'},
             {"id",           required_argument, NULL, 'i'},
             {"min_cov",      required_argument, NULL, 'm'},
+            {"pct_aln",      required_argument, NULL, 'a'},
+            {"keep_sec_aln", required_argument, NULL, 'k'},
             {"num_threads",  required_argument, NULL, 'p'},
             {"bc_err_freq",  required_argument, NULL, 'e'},
             {"model_type",   required_argument, NULL, 'T'},
@@ -874,7 +907,7 @@ int parse_command_line(int argc, char* argv[]) {
         // getopt_long stores the option index here.
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "hvOT:A:L:U:f:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
+        c = getopt_long(argc, argv, "hkvOT:a:A:L:U:f:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -917,6 +950,19 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'm':
             min_stack_cov = atoi(optarg);
+            break;
+        case 'a':
+            req_pct_aln = is_double(optarg);
+            if (req_pct_aln > 1)
+                req_pct_aln = req_pct_aln / 100;
+
+            if (req_pct_aln < 0 || req_pct_aln > 1.0) {
+                cerr << "Unable to parse the required alignment percentage.\n";
+                help();
+            }
+            break;
+        case 'k':
+            keep_sec_alns = true;
             break;
         case 'e':
             barcode_err_freq = atof(optarg);
@@ -1013,6 +1059,8 @@ void help() {
               << "  m: minimum depth of coverage to report a stack (default 1).\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  h: display this help messsage.\n"
+              << "  --pct_aln <num>: require read alignments to use at least this percentage of the read (default 85%).\n"
+              << "  --keep_sec_alns: keep secondary alignments (default: false, only keep primary alignments).\n"
               << "  Model options:\n"
               << "    --model_type <type>: either 'snp' (default), 'bounded', or 'fixed'\n"
               << "    For the SNP or Bounded SNP model:\n"
