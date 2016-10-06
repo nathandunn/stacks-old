@@ -69,40 +69,4 @@ enum class FileT {unknown,
     bowtie,  sam, bam, tsv,
     bustard, phase, fastphase, beagle};
 
-inline
-std::string to_string(const FileT& ft) {
-    if (ft == FileT::unknown)
-        return "unknown";
-    if (ft == FileT::sql)
-        return "sql";
-    if (ft == FileT::gzsql)
-        return "gzsql";
-    if (ft == FileT::fasta)
-        return "fasta";
-    if (ft == FileT::gzfasta)
-        return "gzfasta";
-    if (ft == FileT::fastq)
-        return "fastq";
-    if (ft == FileT::gzfastq)
-        return "gzfastq";
-    if (ft == FileT::bowtie)
-        return "bowtie";
-    if (ft == FileT::sam)
-        return "sam";
-    if (ft == FileT::bam)
-        return "bam";
-    if (ft == FileT::tsv)
-        return "tsv";
-    if (ft == FileT::bustard)
-        return "bustard";
-    if (ft == FileT::phase)
-        return "phase";
-    if (ft == FileT::fastphase)
-        return "fastphase";
-    if (ft == FileT::beagle)
-        return "beagle";
-    assert(NEVER);
-    return "?!";
-}
-
 #endif
