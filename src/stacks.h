@@ -246,9 +246,9 @@ class Rem {
 class CatMatch {
 public:
     int    batch_id;
-    int    cat_id;
-    int    sample_id;
-    int    tag_id;
+    int    cat_id; // c-locus ID
+    int    sample_id; // sample ID
+    int    tag_id; // s-locus ID
     int    depth;
     double lnl;
     char  *haplotype;
