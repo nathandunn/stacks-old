@@ -32,7 +32,6 @@
 class DNANSeq {
 public:
     DNANSeq(uint len, const char* str);
-    DNANSeq(const char* str) : DNANSeq(strlen(str), str) {}
     DNANSeq(const DNANSeq& other);
     DNANSeq& operator=(const DNANSeq&) =delete;
     ~DNANSeq() {delete[] s;}
