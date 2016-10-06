@@ -58,24 +58,19 @@ public:
     uint        bp;
     strand_type strand;
 
-    void set(const char *chr, uint bp, strand_type strand) {
-        if (this->chr != NULL)
-            delete [] this->chr;
-        this->chr    = new char[strlen(chr)  + 1];
-        this->bp     = bp;
-        this->strand = strand;
-        strcpy(this->chr,  chr);
-    }
     PhyLoc() {
         chr    = NULL;
         bp     = 0;
         strand = strand_plus;
     }
     PhyLoc(const PhyLoc& other)
-        : bp(other.bp), strand(other.strand) {
-        chr = new char[strlen(other.chr)+1];
-        strcpy(chr, other.chr);
+        : chr(NULL), bp(other.bp), strand(other.strand) {
+        if (other.chr != NULL) {
+            chr = new char[strlen(other.chr)+1];
+            strcpy(chr, other.chr);
+        }
     }
+    PhyLoc& operator=(const PhyLoc& other) {PhyLoc cp (other); swap(*this, cp); return *this;}
     PhyLoc(const char *chr, uint bp) {
         this->chr    = new char[strlen(chr)  + 1];
         this->bp     = bp;
@@ -88,47 +83,25 @@ public:
         this->strand = strnd;
         strcpy(this->chr,  chr);
     }
+
     ~PhyLoc() {
         if (chr != NULL)
             delete [] chr;
     }
 
-    friend void swap(PhyLoc& p, PhyLoc& q) {
-        char* chr = p.chr;
-        p.chr = q.chr;
-        q.chr = chr;
-
-        const uint bp = p.bp;
-        p.bp = q.bp;
-        q.bp = bp;
-
-        const strand_type strand = p.strand;
-        p.strand = q.strand;
-        q.strand = strand;
-    }
-    PhyLoc& operator=(PhyLoc&& other) {swap(*this, other); return *this;}
-    PhyLoc& operator=(const PhyLoc& other) =delete;
-
-    bool operator==(const PhyLoc& other) const {
-        if (bp == other.bp
-                && strand == other.strand
-                && strcmp(chr, other.chr) == 0)
-            return true;
-        else
-            return false;
+    void set(const char *ochr, uint obp, strand_type ostrand) {
+        if (chr != NULL)
+            delete[] chr;
+        chr    = new char[strlen(ochr)+1];
+        strcpy(chr,  ochr);
+        bp     = obp;
+        strand = ostrand;
     }
 
-    bool operator<(const PhyLoc& other) const {
-        const int chrcmp = strcmp(chr, other.chr);
-        if (chrcmp != 0)
-            // Alphanumeric.
-            return chrcmp < 0;
-        else if (bp != other.bp)
-            return bp < other.bp;
-        else
-            // Minus strand first.
-            return strand == strand_minus && other.strand == strand_plus;
-    }
+    void clear() {if(chr!=NULL) {delete[] chr; chr=NULL;} bp=0; strand=strand_plus;}
+    friend void swap(PhyLoc& p, PhyLoc& q);
+    bool operator==(const PhyLoc& other) const;
+    bool operator<(const PhyLoc& other) const;
 };
 
 class SNP {
@@ -186,7 +159,6 @@ class PStack {
     uint            id;
     uint         count; // Number of identical reads forming this stack
     DNANSeq       *seq; // Sequence read
-    uint           len; // Read length
     vector<char *> map; // List of sequence read IDs merged into this stack
     PhyLoc         loc; // Physical genome location of this stack.
 
@@ -194,16 +166,38 @@ class PStack {
         id     = 0;
         count  = 0;
         seq    = NULL;
-        len    = 0;
     }
+    PStack(const PStack& other);
+    PStack& operator= (PStack&& other);
+    PStack& operator= (const PStack& other) = delete;
+
     ~PStack() {
-        delete this->seq;
+        if (seq!=NULL)
+            delete seq;
         for (unsigned int i = 0; i < this->map.size(); i++)
             delete [] this->map[i];
     }
+
     int  add_id(const char *);
     int  add_seq(const char *);
     int  add_seq(const DNANSeq *);
+    void add_read(const char* read_name) {
+        char* copy = new char[strlen(read_name)+1];
+        strcpy(copy, read_name);
+        map.push_back(copy);
+        ++count;
+    }
+
+    void clear();
+    bool operator< (const PStack& other) const;
+
+    static void set_id_of(set<PStack>::iterator pstack, int id) {
+        const_cast<PStack&>(*pstack).id = id;
+    }
+    static void add_read_to(set<PStack>::iterator pstack, const char* read_name) {
+        const_cast<PStack&>(*pstack).add_read(read_name);
+    }
+
 };
 
 class Stack {
@@ -303,5 +297,99 @@ public:
         this->snps.clear();
     }
 };
+
+//
+// Inline definitions
+// ----------
+//
+
+inline
+void swap(PhyLoc& p, PhyLoc& q) {
+    char* chr = p.chr;
+    p.chr = q.chr;
+    q.chr = chr;
+
+    const uint bp = p.bp;
+    p.bp = q.bp;
+    q.bp = bp;
+
+    const strand_type strand = p.strand;
+    p.strand = q.strand;
+    q.strand = strand;
+}
+
+inline
+bool PhyLoc::operator==(const PhyLoc& other) const {
+    if (bp == other.bp
+            && strand == other.strand
+            && strcmp(chr, other.chr) == 0)
+        return true;
+    else
+        return false;
+}
+
+inline
+bool PhyLoc::operator<(const PhyLoc& other) const {
+    const int chrcmp = strcmp(chr, other.chr);
+    if (chrcmp != 0)
+        // Alphanumeric.
+        return chrcmp < 0;
+    else if (bp != other.bp)
+        return bp < other.bp;
+    else
+        // Minus strand first.
+        return strand == strand_minus && other.strand == strand_plus;
+}
+
+
+inline
+PStack::PStack(const PStack& other)
+        : id(other.id)
+        , count (other.count)
+        , seq (new DNANSeq(*other.seq))
+        , map ()
+        , loc (other.loc)
+        {
+    map.reserve(other.map.size());
+    for (const char* readname : other.map) {
+        char* copy = new char[strlen(readname)+1];
+        strcpy(copy, readname);
+        map.push_back(copy);
+    }
+}
+
+inline
+PStack& PStack::operator= (PStack&& other) {
+    id = other.id;
+    count = other.count;
+    seq = other.seq;
+    other.seq = NULL;
+    swap(map, other.map);
+    swap(loc, other.loc);
+    return *this;
+}
+
+inline
+void PStack::clear() {
+    id = 0;
+    count = 0;
+    if(seq!=NULL) {
+        delete seq;
+        seq = NULL;
+    }
+    map.clear();
+    loc.clear();
+}
+
+inline
+bool PStack::operator< (const PStack& other) const {
+    if (loc < other.loc)
+        return true;
+    else if (other.loc < loc)
+        return false;
+    else
+        // Same genomic loci, compare sequences.
+        return *seq < *other.seq;
+}
 
 #endif // __STACKS_H__

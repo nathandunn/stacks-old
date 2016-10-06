@@ -80,8 +80,7 @@ int PStack::add_seq(const char *seq) {
     if (this->seq != NULL)
         delete this->seq;
 
-    this->len = strlen(seq);
-    this->seq = new DNANSeq(this->len, seq);
+    this->seq = new DNANSeq(strlen(seq), seq);
 
     return 0;
 }
