@@ -21,12 +21,21 @@
 #ifndef __CONSTANTS_H__
 #define __CONSTANTS_H__
 
+#include <string>
+#include <cassert>
+
 //
 // Pull in the configuration variables from the configure script
 //
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
+
+// Define assert's NDEBUG
+#ifndef DEBUG
+#define NDEBUG
+#endif
+#define NEVER false
 
 typedef unsigned int uint;
 
