@@ -21,75 +21,69 @@
 #ifndef __DNANSeq_H__
 #define __DNANSeq_H__
 
-#include <string.h>
-#include <limits.h>
-
-#define BITMASK(b)     (1 << ((b) % CHAR_BIT))
-#define BITSLOT(b)     ((b) / CHAR_BIT)
-#define BITSET(a, b)   ((a)[BITSLOT(b)] |= BITMASK(b))
-#define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
-#define BITTEST(a, b)  ((a)[BITSLOT(b)] & BITMASK(b))
-#define BITNSLOTS(nb)  ((nb + CHAR_BIT - 1) / CHAR_BIT)
+#include <cstring>
+#include <string>
+#include <functional>
 
 //
-// We expect (and C++ defines) an unsigned char as 8 bits.
-//
-const unsigned short int bits_per_nuc = 3;
-const unsigned short int byte_size    = 8;
-
-//
-// DNA Sequence Storage Class
-//
-// Three-bit compression, 2.667 bases per byte of storage:
-//    A == 000
-//    C == 001
-//    G == 010
-//    T == 011
-//    N == 100
+// DNANSeq
+// Compressed DNA Sequence Class. Handles N's.
 //
 class DNANSeq {
 public:
+    DNANSeq(uint len, const char* str);
+    DNANSeq(const char* str) : DNANSeq(strlen(str), str) {}
+    DNANSeq(const DNANSeq& other);
+    DNANSeq& operator=(const DNANSeq&) =delete;
+    ~DNANSeq() {delete[] s;}
+
+    char operator[](uint pos) const;
+    uint size() const {return bits / bits_per_nuc;}
+    void seq(char* buf) const;
+    std::string seq() const;
+
+    bool operator==(const DNANSeq& other) const;
+    bool operator<(const DNANSeq& other) const;
+    friend class std::hash<DNANSeq>;
+
+private:
+    uint nbytes() const {return (bits+8-1)/8;}
+
     //
-    // The number of bits required to store string of DNA string
+    // The number of bits over which the sequence is stored.
     //
-    unsigned short int bits;
+    uint bits;
     //
-    // Array of bytes to store DNA sequence.
+    // The array of bits. Padding bits, if any, are 0.
     //
     unsigned char *s;
 
-    DNANSeq(int);
-    DNANSeq(int, const char *);
-    DNANSeq(int, unsigned char *);
-    DNANSeq(const DNANSeq&);
-    DNANSeq& operator= (const DNANSeq& other) =delete;
-    ~DNANSeq();
+    static unsigned char testbit(const unsigned char* s_, uint index) { return s_[index/8] & (1 << index%8); }
+    static void setbit(unsigned char* s_, uint index) { s_[index/8] |= (1 << index%8); }
 
-    char  operator[](int);
-    int   size() const;
-    char *seq(char *);
-    char *seq();
-    char *subseq(char *, int, int);
-
-    bool operator== (const DNANSeq& other) const {
-        if (bits != other.bits)
-            return false;
-
-        unsigned int bytes = BITNSLOTS(bits);
-        for (unsigned int i = 0; i < bytes; i++)
-            if (s[i] != other.s[i])
-                return false;
-        return true;
-    }
+    // Three-bit compression (2.67 bases/byte)
+    //    A == 000
+    //    C == 001
+    //    G == 010
+    //    T == 011
+    //    N == 100
+    const static uint bits_per_nuc = 3;
 };
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
-using std::stringstream;
-using std::cin;
-using std::cout;
-using std::cerr;
+inline
+bool DNANSeq::operator== (const DNANSeq& other) const {
+    if (bits != other.bits)
+        return false;
+    return memcmp(s, other.s, nbytes()) == 0;
+}
+
+inline
+bool DNANSeq::operator<(const DNANSeq& other) const {
+    if (bits != other.bits)
+        return bits < other.bits;
+    else
+        return memcmp(s, other.s, nbytes()) < 0;
+}
 
 // Specialization for std::hash
 // Based on GCC
@@ -98,8 +92,7 @@ template<>
 struct hash<DNANSeq> {
     size_t operator()(const DNANSeq& seq) const {
         size_t __result = static_cast<size_t>(14695981039346656037ULL);
-        unsigned short int __bytes  = BITNSLOTS(seq.bits);
-        for (unsigned short int i = 0; i < __bytes; i++) {
+        for (uint i = 0; i < seq.nbytes(); i++) {
             __result ^= static_cast<size_t>(seq.s[i]);
             __result *= static_cast<size_t>(1099511628211ULL);
         }
@@ -108,29 +101,13 @@ struct hash<DNANSeq> {
 };
 }
 
-// namespace __gnu_cxx {
-//     template<>
-//     struct hash<DNANSeq *>
-//     {
-//      size_t
-//      operator()(DNANSeq *__s) const {
-//          unsigned long   __h = 0;
-//          unsigned int  bytes = BITNSLOTS(__s->bits);
-//          for (unsigned int i = 0; i < bytes; i++)
-//              __h = 5 * __h + __s->s[i];
-//          return size_t(__h);
-//      }
-//     };
-// }
-
-/* struct hash_dnanseq {
-    // Deprecated
-    size_t operator()(const DNANSeq* seq) const {return std::hash<DNANSeq>{}(*seq);}
-};
-
-struct dnanseq_eqstr {
-    // Deprecated
-    bool operator()(const DNANSeq *s1, const DNANSeq *s2) const {return *s1 == *s2;}
-}; */
+/*
+#define BITMASK(b)     (1 << ((b) % CHAR_BIT))
+#define BITSLOT(b)     ((b) / CHAR_BIT)
+#define BITSET(a, b)   ((a)[BITSLOT(b)] |= BITMASK(b))
+#define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
+#define BITTEST(a, b)  ((a)[BITSLOT(b)] & BITMASK(b))
+#define BITNSLOTS(nb)  ((nb + CHAR_BIT - 1) / CHAR_BIT)
+*/
 
 #endif // __DNANSeq_H__

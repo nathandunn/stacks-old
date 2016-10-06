@@ -353,7 +353,7 @@ edit_gapped_seqs(map<int, Stack *> &unique, map<int, Rem *> &rem, MergedStack *t
         stack_id = tag->utags[i];
         s = unique[stack_id];
 
-        buf = s->seq->seq(buf);
+        s->seq->seq(buf);
         edit_gaps(cigar, buf);
 
         delete s->seq;
@@ -364,7 +364,7 @@ edit_gapped_seqs(map<int, Stack *> &unique, map<int, Rem *> &rem, MergedStack *t
         stack_id = tag->remtags[i];
         r = rem[stack_id];
 
-        buf = r->seq->seq(buf);
+        r->seq->seq(buf);
         edit_gaps(cigar, buf);
 
         delete r->seq;
@@ -625,7 +625,7 @@ merge_remainders(map<int, MergedStack *> &merged, map<int, Rem *> &rem)
             //
             // Generate the k-mers for this remainder sequence
             //
-            buf = r->seq->seq(buf);
+            r->seq->seq(buf);
             generate_kmers_lazily(buf, kmer_len, num_kmers, rem_kmers);
 
             map<int, int> hits;
@@ -2112,7 +2112,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
                      << "primary\t"
                      << id << "\t"
                      << seq_ids[tag_2->map[j]] << "\t"
-                     << tag_2->seq->seq(buf)
+                     << tag_2->seq->seq()
                      << "\t\t\t\t\n";
 
                 if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
@@ -2140,7 +2140,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
                      << "secondary\t"
                      << "\t"
                      << seq_ids[rem->map[j]] << "\t"
-                     << rem->seq->seq(buf)
+                     << rem->seq->seq()
                      << "\t\t\t\t\n";
 
             if (gzip) gzputs(gz_tags, sstr.str().c_str()); else tags << sstr.str();
@@ -2242,7 +2242,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
         map<int, Rem *>::iterator r_it;
         for (r_it = r.begin(); r_it != r.end(); r_it++) {
             if (r_it->second->utilized == false)
-                sstr << ">" << r_it->second->id << "\n" << r_it->second->seq->seq(buf) << "\n";
+                sstr << ">" << r_it->second->id << "\n" << r_it->second->seq->seq() << "\n";
             if (gzip) gzputs(gz_unused, sstr.str().c_str()); else unused << sstr.str();
             sstr.str("");
         }
@@ -2362,21 +2362,16 @@ int dump_unique_tags(map<int, Stack *> &u) {
     map<int, Stack *>::iterator it;
     vector<pair<int, int> >::iterator pit;
     vector<int>::iterator mit;
-    char *c;
 
     for (it = u.begin(); it != u.end(); it++) {
-        c = (*it).second->seq->seq();
-
         cerr << "UniqueTag UID: " << (*it).second->id << "\n"
-             << "  Seq:       "   << c << "\n"
+             << "  Seq:       "   << it->second->seq->seq() << "\n"
              << "  IDs:       ";
 
         for (uint j = 0; j < it->second->map.size(); j++)
             cerr << it->second->map[j] << " ";
 
         cerr << "\n\n";
-
-        delete [] c;
     }
 
     return 0;

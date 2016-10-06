@@ -27,6 +27,9 @@
 //
 // $Id$
 //
+#include <cassert>
+#include "constants.h"
+
 #include "stacks.h"
 
 Rem::Rem() {
@@ -41,7 +44,7 @@ Rem::Rem(int id, uint seq_id, DNANSeq *seq) {
 
     this->map.push_back(seq_id);
 
-    this->seq = new DNANSeq(seq->size(), seq->s);
+    this->seq = new DNANSeq(*seq);
 }
 
 int Rem::add_id(uint id) {
@@ -54,7 +57,7 @@ int Rem::add_seq(const DNANSeq *seq) {
     if (this->seq != NULL)
         delete this->seq;
 
-    this->seq = new DNANSeq(seq->size(), seq->s);
+    this->seq = new DNANSeq(*seq);
 
     return 0;
 }
@@ -89,7 +92,7 @@ int PStack::add_seq(const DNANSeq *seq) {
     if (this->seq != NULL)
         delete this->seq;
 
-    this->seq = new DNANSeq(seq->size(), seq->s);
+    this->seq = new DNANSeq(*seq);
 
     return 0;
 }
@@ -113,7 +116,7 @@ int Stack::add_seq(const DNANSeq *seq) {
     if (this->seq != NULL)
         delete this->seq;
 
-    this->seq = new DNANSeq(seq->size(), seq->s);
+    this->seq = new DNANSeq(*seq);
 
     return 0;
 }
