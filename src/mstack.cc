@@ -48,12 +48,14 @@ MergedStack::MergedStack()  {
 }
 
 MergedStack::~MergedStack() {
-    delete [] this->con;
+    if (con != NULL)
+        delete[] con;
+
+    if (matrix != NULL)
+        delete[] matrix;
 
     for (uint i = 0; i < snps.size(); i++)
-        delete this->snps[i];
-
-    delete [] this->matrix;
+        delete snps[i];
 }
 
 int MergedStack::add_consensus(const char *seq) {
@@ -79,7 +81,7 @@ int MergedStack::add_consensus(DNASeq *seq) {
     return 0;
 }
 
-int MergedStack::add_consensus(DNANSeq *seq) {
+int MergedStack::add_consensus(const DNANSeq *seq) {
     if (this->con != NULL)
         delete [] this->con;
 
