@@ -24,6 +24,11 @@
 #include <string.h>
 #include <limits.h>
 
+#include <functional> //std::hash
+#ifdef HAVE_SPARSEHASH
+#include <tr1/functional>
+#endif
+
 #define BITMASK(b)     (1 << ((b) % CHAR_BIT))
 #define BITSLOT(b)     ((b) / CHAR_BIT)
 #define BITSET(a, b)   ((a)[BITSLOT(b)] |= BITMASK(b))
@@ -58,11 +63,14 @@ public:
     //
     unsigned char *s;
 
+#ifdef HAVE_SPARSEHASH
+    DNANSeq() : bits(3), s(new unsigned char[1]) { *s = (1<<2); } // "N"
+#endif
     DNANSeq(int);
     DNANSeq(int, const char *);
     DNANSeq(int, unsigned char *);
-    DNANSeq(const DNANSeq&);
-    DNANSeq& operator= (const DNANSeq& other) =delete;
+    DNANSeq(const DNANSeq& other);
+    DNANSeq& operator=(const DNANSeq& other);
     ~DNANSeq();
 
     char  operator[](int);
@@ -106,6 +114,15 @@ struct hash<DNANSeq> {
         return __result;
     }
 };
+
+#ifdef HAVE_SPARSEHASH
+namespace tr1 {
+template<>
+struct hash<DNANSeq> {
+    size_t operator()(const DNANSeq& seq) const { return std::hash<DNANSeq>()(seq); }
+};
+}
+#endif
 }
 
 // namespace __gnu_cxx {
