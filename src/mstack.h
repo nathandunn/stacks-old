@@ -73,9 +73,14 @@ class MergedStack {
 
     MergedStack();
     ~MergedStack();
+
+    MergedStack(MergedStack&& other);
+    MergedStack(const MergedStack& other) = delete;
+    MergedStack& operator=(const MergedStack& other) = delete;
+
     int       add_consensus(const char *);
     int       add_consensus(DNASeq *);
-    int       add_consensus(DNANSeq *);
+    int       add_consensus(const DNANSeq *);
     int       add_dist(const int id, const int dist);
     DNANSeq **gen_matrix(map<int, Stack *> &, map<int, Rem *> &);
     DNANSeq **gen_matrix(map<int, PStack *> &);
@@ -83,4 +88,31 @@ class MergedStack {
     string    write_cmb();
 };
 
+inline
+MergedStack::MergedStack(MergedStack&& o)
+        : id (o.id)
+        , con (o.con)
+        , len (o.len)
+        , count (o.count)
+        , utags (std::move(o.utags))
+        , remtags (std::move(o.remtags))
+        , matrix (o.matrix)
+        , dist (std::move(o.dist))
+        , alns (std::move(o.alns))
+        , cohort_id (o.cohort_id)
+        , lnl (o.lnl)
+        , loc (std::move(o.loc))
+        , snps (std::move(o.snps))
+        , alleles (std::move(o.alleles))
+        , gaps (std::move(o.gaps))
+        , deleveraged (o.deleveraged)
+        , masked (o.masked)
+        , blacklisted (o.blacklisted)
+        , gappedlumberjack (o.gappedlumberjack)
+        , lumberjackstack (o.lumberjackstack)
+        {
+    o.con = NULL;
+    o.matrix = NULL;
+    o.snps.clear();
+}
 #endif // __MSTACK_H__
