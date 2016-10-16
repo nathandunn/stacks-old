@@ -146,9 +146,10 @@ int Sam::next_seq(Seq& s) {
         case 'D':
         case 'S':
         case 'H':
+        case 'N':
             break;
         default:
-            cerr << "Error parsing CIGAR string '" << cigar[i].first << cigar[i].second << "'.\n";
+            cerr << "Error parsing CIGAR string '" << cigar[i].second << cigar[i].first << "'.\n";
             break;
         }
     double pct_aln = double(len) / double(parts[9].length());
