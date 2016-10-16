@@ -1056,7 +1056,7 @@ void help() {
               << "  f: input file path.\n"
               << "  o: output path to write results.\n"
               << "  i: SQL ID to insert into the output to identify this sample.\n"
-              << "  m: minimum depth of coverage to report a stack (default 1).\n"
+              << "  m: minimum depth of coverage to report a stack (default 3).\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  h: display this help messsage.\n"
               << "  --pct_aln <num>: require read alignments to use at least this percentage of the read (default 85%).\n"
