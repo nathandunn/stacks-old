@@ -2,6 +2,7 @@ Stacks 1.44 - Oct 11, 2016
 --------------------------
 	Bugfix: corrected an error in pstacks where '=' and 'X' symbols were not recognized properly in SAM/BAM
 	CIGAR strings.
+	Bugfix: corrected some typos in pstacks/populations help output.
 
 Stacks 1.43 - Oct 05, 2016
 --------------------------
