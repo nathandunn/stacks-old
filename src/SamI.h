@@ -140,7 +140,16 @@ int Sam::next_seq(Seq& s) {
         case 'M':
         case 'I':
         case '=':
+        case 'X':
             len += cigar[i].second;
+            break;
+        case 'D':
+        case 'S':
+        case 'H':
+            break;
+        default:
+            cerr << "Error parsing CIGAR string '" << cigar[i].first << cigar[i].second << "'.\n";
+            break;
         }
     double pct_aln = double(len) / double(parts[9].length());
 
@@ -209,7 +218,11 @@ Sam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
             break;
         case 'M':
         case 'D':
+        case '=':
+        case 'X':
             aln_bp += dist;
+            break;
+        default:
             break;
         }
     }
@@ -314,6 +327,8 @@ Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
             }
             break;
         case 'M':
+        case '=':
+        case 'X':
             bp += dist;
             break;
         default:

@@ -192,7 +192,16 @@ Bam::next_seq(Seq& s)
         case 'M':
         case 'I':
         case '=':
+        case 'X':
             len += cigar[i].second;
+            break;
+        case 'D':
+        case 'S':
+        case 'H':
+            break;
+        default:
+            cerr << "Error parsing CIGAR string '" << cigar[i].first << cigar[i].second << "'.\n";
+            break;
         }
     double pct_aln = len / double(seq.length());
 
@@ -221,6 +230,12 @@ Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
         case BAM_CMATCH:
             c = 'M';
             break;
+        case BAM_CEQUAL:
+            c = '=';
+            break;
+        case BAM_CDIFF:
+            c = 'X';
+            break;
         case BAM_CINS:
             c = 'I';
             break;
@@ -238,6 +253,9 @@ Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
             break;
         case BAM_CPAD:
             c = 'P';
+            break;
+        default:
+            cerr << "Unknown operation present in CIGAR string.\n";
             break;
         }
 
@@ -308,8 +326,12 @@ Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
                 aln_bp += dist;
             break;
         case 'M':
+        case '=':
+        case 'X':
         case 'D':
             aln_bp += dist;
+            break;
+        default:
             break;
         }
     }
@@ -414,6 +436,8 @@ Bam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
             }
             break;
         case 'M':
+        case '=':
+        case 'X':
             bp += dist;
             break;
         default:
