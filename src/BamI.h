@@ -321,6 +321,7 @@ Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
 
         switch(op) {
         case 'I':
+        case 'H':
             break;
         case 'S':
             if (i < size - 1)
@@ -330,7 +331,7 @@ Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
         case '=':
         case 'X':
         case 'D':
-        case 'H':
+        case 'N':
             aln_bp += dist;
             break;
         default:

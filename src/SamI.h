@@ -212,15 +212,17 @@ Sam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
 
         switch(op) {
         case 'I':
+        case 'H':
             break;
         case 'S':
             if (i < size - 1)
                 aln_bp += dist;
             break;
         case 'M':
-        case 'D':
         case '=':
         case 'X':
+        case 'D':
+        case 'N':
             aln_bp += dist;
             break;
         default:
