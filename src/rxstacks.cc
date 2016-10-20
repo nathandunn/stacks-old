@@ -472,17 +472,13 @@ calc_lnl_means(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap)
             mean += d[i]->lnl;
         }
 
-        if (lnls.size() == 0) {
+        if (lnls.size() == 0)
             continue;
-        } else if (lnls.size() == 1) {
-            median = lnls[0];
-        } else {
-            sort(lnls.begin(), lnls.end());
 
-            mid    = lnls.size() / 2;
-            median = lnls.size() % 2 == 0 ? lnls[mid] + lnls[mid+1] / 2.0 : lnls[mid+1];
-        }
-        mean = mean / (double) lnls.size();
+        sort(lnls.begin(), lnls.end());
+        mid    = lnls.size() / 2;
+        median = lnls.size() % 2 == 0 ? lnls[mid-1] + lnls[mid] / 2.0 : lnls[mid];
+        mean   = mean / (double) lnls.size();
 
         cloc->lnl = mean;
 
