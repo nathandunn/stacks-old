@@ -64,9 +64,10 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
         int      limit = 3 * sigma;
         int      dist;
         uint     pos_l, pos_u;
-        double   sum, final_weight;
+        double   *sum, final_weight;
         PopStat *c, *p;
 
+        sum   = new double[this->size];
         pos_l = 0;
         pos_u = 0;
 
@@ -77,9 +78,10 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
             if (c == NULL)
                 continue;
 
-            for (uint i = 0; i < this->size; i++)
+            for (uint i = 0; i < this->size; i++) {
                 c->smoothed[i] = 0.0;
-            sum = 0.0;
+                sum[i]         = 0.0;
+            }
 
             determine_window_limits(popstats, c->bp, pos_l, pos_u);
 
@@ -114,10 +116,12 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
                 // sites_cnt++;
 
                 final_weight = (p->alleles - 1) * this->weights[dist];
-                for (uint i = 0; i < this->size; i++)
-                    c->smoothed[i] += p->stat[i] * final_weight;
-                sum += final_weight;
-
+                for (uint i = 0; i < this->size; i++) {
+                    if (p->stat[i] > -7.0) {
+                        c->smoothed[i] += p->stat[i] * final_weight;
+                        sum[i]         += final_weight;
+                    }
+                }
                 // if (c->loc_id == 9314) {
                 //     cerr << "    id: " << p->loc_id
                 //          << "; dist: " << dist
@@ -139,8 +143,10 @@ KSmooth<StatT>::smooth(vector<StatT *> &popstats)
             // c->snp_cnt = snp_cnt;
 
             for (uint i = 0; i < this->size; i++)
-                c->smoothed[i] /= sum;
+                c->smoothed[i] /= sum[i];
         }
+
+        delete [] sum;
     }
 
     return 0;
