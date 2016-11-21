@@ -3082,15 +3082,31 @@ populate_snp_calls(map<int, CSLocus *> &catalog,
             loc = cit->second;
             datum = pmap->datum(loc->id, mpopi.samples()[i].id);
 
-            if (datum != NULL && snpres.count(datum->id)) {
+            if (datum != NULL) {
+                snpr = snpres.at(datum->id);
+
+                if (datum->cigar != NULL) {
+                    // Datum::model is always padded (cf. `Datum::add_model()`),
+                    // so we also want to pad the snps vector as soon as it is
+                    // loaded.
+                    vector<pair<char, uint> > cigar;
+                    parse_cigar(datum->cigar, cigar);
+                    pad(snpr->snps, cigar);
+                    for (auto& snp : snpr->snps) {
+                        if (snp == NULL) {
+                            snp = new SNP();
+                            snp->type = snp_type_unk;
+                        }
+                    }
+                }
 
                 if (merge_sites && merge_map.count(loc->id)) {
+                    //TODO Check how this is affected by CIGARs -- Nick, 2016-11-20
                     datum_adjust_snp_positions(merge_map, loc, datum, snpres);
                 } else {
                     //
                     // Deep copy the SNP objects.
                     //
-                    snpr = snpres[datum->id];
                     for (uint j = 0; j < snpr->snps.size(); j++) {
                         snp         = new SNP;
                         snp->col    = snpr->snps[j]->col;

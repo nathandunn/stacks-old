@@ -39,6 +39,35 @@ int load_catalog_matches(string sample,  vector<CatMatch *> &matches);
 int load_model_results(string sample,  map<int, ModRes *> &modres);
 int load_snp_calls(string sample,  map<int, SNPRes *> &snpres);
 
+//
+// Pads a vector of pointers in-place according to a CIGAR.
+// Only the M, D and S operations are supported (rem. I is unexpected in matches
+// files as the catalog should be fully padded).
+//
+template<typename T>
+void pad(std::vector<T*>& vec, const std::vector<std::pair<char, uint> >& cigar) {
+    std::vector<T*> old_vec = vec;
+    vec.clear();
+
+    size_t old_vec_i = 0;
+    for (const auto& op : cigar) {
+        for (size_t i = 0; i<op.second; ++i) {
+            if (op.first == 'M') {
+                vec.push_back(old_vec.at(old_vec_i));
+                ++old_vec_i;
+            } else if (op.first == 'D') {
+                vec.push_back(NULL);
+            } else if (op.first == 'S') {
+                vec.push_back(NULL);
+                ++old_vec_i;
+            } else {
+                cerr << "Error: Unexpected CIGAR operation '" << op.first << "'." << endl;
+                throw std::exception();
+            }
+        }
+    }
+}
+
 template <class LocusT>
 int
 load_loci(string sample,  map<int, LocusT *> &loci, bool store_reads, bool load_all_model_calls, bool &compressed)
