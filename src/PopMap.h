@@ -59,7 +59,6 @@ public:
     char          *cigar;         // CIGAR string describing how the datum aligns to the catalog locus.
     double         lnl;           // Log likelihood of this locus.
     vector<char *> obshap;        // Observed Haplotypes
-    vector<SNP *>  snps;          // All calls for this sample for this locus. size() is [len].
     Datum()  {
         this->id            = -1;
         this->corrected     = false;
@@ -75,8 +74,6 @@ public:
     ~Datum() {
         for (uint i = 0; i < this->obshap.size(); i++)
             delete [] this->obshap[i];
-        for (uint i = 0; i < this->snps.size(); i++)
-            delete this->snps[i];
         delete [] this->gtype;
         delete [] this->trans_gtype;
         delete [] this->model;
