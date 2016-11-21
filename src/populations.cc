@@ -1839,25 +1839,7 @@ merge_datums(int sample_cnt,
             cerr << "Unexpected condition in merging datums: one datum is NULL while the other is not.\n";
 
         //
-        // 1. Reverse complement the SNP coordinates in the sink locus so that they are
-        //    enumerated on the positive strand. Complement the alleles as well.
-        //
-        for (uint j = 0; j < sink[i]->snps.size(); j++) {
-            sink[i]->snps[j]->col    = sink[i]->len - sink[i]->snps[j]->col - 1;
-            sink[i]->snps[j]->rank_1 = reverse(sink[i]->snps[j]->rank_1);
-            sink[i]->snps[j]->rank_2 = reverse(sink[i]->snps[j]->rank_2);
-            sink[i]->snps[j]->rank_3 = reverse(sink[i]->snps[j]->rank_3);
-            sink[i]->snps[j]->rank_4 = reverse(sink[i]->snps[j]->rank_4);
-        }
-
-        //
-        // 2. Adjust the SNP coordinates in the src locus to account for the now, longer length.
-        //
-        for (uint j = 0; j < src[i]->snps.size(); j++)
-            src[i]->snps[j]->col = sink[i]->len + src[i]->snps[j]->col - renz_olap[enz];
-
-        //
-        // 3. Reverse complement the observed haplotypes in the sink locus.
+        // 1. Reverse complement the observed haplotypes in the sink locus.
         //
         haplen = strlen(sink[i]->obshap[0]);
         for (uint j = 0; j < sink[i]->obshap.size(); j++) {
@@ -1866,24 +1848,11 @@ merge_datums(int sample_cnt,
             tmphap[haplen] = '\0';
             strcpy(sink[i]->obshap[j], tmphap);
         }
-
-        //
-        // 4. Combine SNPs between the two datums: add the SNPs from the sink (formerly on the
-        //    negative strand) in reverse order, followed by the SNPs from the src.
-        //
-        tmpsnp.clear();
-        for (int j = (int) sink[i]->snps.size() - 1; j >= 0; j--)
-            tmpsnp.push_back(sink[i]->snps[j]);
-        for (uint j = 0; j < src[i]->snps.size(); j++)
-            tmpsnp.push_back(src[i]->snps[j]);
-        sink[i]->snps.clear();
-        for (uint j = 0; j < tmpsnp.size(); j++)
-            sink[i]->snps.push_back(tmpsnp[j]);
     }
 
     //
-    // 5. Combine observed haplotypes between the two datums while phasing them.
-    //    5.1 First combine the haplotypes from samples that are already in phase.
+    // 2. Combine observed haplotypes between the two datums while phasing them.
+    //    2.1 First combine the haplotypes from samples that are already in phase.
     //
     string      merged_hap;
     vector<int> to_be_phased;
@@ -1933,7 +1902,7 @@ merge_datums(int sample_cnt,
         }
     }
     //
-    //    5.2 Phase and combine the haplotypes from the remaining samples.
+    //    2.2 Phase and combine the haplotypes from the remaining samples.
     //
     int index;
     for (uint i = 0; i < to_be_phased.size(); i++) {
@@ -1979,7 +1948,7 @@ merge_datums(int sample_cnt,
     }
 
     //
-    // 6. Merge model calls; Set the length; combine the two depth and lnl measures together.
+    // 3. Merge model calls; Set the length; combine the two depth and lnl measures together.
     //
     string model_calls;
     char  *p;
