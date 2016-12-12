@@ -1,8 +1,9 @@
 dev
 ----------
-    Bugfix: Corrected a bug in rxstacks that affected locus likelihood medians.
-    Bugfix: Corrected a VCF-related segfault in the populations module. Current use of VCF's GL field was
-            improper and was removed.
+    Feature: Added a check for sample ID unicity in cstacks.
+    Bugfix:  Corrected a bug in rxstacks that affected locus likelihood medians.
+    Bugfix:  Corrected a VCF-related segfault in the populations module. Current use of VCF's GL field was
+             improper and was removed.
 
 Stacks 1.44 - Oct 11, 2016
 --------------------------

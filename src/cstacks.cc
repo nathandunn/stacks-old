@@ -42,6 +42,8 @@ bool    gapped_alignments = false;
 double  min_match_len     = 0.80;
 double  max_gaps          = 2.0;
 
+using namespace std;
+
 int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
@@ -69,6 +71,8 @@ int main (int argc, char* argv[]) {
     bool compressed = false;
     int  i;
 
+    set<int> seen_sample_ids; // For checking sample ID unicity.
+
     if (catalog_path.length() > 0) {
         cerr << "Initializing existing catalog...\n";
         if (!initialize_existing_catalog(catalog_path, catalog)) {
@@ -87,6 +91,7 @@ int main (int argc, char* argv[]) {
             return 1;
         }
         i = 2;
+        seen_sample_ids.insert(catalog.begin()->second->sample_id);
     }
 
     //
@@ -114,6 +119,13 @@ int main (int argc, char* argv[]) {
         // Assign the ID for this sample data.
         //
         s.first = sample.begin()->second->sample_id;
+
+        // Check for unique sample IDs.
+        if (!seen_sample_ids.insert(s.first).second) {
+            // Insert failed.
+            cerr << "Error: Sample ID '" << s.first << "' occurs more than once. Sample IDs must be unique." << endl;
+            return -1;
+        }
 
         //dump_loci(sample);
 
