@@ -5474,6 +5474,11 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        help();
+    }
+
     //
     // Check argument constrains.
     //
