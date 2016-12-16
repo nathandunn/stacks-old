@@ -15,21 +15,21 @@ const char *aluI[]    = {"CT",                // AG/CT, AluI
 const char *apaLI[]   = {"TGCAC",             // G/TGCAC, ApaLI
                          "GTGCA"};
 const char *apeKI[]   = {"CAGC", "CTGC",      // G/CWGC, ApeKI; W=A or T
-             "GTCG", "GACG"};
+                         "GTCG", "GACG"};
 const char *apoI[]    = {"AATTC", "AATTT",    // R/AATTY, ApoI  (also known as XapI)
                          "GAATT", "AAATT"};
 const char *aseI[]    = {"TAAT",              // AT/TAAT, AseI
                          "ATTA"};
 const char *bamHI[]   = {"GATCC",             // G/GATCC, BamHI
-             "GGATC"};
+                         "GGATC"};
 const char *bfaI[]    = {"TAG",               // C/TAG, BfaI
                          "CTA"};
 const char *bgIII[]   = {"GATCT",             // A/GATCT, BgIII
-             "AGATC"};
+                         "AGATC"};
 const char *bsaHI[]   = {"CGCC", "CGTC",      // GR/CGYC, BsaHI
                          "GGCG", "GACG"};
 const char *bspDI[]   = {"CGAT",              // AT/CGAT, BspDI
-             "ATCG"};
+                         "ATCG"};
 const char *bstYI[]   = {"GATCC", "GATCT",    // R/GATCY, BstYI (also known as PsuI)
                          "GGATC", "AGATC"};
 const char *claI[]    = {"CGAT",              // AT/CGAT, ClaI
@@ -37,29 +37,29 @@ const char *claI[]    = {"CGAT",              // AT/CGAT, ClaI
 const char *csp6I[]   = {"TAC",               // G/TAC, Csp6I
                          "GTA"};
 const char *ddeI[]    = {"TAAG", "TCAG", "TGAG", "TTAG", // C/TNAG, DdeI
-             "CTTA", "CTGA", "CTCA", "CTAA"};
+                         "CTTA", "CTGA", "CTCA", "CTAA"};
 const char *dpnII[]   = {"GATC",              // GATC, DpnII
-             "GATC"};
+                         "GATC"};
 const char *eaeI[]    = {"GGCCA", "GGCCG",    // Y/GGCCR, EaeI
-             "TGGCC", "CGGCC"};
+                         "TGGCC", "CGGCC"};
 const char *ecoRI[]   = {"AATTC",             // G/AATTC, EcoRI
-             "GAATT"};
+                         "GAATT"};
 const char *ecoRV[]   = {"ATC",               // GAT/ATC, EcoRV
-             "GAT"};
+                         "GAT"};
 const char *ecoT22I[] = {"TGCAT",             // A/TGCAT, EcoT22I
-             "ATGCA"};
+                         "ATGCA"};
 const char *hindIII[] = {"AGCTT",             // A/AGCTT, HindIII
-             "TCGAA"};
+                         "TCGAA"};
 const char *hpaII[]   = {"CGG",               // C/CGG, HpaII
                          "CCG"};
 const char *kpnI[]    = {"GTACC",             // C/CATGG, KpnI
-             "GGTAC"};
+                         "GGTAC"};
 const char *mluCI[]   = {"AATT",              // AATT, MluCI
-             "AATT"};
+                         "AATT"};
 const char *mseI[]    = {"TAA",               // T/TAA, MseI
-             "TTA"};
+                         "TTA"};
 const char *mspI[]    = {"CGG",               // C/CGG, MspI
-             "CCG"};
+                         "CCG"};
 const char *ncoI[]    = {"CATGG",             // C/CATGG, NcoI
                          "CCATG"};
 const char *ndeI[]    = {"TATG",              // CA/TATG, NdeI
@@ -67,33 +67,33 @@ const char *ndeI[]    = {"TATG",              // CA/TATG, NdeI
 const char *nheI[]    = {"CTAGC",             // G/CTAGC, NheI
                          "GCTAG"};
 const char *nlaIII[]  = {"CATG",              // CATG, NlaIII
-             "CATG"};
+                         "CATG"};
 const char *notI[]    = {"GGCCGC",            // GC/GGCCGC, NotI
-             "GCGGCC"};
+                         "GCGGCC"};
 const char *nsiI[]    = {"TGCAT",             // ATGCA/T, NsiI
-             "ATGCA"};
+                         "ATGCA"};
 const char *pstI[]    = {"TGCAG",             // CTGCA/G, PstI
-             "CTGCA"};
+                         "CTGCA"};
 const char *rsaI[]    = {"AC",                // GT/AC, RsaI
                          "GT"};
 const char *sacI[]    = {"AGCTC",             // GAGCT/C, SacI
-             "GAGCT"};
+                         "GAGCT"};
 const char *sau3AI[]  = {"GATC",              // GATC, Sau3AI
-             "GATC"};
+                         "GATC"};
 const char *sbfI[]    = {"TGCAGG",            // CCTGCA/GG, SbfI
-             "CCTGCA"};
+                         "CCTGCA"};
 const char *sexAI[]   = {"CCAGGT", "CCTGGT",  // A/CCWGGT, SexAI; W=A or T
-             "ACCTGG", "ACCAGG"};
+                         "ACCTGG", "ACCAGG"};
 const char *sgrAI[]   = {"CCGGCG", "CCGGTG",  // CR/CCGGYG, SgrAI; R=A or G; Y=C or T
-             "CGCCGG", "CACCGG"};
+                         "CGCCGG", "CACCGG"};
 const char *speI[]    = {"CTAGT",             // A/CTAGT, SpeI
                          "ACTAG"};
 const char *sphI[]    = {"CATGC",             // GCATG/C, SphI
-             "GCATG"};
+                         "GCATG"};
 const char *taqI[]    = {"CGA",               // T/CGA, TaqI
-             "TCG"};
+                         "TCG"};
 const char *xbaI[]    = {"CTAGA",             // T/CTAGA, XbaI
-             "TCTAG"};
+                         "TCTAG"};
 const char *xhoI[]    = {"TCGAG",             // C/TCGAG, XhoI
                          "CTCGA"};
 
