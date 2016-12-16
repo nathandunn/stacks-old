@@ -12,6 +12,8 @@ const char *ageI[]    = {"CCGGT",             // A/CCGGT, AgeI
                          "ACCGG"};
 const char *aluI[]    = {"CT",                // AG/CT, AluI
                          "AG"};
+const char *apaLI[]   = {"TGCAC",             // G/TGCAC, ApaLI
+                         "GTGCA"};
 const char *apeKI[]   = {"CAGC", "CTGC",      // G/CWGC, ApeKI; W=A or T
              "GTCG", "GACG"};
 const char *apoI[]    = {"AATTC", "AATTT",    // R/AATTY, ApoI  (also known as XapI)
@@ -142,6 +144,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz["bsaHI"]   = bsaHI;   // GR/CGYC, BsaHI
     renz["hpaII"]   = hpaII;   // C/CGG, HpaII
     renz["ncoI"]    = ncoI;    // C/CATGG, NcoI
+    renz["apaLI"]   = apaLI;   // G/TGCAC, ApaLI
 
     renz_cnt["sbfI"]    = 1;
     renz_cnt["pstI"]    = 1;
@@ -187,6 +190,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_cnt["bsaHI"]   = 2;
     renz_cnt["hpaII"]   = 1;
     renz_cnt["ncoI"]    = 1;
+    renz_cnt["apaLI"]   = 1;
 
     renz_len["sbfI"]    = 6;
     renz_len["pstI"]    = 5;
@@ -232,6 +236,7 @@ initialize_renz(map<string, const char **> &renz, map<string, int> &renz_cnt, ma
     renz_len["bsaHI"]   = 4;
     renz_len["hpaII"]   = 3;
     renz_len["ncoI"]    = 5;
+    renz_len["apaLI"]   = 5;
 }
 
 void
