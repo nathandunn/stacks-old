@@ -74,7 +74,7 @@ int main (int argc, char* argv[]) {
     set<int> seen_sample_ids; // For checking sample ID unicity.
 
     if (catalog_path.length() > 0) {
-        cerr << "Initializing existing catalog...\n";
+        cerr << "\nInitializing existing catalog...\n";
         if (!initialize_existing_catalog(catalog_path, catalog)) {
             cerr << "Failed to initialize the catalog.\n";
             return 1;
@@ -85,7 +85,7 @@ int main (int argc, char* argv[]) {
         s = samples.front();
         samples.pop();
 
-        cerr << "Initializing new catalog...\n";
+        cerr << "\nInitializing new catalog...\n";
         if (!initialize_new_catalog(s, catalog)) {
             cerr << "Failed to initialize the catalog.\n";
             return 1;
@@ -106,7 +106,7 @@ int main (int argc, char* argv[]) {
     while (!samples.empty()) {
         map<int, QLocus *> sample;
 
-        cerr << "Processing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
+        cerr << "\nProcessing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
 
         s = samples.front();
         samples.pop();
@@ -173,9 +173,9 @@ int main (int argc, char* argv[]) {
         sample.clear();
     }
 
-    cerr << "Writing catalog to '" << out_path << "...";
+    cerr << "\nWriting catalog in directory '" << out_path << "'.\n";
     write_catalog(catalog);
-    cerr << " done.\n";
+    cerr << "cstacks is done.\n";
 
     //
     // Free memory associated with the catalog.

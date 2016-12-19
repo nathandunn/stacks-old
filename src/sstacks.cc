@@ -92,7 +92,7 @@ int main (int argc, char* argv[]) {
         sample_path = samples.front();
         samples.pop();
 
-        cerr << "Processing sample '" << sample_path << "' [" << i << " of " << sample_cnt << "]\n";
+        cerr << "\nProcessing sample '" << sample_path << "' [" << i << " of " << sample_cnt << "]\n";
 
         res = load_loci(sample_path, sample, false, false, compressed);
 
@@ -144,8 +144,8 @@ int main (int argc, char* argv[]) {
     //
     for (map<int, Locus *>::iterator j = catalog.begin(); j != catalog.end(); j++)
         delete j->second;
-    catalog.clear();
 
+    cerr << "\nsstacks is done.\n";
     return 0;
 }
 
