@@ -41,7 +41,7 @@ uint    max_subgraph      = 3;
 int     dump_graph        = 0;
 int     retain_rem_reads  = false;
 int     deleverage_stacks = 0;
-int     remove_rep_stacks = 0;
+bool    remove_rep_stacks = true;
 int     max_utag_dist     = 2;
 int     max_rem_dist      = -1;
 bool    gapped_alignments = false;
@@ -2585,7 +2585,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"k_len",            required_argument, NULL, 'k'},
             {"num_threads",      required_argument, NULL, 'p'},
             {"deleverage",       no_argument,       NULL, 'd'},
-            {"remove_rep",       no_argument,       NULL, 'r'},
+            {"keep_high_cov",    no_argument,       NULL, 1000},
             {"retain_rem",       no_argument,       NULL, 'R'},
             {"graph",            no_argument,       NULL, 'g'},
             {"sec_hapl",         no_argument,       NULL, 'H'},
@@ -2597,6 +2597,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"bound_low",        required_argument, NULL, 'L'},
             {"bound_high",       required_argument, NULL, 'U'},
             {"alpha",            required_argument, NULL, 'A'},
+            {"r-deprecated",     no_argument,       NULL, 'r'},
             {0, 0, 0, 0}
         };
 
@@ -2652,8 +2653,8 @@ int parse_command_line(int argc, char* argv[]) {
         case 'd':
             deleverage_stacks++;
             break;
-        case 'r':
-            remove_rep_stacks++;
+        case 1000: // keep_high_cov
+            remove_rep_stacks = false;
             break;
         case 'K':
             max_subgraph = is_integer(optarg);
@@ -2688,6 +2689,7 @@ int parse_command_line(int argc, char* argv[]) {
                 cerr << "Unknown model type specified '" << optarg << "'\n";
                 help();
             }
+            break;;
         case 'e':
             barcode_err_freq = is_double(optarg);
             break;
@@ -2708,6 +2710,9 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'v':
             version();
+            break;
+        case 'r': // deprecated Dec 2016, v1.45
+            cerr << "Warning: Ignoring deprecated option -r (this has become the default).\n";
             break;
         case '?':
             // getopt_long already printed an error message.
@@ -2785,8 +2790,8 @@ void help() {
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  h: display this help messsage.\n\n"
               << "  Stack assembly options:\n"
-              << "    r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm.\n"
               << "    d: enable the Deleveraging algorithm, used for resolving over merged tags.\n"
+              << "    --keep_high_cov: disable the algorithm that removes highly-repetitive stacks and nearby errors.\n"
               << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
               << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
               << "  Gapped assembly options:\n"
