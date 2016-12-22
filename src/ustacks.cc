@@ -134,27 +134,21 @@ int main (int argc, char* argv[]) {
 
     double cov_mean, cov_stdev, cov_max;
 
-    calc_coverage_distribution(unique, cov_mean, cov_stdev, cov_max);
+    map<int, MergedStack *> merged;
+    populate_merged_tags(unique, merged);
+    cerr << merged.size() << " initial stacks were populated; " << remainders.size() << " stacks were set aside as secondary reads.\n";
+    calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
     cerr << "Initial coverage mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
     calc_triggers(cov_mean, cov_stdev, 1, deleverage_trigger, removal_trigger);
-
     cerr << "Deleveraging trigger: " << deleverage_trigger << "; Removal trigger: " << removal_trigger << "\n";
-
-    map<int, MergedStack *> merged;
-
-    populate_merged_tags(unique, merged);
-
-    cerr << merged.size() << " initial stacks were populated; " << remainders.size() << " stacks were set aside as secondary reads.\n";
-
     if (remove_rep_stacks) {
         cerr << "Calculating distance for removing repetitive stacks.\n";
         calc_kmer_distance(merged, 1);
         cerr << "Removing repetitive stacks.\n";
         remove_repetitive_stacks(unique, merged);
     }
-
-    calc_coverage_distribution(unique, merged, cov_mean, cov_stdev, cov_max);
+    calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
     cerr << "Post-Repeat Removal, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
     cerr << "Calculating distance between stacks...\n";
@@ -165,7 +159,7 @@ int main (int argc, char* argv[]) {
 
     call_consensus(merged, unique, remainders, false);
 
-    calc_coverage_distribution(unique, merged, cov_mean, cov_stdev, cov_max);
+    calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
     cerr << "After merging, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
     //dump_merged_tags(merged);
@@ -1709,157 +1703,49 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     return 0;
 }
 
-int
-calc_coverage_distribution(map<int, Stack *> &unique,
-                           double &mean, double &stdev, double &max)
-{
-    map<int, Stack *>::iterator i;
-    double m     = 0.0;
-    double s     = 0.0;
-    double sum   = 0.0;
-    uint   cnt   = 0;
-    double total = 0.0;
-
-    mean  = 0.0;
-    max   = 0.0;
-    stdev = 0.0;
-
-    map<int, int> depth_dist;
-    map<int, int>::iterator j;
-
-    for (i = unique.begin(); i != unique.end(); i++) {
-        cnt = i->second->count();
-        m += cnt;
-        total++;
-
-        depth_dist[cnt]++;
-
-        if (cnt > max)
-            max = cnt;
-    }
-
-    mean = m / total;
-
-    //
-    // Calculate the standard deviation
-    //
-    total = 0.0;
-
-    for (i = unique.begin(); i != unique.end(); i++) {
-        total++;
-        s = i->second->count();
-        sum += pow((s - mean), 2);
-    }
-
-    stdev = sqrt(sum / (total - 1));
-
-    return 0;
-}
-
-int
-calc_coverage_distribution(map<int, Stack *> &unique,
-                           map<int, MergedStack *> &merged,
-                           double &mean, double &stdev, double &max)
-{
-    map<int, MergedStack *>::iterator it;
-    vector<int>::iterator             k;
-    Stack *tag;
-    double m   = 0.0;
-    double s   = 0.0;
-    double sum = 0.0;
-    double cnt = 0.0;
-
-    mean  = 0.0;
-    max   = 0.0;
-    stdev = 0.0;
-
-    for (it = merged.begin(); it != merged.end(); it++) {
-        if (it->second->blacklisted) continue;
-
-        cnt++;
-        m = 0.0;
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag  = unique[*k];
-            m   += tag->count();
-        }
-        if (m > max) max = m;
-
-        sum += m;
-    }
-
-    mean = sum / cnt;
-
-    //
-    // Calculate the standard deviation
-    //
-    for (it = merged.begin(); it != merged.end(); it++) {
-        s = 0.0;
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag  = unique[*k];
-            s   += tag->count();
-        }
-        sum += pow((s - mean), 2);
-    }
-
-    stdev = sqrt(sum / (cnt - 1));
-
-    return 0;
-}
-
-int
+void
 calc_coverage_distribution(map<int, Stack *> &unique,
                            map<int, Rem *> &rem,
                            map<int, MergedStack *> &merged,
                            double &mean, double &stdev, double &max)
 {
-    map<int, MergedStack *>::iterator it;
-    vector<int>::iterator             k;
-    Stack *tag;
-    double m    = 0.0;
-    double s    = 0.0;
-    double sum  = 0.0;
-    double cnt  = 0.0;
-
-    mean  = 0.0;
     max   = 0.0;
+    mean = 0.0;
     stdev = 0.0;
 
-    for (it = merged.begin(); it != merged.end(); it++) {
-        if (it->second->blacklisted) continue;
+    size_t not_blacklisted = 0;
+    for (const pair<int, MergedStack*>& mtag : merged) {
+        if (mtag.second->blacklisted)
+            continue;
 
-        cnt++;
-        m = 0.0;
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag  = unique[*k];
-            m   += tag->count();
-        }
-        for (uint j = 0; j < it->second->remtags.size(); j++)
-            m += rem[it->second->remtags[j]]->count();
+        ++not_blacklisted;
 
-        if (m > max) max = m;
+        double depth = 0.0;
+        for (int utag_id : mtag.second->utags)
+            depth += unique[utag_id]->count();
+        for (int remtag_id : mtag.second->remtags)
+            depth += rem[remtag_id]->count();
 
-        sum += m;
+        mean += depth;
+        if (depth > max)
+            max = depth;
     }
+    mean /= not_blacklisted;
 
-    mean = sum / cnt;
+    for (const pair<int, MergedStack*>& mtag : merged) {
+        if (mtag.second->blacklisted)
+            continue;
 
-    //
-    // Calculate the standard deviation
-    //
-    for (it = merged.begin(); it != merged.end(); it++) {
-        s = 0.0;
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag  = unique[*k];
-            s   += tag->count();
-        }
-        for (uint j = 0; j < it->second->remtags.size(); j++)
-            s += rem[it->second->remtags[j]]->count();
-        sum += pow((s - mean), 2);
+        double depth = 0.0;
+        for (int utag_id : mtag.second->utags)
+            depth += unique[utag_id]->count();
+        for (int remtag_id : mtag.second->remtags)
+            depth += rem[remtag_id]->count();
+
+        stdev += pow(depth - mean, 2);
     }
-
-    stdev = sqrt(sum / (cnt - 1));
-
-    return 0;
+    stdev /= not_blacklisted;
+    stdev = sqrt(stdev);
 }
 
 int count_raw_reads(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged) {
