@@ -64,4 +64,8 @@ enum class FileT {unknown,
 
 std::string remove_suffix(FileT, const std::string&);
 
+FileT guess_file_type(const std::string&);
+
+void escape_char(char c, std::string& s);
+
 #endif
