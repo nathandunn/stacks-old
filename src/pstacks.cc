@@ -323,6 +323,7 @@ double calc_coverage_distribution(map<int, PStack *> &unique, map<int, MergedSta
     //
     // Calculate the standard deviation
     //
+    sum = 0.0;
     for (it = merged.begin(); it != merged.end(); it++) {
         depth = 0.0;
         for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
