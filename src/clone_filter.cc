@@ -1078,6 +1078,7 @@ free_hash(vector<char *> &keys)
 }
 
 int parse_command_line(int argc, char* argv[]) {
+    FileT ftype;
     int   c;
 
     while (1) {
@@ -1146,18 +1147,22 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'f':
             in_file = optarg;
+            ftype   = FileT::fastq;
             break;
         case 'p':
             in_path_1 = optarg;
             in_path_2 = in_path_1;
+            ftype     = FileT::fastq;
             break;
         case '1':
             paired     = true;
             in_file_p1 = optarg;
+            ftype      = FileT::fastq;
             break;
         case '2':
             paired     = true;
             in_file_p2 = optarg;
+            ftype      = FileT::fastq;
             break;
         case 'P':
             paired = true;
@@ -1242,11 +1247,8 @@ int parse_command_line(int argc, char* argv[]) {
     if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
-    if (in_file_type == FileT::unknown) {
-        in_file_type = guess_file_type(in_file);
-        if (in_file_type == FileT::unknown)
-            in_file_type = FileT::fastq;
-    }
+    if (in_file_type == FileT::unknown)
+        in_file_type = ftype;
 
     if (paired == false && barcode_type == null_null) {
         cerr << "You must specify paired-end data if you do not have oligo sequences to differentiate cloned reads.\n";
@@ -1269,24 +1271,21 @@ void version() {
 
 void help() {
     std::cerr << "clone_filter " << VERSION << "\n"
-              << "clone_filter -p in_dir [--paired] -o out_dir [-D] [-i format] [-y format]\n"
-              << "clone_filter -f in_file -o out_dir [-D] [-i format] [-y format]\n"
-              << "clone_filter -1 pair_1 -2 pair_2 -o out_dir [-D] [-i format] [-y format]\n"
-              << "\n"
-              << "  p: path to a directory of files.\n"
-              << "  P,paired: files contained within directory specified by '-p' are paired.\n"
-              << "  o: path to output the processed files.\n"
-              << "  D: capture discarded reads to a file.\n"
-              << "  i: input file format, either 'fastq', 'fasta', 'gzfasta', 'gzfastq', or 'bustard' (default: guess).\n"
-              << "  y: output format (default: same as input format).\n"
+              << "clone_filter [-f in_file | -p in_dir [-P] [-I] | -1 pair_1 -2 pair_2] -o out_dir [-i type] [-y type] [-D] [-h]\n"
               << "  f: path to the input file if processing single-end sequences.\n"
+              << "  p: path to a directory of files.\n"
+              << "  P: files contained within directory specified by '-p' are paired.\n"
               << "  1: first input file in a set of paired-end sequences.\n"
               << "  2: second input file in a set of paired-end sequences.\n"
-              << "\n"
+              << "  i: input file type, either 'bustard', 'fastq', 'fasta', 'gzfasta', or 'gzfastq' (default 'fastq').\n"
+              << "  o: path to output the processed files.\n"
+              << "  y: output type, either 'fastq', 'fasta', 'gzfasta', or 'gzfastq' (default same as input type).\n"
+              << "  D: capture discarded reads to a file.\n"
+              << "  h: display this help messsage.\n"
+              << "  --oligo_len_1 len: length of the single-end oligo sequence in data set.\n"
+              << "  --oligo_len_2 len: length of the paired-end oligo sequence in data set.\n"
+              << "  --retain_oligo: do not trim off the random oligo sequence (if oligo is inline).\n\n"
               << "  Oligo sequence options:\n"
-              << "    --oligo_len_1 len: length of the single-end oligo sequence in data set.\n"
-              << "    --oligo_len_2 len: length of the paired-end oligo sequence in data set.\n"
-              << "    --retain_oligo: do not trim off the random oligo sequence (if oligo is inline).\n"
               << "    --inline_null:   random oligo is inline with sequence, occurs only on single-end read (default).\n"
               << "    --null_index:    random oligo is provded in FASTQ header (Illumina i7 read if both i5 and i7 read are provided).\n"
               << "    --index_null:    random oligo is provded in FASTQ header (Illumina i5 or i7 read).\n"
