@@ -915,7 +915,6 @@ int  compare_barcodes(pair<BarcodePair, int> a, pair<BarcodePair, int> b) {
 }
 
 int parse_command_line(int argc, char* argv[]) {
-    FileT ftype;
     int c;
 
     while (1) {
@@ -1007,22 +1006,18 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'f':
             in_file = optarg;
-            ftype   = FileT::fastq;
             break;
         case 'p':
             in_path_1 = optarg;
             in_path_2 = in_path_1;
-            ftype     = FileT::fastq;
             break;
         case '1':
             paired     = true;
             in_file_p1 = optarg;
-            ftype      = FileT::fastq;
             break;
         case '2':
             paired     = true;
             in_file_p2 = optarg;
-            ftype      = FileT::fastq;
             break;
         case 'P':
             paired = true;
@@ -1167,8 +1162,11 @@ int parse_command_line(int argc, char* argv[]) {
     if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
-    if (in_file_type == FileT::unknown)
-        in_file_type = ftype;
+    if (in_file_type == FileT::unknown) {
+        in_file_type = guess_file_type(in_file);
+        if (in_file_type == FileT::unknown)
+            in_file_type = FileT::fastq;
+    }
 
     if (in_file_type == FileT::bam && paired == true && interleaved == false) {
         cerr << "You may only specify a BAM input file for paired-end data if the read pairs are interleaved.\n";
@@ -1234,26 +1232,29 @@ void version() {
 
 void help() {
     std::cerr << "process_radtags " << VERSION << "\n"
-              << "process_radtags [-f in_file | -p in_dir [-P] [-I] | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim] [-h]\n"
-              << "  f: path to the input file if processing single-end sequences.\n"
-              << "  i: input file type, either 'bustard' for the Illumina BUSTARD format, 'bam', 'fastq' (default), or 'gzfastq' for gzipped FASTQ.\n"
-              << "  y: output type, either 'fastq', 'gzfastq', 'fasta', or 'gzfasta' (default is to match the input file type).\n"
+              << "process_radtags -p in_dir [--paired [--interleaved]] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
+              << "process_radtags -f in_file -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
+              << "process_radtags -1 pair_1 -2 pair_2 -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
+              << "\n"
               << "  p: path to a directory of files.\n"
-              << "  P: files contained within directory specified by '-p' are paired.\n"
-              << "  I: specify that the paired-end reads are interleaved in single files.\n"
+              << "  P,paired: files contained within the directory are paired.\n"
+              << "  I,interleaved: specify that the paired-end reads are interleaved in single files.\n"
+              << "  b: path to a file containing barcodes for this run.\n"
+              << "  o: path to output the processed files.\n"
+              << "  f: path to the input file if processing single-end sequences.\n"
               << "  1: first input file in a set of paired-end sequences.\n"
               << "  2: second input file in a set of paired-end sequences.\n"
-              << "  o: path to output the processed files.\n"
-              << "  b: path to a file containing barcodes for this run.\n"
               << "  c: clean data, remove any read with an uncalled base.\n"
               << "  q: discard reads with low quality scores.\n"
               << "  r: rescue barcodes and RAD-Tags.\n"
               << "  t: truncate final read length to this value.\n"
-              << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.8+, Sanger, default) or 'phred64' (Illumina 1.3 - 1.5).\n"
               << "  D: capture discarded reads to a file.\n"
+              << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.8+/Sanger) or 'phred64' (Illumina 1.3-1.5). (Default: Illumina 1.8+)\n"
               << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
               << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
-              << "  h: display this help messsage." << "\n\n"
+              << "  i: input file type, either 'fastq', 'gzfastq' (gzipped FASTQ), 'bam', or 'bustard' (default:guess).\n"
+              << "  y: output type, either 'fastq', 'gzfastq', 'fasta', or 'gzfasta' (default: same as imput type).\n"
+              << "\n"
               << "  Barcode options:\n"
               << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
               << "    --index_null:    barcode is provded in FASTQ header (Illumina i5 or i7 read).\n"
@@ -1261,7 +1262,8 @@ void help() {
               << "    --inline_inline: barcode is inline with sequence, occurs on single and paired-end read.\n"
               << "    --index_index:   barcode is provded in FASTQ header (Illumina i5 and i7 reads).\n"
               << "    --inline_index:  barcode is inline with sequence on single-end read and occurs in FASTQ header (from either i5 or i7 read).\n"
-              << "    --index_inline:  barcode occurs in FASTQ header (Illumina i5 or i7 read) and is inline with single-end sequence (for single-end data) on paired-end read (for paired-end data).\n\n"
+              << "    --index_inline:  barcode occurs in FASTQ header (Illumina i5 or i7 read) and is inline with single-end sequence (for single-end data) on paired-end read (for paired-end data).\n"
+              << "\n"
               << "  Restriction enzyme options:\n"
               << "    -e <enz>, --renz_1 <enz>: provide the restriction enzyme used (cut site occurs on single-end read)\n"
               << "    --renz_2 <enz>: if a double digest was used, provide the second restriction enzyme used (cut site occurs on the paired-end read).\n"

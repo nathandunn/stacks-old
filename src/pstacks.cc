@@ -29,9 +29,8 @@
 //
 FileT  in_file_type;
 string in_file;
-FileT  out_file_type;
 string out_path;
-int    sql_id        = 0;
+int    sql_id        = -1;
 int    min_stack_cov = 3;
 double req_pct_aln   = 0.85;
 bool   keep_sec_alns = false;
@@ -123,7 +122,7 @@ int main (int argc, char* argv[]) {
 
     calc_coverage_distribution(unique, merged);
 
-    cerr << "Writing loci, SNPs, alleles to '" << out_path << "...'\n";
+    cerr << "Writing loci, SNPs, alleles to '" << out_path << "'.\n";
     write_results(merged, unique);
 
     return 0;
@@ -888,7 +887,6 @@ int parse_command_line(int argc, char* argv[]) {
             {"help",         no_argument,       NULL, 'h'},
             {"version",      no_argument,       NULL, 'v'},
             {"infile_type",  required_argument, NULL, 't'},
-            {"outfile_type", required_argument, NULL, 'y'},
             {"file",         required_argument, NULL, 'f'},
             {"outpath",      required_argument, NULL, 'o'},
             {"id",           required_argument, NULL, 'i'},
@@ -907,7 +905,7 @@ int parse_command_line(int argc, char* argv[]) {
         // getopt_long stores the option index here.
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "hkvOT:a:A:L:U:f:o:i:e:p:m:s:f:t:y:", long_options, &option_index);
+        c = getopt_long(argc, argv, "hkvOT:a:A:L:U:f:o:i:e:p:m:s:f:t:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -929,12 +927,6 @@ int parse_command_line(int argc, char* argv[]) {
             else
                 in_file_type = FileT::unknown;
             break;
-        case 'y':
-            if (strcmp(optarg, "sam") == 0)
-                out_file_type = FileT::sam;
-            else
-                out_file_type = FileT::sql;
-            break;
         case 'f':
             in_file = optarg;
             break;
@@ -943,10 +935,6 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'i':
             sql_id = is_integer(optarg);
-            if (sql_id < 0) {
-                cerr << "SQL ID (-i) must be an integer, e.g. 1, 2, 3\n";
-                help();
-            }
             break;
         case 'm':
             min_stack_cov = atoi(optarg);
@@ -1005,6 +993,11 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
+    if (sql_id < 0) {
+        cerr << "A sample ID must be provided.\n";
+        help();
+    }
+
     if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
         cerr << "SNP model alpha significance level must be either 0.1, 0.05, 0.01, or 0.001.\n";
         help();
@@ -1024,9 +1017,12 @@ int parse_command_line(int argc, char* argv[]) {
         model_type = bounded;
     }
 
-    if (in_file.length() == 0 || in_file_type == FileT::unknown) {
-        cerr << "You must specify an input file of a supported type.\n";
-        help();
+    if (in_file_type == FileT::unknown) {
+        in_file_type = guess_file_type(in_file);
+        if (in_file_type == FileT::unknown) {
+            cerr << "Unable to recongnize the extention of file '" << in_file << "'.\n";
+            help();
+        }
     }
 
     if (out_path.length() == 0)
@@ -1051,25 +1047,25 @@ void version() {
 
 void help() {
     std::cerr << "pstacks " << VERSION << "\n"
-              << "pstacks -t file_type -f file_path [-o path] [-i id] [-m min_cov] [-p num_threads] [-h]" << "\n"
-              << "  t: input file Type. Supported types: bowtie, sam, or bam.\n"
+              << "pstacks -f file_path -i id [-o path] [-m min_cov] [-p num_threads]" << "\n"
               << "  f: input file path.\n"
-              << "  o: output path to write results.\n"
-              << "  i: SQL ID to insert into the output to identify this sample.\n"
+              << "  i: a unique integer ID for this sample.\n"
+              << "  o: output directory.\n"
               << "  m: minimum depth of coverage to report a stack (default 3).\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-              << "  h: display this help messsage.\n"
+              << "  t: input file Type. Supported types: bam, sam, bowtie (default: guess).\n"
               << "  --pct_aln <num>: require read alignments to use at least this percentage of the read (default 85%).\n"
               << "  --keep_sec_alns: keep secondary alignments (default: false, only keep primary alignments).\n"
+              << "\n"
               << "  Model options:\n"
               << "    --model_type <type>: either 'snp' (default), 'bounded', or 'fixed'\n"
-              << "    For the SNP or Bounded SNP model:\n"
-              << "      --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
-              << "    For the Bounded SNP model:\n"
-              << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
-              << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
-              << "    For the Fixed model:\n"
-              << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n";
+              << "       For the SNP or Bounded SNP model:\n"
+              << "       --alpha <num>: chi square significance level required to call a heterozygote or homozygote, either 0.1, 0.05 (default), 0.01, or 0.001.\n"
+              << "       For the Bounded SNP model:\n"
+              << "       --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
+              << "       --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
+              << "       For the Fixed model:\n"
+              << "       --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n";
 
     exit(0);
 }

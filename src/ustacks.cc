@@ -31,7 +31,7 @@ FileT   in_file_type;
 string  in_file;
 string  out_path;
 int     num_threads       = 1;
-int     sql_id            = 0;
+int     sql_id            = -1;
 bool    call_sec_hapl     = true;
 bool    set_kmer_len      = true;
 int     kmer_len          = 0;
@@ -2522,10 +2522,6 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'i':
             sql_id = is_integer(optarg);
-            if (sql_id < 0) {
-                cerr << "SQL ID (-i) must be an integer, e.g. 1, 2, 3\n";
-                help();
-            }
             break;
         case 'm':
             min_merge_cov = is_integer(optarg);
@@ -2636,8 +2632,21 @@ int parse_command_line(int argc, char* argv[]) {
         model_type = bounded;
     }
 
-    if (in_file.length() == 0 || in_file_type == FileT::unknown) {
-        cerr << "You must specify an input file of a supported type.\n";
+    if (in_file.empty()) {
+        cerr << "You must specify an input file.\n";
+        help();
+    }
+
+    if (in_file_type == FileT::unknown) {
+        in_file_type = guess_file_type(in_file);
+        if (in_file_type == FileT::unknown) {
+            cerr << "Unable to recongnize the extention of file '" << in_file << "'.\n";
+            help();
+        }
+    }
+
+    if (sql_id < 0) {
+        cerr << "A sample ID must be provided.\n";
         help();
     }
 
@@ -2663,8 +2672,7 @@ void version() {
 
 void help() {
     std::cerr << "ustacks " << VERSION << "\n"
-              << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-m min_cov] [-M max_dist] [-p num_threads] [-R] [-H] [-h]" << "\n"
-              << "  t: input file Type. Supported types: fasta, fastq, gzfasta, or gzfastq.\n"
+              << "ustacks -f file_path -i id [-d] [-r] [-o path] [-m min_cov] [-M max_dist] [-p num_threads] [-R] [-H]" << "\n"
               << "  f: input file path.\n"
               << "  o: output path to write results.\n"
               << "  i: SQL ID to insert into the output to identify this sample.\n"
@@ -2674,7 +2682,8 @@ void help() {
               << "  R: retain unused reads.\n"
               << "  H: disable calling haplotypes from secondary reads.\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-              << "  h: display this help messsage.\n\n"
+              << "  t: input file type. Supported types: fasta, fastq, gzfasta, or gzfastq (default: guess).\n"
+              << "\n"
               << "  Stack assembly options:\n"
               << "    d: enable the Deleveraging algorithm, used for resolving over merged tags.\n"
               << "    --keep_high_cov: disable the algorithm that removes highly-repetitive stacks and nearby errors.\n"
@@ -2692,7 +2701,9 @@ void help() {
               << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
               << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
               << "    For the Fixed model:\n"
-              << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n";
+              << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n"
+              << "\n"
+              << "  h: display this help messsage.\n";
 
     exit(0);
 }
