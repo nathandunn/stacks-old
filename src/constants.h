@@ -21,6 +21,8 @@
 #ifndef __CONSTANTS_H__
 #define __CONSTANTS_H__
 
+#include <string>
+
 //
 // Pull in the configuration variables from the configure script
 //
@@ -59,5 +61,7 @@ enum class FileT {unknown,
     fastq,   gzfastq,
     bowtie,  sam, bam, tsv,
     bustard, phase, fastphase, beagle};
+
+std::string remove_suffix(FileT, const std::string&);
 
 #endif
