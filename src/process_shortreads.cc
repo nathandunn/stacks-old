@@ -826,7 +826,6 @@ int  compare_barcodes(pair<BarcodePair, int> a, pair<BarcodePair, int> b) {
 }
 
 int parse_command_line(int argc, char* argv[]) {
-    FileT ftype;
     int c;
 
     while (1) {
@@ -914,22 +913,18 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'f':
             in_file = optarg;
-            ftype   = FileT::fastq;
             break;
         case 'p':
             in_path_1 = optarg;
             in_path_2 = in_path_1;
-            ftype     = FileT::fastq;
             break;
         case '1':
             paired     = true;
             in_file_p1 = optarg;
-            ftype      = FileT::fastq;
             break;
         case '2':
             paired     = true;
             in_file_p2 = optarg;
-            ftype      = FileT::fastq;
             break;
         case 'P':
             paired = true;
@@ -1085,7 +1080,7 @@ int parse_command_line(int argc, char* argv[]) {
     }
 
     if (in_file_type == FileT::unknown)
-        in_file_type = ftype;
+        in_file_type = FileT::gzfastq;
 
     if (in_file_type == FileT::bam && paired == true && interleaved == false) {
         cerr << "You may only specify a BAM input file for paired-end data if the read pairs are interleaved.\n";
@@ -1132,13 +1127,13 @@ void help() {
               << "  P: specify that input is paired (for use with '-p').\n"
               << "  I: specify that the paired-end reads are interleaved in single files.\n"
               << "  o: path to output the processed files.\n"
-              << "  y: output type, either 'fastq' or 'fasta' (default fastq).\n"
+              << "  y: output type, either 'fastq' or 'fasta' (default gzfastq).\n"
               << "  b: a list of barcodes for this run.\n"
               << "  c: clean data, remove any read with an uncalled base.\n"
               << "  q: discard reads with low quality scores.\n"
               << "  r: rescue barcodes.\n"
               << "  t: truncate final read length to this value.\n"
-              << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.8+, Sanger) or 'phred64' (Illumina 1.3 - 1.5, default).\n"
+              << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.8+/Sanger, default) or 'phred64' (Illumina 1.3-1.5).\n"
               << "  D: capture discarded reads to a file.\n"
               << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
               << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"

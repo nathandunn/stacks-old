@@ -1170,7 +1170,7 @@ int parse_command_line(int argc, char* argv[]) {
         // In directory mode, just use the default.
 
         if (in_file_type == FileT::unknown)
-            in_file_type = FileT::fastq;
+            in_file_type = FileT::gzfastq;
     }
 
     if (in_file_type == FileT::bam && paired == true && interleaved == false) {
@@ -1244,7 +1244,7 @@ void help() {
               << "  p: path to a directory of files.\n"
               << "  P,paired: files contained within the directory are paired.\n"
               << "  I,interleaved: specify that the paired-end reads are interleaved in single files.\n"
-              << "  i: input file type, either 'fastq', 'gzfastq' (gzipped fastq), 'bam', or 'bustard' (default: guess, or fastq if unable to).\n"
+              << "  i: input file type, either 'fastq', 'gzfastq' (gzipped fastq), 'bam', or 'bustard' (default: guess, or gzfastq if unable to).\n"
               << "  b: path to a file containing barcodes for this run.\n"
               << "  o: path to output the processed files.\n"
               << "  f: path to the input file if processing single-end sequences.\n"
