@@ -1163,7 +1163,12 @@ int parse_command_line(int argc, char* argv[]) {
         out_path += "/";
 
     if (in_file_type == FileT::unknown) {
-        in_file_type = guess_file_type(in_file);
+        if (!in_file.empty())
+            in_file_type = guess_file_type(in_file);
+        else if (!in_file_p1.empty())
+            in_file_type = guess_file_type(in_file_p1);
+        // In directory mode, just use the default.
+
         if (in_file_type == FileT::unknown)
             in_file_type = FileT::fastq;
     }
@@ -1232,13 +1237,14 @@ void version() {
 
 void help() {
     std::cerr << "process_radtags " << VERSION << "\n"
-              << "process_radtags -p in_dir [--paired [--interleaved]] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
-              << "process_radtags -f in_file -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
-              << "process_radtags -1 pair_1 -2 pair_2 -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
+              << "process_radtags -p in_dir [--paired [--interleaved]] [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
+              << "process_radtags -f in_file [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
+              << "process_radtags -1 pair_1 -2 pair_2 [-i format] -b barcode_file -o out_dir -e enz [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
               << "\n"
               << "  p: path to a directory of files.\n"
               << "  P,paired: files contained within the directory are paired.\n"
               << "  I,interleaved: specify that the paired-end reads are interleaved in single files.\n"
+              << "  i: input file type, either 'fastq', 'gzfastq' (gzipped fastq), 'bam', or 'bustard' (default: guess, or fastq if unable to).\n"
               << "  b: path to a file containing barcodes for this run.\n"
               << "  o: path to output the processed files.\n"
               << "  f: path to the input file if processing single-end sequences.\n"
@@ -1252,8 +1258,7 @@ void help() {
               << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.8+/Sanger) or 'phred64' (Illumina 1.3-1.5). (Default: Illumina 1.8+)\n"
               << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
               << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
-              << "  i: input file type, either 'fastq', 'gzfastq' (gzipped FASTQ), 'bam', or 'bustard' (default:guess).\n"
-              << "  y: output type, either 'fastq', 'gzfastq', 'fasta', or 'gzfasta' (default: same as imput type).\n"
+              << "  y: output type, either 'fastq', 'gzfastq', 'fasta', or 'gzfasta' (default: match imput type).\n"
               << "\n"
               << "  Barcode options:\n"
               << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
@@ -1285,6 +1290,7 @@ void help() {
 
         it++;
     }
+    cerr << "\n";
 
     std::cerr << "\n"
               << "  Adapter options:\n"

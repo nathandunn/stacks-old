@@ -1774,11 +1774,8 @@ int parse_command_line(int argc, char* argv[]) {
     if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
-    if (in_file_type == FileT::unknown) {
-        in_file_type = guess_file_type(in_file);
-        if (in_file_type == FileT::unknown)
-            in_file_type = FileT::fastq;
-    }
+    if (in_file_type == FileT::unknown)
+        in_file_type = FileT::fastq;
 
     if (read_k_freq && write_k_freq) {
         cerr << "You may either read a set of kmer frequencies, or write kmer frequencies, not both.\n";
@@ -1810,18 +1807,16 @@ void version() {
 
 void help() {
     std::cerr << "kmer_filter " << VERSION << "\n"
-              << "kmer_filter -p in_dir [-o out_dir] [-D] [-i type] [-y type]\n"
-              << "kmer_filter -f file [-f file2 ...] [-o out_dir] [-D] [-i type] [-y type]\n"
-              << "kmer_filter -1 file1 -2 file2 [-1 file3 -2 file4 ...] [-o out_dir] [-D] [-i type] [-y type]\n"
-              << "\n"
+              << "kmer_filter [-f in_file_1 [-f in_file_2...] | -p in_dir] [-1 pair_1 -2 pair_2 [-1 pair_1...]] -o out_dir [-i type] [-y type] [-D] [-h]\n"
+              << "  f: path to the input file if processing single-end seqeunces.\n"
+              << "  i: input file type, either 'bustard' for the Illumina BUSTARD output files, 'fasta', 'fastq', 'gzfasta', or 'gzfastq' (default 'fastq').\n"
               << "  p: path to a directory of files (for single-end files only).\n"
-              << "  o: path to output the processed files (default: './').\n"
-              << "  D: capture discarded reads to a file.\n"
-              << "  i: input file type, either 'fasta', 'fastq', 'gzfasta', 'gzfastq', or 'bustard' (default: guess).\n"
-              << "  y: output type, either 'fastq' or 'fasta' (default fastq).\n"
-              << "  f: path to an input file.\n"
               << "  1: specify the first in a pair of files to be processed together.\n"
               << "  2: specify the second in a pair of files to be processed together.\n"
+              << "  o: path to output the processed files.\n"
+              << "  y: output type, either 'fastq' or 'fasta' (default fastq).\n"
+              << "  D: capture discarded reads to a file.\n"
+              << "  h: display this help messsage.\n\n"
               << "  Filtering options:\n"
               << "    --rare: turn on filtering based on rare k-mers.\n"
               << "    --abundant: turn on filtering based on abundant k-mers.\n"

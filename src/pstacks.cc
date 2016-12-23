@@ -993,11 +993,6 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
-    if (sql_id < 0) {
-        cerr << "A sample ID must be provided.\n";
-        help();
-    }
-
     if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
         cerr << "SNP model alpha significance level must be either 0.1, 0.05, 0.01, or 0.001.\n";
         help();
@@ -1017,12 +1012,22 @@ int parse_command_line(int argc, char* argv[]) {
         model_type = bounded;
     }
 
+    if (in_file.empty()) {
+        cerr << "You must specify an input file.\n";
+        help();
+    }
+
     if (in_file_type == FileT::unknown) {
         in_file_type = guess_file_type(in_file);
         if (in_file_type == FileT::unknown) {
             cerr << "Unable to recongnize the extention of file '" << in_file << "'.\n";
             help();
         }
+    }
+
+    if (sql_id < 0) {
+        cerr << "A sample ID must be provided.\n";
+        help();
     }
 
     if (out_path.length() == 0)
@@ -1047,7 +1052,7 @@ void version() {
 
 void help() {
     std::cerr << "pstacks " << VERSION << "\n"
-              << "pstacks -f file_path -i id [-o path] [-m min_cov] [-p num_threads]" << "\n"
+              << "pstacks -f file_path -i id -o path [-m min_cov] [-p num_threads]" << "\n"
               << "  f: input file path.\n"
               << "  i: a unique integer ID for this sample.\n"
               << "  o: output directory.\n"

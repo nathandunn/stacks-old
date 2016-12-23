@@ -826,6 +826,7 @@ int  compare_barcodes(pair<BarcodePair, int> a, pair<BarcodePair, int> b) {
 }
 
 int parse_command_line(int argc, char* argv[]) {
+    FileT ftype;
     int c;
 
     while (1) {
@@ -913,18 +914,22 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'f':
             in_file = optarg;
+            ftype   = FileT::fastq;
             break;
         case 'p':
             in_path_1 = optarg;
             in_path_2 = in_path_1;
+            ftype     = FileT::fastq;
             break;
         case '1':
             paired     = true;
             in_file_p1 = optarg;
+            ftype      = FileT::fastq;
             break;
         case '2':
             paired     = true;
             in_file_p2 = optarg;
+            ftype      = FileT::fastq;
             break;
         case 'P':
             paired = true;
@@ -1079,11 +1084,8 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
-    if (in_file_type == FileT::unknown) {
-        in_file_type = guess_file_type(in_file);
-        if (in_file_type == FileT::unknown)
-            in_file_type = FileT::fastq;
-    }
+    if (in_file_type == FileT::unknown)
+        in_file_type = ftype;
 
     if (in_file_type == FileT::bam && paired == true && interleaved == false) {
         cerr << "You may only specify a BAM input file for paired-end data if the read pairs are interleaved.\n";
@@ -1121,29 +1123,26 @@ void version() {
 
 void help() {
     std::cerr << "process_shortreads " << VERSION << "\n"
-              << "process_shortreads -p in_dir [--paired [--interleaved]] -b barcode_file -o out_dir [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
-              << "process_shortreads -f in_file -b barcode_file -o out_dir [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
-              << "process_shortreads -1 pair_1 -2 pair_2 -b barcode_file -o out_dir [-c] [-q] [-r] [-t len] [-D] [-w size] [-s lim]\n"
-              << "\n"
-              << "  p: path to a directory of single-end Illumina files.\n"
-              << "  P,paired: specify that input is paired (for use with '-p').\n"
-              << "  I,interleaved: specify that the paired-end reads are interleaved in single files.\n"
-              << "  b: a list of barcodes for this run.\n"
-              << "  o: path to output the processed files.\n"
+              << "process_shortreads [-f in_file | -p in_dir [-P] [-I] | -1 pair_1 -2 pair_2] -b barcode_file -o out_dir [-i type] [-y type] [-c] [-q] [-r] [-E encoding] [-t len] [-D] [-w size] [-s lim] [-h]\n"
               << "  f: path to the input file if processing single-end seqeunces.\n"
+              << "  i: input file type, either 'bustard' for the Illumina BUSTARD format, 'bam', 'fastq' (default), or 'gzfastq' for gzipped FASTQ.\n"
+              << "  p: path to a directory of single-end Illumina files.\n"
               << "  1: first input file in a set of paired-end sequences.\n"
               << "  2: second input file in a set of paired-end sequences.\n"
+              << "  P: specify that input is paired (for use with '-p').\n"
+              << "  I: specify that the paired-end reads are interleaved in single files.\n"
+              << "  o: path to output the processed files.\n"
+              << "  y: output type, either 'fastq' or 'fasta' (default fastq).\n"
+              << "  b: a list of barcodes for this run.\n"
               << "  c: clean data, remove any read with an uncalled base.\n"
               << "  q: discard reads with low quality scores.\n"
               << "  r: rescue barcodes.\n"
               << "  t: truncate final read length to this value.\n"
+              << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.8+, Sanger) or 'phred64' (Illumina 1.3 - 1.5, default).\n"
               << "  D: capture discarded reads to a file.\n"
               << "  w: set the size of the sliding window as a fraction of the read length, between 0 and 1 (default 0.15).\n"
               << "  s: set the score limit. If the average score within the sliding window drops below this value, the read is discarded (default 10).\n"
-              << "  E: specify how quality scores are encoded, 'phred33' (Illumina 1.8+/Sanger) or 'phred64' (Illumina 1.3-1.5). (default: Illumina 1.3-1.5)\n"
-              << "  i: input file type, either 'fastq', 'gzfastq', 'bam', or 'bustard' (default: guess).\n"
-              << "  y: output type, either 'fastq' or 'fasta' (default fastq/gzfastq depending on the input type).\n"
-              << "\n"
+              << "  h: display this help messsage.\n\n"
               << "  Barcode options:\n"
               << "    --inline_null:   barcode is inline with sequence, occurs only on single-end read (default).\n"
               << "    --index_null:    barcode is provded in FASTQ header (Illumina i5 or i7 read).\n"
@@ -1151,17 +1150,14 @@ void help() {
               << "    --inline_inline: barcode is inline with sequence, occurs on single and paired-end read.\n"
               << "    --index_index:   barcode is provded in FASTQ header (Illumina i5 and i7 reads).\n"
               << "    --inline_index:  barcode is inline with sequence on single-end read and occurs in FASTQ header (from either i5 or i7 read).\n"
-              << "    --index_inline:  barcode occurs in FASTQ header (Illumina i5 or i7 read) and is inline with single-end sequence (for single-end data) on paired-end read (for paired-end data).\n"
-              << "\n"
+              << "    --index_inline:  barcode occurs in FASTQ header (Illumina i5 or i7 read) and is inline with single-end sequence (for single-end data) on paired-end read (for paired-end data).\n\n"
               << "  Adapter options:\n"
               << "    --adapter_1 <sequence>: provide adaptor sequence that may occur on the first read for filtering.\n"
               << "    --adapter_2 <sequence>: provide adaptor sequence that may occur on the paired-read for filtering.\n"
-              << "      --adapter_mm <mismatches>: number of mismatches allowed in the adapter sequence.\n"
-              << "\n"
+              << "      --adapter_mm <mismatches>: number of mismatches allowed in the adapter sequence.\n\n"
               << "  Output options:\n"
               << "    --retain_header: retain unmodified FASTQ headers in the output.\n"
-              << "    --merge: if no barcodes are specified, merge all input files into a single output file (or single pair of files).\n"
-              << "\n"
+              << "    --merge: if no barcodes are specified, merge all input files into a single output file (or single pair of files).\n\n"
               << "  Advanced options:\n"
               << "    --no_read_trimming: do not trim low quality reads, just discard them.\n"
               << "    --len_limit <limit>: when trimming sequences, specify the minimum length a sequence must be to keep it (default 31bp).\n"
