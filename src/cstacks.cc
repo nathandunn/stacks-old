@@ -1799,9 +1799,10 @@ int parse_command_line(int argc, char* argv[]) {
     while (1) {
         static struct option long_options[] = {
             {"help",            no_argument, NULL, 'h'},
-            {"version",         no_argument, NULL, 'v'},
+            {"version",         no_argument, NULL, 1000},
             {"mmatches",        no_argument, NULL, 'm'},
-            {"genomic_loc",     no_argument, NULL, 'g'},
+            {"denovo",          no_argument, NULL, 1001},
+            {"ref_based",       no_argument, NULL, 'g'},
             {"uniq_haplotypes", no_argument, NULL, 'u'},
             {"report_mmatches", no_argument, NULL, 'R'},
             {"gapped",          no_argument, NULL, 'G'},
@@ -1850,6 +1851,10 @@ int parse_command_line(int argc, char* argv[]) {
         case 'R':
             report_mmatches = true;
             break;
+        case 1001: //denovo
+            // (default)
+            search_type = sequence;
+            break;
         case 'g':
             search_type = genomic_loc;
             break;
@@ -1875,7 +1880,7 @@ int parse_command_line(int argc, char* argv[]) {
         case 'x':
             min_match_len = is_double(optarg);
             break;
-        case 'v':
+        case 1000:
             version();
             break;
         case 'p':
@@ -1911,31 +1916,33 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "cstacks " << VERSION << "\n\n";
+    std::cerr << "cstacks " << VERSION << "\n";
 
     exit(0);
 }
 
 void help() {
     std::cerr << "cstacks " << VERSION << "\n"
-              << "cstacks -b batch_id -s sample_file [-s sample_file_2 ...] [-o path] [-g] [-n num] [-p num_threads] [--catalog path] [-h]" << "\n"
-              << "  b: MySQL ID of this batch." << "\n"
+              << "cstacks [--denovo] -s sample1_path [-s sample2_path ...] -o path -b batch_id [-n num_mismatches] [--gapped] [-p num_threads]" << "\n"
+              << "cstacks --ref_based -s sample1_path [-s sample2_path ...] -o path -b batch_id [-p num_threads]" << "\n"
+              << "  --denovo: base catalog construction on sequence identity (default)." << "\n"
+              << "  g,--ref_based: base catalog construction on alignment position." << "\n"
               << "  s: filename prefix from which to load loci into the catalog." << "\n"
               << "  o: output path to write results." << "\n"
-              << "  g: base catalog matching on genomic location, not sequence identity." << "\n"
-              << "  m: include tags in the catalog that match to more than one entry (default false)." << "\n"
-              << "  n: number of mismatches allowed between sample tags when generating the catalog (default 1)." << "\n"
+              << "  b: database/batch ID for this catalog." << "\n"
+              << "  n: number of mismatches allowed between sample loci when build the catalog (default 1)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-              << "  h: display this help messsage." << "\n\n"
-              << "  Catalog editing:\n"
-              << "    --catalog <path>: provide the path to an existing catalog. cstacks will add data to this existing catalog.\n\n"
-              << "  Gapped assembly options:\n"
-              << "    --gapped: preform gapped alignments between stacks.\n"
-              << "    --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
-              << "    --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n\n"
-              << "  Advanced options:\n"
-              << "     --k_len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
-              << "    --report_mmatches: report query loci that match more than one catalog locus.\n";
+              << "  --catalog <path>: add to an existing catalog.\n"
+              << "\n"
+              << "Gapped assembly options:\n"
+              << "  --gapped: preform gapped alignments between stacks.\n"
+              << "  --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
+              << "  --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n"
+              << "\n"
+              << "Advanced options:\n"
+              << "  m: include tags in the catalog that match to more than one entry (default false)." << "\n"
+              << "  --k_len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
+              << "  --report_mmatches: report query loci that match more than one catalog locus.\n";
 
     exit(0);
 }
