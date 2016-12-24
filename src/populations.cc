@@ -282,10 +282,10 @@ int main (int argc, char* argv[]) {
             vector<CatMatch *>& m = catalog_matches.back();
             load_catalog_matches(in_path + mpopi.samples().at(i).name, m);
 
-            if (m.size() == 0) {
-                cerr << "Warning: Absent or malformed matches file '"
-                     << mpopi.samples()[i].name << ".matches.tsv(.gz)"
-                     <<"', excluding this sample from population analysis.\n";
+            if (m.size() == 0 || m[0]->batch_id != batch_id) {
+                cerr << "Warning: File '" << mpopi.samples()[i].name << ".matches.tsv(.gz)'"
+                        " is absent, malformed, or does not match the catalog batch ID. Excluding"
+                        " this sample from population analysis.\n";
                 samples_to_remove.push_back(i);
                 catalog_matches.pop_back(); // This introduces an index shift between catalog_matches and [i]/[mpopi],
                                             // which will be resolved by a call to MetaPopInfo::delete_samples().
@@ -5500,10 +5500,8 @@ int parse_command_line(int argc, char* argv[]) {
         if (pmap_path.empty())
             cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
 
-        if (batch_id < 0) {
-            cerr << "You must specify a batch ID.\n";
-            help();
-        }
+        if (batch_id < 0)
+            batch_id = 1;
 
         if (out_path.empty())
             out_path = in_path;
@@ -5550,15 +5548,15 @@ void version() {
 void help() {
     cerr << "populations " << VERSION << "\n"
          << "Usage:\n"
-              << "populations -P dir -b batch_id [-O dir] [-M popmap] (filters) [--fstats] [-k [--window_size=150000] [--bootstrap [-N 100]]] (output formats)\n"
+              << "populations -P dir [-O dir] [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"
               << "populations -V vcf -O dir [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"
               << "\n"
               << "  -P,--in_path: path to the directory containing the Stacks files.\n"
-              << "  -b,--batch_id: Batch ID to examine when exporting from the catalog (required by -P).\n"
               << "  -V,--in_vcf: path to an input VCF file.\n"
               << "  -O,--out_path: path to a directory where to write the output files. (Required by -V; otherwise defaults to value of -P.)\n"
               << "  -M,--popmap: path to a population map. (Format is 'SAMPLE1\tPOP1\\n...'.)\n"
               << "  -t,--threads: number of threads to run in parallel sections of code.\n"
+              << "  -b,--batch_id: ID of the catalog to consider (default 1).\n"
               << "  -s,--sql_out: output a file to import results into an SQL database.\n"
               << "\n"
               << "Data Filtering:\n"
