@@ -22,7 +22,11 @@
 // sstacks -- search for occurances of stacks in a catalog of stacks.
 //
 
+#include <regex>
+
 #include "sstacks.h"
+
+using namespace std;
 
 // Global variables to hold command-line options.
 queue<string> samples;
@@ -30,7 +34,7 @@ string  catalog_path;
 string  out_path;
 FileT   in_file_type = FileT::sql;
 int     num_threads  = 1;
-int     batch_id     = 0;
+int     batch_id     = -1;
 int     samp_id      = 0;
 int     catalog      = 0;
 bool    verify_haplotypes       = true;
@@ -1370,6 +1374,21 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
+    if (batch_id < 0) {
+        regex r ("batch_([0-9]+)");
+        smatch m;
+        regex_search(catalog_path, m, r);
+        if (m.size()==2) {
+            // full match plus one submatch
+            batch_id = stoi(m[1].str());
+        }
+
+        if (batch_id < 0) {
+            cerr << "Unable to guess batch ID.\n";
+            help();
+        }
+    }
+
     if (samples.size() == 0) {
         cerr << "You must specify at least one sample file.\n";
         help();
@@ -1392,13 +1411,13 @@ void version() {
 
 void help() {
     std::cerr << "sstacks " << VERSION << "\n"
-              << "sstacks [--ref_based] -b batch_id -c catalog_file -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-x] [-v] [-h]" << "\n"
+              << "sstacks [--ref_based] -c catalog_file [-b batch_id] -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-x] [-v] [-h]" << "\n"
               << "  g,ref_based: base matching on alignment position, not sequence identity." << "\n"
-              << "  b: ID of the catalog to consider (default 1)." << "\n"
-              << "  c: path to the catalog (default: IN_DIR/batch_ID, ./batch_ID)." << "\n"
               << "  s: filename prefix from which to load sample loci." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  o: output path to write results." << "\n"
+              << "  c: path to the catalog (default: IN_DIR/batch_ID, ./batch_ID)." << "\n"
+              << "  b: ID of the catalog to consider (default: guess)." << "\n"
               << "  x: don't verify haplotype of matching locus." << "\n"
               << "\n"
               << "Gapped assembly options:\n"
