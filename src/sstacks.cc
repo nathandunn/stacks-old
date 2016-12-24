@@ -24,6 +24,7 @@
 
 #include <regex>
 
+#include "MetaPopInfo.h"
 #include "sstacks.h"
 
 using namespace std;
@@ -1292,8 +1293,8 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
 }
 
 int parse_command_line(int argc, char* argv[]) {
-        string sample_file;
-        int c;
+    string in_dir;
+    string popmap_path;
 
     while (1) {
         static struct option long_options[] = {
@@ -1308,13 +1309,13 @@ int parse_command_line(int argc, char* argv[]) {
             {"catalog",     required_argument, NULL, 'c'},
             {"sample_2",    required_argument, NULL, 's'},
             {"outpath",     required_argument, NULL, 'o'},
+            {"in_dir",      required_argument, NULL, 'P'},
+            {"popmap",      required_argument, NULL, 'M'},
             {0, 0, 0, 0}
         };
 
-        // getopt_long stores the option index here.
         int option_index = 0;
-
-        c = getopt_long(argc, argv, "hgGxuvs:c:o:b:p:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "hgGxuvs:c:o:b:p:P:M:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -1335,8 +1336,7 @@ int parse_command_line(int argc, char* argv[]) {
             }
             break;
         case 's':
-            sample_file = optarg;
-            samples.push(sample_file);
+            samples.push(optarg);
             break;
         case 'g':
             search_type = genomic_loc;
@@ -1356,6 +1356,12 @@ int parse_command_line(int argc, char* argv[]) {
         case 'G':
             gapped_alignments = true;
             break;
+        case 'P':
+            in_dir = optarg;
+            break;
+        case 'M':
+            popmap_path = optarg;
+            break;
         case 'v':
             version();
             break;
@@ -1369,36 +1375,68 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
-    if (catalog_path.length() == 0) {
-        cerr << "You must specify the prefix path to the catalog.\n";
+    if (in_dir.empty() && catalog_path.empty()) {
+        cerr << "Error: You must specify one of -P or -c.\n";
+        help();
+    } else if ((!in_dir.empty() || !popmap_path.empty())
+            && (!catalog_path.empty() || !samples.empty() || !out_path.empty())) {
+        cerr << "Error: Please use options -P/-M or -c/-s/-o, not both.\n";
         help();
     }
 
-    if (batch_id < 0) {
-        regex r ("batch_([0-9]+)");
-        smatch m;
-        regex_search(catalog_path, m, r);
-        if (m.size()==2) {
-            // full match plus one submatch
-            batch_id = stoi(m[1].str());
+    if (!in_dir.empty()) {
+        if (popmap_path.empty()) {
+            cerr << "Error: Please specify a population map (-M).\n";
+            help();
         }
 
         if (batch_id < 0) {
-            cerr << "Unable to guess batch ID.\n";
+            // Default 1.
+            batch_id = 1;
+        }
+
+        if (in_dir.back() != '/')
+            in_dir += "/";
+
+        // Set `catalog_path`.
+        catalog_path = in_dir + "batch_" + to_string(batch_id);
+
+        // Set `samples`.
+        MetaPopInfo popmap;
+        popmap.init_popmap(popmap_path);
+        for (const MetaPopInfo::Sample& s : popmap.samples())
+            samples.push(in_dir + s.name);
+
+        // Set `out_path`.
+        out_path = in_dir;
+
+    } else if (!catalog_path.empty()) {
+        if (batch_id < 0) {
+            regex r ("batch_([0-9]+)");
+            smatch m;
+            regex_search(catalog_path, m, r);
+            if (m.size()==2) {
+                // full match plus one submatch
+                batch_id = stoi(m[1].str());
+            }
+
+            if (batch_id < 0) {
+                cerr << "Unable to guess batch ID.\n";
+                help();
+            }
+        }
+
+        if (samples.size() == 0) {
+            cerr << "You must specify at least one sample file.\n";
             help();
         }
+
+        if (out_path.length() == 0)
+            out_path = ".";
+
+        if (out_path.back() != '/')
+            out_path += "/";
     }
-
-    if (samples.size() == 0) {
-        cerr << "You must specify at least one sample file.\n";
-        help();
-    }
-
-    if (out_path.length() == 0)
-        out_path = ".";
-
-    if (out_path.at(out_path.length() - 1) != '/')
-        out_path += "/";
 
     return 0;
 }
@@ -1411,13 +1449,16 @@ void version() {
 
 void help() {
     std::cerr << "sstacks " << VERSION << "\n"
+              << "sstacks [--ref_based] -P dir_path [-b batch_id] -M popmap [-p num_threads] [-x]" << "\n"
               << "sstacks [--ref_based] -c catalog_file [-b batch_id] -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-x] [-v] [-h]" << "\n"
               << "  g,ref_based: base matching on alignment position, not sequence identity." << "\n"
+              << "  P: path to the directory containing Stacks files.\n"
+              << "  M: path to a population map file.\n"
               << "  s: filename prefix from which to load sample loci." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-              << "  o: output path to write results." << "\n"
+              << "  b: ID of the catalog to consider (default: 1, or with -c guess)." << "\n"
               << "  c: path to the catalog (default: IN_DIR/batch_ID, ./batch_ID)." << "\n"
-              << "  b: ID of the catalog to consider (default: guess)." << "\n"
+              << "  o: output path to write results." << "\n"
               << "  x: don't verify haplotype of matching locus." << "\n"
               << "\n"
               << "Gapped assembly options:\n"

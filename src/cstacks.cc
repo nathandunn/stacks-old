@@ -22,6 +22,8 @@
 // cstacks -- Create a catalog of Stacks.
 //
 
+#include "MetaPopInfo.h"
+
 #include "cstacks.h"
 
 // Global variables to hold command-line options.
@@ -1793,8 +1795,8 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
 }
 
 int parse_command_line(int argc, char* argv[]) {
-    int    c;
-    string sstr;
+    string in_dir;
+    string popmap_path;
 
     while (1) {
         static struct option long_options[] = {
@@ -1818,10 +1820,8 @@ int parse_command_line(int argc, char* argv[]) {
             {0, 0, 0, 0}
         };
 
-        // getopt_long stores the option index here.
         int option_index = 0;
-
-        c = getopt_long(argc, argv, "hgvuRmGX:x:o:s:c:b:p:n:k:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "hgvuRmGX:x:o:s:c:b:p:n:k:P:M:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -1855,8 +1855,7 @@ int parse_command_line(int argc, char* argv[]) {
             search_type = genomic_loc;
             break;
         case 's':
-            sstr = optarg;
-            samples.push(make_pair(0, sstr));
+            samples.push(make_pair(0, optarg));
             break;
         case 'c':
             catalog_path = optarg;
@@ -1882,6 +1881,12 @@ int parse_command_line(int argc, char* argv[]) {
         case 'p':
             num_threads = is_integer(optarg);
             break;
+        case 'P':
+            in_dir = optarg;
+            break;
+        case 'M':
+            popmap_path = optarg;
+            break;
         case '?':
             // getopt_long already printed an error message.
             help();
@@ -1892,24 +1897,61 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
+    if (in_dir.empty() && catalog_path.empty()) {
+        cerr << "Error: You must specify one of -P or -s.\n";
+        help();
+    } else if ((!in_dir.empty() || !popmap_path.empty())
+            && (!catalog_path.empty() || !samples.empty() || !out_path.empty())) {
+        cerr << "Error: Please use options -P/-M or -s/-o, not both.\n";
+        help();
+    }
+
+    if (!in_dir.empty()) {
+        if (popmap_path.empty()) {
+            cerr << "Error: Please specify a population map (-M).\n";
+            help();
+        }
+
+        if (batch_id < 0) {
+            // Default 1.
+            batch_id = 1;
+        }
+
+        if (in_dir.back() != '/')
+            in_dir += "/";
+
+        // Set `catalog_path`.
+        catalog_path = in_dir + "batch_" + to_string(batch_id);
+
+        // Set `samples`.
+        MetaPopInfo popmap;
+        popmap.init_popmap(popmap_path);
+        for (const MetaPopInfo::Sample& s : popmap.samples())
+            samples.push({0, in_dir + s.name});
+
+        // Set `out_path`.
+        out_path = in_dir;
+
+    } else if (!catalog_path.empty()) {
+        if (samples.size() == 0) {
+            cerr << "You must specify at least one sample file.\n";
+            help();
+        }
+
+        if (out_path.empty())
+            out_path = ".";
+
+        if (out_path.back() != '/')
+            out_path += "/";
+
+        if (batch_id < 0)
+            batch_id = 1;
+    }
+
     if (set_kmer_len == false && (kmer_len < 5 || kmer_len > 31)) {
         cerr << "Kmer length must be between 5 and 31bp.\n";
         help();
     }
-
-    if (samples.size() == 0) {
-        cerr << "You must specify at least one sample file.\n";
-        help();
-    }
-
-    if (batch_id < 0)
-        batch_id = 1;
-
-    if (out_path.length() == 0)
-        out_path = ".";
-
-    if (out_path.at(out_path.length() - 1) != '/')
-        out_path += "/";
 
     return 0;
 }
@@ -1922,10 +1964,15 @@ void version() {
 
 void help() {
     std::cerr << "cstacks " << VERSION << "\n"
+              << "cstacks [--denovo] -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks [--denovo] -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
+              << "cstacks --ref_based -P in_dir -M popmap [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks --ref_based -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-b batch_id]" << "\n"
+              << "\n"
               << "  --denovo: base catalog construction on sequence identity (default)." << "\n"
               << "  g,--ref_based: base catalog construction on alignment position." << "\n"
+              << "  P: path to the directory containing Stacks files.\n"
+              << "  M: path to a population map file.\n"
               << "  s: filename prefix from which to load loci into the catalog." << "\n"
               << "  o: output path to write results." << "\n"
               << "  n: number of mismatches allowed between sample loci when build the catalog (default 1)." << "\n"
