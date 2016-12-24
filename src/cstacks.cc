@@ -29,7 +29,7 @@ queue<pair<int, string> > samples;
 string  out_path;
 string  catalog_path;
 FileT   in_file_type      = FileT::sql;
-int     batch_id          = 0;
+int     batch_id          = -1;
 int     ctag_dist         = 1;
 bool    set_kmer_len      = true;
 int     kmer_len          = 0;
@@ -1833,10 +1833,6 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'b':
             batch_id = is_integer(optarg);
-            if (batch_id < 0) {
-                cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
-                help();
-            }
             break;
         case 'n':
             ctag_dist = is_integer(optarg);
@@ -1906,6 +1902,9 @@ int parse_command_line(int argc, char* argv[]) {
         help();
     }
 
+    if (batch_id < 0)
+        batch_id = 1;
+
     if (out_path.length() == 0)
         out_path = ".";
 
@@ -1923,15 +1922,15 @@ void version() {
 
 void help() {
     std::cerr << "cstacks " << VERSION << "\n"
-              << "cstacks [--denovo] -s sample1_path [-s sample2_path ...] -o path -b batch_id [-n num_mismatches] [--gapped] [-p num_threads]" << "\n"
-              << "cstacks --ref_based -s sample1_path [-s sample2_path ...] -o path -b batch_id [-p num_threads]" << "\n"
+              << "cstacks [--denovo] -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
+              << "cstacks --ref_based -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-b batch_id]" << "\n"
               << "  --denovo: base catalog construction on sequence identity (default)." << "\n"
               << "  g,--ref_based: base catalog construction on alignment position." << "\n"
               << "  s: filename prefix from which to load loci into the catalog." << "\n"
               << "  o: output path to write results." << "\n"
-              << "  b: database/batch ID for this catalog." << "\n"
               << "  n: number of mismatches allowed between sample loci when build the catalog (default 1)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
+              << "  b: database/batch ID for this catalog (default 1)." << "\n"
               << "  --catalog <path>: add to an existing catalog.\n"
               << "\n"
               << "Gapped assembly options:\n"
