@@ -1295,7 +1295,7 @@ int parse_command_line(int argc, char* argv[]) {
         static struct option long_options[] = {
             {"help",              no_argument, NULL, 'h'},
             {"version",           no_argument, NULL, 'v'},
-            {"genomic_loc",       no_argument, NULL, 'g'},
+            {"ref_based",         no_argument, NULL, 'g'},
             {"verify_hap",        no_argument, NULL, 'x'},
             {"uniq_haplotypes",   no_argument, NULL, 'u'},
             {"gapped",            no_argument, NULL, 'G'},
@@ -1392,18 +1392,17 @@ void version() {
 
 void help() {
     std::cerr << "sstacks " << VERSION << "\n"
-              << "sstacks -b batch_id -c catalog_file -s sample_file [-s sample_file_2 ...] [-o path] [-p num_threads] [-g] [-x] [-v] [-h]" << "\n"
-              << "  p: enable parallel execution with num_threads threads.\n"
-              << "  b: MySQL ID of this batch." << "\n"
-              << "  c: TSV file from which to load the catalog loci." << "\n"
+              << "sstacks [--ref_based] -b batch_id -c catalog_file -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-x] [-v] [-h]" << "\n"
+              << "  g,ref_based: base matching on alignment position, not sequence identity." << "\n"
+              << "  b: ID of the catalog to consider (default 1)." << "\n"
+              << "  c: path to the catalog (default: IN_DIR/batch_ID, ./batch_ID)." << "\n"
               << "  s: filename prefix from which to load sample loci." << "\n"
+              << "  p: enable parallel execution with num_threads threads.\n"
               << "  o: output path to write results." << "\n"
-              << "  g: base matching on genomic location, not sequence identity." << "\n"
               << "  x: don't verify haplotype of matching locus." << "\n"
-              << "  v: print program version." << "\n"
-              << "  h: display this help messsage." << "\n\n"
-              << "  Gapped assembly options:\n"
-              << "    --gapped: preform gapped alignments between stacks.\n";
+              << "\n"
+              << "Gapped assembly options:\n"
+              << "  --gapped: preform gapped alignments between stacks.\n";
 
     exit(0);
 }
