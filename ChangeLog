@@ -1,9 +1,19 @@
-dev
-----------
-    Feature: Added a check for sample ID unicity in cstacks.
-    Bugfix:  Corrected a bug in rxstacks that affected locus likelihood medians.
-    Bugfix:  Corrected a VCF-related segfault in the populations module. Current use of VCF's GL field was
-             improper and was removed.
+Stacks 1.45 - tba
+--------------------------
+    Feature: Tweaked the defaults and/or interfaces of most programs:
+             * ustacks -r has become the default; --keep-high-cov reverses it.
+             * cstacks and sstacks now accept a population map as input.
+             * pstacks/ustacks/process_radtags will now try to guess file formats.
+             * Batch ID will default to 1, where applicable.
+             * Default format in process_radtags/process_shortread is now gzfastq.
+             * cstacks now checks for sample ID unicity.
+             * Updated help messages.
+    Feature: Added enzyme ApaLI.
+
+    Bugfix: populations: Corrected a VCF-related segfault (current use of VCF's GL field was
+            improper and was removed).
+    Bugfix: rxstacks: Corrected a bug that affected locus likelihood medians.
+    Bugfix: pstacks/ustacks: Corrected a bug that affected coverage standard deviations.
 
 Stacks 1.44 - Oct 11, 2016
 --------------------------
