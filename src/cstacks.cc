@@ -1897,11 +1897,11 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
-    if (in_dir.empty() && catalog_path.empty()) {
+    if (in_dir.empty() && samples.empty()) {
         cerr << "Error: You must specify one of -P or -s.\n";
         help();
     } else if ((!in_dir.empty() || !popmap_path.empty())
-            && (!catalog_path.empty() || !samples.empty() || !out_path.empty())) {
+            && (!samples.empty() || !out_path.empty())) {
         cerr << "Error: Please use options -P/-M or -s/-o, not both.\n";
         help();
     }
@@ -1912,16 +1912,8 @@ int parse_command_line(int argc, char* argv[]) {
             help();
         }
 
-        if (batch_id < 0) {
-            // Default 1.
-            batch_id = 1;
-        }
-
         if (in_dir.back() != '/')
             in_dir += "/";
-
-        // Set `catalog_path`.
-        catalog_path = in_dir + "batch_" + to_string(batch_id);
 
         // Set `samples`.
         MetaPopInfo popmap;
@@ -1932,12 +1924,10 @@ int parse_command_line(int argc, char* argv[]) {
         // Set `out_path`.
         out_path = in_dir;
 
-    } else if (!catalog_path.empty()) {
-        if (samples.size() == 0) {
-            cerr << "You must specify at least one sample file.\n";
-            help();
-        }
+        if (batch_id < 0)
+            batch_id = 1;
 
+    } else if (!samples.empty()) {
         if (out_path.empty())
             out_path = ".";
 
