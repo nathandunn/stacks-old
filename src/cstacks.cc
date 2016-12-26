@@ -1803,7 +1803,6 @@ int parse_command_line(int argc, char* argv[]) {
             {"help",            no_argument, NULL, 'h'},
             {"version",         no_argument, NULL, 1000},
             {"mmatches",        no_argument, NULL, 'm'},
-            {"denovo",          no_argument, NULL, 1001},
             {"ref_based",       no_argument, NULL, 'g'},
             {"uniq_haplotypes", no_argument, NULL, 'u'},
             {"report_mmatches", no_argument, NULL, 'R'},
@@ -1846,10 +1845,6 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'R':
             report_mmatches = true;
-            break;
-        case 1001: //denovo
-            // (default)
-            search_type = sequence;
             break;
         case 'g':
             search_type = genomic_loc;
@@ -1954,20 +1949,19 @@ void version() {
 
 void help() {
     std::cerr << "cstacks " << VERSION << "\n"
-              << "cstacks [--denovo] -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
-              << "cstacks [--denovo] -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
+              << "cstacks -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
+              << "cstacks -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks --ref_based -P in_dir -M popmap [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks --ref_based -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-b batch_id]" << "\n"
               << "\n"
-              << "  --denovo: base catalog construction on sequence identity (default)." << "\n"
-              << "  g,--ref_based: base catalog construction on alignment position." << "\n"
+              << "  g,--ref_based: base catalog construction on alignment position, not sequence identity." << "\n"
               << "  P: path to the directory containing Stacks files.\n"
               << "  M: path to a population map file.\n"
-              << "  s: filename prefix from which to load loci into the catalog." << "\n"
-              << "  o: output path to write results." << "\n"
               << "  n: number of mismatches allowed between sample loci when build the catalog (default 1)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  b: database/batch ID for this catalog (default 1)." << "\n"
+              << "  s: sample prefix from which to load loci into the catalog." << "\n"
+              << "  o: output path to write results." << "\n"
               << "  --catalog <path>: add to an existing catalog.\n"
               << "\n"
               << "Gapped assembly options:\n"
