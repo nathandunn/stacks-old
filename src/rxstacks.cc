@@ -95,10 +95,6 @@ int main (int argc, char* argv[]) {
 
     MetaPopInfo mpopi;
     mpopi.init_directory(in_path);
-    if (mpopi.samples().empty()) {
-        cerr << "Error: Failed to find sample files in directory '" << in_path << "'.\n";
-        return -1;
-    }
 
     //
     // Open and initialize the log files.

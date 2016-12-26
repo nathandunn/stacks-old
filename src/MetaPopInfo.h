@@ -63,9 +63,9 @@ public:
     // -- from a population map file.
     // -- from just a vector of sample names.
     // -- or by looking for "*.tags.tsv(.gz)" files in a directory.
-    bool init_popmap(const string& popmap_path);
-    bool init_names(const vector<string>& sample_names);
-    bool init_directory(const string& dir_path);
+    void init_popmap(const string& popmap_path);
+    void init_names(const vector<string>& sample_names);
+    void init_directory(const string& dir_path);
 
     // Delete samples from the metapopulation.
     // (As samples, populations or groups may be deleted, the indexes of

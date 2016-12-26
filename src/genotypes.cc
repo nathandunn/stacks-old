@@ -88,10 +88,6 @@ int main (int argc, char* argv[]) {
 
     MetaPopInfo mpopi;
     mpopi.init_directory(in_path);
-    if (mpopi.samples().empty()) {
-        cerr << "Error: Failed to find sample files in directory '" << in_path << "'.\n";
-        return -1;
-    }
 
     if (wl_file.length() > 0) {
         load_marker_list(wl_file, whitelist);
