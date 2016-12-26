@@ -1,5 +1,6 @@
 #include <regex>
 #include <cassert>
+#include <map>
 
 #include "constants.h"
 

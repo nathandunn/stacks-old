@@ -39,7 +39,7 @@ void MetaPopInfo::init_popmap(const string& pmap_path) {
     ifstream fh(pmap_path.c_str(), ifstream::in);
     if (fh.fail()) {
         cerr << "Error: Failed to open population map file '" << pmap_path << "'.\n";
-        throw ios_base::failure();
+        throw exception();
     }
 
     size_t p = 0; // pop index counter
@@ -238,7 +238,7 @@ void MetaPopInfo::init_directory(const string& dir_path) {
     closedir(dir);
 
     if (sample_names.empty()) {
-        cerr << "Error: Failed to find sample files in directory '" << in_path << "'.\n";
+        cerr << "Error: Failed to find sample files in directory '" << dir_path << "'.\n";
         throw exception();
     }
 
