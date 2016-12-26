@@ -11,9 +11,7 @@
 
 #include "MetaPopInfo.h"
 
-using std::ifstream;
-using std::cerr;
-using std::exception;
+using namespace std;
 
 const string MetaPopInfo::Pop::default_name = "defaultpop";
 const string MetaPopInfo::Group::default_name = "defaultgrp";
@@ -36,11 +34,13 @@ void MetaPopInfo::reset_group_map() {
         group_indexes_.insert( {groups_[i].name, i} );
 }
 
-bool MetaPopInfo::init_popmap(const string& pmap_path) {
+void MetaPopInfo::init_popmap(const string& pmap_path) {
 
     ifstream fh(pmap_path.c_str(), ifstream::in);
-    if (fh.fail())
-        return false;
+    if (fh.fail()) {
+        cerr << "Error: Failed to open population map file '" << pmap_path << "'.\n";
+        throw ios_base::failure();
+    }
 
     size_t p = 0; // pop index counter
     size_t g = 0; // group index counter
@@ -72,7 +72,7 @@ bool MetaPopInfo::init_popmap(const string& pmap_path) {
             || parts.size() > 3
             || parts[0].empty()
             || parts[1].empty()) {
-            cerr << "Error: Malformed population map -- expected 'SAMPLE\\tPOP[\\tGROUP]'. In file '" << pmap_path << "', line :\n" << line << "\n";
+            cerr << "Error: Malformed population map -- expected 'SAMPLE \\t POP [\\t GROUP]'. In file '" << pmap_path << "', line :\n" << line << "\n";
             throw exception();
         }
 
@@ -125,9 +125,10 @@ bool MetaPopInfo::init_popmap(const string& pmap_path) {
             }
         }
     }
-    if (samples_.empty())
-        // Empty population map.
-        return false;
+    if (samples_.empty()) {
+        cerr << "Error: Population map '" << pmap_path << "' appears to be empty.\n";
+        throw exception();
+    }
 
     //
     // Check that all the populations are in a group. Put
@@ -177,13 +178,13 @@ bool MetaPopInfo::init_popmap(const string& pmap_path) {
         }
     }
     pops_[curr_pop].last_sample = samples_.size()-1;
-
-    return true;
 }
 
-bool MetaPopInfo::init_names(const vector<string>& sample_names) {
-    if(sample_names.empty())
-        return false;
+void MetaPopInfo::init_names(const vector<string>& sample_names) {
+    if(sample_names.empty()) {
+        cerr << "Error: No samples.\n";
+        throw exception();
+    }
 
     // Create the samples
     for (vector<string>::const_iterator s=sample_names.begin(); s!= sample_names.end(); ++s) {
@@ -206,11 +207,9 @@ bool MetaPopInfo::init_names(const vector<string>& sample_names) {
     reset_sample_map();
     reset_pop_map();
     reset_group_map();
-
-    return true;
 }
 
-bool MetaPopInfo::init_directory(const string& dir_path) {
+void MetaPopInfo::init_directory(const string& dir_path) {
 
     //
     // Find all sample names.
@@ -238,11 +237,15 @@ bool MetaPopInfo::init_directory(const string& dir_path) {
     }
     closedir(dir);
 
+    if (sample_names.empty()) {
+        cerr << "Error: Failed to find sample files in directory '" << in_path << "'.\n";
+        throw exception();
+    }
+
     //
     // Initialize the MetaPopInfo
     //
-
-    return init_names(sample_names);
+    init_names(sample_names);
 }
 
 void MetaPopInfo::delete_samples(const vector<size_t>& rm_samples) {

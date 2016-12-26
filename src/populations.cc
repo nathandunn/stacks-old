@@ -213,10 +213,6 @@ int main (int argc, char* argv[]) {
     if (not pmap_path.empty()) {
         cerr << "Parsing population map...\n";
         mpopi.init_popmap(pmap_path);
-        if (mpopi.samples().empty()) {
-            cerr << "Error: Failed to open or parse population map file '" << pmap_path << "'.\n";
-            return -1;
-        }
         cerr << "The population map contained " << mpopi.samples().size() << " samples, "
              << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     }
@@ -228,10 +224,6 @@ int main (int argc, char* argv[]) {
         if (pmap_path.empty()) {
             cerr << "No population map specified, building file list...\n";
             mpopi.init_directory(in_path);
-            if (mpopi.samples().empty()) {
-                cerr << "Error: Failed to find sample files in directory '" << in_path << "'.\n";
-                return -1;
-            }
         }
 
         // Check that at least one sample file exists in the directory.
@@ -5554,7 +5546,7 @@ void help() {
               << "  -P,--in_path: path to the directory containing the Stacks files.\n"
               << "  -V,--in_vcf: path to an input VCF file.\n"
               << "  -O,--out_path: path to a directory where to write the output files. (Required by -V; otherwise defaults to value of -P.)\n"
-              << "  -M,--popmap: path to a population map. (Format is 'SAMPLE1\tPOP1\\n...'.)\n"
+              << "  -M,--popmap: path to a population map. (Format is 'SAMPLE1 \\t POP1 \\n SAMPLE2 ...'.)\n"
               << "  -t,--threads: number of threads to run in parallel sections of code.\n"
               << "  -b,--batch_id: ID of the catalog to consider (default 1).\n"
               << "  -s,--sql_out: output a file to import results into an SQL database.\n"
