@@ -31,7 +31,7 @@ typedef MetaPopInfo::Sample Sample;
 
 // Global variables to hold command-line options.
 int    num_threads = 1;
-int    batch_id    = 0;
+int    batch_id    = -1;
 string in_path;
 string out_path;
 FileT  in_file_type      = FileT::sql;
@@ -1658,10 +1658,6 @@ parse_command_line(int argc, char* argv[])
             break;
         case 'b':
             batch_id = is_integer(optarg);
-            if (batch_id < 0) {
-                cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
-                help();
-            }
             break;
         case 'o':
             out_path = optarg;
@@ -1731,8 +1727,8 @@ parse_command_line(int argc, char* argv[])
     }
 
     if (out_path.length() == 0) {
-        cerr << "No output path specified, files in '" << in_path << "' will be overwritten.\n";
-        out_path = in_path;
+        cerr << "You must specify a path to a directory where to write output files.\n";
+        help();
     }
 
     if (in_path.at(in_path.length() - 1) != '/')
@@ -1741,10 +1737,8 @@ parse_command_line(int argc, char* argv[])
     if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
-    if (batch_id == 0) {
-        cerr << "You must specify a batch ID.\n";
-        help();
-    }
+    if (batch_id < 0)
+        batch_id = 1;
 
     if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
         cerr << "SNP model alpha significance level must be either 0.1, 0.05, 0.01, or 0.001.\n";
@@ -1781,13 +1775,11 @@ void version() {
 
 void help() {
     std::cerr << "rxstacks " << VERSION << "\n"
-              << "rxstacks -b batch_id -P path [-o path] [-t threads] [-v] [-h]" << "\n"
-              << "  b: Batch ID to examine when exporting from the catalog.\n"
+              << "rxstacks -P path -o path [-t threads] [-b batch_id]" << "\n"
               << "  P: path to the Stacks output files.\n"
-              << "  o: output path to write results.\n"
+              << "  o: output path to write results ('.' to override the current files).\n"
               << "  t: number of threads to run in parallel sections of code.\n"
-              << "  v: print program version." << "\n"
-              << "  h: display this help messsage." << "\n\n"
+              << "  b: database/batch ID of the input catalog to consider (default 1).\n"
               << "  Filtering options:\n"
               << "    --lnl_filter: filter catalog loci based on the mean log likelihood of the catalog locus in the population.\n"
               << "      --lnl_lim <limit>: minimum log likelihood required to keep a catalog locus.\n"

@@ -1300,7 +1300,7 @@ int parse_command_line(int argc, char* argv[]) {
         static struct option long_options[] = {
             {"help",              no_argument, NULL, 'h'},
             {"version",           no_argument, NULL, 'v'},
-            {"ref_based",         no_argument, NULL, 'g'},
+            {"aligned",           no_argument, NULL, 'g'},
             {"verify_hap",        no_argument, NULL, 'x'},
             {"uniq_haplotypes",   no_argument, NULL, 'u'},
             {"gapped",            no_argument, NULL, 'G'},
@@ -1449,15 +1449,15 @@ void version() {
 
 void help() {
     std::cerr << "sstacks " << VERSION << "\n"
-              << "sstacks [--ref_based] -P dir_path [-b batch_id] -M popmap [-p num_threads] [-x]" << "\n"
-              << "sstacks [--ref_based] -c catalog_file [-b batch_id] -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-x] [-v] [-h]" << "\n"
-              << "  g,ref_based: base matching on alignment position, not sequence identity." << "\n"
+              << "sstacks [--aligned] -P dir_path [-b batch_id] -M popmap [-p num_threads] [-x]" << "\n"
+              << "sstacks [--aligned] -c catalog_file -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-x]" << "\n"
+              << "  g,--aligned: base matching on alignment position, not sequence identity." << "\n"
               << "  P: path to the directory containing Stacks files.\n"
               << "  M: path to a population map file.\n"
               << "  s: filename prefix from which to load sample loci." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-              << "  b: ID of the catalog to consider (default: 1, or with -c guess)." << "\n"
-              << "  c: path to the catalog (default: IN_DIR/batch_ID, ./batch_ID)." << "\n"
+              << "  b: ID of the catalog to consider (default: 1)." << "\n"
+              << "  c: path to the catalog." << "\n"
               << "  o: output path to write results." << "\n"
               << "  x: don't verify haplotype of matching locus." << "\n"
               << "\n"
