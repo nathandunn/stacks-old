@@ -1803,7 +1803,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"help",            no_argument, NULL, 'h'},
             {"version",         no_argument, NULL, 1000},
             {"mmatches",        no_argument, NULL, 'm'},
-            {"ref_based",       no_argument, NULL, 'g'},
+            {"aligned",         no_argument, NULL, 'g'},
             {"uniq_haplotypes", no_argument, NULL, 'u'},
             {"report_mmatches", no_argument, NULL, 'R'},
             {"gapped",          no_argument, NULL, 'G'},
@@ -1950,11 +1950,11 @@ void version() {
 void help() {
     std::cerr << "cstacks " << VERSION << "\n"
               << "cstacks -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
+              << "cstacks --aligned -P in_dir -M popmap [-p num_threads] [-b batch_id]" << "\n"
               << "cstacks -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
-              << "cstacks --ref_based -P in_dir -M popmap [-p num_threads] [-b batch_id]" << "\n"
-              << "cstacks --ref_based -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-b batch_id]" << "\n"
+              << "cstacks --aligned -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-b batch_id]" << "\n"
               << "\n"
-              << "  g,--ref_based: base catalog construction on alignment position, not sequence identity." << "\n"
+              << "  g,--aligned: base catalog construction on alignment position, not sequence identity." << "\n"
               << "  P: path to the directory containing Stacks files.\n"
               << "  M: path to a population map file.\n"
               << "  n: number of mismatches allowed between sample loci when build the catalog (default 1)." << "\n"
