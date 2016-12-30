@@ -35,7 +35,7 @@
     try {
 #define IF_NDEBUG_CATCH_ALL_EXCEPTIONS \
     } catch (const std::exception& e) { \
-        std::cerr << "Terminated after an error occurred (" << e.what() << ").\n"; \
+        std::cerr << "Aborted. (" << e.what() << ").\n"; \
         return -1; \
     }
 #endif
