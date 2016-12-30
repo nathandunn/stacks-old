@@ -92,28 +92,21 @@ Bam::next_seq()
 int
 Bam::next_seq(Seq& s)
 {
-    int bytes_read = 0;
     int sflag      = 0;
-    int flag       = 0;
 
     //
     // Read a record from the file, skipping unmapped reads,  and place it in a Seq object.
     //
     do {
-        bytes_read = sam_read1(this->bam_fh, this->bamh, this->aln);
-
-        if (bytes_read <= 0)
-            return 0;
-
-        flag = ((this->aln->core.flag & BAM_FUNMAP) != 0);
-
-    } while (flag == 1);
+        if (sam_read1(this->bam_fh, this->bamh, this->aln) <= 0)
+            return false;
+    } while (aln->core.flag & BAM_FUNMAP);
 
     //
     // Check which strand this is aligned to:
     //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
     //
-    sflag = ((this->aln->core.flag & BAM_FREVERSE) != 0);
+    sflag = aln->core.flag & BAM_FREVERSE;
 
     //
     // If the read was aligned on the reverse strand (and is therefore reverse complemented)
@@ -130,18 +123,15 @@ Bam::next_seq(Seq& s)
         this->find_start_bp_pos(this->aln->core.pos, cigar);
 
     //
-    // Check if this is the primary or secondary alignment.
+    // Check if this is a primary, secondary or supplementary (chimeric) alignment.
     //
-    alnt aln_type = pri_aln;
-    flag = ((this->aln->core.flag & BAM_FSECONDARY) != 0);
-    if (flag)
-	aln_type = sec_aln;
-    //
-    // Check if this is a supplemenatry (chimeric) alignment (not yet defined in Bam.h).
-    //
-    flag = ((this->aln->core.flag & 2048) != 0);
-    if (flag)
-	aln_type = sup_aln;
+    alnt aln_type;
+    if (aln->core.flag & BAM_FSECONDARY)
+        aln_type = sec_aln;
+    else if (aln->core.flag & BAM_FSUPPLEMENTARY)
+        aln_type = sup_aln;
+    else
+        aln_type = pri_aln;
 
     //
     // Fetch the sequence.
