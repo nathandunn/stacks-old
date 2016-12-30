@@ -773,19 +773,19 @@ int load_radtags(string in_file, HashMap &radtags) {
 
         i++;
 
-	switch (c.aln_type) {
-	case sec_aln:
+        switch (c.aln_type) {
+        case sec_aln:
             secondary++;
             if (!keep_sec_alns)
                 continue;
-	    break;
-	case sup_aln:
-	    supplementary++;
-	    continue;
-	    break;
-	case pri_aln:
-	default:
-	    break;
+            break;
+        case sup_aln:
+            supplementary++;
+            continue;
+            break;
+        case pri_aln:
+        default:
+            break;
         }
 
         if (c.pct_aln < req_pct_aln) {
@@ -967,6 +967,7 @@ int parse_command_line(int argc, char* argv[]) {
                 cerr << "Unknown model type specified '" << optarg << "'\n";
                 help();
             }
+            break;
         case 'L':
             bound_low  = atof(optarg);
             break;
