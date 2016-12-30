@@ -145,8 +145,14 @@ int Sam::next_seq(Seq& s) {
             break;
         case 'D':
         case 'S':
+            break;
         case 'H':
         case 'N':
+            static bool emitted_hn_warning = false;
+            if(aln_type == pri_aln && !emitted_hn_warning) {
+                cerr << "Warning: Some CIGARs contained H and/or N operations.\n";
+                emitted_hn_warning = true;
+            }
             break;
         default:
             cerr << "Error parsing CIGAR string '" << cigar[i].second << cigar[i].first << "'.\n";
