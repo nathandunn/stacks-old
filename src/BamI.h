@@ -125,13 +125,13 @@ Bam::next_seq(Seq& s)
     //
     // Check if this is a primary, secondary or supplementary (chimeric) alignment.
     //
-    alnt aln_type;
+    AlnT aln_type;
     if (aln->core.flag & BAM_FSECONDARY)
-        aln_type = sec_aln;
+        aln_type = AlnT::secondary;
     else if (aln->core.flag & BAM_FSUPPLEMENTARY)
-        aln_type = sup_aln;
+        aln_type = AlnT::supplementary;
     else
-        aln_type = pri_aln;
+        aln_type = AlnT::primary;
 
     //
     // Fetch the sequence.
@@ -191,7 +191,7 @@ Bam::next_seq(Seq& s)
         case 'H':
         case 'N':
             static bool emitted_hn_warning = false;
-            if(aln_type == pri_aln && !emitted_hn_warning) {
+            if(aln_type == AlnT::primary && !emitted_hn_warning) {
                 cerr << "Warning: Some CIGARs contained H and/or N operations.\n";
                 emitted_hn_warning = true;
             }

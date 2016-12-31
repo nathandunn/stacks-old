@@ -774,16 +774,16 @@ int load_radtags(string in_file, HashMap &radtags) {
         i++;
 
         switch (c.aln_type) {
-        case sec_aln:
+        case AlnT::secondary:
             secondary++;
             if (!keep_sec_alns)
                 continue;
             break;
-        case sup_aln:
+        case AlnT::supplementary:
             supplementary++;
             continue;
             break;
-        case pri_aln:
+        case AlnT::primary:
         default:
             break;
         }
