@@ -97,11 +97,11 @@ int Sam::next_seq(Seq& s) {
     //
     // Check if this is the primary or secondary alignment.
     //
-    alnt aln_type = pri_aln;
+    AlnT aln_type = AlnT::primary;
     aflag = flag & 256;
     aflag = aflag >> 8;
     if (aflag)
-	aln_type = sec_aln;
+	aln_type = AlnT::secondary;
 
     //
     // Check if this is a supplemenatry (chimeric) alignment (not yet defined in Bam.h).
@@ -109,7 +109,7 @@ int Sam::next_seq(Seq& s) {
     aflag = flag & 2048;
     aflag = aflag >> 11;
     if (aflag)
-	aln_type = sup_aln;
+	aln_type = AlnT::supplementary;
 
     //
     // If the read was aligned on the reverse strand (and is therefore reverse complemented)
@@ -149,7 +149,7 @@ int Sam::next_seq(Seq& s) {
         case 'H':
         case 'N':
             static bool emitted_hn_warning = false;
-            if(aln_type == pri_aln && !emitted_hn_warning) {
+            if(aln_type == AlnT::primary && !emitted_hn_warning) {
                 cerr << "Warning: Some CIGARs contained H and/or N operations.\n";
                 emitted_hn_warning = true;
             }

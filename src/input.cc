@@ -29,7 +29,7 @@ Seq::Seq() {
     this->seq      = NULL;
     this->qual     = NULL;
     this->loc_str  = NULL;
-    this->aln_type = pri_aln;
+    this->aln_type = AlnT::primary;
     this->pct_aln  = 1.0;
 }
 
@@ -73,7 +73,7 @@ Seq::Seq(const char *id, const char *seq) {
     strcpy(this->id,   id);
     strcpy(this->seq,  seq);
 
-    this->aln_type = pri_aln;
+    this->aln_type = AlnT::primary;
     this->pct_aln  = 1.0;
 }
 
@@ -87,7 +87,7 @@ Seq::Seq(const char *id, const char *seq, const char *qual)  {
     strcpy(this->seq,  seq);
     strcpy(this->qual, qual);
 
-    this->aln_type = pri_aln;
+    this->aln_type = AlnT::primary;
     this->pct_aln  = 1.0;
 }
 
@@ -112,11 +112,11 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
         this->seq = rev_comp(seq);
     }
 
-    this->aln_type = pri_aln;
+    this->aln_type = AlnT::primary;
     this->pct_aln  = 1.0;
 }
 
-Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand, alnt aln_type, double pct_aln)  {
+Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand, AlnT aln_type, double pct_aln)  {
     this->id      = new char[strlen(id)   + 1];
     this->qual    = new char[strlen(qual) + 1];
     this->loc_str = new char[strlen(chr)  + 15];
@@ -143,7 +143,7 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
 
 void swap(Seq& s1, Seq& s2) {
     char  *ptr;
-    alnt   a;
+    AlnT   a;
     double p;
 
     ptr = s1.id;
