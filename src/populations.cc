@@ -5157,8 +5157,8 @@ int parse_command_line(int argc, char* argv[]) {
             {"hzar",           no_argument,       NULL, 'Z'},
             {"treemix",        no_argument,       NULL, 'U'},
             {"merge_sites",    no_argument,       NULL, 'D'},
-            {"window_size",    required_argument, NULL, 'w'},
-            {"threads",    required_argument, NULL, 't'},
+            {"sigma",          required_argument, NULL, 1005},
+            {"threads",        required_argument, NULL, 't'},
             {"batch_id",       required_argument, NULL, 'b'},
             {"in_path",        required_argument, NULL, 'P'},
             {"out_path",       required_argument, NULL, 'O'},
@@ -5424,7 +5424,7 @@ int parse_command_line(int argc, char* argv[]) {
                 help();
             }
             break;
-        case 'w':
+        case 1005: //sigma
             sigma = atof(optarg);
             break;
         case 'v':
