@@ -167,15 +167,13 @@ int main (int argc, char* argv[]) {
     //
     // Open and initialize the log file.
     //
-    struct stat path_stat;
-    if (stat(out_path.c_str(), &path_stat) == 0) {
+    struct stat out_path_stat;
+    if (stat(out_path.substr(0, out_path.length()-1).c_str(), &out_path_stat) == 0) {
         // Path exists, check that it is a directory
-        DIR* d = opendir(out_path.c_str());
-        if (d == NULL) {
-            cerr << "Error: Failed to open '" << out_path << "' as a directory.\n";
+        if (!S_ISDIR(out_path_stat.st_mode)) {
+            cerr << "Error: '" << out_path.substr(0, out_path.length()-1) << "' is not a directory.\n";
             return -1;
         }
-        closedir(d);
     } else if (mkdir(out_path.c_str(), ACCESSPERMS) != 0) {
         // Failed to create the directory.
         cerr << "Error: Failed to create directory '" << out_path << "'.\n";
