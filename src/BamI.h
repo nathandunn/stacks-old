@@ -28,10 +28,16 @@
 
 #ifdef HAVE_BAM
 
+#include "sam.h" //htslib
+
+#include "stacks.h"
 #include "input.h"
-#include "sam.h"
+
+int bam_find_start_bp(int, strand_type, const vector<pair<char, uint> > &);
+int bam_edit_gaps(vector<pair<char, uint> > &, char *);
 
 class Bam: public Input {
+private:
     htsFile   *bam_fh;
     bam_hdr_t *bamh;
     bam1_t    *aln;
@@ -39,11 +45,7 @@ class Bam: public Input {
     map<uint, string> chrs;
 
     int parse_header();
-    int parse_cigar(const char *, vector<pair<char, uint> > &, bool);
-    int parse_bam_cigar(vector<pair<char, uint> > &, bool);
-    int find_start_bp_pos(int, vector<pair<char, uint> > &);
-    int find_start_bp_neg(int, vector<pair<char, uint> > &);
-    int edit_gaps(vector<pair<char, uint> > &, char *);
+    int parse_cigar(vector<pair<char, uint> > &, strand_type);
 
  public:
     Bam(const char *path) : Input() {
@@ -92,41 +94,20 @@ Bam::next_seq()
 int
 Bam::next_seq(Seq& s)
 {
-    int sflag      = 0;
 
     //
     // Read a record from the file, skipping unmapped reads,  and place it in a Seq object.
     //
-    do {
-        if (sam_read1(this->bam_fh, this->bamh, this->aln) <= 0)
-            return false;
-    } while (aln->core.flag & BAM_FUNMAP);
+    if (sam_read1(bam_fh, bamh, aln) < 0)
+        return false;
 
     //
-    // Check which strand this is aligned to:
-    //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
-    //
-    sflag = aln->core.flag & BAM_FREVERSE;
-
-    //
-    // If the read was aligned on the reverse strand (and is therefore reverse complemented)
-    // alter the start point of the alignment to reflect the right-side of the read, at the
-    // end of the RAD cut site.
-    //
-    // To accomplish this, we must parse the alignment CIGAR string
-    //
-    vector<pair<char, uint> > cigar;
-    this->parse_bam_cigar(cigar, sflag);
-
-    uint bp = sflag ?
-        this->find_start_bp_neg(this->aln->core.pos, cigar) :
-        this->find_start_bp_pos(this->aln->core.pos, cigar);
-
-    //
-    // Check if this is a primary, secondary or supplementary (chimeric) alignment.
+    // Parse the type of the record.
     //
     AlnT aln_type;
-    if (aln->core.flag & BAM_FSECONDARY)
+    if (aln->core.flag & BAM_FUNMAP)
+        aln_type = AlnT::null;
+    else if (aln->core.flag & BAM_FSECONDARY)
         aln_type = AlnT::secondary;
     else if (aln->core.flag & BAM_FSUPPLEMENTARY)
         aln_type = AlnT::supplementary;
@@ -137,12 +118,9 @@ Bam::next_seq(Seq& s)
     // Fetch the sequence.
     //
     string  seq;
-    uint8_t j;
-
-    seq.reserve(this->aln->core.l_qseq);
-
-    for (int i = 0; i < this->aln->core.l_qseq; i++) {
-        j = bam_seqi(bam_get_seq(this->aln), i);
+    seq.reserve(aln->core.l_qseq);
+    for (int i = 0; i < aln->core.l_qseq; i++) {
+        uint8_t j = bam_seqi(bam_get_seq(aln), i);
         switch(j) {
         case 1:
             seq += 'A';
@@ -159,6 +137,9 @@ Bam::next_seq(Seq& s)
         case 15:
             seq += 'N';
             break;
+        default:
+            // assert(false);
+            break;
         }
     }
 
@@ -166,54 +147,78 @@ Bam::next_seq(Seq& s)
     // Fetch the quality score.
     //
     string   qual;
-    uint8_t *q = bam_get_qual(this->aln);
+    uint8_t *q = bam_get_qual(aln);
     for (int i = 0; i < this->aln->core.l_qseq; i++) {
         qual += char(int(q[i]) + 33);
     }
 
-    string chr = this->chrs[this->aln->core.tid];
+    if (aln_type == AlnT::null) {
+        s = Seq(bam_get_qname(aln), seq.c_str(), qual.c_str());
+    } else {
+        // Fetch the chromosome.
+        string chr = chrs[aln->core.tid];
 
-    //
-    // Calculate the percentage of the sequence that was aligned to the reference.
-    //
-    double len = 0.0;
-    for (uint i = 0; i < cigar.size(); i++)
-        switch (cigar[i].first) {
-        case 'M':
-        case 'I':
-        case '=':
-        case 'X':
-            len += cigar[i].second;
-            break;
-        case 'D':
-        case 'S':
-            break;
-        case 'H':
-        case 'N':
-            static bool emitted_hn_warning = false;
-            if(aln_type == AlnT::primary && !emitted_hn_warning) {
-                cerr << "Warning: Some CIGARs contained H and/or N operations.\n";
-                emitted_hn_warning = true;
+        //
+        // Check which strand this is aligned to:
+        //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
+        //
+        strand_type strand = aln->core.flag & BAM_FREVERSE ? strand_minus : strand_plus;
+
+        //
+        // Parse the alignment CIGAR string
+        //
+        vector<pair<char, uint> > cigar;
+        parse_cigar(cigar, strand);
+
+        //
+        // If the read was aligned on the reverse strand (and is therefore reverse complemented)
+        // alter the start point of the alignment to reflect the right-side of the read, at the
+        // end of the RAD cut site.
+        //
+
+        uint bp = bam_find_start_bp(aln->core.pos, strand, cigar);
+
+        //
+        // Calculate the percentage of the sequence that was aligned to the reference.
+        //
+        double len = 0.0;
+        for (uint i = 0; i < cigar.size(); i++)
+            switch (cigar[i].first) {
+            case 'M':
+            case 'I':
+            case '=':
+            case 'X':
+                len += cigar[i].second;
+                break;
+            case 'D':
+            case 'S':
+                break;
+            case 'H':
+            case 'N':
+                static bool emitted_hn_warning = false;
+                if(aln_type == AlnT::primary && !emitted_hn_warning) {
+                    cerr << "Warning: Some CIGARs contained H and/or N operations.\n";
+                    emitted_hn_warning = true;
+                }
+                break;
+            default:
+                cerr << "Warning: Unrecognized CIGAR operation '" << cigar[i].second << cigar[i].first << "'.\n";
+                break;
             }
-            break;
-        default:
-            cerr << "Error parsing CIGAR string '" << cigar[i].second << cigar[i].first << "'.\n";
-            break;
-        }
-    double pct_aln = len / double(seq.length());
+        double pct_aln = len / double(seq.length());
 
-    s = Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str(),
-            chr.c_str(), bp, sflag ? strand_minus : strand_plus, 
-            aln_type, pct_aln);
+        s = Seq(bam_get_qname(aln), seq.c_str(), qual.c_str(),
+                chr.c_str(), bp, strand, aln_type, pct_aln);
 
-    if (cigar.size() > 0)
-        this->edit_gaps(cigar, s.seq);
+        if (cigar.size() > 0)
+            bam_edit_gaps(cigar, s.seq);
+    }
 
-    return 1;
+    return true;
 }
 
 int
-Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
+Bam::parse_cigar(vector<pair<char, uint> > &cigar, strand_type strand)
 {
     int  op, len;
     char c;
@@ -260,7 +265,7 @@ Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
         // If aligned to the negative strand, sequence has been reverse complemented and
         // CIGAR string should be interpreted in reverse.
         //
-        if (orientation == strand_plus)
+        if (strand == strand_plus)
             cigar.push_back(make_pair(c, len));
         else
             cigar.insert(cigar.begin(), make_pair(c, len));
@@ -270,91 +275,44 @@ Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
 }
 
 int
-Bam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool orientation)
+bam_find_start_bp(int aln_bp, strand_type strand, const vector<pair<char, uint> > &cigar)
 {
-    char buf[id_len];
-    int  dist;
-    const char *p, *q;
+    if (strand == strand_plus) {
+        if (cigar.at(0).first == 'S')
+            aln_bp -= cigar.at(0).second;
+    } else {
+        // assert(strand == strand_minus);
+        for (uint i = 0; i < cigar.size(); i++)  {
+            char op   = cigar[i].first;
+            uint dist = cigar[i].second;
 
-    p = cigar_str;
-
-    if (*p == '*') return 0;
-
-    while (*p != '\0') {
-        q = p + 1;
-
-        while (*q != '\0' && isdigit(*q))
-            q++;
-        strncpy(buf, p, q - p);
-        buf[q-p] = '\0';
-        dist = atoi(buf);
-
-        //
-        // If aligned to the negative strand, sequence has been reverse complemented and
-        // CIGAR string should be interpreted in reverse.
-        //
-        if (orientation == strand_plus)
-            cigar.push_back(make_pair(*q, dist));
-        else
-            cigar.insert(cigar.begin(), make_pair(*q, dist));
-
-        p = q + 1;
-    }
-
-    return 0;
-}
-
-int
-Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
-{
-    uint size = cigar.size();
-    char op;
-    uint dist;
-
-    for (uint i = 0; i < size; i++)  {
-        op   = cigar[i].first;
-        dist = cigar[i].second;
-
-        switch(op) {
-        case 'I':
-        case 'H':
-            break;
-        case 'S':
-            if (i < size - 1)
+            switch(op) {
+            case 'I':
+            case 'H':
+                break;
+            case 'S':
+                if (i < cigar.size() - 1)
+                    aln_bp += dist;
+                break;
+            case 'M':
+            case '=':
+            case 'X':
+            case 'D':
+            case 'N':
                 aln_bp += dist;
-            break;
-        case 'M':
-        case '=':
-        case 'X':
-        case 'D':
-        case 'N':
-            aln_bp += dist;
-            break;
-        default:
-            break;
+                break;
+            default:
+                break;
+            }
         }
+        aln_bp -= 1;
     }
-
-    return aln_bp - 1;
-}
-
-int
-Bam::find_start_bp_pos(int aln_bp, vector<pair<char, uint> > &cigar)
-{
-    char op;
-    uint dist;
-
-    op   = cigar[0].first;
-    dist = cigar[0].second;
-
-    if (op == 'S')
-        aln_bp -= dist;
 
     return aln_bp;
 }
 
 int
-Bam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
+bam_edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 {
     char *buf;
     uint  size = cigar.size();

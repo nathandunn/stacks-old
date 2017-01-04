@@ -41,7 +41,7 @@ using std::endl;
 #include "utils.h"
 #include "stacks.h"
 
-enum class AlnT {primary, secondary, supplementary};
+enum class AlnT {null, primary, secondary, supplementary};
 
 class Seq {
  public:

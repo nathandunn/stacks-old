@@ -29,7 +29,7 @@ Seq::Seq() {
     this->seq      = NULL;
     this->qual     = NULL;
     this->loc_str  = NULL;
-    this->aln_type = AlnT::primary;
+    this->aln_type = AlnT::null;
     this->pct_aln  = 1.0;
 }
 
@@ -73,7 +73,7 @@ Seq::Seq(const char *id, const char *seq) {
     strcpy(this->id,   id);
     strcpy(this->seq,  seq);
 
-    this->aln_type = AlnT::primary;
+    this->aln_type = AlnT::null;
     this->pct_aln  = 1.0;
 }
 
@@ -87,7 +87,7 @@ Seq::Seq(const char *id, const char *seq, const char *qual)  {
     strcpy(this->seq,  seq);
     strcpy(this->qual, qual);
 
-    this->aln_type = AlnT::primary;
+    this->aln_type = AlnT::null;
     this->pct_aln  = 1.0;
 }
 

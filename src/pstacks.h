@@ -76,7 +76,7 @@ typedef unordered_map<DNANSeq, vector<Seq*> > HashMap;
 void   help( void );
 void   version( void );
 int    parse_command_line(int, char**);
-int    load_radtags(string, HashMap &);
+void   load_radtags(string, HashMap &);
 int    reduce_radtags(HashMap &, map<int, PStack *> &);
 int    populate_merged_tags(map<int, PStack *> &, map<int, MergedStack *> &);
 int    call_consensus(map<int, MergedStack *> &, map<int, PStack *> &, bool);
