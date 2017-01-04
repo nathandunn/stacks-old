@@ -2824,6 +2824,7 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'e':
             enz = optarg;
+            enz.at(0) = tolower(enz.at(0));
             break;
         case 'v':
             version();
