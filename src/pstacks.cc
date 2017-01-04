@@ -22,6 +22,8 @@
 // pstacks -- search an existing set of stacks for polymorphisms
 //
 
+#include "log_utils.h"
+
 #include "pstacks.h"
 
 //
@@ -747,7 +749,7 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
 // We expect tags to have already been aligned to a reference genome. Therefore, the tags
 // are identified by their chromosome and basepair location.
 //
-int load_radtags(string in_file, HashMap &radtags) {
+void load_radtags(string in_file, HashMap &radtags) {
     Input *fh = NULL;
     Seq c;
 
@@ -760,13 +762,15 @@ int load_radtags(string in_file, HashMap &radtags) {
     else if (in_file_type == FileT::tsv)
         fh = new Tsv(in_file.c_str());
 
-    cerr << "Parsing " << in_file.c_str() << "\n";
+    cerr << "Reading '" << in_file.c_str() << "'...";
 
-    int secondary     = 0;
-    int supplementary = 0;
-    int below_req_aln = 0;
+    int primary_kept   = 0;
+    int primary_disc   = 0;
+    int secondary_kept = 0;
+    int secondary_disc = 0;
+    int supplementary  = 0;
+    int unmapped       = 0;
     int i = 0;
-    cerr << "Loading aligned sequences...";
     while ((fh->next_seq(c)) != 0) {
         if (i % 1000000 == 0 && i>0)
             cerr << i/1000000 << "M...";
@@ -774,23 +778,33 @@ int load_radtags(string in_file, HashMap &radtags) {
         i++;
 
         switch (c.aln_type) {
-        case AlnT::secondary:
-            secondary++;
-            if (!keep_sec_alns)
+        case AlnT::null:
+            unmapped++;
+            continue;
+            break;
+        case AlnT::primary:
+            if (c.pct_aln >= req_pct_aln) {
+                primary_kept++;
+            } else {
+                primary_disc++;
                 continue;
+            }
+            break;
+        case AlnT::secondary:
+            if (keep_sec_alns && c.pct_aln >= req_pct_aln) {
+                secondary_kept++;
+            } else {
+                secondary_disc++;
+                continue;
+            }
             break;
         case AlnT::supplementary:
             supplementary++;
             continue;
             break;
-        case AlnT::primary:
         default:
+            // assert(false);
             break;
-        }
-
-        if (c.pct_aln < req_pct_aln) {
-            below_req_aln++;
-            continue;
         }
 
         HashMap::iterator element = radtags.insert({DNANSeq(strlen(c.seq), c.seq), vector<Seq*>()}).first;
@@ -807,26 +821,23 @@ int load_radtags(string in_file, HashMap &radtags) {
     }
     cerr << "done\n";
 
-    if (i == 0) {
-        cerr << "Error: Unable to load data from '" << in_file.c_str() << "'.\n";
-        exit(-1);
+    cerr << "Read " << i << " records:\n"
+         << "  Kept " << primary_kept << " primary alignments\n"
+         << "  Skipped " << primary_disc << " excessively soft-clipped primary alignments ("
+         << as_percentage((double) primary_disc / (primary_disc+primary_kept)) << ")\n"
+         << "  Skipped " << secondary_disc << " secondary alignments\n"
+         << "  Skipped " << supplementary << " supplementary alignments\n"
+         << "  Skipped " << unmapped << " unmapped reads\n";
+
+    if(keep_sec_alns)
+        cerr << "  Kept " << secondary_kept << " secondary alignments\n";
+
+    if (radtags.empty()) {
+        cerr << "Error: No input.\n";
+        throw std::exception();
     }
 
-    cerr << "Loaded " << i << " sequence reads; "
-         << "identified " << radtags.size() << " unique stacks from those reads.\n"
-         << "  Discarded " << below_req_aln << " reads where the aligned percentage of the read was too low.\n";
-    if (keep_sec_alns) 
-        cerr << "  Kept " << secondary << " secondarily aligned reads (reads may be present in the data set more than once).\n";
-    else
-        cerr << "  Discarded " << secondary << " secondarily aligned reads (primary alignments were retained).\n";
-    cerr << "  Discarded " << supplementary << " supplementary aligned (chimeric) reads.\n";
-
-    //
-    // Close the file and delete the Input object.
-    //
     delete fh;
-
-    return 0;
 }
 
 int dump_stacks(map<int, PStack *> &u) {

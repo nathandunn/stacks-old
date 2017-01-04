@@ -18,7 +18,15 @@
 // along with Stacks.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <ctime>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+
+#include "constants.h"
 #include "log_utils.h"
+
+using namespace std;
 
 int
 init_log(ofstream &fh, int argc, char **argv)
@@ -43,4 +51,11 @@ init_log(ofstream &fh, int argc, char **argv)
     fh << "\n" << argv[0] << " version " << VERSION << " executed " << date << "\n\n";
 
     return 0;
+}
+
+std::string as_percentage(double d) {
+    stringstream ss;
+    ss << std::fixed << std::setprecision(1);
+    ss << d << "%";
+    return ss.str();
 }

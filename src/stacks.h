@@ -73,8 +73,12 @@ public:
     }
     PhyLoc(const PhyLoc& other)
         : bp(other.bp), strand(other.strand) {
-        chr = new char[strlen(other.chr)+1];
-        strcpy(chr, other.chr);
+        if (other.chr == NULL) {
+            chr = NULL;
+        } else {
+            chr = new char[strlen(other.chr)+1];
+            strcpy(chr, other.chr);
+        }
     }
     PhyLoc(const char *chr, uint bp) {
         this->chr    = new char[strlen(chr)  + 1];

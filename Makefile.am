@@ -10,7 +10,7 @@ ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/co
 	src/gzFasta.h src/gzFastq.h
 
 pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/constants.h src/constants.cc \
-	src/mstack.h src/mstack.cc \
+	src/mstack.h src/mstack.cc src/log_utils.h src/log_utils.cc \
 	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
 	src/models.h src/models.cc src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
@@ -117,8 +117,9 @@ ustacks_LDFLAGS   = $(OPENMP_CFLAGS)
 pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
 pstacks_LDFLAGS   = $(OPENMP_CFLAGS)
 pstacks_LDADD     = $(BAM_LIBS)
-estacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+estacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
 estacks_LDFLAGS   = $(OPENMP_CFLAGS)
+estacks_LDADD = $(BAM_LIBS)
 cstacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 cstacks_LDFLAGS   = $(OPENMP_CFLAGS)
 hstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)

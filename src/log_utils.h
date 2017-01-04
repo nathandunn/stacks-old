@@ -21,20 +21,13 @@
 #ifndef __LOG_UTILS_H__
 #define __LOG_UTILS_H__
 
-#include <time.h>
-#include <iostream>
+#include <string>
 #include <fstream>
-using std::ifstream;
 using std::ofstream;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::endl;
-#include <sstream>
-using std::stringstream;
-
-#include "constants.h"
 
 int init_log(ofstream &, int, char **);
+
+// Returns e.g. "23.2%".
+std::string as_percentage(double d);
 
 #endif // __LOG_UTILS_H__
