@@ -1048,9 +1048,11 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'e':
             renz_1 = optarg;
+            renz_1.at(0) = tolower(renz_1.at(0));
             break;
         case 'z':
             renz_2 = optarg;
+            renz_2.at(0) = tolower(renz_2.at(0));
             break;
         case 'b':
             barcode_file = optarg;

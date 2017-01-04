@@ -22,6 +22,7 @@
 // populations -- generate population genetic statistics and output
 // haplotypes in a population context.
 //
+#include <cctype>
 
 #include <dirent.h>
 #include <sys/types.h>
@@ -5419,6 +5420,7 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'e':
             enz = optarg;
+            enz.at(0) = tolower(enz.at(0));
             if (renz.count(enz) == 0) {
                 cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
                 help();
