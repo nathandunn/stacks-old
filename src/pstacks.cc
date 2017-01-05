@@ -54,20 +54,7 @@ int main (int argc, char* argv[]) {
 
     parse_command_line(argc, argv);
 
-    cerr << "Min depth of coverage to report a stack: " << min_stack_cov << "\n"
-         << "Model type: ";
-    switch (model_type) {
-    case snp:
-        cerr << "SNP\n";
-        break;
-    case fixed:
-        cerr << "Fixed\n";
-        break;
-    case bounded:
-        cerr << "Bounded; lower epsilon bound: " << bound_low << "; upper bound: " << bound_high << "\n";
-        break;
-    }
-    cerr << "Alpha significance level for model: " << alpha << "\n";
+    report_options(cerr);
 
     //
     // Set limits to call het or homozygote according to chi-square distribution with one
@@ -95,80 +82,66 @@ int main (int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
     #endif
 
+    map<int, PStack *> unique; // Unique {sequence, alignment position} combinations.
     HashMap*           radtags = new HashMap();
-    map<int, PStack *> unique;
-
     load_radtags(in_file, *radtags);
-
     reduce_radtags(*radtags, unique);
-
     for (auto& stack : *radtags)
         for (Seq* read : stack.second)
             delete read;
     delete radtags;
 
-    //dump_stacks(unique);
-
     map<int, MergedStack *> merged;
-
     populate_merged_tags(unique, merged);
 
-    //dump_merged_stacks(merged);
+    delete_low_cov_loci(merged, unique);
 
     // Call the consensus sequence again, now that remainder tags have been merged.
-    cerr << "Identifying polymorphic sites and calling consensus sequences...";
     call_consensus(merged, unique, true);
-    cerr << "done.\n";
 
-    count_raw_reads(unique, merged);
-
-    calc_coverage_distribution(unique, merged);
-
-    cerr << "Writing loci, SNPs, alleles to '" << out_path << "'.\n";
     write_results(merged, unique);
+
+    cerr << "pstacks is done.\n";
 
     return 0;
 }
 
-int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {
-    int      row;
-    int      height = reads.size();
-    string   allele;
-    char     base;
-    vector<SNP *>::iterator snp;
-    DNANSeq *d;
+void call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {
 
-    for (row = 0; row < height; row++) {
-        allele.clear();
+    vector<SNP*> het_snps;
+    for (SNP* snp : mtag->snps)
+        if (snp->type == snp_type_het)
+            het_snps.push_back(snp);
 
-        uint snp_cnt = 0;
+    if (!het_snps.empty()) {
+        string allele;
+        allele.reserve(het_snps.size());
+        for (DNANSeq* r : reads) {
+            allele.clear();
+            for(SNP* hsnp : het_snps) {
+                //
+                // Check to make sure the nucleotide at the location of this SNP is
+                // of one of the two possible states the multinomial model called.
+                //
+                char base = (*r)[hsnp->col];
+                if (base != hsnp->rank_1 && base != hsnp->rank_2)
+                    break;
+                allele.push_back(base);
+            }
 
-        for (snp = mtag->snps.begin(); snp != mtag->snps.end(); snp++) {
-            if ((*snp)->type != snp_type_het) continue;
-
-            snp_cnt++;
-
-            d    = reads[row];
-            base = (*d)[(*snp)->col];
-
-            //
-            // Check to make sure the nucleotide at the location of this SNP is
-            // of one of the two possible states the multinomial model called.
-            //
-            if (base == (*snp)->rank_1 || base == (*snp)->rank_2)
-                allele += base;
-            else
-                break;
+            if (allele.length() == het_snps.size())
+                mtag->alleles[allele]++;
         }
 
-        if (snp_cnt > 0 && allele.length() == snp_cnt)
-            mtag->alleles[allele]++;
+        if (mtag->alleles.empty())
+            mtag->blacklisted = true;
     }
-
-    return 0;
 }
 
 int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, bool invoke_model) {
+
+    cerr << "Identifying polymorphic sites and calling consensus sequences...";
+
     //
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -274,95 +247,57 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
             }
 
             mtag->add_consensus(con.c_str());
-
-            //
-            // If SNPs were called at this locus but no alleles could be determined,
-            // blacklist this tag. This can occur if there are two many uncalled bases
-            // in the locus (Ns), such that haplotypes can't be consistently read
-            // due to the presence of the Ns in the reads.
-            //
-            if (mtag->alleles.empty())
-                for (uint j = 0; j < mtag->snps.size(); j++)
-                    if (mtag->snps[j]->type == snp_type_het) {
-                        mtag->blacklisted = 1;
-                        break;
-                    }
         }
     }
+
+    size_t n_blacklisted = 0;
+    for (const auto& mtag : merged)
+        if (mtag.second->blacklisted)
+            ++n_blacklisted;
+
+    cerr << "done. (" << n_blacklisted << " loci were blacklisted.)\n";
 
     return 0;
 }
 
-double calc_coverage_distribution(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
-    map<int, MergedStack *>::iterator it;
-    vector<int>::iterator             k;
-    PStack *tag;
-    double  depth = 0.0;
-    double  total = 0.0;
-    double  sum   = 0.0;
-    double  mean  = 0.0;
-    double  max   = 0.0;
-    double  stdev = 0.0;
+void
+calc_coverage_distribution(const map<int, PStack*> &unique,
+                           const map<int, MergedStack*> &merged,
+                           double &mean, double &stdev, double &max)
+{
+    max   = 0.0;
+    mean  = 0.0;
+    stdev = 0.0;
 
-    for (it = merged.begin(); it != merged.end(); it++) {
-        depth = 0.0;
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag    = unique[*k];
-            depth += tag->count;
-        }
-
-        if (depth < min_stack_cov)
+    size_t not_blacklisted = 0;
+    for (const pair<int, MergedStack*>& mtag : merged) {
+        if (mtag.second->blacklisted)
             continue;
+
+        ++not_blacklisted;
+
+        double depth = 0.0;
+        for (int utag_id : mtag.second->utags)
+            depth += unique.at(utag_id)->count;
+
+        mean += depth;
         if (depth > max)
             max = depth;
-
-        sum += depth;
-        total++;
     }
+    mean /= not_blacklisted;
 
-    mean = sum / total;
-
-    //
-    // Calculate the standard deviation
-    //
-    sum = 0.0;
-    for (it = merged.begin(); it != merged.end(); it++) {
-        depth = 0.0;
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag    = unique[*k];
-            depth += tag->count;
-        }
-
-        if (depth < min_stack_cov)
+    for (const pair<int, MergedStack*>& mtag : merged) {
+        if (mtag.second->blacklisted)
             continue;
 
-        sum += pow((depth - mean), 2);
+        double depth = 0.0;
+        for (int utag_id : mtag.second->utags)
+            depth += unique.at(utag_id)->count;
+
+        stdev += pow(depth - mean, 2);
     }
-
-    stdev = sqrt(sum / (total - 1));
-
-    cerr << "  Mean coverage depth is " << mean << "; Std Dev: " << stdev << "; Max: " << max << "\n";
-
-    return mean;
-}
-
-int count_raw_reads(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
-    map<int, MergedStack *>::iterator it;
-    vector<int>::iterator k;
-    PStack *tag;
-    long int m = 0;
-
-    for (it = merged.begin(); it != merged.end(); it++) {
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag  = unique[*k];
-            m   += tag->count;
-        }
-        m += it->second->remtags.size();
-    }
-
-    cerr << "  Number of utilized reads " << m << "\n";
-
-    return 0;
+    stdev /= not_blacklisted;
+    stdev = sqrt(stdev);
 }
 
 int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
@@ -375,18 +310,20 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     PStack      *tag_2;
     stringstream sstr;
 
-    bool gzip = (in_file_type == FileT::bam) ? true : false;
-
     //
     // Parse the input file name to create the output files
     //
     size_t pos_1 = in_file.find_last_of("/");
     size_t pos_2 = in_file.find_last_of(".");
-    string tag_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".tags.tsv";
-    string snp_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".snps.tsv";
-    string all_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".alleles.tsv";
-    string mod_file = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1)) + ".models.tsv";
+    string prefix = out_path + in_file.substr(pos_1 + 1, (pos_2 - pos_1 - 1));
+    string tag_file = prefix + ".tags.tsv";
+    string snp_file = prefix + ".snps.tsv";
+    string all_file = prefix + ".alleles.tsv";
+    string mod_file = prefix + ".models.tsv";
 
+    cerr << "Writing tags, models, snps, and alleles files...\n";
+
+    bool gzip = (in_file_type == FileT::bam) ? true : false;
     if (gzip) {
         tag_file += ".gz";
         snp_file += ".gz";
@@ -483,9 +420,6 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
     int id;
 
     char *buf; // = new char[m.begin()->second->len + 1];
-    int   wrote       = 0;
-    int   excluded    = 0;
-    int   blacklisted = 0;
 
     for (i = m.begin(); i != m.end(); i++) {
         tag_1 = i->second;
@@ -494,20 +428,11 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         for (k = tag_1->utags.begin(); k != tag_1->utags.end(); k++)
             total += u[*k]->count;
 
-        if (total < min_stack_cov) {
-            excluded++;
-            continue;
-        }
-
         //
         // Calculate the log likelihood of this merged stack.
         //
         tag_1->gen_matrix(u);
         tag_1->calc_likelihood();
-
-        wrote++;
-
-        if (tag_1->blacklisted) blacklisted++;
 
         // First write the consensus sequence
         sstr << "0" << "\t"
@@ -631,12 +556,10 @@ int write_results(map<int, MergedStack *> &m, map<int, PStack *> &u) {
         alle.close();
     }
 
-    cerr << "  Wrote " << wrote << " loci, excluded " << excluded << " loci due to insuffient depth of coverage; blacklisted " << blacklisted << " loci.\n";
-
     return 0;
 }
 
-int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
+void populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &merged) {
     map<int, PStack *>::iterator i;
     map<int, MergedStack *>::iterator it_new, it_old;
     map<string, set<int> > locations;
@@ -689,9 +612,44 @@ int populate_merged_tags(map<int, PStack *> &unique, map<int, MergedStack *> &me
         global_id++;
     }
 
-    cerr << "  Merged " << unique.size() << " unique Stacks into " << merged.size() << " loci.\n";
+    double mean;
+    double stdev;
+    double max;
+    calc_coverage_distribution(unique, merged, mean, stdev, max);
 
-    return 0;
+    cerr << "Created " << merged.size() << " loci; mean coverage is " << mean << " (stdev: " << stdev << ", max: " << max << ").\n";
+}
+
+void delete_low_cov_loci(map<int, MergedStack *>& merged, const map<int, PStack*>& unique) {
+
+    size_t n_deleted = 0;
+    size_t n_reads = 0;
+    vector<int> to_erase;
+
+    for (auto& mtag : merged) {
+        int depth = 0;
+        for (int utag_id : mtag.second->utags)
+            depth += unique.at(utag_id)->count;
+
+        if (depth < min_stack_cov) {
+            delete mtag.second;
+            to_erase.push_back(mtag.first);
+
+            n_deleted++;
+            n_reads += depth;
+        }
+    }
+
+    for (int id : to_erase)
+        merged.erase(id);
+
+    double mean;
+    double stdev;
+    double max;
+    calc_coverage_distribution(unique, merged, mean, stdev, max);
+
+    cerr << "Discarded " << n_deleted << " low coverage loci comprising " << n_reads << " reads.\n";
+    cerr << "Now working with " << merged.size() << " loci; mean coverage " << mean << " (stdev: " << stdev << ", max: " << max << ").\n";
 }
 
 //
@@ -740,8 +698,6 @@ int reduce_radtags(HashMap &radtags, map<int, PStack *> &unique) {
         }
     }
 
-    cerr << "  " << radtags.size() << " unique stacks were aligned to " << unique.size() << " genomic locations.\n";
-
     return 0;
 }
 
@@ -762,7 +718,7 @@ void load_radtags(string in_file, HashMap &radtags) {
     else if (in_file_type == FileT::tsv)
         fh = new Tsv(in_file.c_str());
 
-    cerr << "Reading '" << in_file.c_str() << "'...";
+    cerr << "Reading alignments...";
 
     int primary_kept   = 0;
     int primary_disc   = 0;
@@ -836,6 +792,8 @@ void load_radtags(string in_file, HashMap &radtags) {
         cerr << "Error: No input.\n";
         throw std::exception();
     }
+
+    cerr << "Collapsed reads into " << radtags.size() << " stacks.\n";
 
     delete fh;
 }
@@ -1086,4 +1044,25 @@ void help() {
               << "       --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n";
 
     exit(0);
+}
+
+void report_options(std::ostream& os) {
+    cerr << "Alignments file: " << in_file << "\n"
+         << "Output directory: " << out_path << "\n"
+         << "Sample ID: " << sql_id << "\n"
+         << "Min. locus depth: " << min_stack_cov << "\n";
+
+    // Model.
+    if (model_type == snp) {
+        os << "Model: snp\n"
+           << "Model alpha: " << alpha << "\n";
+    } else if (model_type == bounded) {
+        os << "Model: snp\n"
+           << "Model alpha: " << alpha << "\n"
+           << "Model lower bound: " << bound_low << "\n"
+           << "Model higher bound: " << bound_high << "\n";
+    } else if (model_type == ::fixed) {
+        os << "Model: fixed\n"
+           << "Model barcode err. prob.: " << barcode_err_freq << "\n";
+    }
 }
