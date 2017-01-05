@@ -28,6 +28,8 @@
 
 #ifdef HAVE_BAM
 
+#include <algorithm>
+
 #include "sam.h" //htslib
 
 #include "stacks.h"
@@ -45,7 +47,7 @@ private:
     map<uint, string> chrs;
 
     int parse_header();
-    int parse_cigar(vector<pair<char, uint> > &, strand_type);
+    void parse_cigar(vector<pair<char, uint> > &);
 
  public:
     Bam(const char *path) : Input() {
@@ -165,10 +167,14 @@ Bam::next_seq(Seq& s)
         strand_type strand = aln->core.flag & BAM_FREVERSE ? strand_minus : strand_plus;
 
         //
-        // Parse the alignment CIGAR string
+        // Parse the alignment CIGAR string.
+        // If aligned to the negative strand, sequence has been reverse complemented and
+        // CIGAR string should be interpreted in reverse.
         //
         vector<pair<char, uint> > cigar;
-        parse_cigar(cigar, strand);
+        parse_cigar(cigar);
+        if (strand == strand_minus)
+            std::reverse(cigar.begin(), cigar.end());
 
         //
         // If the read was aligned on the reverse strand (and is therefore reverse complemented)
@@ -181,34 +187,14 @@ Bam::next_seq(Seq& s)
         //
         // Calculate the percentage of the sequence that was aligned to the reference.
         //
-        double len = 0.0;
-        for (uint i = 0; i < cigar.size(); i++)
-            switch (cigar[i].first) {
-            case 'M':
-            case 'I':
-            case '=':
-            case 'X':
-                len += cigar[i].second;
-                break;
-            case 'D':
-            case 'S':
-                break;
-            case 'H':
-            case 'N':
-                static bool emitted_hn_warning = false;
-                if(aln_type == AlnT::primary && !emitted_hn_warning) {
-                    cerr << "Warning: Some CIGARs contained H and/or N operations.\n";
-                    emitted_hn_warning = true;
-                }
-                break;
-            default:
-                cerr << "Warning: Unrecognized CIGAR operation '" << cigar[i].second << cigar[i].first << "'.\n";
-                break;
-            }
-        double pct_aln = len / double(seq.length());
+        uint clipped = 0;
+        for (auto& op : cigar)
+            if (op.first == 'S')
+                clipped += op.second;
+        double pct_clipped = (double) clipped / seq.length();
 
         s = Seq(bam_get_qname(aln), seq.c_str(), qual.c_str(),
-                chr.c_str(), bp, strand, aln_type, pct_aln);
+                chr.c_str(), bp, strand, aln_type, pct_clipped);
 
         if (cigar.size() > 0)
             bam_edit_gaps(cigar, s.seq);
@@ -217,8 +203,8 @@ Bam::next_seq(Seq& s)
     return true;
 }
 
-int
-Bam::parse_cigar(vector<pair<char, uint> > &cigar, strand_type strand)
+void
+Bam::parse_cigar(vector<pair<char, uint> > &cigar)
 {
     int  op, len;
     char c;
@@ -244,34 +230,46 @@ Bam::parse_cigar(vector<pair<char, uint> > &cigar, strand_type strand)
         case BAM_CDEL:
             c = 'D';
             break;
-        case BAM_CREF_SKIP:
-            c = 'N';
-            break;
         case BAM_CSOFT_CLIP:
             c = 'S';
             break;
+        case BAM_CREF_SKIP:
+            c = 'N';
+            {
+                static bool emitted_warning = false;
+                if (!emitted_warning) {
+                    cerr << "Warning: Some CIGARs contained N operations (current read name is '" << bam_get_qname(aln) << "').\n";
+                    emitted_warning = true;
+                }
+            }
+            break;
         case BAM_CHARD_CLIP:
             c = 'H';
+            {
+                static bool emitted_warning = false;
+                if (!emitted_warning) {
+                    cerr << "Warning: Some CIGARs contained H operations (current read name is '" << bam_get_qname(aln) << "').\n";
+                    emitted_warning = true;
+                }
+            }
             break;
         case BAM_CPAD:
             c = 'P';
+            {
+                static bool emitted_warning = false;
+                if (!emitted_warning) {
+                    cerr << "Warning: Some CIGARs contained P operations (current read name is '" << bam_get_qname(aln) << "').\n";
+                    emitted_warning = true;
+                }
+            }
             break;
         default:
-            cerr << "Unknown operation present in CIGAR string.\n";
+            cerr << "Warning: Unknown CIGAR operation (current read name is '" << bam_get_qname(aln) << "').\n";
             break;
         }
 
-        //
-        // If aligned to the negative strand, sequence has been reverse complemented and
-        // CIGAR string should be interpreted in reverse.
-        //
-        if (strand == strand_plus)
-            cigar.push_back(make_pair(c, len));
-        else
-            cigar.insert(cigar.begin(), make_pair(c, len));
+        cigar.push_back(make_pair(c, len));
     }
-
-    return 0;
 }
 
 int
