@@ -31,22 +31,27 @@
 //
 #include "stacks.h"
 #include "input.h"
+# include "aln_utils.h"
 #include "BamI.h"
 
 class Sam: public Input {
-    int parse_cigar(const char *, vector<pair<char, uint> > &, strand_type);
 
- public:
+public:
     Sam(const char *path);
     ~Sam() {}
     Seq *next_seq();
     int  next_seq(Seq& s);
+
+private:
+    static const size_t n_mandatory_fields = 11;
 };
 
 Sam::Sam(const char *path)
 : Input(path)
 {
-
+    while(fh.peek() == '@') {
+        fh.getline(line, max_len);
+    }
 }
 
 Seq* Sam::next_seq() {
@@ -61,30 +66,25 @@ Seq* Sam::next_seq() {
 int Sam::next_seq(Seq& s) {
     vector<string> parts;
     int  flag  = 0;
-    uint len;
+
+    if(!fh.getline(line, max_len))
+        return false;
+
+    int len = strlen(line);
+    if (line[len - 1] == '\r')
+        line[len - 1] = '\0';
+
+    parse_tsv(line, parts);
+    if (parts.size() < n_mandatory_fields) {
+        cerr << "Error: Malformed SAM record:\n" << line << "\n";
+        throw std::exception();
+    }
 
     //
-    // Read a record from the file and place it in a Seq object, skipping header
-    // definitions and unaligned sequences.
+    // According to SAM spec FLAGs are the second field,
+    // if FLAG bit 0x4 is set, sequence is not mapped.
     //
-    do {
-        fh.getline(line, max_len);
-
-        if (!fh.good())
-            return 0;
-
-        len = strlen(line);
-        if (line[len - 1] == '\r') line[len - 1] = '\0';
-
-        parse_tsv(line, parts);
-
-        //
-        // According to SAM spec FLAGs are the second field,
-        // if FLAG bit 0x4 is set, sequence is not mapped.
-        //
-        flag = atoi(parts[1].c_str());
-
-    } while (parts[0][0] == '@');
+    flag = atoi(parts[1].c_str());
 
     //
     // Parse the type of the record.
@@ -111,7 +111,9 @@ int Sam::next_seq(Seq& s) {
         // Parse the alignment CIGAR string.
         //
         vector<pair<char, uint> > cigar;
-        parse_cigar(parts[5].c_str(), cigar, strand);
+        parse_cigar(parts[5].c_str(), cigar, true);
+        if (strand == strand_minus)
+            std::reverse(cigar.begin(), cigar.end());
 
         //
         // If the read was aligned on the reverse strand (and is therefore reverse complemented)
@@ -124,74 +126,19 @@ int Sam::next_seq(Seq& s) {
         //
         // Calculate the percentage of the sequence that was aligned to the reference.
         //
-        len = 0;
-        for (uint i = 0; i < cigar.size(); i++)
-            switch (cigar[i].first) {
-            case 'M':
-            case 'I':
-            case '=':
-            case 'X':
-                len += cigar[i].second;
-                break;
-            case 'D':
-            case 'S':
-                break;
-            case 'H':
-            case 'N':
-                static bool emitted_hn_warning = false;
-                if(aln_type == AlnT::primary && !emitted_hn_warning) {
-                    cerr << "Warning: Some CIGARs contained H and/or N operations.\n";
-                    emitted_hn_warning = true;
-                }
-                break;
-            default:
-                cerr << "Error parsing CIGAR string '" << cigar[i].second << cigar[i].first << "'.\n";
-                break;
-            }
-        double pct_aln = double(len) / double(parts[9].length());
+        uint clipped = 0;
+        for (auto& op : cigar)
+            if (op.first == 'S')
+                clipped += op.second;
+        double pct_clipped = (double) clipped / parts[9].length();
 
         s = Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(), // Read ID, Sequence, Quality
-                parts[2].c_str(), bp, strand, aln_type, pct_aln); // Chromosome, etc.
+                parts[2].c_str(), bp, strand, aln_type, pct_clipped); // Chromosome, etc.
 
         if (cigar.size() > 0)
             bam_edit_gaps(cigar, s.seq);
     }
     return true;
-}
-
-int
-Sam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, strand_type strand)
-{
-    char buf[id_len];
-    int  dist;
-    const char *p, *q;
-
-    p = cigar_str;
-
-    if (*p == '*') return 0;
-
-    while (*p != '\0') {
-        q = p + 1;
-
-        while (*q != '\0' && isdigit(*q))
-            q++;
-        strncpy(buf, p, q - p);
-        buf[q-p] = '\0';
-        dist = atoi(buf);
-
-        //
-        // If aligned to the negative strand, sequence has been reverse complemented and
-        // CIGAR string should be interpreted in reverse.
-        //
-        if (strand == strand_plus)
-            cigar.push_back(make_pair(*q, dist));
-        else
-            cigar.insert(cigar.begin(), make_pair(*q, dist));
-
-        p = q + 1;
-    }
-
-    return 0;
 }
 
 #endif // __SAMI_H__

@@ -38,31 +38,51 @@ invert_cigar(string cigar)
 }
 
 int
-parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar)
+parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool check_correctness)
 {
-    char buf[id_len];
-    int  dist;
-    const char *p, *q;
-
+    const char* p = cigar_str;
     uint seqlen = 0;
+    while(*p != '\0') {
+        char* q;
+        uint len = strtol(p, &q, 10);
+        char c = *q;
 
-    cigar.clear();
+        if (check_correctness) {
+            if (q == p || c == '\0') {
+                // No number or no qualifier, respectively.
+                cerr << "Error: Malformed CIGAR string '" << cigar_str << "'.\n";
+                throw std::exception();
+            }
+            if(c == 'N') {
+                static bool emitted_warning = false;
+                if (!emitted_warning) {
+                    cerr << "Warning: Some CIGARs contained N operations (current CIGAR is '" << cigar_str << "').\n";
+                    emitted_warning = true;
+                }
+            } else if (c == 'H') {
+                static bool emitted_warning = false;
+                if (!emitted_warning) {
+                    cerr << "Warning: Some CIGARs contained H operations (current CIGAR is '" << cigar_str << "').\n";
+                    emitted_warning = true;
+                }
+            } else if (c == 'P') {
+                static bool emitted_warning = false;
+                if (!emitted_warning) {
+                    cerr << "Warning: Some CIGARs contained P operations (current CIGAR is '" << cigar_str << "').\n";
+                    emitted_warning = true;
+                }
+            } else if (c != 'M'
+                    && c != '='
+                    && c != 'X'
+                    && c != 'I'
+                    && c != 'D'
+                    && c != 'S') {
+                cerr << "Warning: Unknown CIGAR operation in '" << cigar_str << "'.\n";
+            }
+        }
 
-    p = cigar_str;
-
-    while (*p != '\0') {
-        q = p + 1;
-
-        while (*q != '\0' && isdigit(*q))
-            q++;
-        strncpy(buf, p, q - p);
-        buf[q-p] = '\0';
-        dist = is_integer(buf);
-
-        cigar.push_back(make_pair(*q, dist));
-
-        seqlen += dist;
-
+        cigar.push_back({c, len});
+        seqlen += len;
         p = q + 1;
     }
 

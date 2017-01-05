@@ -53,7 +53,7 @@ class Seq {
     // Information for an aligned sequence.
     //
     AlnT   aln_type;
-    double pct_aln;
+    double pct_clipped;
     char  *loc_str;
     PhyLoc loc;
 

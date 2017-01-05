@@ -12,13 +12,13 @@ ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/co
 pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/constants.h src/constants.cc \
 	src/mstack.h src/mstack.cc src/log_utils.h src/log_utils.cc \
 	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
-	src/models.h src/models.cc src/utils.h src/utils.cc \
+	src/models.h src/models.cc src/utils.h src/utils.cc src/aln_utils.h src/aln_utils.cc \
 	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
 	src/BamI.h
 
 estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/constants.h src/constants.cc \
 	src/mstack.h src/mstack.cc \
-        src/models.h src/models.cc src/utils.h src/utils.cc \
+        src/models.h src/models.cc src/utils.h src/utils.cc src/aln_utils.h src/aln_utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
         src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h
 

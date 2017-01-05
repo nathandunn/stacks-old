@@ -35,7 +35,7 @@ string in_file;
 string out_path;
 int    sql_id        = -1;
 int    min_stack_cov = 3;
-double req_pct_aln   = 0.85;
+double max_clipped   = 0.15;
 bool   keep_sec_alns = false;
 int    num_threads   = 1;
 
@@ -740,7 +740,7 @@ void load_radtags(string in_file, HashMap &radtags) {
             continue;
             break;
         case AlnT::primary:
-            if (c.pct_aln >= req_pct_aln) {
+            if (c.pct_clipped <= max_clipped) {
                 primary_kept++;
             } else {
                 primary_disc++;
@@ -748,7 +748,7 @@ void load_radtags(string in_file, HashMap &radtags) {
             }
             break;
         case AlnT::secondary:
-            if (keep_sec_alns && c.pct_aln >= req_pct_aln) {
+            if (keep_sec_alns && c.pct_clipped <= max_clipped) {
                 secondary_kept++;
             } else {
                 secondary_disc++;
@@ -856,13 +856,13 @@ int parse_command_line(int argc, char* argv[]) {
     while (1) {
         static struct option long_options[] = {
             {"help",         no_argument,       NULL, 'h'},
-            {"version",      no_argument,       NULL, 'v'},
+            {"version",      no_argument,       NULL, 1000},
             {"infile_type",  required_argument, NULL, 't'},
             {"file",         required_argument, NULL, 'f'},
             {"outpath",      required_argument, NULL, 'o'},
             {"id",           required_argument, NULL, 'i'},
             {"min_cov",      required_argument, NULL, 'm'},
-            {"pct_aln",      required_argument, NULL, 'a'},
+            {"max_clipped",  required_argument, NULL, 1001},
             {"keep_sec_aln", required_argument, NULL, 'k'},
             {"num_threads",  required_argument, NULL, 'p'},
             {"bc_err_freq",  required_argument, NULL, 'e'},
@@ -910,13 +910,13 @@ int parse_command_line(int argc, char* argv[]) {
         case 'm':
             min_stack_cov = atoi(optarg);
             break;
-        case 'a':
-            req_pct_aln = is_double(optarg);
-            if (req_pct_aln > 1)
-                req_pct_aln = req_pct_aln / 100;
+        case 1001: //max_clipped
+            max_clipped = is_double(optarg);
+            if (max_clipped > 1)
+                max_clipped = max_clipped / 100;
 
-            if (req_pct_aln < 0 || req_pct_aln > 1.0) {
-                cerr << "Unable to parse the required alignment percentage.\n";
+            if (max_clipped < 0 || max_clipped > 1.0) {
+                cerr << "Unable to parse the maximum clipped proportion.\n";
                 help();
             }
             break;
@@ -950,7 +950,7 @@ int parse_command_line(int argc, char* argv[]) {
         case 'p':
             num_threads = atoi(optarg);
             break;
-        case 'v':
+        case 1000:
             version();
             break;
         case '?':
@@ -1031,7 +1031,7 @@ void help() {
               << "  m: minimum depth of coverage to report a stack (default 3).\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  t: input file Type. Supported types: bam, sam, bowtie (default: guess).\n"
-              << "  --pct_aln <num>: require read alignments to use at least this percentage of the read (default 85%).\n"
+              << "  --max_clipped <float>: alignments with more than this fraction of soft-clipped bases are discarded (default 15%).\n"
               << "  --keep_sec_alns: keep secondary alignments (default: false, only keep primary alignments).\n"
               << "\n"
               << "  Model options:\n"
@@ -1048,10 +1048,11 @@ void help() {
 }
 
 void report_options(std::ostream& os) {
-    cerr << "Alignments file: " << in_file << "\n"
+    os << "Alignments file: " << in_file << "\n"
          << "Output directory: " << out_path << "\n"
          << "Sample ID: " << sql_id << "\n"
-         << "Min. locus depth: " << min_stack_cov << "\n";
+         << "Min locus depth: " << min_stack_cov << "\n"
+         << "Max clipped proportion: " << max_clipped << "\n";
 
     // Model.
     if (model_type == snp) {
