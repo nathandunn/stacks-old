@@ -1666,7 +1666,7 @@ parse_command_line(int argc, char* argv[])
             if (strcmp(optarg, "snp") == 0) {
                 model_type = snp;
             } else if (strcmp(optarg, "fixed") == 0) {
-                model_type = fixed;
+                model_type = ::fixed;
             } else if (strcmp(optarg, "bounded") == 0) {
                 model_type = bounded;
             } else {

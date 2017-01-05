@@ -26,6 +26,7 @@
 
 #include "pstacks.h"
 
+using namespace std;
 //
 // Global variables to hold command-line options.
 //
@@ -225,7 +226,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
                     case bounded:
                         call_bounded_multinomial_snp(mtag, col, nuc, true);
                         break;
-                    case fixed:
+                    case ::fixed:
                         call_multinomial_fixed(mtag, col, nuc);
                         break;
                     }
@@ -234,7 +235,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
             if (invoke_model) {
                 call_alleles(mtag, reads);
 
-                if (model_type == fixed) {
+                if (model_type == ::fixed) {
                     //
                     // Mask nucleotides that are not fixed.
                     //
@@ -929,7 +930,7 @@ int parse_command_line(int argc, char* argv[]) {
             if (strcmp(optarg, "snp") == 0) {
                 model_type = snp;
             } else if (strcmp(optarg, "fixed") == 0) {
-                model_type = fixed;
+                model_type = ::fixed;
             } else if (strcmp(optarg, "bounded") == 0) {
                 model_type = bounded;
             } else {
@@ -1007,7 +1008,7 @@ int parse_command_line(int argc, char* argv[]) {
     if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
-    if (model_type == fixed && barcode_err_freq == 0) {
+    if (model_type == ::fixed && barcode_err_freq == 0) {
         cerr << "You must specify the barcode error frequency.\n";
         help();
     }
