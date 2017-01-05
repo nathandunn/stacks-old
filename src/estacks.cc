@@ -199,7 +199,7 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
             if (invoke_model) {
                 call_alleles(mtag, reads);
 
-                if (model_type == fixed) {
+                if (model_type == ::fixed) {
                     //
                     // Mask nucleotides that are not fixed.
                     //
@@ -663,7 +663,7 @@ int parse_command_line(int argc, char* argv[]) {
     if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
-    if (model_type == fixed && barcode_err_freq == 0) {
+    if (model_type == ::fixed && barcode_err_freq == 0) {
         cerr << "You must specify the barcode error frequency.\n";
         help();
     }
