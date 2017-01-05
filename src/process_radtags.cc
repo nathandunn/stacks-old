@@ -754,6 +754,12 @@ print_results(int argc, char **argv,
     map<string, map<string, long> >::iterator it;
 
     string log_path = out_path + "process_radtags.log";
+    if (!in_path_1.empty()) {
+        // Directory mode; use `$out_path/$(basename $in_path).process_radtags.log`.
+        size_t p = in_path_1.find_last_of('/', in_path_1.size()-2); // Note: in_path_1 ends with a '/'.
+        string basename = in_path_1.substr(p, in_path_1.size()-2);
+        log_path = out_path + basename + ".process_ratags.log";
+    }
     ofstream log(log_path.c_str());
 
     if (log.fail()) {
