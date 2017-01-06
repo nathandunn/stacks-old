@@ -403,6 +403,7 @@ int main (int argc, char* argv[]) {
         log_hap_fh.close();
     }
 
+    cerr << "rxstacks is done.\n";
     return 0;
 }
 

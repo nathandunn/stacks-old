@@ -194,6 +194,7 @@ int main (int argc, char* argv[]) {
     write_results(merged, unique, remainders);
     cerr << "done.\n";
 
+    cerr << "ustacks is done.\n";
     return 0;
 }
 

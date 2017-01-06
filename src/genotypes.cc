@@ -292,6 +292,7 @@ int main (int argc, char* argv[]) {
     if (out_type == genomic)
         write_genomic(catalog, pmap);
 
+    cerr << "genotypes is done.\n";
     return 0;
 }
 
