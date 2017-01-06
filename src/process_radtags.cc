@@ -756,14 +756,14 @@ print_results(int argc, char **argv,
 
     string log_path = out_path + "process_radtags.log";
     if (!in_path_1.empty()) {
-        // Directory mode; use `$out_path/$(basename $in_path).process_radtags.log`.
+        // In directory mode, use `$out_path/process_radtags.$(basename $in_path).log`.
         // For consistency we always use realpath().
         char abspath [PATH_MAX];
         realpath(in_path_1.c_str(), abspath);
         string abspath_s (abspath);
         size_t p = abspath_s.find_last_of('/');
         string in_dir_name = abspath_s.substr(p+1);
-        log_path = out_path + in_dir_name + ".process_ratags.log";
+        log_path = out_path + "process_radtags." + in_dir_name + ".log";
     }
     ofstream log(log_path.c_str());
 
