@@ -1,19 +1,24 @@
 Stacks 1.45 - tba
 --------------------------
-    Feature: Tweaked the defaults and/or interfaces of most programs:
-             * ustacks -r has become the default; --keep-high-cov reverses it.
+    Feature: Tweaked the interfaces of most programs:
              * cstacks and sstacks now accept a population map as input.
-             * pstacks/ustacks/process_radtags will now try to guess file formats.
+             * process_radtags will now reuse the input directory name in its log file name.
+             * Reworked pstacks output.
              * Batch ID will default to 1, where applicable.
-             * Default format in process_radtags/process_shortread is now gzfastq.
+             * pstacks/ustacks/process_radtags will now try to guess file formats.
+             * Default (fallback) format in process_radtags/process_shortread is now gzfastq.
+             * pstacks: Substituted --max_clipped to --min_aln_pct.
+             * ustacks -r has become the default; --keep-high-cov reverses it.
              * cstacks now checks for sample ID unicity.
              * Updated help messages.
+    Feature: populations now logs the 'number of SNPs per locus' distribution.
     Feature: Added enzyme ApaLI.
 
     Bugfix: populations: Corrected a VCF-related segfault (current use of VCF's GL field was
             improper and was removed).
     Bugfix: rxstacks: Corrected a bug that affected locus likelihood medians.
     Bugfix: pstacks/ustacks: Corrected a bug that affected coverage standard deviations.
+    Bugfix: populations: Fixed parsing of option --sigma.
 
 Stacks 1.44 - Oct 11, 2016
 --------------------------
