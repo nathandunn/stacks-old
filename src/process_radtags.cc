@@ -25,6 +25,7 @@
 //
 
 #include <iomanip>
+#include <cstdlib>
 
 #include "process_radtags.h"
 
@@ -756,9 +757,13 @@ print_results(int argc, char **argv,
     string log_path = out_path + "process_radtags.log";
     if (!in_path_1.empty()) {
         // Directory mode; use `$out_path/$(basename $in_path).process_radtags.log`.
-        size_t p = in_path_1.find_last_of('/', in_path_1.size()-2); // Note: in_path_1 ends with a '/'.
-        string basename = in_path_1.substr(p, in_path_1.size()-2);
-        log_path = out_path + basename + ".process_ratags.log";
+        // For consistency we always use realpath().
+        char abspath [PATH_MAX];
+        realpath(in_path_1.c_str(), abspath);
+        string abspath_s (abspath);
+        size_t p = abspath_s.find_last_of('/');
+        string in_dir_name = abspath_s.substr(p+1);
+        log_path = out_path + in_dir_name + ".process_ratags.log";
     }
     ofstream log(log_path.c_str());
 
