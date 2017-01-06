@@ -607,6 +607,11 @@ int main (int argc, char* argv[]) {
         }
     }
 
+    //
+    // Log the SNPs per locus distribution.
+    //
+    log_snps_per_loc_distrib(log_fh, catalog);
+
     calculate_haplotype_stats(catalog, pmap, psum);
 
     if (calc_fstats) {
@@ -3616,6 +3621,31 @@ haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
     double d_est = 1.0 - (x / y);
 
     return d_est;
+}
+
+void log_snps_per_loc_distrib(std::ostream& log_fh, map<int, CSLocus*>& catalog)
+{
+
+    // N.B. The method below gives the same numbers as by counting the SNPs that satisfy
+    // `LocTally::nucs[col].allele_cnt >= 2`.
+    // This is different than the sumstats file, that uses `LocTally::nucs[col].allele_cnt == 2`;
+    // The difference seems to be about 1/1000.
+
+    // Bin loci by number of SNPs.
+    map<size_t, size_t> snps_per_loc_distrib;
+    for (auto& cloc : catalog)
+        ++snps_per_loc_distrib[cloc.second->snps.size()];
+
+    // Fill the gaps in the distribution.
+    size_t n_max = snps_per_loc_distrib.rbegin()->first;
+    for(size_t i=0; i<n_max; ++i)
+        snps_per_loc_distrib.insert({i, 0});
+
+    // Write the distribution.
+    log_fh << "# Distribution of the number of SNPs per locus.\n"
+              "#n_snps\tn_loci\n";
+    for(const auto& n_snps : snps_per_loc_distrib)
+        log_fh << n_snps.first << "\t" << n_snps.second << "\n";
 }
 
 int
