@@ -124,6 +124,8 @@ double   haplotype_d_est(Datum **, LocSum **, vector<int> &);
 LocStat *haplotype_diversity(int, int, Datum **);
 double   count_haplotypes_at_locus(int, int, Datum**, map<string, double>&);
 
+void log_snps_per_loc_distrib(std::ostream&, map<int, CSLocus*>&);
+
 //int  tally_ref_alleles(LocSum **, int, int, char &, char &); //unused; also commented out in the .cc
 //int  load_snp_calls(string,  PopMap<CSLocus> *); //no implementation
 
