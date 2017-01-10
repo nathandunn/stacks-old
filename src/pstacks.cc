@@ -780,8 +780,8 @@ void load_radtags(string in_file, HashMap &radtags) {
 
     cerr << "Read " << i << " records:\n"
          << "  Kept " << primary_kept << " primary alignments\n"
-         << "  Skipped " << primary_disc << " excessively soft-clipped primary alignments ("
-         << as_percentage((double) primary_disc / (primary_disc+primary_kept)) << ")\n"
+         << "  Skipped " << primary_disc << " (" << as_percentage((double) primary_disc / (primary_disc+primary_kept))
+         << ") excessively soft-clipped primary alignments\n"
          << "  Skipped " << secondary_disc << " secondary alignments\n"
          << "  Skipped " << supplementary << " supplementary alignments\n"
          << "  Skipped " << unmapped << " unmapped reads\n";
