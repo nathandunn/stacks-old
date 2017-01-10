@@ -644,13 +644,8 @@ void delete_low_cov_loci(map<int, MergedStack *>& merged, const map<int, PStack*
     for (int id : to_erase)
         merged.erase(id);
 
-    double mean;
-    double stdev;
-    double max;
-    calc_coverage_distribution(unique, merged, mean, stdev, max);
-
-    cerr << "Discarded " << n_deleted << " low coverage loci comprising " << n_reads << " reads.\n";
-    cerr << "Now working with " << merged.size() << " loci; mean coverage " << mean << " (stdev: " << stdev << ", max: " << max << ").\n";
+    cerr << "Discarded " << n_deleted << " low coverage loci comprising " << n_reads << " reads.\n"
+         << "Now working with " << merged.size() << " loci.\n";
 }
 
 //
