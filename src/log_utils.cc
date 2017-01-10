@@ -56,6 +56,6 @@ init_log(ofstream &fh, int argc, char **argv)
 std::string as_percentage(double d) {
     stringstream ss;
     ss << std::fixed << std::setprecision(1);
-    ss << d << "%";
+    ss << d*100 << "%";
     return ss.str();
 }
