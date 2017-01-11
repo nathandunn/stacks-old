@@ -29,6 +29,8 @@
 
 #include "process_radtags.h"
 
+using namespace std;
+
 //
 // Global variables to hold command-line options.
 //
@@ -129,7 +131,7 @@ int main (int argc, char* argv[]) {
             init_adapter_seq(kmer_size, adapter_2, adp_2_len, adp_2_kmers);
         }
 
-        cerr << "    " << distance << " mismatches allowed to adapter sequence.\n";
+        cerr << "    " << ::distance << " mismatches allowed to adapter sequence.\n";
     }
 
     vector<pair<string, string> >        files;
@@ -688,10 +690,10 @@ process_singlet(Read *href,
         int res = 1;
         if (paired_end == true  && adp_2_len > 0)
             res = filter_adapter_seq(href, adapter_2, adp_2_len, adp_2_kmers,
-                                     kmer_size, distance, len_limit);
+                                     kmer_size, ::distance, len_limit);
         if (paired_end == false && adp_1_len > 0)
             res = filter_adapter_seq(href, adapter_1, adp_1_len, adp_1_kmers,
-                                     kmer_size, distance, len_limit);
+                                     kmer_size, ::distance, len_limit);
         if (res <= 0) {
             // cerr << "Sequence " << href->seq << " contains adapter.\n";
             counter["adapter"]++;
@@ -821,17 +823,13 @@ print_results(int argc, char **argv,
         c["retained"]     += it->second["retained"];
     }
 
-    std::ostream cerr_bis (cerr.rdbuf());
-    cerr_bis << std::fixed << std::setprecision(1);
-
-    auto print_nreads = [&cerr_bis,&c] (long n, const string& legend) {
-        size_t nspaces = std::to_string(c["total"]).length() - std::to_string(n).length();
-        cerr_bis << string(nspaces, ' ')
-             << n << " " << legend
-             << " (" << (double) n / c["total"] * 100 << "%)\n";
+    auto print_nreads = [&c] (long n, const string& legend) {
+        size_t nspaces = to_string(c["total"]).length() - to_string(n).length();
+        cerr << string(nspaces, ' ') << n << " " << legend
+             << " (" << as_percentage((double) n / c["total"]) << ")\n";
     };
 
-    cerr_bis << c["total"] << " total sequences\n";
+    cerr << c["total"] << " total sequences\n";
     if (filter_illumina)
         print_nreads(c["ill_filtered"], "failed Illumina filtered reads");
     if (filter_adapter)
@@ -1071,7 +1069,7 @@ int parse_command_line(int argc, char* argv[]) {
                 barcode_type = inline_null;
             break;
         case 'm':
-            merge = true;
+            ::merge = true;
             break;
         case 'D':
             discards = true;
@@ -1114,7 +1112,7 @@ int parse_command_line(int argc, char* argv[]) {
             filter_adapter = true;
             break;
         case 'T':
-            distance = is_integer(optarg);
+            ::distance = is_integer(optarg);
             break;
         case 'H':
             retain_header = true;
@@ -1204,7 +1202,7 @@ int parse_command_line(int argc, char* argv[]) {
     if (barcode_file.length() == 0)
         cerr << "No barcodes specified, files will not be demultiplexed.\n";
 
-    if (barcode_file.length() > 0 && merge) {
+    if (barcode_file.length() > 0 && ::merge) {
         cerr << "You may specify a set of barcodes, or that all files should be merged, not both.\n";
         help();
     }
