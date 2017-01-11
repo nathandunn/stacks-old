@@ -872,8 +872,8 @@ print_results(int argc, char **argv,
     if (bc_names)
         log << "Filename\t";
     log << "Total\t"
-        << "No RadTag\t"
-        << "Low Quality\t"
+        << "NoRadTag\t"
+        << "LowQuality\t"
         << "Retained\n";
 
     set<BarcodePair> barcode_list;
