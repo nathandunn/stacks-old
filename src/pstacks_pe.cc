@@ -201,6 +201,16 @@ void link_reads_to_loci(
         throw exception();
     }
 
+    // Discard loci that are bijective with the catalog
+    for (auto sloc=sloci.begin(); sloc!=sloci.end();) {
+        if (bij_sloci.count(sloc->second->id)) {
+            sloc++;
+        } else {
+            delete sloc->second;
+            sloci.erase(sloc++);
+        }
+    }
+
     // Save the information we need on loci and create the read-to-locus map.
     for (const auto& element : sloci) {
         const Locus& sloc = *element.second;
