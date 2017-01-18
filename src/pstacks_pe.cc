@@ -98,31 +98,10 @@ int main(int argc, char* argv[]) {
 
     // Retrieve bijective matches to the catalog.
     // ----------
-
-    // Parse the matches file.
-    cout << "Loading matches to the catalog..." << endl;
-    vector<CatMatch*> matches;
-    load_catalog_matches(prefix_path, matches);
-    if (matches.empty()) {
-        cerr << "Error: Unable to load matches from '"
-             << prefix_path + ".matches.tsv(.gz)'.\n";
-        throw exception();
-    }
-    sql_id = matches[0]->sample_id;
-
-    unordered_set<int> bij_sloci = retrieve_bijective_sloci(matches);
-
-    for (CatMatch* m : matches)
-        delete m;
-    matches.clear();
-
-     // Parse the tags files; sort the reads per locus.
-     // ----------
-    cout << "Reading read-to-locus information from the tags file..." << endl;
-    unordered_map<string, size_t> read_name_to_loc; // map of (read name, loc index)
     vector<FwLocInfo> fwloci_info;
-    bool is_input_gzipped;
-    link_reads_to_loci(bij_sloci, read_name_to_loc, fwloci_info, is_input_gzipped);
+    unordered_map<string, size_t> read_name_to_loc; // map of {read name, loc index}
+    link_reads_to_loci(fwloci_info, read_name_to_loc);
+
     const size_t n_loci = fwloci_info.size();
     cout << "This sample covers " << n_loci
          << " catalog loci with " << read_name_to_loc.size() << " reads." << endl;
@@ -141,8 +120,8 @@ int main(int argc, char* argv[]) {
     // aligned independently : the forward read may have been kept
     // while the paired-end read was discarded. Loci without any paired-end
     // reads just do not have entries in the `tags_pe.tsv` file.
-    cout << "Merging stacks..." << endl;
 
+    cout << "Merging stacks..." << endl;
     vector<MergedStack> pe_loci;
     pe_loci.reserve(n_loci);
     for (size_t i=0; i<n_loci; ++i) {
@@ -184,7 +163,7 @@ int main(int argc, char* argv[]) {
     // Write results.
     // ----------
     cout << "Writing results..." << endl;
-    write_results(loci_map, stacks_map, is_input_gzipped, true);
+    write_results(loci_map, stacks_map, true, true);
 
     cout << "pstacks_pe is done." << endl;
     return 0;
@@ -209,39 +188,49 @@ void convert_fw_read_name_to_paired(string& read_name) {
 }
 
 void link_reads_to_loci(
-        const unordered_set<int>& bij_sloci,
-        unordered_map<string, size_t>& pread_name_to_loc,
-        vector<FwLocInfo>& sloci_info,
-        bool& is_input_gzipped
+        vector<FwLocInfo>& loc_info,
+        unordered_map<string, size_t>& pread_name_to_loc
         ) {
 
-    // Parse the sloci in the tags file; guess the names of the associated
-    // paired-end reads.
+    // Read the matches file.
+    cout << "Loading the matches file..." << endl;
+    vector<CatMatch*> matches;
+    load_catalog_matches(prefix_path, matches);
+    if (matches.empty()) {
+        cerr << "Error: Unable to load matches from '"
+             << prefix_path + ".matches.tsv(.gz)'.\n";
+        throw exception();
+    }
+    sql_id = matches[0]->sample_id;
+
+    // Save the list of bijective loci
+    unordered_set<int> bij_sloci = retrieve_bijective_sloci(matches);
+
+
+    // Read the tags file
+    cout << "Reading the tags file..." << endl;
     map<int, Locus*> sloci;
-    if(load_loci(prefix_path, sloci, 1, false, is_input_gzipped) != 1) {
+    bool tmpbool;
+    if(load_loci(prefix_path, sloci, 1, false, tmpbool) != 1) {
         cerr << "Error: could not find stacks files '" << prefix_path << ".*' (tags, snps and/or alleles).\n";
         throw exception();
     }
 
-    const bool process_names = debug_flags.count(DEBUG_FWREADS) ? false : true;
+    // Save the information we need on loci and create the read-to-locus map.
     for (const auto& element : sloci) {
         const Locus& sloc = *element.second;
         if (not bij_sloci.count(sloc.id))
             continue;
 
-        sloci_info.push_back(FwLocInfo(sloc.id, sloc.loc));
+        loc_info.push_back(FwLocInfo(sloc.id, sloc.loc));
 
-        // For each first read,
-        for (const char* fread_name : sloc.comp) {
-            string pread_name (fread_name);
-            if (process_names)
+        for (const char* fwread_name : sloc.comp) {
+            string pread_name (fwread_name);
+            if (! debug_flags.count(DEBUG_FWREADS))
                 convert_fw_read_name_to_paired(pread_name);
-            pread_name_to_loc.insert( {pread_name, sloci_info.size()-1} );
+            pread_name_to_loc.insert( {pread_name, loc_info.size()-1} );
         }
     }
-
-    for (const auto& element : sloci)
-        delete element.second;
 
     // If required, save the list of reads.
     if (debug_flags.count(DEBUG_READNAMES)) {
@@ -249,6 +238,12 @@ void link_reads_to_loci(
         for (auto& r : pread_name_to_loc)
             readnames_f << r.first << "\n";
     }
+
+    // Clean up.
+    for (CatMatch* m : matches)
+        delete m;
+    for (const auto& element : sloci)
+        delete element.second;
 }
 
 vector<vector<PStack> > load_aligned_reads(
