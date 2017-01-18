@@ -108,7 +108,7 @@ phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h \
 	src/locus.h src/locus.cc \
 	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc \
 	src/log_utils.h \
-	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc 
+	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc
 
 pstacks_pe_SOURCES = src/pstacks_pe.h src/pstacks_pe.cc src/pstacks_base.h src/pstacks_base.cc \
 	src/stacks/h src/stacks.cc src/constants.h src/mstack.h src/mstack.cc \
@@ -118,8 +118,7 @@ pstacks_pe_SOURCES = src/pstacks_pe.h src/pstacks_pe.cc src/pstacks_base.h src/p
 	src/BamI.h \
 	src/sql_utilities.cc src/locus.cc
 
-tags2bam_SOURCES = src/tags2bam.h src/tags2bam.cc \
-	constants.h log_utils.h
+tags2bam_SOURCES = src/tags2bam.cc src/sql_utilities.cc src/input.cc src/locus.cc src/stacks.cc src/DNANSeq.cc src/utils.cc
 
 ustacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 ustacks_LDFLAGS   = $(OPENMP_CFLAGS)
