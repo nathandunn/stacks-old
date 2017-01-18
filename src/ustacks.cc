@@ -24,6 +24,8 @@
 
 #include "ustacks.h"
 
+using namespace std;
+
 //
 // Global variables to hold command-line options.
 //
@@ -1095,7 +1097,7 @@ merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedSta
 
     if (new_merged.empty()) {
         cerr << "Error: Couldn't assemble any loci.\n";
-        throw std::exception();
+        throw exception();
     }
 
     //
@@ -2056,7 +2058,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
                 break;
             }
 
-            sstr << std::fixed   << std::setprecision(2)
+            sstr << std::fixed   << setprecision(2)
                  << (*s)->lratio << "\t"
                  << (*s)->rank_1 << "\t"
                  << (*s)->rank_2 << "\t\t\n";
@@ -2153,7 +2155,7 @@ int dump_stack_graph(string data_file,
     double d, scale, scaled_d;
     char label[32];
     vector<string> colors;
-    std::ofstream data(data_file.c_str());
+    ofstream data(data_file.c_str());
 
     size_t pos_1 = data_file.find_last_of("/");
     size_t pos_2 = data_file.find_last_of(".");
@@ -2667,13 +2669,13 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "ustacks " << VERSION << "\n\n";
+    cerr << "ustacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "ustacks " << VERSION << "\n"
+    cerr << "ustacks " << VERSION << "\n"
               << "ustacks -f file_path -i id -o path [-M max_dist] [-m min_cov] [-p num_threads]" << "\n"
               << "  f: input file path.\n"
               << "  i: a unique integer ID for this sample.\n"
