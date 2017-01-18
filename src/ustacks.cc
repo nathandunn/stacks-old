@@ -1089,8 +1089,14 @@ merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedSta
         }
     }
 
-    uint new_cnt = new_merged.size();
-    uint old_cnt = merged.size();
+    cerr << "  " << merged.size() << " stacks merged into " << new_merged.size()
+         << " loci; deleveraged " << delev_cnt
+         << " loci; blacklisted " << blist_cnt << " loci.\n";
+
+    if (new_merged.empty()) {
+        cerr << "Error: Couldn't assemble any loci.\n";
+        throw std::exception();
+    }
 
     //
     // Free the memory from the old map of merged tags.
@@ -1098,12 +1104,7 @@ merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedSta
     for (it = merged.begin(); it != merged.end(); it++)
         delete it->second;
 
-    merged = new_merged;
-
-    cerr << "  " << old_cnt << " stacks merged into " << new_cnt
-         << " stacks; deleveraged " << delev_cnt
-         << " stacks; removed " << blist_cnt << " stacks.\n";
-
+    swap(merged, new_merged);
     return 0;
 }
 
