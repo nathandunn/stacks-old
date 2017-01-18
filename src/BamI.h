@@ -235,33 +235,12 @@ Bam::parse_cigar(vector<pair<char, uint> > &cigar)
             break;
         case BAM_CREF_SKIP:
             c = 'N';
-            {
-                static bool emitted_warning = false;
-                if (!emitted_warning) {
-                    cerr << "Warning: Some CIGARs contained N operations (current read name is '" << bam_get_qname(aln) << "').\n";
-                    emitted_warning = true;
-                }
-            }
             break;
         case BAM_CHARD_CLIP:
             c = 'H';
-            {
-                static bool emitted_warning = false;
-                if (!emitted_warning) {
-                    cerr << "Warning: Some CIGARs contained H operations (current read name is '" << bam_get_qname(aln) << "').\n";
-                    emitted_warning = true;
-                }
-            }
             break;
         case BAM_CPAD:
             c = 'P';
-            {
-                static bool emitted_warning = false;
-                if (!emitted_warning) {
-                    cerr << "Warning: Some CIGARs contained P operations (current read name is '" << bam_get_qname(aln) << "').\n";
-                    emitted_warning = true;
-                }
-            }
             break;
         default:
             cerr << "Warning: Unknown CIGAR operation (current read name is '" << bam_get_qname(aln) << "').\n";

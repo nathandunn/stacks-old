@@ -53,31 +53,17 @@ parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool check_
                 cerr << "Error: Malformed CIGAR string '" << cigar_str << "'.\n";
                 throw std::exception();
             }
-            if(c == 'N') {
-                static bool emitted_warning = false;
-                if (!emitted_warning) {
-                    cerr << "Warning: Some CIGARs contained N operations (current CIGAR is '" << cigar_str << "').\n";
-                    emitted_warning = true;
-                }
-            } else if (c == 'H') {
-                static bool emitted_warning = false;
-                if (!emitted_warning) {
-                    cerr << "Warning: Some CIGARs contained H operations (current CIGAR is '" << cigar_str << "').\n";
-                    emitted_warning = true;
-                }
-            } else if (c == 'P') {
-                static bool emitted_warning = false;
-                if (!emitted_warning) {
-                    cerr << "Warning: Some CIGARs contained P operations (current CIGAR is '" << cigar_str << "').\n";
-                    emitted_warning = true;
-                }
-            } else if (c != 'M'
+            if (c != 'M'
                     && c != '='
                     && c != 'X'
                     && c != 'I'
                     && c != 'D'
-                    && c != 'S') {
-                cerr << "Warning: Unknown CIGAR operation in '" << cigar_str << "'.\n";
+                    && c != 'S'
+                    && c != 'N'
+                    && c != 'H'
+                    && c != 'P'
+                    ) {
+                cerr << "Warning: Unknown CIGAR operation '" << c << "' in '" << cigar_str << "'.\n";
             }
         }
 
