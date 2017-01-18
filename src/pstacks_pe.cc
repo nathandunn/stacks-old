@@ -189,8 +189,11 @@ void link_reads_to_loci(
     sql_id = matches[0]->sample_id;
 
     // Save the list of bijective loci
-    unordered_set<int> bij_sloci = retrieve_bijective_sloci(matches);
-
+    vector<pair<int, int> > bij_loci = retrieve_bijective_loci(matches);
+    unordered_set<int> bij_sloci;
+    bij_sloci.reserve(bij_loci.size());
+    for (auto& l : bij_loci)
+        bij_sloci.insert(l.first);
 
     // Read the tags file
     cout << "Reading the tags file..." << endl;
@@ -201,7 +204,7 @@ void link_reads_to_loci(
         throw exception();
     }
 
-    // Discard loci that are bijective with the catalog
+    // Discard loci that aren't bijective with the catalog
     for (auto sloc=sloci.begin(); sloc!=sloci.end();) {
         if (bij_sloci.count(sloc->second->id)) {
             sloc++;
