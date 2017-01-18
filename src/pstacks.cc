@@ -714,7 +714,7 @@ void load_radtags(string in_file, HashMap &radtags) {
     else if (in_file_type == FileT::tsv)
         fh = new Tsv(in_file.c_str());
 
-    cerr << "Reading alignments...";
+    cerr << "Reading alignments...\n";
 
     int primary_kept   = 0;
     int primary_disc   = 0;
@@ -722,12 +722,7 @@ void load_radtags(string in_file, HashMap &radtags) {
     int secondary_disc = 0;
     int supplementary  = 0;
     int unmapped       = 0;
-    int i = 0;
     while ((fh->next_seq(c)) != 0) {
-        if (i % 1000000 == 0 && i>0)
-            cerr << i/1000000 << "M...";
-
-        i++;
 
         switch (c.aln_type) {
         case AlnT::null:
@@ -771,9 +766,8 @@ void load_radtags(string in_file, HashMap &radtags) {
             the_seq.qual = NULL;
         }
     }
-    cerr << "done\n";
 
-    cerr << "Read " << i << " records:\n"
+    cerr << "Done reading alignment records:\n"
          << "  Kept " << primary_kept << " primary alignments\n"
          << "  Skipped " << primary_disc << " (" << as_percentage((double) primary_disc / (primary_disc+primary_kept))
          << ") excessively soft-clipped primary alignments\n"
