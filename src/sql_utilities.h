@@ -24,6 +24,8 @@
 #ifndef __SQL_UTILITIES_H__
 #define __SQL_UTILITIES_H__
 
+#include <unordered_set>
+
 #include "input.h"
 #include "utils.h"
 
@@ -42,6 +44,12 @@ const uint num_matches_fields =  9;
 void load_catalog_matches(string sample,  vector<CatMatch *> &matches);
 int load_model_results(string sample,  map<int, ModRes *> &modres);
 int load_snp_calls(string sample,  map<int, SNPRes *> &snpres);
+
+// retrieve_bijective_sloci()
+// ----------
+// Returns the ids of the sample loci that are in a bijective relationship with
+// the catalog.
+std::unordered_set<int> retrieve_bijective_sloci(const vector<CatMatch*>& matches);
 
 template <class LocusT>
 int

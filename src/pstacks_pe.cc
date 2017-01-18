@@ -96,12 +96,25 @@ int main(int argc, char* argv[]) {
     omp_set_num_threads(num_threads);
 #endif
 
-    // Parse the matches file.
+    // Retrieve bijective matches to the catalog.
     // ----------
-    // We only work with on the sloci that are in a bijective relationship with
-    // the catalog.
+
+    // Parse the matches file.
     cout << "Loading matches to the catalog..." << endl;
-    unordered_set<int> bij_sloci = retrieve_bijective_sloci();
+    vector<CatMatch*> matches;
+    load_catalog_matches(prefix_path, matches);
+    if (matches.empty()) {
+        cerr << "Error: Unable to load matches from '"
+             << prefix_path + ".matches.tsv(.gz)'.\n";
+        throw exception();
+    }
+    sql_id = matches[0]->sample_id;
+
+    unordered_set<int> bij_sloci = retrieve_bijective_sloci(matches);
+
+    for (CatMatch* m : matches)
+        delete m;
+    matches.clear();
 
      // Parse the tags files; sort the reads per locus.
      // ----------
@@ -177,37 +190,6 @@ int main(int argc, char* argv[]) {
     return 0;
 
     IF_NDEBUG_CATCH_ALL_EXCEPTIONS
-}
-
-unordered_set<int> retrieve_bijective_sloci() {
-    unordered_set<int> bij_sloci;
-
-    vector<CatMatch*> matches;
-    load_catalog_matches(prefix_path, matches);
-    if (matches.empty()) {
-        cerr << "Error: Unable to load matches from '"
-             << prefix_path + ".matches.tsv(.gz)'.\n";
-        throw exception();
-    }
-    sql_id = matches[0]->sample_id;
-
-    unordered_map<int, set<int> > cloc_id_to_sloc_ids;
-    unordered_map<int, set<int> > sloc_id_to_cloc_ids;
-    for (const CatMatch* m : matches) {
-        cloc_id_to_sloc_ids[m->cat_id].insert(m->tag_id);
-        sloc_id_to_cloc_ids[m->tag_id].insert(m->cat_id);
-    }
-    for (const auto& sloc : sloc_id_to_cloc_ids)
-        if (sloc.second.size() == 1
-                && cloc_id_to_sloc_ids.at(*sloc.second.begin()).size() == 1
-                )
-            // Bijective, keep it.
-            bij_sloci.insert(sloc.first);
-
-    for (const CatMatch* m : matches)
-        delete m;
-
-    return bij_sloci;
 }
 
 void convert_fw_read_name_to_paired(string& read_name) {
