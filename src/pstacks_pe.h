@@ -53,10 +53,8 @@ void convert_fw_read_name_to_paired(std::string& read_name);
 // names of the paired-end reads (via `convert_fw_read_name_to_paired`).
 // Uses glob `prefix_path`.
 void link_reads_to_loci(
-        const std::unordered_set<int>& bij_sloci,
-        std::unordered_map<std::string, size_t>& read_name_to_loc,
-        std::vector<FwLocInfo>& sloc_ids,
-        bool& gzipped_input
+        std::vector<FwLocInfo>& loc_info,
+        std::unordered_map<std::string, size_t>& read_name_to_loc
         );
 
 // load_aligned_reads()
