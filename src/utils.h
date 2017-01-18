@@ -72,4 +72,24 @@ struct int_decreasing {
     }
 };
 
+// convert_fw_read_name_to_paired()
+// ----------
+// Given a forward read name, guess the paired-end read name. The forward read
+// name is expected to end in '/1' or '_1'.
+inline
+void convert_fw_read_name_to_paired(std::string& read_name) {
+    // Check the format.
+    if (read_name.length() < 2
+            || (read_name.substr(read_name.length()-2) != "/1"
+                    && read_name.substr(read_name.length()-2) != "_1")
+    ){
+        cerr << "Error: Unrecognized read name format; expected '"
+             << read_name << "' to end with '/1' or '_1'.\n";
+        throw std::exception();
+    }
+
+    // Change the 1 into a 2.
+    read_name.back() = '2';
+}
+
 #endif // __UTILS_H__
