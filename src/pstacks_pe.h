@@ -41,12 +41,6 @@ struct Contig {
     size_t count() const;
 };
 
-// convert_fw_read_name_to_paired()
-// ----------
-// Given a forward read name, guess the paired-end read name. The forward read
-// name is expected to end in '/1' or '_1'.
-void convert_fw_read_name_to_paired(std::string& read_name);
-
 // link_reads_to_cloci()
 // ----------
 // Extracts the reads composing each locus from the tags file, and guesses the
