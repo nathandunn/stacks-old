@@ -1,3 +1,5 @@
+#include <unordered_map>
+
 #include "sql_utilities.h"
 
 using namespace std;
@@ -296,4 +298,24 @@ int load_snp_calls(string sample,  map<int, SNPRes *> &snpres) {
     delete [] line;
 
     return 1;
+}
+
+unordered_set<int> retrieve_bijective_sloci(const vector<CatMatch*>& matches) {
+    unordered_set<int> bij_sloci;
+
+    unordered_map<int, set<int> > cloc_id_to_sloc_ids;
+    unordered_map<int, set<int> > sloc_id_to_cloc_ids;
+    for (const CatMatch* m : matches) {
+        cloc_id_to_sloc_ids[m->cat_id].insert(m->tag_id);
+        sloc_id_to_cloc_ids[m->tag_id].insert(m->cat_id);
+    }
+
+    for (const auto& sloc : sloc_id_to_cloc_ids)
+        if (sloc.second.size() == 1
+                && cloc_id_to_sloc_ids.at(*sloc.second.begin()).size() == 1
+                )
+            // Bijective, keep it.
+            bij_sloci.insert(sloc.first);
+
+    return bij_sloci;
 }

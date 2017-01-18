@@ -41,13 +41,6 @@ struct Contig {
     size_t count() const;
 };
 
-// retrieve_bijective_sloci()
-// ----------
-// Parse the matches file and return the ids of the sample loci that are in a
-// bijective relationship with the catalog.
-// Uses glob `prefix_path`.
-std::unordered_set<int> retrieve_bijective_sloci();
-
 // convert_fw_read_name_to_paired()
 // ----------
 // Given a forward read name, guess the paired-end read name. The forward read
