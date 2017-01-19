@@ -41,16 +41,17 @@ int main(int argc, char* argv[]) {
     // Read the sample's files.
     map<int, Locus*> sloci;
     unordered_map<int, int> sloc_to_cloc;
-    read_sample_files(sloci, sloc_to_cloc);
+    int sample_id;
+    read_sample_files(sloci, sloc_to_cloc, sample_id);
 
     // Write the BAM file.
-    write_bam_file(sloci, sloc_to_cloc);
+    write_bam_file(sloci, sloc_to_cloc, sample_id);
 
     cout << "tags2bam is done." << endl;
     return 0;
 }
 
-void read_sample_files(map<int, Locus*>& sloci, unordered_map<int, int>& sloc_to_cloc) {
+void read_sample_files(map<int, Locus*>& sloci, unordered_map<int, int>& sloc_to_cloc, int& sample_id) {
     // Read the matches file.
     cout << "Reading the matches file..." << endl;
     vector<CatMatch*> matches;
@@ -60,7 +61,8 @@ void read_sample_files(map<int, Locus*>& sloci, unordered_map<int, int>& sloc_to
              << prefix_path + ".matches.tsv(.gz)'.\n";
         throw exception();
     }
-    int sample_id = matches[0]->sample_id;
+
+    sample_id = matches[0]->sample_id;
 
     // Retrieve the list of bijective loci
     vector<pair<int, int> > bij_loci = retrieve_bijective_loci(matches);
@@ -89,7 +91,7 @@ void read_sample_files(map<int, Locus*>& sloci, unordered_map<int, int>& sloc_to
         delete m;
 }
 
-void write_bam_file(const std::map<int, Locus*>& sloci, const std::unordered_map<int, int>& sloc_to_cloc) {
+void write_bam_file(const std::map<int, Locus*>& sloci, const std::unordered_map<int, int>& sloc_to_cloc, int sample_id) {
     //TODO
 }
 
