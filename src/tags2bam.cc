@@ -94,25 +94,11 @@ void write_bam_file(const std::map<int, Locus*>& sloci, const std::unordered_map
 }
 
 const string help_string = string() +
-        "pstacks_pe " + VERSION  + "\n"
-        "pstacks_pe -s sample_prefix -f paired_reads_file [-t type] [-p n_threads] [--model type [...]]\n"
+        "tags2bam " + VERSION  + "\n"
+        "tags2bam -s sample_prefix\n"
         "\n"
         "  -s,--prefix: prefix path for the sample.\n"
-        "  -f,--paired_reads: path to the paired reads alignments.\n"
-        "  -t,--filetype: alignment file type. Supported types: bowtie, sam, or bam. (Default: guess)\n"
-        "  -p,--num_threads: number of threads to use for parallel execution. (Default: 1)\n"
         "\n"
-        "Model:\n"
-        "  --model: Model for calling SNPs. One of 'snp', 'bounded', or 'fixed'. (Default: snp)\n"
-        "  For the SNP and Bounded SNP models:\n"
-        "    --alpha: required confidence levels for SNP calls. One of 0.1, 0.05 (default), 0.01, or 0.001.\n"
-        "  For the Bounded SNP model:\n"
-        "    --bound_low <float>: lower bound for epsilon, the error rate. Between 0 and 1 (default 0).\n"
-        "    --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
-        "  For the Fixed model:\n"
-        "    --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n"
-        "\n"
-        "Misc.: -q,--quiet; -h,--help; --version.\n"
         ;
 
 void bad_args() {
@@ -166,7 +152,7 @@ void parse_command_line(int argc, char* argv[]) {
     //
 
     if (prefix_path.empty()) {
-        cerr << "You must specify the prefix path of the sample (-s).\n";
+        cerr << "Error: A sample prefix path is required (-s).\n";
         bad_args();
     }
 }
