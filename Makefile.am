@@ -119,7 +119,7 @@ pstacks_pe_SOURCES = src/pstacks_pe.h src/pstacks_pe.cc src/pstacks_base.h src/p
 	src/sql_utilities.cc src/locus.cc
 
 tags2bam_SOURCES = src/tags2bam.cc src/sql_utilities.cc src/input.cc src/locus.cc src/stacks.cc \
-	src/DNANSeq.cc src/utils.cc src/BamI.cc
+	src/DNANSeq.cc src/utils.cc src/BamI.cc src/DNASeq4.cc
 
 ustacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 ustacks_LDFLAGS   = $(OPENMP_CFLAGS)
