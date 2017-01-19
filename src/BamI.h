@@ -20,16 +20,24 @@
 
 #ifndef __BAMI_H__
 #define __BAMI_H__
+//#ifdef HAVE_BAM
 
 //
 // Code to parse binary BAM format. This format is created for
 // reads that have been aligned to a reference genome.
 //
 
-#ifdef HAVE_BAM
+#include <string>
+#include <vector>
+#include <utility>
 
 #include "input.h"
 #include "sam.h"
+
+// Write a header to a BAM file.
+// The header text should include all tags except @SQ, and seems to be written
+// in plain text in the BAM file.
+void write_bam_header(htsFile* bam_f, const std::string& header_text, const std::vector<std::pair<std::string, uint32_t> >& chrs);
 
 class Bam: public Input {
     htsFile   *bam_fh;
@@ -426,18 +434,5 @@ Bam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
     return 0;
 }
 
-#else  // If HAVE_BAM is undefined and BAM library is not present.
-
-#include "input.h"
-
-class Bam: public Input {
- public:
-    Bam(const char *path) : Input() { cerr << "BAM support was not enabled when Stacks was compiled.\n"; };
-    ~Bam() {};
-    Seq *next_seq()      { return NULL; };
-    int  next_seq(Seq &) { return 0; };
-};
-
-#endif // HAVE_BAM
-
+//#endif // HAVE_BAM
 #endif // __BAMI_H__
