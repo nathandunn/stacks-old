@@ -70,6 +70,7 @@ class Bam: public Input {
     int  next_seq(Seq&);
 };
 
+inline
 int
 Bam::parse_header()
 {
@@ -86,6 +87,7 @@ Bam::parse_header()
     return 0;
 }
 
+inline
 Seq *
 Bam::next_seq()
 {
@@ -97,6 +99,7 @@ Bam::next_seq()
     return s;
 }
 
+inline
 int
 Bam::next_seq(Seq& s)
 {
@@ -205,7 +208,7 @@ Bam::next_seq(Seq& s)
     double pct_aln = len / double(seq.length());
 
     s = Seq((const char *) bam_get_qname(this->aln), seq.c_str(), qual.c_str(),
-            chr.c_str(), bp, sflag ? strand_minus : strand_plus, 
+            chr.c_str(), bp, sflag ? strand_minus : strand_plus,
             aln_type, pct_aln);
 
     if (cigar.size() > 0)
@@ -214,6 +217,7 @@ Bam::next_seq(Seq& s)
     return 1;
 }
 
+inline
 int
 Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
 {
@@ -262,6 +266,7 @@ Bam::parse_bam_cigar(vector<pair<char, uint> > &cigar, bool orientation)
     return 0;
 }
 
+inline
 int
 Bam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool orientation)
 {
@@ -297,6 +302,7 @@ Bam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool o
     return 0;
 }
 
+inline
 int
 Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
 {
@@ -325,6 +331,7 @@ Bam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
     return aln_bp - 1;
 }
 
+inline
 int
 Bam::find_start_bp_pos(int aln_bp, vector<pair<char, uint> > &cigar)
 {
@@ -340,6 +347,7 @@ Bam::find_start_bp_pos(int aln_bp, vector<pair<char, uint> > &cigar)
     return aln_bp;
 }
 
+inline
 int
 Bam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 {
