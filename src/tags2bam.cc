@@ -127,7 +127,22 @@ void write_bam_file(const map<int, Locus*>& sorted_loci, int sample_id) {
     // Write the records.
     // ----------
 
-    // etc.
+    size_t loc_i = 0; // Locus index; we use the same loop as for the header.
+    bam1_t* r = bam_init1(); // As we're going to reuse the exact same fields for all the reads.
+    for (auto& loc : sorted_loci) {
+        const Locus* sloc = loc.second;
+        for (size_t j=0; j<sloc->comp.size();++j) {
+            const char* name = sloc->comp[j];
+            const char* seq = sloc->reads[j];
+
+            r->core.tid = loc_i;
+            r->core.l_qname = strlen(name)+1;
+            r->core.l_qseq = strlen(seq);
+
+            bam_write1(bam_f->fp.bgzf, r);
+        }
+        loc_i++;
+    }
 
     hts_close(bam_f);
 }

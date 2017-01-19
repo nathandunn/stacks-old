@@ -38,6 +38,7 @@
 #define NEVER false
 
 typedef unsigned int uint;
+typedef unsigned char uchar;
 
 //
 //
