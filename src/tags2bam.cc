@@ -9,6 +9,7 @@
 #include "constants.h"
 #include "sql_utilities.h"
 #include "log_utils.h"
+#include "BamI.h"
 #include "tags2bam.h"
 
 using namespace std;
@@ -101,7 +102,7 @@ void read_sample_files(map<int, Locus*>& sloci, unordered_map<int, int>& sloc_to
 void write_bam_file(const map<int, Locus*>& sorted_loci, int sample_id) {
 
     string bam_path = prefix_path + ".matches.bam";
-    htsFile* bam_f = sam_open(bam_path.c_str(), "wb");
+    htsFile* bam_f = hts_open(bam_path.c_str(), "wb");
 
     // Write the header.
     // ----------
@@ -112,40 +113,16 @@ void write_bam_file(const map<int, Locus*>& sorted_loci, int sample_id) {
     // @SQ SN:cloc_id LN:(2^31-1) -- No length.
     // @SQ etc.
 
-    bam_hdr_t* hdr = bam_hdr_init();
-
-    // Unstructured text part.
     string sample_name = prefix_path.substr(prefix_path.find_last_of('/')+1);
     string header_text = string() +
             "@HD\tVN:1.5\tSO:coordinate\n"
             "@RG\tID:" + to_string(sample_id) + "\tSM:" + sample_name + "\n";
 
-    hdr->l_text = header_text.length()+1; // null-terminated
-    hdr->text = new char[hdr->l_text];
-    strcpy(hdr->text, header_text.c_str());
+    vector<pair<string, uint32_t> > chrs;
+    for (auto& loc : sorted_loci)
+        chrs.push_back({to_string(loc.first), pow<size_t>(2,31)-1});
 
-    // Reference sequences (catalog loci).
-    hdr->n_targets = sorted_loci.size();
-    hdr->target_len = new uint32_t[hdr->n_targets];
-    hdr->target_name = new char*[hdr->n_targets];
-    size_t i=0;
-    for (auto& loc : sorted_loci) {
-        hdr->target_len[i] = pow<size_t>(2,31)-1;
-        string name = to_string(loc.first);
-        hdr->target_name[i] = new char[name.length()+1];
-        strcpy(hdr->target_name[i], name.c_str());
-        i++;
-    }
-
-    // Write the header.
-    int r = bam_hdr_write(bam_f->fp.bgzf, hdr);
-    if (r != 0) {
-        cerr << "Error: Writing of BAM header failed (`bam_hdr_write()`returned " << r << ").\n";
-        throw exception();
-    }
-
-    // Clean up.
-    bam_hdr_destroy(hdr);
+    write_bam_header(bam_f, header_text, chrs);
 
     // Write the records.
     // ----------
