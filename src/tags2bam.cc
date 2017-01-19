@@ -3,10 +3,11 @@
 
 #include <getopt.h>
 
+#include "hts.h"
+
 #include "constants.h"
 #include "sql_utilities.h"
 #include "log_utils.h"
-
 #include "tags2bam.h"
 
 using namespace std;
@@ -44,8 +45,13 @@ int main(int argc, char* argv[]) {
     int sample_id;
     read_sample_files(sloci, sloc_to_cloc, sample_id);
 
+    // Sort the loci by catalog ID.
+    map<int, Locus*> sorted_loci; // (cloc_id, sloc)
+    for (auto sloc : sloci)
+        sorted_loci.insert({sloc_to_cloc.at(sloc.second->id), sloc.second});
+
     // Write the BAM file.
-    write_bam_file(sloci, sloc_to_cloc, sample_id);
+    write_bam_file(sloci, sample_id);
 
     cout << "tags2bam is done." << endl;
     return 0;
@@ -91,8 +97,23 @@ void read_sample_files(map<int, Locus*>& sloci, unordered_map<int, int>& sloc_to
         delete m;
 }
 
-void write_bam_file(const std::map<int, Locus*>& sloci, const std::unordered_map<int, int>& sloc_to_cloc, int sample_id) {
-    //TODO
+void write_bam_file(const map<int, Locus*>& sorted_loci, int sample_id) {
+    string bam_path = prefix_path + ".matches.bam";
+    htsFile* bam = hts_open(bam_path.c_str(), "wb");
+
+    // Write the header.
+    // ----------
+
+    // The header has the following structure:
+    // @HD VN:1.5 SO:coordinate
+    // @SQ SN:cloc_id LN:(2^31-1) -- No length
+    // @SQ etc.
+    // @RG ID:sample_id SM:sample_name
+    // @RG etc.
+
+    // etc.
+
+    hts_close(bam);
 }
 
 const string help_string = string() +
