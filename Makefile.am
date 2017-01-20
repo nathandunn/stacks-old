@@ -42,7 +42,7 @@ sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/constants.h src/constants.cc 
 	src/kmers.h src/kmers.cc \
 	src/GappedAln.h src/aln_utils.h src/aln_utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc src/utils.h src/utils.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc \
+	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc src/catalog_utils.cc \
 	src/MetaPopInfo.h src/MetaPopInfo.cc
 
 rxstacks_SOURCES = src/rxstacks.h src/rxstacks.cc src/constants.h src/constants.cc \
@@ -51,7 +51,7 @@ rxstacks_SOURCES = src/rxstacks.h src/rxstacks.cc src/constants.h src/constants.
 	src/mst.h src/mst.cc \
 	src/models.h src/models.cc \
 	src/aln_utils.h src/aln_utils.cc src/utils.h src/utils.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc \
+	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc src/catalog_utils.cc \
 	src/MetaPopInfo.h src/MetaPopInfo.cc
 
 process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h src/constants.cc \

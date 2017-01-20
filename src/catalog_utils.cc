@@ -25,7 +25,29 @@
 // jcatchen@uoregon.edu
 // University of Oregon
 //
+#include <regex>
+
+#include "utils.h"
+
 #include "catalog_utils.h"
+
+using namespace std;
+
+const regex catalog_tags_regex ("^batch_([0-9]+).catalog.tags(.gz)$");
+
+vector<int> find_catalogs(const string& dir_path) {
+    vector<int> ids;
+
+    for (DirIterator e (dir_path); e; ++e) {
+        smatch m;
+        string name (e.name());
+        regex_match(name, m, catalog_tags_regex);
+        if (!m.empty())
+            ids.push_back(stoi(m[1].str()));
+    }
+
+    return ids;
+}
 
 int
 reduce_catalog(map<int, CSLocus *> &catalog, set<int> &whitelist, set<int> &blacklist)

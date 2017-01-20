@@ -24,7 +24,9 @@
 
 #include <regex>
 
+#include "catalog_utils.h"
 #include "MetaPopInfo.h"
+
 #include "sstacks.h"
 
 using namespace std;
@@ -1401,8 +1403,16 @@ int parse_command_line(int argc, char* argv[]) {
         }
 
         if (batch_id < 0) {
-            // Default 1.
-            batch_id = 1;
+            vector<int> cat_ids = find_catalogs(in_dir);
+            if (cat_ids.size() == 1) {
+                batch_id = cat_ids[0];
+            } else if (cat_ids.empty()) {
+                cerr << "Error: Unable to find a catalog in '" << in_dir << "'.\n";
+                help();
+            } else {
+                cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
+                help();
+            }
         }
 
         if (in_dir.back() != '/')

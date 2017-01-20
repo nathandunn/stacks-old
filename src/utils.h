@@ -32,6 +32,8 @@ using std::endl;
 using std::pair;
 using std::make_pair;
 
+#include <dirent.h>
+
 #include "stacks.h"
 
 char   reverse(char);
@@ -70,6 +72,30 @@ struct int_decreasing {
     bool operator() (const int& lhs, const int& rhs) const {
         return lhs > rhs;
     }
+};
+
+//
+// Wrapper for directory parsing functions.
+// e.g. for(DirIterator e (path); e; ++e) {...}
+//
+class DirIterator {
+    DIR* dir;
+    struct dirent* entry;
+public:
+    DirIterator(const std::string& dir_path) : dir(NULL), entry(NULL) {
+        dir = opendir(dir_path.c_str());
+        if (dir == NULL) {
+            cerr << "Error: Unable to open directory '" << dir_path << "' for reading.\n";
+            throw std::exception();
+        }
+        entry = readdir(dir);
+    }
+
+    const char* name() const {return entry->d_name;}
+
+    operator bool() const {return entry==NULL;}
+    DirIterator& operator++() {entry = readdir(dir); return *this;}
+    dirent* operator*() {return entry;}
 };
 
 #endif // __UTILS_H__
