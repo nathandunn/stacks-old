@@ -1295,6 +1295,7 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
 int parse_command_line(int argc, char* argv[]) {
     string in_dir;
     string popmap_path;
+    vector<string> sample_names;
 
     while (1) {
         static struct option long_options[] = {
@@ -1307,15 +1308,16 @@ int parse_command_line(int argc, char* argv[]) {
             {"num_threads", required_argument, NULL, 'p'},
             {"batch_id",    required_argument, NULL, 'b'},
             {"catalog",     required_argument, NULL, 'c'},
-            {"sample_2",    required_argument, NULL, 's'},
+            {"sample_path", required_argument, NULL, 's'},
             {"outpath",     required_argument, NULL, 'o'},
             {"in_dir",      required_argument, NULL, 'P'},
             {"popmap",      required_argument, NULL, 'M'},
+            {"sample",      required_argument, NULL, 'S'},
             {0, 0, 0, 0}
         };
 
         int option_index = 0;
-        int c = getopt_long(argc, argv, "hgGxuvs:c:o:b:p:P:M:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "hgGxuvs:c:o:b:p:P:M:S:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -1362,6 +1364,9 @@ int parse_command_line(int argc, char* argv[]) {
         case 'M':
             popmap_path = optarg;
             break;
+        case 'S':
+            sample_names.push_back(optarg);
+            break;
         case 'v':
             version();
             break;
@@ -1378,15 +1383,20 @@ int parse_command_line(int argc, char* argv[]) {
     if (in_dir.empty() && catalog_path.empty()) {
         cerr << "Error: You must specify one of -P or -c.\n";
         help();
-    } else if ((!in_dir.empty() || !popmap_path.empty())
-            && (!catalog_path.empty() || !samples.empty() || !out_path.empty())) {
-        cerr << "Error: Please use options -P/-M or -c/-s/-o, not both.\n";
+    } else if (
+            (!popmap_path.empty() && !sample_names.empty()) // Both -M and -S
+            || (
+                ((!in_dir.empty() || !popmap_path.empty() || !sample_names.empty()) // One of -P, -M or -S
+                && (!catalog_path.empty() || !samples.empty() || !out_path.empty())) // and one of -c, -s or -o
+                )
+            ) {
+        cerr << "Error: Please do not mix run modes (-P/-M or -P/-S or -c/-s/-o).\n";
         help();
     }
 
     if (!in_dir.empty()) {
-        if (popmap_path.empty()) {
-            cerr << "Error: Please specify a population map (-M).\n";
+        if (popmap_path.empty() && sample_names.empty()) {
+            cerr << "Error: Please specify some input samples (-M or -S).\n";
             help();
         }
 
@@ -1402,10 +1412,15 @@ int parse_command_line(int argc, char* argv[]) {
         catalog_path = in_dir + "batch_" + to_string(batch_id);
 
         // Set `samples`.
-        MetaPopInfo popmap;
-        popmap.init_popmap(popmap_path);
-        for (const MetaPopInfo::Sample& s : popmap.samples())
-            samples.push(in_dir + s.name);
+        if (!popmap_path.empty()) {
+            MetaPopInfo popmap;
+            popmap.init_popmap(popmap_path);
+            for (const MetaPopInfo::Sample& s : popmap.samples())
+                samples.push(in_dir + s.name);
+        } else  {
+            for (string& s : sample_names)
+                samples.push(in_dir + s);
+        }
 
         // Set `out_path`.
         out_path = in_dir;
@@ -1449,11 +1464,13 @@ void version() {
 
 void help() {
     std::cerr << "sstacks " << VERSION << "\n"
-              << "sstacks [--aligned] -P dir_path [-b batch_id] -M popmap [-p num_threads] [-x]" << "\n"
-              << "sstacks [--aligned] -c catalog_file -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-x]" << "\n"
+              << "sstacks [--aligned] -P dir [-b batch_id] -S sample [-S sample ...] [-p n_threads]" << "\n"
+              << "sstacks [--aligned] -P dir [-b batch_id] -M popmap [-p n_threads]" << "\n"
+              << "sstacks [--aligned] -c catalog_path -s sample_path [-s sample_path ...] -o path [-p n_threads]" << "\n"
               << "  g,--aligned: base matching on alignment position, not sequence identity." << "\n"
               << "  P: path to the directory containing Stacks files.\n"
-              << "  M: path to a population map file.\n"
+              << "  S: name of the sample(s) to process.\n"
+              << "  M: path to a population map file from which to take sample names.\n"
               << "  s: filename prefix from which to load sample loci." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  b: ID of the catalog to consider (default: 1)." << "\n"
