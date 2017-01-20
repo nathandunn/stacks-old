@@ -579,7 +579,7 @@ process_reads(string prefix,
         }
 
         if (discards && !r->retain)
-            result = out_file_type == FileT::fastq ?
+            result = out_file_type == FileT::fastq || out_file_type == FileT::gzfastq ?
                 write_fastq(discard_fh, s) :
                 write_fasta(discard_fh, s);
 
