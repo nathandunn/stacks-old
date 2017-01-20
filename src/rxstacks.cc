@@ -24,6 +24,7 @@
 //
 
 #include "MetaPopInfo.h"
+#include "catalog_utils.h"
 
 #include "rxstacks.h"
 
@@ -1738,8 +1739,18 @@ parse_command_line(int argc, char* argv[])
     if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
-    if (batch_id < 0)
-        batch_id = 1;
+    if (batch_id < 0) {
+        vector<int> cat_ids = find_catalogs(in_path);
+        if (cat_ids.size() == 1) {
+            batch_id = cat_ids[0];
+        } else if (cat_ids.empty()) {
+            cerr << "Error: Unable to find a catalog in '" << in_path << "'.\n";
+            help();
+        } else {
+            cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
+            help();
+        }
+    }
 
     if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
         cerr << "SNP model alpha significance level must be either 0.1, 0.05, 0.01, or 0.001.\n";

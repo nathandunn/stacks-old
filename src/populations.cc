@@ -5522,8 +5522,18 @@ int parse_command_line(int argc, char* argv[]) {
         if (pmap_path.empty())
             cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
 
-        if (batch_id < 0)
-            batch_id = 1;
+        if (batch_id < 0) {
+            vector<int> cat_ids = find_catalogs(in_path);
+            if (cat_ids.size() == 1) {
+                batch_id = cat_ids[0];
+            } else if (cat_ids.empty()) {
+                cerr << "Error: Unable to find a catalog in '" << in_path << "'.\n";
+                help();
+            } else {
+                cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
+                help();
+            }
+        }
 
         if (out_path.empty())
             out_path = in_path;
