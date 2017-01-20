@@ -1,6 +1,7 @@
+#include <cmath>
+#include <cstring>
 #include <iostream>
 #include <fstream>
-#include <cmath>
 
 #include <getopt.h>
 
@@ -10,6 +11,8 @@
 #include "sql_utilities.h"
 #include "log_utils.h"
 #include "BamI.h"
+#include "DNASeq4.h"
+
 #include "tags2bam.h"
 
 using namespace std;
@@ -133,13 +136,54 @@ void write_bam_file(const map<int, Locus*>& sorted_loci, int sample_id) {
         const Locus* sloc = loc.second;
         for (size_t j=0; j<sloc->comp.size();++j) {
             const char* name = sloc->comp[j];
-            const char* seq = sloc->reads[j];
+            DNASeq4 seq (sloc->reads[j], strlen(sloc->reads[j]));
 
-            r->core.tid = loc_i;
-            r->core.l_qname = strlen(name)+1;
-            r->core.l_qseq = strlen(seq);
+            size_t l_aux = 3 + sizeof(int32_t);
+            uchar aux[l_aux];
+            aux[0] = 'R';
+            aux[1] = 'G';
+            aux[2] = 'i';
+            *(int32_t*)(aux+3) = sample_id;
 
-            bam_write1(bam_f->fp.bgzf, r);
+            // bam1_t::core
+            bam1_core_t& c = r->core;
+            c.tid = loc_i;
+            c.pos = 0;
+            c.qual = 255;
+            c.l_qname = strlen(name) + 1; //n.b. `l_qname` includes the null character.
+            c.flag = 0;
+            c.n_cigar = 0;
+            c.l_qseq = seq.length();
+            c.mtid = -1;
+            c.mpos = -1;
+
+            // bam1_t::data
+            // Htslib says: "bam1_t::data -- all variable-length data, concatenated;
+            // structure: qname-cigar-seq-qual-aux, concatenated".
+
+            r->l_data = r->core.l_qname + r->core.n_cigar + seq.vsize() + seq.length() + l_aux;
+            r->m_data = r->l_data;
+            r->data = new uchar[r->m_data];
+
+            uchar* p = r->data;
+            strcpy((char*)p, name);
+            p += r->core.l_qname;
+            memcpy(p, seq.vdata(), seq.vsize()); // n.b. `sizeof(DiNuc)==1`
+            p += seq.vsize();
+            memset(p, 0xFF, seq.length());
+            p += seq.length();
+            memcpy(p, aux, l_aux);
+
+            // bam1_t::core.bin
+            // c.f. `sam_parse1()`; I have no idea what this is.
+            uint32_t* cigar = (uint32_t*)(r->data + r->core.l_qname);
+            c.bin = hts_reg2bin(c.pos, c.pos + bam_cigar2rlen(c.n_cigar, cigar), 14, 5);
+
+            int rv = bam_write1(bam_f->fp.bgzf, r);
+            if (rv == -1) {
+                cerr << "Error: Writing of BAM record failed.\n";
+                throw exception();
+            }
         }
         loc_i++;
     }
