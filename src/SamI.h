@@ -132,8 +132,13 @@ int Sam::next_seq(Seq& s) {
                 clipped += op.second;
         double pct_clipped = (double) clipped / parts[9].length();
 
+        int map_qual = is_integer(parts[4].c_str());
+        if (map_qual == -1)
+            // Ignore malformed quality.
+            map_qual = 255;
+
         s = Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(), // Read ID, Sequence, Quality
-                parts[2].c_str(), bp, strand, aln_type, pct_clipped); // Chromosome, etc.
+                parts[2].c_str(), bp, strand, aln_type, pct_clipped, map_qual); // Chromosome, etc.
 
         if (cigar.size() > 0)
             bam_edit_gaps(cigar, s.seq);

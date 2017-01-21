@@ -194,7 +194,7 @@ Bam::next_seq(Seq& s)
         double pct_clipped = (double) clipped / seq.length();
 
         s = Seq(bam_get_qname(aln), seq.c_str(), qual.c_str(),
-                chr.c_str(), bp, strand, aln_type, pct_clipped);
+                chr.c_str(), bp, strand, aln_type, pct_clipped, aln->core.qual);
 
         if (cigar.size() > 0)
             bam_edit_gaps(cigar, s.seq);
