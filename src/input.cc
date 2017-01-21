@@ -31,6 +31,7 @@ Seq::Seq() {
     this->loc_str  = NULL;
     this->aln_type = AlnT::null;
     this->pct_clipped  = 0.0;
+    this->map_qual = 255;
 }
 
 Seq::Seq(const Seq& other)
@@ -62,6 +63,7 @@ Seq::Seq(const Seq& other)
 
     pct_clipped  = other.pct_clipped;
     aln_type = other.aln_type;
+    map_qual = other.map_qual;
 }
 
 Seq::Seq(const char *id, const char *seq) {
@@ -75,6 +77,7 @@ Seq::Seq(const char *id, const char *seq) {
 
     this->aln_type = AlnT::null;
     this->pct_clipped  = 0.0;
+    this->map_qual = 255;
 }
 
 Seq::Seq(const char *id, const char *seq, const char *qual)  {
@@ -89,6 +92,7 @@ Seq::Seq(const char *id, const char *seq, const char *qual)  {
 
     this->aln_type = AlnT::null;
     this->pct_clipped  = 0.0;
+    this->map_qual = 255;
 }
 
 Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand)  {
@@ -114,9 +118,10 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
 
     this->aln_type = AlnT::primary;
     this->pct_clipped  = 0.0;
+    this->map_qual = 255;
 }
 
-Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand, AlnT aln_type, double pct_clipped)  {
+Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uint bp, strand_type strand, AlnT aln_type, double pct_clipped, int map_qual)  {
     this->id      = new char[strlen(id)   + 1];
     this->qual    = new char[strlen(qual) + 1];
     this->loc_str = new char[strlen(chr)  + 15];
@@ -139,6 +144,7 @@ Seq::Seq(const char *id, const char *seq, const char *qual, const char *chr, uin
 
     this->aln_type = aln_type;
     this->pct_clipped  = pct_clipped;
+    this->map_qual = map_qual;
 }
 
 void swap(Seq& s1, Seq& s2) {

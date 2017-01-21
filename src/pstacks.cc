@@ -36,6 +36,7 @@ string out_path;
 int    sql_id        = -1;
 int    min_stack_cov = 3;
 double max_clipped   = 0.15;
+int    min_mapping_qual = 10;
 bool   keep_sec_alns = false;
 int    num_threads   = 1;
 
@@ -717,7 +718,8 @@ void load_radtags(string in_file, HashMap &radtags) {
     cerr << "Reading alignments...\n";
 
     int primary_kept   = 0;
-    int primary_disc   = 0;
+    int primary_qual   = 0;
+    int primary_clipped = 0;
     int secondary_kept = 0;
     int secondary_disc = 0;
     int supplementary  = 0;
@@ -730,11 +732,14 @@ void load_radtags(string in_file, HashMap &radtags) {
             continue;
             break;
         case AlnT::primary:
-            if (c.pct_clipped <= max_clipped) {
-                primary_kept++;
-            } else {
-                primary_disc++;
+            if (c.map_qual < min_mapping_qual) {
+                primary_qual++;
                 continue;
+            } else if (c.pct_clipped > max_clipped) {
+                primary_clipped++;
+                continue;
+            } else {
+                primary_kept++;
             }
             break;
         case AlnT::secondary:
@@ -767,9 +772,12 @@ void load_radtags(string in_file, HashMap &radtags) {
         }
     }
 
+    int n_primary = primary_kept+primary_qual+primary_clipped;
     cerr << "Done reading alignment records:\n"
          << "  Kept " << primary_kept << " primary alignments\n"
-         << "  Skipped " << primary_disc << " (" << as_percentage((double) primary_disc / (primary_disc+primary_kept))
+         << "  Skipped " << primary_qual << " (" << as_percentage((double) primary_qual / n_primary)
+         << ") primary alignments with insufficient mapping qualities\n"
+         << "  Skipped " << primary_clipped << " (" << as_percentage((double) primary_clipped / n_primary)
          << ") excessively soft-clipped primary alignments\n"
          << "  Skipped " << secondary_disc << " secondary alignments\n"
          << "  Skipped " << supplementary << " supplementary alignments\n"
@@ -852,6 +860,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"id",           required_argument, NULL, 'i'},
             {"min_cov",      required_argument, NULL, 'm'},
             {"max_clipped",  required_argument, NULL, 1001},
+            {"min_mapq",     required_argument, NULL, 1002},
             {"keep_sec_aln", required_argument, NULL, 'k'},
             {"num_threads",  required_argument, NULL, 'p'},
             {"bc_err_freq",  required_argument, NULL, 'e'},
@@ -906,6 +915,13 @@ int parse_command_line(int argc, char* argv[]) {
 
             if (max_clipped < 0 || max_clipped > 1.0) {
                 cerr << "Unable to parse the maximum clipped proportion.\n";
+                help();
+            }
+            break;
+        case 1002:
+            min_mapping_qual = is_integer(optarg);
+            if (min_mapping_qual) {
+                cerr << "Unable to parse the minimum mapping quality.\n";
                 help();
             }
             break;
@@ -1021,6 +1037,7 @@ void help() {
               << "  p: enable parallel execution with num_threads threads.\n"
               << "  t: input file Type. Supported types: bam, sam, bowtie (default: guess).\n"
               << "  --max_clipped <float>: alignments with more than this fraction of soft-clipped bases are discarded (default 15%).\n"
+              << "  --min_mapq <int>: minimum required quality (default 10).\n"
               << "  --keep_sec_alns: keep secondary alignments (default: false, only keep primary alignments).\n"
               << "\n"
               << "  Model options:\n"
@@ -1041,7 +1058,8 @@ void report_options(std::ostream& os) {
          << "Output directory: " << out_path << "\n"
          << "Sample ID: " << sql_id << "\n"
          << "Min locus depth: " << min_stack_cov << "\n"
-         << "Max clipped proportion: " << max_clipped << "\n";
+         << "Max clipped proportion: " << max_clipped << "\n"
+         << "Min mapping quality: " << max_clipped << "\n";
 
     // Model.
     if (model_type == snp) {
