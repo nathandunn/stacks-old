@@ -1791,7 +1791,7 @@ void help() {
               << "  P: path to the Stacks output files.\n"
               << "  o: output path to write results ('.' to override the current files).\n"
               << "  t: number of threads to run in parallel sections of code.\n"
-              << "  b: database/batch ID of the input catalog to consider (default 1).\n"
+              << "  b: database/batch ID of the input catalog to consider (default: guess).\n"
               << "  Filtering options:\n"
               << "    --lnl_filter: filter catalog loci based on the mean log likelihood of the catalog locus in the population.\n"
               << "      --lnl_lim <limit>: minimum log likelihood required to keep a catalog locus.\n"

@@ -5588,7 +5588,7 @@ void help() {
               << "  -O,--out_path: path to a directory where to write the output files. (Required by -V; otherwise defaults to value of -P.)\n"
               << "  -M,--popmap: path to a population map. (Format is 'SAMPLE1 \\t POP1 \\n SAMPLE2 ...'.)\n"
               << "  -t,--threads: number of threads to run in parallel sections of code.\n"
-              << "  -b,--batch_id: ID of the catalog to consider (default 1).\n"
+              << "  -b,--batch_id: ID of the catalog to consider (default: guess).\n"
               << "  -s,--sql_out: output a file to import results into an SQL database.\n"
               << "\n"
               << "Data Filtering:\n"

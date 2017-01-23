@@ -33,7 +33,7 @@
 
 using namespace std;
 
-const regex catalog_tags_regex ("^batch_([0-9]+).catalog.tags(.gz)$");
+const regex catalog_tags_regex ("^batch_([0-9]+).catalog.tags.tsv(.gz)?$");
 
 vector<int> find_catalogs(const string& dir_path) {
     vector<int> ids;

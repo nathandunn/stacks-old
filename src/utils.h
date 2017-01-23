@@ -90,10 +90,11 @@ public:
         }
         entry = readdir(dir);
     }
+    ~DirIterator() {closedir(dir);}
 
     const char* name() const {return entry->d_name;}
 
-    operator bool() const {return entry==NULL;}
+    operator bool() const {return entry!=NULL;}
     DirIterator& operator++() {entry = readdir(dir); return *this;}
     dirent* operator*() {return entry;}
 };
