@@ -1059,7 +1059,7 @@ void report_options(std::ostream& os) {
          << "Sample ID: " << sql_id << "\n"
          << "Min locus depth: " << min_stack_cov << "\n"
          << "Max clipped proportion: " << max_clipped << "\n"
-         << "Min mapping quality: " << max_clipped << "\n";
+         << "Min mapping quality: " << min_mapping_qual << "\n";
 
     // Model.
     if (model_type == snp) {
