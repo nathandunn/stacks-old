@@ -1483,7 +1483,7 @@ void help() {
               << "  M: path to a population map file from which to take sample names.\n"
               << "  s: filename prefix from which to load sample loci." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-              << "  b: ID of the catalog to consider (default: 1)." << "\n"
+              << "  b: ID of the catalog to consider (default: guess)." << "\n"
               << "  c: path to the catalog." << "\n"
               << "  o: output path to write results." << "\n"
               << "  x: don't verify haplotype of matching locus." << "\n"
