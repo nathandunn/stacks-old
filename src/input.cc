@@ -177,6 +177,8 @@ void swap(Seq& s1, Seq& s2) {
     s2.pct_clipped = p;
 
     swap(s1.loc, s2.loc);
+
+    std::swap(s1.map_qual, s2.map_qual);
 }
 
 Input::Input() {
