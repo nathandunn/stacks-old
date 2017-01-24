@@ -104,6 +104,8 @@ void read_sample_files(map<int, Locus*>& sloci, unordered_map<int, int>& sloc_to
 
 void write_bam_file(const map<int, Locus*>& sorted_loci, int sample_id) {
 
+    cout << "Writing the bam file..." << endl;
+
     string bam_path = prefix_path + ".matches.bam";
     htsFile* bam_f = hts_open(bam_path.c_str(), "wb");
 
@@ -152,7 +154,7 @@ void write_bam_file(const map<int, Locus*>& sorted_loci, int sample_id) {
             c.qual = 255;
             c.l_qname = strlen(name) + 1; //n.b. `l_qname` includes the null character.
             c.flag = 0;
-            c.n_cigar = 0;
+            c.n_cigar = 1; //An aligned sequence should have at least one cigar op.
             c.l_qseq = seq.length();
             c.mtid = -1;
             c.mpos = -1;
@@ -161,13 +163,16 @@ void write_bam_file(const map<int, Locus*>& sorted_loci, int sample_id) {
             // Htslib says: "bam1_t::data -- all variable-length data, concatenated;
             // structure: qname-cigar-seq-qual-aux, concatenated".
 
-            r->l_data = r->core.l_qname + r->core.n_cigar + seq.vsize() + seq.length() + l_aux;
+            r->l_data = r->core.l_qname + r->core.n_cigar*sizeof(uint32_t) + seq.vsize() + seq.length() + l_aux;
             r->m_data = r->l_data;
             r->data = new uchar[r->m_data];
 
             uchar* p = r->data;
             strcpy((char*)p, name);
             p += r->core.l_qname;
+            *(uint32_t*)p = seq.length() <<BAM_CIGAR_SHIFT; // Barcodes have their length on the 24 high bits & op on the low 8 bits.
+            *(uint32_t*)p |= 4; // S, c.f. Spec.
+            p += r->core.n_cigar*sizeof(uint32_t);
             memcpy(p, seq.vdata(), seq.vsize()); // n.b. `sizeof(DiNuc)==1`
             p += seq.vsize();
             memset(p, 0xFF, seq.length());
