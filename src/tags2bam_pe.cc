@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
     parse_command_line(argc, argv);
 
     // Open the log
-    string lg_path = prefix_path + ".tags2bam.log";
+    string lg_path = prefix_path + ".tags2bam_pe.log";
     if(!quiet)
         cout << "Logging to '" << lg_path << "'." << endl;
     lg = new LogAlterator(lg_path, quiet);
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
     // Write the BAM file.
     write_bam_file(sorted_loci, pe_reads_by_loc, sample_id);
 
-    cout << "tags2bam is done." << endl;
+    cout << "tags2bam_pe is done." << endl;
     return 0;
 }
 
@@ -120,8 +120,11 @@ void read_sample_files(
     for (auto& sloc : sloci) {
         const Locus& sloc2 = *sloc.second;
 
-        for (const char* read_name : sloc2.comp)
-            read_name_to_loc.insert({string(read_name), i});
+        for (const char* read_name : sloc2.comp) {
+            string pe_read (read_name);
+            convert_fw_read_name_to_paired(pe_read);
+            read_name_to_loc.insert({move(pe_read), i});
+        }
 
         cloci.push_back(sloc_to_cloc.at(sloc2.id));
         i++;
@@ -140,6 +143,8 @@ void load_pe_reads(
         const unordered_map<string, size_t>& read_name_to_loc
         ) {
 
+    cout << "Reading the paired-end reads..." << endl;
+
     Input* pe_reads_f;
     if (pe_reads_format == FileT::gzfastq)
         pe_reads_f = new GzFastq(pe_reads_path.c_str());
@@ -148,6 +153,9 @@ void load_pe_reads(
 
     size_t n_used_reads = 0;
     Seq seq;
+    seq.id   = new char[id_len]; // Necessary or GzFastq will segfault.
+    seq.seq  = new char[max_len];
+    seq.qual = new char[max_len];
     while(pe_reads_f->next_seq(seq)) {
         string id (seq.id);
         DNASeq4 seq4 (seq.seq); // xxx could assign
@@ -159,7 +167,7 @@ void load_pe_reads(
         ++n_used_reads;
 
         map<DNASeq4, vector<string> >& loc_stacks = pe_reads_by_loc.at(loc->second);
-        auto stack = *loc_stacks.insert({move(seq4), vector<string>()}).first;
+        auto& stack = *loc_stacks.insert({move(seq4), vector<string>()}).first;
         stack.second.push_back(move(id));
     }
 
@@ -205,6 +213,7 @@ void write_bam_file(
 
     size_t loc_i = 0; // Locus index; we use the same loop as for the header.
     bam1_t* r = bam_init1(); // As we're going to reuse the exact same fields for all the reads.
+
     for (auto& loc : sorted_loci) {
         for (auto& stack : pe_reads_by_loc.at(loc.second)) {
             for (const string& read_name : stack.second) {
@@ -283,8 +292,8 @@ void bad_args() {
 void report_options(ostream& os) {
     os << "Configuration for this run:\n"
        << "  Sample prefix: '" << prefix_path << "'\n"
-       << "  Paired-end reads path: '" << pe_reads_path << "'.\n"
-       << "    format: " + to_string(pe_reads_format) + "\n";
+       << "  Paired-end reads path: '" << pe_reads_path << "'\n"
+       << "  Paired-end reads format: " + to_string(pe_reads_format) + "\n";
 }
 
 void parse_command_line(int argc, char* argv[]) {
