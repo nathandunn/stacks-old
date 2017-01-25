@@ -203,12 +203,11 @@ void write_bam_file(
     string header_text = string() +
             "@HD\tVN:1.5\tSO:coordinate\n"
             "@RG\tID:" + to_string(sample_id) + "\tSM:" + sample_name + "\n";
-
-    vector<pair<string, uint32_t> > chrs;
+    size_t chrlen = pow<size_t>(2,31)-1;
     for (auto& loc : sorted_loci)
-        chrs.push_back({to_string(loc.first), pow<size_t>(2,31)-1});
+        header_text += string("@SQ\tSN:") + to_string(loc.first) + "\tLN:" + to_string(chrlen) + "\n";
 
-    write_bam_header(bam_f, header_text, chrs);
+    write_bam_header(bam_f, header_text);
 
     // Write the records.
     // ----------
@@ -223,17 +222,16 @@ void write_bam_file(
                 const DNASeq4& seq = stack.first;
 
                 // Prepare the `aux` array.
-                size_t l_aux = 3 + sizeof(int32_t);
-                uchar aux[l_aux];
-                aux[0] = 'R';
-                aux[1] = 'G';
-                aux[2] = 'i';
-                *(int32_t*)(aux+3) = sample_id;
+                string aux_s = string() + "RG" + "Z" + to_string(sample_id);
+                size_t l_aux = aux_s.size()+1;
+                uchar* aux = new uchar[l_aux];
+                memcpy(aux, aux_s.c_str(), l_aux);
 
                 // bam1_t::core
                 bam1_core_t& c = r->core;
                 c.tid = loc_i;
                 c.pos = 0;
+                c.bin = uint16_t(-1); // No idea
                 c.qual = 255;
                 c.l_qname = read_name.length() + 1; //n.b. `l_qname` includes the null character.
                 c.flag = 0;
@@ -241,6 +239,7 @@ void write_bam_file(
                 c.l_qseq = seq.length();
                 c.mtid = -1;
                 c.mpos = -1;
+                c.isize = -1; // No idea
 
                 // bam1_t::data
                 // Htslib says: "bam1_t::data -- all variable-length data, concatenated;

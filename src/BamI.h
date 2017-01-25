@@ -37,7 +37,7 @@
 // Write a header to a BAM file.
 // The header text should include all tags except @SQ, and seems to be written
 // in plain text in the BAM file.
-void write_bam_header(htsFile* bam_f, const std::string& header_text, const std::vector<std::pair<std::string, uint32_t> >& chrs);
+void write_bam_header(htsFile* bam_f, const std::string& header_text);
 
 class Bam: public Input {
     htsFile   *bam_fh;
