@@ -1382,6 +1382,11 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        help();
+    }
+
     if (in_dir.empty() && catalog_path.empty()) {
         cerr << "Error: You must specify one of -P or -c.\n";
         help();

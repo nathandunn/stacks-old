@@ -2612,6 +2612,11 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        help();
+    }
+
     if (set_kmer_len == false && (kmer_len < 5 || kmer_len > 31)) {
         cerr << "Kmer length must be between 5 and 31bp.\n";
         help();

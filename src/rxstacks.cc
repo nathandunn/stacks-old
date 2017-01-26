@@ -1723,6 +1723,11 @@ parse_command_line(int argc, char* argv[])
         }
     }
 
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        help();
+    }
+
     if (in_path.length() == 0) {
         cerr << "You must specify a path to the directory containing Stacks output files.\n";
         help();
