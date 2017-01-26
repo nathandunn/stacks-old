@@ -970,6 +970,11 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        help();
+    }
+
     if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
         cerr << "SNP model alpha significance level must be either 0.1, 0.05, 0.01, or 0.001.\n";
         help();

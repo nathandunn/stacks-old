@@ -1037,6 +1037,11 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        help();
+    }
+
     if (in_file.length() == 0 && in_path_1.length() == 0 && in_file_p1.length() == 0) {
         cerr << "You must specify an input file of a directory path to a set of input files.\n";
         help();
