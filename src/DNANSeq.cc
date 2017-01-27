@@ -91,6 +91,16 @@ DNANSeq::DNANSeq(const DNANSeq& other) : bits(other.bits) {
     memcpy(s, other.s, nbytes());
 }
 
+DNANSeq& DNANSeq::operator=(const DNANSeq& other) {
+    delete[] s;
+
+    bits = other.bits;
+    s = new unsigned char[nbytes()];
+    memcpy(s, other.s, nbytes());
+
+    return *this;
+}
+
 char DNANSeq::operator[](uint pos) const {
     unsigned char c, base;
     uint bit;

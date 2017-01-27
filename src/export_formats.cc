@@ -264,15 +264,6 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
         exit(-1);
     }
 
-    bool gl = false; // Whether to include the GL genotype subfield.
-    if (input_mode == InputMode::stacks
-            && !debug_flags.count("VCFCOMP")) {
-        gl=true;
-        // Load SNP data so that model likelihoods can be output to VCF file.
-        cerr << "In preparation for VCF export, loading SNP data for " <<  mpopi.samples().size() << " samples.\n";
-        populate_snp_calls(catalog, pmap, merge_map);
-    }
-
     //
     // Obtain the current date.
     //
@@ -337,8 +328,6 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
             rec.format.push_back("GT");
             rec.format.push_back("DP");
             rec.format.push_back("AD");
-            if (gl)
-                rec.format.push_back("GL");
 
             for (int j = 0; j < pmap->sample_cnt(); j++) {
                 stringstream sample;
@@ -346,13 +335,9 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
                 if (d[j] == NULL || col >= d[j]->len) {
                     // Data does not exist.
                     sample << "./.:0:.,.";
-                    if (gl)
-                        sample << ":.,.,.";
                 } else if (d[j]->model[col] == 'U') {
                     // Data exists, but the model call was uncertain.
                     sample << "./.:" << d[j]->tot_depth << ":.,.";
-                    if (gl)
-                        sample << ":.,.,.";
                 } else {
                     char allele1, allele2;
                     tally_observed_haplotypes(d[j]->obshap, snp_index, allele1, allele2);
@@ -360,34 +345,23 @@ write_vcf_ordered(map<int, CSLocus *> &catalog,
                     if (allele1 == 0) {
                         // More than two alleles in this sample
                         sample << "./.:" << d[j]->tot_depth << ":.,.";
-                        if (gl)
-                            sample << ":.,.,.";
                     } else {
                         // Write the genotype.
 
                         int dp1, dp2;
                         find_datum_allele_depths(d[j], snp_index, allele1, allele2, dp1, dp2);
 
-                        if(gl && col >= d[j]->snps.size())
-                            cerr << "Warning, unable to locate SNP call in column " << col << " for catalog locus " << loc->id << ", tag ID " << d[j]->id << "\n";
-
                         if (allele2 == 0) {
                             // homozygote
                             if (allele1 == ref) {
                                 sample << "0/0:" << d[j]->tot_depth << ":" << dp1 << "," << dp2;
-                                if (gl)
-                                    sample << ":" << - d[j]->snps[col]->lratio << ",.,.";
                             } else {
                                 sample << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1;
-                                if (gl)
-                                    sample << ":.,.," << - d[j]->snps[col]->lratio;
                             }
                         } else {
                             // heterozygote
                             sample << "0/1:" << d[j]->tot_depth
                                    << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1);
-                            if (gl)
-                                sample << ":.," << - d[j]->snps[col]->lratio << ",.";
                         }
                     }
                 }
@@ -415,15 +389,6 @@ write_vcf(map<int, CSLocus *> &catalog,
     if (writer.fail()) {
         cerr << "Error opening VCF file '" << file << "'\n";
         exit(-1);
-    }
-
-    bool gl = false; // Whether to include the GL genotype subfield.
-    if (input_mode == InputMode::stacks
-            && !debug_flags.count("VCFCOMP")) {
-        gl=true;
-        // Load SNP data so that model likelihoods can be output to VCF file.
-        cerr << "In preparation for VCF export, loading SNP data for " << mpopi.samples().size() << " samples.\n";
-        populate_snp_calls(catalog, pmap, merge_map);
     }
 
     //
@@ -502,8 +467,6 @@ write_vcf(map<int, CSLocus *> &catalog,
             rec.format.push_back("GT");
             rec.format.push_back("DP");
             rec.format.push_back("AD");
-            if (gl)
-                rec.format.push_back("GL");
 
             for (int j = 0; j < pmap->sample_cnt(); j++) {
                 stringstream sample;
@@ -511,13 +474,9 @@ write_vcf(map<int, CSLocus *> &catalog,
                 if (d[j] == NULL || col >= uint(d[j]->len)) {
                     // Data does not exist.
                     sample << "./.:0:.,.";
-                    if (gl)
-                        sample << ":.,.,.";
                 } else if (d[j]->model[col] == 'U') {
                     // Data exists, but the model call was uncertain.
                     sample << "./.:" << d[j]->tot_depth << ":.,.";
-                    if (gl)
-                        sample << ":.,.,.";
                 } else {
                     char allele1, allele2;
                     tally_observed_haplotypes(d[j]->obshap, ordered_loci[pos].snp_index, allele1, allele2);
@@ -525,8 +484,6 @@ write_vcf(map<int, CSLocus *> &catalog,
                     if (allele1 == 0) {
                         // More than two alleles in this sample
                         sample << "./.:" << d[j]->tot_depth << ":.,.";
-                        if (gl)
-                            sample << ":.,.,.";
                     } else {
                         // Write the genotype.
 
@@ -537,19 +494,13 @@ write_vcf(map<int, CSLocus *> &catalog,
                             // homozygote
                             if (allele1 == ref) {
                                 sample << "0/0:" << d[j]->tot_depth << ":" << dp1 << "," << dp2;
-                                if (gl)
-                                    sample << ":" << - d[j]->snps[col]->lratio << ",.,.";
                             } else {
                                 sample << "1/1:" << d[j]->tot_depth << ":" << dp2 << "," << dp1;
-                                if (gl)
-                                    sample << ":.,.," << - d[j]->snps[col]->lratio;
                             }
                         } else {
                             // heterozygote
                             sample << "0/1:" << d[j]->tot_depth
                                    << ":" << (allele1 == ref ? dp1 : dp2) << "," << (allele1 == ref ? dp2 : dp1);
-                            if (gl)
-                                sample << ":.," << - d[j]->snps[col]->lratio << ",.";
                         }
                     }
                 }
@@ -3062,57 +3013,6 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     return 0;
 }
 
-int
-populate_snp_calls(map<int, CSLocus *> &catalog,
-                   PopMap<CSLocus> *pmap,
-                   map<int, pair<merget, int> > &merge_map)
-{
-    map<int, CSLocus *>::iterator cit;
-    map<int, SNPRes *>::iterator sit;
-    CSLocus *loc;
-    Datum   *datum;
-    SNPRes  *snpr;
-    SNP     *snp;
-
-    for (uint i = 0; i < mpopi.samples().size(); i++) {
-        map<int, SNPRes *> snpres;
-        load_snp_calls(in_path + mpopi.samples()[i].name, snpres);
-
-        for (cit = catalog.begin(); cit != catalog.end(); cit++) {
-            loc = cit->second;
-            datum = pmap->datum(loc->id, mpopi.samples()[i].id);
-
-            if (datum != NULL && snpres.count(datum->id)) {
-
-                if (merge_sites && merge_map.count(loc->id)) {
-                    datum_adjust_snp_positions(merge_map, loc, datum, snpres);
-                } else {
-                    //
-                    // Deep copy the SNP objects.
-                    //
-                    snpr = snpres[datum->id];
-                    for (uint j = 0; j < snpr->snps.size(); j++) {
-                        snp         = new SNP;
-                        snp->col    = snpr->snps[j]->col;
-                        snp->lratio = snpr->snps[j]->lratio;
-                        snp->rank_1 = snpr->snps[j]->rank_1;
-                        snp->rank_2 = snpr->snps[j]->rank_2;
-                        snp->rank_3 = snpr->snps[j]->rank_3;
-                        snp->rank_4 = snpr->snps[j]->rank_4;
-
-                        datum->snps.push_back(snp);
-                    }
-                }
-            }
-        }
-
-        for (sit = snpres.begin(); sit != snpres.end(); sit++)
-            delete sit->second;
-    }
-
-    return 0;
-}
-
 /*
  * Calculate the SNP-wise allelic depths by adding up the haplotype depths.
  */
@@ -3265,69 +3165,6 @@ int tally_haplotype_freq(CSLocus *locus, PopMap<CSLocus> *pmap,
     }
 
     freq_str = s.str();
-
-    return 0;
-}
-
-int
-datum_adjust_snp_positions(map<int, pair<merget, int> > &merge_map,
-                           CSLocus *loc, Datum *datum,
-                           map<int, SNPRes *> &snpres)
-{
-    //
-    // We will start with the 'sink' locus, which was originally on the negative strand:
-    //   1. If the locus was shorter than the catalog locus, pad the difference.
-    //   2. Convert to positive strand: Reverse the order, complement the alleles,
-    //      alter the internal column position.
-    //
-    SNP    *snp;
-    SNPRes *snpr     = snpres[datum->id];
-    int     index    = 0;
-    int     stop_pos = renz_olap[enz] - 1;
-
-    //
-    // We know the catalog was padded since we already padded hte model call string
-    // if it was necessary when originally merging.
-    //
-    while (datum->model[index] == 'N') {
-        snp         = new SNP;
-        snp->col    = index;
-        snp->lratio = 0.0;
-        snp->rank_1 = 'N';
-        snp->type   = snp_type_unk;
-        datum->snps.push_back(snp);
-        index++;
-    }
-
-    for (int j = snpr->snps.size() - 1; j > stop_pos; j--) {
-        snp         = new SNP;
-        snp->col    = index;
-        snp->lratio = snpr->snps[j]->lratio;
-        snp->rank_1 = reverse(snpr->snps[j]->rank_1);
-        snp->rank_2 = reverse(snpr->snps[j]->rank_2);
-        snp->rank_3 = reverse(snpr->snps[j]->rank_3);
-        snp->rank_4 = reverse(snpr->snps[j]->rank_4);
-        datum->snps.push_back(snp);
-        index++;
-    }
-
-    //
-    // Now we fetch the former locus, the 'src', which was originally on the positive strand.
-    // All we have to do is adjust the column position of each SNP.
-    //
-    snpr = snpres[datum->merge_partner];
-
-    for (uint j = 0; j < snpres[datum->id]->snps.size(); j++) {
-        snp         = new SNP;
-        snp->col    = index;
-        snp->lratio = snpr->snps[j]->lratio;
-        snp->rank_1 = snpr->snps[j]->rank_1;
-        snp->rank_2 = snpr->snps[j]->rank_2;
-        snp->rank_3 = snpr->snps[j]->rank_3;
-        snp->rank_4 = snpr->snps[j]->rank_4;
-        datum->snps.push_back(snp);
-        index++;
-    }
 
     return 0;
 }

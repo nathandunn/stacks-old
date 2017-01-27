@@ -76,16 +76,17 @@ typedef unordered_map<DNANSeq, vector<Seq*> > HashMap;
 void   help( void );
 void   version( void );
 int    parse_command_line(int, char**);
-int    load_radtags(string, HashMap &);
+void   load_radtags(string, HashMap &);
 int    reduce_radtags(HashMap &, map<int, PStack *> &);
-int    populate_merged_tags(map<int, PStack *> &, map<int, MergedStack *> &);
+void   populate_merged_tags(map<int, PStack *> &, map<int, MergedStack *> &);
+void   delete_low_cov_loci(map<int, MergedStack *>&, const map<int, PStack *>&);
 int    call_consensus(map<int, MergedStack *> &, map<int, PStack *> &, bool);
-int    call_alleles(MergedStack *, vector<DNANSeq *> &);
-int    count_raw_reads(map<int, PStack *> &, map<int, MergedStack *> &);
-double calc_coverage_distribution(map<int, PStack *> &, map<int, MergedStack *> &);
+void   call_alleles(MergedStack *, vector<DNANSeq *> &);
+void   calc_coverage_distribution(const map<int, PStack*>&, const map<int, MergedStack *>&, double&, double&, double&);
 int    write_results(map<int, MergedStack *> &, map<int, PStack *> &);
 
-//
+void report_options(std::ostream& os);
+
 // Debugging
 //
 int  dump_stacks(map<int, PStack *> &);

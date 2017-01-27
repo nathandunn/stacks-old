@@ -41,7 +41,7 @@ using std::endl;
 #include "utils.h"
 #include "stacks.h"
 
-enum alnt {pri_aln, sec_aln, sup_aln};
+enum class AlnT {null, primary, secondary, supplementary};
 
 class Seq {
  public:
@@ -52,8 +52,9 @@ class Seq {
     //
     // Information for an aligned sequence.
     //
-    alnt   aln_type;
-    double pct_aln;
+    AlnT   aln_type;
+    double pct_clipped;
+    int    map_qual;
     char  *loc_str;
     PhyLoc loc;
 
@@ -62,7 +63,7 @@ class Seq {
     Seq(const char *, const char *);
     Seq(const char *, const char *, const char *);
     Seq(const char *, const char *, const char *, const char *, uint, strand_type);
-    Seq(const char *, const char *, const char *, const char *, uint, strand_type, alnt, double);
+    Seq(const char *, const char *, const char *, const char *, uint, strand_type, AlnT, double, int);
     ~Seq( void ) {
         if (id != NULL)
             delete[] id;
