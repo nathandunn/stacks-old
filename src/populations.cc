@@ -22,6 +22,7 @@
 // populations -- generate population genetic statistics and output
 // haplotypes in a population context.
 //
+#include <cctype>
 
 #include <dirent.h>
 #include <sys/types.h>
@@ -167,15 +168,13 @@ int main (int argc, char* argv[]) {
     //
     // Open and initialize the log file.
     //
-    struct stat path_stat;
-    if (stat(out_path.c_str(), &path_stat) == 0) {
+    struct stat out_path_stat;
+    if (stat(out_path.substr(0, out_path.length()-1).c_str(), &out_path_stat) == 0) {
         // Path exists, check that it is a directory
-        DIR* d = opendir(out_path.c_str());
-        if (d == NULL) {
-            cerr << "Error: Failed to open '" << out_path << "' as a directory.\n";
+        if (!S_ISDIR(out_path_stat.st_mode)) {
+            cerr << "Error: '" << out_path.substr(0, out_path.length()-1) << "' is not a directory.\n";
             return -1;
         }
-        closedir(d);
     } else if (mkdir(out_path.c_str(), ACCESSPERMS) != 0) {
         // Failed to create the directory.
         cerr << "Error: Failed to create directory '" << out_path << "'.\n";
@@ -213,10 +212,6 @@ int main (int argc, char* argv[]) {
     if (not pmap_path.empty()) {
         cerr << "Parsing population map...\n";
         mpopi.init_popmap(pmap_path);
-        if (mpopi.samples().empty()) {
-            cerr << "Error: Failed to open or parse population map file '" << pmap_path << "'.\n";
-            return -1;
-        }
         cerr << "The population map contained " << mpopi.samples().size() << " samples, "
              << mpopi.pops().size() << " population(s), " << mpopi.groups().size() << " group(s).\n";
     }
@@ -228,10 +223,6 @@ int main (int argc, char* argv[]) {
         if (pmap_path.empty()) {
             cerr << "No population map specified, building file list...\n";
             mpopi.init_directory(in_path);
-            if (mpopi.samples().empty()) {
-                cerr << "Error: Failed to find sample files in directory '" << in_path << "'.\n";
-                return -1;
-            }
         }
 
         // Check that at least one sample file exists in the directory.
@@ -282,10 +273,10 @@ int main (int argc, char* argv[]) {
             vector<CatMatch *>& m = catalog_matches.back();
             load_catalog_matches(in_path + mpopi.samples().at(i).name, m);
 
-            if (m.size() == 0) {
-                cerr << "Warning: Absent or malformed matches file '"
-                     << mpopi.samples()[i].name << ".matches.tsv(.gz)"
-                     <<"', excluding this sample from population analysis.\n";
+            if (m.size() == 0 || m[0]->batch_id != batch_id) {
+                cerr << "Warning: File '" << mpopi.samples()[i].name << ".matches.tsv(.gz)'"
+                        " is absent, malformed, or does not match the catalog batch ID. Excluding"
+                        " this sample from population analysis.\n";
                 samples_to_remove.push_back(i);
                 catalog_matches.pop_back(); // This introduces an index shift between catalog_matches and [i]/[mpopi],
                                             // which will be resolved by a call to MetaPopInfo::delete_samples().
@@ -615,6 +606,11 @@ int main (int argc, char* argv[]) {
             cerr << "Notice: Smoothing was requested (-k), but will not be performed as the loci are not ordered.\n";
         }
     }
+
+    //
+    // Log the SNPs per locus distribution.
+    //
+    log_snps_per_loc_distrib(log_fh, catalog);
 
     calculate_haplotype_stats(catalog, pmap, psum);
 
@@ -1839,25 +1835,7 @@ merge_datums(int sample_cnt,
             cerr << "Unexpected condition in merging datums: one datum is NULL while the other is not.\n";
 
         //
-        // 1. Reverse complement the SNP coordinates in the sink locus so that they are
-        //    enumerated on the positive strand. Complement the alleles as well.
-        //
-        for (uint j = 0; j < sink[i]->snps.size(); j++) {
-            sink[i]->snps[j]->col    = sink[i]->len - sink[i]->snps[j]->col - 1;
-            sink[i]->snps[j]->rank_1 = reverse(sink[i]->snps[j]->rank_1);
-            sink[i]->snps[j]->rank_2 = reverse(sink[i]->snps[j]->rank_2);
-            sink[i]->snps[j]->rank_3 = reverse(sink[i]->snps[j]->rank_3);
-            sink[i]->snps[j]->rank_4 = reverse(sink[i]->snps[j]->rank_4);
-        }
-
-        //
-        // 2. Adjust the SNP coordinates in the src locus to account for the now, longer length.
-        //
-        for (uint j = 0; j < src[i]->snps.size(); j++)
-            src[i]->snps[j]->col = sink[i]->len + src[i]->snps[j]->col - renz_olap[enz];
-
-        //
-        // 3. Reverse complement the observed haplotypes in the sink locus.
+        // 1. Reverse complement the observed haplotypes in the sink locus.
         //
         haplen = strlen(sink[i]->obshap[0]);
         for (uint j = 0; j < sink[i]->obshap.size(); j++) {
@@ -1866,24 +1844,11 @@ merge_datums(int sample_cnt,
             tmphap[haplen] = '\0';
             strcpy(sink[i]->obshap[j], tmphap);
         }
-
-        //
-        // 4. Combine SNPs between the two datums: add the SNPs from the sink (formerly on the
-        //    negative strand) in reverse order, followed by the SNPs from the src.
-        //
-        tmpsnp.clear();
-        for (int j = (int) sink[i]->snps.size() - 1; j >= 0; j--)
-            tmpsnp.push_back(sink[i]->snps[j]);
-        for (uint j = 0; j < src[i]->snps.size(); j++)
-            tmpsnp.push_back(src[i]->snps[j]);
-        sink[i]->snps.clear();
-        for (uint j = 0; j < tmpsnp.size(); j++)
-            sink[i]->snps.push_back(tmpsnp[j]);
     }
 
     //
-    // 5. Combine observed haplotypes between the two datums while phasing them.
-    //    5.1 First combine the haplotypes from samples that are already in phase.
+    // 2. Combine observed haplotypes between the two datums while phasing them.
+    //    2.1 First combine the haplotypes from samples that are already in phase.
     //
     string      merged_hap;
     vector<int> to_be_phased;
@@ -1933,7 +1898,7 @@ merge_datums(int sample_cnt,
         }
     }
     //
-    //    5.2 Phase and combine the haplotypes from the remaining samples.
+    //    2.2 Phase and combine the haplotypes from the remaining samples.
     //
     int index;
     for (uint i = 0; i < to_be_phased.size(); i++) {
@@ -1979,7 +1944,7 @@ merge_datums(int sample_cnt,
     }
 
     //
-    // 6. Merge model calls; Set the length; combine the two depth and lnl measures together.
+    // 3. Merge model calls; Set the length; combine the two depth and lnl measures together.
     //
     string model_calls;
     char  *p;
@@ -3658,6 +3623,31 @@ haplotype_d_est(Datum **d, LocSum **s, vector<int> &pop_ids)
     return d_est;
 }
 
+void log_snps_per_loc_distrib(std::ostream& log_fh, map<int, CSLocus*>& catalog)
+{
+
+    // N.B. The method below gives the same numbers as by counting the SNPs that satisfy
+    // `LocTally::nucs[col].allele_cnt >= 2`.
+    // This is different than the sumstats file, that uses `LocTally::nucs[col].allele_cnt == 2`;
+    // The difference seems to be about 1/1000.
+
+    // Bin loci by number of SNPs.
+    map<size_t, size_t> snps_per_loc_distrib;
+    for (auto& cloc : catalog)
+        ++snps_per_loc_distrib[cloc.second->snps.size()];
+
+    // Fill the gaps in the distribution.
+    size_t n_max = snps_per_loc_distrib.rbegin()->first;
+    for(size_t i=0; i<n_max; ++i)
+        snps_per_loc_distrib.insert({i, 0});
+
+    // Write the distribution.
+    log_fh << "# Distribution of the number of SNPs per locus.\n"
+              "#n_snps\tn_loci\n";
+    for(const auto& n_snps : snps_per_loc_distrib)
+        log_fh << n_snps.first << "\t" << n_snps.second << "\n";
+}
+
 int
 calculate_summary_stats(map<int, CSLocus *> &catalog, PopMap<CSLocus> *pmap, PopSum<CSLocus> *psum)
 {
@@ -5198,8 +5188,8 @@ int parse_command_line(int argc, char* argv[]) {
             {"hzar",           no_argument,       NULL, 'Z'},
             {"treemix",        no_argument,       NULL, 'U'},
             {"merge_sites",    no_argument,       NULL, 'D'},
-            {"window_size",    required_argument, NULL, 'w'},
-            {"threads",    required_argument, NULL, 't'},
+            {"sigma",          required_argument, NULL, 1005},
+            {"threads",        required_argument, NULL, 't'},
             {"batch_id",       required_argument, NULL, 'b'},
             {"in_path",        required_argument, NULL, 'P'},
             {"out_path",       required_argument, NULL, 'O'},
@@ -5460,12 +5450,13 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'e':
             enz = optarg;
+            enz.at(0) = tolower(enz.at(0));
             if (renz.count(enz) == 0) {
                 cerr << "Unrecognized restriction enzyme specified: '" << enz.c_str() << "'.\n";
                 help();
             }
             break;
-        case 'w':
+        case 1005: //sigma
             sigma = atof(optarg);
             break;
         case 'v':
@@ -5505,6 +5496,11 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        help();
+    }
+
     //
     // Check argument constrains.
     //
@@ -5527,8 +5523,16 @@ int parse_command_line(int argc, char* argv[]) {
             cerr << "A population map was not specified, all samples will be read from '" << in_path << "' as a single popultaion.\n";
 
         if (batch_id < 0) {
-            cerr << "You must specify a batch ID.\n";
-            help();
+            vector<int> cat_ids = find_catalogs(in_path);
+            if (cat_ids.size() == 1) {
+                batch_id = cat_ids[0];
+            } else if (cat_ids.empty()) {
+                cerr << "Error: Unable to find a catalog in '" << in_path << "'.\n";
+                help();
+            } else {
+                cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
+                help();
+            }
         }
 
         if (out_path.empty())
@@ -5576,15 +5580,15 @@ void version() {
 void help() {
     cerr << "populations " << VERSION << "\n"
          << "Usage:\n"
-              << "populations -P dir -b batch_id [-O dir] [-M popmap] (filters) [--fstats] [-k [--window_size=150000] [--bootstrap [-N 100]]] (output formats)\n"
-              << "populations -V vcf -O dir [-M popmap] (filters) [--fstats] [-k [--window_size=150000] [--bootstrap [-N 100]]] (output formats)\n"
+              << "populations -P dir [-O dir] [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"
+              << "populations -V vcf -O dir [-M popmap] (filters) [--fstats] [-k [--sigma=150000] [--bootstrap [-N 100]]] (output formats)\n"
               << "\n"
               << "  -P,--in_path: path to the directory containing the Stacks files.\n"
-              << "  -b,--batch_id: Batch ID to examine when exporting from the catalog (required by -P).\n"
               << "  -V,--in_vcf: path to an input VCF file.\n"
-              << "  -O,--out_path: path to a directory where to white the output files. (Required by -V; otherwise defaults to value of -P.)\n"
-              << "  -M,--popmap: path to a population map. (Format is 'SAMPLE1\tPOP1\\n...'.)\n"
+              << "  -O,--out_path: path to a directory where to write the output files. (Required by -V; otherwise defaults to value of -P.)\n"
+              << "  -M,--popmap: path to a population map. (Format is 'SAMPLE1 \\t POP1 \\n SAMPLE2 ...'.)\n"
               << "  -t,--threads: number of threads to run in parallel sections of code.\n"
+              << "  -b,--batch_id: ID of the catalog to consider (default: guess).\n"
               << "  -s,--sql_out: output a file to import results into an SQL database.\n"
               << "\n"
               << "Data Filtering:\n"

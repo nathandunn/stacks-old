@@ -130,9 +130,7 @@ bool rank_alignments(Aln, Aln);
 //
 // Calculate depth of coverage statistics for stacks
 //
-int calc_coverage_distribution(map<int, Stack *> &, double &, double &, double &);
-int calc_coverage_distribution(map<int, Stack *> &, map<int, MergedStack *> &, double &, double &, double &);
-int calc_coverage_distribution(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, double &, double &, double &);
+void calc_coverage_distribution(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &, double &, double &, double &);
 int count_raw_reads(map<int, Stack *> &, map<int, Rem *> &, map<int, MergedStack *> &);
 
 //

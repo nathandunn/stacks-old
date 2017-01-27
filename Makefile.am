@@ -1,7 +1,7 @@
 bin_PROGRAMS = ustacks pstacks estacks cstacks sstacks rxstacks hstacks process_radtags process_shortreads \
 	kmer_filter clone_filter genotypes populations phasedstacks
 
-ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h \
+ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/constants.h src/constants.cc \
 	src/mstack.h src/mstack.cc src/mst.h src/mst.cc src/cmb.h src/cmb.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/models.h src/models.cc src/utils.h src/utils.cc \
@@ -9,73 +9,78 @@ ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/co
 	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
 	src/gzFasta.h src/gzFastq.h
 
-pstacks_SOURCES = src/pstacks.h src/pstacks.cc src/stacks.h src/stacks.cc src/constants.h \
+pstacks_SOURCES = src/pstacks.h src/pstacks.cc \
+	src/stacks.h src/stacks.cc \
+	src/constants.h src/constants.cc \
 	src/mstack.h src/mstack.cc \
+	src/log_utils.h src/log_utils.cc \
 	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
-	src/models.h src/models.cc src/utils.h src/utils.cc \
+	src/models.h src/models.cc src/utils.h src/utils.cc src/aln_utils.h src/aln_utils.cc \
 	src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h \
 	src/BamI.h
 
-estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/constants.h \
+estacks_SOURCES = src/estacks.h src/estacks.cc src/stacks.h src/stacks.cc src/constants.h src/constants.cc \
 	src/mstack.h src/mstack.cc \
-        src/models.h src/models.cc src/utils.h src/utils.cc \
+        src/models.h src/models.cc src/utils.h src/utils.cc src/aln_utils.h src/aln_utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
         src/input.h src/input.cc src/Tsv.h src/BowtieI.h src/FastaI.h src/FastqI.h src/SamI.h
 
-cstacks_SOURCES = src/cstacks.h src/cstacks.cc src/constants.h \
+cstacks_SOURCES = src/cstacks.h src/cstacks.cc src/constants.h src/constants.cc \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/kmers.h src/kmers.cc src/utils.h src/utils.cc \
 	src/GappedAln.h src/aln_utils.h src/aln_utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc
+	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc \
+	src/MetaPopInfo.h src/MetaPopInfo.cc
 
-hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/constants.h \
+hstacks_SOURCES = src/hstacks.h src/hstacks.cc src/constants.h src/constants.cc \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/kmers.h src/kmers.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/utils.h src/utils.cc \
 	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc
 
-sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/constants.h \
+sstacks_SOURCES = src/sstacks.h src/sstacks.cc src/constants.h src/constants.cc \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/kmers.h src/kmers.cc \
 	src/GappedAln.h src/aln_utils.h src/aln_utils.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc src/utils.h src/utils.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc
+	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc src/catalog_utils.cc \
+	src/MetaPopInfo.h src/MetaPopInfo.cc
 
-rxstacks_SOURCES = src/rxstacks.h src/rxstacks.cc src/constants.h \
+rxstacks_SOURCES = src/rxstacks.h src/rxstacks.cc src/constants.h src/constants.cc \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNANSeq.h src/DNANSeq.cc src/DNASeq.h src/DNASeq.cc \
 	src/mst.h src/mst.cc \
 	src/models.h src/models.cc \
 	src/aln_utils.h src/aln_utils.cc src/utils.h src/utils.cc \
-	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc \
+	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc src/catalog_utils.cc \
 	src/MetaPopInfo.h src/MetaPopInfo.cc
 
-process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h \
-	src/utils.h src/utils.cc src/log_utils.h \
+process_radtags_SOURCES = src/process_radtags.h src/process_radtags.cc src/constants.h src/constants.cc \
+	src/utils.h src/utils.cc src/log_utils.h src/log_utils.cc \
 	src/write.h src/write.cc \
 	src/clean.h src/clean.cc \
 	src/file_io.h src/file_io.cc \
 	src/input.h src/input.cc src/BustardI.h src/BamUnalignedI.h src/FastqI.h src/gzFastq.h \
 	src/renz.h src/renz.cc
 
-process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h \
+process_shortreads_SOURCES = src/process_shortreads.h src/process_shortreads.cc src/constants.h src/constants.cc \
 	src/clean.h src/clean.cc \
 	src/file_io.h src/file_io.cc \
-	src/utils.h src/utils.cc src/log_utils.h \
+	src/utils.h src/utils.cc src/log_utils.h src/log_utils.cc \
 	src/write.h src/write.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/BustardI.h src/BamUnalignedI.h src/FastqI.h src/gzFastq.h 
 
-kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h \
+kmer_filter_SOURCES = src/kmer_filter.h src/kmer_filter.cc src/constants.h src/constants.cc \
 	src/utils.h src/utils.cc \
 	src/write.h src/write.cc \
 	src/kmers.h src/kmers.cc \
 	src/input.h src/input.cc src/BustardI.h src/FastqI.h src/FastaI.h \
 	src/gzFastq.h src/gzFasta.h
 
-clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h \
+clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h src/constants.cc \
 	src/kmers.h src/kmers.cc \
 	src/utils.h src/utils.cc \
 	src/write.h src/write.cc \
@@ -83,9 +88,9 @@ clone_filter_SOURCES = src/clone_filter.h src/clone_filter.cc src/constants.h \
 	src/input.h src/input.cc src/BustardI.h src/FastqI.h src/FastaI.h \
 	src/gzFastq.h src/gzFasta.h
 
-genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
+genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h src/constants.cc \
 	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc \
-	src/log_utils.h \
+	src/log_utils.h src/log_utils.cc \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/aln_utils.h src/aln_utils.cc \
@@ -93,9 +98,9 @@ genotypes_SOURCES = src/genotypes.h src/genotypes.cc src/constants.h \
 	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc src/renz.h src/renz.cc \
 	src/MetaPopInfo.h src/MetaPopInfo.cc
 
-populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
+populations_SOURCES = src/populations.h src/populations.cc src/constants.h src/constants.cc \
 	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc \
-	src/log_utils.h \
+	src/log_utils.h src/log_utils.cc \
 	src/stacks.h src/stacks.cc src/locus.h src/locus.cc \
 	src/DNASeq.h src/DNASeq.cc src/DNANSeq.h src/DNANSeq.cc \
 	src/PopMap.h src/PopSum.h src/aln_utils.h src/aln_utils.cc src/genotype_dictionaries.h src/genotype_dictionaries.cc \
@@ -104,10 +109,10 @@ populations_SOURCES = src/populations.h src/populations.cc src/constants.h \
 	src/export_formats.h src/export_formats.cc \
 	src/MetaPopInfo.h src/MetaPopInfo.cc src/Vcf.h src/Vcf.cc
 
-phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h \
+phasedstacks_SOURCES = src/phasedstacks.h src/phasedstacks.cc src/constants.h src/constants.cc \
 	src/locus.h src/locus.cc \
 	src/input.h src/input.cc src/sql_utilities.h src/sql_utilities.cc \
-	src/log_utils.h \
+	src/log_utils.h src/log_utils.cc \
 	src/utils.h src/utils.cc src/catalog_utils.h src/catalog_utils.cc 
 
 ustacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
@@ -115,8 +120,9 @@ ustacks_LDFLAGS   = $(OPENMP_CFLAGS)
 pstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(BAM_CFLAGS) $(SPARSEHASH_CFLAGS)
 pstacks_LDFLAGS   = $(OPENMP_CFLAGS)
 pstacks_LDADD     = $(BAM_LIBS)
-estacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
+estacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS) $(BAM_CFLAGS)
 estacks_LDFLAGS   = $(OPENMP_CFLAGS)
+estacks_LDADD = $(BAM_LIBS)
 cstacks_CXXFLAGS  = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)
 cstacks_LDFLAGS   = $(OPENMP_CFLAGS)
 hstacks_CXXFLAGS = $(OPENMP_CFLAGS) $(SPARSEHASH_CFLAGS)

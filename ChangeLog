@@ -1,3 +1,35 @@
+Stacks 1.45 - tba
+--------------------------
+    Feature: Tweaked the interfaces of most programs:
+             * cstacks and sstacks now accept a population map as input.
+             * process_radtags will now reuse the input directory name in its log file name.
+             * Reworked pstacks output.
+             * Batch ID now defaults to 1 in cstacks, and sstacks and other will try to guess
+               it from the contents of the given directory/catalog path.
+             * pstacks/ustacks/process_radtags will now try to guess file formats.
+             * Default (fallback) format in process_radtags/process_shortread is now gzfastq.
+             * pstacks: Substituted --max_clipped to --min_aln_pct.
+             * ustacks -r has become the default; --keep-high-cov reverses it.
+             * cstacks now checks for sample ID unicity.
+             * Updated help messages.
+    Feature: populations now logs the 'number of SNPs per locus' distribution.
+    Feature: Added mapping quality filter in pstacks (--min_mapq).
+    Feature: Added enzyme ApaLI.
+
+    Bugfix: populations: Corrected a VCF-related segfault (current use of VCF's GL field was
+            improper and was removed).
+    Bugfix: rxstacks: Corrected a bug that affected locus likelihood medians.
+    Bugfix: pstacks/ustacks: Corrected a bug that affected coverage standard deviations.
+    Bugfix: populations: Fixed parsing of option --sigma.
+    Bugfix: Fixed process_radtags writing fasta (instead of fastq) discard files when input
+            files were gzfastq.
+
+Stacks 1.44 - Oct 11, 2016
+--------------------------
+	Bugfix: corrected an error in pstacks where '=' and 'X' symbols were not recognized properly in SAM/BAM
+	CIGAR strings.
+	Bugfix: corrected some typos in pstacks/populations help output.
+
 Stacks 1.43 - Oct 05, 2016
 --------------------------
 	Feature: added alignment controls to pstacks, allowing the program to discard secondary alignments
@@ -9,6 +41,7 @@ Stacks 1.43 - Oct 05, 2016
 	multiple alignment had to be recomputed the initial CIGAR string was not parsed properly leading to the
 	catalog and query sequences coming out of sync in their length (which could throw the exception).
 	Feature: reduced memory usage in ustacks and pstacks by not retaining all reads from a collapsed locus.
+	Bugfix: corrected -V option for populations, which was causing a crash (although --in_vcf worked).
 
 Stacks 1.42 - Aug 05, 2016
 --------------------------

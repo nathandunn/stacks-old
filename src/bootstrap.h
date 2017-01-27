@@ -312,19 +312,10 @@ template<class StatT>
 double
 Bootstrap<StatT>::pval(double stat, vector<double> &dist)
 {
-    vector<double>::iterator up;
-    double pos;
-
-    up = upper_bound(dist.begin(), dist.end(), stat);
-
-    if (up == dist.begin())
-        pos = 1;
-    else if (up == dist.end())
-        pos = dist.size();
-    else
-        pos = up - dist.begin() + 1;
-
-    double res = 1.0 - (pos / (double) dist.size());
+    // Rank `stat` relative to the bootstrapped distribution.
+    // `first_greater` is between 0 (if `stat` is smaller than all values in the
+    // distribution) and `dist.size()` (if `stat` is greater than all of them).
+    size_t first_greater = upper_bound(dist.begin(), dist.end(), stat) - dist.begin();
 
     // cerr << "Generated Smoothed Fst Distribution:\n";
     // for (uint n = 0; n < dist.size(); n++)
@@ -334,7 +325,7 @@ Bootstrap<StatT>::pval(double stat, vector<double> &dist)
     //          << " at position " << (up - dist.begin()) << " out of "
     //          << dist.size() << " positions (converted position: " << pos << "); pvalue: " << res << ".\n";
 
-    return res;
+    return 1.0 - (double) first_greater / dist.size();
 }
 
 
