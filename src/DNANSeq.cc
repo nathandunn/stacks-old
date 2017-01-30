@@ -112,7 +112,7 @@ char DNANSeq::operator[](uint pos) const {
     c    = 0;
     base = 'X';
 
-    for (uint i = bits_per_nuc - 1; i >= 0; i--) {
+    for (int i = bits_per_nuc - 1; i >= 0; i--) {
         if (testbit(s, bit))
             c |= 1 << i;
         bit++;
