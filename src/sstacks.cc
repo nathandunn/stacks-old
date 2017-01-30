@@ -22,7 +22,14 @@
 // sstacks -- search for occurances of stacks in a catalog of stacks.
 //
 
+#include <regex>
+
+#include "catalog_utils.h"
+#include "MetaPopInfo.h"
+
 #include "sstacks.h"
+
+using namespace std;
 
 // Global variables to hold command-line options.
 queue<string> samples;
@@ -30,7 +37,7 @@ string  catalog_path;
 string  out_path;
 FileT   in_file_type = FileT::sql;
 int     num_threads  = 1;
-int     batch_id     = 0;
+int     batch_id     = -1;
 int     samp_id      = 0;
 int     catalog      = 0;
 bool    verify_haplotypes       = true;
@@ -92,7 +99,7 @@ int main (int argc, char* argv[]) {
         sample_path = samples.front();
         samples.pop();
 
-        cerr << "Processing sample '" << sample_path << "' [" << i << " of " << sample_cnt << "]\n";
+        cerr << "\nProcessing sample '" << sample_path << "' [" << i << " of " << sample_cnt << "]\n";
 
         res = load_loci(sample_path, sample, 0, false, compressed);
 
@@ -144,8 +151,8 @@ int main (int argc, char* argv[]) {
     //
     for (map<int, Locus *>::iterator j = catalog.begin(); j != catalog.end(); j++)
         delete j->second;
-    catalog.clear();
 
+    cerr << "\nsstacks is done.\n";
     return 0;
 }
 
@@ -1288,29 +1295,31 @@ write_matches(string sample_path, map<int, QLocus *> &sample)
 }
 
 int parse_command_line(int argc, char* argv[]) {
-        string sample_file;
-        int c;
+    string in_dir;
+    string popmap_path;
+    vector<string> sample_names;
 
     while (1) {
         static struct option long_options[] = {
             {"help",              no_argument, NULL, 'h'},
             {"version",           no_argument, NULL, 'v'},
-            {"genomic_loc",       no_argument, NULL, 'g'},
+            {"aligned",           no_argument, NULL, 'g'},
             {"verify_hap",        no_argument, NULL, 'x'},
             {"uniq_haplotypes",   no_argument, NULL, 'u'},
             {"gapped",            no_argument, NULL, 'G'},
             {"num_threads", required_argument, NULL, 'p'},
             {"batch_id",    required_argument, NULL, 'b'},
             {"catalog",     required_argument, NULL, 'c'},
-            {"sample_2",    required_argument, NULL, 's'},
+            {"sample_path", required_argument, NULL, 's'},
             {"outpath",     required_argument, NULL, 'o'},
+            {"in_dir",      required_argument, NULL, 'P'},
+            {"popmap",      required_argument, NULL, 'M'},
+            {"sample",      required_argument, NULL, 'S'},
             {0, 0, 0, 0}
         };
 
-        // getopt_long stores the option index here.
         int option_index = 0;
-
-        c = getopt_long(argc, argv, "hgGxuvs:c:o:b:p:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "hgGxuvs:c:o:b:p:P:M:S:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -1331,8 +1340,7 @@ int parse_command_line(int argc, char* argv[]) {
             }
             break;
         case 's':
-            sample_file = optarg;
-            samples.push(sample_file);
+            samples.push(optarg);
             break;
         case 'g':
             search_type = genomic_loc;
@@ -1352,6 +1360,15 @@ int parse_command_line(int argc, char* argv[]) {
         case 'G':
             gapped_alignments = true;
             break;
+        case 'P':
+            in_dir = optarg;
+            break;
+        case 'M':
+            popmap_path = optarg;
+            break;
+        case 'S':
+            sample_names.push_back(optarg);
+            break;
         case 'v':
             version();
             break;
@@ -1365,21 +1382,91 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
-    if (catalog_path.length() == 0) {
-        cerr << "You must specify the prefix path to the catalog.\n";
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
         help();
     }
 
-    if (samples.size() == 0) {
-        cerr << "You must specify at least one sample file.\n";
+    if (in_dir.empty() && catalog_path.empty()) {
+        cerr << "Error: You must specify one of -P or -c.\n";
+        help();
+    } else if (
+            (!popmap_path.empty() && !sample_names.empty()) // Both -M and -S
+            || (
+                ((!in_dir.empty() || !popmap_path.empty() || !sample_names.empty()) // One of -P, -M or -S
+                && (!catalog_path.empty() || !samples.empty() || !out_path.empty())) // and one of -c, -s or -o
+                )
+            ) {
+        cerr << "Error: Please do not mix run modes (-P/-M or -P/-S or -c/-s/-o).\n";
         help();
     }
 
-    if (out_path.length() == 0)
-        out_path = ".";
+    if (!in_dir.empty()) {
+        if (popmap_path.empty() && sample_names.empty()) {
+            cerr << "Error: Please specify some input samples (-M or -S).\n";
+            help();
+        }
 
-    if (out_path.at(out_path.length() - 1) != '/')
-        out_path += "/";
+        if (batch_id < 0) {
+            vector<int> cat_ids = find_catalogs(in_dir);
+            if (cat_ids.size() == 1) {
+                batch_id = cat_ids[0];
+            } else if (cat_ids.empty()) {
+                cerr << "Error: Unable to find a catalog in '" << in_dir << "'.\n";
+                help();
+            } else {
+                cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
+                help();
+            }
+        }
+
+        if (in_dir.back() != '/')
+            in_dir += "/";
+
+        // Set `catalog_path`.
+        catalog_path = in_dir + "batch_" + to_string(batch_id);
+
+        // Set `samples`.
+        if (!popmap_path.empty()) {
+            MetaPopInfo popmap;
+            popmap.init_popmap(popmap_path);
+            for (const MetaPopInfo::Sample& s : popmap.samples())
+                samples.push(in_dir + s.name);
+        } else  {
+            for (string& s : sample_names)
+                samples.push(in_dir + s);
+        }
+
+        // Set `out_path`.
+        out_path = in_dir;
+
+    } else if (!catalog_path.empty()) {
+        if (batch_id < 0) {
+            regex r ("batch_([0-9]+)");
+            smatch m;
+            regex_search(catalog_path, m, r);
+            if (m.size()==2) {
+                // full match plus one submatch
+                batch_id = stoi(m[1].str());
+            }
+
+            if (batch_id < 0) {
+                cerr << "Unable to guess batch ID.\n";
+                help();
+            }
+        }
+
+        if (samples.size() == 0) {
+            cerr << "You must specify at least one sample file.\n";
+            help();
+        }
+
+        if (out_path.length() == 0)
+            out_path = ".";
+
+        if (out_path.back() != '/')
+            out_path += "/";
+    }
 
     return 0;
 }
@@ -1392,18 +1479,22 @@ void version() {
 
 void help() {
     std::cerr << "sstacks " << VERSION << "\n"
-              << "sstacks -b batch_id -c catalog_file -s sample_file [-s sample_file_2 ...] [-o path] [-p num_threads] [-g] [-x] [-v] [-h]" << "\n"
-              << "  p: enable parallel execution with num_threads threads.\n"
-              << "  b: MySQL ID of this batch." << "\n"
-              << "  c: TSV file from which to load the catalog loci." << "\n"
+              << "sstacks [--aligned] -P dir [-b batch_id] -S sample [-S sample ...] [-p n_threads]" << "\n"
+              << "sstacks [--aligned] -P dir [-b batch_id] -M popmap [-p n_threads]" << "\n"
+              << "sstacks [--aligned] -c catalog_path -s sample_path [-s sample_path ...] -o path [-p n_threads]" << "\n"
+              << "  g,--aligned: base matching on alignment position, not sequence identity." << "\n"
+              << "  P: path to the directory containing Stacks files.\n"
+              << "  S: name of the sample(s) to process.\n"
+              << "  M: path to a population map file from which to take sample names.\n"
               << "  s: filename prefix from which to load sample loci." << "\n"
+              << "  p: enable parallel execution with num_threads threads.\n"
+              << "  b: ID of the catalog to consider (default: guess)." << "\n"
+              << "  c: path to the catalog." << "\n"
               << "  o: output path to write results." << "\n"
-              << "  g: base matching on genomic location, not sequence identity." << "\n"
               << "  x: don't verify haplotype of matching locus." << "\n"
-              << "  v: print program version." << "\n"
-              << "  h: display this help messsage." << "\n\n"
-              << "  Gapped assembly options:\n"
-              << "    --gapped: preform gapped alignments between stacks.\n";
+              << "\n"
+              << "Gapped assembly options:\n"
+              << "  --gapped: preform gapped alignments between stacks.\n";
 
     exit(0);
 }

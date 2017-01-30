@@ -92,6 +92,5 @@ int    open_files(vector<pair<string, string> > &,
                   map<string, map<string, long> > &);
 int    close_file_handles(map<BarcodePair, ofstream *> &);
 int    close_file_handles(map<BarcodePair, gzFile *> &);
-string remove_suffix(FileT, string);
 
 #endif // __FILE_IO_H__

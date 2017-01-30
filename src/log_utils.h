@@ -21,78 +21,23 @@
 #ifndef __LOG_UTILS_H__
 #define __LOG_UTILS_H__
 
-#include <time.h>
+#include <string>
 #include <iostream>
 #include <fstream>
-#include <sstream>
 
-#include "config.h"
 #include "constants.h"
 
-inline
-int init_log(std::ostream &fh, int argc, char **argv) {
-    //
-    // Obtain the current date.
-    //
-    time_t     rawtime;
-    struct tm *timeinfo;
-    char       date[32];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(date, 32, "%F %T", timeinfo);
+int init_log(std::ostream &fh, int argc, char **argv);
 
-    //
-    // Write the command line that was executed.
-    //
-    for (int i = 0; i < argc; i++) {
-        fh << argv[i];
-        if (i < argc - 1) fh << " ";
-    }
-    fh << "\n" << argv[0] << " version " << VERSION << " executed " << date << "\n\n";
+// Returns e.g. "23.2%".
+std::string as_percentage(double d);
 
-    return 0;
-}
-
-inline
-std::string to_string(const FileT& ft) {
-    if (ft == FileT::unknown)
-        return "unknown";
-    if (ft == FileT::sql)
-        return "sql";
-    if (ft == FileT::gzsql)
-        return "gzsql";
-    if (ft == FileT::fasta)
-        return "fasta";
-    if (ft == FileT::gzfasta)
-        return "gzfasta";
-    if (ft == FileT::fastq)
-        return "fastq";
-    if (ft == FileT::gzfastq)
-        return "gzfastq";
-    if (ft == FileT::bowtie)
-        return "bowtie";
-    if (ft == FileT::sam)
-        return "sam";
-    if (ft == FileT::bam)
-        return "bam";
-    if (ft == FileT::tsv)
-        return "tsv";
-    if (ft == FileT::bustard)
-        return "bustard";
-    if (ft == FileT::phase)
-        return "phase";
-    if (ft == FileT::fastphase)
-        return "fastphase";
-    if (ft == FileT::beagle)
-        return "beagle";
-    assert(NEVER);
-    return "?!";
-}
+std::string to_string(const FileT& ft);
 
 // TeeBuf
 // ==========
-// From http://wordaligned.org/articles/cpp-streambufs */
 // A streambuf which tees to two streambufs.
+// From http://wordaligned.org/articles/cpp-streambufs */
 // This tee buffer has no actual buffer, so every character "overflows"
 // directly into the teed buffers.
 class TeeBuf: public std::streambuf {
@@ -126,42 +71,28 @@ private:
 
 // LogAlterator
 // ==========
-struct LogAlterator {
+class TeeBuf;
+class LogAlterator {
+public:
     std::ofstream l; // The actual log file
-    std::ostream o; // Just stdout
-    std::ostream e; // Just stderr
-    TeeBuf lo_buf;
-    TeeBuf le_buf;
+    std::ostream o;  // Just stdout
+    std::ostream e;  // Just stderr
 
-    // Constructor
-    // ----------
-    // Construct the log fstream;
-    // Keep track of the streambufs of cout and cerr;
-    // Construst the teeing streambufs and let cout and cerr use them.
-    LogAlterator(const std::string& log_path, bool quiet = false)
-            : l(log_path)
-            , o(std::cout.rdbuf())
-            , e(std::cerr.rdbuf())
-            , lo_buf(std::cout.rdbuf(), l.rdbuf())
-            , le_buf(std::cerr.rdbuf(), l.rdbuf())
-            {
-        if (quiet) {
-            // Use the fstream buffer only, and not at all stdout and stderr.
-            std::cout.rdbuf(l.rdbuf());
-            std::cerr.rdbuf(l.rdbuf());
-        } else {
-            std::cout.rdbuf(&lo_buf);
-            std::cerr.rdbuf(&le_buf);
-        }
-    }
+    // Construct the log alterator.
+    // std::cout and std::cerr will also write to the log file (if quiet
+	// is true, output to stdout and stderr is suppressed i.e. they only
+    // write to the log file).
+    LogAlterator(const std::string& log_path, bool quiet = false);
 
-    // Destructor
-    // ---------
-    // Restore cout and cerr.
+    // Upon destruction, restore cout and cerr.
     ~LogAlterator() {
         std::cout.rdbuf(o.rdbuf());
         std::cerr.rdbuf(e.rdbuf());
     }
+
+private:
+    TeeBuf lo_buf;
+    TeeBuf le_buf;
 };
 
 #endif // __LOG_UTILS_H__

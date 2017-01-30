@@ -16,6 +16,7 @@
 using namespace std;
 
 int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, bool invoke_model) {
+    cerr << "Identifying polymorphic sites and calling consensus sequences...";
     //
     // OpenMP can't parallelize random access iterators, so we convert
     // our map to a vector of integer keys.
@@ -121,61 +122,89 @@ int call_consensus(map<int, MergedStack *> &merged, map<int, PStack *> &unique, 
             }
 
             mtag->add_consensus(con.c_str());
-
-            //
-            // If SNPs were called at this locus but no alleles could be determined,
-            // blacklist this tag. This can occur if there are two many uncalled bases
-            // in the locus (Ns), such that haplotypes can't be consistently read
-            // due to the presence of the Ns in the reads.
-            //
-            if (mtag->alleles.empty())
-                for (uint j = 0; j < mtag->snps.size(); j++)
-                    if (mtag->snps[j]->type == snp_type_het) {
-                        mtag->blacklisted = 1;
-                        break;
-                    }
         }
     }
 
+    size_t n_blacklisted = 0;
+    for (const auto& mtag : merged)
+        if (mtag.second->blacklisted)
+            ++n_blacklisted;
+
+    cerr << "done. (" << n_blacklisted << " loci were blacklisted.)\n";
     return 0;
 }
 
-int call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {
-    int      row;
-    int      height = reads.size();
-    string   allele;
-    char     base;
-    vector<SNP *>::iterator snp;
-    DNANSeq *d;
+void call_alleles(MergedStack *mtag, vector<DNANSeq *> &reads) {
 
-    for (row = 0; row < height; row++) {
-        allele.clear();
+    vector<SNP*> het_snps;
+    for (SNP* snp : mtag->snps)
+        if (snp->type == snp_type_het)
+            het_snps.push_back(snp);
 
-        uint snp_cnt = 0;
+    if (!het_snps.empty()) {
+        string allele;
+        allele.reserve(het_snps.size());
+        for (DNANSeq* r : reads) {
+            allele.clear();
+            for(SNP* hsnp : het_snps) {
+                //
+                // Check to make sure the nucleotide at the location of this SNP is
+                // of one of the two possible states the multinomial model called.
+                //
+                char base = (*r)[hsnp->col];
+                if (base != hsnp->rank_1 && base != hsnp->rank_2)
+                    break;
+                allele.push_back(base);
+            }
 
-        for (snp = mtag->snps.begin(); snp != mtag->snps.end(); snp++) {
-            if ((*snp)->type != snp_type_het) continue;
-
-            snp_cnt++;
-
-            d    = reads[row];
-            base = (*d)[(*snp)->col];
-
-            //
-            // Check to make sure the nucleotide at the location of this SNP is
-            // of one of the two possible states the multinomial model called.
-            //
-            if (base == (*snp)->rank_1 || base == (*snp)->rank_2)
-                allele += base;
-            else
-                break;
+            if (allele.length() == het_snps.size())
+                mtag->alleles[allele]++;
         }
 
-        if (snp_cnt > 0 && allele.length() == snp_cnt)
-            mtag->alleles[allele]++;
+        if (mtag->alleles.empty())
+            mtag->blacklisted = true;
+    }
+}
+
+void
+calc_coverage_distribution(const map<int, PStack*> &unique,
+                           const map<int, MergedStack*> &merged,
+                           double &mean, double &stdev, double &max)
+{
+    max   = 0.0;
+    mean  = 0.0;
+    stdev = 0.0;
+
+    size_t not_blacklisted = 0;
+    for (const pair<int, MergedStack*>& mtag : merged) {
+        if (mtag.second->blacklisted)
+            continue;
+
+        ++not_blacklisted;
+
+        double depth = 0.0;
+        for (int utag_id : mtag.second->utags)
+            depth += unique.at(utag_id)->count;
+
+        mean += depth;
+        if (depth > max)
+            max = depth;
+    }
+    mean /= not_blacklisted;
+
+    for (const pair<int, MergedStack*>& mtag : merged) {
+        if (mtag.second->blacklisted)
+            continue;
+
+        double depth = 0.0;
+        for (int utag_id : mtag.second->utags)
+            depth += unique.at(utag_id)->count;
+
+        stdev += pow(depth - mean, 2);
     }
 
-    return 0;
+    stdev /= not_blacklisted;
+    stdev = sqrt(stdev);
 }
 
 int write_results(map<int, MergedStack *> &m,
