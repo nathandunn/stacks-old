@@ -1,6 +1,7 @@
 #include <vector>
 #include <map>
 
+#include "models.h"
 #include "DNANSeq.h"
 #include "stacks.h"
 #include "mstack.h"
@@ -13,8 +14,14 @@ int call_consensus(std::map<int, MergedStack *>& merged,
                    std::map<int, PStack *>& unique,
                    bool invoke_model);
 
-int call_alleles(MergedStack* mstack,
+void call_alleles(MergedStack* mstack,
                  std::vector<DNANSeq *>& reads);
+
+void calc_coverage_distribution(const map<int, PStack*>& unique,
+                                const map<int, MergedStack *>& merged,
+                                double& mean,
+                                double& stdev,
+                                double& max);
 
 int write_results(map<int, MergedStack*>& merged,
                   map<int, PStack*>& unique,

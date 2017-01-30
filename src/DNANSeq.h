@@ -25,17 +25,47 @@
 #include <string>
 #include <functional>
 
+#ifdef HAVE_SPARSEHASH
+#include <tr1/functional>
+#endif
+
+/*
+#define BITMASK(b)     (1 << ((b) % CHAR_BIT))
+#define BITSLOT(b)     ((b) / CHAR_BIT)
+#define BITSET(a, b)   ((a)[BITSLOT(b)] |= BITMASK(b))
+#define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
+#define BITTEST(a, b)  ((a)[BITSLOT(b)] & BITMASK(b))
+#define BITNSLOTS(nb)  ((nb + CHAR_BIT - 1) / CHAR_BIT)
+*/
+
+
 //
 // DNANSeq
 // Compressed DNA Sequence Class. Handles N's.
 //
 class DNANSeq {
+    // Three-bit compression (2.67 bases/byte)
+    //    A == 000
+    //    C == 001
+    //    G == 010
+    //    T == 011
+    //    N == 100
+    const static uint bits_per_nuc = 3;
+
+    // The number of bits over which the sequence is stored.
+    uint bits;
+
+    // The array of bits. Padding bits, if any, are 0.
+    unsigned char *s;
+
 public:
+#ifdef HAVE_SPARSEHASH
+    DNANSeq() : bits(3), s(new unsigned char[1]) { *s = (1<<2); } // "N"
+#endif
     DNANSeq(uint len, const char* str);
-    DNANSeq(const char* str) : DNANSeq(strlen(str), str) {}
     DNANSeq(const DNANSeq& other);
-    DNANSeq& operator=(const DNANSeq&) =delete;
     ~DNANSeq() {delete[] s;}
+    DNANSeq& operator=(const DNANSeq&);
 
     char operator[](uint pos) const;
     uint size() const {return bits / bits_per_nuc;}
@@ -49,27 +79,10 @@ public:
     friend class std::hash<DNANSeq>;
 
 private:
-    uint nbytes() const {return (bits+8-1)/8;}
-
-    //
-    // The number of bits over which the sequence is stored.
-    //
-    uint bits;
-    //
-    // The array of bits. Padding bits, if any, are 0.
-    //
-    unsigned char *s;
+    uint nbytes() const {return (bits+7)/8;}
 
     static unsigned char testbit(const unsigned char* s_, uint index) { return s_[index/8] & (1 << index%8); }
     static void setbit(unsigned char* s_, uint index) { s_[index/8] |= (1 << index%8); }
-
-    // Three-bit compression (2.67 bases/byte)
-    //    A == 000
-    //    C == 001
-    //    G == 010
-    //    T == 011
-    //    N == 100
-    const static uint bits_per_nuc = 3;
 };
 
 inline
@@ -101,15 +114,14 @@ struct hash<DNANSeq> {
         return __result;
     }
 };
+#ifdef HAVE_SPARSEHASH
+namespace tr1 {
+template<>
+struct hash<DNANSeq> {
+    size_t operator()(const DNANSeq& seq) const { return std::hash<DNANSeq>()(seq); }
+};
 }
-
-/*
-#define BITMASK(b)     (1 << ((b) % CHAR_BIT))
-#define BITSLOT(b)     ((b) / CHAR_BIT)
-#define BITSET(a, b)   ((a)[BITSLOT(b)] |= BITMASK(b))
-#define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
-#define BITTEST(a, b)  ((a)[BITSLOT(b)] & BITMASK(b))
-#define BITNSLOTS(nb)  ((nb + CHAR_BIT - 1) / CHAR_BIT)
-*/
+#endif
+}
 
 #endif // __DNANSeq_H__

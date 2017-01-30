@@ -88,10 +88,6 @@ int main (int argc, char* argv[]) {
 
     MetaPopInfo mpopi;
     mpopi.init_directory(in_path);
-    if (mpopi.samples().empty()) {
-        cerr << "Error: Failed to find sample files in directory '" << in_path << "'.\n";
-        return -1;
-    }
 
     if (wl_file.length() > 0) {
         load_marker_list(wl_file, whitelist);
@@ -296,6 +292,7 @@ int main (int argc, char* argv[]) {
     if (out_type == genomic)
         write_genomic(catalog, pmap);
 
+    cerr << "genotypes is done.\n";
     return 0;
 }
 
@@ -2828,6 +2825,7 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'e':
             enz = optarg;
+            enz.at(0) = tolower(enz.at(0));
             break;
         case 'v':
             version();
@@ -2840,6 +2838,11 @@ int parse_command_line(int argc, char* argv[]) {
             help();
             abort();
         }
+    }
+
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        help();
     }
 
     if (in_path.length() == 0) {

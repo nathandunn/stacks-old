@@ -32,6 +32,7 @@ using std::endl;
 using std::pair;
 using std::make_pair;
 
+#include <dirent.h>
 #include "stacks.h"
 
 char   reverse(char);
@@ -72,10 +73,35 @@ struct int_decreasing {
     }
 };
 
+//
+// Wrapper for directory parsing functions.
+// e.g. for(DirIterator e (path); e; ++e) {...}
+//
+class DirIterator {
+    DIR* dir;
+    struct dirent* entry;
+public:
+    DirIterator(const std::string& dir_path) : dir(NULL), entry(NULL) {
+        dir = opendir(dir_path.c_str());
+        if (dir == NULL) {
+            cerr << "Error: Unable to open directory '" << dir_path << "' for reading.\n";
+            throw std::exception();
+        }
+        entry = readdir(dir);
+    }
+    ~DirIterator() {closedir(dir);}
+
+    const char* name() const {return entry->d_name;}
+
+    operator bool() const {return entry!=NULL;}
+    DirIterator& operator++() {entry = readdir(dir); return *this;}
+    dirent* operator*() {return entry;}
+};
+
 // convert_fw_read_name_to_paired()
 // ----------
-// Given a forward read name, guess the paired-end read name. The forward read
-// name is expected to end in '/1' or '_1'.
+// Given a forward read name, guess the paired-end read name.
+// The forward read is expected to end in '/1' or '_1'.
 inline
 void convert_fw_read_name_to_paired(std::string& read_name) {
     // Check the format.

@@ -29,21 +29,30 @@
 //
 // One record per line.
 //
-
+#include "stacks.h"
 #include "input.h"
+# include "aln_utils.h"
+#include "BamI.h"
 
 class Sam: public Input {
-    int parse_cigar(const char *, vector<pair<char, uint> > &, bool);
-    int find_start_bp_neg(int, vector<pair<char, uint> > &);
-    int find_start_bp_pos(int, vector<pair<char, uint> > &);
-    int edit_gaps(vector<pair<char, uint> > &, char *);
 
- public:
-    Sam(const char *path) : Input(path) {}
+public:
+    Sam(const char *path);
     ~Sam() {}
     Seq *next_seq();
     int  next_seq(Seq& s);
+
+private:
+    static const size_t n_mandatory_fields = 11;
 };
+
+Sam::Sam(const char *path)
+: Input(path)
+{
+    while(fh.peek() == '@') {
+        fh.getline(line, max_len);
+    }
+}
 
 Seq* Sam::next_seq() {
     Seq* s = new Seq();
@@ -57,273 +66,84 @@ Seq* Sam::next_seq() {
 int Sam::next_seq(Seq& s) {
     vector<string> parts;
     int  flag  = 0;
-    int  sflag = 0;
-    int  aflag = 0;
-    uint len;
 
-    //
-    // Read a record from the file and place it in a Seq object, skipping header
-    // definitions and unaligned sequences.
-    //
-    do {
-        this->fh.getline(this->line, max_len);
+    if(!fh.getline(line, max_len))
+        return false;
 
-        if (!this->fh.good())
-            return 0;
+    int len = strlen(line);
+    if (line[len - 1] == '\r')
+        line[len - 1] = '\0';
 
-        len = strlen(this->line);
-        if (this->line[len - 1] == '\r') this->line[len - 1] = '\0';
-
-        parse_tsv(this->line, parts);
-
-        //
-        // According to SAM spec FLAGs are the second field,
-        // if FLAG bit 0x4 is set, sequence is not mapped.
-        //
-        flag = atoi(parts[1].c_str());
-        flag = flag  & 4;
-        flag = flag >> 2;
-
-    } while (parts[0][0] == '@' || flag == 1);
-
-    //
-    // Check which strand this is aligned to:
-    //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
-    //
-    flag  = atoi(parts[1].c_str());
-    sflag = flag & 16;
-    sflag = sflag >> 4;
-
-    //
-    // Check if this is the primary or secondary alignment.
-    //
-    alnt aln_type = pri_aln;
-    aflag = flag & 256;
-    aflag = aflag >> 8;
-    if (aflag)
-	aln_type = sec_aln;
-
-    //
-    // Check if this is a supplemenatry (chimeric) alignment (not yet defined in Bam.h).
-    //
-    aflag = flag & 2048;
-    aflag = aflag >> 11;
-    if (aflag)
-	aln_type = sup_aln;
-
-    //
-    // If the read was aligned on the reverse strand (and is therefore reverse complemented)
-    // alter the start point of the alignment to reflect the right-side of the read, at the
-    // end of the RAD cut site.
-    //
-    // To accomplish this, we must parse the alignment CIGAR string
-    //
-    vector<pair<char, uint> > cigar;
-    this->parse_cigar(parts[5].c_str(), cigar, sflag);
-
-    int bp = sflag ?
-        this->find_start_bp_neg(atoi(parts[3].c_str()), cigar) :
-        this->find_start_bp_pos(atoi(parts[3].c_str()), cigar);
-
-    //
-    // Sam format has a 1-based offset for chrmosome/basepair positions, adjust it to match
-    // the Stacks, 0-based offset.
-    //
-    bp--;
-
-    //
-    // Calculate the percentage of the sequence that was aligned to the reference.
-    //
-    len = 0;
-    for (uint i = 0; i < cigar.size(); i++)
-        switch (cigar[i].first) {
-        case 'M':
-        case 'I':
-        case '=':
-            len += cigar[i].second;
-        }
-    double pct_aln = double(len) / double(parts[9].length());
-
-    s = Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(),     // Read ID, Sequence, Quality
-            parts[2].c_str(), bp, sflag ? strand_minus : strand_plus,  // Chr, BasePair, Strand
-            aln_type, pct_aln);                                        // Alignment type (primary or secondary), percent of read aligned
-
-    if (cigar.size() > 0)
-        this->edit_gaps(cigar, s.seq);
-
-    return 1;
-}
-
-int
-Sam::parse_cigar(const char *cigar_str, vector<pair<char, uint> > &cigar, bool orientation)
-{
-    char buf[id_len];
-    int  dist;
-    const char *p, *q;
-
-    p = cigar_str;
-
-    if (*p == '*') return 0;
-
-    while (*p != '\0') {
-        q = p + 1;
-
-        while (*q != '\0' && isdigit(*q))
-            q++;
-        strncpy(buf, p, q - p);
-        buf[q-p] = '\0';
-        dist = atoi(buf);
-
-        //
-        // If aligned to the negative strand, sequence has been reverse complemented and
-        // CIGAR string should be interpreted in reverse.
-        //
-        if (orientation == strand_plus)
-            cigar.push_back(make_pair(*q, dist));
-        else
-            cigar.insert(cigar.begin(), make_pair(*q, dist));
-
-        p = q + 1;
+    parse_tsv(line, parts);
+    if (parts.size() < n_mandatory_fields) {
+        cerr << "Error: Malformed SAM record:\n" << line << "\n";
+        throw std::exception();
     }
 
-    return 0;
-}
+    //
+    // According to SAM spec FLAGs are the second field,
+    // if FLAG bit 0x4 is set, sequence is not mapped.
+    //
+    flag = atoi(parts[1].c_str());
 
-int
-Sam::find_start_bp_neg(int aln_bp, vector<pair<char, uint> > &cigar)
-{
-    uint size = cigar.size();
-    char op;
-    uint dist;
+    //
+    // Parse the type of the record.
+    //
+    AlnT aln_type;
+    if (flag & BAM_FUNMAP)
+        aln_type = AlnT::null;
+    else if (flag & BAM_FSECONDARY)
+        aln_type = AlnT::secondary;
+    else if (flag & BAM_FSUPPLEMENTARY)
+        aln_type = AlnT::supplementary;
+    else
+        aln_type = AlnT::primary;
 
-    for (uint i = 0; i < size; i++)  {
-        op   = cigar[i].first;
-        dist = cigar[i].second;
+    if (aln_type == AlnT::null) {
+        s = Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str()); // Read ID, Sequence, Quality
+    } else {
+        //
+        // Check which strand this is aligned to:
+        //
+        strand_type strand = flag & BAM_FREVERSE ? strand_minus : strand_plus;
 
-        switch(op) {
-        case 'I':
-            break;
-        case 'S':
-            if (i < size - 1)
-                aln_bp += dist;
-            break;
-        case 'M':
-        case 'D':
-            aln_bp += dist;
-            break;
-        }
+        //
+        // Parse the alignment CIGAR string.
+        //
+        vector<pair<char, uint> > cigar;
+        parse_cigar(parts[5].c_str(), cigar, true);
+        if (strand == strand_minus)
+            std::reverse(cigar.begin(), cigar.end());
+
+        //
+        // If the read was aligned on the reverse strand (and is therefore reverse complemented)
+        // alter the start point of the alignment to reflect the right-side of the read, at the
+        // end of the RAD cut site.
+        //
+        int bp = bam_find_start_bp(atoi(parts[3].c_str()), strand, cigar);
+        bp--; // SAM uses 1-based genome positions.
+
+        //
+        // Calculate the percentage of the sequence that was aligned to the reference.
+        //
+        uint clipped = 0;
+        for (auto& op : cigar)
+            if (op.first == 'S')
+                clipped += op.second;
+        double pct_clipped = (double) clipped / parts[9].length();
+
+        int map_qual = is_integer(parts[4].c_str());
+        if (map_qual == -1)
+            // Ignore malformed quality.
+            map_qual = 255;
+
+        s = Seq(parts[0].c_str(), parts[9].c_str(), parts[10].c_str(), // Read ID, Sequence, Quality
+                parts[2].c_str(), bp, strand, aln_type, pct_clipped, map_qual); // Chromosome, etc.
+
+        if (cigar.size() > 0)
+            bam_edit_gaps(cigar, s.seq);
     }
-
-    return aln_bp - 1;
-}
-
-int
-Sam::find_start_bp_pos(int aln_bp, vector<pair<char, uint> > &cigar)
-{
-    char op;
-    uint dist;
-
-    op   = cigar[0].first;
-    dist = cigar[0].second;
-
-    if (op == 'S')
-        aln_bp -= dist;
-
-    return aln_bp;
-}
-
-int
-Sam::edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
-{
-    char *buf;
-    uint  size = cigar.size();
-    char  op;
-    uint  dist, bp, len, buf_len, buf_size, j, k, stop;
-
-    len = strlen(seq);
-    bp  = 0;
-
-    buf      = new char[len + 1];
-    buf_size = len + 1;
-
-    for (uint i = 0; i < size; i++)  {
-        op   = cigar[i].first;
-        dist = cigar[i].second;
-
-        switch(op) {
-        case 'S':
-            stop = bp + dist;
-            stop = stop > len ? len : stop;
-            while (bp < stop) {
-                seq[bp] = 'N';
-                bp++;
-            }
-            break;
-        case 'D':
-            //
-            // A deletion has occured in the read relative to the reference genome.
-            // Pad the read with sufficent Ns to match the deletion, shifting the existing
-            // sequence down. Trim the final length to keep the read length consistent.
-            //
-            k = bp >= len ? len : bp;
-
-            strncpy(buf, seq + k, buf_size - 1);
-            buf[buf_size - 1] = '\0';
-            buf_len         = strlen(buf);
-
-            stop = bp + dist;
-            stop = stop > len ? len : stop;
-            while (bp < stop) {
-                seq[bp] = 'N';
-                bp++;
-            }
-
-            j = bp;
-            k = 0;
-            while (j < len && k < buf_len) {
-                seq[j] = buf[k];
-                k++;
-                j++;
-            }
-            break;
-        case 'I':
-            //
-            // An insertion has occurred in the read relative to the reference genome. Delete the
-            // inserted bases and pad the end of the read with Ns.
-            //
-            if (bp >= len) break;
-
-            k = bp + dist > len ? len : bp + dist;
-            strncpy(buf, seq + k, buf_size - 1);
-            buf[buf_size - 1] = '\0';
-            buf_len           = strlen(buf);
-
-            j = bp;
-            k = 0;
-            while (j < len && k < buf_len) {
-                seq[j] = buf[k];
-                k++;
-                j++;
-            }
-
-            stop = j + dist;
-            stop = stop > len ? len : stop;
-            while (j < stop) {
-                seq[j] = 'N';
-                j++;
-            }
-            break;
-        case 'M':
-            bp += dist;
-            break;
-        default:
-            break;
-        }
-    }
-
-    delete [] buf;
-
-    return 0;
+    return true;
 }
 
 #endif // __SAMI_H__
