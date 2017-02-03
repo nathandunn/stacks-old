@@ -74,7 +74,7 @@ int  process_paired_reads(string, string,
                           map<BarcodePair, fhType *> &,
                           map<BarcodePair, fhType *> &,
                           map<string, long> &, map<BarcodePair, map<string, long> > &);
-int  process_singlet(Read *,
+int  process_singlet(RawRead *,
                      bool,
                      map<string, long> &, map<string, long> &);
 
