@@ -496,7 +496,7 @@ int
 process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counters, OligoHash &oligo_map)
 {
     Input    *fh_1, *fh_2;
-    Read     *r_1,  *r_2;
+    RawRead     *r_1,  *r_2;
     ofstream  out_fh_1,   out_fh_2, discard_fh_1, discard_fh_2;
     gzFile    out_gzfh_1, out_gzfh_2, discard_gzfh_1, discard_gzfh_2;
 
@@ -671,8 +671,8 @@ process_paired_reads(string prefix_1, string prefix_2, map<string, long> &counte
         exit(1);
     }
 
-    r_1 = new Read(strlen(s_1->seq), 1, min_bc_size_1, win_size);
-    r_2 = new Read(strlen(s_2->seq), 2, min_bc_size_2, win_size);
+    r_1 = new RawRead(strlen(s_1->seq), 1, min_bc_size_1, win_size);
+    r_2 = new RawRead(strlen(s_2->seq), 2, min_bc_size_2, win_size);
 
     long i        = 1;
     int  result_1 = 1;
@@ -838,7 +838,7 @@ int
 process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map)
 {
     Input   *fh_1;
-    Read    *r_1;
+    RawRead    *r_1;
     ofstream out_fh_1, discard_fh_1;
     gzFile   out_gzfh_1, discard_gzfh_1;
 
@@ -956,7 +956,7 @@ process_reads(string prefix_1, map<string, long> &counters, OligoHash &oligo_map
         exit(1);
     }
 
-    r_1 = new Read(strlen(s_1->seq), 1, min_bc_size_1, win_size);
+    r_1 = new RawRead(strlen(s_1->seq), 1, min_bc_size_1, win_size);
 
     long   i        = 1;
     int    result_1 = 1;

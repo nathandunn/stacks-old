@@ -247,7 +247,7 @@ process_paired_reads(string prefix_1,
                      map<string, long> &counter,
                      map<BarcodePair, map<string, long> > &barcode_log) {
     Input    *fh_1, *fh_2;
-    Read     *r_1, *r_2;
+    RawRead     *r_1, *r_2;
     ofstream *discard_fh_1, *discard_fh_2;
 
     int return_val = 1;
@@ -307,8 +307,8 @@ process_paired_reads(string prefix_1,
         exit(1);
     }
 
-    r_1 = new Read(strlen(s_1->seq), 1, min_bc_size_1, win_size);
-    r_2 = new Read(strlen(s_2->seq), 2, min_bc_size_2, win_size);
+    r_1 = new RawRead(strlen(s_1->seq), 1, min_bc_size_1, win_size);
+    r_2 = new RawRead(strlen(s_2->seq), 2, min_bc_size_2, win_size);
 
     //
     // Set len_limit so that if we encounter reads already shorter than truncate_seq limit
@@ -464,7 +464,7 @@ process_reads(string prefix,
               map<string, long> &counter,
               map<BarcodePair, map<string, long> > &barcode_log) {
     Input *fh;
-    Read  *r;
+    RawRead  *r;
     ofstream *discard_fh;
 
     int return_val = 1;
@@ -511,7 +511,7 @@ process_reads(string prefix,
     if (truncate_seq > 0)
         len_limit = truncate_seq;
 
-    r = new Read(strlen(s->seq), 1, min_bc_size_1, win_size);
+    r = new RawRead(strlen(s->seq), 1, min_bc_size_1, win_size);
 
     BarcodePair bc;
     //
@@ -609,7 +609,7 @@ process_reads(string prefix,
 
 inline
 int
-process_singlet(Read *href,
+process_singlet(RawRead *href,
                 string res_enz, bool paired_end,
                 map<string, long> &bc_log, map<string, long> &counter)
 {
@@ -710,7 +710,7 @@ process_singlet(Read *href,
 }
 
 int
-correct_radtag(Read *href, string res_enz, map<string, long> &counter)
+correct_radtag(RawRead *href, string res_enz, map<string, long> &counter)
 {
     if (recover == false)
         return 0;

@@ -105,7 +105,7 @@ int parse_illumina_v2(const char *file) {
 }
 
 int
-parse_input_record(Seq *s, Read *r)
+parse_input_record(Seq *s, RawRead *r)
 {
     char *p, *q, *z;
     uint  lim;
@@ -422,7 +422,7 @@ reverse_qual(char *qual, int offset, bool overhang)
 // Functions for quality filtering based on phred scores.
 //
 int
-check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit, int offset)
+check_quality_scores(RawRead *href, int qual_offset, int score_limit, int len_limit, int offset)
 {
     //
     // Phred quality scores are discussed here:
@@ -512,7 +512,7 @@ check_quality_scores(Read *href, int qual_offset, int score_limit, int len_limit
 }
 
 bool
-correct_barcode(set<string> &bcs, Read *href, seqt type, int num_errs)
+correct_barcode(set<string> &bcs, RawRead *href, seqt type, int num_errs)
 {
     if (recover == false)
         return false;
@@ -596,7 +596,7 @@ init_adapter_seq(int kmer_size, char *adapter, int &adp_len, AdapterHash &kmers)
 }
 
 int
-filter_adapter_seq(Read *href, char *adapter, int adp_len, AdapterHash &adp_kmers,
+filter_adapter_seq(RawRead *href, char *adapter, int adp_len, AdapterHash &adp_kmers,
                    int kmer_size, int distance, int len_limit)
 {
     vector<pair<int, int> > hits;
