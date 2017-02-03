@@ -10,6 +10,7 @@ ustacks_SOURCES = src/ustacks.h src/ustacks.cc src/stacks.h src/stacks.cc src/co
 	src/gzFasta.h src/gzFastq.h
 
 pstacks_SOURCES = src/pstacks.h src/pstacks.cc \
+	src/pstacks_base.h src/pstacks_base.cc \
 	src/stacks.h src/stacks.cc \
 	src/constants.h src/constants.cc \
 	src/mstack.h src/mstack.cc \
