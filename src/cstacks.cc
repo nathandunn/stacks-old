@@ -1918,7 +1918,7 @@ int parse_command_line(int argc, char* argv[]) {
         // Set `samples`.
         MetaPopInfo popmap;
         popmap.init_popmap(popmap_path);
-        for (const MetaPopInfo::Sample& s : popmap.samples())
+        for (const Sample& s : popmap.samples())
             samples.push({0, in_dir + s.name});
 
         // Set `out_path`.

@@ -1430,7 +1430,7 @@ int parse_command_line(int argc, char* argv[]) {
         if (!popmap_path.empty()) {
             MetaPopInfo popmap;
             popmap.init_popmap(popmap_path);
-            for (const MetaPopInfo::Sample& s : popmap.samples())
+            for (const Sample& s : popmap.samples())
                 samples.push(in_dir + s.name);
         } else  {
             for (string& s : sample_names)
