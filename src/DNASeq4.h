@@ -1,10 +1,11 @@
+#ifndef DNASEQ4_H
+#define DNASEQ4_H
+
 #include <cstring>
 #include <iostream>
 #include <vector>
 #include <string>
 #include <functional>
-
-#include "hts.h" // For `seq_nt16_table`, `seq_nt16_str`.
 
 #include "constants.h"
 
@@ -87,3 +88,5 @@ struct hash<DNASeq4> {
     }
 };
 }
+
+#endif //DNASEQ4_h
