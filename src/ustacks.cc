@@ -24,6 +24,8 @@
 
 #include "ustacks.h"
 
+using namespace std;
+
 //
 // Global variables to hold command-line options.
 //
@@ -31,7 +33,7 @@ FileT   in_file_type;
 string  in_file;
 string  out_path;
 int     num_threads       = 1;
-int     sql_id            = 0;
+int     sql_id            = -1;
 bool    call_sec_hapl     = true;
 bool    set_kmer_len      = true;
 int     kmer_len          = 0;
@@ -41,7 +43,7 @@ uint    max_subgraph      = 3;
 int     dump_graph        = 0;
 int     retain_rem_reads  = false;
 int     deleverage_stacks = 0;
-int     remove_rep_stacks = 0;
+bool    remove_rep_stacks = true;
 int     max_utag_dist     = 2;
 int     max_rem_dist      = -1;
 bool    gapped_alignments = false;
@@ -83,7 +85,7 @@ int main (int argc, char* argv[]) {
     case snp:
         cerr << "SNP\n";
         break;
-    case fixed:
+    case ::fixed:
         cerr << "Fixed\n";
         break;
     case bounded:
@@ -134,27 +136,21 @@ int main (int argc, char* argv[]) {
 
     double cov_mean, cov_stdev, cov_max;
 
-    calc_coverage_distribution(unique, cov_mean, cov_stdev, cov_max);
+    map<int, MergedStack *> merged;
+    populate_merged_tags(unique, merged);
+    cerr << merged.size() << " initial stacks were populated; " << remainders.size() << " stacks were set aside as secondary reads.\n";
+    calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
     cerr << "Initial coverage mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
     calc_triggers(cov_mean, cov_stdev, 1, deleverage_trigger, removal_trigger);
-
     cerr << "Deleveraging trigger: " << deleverage_trigger << "; Removal trigger: " << removal_trigger << "\n";
-
-    map<int, MergedStack *> merged;
-
-    populate_merged_tags(unique, merged);
-
-    cerr << merged.size() << " initial stacks were populated; " << remainders.size() << " stacks were set aside as secondary reads.\n";
-
     if (remove_rep_stacks) {
         cerr << "Calculating distance for removing repetitive stacks.\n";
         calc_kmer_distance(merged, 1);
         cerr << "Removing repetitive stacks.\n";
         remove_repetitive_stacks(unique, merged);
     }
-
-    calc_coverage_distribution(unique, merged, cov_mean, cov_stdev, cov_max);
+    calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
     cerr << "Post-Repeat Removal, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
     cerr << "Calculating distance between stacks...\n";
@@ -165,7 +161,7 @@ int main (int argc, char* argv[]) {
 
     call_consensus(merged, unique, remainders, false);
 
-    calc_coverage_distribution(unique, merged, cov_mean, cov_stdev, cov_max);
+    calc_coverage_distribution(unique, remainders, merged, cov_mean, cov_stdev, cov_max);
     cerr << "After merging, coverage depth Mean: " << cov_mean << "; Std Dev: " << cov_stdev << "; Max: " << cov_max << "\n";
 
     //dump_merged_tags(merged);
@@ -200,6 +196,7 @@ int main (int argc, char* argv[]) {
     write_results(merged, unique, remainders);
     cerr << "done.\n";
 
+    cerr << "ustacks is done.\n";
     return 0;
 }
 
@@ -868,7 +865,7 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
                     case bounded:
                         call_bounded_multinomial_snp(mtag, col, nuc, true);
                         break;
-                    case fixed:
+                    case ::fixed:
                         call_multinomial_fixed(mtag, col, nuc);
                         break;
                     }
@@ -877,7 +874,7 @@ call_consensus(map<int, MergedStack *> &merged, map<int, Stack *> &unique, map<i
             if (invoke_model) {
                 call_alleles(mtag, reads, read_types);
 
-                if (model_type == fixed) {
+                if (model_type == ::fixed) {
                     //
                     // Mask nucleotides that are not fixed.
                     //
@@ -1094,8 +1091,14 @@ merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedSta
         }
     }
 
-    uint new_cnt = new_merged.size();
-    uint old_cnt = merged.size();
+    cerr << "  " << merged.size() << " stacks merged into " << new_merged.size()
+         << " loci; deleveraged " << delev_cnt
+         << " loci; blacklisted " << blist_cnt << " loci.\n";
+
+    if (new_merged.empty()) {
+        cerr << "Error: Couldn't assemble any loci.\n";
+        throw exception();
+    }
 
     //
     // Free the memory from the old map of merged tags.
@@ -1103,12 +1106,7 @@ merge_stacks(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedSta
     for (it = merged.begin(); it != merged.end(); it++)
         delete it->second;
 
-    merged = new_merged;
-
-    cerr << "  " << old_cnt << " stacks merged into " << new_cnt
-         << " stacks; deleveraged " << delev_cnt
-         << " stacks; removed " << blist_cnt << " stacks.\n";
-
+    swap(merged, new_merged);
     return 0;
 }
 
@@ -1709,157 +1707,49 @@ int reduce_radtags(DNASeqHashMap &radtags, map<int, Stack *> &unique, map<int, R
     return 0;
 }
 
-int
-calc_coverage_distribution(map<int, Stack *> &unique,
-                           double &mean, double &stdev, double &max)
-{
-    map<int, Stack *>::iterator i;
-    double m     = 0.0;
-    double s     = 0.0;
-    double sum   = 0.0;
-    uint   cnt   = 0;
-    double total = 0.0;
-
-    mean  = 0.0;
-    max   = 0.0;
-    stdev = 0.0;
-
-    map<int, int> depth_dist;
-    map<int, int>::iterator j;
-
-    for (i = unique.begin(); i != unique.end(); i++) {
-        cnt = i->second->count();
-        m += cnt;
-        total++;
-
-        depth_dist[cnt]++;
-
-        if (cnt > max)
-            max = cnt;
-    }
-
-    mean = m / total;
-
-    //
-    // Calculate the standard deviation
-    //
-    total = 0.0;
-
-    for (i = unique.begin(); i != unique.end(); i++) {
-        total++;
-        s = i->second->count();
-        sum += pow((s - mean), 2);
-    }
-
-    stdev = sqrt(sum / (total - 1));
-
-    return 0;
-}
-
-int
-calc_coverage_distribution(map<int, Stack *> &unique,
-                           map<int, MergedStack *> &merged,
-                           double &mean, double &stdev, double &max)
-{
-    map<int, MergedStack *>::iterator it;
-    vector<int>::iterator             k;
-    Stack *tag;
-    double m   = 0.0;
-    double s   = 0.0;
-    double sum = 0.0;
-    double cnt = 0.0;
-
-    mean  = 0.0;
-    max   = 0.0;
-    stdev = 0.0;
-
-    for (it = merged.begin(); it != merged.end(); it++) {
-        if (it->second->blacklisted) continue;
-
-        cnt++;
-        m = 0.0;
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag  = unique[*k];
-            m   += tag->count();
-        }
-        if (m > max) max = m;
-
-        sum += m;
-    }
-
-    mean = sum / cnt;
-
-    //
-    // Calculate the standard deviation
-    //
-    for (it = merged.begin(); it != merged.end(); it++) {
-        s = 0.0;
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag  = unique[*k];
-            s   += tag->count();
-        }
-        sum += pow((s - mean), 2);
-    }
-
-    stdev = sqrt(sum / (cnt - 1));
-
-    return 0;
-}
-
-int
+void
 calc_coverage_distribution(map<int, Stack *> &unique,
                            map<int, Rem *> &rem,
                            map<int, MergedStack *> &merged,
                            double &mean, double &stdev, double &max)
 {
-    map<int, MergedStack *>::iterator it;
-    vector<int>::iterator             k;
-    Stack *tag;
-    double m    = 0.0;
-    double s    = 0.0;
-    double sum  = 0.0;
-    double cnt  = 0.0;
-
-    mean  = 0.0;
     max   = 0.0;
+    mean = 0.0;
     stdev = 0.0;
 
-    for (it = merged.begin(); it != merged.end(); it++) {
-        if (it->second->blacklisted) continue;
+    size_t not_blacklisted = 0;
+    for (const pair<int, MergedStack*>& mtag : merged) {
+        if (mtag.second->blacklisted)
+            continue;
 
-        cnt++;
-        m = 0.0;
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag  = unique[*k];
-            m   += tag->count();
-        }
-        for (uint j = 0; j < it->second->remtags.size(); j++)
-            m += rem[it->second->remtags[j]]->count();
+        ++not_blacklisted;
 
-        if (m > max) max = m;
+        double depth = 0.0;
+        for (int utag_id : mtag.second->utags)
+            depth += unique[utag_id]->count();
+        for (int remtag_id : mtag.second->remtags)
+            depth += rem[remtag_id]->count();
 
-        sum += m;
+        mean += depth;
+        if (depth > max)
+            max = depth;
     }
+    mean /= not_blacklisted;
 
-    mean = sum / cnt;
+    for (const pair<int, MergedStack*>& mtag : merged) {
+        if (mtag.second->blacklisted)
+            continue;
 
-    //
-    // Calculate the standard deviation
-    //
-    for (it = merged.begin(); it != merged.end(); it++) {
-        s = 0.0;
-        for (k = it->second->utags.begin(); k != it->second->utags.end(); k++) {
-            tag  = unique[*k];
-            s   += tag->count();
-        }
-        for (uint j = 0; j < it->second->remtags.size(); j++)
-            s += rem[it->second->remtags[j]]->count();
-        sum += pow((s - mean), 2);
+        double depth = 0.0;
+        for (int utag_id : mtag.second->utags)
+            depth += unique[utag_id]->count();
+        for (int remtag_id : mtag.second->remtags)
+            depth += rem[remtag_id]->count();
+
+        stdev += pow(depth - mean, 2);
     }
-
-    stdev = sqrt(sum / (cnt - 1));
-
-    return 0;
+    stdev /= not_blacklisted;
+    stdev = sqrt(stdev);
 }
 
 int count_raw_reads(map<int, Stack *> &unique, map<int, Rem *> &rem, map<int, MergedStack *> &merged) {
@@ -2168,7 +2058,7 @@ write_results(map<int, MergedStack *> &m, map<int, Stack *> &u, map<int, Rem *> 
                 break;
             }
 
-            sstr << std::fixed   << std::setprecision(2)
+            sstr << std::fixed   << setprecision(2)
                  << (*s)->lratio << "\t"
                  << (*s)->rank_1 << "\t"
                  << (*s)->rank_2 << "\t\t\n";
@@ -2265,7 +2155,7 @@ int dump_stack_graph(string data_file,
     double d, scale, scaled_d;
     char label[32];
     vector<string> colors;
-    std::ofstream data(data_file.c_str());
+    ofstream data(data_file.c_str());
 
     size_t pos_1 = data_file.find_last_of("/");
     size_t pos_2 = data_file.find_last_of(".");
@@ -2585,7 +2475,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"k_len",            required_argument, NULL, 'k'},
             {"num_threads",      required_argument, NULL, 'p'},
             {"deleverage",       no_argument,       NULL, 'd'},
-            {"remove_rep",       no_argument,       NULL, 'r'},
+            {"keep_high_cov",    no_argument,       NULL, 1000},
             {"retain_rem",       no_argument,       NULL, 'R'},
             {"graph",            no_argument,       NULL, 'g'},
             {"sec_hapl",         no_argument,       NULL, 'H'},
@@ -2597,6 +2487,7 @@ int parse_command_line(int argc, char* argv[]) {
             {"bound_low",        required_argument, NULL, 'L'},
             {"bound_high",       required_argument, NULL, 'U'},
             {"alpha",            required_argument, NULL, 'A'},
+            {"r-deprecated",     no_argument,       NULL, 'r'},
             {0, 0, 0, 0}
         };
 
@@ -2635,10 +2526,6 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'i':
             sql_id = is_integer(optarg);
-            if (sql_id < 0) {
-                cerr << "SQL ID (-i) must be an integer, e.g. 1, 2, 3\n";
-                help();
-            }
             break;
         case 'm':
             min_merge_cov = is_integer(optarg);
@@ -2652,8 +2539,8 @@ int parse_command_line(int argc, char* argv[]) {
         case 'd':
             deleverage_stacks++;
             break;
-        case 'r':
-            remove_rep_stacks++;
+        case 1000: // keep_high_cov
+            remove_rep_stacks = false;
             break;
         case 'K':
             max_subgraph = is_integer(optarg);
@@ -2681,13 +2568,14 @@ int parse_command_line(int argc, char* argv[]) {
             if (strcmp(optarg, "snp") == 0) {
                 model_type = snp;
             } else if (strcmp(optarg, "fixed") == 0) {
-                model_type = fixed;
+                model_type = ::fixed;
             } else if (strcmp(optarg, "bounded") == 0) {
                 model_type = bounded;
             } else {
                 cerr << "Unknown model type specified '" << optarg << "'\n";
                 help();
             }
+            break;;
         case 'e':
             barcode_err_freq = is_double(optarg);
             break;
@@ -2709,6 +2597,9 @@ int parse_command_line(int argc, char* argv[]) {
         case 'v':
             version();
             break;
+        case 'r': // deprecated Dec 2016, v1.45
+            cerr << "Warning: Ignoring deprecated option -r (this has become the default).\n";
+            break;
         case '?':
             // getopt_long already printed an error message.
             help();
@@ -2719,6 +2610,11 @@ int parse_command_line(int argc, char* argv[]) {
             help();
             abort();
         }
+    }
+
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        help();
     }
 
     if (set_kmer_len == false && (kmer_len < 5 || kmer_len > 31)) {
@@ -2745,8 +2641,21 @@ int parse_command_line(int argc, char* argv[]) {
         model_type = bounded;
     }
 
-    if (in_file.length() == 0 || in_file_type == FileT::unknown) {
-        cerr << "You must specify an input file of a supported type.\n";
+    if (in_file.empty()) {
+        cerr << "You must specify an input file.\n";
+        help();
+    }
+
+    if (in_file_type == FileT::unknown) {
+        in_file_type = guess_file_type(in_file);
+        if (in_file_type == FileT::unknown) {
+            cerr << "Unable to recongnize the extention of file '" << in_file << "'.\n";
+            help();
+        }
+    }
+
+    if (sql_id < 0) {
+        cerr << "A sample ID must be provided.\n";
         help();
     }
 
@@ -2756,7 +2665,7 @@ int parse_command_line(int argc, char* argv[]) {
     if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
-    if (model_type == fixed && barcode_err_freq == 0) {
+    if (model_type == ::fixed && barcode_err_freq == 0) {
         cerr << "You must specify the barcode error frequency.\n";
         help();
     }
@@ -2765,28 +2674,28 @@ int parse_command_line(int argc, char* argv[]) {
 }
 
 void version() {
-    std::cerr << "ustacks " << VERSION << "\n\n";
+    cerr << "ustacks " << VERSION << "\n\n";
 
     exit(0);
 }
 
 void help() {
-    std::cerr << "ustacks " << VERSION << "\n"
-              << "ustacks -t file_type -f file_path [-d] [-r] [-o path] [-i id] [-m min_cov] [-M max_dist] [-p num_threads] [-R] [-H] [-h]" << "\n"
-              << "  t: input file Type. Supported types: fasta, fastq, gzfasta, or gzfastq.\n"
+    cerr << "ustacks " << VERSION << "\n"
+              << "ustacks -f file_path -i id -o path [-M max_dist] [-m min_cov] [-p num_threads]" << "\n"
               << "  f: input file path.\n"
+              << "  i: a unique integer ID for this sample.\n"
               << "  o: output path to write results.\n"
-              << "  i: SQL ID to insert into the output to identify this sample.\n"
-              << "  m: Minimum depth of coverage required to create a stack (default 3).\n"
               << "  M: Maximum distance (in nucleotides) allowed between stacks (default 2).\n"
+              << "  m: Minimum depth of coverage required to create a stack (default 3).\n"
               << "  N: Maximum distance allowed to align secondary reads to primary stacks (default: M + 2).\n"
+              << "  p: enable parallel execution with num_threads threads.\n"
+              << "  t: input file type. Supported types: fasta, fastq, gzfasta, or gzfastq (default: guess).\n"
               << "  R: retain unused reads.\n"
               << "  H: disable calling haplotypes from secondary reads.\n"
-              << "  p: enable parallel execution with num_threads threads.\n"
-              << "  h: display this help messsage.\n\n"
+              << "\n"
               << "  Stack assembly options:\n"
-              << "    r: enable the Removal algorithm, to drop highly-repetitive stacks (and nearby errors) from the algorithm.\n"
-              << "    d: enable the Deleveraging algorithm, used for resolving over merged tags.\n"
+              << "    d,--deleverage: enable the Deleveraging algorithm, used for resolving over merged tags.\n"
+              << "    --keep_high_cov: disable the algorithm that removes highly-repetitive stacks and nearby errors.\n"
               << "    --max_locus_stacks <num>: maximum number of stacks at a single de novo locus (default 3).\n"
               << "     --k_len <len>: specify k-mer size for matching between alleles and loci (automatically calculated by default).\n\n"
               << "  Gapped assembly options:\n"
@@ -2801,7 +2710,9 @@ void help() {
               << "      --bound_low <num>: lower bound for epsilon, the error rate, between 0 and 1.0 (default 0).\n"
               << "      --bound_high <num>: upper bound for epsilon, the error rate, between 0 and 1.0 (default 1).\n"
               << "    For the Fixed model:\n"
-              << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n";
+              << "      --bc_err_freq <num>: specify the barcode error frequency, between 0 and 1.0.\n"
+              << "\n"
+              << "  h: display this help messsage.\n";
 
     exit(0);
 }

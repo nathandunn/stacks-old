@@ -1,6 +1,28 @@
-Stacks 1.45
+Stacks 1.45 - tba
 --------------------------
-	Bugfix: kernel smoothing was not working correctly for Fis values (values were too negative).
+    Feature: Tweaked the interfaces of most programs:
+             * cstacks and sstacks now accept a population map as input.
+             * process_radtags will now reuse the input directory name in its log file name.
+             * Reworked pstacks output.
+             * Batch ID now defaults to 1 in cstacks, and sstacks and other will try to guess
+               it from the contents of the given directory/catalog path.
+             * pstacks/ustacks/process_radtags will now try to guess file formats.
+             * Default (fallback) format in process_radtags/process_shortread is now gzfastq.
+             * pstacks: Substituted --max_clipped to --min_aln_pct.
+             * ustacks -r has become the default; --keep-high-cov reverses it.
+             * cstacks now checks for sample ID unicity.
+             * Updated help messages.
+    Feature: populations now logs the 'number of SNPs per locus' distribution.
+    Feature: Added mapping quality filter in pstacks (--min_mapq).
+    Feature: Added enzyme ApaLI.
+    Bugfix: populations: Corrected a VCF-related segfault (current use of VCF's GL field was
+            improper and was removed).
+    Bugfix: rxstacks: Corrected a bug that affected locus likelihood medians.
+    Bugfix: pstacks/ustacks: Corrected a bug that affected coverage standard deviations.
+    Bugfix: populations: Fixed parsing of option --sigma.
+    Bugfix: Fixed process_radtags writing fasta (instead of fastq) discard files when input
+            files were gzfastq.
+    Bugfix: kernel smoothing was not working correctly for Fis values (values were too negative).
 
 Stacks 1.44 - Oct 11, 2016
 --------------------------

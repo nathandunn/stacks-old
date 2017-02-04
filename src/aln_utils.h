@@ -34,7 +34,7 @@ using std::vector;
 #include "utils.h"
 
 string invert_cigar(string);
-int    parse_cigar(const char *, vector<pair<char, uint> > &);
+int    parse_cigar(const char *, vector<pair<char, uint> > &, bool check_correctness = false);
 string apply_cigar_to_seq(const char *, vector<pair<char, uint> > &);
 string remove_cigar_from_seq(const char *, vector<pair<char, uint> > &);
 string apply_cigar_to_model_seq(const char *, vector<pair<char, uint> > &);
