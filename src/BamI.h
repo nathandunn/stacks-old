@@ -49,7 +49,7 @@ private:
     int parse_header();
     void parse_cigar(vector<pair<char, uint> > &);
 
- public:
+public:
     Bam(const char *path) : Input() {
         this->path   = string(path);
         this->bam_fh = hts_open(path, "r");
@@ -65,6 +65,40 @@ private:
     Seq *next_seq();
     int  next_seq(Seq&);
 };
+
+class BamRecord {
+    bam1_t* r_;
+
+public:
+    BamRecord() : r_(bam_init1()) {}
+    ~BamRecord() {bam_destroy1(r_);}
+
+    string qname() const;
+    uint16_t flag() const;
+    int32_t chrom() const;
+    int32_t pos() const;
+    uint8_t mapq() const;
+    vector<pair<char, uint>> cigar() const;
+    // (rnext)
+    // (pnext)
+    // (tlen)
+    //DNASeq4  seq() const; // xxx (Feb2017) Import DNASeq4 from n_pe
+    // (qual)
+    vector<string> aux() const;
+
+    AlnT aln_type();
+    bool is_rev_compl();
+    bool is_paired();
+    bool is_fw_read();
+    bool is_rev_read();
+
+    //friend bool Bam::next();
+};
+
+//
+// Inline definitions
+// ----------
+//
 
 int
 Bam::parse_header()
