@@ -24,6 +24,7 @@
 //
 
 #include "MetaPopInfo.h"
+#include "catalog_utils.h"
 
 #include "rxstacks.h"
 
@@ -31,7 +32,7 @@ typedef MetaPopInfo::Sample Sample;
 
 // Global variables to hold command-line options.
 int    num_threads = 1;
-int    batch_id    = 0;
+int    batch_id    = -1;
 string in_path;
 string out_path;
 FileT  in_file_type      = FileT::sql;
@@ -95,10 +96,6 @@ int main (int argc, char* argv[]) {
 
     MetaPopInfo mpopi;
     mpopi.init_directory(in_path);
-    if (mpopi.samples().empty()) {
-        cerr << "Error: Failed to find sample files in directory '" << in_path << "'.\n";
-        return -1;
-    }
 
     //
     // Open and initialize the log files.
@@ -407,6 +404,7 @@ int main (int argc, char* argv[]) {
         log_hap_fh.close();
     }
 
+    cerr << "rxstacks is done.\n";
     return 0;
 }
 
@@ -1662,10 +1660,6 @@ parse_command_line(int argc, char* argv[])
             break;
         case 'b':
             batch_id = is_integer(optarg);
-            if (batch_id < 0) {
-                cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
-                help();
-            }
             break;
         case 'o':
             out_path = optarg;
@@ -1674,7 +1668,7 @@ parse_command_line(int argc, char* argv[])
             if (strcmp(optarg, "snp") == 0) {
                 model_type = snp;
             } else if (strcmp(optarg, "fixed") == 0) {
-                model_type = fixed;
+                model_type = ::fixed;
             } else if (strcmp(optarg, "bounded") == 0) {
                 model_type = bounded;
             } else {
@@ -1729,14 +1723,19 @@ parse_command_line(int argc, char* argv[])
         }
     }
 
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        help();
+    }
+
     if (in_path.length() == 0) {
         cerr << "You must specify a path to the directory containing Stacks output files.\n";
         help();
     }
 
     if (out_path.length() == 0) {
-        cerr << "No output path specified, files in '" << in_path << "' will be overwritten.\n";
-        out_path = in_path;
+        cerr << "You must specify a path to a directory where to write output files.\n";
+        help();
     }
 
     if (in_path.at(in_path.length() - 1) != '/')
@@ -1745,9 +1744,17 @@ parse_command_line(int argc, char* argv[])
     if (out_path.at(out_path.length() - 1) != '/')
         out_path += "/";
 
-    if (batch_id == 0) {
-        cerr << "You must specify a batch ID.\n";
-        help();
+    if (batch_id < 0) {
+        vector<int> cat_ids = find_catalogs(in_path);
+        if (cat_ids.size() == 1) {
+            batch_id = cat_ids[0];
+        } else if (cat_ids.empty()) {
+            cerr << "Error: Unable to find a catalog in '" << in_path << "'.\n";
+            help();
+        } else {
+            cerr << "Error: Input directory contains several catalogs, please specify -b.\n";
+            help();
+        }
     }
 
     if (alpha != 0.1 && alpha != 0.05 && alpha != 0.01 && alpha != 0.001) {
@@ -1785,13 +1792,11 @@ void version() {
 
 void help() {
     std::cerr << "rxstacks " << VERSION << "\n"
-              << "rxstacks -b batch_id -P path [-o path] [-t threads] [-v] [-h]" << "\n"
-              << "  b: Batch ID to examine when exporting from the catalog.\n"
+              << "rxstacks -P path -o path [-t threads] [-b batch_id]" << "\n"
               << "  P: path to the Stacks output files.\n"
-              << "  o: output path to write results.\n"
+              << "  o: output path to write results ('.' to override the current files).\n"
               << "  t: number of threads to run in parallel sections of code.\n"
-              << "  v: print program version." << "\n"
-              << "  h: display this help messsage." << "\n\n"
+              << "  b: database/batch ID of the input catalog to consider (default: guess).\n"
               << "  Filtering options:\n"
               << "    --lnl_filter: filter catalog loci based on the mean log likelihood of the catalog locus in the population.\n"
               << "      --lnl_lim <limit>: minimum log likelihood required to keep a catalog locus.\n"

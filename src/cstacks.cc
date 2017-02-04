@@ -22,6 +22,8 @@
 // cstacks -- Create a catalog of Stacks.
 //
 
+#include "MetaPopInfo.h"
+
 #include "cstacks.h"
 
 // Global variables to hold command-line options.
@@ -29,7 +31,7 @@ queue<pair<int, string> > samples;
 string  out_path;
 string  catalog_path;
 FileT   in_file_type      = FileT::sql;
-int     batch_id          = 0;
+int     batch_id          = -1;
 int     ctag_dist         = 1;
 bool    set_kmer_len      = true;
 int     kmer_len          = 0;
@@ -41,6 +43,8 @@ bool    require_uniq_haplotypes = false;
 bool    gapped_alignments = false;
 double  min_match_len     = 0.80;
 double  max_gaps          = 2.0;
+
+using namespace std;
 
 int main (int argc, char* argv[]) {
 
@@ -69,8 +73,10 @@ int main (int argc, char* argv[]) {
     bool compressed = false;
     int  i;
 
+    set<int> seen_sample_ids; // For checking sample ID unicity.
+
     if (catalog_path.length() > 0) {
-        cerr << "Initializing existing catalog...\n";
+        cerr << "\nInitializing existing catalog...\n";
         if (!initialize_existing_catalog(catalog_path, catalog)) {
             cerr << "Failed to initialize the catalog.\n";
             return 1;
@@ -81,12 +87,13 @@ int main (int argc, char* argv[]) {
         s = samples.front();
         samples.pop();
 
-        cerr << "Initializing new catalog...\n";
+        cerr << "\nInitializing new catalog...\n";
         if (!initialize_new_catalog(s, catalog)) {
             cerr << "Failed to initialize the catalog.\n";
             return 1;
         }
         i = 2;
+        seen_sample_ids.insert(catalog.begin()->second->sample_id);
     }
 
     //
@@ -101,7 +108,7 @@ int main (int argc, char* argv[]) {
     while (!samples.empty()) {
         map<int, QLocus *> sample;
 
-        cerr << "Processing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
+        cerr << "\nProcessing sample " << s.second << " [" << i << " of " << sample_cnt << "]\n";
 
         s = samples.front();
         samples.pop();
@@ -114,6 +121,13 @@ int main (int argc, char* argv[]) {
         // Assign the ID for this sample data.
         //
         s.first = sample.begin()->second->sample_id;
+
+        // Check for unique sample IDs.
+        if (!seen_sample_ids.insert(s.first).second) {
+            // Insert failed.
+            cerr << "Error: Sample ID '" << s.first << "' occurs more than once. Sample IDs must be unique." << endl;
+            return -1;
+        }
 
         //dump_loci(sample);
 
@@ -161,9 +175,9 @@ int main (int argc, char* argv[]) {
         sample.clear();
     }
 
-    cerr << "Writing catalog to '" << out_path << "...";
+    cerr << "\nWriting catalog in directory '" << out_path << "'.\n";
     write_catalog(catalog);
-    cerr << " done.\n";
+    cerr << "cstacks is done.\n";
 
     //
     // Free memory associated with the catalog.
@@ -1781,15 +1795,15 @@ initialize_existing_catalog(string catalog_path, map<int, CLocus *> &catalog)
 }
 
 int parse_command_line(int argc, char* argv[]) {
-    int    c;
-    string sstr;
+    string in_dir;
+    string popmap_path;
 
     while (1) {
         static struct option long_options[] = {
             {"help",            no_argument, NULL, 'h'},
-            {"version",         no_argument, NULL, 'v'},
+            {"version",         no_argument, NULL, 1000},
             {"mmatches",        no_argument, NULL, 'm'},
-            {"genomic_loc",     no_argument, NULL, 'g'},
+            {"aligned",         no_argument, NULL, 'g'},
             {"uniq_haplotypes", no_argument, NULL, 'u'},
             {"report_mmatches", no_argument, NULL, 'R'},
             {"gapped",          no_argument, NULL, 'G'},
@@ -1805,10 +1819,8 @@ int parse_command_line(int argc, char* argv[]) {
             {0, 0, 0, 0}
         };
 
-        // getopt_long stores the option index here.
         int option_index = 0;
-
-        c = getopt_long(argc, argv, "hgvuRmGX:x:o:s:c:b:p:n:k:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "hgvuRmGX:x:o:s:c:b:p:n:k:P:M:", long_options, &option_index);
 
         // Detect the end of the options.
         if (c == -1)
@@ -1820,10 +1832,6 @@ int parse_command_line(int argc, char* argv[]) {
             break;
         case 'b':
             batch_id = is_integer(optarg);
-            if (batch_id < 0) {
-                cerr << "Batch ID (-b) must be an integer, e.g. 1, 2, 3\n";
-                help();
-            }
             break;
         case 'n':
             ctag_dist = is_integer(optarg);
@@ -1842,8 +1850,7 @@ int parse_command_line(int argc, char* argv[]) {
             search_type = genomic_loc;
             break;
         case 's':
-            sstr = optarg;
-            samples.push(make_pair(0, sstr));
+            samples.push(make_pair(0, optarg));
             break;
         case 'c':
             catalog_path = optarg;
@@ -1863,11 +1870,17 @@ int parse_command_line(int argc, char* argv[]) {
         case 'x':
             min_match_len = is_double(optarg);
             break;
-        case 'v':
+        case 1000:
             version();
             break;
         case 'p':
             num_threads = is_integer(optarg);
+            break;
+        case 'P':
+            in_dir = optarg;
+            break;
+        case 'M':
+            popmap_path = optarg;
             break;
         case '?':
             // getopt_long already printed an error message.
@@ -1879,51 +1892,92 @@ int parse_command_line(int argc, char* argv[]) {
         }
     }
 
+    if (optind < argc) {
+        cerr << "Error: Failed to parse command line: '" << argv[optind] << "' is seen as a positional argument. Expected no positional arguments.\n";
+        help();
+    }
+
+    if (in_dir.empty() && samples.empty()) {
+        cerr << "Error: You must specify one of -P or -s.\n";
+        help();
+    } else if ((!in_dir.empty() || !popmap_path.empty())
+            && (!samples.empty() || !out_path.empty())) {
+        cerr << "Error: Please use options -P/-M or -s/-o, not both.\n";
+        help();
+    }
+
+    if (!in_dir.empty()) {
+        if (popmap_path.empty()) {
+            cerr << "Error: Please specify a population map (-M).\n";
+            help();
+        }
+
+        if (in_dir.back() != '/')
+            in_dir += "/";
+
+        // Set `samples`.
+        MetaPopInfo popmap;
+        popmap.init_popmap(popmap_path);
+        for (const MetaPopInfo::Sample& s : popmap.samples())
+            samples.push({0, in_dir + s.name});
+
+        // Set `out_path`.
+        out_path = in_dir;
+
+        if (batch_id < 0)
+            batch_id = 1;
+
+    } else if (!samples.empty()) {
+        if (out_path.empty())
+            out_path = ".";
+
+        if (out_path.back() != '/')
+            out_path += "/";
+
+        if (batch_id < 0)
+            batch_id = 1;
+    }
+
     if (set_kmer_len == false && (kmer_len < 5 || kmer_len > 31)) {
         cerr << "Kmer length must be between 5 and 31bp.\n";
         help();
     }
 
-    if (samples.size() == 0) {
-        cerr << "You must specify at least one sample file.\n";
-        help();
-    }
-
-    if (out_path.length() == 0)
-        out_path = ".";
-
-    if (out_path.at(out_path.length() - 1) != '/')
-        out_path += "/";
-
     return 0;
 }
 
 void version() {
-    std::cerr << "cstacks " << VERSION << "\n\n";
+    std::cerr << "cstacks " << VERSION << "\n";
 
     exit(0);
 }
 
 void help() {
     std::cerr << "cstacks " << VERSION << "\n"
-              << "cstacks -b batch_id -s sample_file [-s sample_file_2 ...] [-o path] [-g] [-n num] [-p num_threads] [--catalog path] [-h]" << "\n"
-              << "  b: MySQL ID of this batch." << "\n"
-              << "  s: filename prefix from which to load loci into the catalog." << "\n"
-              << "  o: output path to write results." << "\n"
-              << "  g: base catalog matching on genomic location, not sequence identity." << "\n"
-              << "  m: include tags in the catalog that match to more than one entry (default false)." << "\n"
-              << "  n: number of mismatches allowed between sample tags when generating the catalog (default 1)." << "\n"
+              << "cstacks -P in_dir -M popmap [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
+              << "cstacks --aligned -P in_dir -M popmap [-p num_threads] [-b batch_id]" << "\n"
+              << "cstacks -s sample1_path [-s sample2_path ...] -o path [-n num_mismatches] [--gapped] [-p num_threads] [-b batch_id]" << "\n"
+              << "cstacks --aligned -s sample1_path [-s sample2_path ...] -o path [-p num_threads] [-b batch_id]" << "\n"
+              << "\n"
+              << "  g,--aligned: base catalog construction on alignment position, not sequence identity." << "\n"
+              << "  P: path to the directory containing Stacks files.\n"
+              << "  M: path to a population map file.\n"
+              << "  n: number of mismatches allowed between sample loci when build the catalog (default 1)." << "\n"
               << "  p: enable parallel execution with num_threads threads.\n"
-              << "  h: display this help messsage." << "\n\n"
-              << "  Catalog editing:\n"
-              << "    --catalog <path>: provide the path to an existing catalog. cstacks will add data to this existing catalog.\n\n"
-              << "  Gapped assembly options:\n"
-              << "    --gapped: preform gapped alignments between stacks.\n"
-              << "    --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
-              << "    --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n\n"
-              << "  Advanced options:\n"
-              << "     --k_len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
-              << "    --report_mmatches: report query loci that match more than one catalog locus.\n";
+              << "  b: database/batch ID for this catalog (default 1)." << "\n"
+              << "  s: sample prefix from which to load loci into the catalog." << "\n"
+              << "  o: output path to write results." << "\n"
+              << "  --catalog <path>: add to an existing catalog.\n"
+              << "\n"
+              << "Gapped assembly options:\n"
+              << "  --gapped: preform gapped alignments between stacks.\n"
+              << "  --max_gaps: number of gaps allowed between stacks before merging (default: 2).\n"
+              << "  --min_aln_len: minimum length of aligned sequence in a gapped alignment (default: 0.80).\n"
+              << "\n"
+              << "Advanced options:\n"
+              << "  m: include tags in the catalog that match to more than one entry (default false)." << "\n"
+              << "  --k_len <len>: specify k-mer size for matching between between catalog loci (automatically calculated by default).\n"
+              << "  --report_mmatches: report query loci that match more than one catalog locus.\n";
 
     exit(0);
 }
