@@ -126,7 +126,7 @@ int main (int argc, char* argv[]) {
         catalog_matches.push_back(vector<CatMatch*>());
         vector<CatMatch *>& m = catalog_matches.back();
 
-        const MetaPopInfo::Sample& sample = mpopi.samples()[i];
+        const Sample& sample = mpopi.samples()[i];
         load_catalog_matches(in_path + sample.name, m);
 
         if (m.size() == 0) {

@@ -28,8 +28,6 @@
 
 #include "rxstacks.h"
 
-typedef MetaPopInfo::Sample Sample;
-
 // Global variables to hold command-line options.
 int    num_threads = 1;
 int    batch_id    = -1;

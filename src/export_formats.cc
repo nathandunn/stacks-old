@@ -734,7 +734,7 @@ write_genepop(map<int, CSLocus *> &catalog,
     nuc_map['T'] = "04";
 
     for (size_t p=0; p<mpopi.pops().size(); ++p) {
-        const MetaPopInfo::Pop& pop = mpopi.pops()[p];
+        const Pop& pop = mpopi.pops()[p];
 
         fh << "pop\n";
 
@@ -873,7 +873,7 @@ write_genepop_ordered(map<int, CSLocus *> &catalog,
     nuc_map['T'] = "04";
 
     for (size_t p=0; p<mpopi.pops().size(); ++p) {
-        const MetaPopInfo::Pop& pop = mpopi.pops()[p];
+        const Pop& pop = mpopi.pops()[p];
 
         fh << "pop\n";
         for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
@@ -1003,7 +1003,7 @@ write_structure(map<int, CSLocus *> &catalog,
     char      p_allele, q_allele;
 
     for (size_t p=0; p<mpopi.pops().size(); ++p) {
-        const MetaPopInfo::Pop& pop = mpopi.pops()[p];
+        const Pop& pop = mpopi.pops()[p];
 
         for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
             //
@@ -1181,7 +1181,7 @@ write_structure_ordered(map<int, CSLocus *> &catalog,
     uint      col, snp_index;
 
     for (size_t p=0; p<mpopi.pops().size(); ++p) {
-        const MetaPopInfo::Pop& pop = mpopi.pops()[p];
+        const Pop& pop = mpopi.pops()[p];
 
         for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
             //
@@ -1338,7 +1338,7 @@ write_hzar(map<int, CSLocus *> &catalog,
     fh << "\n";
 
     for (size_t p=0; p<mpopi.pops().size(); ++p) {
-        const MetaPopInfo::Pop& pop = mpopi.pops()[p];
+        const Pop& pop = mpopi.pops()[p];
 
         fh << pop.name << ",";
 
@@ -1599,7 +1599,7 @@ write_fastphase(map<int, CSLocus *> &catalog,
         stringstream gtypes;
 
         for (size_t p=0; p<mpopi.pops().size(); ++p) {
-            const MetaPopInfo::Pop& pop = mpopi.pops()[p];
+            const Pop& pop = mpopi.pops()[p];
 
             for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
                 //
@@ -1817,7 +1817,7 @@ write_phase(map<int, CSLocus *> &catalog,
         stringstream gtypes;
 
         for (size_t p=0; p<mpopi.pops().size(); ++p) {
-            const MetaPopInfo::Pop& pop = mpopi.pops()[p];
+            const Pop& pop = mpopi.pops()[p];
 
             for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
                 //
@@ -2075,7 +2075,7 @@ write_plink(map<int, CSLocus *> &catalog,
     //  marker, output the genotypes for each sample in two successive columns.
     //
     for (size_t p=0; p<mpopi.pops().size(); ++p) {
-        const MetaPopInfo::Pop& pop = mpopi.pops()[p];
+        const Pop& pop = mpopi.pops()[p];
 
         for (size_t j = pop.first_sample; j <= pop.last_sample; j++) {
 
@@ -2205,7 +2205,7 @@ write_beagle(map<int, CSLocus *> &catalog,
         // Now output the genotypes in a separate file for each population.
         //
         for (size_t p=0; p<mpopi.pops().size(); ++p) {
-            const MetaPopInfo::Pop& pop = mpopi.pops()[p];
+            const Pop& pop = mpopi.pops()[p];
 
             //
             // Open a markers file containing each marker, its genomic position in basepairs
@@ -2423,7 +2423,7 @@ write_beagle_phased(map<int, CSLocus *> &catalog,
         //
 
         for (size_t i_pop=0; i_pop<mpopi.pops().size(); ++i_pop) {
-            const MetaPopInfo::Pop& pop = mpopi.pops()[i_pop];
+            const Pop& pop = mpopi.pops()[i_pop];
 
             //
             // Open a file for writing the markers: their genomic position in basepairs
@@ -2736,7 +2736,7 @@ write_phylip(map<int, CSLocus *> &catalog,
 
     fh << mpopi.pops().size() << "    " << interspecific_nucs.begin()->second.length() << "\n";
     for (size_t i_pop=0; i_pop<mpopi.pops().size(); ++i_pop) {
-        const MetaPopInfo::Pop& pop = mpopi.pops()[i_pop];
+        const Pop& pop = mpopi.pops()[i_pop];
 
         char id_str[id_len];
         sprintf(id_str, "%s", pop.name.c_str());
@@ -2858,7 +2858,7 @@ write_fullseq_phylip(map<int, CSLocus *> &catalog,
     map<int, string> outstrs;
     fh << mpopi.pops().size() << "    " << len << "\n";
     for (size_t i_pop=0; i_pop<mpopi.pops().size(); ++i_pop) {
-        const MetaPopInfo::Pop& pop = mpopi.pops()[i_pop];
+        const Pop& pop = mpopi.pops()[i_pop];
 
         char id_str[id_len];
         sprintf(id_str, "%s", pop.name.c_str());

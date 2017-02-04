@@ -338,7 +338,7 @@ int PopSum<LocusT>::add_population(map<int, LocusT *> &catalog,
                << "#\n"
                << "# Level\tAction\tLocus ID\tChr\tBP\tColumn\tPopID\n#\n";
 
-    const MetaPopInfo::Pop& pop = metapopinfo.pops().at(pop_index);
+    const Pop& pop = metapopinfo.pops().at(pop_index);
 
     for (int i = 0; i < loci_cnt(); i++) {
         locus_id = rev_locus_index(i);
