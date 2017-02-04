@@ -43,6 +43,7 @@ using std::stringstream;
 #include "constants.h"
 #include "DNASeq.h"
 #include "DNANSeq.h"
+#include "DNASeq4.h"
 
 typedef unsigned int uint;
 typedef string allele_type;
@@ -299,6 +300,15 @@ public:
             delete this->snps[i];
         this->snps.clear();
     }
+};
+
+struct TmpRead {
+    DNASeq4 s;
+    std::string name;
+
+    TmpRead(DNASeq4&& s, std::string&& n)
+        : s(std::move(s)), name(std::move(n))
+        {}
 };
 
 //
