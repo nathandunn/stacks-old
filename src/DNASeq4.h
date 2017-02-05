@@ -39,28 +39,28 @@ extern const char u2c[16];
 // A dinucleotide, coded on one byte.
 // The first nucleotide uses the high bits.
 class DiNuc {
-    uchar u_;
+    uchar x_;
 
 public:
-    DiNuc() : u_(0) {}
-    DiNuc(const DiNuc& other) : u_(other.u_) {}
-    DiNuc(uchar val) : u_(val) {}
-    DiNuc(uchar u1, uchar u2) : u_(0) {set_first(u1); set_second(u2);}
+    DiNuc() : x_(0) {}
+    DiNuc(const DiNuc& other) : x_(other.x_) {}
+    DiNuc(uchar x) : x_(x) {}
+    DiNuc(uchar u1, uchar u2) : x_(0) {set_first(u1); set_second(u2);}
     DiNuc(char c1, char c2) : DiNuc(nt4::c2u[(int) c1], nt4::c2u[(int) c2]) {}
-    DiNuc& operator= (const DiNuc& other) {u_ = other.u_; return *this;}
+    DiNuc& operator= (const DiNuc& other) {x_ = other.x_; return *this;}
 
-    uchar first() const {return u_ >>4;}
-    uchar second() const {return u_ & 15;}
+    uchar first() const {return x_ >>4;}
+    uchar second() const {return x_ & 15;}
 
-    bool operator== (const DiNuc& other) const {return u_ == other.u_;}
-    bool operator<  (const DiNuc& other) const {return u_ < other.u_;}
+    bool operator== (const DiNuc& other) const {return x_ == other.x_;}
+    bool operator<  (const DiNuc& other) const {return x_ < other.x_;}
 
 private:
-    void set_first(uchar u) {u_ |= u <<4;}
-    void set_second(uchar u) {u_ |= u;}
+    void set_first(uchar u) {x_ |= u <<4;}
+    void set_second(uchar u) {x_ |= u;}
 
-    void clear_first() {u_ &= 15;}
-    void clear_second() {u_ &= ~15;}
+    void clear_first() {x_ &= 15;}
+    void clear_second() {x_ &= ~15;}
 
     friend class std::hash<DNASeq4>;
 };
@@ -114,7 +114,7 @@ struct hash<DNASeq4> {
     size_t operator() (const DNASeq4& s) const {
         size_t x = static_cast<size_t>(14695981039346656037ULL);
         for (const DiNuc& d : s.v_) {
-            x ^= static_cast<size_t>(d.u_);
+            x ^= static_cast<size_t>(d.x_);
             x *= static_cast<size_t>(1099511628211ULL);
         }
         return x;
