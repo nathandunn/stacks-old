@@ -31,7 +31,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-#include <array>
+#include <utility>
 
 #include "sam.h" //htslib
 
@@ -86,19 +86,18 @@ private:
     bam_hdr_t *bamh;
     BamRecord rec;
 
-    map<uint, string> chrs;
-
-    int parse_header();
-    void parse_cigar(vector<pair<char, uint> > &);
-
     bool next_record() {return sam_read1(bam_fh, bamh, rec.r()) >= 0;}
+    const char* chrom_str() {
+        if (rec.chrom() >= bamh->n_targets)
+            throw std::out_of_range("out_of_range in Bam::chrom_str");
+        return bamh->target_name[rec.chrom()];
+    }
 
 public:
-    Bam(const char *path) : Input(), bam_fh(NULL), bamh(NULL), rec() {
+    Bam(const char *path) : Input(), bam_fh(NULL), bamh(bam_hdr_init()), rec() {
         this->path   = string(path);
         bam_fh = hts_open(path, "r");
-
-        parse_header();
+        bamh = sam_hdr_read(bam_fh);
     };
     ~Bam() {
         hts_close(bam_fh);
@@ -112,23 +111,6 @@ public:
 // Inline definitions
 // ----------
 //
-
-inline
-int
-Bam::parse_header()
-{
-    this->bamh = bam_hdr_init();
-    this->bamh = sam_hdr_read(this->bam_fh);
-
-    for (uint j = 0; j < (uint) this->bamh->n_targets; j++) {
-        //
-        // Record the mapping from integer ID to chromosome name that we will see in BAM records.
-        //
-        this->chrs[j] = string(this->bamh->target_name[j]);
-    }
-
-    return 0;
-}
 
 inline
 Seq *
@@ -225,7 +207,7 @@ Bam::next_seq(Seq& s)
         double pct_clipped = (double) clipped / seq.length();
 
         s = Seq(rec.qname().c_str(), seq.c_str(), qual.c_str(),
-                chrs[rec.chrom()].c_str(), bp, strand, rec.aln_type(), pct_clipped, rec.mapq());
+                chrom_str(), bp, strand, rec.aln_type(), pct_clipped, rec.mapq());
 
         if (cigar.size() > 0)
             bam_edit_gaps(cigar, s.seq);
