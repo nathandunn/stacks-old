@@ -100,6 +100,13 @@ public:
     AlnT aln_type() const;
     const char* read_group() const;
 
+private:
+    // Moves the pointer to the start of the next AUX field. Doesn't actually read
+    // anything, the point is just to be able to scan until field(s) of interest.
+    // Returns `ptr`.
+    static void skip_one_aux(const uint8_t* ptr) const;
+
+
 };
 
 //
@@ -412,6 +419,78 @@ AlnT BamRecord::aln_type() const {
         return AlnT::supplementary;
     else
         return AlnT::primary;
+}
+
+const char* BamRecord::read_group() const {
+    uint8_t* ptr = bam_get_aux(r_);
+    while (ptr < bam_get_aux(r_) + bam_get_l_aux(r_) - 3) { // minimum field size is 4
+        if (*(char*)ptr == 'R' && *(char*)(ptr+1) == 'G') {
+            return (char*)ptr+3;
+        } else {
+            skip_one_aux(ptr);
+        }
+    }
+
+    return NULL;
+}
+
+void BamRecord::skip_one_aux(const uint8_t* ptr) const {
+    using namespace std;
+
+    // The library doesn't provide much for handling the AUX fields.
+
+    // Make sure that the tag matches [A-Za-z][A-Za-z0-9].
+    char b = *(ptr+1);
+    if (!isalpha(*ptr) || !isalnum(*(ptr+1))) {
+        cerr << "Warning: Illegal BAM AUX tag '"
+             << *(char*)ptr << *(char*)(ptr+1) << "' ("
+             << *ptr << "," << *(ptr+1) << ").\n" << flush;
+    }
+    ptr += 2;
+
+    char t = *(char*)ptr; // byte 3 of the field gives the type
+    ptr += 1;
+
+    if (t == 'i'        // int32_t
+            || t == 'I' // uint32_t
+            || t == 'f' // float
+            ) {
+        ptr += 4;
+    } else if (t == 'Z' // string
+            || t == 'H' // hex string
+            ) {
+        ptr += strlen((char*)ptr) + 1;
+    } else if (t == 'A' // character
+            || t == 'c' // int8_t
+            || t == 'C' // uint8_t
+            ) {
+        ptr += 1;
+    } else if (t == 's' // int16_t
+            || t == 'S' // uint16_t
+            ) {
+        ptr += 2;
+    } else if (t == 'B') { // array
+        ptr += 1;
+        char t2 = *(char*)ptr; // byte 4 gives the array contents type
+        ptr += 1;
+        int32_t len = *(int32_t*)ptr; // bytes 5-9 give the array length
+        ptr += 4;
+
+        // Type should be an integer type or float.
+        if (t2 == 'c' || t2 == 'C') {
+            ptr += len;
+        } else if (t2 == 's' || t2 == 'S') {
+            ptr += 2 * len;
+        } else if (t2 == 'i' || t2 == 'I' || t2 == 'f') {
+            ptr += 4 * len;
+        } else {
+            cerr << "Error: Unexpected BAM AUX field array type '" << t2 << "' (#" << *(uchar*)&t2 << ").\n";
+            throw exception();
+        }
+    } else {
+        cerr << "Error: Unexpected BAM AUX field type '" << t << "' (#" << *(uchar*)&t << ").\n";
+        throw exception();
+    }
 }
 
 #else  // If HAVE_BAM is undefined and BAM library is not present.
