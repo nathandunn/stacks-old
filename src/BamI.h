@@ -29,6 +29,9 @@
 #ifdef HAVE_BAM
 
 #include <algorithm>
+#include <string>
+#include <vector>
+#include <array>
 
 #include "sam.h" //htslib
 
@@ -68,31 +71,32 @@ public:
 
 class BamRecord {
     bam1_t* r_;
+    bam1_core_t& c_; // r_->core
 
 public:
-    BamRecord() : r_(bam_init1()) {}
+    BamRecord() : r_(bam_init1()), c_(r_->core) {}
     ~BamRecord() {bam_destroy1(r_);}
 
-    string qname() const;
-    uint16_t flag() const;
-    int32_t chrom() const;
-    int32_t pos() const;
-    uint8_t mapq() const;
+    string qname() const {return string(bam_get_qname(r_), c_.l_qname-1);}
+    uint16_t flag() const {return c_.flag;}
+    int32_t chrom() const {return c_.tid;}
+    int32_t pos() const {return c_.pos;}
+    uint8_t mapq() const {return c_.qual;}
     vector<pair<char, uint>> cigar() const;
     // (rnext)
     // (pnext)
     // (tlen)
-    //DNASeq4  seq() const; // xxx (Feb2017) Import DNASeq4 from n_pe
+    DNASeq4 seq() const {return DNASeq4((uchar*) bam_get_seq(r_), c_.l_qseq);}
     // (qual)
-    vector<string> aux() const;
+    // (aux)
 
-    AlnT aln_type();
-    bool is_rev_compl();
-    bool is_paired();
-    bool is_fw_read();
-    bool is_rev_read();
+    AlnT aln_type() const;
+    bool is_rev_compl() const {return c_.flag & BAM_FREVERSE;}
+    bool is_paired() const {return c_.flag & BAM_FPAIRED;}
+    bool is_fw_read() const {return c_.flag & BAM_FREAD1;}
+    bool is_rev_read() const {return c_.flag & BAM_FREAD2;}
 
-    //friend bool Bam::next();
+    const char* read_group() const;
 };
 
 //
@@ -416,6 +420,62 @@ bam_edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
     delete [] buf;
 
     return 0;
+}
+
+vector<pair<char, uint>> BamRecord::cigar() const {
+    vector<pair<char, uint>> cig;
+
+    uint32_t* hts_cigar = bam_get_cigar(r_);
+    for (size_t i = 0; i < c_.n_cigar; i++) {
+        char op;
+        switch(hts_cigar[i] &  BAM_CIGAR_MASK) {
+        case BAM_CMATCH:
+            op = 'M';
+            break;
+        case BAM_CEQUAL:
+            op = '=';
+            break;
+        case BAM_CDIFF:
+            op = 'X';
+            break;
+        case BAM_CINS:
+            op = 'I';
+            break;
+        case BAM_CDEL:
+            op = 'D';
+            break;
+        case BAM_CSOFT_CLIP:
+            op = 'S';
+            break;
+        case BAM_CREF_SKIP:
+            op = 'N';
+            break;
+        case BAM_CHARD_CLIP:
+            op = 'H';
+            break;
+        case BAM_CPAD:
+            op = 'P';
+            break;
+        default:
+            cerr << "Warning: Unknown CIGAR operation (current record name is '" << bam_get_qname(r_) << "').\n";
+            break;
+        }
+
+        cig.push_back({op, hts_cigar[i] >> BAM_CIGAR_SHIFT});
+    }
+
+    return cig;
+}
+
+AlnT BamRecord::aln_type() const {
+    if (c_.flag & BAM_FUNMAP)
+        return AlnT::null;
+    else if (c_.flag & BAM_FSECONDARY)
+        return AlnT::secondary;
+    else if (c_.flag & BAM_FSUPPLEMENTARY)
+        return AlnT::supplementary;
+    else
+        return AlnT::primary;
 }
 
 #else  // If HAVE_BAM is undefined and BAM library is not present.
