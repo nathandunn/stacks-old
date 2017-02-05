@@ -37,9 +37,12 @@
 
 #include "stacks.h"
 #include "input.h"
+#include "DNASeq4.h"
 
 int bam_find_start_bp(int, strand_type, const vector<pair<char, uint> > &);
 int bam_edit_gaps(vector<pair<char, uint> > &, char *);
+
+class BamRecord;
 
 class Bam: public Input {
 private:
@@ -56,7 +59,7 @@ private:
 
 public:
     Bam(const char *path) : Input(), bam_fh(NULL), bamh(NULL), rec() {
-        path   = string(path);
+        this->path   = string(path);
         bam_fh = hts_open(path, "r");
 
         parse_header();
@@ -104,9 +107,7 @@ private:
     // Moves the pointer to the start of the next AUX field. Doesn't actually read
     // anything, the point is just to be able to scan until field(s) of interest.
     // Returns `ptr`.
-    static void skip_one_aux(const uint8_t* ptr) const;
-
-
+    static void skip_one_aux(const uint8_t* ptr);
 };
 
 //
@@ -114,6 +115,7 @@ private:
 // ----------
 //
 
+inline
 int
 Bam::parse_header()
 {
@@ -130,6 +132,7 @@ Bam::parse_header()
     return 0;
 }
 
+inline
 Seq *
 Bam::next_seq()
 {
@@ -141,6 +144,7 @@ Bam::next_seq()
     return s;
 }
 
+inline
 int
 Bam::next_seq(Seq& s)
 {
@@ -232,6 +236,7 @@ Bam::next_seq(Seq& s)
     return true;
 }
 
+inline
 int
 bam_find_start_bp(int aln_bp, strand_type strand, const vector<pair<char, uint> > &cigar)
 {
@@ -269,6 +274,7 @@ bam_find_start_bp(int aln_bp, strand_type strand, const vector<pair<char, uint> 
     return aln_bp;
 }
 
+inline
 int
 bam_edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
 {
@@ -365,6 +371,7 @@ bam_edit_gaps(vector<pair<char, uint> > &cigar, char *seq)
     return 0;
 }
 
+inline
 vector<pair<char, uint>> BamRecord::cigar() const {
     vector<pair<char, uint>> cig;
 
@@ -410,6 +417,7 @@ vector<pair<char, uint>> BamRecord::cigar() const {
     return cig;
 }
 
+inline
 AlnT BamRecord::aln_type() const {
     if (c_.flag & BAM_FUNMAP)
         return AlnT::null;
@@ -421,6 +429,7 @@ AlnT BamRecord::aln_type() const {
         return AlnT::primary;
 }
 
+inline
 const char* BamRecord::read_group() const {
     uint8_t* ptr = bam_get_aux(r_);
     while (ptr < bam_get_aux(r_) + bam_get_l_aux(r_) - 3) { // minimum field size is 4
@@ -434,13 +443,13 @@ const char* BamRecord::read_group() const {
     return NULL;
 }
 
-void BamRecord::skip_one_aux(const uint8_t* ptr) const {
+inline
+void BamRecord::skip_one_aux(const uint8_t* ptr) {
     using namespace std;
 
     // The library doesn't provide much for handling the AUX fields.
 
     // Make sure that the tag matches [A-Za-z][A-Za-z0-9].
-    char b = *(ptr+1);
     if (!isalpha(*ptr) || !isalnum(*(ptr+1))) {
         cerr << "Warning: Illegal BAM AUX tag '"
              << *(char*)ptr << *(char*)(ptr+1) << "' ("
