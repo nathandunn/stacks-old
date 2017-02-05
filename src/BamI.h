@@ -45,25 +45,25 @@ class Bam: public Input {
 private:
     htsFile   *bam_fh;
     bam_hdr_t *bamh;
-    bam1_t    *aln;
+    BamRecord rec;
 
     map<uint, string> chrs;
 
     int parse_header();
     void parse_cigar(vector<pair<char, uint> > &);
 
-public:
-    Bam(const char *path) : Input() {
-        this->path   = string(path);
-        this->bam_fh = hts_open(path, "r");
-        this->aln    = bam_init1();
+    bool next_record() {return sam_read1(bam_fh, bamh, rec.r()) >= 0;}
 
-        this->parse_header();
+public:
+    Bam(const char *path) : Input(), bam_fh(NULL), bamh(NULL), rec() {
+        path   = string(path);
+        bam_fh = hts_open(path, "r");
+
+        parse_header();
     };
     ~Bam() {
-        hts_close(this->bam_fh);
-        bam_hdr_destroy(this->bamh);
-        bam_destroy1(this->aln);
+        hts_close(bam_fh);
+        bam_hdr_destroy(bamh);
     };
     Seq *next_seq();
     int  next_seq(Seq&);
@@ -76,6 +76,7 @@ class BamRecord {
 public:
     BamRecord() : r_(bam_init1()), c_(r_->core) {}
     ~BamRecord() {bam_destroy1(r_);}
+    bam1_t* r() {return r_;}
 
     string qname() const {return string(bam_get_qname(r_), c_.l_qname-1);}
     uint16_t flag() const {return c_.flag;}
@@ -90,13 +91,15 @@ public:
     // (qual)
     // (aux)
 
-    AlnT aln_type() const;
+    bool is_mapped() const {return c_.flag & BAM_FUNMAP;}
     bool is_rev_compl() const {return c_.flag & BAM_FREVERSE;}
     bool is_paired() const {return c_.flag & BAM_FPAIRED;}
     bool is_fw_read() const {return c_.flag & BAM_FREAD1;}
     bool is_rev_read() const {return c_.flag & BAM_FREAD2;}
 
+    AlnT aln_type() const;
     const char* read_group() const;
+
 };
 
 //
@@ -134,33 +137,19 @@ Bam::next_seq()
 int
 Bam::next_seq(Seq& s)
 {
-
     //
-    // Read a record from the file, skipping unmapped reads,  and place it in a Seq object.
+    // Read a record
     //
-    if (sam_read1(bam_fh, bamh, aln) < 0)
+    if (!next_record())
         return false;
-
-    //
-    // Parse the type of the record.
-    //
-    AlnT aln_type;
-    if (aln->core.flag & BAM_FUNMAP)
-        aln_type = AlnT::null;
-    else if (aln->core.flag & BAM_FSECONDARY)
-        aln_type = AlnT::secondary;
-    else if (aln->core.flag & BAM_FSUPPLEMENTARY)
-        aln_type = AlnT::supplementary;
-    else
-        aln_type = AlnT::primary;
 
     //
     // Fetch the sequence.
     //
     string  seq;
-    seq.reserve(aln->core.l_qseq);
-    for (int i = 0; i < aln->core.l_qseq; i++) {
-        uint8_t j = bam_seqi(bam_get_seq(aln), i);
+    seq.reserve(rec.r()->core.l_qseq);
+    for (int i = 0; i < rec.r()->core.l_qseq; i++) {
+        uint8_t j = bam_seqi(bam_get_seq(rec.r()), i);
         switch(j) {
         case 1:
             seq += 'A';
@@ -187,30 +176,26 @@ Bam::next_seq(Seq& s)
     // Fetch the quality score.
     //
     string   qual;
-    uint8_t *q = bam_get_qual(aln);
-    for (int i = 0; i < this->aln->core.l_qseq; i++) {
+    uint8_t *q = bam_get_qual(rec.r());
+    for (int i = 0; i < rec.r()->core.l_qseq; i++) {
         qual += char(int(q[i]) + 33);
     }
 
-    if (aln_type == AlnT::null) {
-        s = Seq(bam_get_qname(aln), seq.c_str(), qual.c_str());
+    if (!rec.is_mapped()) {
+        s = Seq(rec.qname(), seq.c_str(), qual.c_str());
     } else {
-        // Fetch the chromosome.
-        string chr = chrs[aln->core.tid];
-
         //
         // Check which strand this is aligned to:
         //   SAM reference: FLAG bit 0x10 - sequence is reverse complemented
         //
-        strand_type strand = aln->core.flag & BAM_FREVERSE ? strand_minus : strand_plus;
+        strand_type strand = rec.is_rev_compl() ? strand_minus : strand_plus;
 
         //
         // Parse the alignment CIGAR string.
         // If aligned to the negative strand, sequence has been reverse complemented and
         // CIGAR string should be interpreted in reverse.
         //
-        vector<pair<char, uint> > cigar;
-        parse_cigar(cigar);
+        vector<pair<char, uint>> cigar = rec.cigar();
         if (strand == strand_minus)
             std::reverse(cigar.begin(), cigar.end());
 
@@ -219,8 +204,7 @@ Bam::next_seq(Seq& s)
         // alter the start point of the alignment to reflect the right-side of the read, at the
         // end of the RAD cut site.
         //
-
-        uint bp = bam_find_start_bp(aln->core.pos, strand, cigar);
+        uint bp = bam_find_start_bp(rec.pos(), strand, cigar);
 
         //
         // Calculate the percentage of the sequence that was aligned to the reference.
@@ -231,62 +215,14 @@ Bam::next_seq(Seq& s)
                 clipped += op.second;
         double pct_clipped = (double) clipped / seq.length();
 
-        s = Seq(bam_get_qname(aln), seq.c_str(), qual.c_str(),
-                chr.c_str(), bp, strand, aln_type, pct_clipped, aln->core.qual);
+        s = Seq(rec.qname(), seq.c_str(), qual.c_str(),
+                chrs[rec.chrom()].c_str(), bp, strand, rec.aln_type(), pct_clipped, rec.mapq());
 
         if (cigar.size() > 0)
             bam_edit_gaps(cigar, s.seq);
     }
 
     return true;
-}
-
-void
-Bam::parse_cigar(vector<pair<char, uint> > &cigar)
-{
-    int  op, len;
-    char c;
-    uint32_t *cgr = bam_get_cigar(this->aln);
-
-    for (int k = 0; k < this->aln->core.n_cigar; k++) {
-        op  = cgr[k] &  BAM_CIGAR_MASK;
-        len = cgr[k] >> BAM_CIGAR_SHIFT;
-
-        switch(op) {
-        case BAM_CMATCH:
-            c = 'M';
-            break;
-        case BAM_CEQUAL:
-            c = '=';
-            break;
-        case BAM_CDIFF:
-            c = 'X';
-            break;
-        case BAM_CINS:
-            c = 'I';
-            break;
-        case BAM_CDEL:
-            c = 'D';
-            break;
-        case BAM_CSOFT_CLIP:
-            c = 'S';
-            break;
-        case BAM_CREF_SKIP:
-            c = 'N';
-            break;
-        case BAM_CHARD_CLIP:
-            c = 'H';
-            break;
-        case BAM_CPAD:
-            c = 'P';
-            break;
-        default:
-            cerr << "Warning: Unknown CIGAR operation (current read name is '" << bam_get_qname(aln) << "').\n";
-            break;
-        }
-
-        cigar.push_back(make_pair(c, len));
-    }
 }
 
 int
